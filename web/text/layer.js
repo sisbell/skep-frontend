@@ -454,7 +454,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
 /**
  * @typedef {Object} Reading — what a view reads (`readAt`), by value — positions, bytes by identity and a place, no fold and no words: what N-TRAIL keeps beside an entry's view, so a return finds those words wherever its document was set since (N-GO's) and lands at the view that keeps the line it finds them at where the line read stood (`keptAt`)
  * @property {string} addr the document: the version its box showed
- * @property {number | null} at the position its text was read at (M-REC's `Doc.readAt`): at a bare address, what tells the member that text was from a newer one published after it (N-TRAIL's `arrivedAt`); null where no delivery said
+ * @property {number | null} at the position its text was read at (M-REC's `Doc.readAt`): at a bare address, what tells the member that text was from a newer one published after it (N-TRAIL's `arrivedAt`, `countedAt`); null where no delivery said
  * @property {number} pos the position the line under the view's visible centre opens at (P-LAY's `posAt`)
  * @property {number} width that line's positions (`lineOf`): the words the live hold keeps still
  * @property {ISpan[]} ids that line's bytes by identity, in its order, through the document's held image (M-REC's `identityOf`); none where the image did not cover them

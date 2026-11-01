@@ -21,8 +21,11 @@
 // board opened in the boot's order and read again at "try again"; a publish
 // row's member handed to the app at the row's position before anything is
 // dropped, and a refresh's at none; the one
-// refresh a run of bare rows earns, a shown document whose reads there the
-// board answers in part read again as a row naming it is, and a change of
+// refresh a run of bare rows earns, each chain it counts — an edition held at
+// its bare address, or one a trail entry the reader has left read there —
+// counted once and told to the trail before any arrival, each entry
+// re-taking the member its own text was, a shown document whose reads there
+// the board answers in part read again as a row naming it is, and a change of
 // class ending its reads where they stand; a row naming a document the view
 // shows, which keeps it as held until its reads again set it in one step,
 // rows meanwhile queueing one more read; a row touching a doc 1, which keeps
@@ -44,6 +47,7 @@ import * as PUMP from './pump.js';
 import * as F from './frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
+import * as TRAIL from '../nav/trail.js';
 import { accountCell, docBox, DOC_W } from '../plane/projection.js';
 import { lodOf, LOD_FAR_LO } from '../plane/lod.js';
 import { estimate, estimatedSpan, MEASURE_CPL } from '../plane/layout.js';
@@ -2382,6 +2386,74 @@ test('a publish row\'s member arriving where the box showed its plain address ta
   assert.deepEqual([t.from, t.runs], [-1, []], 'D holds none of it');
   await settle();
   assert.deepEqual(fake.asked.slice(from), [FAKE.keyOf('op', { frame: F.editionLinksIn(D + '.2') })], 'none of its text read: the member the row names read alone, for the edition claims the row may have written');
+});
+
+/**
+ * The trail holding, for each of `ats`, an entry the reader has left at D's
+ * plain address whose view read D's text at that position, the walk standing
+ * in D, and the cursor on an entry past them: those entries, oldest first.
+ * @param {number[]} ats
+ */
+function leftAt(ats) {
+  TRAIL._reset();
+  const view = { x: 0, y: 0, scale: 1 }, entry = (/** @type {string} */ addr) => ({ addr, pos: null, width: null, view, label: null, notice: null });
+  TRAIL.push(entry(D), null);
+  ats.forEach((at, i) => TRAIL.push(entry(i + 1 < ats.length ? D : '1.0.1.0.127'), { view, reading: { addr: D, at, pos: 1, width: 8, ids: [], around: [], p: { x: 0, y: 0 }, line: { x: 0, y: 0 }, fs: 1 }, stood: { addr: D, pos: 1, ids: [], end: null } }));
+  return TRAIL.all().slice(0, ats.length);
+}
+/** what a trail entry names: its place, the document its view read and the one its walk stood in */
+const named = (/** @type {import('../nav/trail.js').Entry} */ e) => [e.addr, e.reading && e.reading.addr, e.stood && e.stood.addr];
+
+test('a refresh counts the chain of an edition a trail entry the reader has left read at its plain address, though the page holds none of its text — each member asked once — and the entry re-takes the member its text was by the position it was read at, one whose text the newest member is standing at the plain address; where the board gives a member no mint position, nothing is re-taken (issue #361; FP-22, FP-23)', async () => {
+  const s = { ...script, [opKeyOf(F.docMetadata(D + '.1'))]: mintedAt(3), [opKeyOf(F.docMetadata(D + '.3'))]: NOT_REGISTERED };
+  // D.2 minted at 7; at the second refresh, answering no mint position
+  inTurn(s, F.docMetadata(D + '.2'), mintedAt(7), { result: { ...mintedAt(7).result, at: null } });
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {}, readings: TRAIL.readings, onCounted: TRAIL.countedAt });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('complete'));
+  try {
+    const [early, late] = leftAt([5, 8]);
+    assert.deepEqual([REC.doc(D).from, PUMP.visibleDocs().length], [-1, 0], 'none of D\'s text held, the view far from it');
+    let from = fake.asked.length;
+    fake.fire('feed', naming(20, null));
+    await PUMP.refresh();
+    assert.deepEqual(metadataAsked(fake, from), [D + '.1', D + '.2', D + '.3'], 'D\'s chain counted, each member asked once');
+    assert.deepEqual([named(early), named(late)], [[D + '.1', D + '.1', D + '.1'], [D, D, D]], 'the entry read at 5 re-takes D.1, minted at 3 and followed by D.2, minted at 7; the one read at 8 read D.2, the newest, and stands at the plain address');
+    const [again] = leftAt([5]);
+    from = fake.asked.length;
+    fake.fire('feed', naming(21, null));
+    await PUMP.refresh();
+    assert.deepEqual([metadataAsked(fake, from), named(again)], [[D + '.1', D + '.2', D + '.3'], [D, D, D]], 'D.2 answering no mint position: the chain cannot tell the member, and the entry stands at the plain address');
+    assert.deepEqual(fake.unanswered, []);
+  } finally { TRAIL._reset(); }
+});
+
+test('a refresh counts once the chain of an edition whose text the page holds at its plain address and that trail entries the reader has left read there, down to the earliest position any of them was read at — each member asked once — and tells it to the trail before the arrival it finds: each entry re-takes the member its own text was, never the one the held text is (issue #361; FP-22, FP-23)', async () => {
+  // D.1 minted at 1, D.2 at 4, D.3 at 7, no D.4
+  const s = { ...script, [opKeyOf(F.docMetadata(D + '.1'))]: mintedAt(1), [opKeyOf(F.docMetadata(D + '.2'))]: mintedAt(4), [opKeyOf(F.docMetadata(D + '.3'))]: mintedAt(7), [opKeyOf(F.docMetadata(D + '.4'))]: NOT_REGISTERED };
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  /** @type {Record<string, string>} */
+  const pins = {};
+  // the arrival as N-GO takes it: every entry left at D's plain address re-taking the member before the one published, and D's box pinned on it
+  PUMP.start({ onDirty: () => {}, shown: showing(pins), readings: TRAIL.readings, onCounted: TRAIL.countedAt, onPublish: (member, at) => { const k = memberOf(member); if (k != null && k >= 2) { TRAIL.arrivedAt(D, versionAddress(D, k - 1), at); pins[D] = versionAddress(D, k - 1); } } });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('complete'));
+  // D's text held at its plain address, read at 5 — D.2's — and its chain probed to three members
+  REC.takeDelivery(D, [{ pos: 1, width: 30, kind: 'content', text: BEFORE, ref: null, origin: null }], 5);
+  REC.takeMembers(D, 3);
+  try {
+    const [early, same] = leftAt([2, 5]);
+    const from = fake.asked.length;
+    fake.fire('feed', naming(20, null));
+    await PUMP.refresh();
+    assert.deepEqual(metadataAsked(fake, from), [D + '.3', D + '.4', D + '.2', D + '.1'], 'counted once from the end the record held, then down to D.1, the member minted at or before 2: each member asked once');
+    assert.deepEqual([named(early), named(same)], [[D + '.1', D + '.1', D + '.1'], [D + '.2', D + '.2', D + '.2']], 'the entry read at 2 re-takes D.1, the one read at 5 D.2: each the member its own text was');
+    assert.deepEqual([pins[D], REC.textBetween(D + '.2', 1, 31)], [D + '.2', BEFORE], 'the arrival taken after: D\'s box pinned on D.2, which holds the text');
+    assert.deepEqual(fake.unanswered, []);
+  } finally { TRAIL._reset(); }
 });
 
 // ---- a row naming a document the view shows -------------------------------------------------------------------------

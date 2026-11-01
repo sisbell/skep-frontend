@@ -12,8 +12,10 @@
 // a newer version's arrival re-taking the member read on every entry the
 // reader left at its trunk's plain address, but a claim's place, a scene's
 // entry, the cursor's and one whose text was read after the member was
-// published; a change of the page's class dropping what each entry's view read; an
-// entry a reading scene was opened as re-taking the scene as the reader
+// published; a counted chain re-taking on each such entry the member its own
+// text was, by the position it was read at, and the entries' readings it is
+// counted for; a change of the page's class dropping what each entry's view
+// read; an entry a reading scene was opened as re-taking the scene as the reader
 // leaves it, its place never re-taken, and a change of class dropping where
 // they stood in it and keeping the stop they stood on, a stop the panes'
 // `compare` draws by its bytes' identity; and a reset waking every move
@@ -211,6 +213,39 @@ test('a newer version\'s arrival re-takes the member the trunk\'s text was on ev
   T.arrivedAt('d', 'd.3', null);
   assert.deepEqual(named(T.all()[3]), ['d.3', 'd.3', 'd.3'], 'the newer member\'s position not known: a text read at any position counts as read before it');
   assert.deepEqual([named(T.all()[1]), named(T.all()[6]), named(T.all()[7])], [['d', 'd.2', 'd.2'], ['d', 'd', 'd'], ['d', 'd', 'd']], 'a claim\'s place, a scene\'s entry and the cursor\'s left as they stand');
+});
+
+test('a counted chain re-takes, on each entry the reader has left whose view read the trunk at its plain address, the member its own text was by the position it was read at — behind the cursor and ahead of it, at its place, the document its view read and the one its walk stood in — never on the cursor\'s entry, a claim\'s place while it reads, a reading scene\'s entry, one whose text the newest member is or was read at no known position, nor one on a member or another document; `readings` names what those entries read (issue #361; FP-22, FP-23)', () => {
+  T.push(e('d', 1), null);
+  T.push({ ...e('d', 2), notice: reading }, awayIn('d', 10, 2), true);
+  T.push(e('x', 3), awayIn('d', 20, 2));
+  T.push(e('d', 4), awayIn('d', 30, 9));
+  T.push(e('d', 5), awayIn('d', 40, 6));
+  T.push(e('d.1', 6), { ...awayIn('d', 50, 2), reading: { ...readOf(50), addr: 'd', at: null } });
+  T.push(e('f', 7), awayIn('d.1', 60, 2));
+  T.push({ ...e('d', 8), scene: { a: 'f', b: 'd', held: {}, left: null } }, awayIn('f', 70, 2));
+  T.push(e('d', 9), awayIn('d', 80, 2));
+  T.push(e('d', 10), awayIn('d', 90, 2));
+  T.back(awayIn('d', 100, 2));
+  // the entries, oldest first: d read at 2; a claim at d read at 2; x, its view reading d at 9; d read at 6; d read at no known position; d.1; f; a scene's entry; d — the cursor's; d read at 2, ahead of it
+  assert.deepEqual(T.readings(), [{ addr: 'd', at: 2 }, { addr: 'd', at: 2 }, { addr: 'd', at: 9 }, { addr: 'd', at: 6 }, { addr: 'd.1', at: 2 }, { addr: 'f', at: 2 }, { addr: 'd', at: 2 }], 'what each entry the reader has left read at a known position, save the scene\'s and the cursor\'s');
+  /** @type {number[]} */
+  const asked = [];
+  // d's chain: d.1 minted at 1, d.2 at 5, d.3 — the newest — at 8
+  T.countedAt('d', (at) => { asked.push(at); return at >= 8 ? null : at >= 5 ? 'd.2' : at >= 1 ? 'd.1' : null; });
+  assert.deepEqual(T.all().map(named), [
+    ['d.1', 'd.1', 'd.1'],
+    ['d', 'd.1', 'd.1'],
+    ['x', 'd', 'd'],
+    ['d.2', 'd.2', 'd.2'],
+    ['d', 'd', 'd'],
+    ['d.1', 'd.1', 'd.1'],
+    ['f', 'f', 'f'],
+    ['d', 'd', 'd'],
+    ['d', 'd', 'd'],
+    ['d.1', 'd.1', 'd.1'],
+  ], 'each entry the member its own text was: d.1 read at 2, d.2 at 6, a claim\'s place kept; none where the newest member was read, at no known position, on d.1, on f, on the scene\'s entry or on the cursor\'s');
+  assert.deepEqual([asked, T.all()[3].reading?.at], [[2, 2, 9, 6, 2], 6], 'the chain asked of each entry reading d at its plain address at a known position, by that position, which the entry keeps');
 });
 
 test('every departure re-takes what its view reads and where the walk stood beside the view — a push\'s, Back\'s, Forward\'s, a jump\'s and a jump\'s camera leaving; the entry pushed holds neither until one does (issue #221)', () => {

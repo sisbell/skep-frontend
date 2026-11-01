@@ -11,7 +11,7 @@
 // (rule 16). Each row's words are read from the model as the list is made
 // (N-GO's `wordsHTML`; FP-29), never kept in an entry: its address — at a
 // document, the version its entry keeps, the member a newer version's arrival
-// found its text was among them (N-TRAIL's `arrivedAt`) — in the
+// found its text was among them (N-TRAIL's `arrivedAt`, `countedAt`) — in the
 // identifier's face, a document's first line in the reading face; a reading
 // scene's entry names both its documents, in its panes' order, as the
 // scene's bar names them (N-GO's `scenePair`).

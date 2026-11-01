@@ -52,9 +52,11 @@
 // `reaching`, `floating`, `held`); O-LAND's hand-off and its pieces' element;
 // and M-PUMP's (`shownIn`, N-GO's `arrived` for each feed row publishing a
 // trunk's next member, `dropped` for what each row and each change of the
-// page's class dropped, and the places the trail's entries name — a reading
+// page's class dropped, the places the trail's entries name — a reading
 // scene's entry its two documents (N-GO's `scenePair`) — which a change reads
-// again beside the view's — FP-23, FP-29).
+// again beside the view's, and what the entries the reader has left read,
+// with who re-takes the member each read once a refresh counts its chain —
+// N-TRAIL's `readings`, `countedAt` — FP-22, FP-23, FP-29).
 // The loop (`loop`, on `requestAnimationFrame`): step the camera's flight,
 // pump every 90 ms, and on a dirty frame — the mark, a camera move, a model,
 // layer or kept revision, a flight, an overlay standing, a phase — run T-LAYER's
@@ -307,7 +309,7 @@ async function boot() {
   // the adapter: the bridge client where the flag stands; nothing otherwise
   const adapter = SECRET ? DEV.create({ provider: DEV.DEFAULT_PROVIDER, secret: SECRET, record: !!GATE }) : null;
   PORT.boot(adapter);
-  PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived, onDrop: dropped, stands: () => TRAIL.all().flatMap((e) => [e.addr, ...(GO.scenePair(e) || [])]), onOpen: () => { void launch(); } });
+  PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived, onDrop: dropped, stands: () => TRAIL.all().flatMap((e) => [e.addr, ...(GO.scenePair(e) || [])]), readings: TRAIL.readings, onCounted: TRAIL.countedAt, onOpen: () => { void launch(); } });
   PORT.on('moment', (d) => FACES.moment(/** @type {import('../bridge/shapes').MomentEvent} */ (d)));
   const heldSeen = /** @type {unknown[]} */ ([]);
   PORT.on('held', (d) => { heldSeen.push(d); console.log('held event (not acted on — the editor\'s lane\'s)', d); });

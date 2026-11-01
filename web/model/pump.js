@@ -24,7 +24,9 @@
 // opened; and the readers the app hands in at `start` — the version each box
 // shows (N-GO's `shownIn`), who is told of a member's arrival (N-GO's
 // `arrived`) and of each drop (SC's `dropped`), the places the view's state
-// names (the trail's), and who is told of a board found open.
+// names (the trail's), the texts the trail's entries the reader has left read
+// and who is told of each chain a refresh counts (N-TRAIL's `readings`,
+// `countedAt`), and who is told of a board found open.
 // The view's needs (`pump`; FP-11: the plane's pure camera arithmetic beside
 // the model): at mid scale and nearer, for the documents in view that stand
 // whole — a continuation drawn as one mark asks nothing for its members —
@@ -125,23 +127,27 @@
 // are told (`onDrop`), so a reading scene's pane showing one reads it again. A
 // row naming no document and no link marks the board, and once the run is in
 // — no row for RUN_QUIET_MS, at the latest RUN_MAX_MS after its first bare
-// row — one refresh runs (`refresh`): each edition held at its bare address
-// has its chain counted and, where it advanced past the member its text is
-// (`memberShown`), takes that member's arrival; what the view shows is read
-// again (`readFresh`) and set in one step (M-REC's `setAgain`), or, where the
-// board left a part of its reads unanswered, read again as a row naming it is
-// until its reads set it whole (`readAgain`); the rest dropped (M-REC's
-// `takeRefresh`); every reader is told. An `index` state is
-// taken where it is the face the page reads, a signed-in page's named by its
-// own session (`ofFace`); one naming another session while the call of an
-// acquire for a lost session is out is kept (`faces`), the one naming the
-// session that call opens taken as the page goes on under it as the same
-// principal (`takeFace`). A session's end (`takeEnd`) — `session-died`, a
-// read's `session_died`, or the page's own `close(session)`, its sign-out —
-// is taken where it names the page's own session: the shell's own restart is
-// no death — the page goes on under the session the reason names, or, where
-// it re-opened none, the session is lost — and every other end is M-REC's
-// death, which changes the page's class (`classChanged`).
+// row — one refresh runs (`refresh`): each edition held at its bare address,
+// and each one a trail entry the reader has left read there at a known
+// position, has its chain counted once, every chain told to the trail with
+// the member a text read at each position was (`mintedBy`), so each entry
+// re-takes its own, then each held edition whose chain advanced past the
+// member its text is (`memberShown`) taking that member's arrival; what the
+// view shows is read again (`readFresh`) and set in one step (M-REC's
+// `setAgain`), or, where the board left a part of its reads unanswered, read
+// again as a row naming it is until its reads set it whole (`readAgain`); the
+// rest dropped (M-REC's `takeRefresh`); every reader is told. An `index`
+// state is taken where it is the face the page reads, a signed-in page's
+// named by its own session (`ofFace`); one naming another session while the
+// call of an acquire for a lost session is out is kept (`faces`), the one
+// naming the session that call opens taken as the page goes on under it as
+// the same principal (`takeFace`). A session's end (`takeEnd`) —
+// `session-died`, a read's `session_died`, or the page's own
+// `close(session)`, its sign-out — is taken where it names the page's own
+// session: the shell's own restart is no death — the page goes on under the
+// session the reason names, or, where it re-opened none, the session is lost
+// — and every other end is M-REC's death, which changes the page's class
+// (`classChanged`).
 // The acquire (FP-28): the page's session is opened by one routine
 // (`acquireSession`), at boot and for a session lost — one attempt per lost
 // session, a loss told while it is out joining it, made once the board
@@ -317,6 +323,10 @@ let onDrop = () => {};
 let stands = () => [];
 /** @type {() => void} told once a board the list read again found is open (`retryBoards`): the app's launch there (handed in at `start`) */
 let onOpen = () => {};
+/** @type {() => Array<{addr: string, at: number}>} what the trail's entries the reader has left read, each by its document and the position its text was read at (N-TRAIL's `readings`, handed in at `start`): a refresh counts the chain of each edition among them */
+let readings = () => [];
+/** @type {(trunk: string, memberAt: (at: number) => string | null) => void} told of each chain a refresh counts, with the member a text read at a position was where a newer member follows it (`mintedBy`; N-TRAIL's `countedAt`, handed in at `start`) */
+let onCounted = () => {};
 /** @type {{session: boolean}} how the page opens its board (`openBoard`): whether it asks a session — the gate's guest asks none — as the boot opened it, which the list read again keeps */
 let opening = { session: true };
 /** @type {Promise<boolean> | null} the list read again, out (`retryBoards`): a second press joins it */
@@ -450,7 +460,7 @@ let subscribed = false;
  * ends every refresh and read again a start before it left out (`classes`),
  * what they held as it stood with them (`unkeepAll`), lets go of the rows
  * held and the faces kept, and forgets the positions the last catch-up read.
- * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string, at: number | null) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], onOpen?: () => void}} opts `shown` the version each box shows, which the view reads; `onPublish` told of each trunk member `D.k+1` a `publish` row names, with the row's position, before the row drops what the page held of `D`, and of each a refresh finds past the member a text is, with none; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `onOpen` told once a board the list read again found is open (`retryBoards`)
+ * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string, at: number | null) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], readings?: () => Array<{addr: string, at: number}>, onCounted?: (trunk: string, memberAt: (at: number) => string | null) => void, onOpen?: () => void}} opts `shown` the version each box shows, which the view reads; `onPublish` told of each trunk member `D.k+1` a `publish` row names, with the row's position, before the row drops what the page held of `D`, and of each a refresh finds past the member a text is, with none; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `readings` what the trail's entries the reader has left read, each by its document and the position its text was read at, and `onCounted` told of each chain a refresh counts for them or for a text it holds, before any arrival it finds (`refresh`); `onOpen` told once a board the list read again found is open (`retryBoards`)
  */
 export function start(opts) {
   dirty = opts.onDirty;
@@ -458,6 +468,8 @@ export function start(opts) {
   onPublish = opts.onPublish || (() => {});
   onDrop = opts.onDrop || (() => {});
   stands = opts.stands || (() => []);
+  readings = opts.readings || (() => []);
+  onCounted = opts.onCounted || (() => {});
   onOpen = opts.onOpen || (() => {});
   standing = new Set();
   classes++; again.clear(); claimsOut.clear(); unkeepAll();
@@ -1990,10 +2002,15 @@ export async function readClaims(origin) {
  * tests. The mark taken (M-REC's
  * `unmarkBare`) — nothing where none stood or a refresh is out — then, a
  * change of the page's class ending it wherever it stands: (1) the chain of
- * every edition the page holds the text of at its bare address counted
- * (`countChain`), at most MAX_INFLIGHT at once, and, once every one is, each
- * whose chain advanced past the member its text is (`memberShown`) taking the
- * arrival of that member's successor (`arrive`), its box pinned on the member,
+ * every edition the page holds the text of at its bare address, and of every
+ * one a trail entry the reader has left read there at a known position
+ * (`readings`), counted once (`countChain`), down to the earliest position
+ * those texts were read at, at most MAX_INFLIGHT at once; once every one is,
+ * each chain told to `onCounted` with the member a text read at a position
+ * was, where a newer member follows it (`mintedBy`), so each entry re-takes
+ * the member its own text was before any arrival is taken; then each edition
+ * held whose chain advanced past the member its text is (`memberShown`) taking
+ * the arrival of that member's successor (`arrive`), its box pinned on the member,
  * which keeps the text — the box holding the view's centre last, so the
  * passage being read there is held across its move (T-LAYER's `holdAcross`) —
  * one whose member cannot be told, or whose box the app did not pin, left as
@@ -2033,15 +2050,31 @@ export async function refresh() {
     const handed = new Set();
     /** @type {Array<{doc: string, s: number}>} the editions whose chain advanced past the member their text is */
     const advanced = [];
-    await bounded(REC.docs().filter(atBare), async (d) => {
-      const c = await countChain(d, true);
-      if ('met' in c) { if (unanswered(c.met)) uncounted = true; left.add(d.addr); return; }
-      chains.set(d.addr, { n: c.n, ended: true, met: null });
+    /** @type {Array<{trunk: string, c: Counted}>} each chain counted, by its trunk */
+    const counted = [];
+    /** the editions the page holds the text of at their bare address */
+    const held = new Set(REC.docs().filter(atBare).map((d) => d.addr));
+    /** @type {Map<string, number>} the earliest position a trail entry the reader has left read each edition's text at, at its bare address */
+    const earliest = new Map();
+    for (const r of readings()) {
+      const d = REC.has(r.addr) ? REC.doc(r.addr) : null;
+      if (d && edition(d)) earliest.set(r.addr, Math.min(r.at, earliest.get(r.addr) ?? Infinity));
+    }
+    await bounded([...new Set([...held, ...earliest.keys()])], async (addr) => {
+      const d = REC.doc(addr), holds = held.has(addr);
+      const below = Math.min(holds && d.readAt != null ? d.readAt : Infinity, earliest.get(addr) ?? Infinity);
+      const c = await countChain(d, Number.isFinite(below) ? below : null);
+      if ('met' in c) { if (unanswered(c.met)) uncounted = true; if (holds) left.add(addr); return; }
+      counted.push({ trunk: addr, c });
+      chains.set(addr, { n: c.n, ended: true, met: null });
+      if (!holds) return;
       const s = memberShown(d, c);
-      if (s == null) left.add(d.addr);
-      else if (s >= 1 && c.n > s) advanced.push({ doc: d.addr, s });
+      if (s == null) left.add(addr);
+      else if (s >= 1 && c.n > s) advanced.push({ doc: addr, s });
     });
     if (out()) return;
+    // every chain told before any arrival: each entry re-takes the member its own text was, never the one a text the page holds is
+    for (const { trunk, c } of counted) onCounted(trunk, (at) => { const s = mintedBy(c, at); return s != null && s >= 1 && s < c.n ? versionAddress(trunk, s) : null; });
     // the box holding the view's centre arrives last: the passage being read is held across its move (T-LAYER's `holdAcross`), which a later arrival would end
     const centre = (/** @type {string} */ doc) => { const b = docBox(doc); return b.x <= cam.x && cam.x <= b.x + b.w && b.y <= cam.y && cam.y <= b.y + b.h ? 1 : 0; };
     for (const { doc, s } of advanced.sort((a, b) => centre(a.doc) - centre(b.doc))) {
@@ -2096,23 +2129,28 @@ async function bounded(items, fn, limit = MAX_INFLIGHT) {
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => { while (next < items.length) await fn(items[next++]); }));
 }
 
-/** is a record an edition read at its bare address: a trunk, published, holding text, its box showing its plain address? */
-const atBare = (/** @type {Doc} */ d) => d.from >= 0 && !d.system && plain(d.addr) === d.addr && shown(d.addr) === d.addr && (d.meta ? d.meta.published : d.kind === 'edition');
+/** is a record an edition at its box's own address: a trunk, not the system account's, published — one whose chain a refresh counts where a text of it was read at its bare address (`atBare`, `readings`) */
+const edition = (/** @type {Doc} */ d) => !d.system && plain(d.addr) === d.addr && (d.meta ? d.meta.published : d.kind === 'edition');
+
+/** is a record an edition read at its bare address: an edition (`edition`) holding text, its box showing its plain address? */
+const atBare = (/** @type {Doc} */ d) => d.from >= 0 && shown(d.addr) === d.addr && edition(d);
+
+/** @typedef {{n: number, at: Map<number, number | null>}} Counted a chain counted to its end (`countChain`): its members `D.1 … D.n`, and the mint position of each member asked (M-FRAMES's `Age.at`), null where the board gave none */
 
 /**
  * A chain counted for a refresh: each member's metadata asked
  * in turn to the end the board answers — `doc_not_registered` past the last —
- * from the end the record holds, read again, else the first; then, where
- * `down` and the first member asked was minted after the text the record holds
- * was read, the members below it, down to one minted before it; each member's
+ * from the end the record holds, read again, else the first; then, where the
+ * first member asked was minted after `below`, the members below it, down to
+ * one minted at or before it; each member's
  * mint position kept for the count (M-FRAMES's `Age.at`), and its age in the
  * model (M-REC's `takeMemberAge`). The refusal it stopped at
  * where a read met another, the board not answering among them.
  * @param {Doc} d
- * @param {boolean} down whether the member the record's text is is wanted (`memberShown`)
- * @returns {Promise<{n: number, at: Map<number, number | null>} | {met: Refusal}>}
+ * @param {number | null} below the earliest position a text whose member is wanted was read at (`memberShown`, `mintedBy`); null where none is
+ * @returns {Promise<Counted | {met: Refusal}>}
  */
-async function countChain(d, down) {
+async function countChain(d, below) {
   /** @type {Map<number, number | null>} */
   const at = new Map();
   /** member `k` asked: 'member' where the board answers it, 'end' past the chain's end, else the refusal met */
@@ -2135,7 +2173,7 @@ async function countChain(d, down) {
     if (r !== 'member') return { met: r };
     n = k;
   }
-  for (let k = from - 1; down && k >= 1 && d.readAt != null && (at.get(k + 1) ?? -Infinity) > d.readAt; k--) {
+  for (let k = from - 1; below != null && k >= 1 && (at.get(k + 1) ?? -Infinity) > below; k--) {
     const r = await ask(k);
     if (r === 'end') break;
     if (r !== 'member') return { met: r };
@@ -2144,20 +2182,32 @@ async function countChain(d, down) {
 }
 
 /**
- * The member a bare address's text is (wire.md §Arrangement): the newest the
- * board says was minted at or before the
- * position the text was read at (`Doc.readAt`) — 0 where every member was
- * minted after it; where the board gave a member no mint position, or the
- * text no position, the end of the chain the record held where the board
- * ended it there; null where neither names one.
+ * The member a text read at a position was (wire.md §Arrangement), among the
+ * members a count asked: the newest the board says was minted at or before
+ * that position — 0 where every one asked was minted after it; null where the
+ * board gave one of them no mint position, or the count asked none.
+ * @param {Counted} c
+ * @param {number} at
+ * @returns {number | null}
+ */
+function mintedBy(c, at) {
+  const ats = [...c.at];
+  if (!ats.length || !ats.every(([, a]) => a != null)) return null;
+  return ats.reduce((s, [k, a]) => (a != null && a <= at && k > s ? k : s), 0);
+}
+
+/**
+ * The member a bare address's text is: the one a text read at the position
+ * it was read at (`Doc.readAt`) was (`mintedBy`); where the board gave a
+ * member no mint position, or the text no position, the end of the chain the
+ * record held where the board ended it there; null where neither names one.
  * @param {Doc} d
- * @param {{n: number, at: Map<number, number | null>}} c
+ * @param {Counted} c
  * @returns {number | null}
  */
 function memberShown(d, c) {
-  const readAt = d.readAt, ats = [...c.at];
-  if (readAt != null && ats.length && ats.every(([, a]) => a != null)) return ats.reduce((s, [k, a]) => (a != null && a <= readAt && k > s ? k : s), 0);
-  return d.ended && d.members != null ? d.members : null;
+  const s = d.readAt == null ? null : mintedBy(c, d.readAt);
+  return s != null ? s : d.ended && d.members != null ? d.members : null;
 }
 
 /**
@@ -2267,7 +2317,7 @@ async function readFresh(addr, chains, facts) {
   const chain = d.members == null ? null : chains.get(addr) ?? null;
   if (chain) f.members = { n: chain.n, ended: true };
   else if (d.members != null) {
-    const c = await countChain(d, false);
+    const c = await countChain(d, null);
     if (!('met' in c)) f.members = { n: c.n, ended: true };
     else if (unanswered(c.met)) unheardBy(c.met);
   }

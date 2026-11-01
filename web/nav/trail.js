@@ -10,8 +10,12 @@
 // left, a newer version's arrival at a trunk the entry names at its plain
 // address re-taking the member that text was — its place, the document its
 // view read and the one its walk stood in — save where its view read that
-// text after the member was published (`arrivedAt`, `readBefore`), so a
-// return restores the version read there (FP-22); beside the view, by value,
+// text after the member was published (`arrivedAt`, `readBefore`) — and a
+// chain counted re-taking the same, on every entry the reader has left whose
+// view read the trunk at its plain address at a known position, where a
+// newer member follows the one that text was (`countedAt`; `readings` names
+// what those entries read), so a return restores the version read there
+// (FP-22); beside the view, by value,
 // what that view reads — the line at its visible centre and the view around
 // it, by their positions and their bytes' identity, where the line stood in
 // its fold, and the position its text was read at (T-LAYER's
@@ -165,7 +169,7 @@
 
 /**
  * @typedef {Object} Entry
- * @property {string} addr the place teleported to — the place a jump named, whatever its read brought; at a document, the version its box showed as the entry was last departed (`retakePlace`), or the member that text was where a newer version arrived since (`arrivedAt`); at a reading scene's, the document opened beside the reader's
+ * @property {string} addr the place teleported to — the place a jump named, whatever its read brought; at a document, the version its box showed as the entry was last departed (`retakePlace`), or the member that text was where a newer version arrived since (`arrivedAt`, `countedAt`); at a reading scene's, the document opened beside the reader's
  * @property {number | null} pos the position landed on, where one was
  * @property {number | null} width the positions of the run landed on from `pos`, where the landing named a span: the first run in the text of a follow's projected far end, or a carried passage's counterpart — one of the runs its landing outlined
  * @property {View} view the view at the entry — the landing's, re-taken at departure; where the camera went, where its read brought no place
@@ -250,10 +254,46 @@ export const readBefore = (readAt, at) => readAt == null || at == null || readAt
 export function arrivedAt(trunk, member, at) {
   entries.forEach((e, i) => {
     if (i === cursor || e.scene || (e.reading && e.reading.addr === trunk && !readBefore(e.reading.at, at))) return;
-    if (e.addr === trunk && !claims.has(e)) e.addr = member;
-    if (e.reading && e.reading.addr === trunk) e.reading = { ...e.reading, addr: member };
-    if (e.stood && e.stood.addr === trunk) e.stood = { ...e.stood, addr: member };
+    retakeMember(e, trunk, member);
   });
+}
+
+/**
+ * What every entry the reader has left read, save a reading scene's: the
+ * document its view read and the position that text was read at, where its
+ * view read one at a known position — what a counted chain re-takes the
+ * member of (`countedAt`; M-PUMP's refresh counts the chain of each edition
+ * among them).
+ * @returns {Array<{addr: string, at: number}>}
+ */
+export function readings() {
+  return entries.flatMap((e, i) => (i !== cursor && !e.scene && e.reading && e.reading.at != null ? [{ addr: e.reading.addr, at: e.reading.at }] : []));
+}
+
+/**
+ * A trunk's chain counted (see the head; M-PUMP's refresh; FP-22, FP-23):
+ * every entry the reader has left whose view read the trunk at its plain
+ * address at a known position re-takes the member that text was, where a
+ * newer member follows it — its place, save a claim's while its read is out,
+ * the document its view read and the one its walk stood in, as an arrival
+ * re-takes them (`arrivedAt`). The cursor's entry is left to its departure,
+ * and a reading scene's entry to its panes.
+ * @param {string} trunk the trunk's plain address
+ * @param {(at: number) => string | null} memberAt the member a text read at a position was, where a newer member follows it; null where that member is the newest, or the chain cannot tell
+ */
+export function countedAt(trunk, memberAt) {
+  entries.forEach((e, i) => {
+    if (i === cursor || e.scene || !e.reading || e.reading.addr !== trunk || e.reading.at == null) return;
+    const member = memberAt(e.reading.at);
+    if (member) retakeMember(e, trunk, member);
+  });
+}
+
+/** an entry re-takes a member of a trunk it names at the trunk's plain address: its place, save a claim's while its read is out, the document its view read and the one its walk stood in */
+function retakeMember(/** @type {Entry} */ e, /** @type {string} */ trunk, /** @type {string} */ member) {
+  if (e.addr === trunk && !claims.has(e)) e.addr = member;
+  if (e.reading && e.reading.addr === trunk) e.reading = { ...e.reading, addr: member };
+  if (e.stood && e.stood.addr === trunk) e.stood = { ...e.stood, addr: member };
 }
 
 /**
