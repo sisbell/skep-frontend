@@ -21,7 +21,9 @@
 // board opened in the boot's order and read again at "try again"; a publish
 // row's member handed to the app at the row's position before anything is
 // dropped, and a refresh's at none; the one
-// refresh a run of bare rows earns; a row naming a document the view
+// refresh a run of bare rows earns, a shown document whose reads there the
+// board answers in part read again as a row naming it is, and a change of
+// class ending its reads where they stand; a row naming a document the view
 // shows, which keeps it as held until its reads again set it in one step,
 // rows meanwhile queueing one more read; and the edition claims a row
 // changes — read from its link and from the edition-class links homed in the
@@ -2319,6 +2321,25 @@ test('an edition whose member the page cannot tell — the board giving no mint 
   assert.deepEqual(fake.unanswered, []);
 });
 
+test('an edition whose chain the refresh cannot count, the board not answering, is left as it stands — nothing of it read again — and marks the board again, the refresh made once UNREACHED_MS has passed counting its chain and reading it again (issue #371)', async (t) => {
+  const s = { ...script, [opKeyOf(F.docMetadata(D + '.2'))]: NOT_REGISTERED };
+  const first = inTurn(s, F.docMetadata(D + '.1'), UNREACHABLE, mintedAt(3));
+  const fake = readingD(s);
+  await settle();
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const turn = () => new Promise((r) => setImmediate(r));
+  const texts = () => fake.asked.filter((k) => k === opKeyOf(F.retrieveV(D, 1, 30))).length;
+  const from = fake.asked.length, runs = REC.doc(D).runs, read = texts();
+  fake.fire('feed', naming(20, null));
+  await PUMP.refresh();
+  for (let i = 0; i < 10; i++) { PUMP.pump(); await turn(); }
+  assert.deepEqual([first.asks(), REC.doc(D).runs === runs, fake.asked.slice(from), REC.bare(), PUMP.settled()], [1, true, [opKeyOf(F.docMetadata(D + '.1'))], true, false], 'its chain not counted: its text as it stood, nothing else read, the board marked again and the next refresh armed');
+  t.mock.timers.tick(PUMP.UNREACHED_MS);
+  for (let i = 0; i < 40 && !PUMP.settled(); i++) await turn();
+  assert.deepEqual([first.asks(), texts() - read, REC.doc(D).runs !== runs, REC.bare(), PUMP.settled()], [2, 1, true, false, true], 'past UNREACHED_MS: its chain counted and its text read again and set, the mark taken');
+  assert.deepEqual(fake.unanswered, []);
+});
+
 test('a change of the page\'s class while a refresh is out ends it: nothing it counted under the class it left arrives, though the view has read the text again at the new class meanwhile, nothing is set again, and the mark goes with the class (issue #212)', async () => {
   const s = { ...script, [opKeyOf(F.docMetadata(D + '.1'))]: mintedAt(3), [opKeyOf(F.docMetadata(D + '.2'))]: mintedAt(7), [opKeyOf(F.docMetadata(D + '.3'))]: NOT_REGISTERED };
   inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5));
@@ -2534,7 +2555,7 @@ test('a shown document a read again sets with no wait tells its readers nothing 
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a document a refresh reads again stands kept past KEPT_MS while that read is out, and, where the board left a part of it unheard, until the next refresh\'s read of it answers (issue #345)', async () => {
+test('a document a refresh reads again stands kept past KEPT_MS while that read is out, and, where the board left a part of it unheard, until its read again sets it (issue #345)', async () => {
   const s = { ...script, [opKeyOf(F.docMetadata(D + '.1'))]: mintedAt(3), [opKeyOf(F.docMetadata(D + '.2'))]: NOT_REGISTERED };
   inTurn(s, F.findLinksV(D, 1, 30), script[opKeyOf(F.findLinksV(D, 1, 30))], UNREACHABLE, script[opKeyOf(F.findLinksV(D, 1, 30))]);
   const fake = readingD(s);
@@ -2543,10 +2564,38 @@ test('a document a refresh reads again stands kept past KEPT_MS while that read 
   await PUMP.refresh();
   await settle();
   await pastTheSecond();
-  assert.deepEqual(PUMP.kept(D), { met: UNREACHABLE.refused }, 'its links unheard: kept past the refresh that set the rest');
+  assert.deepEqual(PUMP.kept(D), { met: UNREACHABLE.refused }, 'its links unheard: kept past the refresh');
+  fake.fire('daemon', { board: 'b-1', state: 'running' });
+  await settle();
+  assert.equal(PUMP.kept(D), null, 'its read again made at running answered: kept no more');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a shown document a refresh reads again, one part of which the board did not answer, sets nothing — every part as held, the view asking nothing of it, the board not marked again — and is read again as a row naming it is: kept, saying the refusal its read met, until the read made at the daemon\'s running sets it in one step, its readers then told again (issue #371)', async () => {
+  const s = { ...script, ...ONE_MEMBER };
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), UNREACHABLE, deliveredAt(AFTER, 9));
+  // its links read again answering a second, which is set only once every read has answered
+  const [L1, L2] = [D + '.0.2.1', D + '.0.2.2'], touching = (/** @type {string[]} */ addrs) => ({ result: { as_of: 7, resp: 'addrs', addrs } });
+  inTurn(s, F.findLinksV(D, 1, 30), touching([L1]), touching([L1, L2]));
+  s[opKeyOf(F.readLink(L2))] = citation(14, [{ start: '1.0.1.0.127', width: '0.0.0.0.1' }]);
+  /** @type {PUMP.Dropped[]} */
+  const told = [];
+  const fake = readingD(s, (x) => { told.push(x); });
+  await settle();
+  const meta = REC.doc(D).meta;
+  fake.fire('feed', naming(20, null));
   await PUMP.refresh();
   await settle();
-  assert.equal(PUMP.kept(D), null, 'the next refresh\'s read answered: kept no more');
+  assert.deepEqual([timesAsked(fake, F.retrieveV(D, 1, 30)), REC.textBetween(D, 1, 31), [...REC.doc(D).links], REC.link(L2), REC.doc(D).meta === meta, REC.bare()], [2, BEFORE, [L1], undefined, true, false], 'its text not answered: nothing set — its links and its metadata as held, though the refresh read them again — and the board not marked again');
+  for (let i = 0; i < 5; i++) { PUMP.pump(); await flush(); }
+  assert.equal(timesAsked(fake, F.retrieveV(D, 1, 30)), 2, 'nothing asked of it while the board is out');
+  await pastTheSecond();
+  assert.deepEqual(PUMP.kept(D), { met: UNREACHABLE.refused }, 'kept, the refusal its read met named');
+  const before = told.length;
+  fake.fire('daemon', { board: 'b-1', state: 'running' });
+  await settle();
+  assert.deepEqual([timesAsked(fake, F.retrieveV(D, 1, 30)), REC.textBetween(D, 1, 31), REC.doc(D).readAt, [...REC.doc(D).links], REC.link(L2)?.addr, PUMP.kept(D)], [3, AFTER, 9, [L1, L2], L2, null], 'made again at running and set in one step: kept no more');
+  assert.deepEqual(told.slice(before).map((x) => [x.row, x.addrs]), [[null, [D]]], 'its readers told again once it is set');
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -2710,6 +2759,30 @@ test('a refresh after a change of class keeps each box the change left: a cover 
   fake.fire('feed', naming(21, null));
   await PUMP.refresh();
   assert.deepEqual([extentAsks(fake, OUT), REC.covered(OUT), REC.owed(OUT)], [1, true, false], 'the next refresh, the view at it: read in that refresh and set in one step, covered');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a change of the page\'s class while a refresh reads what the view shows ends its reads where they stand: a document still waiting its turn is never read, and none is left kept with no read again of it out (issue #371)', async () => {
+  const drafts = [5, 6, 7, 8, 9, 10, 11].map((k) => '1.0.1.0.' + k);
+  const fake = FAKE.create({ ...NONE_LISTED, ...Object.fromEntries(drafts.map((dr) => [opKeyOf(F.retrieveDocVSpanSet(dr)), WITHHELD_READ])) });
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.takeIndex(draftsListed(drafts));
+  for (const dr of drafts) readDraft(dr);
+  atHome('1.0.1');
+  const order = PUMP.visibleDocs().map((d) => d.addr), [last] = order.slice(6);
+  assert.deepEqual([...order].sort(), [...drafts].sort(), 'the seven drafts in view');
+  // the six the refresh reads at once held, the seventh waiting its turn
+  const releases = order.slice(0, 6).map((dr) => fake.hold('op', { frame: F.retrieveDocVSpanSet(dr) }));
+  fake.fire('feed', naming(20, null));
+  const refreshed = PUMP.refresh();
+  await until(() => order.slice(0, 6).every((dr) => extentAsks(fake, dr) === 1), 'the first six read');
+  fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
+  for (const release of releases) release();
+  await refreshed;
+  await pastTheSecond();
+  assert.deepEqual([extentAsks(fake, last), PUMP.keptAll().docs], [0, []], 'the seventh never read, and no document kept');
   assert.deepEqual(fake.unanswered, []);
 });
 
