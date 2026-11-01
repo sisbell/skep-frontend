@@ -51,7 +51,11 @@
 // acts made while a pane reads waiting in order, the page's death keeping a pane on a text
 // read as published — a draft's run in it withheld from that moment — and taking every other
 // down to its cover, reading each again as a guest, and a refresh pinning an edition whose
-// chain it counted past the member shown; and a scene opened on a document a
+// chain it counted past the member shown; a setting whose reads the board did not answer —
+// the text, the chain, the owner's byline facts, the `compare` — setting nothing, the pane
+// kept on its text and saying why until the read made at the daemon's running, or past the
+// pause, sets it, and an opening on a text the board did not answer opening nothing; and a
+// scene opened on a document a
 // far end names whole — the far pane that version or the latest, named as
 // the link's whole end and current, its `compare` answering after it shows
 // and adding bands alone, moving no pane and no focus (FP-20, FP-30), and so
@@ -918,6 +922,8 @@ const DR_V2_IMAGE = [
 ];
 const VE_TEXT = 'A version.\n\nIts words.';
 const WITHHELD = { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } };
+/** the board not answering a read: the shell's dial, or the provider's fetch, failed */
+const UNREACHABLE = { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } };
 Object.assign(script, reads(ED, ED_TEXT, { members: 2 }), reads(DR, DR_V1, { published: false }), compared(ED, ED_TEXT, DR, DR_V1));
 
 /** a feed row of the board's, as the shell hands it: a `drafts` row names the session it is sent to, the page's */
@@ -1136,7 +1142,6 @@ test('a row naming a pane\'s document the plane shows too — kept there while t
 
 test('a pane set while the plane\'s read again of its document waits on the board is set again from the read made at the daemon\'s running, its corner saying until then that it is as last read and why — never left on the text the row left standing (issue #345)', () => onPage(async (p) => {
   const DQ = '1.0.1.0.19', DQ_V1 = 'A waiting note.\n\nIts first words.', DQ_V2 = 'A waiting note.\n\nWords set later.\n\nIts first words.';
-  const UNREACHABLE = { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } };
   Object.assign(script, reads(DQ, DQ_V1, { published: false }), compared(VE1, VE_TEXT, DQ, DQ_V1));
   await SCENE.open(VE1, DQ);
   // the plane under the scene: the account's documents in view, the note among them
@@ -1167,6 +1172,161 @@ test('a pane set while the plane\'s read again of its document waits on the boar
     assert.deepEqual(LAYER.madeOf(shownIn(p.paneB, 'b')), { addr: DQ, blocks: d.blocks, runs: d.runs, image: d.image }, 'pane B set again from the text that read set');
     SCENE.markKept();
     assert.ok(!p.cornerB.innerHTML.includes('class="kept"') && p.said.includes(t('L.kept.lifted', { what: DQ })), 'the clause lifted with the setting, and said so');
+  } finally { CAM._reset(); }
+}));
+
+// ---- a setting the board did not answer ------------------------------------------------------------------------------
+
+/** a pane's text as its article was made: its blocks' words, in order */
+const wordsIn = (/** @type {{placed: Array<{el: unknown}>}} */ pane, /** @type {'a' | 'b'} */ side) => (LAYER.madeOf(shownIn(pane, side))?.blocks || []).map((/** @type {{text: string}} */ x) => x.text);
+/** the scene's runs of shared identity, each `[u1, u2, width]` */
+const runsNow = () => (SCENE.pairs()?.pairs || []).map((x) => [x.u1, x.u2, x.width]);
+/** the board's daemon announced running */
+const running = () => fake.fire('daemon', { board: 'b-1', state: 'running' });
+/** the reads a moment set going answered, until `holds` reads true */
+async function until(/** @type {() => boolean} */ holds, /** @type {string} */ what) {
+  for (let i = 0; i < 200 && !holds(); i++) await new Promise((r) => setTimeout(r, 0));
+  assert.ok(holds(), what);
+}
+
+/**
+ * A reading scene on VE1 beside a draft the plane does not show, read as `before`, then a feed row naming the draft, the
+ * board holding `after` — sharing `runs` with VE1, each `[u1, u2, width]` — and not answering the read `silent` names: the
+ * stamp of the text the pane was set with, and the act that has the board answer that read
+ * @param {string} doc
+ * @param {{before: string, after: string, silent: object, position: number, runs?: {before: Array<[number, number, number]>, after: Array<[number, number, number]>}}} o
+ * @returns {Promise<{at: number, answer: () => void}>}
+ */
+async function unheardRow(doc, o) {
+  const runs = o.runs ?? { before: [], after: [] };
+  Object.assign(script, reads(VE1, VE_TEXT), reads(doc, o.before, { published: false }), compared(VE1, VE_TEXT, doc, o.before, runs.before));
+  await SCENE.open(VE1, doc);
+  const at = /** @type {number} */ (REC.doc(doc).textAt);
+  standOnNothing();
+  Object.assign(script, reads(doc, o.after, { published: false }), compared(VE1, VE_TEXT, doc, o.after, runs.after));
+  const key = FAKE.keyOf('op', { frame: o.silent }), answer = script[key];
+  script[key] = UNREACHABLE;
+  fake.fire('feed', row(o.position, 'insert', [doc], 'drafts'));
+  await landed();
+  return { at, answer: () => { script[key] = answer; } };
+}
+
+test('a row naming a draft pane\'s document the plane does not show, whose read the board did not answer, leaves the pane on its text, kept and saying why, until the read made at the daemon\'s running sets it — the clause lifting, said so — and a second running asks it nothing (issue #370)', () => onPage(async (p) => {
+  const DU = '1.0.1.0.23', V1 = 'An unheard note.\n\nIts first words.', V2 = 'An unheard note.\n\nWords set while the board was out.\n\nIts first words.';
+  const unanswered = fake.unanswered.length;
+  try {
+    const u = await unheardRow(DU, { before: V1, after: V2, silent: F.retrieveDocVSpanSet(DU), position: 60 });
+    assert.deepEqual([wordsIn(p.paneB, 'b'), p.paneB.placed.length], [['An unheard note.', 'Its first words.'], 1], 'the board not answering: pane B on its text, set nowhere again');
+    await new Promise((r) => setTimeout(r, PUMP.KEPT_MS + 20));
+    SCENE.markKept();
+    const clause = t('L.kept.failed', { clause: t('L.kept.text', { when: lastRead(u.at) }), reason: t('F.daemon.unreachable') });
+    assert.ok(p.cornerB.innerHTML.includes(`<span class="kept" data-string="L.kept.text">${esc(clause)}</span>`), `pane B's corner: as last read, and why — ${p.cornerB.innerHTML}`);
+    assert.ok(p.said.includes(t('L.kept.said', { what: DU, clause })), 'said as it appears');
+    u.answer();
+    running();
+    await until(() => wordsIn(p.paneB, 'b').includes('Words set while the board was out.'), 'read again at running');
+    await landed();
+    const d = REC.doc(DU);
+    assert.deepEqual(LAYER.madeOf(shownIn(p.paneB, 'b')), { addr: DU, blocks: d.blocks, runs: d.runs, image: d.image }, 'pane B set from the read made at running');
+    SCENE.markKept();
+    assert.ok(!p.cornerB.innerHTML.includes('class="kept"') && p.said.includes(t('L.kept.lifted', { what: DU })), 'the clause lifted with the setting, and said so');
+    const from = fake.asked.length;
+    running();
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual(fake.asked.slice(from).filter((k) => k.includes(DU)), [], 'a second running asks it nothing');
+    assert.deepEqual(fake.unanswered.slice(unanswered), []);
+  } finally { CAM._reset(); }
+}));
+
+test('a pane\'s setting the board did not answer is asked again once UNREACHED_MS has passed where no running comes, and nothing of it before (issue #370)', () => onPage(async (p) => {
+  const DW = '1.0.1.0.25', V1 = 'A patient note.\n\nIts first words.', V2 = 'A patient note.\n\nWords that waited.\n\nIts first words.';
+  try {
+    const u = await unheardRow(DW, { before: V1, after: V2, silent: F.retrieveDocVSpanSet(DW), position: 61 });
+    const from = fake.asked.length;
+    u.answer();
+    await new Promise((r) => setTimeout(r, PUMP.UNREACHED_MS / 2));
+    assert.deepEqual([wordsIn(p.paneB, 'b'), fake.asked.slice(from).filter((k) => k.includes(DW))], [['A patient note.', 'Its first words.'], []], 'inside the pause: nothing asked, pane B on its text');
+    await new Promise((r) => setTimeout(r, PUMP.UNREACHED_MS / 2 + 50));
+    await until(() => wordsIn(p.paneB, 'b').includes('Words that waited.'), 'past the pause: read again, and set');
+    await landed();
+  } finally { CAM._reset(); }
+}));
+
+test('a setting whose `compare` the board did not answer sets nothing — pane B on its text and the runs of shared identity as they were, never the new text with none — until the read made at the daemon\'s running sets the text and its runs together (issue #370)', () => onPage(async (p) => {
+  const DS = '1.0.1.0.26', V1 = 'A shared note.\n\nIts first words.', V2 = 'A shared note.\n\nNew words.\n\nIts first words.';
+  const silent = F.compare([{ doc: VE1, spans: [{ ordinal: 1, positions: VE_TEXT.length }] }], [{ doc: DS, spans: [{ ordinal: 1, positions: V2.length }] }]);
+  try {
+    const u = await unheardRow(DS, { before: V1, after: V2, silent, position: 62, runs: { before: [[1, 1, 10]], after: [[1, 1, 10], [13, 25, 5]] } });
+    assert.deepEqual([wordsIn(p.paneB, 'b'), runsNow()], [['A shared note.', 'Its first words.'], [[1, 1, 10]]], 'the compare not answered: the text and its runs as they were');
+    u.answer();
+    running();
+    await until(() => wordsIn(p.paneB, 'b').includes('New words.'), 'read again at running');
+    await landed();
+    assert.deepEqual(runsNow(), [[1, 1, 10], [13, 25, 5]], 'set with the runs the compare answered');
+  } finally { CAM._reset(); }
+}));
+
+test('a setting whose text the board did not answer, its extent answered, keeps the pane on its text — never a pane with no text — until the read made at the daemon\'s running sets it (issue #370)', () => onPage(async (p) => {
+  const DT = '1.0.1.0.27', V1 = 'A silent text.\n\nIts first words.', V2 = 'A silent text.\n\nWords it held back.\n\nIts first words.';
+  try {
+    const u = await unheardRow(DT, { before: V1, after: V2, silent: F.retrieveV(DT, 1, V2.length), position: 63 });
+    assert.deepEqual([wordsIn(p.paneB, 'b'), p.paneB.placed.length], [['A silent text.', 'Its first words.'], 1], 'its text not answered: pane B on its text, set nowhere again');
+    u.answer();
+    running();
+    await until(() => wordsIn(p.paneB, 'b').includes('Words it held back.'), 'read again at running');
+    await landed();
+    const d = REC.doc(DT);
+    assert.deepEqual(LAYER.madeOf(shownIn(p.paneB, 'b')), { addr: DT, blocks: d.blocks, runs: d.runs, image: d.image }, 'set from the text read then');
+  } finally { CAM._reset(); }
+}));
+
+test('a scene opened on a document whose text the board did not answer opens nothing and answers the board\'s silence — never a pane with no text (issue #370)', () => onPage(async () => {
+  const DX = '1.0.1.0.28', TEXT = 'A note never heard.\n\nIts words.';
+  const unanswered = fake.unanswered.length;
+  Object.assign(script, reads(VE1, VE_TEXT), reads(DX, TEXT, { published: false }), { [FAKE.keyOf('op', { frame: F.retrieveV(DX, 1, TEXT.length) })]: UNREACHABLE });
+  const o = await SCENE.open(VE1, DX);
+  assert.deepEqual([o.shown, o.refused?.kind, SCENE.isOpen()], [false, 'unreachable', false]);
+  assert.deepEqual(fake.unanswered.slice(unanswered), [], 'no compare asked of a text not read');
+}));
+
+test('a setting of an edition at its bare address whose chain\'s probe the board did not answer sets nothing — the pane naming the member its text is, never its bare address — until the read made at the daemon\'s running sets it (issue #370)', () => onPage(async (p) => {
+  const EU = '1.0.1.0.32', EU_TEXT = 'An edition probed.\n\nIts words.', member = FAKE.keyOf('op', { frame: F.docMetadata(EU + '.2') });
+  Object.assign(script, reads(VE1, VE_TEXT), reads(EU, EU_TEXT, { members: 2 }), compared(EU, EU_TEXT, VE1, VE_TEXT));
+  await SCENE.open(EU, VE1);
+  standOnNothing();
+  const pinnedOn = { kind: 'bare', src: EU, names: EU + '.2', shows: EU, k: 2, n: 2, read: null, lacks: null };
+  try {
+    assert.deepEqual(paneState('a'), pinnedOn);
+    const answer = script[member];
+    script[member] = UNREACHABLE;
+    fake.fire('feed', row(64, 'make_link', [EU], 'published'));
+    await landed();
+    assert.deepEqual([paneState('a'), p.paneA.placed.length], [pinnedOn, 1], 'its chain not answered: set nowhere again, naming the member its text is');
+    script[member] = answer;
+    running();
+    await until(() => p.paneA.placed.length === 2, 'read again at running');
+    await landed();
+    assert.deepEqual(paneState('a'), pinnedOn, 'set, its chain read to its end');
+  } finally { CAM._reset(); }
+}));
+
+test('a setting whose owner\'s byline facts the board did not answer sets nothing — never a byline left saying the board is out — until the read made at the daemon\'s running sets it with them (issue #370; FP-34)', () => onPage(async (p) => {
+  // a draft its metadata says another account owns, whose byline's facts are read at that account
+  const DB = '1.0.1.0.33', V1 = 'Another\'s note.\n\nIts first words.', V2 = 'Another\'s note.\n\nWords written since.\n\nIts first words.';
+  const keys = FAKE.keyOf('op', { frame: F.keySet('1.0.4') }), owned = (/** @type {string} */ text) => ({ [FAKE.keyOf('op', { frame: F.docMetadata(DB) })]: { result: { ...metadata(DB, false, text.length).result, owner: '1.0.4' } } });
+  Object.assign(script, reads(VE1, VE_TEXT), reads(DB, V1, { published: false }), owned(V1), compared(VE1, VE_TEXT, DB, V1), { [keys]: UNREACHABLE });
+  await SCENE.open(VE1, DB);
+  standOnNothing();
+  try {
+    Object.assign(script, reads(DB, V2, { published: false }), owned(V2), compared(VE1, VE_TEXT, DB, V2));
+    fake.fire('feed', row(65, 'insert', [DB], 'drafts'));
+    await landed();
+    assert.deepEqual([wordsIn(p.paneB, 'b'), p.paneB.placed.length], [['Another\'s note.', 'Its first words.'], 1], 'its owner\'s facts not answered: pane B on its text, set nowhere again');
+    Object.assign(script, { [keys]: { result: { as_of: 1, resp: 'key_set', enrolled: [], retired: [] } } });
+    running();
+    await until(() => wordsIn(p.paneB, 'b').includes('Words written since.'), 'read again at running');
+    await landed();
+    assert.ok(String(shownIn(p.paneB, 'b').innerHTML).includes('data-slot="label" data-string="F.slot.unsigned"'), 'set with its owner\'s facts read then');
   } finally { CAM._reset(); }
 }));
 

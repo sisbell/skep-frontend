@@ -125,8 +125,8 @@
 // it shows until a setting of it lands (`Pane.kept`), and says so once it has
 // stood a second, or while M-PUMP holds its record so as it reads it again
 // (M-PUMP's `kept`): its corner's last item the clause a box's corner carries,
-// by the one rule (T-LAYER's `keptWords`), the refusal its read met after it
-// where the board did not answer, lifting in the step that sets the pane; a
+// by the one rule (T-LAYER's `keptWords`), the refusal that left its reads
+// unset after it, lifting in the step that sets the pane; a
 // withheld run's kept sign set in its article as the plane's are; and each
 // said once as it appears and once as it lifts (`markKept`; FP-33, FP-36).
 // Every setting is one step (`setPanes`; FP-23): the reads first — the text
@@ -138,8 +138,14 @@
 // articles were made from, the ties measured anew and drawn. While a pane is
 // being set again its own keys, the re-level and the corner's act wait for
 // it (`whenSet`); ending the scene never waits, so a board that does not
-// answer holds no scene open, and a pane whose read the board did not answer
-// keeps what it shows.
+// answer holds no scene open. A setting the board's events asked is made
+// from its reads' answers alone: where its whole read met a refusal that
+// says nothing of the document — its text's among them — the pane keeps what
+// it shows, kept, saying why; where the board did not answer one of its
+// reads, it sets nothing and is asked again once M-PUMP's pause ends
+// (`afterPause`), where the scene stands and no later setting was asked of
+// the pane, the pane's keys, the re-level and the corner's act acting on what
+// it shows meanwhile.
 // It opens through O-HOST's `opening` on its reads, both documents whole and
 // their `compare` (`open`): an act that ends the opening while they read
 // leaves their answer opening nothing, and no `compare` is asked after it;
@@ -476,7 +482,7 @@ import { esc, byteOffsets } from '../util.js';
  * @property {HTMLElement | null} el the article it shows
  * @property {number} serial the settings asked of it: one sets it only where no later one was asked meanwhile
  * @property {number} sets the settings made of it: a `compare` read against its text before one is read again
- * @property {{since: number, met: Refusal | null} | null} kept a setting the board's events asked of it, out (`update`): when it began, by the platform's clock, and the refusal its read met where the board did not answer, the pane standing as it shows; null where none is out
+ * @property {{since: number, met: Refusal | null} | null} kept a setting the board's events asked of it, out (`update`): when it began, by the platform's clock, and the refusal that left its last reads unset — the board not answering among them, whereupon the setting is asked again once M-PUMP's pause ends — the pane standing as it shows; null where none is out
  * @property {string} heard its kept clause as the status region last said it (`markKept`); '' where none
  * @property {string | null} signs what the edition claims held as they are read again said as its article's withheld runs' kept signs were last set (T-LAYER's `keptRunsKey`); null where its article was set since
  */
@@ -1089,32 +1095,47 @@ function placedInto(src, shown) {
  * held, or, at an edition at its bare address, read to its end (`probeChain`):
  * the member its text is, which its acts name. A count the board did not end
  * the chain at is no count: the head is not known there. `d` null where the
- * board did not answer, which leaves a pane as it shows; `whole` false where
- * the board refused the text for what it says of the document — withheld
- * from the reader, or nothing it will say of the address — the record then
- * standing as that refusal (a pane read again at the death, or reopened; a
- * scene opens on two texts read whole alone); `refused` the refusal the
- * whole read met, none where it met none.
+ * whole read met a refusal the record does not hold as the board's word on
+ * the document — the board not answering its extent or its text among them —
+ * which leaves a pane as it shows; `whole` false where the record stands as
+ * the board's word on the document — withheld from the reader, or nothing it
+ * will say of the address, of its extent or of its text — the pane then
+ * standing as that refusal (a pane read again at a change of class, or
+ * reopened; a scene opens on two texts read whole alone); `refused` the
+ * refusal the whole read met, none where it met none; `unheard` the first of
+ * its reads the board did not answer — the whole read, the chain's probe, the
+ * owner's byline facts — none where it answered every one.
  * @param {string} src
  * @param {() => boolean} [stands] the opening the read is made for still stands: a probe asks no more once it ends
- * @returns {Promise<{d: Doc | null, n: number | null, whole: boolean, refused: Refusal | null}>}
+ * @returns {Promise<{d: Doc | null, n: number | null, whole: boolean, refused: Refusal | null, unheard: Refusal | null}>}
  */
 async function readPane(src, stands = () => true) {
   const w = await PUMP.wholeOf(src);
-  if (!w.doc && !REC.doc(src).refused) return { d: null, n: null, whole: false, refused: w.refused };
-  await PUMP.readAccount(REC.ownerAccount(REC.doc(src)));
+  /** @type {Refusal | null} */
+  let unheard = w.refused && PUMP.unanswered(w.refused) ? w.refused : null;
+  if ((!w.doc || w.refused) && !REC.doc(src).refused) return { d: null, n: null, whole: false, refused: w.refused, unheard };
+  const owner = REC.ownerAccount(REC.doc(src));
+  await PUMP.readAccount(owner);
+  const facts = owner ? REC.accountKey(owner) : undefined;
+  if (!unheard && facts && 'cause' in facts && facts.cause === 'unreachable') unheard = PUMP.NOT_ANSWERED;
   const box = REC.has(boxOf(src)) ? REC.doc(boxOf(src)) : null;
   let n = box && box.ended ? box.members : null;
-  if (w.doc && kindAt(src, w.doc) === 'bare' && n == null && stands()) { const p = await PUMP.probeChain(src, stands); n = p && p.ended ? p.n : null; }
-  return { d: REC.doc(src), n, whole: !!w.doc, refused: w.refused };
+  if (w.doc && kindAt(src, w.doc) === 'bare' && n == null && stands()) {
+    const p = await PUMP.probeChain(src, stands);
+    n = p && p.ended ? p.n : null;
+    if (!unheard && p && p.met && PUMP.unanswered(p.met)) unheard = p.met;
+  }
+  const d = REC.doc(src);
+  return { d, n, whole: !d.refused, refused: w.refused, unheard };
 }
 
 /**
- * @typedef {Object} Compared — the two texts' `compare` (`compareBetween`)
+ * @typedef {Object} Compared — the two texts' `compare` (`compareBetween`), with the reads made beside it (`readBetween`)
  * @property {ComparePair[]} pairs the runs of shared identity between them (`merged`); none where it told nothing
  * @property {boolean} told it answered
  * @property {Met | null} refused the refusal it met, by its kind and its name, which the bar says; null where it answered or was not asked
  * @property {Met | null} why where it told nothing, the refusal that kept it from telling — its own, or the one a pane's text was refused for, which asks none; null where it told, or where a pane's text could not be read and no refusal was met
+ * @property {Refusal | null} unheard the first of the reads the board did not answer — the `compare`, a far end's projection (`placeBetween`) — whose silence teaches nothing; null where it answered every one
  */
 
 /** a record's refusal as a met refusal is read (BM-HELD's `whyOf`): `withheld`, or `doc_not_registered` for a document the board says nothing of; null where none was met */
@@ -1123,7 +1144,8 @@ const metOf = (/** @type {Doc} */ d) => (d.refused ? { kind: 'refused', name: d.
 /**
  * The two texts' `compare` whole (see the head): the runs of shared identity;
  * none, and no `compare` asked, where either holds no text, which tells
- * nothing for the refusal its text met; the refusal it met.
+ * nothing for the refusal its text met; the refusal it met, its `unheard`
+ * too where the board did not answer.
  * @param {Pick<Text, 'src' | 'd'>} A
  * @param {Pick<Text, 'src' | 'd'>} B
  * @returns {Promise<Compared>}
@@ -1131,21 +1153,33 @@ const metOf = (/** @type {Doc} */ d) => (d.refused ? { kind: 'refused', name: d.
 async function compareBetween(A, B) {
   const holds = (/** @type {Doc} */ d) => !d.refused && d.extent != null;
   const whole = (/** @type {Pick<Text, 'src' | 'd'>} */ x) => [{ doc: x.src, spans: [{ ordinal: 1, positions: Math.max(1, x.d.extent || 1) }] }];
-  if (!holds(A.d) || !holds(B.d)) return { pairs: [], told: false, refused: null, why: metOf(!holds(A.d) ? A.d : B.d) };
+  if (!holds(A.d) || !holds(B.d)) return { pairs: [], told: false, refused: null, why: metOf(!holds(A.d) ? A.d : B.d), unheard: null };
   const cmp = await PUMP.read(F.compare(whole(A), whole(B)));
-  if ('refused' in cmp) { const r = { kind: cmp.refused.kind, name: cmp.refused.name }; return { pairs: [], told: false, refused: r, why: r }; }
-  return { pairs: merged(F.decodeCompare(cmp.answer)), told: true, refused: null, why: null };
+  if ('refused' in cmp) { const r = { kind: cmp.refused.kind, name: cmp.refused.name }; return { pairs: [], told: false, refused: r, why: r, unheard: PUMP.unanswered(cmp.refused) ? cmp.refused : null }; }
+  return { pairs: merged(F.decodeCompare(cmp.answer)), told: true, refused: null, why: null, unheard: null };
 }
 
-/** where each far end crossing between the panes stands, read (`unplaced`, M-PUMP's `projectEnd`) */
-const placeBetween = (/** @type {Text} */ A, /** @type {Text} */ B) => Promise.all(unplaced(A, B).map((p) => PUMP.projectEnd(p.link, p.slot, p.far)));
+/**
+ * Where each far end crossing between the panes stands, read (`unplaced`,
+ * M-PUMP's `projectEnd`): the first of those reads the board did not answer;
+ * null where it answered every one.
+ * @param {Text} A
+ * @param {Text} B
+ * @returns {Promise<Refusal | null>}
+ */
+async function placeBetween(A, B) {
+  const outs = await Promise.all(unplaced(A, B).map((p) => PUMP.projectEnd(p.link, p.slot, p.far)));
+  for (const o of outs) if ('refused' in o && PUMP.unanswered(o.refused)) return o.refused;
+  return null;
+}
 
 /**
  * The reads between the panes, made before they are set (see the head): the
  * two texts' `compare` (`compareBetween`) and where each far end crossing
- * between them stands (`placeBetween`), side by side; the `compare` left out,
- * no runs and no refusal, where the far end names pane B's document whole and
- * the scene opens on these reads (`open`, `reopen`).
+ * between them stands (`placeBetween`), side by side, the first of them the
+ * board did not answer the reads' `unheard`; the `compare` left out, no runs
+ * and no refusal, where the far end names pane B's document whole and the
+ * scene opens on these reads (`open`, `reopen`).
  * @param {Text} A
  * @param {Text} B
  * @param {boolean} [compare] the `compare` is read with them
@@ -1153,9 +1187,9 @@ const placeBetween = (/** @type {Text} */ A, /** @type {Text} */ B) => Promise.a
  */
 async function readBetween(A, B, compare = true) {
   /** @type {Compared} */
-  const none = { pairs: [], told: false, refused: null, why: null };
-  const [cmp] = await Promise.all([compare ? compareBetween(A, B) : Promise.resolve(none), placeBetween(A, B)]);
-  return cmp;
+  const none = { pairs: [], told: false, refused: null, why: null, unheard: null };
+  const [cmp, placed] = await Promise.all([compare ? compareBetween(A, B) : Promise.resolve(none), placeBetween(A, B)]);
+  return { ...cmp, unheard: cmp.unheard || placed };
 }
 
 /**
@@ -2459,8 +2493,15 @@ function whenSet(fn) {
  * where the other pane was set meanwhile, so the bands stand on both texts as
  * they are — and a stop the reader returned to answered by that `compare`
  * (`answer`). A newer member found where a row naming it was not seen pins an
- * edition at its bare address instead (`pin`). Where the board did not
- * answer, the pane keeps what it shows.
+ * edition at its bare address instead (`pin`). A setting the board's events
+ * asked (`Pane.kept`) is made from its reads' answers alone: where its whole
+ * read met a refusal that says nothing of the document, the pane keeps what
+ * it shows, kept, saying why; where the board did not answer one of its reads
+ * — its text, its chain, its owner's byline facts, the `compare`, a far end's
+ * projection — it sets nothing and is asked again once M-PUMP's pause ends
+ * (`afterPause`), where the scene still stands and no later setting was asked
+ * of the pane, holding none of the panes' acts meanwhile. A version the
+ * corner's act could not read whole leaves the pane as it shows.
  * @param {'a' | 'b'} side
  * @param {{src?: string, carry?: {pos: number, width: number} | null, read?: number | null}} [how] `src` the version the corner's act reads — the pane's own record where none is given; `carry` the passage it carries; `read` the version the corner offers after it, the one it left
  * @returns {Promise<void>}
@@ -2472,14 +2513,22 @@ async function update(side, how = {}) {
   const stale = () => scene !== S || P.serial !== serial;
   // the board's events ask it: the pane stands kept as it shows until a setting of it lands, saying so once it has stood a second
   if (!how.src && !P.kept) { P.kept = { since: performance.now(), met: null }; setTimeout(markDirty, PUMP.KEPT_MS); }
+  /** the setting the board's events asked left unset by the refusal its reads met: the pane kept as it shows, saying why, and asked again once M-PUMP's pause ends where the board did not answer */
+  const unset = (/** @type {Refusal | null} */ met) => {
+    if (!P.kept || !met) return;
+    P.kept.met = met;
+    markDirty();
+    if (PUMP.unanswered(met)) void PUMP.afterPause().then(() => { if (!stale()) void update(side); });
+  };
   S.updating++;
   try {
     const src = how.src ?? P.src;
     const r = await readPane(src), d = r.d;
-    // the board not answering leaves the pane as it shows, kept, saying why
-    if (!stale() && !d && P.kept && r.refused) { P.kept.met = r.refused; markDirty(); }
+    if (stale()) return;
+    // a setting the board's events asked is made from its reads' answers alone
+    if (!how.src && (!d || r.unheard)) { unset(r.unheard || r.refused); return; }
     // a version the corner's act could not read whole leaves the pane as it shows
-    if (stale() || !d || (how.src && !r.whole)) return;
+    if (!d || (how.src && !r.whole)) return;
     if (P.kind === 'bare' && !how.src && P.k != null && r.n != null && r.n > P.k) { pin(S, side, P.k, r.n); return; }
     const kind = how.src ? 'pinned' : P.kind === 'pinned' ? 'pinned' : kindAt(src, d);
     const k = kind === 'pinned' ? memberOf(src) : kind === 'bare' ? r.n : null;
@@ -2501,6 +2550,7 @@ async function update(side, how = {}) {
       const between = await readBetween(side === 'a' ? mine : theirs, side === 'a' ? theirs : mine);
       if (stale()) return;
       if (Q.sets !== seen) continue;
+      if (!how.src && between.unheard) { unset(between.unheard); return; }
       const read = how.read !== undefined ? how.read : P.read;
       // set from its reads: kept no more, from the step that sets it
       P.kept = null;

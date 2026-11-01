@@ -6,7 +6,8 @@
 // box shows, the edition claims and the byline's facts read once, a chain's
 // members' ages kept as its probe reads them — and what
 // a read the board did not answer, a drop that overtook a read, a size
-// refusal or a `scan_busy` does to each; the acquire, a session's end and the
+// refusal or a `scan_busy` does to each, and when the pause such a read
+// waits out ends; the acquire, a session's end and the
 // page's own death — what it kept read again and set in one step, every other
 // draft it could read covered at once where the change ends the session and
 // else left waiting, read at once where the view stood on it and else as the
@@ -1007,6 +1008,36 @@ test('a view\'s read held while the board is out is asked again at once where it
   PUMP.pump();
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual([sent, REC.doc(D).extent], [['s-1', 's-1', 'guest'], 30], 'at the death, the read held under the session asked again at once as a guest, and answered');
+});
+
+test('the pause a read the board did not answer waits out settles at the daemon\'s running and at a change of the page\'s class — every pause woken there running its `woken` before anything awaiting one resumes — and past UNREACHED_MS where neither comes, never before', async (t) => {
+  const fake = FAKE.create(script);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  /** @type {string[]} what the pauses did, in order */
+  const order = [];
+  /** a pause begun, its waking and the resumption of what awaits it recorded */
+  const paused = (/** @type {string} */ name) => PUMP.afterPause(() => { order.push(name + ' woken'); }).then(() => { order.push(name + ' resumed'); });
+  const both = Promise.all([paused('first'), paused('second')]);
+  fake.fire('daemon', { board: 'b-1', state: 'running' });
+  await both;
+  assert.deepEqual(order, ['first woken', 'second woken', 'first resumed', 'second resumed'], 'at running: every pause woken, then what awaits each resumed, in the order begun');
+  order.length = 0;
+  const atDeath = paused('death');
+  fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
+  await atDeath;
+  assert.deepEqual(order, ['death woken', 'death resumed'], 'at a change of the page\'s class');
+  order.length = 0;
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const late = paused('late');
+  t.mock.timers.tick(PUMP.UNREACHED_MS - 1);
+  await Promise.resolve();
+  assert.deepEqual(order, [], 'nothing inside the pause');
+  t.mock.timers.tick(1);
+  await late;
+  assert.deepEqual(order, ['late woken', 'late resumed'], 'past UNREACHED_MS, no running having come');
 });
 
 test('the view\'s probe of a chain records no count where the board did not answer a member, and probes again as the daemon is back, recording the chain to its end', async (t) => {

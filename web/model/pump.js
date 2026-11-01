@@ -8,7 +8,8 @@
 // the acquire out (`attempt`), the feed rows held while one is out for a
 // session lost (`rowsHeld`), the `index` states naming another session
 // kept while its call is out (`faces`), and the positions the last catch-up
-// read (`caught`); the index reads out (`indexing`); a record of
+// read (`caught`); the index reads out (`indexing`); the pauses out, each
+// woken as it ends (`waking`); a record of
 // the events taken while each read of the board's state is out (`whileOut`);
 // the places the view stood on at the last change of class (`standing`); the
 // documents the view shows that a feed row named, each read again until it
@@ -66,9 +67,13 @@
 // the end of the session it went out under, is asked again in the form the
 // page takes then, so no answer to a class the page has left, or of a
 // session the shell does not hold, reaches the model. A read the board did
-// not answer (`unreachable`) teaches nothing: a view's read so refused is
-// held (`unreached`), not missing, its refusal recorded once for the outage,
-// and asked again at the daemon's `running` or after UNREACHED_MS. A read a
+// not answer (`unreachable`; `unanswered`, the one test of it) teaches
+// nothing: a view's read so refused is held (`unreached`), not missing, its
+// refusal recorded once for the outage, and asked again at the daemon's
+// `running` or after UNREACHED_MS; a read again so refused waits out the
+// pause (`afterPause`), which ends at the daemon's `running`, past
+// UNREACHED_MS or at a change of class, whichever comes first, and which any
+// reader whose own read the board did not answer may wait out too. A read a
 // drop overtook teaches nothing either: the board's answers and the feed's
 // rows come by two channels nothing orders, so every read watches the drops
 // of the address it is read for (`watchDrops`) — a lookup of the edition
@@ -321,7 +326,7 @@ let classes = 0;
 /**
  * @typedef {Object} Again — a read again out: of a document the view keeps that a feed row named (`readAgain`), or of the edition claims on an origin one windows that a row changed (`claimsAgain`)
  * @property {boolean} more one more read follows the one out: a refresh reached it, or a row changed the claims, while it was out
- * @property {boolean} paused the board did not answer one of the last reads, which set nothing: the next waits for UNREACHED_MS or the daemon's `running`, the view counting nothing missing meanwhile
+ * @property {boolean} paused the board did not answer one of the last reads, which set nothing: the next waits out the pause (`afterPause`), the view counting nothing missing meanwhile
  * @property {Promise<void>} landed settled as the read out lands — setting what it reads, or overtaken — and made anew for the next
  */
 /** @type {Map<string, Again>} the documents the view keeps that a feed row named, each read again until it is set (`readAgain`): while one is, the view asks nothing of it */
@@ -330,8 +335,25 @@ const again = new Map();
 const claimsOut = new Map();
 /** the searches out for the origins whose edition claims a feed row changed (`searchClaims`): the view counts each missing */
 let searching = 0;
-/** @type {Set<() => void>} the reads again waiting on the board, each woken at the daemon's `running` */
+/** @type {Set<() => void>} the pauses out (`afterPause`), each woken at the daemon's `running`, past UNREACHED_MS or at a change of the page's class */
 const waking = new Set();
+
+/**
+ * The pause a read the board did not answer waits out before it is made
+ * again (see the head): settled at the daemon's `running`, once UNREACHED_MS
+ * has passed, or at a change of the page's class, whichever comes first.
+ * `woken` runs as it settles, before anything awaiting any pause woken with
+ * it resumes.
+ * @param {() => void} [woken]
+ * @returns {Promise<void>}
+ */
+export function afterPause(woken = () => {}) {
+  return new Promise((/** @type {(v: void) => void} */ res) => {
+    const wake = () => { clearTimeout(timer); waking.delete(wake); woken(); res(); };
+    const timer = setTimeout(wake, UNREACHED_MS);
+    waking.add(wake);
+  });
+}
 
 /**
  * @typedef {Object} Kept — what stands as held while it is read again (FP-23): a document the view shows that a feed row
@@ -611,11 +633,7 @@ function readAgain(addr) {
         keptMet(keptDocs, addr, r.unheard);
         landed();
         a.paused = true; waited = true;
-        await new Promise((res) => {
-          const wake = () => { clearTimeout(timer); waking.delete(wake); a.paused = false; res(undefined); };
-          const timer = setTimeout(wake, UNREACHED_MS);
-          waking.add(wake);
-        });
+        await afterPause(() => { a.paused = false; });
         if (ended()) return;
         if (!keptNow().includes(addr)) { dropUnshown(addr); return; }
       }
@@ -1197,7 +1215,7 @@ async function readScan(frame, addr) {
 }
 
 /** did the board not answer — the shell's dial, or the dev provider's fetch, failed? Nothing was learned of what was asked */
-const unanswered = (/** @type {Refusal} */ r) => r.kind === 'unreachable';
+export const unanswered = (/** @type {{kind: string}} */ r) => r.kind === 'unreachable';
 
 /** did the board refuse a read for its size — a budget the same question asked over less can meet (M-FRAMES's `SIZE_REFUSALS`)? */
 export const sized = (/** @type {Refusal} */ r) => r.kind === 'refused' && F.SIZE_REFUSALS.includes(r.name);
@@ -2233,7 +2251,7 @@ async function readFresh(addr, chains, facts) {
 }
 
 /** the board not answering, where a read says so by its cause and not by the refusal it met (`factsOf`'s `unreachable`) */
-const NOT_ANSWERED = /** @type {Refusal} */ ({ kind: 'unreachable', name: 'unreachable', text: '' });
+export const NOT_ANSWERED = /** @type {Refusal} */ ({ kind: 'unreachable', name: 'unreachable', text: '' });
 
 /**
  * The edition claims on an origin as a read of them again reads them
@@ -2415,11 +2433,7 @@ function claimsAgain(origin) {
         keptMet(keptClaims, origin, c.unheard);
         landed();
         a.paused = true;
-        await new Promise((res) => {
-          const wake = () => { clearTimeout(timer); waking.delete(wake); a.paused = false; res(undefined); };
-          const timer = setTimeout(wake, UNREACHED_MS);
-          waking.add(wake);
-        });
+        await afterPause(() => { a.paused = false; });
         if (ended()) return;
         if (!originsShown().has(origin)) { unkeep(keptClaims, origin); REC.claimsChanged(origin, false); decidedAnew(new Set([origin])); return; }
       }
