@@ -131,7 +131,12 @@
 // `boardKept`), each corner naming neither the latest version nor the
 // chain's count, written again as the lag begins and ends (`markKept`); a
 // withheld run's kept sign set in its article as the plane's are; and each
-// said once as it appears and once as it lifts (`markKept`; FP-33, FP-36).
+// pane standing kept told to the one line, which speaks for it (`keptPanes`;
+// FP-36): its name as the mirror finds it, its clause past its second, the
+// stamp it stands from and whether it holds the focus — with how the setting
+// the board's events asked set it, changed or unchanged (`paneLift`), none
+// where an act of the reader's set it, nor where a change of the page's
+// class set it from what the change left.
 // Every setting is one step (`setPanes`; FP-23): the reads first — the text
 // whole, the two texts' `compare`, where each far end crossing between them
 // stands (`readPane`, `readBetween`) — then, where the scene still stands
@@ -486,7 +491,7 @@ import { esc, byteOffsets } from '../util.js';
  * @property {number} serial the settings asked of it: one sets it only where no later one was asked meanwhile
  * @property {number} sets the settings made of it: a `compare` read against its text before one is read again
  * @property {{since: number, at: number, met: Refusal | null} | null} kept a setting the board's events asked of it, out (`update`): when it began, by the platform's clock, the page's clock at the row or drop that left the pane behind (M-PUMP's `Dropped.at`), and the refusal that left its last reads unset — the board not answering among them, whereupon the setting is asked again once M-PUMP's pause ends — the pane standing as it shows; null where none is out
- * @property {string} heard its kept clause as the status region last said it (`markKept`); '' where none
+ * @property {{since: number, outcome: import('../model/records.js').Outcome} | null} lift how the last setting the board's events asked set it: whether it changed what the pane shows (M-REC's `shownBy`), and the stamp it stood kept from (`kept.at`); null where none has set it
  * @property {string | null} signs what the edition claims held as they are read again said as its article's withheld runs' kept signs were last set (T-LAYER's `keptRunsKey`); null where its article was set since
  */
 
@@ -1210,7 +1215,7 @@ function paneAt(side, src, r) {
   const names = kind === 'bare' && r.n ? versionAddress(src, r.n) : src;
   return {
     side, doc: src, src, names, shows: kind === 'bare' ? src : names, kind, k, n: kind === 'draft' ? null : r.n, read: null, lacks: null,
-    d: { ...r.d }, view: LAYER.sceneView(r.d), placed: new Map(), place: null, el: null, serial: 0, sets: 0, kept: null, heard: '', signs: null,
+    d: { ...r.d }, view: LAYER.sceneView(r.d), placed: new Map(), place: null, el: null, serial: 0, sets: 0, kept: null, lift: null, signs: null,
   };
 }
 
@@ -1221,46 +1226,87 @@ const cornerItems = (/** @type {Pane} */ P) => LAYER.sceneCorner(P.shows === P.d
 const lags = () => PUMP.boardKept() !== null;
 
 /**
+ * What a pane stands kept by past its second (see the head; FP-23): the
+ * setting the board's events asked of it, out KEPT_MS (`Pane.kept`), at the
+ * page's clock at the row or drop that left the pane behind; else M-PUMP's
+ * hold of the record its text was made from, as it reads it again past a
+ * second (M-PUMP's `kept`); null where neither stands.
+ * @param {Pane} P
+ * @returns {{met: Refusal | null, since: number} | null}
+ */
+function paneHeld(P) {
+  return P.kept && performance.now() - P.kept.since >= PUMP.KEPT_MS ? { met: P.kept.met, since: P.kept.at } : PUMP.kept(P.src);
+}
+
+/**
  * A pane's kept clause (see the head; FP-23): the rule a box's is said by
- * (T-LAYER's `keptWords`), over the record the pane was set from, while the
- * setting the board's events asked of it has been out KEPT_MS (`Pane.kept`),
- * at the page's clock at the row or drop that left the pane behind, or
- * M-PUMP has held that record past a second as it reads it again (M-PUMP's
- * `kept`); none else.
+ * (T-LAYER's `keptWords`), over the record the pane was set from, while it
+ * stands kept past its second (`paneHeld`); none else.
  * @param {Pane} P
  */
-function paneKept(P) {
-  const own = P.kept && performance.now() - P.kept.since >= PUMP.KEPT_MS ? { met: P.kept.met, since: P.kept.at } : null;
-  return LAYER.keptWords(P.d, P.d, own || PUMP.kept(P.src));
-}
+function paneKept(P) { return LAYER.keptWords(P.d, P.d, paneHeld(P)); }
 
 /**
  * Each pane's kept clause marked in place (see the head): its corner written
  * again where the clause it carries changed (`paneKept`), or the board's lag
  * began or ended since it was written (`lags`), the element kept
- * so a focus on it stays, the withheld runs' kept signs in its article set
+ * so a focus on it stays, and the withheld runs' kept signs in its article set
  * where what the edition claims held say changed since they were set, or its
- * article was set since (T-LAYER's `keptRunsKey`, `markKeptSigns`), and each
- * clause said politely once as it
- * appears and once as it lifts, both panes' in one message (FP-36). The
- * app's loop runs it on each dirty frame while the scene stands.
+ * article was set since (T-LAYER's `keptRunsKey`, `markKeptSigns`). The
+ * app's loop runs it on each dirty frame while the scene stands; the one line
+ * speaks for the panes (`keptPanes`).
  */
 export function markKept() {
   const S = scene, E = els;
   if (!S || !E) return;
-  /** @type {string[]} */
-  const said = [];
   const signs = LAYER.keptRunsKey(), lagging = String(lags());
   for (const side of SIDES) {
     const P = S[side], k = paneKept(P), words = k ? k.text : '';
     const c = /** @type {HTMLElement | null} */ (paneEl(E, side).querySelector(':scope > .corner')), now = c ? c.querySelector('.kept') : null;
     if (c && ((now ? now.textContent : '') !== words || c.dataset.lags !== lagging)) writeCorner(E, P);
     if (P.el && P.signs !== signs) { LAYER.markKeptSigns(P.el); P.signs = signs; }
-    if (words && !P.heard) said.push(t('L.kept.said', { what: P.shows, clause: words }));
-    else if (!words && P.heard) said.push(t('L.kept.lifted', { what: P.shows }));
-    P.heard = words;
   }
-  if (said.length) FOCUS.say(said.join('; '));
+}
+
+/**
+ * @typedef {Object} PaneKept — a pane standing kept, as the one line speaks for it (see the head; FP-36)
+ * @property {string} addr the address it names (`Pane.shows`)
+ * @property {string} name its name as the mirror finds it (T-LAYER's `placeName`)
+ * @property {import('../text/layer.js').KeptClause | null} clause its clause past its second (`paneKept`); null while the setting asked of it is within its second
+ * @property {number} since the page's clock at the row or drop that left it behind: its clause's stamp, else its setting's
+ * @property {boolean} focus the pane holds the platform's focus
+ */
+
+/**
+ * The panes standing kept (see the head): each whose clause stands past its
+ * second (`paneKept`), or whose setting the board's events asked is within it
+ * (`Pane.kept`); none while no scene stands.
+ * @returns {PaneKept[]}
+ */
+export function keptPanes() {
+  const S = scene, E = els;
+  if (!S || !E) return [];
+  const at = typeof document !== 'undefined' ? document.activeElement : null;
+  return SIDES.flatMap((side) => {
+    const P = S[side], held = paneHeld(P), clause = held ? LAYER.keptWords(P.d, P.d, held) : null;
+    const soon = !clause && !!P.kept && performance.now() - P.kept.since < PUMP.KEPT_MS;
+    if (!clause && !soon) return [];
+    const since = held && clause ? held.since : /** @type {NonNullable<Pane['kept']>} */ (P.kept).at;
+    return [{ addr: P.shows, name: LAYER.placeName(P.d, P.shows), clause, since, focus: !!at && paneEl(E, side).contains(at) }];
+  });
+}
+
+/**
+ * How the last setting the board's events asked set the pane naming an
+ * address (`Pane.lift`): changed or unchanged, with the stamp it stood kept
+ * from; null where no pane of a standing scene names it, or none was set so.
+ * @param {string} addr
+ * @returns {{since: number, outcome: import('../model/records.js').Outcome} | null}
+ */
+export function paneLift(addr) {
+  const S = scene;
+  const P = S ? SIDES.map((side) => S[side]).find((x) => x.shows === addr) : null;
+  return P ? P.lift : null;
 }
 /** a pane's corner's id: the group is named by its own words */
 const cornerId = (/** @type {'a' | 'b'} */ side) => (side === 'a' ? 'sceneA' : 'sceneB') + '-corner';
@@ -2560,7 +2606,8 @@ async function update(side, how = {}) {
       if (Q.sets !== seen) continue;
       if (!how.src && between.unheard) { unset(between.unheard); return; }
       const read = how.read !== undefined ? how.read : P.read;
-      // set from its reads: kept no more, from the step that sets it
+      // set from its reads: kept no more, from the step that sets it — a setting the board's events asked saying whether it changed what the pane shows
+      if (!how.src && P.kept) P.lift = { since: P.kept.at, outcome: REC.shownBy(P.d) === REC.shownBy(d) ? 'unchanged' : 'changed' };
       P.kept = null;
       setPanes(S, [{ side, next: { d, kind, src, names, shows: kind === 'bare' ? src : names, k, n, read, lacks, hold } }], between.pairs);
       answer(S, between);

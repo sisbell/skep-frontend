@@ -28,7 +28,9 @@
 // the board answers in part read again as a row naming it is, and a change of
 // class ending its reads where they stand; a row naming a document the view
 // shows, which keeps it as held until its reads again set it in one step,
-// rows meanwhile queueing one more read, kept from the row's arrival; a row
+// rows meanwhile queueing one more read, kept from the row's arrival — each
+// setting recorded changed or unchanged with the stamp it stood from, none
+// where it is let go unset, the board's by whether its catch-up took a row; a row
 // touching a doc 1, which keeps the byline cause of each shown document's
 // owner as held until a read of it again lands, the board's silence leaving
 // it standing; the event stream's drop, which holds every row until its
@@ -2641,6 +2643,38 @@ test('a shown document a read again sets with no wait tells its readers nothing 
   assert.deepEqual(fake.unanswered, []);
 });
 
+test('a shown document a row names records how its reads set it, with the stamp it stood from — unchanged where the board answered the text it showed, changed where other words came, changed where it came withheld — its stamp listed while its second has not passed; and nothing where it is let go unset, the view gone from it and a row voiding its read (issue #369)', async () => {
+  const s = { ...script, ...ONE_MEMBER };
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), deliveredAt(BEFORE, 7), deliveredAt(AFTER, 9));
+  // the view's read of its extent, then the reads again of the first two rows, as the board answers them; then withheld
+  inTurn(s, F.retrieveDocVSpanSet(D), ...Array(3).fill(script[opKeyOf(F.retrieveDocVSpanSet(D))]), WITHHELD_READ, script[opKeyOf(F.retrieveDocVSpanSet(D))]);
+  const fake = readingD(s);
+  await settle();
+  /** a row naming D, the page's clock held still as it comes: the stamp it leaves D kept from */
+  const kept = (/** @type {number} */ position) => { const at = Date.now(), clock = Date.now; Date.now = () => at; try { fake.fire('feed', writing(position, [D])); } finally { Date.now = clock; } return at; };
+  let at = kept(20);
+  assert.deepEqual([PUMP.keptSoon().has(at), PUMP.liftOf('doc', D)], [true, null], 'as the row comes: its stamp within its second, no setting yet');
+  await settle();
+  assert.deepEqual([PUMP.liftOf('doc', D), PUMP.keptSoon().has(at)], [{ since: at, outcome: 'unchanged' }, false], 'the board answered the text as it stood: unchanged');
+  at = kept(21);
+  await settle();
+  assert.deepEqual([PUMP.liftOf('doc', D), REC.textBetween(D, 1, 31)], [{ since: at, outcome: 'changed' }, AFTER], 'other words: changed');
+  at = kept(22);
+  await settle();
+  assert.deepEqual([PUMP.liftOf('doc', D), REC.doc(D).refused], [{ since: at, outcome: 'changed' }, 'withheld'], 'withheld from the reader: changed');
+  // read again whole, the view gone from it while a row's read of it is out
+  REC.invalidate(D); PUMP.forget(D);
+  await settle();
+  const release = fake.hold('op', { frame: F.retrieveV(D, 1, 30) }), asks = () => timesAsked(fake, F.retrieveV(D, 1, 30)), before = asks();
+  kept(23);
+  await until(() => asks() > before, 'the row\'s read of its text out');
+  CAM._reset();
+  fake.fire('feed', writing(24, [D]));
+  release();
+  await settle();
+  assert.deepEqual([PUMP.kept(D), PUMP.liftOf('doc', D)], [null, null], 'let go unset: no setting recorded');
+});
+
 test('a document a refresh reads again stands kept past KEPT_MS while that read is out, and, where the board left a part of it unheard, until its read again sets it (issue #345)', async () => {
   const s = { ...script, [opKeyOf(F.docMetadata(D + '.1'))]: mintedAt(3), [opKeyOf(F.docMetadata(D + '.2'))]: NOT_REGISTERED };
   inTurn(s, F.findLinksV(D, 1, 30), script[opKeyOf(F.findLinksV(D, 1, 30))], UNREACHABLE, script[opKeyOf(F.findLinksV(D, 1, 30))]);
@@ -3035,6 +3069,30 @@ test('the board lags from the stream\'s drop: past a second it is kept from the 
   await settle();
   assert.deepEqual([REC.feedAt(), PUMP.boardKept(), PUMP.keptAll().board, PUMP.keptRevision()], [11, null, false, rev + 2], 'the catch-up\'s rows taken: kept no more');
   assert.deepEqual(fake.unanswered, []);
+});
+
+test('the lagging board records how the reads that made it whole set it, with the stamp of the drop — unchanged where its catch-up read no row, changed where it took one — and nothing where a change of the page\'s class let the lag go (issue #369)', async () => {
+  const A = '1.0.1.0.21';
+  const fake = signedIn({ ...script, ...caughtUp('s-1', 10), ...caughtUp('s-1', 20, [rowOf(21, [A])], 21) });
+  /** the stream dropped, the page's clock held still as it drops: the stamp the board lags from */
+  const dropped = () => { const at = Date.now(), clock = Date.now; Date.now = () => at; try { fake.drop(); } finally { Date.now = clock; } return at; };
+  let at = dropped();
+  fake.reopen();
+  await settle();
+  assert.deepEqual([PUMP.boardKept(), PUMP.liftOf('board', '1')], [null, { since: at, outcome: 'unchanged' }], 'its catch-up read no row: unchanged');
+  REC.reachFeed(20);
+  at = dropped();
+  fake.reopen();
+  await settle();
+  assert.deepEqual([REC.feedAt(), PUMP.liftOf('board', '1')], [21, { since: at, outcome: 'changed' }], 'its catch-up took a row: changed');
+  const held = fake.hold('changes', { session: 's-1', since: 21 });
+  dropped();
+  fake.reopen();
+  await until(() => catchUps(fake).some((c) => c.since === 21), 'the catch-up asked');
+  fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
+  held();
+  await settle();
+  assert.deepEqual([PUMP.boardKept(), PUMP.liftOf('board', '1')], [null, null], 'the class changed while it was out: the lag let go, no setting recorded');
 });
 
 test('a document the view shows that the gap\'s rows name, still being read a second after they are taken, stands kept from the stream\'s drop — the board\'s stamp, never the catch-up\'s — until its read again sets it (issue #367\'s design decision: "If documents are still being read a second after the catch-up\'s rows, they take the clause from the board")', async () => {

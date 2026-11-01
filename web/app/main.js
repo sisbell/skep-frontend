@@ -46,8 +46,10 @@
 // Back, Forward, the trail's list, sign-in, the board list's retry, a
 // jump's face out of view — O-HOST's `aside`, FP-25 — the runs of an arrival
 // in several, the walks' folded moments with the act that unfolds each —
-// O-FACES' `folded`, `unfold` — and the reading scenes closed, N-GO's
-// `closed`); SC's own end, a Back from its entry (N-GO's `closeScene`), and
+// O-FACES' `folded`, `unfold` — the reading scenes closed, N-GO's
+// `closed`, and the scene's panes standing kept with how each was set,
+// SC's `keptPanes`, `paneLift`); SC's own end, a Back from its entry
+// (N-GO's `closeScene`), and
 // the faces a stop the reader returned to shows at its site (O-FACES'
 // `reaching`, `floating`, `held`); O-LAND's hand-off and its pieces' element;
 // and M-PUMP's (`shownIn`, N-GO's `arrived` for each feed row publishing a
@@ -233,7 +235,7 @@ function loop(/** @type {number} */ now) {
  * @param {import('../model/pump.js').Dropped} x
  */
 function dropped(x) {
-  if (!x.addrs) { HOST.classChanged(); FACES.classChanged(); LEAP.classChanged(); GO.classChanged(); LINE.classChanged(); }
+  if (!x.addrs) { HOST.classChanged(); FACES.classChanged(); LEAP.classChanged(); GO.classChanged(); LINE.classChanged(x.at); }
   SCENE.dropped(x);
   void WALK.dropped(x);
 }
@@ -284,7 +286,7 @@ async function boot() {
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')), stop: /** @type {HTMLButtonElement} */ (el('scenestop')), strokes: el('scenestrokes') },
     { end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, at, told) => FACES.floating(far, at, null, told), held: FACES.held } });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
-  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed() });
+  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed(), panes: SCENE.keptPanes, paneLift: SCENE.paneLift });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a), vanished: GO.vanished });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn, first: LAYER.firstOfFar });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords() });

@@ -22,6 +22,9 @@
 // that left it behind, whether it has stood KEPT_MS and the refusal that left
 // the last of its reads unset (`keptDocs`, `keptClaims`), and the board while
 // it lags (`keptBoard`), which `kept`, `claimsKept` and `boardKept` answer;
+// how each was last set by its reads — whether that changed what it shows,
+// with the stamp it stood from — which `liftOf` answers (`lifts`), and what
+// the reads making the lagging board whole found so far (`boardFound`);
 // the refresh armed or out, and the changes of class taken; how the board was
 // opened; and the readers the app hands in at `start` — the version each box
 // shows (N-GO's `shownIn`), who is told of a member's arrival (N-GO's
@@ -156,7 +159,13 @@
 // `drain`), a catch-up that cannot be done marking the board as a row naming
 // nothing does (`markBehind`). The board lags (`standLag`, `boardKept`;
 // FP-23) from the drop, or from the first bare row of a run, until the gap's
-// rows are taken and no mark or refresh stands (`lagEnds`). A session's end
+// rows are taken and no mark or refresh stands (`lagEnds`). What a kept place
+// shows is set by its reads (M-REC's `setAgain`, `setClaims`), each setting
+// recorded as changed or unchanged with the stamp the place stood from
+// (`liftOf`); the board changed where a catch-up took a row or a refresh
+// changed what is shown, else unchanged (`lagFound`); a place let go unset —
+// dropped as the view left it, its reads voided or ended by a change of the
+// page's class — none. A session's end
 // (`takeEnd`) — `session-died`, a read's `session_died`, or the page's own
 // `close(session)`, its sign-out — is taken where it names the page's own
 // session: the shell's own restart is no death — the page goes on under the
@@ -422,13 +431,29 @@ const keptBoard = new Map();
 const BOARD = '1';
 /** the changes of what `kept`, `claimsKept` and `boardKept` answer, counted: the app's loop reads them (`keptRevision`), so every surface shows a change in one frame */
 let keptRev = 0;
+/** @typedef {import('./records.js').Outcome} Outcome */
+/** @typedef {'doc' | 'claims' | 'board'} KeptKind what a place held as it stands is: a document, an origin's edition claims, the board */
+/** @type {Map<Map<string, Kept>, KeptKind>} what each holder holds */
+const KINDS = new Map([[keptDocs, /** @type {KeptKind} */ ('doc')], [keptClaims, /** @type {KeptKind} */ ('claims')], [keptBoard, /** @type {KeptKind} */ ('board')]]);
+/** @type {Map<string, {since: number, outcome: Outcome}>} how each place held as it stood was last set by its reads, with the stamp it stood from, by its kind and its key (`liftOf`); none for one let go unset, or held again since */
+const lifts = new Map();
+/** a place's key among the lifts: its kind, then its key */
+const liftKey = (/** @type {Map<string, Kept>} */ map, /** @type {string} */ key) => KINDS.get(map) + ' ' + key;
+/** @type {Outcome | null} what the reads that make the lagging board whole found so far: changed once a catch-up took a row or a refresh changed what is shown, else unchanged once one landed; null before any did (`lagFound`) */
+let boardFound = null;
 
-/** what is read again held as it stands (`Kept`) from `since`, where it is not already — held so, it keeps its first stamp: its second begun, past which `kept` answers for it and the view is told */
+/** what is read again held as it stands (`Kept`) from `since`, where it is not already — held so, it keeps its first stamp: its second begun, past which `kept` answers for it and the view is told, and the record of how it was last set (`liftOf`) let go */
 function standKept(/** @type {Map<string, Kept>} */ map, /** @type {string} */ key, /** @type {number} */ since) {
   if (map.has(key)) return;
+  lifts.delete(liftKey(map, key));
   /** @type {Kept} */
   const k = { since, long: false, met: null, timer: setTimeout(() => { if (map.get(key) !== k) return; k.long = true; keptRev++; dirty(); }, KEPT_MS) };
   map.set(key, k);
+}
+
+/** a place held as it stood, set by its reads from the stamp it stood from: how it was set, which `liftOf` answers */
+function lifted(/** @type {Map<string, Kept>} */ map, /** @type {string} */ key, /** @type {number | null} */ since, /** @type {Outcome | null} */ outcome) {
+  if (since != null && outcome) lifts.set(liftKey(map, key), { since, outcome });
 }
 
 /** a read of what is held as it stands met a refusal that leaves it standing: what `kept` answers says why */
@@ -439,12 +464,19 @@ function keptMet(/** @type {Map<string, Kept>} */ map, /** @type {string} */ key
   if (k.long) { keptRev++; dirty(); }
 }
 
-/** what was held as it stood set, or let go: `kept` answers nothing for it from this step on */
-function unkeep(/** @type {Map<string, Kept>} */ map, /** @type {string} */ key) {
+/**
+ * What was held as it stood set, or let go: `kept` answers nothing for it
+ * from this step on.
+ * @param {Map<string, Kept>} map
+ * @param {string} key
+ * @returns {number | null} the stamp it stood from (`Kept.since`); null where it was not held
+ */
+function unkeep(map, key) {
   const k = map.get(key);
-  if (!k) return;
+  if (!k) return null;
   clearTimeout(k.timer); map.delete(key);
   if (k.long) keptRev++;
+  return k.since;
 }
 
 /** the documents and the origins' claims held as they stood let go (a start, a change of the page's class); the board's lag apart (`lagEnds`) */
@@ -488,6 +520,23 @@ export function boardKept() { return answerOf(keptBoard.get(BOARD)); }
 /** every document and every origin's claims `kept` and `claimsKept` answer for now, and whether `boardKept` does */
 export const keptAll = () => ({ docs: [...keptDocs].filter(([, k]) => k.long).map(([a]) => a), origins: [...keptClaims].filter(([, k]) => k.long).map(([o]) => o), board: boardKept() !== null });
 
+/** the stamps of the places held as they stand whose second has not passed (`Kept.since`): each is to say so at its second, unless its reads set it first */
+export const keptSoon = () => new Set([...keptDocs.values(), ...keptClaims.values(), ...keptBoard.values()].filter((k) => !k.long).map((k) => k.since));
+
+/**
+ * How a place held as it stood was last set by its reads (FP-23): whether
+ * they changed what it shows (M-REC's `Outcome`), and the stamp it stood
+ * from (`Kept.since`) — a document's, by its address; an origin's edition
+ * claims, by the origin; the board's, by its own address. Null where nothing
+ * set it — it was dropped as the view left it, its reads were ended by a
+ * change of the page's class or a start, or it is held again — or it was
+ * never held.
+ * @param {KeptKind} kind
+ * @param {string} key
+ * @returns {{since: number, outcome: Outcome} | null}
+ */
+export function liftOf(kind, key) { return lifts.get(kind + ' ' + key) ?? null; }
+
 /** the changes of what `kept`, `claimsKept` and `boardKept` answer, counted */
 export const keptRevision = () => keptRev;
 
@@ -498,17 +547,25 @@ export const keptRevision = () => keptRev;
  * stamp stands.
  * @param {number} since
  */
-function standLag(since) { standKept(keptBoard, BOARD, since); }
+function standLag(since) { if (!keptBoard.has(BOARD)) boardFound = null; standKept(keptBoard, BOARD, since); }
 
 /** a read toward making the lagging board whole met a refusal that leaves it lagging: what `boardKept` answers says why */
 function lagMet(/** @type {Refusal | null} */ met) { if (met) keptMet(keptBoard, BOARD, met); }
 
+/** a read toward making the lagging board whole landed: what it found joins what the others found — changed, once one found a change */
+function lagFound(/** @type {Outcome} */ found) { if (keptBoard.has(BOARD) && boardFound !== 'changed') boardFound = found; }
+
 /**
  * The board's lag ended where nothing it waits on stands: no gap (`gap`), no
  * bare row's mark, and no refresh armed or out — the catch-up's rows taken,
- * or the refresh has set what is shown.
+ * or the refresh has set what is shown — set by what the reads that made it
+ * whole found (`lagFound`, `liftOf`), where they found anything.
  */
-function lagEnds() { if (!gap && !REC.bare() && armed == null && !refreshing) unkeep(keptBoard, BOARD); }
+function lagEnds() {
+  if (gap || REC.bare() || armed != null || refreshing) return;
+  lifted(keptBoard, BOARD, unkeep(keptBoard, BOARD), boardFound);
+  boardFound = null;
+}
 
 /**
  * @typedef {Object} Dropped — what one of the board's events dropped of what the page held, told after the drop, so a reader of it reads fresh: a feed row's addresses, a refresh's, or what a change of the page's class left — its session's death among them (`classChanged`)
@@ -543,7 +600,7 @@ export function start(opts) {
   onCounted = opts.onCounted || (() => {});
   onOpen = opts.onOpen || (() => {});
   standing = new Set();
-  classes++; again.clear(); claimsOut.clear(); unkeepAll(); unkeep(keptBoard, BOARD);
+  classes++; again.clear(); claimsOut.clear(); unkeepAll(); unkeep(keptBoard, BOARD); lifts.clear(); boardFound = null;
   rowsHeld = null; caught = null; gap = null; faces.clear();
   started = true;
   if (subscribed) return;
@@ -739,8 +796,8 @@ function readAgain(addr, since, met = null) {
         }
         if (!r.unheard) {
           if (r.fresh.byline && 'cause' in r.fresh.byline.facts && REC.keyDrops() !== causes) delete r.fresh.byline;
-          unkeep(keptDocs, addr);
-          REC.setAgain(addr, r.fresh);
+          const stood = unkeep(keptDocs, addr);
+          lifted(keptDocs, addr, stood, REC.setAgain(addr, r.fresh));
           forget(addr);
           landed();
           if (waited) onDrop({ row: null, addrs: [addr], at: since });
@@ -1054,7 +1111,7 @@ function drain(read, releasing) {
   const c = caught, within = (/** @type {number} */ p) => !!c && p > c.since && p <= c.next;
   /** @type {HeldRow[]} */
   const take = [...(read ? read.entries.map((u) => ({ u, taken: true, at: read.at })) : []), ...rows.filter((h) => !within(h.u.position))];
-  for (const h of take.sort((x, y) => x.u.position - y.u.position)) if (h.taken || takesRow(h.u)) applyRow(h.u, h.at);
+  for (const h of take.sort((x, y) => x.u.position - y.u.position)) if (h.taken || takesRow(h.u)) { applyRow(h.u, h.at); lagFound('changed'); }
   if (read) REC.reachFeed(read.next);
 }
 
@@ -1119,6 +1176,7 @@ async function closeGap(g) {
       const last = g.open && !g.again;
       if (last) gap = null;
       drain({ ...read, at: g.at }, null);
+      lagFound('unchanged');
       if (last) { lagEnds(); return; }
       if (!g.open) return;
     }
@@ -1162,6 +1220,8 @@ function classChanged(stood) {
   if (rowsHeld) for (const h of rowsHeld) h.taken = false;
   // the stream open again: the reads at the new class, made after its reopen, make the page whole — the rows held taken now, or by the acquire out for them
   if (gap && gap.open) { gap = null; if (!(attempt && attempt.lost != null)) drain(null, null); }
+  // the board's lag let go unset: the reads at the new class make it whole, not those it waited on
+  boardFound = null;
   lagEnds();
   standing = new Set(stood);
   void readIndex();
@@ -2280,6 +2340,8 @@ export async function refresh() {
     for (const o of new Set(showing.flatMap((a) => REC.withheldOrigins(a)))) if (REC.editionClaimsOf(o) !== undefined) claimsAgain(o, since);
     /** @type {Map<string, Promise<AccountFacts>>} each owner's byline facts, read once for the refresh */
     const facts = new Map();
+    /** what the refresh changed of what is shown: an edition advanced, or a shown document set again otherwise than it stood — what the lagging board's reads found (`lagFound`) */
+    let changed = advanced.length > 0;
     // a document being read again is read once more by its own reads, the run's changes among them
     const reads = showing.filter((a) => { const x = again.get(a); if (x) x.more = true; return !x; });
     await bounded(reads, async (addr) => {
@@ -2291,12 +2353,15 @@ export async function refresh() {
       if (gone()) { if (!again.has(addr)) unkeep(keptDocs, addr); return; }
       // a part the board did not answer: nothing set, the document read again until its reads set it whole
       if (r.unheard) { readAgain(addr, since, r.unheard); return; }
-      unkeep(keptDocs, addr);
+      const stood = unkeep(keptDocs, addr);
       if (r.fresh.byline && 'cause' in r.fresh.byline.facts && REC.keyDrops() !== causes) delete r.fresh.byline;
-      REC.setAgain(addr, r.fresh);
+      const outcome = REC.setAgain(addr, r.fresh);
+      lifted(keptDocs, addr, stood, outcome);
+      if (outcome === 'changed') changed = true;
       forget(addr);
     });
     if (out()) return;
+    lagFound(changed ? 'changed' : 'unchanged');
     onDrop({ row: null, addrs: [...dropped, ...showing], chains, at: since });
   } finally {
     refreshing = false;
@@ -2695,7 +2760,7 @@ function claimsAgain(origin, since) {
           const set = REC.setClaims(c);
           landed();
           if (!set) continue;
-          unkeep(keptClaims, origin);
+          lifted(keptClaims, origin, unkeep(keptClaims, origin), set);
           decidedAnew(new Set([origin]), since);
           return;
         }

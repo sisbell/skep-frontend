@@ -20,7 +20,8 @@
 // run's boxes; a byline's facts arriving and its cut label opening in
 // place; a face arriving after the first layout setting every standing
 // article again, the passage held; a box's label and first line in their
-// faces; a kept document's one clause — a draft's text, else its links, an
+// faces; the name the status region gives a document — its first line as the
+// mirror says it, six words at the most, then its address; a kept document's one clause — a draft's text, else its links, an
 // edition's links alone, at the row or drop that left it behind, the failed
 // read's words after it — its label carrying it after its address, none where
 // the one line names it, and its account counting it; and the plane's corner made again as the board's lag
@@ -1076,6 +1077,29 @@ test('a box\'s first line is read by one rule: its own text from its first posit
   assert.deepEqual(at(V), [], 'a version, its text unread: none, never its trunk\'s index line');
 });
 
+test('the status region names a document as the mirror\'s item finds it: its first line as the item says it — the document\'s own words quoted, the client\'s bracketed — NAME_WORDS of its words at the most, cut on a word with the quote or the bracket it closes with kept after the ellipsis, then the address it names; the address alone where no first line is known; a box by the version it shows (issue #369\'s design decision: "The name is the one the mirror uses: the first line\'s first six words, then the address")', () => {
+  const U = '1.0.1.0.17', H = '1.0.1.0.1', W = '1.0.1.0.19', V = D + '.3', P = D + '.2';
+  const text = (/** @type {string} */ addr, /** @type {string} */ words) => REC.takeDelivery(addr, [{ pos: 1, width: words.length, kind: 'content', text: words, ref: null, origin: null }]);
+  text(D, 'Tumbler.\n\nThe first field.');
+  assert.deepEqual([LAYER.mirrorLabel(REC.doc(D)).map((r) => r.text).join(''), LAYER.placeName(REC.doc(D), D)], ['"Tumbler."', `"Tumbler." ${D}`], 'a first line of one word: whole, quoted as the mirror quotes it, then the address');
+  text(U, 'Item 1 of an edition longer than its room\'s twelve columns.\n');
+  assert.equal(LAYER.placeName(REC.doc(U), U), `"Item 1 of an edition longer…" ${U}`, 'eleven words: the first six, cut on a word, the closing quote kept after the ellipsis');
+  text(W, 'Six words make this first line.\n');
+  assert.equal(LAYER.placeName(REC.doc(W), W), `"Six words make this first line." ${W}`, 'six words: whole');
+  REC.takeDelivery(H, [{ pos: 1, width: 1, kind: 'atom', text: JSON.stringify({ type: 'skep-enroll', keys: [{ label: 'dev', alg: 'ed25519', key: '00' }] }), ref: null, origin: null }]);
+  const record = LAYER.placeName(REC.doc(H), H);
+  assert.ok(record.startsWith('[' + t('F.home-record.yours').split(' ').slice(0, 3).join(' ')) && record.endsWith(`…] ${H}`) && record.split(' ').filter((w) => /[\p{L}\p{N}]/u.test(w)).length === LAYER.NAME_WORDS + 1, `a record's words, the client's: bracketed, never quoted, cut to six with its closing bracket kept — ${record}`);
+  assert.equal(LAYER.placeName(REC.doc(V), V), V, 'no first line known: the address alone');
+  REC.takeRefused(U, 'withheld');
+  assert.equal(LAYER.placeName(REC.doc(U), U), U, 'withheld: the address alone, as the mirror names no first line there');
+  text(P, 'The second version holds this.\n');
+  try {
+    LAYER.readers({ shown: (a) => (a === D ? P : a) });
+    assert.deepEqual(LAYER.boxName(D), { addr: P, name: `"The second version holds this." ${P}` }, 'a box pinned on a version: that version\'s first line and address');
+  } finally { LAYER.readers({}); }
+  assert.deepEqual(LAYER.boxName(D), { addr: D, name: `"Tumbler." ${D}` }, 'at its plain address: its own');
+});
+
 test('where the platform sets no words — the node tests — the article\'s measure counts every character one advance of the reading face, whatever its face, as the plan does (issue #16)', () => {
   assert.equal(LAYER.widthOf('1.0.1.0.3', 'ident'), 9 * CHAR_W);
   assert.equal(LAYER.widthOf('not rendered', 'client'), 12 * CHAR_W);
@@ -1086,14 +1110,14 @@ test('a kept document carries one clause by one rule: a draft holding its text "
   const at = new Date(2026, 2, 12, 9, 5).getTime(), now = new Date(2026, 2, 12, 12).getTime();
   const draft = { ...REC.doc('1.0.1.0.2'), kind: /** @type {const} */ ('draft'), from: 1, to: 5, linksRead: true };
   const kept = { met: null, since: at }, unreachable = { met: /** @type {any} */ ({ kind: 'unreachable', name: 'unreachable', text: '' }), since: at }, busy = { met: /** @type {any} */ ({ kind: 'refused', name: 'scan_busy' }), since: at };
-  assert.deepEqual(LAYER.keptWords(draft, draft, kept, now), { id: 'L.kept.text', text: t('L.kept.text', { when: lastRead(at, now) }) }, 'a draft holding its text: as last read, at the row or drop that left it behind');
+  assert.deepEqual(LAYER.keptWords(draft, draft, kept, now), { id: 'L.kept.text', text: t('L.kept.text', { when: lastRead(at, now) }), reason: '', since: at }, 'a draft holding its text: as last read, at the row or drop that left it behind, the stamp it says');
   assert.equal(LAYER.keptWords(draft, draft, kept, now)?.text, 'as last read 09:05');
   assert.equal(LAYER.keptWords(draft, draft, { met: null, since: new Date(2026, 2, 12, 9, 7).getTime() }, now)?.text, 'as last read 09:07', 'the stamp the kept answer carries, whatever the text was read at');
-  assert.equal(LAYER.keptWords(draft, draft, unreachable, now)?.text, t('L.kept.failed', { clause: 'as last read 09:05', reason: t('F.daemon.unreachable') }), 'the board not answering: its words after the clause');
+  assert.deepEqual([LAYER.keptWords(draft, draft, unreachable, now)?.text, LAYER.keptWords(draft, draft, unreachable, now)?.reason], [t('L.kept.failed', { clause: 'as last read 09:05', reason: t('F.daemon.unreachable') }), t('F.daemon.unreachable')], 'the board not answering: its words after the clause, and apart');
   assert.equal(LAYER.keptWords(draft, draft, busy, now)?.text, t('L.kept.failed', { clause: 'as last read 09:05', reason: t('L.held.why.busy') }), 'a scan the board kept busy');
-  assert.deepEqual(LAYER.keptWords({ ...draft, from: -1 }, draft, kept, now), { id: 'L.kept.links', text: 'links as last read 09:05' }, 'a draft holding no text: its links');
+  assert.deepEqual(LAYER.keptWords({ ...draft, from: -1 }, draft, kept, now), { id: 'L.kept.links', text: 'links as last read 09:05', reason: '', since: at }, 'a draft holding no text: its links');
   const edition = { ...REC.doc(D), from: 1, to: 5, linksRead: true };
-  assert.deepEqual(LAYER.keptWords(edition, edition, kept, now), { id: 'L.kept.links', text: 'links as last read 09:05' }, 'an edition holding its text: its links alone');
+  assert.deepEqual(LAYER.keptWords(edition, edition, kept, now), { id: 'L.kept.links', text: 'links as last read 09:05', reason: '', since: at }, 'an edition holding its text: its links alone');
   const member = { ...REC.doc(D + '.2'), kind: /** @type {const} */ ('edition'), from: 1, to: 5 };
   assert.equal(LAYER.keptWords(member, edition, kept, now)?.text, 'links as last read 09:05', 'a pinned box: its document\'s links');
   assert.equal(LAYER.keptWords(draft, draft, null, now), null, 'not kept: none');

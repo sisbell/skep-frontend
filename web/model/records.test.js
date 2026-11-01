@@ -9,11 +9,12 @@
 // edition claims held and counted by origin — no feed row dropping them, a
 // change of one origin's dropping that origin's alone or keeping them as
 // held, a read of them setting them again in one step unless a change
-// overtook it; a row naming a document the view shows dropping nothing of
+// overtook it, saying whether it changed them; a row naming a document the view shows dropping nothing of
 // it; the page's place on its board's feed, raised and never lowered; a bare
 // row's mark, a newer member taking a trunk's text, a refresh's
 // drop and a shown document set again in one step — its text without an
-// image holding none, a claim's home making its origin's windows again; the key store,
+// image holding none, a claim's home making its origin's windows again, and
+// whether what it shows a reader changed; the key store,
 // the session's key and the byline's facts, a row touching a doc 1 keeping
 // the causes of the owners it is handed as held, each owed its read again; a
 // change of class keeping what
@@ -414,7 +415,7 @@ test('the edition claims on an origin are held until a change of them drops that
   assert.deepEqual([REC.editionClaimsOf(O), REC.editionClaimsOf(P), REC.claimDropsOf(O), REC.claimDropsOf(P)], [undefined, undefined, o + 3, p + 1], 'the death drops them all with every read at the session\'s class, and is counted for each');
 });
 
-test('a read of the edition claims on an origin sets them again in one step — the homes\' metadata or refusals, the claims\' links, the reads that failed, then the lookup — and sets nothing where a change of them overtook it (issue #272)', () => {
+test('a read of the edition claims on an origin sets them again in one step — the homes\' metadata or refusals, the claims\' links, the reads that failed, then the lookup — saying whether it changed the claims listed or their homes\' publication, and sets nothing where a change of them overtook it (issues #272, #369)', () => {
   const W = '1.0.1.0.3', O = '1.0.1.0.1003', H = '1.0.1.0.9', C = H + '.0.2.1', G = '1.0.1.0.11', D = G + '.0.2.1';
   REC.takeDelivery(W, [{ pos: 1, width: 10, kind: 'content', text: 'Tumbler.\n\n', ref: null, origin: null }, { pos: 11, width: 4, kind: 'withheld', text: '', ref: null, origin: O }]);
   REC.takeEditionClaims(O, []);
@@ -423,10 +424,27 @@ test('a read of the edition claims on an origin sets them again in one step — 
   const stale = fresh();
   REC.claimsChanged(O, true);
   const rev = REC.doc(W).rev;
-  assert.deepEqual([REC.setClaims(stale), REC.editionClaimsOf(O), REC.doc(W).rev], [false, [], rev], 'a read a change overtook: nothing set, nothing made again');
-  assert.equal(REC.setClaims(fresh()), true, 'a read after the change: set');
+  assert.deepEqual([REC.setClaims(stale), REC.editionClaimsOf(O), REC.doc(W).rev], [null, [], rev], 'a read a change overtook: nothing set, nothing made again');
+  assert.equal(REC.setClaims(fresh()), 'changed', 'a read after the change: set, two claims listed where none were');
   assert.deepEqual([REC.editionClaimsOf(O), REC.link(C)?.addr, REC.doc(H).meta?.published, REC.doc(G).refused, REC.readFailed(D)], [[C, D], C, true, 'withheld', true], 'the lookup, the claim\'s link, its home\'s metadata, the other home\'s refusal and the failed read, together');
   assert.ok(REC.doc(W).rev > rev, 'the document windowing the origin made again');
+  assert.equal(REC.setClaims(fresh()), 'unchanged', 'read again as it stands: the same claims, their homes as published');
+  assert.equal(REC.setClaims({ ...fresh(), homes: [{ home: H, meta: { ...meta, published: false }, refused: null }] }), 'changed', 'a claim\'s home read unpublished: changed');
+});
+
+test('a shown document set again says whether what it shows a reader changed — its text, its extent, its links, a refusal — and only that: its image, which draws nothing of its own, read again over the same text changes nothing (issue #369)', () => {
+  const W = '1.0.1.0.3', run = (/** @type {string} */ text) => ({ pos: 1, width: text.length, kind: /** @type {const} */ ('content'), text, ref: null, origin: null });
+  REC.takeSpanSet(W, [{ subspace: 1, ordinal: 1, positions: 8 }]);
+  REC.takeDelivery(W, [run('Tumbler.')]);
+  REC.takeLinks(W, [W + '.0.2.1']);
+  const spans = [{ subspace: 1, ordinal: 1, positions: 8 }];
+  assert.equal(REC.setAgain(W, { spans, text: { runs: [run('Tumbler.')], asOf: 9 }, image: { from: 1, runs: [{ iStart: W + '.0.1.1', width: 8 }] }, links: [W + '.0.2.1'] }), 'unchanged', 'the same text, extent and links, an image read again with them');
+  assert.equal(REC.setAgain(W, { spans, text: { runs: [run('Tumblers')], asOf: 10 } }), 'changed', 'other words over the same extent');
+  assert.equal(REC.setAgain(W, { links: [W + '.0.2.1', W + '.0.2.2'] }), 'changed', 'a link more touching it');
+  assert.equal(REC.setAgain(W, { spans: [{ subspace: 1, ordinal: 1, positions: 9 }] }), 'changed', 'a longer extent');
+  assert.equal(REC.setAgain(W, {}), 'unchanged', 'nothing carried: nothing changed');
+  assert.equal(REC.setAgain(W, { refused: 'withheld' }), 'changed', 'withheld from the reader: its withheld box shown');
+  assert.equal(REC.shownBy(REC.doc(W)), REC.shownBy({ ...REC.doc(W), image: [], imageFor: null }), 'its image no part of what it shows');
 });
 
 test('a failed read of a listed claim\'s link or its home\'s metadata is held — through a change dropping the claims — until a read of it answers, what the page held of it is dropped, or the death; each document windowing an origin whose claim it decides is made again as it lands and as it goes, and no other (issue #186)', () => {

@@ -51,7 +51,9 @@
 // origin's claims M-PUMP reads from a row (`claimsChanged`) drops that
 // origin's alone, or, where the view shows a document windowing it, counts
 // the change and keeps them as held until a read of them again sets them in
-// one step (`setClaims`), a read a change overtook setting nothing; a failed
+// one step (`setClaims`), a read a change overtook setting nothing, a
+// setting saying whether the lookup or its homes' publication changed
+// (`Outcome`); a failed
 // read of a claim's link or home stands through those changes until a read
 // of it answers or what the page held of it is dropped. A
 // byline's cause — never its value, which is the same at every class — is
@@ -69,7 +71,10 @@
 // the run takes the mark (`unmarkBare`), hands an advanced edition's text to
 // the member it is (`takeAsMember`), drops what no shown document reads
 // through (`takeRefresh`) and sets each shown document again in one step
-// (`setAgain`), each standing as held until its reads land.
+// (`setAgain`), each standing as held until its reads land. A setting again
+// says whether it changed what the record shows a reader (`Outcome`,
+// `shownBy`): its text, its extent, its links, its chain's count, its
+// publication or a refusal.
 // The class: the page's own session's death (`sessionDied`), a lost session
 // not regained (`sessionLost`) or one regained as another principal
 // (`sessionRegained`) changes the page's class (`dropClass`; FP-29, FP-23).
@@ -1378,15 +1383,23 @@ export function claimsChanged(origin, kept) {
  * (`FreshClaims.at`, `claimDropsOf`): that read is of claims the page does not
  * hold.
  * @param {FreshClaims} c
- * @returns {boolean} whether it set them
+ * @returns {Outcome | null} whether the claims listed or their homes' publication changed; null where it set nothing
  */
 export function setClaims(c) {
-  if (claimDropsOf(c.origin) !== c.at) return false;
+  if (claimDropsOf(c.origin) !== c.at) return null;
+  const before = claimsShown(c.origin);
   for (const h of c.homes) { if (h.meta) takeMetadata(h.home, h.meta); else if (h.refused) takeRefused(h.home, h.refused); }
   for (const v of c.values) takeLink(v);
   for (const a of c.failed) takeFailedRead(a);
   takeEditionClaims(c.origin, c.lookup);
-  return true;
+  return claimsShown(c.origin) === before ? 'unchanged' : 'changed';
+}
+
+/** what the edition claims on an origin show where a clause beneath it is decided (T-ARTICLE's `editionClause`), as one key: the claims listed, each with its home's publication as held */
+function claimsShown(/** @type {string} */ origin) {
+  const listed = editionClaimsOf(origin);
+  const homes = Array.isArray(listed) ? listed.map((c) => { const h = state.docs.get(homeOf(c) || c); return h ? [h.refused, h.meta ? h.meta.published : null] : null; }) : [];
+  return JSON.stringify([listed ?? null, homes]);
 }
 
 /** the origins a document's delivered withheld runs name, each once, in position order */
@@ -1823,9 +1836,10 @@ export function takeRefresh(keep) {
  * (`setClaims`).
  * @param {string} addr
  * @param {Fresh} fresh
+ * @returns {Outcome} whether what the record shows a reader changed (`shownBy`)
  */
 export function setAgain(addr, fresh) {
-  const d = doc(addr);
+  const d = doc(addr), before = shownBy(d);
   counted(addr);
   if (fresh.refused) { drop(d); d.refused = fresh.refused; state.failedReads.delete(addr); state.owed.delete(addr); }
   else {
@@ -1844,6 +1858,22 @@ export function setAgain(addr, fresh) {
   for (const p of fresh.projections ?? []) takeProjection(p.link, p.slot, p.addr, p.runs);
   if (fresh.byline) takeAccountKey(fresh.byline.account, fresh.byline.facts);
   bump();
+  return shownBy(d) === before ? 'unchanged' : 'changed';
+}
+
+/** @typedef {'changed' | 'unchanged'} Outcome what setting a place again did to what it shows a reader (`setAgain`, `setClaims`) */
+
+/**
+ * What a record shows a reader, as one key: two records showing the same
+ * read equal — a refusal, its extent, its publication, its text as delivered
+ * (each run's place, kind and words), the links touching it and its chain's
+ * count; its image, which places its bytes and draws nothing of its own, and
+ * the window it was read over left out.
+ * @param {Doc} d
+ * @returns {string}
+ */
+export function shownBy(d) {
+  return JSON.stringify([d.refused, d.extent, d.meta ? d.meta.published : null, d.runs.map((r) => [r.pos, r.width, r.kind, r.text, r.origin]), [...d.links].sort(), d.members]);
 }
 
 /** reset everything (tests) */

@@ -3419,14 +3419,16 @@ def kept_holds(ctx, r):
     right after the address segment, its mirror item the same words, its corner none; the walk stepped out to its
     account, the camera put back, a second
     such row: its corner carries the words as its last item, every item above it where it stood before; each read answered,
-    no clause stands in the frame the model's text is set; each appearing and each lifting said once; reads alone"""
+    no clause stands in the frame the model's text is set; the status region saying its appearing once — its name as the
+    mirror finds it, its first line's words then its address, and the clause — and its lifting once, current and unchanged,
+    the board answering the text as it stood (issue #369's design decision); reads alone"""
     # a LEAP to the edition with no position stands the walk on it whole
     ctx.leap(DOC)
     ctx.view_doc_em(DOC, 12.5)
     ctx.settle()
     ctx.frames(2)
     cam = ctx.camera()
-    ctx.js('''(async () => { const K = window.__gateKept = {REC: await import('./model/records.js'), PUMP: await import('./model/pump.js'), ST: await import('./strings.js'), said: [], lift: null};
+    ctx.js('''(async () => { const K = window.__gateKept = {REC: await import('./model/records.js'), PUMP: await import('./model/pump.js'), ST: await import('./strings.js'), LAYER: await import('./text/layer.js'), said: [], lift: null};
       const live = document.getElementById('live');
       new MutationObserver(() => K.said.push(live.textContent)).observe(live, {childList: true, characterData: true, subtree: true});
       return true; })()''')
@@ -3471,8 +3473,9 @@ def kept_holds(ctx, r):
     named = kept_round()
     h, words = named['held'], named['held']['words']
     clause = ' %s.' % words if words else None
-    appear = ctx.js('window.__gateKept.ST.t("L.kept.said", %s)' % json.dumps({'what': DOC, 'clause': words or ''}))
-    lifted = ctx.js('window.__gateKept.ST.t("L.kept.lifted", %s)' % json.dumps({'what': DOC}))
+    name = ctx.js('window.__gateKept.LAYER.boxName(%s).name' % json.dumps(DOC))
+    appear = ctx.js('window.__gateKept.ST.t("L.kept.said", %s)' % json.dumps({'name': name, 'clause': words or ''}))
+    lifted = ctx.js('window.__gateKept.ST.t("L.kept.unchanged", %s)' % json.dumps({'name': name}))
     r.check(named['answered'] and h['kept'] and (h['named'] or {}).get('doc') == DOC and bool(words) and bool(h['seg']) and h['seg']['text'] == words and h['seg']['id'] == 'L.kept.links' and h['seg']['beside']
             and bool(h['corner']) and h['corner']['kept'] is None,
             'the line naming the first edition, its read again out past a second: "links as last read ⟨when⟩" in a segment of its own right after the address segment, its corner carrying none (issue #345)',
@@ -3484,8 +3487,9 @@ def kept_holds(ctx, r):
     nl = named['lift'] or {}
     r.check(bool(named['lift']) and not nl['seg'] and not nl['corner'] and nl['mirror'] == '' and not nl['kept'],
             'the read answered: in the frame the model\'s text is set, no clause stands in the line, the corner or the mirror item', named['lift'])
-    r.check(said_once(named['said'], appear) == 1 and said_once(named['said'], lifted) == 1,
-            'the status region said its appearing once and its lifting once (FP-36)', {'said': named['said'], 'appear': appear, 'lifted': lifted})
+    r.check(said_once(named['said'], appear) == 1 and said_once(named['said'], lifted) == 1 and bool(name) and name.endswith(' ' + DOC),
+            'the status region said its appearing once, by its name — its first line\'s words, then its address — with its clause, and its lifting once, current and unchanged (FP-36; issue #369)',
+            {'said': named['said'], 'appear': appear, 'lifted': lifted, 'name': name})
     ctx.js('window.__skep.walk.key("out")')
     ctx.settle()
     ctx.set_view(cam['x'], cam['y'], cam['scale'])

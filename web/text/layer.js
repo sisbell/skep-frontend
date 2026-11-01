@@ -211,7 +211,10 @@
 // address, at the address's size (`docLabel`) — the canvas's below
 // its reading scale, and the held form over its article where no corner
 // stands (`placeHeld`); and the account's label at far scale counts its
-// documents standing so (`keptCountIn`). A withheld run's kept sign at the
+// documents standing so (`keptCountIn`). The status region names a document
+// as the mirror's item finds it (`placeName`, `boxName`): its label as the
+// item says it (`mirrorLabel`), NAME_WORDS of its words at the most, then
+// the address it names. A withheld run's kept sign at the
 // first run of its origin, in its column's edge, is filled in place while the
 // origin's edition claims stand held so (`markKeptRuns`, `claimsKeptIn`;
 // FP-31). The board lagging past a second (M-PUMP's
@@ -318,7 +321,7 @@ import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, columnAt, MEASURE_CPL, LAY_FS, LINE_H, EDGE, GUTTER, CHAR_W } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, cornerWidth } from '../plane/register.js';
-import { holdTop, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth } from '../plane/labels.js';
+import { holdTop, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords } from '../plane/labels.js';
 import { articleHTML, articlePlan, cornerHTML, keptHTML, blockMarks, symbolLit, editionClause, copyText, firstLineOf } from './article.js';
 import { farSays, whyOf } from '../beams/held.js';
 import { homeOf, documentOf, memberOf, accountOf } from '../model/address.js';
@@ -1737,6 +1740,59 @@ export const isDraft = (/** @type {Doc} */ d) => d.kind === 'draft' || (d.meta ?
  */
 export const firstOf = (d) => firstLineOf(d, { label: memberOf(d.addr) == null ? d.label : null, reader: REC.reader(), owner: REC.ownerAccount(d) });
 
+/** the quote around a document's own words where the mirror's item and a place's name say them (`mirrorLabel`) */
+const QUOTE = /** @type {import('./article.js').Faced} */ ({ text: '"', face: 'client' });
+
+/**
+ * A version's label as the ARIA mirror's item says it (see the head): its
+ * first line (`firstOf`), the document's own words quoted, the client's words
+ * in their place bracketed; none at a withheld box, whose state says its
+ * words (`stateWords`).
+ * @param {Doc} d the version a box shows, or a pane's record
+ * @returns {import('./article.js').Faced[]}
+ */
+export function mirrorLabel(d) {
+  const first = d.refused === 'withheld' ? [] : firstOf(d);
+  return first.length && first.every((r) => r.face === 'reading') ? [QUOTE, ...first, QUOTE] : first;
+}
+
+/** the words of its first line a document's name keeps at the most (`placeName`) */
+export const NAME_WORDS = 6;
+
+/** how many words of a stretch a cut counts: those holding a letter or a figure, as P-LABEL's `cutWords` counts them */
+const wordsIn = (/** @type {string} */ s) => s.split(' ').filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+
+/**
+ * The name the status region gives a document (see the head): its label as
+ * the mirror says it (`mirrorLabel`), NAME_WORDS of its words at the most —
+ * cut on a word, the quote or the bracket it closes with kept after the cut's
+ * ellipsis (P-LABEL's `cutWords`) — then the address it names; the address
+ * alone where no first line is known.
+ * @param {Doc} d the record its first line is read from: the version a box shows, a pane's own
+ * @param {string} addr the address it names
+ * @returns {string}
+ */
+export function placeName(d, addr) {
+  const label = mirrorLabel(d), last = label[label.length - 1];
+  const words = label.map((r) => r.text).join('').trim().replace(/\s+/g, ' ');
+  if (!words) return addr;
+  const close = last.face === 'client' && (last.text === QUOTE.text || last.text === CLIENT_CLOSE) ? last.text : '';
+  const fits = (/** @type {string} */ s) => wordsIn(s) <= NAME_WORDS;
+  const kept = fits(words) ? words : cutWords(words, fits, close);
+  return kept ? `${kept} ${addr}` : addr;
+}
+
+/**
+ * A box as the status region names it (`placeName`): by the version it
+ * shows (the reader `shown`), the address that version's.
+ * @param {string} addr the box, or the version it shows
+ * @returns {{addr: string, name: string}} the address it names, and its name
+ */
+export function boxName(addr) {
+  const shows = read.shown(boxOf(addr));
+  return { addr: shows, name: placeName(REC.doc(shows), shows) };
+}
+
 /**
  * A link's far document's first line by the same rule (T-ARTICLE's
  * `firstLineOf`; LK's reader `first`): what the model holds of it, if
@@ -1801,6 +1857,8 @@ export function stateWords(d) {
  * @typedef {Object} KeptClause — what a kept document, or a kept part of one, says beside its sign (FP-23, FP-33): its string's id and its words
  * @property {'L.kept.text' | 'L.kept.links'} id
  * @property {string} text
+ * @property {string} reason the failed read's words its text ends with (BM-HELD's `whyOf`); '' where no read failed
+ * @property {number} since the stamp its ⟨when⟩ says (M-PUMP's `Kept.since`): the page's clock at the row or drop that left behind what stands
  */
 
 /**
@@ -1835,8 +1893,8 @@ export function keptWords(d, links, kept, now = Date.now()) {
  * @returns {KeptClause}
  */
 function keptClause(id, at, met, now) {
-  const clause = t(id, { when: lastRead(at, now) });
-  return { id, text: met ? t('L.kept.failed', { clause, reason: t(whyOf(met)) }) : clause };
+  const clause = t(id, { when: lastRead(at, now) }), reason = met ? t(whyOf(met)) : '';
+  return { id, text: reason ? t('L.kept.failed', { clause, reason }) : clause, reason, since: at };
 }
 
 /**

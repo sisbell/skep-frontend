@@ -18,8 +18,12 @@
 // segments; a reading scene's close said after it until the next act, whole
 // once a session and as forward ›'s label after; the places the line names;
 // a kept document's clause in a segment of its own beside the address that
-// names it, and the board's wherever it names no kept document, each said
-// once as it appears and once as it lifts; and the cover — no
+// names it, and the board's wherever it names no kept document; what the
+// status region says of a kept place, by its name as the mirror finds it —
+// once as its clause appears and once as its reads set it, changed or
+// unchanged, still as last read where a read fails, nothing where it is let
+// go unset, one message for documents a row names together and none for a
+// change of class's own cause; and the cover — no
 // position at a refused document, the transient taken down and the class
 // change said once with what it covered (FP-13, FP-20, FP-21, FP-22, FP-23,
 // FP-25, FP-26, FP-28, FP-29, FP-33, FP-34, FP-35, FP-36).
@@ -671,27 +675,48 @@ test('at a document a read refused — a covered draft among them — the line n
   assert.ok(!host.innerHTML.includes('seg transient'), `the change takes the transient down: ${host.innerHTML}`);
 });
 
+/** the board not answering a read: the shell's dial, or the dev provider's fetch, failed */
+const UNREACHABLE = { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } };
+/** a status region's stand-in that keeps every message said through it, in order (`said`), and how the last was said (`live`) */
+function region() {
+  /** @type {string[]} */
+  const said = [];
+  const r = { said, live: '', setAttribute(/** @type {string} */ k, /** @type {string} */ v) { if (k === 'aria-live') r.live = v; } };
+  Object.defineProperty(r, 'textContent', { get: () => said[said.length - 1] ?? '', set: (/** @type {string} */ v) => { said.push(v); } });
+  return r;
+}
+/** the line attached to a stand-in element, speaking through a status region that keeps every message (`region`): the element and that region */
+function speaking() {
+  const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [], contains: () => false };
+  const live = region();
+  FOCUS.attach({ live: /** @type {any} */ (live) });
+  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  return { host, said: live.said, live };
+}
+/** a published feed row of an insert at `position` naming the documents `docs` */
+const inserting = (/** @type {number} */ position, /** @type {string[]} */ docs) => ({ board: 'b-1', update: { position, at: position, op: 'insert', docs, class: 'published' } });
+/** every answer the fake port gives and every step a promise makes taken, while `holds` reads true, at most fifty turns */
+async function turns(/** @type {() => boolean} */ holds) { for (let i = 0; i < 50 && holds(); i++) await new Promise((r) => setImmediate(r)); }
+
 // placed last: the death empties the model every test above reads
-test('a kept document the line names carries its clause in a segment of its own right after the address segment — an edition\'s "links as last read" at the page\'s clock as the row that left it behind came — and none while the line names no document; the clause said politely once as it appears and once as it lifts, in the step its read sets the document (issues #345, #367)', async (ctx) => {
+test('a kept document the line names carries its clause in a segment of its own right after the address segment — an edition\'s "links as last read" at the page\'s clock as the row that left it behind came — and none while the line names no document; the status region says it once as it appears, by its name as the mirror finds it — its first line\'s words, then its address — and once as its read sets it, current and unchanged where the board answered its text as it stood (issues #345, #367, #369)', async (ctx) => {
   // D read whole again, its links among it, where a test before this one dropped what it held
   const unasked = fake.unanswered.length;
   await PUMP.loadWhole(D);
   assert.ok(REC.doc(D).linksRead, 'D\'s links read');
   ctx.mock.timers.enable({ apis: ['setTimeout'] });
-  const flush = () => new Promise((r) => setImmediate(r));
-  const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
-  FOCUS.attach({ live: /** @type {any} */ (live) });
-  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  const { host, said, live } = speaking();
   over(D, 14 / STANDARD_FS);
   await WALK.focusTo(D, 15);
   LINE.render(true);
-  live.textContent = '';
+  const from = said.length, name = LAYER.boxName(D).name;
+  assert.equal(name, `"Tumbler." ${D}`, 'its name: its first line as the mirror quotes it, then its address');
   const text = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
   const t0 = Date.now();
-  fake.fire('feed', { board: 'b-1', update: { position: 40, at: 40, op: 'insert', docs: [D], class: 'published' } });
+  fake.fire('feed', inserting(40, [D]));
   const t1 = Date.now();
   LINE.render();
-  assert.ok(!host.innerHTML.includes('seg kept'), 'within the second: no clause');
+  assert.ok(!host.innerHTML.includes('seg kept') && said.length === from, 'within the second: no clause, nothing said');
   ctx.mock.timers.tick(PUMP.KEPT_MS);
   const since = /** @type {number} */ (PUMP.kept(D)?.since);
   assert.ok(since >= t0 && since <= t1, 'kept from the row\'s arrival');
@@ -699,37 +724,121 @@ test('a kept document the line names carries its clause in a segment of its own 
   LINE.render();
   const seg = `<span class="sep">│</span><span class="seg kept" data-string="L.kept.links">${esc(clause)}</span>`;
   assert.ok(host.innerHTML.includes(`</button>${seg}<span class="sep">│</span><span class="seg acting"`), `beside the address segment, before the acting-as segment: ${host.innerHTML}`);
-  assert.deepEqual([live.textContent, live.live], [t('L.kept.said', { what: D, clause }), 'polite'], 'said politely as it appears');
-  live.textContent = '';
+  assert.deepEqual([said.slice(from), live.live], [[t('L.kept.said', { name, clause })], 'polite'], 'said politely as it appears');
   LINE.render(true);
-  assert.equal(live.textContent, '', 'said once');
   over(D, MID);
   LINE.render();
-  assert.ok(!host.innerHTML.includes('seg kept') && live.textContent === '', 'the line naming the account: no clause in it, nothing said, the document still kept');
+  assert.ok(!host.innerHTML.includes('seg kept') && said.length === from + 1, 'said once; the line naming the account: no clause in it, nothing said, the document still kept');
   over(D, 14 / STANDARD_FS);
   text();
-  for (let i = 0; i < 50 && PUMP.kept(D); i++) await flush();
+  await turns(() => !!PUMP.kept(D));
   LINE.render();
-  assert.deepEqual([PUMP.kept(D), host.innerHTML.includes('seg kept'), live.textContent], [null, false, t('L.kept.lifted', { what: D })], 'set: the clause lifted, said once as it lifts');
+  assert.deepEqual([PUMP.kept(D), host.innerHTML.includes('seg kept'), said.slice(from + 1)], [null, false, [t('L.kept.unchanged', { name })]], 'set: the clause lifted, said once — current, unchanged');
   assert.deepEqual(fake.unanswered.slice(unasked), []);
 });
 
-test('while the board lags past a second the line carries its clause in the kept segment wherever it names no kept document — nearer naming a document not kept, at mid naming an account, at far naming the board — said politely once as it appears and once as it lifts as the catch-up\'s rows are taken (issue #367\'s design decision: "Meanwhile the board carries the clause")', async (ctx) => {
+test('a kept document whose read the board does not answer once its clause is said is said still as last read with the failure\'s words, once; its read made again at the daemon\'s running sets it, current and unchanged (issue #369\'s design decision: "A failed read: \'still as last read\', with the failure\'s words")', async (ctx) => {
+  const unasked = fake.unanswered.length, key = FAKE.keyOf('op', { frame: F.retrieveV(D, 1, 30) }), answer = script[key];
+  await PUMP.loadWhole(D);
+  ctx.mock.timers.enable({ apis: ['setTimeout'] });
+  const { said } = speaking();
+  over(D, 14 / STANDARD_FS);
+  await WALK.focusTo(D, 15);
+  LINE.render(true);
+  const from = said.length, name = LAYER.boxName(D).name;
+  const text = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  try {
+    fake.fire('feed', inserting(41, [D]));
+    ctx.mock.timers.tick(PUMP.KEPT_MS);
+    LINE.render();
+    assert.deepEqual(said.slice(from), [t('L.kept.said', { name, clause: t('L.kept.links', { when: lastRead(/** @type {number} */ (PUMP.kept(D)?.since)) }) })], 'its clause said as it appears');
+    script[key] = UNREACHABLE;
+    text();
+    await turns(() => !PUMP.kept(D)?.met);
+    LINE.render();
+    LINE.render(true);
+    assert.deepEqual(said.slice(from + 1), [t('L.kept.still', { name, reason: t('F.daemon.unreachable') })], 'its text not answered: still as last read, with the failure\'s words, once');
+    script[key] = answer;
+    fake.fire('daemon', { board: 'b-1', state: 'running' });
+    await turns(() => !!PUMP.kept(D));
+    LINE.render();
+    assert.deepEqual([PUMP.kept(D), said.slice(from + 2)], [null, [t('L.kept.unchanged', { name })]], 'read again at running and set: current, unchanged');
+  } finally { script[key] = answer; }
+  assert.deepEqual(fake.unanswered.slice(unasked), []);
+});
+
+test('documents a row names together are said in one message as their clauses appear — the one nearest the focus, the walk\'s, named and the rest counted, "as last read ⟨when⟩" for them all — and in one as their reads set them, the nearest by what it says and the rest counted by outcome, a document set with other words current and changed (issue #369\'s design decision: "One message per cause. When several documents change together, count them by outcome and name the one nearest the focus")', async (ctx) => {
+  const unasked = fake.unanswered.length, textL = F.retrieveV(LONG, 1, LONG_TEXT.length), key = FAKE.keyOf('op', { frame: textL }), answer = script[key];
+  await PUMP.loadWhole(D); await PUMP.loadWhole(LONG);
+  ctx.mock.timers.enable({ apis: ['setTimeout'] });
+  const { said } = speaking();
+  await WALK.focusTo(D, 15);
+  CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
+  const shown = PUMP.visibleDocs().map((d) => d.addr);
+  assert.ok(shown.includes(D) && shown.includes(LONG), `HOME shows both: ${shown}`);
+  LINE.render(true);
+  // LONG's words other than they stood, over the same extent
+  script[key] = { result: { as_of: 2, resp: 'delivery', items: [{ content: LONG_TEXT.replace('Item 1 of', 'Item A of') }] } };
+  const holdD = fake.hold('op', { frame: F.retrieveV(D, 1, 30) }), holdL = fake.hold('op', { frame: textL });
+  try {
+    const from = said.length, named = LAYER.boxName(D).name;
+    fake.fire('feed', inserting(42, [D, LONG]));
+    ctx.mock.timers.tick(PUMP.KEPT_MS);
+    LINE.render();
+    const since = /** @type {number} */ (PUMP.kept(D)?.since);
+    assert.equal(PUMP.kept(LONG)?.since, since, 'one cause: both kept from the row');
+    assert.deepEqual(said.slice(from), [t('L.kept.said', { name: t('L.kept.and-more', { name: named, n: 1 }), clause: t('L.kept.text', { when: lastRead(since) }) })], 'one message as they appear: the walk\'s document named, the other counted');
+    holdD();
+    await turns(() => !!PUMP.kept(D));
+    LINE.render();
+    assert.deepEqual([PUMP.kept(D), said.slice(from + 1)], [null, []], 'the walk\'s document set, the other still read: nothing said yet');
+    holdL();
+    await turns(() => !!PUMP.kept(LONG));
+    LINE.render();
+    assert.deepEqual(said.slice(from + 1), [`${t('L.kept.unchanged', { name: named })}; ${t('L.kept.changed', { name: t('L.kept.more', { n: 1 }) })}`], 'one message as their reads set them: the walk\'s document current and unchanged, the other counted current and changed');
+  } finally { script[key] = answer; }
+  assert.deepEqual(fake.unanswered.slice(unasked), []);
+});
+
+test('a kept document let go before its reads set it — the view gone from it, a row voiding the read out — is said nothing of as it goes: its clause was said, and nothing set it (issue #369)', async (ctx) => {
+  const unasked = fake.unanswered.length;
+  await PUMP.loadWhole(D);
+  ctx.mock.timers.enable({ apis: ['setTimeout'] });
+  const { said } = speaking();
+  over(D, 14 / STANDARD_FS);
+  await WALK.focusTo(D, 15);
+  LINE.render(true);
+  const from = said.length, text = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  fake.fire('feed', inserting(43, [D]));
+  ctx.mock.timers.tick(PUMP.KEPT_MS);
+  LINE.render();
+  assert.equal(said.length, from + 1, 'its clause said as it appears');
+  // the view gone from it, fifty boxes to its left: a second row naming it drops it, voiding the read out
+  const b = docBox(D);
+  CAM.set({ x: b.x - 50 * b.w, y: b.y + b.h / 2, scale: MID });
+  assert.ok(!PUMP.visibleDocs().some((d) => d.addr === D), 'the view shows it no more');
+  fake.fire('feed', inserting(44, [D]));
+  text();
+  await turns(() => !!PUMP.kept(D));
+  LINE.render();
+  assert.deepEqual([PUMP.kept(D), PUMP.liftOf('doc', D), said.slice(from + 1)], [null, null, []], 'let go unset: nothing set it, nothing said');
+  await PUMP.loadWhole(D);
+  assert.deepEqual(fake.unanswered.slice(unasked), []);
+});
+
+test('while the board lags past a second the line carries its clause in the kept segment wherever it names no kept document — nearer naming a document not kept, at mid naming an account, at far naming the board — said politely once as it appears, the board by its mirror item\'s name, and once as the catch-up\'s rows are taken, current and unchanged where the catch-up read none (issues #367, #369)', async (ctx) => {
   const from = Math.max(REC.feedAt() ?? 0, 60), unasked = fake.unanswered.length, session = /** @type {{session: string}} */ (REC.session()).session;
   REC.reachFeed(from);
   script[FAKE.keyOf('changes', { session, since: from })] = { result: { entries: [], next: from, head: from } };
   ctx.mock.timers.enable({ apis: ['setTimeout'] });
-  const flush = () => new Promise((r) => setImmediate(r));
-  const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
-  FOCUS.attach({ live: /** @type {any} */ (live) });
-  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  const { host, said, live } = speaking();
   over(D, 14 / STANDARD_FS);
   await WALK.focusTo(D, 15);
   LINE.render(true);
-  live.textContent = '';
+  const told = said.length, name = t('L.mirror.board.name', { node: '1', origin: '' });
   fake.drop();
   LINE.render();
-  assert.ok(!host.innerHTML.includes('seg kept') && live.textContent === '', 'within the second: no clause, nothing said');
+  assert.ok(!host.innerHTML.includes('seg kept') && said.length === told, 'within the second: no clause, nothing said');
   ctx.mock.timers.tick(PUMP.KEPT_MS);
   const clause = t('L.kept.text', { when: lastRead(/** @type {number} */ (PUMP.boardKept()?.since)) });
   const seg = `<span class="sep">│</span><span class="seg kept" data-string="L.kept.text">${esc(clause)}</span>`;
@@ -740,21 +849,23 @@ test('while the board lags past a second the line carries its clause in the kept
     LINE.render();
     assert.ok(host.innerHTML.includes(`</button>${seg}<span class="sep">│</span><span class="seg acting"`), `${where}: the board's clause beside the address segment — ${host.innerHTML}`);
   }
-  assert.deepEqual([live.textContent, live.live], [t('L.kept.said', { what: '1', clause }), 'polite'], 'said politely once as it appears, the board by its address');
-  live.textContent = '';
+  assert.deepEqual([said.slice(told), live.live], [[t('L.kept.said', { name, clause })], 'polite'], 'said politely once as it appears, the board by its mirror item\'s name');
   fake.reopen();
-  for (let i = 0; i < 20 && PUMP.boardKept(); i++) await flush();
+  await turns(() => !!PUMP.boardKept());
   LINE.render();
-  assert.deepEqual([PUMP.boardKept(), host.innerHTML.includes('seg kept'), live.textContent], [null, false, t('L.kept.lifted', { what: '1' })], 'the catch-up\'s rows taken: the clause lifted, said once as it lifts');
+  assert.deepEqual([PUMP.boardKept(), host.innerHTML.includes('seg kept'), said.slice(told + 1)], [null, false, [t('L.kept.unchanged', { name })]], 'the catch-up\'s rows taken, none read: the clause lifted, said once — current, unchanged');
   assert.deepEqual(fake.unanswered.slice(unasked), []);
 });
 
-test('a change of the page\'s class is said once, as the reads it asked answer: the ending\'s words, then the documents it covered — never the ending alone first, and nothing while they read (issue #177: "One status message says the session ended and what is covered")', async () => {
+test('a change of the page\'s class is said once, as the reads it asked answer: the ending\'s words, then the documents it covered — never the ending alone first, and nothing while they read; a document the view stood on, read again at the new class past a second, is said nothing of as its clause appears or lifts, the change\'s own message speaking for its cause (issues #177, #369: "One status message says the session ended and what is covered")', async () => {
   const DR = '1.0.1.0.6', flush = () => new Promise((r) => setTimeout(r, 0));
   const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
   FOCUS.attach({ live: /** @type {any} */ (live) });
   LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  // the one line told of the change as the app tells it, with the change's stamp
+  PUMP.start({ onDirty: () => {}, onDrop: (x) => { if (!x.addrs) LINE.classChanged(x.at); } });
   const was = REC.session();
+  await PUMP.loadWhole(D);
   // a draft the session read, in view at HOME beside the edition; the guest's listing the edition alone, the draft withheld from the guest
   REC.takeSpanSet(DR, [{ subspace: 1, ordinal: 1, positions: 12 }]);
   script[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(DR) })] = { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } };
@@ -762,10 +873,9 @@ test('a change of the page\'s class is said once, as the reads it asked answer: 
   CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
   LINE.render(true);
   live.textContent = '';
-  const listing = fake.hold('places', { board: 'b-1' });
+  const listing = fake.hold('places', { board: 'b-1' }), text = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
   try {
     fake.fire('session-died', { session: /** @type {{session: string}} */ (was).session, reason: { arm: 'closed' } });
-    LINE.classChanged();
     LINE.render();
     assert.deepEqual([live.textContent, PUMP.rereading()], ['', true], 'nothing said while the index is read again: the ending is never said alone first');
     listing();
@@ -777,5 +887,12 @@ test('a change of the page\'s class is said once, as the reads it asked answer: 
     live.textContent = '';
     LINE.render(true);
     assert.equal(live.textContent, '', 'said once');
-  } finally { REC.setSession(was); }
+    await new Promise((r) => setTimeout(r, PUMP.KEPT_MS + 20));
+    LINE.render();
+    assert.deepEqual([!!LAYER.keptIn(D), live.textContent], [true, ''], 'the edition read again at the guest\'s class past a second: its clause stands, nothing said of it');
+    text();
+    for (let i = 0; i < 20 && PUMP.kept(D); i++) await flush();
+    LINE.render();
+    assert.deepEqual([PUMP.kept(D), live.textContent], [null, ''], 'set: nothing said of it either');
+  } finally { text(); REC.setSession(was); }
 });

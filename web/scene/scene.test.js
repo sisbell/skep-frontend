@@ -55,7 +55,9 @@
 // the text, the chain, the owner's byline facts, a cause a row kept as held among them, the
 // `compare` — setting nothing, the pane
 // kept on its text and saying why until the read made at the daemon's running, or past the
-// pause, sets it, and an opening on a text the board did not answer opening nothing; a pane's
+// pause, sets it — reported kept to the one line, one place with the plane's box naming its
+// address, said once as it appears and once, by what its setting changed, as it is set — and
+// an opening on a text the board did not answer opening nothing; a pane's
 // corner naming neither the latest version nor the chain's count while the board lags; and a
 // scene opened on a document a
 // far end names whole — the far pane that version or the latest, named as
@@ -84,6 +86,7 @@ import * as FACES from '../overlays/faces.js';
 import * as FOCUS from '../nav/focus.js';
 import * as KEYS from '../nav/keys.js';
 import * as SCENE from './scene.js';
+import * as LINE from '../line/line.js';
 import { levels, merged, counterpart, counterparts, nearest, linesBetween, carriedTo, wholeEdges, drawEdge, stopFor, banded, drawBand, drawStroke, changeWords, strokeWords, sharedHeld, junctionsOf, strokeHeld, sameBytes } from './scene.js';
 import { byteLength } from '../util.js';
 import * as GO from '../nav/go.js';
@@ -1164,10 +1167,17 @@ test('a row naming a pane\'s document the plane shows too — kept there while t
   } finally { CAM._reset(); }
 }));
 
-test('a pane set while the plane\'s read again of its document waits on the board is set again from the read made at the daemon\'s running, its corner saying until then that it is as last read, at the page\'s clock as the row came, and why — never left on the text the row left standing (issues #345, #367)', () => onPage(async (p) => {
+/** the one line attached over the page, speaking for the scene's panes through the readers the app hands in (SC's `keptPanes`, `paneLift`) */
+function lineOver() {
+  LINE.attach(/** @type {any} */ ({ innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [], contains: () => false }), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {}, panes: SCENE.keptPanes, paneLift: SCENE.paneLift });
+  LINE.classChanged();
+}
+
+test('a pane set while the plane\'s read again of its document waits on the board is set again from the read made at the daemon\'s running, its corner saying until then that it is as last read, at the page\'s clock as the row came, and why — never left on the text the row left standing; the pane and the plane\'s box, naming one address, one place the one line says once as it appears and once, changed, as both are set (issues #345, #367, #369)', () => onPage(async (p) => {
   const DQ = '1.0.1.0.19', DQ_V1 = 'A waiting note.\n\nIts first words.', DQ_V2 = 'A waiting note.\n\nWords set later.\n\nIts first words.';
   Object.assign(script, reads(DQ, DQ_V1, { published: false }), compared(VE1, VE_TEXT, DQ, DQ_V1));
   await SCENE.open(VE1, DQ);
+  lineOver();
   // the plane under the scene: the account's documents in view, the note among them
   CAM.setViewport(1440, 900);
   CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
@@ -1186,7 +1196,10 @@ test('a pane set while the plane\'s read again of its document waits on the boar
     SCENE.markKept();
     const clause = t('L.kept.failed', { clause: t('L.kept.text', { when: lastRead(at) }), reason: t('F.daemon.unreachable') });
     assert.ok(p.cornerB.innerHTML.includes(`<span class="kept" data-string="L.kept.text">${esc(clause)}</span>`), `pane B's corner: as last read, and why — ${p.cornerB.innerHTML}`);
-    assert.ok(p.said.includes(t('L.kept.said', { what: DQ, clause })), 'said as it appears');
+    const name = LAYER.placeName(REC.doc(DQ), DQ), told = p.said.length;
+    assert.deepEqual(SCENE.keptPanes().map((x) => [x.addr, x.name, x.clause?.text, x.since]), [[DQ, name, clause, at]], 'pane B reported kept: its address, its name, its clause and its stamp');
+    LINE.render();
+    assert.deepEqual(p.said.slice(told), [t('L.kept.said', { name, clause })], 'said once as it appears, the pane and the box one place');
     out = false;
     fake.fire('daemon', { board: 'b-1', state: 'running' });
     for (let i = 0; i < 100 && PUMP.kept(DQ); i++) await new Promise((r) => setTimeout(r, 0));
@@ -1195,7 +1208,10 @@ test('a pane set while the plane\'s read again of its document waits on the boar
     assert.ok(d.blocks.some((x) => x.text === 'Words set later.'), 'the plane\'s read made again at running set the note');
     assert.deepEqual(LAYER.madeOf(shownIn(p.paneB, 'b')), { addr: DQ, blocks: d.blocks, runs: d.runs, image: d.image }, 'pane B set again from the text that read set');
     SCENE.markKept();
-    assert.ok(!p.cornerB.innerHTML.includes('class="kept"') && p.said.includes(t('L.kept.lifted', { what: DQ })), 'the clause lifted with the setting, and said so');
+    assert.ok(!p.cornerB.innerHTML.includes('class="kept"'), 'the clause lifted with the setting');
+    assert.deepEqual([SCENE.keptPanes(), SCENE.paneLift(DQ), PUMP.liftOf('doc', DQ)], [[], { since: at, outcome: 'changed' }, { since: at, outcome: 'changed' }], 'the pane and the box each set, its text changed');
+    LINE.render();
+    assert.deepEqual(p.said.slice(told + 1), [t('L.kept.changed', { name })], 'said once: current, changed');
   } finally { CAM._reset(); }
 }));
 
@@ -1247,17 +1263,18 @@ async function unheardRow(doc, o) {
   return { at, answer: () => { script[key] = answer; } };
 }
 
-test('a row naming a draft pane\'s document the plane does not show, whose read the board did not answer, leaves the pane on its text, kept and saying why, until the read made at the daemon\'s running sets it — the clause lifting, said so — and a second running asks it nothing (issue #370)', () => onPage(async (p) => {
+test('a row naming a draft pane\'s document the plane does not show, whose read the board did not answer, leaves the pane on its text, kept and saying why, until the read made at the daemon\'s running sets it — the clause lifting, the pane reported kept to the one line until then and set, changed, after — and a second running asks it nothing (issues #369, #370)', () => onPage(async (p) => {
   const DU = '1.0.1.0.23', V1 = 'An unheard note.\n\nIts first words.', V2 = 'An unheard note.\n\nWords set while the board was out.\n\nIts first words.';
   const unanswered = fake.unanswered.length;
   try {
     const u = await unheardRow(DU, { before: V1, after: V2, silent: F.retrieveDocVSpanSet(DU), position: 60 });
     assert.deepEqual([wordsIn(p.paneB, 'b'), p.paneB.placed.length], [['An unheard note.', 'Its first words.'], 1], 'the board not answering: pane B on its text, set nowhere again');
+    assert.deepEqual(SCENE.keptPanes().map((x) => [x.addr, x.clause, x.since]), [[DU, null, u.at]], 'within its second: reported kept, its clause not yet standing');
     await new Promise((r) => setTimeout(r, PUMP.KEPT_MS + 20));
     SCENE.markKept();
     const clause = t('L.kept.failed', { clause: t('L.kept.text', { when: lastRead(u.at) }), reason: t('F.daemon.unreachable') });
     assert.ok(p.cornerB.innerHTML.includes(`<span class="kept" data-string="L.kept.text">${esc(clause)}</span>`), `pane B's corner: as last read, and why — ${p.cornerB.innerHTML}`);
-    assert.ok(p.said.includes(t('L.kept.said', { what: DU, clause })), 'said as it appears');
+    assert.deepEqual(SCENE.keptPanes().map((x) => [x.addr, x.name, x.clause?.text, x.since, x.focus]), [[DU, `"An unheard note." ${DU}`, clause, u.at, true]], 'past it: reported with its name, its clause, its stamp, and the focus it holds');
     u.answer();
     running();
     await until(() => wordsIn(p.paneB, 'b').includes('Words set while the board was out.'), 'read again at running');
@@ -1265,7 +1282,8 @@ test('a row naming a draft pane\'s document the plane does not show, whose read 
     const d = REC.doc(DU);
     assert.deepEqual(LAYER.madeOf(shownIn(p.paneB, 'b')), { addr: DU, blocks: d.blocks, runs: d.runs, image: d.image }, 'pane B set from the read made at running');
     SCENE.markKept();
-    assert.ok(!p.cornerB.innerHTML.includes('class="kept"') && p.said.includes(t('L.kept.lifted', { what: DU })), 'the clause lifted with the setting, and said so');
+    assert.ok(!p.cornerB.innerHTML.includes('class="kept"'), 'the clause lifted with the setting');
+    assert.deepEqual([SCENE.keptPanes(), SCENE.paneLift(DU)], [[], { since: u.at, outcome: 'changed' }], 'set: reported no more, its setting changed what it shows');
     const from = fake.asked.length;
     running();
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));

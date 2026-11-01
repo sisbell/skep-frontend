@@ -311,9 +311,11 @@ export const STRINGS = {
   'L.scene-label': { text: 'the reading scene: two places side by side', cls: 'DRAFT', source: 'designs/plane.html', screen: 'B1-S9' },
   'L.mirror-label': { text: 'the board in record order', cls: 'DRAFT', source: 'designs/plane.html', screen: 'the ARIA mirror' },
   'L.mirror-level': { text: 'level ⟨n⟩', cls: 'DRAFT', source: 'designs/plane.js', screen: 'the ARIA mirror' },
-  // the mirror's item names (N-WALK's `nameOf`): what a screen reader hears at each element of the walk
+  // the mirror's item names (N-WALK's `nameOf`): what a screen reader hears at each element of the walk — the board's
+  // item its name, the one the status region calls it by, then its count
   'L.mirror.item': { text: 'Item ⟨i⟩ of ⟨n⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.board': { text: 'board ⟨node⟩, ⟨origin⟩: ⟨n⟩ accounts.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.board.name': { text: 'board ⟨node⟩, ⟨origin⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror; the status region', lane: true },
+  'L.mirror.board': { text: '⟨board⟩: ⟨n⟩ accounts.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.account': { text: 'account ⟨account⟩: ⟨documents⟩ documents, ⟨links⟩ links⟨empty⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.at-least': { text: 'at least ⟨n⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.document': { text: 'document ⟨document⟩, ⟨label⟩, ⟨state⟩⟨extent⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
@@ -403,14 +405,21 @@ export const STRINGS = {
   // a draft's text, else the links drawn with it, or an origin's edition claims at a withheld run of it — said once beside
   // the document's name, and the board's while it lags, ⟨when⟩ the page's own clock at the row or drop that left the copy
   // behind (`lastRead`), a failed read's words after it — a mirror item carrying it as its own sentence (L.mirror.clause);
-  // how many of an account's documents stand so, on its label at far scale; and what the status region says as it
-  // appears and as it lifts, ⟨what⟩ the document, the board by its address, or the withheld text of an origin in it
-  'L.kept.text': { text: 'as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; B1-S2: a document\'s label; the ARIA mirror; B1-S3: the board\'s statements; B1-S9: a pane\'s corner', lane: true },
+  // how many of an account's documents stand so, on its label at far scale; and what the status region says of one
+  // cause (L-LINE's `keptSaid`), ⟨name⟩ each place by the name the mirror finds it by — a document's (T-LAYER's
+  // `placeName`), the board's (L.mirror.board.name), the withheld text of an origin in it: as its clause appears, the
+  // clause; as its reads set it, whether what it shows changed; where a read of it fails, still as last read with the
+  // failure's words; several of one cause the one nearest the focus named, the rest counted
+  'L.kept.text': { text: 'as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; B1-S2: a document\'s label; the ARIA mirror; B1-S3: the board\'s statements; B1-S9: a pane\'s corner; the status region', lane: true },
   'L.kept.links': { text: 'links as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; B1-S2: a document\'s label; the ARIA mirror; B1-S7: a column\'s edge, the run\'s face; B1-S9: a pane\'s corner', lane: true },
   'L.kept.failed': { text: '⟨clause⟩ — ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; B1-S2: a document\'s label; the ARIA mirror; B1-S7; B1-S9: a pane\'s corner', lane: true },
   'L.kept.count': { text: '⟨n⟩ as last read', cls: 'DRAFT', source: '', screen: 'B1-S3: an account\'s cluster', lane: true },
-  'L.kept.said': { text: '⟨what⟩ — ⟨clause⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
-  'L.kept.lifted': { text: '⟨what⟩ — read again', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
+  'L.kept.said': { text: '⟨name⟩ ⟨clause⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
+  'L.kept.unchanged': { text: '⟨name⟩ current, unchanged', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
+  'L.kept.changed': { text: '⟨name⟩ current, changed', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
+  'L.kept.still': { text: '⟨name⟩ still as last read — ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
+  'L.kept.and-more': { text: '⟨name⟩ and ⟨n⟩ more', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
+  'L.kept.more': { text: '⟨n⟩ more', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
   'L.kept.run': { text: 'the withheld text from ⟨origin⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
   'L.time.day-time': { text: '⟨day⟩, ⟨time⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; B1-S2: a document\'s label; the ARIA mirror; B1-S7; B1-S9: a pane\'s corner', lane: true },
   // the shown chords' words (D5-F8; the focus record's rule 19): the dismiss's title, the version marker's

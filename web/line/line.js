@@ -114,10 +114,23 @@
 // reader is told (D4): a transient segment and the mode line politely; the
 // session's death, a session a restart lost that the acquire could not get
 // back, and halted writes assertively, once as they arrive — nothing while
-// it reconnects nor as it returns — through the one status region; each
-// kept clause on the plane, a document's, a withheld run's or the board's,
-// politely once as it appears and once as it lifts (`keptSaid`; FP-36), a
-// change of the page's class taking down what was heard unsaid; a change
+// it reconnects nor as it returns — through the one status region; every
+// kept place — a box, a reading scene's pane (SC's `keptPanes`, through the
+// reader the app hands in), an origin's withheld text, the board — politely,
+// one message for each cause, the stamp the places stand kept from
+// (`keptSaid`; FP-36): each place by its name as the mirror finds it, a box
+// and a pane naming one address one place; its clause as it appears, whether
+// what it shows changed as its reads set it (M-PUMP's `liftOf`, SC's
+// `paneLift`), still as last read with the failure's words where a read of it
+// fails, and nothing where it is let go unset; several of one cause the one
+// nearest the focus named — the pane holding the focus, another pane, the
+// walk's place, then the box nearest the view's centre — and the rest
+// counted, the lifts by outcome; a cause said once nothing of it is still
+// within its second and, where it holds a lift, every place of it is set or
+// failed, KEPT_MS after its first word at the most, the causes ready at one
+// look said together; the cause a change of the page's class
+// is said by the change's own message alone, and the change takes down what
+// was heard and what was still to say; a change
 // of the page's class is said once (FP-29), as the reads it asked answer
 // (M-PUMP's `rereading`), UNREACHED_MS at the most after it: the ending's
 // words, then the documents it covered (M-REC's `coveredDocs`), the first
@@ -140,10 +153,10 @@ import { deathWords, noBoardWords } from '../overlays/faces.js';
 import { drawChord } from '../nav/keys.js';
 import { cam, viewForCell } from '../plane/camera.js';
 import { lodOf } from '../plane/lod.js';
-import { boardCell, accountAt, G, LEAF, DEPTH_SOUND } from '../plane/projection.js';
+import { boardCell, accountAt, docBox, G, LEAF, DEPTH_SOUND } from '../plane/projection.js';
 import { memberOf, boardOf, accountOf, documentOf } from '../model/address.js';
 import { inFace, runsOf, runWidth, cutWords, LEAD_WORDS } from '../plane/labels.js';
-import { t, tHTML, addressedHTML, facedHTML, CLIENT_CLOSE } from '../strings.js';
+import { t, tHTML, addressedHTML, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @type {HTMLElement | null} */
@@ -169,8 +182,25 @@ let closesTaken = 0;
 let closedWhole = false;
 /** forward ›'s label carries the close's words, until the next act (`closedSaid`) */
 let forwardSays = false;
-/** @type {Map<string, string>} the kept clauses said through the status region as they appeared, by what each names (`keptSaid`) */
+/**
+ * @typedef {Object} KeptPlace — a place the status region speaks for while it stands kept (`keptSaid`)
+ * @property {string} key the address it names — a box's the version it shows, a pane's its own — the board's own `1`, an origin's withheld text its words
+ * @property {string} name what the status region calls it, as the mirror finds it
+ * @property {string} clause its clause (T-LAYER's `KeptClause`)
+ * @property {string} reason the failed read's words its clause ends with; '' where none
+ * @property {number} since its cause: the page's clock at the row or drop that left it behind
+ * @property {Array<[import('../model/pump.js').KeptKind, string]>} holds what M-PUMP holds it by, each its kind and its key, its lift read there (`liftOf`)
+ * @property {boolean} pane a reading scene's pane holds it, its lift read there too (SC's `paneLift`)
+ * @property {[number, number]} near how near the focus it stands, the least nearest: its tier, then its distance from the view's centre
+ */
+/** @typedef {'changed' | 'unchanged' | 'still'} Said what a place's lift says: whether what it shows changed as its reads set it, or still as last read where a read failed */
+/** @typedef {{at: number, appear: KeptPlace[], lift: Array<{place: KeptPlace, said: Said}>}} Cause what one cause has to say, not yet said: when its first word came, by the platform's clock; the places whose clause appeared; the places whose reads set them or failed */
+/** @type {Map<string, KeptPlace>} the kept places the status region spoke for as it last looked, by their keys (`keptSaid`) */
 let keptHeard = new Map();
+/** @type {Map<number, Cause>} what each cause has to say, not yet said, by its stamp (`keptSaid`) */
+let causes = new Map();
+/** @type {Set<number>} the stamps of the changes of the page's class, each a cause the change's own message speaks for (`classChanged`) */
+const changes = new Set();
 /**
  * @typedef {Object} Acts — the line's acts, and what it reads of the owners that import it, handed in once by the app (FP-10, FP-11)
  * @property {(byKey: boolean) => void} open the address segment's act: the LEAP box
@@ -184,6 +214,8 @@ let keptHeard = new Map();
  * @property {() => Array<{key: string, words: string}>} [walks] the walks' folded moments, each its walk and its segment's words (O-FACES' `folded`)
  * @property {(key: string, byKey: boolean) => void} [walk] a walk's segment's act: its moment unfolded (O-FACES' `unfold`)
  * @property {() => number} [closed] the reading scenes closed so far (N-GO's `closed`): a new one is said after the close (`closedSaid`)
+ * @property {() => import('../scene/scene.js').PaneKept[]} [panes] the reading scene's panes standing kept (SC's `keptPanes`), which the status region speaks for (`keptSaid`)
+ * @property {(addr: string) => ({since: number, outcome: import('../model/records.js').Outcome} | null)} [paneLift] how the setting the board's events asked set the pane naming an address (SC's `paneLift`)
  */
 
 /** @typedef {{addr: string, runs: Array<{pos: number, width: number}>, current: number}} Pieces the runs of an arrival in several, the one the landing stands at by index */
@@ -272,10 +304,18 @@ function closedSaid() {
  * as M-PUMP tells it: the transient segment and
  * forward ›'s close label taken down — the strip's act quotes the text it was
  * made at — a scene's next close said whole again, the page's session being
- * a new one, and the change's one message held until the reads it asked
- * answer (`render`).
+ * a new one, the kept places heard and what was still to say of them taken
+ * down unsaid, the change's own stamp a cause its one message speaks for
+ * (`keptSaid`), and that message held until the reads it asked answer
+ * (`render`).
+ * @param {number | null} [at] the page's clock at the change (M-PUMP's `Dropped.at`)
  */
-export function classChanged() { transientSeg = null; forwardSays = false; closedWhole = false; changedAt = performance.now(); keptHeard = new Map(); render(true); }
+export function classChanged(at = null) {
+  transientSeg = null; forwardSays = false; closedWhole = false; changedAt = performance.now();
+  keptHeard = new Map(); causes = new Map();
+  if (at != null) changes.add(at);
+  render(true);
+}
 
 /**
  * The change's one message (see the head): the ending's words, then the
@@ -291,25 +331,164 @@ function endingSaid(ending) {
   return t('L.covered', { ending, documents: named });
 }
 
+/** the tiers of nearness to the focus (`KeptPlace.near`), nearest first: the pane holding the focus, another pane — the scene standing over the plane — the box the walk stands in, the plane's other boxes, an origin's withheld text, the board */
+const NEAR = /** @type {const} */ ({ focused: 0, pane: 1, walked: 2, box: 3, run: 4, board: 5 });
+
+/** the nearer of two places to the focus (`KeptPlace.near`), as a sort compares them */
+const nearer = (/** @type {KeptPlace} */ a, /** @type {KeptPlace} */ b) => a.near[0] - b.near[0] || a.near[1] - b.near[1];
+
 /**
- * What the status region says of the plane's kept clauses (see the head;
- * FP-36): each box M-PUMP holds as it stands past a second whose clause
- * appears (T-LAYER's `keptIn`), each origin's withheld text whose edition
- * claims stand so (`claimsKeptIn`), and the board while it lags so, by its
- * address (`boardKeptIn`), said politely once as its clause appears and once
- * as it lifts — a new time or a failure's words while it stands said nothing
- * — all a render finds in one message.
+ * The places standing kept past their second as the status region speaks
+ * for them (see the head), by their keys: each box M-PUMP holds so whose
+ * clause stands (T-LAYER's `keptIn`), named by the version it shows
+ * (`boxName`); each pane whose clause stands, one place with a box naming
+ * the same address; each origin's withheld text whose edition claims stand so
+ * (`claimsKeptIn`); and the board while it lags so, by the mirror's name for
+ * it (`boardKeptIn`).
+ * @param {import('../scene/scene.js').PaneKept[]} panes
+ * @returns {Map<string, KeptPlace>}
+ */
+function keptPlaces(panes) {
+  /** @type {Map<string, KeptPlace>} */
+  const out = new Map();
+  const all = PUMP.keptAll(), f = WALK.current(), walked = f ? documentOf(f.addr) || f.addr : null, b = REC.board();
+  for (const addr of all.docs) {
+    const box = documentOf(addr) || addr, k = LAYER.keptIn(box);
+    if (!k) continue;
+    const { addr: key, name } = LAYER.boxName(box), at = docBox(box);
+    const near = /** @type {[number, number]} */ ([box === walked ? NEAR.walked : NEAR.box, Math.hypot(at.x + at.w / 2 - cam.x, at.y + at.h / 2 - cam.y)]);
+    out.set(key, { key, name, clause: k.text, reason: k.reason, since: k.since, holds: [['doc', key], ['doc', box]], pane: false, near });
+  }
+  for (const p of panes) {
+    if (!p.clause) continue;
+    const near = /** @type {[number, number]} */ ([p.focus ? NEAR.focused : NEAR.pane, 0]), was = out.get(p.addr);
+    if (was) { was.pane = true; if (near[0] < was.near[0]) was.near = near; continue; }
+    out.set(p.addr, { key: p.addr, name: p.name, clause: p.clause.text, reason: p.clause.reason, since: p.since, holds: [], pane: true, near });
+  }
+  for (const origin of all.origins) {
+    const k = LAYER.claimsKeptIn(origin), key = t('L.kept.run', { origin });
+    if (k) out.set(key, { key, name: key, clause: k.text, reason: k.reason, since: k.since, holds: [['claims', origin]], pane: false, near: [NEAR.run, 0] });
+  }
+  const lag = all.board && b ? LAYER.boardKeptIn() : null;
+  if (lag && b) out.set('1', { key: '1', name: t('L.mirror.board.name', { node: '1', origin: b.origin }), clause: lag.text, reason: lag.reason, since: lag.since, holds: [['board', '1']], pane: false, near: [NEAR.board, 0] });
+  return out;
+}
+
+/**
+ * What a place heard and gone says (see the head): changed where any of its
+ * holds was set from the stamp it stood from with what it shows changed —
+ * M-PUMP's (`liftOf`), a pane's (SC's `paneLift`) — unchanged where they were
+ * set and none changed it; null where none set it, which says nothing.
+ * @param {KeptPlace} h
+ * @returns {'changed' | 'unchanged' | null}
+ */
+function liftSaid(h) {
+  const set = [...h.holds.map(([kind, key]) => PUMP.liftOf(kind, key)), h.pane && acts && acts.paneLift ? acts.paneLift(h.key) : null].filter((l) => !!l && l.since === h.since);
+  return set.some((l) => l && l.outcome === 'changed') ? 'changed' : set.length ? 'unchanged' : null;
+}
+
+/** a lift's words for a place: whether what it shows changed, or still as last read with the failure's words */
+function liftWords(/** @type {Said} */ said, /** @type {string} */ name, /** @type {string} */ reason) {
+  return said === 'still' ? t('L.kept.still', { name, reason }) : t(said === 'changed' ? 'L.kept.changed' : 'L.kept.unchanged', { name });
+}
+
+/**
+ * One cause's message (see the head): its lifts first — the one nearest the
+ * focus named by what it says, each other outcome after it counted — then
+ * the places whose clause appeared and still stands, one named with its
+ * clause, several the nearest named, the rest counted, and the cause's
+ * "as last read" for them all; '' where nothing is left to say.
+ * @param {number} since the cause's stamp
+ * @param {Cause} c
+ * @param {Map<string, KeptPlace>} now
+ * @returns {string}
+ */
+function causeWords(since, c, now) {
+  // each place once, by what it last said: one that left and came back within the cause counted once
+  const lifts = [...new Map(c.lift.map((l) => [l.place.key, l])).values()].sort((x, y) => nearer(x.place, y.place));
+  const lifted = new Set(lifts.map((l) => l.place.key));
+  const appear = [...new Map(c.appear.map((p) => [p.key, p])).values()].filter((p) => !lifted.has(p.key) && now.get(p.key)?.since === since).sort(nearer);
+  /** @type {string[]} */
+  const parts = [];
+  const [first, ...rest] = lifts;
+  if (first) {
+    parts.push(liftWords(first.said, first.place.name, first.place.reason));
+    /** @type {Map<string, {said: Said, reason: string, n: number}>} the rest by what they say, a failure by its words too */
+    const counted = new Map();
+    for (const l of rest) {
+      const by = l.said === 'still' ? 'still ' + l.place.reason : l.said, g = counted.get(by);
+      if (g) g.n++; else counted.set(by, { said: l.said, reason: l.place.reason, n: 1 });
+    }
+    for (const g of counted.values()) parts.push(liftWords(g.said, t('L.kept.more', { n: g.n }), g.reason));
+  }
+  const [named] = appear;
+  if (named && appear.length === 1) parts.push(t('L.kept.said', { name: named.name, clause: named.clause }));
+  else if (named) {
+    const clause = t('L.kept.text', { when: lastRead(since) });
+    parts.push(t('L.kept.said', { name: t('L.kept.and-more', { name: named.name, n: appear.length - 1 }), clause: named.reason ? t('L.kept.failed', { clause, reason: named.reason }) : clause }));
+  }
+  return parts.join('; ');
+}
+
+/**
+ * Is a cause to be said now (see the head): KEPT_MS after its first word;
+ * else once no place of it is still within its second (M-PUMP's `keptSoon`,
+ * a pane's setting within its own) and, where it holds a lift, no other
+ * place of it still stands kept, read and not failed.
+ * @param {number} since
+ * @param {Cause} c
+ * @param {Map<string, KeptPlace>} now
+ * @param {Set<number>} soon
+ * @param {number} at the platform's clock
+ */
+function causeReady(since, c, now, soon, at) {
+  if (at - c.at >= PUMP.KEPT_MS) return true;
+  if (soon.has(since)) return false;
+  return !c.lift.length || ![...now.values()].some((p) => p.since === since && !p.reason && !c.lift.some((l) => l.place.key === p.key));
+}
+
+/**
+ * What the status region says of the kept places (see the head; FP-36): the
+ * places standing kept now (`keptPlaces`) set beside those heard as it last
+ * looked — one gone, or standing from another stamp, a lift of its cause
+ * where its reads set it (`liftSaid`); one new, or from another stamp, an
+ * appearance of its cause; one whose failed read's words came or changed, a
+ * lift saying still as last read — each word kept for its cause, none for a
+ * change of the page's class's; then each cause ready (`causeReady`) said in
+ * one message (`causeWords`), the causes ready at one look said together, so
+ * none takes another's place in the one region.
  */
 function keptSaid() {
-  const now = PUMP.keptAll(), heard = new Map();
-  const board = now.board ? LAYER.boardKeptIn() : null;
-  // the board named by its address, as the display names it at every scale
-  if (board) heard.set('1', board.text);
-  for (const addr of now.docs) { const box = documentOf(addr) || addr, k = LAYER.keptIn(box); if (k) heard.set(box, k.text); }
-  for (const origin of now.origins) { const k = LAYER.claimsKeptIn(origin); if (k) heard.set(t('L.kept.run', { origin }), k.text); }
-  const said = [...[...heard].filter(([what]) => !keptHeard.has(what)).map(([what, clause]) => t('L.kept.said', { what, clause })), ...[...keptHeard.keys()].filter((what) => !heard.has(what)).map((what) => t('L.kept.lifted', { what }))];
-  keptHeard = heard;
-  if (said.length) FOCUS.say(said.join('; '));
+  const panes = acts && acts.panes ? acts.panes() : [], now = keptPlaces(panes), soon = PUMP.keptSoon(), at = performance.now();
+  for (const p of panes) if (!p.clause) soon.add(p.since);
+  /** the cause a stamp is, made where none stands; null for a change of the page's class's, whose own message speaks for it */
+  const causeOf = (/** @type {number} */ since) => {
+    if (changes.has(since)) return null;
+    const c = causes.get(since) || { at, appear: [], lift: [] };
+    causes.set(since, c);
+    return c;
+  };
+  for (const [key, h] of keptHeard) {
+    const p = now.get(key);
+    if (p && p.since === h.since) continue;
+    const said = liftSaid(h);
+    if (said) causeOf(h.since)?.lift.push({ place: h, said });
+  }
+  for (const [key, p] of now) {
+    const h = keptHeard.get(key);
+    if (!h || h.since !== p.since) causeOf(p.since)?.appear.push(p);
+    else if (p.reason && p.reason !== h.reason) causeOf(p.since)?.lift.push({ place: p, said: 'still' });
+  }
+  keptHeard = now;
+  /** @type {string[]} */
+  const ready = [];
+  for (const [since, c] of [...causes]) {
+    if (!causeReady(since, c, now, soon, at)) continue;
+    causes.delete(since);
+    const words = causeWords(since, c, now);
+    if (words) ready.push(words);
+  }
+  if (ready.length) FOCUS.say(ready.join('; '));
 }
 
 /**

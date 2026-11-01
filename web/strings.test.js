@@ -5,7 +5,8 @@
 // reads in them the identifier's and nothing else; a time said in the one
 // form of a date, "not recorded" or "on or before" where the board's
 // testimony leaves it so; when the page last read what it keeps, by its own
-// clock, the hour and the minute, the day first where it was not today; a
+// clock, the hour and the minute, the day first where it was not today; what
+// the status region says of a kept place, by its name; a
 // continuation's mark's count in what it counts;
 // the entries no design document carries are listed; and every accessible name the page
 // sets is read from ST — none stands in the markup, and none is written as a
@@ -73,6 +74,19 @@ test('when the page last read what it keeps is said by its own clock: the hour a
   assert.equal(t('L.kept.text', { when: lastRead(read, noon) }), 'as last read 09:05');
   assert.equal(t('L.kept.links', { when: lastRead(read, next) }), 'links as last read 12 March 2026, 09:05');
   assert.ok(!/ago|minutes?|hours?|days?/.test(lastRead(read, noon) + lastRead(read, next)), 'never a relative age');
+});
+
+test('the status region says a kept place by its name: "⟨name⟩ as last read ⟨when⟩" as it appears, "current, unchanged" or "current, changed" as its reads set it, "still as last read" with the failure\'s words where a read fails — never a bare "now current" — several of one cause counted; the board named as its mirror item names it (issue #369\'s design decision)', () => {
+  const name = '"Tumbler." 1.0.1.0.3';
+  assert.equal(t('L.kept.said', { name, clause: t('L.kept.text', { when: '09:05' }) }), '"Tumbler." 1.0.1.0.3 as last read 09:05');
+  assert.equal(t('L.kept.said', { name, clause: t('L.kept.links', { when: '09:05' }) }), '"Tumbler." 1.0.1.0.3 links as last read 09:05', 'an edition\'s clause as its views show it');
+  assert.deepEqual([t('L.kept.unchanged', { name }), t('L.kept.changed', { name })], ['"Tumbler." 1.0.1.0.3 current, unchanged', '"Tumbler." 1.0.1.0.3 current, changed']);
+  assert.equal(t('L.kept.still', { name, reason: t('F.daemon.unreachable') }), '"Tumbler." 1.0.1.0.3 still as last read — board unreachable');
+  for (const id of ['L.kept.said', 'L.kept.unchanged', 'L.kept.changed', 'L.kept.still']) assert.ok(STRINGS[id].text.startsWith('⟨name⟩'), `${id} names its place first`);
+  assert.equal(t('L.kept.said', { name: t('L.kept.and-more', { name, n: 2 }), clause: t('L.kept.text', { when: '09:05' }) }), '"Tumbler." 1.0.1.0.3 and 2 more as last read 09:05', 'several of one cause appearing: the nearest named, the rest counted');
+  assert.equal(t('L.kept.changed', { name: t('L.kept.more', { n: 2 }) }), '2 more current, changed', 'the rest of a cause\'s lifts counted by outcome');
+  const board = t('L.mirror.board.name', { node: '1', origin: 'http://127.0.0.1:8642' });
+  assert.deepEqual([t('L.mirror.board', { board, n: 3 }), t('L.kept.unchanged', { name: board })], ['board 1, http://127.0.0.1:8642: 3 accounts.', 'board 1, http://127.0.0.1:8642 current, unchanged'], 'the board: its mirror item\'s name, then its count; the status region the same name');
 });
 
 test('a continuation\'s mark\'s count says what it counts — "152 newer documents", one in its own words — and is a lower bound where the counts are (issue #42\'s design decision)', () => {

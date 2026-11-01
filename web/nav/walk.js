@@ -98,7 +98,8 @@
 // where it stands and its length, as the plane's gap shows its ground alone
 // (FP-33); a
 // document is named by its address, then the first line its box's label sets
-// (T-LAYER's `firstOf`), the version's own — its words quoted, the client's
+// as the mirror says it (T-LAYER's `mirrorLabel`, the one the status region
+// names it by), the version's own — its words quoted, the client's
 // words in their place bracketed — then its state (T-LAYER's `stateWords`):
 // one a read answered `withheld` by its withheld box's words (B1-S2), its
 // first line standing for none, one the board said nothing about by a far
@@ -152,7 +153,7 @@ import { docBox, accountCell, boardCell, accountAt, clearLeftOf, continuationCel
 import { lodOf, residueDepth, markScale } from '../plane/lod.js';
 import { cmpAddr, accountOf, documentOf } from '../model/address.js';
 import { touches } from '../text/span.js';
-import { esc } from '../util.js';
+import { esc, fill } from '../util.js';
 import { t, tHTML, addressedHTML, markCount } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Block} Block */
@@ -352,7 +353,9 @@ function named(n, i, total) {
     // where no board is held the root names none: it says why, as the one line does (FP-35)
     const b = REC.board();
     if (!b) { const why = read.noBoard(); return why ? then(plainly(why.text)) : plainly(at.text.trim()); }
-    return then(then(said('L.mirror.board', { node: n.addr, origin: b.origin, n: REC.accounts().filter((a) => !a.system).length }, { node: 'id' }), plainly(keptSentence(n))));
+    // its name, the one the status region calls it by, then its count
+    const name = said('L.mirror.board.name', { node: n.addr, origin: b.origin }, { node: 'id' }), count = REC.accounts().filter((a) => !a.system).length;
+    return then(then({ text: t('L.mirror.board', { board: name.text, n: count }), html: fill(esc(t('L.mirror.board')), { board: name.html, n: String(count) }) }, plainly(keptSentence(n))));
   }
   if (n.kind === 'account') {
     const c = REC.countOf(n.addr); const lk = LK.countAccount(n.addr);
@@ -363,12 +366,9 @@ function named(n, i, total) {
   // a mark's stop: its count, the words the mark shows (ST's `markCount`)
   if (n.kind === 'mark') return then(plainly(markCount(membersOf(n.addr).length, REC.countsExact())));
   if (n.kind === 'document') {
-    // a version named by its own first line, as its box's label names it (T-LAYER's `firstOf`; FP-22) — the document's words
-    // quoted, the client's words in their place bracketed, none at a withheld box, whose state says its words — then its
-    // state as the board answered it (T-LAYER's `stateWords`)
-    const d = REC.doc(n.addr), first = d.refused === 'withheld' ? [] : LAYER.firstOf(d);
-    const quote = /** @type {import('../text/article.js').Faced} */ ({ text: '"', face: 'client' });
-    const label = first.length && first.every((r) => r.face === 'reading') ? [quote, ...first, quote] : first;
+    // a version named by its own first line, as its box's label names it (T-LAYER's `mirrorLabel`; FP-22), then its state as
+    // the board answered it (T-LAYER's `stateWords`)
+    const d = REC.doc(n.addr), label = LAYER.mirrorLabel(d);
     const values = { document: n.addr, state: LAYER.stateWords(d), extent: d.extent != null ? t('L.mirror.positions', { n: d.extent }) : '' };
     return then(then({ text: t('L.mirror.document', { ...values, label: label.map((r) => r.text).join('') }), html: tHTML('L.mirror.document', { ...values, label }, { document: 'id' }) }, plainly(keptSentence(n))));
   }
