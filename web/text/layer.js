@@ -202,14 +202,20 @@
 // kept document — one M-PUMP holds as it stands past a second while it reads
 // it again (M-PUMP's `kept`; FP-23) — says so once, wherever its name is, in
 // one clause (`keptIn` by `keptWords`, which the one line and the ARIA mirror
-// read too; FP-33): a draft holding its text that text's stamp, else its
-// links' (M-REC's stamps), a failed read's words after it; the corner
+// read too; FP-33): a draft holding its text "as last read", else "links as
+// last read", at the page's clock at the row or drop that left it behind
+// (M-PUMP's `Kept.since`), a failed read's words after it; the corner
 // carries it as its last item, a line of its own its placing leaves apart, so
 // its arrival moves no item, save where the one line names the document,
 // which carries it beside the address instead; and a withheld run's kept
 // sign at the first run of its origin, in its column's edge, is filled in
 // place while the origin's edition claims stand held so (`markKeptRuns`,
-// `claimsKeptIn`; FP-31). The element outlives its
+// `claimsKeptIn`; FP-31). The board lagging past a second (M-PUMP's
+// `boardKept`) says so in one clause too (`boardKeptIn`), which the one
+// line, the board's statements and its mirror item read; meanwhile every
+// corner names neither the latest version nor the chain's count (T-ARTICLE's
+// `cornerHTML`, `ArticleView.lags`), each corner's items made again as the
+// lag begins and ends (`placeCorners`). The element outlives its
 // article's remounts and its items are rewritten only where they change, so
 // a focus on it survives them; the focused document's corner is the plane's
 // next Tab stop, named by its own words, and every other is out of the order
@@ -381,7 +387,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @property {number} grev the view revision at mount
  * @property {Fold} fold the fold it was set in: its size, its columns and the lines they hold
  * @property {number} fs the document's em in world units: its fold's
- * @property {{whole: string, compact: string}} corner the corner's items at mount, whole and compact (T-ARTICLE's `cornerHTML`); empty where it has none
+ * @property {{whole: string, compact: string, lags: boolean}} corner the corner's items, whole and compact (T-ARTICLE's `cornerHTML`), as made at mount and again as the board's lag began or ended, and whether it lagged as they were made (`lags`); empty where it has none
  * @property {HTMLElement | null} template the article's one column, kept out of the page: what its parts are cut from; null where the platform does not set the article
  * @property {Unit[]} units its fold's lines by the row elements that set them
  * @property {Map<number, Cut | null>} cuts the points its lines open at, by line, as far as they were read; null where a line opens at no point found
@@ -687,6 +693,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
     scene, originKinds,
     originOwner, clauseOf, keyOf: REC.accountKey,
     members: REC.has(boxOf(d.addr)) ? REC.doc(boxOf(d.addr)).members : null,
+    lags: lags(),
     cpl: scene ? MEASURE_CPL : measure(),
     measure: widthOf,
   };
@@ -1591,7 +1598,7 @@ function mount(d, v, span, banded) {
   layer.appendChild(el);
   /** @type {Mounted} */
   const rec = {
-    el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, made, grev, fold: f, fs: f.fs, corner: { whole: cornerHTML(d, view), compact: cornerHTML(d, view, true) },
+    el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, made, grev, fold: f, fs: f.fs, corner: cornerOfView(d, view),
     template, units: unitsOf(f.lines, made.blocks), cuts: new Map(), parts: [], lines: new Set(), banded, scale: 1, blockTops: [], marked: [], markedFor: '', litFor: null, labelFor: null, keptFor: '', legible: false,
   };
   mounted.set(d.addr, rec);
@@ -1794,29 +1801,30 @@ export function stateWords(d) {
 /**
  * The clause a kept document carries while it stands held past a second as
  * it is read again (see the head; FP-23, FP-33): a draft holding its text
- * "as last read" at its text's stamp; else, where its links are read, "links
- * as last read" at theirs — an edition's words never change, so its text
- * takes none — the failed read's words after it, keyed on the refusal that
- * left it standing (BM-HELD's `whyOf`), with no act, for its reads go again
- * of themselves (FP-23). None where it is not kept, a read refused it, or it
- * holds neither.
+ * "as last read"; else, where its links are read, "links as last read" — an
+ * edition's words never change, so its text takes none — each at the page's
+ * clock at the row or drop that left it behind, the failed read's words
+ * after it, keyed on the refusal that left it standing (BM-HELD's `whyOf`),
+ * with no act, for its reads go again of themselves (FP-23). None where it is
+ * not kept, a read refused it, or it holds neither.
  * @param {Doc} d the record whose text the surface shows: the version a box shows, a pane's
  * @param {Doc} links the record whose links it draws: the box's document (FP-22), a pane's own
- * @param {{met: import('../bridge/shapes').Refusal | null} | null} kept why its reads left it standing (M-PUMP's `kept`); null where it is not kept
+ * @param {{met: import('../bridge/shapes').Refusal | null, since: number} | null} kept why its reads left it standing and the stamp it stands from (M-PUMP's `kept`); null where it is not kept
  * @param {number} [now] the page's clock
  * @returns {KeptClause | null}
  */
 export function keptWords(d, links, kept, now = Date.now()) {
   if (!kept || d.refused) return null;
-  if (isDraft(d) && d.from >= 0 && d.textAt != null) return keptClause('L.kept.text', d.textAt, kept.met, now);
-  return links.linksAt != null ? keptClause('L.kept.links', links.linksAt, kept.met, now) : null;
+  if (isDraft(d) && d.from >= 0) return keptClause('L.kept.text', kept.since, kept.met, now);
+  return links.linksRead ? keptClause('L.kept.links', kept.since, kept.met, now) : null;
 }
 
 /**
- * A kept clause's words (`keptWords`): ⟨when⟩ its stamp as the page names
- * it (ST's `lastRead`), the failed read's words after it.
+ * A kept clause's words (`keptWords`, `claimsKeptIn`, `boardKeptIn`): ⟨when⟩
+ * its stamp as the page names it (ST's `lastRead`), the failed read's words
+ * after it.
  * @param {KeptClause['id']} id
- * @param {number} at the stamp of the read that set what stands
+ * @param {number} at the page's clock at the row or drop that left behind what stands (M-PUMP's `Kept.since`)
  * @param {import('../bridge/shapes').Refusal | null} met
  * @param {number} now
  * @returns {KeptClause}
@@ -1843,15 +1851,35 @@ export function keptIn(addr) {
 /**
  * The clause a withheld run's sign carries while the edition claims on its
  * origin stand held past a second as they are read again (see the head;
- * FP-23, FP-33): "links as last read" at their lookup's stamp, the failed
- * read's words after it (`keptClause`); none where they are not kept.
+ * FP-23, FP-33): "links as last read" at the page's clock at the row that
+ * left them behind, the failed read's words after it (`keptClause`); none
+ * where they are not kept, or none are held.
  * @param {string} origin
  * @returns {KeptClause | null}
  */
 export function claimsKeptIn(origin) {
-  const k = PUMP.claimsKept(origin), at = REC.claimsReadAt(origin);
-  return k && at != null ? keptClause('L.kept.links', at, k.met, Date.now()) : null;
+  const k = PUMP.claimsKept(origin);
+  return k && REC.editionClaimsOf(origin) !== undefined ? keptClause('L.kept.links', k.since, k.met, Date.now()) : null;
 }
+
+/**
+ * The clause the board carries while it lags past a second (see the head;
+ * M-PUMP's `boardKept`; FP-23): "as last read" at the page's clock at the
+ * stream's drop or the row that left the page's copy behind, the failed
+ * read's words after it (`keptClause`); none where it does not lag, or no
+ * board is held (FP-35).
+ * @returns {KeptClause | null}
+ */
+export function boardKeptIn() {
+  const k = REC.board() ? PUMP.boardKept() : null;
+  return k ? keptClause('L.kept.text', k.since, k.met, Date.now()) : null;
+}
+
+/** does the board lag past a second (M-PUMP's `boardKept`): every corner names neither the latest version nor the chain's count (`ArticleView.lags`) */
+const lags = () => PUMP.boardKept() !== null;
+
+/** a document's corner's items made over its view, whole and compact, with the lag they were made under (`Mounted.corner`) */
+const cornerOfView = (/** @type {Doc} */ d, /** @type {ArticleView} */ view) => ({ whole: cornerHTML(d, view), compact: cornerHTML(d, view, true), lags: !!view.lags });
 
 /**
  * @typedef {Object} DocLabel — a document's label on the plane (`docLabel`): its contents line and its parts beneath it
@@ -2548,9 +2576,11 @@ function signsIn(/** @type {Mounted} */ rec, /** @type {number} */ ci) {
 
 /**
  * The corners' pass, after the articles are placed: each mounted document at
- * reading scale whose corner has items carries it — a kept document's clause
- * its last item where the one line does not name it (`keptIn`, `keptHTML`),
- * the corner placed by its items' height alone — the rest are removed. The
+ * reading scale whose corner has items carries it — its items made again
+ * where the board's lag began or ended since they were made (`lags`), and a
+ * kept document's clause its last item where the one line does not name it
+ * (`keptIn`, `keptHTML`), the corner placed by its items' height alone — the
+ * rest are removed. The
  * writes come first (an element, its form and items where they changed, a cap
  * that binds), the reads together after them (one layout for every corner
  * that changed, none in a frame where none did, and the signs in the edges the
@@ -2569,7 +2599,10 @@ function placeCorners(focused) {
   /** @type {Array<{c: Corner, rec: Mounted, at: Beside}>} */
   const shown = [];
   const centre = viewCentre();
+  const lagging = lags();
   for (const rec of mounted.values()) {
+    // the board's lag begun or ended: the corner's items made again over the view as it stands
+    if (rec.corner.lags !== lagging) rec.corner = cornerOfView(rec.d, viewFor(rec.d));
     if (!rec.corner.whole || !readsAt(rec.fs)) continue;
     const addr = rec.d.addr, box = docBox(addr), open = openWhole.has(addr);
     const c = corners.get(addr) || makeCorner(cornerLayer, addr), p = { x: centre.x - box.x, y: centre.y - box.y };

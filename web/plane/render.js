@@ -281,16 +281,19 @@ function measure(text, px, weight, f = 'client') {
 export function refaced() { widths.clear(); }
 
 /**
- * The board's statements beneath its label (see the head): at the floor, the
- * residue statement; while the shell's index reports changes it could not
- * place — the arm `unplaced`, whose counts the model never draws as exact
- * (M-REC's `countsExact`) — that a document such a change created is not
- * shown (FP-23).
+ * The board's statements beneath its label (see the head): while the board
+ * lags past a second, its clause first (T-LAYER's `boardKeptIn`; FP-23); at
+ * the floor, the residue statement; while the shell's index reports changes
+ * it could not place — the arm `unplaced`, whose counts the model never draws
+ * as exact (M-REC's `countsExact`) — that a document such a change created is
+ * not shown (FP-23).
  * @returns {string[]}
  */
 export function boardStatements() {
   /** @type {string[]} */
   const out = [];
+  const lag = LAYER.boardKeptIn();
+  if (lag) out.push(lag.text);
   const floor = REC.floor(), state = REC.indexState();
   if (floor != null && !REC.countsExact()) out.push(t('F.board-residue', { floor }));
   if (state && state.arm === 'unplaced') out.push(t('L.board-unplaced'));

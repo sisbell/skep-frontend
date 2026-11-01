@@ -18,7 +18,8 @@
 // segments; a reading scene's close said after it until the next act, whole
 // once a session and as forward ›'s label after; the places the line names;
 // a kept document's clause in a segment of its own beside the address that
-// names it, said once as it appears and once as it lifts; and the cover — no
+// names it, and the board's wherever it names no kept document, each said
+// once as it appears and once as it lifts; and the cover — no
 // position at a refused document, the transient taken down and the class
 // change said once with what it covered (FP-13, FP-20, FP-21, FP-22, FP-23,
 // FP-25, FP-26, FP-28, FP-29, FP-33, FP-34, FP-35, FP-36).
@@ -671,7 +672,7 @@ test('at a document a read refused — a covered draft among them — the line n
 });
 
 // placed last: the death empties the model every test above reads
-test('a kept document the line names carries its clause in a segment of its own right after the address segment — an edition\'s its links\' stamp — and none while the line names no document; the clause said politely once as it appears and once as it lifts, in the step its read sets the document (issue #345\'s design decision)', async (ctx) => {
+test('a kept document the line names carries its clause in a segment of its own right after the address segment — an edition\'s "links as last read" at the page\'s clock as the row that left it behind came — and none while the line names no document; the clause said politely once as it appears and once as it lifts, in the step its read sets the document (issues #345, #367)', async (ctx) => {
   // D read whole again, its links among it, where a test before this one dropped what it held
   const unasked = fake.unanswered.length;
   await PUMP.loadWhole(D);
@@ -686,11 +687,15 @@ test('a kept document the line names carries its clause in a segment of its own 
   LINE.render(true);
   live.textContent = '';
   const text = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  const t0 = Date.now();
   fake.fire('feed', { board: 'b-1', update: { position: 40, at: 40, op: 'insert', docs: [D], class: 'published' } });
+  const t1 = Date.now();
   LINE.render();
   assert.ok(!host.innerHTML.includes('seg kept'), 'within the second: no clause');
   ctx.mock.timers.tick(PUMP.KEPT_MS);
-  const clause = t('L.kept.links', { when: lastRead(/** @type {number} */ (REC.doc(D).linksAt)) });
+  const since = /** @type {number} */ (PUMP.kept(D)?.since);
+  assert.ok(since >= t0 && since <= t1, 'kept from the row\'s arrival');
+  const clause = t('L.kept.links', { when: lastRead(since) });
   LINE.render();
   const seg = `<span class="sep">│</span><span class="seg kept" data-string="L.kept.links">${esc(clause)}</span>`;
   assert.ok(host.innerHTML.includes(`</button>${seg}<span class="sep">│</span><span class="seg acting"`), `beside the address segment, before the acting-as segment: ${host.innerHTML}`);
@@ -706,6 +711,41 @@ test('a kept document the line names carries its clause in a segment of its own 
   for (let i = 0; i < 50 && PUMP.kept(D); i++) await flush();
   LINE.render();
   assert.deepEqual([PUMP.kept(D), host.innerHTML.includes('seg kept'), live.textContent], [null, false, t('L.kept.lifted', { what: D })], 'set: the clause lifted, said once as it lifts');
+  assert.deepEqual(fake.unanswered.slice(unasked), []);
+});
+
+test('while the board lags past a second the line carries its clause in the kept segment wherever it names no kept document — nearer naming a document not kept, at mid naming an account, at far naming the board — said politely once as it appears and once as it lifts as the catch-up\'s rows are taken (issue #367\'s design decision: "Meanwhile the board carries the clause")', async (ctx) => {
+  const from = Math.max(REC.feedAt() ?? 0, 60), unasked = fake.unanswered.length, session = /** @type {{session: string}} */ (REC.session()).session;
+  REC.reachFeed(from);
+  script[FAKE.keyOf('changes', { session, since: from })] = { result: { entries: [], next: from, head: from } };
+  ctx.mock.timers.enable({ apis: ['setTimeout'] });
+  const flush = () => new Promise((r) => setImmediate(r));
+  const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
+  FOCUS.attach({ live: /** @type {any} */ (live) });
+  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  over(D, 14 / STANDARD_FS);
+  await WALK.focusTo(D, 15);
+  LINE.render(true);
+  live.textContent = '';
+  fake.drop();
+  LINE.render();
+  assert.ok(!host.innerHTML.includes('seg kept') && live.textContent === '', 'within the second: no clause, nothing said');
+  ctx.mock.timers.tick(PUMP.KEPT_MS);
+  const clause = t('L.kept.text', { when: lastRead(/** @type {number} */ (PUMP.boardKept()?.since)) });
+  const seg = `<span class="sep">│</span><span class="seg kept" data-string="L.kept.text">${esc(clause)}</span>`;
+  /** @type {Array<[string, () => void]>} */
+  const scales = [['nearer, a document not kept', () => over(D, 14 / STANDARD_FS)], ['mid, an account', () => over(D, MID)], ['far, the board', () => CAM.set(CAM.viewForCell(boardCell('1'), 0.92))]];
+  for (const [where, at] of scales) {
+    at();
+    LINE.render();
+    assert.ok(host.innerHTML.includes(`</button>${seg}<span class="sep">│</span><span class="seg acting"`), `${where}: the board's clause beside the address segment — ${host.innerHTML}`);
+  }
+  assert.deepEqual([live.textContent, live.live], [t('L.kept.said', { what: '1', clause }), 'polite'], 'said politely once as it appears, the board by its address');
+  live.textContent = '';
+  fake.reopen();
+  for (let i = 0; i < 20 && PUMP.boardKept(); i++) await flush();
+  LINE.render();
+  assert.deepEqual([PUMP.boardKept(), host.innerHTML.includes('seg kept'), live.textContent], [null, false, t('L.kept.lifted', { what: '1' })], 'the catch-up\'s rows taken: the clause lifted, said once as it lifts');
   assert.deepEqual(fake.unanswered.slice(unasked), []);
 });
 

@@ -107,7 +107,8 @@
 // as it is read again, the clause the one line or its corner shows, as a
 // sentence of its own (T-LAYER's `keptIn`; FP-23, FP-33), the first withheld
 // run of an origin in it the clause its kept sign shows while the origin's
-// edition claims stand so (`claimsKeptIn`), each item marked again in place
+// edition claims stand so (`claimsKeptIn`), and the board's while it lags so
+// (`boardKeptIn`), each item marked again in place
 // on each dirty frame where its clause changed (`markKept`); a mark's stop by its count,
 // the words the mark shows (ST's `markCount`), its item saying a list opens
 // on it (`aria-haspopup`); a link's item names its far end as its tail does
@@ -351,7 +352,7 @@ function named(n, i, total) {
     // where no board is held the root names none: it says why, as the one line does (FP-35)
     const b = REC.board();
     if (!b) { const why = read.noBoard(); return why ? then(plainly(why.text)) : plainly(at.text.trim()); }
-    return then(said('L.mirror.board', { node: n.addr, origin: b.origin, n: REC.accounts().filter((a) => !a.system).length }, { node: 'id' }));
+    return then(then(said('L.mirror.board', { node: n.addr, origin: b.origin, n: REC.accounts().filter((a) => !a.system).length }, { node: 'id' }), plainly(keptSentence(n))));
   }
   if (n.kind === 'account') {
     const c = REC.countOf(n.addr); const lk = LK.countAccount(n.addr);
@@ -497,15 +498,17 @@ export function markExpanded() {
 /**
  * The kept clause a node's item carries as its own sentence after its words
  * (see the head; FP-23, FP-33): a document's, the words its corner or the
- * one line shows (T-LAYER's `keptIn`); the first withheld run of an origin in
- * its document, while the origin's edition claims stand held as they are
- * read again, the words its kept sign shows (T-LAYER's `claimsKeptIn`); ''
- * for every other node, and where nothing is kept.
+ * one line shows (T-LAYER's `keptIn`); the board's while it lags, the words
+ * the one line shows (T-LAYER's `boardKeptIn`); the first withheld run of an
+ * origin in its document, while the origin's edition claims stand held as
+ * they are read again, the words its kept sign shows (T-LAYER's
+ * `claimsKeptIn`); '' for every other node, and where nothing is kept.
  * @param {Node} n
  * @returns {string}
  */
 function keptSentence(n) {
   if (n.kind === 'document') { const k = LAYER.keptIn(n.addr); return k ? t('L.mirror.clause', { clause: k.text }) : ''; }
+  if (n.kind === 'board') { const k = LAYER.boardKeptIn(); return k ? t('L.mirror.clause', { clause: k.text }) : ''; }
   const b = n.kind === 'block' && n.pos != null ? REC.blockByPos(n.addr, n.pos) : null;
   if (!b || b.kind !== 'withheld' || !b.origin || REC.doc(n.addr).blocks.find((x) => x.kind === 'withheld' && x.origin === b.origin) !== b) return '';
   const k = LAYER.claimsKeptIn(b.origin);
@@ -526,7 +529,7 @@ export function markKept() {
   for (const li of /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[role="treeitem"]')])) {
     const i = Number(li.dataset.i), n = siblings[i];
     // a span's item carries a clause only while an origin's edition claims stand kept, or carries one still
-    if (!n || (n.kind !== 'document' && (n.kind !== 'block' || (!runs && !li.dataset.kept)))) continue;
+    if (!n || (n.kind !== 'document' && n.kind !== 'board' && (n.kind !== 'block' || (!runs && !li.dataset.kept)))) continue;
     const words = keptSentence(n);
     if (li.dataset.kept === words) continue;
     li.dataset.kept = words;

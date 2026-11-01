@@ -13,6 +13,9 @@
 // watchers — where the page's own `close(session)` goes out, the person's
 // sign-out, and where an answer is refused as from a session the shell does
 // not hold (`lostSession`), the refusal handed up unchanged after the notice.
+// The event stream's own notices (`StreamNotice`) — its drop, and its reopen
+// after one, which the adapter alone can see — are told to the stream
+// watchers, the port's own shape and no event of the declarations.
 // The write calls, the `publication` family and the ceremonial rows are
 // declared here and called by no screen (S-35 (a)).
 // Types: the generated declarations in `./shapes.d.ts` (S-16 (a); FP-16),
@@ -32,6 +35,7 @@
  * @property {string} name 'dev' | 'shell'
  * @property {(name: string, args: unknown) => Promise<Outcome<unknown>>} call one call, posted; the answer opaque
  * @property {(fn: (name: EventName, data: unknown) => void) => void} subscribe every event, by name
+ * @property {(fn: (n: StreamNotice) => void) => void} onStream the event stream's own notices: its drop, and its reopen after one
  * @property {() => Array<{name: string, bytesIn: number, bytesOut: number, ms: number, outcome: string, at: number}>} calls the adapter's own call log
  * @property {(session: string) => void} closeAtUnload a best-effort `close(session)` as the page hides
  * @property {() => string} streamState the event stream's state
@@ -60,12 +64,20 @@ export const lostSession = (r) => r.kind === 'shell' && LOST.includes(r.name);
  * own `session`, else the one the call went out under — with the refusal
  */
 
+/**
+ * @typedef {'dropped' | 'reopened'} StreamNotice — what the event stream told of itself: `dropped` its connection lost —
+ * told once, and where the platform closes it for good; `reopened` it stands open again after a drop, at the shell's head,
+ * the rows between the two never sent
+ */
+
 /** @type {Adapter | null} */
 let adapter = null;
 /** @type {Map<string, Array<(data: unknown) => void>>} */
 const subs = new Map();
 /** @type {Array<(n: SessionNotice) => void>} */
 const sessionWatchers = [];
+/** @type {Array<(n: StreamNotice) => void>} */
+const streamWatchers = [];
 
 /** the port's own refusal where no adapter stands beneath it (the page's own name, not the crate's) */
 const NO_ADAPTER = Object.freeze({ kind: /** @type {const} */ ('shell'), name: 'no_adapter' });
@@ -77,7 +89,9 @@ const NO_ADAPTER = Object.freeze({ kind: /** @type {const} */ ('shell'), name: '
  */
 export function boot(a) {
   adapter = a;
-  if (a) a.subscribe((name, data) => emit(name, data));
+  if (!a) return;
+  a.subscribe((name, data) => emit(name, data));
+  a.onStream((n) => { for (const fn of streamWatchers) fn(n); });
 }
 export const adapterName = () => (adapter ? adapter.name : null);
 export const hasAdapter = () => adapter !== null;
@@ -121,6 +135,13 @@ function tell(n) { for (const fn of sessionWatchers) fn(n); }
  * @param {(n: SessionNotice) => void} fn
  */
 export function onSession(fn) { sessionWatchers.push(fn); }
+
+/**
+ * Watch the event stream's own notices (`StreamNotice`): its drop, and its
+ * reopen after one.
+ * @param {(n: StreamNotice) => void} fn
+ */
+export function onStream(fn) { streamWatchers.push(fn); }
 
 /**
  * Subscribe to one event (or `*` for every event).

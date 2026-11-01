@@ -20,12 +20,17 @@
 // run's boxes; a byline's facts arriving and its cut label opening in
 // place; a face arriving after the first layout setting every standing
 // article again, the passage held; a box's label and first line in their
-// faces; and a kept document's one clause — a draft's text by its stamp, else
-// its links', an edition's links alone, the failed read's words after it
-// (FP-8, FP-12, FP-20, FP-22, FP-23, FP-26, FP-30, FP-33, FP-34).
+// faces; a kept document's one clause — a draft's text, else its links, an
+// edition's links alone, at the row or drop that left it behind, the failed
+// read's words after it; and the plane's corner made again as the board's lag
+// begins and ends (FP-8, FP-12, FP-20, FP-22, FP-23, FP-26, FP-30, FP-33,
+// FP-34).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
+import * as PUMP from '../model/pump.js';
+import * as PORT from '../bridge/port.js';
+import * as FAKE from '../test/fake-port.js';
 import * as LK from '../links/links.js';
 import * as LAYER from './layer.js';
 import * as CAM from '../plane/camera.js';
@@ -1075,23 +1080,24 @@ test('where the platform sets no words — the node tests — the article\'s mea
   assert.equal(LAYER.viewFor(REC.doc(D)).measure, LAYER.widthOf, 'the article\'s view measures by it');
 });
 
-test('a kept document carries one clause by one rule: a draft holding its text "as last read" at its text\'s stamp, else "links as last read" at its links\' — an edition\'s words never change, so its links\' alone, a pinned box\'s its document\'s — the failed read\'s words after it; none where it is not kept, a read refused it, or it holds neither (issue #345\'s design decision)', () => {
-  const at = new Date(2026, 2, 12, 9, 5).getTime(), later = new Date(2026, 2, 12, 9, 7).getTime(), now = new Date(2026, 2, 12, 12).getTime();
-  const draft = { ...REC.doc('1.0.1.0.2'), kind: /** @type {const} */ ('draft'), from: 1, to: 5, textAt: at, linksRead: true, linksAt: later };
-  const kept = { met: null }, unreachable = { met: /** @type {any} */ ({ kind: 'unreachable', name: 'unreachable', text: '' }) }, busy = { met: /** @type {any} */ ({ kind: 'refused', name: 'scan_busy' }) };
-  assert.deepEqual(LAYER.keptWords(draft, draft, kept, now), { id: 'L.kept.text', text: t('L.kept.text', { when: lastRead(at, now) }) }, 'a draft holding its text: its text\'s stamp');
+test('a kept document carries one clause by one rule: a draft holding its text "as last read", else "links as last read" — an edition\'s words never change, so its links\' alone, a pinned box\'s its document\'s — at the page\'s clock at the row or drop that left it behind, the failed read\'s words after it; none where it is not kept, a read refused it, or it holds neither (issues #345, #367)', () => {
+  const at = new Date(2026, 2, 12, 9, 5).getTime(), now = new Date(2026, 2, 12, 12).getTime();
+  const draft = { ...REC.doc('1.0.1.0.2'), kind: /** @type {const} */ ('draft'), from: 1, to: 5, linksRead: true };
+  const kept = { met: null, since: at }, unreachable = { met: /** @type {any} */ ({ kind: 'unreachable', name: 'unreachable', text: '' }), since: at }, busy = { met: /** @type {any} */ ({ kind: 'refused', name: 'scan_busy' }), since: at };
+  assert.deepEqual(LAYER.keptWords(draft, draft, kept, now), { id: 'L.kept.text', text: t('L.kept.text', { when: lastRead(at, now) }) }, 'a draft holding its text: as last read, at the row or drop that left it behind');
   assert.equal(LAYER.keptWords(draft, draft, kept, now)?.text, 'as last read 09:05');
+  assert.equal(LAYER.keptWords(draft, draft, { met: null, since: new Date(2026, 2, 12, 9, 7).getTime() }, now)?.text, 'as last read 09:07', 'the stamp the kept answer carries, whatever the text was read at');
   assert.equal(LAYER.keptWords(draft, draft, unreachable, now)?.text, t('L.kept.failed', { clause: 'as last read 09:05', reason: t('F.daemon.unreachable') }), 'the board not answering: its words after the clause');
   assert.equal(LAYER.keptWords(draft, draft, busy, now)?.text, t('L.kept.failed', { clause: 'as last read 09:05', reason: t('L.held.why.busy') }), 'a scan the board kept busy');
-  assert.deepEqual(LAYER.keptWords({ ...draft, from: -1, textAt: null }, draft, kept, now), { id: 'L.kept.links', text: 'links as last read 09:07' }, 'a draft holding no text: its links\' stamp');
-  const edition = { ...REC.doc(D), from: 1, to: 5, textAt: at, linksRead: true, linksAt: later };
-  assert.deepEqual(LAYER.keptWords(edition, edition, kept, now), { id: 'L.kept.links', text: 'links as last read 09:07' }, 'an edition holding its text: its links alone');
-  const member = { ...REC.doc(D + '.2'), kind: /** @type {const} */ ('edition'), from: 1, to: 5, textAt: at };
-  assert.equal(LAYER.keptWords(member, edition, kept, now)?.text, 'links as last read 09:07', 'a pinned box: its document\'s links');
+  assert.deepEqual(LAYER.keptWords({ ...draft, from: -1 }, draft, kept, now), { id: 'L.kept.links', text: 'links as last read 09:05' }, 'a draft holding no text: its links');
+  const edition = { ...REC.doc(D), from: 1, to: 5, linksRead: true };
+  assert.deepEqual(LAYER.keptWords(edition, edition, kept, now), { id: 'L.kept.links', text: 'links as last read 09:05' }, 'an edition holding its text: its links alone');
+  const member = { ...REC.doc(D + '.2'), kind: /** @type {const} */ ('edition'), from: 1, to: 5 };
+  assert.equal(LAYER.keptWords(member, edition, kept, now)?.text, 'links as last read 09:05', 'a pinned box: its document\'s links');
   assert.equal(LAYER.keptWords(draft, draft, null, now), null, 'not kept: none');
   assert.equal(LAYER.keptWords({ ...draft, refused: 'withheld' }, draft, kept, now), null, 'a read refused it: none');
-  assert.equal(LAYER.keptWords({ ...edition, linksRead: false, linksAt: null }, { ...edition, linksRead: false, linksAt: null }, kept, now), null, 'an edition whose links are not read: none');
-  assert.equal(LAYER.keptWords(draft, draft, kept, new Date(2026, 2, 13, 8).getTime())?.text, 'as last read 12 March 2026, 09:05', 'read another day: the day first');
+  assert.equal(LAYER.keptWords({ ...edition, linksRead: false }, { ...edition, linksRead: false }, kept, now), null, 'an edition whose links are not read: none');
+  assert.equal(LAYER.keptWords(draft, draft, kept, new Date(2026, 2, 13, 8).getTime())?.text, 'as last read 12 March 2026, 09:05', 'left behind another day: the day first');
 });
 
 test('a withheld run\'s kept sign carries nothing while no origin\'s edition claims stand kept, and a standing article\'s signs are emptied in place (issue #345)', () => {
@@ -1102,4 +1108,50 @@ test('a withheld run\'s kept sign carries nothing while no origin\'s edition cla
   const sign = { dataset: /** @type {Record<string, string>} */ ({ kept: O, string: 'L.kept.links' }), textContent: 'links as last read 09:05' };
   LAYER.markKeptSigns(/** @type {any} */ ({ querySelectorAll: (/** @type {string} */ sel) => (sel === '.wh-kept[data-kept]' ? [sign] : []) }));
   assert.deepEqual([sign.textContent, sign.dataset.string], ['', undefined], 'the claims kept no more: the sign emptied');
+});
+
+test('while the board lags past a second the plane\'s corner names neither the latest version nor the chain\'s count — its items made again in the frame the lag begins, and again in the frame it ends with the catch-up\'s rows (issue #367\'s design decision: "corners drop \'the latest\' and \'of ⟨n⟩\'")', async (ctx) => {
+  const platform = { document: globalThis.document, window: globalThis.window };
+  /** an element of the page: the corner's, the article's and its column's, measured as the platform lays them out */
+  const element = () => {
+    const e = {
+      className: '', innerHTML: '', id: '', dataset: {}, style: {}, children: /** @type {unknown[]} */ ([]), tabIndex: -1, offsetWidth: 160, offsetHeight: 40,
+      classList: { toggle() {} }, setAttribute() {}, removeAttribute() {}, appendChild(/** @type {unknown} */ c) { e.children.push(c); },
+      querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }), contains: () => false, remove() {},
+    };
+    return e;
+  };
+  globalThis.document = /** @type {any} */ ({ createElement: element });
+  globalThis.window = /** @type {any} */ ({ getSelection: () => null });
+  const fake = FAKE.create({ [FAKE.keyOf('changes', { session: 's-1', since: 10 })]: { result: { entries: [], next: 10, head: 10 } } });
+  try {
+    PORT.boot(fake);
+    PUMP.start({ onDirty: () => {} });
+    REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    REC.reachFeed(10);
+    REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.1', birth: D + '.1', birthExtent: EXTENT, placed: null, baseExtent: null, source: null, asOf: 1 });
+    REC.takeMembers(D, 2);
+    REC.takeDelivery(D, [{ pos: 1, width: EXTENT, kind: 'content', text: TEXT, ref: null, origin: null }]);
+    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: EXTENT }]);
+    CAM.setViewport(VW, VH);
+    LAYER.attach(/** @type {any} */ ({ clientWidth: VW, clientHeight: VH, appendChild() {} }), /** @type {any} */ (element()));
+    const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), c = f.columns[0];
+    CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2, scale: 12 / f.fs });
+    const items = () => /** @type {{innerHTML: string} | null} */ (/** @type {unknown} */ (LAYER.cornerOf(D)))?.innerHTML ?? '';
+    const latest = esc(t('F.corner.latest', { published: t('F.published.notebook') })), counted = esc(t('F.version-of', { k: 2, n: 2 }));
+    LAYER.frame();
+    assert.ok(items().includes(latest) && items().includes(counted), `the corner at reading scale: the latest, "version 2 of 2" — ${items()}`);
+    ctx.mock.timers.enable({ apis: ['setTimeout'] });
+    fake.drop();
+    LAYER.frame();
+    assert.ok(items().includes(counted), 'within the second: as it stood');
+    ctx.mock.timers.tick(PUMP.KEPT_MS);
+    LAYER.frame();
+    assert.ok(!items().includes(latest) && !items().includes(counted) && items().includes(`<span class="version">${esc(t('L.version', { k: 2 }))}</span>`), `the board lagging: its publication alone, "version 2" — ${items()}`);
+    fake.reopen();
+    for (let i = 0; i < 20 && PUMP.boardKept(); i++) await new Promise((r) => setImmediate(r));
+    LAYER.frame();
+    assert.ok(PUMP.boardKept() === null && items().includes(latest) && items().includes(counted), `the catch-up's rows taken: the latest and the count again — ${items()}`);
+    assert.deepEqual(fake.unanswered, []);
+  } finally { LAYER.press(false); LAYER.clear(); PORT.boot(null); globalThis.document = platform.document; globalThis.window = platform.window; }
 });

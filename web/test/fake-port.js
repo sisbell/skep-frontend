@@ -4,13 +4,16 @@
 // the port can tell which adapter is beneath it. It answers each call from a
 // script: a map from a call key (`name` + the argument object's canonical
 // JSON, or `op:` + the frame's canonical JSON) to the Outcome the provider
-// would answer; it fires events on demand (`fire`); it holds a call on demand
+// would answer; it fires events on demand (`fire`); it drops its event
+// stream and reopens it on demand (`drop`, `reopen`), telling the stream
+// watchers as the dev client tells them; it holds a call on demand
 // (`hold`): every call of that key waits for its answer until the test
 // releases it, so a test can make acts while a read is in flight and answer
 // it when it chooses; and it keeps the key of every call as it is made
 // (`asked`) and of every call the script did not answer (`unanswered`).
 
 /** @typedef {import('../bridge/port.js').Adapter} Adapter */
+/** @typedef {import('../bridge/port.js').StreamNotice} StreamNotice */
 /** @typedef {import('../bridge/shapes').EventName} EventName */
 
 /** canonical JSON: keys sorted at every level */
@@ -29,11 +32,13 @@ export function keyOf(/** @type {string} */ name, /** @type {unknown} */ args) {
 
 /**
  * @param {Record<string, unknown>} script keyed by `keyOf`
- * @returns {Adapter & {fire: (name: EventName, data: unknown) => void, hold: (name: string, args: unknown) => () => void, unanswered: string[], asked: string[]}}
+ * @returns {Adapter & {fire: (name: EventName, data: unknown) => void, drop: () => void, reopen: () => void, hold: (name: string, args: unknown) => () => void, unanswered: string[], asked: string[]}}
  */
 export function create(script) {
   /** @type {Array<(name: EventName, data: unknown) => void>} */
   const subs = [];
+  /** @type {Array<(n: StreamNotice) => void>} */
+  const streams = [];
   /** @type {Array<{name: string, bytesIn: number, bytesOut: number, ms: number, outcome: string, at: number}>} */
   const log = [];
   /** @type {string[]} */
@@ -56,10 +61,13 @@ export function create(script) {
       return out;
     },
     subscribe(fn) { subs.push(fn); },
+    onStream(fn) { streams.push(fn); },
     calls: () => log.slice(),
     closeAtUnload() {},
     streamState: () => 'open',
     fire(name, data) { for (const fn of subs) fn(name, data); },
+    drop() { for (const fn of streams) fn('dropped'); },
+    reopen() { for (const fn of streams) fn('reopened'); },
     /** hold every call of a key until the release this returns, which answers them in the order they were made */
     hold(name, args) {
       const k = keyOf(name, args);

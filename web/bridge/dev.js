@@ -12,14 +12,24 @@
 // no answer, refuses no call and replays no fixture. Every event comes off
 // one `EventSource` on `/bridge/events?provider=<secret>` (an `EventSource`
 // sends no custom header), one listener per `EventName`, re-emitted by name;
-// an event the declarations do not name is heard by none. `close(session)`
-// at `pagehide` rides a `keepalive` fetch, best-effort, the browser's.
-// State: the provider's origin and the secret, the stream, and its own call
-// log (name, bytes, ms, outcome), which the gate holds equal to `GET
-// /bridge/log`'s `call` entries and to the ledger's `fetch` count.
+// an event the declarations do not name is heard by none. The stream's own
+// `open` and `error` are its notices (B-PORT's `StreamNotice`), told to the
+// stream watchers: `dropped` once, at the first `error` after it stood open —
+// the platform's retries, each an `error`, telling nothing more, and a
+// stream the platform closes for good a drop with no reopen — and
+// `reopened` at the next `open`, never at its first. The platform reopens
+// the stream by itself, and the reopened stream starts at the shell's head,
+// not where the dropped one stopped: M-PUMP reads what it missed.
+// `close(session)` at `pagehide` rides a `keepalive` fetch, best-effort, the
+// browser's.
+// State: the provider's origin and the secret, the stream, whether it has
+// stood open and whether a drop stands told, and its own call log (name,
+// bytes, ms, outcome), which the gate holds equal to `GET /bridge/log`'s
+// `call` entries and to the ledger's `fetch` count.
 // Rules: FP-1, FP-2, FP-4, FP-14, FP-15, FP-16.
 
 /** @typedef {import('./port.js').Adapter} Adapter */
+/** @typedef {import('./port.js').StreamNotice} StreamNotice */
 /** @typedef {import('./shapes').EventName} EventName */
 /** @typedef {import('./shapes').Refusal} Refusal */
 
@@ -52,6 +62,8 @@ export function create({ provider = DEFAULT_PROVIDER, secret, record = false }) 
   const log = [];
   /** @type {Array<(name: EventName, data: unknown) => void>} */
   const subscribers = [];
+  /** @type {Array<(n: StreamNotice) => void>} */
+  const streamWatchers = [];
   /** @type {EventSource | null} */
   let stream = null;
 
@@ -104,6 +116,13 @@ export function create({ provider = DEFAULT_PROVIDER, secret, record = false }) 
   function openStream() {
     if (stream) return;
     stream = new EventSource(`${provider}/bridge/events?provider=${encodeURIComponent(secret)}`);
+    /** the stream has stood open: an `error` after it is a drop */
+    let opened = false;
+    /** a drop told, and no `open` since */
+    let down = false;
+    const tell = (/** @type {StreamNotice} */ n) => { for (const fn of streamWatchers) fn(n); };
+    stream.addEventListener('open', () => { opened = true; if (down) { down = false; tell('reopened'); } });
+    stream.addEventListener('error', () => { if (opened && !down) { down = true; tell('dropped'); } });
     for (const name of EVENT_NAMES) {
       stream.addEventListener(name, (ev) => {
         /** @type {unknown} */
@@ -118,6 +137,7 @@ export function create({ provider = DEFAULT_PROVIDER, secret, record = false }) 
     name: 'dev',
     call,
     subscribe(fn) { subscribers.push(fn); openStream(); },
+    onStream(fn) { streamWatchers.push(fn); },
     calls: () => log.slice(),
     closeAtUnload(session) {
       try {

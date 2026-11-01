@@ -14,9 +14,9 @@
 // document's first line's place are bracketed (`bracketed`, `withheldLine`);
 // when a thing was made is said by `dated`, from the board's own testimony and
 // never from the reader's clock, in one form of a date on every surface; when
-// the page last read what it keeps standing is said by `lastRead`, from the
-// page's own clock — the hour and the minute, the day first where it was not
-// today — and never as an age; a continuation's mark's count is said in what
+// the page's copy of what it keeps standing was left behind is said by
+// `lastRead`, from the page's own clock — the hour and the minute, the day
+// first where it was not today — and never as an age; a continuation's mark's count is said in what
 // it counts by `markCount`;
 // `pinned` lists the pinned entries for the gate's text case, which holds each
 // to its source.
@@ -401,10 +401,11 @@ export const STRINGS = {
   'L.versions.latest-mark': { text: '▲', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
   // a kept document's clause (FP-23, FP-33): what the view shows standing as held past a second while it is read again —
   // a draft's text, else the links drawn with it, or an origin's edition claims at a withheld run of it — said once beside
-  // the document's name, ⟨when⟩ when the read that set it landed by the page's own clock (`lastRead`), a failed read's words
-  // after it — a mirror item carrying it as its own sentence (L.mirror.clause); and what the status region says as it
-  // appears and as it lifts, ⟨what⟩ the document, or the withheld text of an origin in it
-  'L.kept.text': { text: 'as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; the ARIA mirror; B1-S9: a pane\'s corner', lane: true },
+  // the document's name, and the board's while it lags, ⟨when⟩ the page's own clock at the row or drop that left the copy
+  // behind (`lastRead`), a failed read's words after it — a mirror item carrying it as its own sentence (L.mirror.clause);
+  // and what the status region says as it appears and as it lifts, ⟨what⟩ the document, the board by its address, or the
+  // withheld text of an origin in it
+  'L.kept.text': { text: 'as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; the ARIA mirror; B1-S3: the board\'s statements; B1-S9: a pane\'s corner', lane: true },
   'L.kept.links': { text: 'links as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; the ARIA mirror; B1-S7: a column\'s edge, the run\'s face; B1-S9: a pane\'s corner', lane: true },
   'L.kept.failed': { text: '⟨clause⟩ — ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; the ARIA mirror; B1-S7; B1-S9: a pane\'s corner', lane: true },
   'L.kept.said': { text: '⟨what⟩ — ⟨clause⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
@@ -413,7 +414,7 @@ export const STRINGS = {
   'L.time.day-time': { text: '⟨day⟩, ⟨time⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; the ARIA mirror; B1-S7; B1-S9: a pane\'s corner', lane: true },
   // the shown chords' words (D5-F8; the focus record's rule 19): the dismiss's title, the version marker's
   'L.dismiss': { text: 'dismiss (⟨chord⟩)', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
-  'L.version': { text: 'version ⟨k⟩', cls: 'DRAFT', source: '', screen: 'the one line; the versions list', lane: true },
+  'L.version': { text: 'version ⟨k⟩', cls: 'DRAFT', source: '', screen: 'the one line; the versions list; the corner, while the board lags', lane: true },
   // the overlay dialog's name where no caption stands in it (the focus record's D5): one per kind
   'L.dialog.card': { text: 'a card', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
   'L.dialog.list': { text: 'a list', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
@@ -615,11 +616,11 @@ export function dated(age) {
 }
 
 /**
- * When the page last read what it keeps standing (FP-23), by the page's own
- * clock: the hour and the minute its read landed at (U's `timeOf`), the day
- * first in the page's one form of a date (U's `dayOf`) where that was not
- * the day it is now — never an age.
- * @param {number} ms when the read landed, by the page's clock (M-REC's stamps)
+ * When the page's copy of what it keeps standing was left behind (FP-23), by
+ * the page's own clock: the hour and the minute of the row or drop that left
+ * it behind (U's `timeOf`), the day first in the page's one form of a date
+ * (U's `dayOf`) where that was not the day it is now — never an age.
+ * @param {number} ms the page's clock at the row or drop that left the copy behind (M-PUMP's `Kept.since`)
  * @param {number} [now] the page's clock now
  * @returns {string}
  */

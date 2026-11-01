@@ -55,7 +55,8 @@
 // the text, the chain, the owner's byline facts, a cause a row kept as held among them, the
 // `compare` — setting nothing, the pane
 // kept on its text and saying why until the read made at the daemon's running, or past the
-// pause, sets it, and an opening on a text the board did not answer opening nothing; and a
+// pause, sets it, and an opening on a text the board did not answer opening nothing; a pane's
+// corner naming neither the latest version nor the chain's count while the board lags; and a
 // scene opened on a document a
 // far end names whole — the far pane that version or the latest, named as
 // the link's whole end and current, its `compare` answering after it shows
@@ -1006,6 +1007,28 @@ test('a row naming a newer member at a pane on a version counts its chain alone:
   assert.deepEqual(fake.asked.slice(from), [], 'nothing read');
 }));
 
+test('while the board lags past a second a pane\'s corner names neither the latest version nor the chain\'s count — "version 1", its act standing — written again in place as the lag begins and as it ends with the catch-up\'s rows (issue #367\'s design decision: "corners drop \'the latest\' and \'of ⟨n⟩\'")', () => onPage(async (p) => {
+  Object.assign(script, reads(VE1, VE_TEXT), compared(VE1, VE_TEXT, DR, DR_V2));
+  await SCENE.open(VE1, DR);
+  fake.fire('feed', row(70, 'publish', [VE + '.2'], 'published'));
+  const counted = esc(t('F.version-of', { k: 1, n: 2 }));
+  assert.ok(p.cornerA.innerHTML.includes(counted), `"version 1 of 2": ${p.cornerA.innerHTML}`);
+  const from = Math.max(REC.feedAt() ?? 0, 70), unasked = fake.unanswered.length;
+  REC.reachFeed(from);
+  script[FAKE.keyOf('changes', { session: /** @type {{session: string}} */ (REC.session()).session, since: from })] = { result: { entries: [], next: from, head: from } };
+  fake.drop();
+  SCENE.markKept();
+  assert.ok(p.cornerA.innerHTML.includes(counted), 'within the second: as it stood');
+  await new Promise((r) => setTimeout(r, PUMP.KEPT_MS + 20));
+  SCENE.markKept();
+  assert.ok(p.cornerA.innerHTML.includes(`<span class="version">${esc(t('L.version', { k: 1 }))}</span>`) && !p.cornerA.innerHTML.includes(counted), `the board lagging: "version 1", never of the count — ${p.cornerA.innerHTML}`);
+  fake.reopen();
+  for (let i = 0; i < 50 && PUMP.boardKept(); i++) await new Promise((r) => setTimeout(r, 0));
+  SCENE.markKept();
+  assert.ok(PUMP.boardKept() === null && p.cornerA.innerHTML.includes(counted), `the catch-up's rows taken: "version 1 of 2" again — ${p.cornerA.innerHTML}`);
+  assert.deepEqual(fake.unanswered.slice(unasked), []);
+}));
+
 test('a link row reaching a pane\'s text reads it again in its place: its marks drawn from the links it reads now (issue #160)', () => onPage(async (p) => {
   await SCENE.open(VE1, DR);
   assert.ok(!String(shownIn(p.paneB, 'b').innerHTML).includes(`data-links="${LDR}"`), 'no link marked before the row');
@@ -1141,7 +1164,7 @@ test('a row naming a pane\'s document the plane shows too — kept there while t
   } finally { CAM._reset(); }
 }));
 
-test('a pane set while the plane\'s read again of its document waits on the board is set again from the read made at the daemon\'s running, its corner saying until then that it is as last read and why — never left on the text the row left standing (issue #345)', () => onPage(async (p) => {
+test('a pane set while the plane\'s read again of its document waits on the board is set again from the read made at the daemon\'s running, its corner saying until then that it is as last read, at the page\'s clock as the row came, and why — never left on the text the row left standing (issues #345, #367)', () => onPage(async (p) => {
   const DQ = '1.0.1.0.19', DQ_V1 = 'A waiting note.\n\nIts first words.', DQ_V2 = 'A waiting note.\n\nWords set later.\n\nIts first words.';
   Object.assign(script, reads(DQ, DQ_V1, { published: false }), compared(VE1, VE_TEXT, DQ, DQ_V1));
   await SCENE.open(VE1, DQ);
@@ -1155,13 +1178,13 @@ test('a pane set while the plane\'s read again of its document waits on the boar
     const text = FAKE.keyOf('op', { frame: F.retrieveV(DQ, 1, DQ_V2.length) }), answer = script[text];
     let out = true;
     Object.defineProperty(script, text, { enumerable: true, configurable: true, get: () => (out ? UNREACHABLE : answer) });
-    fake.fire('feed', row(41, 'insert', [DQ], 'drafts'));
+    const at = rowAt(() => fake.fire('feed', row(41, 'insert', [DQ], 'drafts')));
     await landed();
     assert.equal(REC.textBetween(DQ, 1, DQ_V1.length + 1), DQ_V1, 'the plane\'s read not answered: the note held');
     assert.equal(LAYER.madeOf(shownIn(p.paneB, 'b')).blocks.some((/** @type {{text: string}} */ x) => x.text === 'Words set later.'), false, 'pane B set from what stood');
     await new Promise((r) => setTimeout(r, PUMP.KEPT_MS + 20));
     SCENE.markKept();
-    const clause = t('L.kept.failed', { clause: t('L.kept.text', { when: lastRead(/** @type {number} */ (REC.doc(DQ).textAt)) }), reason: t('F.daemon.unreachable') });
+    const clause = t('L.kept.failed', { clause: t('L.kept.text', { when: lastRead(at) }), reason: t('F.daemon.unreachable') });
     assert.ok(p.cornerB.innerHTML.includes(`<span class="kept" data-string="L.kept.text">${esc(clause)}</span>`), `pane B's corner: as last read, and why — ${p.cornerB.innerHTML}`);
     assert.ok(p.said.includes(t('L.kept.said', { what: DQ, clause })), 'said as it appears');
     out = false;
@@ -1191,9 +1214,22 @@ async function until(/** @type {() => boolean} */ holds, /** @type {string} */ w
 }
 
 /**
+ * A feed row fired with the page's clock held still as it comes, so the stamp it takes and leaves on what it names is
+ * the moment returned
+ * @param {() => void} fire
+ * @returns {number}
+ */
+function rowAt(fire) {
+  const clock = Date.now, at = clock();
+  Date.now = () => at;
+  try { fire(); } finally { Date.now = clock; }
+  return at;
+}
+
+/**
  * A reading scene on VE1 beside a draft the plane does not show, read as `before`, then a feed row naming the draft, the
  * board holding `after` — sharing `runs` with VE1, each `[u1, u2, width]` — and not answering the read `silent` names: the
- * stamp of the text the pane was set with, and the act that has the board answer that read
+ * page's clock as the row came, which the pane stands kept from, and the act that has the board answer that read
  * @param {string} doc
  * @param {{before: string, after: string, silent: object, position: number, runs?: {before: Array<[number, number, number]>, after: Array<[number, number, number]>}}} o
  * @returns {Promise<{at: number, answer: () => void}>}
@@ -1202,12 +1238,11 @@ async function unheardRow(doc, o) {
   const runs = o.runs ?? { before: [], after: [] };
   Object.assign(script, reads(VE1, VE_TEXT), reads(doc, o.before, { published: false }), compared(VE1, VE_TEXT, doc, o.before, runs.before));
   await SCENE.open(VE1, doc);
-  const at = /** @type {number} */ (REC.doc(doc).textAt);
   standOnNothing();
   Object.assign(script, reads(doc, o.after, { published: false }), compared(VE1, VE_TEXT, doc, o.after, runs.after));
   const key = FAKE.keyOf('op', { frame: o.silent }), answer = script[key];
   script[key] = UNREACHABLE;
-  fake.fire('feed', row(o.position, 'insert', [doc], 'drafts'));
+  const at = rowAt(() => fake.fire('feed', row(o.position, 'insert', [doc], 'drafts')));
   await landed();
   return { at, answer: () => { script[key] = answer; } };
 }

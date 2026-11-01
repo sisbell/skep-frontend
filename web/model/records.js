@@ -17,10 +17,6 @@
 // the transclusion origins it shows, the raw set of links touching them,
 // their chain's count and whether the board ended it there, the position
 // their text was read at (`Doc.readAt`), and a refusal a read of them met;
-// the page's own clock as each read of a text, of a raw set of links and of
-// an edition-claim lookup landed (`stamp`: `Doc.textAt`, `Doc.linksAt`,
-// `claimsReadAt`), kept with what that read set and let go with it, never
-// written or sent;
 // each version member's age, which no feed row drops (`memberAge`); links as
 // delivered with their age, the type learned once (E17 (a)); where a link's slot
 // projects into a document's current text as `project` answered it, or what
@@ -200,14 +196,12 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {number} from the first delivered position, or -1
  * @property {number} to one past the last delivered position
  * @property {number | null} readAt the position the delivery taken last was answered at (its `as_of`) — a widening read asks the whole window again, so it is the text's; null where no delivery said, or none is held
- * @property {number | null} textAt when the delivery taken last landed, by the page's own clock (`stamp`): the stamp of the text held, handed with it to the member it is (`takeAsMember`), never written or sent; null where no text is held
  * @property {Block[]} blocks
  * @property {ImageRun[]} image the V→I image as read, in position order: the permanent address of every position it covers
  * @property {Origin[]} origins the image's runs whose origin is another document — the transcluded runs
  * @property {[number, number] | null} imageFor the window the image was read for
  * @property {Set<string>} links the addresses of the links touching this document, as `find_links_v` delivered them
  * @property {boolean} linksRead
- * @property {number | null} linksAt when the raw set of links held landed, by the page's own clock (`stamp`), never written or sent; null where none is held
  * @property {number | null} members the chain's member count where probed, else null
  * @property {boolean} ended `members` is the whole chain: the board answered that no member follows `D.members` (M-PUMP's `probeChain`); false where the probe stopped short of an end, or none was recorded
  * @property {number | null} whole the content extent the whole document holds, where the span set said
@@ -338,7 +332,7 @@ const state = {
   links: new Map(),
   /** @type {Map<string, Map<string, Stretch[] | Declined>>} `project`'s answers, by the document projected into, then by `⟨link⟩ ⟨slot⟩` */
   projections: new Map(),
-  /** @type {Map<string, {lookup: Lookup, at: number}>} the edition-claim lookup's answer per origin, with its stamp (`takeEditionClaims`) */
+  /** @type {Map<string, Lookup>} the edition-claim lookup's answer per origin (`takeEditionClaims`) */
   editionClaims: new Map(),
   /** @type {Set<string>} the links and documents whose read an edition claim's admission waits on failed, unanswered since (`takeFailedRead`) */
   failedReads: new Set(),
@@ -757,8 +751,8 @@ export function doc(addr) {
     const p = state.index.get(addr);
     d = {
       addr, account: accountOf(addr), kind: p ? p.kind : 'unknown', label: p ? p.label : null, standing: p ? p.standing : null,
-      system: isUnder(SYSTEM_ACCOUNT, addr), extent: null, linkPositions: null, meta: null, runs: [], from: -1, to: -1, readAt: null, textAt: null, blocks: [],
-      image: [], origins: [], imageFor: null, links: new Set(), linksRead: false, linksAt: null, members: null, ended: false, whole: null, rev: 0, refused: null,
+      system: isUnder(SYSTEM_ACCOUNT, addr), extent: null, linkPositions: null, meta: null, runs: [], from: -1, to: -1, readAt: null, blocks: [],
+      image: [], origins: [], imageFor: null, links: new Set(), linksRead: false, members: null, ended: false, whole: null, rev: 0, refused: null,
     };
     state.docs.set(addr, d);
   }
@@ -873,22 +867,13 @@ function deliverInto(/** @type {Doc} */ d, /** @type {Run[]} */ runs, /** @type 
   d.runs = merged;
   d.from = merged[0].pos;
   d.to = merged[merged.length - 1].pos + merged[merged.length - 1].width;
-  d.readAt = asOf; d.textAt = stamp();
+  d.readAt = asOf;
   d.blocks = deriveBlocks(merged);
   d.refused = null; state.owed.delete(d.addr);
 }
 
-/**
- * The page's own clock as a read lands (see the head): every stamp's — a
- * delivery's (`Doc.textAt`), a raw set's (`Doc.linksAt`), an edition-claim
- * lookup's (`claimsReadAt`) — kept with what the read set and dropped with
- * it, never written or sent.
- * @returns {number} unix milliseconds
- */
-const stamp = () => Date.now();
-
-/** a record's text let go — its runs and blocks given new empty ones, as a delivery gives new ones, its window, the position it was read at and its stamp with them — so no record holds a stamp for text it does not hold */
-function noText(/** @type {Doc} */ d) { d.runs = []; d.blocks = []; d.from = -1; d.to = -1; d.readAt = null; d.textAt = null; }
+/** a record's text let go — its runs and blocks given new empty ones, as a delivery gives new ones, its window and the position it was read at with them */
+function noText(/** @type {Doc} */ d) { d.runs = []; d.blocks = []; d.from = -1; d.to = -1; d.readAt = null; }
 
 /** @param {Run} a @param {Run} b */
 const overlaps = (a, b) => a.pos < b.pos + b.width && b.pos < a.pos + a.width;
@@ -1235,7 +1220,7 @@ const counted = (/** @type {string} */ addr) => { state.drops.set(addr, (state.d
 /** a document's delivered state dropped — everything its reads brought, a cover among it; the record stands, its runs and blocks given new empty ones as a delivery gives new ones, and a box owed its read at the page's class stays owed (`owed`), for only a read's answer settles that */
 function drop(/** @type {Doc} */ d) {
   noText(d); d.extent = null; d.whole = null; d.linkPositions = null; d.meta = null; d.image = []; d.origins = []; d.imageFor = null;
-  d.links.clear(); d.linksRead = false; d.linksAt = null; d.members = null; d.ended = false; d.refused = null; d.rev++;
+  d.links.clear(); d.linksRead = false; d.members = null; d.ended = false; d.refused = null; d.rev++;
 }
 
 // ---- links ---------------------------------------------------------------------
@@ -1244,7 +1229,7 @@ function drop(/** @type {Doc} */ d) {
 export function takeLinks(/** @type {string} */ addr, /** @type {string[]} */ addrs) {
   const d = doc(addr);
   for (const a of addrs) d.links.add(a);
-  d.linksRead = true; d.linksAt = stamp(); d.rev++; bump();
+  d.linksRead = true; d.rev++; bump();
 }
 /** `read_link`'s answer: the link's slots and its age, its type learned once, its home read from its address whole — the version member it is homed at, where it is one (`homeOf`) — a failed read of it before answered (`takeFailedRead`); where it is an edition claim, each document windowing the claim's origin is made again */
 export function takeLink(/** @type {LinkValue} */ v) {
@@ -1331,14 +1316,12 @@ function unproject(/** @type {string} */ addr) {
  * @param {Lookup} claims
  */
 export function takeEditionClaims(origin, claims) {
-  state.editionClaims.set(origin, { lookup: Array.isArray(claims) ? [...claims] : claims, at: stamp() });
+  state.editionClaims.set(origin, Array.isArray(claims) ? [...claims] : claims);
   reclause(new Set([origin]));
   bump();
 }
 /** the edition claims held on an origin (`Lookup`), or undefined where the lookup has not answered */
-export const editionClaimsOf = (/** @type {string} */ origin) => state.editionClaims.get(origin)?.lookup;
-/** when the edition claims held on an origin landed, by the page's own clock (`stamp`); null where the lookup has not answered */
-export const claimsReadAt = (/** @type {string} */ origin) => state.editionClaims.get(origin)?.at ?? null;
+export const editionClaimsOf = (/** @type {string} */ origin) => state.editionClaims.get(origin);
 /**
  * A read an edition claim's admission waits on failed (PUB-5.99; FP-33):
  * the claim's link (`read_link`), or a document's metadata
@@ -1454,7 +1437,7 @@ const windows = (/** @type {Doc} */ d, /** @type {ReadonlySet<string>} */ origin
 function claiming(/** @type {(claim: string) => boolean} */ named) {
   /** @type {Set<string>} */
   const out = new Set();
-  for (const [origin, { lookup }] of state.editionClaims) if (Array.isArray(lookup) && lookup.some(named)) out.add(origin);
+  for (const [origin, lookup] of state.editionClaims) if (Array.isArray(lookup) && lookup.some(named)) out.add(origin);
   return out;
 }
 
@@ -1730,7 +1713,7 @@ export function takeAsMember(trunk, member) {
   const t = state.docs.get(trunk), held = state.docs.get(member);
   if (!t || t.from < 0 || (held && held.from >= 0)) return false;
   const m = doc(member);
-  m.runs = t.runs; m.blocks = t.blocks; m.from = t.from; m.to = t.to; m.readAt = t.readAt; m.textAt = t.textAt;
+  m.runs = t.runs; m.blocks = t.blocks; m.from = t.from; m.to = t.to; m.readAt = t.readAt;
   m.image = t.image; m.origins = t.origins; m.imageFor = t.imageFor; m.refused = null; state.owed.delete(member);
   if (m.extent == null) { m.extent = t.extent; m.whole = t.whole; m.linkPositions = t.linkPositions; }
   noText(t); t.image = []; t.origins = []; t.imageFor = null;
@@ -1851,7 +1834,7 @@ export function setAgain(addr, fresh) {
     if (fresh.text) { noText(d); deliverInto(d, fresh.text.runs, fresh.text.asOf); }
     if (fresh.image || fresh.text) { d.image = []; d.origins = []; d.imageFor = null; }
     if (fresh.image) imageInto(d, fresh.image.from, fresh.image.runs);
-    if (fresh.links) { d.links = new Set(fresh.links); d.linksRead = true; d.linksAt = stamp(); }
+    if (fresh.links) { d.links = new Set(fresh.links); d.linksRead = true; }
     if (fresh.members) { d.members = fresh.members.n; d.ended = fresh.members.ended; }
     if (fresh.spans || fresh.meta || fresh.text) { d.refused = null; state.owed.delete(addr); }
   }

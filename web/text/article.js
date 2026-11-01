@@ -185,6 +185,7 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {number | null} [members] the chain's member count as its box's document holds it (M-PUMP's probe records it there, every version sharing the count): what the corner's version statement reads at a version, its own record holding none; absent, the document's own
  * @property {number | null} [read] a reading scene's pane's corner act, the one its Enter takes: the version it reads in the pane's place (SC; FP-23) — the newer one arrived, or the one the act left; absent or null, none
  * @property {number | null} [lacks] the version a pane's corner says holds none of the passage its act carried (SC; FP-23); absent or null, none
+ * @property {boolean} [lags] the board lags past a second (M-PUMP's `boardKept`; FP-23): the corner names neither the latest version nor the chain's count; absent, false
  * @property {number} [cpl] the measure the article's column is set at, in characters of its face (P-CAM's measure in force on the plane, the full measure in a pane): what a withheld run's gap holds is read at it (`gapHolds`); absent, the full measure
  * @property {Measure} measure a string's width in a face as the platform sets it (T-LAYER's `widthOf`): every fit the article judges — what a gap holds, a sign's lines in the edge, a label's cut, a slot's box — reads it
  */
@@ -1020,7 +1021,10 @@ function clauseHTML(c, scene) {
  * glyph, each named by its whole words, which assistive technology reads and
  * its act opens whole;
  * "version ⟨k⟩ of ⟨n⟩", the whole-document count and a withheld document's
- * state keep their words, its owner in the identifier's face. The holder makes the element they stand in
+ * state keep their words, its owner in the identifier's face. While the
+ * board lags (`lags`; FP-23), the bare address's state is its publication
+ * alone, never "the latest", and the version statement "version ⟨k⟩", its
+ * act standing, never the count it is of. The holder makes the element they stand in
  * (`data-corner` naming the document), which is the corner's one stop: no
  * item takes a focus of its own (D5 K-57).
  * @param {Doc} d
@@ -1040,8 +1044,9 @@ export function cornerHTML(d, v, compact = false) {
     const n = v.members !== undefined ? v.members : d.members;
     if (d.meta && d.meta.birth === null && !k) parts.push(usual('st', 'F.corner.no-versions', { published: first }, 'L.corner.bare'));
     else if (k) parts.push(usual('st', 'F.corner.pinned', { published: first, k }, 'L.corner.pinned'));
+    else if (v.lags) parts.push(usual('st', v.notebook ? 'F.published.notebook' : 'F.published', {}, 'L.corner.bare'));
     else parts.push(usual('st', 'F.corner.latest', { published: first }, 'L.corner.bare'));
-    if (n != null && n >= 1 && (d.meta && d.meta.birth)) parts.push(`<span class="version" data-members="${n}">${esc(t('F.version-of', { k: k || n, n }))}</span>`);
+    if (n != null && n >= 1 && (d.meta && d.meta.birth)) parts.push(v.lags ? `<span class="version">${esc(t('L.version', { k: k || n }))}</span>` : `<span class="version" data-members="${n}">${esc(t('F.version-of', { k: k || n, n }))}</span>`);
     if (v.lacks != null) parts.push(`<span class="lacks">${esc(t('F.floating.member', { k: v.lacks }))}</span>`);
     if (v.read != null) parts.push(`<span class="read" data-read="${v.read}">${esc(t('F.versions.read', { k: v.read }))}</span>`);
   } else if (d.kind === 'draft') parts.push(usual('chip', v.localTrust ? 'C-28.flag-on' : 'C-28', {}, 'L.corner.draft', ' data-chip="1"'));

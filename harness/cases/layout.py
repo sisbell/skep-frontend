@@ -3399,8 +3399,10 @@ def kept_holds(ctx, r):
     second, the clause goes wherever the document's name is"; "It lifts in the same frame that the fresh read sets the
     document"): the first edition at em 12.5, the walk on it whole; a published row naming it handed to the page through the
     gate's feed door, its text window's read again held at its answer past a second — the one line, naming it, carries
-    "links as last read ⟨when⟩" (an edition's words never change) in a segment of its own right after the address segment,
-    its mirror item the same words, its corner none; the walk stepped out to its account, the camera put back, a second
+    "links as last read ⟨when⟩" (an edition's words never change), ⟨when⟩ the page's clock as the row came (issue #367's
+    design decision: "⟨when⟩ is the page's clock at the row or drop that left the copy behind"), in a segment of its own
+    right after the address segment, its mirror item the same words, its corner none; the walk stepped out to its
+    account, the camera put back, a second
     such row: its corner carries the words as its last item, every item above it where it stood before; each read answered,
     no clause stands in the frame the model's text is set; each appearing and each lifting said once; reads alone"""
     # a LEAP to the edition with no position stands the walk on it whole
@@ -3417,14 +3419,15 @@ def kept_holds(ctx, r):
       const c = document.querySelector(`#corners .corner[data-corner="${a}"]`), k = c && c.querySelector('.kept'), li = document.querySelector(`#mirror li[data-addr="${a}"]`);
       const box = (e) => { const q = e.getBoundingClientRect(); return {x: q.left, y: q.top, w: q.width, h: q.height}; };
       const sep = seg && seg.previousElementSibling, before = sep && sep.previousElementSibling;
-      return {words: d.linksAt != null ? K.ST.t('L.kept.links', {when: K.ST.lastRead(d.linksAt)}) : null, kept: !!K.PUMP.kept(a), named: window.__skep.named(),
+      const held = K.PUMP.kept(a);
+      return {words: held && d.linksRead ? K.ST.t('L.kept.links', {when: K.ST.lastRead(held.since)}) : null, kept: !!held, since: held ? held.since : null, named: window.__skep.named(),
         seg: seg && {text: seg.textContent, id: seg.dataset.string, beside: !!before && before.matches('button.address')},
         corner: c && {kept: k ? {text: k.textContent, id: k.dataset.string, last: c.lastElementChild === k} : null, top: c.getBoundingClientRect().top, items: [...c.children].filter((e) => e !== k).map(box)},
         mirror: li && {kept: li.dataset.kept || '', text: li.textContent}}; })(%s)''' % json.dumps(DOC)
     # every frame watched from now until the one whose model holds the text set again: what stands in that frame
-    lift = '''((a) => { const K = window.__gateKept, t0 = K.REC.doc(a).textAt; K.lift = null;
+    lift = '''((a) => { const K = window.__gateKept, r0 = K.REC.doc(a).runs; K.lift = null;
       const watch = () => { if (K.lift) return; const d = K.REC.doc(a);
-        if (d.textAt !== t0) { const c = document.querySelector(`#corners .corner[data-corner="${a}"]`), li = document.querySelector(`#mirror li[data-addr="${a}"]`);
+        if (d.runs !== r0) { const c = document.querySelector(`#corners .corner[data-corner="${a}"]`), li = document.querySelector(`#mirror li[data-addr="${a}"]`);
           K.lift = {seg: !!document.querySelector('#line .seg.kept'), corner: !!(c && c.querySelector('.kept')), mirror: li ? li.dataset.kept || '' : null, kept: !!K.PUMP.kept(a)}; return; }
         requestAnimationFrame(watch); };
       requestAnimationFrame(watch); return true; })(%s)''' % json.dumps(DOC)
@@ -3436,7 +3439,7 @@ def kept_holds(ctx, r):
         ctx.js('window.__gateKept.said = []')
         was = ctx.js(seen)
         ctx.drv.hold_op('retrieve_v', DOC)
-        ctx.js('window.__skep.model.feed(%s)' % json.dumps(row))
+        fed = ctx.js('(() => { const t0 = Date.now(); window.__skep.model.feed(%s); return [t0, Date.now()]; })()' % json.dumps(row))
         ctx.drv.pump_events(KEPT_WAIT_S)
         ctx.frames(3)
         held = ctx.js(seen)
@@ -3444,7 +3447,7 @@ def kept_holds(ctx, r):
         answered = ctx.drv.answer_op('whole')
         ctx.settle()
         ctx.frames(3)
-        return {'before': was, 'held': held, 'answered': answered, 'lift': ctx.js('window.__gateKept.lift'), 'after': ctx.js(seen), 'said': ctx.js('window.__gateKept.said')}
+        return {'before': was, 'fed': fed, 'held': held, 'answered': answered, 'lift': ctx.js('window.__gateKept.lift'), 'after': ctx.js(seen), 'said': ctx.js('window.__gateKept.said')}
 
     def said_once(said, words):
         """how many times the status region was told `words`"""
@@ -3459,6 +3462,8 @@ def kept_holds(ctx, r):
             and bool(h['corner']) and h['corner']['kept'] is None,
             'the line naming the first edition, its read again out past a second: "links as last read ⟨when⟩" in a segment of its own right after the address segment, its corner carrying none (issue #345)',
             {'named': h['named'], 'seg': h['seg'], 'words': words, 'corner': h['corner'] and h['corner']['kept']})
+    r.check(h['since'] is not None and named['fed'][0] <= h['since'] <= named['fed'][1],
+            'its ⟨when⟩ the page\'s clock as the row came, never as a read landed (issue #367)', {'since': h['since'], 'fed': named['fed']})
     r.check(bool(h['mirror']) and h['mirror']['kept'] == clause and clause in h['mirror']['text'],
             'its mirror item carries the same words, a sentence of its own after its words (FP-33)', {'mirror': h['mirror'], 'clause': clause})
     nl = named['lift'] or {}

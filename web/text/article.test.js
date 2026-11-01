@@ -20,7 +20,8 @@
 // the first run of an origin carrying its kept sign below them, empty, setting
 // no line; the corner's items, whole and compact, outside the article, a
 // pane's with its read act and its lacking line, a kept clause after them on a
-// line of its own; the record rule; a typed line set as typed in the
+// line of its own, neither the latest version nor the chain's count while the
+// board lags; the record rule; a typed line set as typed in the
 // body's type, a heading's marks its own characters, on its indent where it
 // opens a typed line, the empty lines typed after it whole line boxes below
 // it and no other room between blocks; the plan the bars are
@@ -484,6 +485,16 @@ test('the corner compact: a usual state its glyph, named whole by its words, a n
   const counted = cornerHTML(doc(), view({ wholeLinks: 4 }), true), withheld = cornerHTML(doc({ refused: 'withheld' }), view(), true);
   assert.ok(counted.includes(esc(t('F.whole-links', { n: 4 }))) && withheld.includes(tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' })) && !withheld.includes('glyph'), 'the whole-document count and a withheld document\'s state keep their words, its owner in the identifier\'s face');
   assert.ok(!cornerHTML(doc(), view()).includes('glyph'), 'whole: no glyph');
+});
+
+test('while the board lags the corner names neither the latest version nor the chain\'s count: the bare address\'s state its publication alone — compact, its marker unlit, named so — and the version statement "version ⟨k⟩", standing for the versions list\'s act; a pinned version\'s state keeps its words (issue #367\'s design decision: "corners drop \'the latest\' and \'of ⟨n⟩\'")', () => {
+  const lagging = view({ lags: true });
+  const latest = cornerHTML(doc(), lagging), compact = cornerHTML(doc(), lagging, true), pinned = cornerHTML(doc({ addr: '1.0.1.0.3.1' }), view({ members: 3, lags: true }));
+  assert.ok(latest.startsWith(`<span class="st">${esc(t('F.published.notebook'))}</span>`) && !latest.includes(esc(t('F.corner.latest', { published: t('F.published.notebook') }))), `the bare address: its publication alone, never the latest — ${latest}`);
+  assert.ok(compact.includes(`<span class="st glyph" role="img" aria-label="${esc(t('F.published.notebook'))}">${esc(t('L.corner.bare'))}</span>`), `compact: its marker unlit, named by its publication alone — ${compact}`);
+  assert.ok(latest.includes(`<span class="version">${esc(t('L.version', { k: 2 }))}</span>`) && !latest.includes(esc(t('F.version-of', { k: 2, n: 2 }))), `"version ⟨k⟩", never of the count — ${latest}`);
+  assert.ok(pinned.includes(esc(t('F.corner.pinned', { published: t('F.published.notebook'), k: 1 }))) && pinned.includes(`<span class="version">${esc(t('L.version', { k: 1 }))}</span>`), `a pinned version: its state\'s words, its statement "version ⟨k⟩" — ${pinned}`);
+  assert.ok(cornerHTML(doc(), view({ lags: false })).includes(esc(t('F.version-of', { k: 2, n: 2 }))), 'no lag: "version ⟨k⟩ of ⟨n⟩"');
 });
 
 /** a paragraph's pieces in the plan, a symbol as ⟡ and C-33's mark as its id, every other piece its text */

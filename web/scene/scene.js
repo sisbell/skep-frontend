@@ -122,11 +122,14 @@
 // the readable pane whose far end lies in it ending at the cover
 // (`farEndIn`, `coverIn`), clipped and stubbed as any end whose line has
 // left its pane. A pane being set again by the board's events stands kept as
-// it shows until a setting of it lands (`Pane.kept`), and says so once it has
-// stood a second, or while M-PUMP holds its record so as it reads it again
-// (M-PUMP's `kept`): its corner's last item the clause a box's corner carries,
-// by the one rule (T-LAYER's `keptWords`), the refusal that left its reads
-// unset after it, lifting in the step that sets the pane; a
+// it shows until a setting of it lands (`Pane.kept`), from the row or drop
+// that left it behind, and says so once it has stood a second, or while
+// M-PUMP holds its record so as it reads it again (M-PUMP's `kept`): its
+// corner's last item the clause a box's corner carries, by the one rule
+// (T-LAYER's `keptWords`), the refusal that left its reads unset after it,
+// lifting in the step that sets the pane; while the board lags (M-PUMP's
+// `boardKept`), each corner naming neither the latest version nor the
+// chain's count, written again as the lag begins and ends (`markKept`); a
 // withheld run's kept sign set in its article as the plane's are; and each
 // said once as it appears and once as it lifts (`markKept`; FP-33, FP-36).
 // Every setting is one step (`setPanes`; FP-23): the reads first — the text
@@ -482,7 +485,7 @@ import { esc, byteOffsets } from '../util.js';
  * @property {HTMLElement | null} el the article it shows
  * @property {number} serial the settings asked of it: one sets it only where no later one was asked meanwhile
  * @property {number} sets the settings made of it: a `compare` read against its text before one is read again
- * @property {{since: number, met: Refusal | null} | null} kept a setting the board's events asked of it, out (`update`): when it began, by the platform's clock, and the refusal that left its last reads unset — the board not answering among them, whereupon the setting is asked again once M-PUMP's pause ends — the pane standing as it shows; null where none is out
+ * @property {{since: number, at: number, met: Refusal | null} | null} kept a setting the board's events asked of it, out (`update`): when it began, by the platform's clock, the page's clock at the row or drop that left the pane behind (M-PUMP's `Dropped.at`), and the refusal that left its last reads unset — the board not answering among them, whereupon the setting is asked again once M-PUMP's pause ends — the pane standing as it shows; null where none is out
  * @property {string} heard its kept clause as the status region last said it (`markKept`); '' where none
  * @property {string | null} signs what the edition claims held as they are read again said as its article's withheld runs' kept signs were last set (T-LAYER's `keptRunsKey`); null where its article was set since
  */
@@ -1211,25 +1214,30 @@ function paneAt(side, src, r) {
   };
 }
 
-/** a pane's corner's items: T-ARTICLE's (`sceneCorner`), naming the version it shows, the chain's count as the pane knows it, the act it offers and what it says the version it reads lacks; its kept clause after them, where it stands kept (`paneKept`) */
-const cornerItems = (/** @type {Pane} */ P) => LAYER.sceneCorner(P.shows === P.d.addr ? P.d : { ...P.d, addr: P.shows }, { ...P.view, members: P.n, read: P.read, lacks: P.lacks }) + keptHTML(paneKept(P));
+/** a pane's corner's items: T-ARTICLE's (`sceneCorner`), naming the version it shows, the chain's count as the pane knows it — neither the latest nor the count while the board lags (`lags`) — the act it offers and what it says the version it reads lacks; its kept clause after them, where it stands kept (`paneKept`) */
+const cornerItems = (/** @type {Pane} */ P) => LAYER.sceneCorner(P.shows === P.d.addr ? P.d : { ...P.d, addr: P.shows }, { ...P.view, members: P.n, read: P.read, lacks: P.lacks, lags: lags() }) + keptHTML(paneKept(P));
+
+/** does the board lag past a second (M-PUMP's `boardKept`): every pane's corner names neither the latest version nor the chain's count, and is written again as the lag begins and ends (`markKept`) */
+const lags = () => PUMP.boardKept() !== null;
 
 /**
  * A pane's kept clause (see the head; FP-23): the rule a box's is said by
  * (T-LAYER's `keptWords`), over the record the pane was set from, while the
- * setting the board's events asked of it has been out KEPT_MS (`Pane.kept`)
- * or M-PUMP has held that record past a second as it reads it again
- * (M-PUMP's `kept`); none else.
+ * setting the board's events asked of it has been out KEPT_MS (`Pane.kept`),
+ * at the page's clock at the row or drop that left the pane behind, or
+ * M-PUMP has held that record past a second as it reads it again (M-PUMP's
+ * `kept`); none else.
  * @param {Pane} P
  */
 function paneKept(P) {
-  const own = P.kept && performance.now() - P.kept.since >= PUMP.KEPT_MS ? { met: P.kept.met } : null;
+  const own = P.kept && performance.now() - P.kept.since >= PUMP.KEPT_MS ? { met: P.kept.met, since: P.kept.at } : null;
   return LAYER.keptWords(P.d, P.d, own || PUMP.kept(P.src));
 }
 
 /**
  * Each pane's kept clause marked in place (see the head): its corner written
- * again where the clause it carries changed (`paneKept`), the element kept
+ * again where the clause it carries changed (`paneKept`), or the board's lag
+ * began or ended since it was written (`lags`), the element kept
  * so a focus on it stays, the withheld runs' kept signs in its article set
  * where what the edition claims held say changed since they were set, or its
  * article was set since (T-LAYER's `keptRunsKey`, `markKeptSigns`), and each
@@ -1242,11 +1250,11 @@ export function markKept() {
   if (!S || !E) return;
   /** @type {string[]} */
   const said = [];
-  const signs = LAYER.keptRunsKey();
+  const signs = LAYER.keptRunsKey(), lagging = String(lags());
   for (const side of SIDES) {
     const P = S[side], k = paneKept(P), words = k ? k.text : '';
-    const c = paneEl(E, side).querySelector(':scope > .corner'), now = c ? c.querySelector('.kept') : null;
-    if (c && (now ? now.textContent : '') !== words) writeCorner(E, P);
+    const c = /** @type {HTMLElement | null} */ (paneEl(E, side).querySelector(':scope > .corner')), now = c ? c.querySelector('.kept') : null;
+    if (c && ((now ? now.textContent : '') !== words || c.dataset.lags !== lagging)) writeCorner(E, P);
     if (P.el && P.signs !== signs) { LAYER.markKeptSigns(P.el); P.signs = signs; }
     if (words && !P.heard) said.push(t('L.kept.said', { what: P.shows, clause: words }));
     else if (!words && P.heard) said.push(t('L.kept.lifted', { what: P.shows }));
@@ -1256,14 +1264,15 @@ export function markKept() {
 }
 /** a pane's corner's id: the group is named by its own words */
 const cornerId = (/** @type {'a' | 'b'} */ side) => (side === 'a' ? 'sceneA' : 'sceneB') + '-corner';
-/** a pane's corner's markup (see the head): its one Tab stop, a group named by its own words, as the plane's corner is (D5 K-57) */
-const cornerMarkup = (/** @type {Pane} */ P) => `<div class="corner" data-corner="${esc(P.shows)}" id="${cornerId(P.side)}" role="group" aria-labelledby="${cornerId(P.side)}" tabindex="0">${cornerItems(P)}</div>`;
+/** a pane's corner's markup (see the head): its one Tab stop, a group named by its own words, as the plane's corner is (D5 K-57), marked with whether the board lagged as it was made (`data-lags`) */
+const cornerMarkup = (/** @type {Pane} */ P) => `<div class="corner" data-corner="${esc(P.shows)}" data-lags="${lags()}" id="${cornerId(P.side)}" role="group" aria-labelledby="${cornerId(P.side)}" tabindex="0">${cornerItems(P)}</div>`;
 
 /** a pane's corner written again, in place: the element kept, so the focus standing on it stays */
 function writeCorner(/** @type {NonNullable<typeof els>} */ E, /** @type {Pane} */ P) {
   const c = /** @type {HTMLElement | null} */ (paneEl(E, P.side).querySelector(':scope > .corner'));
   if (!c) return;
   c.dataset.corner = P.shows;
+  c.dataset.lags = String(lags());
   c.innerHTML = cornerItems(P);
 }
 
@@ -2502,7 +2511,7 @@ function whenSet(fn) {
  * of the pane, holding none of the panes' acts meanwhile. A version the
  * corner's act could not read whole leaves the pane as it shows.
  * @param {'a' | 'b'} side
- * @param {{src?: string, carry?: {pos: number, width: number} | null, read?: number | null}} [how] `src` the version the corner's act reads — the pane's own record where none is given; `carry` the passage it carries; `read` the version the corner offers after it, the one it left
+ * @param {{src?: string, carry?: {pos: number, width: number} | null, read?: number | null, at?: number}} [how] `src` the version the corner's act reads — the pane's own record where none is given; `carry` the passage it carries; `read` the version the corner offers after it, the one it left; `at` the page's clock at the row or drop that left the pane behind, which a setting the board's events ask stands kept from (`Pane.kept`) — absent, the moment it is asked
  * @returns {Promise<void>}
  */
 async function update(side, how = {}) {
@@ -2511,7 +2520,7 @@ async function update(side, how = {}) {
   const P = S[side], Q = S[otherSide(side)], serial = ++P.serial;
   const stale = () => scene !== S || P.serial !== serial;
   // the board's events ask it: the pane stands kept as it shows until a setting of it lands, saying so once it has stood a second
-  if (!how.src && !P.kept) { P.kept = { since: performance.now(), met: null }; setTimeout(markDirty, PUMP.KEPT_MS); }
+  if (!how.src && !P.kept) { P.kept = { since: performance.now(), at: how.at ?? Date.now(), met: null }; setTimeout(markDirty, PUMP.KEPT_MS); }
   /** the setting the board's events asked left unset by the refusal its reads met: the pane kept as it shows, saying why, and asked again once M-PUMP's pause ends where the board did not answer */
   const unset = (/** @type {Refusal | null} */ met) => {
     if (!P.kept || !met) return;
@@ -2615,12 +2624,13 @@ export function carriedTo(pairs, c, head) {
  * @param {'a' | 'b'} side
  * @param {number} k the member its text is
  * @param {number} m the newest member known
+ * @param {number} [at] the page's clock at the row or drop that named the newer member (`update`)
  */
-function pin(S, side, k, m) {
+function pin(S, side, k, m, at) {
   const P = S[side], names = versionAddress(boxOf(P.src), k), n = Math.max(m, P.n ?? 0);
   setPanes(S, [{ side, next: { d: P.d, view: P.view, kind: 'pinned', src: names, names, shows: names, k, n, read: n, lacks: null, hold: null } }], null);
   FOCUS.say(t('F.arrival.pane', { k }));
-  void update(side);
+  void update(side, { at });
 }
 
 /**
@@ -2681,17 +2691,17 @@ export function dropped(x) {
       const P = S[side], d = REC.doc(P.src);
       return { side, down: d.from < 0 || !!d.refused, next: { d, kind: P.kind, src: P.src, names: P.names, shows: P.shows, k: P.k, n: P.n, read: P.read, lacks: P.lacks, hold: null } };
     }), []);
-    for (const side of SIDES) void update(side);
+    for (const side of SIDES) void update(side, { at: x.at });
     return;
   }
-  if (x.chains) { for (const side of SIDES) refreshed(S, side, x.chains); return; }
+  if (x.chains) { for (const side of SIDES) refreshed(S, side, x.chains, x.at); return; }
   for (const side of SIDES) {
     const P = S[side];
     if (!x.addrs.some((a) => oneBox(a, P.src))) continue;
     const m = newest(x.row, P.src);
-    if (P.kind === 'bare' && m != null && m > (P.k ?? 0)) { const k = P.k ?? m - 1; if (k >= 1) pin(S, side, k, m); else void update(side); continue; }
-    if (P.kind === 'pinned') { if (m != null) count(S, side, m); if (x.addrs.includes(P.src)) void update(side); continue; }
-    void update(side);
+    if (P.kind === 'bare' && m != null && m > (P.k ?? 0)) { const k = P.k ?? m - 1; if (k >= 1) pin(S, side, k, m, x.at); else void update(side, { at: x.at }); continue; }
+    if (P.kind === 'pinned') { if (m != null) count(S, side, m); if (x.addrs.includes(P.src)) void update(side, { at: x.at }); continue; }
+    void update(side, { at: x.at });
   }
 }
 
@@ -2707,15 +2717,16 @@ export function dropped(x) {
  * @param {Scene} S
  * @param {'a' | 'b'} side
  * @param {Map<string, {n: number}>} chains the chains the refresh counted, by trunk
+ * @param {number} at the page's clock at the drop or the row that left the board behind (M-PUMP's `Dropped.at`)
  */
-function refreshed(S, side, chains) {
+function refreshed(S, side, chains, at) {
   const P = S[side], c = chains.get(boxOf(P.src));
   if (P.kind === 'bare') {
     if (P.k == null) return;
-    if (c && P.k >= 1 && c.n > P.k) { pin(S, side, P.k, c.n); return; }
+    if (c && P.k >= 1 && c.n > P.k) { pin(S, side, P.k, c.n, at); return; }
   }
   if (P.kind === 'pinned' && c) count(S, side, c.n);
-  void update(side);
+  void update(side, { at });
 }
 
 /**

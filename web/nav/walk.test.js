@@ -24,8 +24,9 @@
 // change of class keeps the walk on the span its document kept, a draft's
 // run there named as the withheld run it is now; a withheld run's ends stand a level
 // below its item, counted and marked as the symbols are; a kept document's
-// item carrying the clause its corner or the one line shows, marked in place
-// as it lifts; and where no board is held the root says why and the re-take
+// item carrying the clause its corner or the one line shows, and the board's
+// while it lags, each marked in place as it appears and as it lifts; and
+// where no board is held the root says why and the re-take
 // stands on it alone (FP-20, FP-21, FP-22, FP-23, FP-24, FP-29, FP-33,
 // FP-35).
 import { test, before } from 'node:test';
@@ -1026,13 +1027,14 @@ test('the count, the article\'s symbols and the mirror name the same ends, two l
   }
 });
 
-test('a kept document\'s mirror item carries the clause its corner or the one line shows — an edition\'s its links\' stamp — as a sentence of its own after its words, and the item is written again in place as it lifts, nothing rebuilt (issue #345\'s design decision)', async (ctx) => {
-  const unasked = fake.unanswered.length;
-  await PUMP.loadWhole(D);
-  const platform = globalThis.document;
-  globalThis.document = /** @type {any} */ ({ activeElement: null });
-  /** @typedef {{attrs: Record<string, string>, dataset: Record<string, string>, innerHTML: string}} Item */
-  /** @type {Item[]} the items the last rebuild wrote, each an element whose words are written again in place */
+/** @typedef {{attrs: Record<string, string>, dataset: Record<string, string>, innerHTML: string}} Item */
+
+/**
+ * A mirror that records what the walk writes in it: the items its last rebuild wrote, each an element whose words are
+ * written again in place, and how many rebuilds it took
+ */
+function recordingMirror() {
+  /** @type {Item[]} */
   let items = [];
   let rebuilds = 0;
   const mirror = {
@@ -1048,8 +1050,19 @@ test('a kept document\'s mirror item carries the clause its corner or the one li
     },
     querySelectorAll: (/** @type {string} */ sel) => (sel === 'li[role="treeitem"]' ? items : []),
   };
+  /** the words the item for `addr` holds as the mirror holds them */
+  const item = (/** @type {string} */ addr) => items.find((i) => i.attrs['data-addr'] === addr)?.innerHTML ?? '';
+  return { mirror, item, rebuilds: () => rebuilds };
+}
+
+test('a kept document\'s mirror item carries the clause its corner or the one line shows — an edition\'s "links as last read" at the page\'s clock as the row that left it behind came — as a sentence of its own after its words, and the item is written again in place as it lifts, nothing rebuilt (issues #345, #367)', async (ctx) => {
+  const unasked = fake.unanswered.length;
+  await PUMP.loadWhole(D);
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  const { mirror, item: itemOf, rebuilds: rebuilt } = recordingMirror();
   /** D's item's words as the mirror holds them */
-  const item = () => items.find((i) => i.attrs['data-addr'] === D)?.innerHTML ?? '';
+  const item = () => itemOf(D);
   /** D's text read again, held until the test answers it */
   let text = () => {};
   try {
@@ -1061,21 +1074,60 @@ test('a kept document\'s mirror item carries the clause its corner or the one li
     assert.ok(item() && !item().includes(t('L.kept.links', { when: '' }).trim()), `not kept: no clause — ${item()}`);
     ctx.mock.timers.enable({ apis: ['setTimeout'] });
     text = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+    const t0 = Date.now();
     fake.fire('feed', { board: 'b-1', update: { position: 40, at: 40, op: 'insert', docs: [D], class: 'published' } });
+    const t1 = Date.now();
     ctx.mock.timers.tick(PUMP.KEPT_MS);
-    const clause = t('L.mirror.clause', { clause: t('L.kept.links', { when: lastRead(/** @type {number} */ (REC.doc(D).linksAt)) }) });
-    const was = rebuilds;
+    const since = /** @type {number} */ (PUMP.kept(D)?.since);
+    assert.ok(since >= t0 && since <= t1, 'kept from the row\'s arrival');
+    const clause = t('L.mirror.clause', { clause: t('L.kept.links', { when: lastRead(since) }) });
+    const was = rebuilt();
     WALK.markKept();
     const at = WALK.siblingsNow().findIndex((n) => n.addr === D), named = WALK.mirrorItem(at) || '';
     assert.ok(item().includes(esc(clause)) && named.includes(clause + ' ' + t('L.mirror.item', { i: at + 1, n: WALK.siblingsNow().length })), `its clause a sentence after its words, before its place in the level: ${named}`);
     assert.ok(named.startsWith(t('L.mirror.document', { document: D, label: '"Tumbler."', state: t('F.published'), extent: t('L.mirror.positions', { n: 30 }) })), named);
-    assert.equal(rebuilds, was, 'written in place, nothing rebuilt');
+    assert.equal(rebuilt(), was, 'written in place, nothing rebuilt');
     text();
     for (let i = 0; i < 50 && PUMP.kept(D); i++) await new Promise((r) => setImmediate(r));
     WALK.markKept();
-    assert.ok(!item().includes(esc(clause)) && rebuilds === was, 'set: the clause gone from the item in place');
+    assert.ok(!item().includes(esc(clause)) && rebuilt() === was, 'set: the clause gone from the item in place');
     assert.deepEqual(fake.unanswered.slice(unasked), []);
   } finally { text(); globalThis.document = platform; }
+});
+
+test('while the board lags past a second its mirror item carries the clause the one line shows, as a sentence of its own after its words, written in place as it appears and as it lifts with the catch-up\'s rows, nothing rebuilt (issue #367\'s design decision: "The clause stands in every view, in that place\'s mirror item")', async (ctx) => {
+  const from = Math.max(REC.feedAt() ?? 0, 60), unasked = fake.unanswered.length, session = /** @type {{session: string}} */ (REC.session()).session;
+  REC.reachFeed(from);
+  script[FAKE.keyOf('changes', { session, since: from })] = { result: { entries: [], next: from, head: from } };
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  const { mirror, item, rebuilds } = recordingMirror();
+  try {
+    // at mid, the walk on the board
+    const b = docBox(D);
+    CAM.set({ x: b.x + b.w / 2, y: b.y + b.h / 2, scale: 120 / DOC_W });
+    WALK.attach(/** @type {any} */ (mirror));
+    await WALK.focusTo('1', null);
+    assert.equal(WALK.current()?.kind, 'board', 'the walk on the board');
+    const words = item('1'), at = ' ' + t('L.mirror.item', { i: 1, n: 1 });
+    assert.ok(words.endsWith(esc(at)), `its words, then its place in the level: ${words}`);
+    ctx.mock.timers.enable({ apis: ['setTimeout'] });
+    fake.drop();
+    WALK.markKept();
+    assert.equal(item('1'), words, 'within the second: its words alone');
+    ctx.mock.timers.tick(PUMP.KEPT_MS);
+    const clause = t('L.mirror.clause', { clause: t('L.kept.text', { when: lastRead(/** @type {number} */ (PUMP.boardKept()?.since)) }) });
+    const was = rebuilds();
+    WALK.markKept();
+    assert.equal(WALK.mirrorItem(0), WALK.nameOf({ kind: 'board', addr: '1', pos: null, link: null }, 0, 1));
+    assert.ok((WALK.mirrorItem(0) || '').endsWith(clause + at), `its clause a sentence after its words, before its place in the level: ${WALK.mirrorItem(0)}`);
+    assert.ok(item('1').includes(esc(clause)) && rebuilds() === was, 'written in place, nothing rebuilt');
+    fake.reopen();
+    for (let i = 0; i < 20 && PUMP.boardKept(); i++) await new Promise((r) => setImmediate(r));
+    WALK.markKept();
+    assert.deepEqual([PUMP.boardKept(), item('1'), rebuilds()], [null, words, was], 'the catch-up\'s rows taken: the clause gone from the item in place');
+    assert.deepEqual(fake.unanswered.slice(unasked), []);
+  } finally { globalThis.document = platform; }
 });
 
 test('the page\'s own death takes the mirror down at once where the view stood on nothing — no item quoting what the dead session read, the draft it could read listed as its cover, the editions read as published listed still — and takes the walk again on the span it stood on once its document is read at the guest\'s class (FP-23; issues #160, #350)', async () => {
@@ -1095,7 +1147,7 @@ test('the page\'s own death takes the mirror down at once where the view stood o
     // the guest's read of D held, so nothing it brings stands yet; the death keeps nothing the view stood on, as M-PUMP's end hands it none here, then tells the walk
     const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(D) });
     REC.sessionDied({ arm: 'closed' });
-    const taken = WALK.dropped({ row: null, addrs: null });
+    const taken = WALK.dropped({ row: null, addrs: null, at: Date.now() });
     for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
     assert.ok(!mirror.innerHTML.includes('The first field.'), `at once: no item quotes what the dead session read: ${mirror.innerHTML}`);
     assert.deepEqual(walkAt(), ['document', D, null], 'the walk on its document whole');
@@ -1130,7 +1182,7 @@ test('the walk on a draft the session read stays on it once the guest\'s read an
     assert.ok(mirror.innerHTML.includes('The draft'), 'the walk on the draft\'s span, the mirror quoting it');
     script[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(DR) })] = { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } };
     REC.sessionDied({ arm: 'closed' });
-    await WALK.dropped({ row: null, addrs: null });
+    await WALK.dropped({ row: null, addrs: null, at: Date.now() });
     const box = t('F.corner.withheld', { owner: '1.0.1' });
     assert.deepEqual([walkAt(), REC.covered(DR)], [['document', DR, null], true], 'the walk on the covered draft, whole: never on nothing');
     assert.ok(!mirror.innerHTML.includes('The draft') && (WALK.mirrorItem(WALK.mirrorIndex()) || '').includes(box), `named in its withheld box's words, none of its text: ${WALK.mirrorItem(WALK.mirrorIndex())}`);
@@ -1159,7 +1211,7 @@ test('a change of the page\'s class keeps the walk on the span it stood on where
     await WALK.focusTo(K, AT + 3);
     assert.ok(walkAt()?.[2] === AT && mirror.innerHTML.includes(RUN), 'the walk on the span of the draft\'s bytes, the mirror quoting them');
     REC.sessionDied({ arm: 'closed' }, [K]);
-    const taken = WALK.dropped({ row: null, addrs: null });
+    const taken = WALK.dropped({ row: null, addrs: null, at: Date.now() });
     for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
     assert.deepEqual(walkAt(), ['block', K, AT], 'at once: the walk on the span it stood on, never its document whole');
     assert.ok(!mirror.innerHTML.includes(RUN) && mirror.innerHTML.includes('Kept.'), `no item quotes the draft's bytes, the edition's own quoted still: ${mirror.innerHTML}`);

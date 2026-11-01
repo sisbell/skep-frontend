@@ -28,9 +28,15 @@
 // the board answers in part read again as a row naming it is, and a change of
 // class ending its reads where they stand; a row naming a document the view
 // shows, which keeps it as held until its reads again set it in one step,
-// rows meanwhile queueing one more read; a row touching a doc 1, which keeps
-// the byline cause of each shown document's owner as held until a read of it
-// again lands, the board's silence leaving it standing; and the edition claims a row
+// rows meanwhile queueing one more read, kept from the row's arrival; a row
+// touching a doc 1, which keeps the byline cause of each shown document's
+// owner as held until a read of it again lands, the board's silence leaving
+// it standing; the event stream's drop, which holds every row until its
+// reopen's catch-up reads `changes` from the last position the page took —
+// after any acquire's, from where that reached, and marking the board where
+// none can be done — the board lagging past a second from the drop or a run's
+// first bare row until the catch-up's rows are taken or its refresh has run,
+// and a document the gap's rows name kept from the drop; and the edition claims a row
 // changes — read from its link and from the edition-class links homed in the
 // documents it names — kept as held where a document the view shows windows
 // their origin until their read again sets them in one step, the homes their
@@ -2571,6 +2577,8 @@ test('a shown document a feed row named whose read again is refused as withheld 
 
 /** long enough for what stands held while it is read again to have stood KEPT_MS */
 const pastTheSecond = () => new Promise((r) => setTimeout(r, PUMP.KEPT_MS + 20));
+/** what a kept holder answers (`kept`, `claimsKept`, `boardKept`), its stamp read as whether it falls between `t0` and `t1` by the page's clock */
+const keptBetween = (/** @type {{met: unknown, since: number} | null} */ k, /** @type {number} */ t0, /** @type {number} */ t1) => (k ? { met: k.met, since: k.since >= t0 && k.since <= t1 } : null);
 
 test('a shown document a feed row named stands kept once its read again has been out KEPT_MS — nothing before, then the document with no refusal while its read is out — and is kept no more from the step its read sets it, each change counted (issue #345)', async () => {
   const s = { ...script, ...ONE_MEMBER };
@@ -2578,12 +2586,14 @@ test('a shown document a feed row named stands kept once its read again has been
   const fake = readingD(s);
   await settle();
   const release = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  const t0 = Date.now();
   fake.fire('feed', writing(20, [D]));
+  const t1 = Date.now();
   await untilAsked(fake, F.retrieveV(D, 1, 30));
   const rev = PUMP.keptRevision();
   assert.deepEqual([PUMP.kept(D), PUMP.keptAll().docs], [null, []], 'before the second: not kept');
   await pastTheSecond();
-  assert.deepEqual([PUMP.kept(D), PUMP.keptAll().docs, PUMP.keptRevision()], [{ met: null }, [D], rev + 1], 'past the second: kept, no refusal met while its read is out');
+  assert.deepEqual([keptBetween(PUMP.kept(D), t0, t1), PUMP.keptAll().docs, PUMP.keptRevision()], [{ met: null, since: true }, [D], rev + 1], 'past the second: kept from the row\'s arrival, no refusal met while its read is out');
   let watching = true, lagged = false;
   REC.watch(() => { if (watching && REC.textBetween(D, 1, 31) === AFTER && PUMP.kept(D)) lagged = true; });
   release();
@@ -2600,10 +2610,12 @@ test('a shown document\'s read again the board does not answer leaves it kept, s
   const told = [];
   const fake = readingD(s, (x) => { told.push(x); });
   await settle();
+  const t0 = Date.now();
   fake.fire('feed', writing(20, [D]));
+  const t1 = Date.now();
   await settle();
   await pastTheSecond();
-  assert.deepEqual([REC.textBetween(D, 1, 31), PUMP.kept(D)], [BEFORE, { met: UNREACHABLE.refused }], 'its text not answered: held, kept, the refusal named');
+  assert.deepEqual([REC.textBetween(D, 1, 31), keptBetween(PUMP.kept(D), t0, t1)], [BEFORE, { met: UNREACHABLE.refused, since: true }], 'its text not answered: held, kept from the row\'s arrival, the refusal named');
   const whole = await PUMP.wholeOf(D);
   assert.equal(REC.textBetween(D, 1, 31), BEFORE, 'a whole read in the wait reads what stands');
   assert.ok(whole.doc);
@@ -2634,11 +2646,13 @@ test('a document a refresh reads again stands kept past KEPT_MS while that read 
   inTurn(s, F.findLinksV(D, 1, 30), script[opKeyOf(F.findLinksV(D, 1, 30))], UNREACHABLE, script[opKeyOf(F.findLinksV(D, 1, 30))]);
   const fake = readingD(s);
   await settle();
+  const t0 = Date.now();
   fake.fire('feed', naming(20, null));
+  const t1 = Date.now();
   await PUMP.refresh();
   await settle();
   await pastTheSecond();
-  assert.deepEqual(PUMP.kept(D), { met: UNREACHABLE.refused }, 'its links unheard: kept past the refresh');
+  assert.deepEqual(keptBetween(PUMP.kept(D), t0, t1), { met: UNREACHABLE.refused, since: true }, 'its links unheard: kept past the refresh, from the bare row that left the board behind');
   fake.fire('daemon', { board: 'b-1', state: 'running' });
   await settle();
   assert.equal(PUMP.kept(D), null, 'its read again made at running answered: kept no more');
@@ -2657,14 +2671,16 @@ test('a shown document a refresh reads again, one part of which the board did no
   const fake = readingD(s, (x) => { told.push(x); });
   await settle();
   const meta = REC.doc(D).meta;
+  const t0 = Date.now();
   fake.fire('feed', naming(20, null));
+  const t1 = Date.now();
   await PUMP.refresh();
   await settle();
   assert.deepEqual([timesAsked(fake, F.retrieveV(D, 1, 30)), REC.textBetween(D, 1, 31), [...REC.doc(D).links], REC.link(L2), REC.doc(D).meta === meta, REC.bare()], [2, BEFORE, [L1], undefined, true, false], 'its text not answered: nothing set — its links and its metadata as held, though the refresh read them again — and the board not marked again');
   for (let i = 0; i < 5; i++) { PUMP.pump(); await flush(); }
   assert.equal(timesAsked(fake, F.retrieveV(D, 1, 30)), 2, 'nothing asked of it while the board is out');
   await pastTheSecond();
-  assert.deepEqual(PUMP.kept(D), { met: UNREACHABLE.refused }, 'kept, the refusal its read met named');
+  assert.deepEqual(keptBetween(PUMP.kept(D), t0, t1), { met: UNREACHABLE.refused, since: true }, 'kept from the bare row, the refusal its read met named');
   const before = told.length;
   fake.fire('daemon', { board: 'b-1', state: 'running' });
   await settle();
@@ -2680,12 +2696,14 @@ test('the edition claims a row changed on an origin a shown document windows sta
   const fake = readingD(s);
   forgetClaims();
   await settle();
+  const t0 = Date.now();
   fake.fire('feed', { board: 'b-1', update: { position: 10, at: 10, class: 'published', op: 'make_link', docs: [NEW_HOME], link: NEW } });
+  const t1 = Date.now();
   await until(() => askedOf(fake, F.editionClaimsAt(O)) === 2, 'the claims read again');
   await settle();
   assert.deepEqual([REC.editionClaimsOf(O), PUMP.claimsKept(O)], [[EDITION, FORK], null], 'the lookup not answered: the claims held, not kept before the second');
   await pastTheSecond();
-  assert.deepEqual([PUMP.claimsKept(O), PUMP.keptAll().origins], [{ met: UNREACHABLE.refused }, [O]], 'past the second: kept, the refusal the lookup met');
+  assert.deepEqual([keptBetween(PUMP.claimsKept(O), t0, t1), PUMP.keptAll().origins], [{ met: UNREACHABLE.refused, since: true }, [O]], 'past the second: kept from the row\'s arrival, the refusal the lookup met');
   fake.fire('daemon', { board: 'b-1', state: 'running' });
   await settle();
   assert.deepEqual([REC.editionClaimsOf(O), PUMP.claimsKept(O), PUMP.keptAll().origins], [[EDITION, FORK, NEW], null, []], 'read again at running and set: kept no more');
@@ -2912,6 +2930,171 @@ test('a change of the page\'s class while a refresh reads what the view shows en
   await refreshed;
   await pastTheSecond();
   assert.deepEqual([extentAsks(fake, last), PUMP.keptAll().docs], [0, []], 'the seventh never read, and no document kept');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+// ---- the stream's gap ---------------------------------------------------------------------------------------------
+
+/** a feed row of `op` at `position` naming `docs`, of class `cls`: a drafts row sent under s-1 */
+const rowOf = (/** @type {number} */ position, /** @type {string[]} */ docs, cls = 'published', op = 'insert') => ({ position, at: position, op, docs, class: cls, ...(cls === 'drafts' ? { session: 's-1' } : {}) });
+/** a page signed in under s-1 on b-1, its place on the feed `head`, over a board answering `s` */
+function signedIn(/** @type {Record<string, unknown>} */ s, head = 10) {
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  readHead(head);
+  return fake;
+}
+/** the board refusing `changes` for a position it no longer holds the history of */
+const RECLAIMED = { refused: { kind: 'refused', name: 'history_reclaimed', status: 410, code: 'history_reclaimed', detail: null, op: null, body: { error: 'history_reclaimed', floor: 12 } } };
+
+test('the event stream\'s drop holds every row until the stream reopens and its catch-up reads `changes` from the last position the page took, under the page\'s session: the rows the dropped stream never sent and those the reopened one brings taken together, each once and in position order, nothing read and nothing missing while the stream stands dropped, the page not settled while the catch-up is out (issue #367\'s design decision: "`web/model/pump.js` holds new rows and reads `changes` from its last position once it has a session")', async () => {
+  const [A, B] = ['1.0.1.0.21', '1.0.1.0.22'];
+  // what was written while the stream was down: an edit at 11, a draft minted at 12, edits at 13 and 14
+  const fake = signedIn({ ...script, ...caughtUp('s-1', 10, [rowOf(11, [A]), rowOf(12, [B], 'drafts', 'create_new_document'), rowOf(13, [A]), rowOf(14, [A])], 14) });
+  fake.drop();
+  fake.fire('feed', { board: 'b-1', update: rowOf(13, [A]) });
+  await flush();
+  assert.deepEqual([REC.feedRows(), catchUps(fake), PUMP.settled()], [[], [], true], 'dropped: a row handed meanwhile held, nothing read, nothing missing — nothing comes while the stream is down');
+  const release = fake.hold('changes', { session: 's-1', since: 10 });
+  fake.reopen();
+  await until(() => catchUps(fake).length === 1, 'the catch-up asked');
+  // the reopened stream: a row the catch-up reads too, and one past it
+  for (const u of [rowOf(14, [A]), rowOf(15, [A])]) fake.fire('feed', { board: 'b-1', update: u });
+  await flush();
+  assert.deepEqual([REC.feedRows(), catchUps(fake), PUMP.settled()], [[], [{ session: 's-1', since: 10 }], false], 'reopened: the catch-up asked from the last position under the page\'s session, every row held, the page not settled');
+  release();
+  await settle();
+  assert.deepEqual(REC.feedRows().map((r) => r.position), [11, 12, 13, 14, 15], 'each position once and in order');
+  assert.deepEqual([REC.place(B)?.kind, REC.feedAt(), PUMP.settled()], ['draft', 15, true], 'the draft minted in the gap listed, the page\'s place past every row taken, settled');
+  fake.fire('feed', { board: 'b-1', update: rowOf(16, [A]) });
+  assert.deepEqual(REC.feedRows().slice(5).map((r) => r.position), [16], 'after it, a row taken as it comes');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a gap whose catch-up meets the page\'s session lost leaves the gap to the acquire that loss begins: one catch-up at a time — the acquire\'s from the last position, then the gap\'s from where it reached — every row taken once (issue #367)', async () => {
+  const A = '1.0.1.0.21';
+  const fake = signedIn({ ...script, ...opened('s-2'), [FAKE.keyOf('changes', { session: 's-1', since: 10 })]: { refused: { kind: 'shell', name: 'session_ended', session: 's-1' } }, ...caughtUp('s-2', 10, [rowOf(11, [A]), rowOf(12, [A])], 12), ...caughtUp('s-2', 12, [rowOf(13, [A])], 13) });
+  fake.drop();
+  fake.reopen();
+  await settle();
+  assert.deepEqual([catchUps(fake), opens(fake), REC.session()?.session], [[{ session: 's-1', since: 10 }, { session: 's-2', since: 10 }, { session: 's-2', since: 12 }], 1, 's-2'], 'refused as lost: the acquire\'s catch-up from the last position, then the gap\'s from where that one reached');
+  assert.deepEqual([REC.feedRows().map((r) => r.position), REC.feedAt(), PUMP.settled()], [[11, 12, 13], 13, true], 'each row once, in order');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('an acquire\'s catch-up that lands while the stream stands dropped takes what it read and leaves the rows held for the gap, whose catch-up reads from where it reached once the stream reopens (issue #367)', async () => {
+  const A = '1.0.1.0.21', frame = F.docMetadata(D);
+  const s = { ...script, ...opened('s-2'), ...caughtUp('s-2', 10, [rowOf(11, [A])], 11), ...caughtUp('s-2', 11, [rowOf(12, [A]), rowOf(13, [A])], 13) };
+  firstThen(s, frame, { refused: { kind: 'shell', name: 'session_ended', session: 's-1' } }, script[FAKE.keyOf('op', { frame })]);
+  const fake = signedIn(s);
+  fake.drop();
+  const out = await PUMP.read(frame);
+  assert.ok('answer' in out, 'the read answered under the session got back');
+  assert.deepEqual([REC.session()?.session, catchUps(fake), REC.feedRows().map((r) => r.position)], ['s-2', [{ session: 's-2', since: 10 }], [11]], 'the acquire\'s catch-up taken while the stream stands dropped');
+  fake.fire('feed', { board: 'b-1', update: rowOf(13, [A]) });
+  assert.deepEqual(REC.feedRows().map((r) => r.position), [11], 'the stream still dropped: a row held still');
+  fake.reopen();
+  await settle();
+  assert.deepEqual([catchUps(fake).slice(1), REC.feedRows().map((r) => r.position), REC.feedAt()], [[{ session: 's-2', since: 11 }], [11, 12, 13], 13], 'reopened: the gap\'s catch-up from where the acquire\'s reached, every row once');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('where no catch-up of the gap can be done — a guest, who holds no session to read `changes` under — the rows held are taken alone and the board marked as a row naming nothing marks it, the page not settled until its refresh has run (issue #367\'s design decision)', async () => {
+  const A = '1.0.1.0.21';
+  const fake = FAKE.create({ ...script });
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  readHead(10);
+  fake.drop();
+  fake.fire('feed', { board: 'b-1', update: rowOf(15, [A]) });
+  assert.deepEqual(REC.feedRows(), [], 'dropped: the row held');
+  fake.reopen();
+  await flush();
+  assert.deepEqual([catchUps(fake), REC.feedRows().map((r) => r.position), REC.bare(), PUMP.settled()], [[], [15], true, false], 'reopened with no session: nothing read, the row taken, the board marked and its refresh armed');
+  await PUMP.refresh();
+  assert.deepEqual([REC.bare(), PUMP.settled()], [false, true], 'the refresh took the mark');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the board lags from the stream\'s drop: past a second it is kept from the drop while the stream stands dropped and while the gap\'s catch-up is out, and kept no more from the step the catch-up\'s rows are taken (issue #367\'s design decision: "Meanwhile the board carries the clause")', async () => {
+  const fake = signedIn({ ...script, ...caughtUp('s-1', 10, [rowOf(11, ['1.0.1.0.21'])], 11) });
+  const t0 = Date.now();
+  fake.drop();
+  const t1 = Date.now(), rev = PUMP.keptRevision();
+  assert.deepEqual([PUMP.boardKept(), PUMP.keptAll().board], [null, false], 'within the second: not kept');
+  await pastTheSecond();
+  assert.deepEqual([keptBetween(PUMP.boardKept(), t0, t1), PUMP.keptAll().board, PUMP.keptRevision()], [{ met: null, since: true }, true, rev + 1], 'past the second: kept from the drop');
+  const release = fake.hold('changes', { session: 's-1', since: 10 });
+  fake.reopen();
+  await until(() => catchUps(fake).length === 1, 'the catch-up asked');
+  assert.notEqual(PUMP.boardKept(), null, 'reopened, its catch-up out: kept still');
+  release();
+  await settle();
+  assert.deepEqual([REC.feedAt(), PUMP.boardKept(), PUMP.keptAll().board, PUMP.keptRevision()], [11, null, false, rev + 2], 'the catch-up\'s rows taken: kept no more');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a document the view shows that the gap\'s rows name, still being read a second after they are taken, stands kept from the stream\'s drop — the board\'s stamp, never the catch-up\'s — until its read again sets it (issue #367\'s design decision: "If documents are still being read a second after the catch-up\'s rows, they take the clause from the board")', async () => {
+  const s = { ...script, ...ONE_MEMBER, ...caughtUp('s-1', 10, [writing(11, [D]).update], 11) };
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), deliveredAt(AFTER, 9));
+  const fake = readingD(s);
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  readHead(10);
+  await settle();
+  const t0 = Date.now();
+  fake.drop();
+  const t1 = Date.now();
+  await new Promise((r) => setTimeout(r, 20));
+  const text = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  const caught = Date.now();
+  fake.reopen();
+  await until(() => REC.feedAt() === 11, 'the gap\'s rows taken');
+  assert.deepEqual([REC.textBetween(D, 1, 31), PUMP.boardKept()], [BEFORE, null], 'D held as it stands, the board\'s lag ended with the catch-up');
+  await pastTheSecond();
+  const k = PUMP.kept(D);
+  assert.deepEqual(keptBetween(k, t0, t1), { met: null, since: true }, 'kept from the drop');
+  assert.ok(k && k.since < caught, 'never from the catch-up that read the row');
+  text();
+  await settle();
+  assert.deepEqual([REC.textBetween(D, 1, 31), PUMP.kept(D)], [AFTER, null], 'set: kept no more');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the board lags from the first bare row of a run: past a second it is kept from that row while its refresh is out, and kept no more as the refresh ends (issue #367\'s design decision: "That place is a document whose read is still out, or else the board")', async () => {
+  const fake = readingD({ ...script, ...ONE_MEMBER });
+  await settle();
+  const count = fake.hold('op', { frame: F.docMetadata(D + '.1') });
+  const t0 = Date.now();
+  fake.fire('feed', naming(20, null));
+  const t1 = Date.now();
+  fake.fire('feed', naming(21, null));
+  await pastTheSecond();
+  assert.deepEqual([keptBetween(PUMP.boardKept(), t0, t1), REC.bare()], [{ met: null, since: true }, false], 'kept from the first bare row, its refresh out');
+  count();
+  await settle();
+  assert.deepEqual([PUMP.boardKept(), REC.bare()], [null, false], 'the refresh ended: kept no more');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('where `changes` refuses the gap\'s catch-up, the board is marked and lags from the stream\'s drop, saying why, until its refresh has run (issue #367\'s design decision)', async () => {
+  const fake = readingD({ ...script, ...ONE_MEMBER, [FAKE.keyOf('changes', { session: 's-1', since: 10 })]: RECLAIMED });
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  readHead(10);
+  await settle();
+  const count = fake.hold('op', { frame: F.docMetadata(D + '.1') });
+  const t0 = Date.now();
+  fake.drop();
+  const t1 = Date.now();
+  fake.reopen();
+  await until(() => catchUps(fake).length === 1, 'the catch-up asked');
+  await pastTheSecond();
+  assert.deepEqual(keptBetween(PUMP.boardKept(), t0, t1), { met: RECLAIMED.refused, since: true }, 'kept from the drop, the refusal the catch-up met named, its refresh out');
+  count();
+  await settle();
+  assert.deepEqual([PUMP.boardKept(), REC.bare()], [null, false], 'the refresh ended: kept no more');
   assert.deepEqual(fake.unanswered, []);
 });
 

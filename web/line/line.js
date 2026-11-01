@@ -60,7 +60,10 @@
 // the display names — one M-PUMP holds as it stands past a second while it
 // reads it again (FP-23) — carries its clause in a segment of its own right
 // after the address segment (T-LAYER's `keptIn`, so its corner carries none;
-// FP-33), never cut short of room (the style's).
+// FP-33), never cut short of room (the style's); where the display names no
+// kept document, at every scale, the board lagging past a second carries its
+// own there (T-LAYER's `boardKeptIn`), the board heading every place the
+// display names.
 // The acting-as segment (`actingSegment`), its state among foundations §3.3's
 // seven: state 2 through the signed session, the one a write may go out
 // under (`F.acting-as`), its device label a slot (FP-34; `deviceSlot`) —
@@ -112,9 +115,9 @@
 // session's death, a session a restart lost that the acquire could not get
 // back, and halted writes assertively, once as they arrive — nothing while
 // it reconnects nor as it returns — through the one status region; each
-// kept clause on the plane, a document's or a withheld run's, politely once
-// as it appears and once as it lifts (`keptSaid`; FP-36), a change of the
-// page's class taking down what was heard unsaid; a change
+// kept clause on the plane, a document's, a withheld run's or the board's,
+// politely once as it appears and once as it lifts (`keptSaid`; FP-36), a
+// change of the page's class taking down what was heard unsaid; a change
 // of the page's class is said once (FP-29), as the reads it asked answer
 // (M-PUMP's `rereading`), UNREACHED_MS at the most after it: the ending's
 // words, then the documents it covered (M-REC's `coveredDocs`), the first
@@ -291,13 +294,17 @@ function endingSaid(ending) {
 /**
  * What the status region says of the plane's kept clauses (see the head;
  * FP-36): each box M-PUMP holds as it stands past a second whose clause
- * appears (T-LAYER's `keptIn`), and each origin's withheld text whose
- * edition claims stand so (`claimsKeptIn`), said politely once as its clause
- * appears and once as it lifts — a new time or a failure's words while it
- * stands said nothing — all a render finds in one message.
+ * appears (T-LAYER's `keptIn`), each origin's withheld text whose edition
+ * claims stand so (`claimsKeptIn`), and the board while it lags so, by its
+ * address (`boardKeptIn`), said politely once as its clause appears and once
+ * as it lifts — a new time or a failure's words while it stands said nothing
+ * — all a render finds in one message.
  */
 function keptSaid() {
   const now = PUMP.keptAll(), heard = new Map();
+  const board = now.board ? LAYER.boardKeptIn() : null;
+  // the board named by its address, as the display names it at every scale
+  if (board) heard.set('1', board.text);
   for (const addr of now.docs) { const box = documentOf(addr) || addr, k = LAYER.keptIn(box); if (k) heard.set(box, k.text); }
   for (const origin of now.origins) { const k = LAYER.claimsKeptIn(origin); if (k) heard.set(t('L.kept.run', { origin }), k.text); }
   const said = [...[...heard].filter(([what]) => !keptHeard.has(what)).map(([what, clause]) => t('L.kept.said', { what, clause })), ...[...keptHeard.keys()].filter((what) => !heard.has(what)).map((what) => t('L.kept.lifted', { what }))];
@@ -650,7 +657,8 @@ export function render(force = false) {
   if (daemon.halted && !lastHalted) FOCUS.say(daemon.words, true);
   lastAlarm = acting.alarm ? acting.words : ''; lastHalted = daemon.halted;
   keptSaid();
-  const kept = a.doc ? LAYER.keptIn(a.doc) : null;
+  // the document named's clause, else the board's: the board heads every place the display names
+  const kept = (a.doc ? LAYER.keptIn(a.doc) : null) || LAYER.boardKeptIn();
   const html =
     `<span class="acts"><button id="line-back" data-act="back" ${TRAIL.canBack() ? '' : 'disabled'}>${esc(t('F.back'))}</button><button data-act="forward" ${TRAIL.canForward() ? '' : 'disabled'}${forwardSays ? ` title="${esc(t('L.scene.closed'))}" aria-label="${esc(t('L.scene.closed'))}"` : ''}>${esc(t('F.forward'))}</button><button data-act="trail" title="${esc(drawChord('Mod+Y'))}">${esc(t('F.trail-list'))}</button></span>` +
     `<span class="sep">│</span><button class="seg address" data-act="address" title="${esc(drawChord('Mod+L'))}" aria-label="${esc(t('L.address.name', addressName(a)))}" style="--words:${WORDS_CH}"><b>${esc(a.place)}</b>${labelHTML(a)}${slot(a)}<span class="marker${a.member ? ' lit' : ''}${a.doc ? '' : ' none'}" title="${a.member ? esc(t('L.version', { k: a.member })) : ''}">${a.member ? '●' : '○'}</span></button>` +

@@ -1,7 +1,8 @@
 // P-RENDER's test, on a recording context: the board's statements beneath
 // its label (B1-S3) — the residue statement at the floor, that a document
 // the shell's index could not place is not shown while its arm stands, every
-// count a lower bound meanwhile, and nothing when complete (FP-23); where
+// count a lower bound meanwhile, nothing when complete, and the board's kept
+// clause first while it lags past a second (FP-23); where
 // no board is held a whole frame names none — no board's label, origin
 // or count, no frame of the account under the view, no ring at the walk's
 // root — where the same frames with the board held do (FP-35); a
@@ -16,6 +17,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
+import * as PUMP from '../model/pump.js';
+import * as PORT from '../bridge/port.js';
+import * as FAKE from '../test/fake-port.js';
 import * as CAM from './camera.js';
 import * as WALK from '../nav/walk.js';
 import * as GO from '../nav/go.js';
@@ -27,7 +31,7 @@ import { markScale } from './lod.js';
 import { leadOf, firstRow, GUTTER } from './layout.js';
 import { COL, TARGET } from './register.js';
 import { recorder } from '../test/canvas.js';
-import { t, markCount } from '../strings.js';
+import { t, markCount, lastRead } from '../strings.js';
 import { byteLength } from '../util.js';
 
 /** the address a set label carries: the text of its line whose runs are all in the identifier's face */
@@ -42,6 +46,27 @@ test('while the shell\'s index reports changes it could not place, the board\'s 
   // the shell's own spelling of the arm (skep-shell's `state_json`): the range the bare rows stand in, and how many
   REC.setIndexState({ arm: 'unplaced', range: 'board', count: 2 });
   assert.deepEqual([boardStatements(), REC.countOf('1.0.1').exact], [[t('L.board-unplaced')], false], 'changes it could not place: said, and every count a lower bound');
+});
+
+test('while the board lags past a second its clause stands first among the board\'s statements — "as last read" at the stream\'s drop — and not within the second, nor once the catch-up\'s rows are taken (issue #367\'s design decision: "Meanwhile the board carries the clause")', async (ctx) => {
+  REC._reset();
+  const fake = FAKE.create({ [FAKE.keyOf('changes', { session: 's-1', since: 10 })]: { result: { entries: [], next: 10, head: 10 } } });
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.setHealth({ log_position: 10 }, null);
+  REC.takeIndex(/** @type {any} */ ({ docs: [], counts: [], state: { arm: 'at_the_floor', floor: 8265 } }));
+  const residue = t('F.board-residue', { floor: 8265 });
+  ctx.mock.timers.enable({ apis: ['setTimeout'] });
+  fake.drop();
+  assert.deepEqual(boardStatements(), [residue], 'within the second: the residue alone');
+  ctx.mock.timers.tick(PUMP.KEPT_MS);
+  const lag = /** @type {{since: number}} */ (PUMP.boardKept());
+  assert.deepEqual(boardStatements(), [t('L.kept.text', { when: lastRead(lag.since) }), residue], 'past the second: its clause first');
+  fake.reopen();
+  for (let i = 0; i < 20 && PUMP.boardKept(); i++) await new Promise((r) => setImmediate(r));
+  assert.deepEqual(boardStatements(), [residue], 'the catch-up\'s rows taken: the clause lifted');
+  assert.deepEqual(fake.unanswered, []);
 });
 
 test('where no board is held the plane names none — no board\'s outline, label, origin or count, no frame of the account under the view, no ring at the walk\'s root — where the same frames with the board held draw its label, the account\'s frame and the ring (issue #215\'s design decision: "`render.js` draws no board: no outline, label, origin or count"; FP-35)', async () => {

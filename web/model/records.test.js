@@ -21,9 +21,7 @@
 // that moment — and dropping the rest, every other box it knew left owed its
 // read at the new class whatever the view stood on — covered at once where
 // the change ends the session, else waiting to be read — that read alone
-// covering, confirming or lifting it, a drop keeping it owed; and every read
-// that leaves a record holding text or links, or an origin's claims held,
-// stamped by the page's clock, the stamp leaving with what it stamped.
+// covering, confirming or lifting it, a drop keeping it owed.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from './records.js';
@@ -563,70 +561,6 @@ test('a newer member\'s arrival hands the trunk\'s text to the member it is — 
   REC.takeDelivery(D, [{ pos: 1, width: 3, kind: 'content', text: 'new', ref: null, origin: null }], 8);
   assert.equal(REC.takeAsMember(D, M), false, 'the member holds text of its own: nothing handed');
   assert.deepEqual([REC.textBetween(M, 1, 12), REC.textBetween(D, 1, 4)], ['hello world', 'new']);
-});
-
-/** a content run of `text` at position 1 */
-const words = (/** @type {string} */ text) => [{ pos: 1, width: text.length, kind: /** @type {const} */ ('content'), text, ref: null, origin: null }];
-/** every record's text stamped where it holds text and links where it holds a raw set, and neither where it holds none (the stamps' one rule; issue #345) */
-function stampsSound(/** @type {string} */ why) {
-  for (const d of REC.docs()) {
-    assert.equal(d.textAt != null, d.from >= 0, `${why}: ${d.addr}'s text stamped where it holds text, and only there`);
-    assert.equal(d.linksAt != null, d.linksRead, `${why}: ${d.addr}'s links stamped where its raw set is held, and only there`);
-  }
-}
-
-test('every read that leaves a record holding text or links stamps it by the page\'s clock as it lands — a delivery, a raw set, a text handed to the member it is, a document set again — and the stamp leaves with what it stamped: a drop, a refresh\'s, a refusal set again, an empty text set again and a change of class each leave none for what goes (issue #345\'s design decision: "A kept text without a stamp fails the tests")', () => {
-  const D = '1.0.1.0.3', M = D + '.2', Q = '1.0.1.0.2';
-  const t0 = Date.now(), now = (/** @type {number | null} */ at) => at != null && at >= t0 && at <= Date.now();
-  REC.takeDelivery(D, words('first words'), 3);
-  REC.takeLinks(D, [D + '.0.2.1']);
-  assert.ok(now(REC.doc(D).textAt) && now(REC.doc(D).linksAt), 'a delivery and a raw set stamped as they land');
-  stampsSound('read');
-  const at = REC.doc(D).textAt;
-  assert.equal(REC.takeAsMember(D, M), true);
-  assert.deepEqual([REC.doc(M).textAt, REC.doc(D).textAt], [at, null], 'the text handed to the member it is takes its stamp; the trunk keeps none');
-  stampsSound('handed');
-  REC.setAgain(M, { text: { runs: words('set again'), asOf: 9 }, links: [M + '.0.2.1'], values: [] });
-  assert.ok(now(REC.doc(M).textAt) && now(REC.doc(M).linksAt), 'set again: its text and its links stamped');
-  stampsSound('set again');
-  REC.setAgain(M, { text: { runs: [], asOf: 10 } });
-  stampsSound('set again empty');
-  REC.takeDelivery(M, words('more'), 11);
-  REC.invalidate(M);
-  stampsSound('dropped');
-  REC.takeDelivery(Q, words('a draft'), 4); REC.takeLinks(Q, []);
-  assert.deepEqual(REC.takeRefresh(new Set()).sort(), [D, M, Q].sort());
-  stampsSound('a refresh\'s drop');
-  REC.takeDelivery(Q, words('a draft'), 5); REC.takeLinks(Q, []);
-  REC.setAgain(Q, { refused: 'withheld' });
-  stampsSound('refused');
-  // a change of class: an edition the view stood on with no image keeps none of its text, the draft goes
-  REC.takeIndex(/** @type {any} */ (PLACES));
-  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
-  REC.takeDelivery(D, words('edition text'), 6); REC.takeLinks(D, []);
-  REC.takeDelivery(Q, words('draft text'), 6); REC.takeLinks(Q, []);
-  REC.sessionDied({ arm: 'closed' }, [D, Q]);
-  assert.deepEqual([REC.doc(D).from, REC.doc(D).linksRead, REC.doc(Q).from], [-1, true, -1], 'the edition kept, its text gone where its image placed none of it; the draft dropped');
-  stampsSound('a change of class');
-});
-
-test('an origin\'s edition claims held carry the stamp of the lookup that set them, kept as held with them and gone where they go — a change dropping them, a refresh\'s, a change of class (issue #345)', () => {
-  const O = '1.0.1.0.1003', C = '1.0.1.0.30.0.2.1';
-  const t0 = Date.now();
-  REC.takeEditionClaims(O, [C]);
-  const at = REC.claimsReadAt(O);
-  assert.ok(at != null && at >= t0 && at <= Date.now(), 'stamped as the lookup lands');
-  REC.claimsChanged(O, true);
-  assert.equal(REC.claimsReadAt(O), at, 'a change kept as held: the claims and their stamp stand');
-  REC.claimsChanged(O, false);
-  assert.deepEqual([REC.editionClaimsOf(O), REC.claimsReadAt(O)], [undefined, null], 'a change dropping them: no stamp');
-  REC.takeEditionClaims(O, 'unread');
-  assert.ok(REC.claimsReadAt(O) != null, 'a failed lookup held is stamped too');
-  REC.takeRefresh(new Set());
-  assert.equal(REC.claimsReadAt(O), null, 'a refresh dropping them: no stamp');
-  REC.takeEditionClaims(O, [C]);
-  REC.sessionDied({ arm: 'closed' });
-  assert.equal(REC.claimsReadAt(O), null, 'a change of class: no stamp');
 });
 
 test('a refresh\'s drop keeps the documents shown and what they read through — their links\' values and where those project, the edition claims on their withheld runs\' origins and the claims\' homes, their owners\' byline causes — and drops the rest as a row naming each would, each drop counted; the index, its counts and the feed\'s rows stand (issue #212)', () => {
