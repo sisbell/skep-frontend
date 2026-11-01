@@ -332,7 +332,14 @@ first edition, the line carries the clause beside its address and its mirror
 item the same words, its corner none; while the line names its account, its
 corner carries it as its last item, every item above it where it stood; the
 read answered, no clause stands in the frame its text is set, and each
-appearing and each lifting is said once. THE LONGEST EDITION the claimant's index lists, found by the case's
+appearing and each lifting is said once. BELOW ITS READING SCALE A KEPT
+DOCUMENT'S LABEL SAYS SO (issue #368's design decision: "the clause follows
+the address"): such a row with the line naming the first edition's account,
+at em 4 its canvas label carries the clause right after its address at the
+address's size, on its row ending at the row's end or first beneath it, and
+every label check holds; at em 7, in the mount band with no corner and its
+outline risen past the line, its held label carries the clause last; the
+read answered, neither does. THE LONGEST EDITION the claimant's index lists, found by the case's
 own reads of each edition's span set: LEAPt to, its article mounted at the
 measure, its columns inside its room and every row inside its column and its
 room; standing BY LINE (issue #122's design decision: the cost bounded by the
@@ -344,7 +351,7 @@ THE CONTENTS LINE (issue #23's design decision: names first): at every
 view every document's label carries its address whole, past its region's
 prefix only where the region's label is set or the one line names it, and
 one set in its place stands on one row, its address at its outline's first
-row's end and its first line, where set, its lead cut on a whole word from
+row's end — or before its kept clause, which ends there — and its first line, where set, its lead cut on a whole word from
 where those words stand in its fold; below the mount that first line's first
 word starts where the article mounted above it sets that word; an address
 at a label's size keeps its dots apart; the LEAP box's addresses stand at
@@ -701,9 +708,9 @@ def label_view(ctx):
     cell — and each tail drawn: its site, its links and their far documents, where its stroke leaves and ends; the shape of
     each held label's place (issue #169), by its kind and place — a document's outline's rects, a mark's cell for each
     of its labels (issue #42), an account's cell — the places the one line names, and for each document labelled the lead its label sets (the page's
-    first-line rule) and where its first line stands in its fold (issue #23)"""
+    first-line rule), where its first line stands in its fold (issue #23) and the clause it carries while it stands kept (issue #368)"""
     return ctx.js('''(async () => {
-      const P = await import('./plane/projection.js');
+      const P = await import('./plane/projection.js'), T = await import('./text/layer.js');
       const S = window.__skep, c = S.view.camera(), p = S.view.viewport(), lod = S.view.lod();
       const scr = (b) => ({x: (b.x - c.x) * c.scale + p.VW / 2, y: (b.y - c.y) * c.scale + p.VH / 2, w: b.w * c.scale, h: b.h * c.scale});
       const view = {x: 0, y: 0, w: p.VW, h: p.VH}, top = document.getElementById('line').getBoundingClientRect().bottom;
@@ -727,7 +734,9 @@ def label_view(ctx):
       const shapeOf = (l) => l.kind === 'doc' ? S.fold(l.place).rects.map(scr) : ['mark', 'newest', 'member'].includes(l.kind) ? [cell(l.place)] : [scr(S.accountCell(l.place))];
       // each document labelled: the lead the page's first-line rule gives it and where its first line stands in its fold, on screen
       const leads = Object.fromEntries(labels.filter((l) => l.kind === 'doc').map((l) => { const at = S.fold(l.place).lead; return [l.place, {words: S.firstLine(l.place).lead, at: scr({x: at.x, y: at.y, w: 0, h: at.h})}]; }));
-      return {lod: lod.name, view, seen: {x: 0, y: top, w: p.VW, h: p.VH - top}, labels, out: S.labelsLeftOut(), marks: marks.map((m) => ({place: m.key, rect: m.rect, lines: m.lines})), leads,
+      // each document labelled: the clause it carries while it stands kept, else null
+      const kept = Object.fromEntries(labels.filter((l) => l.kind === 'doc').map((l) => { const k = T.keptIn(l.place); return [l.place, k ? k.text : null]; }));
+      return {lod: lod.name, view, seen: {x: 0, y: top, w: p.VW, h: p.VH - top}, labels, out: S.labelsLeftOut(), marks: marks.map((m) => ({place: m.key, rect: m.rect, lines: m.lines})), leads, kept,
               boxes, rows, accounts, board: scr({x: b.x, y: b.y, w: b.w / 3, h: b.h / 3}), docs, connections, mounted: S.mountedAddrs(),
               tails: S.tails().map((t) => ({key: t.key, links: t.links, far: t.far, from: t.from, to: t.to})),
               held: Object.fromEntries(labels.filter((l) => l.held).map((l) => [l.kind + ' ' + l.place, shapeOf(l)])), named: S.named()};
@@ -868,25 +877,31 @@ def labels_hold(r, name, v):
     r.check(not unnamed, f'{name}: (v) every document\'s label carries its address whole in the identifier\'s face — its fields past its region\'s prefix (".0.3") only where its region\'s label is set in view or the one line names the region, its whole address elsewhere (issue #23)', unnamed[:6])
     # (v-b) the contents line (issue #23's design decision: "Set it at the head of the first column, where those words will stand when
     # the text mounts ... at the end of that row, like a page number"): a document's label set in its place stands on one row — its
-    # address ending at the end of its outline's first row; its first line, where set, the page's lead cut on a whole word, LEAD_WORDS
-    # kept at the least, starting where those words stand in its fold and centred on that line, unless its row is held to its first row's top
+    # address ending at the end of its outline's first row, or, while the document stands kept, before its clause, which ends there
+    # (issue #368's design decision: "the clause follows the address"); its first line, where set, the page's lead cut on a whole word,
+    # LEAD_WORDS kept at the least, starting where those words stand in its fold and centred on that line, unless its row is held to its
+    # first row's top
     astray = []
     for l in labels:
         if l['kind'] != 'doc' or l.get('held') or l['place'] not in v['rows']:
             continue
-        a, row, lead = address_line(l), v['rows'][l['place']], v['leads'].get(l['place'])
+        a, row, lead, kept = address_line(l), v['rows'][l['place']], v['leads'].get(l['place']), v['kept'].get(l['place'])
         if a is None:
             continue
         mid = a['rect']['y'] + a['rect']['h'] / 2
-        on_row = [x for x in l['lines'] if x is not a and abs(x['rect']['y'] + x['rect']['h'] / 2 - mid) <= LABEL_TOL_PX]
+        level = lambda x: abs(x['rect']['y'] + x['rect']['h'] / 2 - mid) <= LABEL_TOL_PX
+        # its kept clause where it stands on the row: its words whole, level with the address
+        after = next((x for x in l['lines'] if x is not a and kept and x['text'] == kept and level(x)), None)
+        on_row = [x for x in l['lines'] if x is not a and x is not after and level(x)]
         row_top = mid - max([a['rect']['h']] + [x['rect']['h'] for x in on_row]) / 2
-        end_ok = abs(a['rect']['x'] + a['rect']['w'] - (row['x'] + row['w'])) <= LABEL_TOL_PX
+        end = (after or a)['rect']
+        end_ok = abs(end['x'] + end['w'] - (row['x'] + row['w'])) <= LABEL_TOL_PX and (after is None or a['rect']['x'] + a['rect']['w'] < after['rect']['x'])
         lead_mid = lead and lead['at']['y'] + lead['at']['h'] / 2
         firsts_ok = len(on_row) <= 1 and all(lead and word_cut(x['text'], lead['words']) and abs(x['rect']['x'] - lead['at']['x']) <= LABEL_TOL_PX
                                              and (abs(mid - lead_mid) <= LABEL_TOL_PX or abs(row_top - row['y']) <= LABEL_TOL_PX) for x in on_row)
         if not (end_ok and firsts_ok):
-            astray.append({'place': l['place'], 'address': a['rect'], 'row': row, 'first': [[x['text'], x['rect']] for x in on_row], 'lead': lead})
-    r.check(not astray, f'{name}: (v-b) every document\'s label set in its place is one contents line — its address ending at its outline\'s first row\'s end; its first line, where set, its lead cut on a whole word with {LEAD_WORDS} words kept at the least, starting where those words stand in its fold and level with that line — {LABEL_TOL_PX} px either way (issue #23)', astray[:6])
+            astray.append({'place': l['place'], 'address': a['rect'], 'kept': after and [after['text'], after['rect']], 'row': row, 'first': [[x['text'], x['rect']] for x in on_row], 'lead': lead})
+    r.check(not astray, f'{name}: (v-b) every document\'s label set in its place is one contents line — its address ending at its outline\'s first row\'s end, or before its kept clause, which ends there; its first line, where set, its lead cut on a whole word with {LEAD_WORDS} words kept at the least, starting where those words stand in its fold and level with that line — {LABEL_TOL_PX} px either way (issues #23, #368)', astray[:6])
     # the connections' counts (foundations §2.1's register: "one connection drawn per document pair with its count"; P44 forbids a merged mark
     # that hides it): the numeral of its links on each holding two or more, else the rule that left it out named; none on one holding one
     conns = v['connections']
@@ -3491,6 +3506,98 @@ def kept_holds(ctx, r):
     return {'named': named, 'cornered': {k: cornered[k] for k in ('held', 'lift', 'said')}, 'moved_px': moved}
 
 
+# how far above the one line's bottom the first edition's outline's top stands while its label is held over its text in the mount band
+KEPT_UNDER_PX = 40
+
+
+def kept_label_holds(ctx, r):
+    """BELOW ITS READING SCALE A KEPT DOCUMENT'S LABEL SAYS SO (issue #368's design decision: "On the canvas label, the
+    clause follows the address, at the address's small size. It never follows the first line, and the first line gives
+    way first"): the first edition at em 4, below its mount, the walk stepped out to its account so the one line names it
+    not; a published row naming it handed to the page through the gate's feed door, its text window's read again held at
+    its answer past a second — its canvas label carries "links as last read ⟨when⟩" right after its address, at the
+    address's size in the client's face: whole on its row, ending at its outline's first row's end with the address a
+    space before it, or else first beneath the row; the line carries none, and every label check holds over the frame; at
+    em 7, its article standing in the mount band with no corner, its outline's top KEPT_UNDER_PX above the one line, its
+    label held over its text carries the words last, right after its address; the read answered, neither label carries
+    them; reads alone"""
+    ctx.leap(DOC)
+    ctx.js('window.__skep.walk.key("out")')
+    ctx.settle()
+    ctx.view_doc_em(DOC, 4)
+    ctx.frames(2)
+    words = '''(async (a) => { const PUMP = await import('./model/pump.js'), REC = await import('./model/records.js'), ST = await import('./strings.js');
+      const k = PUMP.kept(a); return k && REC.doc(a).linksRead ? ST.t('L.kept.links', {when: ST.lastRead(k.since)}) : null; })(%s)''' % json.dumps(DOC)
+    line_kept = "!!document.querySelector('#line .seg.kept')"
+
+    def canvas(said):
+        """the first edition's canvas label at the frame: its lines, its address, and the lines that say `said` — the one
+        line right after the address on its row, or the lines beneath the row that make its words up"""
+        v = label_view(ctx)
+        mine = next((l for l in v['labels'] if l['kind'] == 'doc' and l['place'] == DOC), None)
+        lines = mine['lines'] if mine else []
+        a = address_line(mine) if mine else None
+        i = lines.index(a) if a in lines else -1
+        nxt = lines[i + 1] if 0 <= i < len(lines) - 1 else None
+        on_row = bool(nxt and said) and nxt['text'] == said and abs(nxt['rect']['y'] + nxt['rect']['h'] / 2 - (a['rect']['y'] + a['rect']['h'] / 2)) <= LABEL_TOL_PX
+        clause = [nxt] if on_row else []
+        if not on_row and said and a:
+            acc = ''
+            for x in lines[i + 1:]:
+                if acc == said or x['rect']['y'] < a['rect']['y'] + a['rect']['h'] - LABEL_TOL_PX:
+                    break
+                acc = (acc + ' ' + x['text']).strip()
+                clause.append(x)
+            if acc != said:
+                clause = []
+        return {'v': v, 'lines': lines, 'address': a, 'clause': clause, 'on_row': on_row, 'row': v['rows'].get(DOC)}
+
+    row = {'position': 0, 'at': 0, 'op': 'insert', 'docs': [DOC], 'class': 'published'}
+    ctx.drv.hold_op('retrieve_v', DOC)
+    ctx.js('window.__skep.model.feed(%s)' % json.dumps(row))
+    ctx.drv.pump_events(KEPT_WAIT_S)
+    ctx.frames(3)
+    said = ctx.js(words)
+    c4 = canvas(said)
+    seen = {'kept-em4': labels_hold(r, 'kept-em4', c4['v'])}
+    a, k, rw = c4['address'], c4['clause'], c4['row']
+    placed = bool(a and k and rw) and (not c4['on_row'] or (abs(k[0]['rect']['x'] + k[0]['rect']['w'] - (rw['x'] + rw['w'])) <= LABEL_TOL_PX and 0 < k[0]['rect']['x'] - (a['rect']['x'] + a['rect']['w']) <= k[0]['px']))
+    faced = bool(k) and all(x['px'] == a['px'] and x['runs'] and all(q['face'] == 'client' for q in x['runs']) for x in k)
+    lined = ctx.js(line_kept)
+    r.check(bool(said) and placed and faced and not lined,
+            'em 4: the first edition kept past a second, its read again out, the one line naming its account: its canvas label carries "links as last read ⟨when⟩" right after its address, at the address\'s size in the client\'s face — whole on its row, ending at its outline\'s first row\'s end with the address a space before it, or else first beneath the row — and the line none (issue #368)',
+            {'said': said, 'lines': [[x['text'], x['rect'], x['px']] for x in c4['lines']], 'on_row': c4['on_row'], 'row': rw, 'line_kept': lined, 'named': c4['v']['named'],
+             'left_out': [[x['text'], x['reason']] for x in c4['v']['out'] if x['kind'] == 'doc' and x['place'] == DOC]})
+    # its article in the mount band, below its reading scale: its outline's top risen past the one line, its label held over its text
+    s7 = ctx.js('window.__skep.scaleFor(%s, "em", 7)' % json.dumps(DOC))
+    f7 = ctx.js('window.__skep.fold(%s)' % json.dumps(DOC))
+    first = ctx.js('window.__skep.centreOf(%s, null)' % json.dumps(DOC))
+    vp = ctx.js('window.__skep.view.viewport()')
+    top = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
+    at7 = {'x': first['x'], 'y': f7['outline']['y'] + (vp['VH'] / 2 - (top - KEPT_UNDER_PX)) / s7, 'scale': s7}
+    held_js = '''((a) => ({held: window.__skep.heldLabel(a), mounted: window.__skep.mountedAddrs().includes(a), corner: !!document.querySelector(`#corners .corner[data-corner="${a}"]`), named: window.__skep.named()}))(%s)''' % json.dumps(DOC)
+    ctx.js('window.__skep.view.set(%s)' % json.dumps(at7))
+    ctx.frames(4)
+    h7 = ctx.js(held_js)
+    texts = (h7['held'] or {}).get('text') or []
+    short = DOC[len(account_of(DOC)):]
+    r.check(bool(said) and h7['mounted'] and not h7['corner'] and (h7['named'] or {}).get('doc') is None and len(texts) >= 2 and texts[-1] == said and texts[-2] in (short, DOC),
+            f'em 7: the first edition\'s article in the mount band, no corner beside it, its outline\'s top {KEPT_UNDER_PX} px above the one line: its label held over its text carries the words last, right after its address (issue #368)',
+            {'said': said, 'held': h7})
+    answered = ctx.drv.answer_op('whole')
+    ctx.settle()
+    ctx.frames(3)
+    after7 = ctx.js(held_js)
+    ctx.view_doc_em(DOC, 4)
+    ctx.frames(2)
+    after4 = canvas(said)
+    gone = said not in ((after7['held'] or {}).get('text') or []) and not after4['clause']
+    r.check(answered and bool(said) and gone and not ctx.js(words),
+            'the read answered: the first edition no longer kept, neither its held label nor its canvas label carries the words',
+            {'answered': answered, 'held': after7['held'], 'canvas': [x['text'] for x in after4['lines']]})
+    return {'said': said, 'em4': {'lines': [[x['text'], x['rect']] for x in c4['lines']], 'on_row': c4['on_row']}, 'em7': h7, 'labels': seen}
+
+
 def longest_holds(ctx, r):
     """THE LONGEST EDITION the claimant's index lists (the typography review's finding 7: under a size fitted to its
     length its line ran wider than the window) — found by the harness's own reads of each edition's span set — shown at
@@ -4114,6 +4221,7 @@ def run(ctx):
     r.figures['bare'] = bare_holds(ctx, r)
     r.figures['named'] = named_holds(ctx, r)
     r.figures['kept'] = kept_holds(ctx, r)
+    r.figures['kept_label'] = kept_label_holds(ctx, r)
     r.figures['longest'] = longest_holds(ctx, r)
     r.figures['walk'] = walk_holds(ctx, r)
     r.figures['scene_strokes'] = scene_strokes_hold(ctx, r)

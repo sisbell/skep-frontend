@@ -403,15 +403,16 @@ export const STRINGS = {
   // a draft's text, else the links drawn with it, or an origin's edition claims at a withheld run of it — said once beside
   // the document's name, and the board's while it lags, ⟨when⟩ the page's own clock at the row or drop that left the copy
   // behind (`lastRead`), a failed read's words after it — a mirror item carrying it as its own sentence (L.mirror.clause);
-  // and what the status region says as it appears and as it lifts, ⟨what⟩ the document, the board by its address, or the
-  // withheld text of an origin in it
-  'L.kept.text': { text: 'as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; the ARIA mirror; B1-S3: the board\'s statements; B1-S9: a pane\'s corner', lane: true },
-  'L.kept.links': { text: 'links as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; the ARIA mirror; B1-S7: a column\'s edge, the run\'s face; B1-S9: a pane\'s corner', lane: true },
-  'L.kept.failed': { text: '⟨clause⟩ — ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; the ARIA mirror; B1-S7; B1-S9: a pane\'s corner', lane: true },
+  // how many of an account's documents stand so, on its label at far scale; and what the status region says as it
+  // appears and as it lifts, ⟨what⟩ the document, the board by its address, or the withheld text of an origin in it
+  'L.kept.text': { text: 'as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; B1-S2: a document\'s label; the ARIA mirror; B1-S3: the board\'s statements; B1-S9: a pane\'s corner', lane: true },
+  'L.kept.links': { text: 'links as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; B1-S2: a document\'s label; the ARIA mirror; B1-S7: a column\'s edge, the run\'s face; B1-S9: a pane\'s corner', lane: true },
+  'L.kept.failed': { text: '⟨clause⟩ — ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; B1-S2: a document\'s label; the ARIA mirror; B1-S7; B1-S9: a pane\'s corner', lane: true },
+  'L.kept.count': { text: '⟨n⟩ as last read', cls: 'DRAFT', source: '', screen: 'B1-S3: an account\'s cluster', lane: true },
   'L.kept.said': { text: '⟨what⟩ — ⟨clause⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
   'L.kept.lifted': { text: '⟨what⟩ — read again', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
   'L.kept.run': { text: 'the withheld text from ⟨origin⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
-  'L.time.day-time': { text: '⟨day⟩, ⟨time⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; the ARIA mirror; B1-S7; B1-S9: a pane\'s corner', lane: true },
+  'L.time.day-time': { text: '⟨day⟩, ⟨time⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; B1-S2: a document\'s label; the ARIA mirror; B1-S7; B1-S9: a pane\'s corner', lane: true },
   // the shown chords' words (D5-F8; the focus record's rule 19): the dismiss's title, the version marker's
   'L.dismiss': { text: 'dismiss (⟨chord⟩)', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
   'L.version': { text: 'version ⟨k⟩', cls: 'DRAFT', source: '', screen: 'the one line; the versions list; the corner, while the board lags', lane: true },

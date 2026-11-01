@@ -204,13 +204,17 @@
 // one clause (`keptIn` by `keptWords`, which the one line and the ARIA mirror
 // read too; FP-33): a draft holding its text "as last read", else "links as
 // last read", at the page's clock at the row or drop that left it behind
-// (M-PUMP's `Kept.since`), a failed read's words after it; the corner
-// carries it as its last item, a line of its own its placing leaves apart, so
-// its arrival moves no item, save where the one line names the document,
-// which carries it beside the address instead; and a withheld run's kept
-// sign at the first run of its origin, in its column's edge, is filled in
-// place while the origin's edition claims stand held so (`markKeptRuns`,
-// `claimsKeptIn`; FP-31). The board lagging past a second (M-PUMP's
+// (M-PUMP's `Kept.since`), a failed read's words after it. Save where the
+// one line names the document, which carries it beside the address instead,
+// the corner carries it as its last item, a line of its own its placing
+// leaves apart, so its arrival moves no item; its label carries it after its
+// address, at the address's size (`docLabel`) — the canvas's below
+// its reading scale, and the held form over its article where no corner
+// stands (`placeHeld`); and the account's label at far scale counts its
+// documents standing so (`keptCountIn`). A withheld run's kept sign at the
+// first run of its origin, in its column's edge, is filled in place while the
+// origin's edition claims stand held so (`markKeptRuns`, `claimsKeptIn`;
+// FP-31). The board lagging past a second (M-PUMP's
 // `boardKept`) says so in one clause too (`boardKeptIn`), which the one
 // line, the board's statements and its mirror item read; meanwhile every
 // corner names neither the latest version nor the chain's count (T-ARTICLE's
@@ -231,7 +235,8 @@
 // box, read here (`docLabel`), so the two never part: its first line from
 // the line's start, the box's lead (`leadRuns`, by T-ARTICLE's first-line
 // rule), and its address at the line's end, past its region's prefix where
-// that region is named in view (the reader `region`), else whole, its
+// that region is named in view (the reader `region`), else whole — a space
+// short of its kept clause there where no corner carries the clause — its
 // address in the identifier's face and the document's words in the reading
 // face's, each stretch measured and set in its own (`runHTML`), on one line
 // across its outline's visible part, on its box's ground, pushed up under the
@@ -316,7 +321,7 @@ import { CORNER, HOLD, COL, ADDRESS, cornerWidth } from '../plane/register.js';
 import { holdTop, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth } from '../plane/labels.js';
 import { articleHTML, articlePlan, cornerHTML, keptHTML, blockMarks, symbolLit, editionClause, copyText, firstLineOf } from './article.js';
 import { farSays, whyOf } from '../beams/held.js';
-import { homeOf, documentOf, memberOf } from '../model/address.js';
+import { homeOf, documentOf, memberOf, accountOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
 import { esc } from '../util.js';
 import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
@@ -1836,7 +1841,7 @@ function keptClause(id, at, met, now) {
 
 /**
  * A box's kept clause (`keptWords`) wherever the page names the box — the
- * one line, its corner, its mirror item, so they never part: the version it
+ * one line, its corner, its label, its mirror item, so they never part: the version it
  * shows (the reader `shown`), its links its document's (FP-22); kept while
  * M-PUMP reads it again past a second (`kept`) — a draft by its own record,
  * an edition by its box's document, whose links alone can change.
@@ -1882,9 +1887,22 @@ const lags = () => PUMP.boardKept() !== null;
 const cornerOfView = (/** @type {Doc} */ d, /** @type {ArticleView} */ view) => ({ whole: cornerHTML(d, view), compact: cornerHTML(d, view, true), lags: !!view.lags });
 
 /**
+ * How many of an account's documents stand kept (`keptIn`; see the head):
+ * the boxes whose clause M-PUMP's `kept` answers for, each once — what the
+ * account's label carries at far scale, where no document's label stands
+ * (P-RENDER's clusters; FP-23).
+ * @param {string} account
+ * @returns {number}
+ */
+export function keptCountIn(account) {
+  return [...new Set(PUMP.keptAll().docs.map(boxOf))].filter((box) => accountOf(box) === account && keptIn(box)).length;
+}
+
+/**
  * @typedef {Object} DocLabel — a document's label on the plane (`docLabel`): its contents line and its parts beneath it
  * @property {import('../plane/labels.js').Part | null} lead its first line (`leadPart`); null where none is known
  * @property {import('../plane/labels.js').Part} address the address of the version its box shows, its fields past its region's prefix, whole where the region is not named in view (`Part.whole`)
+ * @property {import('../plane/labels.js').Part | null} kept its kept clause (`keptIn`), after its address; null where it is not kept, or the one line names it, which carries the clause beside its address instead
  * @property {import('../plane/labels.js').Part[]} parts its links' badge; none at a withheld box
  * @property {string | null} region its account, whose label in view carries the prefix
  */
@@ -1895,17 +1913,22 @@ const cornerOfView = (/** @type {Doc} */ d, /** @type {ArticleView} */ view) => 
  * two never part: its lead at its em (`leadPart`); the address of the
  * version its box shows at P-REG's ADDRESS size and weight in the
  * identifier's face, past its region's prefix (`shortAddr`) where its region
- * is named in view, else whole; and its links' badge at that size, none at a
- * withheld box, whose links no read brings.
+ * is named in view, else whole; its kept clause after the address at that
+ * size, in the title's ink, wrapped at its spaces and never cut (`keptIn`),
+ * none where the one line names it (the reader `named`); and its links' badge
+ * at that size, none at a withheld box, whose links no read brings.
  * @param {Doc} d the version its box shows
  * @param {number} fsPx its em on screen, in px
  * @returns {DocLabel}
  */
 export function docLabel(d, fsPx) {
-  const c = LK.countDoc(boxOf(d.addr));
+  const box = boxOf(d.addr), c = LK.countDoc(box), k = box === read.named() ? null : keptIn(d.addr);
   /** @type {import('../plane/labels.js').Part[]} */
   const parts = d.refused !== 'withheld' && (c.n || c.arriving) ? [{ text: c.arriving ? `${c.n ? c.n + ' · ' : ''}${t('L.arriving')}` : c.n === 1 ? t('F.label.links.1') : t('F.label.links', { n: c.n }), px: ADDRESS.px, ink: COL.greek, fit: 'wrap' }] : [];
-  return { lead: leadPart(d, fsPx), address: { text: shortAddr(d), whole: d.addr, px: ADDRESS.px, ink: COL.title, weight: ADDRESS.weight, fit: 'one', face: 'ident' }, parts, region: d.account };
+  return {
+    lead: leadPart(d, fsPx), address: { text: shortAddr(d), whole: d.addr, px: ADDRESS.px, ink: COL.title, weight: ADDRESS.weight, fit: 'one', face: 'ident' },
+    kept: k ? { text: k.text, px: ADDRESS.px, ink: COL.title, fit: 'wrap' } : null, parts, region: d.account,
+  };
 }
 
 /** take a mounted article down; where the platform's selection stands in it, it is kept (`kept`) for the frame that puts it back */
@@ -2673,7 +2696,8 @@ export function besideCorner(line, band, corner) {
  * its face as the canvas sets it (`runHTML`), an address in the title's ink,
  * on one line across its outline's visible part at that height (P-LABEL's
  * `holdTop`, `across`, `heldContents`) — its first line from the line's
- * start, its address at the line's end — its box's edge pushing it up under
+ * start, its address at the line's end, a kept document's clause after it
+ * where no corner carries the clause — its box's edge pushing it up under
  * the line, on its box's ground, over the text it covers; where its corner's
  * box meets that line, in the stretch left of the corner, else the stretch
  * right of it (`besideCorner`), none where neither holds its address. The
@@ -2695,18 +2719,20 @@ function placeHeld() {
     const f = rec.fold, box = docBox(addr), row = firstRow(f), g = (GUTTER / 2) * f.fs, at = sy(box.y + row.y + g);
     if (at >= top) continue;
     const rects = outlineRects(f).map((r) => ({ x: sx(box.x + r.x), y: sy(box.y + r.y), w: r.w * scale, h: r.h * scale }));
-    const label = docLabel(rec.d, f.fs * scale), pad = g * scale;
+    const label = docLabel(rec.d, f.fs * scale), pad = g * scale, c = corners.get(addr);
     const address = label.region && !read.region(label.region) && label.address.whole ? { ...label.address, text: label.address.whole } : label.address;
-    // one line box of its first line's size, known or not, or of its largest part: the address stands where it stood whatever arrives beside it
-    const lh = Math.max(lineHeight(f.fs * scale), ...[label.lead, address, ...label.parts].map((p) => (p ? lineHeight(p.px) : 0))), foot = Math.max(...rects.map((r) => r.y + r.h)) - pad;
+    // a kept document's clause after its address where no corner carries it
+    const kept = c ? null : label.kept;
+    // one line box of its first line's size, known or not, or of its largest part: the address stands where it stood whatever first line arrives beside it
+    const lh = Math.max(lineHeight(f.fs * scale), ...[label.lead, address, kept, ...label.parts].map((p) => (p ? lineHeight(p.px) : 0))), foot = Math.max(...rects.map((r) => r.y + r.h)) - pad;
     const y = Math.round(holdTop(at, top, foot, lh)), a = across(rects, y, lh, pad);
     if (!a || y + lh <= seen.y + 0.5) continue;
-    const x0 = Math.max(a.x, seen.x), c = corners.get(addr);
+    const x0 = Math.max(a.x, seen.x);
     let line = null, room = { x: 0, w: 0 };
     for (const s of besideCorner({ x: x0, w: Math.min(a.x + a.w, seen.x + seen.w) - x0 }, { y, h: lh }, c ? { x: c.x, y: c.y, w: c.w, h: c.h } : null)) {
       // on whole px, never past the stretch's right end
       const x = Math.round(s.x), w = Math.floor(s.x + s.w) - x;
-      line = heldContents({ lead: label.lead, address }, label.parts, w, measureRun);
+      line = heldContents({ lead: label.lead, address, kept }, label.parts, w, measureRun);
       if (line) { room = { x, w }; break; }
     }
     if (line) placed.push({ rec, line, room, y, lh });

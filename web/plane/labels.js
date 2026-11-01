@@ -25,11 +25,16 @@
 // (P-LOD's `residueDepth`).
 // The contents line (FP-26): a document's label is one row (`Contents`) —
 // its first line from where its words stand, cut on a word to the room before
-// its address, and its address at a fixed size at the row's end, so words
-// arriving beside it never move it; the address is the label's head, set
+// its address, and its address at a fixed size at the row's end, so a first
+// line arriving beside it never moves it; the address is the label's head, set
 // whole or the label left out whole, and where no first line is known or too
-// few of its words fit, the address stands alone at that end. Its other parts
-// stand beneath the row. A label's addresses drop their region's prefix only
+// few of its words fit, the address stands alone at that end. A kept
+// document's clause (FP-23) follows its address at the address's size, never
+// its first line: whole at the row's end, the address a space before it, where
+// the row holds the two, so the first line gives way first; else the address
+// at the row's end and the clause the first of its parts beneath the row,
+// wrapped at its spaces. Its other parts stand beneath the row. A label's
+// addresses drop their region's prefix only
 // where that region is named in view (`Label.region`): its own label set
 // before it in the pass, or the one line naming it; elsewhere each part names
 // them whole (`Part.whole`). First lines that read alike once cut are cut
@@ -44,7 +49,9 @@
 // count, whole or no label at all; a badge kept whole beside it or dropped;
 // a first line cut on a word to the room the two leave, or dropped; a
 // contents line its first line from the line's start and its address at the
-// line's end, a badge just before it (`heldContents`); never wrapped — the
+// line's end — a space before its clause there, where the line holds the two
+// — a badge just before the address, the first line giving way first, then
+// the badge, then the clause (`heldContents`); never wrapped — the
 // room across its line read from its place's
 // shape at the line's foot (`across`), the narrowest row it meets, so it
 // never leaves its place. Its place's foot rising pushes it up under the
@@ -249,8 +256,9 @@ export const lineHeight = (/** @type {number} */ px) => sizeOf(px) * LINE_BOX;
 /**
  * @typedef {Object} Contents — a document's contents line (see the head), set on its label's first row, which stands at the label's `y`, its parts beneath it
  * @property {Part | null} lead its first line, from `from`, cut on a word to the room before `to` and its address; null where none is known
- * @property {number} px the size its first line is set at, known or not: its row is one line box of it or of its address, the larger, so the address stands where it stood whatever arrives beside it
- * @property {Part} address the label's head, never cut: its right edge at `end`, the row's end; set whole or the label left out whole
+ * @property {number} px the size its first line is set at, known or not: its row is one line box of it or of its address, the larger, so the address stands where it stood whatever first line arrives beside it
+ * @property {Part} address the label's head, never cut: its right edge at `end`, the row's end, or a space short of its clause there; set whole or the label left out whole
+ * @property {Part | null} [kept] its kept clause (FP-23), at its address's size, never cut: whole at `end`, the address a space before it, where the row holds the two; else the first of its parts beneath the row; absent or null where it is not kept
  * @property {number} from where the lead's first word starts, on screen
  * @property {number} to where the lead's room ends, on screen
  * @property {number} end the row's end, on screen
@@ -549,11 +557,13 @@ export function heldLine(parts, width, measure) {
 
 /**
  * A contents line's held form (see the head): on one line `width` px wide,
- * its address at the line's end, whole, else no line; each part after it — a
- * badge — whole just before the address, a space at its size apart, where it
- * fits beside those kept, else dropped; its lead from the line's start, cut on
- * a word to the room those leave a space short of them, else dropped.
- * @param {{lead: Part | null, address: Part}} c
+ * its address whole, else no line — at the line's end, or, where it is kept,
+ * a space short of its clause, whole at the line's end, where the line holds
+ * the two, else the clause dropped; each part after it — a badge — whole just
+ * before the address, a space at its size apart, where it fits beside those
+ * kept, else dropped; its lead from the line's start, cut on a word to the
+ * room those leave a space short of them, else dropped.
+ * @param {{lead: Part | null, address: Part, kept?: Part | null}} c
  * @param {Part[]} parts
  * @param {number} width
  * @param {Measure} measure
@@ -565,9 +575,12 @@ export function heldContents(c, parts, width, measure) {
   const gap = (/** @type {Held} */ x) => wide(x, ' ');
   const aw = wide(a, a.text);
   if (!plain(a.text) || aw > width + 1e-6) return null;
+  const k = c.kept ? heldPart(c.kept) : null;
+  /** the clause's room at the line's end — a space at its size and its words — where the line holds it beside the address, else none */
+  const kr = k && plain(k.text) && aw + gap(k) + wide(k, k.text) <= width + 1e-6 ? gap(k) + wide(k, k.text) : 0;
+  let left = width - kr - aw;
   /** @type {Array<{x: Held, s: string, at: number}>} */
-  const tail = [{ x: a, s: a.text, at: width - aw }];
-  let left = width - aw;
+  const tail = [{ x: a, s: a.text, at: left }, ...(k && kr ? [{ x: k, s: k.text, at: width - kr + gap(k) }] : [])];
   for (const x of parts.map(heldPart).filter((y) => plain(y.text)).reverse()) {
     const w = wide(x, x.text), need = w + gap(x);
     if (need > left + 1e-6) continue;
@@ -642,7 +655,7 @@ export function setLabels(labels, shapes, view, measure, named = new Set()) {
     }
     /** @type {SetLine[]} */
     const lines = [];
-    let y = l.y;
+    let y = l.y, beneath = parts;
     if (c) {
       const row = contentsRow(l, c);
       if (!row.lines.length) { out.push(...row.out); leave(l, parts, null); continue; }
@@ -650,14 +663,15 @@ export function setLabels(labels, shapes, view, measure, named = new Set()) {
       lines.push(...row.lines);
       for (const m of row.lines) taken.push(m.rect);
       y = row.foot;
+      if (row.below) beneath = [row.below, ...parts];
     }
-    const st = stack(l, parts, y);
+    const st = stack(l, beneath, y);
     lines.push(...st.lines);
     if (lines.length) {
       set.push({ kind: l.kind, place: l.place, within: l.within, alpha: l.alpha, plate: l.plate, lines, held: false });
       for (const m of st.lines) taken.push(m.rect);
     }
-    leave(l, parts.slice(st.i), st.why);
+    leave(l, beneath.slice(st.i), st.why);
   }
   apart(cuts, measure);
   return { set, out };
@@ -705,33 +719,47 @@ export function setLabels(labels, shapes, view, measure, named = new Set()) {
 
   /**
    * A contents line set on its label's first row (see the head): its address,
-   * the head, at the row's end, whole, else the whole label left out by the
-   * rule that left it; its lead from where its words stand, cut on a word to
-   * the room before the row's room ends and a space short of its address, set
-   * where it lies inside its place and the visible view and meets nothing it
-   * may not, else named left out. The row is one line box of the larger of
-   * its first line's size and its address's, known or not, each centred on it.
+   * the head, whole, else the whole label left out by the rule that left it —
+   * at the row's end, or, where it is kept, a space short of its clause, whole
+   * at the row's end, where both lie inside its place and the visible view and
+   * meet nothing they may not, else the clause handed back to stand beneath
+   * the row; its lead from where its words stand, cut on a word to the room
+   * before the row's room ends and a space short of its address, set where it
+   * lies inside its place and the visible view and meets nothing it may not,
+   * else named left out. The row is one line box of the larger of its first
+   * line's size and its address's, known or not, each centred on it.
    * @param {Label} l
    * @param {Contents} c
-   * @returns {{lines: SetLine[], out: LeftOut[], foot: number}} its lines set, lead first; its parts left out; the row's foot
+   * @returns {{lines: SetLine[], out: LeftOut[], foot: number, below: Part | null}} its lines set, lead first; its parts left out; the row's foot; its clause where the row does not hold it, the first part beneath the row
    */
   function contentsRow(l, c) {
     const a = c.address, apx = sizeOf(a.px), aweight = a.weight || 'normal', abase = a.face || 'client', atext = a.text.trim().replace(/\s+/g, ' ');
-    const lead = c.lead && plain(c.lead.text).trim() ? c.lead : null;
+    const lead = c.lead && plain(c.lead.text).trim() ? c.lead : null, kept = c.kept && plain(c.kept.text).trim() ? c.kept : null;
     const lpx = lead ? sizeOf(lead.px) : apx, lh = Math.max(apx, sizeOf(c.px), lpx) * LINE_BOX;
     const aw = wideOf(measure, atext, apx, aweight, abase);
-    const arect = { x: c.end - aw, y: l.y + (lh - apx * LINE_BOX) / 2, w: aw, h: apx * LINE_BOX };
+    /** the address's rect ending at `end`, centred on the row */
+    const addressTo = (/** @type {number} */ end) => ({ x: end - aw, y: l.y + (lh - apx * LINE_BOX) / 2, w: aw, h: apx * LINE_BOX });
+    let arect = addressTo(c.end);
+    /** @type {SetLine | null} the clause at the row's end, where the row holds it beside the address */
+    let after = null;
+    if (kept && l.alpha >= STRONGER) {
+      const kpx = sizeOf(kept.px), kweight = kept.weight || 'normal', kbase = kept.face || 'client', ktext = kept.text.trim().replace(/\s+/g, ' ');
+      const kw = wideOf(measure, ktext, kpx, kweight, kbase), krect = { x: c.end - kw, y: l.y + (lh - kpx * LINE_BOX) / 2, w: kw, h: kpx * LINE_BOX };
+      const short = addressTo(krect.x - wideOf(measure, ' ', kpx, kweight, kbase));
+      if (!breaks(krect, l) && !breaks(short, l)) { after = { text: plain(ktext), runs: runsOf(ktext, kbase), px: kpx, ink: kept.ink, weight: kweight, rect: krect }; arect = short; }
+    }
     const why = l.alpha < STRONGER ? 'faint' : breaks(arect, l);
     /** @type {LeftOut[]} */
     const left = [];
     if (why) {
       left.push({ kind: l.kind, place: l.place, text: plain(atext), reason: why });
-      if (lead) left.push({ kind: l.kind, place: l.place, text: plain(lead.text), reason: 'after' });
-      return { lines: [], out: left, foot: l.y + lh };
+      for (const p of [lead, kept]) if (p) left.push({ kind: l.kind, place: l.place, text: plain(p.text), reason: 'after' });
+      return { lines: [], out: left, foot: l.y + lh, below: null };
     }
     /** @type {SetLine} */
     const address = { text: plain(atext), runs: runsOf(atext, abase), px: apx, ink: a.ink, weight: aweight, rect: arect };
-    if (!lead) return { lines: [address], out: left, foot: l.y + lh };
+    const tail = after ? [address, after] : [address], below = kept && !after ? kept : null;
+    if (!lead) return { lines: tail, out: left, foot: l.y + lh, below };
     const lweight = lead.weight || 'normal', lbase = lead.face || 'client', full = lead.text.trim().replace(/\s+/g, ' ');
     const wide = (/** @type {string} */ s) => wideOf(measure, s, lpx, lweight, lbase);
     const room = Math.min(c.to, arect.x - wide(' ')) - c.from;
@@ -743,12 +771,12 @@ export function setLabels(labels, shapes, view, measure, named = new Set()) {
     if (s) lwhy = breaks(rect, l);
     if (!s || lwhy) {
       left.push({ kind: l.kind, place: l.place, text: plain(lead.text), reason: /** @type {Reason} */ (lwhy) });
-      return { lines: [address], out: left, foot: l.y + lh };
+      return { lines: tail, out: left, foot: l.y + lh, below };
     }
     /** @type {SetLine} */
     const first = { text: plain(s), runs: runsOf(s, lbase), px: lpx, ink: lead.ink, weight: lweight, rect };
     if (s !== full) cuts.push({ line: first, full, base: lbase, close: lead.close || '' });
-    return { lines: [first, address], out: left, foot: l.y + lh };
+    return { lines: [first, ...tail], out: left, foot: l.y + lh, below };
   }
 
   /**
@@ -767,7 +795,8 @@ export function setLabels(labels, shapes, view, measure, named = new Set()) {
    * @returns {{label: SetLabel | null, out: LeftOut[]}}
    */
   function held(l, hold, parts, c) {
-    const all = c ? [...(c.lead && plain(c.lead.text).trim() ? [c.lead] : []), c.address, ...parts] : parts;
+    const lead = c && c.lead && plain(c.lead.text).trim() ? [c.lead] : [], kept = c && c.kept && plain(c.kept.text).trim() ? [c.kept] : [];
+    const all = c ? [...lead, c.address, ...kept, ...parts] : parts;
     const lh = Math.max(c ? lineHeight(c.px) : 0, ...all.map((p) => lineHeight(p.px))), foot = Math.max(...hold.rects.map((r) => r.y + r.h)) - hold.pad;
     let y = holdTop(l.y, top, foot, lh), x0 = 0, x1 = 0;
     /** @type {Reason | null} */
@@ -786,7 +815,7 @@ export function setLabels(labels, shapes, view, measure, named = new Set()) {
     /** @type {SetLine[]} */
     const lines = (line || []).map((m) => ({ text: m.text, runs: m.runs, px: m.px, ink: m.part.ink, weight: m.weight, rect: { x: x0 + m.x, y, w: m.w, h: lh } }));
     if (!why && lines.some((m) => strong.some((s) => s.place !== l.place && meets(m.rect, s.rect)))) why = 'meets';
-    const order = c ? [c.address, ...(c.lead && plain(c.lead.text).trim() ? [c.lead] : []), ...parts] : all;
+    const order = c ? [c.address, ...kept, ...lead, ...parts] : all;
     if (why || !line) return { label: null, out: order.map((p, j) => ({ kind: l.kind, place: l.place, text: plain(p.text), reason: j ? 'after' : /** @type {Reason} */ (why) })) };
     const dropped = order.filter((p) => !line.some((m) => m.part === p)).map((p) => ({ kind: l.kind, place: l.place, text: plain(p.text), reason: /** @type {Reason} */ ('width') }));
     line.forEach((m, k) => {

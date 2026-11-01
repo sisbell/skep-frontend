@@ -8,7 +8,8 @@
 // under the view, nor a ring at the walk's root (FP-35); at far the accounts
 // as clusters with their counts, exact or a lower bound where the index runs
 // from a floor, the address above the density mark and each count on lines
-// of its own beneath it (foundations §2.1); at mid the account frames, an
+// of its own beneath it (foundations §2.1), its documents standing as last
+// read counted after their count (T-LAYER's `keptCountIn`; FP-23); at mid the account frames, an
 // empty one saying so (law 13), the mid connections behind, the
 // continuations too small to stand whole as one mark each (foundations §2.1;
 // P44; P-LOD's `residueDepth`), crossfading with the boxes they hold through
@@ -29,7 +30,8 @@
 // extent is unread its first column slot; its label, its contents
 // line (T-LAYER's `docLabel`) — its first line where those words stand in its
 // column (P-LAY's `leadOf`), its address at the end of that row, the end of
-// the outline's first row — and the members' marks on the strip along its
+// the outline's first row, a kept document's clause after its address
+// (FP-23) — and the members' marks on the strip along its
 // outline's top; a document a read answered `withheld`, whether the index
 // lists it or not, as the withheld box (B1-S2). The mid connections come
 // from LK's `connections`, each end at the outline that draws a document or
@@ -346,14 +348,16 @@ function drawClusters(/** @type {number} */ alpha, /** @type {Pass} */ pass) {
       if (links.arriving) { ctx.strokeStyle = 'rgba(127,178,255,0.5)'; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]); }
       if (links.n) { ctx.strokeStyle = `rgba(127,178,255,${Math.min(0.5, 0.06 + links.n / (count.documents * 10))})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, rad * 1.35, 0, 6.284); ctx.stroke(); }
     }
-    // the address above the density disc; beneath it each count on lines of its own, then the landmarks or law 13's empty statement — the link ring, the cluster's own mark, passing behind them
+    // the address above the density disc; beneath it each count on lines of its own — its documents standing as last read after their count — then the landmarks or law 13's
+    // empty statement — the link ring, the cluster's own mark, passing behind them
     const outer = rad + 1;
-    const ax = Math.min(15, W * 0.09), cpx = Math.min(12, W * 0.075);
+    const ax = Math.min(15, W * 0.09), cpx = Math.min(12, W * 0.075), kept = LAYER.keptCountIn(a.account);
     pass.labels.push({ kind: 'cluster', place: a.account, within: { x: mark.x + 3, y: mark.y, w: mark.w - 6, h: cy - outer - mark.y }, x: cx, y: cy - outer - lineHeight(ax), align: 'center', alpha, plate: null,
       parts: [{ text: a.account, px: ax, ink: COL.title, fit: 'one', face: 'ident' }], hold: { rects: [mark], pad: 3, plate: COL.cluster } });
     /** @type {Part[]} */
     const counts = [
       { text: `${count.exact ? count.documents : t('L.lower-bound', { n: count.documents })} ${t('F.count.documents')}`, px: cpx, ink: COL.text, fit: 'wrap' },
+      ...(kept ? [{ text: t('L.kept.count', { n: kept }), px: cpx, ink: COL.title, fit: /** @type {const} */ ('wrap') }] : []),
       { text: `${links.arriving ? t('L.arriving') + ' · ' : ''}${links.n} ${t('F.count.links')}`, px: cpx, ink: COL.text, fit: 'wrap' },
     ];
     const land = REC.landmarks().filter((p) => p.account === a.account).length;
@@ -615,11 +619,11 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     if (mountedHere || whole) stats.yielded.push(d.addr);
     if (W >= 10 && !mountedHere) {
       // the label, its contents line (T-LAYER's `docLabel`): its first line from where its words stand in its column (P-LAY's `leadOf`), its row centred on that line, cut short of its column's
-      // end and of its address at the row's end, the end of the outline's first row; its badge beneath, none at a withheld box — set by the label pass in that row on the document's
-      // ground, else held below the one line in its outline, but where the line names the document
+      // end and of its address at the row's end, the end of the outline's first row, a kept document's clause after its address; its badge beneath, none at a withheld box — set by
+      // the label pass in that row on the document's ground, else held below the one line in its outline, but where the line names the document
       const lab = LAYER.docLabel(d, fsPx), lead = leadOf(f), col = f.columns[lead.column], rowH = Math.max(lineHeight(lab.address.px), lineHeight(fsPx));
       pass.labels.push({ kind: 'doc', place: d.addr, within: { x: X, y: Y, w: W, h: H }, x: sx(box.x + col.x), y: Math.max(Y, sy(box.y + lead.y + lead.h / 2) - rowH / 2), align: 'left', alpha: a, plate: ground,
-        contents: { lead: lab.lead, px: fsPx, address: lab.address, from: sx(box.x + lead.x), to: sx(box.x + col.x + col.w), end: X + W },
+        contents: { lead: lab.lead, px: fsPx, address: lab.address, kept: lab.kept, from: sx(box.x + lead.x), to: sx(box.x + col.x + col.w), end: X + W },
         parts: lab.parts, region: lab.region, hold: named.doc === doc ? null : { rects, pad: g * cam.scale, plate: ground } });
       // the history strip along the first row's top: the members as marks
       if (trunk.members && trunk.members > 1 && W > 60) { ctx.fillStyle = COL.land; for (let k = 0; k < trunk.members; k++) ctx.fillRect(X + k * 6, sy(box.y + row.y) + 2, 4, 2); }

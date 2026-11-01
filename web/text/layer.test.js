@@ -22,7 +22,8 @@
 // article again, the passage held; a box's label and first line in their
 // faces; a kept document's one clause — a draft's text, else its links, an
 // edition's links alone, at the row or drop that left it behind, the failed
-// read's words after it; and the plane's corner made again as the board's lag
+// read's words after it — its label carrying it after its address, none where
+// the one line names it, and its account counting it; and the plane's corner made again as the board's lag
 // begins and ends (FP-8, FP-12, FP-20, FP-22, FP-23, FP-26, FP-30, FP-33,
 // FP-34).
 import { test, beforeEach } from 'node:test';
@@ -32,6 +33,7 @@ import * as PUMP from '../model/pump.js';
 import * as PORT from '../bridge/port.js';
 import * as FAKE from '../test/fake-port.js';
 import * as LK from '../links/links.js';
+import * as F from '../model/frames.js';
 import * as LAYER from './layer.js';
 import * as CAM from '../plane/camera.js';
 import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, columnOfLine, setAdvance, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER, EDGE, CHAR_W, LINE_H } from '../plane/layout.js';
@@ -1108,6 +1110,38 @@ test('a withheld run\'s kept sign carries nothing while no origin\'s edition cla
   const sign = { dataset: /** @type {Record<string, string>} */ ({ kept: O, string: 'L.kept.links' }), textContent: 'links as last read 09:05' };
   LAYER.markKeptSigns(/** @type {any} */ ({ querySelectorAll: (/** @type {string} */ sel) => (sel === '.wh-kept[data-kept]' ? [sign] : []) }));
   assert.deepEqual([sign.textContent, sign.dataset.string], ['', undefined], 'the claims kept no more: the sign emptied');
+});
+
+test('a kept box\'s label carries its clause after its address — the words the page says of it wherever it names it, at P-REG\'s address size, in the title\'s ink, wrapped and never cut — and none within the second, where the one line names it, or once its read again sets it; its account counts it among its documents standing so (issue #368\'s design decision: "the clause follows the address, at the address\'s small size"; "At far scale, the account\'s label carries \'⟨n⟩ as last read\'")', async (ctx) => {
+  const fake = FAKE.create({});
+  try {
+    PORT.boot(fake);
+    PUMP.start({ onDirty: () => {} });
+    REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    REC.takeLinks(D, []);
+    // the camera over D's first column, below its reading scale: D shown, so a row naming it keeps it as it stands
+    CAM._reset(); CAM.setViewport(1440, 900);
+    const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), c = f.columns[0];
+    CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2, scale: 4 / f.fs });
+    const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(D) });
+    ctx.mock.timers.enable({ apis: ['setTimeout'] });
+    const label = () => LAYER.docLabel(REC.doc(D), 4);
+    fake.fire('feed', { board: 'b-1', update: { position: 9, at: 9, op: 'insert', docs: [D], class: 'published' } });
+    assert.deepEqual([label().kept, LAYER.keptCountIn('1.0.1')], [null, 0], 'within the second: no clause, none counted');
+    ctx.mock.timers.tick(PUMP.KEPT_MS);
+    const k = /** @type {{since: number}} */ (PUMP.kept(D));
+    assert.ok(k, 'D kept past the second, its read again out');
+    const words = t('L.kept.links', { when: lastRead(k.since) });
+    assert.deepEqual(label().kept, { text: words, px: ADDRESS.px, ink: COL.title, fit: 'wrap' }, 'an edition\'s "links as last read", at the address\'s size, in the title\'s ink, never cut');
+    assert.equal(LAYER.keptIn(D)?.text, words, 'the words the page says of it wherever it names it');
+    assert.deepEqual([LAYER.keptCountIn('1.0.1'), LAYER.keptCountIn('1.0.2')], [1, 0], 'its account counts it; another none');
+    LAYER.readers({ named: () => D });
+    assert.equal(label().kept, null, 'the one line naming it: none on its label, for the line carries the clause beside its address');
+    LAYER.readers({});
+    release();
+    for (let i = 0; i < 50 && PUMP.kept(D); i++) await new Promise((r) => setImmediate(r));
+    assert.deepEqual([PUMP.kept(D), label().kept, LAYER.keptCountIn('1.0.1')], [null, null, 0], 'its read again set it: no clause, none counted');
+  } finally { LAYER.readers({}); PORT.boot(null); CAM._reset(); }
 });
 
 test('while the board lags past a second the plane\'s corner names neither the latest version nor the chain\'s count — its items made again in the frame the lag begins, and again in the frame it ends with the catch-up\'s rows (issue #367\'s design decision: "corners drop \'the latest\' and \'of ⟨n⟩\'")', async (ctx) => {

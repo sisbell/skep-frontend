@@ -9,7 +9,9 @@
 // document's label at mid scale its contents line — its first line where
 // those words stand, its address at the row's end, past its region's prefix
 // only where the region is named — each line on its own plate, its address
-// in the title's ink (FP-26); and a continuation's mark two targets where it
+// in the title's ink (FP-26); a kept document's clause after its address on
+// its label below its reading scale, and its account's label counting it at
+// far scale, while it stands kept alone (FP-23); and a continuation's mark two targets where it
 // holds two — its newest member's label, as the version its box shows, in a
 // band at its foot, and the rest of the mark, its count in what it counts —
 // one where it is too small, and a member the walk's ring stands on ringed
@@ -26,10 +28,11 @@ import * as GO from '../nav/go.js';
 import * as RENDER from './render.js';
 import { boardStatements } from './render.js';
 import * as LAYER from '../text/layer.js';
-import { boardCell, accountCell, docBox, accountAt, continuationCell } from './projection.js';
-import { markScale } from './lod.js';
+import * as F from '../model/frames.js';
+import { boardCell, accountCell, docBox, accountAt, continuationCell, DOC_W } from './projection.js';
+import { markScale, lodOf } from './lod.js';
 import { leadOf, firstRow, GUTTER } from './layout.js';
-import { COL, TARGET } from './register.js';
+import { COL, TARGET, ADDRESS } from './register.js';
 import { recorder } from '../test/canvas.js';
 import { t, markCount, lastRead } from '../strings.js';
 import { byteLength } from '../util.js';
@@ -145,6 +148,56 @@ test('at mid scale a document\'s label is its contents line: its first line from
     assert.equal(shut && shut.lines[0].text, t('L.client-words', { words: t('F.corner.withheld', { owner: '1.0.1' }) }), 'its first line\'s place: its withheld box\'s words, bracketed');
     assert.ok(inked.some((x) => x.text === '1.0.1' && x.ink === COL.title) && inked.some((x) => x.text.includes('withheld') && x.ink === COL.text), `the owner in the title's ink, the words around it in the text's: ${JSON.stringify(inked.slice(0, 8))}`);
   } finally { REC._reset(); CAM.setViewport(1440, 900); }
+});
+
+test('below its reading scale a kept document\'s label carries its clause after its address — on its row, ending at the row\'s end, the address a space before it, at the address\'s size and in the title\'s ink — and at far scale its account\'s label counts it after its documents; neither within the second, nor once its read again sets it (issue #368\'s design decision: "On the canvas label, the clause follows the address, at the address\'s small size"; "At far scale, the account\'s label carries \'⟨n⟩ as last read\'")', async (ctx) => {
+  const D = '1.0.1.0.3';
+  const { ctx: canvas } = recorder();
+  RENDER.attach(/** @type {any} */ ({ getContext: () => canvas }));
+  CAM.setViewport(4000, 900);
+  REC._reset();
+  const fake = FAKE.create({});
+  try {
+    PORT.boot(fake);
+    PUMP.start({ onDirty: () => {} });
+    REC.setBoard({ board: 'b-1', name: '', origin: 'http://127.0.0.1:8642' });
+    REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true });
+    REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'Notes on the artifact chain of custody', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 600 }]);
+    REC.takeLinks(D, []);
+    const box = docBox(D), f = LAYER.foldOf(REC.doc(D)), row = firstRow(f), g = (GUTTER / 2) * f.fs, cell = accountCell('1.0.1');
+    // over its first column at em 6, below its reading scale, its row wide enough for its address and its clause; its account at far scale
+    const mid = { ...LAYER.centreOf(D, null), scale: 6 / f.fs }, far = { x: cell.x + cell.w / 2, y: cell.y + cell.h / 2, scale: 9.9 / DOC_W };
+    /** the frame drawn at a view: its document's label's lines, and its account's counts' — as the label pass set them */
+    const frame = (/** @type {typeof mid} */ v) => {
+      CAM.set(v);
+      RENDER.draw();
+      const doc = RENDER.stats.labels.find((l) => l.kind === 'doc' && l.place === D);
+      const counts = RENDER.stats.labels.find((l) => l.kind === 'cluster' && l.place === '1.0.1' && l.lines.some((x) => x.text.endsWith(t('F.count.documents'))));
+      return { doc: doc ? doc.lines : [], counts: counts ? counts.lines : [] };
+    };
+    const told = (/** @type {ReturnType<typeof frame>} */ at) => [at.doc.some((x) => x.text.includes('as last read')), at.counts.map((x) => x.text).join(' ').includes(t('L.kept.count', { n: 1 }))];
+    CAM.set(mid);
+    const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(D) });
+    ctx.mock.timers.enable({ apis: ['setTimeout'] });
+    fake.fire('feed', { board: 'b-1', update: { position: 9, at: 9, op: 'insert', docs: [D], class: 'published' } });
+    assert.deepEqual([...told(frame(mid)), ...told(frame(far))], [false, false, false, false], 'within the second: neither');
+    ctx.mock.timers.tick(PUMP.KEPT_MS);
+    const words = t('L.kept.links', { when: lastRead(/** @type {{since: number}} */ (PUMP.kept(D)).since) });
+    const at = frame(mid), k = at.doc.find((x) => x.text === words), a = at.doc.find((x) => x.runs.every((r) => r.face === 'ident'));
+    assert.ok(!LAYER.atReadingScale(D) && k && a, `below its reading scale, its clause set beside its address: ${JSON.stringify(at.doc.map((x) => x.text))}`);
+    assert.equal(at.doc.indexOf(k), at.doc.indexOf(a) + 1, 'right after its address');
+    assert.ok(Math.abs(k.rect.x + k.rect.w - CAM.sx(box.x + row.x + row.w - g)) < 1e-6, 'its clause ending at its row\'s end, the end of the outline\'s first row inside its half gutter');
+    assert.ok(Math.abs(k.rect.y + k.rect.h / 2 - (a.rect.y + a.rect.h / 2)) < 1e-6 && Math.abs(a.rect.x + a.rect.w - (k.rect.x - 0.6 * k.px)) < 1e-6, 'level with its address, a space after it');
+    assert.deepEqual([k.px, a.px, k.ink, k.runs.map((r) => r.face)], [ADDRESS.px, ADDRESS.px, COL.title, ['client']], 'at the address\'s size, in the title\'s ink, the client\'s words');
+    const counted = frame(far);
+    assert.equal(lodOf(CAM.cam.scale).name, 'far', 'at far scale');
+    assert.ok(counted.counts.map((x) => x.text).join(' ').startsWith(`1 ${t('F.count.documents')} ${t('L.kept.count', { n: 1 })}`), `its account's label counts it after its documents: ${JSON.stringify(counted.counts.map((x) => x.text))}`);
+    assert.equal(counted.counts.filter((x) => x.ink === COL.title).map((x) => x.text).join(' '), t('L.kept.count', { n: 1 }), 'in the title\'s ink, the counts beside it in the text\'s');
+    release();
+    for (let i = 0; i < 50 && PUMP.kept(D); i++) await new Promise((r) => setImmediate(r));
+    assert.deepEqual([PUMP.kept(D), ...told(frame(far)), ...told(frame(mid))], [null, false, false, false, false], 'its read again set it: neither');
+  } finally { REC._reset(); CAM.setViewport(1440, 900); PORT.boot(null); }
 });
 
 /** an account of sixty documents the index lists, each its first line "Notes on ⟨n⟩": at HOME the first 48 stand whole and the other twelve are its first continuation's one mark */
