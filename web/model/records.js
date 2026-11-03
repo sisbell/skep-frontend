@@ -30,8 +30,12 @@
 // read again (`causeOwed`); the feed's rows as they arrived; the last
 // position the page took on its board's feed (`feedAt`) — the `/health`
 // head as read, raised by each row taken and each catch-up's reach
-// (M-PUMP), never lowered, a change of class keeping it; and a bare row's
-// mark on the board (`bare`).
+// (M-PUMP), never lowered, a change of class keeping it; the position of
+// the last DRAFTS row the page took (`draftsAt`) — started from a session
+// answer's `opened_at` where none stands, raised by each drafts row taken
+// and never by a published one, from which M-PUMP's drafts read at a regain
+// starts, a change of class keeping it; and a bare row's mark on the board
+// (`bare`).
 // A link's slot names bytes, never a place (wire.md §Links): where a stored
 // span stands in a document's text is read through that document's held V→I
 // image (`placed`) — moved where the image puts it, cut in two as two
@@ -365,6 +369,8 @@ const state = {
   feed: [],
   /** @type {number | null} the last position the page took on its board's feed (`feedAt`); null where no head was read and no row taken */
   feedAt: null,
+  /** @type {number | null} the position of the last drafts row the page took (`draftsAt`): started from a session answer's `opened_at` where none stands (`setSession`), raised by each drafts row taken (`applyFeedUpdate`), never lowered; null where no `opened_at` was answered and no drafts row taken. M-PUMP's drafts read at a regain reads from it */
+  draftsAt: null,
   rev: 0,
   /** @type {Array<() => void>} */
   watchers: [],
@@ -396,8 +402,19 @@ export function takeBoards(out) {
 }
 /** why the page holds no board, as `boards()` answered (`NoBoard`); null where a board is held, or the list has not answered */
 export const noBoard = () => state.noBoard;
-/** @param {SessionOpened | null} s */
-export function setSession(s) { state.session = s; state.sessionDied = null; state.reconnect = null; bump(); }
+/**
+ * The session as `session` opened it. `draftsAt` is started from the
+ * answer's `opened_at` ONLY where none stands (FP-28; D6): the page's first
+ * session, or after `_reset` — a later session's `opened_at` never overwrites
+ * it, nor the re-opened session's carried from the old answer, so a regain's
+ * drafts read reads from the place the page kept.
+ * @param {SessionOpened | null} s
+ */
+export function setSession(s) {
+  state.session = s; state.sessionDied = null; state.reconnect = null;
+  if (s && typeof s.opened_at === 'number' && state.draftsAt == null) state.draftsAt = s.opened_at;
+  bump();
+}
 export const session = () => state.session;
 /** @param {{kind: string, name: string} | null} r */
 export function setSessionRefused(r) { state.sessionRefused = r; bump(); }
@@ -1586,11 +1603,13 @@ const inDocOne = (/** @type {string} */ addr) => { const a = accountOf(addr), tr
  * @param {FeedUpdate} u
  * @param {ReadonlySet<string>} [keep] what M-PUMP keeps as held: each address the row touches it names counted dropped and kept as held
  * @param {ReadonlySet<string>} [owners] the accounts whose byline causes M-PUMP keeps as held at a row touching a doc 1: the owners of the documents the view shows
+ * @param {boolean} [raiseFeed] false where M-PUMP's drafts read applies a drafts row (D6): `draftsAt` is raised, `feedAt` left where the published catch-up's own reach keeps it
  * @returns {string[]} the addresses the row touched, each once: those dropped, which the view asks again, and those `keep` names, which M-PUMP reads again
  */
-export function applyFeedUpdate(u, keep = new Set(), owners = new Set()) {
+export function applyFeedUpdate(u, keep = new Set(), owners = new Set(), raiseFeed = true) {
   const docsNamed = Array.isArray(u.docs) ? u.docs : [];
-  reach(u.position);
+  if (raiseFeed) reach(u.position);
+  if (u.class === 'drafts') reachDrafts(u.position);
   state.feed.push({ position: u.position, op: u.op, docs: docsNamed, cls: u.class, time: typeof u.time === 'number' ? u.time : null });
   if (state.feed.length > 2000) state.feed.shift();
   listRow(u);
@@ -1634,6 +1653,17 @@ export const feedRows = () => state.feed.slice();
 
 /** the page's place on its board's feed raised to a position it has taken through; never lowered */
 const reach = (/** @type {unknown} */ at) => { if (typeof at === 'number' && (state.feedAt == null || at > state.feedAt)) state.feedAt = at; };
+/** the page's last drafts row position raised to a drafts row it has taken, or started from a session's `opened_at` (`setSession`); never lowered */
+const reachDrafts = (/** @type {number} */ at) => { if (state.draftsAt == null || at > state.draftsAt) state.draftsAt = at; };
+/**
+ * The position of the last drafts row the page took (`draftsAt`): started
+ * from a session answer's `opened_at` where none stood, raised by each drafts
+ * row taken, never lowered — a change of class keeps it; null where no
+ * `opened_at` was answered and no drafts row taken. M-PUMP's drafts read at a
+ * regain reads from it.
+ * @returns {number | null}
+ */
+export const draftsAt = () => state.draftsAt;
 /**
  * The last position the page took on its board's feed: the `/health` head
  * as read (`setHealth`), raised by each row taken (`applyFeedUpdate`) and
@@ -1881,7 +1911,7 @@ export function _reset() {
   state.board = null; state.noBoard = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.reconnect = null; state.health = null; state.mode = null;
   state.keys = null; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.bare = false; state.docs.clear(); state.memberAges.clear();
   state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.owed.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.claimDrops.clear(); state.claimsRefreshed = 0;
-  state.owners.clear(); state.keySets.clear(); state.accountKeys.clear(); state.keyDrops = 0; state.feed = []; state.feedAt = null; state.rev = 0;
+  state.owners.clear(); state.keySets.clear(); state.accountKeys.clear(); state.keyDrops = 0; state.feed = []; state.feedAt = null; state.draftsAt = null; state.rev = 0;
 }
 
 /** a deep, serializable picture of the model for the gate and the fake-port test */

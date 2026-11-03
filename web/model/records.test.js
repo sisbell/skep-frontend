@@ -718,6 +718,28 @@ test('the page\'s place on its board\'s feed is the `/health` head as read, rais
   assert.equal(REC.feedAt(), null, 'a reset forgets it');
 });
 
+test('the page\'s last drafts row position is started from a session answer\'s `opened_at` where none stands — never overwritten by a later session\'s, nor a re-open\'s carried one — raised by a drafts row taken and never by a published one, and forgotten at a reset (issue #392, D6)', () => {
+  /** a row at `position` of class `cls` writing the edition */
+  const row = (/** @type {number} */ position, /** @type {'published' | 'drafts'} */ cls) => /** @type {import('../bridge/shapes').FeedUpdate} */ ({ position, at: position, op: 'insert', docs: ['1.0.1.0.3'], class: cls, ...(cls === 'drafts' ? { session: 's-1' } : {}) });
+  assert.equal(REC.draftsAt(), null, 'none before a session or a drafts row');
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true, opened_at: 8 });
+  assert.equal(REC.draftsAt(), 8, 'started from the first session\'s opened_at, where none stood');
+  REC.setSession({ session: 's-2', principal: 1, account: '1.0.1', writes: true, opened_at: 20 });
+  assert.equal(REC.draftsAt(), 8, 'a later session\'s opened_at never overwrites it');
+  REC.applyFeedUpdate(row(6, 'drafts'));
+  assert.equal(REC.draftsAt(), 8, 'a drafts row below it lowers nothing');
+  REC.applyFeedUpdate(row(11, 'drafts'));
+  assert.equal(REC.draftsAt(), 11, 'a drafts row past it raises it');
+  REC.applyFeedUpdate(row(14, 'published'));
+  assert.deepEqual([REC.draftsAt(), REC.feedAt()], [11, 14], 'a published row raises the feed position, never the drafts one');
+  REC.setSession({ session: 's-3', principal: 1, account: '1.0.1', writes: true, opened_at: 30 });
+  assert.equal(REC.draftsAt(), 11, 'a re-open carrying the old answer\'s opened_at never overwrites it');
+  REC._reset();
+  assert.equal(REC.draftsAt(), null, 'a reset forgets it');
+  REC.setSession({ session: 's-4', principal: 1, account: '1.0.1', writes: true });
+  assert.equal(REC.draftsAt(), null, 'a session answering no opened_at (an older shell) leaves it null');
+});
+
 test('the key store is read for this board: a key is present only where a binding names its origin whole, and the reader keeps it through a session\'s death', () => {
   const O = 'http://127.0.0.1:8642';
   /** a key of the store as `fingerprint` answers it, bound where its bindings say */

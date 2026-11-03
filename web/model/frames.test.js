@@ -38,9 +38,9 @@ const EXAMPLES = {
 const WIRE = {
   link_value: '{"as_of":9,"at":7,"link":{"slots":[[{"start":"1.0.1.0.1.0.1.1","width":"0.0.0.0.0.0.0.5"}],[{"start":"1.0.1.0.2.0.1.1","width":"0.0.0.0.0.0.0.6"}],[{"start":"1.0.1.0.3.0.1.1","width":"0.0.0.0.0.0.0.1"}]]},"resp":"link_value","time":1786838400047,"time_from":"feed"}',
   link_value_null: '{"as_of":9,"at":null,"link":null,"resp":"link_value","time":null,"time_from":null}',
-  doc_metadata: '{"as_of":9,"at":7,"base_extent":"3","birth":"1.0.1.0.1.1","birth_extent":"5","doc":"1.0.1.0.1","owner":"1.0.1","placed":"5","published":true,"resp":"doc_metadata","source":null,"time":1786838400047,"time_from":"feed"}',
-  doc_metadata_unborn: '{"as_of":9,"at":8,"base_extent":null,"birth":null,"birth_extent":null,"doc":"1.0.1.0.2","owner":"1.0.1","placed":null,"published":false,"resp":"doc_metadata","source":null,"time":1786838400052,"time_from":"anchor"}',
-  doc_metadata_fork: '{"as_of":9,"at":null,"base_extent":null,"birth":null,"birth_extent":null,"doc":"1.0.2.0.1","owner":"1.0.2","placed":null,"published":false,"resp":"doc_metadata","source":"1.0.1.0.1.1","time":null,"time_from":null}',
+  doc_metadata: '{"as_of":9,"at":7,"base":null,"base_copied":null,"base_extent":"3","birth":"1.0.1.0.1.1","birth_extent":"5","doc":"1.0.1.0.1","owner":"1.0.1","placed":"5","published":true,"resp":"doc_metadata","source":null,"time":1786838400047,"time_from":"feed"}',
+  doc_metadata_unborn: '{"as_of":9,"at":8,"base":"1.0.1.0.1.1","base_copied":"5","base_extent":null,"birth":null,"birth_extent":null,"doc":"1.0.1.0.2","owner":"1.0.1","placed":null,"published":false,"resp":"doc_metadata","source":"1.0.1.0.1.1","time":1786838400052,"time_from":"anchor"}',
+  doc_metadata_fork: '{"as_of":9,"at":null,"base":null,"base_copied":null,"base_extent":null,"birth":null,"birth_extent":null,"doc":"1.0.2.0.1","owner":"1.0.2","placed":null,"published":false,"resp":"doc_metadata","source":"1.0.1.0.1.1","time":null,"time_from":null}',
 };
 
 test('the read composers spell the wire examples exactly', () => {

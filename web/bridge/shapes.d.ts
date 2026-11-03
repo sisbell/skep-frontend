@@ -18,6 +18,7 @@ export type AckVia = 'answer' | 'twin' | 'records' | 'walk' | 'edition_claim';
 export type Inert = 'unchanged' | { unanswered: number[] } | { publish_first: number[] };
 export type Missing = { copy: number } | { retraction: number };
 export type HandKey = 'own' | 'other' | 'bare' | 'lost';
+export type BaseStanding = 'at_head' | 'behind' | 'first';
 export type Refusal = RefusedByBoard | HaltFace | BlockedFace | Unreachable | ShellRefusal;
 export type Outcome<T> = { result: T } | { refused: Refusal };
 export type EventName = 'mode' | 'session-died' | 'daemon' | 'feed' | 'index' | 'moment' | 'held' | 'publication';
@@ -29,12 +30,13 @@ export interface BoardRow {
   origin: string;
 }
 
-/** `session(board, principal)` — the session's opaque reference in the token's place; `writes` whether a write may go out under it: the signed mode's session writes, the bare mode's keyless one reads alone and has every write refused `write_in_bare_session` */
+/** `session(board, principal)` — the session's opaque reference in the token's place; `writes` whether a write may go out under it: the signed mode's session writes, the bare mode's keyless one reads alone and has every write refused `write_in_bare_session`; `opened_at` the board's position read before the session opened, where its drafts feed starts — the position a page keeps as its last drafts row's (`draftsAt`) until a row moves it, and reads `changes(session, since, class: 'drafts')` from after the session's end */
 export interface SessionOpened {
   session: string;
   principal: number;
   account: string | null;
   writes: boolean;
+  opened_at?: number;
 }
 
 /** `keygen({label?})` — the device key's fingerprint, its enrollment record, and the outstanding act */
@@ -201,14 +203,14 @@ export interface AccountCount {
   documents: number;
 }
 
-/** `changes(session, since, limit?)` — what changed since the position `since` at the session's class: the entries in the `feed` update's shape, oldest first, each `published` or `drafts` by the read that answered it (two reads, the published feed as a guest and the session's drafts supplement under its token, merged by position); `next` the position to ask from next time, past every entry answered and never past one withheld; `head` the board's latest position, read before the page */
+/** `changes(session, since, limit?, class?)` and its guest form — what changed since the position `since`: the entries in the `feed` update's shape, oldest first, each `published` or `drafts` by the read that answered it — under a session two reads, the published feed as a guest and the session's drafts supplement under its token, merged by position; with `class: 'drafts'`, the one value the member takes, the drafts supplement's page alone (a page's read, from the session's `opened_at`, of the drafts rows an end cut off before it regained a session); as a guest, `{guest: true, board?, origin?, since, limit?}`, the published feed alone, token-free (no `class`); `next` the position to ask from next time, past every entry answered and never past one withheld; `head` the board's latest position, read before the page; the shell keeps no position — every form reads from `since` */
 export interface ChangesAnswer {
   entries: FeedUpdate[];
   next: number;
   head: number;
 }
 
-/** a refusal: the board's own verdict, verbatim; `site` the address and the entry the code names (`already_published`'s member, `kept_place_moved`'s `runs` entry, a deposit's entry in its own list), each absent where the code carries none */
+/** a refusal: the board's own verdict, verbatim; `site` the fault's place as the wire names it (wire.md §Rejections), each member absent where the code carries none — `addr` the address the code names (`already_published`'s member, `not_owner`'s document, `withheld`'s origin), `index` the entry (`kept_place_moved`'s `runs` entry, a deposit's entry in its own list) and `fault` the span fault beside it, `operand` and `region` a compare input's, `slot` an `edit_link` successor's slot, `as_of` and `current` an `arrangement_moved`'s two states — the one the refused burst was typed against, echoed, and the position the document's arrangement last changed at */
 export interface RefusedByBoard {
   kind: 'refused';
   name: string;
@@ -216,7 +218,7 @@ export interface RefusedByBoard {
   code: string;
   detail: string | null;
   op: string | null;
-  site: { addr?: string; index?: number };
+  site: { addr?: string; index?: number; operand?: 'first' | 'second'; region?: number; slot?: number; fault?: string; as_of?: number; current?: number };
   body: unknown;
 }
 
@@ -266,9 +268,24 @@ export interface SessionDiedEvent {
   reason: DeathReason;
 }
 
-/** the reason a death carries: its `arm`, the trigger it names, and the arm's own members beside it — the `retired` arm's `own` null where the fork on whose key retired it cannot be taken (no record read, a hand the read could not name, or the shell's key store unlisted beside another hand), its `position` the one read whatever the hand (AUTH-5.77's no-hand form) */
+/** the reason a death carries: its `arm`, the trigger it names, and the arm's own members beside it, each declared here and present on its arm alone — the `restart` arm's `reopened`, with `session` the reference the shell re-opened silently in the dead one's place where it did, and `refused` the name of the re-open's refusal where one was tried and refused; the `mode` arm's `mode`, the pair the bare session died at the flip to; the `unreachable` arm's `text`; the `retired` arm's `fingerprint`, `own`, `hand`, `position` and `label` — `own` null where the fork on whose key retired it cannot be taken (no record read, a hand the read could not name, or the shell's key store unlisted beside another hand), its `position` the one read whatever the hand (AUTH-5.77's no-hand form); the `seeded` arm's `account`, `as_of` and `writer`; the `blocked` arm's `record` and `ground`; the `closed` arm carries nothing beside */
 export interface DeathReason {
   arm: 'closed' | 'mode' | 'retired' | 'seeded' | 'blocked' | 'restart' | 'unreachable';
+  reopened?: boolean;
+  session?: string;
+  refused?: string;
+  mode?: Mode;
+  text?: string;
+  fingerprint?: string;
+  own?: boolean | null;
+  hand?: string | null;
+  position?: number | null;
+  label?: string | null;
+  account?: string;
+  as_of?: number;
+  writer?: string | null;
+  record?: string;
+  ground?: string | null;
   [member: string]: unknown;
 }
 
@@ -344,19 +361,27 @@ export interface HeldAnswer {
   unwritable?: string;
 }
 
-/** `held(session)` — one held burst of the acting principal at the session's board, in resend order (§3c.2): `held` the ordinal, `doc` the draft, `base` the resend's read start, `frame` the page's frame as composed (no attest), `sent` whether the burst may have landed — a dial whose answer was lost (the board's `internal_panic` among them), or a `poisoned` answer (§3c.2), `refusal` the board's verdict for a REFUSED run */
+/** `held(session)` — one held burst of the acting principal at the session's board, in resend order (§3c.2): `held` the ordinal, `doc` the draft, `base` the resend's read start, `frame` the wire frame (no attest) — the page's as composed, or as the shell last shifted it through another writer's change, every position it names moved by one displacement and its `as_of` the state they are true of — `anchors` the page's, where the burst carried them (the `op` row's member): the identities on either side of the span the frame edits and, for a delete or a rearrange, the I-runs of the units it holds, by which the shell shifts it, `sent` whether a dial of the line was attempted since the last read, so it may have landed — a first dial whose answer was lost (the board's `internal_panic` among them), a `poisoned` answer, or any resend, which marks its line before it dials (§3c.2) — kept through a move, `refusal` the verdict for a refused run — the board's, a refusal at a resend under a code the shell's table holds nowhere among them, handed to the person at once, or the shell's `answers_lost` where it handed the person a line no landing of which was found two minutes after its first failed send, whatever the failure (§3c.4): `last` the last failure's token, the held cause or the board's, and `elapsed_ms` the milliseconds since that first failed send — its `sent` kept; at a line held `moved` because the board refused it as typed against an older state and the shift could not move it through the change exactly, the board's `arrangement_moved` (`site.as_of` the state it was typed against, `site.current` the document's); at a line held `head_unreadable`, the shell's refusal naming why its signature could not be made, the line holding all the same (SP-14) */
 export interface HeldRow {
   held: number;
   doc: string;
   base: number;
   frame: unknown;
+  anchors?: Anchors;
   cause: string;
   sent: boolean;
   time: number;
   refusal?: unknown;
 }
 
-/** `held(board, session, {doc, held, state, cause?, hands?})` (§4b.2) — a document's held state as it moves, always under the session it is about (never the guest face, P39); `held` the count of lines still held on the document, `cause` the line's cause — the hold's token while `holding`, the refusal's token while `refused`; `hands` with the `moved` state, EACH HAND ONCE, read off the `under=` rows since `base` the read already holds (§3c.5); emitted at a hold's start, at each line's resolution or drop, and at each state the resend moves the document through — never when a principal's file is read at its session's open, whose lines `held(session)` lists */
+/** the identities a burst's edit is placed by (skep #442, #751), sent beside the frame on the `op` row and kept with the held line, never on the wire: `before` the I-address of the unit just before the span the burst edits, `after` the I-address of the unit just after it — in the tumbler-string form `image` answers an `i_start` in, the run's position added — each `null` at the document's edge; an insert, a copy or a reinstate names the units on either side of its `at`, a delete those on either side of its `width` positions from `p`, a rearrange those on either side of its first cut to its last; `span`, for a delete and a rearrange alone, the I-runs of the units between the two, in V order, as the page's `image` read gave them — `start` an I-address, `width` a natural of 1 or more as a decimal string, the widths summing to the span's positions; where the board refuses the burst as typed against an older state, the shell finds `before` and `after` in the document's current image and, where each stands at one place and the units between them are the span's own — none for an insert, a copy or a reinstate, so the two stand adjacent; for a delete or a rearrange its `span`, compared run for run with adjacent runs joined on both sides, so a span another writer cut, filled, emptied and refilled with as many others, or rearranged is not whole — moves every position the frame names by their one displacement and sends it again; else the document is held as moved; a burst sent without anchors, or a delete or a rearrange without its `span`, is held as moved there */
+export interface Anchors {
+  before: string | null;
+  after: string | null;
+  span?: { start: string; width: string }[];
+}
+
+/** `held(board, session, {doc, held, state, cause?, hands?})` (§4b.2) — a document's held state as it moves, always under the session it is about (never the guest face, P39); `held` the count of lines still held on the document, `cause` the line's cause — the hold's token while `holding`, the refusal's token while `refused`; `hands` with the `moved` state, EACH HAND ONCE, read off the `under=` rows since the burst's typed state or the person's last `send` on the document, whichever is later (a document moved again after that `send` names only the hands since it) — the board's refusal of it as typed against an older state (`arrangement_moved`), at its first dial or at a resend, where the shell could not shift the burst through the change exactly (no anchors, a delete or a rearrange without its span, an anchor lost or at two places, the span between them cut or refilled), is the one route to `moved`; a burst it shifts is sent again and lands, no `moved` said; the resend's read judges only whether the line's own write landed (§3c.5); emitted at a hold's start, at each line's resolution or drop, and at each state the resend moves the document through — never when a principal's file is read at its session's open, whose lines `held(session)` lists, nor for a line a call enters, shifts and settles within itself */
 export interface HeldEvent {
   board: string;
   session: string;
@@ -388,7 +413,7 @@ export interface Run {
   width: number;
 }
 
-/** `publication.open(session, {draft, also?, base?, doc?, mint?, claim?, selection?, notes?, readable_drafts?, published?})` — THE PANEL: the composition's first steps run by the shell (`enumerate` → `panel` → the price), every member DATA with a code or a kind and never a string a person reads; `draft` the RENDERING draft, `also` the OTHER private drafts of the person's own whose words this publication re-mints as the document's own beside it (the Nelson way — the family: the staging draft and the alternatives made from it, never the notes), each keeping its own records; `base`, for a draft BEHIND the head, the member it was staged from or last re-windowed to, the page's own (the shell reads the head where it is absent) — so the shot lands a daughter under its own base; `rows` the sets in the RULED order — own, notes, private, public by address; `read_with` per published document of the person's whether the edition is read with it now; `count` at the switches' DEFAULT — every private row OFF; `price` the five terms against their caps, as the request would stand with every window kept private; `windows` the own-origin windows the three answers are asked for, the drafts `also` names EXCLUDED; `inherited` per draft `also` names, in its order, THE STATEMENT's count — the passages first written in it (B3-S11 P2 (i)); `hold` where a HELD publication of this draft stood and is re-opened as it stands, with the switches and answers the page last sent it (item 1 (a)) */
+/** `publication.open(session, {draft, also?, doc?, mint?, claim?, selection?, notes?, readable_drafts?, published?})` — THE PANEL: the composition's first steps run by the shell (`enumerate` → `panel` → the price), every member DATA with a code or a kind and never a string a person reads; `draft` the RENDERING draft, `also` the OTHER private drafts of the person's own whose words this publication re-mints as the document's own beside it (the Nelson way — the family: the staging draft and the alternatives made from it, never the notes), each keeping its own records; the draft's BASE the shell's own read off the board, never the page's — the base the board records for the draft, the version its `stage` copied (the bare document while the chain is empty) or the member its newest publication made — so the shot lands after it, or as its daughter where the trunk has moved past it; a draft the board records no base for is refused `base_unrecorded {draft, doc, reason}` — `reason` `no_record` (minted and never staged), `other_chain` (a base in another document's chain) or `free_standing` (an alternative of a draft with no base) — and one staged from the bare document whose first member now stands `base_superseded {draft, doc, first}`, `first` that member; `rows` the sets in the RULED order — own, notes, private, public by address; `read_with` per published document of the person's whether the edition is read with it now; `count` at the switches' DEFAULT — every private row OFF; `price` the five terms against their caps, as the request would stand with every window kept private; `windows` the own-origin windows the three answers are asked for, the drafts `also` names EXCLUDED; `inherited` per draft `also` names, in its order, THE STATEMENT's count — the passages first written in it (B3-S11 P2 (i)); `standing` the base TYPED against the document's head before any act — `at_head`, `behind` (told and never refused: the shot lands the base's daughter, the head unmoved) or `first` (the bare document, its chain empty) — absent at the mint form; `left_behind` the drafts of the family this publication leaves behind, by address: every draft `also` names, then, where it becomes the head (`at_head`, `first`), every other draft of the person's own whose recorded base is this draft's — empty at the mint form; `hold` where a HELD publication of this draft stood and is re-opened as it stands, with the switches and answers the page last sent it (item 1 (a)), its standing typed again */
 export interface PublicationPanel {
   rows: PublicationRow[];
   formatting: Formatting;
@@ -397,6 +422,8 @@ export interface PublicationPanel {
   price: Price;
   windows: Window[];
   inherited: Inherited[];
+  standing?: BaseStanding;
+  left_behind: string[];
   hold?: Hold;
 }
 
@@ -537,7 +564,7 @@ export interface Acknowledged {
   via: AckVia;
 }
 
-/** `publication.confirm` — THE RE-STATEMENT: P4's RE-READ found the draft moved since the panel — `left` links gone or retracted, `superseded` links a claim of the person's superseded since, `came` links arrived, `removals_undone` and `removals_came` the held removals' job list moved, `selection` held runs whose placement changed with where each stands now — NOTHING SENT (PUB-3.108): the page re-renders P2 from it and confirms again; `race` where the re-statement follows the board's `kept_place_moved`, the newest row under the draft since the request's reads and its key */
+/** `publication.confirm` — THE RE-STATEMENT: P4's RE-READ found the draft moved since the panel — `left` links gone or retracted, `superseded` links a claim of the person's superseded since, `came` links arrived, `removals_undone` and `removals_came` the held removals' job list moved, `selection` held runs whose placement changed with where each stands now — or THE BASE's STANDING moved — NOTHING SENT (PUB-3.108): the page re-renders P2 from it and confirms again; `race` where the re-statement follows the board's `kept_place_moved`, the newest row under the draft since the request's reads and its key; `standing` where the base's standing moved since the panel — a sibling's shot landing while it stood, `at_head` → `behind` — as the re-read typed it, the panel's own from then on (a re-read finding the base no longer recorded, or a first draft's first member landed, refuses as the open does, `base_unrecorded` or `base_superseded`) */
 export interface Restated {
   outcome: 'restated';
   left: string[];
@@ -547,6 +574,7 @@ export interface Restated {
   removals_came: string[];
   selection: { run: number; placement: Placement }[];
   race?: RaceKey;
+  standing?: BaseStanding;
 }
 
 /** the race's key at a kept place moved: the feed's newest row under the draft since the request's reads — `at` its position, `key` whose write it was (a fingerprint, `bare`; null where lost or a signed entry), `signed` whether the row carries its own attest */
@@ -556,7 +584,7 @@ export interface RaceKey {
   signed: boolean;
 }
 
-/** `publication.confirm` — THE REFUSAL: a typed arm with its face's DATA beside `arm` and never a string — the library's `twin {member, missing}`, `kept_place_moved {index, race}` (where the re-read found no difference to re-state), `unowned_draft {draft}`, `not_owner {addr}`, `claim_refused {edition}` (crossing as the board answered it, nothing re-sent), `window_withheld {origin}`, `needs_signed_session`, `no_such_document`, `older_board {detail}`, `head_unreadable` (nothing sent), `session_ended {reason}`, `budget_race {detail}`, `may_already_stand`, `own_fault {fault}`, `other {refusal}` — and the shell's own two BEFORE ANY FRAME: `over_cap {over}` and `inert {inert}` */
+/** `publication.confirm` — THE REFUSAL: a typed arm with its face's DATA beside `arm` and never a string — the library's `twin {member, missing}`, `kept_place_moved {index, race}` (where the re-read found no difference to re-state), `unowned_draft {draft}`, `not_owner {addr}`, `claim_refused {edition}` (crossing as the board answered it, nothing re-sent), `window_withheld {origin}`, `needs_signed_session`, `no_such_document`, `older_board {detail}`, `head_unreadable` (nothing sent), `session_ended {reason}`, `budget_race {detail}`, `may_already_stand`, `base_superseded {first}` (the board's refusal of a draft staged from the bare document, its first member `first` landed past a race the re-read did not see; nothing published), `own_fault {fault}`, `other {refusal}` — and the shell's own three BEFORE ANY FRAME: `over_cap {over}`, `inert {inert}` and `head_unreadable {refusal}`, the refusal naming why the signature could not be made (SP-14) */
 export interface PublicationRefused {
   outcome: 'refused';
   arm: string;
@@ -589,8 +617,8 @@ export interface Bridge {
   accept(args: { board: string; address: string; label?: string; paper?: boolean; noAnchors?: boolean }): Promise<Outcome<Accepted>>;
   health(args: { board: string }): Promise<Outcome<Health>>;
   probe(args: {}): Promise<Outcome<Probe>>;
-  op(args: { session: string; frame: unknown } | { guest: true; board?: string; origin?: string; frame: unknown }): Promise<Outcome<unknown>>;
-  'publication.open'(args: { session: string; draft: string; also?: string[]; base?: string; doc?: string; mint?: string; claim?: boolean; selection?: Run[]; notes?: string[]; readable_drafts?: string[]; published?: string[] }): Promise<Outcome<PublicationPanel>>;
+  op(args: { session: string; frame: unknown; anchors?: Anchors } | { guest: true; board?: string; origin?: string; frame: unknown }): Promise<Outcome<unknown>>;
+  'publication.open'(args: { session: string; draft: string; also?: string[]; doc?: string; mint?: string; claim?: boolean; selection?: Run[]; notes?: string[]; readable_drafts?: string[]; published?: string[] }): Promise<Outcome<PublicationPanel>>;
   'publication.count'(args: { session: string; switches?: Switches; answers?: Record<string, OriginAnswer> }): Promise<Outcome<{ count: Count; price: Price }>>;
   'publication.confirm'(args: { session: string; switches?: Switches; answers?: Record<string, OriginAnswer> }): Promise<Outcome<Acknowledged | Restated | PublicationRefused>>;
   'publication.cancel'(args: { session: string }): Promise<Outcome<Empty>>;
@@ -601,7 +629,7 @@ export interface Bridge {
   places(args: { session: string; board?: string; opts?: PlacesOpts } | { guest: true; board?: string; origin?: string; opts?: PlacesOpts }): Promise<Outcome<PlacesAnswer>>;
   held(args: { session: string }): Promise<Outcome<HeldRow[]>>;
   resolve(args: { session: string; held: number; act: 'drop' | 'send' }): Promise<Outcome<Empty>>;
-  changes(args: { session: string; since: number; limit?: number }): Promise<Outcome<ChangesAnswer>>;
+  changes(args: { session: string; since: number; limit?: number; class?: 'drafts' } | { guest: true; board?: string; origin?: string; since: number; limit?: number }): Promise<Outcome<ChangesAnswer>>;
   answer(args: Answer): Promise<Outcome<Empty>>;
   cancel(args: Cancel): Promise<Outcome<Empty>>;
 }

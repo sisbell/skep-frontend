@@ -294,9 +294,11 @@ const opens = (/** @type {ReturnType<typeof FAKE.create>} */ fake) => fake.asked
 const flush = () => new Promise((r) => setTimeout(r, 0));
 /** the board's head as the boot's `/health` read answers it: the page's place on its feed */
 const readHead = (/** @type {number} */ at) => REC.setHealth({ log_position: at }, null);
-/** the board's `changes(session, since)` answering one page: the rows `entries` at the session's class, read through `next`, the board's head `head` */
-const caughtUp = (/** @type {string} */ session, /** @type {number} */ since, /** @type {object[]} */ entries = [], next = since, head = next) => ({ [FAKE.keyOf('changes', { session, since })]: { result: { entries, next, head } } });
-/** the `changes` calls the fake port was asked, each by its session and the position it read from */
+/** the board's `changes(session, since)` answering one page: the rows `entries` at the session's class, read through `next`, the board's head `head`; with `cls`, the drafts form (D6) */
+const caughtUp = (/** @type {string} */ session, /** @type {number} */ since, /** @type {object[]} */ entries = [], next = since, head = next, /** @type {'drafts' | undefined} */ cls = undefined) => ({ [FAKE.keyOf('changes', cls ? { session, since, class: cls } : { session, since })]: { result: { entries, next, head } } });
+/** the board's guest `changes({guest, board, since})` answering one page: the published rows alone (D6, #749) */
+const caughtUpGuest = (/** @type {string} */ board, /** @type {number} */ since, /** @type {object[]} */ entries = [], next = since, head = next) => ({ [FAKE.keyOf('changes', { guest: true, board, since })]: { result: { entries, next, head } } });
+/** the `changes` calls the fake port was asked, each by its members — its session and position, a `class` or the guest form among them */
 const catchUps = (/** @type {ReturnType<typeof FAKE.create>} */ fake) => fake.asked.filter((k) => k.startsWith('changes:')).map((k) => JSON.parse(k.slice('changes:'.length)));
 
 test('the boot\'s session is opened by the acquire: one call, the session taken, or the refusal kept with nothing said of a restart (S-37 (a); issue #175)', async () => {
@@ -317,7 +319,8 @@ test('a restart the shell re-opened is no death: the page goes on under the re-o
   const DR = '1.0.1.0.1013', NEW = '1.0.1.0.1014';
   // what was written while the session was out: a draft minted at 4 — which the shell sends another tab's session, s-3, meanwhile — and the draft DR written at 5
   const minted = { ...minting(NEW, 'drafts', 's-10'), position: 4, at: 4 }, written = { position: 5, at: 5, op: 'insert', docs: [DR], class: 'drafts', session: 's-10' };
-  const fake = FAKE.create({ ...script, ...opened('s-10'), ...caughtUp('s-10', 3, [minted, written], 5) });
+  // the drafts the end cut off are read FIRST from `draftsAt` (the drafts row at 3 set it), then the catch-up from `feedAt` reads them again and they are not re-taken (D6)
+  const fake = FAKE.create({ ...script, ...opened('s-10'), ...caughtUp('s-10', 3, [minted, written], 5, 5, 'drafts'), ...caughtUp('s-10', 3, [minted, written], 5) });
   PORT.boot(fake);
   let drops = 0;
   PUMP.start({ onDirty: () => {}, onDrop: (d) => { if (!d.row) drops++; } });
@@ -342,9 +345,89 @@ test('a restart the shell re-opened is no death: the page goes on under the re-o
   await waiting;
   assert.deepEqual(REC.session(), { session: 's-10', principal: 1, account: '1.0.1', writes: true }, 'a restart that re-opened none: the session the boot\'s own call opens again');
   assert.deepEqual([opens(fake), REC.deathReason(), REC.reconnect(), drops, listings], [1, null, null, 0, []], 'one call; no death, nothing to say, no change of class and no index read');
-  assert.deepEqual([fake.asked.slice(from).map((k) => k.slice(0, k.indexOf(':'))), catchUps(fake)], [['session', 'changes', 'op'], [{ session: 's-10', since: 3 }]], 'the catch-up asked under the session got back from the last position the page took, before the read waiting on the session went out');
-  assert.deepEqual([REC.place(NEW)?.kind, REC.textBetween(DR, 1, 6), REC.place(DR)?.kind, REC.textBetween(D, 1, 9), REC.feedAt()], ['draft', '', 'draft', 'Tumbler.', 5], 'the draft minted in the gap listed and the one written there dropped of its text, what no row named standing, the page\'s place on the feed past the gap');
+  assert.deepEqual([fake.asked.slice(from).map((k) => k.slice(0, k.indexOf(':'))), catchUps(fake)], [['session', 'changes', 'changes', 'op'], [{ class: 'drafts', session: 's-10', since: 3 }, { session: 's-10', since: 3 }]], 'the drafts read from `draftsAt` with class drafts, then the catch-up from `feedAt`, both under the session got back and before the read waiting on the session went out');
+  assert.deepEqual([REC.place(NEW)?.kind, REC.textBetween(DR, 1, 6), REC.place(DR)?.kind, REC.textBetween(D, 1, 9), REC.feedAt()], ['draft', '', 'draft', 'Tumbler.', 5], 'the draft the end cut off read by the drafts read and listed, the one written there dropped of its text, what no row named standing, the page\'s place on the feed past the gap');
   assert.deepEqual(sent, ['s-9', 's-10'], 'the read waiting went out under the session got back');
+});
+
+test('a regain with no re-open reads the drafts from `draftsAt` with class drafts BEFORE the catch-up from `feedAt`, applies a draft the end cut off, raises `draftsAt` but not `feedAt`, and masks no published row in the drafts read\'s window (issue #392, D6)', async () => {
+  const NEW = '1.0.1.0.1013', A = '1.0.1.0.21';
+  const draft14 = { position: 14, at: 14, op: 'create_new_document', docs: [NEW], class: 'drafts', session: 's-2' };
+  // the drafts read reaches 14; the catch-up from feedAt reads an earlier snapshot to 12, so its `caught` is (10,12] and a live row at 13 lies in the drafts read's window above it
+  const fake = FAKE.create({ ...script, ...opened('s-2', { opened_at: 10 }),
+    ...caughtUp('s-2', 10, [draft14], 14, 14, 'drafts'),
+    ...caughtUp('s-2', 10, [rowOf(11, [A]), rowOf(12, [A])], 12) });
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  readHead(10);
+  const release = fake.hold('changes', { session: 's-2', since: 10, class: 'drafts' });
+  fake.fire('session-died', { session: 's-1', reason: UNOPENED });
+  await until(() => catchUps(fake).some((c) => c.class === 'drafts'), 'the drafts read asked');
+  assert.deepEqual([catchUps(fake), REC.place(NEW)], [[{ class: 'drafts', session: 's-2', since: 10 }], undefined], 'the drafts read asked first and held: nothing of the catch-up asked yet, no draft taken');
+  release();
+  await settle();
+  assert.deepEqual([REC.place(NEW)?.kind, REC.draftsAt(), REC.feedAt()], ['draft', 14, 12], 'the draft the end cut off listed, draftsAt raised to it, feedAt left at the catch-up\'s reach — the drafts read never raises feedAt');
+  fake.fire('feed', { board: 'b-1', update: rowOf(13, [A]) });
+  assert.deepEqual([REC.feedAt(), REC.feedRows().some((r) => r.position === 13)], [13, true], 'a published row in the drafts read\'s window (10,14] above the catch-up\'s caught (10,12] is taken, never masked by the drafts read');
+  assert.deepEqual([catchUps(fake), fake.unanswered], [[{ class: 'drafts', session: 's-2', since: 10 }, { session: 's-2', since: 10 }], []], 'the drafts read with class drafts, then the catch-up from feedAt');
+});
+
+test('a regain with a re-open makes no drafts read — the re-opened session keeps the principal\'s place and `draftsAt` stands as it was (issue #392, D6)', async () => {
+  const fake = FAKE.create({ ...script });
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true, opened_at: 8 });
+  readHead(10);
+  assert.equal(REC.draftsAt(), 8, 'started from the session\'s opened_at');
+  fake.fire('session-died', { session: 's-1', reason: REOPENED });
+  await flush();
+  assert.deepEqual([REC.session()?.session, catchUps(fake), REC.draftsAt(), REC.deathReason()], ['s-9', [], 8, null], 'the re-opened reference, no catch-up of any kind — drafts or feed — draftsAt standing, no death');
+});
+
+test('a regain\'s drafts read refused does not block the catch-up: the board is marked as the published catch-up\'s own refusal marks it, and the catch-up from feedAt still runs and takes its rows (issue #392, D6)', async () => {
+  const A = '1.0.1.0.21';
+  const fake = FAKE.create({ ...script, ...opened('s-2', { opened_at: 10 }),
+    [FAKE.keyOf('changes', { session: 's-2', since: 10, class: 'drafts' })]: RECLAIMED,
+    ...caughtUp('s-2', 10, [rowOf(11, [A])], 11) });
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  readHead(10);
+  fake.fire('session-died', { session: 's-1', reason: UNOPENED });
+  await settle();
+  assert.deepEqual([REC.session()?.session, catchUps(fake)], ['s-2', [{ class: 'drafts', session: 's-2', since: 10 }, { session: 's-2', since: 10 }]], 'the drafts read refused, the catch-up from feedAt still asked after it');
+  assert.deepEqual([REC.feedRows().map((r) => r.position), REC.feedAt(), REC.bare()], [[11], 11, true], 'the catch-up\'s row taken, the board marked by the drafts read\'s refusal as the catch-up\'s own would mark it');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a call refused `session_died` is taken as the event\'s end by its reason: the restart arm with `reopened: true` and `session` goes on under that reference, the arm with `reopened: false` — a reference of an earlier shell run — asks for a session again, neither a death (issue #392 step 4; #571, #625/#532)', async () => {
+  // (a) reopened: true — on under reason.session, no session asked, no death
+  let frame = F.docMetadata(D);
+  let s = { ...script };
+  firstThen(s, frame, { refused: { kind: 'shell', name: 'session_died', session: 's-1', reason: { arm: 'restart', reopened: true, session: 's-9' } } }, script[FAKE.keyOf('op', { frame })]);
+  let fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  let sent = sessionsSent(fake);
+  let out = await PUMP.read(frame);
+  assert.ok('answer' in out, 'the answer, never the refusal');
+  assert.deepEqual([sent, opens(fake), REC.session()?.session, REC.deathReason()], [['s-1', 's-9'], 0, 's-9', null], 'reopened true: on under reason.session, no session asked for, no death');
+  // (b) reopened: false — a reference of an earlier shell run, a session asked for again as session_ended\'s lose does
+  REC._reset();
+  s = { ...script, ...opened('s-2'), ...caughtUp('s-2', 3) };
+  firstThen(s, frame, { refused: { kind: 'shell', name: 'session_died', session: 's-7', reason: { arm: 'restart', reopened: false } } }, script[FAKE.keyOf('op', { frame })]);
+  fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-7', principal: 1, account: '1.0.1' });
+  readHead(3);
+  sent = sessionsSent(fake);
+  out = await PUMP.read(frame);
+  assert.ok('answer' in out, 'the answer, never the refusal');
+  assert.deepEqual([sent, opens(fake), REC.session()?.session, REC.deathReason()], [['s-7', 's-2'], 1, 's-2', null], 'reopened false: a session asked for again, on under it, no death');
 });
 
 test('a restart that re-opened none whose call again is refused: what the session read is dropped and the index read again in the guest form — no death recorded, for the shell named none, the refusal kept as boot keeps it with the account the page could not reconnect as; no second call (issue #175)', async () => {
@@ -807,8 +890,8 @@ test('a catch-up the page\'s class changes under takes nothing it read and marks
   assert.deepEqual([REC.place(NEW)?.kind, REC.feedRows().map((r) => r.position), REC.feedAt()], ['draft', [4, 5], 5], 'the second catch-up\'s row taken with the row held through both, once each and in order');
 });
 
-test('the face the shell sends the session an acquire opens, before the call that opens it answers, is taken as the page goes on under it as the same principal; one naming another session is not (issue #326)', async () => {
-  const fake = FAKE.create({ ...script, ...opened('s-10'), ...caughtUp('s-10', 3) });
+test('the face the shell sends the session an acquire opens, before the call that opens it answers, is taken as the page goes on under it as the same principal; one naming another session is not; the session answer\'s `opened_at` starts `draftsAt` and the regain reads the drafts from it (issues #326, #392)', async () => {
+  const fake = FAKE.create({ ...script, ...opened('s-10', { opened_at: 3 }), ...caughtUp('s-10', 3, [], 3, 3, 'drafts'), ...caughtUp('s-10', 3) });
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
   REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
@@ -820,14 +903,15 @@ test('the face the shell sends the session an acquire opens, before the call tha
   fake.fire('index', { board: 'b-1', session: 's-10', state: { arm: 'widening' } });
   assert.equal(REC.indexState()?.arm, 'complete', 'while the call is out: the face the page reads stands');
   call();
-  await flush();
+  await settle();
   assert.deepEqual([REC.session()?.session, REC.indexState()?.arm, REC.countsExact()], ['s-10', 'widening', false], 'the face of the session got back, never another tab\'s');
+  assert.deepEqual([REC.draftsAt(), catchUps(fake)], [3, [{ class: 'drafts', session: 's-10', since: 3 }, { session: 's-10', since: 3 }]], 'draftsAt started from opened_at, the drafts read from it before the catch-up from feedAt');
 });
 
 test('a session got back says nothing of reconnecting while its catch-up is out, however long it takes (issues #175, #326)', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const turn = () => new Promise((r) => setImmediate(r));
-  const fake = FAKE.create({ ...script, ...opened('s-10'), ...caughtUp('s-10', 3) });
+  const fake = FAKE.create({ ...script, ...opened('s-10', { opened_at: 3 }), ...caughtUp('s-10', 3, [], 3, 3, 'drafts'), ...caughtUp('s-10', 3) });
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
   REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
@@ -835,7 +919,7 @@ test('a session got back says nothing of reconnecting while its catch-up is out,
   const release = fake.hold('changes', { session: 's-10', since: 3 });
   fake.fire('session-died', { session: 's-1', reason: UNOPENED });
   for (let i = 0; i < 5; i++) await turn();
-  assert.deepEqual([REC.session()?.session, catchUps(fake)], ['s-10', [{ session: 's-10', since: 3 }]], 'the session got back, its catch-up out');
+  assert.deepEqual([REC.session()?.session, catchUps(fake)], ['s-10', [{ class: 'drafts', session: 's-10', since: 3 }, { session: 's-10', since: 3 }]], 'the session got back, its drafts read taken and its catch-up from feedAt out');
   t.mock.timers.tick(PUMP.RECONNECTING_MS);
   assert.equal(REC.reconnect(), null, 'past RECONNECTING_MS: nothing said of reconnecting');
   release();
@@ -3035,21 +3119,24 @@ test('an acquire\'s catch-up that lands while the stream stands dropped takes wh
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('where no catch-up of the gap can be done — a guest, who holds no session to read `changes` under — the rows held are taken alone and the board marked as a row naming nothing marks it, the page not settled until its refresh has run (issue #367\'s design decision)', async () => {
-  const A = '1.0.1.0.21';
-  const fake = FAKE.create({ ...script });
+test('the event stream\'s drop over a guest\'s page is caught up with the guest form of `changes` — the published rows read token-free from the last position the page took, taken with the rows held, each once and in position order (issue #367; #749)', async () => {
+  const [A, B] = ['1.0.1.0.21', '1.0.1.0.22'];
+  // what was written while the stream was down: edits at 11 and 12
+  const fake = FAKE.create({ ...script, ...caughtUpGuest('b-1', 10, [rowOf(11, [A]), rowOf(12, [B])], 12) });
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
   REC.setBoard({ board: 'b-1', name: '', origin: '' });
   readHead(10);
   fake.drop();
-  fake.fire('feed', { board: 'b-1', update: rowOf(15, [A]) });
+  fake.fire('feed', { board: 'b-1', update: rowOf(13, [A]) });
   assert.deepEqual(REC.feedRows(), [], 'dropped: the row held');
+  const release = fake.hold('changes', { guest: true, board: 'b-1', since: 10 });
   fake.reopen();
-  await flush();
-  assert.deepEqual([catchUps(fake), REC.feedRows().map((r) => r.position), REC.bare(), PUMP.settled()], [[], [15], true, false], 'reopened with no session: nothing read, the row taken, the board marked and its refresh armed');
-  await PUMP.refresh();
-  assert.deepEqual([REC.bare(), PUMP.settled()], [false, true], 'the refresh took the mark');
+  await until(() => catchUps(fake).length === 1, 'the guest catch-up asked');
+  assert.deepEqual([catchUps(fake), PUMP.settled()], [[{ guest: true, board: 'b-1', since: 10 }], false], 'reopened with no session: the guest form asked from the last position, token-free, the page not settled');
+  release();
+  await settle();
+  assert.deepEqual([REC.feedRows().map((r) => r.position), REC.feedAt(), REC.bare(), PUMP.settled()], [[11, 12, 13], 13, false, true], 'the gap\'s rows and the row held taken, each once and in order, the board not marked');
   assert.deepEqual(fake.unanswered, []);
 });
 

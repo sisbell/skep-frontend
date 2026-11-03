@@ -153,11 +153,13 @@
 // the same principal (`takeFace`). The event stream's drop (B-PORT's
 // `onStream`) opens a gap (`streamDropped`): the reopened stream starts at
 // the shell's head, so once it reopens the rows between are read by
-// `changes` from the last position the page took (M-REC's `feedAt`) — after
-// any acquire out, whose own catch-up reads from the same position — and
-// taken with the rows held, each once and in position order (`closeGap`,
-// `drain`), a catch-up that cannot be done marking the board as a row naming
-// nothing does (`markBehind`). The board lags (`standLag`, `boardKept`;
+// `changes` from the last position the page took (M-REC's `feedAt`) — under
+// the page's session, or in the guest form (`{guest, board}`; #749) where it
+// holds none, after any acquire out, whose own catch-up reads from the same
+// position — and taken with the rows held, each once and in position order
+// (`closeGap`, `drain`), a catch-up that cannot be done marking the board as
+// a row naming nothing does (`markBehind`); the gap makes no drafts read, its
+// two-class read from `feedAt` covering its window. The board lags (`standLag`, `boardKept`;
 // FP-23) from the drop, or from the first bare row of a run, until the gap's
 // rows are taken and no mark or refresh stands (`lagEnds`). What a kept place
 // shows is set by its reads (M-REC's `setAgain`, `setClaims`), each setting
@@ -179,13 +181,18 @@
 // for a session lost every feed row is held; while its call is unanswered
 // past RECONNECTING_MS the line reads that the page is reconnecting. An
 // answer after the attempt settled is stale, a session it opened closed.
-// Got back for a session lost, the session is taken and, before the attempt
-// settles, what was written on the board while it was out is read by
-// `changes` from the last position the page took there (M-REC's `feedAt`)
-// and taken with the rows held, each row once and in position order
-// (`catchUp`, `drain`), a catch-up that cannot be done marking the board as
-// a row naming nothing does. Regained as another principal, or refused, the
-// class changes as at a death.
+// Got back for a session lost with no re-open and as the same principal, and
+// `draftsAt` standing, the drafts rows a mid-tick end cut off are read FIRST
+// (`changes(session, since: draftsAt, class: 'drafts')`; D6) — each applied
+// with `draftsAt` raised but `feedAt` left and `caught` untouched, so no
+// published row in its window is masked, a refusal marking the board as the
+// catch-up's own does and not blocking it. Then, before the attempt settles,
+// what was written on the board while it was out is read by `changes` from
+// the last position the page took there (M-REC's `feedAt`) and taken with the
+// rows held, each row once and in position order (`catchUp`, `drain`), a
+// catch-up that cannot be done marking the board as a row naming nothing
+// does. Regained as another principal, or refused, the class changes as at a
+// death, and no drafts read is made.
 // A change of class (`classChanged`; FP-29, FP-23) takes the documents in
 // view and those the view's state names before anything goes (`stoodOn`),
 // hands them to M-REC, which keeps those read as published and leaves every
@@ -679,11 +686,12 @@ export function takeRow(u) {
  * in.
  * @param {FeedUpdate} u
  * @param {number} at the page's clock at the row or drop that left behind what it names: its arrival, or the stream's drop for a row a catch-up read (`drain`)
+ * @param {boolean} [raiseFeed] false where M-PUMP's drafts read applies a drafts entry (D6): `draftsAt` is raised, not `feedAt`
  */
-function applyRow(u, at) {
+function applyRow(u, at, raiseFeed = true) {
   if (u.op === 'publish') for (const named of Array.isArray(u.docs) ? u.docs : []) if (isTrunkMember(named)) arrive(named, u.position);
   const shown = shownNow(), keep = new Set(keptNow(shown));
-  const touched = REC.applyFeedUpdate(u, keep, new Set(shown.map((a) => REC.ownerAccount(REC.doc(a)))));
+  const touched = REC.applyFeedUpdate(u, keep, new Set(shown.map((a) => REC.ownerAccount(REC.doc(a)))), raiseFeed);
   for (const m of whileOut) m.rows.push(u);
   for (const addr of touched) { if (keep.has(addr)) readAgain(addr, at); else forget(addr); }
   onDrop({ row: u, addrs: touched, at });
@@ -992,8 +1000,9 @@ async function make(a) {
     else if (out) REC.setSessionRefused({ kind: out.refused.kind, name: out.refused.name });
   } else if (out && 'result' in out) {
     const stood = stoodOn();
-    if (REC.sessionRegained(out.result, stood)) classChanged(stood); else takeFace(out.result.session);
-    await catchUp(a, out.result.session);
+    const other = REC.sessionRegained(out.result, stood);
+    if (other) classChanged(stood); else takeFace(out.result.session);
+    await catchUp(a, out.result.session, !other);
   } else {
     if (out) { const stood = stoodOn(); REC.sessionLost({ kind: out.refused.kind, name: out.refused.name }, stood); classChanged(stood); }
     drain(null, a);
@@ -1029,11 +1038,30 @@ function takeFace(ref) {
  * page has left; the reads that change makes leave the page whole. Where
  * another acquire takes the attempt's place, nothing is taken: the rows stay
  * held for that acquire, whose catch-up reads from the same position.
+ * Where the session is got back as the same principal and `draftsAt` stands
+ * (`drafts`; D6), the drafts rows a mid-tick end cut off are read FIRST —
+ * `changes(session, since: draftsAt, class: 'drafts')`, paged as the catch-up
+ * pages, each entry applied with `draftsAt` raised but `feedAt` left and
+ * `caught` untouched, so no published row arriving in its window is masked —
+ * and a refusal of it marks the board as the published catch-up's own does
+ * and does not block the catch-up after it. A regain with a re-open
+ * (`takeEnd`) makes no drafts read, nor one got back as another principal
+ * (`drafts` false): its `draftsAt` stands.
  * @param {Attempt} a the acquire the session was got back by
  * @param {string} ref the session got back
+ * @param {boolean} drafts the regain is with no re-open and as the same principal: the drafts read is made where `draftsAt` stands
  */
-async function catchUp(a, ref) {
-  const cls = classes, since = REC.feedAt(), at = gap ? gap.at : a.at;
+async function catchUp(a, ref, drafts) {
+  const cls = classes, at = gap ? gap.at : a.at;
+  const d0 = REC.draftsAt();
+  if (drafts && d0 != null) {
+    const read = await readChanges(ref, d0, () => attempt !== a || classes !== cls, 'drafts');
+    if (attempt !== a) return;
+    if (classes !== cls || !read) { drain(null, a); return; }
+    if ('met' in read) markBehind(read.met, at);
+    else for (const u of read.entries) applyRow(u, at, false);
+  }
+  const since = REC.feedAt();
   const read = since == null ? { met: null } : await readChanges(ref, since, () => attempt !== a || classes !== cls);
   if (attempt !== a) return;
   if (classes !== cls || !read) { drain(null, a); return; }
@@ -1049,22 +1077,28 @@ async function catchUp(a, ref) {
  */
 
 /**
- * What was written on the page's board after a position, read by `changes`
- * under a session: page after page, each from the one before's `next`, until
- * one reaches its `head`; a page refused as from a session the shell
- * re-opened meanwhile asked again under the re-opened one.
- * @param {string} ref the session it is read under
+ * What was written on the page's board after a position, read by `changes`:
+ * page after page, each from the one before's `next`, until one reaches its
+ * `head`. Under a session (`ref` a reference): a page refused as from a
+ * session the shell re-opened meanwhile asked again under the re-opened one;
+ * with `cls` the drafts form, the drafts page alone (D6). In the guest form
+ * (`ref` null), token-free over the page's board (`{guest: true, board}`; the
+ * published feed alone) — a refusal is `met`, no session to re-ask under.
+ * @param {string | null} ref the session it is read under, or null for the guest form
  * @param {number} since
  * @param {() => boolean} ended read as each page lands: the read is let go where it holds
+ * @param {'drafts' | null} [cls] the drafts form of the session read, the drafts supplement's page alone
  * @returns {Promise<CaughtUp | {met: Refusal | null} | null>} the rows read; `met` where none can be done — the refusal `changes` met, null where a page did not move past where it began; null where it was let go
  */
-async function readChanges(ref, since, ended) {
+async function readChanges(ref, since, ended, cls = null) {
+  const board = ref == null ? REC.board()?.board : undefined;
   /** @type {FeedUpdate[]} */
   const entries = [];
   for (let from = since; ;) {
-    const out = await PORT.changes({ session: ref, since: from });
+    const out = await PORT.changes(ref == null ? { guest: /** @type {const} */ (true), board, since: from } : cls ? { session: ref, since: from, class: cls } : { session: ref, since: from });
     if (ended()) return null;
     if ('refused' in out) {
+      if (ref == null) return { met: out.refused };
       const now = REC.session();
       if (!PORT.lostSession(out.refused) || !now || now.session === ref) return { met: out.refused };
       ref = now.session;
@@ -1109,8 +1143,10 @@ function drain(read, releasing) {
   rowsHeld = gap || (attempt && attempt.lost != null && attempt !== releasing) ? [] : null;
   if (read) caught = caught && caught.next >= read.since && read.next >= caught.since ? { since: Math.min(caught.since, read.since), next: Math.max(caught.next, read.next) } : { since: read.since, next: read.next };
   const c = caught, within = (/** @type {number} */ p) => !!c && p > c.since && p <= c.next;
+  // a drafts row at or before `draftsAt` the regain's drafts read already took (D6): board positions only grow, so this masks no later row
+  const d = REC.draftsAt(), tookDraft = (/** @type {FeedUpdate} */ u) => u.class === 'drafts' && d != null && u.position <= d;
   /** @type {HeldRow[]} */
-  const take = [...(read ? read.entries.map((u) => ({ u, taken: true, at: read.at })) : []), ...rows.filter((h) => !within(h.u.position))];
+  const take = [...(read ? read.entries.map((u) => ({ u, taken: true, at: read.at })) : []), ...rows.filter((h) => !within(h.u.position))].filter((h) => !tookDraft(h.u));
   for (const h of take.sort((x, y) => x.u.position - y.u.position)) if (h.taken || takesRow(h.u)) { applyRow(h.u, h.at); lagFound('changed'); }
   if (read) REC.reachFeed(read.next);
 }
@@ -1165,7 +1201,7 @@ async function closeGap(g) {
       await noAcquire();
       if (gap !== g || !g.open) return;
       const cls = classes, s = REC.session(), since = REC.feedAt();
-      const read = s && since != null ? await readChanges(s.session, since, () => gap !== g || classes !== cls) : { met: null };
+      const read = since == null ? { met: null } : await readChanges(s ? s.session : null, since, () => gap !== g || classes !== cls);
       if (gap !== g) return;
       if (!read || classes !== cls) continue;
       if ('met' in read) {
