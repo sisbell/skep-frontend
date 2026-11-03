@@ -80,8 +80,9 @@ beneath the symbol, the card standing at the link's own bytes once the text
 layer rebuilds the article and takes the symbol away, and at the document's
 box once the layer takes the article down — never at the viewport's corner
 (foundations §3.1); a follow that lands nowhere — from the selection, by
-Mod+Enter or a row of its "which" list pressed, and the anatomy card's
-follow pressed, its far document known to say nothing — faced at the
+Mod+Enter or the row of its "which" list naming the ghost pressed, and the
+anatomy card's follow pressed, its far document known to say nothing — the
+first edition's citation of the ghost each time — faced at the
 followed link's own bytes, the face taking the place of the list or card it
 was pressed on (foundations §3.1, F-G3), the link joining no visited set,
 for its camera never left, while a follow that leaves — a citation of the
@@ -2419,18 +2420,21 @@ def run(ctx):
     chord(ctx, 'Escape')
     r.check(ctx.js('window.__skep.reveal(%s)' % json.dumps(DOC))['stage'] == 1, 'Esc dismisses the card; the chain is hidden again')
     # a row of the card opens its link's anatomy card in the card's place — a replacement, never a dismissal (O-HOST): the
-    # chain's stage stands, the symbols at their spans, and the anatomy card stands at the link's own bytes. The link is one
-    # whose marked words the landing at its position shows, below the one line
+    # chain's stage stands, the symbols at their spans, and the anatomy card stands at the link's own bytes. The link is a
+    # citation of the ghost — the one the anatomy card's follow below meets the dead end at — whose marked words the landing
+    # at its position shows, below the one line; its row is its index in the drawn set, which the links card rows in order
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
     line_bottom = ctx.js('document.getElementById("line").getBoundingClientRect().bottom')
     row, link = None, None
     for i, s in enumerate(shown[:12]):
+        if s['far'] != GHOST:
+            continue
         ctx.leap(DOC, s['pos'])
         words = ctx.js('window.__skep.visible(%s)' % json.dumps('#domlayer [data-addr="%s"] .lip[data-links~="%s"]' % (DOC, s['link'])))
         if words and all(w['inClip'] and w['inView'] and w['rect']['y'] >= line_bottom for w in words):
             row, link = i, s
             break
-    r.check(link is not None, 'a drawn link of the first edition has its marked words shown at the landing on its position', [s['pos'] for s in shown[:12]])
+    r.check(link is not None, 'a citation of the ghost the first edition draws, among the links card\'s first twelve rows, has its marked words shown at the landing on its position', [[s['pos'], s['far']] for s in shown[:12]])
     if link is not None:
         ctx.js('window.__skep.cards.links(%s)' % json.dumps(DOC))
         ctx.frames(2)
@@ -2476,53 +2480,61 @@ def run(ctx):
             chord(ctx, 'Escape')
         ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
         ctx.frames(2)
-    # select the block that holds a drawn link, then follow (Mod+Enter) to its ghost → the dead-reference face
+    # select the block holding the first edition's citation of the ghost — the link a follow to a dead end takes — then follow
+    # (Mod+Enter) → the dead-reference face
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
     blocks = ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC))
-    linked = next((b for b in blocks for s in shown if b['pos'] <= s['pos'] < b['pos'] + b['width']), None)
-    n_here = sum(1 for s in shown if linked and linked['pos'] <= s['pos'] < linked['pos'] + linked['width'])
-    ctx.js('window.__skep.select(%s, %d)' % (json.dumps(DOC), linked['pos']))
-    ctx.frames(2)
-    r.check(ctx.js('window.__skep.overlay().id') == 'selection', 'the selection card stands at the linked span')
-    chord(ctx, 'O', mods=('Meta', 'Shift'))
-    s = state(ctx)
-    r.check(s['overlay'] == 'card' and 'written by' in ctx.js('window.__skep.overlay().text'), 'Mod+Shift+O asks "who wrote this?" (show_origin)', ctx.js('window.__skep.overlay().text')[:160])
-    chord(ctx, 'Escape')
-    ctx.js('window.__skep.select(%s, %d)' % (json.dumps(DOC), linked['pos']))
-    chord(ctx, 'R', mods=('Meta', 'Shift'))
-    s = state(ctx)
-    r.check(s['overlay'] == 'card' and 'used by' in ctx.js('window.__skep.overlay().text'), 'Mod+Shift+R asks "who uses this?" (find_docs_containing)', ctx.js('window.__skep.overlay().text')[:160])
-    chord(ctx, 'Escape')
-    # the links drawn at the selected block, in the order the "which" list rows them (LK's `shownAt`): each far document read
-    # whole (reads alone), so the page knows it says nothing before the follow is made (FP-25: a failure known at the act)
-    drawn_here = [x for x in shown if x['pos'] < linked['pos'] + linked['width'] and linked['pos'] < x['pos'] + x['width']]
-    for x in drawn_here:
-        ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(x['far']))
-    r.check(bool(drawn_here) and ctx.js('window.__skep.model.doc(%s).refused' % json.dumps(drawn_here[0]['far'])) == 'unregistered',
-            'the first link drawn at the selected block — the one a follow from it takes — cites an address the board says nothing about, as the page knows', [x['far'] for x in drawn_here])
-    ctx.js('window.__skep.select(%s, %d)' % (json.dumps(DOC), linked['pos']))
-    chord(ctx, 'Enter', mods=('Meta',))
-    s = state(ctx)
-    if n_here == 1:
-        r.check(s['overlay'] == 'face' and 'nothing this board will say' in ctx.js('window.__skep.overlay().text'), 'Mod+Enter follows the one drawn link: its ghost target answers the dead-reference face', ctx.js('window.__skep.overlay().text')[:160])
-    else:
-        r.check(s['overlay'] == 'list', 'Mod+Enter at a span with several links asks which', {'n': n_here, 'overlay': s['overlay']})
-        # its first row pressed with the pointer follows that row's link, the row gone with the list the face takes the place of
-        first = ctx.js('(() => { const b = document.querySelector(\'#overlay [data-run="w0"]\'); if (!b) return null; const q = b.getBoundingClientRect(); return {x: q.left + q.width / 2, y: q.top + q.height / 2}; })()')
-        r.check(first is not None, 'the list rows the links drawn at the span', ctx.js('window.__skep.overlay().id'))
-        if first is not None:
-            ctx.drv.mouse(first['x'], first['y'])
-    # either way the follow's ghost target answers the dead-reference face, which stands at the act's site — the followed link's
-    # own bytes, beneath their first line (foundations §3.1, F-G3) — never at the viewport's corner
-    overlay_up(ctx, 'face:')
-    placed = placed_at(ctx, DOC, drawn_here[0]['pos'], drawn_here[0]['width']) if drawn_here else None
-    r.check(ctx.js('window.__skep.overlay().id') == 'face:doc_not_registered' and bool(placed) and stands_at(placed),
-            'the dead-reference face a follow from the selection met stands at the followed link\'s own bytes, beneath their first line', {'id': ctx.js('window.__skep.overlay().id'), 'placed': placed, 'link': drawn_here[:1]})
-    r.check(bool(drawn_here) and not ctx.js('window.__skep.links.visited(%s)' % json.dumps(drawn_here[0]['link'])),
-            'a follow whose far document the page knows says nothing never leaves, and its link joins no visited set (D-3; FP-25: "the jump counts as made … as a followed link, when the camera leaves")', drawn_here[:1])
-    chord(ctx, 'Escape')
-    chord(ctx, 'Escape')
-    r.check(state(ctx)['sel'] is None and state(ctx)['overlay'] is None, 'Esc clears the overlay, then the selection (one order)')
+    ghost = next((s for s in shown if s['far'] == GHOST), None)
+    linked = next((b for b in blocks if ghost and b['pos'] <= ghost['pos'] < b['pos'] + b['width']), None)
+    r.check(ghost is not None and linked is not None, 'the first edition draws its citation of the ghost, at a block of its text',
+            {'drawn': [s['far'] for s in shown][:8], 'ghost': ghost and {k: ghost[k] for k in ('link', 'pos', 'width')}})
+    if ghost is not None and linked is not None:
+        ctx.js('window.__skep.select(%s, %d)' % (json.dumps(DOC), linked['pos']))
+        ctx.frames(2)
+        r.check(ctx.js('window.__skep.overlay().id') == 'selection', 'the selection card stands at the linked span')
+        chord(ctx, 'O', mods=('Meta', 'Shift'))
+        s = state(ctx)
+        r.check(s['overlay'] == 'card' and 'written by' in ctx.js('window.__skep.overlay().text'), 'Mod+Shift+O asks "who wrote this?" (show_origin)', ctx.js('window.__skep.overlay().text')[:160])
+        chord(ctx, 'Escape')
+        ctx.js('window.__skep.select(%s, %d)' % (json.dumps(DOC), linked['pos']))
+        chord(ctx, 'R', mods=('Meta', 'Shift'))
+        s = state(ctx)
+        r.check(s['overlay'] == 'card' and 'used by' in ctx.js('window.__skep.overlay().text'), 'Mod+Shift+R asks "who uses this?" (find_docs_containing)', ctx.js('window.__skep.overlay().text')[:160])
+        chord(ctx, 'Escape')
+        # the links drawn at the selected block, as the "which" list rows them (LK's `shownAt`: each end whose stretch meets the
+        # block): each far document read whole (reads alone), so the page knows the ghost says nothing before the follow is made
+        # (FP-25: a failure known at the act)
+        drawn_here = [x for x in shown if x['pos'] < linked['pos'] + linked['width'] and linked['pos'] < x['pos'] + x['width']]
+        for far in dict.fromkeys(x['far'] for x in drawn_here if x['far']):
+            ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(far))
+        r.check(ctx.js('window.__skep.model.doc(%s).refused' % json.dumps(GHOST)) == 'unregistered',
+                'the citation of the ghost drawn at the selected block cites an address the board says nothing about, as the page knows', [x['far'] for x in drawn_here])
+        ctx.js('window.__skep.select(%s, %d)' % (json.dumps(DOC), linked['pos']))
+        chord(ctx, 'Enter', mods=('Meta',))
+        s = state(ctx)
+        if len(drawn_here) == 1:
+            r.check(s['overlay'] == 'face' and 'nothing this board will say' in ctx.js('window.__skep.overlay().text'), 'Mod+Enter follows the one drawn link, the citation of the ghost: its target answers the dead-reference face', ctx.js('window.__skep.overlay().text')[:160])
+        else:
+            r.check(s['overlay'] == 'list', 'Mod+Enter at a span with several links asks which', {'n': len(drawn_here), 'overlay': s['overlay']})
+            # the row naming the ghost — each row names its far document by its address — pressed with the pointer follows that
+            # row's link, the row gone with the list the face takes the place of
+            which = ctx.js('''((far) => { const b = [...document.querySelectorAll('#overlay [data-run^="w"]')].find((x) => x.textContent.includes(far)); if (!b) return null;
+              const q = b.getBoundingClientRect(); return {run: b.dataset.run, x: q.left + q.width / 2, y: q.top + q.height / 2}; })(%s)''' % json.dumps(GHOST))
+            r.check(which is not None, 'the list rows the links drawn at the span, the citation of the ghost named by its far address among them',
+                    {'overlay': ctx.js('window.__skep.overlay().id'), 'rows': ctx.js('[...document.querySelectorAll(\'#overlay [data-run^="w"]\')].map((b) => b.textContent)')})
+            if which is not None:
+                ctx.drv.mouse(which['x'], which['y'])
+        # either way the follow's ghost target answers the dead-reference face, which stands at the act's site — the followed link's
+        # own bytes, beneath their first line (foundations §3.1, F-G3) — never at the viewport's corner
+        overlay_up(ctx, 'face:')
+        placed = placed_at(ctx, DOC, ghost['pos'], ghost['width'])
+        r.check(ctx.js('window.__skep.overlay().id') == 'face:doc_not_registered' and stands_at(placed),
+                'the dead-reference face a follow from the selection met stands at the followed link\'s own bytes, beneath their first line', {'id': ctx.js('window.__skep.overlay().id'), 'placed': placed, 'link': {k: ghost[k] for k in ('link', 'pos', 'width')}})
+        r.check(not ctx.js('window.__skep.links.visited(%s)' % json.dumps(ghost['link'])),
+                'a follow whose far document the page knows says nothing never leaves, and its link joins no visited set (D-3; FP-25: "the jump counts as made … as a followed link, when the camera leaves")', ghost['link'])
+        chord(ctx, 'Escape')
+        chord(ctx, 'Escape')
+        r.check(state(ctx)['sel'] is None and state(ctx)['overlay'] is None, 'Esc clears the overlay, then the selection (one order)')
     # the anatomy card's follow pressed with the pointer, at a link whose far end is a ghost the page knows says nothing (its
     # far document read whole, reads alone): the follow never leaves, and the control pressed stands in the card the
     # dead-reference face takes the place of, so the face stands at the act's site — the link's own bytes, beneath their first

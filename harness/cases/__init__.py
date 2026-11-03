@@ -36,6 +36,10 @@ GHOST = '1.0.1.0.1049578'    # cited by the first edition, never minted: `doc_no
 FAR_LEAP = '1.0.1.0.127'     # the one citation whose target is a real edition
 BEAMED = '1.0.1.0.34'        # a citer of FAR_LEAP whose citations reach four editions the plane draws — .127, .946, .931, .999 — the
                              # first edition's every citation reaching a ghost, which a tail names (issue #132): where the beams are read
+# the seed's `publish` shot minted `3.102.1` correspondence records (A-328) homed in the draft 1.0.1.0.2, each with its `to` end
+# the positions the shot published of one edition — the first edition's (`1.0.1.0.2.0.2.1`) and BEAMED's (`.0.2.32`) among
+# them: the owner's page holds each among its edition's links, a guest's page never, and the page draws, counts and lists
+# none of them (LK's rule (i)), so an edition's drawn links are its citations alone on either page
 AGENT_SPACE = '1.0.1.1'      # the claimant's delegated agent space
 SECOND_ACCOUNT = '1.0.2'     # the seed's keyless second account
 WITHHELD = '1.0.2.0.2'       # its draft: withheld from every reader of this board, a box of its own (continuation depth 0)

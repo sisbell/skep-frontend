@@ -56,8 +56,9 @@ it by a tail drawn at that line, from the edge of the part of its block that
 holds the line (level with one of its links' marked words' line rects, at
 that part's edge). THE BEAMS, at BEAMED — a citer of FAR_LEAP whose
 citations reach editions the plane draws, over the passage whose line the
-most beams leave in view — every beam leaving the text at its span's own
-line, from the edge of the part of its block that holds the line (its
+most beams leave in view — every beam whose leaving line the view holds, a
+line the article stands (FP-12), leaving the text at its span's own line,
+from the edge of the part of its block that holds the line (its
 endpoint level with one of its marked words' line rects, at that part's edge
 — foundations §2.1; S1 Q1), every stub whose beam leaves the text in
 the visible view — the viewport below the one line — carrying its far
@@ -96,8 +97,10 @@ its passage in two — it outlines each run's own lines and nothing between
 them; it is gone at the next landing — HOME made from the landing, the camera
 set back on the landing's view (a camera move, no act) finds nothing outlined
 (FP-21: "The state ends only at another landing"); and, at BEAMED with the
-reveal at stage 3, the link a landing names is drawn heavier (§2.1: "with the
-followed link drawn heavier"): its beam lays HEAVIER_INK times the ink or more
+reveal at stage 3, the link a landing names — a beamed link whose span lies
+within one paragraph, so its symbol stands with its words at the landing — is
+drawn heavier (§2.1: "with the followed link drawn heavier"): its beam lays
+HEAVIER_INK times the ink or more
 about its start that it lays after a landing on the same span naming no link,
 and its symbol in the mounted article is marked heavier, unlit after the
 landing naming none (FP-30; issue #202).
@@ -1001,11 +1004,12 @@ def tails_hold(ctx, r):
 
 def beams_hold(ctx, r):
     """THE BEAMS' checks where citations reach documents the plane draws — at BEAMED, a citer of FAR_LEAP, at em 12.5 over the
-    passage whose line the most beams leave inside the visible view, the reveal at stage 3: every beam leaving the text at its
-    span's own line, from the edge of the part of its block that holds the line (its endpoint level with one of its marked
-    words' line rects, at that part's edge — foundations §2.1; S1 Q1); every stub whose beam leaves the text in the visible view
-    carrying its far document's label inside that view (S1 Q3); and, where two labels or more stand in view, no two of them
-    meeting — issue #9's, marked, and unmeasured where fewer stand; its figures"""
+    passage whose line the most beams leave inside the visible view, the reveal at stage 3: every beam whose leaving line the
+    view holds — a line the article stands, where the oracle reads (FP-12) — leaving the text at its span's own line, from the
+    edge of the part of its block that holds the line (its endpoint level with one of its marked words' line rects, at that
+    part's edge — foundations §2.1; S1 Q1), a beam leaving at a line past the view counted unmeasured (FP-18); every stub
+    whose beam leaves the text in the visible view carrying its far document's label inside that view (S1 Q3); and, where two
+    labels or more stand in view, no two of them meeting — issue #9's, marked, and unmeasured where fewer stand; its figures"""
     ctx.leap(BEAMED, None)
     ctx.js('window.__skep.links.reveal(%s, 3)' % json.dumps(BEAMED))
     ctx.settle()
@@ -1030,9 +1034,13 @@ def beams_hold(ctx, r):
     ctx.frames(3)
     anchors = ctx.js('window.__skep.beamAnchors()')
     r.check(len(anchors) >= 1, f'beams are built at stage 3 at {BEAMED}', len(anchors))
-    r.check(all(a['words'] for a in anchors), 'every drawn beam\'s link is marked at its words in the mounted article (the oracle\'s rects exist)', [a['link'] for a in anchors if not a['words']])
-    off = [{'link': a['link'], 'pos': a['pos'], 'x': a['x'], 'y': a['y'], 'edge': a['edge'], 'words': a['words']} for a in anchors if not on_own_line(a)]
-    r.check(not off, f'every beam leaves the text at its span\'s own line, from the article\'s edge: its endpoint\'s y within one of its words\' line rects and its x at the article\'s edge, {ANCHOR_TOL_PX} px either way', off[:4])
+    # the oracle reads the article's standing lines (FP-12): a beam leaving at a line the view holds is held to it; one leaving
+    # at a line past the view, which stands nowhere, is counted unmeasured (FP-18)
+    standing = [a for a in anchors if 0 <= a['rect']['y'] + a['rect']['h'] / 2 <= vp['VH'] and a['rect']['x'] <= vp['VW'] and a['rect']['x'] + a['rect']['w'] >= 0]
+    r.check(bool(standing) and all(a['words'] for a in standing), 'every beam leaving at a line the view holds has its link marked at its words in the mounted article (the oracle\'s rects exist)',
+            {'unmarked': [a['link'] for a in standing if not a['words']], 'standing': len(standing), 'anchors': len(anchors)})
+    off = [{'link': a['link'], 'pos': a['pos'], 'x': a['x'], 'y': a['y'], 'edge': a['edge'], 'words': a['words']} for a in standing if not on_own_line(a)]
+    r.check(not off, f'every beam leaving at a line the view holds leaves the text at its span\'s own line, from the article\'s edge: its endpoint\'s y within one of its words\' line rects and its x at the article\'s edge, {ANCHOR_TOL_PX} px either way', off[:4])
     # the stubs' labels (S1 Q3): every bundle with a beam that leaves the text in the visible view and ends at the view's border sets the label
     # naming its far document, in the visible view — below the one line, which stands over the beams. A beam whose line lies past the visible
     # view — under the one line, or past the viewport — is cut at its start where it is bound away from the view, and sets no label there,
@@ -1052,7 +1060,8 @@ def beams_hold(ctx, r):
     above = ctx.js('''((fars, top) => { const S = window.__skep, c = S.view.camera(), p = S.view.viewport();
       return fars.filter((f) => { const b = S.boxOf(f); return (b.y + b.h / 2 - c.y) * c.scale + p.VH / 2 < top; }); })(%s, %s)''' % (json.dumps(sorted({a['far'] for a in anchors if a['stub']})), json.dumps(top)))
     ctx.js('window.__skep.links.hide(%s)' % json.dumps(BEAMED))
-    return {'doc': BEAMED, 'at': best[0], 'count': len(anchors), 'stubs': sum(1 for a in anchors if a['stub']), 'far': sorted({a['far'] for a in anchors})[:8], 'on_own_line': len(anchors) - len(off), 'off_own_line': len(off),
+    return {'doc': BEAMED, 'at': best[0], 'count': len(anchors), 'stubs': sum(1 for a in anchors if a['stub']), 'far': sorted({a['far'] for a in anchors})[:8], 'on_own_line': len(standing) - len(off), 'off_own_line': len(off),
+            'unmeasured_past_view': len(anchors) - len(standing),
             'stubs_in_view': len(stubbed), 'labels': len(labels), 'labels_in_view': len(in_view), 'labels_meeting_pairs': len(met) if len(in_view) >= 2 else 'unmeasured: fewer than two labels in view',
             'stubs_bound_above': above or 'unmeasured: no beam stub at em 12.5 is bound above the visible view\'s top'}
 
@@ -4062,9 +4071,11 @@ def run(ctx):
         # the link followed drawn heavier (foundations §2.1's register: "the arrival an outline around its span with the
         # followed link drawn heavier"): at BEAMED, whose citations draw beams — the first edition's every citation a tail — the
         # reveal at stage 3, the landing that names a beamed link lays more ink about its beam's start than a landing on the same
-        # span that names none
+        # span that names none. The link named: a beamed link whose span lies within one paragraph, so its symbol — set after
+        # its span's last word — stands with its words at the landing
         beamed = [x for x in ctx.js('window.__skep.links.shown(%s)' % json.dumps(BEAMED)) if ctx.js('window.__skep.links.tailed(%s, %s)' % (json.dumps(BEAMED), json.dumps(x['link']))) is False]
-        heavy = beamed[0] if beamed else None
+        beamed_paras = [b for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(BEAMED)) if b['kind'] == 'para']
+        heavy = next((x for x in beamed if any(b['pos'] <= x['pos'] and x['pos'] + x['width'] <= b['pos'] + b['width'] for b in beamed_paras)), None)
         ink = {True: None, False: None}
         # and its symbol in the article, marked heavier in place while the arrival stands (FP-30; issue #202): the one the
         # landing names, and none where it names none

@@ -28,8 +28,10 @@ box there, the one line naming that address whole with its position and its
 version marker lit, and the plain address taking the box back to the trunk
 head, the marker unlit (issue #154); a face's words
 alone — the fifth cell's at a typed ghost address, with no wire token above
-them and no act beneath (B1-S8; C-42); the anatomy card's rows, each a value
-the page holds (a bare dash reads as B1-S5's "none"), the row after the owner's
+them and no act beneath (B1-S8; C-42); the anatomy card's rows — the card opened on a drawn
+link of the first edition homed in a published document, the first whose
+`read_link` the harness's token-free oracle answers — each a value the page
+holds (a bare dash reads as B1-S5's "none"), the row after the owner's
 saying when the link was made — the day the board's own `read_link` dates it,
 in the page's one form of a date, and no "age" row (issue #22) — its two lineage rows
 among them — `in_claims` and `out_claims` asked for its link under the audit
@@ -194,10 +196,15 @@ def run(ctx):
     swallow = ctx.js('window.__skep.line()')['text']
     r.check('typing goes nowhere here' in swallow and '⌘L' in swallow, 'a printable key shows the K-9 line with the LEAP chord drawn for the platform', swallow[-160:])
     # ---- the anatomy card's rows: each a value the page holds -------------------------------
+    # the card opened on a drawn link of the first edition whose read the harness's token-free oracle answers — one homed in
+    # a published document, dated here apart from the page's session; a link homed in a draft answers no link to that oracle
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
-    r.check(bool(shown), 'the first edition draws a link to open the anatomy card of', len(shown))
-    if shown:
-        link = shown[0]['link']
+    boards = {l: ctx.daemon_op({'op': 'read_link', 'a': l}) for l in dict.fromkeys(s['link'] for s in shown)}
+    link = next((l for l, b in boards.items() if b.get('link') is not None), None)
+    r.check(link is not None, 'the first edition draws a link homed in a published document — one the harness\'s token-free read answers — to open the anatomy card of',
+            {l: b.get('resp') or b.get('refused') for l, b in boards.items()})
+    if link:
+        board = boards[link]
         n_calls = len(ctx.js('window.__skep.bridge.calls()'))
         ctx.js('window.__skep.cards.anatomy(%s, %s)' % (json.dumps(DOC), json.dumps(link)))
         ctx.settle()
@@ -208,16 +215,15 @@ def run(ctx):
         r.check(ctx.js('window.__skep.overlay().id') == 'anatomy:' + link and bool(rows) and not blank, 'every row of the anatomy card carries a value: none stands as a bare dash, which B1-S5 draws as "none"', {'blank': blank, 'rows': [x['labels'] for x in rows]})
         # when the link was made (issue #22's design decision: "The row reads 'made 12 March 2026'"): the day the board's own
         # `read_link` dates the link, in the page's one form of a date, the row right after the owner's — no age, no position
-        board = ctx.daemon_op({'op': 'read_link', 'a': link})
         made = ctx.js('''(async (age) => { const {dated, t} = await import("./strings.js");
           return {label: t("L.card.made"), owner: t("F.card.owner"), want: dated(age)}; })(%s)''' % json.dumps({'at': board.get('at'), 'time': board.get('time'), 'from': board.get('time_from')}))
         labels = [x['labels'] for x in rows]
         made_row = [x['value'] for x in rows if x['labels'] == [made['label']]]
         after_owner = [made['owner']] in labels and labels.index([made['owner']]) + 1 < len(labels) and labels[labels.index([made['owner']]) + 1] == [made['label']]
-        r.check(board.get('link') is not None and len(made_row) == 1 and norm(made_row[0]) == norm(made['want']) and after_owner and ['age'] not in labels,
+        r.check(len(made_row) == 1 and norm(made_row[0]) == norm(made['want']) and after_owner and ['age'] not in labels,
                 'the anatomy card says when its link was made: "%s", the day the board\'s own read of the link dates it, the row right after the owner\'s, and no "age" row (issue #22)' % made['label'],
-                {'row': made_row, 'want': made['want'], 'board': {k: board.get(k) for k in ('at', 'time', 'time_from')}, 'labels': labels})
-        r.figures['anatomy_made'] = {'row': made_row, 'board': {k: board.get(k) for k in ('at', 'time', 'time_from')}}
+                {'link': link, 'row': made_row, 'want': made['want'], 'board': {k: board.get(k) for k in ('at', 'time', 'time_from')}, 'labels': labels})
+        r.figures['anatomy_made'] = {'link': link, 'row': made_row, 'board': {k: board.get(k) for k in ('at', 'time', 'time_from')}}
         marks = wording_marks(ctx, '#overlay')
         r.check('R5.undocumented' in marks['shown'] and not marks['marked'], 'the anatomy card\'s strings — R5\'s type among them — are set apart by no class of theirs in the inventory', marks)
         r.figures['anatomy_rows'] = rows

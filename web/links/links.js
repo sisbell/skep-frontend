@@ -21,9 +21,11 @@
 //     (`setOthers`, `lens`, `othersLet`);
 //   - rule (i): a link whose end is a whole work counts once, at the corner,
 //     never at a passage (`wholeLinks`); an account-named end counts nowhere
-//     as a number; a record (a credential, the claim, `replaces`, an edition
-//     claim, a registry record, a succession pair) never counts and is never
-//     a mark; the social types stand as one unnumbered mark (`classify`);
+//     as a number; a record — by its ordinal's family a credential, the
+//     claim, `replaces`, an edition claim, a registry record, a succession
+//     pair, and by its exact stored type the shot's correspondence record
+//     (A-328) — never counts and is never a mark; the social types stand as
+//     one unnumbered mark (`classify`);
 //   - rule (iii): the registry's structural family is formatting, rendered
 //     by T-ARTICLE, never counted, never marked;
 //   - every count is a fold of `find_links_v`'s answer (E17 (a)); a document
@@ -244,6 +246,10 @@ import { t, facedHTML, bracketed, withheldLine } from '../strings.js';
 
 /** the commons rows: the credential classes, `replaces`, the edition claim, the registry's five, succession — records (rule (i)) */
 const RECORD_ORDINALS = new Set([1, 2, 3, 12, 14, 55, 56, 57, 58, 59]);
+/** the commons rows that are records by their exact stored type alone, never by their ordinal's family (rule (i); A-328): the shot's correspondence 3.102.1, a subtype of the counterpart class 3.102, which a person may write and which classifies by its ends */
+const RECORD_TYPES = new Set(['3.102.1']);
+/** a commons type's path under the registry's subspace 3, exactly as stored: "3.102.1" */
+const exactType = (/** @type {{ordinal: number, sub: number[]}} */ ty) => ['3', ty.ordinal, ...ty.sub].join('.');
 /** the social types — one unnumbered mark (E11 (c)): endorse 3.42, bookmark 3.44 */
 const SOCIAL_ORDINALS = new Set([42, 44]);
 /** the structural family — formatting, never counted (rule (iii)); the commons map's 3.22–3.29 */
@@ -293,14 +299,15 @@ export function follow(/** @type {Link | string} */ l) { visitedSet.add(typeof l
 export const visited = (/** @type {Link | string} */ l) => visitedSet.has(typeof l === 'string' ? l : l.addr);
 
 /**
- * The kind of a link under the register's rules.
+ * The kind of a link under the register's rules: by its type's ordinal
+ * family, by its exact stored type (`RECORD_TYPES`), else by its ends.
  * @param {Link} l
  * @returns {'record' | 'social' | 'structural' | 'account-end' | 'passage' | 'whole'}
  */
 export function classify(l) {
   const ty = commonsType(l.type);
   if (ty) {
-    if (RECORD_ORDINALS.has(ty.ordinal)) return 'record';
+    if (RECORD_ORDINALS.has(ty.ordinal) || RECORD_TYPES.has(exactType(ty))) return 'record';
     if (SOCIAL_ORDINALS.has(ty.ordinal)) return 'social';
     if (STRUCTURAL_ORDINALS.has(ty.ordinal)) return 'structural';
   }

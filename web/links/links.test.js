@@ -1,8 +1,9 @@
 // LK's test, on a hand-built model: which links a document shows and how
 // each is marked — the owner's and the person's own at their spans, others'
 // counted and shown by the toggle or a lens, a followed link lighter, a link
-// lit at an arrival heavier as the reader handed in names it, records,
-// account-named ends and the social types never counted, the badge counting
+// lit at an arrival heavier as the reader handed in names it, records — by
+// their ordinal's family or their exact stored type — account-named ends and
+// the social types never counted, the badge counting
 // what is homed in a document and its members; each end drawn where its
 // bytes stand now, carrying its stored span's key, at every document whose
 // text holds them, and nowhere until an image is read; the reveal kept per
@@ -97,6 +98,26 @@ test('records, the claim, an account-named end and the social types never count 
   assert.ok(!LK.shown(D).some((s) => s.link.type === ENROLL || s.link.type === CLAIM));
   assert.equal(LK.wholeLinks(D).length, 1, 'a whole-document end counts once, at the corner');
   assert.equal(LK.countAt(D, REC.doc(D).blocks[0]).n, 1, 'and never at a passage');
+});
+
+test('the shot\'s correspondence record is a record by its exact stored type (A-328): never drawn, counted, folded for or listed, while the counterpart class it lies under classifies by its ends', () => {
+  const CORRESPONDENCE = '1.1.0.1.0.1.0.3.102.1', COUNTERPART = '1.1.0.1.0.1.0.3.102', DRAFT = '1.0.1.0.2', OTHER_DRAFT = '1.0.2.0.9';
+  const own = DRAFT + '.0.2.1', bare = DRAFT + '.0.2.2', theirs = OTHER_DRAFT + '.0.2.1';
+  REC.takeLinks(D, [own, bare, theirs]);
+  REC.takeLinks(DRAFT, [own, bare]);
+  REC.takeLink({ addr: own, from: [span(DRAFT, 1, 90)], to: [span(D, 1, 90)], type: CORRESPONDENCE });
+  REC.takeLink({ addr: bare, from: [span(DRAFT, 1, 10)], to: [span(D, 20, 10)], type: COUNTERPART });
+  REC.takeLink({ addr: theirs, from: [span(OTHER_DRAFT, 1, 10)], to: [span(D, 3, 10)], type: CORRESPONDENCE });
+  assert.equal(LK.classify(/** @type {any} */ (REC.link(own))), 'record', 'the person\'s own correspondence record');
+  assert.equal(LK.classify(/** @type {any} */ (REC.link(theirs))), 'record', 'another\'s');
+  assert.equal(LK.classify(/** @type {any} */ (REC.link(bare))), 'passage', 'the bare counterpart class, a link a person may write');
+  const drawn = LK.shown(D).map((s) => s.link.addr);
+  assert.ok(!drawn.includes(own) && drawn.includes(bare), 'the record is never drawn at D; the counterpart, the person\'s own, is');
+  assert.ok(!LK.utmost(D).shown.some((s) => s.link.addr === own), 'the fold holds no room for a symbol of it');
+  assert.deepEqual(LK.countAt(D, REC.doc(D).blocks[0]), { n: 1, social: true }, 'another\'s record on the first block is not among the others\' count');
+  assert.ok(!LK.othersTouching(D).some((l) => l.addr === theirs), 'nor among the card\'s toggle count');
+  assert.ok(!LK.lensRows(D).types.includes(CORRESPONDENCE), 'the lens rows list no such type');
+  assert.deepEqual(LK.countDoc(DRAFT), { n: 1, social: false, arriving: false }, 'its home\'s badge counts the counterpart alone');
 });
 
 test('the badge counts the links a document holds; arriving until its links are read', () => {
