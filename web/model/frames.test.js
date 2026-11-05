@@ -3,8 +3,9 @@
 // lookups and the edition-class links homed in a document take
 // `find_links_ftt`'s two-slot shape and never the audit view's
 // `edition_claims`, no write composer exists, every decoder reads the wire's
-// example answers, the age a link value and `doc_metadata` carry among them,
-// and a delivery keeps an item of a kind it does not know at its own place.
+// example answers — the age a link value and `doc_metadata` carry, and the
+// draft base and merge marker `doc_metadata` carries, among them — and a
+// delivery keeps an item of a kind it does not know at its own place.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as F from './frames.js';
@@ -38,9 +39,10 @@ const EXAMPLES = {
 const WIRE = {
   link_value: '{"as_of":9,"at":7,"link":{"slots":[[{"start":"1.0.1.0.1.0.1.1","width":"0.0.0.0.0.0.0.5"}],[{"start":"1.0.1.0.2.0.1.1","width":"0.0.0.0.0.0.0.6"}],[{"start":"1.0.1.0.3.0.1.1","width":"0.0.0.0.0.0.0.1"}]]},"resp":"link_value","time":1786838400047,"time_from":"feed"}',
   link_value_null: '{"as_of":9,"at":null,"link":null,"resp":"link_value","time":null,"time_from":null}',
-  doc_metadata: '{"as_of":9,"at":7,"base":null,"base_copied":null,"base_extent":"3","birth":"1.0.1.0.1.1","birth_extent":"5","doc":"1.0.1.0.1","owner":"1.0.1","placed":"5","published":true,"resp":"doc_metadata","source":null,"time":1786838400047,"time_from":"feed"}',
-  doc_metadata_unborn: '{"as_of":9,"at":8,"base":"1.0.1.0.1.1","base_copied":"5","base_extent":null,"birth":null,"birth_extent":null,"doc":"1.0.1.0.2","owner":"1.0.1","placed":null,"published":false,"resp":"doc_metadata","source":"1.0.1.0.1.1","time":1786838400052,"time_from":"anchor"}',
-  doc_metadata_fork: '{"as_of":9,"at":null,"base":null,"base_copied":null,"base_extent":null,"birth":null,"birth_extent":null,"doc":"1.0.2.0.1","owner":"1.0.2","placed":null,"published":false,"resp":"doc_metadata","source":"1.0.1.0.1.1","time":null,"time_from":null}',
+  doc_metadata: '{"as_of":9,"at":7,"base":null,"base_copied":null,"base_extent":"3","birth":"1.0.1.0.1.1","birth_extent":"5","doc":"1.0.1.0.1","merge":null,"owner":"1.0.1","placed":"5","published":true,"resp":"doc_metadata","source":null,"time":1786838400047,"time_from":"feed"}',
+  doc_metadata_unborn: '{"as_of":9,"at":8,"base":"1.0.1.0.1.1","base_copied":"5","base_extent":null,"birth":null,"birth_extent":null,"doc":"1.0.1.0.2","merge":null,"owner":"1.0.1","placed":null,"published":false,"resp":"doc_metadata","source":"1.0.1.0.1.1","time":1786838400052,"time_from":"anchor"}',
+  doc_metadata_fork: '{"as_of":9,"at":null,"base":null,"base_copied":null,"base_extent":null,"birth":null,"birth_extent":null,"doc":"1.0.2.0.1","merge":null,"owner":"1.0.2","placed":null,"published":false,"resp":"doc_metadata","source":"1.0.1.0.1.1","time":null,"time_from":null}',
+  doc_metadata_marked: '{"as_of":15,"at":8,"base":"1.0.1.0.1.2","base_copied":"6","base_extent":null,"birth":null,"birth_extent":null,"doc":"1.0.1.0.2","merge":{"at":14,"head":"1.0.1.0.1.2","head_copied":"6","sides":["1.0.1.0.1.1.1"]},"owner":"1.0.1","placed":null,"published":false,"resp":"doc_metadata","source":"1.0.1.0.1.1","time":1786838400052,"time_from":"anchor"}',
 };
 
 test('the read composers spell the wire examples exactly', () => {
@@ -145,6 +147,27 @@ test('a link value and `doc_metadata` carry the age of the address asked as wire
   const odd = (/** @type {object} */ members) => F.decodeLinkValue('1.0.1.0.1.0.2.1', { ...JSON.parse(WIRE.link_value), ...members })?.age;
   assert.deepEqual(odd({ time_from: 'clock' }), { at: 7, time: null, from: null }, 'a source the wire does not name: no time');
   assert.deepEqual(odd({ time: null }), { at: 7, time: null, from: null }, 'a source with no time: neither');
+});
+
+test('`doc_metadata` carries the draft base the board records and the merge marker beside it as wire.md\'s examples give them — null for each where the board records none — and a `merge` that is no object naming its sides and its head reads null, as the client\'s reading of the marker does (issue #395)', () => {
+  const member = F.decodeDocMetadata(JSON.parse(WIRE.doc_metadata));
+  assert.deepEqual([member?.base, member?.baseCopied, member?.merge], [null, null, null], 'a shot member: the board records no base and no marker');
+  const staged = F.decodeDocMetadata(JSON.parse(WIRE.doc_metadata_unborn));
+  assert.deepEqual([staged?.base, staged?.baseCopied, staged?.merge], ['1.0.1.0.1.1', 5, null], 'a staged draft: the member copied and the five positions the copy took, no marker');
+  const fork = F.decodeDocMetadata(JSON.parse(WIRE.doc_metadata_fork));
+  assert.deepEqual([fork?.base, fork?.baseCopied, fork?.merge], [null, null, null], 'a fork no staging act recorded a base for');
+  const marked = F.decodeDocMetadata(JSON.parse(WIRE.doc_metadata_marked));
+  assert.deepEqual([marked?.base, marked?.baseCopied], ['1.0.1.0.1.2', 6], 'the landing moved the base to the head it was composed on, at the extent read');
+  assert.deepEqual(marked?.merge, { sides: ['1.0.1.0.1.1.1'], head: '1.0.1.0.1.2', headCopied: 6, at: 14 }, 'the marker beside it: the daughter merged, the head, its count as read, the landing\'s position');
+  assert.deepEqual([marked?.doc, marked?.source, marked?.age], ['1.0.1.0.2', '1.0.1.0.1.1', { at: 8, time: 1786838400052, from: 'anchor' }], 'nothing the answer carried beside them reads otherwise');
+  const unserved = F.decodeDocMetadata({ as_of: 9, doc: '1.0.1.0.2', owner: '1.0.1', published: false, resp: 'doc_metadata' });
+  assert.deepEqual([unserved?.base, unserved?.baseCopied, unserved?.merge], [null, null, null], 'a board that serves none of the three: null for each');
+  const odd = (/** @type {unknown} */ merge) => F.decodeDocMetadata({ ...JSON.parse(WIRE.doc_metadata_marked), merge })?.merge;
+  for (const v of [null, '1.0.1.0.1.2', 14, true, ['1.0.1.0.1.2'], {}, { sides: ['1.0.1.0.1.1.1'] }, { head: '1.0.1.0.1.2' }, { sides: [], head: 14 }, { sides: '1.0.1.0.1.1.1', head: '1.0.1.0.1.2' }, { sides: [], head: null }]) {
+    assert.equal(odd(v), null, JSON.stringify(v) + ': no object naming its sides and its head — no marker');
+  }
+  assert.deepEqual(odd({ sides: [], head: '1.0.1.0.1.2' }), { sides: [], head: '1.0.1.0.1.2', headCopied: null, at: null }, 'the draft itself the side, the count and the position unserved');
+  assert.deepEqual(odd({ at: 14, head: '1.0.1.0.1.2', head_copied: '6', sides: ['1.0.1.0.1.1.1', 7, null] })?.sides, ['1.0.1.0.1.1.1'], 'a side that is no string is left out');
 });
 
 test('the lineage\'s claims decode as the wire gives them; any other answer is null, never no claim', () => {

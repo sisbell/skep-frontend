@@ -1,10 +1,11 @@
 // B-PORT — the page's one interface to the shell (the structure record §3.2;
 // client.md §4b.1's calls and §4b.2's events; FP-14, FP-15). Layer 0,
 // engine-bound only through its adapter. Every row of the generated `Bridge`
-// as a function: the calls (`CALLS`), the `publication` family's four among
-// them on one `publication` object, each sent under its dotted name, and the
-// two answers to a moment (`answer`, `cancel`); every event (`EVENTS`) as a
-// subscription; and the adapter beneath, handed to `boot` (S-14 (b)). State:
+// as a function: the calls (`CALLS`), the `publication` family's four and the
+// `merge` family's four among them, each family on one object (`publication`,
+// `merge`) and each row sent under its dotted name, and the two answers to a
+// moment (`answer`, `cancel`); every event (`EVENTS`) as a subscription; and
+// the adapter beneath, handed to `boot` (S-14 (b)). State:
 // the event subscribers and the session watchers alone — no copy of any
 // record. The port composes no frame, decodes no answer and refuses no call:
 // every answer is the adapter's `Outcome` handed up as it came, in the one
@@ -16,8 +17,8 @@
 // The event stream's own notices (`StreamNotice`) — its drop, and its reopen
 // after one, which the adapter alone can see — are told to the stream
 // watchers, the port's own shape and no event of the declarations.
-// The write calls, the `publication` family and the ceremonial rows are
-// declared here and called by no screen (S-35 (a)).
+// The write calls, the `publication` and `merge` families and the ceremonial
+// rows are declared here and called by no screen (S-35 (a)).
 // Types: the generated declarations in `./shapes.d.ts` (S-16 (a); FP-16),
 // which the checker holds the port's rows and its events to.
 
@@ -199,6 +200,17 @@ export const publication = Object.freeze({
   /** @type {Bridge['publication.cancel']} */
   cancel: (args) => call('publication.cancel', args),
 });
+/** the `merge` family, each row sent under its dotted name */
+export const merge = Object.freeze({
+  /** @type {Bridge['merge.compose']} */
+  compose: (args) => call('merge.compose', args),
+  /** @type {Bridge['merge.land']} */
+  land: (args) => call('merge.land', args),
+  /** @type {Bridge['merge.undo']} */
+  undo: (args) => call('merge.undo', args),
+  /** @type {Bridge['merge.withdraw']} */
+  withdraw: (args) => call('merge.withdraw', args),
+});
 /** @type {Bridge['upload']} */
 export const upload = (args) => call('upload', args);
 /** @type {Bridge['fetch']} */
@@ -228,6 +240,7 @@ export const cancel = (args) => call('cancel', args);
 const ROWS = {
   boards, session, close, keygen, fingerprint, claim, enroll, bind, recover, rotate, retire, handoff, accept, health, probe, op,
   'publication.open': publication.open, 'publication.count': publication.count, 'publication.confirm': publication.confirm, 'publication.cancel': publication.cancel,
+  'merge.compose': merge.compose, 'merge.land': merge.land, 'merge.undo': merge.undo, 'merge.withdraw': merge.withdraw,
   upload, fetch, restore, search, places, held, resolve, changes, answer, cancel,
 };
 /** the call names, in the generated `Bridge`'s order; the two answers to a moment, `answer` and `cancel`, stand apart */

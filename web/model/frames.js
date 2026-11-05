@@ -23,7 +23,9 @@
 // `doc_metadata` each carry the age of the address asked (`Age`): the
 // position of the commit that minted it and the board's testimony of when
 // that commit was made, the testimony's time and its source taken together
-// or not at all.
+// or not at all. `doc_metadata` carries beside them the draft base the board
+// records for the address asked and the merge marker beside the base
+// (`MergeMarker`), each null where the board records none.
 // Rules: FP-1, FP-2, FP-6, FP-16 (this module's test pins every frame to the
 // wire document's examples).
 
@@ -85,9 +87,25 @@ export const SIZE_REFUSALS = Object.freeze(['too_many_blocks', 'too_many_pairs',
  * @property {number | null} placed
  * @property {number | null} baseExtent
  * @property {string | null} source
+ * @property {string | null} base the draft base the board records for the address asked — the member, or the memberless
+ * document, the draft's next publication lands after (wire.md §Namespace, `doc_metadata`); null where it records none
+ * @property {number | null} baseCopied the content positions the draft's copy took of `base`; null where the board
+ * records no base
+ * @property {MergeMarker | null} merge the merge the draft carries, the marker beside its base; null where it carries none
  * @property {Age} age the age of the address asked — a version member its own mint, the trunk its creation (wire.md
  * §Namespace, `doc_metadata`)
  * @property {number} asOf
+ */
+
+/**
+ * @typedef {Object} MergeMarker — the merge a draft carries, the marker beside its base (wire.md §Namespace,
+ * `doc_metadata`'s `merge`): made by `markerOf` alone
+ * @property {string[]} sides the sides merged, by address; empty where the draft itself was the side
+ * @property {string} head the version the merge was composed on
+ * @property {number | null} headCopied that version's content count as read at the compose; null where the board
+ * serves none
+ * @property {number | null} at the position of the commit that put the marker on the draft; null where the board
+ * serves none
  */
 
 /**
@@ -364,18 +382,37 @@ export function decodeCompare(/** @type {unknown} */ answer) {
   return a.pairs.filter((p) => p.u1.subspace === '1' && p.u2.subspace === '1').map((p) => ({ d1: p.d1, d2: p.d2, u1: Number(p.u1.ordinal), u2: Number(p.u2.ordinal), width: Number(p.width) }));
 }
 
+/** a nat or a position as the wire spells it, a decimal string or a number; null where the board serves none */
+const num = (/** @type {unknown} */ v) => (v == null ? null : Number(v));
+
 /** `doc_metadata` */
 export function decodeDocMetadata(/** @type {unknown} */ answer) {
   const a = /** @type {Record<string, unknown>} */ (answer || {});
   if (a.resp !== 'doc_metadata') return null;
-  const num = (/** @type {unknown} */ v) => (v == null ? null : Number(v));
   /** @type {DocMeta} */
   const m = {
     doc: String(a.doc), published: !!a.published, owner: String(a.owner),
     birth: a.birth == null ? null : String(a.birth), birthExtent: num(a.birth_extent), placed: num(a.placed), baseExtent: num(a.base_extent),
-    source: a.source == null ? null : String(a.source), age: ageIn(a), asOf: Number(a.as_of),
+    source: a.source == null ? null : String(a.source),
+    base: a.base == null ? null : String(a.base), baseCopied: num(a.base_copied), merge: markerOf(a.merge),
+    age: ageIn(a), asOf: Number(a.as_of),
   };
   return m;
+}
+
+/**
+ * A `doc_metadata` answer's `merge` member as one `MergeMarker`: null where
+ * the draft carries no marker — the member null or absent — and where the
+ * member is no object naming its sides and its head, as the client's own
+ * reading of the marker leaves it; a side that is no string is left out.
+ * @param {unknown} v
+ * @returns {MergeMarker | null}
+ */
+function markerOf(v) {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  const m = /** @type {Record<string, unknown>} */ (v);
+  if (!Array.isArray(m.sides) || typeof m.head !== 'string') return null;
+  return { sides: m.sides.filter((s) => typeof s === 'string').map(String), head: m.head, headCopied: num(m.head_copied), at: num(m.at) };
 }
 
 /** `effective_owner` → {prefix, principal} or nulls together */
