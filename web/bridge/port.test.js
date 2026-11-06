@@ -1,10 +1,11 @@
 // B-PORT's test over the fake port (FP-15): the port's calls are the rows of
-// the generated `Bridge`, in its order, the `merge` family's four among them
-// beside the rows it held before; the `publication` and `merge` families go
-// out under their dotted names and `changes` under its own, each answer
+// the generated `Bridge`, in its order, the `merge` family's four,
+// `history.restore` and `held.show` among them beside the rows it held
+// before; the `publication`, `merge` and `history` families and `held.show`
+// go out under their dotted names and `changes` under its own, each answer
 // handed up as it came and a lost session's refusal told to the session
-// watchers; and a `publication` event reaches its own subscribers and
-// every-event ones.
+// watchers; and a `publication` event and an `another-window` event each
+// reach their own subscribers and every-event ones.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -32,6 +33,16 @@ const HELD = [
 ];
 /** the `merge` family's rows, in the generated `Bridge`'s order */
 const MERGE = ['merge.compose', 'merge.land', 'merge.undo', 'merge.withdraw'];
+/** the rows the editor's groundwork added (issue #410), each after the row it follows in the generated `Bridge`'s order */
+const ADDED = /** @type {const} */ ([['history.restore', 'merge.withdraw'], ['held.show', 'held']]);
+
+/** the calls as the port holds them now: the rows it held, the `merge` family after `publication.cancel`, and each added row after the row it follows */
+function expectedCalls() {
+  const after = HELD.indexOf('publication.cancel') + 1;
+  const calls = [...HELD.slice(0, after), ...MERGE, ...HELD.slice(after)];
+  for (const [row, follows] of ADDED) calls.splice(calls.indexOf(follows) + 1, 0, row);
+  return calls;
+}
 
 test('the calls are the generated Bridge\'s rows in its order, the two answers to a moment apart', () => {
   const rows = bridgeRows();
@@ -75,13 +86,43 @@ test('a publication row refused as from a session the shell does not hold is tol
   assert.ok('refused' in out && out.refused === refusal);
 });
 
-test('CALLS holds the merge family\'s four rows after the publication family\'s, and beside them exactly the twenty-eight it held (issue #395)', () => {
+test('CALLS holds the merge family\'s four rows after the publication family\'s, `history.restore` after them and `held.show` after `held`, and beside them exactly the twenty-eight it held (issues #395, #410)', () => {
   assert.equal(HELD.length, 28);
-  assert.equal(PORT.CALLS.length, 32);
-  const after = HELD.indexOf('publication.cancel') + 1;
-  assert.deepEqual(PORT.CALLS, [...HELD.slice(0, after), ...MERGE, ...HELD.slice(after)], 'the rows it held, none dropped and none added, the four after `publication.cancel` in the Bridge\'s order');
+  assert.equal(PORT.CALLS.length, 34, 'thirty-two before the editor\'s groundwork, and its two');
+  assert.deepEqual(PORT.CALLS, expectedCalls(), 'the rows it held, none dropped, the four after `publication.cancel`, `history.restore` after `merge.withdraw` and `held.show` after `held`, in the Bridge\'s order');
   assert.deepEqual(Object.keys(PORT.merge), ['compose', 'land', 'undo', 'withdraw']);
   assert.ok(Object.isFrozen(PORT.merge), 'frozen as `publication` is');
+  assert.deepEqual(Object.keys(PORT.history), ['restore'], 'the history family\'s one row');
+  assert.ok(Object.isFrozen(PORT.history), 'frozen as the other families are');
+  assert.equal(typeof PORT.heldShow, 'function', '`held.show` beside the `held` call');
+});
+
+test('history.restore and held.show go out under their dotted names, each answer handed up as it came (issue #410)', async () => {
+  const restore = { session: 's-1', draft: DRAFT, at: 9, as_of: 16 }, show = { session: 's-1' };
+  const restored = { result: { draft: DRAFT, at: 9, position: 17, as_of: 16, marker: null } };
+  const shown = { result: { shown: true } };
+  const fake = FAKE.create({
+    [FAKE.keyOf('history.restore', restore)]: restored,
+    [FAKE.keyOf('held.show', show)]: shown,
+  });
+  PORT.boot(fake);
+  assert.equal(await PORT.history.restore(restore), restored);
+  assert.equal(await PORT.heldShow(show), shown);
+  assert.deepEqual(fake.calls().map((c) => c.name), ['history.restore', 'held.show'], 'each sent under its dotted name');
+  assert.deepEqual(fake.unanswered, [], 'each went out with the arguments it was given');
+});
+
+test('a history.restore refused as from a session the shell does not hold is told to the session watchers, the refusal handed up unchanged (issue #410)', async () => {
+  const restore = { session: 's-4', draft: DRAFT, at: 9, as_of: 16 };
+  const refusal = { kind: 'shell', name: 'session_ended' };
+  const fake = FAKE.create({ [FAKE.keyOf('history.restore', restore)]: { refused: refusal } });
+  PORT.boot(fake);
+  /** @type {import('./port.js').SessionNotice[]} */
+  const told = [];
+  PORT.onSession((n) => told.push(n));
+  const out = await PORT.history.restore(restore);
+  assert.deepEqual(told, [{ lost: 's-4', refusal }]);
+  assert.ok('refused' in out && out.refused === refusal);
 });
 
 test('the merge family goes out under its dotted names, each answer handed up as it came (issue #395)', async () => {
@@ -143,4 +184,20 @@ test('a publication event reaches its own subscribers and every-event subscriber
   fake.fire('held', held);
   assert.deepEqual(heard, [sent]);
   assert.deepEqual(all, [{ name: 'publication', data: sent }, { name: 'held', data: held }]);
+});
+
+test('an another-window event is an event of the declarations: it reaches its own subscribers and every-event subscribers (issue #410)', () => {
+  const fake = FAKE.create({});
+  PORT.boot(fake);
+  /** @type {unknown[]} */
+  const heard = [];
+  /** @type {unknown[]} */
+  const all = [];
+  assert.ok(PORT.EVENTS.includes('another-window'), 'named among the events');
+  PORT.on('another-window', (d) => heard.push(d));
+  PORT.on('*', (e) => all.push(e));
+  const edge = { board: 'b-1', another_window: true };
+  fake.fire('another-window', edge);
+  assert.deepEqual(heard, [edge]);
+  assert.deepEqual(all, [{ name: 'another-window', data: edge }]);
 });

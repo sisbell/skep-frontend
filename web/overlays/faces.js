@@ -57,7 +57,19 @@
 // `range_not_present`, the `invalid` follow, `scan_busy`,
 // `endsets_too_large`, `too_many_blocks`, `too_many_pairs`,
 // `too_much_coverage`, the session's `no_key` (C-136 with this version's
-// limit), `unreachable`; at the one line's sign-in act the session's refusal
+// limit), `unreachable`; the editor's refusal names (B3; D6), each its
+// entry's words and no act, for the acts are the editor's screens' —
+// `out_of_bounds`, `empty_content` and `not_content_subspace` the one own-bug
+// entry (B3-S2), `arrangement_moved` the moved face, `held_full` the held
+// store's bound, `store_halted` the halt in one of two forms by the
+// refusal's `why` (the damaged file's, else the newer app's), `another_window`
+// the second window's line, `answers_lost` the hand-over's, keyed on the
+// refusal's name alone and its ⟨board⟩ and ⟨time⟩ the caller's to fill,
+// `write_in_bare_session` the keyless line, `history_busy`,
+// `history_reclaimed` (its ⟨floor⟩ the caller's to fill, a date), S6's
+// `slot_too_large`, S5's `source_not_registered` and `dangling_source`,
+// S12's `bad_target` and `original_not_resident`, and `published_target`
+// C-45; at the one line's sign-in act the session's refusal
 // — the boot's, or the re-acquire's of a session a restart lost — and a
 // death's arm (C-137, by the death's reason: `deathWords`, the words the
 // line's death arm says too), "signed out" the sign-out marker's alone and
@@ -312,16 +324,22 @@ function clauseFace(c, follow) {
 }
 
 /**
- * The words for a refusal, by its name. A `withheld` refusal is not among
- * them: its face names the document it withholds (`withheld`).
+ * The words for a refusal, by its name (see the head). A `withheld` refusal
+ * is not among them: its face names the document it withholds (`withheld`).
+ * The editor's names show their entries alone, no act: a token the entry
+ * carries that the refusal does not — the board's name, the time elapsed, the
+ * history's floor as a date — is the caller's to fill through `ctx`, and
+ * stands as the design writes it where none is handed in.
  * @param {Refusal} r
- * @param {{addr?: string}} [ctx]
+ * @param {{addr?: string, board?: string, time?: string, floor?: string}} [ctx] `addr` the document the act named; `board` the board's name as the line names it; `time` the time elapsed, in words; `floor` the history's floor, as a date
  * @returns {Face}
  */
 export function wordsFor(r, ctx = {}) {
   const name = r.name;
   const addr = ctx.addr || '';
   const f = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ v = {}) => ({ id, text: t(id, v), acts: /** @type {Face['acts']} */ ([]) });
+  /** the tokens an entry carries that its refusal does not, filled where the caller hands them in */
+  const given = /** @type {Record<string, string>} */ (Object.fromEntries(Object.entries({ board: ctx.board, time: ctx.time, floor: ctx.floor }).filter(([, v]) => typeof v === 'string')));
   switch (name) {
     case 'doc_not_registered': return f('B1.doc_not_registered', { address: addr });
     case 'not_a_link': return f('B1.not_a_link');
@@ -336,6 +354,22 @@ export function wordsFor(r, ctx = {}) {
     case 'busy': return f('C-138.busy');
     case 'unreachable': return f('F.daemon.unreachable');
     case 'no_adapter': return f('L.no-adapter');
+    // the editor's refusals (B3; D6), each its entry and no act
+    case 'out_of_bounds': case 'empty_content': case 'not_content_subspace': return f('B3.own-bug');
+    case 'arrangement_moved': return f('B3.moved');
+    case 'held_full': return f('B3.held_full.line', given);
+    case 'store_halted': return f(/** @type {{why?: unknown}} */ (r).why === 'damaged' ? 'B3.store_halted.damaged' : 'B3.store_halted.newer');
+    case 'another_window': return f('B3.another_window');
+    case 'answers_lost': return f('B3.answers_lost', given);
+    case 'write_in_bare_session': return f('B3.keyless');
+    case 'history_busy': return f('B3.history.busy');
+    case 'history_reclaimed': return f('B3.history.reclaimed', given);
+    case 'slot_too_large': return f('B3.slot_too_large');
+    case 'source_not_registered': return f('B3.source_not_registered', { address: addr });
+    case 'dangling_source': return f('B3.dangling_source');
+    case 'bad_target': return f('B3.bad_target');
+    case 'original_not_resident': return f('B3.original_not_resident');
+    case 'published_target': return f('C-45', { D: addr });
     default: return f('L.refused', { name });
   }
 }

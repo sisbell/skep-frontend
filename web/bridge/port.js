@@ -1,10 +1,12 @@
 // B-PORT — the page's one interface to the shell (the structure record §3.2;
 // client.md §4b.1's calls and §4b.2's events; FP-14, FP-15). Layer 0,
 // engine-bound only through its adapter. Every row of the generated `Bridge`
-// as a function: the calls (`CALLS`), the `publication` family's four and the
-// `merge` family's four among them, each family on one object (`publication`,
-// `merge`) and each row sent under its dotted name, and the two answers to a
-// moment (`answer`, `cancel`); every event (`EVENTS`) as a subscription; and
+// as a function: the calls (`CALLS`), the `publication` family's four, the
+// `merge` family's four and the `history` family's one among them, each
+// family on one object (`publication`, `merge`, `history`) and each row sent
+// under its dotted name, the `held.show` row beside the `held` call as
+// `heldShow`, and the two answers to a moment (`answer`, `cancel`); every
+// event (`EVENTS`) as a subscription; and
 // the adapter beneath, handed to `boot` (S-14 (b)). State:
 // the event subscribers and the session watchers alone — no copy of any
 // record. The port composes no frame, decodes no answer and refuses no call:
@@ -17,8 +19,9 @@
 // The event stream's own notices (`StreamNotice`) — its drop, and its reopen
 // after one, which the adapter alone can see — are told to the stream
 // watchers, the port's own shape and no event of the declarations.
-// The write calls, the `publication` and `merge` families and the ceremonial
-// rows are declared here and called by no screen (S-35 (a)).
+// The write calls, the `publication`, `merge` and `history` families,
+// `held.show` and the ceremonial rows are declared here and called by no
+// screen (S-35 (a)).
 // Types: the generated declarations in `./shapes.d.ts` (S-16 (a); FP-16),
 // which the checker holds the port's rows and its events to.
 
@@ -43,7 +46,7 @@
  */
 
 /** @type {Record<EventName, null>} every `EventName` of the generated declarations, the checker refusing one missed (FP-16) */
-const EVENT_ROWS = { mode: null, 'session-died': null, daemon: null, feed: null, index: null, moment: null, held: null, publication: null };
+const EVENT_ROWS = { mode: null, 'session-died': null, daemon: null, feed: null, index: null, moment: null, held: null, publication: null, 'another-window': null };
 /** the events, by name */
 export const EVENTS = Object.freeze(/** @type {EventName[]} */ (Object.keys(EVENT_ROWS)));
 
@@ -211,6 +214,11 @@ export const merge = Object.freeze({
   /** @type {Bridge['merge.withdraw']} */
   withdraw: (args) => call('merge.withdraw', args),
 });
+/** the `history` family, its one row sent under its dotted name */
+export const history = Object.freeze({
+  /** @type {Bridge['history.restore']} */
+  restore: (args) => call('history.restore', args),
+});
 /** @type {Bridge['upload']} */
 export const upload = (args) => call('upload', args);
 /** @type {Bridge['fetch']} */
@@ -223,6 +231,8 @@ export const search = (args) => call('search', args);
 export const places = (args) => call('places', args);
 /** @type {Bridge['held']} */
 export const held = (args) => call('held', args);
+/** the `held.show` row, sent under its dotted name @type {Bridge['held.show']} */
+export const heldShow = (args) => call('held.show', args);
 /** @type {Bridge['resolve']} */
 export const resolve = (args) => call('resolve', args);
 /** @type {Bridge['changes']} */
@@ -240,8 +250,8 @@ export const cancel = (args) => call('cancel', args);
 const ROWS = {
   boards, session, close, keygen, fingerprint, claim, enroll, bind, recover, rotate, retire, handoff, accept, health, probe, op,
   'publication.open': publication.open, 'publication.count': publication.count, 'publication.confirm': publication.confirm, 'publication.cancel': publication.cancel,
-  'merge.compose': merge.compose, 'merge.land': merge.land, 'merge.undo': merge.undo, 'merge.withdraw': merge.withdraw,
-  upload, fetch, restore, search, places, held, resolve, changes, answer, cancel,
+  'merge.compose': merge.compose, 'merge.land': merge.land, 'merge.undo': merge.undo, 'merge.withdraw': merge.withdraw, 'history.restore': history.restore,
+  upload, fetch, restore, search, places, held, 'held.show': heldShow, resolve, changes, answer, cancel,
 };
 /** the call names, in the generated `Bridge`'s order; the two answers to a moment, `answer` and `cancel`, stand apart */
 export const CALLS = Object.freeze(/** @type {CallName[]} */ (Object.keys(ROWS).filter((n) => n !== 'answer' && n !== 'cancel')));

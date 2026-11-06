@@ -31,7 +31,44 @@ test('the pinned strings are verbatim and their count is what the inventory give
   assert.equal(t('C-39', { owner: 'Acme' }), "an address inside Acme's withheld document; whether a link occupies it is withheld with it");
   assert.equal(t('C-67.pointer'), 'a published edition may exist — follow the edition claim');
   assert.ok(isPinned('C-136') && !isPinned('B1.invalid'));
-  assert.ok(pinned().length >= 30);
+  assert.equal(pinned().length, 39, 'the thirty-six the reader\'s lanes pinned, and the deletion face\'s three (issue #410)');
+});
+
+test('the deletion face\'s pinned lines are verbatim from the copy inventory — the edition arm, the draft arm and the draft face\'s audience phrase — and the removal\'s reach statement, which the inventory PROPOSES and pins no words for, is B3\'s DRAFT (issue #410)', () => {
+  assert.equal(t('C-48'), 'still here — public history: the version you removed it from remains readable, forever');
+  assert.equal(t('C-49'), 'still here — for as long as this board retains it; below the reclaim floor it resolves nowhere here, unless another document still windows it');
+  assert.equal(t('C-50'), "visible to this draft's readers,");
+  assert.ok(isPinned('C-48') && isPinned('C-49') && isPinned('C-50'));
+  assert.ok(!('C-167' in STRINGS) && STRINGS['B3.C-167'].cls === 'DRAFT' && STRINGS['B3.C-167'].source === 'designs/B3-editor.md', 'C-167 carries no pinned string: entered as B3 renders it, under the screen\'s prefix as B1.C-72 is');
+});
+
+test('every line of the editor\'s is PINNED from the copy inventory or DRAFT from its design document — B3 or D6 — with its source and its screen, and none is the lane\'s own (issue #410)', () => {
+  const editor = Object.entries(STRINGS).filter(([id]) => id.startsWith('B3.') || id.startsWith('D6.') || ['C-48', 'C-49', 'C-50'].includes(id));
+  assert.ok(editor.length >= 200, `the editor's lines: ${editor.length}`);
+  for (const [id, e] of editor) {
+    assert.ok(!e.lane, id + ' is no lane string: the page invents no wording');
+    if (e.cls === 'PINNED') assert.equal(e.source, 'ux/copy.md', id);
+    else {
+      assert.equal(e.cls, 'DRAFT', id);
+      assert.ok(id.startsWith('B3.') ? e.source === 'designs/B3-editor.md' : e.source === 'designs/D6-burst-machine.md', id + ' names the design document that drafts it');
+      assert.ok(e.screen && /B3-S\d+/.test(e.screen), id + ' names its screen');
+    }
+  }
+  // the survey's U8 list, each by the id that enters it: the corner's three words, Mod+S's answer, the moved face's hands,
+  // the refused run's statements, the island, held_full's two lines, unwritable's two arms, head_unreadable's, the halt's two
+  // forms and its act, the second window's, the fate clause, durability's, the keyless and stopped lines, answers_lost's, the
+  // undo's constant sentence, the paste's and quote's faces, S6's, S7's, S9's, S10's, S11's, S12's, S13's
+  for (const id of ['B3.kept', 'B3.not-yet-kept', 'B3.not-kept', 'B3.save.kept', 'B3.hand.device', 'B3.hand.unsigned', 'B3.hand.lost', 'B3.refused.discard', 'B3.own-bug',
+    'B3.island', 'B3.held_full.line', 'B3.held_full.caret', 'B3.unwritable.full', 'B3.unwritable.read_only', 'B3.head_unreadable', 'B3.store_halted.newer', 'B3.store_halted.damaged', 'B3.show-file',
+    'B3.another_window', 'B3.daemon.fate', 'B3.durability', 'B3.keyless', 'B3.stopped.act', 'B3.answers_lost', 'B3.undo.constant', 'B3.undo.empty', 'B3.paste.withheld', 'B3.source_not_registered',
+    'B3.dangling_source', 'B3.link.kept-in-set', 'B3.slot_too_large', 'B3.history.busy', 'B3.history.reclaimed', 'B3.history.row', 'B3.capture.kept-in', 'B3.capture.held', 'B3.standing.behind',
+    'B3.standing.superseded-by', 'B3.standing.merged-into', 'B3.publish.may-stand', 'B3.merge.moved', 'B3.merge.head-published', 'B3.merge.line.merged', 'B3.merge.line.none', 'B3.card.highlight',
+    'B3.bad_target', 'B3.original_not_resident', 'B3.caret.enter', 'B3.caret.enter.paste', 'B3.caret.cut']) {
+    assert.ok(id in STRINGS, id + ' entered');
+  }
+  assert.equal(t('B3.kept'), 'kept');
+  assert.equal(t('B3.own-bug'), 'a fault in this client, not a change to your text — nothing was written; your words are held here');
+  assert.equal(t('B3.answers_lost', { board: 'board 1', time: '2 minutes' }), 'board 1 has not answered this change for 2 minutes — it may have reached the board: send again checks, and sends it only if it did not');
 });
 
 test('a token left unfilled stays as the design writes it', () => {

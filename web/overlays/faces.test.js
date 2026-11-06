@@ -22,8 +22,10 @@
 // left over, drawn by its kind, its refusal drawn inside it, only its own
 // cancel cancelling, its walk's next moment opening as the last was left,
 // one raised over a surface of the reader's opening folded, an unfold an act;
-// and where no board is held, why as one entry and the no-board face with
-// what still works (FP-35).
+// where no board is held, why as one entry and the no-board face with
+// what still works (FP-35); and the editor's refusal names each mapped to
+// their entry's words with no act, a name no document drafts words for kept
+// on the generic refusal line.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as FACES from './faces.js';
@@ -340,6 +342,43 @@ test('a withheld run\'s face reads the claims on its origin before it shows, whe
   assert.deepEqual(leaps, [[E4, true]], 'its act the LEAP to the edition the claim names');
   HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
+});
+
+test('each of the editor\'s refusal names maps to its entry\'s words — the three own-bug tokens to the one own-bug entry, the halt to one of two forms by its `why`, a token the refusal does not carry filled from the caller and else left as the design writes it — with no act; an unlisted name keeps the generic refusal line (issue #410; B3; D6)', () => {
+  const board = (/** @type {string} */ name, /** @type {object} */ [more] = [{}]) => /** @type {Refusal} */ ({ kind: 'refused', name, status: 200, code: name, detail: null, op: 'insert', site: {}, body: null, ...more });
+  const shell = (/** @type {string} */ name, /** @type {object} */ [more] = [{}]) => /** @type {Refusal} */ ({ kind: 'shell', name, ...more });
+  /** @type {Array<[Refusal, string, Record<string, string>?]>} each refusal, the id its face shows, and the values its words take */
+  const cases = [
+    [board('out_of_bounds'), 'B3.own-bug'], [board('empty_content'), 'B3.own-bug'], [board('not_content_subspace'), 'B3.own-bug'],
+    [board('arrangement_moved', [{ site: { as_of: 41, current: 44 } }]), 'B3.moved'],
+    [shell('held_full'), 'B3.held_full.line', { board: 'board 1' }],
+    [shell('store_halted', [{ why: 'newer' }]), 'B3.store_halted.newer'], [shell('store_halted', [{ why: 'unknown_member' }]), 'B3.store_halted.newer'], [shell('store_halted', [{ why: 'damaged' }]), 'B3.store_halted.damaged'],
+    [shell('another_window'), 'B3.another_window'],
+    [shell('answers_lost', [{ last: 'unreachable', elapsed_ms: 120480 }]), 'B3.answers_lost', { board: 'board 1', time: '2 minutes' }],
+    [board('write_in_bare_session'), 'B3.keyless'],
+    [board('history_busy'), 'B3.history.busy'],
+    [board('history_reclaimed', [{ body: { error: 'history_reclaimed', floor: 2048 } }]), 'B3.history.reclaimed', { floor: '12 March 2026' }],
+    [board('slot_too_large'), 'B3.slot_too_large'],
+    [board('source_not_registered'), 'B3.source_not_registered', { address: '1.0.2.0.9' }],
+    [board('dangling_source'), 'B3.dangling_source'],
+    [board('bad_target'), 'B3.bad_target'], [board('original_not_resident'), 'B3.original_not_resident'],
+    [board('published_target'), 'C-45', { D: '1.0.2.0.9' }],
+  ];
+  for (const [r, id, values] of cases) {
+    const face = FACES.wordsFor(r, { addr: '1.0.2.0.9', board: 'board 1', time: '2 minutes', floor: '12 March 2026' });
+    assert.deepEqual([face.id, face.text, face.acts], [id, t(id, values || {}), []], `${r.name}: its entry's words, filled from the caller, and no act`);
+    assert.ok(!face.text.includes('⟨'), `${r.name}: no token left unfilled where the caller fills them: ${face.text}`);
+  }
+  const bare = FACES.wordsFor(shell('answers_lost', [{ last: 'unreachable', elapsed_ms: 120480 }]));
+  assert.equal(bare.text, STRINGS['B3.answers_lost'].text, 'a token the refusal does not carry and no caller fills stands as the design writes it');
+  assert.equal(FACES.wordsFor(board('published_target')).text, t('C-45', { D: '' }), 'C-45 at a target the act did not name');
+  for (const name of ['empty_source', 'frame_too_large', 'attest_not_composed', 'self_supersession', 'ill_formed_successor', 'head_unreadable', 'session_died', 'nothing_to_undo', 'no_merge', 'not_followed']) {
+    assert.deepEqual(FACES.wordsFor(shell(name)), { id: 'L.refused', text: t('L.refused', { name }), acts: [] }, `${name}: no entry drafted for it — the generic refusal line`);
+  }
+  // the editor's faces shown at an act's site are named by the refusal, carry its entry and offer nothing
+  FACES.showRefusal(null, board('arrangement_moved'), '1.0.2.0.9');
+  assert.deepEqual([faceShown()?.id, faceShown()?.words, faceShown()?.acts], ['face:arrangement_moved', ['B3.moved', t('B3.moved')], []]);
+  HOST.dismiss();
 });
 
 test('a jump reading says so in its own words, as a face is heard, and offers no act; it ends where it still stands, and an overlay shown since stands on (issue #136)', () => {

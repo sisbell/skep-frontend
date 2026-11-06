@@ -35,7 +35,7 @@
 
 export const DEFAULT_PROVIDER = 'http://127.0.0.1:8742';
 /** @type {Record<EventName, null>} every `EventName` of the generated declarations, the checker refusing one missed (FP-16) */
-const EVENT_ROWS = { mode: null, 'session-died': null, daemon: null, feed: null, index: null, moment: null, held: null, publication: null };
+const EVENT_ROWS = { mode: null, 'session-died': null, daemon: null, feed: null, index: null, moment: null, held: null, publication: null, 'another-window': null };
 const EVENT_NAMES = /** @type {EventName[]} */ (Object.keys(EVENT_ROWS));
 
 /**
