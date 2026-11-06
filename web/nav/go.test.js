@@ -13,8 +13,8 @@
 // standing below a card the reader opened, Enter at a withheld run and a
 // tail pressed, the box's version — a return restoring the versions its
 // entry kept, the member a newer version's arrival found a bare address's
-// text was among them, by the position its row names — a change of the
-// page's class, where no
+// text was among them, by the position its row names, and the version a
+// landing's "read side by side" opens — a change of the page's class, where no
 // board is held, the passage Back lands on — a return finding the words its
 // entry's view read in the text it reaches, and the arrival it keeps read
 // again there, one whose bytes were never named kept only on the text it was
@@ -792,7 +792,7 @@ test('a LEAP carrying a passage the text landed in holds in two stretches marks 
   const piece = (/** @type {number} */ k) => t('L.piece', { k, n: 2 }), words = [piece(1), t('L.piece.all'), t('L.piece.order')].join(' · ');
   assert.deepEqual([GO.landing()?.said?.state, GO.landingLine(), GO.described()], ['pieces', words, { addr: FAR, pos: 25, words, runs: [{ pos: 2, width: 5, words: piece(2) }, { pos: 25, width: 5, words: piece(1) }] }],
     'all of it, its second half first: "piece 1 of 2 · all of the passage · in another order", the description of the item landed on, and "piece 2 of 2" the run before it in the text');
-  assert.deepEqual(GO.landing()?.beside, { a: D, b: FAR, held: { posA: 1, widthA: 10, posB: null } }, 'the first edition holds it whole: read side by side with it, set level with its counterpart here');
+  assert.deepEqual(GO.landing()?.beside, { a: D, held: { posA: 1, widthA: 10, ids: [{ prefix: D + '.0.1', ordinal: 1, width: 10 }] } }, 'the first edition holds it whole: read side by side with it, the passage held there by its bytes, set level with its counterpart here');
   for (let i = 0; i < 50 && GO.landing()?.version == null; i++) await new Promise((r) => setTimeout(r, 0));
   assert.equal(GO.landing()?.version, 1, 'the latest member holding it in one piece, other than the text landed in: FAR.1');
   const at = CAM.view();
@@ -814,7 +814,7 @@ test('a LEAP carrying a passage the text landed in holds only part of keeps its 
     const words = t('L.held.part', { subject: t(selected ? 'L.held.selected' : 'L.held.reading'), where: t('L.held.current', { D: FAR }) });
     assert.deepEqual([GO.landing()?.said?.state, GO.landing()?.said?.places, GO.landingLine()], ['part', 1, words], `"only part of ${selected ? 'what you selected' : 'the text you were reading'} is in ⟨D⟩'s current text", no places at one place`);
     assert.ok(!/missing|removed|deleted|compare/.test(words), `never "missing", "removed", "deleted" or "compare": ${words}`);
-    assert.deepEqual(GO.landing()?.beside, { a: D, b: FAR, held: { posA: 1, widthA: 12, posB: null } }, 'the first edition holds it whole: read side by side with it');
+    assert.deepEqual(GO.landing()?.beside, { a: D, held: { posA: 1, widthA: 12, ids: [{ prefix: D + '.0.1', ordinal: 1, width: 12 }] } }, 'the first edition holds it whole: read side by side with it, the passage held there by its bytes');
     for (let i = 0; i < 50 && fake.asked.slice(-1)[0] !== FAKE.keyOf('op', { frame: carried(PARTIAL, FAR1, FAR_EXTENT) }); i++) await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
     assert.equal(GO.landing()?.version, null, 'FAR\'s first member holds none of it: no version offered');
@@ -2956,6 +2956,31 @@ test('a newer version\'s arrival takes its member\'s position from its feed row 
   GO.arrived(FAR + '.3', readAt + 1);
   assert.deepEqual([GO.shownIn(FAR), e.addr, e.reading?.addr], [FAR2, FAR2, FAR2], 'published at 2, after it: version 2\'s — the box pinned on it and the entry re-taking it');
   await run(GO.leapTo(FAR));
+  assert.deepEqual(fake.unanswered, []);
+});
+
+/** FAR's image as MOVED's `compare` answers it — D's 6th to 10th bytes at its 2nd, D's 1st to 5th at its 25th, its own around them — so the arrival a carry of MOVED left is read again by identity where FAR holds it */
+const movedInto = () => REC.takeImage(FAR, 1, [{ iStart: FAR + '.0.1.1', width: 1 }, { iStart: D + '.0.1.6', width: 5 }, { iStart: FAR + '.0.1.7', width: 18 }, { iStart: D + '.0.1.1', width: 5 }, { iStart: FAR + '.0.1.30', width: FAR_EXTENT - 29 }]);
+
+test('"read side by side" at a landing opens the version its box shows as the act is made, never the address the landing was made at: a carry landing at FAR\'s bare address, version 3 arriving while it stands, or while the reader is away and Back reads it again — the scene\'s entry naming version 2, the member read there, beside the first edition (FP-22)', async () => {
+  /** the scene the landing's act opens, as the trail entry it takes at the act names it: its two documents */
+  const opens = () => { GO.landingAct('beside'); const o = TRAIL.current()?.scene; return o ? [o.a, o.b] : null; };
+  for (const away of [false, true]) {
+    await farAfresh();
+    movedInto();
+    await run(GO.leapTo(D));
+    await run(GO.leapTo(FAR, { how: 'leap', carry: MOVED }));
+    for (let i = 0; i < 50 && GO.landing()?.version == null; i++) await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual([GO.landing()?.addr, GO.landing()?.said?.state, !!GO.landing()?.beside], [FAR, 'pieces', true], `${away ? 'away' : 'standing'}: landed at FAR in pieces, "read side by side" offered`);
+    if (away) await run(GO.leapTo(D));
+    publishFar3();
+    if (away) await run(GO.back());
+    assert.deepEqual([GO.shownIn(FAR), GO.landing()?.addr, !!GO.landing()?.beside], [FAR2, away ? FAR2 : FAR, true], `${away ? 'Back' : 'standing'}: FAR's box on version 2, the offer standing`);
+    assert.deepEqual(opens(), [D, FAR2], `${away ? 'Back' : 'standing'}: the scene beside the first edition opens on version 2, the text the passage is outlined in — never the bare address`);
+    // no scene to show here: its opening gives its entry back
+    await new Promise((r) => setTimeout(r, 0));
+  }
+  await farAgain();
   assert.deepEqual(fake.unanswered, []);
 });
 

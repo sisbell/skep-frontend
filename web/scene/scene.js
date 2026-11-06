@@ -15,17 +15,19 @@
 // scrolling on its own (R3); the places unmoved, nothing written; the dialog
 // named as it attaches by ST's `L.scene-label`. It sets the two ends level
 // (§2.5): the passage the opener holds — a link's span, a selection, the
-// versions list's held passage, provenance's span — at its first stretch of
-// shared identity, and its counterpart in the other document, or the far end
-// a link names (`levels`); each pane's matched line brought to one height,
-// LEVEL_AT px below the panes' tops or higher where one stands above it,
-// and each article given a pane's height of room below its end so a passage
-// near the end can be brought there too (`level`); the re-level act (K-62)
-// restores that. Where the far end of the link it is opened from names pane
-// B's document whole (`Held.wholeB`), nothing of that document is set level
-// with the near passage: pane B opens at its start, where its follow lands,
-// the near passage set as for any link, and the re-level returns both there
-// (FP-30).
+// versions list's held passage, provenance's span, a landing's passage —
+// where pane A's text as the scene reads it places the bytes the opener
+// names it by, else at the positions it names (`placedHeld`), at its first
+// stretch of shared identity, and its counterpart in the other document, or
+// the far end a link names (`levels`); each pane's matched line brought to
+// one height, LEVEL_AT px below the panes' tops or higher where one stands
+// above it, and each article given a pane's height of room below its end so
+// a passage near the end can be brought there too (`level`); the re-level
+// act (K-62) restores that. Where the far end of the link it is opened from
+// names pane B's document whole (`Held.wholeB`), nothing of that document is
+// set level with the near passage: pane B opens at its start, where its
+// follow lands, the near passage set as for any link, and the re-level
+// returns both there (FP-30).
 // Between the panes links are drawn as lines from the set LK gave at either
 // pane's document as the pane was set (§2.5; `linesBetween`), each link once
 // per pair of its ends (P44), each end where the link's bytes stood in its
@@ -344,8 +346,9 @@ import { esc, byteOffsets } from '../util.js';
 
 /**
  * @typedef {Object} Held — what an opener holds as it opens the scene
- * @property {number | null} [posA] the first position of the passage held in the first document
+ * @property {number | null} [posA] the first position of the passage held in the first document, as the opener read it
  * @property {number | null} [widthA] its positions; absent or null, the position alone
+ * @property {ISpan[]} [ids] the passage held by its bytes' identity, for an opener that holds it past the read it was measured on (N-GO's landing): the scene places them in pane A's text as it reads it, in the place of `posA` and `widthA` wherever that text holds any of them (`placedHeld`)
  * @property {number | null} [posB] the position in the second document the opener names — where a link's far end stands in its text now (LK's `farPos`) — where it names one
  * @property {boolean} [wholeB] the far end of the link the scene is opened from names the second document whole: nothing of it is set level with the passage held, and pane B opens at its start (see the head)
  */
@@ -1384,19 +1387,40 @@ export async function open(a, b, held = {}, as = {}) {
 
 /**
  * A scene on two panes as it opens (`open`, `reopen`): the ends `levels`
- * sets from the runs and the passage held, whether the far end names pane B's
- * document whole, the near passage's positions, and the stop at its first
- * passage, none measured yet.
+ * sets from the runs and the passage held as pane A's text holds it
+ * (`placedHeld`), whether the far end names pane B's document whole, the
+ * near passage's positions, and the stop at its first passage, none measured
+ * yet.
  * @param {Pane} pa
  * @param {Pane} pb
  * @param {ComparePair[]} pairs
  * @param {Held} held
  * @returns {Scene}
  */
-const sceneOf = (pa, pb, pairs, held) => ({
-  a: pa, b: pb, pairs, level: levels(pairs, held), whole: !!held.wholeB, widthA: Math.max(1, held.widthA ?? 1),
-  bands: [], lines: [], strokes: [], listing: null, relist: null, shared: [], next: 0, at: null, told: false, stepped: null, returned: null, size: '', updating: 0, waiting: [],
-});
+function sceneOf(pa, pb, pairs, held) {
+  const h = placedHeld(pa, held);
+  return {
+    a: pa, b: pb, pairs, level: levels(pairs, h), whole: !!h.wholeB, widthA: Math.max(1, h.widthA ?? 1),
+    bands: [], lines: [], strokes: [], listing: null, relist: null, shared: [], next: 0, at: null, told: false, stepped: null, returned: null, size: '', updating: 0, waiting: [],
+  };
+}
+
+/**
+ * The passage an opener holds as the text pane A is set with holds it (see
+ * the head): where the opener names its bytes (`Held.ids`), from the first
+ * stretch that text's image places them in to the end of the last (M-REC's
+ * `placedIn`); at the positions the opener names where it names none, or the
+ * image places none of them.
+ * @param {Pane} P pane A
+ * @param {Held} held
+ * @returns {Held}
+ */
+function placedHeld(P, held) {
+  const at = held.ids && held.ids.length ? REC.placedIn(P.d.image, held.ids) : [];
+  if (!at.length) return held;
+  const first = at[0], last = at[at.length - 1];
+  return { ...held, posA: first.pos, widthA: last.pos + last.width - first.pos };
+}
 
 /**
  * The bands a whole-document opening shows without (see the head): the two

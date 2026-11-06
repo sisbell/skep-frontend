@@ -69,9 +69,12 @@
 // its count being read, recorded again by what it stood for; answered all,
 // part, none, refused or with no text to read, the focus kept and its words
 // FP-21's; an act on it waiting for the answer, made, abandoned, or dropped
-// once the reader moved on (FP-20, FP-25, FP-34); and a stroke's list kept by
+// once the reader moved on (FP-20, FP-25, FP-34); a stroke's list kept by
 // its stroke's key as the reader leaves the scene and carried back by its
-// reopening (FP-36).
+// reopening (FP-36); and a passage the opener names by its bytes set level
+// where pane A's text, as the scene reads it, places them — a landing's "read
+// side by side" so setting its passage level however its source or the far
+// text was set since the landing (FP-21).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -1751,4 +1754,106 @@ test('the scene as the reader leaves it keeps a stroke\'s list standing, by its 
     assert.deepEqual([SCENE.isOpen(), HOST.currentState(), p.said.slice(told).includes(t('L.scene.stroke.gone'))], [true, null, true], 'reopened: no stroke bears its key, so no list stands, and its gone line is said');
     SCENE.close();
   } finally { Object.assign(script, { [FAKE.keyOf('op', { frame: BOTH })]: was }); }
+}));
+
+// ---- a passage the opener names by its bytes ---------------------------------------------------------------------------
+
+test('a passage the opener names by its bytes is set level where pane A\'s text, as the scene reads it, places them, whatever positions the opener names with them; where that text places none of them, at those positions', () => onPage(async () => {
+  const key = FAKE.keyOf('op', { frame: BOTH }), was = script[key], unanswered = fake.unanswered.length;
+  Object.assign(script, compared(A, A_TEXT, B, B_TEXT, [[14, 14, 11]]));
+  try {
+    await SCENE.open(A, B, { posA: 1, widthA: 11, ids: own(A, 14, 11) });
+    assert.deepEqual(SCENE.pairs()?.level, { a: 14, b: 14 }, 'its bytes at pane A\'s 14, level with their counterpart — never the 1 the opener named');
+    SCENE.close();
+    await SCENE.open(A, B, { posA: 1, widthA: 11, ids: own(B, 14, 11) });
+    assert.deepEqual(SCENE.pairs()?.level, { a: 1, b: null }, 'bytes pane A holds none of: the positions named, which share nothing');
+  } finally { Object.assign(script, { [key]: was }); }
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+/** an image's runs as `image` answers them, each `[the document whose I-space it lies in, ordinal, width]` */
+const wireImage = (/** @type {Array<[string, number, number]>} */ runs) => runs.map(([doc, ordinal, width]) => ({ i_start: `${doc}.0.1.${ordinal}`, width: String(width) }));
+/** a paragraph minted before a text by an edit */
+const LEAD = 'A new lead.\n\n';
+/** bytes an edit minted, in a document of their own */
+const MINTED = '1.0.1.0.99';
+
+/** a carried passage's source and the text it lands in: the source's "Its passage", eleven bytes from its 14th, which the landing text holds in two pieces — its first four at the landing's 14th, its last seven at its 22nd, a word minted between them */
+const SRC = '1.0.1.0.61', DST = '1.0.1.0.62', CARRIED = { addr: SRC, pos: 14, width: 11 };
+const SRC_TEXT = 'The source.\n\nIts passage stands here.', DST_TEXT = 'The origin.\n\nIts new passage stands here.';
+Object.assign(script, reads(SRC, SRC_TEXT, { published: false }), reads(DST, DST_TEXT, { published: false, image: wireImage([[DST, 1, 13], [SRC, 14, 4], [DST, 14, 4], [SRC, 18, 7], [DST, 18, 13]]) }), {
+  // the carry's `compare` (N-GO's `heldIn`): the passage against the landing text whole
+  [FAKE.keyOf('op', { frame: F.compare([{ doc: SRC, spans: [{ ordinal: 14, positions: 11 }] }], [{ doc: DST, spans: [{ ordinal: 1, positions: DST_TEXT.length }] }]) })]: {
+    result: { as_of: 1, resp: 'compare', pairs: [[14, 14, 4], [18, 22, 7]].map(([u1, u2, width]) => ({ d1: SRC, d2: DST, u1: { ordinal: String(u1), subspace: '1' }, u2: { ordinal: String(u2), subspace: '1' }, width: String(width) })) },
+  },
+});
+
+test('"read side by side" at a carried passage\'s landing sets the passage level where its source holds its bytes as the scene reads that text — the source set again with a paragraph before the passage while the landing stands — never at the positions the landing read it at, which other words hold now (FP-21)', () => onPage(async (p) => {
+  const unanswered = fake.unanswered.length;
+  await onTrail(p);
+  const at = GO.leapTo(SRC); await flown(); await at;
+  const leap = GO.leapTo(DST, { how: 'leap', carry: CARRIED }); await flown(); await leap;
+  assert.deepEqual([GO.arrivalMark()?.runs, GO.landing()?.said?.state, !!GO.landing()?.beside], [[{ pos: 14, width: 4 }, { pos: 22, width: 7 }], 'pieces', true], 'landed in two pieces, at piece 1, offering "read side by side"');
+  const k = LEAD.length;
+  REC.invalidate(SRC);
+  Object.assign(script, reads(SRC, LEAD + SRC_TEXT, { published: false, image: wireImage([[MINTED, 1, k], [SRC, 1, SRC_TEXT.length]]) }), compared(SRC, LEAD + SRC_TEXT, DST, DST_TEXT, [[14 + k, 14, 4], [18 + k, 22, 7]]));
+  GO.landingAct('beside'); await flown();
+  assert.deepEqual([SCENE.isOpen(), SCENE.panes()?.a.src, SCENE.pairs()?.level], [true, SRC, { a: 14 + k, b: 14 }], 'pane A the source as it reads now, the passage at its bytes there, level with piece 1');
+  GO.closeScene(); await flown();
+  GO.endArrival();
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+/** a citation's near document, quoting the far end's passage whole — the far document's own "Its passage", eleven bytes from its 14th — and the far document, which holds that passage in two pieces, a word minted between them */
+const QUOTING = '1.0.1.0.63', QUOTED = '1.0.1.0.64', QUOTE_LINK = QUOTING + '.0.2.1';
+const QUOTING_TEXT = 'The near.\n\nIts passage, quoted.', QUOTED_TEXT = 'The origin.\n\nIts new passage stands here.';
+Object.assign(script, reads(QUOTING, QUOTING_TEXT, { published: false, image: wireImage([[QUOTING, 1, 11], [QUOTED, 14, 11], [QUOTING, 12, 9]]) }), reads(QUOTED, QUOTED_TEXT, { published: false, image: wireImage([[QUOTED, 1, 17], [QUOTED, 38, 4], [QUOTED, 18, 20]]) }), {
+  [FAKE.keyOf('op', { frame: F.project(QUOTE_LINK, 2, QUOTED) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.14', width: '0.4' }, { start: '1.22', width: '0.7' }] } },
+});
+
+/**
+ * The far text set again in one step, as a refresh sets it (M-REC's `setAgain`), with `n` paragraphs minted before it — the
+ * far end's two pieces and its projection moved with it — and the scene's `compare` of the near text against it.
+ * @param {number} n
+ * @returns {number} the positions the paragraphs take
+ */
+function quotedLed(n) {
+  const lead = LEAD.repeat(n), text = lead + QUOTED_TEXT, k = lead.length;
+  REC.setAgain(QUOTED, {
+    spans: [{ subspace: 1, ordinal: 1, positions: text.length }],
+    text: { runs: [{ pos: 1, width: text.length, kind: 'content', text, ref: null, origin: null }], asOf: 9 },
+    image: { from: 1, runs: [{ iStart: MINTED + '.0.1.1', width: k }, { iStart: QUOTED + '.0.1.1', width: 17 }, { iStart: QUOTED + '.0.1.38', width: 4 }, { iStart: QUOTED + '.0.1.18', width: 20 }] },
+    projections: [{ link: QUOTE_LINK, slot: 2, addr: QUOTED, runs: [{ pos: 14 + k, width: 4 }, { pos: 22 + k, width: 7 }] }],
+  });
+  Object.assign(script, compared(QUOTING, QUOTING_TEXT, QUOTED, text, [[12, 14 + k, 4], [16, 22 + k, 7]]));
+  return k;
+}
+
+test('"read side by side" at a follow\'s landing sets the quotation level with piece 1 where the far text holds it as the scene reads it — the far text set again with a paragraph before it under the standing landing, and again while the reader was away and Back — never at the run the landing stood at when it was made (FP-21)', () => onPage(async (p) => {
+  const unanswered = fake.unanswered.length;
+  await onTrail(p);
+  const at = GO.leapTo(QUOTING); await flown(); await at;
+  REC.takeLinks(QUOTING, [QUOTE_LINK]);
+  REC.takeLink({ addr: QUOTE_LINK, from: [passage(QUOTING, 1, 3)], to: [passage(QUOTED, 14, 11)], type: CITE, age: { at: null, time: null, from: null } });
+  const s = /** @type {import('../links/links.js').Shown} */ (LK.shown(QUOTING).find((x) => x.link.addr === QUOTE_LINK));
+  const following = GO.follow(s); await flown(); await following;
+  assert.deepEqual([GO.arrivalMark()?.runs, GO.landing()?.pos, GO.landing()?.said?.state, !!GO.landing()?.beside], [[{ pos: 14, width: 4 }, { pos: 22, width: 7 }], 14, 'pieces', true], 'the far end landed in two pieces, at piece 1, offering "read side by side"');
+  /** the scene the landing's act opens: the two ends it sets level, then its own end, a Back onto the landing */
+  const opened = async () => {
+    GO.landingAct('beside'); await flown();
+    const level = SCENE.isOpen() ? SCENE.pairs()?.level : null;
+    GO.closeScene(); await flown();
+    return level;
+  };
+  let k = quotedLed(1);
+  GO.recheck();
+  assert.equal(GO.arrivalMark()?.pos, 14 + k, 'the standing landing placed again by its bytes');
+  assert.deepEqual(await opened(), { a: 12, b: 14 + k }, 'set again under the standing landing: the quotation level with piece 1 where the far text holds it now');
+  const away = GO.leapTo(QUOTING); await flown(); await away;
+  k = quotedLed(2);
+  const back = GO.back(); await flown(); await back;
+  assert.equal(GO.arrivalMark()?.pos, 14 + k, 'Back reads the landing again from the far text');
+  assert.deepEqual(await opened(), { a: 12, b: 14 + k }, 'set again while the reader was away: level with piece 1 where it stands now');
+  GO.endArrival();
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
 }));

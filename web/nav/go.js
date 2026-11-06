@@ -104,15 +104,16 @@
 // run the line naming the passage by what it was to the reader, in several
 // runs every run labelled (BM-HELD's `piecesIn`, `labelOf`) and the line the
 // label of the run the landing stands at, the line offering the scene with
-// where the passage came from where that text holds it whole and, at a
-// published landing, the latest member holding it whole once its reads find
-// one (`offerVersion`), a version move; none, the dead end's face — a
-// followed passage's offering that version move in the line's place;
-// couldn't tell — a read refused by a name that says nothing of the
-// document, or a text the page could not read — the landing unmarked at the
-// place as asked, its line saying it could not tell and why, keyed on the
-// refusal, and offering "try again" where a retry may tell, which reads again
-// and lands from the answer with no trail move (`againCarried`,
+// where the passage came from where that text holds it whole — the passage
+// held there by its bytes, beside the version the box shows as it is asked
+// (`landingAct`) — and, at a published landing, the latest member holding it
+// whole once its reads find one (`offerVersion`), a version move; none, the
+// dead end's face — a followed passage's offering that version move in the
+// line's place; couldn't tell — a read refused by a name that says nothing
+// of the document, or a text the page could not read — the landing unmarked
+// at the place as asked, its line saying it could not tell and why, keyed on
+// the refusal, and offering "try again" where a retry may tell, which reads
+// again and lands from the answer with no trail move (`againCarried`,
 // `againVersion`). The walk's element takes the line, or the dead end's or
 // the withheld document's words, as its description, and every item holding
 // another run that run's label (`described`), so the mirror says all four; a
@@ -422,7 +423,7 @@ import { esc } from '../util.js';
  * @property {number} current the run it stands at, an index into `pieces.runs`; 0 where no pieces stand
  * @property {boolean} floating the text holds none of the passage: the dead end's face says so
  * @property {boolean} withheld the document landed at is withheld from the reader: the face of its own withheld words says so (`landWithheld`)
- * @property {{a: string, b: string, held: import('../scene/scene.js').Held} | null} beside the line's offer to read the passage side by side with where it came from, where that text holds it whole
+ * @property {{a: string, held: import('../scene/scene.js').Held} | null} beside the line's offer to read the passage side by side with where it came from, where that text holds it whole: `a` that document, and the passage held there by its positions as the landing read them and by its bytes, which the scene places in that text as it reads it (SC's `Held.ids`); the scene opens it beside the version the box landed in shows as the act is made (`landingAct`)
  * @property {number | null} version the version offer at a published landing — the line's, or the dead end's face's where a followed passage floats: the latest member holding the passage whole, once its reads find one; null until then, or where none does
  */
 
@@ -1027,18 +1028,19 @@ export function described() {
 
 /**
  * One of the landing's line's acts (O-LAND's buttons): `beside`, the reading
- * scene with where the passage came from (`toScene`), the passage held there
- * set level with its counterpart here (SC), the document it came from the
- * one opened beside; `version`, the version move to the latest member holding
- * the passage whole; `again`, the landing's read made again; `next` and
- * `previous`, the step (`step`). Each acts only while the landing's line
- * stands.
+ * scene with where the passage came from (`toScene`) beside the version the
+ * box landed in shows now (`shownIn`), the passage held there placed by its
+ * bytes and set level with its counterpart here (SC), the document it came
+ * from the one opened beside; `version`, the version move to the latest
+ * member holding the passage whole; `again`, the landing's read made again;
+ * `next` and `previous`, the step (`step`). Each acts only while the
+ * landing's line stands.
  * @param {'beside' | 'version' | 'again' | 'next' | 'previous'} which
  * @param {boolean} [byKey] a key made the act
  */
 export function landingAct(which, byKey = false) {
   if (!landed) return;
-  if (which === 'beside' && landed.beside) { const b = landed.beside; void toScene(b.a, b.b, b.held, { beside: 'a', site: { span: { addr: landed.addr, pos: landed.pos } } }); }
+  if (which === 'beside' && landed.beside) { const b = landed.beside; void toScene(b.a, shownIn(landed.addr), b.held, { beside: 'a', site: { span: { addr: landed.addr, pos: landed.pos } } }); }
   else if (which === 'version' && versionOffer) versionOffer(byKey);
   else if (which === 'again' && retry) void retry(byKey);
   else if (which === 'next' || which === 'previous') step(which === 'next' ? 1 : -1, byKey);
@@ -1667,7 +1669,8 @@ async function followed(s, proj) {
  * A carried passage's landing's line and offers (see the head): what it
  * says, its runs' labels where they are two or more, the landing at piece 1;
  * the scene with the text it came from, where that text holds the
- * passage whole; at a published landing, the latest member holding it
+ * passage whole, the passage held there by its bytes as the act was made
+ * (`carried`); at a published landing, the latest member holding it
  * whole, sought once it has landed (`offerVersion`) — a version move whose
  * landing keeps the line of the passage's first held piece here at its
  * counterpart there; and "try again", its read made again (`again`; a LEAP's
@@ -1686,7 +1689,7 @@ function sayCarried(act, c, carried, d, placed, entry, link, again = (byKey) => 
   const offers = !!said && said.state !== 'unknown';
   const source = offers && c.addr !== addr ? (carried.length ? wholeAt(c.addr, carried, c.width) : { pos: c.pos, width: c.width }) : null;
   const pieces = placed.pieces;
-  landed = { addr, pos, said, pieces, current: pieces ? pieces.order[0] : 0, floating: placed.none, withheld: false, beside: source ? { a: c.addr, b: addr, held: { posA: source.pos, widthA: source.width, posB: null } } : null, version: null };
+  landed = { addr, pos, said, pieces, current: pieces ? pieces.order[0] : 0, floating: placed.none, withheld: false, beside: source ? { a: c.addr, held: { posA: source.pos, widthA: source.width, ids: carried } } : null, version: null };
   retry = said && said.again ? again : null;
   versionOffer = null;
   const at = placed.at;
@@ -1816,7 +1819,8 @@ async function landWithheld(act, s, entry, byKey, first) {
  * A follow's landing's line and offers (see the head): what it says, its
  * runs' labels where they are two or more, the landing at piece 1; the
  * scene with the document the follow was made from, where that text holds
- * the far end's passage whole, set level with the run landed at; at a
+ * the far end's passage whole, the passage held there by the far end's bytes
+ * and set level with its counterpart in the far text (SC's `levels`); at a
  * published far document whose text holds part of the passage, all of it in
  * pieces, or none of it — the dead end's face offering it then — the latest
  * member holding it whole, its slot projected into each member and its runs'
@@ -1837,7 +1841,7 @@ function sayFollowed(act, s, entry, placed, pos) {
   const floating = !!placed.runs && !placed.runs.length;
   const offers = !!said && said.state !== 'unknown' && !!passage;
   const source = offers && passage && s.near !== far ? wholeAt(s.near, [passage], passage.width) : null;
-  landed = { addr: far, pos, said, pieces, current: pieces ? pieces.order[0] : 0, floating, withheld: false, beside: source ? { a: s.near, b: far, held: { posA: source.pos, widthA: source.width, posB: pos } } : null, version: null };
+  landed = { addr: far, pos, said, pieces, current: pieces ? pieces.order[0] : 0, floating, withheld: false, beside: source && passage ? { a: s.near, held: { posA: source.pos, widthA: source.width, ids: [passage] } } : null, version: null };
   retry = said && said.again ? async (byKey) => {
     const at = made;
     const proj = await PUMP.projectEnd(l.addr, s.farSlot, far);
