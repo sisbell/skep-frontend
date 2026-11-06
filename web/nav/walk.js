@@ -54,8 +54,13 @@
 // document to its outline framed, no nearer than its reading size where the
 // scale the move was made at reads it at its reading scale, else no nearer
 // than just short of that (T-LAYER's `scaleBelowReading`), so no step takes a
-// document to its reading scale from below it — and the focus follows the
-// camera: any other move re-takes it at the scale's grain
+// document to its reading scale from below it; a span to its line, its column
+// framed at the landing's em (T-LAYER's `frameOf`); a document's frame and a
+// span's line read again each frame as the document is set while the camera
+// flies, at the position the walk's node holds and under the cap decided as
+// the move is made, their last answer kept while the page holds none of its
+// text (P-CAM's `Aim`; `aimIn`; FP-8) — and the focus follows the camera: any
+// other move re-takes it at the scale's grain
 // (`retakeFromView`). The re-take's order, so the walk never stands on a
 // place out of view nor on one the plane does not draw: a continuation's mark
 // whose cell holds the view's centre — the walk's focus kept where it stands
@@ -138,8 +143,8 @@
 // the document — and again once its document is read at the new class
 // (`dropped`) — on that document still where the new class may not read it,
 // named by its withheld box's words, its cover.
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13, FP-20, FP-21, FP-22, FP-23,
-// FP-24, FP-29, FP-33, FP-35.
+// Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-13, FP-20, FP-21, FP-22,
+// FP-23, FP-24, FP-29, FP-33, FP-35.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -264,8 +269,8 @@ export const ringShown = () => FOCUS.ringShown();
 /** is a block an element of the walk (rule 20): any but a typed line of white space alone, or the newlines before a run's first typed line */
 export const isElement = (/** @type {Block} */ b) => b.kind !== 'para' || b.text.trim() !== '';
 
-/** is a document below its reading scale at the view the camera is bound for (see the head; T-LAYER's one test) */
-const below = (/** @type {string} */ addr) => !LAYER.atReadingScale(addr, CAM.destination().scale);
+/** is a document below its reading scale at the view the camera is bound for (see the head; T-LAYER's one test) — `scale` that view's, where a pass over the mirror's items read it once */
+const below = (/** @type {string} */ addr, scale = CAM.destination().scale) => !LAYER.atReadingScale(addr, scale);
 /**
  * Does the walk stand on a document below its reading scale (see the head):
  * one stop, focused whole, its mirror item collapsed — its spans reached
@@ -458,11 +463,11 @@ export function render() {
   const lo = Math.max(0, idx - W), hi = Math.min(total, idx + W);
   const lvl = total ? levelOf(siblings[0]) : 1;
   let html = `<ul role="group" aria-label="${esc(t('L.mirror-level', { n: lvl }))}">`;
-  const at = read.located(), said = read.described();
+  const at = read.located(), said = read.described(), scale = CAM.destination().scale;
   let pieces = '';
   for (let i = lo; i < hi; i++) {
     const n = siblings[i];
-    const expanded = n.kind === 'document' ? ` aria-expanded="${!below(n.addr)}"` : n.kind === 'block' && n.pos != null && runEnds(n.addr, n.pos).length ? ' aria-expanded="true"' : '';
+    const expanded = n.kind === 'document' ? ` aria-expanded="${!below(n.addr, scale)}"` : n.kind === 'block' && n.pos != null && runEnds(n.addr, n.pos).length ? ' aria-expanded="true"' : '';
     const popup = n.kind === 'mark' ? ' aria-haspopup="dialog"' : '';
     const located = isLocated(n, at) ? ' aria-current="location"' : '';
     const by = describedBy(n, i, said);
@@ -487,10 +492,11 @@ export function render() {
  */
 export function markExpanded() {
   if (!mirrorEl || typeof mirrorEl.querySelectorAll !== 'function') return;
+  const scale = CAM.destination().scale;
   for (const li of /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[aria-expanded]')])) {
     const n = siblings[Number(li.dataset.i)];
     if (!n || n.kind !== 'document') continue;
-    const v = String(!below(li.dataset.addr || ''));
+    const v = String(!below(li.dataset.addr || '', scale));
     if (li.getAttribute('aria-expanded') !== v) li.setAttribute('aria-expanded', v);
   }
 }
@@ -697,9 +703,10 @@ function heldBy(addr) {
  * at its reading scale, else no nearer than just short of that (T-LAYER's
  * `scaleBelowReading`), so a step never takes a document to its reading scale
  * from below it; a span's line, its column framed with both its margins, at
- * the landing's em (T-LAYER's `frameOf`; P-CAM's `landingPx`) — nowhere where
- * the document's extent is read first and a later move overtook this one
- * meanwhile.
+ * the landing's em (T-LAYER's `frameOf`; P-CAM's `landingPx`) — the document's
+ * frame and the span's line each read again as the camera flies (`aimIn`) —
+ * nowhere where the document's extent is read first and a later move overtook
+ * this one meanwhile.
  * @param {number} move the move's count
  */
 async function flyToFocus(move) {
@@ -716,14 +723,31 @@ async function flyToFocus(move) {
     const addr = focus.addr;
     if (REC.doc(addr).extent == null) await PUMP.loadWhole(addr);
     if (move !== moves) return;
-    const v = CAM.viewForCell(LAYER.shapeOf(addr), 0.9);
-    const most = LAYER.atReadingScale(addr, from) ? CAM.landingPx() / LAYER.foldOf(REC.doc(addr)).fs : LAYER.scaleBelowReading(addr);
-    await CAM.fly({ ...v, scale: Math.min(v.scale, most) }, 300);
+    const reads = LAYER.atReadingScale(addr, from);
+    await CAM.fly(aimIn(addr, () => {
+      const v = CAM.viewForCell(LAYER.shapeOf(addr), 0.9);
+      return { ...v, scale: Math.min(v.scale, reads ? CAM.landingPx() / LAYER.foldOf(REC.doc(addr)).fs : LAYER.scaleBelowReading(addr)) };
+    }), 300);
   } else {
-    const at = LAYER.frameOf(focus.addr, focus.pos);
-    await CAM.fly(CAM.viewAt(at, at.fs), 260);
+    const addr = focus.addr, pos = focus.pos;
+    await CAM.fly(aimIn(addr, () => { const at = LAYER.frameOf(addr, pos); return CAM.viewAt(at, at.fs); }), 260);
   }
   CAM.markDirty();
+}
+
+/**
+ * The aim of a walk move's flight to a document's place (see the head;
+ * P-CAM's `Aim`; FP-8): `view` read again each frame as the document is set
+ * — a resize, a face, its text or its links arriving — its last answer kept
+ * while the page holds none of the document's text, which an estimate would
+ * place elsewhere.
+ * @param {string} addr
+ * @param {() => import('../plane/camera.js').View} view
+ * @returns {import('../plane/camera.js').Aim}
+ */
+function aimIn(addr, view) {
+  let last = view();
+  return () => { if (REC.has(addr) && REC.doc(addr).from >= 0) last = view(); return last; };
 }
 
 /** a walk key's move: the mirror rebuilt, the platform's focus on the new item with the ring drawn (rules 10, 12), the watchers told */

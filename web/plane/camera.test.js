@@ -1,10 +1,12 @@
 // P-CAM's test: the projection to the screen and back, the clamp, a flight
-// that lands and where the camera is bound while it runs, every flight
-// settled once — true as it lands, false where a newer flight, `set`, a pan,
-// a zoom or a reset cuts it short — the zoom-in bound raised per E18 (a) by
-// the deepest place and by every size a document is set at and never
-// lowered, a re-anchor keeping a passage's place and size on screen with a
-// flight bound into its document moved with it, the measure in force moved
+// that lands exactly and where the camera is bound while it runs, an aimed
+// flight moving toward its destination as last read before reading it again
+// and landing on its aim's last answer, every flight settled once — true as
+// it lands, false where a newer flight, `set`, a pan, a zoom or a reset cuts
+// it short — the zoom-in bound raised per E18 (a) by the deepest place and
+// by every size a document is set at and never lowered, a re-anchor keeping
+// a passage's place and size on screen with an aimed flight's start moved
+// with it and no destination moved (FP-8, FP-25), the measure in force moved
 // by a resize or the reader's root size alone (FP-26), the reading size
 // 1.0625 of the root's and the landing's em smaller only where a column of
 // one character does not fit, and the edge stub's cut and triangle on the
@@ -69,16 +71,53 @@ test('the bound reaches every size a document is set at, and only rises: a fligh
   CAM._reset();
 });
 
-test('a flight interpolates and lands exactly, resolving its promise', async () => {
+test('a flight interpolates and lands exactly on the view it is bound for, resolving its promise', async () => {
   CAM.setViewport(1000, 500);
-  CAM.set({ x: 0, y: 0, scale: 1 });
-  const p = CAM.fly({ x: 100, y: 50, scale: 2 }, 100, 0);
+  CAM.set({ x: 0.1, y: 0.3, scale: 3 });
+  const to = { x: 70.7, y: 20.3, scale: 7.3 };
+  const p = CAM.fly(to, 100, 0);
   assert.ok(CAM.flying());
-  CAM.step(50); assert.ok(CAM.cam.x > 0 && CAM.cam.x < 100);
+  CAM.step(50); assert.ok(CAM.cam.x > 0.1 && CAM.cam.x < 70.7);
   CAM.step(100);
   assert.equal(await p, true, 'it settles true as it lands');
   assert.ok(!CAM.flying());
-  assert.deepEqual(CAM.view(), { x: 100, y: 50, scale: 2 });
+  assert.deepEqual(CAM.view(), to, 'exactly there: never the last step\'s rounding of it');
+});
+
+test('a flight bound for an aim reads its destination again each frame, after moving toward the answer it last read; it is bound for the aim\'s answer now while it runs, and lands exactly on its last answer, one frame more where the aim answered elsewhere at its last (FP-8, FP-25)', async () => {
+  CAM._reset(); CAM.setViewport(1000, 500);
+  const from = { x: 0.1, y: 0.3, scale: 3 };
+  CAM.set(from);
+  let at = { x: 70.7, y: 20.3, scale: 7.3 };
+  /** @type {boolean | undefined} */
+  let landed;
+  CAM.fly(() => at, 100, 0).then((v) => { landed = v; });
+  assert.deepEqual(CAM.destination(), at, 'bound for the aim\'s answer');
+  CAM.step(40);
+  const read = at;
+  at = { x: 140.9, y: -33.1, scale: 5.7 };
+  assert.deepEqual(CAM.destination(), at, 'bound for the aim\'s answer now, before any frame reads it');
+  CAM.step(70);
+  const e = 1 - Math.pow(-2 * 0.7 + 2, 3) / 2;
+  assert.ok(Math.abs(CAM.cam.x - (from.x + (read.x - from.x) * e)) < 1e-9 && Math.abs(CAM.cam.y - (from.y + (read.y - from.y) * e)) < 1e-9, `the frame moved the camera toward the answer it last read, never the one the aim gives now: ${JSON.stringify(CAM.view())}`);
+  CAM.step(Infinity);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([landed, CAM.flying(), CAM.view()], [true, false, at], 'landed exactly on the aim\'s last answer');
+  // the aim answering elsewhere at the flight's last frame: the camera on the destination as last read, then on the new one
+  CAM.set(from);
+  at = { x: 70.7, y: 20.3, scale: 7.3 };
+  landed = undefined;
+  CAM.fly(() => at, 100, 0).then((v) => { landed = v; });
+  CAM.step(90);
+  const last = at;
+  at = { x: 82.9, y: 31.7, scale: 6.1 };
+  CAM.step(Infinity);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([landed, CAM.flying(), CAM.view()], [undefined, true, last], 'its last frame: on the destination as last read, flying one frame more');
+  CAM.step(Infinity);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([landed, CAM.flying(), CAM.view()], [true, false, at], 'the next: landed exactly on the aim\'s answer');
+  CAM._reset();
 });
 
 test('a flight cut short settles false: by a newer flight, which runs on and settles true as it lands, by set, a pan, a zoom or a reset — the camera where the cut put it', async () => {
@@ -111,7 +150,7 @@ test('a flight cut short settles false: by a newer flight, which runs on and set
   CAM._reset();
 });
 
-test('a re-anchor keeps a passage\'s place and size on screen: the point it stood at moved to where it stands now, the scale by the ratio of its sizes; a flight bound into the document lands at its new place, never cut, settling true; one bound elsewhere carries on', async () => {
+test('a re-anchor keeps a passage\'s place and size on screen — the point it stood at moved to where it stands now, the scale by the ratio of its sizes — and moves no destination: a flight aimed into the document has where it set out from and its dip moved with the camera and its destination read again from its aim, landing exactly where the aim answers though that passage moved otherwise, never cut; one bound for a view fixed in the room, or elsewhere, carries the camera on and lands where it was bound (FP-8, FP-25)', async () => {
   const near = (/** @type {number} */ x, /** @type {number} */ y) => Math.abs(x - y) < 1e-6;
   CAM._reset(); CAM.setViewport(1000, 500);
   CAM.set({ x: 100, y: 200, scale: 2 });
@@ -120,20 +159,34 @@ test('a re-anchor keeps a passage\'s place and size on screen: the point it stoo
   CAM.reanchor(a, b, k, room);
   assert.ok(near(CAM.sx(b.x), seen.x) && near(CAM.sy(b.y), seen.y), 'the passage where it stood on screen');
   assert.ok(near(CAM.view().scale, 2 * k), 'at k times the scale: its size kept');
-  // a flight bound into the document: moved with it, from where it set out to where it lands
+  // a flight aimed into the document: its own passage moved otherwise than the passage under the camera
   CAM.set({ x: 0, y: 0, scale: 1 });
-  const to = { x: 150, y: 220, scale: 2 };
+  let to = { x: 150, y: 220, scale: 2 };
   /** @type {boolean | undefined} */
   let landed;
-  CAM.fly(to, 100, 0).then((v) => { landed = v; });
+  CAM.fly(() => to, 100, 0).then((v) => { landed = v; });
   CAM.step(50);
+  const f = /** @type {import('./camera.js').Flight} */ (CAM.cam.anim), set = f.from, dip = f.outScale, under = { x: CAM.sx(a.x), y: CAM.sy(a.y) }, scale = CAM.view().scale;
+  to = { x: 175.3, y: 260.9, scale: 2.9 };
   CAM.reanchor(a, b, k, room);
   assert.ok(CAM.flying(), 'never cut');
+  assert.ok(near(CAM.sx(b.x), under.x) && near(CAM.sy(b.y), under.y) && near(CAM.view().scale, scale * k), 'the passage under the camera where it stood on screen, at its size');
+  assert.deepEqual([f.from, f.outScale, f.to], [CAM.reanchored(set, a, b, k), dip * k, to], 'where it set out from and its dip moved with the camera; its destination its aim\'s answer, never moved by the re-anchor');
   CAM.step(100);
   await new Promise((r) => setTimeout(r, 0));
-  assert.equal(landed, true, 'it settles true as it lands');
-  const v = CAM.view();
-  assert.ok(near((b.x - v.x) * v.scale, (a.x - to.x) * to.scale) && near((b.y - v.y) * v.scale, (a.y - to.y) * to.scale) && near(v.scale, to.scale * k), 'it lands with the passage where the flight would have shown it, at its size');
+  assert.deepEqual([landed, CAM.view()], [true, to], 'it settles true as it lands, exactly where its aim answers');
+  // a flight bound for a view fixed in the room — an account's centre, inside one of its documents' rooms: carried on
+  CAM.set({ x: 0, y: 0, scale: 1 });
+  const cell = { x: 120.7, y: 230.1, scale: 1.3 };
+  landed = undefined;
+  CAM.fly(cell, 100, 0).then((v) => { landed = v; });
+  CAM.step(50);
+  const there = CAM.view();
+  CAM.reanchor(a, b, k, room);
+  assert.deepEqual([CAM.view(), CAM.destination()], [there, cell], 'the camera as the flight put it, bound where it was');
+  CAM.step(100);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([landed, CAM.view()], [true, cell], 'it lands where it was bound');
   // a flight bound elsewhere: the camera carried on by it, as it was
   CAM.set({ x: 0, y: 0, scale: 1 });
   const away = { x: 5000, y: 5000, scale: 1 };
@@ -143,8 +196,7 @@ test('a re-anchor keeps a passage\'s place and size on screen: the point it stoo
   CAM.reanchor(a, b, k, room);
   assert.deepEqual(CAM.view(), mid, 'the camera as the flight put it');
   CAM.step(100);
-  const end = CAM.view();
-  assert.ok(near(end.x, away.x) && near(end.y, away.y) && near(end.scale, away.scale), 'it lands where it was bound');
+  assert.deepEqual(CAM.view(), away, 'it lands where it was bound');
   CAM._reset();
 });
 

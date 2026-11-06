@@ -198,7 +198,9 @@
 // view holds it, else its head at the top of the visible view (FP-37) — on
 // the document's lines as rendered, set first where its fold does not stand
 // on them at the measure in force (`renderedFold`; FP-12, FP-25), so a
-// camera bound there lands on the line its mounted text sets. A
+// camera bound there lands on the line its mounted text sets — the frame read
+// again as the camera flies, so a document set again meanwhile moves where it
+// lands. A
 // kept document — one M-PUMP holds as it stands past a second while it reads
 // it again (M-PUMP's `kept`; FP-23) — says so once, wherever its name is, in
 // one clause (`keptIn` by `keptWords`, which the one line and the ARIA mirror
@@ -933,9 +935,11 @@ export function centreOf(addr, pos) {
  * first column's depth, moved down so the column's outline tops the visible
  * view and the document's head stands in it, never under the line (FP-37).
  * N-GO's landing and N-WALK's flight to a span read it, the view's scale from
- * its em (P-CAM's `viewAt`), so the place and the size are one fold's; the
- * measure in force is one the view holds them at, at the landing's em (P-LAY's
- * `fitFor`, P-CAM's `landingPx`).
+ * its em (P-CAM's `viewAt`), so the place and the size are one fold's, and
+ * read it again each frame as the camera flies there (P-CAM's `Aim`), so it
+ * lands on the fold its document is set in then; the measure in force is one
+ * the view holds them at, at the landing's em (P-LAY's `fitFor`, P-CAM's
+ * `landingPx`).
  * @param {string} addr
  * @param {number | null} pos
  * @param {number} [fsPx] the em the view reads the document at, in px: the landing's where none is given
@@ -2336,7 +2340,8 @@ const imageCovers = (/** @type {Doc} */ d) => !!d.imageFor && d.extent != null &
 /**
  * The passage held as its document's article was taken down, set again: the
  * camera re-anchored so it keeps its place and its size on screen (P-LAY's
- * `holdOf`, P-CAM's `reanchor`), a flight bound into the document with it —
+ * `holdOf`, P-CAM's `reanchor`) — the start of a flight aimed into the
+ * document with it, its destination read again from its aim and never moved —
  * the passage's own bytes, where the text set again places them (`carried`;
  * FP-8: an edit above the view moves no word the reader reads), else its
  * position. Where the text set again holds none of those bytes and its image

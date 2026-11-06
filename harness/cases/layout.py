@@ -29,7 +29,12 @@ first position, its lines set at no measure in force there — the view away
 at the far edition as the window narrowed, its fold P-LAY's prediction, half
 a line or more off at that position — lands on its lines as rendered, the
 camera at that line's frame, 1 px either way, at the landing's em (issue
-#296); the corner (foundations §3.1: every mounted document at reading scale carries
+#296); and a LEAP there from the far edition at the full measure, the window
+set NARROW_PX wide while its camera flies — the first edition folded again at
+the measure the narrowed window holds — lands on that line in that fold, the
+camera at its frame there, 1 px either way, at the landing's em (FP-8,
+FP-25), the intervals and draw times of the flight's frames its figures
+(FP-18); the corner (foundations §3.1: every mounted document at reading scale carries
 one beside its article, clipped by no box of the page and reaching into no
 other document's box, mounted or only drawn; the first edition's in view
 below the one line at each level, held there while its first column's top
@@ -3881,6 +3886,57 @@ def leap_onto_rendered(ctx, r):
     return {'window': NARROW_PX, 'pos': pos, 'apart_px': apart, 'line_px': line_px, 'off_px': off, 'em': em}
 
 
+# every frame from here on sampled until stopped: whether the camera flew in it, and the viewport's width the page held
+NARROWED = '''(() => { const g = window.__gateNarrowed = {seen: [], stop: false};
+  const tick = () => { if (g.stop) return; g.seen.push([window.__skep.view.flying(), window.__skep.view.viewport().VW]); requestAnimationFrame(tick); }; requestAnimationFrame(tick); })()'''
+NARROWED_SEEN = '(() => { const g = window.__gateNarrowed; if (!g) return []; g.stop = true; return g.seen; })()'
+
+
+def middle(xs):
+    """the middle value of some figures, the upper of the two middle ones where they are even; None where there are none"""
+    return sorted(xs)[len(xs) // 2] if xs else None
+
+
+def leap_across_resize(ctx, r):
+    """A FLIGHT ACROSS A RESIZE (FP-8, FP-25): the view away at the far edition at the full measure, a LEAP into the
+    first edition at the window run's first position made, and the window set NARROW_PX wide while its camera flies —
+    the first edition folded again at the measure the narrowed window holds — it lands on the line holding that
+    position in that fold: the camera at that line's frame there, 1 px either way, at the landing's em; its figures,
+    the intervals and draw times of the frames from the act to the landing among them, measured on this machine
+    (FP-18)"""
+    pos = WINDOW[0]
+    ctx.leap(FAR_LEAP)
+    ctx.js(NARROWED)
+    t0 = ctx.js('performance.now()')
+    ctx.js('void window.__skep.go.leapTo(%s, %d)' % (json.dumps(DOC), pos))
+    was = ctx.resize(NARROW_PX, 900)
+    try:
+        ctx.settle()
+        ctx.frames(3)
+        seen = ctx.js(NARROWED_SEEN)
+        cam, fit = ctx.camera(), ctx.js('window.__skep.measure()')
+        at = ctx.js('window.__skep.frameOf(%s, %d)' % (json.dumps(DOC), pos))
+        mounted = ctx.js('window.__skep.mounted(%s)' % json.dumps(DOC))
+        flown = ctx.js('window.__skep.frames().filter((f) => f.t >= %s).map((f) => [f.interval, f.drawMs])' % t0)
+    finally:
+        ctx.js(NARROWED_SEEN)
+        ctx.resize(*was)
+    ctx.settle()
+    ctx.frames(3)
+    narrowed = sum(1 for flying, vw in seen if flying and vw == NARROW_PX)
+    r.check(narrowed > 0, f'the window set {NARROW_PX} px wide while the LEAP\'s camera flew: frames that flew in the narrowed window',
+            {'frames': len(seen), 'flew_narrowed': narrowed})
+    off = {'dx': (at['x'] - cam['x']) * cam['scale'], 'dy': (at['y'] - cam['y']) * cam['scale']}
+    em = mounted['fs'] * cam['scale'] if mounted else None
+    r.check(mounted is not None and abs(off['dx']) <= 1 and abs(off['dy']) <= 1 and abs(em - fit['px']) < 1e-6,
+            f'a LEAP whose window narrows to {NARROW_PX} px as it flies lands on the line in the fold the narrowed window sets the first edition in: the camera at that line\'s frame there, 1 px either way, at the landing\'s em, {fit["px"]} px (FP-8, FP-25)',
+            {'pos': pos, 'camera': cam, 'frame': at, 'off_px': off, 'em': em, 'landing_px': fit['px']})
+    intervals, draws = [f[0] for f in flown], [f[1] for f in flown]
+    return {'window': NARROW_PX, 'pos': pos, 'flew_narrowed': narrowed, 'off_px': off, 'em': em, 'frames': len(flown),
+            'interval_ms': {'middle': middle(intervals), 'max': max(intervals, default=None)},
+            'draw_ms': {'middle': middle(draws), 'max': max(draws, default=None)}}
+
+
 def step(ctx, em):
     """the camera over the first edition at an em, and what the frames that step drew show: the most documents any of
     them drew as bars under their own mounted text (`both`), and yielded to text that was not mounted (`neither`)"""
@@ -3974,6 +4030,8 @@ def run(ctx):
     r.figures['back_after_resize'] = back_after_resize(ctx, r)
     # a LEAP into a document whose lines are set at no measure in force lands on its lines as rendered (issue #296)
     r.figures['leap_onto_rendered'] = leap_onto_rendered(ctx, r)
+    # a LEAP whose window narrows while its camera flies lands on its passage in the fold the narrowed window sets
+    r.figures['leap_across_resize'] = leap_across_resize(ctx, r)
     # a continuous zoom: drift sampled across a sweep, about the first column
     first = ctx.js('window.__skep.centreOf(%s, null)' % json.dumps(DOC))
     s_lo = ctx.js('window.__skep.scaleFor(%s, "em", 7)' % json.dumps(DOC))

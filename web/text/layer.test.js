@@ -11,7 +11,9 @@
 // article standing until the reads it makes again set it — a version move
 // and an edit above the view, by its bytes' identity, the view's centre on an
 // empty line typed below it as well, and the reader told where a text set
-// again holds none of it; what stands — every
+// again holds none of it; a flight aimed at a passage of a document set again
+// under it landing on that passage, the line under the camera kept where it
+// stood; what stands — every
 // readable document in the one frame, the limit's order below it, by line,
 // the selection's and the focus's lines held, hysteresis, stale articles set
 // again and a press holding them; the owner a withheld run names; C-67's
@@ -666,6 +668,31 @@ test('a text set again holding none of the line being read, its image covering i
   assert.ok(told[0][2] > 0 && together(screen(at2), here2), 'the passage named by its bytes, its line kept by position');
   LAYER.frame();
   assert.equal(told.length, 1, 'told once for the setting');
+}, 1440, 900));
+
+test('a flight aimed at a passage of a document set again under it as it flies: words set between the line under the camera and the passage, between two frames at one time, leave that line where it stood on screen — the frame after them moves the camera toward the passage as its aim answered before them, and only then reads the aim again — and the flight lands where its aim answers then, on the passage\'s own bytes past the words set before them (FP-8, FP-25)', () => onLayer(() => {
+  const { screen } = readLater();
+  const f0 = LAYER.foldOf(REC.doc(D)), c = f0.columns[8];
+  const line = c && f0.lines.slice(c.first, c.first + c.n).find((l) => l.kind === 'text' && l.at != null);
+  assert.ok(line && line.at != null, 'a typed line two columns on from the one read');
+  const there = /** @type {number} */ (line.at), ids = REC.identityOf(D, there, 1);
+  /** the view that reads the passage where D's held image places its first byte now, as N-GO's aim reads it */
+  const aim = () => { const now = REC.placedIdentity(D, ids), at = LAYER.frameOf(D, now.length ? now[0].pos : there); return CAM.viewAt(at, at.fs); };
+  CAM.fly(aim, 400, 0);
+  CAM.step(100); LAYER.frame();
+  const under = /** @type {number} */ (LAYER.posAt(D, CAM.cam.x, CAM.cam.y)), was = screen(under);
+  // a paragraph set after the block holding the line under the camera: that line stays where it stands, the passage later
+  const b = /** @type {import('../model/records.js').Block} */ (REC.doc(D).blocks.find((x) => x.pos <= under && under < x.pos + x.width));
+  const cut = b.pos + b.width - 1, words = 'Words set between the line read and the passage.\n\n', n = new TextEncoder().encode(words).length;
+  assert.ok(cut < there, 'set before the passage');
+  setD(TEXT.slice(0, cut) + words + TEXT.slice(cut), [{ iStart: D + '.0.1.1', width: cut }, { iStart: `${D}.0.1.${EXTENT + 1}`, width: n }, { iStart: `${D}.0.1.${cut + 1}`, width: EXTENT - cut }]);
+  CAM.step(100); LAYER.frame();
+  assert.ok(LAYER.isMounted(D) && together(screen(under), was), `the line under the camera where it stood on screen: ${JSON.stringify(was)} → ${JSON.stringify(screen(under))}`);
+  CAM.step(300); LAYER.frame();
+  CAM.step(Infinity); LAYER.frame();
+  const at = LAYER.frameOf(D, there + n), old = LAYER.frameOf(D, there);
+  assert.deepEqual([CAM.flying(), CAM.view()], [false, CAM.viewAt(at, at.fs)], 'landed where the aim answers: the passage past the words set before it');
+  assert.notDeepEqual(CAM.view(), CAM.viewAt(old, old.fs), 'never the position the flight set out for, which holds other words now');
 }, 1440, 900));
 
 test('every document in view at the readable em stands in the frame it gets there, however many: no count holds one back', () => onLayer((held) => {

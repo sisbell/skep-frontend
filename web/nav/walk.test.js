@@ -12,7 +12,8 @@
 // inert mark kept through a rebuild; a move whose reads a later move overtook
 // sets nothing and flies nowhere; in a document folded into columns the
 // camera follows the walk to a span's line in its column and to the outline
-// framed no nearer than reading size, and a step made below a document's
+// framed no nearer than reading size, in the fold a resize in the air sets
+// the document in, and a step made below a document's
 // reading scale frames it short of that scale; the grain below a document is
 // the document's own and the re-take's order holds at every band; a
 // continuation the plane draws as one mark is one stop before its members,
@@ -27,7 +28,7 @@
 // item carrying the clause its corner or the one line shows, and the board's
 // while it lags, each marked in place as it appears and as it lifts; and
 // where no board is held the root says why and the re-take
-// stands on it alone (FP-20, FP-21, FP-22, FP-23, FP-24, FP-29, FP-33,
+// stands on it alone (FP-8, FP-20, FP-21, FP-22, FP-23, FP-24, FP-29, FP-33,
 // FP-35).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
@@ -806,6 +807,41 @@ test('in a document folded into columns the camera follows the walk to a span\'s
     await WALK.retakeFromView(true);
     assert.deepEqual(walkAt(), ['block', H, later.pos], 'the re-take: the span under the view\'s centre, in its column');
   } finally {
+    index([D, E]);
+  }
+});
+
+test('the camera follows the walk through a resize in the air (FP-8): ↓ onto a span of H, the window narrowed half way there, lands on that span\'s line in the fold the narrow view holds, its column framed; ← to H whole, the window widened half way there, lands on its outline framed in the fold the wide view holds', async () => {
+  /** two views the same, within a flight's rounding */
+  const near = (/** @type {{x: number, y: number, scale: number}} */ a, /** @type {{x: number, y: number, scale: number}} */ b) => [a.x - b.x, a.y - b.y, a.scale - b.scale].every((d, i) => Math.abs(d) <= 1e-9 * Math.max(1, Math.abs([b.x, b.y, b.scale][i])));
+  /** a walk move's flight stepped as the frames step it — half way, the window set `w` px wide between two frames, three quarters — then run to its landing */
+  const across = async (/** @type {Promise<unknown>} */ move, /** @type {number} */ w) => {
+    const f = CAM.cam.anim;
+    assert.ok(f, 'the move flies');
+    CAM.step(f.t0 + f.ms / 2);
+    CAM.setViewport(w, 900);
+    CAM.step(f.t0 + f.ms * 3 / 4);
+    await run(move);
+  };
+  /** the view a span of H frames, its column with its margins, at the landing's em */
+  const spanView = (/** @type {number} */ pos) => { const at = LAYER.frameOf(H, pos); return CAM.viewAt(at, at.fs); };
+  await PUMP.loadWhole(H);
+  index([D, E, H]);
+  try {
+    const b = REC.doc(H).blocks[40];
+    CAM.set(spanView(b.pos));
+    await WALK.focusTo(H, b.pos, true);
+    const down = WALK.key('down'), next = /** @type {number} */ (WALK.current()?.pos), wide = spanView(next);
+    await across(down, 400);
+    assert.ok(!near(wide, spanView(next)), 'the narrow view folds H again: the span\'s line framed elsewhere');
+    assert.deepEqual(walkAt(), ['block', H, next]);
+    assert.ok(near(CAM.view(), spanView(next)), `↓: the camera on the span's line in the fold the narrow view holds: ${JSON.stringify(CAM.view())}`);
+    await across(WALK.key('out'), 1440);
+    const v = CAM.viewForCell(LAYER.shapeOf(H), 0.9), framed = { ...v, scale: Math.min(v.scale, CAM.landingPx() / LAYER.foldOf(REC.doc(H)).fs) };
+    assert.deepEqual(walkAt(), ['document', H, null]);
+    assert.ok(near(CAM.view(), framed), `←: the camera on H's outline framed in the fold the wide view holds: ${JSON.stringify(CAM.view())}`);
+  } finally {
+    CAM.setViewport(1440, 900);
     index([D, E]);
   }
 });

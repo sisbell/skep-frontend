@@ -10,7 +10,15 @@
 // it the landing's em, the reading size but where even a column of one
 // character is wider than the view (`landingPx`). View state, never
 // serialized or sent (FP-7).
-// Where the camera is bound is the flight's destination while one runs
+// A flight is bound for a view fixed at its act, or for an aim (`Aim`): the
+// view that reads the passage it lands on, wherever its document is set while
+// it flies (FP-8, FP-25). Each frame moves the camera toward the destination
+// as the aim last answered it and only then reads the aim again, for the next
+// frame, so the camera moves in the world T-LAYER's articles were drawn in
+// until T-LAYER's frame re-anchors it; the last frame lands exactly on the
+// destination as last read, and where the aim answers elsewhere then, the
+// flight takes one frame more to land there (`step`). Where the camera is
+// bound is the flight's destination while one runs — an aim's answer now
 // (`destination`): what a departure re-takes, so input made during a flight
 // lands at its destination, never at a point the flight was passing
 // (foundations §2.3). Every flight `fly` starts settles its promise once:
@@ -18,9 +26,11 @@
 // it short (`cut`), so the act awaiting it ends whatever ends its flight. A
 // re-anchor (`reanchor`; FP-8) moves the view with the text it reads where a
 // document is set again: the point the passage stood at to where it stands
-// now, the scale by the ratio of its sizes — and a flight bound for that
-// document with it, never cut, still settling true as it lands; the same
-// move re-places a view kept apart from the camera, a trail entry's
+// now, the scale by the ratio of its sizes — and the start of a flight aimed
+// into that document with it, its destination read again from its aim, never
+// cut, still settling true as it lands. It moves no destination: a flight
+// bound elsewhere, or for a view fixed at its act, carries the camera on. The
+// same move re-places a view kept apart from the camera, a trail entry's
 // (`reanchored`).
 // The zoom-in bound (E18 (a)) never stops short of the reading scale of a
 // place the projection draws — the deepest place's standard type at boot
@@ -41,7 +51,7 @@
 // root; the bound's floor 40 (S3's); the clamp's margin 0.6 of the world's
 // width; a flight 620 ms where none is given, dipping out where its distance
 // exceeds 1.5 viewports.
-// Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-11, FP-26.
+// Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-11, FP-25, FP-26.
 
 import { WORLD_W, WORLD_H, DEPTH_SOUND, G, LEAF } from './projection.js';
 import { STANDARD_FS, MEASURE_CPL, fitFor } from './layout.js';
@@ -54,12 +64,16 @@ import { STUB, CORNER, cornerWidth } from './register.js';
  * @property {number} scale screen px per world unit
  */
 
+/** @typedef {() => View} Aim the view a flight is bound for, read again each frame while it flies: the view that reads the passage it lands on, wherever its document is set then (see the head) */
+
 /**
  * @typedef {Object} Flight
  * @property {number} t0
  * @property {number} ms
  * @property {View} from
- * @property {View} to
+ * @property {View} to the view it is bound for: as its aim last answered it, else the view `fly` was given
+ * @property {Aim | null} aim reads `to` again each frame (`step`); null for a view fixed at its act
+ * @property {boolean} late its time is up and its aim answered elsewhere at its last frame: it lands on `to` at the next (`step`)
  * @property {boolean} arc
  * @property {number} outScale
  * @property {(landed: boolean) => void} done settles the promise `fly` answered: true as it lands, false where it is cut short
@@ -171,8 +185,8 @@ export function set(v) { cut(); cam.x = v.x; cam.y = v.y; cam.scale = v.scale; c
 /** the current view, copied */
 export function view() { return { x: cam.x, y: cam.y, scale: cam.scale }; }
 
-/** the view the camera is bound for, copied: the flight's destination while one runs, else the current view */
-export function destination() { return cam.anim ? { ...cam.anim.to } : view(); }
+/** the view the camera is bound for, copied: the flight's destination while one runs — its aim's answer now, where it has one — else the current view */
+export function destination() { const a = cam.anim; return a ? { ...(a.aim ? a.aim() : a.to) } : view(); }
 
 /**
  * The view that frames a cell (a board's or an account's) at the clamp —
@@ -214,41 +228,57 @@ export function viewForBoxes(bs, fit = 0.8) {
 const easeInOut = (/** @type {number} */ u) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
 
 /**
- * A flight to a view: a transform of the view (law 6), dipping out for far
- * targets (`arc`), from where the camera stands — the flight in progress cut
- * short there. It settles once: true where it lands, false where a newer
- * flight, `set`, a pan or a zoom cuts it short.
- * @param {View} t
+ * A flight to a view, or to the view an aim answers each frame (see the
+ * head): a transform of the view (law 6), dipping out for far targets (`arc`,
+ * decided from where it sets out), from where the camera stands — the flight
+ * in progress cut short there. It settles once: true where it lands, false
+ * where a newer flight, `set`, a pan or a zoom cuts it short.
+ * @param {View | Aim} t
  * @param {number} [ms]
  * @param {number} [now]
  * @returns {Promise<boolean>} the flight landed
  */
 export function fly(t, ms = 620, now = performance.now()) {
+  const aim = typeof t === 'function' ? t : null, to = aim ? aim() : /** @type {View} */ (t);
   const from = view();
-  const dist = Math.hypot(t.x - from.x, t.y - from.y);
-  const minScale = Math.min(from.scale, t.scale);
+  const dist = Math.hypot(to.x - from.x, to.y - from.y);
+  const minScale = Math.min(from.scale, to.scale);
   const outScale = minScale * Math.min(1, (VW * 0.7) / Math.max(1, dist * minScale));
   const arc = dist * minScale > VW * 1.5;
   cut();
-  return new Promise((res) => { cam.anim = { t0: now, ms, from, to: t, arc, outScale, done: res }; });
+  return new Promise((res) => { cam.anim = { t0: now, ms, from, to, aim, late: false, arc, outScale, done: res }; });
 }
 
+/** do two views name one place at one scale, exactly? */
+const sameView = (/** @type {View} */ a, /** @type {View} */ b) => a.x === b.x && a.y === b.y && a.scale === b.scale;
+
 /**
- * Advance the flight; at its last frame it lands, its promise settled true.
- * True while one is running.
+ * Advance the flight (see the head): the camera moved toward its destination
+ * as last read, then its aim read again for the next frame. At its last frame
+ * the camera stands exactly on that destination, and the flight lands there,
+ * its promise settled true — save where its aim answers elsewhere then, which
+ * the next frame lands on instead. True while one is running.
  * @param {number} now
  * @returns {boolean}
  */
 export function step(now) {
   if (!cam.anim) return false;
-  const a = cam.anim, u = Math.min(1, (now - a.t0) / a.ms), e = easeInOut(u);
+  const a = cam.anim, u = Math.min(1, (now - a.t0) / a.ms);
+  if (u >= 1) {
+    cam.x = a.to.x; cam.y = a.to.y; cam.scale = a.to.scale;
+    clamp();
+    const next = a.aim && !a.late ? a.aim() : a.to;
+    if (sameView(next, a.to)) { cam.anim = null; a.done(true); } else { a.to = next; a.late = true; }
+    return true;
+  }
+  const e = easeInOut(u);
   cam.x = a.from.x + (a.to.x - a.from.x) * e;
   cam.y = a.from.y + (a.to.y - a.from.y) * e;
   const base = Math.exp(Math.log(a.from.scale) + (Math.log(a.to.scale) - Math.log(a.from.scale)) * e);
   if (a.arc) { const dip = Math.sin(Math.PI * e); cam.scale = Math.exp(Math.log(base) * (1 - dip) + Math.log(a.outScale) * dip); }
   else cam.scale = base;
   clamp();
-  if (u >= 1) { cam.anim = null; a.done(true); }
+  if (a.aim) a.to = a.aim();
   return true;
 }
 
@@ -259,8 +289,9 @@ export const flying = () => cam.anim !== null;
  * The re-anchor's move, on a view (see the head): the world point `a` a
  * passage stood at moved to `b`, where it stands now, its text set `k` times
  * smaller — the view taken so `b` stands where `a` stood on screen, at `k`
- * times the scale. `reanchor` moves the camera and a flight so; T-LAYER's
- * `keptAt` moves a view kept apart from the camera, a trail entry's.
+ * times the scale. `reanchor` moves the camera and an aimed flight's start
+ * so; T-LAYER's `keptAt` moves a view kept apart from the camera, a trail
+ * entry's.
  * @param {View} v
  * @param {{x: number, y: number}} a
  * @param {{x: number, y: number}} b
@@ -271,10 +302,12 @@ export const reanchored = (v, a, b, k) => ({ x: b.x + (v.x - a.x) / k, y: b.y + 
 
 /**
  * The re-anchor (see the head): the camera moved by `reanchored`, so the
- * passage keeps its place and its size; a flight bound inside `within` — the
- * document's room — moved the same way, from where it set out to where it
- * lands, never cut, so it lands where its passage stands now and settles true.
- * A flight bound elsewhere carries the camera on, as it was.
+ * passage keeps its place and its size; a flight aimed inside `within` — the
+ * document's room — has where it set out from and its dip moved the same way
+ * and its destination read again from its aim, never cut, so the camera goes
+ * on from where the passage keeps it and lands where its own passage stands
+ * now, settling true. No destination is moved: a flight bound elsewhere, or
+ * for a view fixed at its act, carries the camera on, as it was.
  * @param {{x: number, y: number}} a
  * @param {{x: number, y: number}} b
  * @param {number} k the passage's old em over its new
@@ -284,13 +317,14 @@ export function reanchor(a, b, k, within) {
   const move = (/** @type {View} */ v) => reanchored(v, a, b, k);
   const f = cam.anim;
   if (f) {
-    const inside = !!within && f.to.x >= within.x && f.to.x <= within.x + within.w && f.to.y >= within.y && f.to.y <= within.y + within.h;
+    const inside = !!f.aim && !!within && f.to.x >= within.x && f.to.x <= within.x + within.w && f.to.y >= within.y && f.to.y <= within.y + within.h;
     if (!inside) return;
-    f.from = move(f.from); f.to = move(f.to); f.outScale *= k;
+    f.from = move(f.from); f.outScale *= k;
   }
   const m = move(view());
   cam.x = m.x; cam.y = m.y; cam.scale = m.scale;
   clamp();
+  if (f && f.aim) f.to = f.aim();
 }
 
 /** pan by screen px: view state moved, nothing drawn (FP-9) */

@@ -65,7 +65,17 @@
 // flown (P-CAM's `fly`) and the walk moved to the landing (N-WALK's `focusTo`), the
 // ring drawn there where a key made the act, which only the caller knows, so
 // every act takes `byKey` from it (D5 §4 rules 2 and 8); a LEAP and a follow
-// land at the reading size, framing the passage's column (`viewFor`).
+// land at the reading size, framing the passage's column (`viewFor`). A
+// flight bound for a place in a document — a LEAP's, a follow's, a step's,
+// a return's, a cover's — flies its aim (`aimAt`; P-CAM's `Aim`; FP-8,
+// FP-25): the view that reads its position, read again each frame, the
+// position followed by the identity of the byte standing there as the act is
+// made, wherever the held image places that byte, else as the act named it,
+// and the last answer kept while the page holds none of the document's text,
+// so the camera lands on that passage wherever the document is set while it
+// flies — a resize, a face, a feed row's reads, its links or the rest of its
+// text arriving; HOME's, WHOLE BOARD's, an account's and a moment's view
+// stand fixed.
 // The arrival's two marks: every run of the span landed on outlined
 // (`arrivalMark`) and the link followed lit (`litLinks`), which LK draws
 // heavier (foundations §2.1). A follow (`follow`) reports the link to LK's
@@ -246,7 +256,8 @@
 // moment the reader opened, covering neither it nor its focus; a face shown
 // at the act stands in the place of what stands there. Its reads run beside
 // the flight: where they answer first, the camera goes on from where it is
-// to the passage they placed (`goOn`); where
+// to the passage they placed — on its first leg, where that leg's aim answers
+// that passage's view already (`goOn`); where
 // the reader takes the camera over first (`takeOver`; APP-INPUT's), the jump
 // lands where the camera is and its read, answering, only marks its passage
 // where it falls, the entry keeping the view the reader leaves it at. While
@@ -298,7 +309,9 @@
 // notice — a failure its jump's read met, a dead end, a withheld document —
 // the words only place the view and the walk; and no entry keeps a landing a
 // return made of its words (`leaveHere`). The camera flies at once to that
-// view — where the page cannot tell yet, to the line holding the first of the
+// view, its aim keeping the line it lands on where the line read stood as
+// that line's document is set while it flies (`Return.aim`) — where the page
+// cannot tell yet, to the line holding the first of the
 // words the held text places, else to the line at their own position, else,
 // the page holding none of that text, to the view the entry was left at, that
 // text read whole, its image with it, beside the flight and the camera going
@@ -329,8 +342,8 @@
 // Figures: a click's flight 420 ms, every other LEAP's and a follow's 620,
 // HOME's and WHOLE BOARD's 700, an account's and a moment's view's 400, a
 // cursor move's 500, a step's 420; a second leg SECOND_LEG_MS (unmeasured).
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-20, FP-21, FP-22, FP-25, FP-29,
-// FP-35, FP-36.
+// Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-20, FP-21, FP-22, FP-25,
+// FP-29, FP-35, FP-36.
 
 import * as CAM from '../plane/camera.js';
 import * as TRAIL from './trail.js';
@@ -363,6 +376,7 @@ import { esc } from '../util.js';
 /** @typedef {import('./trail.js').Notice} Notice */
 /** @typedef {import('./trail.js').Site} Site */
 /** @typedef {import('./trail.js').View} View */
+/** @typedef {import('../plane/camera.js').Aim} Aim */
 /** @typedef {import('./trail.js').Step} Step */
 /** @typedef {import('./walk.js').End} End */
 /** @typedef {import('./walk.js').Located} Located */
@@ -384,7 +398,8 @@ import { esc } from '../util.js';
  * @typedef {Object} Destination — where a jump's camera and walk go (`land`)
  * @property {string} addr the place the walk moves to
  * @property {number | null} pos the position in it the walk stands on, where its view reads it at its reading scale
- * @property {View} view the view the camera flies to
+ * @property {View} view the view the camera flies to, as the act reads it
+ * @property {Aim | null} [aim] that view read again each frame as the camera flies (see the head; `aimAt`); none where the view stands fixed
  * @property {End | null} [end] the link's end the walk stands on there
  * @property {boolean} [take] the platform's focus goes to the walk's element — save where named false: a walk's moment unfolded holds it (`toView`)
  */
@@ -1047,10 +1062,10 @@ export function step(dir, byKey = false) {
  * the previous one, or an outlined run pressed below reading scale
  * (APP-INPUT): the landing standing there, its line the run's label, the
  * camera flown to the view that reads it at the reading size, its column
- * framed (`viewFor`), and the walk on the span holding it, the platform's
- * focus there with the ring drawn where a key made the step (N-WALK's
- * `focusTo`; FP-20) — no trail move, no act counted, the arrival standing.
- * Nothing where no step stands, or the run is none of its runs.
+ * framed, by its aim (`toward`), and the walk on the span holding it, the
+ * platform's focus there with the ring drawn where a key made the step
+ * (N-WALK's `focusTo`; FP-20) — no trail move, no act counted, the arrival
+ * standing. Nothing where no step stands, or the run is none of its runs.
  * @param {number} i the run, an index into the landing's runs (`Landing.pieces`; the arrival's `runs`)
  * @param {boolean} [byKey] a key made the step
  * @returns {boolean} a step was made
@@ -1061,7 +1076,7 @@ export function stepTo(i, byKey = false) {
   landed = { ...l, pos: r.pos, current: i };
   if (arrival && arrival.addr === l.addr) arrival = { ...arrival, pos: r.pos };
   void WALK.focusTo(l.addr, r.pos, byKey, true);
-  void CAM.fly(viewFor(l.addr, r.pos), 420);
+  void CAM.fly(toward(l.addr, r.pos).aim, 420);
   CAM.markDirty();
   return true;
 }
@@ -1234,8 +1249,9 @@ function leave(act, entry, at, byKey, ms) {
  * A jump goes on to the place its reads placed (see the head): the walk on
  * the place, and the camera from where it is to the view placed — the first
  * leg cut short where it is still in the air, never flown back — or, where
- * the camera is bound for that view already, on with the first leg; the jump
- * in the air ends as the camera lands, or as anything else ends its flight.
+ * the camera is bound for that view already — the first leg's aim answering
+ * it now (P-CAM's `destination`) — on with the first leg; the jump in the air
+ * ends as the camera lands, or as anything else ends its flight.
  * @param {number} act
  * @param {Promise<boolean>} first the first leg's flight
  * @param {Destination} at
@@ -1244,9 +1260,9 @@ function leave(act, entry, at, byKey, ms) {
  * @returns {Promise<boolean>} the camera landed
  */
 async function goOn(act, first, at, byKey, ms) {
-  const d = CAM.destination();
+  const d = CAM.destination(), to = at.aim ? at.aim() : at.view;
   let ok;
-  if (d.x === at.view.x && d.y === at.view.y && d.scale === at.view.scale) { focusOn(at, byKey); ok = await first; }
+  if (d.x === to.x && d.y === to.y && d.scale === to.scale) { focusOn(at, byKey); ok = await first; }
   else ok = await land(at, byKey, CAM.flying() ? ms : SECOND_LEG_MS);
   endAir(act, ok);
   return ok;
@@ -1277,18 +1293,69 @@ function failed(act, entry, n, byKey) {
 }
 
 /**
- * The view that reads a document at a position: its size (the fold T-LAYER
- * frames it in) at the landing's em — the reading size, smaller only where
- * even a column of one character is wider than the view (P-CAM's
- * `landingPx`) — on the line holding the position, framing its column with
- * both its margins — the corner on its left, the edge on its right
- * (T-LAYER's `frameOf`; FP-26) — the first column where none is named.
+ * The view that reads a document at a position, as its document is set now:
+ * its size (the fold T-LAYER frames it in) at the landing's em — the reading
+ * size, smaller only where even a column of one character is wider than the
+ * view (P-CAM's `landingPx`) — on the line holding the position, framing its
+ * column with both its margins — the corner on its left, the edge on its
+ * right (T-LAYER's `frameOf`; FP-26) — the first column where none is named.
+ * A flight bound there reads it again as it flies (`toward`).
  * @param {string} addr
  * @param {number | null} pos
  */
 export function viewFor(addr, pos) {
   const at = LAYER.frameOf(addr, pos);
   return CAM.viewAt(at, at.fs, CAM.landingPx());
+}
+
+/**
+ * A flight's destination at a position of a document (`Destination`): the
+ * view that reads it (`viewFor`), and the aim that reads it again as the
+ * camera flies (`aimAt`).
+ * @param {string} addr
+ * @param {number | null} pos
+ * @returns {Destination & {aim: Aim}}
+ */
+function toward(addr, pos) {
+  const view = viewFor(addr, pos);
+  return { addr, pos, view, aim: aimAt(addr, pos, (p) => viewFor(addr, p), view) };
+}
+
+/**
+ * The aim of a flight bound for a position of a document (see the head;
+ * P-CAM's `Aim`): the view that reads that position (`view`) — `first` as the
+ * act reads it — read again each frame at the position the byte standing
+ * there as the act is made stands at now: that byte by its identity, where
+ * the document's held image places it then — where the text holds it more
+ * than once, the stretch standing where the act's stood in their order — else
+ * the position as the act named it; its last answer while the page holds none
+ * of the document's text, which an estimate would place elsewhere. The
+ * document whole, where no position is named.
+ * @param {string} addr the document: the version its box shows
+ * @param {number | null} pos
+ * @param {(pos: number | null) => View | null} view the view that reads a position of the document now; null where none can
+ * @param {View} first that view as the act reads it
+ * @returns {Aim}
+ */
+function aimAt(addr, pos, view, first) {
+  /** @type {ISpan[]} the act's byte by identity */
+  let ids = [];
+  /** which of that byte's stretches in the held image holds the act's position, and how far into it */
+  let nth = -1, off = 0;
+  if (pos != null) {
+    ids = REC.identityOf(addr, pos, 1);
+    const was = ids.length ? REC.placedIdentity(addr, ids) : [];
+    nth = was.findIndex((s) => s.pos <= pos && pos < s.pos + s.width);
+    if (nth >= 0) off = pos - was[nth].pos;
+  }
+  let last = first;
+  return () => {
+    const d = REC.has(addr) ? REC.doc(addr) : null;
+    if (!d || d.from < 0) return last;
+    const now = nth >= 0 ? REC.placedIdentity(addr, ids) : [], s = now.length ? now[Math.min(nth, now.length - 1)] : null;
+    last = view(s ? s.pos + Math.min(off, s.width - 1) : pos) || last;
+    return last;
+  };
 }
 
 /**
@@ -1370,8 +1437,10 @@ function focusOn(at, byKey) {
 
 /**
  * The landing: the walk moved to the place (`focusOn`), and the camera flown
- * to its view. A LEAP and a follow land at reading size; a cursor move lands
- * at the view its entry was left at.
+ * to its view — by its aim where it has one, so it lands where that view
+ * stands then (see the head). A LEAP and a follow land at reading size; a
+ * cursor move lands at the view its entry was left at, or the one that keeps
+ * the line it read where it stood.
  * @param {Destination} at
  * @param {boolean | undefined} byKey
  * @param {number} ms
@@ -1379,7 +1448,7 @@ function focusOn(at, byKey) {
  */
 async function land(at, byKey, ms) {
   focusOn(at, byKey);
-  const landed = await CAM.fly(at.view, ms);
+  const landed = await CAM.fly(at.aim || at.view, ms);
   CAM.markDirty();
   return landed;
 }
@@ -1648,14 +1717,14 @@ async function againCarried(c, carried, addr, entry, link, asked, byKey) {
   let d = REC.doc(addr), met = null;
   if (d.extent == null || d.from < 0) { const w = await PUMP.wholeOf(addr); met = w.refused; d = REC.doc(addr); }
   const placed = carriedLanding(c, d, await reproject(c, d, met), asked);
-  const v = viewFor(addr, placed.pos);
+  const to = toward(addr, placed.pos);
   const notice = placed.none ? floatingNotice(addr, headOf(d)) : null;
-  if (entry) TRAIL.settle(entry, { ...seen(v, addr, placed.pos), pos: placed.pos, width: widthAt(placed.runs, placed.pos), notice });
+  if (entry) TRAIL.settle(entry, { ...seen(to.view, addr, placed.pos), pos: placed.pos, width: widthAt(placed.runs, placed.pos), notice });
   if (act !== made) return;
   pinTo(addr);
   arrival = withBytes(link || placed.runs ? { addr, pos: placed.pos ?? 1, runs: placed.runs, link } : null, carried);
   sayCarried(act, c, carried, d, placed, entry, link);
-  const flight = land({ addr, pos: placed.pos, view: v }, byKey, 620);
+  const flight = land(to, byKey, 620);
   if (notice) showFound(notice, true);
   await flight;
 }
@@ -1683,10 +1752,10 @@ async function landFollowed(act, s, entry, placed, byKey, first = null) {
   const far = s.far, l = s.link;
   const runs = placed.runs && placed.runs.length ? placed.runs : null;
   const pos = runs ? firstOf(runs, placed.pieces) : headOf(REC.doc(far)), marked = runs && placed.marked && !s.farWhole ? runs : null;
-  const v = viewFor(far, pos);
+  const at = toward(far, pos);
   /** @type {Notice | null} a floating end: the dead end's face beside the head landed on */
   const notice = placed.runs && !placed.runs.length ? floatingNotice(far, pos) : null;
-  if (entry) TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : seen(v, far, pos)), pos, width: widthAt(marked, pos), notice });
+  if (entry) TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : seen(at.view, far, pos)), pos, width: widthAt(marked, pos), notice });
   if (act !== made) return;
   FACES.endReading();
   pinTo(far);
@@ -1695,7 +1764,6 @@ async function landFollowed(act, s, entry, placed, byKey, first = null) {
   lit = [l.addr];
   sayFollowed(act, s, entry, placed, pos);
   if (first && takenAt === act) { if (notice) showFound(notice); return; }
-  const at = { addr: far, pos, view: v };
   const flight = first ? goOn(act, first, at, byKey, 620) : land(at, byKey, 620);
   if (notice) showFound(notice, true);
   await flight;
@@ -1723,10 +1791,10 @@ async function landFollowed(act, s, entry, placed, byKey, first = null) {
 async function landWithheld(act, s, entry, byKey, first) {
   const far = s.far;
   await FACES.prepare(far);
-  const v = viewFor(far, null);
+  const at = toward(far, null);
   /** @type {Notice} the document's own withheld words at its place */
   const notice = { face: 'withheld', addr: far, refusal: null, site: placeAt(far) };
-  if (entry) TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : seen(v, far, null)), pos: null, width: null, notice });
+  if (entry) TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : seen(at.view, far, null)), pos: null, width: null, notice });
   if (act !== made) return;
   FACES.endReading();
   pinTo(far);
@@ -1735,7 +1803,7 @@ async function landWithheld(act, s, entry, byKey, first) {
   landed = { addr: far, pos: headOf(REC.doc(far)), said: null, pieces: null, current: 0, floating: false, withheld: true, beside: null, version: null };
   retry = null; versionOffer = null;
   if (takenAt === act) { showFound(notice); return; }
-  const flight = goOn(act, first, { addr: far, pos: null, view: v }, byKey, 620);
+  const flight = goOn(act, first, at, byKey, 620);
   showFound(notice, true);
   await flight;
 }
@@ -1852,19 +1920,19 @@ export async function leapTo(addr, opts = {}) {
     if (entry) TRAIL.leaveFrom(entry, leavingNow());
   }
   dismissChrome(entry);
-  const v0 = viewFor(addr, pos);
+  const at0 = toward(addr, pos);
   if (!unread && !c) {
     // nothing to read: the landing as the act is made
-    if (entry) TRAIL.settle(entry, { ...seen(v0, addr, pos), pos, width: widthAt(runs, pos), notice: null });
+    if (entry) TRAIL.settle(entry, { ...seen(at0.view, addr, pos), pos, width: widthAt(runs, pos), notice: null });
     pinTo(addr);
     if (link || named) arrival = withBytes({ addr, pos: pos ?? 1, runs, link }, passage ? [passage] : []);
     lit = link ? [link] : [];
     if (named && pos != null) sayNamed(addr, pos, named);
-    const ok = await leave(act, entry, { addr, pos, view: v0 }, opts.byKey, ms);
+    const ok = await leave(act, entry, at0, opts.byKey, ms);
     endAir(act, ok);
     return ok ? d : null;
   }
-  const first = leave(act, entry, { addr, pos, view: v0 }, opts.byKey, ms);
+  const first = leave(act, entry, at0, opts.byKey, ms);
   if (waiting) showNotice(waiting);
   if (unread) { const w = await PUMP.wholeOf(addr); met = w.refused; d = REC.doc(addr); }
   if (d.refused === 'unregistered') {
@@ -1874,10 +1942,10 @@ export async function leapTo(addr, opts = {}) {
   if (passage && runs && !named) { named = namedRuns(addr, runs, passage); runs = named.runs; pos = firstOf(runs, named.pieces); }
   const placed = c ? carriedLanding(c, d, await reproject(c, d, met), pos) : null;
   if (placed) { pos = placed.pos; runs = placed.runs; }
-  const v = viewFor(addr, pos);
+  const at = toward(addr, pos);
   /** @type {Notice | null} a carried passage the text holds none of: the dead end's face beside the head landed on, offering no act */
   const notice = placed && placed.none ? floatingNotice(addr, headOf(d)) : null;
-  if (entry) TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : seen(v, addr, pos)), pos, width: widthAt(runs, pos), notice });
+  if (entry) TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : seen(at.view, addr, pos)), pos, width: widthAt(runs, pos), notice });
   if (act !== made) return null;
   FACES.endReading();
   pinTo(addr);
@@ -1886,7 +1954,7 @@ export async function leapTo(addr, opts = {}) {
   if (c && placed) sayCarried(act, c, carried, d, placed, entry, link);
   else if (named && pos != null) sayNamed(addr, pos, named);
   if (takenAt === act) { if (notice) showFound(notice); return null; }
-  const flight = goOn(act, first, { addr, pos, view: v }, opts.byKey, ms);
+  const flight = goOn(act, first, at, opts.byKey, ms);
   if (notice) showFound(notice, true);
   return (await flight) ? d : null;
 }
@@ -2193,7 +2261,7 @@ export async function follow(s, byKey = false) {
   }
   dismissChrome(entry);
   LK.follow(l);
-  const first = leave(act, entry, { addr: far, pos: null, view: viewFor(far, null) }, byKey, 620);
+  const first = leave(act, entry, toward(far, null), byKey, 620);
   showNotice(waiting);
   /** the follow's read brought a failure, learned in the air: faced where the camera went, the link lit where no act was made after it */
   const faced = (/** @type {Notice} */ notice) => { if (failed(act, entry, notice, byKey)) lit = [l.addr]; };
@@ -2478,9 +2546,9 @@ async function landAtCursor(e, act, byKey, l) {
   if (!answer) restoreVersions(e);
   const cover = answer ? null : coverOf(e);
   const at = answer || cover ? null : returning(e), told = at && !at.reads.length ? markReturn(at, e.notice) : null;
-  const view = at ? at.view : e.view;
+  const view = at ? at.view : e.view, aim = at ? at.aim : null;
   const back = l && l.back ? returnTo(l, view) : null;
-  const first = leave(act, e, cover === 'covered' ? coveredAt(e.addr) : back ? { ...back, view } : { ...walkOf(e, at), view }, byKey, 500);
+  const first = leave(act, e, cover === 'covered' ? coveredAt(e.addr) : back ? { ...back, view, aim } : { ...walkOf(e, at), view, aim }, byKey, 500);
   if (e.notice) showFound(e.notice, !!landed && (landed.floating || landed.withheld) && landed.addr === e.notice.addr);
   if (cover === 'covered') showCover(e.addr);
   if (!answer) {
@@ -2529,8 +2597,8 @@ function restoreVersions(e) {
 async function sceneAt(e, act, byKey) {
   const o = /** @type {import('./trail.js').Opened} */ (e.scene);
   arrival = null; landed = null; light = null; lit = [];
-  const at = returning(e), view = at.view;
-  const first = leave(act, e, { ...walkOf(e, at), view, take: false }, byKey, 500);
+  const at = returning(e);
+  const first = leave(act, e, { ...walkOf(e, at), view: at.view, aim: at.aim, take: false }, byKey, 500);
   const out = await SCENE.reopen(o);
   if (act !== made) return;
   if (!out.shown && out.refused) FACES.showRefusal(null, out.refused, e.addr, asNotice(act));
@@ -2569,6 +2637,7 @@ async function sceneAt(e, act, byKey) {
 /**
  * @typedef {Object} Return — where a cursor move reaching an entry lands, from what the page holds now (`returning`)
  * @property {View} view the view it lands at: the entry's, the line the words its view read are found at set where the line read stood (T-LAYER's `keptAt`); while a read must tell first, the line holding the first of them the held text places, else their own position's; the view the entry was left at where the page holds none of that text
+ * @property {Aim | null} aim that view read again each frame as the camera flies, the position whose line it sets followed by the byte standing there (`keeping`); null where its view read no line: the view the entry was left at stands
  * @property {WalkTo | null} walk where the walk stood as the reader left the entry, or where a read placed its landing since, placed again by its byte (`stoodAgain`); null where it stood nowhere the text it reaches holds
  * @property {Found | null} found the words its view read, found; null where it read none, or a read must tell first
  * @property {Again | null} again the arrival it keeps, read again; null where it keeps none, or a read must tell first
@@ -2607,9 +2676,26 @@ function returning(e, settled = false, met = null) {
   const walk = e.stood ? stoodAgain(e.stood) : null;
   if (reads.size) {
     const held = r ? REC.placedIdentity(shownIn(r.addr), r.ids) : [];
-    return { view: (r && LAYER.keptAt(e.view, r, held.length ? held[0].pos : r.pos)) || e.view, walk, found: null, again: null, reads: [...reads] };
+    return { ...keeping(e.view, r, r ? (held.length ? held[0].pos : r.pos) : null), walk, found: null, again: null, reads: [...reads] };
   }
-  return { view: (r && found && LAYER.keptAt(e.view, r, found.to)) || e.view, walk, found, again, reads: [] };
+  return { ...keeping(e.view, r, found ? found.to : null), walk, found, again, reads: [] };
+}
+
+/**
+ * The view a return lands at and its aim (`Return.view`, `Return.aim`): the
+ * view that keeps what an entry's view read where it stood, the line holding
+ * `to` in the text its box shows taking that line's place (T-LAYER's
+ * `keptAt`), read again as the camera flies by `to`'s byte (`aimAt`); the
+ * view the entry was left at, fixed, where it read no line or no line takes
+ * its place.
+ * @param {View} left the view the entry was left at
+ * @param {import('../text/layer.js').Reading | null} r what it read
+ * @param {number | null} to the position whose line takes the place of the line read
+ * @returns {{view: View, aim: Aim | null}}
+ */
+function keeping(left, r, to) {
+  const view = (r && to != null && LAYER.keptAt(left, r, to)) || left;
+  return { view, aim: r && to != null ? aimAt(shownIn(r.addr), to, (p) => (p == null ? null : LAYER.keptAt(left, r, p)), view) : null };
 }
 
 /**
@@ -2847,7 +2933,7 @@ async function againReturn(e, byKey) {
   const at = now.reads.length ? returning(e, true, met) : now;
   arrival = null; landed = null; retry = null; versionOffer = null; words = false;
   const told = markReturn(at, e.notice);
-  const flight = land({ ...walkOf(e, at), view: at.view }, byKey, 500);
+  const flight = land({ ...walkOf(e, at), view: at.view, aim: at.aim }, byKey, 500);
   sayReturn(act, e, told);
   await flight;
 }
@@ -2902,7 +2988,7 @@ async function placeRead(act, e, texts, first, byKey, n = null) {
   if (act !== made) return;
   const at = returning(e, true, met), told = markReturn(at, e.notice);
   if (takenAt === act) { if (n) showFound(n); sayReturn(act, e, told); return; }
-  const flight = goOn(act, first, { ...walkOf(e, at), view: at.view }, byKey, 500);
+  const flight = goOn(act, first, { ...walkOf(e, at), view: at.view, aim: at.aim }, byKey, 500);
   if (n) showFound(n);
   sayReturn(act, e, told);
   void restore(e, act);
@@ -2929,8 +3015,8 @@ function coverOf(e) {
   return REC.couldRead(e.addr) && (!d || (d.extent == null && !d.refused)) ? 'unread' : null;
 }
 
-/** a covered document's landing (see the head): its box framed whole at the reading size — the entry's view frames columns the cover does not draw — the walk on the document */
-const coveredAt = (/** @type {string} */ addr) => ({ addr, pos: null, view: viewFor(addr, null) });
+/** a covered document's landing (see the head): its box framed whole at the reading size, by its aim (`toward`) — the entry's view frames columns the cover does not draw — the walk on the document */
+const coveredAt = (/** @type {string} */ addr) => toward(addr, null);
 /**
  * A covered document's face at its box's head (see the head): the
  * document-level withheld face, its sign-in act the way back (O-FACES'

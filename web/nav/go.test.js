@@ -4,8 +4,10 @@
 // where its camera, its walk, its focus ring and its faces go, at any board
 // speed and in whatever order the reads answer: the arrival's two marks and
 // their life, the four states and the runs' labels, the step and its light,
-// the order of acts, the jump in the air and the keys it holds, a jump
-// reaching, failures known at the act and learned in the air, a follow to a
+// the order of acts, the jump in the air and the keys it holds, its flight
+// landing on its passage where its document is set again or folded again in
+// the air, a jump reaching, failures known at the act and learned in the air,
+// a follow to a
 // withheld document, the chrome a landing leaves standing and a field that
 // keeps its caret, cards opened while an act reads, a face a read brings
 // standing below a card the reader opened, Enter at a withheld run and a
@@ -22,8 +24,8 @@
 // set again under the reader — an arrival placed again by its runs' bytes,
 // and the passage being read gone from it — and the surfaces standing
 // through a version move or a newer version's arrival, the selection, a card
-// and a list re-checked against the version their box shows then (FP-20,
-// FP-21, FP-22, FP-25, FP-29, FP-35, FP-36). The overlay host stands on stand-in elements — the
+// and a list re-checked against the version their box shows then (FP-8,
+// FP-20, FP-21, FP-22, FP-25, FP-29, FP-35, FP-36). The overlay host stands on stand-in elements — the
 // overlay's and the notice's below it — the platform's document a stand-in
 // beside them, so a face a landing shows is read back from what the host
 // wrote.
@@ -3271,6 +3273,59 @@ test('a return to the entry a jump\'s failure faced at — the walk on the addre
   await run(GO.forward());
   assert.deepEqual([walkAt(), faceShown()?.id, GO.landing(), GO.arrivalMark()], [['document', GHOSTED, null], 'face:doc_not_registered', null, null], 'the line read gone: the walk on the address, its notice still the one face — no dead end\'s face for the neighbour, nothing marked');
   HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+// ---- THE FLIGHT LANDS ON ITS PASSAGE (FP-8, FP-25) -----------------------------------------------------------------
+
+/** a jump's flight stepped as the frames step it — half way, a change made between two frames, three quarters — then run to its landing */
+async function across(/** @type {Promise<unknown>} */ jump, /** @type {() => void} */ change) {
+  const f = CAM.cam.anim;
+  assert.ok(f, 'the jump flies');
+  CAM.step(f.t0 + f.ms / 2);
+  change();
+  CAM.step(f.t0 + f.ms * 3 / 4);
+  await run(jump);
+}
+
+test('a LEAP\'s flight lands on its passage where its document is set again in the air: CUT set again half way there with a paragraph before its text, the camera lands at the view that reads the passage\'s first byte where it stands now — never at the position the act named, which holds other words now', async () => {
+  setDraft(CUT, EIGHTY, [[CUT, 1, EIGHTY.length]]);
+  await PUMP.loadWhole(CUT);
+  const at = REC.doc(CUT).blocks[9].pos, k = INSERTED.length;
+  await run(GO.leapTo(FAR));
+  await across(GO.leapTo(CUT, { pos: at }), () => setDraft(CUT, INSERTED + EIGHTY, [[FOREIGN, 1, k], [CUT, 1, EIGHTY.length]]));
+  assert.ok(same(CAM.view(), GO.viewFor(CUT, at + k)), `the camera on the passage, ${at + k} now: ${JSON.stringify(CAM.view())}`);
+  assert.ok(!same(CAM.view(), GO.viewFor(CUT, at)), 'never on the position the act named');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a LEAP\'s flight lands on its passage through a resize in the air: the window narrowed half way there, LONG folded again at the measure the narrow view holds, the camera lands at the view that reads the passage in that fold', async () => {
+  await PUMP.loadWhole(LONG);
+  const d = REC.doc(LONG), pos = d.blocks[Math.floor(d.blocks.length * 2 / 3)].pos;
+  await run(GO.leapTo(FAR));
+  const wide = GO.viewFor(LONG, pos);
+  try {
+    await across(GO.leapTo(LONG, { pos }), () => CAM.setViewport(400, 900));
+    const narrow = GO.viewFor(LONG, pos);
+    assert.ok(!same(wide, narrow), 'the narrow view folds LONG again: the passage read elsewhere');
+    assert.ok(same(CAM.view(), narrow), `the camera at the view that reads the passage in the fold the narrow view holds: ${JSON.stringify(CAM.view())}`);
+  } finally {
+    CAM.setViewport(1440, 900);
+  }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a LEAP\'s flight to a byte its text holds more than once lands on the stretch the act named, never the first that holds the byte', async () => {
+  await PUMP.loadWhole(FAR);
+  // FAR's text as an edit left it: its third byte at 3, at 20 and at 22
+  REC.takeImage(FAR, 1, [{ iStart: FAR + '.0.1.1', width: 19 }, { iStart: FAR + '.0.1.3', width: 2 }, { iStart: FAR + '.0.1.3', width: 2 }, { iStart: FAR + '.0.1.24', width: FAR_EXTENT - 23 }]);
+  try {
+    assert.ok(REC.doc(FAR).from >= 0, 'FAR\'s text held: the LEAP reads nothing');
+    assert.deepEqual(REC.placedIdentity(FAR, REC.identityOf(FAR, 22, 1)).map((s) => s.pos), [3, 20, 22], 'the byte at 22 stands at 3 and 20 too');
+    await run(GO.leapTo(D));
+    await across(GO.leapTo(FAR, { pos: 22 }), () => {});
+    assert.ok(same(CAM.view(), GO.viewFor(FAR, 22)) && !same(CAM.view(), GO.viewFor(FAR, 3)), `the camera on 22, never on 3: ${JSON.stringify(CAM.view())}`);
+  } finally { farOwn(); }
   assert.deepEqual(fake.unanswered, []);
 });
 
