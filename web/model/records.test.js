@@ -16,8 +16,9 @@
 // image holding none, a claim's home making its origin's windows again, and
 // whether what it shows a reader changed; the key store,
 // the session's key and the byline's facts, a row touching a doc 1 keeping
-// the causes of the owners it is handed as held, each owed its read again; a
-// change of class keeping what
+// the causes of the owners it is handed as held, each owed its read again,
+// two holdings of the facts compared by what they say and the documents an
+// account owns; a change of class keeping what
 // the class it left read as published — a draft's run in it withheld from
 // that moment — and dropping the rest, every other box it knew left owed its
 // read at the new class whatever the view stood on — covered at once where
@@ -880,6 +881,20 @@ test('a row touching a doc 1 keeps the byline causes of the owners it is handed 
   REC.applyFeedUpdate(enrolling(5), new Set(), shown);
   REC.sessionDied({ arm: 'closed' });
   assert.deepEqual([REC.accountKey('1.0.1'), REC.causeOwed('1.0.1'), REC.accountKey('1.0.9')], [undefined, false, { label: 'k', fingerprint: 'ab' }], 'a change of class: the kept cause and its mark dropped, the value kept');
+});
+
+test('two holdings of an account\'s byline facts say the same where both are unread, name one device key, or give one cause naming one owner; the documents an account owns are the held ones its facts decide, by the one owner rule (FP-34)', () => {
+  const key = { label: 'dev-notebook', fingerprint: 'ab'.repeat(32) };
+  assert.deepEqual([
+    REC.sameFacts(undefined, undefined), REC.sameFacts(key, { ...key }), REC.sameFacts({ cause: 'unsigned' }, { cause: 'unsigned' }), REC.sameFacts({ cause: 'withheld', owner: '1.0.2' }, { cause: 'withheld', owner: '1.0.2' }),
+  ], [true, true, true, true], 'the same, whatever object holds them');
+  assert.deepEqual([
+    REC.sameFacts(undefined, { cause: 'unsigned' }), REC.sameFacts(key, { ...key, label: null }), REC.sameFacts(key, { ...key, fingerprint: 'cd'.repeat(32) }), REC.sameFacts(key, { cause: 'unsigned' }),
+    REC.sameFacts({ cause: 'unsigned' }, { cause: 'not-recorded' }), REC.sameFacts({ cause: 'withheld', owner: '1.0.2' }, { cause: 'withheld', owner: '1.0.3' }),
+  ], [false, false, false, false, false, false], 'unread beside read, another label or fingerprint, a key beside a cause, another cause or its owner');
+  for (const d of ['1.0.1.0.3', '1.0.2.0.5', '1.0.1.1.0.4']) REC.takeSpanSet(d, [{ subspace: 1, ordinal: 1, positions: 4 }]);
+  REC.takeOwner('1.0.1.1', /** @type {any} */ ({ prefix: '1.0.1' }));
+  assert.deepEqual([REC.ownedBy('1.0.1'), REC.ownedBy('1.0.2'), REC.ownedBy('1.0.1.1')], [['1.0.1.0.3', '1.0.1.1.0.4'], ['1.0.2.0.5'], []], 'its own, and a sub-account\'s whose effective owner it is, in the order first held');
 });
 
 test('a session is a reference, never a token; the death signal drops it', () => {

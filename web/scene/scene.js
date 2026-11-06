@@ -7,8 +7,9 @@
 // went to and whether its appearance was said, a stop the reader returned to
 // with what its answer told and an act waiting on it, the panes' scrolls,
 // each pane's text — the record it was made from, the version it reads and
-// the address it names, the links and far ends it was set with — the
-// settings reading and the acts waiting on them, the element it was opened
+// the address it names, the links and far ends and its owner's byline facts
+// it was set with — the settings reading and the acts and checks waiting on
+// them, the element it was opened
 // from, and its own end and the faces a returned stop shows, the app's to
 // hand in; view state, never written (FP-7).
 // Two documents at reading scale side by side over the plane, each pane
@@ -87,7 +88,15 @@
 // reaches the panes after it drops what it named (`dropped`, its `onDrop`),
 // a pane reached where the row named its document's box, or where M-PUMP
 // names its document as windowing an origin whose clause may be decided
-// anew, and none offers a reload. A draft — any text no publication fixes — is read again whole and
+// anew, and none offers a reload. Its byline is made as it is set, with its
+// owner's facts as the model holds them then (FP-34): read before it is set,
+// a read a drop of the byline causes overtook begun again, DROP_ATTEMPTS
+// reads in all (`readFacts`), and read where it is set without them (`swap`);
+// owner facts M-PUMP takes anew reach each pane on a document the owner holds
+// (M-PUMP's `bylineTaken`) once no setting reads, so a setting out lands as
+// asked, and read it again in its place where its byline was made with other
+// facts (`dropped`) — the plane and the pane stating one byline. A draft —
+// any text no publication fixes — is read again whole and
 // set in its place, the first span in view holding still and the platform's
 // selection put back on the same words. An edition read at its bare address
 // keeps the version it opened on: its acts name the member its text is
@@ -327,6 +336,7 @@ import { esc, byteOffsets } from '../util.js';
 /** @typedef {import('../model/records.js').Stretch} Stretch */
 /** @typedef {import('../model/records.js').Declined} Declined */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
+/** @typedef {import('../model/records.js').AccountFacts} AccountFacts */
 /** @typedef {import('../model/pump.js').Dropped} Dropped */
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../beams/beams.js').Ink} Ink */
@@ -496,6 +506,7 @@ import { esc, byteOffsets } from '../util.js';
  * @property {{since: number, at: number, met: Refusal | null} | null} kept a setting the board's events asked of it, out (`update`): when it began, by the platform's clock, the page's clock at the row or drop that left the pane behind (M-PUMP's `Dropped.at`), and the refusal that left its last reads unset — the board not answering among them, whereupon the setting is asked again once M-PUMP's pause ends — the pane standing as it shows; null where none is out
  * @property {{since: number, outcome: import('../model/records.js').Outcome} | null} lift how the last setting the board's events asked set it: whether it changed what the pane shows (M-REC's `shownBy`), and the stamp it stood kept from (`kept.at`); null where none has set it
  * @property {string | null} signs what the edition claims held as they are read again said as its article's withheld runs' kept signs were last set (T-LAYER's `keptRunsKey`); null where its article was set since
+ * @property {AccountFacts | undefined} facts the owner's byline facts its article's byline was made with (`ownerFacts`), undefined where they were not read: what owner facts taken anew are checked against (`dropped`)
  */
 
 /**
@@ -534,7 +545,7 @@ import { esc, byteOffsets } from '../util.js';
  * @property {Returned | null} returned the stop drawn only by the panes' `compare` the reader left from, standing with the landing until its answer is taken and the reader has moved on (see the head); null where none stands
  * @property {string} size the panes' sizes the ties were measured at
  * @property {number} updating the settings reading
- * @property {Array<() => void>} waiting the acts made while one reads, in the order made (`whenSet`)
+ * @property {Array<() => void>} waiting the acts made while one reads, and the checks owner facts taken anew ask of the panes, in the order made (`whenSet`)
  */
 
 /**
@@ -1098,10 +1109,24 @@ function placedInto(src, shown) {
 }
 
 /**
+ * An owner's byline facts read for a pane (M-PUMP's `readAccount`; FP-34): a
+ * read a drop of the byline causes overtook, which took nothing, begun again,
+ * DROP_ATTEMPTS reads in all and none once `stands` reads false — past them
+ * the pane is set with what the model holds, as a whole read past its passes
+ * is.
+ * @param {string} owner
+ * @param {() => boolean} [stands] the opening the read is made for still stands
+ * @returns {Promise<void>} settled once what was read is taken, or the reads are spent
+ */
+async function readFacts(owner, stands = () => true) {
+  for (let reads = 1; !(await PUMP.readAccount(owner)); reads++) if (reads >= PUMP.DROP_ATTEMPTS || !stands()) return;
+}
+
+/**
  * A pane's record read before it is set (see the head): whole (M-PUMP's
- * `wholeOf`), its owner's byline facts (M-PUMP's `readAccount`; FP-34), so the
- * byline the pane is set with shows them, or why it can show none, never an
- * empty box a pane set from its kept view would show again; and the chain's
+ * `wholeOf`), its owner's byline facts (`readFacts`; FP-34), so the byline the
+ * pane is set with shows them, or why it can show none, never an empty box a
+ * pane set from its kept view would show again; and the chain's
  * count where the board ended the chain there —
  * held, or, at an edition at its bare address, read to its end (`probeChain`):
  * the member its text is, which its acts name. A count the board did not end
@@ -1126,7 +1151,7 @@ async function readPane(src, stands = () => true) {
   let unheard = w.refused && PUMP.unanswered(w.refused) ? w.refused : null;
   if ((!w.doc || w.refused) && !REC.doc(src).refused) return { d: null, n: null, whole: false, refused: w.refused, unheard };
   const owner = REC.ownerAccount(REC.doc(src));
-  await PUMP.readAccount(owner);
+  await readFacts(owner, stands);
   if (!unheard && owner && PUMP.factsUnheard(owner)) unheard = PUMP.NOT_ANSWERED;
   const box = REC.has(boxOf(src)) ? REC.doc(boxOf(src)) : null;
   let n = box && box.ended ? box.members : null;
@@ -1218,7 +1243,7 @@ function paneAt(side, src, r) {
   const names = kind === 'bare' && r.n ? versionAddress(src, r.n) : src;
   return {
     side, doc: src, src, names, shows: kind === 'bare' ? src : names, kind, k, n: kind === 'draft' ? null : r.n, read: null, lacks: null,
-    d: { ...r.d }, view: LAYER.sceneView(r.d), placed: new Map(), place: null, el: null, serial: 0, sets: 0, kept: null, lift: null, signs: null,
+    d: { ...r.d }, view: LAYER.sceneView(r.d), placed: new Map(), place: null, el: null, serial: 0, sets: 0, kept: null, lift: null, signs: null, facts: undefined,
   };
 }
 
@@ -1331,12 +1356,28 @@ function nameBar(/** @type {NonNullable<typeof els>} */ E, /** @type {Pane} */ P
   if (b) b.textContent = P.shows;
 }
 
-/** a pane's article put in its place: the one it shows replaced, else placed — pane A's after its corner, pane B's before it, so each corner stands on its pane's outer side — its withheld runs' kept signs to be set (`markKept`) */
-function swap(/** @type {NonNullable<typeof els>} */ E, /** @type {Pane} */ P, /** @type {HTMLElement} */ el) {
-  const pane = paneEl(E, P.side);
+/** the byline facts the model holds now of the owner of the record a pane is set from (M-REC's `accountKey`, `ownerAccount`): what its article's byline is made with */
+const ownerFacts = (/** @type {Pane} */ P) => REC.accountKey(REC.ownerAccount(P.d));
+
+/**
+ * A pane's article made from what the pane is set with — T-LAYER's mount
+ * (`sceneArticle`) — and put in its place: the one it shows replaced, else
+ * placed — pane A's after its corner, pane B's before it, so each corner
+ * stands on its pane's outer side — its withheld runs' kept signs to be set
+ * (`markKept`), and the owner's byline facts its byline was made with kept
+ * beside it (`Pane.facts`); where they are not read, a read of them made
+ * (`readFacts`; FP-34), whose take sets the pane again (`dropped`).
+ * @param {NonNullable<typeof els>} E
+ * @param {Pane} P
+ */
+function swap(E, P) {
+  const el = LAYER.sceneArticle(P.d, { names: P.names, shows: P.shows, view: P.view }), pane = paneEl(E, P.side);
   if (P.el && pane.contains(P.el)) P.el.replaceWith(el);
   else if (P.side === 'a') pane.append(el); else pane.prepend(el);
   P.el = el; P.signs = null;
+  P.facts = ownerFacts(P);
+  const owner = REC.ownerAccount(P.d);
+  if (P.facts === undefined && owner) void readFacts(owner);
 }
 
 /**
@@ -1494,7 +1535,7 @@ function stand(E, S, face) {
   for (const side of SIDES) {
     const P = S[side], pane = paneEl(E, side);
     pane.innerHTML = cornerMarkup(P);
-    swap(E, P, LAYER.sceneArticle(P.d, { names: P.names, shows: P.shows, view: P.view }));
+    swap(E, P);
     pane.setAttribute('tabindex', '0');
   }
   namePanes(E, S);
@@ -2517,7 +2558,7 @@ function setPanes(S, sets, pairs) {
     const P = S[side], view = next.view ?? LAYER.sceneView(next.d);
     Object.assign(P, { d: { ...next.d }, view, kind: next.kind, src: next.src, names: next.names, shows: next.shows, k: next.k, n: next.n, read: next.read, lacks: next.lacks });
     P.sets++;
-    swap(E, P, LAYER.sceneArticle(P.d, { names: P.names, shows: P.shows, view }));
+    swap(E, P);
     writeCorner(E, P);
     nameBar(E, P);
   }
@@ -2551,9 +2592,10 @@ function setPanes(S, sets, pairs) {
 }
 
 /**
- * An act on the panes made while one is being set again waits for it (see
- * the head; FP-23): run now where no setting reads, else once the last
- * lands, in the order the acts were made. Ending the scene never waits.
+ * An act on the panes made while one is being set again waits for it, as
+ * does a pane's check against owner facts taken anew (`dropped`; see the
+ * head; FP-23): run now where no setting reads, else once the last lands, in
+ * the order they were made. Ending the scene never waits.
  * @param {() => void} fn
  */
 function whenSet(fn) {
@@ -2751,7 +2793,12 @@ function newest(row, src) {
  * refresh reaching every pane (`refreshed`); a row naming a newer member
  * pinning an edition at its bare address at once, or counting a version's
  * chain again; any other row reaching a pane's text, and a clause decided
- * anew at an origin its text windows, reading it again in its place.
+ * anew at an origin its text windows, reading it again in its place; owner
+ * facts taken anew (M-PUMP's `bylineTaken`) reaching each pane on a document
+ * the owner holds once no setting reads (`whenSet`) — so a setting out, a
+ * corner's act's among them, lands as asked, with them — and reading it again
+ * in its place where its byline was made with other facts (`Pane.facts`),
+ * nothing else of it touched.
  * @param {Dropped} x
  */
 export function dropped(x) {
@@ -2766,6 +2813,13 @@ export function dropped(x) {
     return;
   }
   if (x.chains) { for (const side of SIDES) refreshed(S, side, x.chains, x.at); return; }
+  if (x.byline) {
+    for (const side of SIDES) {
+      if (!x.addrs.some((a) => oneBox(a, S[side].src))) continue;
+      whenSet(() => { const P = S[side]; if (scene === S && !REC.sameFacts(P.facts, ownerFacts(P))) void update(side, { at: x.at }); });
+    }
+    return;
+  }
   for (const side of SIDES) {
     const P = S[side];
     if (!x.addrs.some((a) => oneBox(a, P.src))) continue;

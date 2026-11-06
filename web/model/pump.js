@@ -88,9 +88,11 @@
 // drop overtook teaches nothing either: the board's answers and the feed's
 // rows come by two channels nothing orders, so every read watches the drops
 // of the address it is read for (`watchDrops`) — a lookup of the edition
-// claims the changes of its origin's claims (`watchClaims`) — and takes
-// nothing learned across one — a view's read is left unasked, an act's read
-// begun again, at most DROP_ATTEMPTS times. A read refused for its size
+// claims the changes of its origin's claims (`watchClaims`), a byline's cause
+// the drops of the causes (M-REC's `keyDrops`), its read answering whether it
+// took what it read (`readAccount`) — and takes nothing learned across one —
+// a view's read is left unasked, an act's read begun again, at most
+// DROP_ATTEMPTS times. A read refused for its size
 // (`SIZE_REFUSALS`) is asked again in parts, within SPLIT_READS (FP-21). A
 // class scan read whole is asked again on `scan_busy`, within SCAN_ATTEMPTS.
 // A read of the board's state the board's events overtook keeps what they
@@ -133,7 +135,12 @@
 // meanwhile queueing one more read; any other dropped. Wherever the clause on
 // an origin may be decided anew — its claims set again or dropped, a claim's
 // home dropped by a row or read again — the documents windowing the origin
-// are told (`onDrop`), so a reading scene's pane showing one reads it again. A
+// are told (`onDrop`), so a reading scene's pane showing one reads it again.
+// Owner facts taken that say other than those held — a byline read's
+// (`readAccount`), or a shown document's read again (`readAgain`) — are told
+// as one drop naming the documents the owner holds and the owner
+// (`bylineTaken`), so a reading scene's pane sets its byline again (FP-34);
+// what a refresh takes reaches every reader by the refresh's own drop. A
 // row naming no document and no link marks the board, and once the run is in
 // — no row for RUN_QUIET_MS, at the latest RUN_MAX_MS after its first bare
 // row — one refresh runs (`refresh`): each edition held at its bare address,
@@ -308,7 +315,7 @@ export const KEPT_MS = 1000;
 
 /** @type {Set<string>} */
 const inflight = new Set();
-/** @type {Map<string, Promise<void>>} the byline reads out, by account (`readAccount`): every reader of one joins it */
+/** @type {Map<string, Promise<boolean>>} the byline reads out, by account (`readAccount`): every reader of one joins it, and is answered whether it took what it read */
 const accountsOut = new Map();
 /** @type {Set<string>} keys already asked and answered (a refusal included), not to be asked again until invalidated */
 const asked = new Set();
@@ -575,11 +582,12 @@ function lagEnds() {
 }
 
 /**
- * @typedef {Object} Dropped — what one of the board's events dropped of what the page held, told after the drop, so a reader of it reads fresh: a feed row's addresses, a refresh's, or what a change of the page's class left — its session's death among them (`classChanged`)
- * @property {FeedUpdate | null} row the feed row, its `op` among it — `null` where the journal could not name it (wire.md §The change feed); null for a refresh, a change of class, and a clause decided anew
- * @property {string[] | null} addrs the addresses the row touched, each once — the documents it names, the trunk of a member among them, the home of the link it names with the home's trunk (M-REC's `applyFeedUpdate`), every one dropped but those the view keeps, which are read again (`readAgain`) — or those a refresh dropped or set again; or, its `row` null, the documents windowing an origin whose clause may be decided anew — its edition claims set again or dropped, a claim's home dropped by a row or read again — or a document its read again set after the board kept that read waiting, which a reader read in the wait as it stood; null for a change of class, which reaches every record: each one M-REC kept read again, every other dropped, a box among them owed its read
+ * @typedef {Object} Dropped — what one of the board's events dropped of what the page held, told after the drop, so a reader of it reads fresh: a feed row's addresses, a refresh's, what a change of the page's class left — its session's death among them (`classChanged`) — or the documents whose byline owner facts taken anew decide (`bylineTaken`)
+ * @property {FeedUpdate | null} row the feed row, its `op` among it — `null` where the journal could not name it (wire.md §The change feed); null for a refresh, a change of class, a clause decided anew and owner facts taken anew
+ * @property {string[] | null} addrs the addresses the row touched, each once — the documents it names, the trunk of a member among them, the home of the link it names with the home's trunk (M-REC's `applyFeedUpdate`), every one dropped but those the view keeps, which are read again (`readAgain`) — or those a refresh dropped or set again; or, its `row` null, the documents windowing an origin whose clause may be decided anew — its edition claims set again or dropped, a claim's home dropped by a row or read again — or a document its read again set after the board kept that read waiting, which a reader read in the wait as it stood, or the held documents an owner whose facts were taken anew owns (`byline`); null for a change of class, which reaches every record: each one M-REC kept read again, every other dropped, a box among them owed its read
  * @property {Map<string, Chain>} [chains] a refresh's alone (`refresh`): the chain of each edition it counted, by its trunk — what a reading scene's pane at a bare address is pinned by
- * @property {number} at the page's clock at the row or drop that left behind what it names: a row's arrival, the stream's drop for a row its catch-up read, the first bare row of a refresh's run, the change of class — what a reader keeping what it shows as it stands says ⟨when⟩ of (`Kept.since`)
+ * @property {string} [byline] owner facts taken anew alone (`bylineTaken`): the account whose facts say other than those held before, which decide the bylines of the documents it names; nothing of those documents dropped
+ * @property {number} at the page's clock at the row or drop that left behind what it names: a row's arrival, the stream's drop for a row its catch-up read, the first bare row of a refresh's run, the change of class, the read or the row that brought owner facts — what a reader keeping what it shows as it stands says ⟨when⟩ of (`Kept.since`)
  */
 
 /** the model is subscribed to the port's events: a start made again hands in its readers alone */
@@ -595,7 +603,7 @@ let subscribed = false;
  * they held as it stood with them (`unkeepAll`) and the board's lag, lets go
  * of the rows held, the gap and the faces kept, and forgets the positions the
  * catch-ups read.
- * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string, at: number | null) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], readings?: () => Array<{addr: string, at: number}>, onCounted?: (trunk: string, memberAt: (at: number) => string | null) => void, onOpen?: () => void}} opts `shown` the version each box shows, which the view reads; `onPublish` told of each trunk member `D.k+1` a `publish` row names, with the row's position, before the row drops what the page held of `D`, and of each a refresh finds past the member a text is, with none; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `readings` what the trail's entries the reader has left read, each by its document and the position its text was read at, and `onCounted` told of each chain a refresh counts for them or for a text it holds, before any arrival it finds (`refresh`); `onOpen` told once a board the list read again found is open (`retryBoards`)
+ * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string, at: number | null) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], readings?: () => Array<{addr: string, at: number}>, onCounted?: (trunk: string, memberAt: (at: number) => string | null) => void, onOpen?: () => void}} opts `shown` the version each box shows, which the view reads; `onPublish` told of each trunk member `D.k+1` a `publish` row names, with the row's position, before the row drops what the page held of `D`, and of each a refresh finds past the member a text is, with none; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop, and of the documents whose byline owner facts taken anew decide; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `readings` what the trail's entries the reader has left read, each by its document and the position its text was read at, and `onCounted` told of each chain a refresh counts for them or for a text it holds, before any arrival it finds (`refresh`); `onOpen` told once a board the list read again found is open (`retryBoards`)
  */
 export function start(opts) {
   dirty = opts.onDirty;
@@ -761,7 +769,8 @@ function decidedAnew(origins, at) {
  * passed, with the refusal that left the last of its reads unset, until the
  * step that sets it or lets it go. Set after the board kept a read of it
  * waiting, its readers are told again (`onDrop`, its `row` null), for one that
- * read it meanwhile read what stood.
+ * read it meanwhile read what stood; its owner's byline facts set with it that
+ * say other than those held are told after (`bylineTaken`).
  * @param {string} addr
  * @param {number} since the page's clock at the row or drop that left it behind (`Kept.since`): a row's, a refresh's run's, the change of class
  * @param {Refusal | null} [met] the refusal a read of it already met that left it unset — a refresh's, the board not answering a part of it — so its reads wait out the pause first
@@ -804,12 +813,14 @@ function readAgain(addr, since, met = null) {
         }
         if (!r.unheard) {
           if (r.fresh.byline && 'cause' in r.fresh.byline.facts && REC.keyDrops() !== causes) delete r.fresh.byline;
+          const owner = r.fresh.byline ? r.fresh.byline.account : null, was = owner ? REC.accountKey(owner) : undefined;
           const stood = unkeep(keptDocs, addr);
           lifted(keptDocs, addr, stood, REC.setAgain(addr, r.fresh));
           forget(addr);
           landed();
           if (waited) onDrop({ row: null, addrs: [addr], at: since });
           decidedAnew(REC.originsClaimedIn([addr]), since);
+          if (owner) bylineTaken(owner, was, since);
           return;
         }
         landed();
@@ -2864,32 +2875,52 @@ function needAccount(account) {
  * board did not answer holds them for has ended — once for every reader of
  * them, a read out joined. A value is taken always, for it never changes; a
  * cause only where no drop of the byline causes overtook it (M-REC's
- * `keyDrops`), else it is asked again as the view next needs it; the board
- * not answering held for UNREACHED_MS (`hold`), asked again past it or at the
- * daemon's `running`, and taken only where the page holds nothing else of
- * them: facts held stand through such a read, a cause owed its read again
- * still (FP-23).
+ * `keyDrops`), else nothing is taken and the read answers so — the view asks
+ * again as it next needs them, an act begins it again (SC's `readPane`); the
+ * board not answering held for UNREACHED_MS (`hold`), asked again past it or
+ * at the daemon's `running`, and taken only where the page holds nothing else
+ * of them: facts held stand through such a read, a cause owed its read again
+ * still (FP-23). Facts taken that say other than those held are told
+ * (`bylineTaken`).
  * @param {string} account
- * @returns {Promise<void>} settled once what was read is taken, or nothing is
+ * @returns {Promise<boolean>} settled once what was read is taken, or nothing was to be read: false where a drop of the byline causes overtook the read and nothing was taken
  */
 export function readAccount(account) {
   const out = accountsOut.get(account);
   if (out) return out;
-  if (!account || !accountWanted(account)) return Promise.resolve();
+  if (!account || !accountWanted(account)) return Promise.resolve(true);
   const p = (async () => {
     const at = REC.keyDrops();
     const facts = await factsOf(account);
-    if ('cause' in facts && REC.keyDrops() !== at) return;
+    if ('cause' in facts && REC.keyDrops() !== at) return false;
+    const was = REC.accountKey(account);
     if (!('cause' in facts) || facts.cause !== 'unreachable') unreached.delete(accountKeyOf(account));
     else {
       hold(accountKeyOf(account));
-      const was = REC.accountKey(account);
-      if (was && !('cause' in was && was.cause === 'unreachable')) return;
+      if (was && !('cause' in was && was.cause === 'unreachable')) return true;
     }
     REC.takeAccountKey(account, facts);
+    bylineTaken(account, was, Date.now());
+    return true;
   })().finally(() => { accountsOut.delete(account); dirty(); });
   accountsOut.set(account, p);
   return p;
+}
+
+/**
+ * Owner facts the page took anew told to the readers that keep a byline apart
+ * from the model, so each sets it again (`onDrop`, its `byline` the account;
+ * FP-23, FP-34): where the facts held now say other than those held before the
+ * take (M-REC's `sameFacts`), one drop naming the held documents the account
+ * owns (M-REC's `ownedBy`); none where they say the same, or it owns none.
+ * @param {string} account
+ * @param {AccountFacts | undefined} was the facts held before the take
+ * @param {number} at the page's clock at the read or the row that brought them (`Dropped.at`)
+ */
+function bylineTaken(account, was, at) {
+  if (REC.sameFacts(was, REC.accountKey(account))) return;
+  const addrs = REC.ownedBy(account);
+  if (addrs.length) onDrop({ row: null, addrs, byline: account, at });
 }
 
 /**

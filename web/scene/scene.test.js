@@ -71,10 +71,15 @@
 // FP-21's; an act on it waiting for the answer, made, abandoned, or dropped
 // once the reader moved on (FP-20, FP-25, FP-34); a stroke's list kept by
 // its stroke's key as the reader leaves the scene and carried back by its
-// reopening (FP-36); and a passage the opener names by its bytes set level
+// reopening (FP-36); a passage the opener names by its bytes set level
 // where pane A's text, as the scene reads it, places them — a landing's "read
 // side by side" so setting its passage level however its source or the far
-// text was set since the landing (FP-21).
+// text was set since the landing (FP-21); and a pane's byline set with its
+// owner's facts as the model holds them — a facts read a row touching a doc 1
+// overtook asked again before the pane is set, facts a row dropped after its
+// reads read as it shows, and owner facts taken anew setting again each pane
+// whose byline said other once no setting reads, a corner's act out landing
+// as asked (FP-23, FP-34).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -1855,5 +1860,106 @@ test('"read side by side" at a follow\'s landing sets the quotation level with p
   assert.equal(GO.arrivalMark()?.pos, 14 + k, 'Back reads the landing again from the far text');
   assert.deepEqual(await opened(), { a: 12, b: 14 + k }, 'set again while the reader was away: level with piece 1 where it stands now');
   GO.endArrival();
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+// ---- a pane's byline ---------------------------------------------------------------------------------------------------
+
+/** a draft whose metadata names `owner` its owner, read whole: its byline's facts are read at that account */
+const ownedDraft = (/** @type {string} */ doc, /** @type {string} */ text, /** @type {string} */ owner) => ({
+  ...reads(doc, text, { published: false }),
+  [FAKE.keyOf('op', { frame: F.docMetadata(doc) })]: { result: { ...metadata(doc, false, text.length).result, owner } },
+});
+/** an account's byline facts as its board answers them: no key enrolled at it and none above it — unsigned */
+const unsignedAt = (/** @type {string} */ account) => ({ [FAKE.keyOf('op', { frame: F.keySet(account) })]: { result: { as_of: 1, resp: 'key_set', enrolled: [], retired: [] } } });
+/** a byline's label slot showing the words of a cause, by their string's id */
+const labelSlot = (/** @type {string} */ id) => `data-slot="label" data-string="${id}"`;
+/** how many times the fake port was asked a frame */
+const timesAsked = (/** @type {object} */ frame) => fake.asked.filter((k) => k === FAKE.keyOf('op', { frame })).length;
+/** the plane over 1.0.1's account at mid scale: a row touching a doc 1 keeps as held the causes of the owners of the documents in view */
+const overOwnAccount = () => { CAM.setViewport(1440, 900); CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85)); };
+
+test('a pane\'s owner facts read that a row touching a doc 1 overtook is asked again before the pane is set, the pane stating them from the moment it shows — never an empty slot no read fills (FP-34)', () => onPage(async (p) => {
+  const DO = '1.0.1.0.45', TEXT = 'An owned note.\n\nIts first words.', facts = F.keySet('1.0.5'), unanswered = fake.unanswered.length;
+  Object.assign(script, reads(VE1, VE_TEXT), ownedDraft(DO, TEXT, '1.0.5'), compared(VE1, VE_TEXT, DO, TEXT), unsignedAt('1.0.5'));
+  overOwnAccount();
+  try {
+    const release = fake.hold('op', { frame: facts });
+    const opening = SCENE.open(VE1, DO);
+    await until(() => timesAsked(facts) === 1, 'the owner\'s facts asked');
+    fake.fire('feed', row(80, 'insert', ['1.0.9.0.1'], 'published'));
+    release();
+    assert.equal((await opening).shown, true);
+    assert.deepEqual([timesAsked(facts), REC.accountKey('1.0.5')], [2, { cause: 'unsigned' }], 'the read the row overtook took nothing, and was asked again and taken');
+    assert.ok(String(shownIn(p.paneB, 'b').innerHTML).includes(labelSlot('F.slot.unsigned')), `pane B states them as the scene shows: ${shownIn(p.paneB, 'b').innerHTML}`);
+    await landed();
+  } finally { CAM._reset(); }
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+test('a pane set while its owner\'s facts are not held — a row touching a doc 1 dropped them after its reads — has them read as it shows, its slots being read while the read is out, and is set again with them once they land (FP-34)', () => onPage(async (p) => {
+  const DG = '1.0.1.0.46', TEXT = 'A guarded note.\n\nIts first words.', facts = F.keySet('1.0.7'), unanswered = fake.unanswered.length;
+  const cmp = F.compare([{ doc: VE1, spans: [{ ordinal: 1, positions: VE_TEXT.length }] }], [{ doc: DG, spans: [{ ordinal: 1, positions: TEXT.length }] }]);
+  Object.assign(script, reads(VE1, VE_TEXT), ownedDraft(DG, TEXT, '1.0.7'), compared(VE1, VE_TEXT, DG, TEXT), unsignedAt('1.0.7'));
+  standOnNothing();
+  try {
+    const between = fake.hold('op', { frame: cmp });
+    const opening = SCENE.open(VE1, DG);
+    await until(() => timesAsked(cmp) === 1, 'the panes\' compare asked, each pane\'s record read');
+    fake.fire('feed', row(81, 'insert', ['1.0.9.0.1'], 'published'));
+    assert.deepEqual([timesAsked(facts), REC.accountKey('1.0.7')], [1, undefined], 'read before the pane is set, then dropped by the row');
+    const read = fake.hold('op', { frame: facts });
+    between();
+    assert.equal((await opening).shown, true);
+    await until(() => timesAsked(facts) === 2, 'a read of them out as the pane shows');
+    assert.ok(String(shownIn(p.paneB, 'b').innerHTML).includes('class="slot pending"'), 'set without them: its slots being read, while a read of them is out');
+    read();
+    await until(() => String(shownIn(p.paneB, 'b').innerHTML).includes(labelSlot('F.slot.unsigned')), 'pane B set again with them once they land');
+    await landed();
+  } finally { CAM._reset(); }
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+test('owner facts the page takes anew — the plane reading again the cause a row touching a doc 1 left behind — reach a pane on a document that owner holds, which is set again with them once, the plane and the pane stating one byline (FP-23, FP-33, FP-34)', () => onPage(async (p) => {
+  const D6 = '1.0.1.0.47', TEXT = 'A note of another\'s.\n\nIts first words.', unanswered = fake.unanswered.length;
+  Object.assign(script, reads(VE1, VE_TEXT), ownedDraft(D6, TEXT, '1.0.6'), compared(VE1, VE_TEXT, D6, TEXT), unsignedAt('1.0.6'));
+  await SCENE.open(VE1, D6);
+  assert.ok(String(shownIn(p.paneB, 'b').innerHTML).includes(labelSlot('F.slot.unsigned')), 'pane B opens on its owner\'s facts: unsigned');
+  overOwnAccount();
+  try {
+    fake.fire('feed', row(82, 'insert', ['1.0.9.0.1'], 'published'));
+    // 1.0.6 enrolls a key, its board holding no genesis record naming one device for it: not recorded
+    Object.assign(script, {
+      [FAKE.keyOf('op', { frame: F.keySet('1.0.6') })]: { result: { as_of: 1, resp: 'key_set', enrolled: [{ alg: 'mldsa65-ed25519', anchor: false, fingerprint: 'ab'.repeat(32) }], retired: [] } },
+      [FAKE.keyOf('op', { frame: F.enrollmentsOf('1.0.6') })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+    });
+    const placed = p.paneB.placed.length;
+    assert.equal(await PUMP.readAccount('1.0.6'), true, 'read again as the plane reads it, and taken');
+    await landed();
+    assert.deepEqual([REC.accountKey('1.0.6'), p.paneB.placed.length], [{ cause: 'not-recorded' }, placed + 1], 'the facts taken, and pane B set again once');
+    assert.ok(String(shownIn(p.paneB, 'b').innerHTML).includes(labelSlot('F.slot.not-recorded')), `pane B states them: ${shownIn(p.paneB, 'b').innerHTML}`);
+  } finally { CAM._reset(); }
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+test('a pane\'s corner\'s act whose own reads take its owner\'s facts anew lands as asked, the version it reads in the pane\'s place — never lost to a setting those facts ask — and the other pane, its byline made with facts that say the same, is set nowhere again (FP-23, FP-34)', () => onPage(async (p) => {
+  const EP = '1.0.1.0.48', EP2 = EP + '.2', EP3 = EP + '.3', DP = '1.0.1.0.50', unanswered = fake.unanswered.length;
+  const EP2_TEXT = 'An edition.\n\nIts second version.', EP3_TEXT = 'An edition.\n\nIts third version.', DP_TEXT = 'A draft beside it.', head = 'An edition.\n\n'.length;
+  Object.assign(script, reads(EP2, EP2_TEXT), reads(EP3, EP3_TEXT), reads(DP, DP_TEXT, { published: false }),
+    compared(EP2, EP2_TEXT, DP, DP_TEXT), compared(EP2, EP2_TEXT, EP3, EP3_TEXT, [[1, 1, head]]), compared(EP3, EP3_TEXT, DP, DP_TEXT));
+  await SCENE.open(EP2, DP);
+  assert.deepEqual(paneState('a'), { kind: 'pinned', src: EP2, names: EP2, shows: EP2, k: 2, n: null, read: null, lacks: null }, 'pane A on the edition\'s second version');
+  standOnNothing();
+  try {
+    // the row drops 1.0.1's cause, so the act's own reads take it anew
+    fake.fire('feed', row(83, 'insert', ['1.0.9.0.1'], 'published'));
+    assert.equal(REC.accountKey('1.0.1'), undefined);
+    const asked = timesAsked(F.keySet('1.0.1')), placed = p.paneB.placed.length;
+    SCENE.readIn('a', 3, { pos: 1, width: 5 });
+    await landed();
+    assert.deepEqual([paneState('a')?.src, paneState('a')?.k, paneState('a')?.read], [EP3, 3, 2], 'the act landed: version 3 in the pane, version 2 one act away');
+    assert.deepEqual([timesAsked(F.keySet('1.0.1')) - asked, REC.accountKey('1.0.1')], [1, { cause: 'unsigned' }], 'its owner\'s facts read once among its reads, and taken');
+    assert.equal(p.paneB.placed.length, placed, 'pane B set nowhere again');
+  } finally { CAM._reset(); }
   assert.deepEqual(fake.unanswered.slice(unanswered), []);
 }));

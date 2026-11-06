@@ -1535,6 +1535,23 @@ export const causeOwed = (account) => !!state.accountKeys.get(account)?.owed;
  */
 export const keyDrops = () => state.keyDrops;
 
+/**
+ * Do two holdings of an account's byline facts say the same (FP-34): both
+ * unread, or the same device key — its label and its fingerprint — or the
+ * same cause, naming the same owner where one names one.
+ * @param {AccountFacts | undefined} a
+ * @param {AccountFacts | undefined} b
+ * @returns {boolean}
+ */
+export function sameFacts(a, b) {
+  if (a === undefined || b === undefined) return a === b;
+  if ('cause' in a || 'cause' in b) return 'cause' in a && 'cause' in b && a.cause === b.cause && a.owner === b.owner;
+  return a.label === b.label && a.fingerprint === b.fingerprint;
+}
+
+/** the held documents an account owns (`ownerAccount`), in the order first held: those whose bylines its facts decide (`rebyline`) */
+export const ownedBy = (/** @type {string} */ account) => [...state.docs.values()].filter((d) => ownerAccount(d) === account).map((d) => d.addr);
+
 /** every held document one of these accounts owns gains a revision: its byline is decided again from what the page holds now */
 function rebyline(/** @type {Set<string>} */ accounts) {
   if (!accounts.size) return;

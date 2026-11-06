@@ -37,7 +37,10 @@
 // where it is let go unset, the board's by whether its catch-up took a row; a row
 // touching a doc 1, which keeps the byline cause of each shown document's
 // owner as held until a read of it again lands, the board's silence leaving
-// it standing; the event stream's drop, which holds every row until its
+// it standing, a byline read it overtook answering that it took nothing;
+// owner facts taken that say other than those held — by a byline read, or a
+// shown document's read again — told once as a drop naming the documents the
+// owner holds, and none where they say the same; the event stream's drop, which holds every row until its
 // reopen's catch-up reads `changes` from the last position the page took —
 // after any acquire's, from where that reached, and marking the board where
 // none can be done — the board lagging past a second from the drop or a run's
@@ -2276,7 +2279,7 @@ test('where an account\'s byline can name no key it says why: its genesis names 
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a byline read the board did not answer is held — not asked again inside its pause — and asked again at the daemon\'s running; a cause that lands after a feed row touching a doc 1 is never taken and is asked again, while a value is taken whatever the row (FP-34; AUTH-2.127)', async (t) => {
+test('a byline read the board did not answer is held — not asked again inside its pause — and asked again at the daemon\'s running; a cause that lands after a feed row touching a doc 1 is never taken, its read answering that it took nothing, and is asked again, while a value is taken whatever the row (FP-34; AUTH-2.127)', async (t) => {
   t.mock.method(performance, 'now', () => 1000);
   const s = {
     [opKey(F.keySet('1.0.17'))]: keySetOf([]),
@@ -2296,9 +2299,8 @@ test('a byline read the board did not answer is held — not asked again inside 
   assert.equal(PUMP.readAccount('1.0.17'), p, 'a read out is joined');
   fake.fire('feed', { board: 'b-1', update: { position: 9, at: 9, op: 'make_link', docs: ['1.0.17.0.1'], class: 'published', link: '1.0.17.0.1.0.2.1' } });
   held();
-  await p;
-  assert.equal(REC.accountKey('1.0.17'), undefined, 'the cause the row overtook is never taken');
-  await PUMP.readAccount('1.0.17');
+  assert.deepEqual([await p, REC.accountKey('1.0.17')], [false, undefined], 'the cause the row overtook is never taken, and the read says it took nothing');
+  assert.equal(await PUMP.readAccount('1.0.17'), true, 'asked again: taken');
   assert.deepEqual([asksOf(fake, F.keySet('1.0.17')), REC.accountKey('1.0.17')], [2, { cause: 'unsigned' }], 'asked again, and taken');
   // a value read across such a row: a value never changes
   const atom = fake.hold('op', { frame: F.retrieveV('1.0.18.0.1', 1, 1) });
@@ -2306,8 +2308,36 @@ test('a byline read the board did not answer is held — not asked again inside 
   await flush();
   fake.fire('feed', { board: 'b-1', update: { position: 10, at: 10, op: 'make_link', docs: ['1.0.18.0.1'], class: 'published', link: '1.0.18.0.1.0.2.2' } });
   atom();
-  await q;
-  assert.deepEqual(REC.accountKey('1.0.18'), { label: 'dev', fingerprint: fingerprintOf(ALG, KEY_B) }, 'taken');
+  assert.deepEqual([await q, REC.accountKey('1.0.18')], [true, { label: 'dev', fingerprint: fingerprintOf(ALG, KEY_B) }], 'taken');
+});
+
+test('owner facts a byline read takes that say other than those held are told once — a drop naming no row, the held documents the owner owns and the owner, at the page\'s clock as they are taken — and a read that brings the facts held tells nothing (FP-23, FP-34)', async () => {
+  const A = '1.0.20', MINE = [A + '.0.3', A + '.0.4'], OTHER = '1.0.21.0.2';
+  const s = { [opKey(F.enrollmentsOf(A))]: { result: { as_of: 1, resp: 'addrs', addrs: [] } } };
+  // unsigned, unsigned again, then a key with no genesis enrollment: not recorded
+  inTurn(s, F.keySet(A), keySetOf([]), keySetOf([]), keySetOf(ONE_KEY));
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  /** @type {PUMP.Dropped[]} */
+  const told = [];
+  PUMP.start({ onDirty: () => {}, onDrop: (x) => { told.push(x); } });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  for (const d of [...MINE, OTHER]) REC.takeSpanSet(d, [{ subspace: 1, ordinal: 1, positions: 4 }]);
+  /** a row touching a doc 1 keeping A's cause owed its read again, as M-PUMP keeps a shown document's owner's */
+  const owe = (/** @type {number} */ position) => REC.applyFeedUpdate(/** @type {any} */ ({ position, at: position, op: 'insert', docs: ['1.0.9.0.1'], class: 'published' }), new Set(), new Set([A]));
+  const told1 = (/** @type {PUMP.Dropped[]} */ xs) => xs.map((x) => [x.row, x.addrs, x.byline]);
+  const t0 = Date.now();
+  assert.equal(await PUMP.readAccount(A), true);
+  assert.deepEqual(told1(told), [[null, MINE, A]], 'none held before: one drop naming the documents A owns and A');
+  assert.ok(told[0].at >= t0 && told[0].at <= Date.now(), 'at the page\'s clock as they are taken');
+  told.length = 0;
+  owe(1);
+  assert.equal(await PUMP.readAccount(A), true);
+  assert.deepEqual([REC.accountKey(A), REC.causeOwed(A), told], [{ cause: 'unsigned' }, false, []], 'the cause held read again: taken, owed no more, nothing told');
+  owe(2);
+  await PUMP.readAccount(A);
+  assert.deepEqual([REC.accountKey(A), told1(told)], [{ cause: 'not-recorded' }, [[null, MINE, A]]], 'another cause: told once');
+  assert.deepEqual(fake.unanswered, []);
 });
 
 // ---- a row naming nothing ---------------------------------------------------------------------------------
@@ -2886,6 +2916,27 @@ test('a row touching a doc 1 keeps the byline cause of the owner of a document t
   watching = false;
   assert.deepEqual([REC.textBetween(D, 1, 31), causeOf('1.0.1'), REC.causeOwed('1.0.1'), asksOf(fake, F.keySet('1.0.1'))], [AFTER, 'not-recorded', false, 5], 'set in one step from D\'s reads, its owner\'s byline read once among them');
   assert.deepEqual([emptied, early], [false, false], 'the byline never emptied, and never set before D\'s text');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('owner facts a shown document\'s read again takes that say other than those held are told once after it is set — a drop naming the documents the owner owns and the owner, stamped by the row that left the document behind (FP-23, FP-34)', async () => {
+  const s = { ...script, ...ONE_MEMBER, [opKeyOf(F.keySet('1.0.1'))]: keySetOf(ONE_KEY), [opKeyOf(F.enrollmentsOf('1.0.1'))]: { result: { as_of: 1, resp: 'addrs', addrs: [] } } };
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), deliveredAt(AFTER, 9));
+  /** @type {PUMP.Dropped[]} */
+  const told = [];
+  // D's owner's byline held as a cause, which a read of D again reads again
+  REC.takeAccountKey('1.0.1', { cause: 'unsigned' });
+  const fake = readingD(s, (x) => { told.push(x); });
+  await settle();
+  assert.equal(asksOf(fake, F.keySet('1.0.1')), 0, 'the cause held: not read as the view draws D');
+  const at = Date.now(), clock = Date.now;
+  Date.now = () => at;
+  try { fake.fire('feed', writing(20, [D])); } finally { Date.now = clock; }
+  await settle();
+  const byline = told.filter((x) => x.byline);
+  assert.deepEqual([REC.textBetween(D, 1, 31), REC.accountKey('1.0.1'), asksOf(fake, F.keySet('1.0.1'))], [AFTER, { cause: 'not-recorded' }, 1], 'D set again, its owner\'s byline read once among its reads');
+  assert.deepEqual(byline.map((x) => [x.row, x.byline, x.addrs?.includes(D), x.at]), [[null, '1.0.1', true, at]], 'told once, naming D among 1.0.1\'s documents, from the row\'s stamp');
+  assert.deepEqual(byline[0].addrs, REC.ownedBy('1.0.1'), 'every held document 1.0.1 owns');
   assert.deepEqual(fake.unanswered, []);
 });
 
