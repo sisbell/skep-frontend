@@ -21,7 +21,8 @@
 // continuation the plane draws as one mark is one stop before its members,
 // named by its count, the camera flown to the mark for each of them, and a
 // re-take over it takes the mark or keeps a member, never the member under
-// the centre; each box is
+// the centre, and a landing at its name stands on its account where the scale
+// draws no mark; each box is
 // walked as the version it shows; the page's own death takes the mirror down
 // where the view stood on nothing, the walk staying on a covered draft, and a
 // change of class keeps the walk on the span its document kept, a draft's
@@ -927,6 +928,23 @@ test('a re-take over a continuation\'s mark keeps a focus already on one of its 
     over('1.0.1.0.52');
     await WALK.retakeFromView(true);
     assert.deepEqual(walkAt(), ['document', C1, null], 'on a span of a member: the member whole');
+  } finally {
+    index([D, E]);
+  }
+});
+
+test('a landing at a continuation\'s mark stands on its stop where the plane draws the mark at the scale the camera is bound for, and on the mark\'s account where it draws none: at far scale, which draws clusters and no mark', async () => {
+  index(Array.from({ length: 60 }, (_, i) => '1.0.1.0.' + (i + 1)));
+  try {
+    CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
+    await WALK.focusTo('1.0.1:1', null);
+    assert.deepEqual(walkAt(), ['mark', '1.0.1:1', null], 'at HOME\'s scale: the mark\'s stop');
+    at(middle(continuationCell('1.0.1', 1)), CAM.viewForCell(boardCell('1'), 0.92).scale / 4);
+    assert.equal(lodOf(CAM.cam.scale).name, 'far');
+    await WALK.focusTo('1.0.1:1', null);
+    assert.deepEqual(walkAt(), ['account', '1.0.1', null], 'at far scale: the mark\'s account');
+    await run(WALK.key('out'));
+    assert.deepEqual(walkAt(), ['board', '1', null], '← walks out of it to the board');
   } finally {
     index([D, E]);
   }

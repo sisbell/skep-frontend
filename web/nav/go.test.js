@@ -18,7 +18,9 @@
 // board is held, the passage Back lands on — a return finding the words its
 // entry's view read in the text it reaches, and the arrival it keeps read
 // again there, one whose bytes were never named kept only on the text it was
-// outlined on, landing in the landing rule's states — the surfaces a place keeps —
+// outlined on, landing in the landing rule's states — where a return puts the
+// walk back, on the board, an account, a mark's stop or a span kept past its
+// document's last line as the reader left it, the surfaces a place keeps —
 // the selection, a card, a list — ended as the reader leaves and reopened as
 // left on a return, their subjects placed again by their bytes, and a text
 // set again under the reader — an arrival placed again by its runs' bytes,
@@ -48,8 +50,8 @@ import * as LINKS from '../overlays/links-card.js';
 import * as SEL from '../overlays/selection.js';
 import * as TRAILLIST from '../overlays/trail-list.js';
 import * as INPUT from '../app/input.js';
-import { docBox, depthOfDoc, DEPTH_SOUND } from '../plane/projection.js';
-import { LOD_TXT_LO } from '../plane/lod.js';
+import { docBox, depthOfDoc, DEPTH_SOUND, accountCell, boardCell, continuationCell } from '../plane/projection.js';
+import { LOD_TXT_LO, markScale } from '../plane/lod.js';
 import { standardFs, placeOf, EDGE } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
 import { entitlementArm } from '../text/article.js';
@@ -1953,6 +1955,59 @@ test('Back to an entry left while the walk stood on a document whole below its r
   await run(GO.back());
   assert.deepEqual([TRAIL.current()?.label, walkAt()], [t('F.level.home'), ['document', D, null]], 'Back to HOME\'s entry: the walk on D whole, where it stood as the reader left, never on the account');
   assert.ok(same(CAM.view(), left), 'at the view left');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a return to an entry whose view read no line puts the walk back where it stood as the reader left — on the board, on an account, on a continuation\'s mark, on a span kept past its document\'s last line — never on the entry\'s place (issue #315)', async () => {
+  await run(GO.home());
+  await run(WALK.key('out'));
+  const board = CAM.view();
+  assert.deepEqual([walkAt(), LAYER.readAt(board)], [['board', '1', null], null], '← from HOME\'s account: the walk on the board, the view reading no line');
+  await run(GO.leapTo(D));
+  assert.deepEqual(departed()?.stood, { addr: '1', pos: null, ids: [], end: null }, 'HOME\'s entry keeps the board the walk stood on');
+  await run(GO.back());
+  assert.deepEqual([TRAIL.current()?.label, walkAt()], [t('F.level.home'), ['board', '1', null]], 'Back to HOME\'s entry: the walk on the board, never on the account');
+  assert.ok(same(CAM.view(), board), 'at the view left');
+  await run(GO.leapTo(D));
+  await run(WALK.key('out'));
+  const account = CAM.view();
+  assert.deepEqual([walkAt(), LAYER.readAt(account)], [['account', '1.0.1', null], null], '← from D: the walk on its account, the view reading no line');
+  await run(GO.back());
+  await run(GO.forward());
+  assert.deepEqual([TRAIL.current()?.addr, walkAt()], [D, ['account', '1.0.1', null]], 'Forward to D\'s entry: the walk on the account, never on D');
+  assert.ok(same(CAM.view(), account), 'at the view left');
+  await run(GO.home());
+  const c = continuationCell('1.0.1', 1);
+  CAM.set({ x: c.x + c.w / 2, y: c.y + c.h / 2, scale: markScale(1, CAM.view().scale) });
+  await run(WALK.key('in'));
+  const mark = CAM.view();
+  assert.deepEqual([walkAt(), LAYER.readAt(mark)], [['mark', '1.0.1:1', null], null], '→ at the account over the continuation\'s mark: the walk on its stop, the view reading no line');
+  await run(GO.leapTo(D));
+  await run(GO.back());
+  assert.deepEqual([TRAIL.current()?.label, walkAt()], [t('F.level.home'), ['mark', '1.0.1:1', null]], 'Back to HOME\'s entry: the walk on the mark\'s stop, never on the account');
+  assert.ok(same(CAM.view(), mark), 'at the view left');
+  await run(GO.leapTo(D, { pos: 1 }));
+  await run(WALK.key('down'));
+  assert.deepEqual(walkAt(), ['block', D, 11], '↓ from D\'s head to its second span');
+  const v = CAM.view(), kept = { ...v, y: v.y + 300 / v.scale };
+  CAM.set(kept);
+  await WALK.retakeFromView(true);
+  assert.deepEqual([walkAt(), WALK.kept(), LAYER.readAt(kept), LAYER.inView(D, kept)], [['block', D, 11], true, null, true], 'past D\'s last line: the span kept, the view reading no line, D in view');
+  await run(GO.leapTo(FAR));
+  await run(GO.back());
+  assert.deepEqual([TRAIL.current()?.addr, walkAt()], [D, ['block', D, 11]], 'Back to D\'s entry: the walk on the span it stood on, never on the position the LEAP named');
+  assert.ok(same(CAM.view(), kept), 'at the view left');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a departure made before the walk reached the landing its act left for keeps nothing of where the walk stood before: HOME, then a LEAP to D\'s second span and Back made at once, the walk still on the account as the LEAP\'s entry is departed, and Forward to that entry lands the walk on the span, never on the account (issue #315)', async () => {
+  await run(GO.home());
+  assert.deepEqual(walkAt(), ['account', '1.0.1', null], 'at HOME: the walk on the account');
+  const leap = GO.leapTo(D, { pos: 11 }), back = GO.back();
+  await run(leap); await run(back);
+  assert.deepEqual([TRAIL.current()?.label, TRAIL.all()[TRAIL.cursorIndex() + 1]?.stood ?? null], [t('F.level.home'), null], 'Back to HOME\'s entry: the LEAP\'s entry keeps no place of the walk\'s');
+  await run(GO.forward());
+  assert.deepEqual([TRAIL.current()?.addr, walkAt()], [D, ['block', D, 11]], 'Forward to the LEAP\'s entry: the walk on the span its line read holds');
   assert.deepEqual(fake.unanswered, []);
 });
 

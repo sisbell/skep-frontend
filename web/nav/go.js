@@ -46,10 +46,10 @@
 // (P-CAM's `destination`) — so a departure made during a flight re-takes the
 // flight's destination, never a point it was passing (foundations §2.3) —
 // with what that view reads (T-LAYER's `readAt`), where the walk stands in
-// the document it reads — or, where the view reads none, the document it
-// stands on whole, standing in that view (`stoodIn`) — the version the
-// entry's box shows, and a reading scene standing over it as the reader
-// leaves it (SC's `asLeft`).
+// the document it reads — or, where the view reads none, the board, the
+// account or the mark's stop it stands on, else its place in a document
+// standing in that view (`stoodIn`) — the version the entry's box shows, and
+// a reading scene standing over it as the reader leaves it (SC's `asLeft`).
 // As its camera leaves, an act ends the chrome of the place it leaves
 // (`dismissChrome`; FP-25): the arrival and the surfaces standing as the act
 // was made (`nextAct`) — the selection by its bytes, the card or the list by
@@ -318,14 +318,15 @@
 // on once it answers (`readTexts`, `placeRead`) — the walk where Back's light
 // returns it, else on the run the landing stands at where that landing says
 // anything, so the item it lands on carries what it says, else where it stood
-// as the reader left the entry, or where a read placed its landing, placed
-// again by its byte, else on the run a landing saying nothing stands at, else,
-// where it stood in the text the words were found in, where the return lands
-// there, else on the entry's place (`walkOf`), on a span only where the view
-// reads its document at its reading scale; and it shows the entry's notice
-// again. Reaching an entry still reading, it shows that entry's reading face
-// and goes on once the read answers, where no act was made and the reader
-// took nothing over.
+// as the reader left the entry, or where a read placed its landing — the
+// board, an account or a mark's stop as it stood there, a place in a document
+// placed again by its byte — else on the run a landing saying nothing stands
+// at, else, where it stood in the text the words were found in, where the
+// return lands there, else on the entry's place (`walkOf`), on a span only
+// where the view reads its document at its reading scale; and it shows the
+// entry's notice again. Reaching an entry still reading, it shows that
+// entry's reading face and goes on once the read answers, where no act was
+// made and the reader took nothing over.
 // The cover (FP-29): a trail entry holds no document's words — HOME and WHOLE
 // BOARD push their act's name, the strings table's, a reading scene's entry
 // is named by its act's and its two documents' addresses (`scenePair`), and
@@ -602,21 +603,24 @@ function leaving(view) {
  * or on a link's end in it — its position there, the one a landing named in
  * its span, else the span's or the link's own, none on the document whole;
  * that position's byte by identity (M-REC's `identityOf`); and the link's end
- * it stands on. Where the view reads no document, the document the walk
- * stands on whole, where that document stands in the view (T-LAYER's
- * `inView`). Null where the walk stands on no document; outside the document
- * the view reads, or out of the view where it reads none — a jump in the air
- * has not yet brought it to the place its camera left for; or on a span or a
- * link's end where the view reads none.
+ * it stands on. Where the view reads no document: the board, an account or a
+ * mark's stop it stands on, by its address or the mark's name, no position;
+ * else the document it stands in, the same way, where that document stands
+ * in the view (T-LAYER's `inView`) — a span past its document's last line
+ * among them, which the re-take keeps (N-WALK's `kept`). Null where the walk
+ * stands outside the document the view reads, in a document out of the view
+ * where it reads none, or on the board, an account or a mark's stop where it
+ * reads one — a jump in the air has not yet brought it to the place its
+ * camera left for.
  * @param {View} view the view left
  * @param {import('../text/layer.js').Reading | null} r what it reads
  * @returns {Stood | null}
  */
 function stoodIn(view, r) {
   const f = WALK.current();
-  if (!f || (f.kind !== 'document' && f.kind !== 'block' && f.kind !== 'link')) return null;
-  if (!r) return f.kind === 'document' && LAYER.inView(f.addr, view) ? { addr: f.addr, pos: null, ids: [], end: null } : null;
-  if (boxOf(f.addr) !== boxOf(r.addr)) return null;
+  if (!f) return null;
+  if (f.kind !== 'document' && f.kind !== 'block' && f.kind !== 'link') return r ? null : { addr: f.addr, pos: null, ids: [], end: null };
+  if (r ? boxOf(f.addr) !== boxOf(r.addr) : !LAYER.inView(f.addr, view)) return null;
   const pos = f.kind === 'document' ? null : WALK.landedAt() ?? f.pos;
   return { addr: f.addr, pos, ids: pos != null ? REC.identityOf(f.addr, pos, 1) : [], end: f.kind === 'link' && f.link ? { link: f.link.link.addr, key: f.link.key } : null };
 }
@@ -2504,9 +2508,9 @@ function returnTo(l, view) {
  * they are found at where the line read stood, the walk where Back's light
  * returns it (`returnTo`), else in `walkOf`'s order — on the run a landing
  * that says anything stands at, else where it stood as the reader left the
- * entry, placed again by its byte, else where the return lands in the text it
- * stood in, else on the entry's place — and its notice shown again as
- * O-HOST's notice,
+ * entry, a place in a document placed again by its byte, else where the
+ * return lands in the text it stood in, else on the entry's place — and its
+ * notice shown again as O-HOST's notice,
  * so a surface the return reopens stands over it (`showFound`) — a failure's
  * where the camera went, the dead end's told by the landing's description
  * where it describes it — then what the return says beyond its marks
@@ -2826,12 +2830,13 @@ function keptAgain(k, toIn, settled, met, notice) {
 
 /**
  * Where the walk stood as the reader left an entry, or where a read placed
- * its landing (`Stood`), in the text its box shows now: its byte where that
- * text's held image places it (M-REC's `placedIdentity`), at the link's end
- * it stood on — by its position where no byte of it was named; the document
- * whole where it stood on it so; null where the image places that byte
- * nowhere — the walk then lands where the return lands in that text, else on
- * its document whole (`walkOf`).
+ * its landing (`Stood`), in the text its box shows now: the board, an
+ * account, a mark's stop or a document whole, as it stood there; else its
+ * byte where that text's held image places it (M-REC's `placedIdentity`), at
+ * the link's end it stood on — by its position where no byte of it was
+ * named; null where the image places that byte nowhere — the walk then lands
+ * where the return lands in that text, else on its document whole
+ * (`walkOf`).
  * @param {Stood} s
  * @returns {WalkTo | null}
  */

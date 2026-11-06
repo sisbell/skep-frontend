@@ -21,23 +21,24 @@
 // its fold, and the position its text was read at (T-LAYER's
 // `Reading`) — written with every view the trail writes: a departure's, a
 // jump's camera leaving (`leaveFrom`), a landing's (`settle`); and where the
-// walk stood in that line's document — or the document it stood on whole,
-// where the view read none — as the entry was departed, or where a read
-// placed its landing since (`settle`), by position and identity (`Stood`),
-// so a return finds those words and that place wherever its document was set
-// again since (N-GO's `landAtCursor`). An entry records the step that left
-// it for the entry after it (`Step`), written as a push departs it: the link
-// followed for a follow, the passage carried for a carrying LEAP or a version
-// move — by identity, the permanent addresses of its bytes, never its
-// positions — the link's end or the passage a reading scene was opened from,
-// and none for any other move; a cursor move writes none. It keeps the
-// arrival standing at it as the reader leaves it — its outline and its
-// passage by identity, what its landing said, its runs' labels and the run it
-// stood at, that run's first byte by identity — and the surfaces standing
-// there — the selection by its bytes, the card or the list by what it is
-// about and the control the focus stood on in it — written on it by value
-// (`keep`; N-GO's), which a return reads again from the text it reaches and
-// reopens (FP-25, FP-21, FP-36). An entry a reading
+// walk stood in that line's document — or, where the view read none, the
+// board, the account or the mark's stop it stood on, else its place in a
+// document standing in that view — as the entry was departed, or where a
+// read placed its landing since (`settle`), by position and identity
+// (`Stood`), so a return finds those words and that place wherever its
+// document was set again since (N-GO's `landAtCursor`). An entry records the
+// step that left it for the entry after it (`Step`), written as a push
+// departs it: the link followed for a follow, the passage carried for a
+// carrying LEAP or a version move — by identity, the permanent addresses of
+// its bytes, never its positions — the link's end or the passage a reading
+// scene was opened from, and none for any other move; a cursor move writes
+// none. It keeps the arrival standing at it as the reader leaves it — its
+// outline and its passage by identity, what its landing said, its runs'
+// labels and the run it stood at, that run's first byte by identity — and the
+// surfaces standing there — the selection by its bytes, the card or the list
+// by what it is about and the control the focus stood on in it — written on
+// it by value (`keep`; N-GO's), which a return reads again from the text it
+// reaches and reopens (FP-25, FP-21, FP-36). An entry a reading
 // scene was opened as holds the pair it opened on and the passage held, and the
 // scene as the reader last left the entry (`Opened`; SC's `Left`), by value,
 // re-taken with every departure from it while the scene stands, which a
@@ -92,10 +93,10 @@
 /** @typedef {import('../text/layer.js').Reading} Reading */
 
 /**
- * @typedef {Object} Stood — where the walk stood in a document as the reader left an entry (see the head): a return puts it back there
- * @property {string} addr the document: the version its box showed
- * @property {number | null} pos the position it stood at — the one a landing named in its span, else the span's or the link's own; null where it stood on the document whole
- * @property {ISpan[]} ids that position's byte by identity (M-REC's `identityOf`), which a return places in the text its box shows then; none where the held image did not cover it
+ * @typedef {Object} Stood — where the walk stood as the reader left an entry (see the head): a return puts it back there
+ * @property {string} addr the place it stood on: the board's or an account's address, a mark's name (P-PROJ's `markKey`), or a document — the version its box showed
+ * @property {number | null} pos the position it stood at — the one a landing named in its span, else the span's or the link's own; null where it stood on a document whole, or on no document
+ * @property {ISpan[]} ids that position's byte by identity (M-REC's `identityOf`), which a return places in the text its box shows then; none where it names no position, or the held image did not cover it
  * @property {import('./walk.js').End | null} end the link's end it stood on; null where it stood on none
  */
 
@@ -103,7 +104,7 @@
  * @typedef {Object} Departure — what a departure re-takes of the entry it leaves (see the head): N-GO's, read as the act is made
  * @property {View} view the view the camera is bound for
  * @property {Reading | null} reading what that view reads (T-LAYER's `readAt`); null where it reads no passage
- * @property {Stood | null} stood where the walk stands in the document that view reads, or, where the view reads none, the document it stands on whole in that view; null where it stands on no document, outside the document the view reads, out of the view where it reads none, or on a span or a link's end where it reads none
+ * @property {Stood | null} stood where the walk stands (N-GO's `stoodIn`): in the document that view reads, or, where the view reads none, on the board, an account or a mark's stop, else in a document standing in that view; null where it stands outside the document the view reads, in a document out of the view where it reads none, or on no document where it reads one
  * @property {import('../scene/scene.js').Left | null} [scene] the reading scene standing over the view, as the reader leaves it (SC's `asLeft`): re-taken on an entry a scene was opened as; null where none stands
  */
 
