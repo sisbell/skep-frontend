@@ -15,7 +15,9 @@
 // framed no nearer than reading size, in the fold a resize in the air sets
 // the document in, and a step made below a document's
 // reading scale frames it short of that scale; the grain below a document is
-// the document's own and the re-take's order holds at every band; a
+// the document's own and the re-take's order holds at every band; → steps in
+// to the child drawn under the centre of the view the camera is bound for,
+// else to the first; a
 // continuation the plane draws as one mark is one stop before its members,
 // named by its count, the camera flown to the mark for each of them, and a
 // re-take over it takes the mark or keeps a member, never the member under
@@ -925,6 +927,52 @@ test('a re-take over a continuation\'s mark keeps a focus already on one of its 
     over('1.0.1.0.52');
     await WALK.retakeFromView(true);
     assert.deepEqual(walkAt(), ['document', C1, null], 'on a span of a member: the member whole');
+  } finally {
+    index([D, E]);
+  }
+});
+
+test('→ steps in to the child drawn under the centre of the view the camera is bound for — at the board the account whose cell holds it, at an account the continuation\'s mark whose cell holds it, else the document whose region holds it, at a document the span its fold holds there — and else to the first child in record order: over a cell no listed document stands in, at far scale, which draws no document, and off the document\'s region (D5 K-3)', async () => {
+  const home = CAM.viewForCell(accountCell('1.0.1'), 0.85);
+  /** → made with the walk on a place and the camera over a point at a scale: the walk's element after it */
+  const stepIn = async (/** @type {string} */ place, /** @type {{x: number, y: number}} */ p, /** @type {number} */ scale) => {
+    await WALK.focusTo(place, null);
+    at(p, scale);
+    await run(WALK.key('in'));
+    return walkAt();
+  };
+  await PUMP.loadWhole(H);
+  try {
+    // the board, two accounts listed: the centre over the second's cell
+    REC.takeIndex(/** @type {any} */ ({ docs: [D, E].map((doc) => ({ doc, kind: 'edition', label: doc, standing: 'public' })), counts: [{ account: '1.0.1', documents: 2 }, { account: '1.0.2', documents: 0 }], state: { arm: 'complete' } }));
+    const second = CAM.viewForCell(accountCell('1.0.2'), 0.85);
+    assert.deepEqual(await stepIn('1', second, second.scale), ['account', '1.0.2', null], 'at the board: the account whose cell holds the centre');
+    // the account at HOME's scale
+    index([D, E, H]);
+    assert.deepEqual(await stepIn('1.0.1', middle(LAYER.shapeOf(E)), home.scale), ['document', E, null], 'at the account: the document whose region holds the centre, never its first');
+    assert.deepEqual(await stepIn('1.0.1', middle(docBox('1.0.1.0.30')), home.scale), ['document', D, null], 'over a cell no listed document stands in: the first');
+    await WALK.focusTo('1.0.1', null);
+    at(middle(LAYER.shapeOf(E)), CAM.viewForCell(boardCell('1'), 0.92).scale / 4);
+    assert.equal(lodOf(CAM.cam.scale).name, 'far');
+    await run(WALK.key('in'));
+    assert.deepEqual(walkAt(), ['document', D, null], 'at far scale, which draws clusters and no document, over E\'s region: the first');
+    // a flight bound for E's region, not yet stepped, from over a cell no listed document stands in: read where it is bound
+    await WALK.focusTo('1.0.1', null);
+    at(middle(docBox('1.0.1.0.30')), home.scale);
+    void CAM.fly({ ...middle(LAYER.shapeOf(E)), scale: home.scale }, 300);
+    await run(WALK.key('in'));
+    assert.deepEqual(walkAt(), ['document', E, null], 'a flight bound for E\'s region: E');
+    // a document at its reading scale: H, folded into columns, the walk on it whole
+    const d = REC.doc(H), f = LAYER.foldOf(d), reading = 12.5 / f.fs, c = f.columns[1];
+    const later = d.blocks.find((b) => placeOf(f, b.pos).column === 1 && placeOf(f, b.pos).y > c.y + c.h / 3);
+    assert.ok(later && later.pos > 1, 'a span a third of the way down H\'s second column');
+    assert.deepEqual(await stepIn(H, LAYER.centreOf(H, later.pos), reading), ['block', H, later.pos], 'at a document: the span under the centre, in its column');
+    const s = LAYER.shapeOf(H), r = LAYER.regionOf(H), off = { x: s.x + s.w / 2, y: s.y + s.h + 10 * f.fs };
+    assert.ok(off.y > r.y + r.h && (LAYER.posAt(H, off.x, off.y) ?? 0) > later.pos, 'ten ems below H\'s outline, off its region, the fold\'s nearest line holding a late position');
+    assert.deepEqual(await stepIn(H, off, reading), ['block', H, 1], 'the centre off the document\'s region: its first span');
+    // a continuation the plane draws as one mark: the centre over its cell
+    index(Array.from({ length: 60 }, (_, i) => '1.0.1.0.' + (i + 1)));
+    assert.deepEqual(await stepIn('1.0.1', middle(continuationCell('1.0.1', 1)), markScale(1, home.scale)), ['mark', '1.0.1:1', null], 'at the account: the mark\'s stop, never its first document');
   } finally {
     index([D, E]);
   }

@@ -1879,7 +1879,7 @@ test('a LEAP to a passage of an edition folded into columns lands on the passage
 /** → as the platform delivers it at the plane */
 const right = /** @type {any} */ ({ type: 'keydown', key: 'ArrowRight', keyCode: 39, isComposing: false, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, preventDefault() {} });
 
-test('→ at a document below its reading scale is Enter\'s act: a teleport to its reading scale, one trail entry pushed, the walk on the document with the ring drawn; → again enters its first span and pushes nothing (issue #140; foundations §2.2)', async () => {
+test('→ at a document below its reading scale is Enter\'s act: a teleport to its reading scale, one trail entry pushed, the walk on the document with the ring drawn; → again, the view\'s centre on its second paragraph, enters that span and pushes nothing (issue #140; foundations §2.2; D5 K-3)', async () => {
   await PUMP.loadWhole(CONT);
   const fs = LAYER.foldOf(REC.doc(CONT)).fs, c = LAYER.centreOf(CONT, null);
   assert.ok(depthOfDoc(CONT) === 1 && fs < LAYER.foldOf(REC.doc(D)).fs / 6, 'a continuation document, set at a seventh of a depth-0 document\'s size');
@@ -1892,8 +1892,10 @@ test('→ at a document below its reading scale is Enter\'s act: a teleport to i
   assert.deepEqual([TRAIL.length(), TRAIL.cursorIndex(), TRAIL.current()?.addr], [n + 1, n, CONT], 'one entry pushed, its own');
   assert.ok(Math.abs(emNow(CONT) - CAM.READING_PX) < 1e-6, `the landing at its reading scale, the reading size: ${emNow(CONT)} px an em`);
   assert.deepEqual([walkAt(), WALK.ringShown(), WALK.collapsed()], [['document', CONT, null], true, false], 'the walk on the document, the ring drawn, expanded');
+  const second = /** @type {import('../model/records.js').Block} */ (REC.doc(CONT).blocks[1]);
+  CAM.set({ ...LAYER.centreOf(CONT, second.pos), scale: CAM.view().scale });
   await run(KEYS.dispatch(right, { where: 'plane', byKey: true }));
-  assert.deepEqual(walkAt(), ['block', CONT, 1], '→ again enters its first span');
+  assert.deepEqual(walkAt(), ['block', CONT, second.pos], '→ again enters the span under the view\'s centre, never its first');
   assert.deepEqual([TRAIL.length(), TRAIL.cursorIndex()], [n + 1, n], 'and pushes nothing');
   assert.deepEqual(fake.unanswered, []);
 });
@@ -1916,10 +1918,12 @@ test('Back to an entry whose view was left below its document\'s reading scale s
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('→ from HOME onto the account\'s first document stops short of its reading scale — one stop, collapsed, nothing pushed — and → there is Enter\'s act, its entry pushed at the reading size; Back returns to the stop\'s view, the walk on the document whole, and Forward into the document (issue #55; foundations §2.2)', async () => {
+test('→ from HOME, no document drawn under the view\'s centre, onto the account\'s first document stops short of its reading scale — one stop, collapsed, nothing pushed — and → there is Enter\'s act, its entry pushed at the reading size; Back returns to the stop\'s view, the walk on the document whole, and Forward into the document (issue #55; foundations §2.2; D5 K-3)', async () => {
   const fs = LAYER.foldOf(REC.doc(D)).fs;
   await run(GO.home(true));
   assert.ok(!LAYER.atReadingScale(D) && CAM.viewForCell(LAYER.shapeOf(D), 0.9).scale * fs >= CAM.READING_PX, 'at HOME D stands below its reading scale, and framed whole it would read past the reading size');
+  const c = CAM.view();
+  assert.ok(REC.places().every((p) => { const r = LAYER.regionOf(p.doc); return c.x < r.x || c.x > r.x + r.w || c.y < r.y || c.y > r.y + r.h; }), 'no listed document\'s region holds HOME\'s centre');
   const n = TRAIL.length(), cursor = TRAIL.cursorIndex();
   await run(KEYS.dispatch(right, PLANE));
   const stop = CAM.view();

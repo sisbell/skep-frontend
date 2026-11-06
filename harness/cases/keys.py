@@ -48,9 +48,11 @@ an em under 8 — the walk on it whole,
 the one line naming it alone with its position's slot standing empty,
 nothing after it moved, its mirror item collapsed, and → there Enter's act,
 a teleport to its reading scale with its trail entry, the item expanded, →
-again its first span with no entry; → from HOME's account onto its first
-document, a short one, framing it one stop short of its reading scale, its
-item collapsed and no entry pushed, → there Enter's act with its entry at the
+again the span under the view's centre with no entry (K-3); → from HOME's
+account its first document where no document's region holds the view's
+centre, and the document whose outline holds it — a short one — framing it
+one stop short of its reading scale, its item collapsed and no entry
+pushed, → there Enter's act with its entry at the
 reading size, Mod+[ back to the stop's view with the walk on the document
 whole and Mod+] into it again (issue #55); the paging key (K-6) paging the
 view by 0.9 of its height below reading scale and, at reading scale, continuing at the next
@@ -169,7 +171,7 @@ every check here that reads the edition's chain, and the page keeps its
 record. Every other step leaves the page as it found it."""
 import json
 
-from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, item_words, key_fingerprint
+from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, item_words, key_fingerprint, trunk_of
 from .layout import DRIFT_TOL_PX, box_of, click_on, inside, lacking_of, level_holds, line_of, passage_at, scene_level, ties_hold
 
 # the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
@@ -1599,8 +1601,9 @@ def collapsed_document(ctx, r):
     stands the walk on the document whole; the one line names it alone, no position, its position's slot standing
     empty, so the acting segment stands where it stood at the landing; the mirror's current item, holding the focus, is
     collapsed (`aria-expanded` false, and in the AX tree where CDP answers). → there is Enter's act: a teleport to its
-    reading scale, one trail entry pushed, the focus on the document, now expanded; → again enters its first span and
-    pushes nothing. The step ends at the first edition's landing"""
+    reading scale, one trail entry pushed, the focus on the document, now expanded; the view's centre then set on its
+    second span, the walk left standing on the document, → again enters that span — the child under the view's centre,
+    never its first (K-3) — and pushes nothing. The step ends at the first edition's landing"""
     def seen():
         """the walk, the line, the trail, the camera and the current item as the page stands — the line given time to
         redraw (the loop redraws it every 120 ms), so the acting segment's place is read off what the line shows now"""
@@ -1646,12 +1649,19 @@ def collapsed_document(ctx, r):
             '→ at the collapsed document is Enter\'s act: a teleport to its reading scale (the reading size, em %s), its trail entry pushed, the walk on the document (issue #140; foundations §2.2)' % READING_PX,
             {'cursor': [t0['cursor'], t1['cursor']], 'entries': [len(t0['entries']), len(t1['entries'])], 'newest': newest and newest['addr'], 'em': em(into), 'focus': into['focus']})
     r.check(into['on_item'] and into['expanded'] == 'true', 'at its reading scale the far edition\'s item, holding the focus, is expanded: aria-expanded true', {'on_item': into['on_item'], 'expanded': into['expanded']})
+    # the view's centre on the far edition's second span, at the scale the teleport landed at, the walk left on the document whole
+    spans = [b for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(FAR_LEAP)) if b['kind'] != 'para' or b['text'].strip()]
+    aim = spans[1] if len(spans) > 1 else None
+    if aim:
+        c = ctx.js('window.__skep.centreOf(%s, %d)' % (json.dumps(FAR_LEAP), aim['pos']))
+        ctx.set_view(c['x'], c['y'], into['cam']['scale'])
     chord(ctx, 'ArrowRight')
     entered = seen()
     t2 = entered['trail']
-    r.check(bool(entered['focus']) and entered['focus']['kind'] == 'block' and entered['focus']['addr'] == FAR_LEAP and entered['index'] == 0
+    r.check(bool(aim) and bool(entered['focus']) and entered['focus']['kind'] == 'block' and entered['focus']['addr'] == FAR_LEAP and entered['focus']['pos'] == aim['pos']
             and t2['cursor'] == t1['cursor'] and len(t2['entries']) == len(t1['entries']),
-            '→ again, at its reading scale, enters its first span and pushes nothing (K-3)', {'focus': entered['focus'], 'index': entered['index'], 'cursor': [t1['cursor'], t2['cursor']], 'entries': [len(t1['entries']), len(t2['entries'])]})
+            '→ again, at its reading scale, the view\'s centre on its second span, enters that span — never its first — and pushes nothing (K-3)',
+            {'aim': aim and aim['pos'], 'focus': entered['focus'], 'index': entered['index'], 'cursor': [t1['cursor'], t2['cursor']], 'entries': [len(t1['entries']), len(t2['entries'])]})
     r.figures['collapsed_document'] = {'addr': FAR_LEAP, 'em': {'landing': em(landing), 'below': em(out), 'entered': em(into)}, 'lod_below': out['lod'],
                                        'line': {'landing': landing['address']['text'], 'below': out['address']['text']}, 'acting_left': [landing['acting'], out['acting']],
                                        'expanded': [out['expanded'], into['expanded']], 'ax': ax}
@@ -1659,35 +1669,66 @@ def collapsed_document(ctx, r):
 
 
 def stepped_in(ctx, r):
-    """a walk step onto a document from below its reading scale (issue #55): Mod+Shift+H, the walk on the acting account
-    at HOME, then → onto the account's first document — one whose outline, framed whole at 0.9 of the view, would read at
-    an em of 8 or more. The step stands the walk on the document as one stop, framed short of its reading scale — its own
-    em under 8 — its mirror item collapsed, and pushes nothing; → there is Enter's act, one trail entry pushed, the
-    document at the reading size (em READING_PX); Mod+[ returns to HOME's entry at the stop's view, the walk on the
-    document whole and its item collapsed; Mod+] returns into it at the reading size. The step ends at the first edition's
-    landing"""
+    """→ at an account steps in to the document drawn under the view's centre, else to its first (K-3), and a walk step
+    onto a document from below its reading scale (issue #55): Mod+Shift+H, the walk on the acting account at HOME, and a
+    listed document of its first grid — the first edition where it is one, else the first that is — whose outline, framed
+    whole at 0.9 of the view, would read at an em of 8 or more, and whose room holds empty depths below its outline. The
+    view's centre set, the walk left standing, over those depths, where no document's region stands: → enters the
+    account's first document, and ← walks out again. Then over the document's outline: → enters that document, never the
+    first. The step stands the walk on it as one stop, framed short of its reading scale — its own em under 8 — its
+    mirror item collapsed, and pushes nothing; → there is Enter's act, one trail entry pushed, the document at the
+    reading size (em READING_PX); Mod+[ returns to HOME's entry at the stop's view, the walk on the document whole and its
+    item collapsed; Mod+] returns into it at the reading size. The step ends at the first edition's landing"""
     def seen():
-        """the walk, the trail, the camera and the current item as the page stands"""
+        """the walk, its place among its siblings, the trail, the camera and the current item as the page stands"""
         return ctx.js('''(() => { const S = window.__skep, f = S.view.focus(), i = document.getElementById("walk-" + S.mirror.index());
-          return {focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}, trail: S.trail(), cam: S.view.camera(), expanded: i ? i.getAttribute("aria-expanded") : null}; })()''')
+          return {focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}, index: S.mirror.index(), trail: S.trail(), cam: S.view.camera(), expanded: i ? i.getAttribute("aria-expanded") : null}; })()''')
+    def framed_whole(addr):
+        """the em a document's outline, framed whole at 0.9 of the view, would read at, from its fold as the page holds it"""
+        fold, vp = ctx.js('window.__skep.fold(%s)' % json.dumps(addr)), ctx.js('window.__skep.view.viewport()')
+        o = fold['outline']
+        return min(vp['VW'] / o['w'], vp['VH'] / o['h']) * 0.9 * fold['fs'] if o['w'] > 0 and o['h'] > 0 else None
+    def depths(addr):
+        """the middle of a document's room below its outline, across the outline's middle — where its region stands not —
+        or None where its outline reaches its room's foot"""
+        o, room = ctx.js('window.__skep.fold(%s)' % json.dumps(addr))['outline'], ctx.js('window.__skep.boxOf(%s)' % json.dumps(addr))
+        return {'x': o['x'] + o['w'] / 2, 'y': (o['y'] + o['h'] + room['y'] + room['h']) / 2} if o['y'] + o['h'] < room['y'] + room['h'] else None
     chord(ctx, 'H', mods=('Meta', 'Shift'))
     home = seen()
-    t0 = home['trail']
-    chord(ctx, 'ArrowRight')
-    stop = seen()
-    first = stop['focus']['addr'] if stop['focus'] and stop['focus']['kind'] == 'document' else None
-    whole = None
-    if first:
-        fold, vp = ctx.js('window.__skep.fold(%s)' % json.dumps(first)), ctx.js('window.__skep.view.viewport()')
-        o = fold['outline']
-        whole = min(vp['VW'] / o['w'], vp['VH'] / o['h']) * 0.9 * fold['fs']
-    r.check(bool(home['focus']) and home['focus']['kind'] == 'account' and bool(first) and whole is not None and whole >= 8,
-            '→ at HOME\'s account stands the walk on its first document, one whose outline framed whole would read at an em of 8 or more (what the step\'s checks stand on)',
-            {'home': home['focus'], 'stop': stop['focus'], 'framed_whole_em': whole})
-    if not first:
+    t0, scale = home['trail'], home['cam']['scale']
+    acct = home['focus']['addr'] if home['focus'] and home['focus']['kind'] == 'account' else None
+    listed = {q['doc'] for q in ctx.js('window.__skep.model.places()')}
+    # the account's first grid, which HOME draws whole: its 49th cell holds the continuation, drawn there as one mark
+    grid = [a for a in ('%s.0.%d' % (acct, n) for n in range(1, 49)) if acct and a in listed]
+    target = next((a for a in sorted(grid, key=lambda a: a != DOC) if (framed_whole(a) or 0) >= 8 and depths(a)), None)
+    r.check(bool(acct) and bool(target), 'Mod+Shift+H stands the walk on the acting account, a listed document of its first grid framed whole at an em of 8 or more, its room holding empty depths below its outline (what the step stands on)',
+            {'home': home['focus'], 'target': target})
+    if not target:
         ctx.leap(DOC, WINDOW[0])
         return
-    em = lambda s: s['cam']['scale'] / ctx.js('window.__skep.scaleFor(%s, "em", 1)' % json.dumps(first))
+    below = depths(target)
+    ctx.set_view(below['x'], below['y'], scale)
+    chord(ctx, 'ArrowRight')
+    fallback = seen()
+    first = fallback['focus']['addr'] if fallback['focus'] and fallback['focus']['kind'] == 'document' else None
+    r.check(bool(first) and fallback['index'] == 0,
+            '→ at HOME\'s account, the view\'s centre in %s\'s room below its outline, where no document\'s region stands, enters the account\'s first document (K-3)' % target,
+            {'at': below, 'focus': fallback['focus'], 'index': fallback['index']})
+    chord(ctx, 'ArrowLeft')
+    o = ctx.js('window.__skep.fold(%s)' % json.dumps(target))['outline']
+    ctx.set_view(o['x'] + o['w'] / 2, o['y'] + o['h'] / 2, scale)
+    chord(ctx, 'ArrowRight')
+    stop = seen()
+    # the document as the walk stands on it: the version its box shows
+    doc = stop['focus']['addr'] if stop['focus'] and stop['focus']['kind'] == 'document' and trunk_of(stop['focus']['addr']) == target else None
+    whole = framed_whole(doc) if doc else None
+    r.check(bool(doc) and stop['index'] > 0 and whole is not None and whole >= 8,
+            '→ at HOME\'s account, the view\'s centre over %s\'s outline, enters that document — never the account\'s first — one whose outline framed whole would read at an em of 8 or more (K-3; what the step\'s checks stand on)' % target,
+            {'target': target, 'first': first, 'stop': stop['focus'], 'index': stop['index'], 'framed_whole_em': whole})
+    if not doc:
+        ctx.leap(DOC, WINDOW[0])
+        return
+    em = lambda s: s['cam']['scale'] / ctx.js('window.__skep.scaleFor(%s, "em", 1)' % json.dumps(doc))
     t1 = stop['trail']
     r.check(em(stop) < 8 and stop['expanded'] == 'false' and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']),
             '→ onto the document from below its reading scale frames it short of that scale — its own em under 8 — one stop, its item collapsed, no trail entry pushed (issue #55; #140\'s design decision)',
@@ -1696,20 +1737,20 @@ def stepped_in(ctx, r):
     into = seen()
     t2 = into['trail']
     newest = t2['entries'][t2['cursor']] if 0 <= t2['cursor'] < len(t2['entries']) else None
-    r.check(t2['cursor'] == t1['cursor'] + 1 and len(t2['entries']) == t2['cursor'] + 1 and bool(newest) and newest['addr'] == first
-            and abs(em(into) - READING_PX) < 1e-6 and bool(into['focus']) and into['focus']['addr'] == first and into['expanded'] == 'true',
+    r.check(t2['cursor'] == t1['cursor'] + 1 and len(t2['entries']) == t2['cursor'] + 1 and bool(newest) and newest['addr'] == doc
+            and abs(em(into) - READING_PX) < 1e-6 and bool(into['focus']) and into['focus']['addr'] == doc and into['expanded'] == 'true',
             '→ again, at the stop, is Enter\'s act: its trail entry pushed, the document at the reading size (em %s), its item expanded (foundations §2.2)' % READING_PX,
             {'cursor': [t1['cursor'], t2['cursor']], 'entries': [len(t1['entries']), len(t2['entries'])], 'newest': newest and newest['addr'], 'em': em(into), 'focus': into['focus'], 'expanded': into['expanded']})
     chord(ctx, '[', mods=('Meta',))
     back = seen()
-    r.check(back['trail']['cursor'] == t1['cursor'] and same_view(back, stop) and back['focus'] == {'kind': 'document', 'addr': first, 'pos': None} and back['expanded'] == 'false',
+    r.check(back['trail']['cursor'] == t1['cursor'] and same_view(back, stop) and back['focus'] == {'kind': 'document', 'addr': doc, 'pos': None} and back['expanded'] == 'false',
             'Mod+[ returns to HOME\'s entry at the stop\'s view, the walk on the document whole, its item collapsed (issue #55)',
             {'cursor': [t1['cursor'], back['trail']['cursor']], 'cam_same': same_view(back, stop), 'focus': back['focus'], 'expanded': back['expanded']})
     chord(ctx, ']', mods=('Meta',))
     again = seen()
-    r.check(again['trail']['cursor'] == t1['cursor'] + 1 and abs(em(again) - READING_PX) < 1e-6 and bool(again['focus']) and again['focus']['addr'] == first,
+    r.check(again['trail']['cursor'] == t1['cursor'] + 1 and abs(em(again) - READING_PX) < 1e-6 and bool(again['focus']) and again['focus']['addr'] == doc,
             'Mod+] returns to the entry Enter\'s act pushed, into the document at the reading size', {'cursor': [t1['cursor'], again['trail']['cursor']], 'em': em(again), 'focus': again['focus']})
-    r.figures['stepped_in'] = {'addr': first, 'framed_whole_em': whole, 'em': {'stop': em(stop), 'entered': em(into), 'back': em(back), 'forward': em(again)},
+    r.figures['stepped_in'] = {'addr': doc, 'first': first, 'below': below, 'framed_whole_em': whole, 'em': {'stop': em(stop), 'entered': em(into), 'back': em(back), 'forward': em(again)},
                                'expanded': [stop['expanded'], into['expanded'], back['expanded']], 'focus_back': back['focus']}
     ctx.leap(DOC, WINDOW[0])
 
@@ -2387,9 +2428,16 @@ def run(ctx):
     r.check(s['focus'] and s['focus']['kind'] == 'document' and s['focus']['addr'] == DOC and t1['cursor'] == t0['cursor'] + 1 and t1['entries'][-1]['addr'] == DOC,
             'Enter on the document the walk holds teleports to it (K-7): its entry pushed, the focus on the document', {'focus': s['focus'], 'cursor': [t0['cursor'], t1['cursor']]})
     ring_drawn(ctx, r, 'Enter on a document')
+    # the position the first edition's fold holds under the view's centre, where its outline holds the centre, read before the key
+    under = ctx.js('''((a) => { const S = window.__skep, c = S.view.camera(), o = S.fold(a).outline;
+      return c.x >= o.x && c.x <= o.x + o.w && c.y >= o.y && c.y <= o.y + o.h ? S.posAt(a, c.x, c.y) : null; })(%s)''' % json.dumps(DOC))
     chord(ctx, 'ArrowRight')
     f3 = state(ctx)['focus']
-    r.check(f3 and f3['kind'] == 'block' and f3['addr'] == DOC, '→ enters the document at its first span', f3)
+    spans = [q['pos'] for q in ctx.js('window.__skep.mirror.siblings()') if q['kind'] == 'block']
+    want = next((p for p in reversed(spans) if under is not None and p <= under), spans[0] if spans else None)
+    r.check(f3 and f3['kind'] == 'block' and f3['addr'] == DOC and f3['pos'] == want,
+            '→ enters the document at the span under the view\'s centre — the last of its spans opening at or before the position its fold holds there — else at its first (K-3)',
+            {'focus': f3, 'under': under, 'want': want})
     chord(ctx, 'End')
     size = ctx.js('window.__skep.mirror.size()')
     r.check(ctx.js('window.__skep.mirror.index()') == size - 1, 'End goes to the last sibling')

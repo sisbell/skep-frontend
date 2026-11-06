@@ -46,29 +46,36 @@
 // position no block holds stands on the first span. A landing the index does
 // not list — a withheld document, one unchanged since the index's floor, its
 // account — lands on its own node, placed among the listed siblings in
-// address order (`among`; rule 12). The camera follows the focus — a walk
-// move flies to the element at its level's scale (`flyToFocus`): the mark's
-// stop, and a member the walk lists after it, to the mark centred at the
-// scale nearest the camera's that draws it (P-LOD's `markScale`), the member
-// never framed, so its ring stands on the mark (P-RENDER's); any other
-// document to its outline framed, no nearer than its reading size where the
-// scale the move was made at reads it at its reading scale, else no nearer
-// than just short of that (T-LAYER's `scaleBelowReading`), so no step takes a
-// document to its reading scale from below it; a span to its line, its column
-// framed at the landing's em (T-LAYER's `frameOf`); a document's frame and a
-// span's line read again each frame as the document is set while the camera
-// flies, at the position the walk's node holds and under the cap decided as
-// the move is made, their last answer kept while the page holds none of its
-// text (P-CAM's `Aim`; `aimIn`; FP-8) — and the focus follows the camera: any
-// other move re-takes it at the scale's grain
-// (`retakeFromView`). The re-take's order, so the walk never stands on a
-// place out of view nor on one the plane does not draw: a continuation's mark
-// whose cell holds the view's centre — the walk's focus kept where it stands
-// on one of the mark's members, a span or a link in one taken to the member
-// whole, else the mark's stop, never the member under the centre, and no list
-// opened; else the document whose region holds the view's centre (T-LAYER's
-// `regionOf`), none a mark holds; else the document the walk stands on, kept
-// while its region meets the visible view (T-LAYER's `inView`; `kept`); else
+// address order (`among`; rule 12). → steps in to the child the plane draws
+// under the centre of the view the camera is bound for as the key is made,
+// else to the first in record order (D5 K-3; `childUnder`): at the board the
+// account whose cell holds the centre; at an account the mark whose cell
+// holds it, else, nearer than far, the document whose region holds it; at a
+// document the element standing on the position its fold holds there, by the
+// landing's rule (`elementAt`); at a withheld run its first end. The camera
+// follows the focus — a walk move flies to the element at its level's scale
+// (`flyToFocus`): the mark's stop, and a member the walk lists after it, to
+// the mark centred at the scale nearest the camera's that draws it (P-LOD's
+// `markScale`), the member never framed, so its ring stands on the mark
+// (P-RENDER's); any other document to its outline framed, no nearer than its
+// reading size where the scale the move was made at reads it at its reading
+// scale, else no nearer than just short of that (T-LAYER's
+// `scaleBelowReading`), so no step takes a document to its reading scale from
+// below it; a span to its line, its column framed at the landing's em
+// (T-LAYER's `frameOf`); a document's frame and a span's line read again
+// each frame as the document is set while the camera flies, at the position
+// the walk's node holds and under the cap decided as the move is made, their
+// last answer kept while the page holds none of its text (P-CAM's `Aim`;
+// `aimIn`; FP-8) — and the focus follows the camera: any other move re-takes
+// it at the scale's grain (`retakeFromView`). The re-take's order, so the
+// walk never stands on a place out of view nor on one the plane does not
+// draw: a continuation's mark whose cell holds the view's centre — the walk's
+// focus kept where it stands on one of the mark's members, a span or a link in
+// one taken to the member whole, else the mark's stop, never the member under
+// the centre, and no list opened; else the document whose region holds the
+// view's centre (T-LAYER's `regionOf`), none a mark holds; else the document
+// the walk stands on, kept while its region meets the visible view
+// (T-LAYER's `inView`; `kept`); else
 // the account whose region holds the centre, else the board. At far scale the
 // grain stops at the account, and the last alone is read. Where no board is
 // held (FP-35) the root names no board: it says why, in the words the
@@ -328,6 +335,26 @@ function elementsOf(/** @type {string} */ addr) {
   const out = REC.doc(addr).blocks.filter(isElement).map((b) => ({ kind: /** @type {const} */ ('block'), addr, pos: b.pos, link: null }));
   for (const s of LK.shown(addr)) if (!s.run) out.push({ kind: 'link', addr, pos: s.pos, link: s });
   return out;
+}
+
+/**
+ * The index of the element of the walk standing on a position, among a
+ * document's elements (rule 20): the span holding it; where the block holding
+ * it is no element of the walk — white space — the element before it; where no
+ * block holds it, or no element stands before it, the first.
+ * @param {Node[]} kids the document's elements (`elementsOf`)
+ * @param {string} addr the document
+ * @param {number} pos
+ * @returns {number}
+ */
+function elementAt(kids, addr, pos) {
+  const b = REC.blockAt(addr, pos);
+  if (!b) return 0;
+  const i = kids.findIndex((n) => n.kind === 'block' && n.pos === b.pos);
+  if (i >= 0) return i;
+  let before = 0;
+  kids.forEach((n, k) => { if (n.kind === 'block' && n.pos != null && n.pos <= pos) before = k; });
+  return before;
 }
 
 /** the ends LK draws at the withheld run a document's block at `pos` is, in the order it draws them; none for any other block */
@@ -754,11 +781,38 @@ function aimIn(addr, view) {
 function stepped() { render(); focusItem({ byKey: true }); moved(); }
 
 /**
+ * The child of a node → steps in to (D5 K-3), read from what the plane draws
+ * under a view's centre as the key is made, before the node's children are
+ * read: at the board, the account whose cell holds the centre; at an account,
+ * the continuation's mark whose cell holds it at the view's scale (`markAt`),
+ * else, nearer than far, where the plane draws documents, the document whose
+ * region holds it, as the version its box shows (`documentAt`); at a
+ * document, the element standing on the position its fold holds under the
+ * centre (`elementAt`), where its region holds the centre. It answers that
+ * child's index among the node's children once they are read, and the first's
+ * where none of them is drawn under the centre.
+ * @param {Node} node
+ * @param {import('../plane/camera.js').View} view the view the camera is bound for
+ * @returns {(kids: Node[]) => number}
+ */
+function childUnder(node, view) {
+  const { x, y, scale } = view;
+  /** the index of the child at an address, else the first's */
+  const named = (/** @type {string | null} */ addr) => (/** @type {Node[]} */ kids) => Math.max(0, kids.findIndex((n) => n.addr === addr));
+  if (node.kind === 'board') return named(REC.board() ? accountAt(x, y, BOARD.addr) : null);
+  if (node.kind === 'account') { const mark = markAt(x, y, scale); return named(mark ? mark.key : lodOf(scale).name === 'far' ? null : documentAt(x, y, scale)); }
+  const pos = node.kind === 'document' && holdsPoint(LAYER.regionOf(node.addr), x, y) ? LAYER.posAt(node.addr, x, y) : null;
+  return (kids) => (pos == null ? 0 : elementAt(kids, node.addr, pos));
+}
+
+/**
  * A walk key: ↓ ↑ siblings, → in, ← out, Home/End first/last, Enter acts;
  * Shift+↓ / Shift+↑ select by span (K-8, the selection's owner's, which
- * leaves the focus here — rule 15). → reads the children first, and enters
- * nothing where a later move overtook it meanwhile, nor at a document below
- * its reading scale (`collapsed`), whose spans Enter's act reaches.
+ * leaves the focus here — rule 15). → steps in to the child drawn under the
+ * centre of the view the camera is bound for as the key is made, else to the
+ * first (`childUnder`); it reads the children first, and enters nothing where
+ * a later move overtook it meanwhile, nor at a document below its reading
+ * scale (`collapsed`), whose spans Enter's act reaches.
  * @param {'down' | 'up' | 'in' | 'out' | 'first' | 'last'} k
  * @returns {Promise<boolean>}
  */
@@ -771,10 +825,10 @@ export async function key(k) {
   }
   if (k === 'in') {
     if (collapsed()) return true;
-    const move = ++moves;
+    const move = ++moves, child = childUnder(focus, CAM.destination());
     const kids = await childrenOf(focus);
     if (move !== moves) return true;
-    if (kids.length) { stack.push({ siblings, idx }); setFocus(kids, 0); stepped(); await flyToFocus(move); }
+    if (kids.length) { stack.push({ siblings, idx }); setFocus(kids, child(kids)); stepped(); await flyToFocus(move); }
     return true;
   }
   if (k === 'out') {
@@ -841,13 +895,9 @@ export async function focusTo(addr, pos, byKey = false, take = true, end = null,
     const kids = pos != null && d.blocks.length ? (asHeld ? elementsOf(doc) : await childrenOf({ kind: 'document', addr: doc, pos: null, link: null })) : [];
     if (move !== moves) return;
     if (pos != null && kids.length) {
-      const b = REC.blockAt(doc, pos);
       const named = end ? kids.findIndex((n) => n.kind === 'link' && !!n.link && n.link.link.addr === end.link && n.link.key === end.key) : -1;
-      let i = named >= 0 ? named : b ? kids.findIndex((n) => n.kind === 'block' && n.pos === b.pos) : -1;
-      // a position no block holds stands on the first span; one in a block that is no element of the walk — white space — on the element before it
-      if (i < 0) { i = 0; if (b) kids.forEach((n, k) => { if (n.kind === 'block' && n.pos != null && n.pos <= pos) i = k; }); }
       stack = [{ siblings: [BOARD], idx: 0 }, { siblings: A.sibs, idx: A.i }, { siblings: D.sibs, idx: D.i }];
-      setFocus(kids, i, pos);
+      setFocus(kids, named >= 0 ? named : elementAt(kids, doc, pos), pos);
     } else {
       stack = [{ siblings: [BOARD], idx: 0 }, { siblings: A.sibs, idx: A.i }];
       setFocus(D.sibs, D.i, null);
@@ -871,16 +921,16 @@ const holdsPoint = (/** @type {{x: number, y: number, w: number, h: number}} */ 
 const inDocument = (/** @type {Node} */ n) => n.kind === 'document' || n.kind === 'block' || n.kind === 'link';
 
 /**
- * The continuation's mark whose cell holds a world point at the camera's
- * scale — the one the plane draws the stronger there — with its name and its
- * members; null where no mark's cell holds it, or the mark holds no document
- * (see the head).
+ * The continuation's mark whose cell holds a world point at a scale — the one
+ * the plane draws the stronger there — with its name and its members; null
+ * where no mark's cell holds it, or the mark holds no document (see the head).
  * @param {number} x
  * @param {number} y
+ * @param {number} [scale] the camera's where none is given
  * @returns {{key: string, members: string[]} | null}
  */
-function markAt(x, y) {
-  const k = markDepth(CAM.cam.scale), acct = REC.board() ? accountAt(x, y, BOARD.addr) : null;
+function markAt(x, y, scale = CAM.cam.scale) {
+  const k = markDepth(scale), acct = REC.board() ? accountAt(x, y, BOARD.addr) : null;
   if (k == null || !acct || !holdsPoint(continuationCell(acct, k), x, y)) return null;
   const key = markKey(acct, k), members = membersOf(key);
   return members.length ? { key, members } : null;
@@ -889,17 +939,18 @@ function markAt(x, y) {
 /**
  * The document whose region holds a world point (T-LAYER's `regionOf`: its
  * outline and the strip its corner stands in), of those the index lists and
- * the plane draws whole at the camera's scale — none a continuation's mark
- * holds — as the version its box shows, the region that version's (see the
- * head); of documents sharing the room past the sound depth, the first whose
- * outline holds it; null where no region does.
+ * the plane draws whole at a scale — none a continuation's mark holds — as the
+ * version its box shows, the region that version's (see the head); of
+ * documents sharing the room past the sound depth, the first whose outline
+ * holds it; null where no region does.
  * @param {number} x
  * @param {number} y
+ * @param {number} [scale] the camera's where none is given
  * @returns {string | null}
  */
-function documentAt(x, y) {
+function documentAt(x, y, scale = CAM.cam.scale) {
   let best = null, on = false;
-  const k = markDepth(CAM.cam.scale);
+  const k = markDepth(scale);
   for (const p of REC.places()) {
     if (p.system || (k != null && withinContinuation(p.doc, k))) continue;
     // the room widened by the corner's strip: the region stands inside it — the region of the version the box shows
