@@ -13,7 +13,8 @@
 // standing below a card the reader opened, Enter at a withheld run and a
 // tail pressed, the box's version — a return restoring the versions its
 // entry kept, the member a newer version's arrival found a bare address's
-// text was among them, by the position its row names, and the version a
+// text was among them, by the position its row names, an arrival standing
+// there read in that member, and the version a
 // landing's "read side by side" opens — a change of the page's class, where no
 // board is held, the passage Back lands on — a return finding the words its
 // entry's view read in the text it reaches, and the arrival it keeps read
@@ -23,8 +24,10 @@
 // document's last line as the reader left it, the surfaces a place keeps —
 // the selection, a card, a list — ended as the reader leaves and reopened as
 // left on a return, their subjects placed again by their bytes, and a text
-// set again under the reader — an arrival placed again by its runs' bytes,
-// and the passage being read gone from it — and the surfaces standing
+// set again under the reader — an arrival placed again by its runs' bytes
+// and read again by the landing rule, its runs labelled and its landing kept
+// at the run it stood at, and the passage being read gone from it — and the
+// surfaces standing
 // through a version move or a newer version's arrival, the selection, a card
 // and a list re-checked against the version their box shows then (FP-8,
 // FP-20, FP-21, FP-22, FP-25, FP-29, FP-35, FP-36). The overlay host stands on stand-in elements — the
@@ -2984,6 +2987,23 @@ test('"read side by side" at a landing opens the version its box shows as the ac
   assert.deepEqual(fake.unanswered, []);
 });
 
+test('an arrival standing at an edition read at its bare address stays outlined once a newer version arrives, in the member read there — the version its box shows, its landing there too — never put out with the bare address\'s text, which that member holds now: a far end\'s passage, and the head of a far document named whole (FP-21, FP-22; issue #359)', async () => {
+  /** @type {Array<[string, object]>} each link followed, and the arrival it stands as in version 2 */
+  const follows = [[PASSAGE, { addr: FAR2, pos: 20, runs: [{ pos: 20, width: 5 }], link: PASSAGE }], [WHOLE, { addr: FAR2, pos: FAR_HEAD, runs: null, link: WHOLE }]];
+  for (const [link, mark] of follows) {
+    await farAfresh();
+    await run(GO.leapTo(D));
+    await run(GO.follow(drawn(link)));
+    publishFar3();
+    assert.deepEqual([GO.shownIn(FAR), marks()], [FAR2, [mark, [link]]], `${link}: version 3 arrived — the box on version 2, the arrival outlined there, its link lit`);
+    GO.recheck();
+    assert.deepEqual([marks(), GO.landing()?.addr, GO.landing()?.said, faceShown()], [[mark, [link]], FAR2, null, null], `${link}: re-checked — the outline in version 2, its landing there, nothing said and no face`);
+    GO.endArrival();
+  }
+  await farAgain();
+  assert.deepEqual(fake.unanswered, []);
+});
+
 // ---- THE PASSAGE LEFT: Back lands on the passage the reader left ---------------------------
 
 // REWRITTEN, DROPPED: two drafts of eighty paragraphs, which an edit sets a paragraph of new bytes before while the reader is
@@ -3586,6 +3606,16 @@ const setSeta = (/** @type {string} */ text, /** @type {Array<[number, number]>}
   spans: [{ subspace: 1, ordinal: 1, positions: text.length }], text: { runs: [{ pos: 1, width: text.length, kind: 'content', text, ref: null, origin: null }], asOf: 9 },
   image: { from: 1, runs: image.map(([ordinal, width]) => ({ iStart: `${SETA}.0.1.${ordinal}`, width })) },
 });
+/** SETA set again as its image places SETA's own bytes, each run `[ordinal, width]`: its text those bytes' words in that order, a run of bytes minted since — past SETA_TEXT's own — the words `minted` */
+const placeSeta = (/** @type {Array<[number, number]>} */ image, minted = '') => setSeta(image.map(([ordinal, width]) => (ordinal > SETA_TEXT.length ? minted : SETA_TEXT.slice(ordinal - 1, ordinal - 1 + width))).join(''), image);
+/** SETA set again as its own text, and a LEAP to it naming its passage "Its passage" by identity, as the gate's door names it: the passage outlined in one piece at 20, nothing said */
+async function leapToSeta() {
+  const at = SETA_TEXT.indexOf('Its passage') + 1, width = 'Its passage'.length;
+  Object.assign(script, reads(SETA, SETA_TEXT, []), noClaims(SETA));
+  placeSeta([[1, SETA_TEXT.length]]);
+  await run(GO.leapTo(SETA, { pos: at, runs: [{ pos: at, width }], passage: { prefix: SETA + '.0.1', ordinal: at, width }, how: 'leap' }));
+  assert.deepEqual([GO.arrivalMark(), GO.landing()], [{ addr: SETA, pos: 20, runs: [{ pos: 20, width: 11 }], link: null }, null], 'the passage outlined in one piece, nothing said');
+}
 
 test('an arrival whose document\'s text is set again is placed again by its passage\'s bytes (the landing rule): all of them standing, the outline moves with them; part, the outline on what stands and the landing\'s line saying only part of the passage is there; none, nothing outlined and the dead end\'s face at the landing\'s place (FP-21; issue #285)', async () => {
   Object.assign(script, reads(SETA, SETA_TEXT, []), noClaims(SETA));
@@ -3611,6 +3641,41 @@ test('an arrival whose document\'s text is set again is placed again by its pass
     assert.ok(f && f.html.includes(addressedHTML(t('F.floating', { D: SETA }))) && HOST.currentState()?.anchor?.span?.addr === SETA, `its words, at the landing's place: ${f && f.html}`);
     GO.recheck();
     assert.equal(faceShown()?.id, 'face:floating', 'once for each setting of the text');
+  } finally { GO.endArrival(); HOST.dismiss(); }
+});
+
+test('an arrival whose text is set again holding its passage\'s opening twice — side by side, or apart — is read again by its bytes, never by its runs\' widths: part of the passage, a run for each opening, labelled "again later" and "again" (FP-21; issue #359)', async () => {
+  const again = [t('L.piece.again-later'), t('L.piece.again')], words = again[0] + ' · ' + t('L.piece.part');
+  try {
+    await leapToSeta();
+    placeSeta([[1, 25], [20, 6], [31, 27]]);
+    assert.deepEqual(GO.arrivalMark()?.runs, [{ pos: 20, width: 6 }, { pos: 26, width: 6 }], 'placed again at once by its bytes, before its re-check: a run for each opening');
+    GO.recheck();
+    assert.deepEqual(GO.arrivalMark(), { addr: SETA, pos: 20, runs: [{ pos: 20, width: 6 }, { pos: 26, width: 6 }], link: null }, 'side by side: a run for each opening, never one run over both');
+    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine(), GO.described()?.runs.map((r) => r.words)], ['part', words, again], 'part of the passage, each run labelled, the landing at the first: never all of it in one piece');
+    placeSeta([[1, 25], [31, 13], [20, 6], [44, 14]]);
+    GO.recheck();
+    assert.deepEqual(GO.arrivalMark()?.runs, [{ pos: 20, width: 6 }, { pos: 39, width: 6 }], 'apart: a run for each opening');
+    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine()], ['part', words], 'part of the passage: never all of it in pieces');
+  } finally { GO.endArrival(); HOST.dismiss(); }
+});
+
+test('an arrival in several runs whose text is set again keeps its runs\' labels and the run it stands at, found by the byte it stood on: its passage\'s halves swapped side by side, two pieces "in another order", the landing at piece 1 and the step taking it to piece 2; a paragraph then set before them, the landing still at piece 2 where it stands now, the step still offered (FP-21; issue #359)', async () => {
+  const swapped = /** @type {Array<[number, number]>} */ ([[1, 19], [25, 6], [20, 5], [31, 27]]), lead = 'A new lead.\n', k = lead.length;
+  const piece = (/** @type {number} */ which) => [t('L.piece', { k: which, n: 2 }), t('L.piece.all'), t('L.piece.order')].join(' · ');
+  try {
+    await leapToSeta();
+    placeSeta(swapped);
+    GO.recheck();
+    assert.deepEqual(GO.arrivalMark(), { addr: SETA, pos: 26, runs: [{ pos: 20, width: 6 }, { pos: 26, width: 5 }], link: null }, 'a run for each half, the landing at the first half: never one run over both');
+    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine(), GO.steps()], ['pieces', piece(1), true], 'all of it in two pieces in another order, the line piece 1\'s, the step offered');
+    assert.equal(GO.step(1), true);
+    await stepped();
+    assert.deepEqual([GO.landing()?.pos, GO.arrivalMark()?.pos, GO.landingLine()], [20, 20, piece(2)], 'the step: piece 2');
+    placeSeta([[SETA_TEXT.length + 1, k], ...swapped], lead);
+    GO.recheck();
+    assert.deepEqual(GO.arrivalMark(), { addr: SETA, pos: 20 + k, runs: [{ pos: 20 + k, width: 6 }, { pos: 26 + k, width: 5 }], link: null }, 'a paragraph set before them: both runs where they stand now, the landing at piece 2');
+    assert.deepEqual([GO.landing()?.pos, GO.landing()?.current, GO.landingLine(), GO.steps()], [20 + k, 0, piece(2), true], 'its line piece 2\'s, the step still offered');
   } finally { GO.endArrival(); HOST.dismiss(); }
 });
 
