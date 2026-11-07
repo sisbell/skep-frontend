@@ -98,7 +98,10 @@ platform's selection never read back as the person's, whose card, shown
 while the answer reads, would end its opening (O-HOST's); the
 selection's one continuous gesture (R11) — a pointer drag over a phrase of a
 shown paragraph selects that phrase's byte span, never its block: the acts
-ask the wire over those bytes, the copy names them, and the platform's
+ask the wire over those bytes, the copy names them as FP-27 names a copy —
+the first edition read at its plain address, the member its text is by the
+harness's own reads of its chain, the bytes' positions in it and their
+identity (issue #244) — and the platform's
 highlight survives the remount the links card causes; the platform's
 selection standing as the person left it — a drag from a phrase's end to its
 start marked in place, the article standing and the selection running
@@ -132,17 +135,22 @@ claimant's key record selects it whole, and its copy is its stand-in — its
 kind in the strings table's words, each key's label and its fingerprint, the
 fingerprints the harness's own hashing gives and one the device's key store
 holds — never empty and never the words the plane draws, the skep flavor
-naming the record's one position; a drag over part of its words selects it
+naming the record as FP-27 names a copy, its one position where its home is
+published; a drag over part of its words selects it
 whole and draws it so, every glyph inside the platform's selection. In the reading scene a
 drag selects as it does on the plane (§2.5): a drag over a phrase of a pane,
-or from its head into its first block, is copied as the passage's board and
-the address the pane's acts name beside the document's own bytes over the
-bytes dragged, the head's words never among them — the first edition at its
-bare address naming the member its text is, by the harness's own reads of its
-chain (issue #160) — and makes no selection of the page's. A feed row naming
+or from its head into its first block, is copied as FP-27 names a copy — the
+passage's board, the document read, the member its text is with the bytes
+dragged in it and whether it was read at the plain address, those bytes by
+identity — beside the document's own bytes over them, the head's words never
+among them — the first edition at its bare address naming the member its text
+is, by the harness's own reads of its chain (issue #160), a draft no member
+and no positions — and makes no selection of the page's; the bytes pane A
+copied, selected on the plane's box at the first edition's plain address, are
+named alike (issue #244). A feed row naming
 the draft in a pane, sent to the page's session (the gate's feed door, reads
 alone), reaches the pane (issue #160): until its read lands the pane's copy is
-its own bytes, whatever the model holds of them — none where the plane does
+its own bytes by the same identity, whatever the model holds of them — none where the plane does
 not show the draft, what it held where it does (issue #285); then the pane is set again
 in one step — its article rebuilt, the platform's selection on the same words,
 the first span in view where it stood, the bands on their lines — and a
@@ -941,11 +949,22 @@ def own(ctx, span, addr=None):
     return ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(addr or span['addr']), span['pos'], span['pos'] + span['width'])) if span else None
 
 
-def names(ctx, c, addr, p0, p1):
-    """does the copy's flavor name the board, the document and the span copied, the bytes [p0, p1) three positions either way?"""
+def flavor_of(ctx, span, doc, member, plain, ids=None):
+    """the skep flavor FP-27 names a copy of `span` by: the board; `doc`, the document its words were read in; `member`, the
+    member its text is, with the span's positions in it — none where no member is named, as for a draft, whose positions
+    move; whether it was read at a published document's plain address; and its bytes by identity — `ids`, else the span
+    read through `doc`'s held image by the model's `identity` door"""
+    if ids is None:
+        ids = ctx.js('window.__skep.model.identity(%s, %d, %d)' % (json.dumps(doc), span['pos'], span['width']))
+    at = {'pos': span['pos'], 'width': span['width']} if member else {'pos': None, 'width': None}
+    return dict(board=ctx.js('window.__skep.model.board().origin'), doc=doc, member=member, plain=plain, ids=ids, **at)
+
+
+def names(ctx, c, doc, member, plain, p0, p1, ids=None):
+    """does the copy's flavor name the span copied as FP-27 names a copy (`flavor_of`), its bytes by identity never none,
+    and is that span the bytes [p0, p1), three positions either way?"""
     f, s = c['flavor'], c['span']
-    origin = ctx.js('window.__skep.model.board().origin')
-    return bool(f) and bool(s) and f == {'board': origin, 'addr': addr, 'pos': s['pos'], 'width': s['width']} and abs(s['pos'] - p0) <= 3 and abs(s['pos'] + s['width'] - p1) <= 3
+    return bool(f) and bool(s) and f == flavor_of(ctx, s, doc, member, plain, ids) and bool(f['ids']) and abs(s['pos'] - p0) <= 3 and abs(s['pos'] + s['width'] - p1) <= 3
 
 
 def bare(c, mine):
@@ -963,6 +982,15 @@ def member_of(ctx, addr):
             break
         k = j
     return '%s.%d' % (addr, k) if k else None
+
+
+def plain_where(ctx, addr):
+    """where the words of a box at a document's plain address are read, as FP-27 names a copy of them: the member its text
+    is — a published document's chain's newest, by the harness's own reads of the chain (`member_of`), none for a draft —
+    and whether it is a published document's plain address, by its metadata as the page read it, else its index's kind"""
+    d = ctx.js('window.__skep.model.doc(%s)' % json.dumps(addr))
+    published = bool(d['meta']['published']) if d.get('meta') else d.get('kind') == 'edition'
+    return (member_of(ctx, addr) if published else None), published
 
 
 def back_after_publish(ctx, r):
@@ -1160,7 +1188,9 @@ def record_copy(ctx, r):
         in the strings table's words, then each key's label and its fingerprint in the record's order — the fingerprints
         decided here by the harness's own hashing of the record's keys, one of them the fingerprint the device's key store
         holds as the shell computes it — never empty, and never the words the plane draws for whoever is looking; the skep
-        flavor names the board, the document and the record's one position;
+        flavor names the record as FP-27 names a copy: the board, its home read at its address, the member its text is
+        with the record's one position in it where its home is published — none where it is a draft — and the record's
+        bytes by identity;
     (b) a drag over part of the record's words selects it whole and draws it so: every glyph of it inside the platform's
         selection, the page's selection the record's one position.
     The selection is cleared after; its figures"""
@@ -1190,13 +1220,16 @@ def record_copy(ctx, r):
     sel = ctx.js('window.__skep.selection()')
     c = copied(ctx)
     plain = c['plain'] or ''
-    origin = ctx.js('window.__skep.model.board().origin')
     r.check(on and sel == span and plain == want, 'Enter at the walk\'s item on the claimant\'s key record selects it whole, and the copy\'s plain text is its stand-in: "%s", then each key\'s label and its fingerprint in the record\'s order, never empty (issue #161)' % kind,
             {'focused': on, 'selection': sel, 'plain': plain[:400], 'want': want[:400]})
     r.check(bool(set(fps) & held), 'a fingerprint the stand-in carries is one the device\'s key store holds, as the shell computes it: the page, the harness and the shell hash a key alike', {'record': fps, 'store': sorted(held)})
     drawn = [w for w in (plane['words'], plane['keys'], 'ANCHOR') if w and w in plain]
     r.check(bool(plane['words']) and not drawn, 'the copy carries none of what the plane draws of the record for whoever is looking', {'drawn': drawn, 'plane': plane})
-    r.check(c['flavor'] == dict(span, board=origin) and c['span'] == span, 'the skep flavor names the board, the document and the record\'s one position, though the span holds no text', {'flavor': c['flavor'], 'span': c['span']})
+    member, published = plain_where(ctx, HOME)
+    r.check(c['flavor'] == flavor_of(ctx, span, HOME, member, published) and bool(c['flavor']) and bool(c['flavor']['ids']) and c['span'] == span,
+            'the skep flavor names the record as FP-27 names a copy, though the span holds no text: the board, its home read at its address, %s, and the record\'s bytes by identity (issue #244)'
+            % ('the record\'s one position in %s, the member its text is' % member if member else 'no member and no position, its home %s' % ('naming no member' if published else 'a draft')),
+            {'flavor': c['flavor'], 'span': c['span'], 'member': member, 'published': published})
     figures['copied'] = plain[:400]
     chord(ctx, 'Escape')
     chord(ctx, 'Escape')
@@ -1228,22 +1261,27 @@ def scene_copy(ctx, r):
     the draft it windows, opened over no selection of the page's, pane A on the first edition at its bare address:
     (o) pane A names the member its text is — the newest of the first edition's chain, by the harness's own reads of it —
         and shows the bare address it was opened on;
-    (a) a drag over a phrase of pane A: the copy's flavor names the board, that member and the dragged bytes, three
-        positions either way, never the bare address; its plain text is the document's own bytes over them, no label of
-        the page among them; and the drag makes no selection of the page's, a pane's own selection being D1's second
-        stage (#94);
+    (a) a drag over a phrase of pane A: the copy's flavor names the passage as FP-27 names a copy — the board, the bare
+        address it was read at, marked so, that member with the dragged bytes' positions in it, three positions either
+        way, and those bytes by identity; its plain text is the document's own bytes over them, no label of the page among
+        them; and the drag makes no selection of the page's, a pane's own selection being D1's second stage (#94);
     (b) pane A at its top, a drag from the head's address into the first block: the copy starts at the first block, the
         head's words never in it;
     (c) a drag over a phrase of pane B, then a feed row naming the draft, sent to the page's session, through the gate's
         feed door (reads alone, as the feed hands a row): in the same evaluation the pane is being set again and its
-        copy still carries the phrase's bytes as the pane shows them, the model holding none of them where the plane does
-        not show the draft and holding them as they stood where it does (issue #285); once its
+        copy still carries the phrase's bytes as the pane shows them, the flavor naming the draft and the bytes by the
+        identity the copy before the row named — never their positions, a draft's — the model holding none of them where
+        the plane does not show the draft and holding them as they stood where it does (issue #285); once its
         read lands the pane's article is rebuilt, the platform's selection on the same words in it, the first span in
         view at the top it stood at on screen, the copy naming the same bytes, and the bands between the panes on their
         lines;
     (d) pane A scrolled away, a second such row and, in the same evaluation, the re-level act clicked: it waits — pane A
         unmoved while the read is out — and once the read lands the two ends stand level.
-    The draft is read whole again and the scene ended after them"""
+    The draft is read whole again and the scene ended after them; then
+    (e) the bytes pane A's drag copied, selected on the plane's box at the first edition's plain address as the page
+        selects them: the box's copy names them as the pane's did — the bare address, the member its text is, their
+        positions in it and their identity alike (issue #244).
+    The selection is cleared after"""
     B = WINDOW[2]
     figures = {}
     ctx.leap(DOC, WINDOW[0])
@@ -1252,7 +1290,8 @@ def scene_copy(ctx, r):
     open_scene(ctx)
     r.check(ctx.js('window.__skep.scene.isOpen()') and ctx.js('window.__skep.selection()') is None, 'the scene stands on the first edition and the draft it windows, over no selection of the page\'s')
     # (o) pane A names the member its text is
-    A = member_of(ctx, DOC) or DOC
+    M = member_of(ctx, DOC)
+    A = M or DOC
     panes = ctx.js('window.__skep.scene.panes()') or {}
     pa = panes.get('a') or {}
     r.check(pa.get('names') == A and pa.get('shows') == DOC and pa.get('src') == DOC and pa.get('kind') == 'bare',
@@ -1268,11 +1307,11 @@ def scene_copy(ctx, r):
         c = copied(ctx)
         mine = own(ctx, c['span'], DOC)
         page = ctx.js('({sel: window.__skep.selection(), platform: window.__skep.platformSelection().span})')
-        r.check(names(ctx, c, A, ph['p0'], ph['p1']), '(a) a drag over a phrase in pane A: the copy\'s flavor names the board, the member the pane\'s text is and the dragged bytes, never the bare address (§2.4; §2.5; issue #160)',
-                dict(c, phrase=[ph['p0'], ph['p1'], ph['text']], member=A))
+        r.check(names(ctx, c, DOC, M, True, ph['p0'], ph['p1']), '(a) a drag over a phrase in pane A: the copy\'s flavor names the passage as FP-27 names a copy — the board, the bare address it was read at, the member the pane\'s text is with the dragged bytes\' positions in it, and those bytes by identity (§2.4; §2.5; issues #160, #244)',
+                dict(c, phrase=[ph['p0'], ph['p1'], ph['text']], member=M))
         r.check(bare(c, mine), '(a) its plain text is the document\'s own bytes over them, no label of the page among them', {'plain': c['plain'], 'own': mine})
         r.check(page['sel'] is None and page['platform'] is None, '(a) the drag in the pane makes no selection of the page\'s: a pane\'s own selection is D1\'s second stage (#94)', page)
-        figures['a'] = {'phrase': [ph['p0'], ph['p1'], ph['text']], 'span': c['span'], 'plain': c['plain']}
+        figures['a'] = {'phrase': [ph['p0'], ph['p1'], ph['text']], 'span': c['span'], 'plain': c['plain'], 'flavor': c['flavor']}
     # (b) pane A at its top, a drag from the head's address into the first block
     ctx.js('document.getElementById("sceneA").scrollTop = 0')
     ctx.frames(2)
@@ -1289,7 +1328,7 @@ def scene_copy(ctx, r):
         ctx.frames(2)
         c = copied(ctx)
         mine = own(ctx, c['span'], DOC)
-        r.check(bool(c['span']) and c['span']['pos'] == first['pos'] and names(ctx, c, A, first['pos'], end) and bare(c, mine),
+        r.check(bool(c['span']) and c['span']['pos'] == first['pos'] and names(ctx, c, DOC, M, True, first['pos'], end) and bare(c, mine),
                 '(b) a drag from pane A\'s head into its first block: the copy starts at the first block, the head\'s words never in it — the flavor names those bytes, the plain text is the document\'s own',
                 dict(c, own=mine, first=[first['pos'], end], head=head['text']))
         figures['b'] = {'span': c['span'], 'plain': c['plain'], 'head': head['text']}
@@ -1301,6 +1340,8 @@ def scene_copy(ctx, r):
         ctx.drv.drag(*ph['start'], *ph['end'])
         ctx.frames(2)
         pre = copied(ctx)
+        # the dragged bytes by identity as the model reads them before the row, which may drop what it holds of the draft
+        ids = ctx.js('window.__skep.model.identity(%s, %d, %d)' % (json.dumps(B), pre['span']['pos'], pre['span']['width'])) if pre['span'] else []
         before = ctx.js(PANE_NOW % json.dumps('b'))
         ties0 = len(ctx.js('window.__skep.scene.ties()'))
         # the row and the reads of it in one evaluation: no answer and no frame comes between them
@@ -1312,8 +1353,10 @@ def scene_copy(ctx, r):
         data = torn['post'].get('data') or {}
         flavor = data.get('application/x-skep-passage')
         mid = {'span': torn['post'].get('span'), 'flavor': json.loads(flavor) if flavor else None, 'plain': data.get('text/plain')}
-        r.check(torn['updating'] and names(ctx, mid, B, ph['p0'], ph['p1']) and mid['span'] == pre['span'] and bool(pre['plain']) and bare(mid, pre['plain']) and torn['now'] in ('', pre['plain']),
-                '(c) a feed row naming the draft reaches pane B (issue #160): the pane is being set again, and until its read lands the copy names the dragged bytes and carries them as the pane shows them — the model holding none of them where the plane does not show the draft, and holding them as they stood where it does (issue #285)',
+        r.check(names(ctx, pre, B, None, False, ph['p0'], ph['p1'], ids), '(c) a drag over a phrase in pane B, the draft: the copy\'s flavor names the draft and the dragged bytes by identity, never their positions, which move (FP-27; issue #244)',
+                dict(pre, phrase=[ph['p0'], ph['p1'], ph['text']], ids=ids))
+        r.check(torn['updating'] and names(ctx, mid, B, None, False, ph['p0'], ph['p1'], ids) and mid['span'] == pre['span'] and bool(pre['plain']) and bare(mid, pre['plain']) and torn['now'] in ('', pre['plain']),
+                '(c) a feed row naming the draft reaches pane B (issue #160): the pane is being set again, and until its read lands the copy names the dragged bytes by the identity it named before the row and carries them as the pane shows them — the model holding none of them where the plane does not show the draft, and holding them as they stood where it does (issue #285)',
                 dict(mid, phrase=[ph['p0'], ph['p1'], ph['text']], pre=pre['span'], updating=torn['updating'], now=torn['now']))
         landed = scene_set(ctx)
         after = ctx.js(PANE_NOW % json.dumps('b'))
@@ -1324,7 +1367,7 @@ def scene_copy(ctx, r):
         r.check(bool(sb) and bool(sa) and sa['held'] and sa['text'] == sb['text'], '(c) the platform\'s selection stands on the same words in the article set again (issue #160)', {'before': sb, 'after': sa})
         fb, fa = before['first'], after['first']
         r.check(bool(fb) and bool(fa) and fa['pos'] == fb['pos'] and abs(fa['top'] - fb['top']) <= 0.5, '(c) the first span in view holds still: the same block, its top where it stood on screen, half a pixel either way (issue #160)', {'before': fb, 'after': fa})
-        r.check(names(ctx, post, B, ph['p0'], ph['p1']) and post['span'] == pre['span'] and bare(post, pre['plain']),
+        r.check(names(ctx, post, B, None, False, ph['p0'], ph['p1'], ids) and post['span'] == pre['span'] and bare(post, pre['plain']),
                 '(c) the copy after it names the same bytes and carries the same words', {'pre': pre, 'post': post})
         ties = ctx.js('window.__skep.scene.ties()')
         r.check(len(ties) == ties0, '(c) the bands and lines between the panes as many as they stood', {'before': ties0, 'after': len(ties)})
@@ -1344,6 +1387,17 @@ def scene_copy(ctx, r):
         ctx.settle()
     ctx.js('window.__skep.scene.close()')
     ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    # (e) the bytes pane A's drag copied, selected on the plane's box at the first edition's plain address
+    sa = (figures.get('a') or {}).get('span')
+    if sa:
+        ctx.settle()
+        ctx.js('window.__skep.select(%s, %d, %d)' % (json.dumps(DOC), sa['pos'], sa['width']))
+        ctx.frames(2)
+        c = copied(ctx)
+        r.check(bool(c['flavor']) and bool(c['span']) and [c['span']['addr'], c['span']['pos'], c['span']['width']] == [DOC, sa['pos'], sa['width']] and c['flavor'] == figures['a']['flavor'],
+                '(e) the bytes pane A copied, selected on the plane\'s box at the first edition\'s plain address: the box\'s copy names them as the pane\'s did — the bare address, %s with their positions in it, and their identity alike (issue #244)' % M,
+                {'box': c['flavor'], 'pane': figures['a']['flavor'], 'span': c['span'], 'pane_span': sa})
+        figures['e'] = {'span': c['span'], 'flavor': c['flavor']}
     chord(ctx, 'Escape')
     chord(ctx, 'Escape')
     r.figures['scene_copy'] = figures
@@ -1426,8 +1480,8 @@ def scene_versions(ctx, r):
             sb, sa = before['selection'], after['selection']
             r.check(bool(sb) and bool(sa) and sa['held'] and sa['text'] == sb['text'] and y0 is not None and y1 is not None and abs(y1 - y0) <= 0.5,
                     '(b) the selection stands on the same words in version 1, its first line at the top it stood at on screen, half a pixel either way (issue #160)', {'before': sb, 'after': sa, 'line': [y0, y1]})
-            r.check(names(ctx, post, V1, post['span']['pos'] if post['span'] else -9, (post['span']['pos'] + post['span']['width']) if post['span'] else -9) and post['plain'] == pre['plain'] and bool(pre['plain']),
-                    '(b) the copy names version 1 and carries the same words (issue #160)', {'pre': pre, 'post': post})
+            r.check(names(ctx, post, V1, V1, False, post['span']['pos'] if post['span'] else -9, (post['span']['pos'] + post['span']['width']) if post['span'] else -9) and post['plain'] == pre['plain'] and bool(pre['plain']),
+                    '(b) the copy names version 1 — read at its own address, the member its text is — and carries the same words (issues #160, #244)', {'pre': pre, 'post': post})
             figures['b'] = {'phrase': [ph['p0'], ph['p1'], ph['text']], 'span': [pre['span'], post['span']], 'line': [y0, y1]}
             # (c) the corner's act pressed as a person presses it: version 2 read back in its place
             at = click_on(ctx, '#sceneA > .corner [data-read]')
@@ -1438,7 +1492,7 @@ def scene_versions(ctx, r):
                     and corner.get('version') == t('F.version-of', {'k': n, 'n': n}) and corner.get('read') == t('F.versions.read', {'k': 1}),
                     f'(c) the corner\'s act, pressed, reads version {n} back in pane A\'s place, the corner offering version 1: the version left one act away (issue #160)',
                     {'pressed': at, 'pane': {k: pa.get(k) for k in keep}, 'corner': corner})
-            r.check(bool(sc) and sc['held'] and bool(sb) and sc['text'] == sb['text'] and back['plain'] == pre['plain'] and bool(back['flavor']) and back['flavor']['addr'] == newest,
+            r.check(bool(sc) and sc['held'] and bool(sb) and sc['text'] == sb['text'] and back['plain'] == pre['plain'] and bool(back['flavor']) and [back['flavor'].get(k) for k in ('doc', 'member', 'plain')] == [newest, newest, False],
                     '(c) the press leaves the selection standing, and the act carries it: on the same words still, the copy naming the version read', {'selection': sc, 'copy': back})
             figures['c'] = {'pressed': at, 'span': back['span']}
         # (d) nothing selected, the paragraph that opens with the stretch version 1 lacks first in view; version 1 read
@@ -1565,8 +1619,8 @@ def selection_held_elsewhere(ctx, r):
     then S is selected again and the scene opened through the card that took the selection's card's place, which leaves
     their place: S ends as the scene shows, no highlight on the plane under it (issue #264; FP-36):
     (a) a drag over a phrase of pane B, the camera at em 5 under the scene, below the mount, then back, the article in the
-        band again: the copy names the draft and the phrase's own bytes, no highlight stands over the plane, and the page
-        holds no selection;
+        band again: the copy names the draft and the phrase's own bytes, by identity and never by a draft's positions,
+        no highlight stands over the plane, and the page holds no selection;
     (b) a click in pane B, a caret alone, then such a row, the article set again: nothing is put on the plane;
     (c) a drag over the phrase of pane B, then such a row, the article set again: as after (a).
     The first edition is read whole again, then the scene's close, a Back, brings S back with the card over it; the camera
@@ -1605,8 +1659,8 @@ def selection_held_elsewhere(ctx, r):
 
     def stood(pb, c, after, rebuilt, what):
         """the check that a drag over the phrase `pb` of pane B stood through the remount `what`: `c` the copy after it"""
-        r.check(rebuilt and names(ctx, c, WINDOW[2], pb['p0'], pb['p1']) and bare(c, own(ctx, c['span'])) and after['span'] is None and after['sel'] is None,
-                '%s: the copy names the draft and the phrase\'s own bytes the person dragged, no highlight stands over the plane, and the page holds no selection' % what,
+        r.check(rebuilt and names(ctx, c, WINDOW[2], None, False, pb['p0'], pb['p1']) and bare(c, own(ctx, c['span'])) and after['span'] is None and after['sel'] is None,
+                '%s: the copy names the draft and the phrase\'s own bytes the person dragged, by identity and never by a draft\'s positions, no highlight stands over the plane, and the page holds no selection' % what,
                 dict(c, held=after, rebuilt=rebuilt, phrase=[pb['p0'], pb['p1'], pb['text']]))
 
     if span:
@@ -2826,11 +2880,14 @@ def run(ctx):
         r.check(s['overlay'] == 'card' and ctx.js('window.__skep.overlay().id') == 'selection', 'the selection\'s acts appear at the dragged span', ctx.js('window.__skep.overlay().id'))
         plat = ctx.js('window.__skep.platformSelection()')
         r.check(not plat['collapsed'] and plat['span'] == sel, 'the platform\'s selection and the page\'s name the same bytes', plat)
-        # the copy: the passage's board and address beside the plain text, never in it (§2.4)
+        # the copy: the passage named as FP-27 names a copy beside the plain text, never in it (§2.4)
         copied = ctx.js('window.__skep.copy()')
         flavor = json.loads((copied.get('data') or {}).get('application/x-skep-passage') or 'null')
-        origin = ctx.js('window.__skep.model.board().origin')
-        r.check(bool(flavor) and bool(sel) and flavor['board'] == origin and flavor['addr'] == DOC and flavor['pos'] == sel['pos'] and flavor['width'] == sel['width'], 'the copy\'s skep flavor names the board, the document and the dragged span, width and all', flavor)
+        member, published = plain_where(ctx, DOC)
+        want = flavor_of(ctx, sel, DOC, member, published) if sel else None
+        r.check(bool(flavor) and bool(sel) and flavor == want and bool(member) and bool(flavor['ids']),
+                'the copy\'s skep flavor names the passage as FP-27 names a copy: the board, the first edition read at its plain address, %s — the member its text is, by the harness\'s own reads of its chain — with the dragged span in it, width and all, and the dragged bytes by identity (issue #244)' % member,
+                {'flavor': flavor, 'want': want})
         own = ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(DOC), sel['pos'], sel['pos'] + sel['width'])) if sel else None
         plain = (copied.get('data') or {}).get('text/plain')
         r.check(plain is not None and plain == own and '≡' not in plain and '⟡' not in plain, 'the copy\'s plain text is the document\'s own bytes over the span — no label or symbol of the page among them', {'plain': (plain or '')[:80], 'own': (own or '')[:80]})

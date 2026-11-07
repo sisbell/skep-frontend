@@ -2,12 +2,13 @@
 // reconciler, two targets, the plane's text layer and the reading scene's
 // panes, which borrow this mount). Layer 2. Engine-bound. State (FP-10): the
 // mounted set (`mounted`) — each record's layout scale, revision, what it was
-// made from, the fold it was set in, the parts of it standing, its marks and
-// whether it takes the pointer — the corners beside the articles and the
-// labels held over them, which corners and cut labels a reader's act opened
-// whole, each document's fold and its lines as the platform set them, the
-// passage being read while its document is set again (`hold`), what each
-// reading scene's pane's article was made from (`panes`), whether a press
+// made from and where its words were read, the fold it was set in, the parts
+// of it standing, its marks and whether it takes the pointer — the corners
+// beside the articles and the labels held over them, which corners and cut
+// labels a reader's act opened whole, each document's fold and its lines as
+// the platform set them, the passage being read while its document is set
+// again (`hold`), what each reading scene's pane's article was made from and
+// where its words were read (`panes`), whether a press
 // stands on the layer, the platform's selection as it stood over an article
 // taken down (`kept`), the page's selection while it is owed its range
 // (`owed`), the span the platform's selection was last placed over, the
@@ -313,13 +314,22 @@
 // in a pane so, and the platform's selection there is read and put back over
 // the same bytes (`selectionIn`, `selectIn`). The copy of any selection in
 // an article — a mounted one, or a pane's (foundations §2.4, §2.5) —
-// replaces the clipboard and carries the passage's board and address beside
-// the plain text and never in it, in a flavor only a skep client reads
-// (`onCopy`; FP-24): the plain text is the span's items in the text's order,
-// as the article was made from them (T-ARTICLE's `copyText`), no label of
-// the page among them — a range that starts in an article's head starts at
-// its first block, and a range that touches an item covers it whole
-// (`posOfPoint`), as it is drawn.
+// replaces the clipboard (`onCopy`; FP-24): the plain text is the span's
+// items in the text's order, as the article was made from them (T-ARTICLE's
+// `copyText`), no label of the page among them — a range that starts in an
+// article's head starts at its first block, and a range that touches an item
+// covers it whole (`posOfPoint`), as it is drawn — and beside it, never in
+// it, in a flavor only a skep client reads, skep's own entry names the
+// passage (`namedIn`; FP-27): its bytes by identity through the image the
+// article was made from, the board and the document its words were read in,
+// and, where its text is a published member, that member by its version
+// address with the span's positions in it, marked where the words were read
+// at the plain address — never a draft's positions. Where the words were
+// read is kept beside what each article was made from, set as it is made
+// (`Where`): for a mounted article, the version its box shows, and at a
+// published document's plain address the head its corner names
+// (`shownWhere`); for a pane, what the scene hands in (`sceneArticle`) — so
+// the same words copied from a box and from a pane are named alike.
 // The text shown of a draft the person has typed in is the record M-DERIVE
 // derives from the model's — its delivered runs with the page-local edits
 // applied (`shownDoc`; K-72) — mounted, folded and measured in the model's
@@ -348,7 +358,7 @@
 // the mount log (`mountedSet`, `mounts`); APP records each frame's counts
 // (`frameStats`).
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-14, FP-20, FP-21, FP-22, FP-23,
-// FP-24, FP-25, FP-26, FP-29, FP-30, FP-34, FP-37.
+// FP-24, FP-25, FP-26, FP-27, FP-29, FP-30, FP-34, FP-37.
 
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
@@ -360,10 +370,10 @@ import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, columnAt, MEASURE_CPL, LAY_FS, LINE_H, EDGE, GUTTER, CHAR_W } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, cornerWidth } from '../plane/register.js';
 import { holdTop, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords } from '../plane/labels.js';
-import { articleHTML, articlePlan, cornerHTML, cornerWords, keptHTML, blockMarks, symbolLit, editionClause, copyText, firstLineOf } from './article.js';
+import { articleHTML, articlePlan, cornerHTML, cornerWords, keptHTML, blockMarks, symbolLit, editionClause, copyText, firstLineOf, isPublished, statedChain } from './article.js';
 import { farShort, whyOf } from '../beams/held.js';
 import { applyEdits, toBase, toShown, boundaries } from '../model/derive.js';
-import { homeOf, documentOf, memberOf, accountOf } from '../model/address.js';
+import { homeOf, documentOf, memberOf, versionAddress, accountOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
 import { esc, byteLength } from '../util.js';
 import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
@@ -379,11 +389,29 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect */
 
 /**
- * @typedef {Object} Made — what an article was made from: its document, and the blocks, runs and image the model held of it as the article was made. The model replaces a document's blocks, runs and image whole and never edits them in place, so these stay the article's own while it stands, whatever the model has delivered since: every position in the article is mapped through them (`rangeIn`), a copy takes its bytes from them (`onCopy`), and a reader's place in it is carried by its bytes' identity into the text it is set again as (`readingNow`; SC's pane set again — FP-23)
+ * @typedef {Object} Made — what an article was made from: its document, and the blocks, runs and image the model held of it as the article was made. The model replaces a document's blocks, runs and image whole and never edits them in place, so these stay the article's own while it stands, whatever the model has delivered since: every position in the article is mapped through them (`rangeIn`), a copy takes its bytes from them and names them by identity through its image (`onCopy`, `namedIn`), and a reader's place in it is carried by its bytes' identity into the text it is set again as (`readingNow`; SC's pane set again — FP-23)
  * @property {string} addr the document — for a reading scene's pane, the address its acts name (`sceneArticle`)
  * @property {Block[]} blocks
  * @property {Run[]} runs
  * @property {import('../model/records.js').ImageRun[]} image its V→I image: the permanent address of every position it covers
+ */
+
+/**
+ * @typedef {Object} Where — where an article's words were read, as FP-27 names a copy of them (`namedIn`): kept beside what it was made from, set as it is made, so a copy names the text the reader saw however the model has moved since
+ * @property {string} doc the document read: the version its box shows on the plane (`shownWhere`), the address a reading scene's pane's head names
+ * @property {string | null} member the member its text is, by its version address: the version shown, else — at a published document's plain address — the head its corner names (`shownWhere`); null for a draft, and where no member is known
+ * @property {boolean} plain its words were read at a published document's plain address
+ */
+
+/**
+ * @typedef {Object} Named — a passage named as FP-27 names a copy (`namedIn`; SC's stops, as the reader leaves them): where its words were read (`Where`), on its board, its bytes by identity, and, where a member is named, its positions in that member — never a draft's, which move
+ * @property {string} board the board's origin
+ * @property {string} doc the document read (`Where.doc`)
+ * @property {string | null} member the member its text is (`Where.member`)
+ * @property {boolean} plain read at a published document's plain address (`Where.plain`)
+ * @property {number | null} pos its first position in `member`; null where no member is named, or no one stretch of it holds the passage
+ * @property {number | null} width its positions there; null with `pos`
+ * @property {ISpan[]} ids its bytes by identity, through the image its article was made from (M-REC's `identityIn`); none where the passage holds no byte, or that image does not cover it
  */
 
 /**
@@ -439,6 +467,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @property {number} rev the model's record's revision at mount
  * @property {number} editRev how many times the draft's page-local edits had changed at mount (M-REC's `editRev`)
  * @property {Made} made what the article was made from
+ * @property {Where} where where its words were read, as its box showed them as it mounted (`shownWhere`): a chain counted or metadata read since moves the record's revision, and the article mounted again names what they told
  * @property {number} grev the view revision at mount
  * @property {Fold} fold the fold it was set in: its size, its columns and the lines they hold
  * @property {number} fs the document's em in world units: its fold's
@@ -556,7 +585,7 @@ const BARS_EM = 3;
 
 /** @type {Map<string, Mounted>} */
 const mounted = new Map();
-/** @type {WeakMap<HTMLElement, Made>} what each reading scene's pane's article was made from, by its element (`sceneArticle`), for as long as the element lives */
+/** @type {WeakMap<HTMLElement, {made: Made, where: Where}>} what each reading scene's pane's article was made from and where its words were read, by its element (`sceneArticle`), for as long as the element lives */
 const panes = new WeakMap();
 /** @type {Map<string, Corner>} the corners on the plane, by document */
 const corners = new Map();
@@ -995,6 +1024,23 @@ const articleOf = (d, v, owner) => articleHTML(d, { ...v, selected: null, focus:
 
 /** what an article made from a document now is made from: the document's blocks, runs and image as the model holds them */
 const madeFrom = (/** @type {Doc} */ d) => ({ addr: d.addr, blocks: d.blocks, runs: d.runs, image: d.image });
+
+/**
+ * Where the words of a version a box shows are read (`Where`; FP-27): the
+ * version itself; the member its text is — a version's own address, else, at
+ * a published document's plain address (T-ARTICLE's `isPublished`), the head
+ * of the chain its corner states (T-ARTICLE's `statedChain`, over its box's
+ * count, `chainOf`), so a copy names the member the corner names (FP-22);
+ * and whether it is that plain address. A draft names no member, nor a plain
+ * address no read has told published.
+ * @param {Doc} d the model's record of the version a box shows
+ * @returns {Where}
+ */
+function shownWhere(d) {
+  if (memberOf(d.addr) != null) return { doc: d.addr, member: d.addr, plain: false };
+  const published = !d.refused && isPublished(d), n = published ? statedChain(d, chainOf(d.addr)) : null;
+  return { doc: d.addr, member: n != null ? versionAddress(d.addr, n) : null, plain: published };
+}
 
 /** a document's outline's bounds, in world units (where the plane draws it): its fold's padded columns' */
 export function shapeOf(/** @type {string} */ addr) {
@@ -1780,7 +1826,7 @@ function mount(d, v, span, banded) {
   layer.appendChild(el);
   /** @type {Mounted} */
   const rec = {
-    el, d, lay, runFrom: base.from, runTo: base.to, rev: base.rev, editRev: REC.editRev(d.addr), made, grev, fold: f, fs: f.fs, corner: cornerOfView(d, view),
+    el, d, lay, runFrom: base.from, runTo: base.to, rev: base.rev, editRev: REC.editRev(d.addr), made, where: shownWhere(base), grev, fold: f, fs: f.fs, corner: cornerOfView(d, view),
     template, units: unitsOf(f.lines, made.blocks), cuts: new Map(), parts: [], lines: new Set(), banded, scale: 1, blockTops: [], marked: [], markedFor: '', litFor: null, labelFor: null, keptFor: '', legible: false,
   };
   mounted.set(d.addr, rec);
@@ -3254,14 +3300,46 @@ function posOfPoint(b, el, node, offset, side) {
 }
 
 /**
+ * What an article was made from and where its words were read: a mounted
+ * article's, or a reading scene's pane's (`sceneArticle`); null where the
+ * element is neither.
+ * @param {HTMLElement} el the article's element
+ * @returns {{made: Made, where: Where} | null}
+ */
+function articleAt(el) {
+  const rec = mounted.get(el.dataset.addr || '');
+  return rec && rec.el === el ? rec : panes.get(el) || null;
+}
+
+/**
  * What an article was made from (`Made`): a mounted article's, or a reading
  * scene's pane's (`sceneArticle`); null where the element is neither.
  * @param {HTMLElement} el the article's element
  * @returns {Made | null}
  */
 export function madeOf(el) {
-  const rec = mounted.get(el.dataset.addr || '');
-  return rec && rec.el === el ? rec.made : panes.get(el) || null;
+  const a = articleAt(el);
+  return a ? a.made : null;
+}
+
+/**
+ * A span of an article named as FP-27 names a copy (`Named`): where the
+ * article's words were read (`Where`) — a mounted article's as its box
+ * showed them as it mounted, a pane's as the scene handed them in
+ * (`sceneArticle`) — on the board; the span's bytes by identity, through the
+ * image the article was made from (M-REC's `identityIn`); and its positions
+ * where a member is named, the article's text being that member's. Null
+ * where the element is no such article, or the span is another document's.
+ * @param {HTMLElement} el the article's element
+ * @param {Span} span a span of its text
+ * @param {string} board the board's origin
+ * @returns {Named | null}
+ */
+export function namedIn(el, span, board) {
+  const a = articleAt(el);
+  if (!a || span.addr !== a.made.addr) return null;
+  const { doc, member, plain } = a.where;
+  return { board, doc, member, plain, pos: member ? span.pos : null, width: member ? span.width : null, ids: REC.identityIn(a.made.image, span.pos, span.width) };
 }
 
 /** the article a range starts in, else the one it ends in; null where it lies in none */
@@ -3487,15 +3565,17 @@ export const sceneView = (d) => viewFor(d, true);
  * scene-mode variant, laid out by the pane's own style in one column at the
  * plane's measure and never transformed, and never hidden from assistive
  * technology as the plane's articles are, a pane's text being what it reads
- * there; what it was made from is kept beside it (`madeOf`) for as long as the
- * element lives. The scene places the element in its pane; this is the one
- * place it is made — from a record and the view it draws, the model's now or
- * what the scene kept of them as it last set the pane, and named by the
- * addresses the scene gives it: the one its acts name and its positions are
- * mapped against — at an edition read at its bare address, the member its
- * text is (SC; FP-23) — and the one its head shows.
+ * there; what it was made from, and where its words were read, are kept
+ * beside it (`madeOf`, `namedIn`) for as long as the element lives. The scene
+ * places the element in its pane; this is the one place it is made — from a
+ * record and the view it draws, the model's now or what the scene kept of
+ * them as it last set the pane, and named by the addresses the scene gives
+ * it: the one its acts name and its positions are mapped against — at an
+ * edition read at its bare address, the member its text is (SC; FP-23) — and
+ * the one its head shows; a copy from it names its words where the scene
+ * says they were read (FP-27).
  * @param {Doc} d the record its text is made from
- * @param {{view?: ArticleView, names?: string, shows?: string}} [as] `view` the view it draws — the record's now (`sceneView`) where none is given; `names` the address it is made as (`Made.addr`), which a copy from it names and its spans are measured against — the record's where none is given; `shows` the address its head names — `names` where none is given
+ * @param {{view?: ArticleView, names?: string, shows?: string, where?: Where}} [as] `view` the view it draws — the record's now (`sceneView`) where none is given; `names` the address it is made as (`Made.addr`), which its spans are measured against — the record's where none is given; `shows` the address its head names — `names` where none is given; `where` where its words were read, which a copy from it names — as a box showing the record names them (`shownWhere`) where none is given
  * @returns {HTMLElement}
  */
 export function sceneArticle(d, as = {}) {
@@ -3504,7 +3584,7 @@ export function sceneArticle(d, as = {}) {
   el.className = 'dtext scene';
   el.dataset.addr = names;
   el.innerHTML = articleHTML(shows === d.addr ? d : { ...d, addr: shows }, as.view ?? viewFor(d, true), REC.ownerAccount(d));
-  panes.set(el, { ...madeFrom(d), addr: names });
+  panes.set(el, { made: { ...madeFrom(d), addr: names }, where: as.where ?? shownWhere(d) });
   return el;
 }
 
@@ -3947,23 +4027,24 @@ export function clear() {
 }
 
 /**
- * The copy event's addition (foundations §2.4; FP-24): the copy of any
+ * The copy event's addition (foundations §2.4; FP-24, FP-27): the copy of any
  * selection in an article — a mounted one, or a reading scene's pane's, where
  * a drag selects as it does on the plane (§2.5) — replaces the clipboard, the
- * platform's own
- * copy prevented, and carries the passage's board and address beside the
- * plain text and never in it, in a flavor only a skep client reads, as
- * `{board, addr, pos, width}`: the span the platform's selection covers in
- * the article it starts in, else ends in (`spanIn`), through the blocks that
- * article was made from, written whether or not the span holds text. The
- * plain text is the span's items in the text's order as the article was made
- * from them (T-ARTICLE's `copyText`) — the bytes the person selected,
- * whatever the model has delivered since, each item that holds no text a
- * stand-in in square brackets in its place, so a span of a record alone is
- * never an empty clipboard — and a paste anywhere else carries the passage
- * alone and no label of the page (the head's, a hairline's, a mark's, a
- * symbol's, a count's, an item's rendering). A selection in no article
- * leaves the event to the platform.
+ * platform's own copy prevented, and beside the plain text and never in it,
+ * in a flavor only a skep client reads, names the passage as FP-27 names a
+ * copy (`namedIn`): the span the platform's selection covers in the article
+ * it starts in, else ends in (`spanIn`), through the blocks that article was
+ * made from, its bytes by identity, where its words were read and, where a
+ * member is named, its positions in that member — never a draft's — written
+ * whether or not the span holds text. The plain text is the span's items in
+ * the text's order as the article was made from them (T-ARTICLE's
+ * `copyText`) — the bytes the person selected, whatever the model has
+ * delivered since, each item that holds no text a stand-in in square
+ * brackets in its place, so a span of a record alone is never an empty
+ * clipboard — and a paste anywhere else carries the passage alone and no
+ * label of the page (the head's, a hairline's, a mark's, a symbol's, a
+ * count's, an item's rendering). A selection in no article leaves the event
+ * to the platform.
  * @param {{clipboardData: {setData(format: string, data: string): void} | null, preventDefault(): void}} e the clipboard event (the gate's door hands a stub)
  * @param {string} board the board's origin
  * @returns {Span | null} the span copied
@@ -3973,9 +4054,10 @@ export function onCopy(e, board) {
   if (!s || s.rangeCount === 0 || s.isCollapsed || !e.clipboardData) return null;
   const range = s.getRangeAt(0), art = articleOfRange(range), made = art ? madeOf(art) : null;
   const span = art && made ? spanIn(art, made, range) : null;
-  if (!span || !made) return null;
+  const named = art && span ? namedIn(art, span, board) : null;
+  if (!span || !made || !named) return null;
   e.clipboardData.setData('text/plain', copyText(made, span, originOwner));
-  e.clipboardData.setData('application/x-skep-passage', JSON.stringify({ board, addr: span.addr, pos: span.pos, width: span.width }));
+  e.clipboardData.setData('application/x-skep-passage', JSON.stringify(named));
   e.preventDefault();
   return span;
 }

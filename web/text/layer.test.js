@@ -17,7 +17,10 @@
 // readable document in the one frame, the limit's order below it, by line,
 // the selection's and the focus's lines held, hysteresis, stale articles set
 // again and a press holding them; the owner a withheld run names; C-67's
-// clause from the model; what an article was made from; the zoom-in bound;
+// clause from the model; what an article was made from; a copy named where
+// its words were read — a box's at its version, the head its corner names at
+// a plain address, and a pane's alike — by its bytes' identity, never a
+// draft's positions; the zoom-in bound;
 // symbols marked heavier in place, titled with their far ends' state in its
 // short form, and a span inside a withheld run at the
 // run's boxes; a byline's facts arriving and its cut label opening in
@@ -31,7 +34,7 @@
 // begins and ends, as its box's chain is counted again, naming no count
 // the board did not end the chain at, and as the read a newer version's
 // arrival offers comes, rises and goes, a focus on it kept (FP-8, FP-12, FP-20, FP-22, FP-23,
-// FP-26, FP-30, FP-33, FP-34).
+// FP-26, FP-27, FP-30, FP-33, FP-34).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -969,6 +972,59 @@ test('an article keeps what it was made from — its document\'s blocks, runs an
     assert.equal(kept && REC.textOf(kept.runs, 11, 22), 'The passage', `${where}: its bytes are the text it shows`);
   }
   assert.equal(LAYER.madeOf(/** @type {any} */ ({ dataset: { addr: D } })), null, 'an element that is neither a mounted article nor a pane\'s was made from nothing');
+}, 1440, 900));
+
+// ---- where an article's words were read: a copy named (FP-27) --------------------------------------------------------
+
+/** D's metadata as `doc_metadata` answers it: an edition born at its first member */
+const META = { doc: D, published: true, owner: '1.0.1', birth: D + '.1', birthExtent: EXTENT, placed: null, baseExtent: null, source: null, asOf: 1 };
+/** the span the copies below name */
+const AT = { pos: 5, width: 12 };
+/** the camera over D's first column at em 12: its article, or its version's, stands */
+function readFirst() {
+  const f = LAYER.foldOf(REC.doc(D)), room = docBox(D), c = f.columns[0];
+  CAM.set({ x: room.x + c.x + c.w / 2, y: room.y + c.y + c.h / 2, scale: 12 / f.fs });
+}
+/** the entry a copy of AT names in the article a box shows, after a frame */
+function copyOf(/** @type {string} */ addr, board = 'origin-1') {
+  LAYER.frame();
+  const rec = LAYER.mountedSet().get(addr);
+  assert.ok(rec, `${addr}'s article stands`);
+  return LAYER.namedIn(rec.el, { addr, ...AT }, board);
+}
+
+test('a copy from a box names its words as FP-27 names a copy: at a published document\'s plain address the head its corner names, the span copied in it, read at the plain address; a chain not known to end there, or holding no member, no member and no positions; a box pinned at a version that version alone; a draft its address and never its positions — each by its bytes\' identity through the image its article was made from, the head named again as the chain is counted again (issue #244)', () => onLayer(() => {
+  deliver(); deliver2();
+  REC.takeImage(D2, 1, EDITED_IMAGE);
+  const box = { at: D }, board = 'origin-1', ids = REC.identityOf(D, AT.pos, AT.width), ids2 = REC.identityOf(D2, AT.pos, AT.width);
+  showing(box);
+  readFirst();
+  assert.ok(ids.length && ids2.length && ids[0].ordinal !== ids2[0].ordinal, 'each version\'s image covers the span, over bytes of its own');
+  REC.takeMetadata(D, META); REC.takeMembers(D, 2);
+  assert.deepEqual(copyOf(D), { board, doc: D, member: D2, plain: true, ...AT, ids }, 'the plain address, the chain ended at 2: the head its corner names, the span in it, read at the plain address');
+  REC.takeMembers(D, 3);
+  assert.deepEqual(copyOf(D), { board, doc: D, member: D + '.3', plain: true, ...AT, ids }, 'the chain counted again at 3: its article set again, naming the head now');
+  REC.takeMembers(D, 8, false);
+  assert.deepEqual(copyOf(D), { board, doc: D, member: null, plain: true, pos: null, width: null, ids }, 'a chain not known to end there: no member and no positions, read at the plain address');
+  REC.takeMetadata(D, { ...META, birth: null }); REC.takeMembers(D, 0);
+  assert.deepEqual(copyOf(D), { board, doc: D, member: null, plain: true, pos: null, width: null, ids }, 'no versions yet: no member, never a member 0');
+  box.at = D2;
+  assert.deepEqual(copyOf(D2), { board, doc: D2, member: D2, plain: false, ...AT, ids: ids2 }, 'pinned at version 2, its metadata unread: that version by its own address, its own bytes, never the plain address');
+  box.at = D;
+  REC.takeMetadata(D, { ...META, published: false, birth: null });
+  assert.deepEqual(copyOf(D), { board, doc: D, member: null, plain: false, pos: null, width: null, ids }, 'a draft: its address and its bytes by identity, never its positions, which move');
+}, 1440, 900));
+
+test('a reading scene\'s pane names a copy where the scene says its words were read, its span measured against the address its acts name: an edition at its bare address, made as the member its text is, names the same words as the box showing it does; made with no word of where, as a box showing its record would; a span of another address none (issue #244)', () => onLayer(() => {
+  deliver();
+  REC.takeMetadata(D, META); REC.takeMembers(D, 2);
+  readFirst();
+  const box = copyOf(D);
+  assert.ok(box && box.member === D2 && box.ids.length, 'the box at its plain address names its head and its bytes');
+  const pane = LAYER.sceneArticle(REC.doc(D), { names: D2, shows: D, where: { doc: D, member: D2, plain: true } });
+  assert.deepEqual(LAYER.namedIn(pane, { addr: D2, ...AT }, 'origin-1'), box, 'the pane at the bare address, made as the scene makes it: the box\'s entry, over the same bytes');
+  assert.deepEqual(LAYER.namedIn(LAYER.sceneArticle(REC.doc(D)), { addr: D, ...AT }, 'origin-1'), box, 'made with no word of where: as the box names it');
+  assert.equal(LAYER.namedIn(pane, { addr: D, ...AT }, 'origin-1'), null, 'a span measured against another address: none');
 }, 1440, 900));
 
 // ---- the zoom-in bound -------------------------------------------------------------------------------------------------

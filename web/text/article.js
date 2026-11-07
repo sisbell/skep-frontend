@@ -1081,7 +1081,18 @@ function keptLineHTML(v) {
 }
 
 /** is a document published: its metadata's word where read, else its index's kind */
-const isPublished = (/** @type {Doc} */ d) => (d.meta ? d.meta.published : d.kind === 'edition');
+export const isPublished = (/** @type {Doc} */ d) => (d.meta ? d.meta.published : d.kind === 'edition');
+
+/**
+ * The chain's count a published document's corner states (`stateItems`):
+ * its box's count where the chain holds a member and the document's metadata
+ * names its first; null where the corner states none. At the plain address
+ * the corner names the chain's head as the member it shows.
+ * @param {Doc} d
+ * @param {number | null | undefined} n its box's chain's count, where counted
+ * @returns {number | null}
+ */
+export const statedChain = (d, n) => (n != null && n >= 1 && d.meta && d.meta.birth ? n : null);
 
 /**
  * @typedef {Pick<ArticleView, 'members' | 'lags' | 'notebook' | 'localTrust' | 'kept' | 'originOwner'>} CornerFacts — what a corner's state is made from (`stateItems`): its box's chain, the board's lag, the venue, the local trust flag, a draft's kept state and the one owner rule
@@ -1104,8 +1115,8 @@ const isPublished = (/** @type {Doc} */ d) => (d.meta ? d.meta.published : d.kin
  * (`L.far.unregistered`); published, its state — "no versions yet" where its
  * chain holds no member, its own version at a pinned one, "the latest
  * version" at the bare address, its publication alone while the board lags
- * (FP-23) — then, where its box's document counts its chain (`members`) and
- * the chain holds a member, its version statement: "version ⟨k⟩ of ⟨n⟩",
+ * (FP-23) — then, where it states its box's chain (`members`, `statedChain`),
+ * its version statement: "version ⟨k⟩ of ⟨n⟩",
  * its own number at a pinned version, the head's at the bare address
  * (FP-22), "version ⟨k⟩" while the board lags; a draft, its kept word
  * (B3-S2) then its chip (C-28); none for any other. The one rule the corner
@@ -1128,8 +1139,9 @@ function stateItems(d, v) {
       : k ? item('st', 'F.corner.pinned', { published: first, k }, 'L.corner.pinned')
         : v.lags ? item('st', v.notebook ? 'F.published.notebook' : 'F.published', {}, 'L.corner.bare')
           : item('st', 'F.corner.latest', { published: first }, 'L.corner.bare');
-    if (n == null || n < 1 || !(d.meta && d.meta.birth)) return [st];
-    return [st, v.lags ? item('version', 'L.version', { k: k || n }) : item('version', 'F.version-of', { k: k || n, n }, null, { members: n })];
+    const of = statedChain(d, n);
+    if (of == null) return [st];
+    return [st, v.lags ? item('version', 'L.version', { k: k || of }) : item('version', 'F.version-of', { k: k || of, n: of }, null, { members: of })];
   }
   if (d.kind === 'draft') return [item('kept', v.kept ? KEPT_WORDS[v.kept.word] : '', {}), item('chip', v.localTrust ? 'C-28.flag-on' : 'C-28', {}, 'L.corner.draft')];
   return [];

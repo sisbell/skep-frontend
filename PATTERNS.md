@@ -552,6 +552,7 @@ last. Each stands until a later decision says it changes it.
 - **#239**: a document's state is said once, at its corner, its article's head stating none in any state — at the bare address, at a pin, before its first version, where a read refused it and in a reading scene's pane — the corner naming the version its box shows and the count of its chain, counted again as a newer version arrives, and the ARIA mirror's item voicing the corner's state whole → FP-12, FP-22, FP-23
 - **#241**: a box's history strip marks the version its box shows in the one line's window mark, the head keeping a shape of its own where the board ended the chain there, and the mirror's item says "version ⟨k⟩ of ⟨n⟩" → FP-26, FP-22
 - **#242**: a drawn link's far end says on its stub and its symbol the start of the line its card and its mirror item say whole, and a versions row whose member holds all of the passage in several runs says it in the arrival's words (changes #153) → FP-21
+- **#244**: a copy from the plane's box names the version the box shows by its version address — at a published document's plain address the head its corner names, marked as read there — and a reading scene's pane writes the same entry → FP-27
 
 ## What these rule out
 

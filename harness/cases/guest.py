@@ -85,8 +85,9 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     beside FAR_LEAP; the draft opens nowhere for a guest), copying the text
     before, the run's stand-in in its place — its kind, its origin's owner, its
     length — and the text after, never the two joined, the gap drawn
-    selected whole; a person's click on the gap conjuring C-39's face
-    and selecting nothing;
+    selected whole, the skep flavor naming the first edition read at its plain
+    address and the member its text is alike on both (issue #244); a person's
+    click on the gap conjuring C-39's face and selecting nothing;
 (f) the guest's own acts: every link at the first edition drawn as its
     owner's, never "you"; each end LK draws there standing in the article the
     plane makes of it — a mark or a symbol carrying its key, one wholly inside
@@ -146,7 +147,7 @@ import time
 from collections import Counter
 
 from . import CLAUSE_READING, DOC, FAR_LEAP, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, WITHHELD, Result, item_words, unit_span
-from .keys import copied, placed_at, placed_at_box, placed_under, rebuilt_away, scene_set, stands_at
+from .keys import copied, member_of, placed_at, placed_at_box, placed_under, rebuilt_away, scene_set, stands_at
 
 OWNER = '1.0.1'
 # a stretch of the owner's bytes over the run, in characters with white space folded, that the guest's page must never hold
@@ -323,6 +324,8 @@ def copy_across_run(ctx, r, doc, kind):
     (ii) a person's click on the placeholder conjures C-39's face and selects nothing: a press there starts no selection;
     (iii) in a reading scene's pane — the first edition beside FAR_LEAP, as the draft opens nowhere for a guest — the same
         drag copies the same text, the skep flavor naming the member the pane's acts name.
+    On both, the skep flavor names the copy as FP-27 does: the first edition read at its plain address, the member its text
+    is — its chain's newest, by the harness's own reads of it — with the span's positions in it (issue #244).
     The selection is cleared, and the scene ended, after; its figures"""
     figures = {}
     blocks, end = doc['blocks'], WINDOW[0] + WINDOW[1]
@@ -338,14 +341,19 @@ def copy_across_run(ctx, r, doc, kind):
     stand_in = t(ctx, 'L.copy.item.owned', {'kind': kind, 'owner': OWNER, 'length': t(ctx, 'L.item.positions', {'n': WINDOW[1]})})
     text = lambda p0, p1: ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(DOC), p0, p1))
 
-    def across(c, addr):
+    member = member_of(ctx, DOC)
+
+    def across(c):
         """the copy across the run as the decision orders it: its span from before the run to after it, its plain text the
-        text before, the stand-in, the text after; and the flavor naming `addr`"""
+        text before, the stand-in, the text after; and the flavor naming the first edition read at its plain address, the
+        member its text is with the span's positions in it"""
         s = c['span']
         if not s or not (s['pos'] < WINDOW[0] and s['pos'] + s['width'] > end):
             return False, None
         want = text(s['pos'], WINDOW[0]) + stand_in + text(end, s['pos'] + s['width'])
-        return c['plain'] == want and bool(c['flavor']) and c['flavor']['addr'] == addr, want
+        f = c['flavor'] or {}
+        named = [f.get(k) for k in ('doc', 'member', 'plain', 'pos', 'width')] == [DOC, member, True, s['pos'], s['width']]
+        return c['plain'] == want and bool(member) and named, want
 
     def drawn(face):
         """is a placeholder drawn selected whole: every glyph of it inside the platform's selection, and its words among the
@@ -359,15 +367,16 @@ def copy_across_run(ctx, r, doc, kind):
     vp, em12, em9 = ctx.js('window.__skep.view.viewport()'), ctx.js('window.__skep.scaleFor(%s, "em", 12)' % json.dumps(DOC)), ctx.js('window.__skep.scaleFor(%s, "em", 9)' % json.dumps(DOC))
     scale = max(em9, min(em12, 0.6 * vp['VW'] / max(1e-9, abs(a['x'] - b['x'])), 0.6 * vp['VH'] / max(1e-9, abs(a['y'] - b['y']))))
     ctx.set_view((a['x'] + b['x']) / 2, (a['y'] + b['y']) / 2, scale)
+    ctx.settle()
     at = ctx.js(DRAG_ACROSS % (json.dumps(DOC), p_start, p_end))
     r.check(bool(at) and at['hits'], '(e) the text before the window run and the text after it stand on the plane under the pointer, for a drag across the run', at)
     if at and at['hits']:
         ctx.drv.drag(*at['start'], *at['end'])
         ctx.frames(2)
         c = copied(ctx)
-        ok, want = across(c, DOC)
-        r.check(ok, '(e) a drag across the window run on the plane copies the text before it, the run\'s stand-in in its place — "%s" — and the text after it: the two texts never joined (issue #161)' % stand_in,
-                {'plain': (c['plain'] or '')[-300:], 'want': (want or '')[-300:], 'span': c['span'], 'flavor': c['flavor']})
+        ok, want = across(c)
+        r.check(ok, '(e) a drag across the window run on the plane copies the text before it, the run\'s stand-in in its place — "%s" — and the text after it: the two texts never joined (issue #161), the flavor naming the first edition read at its plain address and %s, the member its text is (issue #244)' % (stand_in, member),
+                {'plain': (c['plain'] or '')[-300:], 'want': (want or '')[-300:], 'span': c['span'], 'flavor': c['flavor'], 'member': member})
         r.check(drawn(PLACEHOLDER), '(e) the run\'s placeholder is drawn selected whole: every glyph of it inside the platform\'s selection, its words among the selection\'s (issue #161)', ctx.js('String(window.getSelection())')[-300:])
         figures['plane'] = {'span': c['span'], 'plain_tail': (c['plain'] or '')[-120:]}
     ctx.esc()
@@ -399,9 +408,9 @@ def copy_across_run(ctx, r, doc, kind):
         ctx.drv.drag(s['x'] + 0.5, s['y'] + s['h'] / 2, e['x'] + e['w'] - 0.5, e['y'] + e['h'] / 2)
         ctx.frames(2)
         c = copied(ctx)
-        ok, want = across(c, names)
-        r.check(ok, '(e) the same drag in a reading scene\'s pane copies the same text, the run\'s stand-in in its place, the flavor naming the member the pane\'s acts name, %s (issue #161)' % names,
-                {'plain': (c['plain'] or '')[-300:], 'want': (want or '')[-300:], 'span': c['span'], 'flavor': c['flavor']})
+        ok, want = across(c)
+        r.check(ok and names == member, '(e) the same drag in a reading scene\'s pane copies the same text, the run\'s stand-in in its place, the flavor naming as the plane\'s did the member the pane\'s acts name, %s (issues #161, #244)' % names,
+                {'plain': (c['plain'] or '')[-300:], 'want': (want or '')[-300:], 'span': c['span'], 'flavor': c['flavor'], 'member': member})
         r.check(drawn(face), '(e) in the pane too the run\'s placeholder is drawn selected whole: every glyph of it inside the platform\'s selection, its words among the selection\'s (issue #161)', ctx.js('String(window.getSelection())')[-300:])
         figures['pane'] = {'names': names, 'span': c['span']}
     ctx.js('window.__skep.scene.close()')

@@ -40,7 +40,9 @@
 // back (FP-25), the card it was opened from reopened by its close (FP-36);
 // each pane's article
 // T-LAYER's mount on the inner side of its corner, its byline's facts read
-// before the pane is set (FP-12, FP-34); the opening ended by a navigation
+// before the pane is set (FP-12, FP-34), a copy from it named where the
+// scene read its words — an edition at its bare address its member, a draft
+// no member and no positions (FP-27); the opening ended by a navigation
 // act's dismissal, Esc or an overlay shown, asking no `compare` after it and
 // opening nothing; and a pane kept fresh by its kind (FP-23) — a draft read
 // again in place, from the reads the plane makes of it again where it shows
@@ -994,6 +996,16 @@ test('an edit row naming a draft pane\'s document reads it again whole and sets 
   assert.ok(d.blocks.some((x) => x.text === 'Words set before them.'), 'the model holds the edited text');
   assert.deepEqual(LAYER.madeOf(shownIn(p.paneB, 'b')), { addr: DR, blocks: d.blocks, runs: d.runs, image: d.image }, 'pane B\'s article made from the draft\'s text now');
   assert.deepEqual([p.paneA.placed.length, shownIn(p.paneA, 'a') === a], [1, true], 'pane A set nowhere again');
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('a copy from a pane names its words where the scene read them, as FP-27 names a copy and as the plane\'s box names the same words: an edition at its bare address the member its text is — its chain\'s head — with the span copied in it, read at the plain address; a draft its address alone, no member and never its positions; each by its bytes\' identity (issue #244)', () => onPage(async (p) => {
+  await SCENE.open(ED, DR);
+  const board = 'origin-1', a = shownIn(p.paneA, 'a'), b = shownIn(p.paneB, 'b');
+  const inA = { pos: 3, width: 5 }, inB = { pos: 1, width: 4 }, idsA = REC.identityOf(ED, inA.pos, inA.width), idsB = REC.identityOf(DR, inB.pos, inB.width);
+  assert.ok(idsA.length && idsB.length, 'both texts\' images read');
+  assert.deepEqual(LAYER.namedIn(a, { addr: ED2, ...inA }, board), { board, doc: ED, member: ED2, plain: true, ...inA, ids: idsA }, 'pane A, the edition at its bare address: the member its text is, the span in it, read at the plain address');
+  assert.deepEqual(LAYER.namedIn(b, { addr: DR, ...inB }, board), { board, doc: DR, member: null, plain: false, pos: null, width: null, ids: idsB }, 'pane B, the draft: its address and its bytes by identity, never its positions');
   assert.deepEqual(fake.unanswered, []);
 }));
 

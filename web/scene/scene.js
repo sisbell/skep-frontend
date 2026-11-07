@@ -287,11 +287,14 @@
 // `sceneArticle` makes each pane's article from the record and the view the
 // scene keeps, `madeOf` and `rangeIn` map a position through the blocks it
 // was made from, `selectionIn` and `selectIn` read and set the selection,
-// and T-LAYER's copy event serves the panes (FP-24); the scene keeps no DOM
-// text of its own. Each pane carries its own document's corner (ux-T2;
-// T-LAYER's `sceneCorner` makes its items) on its outer side — pane A's left,
-// pane B's right — held to the top of the pane's scroll, so the bands and
-// lines leave the inner edges clear of it (foundations §3.1); the corner is
+// and T-LAYER's copy event serves the panes (FP-24), each article made with
+// where its pane's words are read (`whereIn`), so a copy from a pane names
+// its words as one from the plane's box names the same words (FP-27); the
+// scene keeps no DOM text of its own. Each pane carries its own document's
+// corner (ux-T2; T-LAYER's `sceneCorner` makes its items) on its outer side —
+// pane A's left, pane B's right — held to the top of the pane's scroll, so
+// the bands and lines leave the inner edges clear of it (foundations §3.1);
+// the corner is
 // the pane's one Tab stop after the pane itself, a group named by its own
 // words (D5 K-57), and its Enter, or a click on the act, takes its act — a
 // press on the act leaving the selection standing in the pane, the passage
@@ -360,6 +363,8 @@ import { esc, byteOffsets } from '../util.js';
 /** @typedef {import('../beams/beams.js').Ink} Ink */
 /** @typedef {import('../plane/register.js').Mark} Mark */
 /** @typedef {import('../text/article.js').ArticleView} ArticleView */
+/** @typedef {import('../text/layer.js').Where} Where */
+/** @typedef {import('../text/layer.js').Named} Named */
 /** @typedef {import('../bridge/shapes').FeedUpdate} FeedUpdate */
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
 /** @typedef {import('../beams/held.js').Met} Met */
@@ -586,17 +591,6 @@ import { esc, byteOffsets } from '../util.js';
  * @property {{ids: ISpan[], backward: boolean} | null} sel the platform's selection in the pane, and whether it ran backward; null where none stood there
  * @property {{pos: number, ids: ISpan[]} | null} level the end set level in the pane; null where the pane stood at its top
  * @property {number | null} lacks what the pane's corner said the version it read lacks (`Pane.lacks`)
- */
-
-/**
- * @typedef {Object} Named — a passage of a pane's text named as FP-27 names a copy (see the head): where its words were read, by board and document, its bytes by identity, and, where the text is a published member, that member and its positions there — never a draft's, which move
- * @property {string} board the board's origin
- * @property {string} doc the document read: the address the pane shows
- * @property {string | null} member the member the text is, by its version address; null for a draft, and for an edition whose member is not known
- * @property {boolean} plain the words were read at the plain address: an edition at its bare address
- * @property {number | null} pos its first position in `member`; null where no member is named, or the passage stands in no one stretch of it
- * @property {number | null} width its positions there; null with `pos`
- * @property {ISpan[]} ids its bytes by identity, through the image the pane's article was made from (M-REC's `identityIn`); none where the passage holds no byte, or that image does not cover it
  */
 
 /**
@@ -1425,7 +1419,8 @@ const ownerFacts = (/** @type {Pane} */ P) => REC.accountKey(REC.ownerAccount(P.
 
 /**
  * A pane's article made from what the pane is set with — T-LAYER's mount
- * (`sceneArticle`) — and put in its place: the one it shows replaced, else
+ * (`sceneArticle`), where its words are read handed in (`whereIn`; FP-27) —
+ * and put in its place: the one it shows replaced, else
  * placed — pane A's after its corner, pane B's before it, so each corner
  * stands on its pane's outer side — its withheld runs' kept signs to be set
  * (`markKept`), and the owner's byline facts its byline was made with kept
@@ -1435,7 +1430,7 @@ const ownerFacts = (/** @type {Pane} */ P) => REC.accountKey(REC.ownerAccount(P.
  * @param {Pane} P
  */
 function swap(E, P) {
-  const el = LAYER.sceneArticle(P.d, { names: P.names, shows: P.shows, view: P.view }), pane = paneEl(E, P.side);
+  const el = LAYER.sceneArticle(P.d, { names: P.names, shows: P.shows, view: P.view, where: whereIn(P) }), pane = paneEl(E, P.side);
   if (P.el && pane.contains(P.el)) P.el.replaceWith(el);
   else if (P.side === 'a') pane.append(el); else pane.prepend(el);
   P.el = el; P.signs = null;
@@ -1822,22 +1817,32 @@ const idsIn = (/** @type {Pane} */ P, /** @type {number} */ pos, /** @type {numb
 const bytesIn = (/** @type {ISpan[]} */ ids) => ids.reduce((n, s) => n + s.width, 0);
 
 /**
+ * Where a pane's words are read, as FP-27 names a copy of them (T-LAYER's
+ * `Where`): the address the pane shows; the member its text is, where that
+ * text is a published member — a version, or an edition at its bare address
+ * whose member is known — never a draft's; and whether it is read at the
+ * plain address. Its article is made with it (`swap`), so a copy from the
+ * pane and a stop it records name a passage alike (`named`).
+ * @param {Pane} P
+ * @returns {Where}
+ */
+const whereIn = (P) => ({ doc: P.shows, member: P.kind !== 'draft' && memberOf(P.names) != null ? P.names : null, plain: P.kind === 'bare' });
+
+/**
  * A passage of a pane's text named as FP-27 names a copy (`Named`; see the
- * head): the board and the document the pane shows; where its text is a
- * published member — a version, or an edition at its bare address whose
- * member is known — that member, whether it was read at the plain address,
- * and the passage's positions there where it stands in one stretch of it;
- * its bytes by identity. A draft's positions are never named.
+ * head): where the pane's words are read (`whereIn`), on the board; the
+ * passage's positions in the member named, where it stands in one stretch of
+ * it; its bytes by identity. A draft's positions are never named.
  * @param {Pane} P
  * @param {ISpan[]} ids
  * @returns {Named}
  */
 function named(P, ids) {
-  const member = P.kind !== 'draft' && memberOf(P.names) != null ? P.names : null;
-  const at = member ? REC.placedIn(imageOf(P), ids) : [];
+  const where = whereIn(P);
+  const at = where.member ? REC.placedIn(imageOf(P), ids) : [];
   const one = at.length === 1 && at[0].width === bytesIn(ids) ? at[0] : null;
   const b = REC.board();
-  return { board: b ? b.origin : '', doc: P.shows, member, plain: P.kind === 'bare', pos: one ? one.pos : null, width: one ? one.width : null, ids };
+  return { board: b ? b.origin : '', ...where, pos: one ? one.pos : null, width: one ? one.width : null, ids };
 }
 
 /** where an element of the scene stands, px from the scene's box: its right edge — the stop's, against pane B's facing edge — else its middle across, and its middle down */
