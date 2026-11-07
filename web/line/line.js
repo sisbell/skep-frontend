@@ -43,15 +43,18 @@
 // (FP-29) — and stands at its own reading scale (T-LAYER's `atReadingScale`,
 // the one test the press rule and the walk's grain read too), the one a
 // landing named inside the focused span (N-WALK's `landedAt`), else the
-// span's own first; below that scale the slot stands empty, as wide as the
-// document's widest position and its strip. The strip (`strip`) marks the
-// position, or, while the walk keeps its document in view with the view's
-// centre off its region (N-WALK's `kept`), the view's window over it
-// (T-LAYER's `windowIn`), open at whichever end the view has run past; where
-// an arrival in several runs stands in that document, each run is an
-// outlined extent along it, the one the landing stands at filled (FP-21;
-// N-GO's landing, through the reader the app hands in); the strip's act
-// (K-23; `stripAct`) quotes the position and the passage's first words. The
+// span's own first; below that scale the position's words stand empty, as
+// wide as the document's widest position. The strip (`strip`) stands wherever
+// the line names a document whose text the reader may read, at every scale it
+// names it at (FP-26): where a position is named it marks the position, or,
+// while the walk keeps its document in view with the view's centre off its
+// region (N-WALK's `kept`), the view's window over it (T-LAYER's `windowIn`),
+// open at whichever end the view has run past; below the document's reading
+// scale it stands bare, marking neither; where an arrival in several runs
+// stands in that document, each run is an outlined extent along it, the one
+// the landing stands at filled (FP-21; N-GO's landing, through the reader the
+// app hands in); the strip's act (K-23; `stripAct`) quotes the position named
+// and the passage's first words. The
 // version marker beside it: ○ at the bare address, ● at a pinned member. The
 // segment is LEAP's box's act (a click, Enter or Mod+L; the chord drawn for
 // the platform in its title, rule 19), which opens holding the address the
@@ -496,12 +499,13 @@ function keptSaid() {
  * @property {string} text the segment's fields: the place, then the position where one is named
  * @property {string} place the place's words — the board, the account, or board › account › document — before the position's slot
  * @property {import('../text/article.js').Faced[]} label the label after the document's field: its box's lead as its label on the plane sets it (T-LAYER's `leadRuns`), whole; none where no document is named or no first line is known
- * @property {number} slot the position's slot, in characters: as many as the document's widest position takes in its words, standing empty below the document's reading scale; 0 where no document is named
+ * @property {number} slot the position's words' room, in characters: as many as the document's widest position takes in its words, which stand empty below the document's reading scale; 0 where no document is named
  * @property {string} addr the address named — the board, the account under the camera at mid, nearer the account or the board the walk stands on, or the document the walk stands in (its member where one is pinned): the LEAP box's prefill; '' where no board is held
  * @property {string | null} doc the document named, nearer than mid
  * @property {number | null} pos the position named inside it, at the document's own reading scale alone
  * @property {number | null} member the version member pinned
  * @property {boolean} whole the whole board is in view, at WHOLE BOARD's clamp
+ * @property {boolean} strip the position strip stands: the line names a document whose text the reader may read (FP-26), the strip bare below the document's reading scale; false where none is named or a read refused it (FP-29)
  * @property {import('../plane/layout.js').Window | null} window the view's window over the document named, the strip's mark where the walk keeps it in view off the view's centre (N-WALK's `kept`); null where it is not kept, no position is named, or no line in view names one
  */
 
@@ -548,9 +552,10 @@ const WORDS_CH = (() => {
  * The address display: the level the camera's scale reads (foundations
  * §2.2) — at far scale the board; at mid the account under the camera
  * (B1-S2), whatever the walk stands on; nearer the walk's own place: the
- * document it stands in, and the position only where that document stands at
- * its own reading scale (T-LAYER's `atReadingScale`), its slot standing
- * empty below it, the strip's window where the walk keeps the document in
+ * document it stands in, its strip standing where no read refused it, and the
+ * position only where that document stands at its own reading scale
+ * (T-LAYER's `atReadingScale`), its words standing empty below it, the
+ * strip's window where a position is named and the walk keeps the document in
  * view off the view's centre; or the account or the board it stands on, named
  * as at mid; the account under the camera where it stands nowhere.
  * Where no board is held, at every scale, "go to an address" alone, naming
@@ -558,26 +563,27 @@ const WORDS_CH = (() => {
  * @returns {AddressDisplay}
  */
 export function addressDisplay() {
-  if (!REC.board()) { const text = t('L.go-to-address'); return { text, place: text, label: [], slot: 0, addr: '', doc: null, pos: null, member: null, whole: false, window: null }; }
+  if (!REC.board()) { const text = t('L.go-to-address'); return { text, place: text, label: [], slot: 0, addr: '', doc: null, pos: null, member: null, whole: false, strip: false, window: null }; }
   const lod = lodOf(cam.scale);
   if (lod.name === 'far' || lod.name === 'far~mid') {
     const whole = cam.scale <= viewForCell(boardCell('1'), 0.92).scale * 1.02;
     const text = '1' + (whole ? ' · ' + t('B1.clamp') : '');
-    return { text, place: text, label: [], slot: 0, addr: '1', doc: null, pos: null, member: null, whole, window: null };
+    return { text, place: text, label: [], slot: 0, addr: '1', doc: null, pos: null, member: null, whole, strip: false, window: null };
   }
   const f = WALK.current(), nearer = lod.name === 'near' || lod.name === 'mid~near';
   if (f && nearer && (f.kind === 'block' || f.kind === 'document' || f.kind === 'link')) {
     const place = `${boardOf(f.addr)} › ${accountOf(f.addr)} › ${f.addr}`;
-    // a document a read refused — withheld, a covered one among them, or nothing the board will say of it — holds no position to name
-    const pos = !REC.doc(f.addr).refused && LAYER.atReadingScale(f.addr) ? WALK.landedAt() ?? f.pos ?? 1 : null;
+    // a document a read refused — withheld, a covered one among them, or nothing the board will say of it — holds no text to stand a strip or name a position in
+    const readable = !REC.doc(f.addr).refused;
+    const pos = readable && LAYER.atReadingScale(f.addr) ? WALK.landedAt() ?? f.pos ?? 1 : null;
     const widest = Math.max(1, REC.doc(f.addr).extent || 0, pos || 0);
     const win = pos != null && WALK.kept() ? LAYER.windowIn(f.addr) : null;
-    return { text: place + positionWords(pos), place, label: LAYER.leadRuns(REC.doc(f.addr)), slot: positionWords(widest).length, addr: f.addr, doc: f.addr, pos, member: memberOf(f.addr), whole: false, window: win };
+    return { text: place + positionWords(pos), place, label: LAYER.leadRuns(REC.doc(f.addr)), slot: positionWords(widest).length, addr: f.addr, doc: f.addr, pos, member: memberOf(f.addr), whole: false, strip: readable, window: win };
   }
   // nearer than mid the account or the board the walk stands on; at mid, or where it stands nowhere, the account under the camera
   const acct = f && nearer && (f.kind === 'account' || f.kind === 'board') ? (f.kind === 'account' ? f.addr : null) : accountAt(cam.x, cam.y, '1');
   const text = acct ? `1 › ${acct}` : '1';
-  return { text, place: text, label: [], slot: 0, addr: acct || '1', doc: null, pos: null, member: null, whole: false, window: null };
+  return { text, place: text, label: [], slot: 0, addr: acct || '1', doc: null, pos: null, member: null, whole: false, strip: false, window: null };
 }
 
 /** the sign-in act, the guest's and the death arm's: its id names it across the line's rebuilds, as Back's does, so the session's face standing at it finds it again (O-HOST's anchor) */
@@ -784,9 +790,9 @@ function addressName(a) {
 
 /**
  * The position's slot: the position's words, as wide as the document's
- * widest position, then its strip — standing empty below the document's
- * reading scale, and where no document is named, the strip's room kept, so
- * nothing after it on the line moves.
+ * widest position, then its strip (`strip`) — the words standing empty below
+ * the document's reading scale, and both where no document is named, their
+ * room kept, so nothing after it on the line moves.
  * @param {AddressDisplay} a
  */
 function slot(a) {
@@ -794,29 +800,32 @@ function slot(a) {
 }
 
 /**
- * The position strip: the document's length, the position named marked on
- * it — or, where the walk keeps the document in view off the view's centre,
- * the view's window over it, open at whichever end the view has run past —
- * and the runs of an arrival in several
- * standing in that document, each an outlined extent from its first position
- * to its last, the one the landing stands at filled (see the head); its room
- * alone, hidden, where no position is named.
+ * The position strip (see the head): the document's length, carrying the
+ * runs of an arrival in several standing in that document, each an outlined
+ * extent from its first position to its last, the one the landing stands at
+ * filled; where a position is named, that position marked on it — or, where
+ * the walk keeps the document in view off the view's centre, the view's
+ * window over it, open at whichever end the view has run past — the strip
+ * marked as the act's (K-23) and titled with the position; bare of both
+ * where none is named; its room alone, hidden, where it does not stand
+ * (`AddressDisplay.strip`).
  * @param {AddressDisplay} a
  */
 function strip(a) {
-  if (!a.doc || a.pos == null) return '<span class="strip none" aria-hidden="true"></span>';
+  if (!a.strip || !a.doc) return '<span class="strip none" aria-hidden="true"></span>';
   const extent = REC.doc(a.doc).extent || 0;
   /** a position's place along the strip, 0 to 1 */
   const along = (/** @type {number} */ p) => (extent ? Math.max(0, Math.min(1, (p - 1) / extent)) : 0);
   const pct = (/** @type {number} */ u) => (u * 100).toFixed(1) + '%';
+  const p = acts && acts.pieces ? acts.pieces() : null;
+  const runs = p && p.addr === a.doc ? p.runs.map((r, i) => `<span class="strip-run${i === p.current ? ' current' : ''}" style="left:${pct(along(r.pos))};width:${pct(along(r.pos + r.width) - along(r.pos))}"></span>`).join('') : '';
+  if (a.pos == null) return `<span class="strip">${runs}</span>`;
   const w = a.window;
   let mark = `<span class="strip-mark" style="left:${pct(along(a.pos))}"></span>`;
   if (w) {
     const from = w.start ? 0 : along(w.from), to = w.end ? 1 : along(w.to);
     mark = `<span class="strip-window${w.start ? ' open-start' : ''}${w.end ? ' open-end' : ''}" style="left:${pct(from)};width:${pct(to - from)}"></span>`;
   }
-  const p = acts && acts.pieces ? acts.pieces() : null;
-  const runs = p && p.addr === a.doc ? p.runs.map((r, i) => `<span class="strip-run${i === p.current ? ' current' : ''}" style="left:${pct(along(r.pos))};width:${pct(along(r.pos + r.width) - along(r.pos))}"></span>`).join('') : '';
   return `<span class="strip" data-act="strip" title="${esc(t('F.position', { p: a.pos }))}">${runs}${mark}</span>`;
 }
 

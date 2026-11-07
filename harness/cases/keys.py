@@ -40,12 +40,13 @@ the view, on its facing edge; PageDown past the first edition's last line
 keeping the walk on its span, the strip marking the view's window, the ring
 on the view's top edge across the span's column; the address segment one
 width, the acting segment at one x at WHOLE BOARD, HOME, the board and the
-account so re-taken, below a document's reading scale and at a position (issue
-#141); a document below its own reading scale with the camera's
+account so re-taken, below a document's reading scale — its position strip
+drawn there bare, marking no position and no window (issue #236) — and at a
+position (issue #141); a document below its own reading scale with the camera's
 band nearer than mid (issue #140's design decision) — the far edition, a
 continuation document, zoomed out by Mod+- OUT_STEPS times from its landing to
 an em under 8 — the walk on it whole,
-the one line naming it alone with its position's slot standing empty,
+the one line naming it alone with its position's words standing empty,
 nothing after it moved, its mirror item collapsed, and → there Enter's act,
 a teleport to its reading scale with its trail entry, the item expanded, →
 again the span under the view's centre with no entry (K-3); → from HOME's
@@ -1709,7 +1710,7 @@ def collapsed_document(ctx, r):
     """a document below its own reading scale (issue #140's design decision): the far edition, a continuation document
     whose room is a 49th of a depth-0 document's across, LEAPed to and zoomed out by Mod+- OUT_STEPS times, to an em under 8 —
     the camera's band still nearer than mid, the standard type 49 times that — where a click teleports. The re-take
-    stands the walk on the document whole; the one line names it alone, no position, its position's slot standing
+    stands the walk on the document whole; the one line names it alone, no position, its position's words standing
     empty, so the acting segment stands where it stood at the landing; the mirror's current item, holding the focus, is
     collapsed (`aria-expanded` false, and in the AX tree where CDP answers). → there is Enter's act: a teleport to its
     reading scale, one trail entry pushed, the focus on the document, now expanded; the view's centre then set on its
@@ -1743,7 +1744,7 @@ def collapsed_document(ctx, r):
             and out['shown'].startswith(place) and 'position' not in out['shown'],
             'the one line names the document alone, %s — no position below its reading scale (issue #140)' % place, {'address': out['address'], 'shown': out['shown']})
     r.check(out['acting'] is not None and abs(out['acting'] - landing['acting']) <= 0.5,
-            'the position\'s slot stands empty: the acting segment stands where it stood at the landing (issue #140)', {'landing': landing['acting'], 'below': out['acting']})
+            'the position\'s words stand empty: the acting segment stands where it stood at the landing (issue #140)', {'landing': landing['acting'], 'below': out['acting']})
     r.check(out['on_item'] and out['expanded'] == 'false',
             'the mirror\'s current item, holding the focus, is collapsed: aria-expanded false (issue #140)', {'on_item': out['on_item'], 'expanded': out['expanded']})
     ax = ax_expanded(ctx, out['item'])
@@ -1920,15 +1921,19 @@ def retake_holds(ctx, r):
     the ring stands around the place's cell clamped to the visible view: at the view's border where the cell is wider than
     the view, on the view's right edge where the board lies to the right of it. THE ADDRESS SEGMENT IS ONE WIDTH: the
     acting segment's left edge stands at one x, the segment at one width, at WHOLE BOARD, at HOME, on the board and the
-    account so re-taken — their slot, strip and marker empty — on the far edition below its reading scale and at a
-    position. The step ends at the first edition's landing"""
+    account so re-taken — their slot, strip and marker empty — on the far edition below its reading scale — its
+    position strip drawn bare, no position and no window marked on it (issue #236) — and at a position. The step ends
+    at the first edition's landing"""
     def seen():
-        """the walk, the line and the acting segment as the page stands, the line given time to redraw (every 120 ms)"""
+        """the walk, the line, its position strip and the acting segment as the page stands, the line given time to redraw
+        (every 120 ms)"""
         ctx.js('new Promise((r) => setTimeout(r, 300))')
-        return ctx.js('''(() => { const S = window.__skep, f = S.view.focus(), a = document.querySelector("#line .seg.acting"), b = document.querySelector("#line button.address");
+        return ctx.js('''(() => { const S = window.__skep, f = S.view.focus(), a = document.querySelector("#line .seg.acting"), b = document.querySelector("#line button.address"), s = document.querySelector("#line .slot .strip");
           return {focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}, address: S.line().address, lod: S.view.lod().name,
                   acting: a ? a.getBoundingClientRect().left : null, segment: b ? b.getBoundingClientRect().width : null,
-                  empty: !!document.querySelector("#line .slot .strip.none") && !!document.querySelector("#line .marker.none")}; })()''')
+                  empty: !!document.querySelector("#line .slot .strip.none") && !!document.querySelector("#line .marker.none"),
+                  strip: s ? {none: s.classList.contains("none"), visibility: getComputedStyle(s).visibility, width: s.getBoundingClientRect().width,
+                              mark: !!s.querySelector(".strip-mark"), window: !!s.querySelector(".strip-window")} : null}; })()''')
     near = ctx.js('window.__skep.scaleFor(%s, "em", 12.5)' % json.dumps(DOC))
     drawn = set(ctx.js('import("./model/records.js").then((R) => R.known())'))
     free = next(((acct, '%s.0.%d' % (acct, n)) for acct in ('1.0.1', SECOND_ACCOUNT) for n in range(1, 49) if '%s.0.%d' % (acct, n) not in drawn), None)
@@ -1964,7 +1969,12 @@ def retake_holds(ctx, r):
     ctx.leap(FAR_LEAP)
     for _ in range(OUT_STEPS):
         chord(ctx, '-', mods=('Meta',))
-    states['the far edition below its reading scale'] = seen()
+    states['the far edition below its reading scale'] = below = seen()
+    named, track = below['address'], below['strip']
+    r.check(named['doc'] == FAR_LEAP and named['pos'] is None and named.get('strip') is True and bool(track) and not track['none']
+            and track['visibility'] == 'visible' and track['width'] > 0 and not track['mark'] and not track['window'],
+            'below the far edition\'s reading scale the one line names it with its position strip drawn bare — no position marked and no window (issue #236)',
+            {'address': {k: named.get(k) for k in ('text', 'doc', 'pos', 'strip')}, 'strip': track})
     ctx.leap(DOC, WINDOW[0])
     states['a position'] = seen()
     first = states['the whole board']

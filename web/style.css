@@ -57,8 +57,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #line .strip-window { position:absolute; top:0; bottom:0; min-width:2px; background:rgba(127,178,255,.3); border:0 solid var(--accent); border-left-width:2px; border-right-width:2px; }
 #line .strip-window.open-start { border-left-width:0; }
 #line .strip-window.open-end { border-right-width:0; }
-/* the position's slot (issue #140): its words as wide as the document's widest position, then the strip — empty below the
-   document's reading scale and where no document is named, the room of both kept, so nothing after it on the line moves */
+/* the position's slot: its words as wide as the document's widest position, then the strip — the words empty below the
+   document's reading scale, where the strip stands bare; both empty where no document is named or a read refused it, the
+   room of both kept, so nothing after it on the line moves */
 #line .slot .pos { display:inline-block; }
 #line .strip.none { visibility:hidden; }
 #line .strip-run { position:absolute; top:1px; bottom:1px; min-width:2px; box-sizing:border-box; border:1px solid var(--hue-you); }

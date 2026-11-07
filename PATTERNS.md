@@ -547,6 +547,7 @@ last. Each stands until a later decision says it changes it.
 - **#224**: a link's far end the board will say nothing of stands in one state with a short and a whole form — "no document here yet" only in exactly the account the reader acts as under an index complete from the board's first position, its whole form saying nothing has been made there and whether the account's next new document goes there, else "no document known here" followed by the fifth cell's words — the short form naming it on its tail, a merged tail sharing it, its rows, its card and its mirror item, and the whole form, its short form first, its follow's face and its mirror item's description → FP-21, FP-26
 - **#227**: a follow of a link whose far end names no document never leaves and so takes no trail entry, its face standing at the act's site, the link's own bytes, until Esc or the next act → FP-25
 - **#228**: a failed jump's entry stands where its camera went, with its face and its walk, and every return to it asks its read again, showing the failure's face only where the answer meets it again → FP-25
+- **#236**: below its own reading scale the document the one line names stands with its address and its position strip, the strip marking neither a position nor the view's window → FP-26
 
 ## What these rule out
 
