@@ -5,8 +5,9 @@
 // What they expose, for the harness's cases: the model's held records, a
 // stretch of a held text by identity (`model.identity`), what a feed row
 // naming a document out of view does to the model alone (`model.invalidate`),
-// a row taken as the feed hands one (`model.feed`) and a draft's kept state
-// set as the machine will set it (`model.setKept`); the mounted articles' text and
+// a row taken as the feed hands one (`model.feed`), a draft's kept state
+// set as the machine will set it (`model.setKept`) and a draft's page-local
+// edits (`model.edits`); the page's own caret as it stands (`caret`); the mounted articles' text and
 // what stands of each by line (`mountedLines`); the mirror's items; the
 // camera, the focus and its owner's state, the focus ring the canvas drew
 // (`view.ring`) and the bounds it is clamped to (`view.ringBounds`); the
@@ -45,7 +46,9 @@
 // lists carrying its key and the withheld run it is drawn at, for the marks
 // and mirror checks; the reading scene — opened as a step on the trail, with
 // the passage its opener holds, and closed by its own end, a Back
-// (`scene.open`, `scene.close`), its pairs, a passage's line in a pane
+// (`scene.open`, `scene.close`), opened apart from the trail on a document
+// beside the record the page derives from it with held lines applied
+// (`scene.openHeld`; M-DERIVE's `applyHeld`), its pairs, a passage's line in a pane
 // (`scene.at`), its bands beside their runs' lines and its lines beside their
 // passages' lines, and their panes' facing edges (`scene.ties`), the facing
 // edges a whole document's ends meet (`scene.edges`), the stop at a band's
@@ -93,6 +96,7 @@ import * as LANDING from '../overlays/landing.js';
 import * as KEYS from '../nav/keys.js';
 import * as FOCUS from '../nav/focus.js';
 import * as SCENE from '../scene/scene.js';
+import * as DERIVE from '../model/derive.js';
 import { docBox, accountCell, boardCell, boardLabelCell, DOC_W, depthOfDoc } from '../plane/projection.js';
 import { STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, EDGE, EDGE_GAP, LINE_H, boundsOf, outlineRects, firstRow, edgeOf, leadOf } from '../plane/layout.js';
 import { lodOf, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME } from '../plane/lod.js';
@@ -607,7 +611,11 @@ export function install(deps) {
       feed: (/** @type {import('../bridge/shapes').FeedUpdate} */ update) => { PUMP.takeRow(update); CAM.markDirty(); },
       /** a draft's kept state set as D6's machine will set it (M-REC's `setKept`; B3-S2), or cleared with null: its corner's slot shows the word on the next frame — page state alone, nothing written */
       setKept: (/** @type {string} */ addr, /** @type {import('../model/records.js').KeptState | null} */ s) => { REC.setKept(addr, s); CAM.markDirty(); },
+      /** a draft's page-local edits as the caret made them (M-REC's `edits`; K-72): each its position, the width it replaced and its text — page state alone, never sent */
+      edits: (/** @type {string} */ addr) => REC.edits(addr).map((e) => ({ ...e })),
     },
+    /** the page's own caret as it stands (T-LAYER's `caret`; D5 K-70, K-77): its document, its position in the text shown and whether the keys reach it — false where Esc left it kept; null where none stands */
+    caret: () => LAYER.caret(),
     mounted: (/** @type {string} */ addr) => { const rec = LAYER.mountedSet().get(addr); if (!rec) return null; const r = rec.el.getBoundingClientRect(); return { text: LAYER.mountedText(addr), rect: { x: r.left, y: r.top, w: r.width, h: r.height }, fs: rec.fs, lay: rec.lay }; },
     mountedAddrs: () => LAYER.mountedAddrs(),
     /** what stands of a document's article (FP-12): its parts, each a column and the run of its fold's lines [first, end) it holds, in their lines' order — the parts' boxes, by the same column and first line (`data-column`, `data-first`); null where no article of it stands */
@@ -707,6 +715,12 @@ export function install(deps) {
     scene: {
       /** the scene opened on two documents as a step on the trail, the second the one opened beside, with the passage its opener holds (N-GO's `toScene`; SC's `Held`), and its own end, a Back from its entry (N-GO's `closeScene`) */
       open: (/** @type {string} */ a, /** @type {string} */ b, /** @type {import('../scene/scene.js').Held} */ held = {}) => GO.toScene(a, b, held), close: () => GO.closeScene(), isOpen: () => SCENE.isOpen(), pair: () => SCENE.pair(),
+      /** the scene opened apart from the trail on a document and, in its second pane, the record the page derives from it with held lines applied in the order given (M-DERIVE's `applyHeld`; B3-S2, D6 BM-14): page state alone, nothing read for the derived pane; whether the scene shows, how many rows applied and why the apply stopped, where it did */
+      openHeld: async (/** @type {string} */ a, /** @type {import('../model/frames.js').HeldLine[]} */ rows) => {
+        const out = DERIVE.applyHeld(REC.doc(a), rows, (addr) => (REC.has(addr) ? REC.doc(addr) : null));
+        const opened = await SCENE.open(a, out.doc, {}, {});
+        return { shown: opened.shown, applied: out.applied, stopped: out.stopped ? out.stopped.why : null };
+      },
       /** its runs of shared identity, contiguous pairs merged, and the two ends it set level */
       pairs: () => SCENE.pairs(),
       at: sceneAt, ties: sceneTies,

@@ -3,7 +3,8 @@
 spikes/s11/cdp.py's two verbs, Python and the `websocket` module alone).
 
     drive.py --page URL --provider URL --board URL --cases all|a,b,c
-             [--results DIR] [--shots DIR] [--chrome PATH] [--cdp-port N]
+             [--editor-provider URL] [--results DIR] [--shots DIR]
+             [--chrome PATH] [--cdp-port N]
 
 Launches headless Chrome with a throwaway profile under the system temp dir,
 navigates to the gate URL, settles on the page's own signal, and runs the
@@ -11,7 +12,12 @@ cases (one module per fence class under cases/), each writing
 results/<class>.json. The owner's board's `/health.log_position` is read
 before the first case and after the last (`board_change`): the run exits
 non-zero where the two readings differ or either holds none, whatever its
-cases said, as it does on a failed case or an exception in the page.
+cases said, as it does on a failed case or an exception in the page. Two
+providers: the owner's (`--provider`), whose secret is SKEP_PROVIDER_SECRET
+and which no case arms, and the harness's own (`--editor-provider`, 8744),
+whose secret is SKEP_EDITOR_SECRET and whose script seam the `editor` case
+alone arms and fires, by the harness's own requests; neither secret is
+written anywhere.
 Every browser claim the structure record left
 unverified (§10 items 16–21) is settled by what these runs observe and
 recorded in results/browser.json. A case may hold the page's next `op` call
@@ -349,6 +355,7 @@ def main():
     ap.add_argument('--page', required=True)
     ap.add_argument('--provider', default='http://127.0.0.1:8742')
     ap.add_argument('--board', default='http://127.0.0.1:8642')
+    ap.add_argument('--editor-provider', default='http://127.0.0.1:8744', help="the harness's own provider, the editor case's; its secret is SKEP_EDITOR_SECRET")
     ap.add_argument('--cases', default='all')
     ap.add_argument('--results', default=os.path.join(ROOT, 'results'))
     ap.add_argument('--shots', default=os.path.join(ROOT, 'shots'))
@@ -358,6 +365,8 @@ def main():
     secret = os.environ.get('SKEP_PROVIDER_SECRET', '')
     if not secret:
         sys.exit('SKEP_PROVIDER_SECRET is not in the environment')
+    # the harness's own provider's secret: read here, required by the editor case alone, which fails naming it where it is unset
+    editor_secret = os.environ.get('SKEP_EDITOR_SECRET', '')
     os.makedirs(a.results, exist_ok=True); os.makedirs(a.shots, exist_ok=True)
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import cases  # noqa: E402
@@ -365,9 +374,9 @@ def main():
     profile = tempfile.mkdtemp(prefix='skep-gate-chrome-')
     drv = Driver(a.chrome, a.cdp_port, profile)
     health0 = daemon_health(a.board)
-    env = {'page': a.page.replace(secret, '<secret>'), 'provider': a.provider, 'board': a.board, 'health_start': health0,
+    env = {'page': a.page.replace(secret, '<secret>'), 'provider': a.provider, 'board': a.board, 'editor_provider': a.editor_provider, 'health_start': health0,
            'started': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}
-    ctx = cases.Context(drv, a.provider, a.board, secret, a.results, a.shots, env, a.page)
+    ctx = cases.Context(drv, a.provider, a.board, secret, a.results, a.shots, env, a.page, editor_provider=a.editor_provider, editor_secret=editor_secret)
     failed = []
     try:
         drv.launch()

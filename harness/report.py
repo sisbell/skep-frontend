@@ -171,6 +171,25 @@ def main():
         L.append(table([[t['name'], t['kind'], t['value'], f"{t['scale']:.5f}", t['lod'], len(t['mounted']), 'shots/' + t['shot']] for t in sh_['thresholds']], ['threshold', 'kind', 'value', 'scale', 'lod', 'mounted', 'shot']))
         L.append('\n### The B1 screens\n')
         L.append(table([[s['screen'], s['what'], 'shots/' + s['shot']] for s in sh_.get('screens') or []], ['screen', 'what', 'shot']))
+    ed = (cases.get('editor') or {}).get('figures') or {}
+    if ed.get('states'):
+        L.append('\n## The editor\'s states — scripted against the harness\'s own provider (`%s`), by screen, state and walk step\n' % env.get('editor_provider'))
+        L.append('Each row of the case\'s table: shot at the desktop width and at %s px, red with its detail, or not drawn — the module or unit the state waits on. The own draft is `%s`.\n' % (ed.get('narrow_px'), ed.get('own_draft')))
+        for s in ed['states']:
+            head = f"- **{s['screen']} · {s['state']} · {s['walk']} step {s['step']}** — {s['how']}"
+            if s['outcome'] == 'shot':
+                L.append(head + '  \n  shot at both widths: ' + ', '.join(f"`shots/{p}`" for p in s['shots']))
+            elif s['outcome'] == 'expected':
+                waits = '; '.join(f"at {x['width']} px — {x['issue']}: `{x['detail']}`" for x in s.get('expected') or [])
+                L.append(head + f"  \n  expected red (a marked check waiting on a page issue): {waits}  \n  evidence: " + ', '.join(f"`shots/{p}`" for p in s.get('shots') or []))
+            elif s['outcome'] == 'red':
+                L.append(head + f"  \n  RED: {s['detail']}")
+            else:
+                L.append(head + f"  \n  not drawn: {s['why']}")
+        L.append('')
+        wr = ed.get('write_check') or {}
+        L.append('The editor case\'s own write check over the harness\'s provider\'s log: dials `%s`; calls `%s`; canned `%s`; the owner\'s log_position %s → %s.\n' % (
+            json.dumps(wr.get('dials')), json.dumps(wr.get('calls')), json.dumps(wr.get('canned')), wr.get('log_position_before'), wr.get('log_position_after')))
     notes = [(n, x) for n, c in cases.items() for x in (c.get('notes') or [])]
     if notes:
         L.append('\n## Notes the cases left\n')

@@ -25,8 +25,9 @@ keys, layout, the wire, frames and the accessible rendering; `results/`
 and `shots/` hold what its last run wrote. Writes, the key ceremonies,
 annotation and the installed shell come in later lanes. The gate never
 changes the owner's board: a test that needs a write's answer takes it
-from the fake port under `web/test/`, never from the board or the
-provider.
+from the fake port under `web/test/`, or in a harness case from the
+harness's own provider (step 6 below), never from the board or the
+owner's provider.
 
 ## Where the design lives
 
@@ -81,22 +82,44 @@ claimed, seeded or written to by the gate. Everything is loopback.
 
    `--listen 8742` is the default; closing its stdin is the clean stop.
 
-6. In this tree, once:
+6. Start the harness's own provider over the same board, on 8744, for the
+   gate's `editor` case alone: it arms that provider's script seam with
+   canned answers and fires events by hand to reach the editor's states,
+   and never the owner's on 8742. It needs a store of its own, made once,
+   mode 0700, holding copies of the dev store's `keys/` and `bindings` and
+   nothing else (a provider holds its store's search index while it runs):
+
+       mkdir -m 0700 ./store-gate
+       cp -Rp ./store/keys ./store/bindings ./store-gate/
+
+   Then, with a secret of its own exported and kept in the environment
+   (never written to this tree):
+
+       export SKEP_EDITOR_SECRET=<any long text of A-Z a-z 0-9 - . _ ~>
+       skep-dev serve --board http://127.0.0.1:8642 \
+         --page-origin http://127.0.0.1:8731 --listen 8744 \
+         --session signed --dir ./store-gate \
+         --principal 1 --secret "$SKEP_EDITOR_SECRET"
+
+   The gate checks it is up and stops where it is not; it never starts
+   or stops it.
+
+7. In this tree, once:
 
        npm install
 
    (TypeScript is the one devDependency, pinned in `package.json`.)
 
-7. The gate — the checker, the pure tests, the page served on 8731,
+8. The gate — the checker, the pure tests, the page served on 8731,
    headless Chrome over CDP through every case, the report:
 
        harness/run.sh
 
    It writes `results/*.json`, `results/report.md` and `shots/**`, and
    exits non-zero on any failed case, and where the board's log
-   position at the run's end is not the one it read at the start.
-   `npm run check` and `npm test` run the checker and the pure tests
-   alone.
+   position at the run's end is not the one it read at the start. Both
+   secrets must be in the environment. `npm run check` and `npm test`
+   run the checker and the pure tests alone.
 
 To look at the page yourself, serve it and open it with the secret:
 

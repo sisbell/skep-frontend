@@ -4,15 +4,20 @@ page's gate hooks (`web/gate/hooks.js`, `window.__skep`); the ASSERTING code
 lives here, one module per class — rendered, keys, text, layout, wire,
 frames, a11y — plus `static` (FP-15's grep and the checks beside it that
 read the tree), `shapes` (the declarations' drift), `walks` (W-01 and W-05
-as camera scripts with shots), `shots` (the threshold set) and `guest` (the
-page at guest class, opened under `?gate=guest`). Each module's `run(ctx)`
-returns a dict with `pass`, `checks`, `failures`, `expected` and its figures;
-`drive.py` writes it to `results/<name>.json`. A check that holds the page
-to what a named page issue still breaks is marked with that issue: it is
-counted under `expected` while it fails, and it FAILS the case the day it
-passes, so the mark comes off with the fix and never outlives it. The
-harness is not the product (FP-5): nothing in `web/` imports any of
-this."""
+as camera scripts with shots), `shots` (the threshold set), `guest` (the
+page at guest class, opened under `?gate=guest`) and `editor` (the editor's
+states, scripted against the harness's own provider). Each module's
+`run(ctx)` returns a dict with `pass`, `checks`, `failures`, `expected` and
+its figures; `drive.py` writes it to `results/<name>.json`. A check that
+holds the page to what a named page issue still breaks is marked with that
+issue: it is counted under `expected` while it fails, and it FAILS the case
+the day it passes, so the mark comes off with the fix and never outlives it.
+Two providers stand beside the gate, both the owner's prelude's: the
+owner's on 8742, which every case reads and none arms, and the harness's
+on 8744, which the `editor` case alone arms (`Context.arm`) and fires
+(`Context.fire`) through the dev provider's script seam, by the harness's
+own request and never the page's. The harness is not the product (FP-5):
+nothing in `web/` imports any of this."""
 import hashlib
 import importlib
 import json
@@ -26,7 +31,8 @@ import urllib.parse
 import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DESIGN = os.environ.get('SKEP_DESIGN_REPO', '/Users/shane/Documents/github/claude/skep-ux-design')
+# the design repository: a sibling of this one, unless the environment names another checkout
+DESIGN = os.environ.get('SKEP_DESIGN_REPO', os.path.normpath(os.path.join(ROOT, '..', 'skep-ux-design')))
 PAGE_ORIGIN = 'http://127.0.0.1:8731'
 
 # the seed's fixed points (the owner's board, read in the run condition)
@@ -323,8 +329,9 @@ def placeholder_sweep(ctx):
 # the order the gate runs them in: the two that need no page first, then the
 # wire's cold-open figures before the other classes move the camera; the wire
 # holds the run's provider log to the first page's own calls, so every case
-# that opens another page (`walks`, `guest`) runs after it
-ALL = ['static', 'shapes', 'wire', 'rendered', 'text', 'layout', 'a11y', 'keys', 'frames', 'walks', 'shots', 'guest']
+# that opens another page (`walks`, `guest`) runs after it; the editor's
+# states last, the one case that opens a page on the harness's provider
+ALL = ['static', 'shapes', 'wire', 'rendered', 'text', 'layout', 'a11y', 'keys', 'frames', 'walks', 'shots', 'guest', 'editor']
 
 # the page issues the marked checks wait on; each mark comes off the day its check passes
 # issue #9's boundary note
@@ -370,11 +377,14 @@ class Result:
 
 
 class Context:
-    """what every case gets: the driver, the page's URL, the provider and the board, the folders, and a few verbs"""
+    """what every case gets: the driver, the page's URL, the owner's provider and the board, the harness's own provider
+    and its secret, the folders, and a few verbs"""
 
-    def __init__(self, drv, provider, board, secret, results, shots, env, page):
+    def __init__(self, drv, provider, board, secret, results, shots, env, page, editor_provider=None, editor_secret=''):
         self.drv, self.provider, self.board, self.secret = drv, provider, board, secret
         self.results, self.shots, self.env, self.page = results, shots, env, page
+        self.editor_provider, self.editor_secret = editor_provider, editor_secret
+        self.armed = []  # every call the run armed on the harness's provider, with the log seq it was armed after (`arm`)
         self.shared = {}
         self._design_cache = {}
         try:
@@ -607,6 +617,84 @@ class Context:
     def health(self):
         with urllib.request.urlopen(self.board + '/health', timeout=10) as r:
             return json.load(r)
+
+    # ---- the harness's own provider (the editor case's; the dev provider's script seam) ----
+    def provider_call(self, name, args, provider=None, secret=None):
+        """the harness's own `POST <provider>/bridge/<name>` with the secret — a request of the harness's, never the
+        page's `fetch`, so no ledger and no call log of the page counts it; the owner's provider where none is named.
+        Answers the JSON body, or `{'HTTP': status, 'body': text}` where the provider refused the request itself"""
+        provider, secret = provider or self.provider, secret if secret is not None else self.secret
+        req = urllib.request.Request(f'{provider}/bridge/{name}', data=json.dumps(args).encode(), method='POST',
+                                     headers={'Content-Type': 'application/json', 'Origin': PAGE_ORIGIN, 'Skep-Provider': secret})
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            return {'HTTP': e.code, 'body': e.read().decode('utf8', 'replace')}
+
+    def editor_call(self, name, args):
+        """`provider_call` of the harness's own provider, with its secret"""
+        if not self.editor_provider:
+            raise RuntimeError('no editor provider: the driver names it with --editor-provider')
+        return self.provider_call(name, args, self.editor_provider, self.editor_secret)
+
+    def editor_log(self):
+        """the harness's own provider's `GET /bridge/log`: its calls — a canned answer logged `canned` — and its dials"""
+        req = urllib.request.Request(self.editor_provider + '/bridge/log', headers={'Origin': PAGE_ORIGIN, 'Skep-Provider': self.editor_secret})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return json.load(r)
+
+    def editor_seq(self):
+        """the harness's own provider's log's last seq; -1 where it holds none"""
+        log = self.editor_log()
+        return log[-1]['seq'] if log else -1
+
+    @property
+    def editor_port(self):
+        """the port the harness's own provider listens on, as its URL names it"""
+        return urllib.parse.urlsplit(self.editor_provider).port
+
+    def arm(self, call, answer=None, refusal=None):
+        """the harness's own provider's script seam armed: `call`'s next answer served as `answer` (its result, exactly as
+        given) or as the named `refusal` (a name, or an object carrying one), one of the two; the arm stands until that
+        call is served once or another arm of the call replaces it — the seam has no disarm — so a case that arms checks
+        the arm was consumed (`consumed`) and serves any it left (`clear_arms`). Answers the seam's reply; the call and
+        the log seq it was armed after are kept"""
+        if (answer is None) == (refusal is None):
+            raise ValueError('arm takes an answer or a refusal, one of the two')
+        seq = self.editor_seq()
+        out = self.editor_call('script', {'call': call, 'answer': answer} if answer is not None else {'call': call, 'refusal': refusal})
+        self.armed.append({'call': call, 'seq': seq, 'reply': out})
+        return out
+
+    def fire(self, event, data):
+        """an event fired by hand on the harness's own provider's stream: every page open on that provider takes it as
+        one the shell emitted. Answers the seam's reply"""
+        return self.editor_call('script', {'event': event, 'data': data})
+
+    def consumed(self, call, since_seq):
+        """was an arm of `call` served: the harness's own provider's log holds a `call` entry of that name with the
+        outcome `canned` after `since_seq`"""
+        return any(e['seq'] > since_seq and e['kind'] == 'call' and e.get('call') == call and e.get('outcome') == 'canned' for e in self.editor_log())
+
+    def clear_arms(self):
+        """every arm the run made that the log shows unserved is served now by a harness call of that name, its answer
+        discarded, so the provider — which outlives the run — meets the next run clean. The seam serves an arm before
+        the shell reads the call's arguments, so a call of any name the run armed is cleared by this; a name the run
+        did not arm is never called, since an unarmed row would run in the shell. Answers the calls cleared"""
+        cleared = []
+        for a in self.armed:
+            if not self.consumed(a['call'], a['seq']):
+                self.editor_call(a['call'], {})
+                cleared.append(a['call'])
+        return cleared
+
+    def open_editor_page(self, gate='all'):
+        """the page opened afresh at the run's URL on the harness's own provider: `provider=` its secret and `port=` its
+        port (the bridge client's port key), settled as `open_page` settles. What the new page booted with is returned"""
+        if not self.editor_provider or not self.editor_secret:
+            raise RuntimeError('the editor page needs --editor-provider and SKEP_EDITOR_SECRET')
+        return self.open_page(gate, provider=self.editor_secret, port=str(self.editor_port))
 
     # ---- the design repository, read-only, by `git show` ------------------
     def design(self, path):
