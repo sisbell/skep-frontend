@@ -49,7 +49,8 @@
 // with what that view reads (T-LAYER's `readAt`), where the walk stands in
 // the document it reads — or, where the view reads none, the board, the
 // account or the mark's stop it stands on, else its place in a document
-// standing in that view (`stoodIn`) — the version the entry's box shows, and
+// standing in that view — where that view shows it (`stoodIn`), the version
+// the entry's box shows, and
 // a reading scene standing over it as the reader leaves it (SC's `asLeft`).
 // As its camera leaves, an act ends the chrome of the place it leaves
 // (`dismissChrome`; FP-25): the arrival and the surfaces standing as the act
@@ -332,14 +333,26 @@
 // the page holding none of that text, to the view the entry was left at, that
 // text read whole, its image with it, beside the flight and the camera going
 // on once it answers (`readTexts`, `placeRead`) — the walk where Back's light
-// returns it, else on the run the landing stands at where that landing says
-// anything, so the item it lands on carries what it says, else where it stood
-// as the reader left the entry, or where a read placed its landing — the
-// board, an account or a mark's stop as it stood there, a place in a document
-// placed again by its byte — else on the run a landing saying nothing stands
-// at, else, where it stood in the text the words were found in, where the
-// return lands there, else on the entry's place (`walkOf`), on a span only
-// where the view reads its document at its reading scale; and it shows the
+// returns it, else, each place only where the view the move lands at shows
+// it (`shows`; FP-25), on the run the landing stands at where that landing
+// says anything, so the item it lands on carries what it says, else where it
+// stood as the reader left the entry, or where a read placed its landing —
+// the board, an account or a mark's stop as it stood there, a place in a
+// document placed again by its byte, else on the first stretch of what stands
+// of the element it stood on — else on the run a landing saying nothing
+// stands at, else, where it stood in the text the words were found in, where
+// the return lands there, else, at an entry still reading or holding a
+// failure's face, on the entry's place, where its camera went, else on the
+// element under that view's centre, the re-take's (N-WALK's `elementUnder`)
+// (`walkOf`), on a span only where the view reads its document at its
+// reading scale. A departure records where the walk stood only where the
+// view it leaves shows it (`stoodIn`), with the element it stood on by its
+// bytes; where none of that element stands in the text a return reaches,
+// read at its reading scale, and nothing else is said, the return lands in
+// the none state where the words are found, else at that text's head, the
+// dead end's face there (`stoodAgain`, `markReturn`). A landing standing
+// where the walk does not land is said in the status region, its face's
+// words or its line (`sayReturn`; FP-36). The return shows the
 // entry's notice again — a dead end's, a withheld document's — save a
 // failure's: an entry holding the face a failure brought asks the read its
 // jump made again (`askOf`, `askAgain`), its reading face at that face's site
@@ -393,7 +406,7 @@ import * as LINKS from '../overlays/links-card.js';
 import * as PROV from '../overlays/provenance.js';
 import * as MARKLIST from '../overlays/mark-list.js';
 import * as FOCUS from './focus.js';
-import { accountCell, boardCell } from '../plane/projection.js';
+import { accountCell, boardCell, continuationCell, continuationOf } from '../plane/projection.js';
 import { documentOf, memberOf, versionAddress, kindOf, isTrunkMember, boardOf } from '../model/address.js';
 import { sameSpan } from '../text/span.js';
 import { t } from '../strings.js';
@@ -631,16 +644,19 @@ function leaving(view) {
  * document the view left reads (T-LAYER's `readAt`) — on it whole, on a span
  * or on a link's end in it — its position there, the one a landing named in
  * its span, else the span's or the link's own, none on the document whole;
- * that position's byte by identity (M-REC's `identityOf`); and the link's end
- * it stands on. Where the view reads no document: the board, an account or a
- * mark's stop it stands on, by its address or the mark's name, no position;
- * else the document it stands in, the same way, where that document stands
- * in the view (T-LAYER's `inView`) — a span past its document's last line
- * among them, which the re-take keeps (N-WALK's `kept`). Null where the walk
- * stands outside the document the view reads, in a document out of the view
- * where it reads none, or on the board, an account or a mark's stop where it
- * reads one — a jump in the air has not yet brought it to the place its
- * camera left for.
+ * that position's byte by identity (M-REC's `identityOf`), the element it
+ * stands on by identity — its span's block, or its link's end — and the
+ * link's end it stands on. Where the view reads no document: the board, an
+ * account or a mark's stop it stands on, by its address or the mark's name,
+ * no position; else the document it stands in, the same way, where that
+ * document stands in the view (T-LAYER's `inView`) — a span past its
+ * document's last line among them, which the re-take keeps (N-WALK's
+ * `kept`). Null where the walk stands outside the document the view reads,
+ * in a document out of the view where it reads none, or on the board, an
+ * account or a mark's stop where it reads one — a jump in the air has not
+ * yet brought it to the place its camera left for — and where the view does
+ * not show where it stands (`shows`): the camera left it before the re-take
+ * followed.
  * @param {View} view the view left
  * @param {import('../text/layer.js').Reading | null} r what it reads
  * @returns {Stood | null}
@@ -648,17 +664,45 @@ function leaving(view) {
 function stoodIn(view, r) {
   const f = WALK.current();
   if (!f) return null;
-  if (f.kind !== 'document' && f.kind !== 'block' && f.kind !== 'link') return r ? null : { addr: f.addr, pos: null, ids: [], end: null };
+  if (f.kind !== 'document' && f.kind !== 'block' && f.kind !== 'link') return r || !shows(view, { addr: f.addr, pos: null, end: null }) ? null : { addr: f.addr, pos: null, ids: [], of: [], end: null };
   if (r ? boxOf(f.addr) !== boxOf(r.addr) : !LAYER.inView(f.addr, view)) return null;
   const pos = f.kind === 'document' ? null : WALK.landedAt() ?? f.pos;
-  return { addr: f.addr, pos, ids: pos != null ? REC.identityOf(f.addr, pos, 1) : [], end: f.kind === 'link' && f.link ? { link: f.link.link.addr, key: f.link.key } : null };
+  if (!shows(view, { addr: f.addr, pos, end: null })) return null;
+  const el = f.kind === 'link' && f.link ? f.link : f.kind === 'block' && f.pos != null ? REC.blockByPos(f.addr, f.pos) : null;
+  return {
+    addr: f.addr, pos, ids: pos != null ? REC.identityOf(f.addr, pos, 1) : [], of: el ? REC.identityOf(f.addr, el.pos, el.width) : [],
+    end: f.kind === 'link' && f.link ? { link: f.link.link.addr, key: f.link.key } : null,
+  };
+}
+
+/**
+ * Does a view show where the walk stands, or would (see the head; FP-25): a
+ * place in a document — the line holding its position in the visible view
+ * where the view reads the document at its reading scale (T-LAYER's
+ * `lineInView`), else, the walk then standing on the document whole, the
+ * document's region meeting the visible view (T-LAYER's `inView`); a mark's
+ * stop or an account, its cell meeting the visible view (T-LAYER's
+ * `meetsView`); the board, the root, wherever the view stands.
+ * @param {View} view
+ * @param {WalkTo} w
+ * @returns {boolean}
+ */
+function shows(view, w) {
+  const mark = continuationOf(w.addr), kind = kindOf(w.addr);
+  if (mark) return LAYER.meetsView(continuationCell(mark.account, mark.k), view);
+  if (kind === 'account') return LAYER.meetsView(accountCell(w.addr), view);
+  if (kind !== 'document') return true;
+  return w.pos != null && LAYER.atReadingScale(w.addr, view.scale) ? LAYER.lineInView(w.addr, w.pos, view) : LAYER.inView(w.addr, view);
 }
 
 /** a landing's view as an entry's landing writes it (N-TRAIL's `settle`): with the passage it reads (T-LAYER's `readAt`) and where the walk lands there (`landsAt`) */
 const seen = (/** @type {View} */ view, /** @type {string} */ addr, /** @type {number | null} */ pos) => ({ view, reading: LAYER.readAt(view), stood: landsAt(addr, pos) });
 
-/** where the walk lands at a landing, as an entry keeps it (N-TRAIL's `Stood`): the document landed in, at the position the landing names and that position's byte by identity (M-REC's `identityOf`); on the document whole where it names none */
-const landsAt = (/** @type {string} */ addr, /** @type {number | null} */ pos) => /** @type {Stood} */ ({ addr, pos, ids: pos != null ? REC.identityOf(addr, pos, 1) : [], end: null });
+/** where the walk lands at a landing, as an entry keeps it (N-TRAIL's `Stood`): the document landed in, at the position the landing names, that position's byte and the block holding it by identity (M-REC's `identityOf`); on the document whole where it names none */
+const landsAt = (/** @type {string} */ addr, /** @type {number | null} */ pos) => {
+  const b = pos != null ? REC.blockAt(addr, pos) : null;
+  return /** @type {Stood} */ ({ addr, pos, ids: pos != null ? REC.identityOf(addr, pos, 1) : [], of: b ? REC.identityOf(addr, b.pos, b.width) : [], end: null });
+};
 
 /**
  * A passage as the text its document's box shows holds it now (`shownIn`):
@@ -2602,7 +2646,7 @@ function lightOf(left, e, by) {
  * the passage carried its text holds now, where that stretch's line stands in
  * the visible view of the view Back lands at and its document stands at its
  * reading scale there (T-LAYER's `lineInView` and one test); null where it
- * does not, the walk landing on the entry's place.
+ * does not, the walk landing in `walkOf`'s order.
  * @param {Light} l
  * @param {View} view the view Back lands at
  * @returns {{addr: string, pos: number, end: End | null} | null}
@@ -2622,17 +2666,19 @@ function returnTo(l, view) {
  * read again from it (`returning`), marked in the landing rule's states
  * (`markReturn`) — the camera leaving at once for the view that sets the line
  * they are found at where the line read stood, the walk where Back's light
- * returns it (`returnTo`), else in `walkOf`'s order — on the run a landing
- * that says anything stands at, else where it stood as the reader left the
- * entry, a place in a document placed again by its byte, else where the
- * return lands in the text it stood in, else on the entry's place — and its
- * notice shown again as O-HOST's notice,
- * so a surface the return reopens stands over it (`showFound`) — a dead
- * end's, told by the landing's description where it describes it, or a
- * withheld document's — then what the return says beyond its marks
- * (`sayReturn`); the move's light lit (`lightOf`), and no link of the entry's
- * own: the one the move crossed alone. An entry holding a failure's face asks
- * the read its jump made again, and so does one holding no notice whose place
+ * returns it (`returnTo`), else in `walkOf`'s order, each place only where
+ * that view shows it — on the run a landing that says anything stands at,
+ * else where it stood as the reader left the entry, a place in a document
+ * placed again by its byte, else where the return lands in the text it
+ * stood in, else, for a claim or a failure's entry, on the entry's place,
+ * else on the element under that view's centre — and its notice shown again
+ * as O-HOST's notice, so a surface the return reopens stands over it
+ * (`showFound`) — a dead end's, told by the landing's description where the
+ * walk stands on the landing, or a withheld document's — then what the
+ * return says beyond its marks (`sayReturn`); the move's light lit
+ * (`lightOf`), and no link of the entry's own: the one the move crossed
+ * alone. An entry holding a failure's face asks the read its jump made
+ * again, and so does one holding no notice whose place
  * nothing else the move reads tells of (`askOf`): the face its answer brings
  * shown where it stands, else the return landing as any does (`askAgain`).
  * Where the page cannot tell yet what
@@ -2669,19 +2715,20 @@ async function landAtCursor(e, act, byKey, l) {
   light = l; lit = l && l.link ? [l.link] : [];
   if (!answer) restoreVersions(e);
   const cover = answer ? null : coverOf(e), at = answer || cover ? null : returning(e), ask = at ? askOf(e, at) : null;
-  const told = at && !at.reads.length ? markReturn(at, e.notice) : null;
   const view = at ? at.view : e.view, aim = at ? at.aim : null;
   const back = l && l.back ? returnTo(l, view) : null;
+  // where Back's light returns the walk, the element it stood on is not where it lands: nothing is said of it
+  const told = at && !at.reads.length ? markReturn(back ? { ...at, gone: null } : at, e.notice) : null;
   /** @type {Destination} where the move puts the camera and the walk */
   const to = cover === 'covered' ? coveredAt(e.addr) : back ? { ...back, view, aim } : { ...walkOf(e, at), view, aim };
   const first = leave(act, e, to, byKey, 500);
   if (at && ask) { await askAgain(act, e, ask, at, to, first, byKey, told); return; }
-  if (e.notice) showFound(e.notice, !!landed && (landed.floating || landed.withheld) && landed.addr === e.notice.addr);
+  if (e.notice) showFound(e.notice, !!landed && (landed.floating || landed.withheld) && landed.addr === e.notice.addr && tells(to));
   if (cover === 'covered') showCover(e.addr);
   if (!answer) {
     if (cover === 'unread') await coverRead(act, e, first, byKey);
     else if (at && at.reads.length) await placeRead(act, e, at.reads, first, byKey);
-    else { if (!cover) { sayReturn(act, e, told); void restore(e, act); } endAir(act, await first); }
+    else { if (!cover) { sayReturn(act, e, told, to); void restore(e, act); } endAir(act, await first); }
     return;
   }
   await answer;
@@ -2784,7 +2831,7 @@ async function askAgain(act, e, ask, at, to, first, byKey, told) {
   if (notice && notice.face !== 'withheld') {
     if (at.reads.length) { await placeRead(act, e, at.reads, first, byKey, notice); return; }
     showFound(notice);
-    sayReturn(act, e, told);
+    sayReturn(act, e, told, takenAt === act ? null : to);
     if (takenAt === act) return;
     focusOn({ ...to, take: false }, byKey);
     void restore(e, act);
@@ -2866,7 +2913,8 @@ async function sceneAt(e, act, byKey) {
  * @typedef {Object} Return — where a cursor move reaching an entry lands, from what the page holds now (`returning`)
  * @property {View} view the view it lands at: the entry's, the line the words its view read are found at set where the line read stood (T-LAYER's `keptAt`); while a read must tell first, the line holding the first of them the held text places, else their own position's; the view the entry was left at where the page holds none of that text
  * @property {Aim | null} aim that view read again each frame as the camera flies, the position whose line it sets followed by the byte standing there (`keeping`); null where its view read no line: the view the entry was left at stands
- * @property {WalkTo | null} walk where the walk stood as the reader left the entry, or where a read placed its landing since, placed again by its byte (`stoodAgain`); null where it stood nowhere the text it reaches holds
+ * @property {WalkTo | null} walk where the walk stood as the reader left the entry, or where a read placed its landing since, placed again by its byte, else on the first stretch of what stands of the element it stood on (`stoodAgain`); null where it stood nowhere the text it reaches holds
+ * @property {{addr: string, ids: ISpan[]} | null} gone the element the walk stood on, none of it standing in the text it reaches, which the view reads at its reading scale: that text, and the element by identity; null otherwise, and where a read must tell first
  * @property {Found | null} found the words its view read, found; null where it read none, or a read must tell first
  * @property {Again | null} again the arrival it keeps, read again; null where it keeps none, or a read must tell first
  * @property {string[]} reads the texts the page must read whole before it can tell what they hold (`placeRead`); none where it can tell now
@@ -2881,19 +2929,22 @@ async function sceneAt(e, act, byKey) {
  * (T-LAYER's `keptAt`); the arrival it keeps read again from that text
  * (`keptAgain`), its landing in the none state where the return lands there;
  * and where the walk stood as the reader left the entry, or where a read
- * placed its landing, placed again by its byte (`stoodAgain`). Where the page
+ * placed its landing, placed again by its byte, else on what stands of the
+ * element it stood on, that element gone where none of it stands and the
+ * view reads that text at its reading scale (`stoodAgain`). Where the page
  * cannot tell yet what a text holds — it
  * holds none of it, or an image covering too little — that text is named for
  * a read to bring first (`Return.reads`), and the view placed by what is held;
  * once those reads have answered (`settled`), what the page still cannot tell
- * is couldn't tell, by the refusal they met.
+ * is couldn't tell, by the refusal they met, and the element the walk stood
+ * on neither stands nor is gone.
  * @param {Entry} e
  * @param {boolean} [settled] the reads a return makes have answered
  * @param {Refusal | null} [met] the refusal they met
  * @returns {Return}
  */
 function returning(e, settled = false, met = null) {
-  const r = e.reading, k = e.kept;
+  const r = e.reading, k = e.kept, s = e.stood;
   /** @type {Set<string>} */
   const reads = new Set();
   const found = r ? foundIn(r, settled, met) : null;
@@ -2901,12 +2952,15 @@ function returning(e, settled = false, met = null) {
   const toIn = (/** @type {string} */ addr) => (found && found.addr === addr ? found.to : headOf(REC.doc(addr)));
   const again = k && (k.arrival || k.landed) ? keptAgain(k, toIn, settled, met, e.notice) : null;
   if (k && k.arrival && !again) reads.add(shownIn(k.arrival.addr));
-  const walk = e.stood ? stoodAgain(e.stood) : null;
+  const stand = s ? stoodAgain(s) : null, walk = stand ? stand.at : null;
+  if (s && stand && stand.holds === 'unknown' && !settled) reads.add(shownIn(s.addr));
   if (reads.size) {
     const held = r ? REC.placedIdentity(shownIn(r.addr), r.ids) : [];
-    return { ...keeping(e.view, r, r ? (held.length ? held[0].pos : r.pos) : null), walk, found: null, again: null, reads: [...reads] };
+    return { ...keeping(e.view, r, r ? (held.length ? held[0].pos : r.pos) : null), walk, gone: null, found: null, again: null, reads: [...reads] };
   }
-  return { ...keeping(e.view, r, found ? found.to : null), walk, found, again, reads: [] };
+  const placed = keeping(e.view, r, found ? found.to : null), text = s ? shownIn(s.addr) : '';
+  const gone = s && stand && stand.holds === 'none' && LAYER.atReadingScale(text, placed.view.scale) ? { addr: text, ids: s.of } : null;
+  return { ...placed, walk, gone, found, again, reads: [] };
 }
 
 /**
@@ -3092,50 +3146,78 @@ function outlinedIn(a, l, addr, h, stood, subject) {
  * account, a mark's stop or a document whole, as it stood there; else its
  * byte where that text's held image places it (M-REC's `placedIdentity`), at
  * the link's end it stood on — by its position where no byte of it was
- * named; null where the image places that byte nowhere — the walk then lands
- * where the return lands in that text, else on its document whole
- * (`walkOf`).
+ * named; else, that byte standing nowhere, what that text holds of the
+ * element it stood on, by BM-HELD's rule (`holdsIn`): some of it, the first
+ * stretch of what stands, in the element's own order; none of it, the
+ * element gone; the page holding too little of that text to tell, a read
+ * must tell first. Where neither the byte nor the element stands so, the
+ * walk lands where the return lands (`walkOf`).
  * @param {Stood} s
- * @returns {WalkTo | null}
+ * @returns {{at: WalkTo | null, holds: 'none' | 'unknown' | null}} where it stands; where it stands nowhere, whether its element is gone or a read must tell first, else null
  */
 function stoodAgain(s) {
   const addr = shownIn(s.addr);
-  if (s.pos == null) return { addr, pos: null, end: null };
-  if (!s.ids.length) return { addr, pos: s.pos, end: s.end };
+  if (s.pos == null) return { at: { addr, pos: null, end: null }, holds: null };
+  if (!s.ids.length) return { at: { addr, pos: s.pos, end: s.end }, holds: null };
   const at = REC.placedIdentity(addr, s.ids);
-  return at.length ? { addr, pos: at[0].pos, end: s.end } : null;
+  if (at.length) return { at: { addr, pos: at[0].pos, end: s.end }, holds: null };
+  const h = s.of.length ? holdsIn(addr, s.of) : null;
+  if (!h) return { at: null, holds: s.of.length ? 'unknown' : null };
+  if (h.held.holds === 'none') return { at: null, holds: 'none' };
+  return { at: { addr, pos: firstOf(h.stretches, h.pieces), end: s.end }, holds: null };
 }
 
 /**
- * Where a cursor move puts the walk, Back's light apart (`returnTo`): on the
- * run the landing stands at — the arrival the entry keeps, read again, or
- * the words its view read, found — where that landing says anything, so the
- * item the walk lands on carries what it says (`described`; FP-21); else
- * where it stood as the reader left the entry, placed again (`returning`);
- * else on the run a landing that says nothing stands at; else, where the
- * walk stood in the text the words were found in — or stood nowhere, at an
- * entry whose place is that text — where the return lands there
- * (`Found.to`); else, where the byte it stood on is gone, on its document
- * whole; else on the entry's place, at its position, whatever document the
- * view read beside it — the address a jump's failure faced among them.
- * Where the move has not yet read what the entry holds (`at` null) — an entry
- * still reading — the landing's run, else, where the reader took the camera
- * over at the entry (`takeOver`), where the walk stood as they left it,
- * placed again by its byte (`stoodAgain`), so the walk stands with the
- * camera, else the entry's place.
+ * Does the walk a cursor move puts at `w` stand on the landing, so the item
+ * it lands on carries what the landing says as its description (N-WALK's;
+ * FP-21): on the span holding the landing's position, or on the landing's
+ * document whole where the view reads it below its reading scale; never on
+ * a link's end.
+ * @param {Destination} w
+ * @returns {boolean}
+ */
+function tells(w) {
+  if (!landed || w.end || w.addr !== landed.addr) return false;
+  if (w.pos == null || !LAYER.atReadingScale(w.addr, w.view.scale)) return true;
+  const b = REC.blockAt(w.addr, w.pos);
+  return !!b && landed.pos >= b.pos && landed.pos < b.pos + b.width;
+}
+
+/**
+ * Where a cursor move puts the walk, Back's light apart (`returnTo`), each
+ * place only where the view the move lands at shows it (`shows`; FP-25): on
+ * the run the landing stands at — the arrival the entry keeps, read again,
+ * or the words its view read, found — where that landing says anything, so
+ * the item the walk lands on carries what it says (`described`; FP-21);
+ * else where it stood as the reader left the entry, placed again
+ * (`returning`); else on the run a landing that says nothing stands at;
+ * else, where the walk stood in the text the words were found in — or stood
+ * nowhere, at an entry whose place is that text — where the return lands
+ * there (`Found.to`); else, at an entry still reading — the move has not yet
+ * read what it holds (`at` null) — or one holding a failure's face, on the
+ * entry's place, at its position, where its camera went (FP-25); else on the
+ * element under the view's centre, the re-take's (N-WALK's `elementUnder`).
+ * Where the move has not yet read what the entry holds, where the walk stood
+ * is read only where the reader took the camera over at the entry
+ * (`takeOver`), placed again by its byte (`stoodAgain`), so the walk stands
+ * with the camera.
  * @param {Entry} e
  * @param {Return | null} at
  * @returns {WalkTo}
  */
 function walkOf(e, at) {
-  const f = at ? at.found : null, s = e.stood, stood = at ? at.walk : s && takenOver.has(e) ? stoodAgain(s) : null;
+  const view = at ? at.view : e.view, f = at ? at.found : null, s = e.stood, stood = at ? at.walk : s && takenOver.has(e) ? stoodAgain(s).at : null;
   const on = landed && (landed.addr === shownIn(e.addr) || (!!f && landed.addr === f.addr)) ? { addr: landed.addr, pos: landed.pos, end: null } : null;
-  if (on && described()) return on;
-  if (stood) return stood;
-  if (on) return on;
-  if (f && boxOf(s ? s.addr : e.addr) === boxOf(f.addr)) return { addr: f.addr, pos: f.to, end: null };
-  if (at && s) return { addr: shownIn(s.addr), pos: null, end: null };
-  return { addr: e.addr, pos: e.pos, end: null };
+  const shown = (/** @type {WalkTo | null} */ w) => !!w && shows(view, w);
+  if (on && described() && shown(on)) return on;
+  if (stood && shown(stood)) return stood;
+  if (on && shown(on)) return on;
+  const there = f && boxOf(s ? s.addr : e.addr) === boxOf(f.addr) ? { addr: f.addr, pos: f.to, end: null } : null;
+  if (there && shown(there)) return there;
+  const n = e.notice;
+  if (!at || (n && (n.face === 'unregistered' || n.face === 'refused'))) return { addr: e.addr, pos: e.pos, end: null };
+  const u = WALK.elementUnder(view);
+  return { addr: u.addr, pos: u.pos, end: null };
 }
 
 /**
@@ -3143,11 +3225,16 @@ function walkOf(e, at) {
  * again (`Return.again`); else, where the words its view read stand in the
  * text it reaches in part or in several runs, every run outlined and
  * labelled and the landing's line saying what the text holds; none of them,
- * the landing in the none state; no answer told, the couldn't-tell line —
- * nothing where all of them stand in one piece, or a landing stands already —
- * the arrival the entry keeps — or an outline in that text, a light's, or the
- * entry holds a notice, which says what its return says: the words then only
- * placing the view and the walk.
+ * the landing in the none state; no answer told, the couldn't-tell line;
+ * else, where none of the element the walk stood on stands in that text
+ * (`Return.gone`), the landing in the none state where the words are found
+ * there, else at that text's head, the walk standing on it where the view
+ * shows it (`walkOf`). Nothing where a landing stands already — the arrival
+ * the entry keeps — or
+ * an outline in that text, a light's, or the entry holds a notice, which
+ * says what its return says: the words then only placing the view and the
+ * walk; and nothing more where all of the words stand in one piece and the
+ * element stands, or none was named.
  * @param {Return} at
  * @param {Notice | null} notice the entry's notice
  * @returns {Told | null} what the return says beyond its marks (`sayReturn`)
@@ -3155,30 +3242,46 @@ function walkOf(e, at) {
 function markReturn(at, notice) {
   const g = at.again, f = at.found;
   if (g) { arrival = g.arrival; landed = g.landed; CAM.markDirty(); if (g.told) return g.told; }
-  if (!f || f.holds == null || f.holds === 'all' || landed || notice) return null;
-  const m = arrivalMark();
-  if (m && boxOf(m.addr) === boxOf(f.addr)) return null;
-  if (f.runs) arrival = withBytes({ addr: f.addr, pos: f.to, runs: f.runs, link: null }, f.ids);
-  landed = { addr: f.addr, pos: f.to, said: f.said, pieces: f.pieces, current: f.pieces ? f.pieces.order[0] : 0, floating: f.holds === 'none', withheld: false, beside: null, version: null };
+  if (landed || notice) return null;
+  const m = arrivalMark(), outlined = (/** @type {string} */ addr) => !!m && boxOf(m.addr) === boxOf(addr);
+  if (f && f.holds != null && f.holds !== 'all' && !outlined(f.addr)) {
+    if (f.runs) arrival = withBytes({ addr: f.addr, pos: f.to, runs: f.runs, link: null }, f.ids);
+    landed = { addr: f.addr, pos: f.to, said: f.said, pieces: f.pieces, current: f.pieces ? f.pieces.order[0] : 0, floating: f.holds === 'none', withheld: false, beside: null, version: null };
+    words = true;
+    CAM.markDirty();
+    return { addr: f.addr, to: f.to, ids: f.ids, holds: f.holds, offers: f.holds !== 'unknown' };
+  }
+  const x = at.gone;
+  if (!x || outlined(x.addr)) return null;
+  const to = f && f.addr === x.addr ? f.to : headOf(REC.doc(x.addr));
+  landed = { addr: x.addr, pos: to, said: null, pieces: null, current: 0, floating: true, withheld: false, beside: null, version: null };
   words = true;
   CAM.markDirty();
-  return { addr: f.addr, to: f.to, ids: f.ids, holds: f.holds, offers: f.holds !== 'unknown' };
+  return { addr: x.addr, to, ids: x.ids, holds: 'none', offers: true };
 }
 
 /**
  * What a return says beyond its marks (see the head), where no act was made
- * since: the dead end's face at a landing in the none state, told by the
- * landing's description, as O-HOST's notice; at a published text, the latest
- * member holding the words its view read whole offered once its reads find
- * one (`offerVersion`, `holdingWhole`); "try again" where no answer told and
- * a retry may tell (`againReturn`).
+ * since: the dead end's face at a landing in the none state, as O-HOST's
+ * notice, told by the landing's description where the walk lands on the
+ * landing (`tells`), else said in the status region by O-HOST; at a
+ * published text, the latest member holding the words its view read whole
+ * — or the element the walk stood on, gone — offered once its reads find one
+ * (`offerVersion`, `holdingWhole`); "try again" where no answer told and a
+ * retry may tell (`againReturn`). The line of a landing standing where the
+ * walk does not land is said in the status region, for the item the walk
+ * lands on does not carry it (FP-36).
  * @param {number} act the return's act
  * @param {Entry} e the entry it reached
  * @param {Told | null} told
+ * @param {Destination | null} to where the return puts the walk; null where it moves it nowhere — the reader took the camera over
  */
-function sayReturn(act, e, told) {
-  if (!told || act !== made) return;
-  if (told.holds === 'none') showFound(floatingNotice(told.addr, told.to), true);
+function sayReturn(act, e, told, to) {
+  if (act !== made) return;
+  const heard = !!to && tells(to), line = landingLine();
+  if (!heard && line) FOCUS.say(line);
+  if (!told) return;
+  if (told.holds === 'none') showFound(floatingNotice(told.addr, told.to), heard);
   if (told.holds === 'unknown') retry = landed && landed.said && landed.said.again ? (byKey) => againReturn(e, byKey) : null;
   else if (told.offers) void offerVersion(act, told.addr, holdingWhole(told.addr, told.to, told.ids));
 }
@@ -3199,8 +3302,10 @@ async function againReturn(e, byKey) {
   const at = now.reads.length ? returning(e, true, met) : now;
   arrival = null; landed = null; retry = null; versionOffer = null; words = false;
   const told = markReturn(at, e.notice);
-  const flight = land({ ...walkOf(e, at), view: at.view, aim: at.aim }, byKey, 500);
-  sayReturn(act, e, told);
+  /** @type {Destination} */
+  const to = { ...walkOf(e, at), view: at.view, aim: at.aim };
+  const flight = land(to, byKey, 500);
+  sayReturn(act, e, told, to);
   await flight;
 }
 
@@ -3253,10 +3358,12 @@ async function placeRead(act, e, texts, first, byKey, n = null) {
   const met = await readTexts(texts);
   if (act !== made) return;
   const at = returning(e, true, met), told = markReturn(at, e.notice);
-  if (takenAt === act) { if (n) showFound(n); sayReturn(act, e, told); return; }
-  const flight = goOn(act, first, { ...walkOf(e, at), view: at.view, aim: at.aim }, byKey, 500);
+  if (takenAt === act) { if (n) showFound(n); sayReturn(act, e, told, null); return; }
+  /** @type {Destination} */
+  const to = { ...walkOf(e, at), view: at.view, aim: at.aim };
+  const flight = goOn(act, first, to, byKey, 500);
   if (n) showFound(n);
-  sayReturn(act, e, told);
+  sayReturn(act, e, told, to);
   void restore(e, act);
   await flight;
 }

@@ -77,7 +77,10 @@
 // the walk stands on, kept while its region meets the visible view
 // (T-LAYER's `inView`; `kept`); else
 // the account whose region holds the centre, else the board. At far scale the
-// grain stops at the account, and the last alone is read. Where no board is
+// grain stops at the account, and the last alone is read. That order without
+// its rules of keeping is the element under a view's centre, read at any view
+// (`elementUnder`): the re-take reads it at the camera, and a return to a
+// trail entry at the view it lands at (N-GO's). Where no board is
 // held (FP-35) the root names no board: it says why, in the words the
 // `noBoard` reader gives, and the re-take stands on it alone. The grain below
 // a document is the document's own: P-LOD's band decides how deep the walk
@@ -996,63 +999,72 @@ export function kept() {
 }
 
 /**
+ * The element of the walk the plane draws under a view's centre, in the
+ * re-take's order without its two rules of keeping (see the head): nearer
+ * than far, a continuation's mark whose cell holds the centre (`markAt`),
+ * else the document whose region holds it (`documentAt`) — the span in the
+ * column under it where the view reads that document at its own reading
+ * scale (T-LAYER's fold and its one test), else the document whole; else,
+ * and at far scale, where the grain stops at the account, the account whose
+ * region holds the centre, else the board — the root alone where no board is
+ * held. The re-take reads it at the camera (`retakeFromView`), and a return
+ * at the view it lands at as the act is made, before the camera is there
+ * (N-GO's).
+ * @param {import('../plane/camera.js').View} view
+ * @returns {Node}
+ */
+export function elementUnder(view) {
+  const { x, y, scale } = view, lod = lodOf(scale).name;
+  if (lod !== 'far' && lod !== 'far~mid') {
+    const mark = markAt(x, y, scale);
+    if (mark) return { kind: 'mark', addr: mark.key, pos: null, link: null };
+    const doc = documentAt(x, y, scale);
+    if (doc) {
+      const d = REC.doc(doc);
+      if (!LAYER.atReadingScale(doc, scale) || !d.blocks.length) return { kind: 'document', addr: doc, pos: null, link: null };
+      const pos = LAYER.posAt(doc, x, y);
+      const b = (pos != null && d.blocks.find((q) => pos >= q.pos && pos < q.pos + q.width)) || d.blocks[0];
+      return { kind: 'block', addr: doc, pos: b.pos, link: null };
+    }
+  }
+  const acct = REC.board() ? accountAt(x, y, BOARD.addr) : null;
+  return acct ? { kind: 'account', addr: acct, pos: null, link: null } : BOARD;
+}
+
+/**
  * The focus follows the camera (rule 3): after a camera move — the wheel,
  * the camera key's drag, a zoom chord, PageDown — re-take it at the scale's
- * grain, in the re-take's order (see the head).
- * Nearer than far: a continuation's mark whose cell holds the view's centre
- * (`markAt`) — the walk's own document kept where the mark holds it, a span
- * or a link in it taken to the document whole, else the mark's stop; never
- * the member under the centre, and no list opened. Else the document whose
- * region holds the view's centre, and the
- * span in the column under it where that document stands at its own reading
- * scale (T-LAYER's fold and its one test); else the walk's own document, kept
- * while its region meets the visible view, a span or a link in it taken to
- * the document where it stands below its reading scale. Else, and at far
- * scale, where the grain stops at the account: the account whose region holds
- * the centre, else the board — the root alone where no board is held (see the
- * head). A key's move puts the platform's focus on the
- * element wherever the key was pressed, the ring drawn (rule 10); a
- * pointer's or the wheel's carries it only where the mirror held it, the ring
- * out, and says nothing until the next keyboard act (rule 12).
+ * grain, in the re-take's order (see the head), on the element under the
+ * view's centre (`elementUnder`) save where one of its two rules keeps the
+ * walk. A continuation's mark under the centre keeps the walk's own document
+ * where the mark holds it, a span or a link in it taken to the document
+ * whole, else takes the mark's stop; never the member under the centre, and
+ * no list opened. Where no document stands under the centre nearer than far,
+ * the walk's own document is kept while its region meets the visible view, a
+ * span or a link in it taken to the document where it stands below its
+ * reading scale; else the account or the board under the centre takes it. A
+ * key's move puts the platform's focus on the element wherever the key was
+ * pressed, the ring drawn (rule 10); a pointer's or the wheel's carries it
+ * only where the mirror held it, the ring out, and says nothing until the
+ * next keyboard act (rule 12).
  * @param {boolean} [byKey] a key made the camera move
  */
 export async function retakeFromView(byKey = false) {
-  const { x, y } = CAM.cam;
-  const lod = lodOf(CAM.cam.scale);
-  if (lod.name !== 'far' && lod.name !== 'far~mid') {
-    // 1. a continuation's mark under the centre: the walk's own member kept, whole, else the mark
-    const mark = markAt(x, y);
-    if (mark) {
-      const own = focus && inDocument(focus) && mark.members.includes(documentOf(focus.addr) || focus.addr) ? focus : null;
-      if (own) { if (own.kind !== 'document') await focusTo(own.addr, null, byKey, byKey); }
-      else if (!focus || focus.addr !== mark.key) await focusTo(mark.key, null, byKey, byKey);
-      return;
-    }
-    // 2. the document under the centre
-    const best = documentAt(x, y);
-    if (best) {
-      if (LAYER.atReadingScale(best)) {
-        const d = REC.doc(best);
-        if (d.blocks.length) {
-          // the span in the column under the centre (T-LAYER's fold)
-          const pos = LAYER.posAt(best, x, y);
-          const b = (pos != null && d.blocks.find((q) => pos >= q.pos && pos < q.pos + q.width)) || d.blocks[0];
-          if (!focus || focus.addr !== best || focus.pos !== b.pos) await focusTo(best, b.pos, byKey, byKey);
-          return;
-        }
-      }
-      if (!focus || focus.addr !== best || focus.kind !== 'document') await focusTo(best, null, byKey, byKey);
-      return;
-    }
-    // 3. the walk's own document, while it is in view: below its reading scale its spans are no stops, so it stands whole
-    if (focus && inDocument(focus) && LAYER.inView(focus.addr)) {
-      if (focus.kind !== 'document' && !LAYER.atReadingScale(focus.addr)) await focusTo(focus.addr, null, byKey, byKey);
-      return;
-    }
+  const view = CAM.view(), at = elementUnder(view), lod = lodOf(view.scale).name;
+  if (at.kind === 'mark') {
+    const own = focus && inDocument(focus) && membersOf(at.addr).includes(documentOf(focus.addr) || focus.addr) ? focus : null;
+    if (own) { if (own.kind !== 'document') await focusTo(own.addr, null, byKey, byKey); }
+    else if (!focus || focus.addr !== at.addr) await focusTo(at.addr, null, byKey, byKey);
+    return;
   }
-  // 4. the place holding the centre: the account whose region holds it, else the board — the root alone where no board is held
-  const at = (REC.board() && accountAt(x, y, BOARD.addr)) || BOARD.addr;
-  if (!focus || focus.addr !== at) await focusTo(at, null, byKey, byKey);
+  if (at.kind === 'block') { if (!focus || focus.addr !== at.addr || focus.pos !== at.pos) await focusTo(at.addr, at.pos, byKey, byKey); return; }
+  if (at.kind === 'document') { if (!focus || focus.addr !== at.addr || focus.kind !== 'document') await focusTo(at.addr, null, byKey, byKey); return; }
+  // the walk's own document, while it is in view: below its reading scale its spans are no stops, so it stands whole
+  if (lod !== 'far' && lod !== 'far~mid' && focus && inDocument(focus) && LAYER.inView(focus.addr)) {
+    if (focus.kind !== 'document' && !LAYER.atReadingScale(focus.addr)) await focusTo(focus.addr, null, byKey, byKey);
+    return;
+  }
+  if (!focus || focus.addr !== at.addr) await focusTo(at.addr, null, byKey, byKey);
 }
 
 /**

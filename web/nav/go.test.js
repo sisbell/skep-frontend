@@ -24,7 +24,10 @@
 // again there, one whose bytes were never named kept only on the text it was
 // outlined on, landing in the landing rule's states — where a return puts the
 // walk back, on the board, an account, a mark's stop or a span kept past its
-// document's last line as the reader left it, the surfaces a place keeps —
+// document's last line as the reader left it, only where the view it lands at
+// shows it, else on the element under that view's centre, on what stands of
+// the element it stood on, in the none state where none of it stands, and a
+// landing out of view said in the status region — the surfaces a place keeps —
 // the selection, a card, a list — ended as the reader leaves and reopened as
 // left on a return, their subjects placed again by their bytes, and a text
 // set again under the reader — an arrival placed again by its runs' bytes
@@ -1596,7 +1599,7 @@ test('a return reaching a jump\'s entry while its read is out, the reader having
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('Back returns the walk to where the step it crossed began — the link\'s item, the passage\'s first stretch — only where the view it lands at shows it at its document\'s reading scale; else on the entry\'s place (issue #152)', async () => {
+test('Back returns the walk to where the step it crossed began — the link\'s item, the passage\'s first stretch — only where the view it lands at shows it at its document\'s reading scale; else where it stood, where that view shows it, else on the element under that view\'s centre (issues #152, #237)', async () => {
   await run(GO.leapTo(D));
   await run(GO.follow(drawn(PASSAGE)));
   await run(GO.back(true));
@@ -1612,8 +1615,10 @@ test('Back returns the walk to where the step it crossed began — the link\'s i
     return left;
   };
   const below = await carriedFrom((v) => ({ ...v, y: v.y + 2 * 900 / v.scale }));
-  assert.ok(!LAYER.lineInView(D, 11, below) && LAYER.atReadingScale(D, below.scale), 'D left at its reading scale, the passage\'s line out of view');
-  assert.deepEqual([walkAt(), GO.arrivalMark()?.runs], [['document', D, null], [{ pos: 11, width: 5 }]], 'the passage lit, out of view; the walk on the entry\'s place');
+  assert.ok(!LAYER.lineInView(D, 11, below) && LAYER.atReadingScale(D, below.scale) && !LAYER.inView(D, below), 'D left at its reading scale, the passage\'s line and D out of view');
+  const centre = WALK.elementUnder(below);
+  assert.deepEqual([walkAt(), GO.arrivalMark()?.runs], [[centre.kind, centre.addr, centre.pos], [{ pos: 11, width: 5 }]], 'the passage lit, out of view; the walk on the element under the view\'s centre, never on D, the entry\'s place out of view');
+  assert.notEqual(centre.addr, D);
   const far = await carriedFrom((v) => ({ ...v, scale: v.scale / 3 }));
   assert.ok(LAYER.lineInView(D, 11, far) && !LAYER.atReadingScale(D, far.scale), 'D left below its reading scale, the passage\'s line in view');
   assert.deepEqual([walkAt(), GO.arrivalMark()?.runs], [['document', D, null], [{ pos: 11, width: 5 }]], 'the walk on the document whole, the grain the view gives');
@@ -2115,7 +2120,7 @@ test('a return to an entry whose view read no line puts the walk back where it s
   const board = CAM.view();
   assert.deepEqual([walkAt(), LAYER.readAt(board)], [['board', '1', null], null], '← from HOME\'s account: the walk on the board, the view reading no line');
   await run(GO.leapTo(D));
-  assert.deepEqual(departed()?.stood, { addr: '1', pos: null, ids: [], end: null }, 'HOME\'s entry keeps the board the walk stood on');
+  assert.deepEqual(departed()?.stood, { addr: '1', pos: null, ids: [], of: [], end: null }, 'HOME\'s entry keeps the board the walk stood on');
   await run(GO.back());
   assert.deepEqual([TRAIL.current()?.label, walkAt()], [t('F.level.home'), ['board', '1', null]], 'Back to HOME\'s entry: the walk on the board, never on the account');
   assert.ok(same(CAM.view(), board), 'at the view left');
@@ -2148,6 +2153,22 @@ test('a return to an entry whose view read no line puts the walk back where it s
   await run(GO.back());
   assert.deepEqual([TRAIL.current()?.addr, walkAt()], [D, ['block', D, 11]], 'Back to D\'s entry: the walk on the span it stood on, never on the position the LEAP named');
   assert.ok(same(CAM.view(), kept), 'at the view left');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a departure keeps no account the walk stood on whose cell the view it leaves does not show: HOME, the camera moved over another account\'s cell with no re-take, a LEAP away and Back — the walk on the element under the view\'s centre, never on HOME\'s account, out of view (issue #237; FP-25)', async () => {
+  await run(GO.home());
+  assert.deepEqual(walkAt(), ['account', '1.0.1', null], 'at HOME: the walk on the account');
+  const c = accountCell('1.0.5');
+  CAM.set({ x: c.x + c.w / 2, y: c.y + c.h / 2, scale: CAM.viewForCell(c, 0.85).scale * 2 });
+  const left = CAM.view();
+  assert.ok(!LAYER.meetsView(accountCell('1.0.1'), left) && LAYER.readAt(left) === null, 'the camera over 1.0.5\'s cell, the re-take not made: HOME\'s account out of view, the view reading no line');
+  await run(GO.leapTo(D));
+  assert.equal(departed()?.stood, null, 'HOME\'s entry keeps no place of the walk\'s');
+  await run(GO.back());
+  const centre = WALK.elementUnder(left);
+  assert.ok(same(CAM.view(), left), 'Back at the view left');
+  assert.deepEqual([walkAt(), centre.addr], [[centre.kind, centre.addr, centre.pos], '1.0.5'], 'the walk on the account under the view\'s centre');
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -3404,18 +3425,109 @@ test('Back to a draft a refresh set again with no image while the reader was awa
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('Back puts the walk on the line the return lands at where the span it stood on is gone, the line read standing: never the old position, which holds another paragraph now (issue #297)', async () => {
+/** CUT left as `leftCut` leaves it, Back to its entry, and the walk moved to its paragraph `k` with the camera where it stood: that paragraph, the line read's, and the view left */
+async function walkedOn(/** @type {number} */ k) {
   const { at, left } = await leftCut();
   await run(GO.back());
-  const gone = REC.doc(CUT).blocks[11];
-  await WALK.focusTo(CUT, gone.pos);
-  assert.ok(same(CAM.view(), left) && walkAt()?.[2] === gone.pos, 'the walk two paragraphs on, the camera where it stood');
+  const on = REC.doc(CUT).blocks[k];
+  await WALK.focusTo(CUT, on.pos);
+  assert.ok(same(CAM.view(), left) && walkAt()?.[2] === on.pos && LAYER.lineInView(CUT, on.pos, left), `the walk on paragraph ${k + 1}, in view, the camera where it stood`);
+  return { at, left, on };
+}
+
+test('Back to a draft whose paragraph the walk stood on an edit removed, the line read standing, lands in the none state at the line read — the dead end\'s face there, told by the landing\'s description — the walk on that line: never the paragraph now at the old position; and no entry keeps that landing (issues #297, #237)', async () => {
+  const { at, left, on: gone } = await walkedOn(11);
   await run(GO.leapTo(FAR));
-  const end = gone.pos + gone.width;
+  const end = gone.pos + gone.width, n = TRAIL.length();
   setDraft(CUT, EIGHTY.slice(0, gone.pos - 1) + EIGHTY.slice(end - 1), [[CUT, 1, gone.pos - 1], [CUT, end, EIGHTY.length - end + 1]]);
   await run(GO.back());
-  assert.deepEqual([same(CAM.view(), left), GO.landing(), faceShown()], [true, null, null], 'the line read stands whole: the view as left, nothing said');
-  assert.deepEqual(walkAt(), ['block', CUT, at.pos], 'the walk on the line read, never on the paragraph now at the old position');
+  assert.ok(same(CAM.view(), left), 'the line read stands whole: the view as left');
+  assert.deepEqual([walkAt(), TRAIL.length()], [['block', CUT, at.pos], n], 'the walk on the line read, never on the paragraph now at the old position; no trail move');
+  const f = faceShown(), words = t('F.floating', { D: CUT });
+  assert.ok(f && f.id === 'face:floating' && f.html.includes(addressedHTML(words)), `the dead end's words: ${f && f.html}`);
+  assert.deepEqual([HOST.currentState()?.anchor, HOST.currentState()?.told], [{ span: { addr: CUT, pos: at.pos }, sign: CUT }, true], 'at the walk\'s span, told by the landing\'s description');
+  assert.deepEqual([GO.landing()?.floating, GO.described(), GO.arrivalMark()], [true, { addr: CUT, pos: at.pos, words, runs: [] }, null], 'the landing in the none state there, nothing outlined');
+  HOST.dismiss();
+  await run(GO.leapTo(FAR));
+  await run(GO.back());
+  assert.deepEqual([walkAt(), GO.landing(), faceShown()], [['block', CUT, at.pos], null, null], 'Back again: the walk on the line read, where it stood as the reader left; nothing said, the entry keeping no landing');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back to a draft whose paragraph the walk stood on lost its first word while the reader was away puts the walk on what stands of that paragraph, nothing said: never the line read, nor a dead end for a paragraph that stands (issue #237)', async () => {
+  const { left, on: cut } = await walkedOn(11);
+  await run(GO.leapTo(FAR));
+  const word = 'Line '.length;
+  setDraft(CUT, EIGHTY.slice(0, cut.pos - 1) + EIGHTY.slice(cut.pos - 1 + word), [[CUT, 1, cut.pos - 1], [CUT, cut.pos + word, EIGHTY.length - cut.pos - word + 1]]);
+  await run(GO.back());
+  assert.deepEqual([same(CAM.view(), left), walkAt(), GO.landing(), faceShown()], [true, ['block', CUT, cut.pos], null, null], 'the view as left, the walk on what stands of its paragraph, nothing said');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back to a draft where an edit moved the paragraph the walk stood on out of the view the return lands at puts the walk on the line read, nothing said: never on the paragraph where it stands now, out of view (issue #237; FP-25)', async () => {
+  const { at, left, on } = await walkedOn(11);
+  await run(GO.leapTo(FAR));
+  const forty = Array.from({ length: 40 }, (_, i) => `An inserted paragraph ${i + 1}.`).join('\n\n') + '\n\n';
+  setDraft(CUT, EIGHTY.slice(0, on.pos - 1) + forty + EIGHTY.slice(on.pos - 1), [[CUT, 1, on.pos - 1], [FOREIGN, 1, forty.length], [CUT, on.pos, EIGHTY.length - on.pos + 1]]);
+  await run(GO.back());
+  const moved = on.pos + forty.length;
+  assert.ok(same(CAM.view(), left) && !LAYER.lineInView(CUT, moved, CAM.view()), 'the view as left, the paragraph the walk stood on moved out of it');
+  assert.deepEqual([walkAt(), GO.landing(), faceShown()], [['block', CUT, at.pos], null, null], 'the walk on the line read, nothing said');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a departure keeps no place the walk stood on that the view it leaves does not show: the camera moved down LONG with no re-take, a LEAP away and Back — the walk on the line read, never on the paragraph the camera left (issue #237; FP-25)', async () => {
+  await PUMP.loadWhole(LONG);
+  const spans = REC.doc(LONG).blocks.filter(WALK.isElement), [tenth, read] = [spans[9], spans[80]];
+  await run(GO.leapTo(LONG, { pos: tenth.pos }));
+  assert.deepEqual(walkAt(), ['block', LONG, tenth.pos], 'the walk on the tenth paragraph');
+  CAM.set(GO.viewFor(LONG, read.pos));
+  const left = CAM.view();
+  assert.ok(!LAYER.lineInView(LONG, tenth.pos, left), 'the camera moved on, the re-take not made: the walk\'s paragraph out of view');
+  await run(GO.leapTo(FAR));
+  assert.equal(departed()?.stood, null, 'the entry keeps no place of the walk\'s');
+  await run(GO.back());
+  assert.ok(same(CAM.view(), left), 'Back at the view left');
+  assert.deepEqual(walkAt(), ['block', LONG, read.pos], 'the walk on the line read, in view');
+  assert.ok(LAYER.lineInView(LONG, read.pos, CAM.view()));
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a departure keeps no place the walk stood on that the view it leaves does not show, so a paragraph the camera left before the re-take, removed while the reader is away, says nothing on Back (issue #237)', async () => {
+  const { at } = await leftCut();
+  await run(GO.back());
+  const later = REC.doc(CUT).blocks[60];
+  CAM.set(GO.viewFor(CUT, later.pos));
+  const left = CAM.view();
+  assert.ok(walkAt()?.[2] === at.pos && !LAYER.lineInView(CUT, at.pos, left), 'the camera moved on, the walk still on the paragraph read, out of view');
+  await run(GO.leapTo(FAR));
+  const end = at.pos + at.width;
+  setDraft(CUT, EIGHTY.slice(0, at.pos - 1) + EIGHTY.slice(end - 1), [[CUT, 1, at.pos - 1], [CUT, end, EIGHTY.length - end + 1]]);
+  await run(GO.back());
+  const now = later.pos - at.width;
+  assert.deepEqual([walkAt(), GO.landing(), faceShown()], [['block', CUT, now], null, null], 'the walk on the line read where it stands now, nothing said of the paragraph the camera had left');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back to a draft where a landing in two pieces stands out of the view the reader left puts the walk where it stood, in view, and says the landing\'s line once in the status region: never the walk on piece 1, out of view (issue #237; FP-21, FP-36)', async () => {
+  const at = EIGHTY.indexOf('Line 10 ') + 1, width = 'Line 10 of a draft'.length, cut = at - 1 + 8, word = 'new ', w = word.length;
+  setDraft(CUT, EIGHTY.slice(0, cut) + word + EIGHTY.slice(cut), [[CUT, 1, cut], [FOREIGN, 1, w], [CUT, cut + 1, EIGHTY.length - cut]]);
+  await PUMP.loadWhole(CUT);
+  await run(GO.leapTo(CUT, { pos: at, runs: [{ pos: at, width: 8 }, { pos: at + 8 + w, width: width - 8 }], passage: { prefix: CUT + '.0.1', ordinal: at, width }, how: 'leap' }));
+  const line = GO.landingLine();
+  assert.equal(line, t('L.piece', { k: 1, n: 2 }) + ' · ' + t('L.piece.all'), 'landed at piece 1 of 2');
+  const sixty = REC.doc(CUT).blocks[59];
+  CAM.set(GO.viewFor(CUT, sixty.pos));
+  await WALK.retakeFromView();
+  const left = CAM.view();
+  assert.deepEqual([walkAt(), LAYER.lineInView(CUT, at, left), !!GO.arrivalMark()], [['block', CUT, sixty.pos], false, true], 'the walk on the sixtieth paragraph, the landing out of view and standing');
+  await run(GO.leapTo(FAR));
+  const said = statusSaid();
+  await run(GO.back());
+  assert.ok(same(CAM.view(), left), 'Back at the view left');
+  assert.deepEqual([walkAt(), GO.landingLine(), GO.arrivalMark()?.runs?.length], [['block', CUT, sixty.pos], line, 2], 'the walk where it stood, the landing standing again out of view');
+  assert.deepEqual(said.filter((x) => x === line), [line], 'the landing\'s line said once, the item the walk lands on not carrying it');
+  GO.endArrival();
   assert.deepEqual(fake.unanswered, []);
 });
 

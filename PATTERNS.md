@@ -548,6 +548,7 @@ last. Each stands until a later decision says it changes it.
 - **#227**: a follow of a link whose far end names no document never leaves and so takes no trail entry, its face standing at the act's site, the link's own bytes, until Esc or the next act → FP-25
 - **#228**: a failed jump's entry stands where its camera went, with its face and its walk, and every return to it asks its read again, showing the failure's face only where the answer meets it again → FP-25
 - **#236**: below its own reading scale the document the one line names stands with its address and its position strip, the strip marking neither a position nor the view's window → FP-26
+- **#237**: leaving an entry records the walk's element by its bytes where the view left shows it, and a return stands the walk on it where the view the return lands at shows it — on what stands of it where its own place is gone — else on the element under that view's centre by #141's order, the dead end's face saying so where none of the element stands → FP-25, FP-21
 
 ## What these rule out
 

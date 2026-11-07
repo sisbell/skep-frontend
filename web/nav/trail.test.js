@@ -35,7 +35,7 @@ const at = (/** @type {number} */ n) => ({ view: v(n), reading: null, stood: nul
 /** what the view n reads: the line at its centre, its position n, one position wide, and the view around it, its text read at no known position */
 const readOf = (/** @type {number} */ n) => ({ addr: 'd', at: null, pos: n, width: 1, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], around: [{ pos: n, width: 1, prefix: 'd.0.1', ordinal: n }], p: { x: n, y: n }, line: { x: 0, y: n }, fs: 1 });
 /** a departure at the view n, which reads the passage at n, the walk standing there */
-const away = (/** @type {number} */ n) => ({ view: v(n), reading: readOf(n), stood: { addr: 'd', pos: n, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], end: null } });
+const away = (/** @type {number} */ n) => ({ view: v(n), reading: readOf(n), stood: { addr: 'd', pos: n, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], of: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], end: null } });
 /** what an entry keeps of the departure from it: its view's x, what that view reads, where the walk stood */
 const kept = (/** @type {Entry} */ x) => [x.view.x, x.reading && x.reading.pos, x.stood && x.stood.pos];
 /** @type {Notice} a jump's reading notice, as its claim holds it while its read is out */
@@ -177,7 +177,7 @@ test('the cursor\'s entry\'s place re-taken as it is departed — the version it
 });
 
 /** a departure at the view n whose view read the document `addr`, its text read at `readAt`, the walk standing in it */
-const awayIn = (/** @type {string} */ addr, /** @type {number} */ n, /** @type {number | null} */ readAt) => ({ view: v(n), reading: { ...readOf(n), addr, at: readAt }, stood: { addr, pos: n, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], end: null } });
+const awayIn = (/** @type {string} */ addr, /** @type {number} */ n, /** @type {number | null} */ readAt) => ({ view: v(n), reading: { ...readOf(n), addr, at: readAt }, stood: { addr, pos: n, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], of: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], end: null } });
 /** what an entry's record names: its place, the document its view read and the one its walk stood in */
 const named = (/** @type {Entry} */ x) => [x.addr, x.reading && x.reading.addr, x.stood && x.stood.addr];
 
@@ -269,7 +269,7 @@ test('a landing that writes a view writes what that view reads and where the wal
   assert.deepEqual(kept(claim), [20, 20, 20], 'departed while it reads');
   T.settle(claim, { pos: 5, width: 1 });
   assert.deepEqual(kept(claim), [20, 20, 20], 'settled with no view — the reader took the camera over there: the view, what it read and where the walk stood kept');
-  T.settle(claim, { view: v(30), reading: readOf(30), stood: { addr: 'd', pos: 7, ids: [{ prefix: 'd.0.1', ordinal: 7, width: 1 }], end: null }, pos: 7, width: 1 });
+  T.settle(claim, { view: v(30), reading: readOf(30), stood: { addr: 'd', pos: 7, ids: [{ prefix: 'd.0.1', ordinal: 7, width: 1 }], of: [{ prefix: 'd.0.1', ordinal: 7, width: 1 }], end: null }, pos: 7, width: 1 });
   assert.deepEqual(kept(claim), [30, 30, 7], 'settled with a view: that view, what it reads and where the walk lands there, by its byte');
   T.settle(claim, { view: v(40), pos: 8, width: 1 });
   assert.deepEqual(kept(claim), [40, null, null], 'a view written with nothing it reads and no place for the walk: neither kept');

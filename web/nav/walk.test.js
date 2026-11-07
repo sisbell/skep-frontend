@@ -16,7 +16,9 @@
 // framed no nearer than reading size, in the fold a resize in the air sets
 // the document in, and a step made below a document's
 // reading scale frames it short of that scale; the grain below a document is
-// the document's own and the re-take's order holds at every band; → steps in
+// the document's own and the re-take's order holds at every band, the element
+// under a view's centre read at any view the one the re-take takes where it
+// keeps nothing; → steps in
 // to the child drawn under the centre of the view the camera is bound for,
 // else to the first; the re-take and → find every box the plane draws under
 // the centre, one the index does not list among them; a
@@ -1120,6 +1122,35 @@ test('the re-take and → find a box the plane draws that the index does not lis
   at(middle(LAYER.shapeOf(G)), CAM.viewForCell(accountCell('1.0.1'), 0.85).scale);
   await run(WALK.key('in'));
   assert.deepEqual(walkAt(), ['document', G, null], '→ enters G, the document whose region holds the centre');
+});
+
+test('the element under a view\'s centre, read at a view the camera does not stand at, is the one the re-take takes there where neither of its rules keeps the walk: a continuation\'s mark, a span at its document\'s reading scale, a document whole at mid, an account, the board (issue #237)', async () => {
+  await PUMP.loadWhole(H);
+  const home = CAM.viewForCell(accountCell('1.0.1'), 0.85), d = REC.doc(H), f = LAYER.foldOf(d), later = d.blocks[Math.floor(d.blocks.length / 2)], near = 14 / STANDARD_FS;
+  /** @type {Array<[string, string[], {x: number, y: number, scale: number}, Array<string | number | null>]>} each place: what the index lists, the view, the element there */
+  const places = [
+    ['a continuation\'s mark', Array.from({ length: 60 }, (_, i) => '1.0.1.0.' + (i + 1)), { ...middle(continuationCell('1.0.1', 1)), scale: markScale(1, home.scale) }, ['mark', '1.0.1:1', null]],
+    ['a span at its document\'s reading scale', [D, E, H], { ...LAYER.centreOf(H, later.pos), scale: 12.5 / f.fs }, ['block', H, later.pos]],
+    ['a document whole at mid', [D, E, H], { ...middle(LAYER.shapeOf(H)), scale: 120 / DOC_W }, ['document', H, null]],
+    ['an account', [D, E], { ...middle(docBox('1.0.1.0.30')), scale: near }, ['account', '1.0.1', null]],
+    ['the board', [D, E], { ...middle(boardLabelCell('1')), scale: near }, ['board', '1', null]],
+  ];
+  try {
+    for (const [what, docs, view, element] of places) {
+      index(docs);
+      // the walk on D, which no mark holds and which stands out of each view: neither rule keeps it
+      await WALK.focusTo(D, 15);
+      CAM.set(CAM.viewForCell(boardCell('1'), 0.92));
+      const u = WALK.elementUnder(view);
+      assert.deepEqual([u.kind, u.addr, u.pos], element, `${what}: under the view's centre, the camera elsewhere`);
+      at(view, view.scale);
+      assert.equal(LAYER.inView(D), false, `${what}: D out of view`);
+      await WALK.retakeFromView(true);
+      assert.deepEqual(walkAt(), element, `${what}: the re-take there takes it`);
+    }
+  } finally {
+    index([D, E]);
+  }
 });
 
 test('the walk takes each box as the version it shows (issues #154, #23): an account\'s documents list the version its box shows, named by that version\'s own first line, a landing at the document stands on that version\'s span, and a re-take over its box stands there', async () => {

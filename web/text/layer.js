@@ -144,9 +144,9 @@
 // The paging key continues at the next column's top at reading scale
 // (`pageTarget`). A document's region is its outline's bounds widened
 // leftward by the strip its corner stands in (`regionOf`); whether it meets
-// the visible view (`inView`), the view's window over it (`windowIn`) and
-// whether a position's line stands in a view (`lineInView`) are read here by
-// N-WALK, L-LINE and N-GO.
+// the visible view (`inView`) — as any world rect does (`meetsView`) — the
+// view's window over it (`windowIn`) and whether a position's line stands in
+// a view (`lineInView`) are read here by N-WALK, L-LINE and N-GO.
 // The marks and symbols are placed from LK's `shown` and `symbols`, a
 // stretch several links mark in the one mark LK's `mergedMark` gives; a
 // withheld run's owner and C-67's clause beneath it from what the model
@@ -997,11 +997,20 @@ function centreAt(/** @type {{x: number, y: number, scale: number}} */ at) {
 /**
  * Does a document stand in the visible view (see the head): its region meeting
  * the viewport below the one line, unpadded — any of its text or box, or the
- * strip its corner stands in.
+ * strip its corner stands in (`meetsView`).
  * @param {string} addr
  * @param {{x: number, y: number, scale: number} | null} [view] the view it is read at: the camera's where none is given — a departure's, bound for a flight's destination, where the view is bound elsewhere
  */
-export function inView(addr, view = null) { return intersects(regionOf(addr), seenWorld(view)); }
+export function inView(addr, view = null) { return meetsView(regionOf(addr), view); }
+
+/**
+ * Does a world rect meet the visible view (see the head): the viewport below
+ * the one line, unpadded — a document's region (`inView`), or an account's or
+ * a mark's cell the walk stood on (N-GO's).
+ * @param {Rect} r
+ * @param {{x: number, y: number, scale: number} | null} [view] the view it is read at: the camera's where none is given
+ */
+export function meetsView(r, view = null) { return intersects(r, seenWorld(view)); }
 
 /**
  * The visible view's window over a document (P-LAY's `windowIn`): the

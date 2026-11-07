@@ -23,10 +23,12 @@
 // jump's camera leaving (`leaveFrom`), a landing's (`settle`); and where the
 // walk stood in that line's document — or, where the view read none, the
 // board, the account or the mark's stop it stood on, else its place in a
-// document standing in that view — as the entry was departed, or where a
-// read placed its landing since (`settle`), by position and identity
-// (`Stood`), so a return finds those words and that place wherever its
-// document was set again since (N-GO's `landAtCursor`). An entry records the
+// document standing in that view — as the entry was departed, where that
+// view shows it, or where a read placed its landing since (`settle`), by
+// position and identity, the element it stood on by identity too (`Stood`),
+// so a return finds those words and that place wherever its document was set
+// again since, and what stands of that element where its place is gone
+// (N-GO's `landAtCursor`). An entry records the
 // step that left it for the entry after it (`Step`), written as a push
 // departs it: the link followed for a follow, the passage carried for a
 // carrying LEAP or a version move — by identity, the permanent addresses of
@@ -96,10 +98,11 @@
 /** @typedef {import('../text/layer.js').Reading} Reading */
 
 /**
- * @typedef {Object} Stood — where the walk stood as the reader left an entry (see the head): a return puts it back there
+ * @typedef {Object} Stood — where the walk stood as the reader left an entry, in the view they left it at (see the head): a return puts it back there where the view it lands at shows it
  * @property {string} addr the place it stood on: the board's or an account's address, a mark's name (P-PROJ's `markKey`), or a document — the version its box showed
  * @property {number | null} pos the position it stood at — the one a landing named in its span, else the span's or the link's own; null where it stood on a document whole, or on no document
  * @property {ISpan[]} ids that position's byte by identity (M-REC's `identityOf`), which a return places in the text its box shows then; none where it names no position, or the held image did not cover it
+ * @property {ISpan[]} of the element it stood on by identity — its span's block, or its link's end — whose bytes a return seeks in the text its box shows then where that position's byte stands nowhere; none where it names no position, or the held image did not cover the element
  * @property {import('./walk.js').End | null} end the link's end it stood on; null where it stood on none
  */
 
@@ -107,7 +110,7 @@
  * @typedef {Object} Departure — what a departure re-takes of the entry it leaves (see the head): N-GO's, read as the act is made
  * @property {View} view the view the camera is bound for
  * @property {Reading | null} reading what that view reads (T-LAYER's `readAt`); null where it reads no passage
- * @property {Stood | null} stood where the walk stands (N-GO's `stoodIn`): in the document that view reads, or, where the view reads none, on the board, an account or a mark's stop, else in a document standing in that view; null where it stands outside the document the view reads, in a document out of the view where it reads none, or on no document where it reads one
+ * @property {Stood | null} stood where the walk stands (N-GO's `stoodIn`): in the document that view reads, or, where the view reads none, on the board, an account or a mark's stop, else in a document standing in that view; null where it stands outside the document the view reads, in a document out of the view where it reads none, on no document where it reads one, or on a place that view does not show
  * @property {import('../scene/scene.js').Left | null} [scene] the reading scene standing over the view, as the reader leaves it (SC's `asLeft`): re-taken on an entry a scene was opened as; null where none stands
  */
 
@@ -179,7 +182,7 @@
  * @property {number | null} width the positions of the run landed on from `pos`, where the landing named a span: the first run in the text of a follow's projected far end, or a carried passage's counterpart — one of the runs its landing outlined
  * @property {View} view the view at the entry — the landing's, re-taken at departure; where the camera went, where its read brought no place
  * @property {Reading | null} reading what its view reads, written with the view (see the head): the words a return finds in the text it reaches, and places the view by; null where it reads no passage
- * @property {Stood | null} stood where the walk stood as the entry was last departed, or where a read placed the entry's landing since (`settle`) (see the head): a return puts it back there; null where neither held one (`Departure`)
+ * @property {Stood | null} stood where the walk stood as the entry was last departed, or where a read placed the entry's landing since (`settle`) (see the head): a return puts it back there where the view it lands at shows it; null where neither held one (`Departure`)
  * @property {Step | null} step the step that left it for the entry after it, written as a push departed it; none while nothing has, and none where the push took no step this module records
  * @property {string | null} label the act's name where HOME or WHOLE BOARD pushed the entry, the strings table's; null for every other entry, whose document's words are read from the model as it is shown (see the head)
  * @property {Notice | null} notice the face the entry shows: its jump's reading face while the read is out, then the face its read brought, as the latest return to ask that read again found it; null where it shows none

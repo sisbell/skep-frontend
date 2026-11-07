@@ -2530,7 +2530,7 @@ function leftAt(ats) {
   TRAIL._reset();
   const view = { x: 0, y: 0, scale: 1 }, entry = (/** @type {string} */ addr) => ({ addr, pos: null, width: null, view, label: null, notice: null });
   TRAIL.push(entry(D), null);
-  ats.forEach((at, i) => TRAIL.push(entry(i + 1 < ats.length ? D : '1.0.1.0.127'), { view, reading: { addr: D, at, pos: 1, width: 8, ids: [], around: [], p: { x: 0, y: 0 }, line: { x: 0, y: 0 }, fs: 1 }, stood: { addr: D, pos: 1, ids: [], end: null } }));
+  ats.forEach((at, i) => TRAIL.push(entry(i + 1 < ats.length ? D : '1.0.1.0.127'), { view, reading: { addr: D, at, pos: 1, width: 8, ids: [], around: [], p: { x: 0, y: 0 }, line: { x: 0, y: 0 }, fs: 1 }, stood: { addr: D, pos: 1, ids: [], of: [], end: null } }));
   return TRAIL.all().slice(0, ats.length);
 }
 /** what a trail entry names: its place, the document its view read and the one its walk stood in */
