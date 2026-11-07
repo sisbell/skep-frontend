@@ -7,7 +7,8 @@
 // with each level's group, its items naming a withheld run's placeholder —
 // its kind and length alone while its clause is read —
 // each block that holds no text by its kind, a withheld or untold document by
-// its state and a link's far end as its tail does — described, where the
+// its state and a link's far end as its tail does, what its text holds of
+// its passage said whole — described, where the
 // board will say nothing of it, by its one state's whole form — its descriptions and
 // Back's light written at the rebuild and marked again in place, and its
 // inert mark kept through a rebuild; a move whose reads a later move overtook
@@ -59,6 +60,7 @@ import { esc, byteLength } from '../util.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
 import * as WALK from './walk.js';
 import * as LK from '../links/links.js';
+import { farShort } from '../beams/held.js';
 
 const D = '1.0.1.0.3';
 /** a second document: a separator alone, then a span, a block of one space, a span — two elements of the walk among four blocks */
@@ -597,6 +599,25 @@ test('the mirror\'s item at a link whose far end floats says "its passage is not
     assert.ok(item().includes(t('L.mirror.floating', { sentence: part })), `two of its four bytes there: the line, as its symbol and its stub say it (issue #153): ${item()}`);
     REC.takeProjection(L, 2, FAR, [{ pos: 20, width: 4 }]);
     assert.ok(item() !== '' && !item().includes(t('F.floating', { D: FAR })) && !item().includes(part), item());
+  } finally { REC.invalidate(FAR); }
+});
+
+test('the mirror\'s item at a link whose far end\'s text holds part of its passage in two runs, that text showing withheld text, says the line whole — the rest maybe under the withheld text — counting no runs, its words opening on the short form its symbol and its stub say (issue #242\'s design decision: "Stubs and symbols show the start of the card\'s and mirror\'s full phrase")', () => {
+  const L = D + '.0.2.1', FAR = '1.0.1.0.127';
+  const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
+  REC.takeLinks(D, [L]);
+  REC.takeLink({ addr: L, from: [span(D, 11, 3)], to: [span(FAR, 8, 4)], type: '1.1.0.1.0.1.0.3.13' });
+  // FAR's text: twenty positions holding the passage's first two bytes at 3 and its last at 12, other bytes about them, then ten withheld from the reader
+  REC.takeDelivery(FAR, [{ pos: 1, width: 20, kind: 'content', text: 'The far text, twenty', ref: null, origin: null }, { pos: 21, width: 10, kind: 'withheld', text: '', ref: null, origin: '1.0.2.0.6' }]);
+  REC.takeImage(FAR, 1, [{ iStart: FAR + '.0.1.100', width: 2 }, { iStart: FAR + '.0.1.8', width: 2 }, { iStart: FAR + '.0.1.102', width: 7 }, { iStart: FAR + '.0.1.11', width: 1 }, { iStart: FAR + '.0.1.109', width: 18 }]);
+  try {
+    REC.takeProjection(L, 2, FAR, [{ pos: 3, width: 2 }, { pos: 12, width: 1 }]);
+    const s = /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === L));
+    const item = WALK.nameOf({ kind: 'link', addr: D, pos: s.pos, link: s }, 0, 1);
+    const part = t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) });
+    assert.ok(item.includes(t('L.mirror.floating', { sentence: part + t('L.held.withheld') })), `the line whole, nothing between its two clauses: ${item}`);
+    assert.ok(farShort(s) === part && item.includes(t('L.mirror.floating', { sentence: farShort(s) })), `its words open on the symbol's and the stub's: ${item}`);
+    assert.ok(!/places/.test(item), `no count of the runs holding it: ${item}`);
   } finally { REC.invalidate(FAR); }
 });
 

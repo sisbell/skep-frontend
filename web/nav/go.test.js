@@ -429,7 +429,7 @@ test('a follow of a far end the far document\'s text holds in two runs apart out
   // nine of the stored span's twenty-two bytes stand in FAR's text, in two runs: each labelled, the line the first's, part of it — never the outline alone
   const piece = (/** @type {number} */ k) => t('L.piece', { k, n: 2 }), words = piece(1) + ' · ' + t('L.piece.part');
   assert.deepEqual([GO.landing()?.said?.state, GO.landing()?.current, GO.landingLine()], ['part', 0, words], 'the line: "piece 1 of 2 · only part of the passage"');
-  assert.ok(!(GO.landingLine() || '').includes(t('L.held.places', { n: 2 }).trim()), 'no places counted');
+  assert.ok(!/places/.test(GO.landingLine() || ''), 'no places counted');
   assert.deepEqual(GO.described(), { addr: FAR, pos: 3, words, runs: [{ pos: 3, width: 4, words: piece(1) }, { pos: 20, width: 5, words: piece(2) }] }, 'the mirror\'s descriptions: the line at the item the focus landed on, every run\'s label at its own');
   assert.equal(GO.landing()?.beside, null, 'no side-by-side offer: the first edition holds none of FAR\'s passage');
   for (let i = 0; i < 50 && GO.landing()?.version == null; i++) await new Promise((r) => setTimeout(r, 0));
@@ -827,7 +827,7 @@ test('a LEAP carrying a passage the text landed in holds only part of keeps its 
     await run(GO.leapTo(FAR, { how: 'leap', carry: { ...PARTIAL, selected } }));
     assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: 25, runs: [{ pos: 25, width: 5 }], link: null }, 'the part FAR holds outlined, as before');
     const words = t('L.held.part', { subject: t(selected ? 'L.held.selected' : 'L.held.reading'), where: t('L.held.current', { D: FAR }) });
-    assert.deepEqual([GO.landing()?.said?.state, GO.landing()?.said?.places, GO.landingLine()], ['part', 1, words], `"only part of ${selected ? 'what you selected' : 'the text you were reading'} is in ⟨D⟩'s current text", no places at one place`);
+    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine()], ['part', words], `"only part of ${selected ? 'what you selected' : 'the text you were reading'} is in ⟨D⟩'s current text", no places counted`);
     assert.ok(!/missing|removed|deleted|compare/.test(words), `never "missing", "removed", "deleted" or "compare": ${words}`);
     assert.deepEqual(GO.landing()?.beside, { a: D, held: { posA: 1, widthA: 12, ids: [{ prefix: D + '.0.1', ordinal: 1, width: 12 }] } }, 'the first edition holds it whole: read side by side with it, the passage held there by its bytes');
     for (let i = 0; i < 50 && fake.asked.slice(-1)[0] !== FAKE.keyOf('op', { frame: carried(PARTIAL, FAR1, FAR_EXTENT) }); i++) await new Promise((r) => setTimeout(r, 0));
@@ -1669,7 +1669,7 @@ test('a follow whose far text holds its passage in two runs whose bytes the boar
   await run(GO.follow(drawn(UNNAMED_LINK)));
   assert.deepEqual(GO.arrivalMark(), { addr: UNNAMED, pos: 3, runs: [{ pos: 3, width: 4 }, { pos: 12, width: 5 }], link: UNNAMED_LINK }, 'both runs outlined, the landing at the first in the text');
   const words = t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: UNNAMED }) });
-  assert.deepEqual([GO.landing()?.said?.places, GO.landing()?.pieces, GO.landingLine(), GO.landingOffers().steps], [2, null, words, false], 'nine positions of twenty in two runs: part, no runs labelled and no step, the line counting no places');
+  assert.deepEqual([GO.landing()?.said?.state, GO.landing()?.pieces, GO.landingLine(), GO.landingOffers().steps], ['part', null, words, false], 'nine positions of twenty in two runs: part, no runs labelled and no step, the line counting no places');
   await run(GO.leapTo(D));
   assert.deepEqual(fake.unanswered, []);
 });

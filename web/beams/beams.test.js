@@ -14,8 +14,8 @@
 // view and nowhere else, a far end placed by `project` in the version its
 // far box shows (FP-22); and a bundle's label — its far end's words cut on a
 // word, alike ones cut apart — placed above or below its end inside the
-// visible view, saying what its beams' far texts hold where they agree
-// (FP-21).
+// visible view, saying what its beams' far texts hold where they agree, in
+// its short form (FP-21).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -24,6 +24,7 @@ import { bundlesOf, beamOf, labelPlace, labelText, labelRuns, bundleLabels, past
 import { edgeStub } from '../plane/camera.js';
 import { HUE, NEUTRAL_HUE, STUB } from '../plane/register.js';
 import { t } from '../strings.js';
+import { farSays } from './held.js';
 import { recorder } from '../test/canvas.js';
 
 const CITE = '1.1.0.1.0.1.0.3.13';
@@ -402,6 +403,18 @@ test('a bundle whose every beam\'s far text holds only part of its passage says 
   assert.ok(label().startsWith(H + ' · 2') && label().endsWith(words), label());
   REC.takeProjection(THIRD, 2, H, [{ pos: 9, width: 3 }]);
   assert.equal(label(), H + ' · 2', 'the third party\'s whole: they part, and nothing is said');
+});
+
+test('a bundle\'s label says its far ends\' state in its short form, the start of what their mirror items and cards say whole: no clause for the withheld text its far document shows, and no count of the runs holding a passage (issue #242\'s design decision: "Stubs and symbols show the start of the card\'s and mirror\'s full phrase")', () => {
+  build([OWN, THIRD]);
+  // H's twenty positions, then ten withheld from the reader; it holds the person's citation's first two bytes and its fourth, in two runs, and the third party's first of three
+  REC.takeDelivery(H, [{ pos: 1, width: 20, kind: 'content', text: 'The far document xyz', ref: null, origin: null }, { pos: 21, width: 10, kind: 'withheld', text: '', ref: null, origin: '1.0.3.0.9' }]);
+  REC.takeProjection(OWN, 2, H, [{ pos: 1, width: 2 }, { pos: 4, width: 1 }]); REC.takeProjection(THIRD, 2, H, [{ pos: 9, width: 1 }]);
+  const b = bundlesOf(met([D]))[0], part = t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: H }) });
+  assert.deepEqual(b.members.map((m) => farSays(m.s)), [part + t('L.held.withheld'), part + t('L.held.withheld')], 'each one\'s whole form: part, the rest maybe under the withheld text');
+  const label = labelText(b);
+  assert.ok(label.startsWith(H + ' · ') && label.endsWith(' · 2 · ' + part), `the short form after the count: ${label}`);
+  assert.ok(!label.includes(t('L.held.withheld')) && !/places/.test(label), `no withheld clause and no count of runs: ${label}`);
 });
 
 test('a bundle\'s label names its far end\'s words as its tail would, cut on a word to WORDS_CH characters; the frame\'s labels whose words read alike once cut are cut apart where they differ (issue #23)', () => {

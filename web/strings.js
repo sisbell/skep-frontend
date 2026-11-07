@@ -700,7 +700,8 @@ export const STRINGS = {
   'L.far.empty.order': { text: 'your account\'s new documents take its addresses in order', cls: 'DRAFT', source: '', screen: 'a link\'s far end: the follow\'s face, the ARIA mirror\'s description', lane: true },
   'L.far.unknown': { text: 'no document known here', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its tail, a merged tail, B1-S5, the "which" list, the follow\'s face, the ARIA mirror', lane: true },
   // a link whose far end's text holds none of its passage, part of it or all of it in pieces, or the board would not tell:
-  // those words (BM-HELD's `farSays` — F.floating's, or its line), as its symbol and its stub say them
+  // those words whole (BM-HELD's `farSays` — F.floating's, or its line), whose start its symbol and its stub say
+  // (`farShort`)
   'L.mirror.floating': { text: ' — ⟨sentence⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // a jump reading, said where the camera is until its read answers; a jump reaching, said at the act's site while only a read
   // can place its destination, the camera still (FP-25)
@@ -708,12 +709,12 @@ export const STRINGS = {
   'L.reaching': { text: 'reaching ⟨address⟩…', cls: 'DRAFT', source: '', screen: 'a jump reaching: at the act\'s site, else the one line; B1-S9: a stop returned to, pressed while its count is read', lane: true },
   // a landing's line (FP-21): what of the passage carried or followed the text landed in holds, where it stands in one run
   // and that is not all of it, or where no answer told — the passage named by what it was to the reader, the text by
-  // F.floating's two forms, the withheld text after it; the same words at a drawn link's far end before departure, the
-  // places it stands in counted there alone (BM-HELD's `lineOf`)
+  // F.floating's two forms, the withheld text after it; the same words at a drawn link's far end before departure, whole
+  // on its card and its mirror item, its stub and its symbol saying them short of the withheld text (BM-HELD's `lineOf`,
+  // `shortLineOf`)
   'L.held.part': { text: 'only part of ⟨subject⟩ is in ⟨where⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
   'L.held.pieces': { text: 'all of ⟨subject⟩ is in ⟨where⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
-  'L.held.places': { text: ' — in ⟨n⟩ places', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
-  'L.held.withheld': { text: '; the rest may be under the withheld text here', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
+  'L.held.withheld': { text: '; the rest may be under the withheld text here', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
   'L.held.unknown': { text: 'couldn\'t tell whether ⟨where⟩ holds ⟨subject⟩: ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
   'L.held.selected': { text: 'what you selected', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
   'L.held.reading': { text: 'the text you were reading', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
@@ -740,7 +741,7 @@ export const STRINGS = {
   'L.piece.next': { text: 'next piece', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
   'L.piece.previous': { text: 'previous piece', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
   // a versions row's strip for the two states F.versions' three do not name (FP-21)
-  'L.versions.pieces': { text: 'holds all of the passage, in ⟨n⟩ places', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
+  'L.versions.pieces': { text: 'holds all of the passage', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
   'L.versions.unknown': { text: 'couldn\'t tell whether it holds the passage: ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
   // the list's open end: where the board did not end the chain at the last member read, a line saying how far the list
   // was read and that it is not known to be complete — "then the board stopped answering" where the board did not answer,

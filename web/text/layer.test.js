@@ -18,7 +18,8 @@
 // the selection's and the focus's lines held, hysteresis, stale articles set
 // again and a press holding them; the owner a withheld run names; C-67's
 // clause from the model; what an article was made from; the zoom-in bound;
-// symbols marked heavier in place and a span inside a withheld run at the
+// symbols marked heavier in place, titled with their far ends' state in its
+// short form, and a span inside a withheld run at the
 // run's boxes; a byline's facts arriving and its cut label opening in
 // place; a face arriving after the first layout setting every standing
 // article again, the passage held; a box's label and first line in their
@@ -46,7 +47,8 @@ import { CORNER, ADDRESS, COL, cornerWidth } from '../plane/register.js';
 import { holdTop, runsOf } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME } from '../plane/lod.js';
-import { CLAUSE_READING } from './article.js';
+import { CLAUSE_READING, articleHTML } from './article.js';
+import { farSays } from '../beams/held.js';
 import { t, tHTML, lastRead } from '../strings.js';
 import { esc } from '../util.js';
 
@@ -1133,6 +1135,24 @@ test('where the platform sets no words — the node tests — the article\'s mea
   assert.equal(LAYER.widthOf('1.0.1.0.3', 'ident'), 9 * CHAR_W);
   assert.equal(LAYER.widthOf('not rendered', 'client'), 12 * CHAR_W);
   assert.equal(LAYER.viewFor(REC.doc(D)).measure, LAYER.widthOf, 'the article\'s view measures by it');
+});
+
+test('a link\'s symbol is titled with its far end\'s state in its short form, the start of what its mirror item and its card say whole: no clause for the withheld text its far document shows, and no count of the runs holding its passage (issue #242\'s design decision: "Stubs and symbols show the start of the card\'s and mirror\'s full phrase")', () => {
+  // the person's citation from D's first three bytes of FAR's first five, which FAR's text holds two of at 1 and its fourth at 8, in two runs, before thirty positions withheld from the reader
+  const L = D + '.0.2.1', P = FAR + '.0.1.';
+  REC.takeDelivery(D, [{ pos: 1, width: EXTENT, kind: 'content', text: TEXT, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: EXTENT }]);
+  REC.takeLinks(D, [L]);
+  REC.takeLink({ addr: L, from: [span(D, 1, 3)], to: [span(FAR, 1, 5)], type: CITE });
+  REC.takeDelivery(FAR, [{ pos: 1, width: 10, kind: 'content', text: 'abcde\n\nfg\n', ref: null, origin: null }, { pos: 11, width: 30, kind: 'withheld', text: '', ref: null, origin: '1.0.2.0.6' }]);
+  REC.takeImage(FAR, 1, [{ iStart: P + '1', width: 2 }, { iStart: P + '100', width: 5 }, { iStart: P + '4', width: 1 }, { iStart: P + '200', width: 32 }]);
+  REC.takeProjection(L, 2, FAR, [{ pos: 1, width: 2 }, { pos: 8, width: 1 }]);
+  LK.reveal(D, 2);
+  const d = REC.doc(D), v = LAYER.viewFor(d), s = /** @type {import('../links/links.js').Shown} */ (v.symbols.find((x) => x.link.addr === L));
+  const part = t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) });
+  assert.deepEqual([v.says(s), farSays(s)], [part, part + t('L.held.withheld')], 'the symbol\'s words the short form, its mirror item\'s the whole');
+  const title = (articleHTML(d, v, '1.0.1').match(new RegExp(`<span class="sym [^"]*" data-link="${L}"[^>]* title="([^"]*)"`)) || [])[1];
+  assert.equal(title, esc(`${CITE} · ${part}`), 'its title: its type, then the short form alone');
 });
 
 test('a kept document carries one clause by one rule: a draft holding its text "as last read", else "links as last read" — an edition\'s words never change, so its links\' alone, a pinned box\'s its document\'s — at the page\'s clock at the row or drop that left it behind, the failed read\'s words after it; none where it is not kept, a read refused it, or it holds neither (issues #345, #367)', () => {

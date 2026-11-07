@@ -2146,7 +2146,7 @@ function answerOf(S, stop, cmp) {
     return { holds, said: holds === 'all' || holds === 'none' ? null : saidOf(h.held, 'stop', D, withheldIn(S.b)), at: at >= 0 ? at : null, count: h.count, changes: [] };
   }
   const h = strokeHeld(S.pairs, { a: imageOf(S.a), b: imageOf(S.b) }, stop);
-  return { holds: h.holds, said: h.holds === 'part' ? saidOf({ holds: 'part', places: h.changes.length }, 'stop', D, withheldIn(S.b)) : null, at: null, count: h.changes.length, changes: h.changes };
+  return { holds: h.holds, said: h.holds === 'part' ? saidOf({ holds: 'part' }, 'stop', D, withheldIn(S.b)) : null, at: null, count: h.changes.length, changes: h.changes };
 }
 
 /** the stroke a returned stroke's button stands for once answered: the one measured bearing its key, else the changes the answer found standing where it stood; null where none stands */

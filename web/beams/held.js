@@ -35,15 +35,16 @@
 // a followed link's passage, what a reading scene's stop the reader returned
 // to stood for — and the text by F.floating's two forms, a
 // member or a bare address's current text (`whereOf`); where the landing
-// shows withheld text a part's line says the rest may be under it. A landing
-// in one run says it so (N-GO's `landing`), counting no runs; a landing in
-// several says its runs' labels in its place, the label of the run it stands
-// at its line. Every surface that knows the state before departure says it
-// by this one rule (FP-21): a versions row (O-VERSIONS, through N-GO's
-// `heldIn`), and a drawn link's far end (`farHolds`, `farSays`), read from
-// the end LK draws and what M-REC holds of its far document — its
-// projection, and the bytes of each run it names through that document's
-// held image — the line counting the runs that hold it there.
+// shows withheld text, a part's line says after its short form — the line's
+// start (`shortLineOf`) — that the rest may be under it. A landing in one run
+// says its line (N-GO's `landing`); a landing in several says its runs'
+// labels in its place, the label of the run it stands at its line. Every
+// surface that knows the state before departure says it by this one rule (FP-21): a
+// versions row (O-VERSIONS, through N-GO's `heldIn`), and a drawn link's far
+// end (`farHolds`), read from the end LK draws and what M-REC holds of its
+// far document — its projection, and the bytes of each run it names through
+// that document's held image — its card and its mirror item saying the line
+// whole (`farSays`), its stub and its symbol its short form (`farShort`).
 // Rules: FP-1, FP-2, FP-21, FP-22.
 
 import * as REC from '../model/records.js';
@@ -94,7 +95,6 @@ import { t } from '../strings.js';
 /**
  * @typedef {Object} Said — what the line says (`lineOf`): a passage the text holds part of, or all of in pieces, or one no answer told of
  * @property {'part' | 'pieces' | 'unknown'} state
- * @property {number} places the stretches of the text holding it, for part and pieces
  * @property {Subject} subject
  * @property {string} addr the document whose text it is: a member, or a bare address
  * @property {boolean} withheld the text shows withheld text, and the line says the rest of a part may be under it
@@ -373,7 +373,7 @@ const SUBJECTS = { selected: 'L.held.selected', reading: 'L.held.reading', follo
  * What the line says of what a text holds (see the head): part, the rest
  * possibly under the withheld text it shows, or pieces; null for all, which
  * the outline alone says, and for none, which the dead end's face says.
- * @param {Held} held
+ * @param {{holds: Holds}} held
  * @param {Subject} subject
  * @param {string} addr the document whose text it is
  * @param {boolean} [withheld] the text shows withheld text
@@ -381,7 +381,7 @@ const SUBJECTS = { selected: 'L.held.selected', reading: 'L.held.reading', follo
  */
 export function saidOf(held, subject, addr, withheld = false) {
   if (held.holds !== 'part' && held.holds !== 'pieces') return null;
-  return { state: held.holds, places: held.places, subject, addr, withheld: held.holds === 'part' && withheld, why: null, again: false };
+  return { state: held.holds, subject, addr, withheld: held.holds === 'part' && withheld, why: null, again: false };
 }
 
 /**
@@ -393,26 +393,31 @@ export function saidOf(held, subject, addr, withheld = false) {
  * @returns {Said}
  */
 export function unknownOf(r, subject, addr) {
-  return { state: 'unknown', places: 0, subject, addr, withheld: false, why: whyOf(r), again: retries(r) };
+  return { state: 'unknown', subject, addr, withheld: false, why: whyOf(r), again: retries(r) };
 }
 
 /**
- * The line's words (see the head): a part, "only part of ⟨subject⟩ is in
- * ⟨where⟩", with the places it stands in where they are two or more and the
- * line counts them, and, where the text shows withheld text, that the rest
- * may be under it; pieces, "all of ⟨subject⟩ is in ⟨where⟩" and its places
- * where the line counts them; couldn't tell, "couldn't tell whether ⟨where⟩
- * holds ⟨subject⟩: ⟨reason⟩".
+ * The line's short form (see the head), the start of its words (`lineOf`): a
+ * part, "only part of ⟨subject⟩ is in ⟨where⟩"; pieces, "all of ⟨subject⟩ is
+ * in ⟨where⟩"; couldn't tell, "couldn't tell whether ⟨where⟩ holds
+ * ⟨subject⟩: ⟨reason⟩".
  * @param {Said} s
- * @param {boolean} [counts] the line counts the runs holding the passage — a drawn link's far end's, before departure; a landing's never, its outline showing them (FP-21)
  * @returns {string}
  */
-export function lineOf(s, counts = true) {
+export function shortLineOf(s) {
   const subject = t(SUBJECTS[s.subject]), where = whereOf(s.addr);
   if (s.state === 'unknown') return t('L.held.unknown', { subject, where, reason: t(s.why || 'L.held.why.other') });
-  const places = counts && s.places > 1 ? t('L.held.places', { n: s.places }) : '';
-  if (s.state === 'pieces') return t('L.held.pieces', { subject, where }) + places;
-  return t('L.held.part', { subject, where }) + places + (s.withheld ? t('L.held.withheld') : '');
+  return t(s.state === 'pieces' ? 'L.held.pieces' : 'L.held.part', { subject, where });
+}
+
+/**
+ * The line's words (see the head): its short form (`shortLineOf`), then, for
+ * a part where the text shows withheld text, that the rest may be under it.
+ * @param {Said} s
+ * @returns {string}
+ */
+export function lineOf(s) {
+  return shortLineOf(s) + (s.withheld ? t('L.held.withheld') : '');
 }
 
 /**
@@ -441,7 +446,7 @@ export function farHolds(s) {
   const d = REC.has(at) ? REC.doc(at) : null, withheld = !!d && d.blocks.some((b) => b.kind === 'withheld');
   const ids = p.map((r) => REC.identityOf(at, r.pos, r.width));
   if (ids.every((x) => x.length)) { const { pieces, places } = piecesOf(passage, ids); return saidOf(heldOf(pieces, passage.width, places), 'followed', at, withheld); }
-  return p.reduce((n, r) => n + r.width, 0) < passage.width ? saidOf({ holds: 'part', places: p.length }, 'followed', at, withheld) : null;
+  return p.reduce((n, r) => n + r.width, 0) < passage.width ? saidOf({ holds: 'part' }, 'followed', at, withheld) : null;
 }
 
 /**
@@ -455,17 +460,34 @@ export function farHolds(s) {
 export const floatingOf = (addr) => { const k = memberOf(addr); return k != null ? t('F.floating.member', { k }) : t('F.floating', { D: addr }); };
 
 /**
- * A drawn link's far end's state in words, before departure — what its stub,
- * its symbol's title, its mirror item and its card say: the dead end's words
- * where it floats in the version its far box shows (LK's `floats`,
- * `floatingOf`), the line where that text holds part of it, all of it in
- * pieces, or nothing told (`farHolds`); '' where it holds all of it in one
- * piece or nothing is known.
+ * A drawn link's far end's state in words, before departure, the line in the
+ * form given (see the head): the dead end's words where it floats in the
+ * version its far box shows (LK's `floats`, `floatingOf`), the line where
+ * that text holds part of it, all of it in pieces, or nothing told
+ * (`farHolds`); '' where it holds all of it in one piece or nothing is known.
+ * @param {Shown} s
+ * @param {(said: Said) => string} form the line's whole words (`lineOf`), or its short form (`shortLineOf`)
+ * @returns {string}
+ */
+function farIn(s, form) {
+  if (floats(s)) return floatingOf(s.farAt || s.far);
+  const said = farHolds(s);
+  return said ? form(said) : '';
+}
+
+/**
+ * A drawn link's far end's state in words whole, before departure — what its
+ * mirror item and its card say (`farIn`, the line whole).
  * @param {Shown} s
  * @returns {string}
  */
-export function farSays(s) {
-  if (floats(s)) return floatingOf(s.farAt || s.far);
-  const said = farHolds(s);
-  return said ? lineOf(said) : '';
-}
+export const farSays = (s) => farIn(s, lineOf);
+
+/**
+ * A drawn link's far end's state in words short, before departure — what its
+ * stub's label and its symbol's title say (`farIn`, the line's short form):
+ * the start of what `farSays` says.
+ * @param {Shown} s
+ * @returns {string}
+ */
+export const farShort = (s) => farIn(s, shortLineOf);

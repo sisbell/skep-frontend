@@ -212,13 +212,15 @@ test('a member the board holds no reading of the time of reads "not recorded"; o
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('each row reads its member by the rule a landing reads (issue #153): whole, in one piece; part, though it holds as many positions as the passage; all of it in pieces, its places named; couldn\'t tell, by the refusal met, where the board did not answer — never a strip left blank', async () => {
+test('each row reads its member by the rule a landing reads (issue #153): whole, in one piece; part, though it holds as many positions as the passage; all of it in pieces, in the arrival\'s words and never counted (issue #242); couldn\'t tell, by the refusal met, where the board did not answer — never a strip left blank', async () => {
   await PUMP.loadWhole(V);
   REC.takeMembers(V, 4);
   await VERSIONS.open(V, HELD.pos, null);
   assert.deepEqual(rows(), [[1, 'whole'], [2, 'part'], [3, 'pieces'], [4, 'unknown']], hostEl.innerHTML);
   const strips = [...hostEl.innerHTML.matchAll(/<span class="strip" data-holds="[a-z]*">([^<]*)<\/span>/g)].map((m) => m[1]);
-  assert.deepEqual(strips, [t('F.versions.whole'), t('F.versions.part'), t('L.versions.pieces', { n: 2 }), t('L.versions.unknown', { reason: t('F.daemon.unreachable') })].map(esc), 'each in its words');
+  assert.deepEqual(strips, [t('F.versions.whole'), t('F.versions.part'), t('L.versions.pieces'), t('L.versions.unknown', { reason: t('F.daemon.unreachable') })].map(esc), 'each in its words');
+  assert.equal(unesc(strips[2]), 'holds all of the passage', 'the member holding all of it in two runs: "all of the passage", as the arrival says it');
+  assert.ok(strips.every((s) => !/places/.test(s)), 'no strip counts "places"');
   HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });

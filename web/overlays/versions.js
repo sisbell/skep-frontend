@@ -108,7 +108,6 @@ import { esc, dayOf } from '../util.js';
  * @property {number} k the member
  * @property {{age: import('../model/frames.js').Age} | {refused: Refusal | null} | null} date its age as the board answered it (M-PUMP's `ageOf`), or the refusal its read met — null where the answer told none; null itself where it was not read, a member past the ones the probe read
  * @property {import('../beams/held.js').Holds | 'unknown' | 'unread' | null} holds all of it in one piece, in pieces, part, none; couldn't tell; not read — a member past the ones the probe read; null where no passage is held
- * @property {number} places the stretches of its text holding it
  * @property {string | null} why couldn't tell: the id of its reason's words (BM-HELD's `whyOf`)
  * @property {boolean} again a read of the row met a refusal a retry may answer otherwise (BM-HELD's `retries`): read again at "try again"
  */
@@ -123,7 +122,7 @@ import { esc, dayOf } from '../util.js';
  */
 
 /** a row that could not tell what its text holds, by the refusal met: read again at "try again" where that refusal, or its date's, may answer otherwise */
-const unknownRow = (/** @type {Row} */ row, /** @type {Refusal} */ r) => /** @type {Row} */ ({ ...row, holds: 'unknown', places: 0, why: whyOf(r), again: row.again || retries(r) });
+const unknownRow = (/** @type {Row} */ row, /** @type {Refusal} */ r) => /** @type {Row} */ ({ ...row, holds: 'unknown', why: whyOf(r), again: row.again || retries(r) });
 
 /** did the board not answer a row's date's read (see the head)? */
 const dateUnanswered = (/** @type {Row['date']} */ date) => !!date && 'refused' in date && !!date.refused && date.refused.kind === 'unreachable';
@@ -150,7 +149,7 @@ async function rowOf(trunk, at, held, k, stands) {
   const date = known ? { age: known } : await PUMP.ageOf(member);
   if (!stands()) return null;
   /** @type {Row} */
-  const row = { k, date, holds: null, places: 0, why: null, again: 'refused' in date && retries(date.refused) };
+  const row = { k, date, holds: null, why: null, again: 'refused' in date && retries(date.refused) };
   if (!held) return row;
   if ('refused' in date && dateUnanswered(date)) return unknownRow(row, /** @type {Refusal} */ (date.refused));
   const e = await PUMP.extentOf(member);
@@ -158,13 +157,13 @@ async function rowOf(trunk, at, held, k, stands) {
   if (!('extent' in e)) return unknownRow(row, e.refused);
   const h = await GO.heldIn({ addr: at, pos: held.pos, width: held.width }, member, e.extent);
   if (!('held' in h)) return unknownRow(row, h.refused);
-  return { ...row, holds: h.held.holds, places: h.held.places };
+  return { ...row, holds: h.held.holds };
 }
 
 /** a row's strip, in words: whole, all of it in pieces, in part, not at all, couldn't tell, not read; nothing where no passage is held */
 function stripOf(/** @type {Row} */ r) {
   if (r.holds === 'all') return t('F.versions.whole');
-  if (r.holds === 'pieces') return t('L.versions.pieces', { n: r.places });
+  if (r.holds === 'pieces') return t('L.versions.pieces');
   if (r.holds === 'part') return t('F.versions.part');
   if (r.holds === 'none') return t('F.versions.none');
   if (r.holds === 'unknown') return t('L.versions.unknown', { reason: t(r.why || 'L.held.why.other') });
@@ -237,7 +236,7 @@ async function listed(addr, pos, width, stands, last) {
   }
   if (!chain.ended) {
     const known = Math.max(memberOf(addr) ?? 0, REC.feedMember(trunk) ?? 0);
-    for (let k = chain.n + 1; k <= known; k++) rows.push({ k, date: null, holds: 'unread', places: 0, why: null, again: false });
+    for (let k = chain.n + 1; k <= known; k++) rows.push({ k, date: null, holds: 'unread', why: null, again: false });
   }
   return { trunk, addr, held, chain, rows };
 }

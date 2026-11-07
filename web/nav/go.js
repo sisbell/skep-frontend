@@ -518,7 +518,7 @@ import { esc } from '../util.js';
 
 /** @typedef {{addr: string, pos: number, width: number, ids: ISpan[]}} Subject a surface's subject where it is a span's bytes (see the head): where they stood as the reader left them, by position and identity */
 
-/** @typedef {{holds: 'all' | 'part' | 'none', span: Span | null, places: number}} Placed a subject placed by the landing rule (`placedNow`): what the text its box shows now holds of it, the span from its first stretch there to the end of its last — none where it holds none — and its stretches */
+/** @typedef {{holds: 'all' | 'part' | 'none', span: Span | null}} Placed a subject placed by the landing rule (`placedNow`): what the text its box shows now holds of it, and the span from its first stretch there to the end of its last — none where it holds none */
 
 /** @typedef {Surfaces & {entry: Entry}} Owed the surfaces a return owes the entry it reached, each until it shows (see the head) */
 
@@ -1137,13 +1137,13 @@ export const landing = () => landed;
  * The landing's line in words, for O-LAND's line: where the passage stands in
  * several runs, the label of the run it stands at (BM-HELD's `labelOf`), which
  * says how much of the passage the runs hold; else its line (BM-HELD's
- * `lineOf`), counting no runs (FP-21); null where it has none.
+ * `lineOf`; FP-21); null where it has none.
  * @returns {string | null}
  */
 export function landingLine() {
   if (!landed) return null;
   if (landed.pieces) return HELD.labelOf(landed.pieces, landed.current, true);
-  return landed.said ? HELD.lineOf(landed.said, false) : null;
+  return landed.said ? HELD.lineOf(landed.said) : null;
 }
 /** the acts the landing offers now, on its line: the step, where the passage stands in several runs; "try again" where a retry may tell; the version offer once its reads found one — the dead end's face's where the passage floats */
 export const landingOffers = () => ({ steps: !!landed && !!landed.pieces, again: !!retry, version: !!versionOffer });
@@ -1847,7 +1847,7 @@ async function followed(s, proj) {
   const withheld = showsWithheld(REC.doc(far));
   const ids = await idsOf(far, runs);
   if ('ids' in ids) { const out = runsOf(passage, runs, ids.ids, withheld); return { runs: out.runs, marked: true, said: HELD.saidOf(out.held, 'followed', far, withheld), pieces: out.pieces }; }
-  if (runs.reduce((n, r) => n + r.width, 0) < passage.width) return { runs, marked: true, said: HELD.saidOf({ holds: 'part', places: runs.length }, 'followed', far, withheld), pieces: null };
+  if (runs.reduce((n, r) => n + r.width, 0) < passage.width) return { runs, marked: true, said: HELD.saidOf({ holds: 'part' }, 'followed', far, withheld), pieces: null };
   return { runs, marked: false, said: HELD.unknownOf(ids.refused, 'followed', far), pieces: null };
 }
 
@@ -3625,11 +3625,11 @@ async function placedNow(s) {
  */
 function placeBytes(s) {
   const addr = shownIn(s.addr), width = s.ids.reduce((n, x) => n + x.width, 0);
-  if (!width) return { holds: 'all', span: { addr, pos: s.pos, width: s.width }, places: 1 };
+  if (!width) return { holds: 'all', span: { addr, pos: s.pos, width: s.width } };
   const runs = REC.placedIdentity(addr, s.ids);
-  if (!runs.length) return { holds: 'none', span: null, places: 0 };
+  if (!runs.length) return { holds: 'none', span: null };
   const first = runs[0], last = runs[runs.length - 1], stands = runs.reduce((n, r) => n + r.width, 0);
-  return { holds: stands < width ? 'part' : 'all', span: { addr, pos: first.pos, width: last.pos + last.width - first.pos }, places: runs.length };
+  return { holds: stands < width ? 'part' : 'all', span: { addr, pos: first.pos, width: last.pos + last.width - first.pos } };
 }
 
 /**
@@ -3643,9 +3643,9 @@ function placeBytes(s) {
  * @param {HELD.Subject} word what the line names it as
  */
 function heldPart(at, s, word) {
-  const span = /** @type {Span} */ (at.span), said = HELD.saidOf({ holds: 'part', places: at.places }, word, span.addr, showsWithheld(REC.doc(span.addr)));
+  const span = /** @type {Span} */ (at.span), said = HELD.saidOf({ holds: 'part' }, word, span.addr, showsWithheld(REC.doc(span.addr)));
   if (!said) return;
-  FOCUS.say(HELD.lineOf(said, false));
+  FOCUS.say(HELD.lineOf(said));
   if (landed) return;
   landed = { addr: span.addr, pos: span.pos, said, pieces: null, current: 0, floating: false, withheld: false, beside: null, version: null };
   CAM.markDirty();

@@ -191,7 +191,7 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {Shown[]} marks the links to mark in place (LK.shown), each over every stretch its end stands in
  * @property {(marks: [Mark, ...Mark[]]) => Mark} mergedMark the one mark the links over one stretch merge into (LK.mergedMark)
  * @property {Shown[]} symbols the symbols at their spans (LK.symbols)
- * @property {(s: Shown) => string} says what a drawn link's far end's text holds of its passage, in words, before departure — the dead end's where it floats, BM-HELD's line where it holds part of it, all of it in pieces, or nothing told (BM-HELD's farSays); '' where nothing is said
+ * @property {(s: Shown) => string} says what a drawn link's far end's text holds of its passage, in words, before departure — the dead end's where it floats, BM-HELD's line's short form where it holds part of it, all of it in pieces, or nothing told (BM-HELD's farShort), the start of what its mirror item and its card say; '' where nothing is said
  * @property {(block: Block) => {n: number, social: boolean}} countAt the others' count per block (LK.countAt)
  * @property {number} wholeLinks the links to this document as a whole
  * @property {Reader} reader who reads (M-REC's `reader`): the acting account, or a guest's null, and whether a key for this board is present
@@ -1411,11 +1411,11 @@ const control = (scene) => (scene ? '' : ' role="button" tabindex="-1"');
  * A link's symbol at its span: hue the linker's, dashed for another's,
  * lighter once followed; titled with its type, and with what its far end's
  * text holds of its passage where that is not all of it in one piece — "its
- * passage is not in ⟨D⟩'s current text" where it floats, BM-HELD's line where
- * it holds part of it, all of it in pieces, or the board would not tell —
- * said before anyone follows it (foundations §2.3; FP-21); carrying its
- * link and its end's key (LK's `endKey`): the end whose card a click on it
- * opens (APP-INPUT).
+ * passage is not in ⟨D⟩'s current text" where it floats, BM-HELD's line's
+ * short form where it holds part of it, all of it in pieces, or the board
+ * would not tell (the view's `says`) — said before anyone follows it
+ * (foundations §2.3; FP-21); carrying its link and its end's key (LK's
+ * `endKey`): the end whose card a click on it opens (APP-INPUT).
  * @param {Shown} s
  * @param {ArticleView} v
  */

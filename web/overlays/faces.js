@@ -684,9 +684,9 @@ export function reaching(addr, anchor, abandon) {
  * What a text holds of a passage, at the site of the control that stood for
  * it (see the head; FP-21): a reading scene's stop the reader returned to,
  * whose read told that only part of what it stood for holds, all of it in
- * pieces, or nothing — BM-HELD's line (`lineOf`), the places it holds in
- * counted, and "try again" where a retry may tell and the stop's owner hands
- * one in. It offers nothing else: the stop it stands at is what still works.
+ * pieces, or nothing — BM-HELD's line (`lineOf`), and "try again" where a
+ * retry may tell and the stop's owner hands one in. It offers nothing else:
+ * the stop it stands at is what still works.
  * It takes no focus, and is heard through the status region as every face is
  * — save where the stop's own name says its words where the focus lands on it
  * (`told`), which is heard there once.

@@ -48,9 +48,10 @@
 // the reading face — the frame's labels whose words read alike once cut cut
 // again to show where they differ (`bundleLabels`) — its count where it holds
 // two beams or more, and, where
-// every beam it holds says one state of what its far end's text holds
-// (BM-HELD's `farSays`), those words, so the stub says it before anyone
-// follows it; it is set above the end, or below it where above would reach
+// every beam it holds says one state of what its far end's text holds, those
+// words in their short form (BM-HELD's `farShort`), the start of what its
+// mirror item and its card say, so the stub says it before anyone follows
+// it; it is set above the end, or below it where above would reach
 // past the visible view's top, and nowhere it would not stand whole inside
 // that view (`labelPlace`). Figures: at most twenty beams a bundle are
 // stroked; their alpha is 24 over the beams built, held between 0.25 and
@@ -73,7 +74,7 @@ import { COL } from '../plane/register.js';
 import { drawRun, runWidth, face, inFace, plain, runsOf, cutWords, apartTexts, LEAD_WORDS } from '../plane/labels.js';
 import { doc, blockAt } from '../model/records.js';
 import { CLIENT_CLOSE } from '../strings.js';
-import { farSays } from './held.js';
+import { farShort } from './held.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../plane/register.js').Mark} Mark */
@@ -455,13 +456,14 @@ function shared(/** @type {[{s: Shown}, ...Array<{s: Shown}>]} */ members, /** @
  * or the client's words in its place, bracketed) cut on a word to WORDS_CH
  * characters (P-LABEL's `cutWords`), its count where it holds two beams or
  * more — and, where every beam it holds says the same of what its far end's
- * text holds (BM-HELD's `farSays`), those words: "its passage is not in ⟨D⟩'s current
- * text" where every one floats, BM-HELD's line where every one's text holds
- * only part of it, or all of it in pieces, or the board would not tell
- * (FP-21), the stub saying so before anyone follows it (foundations §2.3;
- * P44: what its members share, so a bundle holding a beam that floats
- * beside one that lands says neither). A far document the board will say
- * nothing of is drawn nowhere, so no beam reaches it: its tail names it.
+ * text holds, those words short (BM-HELD's `farShort`): "its passage is not
+ * in ⟨D⟩'s current text" where every one floats, BM-HELD's line's short form
+ * where every one's text holds only part of it, or all of it in pieces, or
+ * the board would not tell (FP-21), the stub saying so before anyone follows
+ * it (foundations §2.3; P44: what its members share, so a bundle holding a
+ * beam that floats beside one that lands says neither). A far document the
+ * board will say nothing of is drawn nowhere, so no beam reaches it: its
+ * tail names it.
  * @param {Bundle<{s: Shown}>} b
  * @returns {string}
  */
@@ -495,7 +497,7 @@ function farOf(b) {
  * @returns {import('../plane/labels.js').Run[]}
  */
 export function labelRuns(b, words = farOf(b).shown) {
-  const says = b.members.map((m) => farSays(m.s));
+  const says = b.members.map((m) => farShort(m.s));
   const rest = (b.members.length > 1 ? ` · ${b.members.length}` : '') + (says[0] && says.every((w) => w === says[0]) ? ' · ' + says[0] : '');
   /** @type {import('../plane/labels.js').Run[]} */
   const out = [{ text: b.far, face: 'ident' }];

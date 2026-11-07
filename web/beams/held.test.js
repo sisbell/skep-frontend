@@ -2,13 +2,13 @@
 // position and by the identity of each run's bytes, a passage named by spans
 // of several I-spaces one passage, in its pieces and in its stretches; the
 // line's words by subject — what a
-// returned stop stood for among them — and by the text's address, the places
-// counted at a far end alone;
+// returned stop stood for among them — and by the text's address, no line
+// counting the runs that hold it, its short form its start;
 // why a line could not tell, keyed on the refusal's name and kind, never its
 // token, a lost session the text that could not be read (FP-28), and "try
 // again" only where a retry can change the answer; a drawn link's far end's
 // state before departure, read through the version its far box shows
-// (FP-22); and the runs' labels — stretches cut where their bytes break the
+// (FP-22), its short form heading its whole; and the runs' labels — stretches cut where their bytes break the
 // passage's order, pieces numbered in the passage's order, repeats, the
 // amount and the order at the landing's run, merged labels and the wrapping
 // step (FP-21).
@@ -16,7 +16,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
-import { heldOf, piecesOf, stretchesOf, piecesIn, labelOf, mergedLabel, stepFrom, lineOf, saidOf, unknownOf, whyOf, retries, whereOf, farHolds, farSays } from './held.js';
+import { heldOf, piecesOf, stretchesOf, piecesIn, labelOf, mergedLabel, stepFrom, lineOf, shortLineOf, saidOf, unknownOf, whyOf, retries, whereOf, farHolds, farSays, farShort } from './held.js';
 import { t } from '../strings.js';
 
 const D = '1.0.1.0.3', OTHER_HOME = '1.0.2.0.5', CITE = '1.1.0.1.0.1.0.3.13';
@@ -60,19 +60,19 @@ test('a passage named by spans of two I-spaces is one passage, each span after t
 });
 
 test('the line names what a stop the reader returned to stood for', () => {
-  const said = /** @type {import('./held.js').Said} */ (saidOf({ holds: 'part', places: 1 }, 'stop', '1.0.1.0.4'));
+  const said = /** @type {import('./held.js').Said} */ (saidOf({ holds: 'part' }, 'stop', '1.0.1.0.4'));
   assert.equal(lineOf(said), t('L.held.part', { subject: t('L.held.stop'), where: t('L.held.current', { D: '1.0.1.0.4' }) }));
 });
 
-test('the line in the decision\'s words: a part with its places, the text a member\'s version or a bare address\'s current text, pieces, the withheld text\'s clause on a part alone; never "missing", "removed", "deleted" or "compare"', () => {
+test('the line in the decision\'s words: a part, the text a member\'s version or a bare address\'s current text, pieces, the withheld text\'s clause on a part alone; never "missing", "removed", "deleted" or "compare"', () => {
   const at = '1.0.1.0.43.3';
-  const part = /** @type {import('./held.js').Said} */ (saidOf({ holds: 'part', places: 2 }, 'selected', at));
-  assert.equal(lineOf(part), 'only part of what you selected is in version 3 — in 2 places', 'the decision\'s own example');
-  assert.equal(lineOf({ ...part, subject: 'reading', places: 1 }), 'only part of the text you were reading is in version 3', 'no places at one place');
+  const part = /** @type {import('./held.js').Said} */ (saidOf({ holds: 'part' }, 'selected', at));
+  assert.equal(lineOf(part), 'only part of what you selected is in version 3', 'a part, no count of the runs holding it after it');
+  assert.equal(lineOf({ ...part, subject: 'reading' }), 'only part of the text you were reading is in version 3');
   assert.equal(whereOf('1.0.1.0.43'), t('L.held.current', { D: '1.0.1.0.43' }), 'a bare address: its current text');
-  assert.equal(lineOf(/** @type {import('./held.js').Said} */ (saidOf({ holds: 'pieces', places: 3 }, 'followed', '1.0.1.0.43', true))), t('L.held.pieces', { subject: t('L.held.followed'), where: t('L.held.current', { D: '1.0.1.0.43' }) }) + t('L.held.places', { n: 3 }), 'pieces: all of it, its places — no withheld clause, for nothing is left to be under it');
-  assert.equal(lineOf(/** @type {import('./held.js').Said} */ (saidOf({ holds: 'part', places: 1 }, 'selected', at, true))), t('L.held.part', { subject: t('L.held.selected'), where: t('L.held.member', { k: 3 }) }) + t('L.held.withheld'), 'a part where the text shows withheld text: the rest may be under it');
-  assert.deepEqual([saidOf({ holds: 'all', places: 1 }, 'selected', at), saidOf({ holds: 'none', places: 0 }, 'selected', at)], [null, null], 'all says nothing beyond the outline, none nothing beyond the dead end\'s face');
+  assert.equal(lineOf(/** @type {import('./held.js').Said} */ (saidOf({ holds: 'pieces' }, 'followed', '1.0.1.0.43', true))), t('L.held.pieces', { subject: t('L.held.followed'), where: t('L.held.current', { D: '1.0.1.0.43' }) }), 'pieces: all of it — no withheld clause, for nothing is left to be under it');
+  assert.equal(lineOf(/** @type {import('./held.js').Said} */ (saidOf({ holds: 'part' }, 'selected', at, true))), t('L.held.part', { subject: t('L.held.selected'), where: t('L.held.member', { k: 3 }) }) + t('L.held.withheld'), 'a part where the text shows withheld text: the rest may be under it');
+  assert.deepEqual([saidOf({ holds: 'all' }, 'selected', at), saidOf({ holds: 'none' }, 'selected', at)], [null, null], 'all says nothing beyond the outline, none nothing beyond the dead end\'s face');
   const lines = [part, { ...part, state: /** @type {const} */ ('pieces') }, unknownOf(null, 'reading', at), unknownOf({ kind: 'refused', name: 'too_many_pairs' }, 'followed', at)].map(lineOf);
   assert.ok(lines.every((l) => !/missing|removed|deleted|compare|too_many|not_a_link/.test(l)), lines.join(' | '));
 });
@@ -114,7 +114,7 @@ test('a drawn link\'s far end says before departure what its text holds of its p
   // an edit set its last three bytes at 10 and its first two at 20, other bytes about them
   REC.takeImage(OTHER_HOME, 1, [{ iStart: P + '100', width: 9 }, { iStart: P + '3', width: 3 }, { iStart: P + '200', width: 7 }, { iStart: P + '1', width: 2 }, { iStart: P + '300', width: 19 }]);
   REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 10, width: 3 }, { pos: 20, width: 2 }]);
-  assert.deepEqual([farHolds(at())?.state, farSays(at())], ['pieces', t('L.held.pieces', { subject, where }) + t('L.held.places', { n: 2 })], 'all of it, in two places');
+  assert.deepEqual([farHolds(at())?.state, farSays(at())], ['pieces', t('L.held.pieces', { subject, where })], 'all of it, in two runs: never counted');
   // its first two bytes twice, the rest nowhere: as many positions as the passage, never all of it
   REC.takeImage(OTHER_HOME, 1, [{ iStart: P + '1', width: 2 }, { iStart: P + '1', width: 2 }, { iStart: P + '200', width: 36 }]);
   REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 4 }]);
@@ -122,7 +122,7 @@ test('a drawn link\'s far end says before departure what its text holds of its p
   // the image dropped with the text: the projection's widths alone
   REC.invalidate(OTHER_HOME);
   REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 2 }, { pos: 20, width: 2 }]);
-  assert.equal(farSays(at()), t('L.held.part', { subject, where }) + t('L.held.places', { n: 2 }), 'no image: four positions of five prove part');
+  assert.equal(farSays(at()), t('L.held.part', { subject, where }), 'no image: four positions of five, in two runs, prove part');
   REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 5 }]);
   assert.equal(farSays(at()), '', 'no image, as many positions as the passage: nothing more said, never a guess');
   REC.takeProjection(L, 1, OTHER_HOME, { refused: 'not_a_link' });
@@ -184,7 +184,7 @@ test('an arrival\'s runs labelled: pieces of different material numbered in the 
   const part = /** @type {import('./held.js').Pieces} */ (piecesIn([{ pos: 2, width: 3, at: 0 }, { pos: 30, width: 3, at: 7 }], 10, true));
   assert.deepEqual([part.whole, part.reordered, part.withheld], [false, false, true]);
   assert.equal(labelOf(part, 0, true), piece(1) + ' · ' + t('L.piece.part') + t('L.held.withheld'), '"only part of the passage", the rest maybe under the withheld text');
-  assert.ok([p, part].flatMap((x) => x.runs.map((_, i) => labelOf(x, i, true))).every((w) => !w.includes(t('L.held.places', { n: 2 }).trim()) && !/places/.test(w)), 'no label counts "places"');
+  assert.ok([p, part].flatMap((x) => x.runs.map((_, i) => labelOf(x, i, true))).every((w) => !/places/.test(w)), 'no label counts "places"');
 });
 
 test('runs holding one material are unnumbered — "again later", then "again" — the run the landing stands at saying how much; one run, or none, is no labelled arrival (issue #158)', () => {
@@ -207,8 +207,40 @@ test('labels that would stack merge into the pieces they hold — consecutive nu
   assert.deepEqual([stepFrom(again, 1, 1), stepFrom(again, 0, 1), stepFrom(again, 2, 1)], [0, 2, 1], 'piece 1, then piece 2 where the text first holds it, then its repeat, then round');
 });
 
-test('a landing\'s line counts no runs; a drawn link\'s far end\'s still counts them (FP-21; issue #242 holds its words)', () => {
-  const s = /** @type {import('./held.js').Said} */ (saidOf({ holds: 'part', places: 2 }, 'selected', '1.0.1.0.43.3'));
-  assert.equal(lineOf(s, false), 'only part of what you selected is in version 3', 'the landing\'s');
-  assert.equal(lineOf(s), 'only part of what you selected is in version 3 — in 2 places', 'the far end\'s');
+test('the line\'s short form is its start: the whole the short, then on a part where the text shows withheld text that the rest may be under it; couldn\'t tell keeps its reason in both (FP-21)', () => {
+  const at = '1.0.1.0.43.3';
+  /** @type {Array<[string, import('./held.js').Said, string, string]>} each line: its state, its short form and its whole */
+  const lines = [
+    ['a part', /** @type {import('./held.js').Said} */ (saidOf({ holds: 'part' }, 'selected', at)), t('L.held.part', { subject: t('L.held.selected'), where: t('L.held.member', { k: 3 }) }), ''],
+    ['a part, withheld text shown', /** @type {import('./held.js').Said} */ (saidOf({ holds: 'part' }, 'reading', at, true)), t('L.held.part', { subject: t('L.held.reading'), where: t('L.held.member', { k: 3 }) }), t('L.held.withheld')],
+    ['pieces, withheld text shown', /** @type {import('./held.js').Said} */ (saidOf({ holds: 'pieces' }, 'followed', at, true)), t('L.held.pieces', { subject: t('L.held.followed'), where: t('L.held.member', { k: 3 }) }), ''],
+    ['couldn\'t tell', unknownOf({ kind: 'refused', name: 'scan_busy' }, 'stop', at), t('L.held.unknown', { subject: t('L.held.stop'), where: t('L.held.member', { k: 3 }), reason: t('L.held.why.busy') }), ''],
+  ];
+  for (const [state, s, short, after] of lines) assert.deepEqual([shortLineOf(s), lineOf(s)], [short, short + after], state);
+});
+
+test('a drawn link\'s far end says its state in two forms — its stub\'s label and its symbol\'s title the short, its mirror item and its card the whole — the short the whole\'s start, neither counting the runs that hold it: a part where its text shows withheld text, the clause after it in the whole alone; all of it in pieces, and couldn\'t tell with its reason, one form; floating, the dead end\'s words in both; all of it in one piece, nothing in either (issue #242\'s design decision: "Stubs and symbols show the start of the card\'s and mirror\'s full phrase")', () => {
+  buildFar();
+  LK.setOthers(D, true);
+  const L = OTHER_HOME + '.0.2.1', P = OTHER_HOME + '.0.1.';
+  const at = () => /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((s) => s.link.addr === L));
+  const subject = t('L.held.followed'), where = t('L.held.current', { D: OTHER_HOME });
+  // OTHER_HOME's text: ten positions, then thirty withheld from the reader
+  REC.takeDelivery(OTHER_HOME, [{ pos: 1, width: 10, kind: 'content', text: 'abcde\n\nfg\n', ref: null, origin: null }, { pos: 11, width: 30, kind: 'withheld', text: '', ref: null, origin: '1.0.2.0.6' }]);
+  const part = t('L.held.part', { subject, where }), pieces = t('L.held.pieces', { subject, where }), unknown = t('L.held.unknown', { subject, where, reason: t('B1.not_a_link') }), floating = t('F.floating', { D: OTHER_HOME });
+  /** @type {Array<[string, () => void, string, string]>} each state: how its text holds the passage, its short form and its whole */
+  const states = [
+    // the passage's first two bytes at 1 and its fourth at 8
+    ['part, in two runs', () => { REC.takeImage(OTHER_HOME, 1, [{ iStart: P + '1', width: 2 }, { iStart: P + '100', width: 5 }, { iStart: P + '4', width: 1 }, { iStart: P + '200', width: 32 }]); REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 2 }, { pos: 8, width: 1 }]); }, part, part + t('L.held.withheld')],
+    // its last three bytes at 1 and its first two at 4
+    ['all of it in pieces, in two runs', () => { REC.takeImage(OTHER_HOME, 1, [{ iStart: P + '3', width: 3 }, { iStart: P + '1', width: 2 }, { iStart: P + '200', width: 35 }]); REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 3 }, { pos: 4, width: 2 }]); }, pieces, pieces],
+    ['couldn\'t tell', () => REC.takeProjection(L, 1, OTHER_HOME, { refused: 'not_a_link' }), unknown, unknown],
+    ['floating', () => REC.takeProjection(L, 1, OTHER_HOME, []), floating, floating],
+    ['all of it in one piece', () => { REC.takeImage(OTHER_HOME, 1, [{ iStart: P + '1', width: 40 }]); REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 5 }]); }, '', ''],
+  ];
+  for (const [state, hold, short, whole] of states) {
+    hold();
+    assert.deepEqual([farShort(at()), farSays(at())], [short, whole], state);
+    assert.ok(farSays(at()).startsWith(farShort(at())) && !/places/.test(farSays(at())), `${state}: the short form the whole's start, no count of the runs holding it`);
+  }
 });

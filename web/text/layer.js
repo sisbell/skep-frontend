@@ -361,7 +361,7 @@ import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRo
 import { CORNER, HOLD, COL, ADDRESS, cornerWidth } from '../plane/register.js';
 import { holdTop, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords } from '../plane/labels.js';
 import { articleHTML, articlePlan, cornerHTML, cornerWords, keptHTML, blockMarks, symbolLit, editionClause, copyText, firstLineOf } from './article.js';
-import { farSays, whyOf } from '../beams/held.js';
+import { farShort, whyOf } from '../beams/held.js';
 import { applyEdits, toBase, toShown, boundaries } from '../model/derive.js';
 import { homeOf, documentOf, memberOf, accountOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
@@ -819,7 +819,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
   /** @type {ArticleView} */
   const v = {
     selected: carriedSpan(d, read.selection()), focus: carriedFocus(d, litFocus(scene)),
-    marks: linked ? LK.shown(d.addr) : [], mergedMark: LK.mergedMark, symbols: linked ? LK.symbols(d.addr) : [], says: farSays, countAt: linked ? (b) => LK.countAt(d.addr, b) : () => ({ n: 0, social: false }),
+    marks: linked ? LK.shown(d.addr) : [], mergedMark: LK.mergedMark, symbols: linked ? LK.symbols(d.addr) : [], says: farShort, countAt: linked ? (b) => LK.countAt(d.addr, b) : () => ({ n: 0, social: false }),
     wholeLinks: LK.wholeLinks(d.addr).length,
     reader: REC.reader(),
     ...cornerFacts(d),

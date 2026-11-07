@@ -319,7 +319,7 @@ test('the card says beneath its far end\'s words what that end\'s text holds of 
   /** the line beneath the far end's words, as a person reads it; null where none stands */
   const said = () => { const m = p.host.innerHTML.match(/<div class="end far">.*?<div class="note" data-string="L\.held\.(\w+)">(.*?)<\/div>/); return m ? [m[1], text(m[2])] : null; };
   await ANATOMY.open(drawn(), null);
-  assert.deepEqual(said(), ['part', t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) }) + t('L.held.places', { n: 2 })], 'nine of its twenty-two bytes, in two places');
+  assert.deepEqual(said(), ['part', t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) })], 'nine of its twenty-two bytes, in two runs: part, the runs never counted');
   HOST.dismiss();
   REC.takeProjection(CUT, 2, FAR, [{ pos: 3, width: 22 }]);
   await ANATOMY.open(drawn(), null);

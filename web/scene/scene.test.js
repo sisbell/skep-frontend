@@ -1707,6 +1707,26 @@ test('the panes\' `compare` answering a stop the reader returned to keeps the fo
   assert.deepEqual(fake.unanswered.slice(unanswered), []);
 }));
 
+test('a returned stroke whose texts hold its change in part, two changes standing about it, says so without counting them: its name, its words and its face the line alone (issue #242\'s design decision: "\'Places\' goes")', () => onPage(async (p) => {
+  const was = script[FAKE.keyOf('op', { frame: BOTH })], unanswered = fake.unanswered.length;
+  const part = t('L.held.part', { subject, where });
+  try {
+    p.item.focus();
+    const release = fake.hold('op', { frame: BOTH });
+    await SCENE.reopen(leftFrom(STROKE_STOP));
+    // the first edition's byte 13 standing alone before its byte 14, then two of the origin's bytes before the run from its 15: a change after the stroke's first byte and one before its last
+    Object.assign(script, compareAs([[1, 1, 12], [14, 13, 1], [15, 16, 22]]));
+    release();
+    await answered();
+    const r = SCENE.returned();
+    assert.deepEqual([r?.answer?.holds, r?.answer?.count], ['part', 2], 'part of what it stood for, two changes standing about it');
+    assert.deepEqual([r?.name, r?.answer?.words, HOST.currentState()?.id], [t('L.scene.stop.said', { stop: t('L.scene.stroke.kind'), said: part }), part, 'face:held'], 'its kind\'s words, then the line alone');
+    assert.ok(![r?.name, HOST.currentState()?.html].some((w) => /places/.test(String(w))), 'nothing counts "places"');
+    SCENE.close();
+  } finally { Object.assign(script, { [FAKE.keyOf('op', { frame: BOTH })]: was }); }
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
 test('a returned stop whose pane holds no text — withheld from the reader — is answered at once that nothing could tell, in FP-21\'s words, the focus kept on it; a scene that read its `compare` before showing answers its stroke as it shows', () => onPage(async (p) => {
   const WH = '1.0.1.0.13', was = script[FAKE.keyOf('op', { frame: BOTH })];
   Object.assign(script, { [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(WH) })]: WITHHELD });
