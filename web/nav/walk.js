@@ -959,9 +959,9 @@ function markAt(x, y, scale = CAM.cam.scale) {
 
 /**
  * The document whose region holds a world point (T-LAYER's `regionOf`: its
- * outline and the strip its corner stands in), of those the index lists and
- * the plane draws whole at a scale — none a continuation's mark holds — as the
- * version its box shows, the region that version's (see the head); of
+ * outline and the strip its corner stands in), of the boxes the plane draws
+ * (M-REC's `known`) whole at a scale — none a continuation's mark holds — as
+ * the version its box shows, the region that version's (see the head); of
  * documents sharing the room past the sound depth, the first whose outline
  * holds it; null where no region does.
  * @param {number} x
@@ -972,10 +972,10 @@ function markAt(x, y, scale = CAM.cam.scale) {
 function documentAt(x, y, scale = CAM.cam.scale) {
   let best = null, on = false;
   const k = markDepth(scale);
-  for (const p of REC.places()) {
-    if (p.system || (k != null && withinContinuation(p.doc, k))) continue;
+  for (const doc of REC.known()) {
+    if (k != null && withinContinuation(doc, k)) continue;
     // the room widened by the corner's strip: the region stands inside it — the region of the version the box shows
-    const b = docBox(p.doc), left = clearLeftOf(p.doc), shown = read.shown(p.doc);
+    const b = docBox(doc), left = clearLeftOf(doc), shown = read.shown(doc);
     if (x < b.x - left || x > b.x + b.w || y < b.y || y > b.y + b.h || !holdsPoint(LAYER.regionOf(shown), x, y)) continue;
     const outline = holdsPoint(LAYER.shapeOf(shown), x, y);
     if (!best || (outline && !on)) { best = shown; on = outline; }
@@ -1087,5 +1087,3 @@ export async function dropped(x) {
 
 /** @returns {Node[]} the siblings in order (the gate's a11y case) */
 export const siblingsNow = () => siblings.slice();
-/** the sorted documents of an account (record order) */
-export const documentsOf = (/** @type {string} */ acct) => REC.placesOf(acct).map((p) => p.doc).sort(cmpAddr);

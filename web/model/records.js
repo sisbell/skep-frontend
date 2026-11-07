@@ -827,8 +827,9 @@ export const docs = () => [...state.docs.values()];
  * metadata or a `withheld` refusal (existence and owner, never bytes: B1-S2),
  * or one owed its read at the page's class (`owed`), in the order first held
  * — the system account's rows left out. The plane draws a box for each
- * (P-RENDER's `drawable`) and the walk lists each under its account
- * (N-WALK's `childrenOf`), so the two never part.
+ * (P-RENDER's `drawable`), the walk lists each under its account (N-WALK's
+ * `childrenOf`), and a press and the walk's re-take find each under a point
+ * (P-RENDER's `docAtScreen`, N-WALK's `documentAt`), so none of them part.
  * @returns {string[]}
  */
 export function known() {

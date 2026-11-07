@@ -1914,8 +1914,9 @@ def kept_holds(ctx, r):
 def retake_holds(ctx, r):
     """THE RE-TAKE'S ORDER AND THE RING CLAMPED TO THE VIEW (issue #141's design decision): a key's camera move — Mod+=,
     from a view at the near band — ending over no document's region re-takes the place holding the view's centre: over
-    the board's label cell the board, over the cell of a document its account's index lists nothing in the account, and
-    past the board's left edge the board; the one line names that place as mid scale names it, no document named; and
+    the board's label cell the board, over a document's cell no box the plane draws stands in (M-REC's `known`) the
+    account, and past the board's left edge the board; the one line names that place as mid scale names it, no
+    document named; and
     the ring stands around the place's cell clamped to the visible view: at the view's border where the cell is wider than
     the view, on the view's right edge where the board lies to the right of it. THE ADDRESS SEGMENT IS ONE WIDTH: the
     acting segment's left edge stands at one x, the segment at one width, at WHOLE BOARD, at HOME, on the board and the
@@ -1929,8 +1930,8 @@ def retake_holds(ctx, r):
                   acting: a ? a.getBoundingClientRect().left : null, segment: b ? b.getBoundingClientRect().width : null,
                   empty: !!document.querySelector("#line .slot .strip.none") && !!document.querySelector("#line .marker.none")}; })()''')
     near = ctx.js('window.__skep.scaleFor(%s, "em", 12.5)' % json.dumps(DOC))
-    listed = {q['doc'] for q in ctx.js('window.__skep.model.places()')}
-    free = next(((acct, '%s.0.%d' % (acct, n)) for acct in ('1.0.1', SECOND_ACCOUNT) for n in range(1, 49) if '%s.0.%d' % (acct, n) not in listed), None)
+    drawn = set(ctx.js('import("./model/records.js").then((R) => R.known())'))
+    free = next(((acct, '%s.0.%d' % (acct, n)) for acct in ('1.0.1', SECOND_ACCOUNT) for n in range(1, 49) if '%s.0.%d' % (acct, n) not in drawn), None)
     label, board = ctx.js('window.__skep.boardLabelCell("1")'), ctx.js('window.__skep.boardCell("1")')
     states = {}
     chord(ctx, '0', mods=('Meta',))
@@ -1941,9 +1942,9 @@ def retake_holds(ctx, r):
               ('past the board\'s left edge', board['x'] - 2000, board['y'] + board['h'] / 2, ('board', '1'), '1', 'right')]
     if free:
         box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(free[1]))
-        places.insert(1, ('the cell of %s, which the index does not list' % free[1], box['x'] + box['w'] / 2, box['y'] + box['h'] / 2, ('account', free[0]), '1 › ' + free[0], 'border'))
+        places.insert(1, ('the cell of %s, where the plane draws no box' % free[1], box['x'] + box['w'] / 2, box['y'] + box['h'] / 2, ('account', free[0]), '1 › ' + free[0], 'border'))
     else:
-        r.check(False, 'a cell no listed document stands in, in the claimant\'s account or the second (what the account\'s re-take stands on)', None)
+        r.check(False, 'a document\'s cell no box the plane draws stands in, in the claimant\'s account or the second (what the account\'s re-take stands on)', None)
     rings = {}
     for where, x, y, focus, text, edge in places:
         ctx.set_view(x, y, near)

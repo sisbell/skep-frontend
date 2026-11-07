@@ -1055,15 +1055,15 @@ export function arrivalAtScreen(px, py) {
   return a && r ? { addr: a.addr, run: r.run } : null;
 }
 
-/** the document under a screen point where it stands whole, on its outline — the version its box shows (N-GO's `shownIn`), the outline that version's; one a continuation's mark holds is the mark's (a hit test; draws nothing) */
+/** the document under a screen point where it stands whole, on its outline — of the boxes the plane draws (`drawable`), each the version its box shows (N-GO's `shownIn`), the outline that version's; one a continuation's mark holds is the mark's (a hit test; draws nothing) */
 export function docAtScreen(/** @type {number} */ px, /** @type {number} */ py) {
   const { held } = residueDepth(cam.scale);
   const wxp = wx(px), wyp = wy(py);
   const inside = (/** @type {{x: number, y: number, w: number, h: number}} */ b, /** @type {number} */ x, /** @type {number} */ y) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
-  for (const p of REC.places()) {
-    if (p.system || withinContinuation(p.doc, held)) continue;
-    const b = docBox(p.doc), shown = GO.shownIn(p.doc);
-    if (inside(b, wxp, wyp) && outlineRects(LAYER.foldOf(REC.doc(shown))).some((r) => inside(r, wxp - b.x, wyp - b.y))) return shown;
+  for (const d of drawable()) {
+    if (withinContinuation(d.addr, held)) continue;
+    const b = docBox(d.addr);
+    if (inside(b, wxp, wyp) && outlineRects(LAYER.foldOf(d)).some((r) => inside(r, wxp - b.x, wyp - b.y))) return d.addr;
   }
   return null;
 }

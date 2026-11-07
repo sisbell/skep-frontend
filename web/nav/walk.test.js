@@ -18,7 +18,8 @@
 // reading scale frames it short of that scale; the grain below a document is
 // the document's own and the re-take's order holds at every band; → steps in
 // to the child drawn under the centre of the view the camera is bound for,
-// else to the first; a
+// else to the first; the re-take and → find every box the plane draws under
+// the centre, one the index does not list among them; a
 // continuation the plane draws as one mark is one stop before its members,
 // named by its count, the camera flown to the mark for each of them, and a
 // re-take over it takes the mark or keeps a member, never the member under
@@ -1092,6 +1093,33 @@ test('the walk keeps the document it stands in while that document\'s region mee
   } finally {
     index([D, E]);
   }
+});
+
+test('the re-take and → find a box the plane draws that the index does not list under the view\'s centre, as a listed one: its span at its reading scale, the walk following the reader through its text; the document whole at mid, never a listed neighbour kept; → at its account entering it, never the first (issue #233)', async () => {
+  await PUMP.loadWhole(G);
+  assert.ok(!REC.place(G) && REC.known().includes(G), 'G a box the plane draws, its text held, the index listing D and E alone');
+  const d = REC.doc(G), reading = 12.5 / LAYER.foldOf(d).fs, [first, , third] = d.blocks;
+  // G's reading scale over its third paragraph, D far out of view: the span there, never the account
+  await WALK.focusTo(D, 15);
+  at(LAYER.centreOf(G, third.pos), reading);
+  assert.equal(LAYER.inView(D), false, 'D out of view');
+  await WALK.retakeFromView(true);
+  assert.deepEqual(walkAt(), ['block', G, third.pos], 'the span under the view\'s centre');
+  // the walk on G's first paragraph, the reader over its third: the walk follows the reader
+  await WALK.focusTo(G, first.pos);
+  await WALK.retakeFromView(true);
+  assert.deepEqual(walkAt(), ['block', G, third.pos], 'the walk on the span under the view\'s centre, never left on the one it landed on');
+  // mid over G's outline, the walk on D, in view there
+  await WALK.focusTo(D, 15);
+  at(middle(LAYER.shapeOf(G)), 120 / DOC_W);
+  assert.deepEqual([lodOf(CAM.cam.scale).name, LAYER.inView(D)], ['mid', true], 'mid, D in view');
+  await WALK.retakeFromView(true);
+  assert.deepEqual(walkAt(), ['document', G, null], 'G whole, never D kept');
+  // → at the account, HOME's scale over G's outline
+  await WALK.focusTo('1.0.1', null);
+  at(middle(LAYER.shapeOf(G)), CAM.viewForCell(accountCell('1.0.1'), 0.85).scale);
+  await run(WALK.key('in'));
+  assert.deepEqual(walkAt(), ['document', G, null], '→ enters G, the document whose region holds the centre');
 });
 
 test('the walk takes each box as the version it shows (issues #154, #23): an account\'s documents list the version its box shows, named by that version\'s own first line, a landing at the document stands on that version\'s span, and a re-take over its box stands there', async () => {

@@ -7,8 +7,9 @@
 // pointer LEAPs to the claim's home whole, carrying no passage and lighting
 // no link, while the rest of the placeholder still conjures C-39's face; a
 // press at the readable em on text not yet standing is held for it and
-// becomes the text's click; an empty click ends a card's opening alone, then
-// dismisses the card; a press on a placeholder starts no selection; a wheel
+// becomes the text's click; a press or a click falls on every box the plane
+// draws, one the index does not list among them; an empty click ends a card's
+// opening alone, then dismisses the card; a press on a placeholder starts no selection; a wheel
 // series under way as a jump's camera left is dropped whole, and a later
 // wheel, a pinch or the camera key's drag takes the camera over; a press on
 // an outlined run below reading scale is a step to it; a withheld run's one
@@ -481,6 +482,74 @@ test('a press at the readable em on a document whose text does not stand yet is 
     HOST.dismiss();
     SEL.clear();
   } finally {
+    LAYER.clear();
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+test('a press or a click on a box the plane draws that the index does not list falls on it as on a listed one: at the readable em the press is held for its text and selects the block under it once the frame sets it; below its reading scale the click goes to it, its trail entry taken and the camera leaving (issue #233)', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the plane's listeners, and the window's, by event */
+  const plane = new Map(), win = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  /** @type {unknown} what the platform answers stands under the press: the plane until the frame sets the text there */
+  let under = { id: 'plane', closest: () => null };
+  /** @type {Set<unknown>} the articles the text layer holds */
+  const held = new Set();
+  const element = () => {
+    const e = { className: '', innerHTML: '', dataset: {}, style: {}, children: /** @type {unknown[]} */ ([]), classList: { toggle() {} }, setAttribute() {},
+      appendChild(/** @type {unknown} */ c) { e.children.push(c); }, querySelectorAll: () => [], getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }), remove() { held.delete(e); } };
+    return e;
+  };
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null, createElement: element, elementFromPoint: () => under });
+  globalThis.window = /** @type {any} */ ({ ...listens(win), getSelection: () => null });
+  try {
+    // the index listing nothing; a document of the reader's account whose text, metadata and links the page holds, so a LEAP to it reads nothing
+    const D = '1.0.1.0.5', text = 'A document the index does not list.\n\nIts second paragraph is read here.', n = byteLength(text);
+    REC.takeIndex(/** @type {any} */ ({ docs: [], counts: [], state: { arm: 'complete' } }));
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
+    REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+    REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.1', birth: D + '.1', birthExtent: n, placed: null, baseExtent: null, source: null, asOf: 1 });
+    REC.takeLinks(D, []);
+    assert.ok(!REC.place(D) && REC.known().includes(D), 'a box the plane draws, the index listing it not');
+    const d = REC.doc(D), second = d.blocks[1];
+    HOST.attach(/** @type {any} */ ({
+      ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
+      querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    }));
+    INPUT.attach(/** @type {any} */ ({ plane: { ...listens(plane), classList: { add() {}, remove() {} } }, layer: listens(null), corners: listens(null) }));
+    LAYER.attach(/** @type {any} */ ({ clientWidth: 1440, clientHeight: 900, appendChild: (/** @type {unknown} */ e) => { held.add(e); } }), null);
+    TRAIL._reset();
+    // the camera at em 9 over the second paragraph's line, its text not yet standing: no frame has run since
+    CAM.setViewport(1440, 900);
+    const f = LAYER.foldOf(d), at = LAYER.centreOf(D, second.pos);
+    CAM.set({ x: at.x, y: at.y, scale: 9 / f.fs });
+    const press = { clientX: 720, clientY: 450, ctrlKey: false, metaKey: false, pointerId: 1 };
+    assert.equal(RENDER.docAtScreen(press.clientX, press.clientY), D, 'the press falls on the document, at em 9');
+    plane.get('pointerdown')?.(press);
+    plane.get('pointerup')?.(press);
+    win.get('pointerup')?.(press);
+    INPUT.afterFrame();
+    assert.equal(SEL.selected(), null, 'held: no text stands under it yet, and nothing is selected');
+    LAYER.frame();
+    assert.ok(LAYER.isMounted(D), 'the frame stands its text');
+    const article = { dataset: { addr: D } }, sp = { dataset: { addr: D, pos: String(second.pos) } };
+    under = { id: '', closest: (/** @type {string} */ sel) => (sel === '#domlayer article.dtext' || sel === 'article' ? article : sel === '.sp' ? sp : null) };
+    INPUT.afterFrame();
+    assert.deepEqual([SEL.selected(), TRAIL.all().length], [{ addr: D, pos: second.pos, width: second.width }, 0], 'the click selects the block under it whole, and moves to no place');
+    SEL.clear();
+    // em 3 over the same line, below its reading scale: a click is on the place
+    under = { id: 'plane', closest: () => null };
+    CAM.set({ x: at.x, y: at.y, scale: 3 / f.fs });
+    assert.deepEqual([lodOf(CAM.cam.scale).name, LAYER.atReadingScale(D), RENDER.docAtScreen(press.clientX, press.clientY)], ['mid', false, D], 'at mid, below its reading scale, the click falls on the document');
+    plane.get('pointerdown')?.(press);
+    plane.get('pointerup')?.(press);
+    assert.deepEqual([TRAIL.current()?.addr, CAM.flying()], [D, true], 'the document: its entry taken and the camera leaving');
+    await settled(() => WALK.current()?.addr === D);
+  } finally {
+    HOST.dismiss();
+    SEL.clear();
     LAYER.clear();
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }

@@ -45,7 +45,11 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     "One fact, one placement"), and no act but its head's and the pointer
     where the claims decide one; asked again, compact — its head alone, the
     arm and the clause one act away, reached by Tab from the walk's item with
-    the face standing, Enter opening the rest in place (issue #179);
+    the face standing, Enter opening the rest in place (issue #179); and that
+    document a box the plane draws though the index does not list it: the
+    walk taken off it, a key's camera move ending over its outline at the
+    near band re-taking it, never its account, and a click on its outline at
+    mid going to it, its trail entry taken;
 (e) the window run at 1467 withheld: the model's block — its width, its
     origin, no text — B1-S7's gap at the run (issue #151's design decision:
     a gap of its true width, its face in it where it fits, else compact in
@@ -818,6 +822,30 @@ def run(ctx):
             {'compact': compact, 'tabbed': tabbed, 'opened': opened})
     r.figures['shots'].append(ctx.shot('guest/withheld-face-opened.png'))
     r.figures['withheld_face_compact'] = {'compact': compact, 'opened': opened}
+    ctx.esc()
+    # the withheld document a box the plane draws, which the index does not list: the walk taken off it by HOME, a key's
+    # camera move ending over its outline at the near band re-takes it, never its account; a click on its outline at mid
+    # goes to it, its trail entry taken
+    ctx.drv.key('H', mods=('Meta', 'Shift')); ctx.settle(); ctx.frames(2)
+    WALK_AT = '(() => { const f = window.__skep.view.focus(); return f && [f.kind, f.addr, f.pos]; })()'
+    o = ctx.js('window.__skep.fold(%s)' % json.dumps(WITHHELD))['outline']
+    mid_x, mid_y = o['x'] + o['w'] / 2, o['y'] + o['h'] / 2
+    ctx.set_view(mid_x, mid_y, ctx.js('window.__skep.scaleFor(%s, "em", 12.5)' % json.dumps(WITHHELD)))
+    off = ctx.js(WALK_AT)
+    ctx.drv.key('=', code='Equal', mods=('Meta',)); ctx.settle(); ctx.frames(2)
+    retaken = ctx.js(WALK_AT)
+    r.check(bool(off) and off[0] == 'board' and retaken == ['document', WITHHELD, None],
+            '(d) the walk on the board, Mod+= ending at the near band over the withheld document\'s outline re-takes that document, never its account: a box the plane draws, though the index does not list it (issue #141\'s design decision)',
+            {'before': off, 'after': retaken})
+    ctx.set_view(mid_x, mid_y, ctx.js('window.__skep.scaleFor(%s, "em", 3)' % json.dumps(WITHHELD)))
+    vp, lod, t0 = ctx.js('window.__skep.view.viewport()'), ctx.js('window.__skep.view.lod().name'), ctx.js('window.__skep.trail()')
+    ctx.drv.mouse(vp['VW'] / 2, vp['VH'] / 2); ctx.settle(); ctx.frames(2)
+    t1 = ctx.js('window.__skep.trail()')
+    went = t1['entries'][t1['cursor']]['addr'] if 0 <= t1['cursor'] < len(t1['entries']) else None
+    r.check(lod == 'mid' and t1['cursor'] == t0['cursor'] + 1 and went == WITHHELD,
+            '(d) a click on the withheld document\'s outline at mid goes to it: its trail entry taken, the newest',
+            {'lod': lod, 'cursor': [t0['cursor'], t1['cursor']], 'entry': went})
+    r.figures['withheld_box_found'] = {'retaken': retaken, 'clicked': went}
     ctx.esc()
 
     # (a) the whole guest run: the page's own log, and the provider's from the navigation on
