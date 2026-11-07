@@ -7,7 +7,8 @@
 // the order of acts, the jump in the air and the keys it holds, its flight
 // landing on its passage where its document is set again or folded again in
 // the air, a jump reaching, failures known at the act and learned in the air,
-// a follow to a
+// a follow's dead reference faced by every route in the words its far end's
+// label names it by, a follow to a
 // withheld document, the chrome a landing leaves standing and a field that
 // keeps its caret, cards opened while an act reads, a face a read brings
 // standing below a card the reader opened, Enter at a withheld run and a
@@ -58,7 +59,7 @@ import { LOD_TXT_LO, markScale } from '../plane/lod.js';
 import { standardFs, placeOf, EDGE } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
 import { entitlementArm } from '../text/article.js';
-import { t, tHTML, addressedHTML } from '../strings.js';
+import { STRINGS, t, tHTML, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
 import * as TRAIL from './trail.js';
 import * as WALK from './walk.js';
@@ -1810,6 +1811,62 @@ test('a follow that lands nowhere is faced where the camera is: at its site — 
     assert.deepEqual(o?.anchor, site, `${what}: standing where the camera is — never at the viewport's corner, nor at a control the face removed`);
     HOST.dismiss();
   }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('wherever a follow meets a far end the board will say nothing of — known at the act, learned in the air, its projection refused so, its text refused once its projection answered, reaching another board — its face opens with the words its label names the far end by, then the rest of the far end\'s one state; a return to its entry shows the same words; a LEAP to the address faces in the board\'s words alone (issue #224\'s design decision: "The label is always the face\'s first words, shown and spoken")', async () => {
+  takeDead(); takeLate(DEAD_LATE, GONE_LATE, 19);
+  // PROJ_DEAD: a citation of PROJ_GONE, whose extent the page holds, its projection refused `doc_not_registered`; REACH_DEAD: a
+  // citation of REACH_GONE, on board 2, which the plane does not draw
+  const PROJ_GONE = '1.0.1.0.14', PROJ_DEAD = D + '.0.2.30', REACH_DEAD = D + '.0.2.31';
+  REC.invalidate(PROJ_GONE); REC.takeSpanSet(PROJ_GONE, [{ subspace: 1, ordinal: 1, positions: LATE_EXTENT }]);
+  REC.takeLinks(D, [PROJ_DEAD, REACH_DEAD]);
+  REC.takeLink({ addr: PROJ_DEAD, from: [span(D, 13, 2)], to: [span(PROJ_GONE, 3, 4)], type: CITE });
+  REC.takeLink({ addr: REACH_DEAD, from: [span(D, 25, 2)], to: [{ ...span(REACH_GONE, 1, 2), account: '2.0.1' }], type: CITE });
+  script[FAKE.keyOf('op', { frame: F.project(PROJ_DEAD, 2, PROJ_GONE) })] = { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } };
+  const [OPEN, CLOSE] = STRINGS['L.client-words'].text.split('⟨words⟩');
+  /** a far end's words as its label sets them after its address, their brackets off: what its face opens with */
+  const labelled = (/** @type {string} */ link) => { const w = LK.farWords(drawn(link)); return w.startsWith(OPEN) && w.endsWith(CLOSE) ? w.slice(OPEN.length, w.length - CLOSE.length) : w; };
+  /** the face's words as a person reads them: its words, then each part beneath them, in order */
+  const said = () => (hostEl.innerHTML.match(/<div class="(?:face-text|note)"[^>]*>.*?<\/div>/g) || []).map((m) => m.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')).join(' ');
+  /** @type {Array<{what: string, link: string, far: string, before?: () => void}>} each way a follow meets a far end the board will say nothing of */
+  const ways = [
+    { what: 'known at the act', link: DEAD, far: GONE, before: () => REC.takeRefused(GONE, 'unregistered') },
+    { what: 'learned in the air', link: DEAD, far: GONE, before: () => REC.invalidate(GONE) },
+    { what: 'its projection refused so', link: PROJ_DEAD, far: PROJ_GONE },
+    { what: 'its text refused once its projection answered', link: DEAD_LATE, far: GONE_LATE },
+    { what: 'reaching another board', link: REACH_DEAD, far: REACH_GONE, before: () => REC.invalidate(REACH_GONE) },
+  ];
+  for (const { what, link, far, before } of ways) {
+    await run(GO.leapTo(D));
+    if (before) before();
+    await run(GO.follow(drawn(link)));
+    const words = labelled(link), whole = LK.emptyAt(far).whole.map((p) => p.text).join(' ');
+    assert.equal(faceShown()?.id, 'face:doc_not_registered', `${what}: the fifth cell`);
+    assert.ok(words && [t('L.far.empty'), t('L.far.unknown')].includes(words), `${what}: the far end's label names it by its state: ${words}`);
+    assert.ok(said().startsWith(words) && said() === whole, `${what}: the face opens with "${words}", then the rest of the state: ${said()}`);
+    HOST.dismiss();
+  }
+  assert.equal(labelled(REACH_DEAD), t('L.far.unknown'), 'another board\'s address: no document known here');
+  assert.equal(labelled(DEAD), t('L.far.empty'), 'the reader\'s own account, the index complete: no document here yet');
+  // a return to the entry a follow learned it in the air on: its face shown again in the same words
+  await run(GO.leapTo(D));
+  REC.invalidate(GONE);
+  await run(GO.follow(drawn(DEAD)));
+  const met = said();
+  await run(GO.back());
+  await run(GO.forward());
+  assert.deepEqual([TRAIL.current()?.notice?.far, faceShown()?.id, said()], [true, 'face:doc_not_registered', met], 'Back then Forward onto its entry: the notice a follow\'s, its face in the same words');
+  HOST.dismiss();
+  // a LEAP to the address, learned in the air and known at the act: the board's words alone
+  const board = t('B1.doc_not_registered', { address: GONE });
+  REC.invalidate(GONE);
+  await run(GO.leapTo(GONE));
+  assert.deepEqual([faceShown()?.id, said()], ['face:doc_not_registered', board], 'a LEAP learning it in the air');
+  HOST.dismiss();
+  await run(GO.leapTo(GONE));
+  assert.deepEqual([faceShown()?.id, said()], ['face:doc_not_registered', board], 'a LEAP knowing it at the act');
+  HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });
 

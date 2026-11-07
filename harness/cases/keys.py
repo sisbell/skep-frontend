@@ -1137,6 +1137,14 @@ def strings(ctx, sid, values=None):
     return ctx.js('(async () => (await import("./strings.js")).t(%s, %s))()' % (json.dumps(sid), json.dumps(values or {})))
 
 
+def far_words(ctx, doc, link):
+    """the words a link's far end's label names it by after its address (LK's `farLabel`), the brackets around the client's
+    words off (`L.client-words`): what a follow's face opens with (issue #224); '' where the label names the address alone"""
+    return ctx.js('''(async (doc, link) => { const { STRINGS } = await import("./strings.js"); const [open, close] = STRINGS["L.client-words"].text.split("\\u27e8words\\u27e9");
+      const label = window.__skep.links.farLabel(doc, link) || "", i = label.indexOf(" \\u00b7 "), w = i < 0 ? "" : label.slice(i + 3);
+      return w.startsWith(open) && w.endsWith(close) ? w.slice(open.length, w.length - close.length) : w; })(%s, %s)''' % (json.dumps(doc), json.dumps(link)))
+
+
 def record_copy(ctx, r):
     """THE COPY OF AN ITEM THAT HOLDS NO TEXT (issue #161's design decision; FP-24), at the claimant's home document, whose one
     block is its key record — an atom, no content byte in it:
@@ -2664,7 +2672,7 @@ def run(ctx):
         chord(ctx, 'Enter', mods=('Meta',))
         s = state(ctx)
         if len(drawn_here) == 1:
-            r.check(s['overlay'] == 'face' and 'nothing this board will say' in ctx.js('window.__skep.overlay().text'), 'Mod+Enter follows the one drawn link, the citation of the ghost: its target answers the dead-reference face', ctx.js('window.__skep.overlay().text')[:160])
+            r.check(s['overlay'] == 'face', 'Mod+Enter follows the one drawn link, the citation of the ghost: its target answers the dead-reference face', ctx.js('window.__skep.overlay().text')[:160])
         else:
             r.check(s['overlay'] == 'list', 'Mod+Enter at a span with several links asks which', {'n': len(drawn_here), 'overlay': s['overlay']})
             # the row naming the ghost — each row names its far document by its address — pressed with the pointer follows that
@@ -2681,6 +2689,10 @@ def run(ctx):
         placed = placed_at(ctx, DOC, ghost['pos'], ghost['width'])
         r.check(ctx.js('window.__skep.overlay().id') == 'face:doc_not_registered' and stands_at(placed),
                 'the dead-reference face a follow from the selection met stands at the followed link\'s own bytes, beneath their first line', {'id': ctx.js('window.__skep.overlay().id'), 'placed': placed, 'link': {k: ghost[k] for k in ('link', 'pos', 'width')}})
+        opens, said = far_words(ctx, DOC, ghost['link']), ctx.js('window.__skep.overlay().text') or ''
+        r.check(bool(opens) and said.startswith(opens),
+                'the dead-reference face a follow met opens with the words the far end\'s label names it by after its address, their brackets off (issue #224\'s design decision: "The label is always the face\'s first words, shown and spoken")',
+                {'label': ctx.js('window.__skep.links.farLabel(%s, %s)' % (json.dumps(DOC), json.dumps(ghost['link']))), 'opens': opens, 'face': said[:240]})
         r.check(not ctx.js('window.__skep.links.visited(%s)' % json.dumps(ghost['link'])),
                 'a follow whose far document the page knows says nothing never leaves, and its link joins no visited set (D-3; FP-25: "the jump counts as made … as a followed link, when the camera leaves")', ghost['link'])
         chord(ctx, 'Escape')

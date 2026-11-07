@@ -114,8 +114,8 @@
 // names it by), the version's own — its words quoted, the client's
 // words in their place bracketed — then its state (T-LAYER's `stateWords`):
 // one a read answered `withheld` by its withheld box's words (B1-S2), its
-// first line standing for none, one the board said nothing about by a far
-// end's words for it (`L.far.unregistered`), and one no read or listing has
+// first line standing for none, one the board said nothing about by the
+// words for that (`L.far.unregistered`), and one no read or listing has
 // told the state of by no state at all (FP-25) — and, while it stands kept
 // as it is read again, the clause the one line or its corner shows, as a
 // sentence of its own (T-LAYER's `keptIn`; FP-23, FP-33), the first withheld
@@ -127,7 +127,11 @@
 // on it (`aria-haspopup`); a link's item names its far end as its tail does
 // (LK's `farLabel`), and says BM-HELD's line where the
 // far end floats or its text holds part of its passage (`farSays`;
-// foundations §2.3). Back's light is exposed: the items it stands on — each
+// foundations §2.3); where the board will say nothing of its far end's
+// document, the item is described by the far end's whole form in its one
+// state (LK's `farEmpty`; FP-21), the words a follow of it is faced with, a
+// hidden description of its own written at the rebuild and marked again in
+// place (`markDescribed`). Back's light is exposed: the items it stands on — each
 // span holding a stretch of the passage carried, or the link's end the follow
 // was made at, at a withheld run the run's item — carry
 // `aria-current="location"` while it stands, written at the rebuild and
@@ -232,6 +236,8 @@ export function readers(/** @type {Partial<Readers>} */ r) { read = { ...noReade
 const DESCRIPTION = 'walk-landing';
 /** the id of the hidden description of the other runs an item holds, item i's (see the head) */
 const pieceId = (/** @type {number} */ i) => 'walk-piece-' + i;
+/** the id of the hidden description of a link item's far end the board will say nothing of, item i's (see the head) */
+const farId = (/** @type {number} */ i) => 'walk-far-' + i;
 
 /** the board's node */
 const BOARD = /** @type {Node} */ ({ kind: 'board', addr: '1', pos: null, link: null });
@@ -479,7 +485,8 @@ export function among(sibs, node) {
  * item says whether it is expanded — at its reading scale — or collapsed
  * (see the head) — a withheld run's item, where ends are drawn at it, expanded,
  * → entering them — and the item a landing stands on its description (see the
- * head), held in the mirror's one hidden element after the items. Replacing
+ * head), held in the mirror's one hidden element after the items, each other
+ * description an item names in a hidden element of its own after them. Replacing
  * the items removes the one the platform's focus may stand on; the callers
  * put it on the new current item through the focus's owner (`FOCUS.land`), as
  * every rebuild here is a move of the walk.
@@ -501,6 +508,8 @@ export function render() {
     const described = by ? ` aria-describedby="${by}"` : '';
     html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}"${expanded}${popup}${located}${described} data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''} data-kept="${esc(keptSentence(n))}">${named(n, i, total).html}</li>`;
     if (holdsRuns(n, said)) pieces += `<div id="${pieceId(i)}" hidden>${esc(otherRuns(n, said))}</div>`;
+    const far = farWhole(n);
+    if (far) pieces += `<div id="${farId(i)}" hidden>${esc(far)}</div>`;
   }
   html += `</ul><div id="${DESCRIPTION}" hidden>${esc(said ? said.words : '')}</div>${pieces}`;
   mirrorEl.innerHTML = html;
@@ -622,10 +631,17 @@ function otherRuns(/** @type {Node} */ n, /** @type {Described | null} */ at) {
   return at && b ? at.runs.filter((r) => r.pos !== at.pos && touches(b, r)).map((r) => r.words).join('; ') : '';
 }
 
+/** a link node's far end's whole form where the board will say nothing of its document (LK's `farEmpty`), its parts in order as a face of it is heard: its own description's words (see the head); '' for every other node */
+function farWhole(/** @type {Node} */ n) {
+  const empty = n.kind === 'link' && n.link ? LK.farEmpty(n.link) : null;
+  return empty ? empty.whole.map((p) => p.text).join(' ') : '';
+}
+
 /**
  * The descriptions a node names (see the head): the landing's, where it
- * stands on it; its other runs' labels, where it holds any; null where it
- * names none.
+ * stands on it; its other runs' labels, where it holds any; its far end's
+ * whole form, where the board will say nothing of its far document; null
+ * where it names none.
  * @param {Node} n
  * @param {number} i its index among its siblings
  * @param {Described | null} at
@@ -636,18 +652,21 @@ function describedBy(n, i, at) {
   const ids = [];
   if (isDescribed(n, at)) ids.push(DESCRIPTION);
   if (otherRuns(n, at)) ids.push(pieceId(i));
+  if (farWhole(n)) ids.push(farId(i));
   return ids.length ? ids.join(' ') : null;
 }
 
 /**
- * The landing's descriptions marked in place (see the head): the hidden
- * elements' words set to what the landing says now — its line's, and each
- * span's other runs' labels — and `aria-describedby` on the items they stand
- * on and on no other, nothing rebuilt, so the platform's focus stays on the
- * item it stands on. The app's loop runs it on each dirty frame: the line
- * goes with the arrival, its words change as its reads answer — an offer
- * found, a retry answered — and a step moves the landing among its runs,
- * between the walk's moves.
+ * The items' descriptions marked in place (see the head): the hidden
+ * elements' words set to what they say now — the landing's line, each span's
+ * other runs' labels, each link item's far end's whole form — and
+ * `aria-describedby` on the items they stand on and on no other, naming an
+ * item's own hidden description only where the rebuild wrote one, nothing
+ * rebuilt, so the platform's focus stays on the item it stands on. The app's
+ * loop runs it on each dirty frame: the line goes with the arrival, its words
+ * change as its reads answer — an offer found, a retry answered — a step
+ * moves the landing among its runs, and a far end's state changes with the
+ * index and the session, between the walk's moves.
  */
 export function markDescribed() {
   if (!mirrorEl || typeof mirrorEl.querySelectorAll !== 'function') return;
@@ -656,9 +675,11 @@ export function markDescribed() {
   const el = q(DESCRIPTION);
   if (el && el.textContent !== words) el.textContent = words;
   for (const li of /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[role="treeitem"]')])) {
-    const i = Number(li.dataset.i), n = siblings[i], piece = q(pieceId(i));
+    const i = Number(li.dataset.i), n = siblings[i], piece = q(pieceId(i)), far = q(farId(i));
     if (n && piece) { const w = otherRuns(n, said); if (piece.textContent !== w) piece.textContent = w; }
-    const by = n ? describedBy(n, i, said) : null, named = by && !piece ? by.split(' ').filter((x) => x !== pieceId(i)).join(' ') || null : by;
+    if (n && far) { const w = farWhole(n); if (far.textContent !== w) far.textContent = w; }
+    const by = n ? describedBy(n, i, said) : null;
+    const named = by ? by.split(' ').filter((x) => (x !== pieceId(i) || piece) && (x !== farId(i) || far)).join(' ') || null : null;
     if (named && li.getAttribute('aria-describedby') !== named) li.setAttribute('aria-describedby', named);
     else if (!named && li.getAttribute('aria-describedby') != null) li.removeAttribute('aria-describedby');
   }

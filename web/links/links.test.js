@@ -15,7 +15,11 @@
 // and merged by what they share (P44), a far end out of view or inside a
 // mark still an end; a far document the plane draws nowhere tailed, never a
 // connection, and a far end named by its address and what the page holds of
-// its document, never the index's silence; and the most a reveal can set in
+// its document, never the index's silence — one the board will say nothing
+// of in one state, decided by the address, the session and the index, its
+// whole form beginning with the short form that names it, and a tail of
+// several carrying that short form only where every far end shares it
+// (FP-21, FP-26); and the most a reveal can set in
 // a text, which no stage, toggle or lens moves (FP-12).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -481,7 +485,7 @@ test('the tails: one per place a drawn document stands at, holding once each lin
   assert.deepEqual(LK.tails([D, E], mark).map((x) => [x.at, x.docs, x.ends.map((e) => e.link.addr)]), [['1.0.1:1', [D, E], [D + '.0.2.1', E + '.0.2.1']]], 'one tail at the mark, its documents and their links');
 });
 
-test('a far end is named by its address, then what the page holds of its document: nothing answered, the address alone; readable, its first line; withheld, "withheld · ⟨owner⟩" by the owner rule handed in; the board saying nothing of it, "nothing this board will say about this address" — "no document here yet" in the reader\'s own account under a complete index listing none there — never from the index\'s silence alone; each of the client\'s words bracketed in the first line\'s place (issues #132, #23)', () => {
+test('a far end is named by its address, then what the page holds of its document: nothing answered, the address alone; readable, its first line; withheld, "withheld · ⟨owner⟩" by the owner rule handed in; the board saying nothing of it, "no document here yet" in the reader\'s own account under a complete index listing none there, else "no document known here" — never from the index\'s silence alone; each of the client\'s words bracketed in the first line\'s place (issues #132, #23, #224)', () => {
   const GHOST = '1.0.1.0.1049578', HIDDEN = '1.0.2.0.7', THEIR_GHOST = '1.0.2.0.99';
   const [TO_GHOST, TO_HIDDEN, TO_THEIRS] = [20, 21, 22].map((k) => `${D}.0.2.${k}`);
   REC.takeLinks(D, [TO_GHOST, TO_HIDDEN, TO_THEIRS]);
@@ -499,15 +503,15 @@ test('a far end is named by its address, then what the page holds of its documen
   const bracket = (/** @type {string} */ words) => t('L.client-words', { words });
   assert.equal(named(TO_GHOST), `${GHOST} · ${bracket(t('L.far.empty'))}`);
   REC.setIndexState({ arm: 'at_the_floor', floor: 9 });
-  assert.equal(named(TO_GHOST), `${GHOST} · ${bracket(t('L.far.unregistered'))}`, 'the index from a floor: nothing this board will say');
+  assert.equal(named(TO_GHOST), `${GHOST} · ${bracket(t('L.far.unknown'))}`, 'the index from a floor: no document known here');
   REC.setIndexState({ arm: 'complete' });
   REC.setSession({ session: 's-2', principal: 2, account: '1.0.9' });
-  assert.equal(named(TO_GHOST), `${GHOST} · ${bracket(t('L.far.unregistered'))}`, 'another reader\'s account: nothing this board will say');
+  assert.equal(named(TO_GHOST), `${GHOST} · ${bracket(t('L.far.unknown'))}`, 'another reader\'s account: no document known here');
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   // the projection the plane makes says the same: the other account's ghost, the draft withheld
   REC.takeProjection(TO_THEIRS, 2, THEIR_GHOST, 'unregistered');
   REC.takeProjection(TO_HIDDEN, 2, HIDDEN, 'withheld');
-  assert.equal(named(TO_THEIRS), `${THEIR_GHOST} · ${bracket(t('L.far.unregistered'))}`, 'another account\'s address, its projection refused doc_not_registered');
+  assert.equal(named(TO_THEIRS), `${THEIR_GHOST} · ${bracket(t('L.far.unknown'))}`, 'another account\'s address, its projection refused doc_not_registered');
   assert.equal(named(TO_HIDDEN), `${HIDDEN} · ${bracket(t('F.corner.withheld', { owner: '1.0.2' }))}`, 'withheld: its owner by its account, where no owner rule is handed in');
   assert.deepEqual(LK.farFaced(end(TO_HIDDEN)), [{ text: '[', face: 'client' }, { text: 'withheld · ', face: 'client' }, { text: '1.0.2', face: 'ident' }, { text: ']', face: 'client' }], 'the brackets and the statement the client\'s, its owner the identifier\'s');
   // the readers the app hands in: the owner rule, and the first-line rule a box's label reads (T-ARTICLE's)
@@ -524,6 +528,82 @@ test('a far end is named by its address, then what the page holds of its documen
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: '1.0.1.0.127', kind: 'edition', label: '# The far edition', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
   assert.equal(named(D + '.0.2.1'), '1.0.1.0.127 · # The far edition', 'the index listing it: the index\'s first line, as listed');
   assert.equal(LK.farWords(end(D + '.0.2.1')), '# The far edition', 'the words alone, which a tail\'s label sets beneath its address');
+});
+
+/** a far end's one state as its parts' strings: its short form, and the ids of its whole form's parts in order */
+const stateOf = (/** @type {import('./links.js').Empty} */ e) => [e.short, e.whole.map((p) => p.id)];
+
+test('an address the board will say nothing of stands, as a far end, in one state: in exactly the account the reader acts as, the index complete and listing nothing there, "no document here yet", its whole form saying nothing has been made there, then that the account\'s next new document goes there — one past the greatest document number the index lists in it — else that its new documents take its addresses in order (issue #224\'s design decision)', () => {
+  // the index lists D, 1.0.1.0.3, alone in the reader's account: the next document it mints is 1.0.1.0.4
+  const next = LK.emptyAt('1.0.1.0.4');
+  assert.deepEqual(stateOf(next), [t('L.far.empty'), ['L.far.empty.whole', 'L.far.empty.next']], 'the account\'s next address');
+  assert.deepEqual(next.whole.map((p) => p.text), [t('L.far.empty.whole', { address: '1.0.1.0.4' }), t('L.far.empty.next')], 'its words, the address filled');
+  assert.deepEqual(stateOf(LK.emptyAt('1.0.1.0.9')), [t('L.far.empty'), ['L.far.empty.whole', 'L.far.empty.order']], 'an address past it: its new documents take its addresses in order');
+  assert.deepEqual(stateOf(LK.emptyAt('1.0.1.0.4.2')), [t('L.far.empty'), ['L.far.empty.whole', 'L.far.empty.order']], 'a version member of the next address is no document the chain mints');
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: '1.0.1.0.40', kind: 'draft', label: 'e', standing: 'private' }, { doc: OTHER_HOME, kind: 'edition', label: 'o', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }, { account: '1.0.2', documents: 1 }], state: { arm: 'complete' } }));
+  assert.deepEqual([stateOf(LK.emptyAt('1.0.1.0.41'))[1][1], stateOf(LK.emptyAt('1.0.1.0.4'))[1][1]], ['L.far.empty.next', 'L.far.empty.order'], 'a draft listed at 1.0.1.0.40: the next is 1.0.1.0.41, and 1.0.1.0.4 an address in order before it');
+  assert.ok(next.whole[0].text.startsWith(next.short), 'the whole form begins with the short form');
+});
+
+test('an address the board will say nothing of stands everywhere else in the weaker state — "no document known here", its whole form that short form, then the fifth cell\'s words unchanged — a sub-account, the same digits on another board, another account, a guest, an index not run unbroken from the board\'s first position, and an address the index lists (issue #224\'s design decision)', () => {
+  /** @type {Array<[string, string, () => void]>} each case: what it is, the address, and the page as it stands then */
+  const cases = [
+    ['a sub-account under the reader\'s', '1.0.1.1.0.4', () => {}],
+    ['the same digits on another board', '2.0.1.0.4', () => {}],
+    ['the same digits under a sub-node', '1.5.0.1.0.4', () => {}],
+    ['another account', '1.0.2.0.99', () => {}],
+    ['a guest', '1.0.1.0.4', () => REC.setSession(null)],
+    ['the index from a floor', '1.0.1.0.4', () => REC.setIndexState({ arm: 'at_the_floor', floor: 9 })],
+    ['the index widening', '1.0.1.0.4', () => REC.setIndexState({ arm: 'widening' })],
+    ['an address the index lists', D, () => {}],
+  ];
+  for (const [what, addr, set] of cases) {
+    build();
+    set();
+    const e = LK.emptyAt(addr);
+    assert.deepEqual([e.short, e.whole], [t('L.far.unknown'), [{ id: 'L.far.unknown', text: t('L.far.unknown') }, { id: 'B1.doc_not_registered', text: t('B1.doc_not_registered', { address: addr }) }]], what);
+    assert.ok(e.whole[0].text.startsWith(e.short), `${what}: the whole form begins with the short form`);
+  }
+});
+
+test('a far end stands in its one state only where the page holds the board\'s answer that it will say nothing of its document — its projection refused so, or a read of the document — and nowhere else (issue #224)', () => {
+  const GHOST = '1.0.1.0.9', L = D + '.0.2.20';
+  REC.takeLinks(D, [L]);
+  REC.takeLink({ addr: L, from: [span(D, 60, 3)], to: [span(GHOST, 1, 3)], type: CITE });
+  const end = () => /** @type {import('./links.js').Shown} */ (LK.shown(D).find((s) => s.link.addr === L));
+  assert.equal(LK.farEmpty(end()), null, 'nothing answered: no state, whatever the index says');
+  REC.takeProjection(L, 2, GHOST, 'unregistered');
+  assert.deepEqual(LK.farEmpty(end()), LK.emptyAt(GHOST), 'its projection refused doc_not_registered');
+  REC.takeProjection(L, 2, GHOST, { refused: 'not_a_link' });
+  assert.equal(LK.farEmpty(end()), null, 'refused for another reason: no state');
+  REC.takeRefused(GHOST, 'unregistered');
+  assert.deepEqual(LK.farEmpty(end()), LK.emptyAt(GHOST), 'a read of the document refused doc_not_registered');
+  assert.deepEqual(LK.farFaced(end()), [{ text: '[', face: 'client' }, { text: t('L.far.empty'), face: 'client' }, { text: ']', face: 'client' }], 'its words the short form, bracketed');
+  REC.takeRefused(GHOST, 'withheld');
+  assert.equal(LK.farEmpty(end()), null, 'withheld: another state, not this one');
+});
+
+test('a tail\'s words after its address or its count: one far end\'s words; several, the short form they share where the board will say nothing of every one\'s document in the same state, bracketed — none where any is another state or none is said (issue #224\'s design decision: "A merged tail keeps its count. Its label carries state words only when every member shares them")', () => {
+  const GHOST = '1.0.1.0.9', GHOST2 = '1.0.1.0.10', THEIRS = '1.0.2.0.99', NAMED = '1.0.1.0.127';
+  const [A, B, C, E] = [20, 21, 22, 23].map((k) => `${D}.0.2.${k}`);
+  REC.takeLinks(D, [A, B, C, E]);
+  REC.takeLink({ addr: A, from: [span(D, 60, 3)], to: [whole(GHOST)], type: CITE });
+  REC.takeLink({ addr: B, from: [span(D, 64, 3)], to: [whole(GHOST2)], type: CITE });
+  REC.takeLink({ addr: C, from: [span(D, 68, 3)], to: [whole(THEIRS)], type: CITE });
+  REC.takeLink({ addr: E, from: [span(D, 72, 3)], to: [whole(NAMED)], type: CITE });
+  for (const g of [GHOST, GHOST2, THEIRS]) REC.takeRefused(g, 'unregistered');
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: NAMED, kind: 'edition', label: 'The far edition', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
+  const end = (/** @type {string} */ l) => /** @type {import('./links.js').Shown} */ (LK.shown(D).find((s) => s.link.addr === l));
+  const words = (/** @type {string[]} */ ls) => LK.tailFaced(ls.map(end)).map((r) => r.text).join('');
+  const bracket = (/** @type {string} */ w) => t('L.client-words', { words: w });
+  assert.deepEqual(LK.tailFaced([end(E)]), LK.farFaced(end(E)), 'one far end: its own words');
+  assert.equal(words([A]), bracket(t('L.far.empty')), 'one dead end: its short form');
+  assert.equal(words([A, B]), bracket(t('L.far.empty')), 'two dead ends in the reader\'s own account: the state they share');
+  assert.equal(words([C, A]), '', 'one in another account beside one in the reader\'s: two states, no words');
+  assert.equal(words([A, E]), '', 'a dead end beside a far end its first line names: no words');
+  REC.setIndexState({ arm: 'at_the_floor', floor: 9 });
+  assert.equal(words([C, A, B]), bracket(t('L.far.unknown')), 'the index from a floor: every one no document known here, the state they share');
+  assert.deepEqual(LK.tailFaced([]), [], 'none: no words');
 });
 
 test('where an end is drawn is one rule (`drawnIn`; issue #202): on the stretches of it outside every withheld run, each cut where one stands; wholly inside withheld text, at the start of the run holding its last position, the run\'s whole extent its one stretch; none where the text places none of it', () => {

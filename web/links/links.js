@@ -78,19 +78,24 @@
 //   - a far end is named (`farLabel`) by its full address, then the words the
 //     answers the page holds of its document give (`farWords`) — the read the
 //     plane makes for it (`project`) and any read of the document itself,
-//     never a guess, never the index's silence alone: that the board will say
-//     nothing of the address where it answered `doc_not_registered`, or that
-//     there is no document here yet in the reader's own account where the
-//     index, known complete, lists none at the address; withheld, with its
-//     owner by the one owner rule (the reader `owner`) — each of these the
-//     client's words in its first line's place, bracketed (ST's
-//     `bracketed`); its first line by the one rule a box's label reads (the
-//     reader `first`, T-ARTICLE's `firstLineOf`) where it is readable and the
-//     page holds one; and nothing where nothing was
+//     never a guess, never the index's silence alone: where the board
+//     answered `doc_not_registered`, the short form of the far end's one state
+//     (`farEmpty`, `emptyAt`; FP-21, FP-26) — "no document here yet" in
+//     exactly the account the reader acts as where the index, run unbroken
+//     from the board's first position, lists no document at the address,
+//     else "no document known here" — whose whole form, its short form
+//     first, O-FACES' face at a follow of it says and N-WALK's item for it
+//     is described by; withheld, with its owner by the one owner rule (the
+//     reader `owner`) — each of these the client's words in its first line's
+//     place, bracketed (ST's `bracketed`); its first line by the one rule a
+//     box's label reads (the reader `first`, T-ARTICLE's `firstLineOf`) where
+//     it is readable and the page holds one; and nothing where nothing was
 //     answered; its tail, its card, its mirror item and every list that
 //     names it carry those words, each stretch in its face (`farFaced`) — the
 //     address the identifier's, the document's words the reading face's, a
-//     list row's markup made so (`farLabelHTML`);
+//     list row's markup made so (`farLabelHTML`); a tail holding several
+//     links carries that short form after its count only where every one of
+//     its far ends stands in the same such state (`tailFaced`);
 //   - a link shows as a symbol at its span where the reveal has reached stage
 //     2 (`symbols`) and as a beam where it has reached stage 3 (`beams`); the
 //     lenses by owner, type and endorsement filter the set per document for
@@ -150,13 +155,13 @@
 // drawing modules — BM, T-LAYER, P-RENDER, SC, the cards — draw what `shown`,
 // `shownAt`, `symbols`, `beams`, `countAt`, `connections`, `tails`, `tailed`,
 // `markOf`, `mergedMark`, `lit`, `floats`, `farPos`, `besideAt`, `farWords`, `farFaced`,
-// `farLabel`, `farLabelHTML`, `drawnIn` and `endKey` give them, and T-LAYER sets each document at the
+// `farLabel`, `farLabelHTML`, `farEmpty`, `emptyAt`, `tailFaced`, `drawnIn` and `endKey` give them, and T-LAYER sets each document at the
 // size the fold of what `utmost` gives takes.
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-11, FP-21, FP-22, FP-30.
 
 import * as REC from '../model/records.js';
 import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
-import { commonsType, documentOf, accountOf, isUnder } from '../model/address.js';
+import { commonsType, documentOf, accountOf, isUnder, fieldsOf } from '../model/address.js';
 import { t, facedHTML, bracketed, withheldLine } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Link} Link */
@@ -235,6 +240,11 @@ import { t, facedHTML, bracketed, withheldLine } from '../strings.js';
  * @property {EndRef | null} farEnd its span, as stored
  * @property {1 | 2} farSlot the slot it lies in
  * @property {boolean} farWhole it names its document whole
+ */
+/**
+ * @typedef {Object} Empty — a far end the board will say nothing of, in its one state (`emptyAt`; see the head)
+ * @property {string} short what names it on every label and row and in its mirror item's name: the first words of `whole`
+ * @property {Array<{id: string, text: string}>} whole its whole form, its parts in order, the first beginning with `short`: what a follow's face says and its mirror item is described by
  */
 /**
  * @typedef {Object} Tail — the links a place sends to documents the plane draws nowhere: drawn as one short tail at the place, never pointed at their far ends
@@ -580,13 +590,61 @@ export const tailed = (s) => !!s.far && !read.drawn(s.far);
 export function farWords(s) { return farFaced(s).map((r) => r.text).join(''); }
 
 /**
+ * An address the board will say nothing of, as a far end, in its one state
+ * (see the head; FP-21, FP-26): where it lies in exactly the account the
+ * reader acts as — never a sub-account under it, nor the same digits on
+ * another board — and the index, run unbroken from the board's first
+ * position, lists no document at it, "no document here yet", its whole form
+ * saying nothing has been made there, then that the account's next new
+ * document goes there where the address is the next its document chain
+ * mints — one past the greatest document number the index lists in the
+ * account — else that the account's new documents take its addresses in
+ * order; everywhere else "no document known here", its whole form that
+ * short form, then the fifth cell's words (`B1.doc_not_registered`).
+ * Decided by the address, the session and the index alone: a caller states
+ * it only where the board answered the address with nothing (`farEmpty`).
+ * @param {string} addr
+ * @returns {Empty}
+ */
+export function emptyAt(addr) {
+  const me = REC.session(), account = accountOf(addr);
+  if (me && me.account && account === me.account && REC.countsExact() && !REC.place(addr)) {
+    const last = REC.placesOf(account).reduce((n, p) => Math.max(n, fieldsOf(p.doc)[2]?.[0] ?? 0), 0);
+    const clause = addr === `${account}.0.${last + 1}` ? 'L.far.empty.next' : 'L.far.empty.order';
+    return { short: t('L.far.empty'), whole: [{ id: 'L.far.empty.whole', text: t('L.far.empty.whole', { address: addr }) }, { id: clause, text: t(clause) }] };
+  }
+  return { short: t('L.far.unknown'), whole: [{ id: 'L.far.unknown', text: t('L.far.unknown') }, { id: 'B1.doc_not_registered', text: t('B1.doc_not_registered', { address: addr }) }] };
+}
+
+/** what the page holds of a far end's document: its record, where it holds one; the far end's projection into it, where the end names a passage; its index row */
+function heldOf(/** @type {FarEnd} */ s) {
+  return {
+    d: REC.has(s.far) ? REC.doc(s.far) : null,
+    projected: s.farEnd && !s.farWhole && s.farEnd.ordinal != null ? REC.projection(s.link.addr, s.farSlot, s.far) : undefined,
+    place: REC.place(s.far),
+  };
+}
+
+/**
+ * A far end in its one state where the board will say nothing of its
+ * document (`emptyAt`), as the page holds that answer: its `project` refused
+ * `doc_not_registered`, or a read of the document itself; null for every
+ * other far end, and for one nothing has answered.
+ * @param {FarEnd} s
+ * @returns {Empty | null}
+ */
+export function farEmpty(s) {
+  if (!s.far) return null;
+  const { d, projected } = heldOf(s);
+  return (d && d.refused === 'unregistered') || projected === 'unregistered' ? emptyAt(s.far) : null;
+}
+
+/**
  * A drawn end's far end in words (see the head), each stretch with its face
  * (P-REG's FACE), from the answers the page
  * holds of its document, read as they stand now: where the board will say
- * nothing of the address — its `project` refused `doc_not_registered`, or a
- * read of the document itself — "no document here yet" in the reader's own
- * account where the index, known complete, lists no document at the address,
- * else "nothing this board will say about this address"; where it is withheld
+ * nothing of the address, the short form of its one state (`farEmpty`);
+ * where it is withheld
  * from the reader — the projection or a read of the document refused
  * `withheld` — "withheld · ⟨owner⟩"; each of these the client's words in its
  * first line's place, bracketed (ST's `bracketed`); where it is
@@ -601,16 +659,27 @@ export function farWords(s) { return farFaced(s).map((r) => r.text).join(''); }
  */
 export function farFaced(s) {
   if (!s.far) return [];
-  const d = REC.has(s.far) ? REC.doc(s.far) : null;
-  const projected = s.farEnd && !s.farWhole && s.farEnd.ordinal != null ? REC.projection(s.link.addr, s.farSlot, s.far) : undefined;
-  const place = REC.place(s.far);
-  if ((d && d.refused === 'unregistered') || projected === 'unregistered') {
-    const me = REC.session();
-    return bracketed([{ text: t(me && me.account && accountOf(s.far) === me.account && REC.countsExact() && !place ? 'L.far.empty' : 'L.far.unregistered'), face: 'client' }]);
-  }
+  const empty = farEmpty(s);
+  if (empty) return bracketed([{ text: empty.short, face: 'client' }]);
+  const { d, projected, place } = heldOf(s);
   if ((d && d.refused === 'withheld') || projected === 'withheld') return withheldLine(read.owner(s.far));
   if (!(Array.isArray(projected) || place || (d && (d.from >= 0 || d.meta || d.extent != null)))) return [];
   return read.first(d, place ? place.label : null);
+}
+
+/**
+ * A tail's words after its address or its count (see the head), each
+ * stretch with its face: one far end's, its words (`farFaced`); several, the
+ * short form they share where the board will say nothing of every one's
+ * document and every one stands in the same state (`farEmpty`), bracketed as
+ * one far end's is; else none.
+ * @param {FarEnd[]} ends a tail's far ends, each link once
+ * @returns {Array<{text: string, face: import('../plane/register.js').Face}>}
+ */
+export function tailFaced(ends) {
+  if (ends.length === 1) return farFaced(ends[0]);
+  const said = ends.map((e) => farEmpty(e)?.short ?? null);
+  return said[0] && said.every((x) => x === said[0]) ? bracketed([{ text: said[0], face: 'client' }]) : [];
 }
 
 /**

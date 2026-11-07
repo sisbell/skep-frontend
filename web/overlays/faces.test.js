@@ -11,7 +11,9 @@
 // (FP-33); a withheld run's face whole as its placeholder's record, at the
 // run's positions, taking no focus; "who wrote this?" and "who uses this?"
 // refused `withheld` showing that face; a jump reading and a jump reaching
-// (FP-25); the dead end's face and the version offer it takes as it is found
+// (FP-25); the fifth cell a follow meets in its far end's words, its label's
+// first, and a typed address's in the board's alone (FP-21); the dead end's
+// face and the version offer it takes as it is found
 // (FP-21); a death's face saying its arm's words, "signed out" the page's own
 // close's alone (FP-28); the withheld face at a covered document while the
 // ending stands saying the ending's words, C-67's clause beneath them read at
@@ -41,6 +43,7 @@ import * as KEYS from '../nav/keys.js';
 import * as GO from '../nav/go.js';
 import * as TRAIL from '../nav/trail.js';
 import * as CAM from '../plane/camera.js';
+import * as LK from '../links/links.js';
 import { accountCell } from '../plane/projection.js';
 import { entitlementArm } from '../text/article.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
@@ -410,6 +413,32 @@ test('a jump reaching says so in its own words at the act\'s site, heard as a fa
   FACES.reaching(D, at, () => { abandoned++; });
   HOST.dismiss();
   assert.deepEqual([HOST.currentState(), abandoned], [null, 1], 'dismissed — Esc\'s innermost thing — it abandons the jump');
+});
+
+test('the fifth cell answering a follow says the far end\'s whole form in its one state — its first words the short form its label names it by, each later part beneath them, heard in that order, no act — and at a typed address the board\'s words alone (issue #224\'s design decision: "The label is always the face\'s first words, shown and spoken")', () => {
+  const at = { span: { addr: '1.0.1.0.3', pos: 11, width: 5 } }, GONE = '1.0.1.0.9', THEIRS = '1.0.2.0.99';
+  readAs(READERS[0]);
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: '1.0.1.0.3', kind: 'edition', label: 'd', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  /** the notes beneath the face's words: each one's string and its words as a person reads them */
+  const notes = () => [...hostEl.innerHTML.matchAll(/<div class="note" data-string="([^"]*)">((?:[^<]|<\/?span[^>]*>)*)<\/div>/g)].map((m) => [m[1], text(m[2].replace(/<[^>]*>/g, ''))]);
+  try {
+    for (const [what, addr, short] of [['the reader\'s own account, the index complete', GONE, 'L.far.empty'], ['another account', THEIRS, 'L.far.unknown']]) {
+      const e = LK.emptyAt(addr);
+      assert.equal(e.short, t(short), `${what}: the state`);
+      FACES.unregistered(addr, at, { far: true });
+      const f = faceShown();
+      assert.deepEqual([f?.id, f?.words, f?.acts, HOST.currentState()?.anchor], ['face:doc_not_registered', [e.whole[0].id, e.whole[0].text], [], at], `${what}: the fifth cell at the follow's site, its words the whole form's first part, no act`);
+      assert.ok(f && f.words && f.words[1].startsWith(e.short), `${what}: its first words the short form its label names it by: ${f && f.words}`);
+      assert.deepEqual(notes(), e.whole.slice(1).map((p) => [p.id, p.text]), `${what}: each later part beneath them, in order`);
+      assert.equal(live.textContent, e.whole.map((p) => p.text).join(' '), `${what}: heard in that order`);
+      HOST.dismiss();
+    }
+    FACES.unregistered(GONE, at);
+    assert.deepEqual([faceShown()?.words, notes()], [['B1.doc_not_registered', t('B1.doc_not_registered', { address: GONE })], []], 'a typed address: the board\'s words alone');
+    HOST.dismiss();
+  } finally {
+    REC.takeIndex(/** @type {any} */ ({ docs: [], counts: [], state: { arm: 'none' } }));
+  }
 });
 
 test('the dead end\'s face offers the version offer handed in — "read version ⟨k⟩, the last that holds it", its number filled and no token left, its act the version move — and no act where none is; drawn again in its place as the offer is found, still told by its landing, the act\'s words said once and the face\'s own not again; a face no longer standing at that document never drawn again (issue #57)', () => {

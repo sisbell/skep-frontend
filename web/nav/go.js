@@ -290,7 +290,11 @@
 // whose text the page holds or held (O-FACES' `accessChanged`); for a jump
 // that must read, the board marked unreachable — never leaves: no flight, no
 // entry, no read, the link not counted as followed, its face at the act's
-// site in the place of what stands there (`showNotice`), the chrome kept. A
+// site in the place of what stands there (`showNotice`), the chrome kept.
+// Wherever a follow meets a far end the board will say nothing of, its face
+// says the far end's words — the ones its label and rows name it by first,
+// then the rest of its one state (O-FACES' `unregistered`; LK's `emptyAt`;
+// FP-21) — and a jump to an address the board's words alone. A
 // jump where only a read can place the destination reaches (`reachFor`): its
 // entry taken at the act, the camera still, its reaching face at the act's
 // site (O-FACES' `reaching`); Esc, Back and every later act abandon it, its
@@ -1196,7 +1200,8 @@ function dismissChrome(to, beside = false) {
 
 /**
  * An entry's notice shown (O-FACES): its jump's reading face while its read
- * is out, else the face the read brought — the fifth cell, the
+ * is out, else the face the read brought — the fifth cell, in the far end's
+ * words where it answers a follow (`Notice.far`), the
  * document-level withheld face, a refusal's by its name, the dead end's —
  * each at its site; the dead end's at the landing that met it, and a
  * withheld document's at the place a follow landed at, told by that
@@ -1215,7 +1220,7 @@ function dismissChrome(to, beside = false) {
 function showNotice(n, told = false, caption = null, found = false) {
   const asked = { caption, follow: pointTo(n.site), told, ...(found ? asNotice(made) : {}) };
   if (n.face === 'reading') FACES.reading(n.addr, n.site);
-  else if (n.face === 'unregistered') FACES.unregistered(n.addr, n.site, asked);
+  else if (n.face === 'unregistered') FACES.unregistered(n.addr, n.site, { ...asked, far: !!n.far });
   else if (n.face === 'withheld') FACES.withheld(n.addr, n.site, asked);
   else if (n.face === 'refused' && n.refusal) FACES.showRefusal(n.site, n.refusal, n.addr, asked);
   else if (n.face === 'floating') FACES.floating(n.addr, n.site, floatOffer(n.addr), told, found);
@@ -1261,7 +1266,8 @@ const UNREACHABLE = /** @type {Refusal} */ ({ kind: 'unreachable', name: 'unreac
  * class it left (O-FACES' `accessChanged`), any other withheld far document
  * being a place the follow lands at;
  * for a jump that must read, the board is marked unreachable — as a notice's
- * face, its site the caller's to give; null where none is known.
+ * face, its site the caller's to give, the fifth cell a follow's in the far
+ * end's words (`Notice.far`); null where none is known.
  * @param {string} addr the place the jump names
  * @param {boolean} reads the jump must read before it lands
  * @param {{link: string, slot: 1 | 2} | null} [end] a follow's far end
@@ -1274,7 +1280,8 @@ function known(addr, reads, end = null) {
   const face = (d && d.refused === 'unregistered') || p === 'unregistered' ? 'unregistered'
     : end && ((d && d.refused === 'withheld') || p === 'withheld') && FACES.accessChanged(addr) ? 'withheld'
       : reads && REC.daemon() === 'unreachable' ? 'refused' : null;
-  return face ? { face, addr, refusal: face === 'refused' ? UNREACHABLE : null, site: null } : null;
+  if (!face) return null;
+  return { face, addr, refusal: face === 'refused' ? UNREACHABLE : null, site: null, ...(end && face === 'unregistered' ? { far: true } : {}) };
 }
 
 /**
@@ -1296,15 +1303,17 @@ function placeable(addr) {
  * of what stands there, the camera still, its read made. Where the jump was
  * abandoned meanwhile, nothing; where its read answered, the camera may
  * leave; where the board refused it, the refusal faced at the site as
- * O-HOST's notice (`asNotice`) — the fifth cell, the withheld face, a
+ * O-HOST's notice (`asNotice`) — the fifth cell, in the far end's words where
+ * the jump is a follow (O-FACES' `Asked.far`), the withheld face, a
  * refusal's by its name — and the entry given back.
  * @param {number} act
  * @param {string} addr
  * @param {Entry | null} entry
  * @param {Site | null} site the act's site
+ * @param {boolean} [far] the jump is a follow, `addr` its link's far end
  * @returns {Promise<{refused: Refusal | null} | null>} the read answered, with the refusal its text met; null where the jump ended without its camera leaving
  */
-async function reachFor(act, addr, entry, site) {
+async function reachFor(act, addr, entry, site, far = false) {
   const at = signed(site);
   reach = { act, addr, entry };
   FACES.reaching(addr, at, () => { if (reach && reach.act === act) giveUp(); });
@@ -1313,7 +1322,8 @@ async function reachFor(act, addr, entry, site) {
   reach = null;
   if (placeable(addr) || !w.refused) return { refused: w.refused };
   if (entry) TRAIL.giveBack(entry);
-  FACES.showRefusal(at, w.refused, addr, asNotice(act));
+  if (far && w.refused.name === 'doc_not_registered') FACES.unregistered(addr, at, { ...asNotice(act), far });
+  else FACES.showRefusal(at, w.refused, addr, asNotice(act));
   return null;
 }
 
@@ -2305,7 +2315,10 @@ export function arrived(member, at = null) {
  * reference — no slot projected into it, a read the board
  * refuses with the document, the projection refused for it — learned in the
  * air is faced where the camera went (`failed`), the claim settled with that
- * face as its notice there, and the link lit (B1-S8). One known at the act —
+ * face as its notice there, and the link lit (B1-S8); its face, there, at the
+ * act or reaching, is the fifth cell in the far end's words, the ones its
+ * label names it by first (`Notice.far`; O-FACES' `unregistered`), which a
+ * return to its entry shows again. One known at the act —
  * a withheld far document among them only where its text is on screen
  * (`known`), its face captioned by the follow — and a link naming no far
  * document never leave (see the head): no entry, no read, the arrival
@@ -2346,7 +2359,7 @@ export async function follow(s, byKey = false) {
   const step = { kind: 'follow', link: l.addr, near: s.near, key: s.key, far, spans: s.farWhole ? null : slotSpans(s) };
   const entry = TRAIL.push({ addr: far, pos: null, width: null, view: viewFor(far, null), label: null, notice: waiting }, departure(), true, step);
   if (!placeable(far)) {
-    if (!(await reachFor(act, far, entry, site))) return;
+    if (!(await reachFor(act, far, entry, site, true))) return;
     TRAIL.leaveFrom(entry, leavingNow());
   }
   dismissChrome(entry);
@@ -2355,19 +2368,21 @@ export async function follow(s, byKey = false) {
   showNotice(waiting);
   /** the follow's read brought a failure, learned in the air: faced where the camera went, the link lit where no act was made after it */
   const faced = (/** @type {Notice} */ notice) => { if (failed(act, entry, notice, byKey)) lit = [l.addr]; };
+  /** @type {Notice} the board will say nothing of the far document: the fifth cell where the camera went, in the far end's words */
+  const dead = { ...waiting, face: 'unregistered', far: true };
   const fd = REC.doc(far);
   if (fd.refused !== 'unregistered' && fd.extent == null) await PUMP.loadWhole(far);
-  if (REC.doc(far).refused === 'unregistered') { faced({ ...waiting, face: 'unregistered' }); return; }
+  if (REC.doc(far).refused === 'unregistered') { faced(dead); return; }
   if (REC.doc(far).refused === 'withheld') { await landWithheld(act, s, entry, byKey, first); return; }
   const proj = await PUMP.projectEnd(l.addr, s.farSlot, far);
   if ('refused' in proj && ofDocument(proj.refused)) {
     if (proj.refused.name === 'withheld') await landWithheld(act, s, entry, byKey, first);
-    else faced({ ...waiting, face: 'refused', refusal: proj.refused });
+    else faced(dead);
     return;
   }
   const d = REC.doc(far);
   if (d.extent == null || d.from < 0) await PUMP.loadWhole(far);
-  if (REC.doc(far).refused === 'unregistered') { faced({ ...waiting, face: 'unregistered' }); return; }
+  if (REC.doc(far).refused === 'unregistered') { faced(dead); return; }
   if (REC.doc(far).refused === 'withheld') { await landWithheld(act, s, entry, byKey, first); return; }
   await landFollowed(act, s, entry, await followed(s, proj), byKey, first);
 }

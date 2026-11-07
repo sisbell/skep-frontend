@@ -111,6 +111,9 @@ def run(ctx):
     face = ctx.overlay_shown()
     r.check(face['kind'] == 'face' and 'nothing this board will say about this address' in face['text'] and GHOST in face['text'] and 'doc_not_registered' not in face['text'].lower() and face['acts'] == 0,
             'W-01 step 7: the followed ghost is faced as the note says — B1-S8\'s words with the address and nothing more: no wire token, no act', face)
+    unknown = ctx.js('import("./strings.js").then(({t}) => t("L.far.unknown"))')
+    r.check(face['text'].startswith(unknown),
+            'W-01 step 7: the guest\'s face opens with the far end\'s short form, "%s", the words its label names it by, before B1-S8\'s (issue #224\'s design decision: a guest acts as no account, so the weaker state)' % unknown, face['text'][:240])
     ctx.esc()
     # ---- W-05 — Read & navigate the board, on the owner's page opened again --------------
     ctx.open_page('all')

@@ -1971,7 +1971,7 @@ export function leadPart(d, px) {
 /**
  * A document's state in the ARIA mirror's words (the walk's item, the one
  * line's accessible name; R94): withheld, its withheld box's words; nothing
- * the board will say of it, a far end's words for that; a draft; published;
+ * the board will say of it, the words for that (`L.far.unregistered`); a draft; published;
  * none where nothing has told it yet — its kind the index's place's for its
  * box, else its own record's, else its metadata's.
  * @param {Doc} d the version a box shows

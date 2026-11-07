@@ -54,8 +54,10 @@
 // where its symbol stands (BM's `leaveAt`), the passages leaving by one line
 // one tail — each drawn only where it leaves inside the visible view and set
 // ending in its label by the pass: one link's far end named, its address
-// whole then LK's `farWords` cut on a word to the room, or the count of
-// several; a press on it lists its links (`tailAtScreen`).
+// whole, or the count of several, then the words LK's `tailFaced` gives them
+// cut on a word to the room — one far end's words, and the state several
+// share where the board will say nothing of each one's document; a press on
+// it lists its links (`tailAtScreen`).
 // The labels — every string the canvas sets but the trail's pip numbers —
 // are handed to P-LABEL's one pass once every place's shapes are drawn
 // (`drawLabels`), each set only where its place holds it whole inside the
@@ -191,7 +193,7 @@ import { t, markCount } from '../strings.js';
  * @property {number} alpha the documents' band's, by its links' value
  * @property {number} weight its links' weight: heavier where every one is lit
  * @property {boolean} dashed every one of its links another's, dashed as a beam is
- * @property {string[]} label the lines the label pass set at its end — its far end named, or its count; none where it left the label out (`stats.labelsLeftOut` names why)
+ * @property {string[]} label the lines the label pass set at its end — its far end named, or its count, then the words its far ends share where they share any (LK's `tailFaced`); none where it left the label out (`stats.labelsLeftOut` names why)
  * @property {Rect[]} rects those lines' rects
  */
 
@@ -692,9 +694,9 @@ const hundredth = (/** @type {number} */ v) => Math.round(v * 100) / 100;
  * a stroke, its stroke held short of any other place's shape (P-LABEL's
  * `roomRight`) and made a shape of the pass; then each one's label handed to
  * the pass at its stroke's end, its room run to the first shape its lines
- * would meet, its own document's among them: one link's far end named — its
- * address whole, then LK's `farWords` cut on a word to the room — or the
- * count of several, on a plate of the plane's ground.
+ * would meet, its own document's among them: one link's far end's address
+ * whole, or the count of several, then the words LK's `tailFaced` gives its
+ * far ends, cut on a word to the room, on a plate of the plane's ground.
  * @param {string[]} docsDrawn
  * @param {(addr: string) => string | null} placeOf
  * @param {number} alpha the documents' band's
@@ -743,10 +745,9 @@ function tailsOf(docsDrawn, placeOf, alpha, pass, seen) {
   }
   const lh = lineHeight(LABEL_MIN_PX);
   return laid.map(({ key, site, to, mark }) => {
-    const one = site.ends.length === 1 ? site.ends[0] : null, words = one ? LK.farFaced(one).map((r) => (r.face === 'client' ? r.text : inFace(r.face, r.text))).join('') : '';
+    const one = site.ends.length === 1 ? site.ends[0] : null, words = LK.tailFaced(site.ends).map((r) => (r.face === 'client' ? r.text : inFace(r.face, r.text))).join('');
     /** @type {Part[]} */
-    const parts = one ? [{ text: one.far, px: LABEL_MIN_PX, ink: COL.text, fit: 'one', face: 'ident' }, { text: words, px: LABEL_MIN_PX, ink: COL.greek, fit: 'cut' }]
-      : [{ text: String(site.ends.length), px: LABEL_MIN_PX, ink: COL.text, fit: 'one' }];
+    const parts = [one ? { text: one.far, px: LABEL_MIN_PX, ink: COL.text, fit: 'one', face: 'ident' } : { text: String(site.ends.length), px: LABEL_MIN_PX, ink: COL.text, fit: 'one' }, { text: words, px: LABEL_MIN_PX, ink: COL.greek, fit: 'cut' }];
     const x = to.x + TAIL.gap, y = site.from.y - lh / 2, h = (words ? 2 : 1) * lh;
     pass.labels.push({ kind: 'tail', place: key, within: { x, y, w: roomRight({ x, y }, h, pass.shapes, seen, key), h }, x, y, align: 'left', alpha, plate: COL.bg, parts, hold: null });
     return {

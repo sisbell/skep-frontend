@@ -7,7 +7,8 @@
 // with each level's group, its items naming a withheld run's placeholder —
 // its kind and length alone while its clause is read —
 // each block that holds no text by its kind, a withheld or untold document by
-// its state and a link's far end as its tail does, its descriptions and
+// its state and a link's far end as its tail does — described, where the
+// board will say nothing of it, by its one state's whole form — its descriptions and
 // Back's light written at the rebuild and marked again in place, and its
 // inert mark kept through a rebuild; a move whose reads a later move overtook
 // sets nothing and flies nowhere; in a document folded into columns the
@@ -604,7 +605,7 @@ test('the mirror\'s item at a link names its far end as its tail and its card do
   assert.ok(item().includes(`${t('F.card.to')} ${GHOST} · ${t('L.client-words', { words: t('L.far.empty') })}`), `the board saying nothing of an address of the reader's own account the complete index lists nothing at, the client's words bracketed: ${item()}`);
   REC.takeLink({ addr: L, from: [span(D, 12, 3)], to: [span(THEIRS, 1, 4)], type: '1.1.0.1.0.1.0.3.13' });
   REC.takeProjection(L, 2, THEIRS, 'unregistered');
-  assert.ok(item().includes(`${t('F.card.to')} ${THEIRS} · ${t('L.client-words', { words: t('L.far.unregistered') })}`), `another account's: ${item()}`);
+  assert.ok(item().includes(`${t('F.card.to')} ${THEIRS} · ${t('L.client-words', { words: t('L.far.unknown') })}`), `another account's: ${item()}`);
   REC.invalidate(THEIRS); REC.invalidate(GHOST);
 });
 
@@ -767,6 +768,69 @@ test('where the landing\'s passage stands in several runs every other span holdi
     assert.deepEqual(described(), [], 'the arrival ended: nothing described');
     assert.equal(rebuilds, was, 'every mark made in place, nothing rebuilt');
   } finally {
+    globalThis.document = platform;
+    WALK.readers({});
+  }
+});
+
+// placed with the tests above: it attaches a mirror of its own
+test('a link\'s item whose far end the board will say nothing of is named by the short form of the far end\'s one state and described by its whole form — the words a follow of it is faced with — a hidden description of its own written at the rebuild and marked again in place as the state changes; an item whose far end the board said nothing of is described by nothing (issue #224\'s design decision: "In the mirror, the short form is the item\'s name and the whole form its description")', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  /** @typedef {{attrs: Record<string, string>, dataset: {i?: string}, getAttribute: (k: string) => string | null, setAttribute: (k: string, v: string) => void, removeAttribute: (k: string) => void}} Item */
+  /** @type {Item[]} */
+  let items = [];
+  /** @type {Map<string, {textContent: string}>} the hidden descriptions the last rebuild wrote, by id */
+  let hidden = new Map();
+  let rebuilds = 0;
+  const mirror = {
+    tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} },
+    get innerHTML() { return ''; },
+    set innerHTML(/** @type {string} */ html) {
+      rebuilds++;
+      items = [...html.matchAll(/<li\b[^>]*>/g)].map((m) => {
+        /** @type {Record<string, string>} */
+        const attrs = Object.fromEntries([...m[0].matchAll(/ ([\w-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
+        return { attrs, dataset: { i: attrs['data-i'] }, getAttribute: (k) => attrs[k] ?? null, setAttribute: (k, v) => { attrs[k] = v; }, removeAttribute: (k) => { delete attrs[k]; } };
+      });
+      hidden = new Map([...html.matchAll(/<div id="([\w-]+)" hidden>([^<]*)<\/div>/g)].map((m) => [m[1], { textContent: m[2] }]));
+    },
+    querySelectorAll: (/** @type {string} */ sel) => (sel === 'li[role="treeitem"]' ? items : []),
+    querySelector: (/** @type {string} */ sel) => hidden.get(sel.slice(1)) || null,
+  };
+  // the person's citation from D's "first" of a passage of an address in their own account, never minted
+  const L = D + '.0.2.13', GHOST = '1.0.1.0.1049578', TYPE = '1.1.0.1.0.1.0.3.13';
+  const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
+  REC.takeLinks(D, [L]);
+  REC.takeLink({ addr: L, from: [span(D, 15, 5)], to: [span(GHOST, 1, 4)], type: TYPE });
+  const end = () => /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === L));
+  /** the link's item as the last rebuild wrote it: the words of every description it names */
+  const describedAs = () => {
+    const li = items.find((i) => WALK.siblingsNow()[Number(i.attrs['data-i'])]?.link?.link.addr === L);
+    const by = li && li.attrs['aria-describedby'];
+    return by ? by.split(' ').map((id) => hidden.get(id)?.textContent) : [];
+  };
+  /** what a follow of the far end is faced with, as the hidden description holds it */
+  const wholeOf = () => esc(LK.emptyAt(GHOST).whole.map((p) => p.text).join(' '));
+  try {
+    WALK.attach(/** @type {any} */ (mirror));
+    await WALK.focusTo(D, 15, false, true, { link: L, key: end().key });
+    assert.deepEqual([WALK.current()?.kind, describedAs()], ['link', []], 'nothing answered of its far document: no description');
+    REC.takeProjection(L, 2, GHOST, 'unregistered');
+    await WALK.focusTo(D, 15, false, true, { link: L, key: end().key });
+    const name = WALK.mirrorItem(WALK.mirrorIndex()) || '';
+    assert.ok(name.includes(`${GHOST} · ${t('L.client-words', { words: t('L.far.empty') })}`), `its name the short form: ${name}`);
+    assert.deepEqual(describedAs(), [wholeOf()], 'its description the whole form');
+    assert.ok(wholeOf().startsWith(esc(t('L.far.empty'))) && wholeOf().includes(esc(t('L.far.empty.order'))), wholeOf());
+    const was = rebuilds;
+    REC.setIndexState({ arm: 'at_the_floor', floor: 9 });
+    WALK.markDescribed();
+    assert.deepEqual(describedAs(), [esc(LK.emptyAt(GHOST).whole.map((p) => p.text).join(' '))], 'the index from a floor: the description marked in place, the weaker state\'s');
+    assert.ok(describedAs()[0]?.startsWith(esc(t('L.far.unknown'))), `${describedAs()}`);
+    assert.equal(rebuilds, was, 'marked in place, nothing rebuilt');
+  } finally {
+    REC.setIndexState({ arm: 'complete' });
+    REC.invalidate(GHOST);
     globalThis.document = platform;
     WALK.readers({});
   }
