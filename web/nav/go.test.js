@@ -7,8 +7,10 @@
 // the order of acts, the jump in the air and the keys it holds, its flight
 // landing on its passage where its document is set again or folded again in
 // the air, a jump reaching, failures known at the act and learned in the air,
-// a follow's dead reference faced by every route in the words its far end's
-// label names it by, a follow to a
+// every return to a failed jump's entry asking its read again — after a
+// change of the page's class too — with the camera and the walk where the
+// reader left them, a follow's dead reference faced by every route in the
+// words its far end's label names it by, a follow to a
 // withheld document, the chrome a landing leaves standing and a field that
 // keeps its caret, cards opened while an act reads, a face a read brings
 // standing below a card the reader opened, Enter at a withheld run and a
@@ -374,6 +376,8 @@ const marks = () => [GO.arrivalMark(), GO.litLinks()];
 const departed = () => TRAIL.all()[TRAIL.cursorIndex() - 1];
 /** FAR's first member as the page holds it before a version offer asks it: unread, so the offer reads its bytes, which hold each passage the script places there whole */
 const memberUnread = () => REC.invalidate(FAR1);
+/** how many times a document's extent has been asked of the board: the read a return to a failed jump's entry asks again */
+const extentAsks = (/** @type {string} */ addr) => fake.asked.filter((k) => k === FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(addr) })).length;
 
 /**
  * A follow of a link drawn at the first edition while the board does not
@@ -1450,7 +1454,7 @@ test('a jump that ends in a notice keeps its entry and takes one Back to undo at
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a notice whose read answers after the reader left its entry moves nothing; returned to, the entry lands where the camera went — the walk on the address the board says nothing about, the mirror naming it so — and shows its face there again, the link lit (issue #136; FP-25)', async () => {
+test('a notice whose read answers after the reader left its entry moves nothing; returned to, the entry asks its read again and lands where the camera went — the walk on the address the board says nothing about, the mirror naming it so — its face shown there again as the board still says nothing, the link lit (issues #136, #228; FP-25)', async () => {
   takeDead();
   await run(GO.leapTo(FAR));
   await run(GO.leapTo(D));
@@ -1467,8 +1471,9 @@ test('a notice whose read answers after the reader left its entry moves nothing;
   const e = TRAIL.all()[n];
   assert.deepEqual(e && e.notice && [e.addr, e.notice.face, e.notice.site], [GONE, 'unregistered', there], 'its entry holds the answer, where the camera went');
   assert.ok(e && same(e.view, went), 'at the view its camera left for, which Back re-took as it departed');
+  const asked = extentAsks(GONE);
   await run(GO.forward());
-  assert.equal(TRAIL.cursorIndex(), n, 'Forward returns to it');
+  assert.deepEqual([TRAIL.cursorIndex(), extentAsks(GONE) - asked], [n, 1], 'Forward returns to it, asking its read again');
   assert.ok(same(CAM.view(), went), 'where the camera went');
   assert.deepEqual(walkAt(), ['document', GONE, null], 'the walk on the address the board says nothing about, with the camera — never on the link\'s bytes, out of view');
   const item = WALK.mirrorItem(WALK.mirrorIndex()) || '';
@@ -1480,7 +1485,7 @@ test('a notice whose read answers after the reader left its entry moves nothing;
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('Back onto a notice\'s entry from a follow made from it lights the link Back came back along alone — never the one the notice came from — and shows the notice again (issues #136, #152)', async () => {
+test('Back onto a notice\'s entry from a follow made from it lights the link Back came back along alone — never the one the notice came from — and asks the notice\'s read again, its face shown again as the board still says nothing (issues #136, #152, #228)', async () => {
   takeDead();
   await run(GO.leapTo(D));
   REC.invalidate(GONE); // learned in the air: the follow keeps its entry, holding the notice
@@ -1488,13 +1493,14 @@ test('Back onto a notice\'s entry from a follow made from it lights the link Bac
   assert.equal(faceShown()?.id, 'face:doc_not_registered', 'the dead reference faced, its entry the cursor\'s');
   await run(GO.follow(drawn(PASSAGE)));
   assert.equal(TRAIL.current()?.addr, FAR, 'a follow made from the notice\'s entry, landed in FAR');
+  const asked = extentAsks(GONE);
   await run(GO.back());
   assert.deepEqual(marks(), [null, [PASSAGE]], 'the follow Back crossed lit, nothing outlined: one move, one mark');
-  assert.equal(faceShown()?.id, 'face:doc_not_registered', 'the notice shown again');
+  assert.deepEqual([extentAsks(GONE) - asked, faceShown()?.id], [1, 'face:doc_not_registered'], 'the notice\'s read asked again, its face shown again');
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a jump to the entry behind lights as Back does and one to the entry ahead as Forward does; a jump across two entries or more lights nothing — onto a notice\'s entry too, its face shown again (issue #152)', async () => {
+test('a jump to the entry behind lights as Back does and one to the entry ahead as Forward does; a jump across two entries or more lights nothing — onto a notice\'s entry too, its read asked again and its face shown again (issues #152, #228)', async () => {
   takeDead();
   await run(GO.leapTo(D));
   await run(GO.follow(drawn(PASSAGE)));
@@ -1511,8 +1517,82 @@ test('a jump to the entry behind lights as Back does and one to the entry ahead 
   await run(GO.follow(drawn(DEAD)));
   await run(GO.leapTo(FAR));
   await run(GO.leapTo(D));
+  const asked = extentAsks(GONE);
   await run(GO.toTrailEntry(3));
-  assert.deepEqual([TRAIL.current()?.notice?.face, marks(), faceShown()?.id], ['unregistered', [null, []], 'face:doc_not_registered'], 'across two entries onto the notice\'s entry: its face shown again, its link not relit');
+  assert.deepEqual([TRAIL.current()?.notice?.face, marks(), extentAsks(GONE) - asked, faceShown()?.id], ['unregistered', [null, []], 1, 'face:doc_not_registered'], 'across two entries onto the notice\'s entry: its read asked again, its face shown again, its link not relit');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('every return to a failed jump\'s entry asks its read again (issue #228\'s design decision: "Returning to it asks again"): its reading face stands where the failure\'s did while the read is out; the board still saying nothing of the address, the fifth cell there again, the entry holding it; the board not answering, that refusal\'s face, never the word it gave before; and once the board answers for a document there, the return lands on it with no face, the entry\'s notice taken off (FP-25)', async () => {
+  const NEW = '1.0.1.0.33', NEW_TEXT = 'A note made where the board said nothing.';
+  const answered = draftReads(NEW, NEW_TEXT), spans = FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(NEW) });
+  Object.assign(script, answered);
+  script[spans] = { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } };
+  const there = { span: { addr: NEW, pos: 1 }, sign: NEW };
+  try {
+    await run(GO.leapTo(D));
+    await run(GO.leapTo(NEW));
+    assert.deepEqual([faceShown()?.id, TRAIL.current()?.notice?.face], ['face:doc_not_registered', 'unregistered'], 'the LEAP learned in the air that the board says nothing of the address');
+    await run(GO.leapTo(D));
+    let asked = extentAsks(NEW);
+    const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(NEW) });
+    const back = GO.back();
+    assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['reading:' + NEW, there], 'Back: its reading face where the failure\'s stood while the read is out, never the face the entry held');
+    release();
+    await run(back);
+    assert.deepEqual([extentAsks(NEW) - asked, faceShown()?.id, HOST.currentState()?.anchor, TRAIL.current()?.notice?.face, walkAt()], [1, 'face:doc_not_registered', there, 'unregistered', ['document', NEW, null]],
+      'the board still saying nothing: the fifth cell there again, the entry holding it, the walk on the address');
+    await run(GO.leapTo(D));
+    script[spans] = { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } };
+    await run(GO.back());
+    assert.deepEqual([faceShown()?.id, HOST.currentState()?.anchor, TRAIL.current()?.notice?.face], ['face:unreachable', there, 'refused'], 'the board not answering: that refusal\'s face where the fifth cell stood, the entry holding it');
+    await run(GO.leapTo(D));
+    script[spans] = answered[spans];
+    asked = extentAsks(NEW);
+    await run(GO.back());
+    assert.deepEqual([extentAsks(NEW) - asked, HOST.currentState(), TRAIL.current()?.notice, walkAt(), REC.doc(NEW).extent], [1, null, null, ['document', NEW, null], NEW_TEXT.length],
+      'the board answering for a document there: no face, the entry\'s notice taken off, the walk on the document, its text read');
+  } finally {
+    HOST.dismiss();
+    REC.invalidate(NEW);
+  }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a return to a failed jump\'s entry the reader walked on from keeps the camera and the walk where they left them as its read meets the failure again: the walk on the span they walked to, the fifth cell carried by the one line (issue #228\'s design decision: "A failed jump\'s entry is where the camera went, with its face and walk")', async () => {
+  await run(GO.leapTo(FAR));
+  REC.invalidate(GONE);
+  await run(GO.leapTo(GONE));
+  assert.equal(faceShown()?.id, 'face:doc_not_registered', 'the LEAP learned in the air that the board says nothing of the address');
+  CAM.set(GO.viewFor(D, 11));
+  await WALK.focusTo(D, 11);
+  const left = CAM.view();
+  await run(GO.leapTo(FAR));
+  const asked = extentAsks(GONE);
+  await run(GO.back());
+  assert.deepEqual([TRAIL.current()?.addr, extentAsks(GONE) - asked, faceShown()?.id, walkAt()], [GONE, 1, 'face:doc_not_registered', ['block', D, 11]], 'Back: its read asked again, the fifth cell shown, the walk on the span the reader walked to — never on the address');
+  assert.ok(same(CAM.view(), left) && HOST.aside(), 'the camera at the view left, the face carried by the one line');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a return reaching a jump\'s entry while its read is out, the reader having taken the camera over there and walked on, keeps the walk where they left it as the read meets a failure: the walk on their span with the camera, the fifth cell carried by the one line (issue #228\'s design decision: "A failed jump\'s entry is where the camera went, with its face and walk")', async () => {
+  await run(GO.leapTo(FAR));
+  REC.invalidate(GONE);
+  const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(GONE) });
+  const leap = GO.leapTo(GONE);
+  GO.takeOver();
+  CAM.set(GO.viewFor(D, 11));
+  await WALK.focusTo(D, 11);
+  const left = CAM.view();
+  await run(GO.leapTo(FAR));
+  const back = GO.back();
+  assert.deepEqual([TRAIL.pending(/** @type {import('./trail.js').Entry} */ (TRAIL.current())) !== null, HOST.currentState()?.id], [true, 'reading:' + GONE], 'Back reached the entry still reading, its reading face standing');
+  release();
+  await run(leap); await run(back);
+  assert.deepEqual([TRAIL.current()?.addr, TRAIL.current()?.notice?.face, faceShown()?.id, walkAt()], [GONE, 'unregistered', 'face:doc_not_registered', ['block', D, 11]], 'the read met the board saying nothing: the fifth cell shown, the walk on the span the reader walked to — never on the address');
+  assert.ok(same(CAM.view(), left) && HOST.aside(), 'the camera at the view the reader left, the face carried by the one line');
+  HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -1823,7 +1903,7 @@ test('a follow that lands nowhere is faced where the camera is: at its site — 
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('wherever a follow meets a far end the board will say nothing of — known at the act, learned in the air, its projection refused so, its text refused once its projection answered, reaching another board — its face opens with the words its label names the far end by, then the rest of the far end\'s one state; a return to its entry shows the same words; a LEAP to the address faces in the board\'s words alone (issue #224\'s design decision: "The label is always the face\'s first words, shown and spoken")', async () => {
+test('wherever a follow meets a far end the board will say nothing of — known at the act, learned in the air, its projection refused so, its text refused once its projection answered, reaching another board — its face opens with the words its label names the far end by, then the rest of the far end\'s one state; a return to its entry asks its read again and shows the same words; a LEAP to the address faces in the board\'s words alone (issue #224\'s design decision: "The label is always the face\'s first words, shown and spoken"; issue #228)', async () => {
   takeDead(); takeLate(DEAD_LATE, GONE_LATE, 19);
   // PROJ_DEAD: a citation of PROJ_GONE, whose extent the page holds, its projection refused `doc_not_registered`; REACH_DEAD: a
   // citation of REACH_GONE, on board 2, which the plane does not draw
@@ -1864,8 +1944,9 @@ test('wherever a follow meets a far end the board will say nothing of — known 
   await run(GO.follow(drawn(DEAD)));
   const met = said();
   await run(GO.back());
+  const asked = extentAsks(GONE);
   await run(GO.forward());
-  assert.deepEqual([TRAIL.current()?.notice?.far, faceShown()?.id, said()], [true, 'face:doc_not_registered', met], 'Back then Forward onto its entry: the notice a follow\'s, its face in the same words');
+  assert.deepEqual([TRAIL.current()?.notice?.far, extentAsks(GONE) - asked, faceShown()?.id, said()], [true, 1, 'face:doc_not_registered', met], 'Back then Forward onto its entry: its read asked again, the notice a follow\'s, its face in the same words');
   HOST.dismiss();
   // a LEAP to the address, learned in the air and known at the act: the board's words alone
   const board = t('B1.doc_not_registered', { address: GONE });
@@ -3425,7 +3506,7 @@ Object.assign(script, draftReads(NEIGHBOUR, EIGHTY), {
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(GHOSTED) })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
 });
 
-test('a return to the entry a jump\'s failure faced at — the walk on the address the board says nothing about, its view reading the line of a document sharing its room — puts the walk on that address and shows the entry\'s notice alone, whatever the text the view read holds of that line now (issue #297)', async () => {
+test('a return to the entry a jump\'s failure faced at — the walk on the address the board says nothing about, its view reading the line of a document sharing its room — asks its read again, puts the walk on that address and shows the face the board still answers alone, whatever the text the view read holds of that line now (issues #297, #228)', async () => {
   CAM.setDeepest(depthOfDoc(GHOSTED));
   await PUMP.loadWhole(NEIGHBOUR);
   await run(GO.leapTo(FAR));
@@ -3435,14 +3516,16 @@ test('a return to the entry a jump\'s failure faced at — the walk on the addre
   await run(GO.back());
   const e = /** @type {import('./trail.js').Entry} */ (TRAIL.all()[TRAIL.cursorIndex() + 1]), r = /** @type {import('../text/layer.js').Reading} */ (e.reading);
   assert.deepEqual([e.addr, e.notice?.face, r && r.addr, e.stood], [GHOSTED, 'unregistered', NEIGHBOUR, null], 'its entry keeps the notice and the line its view read, the neighbour\'s, the walk standing in no document it read');
+  let asked = extentAsks(GHOSTED);
   await run(GO.forward());
-  assert.deepEqual([walkAt(), faceShown()?.id, GO.landing(), GO.arrivalMark()], [['document', GHOSTED, null], 'face:doc_not_registered', null, null], 'Forward: the walk on the address, never the neighbour\'s line; its notice shown again, nothing else said');
+  assert.deepEqual([walkAt(), extentAsks(GHOSTED) - asked, faceShown()?.id, GO.landing(), GO.arrivalMark()], [['document', GHOSTED, null], 1, 'face:doc_not_registered', null, null], 'Forward: the walk on the address, never the neighbour\'s line; its read asked again and its face shown again, nothing else said');
   // the paragraph holding the line read removed while the reader is away
   await run(GO.back());
   const b = /** @type {import('../model/records.js').Block} */ (REC.blockAt(NEIGHBOUR, r.pos)), end = b.pos + b.width;
   setDraft(NEIGHBOUR, EIGHTY.slice(0, b.pos - 1) + EIGHTY.slice(end - 1), [[NEIGHBOUR, 1, b.pos - 1], [NEIGHBOUR, end, EIGHTY.length - end + 1]]);
+  asked = extentAsks(GHOSTED);
   await run(GO.forward());
-  assert.deepEqual([walkAt(), faceShown()?.id, GO.landing(), GO.arrivalMark()], [['document', GHOSTED, null], 'face:doc_not_registered', null, null], 'the line read gone: the walk on the address, its notice still the one face — no dead end\'s face for the neighbour, nothing marked');
+  assert.deepEqual([walkAt(), extentAsks(GHOSTED) - asked, faceShown()?.id, GO.landing(), GO.arrivalMark()], [['document', GHOSTED, null], 1, 'face:doc_not_registered', null, null], 'the line read gone: the walk on the address, its read asked again and its face still the one face — no dead end\'s face for the neighbour, nothing marked');
   HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });
@@ -3816,6 +3899,37 @@ test('a change of the page\'s class (issue #177: "Keep every place, and cover th
     HOST.dismiss();
     REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   }
+});
+
+test('a return to a failed jump\'s entry a change of the page\'s class left holding no notice asks its read again at the new class (issue #228\'s design decision: "Returning to it asks again"; FP-29): the fifth cell where its camera went, in the board\'s words for a LEAP and in the far end\'s where a follow met the address', async () => {
+  /** @type {Array<[string, () => Promise<unknown>, boolean]>} each jump whose read learns in the air that the board says nothing of GONE, and whether a follow made it */
+  const jumps = [['a LEAP', () => GO.leapTo(GONE), false], ['a follow of a dead reference', () => GO.follow(drawn(DEAD)), true]];
+  const was = fake.unanswered.length;
+  try {
+    for (const [what, jump, far] of jumps) {
+      REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+      await run(GO.leapTo(D));
+      takeDead();
+      REC.invalidate(GONE);
+      await run(jump());
+      assert.deepEqual([faceShown()?.id, TRAIL.current()?.notice?.far ?? false], ['face:doc_not_registered', far], `${what}: learned in the air`);
+      await run(GO.leapTo(FAR));
+      REC.sessionDied({ arm: 'closed' });
+      GO.classChanged();
+      assert.equal(TRAIL.all()[TRAIL.cursorIndex() - 1].notice, null, `${what}: the change of class dropped the entry's notice`);
+      const asked = extentAsks(GONE);
+      await run(GO.back());
+      const words = far ? LK.emptyAt(GONE).whole[0].text : t('B1.doc_not_registered', { address: GONE });
+      assert.deepEqual([TRAIL.current()?.addr, extentAsks(GONE) - asked, faceShown()?.id, HOST.currentState()?.anchor, TRAIL.current()?.notice?.far ?? false], [GONE, 1, 'face:doc_not_registered', { span: { addr: GONE, pos: 1 }, sign: GONE }, far],
+        `${what}: Back asks the read again at the new class, the fifth cell where the camera went, the entry holding it`);
+      assert.ok(hostEl.innerHTML.includes(addressedHTML(words)), `${what}: in ${far ? 'the far end\'s' : 'the board\'s'} words: ${hostEl.innerHTML}`);
+      HOST.dismiss();
+    }
+  } finally {
+    HOST.dismiss();
+    REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  }
+  assert.equal(fake.unanswered.length, was, 'nothing asked the script does not answer');
 });
 
 test('where no board is held the launch names no place — no trail entry, the walk on its root — and every act that needs a board answers where it is taken: a LEAP, HOME, WHOLE BOARD, an account\'s region, and from the plane the walk\'s keys, K-8, the selection\'s chords and the strip, each with the no-board face — why, and "try again" where a retry may tell — making no entry, no flight and no read; the paging key stays the camera\'s; a walk\'s moment unfolded flies the camera alone, pushing nothing (issue #215\'s design decision: "an act that needs a board the reader lacks answers where it is taken and names what still works … None stays silent"; FP-35)', async () => {

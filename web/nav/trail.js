@@ -67,10 +67,13 @@
 // what it reads, the position and the positions the read placed, where the
 // walk then lands; the view left out where the reader took the camera over
 // at the entry, which keeps the view they left it at, what it read and where
-// the walk stood; or a notice: the face the entry shows on every return to
-// it, the entry standing where the camera went — and what its push dropped
-// stays dropped, as any push's does. A cursor move that reaches a claim goes
-// on once it is answered (`pending`). A jump that ends without its camera
+// the walk stood; or a notice: the face the read met, the entry standing
+// where the camera went — and what its push dropped stays dropped, as any
+// push's does. A failure's face is the answer of one read: every return to
+// the entry asks that read again and settles the entry with what it brings
+// (N-GO's), a dead end's and a withheld document's shown again as they
+// stand. A cursor move that reaches a claim goes on once it is answered
+// (`pending`). A jump that ends without its camera
 // leaving — one only a read could place, abandoned or refused — gives its
 // entry back (`giveBack`): its push undone, the entries it dropped and the
 // step it wrote standing again (FP-25).
@@ -161,7 +164,7 @@
  */
 
 /**
- * @typedef {Object} Notice — the face an entry shows, as data (FP-25): where the camera went while its jump's read is out, then on every return to the entry once its read brought it
+ * @typedef {Object} Notice — the face an entry shows, as data (FP-25): where the camera went while its jump's read is out, then once its read brought it — a failure's until a return asks that read again and settles the entry with what it brings (see the head), a dead end's and a withheld document's on every return
  * @property {'reading' | 'unregistered' | 'withheld' | 'refused' | 'floating'} face `reading` while the jump's read is out; then what the read brought — where it brought no place to read, the fifth cell (`unregistered`) or a refusal's face by its name; at the place of a withheld document a follow landed at, its own withheld words (`withheld`); beside the head it landed on, the dead end's (`floating`)
  * @property {string} addr the document the face names
  * @property {import('../bridge/shapes').Refusal | null} refusal the refusal a `refused` face names; null for every other face
@@ -179,7 +182,7 @@
  * @property {Stood | null} stood where the walk stood as the entry was last departed, or where a read placed the entry's landing since (`settle`) (see the head): a return puts it back there; null where neither held one (`Departure`)
  * @property {Step | null} step the step that left it for the entry after it, written as a push departed it; none while nothing has, and none where the push took no step this module records
  * @property {string | null} label the act's name where HOME or WHOLE BOARD pushed the entry, the strings table's; null for every other entry, whose document's words are read from the model as it is shown (see the head)
- * @property {Notice | null} notice the face the entry shows: its jump's reading face while the read is out, then the face the read brought; null where it shows none
+ * @property {Notice | null} notice the face the entry shows: its jump's reading face while the read is out, then the face its read brought, as the latest return to ask that read again found it; null where it shows none
  * @property {Kept | null} kept the arrival as the reader last left the entry, which a return to it restores (see the head); null where none stood
  * @property {Opened | null} scene the reading scene the entry was opened as, its address the document opened beside the reader's; null for every other entry
  */
@@ -330,12 +333,13 @@ export function push(e, departed, claim = false, step = null) {
 }
 
 /**
- * A claim answered with what its read brought (FP-25): a place — its view,
- * what that view reads and where the walk lands there, in the place of where
- * it stood, where the reader did not take the camera over at the entry, and
- * the position and the positions where the read placed them — or a notice,
- * the face the entry shows on every return to it, the entry standing where
- * the camera went; the reading notice the claim held is taken off either way.
+ * A claim answered with what its read brought (FP-25), or an entry whose
+ * read a return asked again (see the head): a place — its view, what that
+ * view reads and where the walk lands there, in the place of where it stood,
+ * where the reader did not take the camera over at the entry, and the
+ * position and the positions where the read placed them — or a notice, the
+ * face the read met, the entry standing where the camera went; the notice
+ * the entry held — a claim's reading notice — is replaced either way.
  * The entry keeps its place and its number, and what its push dropped stays
  * dropped; every cursor move waiting on it is woken.
  * @param {Entry} e

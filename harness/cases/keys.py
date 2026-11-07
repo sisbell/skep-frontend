@@ -2443,8 +2443,8 @@ def run(ctx):
     # FP-25): Enter on the address — the page holding nothing of it, the gate's invalidation door (reads alone) dropping
     # whatever an earlier case learned — flies at once for its place and faces it there, taking one entry, the newest, holding
     # the notice, the walk on the address; Mod+[ undoes it alone — the cursor back on the entry it was made from, the camera
-    # where it stood, the notice cleared — and Mod+] returns to it, the camera and the walk where the camera went and the
-    # notice shown again there
+    # where it stood, the notice cleared — and Mod+] returns to it, asking its read again (issue #228's design decision), the
+    # camera and the walk where the camera went and the fifth cell shown there again as the board still says nothing
     ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(GHOST))
     left, t0 = state(ctx), trail(ctx)
     chord(ctx, 'l', mods=('Meta',))
@@ -2466,13 +2466,15 @@ def run(ctx):
     r.check(t2['cursor'] == t0['cursor'] and len(t2['entries']) == len(t1['entries']) and same_view(left, s) and s['overlay'] is None,
             'Mod+[ after the notice undoes the jump alone: the cursor on the entry it was made from, the camera where it stood, the notice cleared (#136)',
             {'cursor': [t0['cursor'], t2['cursor']], 'cam_same': same_view(left, s), 'overlay': s['overlay']})
+    extent_asks = 'window.__skep.bridge.calls().slice(%%d).filter((c) => c.op === "retrieve_doc_v_span_set" && JSON.parse(c.frame).doc === %s).length' % json.dumps(GHOST)
+    n_calls = ctx.js('window.__skep.bridge.calls().length')
     chord(ctx, ']', mods=('Meta',))
     overlay_up(ctx, 'face:')
     s, t3 = state(ctx), trail(ctx)
-    again = ctx.js('window.__skep.overlay().id')
-    r.check(t3['cursor'] == t0['cursor'] + 1 and again == 'face:doc_not_registered' and same_view(went, s) and s['focus'] == went['focus'],
-            'Mod+] returns to the jump\'s entry: the notice shown again, the camera and the walk where the camera went (#136; FP-25)',
-            {'cursor': [t0['cursor'], t3['cursor']], 'overlay': again, 'cam_same': same_view(went, s), 'focus': [went['focus'], s['focus']]})
+    again, asked = ctx.js('window.__skep.overlay().id'), ctx.js(extent_asks % n_calls)
+    r.check(t3['cursor'] == t0['cursor'] + 1 and asked >= 1 and again == 'face:doc_not_registered' and same_view(went, s) and s['focus'] == went['focus'],
+            'Mod+] returns to the jump\'s entry and asks its read again: the fifth cell shown again as the board still says nothing, the camera and the walk where the camera went (#136, #228; FP-25)',
+            {'cursor': [t0['cursor'], t3['cursor']], 'asked': asked, 'overlay': again, 'cam_same': same_view(went, s), 'focus': [went['focus'], s['focus']]})
     # the same address, the page knowing now that the board says nothing about it, never leaves (FP-25; issue #137): Enter on
     # it takes no entry and moves no camera, its face standing
     chord(ctx, 'Escape')

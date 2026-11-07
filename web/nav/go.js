@@ -261,8 +261,8 @@
 // jump is in the air stands over its landing, and one asked then opens
 // there. Nor does a failure: every face a read brings once it answered — a
 // failure learned in the air, the dead end or the withheld document a landing
-// meets, a refusal met reaching, an entry's notice shown again on a return —
-// is O-HOST's notice (`showFound`, `asNotice`; FP-36), no act on the chrome,
+// meets, a refusal met reaching, an entry's notice shown or asked again on a
+// return — is O-HOST's notice (`showFound`, `asNotice`; FP-36), no act on the chrome,
 // which ends no card still reading and stands below a card, a list or a
 // moment the reader opened, covering neither it nor its focus; a face shown
 // at the act stands in the place of what stands there. Its reads run beside
@@ -278,7 +278,8 @@
 // dropped (APP-INPUT; `airSince`). A jump says it is reading where the camera
 // is (O-FACES' `reading`), at the place it left for. A failure its reads
 // learn in the air is faced where the camera went (`failed`), the camera
-// staying, the walk re-taken there, the entry holding the face as its notice;
+// staying, the walk re-taken there, the entry holding the face as its notice,
+// which every return to the entry asks again (see the cursor move, below);
 // a follow to a far document the board withholds lands at the document
 // whole, the face of its own withheld words at its place as the notice, the
 // link lit and nothing outlined, told by the landing's description
@@ -339,9 +340,21 @@
 // at, else, where it stood in the text the words were found in, where the
 // return lands there, else on the entry's place (`walkOf`), on a span only
 // where the view reads its document at its reading scale; and it shows the
-// entry's notice again. Reaching an entry still reading, it shows that
-// entry's reading face and goes on once the read answers, where no act was
-// made and the reader took nothing over.
+// entry's notice again — a dead end's, a withheld document's — save a
+// failure's: an entry holding the face a failure brought asks the read its
+// jump made again (`askOf`, `askAgain`), its reading face at that face's site
+// while the read is out, the entry settled with the face the answer brings —
+// the fifth cell or a refusal's where it meets a failure again, shown where it
+// stands, the camera and the walk where the move put them; none where it
+// places a document, the return then landing as any does — and so does an
+// entry holding no notice, as a change of the page's class leaves a failed
+// jump's, whose place the page holds nothing of but that the board says
+// nothing of it, its index lists no such place and nothing else the move
+// reads names it, the fifth cell in the far end's words where a follow met
+// it. Reaching an entry still reading, it shows that entry's reading face and
+// goes on once the read answers, where no act was made and the reader took
+// nothing over, the walk where the reader left it where they took the camera
+// over there.
 // The cover (FP-29): a trail entry holds no document's words — HOME and WHOLE
 // BOARD push their act's name, the strings table's, a reading scene's entry
 // is named by its act's and its two documents' addresses (`scenePair`), and
@@ -1370,21 +1383,23 @@ async function goOn(act, first, at, byKey, ms) {
  * the board answers for with nothing,
  * a follow's far end projected into one: its entry holding the face as its
  * notice where the camera went; then, where no act was made since, the face
- * shown there as O-HOST's notice (`showFound`), the walk re-taken on the
- * place without the platform's focus — save where the reader took the camera
- * over — so the mirror names what the read learned, the ring as the act left
- * it, and the jump ended, never landed.
+ * shown there as O-HOST's notice (`showFound`), the walk re-taken without the
+ * platform's focus — on the place, or where a return reaching the entry put
+ * it (`to`) — save where the reader took the camera over, so the mirror names
+ * what the read learned, the ring as the act left it, and the jump ended,
+ * never landed.
  * @param {number} act
  * @param {Entry | null} entry
  * @param {Notice} n
  * @param {boolean | undefined} byKey a key made the act
+ * @param {Destination | null} [to] where a return put the walk: re-taken there, never on the place
  * @returns {boolean} no act was made since: the face shows
  */
-function failed(act, entry, n, byKey) {
+function failed(act, entry, n, byKey, to = null) {
   if (entry) TRAIL.settle(entry, { notice: n });
   if (act !== made) return false;
   showFound(n);
-  if (takenAt !== act) void WALK.focusTo(n.addr, null, !!byKey, false);
+  if (takenAt !== act) { if (to) focusOn({ ...to, take: false }, byKey); else void WALK.focusTo(n.addr, null, !!byKey, false); }
   endAir(act, false);
   return true;
 }
@@ -2612,11 +2627,15 @@ function returnTo(l, view) {
  * entry, a place in a document placed again by its byte, else where the
  * return lands in the text it stood in, else on the entry's place — and its
  * notice shown again as O-HOST's notice,
- * so a surface the return reopens stands over it (`showFound`) — a failure's
- * where the camera went, the dead end's told by the landing's description
- * where it describes it — then what the return says beyond its marks
+ * so a surface the return reopens stands over it (`showFound`) — a dead
+ * end's, told by the landing's description where it describes it, or a
+ * withheld document's — then what the return says beyond its marks
  * (`sayReturn`); the move's light lit (`lightOf`), and no link of the entry's
- * own: the one the move crossed alone. Where the page cannot tell yet what
+ * own: the one the move crossed alone. An entry holding a failure's face asks
+ * the read its jump made again, and so does one holding no notice whose place
+ * nothing else the move reads tells of (`askOf`): the face its answer brings
+ * shown where it stands, else the return landing as any does (`askAgain`).
+ * Where the page cannot tell yet what
  * the text holds — a feed row dropped it while the reader was away, or its
  * image covers too little — the camera leaves for the line holding the first
  * of the words the held text places, else the line at their own position,
@@ -2625,8 +2644,8 @@ function returnTo(l, view) {
  * reading shows its reading face at the place the camera left for, and once
  * its read is answered the move restores the versions it kept and goes on to
  * what it brought — the place it placed, or the face it met, faced there as
- * a failure learned in the air is — save where an act was made after the
- * move, which ends it there, and
+ * a failure learned in the air is, the walk staying where the move put it —
+ * save where an act was made after the move, which ends it there, and
  * where the reader took the camera over meanwhile, which marks what it
  * brought and moves nothing. An entry whose document is covered lands on the
  * covered box framed whole, its withheld face standing there (see the head;
@@ -2635,8 +2654,8 @@ function returnTo(l, view) {
  * (`coverRead`). The surfaces the entry keeps are owed to it from the move,
  * and reopened beside the flight once the place is landed at (`restore`) —
  * never at a covered place, nor where the reader took the camera over or the
- * entry's read met a failure. An entry a reading scene was opened as reopens
- * the scene (`sceneAt`).
+ * read an entry still reading waited on met a failure. An entry a reading
+ * scene was opened as reopens the scene (`sceneAt`).
  * @param {Entry} e the entry the move reached
  * @param {number} act the move's count
  * @param {boolean} byKey a key made the move
@@ -2649,11 +2668,14 @@ async function landAtCursor(e, act, byKey, l) {
   owed = kept ? { entry: e, ...kept } : null;
   light = l; lit = l && l.link ? [l.link] : [];
   if (!answer) restoreVersions(e);
-  const cover = answer ? null : coverOf(e);
-  const at = answer || cover ? null : returning(e), told = at && !at.reads.length ? markReturn(at, e.notice) : null;
+  const cover = answer ? null : coverOf(e), at = answer || cover ? null : returning(e), ask = at ? askOf(e, at) : null;
+  const told = at && !at.reads.length ? markReturn(at, e.notice) : null;
   const view = at ? at.view : e.view, aim = at ? at.aim : null;
   const back = l && l.back ? returnTo(l, view) : null;
-  const first = leave(act, e, cover === 'covered' ? coveredAt(e.addr) : back ? { ...back, view, aim } : { ...walkOf(e, at), view, aim }, byKey, 500);
+  /** @type {Destination} where the move puts the camera and the walk */
+  const to = cover === 'covered' ? coveredAt(e.addr) : back ? { ...back, view, aim } : { ...walkOf(e, at), view, aim };
+  const first = leave(act, e, to, byKey, 500);
+  if (at && ask) { await askAgain(act, e, ask, at, to, first, byKey, told); return; }
   if (e.notice) showFound(e.notice, !!landed && (landed.floating || landed.withheld) && landed.addr === e.notice.addr);
   if (cover === 'covered') showCover(e.addr);
   if (!answer) {
@@ -2666,9 +2688,110 @@ async function landAtCursor(e, act, byKey, l) {
   if (act !== made) return;
   FACES.endReading();
   const n = e.notice;
-  if (n && n.face !== 'floating' && n.face !== 'withheld') { failed(act, null, n, byKey); return; }
+  if (n && n.face !== 'floating' && n.face !== 'withheld') { failed(act, null, n, byKey, to); return; }
   restoreVersions(e);
   await placeRead(act, e, returning(e).reads, first, byKey, n);
+}
+
+/**
+ * @typedef {Object} Ask — the read a return asks again at an entry (`askOf`): the read its jump made, whose answer the entry's notice holds
+ * @property {string} addr the place the read names: the address the jump named
+ * @property {Site | null} site where the face its answer brings stands — the notice's site, or the place the jump's camera left for
+ * @property {boolean} far a follow met the place at its link's far end: the fifth cell said in the far end's words (`Notice.far`)
+ */
+
+/**
+ * The read a cursor move reaching an entry asks again (see the head; FP-25):
+ * where the entry holds the face a failure brought — the fifth cell, or a
+ * refusal's by its name — the place that face names, where it stands, and
+ * whether a follow met it; where it holds no notice, as a change of the
+ * page's class leaves a failed jump's entry, its own document, where the page
+ * holds no answer for it but that the board says nothing of it, its index
+ * lists no such place, so the view draws nothing there to read, and nothing
+ * else the move reads names it (`Return.reads`), a follow having met it where
+ * the entry before it records one into it (`followedInto`). Null for every
+ * other entry: a claim, a covered place and one owed its read (`coverOf`)
+ * among them.
+ * @param {Entry} e
+ * @param {Return} at what the move reads of the entry (`returning`)
+ * @returns {Ask | null}
+ */
+function askOf(e, at) {
+  const n = e.notice;
+  if (n) return n.face === 'unregistered' || n.face === 'refused' ? { addr: n.addr, site: n.site, far: !!n.far } : null;
+  if (kindOf(e.addr) !== 'document' || REC.place(e.addr) || at.reads.some((a) => boxOf(a) === boxOf(e.addr))) return null;
+  const d = REC.has(e.addr) ? REC.doc(e.addr) : null;
+  if (d && (d.extent != null || d.meta || d.from >= 0 || d.refused === 'withheld')) return null;
+  return { addr: e.addr, site: siteAt(e.addr, e.pos), far: followedInto(e) };
+}
+
+/** was an entry's place met at a followed link's far end: does the entry before it record a follow into it (N-TRAIL's `Step`)? */
+function followedInto(/** @type {Entry} */ e) {
+  const all = TRAIL.all(), i = all.indexOf(e), s = i > 0 ? all[i - 1].step : null;
+  return !!s && s.kind === 'follow' && s.far === e.addr;
+}
+
+/**
+ * The face a read asked again brings, as the entry's notice (`askAgain`): the
+ * board refusing the place's extent — the fifth cell for `doc_not_registered`,
+ * in the far end's words where a follow met the place; a follow's far
+ * document withheld from the reader, its own withheld words at its place
+ * (`landWithheld`); any other refusal, its face by its name — else none, the
+ * read having placed a document: a LEAP's withheld one among them, whose box
+ * says so.
+ * @param {Ask} ask
+ * @param {{doc: Doc | null, refused: Refusal | null}} w the read's answer (M-PUMP's `wholeOf`)
+ * @returns {Notice | null}
+ */
+function answerOf(ask, w) {
+  const r = w.doc ? null : w.refused;
+  if (!r) return null;
+  if (r.name === 'doc_not_registered') return { face: 'unregistered', addr: ask.addr, refusal: null, site: ask.site, ...(ask.far ? { far: true } : {}) };
+  if (r.name === 'withheld') return ask.far ? { face: 'withheld', addr: ask.addr, refusal: null, site: placeAt(ask.addr) } : null;
+  return { face: 'refused', addr: ask.addr, refusal: r, site: ask.site };
+}
+
+/**
+ * A return asking again the read a failed jump made (see the head; FP-25;
+ * `askOf`): its reading face at the face's site while the read is out, where
+ * the page holds no extent of the place; the place read whole beside the
+ * flight (M-PUMP's `wholeOf`), and the entry settled with the face the answer
+ * brings (`answerOf`) whatever act was made since. Then, where no act was made
+ * since, the reading face ended and: a failure — its face shown as O-HOST's
+ * notice where it stands, what the return says said (`sayReturn`), and, save
+ * where the reader took the camera over, the walk re-taken where the move put
+ * it without the platform's focus, so the mirror names the answer, and the
+ * surfaces the entry keeps reopened (`restore`) — the texts the move could not
+ * tell from read first (`placeRead`); else the return landing as any return
+ * does once its texts are read (`placeRead`), a follow's withheld document's
+ * face shown with it.
+ * @param {number} act the move's count
+ * @param {Entry} e the entry the move reached
+ * @param {Ask} ask
+ * @param {Return} at what the move read of the entry as it was made (`returning`)
+ * @param {Destination} to where the move put the camera and the walk
+ * @param {Promise<boolean>} first the move's flight
+ * @param {boolean} byKey a key made the move
+ * @param {Told | null} told what the return says beyond its marks
+ */
+async function askAgain(act, e, ask, at, to, first, byKey, told) {
+  const d = REC.has(ask.addr) ? REC.doc(ask.addr) : null, reads = !d || d.extent == null;
+  if (reads) FACES.reading(ask.addr, ask.site);
+  const notice = answerOf(ask, await PUMP.wholeOf(ask.addr));
+  TRAIL.settle(e, { notice });
+  if (act !== made) return;
+  if (reads) FACES.endReading();
+  if (notice && notice.face !== 'withheld') {
+    if (at.reads.length) { await placeRead(act, e, at.reads, first, byKey, notice); return; }
+    showFound(notice);
+    sayReturn(act, e, told);
+    if (takenAt === act) return;
+    focusOn({ ...to, take: false }, byKey);
+    void restore(e, act);
+    endAir(act, await first);
+    return;
+  }
+  await placeRead(act, e, returning(e).reads, first, byKey, notice);
 }
 
 /**
@@ -2995,17 +3118,20 @@ function stoodAgain(s) {
  * (`Found.to`); else, where the byte it stood on is gone, on its document
  * whole; else on the entry's place, at its position, whatever document the
  * view read beside it — the address a jump's failure faced among them.
- * Where the move has not yet read what the entry holds (`at` null), the
- * landing's run, else the entry's place.
+ * Where the move has not yet read what the entry holds (`at` null) — an entry
+ * still reading — the landing's run, else, where the reader took the camera
+ * over at the entry (`takeOver`), where the walk stood as they left it,
+ * placed again by its byte (`stoodAgain`), so the walk stands with the
+ * camera, else the entry's place.
  * @param {Entry} e
  * @param {Return | null} at
  * @returns {WalkTo}
  */
 function walkOf(e, at) {
-  const f = at ? at.found : null, s = e.stood;
+  const f = at ? at.found : null, s = e.stood, stood = at ? at.walk : s && takenOver.has(e) ? stoodAgain(s) : null;
   const on = landed && (landed.addr === shownIn(e.addr) || (!!f && landed.addr === f.addr)) ? { addr: landed.addr, pos: landed.pos, end: null } : null;
   if (on && described()) return on;
-  if (at && at.walk) return at.walk;
+  if (stood) return stood;
   if (on) return on;
   if (f && boxOf(s ? s.addr : e.addr) === boxOf(f.addr)) return { addr: f.addr, pos: f.to, end: null };
   if (at && s) return { addr: shownIn(s.addr), pos: null, end: null };
@@ -3143,7 +3269,8 @@ async function placeRead(act, e, texts, first, byKey, n = null) {
  * class left whose read is still owed (M-REC's `owed`) — covered at once, or
  * waiting to be read — which that read covers, confirms or lifts, or one the
  * class it left could read that the page holds nothing of yet; null for every
- * other entry, and for one holding a notice, which shows its own face.
+ * other entry, and for one holding a notice, which shows its own face or asks
+ * again the read that brought it (`askOf`).
  * @param {Entry} e
  * @returns {'covered' | 'unread' | null}
  */
