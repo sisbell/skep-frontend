@@ -21,18 +21,42 @@
 // No plane command rides a printable key (§2.7): every command is a chord
 // (Mod = ⌘ on macOS, Ctrl elsewhere; D5 §0) or a navigation key with the
 // platform's meaning; a printable key on the plane is swallowed, never
-// dispatched, the K-9 line shown at the focus (`swallow`); Mod+S is
-// swallowed too (K-74), Mod+R and F5 taken and nothing reloaded (K-94), and
-// the platform's own chords — copy, paste, cut, select all, print, close,
-// quit, minimize, hide, preferences — are never taken (K-92, K-93). No key is
-// dispatched while an input method's composition is open (the IME guard).
+// dispatched, the K-9 line shown at the focus (`swallow`), save in text the
+// person may edit (below); Mod+R and F5 are taken and nothing reloaded
+// (K-94), and the platform's own chords — copy, paste, cut, select all,
+// print, close, quit, minimize, hide, preferences — are never taken (K-92,
+// K-93). No key is dispatched while an input method's composition is open
+// (the IME guard).
+// THE CARET (D5 K-70, K-71, K-72, K-76, K-77; D6 BM-1, BM-52, BM-54): in
+// text the person may edit (T-LAYER's `editable`) Enter at the walk's focused
+// span places the caret at the span's start, or returns the kept one standing
+// in that span (`activateFocus`; T-LAYER's `caretToSpan`); while a live caret
+// stands on the plane the focus is at it (`Ctx.where` `caret`, read as a key
+// is pressed and again as a held key is made, `whereNow`), and its keys reach
+// it before the walk's (`caretKey`): the arrows move it, Backspace and
+// Delete take a character out, Enter and Shift+Enter put a new line in, Tab
+// a tab character, a printable key its character — each a change of the text
+// shown alone, nothing composed and nothing sent (T-LAYER; FP-14); every
+// other key acts as on the plane. At a span of such a draft where no caret
+// stands a printable key but Space is answered by the draft's own line,
+// "Enter places a caret here" (K-72, K-9), and a paste or a cut there by that
+// line in their own words, nothing placed and nothing removed (K-93); at the
+// span a kept caret stands in, a printable key returns it and types at it
+// (`typeAt`). Mod+S writes nothing (K-74): where the draft the caret stands in
+// — else the walk's document — has a kept state, it is answered at the
+// corner with the state's statement whole at the first press in a session
+// and with the corner's own word after it, the statement whole on the word's
+// act (`saveChord`; P41; T-LAYER's `openStatement`); elsewhere it is taken
+// and does nothing.
 // Esc closes the innermost thing, in one order (`esc`; §4 rule 7; D7): the
 // box, a card or scene still reading, the notice standing below the overlay
 // (FP-36; O-HOST's), the overlay, a jump reaching, the scene — its close a
-// Back from its entry (N-GO's `closeScene`) — the selection, and after them
-// all the arrival (FP-21; N-GO's `endArrival`); made at a landing, it passes
-// over the box and over an overlay whose own field holds the caret, the
-// notice below that overlay still closing first (FP-20). Mod+L and Mod+K
+// Back from its entry (N-GO's `closeScene`) — the selection, then a live
+// caret — the text left to the walk at the caret's span, the caret KEPT
+// there (K-77; BM-4), which Enter or a printable key at that span returns —
+// and after them all the arrival (FP-21; N-GO's `endArrival`); made at a
+// landing, it passes over the box and over an overlay whose own field holds
+// the caret, the notice below that overlay still closing first (FP-20). Mod+L and Mod+K
 // open the LEAP box (K-30), Mod+Y the trail's list (K-41), Mod+= and Mod+-
 // zoom the camera by 1.25 about the view's
 // centre and re-take the focus (K-11), Mod+Shift+P shows the one line's strip
@@ -44,8 +68,9 @@
 // one, and are the platform's otherwise (FP-21). Where the focus is
 // (`Ctx.where`) decides the rest: in a field every key but Esc is the field's
 // own; on the line ← and → move among its acts and every other key is the
-// act's own (K-22); at a corner Enter takes the corner's act (K-57) and its
-// other keys are the platform's; in an overlay and at a landing's line every
+// act's own (K-22); at a corner Enter takes the corner's act (K-57) — a
+// draft's kept word opens its statement, an edition's version statement its
+// list — and its other keys are the platform's; in an overlay and at a landing's line every
 // key is the control's own; on the plane the walk's keys (K-1 … K-5) move
 // the walk, Enter activates the focus (K-7) — at a continuation's mark's stop
 // it opens the mark's list — and the paging keys page the camera (K-6);
@@ -65,8 +90,9 @@
 // the plane (K-1 … K-5, K-7), K-8, the selection's slot chords (K-47 … K-52)
 // and the strip (K-23) each answer with O-FACES' no-board face, as HOME and
 // WHOLE BOARD do through N-GO; the paging keys and the zoom chords stay the
-// camera's.
-// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-25, FP-35.
+// camera's. State (FP-10), beside the held keys: whether Mod+S has been
+// answered whole this session (`saveAnswered`).
+// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-14, FP-25, FP-35.
 
 import * as GO from './go.js';
 import * as WALK from './walk.js';
@@ -93,10 +119,10 @@ export const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(na
  * @property {string} id K-n
  * @property {string} chord the key as D5 writes it (`Mod+L`, `↓`, `Enter`)
  * @property {string} act the act's name
- * @property {'plane' | 'line' | 'box' | 'trail' | 'selection' | 'cards' | 'corner' | 'scene' | 'platform'} surface
+ * @property {'plane' | 'line' | 'box' | 'trail' | 'selection' | 'cards' | 'corner' | 'scene' | 'caret' | 'platform'} surface `caret` a key at a live caret in text the person may edit
  */
 
-/** the table: every chord the page binds, by D5's row — K-9's swallow, K-10's quasimode and K-12's pinch are APP-INPUT's */
+/** the table: every chord the page binds, by D5's row — K-9's swallow, K-72's printable key at a caret, K-10's quasimode and K-12's pinch are APP-INPUT's and the dispatch's own */
 export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-1', chord: '↓', act: 'walk.down', surface: 'plane' },
   { id: 'K-2', chord: '↑', act: 'walk.up', surface: 'plane' },
@@ -128,6 +154,18 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-52', chord: 'Mod+Shift+Enter', act: 'selection.scene', surface: 'selection' },
   { id: 'K-55', chord: 'Enter', act: 'cards.open', surface: 'cards' },
   { id: 'K-57', chord: 'Enter', act: 'corner.act', surface: 'corner' },
+  { id: 'K-70', chord: 'Enter', act: 'caret.place', surface: 'plane' },
+  { id: 'K-71', chord: '←', act: 'caret.left', surface: 'caret' },
+  { id: 'K-71', chord: '→', act: 'caret.right', surface: 'caret' },
+  { id: 'K-71', chord: '↑', act: 'caret.up', surface: 'caret' },
+  { id: 'K-71', chord: '↓', act: 'caret.down', surface: 'caret' },
+  { id: 'K-72', chord: 'Backspace', act: 'caret.erase', surface: 'caret' },
+  { id: 'K-72', chord: 'Delete', act: 'caret.erase', surface: 'caret' },
+  { id: 'K-74', chord: 'Mod+S', act: 'save.answer', surface: 'plane' },
+  { id: 'K-76', chord: 'Tab', act: 'caret.tab', surface: 'caret' },
+  { id: 'K-76', chord: 'Enter', act: 'caret.newline', surface: 'caret' },
+  { id: 'K-76', chord: 'Shift+Enter', act: 'caret.newline', surface: 'caret' },
+  { id: 'K-77', chord: 'Esc', act: 'caret.leave', surface: 'caret' },
   { id: 'K-91', chord: 'Mod+G', act: 'arrival.next', surface: 'plane' },
   { id: 'K-91', chord: 'Mod+Shift+G', act: 'arrival.previous', surface: 'plane' },
   { id: 'K-62', chord: 'Mod+R', act: 'scene.relevel', surface: 'scene' },
@@ -167,7 +205,7 @@ export const drawChord = (/** @type {string} */ chord) => (MAC ? chord.replace('
 
 /**
  * @typedef {Object} Ctx — where the focus is, and whether a key made the act
- * @property {'plane' | 'line' | 'box' | 'overlay' | 'landing' | 'corner' | 'scene' | 'scene-acts' | 'field'} where `scene` a reading scene's pane, `scene-acts` its bar's buttons, `landing` a landing's line's acts (O-LAND)
+ * @property {'plane' | 'caret' | 'line' | 'box' | 'overlay' | 'landing' | 'corner' | 'scene' | 'scene-acts' | 'field'} where `caret` the plane while a live caret stands in text the person may edit (T-LAYER's `caret`; set here, `whereNow`), `scene` a reading scene's pane, `scene-acts` its bar's buttons, `landing` a landing's line's acts (O-LAND)
  * @property {boolean} byKey a key made the act (the focus owner's one reading, `FOCUS.byKey`)
  * @property {boolean} [landed] the key is made at a jump's landing, held while the jump was in the air (`replay`): Esc passes over the chrome a field the reader types in stands in (`esc`)
  */
@@ -188,8 +226,44 @@ let replaying = false;
 /** a held key's act is being made now */
 let making = false;
 
+/** Mod+S has been answered whole this session: after it the corner's own word answers (K-74; P41) */
+let saveAnswered = false;
+
 /** the keys held for a landing, and the one whose act is being made there (the gate's settle signal) */
 export const holding = () => held.length + (making ? 1 : 0);
+
+/**
+ * Where the focus is, read now (see the head): the plane while a live caret
+ * stands in text the person may edit is the caret; everywhere else as the
+ * app read it. A live caret the walk has left behind — its focus landed in
+ * another document, a teleport's or a click's — is left to the walk as the
+ * key finds it, kept where it stood (K-77; D5 §4 rule 8): no landing hands
+ * the next key to a caret it did not land at.
+ * @param {Ctx} ctx
+ * @returns {Ctx}
+ */
+function whereNow(ctx) {
+  if (ctx.where !== 'plane' || SCENE.isOpen()) return ctx;
+  const c = LAYER.caret(), f = WALK.current();
+  if (!c || !c.live) return ctx;
+  if (f && f.addr !== c.addr) { LAYER.leaveCaret(); return ctx; }
+  return { ...ctx, where: 'caret' };
+}
+
+/**
+ * The walk's focused span where it is a span of a draft the person may edit
+ * holding no caret, live or kept — the site of the swallow's draft form
+ * (K-72, K-93); null anywhere else: another's text, a live caret standing, a
+ * kept caret in that span, the scene over the plane.
+ * @param {Ctx} ctx
+ * @returns {{addr: string, pos: number} | null}
+ */
+function bareDraftSpan(ctx) {
+  if (ctx.where !== 'plane' || SCENE.isOpen()) return null;
+  const f = WALK.current();
+  if (!f || f.kind !== 'block' || f.pos == null || !LAYER.editable(f.addr) || LAYER.caretInSpan(f.addr, f.pos)) return null;
+  return { addr: f.addr, pos: f.pos };
+}
 
 /**
  * Dispatch a key: true where the page took it (the caller then prevents the
@@ -208,6 +282,9 @@ export async function dispatch(e, ctx) {
   if (e.isComposing || e.key === 'Process' || e.keyCode === 229) return false;
   const chord = chordOf(e);
   const mod = MAC ? e.metaKey : e.ctrlKey;
+  ctx = whereNow(ctx);
+  // a paste or a cut at a span of a draft the person may edit holding no caret (K-93, K-72): the draft's line in their own words, nothing placed and nothing removed
+  if (mod && !e.shiftKey && (chord === 'Mod+V' || chord === 'Mod+X') && bareDraftSpan(ctx)) { LINE.transient(t(chord === 'Mod+V' ? 'B3.caret.enter.paste' : 'B3.caret.cut')); return true; }
   // the platform's own, never taken (K-92, K-93)
   if (mod && !e.shiftKey && ['C', 'V', 'X', 'A', 'P', 'W', 'Q', 'M', 'H', ','].includes(chord.slice(4))) return false;
   if (ctx.where === 'field') {
@@ -244,7 +321,7 @@ function route(e, chord, ctx) {
   if (chord === 'Mod+L' || chord === 'Mod+K') return () => { LEAP.open(); return true; };
   // the trail's list (K-41)
   if (chord === 'Mod+Y') return () => { TRAILLIST.open(byKey); return true; };
-  if (chord === 'Mod+S') return () => true; // K-74: swallowed — no save exists; the corner's "kept" is the answer
+  if (chord === 'Mod+S') return () => { saveChord(); return true; }; // K-74: the chord writes nothing; the corner's kept state answers it
   // the scene covers the plane: its keys alone, nothing under it takes one
   if (SCENE.isOpen()) return sceneKey(e, chord, ctx);
   // zoom (K-11)
@@ -266,10 +343,15 @@ function route(e, chord, ctx) {
   // the step (K-91's chords; FP-21): an arrival's next and previous run, live from the plane and every control on it — held for a
   // jump's landing while one is in the air, which may stand an arrival in several runs; the platform's find where none steps
   if (chord === 'Mod+G' || chord === 'Mod+Shift+G') return GO.steps() || GO.inAir() ? () => { GO.step(chord === 'Mod+G' ? 1 : -1, byKey); return true; } : null;
-  // the corner (K-57): Enter takes its act; its other keys are the platform's
+  // the caret's keys (see the head): at a live caret, before the walk's
+  if (ctx.where === 'caret') { const act = caretKey(e, chord); if (act) return act; }
+  // the corner (K-57): Enter takes its act — a draft's kept word's statement (K-74), else the version statement's list; its other keys are the platform's
   if (ctx.where === 'corner') {
     const corner = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('[data-corner]'));
-    return chord === 'Enter' && corner ? () => VERSIONS.fromCorner(corner, SEL.selected(), byKey) : null;
+    if (chord !== 'Enter' || !corner) return null;
+    const addr = corner.dataset.corner || '';
+    if (REC.keptOf(addr)) return () => { LAYER.openStatement(addr); return true; };
+    return () => VERSIONS.fromCorner(corner, SEL.selected(), byKey);
   }
   // the line is one stop (K-22): ← and → move among its acts; every other key is the act's own
   if (ctx.where === 'line') return chord === '←' || chord === '→' ? () => { e.preventDefault(); return LINE.step(chord === '→' ? 1 : -1); } : null;
@@ -285,9 +367,69 @@ function route(e, chord, ctx) {
   if (chord === 'End') return async () => { e.preventDefault(); await WALK.key('last'); return true; };
   if (chord === 'PageDown' || chord === 'PageUp') return () => { page(chord === 'PageDown' ? 1 : -1); CAM.markDirty(); WALK.retakeFromView(byKey); return true; };
   if (chord === 'Enter') return async () => { await activateFocus(byKey); return true; };
-  // a printable key on the plane: swallowed, the K-9 line at the focus
-  if (printable(e)) return () => { swallow(e); return true; };
+  // a printable key on the plane: typed at the kept caret standing in the focused span, answered by the draft's line at a span of a draft the person may edit holding none, else swallowed with the K-9 line (`typeAt`)
+  if (printable(e)) return () => { typeAt(e); return true; };
   return null;
+}
+
+/**
+ * A key at a live caret (see the head; K-71, K-72, K-76): the arrows move it,
+ * Backspace and Delete take a character out, Enter and Shift+Enter put a new
+ * line in, Tab a tab character, a printable key its character — each a change
+ * of the text shown alone (T-LAYER). Null for any other key, which acts as on
+ * the plane. The platform's default is prevented first: an arrow would scroll
+ * the mirror, Tab would move the focus, Backspace would go back.
+ * @param {KeyboardEvent} e
+ * @param {string} chord
+ * @returns {Act | null}
+ */
+function caretKey(e, chord) {
+  /** @type {Record<string, 'left' | 'right' | 'up' | 'down'>} */
+  const moves = { '←': 'left', '→': 'right', '↑': 'up', '↓': 'down' };
+  if (chord in moves) return () => { e.preventDefault(); LAYER.caretMove(moves[chord]); return true; };
+  if (chord === 'Backspace') return () => { e.preventDefault(); LAYER.caretErase(-1); return true; };
+  if (chord === 'Delete') return () => { e.preventDefault(); LAYER.caretErase(1); return true; };
+  if (chord === 'Enter' || chord === 'Shift+Enter') return () => { e.preventDefault(); LAYER.caretType('\n'); return true; };
+  if (chord === 'Tab') return () => { e.preventDefault(); LAYER.caretType('\t'); return true; };
+  if (printable(e)) return () => { e.preventDefault(); LAYER.caretType(e.key); return true; };
+  return null;
+}
+
+/**
+ * A printable key on the plane where no live caret stands (see the head): at
+ * the walk's focused span of a draft the person may edit, every key but Space
+ * — the kept caret standing in that span returned and the key typed at it
+ * (K-70; BM-52), else the draft's own line, "Enter places a caret here"
+ * (K-72; K-9); anywhere else, and for Space, swallowed with the K-9 line
+ * (`swallow`).
+ * @param {KeyboardEvent} e
+ */
+function typeAt(e) {
+  const f = WALK.current();
+  if (e.key !== ' ' && f && f.kind === 'block' && f.pos != null && LAYER.editable(f.addr)) {
+    if (LAYER.caretInSpan(f.addr, f.pos)) { LAYER.returnCaret(); LAYER.caretType(e.key); return; }
+    LINE.transient(t('B3.caret.enter'));
+    return;
+  }
+  swallow(e);
+}
+
+/**
+ * Mod+S answered (see the head; K-74; BM-3): the chord writes nothing. Where
+ * the draft the caret stands in — else the walk's document — has a kept state
+ * (M-REC's `keptOf`), the state's statement is opened whole at its corner at
+ * the first press in a session (T-LAYER's `openStatement`); after it the
+ * corner's own word answers, the statement whole on the word's act (P41).
+ * Nothing where no such state stands, or the scene covers the plane.
+ */
+function saveChord() {
+  if (SCENE.isOpen()) return;
+  const c = LAYER.caret(), f = WALK.current();
+  const addr = c ? c.addr : f && (f.kind === 'document' || f.kind === 'block' || f.kind === 'link') ? f.addr : null;
+  if (!addr || !REC.keptOf(addr)) return;
+  if (saveAnswered) return;
+  saveAnswered = true;
+  LAYER.openStatement(addr, true);
 }
 
 /**
@@ -312,7 +454,7 @@ async function replay() {
       const k = held[0];
       if (!(await k.jump)) { while (held.length && held[0].jump === k.jump) held.shift(); continue; }
       held.shift();
-      const run = route(k.e, chordOf(k.e), { ...k.ctx, landed: true });
+      const run = route(k.e, chordOf(k.e), whereNow({ ...k.ctx, landed: true }));
       if (!run) continue;
       making = true;
       try { await run(); } finally { making = false; }
@@ -371,7 +513,9 @@ function swallow(/** @type {KeyboardEvent} */ e) {
  * reaching whose face another overlay took the place of (FP-25; N-GO's
  * `abandon`), the scene — its close a Back from its entry (N-GO's
  * `closeScene`), which brings back the selection the place it opened over
- * kept — then the selection, then the arrival — its outline, its labels and
+ * kept — then the selection, then a live caret — the text left to the walk at
+ * the caret's span, the caret kept there (K-77; T-LAYER's `leaveCaret`,
+ * N-WALK's `focusTo`) — then the arrival — its outline, its labels and
  * its line (FP-21; N-GO's `endArrival`); on the bare plane nothing. Made at a
  * jump's landing, it ends no chrome a field the reader types in stands in
  * (FP-20): it passes over the box, and over an overlay whose own field holds
@@ -386,6 +530,8 @@ export function esc(landed = false) {
   if (GO.abandon()) return;
   if (SCENE.isOpen()) { GO.closeScene(true); return; }
   if (SEL.selected()) { SEL.clear(); return; }
+  const left = LAYER.leaveCaret();
+  if (left) { void WALK.focusTo(left.addr, left.pos, true, true, null, true); return; }
   GO.endArrival();
 }
 
@@ -396,11 +542,13 @@ export function esc(landed = false) {
  * continuation's mark opens its members' list, which takes the focus on its
  * newest row (O-MARK-LIST); a withheld
  * run shows its face whole (§2.1), C-67's pointer its offered act, a LEAP to
- * the edition its claim names made at the run, reached by Tab (K-58); any
- * other span is selected whole (D8), a link's
- * symbol opens its card, which takes the focus as a key opened it (K-55).
- * → at a document below its reading scale takes this act too (K-3; see the
- * head).
+ * the edition its claim names made at the run, reached by Tab (K-58); in
+ * text the person may edit the span takes the caret — placed at its start,
+ * or the kept one standing in it returned — the selection cleared (K-70;
+ * BM-52; T-LAYER's `caretToSpan`); any other span is selected whole (D8), a
+ * link's symbol opens its card, which takes the focus as a key opened it
+ * (K-55). → at a document below its reading scale takes this act too (K-3;
+ * see the head).
  * @param {boolean} byKey
  */
 async function activateFocus(byKey) {
@@ -413,6 +561,7 @@ async function activateFocus(byKey) {
   if (f.kind === 'block' && f.pos != null) {
     const b = REC.blockByPos(f.addr, f.pos);
     if (b && b.kind === 'withheld') FACES.withheldRun(f.addr, b, (home, byKey) => GO.leapTo(home, { how: 'leap', byKey, site: { span: { addr: f.addr, pos: b.pos, width: b.width } } }));
+    else if (LAYER.editable(f.addr)) { SEL.clear(); LAYER.caretToSpan(f.addr, f.pos); }
     else SEL.select(f.addr, f.pos);
     return;
   }

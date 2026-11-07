@@ -37,7 +37,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, keptHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, keptHTML, keptStatement, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
@@ -384,6 +384,33 @@ test('the corner: version k of n with R20\'s teaching keyed by venue; a draft\'s
   const off = cornerHTML(doc({ kind: 'draft', meta: null }), view({ localTrust: false }));
   assert.ok(off.includes('Readable by you alone'));
   assert.ok(![c, draft, off].some((h) => h.includes('tabindex')), 'no item takes a focus of its own: the corner is one stop (K-57)');
+});
+
+test('a draft\'s corner carries its kept state in a slot of fixed width — the longest of the three words\' as the view measures them — the word and its string named on it, an empty box of that width hidden from assistive technology while no state is set, before the chip in either form; the word\'s act opens the statement whole on a line of its own, the save chord\'s line at "kept" and "nothing to save —" before the word and its reason at the other two; the corner carries no "past states" act while the strings table holds no reason for an inert one; an edition\'s corner is unchanged (B3-S1, B3-S2; D5 K-57, K-74; FP-34)', () => {
+  const draft = doc({ kind: 'draft', meta: null });
+  /** @type {Array<[import('../model/records.js').KeptState['word'], string]>} */
+  const WORDS = [['kept', 'B3.kept'], ['not yet kept', 'B3.not-yet-kept'], ['not kept', 'B3.not-kept']];
+  const em = Math.max(...WORDS.map(([, id]) => advances(t(id))));
+  assert.ok(em === advances(t('B3.not-yet-kept')) && em > advances(t('B3.kept')), 'the slot the longest word\'s, wider than the shortest');
+  const empty = cornerHTML(draft, view());
+  assert.ok(empty.startsWith(`<span class="kept-line"><span class="kept-word pending" aria-hidden="true" style="width:${em}em"></span></span><span class="chip"`), `no state set: an empty box of the slot's width before the chip — ${empty}`);
+  for (const [word, id] of WORDS) {
+    const whole = cornerHTML(draft, view({ kept: { word, reason: null } })), compact = cornerHTML(draft, view({ kept: { word, reason: null } }), true);
+    const slot = `<span class="kept-line"><span class="kept-word" data-kept="${word}" data-string="${id}" style="width:${em}em">${esc(t(id))}</span></span>`;
+    assert.ok(whole.startsWith(slot) && whole.indexOf('<span class="chip"') === slot.length, `${word}: the word in its slot, the chip after it — ${whole}`);
+    assert.ok(compact.startsWith(slot) && compact.includes('class="chip glyph"'), `${word}: compact, the word keeps its words beside the glyph — ${compact}`);
+    assert.ok(!whole.includes('kept-statement') && !compact.includes('kept-statement'), `${word}: the statement closed`);
+  }
+  const kept = cornerHTML(draft, view({ kept: { word: 'kept', reason: null }, keptOpen: true }));
+  assert.ok(kept.includes(`</span><span class="kept-statement" data-string="B3.save.kept">${esc(t('B3.save.kept'))}</span><span class="chip"`), `kept: the save chord's line whole, on a line of its own after the word — ${kept}`);
+  const reason = 'the board is not answering';
+  const held = cornerHTML(draft, view({ kept: { word: 'not yet kept', reason }, keptOpen: true }));
+  assert.ok(held.includes(`<span class="kept-statement" data-string="B3.save.before">${esc(`${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-yet-kept'), reason })}`)}</span>`), `not yet kept: "nothing to save —" before the word, the reason on the act — ${held}`);
+  const refused = cornerHTML(draft, view({ kept: { word: 'not kept', reason: null }, keptOpen: true }));
+  assert.ok(refused.includes(`<span class="kept-statement" data-string="B3.save.before">${esc(`${t('B3.save.before')} ${t('B3.not-kept')}`)}</span>`), 'not kept with no reason: "nothing to save —" before the word alone');
+  assert.deepEqual([keptStatement({ word: 'kept', reason: 'ignored' }), keptStatement({ word: 'not kept', reason: 'r' })], [{ id: 'B3.save.kept', text: t('B3.save.kept') }, { id: 'B3.save.before', text: `${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-kept'), reason: 'r' })}` }], 'the statement by the word: at "kept" its own line whatever reason stands; at the others the word and the reason');
+  for (const h of [empty, kept, held, refused]) assert.ok(!h.includes(t('B3.past-states')) && !h.includes('tabindex'), 'no "past states" act: the strings table holds its words and no reason for an inert one; no item takes a focus of its own (K-57)');
+  assert.ok(!cornerHTML(doc(), view({ kept: { word: 'kept', reason: null }, keptOpen: true })).includes('kept-'), 'an edition\'s corner carries no kept slot, whatever state is handed in');
 });
 
 test('the corner at a pinned version names it — its own number of the count its box\'s document holds — and offers the versions list there too; its own record holding no count, it takes the box\'s (issue #154)', () => {

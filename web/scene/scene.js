@@ -265,8 +265,23 @@
 // it at the first again, none gone to. The strokes in view, top to
 // bottom, then the stop, are the scene's stops after pane A's corner and
 // before pane B; a stroke that leaves view while it holds the focus hands it
-// to pane B; and their keys are a button's own, as the bar's acts' are. The
-// panes
+// to pane B; and their keys are a button's own, as the bar's acts' are. A pane
+// opens on a record read whole from the board, or on a record the page
+// DERIVES (M-DERIVE; B3-S2, B3-S7) — the held version, a past state, a
+// merge's list — handed to `open` in an address's place: nothing is read for
+// it, its article is made from the record as given, its corner and its place
+// are kept as a read pane's, and the entry a leaving records keeps the record
+// itself (`Version.derived`), so a return reopens it reading nothing. A
+// derived pane is read only: no `compare` is asked against it and no far end
+// is placed in it, no row of the board's sets it again (its text is the
+// page's, not the board's), its corner offers no version and its kept slot
+// stands empty; a change of the page's class sets it again from the model's
+// record of its document, as every pane (FP-29). A pane of a draft carries
+// the draft's kept word in its corner (T-ARTICLE's draft arm; B3-S2), the
+// statement open or closed as T-LAYER holds it (`openStatement`), its items
+// written again as the word or the statement moves (`markKept`), and Enter
+// at the corner opens the statement (D5 K-57, K-74) where the draft has a
+// kept state. The panes
 // borrow T-LAYER's mount (FP-12; the structure record §3.4 (vii)):
 // `sceneArticle` makes each pane's article from the record and the view the
 // scene keeps, `madeOf` and `rangeIn` map a position through the blocks it
@@ -496,8 +511,9 @@ import { esc, byteOffsets } from '../util.js';
  * @property {number | null} n the chain's members as the pane knows them: probed as it opens, raised by a row naming a newer member
  * @property {number | null} read the version its corner's act reads in its place: the newest arrived, or the one the act left; null where it offers none
  * @property {number | null} lacks the version it reads, where that version holds none of the passage its corner's act carried; null where none
- * @property {Doc} d the record it was set from, as the model held it: kept whole, its arrays the model's own, which the model replaces and never edits (M-REC), so the pane is set again from it with no read
+ * @property {Doc} d the record it was set from, as the model held it: kept whole, its arrays the model's own, which the model replaces and never edits (M-REC), so the pane is set again from it with no read; or the record the page derived (M-DERIVE, `Doc.derived`), which no read of the board's sets again
  * @property {ArticleView} view the view its article draws, as read when it was set: the links its marks and its lines are drawn from
+ * @property {string} corner its corner's items as last written (`writeCorner`, `cornerItems`): written again where they would read other
  * @property {Map<string, Stretch[] | Declined>} placed where the far ends of the links crossing into it stood in its text as it was set, by `⟨link⟩ ⟨slot⟩`
  * @property {Place | null} place the reader's place as a change of the page's class took the pane down to its cover, kept for the read at the new class that sets it again
  * @property {HTMLElement | null} el the article it shows
@@ -559,7 +575,7 @@ import { esc, byteOffsets } from '../util.js';
  * @property {() => void} [leaving] run as the scene shows, before anything of it is set: the chrome of the place it leaves ended (N-GO's)
  */
 
-/** @typedef {Pick<Pane, 'doc' | 'src' | 'names' | 'shows' | 'kind' | 'k' | 'n' | 'read'>} Version a pane's text as the reader left it (`Left`): the record it was made from and the addresses it names and shows, as the pane holds them */
+/** @typedef {Pick<Pane, 'doc' | 'src' | 'names' | 'shows' | 'kind' | 'k' | 'n' | 'read'> & {derived?: Doc | null}} Version a pane's text as the reader left it (`Left`): the record it was made from and the addresses it names and shows, as the pane holds them; `derived` the record itself where the page derived it (M-DERIVE), which a reopening shows again reading nothing — absent or null for a record read from the board */
 
 /**
  * @typedef {Object} Spot — where the reader stood in a pane as they left it (`Left`), each by its bytes' identity
@@ -790,13 +806,13 @@ export const updating = () => !!scene && scene.updating > 0;
  * Each pane as it stands, read-only (the gate reads it): the address it was
  * opened on, the record its text was made from, the address its acts name and
  * the one it shows, its kind, its version and the chain's count, its corner's
- * act and what its corner says it lacks, and the blocks its article was made
- * from.
+ * act and what its corner says it lacks, whether its record is one the page
+ * derived, and the blocks its article was made from.
  */
 export function panes() {
   const S = scene;
   if (!S) return null;
-  const of = (/** @type {Pane} */ P) => ({ doc: P.doc, src: P.src, names: P.names, shows: P.shows, kind: P.kind, k: P.k, n: P.n, read: P.read, lacks: P.lacks, blocks: P.d.blocks.map((b) => ({ pos: b.pos, width: b.width, kind: b.kind, text: b.text })) });
+  const of = (/** @type {Pane} */ P) => ({ doc: P.doc, src: P.src, names: P.names, shows: P.shows, kind: P.kind, k: P.k, n: P.n, read: P.read, lacks: P.lacks, derived: !!P.d.derived, blocks: P.d.blocks.map((b) => ({ pos: b.pos, width: b.width, kind: b.kind, text: b.text })) });
   return { a: of(S.a), b: of(S.b) };
 }
 
@@ -1164,6 +1180,24 @@ async function readPane(src, stands = () => true) {
   return { d, n, whole: !d.refused, refused: w.refused, unheard };
 }
 
+/** @typedef {string | Doc} Source what a pane is opened on (`open`): a document's address, read whole from the board (`readPane`), or a record the page derived (M-DERIVE, `Doc.derived`), shown as given */
+
+/** the address a pane's source names: the record's own where the source is a derived record */
+const addrOf = (/** @type {Source} */ x) => (typeof x === 'string' ? x : x.addr);
+
+/**
+ * A pane's source read, or taken as given (see the head): an address's
+ * record read whole (`readPane`); a derived record itself, whole, no read
+ * made for it and no chain counted.
+ * @param {Source} x
+ * @param {() => boolean} [stands]
+ * @returns {ReturnType<typeof readPane>}
+ */
+async function sourceOf(x, stands = () => true) {
+  if (typeof x === 'string') return readPane(x, stands);
+  return { d: x, n: null, whole: !x.refused, refused: null, unheard: null };
+}
+
 /**
  * @typedef {Object} Compared — the two texts' `compare` (`compareBetween`), with the reads made beside it (`readBetween`)
  * @property {ComparePair[]} pairs the runs of shared identity between them (`merged`); none where it told nothing
@@ -1223,6 +1257,8 @@ async function placeBetween(A, B) {
 async function readBetween(A, B, compare = true) {
   /** @type {Compared} */
   const none = { pairs: [], told: false, refused: null, why: null, unheard: null };
+  // a derived record is no text of the board's: nothing to compare it against, and no far end placed in it (see the head)
+  if (A.d.derived || B.d.derived) return none;
   const [cmp, placed] = await Promise.all([compare ? compareBetween(A, B) : Promise.resolve(none), placeBetween(A, B)]);
   return { ...cmp, unheard: cmp.unheard || placed };
 }
@@ -1243,12 +1279,12 @@ function paneAt(side, src, r) {
   const names = kind === 'bare' && r.n ? versionAddress(src, r.n) : src;
   return {
     side, doc: src, src, names, shows: kind === 'bare' ? src : names, kind, k, n: kind === 'draft' ? null : r.n, read: null, lacks: null,
-    d: { ...r.d }, view: LAYER.sceneView(r.d), placed: new Map(), place: null, el: null, serial: 0, sets: 0, kept: null, lift: null, signs: null, facts: undefined,
+    d: { ...r.d }, view: LAYER.sceneView(r.d), corner: '', placed: new Map(), place: null, el: null, serial: 0, sets: 0, kept: null, lift: null, signs: null, facts: undefined,
   };
 }
 
-/** a pane's corner's items: T-ARTICLE's (`sceneCorner`), naming the version it shows, the chain's count as the pane knows it — neither the latest nor the count while the board lags (`lags`) — the act it offers and what it says the version it reads lacks; its kept clause after them, where it stands kept (`paneKept`) */
-const cornerItems = (/** @type {Pane} */ P) => LAYER.sceneCorner(P.shows === P.d.addr ? P.d : { ...P.d, addr: P.shows }, { ...P.view, members: P.n, read: P.read, lacks: P.lacks, lags: lags() }) + keptHTML(paneKept(P));
+/** a pane's corner's items: T-ARTICLE's (`sceneCorner`), naming the version it shows, the chain's count as the pane knows it — neither the latest nor the count while the board lags (`lags`) — the act it offers and what it says the version it reads lacks, a draft's kept word as the model holds it with its statement where T-LAYER holds it open (B3-S2) — a derived record's slot empty — and its kept clause after them, where it stands kept (`paneKept`) */
+const cornerItems = (/** @type {Pane} */ P) => LAYER.sceneCorner(P.shows === P.d.addr ? P.d : { ...P.d, addr: P.shows }, { ...P.view, members: P.n, read: P.read, lacks: P.lacks, lags: lags(), kept: P.d.derived ? null : REC.keptOf(P.names), keptOpen: !P.d.derived && LAYER.statementOpen(P.names) }) + keptHTML(paneKept(P));
 
 /** does the board lag past a second (M-PUMP's `boardKept`): every pane's corner names neither the latest version nor the chain's count, and is written again as the lag begins and ends (`markKept`) */
 const lags = () => PUMP.boardKept() !== null;
@@ -1263,6 +1299,7 @@ const lags = () => PUMP.boardKept() !== null;
  * @returns {{met: Refusal | null, since: number} | null}
  */
 function paneHeld(P) {
+  if (P.d.derived) return null;
   return P.kept && performance.now() - P.kept.since >= PUMP.KEPT_MS ? { met: P.kept.met, since: P.kept.at } : PUMP.kept(P.src);
 }
 
@@ -1275,9 +1312,10 @@ function paneHeld(P) {
 function paneKept(P) { return LAYER.keptWords(P.d, P.d, paneHeld(P)); }
 
 /**
- * Each pane's kept clause marked in place (see the head): its corner written
- * again where the clause it carries changed (`paneKept`), or the board's lag
- * began or ended since it was written (`lags`), the element kept
+ * Each pane's corner marked in place (see the head): its items written again
+ * where they would read other than as last written (`cornerItems`) — its
+ * kept clause changed (`paneKept`), a draft's kept word or its statement
+ * moved — or the board's lag began or ended since (`lags`), the element kept
  * so a focus on it stays, and the withheld runs' kept signs in its article set
  * where what the edition claims held say changed since they were set, or its
  * article was set since (T-LAYER's `keptRunsKey`, `markKeptSigns`). The
@@ -1289,9 +1327,9 @@ export function markKept() {
   if (!S || !E) return;
   const signs = LAYER.keptRunsKey(), lagging = String(lags());
   for (const side of SIDES) {
-    const P = S[side], k = paneKept(P), words = k ? k.text : '';
-    const c = /** @type {HTMLElement | null} */ (paneEl(E, side).querySelector(':scope > .corner')), now = c ? c.querySelector('.kept') : null;
-    if (c && ((now ? now.textContent : '') !== words || c.dataset.lags !== lagging)) writeCorner(E, P);
+    const P = S[side], items = cornerItems(P);
+    const c = /** @type {HTMLElement | null} */ (paneEl(E, side).querySelector(':scope > .corner'));
+    if (c && (items !== P.corner || c.dataset.lags !== lagging)) writeCorner(E, P, items);
     if (P.el && P.signs !== signs) { LAYER.markKeptSigns(P.el); P.signs = signs; }
   }
 }
@@ -1338,16 +1376,20 @@ export function paneLift(addr) {
 }
 /** a pane's corner's id: the group is named by its own words */
 const cornerId = (/** @type {'a' | 'b'} */ side) => (side === 'a' ? 'sceneA' : 'sceneB') + '-corner';
-/** a pane's corner's markup (see the head): its one Tab stop, a group named by its own words, as the plane's corner is (D5 K-57), marked with whether the board lagged as it was made (`data-lags`) */
-const cornerMarkup = (/** @type {Pane} */ P) => `<div class="corner" data-corner="${esc(P.shows)}" data-lags="${lags()}" id="${cornerId(P.side)}" role="group" aria-labelledby="${cornerId(P.side)}" tabindex="0">${cornerItems(P)}</div>`;
+/** a pane's corner's markup (see the head): its one Tab stop, a group named by its own words, as the plane's corner is (D5 K-57), marked with whether the board lagged as it was made (`data-lags`); the items it holds kept on the pane as last written (`Pane.corner`) */
+function cornerMarkup(/** @type {Pane} */ P) {
+  P.corner = cornerItems(P);
+  return `<div class="corner" data-corner="${esc(P.shows)}" data-lags="${lags()}" id="${cornerId(P.side)}" role="group" aria-labelledby="${cornerId(P.side)}" tabindex="0">${P.corner}</div>`;
+}
 
-/** a pane's corner written again, in place: the element kept, so the focus standing on it stays */
-function writeCorner(/** @type {NonNullable<typeof els>} */ E, /** @type {Pane} */ P) {
+/** a pane's corner written again, in place: the element kept, so the focus standing on it stays; the items as given, else made now (`cornerItems`) */
+function writeCorner(/** @type {NonNullable<typeof els>} */ E, /** @type {Pane} */ P, items = cornerItems(P)) {
   const c = /** @type {HTMLElement | null} */ (paneEl(E, P.side).querySelector(':scope > .corner'));
   if (!c) return;
   c.dataset.corner = P.shows;
   c.dataset.lags = String(lags());
-  c.innerHTML = cornerItems(P);
+  c.innerHTML = items;
+  P.corner = items;
 }
 
 /** the bar's name for a pane, written again: the address it shows */
@@ -1390,9 +1432,10 @@ function swap(E, P) {
  * far end's pane, the plane under the scene out of the page's order. Where
  * the far end names the second document whole (`Held.wholeB`), no `compare`
  * is waited on: it is asked as the scene shows, and adds the bands as it
- * answers (`addBands`).
- * @param {string} a
- * @param {string} b
+ * answers (`addBands`). A pane given a derived record in an address's place
+ * (`Source`) reads nothing: the record is shown as given (see the head).
+ * @param {Source} a
+ * @param {Source} b
  * @param {Held} [held]
  * @param {Showing} [as]
  * @returns {Promise<Opening>} once the scene shows, or nothing will
@@ -1402,12 +1445,12 @@ export async function open(a, b, held = {}, as = {}) {
   const out = { shown: false, refused: null };
   if (!els) return out;
   await HOST.opening(async (stands) => {
-    const [ra, rb] = await Promise.all([readPane(a, stands), readPane(b, stands)]);
+    const [ra, rb] = await Promise.all([sourceOf(a, stands), sourceOf(b, stands)]);
     const da = ra.d, db = rb.d;
     if (!da || !db || !ra.whole || !rb.whole) { if (stands()) out.refused = (!da || !ra.whole ? ra.refused : null) || rb.refused; return null; }
     if (!stands()) return null;
-    const between = await readBetween({ src: a, d: da, shown: LK.shown(a) }, { src: b, d: db, shown: LK.shown(b) }, !held.wholeB);
-    return { pa: paneAt('a', a, { d: da, n: ra.n }), pb: paneAt('b', b, { d: db, n: rb.n }), between };
+    const between = await readBetween(textOf(a, da), textOf(b, db), !held.wholeB);
+    return { pa: paneAt('a', addrOf(a), { d: da, n: ra.n }), pb: paneAt('b', addrOf(b), { d: db, n: rb.n }), between };
   }, ({ pa, pb, between }) => {
     const E = els;
     if (!E) return;
@@ -1425,6 +1468,9 @@ export async function open(a, b, held = {}, as = {}) {
   });
   return out;
 }
+
+/** one side of the reads between the panes as a scene opens (`Text`): a derived record shows no link of the board's text (see the head) */
+const textOf = (/** @type {Source} */ x, /** @type {Doc} */ d) => ({ src: addrOf(x), d, shown: d.derived ? [] : LK.shown(addrOf(x)) });
 
 /**
  * A scene on two panes as it opens (`open`, `reopen`): the ends `levels`
@@ -1645,6 +1691,8 @@ function relisted(S) {
  * @returns {Promise<{pane: Pane | null, refused: Refusal | null}>}
  */
 async function paneAgain(side, v, stands) {
+  // a derived record the entry kept is shown again as it stood, nothing read for it (see the head)
+  if (v.derived) return { pane: { ...paneAt(side, v.src, { d: v.derived, n: null }), doc: v.doc }, refused: null };
   const r = await readPane(v.src, stands), d = r.d;
   if (!d) return { pane: null, refused: r.refused };
   if (v.kind === 'bare' && v.k != null && r.n != null && r.n > v.k) {
@@ -1658,10 +1706,11 @@ async function paneAgain(side, v, stands) {
 
 /**
  * Each pane brought back to where the reader stood in it (`reopen`): its
- * place's line, where its text holds that byte, at the height it stood below
- * the pane's visible top — any other pane left where the re-level set it —
- * and its selection put back on the same bytes; then the ties drawn at the
- * panes' scrolls.
+ * place's line, where its text holds that byte — at its position in a
+ * derived record the entry kept, whose text is the one left — at the height
+ * it stood below the pane's visible top — any other pane left where the
+ * re-level set it — and its selection put back on the same bytes; then the
+ * ties drawn at the panes' scrolls.
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  * @param {{a: Spot, b: Spot}} spots
@@ -1670,7 +1719,8 @@ function placeAgain(E, S, spots) {
   for (const side of SIDES) {
     const P = S[side], pane = paneEl(E, side), s = spots[side], image = P.d.image;
     const at = s.place ? REC.placedIn(image, s.place.ids) : [];
-    if (s.place && at.length) { const line = lineAt(pane, P.names, at[0].pos); if (line) pane.scrollTop = line.top - s.place.at; }
+    const pos = at.length ? at[0].pos : s.place && P.d.derived ? s.place.pos : null;
+    if (s.place && pos != null) { const line = lineAt(pane, P.names, pos); if (line) pane.scrollTop = line.top - s.place.at; }
     const sel = s.sel ? REC.placedIn(image, s.sel.ids) : [], z = sel[sel.length - 1];
     if (s.sel && z && P.el) LAYER.selectIn(P.el, { addr: P.names, pos: sel[0].pos, width: z.pos + z.width - sel[0].pos }, s.sel.backward);
   }
@@ -1692,7 +1742,7 @@ export function asLeft() {
   const S = scene, E = els;
   if (!S || !E) return null;
   /** @type {(P: Pane) => Version} */
-  const version = (P) => ({ doc: P.doc, src: P.src, names: P.names, shows: P.shows, kind: P.kind, k: P.k, n: P.n, read: P.read });
+  const version = (P) => ({ doc: P.doc, src: P.src, names: P.names, shows: P.shows, kind: P.kind, k: P.k, n: P.n, read: P.read, derived: P.d.derived ? P.d : null });
   /** @type {(P: Pane) => Spot} */
   const spot = (P) => {
     const made = P.el ? LAYER.madeOf(P.el) : null, image = made ? made.image : [], sel = P.el ? LAYER.selectionIn(P.el) : null, lv = S.level[P.side];
@@ -2630,6 +2680,8 @@ async function update(side, how = {}) {
   const S = scene;
   if (!S) return;
   const P = S[side], Q = S[otherSide(side)], serial = ++P.serial;
+  // a derived record is the page's, not the board's: no read sets it again (see the head)
+  if (P.d.derived) return;
   const stale = () => scene !== S || P.serial !== serial;
   // the board's events ask it: the pane stands kept as it shows until a setting of it lands, saying so once it has stood a second
   if (!how.src && !P.kept) { P.kept = { since: performance.now(), at: how.at ?? Date.now(), met: null }; setTimeout(markDirty, PUMP.KEPT_MS); }
@@ -2816,13 +2868,18 @@ export function dropped(x) {
   if (x.byline) {
     for (const side of SIDES) {
       if (!x.addrs.some((a) => oneBox(a, S[side].src))) continue;
-      whenSet(() => { const P = S[side]; if (scene === S && !REC.sameFacts(P.facts, ownerFacts(P))) void update(side, { at: x.at }); });
+      whenSet(() => {
+        const P = S[side], E = els;
+        if (scene !== S || REC.sameFacts(P.facts, ownerFacts(P))) return;
+        // a derived pane's byline made again from the facts now, its text as it stands; a read pane's set again from its reads
+        if (P.d.derived) { if (E) swap(E, P); } else void update(side, { at: x.at });
+      });
     }
     return;
   }
   for (const side of SIDES) {
     const P = S[side];
-    if (!x.addrs.some((a) => oneBox(a, P.src))) continue;
+    if (P.d.derived || !x.addrs.some((a) => oneBox(a, P.src))) continue;
     const m = newest(x.row, P.src);
     if (P.kind === 'bare' && m != null && m > (P.k ?? 0)) { const k = P.k ?? m - 1; if (k >= 1) pin(S, side, k, m, x.at); else void update(side, { at: x.at }); continue; }
     if (P.kind === 'pinned') { if (m != null) count(S, side, m); if (x.addrs.includes(P.src)) void update(side, { at: x.at }); continue; }
@@ -2846,6 +2903,7 @@ export function dropped(x) {
  */
 function refreshed(S, side, chains, at) {
   const P = S[side], c = chains.get(boxOf(P.src));
+  if (P.d.derived) return;
   if (P.kind === 'bare') {
     if (P.k == null) return;
     if (c && P.k >= 1 && c.n > P.k) { pin(S, side, P.k, c.n, at); return; }
@@ -3409,9 +3467,12 @@ function move(/** @type {HTMLElement} */ pane, /** @type {string} */ k) {
 /**
  * The scene's own keys: a pane's (K-60) move the pane the focus stands in —
  * pane A where it stands in neither — and Enter at a pane's corner takes the
- * corner's act (`act`; D5 K-57, as the plane's corner); each waits for a pane
- * being set again (`whenSet`), the key taken meanwhile. False for any other
- * key, and for Enter at a corner that offers no act.
+ * corner's act (D5 K-57, as the plane's corner): a draft's kept word's
+ * statement opened or closed where the draft has a kept state (T-LAYER's
+ * `openStatement`; K-74), else the version its corner offers read in its
+ * place (`act`); each waits for a pane being set again (`whenSet`), the key
+ * taken meanwhile. False for any other key, and for Enter at a corner that
+ * offers no act.
  * @param {string} k the chord (N-KEYS's `chordOf`)
  * @returns {boolean} the scene took the key
  */
@@ -3421,8 +3482,9 @@ export function key(k) {
   const at = typeof document !== 'undefined' ? /** @type {HTMLElement | null} */ (document.activeElement) : null;
   const pane = at && E.paneB.contains(at) ? E.paneB : E.paneA, side = pane === E.paneB ? 'b' : 'a';
   if (k === 'Enter') {
-    const onCorner = !!at && !!at.classList && at.classList.contains('corner') && pane.contains(at);
-    if (!onCorner || S[side].read == null) return false;
+    const onCorner = !!at && !!at.classList && at.classList.contains('corner') && pane.contains(at), P = S[side];
+    if (onCorner && !P.d.derived && REC.keptOf(P.names)) { LAYER.openStatement(P.names); writeCorner(E, P); return true; }
+    if (!onCorner || P.read == null) return false;
     act(side);
     return true;
   }

@@ -308,11 +308,36 @@
 // as the article was made from them (T-ARTICLE's `copyText`), no label of
 // the page among them — a range that starts in an article's head starts at
 // its first block, and a range that touches an item covers it whole
-// (`posOfPoint`), as it is drawn. The gate's hooks read the mounted set and
+// (`posOfPoint`), as it is drawn.
+// The text shown of a draft the person has typed in is the record M-DERIVE
+// derives from the model's — its delivered runs with the page-local edits
+// applied (`shownDoc`; K-72) — mounted, folded and measured in the model's
+// record's place and set again as the edits move, the model's own record
+// standing as the board served it; the ARIA mirror reads the model. The
+// caret (D5 K-70, K-72, K-76, K-77; D6 BM-4, BM-52, BM-54): the page's own,
+// one at a time, in text the person may edit — a draft under the session's
+// account, by its address alone, at reading scale (`editable`) — a position
+// of the text shown, placed by Enter at a focused span at the span's start
+// (`caretToSpan`), by a click at the character clicked (`caretFromPlatform`,
+// `placeCaret`), moved by the arrows a character or a line (`caretMove`),
+// and typed at: a printable key, Enter and Tab put their characters in,
+// Backspace and Delete take a character out (`caretType`, `caretReplace`,
+// `caretErase`), each an edit added to the model's page-local list and shown
+// through the derived record, nothing composed and nothing sent (FP-14). Esc
+// leaves the text to the walk at the caret's span with the caret KEPT at its
+// position (`leaveCaret`), which Enter or a printable key there returns
+// (`returnCaret`); its line stands while it holds the caret (`heldParts`), the
+// platform's selection is collapsed at it as the page moves it, and its mark
+// — the page's own, of no width, hollow where kept — is set at its character
+// boundary in the standing part each frame (`placeCaretMark`) and is no byte
+// of the document. A draft's kept word opens its statement in its corner on
+// its act (`openStatement`; K-57, K-74; FP-26), the corner's items made
+// again as the state, the statement or the board's lag moves
+// (`placeCorners`). The gate's hooks read the mounted set and
 // the mount log (`mountedSet`, `mounts`); APP records each frame's counts
 // (`frameStats`).
-// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-21, FP-22, FP-23, FP-24,
-// FP-25, FP-26, FP-29, FP-30, FP-34, FP-37.
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-14, FP-20, FP-21, FP-22, FP-23,
+// FP-24, FP-25, FP-26, FP-29, FP-30, FP-34, FP-37.
 
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
@@ -326,9 +351,10 @@ import { CORNER, HOLD, COL, ADDRESS, cornerWidth } from '../plane/register.js';
 import { holdTop, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords } from '../plane/labels.js';
 import { articleHTML, articlePlan, cornerHTML, keptHTML, blockMarks, symbolLit, editionClause, copyText, firstLineOf } from './article.js';
 import { farSays, whyOf } from '../beams/held.js';
+import { applyEdits, toBase, toShown, boundaries } from '../model/derive.js';
 import { homeOf, documentOf, memberOf, accountOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
-import { esc } from '../util.js';
+import { esc, byteLength } from '../util.js';
 import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
@@ -386,18 +412,26 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  */
 
 /**
+ * @typedef {Object} Caret — the page's own caret (see the head)
+ * @property {string} addr the draft
+ * @property {number} pos its position in the text shown: the boundary before the byte at `pos`, the text's end one past its last
+ * @property {boolean} live the keys reach it; false where Esc left the text to the walk, the caret kept at its position (BM-52)
+ */
+
+/**
  * @typedef {Object} Mounted
  * @property {HTMLElement} el
- * @property {Doc} d
+ * @property {Doc} d the record the article was made from: the model's, or the record derived from it where the page shows a draft's typed text (`shownDoc`)
  * @property {number} lay the layout scale: layout px per world unit
- * @property {number} runFrom
+ * @property {number} runFrom the model's record's window at mount
  * @property {number} runTo
- * @property {number} rev the document's revision at mount
+ * @property {number} rev the model's record's revision at mount
+ * @property {number} editRev how many times the draft's page-local edits had changed at mount (M-REC's `editRev`)
  * @property {Made} made what the article was made from
  * @property {number} grev the view revision at mount
  * @property {Fold} fold the fold it was set in: its size, its columns and the lines they hold
  * @property {number} fs the document's em in world units: its fold's
- * @property {{whole: string, compact: string, lags: boolean}} corner the corner's items, whole and compact (T-ARTICLE's `cornerHTML`), as made at mount and again as the board's lag began or ended, and whether it lagged as they were made (`lags`); empty where it has none
+ * @property {{whole: string, compact: string, key: string}} corner the corner's items, whole and compact (T-ARTICLE's `cornerHTML`), as made at mount and again as what they are made from moved — the board's lag, the draft's kept state, its statement open or closed (`cornerKey`); empty where it has none
  * @property {HTMLElement | null} template the article's one column, kept out of the page: what its parts are cut from; null where the platform does not set the article
  * @property {Unit[]} units its fold's lines by the row elements that set them
  * @property {Map<number, Cut | null>} cuts the points its lines open at, by line, as far as they were read; null where a line opens at no point found
@@ -549,6 +583,14 @@ let kept = null;
 let owed = null;
 /** @type {Hold | null} */
 let hold = null;
+/** @type {Caret | null} the page's own caret (see the head); null where none stands */
+let caret_ = null;
+/** the caret was placed or moved since the platform's selection was last collapsed at it: the frame does so once its part stands */
+let caretMoved = false;
+/** @type {Set<string>} the drafts whose kept word's statement stands open in their corner (`openStatement`) */
+const openStatements = new Set();
+/** @type {Map<string, {key: string, doc: Doc}>} the record derived from each draft's delivered runs and its page-local edits, by document, as last made (`shownDoc`) */
+const shownCache = new Map();
 /** the box an address stands in: its document's, which every version of it shares */
 const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
 /** the readers until the app hands its owners' in: no selection and no focus, the line at the viewport's top, nowhere navigated, every box showing its plain address, no document and no account named */
@@ -686,16 +728,83 @@ function runHTML(/** @type {import('../plane/labels.js').Run} */ r, /** @type {n
  */
 export function refaced() { widths.clear(); measured.clear(); folds.clear(); markDirty(); }
 
-/** the article's view state, from the owners' readers and LK: a byline's facts the model's for its owner's account (M-REC's `accountKey`), never this device's key; every fit it judges measured as the platform sets the words (`widthOf`) */
+/**
+ * The record the page shows of a document (see the head): the model's, or,
+ * where the draft holds page-local edits, the record M-DERIVE derives from its
+ * delivered runs with them applied (`applyEdits`) — made again where the
+ * model's record or the edits moved, the same object while neither has, so
+ * what was made from it is read against one record. A record already derived
+ * answers itself.
+ * @param {Doc} d
+ * @returns {Doc}
+ */
+function shownDoc(d) {
+  if (d.derived) return d;
+  const edits = REC.edits(d.addr);
+  if (!edits.length) { shownCache.delete(d.addr); return d; }
+  const key = `${d.rev}:${d.from}:${d.to}:${REC.editRev(d.addr)}`, c = shownCache.get(d.addr);
+  if (c && c.key === key) return c.doc;
+  const doc = applyEdits(d, edits).doc;
+  shownCache.set(d.addr, { key, doc });
+  return doc;
+}
+
+/** the record the page shows of a document by its address (`shownDoc`): the gate's and the tests' reading of a draft's typed text */
+export const shownOf = (/** @type {string} */ addr) => shownDoc(REC.doc(addr));
+
+/** the page-local edits a record derived from a draft's typed text was made with (M-REC's `edits`; M-DERIVE's `applyEdits`); none for any other record */
+const editsOf = (/** @type {Doc} */ d) => (d.derived && d.derived.edits ? REC.edits(d.addr) : []);
+
+/**
+ * The walk's focus carried into a record derived from the typed text: the
+ * block of that text holding the focused block's first position as the edits
+ * moved it (M-DERIVE's `toShown`); null where none holds it. Any other
+ * record's focus as given.
+ * @param {Doc} d
+ * @param {{addr: string, pos: number} | null} f
+ */
+function carriedFocus(d, f) {
+  if (!f || f.addr !== d.addr) return f;
+  const edits = editsOf(d);
+  if (!edits.length) return f;
+  const b = REC.blockIn(d.blocks, Math.min(toShown(edits, f.pos), Math.max(d.from, d.to - 1)));
+  return b ? { addr: f.addr, pos: b.pos } : null;
+}
+
+/**
+ * The selection carried into a record derived from the typed text: its ends
+ * moved by the edits (M-DERIVE's `toShown`); null where nothing of it
+ * remains. Any other record's selection as given.
+ * @param {Doc} d
+ * @param {Span | null} s
+ */
+function carriedSpan(d, s) {
+  if (!s || s.addr !== d.addr) return s;
+  const edits = editsOf(d);
+  if (!edits.length) return s;
+  const pos = toShown(edits, s.pos), end = toShown(edits, s.pos + s.width);
+  return end > pos ? { addr: s.addr, pos, width: end - pos } : null;
+}
+
+/**
+ * The article's view state, from the owners' readers and LK: a byline's
+ * facts the model's for its owner's account (M-REC's `accountKey`), never
+ * this device's key; every fit it judges measured as the platform sets the
+ * words (`widthOf`). A derived record's text is not the board's (M-DERIVE):
+ * the links' places are the board's text's, so none is marked or counted in
+ * it, and the focus and the selection are carried into it through the
+ * page-local edits it was made with (`carriedFocus`, `carriedSpan`).
+ */
 export function viewFor(/** @type {Doc} */ d, scene = false) {
   const h = REC.health();
   /** @type {Map<string, 'edition' | 'draft' | 'unknown'>} */
   const originKinds = new Map();
   for (const o of d.origins) { const od = REC.doc(o.doc); const p = REC.place(o.doc); originKinds.set(o.doc, p ? p.kind : od.meta ? (od.meta.published ? 'edition' : 'draft') : od.kind); }
+  const linked = !d.derived;
   /** @type {ArticleView} */
   const v = {
-    selected: read.selection(), focus: litFocus(scene),
-    marks: LK.shown(d.addr), mergedMark: LK.mergedMark, symbols: LK.symbols(d.addr), says: farSays, countAt: (b) => LK.countAt(d.addr, b),
+    selected: carriedSpan(d, read.selection()), focus: carriedFocus(d, litFocus(scene)),
+    marks: linked ? LK.shown(d.addr) : [], mergedMark: LK.mergedMark, symbols: linked ? LK.symbols(d.addr) : [], says: farSays, countAt: linked ? (b) => LK.countAt(d.addr, b) : () => ({ n: 0, social: false }),
     wholeLinks: LK.wholeLinks(d.addr).length,
     reader: REC.reader(),
     localTrust: !!(h && h.auth && h.auth.local_trust),
@@ -704,6 +813,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
     originOwner, clauseOf, keyOf: REC.accountKey,
     members: REC.has(boxOf(d.addr)) ? REC.doc(boxOf(d.addr)).members : null,
     lags: lags(),
+    kept: REC.keptOf(d.addr), keptOpen: openStatements.has(d.addr),
     cpl: scene ? MEASURE_CPL : measure(),
     measure: widthOf,
   };
@@ -767,6 +877,7 @@ export function scaleBelowReading(addr) { return (LOD_TXT_LO / foldOf(REC.doc(ad
  * @returns {Fold}
  */
 function folded(d) {
+  d = shownDoc(d);
   const room = docBox(d.addr), cpl = measure();
   if (d.from < 0) {
     const key = d.extent != null ? `est:${d.extent}:${cpl}` : `slot:${cpl}`;
@@ -1384,9 +1495,17 @@ function heldParts(rec, span) {
   if (s && s.rangeCount && (pressed || !s.isCollapsed)) { const r = s.getRangeAt(0); for (const p of rec.parts) if (p.el && r.intersectsNode(p.el)) out.add(p); }
   const a = typeof document !== 'undefined' ? document.activeElement : null;
   if (a) for (const p of rec.parts) if (p.el && p.el.contains(a)) out.add(p);
-  const ls = spanLines(rec, span);
-  if (ls) for (const p of rec.parts) if (p.first <= ls[1] && ls[0] < p.end) out.add(p);
+  for (const sp of [span, caretSpanIn(rec)]) {
+    const ls = spanLines(rec, sp);
+    if (ls) for (const p of rec.parts) if (p.first <= ls[1] && ls[0] < p.end) out.add(p);
+  }
   return out;
+}
+
+/** the caret as a span of one position of a mounted article's text, where the caret stands in it — the text's last position at its end — so its line is held and stood as the selection's are; null where it stands elsewhere, or the article holds no text */
+function caretSpanIn(/** @type {Mounted} */ rec) {
+  if (!caret_ || caret_.addr !== rec.d.addr || rec.d.from < 0) return null;
+  return { addr: caret_.addr, pos: Math.max(rec.d.from, Math.min(caret_.pos, rec.d.to - 1)), width: 1 };
 }
 
 /**
@@ -1559,7 +1678,7 @@ function fill(rec, v, span) {
   }
   /** @type {Part[]} */
   const added = [];
-  for (const w of [...win, ...endsOf(rec, span)]) for (const g of gapsIn(rec, w)) { const p = addPart(rec, g); if (p) added.push(p); }
+  for (const w of [...win, ...endsOf(rec, span), ...endsOf(rec, caretSpanIn(rec))]) for (const g of gapsIn(rec, w)) { const p = addPart(rec, g); if (p) added.push(p); }
   if (added.length) { measureParts(rec, added); changed = true; }
   if (changed) {
     rec.lines = new Set(rec.parts.flatMap((p) => Array.from({ length: p.end - p.first }, (_, k) => p.first + k)));
@@ -1589,6 +1708,8 @@ function fill(rec, v, span) {
 function mount(d, v, span, banded) {
   if (!layer || mounted.has(d.addr) || d.from < 0) return null;
   const t0 = performance.now();
+  const base = d;
+  d = shownDoc(d);
   const made = madeFrom(d);
   const view = viewFor(d), owner = REC.ownerAccount(d), html = articleOf(d, view, owner);
   let measureMs = 0;
@@ -1610,7 +1731,7 @@ function mount(d, v, span, banded) {
   layer.appendChild(el);
   /** @type {Mounted} */
   const rec = {
-    el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, made, grev, fold: f, fs: f.fs, corner: cornerOfView(d, view),
+    el, d, lay, runFrom: base.from, runTo: base.to, rev: base.rev, editRev: REC.editRev(d.addr), made, grev, fold: f, fs: f.fs, corner: cornerOfView(d, view),
     template, units: unitsOf(f.lines, made.blocks), cuts: new Map(), parts: [], lines: new Set(), banded, scale: 1, blockTops: [], marked: [], markedFor: '', litFor: null, labelFor: null, keptFor: '', legible: false,
   };
   mounted.set(d.addr, rec);
@@ -1655,6 +1776,7 @@ function setLines(d, rows, html, blocks, key) {
  */
 function measureAside(d) {
   if (!layer) return;
+  d = shownDoc(d);
   const v = viewFor(d), owner = REC.ownerAccount(d);
   setLines(d, articlePlan(d, v, owner), articleOf(d, v, owner), d.blocks, layoutKey(d, v, owner, measure()));
 }
@@ -1945,8 +2067,10 @@ export function boardKeptIn() {
 /** does the board lag past a second (M-PUMP's `boardKept`): every corner names neither the latest version nor the chain's count (`ArticleView.lags`) */
 const lags = () => PUMP.boardKept() !== null;
 
-/** a document's corner's items made over its view, whole and compact, with the lag they were made under (`Mounted.corner`) */
-const cornerOfView = (/** @type {Doc} */ d, /** @type {ArticleView} */ view) => ({ whole: cornerHTML(d, view), compact: cornerHTML(d, view, true), lags: !!view.lags });
+/** what a document's corner's items are made from beside its record and the links (`Mounted.corner`): the board's lag, the draft's kept state and whether its statement stands open — the items made again where it moved */
+const cornerKey = (/** @type {string} */ addr) => JSON.stringify([lags(), REC.keptOf(addr), openStatements.has(addr)]);
+/** a document's corner's items made over its view, whole and compact, keyed by what they were made from (`cornerKey`) */
+const cornerOfView = (/** @type {Doc} */ d, /** @type {ArticleView} */ view) => ({ whole: cornerHTML(d, view), compact: cornerHTML(d, view, true), key: cornerKey(d.addr) });
 
 /**
  * How many of an account's documents stand kept (`keptIn`; see the head):
@@ -2189,10 +2313,15 @@ function place(/** @type {Mounted} */ rec) {
 
 /**
  * Has a mounted article gone stale: its document's run, its revision, the
- * view revision or its fold moved since it was mounted?
+ * draft's page-local edits, the view revision or its fold moved since it was
+ * mounted? Read against the model's record, which the article's own may be a
+ * record derived from (`shownDoc`).
  * @param {Mounted} rec
  */
-const wentStale = (rec) => rec.d.from !== rec.runFrom || rec.d.to !== rec.runTo || rec.rev !== rec.d.rev || rec.grev !== grev || rec.fold !== foldOf(rec.d);
+const wentStale = (rec) => {
+  const m = REC.doc(rec.d.addr);
+  return m.from !== rec.runFrom || m.to !== rec.runTo || m.rev !== rec.rev || rec.grev !== grev || rec.editRev !== REC.editRev(m.addr) || rec.fold !== foldOf(m);
+};
 
 /**
  * The documents that mount afresh this frame (see the head): of those in view
@@ -2543,6 +2672,9 @@ export function frame(focused = () => false) {
   placeHeld();
   if (span && !pressed && (fresh.includes(span.addr) || (owed && sameSpan(owed, span)))) placeAgain(span);
   if (owed && !sameSpan(owed, span)) owed = null;
+  // a live caret the walk's focus has left for another document's span is left to the walk, kept where it stood (K-77; D5 §4 rule 8)
+  if (caret_ && caret_.live) { const f = read.focus(); if (f && f.addr !== caret_.addr) caret_ = { ...caret_, live: false }; }
+  placeCaretMark();
   if (engine && !pressed) measureInView(v);
   last.mounted = spent;
   last.standing = 0; last.lines = 0;
@@ -2685,10 +2817,9 @@ function placeCorners(focused) {
   /** @type {Array<{c: Corner, rec: Mounted, at: Beside}>} */
   const shown = [];
   const centre = viewCentre();
-  const lagging = lags();
   for (const rec of mounted.values()) {
-    // the board's lag begun or ended: the corner's items made again over the view as it stands
-    if (rec.corner.lags !== lagging) rec.corner = cornerOfView(rec.d, viewFor(rec.d));
+    // the board's lag begun or ended, a draft's kept state set, its statement opened or closed: the corner's items made again over the view as it stands
+    if (rec.corner.key !== cornerKey(rec.d.addr)) rec.corner = cornerOfView(rec.d, viewFor(rec.d));
     if (!rec.corner.whole || !readsAt(rec.fs)) continue;
     const addr = rec.d.addr, box = docBox(addr), open = openWhole.has(addr);
     const c = corners.get(addr) || makeCorner(cornerLayer, addr), p = { x: centre.x - box.x, y: centre.y - box.y };
@@ -3303,11 +3434,12 @@ export function sceneArticle(d, as = {}) {
 
 /**
  * A document's article as P-LAY's plan — the rows its lines are predicted
- * from — from the same view its article is mounted with.
+ * from — from the same view its article is mounted with, over the record the
+ * page shows of it (`shownDoc`).
  * @param {Doc} d
  * @returns {import('../plane/layout.js').Row[]}
  */
-export function planOf(d) { return articlePlan(d, viewFor(d), REC.ownerAccount(d)); }
+export function planOf(d) { d = shownDoc(d); return articlePlan(d, viewFor(d), REC.ownerAccount(d)); }
 
 /**
  * A pane's corner items (ux-T2: each pane its own), from the view the pane's
@@ -3428,11 +3560,305 @@ export function extendTo(/** @type {number} */ x, /** @type {number} */ y) {
   if (p && s && s.rangeCount) s.extend(p.node, p.offset);
 }
 
-/** unmount everything and take the corners and the held labels down (a board change); a corner that held the focus hands it to the walk */
+// ---- the caret (see the head) -----------------------------------------------------
+
+/**
+ * Is a document's text one the person may edit (D5 K-70): a draft under the
+ * session's account — read from its address alone, never from an owner store
+ * — whose text the page holds, at reading scale. The one test the caret's
+ * placing, its keys and the swallow's draft form read.
+ * @param {string} addr
+ * @param {number} [scale] the scale it is read at: the camera's where none is given
+ */
+export function editable(addr, scale = cam.scale) {
+  const s = REC.session();
+  if (!s || !s.account || accountOf(addr) !== s.account || !REC.has(addr)) return false;
+  const d = REC.doc(addr);
+  return isDraft(d) && d.from >= 0 && !d.refused && atReadingScale(addr, scale);
+}
+
+/** the caret as it stands, by value; null where none stands */
+export const caret = () => (caret_ ? { ...caret_ } : null);
+
+/** the caret set: placed, moved or kept — the frame collapses the platform's selection at it once its part stands */
+function setCaret(/** @type {Caret | null} */ c) { caret_ = c; caretMoved = !!c; markDirty(); }
+
+/** a position of a draft's shown text clamped to the text it holds: its first position to one past its last; 1 where it holds none */
+function clampPos(/** @type {Doc} */ d, /** @type {number} */ pos) { return d.from < 0 ? 1 : Math.max(d.from, Math.min(pos, d.to)); }
+
+/**
+ * The caret placed at a position of a draft's shown text (K-70), live: one
+ * caret stands at a time, so a caret in another document goes. Nothing where
+ * the text is none the person may edit.
+ * @param {string} addr
+ * @param {number} pos a position of the text shown (`shownOf`)
+ * @returns {Caret | null} the caret as placed
+ */
+export function placeCaret(addr, pos) {
+  if (!editable(addr)) return null;
+  setCaret({ addr, pos: clampPos(shownOf(addr), pos), live: true });
+  return caret();
+}
+
+/**
+ * Enter at a focused span of a draft the person may edit (K-70; BM-52): the
+ * caret placed at the span's start — the model's position carried into the
+ * text shown — or, where a kept caret stands in that span, returned where it
+ * stood. Null where the text is none the person may edit.
+ * @param {string} addr
+ * @param {number} pos the span's first position in the model's text (N-WALK's)
+ * @returns {Caret | null}
+ */
+export function caretToSpan(addr, pos) {
+  if (!editable(addr)) return null;
+  if (caret_ && caret_.addr === addr && !caret_.live && sameBlock(addr, caret_.pos, pos)) return returnCaret();
+  return placeCaret(addr, toShown(REC.edits(addr), pos));
+}
+
+/**
+ * Does a position of a draft's shown text stand in the span of the model's
+ * text whose first position is `blockPos` (N-WALK's grain) — the kept caret's
+ * span (BM-52)?
+ * @param {string} addr
+ * @param {number} shownPos
+ * @param {number} blockPos
+ */
+export function sameBlock(addr, shownPos, blockPos) {
+  const b = REC.blockAt(addr, toBase(REC.edits(addr), shownPos));
+  return !!b && b.pos === blockPos;
+}
+
+/** does a caret — live or kept — stand in the span of a draft's text whose first position is `blockPos` (N-WALK's grain; BM-52)? */
+export const caretInSpan = (/** @type {string} */ addr, /** @type {number} */ blockPos) => !!caret_ && caret_.addr === addr && sameBlock(addr, caret_.pos, blockPos);
+
+/**
+ * The span the caret stands in, in the model's text (N-WALK's grain): the
+ * caret's position carried back through the edits, and the block holding it;
+ * null where no caret stands.
+ * @returns {{addr: string, pos: number, block: number | null} | null}
+ */
+export function caretSpan() {
+  if (!caret_) return null;
+  const pos = toBase(REC.edits(caret_.addr), caret_.pos), b = REC.blockAt(caret_.addr, pos);
+  return { addr: caret_.addr, pos, block: b ? b.pos : null };
+}
+
+/** Esc leaves the text (K-77; BM-4): the caret kept where it stood, the keys no longer reaching it; the span it stands in, for the walk; null where no live caret stood */
+export function leaveCaret() {
+  if (!caret_ || !caret_.live) return null;
+  setCaret({ ...caret_, live: false });
+  return caretSpan();
+}
+
+/** a kept caret returned where it stood (K-70, K-77; BM-52): the keys reach it again; null where none is kept */
+export function returnCaret() {
+  if (!caret_) return null;
+  setCaret({ ...caret_, live: true });
+  return caret();
+}
+
+/** the caret dropped: none stands */
+export function dropCaret() { if (caret_) setCaret(null); }
+
+/**
+ * Text typed at a live caret (K-72, K-76; BM-1, BM-54): one page-local edit
+ * added to the draft — the text at the caret's position, nothing removed —
+ * and the caret moved past it. False where no live caret stands.
+ * @param {string} text
+ */
+export function caretType(text) {
+  if (!caret_ || !caret_.live || !text) return false;
+  REC.addEdit(caret_.addr, { pos: caret_.pos, width: 0, text });
+  setCaret({ ...caret_, pos: caret_.pos + byteLength(text) });
+  return true;
+}
+
+/**
+ * A selection of the caret's draft replaced by text typed (K-71; BM-70): one
+ * edit removing its bytes and placing the text, the caret after the text.
+ * False where no live caret stands, or the span is another document's.
+ * @param {Span} span the selection, in the text shown
+ * @param {string} text
+ */
+export function caretReplace(span, text) {
+  if (!caret_ || !caret_.live || span.addr !== caret_.addr) return false;
+  REC.addEdit(caret_.addr, { pos: span.pos, width: span.width, text });
+  setCaret({ ...caret_, pos: span.pos + byteLength(text) });
+  return true;
+}
+
+/**
+ * Backspace (dir −1) or Delete (dir 1) at a live caret (K-72): the character
+ * before or after it taken out of the text shown — an item whole — as one
+ * page-local edit, the caret at the removal. False where none stands there.
+ * @param {-1 | 1} dir
+ */
+export function caretErase(dir) {
+  if (!caret_ || !caret_.live) return false;
+  const d = shownOf(caret_.addr), b = boundaries(d.runs, caret_.pos);
+  const from = dir < 0 ? b.before : caret_.pos, to = dir < 0 ? caret_.pos : b.after;
+  if (from == null || to == null || to <= from) return false;
+  REC.addEdit(caret_.addr, { pos: from, width: to - from, text: '' });
+  setCaret({ ...caret_, pos: from });
+  return true;
+}
+
+/**
+ * The caret moved (K-71): ← and → a character — an item whole — ↑ and ↓ a
+ * line: where the platform stands the text, the character boundary under
+ * the caret's mark a line above or below (`caretPoint`); else the same
+ * offset into the typed line before or after the caret's. False where no
+ * live caret stands, or the text holds nothing that way.
+ * @param {'left' | 'right' | 'up' | 'down'} dir
+ */
+export function caretMove(dir) {
+  if (!caret_ || !caret_.live) return false;
+  const d = shownOf(caret_.addr);
+  /** @type {number | null} */
+  let to = null;
+  if (dir === 'left' || dir === 'right') { const b = boundaries(d.runs, caret_.pos); to = dir === 'left' ? b.before : b.after; }
+  else {
+    to = caretLineStep(d, dir === 'up' ? -1 : 1);
+  }
+  if (to == null || to === caret_.pos) return false;
+  setCaret({ ...caret_, pos: clampPos(d, to) });
+  return true;
+}
+
+/**
+ * The position a line above or below the caret (`caretMove`): the boundary
+ * the platform finds under the caret's mark moved by a line box, where the
+ * mark stands; else the same byte offset into the typed line before or after
+ * the caret's, clamped to that line's characters; null where no line lies that
+ * way.
+ * @param {Doc} d the text shown
+ * @param {1 | -1} dir
+ * @returns {number | null}
+ */
+function caretLineStep(d, dir) {
+  const c = /** @type {Caret} */ (caret_);
+  if (engine && layer) {
+    const mark = /** @type {HTMLElement | null} */ (layer.querySelector('.caret-mark'));
+    const r = mark ? mark.getBoundingClientRect() : null;
+    if (r && r.height > 0) {
+      const p = caretPoint(r.left + 1, dir < 0 ? r.top - r.height / 2 : r.bottom + r.height / 2);
+      const at = p ? posAtNode(p.node, p.offset) : null;
+      if (at && at.addr === c.addr) return at.pos;
+    }
+  }
+  const blocks = d.blocks.filter((b) => b.kind === 'para');
+  const i = blocks.findIndex((b) => c.pos >= b.pos && c.pos < b.pos + b.width);
+  const here = i >= 0 ? i : c.pos >= d.to ? blocks.length - 1 : -1;
+  const next = blocks[here + dir];
+  if (here < 0 || !next) return null;
+  const off = c.pos - blocks[here].pos;
+  return Math.min(next.pos + off, next.pos + byteLength(next.text));
+}
+
+/**
+ * The position of a point of the platform's — a node and an offset in a
+ * standing part of a mounted article — in the text the article was made from
+ * (`posOfPoint`): the one a click names (K-70). Null where the point lies in
+ * no block part of a mounted article.
+ * @param {Node} node
+ * @param {number} offset
+ * @returns {{addr: string, pos: number} | null}
+ */
+function posAtNode(node, offset) {
+  const el = elementOf(node), part = el ? /** @type {HTMLElement | null} */ (el.closest('.run > .sp')) : null;
+  const art = part ? /** @type {HTMLElement | null} */ (part.closest('article.dtext')) : null, made = art ? madeOf(art) : null;
+  if (!part || !made) return null;
+  const b = made.blocks.find((x) => x.pos === Number(part.dataset.pos));
+  return b ? { addr: made.addr, pos: posOfPoint(b, part, node, offset, 'start') } : null;
+}
+
+/**
+ * The position the platform's selection names in a mounted article where it
+ * stands collapsed there — a click's own collapse at the character clicked,
+ * or the press rule's (`caretAt`) — in the text the article was made from;
+ * null where it stands elsewhere, or is no point.
+ * @returns {{addr: string, pos: number} | null}
+ */
+export function caretFromPlatform() {
+  const s = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+  if (!s || !s.rangeCount || !s.isCollapsed || !s.anchorNode) return null;
+  return posAtNode(s.anchorNode, s.anchorOffset);
+}
+
+/**
+ * The point of the standing part of a mounted article at a position of the
+ * text it was made from: the block holding it, the one before where it is
+ * the text's end, and the character boundary there (`pointOfPos`); null
+ * where no part standing holds it.
+ * @param {Mounted} rec
+ * @param {number} pos
+ * @returns {{node: Node, offset: number} | null}
+ */
+function pointAt(rec, pos) {
+  const blocks = rec.made.blocks;
+  const b = blocks.find((x) => pos >= x.pos && pos < x.pos + x.width) || (pos >= rec.d.to ? blocks[blocks.length - 1] : null);
+  if (!b) return null;
+  const parts = partsOf(rec.el, b.pos);
+  return parts.length ? pointOfPos(b, parts, Math.min(pos, b.pos + b.width), b.kind === 'para' && pos >= b.pos + b.width ? 'end' : 'start') : null;
+}
+
+/** the caret's mark: the page's own, of no width, hollow where the caret is kept — no byte of the document, no text node of its own */
+const CARET_MARK = 'caret-mark';
+
+/**
+ * The caret's mark set in the standing part at its character boundary (see
+ * the head), each frame: every mark standing taken down, the text nodes
+ * about it joined again, and one set where the caret stands in a mounted
+ * article whose part holds its position — hollow where the caret is kept;
+ * and, where the page placed or moved the caret since, the platform's
+ * selection collapsed there once, save under a press or while a field holds
+ * the caret of its own. Nothing where the platform does not set the
+ * articles.
+ */
+function placeCaretMark() {
+  if (!engine || !layer) return;
+  for (const m of /** @type {HTMLElement[]} */ ([...layer.querySelectorAll('.' + CARET_MARK)])) { const p = m.parentNode; m.remove(); if (p) p.normalize(); }
+  const c = caret_, rec = c ? mounted.get(c.addr) : undefined;
+  if (!c || !rec) return;
+  const at = pointAt(rec, c.pos);
+  if (!at) return;
+  const mark = document.createElement('span');
+  mark.className = CARET_MARK + (c.live ? '' : ' kept');
+  mark.setAttribute('aria-hidden', 'true');
+  const r = document.createRange(); r.setStart(at.node, at.offset); r.collapse(true); r.insertNode(mark);
+  if (caretMoved && !pressed && !typing()) {
+    const s = window.getSelection();
+    if (s) { s.collapse(mark.parentNode, [...(/** @type {Node} */ (mark.parentNode)).childNodes].indexOf(mark)); caretMoved = false; }
+  }
+}
+
+/**
+ * A draft's kept word's statement opened in its corner on the word's act, or
+ * closed again on the act (K-57, K-74; FP-26): `on` sets it, left out
+ * toggles; the corner's items are made again from it (`placeCorners`), and a
+ * pane's corner reads it too (SC). Nothing where the draft's kept state is
+ * not set: there is no statement to open.
+ * @param {string} addr
+ * @param {boolean} [on]
+ * @returns {boolean} whether the statement stands open now
+ */
+export function openStatement(addr, on = !openStatements.has(addr)) {
+  if (!REC.keptOf(addr)) on = false;
+  if (on) openStatements.add(addr); else openStatements.delete(addr);
+  markDirty();
+  return on;
+}
+/** does a draft's kept word's statement stand open in its corner (`openStatement`)? */
+export const statementOpen = (/** @type {string} */ addr) => openStatements.has(addr);
+
+/** unmount everything and take the corners, the held labels, the caret and the open statements down (a board change); a corner that held the focus hands it to the walk */
 export function clear() {
   for (const a of [...mounted.keys()]) unmount(a);
   hold = null;
   owed = null;
+  caret_ = null; caretMoved = false;
+  openStatements.clear();
+  shownCache.clear();
   let lost = false;
   for (const a of [...corners.keys()]) lost = dropCorner(a) || lost;
   for (const h of helds.values()) h.el.remove();

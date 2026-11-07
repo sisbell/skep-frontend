@@ -34,8 +34,14 @@
 // the last DRAFTS row the page took (`draftsAt`) — started from a session
 // answer's `opened_at` where none stands, raised by each drafts row taken
 // and never by a published one, from which M-PUMP's drafts read at a regain
-// starts, a change of class keeping it; and a bare row's mark on the board
-// (`bare`).
+// starts, a change of class keeping it; a bare row's mark on the board
+// (`bare`); a draft's kept state as its corner reads it — the word and the
+// reason standing on the word's act (`keptOf`, `setKept`; B3-S2) — set by
+// its owner alone and never by a read; and the page-local edits a draft's
+// caret made (`edits`, `addEdit`; K-72) — positions and text, each in the
+// text as it stood after the edits before it, never a frame — which M-DERIVE
+// applies over the delivered runs for what the page shows, the model's own
+// record standing as the board served it, and a change of class drops.
 // A link's slot names bytes, never a place (wire.md §Links): where a stored
 // span stands in a document's text is read through that document's held V→I
 // image (`placed`) — moved where the image puts it, cut in two as two
@@ -216,6 +222,29 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {number | null} whole the content extent the whole document holds, where the span set said
  * @property {number} rev bumped on every change to this document
  * @property {'unregistered' | 'withheld' | null} refused what a read of this document answered, where one refused
+ * @property {Derivation} [derived] set on a record the page derived (M-DERIVE): what it was derived from and what was applied; never on a record this module holds
+ */
+
+/**
+ * @typedef {Object} Derivation — what a derived record was made from (M-DERIVE's `applyHeld`, `applyEdits`, `recordAt`)
+ * @property {string} from the document the record was derived from
+ * @property {number[]} rows the held lines applied, by ordinal, in the order applied
+ * @property {number} edits the page-local edits applied
+ * @property {number | null} at the board position a past state was read at; null for the held version and the typed text
+ */
+
+/**
+ * @typedef {Object} KeptState — a draft's kept state as its corner reads it (B3-S2; D6's machine sets it)
+ * @property {'kept' | 'not yet kept' | 'not kept'} word
+ * @property {string | null} reason the reason standing on the word's act, in its statement; null where the state carries none
+ */
+
+/**
+ * @typedef {Object} Edit — one page-local edit of a draft's shown text (K-72): `width` positions at `pos` replaced by `text` — an insert where
+ * `width` is 0, a removal where `text` is '' — in the text as it stood after the edits before it; kept on the page alone, never a frame, never sent
+ * @property {number} pos
+ * @property {number} width
+ * @property {string} text
  */
 
 /**
@@ -371,6 +400,10 @@ const state = {
   feedAt: null,
   /** @type {number | null} the position of the last drafts row the page took (`draftsAt`): started from a session answer's `opened_at` where none stands (`setSession`), raised by each drafts row taken (`applyFeedUpdate`), never lowered; null where no `opened_at` was answered and no drafts row taken. M-PUMP's drafts read at a regain reads from it */
   draftsAt: null,
+  /** @type {Map<string, KeptState>} each draft's kept state, by address (`setKept`) */
+  kept: new Map(),
+  /** @type {Map<string, {list: Edit[], rev: number}>} each draft's page-local edits in the order made, with a count of every change to them (`addEdit`, `editRev`) */
+  edits: new Map(),
   rev: 0,
   /** @type {Array<() => void>} */
   watchers: [],
@@ -481,6 +514,8 @@ function dropClass(stood, ended) {
   state.memberAges.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.owners.clear(); state.keySets.clear();
   dropKeyCauses();
   state.feed = state.feed.filter((r) => r.cls !== 'drafts');
+  state.kept.clear();
+  for (const e of state.edits.values()) { e.list = []; e.rev++; }
 }
 
 /**
@@ -1719,6 +1754,60 @@ export function feedTime() {
   return null;
 }
 
+// ---- the kept state and the page-local edits ----------------------------------
+
+/**
+ * A draft's kept state as its corner reads it (B3-S2): the word and the
+ * reason on its act; null where none is set — the slot then stands empty, its
+ * width kept (FP-34). Set by its owner, D6's machine, and by the gate's
+ * hook; no read sets it.
+ * @param {string} addr
+ * @returns {KeptState | null}
+ */
+export const keptOf = (addr) => state.kept.get(addr) ?? null;
+/**
+ * A draft's kept state set, or cleared with null (`keptOf`): every surface
+ * that reads it — its corner on the plane, a pane's — is made again from it.
+ * @param {string} addr
+ * @param {KeptState | null} s
+ */
+export function setKept(addr, s) {
+  if (s) state.kept.set(addr, { word: s.word, reason: s.reason ?? null }); else state.kept.delete(addr);
+  bump();
+}
+
+/**
+ * A draft's page-local edits, in the order made (`addEdit`): what M-DERIVE
+ * applies over its delivered runs for the text the page shows (K-72); none
+ * where no caret has typed in it.
+ * @param {string} addr
+ * @returns {readonly Edit[]}
+ */
+export const edits = (addr) => state.edits.get(addr)?.list ?? [];
+/** how many times a draft's page-local edits have changed — each edit added, each clearing — so a record derived from them is made again where it moved */
+export const editRev = (/** @type {string} */ addr) => state.edits.get(addr)?.rev ?? 0;
+/**
+ * One page-local edit added to a draft's (`edits`): its positions in the
+ * text as it stands after the edits before it. The model's own record stands
+ * as the board served it; nothing is composed or sent.
+ * @param {string} addr
+ * @param {Edit} e
+ */
+export function addEdit(addr, e) {
+  let x = state.edits.get(addr);
+  if (!x) { x = { list: [], rev: 0 }; state.edits.set(addr, x); }
+  x.list = [...x.list, { pos: e.pos, width: e.width, text: e.text }];
+  x.rev++;
+  bump();
+}
+/** a draft's page-local edits let go: the page shows its delivered text again */
+export function clearEdits(/** @type {string} */ addr) {
+  const x = state.edits.get(addr);
+  if (!x || !x.list.length) return;
+  x.list = []; x.rev++;
+  bump();
+}
+
 // ---- the refresh ---------------------------------------------------------------
 
 /**
@@ -1929,6 +2018,7 @@ export function _reset() {
   state.keys = null; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.bare = false; state.docs.clear(); state.memberAges.clear();
   state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.owed.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.claimDrops.clear(); state.claimsRefreshed = 0;
   state.owners.clear(); state.keySets.clear(); state.accountKeys.clear(); state.keyDrops = 0; state.feed = []; state.feedAt = null; state.draftsAt = null; state.rev = 0;
+  state.kept.clear(); state.edits.clear();
 }
 
 /** a deep, serializable picture of the model for the gate and the fake-port test */

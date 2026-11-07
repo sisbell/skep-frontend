@@ -97,6 +97,8 @@ import * as SCENE from './scene.js';
 import * as LINE from '../line/line.js';
 import { levels, merged, counterpart, counterparts, nearest, linesBetween, carriedTo, wholeEdges, drawEdge, stopFor, banded, drawBand, drawStroke, changeWords, strokeWords, sharedHeld, junctionsOf, strokeHeld, sameBytes } from './scene.js';
 import { byteLength } from '../util.js';
+import { applyHeld } from '../model/derive.js';
+import { deriveBlocks } from '../model/records.js';
 import * as GO from '../nav/go.js';
 import * as TRAIL from '../nav/trail.js';
 import * as CAM from '../plane/camera.js';
@@ -1962,4 +1964,66 @@ test('a pane\'s corner\'s act whose own reads take its owner\'s facts anew lands
     assert.equal(p.paneB.placed.length, placed, 'pane B set nowhere again');
   } finally { CAM._reset(); }
   assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+// ---- a pane from a record the page derived (M-DERIVE; B3-S2, B3-S7) ---------------------------------------------------
+
+/** a draft of 1.0.1's the board is never asked about: a record of it the page holds, over one content run of `text`, its image its own bytes */
+const draftOf = (/** @type {string} */ addr, /** @type {string} */ text) => {
+  const n = byteLength(text);
+  /** @type {import('../model/frames.js').Run[]} */
+  const runs = [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }];
+  return /** @type {import('../model/records.js').Doc} */ ({
+    addr, account: '1.0.1', kind: 'draft', label: null, standing: null, system: false, extent: n, linkPositions: 0, meta: null,
+    runs, from: 1, to: n + 1, readAt: 3, blocks: deriveBlocks(runs), image: [{ pos: 1, width: n, prefix: addr + '.0.1', ordinal: 1 }], origins: [], imageFor: [1, n + 1],
+    links: new Set(), linksRead: true, members: null, ended: false, whole: n, rev: 1, refused: null,
+  });
+};
+
+test('a pane opened from a record the page derived — the kept text with a held line applied — shows that record\'s text and reads nothing from the board for it: no whole read, no chain, no `compare` and no far end placed; its corner a draft\'s with its kept slot empty and no version act; leaving keeps the record itself in the entry, and a reopening shows it again, reading nothing (B3-S2, B3-S7; D6 BM-14, BM-29; FP-23)', () => onPage(async (p) => {
+  const H = '1.0.1.0.44', H_TEXT = 'The kept text.\n\nIts passage stands here.';
+  const rows = F.decodeHeldRows([{ held: 1, doc: H, base: 5, frame: { op: 'insert', at: { ordinal: '17', subspace: '1' }, values: ['Held words. '] }, cause: 'unreachable', sent: false, time: 1 }]);
+  assert.ok(rows && rows.length === 1, 'the held row decoded');
+  const held = applyHeld(draftOf(H, H_TEXT), /** @type {NonNullable<typeof rows>} */ (rows));
+  assert.deepEqual([held.stopped, REC.textOf(held.doc.runs, held.doc.from, held.doc.to)], [null, 'The kept text.\n\nHeld words. Its passage stands here.'], 'the held version derived');
+  const before = fake.asked.length;
+  p.item.focus();
+  await SCENE.open(A, held.doc);
+  const asked = fake.asked.slice(before);
+  assert.equal(SCENE.isOpen(), true, 'the scene shows');
+  const panes = SCENE.panes();
+  assert.deepEqual([panes?.a.src, panes?.a.derived, panes?.b.src, panes?.b.derived, panes?.b.kind, panes?.b.n, panes?.b.read], [A, false, H, true, 'draft', null, null], 'pane B on the derived record, named by its document, no version known and no act offered');
+  assert.equal(panes?.b.blocks.map((b) => b.text).join('|'), 'The kept text.|Held words. Its passage stands here.', 'its text the derived record\'s');
+  assert.ok(asked.every((k) => !k.includes(H) && !k.includes('"compare"')) && fake.asked.every((k) => !k.includes(H)), `nothing read for the derived record, and no compare asked: ${JSON.stringify(asked)}`);
+  assert.deepEqual(SCENE.pairs()?.pairs, [], 'no bands: nothing of the board\'s to compare the derived text against');
+  assert.ok(p.paneB.innerHTML.includes(`data-corner="${H}"`) && p.paneB.innerHTML.includes('kept-word pending') && p.paneB.innerHTML.includes('data-chip="1"') && !p.paneB.innerHTML.includes('data-read'), `its corner a draft's: the kept slot empty, the chip, no version act — ${p.paneB.innerHTML}`);
+  const left = SCENE.asLeft();
+  assert.ok(left, 'the scene as left');
+  assert.deepEqual([left.panes.a.derived, left.panes.b.src, left.panes.b.derived?.derived, left.panes.b.derived?.blocks.map((b) => b.text)], [null, H, { from: H, rows: [1], edits: 0, at: null }, ['The kept text.', 'Held words. Its passage stands here.']], 'the entry keeps the derived record itself; a read pane keeps none');
+  SCENE.close();
+  const again = fake.asked.length;
+  await SCENE.reopen({ a: A, b: H, held: {}, left });
+  assert.deepEqual([SCENE.isOpen(), SCENE.panes()?.b.derived, SCENE.panes()?.b.blocks.map((b) => b.text).join('|')], [true, true, 'The kept text.|Held words. Its passage stands here.'], 'reopened as left: the derived text again');
+  assert.ok(fake.asked.slice(again).every((k) => !k.includes(H) && !k.includes('"compare"')), 'reading nothing for it');
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+Object.assign(script, compared(A, A_TEXT, A, A_TEXT, [[1, 1, A_TEXT.length]]));
+
+test('a scene on one document in both panes opens — each pane the document, named by its own head, the two ends level at the passage held — and leaving records two spots, one per pane, each pane where the reader scrolled it; a reopening opens it on the one document twice (the survey\'s §6 #2, tufte\'s (4))', () => onPage(async (p) => {
+  p.item.focus();
+  await SCENE.open(A, A, { posA: 14, widthA: 3 });
+  assert.equal(SCENE.isOpen(), true, 'the scene shows');
+  const panes = SCENE.panes();
+  assert.deepEqual([panes?.a.src, panes?.b.src, panes?.a.shows, panes?.b.shows, panes?.a.derived, panes?.b.derived], [A, A, A, A, false, false]);
+  assert.deepEqual(SCENE.pairs()?.level, { a: 14, b: 14 }, 'the held passage level with itself');
+  assert.deepEqual([p.headA.id, p.headB.id, p.paneA.attrs['aria-labelledby'], p.paneB.attrs['aria-labelledby']], ['sceneA-name', 'sceneB-name', 'sceneA-name', 'sceneB-name'], 'each pane named by its own head');
+  p.paneA.scrollTop = 30; p.paneB.scrollTop = 90;
+  const left = SCENE.asLeft();
+  assert.ok(left && left.spots && left.spots.a !== left.spots.b, 'two spots, one per pane');
+  assert.deepEqual([left.panes.a.src, left.panes.b.src, p.paneA.scrollTop, p.paneB.scrollTop], [A, A, 30, 90], 'each pane where the reader scrolled it');
+  SCENE.close();
+  await SCENE.reopen({ a: A, b: A, held: { posA: 14, widthA: 3 }, left });
+  assert.deepEqual([SCENE.isOpen(), SCENE.panes()?.a.src, SCENE.panes()?.b.src, SCENE.pairs()?.level], [true, A, A, { a: 14, b: 14 }], 'reopened on the one document twice, level as before');
+  assert.deepEqual(fake.unanswered, []);
 }));

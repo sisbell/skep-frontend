@@ -90,10 +90,18 @@
 // state and its chip (C-28; ux-T2), the whole-document link count, and in a
 // reading scene's pane its act reading another version there and the line
 // saying the version it reads lacks the passage that act carried (FP-23),
-// whole or compact (FP-26). They stand outside the article: the article's
-// box clips whatever stands past its measure, so the corner's element is its
-// holder's, T-LAYER's beside the article on the plane and each pane's own in
-// the scene.
+// whole or compact (FP-26). A draft's kept state (B3-S2; D5 K-57, K-74) is
+// its word in a slot of fixed width — the longest of the three words', as
+// the view measures them — in both forms, an empty box while no state is
+// set (FP-34), the word's own act opening its statement whole on a line of
+// its own below it (`keptStatement`; P41): at "kept" the save chord's answer,
+// at the other two "nothing to save —" before the word and the reason on the
+// act; the statement is Mod+S's answer too (N-KEYS). The corner carries no
+// second act for the past states: the strings table holds no reason for an
+// inert one, and the page invents no wording. They stand outside the
+// article: the article's box clips whatever stands past its measure, so the
+// corner's element is its holder's, T-LAYER's beside the article on the plane
+// and each pane's own in the scene.
 // The plan (`articlePlan`): the same article as P-LAY's rows — the head's
 // lines, each block's text at its size with the inline pieces it carries
 // (the hairline's label, C-33's mark, the symbols), a record's words and
@@ -154,6 +162,7 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
 /** @typedef {import('../model/records.js').Reader} Reader */
 /** @typedef {import('../model/records.js').AccountFacts} AccountFacts */
 /** @typedef {import('../model/records.js').RecordValue} RecordValue */
+/** @typedef {import('../model/records.js').KeptState} KeptState */
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../plane/register.js').Mark} Mark */
 /** @typedef {import('./span.js').Span} Span */
@@ -186,6 +195,8 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {number | null} [read] a reading scene's pane's corner act, the one its Enter takes: the version it reads in the pane's place (SC; FP-23) — the newer one arrived, or the one the act left; absent or null, none
  * @property {number | null} [lacks] the version a pane's corner says holds none of the passage its act carried (SC; FP-23); absent or null, none
  * @property {boolean} [lags] the board lags past a second (M-PUMP's `boardKept`; FP-23): the corner names neither the latest version nor the chain's count; absent, false
+ * @property {KeptState | null} [kept] a draft's kept state as the model holds it (M-REC's `keptOf`): the word its corner's slot shows; absent or null, no state is set and the slot stands empty
+ * @property {boolean} [keptOpen] the kept word's statement stands open in the corner, on its act (T-LAYER's `openStatement`, SC's); absent, closed
  * @property {number} [cpl] the measure the article's column is set at, in characters of its face (P-CAM's measure in force on the plane, the full measure in a pane): what a withheld run's gap holds is read at it (`gapHolds`); absent, the full measure
  * @property {Measure} measure a string's width in a face as the platform sets it (T-LAYER's `widthOf`): every fit the article judges — what a gap holds, a sign's lines in the edge, a label's cut, a slot's box — reads it
  */
@@ -1007,6 +1018,59 @@ function clauseHTML(c, scene) {
   return `<span class="clause"${follows}>${words}</span>`;
 }
 
+/** each kept word's entry in the strings table (B3-S1, B3-S2), by the state's word */
+const KEPT_WORDS = /** @type {Record<KeptState['word'], string>} */ ({ kept: 'B3.kept', 'not yet kept': 'B3.not-yet-kept', 'not kept': 'B3.not-kept' });
+
+/**
+ * A kept state's word as the corner shows it: its string's id and its words.
+ * @param {KeptState} k
+ * @returns {{id: string, text: string}}
+ */
+export const keptWord = (k) => ({ id: KEPT_WORDS[k.word], text: t(KEPT_WORDS[k.word]) });
+
+/**
+ * A kept state's statement (D5 K-74; B3-S1, B3-S2): what the kept word's act
+ * opens whole and the save chord answers with — at "kept" the save chord's
+ * line, "nothing to save — everything here is kept"; at "not yet kept" and
+ * "not kept" "nothing to save —" before the word, the reason standing after
+ * the word on this act where the state carries one, joined as a kept clause
+ * joins its reason.
+ * @param {KeptState} k
+ * @returns {{id: string, text: string}}
+ */
+export function keptStatement(k) {
+  if (k.word === 'kept') return { id: 'B3.save.kept', text: t('B3.save.kept') };
+  const w = keptWord(k);
+  const words = k.reason ? t('L.kept.failed', { clause: w.text, reason: k.reason }) : w.text;
+  return { id: 'B3.save.before', text: `${t('B3.save.before')} ${words}` };
+}
+
+/**
+ * The kept slot's width, in em of the corner's size (P67): the longest of
+ * the three words as the view measures them in the client's face, so the
+ * slot holds its place whichever word stands.
+ * @param {Measure} measure
+ */
+const keptSlotEm = (measure) => Math.max(...Object.values(KEPT_WORDS).map((id) => measure(t(id), 'client')));
+
+/**
+ * A draft's kept line (see the head; B3-S2; FP-34): the kept word in its
+ * slot of fixed width (`keptSlotEm`), carrying the state's word and its
+ * string — an empty box of the same width, hidden from assistive technology,
+ * while no state is set — and, where its act opened it, the statement whole
+ * on a line of its own after it (`keptStatement`). The word takes no focus
+ * of its own: the corner is one stop (D5 K-57), its act the holder's.
+ * @param {ArticleView} v
+ */
+function keptLineHTML(v) {
+  const em = keptSlotEm(v.measure), k = v.kept ?? null;
+  const slot = k
+    ? `<span class="kept-word" data-kept="${esc(k.word)}" data-string="${esc(KEPT_WORDS[k.word])}" style="width:${em}em">${esc(t(KEPT_WORDS[k.word]))}</span>`
+    : `<span class="kept-word pending" aria-hidden="true" style="width:${em}em"></span>`;
+  const st = k && v.keptOpen ? keptStatement(k) : null;
+  return `<span class="kept-line">${slot}</span>` + (st ? `<span class="kept-statement" data-string="${esc(st.id)}">${esc(st.text)}</span>` : '');
+}
+
 /**
  * The corner's items in foundations' one order (§3.1): an edition's state
  * with "version ⟨k⟩ of ⟨n⟩" and R20's teaching, keyed by venue — at a pinned
@@ -1015,12 +1079,14 @@ function clauseHTML(c, scene) {
  * there too (FP-22); in a reading scene's pane, where the version its pane
  * reads lacks the passage its act carried, a line saying so (`lacks`), and
  * its act reading another version in the pane's place (`read`; FP-23); a
- * draft's chip (C-28); the whole-document link count (rule (i)). Compact
+ * draft's kept line (`keptLineHTML`; B3-S2) and its chip (C-28); the
+ * whole-document link count (rule (i)). Compact
  * (FP-26): an edition's state its version marker — unlit at the bare
  * address, lit at a pinned version (foundations §3.1) — and a draft's chip a
  * glyph, each named by its whole words, which assistive technology reads and
  * its act opens whole;
- * "version ⟨k⟩ of ⟨n⟩", the whole-document count and a withheld document's
+ * "version ⟨k⟩ of ⟨n⟩", the whole-document count, the kept word in its slot
+ * and a withheld document's
  * state keep their words, its owner in the identifier's face. While the
  * board lags (`lags`; FP-23), the bare address's state is its publication
  * alone, never "the latest", and the version statement "version ⟨k⟩", its
@@ -1049,7 +1115,7 @@ export function cornerHTML(d, v, compact = false) {
     if (n != null && n >= 1 && (d.meta && d.meta.birth)) parts.push(v.lags ? `<span class="version">${esc(t('L.version', { k: k || n }))}</span>` : `<span class="version" data-members="${n}">${esc(t('F.version-of', { k: k || n, n }))}</span>`);
     if (v.lacks != null) parts.push(`<span class="lacks">${esc(t('F.floating.member', { k: v.lacks }))}</span>`);
     if (v.read != null) parts.push(`<span class="read" data-read="${v.read}">${esc(t('F.versions.read', { k: v.read }))}</span>`);
-  } else if (d.kind === 'draft') parts.push(usual('chip', v.localTrust ? 'C-28.flag-on' : 'C-28', {}, 'L.corner.draft', ' data-chip="1"'));
+  } else if (d.kind === 'draft') parts.push(keptLineHTML(v), usual('chip', v.localTrust ? 'C-28.flag-on' : 'C-28', {}, 'L.corner.draft', ' data-chip="1"'));
   if (v.wholeLinks > 0) parts.push(`<span class="whole-links">${esc(v.wholeLinks === 1 ? t('F.whole-links.1') : t('F.whole-links', { n: v.wholeLinks }))}</span>`);
   return parts.join('');
 }

@@ -37,7 +37,7 @@ import * as RENDER from '../plane/render.js';
 import { lodOf } from '../plane/lod.js';
 import { articleHTML, entitlementArm } from '../text/article.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
-import { accountCell, boardCell } from '../plane/projection.js';
+import { accountCell, boardCell, docBox } from '../plane/projection.js';
 import { t, tHTML, addressedHTML } from '../strings.js';
 import { MAC } from '../nav/keys.js';
 import { esc, byteLength } from '../util.js';
@@ -725,5 +725,72 @@ test('a click on a continuation\'s mark acts by the target it falls on: its newe
     RENDER.stats.residueMarks = [];
     REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+test('a click on a block of a draft the person may edit places the caret at the character clicked — where the platform collapsed its selection — the selection cleared and the block not selected; the same click on another\'s block selects it whole; a click on the corner\'s kept word opens the draft\'s statement, and again closes it (D5 K-70, K-57, K-74; FP-14)', () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement, Node: globalThis.Node };
+  /** @type {Map<string, (e: unknown) => void>} the text layer's and the corners' listeners, by event */
+  const layer = new Map(), corners = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.Node = /** @type {any} */ ({ ELEMENT_NODE: 1 });
+  /** @type {unknown} the platform's selection as the click left it */
+  let selection = null;
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null, createElement: () => ({ className: '', innerHTML: '', dataset: {} }) });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => selection });
+  const D = '1.0.1.0.2', O = '1.0.2.0.1', text = 'First line.\n\nSecond line here.\n', n = byteLength(text);
+  try {
+    REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+    REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: null, standing: 'yours_to_read' }, { doc: O, kind: 'draft', label: null, standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }, { account: '1.0.2', documents: 1 }], state: { arm: 'complete' } }));
+    for (const a of [D, O]) {
+      REC.takeSpanSet(a, [{ subspace: 1, ordinal: 1, positions: n }]);
+      REC.takeDelivery(a, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+      REC.takeImage(a, 1, [{ iStart: a + '.0.1.1', width: n }]);
+    }
+    CAM.setViewport(1440, 900);
+    const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), c = f.columns[0];
+    CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2, scale: 12 / f.fs });
+    assert.deepEqual([LAYER.editable(D), LAYER.editable(O)], [true, false], 'the session\'s own draft at reading scale; another\'s is not');
+    /** a block part of a document's article as the layer's mapping reads it — the article a pane's, made from the record, which the mapping reads through what it was made from; the click's point the part's own start */
+    const partOf = (/** @type {string} */ addr, /** @type {number} */ pos) => {
+      const art = LAYER.sceneArticle(REC.doc(addr));
+      const sp = Object.assign(new globalThis.HTMLElement(), { nodeType: 1, dataset: { addr, pos: String(pos) }, contains: () => false });
+      Object.assign(sp, { closest: (/** @type {string} */ sel) => (sel === '.sp' || sel === '.run > .sp' ? sp : sel === 'article.dtext' || sel === 'article' ? art : null) });
+      return sp;
+    };
+    /** the platform's selection collapsed at a part's start, as a click leaves it */
+    const collapsedAt = (/** @type {unknown} */ sp) => ({ rangeCount: 1, isCollapsed: true, anchorNode: sp, anchorOffset: 0, getRangeAt: () => ({ collapsed: true, startContainer: sp, endContainer: sp, commonAncestorContainer: sp }), removeAllRanges() {} });
+    HOST.attach(/** @type {any} */ ({
+      ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
+      querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    }));
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(corners) }));
+    // the text layer's element, which the page's selection is read against as it is cleared
+    LAYER.attach(/** @type {any} */ ({ clientWidth: 1440, clientHeight: 900, appendChild() {}, contains: () => false }), null);
+    const click = layer.get('click'), onCorner = corners.get('click');
+    assert.ok(click && onCorner, 'the text layer and the corners take a click');
+    const second = REC.doc(D).blocks[1];
+    SEL.select(D, 1);
+    const sp = partOf(D, second.pos);
+    selection = collapsedAt(sp);
+    click({ target: sp, clientX: 0, clientY: 0, stopPropagation() {} });
+    assert.deepEqual([LAYER.caret(), SEL.selected()], [{ addr: D, pos: second.pos, live: true }, null], 'the caret at the character clicked, live; the selection cleared, the block not selected');
+    const other = partOf(O, second.pos);
+    selection = collapsedAt(other);
+    click({ target: other, clientX: 0, clientY: 0, stopPropagation() {} });
+    assert.deepEqual([SEL.selected()?.addr, SEL.selected()?.pos, LAYER.caret()?.addr], [O, second.pos, D], 'another\'s block: selected whole, no caret placed in it');
+    // the corner's kept word
+    REC.setKept(D, { word: 'kept', reason: null });
+    const holder = { dataset: { corner: D } };
+    const word = /** @type {any} */ ({ closest: (/** @type {string} */ sel) => (sel === '[data-corner]' ? holder : sel === '.kept-word[data-kept]' ? word : null) });
+    onCorner({ target: word, stopPropagation() {} });
+    assert.equal(LAYER.statementOpen(D), true, 'the kept word\'s click opens the statement');
+    onCorner({ target: word, stopPropagation() {} });
+    assert.equal(LAYER.statementOpen(D), false, 'and again closes it');
+  } finally {
+    HOST.dismiss(); SEL.clear(); LAYER.clear();
+    REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement; globalThis.Node = platform.Node;
   }
 });

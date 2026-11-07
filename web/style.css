@@ -220,6 +220,11 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .sp.gap { color:#4b5563; }
 /* the chrome inside a block is never the document's bytes: a drag crosses it unselected, the copy never carries it */
 .dtext .hairline, .dtext .pubmark, .dtext .sym, .dtext .edge { user-select:none; -webkit-user-select:none; }
+/* THE CARET'S MARK (D5 K-70; FP-31): the page's own caret, set by T-LAYER at its character boundary in the standing part
+   each frame — a mark of no width, so it moves no word and sets no line, one em tall on the text's baseline; hollow
+   where the caret is kept, the text left to the walk (K-77) */
+.dtext .caret-mark { display:inline-block; width:0; height:1em; vertical-align:text-bottom; border-left:1px solid var(--ink); margin-left:-.5px; pointer-events:none; user-select:none; -webkit-user-select:none; }
+.dtext .caret-mark.kept { border-left-style:dotted; opacity:.6; }
 /* an item that holds no text — a record, a reference, an item this client cannot show, a withheld run's face — is selected
    whole wherever a selection touches it, and drawn so: the span takes it whole, and a copy writes its stand-in in its place
    (FP-24; issue #161). On the plane a press on a withheld run's face starts no selection: its click is its act's (APP-INPUT) */
@@ -255,6 +260,15 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #corners .corner .version { text-decoration:underline dotted; }
 .corner .chip { display:inline-block; border:1px solid #4a5260; border-radius:3px; padding:0 .4em; color:#e8e6e1; margin-top:.3em; }
 .corner .chip.glyph { border:0; padding:0; }
+/* A DRAFT'S KEPT LINE (B3-S2; FP-34): the kept word in a slot of fixed width — the longest of the three words', which
+   T-ARTICLE sets on it in em — one line box tall whatever word stands, an empty box on a faint ground while no state is
+   set; its act on the plane's corner alone, as the version statement's is; the statement it opens whole on a line of its
+   own below it, wrapped and never cut */
+.corner .kept-line { display:block; margin-top:.3em; }
+.corner .kept-word { display:inline-block; height:1lh; white-space:pre; overflow:hidden; vertical-align:top; color:#cfd6df; }
+.corner .kept-word.pending { background:rgba(139,143,150,.12); border-radius:2px; }
+#corners .corner .kept-word[data-kept] { cursor:pointer; text-decoration:underline dotted; }
+.corner .kept-statement { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
 .corner .whole-links { display:block; margin-top:.3em; }
 /* a kept document's clause, the corner's last item on a line of its own: its words whole in either form, wrapped and never
    cut, the room above it its own padding, so the corner is placed by the items above it alone (T-LAYER) */

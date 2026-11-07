@@ -28,6 +28,8 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from './records.js';
 import { resolveSpan } from './address.js';
+import { applyEdits } from './derive.js';
+import { byteLength } from '../util.js';
 
 beforeEach(() => REC._reset());
 
@@ -903,4 +905,41 @@ test('a session is a reference, never a token; the death signal drops it', () =>
   REC.sessionDied({ arm: 'closed' });
   assert.equal(REC.session(), null);
   assert.equal(REC.deathReason()?.arm, 'closed');
+});
+
+test('a draft\'s kept state is set and read by address — the word and its reason, none a null reason — cleared with null, each setting a change of the model, and dropped with the class the page reads at (B3-S2; FP-29)', () => {
+  const D = '1.0.1.0.2', E = '1.0.1.0.3';
+  assert.equal(REC.keptOf(D), null, 'none set');
+  const rev = REC.rev();
+  REC.setKept(D, { word: 'not yet kept', reason: 'the board is not answering' });
+  assert.deepEqual(REC.keptOf(D), { word: 'not yet kept', reason: 'the board is not answering' });
+  assert.ok(REC.rev() > rev, 'a change of the model: every surface reading it is made again');
+  REC.setKept(D, { word: 'kept', reason: null });
+  REC.setKept(E, { word: 'not kept', reason: 'refused: out_of_bounds' });
+  assert.deepEqual([REC.keptOf(D), REC.keptOf(E)], [{ word: 'kept', reason: null }, { word: 'not kept', reason: 'refused: out_of_bounds' }], 'each draft its own');
+  REC.setKept(D, null);
+  assert.deepEqual([REC.keptOf(D), REC.keptOf(E)], [null, { word: 'not kept', reason: 'refused: out_of_bounds' }], 'cleared with null, the other standing');
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.sessionDied({ arm: 'closed' });
+  assert.equal(REC.keptOf(E), null, 'a change of class drops every kept state');
+});
+
+test('a draft\'s page-local edits are kept in the order made and counted, applied through M-DERIVE over the delivered runs they give the typed text while the model\'s own record stands as the board served it, and a clearing or a change of class lets them go (K-72; FP-14, FP-29)', () => {
+  const D = '1.0.1.0.2', text = 'First line.\n\nSecond.\n', n = byteLength(text);
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
+  REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+  assert.deepEqual([REC.edits(D), REC.editRev(D)], [[], 0], 'none typed');
+  const rev = REC.rev();
+  REC.addEdit(D, { pos: 7, width: 0, text: 'typed ' });
+  REC.addEdit(D, { pos: 1, width: 6, text: '' });
+  assert.deepEqual([REC.edits(D), REC.editRev(D), REC.rev() > rev], [[{ pos: 7, width: 0, text: 'typed ' }, { pos: 1, width: 6, text: '' }], 2, true], 'in the order made, each counted, the model moved');
+  const shown = applyEdits(REC.doc(D), REC.edits(D)).doc;
+  assert.equal(REC.textOf(shown.runs, shown.from, shown.to), 'typed line.\n\nSecond.\n', 'the typed text: the edits applied over the delivered runs');
+  assert.deepEqual([REC.textOf(REC.doc(D).runs, 1, n + 1), REC.doc(D).derived, shown.derived], [text, undefined, { from: D, rows: [], edits: 2, at: null }], 'the model\'s record as the board served it; the derived one named so');
+  REC.clearEdits(D);
+  assert.deepEqual([REC.edits(D), REC.editRev(D)], [[], 3], 'let go, the change counted');
+  REC.addEdit(D, { pos: 1, width: 0, text: 'x' });
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.sessionDied({ arm: 'closed' });
+  assert.deepEqual(REC.edits(D), [], 'a change of class drops them: nothing the class it left typed survives');
 });

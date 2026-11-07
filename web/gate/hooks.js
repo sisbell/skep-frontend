@@ -4,8 +4,9 @@
 // (`install`); nothing here is shipped chrome, and nothing posts anywhere.
 // What they expose, for the harness's cases: the model's held records, a
 // stretch of a held text by identity (`model.identity`), what a feed row
-// naming a document out of view does to the model alone (`model.invalidate`)
-// and a row taken as the feed hands one (`model.feed`); the mounted articles' text and
+// naming a document out of view does to the model alone (`model.invalidate`),
+// a row taken as the feed hands one (`model.feed`) and a draft's kept state
+// set as the machine will set it (`model.setKept`); the mounted articles' text and
 // what stands of each by line (`mountedLines`); the mirror's items; the
 // camera, the focus and its owner's state, the focus ring the canvas drew
 // (`view.ring`) and the bounds it is clamped to (`view.ringBounds`); the
@@ -601,6 +602,8 @@ export function install(deps) {
       invalidate: (/** @type {string} */ addr) => { REC.invalidate(addr); PUMP.forget(addr); CAM.markDirty(); },
       /** a feed row taken as the feed hands one (M-PUMP's `takeRow`): the model, the view and a reading scene's panes kept fresh from it — reads alone, nothing written */
       feed: (/** @type {import('../bridge/shapes').FeedUpdate} */ update) => { PUMP.takeRow(update); CAM.markDirty(); },
+      /** a draft's kept state set as D6's machine will set it (M-REC's `setKept`; B3-S2), or cleared with null: its corner's slot shows the word on the next frame — page state alone, nothing written */
+      setKept: (/** @type {string} */ addr, /** @type {import('../model/records.js').KeptState | null} */ s) => { REC.setKept(addr, s); CAM.markDirty(); },
     },
     mounted: (/** @type {string} */ addr) => { const rec = LAYER.mountedSet().get(addr); if (!rec) return null; const r = rec.el.getBoundingClientRect(); return { text: LAYER.mountedText(addr), rect: { x: r.left, y: r.top, w: r.width, h: r.height }, fs: rec.fs, lay: rec.lay }; },
     mountedAddrs: () => LAYER.mountedAddrs(),

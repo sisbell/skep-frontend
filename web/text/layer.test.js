@@ -1240,3 +1240,45 @@ test('while the board lags past a second the plane\'s corner names neither the l
     assert.deepEqual(fake.unanswered, []);
   } finally { LAYER.press(false); LAYER.clear(); PORT.boot(null); globalThis.document = platform.document; globalThis.window = platform.window; }
 });
+
+test('the plane\'s corner of a draft carries its kept state — the slot an empty box while none is set — its items made again in the frame the state is set, the frame the word\'s statement opens and the frame it closes, and the frame the state is cleared (B3-S2; D5 K-57, K-74; FP-34)', () => {
+  const platform = { document: globalThis.document, window: globalThis.window };
+  /** an element of the page: the corner's, the article's and its column's, measured as the platform lays them out */
+  const element = () => {
+    const e = {
+      className: '', innerHTML: '', id: '', dataset: {}, style: {}, children: /** @type {unknown[]} */ ([]), tabIndex: -1, offsetWidth: 160, offsetHeight: 40,
+      classList: { toggle() {} }, setAttribute() {}, removeAttribute() {}, appendChild(/** @type {unknown} */ c) { e.children.push(c); },
+      querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }), contains: () => false, remove() {},
+    };
+    return e;
+  };
+  globalThis.document = /** @type {any} */ ({ createElement: element });
+  globalThis.window = /** @type {any} */ ({ getSelection: () => null });
+  try {
+    // D a draft of the session's account, its text held
+    REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: 'd', standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+    REC.takeDelivery(D, [{ pos: 1, width: EXTENT, kind: 'content', text: TEXT, ref: null, origin: null }]);
+    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: EXTENT }]);
+    CAM.setViewport(VW, VH);
+    LAYER.attach(/** @type {any} */ ({ clientWidth: VW, clientHeight: VH, appendChild() {} }), /** @type {any} */ (element()));
+    const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), c = f.columns[0];
+    CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2, scale: 12 / f.fs });
+    const items = () => /** @type {{innerHTML: string} | null} */ (/** @type {unknown} */ (LAYER.cornerOf(D)))?.innerHTML ?? '';
+    const reason = 'the board is not answering';
+    LAYER.frame();
+    assert.ok(items().includes('<span class="kept-word pending" aria-hidden="true"') && items().includes('data-chip="1"') && !items().includes('class="version"'), `a draft's corner at reading scale: the empty slot, then the chip — ${items()}`);
+    REC.setKept(D, { word: 'not yet kept', reason });
+    LAYER.frame();
+    assert.ok(items().includes(`data-kept="not yet kept" data-string="B3.not-yet-kept"`) && items().includes(esc(t('B3.not-yet-kept'))) && !items().includes('kept-statement'), `the state set: its word in the slot, the statement closed — ${items()}`);
+    assert.equal(LAYER.openStatement(D), true, 'the word\'s act opens the statement');
+    LAYER.frame();
+    assert.ok(items().includes('<span class="kept-statement" data-string="B3.save.before">') && items().includes(esc(reason)), `the statement whole, the reason on it — ${items()}`);
+    assert.equal(LAYER.openStatement(D), false, 'the act again closes it');
+    LAYER.frame();
+    assert.ok(items().includes('data-kept="not yet kept"') && !items().includes('kept-statement'), 'closed: the word alone');
+    REC.setKept(D, null);
+    LAYER.frame();
+    assert.ok(items().includes('kept-word pending') && !items().includes('data-kept'), 'cleared: the slot empty again, its width kept');
+    assert.equal(LAYER.openStatement(D), false, 'no state set: there is no statement to open');
+  } finally { LAYER.press(false); LAYER.clear(); globalThis.document = platform.document; globalThis.window = platform.window; }
+});

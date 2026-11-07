@@ -85,10 +85,16 @@
 // platform, selecting an item whole wherever a selection touches it (FP-24),
 // would otherwise make of it at every click; a selection the platform made
 // (a double-click's word) is the page's; a click on a block selects it whole
-// (R11). On the corners: the version statement opens the document's members
-// (the corner's act, the one Enter takes there — K-57), a compact corner's
-// glyph opens the corner whole and a click on the corner opened closes it
-// again (T-LAYER's `openCorner`; FP-26).
+// (R11) — save in text the person may edit (T-LAYER's `editable`; D5 K-70),
+// where a click on a block or on a marked stretch places the caret at the
+// character clicked, as the platform's own collapse of its selection names it
+// (T-LAYER's `caretFromPlatform`, `placeCaret`), the selection cleared, and
+// a symbol's click still opens its card (K-7). On the corners: the version
+// statement opens the document's members (the corner's act, the one Enter
+// takes there — K-57), a draft's kept word opens its statement and closes it
+// again (T-LAYER's `openStatement`; K-57, K-74), a compact corner's glyph
+// opens the corner whole and a click on the corner opened closes it again
+// (T-LAYER's `openCorner`; FP-26).
 // Figures: a press that moves more than 4 px is a drag, not a click; a wheel
 // series ends at SERIES_MS (220 ms, unmeasured) of quiet, and the re-take
 // follows a wheel 220 ms after it; a pinch zooms by e^(-Δy·0.012), Mod+wheel
@@ -222,6 +228,7 @@ export function attach(els) {
     LINE.act();
     const holder = /** @type {HTMLElement | null} */ (target.closest('[data-corner]')), addr = holder ? holder.dataset.corner || '' : '';
     if (holder && target.closest('.version')) { e.stopPropagation(); VERSIONS.fromCorner(holder, SEL.selected(), false); }
+    else if (holder && target.closest('.kept-word[data-kept]')) { e.stopPropagation(); LAYER.openStatement(addr); }
     else if (holder && (target.closest('.glyph') || LAYER.cornerAt(addr)?.opened)) { e.stopPropagation(); LAYER.openCorner(addr); }
   });
   window.addEventListener('wheel', (e) => {
@@ -298,7 +305,8 @@ function endAt(mark, link, key) {
 /**
  * A click on the text layer's text, at the element under it (see the head): a
  * symbol, the ⟡, a hairline, the scene-offer, C-67's pointer, a withheld run;
- * a selection the platform made (a double-click's word); a marked stretch; a
+ * a selection the platform made (a double-click's word); in text the person
+ * may edit, the caret at the character clicked (K-70); a marked stretch; a
  * block, selected whole. The text layer's own clicks and a held press's
  * release both act through it.
  * @param {HTMLElement} target
@@ -346,6 +354,12 @@ function clickText(target) {
   // the platform selected text under the click (a double-click's word): the selection IS that span (R11)
   const span = LAYER.spanOfSelection();
   if (span && !sameSpan(span, LAYER.placedSpan())) { SEL.select(span.addr, span.pos, span.width); return true; }
+  // text the person may edit: the click places the caret at the character clicked, where the platform collapsed its selection (K-70) — a marked stretch takes it as any text does, the card its symbol's (K-7)
+  const own = /** @type {HTMLElement | null} */ (target.closest('.sp'));
+  if (own && LAYER.editable(own.dataset.addr || '')) {
+    const at = LAYER.caretFromPlatform();
+    if (at && at.addr === own.dataset.addr) { SEL.clear(); LAYER.placeCaret(at.addr, at.pos); return true; }
+  }
   const marked = target.closest('.lip');
   if (marked) { took = true; const m = /** @type {HTMLElement} */ (marked); const s = endAt(m, (m.dataset.links || '').split(' ')[0], (m.dataset.ends || '').split(' ')[0]); if (s) { ANATOMY.open(s, m, false); return true; } }
   const sp = target.closest('.sp');
