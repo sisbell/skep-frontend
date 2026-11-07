@@ -293,8 +293,11 @@ export const boardCell = (board) => cellOfKey(board);
 export const boardLabelCell = (board) => cellOf([...pathOf(board), 0]);
 
 /**
- * The address of the account whose cell holds a world point, or null off
- * every account cell of the board (the separator slots hold no account).
+ * The address of the account whose cell holds a world point, read through
+ * each level's continuations as `cellOf` places them, whether or not the
+ * board holds an account there. Null off the board's cell, at its user
+ * grid's separator slot, and where the point lies in a continuation the
+ * doubles can no longer place apart from the grid holding it.
  * @param {number} wx
  * @param {number} wy
  * @param {string} board the board the camera is over
@@ -305,20 +308,26 @@ export function accountAt(wx, wy, board) {
   if (wx < bc.x || wx >= bc.x + bc.w || wy < bc.y || wy >= bc.y + bc.h) return null;
   // walk the padded levels after the node's three digits
   const p = pathOf(board);
-  let x = bc.x, y = bc.y, cw = bc.w, ch = bc.h;
+  let x = bc.x, y = bc.y, w = bc.w, h = bc.h;
   /** @type {number[]} */
   const digits = [];
   for (let L = p.length; L < LEAF; L++) {
-    const g = G[L];
-    cw = cw / g; ch = ch / g;
-    const col = Math.min(g - 1, Math.floor((wx - x) / cw)), row = Math.min(g - 1, Math.floor((wy - y) / ch));
-    digits.push(row * g + col);
-    x += col * cw; y += row * ch;
+    const g = G[L], U = g * g - 1;
+    let cw = w / g, ch = h / g, k = 0, col = 0, row = 0;
+    // descend into the continuation cell — the last cell of each grid — while the point lies in it, as `cellOf` does
+    for (;;) {
+      col = Math.min(g - 1, Math.floor((wx - x) / cw)); row = Math.min(g - 1, Math.floor((wy - y) / ch));
+      if (row * g + col < U) break;
+      const nx = x + (g - 1) * cw, ny = y + (g - 1) * ch;
+      if (nx === x || ny === y) return null;
+      x = nx; y = ny; cw /= g; ch /= g; k++;
+    }
+    digits.push(k * U + row * g + col);
+    x += col * cw; y += row * ch; w = cw; h = ch;
   }
   // digits: [user1, user2] — the separator slot (0) at user1 holds no account
-  if (!digits.length || digits[0] === 0 || digits[0] >= G[3] * G[3] - 1) return null;
-  const acct = board + '.0.' + digits[0] + (digits[1] ? '.' + digits[1] : '');
-  return acct;
+  if (!digits.length || digits[0] === 0) return null;
+  return board + '.0.' + digits[0] + (digits[1] ? '.' + digits[1] : '');
 }
 
 /** @param {string} key @returns {string} */

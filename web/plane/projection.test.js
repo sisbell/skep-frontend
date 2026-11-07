@@ -2,8 +2,9 @@
 // mint moves no place; siblings never collide; each continuation's cell
 // holds its documents and none shallower; a mark's name read back, and its
 // members each account's documents its continuation holds; the residue past
-// the sound depth; the clear strip left of a box; the account under a point
-// and the board's label cell.
+// the sound depth; the clear strip left of a box; the account under a point,
+// read through every level's continuations, and none where the doubles can no
+// longer place a continuation apart; and the board's label cell.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { slotOf, cellOf, pathOf, docBox, cellOfKey, accountAt, boardLabelCell, clearLeftOf, continuationCell, withinContinuation, membersAt, markKey, continuationOf, G, DEPTH_SOUND, depthOfDoc, _reset } from './projection.js';
@@ -111,6 +112,27 @@ test('the account under a world point is read back from the grid', () => {
   assert.equal(accountAt(c.x + c.w / 2, c.y + c.h / 2, '1'), '1.0.2');
   const sep = cellOfKey('1');
   assert.equal(accountAt(sep.x + 1, sep.y + 1, '1'), null, 'the separator slot holds no account');
+});
+
+test('the account under a world point is read back through each level\'s continuations: at the middle of every account\'s cell, that account — 1.0.9 in the user grid\'s continuation, 1.0.1.4 in the sub-account grid\'s — whether or not the board holds it (issue #232)', () => {
+  /** @type {string[]} */
+  const missed = [];
+  for (let u = 1; u <= 40; u++) for (const s of [0, 1, 2, 3, 4, 5, 9, 12]) {
+    const a = '1.0.' + u + (s ? '.' + s : ''), c = cellOfKey(a), at = accountAt(c.x + c.w / 2, c.y + c.h / 2, '1');
+    if (at !== a) missed.push(`${a} read as ${at}`);
+  }
+  assert.deepEqual(missed, []);
+});
+
+/** the double `n` representable steps below a positive `v` */
+const below = (/** @type {number} */ v, /** @type {number} */ n) => {
+  const f = new Float64Array([v]), bits = new BigInt64Array(f.buffer);
+  bits[0] -= BigInt(n);
+  return f[0];
+};
+
+test('no account is under a point lying in a continuation the doubles can no longer place apart from the grid holding it: on the edge 1.0.3\'s cell shares with 1.0.4\'s, which the grid reads inside 1.0.3\'s, just above 1.0.6\'s top — the corner 1.0.3\'s sub-account continuations close on (issue #232)', () => {
+  assert.equal(accountAt(cellOfKey('1.0.4').x, below(cellOfKey('1.0.6').y, 3), '1'), null);
 });
 
 test('the board\'s label stands in the first cell of its user grid, which no account\'s cell meets', () => {

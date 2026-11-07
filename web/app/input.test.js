@@ -14,10 +14,11 @@
 // an outlined run below reading scale is a step to it; a withheld run's one
 // symbol opens its ends' card or list, never C-39's face; a byline's cut
 // label opens and closes on its clicks, selecting nothing; where no board is
-// held a click at far scale is an empty one; and a continuation's mark is two
-// targets, its newest label going to that member and the rest opening its
-// list, the pointer's shape over each its own (FP-12, FP-21, FP-24, FP-25,
-// FP-30, FP-34, FP-35).
+// held a click at far scale is an empty one, and where one is held it goes to
+// the account whose cell holds it, in a continuation too; and a
+// continuation's mark is two targets, its newest label going to that member
+// and the rest opening its list, the pointer's shape over each its own (FP-12,
+// FP-21, FP-24, FP-25, FP-30, FP-34, FP-35).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';
@@ -666,6 +667,41 @@ test('where no board is held a click on the plane at far scale names no account 
   } finally {
     HOST.dismiss();
     REC.setBoard(was);
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+test('a click on the plane at far scale goes to the account whose cell holds it in a continuation too — over 1.0.9\'s cell to 1.0.9, over 1.0.1.4\'s to 1.0.1.4 — its entry pushed and the camera leaving (issue #232)', () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the plane's listeners, by event */
+  const plane = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  try {
+    REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    HOST.attach(/** @type {any} */ ({
+      ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
+      querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    }));
+    INPUT.attach(/** @type {any} */ ({ plane: { ...listens(plane), classList: { add() {}, remove() {} } }, layer: listens(null), corners: listens(null) }));
+    CAM.setViewport(1440, 900);
+    const scale = CAM.viewForCell(boardCell('1'), 0.92).scale / 2, at = { clientX: 720, clientY: 450 };
+    const click = () => { plane.get('pointerdown')?.({ ...at, ctrlKey: false, metaKey: false, pointerId: 1 }); plane.get('pointerup')?.({ ...at }); };
+    TRAIL._reset();
+    for (const acct of ['1.0.9', '1.0.1.4']) {
+      // the camera at far scale over the middle of the account's cell, the click at the view's centre
+      const c = accountCell(acct);
+      CAM.set({ x: c.x + c.w / 2, y: c.y + c.h / 2, scale });
+      assert.ok(['far', 'far~mid'].includes(lodOf(CAM.cam.scale).name), 'at far scale');
+      click();
+      assert.deepEqual([TRAIL.current()?.addr, CAM.flying()], [acct, true], `over ${acct}'s cell: its region, its entry pushed and the camera leaving`);
+      CAM.step(Infinity);
+    }
+  } finally {
+    HOST.dismiss();
+    REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }
 });
