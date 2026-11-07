@@ -127,6 +127,11 @@
 // the camera to the view that reads it at the reading size, the walk on its
 // span with the platform's focus there, its label the line's, and no trail
 // move and no act counted (`step`, `stepTo`).
+// The find's moves (N-FIND; FP-21, FP-25): an in-document find's move to a
+// match outlines that match alone as the arrival and flies the camera to it
+// at the reading size, the walk on its span (`toMatch`); its first move is a
+// jump that pushes one trail entry, and each move after it re-uses that
+// entry, so Back returns to where the find opened.
 // The step's light: the entry a follow or a carrying LEAP departs records the
 // step (N-TRAIL's `Step`) — the link followed, the end it was made at and its
 // far end, or the passage carried — each passage by identity, the permanent
@@ -348,7 +353,8 @@
 // `coverRead`, `showCover`).
 // Figures: a click's flight 420 ms, every other LEAP's and a follow's 620,
 // HOME's and WHOLE BOARD's 700, an account's and a moment's view's 400, a
-// cursor move's 500, a step's 420; a second leg SECOND_LEG_MS (unmeasured).
+// cursor move's 500, a step's and a find's move's 420; a second leg
+// SECOND_LEG_MS (unmeasured).
 // Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-20, FP-21, FP-22, FP-25,
 // FP-29, FP-35, FP-36.
 
@@ -1124,6 +1130,42 @@ export function stepTo(i, byKey = false) {
   void CAM.fly(toward(l.addr, r.pos).aim, 420);
   CAM.markDirty();
   return true;
+}
+
+/**
+ * An in-document find's move to a match (see the head; N-FIND; FP-21, FP-25):
+ * the match outlined as the arrival — its one run, no link lit, no line —
+ * the camera flown to the view that reads it at the reading size, its column
+ * framed (`toward`), and the walk on its span. The find's first move — the
+ * cursor standing on no entry of the find's own (`own`) — is a jump: the next
+ * act, its trail entry pushed as it is made and the chrome of the place it
+ * leaves ended (`dismissChrome`), save the find's field, which holds the
+ * caret (FP-20), the box pinned on the version searched (`pinTo`; FP-22);
+ * each move after it re-uses that entry, pushing nothing and ending nothing,
+ * as a step among an arrival's runs does (`stepTo`), so Back returns to where
+ * the find opened. Where no board is held, nothing moves (FP-35).
+ * @param {string} addr the version the find searches
+ * @param {Run} run the match: its first position and its positions, in that version's text as the page shows it
+ * @param {{own?: Entry | null, byKey?: boolean}} [o] `own` the entry the find's moves share, null before its first; `byKey` a key made the move
+ * @returns {Entry | null} the entry the find's moves share from now; null where none was taken
+ */
+export function toMatch(addr, run, o = {}) {
+  const at = toward(addr, run.pos);
+  if (o.own && TRAIL.current() === o.own) {
+    light = null; lit = []; landed = null; retry = null; versionOffer = null; words = false;
+    arrival = withBytes({ addr, pos: run.pos, runs: [{ pos: run.pos, width: run.width }], link: null }, []);
+    focusOn(at, o.byKey);
+    void CAM.fly(at.aim, 420);
+    return o.own;
+  }
+  const act = nextAct();
+  if (!REC.board()) { FACES.noBoard(null); return null; }
+  const entry = TRAIL.push({ addr, pos: run.pos, width: run.width, view: at.view, label: null, notice: null }, departure());
+  dismissChrome(entry);
+  pinTo(addr);
+  arrival = withBytes({ addr, pos: run.pos, runs: [{ pos: run.pos, width: run.width }], link: null }, []);
+  void leave(act, entry, at, o.byKey, 420).then((ok) => endAir(act, ok));
+  return entry;
 }
 
 /**

@@ -23,7 +23,7 @@
 //                          by its own name, and each region holding the field
 //                          waits on it (FP-20, FP-36). An opening no key made
 //                          is waited on by none.
-//   close(region)          the region ends: a focus standing on nothing, or
+//   close(region, {…})     the region ends: a focus standing on nothing, or
 //                          still inside the region, goes to the first control
 //                          of the region it waits on, as that control stands
 //                          then, else returns to the opener where that takes
@@ -31,7 +31,10 @@
 //                          control of the innermost region still standing — a
 //                          scene the walk stands under — never lost, never to
 //                          the top (rule 4); one the person moved elsewhere
-//                          stays where they put it.
+//                          stays where they put it. `toWalk` passes over the
+//                          opener: the act that closes it left the reader at
+//                          the walk's element (an in-document find's Esc on
+//                          its match, N-FIND).
 //   keep(region, keyOf, rebuild)  a control redrawn from state while it holds
 //                          the focus (FP-13): the focus returns, after the
 //                          redraw, to the element bearing the same key, else
@@ -55,7 +58,7 @@
 
 /**
  * @typedef {Object} Entry — a region holding the focus, and where it took it from
- * @property {string} region `overlay`, `box`, `scene`
+ * @property {string} region `overlay`, `box`, `find`, `scene`
  * @property {Element} el the region's element: a focus inside it is the region's
  * @property {Element | null} opener the element the focus stood on as the region opened; null where it stood on nothing, or where a move passed over a field the region holds (`land`)
  * @property {Element | null} first the control its opening named first: where the focus goes as a region waiting on it closes (`waiting`), and where a region closing over it returns the focus when neither that region's opener nor the walk's element takes it (`close`)
@@ -229,10 +232,13 @@ function nameOf(/** @type {Element} */ el) {
  * never lost, never to the top. The return runs only where the focus stands
  * on nothing, or still inside the region (taken off it first); one the person
  * moved out stays where they put it. A region waiting on this one waits on
- * none from now.
+ * none from now. Where the act that closes it left the reader at the walk's
+ * element (`toWalk`: a find's Esc on its match), the focus goes there in the
+ * place of the opener.
  * @param {string} region
+ * @param {{toWalk?: boolean}} [o]
  */
-export function close(region) {
+export function close(region, o = {}) {
   let i = -1;
   for (let k = stack.length - 1; k >= 0; k--) if (stack[k].region === region) { i = k; break; }
   if (i < 0) return;
@@ -243,7 +249,8 @@ export function close(region) {
   if (!onNothing(at) && !inside) { changed(); return; }
   if (inside && at) /** @type {HTMLElement} */ (at).blur();
   const w = e.waiting, next = w ? (w.first && w.first.isConnected ? w.first : firstOf(w.el)) : null;
-  if (!(next && focusEl(next)) && !(e.opener && e.opener.isConnected && focusEl(e.opener))) {
+  const opener = o.toWalk ? null : e.opener;
+  if (!(next && focusEl(next)) && !(opener && opener.isConnected && focusEl(opener))) {
     const h = home();
     if (!(h && focusEl(h))) for (let k = stack.length - 1; k >= 0; k--) { const f = stack[k].first; if (f && f.isConnected && focusEl(f)) break; }
   }

@@ -311,7 +311,9 @@
 // the dismissal, the scene's own end — each pressed by a click anywhere on
 // it, by Enter or by Space, a pane's corner's act, and a stroke's.
 // A face that arrives once the panes are set refits them and measures their
-// ties again (`refaced`).
+// ties again (`refaced`). An in-document find opened in the scene reads the
+// pane holding the focus, by the rule the scene's keys read it by
+// (`paneRead`; N-FIND).
 // Figures: the ends level LEVEL_AT px below the panes' tops; every run a
 // band; a band's ground sameness's texture and its edges BAND_EDGE_W px of
 // its boundary, a line 1.6 px at the link's value; a stroke STROKE_W px in
@@ -802,6 +804,25 @@ export function stop() {
 }
 /** is a pane being set again: an act on the panes waits for it (see the head) */
 export const updating = () => !!scene && scene.updating > 0;
+
+/**
+ * A pane as an in-document find reads it (N-FIND), read-only: the one on
+ * `side`, else the one holding the platform's focus — pane B where the focus
+ * stands in it, else pane A, as the scene's keys read it (`key`) — with the
+ * address its positions are measured against (`Pane.names`), the record its
+ * text was made from, the first position in its view and its box on screen.
+ * Null where no scene stands.
+ * @param {'a' | 'b' | null} [side]
+ * @returns {{side: 'a' | 'b', names: string, d: Doc, first: number | null, rect: {x: number, y: number, w: number, h: number} | null} | null}
+ */
+export function paneRead(side = null) {
+  const S = scene, E = els;
+  if (!S || !E) return null;
+  const at = typeof document !== 'undefined' ? /** @type {HTMLElement | null} */ (document.activeElement) : null;
+  const s = side || (at && E.paneB.contains(at) ? 'b' : 'a'), pane = paneEl(E, s), P = S[s];
+  const r = typeof pane.getBoundingClientRect === 'function' ? pane.getBoundingClientRect() : null;
+  return { side: s, names: P.names, d: P.d, first: firstInView(pane), rect: r ? { x: r.left, y: r.top, w: r.width, h: r.height } : null };
+}
 /**
  * Each pane as it stands, read-only (the gate reads it): the address it was
  * opened on, the record its text was made from, the address its acts name and

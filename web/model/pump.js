@@ -31,7 +31,10 @@
 // `arrived`) and of each drop (SC's `dropped`), the places the view's state
 // names (the trail's), the texts the trail's entries the reader has left read
 // and who is told of each chain a refresh counts (N-TRAIL's `readings`,
-// `countedAt`), and who is told of a board found open.
+// `countedAt`), who is told of a board found open, and the text an open find
+// searches (N-FIND's `searched`), which the view keeps as it keeps the
+// documents it shows (`shownNow`); the view's text reads the board refused
+// for their size (`halved`).
 // The view's needs (`pump`; FP-11: the plane's pure camera arithmetic beside
 // the model): at mid scale and nearer, for the documents in view that stand
 // whole — a continuation drawn as one mark asks nothing for its members —
@@ -44,7 +47,10 @@
 // touching the document (`find_links_v`, then each new link once by
 // `read_link`; E17 (a)) and, from FETCH_EM up, the span window of text
 // (`retrieve_v`: from position 1 through the columns in view, every column's
-// place read from every line before it — FP-12) with its V→I image
+// place read from every line before it — FP-12 — the parts it lacks read
+// alone where one delivery would not hold it, each of at most
+// MAX_DELIVERY_ITEMS positions, one the board refused for its size asked as
+// its halves, `halvedOf`) with its V→I image
 // (`image`), where each far end its links send from it stands in the far
 // document's current text (`project`, A-53) into the version the far box
 // shows, from every passage end the document holds (M-REC's `holdsEnd`), the
@@ -65,6 +71,8 @@
 // (`changes`; `closeGap`); the client index
 // (`readIndex`: `places`, at boot and at every change of class, the view
 // asking nothing while it is out); a whole document (`loadWhole`, `wholeOf`);
+// the rest of a document's text an open find searches, each part taken into
+// the model as it lands (`readRest`; FP-6);
 // the reads a face stating a withheld origin needs before it shows
 // (`claimsToRead`, `readClaims`); where a link's end projects (`projectEnd`,
 // `projectedIn`); a member's extent (`extentOf`) and its age (`ageOf`),
@@ -93,7 +101,8 @@
 // took what it read (`readAccount`) — and takes nothing learned across one —
 // a view's read is left unasked, an act's read begun again, at most
 // DROP_ATTEMPTS times. A read refused for its size
-// (`SIZE_REFUSALS`) is asked again in parts, within SPLIT_READS (FP-21). A
+// (`SIZE_REFUSALS`) is asked again in parts, within SPLIT_READS (FP-21), and a
+// text is asked in parts no delivery's item bound refuses (`textParts`). A
 // class scan read whole is asked again on `scan_busy`, within SCAN_ATTEMPTS.
 // A read of the board's state the board's events overtook keeps what they
 // brought (`overtaken`): the listing is laid under the feed rows and the
@@ -114,7 +123,8 @@
 // `publish` row's member to the app with the row's position before anything
 // is dropped (`arrive`), then goes to M-REC's index and invalidation — every
 // document it touches dropped, but
-// those the view shows and the homes of the edition claims on the origins
+// those the view shows — the text an open find searches among them — and the
+// homes of the edition claims on the origins
 // those window, whose metadata decides the clause there (`keptNow`), which
 // stand as held while they are read again and are set in one step as their
 // reads land (`readAgain`; M-REC's `setAgain`), a row naming one while they
@@ -304,7 +314,7 @@ const SCAN_ATTEMPTS = 6;
 export const DROP_ATTEMPTS = 4;
 /** an acquire for a session lost that is not back within this long has the line read that the page is reconnecting (FP-28) */
 export const RECONNECTING_MS = 1000;
-/** an act's read the board refuses for its size (M-FRAMES's `SIZE_REFUSALS`) is asked in parts in at most this many reads in all (`compareParts`, `imageParts`); past it the size refusal is handed up (unmeasured: no document on the seeded board meets a size refusal) */
+/** an act's read the board refuses for its size (M-FRAMES's `SIZE_REFUSALS`) is asked in parts in at most this many reads in all (`compareParts`, `imageParts`), a text in at most this many past its first size refusal (`textParts`), and the view's text window in at most this many parts (`halvedOf`); past it the size refusal is handed up (unmeasured: no document on the seeded board meets a size refusal) */
 export const SPLIT_READS = 32;
 /** a run of feed rows is taken to be in once no row has come for this long: the shell emits a tick's rows back to back and announces no run's end (`skep-shell`'s feed thread; unmeasured) */
 export const RUN_QUIET_MS = 250;
@@ -378,6 +388,8 @@ let onOpen = () => {};
 let readings = () => [];
 /** @type {(trunk: string, memberAt: (at: number) => string | null) => void} told of each chain a refresh counts, with the member a text read at a position was where a newer member follows it (`mintedBy`; N-TRAIL's `countedAt`, handed in at `start`) */
 let onCounted = () => {};
+/** @type {() => (string | null)} the text an open find searches (N-FIND's `searched`, handed in at `start`): kept as the view keeps the documents it shows (`shownNow`); null where no find is open */
+let finding = () => null;
 /** @type {{session: boolean}} how the page opens its board (`openBoard`): whether it asks a session — the gate's guest asks none — as the boot opened it, which the list read again keeps */
 let opening = { session: true };
 /** @type {Promise<boolean> | null} the list read again, out (`retryBoards`): a second press joins it */
@@ -603,7 +615,7 @@ let subscribed = false;
  * they held as it stood with them (`unkeepAll`) and the board's lag, lets go
  * of the rows held, the gap and the faces kept, and forgets the positions the
  * catch-ups read.
- * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string, at: number | null) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], readings?: () => Array<{addr: string, at: number}>, onCounted?: (trunk: string, memberAt: (at: number) => string | null) => void, onOpen?: () => void}} opts `shown` the version each box shows, which the view reads; `onPublish` told of each trunk member `D.k+1` a `publish` row names, with the row's position, before the row drops what the page held of `D`, and of each a refresh finds past the member a text is, with none; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop, and of the documents whose byline owner facts taken anew decide; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `readings` what the trail's entries the reader has left read, each by its document and the position its text was read at, and `onCounted` told of each chain a refresh counts for them or for a text it holds, before any arrival it finds (`refresh`); `onOpen` told once a board the list read again found is open (`retryBoards`)
+ * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string, at: number | null) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], readings?: () => Array<{addr: string, at: number}>, onCounted?: (trunk: string, memberAt: (at: number) => string | null) => void, onOpen?: () => void, finding?: () => (string | null)}} opts `shown` the version each box shows, which the view reads; `onPublish` told of each trunk member `D.k+1` a `publish` row names, with the row's position, before the row drops what the page held of `D`, and of each a refresh finds past the member a text is, with none; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop, and of the documents whose byline owner facts taken anew decide; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `readings` what the trail's entries the reader has left read, each by its document and the position its text was read at, and `onCounted` told of each chain a refresh counts for them or for a text it holds, before any arrival it finds (`refresh`); `onOpen` told once a board the list read again found is open (`retryBoards`); `finding` the text an open find searches (N-FIND's `searched`), which the view keeps as it keeps the documents it shows
  */
 export function start(opts) {
   dirty = opts.onDirty;
@@ -614,7 +626,8 @@ export function start(opts) {
   readings = opts.readings || (() => []);
   onCounted = opts.onCounted || (() => {});
   onOpen = opts.onOpen || (() => {});
-  standing = new Set();
+  finding = opts.finding || (() => null);
+  standing = new Set(); halved.clear();
   classes++; again.clear(); claimsOut.clear(); unkeepAll(); unkeep(keptBoard, BOARD); lifts.clear(); boardFound = null;
   rowsHeld = null; caught = null; gap = null; faces.clear();
   started = true;
@@ -709,8 +722,12 @@ function applyRow(u, at, raiseFeed = true) {
   dirty();
 }
 
-/** the documents the view shows: those in view (`visibleDocs`) — each box's document, and the version it shows — nearer than far scale, where the view reads */
-const shownNow = () => (started && lodOf(cam.scale).name !== 'far' ? visibleDocs().map((d) => d.addr) : []);
+/** the documents the view shows: those in view (`visibleDocs`) — each box's document, and the version it shows — nearer than far scale, where the view reads; and the text an open find searches, at any scale (`finding`) */
+const shownNow = () => {
+  if (!started) return [];
+  const f = finding(), out = lodOf(cam.scale).name !== 'far' ? visibleDocs().map((d) => d.addr) : [];
+  return f && !out.includes(f) ? [...out, f] : out;
+};
 
 /** the origins the withheld runs of the documents the view shows name (`shownNow`): their edition claims are kept as held while a change of them is read (`claimsAgain`) */
 const originsShown = () => new Set(shownNow().flatMap((a) => REC.withheldOrigins(a)));
@@ -1633,6 +1650,61 @@ export async function imageParts(addr, pos, width, met = null) {
 }
 
 /**
+ * A stretch of a document's text (`retrieve_v`) read in parts (FP-21): parts
+ * of at most MAX_DELIVERY_ITEMS positions (`partsOf`), so no delivery passes
+ * the board's item bound, each part the board refuses for its size
+ * (`too_many_items`: its run-list walk priced past the budget) halved, each
+ * half asked on its own, the parts' runs taken in the text's order — at most
+ * SPLIT_READS reads past the first size refusal. Any other refusal is handed
+ * up; so is a size refusal past that bound, or of a single position. Every
+ * refusal met is recorded. Each part is told to `part` as it lands, and no
+ * part is asked once `stop` answers true. The text's `as_of` is the earliest
+ * its parts were answered at, none where a part said none.
+ * @param {string} addr
+ * @param {number} pos the stretch's first position
+ * @param {number} width its positions
+ * @param {{part?: (runs: import('./frames.js').Run[], asOf: number | null) => void, stop?: () => boolean}} [o]
+ * @returns {Promise<{runs: import('./frames.js').Run[], asOf: number | null} | {refused: Refusal} | null>} null where `stop` ended it
+ */
+export async function textParts(addr, pos, width, o = {}) {
+  /** @type {import('./frames.js').Run[]} */
+  const runs = [];
+  /** @type {Array<number | null>} */
+  const asOfs = [];
+  /** @type {Operand[]} */
+  const todo = partsOf({ doc: addr, pos, width });
+  /** @type {Refusal | null} the last size refusal met: the one handed up past the bound */
+  let last = null;
+  for (let past = 0; todo.length; ) {
+    if (o.stop && o.stop()) return null;
+    if (last && past >= SPLIT_READS) return { refused: last };
+    const p = /** @type {Operand} */ (todo.shift());
+    const out = await read(F.retrieveV(addr, p.pos, p.width));
+    if (last) past++;
+    if (!('refused' in out)) {
+      const got = F.decodeDelivery(out.answer, p.pos), at = F.asOf(out.answer);
+      runs.push(...got); asOfs.push(at);
+      if (o.part) o.part(got, at);
+      continue;
+    }
+    refusals.push({ frame: 'retrieve_v', refusal: out.refused, addr });
+    if (!sized(out.refused) || p.width < 2) return { refused: out.refused };
+    last = out.refused;
+    todo.unshift(...halves(p));
+  }
+  const asOf = asOfs.length && asOfs.every((a) => a != null) ? Math.min(.../** @type {number[]} */ (asOfs)) : null;
+  return { runs, asOf };
+}
+
+/** a stretch of text cut into the parts one delivery holds: consecutive stretches of at most MAX_DELIVERY_ITEMS positions, in the text's order */
+function partsOf(/** @type {Operand} */ o) {
+  /** @type {Operand[]} */
+  const out = [];
+  for (let p = o.pos; p < o.pos + o.width; p += F.MAX_DELIVERY_ITEMS) out.push({ ...o, pos: p, width: Math.min(F.MAX_DELIVERY_ITEMS, o.pos + o.width - p) });
+  return out;
+}
+
+/**
  * Watch an address for a drop from now on, as a read of it goes out: the
  * watch reads true once what the page held of it has been dropped (M-REC's
  * `dropsOf`), and what the read learned is then of what the page does not
@@ -1793,6 +1865,28 @@ export function spanWindow(d) {
   return [from, up(end)];
 }
 
+/** @type {Set<string>} the view's text reads the board refused for their size (`too_many_items`), by their keys: each asked again as its two halves (`halvedOf`) */
+const halved = new Set();
+
+/**
+ * The parts of a text window the view asks (`pump`), each one the board
+ * refused for its size (`halved`) asked as its two halves, theirs so too, at
+ * most SPLIT_READS parts in all (FP-21).
+ * @param {Operand[]} parts
+ * @returns {Operand[]}
+ */
+function halvedOf(parts) {
+  /** @type {Operand[]} */
+  const out = [];
+  const todo = [...parts];
+  while (todo.length) {
+    const p = /** @type {Operand} */ (todo.shift());
+    if (p.width >= 2 && out.length + todo.length + 2 <= SPLIT_READS && halved.has('r:' + p.doc + ':' + p.pos + ':' + (p.pos + p.width))) todo.unshift(...halves(p));
+    else out.push(p);
+  }
+  return out;
+}
+
 /** do a document's delivered runs hold every position of [from, to)? */
 function holdsSpan(/** @type {Doc} */ d, /** @type {number} */ from, /** @type {number} */ to) {
   let at = from;
@@ -1857,11 +1951,16 @@ export function pump() {
     if (drawn && em >= FETCH_EM && d.extent > 0) {
       const w = spanWindow(d);
       if (w && !holdsSpan(d, w[0], w[1])) {
-        // joined to what is held where it meets it; a window past the whole read's cap read alone
+        // joined to what is held where it meets it, where one delivery holds the whole; else the window's parts it lacks, each read alone
         const meets = d.from >= 0 && w[0] <= d.to && d.from <= w[1];
         const from = meets ? Math.min(d.from, w[0]) : w[0];
         const to = meets ? Math.max(d.to, w[1]) : w[1];
-        if (need('r:' + d.addr + ':' + from + ':' + to, F.retrieveV(d.addr, from, to - from), (a) => REC.takeDelivery(d.addr, F.decodeDelivery(a, from), F.asOf(a)), d.addr, (r) => refuseDoc(d, r))) missing++;
+        const parts = to - from <= F.MAX_DELIVERY_ITEMS ? [{ doc: d.addr, pos: from, width: to - from }] : partsOf({ doc: d.addr, pos: w[0], width: w[1] - w[0] });
+        for (const p of halvedOf(parts)) {
+          if (parts.length > 1 && holdsSpan(d, p.pos, p.pos + p.width)) continue;
+          const key = 'r:' + d.addr + ':' + p.pos + ':' + (p.pos + p.width);
+          if (need(key, F.retrieveV(d.addr, p.pos, p.width), (a) => REC.takeDelivery(d.addr, F.decodeDelivery(a, p.pos), F.asOf(a)), d.addr, (r) => { if (sized(r) && p.width >= 2) halved.add(key); else refuseDoc(d, r); })) missing++;
+        }
       }
       if (d.from >= 0 && (!d.imageFor || d.imageFor[0] > d.from || d.imageFor[1] < d.to)) {
         // placed from the window it was asked for: a text read widening the window can land first
@@ -2189,6 +2288,74 @@ export async function wholeOf(addr) {
 }
 
 /**
+ * The rest of a document's text, for an open find (N-FIND; B2-S5's one read
+ * at open): its extent first where the record lacks it, then every stretch of
+ * its positions the record's delivered runs lack, in the text's order, each
+ * read in parts (`textParts`), each part taken into the model as it lands
+ * (M-REC's `takeDelivery`; FP-6) and told to `part`. Each pass waits first
+ * for the reads again of a document the view keeps (`readAgainFirst`); a pass
+ * the document was dropped under takes nothing more and is begun again, at
+ * most DROP_ATTEMPTS passes. Never a read per keystroke: the find asks it
+ * once as it opens, and again only where a drop took what it read.
+ * @param {string} addr the version the find searches
+ * @param {() => void} [part] told as each part is taken
+ * @returns {Promise<{refused: Refusal | null}>} the refusal the extent or a part met, which the find says it searched only part by; none where every part landed, or the passes ran out
+ */
+export async function readRest(addr, part = () => {}) {
+  for (let pass = 1; ; pass++) {
+    await readAgainFirst(addr);
+    const out = await restOf(addr, watchDrops(addr), part);
+    if (out !== 'dropped') return out;
+    if (pass >= DROP_ATTEMPTS) { dirty(); return { refused: null }; }
+  }
+}
+
+/**
+ * One pass of `readRest`.
+ * @param {string} addr
+ * @param {() => boolean} dropped the document dropped since the pass began
+ * @param {() => void} part
+ * @returns {Promise<{refused: Refusal | null} | 'dropped'>}
+ */
+async function restOf(addr, dropped, part) {
+  const d = REC.doc(addr);
+  if (d.extent == null) {
+    const out = await read(F.retrieveDocVSpanSet(addr));
+    if (dropped()) return 'dropped';
+    if ('refused' in out) { refusals.push({ frame: 'retrieve_doc_v_span_set', refusal: out.refused, addr }); refuseDoc(d, out.refused); dirty(); return { refused: out.refused }; }
+    REC.takeSpanSet(addr, F.decodeSpanSet(out.answer));
+  }
+  for (const [from, to] of textLacked(REC.doc(addr))) {
+    const out = await textParts(addr, from, to - from, { part: (runs, asOf) => { if (dropped()) return; REC.takeDelivery(addr, runs, asOf); part(); dirty(); }, stop: dropped });
+    if (!out || dropped()) return 'dropped';
+    if ('refused' in out) { refuseDoc(REC.doc(addr), out.refused); dirty(); return { refused: out.refused }; }
+  }
+  dirty();
+  return { refused: null };
+}
+
+/**
+ * The stretches of a document's positions its delivered runs lack, in the
+ * text's order, each [first position, one past the last]: every position of
+ * its extent where the record holds none.
+ * @param {Doc} d
+ * @returns {Array<[number, number]>}
+ */
+export function textLacked(d) {
+  const end = (d.extent ?? 0) + 1;
+  /** @type {Array<[number, number]>} */
+  const out = [];
+  let at = 1;
+  for (const r of d.runs) {
+    if (r.pos > at) out.push([at, Math.min(r.pos, end)]);
+    at = Math.max(at, r.pos + r.width);
+    if (at >= end) break;
+  }
+  if (at < end) out.push([at, end]);
+  return out.filter(([a, b]) => b > a);
+}
+
+/**
  * One pass of a whole read (`loadWhole`), each step asked where the record
  * lacks what it brings. Where the document is dropped while a step reads, the
  * pass ends there, taking nothing that step learned — an answer or a refusal
@@ -2213,10 +2380,10 @@ async function readWhole(addr, dropped) {
   const extent = d.extent || 0;
   const whole = Math.min(extent, WHOLE_CAP);
   if (whole > 0 && !(d.from === 1 && d.to >= whole + 1)) {
-    const out = await read(F.retrieveV(addr, 1, whole));
+    const out = /** @type {{runs: import('./frames.js').Run[], asOf: number | null} | {refused: Refusal}} */ (await textParts(addr, 1, whole));
     if (dropped()) return 'dropped';
-    if ('refused' in out) { refusals.push({ frame: 'retrieve_v', refusal: out.refused, addr }); refuseDoc(d, out.refused); dirty(); return { doc: d, refused: out.refused }; }
-    REC.takeDelivery(addr, F.decodeDelivery(out.answer, 1), F.asOf(out.answer));
+    if ('refused' in out) { refuseDoc(d, out.refused); dirty(); return { doc: d, refused: out.refused }; }
+    REC.takeDelivery(addr, out.runs, out.asOf);
     const im = await read(F.image(addr, 1, whole));
     if (dropped()) return 'dropped';
     if (!('refused' in im)) REC.takeImage(addr, 1, F.decodeRuns(im.answer));
@@ -2590,10 +2757,14 @@ async function readFresh(addr, chains, facts) {
     const grew = Math.max(0, extent - (d.extent ?? extent));
     const from = d.from <= extent ? d.from : 1, to = Math.min(extent + 1, from + d.to - d.from + grew);
     if (to > from) {
-      const a = await ask(F.retrieveV(addr, from, to - from), true);
-      if (f.refused) return { fresh: f, unheard };
-      if (a) {
-        f.text = { runs: F.decodeDelivery(a, from), asOf: F.asOf(a) };
+      // in parts, so a window past one delivery's items is read whole (`textParts`)
+      const t = /** @type {{runs: import('./frames.js').Run[], asOf: number | null} | {refused: Refusal}} */ (await textParts(addr, from, to - from));
+      if ('refused' in t) {
+        if (unanswered(t.refused)) unheardBy(t.refused);
+        else if (t.refused.name === 'withheld') { f.refused = 'withheld'; return { fresh: f, unheard }; }
+        else if (t.refused.name === 'doc_not_registered') { f.refused = 'unregistered'; return { fresh: f, unheard }; }
+      } else {
+        f.text = { runs: t.runs, asOf: t.asOf };
         const im = await imageParts(addr, from, to - from);
         if ('runs' in im) f.image = { from, runs: im.runs };
         else if (unanswered(im.refused)) unheardBy(im.refused);

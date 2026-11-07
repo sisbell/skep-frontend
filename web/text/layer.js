@@ -192,7 +192,9 @@
 // row's first column, nor past its row's foot beside another, placed by
 // translate alone from the same camera arithmetic: P-LABEL's one hold
 // (`holdTop`), P-REG's HOLD gap below the line, so it stands level with a
-// label held there. A reading view frames the column it reads with the
+// label held there; an in-document find standing at its place, its items
+// stack beneath the find's box (the reader `atop`), which reads where the
+// corner stands (`cornerPlace`). A reading view frames the column it reads with the
 // corner and the edge beside it, at the landing's em (`frameOf`; P-CAM's
 // `landingPx`) — a document read whole, its first column where the visible
 // view holds it, else its head at the top of the visible view (FP-37) — on
@@ -459,6 +461,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @property {number} h its items' height as laid out (px), a kept clause below them apart (`keptHTML`): what it is placed by, so the clause's arrival moves none of them
  * @property {number} x its left edge as last placed, on screen (px): its document's held label stands clear of it
  * @property {number} y its top as last placed, on screen (px)
+ * @property {number} top the top its room gives it, on screen (px): `y`, save where a surface standing at its place pushes its items down (`Readers.atop`)
  * @property {boolean} stale its items or its cap changed since it was measured
  * @property {boolean} mine it is the focused document's: the Tab stop
  * @property {number} blockedAt the column beside which the signs in the edge before it left it no room down to its row's foot, where it stands by its row's first column while the view's centre stays over that column; -1 where none
@@ -531,6 +534,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @property {() => (string | null)} named the document the one line names, by its box (L-LINE's `named`): the one whose label is never held over its text; null where it names none
  * @property {(account: string) => boolean} region is an account named in view: the one line names it, or the canvas's last frame set its label (P-RENDER's `regionNamed`) — a held label's address drops its prefix there alone (P-LABEL's region rule)
  * @property {(addr: string, pos: number, ids: ISpan[]) => void} vanished told where the text a document is set again as holds none of the passage being read (`keepPlace`): the document, the position whose line keeps the passage's place, and the passage by identity (N-GO's `vanished`; FP-21)
+ * @property {(addr: string) => number} atop how far a surface standing at a document's corner's place pushes the corner's items down, in px, by the document's box: an in-document find's box (N-FIND's `atop`); 0 where none stands
  */
 
 /** the corner's distance from the text column, and from the edge of the room it stands in (px): P-REG's */
@@ -594,7 +598,7 @@ const shownCache = new Map();
 /** the box an address stands in: its document's, which every version of it shares */
 const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
 /** the readers until the app hands its owners' in: no selection and no focus, the line at the viewport's top, nowhere navigated, every box showing its plain address, no document and no account named */
-const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: boxOf, named: () => null, region: () => false, vanished: () => {} });
+const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: boxOf, named: () => null, region: () => false, vanished: () => {}, atop: () => 0 });
 /** @type {Readers} */
 let read = noReaders();
 /** is a version the one its box shows (see the head)? */
@@ -2850,7 +2854,8 @@ function placeCorners(focused) {
       const y = cornerTop({ x, w: c.w, h: c.h }, rowTop, top, sy(box.y + foot.y + foot.h), signs[k]);
       // beside that column the signs before it leave it no room: the next frame stands it by its row's first column
       if (y === null) { c.blockedAt = at.column; markDirty(); }
-      c.x = Math.round(x); c.y = Math.round(y ?? rowTop);
+      // a surface standing at its place — a find's box — stacks its items beneath it
+      c.x = Math.round(x); c.top = Math.round(y ?? rowTop); c.y = c.top + Math.round(read.atop(boxOf(rec.d.addr)));
       c.el.style.transform = `translate(${c.x}px, ${c.y}px)`;
       const mine = focused(rec.d.addr);
       if (mine === c.mine) return;
@@ -3020,7 +3025,7 @@ function makeCorner(into, addr) {
   el.setAttribute('aria-hidden', 'true');
   into.appendChild(el);
   /** @type {Corner} */
-  const c = { el, html: '', compact: false, column: 0, cap: Infinity, w: 0, h: 0, x: 0, y: 0, stale: true, mine: false, blockedAt: -1 };
+  const c = { el, html: '', compact: false, column: 0, cap: Infinity, w: 0, h: 0, x: 0, y: 0, top: 0, stale: true, mine: false, blockedAt: -1 };
   corners.set(addr, c);
   return c;
 }
@@ -3456,6 +3461,8 @@ export function sceneCorner(d, view = viewFor(d, true)) { return cornerHTML(d, v
 export function cornerOf(/** @type {string} */ addr) { const c = corners.get(addr); return c ? c.el : null; }
 /** a document's corner as the last frame placed it: the column it stands beside, whether it stands compact, and whether a reader's act opened it whole (`openCorner`); null where none stands */
 export function cornerAt(/** @type {string} */ addr) { const c = corners.get(addr); return c ? { column: c.column, compact: c.compact, opened: openWhole.has(addr) } : null; }
+/** where a document's corner stands on the plane as last placed, by the version its box shows: its right edge and the top its room gives it, on screen (px) — where an in-document find's box stands, the corner's items beneath it (N-FIND; `Readers.atop`); null where no corner stands */
+export function cornerPlace(/** @type {string} */ addr) { const c = corners.get(read.shown(boxOf(addr))); return c ? { right: c.x + c.w, top: c.top } : null; }
 
 /** the text of a mounted article (the gate's rendered case): its standing parts' blocks, in their lines' order */
 export function mountedText(/** @type {string} */ addr) {

@@ -168,7 +168,19 @@ there: the entry and the trail list's row name it and the paragraph read
 stands where it stood, Mod+] and Mod+[ again the same (issue #298's design
 decision); that row names a member the board never minted, so it comes after
 every check here that reads the edition's chain, and the page keeps its
-record. Every other step leaves the page as it found it."""
+record. The page's own find (issue #222's design decision; B2-S5; D5 K-91):
+at the board's longest edition at its reading size, the page holding the
+window its view reads as a pan would leave it — the text the LEAP read whole
+let go through the gate's model door — Mod+F — its default prevented, so the browser's find never
+runs — opens the find at the document's edge with its field holding the
+focus, and reads the rest of the text once; a word standing only in what the
+page lacked, in no mounted line and no mirror item, is found and counted over
+the whole text, no read made per keystroke, the camera taken to its first
+match — outlined alone, its line mounted — with one trail entry the next
+move, Mod+G, shares; Esc leaves the match selected with the focus on its
+item and the camera still; Back returns to where the find opened; and at
+WHOLE BOARD Mod+F opens nothing and the one line says where words are found.
+Every other step leaves the page as it found it."""
 import json
 
 from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, item_words, key_fingerprint, trunk_of
@@ -188,6 +200,8 @@ OUT_STEPS = 4
 # scroller in while a selection is dragged at its edge
 PANE_EDGE_PX = 40
 CODES = {'[': 'BracketLeft', ']': 'BracketRight', '=': 'Equal', '-': 'Minus', '0': 'Digit0', '1': 'Digit1', '2': 'Digit2', '/': 'Slash', '+': 'Equal'}
+# the board's longest edition: six columns at the measure, the page holding at its landing the columns in view and one past them
+FIND_DOC = '1.0.1.0.303'
 
 
 def state(ctx):
@@ -1027,6 +1041,95 @@ PANE_NOW = '''((side) => { const pane = document.getElementById(side === 'a' ? '
   const inPane = (n) => { const e = !n ? null : n.nodeType === 1 ? n : n.parentElement; return !!e && pane.contains(e); };
   return {first: first ? {pos: Number(first.dataset.pos), top: first.getBoundingClientRect().top, text: first.textContent.slice(0, 40)} : null,
           selection: s && s.rangeCount && !s.isCollapsed ? {text: String(s), held: inPane(s.anchorNode) && inPane(s.focusNode)} : null}; })(%s)'''
+
+
+def prevented_probe(ctx):
+    """a listener added after the page's own, which sees the next keydown as the platform does once the page's listener has
+    returned: whether its default was prevented"""
+    ctx.js('(() => { window.__gateKeydown = null; window.addEventListener("keydown", (e) => { window.__gateKeydown = {key: e.key, prevented: e.defaultPrevented}; }, {once: true}); })()')
+
+
+def find_holds(ctx, r):
+    """the page's own find (see the head): what it opens at, reads, finds, counts and moves, read back at each step"""
+    addr = FIND_DOC
+    ctx.leap(addr, None)
+    # the page as a pan leaves it there: the text the LEAP read whole let go (the gate's door, the model alone), the view's own
+    # window read again — the columns in view and one past them
+    ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(addr))
+    ctx.settle()
+    ctx.frames(2)
+    lacked = ctx.js('window.__skep.find.lacking(%s)' % json.dumps(addr))
+    r.check(bool(lacked), 'at the longest edition\'s landing the page lacks part of its text — what the browser\'s find, over the lines in view, could never search', lacked)
+    if not lacked:
+        return {'unmeasured': 'the page held the whole text at the landing'}
+    before = ctx.js('({cam: window.__skep.view.camera(), trail: window.__skep.trail().entries.length, calls: window.__skep.bridge.calls().length})')
+    prevented_probe(ctx)
+    chord(ctx, 'f', mods=('Meta',))
+    seen = ctx.js('window.__gateKeydown')
+    r.check(bool(seen) and seen['prevented'] is True, 'Mod+F\'s default is prevented: the browser\'s own find never runs', seen)
+    # the find's read of the rest is an act's: waited on by its own state, never the pump's settle
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => { const s = window.__skep.find.stands(); return (s && !s.reading) || performance.now() - t0 > 15000 ? res(true) : setTimeout(tick, 50); }; tick(); })')
+    ctx.frames(2)
+    opened = ctx.js('''(() => { const s = window.__skep.find.stands(), e = document.activeElement, v = window.__skep.visible('#find');
+      return {open: !!s, addr: s && s.addr, field: !!e && e.id === 'findq', visible: v.length === 1 && v[0].inClip && v[0].inView, lacking: window.__skep.find.lacking(%s)}; })()''' % json.dumps(addr))
+    r.check(opened['open'] and opened['addr'] == addr and opened['field'] and opened['visible'], 'Mod+F opens the find at the document the focus is in, its box in view and its field holding the focus', opened)
+    r.check(opened['lacking'] == [], 'the find read the rest of the text: the model holds every position (FP-6, as the design decision changes it)', opened['lacking'])
+    reads = ctx.js('window.__skep.bridge.calls().slice(%d).filter((c) => c.op === "retrieve_v").map((c) => JSON.parse(c.frame).specs[0])' % before['calls'])
+    # a word standing only in what the page lacked: in no line mounted and no item of the mirror
+    word = ctx.js('''(() => { const S = window.__skep, from = %d, bl = S.model.doc(%s).blocks.filter((b) => b.kind === 'para');
+      const head = bl.filter((b) => b.pos < from).map((b) => b.text.toLowerCase()).join('\\n');
+      const dom = document.getElementById('domlayer').textContent.toLowerCase(), mirror = document.getElementById('mirror').textContent.toLowerCase();
+      const words = [...new Set(bl.filter((b) => b.pos >= from).flatMap((b) => b.text.split(/[^A-Za-z]+/)).filter((w) => w.length >= 6))].filter((x) => !head.includes(x.toLowerCase()));
+      const w = words.find((x) => !dom.includes(x.toLowerCase()) && !mirror.includes(x.toLowerCase())) || words[0];
+      if (!w) return null;
+      const q = w.toLowerCase(); let n = 0;
+      for (const b of bl) { const t = b.text.toLowerCase(); for (let i = t.indexOf(q); i >= 0; i = t.indexOf(q, i + q.length)) n++; }
+      return {word: w, n, dom: dom.includes(q), mirror: mirror.includes(q)}; })()''' % (lacked[0][0], json.dumps(addr)))
+    r.check(bool(word) and not word['dom'] and not word['mirror'], 'a word of the part the page lacked stands in no mounted line and no mirror item: the browser\'s find would miss it', word)
+    if not word:
+        return {'lacked': lacked, 'reads': reads, 'unmeasured': 'no word stands only in the part lacked'}
+    ctx.drv.ime(word['word'])
+    ctx.settle()
+    ctx.frames(3)
+    calls = ctx.js('window.__skep.bridge.calls().slice(%d).filter((c) => c.op === "retrieve_v").length' % before['calls'])
+    r.check(calls == len(reads) and len(reads) >= 1, 'the rest read once as the find opened, in parts of at most MAX_DELIVERY_ITEMS positions, and no read made as the reader typed', {'reads_at_open': reads, 'reads_after_typing': calls})
+    found = ctx.js('''(() => { const S = window.__skep, s = S.find.stands(), m = s && s.matches[s.current], mounted = S.mounted(%s);
+      return {count: s && s.count, n: s && s.matches.length, current: s && s.current, match: m, arrival: S.go.arrival(), trail: S.trail().entries.length,
+              mounted: !!mounted && mounted.text.toLowerCase().includes(%s)}; })()''' % (json.dumps(addr), json.dumps(word['word'].lower())))
+    want = strings(ctx, 'B2.find.count', {'k': 1, 'n': word['n']})
+    r.check(found['count'] == want and found['n'] == word['n'], 'every part in: the count over the whole text, "%s"' % want, found)
+    m = found['match'] or {}
+    r.check(found['arrival'] == {'addr': addr, 'pos': m.get('pos'), 'runs': [m], 'link': None} and found['trail'] == before['trail'] + 1 and found['mounted'],
+            'typing\'s move: the camera at the first match, outlined alone as the arrival, its line mounted, one trail entry pushed (FP-21, FP-25)', found)
+    chord(ctx, 'g', mods=('Meta',))
+    stepped = ctx.js('({current: window.__skep.find.stands().current, trail: window.__skep.trail().entries.length, arrival: window.__skep.go.arrival()})')
+    r.check(stepped['current'] == (1 if word['n'] > 1 else 0) and stepped['trail'] == found['trail'], 'Mod+G in the field: the next match, wrapping, the trail entry shared', stepped)
+    mark = ctx.js('(() => { const s = window.__skep.find.stands(); return s.matches[s.current]; })()')
+    view = ctx.js('window.__skep.view.camera()')
+    chord(ctx, 'Escape')
+    ctx.frames(3)
+    closed = ctx.js('''(() => { const S = window.__skep, e = document.activeElement;
+      return {open: S.find.isOpen(), sel: S.selection(), item: !!e && e.id === 'walk-' + S.mirror.index(), focus: S.view.focus(), cam: S.view.camera()}; })()''')
+    still_cam = all(abs(closed['cam'][k] - view[k]) < 1e-6 for k in ('x', 'y', 'scale'))
+    r.check(not closed['open'] and closed['sel'] == {'addr': addr, 'pos': mark['pos'], 'width': mark['width']} and closed['item'] and still_cam,
+            'Esc: the find closed, its match selected, the focus on the walk\'s item at it, the camera still (FP-20, as the design decision changes it)', closed)
+    ctx.esc(); ctx.esc()
+    ctx.js('window.__skep.go.back()')
+    ctx.settle()
+    ctx.frames(2)
+    back = ctx.js('({cam: window.__skep.view.camera(), cursor: window.__skep.trail().cursor})')
+    r.check(all(abs(back['cam'][k] - before['cam'][k]) < 1e-3 * max(1, abs(before['cam'][k])) for k in ('x', 'y', 'scale')) and back['cursor'] == before['trail'] - 1,
+            'Back from the find\'s entry: the view the find opened over', {'before': before['cam'], 'back': back})
+    ctx.js('window.__skep.go.wholeBoard()')
+    ctx.settle()
+    ctx.frames(2)
+    prevented_probe(ctx)
+    chord(ctx, 'f', mods=('Meta',))
+    seen = ctx.js('window.__gateKeydown')
+    off = ctx.js('({open: window.__skep.find.isOpen(), line: window.__skep.line().text})')
+    words = strings(ctx, 'L.find.off', {'find chord': '⌘F'})
+    r.check(bool(seen) and seen['prevented'] and not off['open'] and words in off['line'], 'at WHOLE BOARD Mod+F opens nothing — its default prevented all the same — and the one line says where words are found', {'probe': seen, **off, 'want': words})
+    return {'lacked': lacked, 'reads': reads, 'word': word, 'found': found}
 
 
 def strings(ctx, sid, values=None):
@@ -2820,6 +2923,8 @@ def run(ctx):
     r.check(same_view(s0, s1) and s1['overlay'] == s0['overlay'] and not s1['leap'], 'Mod+C is the platform\'s: nothing happens on the plane')
     # ---- Back to an edition's bare address after a newer version arrived: the version read (issue #298) -----------
     r.figures['back_after_publish'] = back_after_publish(ctx, r)
+    # ---- the page's own find (issue #222's design decision) ------------------------------------------------------
+    r.figures['find'] = find_holds(ctx, r)
     r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

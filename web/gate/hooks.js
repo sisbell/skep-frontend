@@ -36,7 +36,8 @@
 // buffer, each frame's counts (`Frame`), for the frame-cost checks; the
 // bridge client's call log, the pump's counts and the settle signal
 // (`settled`, `settle`); the trail, the one line's and the overlay's text
-// with the notice standing below it (`overlay`), a
+// with the notice standing below it (`overlay`), the in-document find as it
+// stands and the stretches of a text the model lacks (`find`), a
 // walk's moment raised and the folded moments (`moments`); the selection
 // beside the platform's own (`platformSelection`) and the copy door (`copy`);
 // the reveal's state and setters (`reveal`, `links`), each end `links.shown`
@@ -81,6 +82,7 @@ import * as LK from '../links/links.js';
 import * as BM from '../beams/beams.js';
 import * as GO from '../nav/go.js';
 import * as LEAP from '../nav/leap.js';
+import * as FIND from '../nav/find.js';
 import * as LINKS from '../overlays/links-card.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as PROV from '../overlays/provenance.js';
@@ -690,6 +692,7 @@ export function install(deps) {
     /** a landing's line as it stands (FP-21): its words, its acts, its rect on screen, whether the scene covers it, and the labels set for its other runs; null where none stands */
     landingLine: () => LANDING.shown(),
     leap: { open: () => LEAP.open(), close: () => LEAP.close(), rows: () => LEAP.currentRows(), isOpen: () => LEAP.isOpen() },
+    find: { stands: () => FIND.stands(), isOpen: () => FIND.isOpen(), searched: () => FIND.searched(), lacking: (/** @type {string} */ a) => PUMP.textLacked(REC.doc(a)) },
     cards: {
       links: (/** @type {string} */ a) => LINKS.show(a),
       anatomy: (/** @type {string} */ addr, /** @type {string} */ link) => { const s = LK.shown(addr).find((x) => x.link.addr === link); return s ? ANATOMY.open(s, null).then(() => true) : Promise.resolve(false); },

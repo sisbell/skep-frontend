@@ -29,7 +29,7 @@ import { commonsType, isAddress } from './model/address.js';
  * @typedef {Object} StringEntry
  * @property {string} text the string, with its ⟨tokens⟩
  * @property {'PINNED' | 'DRAFT'} cls
- * @property {string} source the design file that carries it (`ux/copy.md`, `requirements.md`, `designs/foundations.md`, `designs/B1-reader.md`, `designs/B3-editor.md`, `designs/D5-keys.md`, `designs/D6-burst-machine.md`), or `''` where none does
+ * @property {string} source the design file that carries it (`ux/copy.md`, `requirements.md`, `designs/foundations.md`, `designs/B1-reader.md`, `designs/B2-finding.md`, `designs/B3-editor.md`, `designs/D5-keys.md`, `designs/D6-burst-machine.md`), or `''` where none does
  * @property {string} [screen] the screen that needed it (DRAFT)
  * @property {boolean} [lane] true where no design document carries the string
  */
@@ -217,6 +217,11 @@ export const STRINGS = {
   'D5.annotate': { text: 'annotate', cls: 'DRAFT', source: 'designs/D5-keys.md', screen: 'the selection' },
   'D5.quote': { text: 'quote', cls: 'DRAFT', source: 'designs/D5-keys.md', screen: 'the selection' },
   'D5.link-to': { text: 'link to…', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the selection' },
+
+  // ---- DRAFT: designs/B2-finding.md (the in-document find, B2-S5) ---------------
+  'B2.find.count': { text: '⟨k⟩ of ⟨n⟩', cls: 'DRAFT', source: 'designs/B2-finding.md', screen: 'B2-S5: the find\'s count, every part in' },
+  'B2.find.so-far': { text: '≥ ⟨n⟩ so far', cls: 'DRAFT', source: 'designs/B2-finding.md', screen: 'B2-S5: the find\'s count while a part is out' },
+  'B2.find.reading': { text: 'reading the rest of this document to search it', cls: 'DRAFT', source: 'designs/B2-finding.md', screen: 'B2-S5: the parts line' },
 
   // ---- DRAFT: designs/B3-editor.md (the editor's screens, by screen; D6 BM-n names the burst machine's row) ----
   // B3-S1: the kept state's three words, Mod+S's answers, the LEAP box's creation row, the launch, the kept caret
@@ -569,6 +574,18 @@ export const STRINGS = {
   // the one status message at a session's ending (FP-29): the ending's words — the one line's — then the documents the
   // view stood on that the reader can no longer read, each now its withheld box, "withheld · ⟨owner⟩"
   'L.covered': { text: '⟨ending⟩ — withheld from you now: ⟨documents⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
+  // the in-document find (B2-S5): its field's name and its two moves; a miss naming the
+  // document and the version searched — a member by its number, a bare address by its current text (L.held.current); the
+  // withheld text it did not search; a part the board would not give, by why (BM-HELD's `whyOf`); and, off any document,
+  // where words are found
+  'L.find-label': { text: 'find in this document', cls: 'DRAFT', source: '', screen: 'B2-S5: the find\'s field', lane: true },
+  'L.find.next': { text: 'next match', cls: 'DRAFT', source: '', screen: 'B2-S5: the find\'s next', lane: true },
+  'L.find.previous': { text: 'previous match', cls: 'DRAFT', source: '', screen: 'B2-S5: the find\'s previous', lane: true },
+  'L.find.none': { text: 'no match in ⟨where⟩', cls: 'DRAFT', source: '', screen: 'B2-S5: the find\'s miss', lane: true },
+  'L.find.member': { text: 'version ⟨k⟩ of ⟨name⟩', cls: 'DRAFT', source: '', screen: 'B2-S5: the find\'s miss', lane: true },
+  'L.find.withheld': { text: 'withheld text here was not searched', cls: 'DRAFT', source: '', screen: 'B2-S5: the find\'s answer', lane: true },
+  'L.find.part': { text: 'searched only part of it — ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'B2-S5: the find\'s answer', lane: true },
+  'L.find.off': { text: 'words are found in a document — go into one, then ⟨find chord⟩', cls: 'DRAFT', source: '', screen: 'B2-S5: the find\'s chord off any document', lane: true },
   // a walk's moment (FP-36): its face's caption by its kind, its answers, its cancel named by its walk and beside it that
   // what cancelling leaves behind is not told to the page, a label box's default and its empty field flagged, a moment the
   // shell no longer holds; and the walk's segment of the one line

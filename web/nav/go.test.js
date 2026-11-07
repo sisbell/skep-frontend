@@ -1575,7 +1575,7 @@ test('a follow whose far text holds its passage in two runs whose bytes the boar
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a follow of a far end an edit set in another order lands at piece 1 — its first half, never the first run in the text — every run labelled; a step takes the landing to the next piece in the passage\'s order and round again, flying to it at reading size with the walk on it, pushing nothing, and the previous wraps the other way; Mod+G and Mod+Shift+G step, and are the platform\'s where no arrival in several runs stands (FP-21; issue #158)', async () => {
+test('a follow of a far end an edit set in another order lands at piece 1 — its first half, never the first run in the text — every run labelled; a step takes the landing to the next piece in the passage\'s order and round again, flying to it at reading size with the walk on it, pushing nothing, and the previous wraps the other way; Mod+G and Mod+Shift+G step, and where no arrival in several runs stands are taken for the page\'s own find, never the platform\'s (FP-21; issues #158, #222)', async () => {
   reorder();
   try {
     await run(GO.leapTo(D));
@@ -1603,7 +1603,8 @@ test('a follow of a far end an edit set in another order lands at piece 1 — it
     await stepped();
     assert.equal(GO.landing()?.pos, 5, 'Mod+Shift+G: the previous piece');
     await run(GO.leapTo(D));
-    assert.equal(await KEYS.dispatch(keyOf('g', MOD), PLANE), false, 'no arrival in several runs: Mod+G is the platform\'s');
+    assert.equal(await KEYS.dispatch(keyOf('g', MOD), PLANE), true, 'no arrival in several runs: Mod+G is taken for the page\'s find (N-FIND), the platform\'s never run');
+    assert.deepEqual([GO.steps(), GO.landing()], [false, null], 'and steps no arrival');
   } finally { unorder(); }
   assert.deepEqual(fake.unanswered, []);
 });

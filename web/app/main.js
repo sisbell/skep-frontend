@@ -38,7 +38,8 @@
 // `named`, FP-26 — whether an account is named in view: the line names
 // it, or the canvas's last frame set its label, P-RENDER's `regionNamed` —
 // and who is told the passage being read is gone from the text its document
-// is set again as, N-GO's `vanished`, FP-21);
+// is set again as, N-GO's `vanished`, FP-21 — and how far an in-document
+// find's box pushes a corner's items down, N-FIND's `atop`);
 // LK's (the links lit, P-RENDER's `drawsDoc`, T-LAYER's
 // owner rule, `shownIn`, and a far document's first line, T-LAYER's
 // `firstOfFar` by T-ARTICLE's one rule); N-WALK's (Back's light, what a landing says,
@@ -58,17 +59,20 @@
 // scene's entry its two documents (N-GO's `scenePair`) — which a change reads
 // again beside the view's, and what the entries the reader has left read,
 // with who re-takes the member each read once a refresh counts its chain —
-// N-TRAIL's `readings`, `countedAt` — FP-22, FP-23, FP-29).
+// N-TRAIL's `readings`, `countedAt` — and the text an open find searches,
+// N-FIND's `searched` — FP-6, FP-22, FP-23, FP-29).
 // The loop (`loop`, on `requestAnimationFrame`): step the camera's flight,
 // pump every 90 ms, and on a dirty frame — the mark, a camera move, a model,
 // layer or kept revision, a flight, an overlay standing, a phase — run T-LAYER's
 // frame first, so what stands is decided before anything is drawn (FP-8),
 // then the landing rule at an arrival whose text was set again (N-GO's
 // `recheck`; FP-21) and at every surface standing on a version its box no
-// longer shows (N-GO's `surfacesAcross`; FP-36), mark the mirror's
+// longer shows (N-GO's `surfacesAcross`; FP-36), the find read again
+// (N-FIND's `refresh`), mark the mirror's
 // documents, Back's light, the landing's description and the kept clauses in
 // place (N-WALK's `markExpanded`, `markLocated`, `markDescribed`,
-// `markKept`), then P-RENDER, BM, O-HOST's place, the landing's line
+// `markKept`), then P-RENDER, BM, O-HOST's place and the find's (N-FIND's
+// `place`), the landing's line
 // (O-LAND's `render`), the scene's ties and its panes' kept clauses where the
 // scene is open (SC's `draw`, `markKept`), the one line where what M-PUMP
 // holds as it stands while it reads it again moved (`keptRevision`), so a
@@ -83,11 +87,12 @@
 // address beside it and, standing over a change of the page's class, the
 // index its new class reads (N-LEAP's `takeAddress`, `takeIndex`).
 // A change of the page's class (`dropped`): the overlay host, the faces, the
-// LEAP box, N-GO and the one line first, so what the class the page left
+// LEAP box, the find, N-GO and the one line first, so what the class the page left
 // could read goes with it (FP-29), then each reading scene's pane and the
 // walk (FP-23).
 // The global key listener → N-KEYS, each key handed where the focus is
-// (`whereIs`; a field as N-FOCUS reads one, `isField`; the scene's stop and
+// (`whereIs`; a field as N-FOCUS reads one, `isField`, the LEAP box and the
+// find's box whole among them; the scene's stop and
 // its strokes' buttons among the scene's acts, as its bar's buttons are) and
 // whether a key
 // made it by N-FOCUS's one reading (FP-20): a chord the LEAP box closed on
@@ -118,6 +123,7 @@ import * as TRAILLIST from '../overlays/trail-list.js';
 import * as LANDING from '../overlays/landing.js';
 import * as LINE from '../line/line.js';
 import * as LEAP from '../nav/leap.js';
+import * as FIND from '../nav/find.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import * as KEYS from '../nav/keys.js';
@@ -199,6 +205,7 @@ function loop(/** @type {number} */ now) {
     LAYER.frame((addr) => { const f = WALK.current(); return !!f && f.addr === addr; });
     GO.recheck();
     GO.surfacesAcross();
+    FIND.refresh();
     WALK.markExpanded();
     WALK.markLocated();
     WALK.markDescribed();
@@ -206,6 +213,7 @@ function loop(/** @type {number} */ now) {
     const lod = RENDER.draw();
     BM.draw();
     HOST.place();
+    FIND.place();
     LANDING.render();
     if (SCENE.isOpen()) { SCENE.draw(); SCENE.markKept(); }
     // the one line in the frame what is kept moved, so a kept clause appears and lifts there with the corners and the mirror
@@ -227,7 +235,7 @@ function loop(/** @type {number} */ now) {
  * What a feed row or a change of the page's class dropped, told by M-PUMP
  * after the drop (its `onDrop`): at a change of class — FP-23, FP-29 — the
  * overlay, the faces' memory of what they showed whole, the LEAP box's rows,
- * the arrival and the trail's notices, and the one line's transient taken
+ * what the find measured, the arrival and the trail's notices, and the one line's transient taken
  * down from the model at once, the overlay first so the focus a closing card
  * hands back stands on the walk's element as the walk is taken again; then
  * each reading scene's pane kept fresh by its kind, and the walk taken again
@@ -235,7 +243,7 @@ function loop(/** @type {number} */ now) {
  * @param {import('../model/pump.js').Dropped} x
  */
 function dropped(x) {
-  if (!x.addrs) { HOST.classChanged(); FACES.classChanged(); LEAP.classChanged(); GO.classChanged(); LINE.classChanged(x.at); }
+  if (!x.addrs) { HOST.classChanged(); FACES.classChanged(); LEAP.classChanged(); FIND.classChanged(); GO.classChanged(); LINE.classChanged(x.at); }
   SCENE.dropped(x);
   void WALK.dropped(x);
 }
@@ -244,7 +252,7 @@ function dropped(x) {
 function whereIs(/** @type {EventTarget | null} */ target) {
   const t = /** @type {HTMLElement | null} */ (target);
   if (!t || !t.closest) return /** @type {const} */ ('plane');
-  if (t.closest('#leap')) return /** @type {const} */ ('field');
+  if (t.closest('#leap, #find')) return /** @type {const} */ ('field');
   if (FOCUS.isField(t)) return /** @type {const} */ ('field');
   if (t.closest('#overlay, #notice')) return /** @type {const} */ ('overlay');
   if (t.closest('#landing')) return /** @type {const} */ ('landing');
@@ -286,8 +294,9 @@ async function boot() {
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')), stop: /** @type {HTMLButtonElement} */ (el('scenestop')), strokes: el('scenestrokes') },
     { end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, at, told) => FACES.floating(far, at, null, told), held: FACES.held } });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
+  FIND.attach({ box: el('find'), input: /** @type {HTMLInputElement} */ (el('findq')), count: el('findcount'), prev: /** @type {HTMLButtonElement} */ (el('findprev')), next: /** @type {HTMLButtonElement} */ (el('findnext')), note: el('findnote') });
   LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed(), panes: SCENE.keptPanes, paneLift: SCENE.paneLift });
-  LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a), vanished: GO.vanished });
+  LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a), vanished: GO.vanished, atop: FIND.atop });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn, first: LAYER.firstOfFar });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords() });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
@@ -311,7 +320,7 @@ async function boot() {
   // the adapter: the bridge client where the flag stands; nothing otherwise
   const adapter = SECRET ? DEV.create({ provider: DEV.DEFAULT_PROVIDER, secret: SECRET, record: !!GATE }) : null;
   PORT.boot(adapter);
-  PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived, onDrop: dropped, stands: () => TRAIL.all().flatMap((e) => [e.addr, ...(GO.scenePair(e) || [])]), readings: TRAIL.readings, onCounted: TRAIL.countedAt, onOpen: () => { void launch(); } });
+  PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived, onDrop: dropped, stands: () => TRAIL.all().flatMap((e) => [e.addr, ...(GO.scenePair(e) || [])]), readings: TRAIL.readings, onCounted: TRAIL.countedAt, onOpen: () => { void launch(); }, finding: FIND.searched });
   PORT.on('moment', (d) => FACES.moment(/** @type {import('../bridge/shapes').MomentEvent} */ (d)));
   const heldSeen = /** @type {unknown[]} */ ([]);
   PORT.on('held', (d) => { heldSeen.push(d); console.log('held event (not acted on — the editor\'s lane\'s)', d); });

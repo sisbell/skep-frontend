@@ -50,24 +50,30 @@
 // and does nothing.
 // Esc closes the innermost thing, in one order (`esc`; §4 rule 7; D7): the
 // box, a card or scene still reading, the notice standing below the overlay
-// (FP-36; O-HOST's), the overlay, a jump reaching, the scene — its close a
-// Back from its entry (N-GO's `closeScene`) — the selection, then a live
-// caret — the text left to the walk at the caret's span, the caret KEPT
-// there (K-77; BM-4), which Enter or a printable key at that span returns —
-// and after them all the arrival (FP-21; N-GO's `endArrival`); made at a
-// landing, it passes over the box and over an overlay whose own field holds
-// the caret, the notice below that overlay still closing first (FP-20). Mod+L and Mod+K
+// (FP-36; O-HOST's), the overlay, a jump reaching, the find — its current
+// match left selected with the focus on it (N-FIND's `close`; FP-20) — the
+// scene — its close a Back from its entry (N-GO's `closeScene`) — the
+// selection, then a live caret — the text left to the walk at the caret's
+// span, the caret KEPT there (K-77; BM-4), which Enter or a printable key at
+// that span returns — and after them all the arrival (FP-21; N-GO's
+// `endArrival`); made at a landing, it passes over the box, over the find
+// and over an overlay whose own field holds the caret, the notice below that
+// overlay still closing first (FP-20). Mod+L and Mod+K
 // open the LEAP box (K-30), Mod+Y the trail's list (K-41), Mod+= and Mod+-
 // zoom the camera by 1.25 about the view's
 // centre and re-take the focus (K-11), Mod+Shift+P shows the one line's strip
 // (K-23), and the selection's slot chords (K-47 … K-52) and K-8's
-// select-by-span act from the plane and from a standing overlay alike. Mod+G
-// and Mod+Shift+G (K-91) step to the next and the previous run of an arrival
-// in several runs (N-GO's `step`), from the plane and every control on it
-// alike, while such an arrival stands or a jump is in the air that may land
-// one, and are the platform's otherwise (FP-21). Where the focus is
-// (`Ctx.where`) decides the rest: in a field every key but Esc is the field's
-// own; on the line ← and → move among its acts and every other key is the
+// select-by-span act from the plane and from a standing overlay alike. Find
+// (K-91; `findAct`) acts from the plane, the scene, a field and every control
+// on them alike, the browser's own find never run: Mod+F opens the page's
+// find at the document the focus is in (N-FIND's `open`); Mod+G and
+// Mod+Shift+G — F3 and Shift+F3 too elsewhere than macOS — step its matches
+// where it stands (N-FIND's `step`), else the next and the previous run of an
+// arrival in several runs (N-GO's `step`; FP-21) while such an arrival
+// stands or a jump is in the air that may land one, else open the find as
+// Mod+F does. Where the focus is (`Ctx.where`) decides the rest: in a field
+// every key but Esc and find's chords is the field's own; on the line ← and
+// → move among its acts and every other key is the
 // act's own (K-22); at a corner Enter takes the corner's act (K-57) — a
 // draft's kept word opens its statement, an edition's version statement its
 // list — and its other keys are the platform's; in an overlay and at a landing's line every
@@ -87,16 +93,18 @@
 // of its height everywhere else. Shift with ← and → is never dispatched: it
 // is the platform's own (K-71), and APP-INPUT reads what it does back into
 // the page's selection. Where no board is held (FP-35) the walk's keys at
-// the plane (K-1 … K-5, K-7), K-8, the selection's slot chords (K-47 … K-52)
-// and the strip (K-23) each answer with O-FACES' no-board face, as HOME and
+// the plane (K-1 … K-5, K-7), K-8, the selection's slot chords (K-47 … K-52),
+// the strip (K-23) and find's chords (K-91) each answer with O-FACES'
+// no-board face, as HOME and
 // WHOLE BOARD do through N-GO; the paging keys and the zoom chords stay the
 // camera's. State (FP-10), beside the held keys: whether Mod+S has been
 // answered whole this session (`saveAnswered`).
-// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-14, FP-25, FP-35.
+// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-14, FP-20, FP-21, FP-25, FP-35.
 
 import * as GO from './go.js';
 import * as WALK from './walk.js';
 import * as LEAP from './leap.js';
+import * as FIND from './find.js';
 import * as REC from '../model/records.js';
 import * as HOST from '../overlays/host.js';
 import * as FACES from '../overlays/faces.js';
@@ -166,6 +174,11 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-76', chord: 'Enter', act: 'caret.newline', surface: 'caret' },
   { id: 'K-76', chord: 'Shift+Enter', act: 'caret.newline', surface: 'caret' },
   { id: 'K-77', chord: 'Esc', act: 'caret.leave', surface: 'caret' },
+  { id: 'K-91', chord: 'Mod+F', act: 'find.open', surface: 'plane' },
+  { id: 'K-91', chord: 'Mod+G', act: 'find.next', surface: 'plane' },
+  { id: 'K-91', chord: 'Mod+Shift+G', act: 'find.previous', surface: 'plane' },
+  { id: 'K-91', chord: 'F3', act: 'find.next', surface: 'plane' },
+  { id: 'K-91', chord: 'Shift+F3', act: 'find.previous', surface: 'plane' },
   { id: 'K-91', chord: 'Mod+G', act: 'arrival.next', surface: 'plane' },
   { id: 'K-91', chord: 'Mod+Shift+G', act: 'arrival.previous', surface: 'plane' },
   { id: 'K-62', chord: 'Mod+R', act: 'scene.relevel', surface: 'scene' },
@@ -180,6 +193,8 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
 const SLOT_CHORDS = new Set(TABLE.filter((r) => r.surface === 'selection').map((r) => r.chord));
 /** the walk's keys at the plane (K-1 … K-5, K-7) */
 const WALK_KEYS = new Set(['↓', '↑', '→', '←', 'Home', 'End', 'Enter']);
+/** a find chord's move (K-91): 1 the next, -1 the previous — Mod+G and Mod+Shift+G, and F3 and Shift+F3 elsewhere than macOS — 0 for any other chord */
+const findDir = (/** @type {string} */ chord) => (chord === 'Mod+G' || (!MAC && chord === 'F3') ? 1 : chord === 'Mod+Shift+G' || (!MAC && chord === 'Shift+F3') ? -1 : 0);
 
 /** the chord a KeyboardEvent spells, in D5's notation — `Mod+Shift+L`, `↓`, `Enter`, or the printable key itself */
 export function chordOf(/** @type {KeyboardEvent} */ e) {
@@ -289,6 +304,8 @@ export async function dispatch(e, ctx) {
   if (mod && !e.shiftKey && ['C', 'V', 'X', 'A', 'P', 'W', 'Q', 'M', 'H', ','].includes(chord.slice(4))) return false;
   if (ctx.where === 'field') {
     if (chord === 'Esc') { esc(); return true; }
+    // find's chords, which no field takes as its own: the find opened beside the field, which keeps the caret (FP-20), or stepped
+    if (REC.board() && (chord === 'Mod+F' || findDir(chord))) return findAct(e, findDir(chord), ctx)();
     return false; // a field takes its keys
   }
   const byKey = ctx.byKey;
@@ -322,14 +339,17 @@ function route(e, chord, ctx) {
   // the trail's list (K-41)
   if (chord === 'Mod+Y') return () => { TRAILLIST.open(byKey); return true; };
   if (chord === 'Mod+S') return () => { saveChord(); return true; }; // K-74: the chord writes nothing; the corner's kept state answers it
+  // find (K-91): live from the plane, the scene, the line, a corner and every control on them alike, the browser's own find never run
+  const fd = findDir(chord);
+  if ((chord === 'Mod+F' || fd) && REC.board()) return findAct(e, fd, ctx);
   // the scene covers the plane: its keys alone, nothing under it takes one
   if (SCENE.isOpen()) return sceneKey(e, chord, ctx);
   // zoom (K-11)
   if (chord === 'Mod+=') return () => { zoomAboutFocus(1.25, byKey); return true; };
   if (chord === 'Mod+-') return () => { zoomAboutFocus(1 / 1.25, byKey); return true; };
-  // no board held (see the head): the selection's chords, K-8 and the strip answer why, as the walk's keys do below
+  // no board held (see the head): the selection's chords, K-8, the strip and find's chords answer why, as the walk's keys do below
   const lacking = REC.board() ? null : () => { FACES.noBoard(null); return true; };
-  if (lacking && (SLOT_CHORDS.has(chord) || chord === 'Shift+↓' || chord === 'Shift+↑' || chord === 'Mod+Shift+P')) return lacking;
+  if (lacking && (SLOT_CHORDS.has(chord) || chord === 'Shift+↓' || chord === 'Shift+↑' || chord === 'Mod+Shift+P' || chord === 'Mod+F' || fd)) return lacking;
   // the selection's slot chords (K-47 … K-52) and K-8's select-by-span — live from the plane and from a standing overlay alike; the selection's acts take no focus (rule 15), and the next K-8 press extends the selection from the walk's element
   if (chord === 'Mod+Shift+O') return () => { SEL.act('wrote', byKey); return true; };
   if (chord === 'Mod+Shift+R') return () => { SEL.act('uses', byKey); return true; };
@@ -340,9 +360,6 @@ function route(e, chord, ctx) {
   if (chord === 'Shift+↑') return () => { SEL.selectFocused('up'); return true; };
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
   if (chord === 'Mod+R' || e.key === 'F5') return () => true; // K-94: the plane is live; nothing reloads
-  // the step (K-91's chords; FP-21): an arrival's next and previous run, live from the plane and every control on it — held for a
-  // jump's landing while one is in the air, which may stand an arrival in several runs; the platform's find where none steps
-  if (chord === 'Mod+G' || chord === 'Mod+Shift+G') return GO.steps() || GO.inAir() ? () => { GO.step(chord === 'Mod+G' ? 1 : -1, byKey); return true; } : null;
   // the caret's keys (see the head): at a live caret, before the walk's
   if (ctx.where === 'caret') { const act = caretKey(e, chord); if (act) return act; }
   // the corner (K-57): Enter takes its act — a draft's kept word's statement (K-74), else the version statement's list; its other keys are the platform's
@@ -370,6 +387,26 @@ function route(e, chord, ctx) {
   // a printable key on the plane: typed at the kept caret standing in the focused span, answered by the draft's line at a span of a draft the person may edit holding none, else swallowed with the K-9 line (`typeAt`)
   if (printable(e)) return () => { typeAt(e); return true; };
   return null;
+}
+
+/**
+ * A find chord's act (K-91; see the head): a move — Mod+G, Mod+Shift+G, F3,
+ * Shift+F3 — steps the find's matches where a find stands (N-FIND's `step`),
+ * else an arrival's runs where one in several stands or a jump in the air may
+ * land one, outside the scene (N-GO's `step`; FP-21); Mod+F, and a move
+ * where neither steps, opens the find at the document the focus is in — the
+ * one a corner the focus stands on names (N-FIND's `open`). The platform's
+ * default is prevented first: the browser's own find never runs.
+ * @param {KeyboardEvent} e
+ * @param {1 | -1 | 0} dir the chord's move; 0 for Mod+F
+ * @param {Ctx} ctx
+ * @returns {Act}
+ */
+function findAct(e, dir, ctx) {
+  if (dir && FIND.isOpen()) return () => { e.preventDefault(); FIND.step(dir, ctx.byKey); return true; };
+  if (dir && !SCENE.isOpen() && (GO.steps() || GO.inAir())) return () => { e.preventDefault(); GO.step(dir, ctx.byKey); return true; };
+  const corner = ctx.where === 'corner' && e.target ? /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('[data-corner]')) : null;
+  return () => { e.preventDefault(); FIND.open(corner ? corner.dataset.corner || null : null, ctx.byKey); return true; };
 }
 
 /**
@@ -511,15 +548,16 @@ function swallow(/** @type {KeyboardEvent} */ e) {
  * overlay, then the overlay (O-HOST's `dismissInnermost`; FP-36) — a jump's
  * reaching face among them, whose dismissal abandons the jump — then a jump
  * reaching whose face another overlay took the place of (FP-25; N-GO's
- * `abandon`), the scene — its close a Back from its entry (N-GO's
- * `closeScene`), which brings back the selection the place it opened over
- * kept — then the selection, then a live caret — the text left to the walk at
+ * `abandon`), the find — its current match left selected, the focus on it
+ * (N-FIND's `close`; FP-20) — the scene — its close a Back from its entry
+ * (N-GO's `closeScene`), which brings back the selection the place it opened
+ * over kept — then the selection, then a live caret — the text left to the walk at
  * the caret's span, the caret kept there (K-77; T-LAYER's `leaveCaret`,
  * N-WALK's `focusTo`) — then the arrival — its outline, its labels and
  * its line (FP-21; N-GO's `endArrival`); on the bare plane nothing. Made at a
  * jump's landing, it ends no chrome a field the reader types in stands in
- * (FP-20): it passes over the box, and over an overlay whose own field holds
- * the caret (O-HOST's `typing`) — the notice below that overlay closing first
+ * (FP-20): it passes over the box, the find, and an overlay whose own field
+ * holds the caret (O-HOST's `typing`) — the notice below that overlay closing first
  * all the same — and closes the next thing in the order.
  * @param {boolean} [landed] a key held while a jump was in the air made it at the landing (`Ctx.landed`)
  */
@@ -528,6 +566,7 @@ export function esc(landed = false) {
   if (HOST.pending()) { HOST.endOpening(); return; }
   if (HOST.current() && !(landed && HOST.typing() && !HOST.notice())) { HOST.dismissInnermost(); return; }
   if (GO.abandon()) return;
+  if (FIND.isOpen() && !landed) { void FIND.close(true); return; }
   if (SCENE.isOpen()) { GO.closeScene(true); return; }
   if (SEL.selected()) { SEL.clear(); return; }
   const left = LAYER.leaveCaret();

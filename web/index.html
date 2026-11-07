@@ -12,10 +12,12 @@
   ?provider=<secret> (S-14 (b), S-36 (a)). Each region below carries its
   role and no words: its accessible name is its owner's, read from
   strings.js as the owner attaches (FP-13) — the one line's (L-LINE), the
-  LEAP box's input and rows (N-LEAP), the scene's and its panes' (SC), the
+  LEAP box's input and rows (N-LEAP), the find's box and field (N-FIND), the
+  scene's and its panes' (SC), the
   mirror's (N-WALK), the overlay's its own caption as each opens (O-HOST).
   Their order here is the Tab ring's (D5 §4 rule 5): the one line (one
   stop; the LEAP box after it, while open — the line's stop, opened), the
+  find's field and its acts, while it stands, the
   plane's stop, the focused document's corner, a landing's line's acts
   while it stands, the standing overlay, the notice below it, and the line
   again; the scene,
@@ -37,6 +39,15 @@
   <input id="leapq" role="combobox" aria-autocomplete="list" aria-controls="leaphits" aria-expanded="false" autocomplete="off" spellcheck="false">
   <div id="leapnote" role="status"></div>
   <div id="leaphits" role="listbox" tabindex="-1"></div>
+</div>
+
+<!-- the in-document find (N-FIND's): while it stands, after the LEAP box and before the plane's stop in the page's order; placed at its document's edge each frame; its answers said through #live, never a live region of its own -->
+<div id="find" class="panel" role="search">
+  <input id="findq" autocomplete="off" spellcheck="false">
+  <span id="findcount"></span>
+  <button id="findprev" type="button"></button>
+  <button id="findnext" type="button"></button>
+  <div id="findnote"></div>
 </div>
 
 <!-- the scene (SC's): while it stands, its stops take the plane's place in the page's order — pane A, its corner, the strokes between its bands in view, top to bottom, the stop at a band's clipped end while it stands, pane B, its corner, then the bar's acts (D5 §4 rule 5; K-61) — so the bar follows the panes here; its style draws it at the scene's top -->

@@ -50,7 +50,10 @@
 // documents it names — kept as held where a document the view shows windows
 // their origin until their read again sets them in one step, the homes their
 // clause reads kept with them, else dropped, the documents windowing the
-// origin told either way, and every other row leaving them held. With
+// origin told either way, and every other row leaving them held; a text past
+// one delivery's items read in parts — a whole read, an open find's read of
+// the rest, and a row's read again of the window held, the find's text kept as
+// the view's — a part refused for its size asked as its halves. With
 // SKEP_REPLAY naming a script the harness recorded, the model's snapshot is
 // printed for the gate.
 import { test, beforeEach } from 'node:test';
@@ -3299,6 +3302,74 @@ test('where `changes` refuses the gap\'s catch-up, the board is marked and lags 
   await settle();
   assert.deepEqual([PUMP.boardKept(), REC.bare()], [null, false], 'the refresh ended: kept no more');
   assert.deepEqual(fake.unanswered, []);
+});
+
+/** a text of `n` positions of one character, as `retrieve_v` delivers it */
+const filled = (/** @type {string} */ ch, /** @type {number} */ n) => ({ result: { as_of: 1, resp: 'delivery', items: [{ content: ch.repeat(n) }] } });
+
+test('a text past one delivery\'s items is read in parts of at most MAX_DELIVERY_ITEMS positions — a whole read, an open find\'s read of the rest, and a feed row\'s read again of the window held, the text an open find searches kept as the view keeps what it shows — and a part the board refuses for its size is asked again as its halves (FP-21; wire.md §Content & provenance reads)', async () => {
+  const HUGE = '1.0.1.0.7', SIZED = '1.0.1.0.8', n = 200000, cut = F.MAX_DELIVERY_ITEMS;
+  /** @type {Record<string, unknown>} */
+  const s = {
+    [opKeyOf(F.retrieveDocVSpanSet(HUGE))]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + n }] } },
+    [opKeyOf(F.docMetadata(HUGE))]: { result: { as_of: 1, resp: 'doc_metadata', doc: HUGE, published: false, owner: '1.0.1', birth: null, birth_extent: null, placed: null, base_extent: null, source: null } },
+    [opKeyOf(F.image(HUGE, 1, n))]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: HUGE + '.0.1.1', width: String(n) }] } },
+    [opKeyOf(F.findLinksV(HUGE, 1, n))]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+    [opKeyOf(F.retrieveDocVSpanSet(SIZED))]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.1000' }] } },
+    // SIZED's text whole refused for its size — its run-list walk priced past the budget — each half answering
+    [opKeyOf(F.retrieveV(SIZED, 1, 1000))]: { refused: { kind: 'refused', name: 'too_many_items', code: 'too_many_items' } },
+    [opKeyOf(F.retrieveV(SIZED, 1, 500))]: filled('s', 500),
+    [opKeyOf(F.retrieveV(SIZED, 501, 500))]: filled('z', 500),
+  };
+  // HUGE's two parts: the first text read, then the text a write left
+  inTurn(s, F.retrieveV(HUGE, 1, cut), filled('a', cut), filled('c', cut));
+  inTurn(s, F.retrieveV(HUGE, cut + 1, n - cut), filled('b', n - cut), filled('d', n - cut));
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  /** the text an open find searches: HUGE, kept as the view keeps what it shows, at any scale */
+  let finding = /** @type {string | null} */ (null);
+  PUMP.start({ onDirty: () => {}, finding: () => finding });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  await PUMP.loadWhole(HUGE);
+  assert.equal(REC.textBetween(HUGE, 1, n + 1), 'a'.repeat(cut) + 'b'.repeat(n - cut), 'the whole read: both parts taken');
+  assert.deepEqual([timesAsked(fake, F.retrieveV(HUGE, 1, n)), timesAsked(fake, F.retrieveV(HUGE, 1, cut))], [0, 1], 'never one delivery past the bound');
+  assert.deepEqual(await PUMP.readRest(SIZED), { refused: null });
+  assert.equal(REC.textBetween(SIZED, 1, 1001), 's'.repeat(500) + 'z'.repeat(500), 'the find\'s read of the rest: the text refused whole read as its halves');
+  // a write to HUGE while a find searches it: kept as held, read again in parts and set in one step
+  finding = HUGE;
+  fake.fire('feed', writing(20, [HUGE]));
+  for (let i = 0; i < 40 && REC.textBetween(HUGE, 1, 2) !== 'c'; i++) await flush();
+  assert.equal(REC.textBetween(HUGE, 1, n + 1), 'c'.repeat(cut) + 'd'.repeat(n - cut), 'the row\'s read again: the window held, in parts, set in one step');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the view\'s window past one delivery\'s items reads each part of it the page lacks on its own, of at most MAX_DELIVERY_ITEMS positions, and a part the board refuses for its size as its two halves (FP-21, FP-12)', async () => {
+  const BIG = '1.0.1.0.9', n = 200000, cut = F.MAX_DELIVERY_ITEMS, half = Math.floor((n - cut) / 2);
+  /** @type {Record<string, unknown>} */
+  const s = {
+    [opKeyOf(F.retrieveDocVSpanSet(BIG))]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + n }] } },
+    [opKeyOf(F.docMetadata(BIG))]: { result: { as_of: 1, resp: 'doc_metadata', doc: BIG, published: true, owner: '1.0.1', birth: null, birth_extent: null, placed: null, base_extent: null, source: null } },
+    [opKeyOf(F.findLinksV(BIG, 1, n))]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+    [opKeyOf(F.retrieveV(BIG, 1, cut))]: filled('a', cut),
+    // the window's second part refused for its size, each half answering
+    [opKeyOf(F.retrieveV(BIG, cut + 1, n - cut))]: { refused: { kind: 'refused', name: 'too_many_items', code: 'too_many_items' } },
+    [opKeyOf(F.retrieveV(BIG, cut + 1, half))]: filled('b', half),
+    [opKeyOf(F.retrieveV(BIG, cut + 1 + half, n - cut - half))]: filled('c', n - cut - half),
+    [opKeyOf(F.image(BIG, 1, n))]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: BIG + '.0.1.1', width: String(n) }] } },
+    [opKeyOf(F.editionClaimsAt(BIG))]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+  };
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: BIG, kind: 'edition', label: 'd', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  REC.takeSpanSet(BIG, [{ subspace: 1, ordinal: 1, positions: n }]);
+  // the camera over the estimate's last column at its reading em: the window from position 1 through the text's end
+  const box = docBox(BIG), e = estimate(n, box), c = e.columns[e.columns.length - 1];
+  CAM.setViewport(1440, 900); CAM.reach(e.fs); CAM.set(CAM.viewAt({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2 }, e.fs));
+  for (let i = 0; i < 12; i++) { PUMP.pump(); await flush(); }
+  assert.equal(REC.textBetween(BIG, 1, n + 1), 'a'.repeat(cut) + 'b'.repeat(half) + 'c'.repeat(n - cut - half), 'the window whole, in parts');
+  assert.deepEqual([timesAsked(fake, F.retrieveV(BIG, 1, n)), timesAsked(fake, F.retrieveV(BIG, cut + 1, n - cut))], [0, 1], 'never one delivery past the bound; the part refused for its size asked once, then as its halves');
 });
 
 test('replay: a recorded script from the provider builds the model; the snapshot printed for the gate', async () => {

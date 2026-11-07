@@ -188,7 +188,20 @@ def run(ctx):
     ctx.frames(2)
     step(ctx, r, 'W-05', 7, 'the trail', 'W-05 step 7: "The trail: back = pop the address stack (LM 2/27, law 1 — client-side)" — the entries of this walk, newest first, each a Mod+⟨n⟩; keeping a trail as a document (R7) is a write and not this lane\'s.', 'trail-list')
     ctx.esc()
-    step(ctx, r, 'W-05', 8, 'find', 'W-05 step 8: "Find: in-document find (R9a); board-wide lexical search over the /changes-fed client index" — NOT in this lane\'s cut: K-91 has no design form; the LEAP box matches addresses and first lines over the index `places` built (R8\'s own documents by label).', 'leap-box-find')
+    # the page's own find (B2-S5; issue #222's design decision): Mod+F at the first edition, a word of its first lines typed
+    ctx.leap(DOC, None)
+    ctx.drv.key('f', mods=('Meta',))
+    ctx.settle()
+    ctx.frames(2)
+    word = ctx.js('(() => { const b = window.__skep.model.doc(%s).blocks.find((x) => x.kind === "para" && /[A-Za-z]{5,}/.test(x.text)); return b ? b.text.match(/[A-Za-z]{5,}/)[0] : null; })()' % json.dumps(DOC))
+    if word:
+        ctx.drv.ime(word)
+        ctx.settle()
+        ctx.frames(3)
+    found = ctx.js('window.__skep.find.stands()') or {}
+    step(ctx, r, 'W-05', 8, 'find', 'W-05 step 8: "Find: in-document find (R9a); board-wide lexical search over the /changes-fed client index" — the page\'s own find (B2-S5): Mod+F at the first edition, "%s" typed, counted over its whole text — %s — the camera at its first match, outlined alone. Board-wide search is the LEAP box\'s word arm, not in this lane\'s cut: the box matches addresses and first lines over the index `places` built (R8\'s own documents by label).' % (word, found.get('count')), 'find',
+         claims=[('#find', 'the find\'s box', None)])
+    ctx.esc(); ctx.esc(); ctx.esc()
     ctx.leap(DOC, WINDOW[0])
     step(ctx, r, 'W-05', 9, 'where am I', 'W-05 step 9: "Where-am-I: account › document › position always visible (R6); home, landmarks, and the trail anchor against disorientation (R92 rider (c))." The one line: ‹ back · forward › · the trail │ 1 › 1.0.1 › 1.0.1.0.3 › position │ acting as 1.0.1 ….', 'where-am-i')
     ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(AGENT_SPACE + '.0.1'))

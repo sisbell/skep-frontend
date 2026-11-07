@@ -72,11 +72,16 @@ export const READ_OPS = Object.freeze([
  * The budget refusals a smaller read can meet (wire.md §Errors: M6's
  * `too_many_blocks`, a `compare` operand past its blocks, and
  * `too_many_pairs`, its report past its pairs; M8's `image_too_large`, an
- * `image` region or a `project` read past its runs): each permanent for the
- * request as sent, none for the same question asked over less, so M-PUMP
- * asks a `compare` or an `image` so refused again in parts.
+ * `image` region or a `project` read past its runs; `too_many_items`, a
+ * `retrieve_v` delivery past MAX_DELIVERY_ITEMS or its run-list walk priced
+ * past its budget): each permanent for the request as sent, none for the same
+ * question asked over less, so M-PUMP asks a `compare`, an `image` or a
+ * `retrieve_v` so refused again in parts.
  */
-export const SIZE_REFUSALS = Object.freeze(['too_many_blocks', 'too_many_pairs', 'image_too_large']);
+export const SIZE_REFUSALS = Object.freeze(['too_many_blocks', 'too_many_pairs', 'image_too_large', 'too_many_items']);
+
+/** the most items one `retrieve_v` delivery holds — one per delivered position, one per withheld run (wire.md §Content & provenance reads); a delivery past it is refused whole, so M-PUMP asks a text in parts of at most this many positions */
+export const MAX_DELIVERY_ITEMS = 131072;
 
 /**
  * @typedef {Object} Run — one delivered item, placed at its positions

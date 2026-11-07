@@ -35,6 +35,8 @@ const rows = [...src.matchAll(/\{ id: '([^']+)', chord: '([^']+)', act: '([^']+)
 const NAV = new Set(['↓', '↑', '→', '←', 'Home', 'End', 'PageDown', 'PageUp', 'Enter', 'Esc', 'Tab']);
 /** the platform's text keys a caret takes (D5 K-72): bound at the caret alone */
 const TEXT_KEYS = new Set(['Backspace', 'Delete']);
+/** a function key, alone or with Shift — F3 and Shift+F3, find's next and previous elsewhere than macOS (D5 K-91): never a printable key */
+const FN = /^(Shift\+)?F\d{1,2}$/;
 
 test('every row of the TABLE is read (a row the pattern misses would escape the claims below)', () => {
   const table = src.slice(src.indexOf('export const TABLE'), src.indexOf(']));', src.indexOf('export const TABLE')));
@@ -48,15 +50,17 @@ test('the table holds D5\'s routed rows', () => {
   for (const id of ['K-1', 'K-7', 'K-11', 'K-13', 'K-14', 'K-20', 'K-21', 'K-30', 'K-40', 'K-41', 'K-47', 'K-48', 'K-49', 'K-51', 'K-52', 'K-57', 'K-62', 'K-70', 'K-71', 'K-72', 'K-74', 'K-76', 'K-77']) assert.ok(rows.some((r) => r.id === id), id);
 });
 
-test('no plane command rides a printable key: every chord is Mod+… or Shift+a navigation key or a navigation key, or one of the platform\'s text keys bound at the caret alone', () => {
+test('no plane command rides a printable key: every chord is Mod+… or Shift+a navigation key or a navigation key, a function key, or one of the platform\'s text keys bound at the caret alone', () => {
   for (const r of rows) {
     const bare = r.chord.replace(/^(Mod\+)?(Shift\+)?/, '');
     const isChord = r.chord.startsWith('Mod+');
     const isNav = NAV.has(bare) && !r.chord.startsWith('Mod') ? (r.chord === bare || r.chord === 'Shift+' + bare) : false;
     const isText = TEXT_KEYS.has(r.chord) && r.surface === 'caret';
-    assert.ok(isChord || isNav || isText, `${r.id} ${r.chord} is a bare printable binding`);
-    if (!isChord && !isText) assert.ok(NAV.has(bare), `${r.id} ${r.chord}: a navigation key alone`);
+    const isFn = FN.test(r.chord);
+    assert.ok(isChord || isNav || isText || isFn, `${r.id} ${r.chord} is a bare printable binding`);
+    if (!isChord && !isText && !isFn) assert.ok(NAV.has(bare), `${r.id} ${r.chord}: a navigation key alone`);
   }
+  assert.ok(rows.some((r) => r.chord === 'F3') && rows.some((r) => r.chord === 'Shift+F3'), 'K-91\'s function keys are bound');
 });
 
 test('the wireframe\'s bare keys are gone: no row binds /, t, k, 0–9, +, - alone', () => {

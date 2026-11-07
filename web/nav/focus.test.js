@@ -191,6 +191,22 @@ test('a region\'s opener is remembered once: a second opening keeps the first, a
   assert.deepEqual(FOCUS.standing(), []);
 });
 
+test('a close made where the act left the reader at the walk\'s element passes over the opener: the focus goes to the walk\'s element though the opener still takes it — an in-document find\'s Esc on its match (issue #222\'s design decision; FP-20)', () => {
+  const p = page();
+  const opener = p.element('the corner'), match = p.element('the match\'s item'), region = p.element('the find'), field = p.element('the find\'s field');
+  region.contains = (x) => x === field;
+  FOCUS.attach({ home: () => /** @type {any} */ (match) });
+  opener.focus();
+  FOCUS.open('find', { el: /** @type {any} */ (region), byKey: true, first: /** @type {any} */ (field) });
+  assert.equal(p.at(), 'the find\'s field');
+  FOCUS.close('find', { toWalk: true });
+  assert.equal(p.at(), 'the match\'s item', 'the walk\'s element, never the opener');
+  opener.focus();
+  FOCUS.open('find', { el: /** @type {any} */ (region), byKey: true, first: /** @type {any} */ (field) });
+  FOCUS.close('find');
+  assert.equal(p.at(), 'the corner', 'a close made otherwise returns to the opener');
+});
+
 test('a pointer\'s opening takes no focus; the close returns a focus on nothing to the opener where that takes it, else to the walk\'s element — never to the top', () => {
   const p = page();
   const item = p.element('the item'), region = p.element('the overlay'), first = p.element('the first act'), opener = p.element('the line\'s act');
