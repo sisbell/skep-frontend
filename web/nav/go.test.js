@@ -1312,22 +1312,31 @@ test('a Back reaching a LEAP\'s entry while it reads puts the arrival out as it 
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a follow of a dead reference the page already knows says nothing never leaves: no entry, nothing asked, the link not counted as followed and lit, the fifth cell at the link\'s own bytes (FP-25; issues #137, #227)', async () => {
+test('a follow that never leaves — of a link naming no far document, or of a dead reference the page already knows says nothing — takes no entry, asks nothing and is not counted as followed, its face standing at the link\'s own bytes; Back, the next act, ends the face and goes to the entry before the place it was made at (FP-25; issues #137, #227)', async () => {
   takeUnfollowed();
   REC.takeRefused(GONE, 'unregistered');
-  await run(GO.leapTo(D));
-  await run(GO.leapTo(FAR));
-  await run(GO.back());
-  const before = addrs(), cursor = TRAIL.cursorIndex(), at = CAM.view(), from = fake.asked.length;
-  const following = GO.follow(drawn(UNFOLLOWED));
-  assert.deepEqual([CAM.flying(), GO.inAir()], [false, false], 'no flight');
-  await run(following);
-  assert.deepEqual([addrs(), TRAIL.cursorIndex()], [before, cursor], 'no entry: FAR\'s ahead of the cursor kept');
-  assert.deepEqual([fake.asked.slice(from), LK.visited(UNFOLLOWED)], [[], false], 'nothing asked, and the link not counted as followed: its camera never left');
-  assert.deepEqual([faceShown()?.id, HOST.currentState()?.anchor], ['face:doc_not_registered', { span: { addr: D, pos: 9, width: 2 }, sign: D }], 'the fifth cell at the link\'s own bytes');
-  assert.deepEqual(marks(), [null, [UNFOLLOWED]], 'the link lit, nothing outlined');
-  assert.ok(same(CAM.view(), at), 'the camera where the follow was made');
-  HOST.dismiss();
+  /** @type {Array<{what: string, s: import('../links/links.js').Shown, face: string, lit: string[]}>} each follow that never leaves, the face it shows, and the links lit after it */
+  const rows = [
+    { what: 'a link naming no far document', s: { ...drawn(UNFOLLOWED), far: '' }, face: 'face:invalid', lit: [] },
+    { what: 'a dead reference the page knows says nothing', s: drawn(UNFOLLOWED), face: 'face:doc_not_registered', lit: [UNFOLLOWED] },
+  ];
+  for (const { what, s, face, lit } of rows) {
+    await run(GO.home());
+    await run(GO.leapTo(D));
+    await run(GO.leapTo(FAR));
+    await run(GO.back());
+    const before = addrs(), cursor = TRAIL.cursorIndex(), at = CAM.view(), from = fake.asked.length;
+    const following = GO.follow(s);
+    assert.deepEqual([CAM.flying(), GO.inAir()], [false, false], `${what}: no flight`);
+    await run(following);
+    assert.deepEqual([addrs(), TRAIL.cursorIndex()], [before, cursor], `${what}: no entry, FAR's ahead of the cursor kept`);
+    assert.deepEqual([fake.asked.slice(from), LK.visited(UNFOLLOWED)], [[], false], `${what}: nothing asked, and the link not counted as followed — its camera never left`);
+    assert.deepEqual([faceShown()?.id, HOST.currentState()?.anchor], [face, { span: { addr: D, pos: 9, width: 2 }, sign: D }], `${what}: its face at the link's own bytes`);
+    assert.deepEqual(marks(), [null, lit], `${what}: nothing outlined, ${lit.length ? 'the link lit' : 'no link lit'}`);
+    assert.ok(same(CAM.view(), at), `${what}: the camera where the follow was made`);
+    await run(GO.back());
+    assert.deepEqual([TRAIL.current()?.label, TRAIL.cursorIndex(), addrs(), faceShown()], [t('F.level.home'), cursor - 1, before, null], `${what}: Back, the next act, ends the face and goes to HOME's entry, the one before D's`);
+  }
   assert.deepEqual(fake.unanswered, []);
 });
 
