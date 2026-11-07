@@ -52,9 +52,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #line .address { cursor:pointer; }
 #line .strip { display:inline-block; width:64px; height:8px; margin:0 6px -1px; border:1px solid #4a5260; border-radius:2px; position:relative; vertical-align:middle; }
 #line .strip-mark { position:absolute; top:0; bottom:0; width:3px; background:var(--accent); }
-/* the view's window over a document kept in view off the view's centre (issue #141): an edge at each end the view has not
-   run past, none at an end it has, where the window runs open to the strip's end */
-#line .strip-window { position:absolute; top:0; bottom:0; min-width:2px; background:rgba(127,178,255,.3); border:0 solid var(--accent); border-left-width:2px; border-right-width:2px; }
+/* the view's window over a document kept in view off the view's centre, in the window mark a box's history strip holds
+   the version it shows in too (P-REG's WINDOW): an edge at each end the view has not run past, none at an end it has,
+   where the window runs open to the strip's end */
+#line .strip-window { position:absolute; top:0; bottom:0; min-width:2px; background:var(--window-fill); border:0 solid var(--window-ink); border-left-width:var(--window-edge); border-right-width:var(--window-edge); }
 #line .strip-window.open-start { border-left-width:0; }
 #line .strip-window.open-end { border-right-width:0; }
 /* the position's slot: its words as wide as the document's widest position, then the strip — the words empty below the

@@ -22,18 +22,21 @@
 // whole mark the list's (`residueAtScreen`) — and the documents as their
 // columns, one box a document showing one version of it (FP-22; N-GO's
 // `shownIn`): the version's own text, its fold, its bars and its label, and
-// the box's document's edge, landmark, badge, history strip, connections and
-// tails, which stand as they are whichever version it shows. A document's one
-// edge traces the outside of its columns (P-LAY's `outline`), the edition or
+// the box's document's edge, landmark, badge, connections and tails, which
+// stand as they are whichever version it shows. A document's one edge
+// traces the outside of its columns (P-LAY's `outline`), the edition or
 // draft edge its weight, so length reads as a count of columns (FP-12); a
 // document whose text has not arrived is its estimated columns, one whose
 // extent is unread its first column slot; its label, its contents
 // line (T-LAYER's `docLabel`) — its first line where those words stand in its
 // column (P-LAY's `leadOf`), its address at the end of that row, the end of
 // the outline's first row, a kept document's clause after its address
-// (FP-23) — and the members' marks on the strip along its
-// outline's top; a document a read answered `withheld`, whether the index
-// lists it or not, as the withheld box (B1-S2). The mid connections come
+// (FP-23) — and its history strip along its outline's top (`drawStrip`;
+// FP-22, FP-26): its document's members as ticks in chain order, the head in
+// a triangle of its own where the board ended the chain there, and the
+// version the box shows held in the one line's window mark (P-REG's WINDOW);
+// a document a read answered `withheld`, whether the index lists it or not,
+// as the withheld box (B1-S2). The mid connections come
 // from LK's `connections`, each end at the outline that draws a document or
 // the mark that holds it — none where the plane draws its document nowhere
 // (`drawsDoc`, the one test LK reads through the reader the app hands it) —
@@ -124,8 +127,8 @@ import { lodOf, residueDepth, LOD_TXT_LO } from './lod.js';
 import { docBox, accountCell, boardCell, boardLabelCell, intersects, continuationCell, withinContinuation, accountAt, membersAt, markKey, continuationOf } from './projection.js';
 import { bars, outline, outlineRects, firstRow, leadOf, GUTTER } from './layout.js';
 import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, inFace, runWidth, drawRun, LINE_BOX } from './labels.js';
-import { COL, EDGE, HUE, LABEL_MIN_PX, RING, TAIL, TARGET, ADDRESS } from './register.js';
-import { documentOf, accountOf } from '../model/address.js';
+import { COL, EDGE, HUE, LABEL_MIN_PX, RING, TAIL, TARGET, ADDRESS, WINDOW, STRIP } from './register.js';
+import { documentOf, accountOf, memberOf, isTrunkMember } from '../model/address.js';
 import * as FOCUS from '../nav/focus.js';
 import { t, markCount } from '../strings.js';
 
@@ -197,6 +200,18 @@ import { t, markCount } from '../strings.js';
  * @property {Rect[]} rects those lines' rects
  */
 
+/**
+ * @typedef {Object} DrawnStrip — a box's history strip the frame drew (`drawStrip`)
+ * @property {string} place the version its box shows (N-GO's `shownIn`)
+ * @property {string} doc its box's document
+ * @property {number} n the members it marks, D.1 … D.n in chain order
+ * @property {number | null} held the member its window holds: the one its box shows; null where the box shows none of them — a daughter
+ * @property {number | null} head the member drawn in the head's triangle: n, where the board ended the chain there; null where it is not known to end there
+ * @property {boolean} open its window runs open past its last member, no edge at its end: the plain address, its chain not known to end there
+ * @property {Rect} rect its ticks' extent on screen, from its first member's left to its last's right
+ * @property {Rect | null} window its window's extent on screen; null where it holds none
+ */
+
 /** @type {HTMLCanvasElement | null} */
 let cv = null;
 /** @type {CanvasRenderingContext2D | null} */
@@ -213,6 +228,8 @@ let DPR = 1;
  * mid connections drawn, each between two places, a stub where one of them
  * stands out of view, the count set on its stroke where the pass set one,
  * `tails` the tails drawn, each with its links and the label set at its end,
+ * `strips` the history strips drawn, each with the members it marks, the one
+ * its window holds and its head (`DrawnStrip`),
  * `labels` the labels set — the connections' counts, the tails' labels and
  * the trail's pip numbers among them — `labelsLeftOut` the parts the pass left out, each with
  * the rule that left it out, `ring` the focused element's box on screen the
@@ -224,6 +241,7 @@ export const stats = {
   residueMarks: /** @type {ResidueMark[]} */ ([]),
   connections: /** @type {DrawnConnection[]} */ ([]),
   tails: /** @type {DrawnTail[]} */ ([]),
+  strips: /** @type {DrawnStrip[]} */ ([]),
   drawn: /** @type {string[]} */ ([]), labelled: /** @type {string[]} */ ([]), yielded: /** @type {string[]} */ ([]),
   bars: /** @type {Array<[string, number]>} */ ([]), yieldedLines: /** @type {Array<[string, number]>} */ ([]), barred: 0,
   labels: /** @type {import('./labels.js').SetLabel[]} */ ([]),
@@ -518,6 +536,48 @@ function drawMark(m, pass, seen, ringed) {
   return { key: m.key, account: m.account, k: m.k, n, exact, newest: m.members[n - 1], members: m.members, alpha: m.alpha, lines: [], newestLines: [], newestTarget: band, rect };
 }
 
+/**
+ * A box's history strip (see the head; foundations §2.1's register), at
+ * P-REG's STRIP: its document's members D.1 … D.n as ticks in chain order —
+ * n the members the model counted of its chain, or the member its box shows
+ * where that is later, every member before it standing — the last in the
+ * head's triangle only where the board ended the chain there (T-LAYER's
+ * `chainOf`), so no strip claims a latest the board did not give; and the
+ * member its box shows (N-GO's `shownIn`) held in P-REG's WINDOW mark: a
+ * pinned member its own, the plain address the head where the chain ended,
+ * else the last member counted, the window open past it, for the text there
+ * is that member's or a later one's. Its window's fill first, then the ticks
+ * and the head, then its edges, in the gaps either side of the member, so
+ * the member's own shape stands inside its window. None where it would mark
+ * fewer than two members.
+ * @param {CanvasRenderingContext2D} c
+ * @param {Doc} d the version the box shows
+ * @param {string} doc the box's document
+ * @param {number} x where its first tick stands, on screen
+ * @param {number} top its outline's top, on screen
+ * @returns {DrawnStrip | null}
+ */
+function drawStrip(c, d, doc, x, top) {
+  const pinned = d.addr !== doc, k = pinned && isTrunkMember(d.addr) ? memberOf(d.addr) : null;
+  const n = Math.max(REC.doc(doc).members ?? 0, k ?? 0);
+  if (n < 2) return null;
+  const head = LAYER.chainOf(doc) === n ? n : null, held = pinned ? k : n, open = !pinned && head == null;
+  const { tick, h, pitch, pad } = STRIP, gap = pitch - tick, y = top + STRIP.inset;
+  /** a member's tick's left, on screen */
+  const at = (/** @type {number} */ i) => x + (i - 1) * pitch;
+  const win = held == null ? null : { x: at(held) - gap, y: y - pad, w: tick + 2 * gap + (open ? pitch : 0), h: h + 2 * pad };
+  if (win) { c.fillStyle = WINDOW.fill; c.fillRect(win.x, win.y, win.w, win.h); }
+  c.fillStyle = COL.land;
+  for (let i = 1; i <= n; i++) if (i !== head) c.fillRect(at(i), y, tick, h);
+  if (head) { const hx = at(head); c.beginPath(); c.moveTo(hx, y + h); c.lineTo(hx + tick / 2, y - pad); c.lineTo(hx + tick, y + h); c.closePath(); c.fill(); }
+  if (win) {
+    c.fillStyle = WINDOW.ink;
+    c.fillRect(win.x, win.y, WINDOW.edge, win.h);
+    if (!open) c.fillRect(win.x + win.w - WINDOW.edge, win.y, WINDOW.edge, win.h);
+  }
+  return { place: d.addr, doc, n, held, head, open, rect: { x: at(1), y, w: at(n) + tick - at(1), h }, window: win };
+}
+
 /** the documents as extents; the continuations too small to stand whole as marks; the mid connections, against the visible view `seen`; a label held below the one line but where the line names its document (`named`) */
 function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} */ alpha, /** @type {Pass} */ pass, /** @type {Rect} */ seen, /** @type {import('../line/line.js').Named} */ named) {
   if (!ctx) return 0;
@@ -594,7 +654,7 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
   stats.residueMarks = marks.map((m) => drawMark(m, pass, seen, ringOn && m.k === cont.held && m.members.includes(ringOn) ? ringOn : null));
   for (const { d, alpha: a } of vis) {
     ctx.globalAlpha = a;
-    // the version the box shows draws its text and its label; the box's document its edge, its landmark, its badge and its strip
+    // the version the box shows draws its text and its label; the box's document its edge, its landmark, its badge and its strip, which holds that version
     const doc = documentOf(d.addr) || d.addr, trunk = REC.doc(doc);
     const box = docBox(d.addr), f = LAYER.foldOf(d);
     const draft = LAYER.isDraft(trunk);
@@ -627,8 +687,8 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
       pass.labels.push({ kind: 'doc', place: d.addr, within: { x: X, y: Y, w: W, h: H }, x: sx(box.x + col.x), y: Math.max(Y, sy(box.y + lead.y + lead.h / 2) - rowH / 2), align: 'left', alpha: a, plate: ground,
         contents: { lead: lab.lead, px: fsPx, address: lab.address, kept: lab.kept, from: sx(box.x + lead.x), to: sx(box.x + col.x + col.w), end: X + W },
         parts: lab.parts, region: lab.region, hold: named.doc === doc ? null : { rects, pad: g * cam.scale, plate: ground } });
-      // the history strip along the first row's top: the members as marks
-      if (trunk.members && trunk.members > 1 && W > 60) { ctx.fillStyle = COL.land; for (let k = 0; k < trunk.members; k++) ctx.fillRect(X + k * 6, sy(box.y + row.y) + 2, 4, 2); }
+      // the history strip along the outline's top, from the first row's text: the members, the head, the version the box shows
+      if (W > 60) { const s = drawStrip(ctx, d, doc, X, sy(box.y + row.y)); if (s) stats.strips.push(s); }
     }
     if (W < 26) continue;
     if (d.refused === 'withheld') { if (W > 60) { ctx.strokeStyle = COL.greek; ctx.setLineDash([2, 4]); ctx.strokeRect(X + W * 0.04, Y + H * 0.3, W * 0.92, H * 0.5); ctx.setLineDash([]); } continue; }
@@ -1014,7 +1074,7 @@ export function draw() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = COL.bg; ctx.fillRect(0, 0, VW, VH);
   ctx.textBaseline = 'alphabetic';
-  stats.linksDrawn = 0; stats.linesDrawn = 0; stats.clusters = 0; stats.docsDrawn = 0; stats.residueMarks = []; stats.connections = []; stats.tails = []; stats.drawn = []; stats.labelled = []; stats.yielded = [];
+  stats.linksDrawn = 0; stats.linesDrawn = 0; stats.clusters = 0; stats.docsDrawn = 0; stats.residueMarks = []; stats.connections = []; stats.tails = []; stats.strips = []; stats.drawn = []; stats.labelled = []; stats.yielded = [];
   stats.bars = []; stats.yieldedLines = []; stats.barred = 0; stats.labels = []; stats.labelsLeftOut = []; stats.ring = null; stats.arrival = [];
   /** @type {Pass} */
   const pass = { labels: [], shapes: [] };

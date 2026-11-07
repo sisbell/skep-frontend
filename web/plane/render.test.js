@@ -11,11 +11,13 @@
 // only where the region is named — each line on its own plate, its address
 // in the title's ink (FP-26); a kept document's clause after its address on
 // its label below its reading scale, and its account's label counting it at
-// far scale, while it stands kept alone (FP-23); and a continuation's mark two targets where it
+// far scale, while it stands kept alone (FP-23); a continuation's mark two targets where it
 // holds two — its newest member's label, as the version its box shows, in a
 // band at its foot, and the rest of the mark, its count in what it counts —
 // one where it is too small, and a member the walk's ring stands on ringed
-// on the mark with its name and place (issue #42).
+// on the mark with its name and place (issue #42); and a box's history strip
+// holding the version its box shows in the window mark, the head in its own
+// triangle only where the board ended the chain there (FP-22, FP-26).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -32,7 +34,7 @@ import * as F from '../model/frames.js';
 import { boardCell, accountCell, docBox, accountAt, continuationCell, DOC_W } from './projection.js';
 import { markScale, lodOf } from './lod.js';
 import { leadOf, firstRow, GUTTER } from './layout.js';
-import { COL, TARGET, ADDRESS } from './register.js';
+import { COL, TARGET, ADDRESS, WINDOW, STRIP } from './register.js';
 import { recorder } from '../test/canvas.js';
 import { t, markCount, lastRead } from '../strings.js';
 import { byteLength } from '../util.js';
@@ -280,4 +282,99 @@ test('the walk\'s ring on a member the mark holds stands on the mark, and the ma
     RENDER.draw();
     assert.ok(sameRect(RENDER.stats.ring, firstMark().rect) && firstMark().lines.join(' ') === markCount(12, true), 'the mark\'s own stop: the ring on it, its count');
   } finally { REC._reset(); CAM.setViewport(1440, 900); }
+});
+
+test('a box\'s history strip marks its document\'s members in chain order, the head in a triangle of its own where the board ended the chain there, and the version the box shows in the one line\'s window mark — a pinned member its own, the plain address the head, else its last member counted with the window open past it — a pinned member past the count standing with every member before it, and a daughter in no member\'s window (issue #241\'s design decision: "History strips mark `go.shownIn`\'s version with the line\'s window mark, and the head keeps its shape")', async () => {
+  const D = '1.0.1.0.3', text = 'Notes on the artifact chain of custody.';
+  const platform = { document: globalThis.document, window: globalThis.window };
+  const listens = { addEventListener() {} };
+  globalThis.document = /** @type {any} */ ({ ...listens, activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens, getSelection: () => null });
+  const { ctx: canvas, rects, filled } = recorder();
+  RENDER.attach(/** @type {any} */ ({ getContext: () => canvas }));
+  CAM.setViewport(4000, 900);
+  REC._reset();
+  const box = docBox(D);
+  /** em 3 over the box, below its reading scale */
+  let view = { x: box.x + box.w / 2, y: box.y + box.h / 2, scale: 1 };
+  /** the box left on a version — its plain address unpinning it — as a LEAP to that version leaves it */
+  const leave = async (/** @type {string} */ addr) => { const leap = GO.leapTo(addr); CAM.set(view); await leap; };
+  try {
+    REC.setBoard({ board: 'b-1', name: '', origin: 'http://127.0.0.1:8642' });
+    REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true });
+    REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: text, standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+    // the document and each version its box is left on, its text held, so a LEAP to it pins the box as the act is made
+    for (const a of [D, D + '.2', D + '.10', D + '.2.1']) {
+      REC.takeSpanSet(a, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
+      REC.takeDelivery(a, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
+    }
+    view = { ...view, scale: 3 / LAYER.foldOf(REC.doc(D)).fs };
+    /** the box left on a version, the frame then drawn over it: its strip, its members' ticks' lefts, and the ticks, the window's fill, its edges and the head's triangle the recorder kept along it, each rect with its place in the drawing order */
+    const strip = async (/** @type {string} */ addr) => {
+      await leave(addr);
+      assert.equal(GO.shownIn(D), addr, `the box shows ${addr}`);
+      rects.length = 0; filled.length = 0;
+      RENDER.draw();
+      const s = /** @type {import('./render.js').DrawnStrip} */ (RENDER.stats.strips.find((x) => x.doc === D));
+      assert.ok(s, `${addr}: its strip drawn`);
+      const at = (/** @type {number} */ i) => s.rect.x + (i - 1) * STRIP.pitch;
+      const along = (/** @type {{y: number, h: number}} */ r) => r.y >= s.rect.y - STRIP.pad - 1e-6 && r.y + r.h <= s.rect.y + s.rect.h + STRIP.pad + 1e-6;
+      const kept = (/** @type {string} */ fill) => rects.flatMap((r, i) => (r.fill === fill && along(r) ? [{ ...r, i }] : []));
+      return {
+        s, at, ticks: kept(COL.land), fills: kept(WINDOW.fill), edges: kept(WINDOW.ink),
+        heads: filled.filter((f) => f.fill === COL.land).map((f) => f.path.flatMap((g) => g.at)),
+      };
+    };
+    /** the strip as the gate reads it */
+    const facts = (/** @type {import('./render.js').DrawnStrip} */ s) => ({ place: s.place, doc: s.doc, n: s.n, held: s.held, head: s.head, open: s.open });
+    /** the window over member k: one fill over its tick and the gaps beside it — a member's pitch past them where it runs open — above and below the ticks and on no neighbour's tick; an edge at each end it closes, in those gaps; its fill drawn first, then the ticks, then its edges */
+    const holds = (/** @type {Awaited<ReturnType<typeof strip>>} */ f, /** @type {number} */ k) => {
+      const { s, at, ticks, fills, edges } = f, gap = STRIP.pitch - STRIP.tick, w = fills[0];
+      assert.equal(fills.length, 1, `member ${k}: one window`);
+      assert.ok(sameRect(w, /** @type {{x: number, y: number, w: number, h: number}} */ (s.window)), 'drawn where the strip records it');
+      assert.ok(Math.abs(w.x - (at(k) - gap)) < 1e-6 && Math.abs(w.w - (STRIP.tick + 2 * gap + (s.open ? STRIP.pitch : 0))) < 1e-6, `over member ${k}'s tick and the gaps beside it${s.open ? ', open a member past it' : ''}: ${JSON.stringify(w)}`);
+      assert.ok(w.y < s.rect.y && w.y + w.h > s.rect.y + s.rect.h, 'above and below the ticks');
+      assert.ok((k === 1 || w.x >= at(k - 1) + STRIP.tick - 1e-6) && (k === s.n || w.x + w.w <= at(k + 1) + 1e-6), 'on no neighbour\'s tick');
+      assert.deepEqual(edges.map((e) => [e.x - w.x, e.w, e.h]), [[0, WINDOW.edge, w.h], ...(s.open ? [] : [[w.w - WINDOW.edge, WINDOW.edge, w.h]])], s.open ? 'an edge at its start alone' : 'an edge at each end, in the gaps');
+      assert.ok(ticks.every((t) => t.i > w.i) && edges.every((e) => ticks.every((t) => e.i > t.i)), 'its fill drawn first, then the ticks, then its edges');
+    };
+    /** the members drawn as ticks, by their place along the strip */
+    const ticked = (/** @type {Awaited<ReturnType<typeof strip>>} */ f) => f.ticks.map((t) => Math.round((t.x - f.at(1)) / STRIP.pitch) + 1);
+    /** the head's triangle at member k: one tick wide, its base on the ticks' foot, its apex at the window's top */
+    const headAt = (/** @type {Awaited<ReturnType<typeof strip>>} */ f, /** @type {number} */ k) => {
+      const [p] = f.heads, xs = p.map((q) => q.x), ys = p.map((q) => q.y);
+      assert.equal(f.heads.length, 1, 'one head');
+      assert.deepEqual([Math.min(...xs) - f.at(k), Math.max(...xs) - f.at(k), Math.min(...ys) - f.s.rect.y, Math.max(...ys) - f.s.rect.y], [0, STRIP.tick, -STRIP.pad, STRIP.h], `member ${k} in the head's triangle`);
+      return p;
+    };
+    REC.takeMembers(D, 3);
+    const pinned = await strip(D + '.2');
+    assert.deepEqual(facts(pinned.s), { place: D + '.2', doc: D, n: 3, held: 2, head: 3, open: false }, 'pinned on version 2 of 3: the window on member 2, the head on 3');
+    assert.deepEqual(ticked(pinned), [1, 2], 'members 1 and 2 as ticks');
+    holds(pinned, 2);
+    headAt(pinned, 3);
+    const plain = await strip(D);
+    assert.deepEqual(facts(plain.s), { place: D, doc: D, n: 3, held: 3, head: 3, open: false }, 'the plain address, the chain ended at 3: the window on the head');
+    holds(plain, 3);
+    const w = /** @type {{x: number, y: number, w: number, h: number}} */ (plain.s.window);
+    assert.ok(headAt(plain, 3).every((q) => q.x >= w.x && q.x <= w.x + w.w && q.y >= w.y && q.y <= w.y + w.h), 'the head\'s triangle inside the window, its shape kept');
+    REC.takeMembers(D, 8, false);
+    const open = await strip(D);
+    assert.deepEqual(facts(open.s), { place: D, doc: D, n: 8, held: 8, head: null, open: true }, 'the chain read to 8, not known to end there: the window on member 8, open past it, no head');
+    assert.deepEqual([ticked(open), open.heads], [[1, 2, 3, 4, 5, 6, 7, 8], []], 'every member a tick, none the head\'s');
+    holds(open, 8);
+    const past = await strip(D + '.10');
+    assert.deepEqual(facts(past.s), { place: D + '.10', doc: D, n: 10, held: 10, head: null, open: false }, 'pinned on version 10, past the 8 counted: ten members, the window closed on member 10');
+    assert.deepEqual([ticked(past), past.heads], [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10], []], 'every member to it a tick');
+    holds(past, 10);
+    REC.takeMembers(D, 3);
+    const daughter = await strip(D + '.2.1');
+    assert.deepEqual(facts(daughter.s), { place: D + '.2.1', doc: D, n: 3, held: null, head: 3, open: false }, 'a daughter beside version 2: no member is the version the box shows');
+    assert.deepEqual([daughter.s.window, daughter.fills, daughter.edges, ticked(daughter)], [null, [], [], [1, 2]], 'no window, the members still marked');
+    headAt(daughter, 3);
+  } finally {
+    await leave(D);
+    REC._reset(); CAM.setViewport(1440, 900);
+    globalThis.document = platform.document; globalThis.window = platform.window;
+  }
 });

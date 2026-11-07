@@ -3,11 +3,13 @@
 // readable em, a document's address set at one size, never below it; the
 // tail shorter than a gutter at the smallest em an article
 // stands at; the corner narrower compact than whole, holding a kept word
-// whole; the three faces each their job's, the shipped two waited on in
-// every style the style declares; the CSS variables carry the same values.
+// whole; a history strip's window holding one member, its edges in the gaps
+// beside it and inside the strip's inset; the three faces each their job's,
+// the shipped two waited on in every style the style declares; the CSS
+// variables carry the same values.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HUE, VISITED_ALPHA, KIND_FORM, EDGE, LABEL_MIN_PX, ADDRESS, TAIL, CORNER, FACE, SHIPPED, cornerWidth, cssVariables } from './register.js';
+import { HUE, VISITED_ALPHA, KIND_FORM, EDGE, LABEL_MIN_PX, ADDRESS, TAIL, CORNER, FACE, SHIPPED, WINDOW, STRIP, cornerWidth, cssVariables } from './register.js';
 import { LOD_TXT_LO, UNMOUNT_EM } from './lod.js';
 import { GUTTER } from './layout.js';
 
@@ -37,6 +39,11 @@ test('the CSS variables carry the register\'s values', () => {
   assert.equal(v['--visited-alpha'], String(VISITED_ALPHA));
   assert.deepEqual([v['--corner-px'], v['--corner-w'], v['--corner-compact-w'], v['--corner-pad']], [CORNER.px + 'px', CORNER.whole + 'em', CORNER.compact + 'em', CORNER.pad + 'px'], 'the corner\'s sizes, which the style sets it by');
   assert.deepEqual([v['--face-reading'], v['--face-client'], v['--face-ident']], [FACE.reading, FACE.client, FACE.ident], 'the three faces\' stacks');
+  assert.deepEqual([v['--window-fill'], v['--window-ink'], v['--window-edge']], [WINDOW.fill, WINDOW.ink, WINDOW.edge + 'px'], 'the window mark, which the one line\'s strip draws by and a box\'s history strip shares (issue #241)');
+});
+test('a history strip\'s window holds one member: its edges stand in the gaps either side of it, never on a neighbour\'s tick, and its top below the outline\'s top, the head\'s apex at it (issue #241)', () => {
+  assert.ok(STRIP.pitch - STRIP.tick >= WINDOW.edge && WINDOW.edge > 0, `an edge of ${WINDOW.edge} px in a gap of ${STRIP.pitch - STRIP.tick} px`);
+  assert.ok(STRIP.inset > STRIP.pad && STRIP.pad > 0 && STRIP.h > 0, `the window ${STRIP.pad} px above the ticks, inside their ${STRIP.inset} px inset`);
 });
 test('a document\'s words are set in Charter, the client\'s in the system\'s face, addresses and fingerprints in Atkinson Hyperlegible Mono, each falling back to its generic family; the shipped two waited on in Charter\'s four styles and the mono\'s one (issue #16)', () => {
   assert.deepEqual(FACE, { reading: 'Charter, serif', client: 'system-ui, sans-serif', ident: '"Atkinson Hyperlegible Mono", monospace' });

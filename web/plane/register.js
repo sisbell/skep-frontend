@@ -20,7 +20,12 @@
 // the hold its gap below the one line, where a label and a corner whose
 // place has risen under the line stand level (FP-26); the corner its size
 // whole and compact, its padding and its gap from the text, which T-LAYER
-// places it by and P-LAY's fit holds a column beside (FP-26). The type takes
+// places it by and P-LAY's fit holds a column beside (FP-26); the window
+// mark its fill, its edges' ink and their width, the one mark the one line's
+// position strip and a box's history strip hold what the reader holds in
+// (FP-22, FP-26); the history strip its members' ticks — their size, their
+// pitch, their inset below the outline's top — and the window's reach above
+// and below them, the head's triangle standing in it. The type takes
 // three faces, each one job (`FACE`): a document's own words wherever the
 // page shows them, the client's words, and an address or a fingerprint; the
 // two shipped faces' styles are the ones APP waits on before the first
@@ -147,6 +152,27 @@ export const CORNER = Object.freeze({ px: 11, whole: 11, compact: 7, pad: 6, gap
 export const cornerWidth = (/** @type {boolean} */ compact) => (compact ? CORNER.compact : CORNER.whole) * CORNER.px;
 
 /**
+ * The window mark (FP-22, FP-26): the held stretch of a strip filled with
+ * `fill`, an edge `edge` px wide in `ink` at each end it closes, none at an
+ * end it runs open past — the one line's position strip the view's window
+ * over the document it names, a box's history strip the version the box
+ * shows. The style reads them (`cssVariables`); P-RENDER draws the history
+ * strip's by them.
+ */
+export const WINDOW = Object.freeze({ fill: 'rgba(127,178,255,0.3)', ink: '#7fb2ff', edge: 2 });
+
+/**
+ * A box's history strip (foundations §2.1's register; P-RENDER's): its
+ * document's members as ticks in chain order, each `tick` px wide and `h` px
+ * tall, `pitch` px apart, `inset` px below its outline's top — the head a
+ * triangle one tick wide, its base on the ticks' foot and its apex at the
+ * window's top — and the window mark (`WINDOW`) over the member its box
+ * shows and the gap either side of it, `pad` px above and below the ticks,
+ * its edges in those gaps (register.test.js holds them to it).
+ */
+export const STRIP = Object.freeze({ tick: 4, h: 2, pitch: 6, inset: 2, pad: 1 });
+
+/**
  * The smallest size a label on the plane is set at, in px — the far labels'
  * size, above P-LOD's readable em (foundations §2.1; S3 Q4).
  */
@@ -190,6 +216,7 @@ export function cssVariables() {
     '--visited-alpha': String(VISITED_ALPHA),
     '--col-bg': COL.bg, '--col-doc': COL.doc, '--col-text': COL.text, '--col-title': COL.title, '--col-dim': COL.greek, '--col-land': COL.land, '--col-focus': COL.focus,
     '--corner-px': CORNER.px + 'px', '--corner-w': CORNER.whole + 'em', '--corner-compact-w': CORNER.compact + 'em', '--corner-pad': CORNER.pad + 'px',
+    '--window-fill': WINDOW.fill, '--window-ink': WINDOW.ink, '--window-edge': WINDOW.edge + 'px',
     '--face-reading': FACE.reading, '--face-client': FACE.client, '--face-ident': FACE.ident,
   };
 }

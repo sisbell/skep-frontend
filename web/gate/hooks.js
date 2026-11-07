@@ -27,8 +27,9 @@
 // the places the line names (`named`) and
 // where a reading view frames a column (`frameOf`); the continuations' marks
 // (`residues`), the mid connections with their counts and stubs
-// (`connections`), the labels the canvas set and the parts it left out
-// (`labels`, `labelsLeftOut`); the teleports and the landing — the version
+// (`connections`), the boxes' history strips (`strips`), the labels the
+// canvas set and the parts it left out (`labels`, `labelsLeftOut`); the
+// teleports and the landing — the version
 // each box shows (`go.shownIn`), the arrival, what a landing says and the
 // mirror's descriptions (`go.landing`, `go.described`), the step among its
 // runs (`go.step`, `go.stepTo`) and its line as it stands (`landingLine`) —
@@ -632,6 +633,8 @@ export function install(deps) {
     connections: () => RENDER.stats.connections.slice(),
     /** the tails the last frame drew: each one's site, its form — leaving a box or a mark, or a passage's line — the place and the documents it leaves, its links and their far documents, where its stroke leaves and ends, the line it leaves at, and the lines the label pass set at its end */
     tails: () => RENDER.stats.tails.map((tl) => ({ ...tl })),
+    /** the history strips the last frame drew: each one's box's document and the version it shows, the members it marks, the one its window holds, its head where the board ended the chain, whether its window runs open, and its ticks' and its window's rects on screen */
+    strips: () => RENDER.stats.strips.map((s) => ({ ...s })),
     /** the labels the last frame set, in the order they were set — a connection's count under its two places, `a|b` sorted — the trail's pip numbers last */
     labels: () => RENDER.stats.labels.slice(),
     /** the parts of labels the last frame left out, each with the rule that left it out */

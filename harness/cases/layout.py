@@ -2685,8 +2685,10 @@ def version_holds(ctx, r):
     lit, and the trail one entry on, at the passage's counterpart; the list standing through the move, read again at
     version 1, its read act the current one;
     (b) Mod+- until mid scale, the box's article down: it still shows version 1, its one label the version's address past the region's prefix,
-    the mirror listing the box once, by the version; Mod+= as many times back: the box, the line and the camera as they
-    were, the trail unmoved;
+    the mirror listing the box once, by the version; its history strip marking every member the model counted, version 1
+    held in the window mark, closed at both ends — its edges and member 1's tick in their own colours on the canvas as
+    drawn — and the last member in the head's triangle where the board ended the chain there (issue #241); Mod+= as many
+    times back: the box, the line and the camera as they were, the trail unmoved;
     (c) Mod+[: the trunk head again, its article and corner alone, at the view the move left, the passage's line where it
     stood, the marker unlit; Mod+]: version 1 again, at the view Back left; then a click on the box at mid scale, as a
     person clicks a document there: the teleport lands in version 1, the box still pinned;
@@ -2768,6 +2770,22 @@ def version_holds(ctx, r):
             {'labels': [[l['place'], [x['text'] for x in l['lines']]] for l in labels], 'left_out': [[o['place'], o['reason']] for o in left]})
     r.check(sibs == [m1] and bool(mid['focus']) and mid['focus']['addr'] == m1, 'at mid the walk stands on the box by the version it shows, and the mirror lists the box once, by that version (issue #154)',
             {'siblings': sibs, 'focus': mid['focus']})
+    # the box's history strip as the last frame drew it, and the canvas's own pixels at its window's edges and member 1's tick
+    strip = ctx.js('''((a) => { const s = window.__skep.strips().find((x) => x.doc === a); if (!s) return null;
+      const c = document.getElementById('plane'), k = c.width / c.clientWidth, g = c.getContext('2d'), w = s.window;
+      const px = (x, y) => [...g.getImageData(Math.floor(x * k), Math.floor(y * k), 1, 1).data].slice(0, 3);
+      return {...s, pixels: w && {start: px(w.x + 1, w.y + w.h / 2), end: px(w.x + w.w - 1, w.y + w.h / 2), tick: px(s.rect.x + 2, s.rect.y + s.rect.h / 2)}}; })(%s)''' % json.dumps(VERSIONED))
+    chain = ctx.js('window.__skep.model.doc(%s)' % json.dumps(VERSIONED))
+    reg = ctx.js('import("./plane/register.js").then(({WINDOW, COL}) => ({ink: WINDOW.ink, land: COL.land}))')
+    rgb = lambda h: [int(h[i:i + 2], 16) for i in (1, 3, 5)]
+    near_rgb = lambda a, b: bool(a) and all(abs(x - y) <= 3 for x, y in zip(a, b))
+    want = {'place': m1, 'doc': VERSIONED, 'n': chain['members'], 'held': 1, 'head': chain['members'] if chain['ended'] else None, 'open': False}
+    got = strip and {k: strip[k] for k in want}
+    pixels = (strip or {}).get('pixels') or {}
+    r.check(got == want and (chain['members'] or 0) >= 2 and near_rgb(pixels.get('start'), rgb(reg['ink'])) and near_rgb(pixels.get('end'), rgb(reg['ink'])) and near_rgb(pixels.get('tick'), rgb(reg['land'])),
+            'at mid the box\'s history strip marks its %s members, version 1 held in the window mark closed at both ends — its edges and member 1\'s tick in their own colours on the canvas — and the last member in the head\'s triangle where the board ended the chain there (issue #241)' % chain['members'],
+            {'strip': got, 'want': want, 'pixels': pixels, 'rect': strip and strip['rect'], 'window': strip and strip['window'], 'ink': reg})
+    seen['strip'] = {'strip': got, 'pixels': pixels}
     for _ in range(out):
         ctx.drv.key('=', code='Equal', mods=('Meta',))
         ctx.settle()
