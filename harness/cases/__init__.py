@@ -385,12 +385,14 @@ class Context:
             env['provider_log_error'] = str(e)
 
     # ---- the page -----------------------------------------------------------
-    def open_page(self, gate):
+    def open_page(self, gate, **keys):
         """the page opened afresh at the run's URL with `gate` its `?gate=` value — `all` the owner's signed page,
-        `guest` the page at guest class, which asks no session — settled on its own signal; the page it replaces
-        closes its session at `pagehide`. What the new page booted with is returned"""
+        `guest` the page at guest class, which asks no session — and each of `keys` its query key's value in place of
+        the run URL's own (`provider`, `port`), settled on its own signal; the page it replaces closes its session at
+        `pagehide`. What the new page booted with is returned"""
         url = urllib.parse.urlsplit(self.page)
-        query = [(k, v) for k, v in urllib.parse.parse_qsl(url.query, keep_blank_values=True) if k != 'gate'] + [('gate', gate)]
+        given = dict(keys, gate=gate)
+        query = [(k, v) for k, v in urllib.parse.parse_qsl(url.query, keep_blank_values=True) if k not in given] + list(given.items())
         self.drv.navigate(urllib.parse.urlunsplit(url._replace(query=urllib.parse.urlencode(query))))
         self.drv.settle(40)
         self.drv.pump_events(0.5)

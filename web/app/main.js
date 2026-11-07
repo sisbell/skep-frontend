@@ -4,15 +4,18 @@
 // camera, the gate's phase, the frame buffer the gate reads (`frames`, at
 // most FRAME_CAP of them) and what boot found (`bootInfo`), the shipped faces
 // as the first frame found them among it.
-// Boot (`boot`): the URL's two flags — `?provider=<secret>` selects the
-// bridge client over `skep-dev serve` (S-14 (b), S-36 (a): the one flag, the
-// port the verb's default, the secret handed to B-DEV alone; FP-15), and
-// `?gate=` loads `web/gate/` by `import()` (S-22 (a)), the ledger first,
-// before any call. Absent the provider flag the page boots against the port
-// with no adapter and the one line says so. `?gate=guest` boots at guest
-// class with `session(board)` never asked, so every read takes the guest
-// form and every screen its guest arm. Then the board, by M-PUMP's
-// `openBoard`: `boards()`, and for the board held its key store
+// Boot (`boot`): the URL's flags — `?provider=<secret>` selects the bridge
+// client over `skep-dev serve` (S-14 (b); FP-15), the secret handed to B-DEV
+// alone, and beside it alone `?port=` names the provider's port on loopback
+// (S-36 (b); B-DEV's `providerAt`), the verb's default where the URL carries
+// none; a `port` naming no port makes no client, so the page boots against
+// the port with no adapter, dials nothing, and the one line says why
+// (B-PORT's `bad_port`). `?gate=` loads `web/gate/` by `import()` (S-22 (a)),
+// the ledger first, before any call. Absent the provider flag the page boots
+// against the port with no adapter and the one line says so. `?gate=guest`
+// boots at guest class with `session(board)` never asked, so every read
+// takes the guest form and every screen its guest arm. Then the board, by
+// M-PUMP's `openBoard`: `boards()`, and for the board held its key store
 // (`fingerprint()`, read before the session so the one line's device label
 // is taken with it — FP-34), the session by M-PUMP's acquire (S-37 (a);
 // FP-28: the boot's own call, made again where a restart loses the session;
@@ -142,6 +145,8 @@ import { lodOf } from '../plane/lod.js';
 
 const P = new URLSearchParams(location.search);
 const SECRET = P.get('provider');
+/** the provider's origin the URL's `port` names beside the secret (B-DEV's `providerAt`): null where there is no secret, or the value names no port */
+const PROVIDER = SECRET ? DEV.providerAt(P.get('port')) : null;
 const GATE = P.get('gate');
 /** the gate's guest: the page boots at guest class, asking no session */
 const GUEST = GATE === 'guest';
@@ -319,9 +324,9 @@ async function boot() {
     if (took) e.preventDefault();
   });
 
-  // the adapter: the bridge client where the flag stands; nothing otherwise
-  const adapter = SECRET ? DEV.create({ provider: DEV.DEFAULT_PROVIDER, secret: SECRET, record: !!GATE }) : null;
-  PORT.boot(adapter);
+  // the adapter: the bridge client where the flag stands and its port names one; nothing otherwise, the port told why
+  const adapter = SECRET && PROVIDER ? DEV.create({ provider: PROVIDER, secret: SECRET, record: !!GATE }) : null;
+  PORT.boot(adapter, { badPort: !!SECRET && !PROVIDER });
   PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived, onDrop: dropped, stands: () => TRAIL.all().flatMap((e) => [e.addr, ...(GO.scenePair(e) || [])]), readings: TRAIL.readings, onCounted: TRAIL.countedAt, onOpen: () => { void launch(); }, finding: FIND.searched });
   PORT.on('moment', (d) => FACES.moment(/** @type {import('../bridge/shapes').MomentEvent} */ (d)));
   const heldSeen = /** @type {unknown[]} */ ([]);

@@ -7,15 +7,20 @@
 // under its dotted name, the `held.show` row beside the `held` call as
 // `heldShow`, and the two answers to a moment (`answer`, `cancel`); every
 // event (`EVENTS`) as a subscription; and
-// the adapter beneath, handed to `boot` (S-14 (b)). State:
-// the event subscribers and the session watchers alone — no copy of any
-// record. The port composes no frame, decodes no answer and refuses no call:
-// every answer is the adapter's `Outcome` handed up as it came, in the one
-// refusal shape (`{kind, name, …}`, §4.4). The session's notices (FP-28): a
-// call crossing the port that names a session is told to the session
-// watchers — where the page's own `close(session)` goes out, the person's
-// sign-out, and where an answer is refused as from a session the shell does
-// not hold (`lostSession`), the refusal handed up unchanged after the notice.
+// the adapter beneath, handed to `boot` (S-14 (b)). State: the event
+// subscribers, the session watchers and, while no adapter stands beneath it,
+// why none does (`noAdapter`) — no copy of any record. The port composes no
+// frame, decodes no answer and refuses no call an adapter answers: every
+// answer is the adapter's `Outcome` handed up as it came, in the one refusal
+// shape (`{kind, name, …}`, §4.4). With no adapter every call answers the
+// port's own refusal, the page's names and not the crate's: `bad_port` where
+// the boot made none because the page URL's `port` names no port
+// (S-36 (b)), else `no_adapter` — no shell and no provider beneath it. The
+// session's notices (FP-28): a call crossing the port that names a session
+// is told to the session watchers — where the page's own `close(session)`
+// goes out, the person's sign-out, and where an answer is refused as from a
+// session the shell does not hold (`lostSession`), the refusal handed up
+// unchanged after the notice.
 // The event stream's own notices (`StreamNotice`) — its drop, and its reopen
 // after one, which the adapter alone can see — are told to the stream
 // watchers, the port's own shape and no event of the declarations.
@@ -83,22 +88,33 @@ const sessionWatchers = [];
 /** @type {Array<(n: StreamNotice) => void>} */
 const streamWatchers = [];
 
-/** the port's own refusal where no adapter stands beneath it (the page's own name, not the crate's) */
-const NO_ADAPTER = Object.freeze({ kind: /** @type {const} */ ('shell'), name: 'no_adapter' });
+/** the port's own refusal where no adapter was handed to it: no shell and no provider beneath it */
+const NO_ADAPTER = /** @type {Refusal} */ (Object.freeze({ kind: 'shell', name: 'no_adapter' }));
+/** the port's own refusal where the boot made no adapter because the page URL's `port` names no port */
+const BAD_PORT = /** @type {Refusal} */ (Object.freeze({ kind: 'shell', name: 'bad_port' }));
+
+/** @type {Refusal} what every call answers while no adapter stands beneath the port */
+let unreached = NO_ADAPTER;
 
 /**
  * Start the port over an adapter; with none the page reaches nothing and
- * every call answers `no_adapter`.
+ * every call answers the port's own refusal — `bad_port` where `badPort`
+ * says the boot made none because the page URL's `port` names no port, else
+ * `no_adapter`. Each boot sets both afresh.
  * @param {Adapter | null} a
+ * @param {{badPort?: boolean}} [opts]
  */
-export function boot(a) {
+export function boot(a, { badPort = false } = {}) {
   adapter = a;
+  unreached = badPort ? BAD_PORT : NO_ADAPTER;
   if (!a) return;
   a.subscribe((name, data) => emit(name, data));
   a.onStream((n) => { for (const fn of streamWatchers) fn(n); });
 }
 export const adapterName = () => (adapter ? adapter.name : null);
 export const hasAdapter = () => adapter !== null;
+/** the port's own refusal every call answers while no adapter stands beneath it (`boot`): why none does; null while one stands */
+export const noAdapter = () => (adapter ? null : unreached);
 
 /**
  * One call through the adapter, its session's notices told: the page's own
@@ -112,7 +128,7 @@ export const hasAdapter = () => adapter !== null;
  * @returns {Promise<Outcome<T>>}
  */
 function call(name, args) {
-  if (!adapter) return Promise.resolve(/** @type {Outcome<T>} */ ({ refused: /** @type {Refusal} */ (NO_ADAPTER) }));
+  if (!adapter) return Promise.resolve(/** @type {Outcome<T>} */ ({ refused: unreached }));
   const out = adapter.call(name, args);
   const sent = /** @type {{session?: unknown} | null} */ (args)?.session;
   if (name === 'close' && typeof sent === 'string') tell({ closed: sent });

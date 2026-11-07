@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The page's dev server and results collector (the structure record §6.1,
-S-18 (a): `serve.py` serves `web/`, no reliance on `file://` — the provider
-admits ONE page origin exactly, `http://127.0.0.1:8731`).
+S-18 (a): `serve.py` serves `web/`, no reliance on `file://` — each provider
+admits ONE page origin exactly, the gate's `http://127.0.0.1:8731`).
 
     serve.py [port] [--web <dir>] [--results <dir>] [--shots <dir>]
 

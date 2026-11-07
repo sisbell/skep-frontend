@@ -4,15 +4,20 @@
 // network code. Every call is one `POST <provider>/bridge/<name>` with the
 // row's argument object as the body and the run's admission secret in the
 // `Skep-Provider` header — the secret the boot reads from the page URL's
-// `?provider=` (S-36 (a)) and hands to `create`, the provider at the verb's
-// default `http://127.0.0.1:8742`; the secret is held in this module alone
-// and sent nowhere else, admits the page to the provider and grants nothing
-// at the board, and the page holds no token (FP-14). The answer, `{result}`
-// or `{refused}`, is handed up opaque: this module composes no frame, decodes
-// no answer, refuses no call and replays no fixture. Every event comes off
-// one `EventSource` on `/bridge/events?provider=<secret>` (an `EventSource`
-// sends no custom header), one listener per `EventName`, re-emitted by name;
-// an event the declarations do not name is heard by none. The stream's own
+// `?provider=` and hands to `create` with the provider's origin. That origin
+// is always loopback, `http://127.0.0.1:<port>`: the port the page URL's
+// `?port=` names (S-36 (b)), read by `providerAt` — ASCII digits alone,
+// naming 1 to 65535, the origin built from the number — and the verb's
+// default 8742 where the URL carries no `port`; a value naming no port
+// names no provider, and the boot makes no client. The secret is held in
+// this module alone and sent to that origin alone, admits the page to the
+// provider and grants nothing at the board, and the page holds no token
+// (FP-14). The answer, `{result}` or `{refused}`, is handed up opaque: this
+// module composes no frame, decodes no answer, refuses no call and replays
+// no fixture. Every event comes off one `EventSource` on
+// `/bridge/events?provider=<secret>` (an `EventSource` sends no custom
+// header), one listener per `EventName`, re-emitted by name; an event the
+// declarations do not name is heard by none. The stream's own
 // `open` and `error` are its notices (B-PORT's `StreamNotice`), told to the
 // stream watchers: `dropped` once, at the first `error` after it stood open —
 // the platform's retries, each an `error`, telling nothing more, and a
@@ -33,10 +38,30 @@
 /** @typedef {import('./shapes').EventName} EventName */
 /** @typedef {import('./shapes').Refusal} Refusal */
 
-export const DEFAULT_PROVIDER = 'http://127.0.0.1:8742';
+/** the one host a provider listens on */
+const LOOPBACK = 'http://127.0.0.1';
+/** the provider at the verb's default port, where the page URL names none */
+export const DEFAULT_PROVIDER = `${LOOPBACK}:8742`;
 /** @type {Record<EventName, null>} every `EventName` of the generated declarations, the checker refusing one missed (FP-16) */
 const EVENT_ROWS = { mode: null, 'session-died': null, daemon: null, feed: null, index: null, moment: null, held: null, publication: null, 'another-window': null };
 const EVENT_NAMES = /** @type {EventName[]} */ (Object.keys(EVENT_ROWS));
+
+/**
+ * The provider's origin for the page URL's `port` value (S-36 (b)): the
+ * default provider where the URL carries no `port`; where the value is ASCII
+ * digits alone naming 1 to 65535, the loopback origin of that port, built
+ * from the number; null for any other value — a sign, a space, a fraction,
+ * an exponent, a radix prefix, a trailing letter, an empty value or one out
+ * of range — which names no provider, so none is dialed.
+ * @param {string | null} port the `?port=` value, null where the URL carries none
+ * @returns {string | null}
+ */
+export function providerAt(port) {
+  if (port === null) return DEFAULT_PROVIDER;
+  if (!/^[0-9]+$/.test(port)) return null;
+  const n = Number(port);
+  return n >= 1 && n <= 65535 ? `${LOOPBACK}:${n}` : null;
+}
 
 /**
  * @typedef {Object} CallEntry
@@ -53,8 +78,9 @@ const EVENT_NAMES = /** @type {EventName[]} */ (Object.keys(EVENT_ROWS));
  */
 
 /**
- * Make the bridge client.
- * @param {{provider?: string, secret: string, record?: boolean}} opts `record` keeps every call's arguments and answer in the log — the gate's door alone (`?gate=`), never the installed app's
+ * Make the bridge client: every call, the event stream and the close at
+ * unload go to the one provider's origin it is given.
+ * @param {{provider?: string, secret: string, record?: boolean}} opts `provider` the origin `providerAt` reads from the page URL; `record` keeps every call's arguments and answer in the log — the gate's door alone (`?gate=`), never the installed app's
  * @returns {Adapter}
  */
 export function create({ provider = DEFAULT_PROVIDER, secret, record = false }) {

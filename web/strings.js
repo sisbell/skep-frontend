@@ -549,6 +549,8 @@ export const STRINGS = {
 
   // ---- DRAFT: strings no design document carries (`lane: true`) -------------
   'L.no-adapter': { text: 'no shell and no provider — this page reaches nothing', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
+  // the page URL's `port` names no port, so the page dials nothing (S-36 (b))
+  'L.bad-port': { text: 'port must be a number from 1 to 65535', cls: 'DRAFT', source: '', screen: 'the one line; the ARIA mirror; an act that needs a board', lane: true },
   // where no board is held (FP-35): the board list refused, in the guest line's place; the address display's one segment;
   // the empty list's statement
   'L.boards-unread': { text: 'the boards on this machine could not be read — that does not mean there are none', cls: 'DRAFT', source: '', screen: 'the one line; the ARIA mirror; an act that needs a board', lane: true },

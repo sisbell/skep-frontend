@@ -15,10 +15,12 @@
 // and one refused, a death of an arm the page holds no words for, the
 // keyless and the signed session's words with the device label's slot and
 // its causes, the guest line with the board's origin and its sign-in act's
-// id, and where no board is held why in the guest line's place and "go to an
-// address" alone; a jump's face out of view and a walk's folded moment as
-// segments; a reading scene's close said after it until the next act, whole
-// once a session and as forward ›'s label after; the places the line names;
+// id, and where no board is held why in the guest line's place — with no
+// adapter beneath the port why none stands, a page URL's `port` naming no
+// port in its own words — and "go to an address" alone; a jump's face out of
+// view and a walk's folded moment as segments; a reading scene's close said
+// after it until the next act, whole once a session and as forward ›'s label
+// after; the places the line names;
 // a kept document's clause in a segment of its own beside the address that
 // names it, and the board's wherever it names no kept document; what the
 // status region says of a kept place, by its name as the mirror finds it —
@@ -446,6 +448,23 @@ test('where `boards()` found no board the line names none — no guest line, ven
     assert.deepEqual([refused.state, shown(refused.html), refused.html.includes('data-act')], [0, t('L.boards-unread'), false], 'the provider\'s own refusal: its words, and no retry offered where none may tell');
   } finally {
     LINE.act(); REC.setBoard(was.board); REC.setSession(was.session);
+  }
+});
+
+test('with no adapter beneath the port the acting-as segment says why none stands as the one entry says it — "port must be a number from 1 to 65535" where the page URL\'s `port` names no port, else no shell and no provider — naming no board, venue, origin or sign-in, none of §3.3\'s states (S-36 (b); FP-35)', async () => {
+  const was = { board: REC.board(), session: REC.session() };
+  try {
+    REC.setSession(null);
+    /** the segment where the port answers its own refusal, the list's answer taken as the boot takes it */
+    const unreached = async (/** @type {boolean} */ badPort) => { PORT.boot(null, { badPort }); REC.takeBoards(await PORT.boards({})); return LINE.actingSegment(); };
+    const bad = await unreached(true);
+    assert.deepEqual(bad, { html: `<span data-string="L.bad-port">${esc(t('L.bad-port'))}</span>`, state: 0, words: t('L.bad-port'), alarm: false }, 'the port named no port: its words alone, none of the seven, nothing said assertively');
+    const none = await unreached(false);
+    assert.deepEqual(none, { html: `<span data-string="L.no-adapter">${esc(t('L.no-adapter'))}</span>`, state: 0, words: t('L.no-adapter'), alarm: false }, 'no shell and no provider: its words alone');
+  } finally {
+    // the shared fake's calls given back, its events reaching the port through the subscription the first boot made
+    PORT.boot({ ...fake, subscribe() {}, onStream() {} });
+    REC.setBoard(was.board); REC.setSession(was.session);
   }
 });
 

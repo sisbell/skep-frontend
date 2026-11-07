@@ -644,7 +644,8 @@ const AGAIN = `<button id="line-again" data-act="again">${esc(t('B1.try-again'))
 /**
  * The acting-as segment where no board is held (see the head; FP-35): why,
  * as O-FACES' one entry says it (`noBoardWords`), in the guest line's place,
- * naming no venue, origin, claimant or sign-in — at an empty list
+ * naming no venue, origin, claimant or sign-in — with no adapter beneath the
+ * port, why none stands, `L.bad-port` or `L.no-adapter`; at an empty list
  * `F.unclaimed`, the doors' act, inert in this build, saying so as it is
  * pressed; at a list refused its words, and "try again" beside them where a
  * retry may tell; nothing while the list has not answered. None of §3.3's
@@ -666,14 +667,14 @@ function noBoardSegment() {
  * session's state kept; where it was refused, the guest state boot shows for
  * that refusal, led by "could not reconnect as" (FP-28); a death's words
  * O-FACES's (`deathWords`), the guest line's in
- * their place for an arm it holds none for. Where no board is held, why
- * (`noBoardSegment`), and none of the seven.
+ * their place for an arm it holds none for. Where no adapter stands beneath
+ * the port or no board is held, why (`noBoardSegment`), and none of the
+ * seven.
  * @returns {Acting}
  */
 export function actingSegment() {
   const s = REC.session(), b = REC.board(), dev = REC.device(), dead = REC.deathReason(), refused = REC.sessionRefused(), lost = REC.reconnect();
-  if (!PORT.hasAdapter()) return { html: `<span data-string="L.no-adapter">${esc(t('L.no-adapter'))}</span>`, state: 0, words: t('L.no-adapter'), alarm: false };
-  if (!b) return noBoardSegment();
+  if (!PORT.hasAdapter() || !b) return noBoardSegment();
   // the board's origin, as `boards()` answered it; the boot opens a session only on the board it holds
   const origin = b.origin;
   if (s && lost && !lost.refused) {

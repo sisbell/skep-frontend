@@ -4,8 +4,10 @@
 // before; the `publication`, `merge` and `history` families and `held.show`
 // go out under their dotted names and `changes` under its own, each answer
 // handed up as it came and a lost session's refusal told to the session
-// watchers; and a `publication` event and an `another-window` event each
-// reach their own subscribers and every-event ones.
+// watchers; a `publication` event and an `another-window` event each reach
+// their own subscribers and every-event ones; and with no adapter beneath it
+// every call answers the port's own refusal — `bad_port` where the page URL's
+// `port` names no port, else `no_adapter` — which the port reads back.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -184,6 +186,18 @@ test('a publication event reaches its own subscribers and every-event subscriber
   fake.fire('held', held);
   assert.deepEqual(heard, [sent]);
   assert.deepEqual(all, [{ name: 'publication', data: sent }, { name: 'held', data: held }]);
+});
+
+test('with no adapter every call answers the port\'s own refusal — `bad_port` where the boot says the page URL\'s `port` names no port, else `no_adapter` — and `noAdapter` reads it back, each boot setting it afresh; with an adapter beneath, `noAdapter` reads null (S-36 (b); FP-35)', async () => {
+  const none = { kind: 'shell', name: 'no_adapter' }, bad = { kind: 'shell', name: 'bad_port' };
+  PORT.boot(null);
+  assert.deepEqual([await PORT.boards({}), PORT.noAdapter(), PORT.hasAdapter()], [{ refused: none }, none, false], 'no adapter handed in: no shell and no provider');
+  PORT.boot(null, { badPort: true });
+  assert.deepEqual([await PORT.boards({}), await PORT.fingerprint({}), PORT.noAdapter(), PORT.hasAdapter()], [{ refused: bad }, { refused: bad }, bad, false], 'the page URL\'s port named no port: every call answers it, and the port reads it back');
+  PORT.boot(FAKE.create({}));
+  assert.equal(PORT.noAdapter(), null, 'an adapter beneath: no refusal of the port\'s own');
+  PORT.boot(null);
+  assert.deepEqual([await PORT.boards({}), PORT.noAdapter()], [{ refused: none }, none], 'a boot with no adapter and no word of the port: no shell and no provider again');
 });
 
 test('an another-window event is an event of the declarations: it reaches its own subscribers and every-event subscribers (issue #410)', () => {

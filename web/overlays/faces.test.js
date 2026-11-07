@@ -25,9 +25,10 @@
 // cancel cancelling, its walk's next moment opening as the last was left,
 // one raised over a surface of the reader's opening folded, an unfold an act;
 // where no board is held, why as one entry and the no-board face with
-// what still works (FP-35); and the editor's refusal names each mapped to
-// their entry's words with no act, a name no document drafts words for kept
-// on the generic refusal line.
+// what still works, a page URL whose `port` names no port saying so in the
+// entry, the face and every call's answer (FP-35); and the editor's refusal
+// names each mapped to their entry's words with no act, a name no document
+// drafts words for kept on the generic refusal line.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as FACES from './faces.js';
@@ -951,5 +952,34 @@ test('why no board is held is one entry — no shell and no provider, the list e
   } finally {
     HOST.dismiss();
     REC.setSessionRefused(null); REC.setBoard(was.board); REC.setSession(was.session);
+  }
+});
+
+test('where the page URL\'s `port` names no port, why no board is held is the port\'s own refusal in its own words — the one entry, the no-board face at an act\'s site and the face of every call it answers each saying the port must be a number from 1 to 65535, offering nothing and naming no notebook, never "no shell and no provider" (S-36 (b); FP-35)', async () => {
+  const was = { board: REC.board(), session: REC.session() }, at = { world: { x: 3, y: 4 } };
+  const words = /** @type {[string, string]} */ (['L.bad-port', t('L.bad-port')]);
+  try {
+    HOST.dismiss();
+    REC.setSession(null);
+    PORT.boot(null, { badPort: true });
+    // the boot's own first call, its answer taken as the boot takes it
+    const answer = await PORT.boards({});
+    REC.takeBoards(answer);
+    assert.ok('refused' in answer && answer.refused.name === 'bad_port', `the list answered the port's own refusal: ${JSON.stringify(answer)}`);
+    assert.deepEqual(FACES.noBoardWords(), { id: words[0], text: words[1], again: false, doors: false }, 'the one entry: the port must be a number — no retry tells, no doors');
+    assert.deepEqual(FACES.wordsFor(answer.refused), { id: words[0], text: words[1], acts: [] }, 'every call\'s answer in the same words, no act');
+    live.textContent = '';
+    FACES.noBoard(at);
+    const f = faceShown();
+    assert.deepEqual([f?.id, f?.words, f?.acts, HOST.currentState()?.anchor], ['face:no-board', words, [], at], 'an act needing a board: its face at the act\'s site, why, no act');
+    assert.ok(f && !f.html.includes('L.no-notebook-yet') && !f.html.includes('L.no-adapter'), `naming no notebook, and not as no shell and no provider: ${f && f.html}`);
+    assert.equal(live.textContent, words[1], 'said through the status region');
+    HOST.dismiss();
+    FACES.showRefusal(at, answer.refused, '');
+    assert.deepEqual([faceShown()?.id, faceShown()?.words, faceShown()?.acts], ['face:bad_port', words, []], 'a call it answers shown at the act: the same words, named by the refusal');
+  } finally {
+    HOST.dismiss();
+    PORT.boot(null);
+    REC.setBoard(was.board); REC.setSession(was.session);
   }
 });

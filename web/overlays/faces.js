@@ -133,15 +133,18 @@
 // region alone.
 // Where no board is held (FP-35): why is one entry, which the one line, the
 // ARIA mirror's root and every act needing a board read alone
-// (`noBoardWords`) — no shell and no provider beneath the port,
-// `L.no-adapter`; `boards()` answered an empty list, `F.unclaimed`, its act
-// the doors', which this build has not, so it stands inert and says
-// beginning a notebook isn't built yet; the list refused, `L.boards-unread`,
-// "try again" offered where a retry may tell (BM-HELD's `retries`). Such an
-// act answers at its site with a face of those words and what still works
-// (`noBoard`), and "try again" reads the list again (`tryBoardsAgain`;
-// M-PUMP's `retryBoards`): a board found, the page launches there and the
-// face goes; a refusal again said, so no press is silent.
+// (`noBoardWords`) — no adapter beneath the port, the words for the port's
+// own refusal, which every call answers too: `bad_port`, `L.bad-port`, where
+// the page URL's `port` names no port, else `no_adapter`, no shell and no
+// provider, `L.no-adapter`; `boards()` answered an empty list,
+// `F.unclaimed`, its act the doors', which this build has not, so it stands
+// inert and says beginning a notebook isn't built yet; the list refused,
+// `L.boards-unread`, "try again" offered where a retry may tell (BM-HELD's
+// `retries`). Such an act answers at its site with a face of those words and
+// what still works (`noBoard`), and "try again" reads the list again
+// (`tryBoardsAgain`; M-PUMP's `retryBoards`): a board found, the page
+// launches there and the face goes; a refusal again said, so no press is
+// silent.
 // Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-25, FP-26, FP-28, FP-29,
 // FP-33, FP-35, FP-36.
 
@@ -360,6 +363,7 @@ export function wordsFor(r, ctx = {}) {
     case 'busy': return f('C-138.busy');
     case 'unreachable': return f('F.daemon.unreachable');
     case 'no_adapter': return f('L.no-adapter');
+    case 'bad_port': return f('L.bad-port');
     // the editor's refusals (B3; D6), each its entry and no act
     case 'out_of_bounds': case 'empty_content': case 'not_content_subspace': return f('B3.own-bug');
     case 'arrangement_moved': return f('B3.moved');
@@ -587,16 +591,19 @@ export function signIn(anchor) {
 }
 
 /**
- * Why the page holds no board, as one entry (see the head; FP-35): no shell
- * and no provider beneath the port, `L.no-adapter`; the list empty,
- * `F.unclaimed`, its act the doors', inert in this build; the list refused,
+ * Why the page holds no board, as one entry (see the head; FP-35): no
+ * adapter beneath the port, the words for the port's own refusal
+ * (`wordsFor` of B-PORT's `noAdapter`) — `L.bad-port` where the page URL's
+ * `port` names no port, else `L.no-adapter`; the list empty, `F.unclaimed`,
+ * its act the doors', inert in this build; the list refused,
  * `L.boards-unread`, "try again" where a retry may tell (BM-HELD's
  * `retries`). Null where a board is held, or the list has not answered.
  * @returns {NoBoardWords | null}
  */
 export function noBoardWords() {
   if (REC.board()) return null;
-  if (!PORT.hasAdapter()) return { id: 'L.no-adapter', text: t('L.no-adapter'), again: false, doors: false };
+  const unreached = PORT.noAdapter();
+  if (unreached) { const w = wordsFor(unreached); return { id: w.id, text: w.text, again: false, doors: false }; }
   const why = REC.noBoard();
   if (!why) return null;
   if (why === 'none') return { id: 'F.unclaimed', text: t('F.unclaimed'), again: false, doors: true };

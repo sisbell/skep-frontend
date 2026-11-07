@@ -109,3 +109,49 @@ the owner's pass. Adding `&gate=all` to the URL loads the gate's hooks
 instrumentation. `&gate=guest` loads them too and opens the page as a
 guest: it asks no session, so it reads the board at guest class — the
 page the gate's `guest` case and the W-01 walk drive.
+
+### Looking at the page while the gate runs
+
+The gate takes port 8731 for each run, and the provider on 8742 admits
+that one page origin alone. To read the page while a gate runs, give it
+a page origin and a provider of its own:
+
+1. A second checkout, outside this tree:
+
+       git worktree add --detach ../skep-frontend-view origin/main
+
+   To bring it up to date, `git -C ../skep-frontend-view fetch`, then
+   `git -C ../skep-frontend-view checkout --detach origin/main`.
+
+2. A store of its own, mode 0700, holding copies of the dev store's
+   `keys/` and `bindings` and nothing else:
+
+       mkdir -m 0700 ./store-view
+       cp -Rp ./store/keys ./store/bindings ./store-view/
+
+   A provider holds its store's search index for as long as it runs. A
+   second provider over the same store finds the index taken and lists
+   no documents, so its page's plane stands empty; and where the gate's
+   provider is the one started second, the gate's is the empty one.
+
+3. Its provider, on a port of its own, admitting the second page origin,
+   with a secret of its own:
+
+       export SKEP_VIEW_SECRET=<any long text of A-Z a-z 0-9 - . _ ~>
+       skep-dev serve --board http://127.0.0.1:8642 \
+         --page-origin http://127.0.0.1:8732 --listen 8743 \
+         --session signed --dir ./store-view \
+         --principal 1 --secret "$SKEP_VIEW_SECRET"
+
+4. In the second checkout, serve the page on that origin and open it at
+   that provider's port:
+
+       python3 harness/serve.py 8732 &
+       open "http://127.0.0.1:8732/?provider=$SKEP_VIEW_SECRET&port=8743"
+
+`port` names a port on 127.0.0.1, never a host; without it the page
+dials 8742. A value that is not a number from 1 to 65535 dials nothing:
+the page boots, and its one line says the port must be a number. The
+gate serves its page on 8731 and reads the board through 8742 alone; its
+`wire` case sets `port` only to check the key, at a port nothing listens
+on and with a stand-in for the secret.

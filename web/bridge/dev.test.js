@@ -1,8 +1,12 @@
-// B-DEV's test with the engine's event stream stood in for: the client's one
-// stream listens for every event the port names and for its own `open` and
-// `error`, a `publication` event that comes off it is re-emitted by name with
-// its data parsed, and the stream's drop is told once and its reopen at the
-// next open, never at its first.
+// B-DEV's test with the engine's event stream and its fetch stood in for: the
+// client's one stream listens for every event the port names and for its own
+// `open` and `error`, a `publication` event that comes off it is re-emitted by
+// name with its data parsed, and the stream's drop is told once and its
+// reopen at the next open, never at its first; the page URL's `port` names
+// the loopback provider at a port of digits alone from 1 to 65535, the
+// default where the URL carries none and no provider for any other value; and
+// a client made at that origin sends its calls, its stream and its close at
+// unload there alone.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import * as DEV from './dev.js';
@@ -33,7 +37,11 @@ class RecordingSource {
 const engines = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (globalThis));
 const engineSource = engines.EventSource;
 engines.EventSource = RecordingSource;
-after(() => { engines.EventSource = engineSource; });
+/** @type {string[]} the URL of every fetch the clients make, each answered with an empty list */
+const fetched = [];
+const engineFetch = engines.fetch;
+engines.fetch = async (/** @type {string} */ url) => { fetched.push(String(url)); return { status: 200, text: async () => '{"result":[]}' }; };
+after(() => { engines.EventSource = engineSource; engines.fetch = engineFetch; });
 
 /** a client over a fresh stand-in stream, every event and every stream notice it tells recorded */
 function client() {
@@ -79,4 +87,32 @@ test('a stream the platform closes for good is a drop with no reopen', () => {
   stream.open();
   stream.fail(true);
   assert.deepEqual([notices, stream.readyState], [['dropped'], 2]);
+});
+
+test('the page URL\'s `port` names the loopback provider at a port of ASCII digits alone from 1 to 65535, its origin built from the number; the default provider where the URL carries none; and no provider for any other value, which neither `Number` nor `parseInt` is let read as a port (S-36 (b))', () => {
+  /** @type {Array<[string | null, string | null]>} each value the URL may carry, and the provider it names */
+  const table = [
+    [null, 'http://127.0.0.1:8742'],
+    ['1', 'http://127.0.0.1:1'], ['8743', 'http://127.0.0.1:8743'], ['65535', 'http://127.0.0.1:65535'], ['08743', 'http://127.0.0.1:8743'],
+    ['', null], ['abc', null], ['0', null], ['65536', null], ['99999', null],
+    ['-1', null], ['+8743', null], [' 8743', null], ['8743 ', null], ['8743.0', null], ['1e3', null], ['0x21A7', null], ['8743abc', null],
+  ];
+  for (const [port, provider] of table) assert.equal(DEV.providerAt(port), provider, `port ${JSON.stringify(port)}`);
+  /** the provider a page URL's query names, its `port` read as the boot reads it */
+  const named = (/** @type {string} */ query) => DEV.providerAt(new URLSearchParams(query).get('port'));
+  assert.deepEqual([named('provider=s'), named('provider=s&port=8743'), named('provider=s&port='), named('provider=s&port=+8743')],
+    ['http://127.0.0.1:8742', 'http://127.0.0.1:8743', null, null], 'no key the default; an empty value, and a `+` the query reads as a space, no port');
+});
+
+test('a client made at the provider the page URL names sends its calls, its event stream and its close at unload to that origin alone, and at a URL naming no port to the default provider', async () => {
+  for (const [port, origin] of [['8743', 'http://127.0.0.1:8743'], [null, 'http://127.0.0.1:8742']]) {
+    const provider = /** @type {string} */ (DEV.providerAt(port));
+    fetched.length = 0;
+    const dev = DEV.create({ provider, secret: 'test-secret' });
+    dev.subscribe(() => {});
+    const stream = RecordingSource.opened[RecordingSource.opened.length - 1];
+    assert.deepEqual(await dev.call('boards', {}), { result: [] }, `port ${port}: the answer handed up as it came`);
+    dev.closeAtUnload('s-1');
+    assert.deepEqual([...fetched, stream.url], [`${origin}/bridge/boards`, `${origin}/bridge/close`, `${origin}/bridge/events?provider=test-secret`], `port ${port}: every call, the close and the stream at ${origin}`);
+  }
 });

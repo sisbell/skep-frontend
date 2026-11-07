@@ -24,13 +24,22 @@ writes".
     deep-equal on the records the replay touches;
 (v) the browser claims of the record §10 items 16–21, as this run saw them
     (the preflight, Origin, Host, Vary/Max-Age, the EventSource's headers,
-    a CORS failure's face)."""
+    a CORS failure's face);
+(vi) the provider's port the page URL names (S-36 (b)), each page opened with
+    a stand-in for the secret, never the run's: at a port nothing of the run
+    listens on (item 21's) every request the page sends off its own origin
+    goes there — a POST and the event stream among them — and none to the
+    default provider; at `port=abc` none leaves its origin, the ledger counts
+    no fetch and no stream, the bridge client made no call, the list answered
+    the port's own `bad_port`, and the one line says the port must be a
+    number; then the owner's page opened again for the cases after this one."""
 import json
 import os
 import re
 import subprocess
 import tempfile
 import time
+import urllib.parse
 from collections import Counter
 
 from . import DOC, FAR_LEAP, ROOT, WINDOW, Result
@@ -45,6 +54,10 @@ READ_PATHS = {('POST', '/op'), ('POST', '/op-at'), ('GET', '/health'), ('GET', '
 # moments (`answer`, `cancel`), since a ceremony writes the owner's key store where no board check sees it; and
 # `held.show`, which opens the shell's own window
 READ_ROWS = ('boards', 'session', 'close', 'fingerprint', 'health', 'probe', 'op', 'fetch', 'search', 'places', 'held', 'changes')
+# the secret a page opened at another port carries: a stand-in, so the run's own is sent to its provider alone
+STAND_IN = 'not-the-run-secret'
+# a port nothing of the run listens on: the one item 21 probes
+CLOSED_PORT = 8749
 
 
 def read_ops():
@@ -59,6 +72,16 @@ def ledger(ctx):
 
 def calls(ctx):
     return ctx.js('window.__skep.bridge.calls().map(c => ({name: c.name, op: c.op || null, bytesIn: c.bytesIn, bytesOut: c.bytesOut, ms: c.ms, outcome: c.outcome}))')
+
+
+def origin_of(url):
+    u = urllib.parse.urlsplit(str(url))
+    return f'{u.scheme}://{u.netloc}'
+
+
+def off_origin(requests, origin):
+    """the requests among `requests` the page sent over HTTP to an origin other than `origin`, its own"""
+    return [q for q in requests if urllib.parse.urlsplit(str(q.get('url'))).scheme in ('http', 'https') and origin_of(q.get('url')) != origin]
 
 
 def quiet_surfaces(r, led, label):
@@ -266,4 +289,29 @@ def run(ctx):
     quiet_surfaces(r, led2, 'end of the wire case (after the LEAP\'s flight and the probes)')
     r.figures['ledger_end'] = led2
     ctx.shared['wire_probe_fetches'] = 2
+    # ---- (vi) the provider's port the page URL names (S-36 (b)) -----------------------
+    own, at = origin_of(ctx.page), f'http://127.0.0.1:{CLOSED_PORT}'
+    n = len(ctx.drv.requests)
+    named = ctx.open_page('all', provider=STAND_IN, port=str(CLOSED_PORT))
+    ctx.drv.pump_events(0.5)
+    off = off_origin(ctx.drv.requests[n:], own)
+    sent = [(q.get('method'), origin_of(q.get('url')), urllib.parse.urlsplit(str(q.get('url'))).path) for q in off]
+    r.check(bool(off) and all(o == at for _, o, _ in sent) and any(m == 'POST' for m, _, _ in sent) and any(p == '/bridge/events' for _, _, p in sent),
+            f'(vi) at `port={CLOSED_PORT}` every request the page sends off its own origin goes to {at} — a POST and the event stream among them — and none to the default provider',
+            sent[:16])
+    r.figures['named_port'] = {'adapter': (named or {}).get('adapter'), 'calls': [[c['name'], c['outcome']] for c in calls(ctx)], 'sent': dict(Counter(f'{m} {o}{p}' for m, o, p in sent))}
+    n = len(ctx.drv.requests)
+    refused = ctx.open_page('all', provider=STAND_IN, port='abc')
+    ctx.drv.pump_events(0.5)
+    off = off_origin(ctx.drv.requests[n:], own)
+    led3, cl4 = ledger(ctx), calls(ctx)
+    said = ctx.js('''(async () => { const ST = await import("./strings.js"), el = document.querySelector('#line [data-string="L.bad-port"]');
+      return {line: el ? el.textContent : null, words: ST.t("L.bad-port"), no_adapter: !!document.querySelector('[data-string="L.no-adapter"]')}; })()''')
+    r.check(not off, '(vi) at `port=abc` no request leaves the page\'s origin', [str(q.get('url')).replace(STAND_IN, '<stand-in>') for q in off][:16])
+    r.check(led3.get('fetch') == 0 and led3.get('eventsource') == 0 and cl4 == [], '(vi) at `port=abc` the ledger counts no fetch and no event stream, and the bridge client made no call — none was made',
+            {'fetch': led3.get('fetch'), 'eventsource': led3.get('eventsource'), 'calls': cl4})
+    r.check(((refused or {}).get('boardsRefused') or {}).get('name') == 'bad_port', '(vi) at `port=abc` the board list answered the port\'s own refusal, `bad_port`', (refused or {}).get('boardsRefused'))
+    r.check(said['line'] == said['words'] and not said['no_adapter'], '(vi) at `port=abc` the one line says the port must be a number from 1 to 65535, and nothing on the page says there is no shell and no provider', said)
+    # the owner's page again, for the cases after this one
+    ctx.open_page('all')
     return r.out()
