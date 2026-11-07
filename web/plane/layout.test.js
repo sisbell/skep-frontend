@@ -51,8 +51,8 @@ const close = (/** @type {number} */ a, /** @type {number} */ b) => Math.abs(a -
 const widths = (/** @type {Row} */ r, /** @type {number} */ cpl) => wrap(r, cpl).map((l) => +l.w.toFixed(4));
 /** a depth-0 document's room */
 const ROOM = { w: DOC_W, h: DOC_H };
-/** the head's three rows, as T-ARTICLE plans them */
-const HEAD = [row('head', null, [piece('1.0.1.0.3', 1, { own: false })], { keep: 'whole' }), row('head', null, [piece('published', MEASURE.head, { own: false })], { size: MEASURE.head, keep: 'joined' }), row('head', null, [piece('1.0.1 · dev', MEASURE.head, { own: false })], { size: MEASURE.head, keep: 'joined' })];
+/** the head's two rows, as T-ARTICLE plans them: its address, then its byline */
+const HEAD = [row('head', null, [piece('1.0.1.0.3', 1, { own: false })], { keep: 'whole' }), row('head', null, [piece('1.0.1 · dev', MEASURE.head, { own: false })], { size: MEASURE.head, keep: 'joined' })];
 /** a paragraph of `n` words of two to nine characters, varied by `seed` */
 const words = (/** @type {number} */ n, /** @type {number} */ seed) => Array.from({ length: n }, (_, i) => 'abcdefghij'.slice(0, 2 + ((i * 7 + seed) % 8))).join(' ');
 /** an article's plan: the head's rows and a typed line per text, each opening a typed line, its text's positions and two newlines — one empty line — apart */
@@ -106,10 +106,10 @@ test('a line box is its own size\'s: the engine\'s font size on the 1/64 px grid
 test('the head\'s lines stand before the first block, each its own size\'s line box', () => {
   const L = layoutOf([...HEAD, para(1, 'text')], 52);
   const b = /** @type {{first: number, n: number}} */ (L.blocks.get(1));
-  assert.equal(b.first, 3);
-  assert.ok(close(L.lines[b.first].top, LINE_H + 2 * lineBox(MEASURE.head)), `the first block at ${L.lines[b.first].top} em: the address's line box and two of the head's`);
-  assert.deepEqual(L.lines.slice(0, 3).map((l) => l.kind), ['head', 'head', 'head']);
-  assert.deepEqual(L.lines.slice(0, 3).map((l) => l.h), [LINE_H, lineBox(MEASURE.head), lineBox(MEASURE.head)]);
+  assert.equal(b.first, 2);
+  assert.ok(close(L.lines[b.first].top, LINE_H + lineBox(MEASURE.head)), `the first block at ${L.lines[b.first].top} em: the address's line box and the byline's`);
+  assert.deepEqual(L.lines.slice(0, 2).map((l) => l.kind), ['head', 'head']);
+  assert.deepEqual(L.lines.slice(0, 2).map((l) => l.h), [LINE_H, lineBox(MEASURE.head)]);
 });
 
 test('the empty lines typed after a typed line stand below it as whole body line boxes, and no other room stands between blocks — an item\'s neither — adjoining margins collapsing to the larger', () => {
@@ -558,5 +558,5 @@ test('a document\'s first line stands in its fold at its first block\'s first li
   assert.ok(close(l.x - c.x, MEASURE.indent * f.fs), 'a typed line opening the document: past its indent');
   const e = estimate(600, ROOM), le = leadOf(e), p = placeOf(e, 1);
   assert.deepEqual(le, { column: 0, x: e.columns[0].x + MEASURE.indent * e.fs, y: p.y, h: p.h }, 'its text unread: its first position\'s estimated line past the head, on the indent');
-  assert.ok(close(le.y - e.columns[0].y, LINE_H * e.fs + 2 * lineBox(MEASURE.head) * e.fs), 'below the head\'s three lines');
+  assert.ok(close(le.y - e.columns[0].y, LINE_H * e.fs + lineBox(MEASURE.head) * e.fs), 'below the head\'s two lines, its address and its byline');
 });

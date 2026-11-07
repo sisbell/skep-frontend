@@ -31,9 +31,12 @@
 // where the view stood on nothing, the walk staying on a covered draft, and a
 // change of class keeps the walk on the span its document kept, a draft's
 // run there named as the withheld run it is now; a withheld run's ends stand a level
-// below its item, counted and marked as the symbols are; a kept document's
-// item carrying the clause its corner or the one line shows, and the board's
-// while it lags, each marked in place as it appears and as it lifts; and
+// below its item, counted and marked as the symbols are; a document's item
+// voicing its corner's state whole, the version its box shows and its
+// chain's count, marked in place as the chain is counted again; a kept
+// document's item carrying the clause its corner or the one line shows, and
+// the board's while it lags, each marked in place as it appears and as it
+// lifts; and
 // where no board is held the root says why and the re-take
 // stands on it alone (FP-8, FP-20, FP-21, FP-22, FP-23, FP-24, FP-29, FP-33,
 // FP-35).
@@ -1162,7 +1165,7 @@ test('the walk takes each box as the version it shows (issues #154, #23): an acc
     const kids = await WALK.childrenOf({ kind: 'account', addr: '1.0.1', pos: null, link: null });
     assert.deepEqual(kids.map((n) => n.addr).filter((a) => [D, D2, E].includes(a)), [D2, E], 'the account lists the version D\'s box shows, in D\'s place, never D');
     const named = WALK.nameOf(kids[0], 0, kids.length);
-    assert.ok(named.startsWith(t('L.mirror.document', { document: D2, label: '"Tumbler."', state: t('F.published'), extent: t('L.mirror.positions', { n: TEXT2.length }) })), 'the mirror names the version by its own first line, as its box\'s label names it, and its box\'s document\'s state: ' + named);
+    assert.ok(named.startsWith(t('L.mirror.document', { document: D2, label: '"Tumbler."', state: t('F.corner.pinned', { published: t('F.published.notebook'), k: 2 }), extent: t('L.mirror.positions', { n: TEXT2.length }) })), 'the mirror names the version by its own first line, as its box\'s label names it, and its state as its corner states it: ' + named);
     await WALK.focusTo(D, 12);
     assert.deepEqual([walkAt(), WALK.siblingsNow().map((n) => n.pos)], [['block', D2, 11], [1, 11]], 'a landing at D stands on the version\'s span, its siblings the version\'s');
     await WALK.focusTo(E, 3);
@@ -1270,7 +1273,7 @@ function recordingMirror() {
       items = [...html.matchAll(/<li\b([^>]*)>(.*?)<\/li>/g)].map((m) => {
         /** @type {Record<string, string>} */
         const attrs = Object.fromEntries([...m[1].matchAll(/ ([\w-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
-        return { attrs, dataset: { i: attrs['data-i'], kept: attrs['data-kept'] }, innerHTML: m[2] };
+        return { attrs, dataset: { i: attrs['data-i'], kept: attrs['data-kept'], state: attrs['data-state'] }, innerHTML: m[2] };
       });
     },
     querySelectorAll: (/** @type {string} */ sel) => (sel === 'li[role="treeitem"]' ? items : []),
@@ -1310,7 +1313,7 @@ test('a kept document\'s mirror item carries the clause its corner or the one li
     WALK.markKept();
     const at = WALK.siblingsNow().findIndex((n) => n.addr === D), named = WALK.mirrorItem(at) || '';
     assert.ok(item().includes(esc(clause)) && named.includes(clause + ' ' + t('L.mirror.item', { i: at + 1, n: WALK.siblingsNow().length })), `its clause a sentence after its words, before its place in the level: ${named}`);
-    assert.ok(named.startsWith(t('L.mirror.document', { document: D, label: '"Tumbler."', state: t('F.published'), extent: t('L.mirror.positions', { n: 30 }) })), named);
+    assert.ok(named.startsWith(t('L.mirror.document', { document: D, label: '"Tumbler."', state: t('F.corner.latest', { published: t('F.published.notebook') }), extent: t('L.mirror.positions', { n: 30 }) })), named);
     assert.equal(rebuilt(), was, 'written in place, nothing rebuilt');
     text();
     for (let i = 0; i < 50 && PUMP.kept(D); i++) await new Promise((r) => setImmediate(r));
@@ -1318,6 +1321,56 @@ test('a kept document\'s mirror item carries the clause its corner or the one li
     assert.ok(!item().includes(esc(clause)) && rebuilt() === was, 'set: the clause gone from the item in place');
     assert.deepEqual(fake.unanswered.slice(unasked), []);
   } finally { text(); globalThis.document = platform; }
+});
+
+test('a document\'s mirror item voices its corner\'s state whole — at the bare address, an older pin, a pin on the newest version, a document with no versions — the version its box shows and the count of its chain among it, and is written again in place as a newer version\'s arrival counts the chain again, nothing rebuilt (issue #239\'s design decision: "The ARIA mirror\'s item for a document voices the corner\'s state, whole")', async () => {
+  const D1 = D + '.1', D2 = D + '.2', N = '1.0.1.0.9', TEXT2 = 'Tumbler.\n\nThe second version.', unasked = fake.unanswered.length;
+  Object.assign(script, reads(D2, [{ content: TEXT2 }], TEXT2.length, [{ i_start: D2 + '.0.1.1', width: String(TEXT2.length) }]));
+  await PUMP.loadWhole(D2);
+  // D's first member read, its chain counted to its end at two; N published with no member yet
+  REC.takeMetadata(D1, { doc: D, published: true, owner: '1.0.1', birth: D1, birthExtent: 30, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeMetadata(N, { doc: N, published: true, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeMembers(D, 2);
+  const published = t('F.published.notebook');
+  /** the corner's state at version `k` of a chain `n` members long, its words whole */
+  const pinned = (/** @type {number} */ k, /** @type {number} */ n) => [t('F.corner.pinned', { published, k }), t('F.version-of', { k, n })].join(', ');
+  /** a document's item as the mirror names it, its state the words given */
+  const itemSays = (/** @type {string} */ addr, /** @type {string} */ state) => {
+    const d = REC.doc(addr);
+    return t('L.mirror.document', { document: addr, label: LAYER.mirrorLabel(d).map((r) => r.text).join(''), state, extent: d.extent != null ? t('L.mirror.positions', { n: d.extent }) : '' });
+  };
+  /** @type {Array<[string, string, string]>} each version state, the version its box shows, and its corner's state's words */
+  const states = [
+    ['the bare address', D, [t('F.corner.latest', { published }), t('F.version-of', { k: 2, n: 2 })].join(', ')],
+    ['an older pin', D1, pinned(1, 2)],
+    ['a pin on the newest version', D2, pinned(2, 2)],
+    ['a document with no versions', N, t('F.corner.no-versions', { published })],
+  ];
+  for (const [what, addr, state] of states) {
+    const named = WALK.nameOf({ kind: 'document', addr, pos: null, link: null }, 0, 1);
+    assert.ok(named.startsWith(itemSays(addr, state)), `${what}: its corner's state whole — ${named}`);
+    assert.ok(!named.includes(t('F.published') + ',') && !named.includes(t('F.published') + '.'), `${what}: never the bare "published" — ${named}`);
+  }
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  const { mirror, item, rebuilds } = recordingMirror();
+  // D's box pinned on its second member, the walk on it at mid
+  WALK.readers({ shown: (a) => (a === D || a === D2 ? D2 : a) });
+  try {
+    const b = docBox(D);
+    CAM.set({ x: b.x + b.w / 2, y: b.y + b.h / 2, scale: 120 / DOC_W });
+    WALK.attach(/** @type {any} */ (mirror));
+    await WALK.focusTo(D2, null);
+    assert.ok(item(D2).includes(esc(pinned(2, 2))), `version 2 of 2: ${item(D2)}`);
+    const was = rebuilds();
+    REC.takeMembers(D, 3);
+    WALK.markKept();
+    assert.ok(item(D2).includes(esc(pinned(2, 3))) && !item(D2).includes(esc(pinned(2, 2))), `a newer version arrived, the chain counted again: version 2 of 3 — ${item(D2)}`);
+    assert.equal(rebuilds(), was, 'written in place, nothing rebuilt');
+    WALK.markKept();
+    assert.equal(rebuilds(), was, 'nothing moved: nothing written');
+    assert.deepEqual(fake.unanswered.slice(unasked), []);
+  } finally { WALK.readers({}); globalThis.document = platform; }
 });
 
 test('while the board lags past a second its mirror item carries the clause the one line shows, as a sentence of its own after its words, written in place as it appears and as it lifts with the catch-up\'s rows, nothing rebuilt (issue #367\'s design decision: "The clause stands in every view, in that place\'s mirror item")', async (ctx) => {

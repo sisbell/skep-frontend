@@ -60,7 +60,9 @@ it, a press changing its checked state and neither its name nor its
 description; a box shown at a version (issue #154's design decision) — a
 LEAP to version 1's address, zoomed out to mid over it — listed by the
 mirror once, its current item, named by the version's address and its
-document's first line; an item that holds no text announced by its kind
+document's first line, its state its corner's whole — the version it shows
+and the count of its chain (issue #239's design decision); an item that
+holds no text announced by its kind
 (issue #161's design decision) — the claimant's key record named "a record",
 the words a copy's stand-in names it by, then the words and keys the plane
 shows of it, never its raw value. Never a screen reader's voice — the
@@ -924,7 +926,17 @@ def run(ctx):
     r.check(len(listed) == 1 and listed[0]['current'] and listed[0]['text'].startswith('document %s, %s,' % (member, '"%s"' % label if label else '')),
             'at mid over a box pinned to version 1 the mirror lists the box once, its current item, named by the version\'s address and that version\'s own first line, as its box\'s label names it (issues #154, #23)',
             {'listed': [dict(i, text=i['text'][:120]) for i in listed], 'zooms': zooms, 'label': label})
-    r.figures['pinned_box'] = {'zooms': zooms, 'listed': [i['text'][:120] for i in listed]}
+    # its state as its corner states it, whole (issue #239's design decision: "The ARIA mirror's item for a document voices
+    # the corner's state, whole"): the version it shows and the count of its chain, which the board ended — never the bare
+    # "published"
+    chain = ctx.js('((a) => { const d = window.__skep.model.doc(a); return {n: d.members, ended: d.ended}; })(%s)' % json.dumps(VERSIONED))
+    said = ctx.js('''import("./strings.js").then(({t}) => { const published = t("F.published.notebook"), c = %s;
+      return {state: [t("F.corner.pinned", {published, k: 1}), c.ended && c.n ? t("F.version-of", {k: 1, n: c.n}) : null].filter(Boolean).join(", "), bare: t("F.published")}; })''' % json.dumps(chain))
+    item = listed[0]['text'] if len(listed) == 1 else ''
+    r.check(bool(chain['ended']) and said['state'] in item and ', %s,' % said['bare'] not in item,
+            'at mid over a box pinned to version 1 its mirror item voices its corner\'s state whole — the version it shows and the count of its chain — never the bare "published" (issue #239\'s design decision: "The ARIA mirror\'s item for a document voices the corner\'s state, whole")',
+            {'item': item[:320], 'want': said['state'], 'chain': chain})
+    r.figures['pinned_box'] = {'zooms': zooms, 'listed': [i['text'][:240] for i in listed]}
     ctx.leap(VERSIONED, None)
     # ---- an item that holds no text is announced by its kind (issue #161's design decision): at the claimant's home document,
     # the walk on its key record, the mirror's item names it by the words a copy's stand-in names it by, then what the plane

@@ -1867,15 +1867,36 @@ def stepped_in(ctx, r):
     ctx.leap(DOC, WINDOW[0])
 
 
+# the paragraph of a document's first column, by its first position, that one PageDown — paging the view by 0.9 of its
+# height — pages past the document's text from: its first line, at the reading size, deeper above the column's foot than
+# half the view, so the foot stands below the view as a landing on it frames it, and shallower than the page step less
+# the outline's margin below the foot, so the step takes the view's centre past the outline; its last line lifted above
+# the one line by the step, an em to spare; of those, the one nearest midway between the two depths; null where none is
+PAGE_PAST = '''((d, px) => { const S = window.__skep, f = S.fold(d), c = f.columns[0], s = S.scaleFor(d, "em", px), VH = S.view.viewport().VH;
+  const top = document.getElementById("line").getBoundingClientRect().bottom, foot = c.y + c.h, step = 0.9 * VH;
+  const lo = VH / 2, hi = step - (f.outline.y + f.outline.h - foot) * s, mid = (lo + hi) / 2;
+  const depth = (pos) => (foot - S.centreOf(d, pos).y) * s, inFirst = (pos) => { const x = S.centreOf(d, pos).x; return x >= c.x && x <= c.x + c.w; };
+  const fit = S.model.doc(d).blocks.filter((b) => b.kind === "para" && b.text.trim() && inFirst(b.pos) && depth(b.pos) > lo && depth(b.pos) < hi
+    && VH / 2 + depth(b.pos) - depth(b.pos + b.width - 1) - step + px < top);
+  fit.sort((a, b) => Math.abs(depth(a.pos) - mid) - Math.abs(depth(b.pos) - mid));
+  return fit.length ? fit[0].pos : null; })(%s, %d)'''
+
+
 def kept_holds(ctx, r):
     """THE KEPT FOCUS (issue #141's design decision: "keep the current focus … while any of its text or box is in view
-    … Reading past the last line … does not leave it"): at the first edition's landing on its first block, walked onto by
-    ↓ and ↑ so the ring is a key's, its first column's foot below the view, PageDown pages the view by 0.9 of its height
-    — the view's centre past the edition's text, in its room, off its outline, its last lines in view. The walk stays on
-    the first span; the one line names the edition and that span's position still, its strip marking the view's window
-    — open at the end where the last column's foot stands in the view, and only there — never the position; and the
-    ring stands on the view's top edge across the span's column, the span's lines above the view. PageUp returns"""
+    … Reading past the last line … does not leave it"): at the first edition's landing on the paragraph of its first
+    column one PageDown pages past its text from (`PAGE_PAST`), walked onto by ↓ and ↑ so the ring is a key's, its first
+    column's foot below the view, PageDown pages the view by 0.9 of its height — the view's centre past the edition's
+    text, in its room, off its outline, its last lines in view. The walk stays on that span; the one line names the
+    edition and that span's position still, its strip marking the view's window — open at the end where the last
+    column's foot stands in the view, and only there — never the position; and the ring stands on the view's top edge
+    across the span's column, the span's lines above the view. PageUp returns"""
     ctx.leap(DOC, 1)
+    at = ctx.js(PAGE_PAST % (json.dumps(DOC), READING_PX))
+    if not r.check(at is not None, 'the first edition\'s first column holds a paragraph one PageDown pages past its text from: what the kept focus\'s checks stand on (issue #141)',
+                   {'columns': (ctx.js('window.__skep.fold(%s)' % json.dumps(DOC)) or {}).get('columns', [])[:1]}):
+        return {}
+    ctx.leap(DOC, at)
     chord(ctx, 'ArrowDown')
     chord(ctx, 'ArrowUp')
     f0 = state(ctx)['focus']

@@ -21,7 +21,8 @@
 // whole-work end at its pane's facing edge, drawn whole in the one mark its
 // ends there merge into, a floating one at its pane's first block, a far end
 // where `project` places it in the version the pane holds, a line ending at
-// a covered pane's cover (FP-29, FP-30) — the stop picking the next shared
+// a covered pane's cover, its head's address, which scrolls with its text
+// (FP-29, FP-30) — the stop picking the next shared
 // passage out of view, and the opening asking each crossing far end once;
 // what the panes' runs hold of what a stop the reader left from stood for —
 // the passage of pane B the stop at a band's clipped end stood for, the
@@ -95,7 +96,7 @@ import * as FOCUS from '../nav/focus.js';
 import * as KEYS from '../nav/keys.js';
 import * as SCENE from './scene.js';
 import * as LINE from '../line/line.js';
-import { levels, merged, counterpart, counterparts, nearest, linesBetween, carriedTo, wholeEdges, drawEdge, stopFor, banded, drawBand, drawStroke, changeWords, strokeWords, sharedHeld, junctionsOf, strokeHeld, sameBytes } from './scene.js';
+import { levels, merged, counterpart, counterparts, nearest, linesBetween, carriedTo, wholeEdges, drawEdge, stopFor, banded, drawBand, drawStroke, changeWords, strokeWords, sharedHeld, junctionsOf, strokeHeld, sameBytes, coverIn } from './scene.js';
 import { byteLength } from '../util.js';
 import { applyHeld } from '../model/derive.js';
 import { deriveBlocks } from '../model/records.js';
@@ -464,6 +465,30 @@ test('a line homed in the readable pane whose far end lies in a pane showing a c
   const toA = endShown(L, passage(DOC_B, 50, 10), passage(DOC_A, 1, 5), null);
   assert.deepEqual(ends(linesBetween(draft(DOC_A, true), paneLinks(DOC_B, [toA]))).map((l) => [l[1], l[2]]), [[{ pos: 0, width: 0, cover: true }, { pos: 50, width: 10 }]], 'the cover in pane A: its end there');
 }));
+
+test('a pane\'s cover stands at its article\'s head, level with its address — a covered document\'s article its head alone, holding no statement of its state — in px below the pane\'s content top, so it scrolls with the pane\'s text; none where the pane holds no article (FP-29; issue #239\'s design decision: "Remove the head\'s state line in every state")', () => {
+  const X = '1.0.2.0.61', platform = globalThis.document;
+  /** the address the article's head names, as the platform lays it out: 18 px tall, its top `top` px down the viewport */
+  let top = 130;
+  const named = { getBoundingClientRect: () => ({ top, height: 18 }) };
+  /** an article element, the address its markup's head holds found by its query, as the platform's is */
+  const article = () => {
+    const el = { className: '', dataset: {}, innerHTML: '', querySelector: (/** @type {string} */ s) => (s === '.hd .addr' && el.innerHTML.includes(`<span class="addr id">${X}</span>`) ? named : null) };
+    return el;
+  };
+  globalThis.document = /** @type {any} */ ({ createElement: article });
+  try {
+    REC.takeRefused(X, 'withheld');
+    const art = LAYER.sceneArticle(REC.doc(X));
+    assert.ok(art.innerHTML.startsWith(`<div class="hd"><span class="addr id">${X}</span><span class="by">`) && !art.innerHTML.includes('class="st"'), `its head alone, no statement in it: ${art.innerHTML}`);
+    /** the pane: its top 100 px down the viewport, its border 2 px, scrolled 40 px */
+    const pane = { querySelector: (/** @type {string} */ s) => (s === 'article.dtext' ? art : null), getBoundingClientRect: () => ({ top: 100 }), clientTop: 2, scrollTop: 40 };
+    assert.deepEqual(coverIn(/** @type {any} */ (pane)), { top: 68, y: 77 }, 'level with its address: 130 px down the viewport, 68 px past the pane\'s content top');
+    pane.scrollTop = 80; top = 90;
+    assert.deepEqual(coverIn(/** @type {any} */ (pane)), { top: 68, y: 77 }, 'scrolled 40 px further, its address 40 px higher: the same place in the pane\'s text');
+    assert.equal(coverIn(/** @type {any} */ ({ ...pane, querySelector: () => null })), null, 'no article in the pane: none');
+  } finally { globalThis.document = platform; REC.invalidate(X); }
+});
 
 test('a line\'s far end stands where `project` places its passage now, never where the link stores it; one that floats at its pane\'s first block, where its follow lands; one nothing places draws no line', () => asReader('1.0.1', () => {
   const L = linkBy(DOC_A + '.0.2.1', '1.0.1'), blocks = [{ pos: 3, width: 20 }, { pos: 23, width: 60 }];
@@ -1090,7 +1115,7 @@ test('the page\'s own death takes down at once every pane whose document the vie
     await landed();
     const b = shownIn(p.paneB, 'b'), a = shownIn(p.paneA, 'a');
     assert.deepEqual(LAYER.madeOf(b)?.blocks, [], 'the draft, withheld from the guest, holds no text');
-    assert.ok(String(b.innerHTML).includes(tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' })), `its head alone, withheld: ${b.innerHTML}`);
+    assert.ok(!String(b.innerHTML).includes('class="st"') && String(p.cornerB.innerHTML).includes(tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' })), `its head alone, its corner saying it is withheld: ${b.innerHTML} | ${p.cornerB.innerHTML}`);
     assert.deepEqual(LAYER.madeOf(a)?.blocks.map((x) => x.text), ['A version.', 'Its words.'], 'the version read again as the guest reads it');
     assert.deepEqual(fake.unanswered, []);
   } finally { REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' }); CAM._reset(); }
@@ -1127,7 +1152,7 @@ test('the page\'s own death keeps a pane whose document the view stood on and th
     await landed();
     assert.deepEqual(blocks('a'), kept, 'read again at the guest\'s class: the run the guest\'s delivery withholds, set from that read');
     assert.equal(LAYER.madeOf(shownIn(p.paneA, 'a'))?.runs.find((r) => r.kind === 'withheld')?.width, RUN.length);
-    assert.ok(String(shownIn(p.paneB, 'b').innerHTML).includes(tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' })), `the draft, withheld from the guest, its head alone: ${shownIn(p.paneB, 'b').innerHTML}`);
+    assert.ok(!String(shownIn(p.paneB, 'b').innerHTML).includes('class="st"') && String(p.cornerB.innerHTML).includes(tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' })), `the draft, withheld from the guest, its head alone, its corner saying it is withheld: ${shownIn(p.paneB, 'b').innerHTML} | ${p.cornerB.innerHTML}`);
     assert.deepEqual(fake.unanswered, []);
   } finally { REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' }); PUMP.start({ onDirty: () => {}, onDrop: SCENE.dropped }); CAM._reset(); }
 }));

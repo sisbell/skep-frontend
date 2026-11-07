@@ -270,7 +270,7 @@ export function lineBox(size) {
 export const MEASURE = Object.freeze({
   /** the room before a typed line's first character */
   indent: 1,
-  /** the head's state line, byline and presence line */
+  /** the head's byline and presence line */
   head: 0.8,
   /** the scene-offer and the gap on either side of it */
   offer: 0.8, offerGap: 0.6,
@@ -762,8 +762,8 @@ export function fold(lines, room, opts = {}) {
   return { fs: s.fs, step: s.k, across: s.across, cpl, room: { w: room.w, h: room.h }, lines, columns, unheld };
 }
 
-/** the head's lines every article opens with: its address, its state line and its byline, in the body's em */
-const HEAD_H = lineBox(1) + 2 * lineBox(MEASURE.head);
+/** the head's lines every article opens with: its address and its byline, in the body's em */
+const HEAD_H = lineBox(1) + lineBox(MEASURE.head);
 
 /**
  * A document whose text has not arrived, folded: its head's lines and a body

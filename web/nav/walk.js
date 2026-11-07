@@ -115,17 +115,20 @@
 // document is named by its address, then the first line its box's label sets
 // as the mirror says it (T-LAYER's `mirrorLabel`, the one the status region
 // names it by), the version's own — its words quoted, the client's
-// words in their place bracketed — then its state (T-LAYER's `stateWords`):
-// one a read answered `withheld` by its withheld box's words (B1-S2), its
-// first line standing for none, one the board said nothing about by the
-// words for that (`L.far.unregistered`), and one no read or listing has
-// told the state of by no state at all (FP-25) — and, while it stands kept
-// as it is read again, the clause the one line or its corner shows, as a
-// sentence of its own (T-LAYER's `keptIn`; FP-23, FP-33), the first withheld
-// run of an origin in it the clause its kept sign shows while the origin's
-// edition claims stand so (`claimsKeptIn`), and the board's while it lags so
-// (`boardKeptIn`), each item marked again in place
-// on each dirty frame where its clause changed (`markKept`); a mark's stop by its count,
+// words in their place bracketed — then its state (T-LAYER's
+// `mirrorState`): where a read answered its metadata its corner's state
+// whole, the version its box shows and the count of its chain among it
+// (FP-22), a draft's after its kind; one a read answered `withheld` by its
+// withheld box's words (B1-S2), its first line standing for none, one the
+// board said nothing about by the words for that (`L.far.unregistered`),
+// and one no read or listing has told the state of by no state at all
+// (FP-25) — and, while it stands kept as it is read again, the clause the
+// one line or its corner shows, as a sentence of its own (T-LAYER's
+// `keptIn`; FP-23, FP-33), the first withheld run of an origin in it the
+// clause its kept sign shows while the origin's edition claims stand so
+// (`claimsKeptIn`), and the board's while it lags so (`boardKeptIn`), each
+// item marked again in place on each dirty frame where its clause or a
+// document's state changed (`markKept`); a mark's stop by its count,
 // the words the mark shows (ST's `markCount`), its item saying a list opens
 // on it (`aria-haspopup`); a link's item names its far end as its tail does
 // (LK's `farLabel`), and says BM-HELD's line where the
@@ -408,9 +411,9 @@ function named(n, i, total) {
   if (n.kind === 'mark') return then(plainly(markCount(membersOf(n.addr).length, REC.countsExact())));
   if (n.kind === 'document') {
     // a version named by its own first line, as its box's label names it (T-LAYER's `mirrorLabel`; FP-22), then its state as
-    // the board answered it (T-LAYER's `stateWords`)
+    // its corner states it, whole, where a read told it (T-LAYER's `mirrorState`)
     const d = REC.doc(n.addr), label = LAYER.mirrorLabel(d);
-    const values = { document: n.addr, state: LAYER.stateWords(d), extent: d.extent != null ? t('L.mirror.positions', { n: d.extent }) : '' };
+    const values = { document: n.addr, state: LAYER.mirrorState(d), extent: d.extent != null ? t('L.mirror.positions', { n: d.extent }) : '' };
     return then(then({ text: t('L.mirror.document', { ...values, label: label.map((r) => r.text).join('') }), html: tHTML('L.mirror.document', { ...values, label }, { document: 'id' }) }, plainly(keptSentence(n))));
   }
   if (n.kind === 'block') {
@@ -509,7 +512,8 @@ export function render() {
     const located = isLocated(n, at) ? ' aria-current="location"' : '';
     const by = describedBy(n, i, said);
     const described = by ? ` aria-describedby="${by}"` : '';
-    html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}"${expanded}${popup}${located}${described} data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''} data-kept="${esc(keptSentence(n))}">${named(n, i, total).html}</li>`;
+    const state = n.kind === 'document' ? ` data-state="${esc(stateOf(n))}"` : '';
+    html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}"${expanded}${popup}${located}${described} data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''} data-kept="${esc(keptSentence(n))}"${state}>${named(n, i, total).html}</li>`;
     if (holdsRuns(n, said)) pieces += `<div id="${pieceId(i)}" hidden>${esc(otherRuns(n, said))}</div>`;
     const far = farWhole(n);
     if (far) pieces += `<div id="${farId(i)}" hidden>${esc(far)}</div>`;
@@ -560,13 +564,18 @@ function keptSentence(n) {
   return k ? t('L.mirror.clause', { clause: k.text }) : '';
 }
 
+/** a document's state as its item voices it (T-LAYER's `mirrorState`): the version its node names, as its corner states it */
+const stateOf = (/** @type {Node} */ n) => LAYER.mirrorState(REC.doc(n.addr));
+
 /**
- * The mirror's items marked in place where the kept clause they carry
- * changed (see the head; `keptSentence`): each such item's words written
- * again, the item itself kept, so the platform's focus stays on the item it
- * stands on. The app's loop runs it on each dirty frame: a clause appears
- * once its read again has stood a second and lifts in the frame its read
- * sets it, between the walk's moves.
+ * The mirror's items marked in place where the kept clause they carry, or a
+ * document's state, changed (see the head; `keptSentence`, `stateOf`): each
+ * such item's words written again, the item itself kept, so the platform's
+ * focus stays on the item it stands on. The app's loop runs it on each dirty
+ * frame: a clause appears once its read again has stood a second and lifts
+ * in the frame its read sets it, and a document's item says what its corner
+ * says in the frame its corner says it — its chain counted again, the
+ * board's lag begun or ended — between the walk's moves.
  */
 export function markKept() {
   if (!mirrorEl || typeof mirrorEl.querySelectorAll !== 'function') return;
@@ -575,9 +584,10 @@ export function markKept() {
     const i = Number(li.dataset.i), n = siblings[i];
     // a span's item carries a clause only while an origin's edition claims stand kept, or carries one still
     if (!n || (n.kind !== 'document' && n.kind !== 'board' && (n.kind !== 'block' || (!runs && !li.dataset.kept)))) continue;
-    const words = keptSentence(n);
-    if (li.dataset.kept === words) continue;
+    const words = keptSentence(n), state = n.kind === 'document' ? stateOf(n) : null;
+    if (li.dataset.kept === words && (state === null || li.dataset.state === state)) continue;
     li.dataset.kept = words;
+    if (state !== null) li.dataset.state = state;
     li.innerHTML = named(n, i, total).html;
   }
 }

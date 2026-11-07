@@ -194,10 +194,15 @@
 // (`holdTop`), P-REG's HOLD gap below the line, so it stands level with a
 // label held there; an in-document find standing at its place, its items
 // stack beneath the find's box (the reader `atop`), which reads where the
-// corner stands (`cornerPlace`). A reading view frames the column it reads with the
-// corner and the edge beside it, at the landing's em (`frameOf`; P-CAM's
-// `landingPx`) — a document read whole, its first column where the visible
-// view holds it, else its head at the top of the visible view (FP-37) — on
+// corner stands (`cornerPlace`). Its version statement counts its box's
+// chain only where the board ended the chain there (`chainOf`), every
+// version of the box sharing the count, its items made again as the chain
+// is counted again (`cornerKey`; FP-22, FP-23); the ARIA mirror's item
+// voices its state whole (`mirrorState`). A reading view frames the column
+// it reads with the corner and the edge beside it, at the landing's em
+// (`frameOf`; P-CAM's `landingPx`) — a document read whole, its first column
+// where the visible view holds it, else its head at the top of the visible
+// view (FP-37) — on
 // the document's lines as rendered, set first where its fold does not stand
 // on them at the measure in force (`renderedFold`; FP-12, FP-25), so a
 // camera bound there lands on the line its mounted text sets — the frame read
@@ -351,7 +356,7 @@ import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, columnAt, MEASURE_CPL, LAY_FS, LINE_H, EDGE, GUTTER, CHAR_W } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, cornerWidth } from '../plane/register.js';
 import { holdTop, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords } from '../plane/labels.js';
-import { articleHTML, articlePlan, cornerHTML, keptHTML, blockMarks, symbolLit, editionClause, copyText, firstLineOf } from './article.js';
+import { articleHTML, articlePlan, cornerHTML, cornerWords, keptHTML, blockMarks, symbolLit, editionClause, copyText, firstLineOf } from './article.js';
 import { farSays, whyOf } from '../beams/held.js';
 import { applyEdits, toBase, toShown, boundaries } from '../model/derive.js';
 import { homeOf, documentOf, memberOf, accountOf } from '../model/address.js';
@@ -433,7 +438,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @property {number} grev the view revision at mount
  * @property {Fold} fold the fold it was set in: its size, its columns and the lines they hold
  * @property {number} fs the document's em in world units: its fold's
- * @property {{whole: string, compact: string, key: string}} corner the corner's items, whole and compact (T-ARTICLE's `cornerHTML`), as made at mount and again as what they are made from moved — the board's lag, the draft's kept state, its statement open or closed (`cornerKey`); empty where it has none
+ * @property {{whole: string, compact: string, key: string}} corner the corner's items, whole and compact (T-ARTICLE's `cornerHTML`), as made at mount and again as what they are made from moved — the board's lag, its box's chain counted again, the draft's kept state, its statement open or closed (`cornerKey`); empty where it has none
  * @property {HTMLElement | null} template the article's one column, kept out of the page: what its parts are cut from; null where the platform does not set the article
  * @property {Unit[]} units its fold's lines by the row elements that set them
  * @property {Map<number, Cut | null>} cuts the points its lines open at, by line, as far as they were read; null where a line opens at no point found
@@ -800,7 +805,6 @@ function carriedSpan(d, s) {
  * page-local edits it was made with (`carriedFocus`, `carriedSpan`).
  */
 export function viewFor(/** @type {Doc} */ d, scene = false) {
-  const h = REC.health();
   /** @type {Map<string, 'edition' | 'draft' | 'unknown'>} */
   const originKinds = new Map();
   for (const o of d.origins) { const od = REC.doc(o.doc); const p = REC.place(o.doc); originKinds.set(o.doc, p ? p.kind : od.meta ? (od.meta.published ? 'edition' : 'draft') : od.kind); }
@@ -811,17 +815,41 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
     marks: linked ? LK.shown(d.addr) : [], mergedMark: LK.mergedMark, symbols: linked ? LK.symbols(d.addr) : [], says: farSays, countAt: linked ? (b) => LK.countAt(d.addr, b) : () => ({ n: 0, social: false }),
     wholeLinks: LK.wholeLinks(d.addr).length,
     reader: REC.reader(),
-    localTrust: !!(h && h.auth && h.auth.local_trust),
-    notebook: true,
+    ...cornerFacts(d),
     scene, originKinds,
-    originOwner, clauseOf, keyOf: REC.accountKey,
-    members: REC.has(boxOf(d.addr)) ? REC.doc(boxOf(d.addr)).members : null,
-    lags: lags(),
-    kept: REC.keptOf(d.addr), keptOpen: openStatements.has(d.addr),
+    clauseOf, keyOf: REC.accountKey,
+    keptOpen: openStatements.has(d.addr),
     cpl: scene ? MEASURE_CPL : measure(),
     measure: widthOf,
   };
   return v;
+}
+
+/**
+ * The chain's count a box's corner names (T-ARTICLE's `ArticleView.members`):
+ * its box's document's, where the board ended the chain there (M-REC's
+ * `Doc.ended`) — every version of the box sharing it; null where the model
+ * holds no count, or one not known to be the whole chain, so no corner
+ * claims a total the board did not give.
+ * @param {string} addr a document, or any version of it
+ * @returns {number | null}
+ */
+export function chainOf(addr) {
+  const box = REC.has(boxOf(addr)) ? REC.doc(boxOf(addr)) : null;
+  return box && box.ended ? box.members : null;
+}
+
+/**
+ * What a document's corner states its state from (T-ARTICLE's `CornerFacts`):
+ * its box's chain (`chainOf`), the board's lag (`lags`), the venue, the local
+ * trust flag, a draft's kept state and the one owner rule — the corner's
+ * view's own (`viewFor`), read without the links the rest of the view reads.
+ * @param {Doc} d
+ * @returns {import('./article.js').CornerFacts}
+ */
+function cornerFacts(d) {
+  const h = REC.health();
+  return { members: chainOf(d.addr), lags: lags(), notebook: true, localTrust: !!(h && h.auth && h.auth.local_trust), kept: REC.keptOf(d.addr), originOwner };
 }
 
 // ---- the fold ---------------------------------------------------------------------------------------------------
@@ -1854,11 +1882,11 @@ export function clauseOf(origin) {
  * withheld box: existence and owner, never bytes — in the corner's own words,
  * "withheld · ⟨owner⟩" (foundations §3.1; FP-29), its owner by the
  * one owner rule (M-REC's `ownerAccount`). The document's state in the ARIA
- * mirror's item and the one line's name (`stateWords`) and the face a refused
- * read of it conjures (O-FACES's `withheld`) read it, and its first line names
- * it in the same words, bracketed (T-ARTICLE's `firstLineOf`) — the box's
- * label, a trail entry's words — so what a sighted reader sees and what a
- * screen reader hears never part (R94).
+ * mirror's item (`mirrorState`), the one line's name (`stateWords`) and the
+ * face a refused read of it conjures (O-FACES's `withheld`) read it, and its
+ * first line names it in the same words, bracketed (T-ARTICLE's
+ * `firstLineOf`) — the box's label, a trail entry's words — so what a
+ * sighted reader sees and what a screen reader hears never part (R94).
  * @param {Doc} d
  */
 export function withheldBox(d) { return t('F.corner.withheld', { owner: REC.ownerAccount(d) }); }
@@ -1886,7 +1914,7 @@ const QUOTE = /** @type {import('./article.js').Faced} */ ({ text: '"', face: 'c
  * A version's label as the ARIA mirror's item says it (see the head): its
  * first line (`firstOf`), the document's own words quoted, the client's words
  * in their place bracketed; none at a withheld box, whose state says its
- * words (`stateWords`).
+ * words (`mirrorState`).
  * @param {Doc} d the version a box shows, or a pane's record
  * @returns {import('./article.js').Faced[]}
  */
@@ -1978,11 +2006,13 @@ export function leadPart(d, px) {
 }
 
 /**
- * A document's state in the ARIA mirror's words (the walk's item, the one
- * line's accessible name; R94): withheld, its withheld box's words; nothing
- * the board will say of it, the words for that (`L.far.unregistered`); a draft; published;
- * none where nothing has told it yet — its kind the index's place's for its
- * box, else its own record's, else its metadata's.
+ * A document's state in its short words (the one line's accessible name,
+ * and the ARIA mirror's item where no read has answered what its corner
+ * states it from — `mirrorState`; R94): withheld, its withheld box's words;
+ * nothing the board will say of it, the words for that
+ * (`L.far.unregistered`); a draft; published; none where nothing has told it
+ * yet — its kind the index's place's for its box, else its own record's,
+ * else its metadata's.
  * @param {Doc} d the version a box shows
  * @returns {string}
  */
@@ -1990,6 +2020,22 @@ export function stateWords(d) {
   const p = REC.place(boxOf(d.addr));
   const kind = p ? p.kind : d.kind !== 'unknown' ? d.kind : d.meta ? (d.meta.published ? 'edition' : 'draft') : null;
   return d.refused === 'withheld' ? withheldBox(d) : d.refused === 'unregistered' ? t('L.far.unregistered') : kind === 'draft' ? t('L.mirror.draft') : kind === 'edition' ? t('F.published') : '';
+}
+
+/**
+ * A document's state as the ARIA mirror's item voices it (R94): where a read
+ * answered its metadata, its corner's state whole, as its corner states it
+ * at any scale (T-ARTICLE's `cornerWords`, over `cornerFacts`) — a draft's
+ * after its kind, which its label marks (`leadRuns`); else, and for a
+ * document a read refused, its short words (`stateWords`), which claim
+ * nothing a read has not told (FP-33).
+ * @param {Doc} d the version a box shows
+ * @returns {string}
+ */
+export function mirrorState(d) {
+  if (d.refused || !d.meta) return stateWords(d);
+  const said = cornerWords(d, cornerFacts(d));
+  return isDraft(d) ? [t('L.mirror.draft'), said].filter(Boolean).join(', ') : said || stateWords(d);
 }
 
 /**
@@ -2080,8 +2126,8 @@ export function boardKeptIn() {
 /** does the board lag past a second (M-PUMP's `boardKept`): every corner names neither the latest version nor the chain's count (`ArticleView.lags`) */
 const lags = () => PUMP.boardKept() !== null;
 
-/** what a document's corner's items are made from beside its record and the links (`Mounted.corner`): the board's lag, the draft's kept state and whether its statement stands open — the items made again where it moved */
-const cornerKey = (/** @type {string} */ addr) => JSON.stringify([lags(), REC.keptOf(addr), openStatements.has(addr)]);
+/** what a document's corner's items are made from beside its record and the links (`Mounted.corner`): the board's lag, its box's chain (`chainOf`), the draft's kept state and whether its statement stands open — the items made again where it moved */
+const cornerKey = (/** @type {string} */ addr) => JSON.stringify([lags(), chainOf(addr), REC.keptOf(addr), openStatements.has(addr)]);
 /** a document's corner's items made over its view, whole and compact, keyed by what they were made from (`cornerKey`) */
 const cornerOfView = (/** @type {Doc} */ d, /** @type {ArticleView} */ view) => ({ whole: cornerHTML(d, view), compact: cornerHTML(d, view, true), key: cornerKey(d.addr) });
 
@@ -2808,7 +2854,9 @@ function signsIn(/** @type {Mounted} */ rec, /** @type {number} */ ci) {
 /**
  * The corners' pass, after the articles are placed: each mounted document at
  * reading scale whose corner has items carries it — its items made again
- * where the board's lag began or ended since they were made (`lags`), and a
+ * where what they are made from moved since they were made (`cornerKey`):
+ * the board's lag begun or ended (`lags`), its box's chain counted again as
+ * a newer version arrives (`chainOf`; FP-23), a draft's kept state — and a
  * kept document's clause its last item where the one line does not name it
  * (`keptIn`, `keptHTML`), the corner placed by its items' height alone — the
  * rest are removed. The
@@ -2831,7 +2879,7 @@ function placeCorners(focused) {
   const shown = [];
   const centre = viewCentre();
   for (const rec of mounted.values()) {
-    // the board's lag begun or ended, a draft's kept state set, its statement opened or closed: the corner's items made again over the view as it stands
+    // the board's lag begun or ended, its box's chain counted again, a draft's kept state set, its statement opened or closed: the corner's items made again over the view as it stands
     if (rec.corner.key !== cornerKey(rec.d.addr)) rec.corner = cornerOfView(rec.d, viewFor(rec.d));
     if (!rec.corner.whole || !readsAt(rec.fs)) continue;
     const addr = rec.d.addr, box = docBox(addr), open = openWhole.has(addr);

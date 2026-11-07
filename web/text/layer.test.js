@@ -27,8 +27,9 @@
 // edition's links alone, at the row or drop that left it behind, the failed
 // read's words after it — its label carrying it after its address, none where
 // the one line names it, and its account counting it; and the plane's corner made again as the board's lag
-// begins and ends (FP-8, FP-12, FP-20, FP-22, FP-23, FP-26, FP-30, FP-33,
-// FP-34).
+// begins and ends and as its box's chain is counted again, naming no count
+// the board did not end the chain at (FP-8, FP-12, FP-20, FP-22, FP-23,
+// FP-26, FP-30, FP-33, FP-34).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -1240,6 +1241,65 @@ test('while the board lags past a second the plane\'s corner names neither the l
     assert.deepEqual(fake.unanswered, []);
   } finally { LAYER.press(false); LAYER.clear(); PORT.boot(null); globalThis.document = platform.document; globalThis.window = platform.window; }
 });
+
+/**
+ * The plane's corner over stand-ins of the page: `body` run with the corner layer attached, D's version 2 delivered whole
+ * and D's metadata and version 2's read — the chain born at version 1 — the camera at reading scale over D's box; the
+ * corner's items read back by `items(addr)`
+ * @param {(items: (addr: string) => string) => void} body
+ */
+function onCorner(body) {
+  const platform = { document: globalThis.document, window: globalThis.window };
+  /** an element of the page: the corner's, the article's and its column's, measured as the platform lays them out */
+  const element = () => {
+    const e = {
+      className: '', innerHTML: '', id: '', dataset: {}, style: {}, children: /** @type {unknown[]} */ ([]), tabIndex: -1, offsetWidth: 160, offsetHeight: 40,
+      classList: { toggle() {} }, setAttribute() {}, removeAttribute() {}, appendChild(/** @type {unknown} */ c) { e.children.push(c); },
+      querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }), contains: () => false, remove() {},
+    };
+    return e;
+  };
+  globalThis.document = /** @type {any} */ ({ createElement: element });
+  globalThis.window = /** @type {any} */ ({ getSelection: () => null });
+  try {
+    const meta = { doc: D, published: true, owner: '1.0.1', birth: D + '.1', birthExtent: EXTENT, placed: null, baseExtent: null, source: null, asOf: 1 };
+    deliver(); deliver2();
+    REC.takeMetadata(D, meta); REC.takeMetadata(D2, meta);
+    CAM.setViewport(VW, VH);
+    LAYER.attach(/** @type {any} */ ({ clientWidth: VW, clientHeight: VH, appendChild() {} }), /** @type {any} */ (element()));
+    const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), c = f.columns[0];
+    CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2, scale: 12 / f.fs });
+    body((addr) => /** @type {{innerHTML: string} | null} */ (/** @type {unknown} */ (LAYER.cornerOf(addr)))?.innerHTML ?? '');
+  } finally { LAYER.press(false); LAYER.clear(); LAYER.readers({}); globalThis.document = platform.document; globalThis.window = platform.window; }
+}
+
+test('the plane\'s corner of a box shown at a version names that version and its chain\'s count, and counts the chain again in the frame a newer version\'s arrival counts it — "version 2 of 2", then "version 2 of 3" — its article standing all the while (FP-22, FP-23; issue #239\'s design decision: "it counts the chain again when a newer version arrives")', () => onCorner((items) => {
+  showing({ at: D2 });
+  REC.takeMembers(D, 2);
+  const published = t('F.published.notebook'), of = (/** @type {number} */ n) => `<span class="version" data-members="${n}">${esc(t('F.version-of', { k: 2, n }))}</span>`;
+  LAYER.frame();
+  assert.ok(LAYER.isMounted(D2) && items(D2).includes(esc(t('F.corner.pinned', { published, k: 2 }))) && items(D2).includes(of(2)), `the box at version 2: its corner names it, "version 2 of 2" — ${items(D2)}`);
+  const last = LAYER.mounts().at(-1);
+  REC.takeMembers(D, 3);
+  LAYER.frame();
+  assert.ok(items(D2).includes(of(3)) && !items(D2).includes(of(2)), `version 3 arrived, the chain counted again: "version 2 of 3" in that frame — ${items(D2)}`);
+  assert.ok(LAYER.isMounted(D2) && LAYER.mounts().at(-1) === last, 'its article standing: nothing mounted again');
+}));
+
+test('the plane\'s corner claims no total the board did not give: a chain its probe read part of — the board not answering that none follows — names no count at the bare address nor at a version, its state standing; the board ending the chain there, the count (FP-22; #184\'s rule: "nothing built from it claims a total or a latest")', () => onCorner((items) => {
+  const box = { at: D };
+  showing(box);
+  const published = t('F.published.notebook');
+  REC.takeMembers(D, 8, false);
+  LAYER.frame();
+  assert.ok(items(D).includes(esc(t('F.corner.latest', { published }))) && !items(D).includes('class="version"'), `the bare address: the latest version, no "version 8 of 8" — ${items(D)}`);
+  box.at = D2;
+  LAYER.frame();
+  assert.ok(items(D2).includes(esc(t('F.corner.pinned', { published, k: 2 }))) && !items(D2).includes('class="version"'), `at version 2: its own version, no "of 8" — ${items(D2)}`);
+  REC.takeMembers(D, 8, true);
+  LAYER.frame();
+  assert.ok(items(D2).includes(esc(t('F.version-of', { k: 2, n: 8 }))), `the chain ended at 8: "version 2 of 8" — ${items(D2)}`);
+}));
 
 test('the plane\'s corner of a draft carries its kept state — the slot an empty box while none is set — its items made again in the frame the state is set, the frame the word\'s statement opens and the frame it closes, and the frame the state is cleared (B3-S2; D5 K-57, K-74; FP-34)', () => {
   const platform = { document: globalThis.document, window: globalThis.window };

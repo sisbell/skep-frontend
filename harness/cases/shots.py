@@ -35,7 +35,7 @@ def run(ctx):
             r.check(bool(vis) and all(v['inClip'] and v['inView'] for v in vis), f'{sid}: {claimed} is in view, as the caption claims (inside its clip and the viewport)', [{'rect': v['rect'], 'clip': v['clip'], 'inClip': v['inClip'], 'inView': v['inView']} for v in vis][:3], xfail=xfail)
     corner = '#corners [data-corner="%s"]' % DOC
     ctx.leap(DOC, WINDOW[0])
-    screen('B1-S1', 'arrive and read: the first edition at reading scale, the owner\'s links in place, the byline, the state line, the presence indicator, its corner', 'B1-S1-arrive-and-read',
+    screen('B1-S1', 'arrive and read: the first edition at reading scale, the owner\'s links in place, the byline, the presence indicator, its corner', 'B1-S1-arrive-and-read',
            claims=[(corner, 'the first edition\'s corner', None)])
     ctx.view_doc_px(DOC, 160)
     screen('B1-S2', 'the region at mid: the extents, each edged as a draft or an edition', 'B1-S2-region-mid')

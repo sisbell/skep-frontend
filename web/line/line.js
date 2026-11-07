@@ -30,7 +30,7 @@
 // runs short (the style's); the board and an account carry none, the page
 // holding no name for either. Its accessible name is its fields in their
 // order, the document's label whole after its field and the document's state
-// in the ARIA mirror's words (`addressName`). The places it names are
+// in its short words (`addressName`). The places it names are
 // the plane's running head (`named`; FP-26): the plane's labels and T-LAYER's
 // held labels read them through the reader the app hands in, so none of them
 // holds a label below the line. The address segment is one width at every
@@ -778,8 +778,8 @@ function labelHTML(a) {
  * The address segment's accessible name's words (see the head;
  * `L.address.name`): its fields in their order, the document's label after
  * its field whole, the position, the version pinned, then the document's
- * state in the ARIA mirror's words (T-LAYER's `stateWords`), each after its
- * own separator, none where it is empty.
+ * state in its short words (T-LAYER's `stateWords`), each after its own
+ * separator, none where it is empty.
  * @param {AddressDisplay} a
  * @returns {Record<string, string>}
  */

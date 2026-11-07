@@ -172,7 +172,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #domlayer .dtext.legible .col { pointer-events:auto; }
 .dtext .hd { color:#cfd6df; }
 .dtext .hd .addr { font-weight:600; }
-.dtext .hd .st, .dtext .hd .by, .dtext .hd .pres { color:#8b8f96; font-size:var(--head); display:block; }
+.dtext .hd .by, .dtext .hd .pres { color:#8b8f96; font-size:var(--head); display:block; }
 .dtext .hd .pres { color:#b9c1cb; }
 /* THE BYLINE'S SLOTS (FP-34; issue #208's design decision: "the slot keeps its place as an empty box of its own width"): a
    box as wide as its slots, each slot a box of its own width (in em, T-ARTICLE's) whatever it shows, set at its line's top

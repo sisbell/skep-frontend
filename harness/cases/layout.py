@@ -1078,7 +1078,7 @@ def type_view(ctx):
     its block, the character its part starts at, its white space, its indent, its size and its weight, and the
     character the bytes delivered hold before its block; each block that sets a line, in each part, its top below the
     block before it there; the body's size; the first family the computed face of each voice names — a typed line's,
-    the head's state line's, the head's address's — and the platform's font set asked of each face the page ships; the
+    the head's byline's, the head's address's — and the platform's font set asked of each face the page ships; the
     advance of a weighed sample set in a typed line"""
     art = json.dumps('#domlayer article.dtext[data-addr="%s"]' % DOC)
     return ctx.js('''(async () => {
@@ -1089,7 +1089,7 @@ def type_view(ctx):
       const name = (e) => e.tagName.toLowerCase() + (e.className ? '.' + String(e.className).split(' ').join('.') : '');
       const sized = [...art.querySelectorAll('.hd > *, .run > *, .rec .derived, .withheld .arm, .withheld .clause')].map((e) => {
         const cs = getComputedStyle(e); return {el: name(e), pos: e.dataset.pos || null, font: parseFloat(cs.fontSize), line: parseFloat(cs.lineHeight)}; });
-      const boxes = [...art.querySelectorAll('.hd .st, .hd .by, .hd .pres')].map((e) => {
+      const boxes = [...art.querySelectorAll('.hd .by, .hd .pres')].map((e) => {
         const font = parseFloat(getComputedStyle(e).fontSize); return {el: name(e), pos: e.dataset.pos || null, height: e.getBoundingClientRect().height / s, line_box: L.lineBox(font / L.LAY_FS) * L.LAY_FS}; });
       const headings = [...art.querySelectorAll('h1, h2, h3, h4, h5, h6')].map(name);
       const typed = [...art.querySelectorAll('.run > p.sp')].filter((e) => !e.matches('.empty')).map((e) => { const cs = getComputedStyle(e), pos = Number(e.dataset.pos);
@@ -1102,7 +1102,7 @@ def type_view(ctx):
       const para = art.querySelector('.run > p.sp.blk-para:not(:empty)'), addr = art.querySelector('.hd .addr');
       // the address's advance a character, in em of its own size: its run's width over its characters
       const ident = addr && addr.textContent ? addr.getBoundingClientRect().width / s / [...addr.textContent].length / parseFloat(getComputedStyle(addr).fontSize) : null;
-      return {sized, boxes, headings, typed, steps, body: parseFloat(getComputedStyle(art).fontSize), line_box: L.lineBox(1) * L.LAY_FS, faces: {reading: family('.run > p.sp'), client: family('.hd .st'), ident: family('.hd .addr')},
+      return {sized, boxes, headings, typed, steps, body: parseFloat(getComputedStyle(art).fontSize), line_box: L.lineBox(1) * L.LAY_FS, faces: {reading: family('.run > p.sp'), client: family('.hd .by'), ident: family('.hd .addr')},
               loaded: %s.map((f) => [f, document.fonts.check(f)]), set: [...document.fonts].map((f) => ({family: f.family.replace(/^["']|["']$/g, ''), style: f.style, weight: f.weight, status: f.status})),
               advance: para ? %s(para, s) / L.LAY_FS : null, ident_advance: ident, page_advance: L.CHAR_W};
     })()''' % (json.dumps(DOC), art, json.dumps(DOC), json.dumps(DOC), json.dumps(SHIPPED_FACES), ADVANCE_JS))
@@ -1188,7 +1188,7 @@ def type_holds(ctx, r):
             f'the type: each block of the first edition a whole count of body line boxes below the block before it in its part — an empty line typed between them one line box, no other room — so a column keeps its grid of lines ({LINE_BOX_TOL_PX:.4f} px at the layout size; issue #17\'s design decision: "No space is added between blocks")',
             {'steps': len(v['steps']), 'line_box': v['line_box'], 'off_grid': off_grid[:6]})
     shipped = v['advance'] is not None and v['ident_advance'] is not None and abs(v['advance'] - SHIPPED_ADVANCE['reading']) <= ADVANCE_TOL and abs(v['ident_advance'] - SHIPPED_ADVANCE['ident']) <= ADVANCE_TOL
-    r.check(v['faces'] == FACE_FAMILIES and shipped, f'the type: each voice stands in its face — a typed line, the document\'s words, in Charter; the head\'s state line, the client\'s, in the system face; the head\'s address in Atkinson Hyperlegible Mono — the reading and identifier faces set as shipped, their rendered advances their files\' own, {ADVANCE_TOL} em either way (issue #16\'s design decision)',
+    r.check(v['faces'] == FACE_FAMILIES and shipped, f'the type: each voice stands in its face — a typed line, the document\'s words, in Charter; the head\'s byline, the client\'s, in the system face; the head\'s address in Atkinson Hyperlegible Mono — the reading and identifier faces set as shipped, their rendered advances their files\' own, {ADVANCE_TOL} em either way (issue #16\'s design decision)',
             {'faces': v['faces'], 'want': FACE_FAMILIES, 'advance': {'reading': v['advance'], 'ident': v['ident_advance'], 'shipped': SHIPPED_ADVANCE}})
     boot = ctx.js('window.__skep.boot') or {}
     typed = boot.get('type') or {}

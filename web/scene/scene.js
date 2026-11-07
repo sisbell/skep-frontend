@@ -128,7 +128,8 @@
 // other taken down to its cover — no band standing; then each is read again
 // at the class the page reads at then,
 // a document withheld from a guest standing as its head alone; a pane on a
-// covered draft stays open (FP-29), its head's withheld statement its cover,
+// covered draft stays open (FP-29), its head its cover, its corner saying it
+// is withheld,
 // the bands of shared identity gone with its text, and every line homed in
 // the readable pane whose far end lies in it ending at the cover
 // (`farEndIn`, `coverIn`), clipped and stubbed as any end whose line has
@@ -384,7 +385,7 @@ import { esc, byteOffsets } from '../util.js';
  * @typedef {Object} End — one end of a link's line between the panes: its passage, and where the passage's first line stands in its pane's scrolled content
  * @property {number} pos the passage's first position
  * @property {number} width its positions
- * @property {number} y the first line's middle, px below the pane's content top — at a cover, its head's withheld statement's; at a whole document, 0, the end standing at no line
+ * @property {number} y the first line's middle, px below the pane's content top — at a cover, its head's address's (`coverIn`); at a whole document, 0, the end standing at no line
  * @property {boolean} [cover] it ends at its pane's cover (`Passage`)
  * @property {boolean} [whole] it is its pane's document whole (`Passage`)
  */
@@ -482,7 +483,7 @@ import { esc, byteOffsets } from '../util.js';
  * @property {boolean} [cover] it shows a cover: its record a read answered `withheld` as it was set — a covered draft's pane its head alone (FP-29) — where every far end crossing into it ends
  */
 
-/** @typedef {{pos: number, width: number, cover?: boolean, whole?: boolean}} Passage one end of a line between the panes, as a passage of its pane's document: its first position and its positions; `cover` where it ends at its pane's cover, its head's withheld statement, which holds no position; `whole` where it is its pane's document whole, standing at no position of it */
+/** @typedef {{pos: number, width: number, cover?: boolean, whole?: boolean}} Passage one end of a line between the panes, as a passage of its pane's document: its first position and its positions; `cover` where it ends at its pane's cover, its head, which holds no position; `whole` where it is its pane's document whole, standing at no position of it */
 
 /**
  * @typedef {Object} Line — a link's line between the panes, its ends as passages, before they are measured
@@ -1029,7 +1030,7 @@ function restIn(/** @type {Block[]} */ blocks, /** @type {number} */ pos) {
  * (`farAt`; FP-22), whatever version of the box the plane shows; where it
  * floats — the pane's text holding none of it, where its follow lands at the
  * head — the pane's first block to the block's end; at a pane that shows a
- * cover, at the cover, its head's withheld statement (FP-29); where it names
+ * cover, at the cover, its head (FP-29); where it names
  * the document whole, the whole document, at no position of it (FP-30); null
  * where nothing places it, its projection not read or refused.
  * @param {Shown} s the link as LK showed it at the other pane's document
@@ -2430,17 +2431,19 @@ const sizeOf = (/** @type {NonNullable<typeof els>} */ E) => `${E.paneA.clientWi
 const linksOf = (/** @type {Pane} */ P) => ({ addr: P.src, shown: P.view.marks, blocks: P.d.blocks, placed: P.placed, cover: P.d.refused === 'withheld' });
 
 /**
- * Where a pane's cover stands (FP-29): its article's head's withheld
- * statement — "withheld · ⟨owner⟩" — the line every far end crossing into
- * the pane ends at, in px below the pane's content top; null where the pane
- * holds no article.
+ * Where a pane's cover stands (FP-29): its article's head — a covered
+ * document's article holding no more, its corner saying it is withheld
+ * (T-ARTICLE's `cornerHTML`) — level with its address, the place that
+ * stands: the line every far end crossing into the pane ends at, in px below
+ * the pane's content top, so it scrolls with the pane's text; null where the
+ * pane holds no article.
  * @param {HTMLElement} pane
- * @returns {{top: number, y: number} | null} the statement's top, and its middle
+ * @returns {{top: number, y: number} | null} the address's top, and its middle
  */
-function coverIn(pane) {
+export function coverIn(pane) {
   const art = articleIn(pane);
-  const st = art ? /** @type {HTMLElement | null} */ (art.el.querySelector('.hd .st')) : null;
-  const r = st ? st.getBoundingClientRect() : null;
+  const addr = art ? /** @type {HTMLElement | null} */ (art.el.querySelector('.hd .addr')) : null;
+  const r = addr ? addr.getBoundingClientRect() : null;
   if (!r || !r.height) return null;
   const origin = pane.getBoundingClientRect().top + pane.clientTop - pane.scrollTop;
   return { top: r.top - origin, y: r.top + r.height / 2 - origin };

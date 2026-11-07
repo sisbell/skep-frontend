@@ -96,7 +96,6 @@ export const STRINGS = {
   'B1.unregistered': { text: '⟨prefix⟩ — an unregistered prefix; unknown is a visible state', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S8' },
   'B1.C-72': { text: 'named here: the documents you can read whose arrangement holds this passage; a copy pasted as fresh bytes, and any document you may not read, are not counted', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S10' },
   'B1.guest-line': { text: 'reading as a guest', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S1' },
-  'B1.state-line': { text: 'published · the bare address, at its latest version', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S1' },
   'B1.others-toggle': { text: 'others\' links: ⟨state⟩ · ⟨n⟩ touch this document', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S4' },
   'B1.others-toggle.1': { text: 'others\' links: ⟨state⟩ · 1 touches this document', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S4' },
   'B1.presence': { text: '⟨n⟩ links touch this document', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S1' },
@@ -649,8 +648,8 @@ export const STRINGS = {
   'L.time.on-or-before': { text: 'on or before ⟨date⟩', cls: 'DRAFT', source: '', screen: 'B1-S5; the versions list', lane: true },
   'L.the-line': { text: 'the one line', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   // the address segment's accessible name: its fields in their order, the document's label whole after its field, the
-  // position, the version pinned, then the document's state in the ARIA mirror's words — each after its own separator,
-  // none where it is empty
+  // position, the version pinned, then the document's state in its short words — each after its own separator, none
+  // where it is empty
   'L.address.name': { text: '⟨place⟩⟨label⟩⟨position⟩⟨version⟩⟨state⟩', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.leap-label': { text: 'LEAP — an address, or a document\'s first line', cls: 'DRAFT', source: 'designs/plane.html', screen: 'B1-S11' },
   'L.leap-rows-label': { text: 'LEAP', cls: 'DRAFT', source: '', screen: 'B1-S11', lane: true },
@@ -687,8 +686,8 @@ export const STRINGS = {
   // ⟨far⟩ the far end's label (LK's `farLabel`), the words its tail, its card and its list rows carry
   'L.mirror.link': { text: 'link ⟨link⟩, type ⟨type⟩, ⟨direction⟩ ⟨far⟩⟨floating⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.untyped': { text: 'untyped', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  // a document the board will say nothing of, as its state (T-LAYER's `stateWords`)
-  'L.far.unregistered': { text: 'nothing this board will say about this address', cls: 'DRAFT', source: '', screen: 'the ARIA mirror: a document\'s item; the one line', lane: true },
+  // a document the board will say nothing of, as its state (T-LAYER's `stateWords`, T-ARTICLE's corner)
+  'L.far.unregistered': { text: 'nothing this board will say about this address', cls: 'DRAFT', source: '', screen: 'the ARIA mirror: a document\'s item; the one line; the corner', lane: true },
   // a link's far end the board will say nothing of, in one state (LK's `emptyAt`): in the reader's own account under a
   // complete index listing no document at the address, "no document here yet" — its whole form saying nothing has been made
   // there, then whether the account's next new document goes there — else "no document known here", its whole form that

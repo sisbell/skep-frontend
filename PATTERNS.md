@@ -549,6 +549,7 @@ last. Each stands until a later decision says it changes it.
 - **#228**: a failed jump's entry stands where its camera went, with its face and its walk, and every return to it asks its read again, showing the failure's face only where the answer meets it again → FP-25
 - **#236**: below its own reading scale the document the one line names stands with its address and its position strip, the strip marking neither a position nor the view's window → FP-26
 - **#237**: leaving an entry records the walk's element by its bytes where the view left shows it, and a return stands the walk on it where the view the return lands at shows it — on what stands of it where its own place is gone — else on the element under that view's centre by #141's order, the dead end's face saying so where none of the element stands → FP-25, FP-21
+- **#239**: a document's state is said once, at its corner, its article's head stating none in any state — at the bare address, at a pin, before its first version, where a read refused it and in a reading scene's pane — the corner naming the version its box shows and the count of its chain, counted again as a newer version arrives, and the ARIA mirror's item voicing the corner's state whole → FP-12, FP-22, FP-23
 
 ## What these rule out
 

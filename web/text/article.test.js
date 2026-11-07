@@ -18,10 +18,13 @@
 // the others' count in the column's edge, setting no line, and a withheld
 // run's below its mark by the lines the mark's words take as measured, and
 // the first run of an origin carrying its kept sign below them, empty, setting
-// no line; the corner's items, whole and compact, outside the article, a
-// pane's with its read act and its lacking line, a kept clause after them on a
-// line of its own, neither the latest version nor the chain's count while the
-// board lags; the record rule; a typed line set as typed in the
+// no line; a document's state said once, at its corner, the head stating
+// none in any state, a refused document's among them; the corner's items,
+// whole and compact, outside the article, a pane's with its read act and its
+// lacking line, a kept clause after them on a line of its own, neither the
+// latest version nor the chain's count while the board lags, its state one
+// rule the words the ARIA mirror voices are made by; the record rule; a
+// typed line set as typed in the
 // body's type, a heading's marks its own characters, on its indent where it
 // opens a typed line, the empty lines typed after it whole line boxes below
 // it and no other room between blocks; the plan the bars are
@@ -37,7 +40,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, keptHTML, keptStatement, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, cornerWords, keptHTML, keptStatement, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
@@ -457,16 +460,16 @@ test('a record atom renders as the record it is; a typed line its bytes open wit
 /** a link marked at a span of the first edition, as LK hands it in, its end's key the span's */
 const shown = (/** @type {number} */ pos, /** @type {number} */ width) => /** @type {any} */ ({ link: { addr: 'L' + pos, type: null }, end: 'from', key: `${pos}+${width}`, pos, width, runs: [{ pos, width }], mark: { hue: '#7fb2ff', linker: 'you', form: [], value: 1, own: true }, linker: 'you', far: '1.0.1.0.4', farEnd: null, farWhole: true });
 
-test('the plan\'s head is the article\'s: three lines, a fourth where links touch the document', () => {
+test('the plan\'s head is the article\'s: two lines — its address and its byline — a third where links touch the document', () => {
   const d = doc({ blocks: [{ pos: 1, width: 20, kind: 'para', text: 'abcdefghijklmnopqrst', origin: null }] });
   const bare = articlePlan(d, view(), '1.0.1').filter((r) => r.kind === 'head');
-  assert.deepEqual(bare.map((r) => r.pieces.map((p) => p.text).join('')), ['1.0.1.0.3', t('B1.state-line'), '1.0.1 · '], 'the byline: its owner, then the box its slots take, no characters of its own');
-  assert.deepEqual([bare[2].pieces[1].box, bare[2].pieces[1].lead], [true, LABEL_CH * advances('0') * MEASURE.head], 'the slots one inline-block, which no line breaks inside, as wide as the one slot the reader\'s own byline takes, measured in its face, whatever it shows (FP-34)');
-  assert.deepEqual(bare.map((r) => r.pieces[0].size), [1, MEASURE.head, MEASURE.head], 'the address at the body\'s size, the state line and the byline at the head\'s');
+  assert.deepEqual(bare.map((r) => r.pieces.map((p) => p.text).join('')), ['1.0.1.0.3', '1.0.1 · '], 'the byline: its owner, then the box its slots take, no characters of its own');
+  assert.deepEqual([bare[1].pieces[1].box, bare[1].pieces[1].lead], [true, LABEL_CH * advances('0') * MEASURE.head], 'the slots one inline-block, which no line breaks inside, as wide as the one slot the reader\'s own byline takes, measured in its face, whatever it shows (FP-34)');
+  assert.deepEqual(bare.map((r) => r.pieces[0].size), [1, MEASURE.head], 'the address at the body\'s size, the byline at the head\'s');
   const marked = articlePlan(d, view({ marks: [shown(5, 4)] }), '1.0.1').filter((r) => r.kind === 'head');
-  assert.equal(marked.length, 4);
-  assert.equal(marked[3].pieces[0].box, true, 'the presence line opens with its ⟡, an inline-block');
-  assert.ok(marked[3].pieces.map((p) => p.text).join('').endsWith(t('B1.presence.1')));
+  assert.equal(marked.length, 3);
+  assert.equal(marked[2].pieces[0].box, true, 'the presence line opens with its ⟡, an inline-block');
+  assert.ok(marked[2].pieces.map((p) => p.text).join('').endsWith(t('B1.presence.1')));
 });
 
 test('a block\'s plan carries its hairline\'s label, C-33\'s mark and its symbols, at its own size', () => {
@@ -522,6 +525,57 @@ test('while the board lags the corner names neither the latest version nor the c
   assert.ok(latest.includes(`<span class="version">${esc(t('L.version', { k: 2 }))}</span>`) && !latest.includes(esc(t('F.version-of', { k: 2, n: 2 }))), `"version ⟨k⟩", never of the count — ${latest}`);
   assert.ok(pinned.includes(esc(t('F.corner.pinned', { published: t('F.published.notebook'), k: 1 }))) && pinned.includes(`<span class="version">${esc(t('L.version', { k: 1 }))}</span>`), `a pinned version: its state\'s words, its statement "version ⟨k⟩" — ${pinned}`);
   assert.ok(cornerHTML(doc(), view({ lags: false })).includes(esc(t('F.version-of', { k: 2, n: 2 }))), 'no lag: "version ⟨k⟩ of ⟨n⟩"');
+});
+
+test('a document\'s state is said once, at its corner: in every version state — at the bare address, an older pin, a pin on the newest version, a document with no versions, a reading scene\'s pane — the head states none and its plan sets no line for one, the corner names the version shown and the chain\'s count, and the words the ARIA mirror voices are the corner\'s state whole (issue #239\'s design decision: "State is said once per document, at its corner")', () => {
+  const blocks = [{ pos: 1, width: 20, kind: /** @type {const} */ ('para'), text: 'abcdefghijklmnopqrst', origin: null }];
+  const published = t('F.published.notebook'), meta = /** @type {NonNullable<import('../model/records.js').Doc['meta']>} */ (doc().meta);
+  /** @type {Array<[string, import('../model/records.js').Doc, import('./article.js').ArticleView, string[]]>} each state, its document and view, and its corner's state's words */
+  const states = [
+    ['the bare address', doc({ blocks }), view({ members: 2 }), [t('F.corner.latest', { published }), t('F.version-of', { k: 2, n: 2 })]],
+    ['an older pin', doc({ addr: '1.0.1.0.3.1', blocks, members: null }), view({ members: 2 }), [t('F.corner.pinned', { published, k: 1 }), t('F.version-of', { k: 1, n: 2 })]],
+    ['a pin on the newest version', doc({ addr: '1.0.1.0.3.2', blocks, members: null }), view({ members: 2 }), [t('F.corner.pinned', { published, k: 2 }), t('F.version-of', { k: 2, n: 2 })]],
+    ['a document with no versions', doc({ blocks, meta: { ...meta, birth: null } }), view({ members: null }), [t('F.corner.no-versions', { published })]],
+    ['a reading scene\'s pane', doc({ addr: '1.0.1.0.3.1', blocks, members: null }), view({ scene: true, members: 3, read: 3, lacks: 1 }), [t('F.corner.pinned', { published, k: 1 }), t('F.version-of', { k: 1, n: 3 })]],
+  ];
+  for (const [what, d, v, state] of states) {
+    const head = (/^<div class="hd">(.*?)<\/div>/.exec(articleHTML(d, v, '1.0.1')) || [])[1] ?? '';
+    assert.ok(head.startsWith(`<span class="addr id">${d.addr}</span><span class="by">`) && !head.includes('class="st"') && !/published|version/.test(head), `${what}: the head its address, then its byline, no state — ${head}`);
+    assert.deepEqual(articlePlan(d, v, '1.0.1').filter((r) => r.kind === 'head').map((r) => r.pieces.map((p) => p.text).join('')), [d.addr, '1.0.1 · '], `${what}: the plan's head its address and its byline alone`);
+    const corner = cornerHTML(d, v);
+    assert.ok(state.every((words) => corner.includes(esc(words))), `${what}: the corner names ${JSON.stringify(state)} — ${corner}`);
+    assert.equal(cornerWords(d, v), state.join(', '), `${what}: the mirror's words the corner's state, whole`);
+  }
+});
+
+test('a document a read refused states nothing in its head either, on the plane and in a pane — its article its head alone, its address and its byline — its state its corner\'s whole in either form, before any version\'s, no act on a version beside it: withheld, its withheld box\'s words, its owner in the identifier\'s face, the cover a pane shows; one the board says nothing of, the words for that; the words the ARIA mirror voices the corner\'s (issue #239\'s design decision: "Remove the head\'s state line in every state")', () => {
+  /** @type {Array<[string, import('../model/records.js').Doc, string, string]>} each refusal, its document — listed as an edition — and its corner's words, as words and as markup */
+  const refusals = [
+    ['withheld', doc({ refused: 'withheld', meta: null }), t('F.corner.withheld', { owner: '1.0.1' }), tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' })],
+    ['nothing the board will say of it', doc({ refused: 'unregistered', meta: null }), t('L.far.unregistered'), esc(t('L.far.unregistered'))],
+  ];
+  for (const [what, d, words, html] of refusals) for (const scene of [false, true]) {
+    const where = `${what}, ${scene ? 'in a pane' : 'on the plane'}`, v = view({ scene, members: 2, read: 3, lacks: 1 });
+    const article = articleHTML(d, v, '1.0.1');
+    assert.ok(article.startsWith(`<div class="hd"><span class="addr id">${d.addr}</span><span class="by">`) && article.endsWith('</div>') && !article.includes('class="st"') && !article.includes(html), `${where}: its head alone, its address then its byline, no state — ${article}`);
+    assert.deepEqual(articlePlan(d, v, '1.0.1').map((r) => r.pieces.map((p) => p.text).join('')), [d.addr, '1.0.1 · '], `${where}: the plan its address and its byline alone`);
+    assert.deepEqual([cornerHTML(d, v), cornerHTML(d, v, true)], [`<span class="st">${html}</span>`, `<span class="st">${html}</span>`], `${where}: its corner its state alone, whole in either form — never "published", a version or a version's act`);
+    assert.equal(cornerWords(d, v), words, `${where}: the mirror's words the corner's`);
+  }
+});
+
+test('the corner\'s state and the words the mirror voices are one rule: a withheld document\'s owner the one owner rule\'s, never its sub-account; a draft\'s kept word where one is set, then its chip; while the board lags its publication and "version ⟨k⟩"; a pane\'s act and lacking line no part of its state (R94)', () => {
+  const blocks = [{ pos: 1, width: 20, kind: /** @type {const} */ ('para'), text: 'abcdefghijklmnopqrst', origin: null }];
+  const sub = doc({ addr: '1.0.2.1.0.2', account: '1.0.2.1', refused: 'withheld', meta: null }), seat = view({ originOwner: (a) => (a === sub.addr ? '1.0.2' : accountOf(a) || '') });
+  assert.equal(cornerWords(sub, seat), t('F.corner.withheld', { owner: '1.0.2' }), 'withheld: its box\'s words, the seat above the sub-account');
+  assert.ok(cornerHTML(sub, seat).includes(tHTML('F.corner.withheld', { owner: '1.0.2' }, { owner: 'id' })) && !cornerHTML(sub, seat).includes('1.0.2.1'), 'its corner names the same owner, in the identifier\'s face');
+  const draft = doc({ kind: 'draft', meta: null, blocks });
+  assert.equal(cornerWords(draft, view()), t('C-28.flag-on'), 'a draft with no kept state: its chip');
+  assert.equal(cornerWords(draft, view({ kept: { word: 'not yet kept', reason: null }, localTrust: false })), [t('B3.not-yet-kept'), t('C-28')].join(', '), 'its kept word, then its chip');
+  assert.equal(cornerWords(doc({ addr: '1.0.1.0.3.1', members: null }), view({ members: 3, lags: true })), [t('F.corner.pinned', { published: t('F.published.notebook'), k: 1 }), t('L.version', { k: 1 })].join(', '), 'lagging at a pin: its own version, never of the count');
+  assert.equal(cornerWords(doc(), view({ members: 2, lags: true })), [t('F.published.notebook'), t('L.version', { k: 2 })].join(', '), 'lagging at the bare address: its publication alone');
+  assert.equal(cornerWords(doc({ addr: '1.0.1.0.3.2', members: null }), view({ scene: true, members: 3, read: 3, lacks: 2 })), [t('F.corner.pinned', { published: t('F.published.notebook'), k: 2 }), t('F.version-of', { k: 2, n: 3 })].join(', '), 'a pane: its act and its lacking line said by the corner, no part of its state');
+  assert.equal(cornerWords(doc({ addr: '1.0.1.0.3.2', members: null }), view({ members: null })), t('F.corner.pinned', { published: t('F.published.notebook'), k: 2 }), 'no count known: its version alone, no statement of the count');
 });
 
 /** a paragraph's pieces in the plan, a symbol as ⟡ and C-33's mark as its id, every other piece its text */
@@ -635,7 +689,7 @@ test('a typed line is set at the body\'s size, kept as typed: on its indent wher
   const lines = layoutOf(articlePlan(d, view(), '1.0.1')).lines.filter((l) => l.kind !== 'head'), top = lines[0].top;
   assert.ok(lines.every((l) => Math.abs((l.top - top) / LINE_H - Math.round((l.top - top) / LINE_H)) < 1e-9), 'every line a whole count of body line boxes below the first: the column\'s grid kept');
   const head = articlePlan(d, view(), '1.0.1').filter((r) => r.kind === 'head').map((r) => r.size);
-  assert.deepEqual(head, [1, MEASURE.head, MEASURE.head], 'the head\'s address at the body\'s size, its state line and byline at the head\'s');
+  assert.deepEqual(head, [1, MEASURE.head], 'the head\'s address at the body\'s size, its byline at the head\'s');
 });
 
 test('a carriage return typed in a line is kept as the character typed, never written where the parser reads it as a line\'s end', () => {
@@ -664,7 +718,7 @@ test('the plan and the HTML decide the same blocks, in the same order', () => {
   assert.deepEqual(plan.slice(at, at + 2).map((r) => [r.pos, r.pieces[0].text, r.size]), [[1, t('F.home-record.yours'), 1], [null, 'dev-notebook · device', 1]], 'a record\'s words, then its keys on a row of their own, at the run\'s size');
   assert.deepEqual(plan.filter((r) => r.kind === 'gap').map((r) => [r.pos, r.width]), [[12, 240], [253, 4]], 'a withheld run and an item not rendered each a gap carrying its width');
   assert.equal(plan.filter((r) => r.kind === 'chrome').length, 1, 'the scene-offer: the page\'s chrome after the blocks');
-  assert.equal(articlePlan(doc({ refused: 'withheld' }), view(), '1.0.1').length, 3, 'a refused document is its head alone');
+  assert.equal(articlePlan(doc({ refused: 'withheld' }), view(), '1.0.1').length, 2, 'a refused document is its head alone: its address and its byline');
 });
 
 test('the scene-mode variant, a pane\'s article: no scene-offer and no row for one, and no mark a control — on the plane the offer, the symbols and the presence ⟡ are', () => {
@@ -693,7 +747,7 @@ const slotsIn = (/** @type {string} */ html) => {
 /** a slot's accessible name, in the strings table's words */
 const named = (/** @type {'label' | 'fingerprint'} */ role, /** @type {string} */ shows) => esc(t('L.slot.named', { role: t(role === 'label' ? 'L.slot.device-label' : 'L.slot.fingerprint'), shows }));
 /** the byline row of an article's plan: its pieces' text */
-const bylineRow = (/** @type {import('../model/records.js').Doc} */ d, /** @type {import('./article.js').ArticleView} */ v) => JSON.stringify(articlePlan(d, v, d.account || '').filter((r) => r.kind === 'head')[2]);
+const bylineRow = (/** @type {import('../model/records.js').Doc} */ d, /** @type {import('./article.js').ArticleView} */ v) => JSON.stringify(articlePlan(d, v, d.account || '').filter((r) => r.kind === 'head')[1]);
 /** the device label's box and the fingerprint cue's, in em, as the view's measure sets their faces: LABEL_CH figures, and the cue's own characters */
 const LABEL_EM = LABEL_CH * advances('0'), CUE_EM = advances('0000 0000 0000 0000');
 
@@ -806,14 +860,10 @@ test('an item this client cannot show is a gap of its positions, each one advanc
   assert.deepEqual(layoutOf(plan).lines.filter((l) => l.pos === 5).map((l) => [l.w, l.at]), [[MEASURE_CPL, 5], [MEASURE_CPL, 5 + MEASURE_CPL], [MEASURE_CPL, 5 + 2 * MEASURE_CPL]], 'its bars a line of its positions each');
 });
 
-test('every address the article sets stands in the identifier\'s face, inside a sentence as well: the head\'s address, the byline\'s owner, a withheld document\'s state line, an unregistered one\'s address, another\'s home record (issue #16)', () => {
+test('every address the article sets stands in the identifier\'s face, inside a sentence as well: the head\'s address, the byline\'s owner, another\'s home record (issue #16)', () => {
   const head = articleHTML(doc({ blocks: [{ pos: 1, width: 8, kind: 'para', text: 'Tumbler.', origin: null }] }), view(), '1.0.1');
   assert.ok(head.startsWith(`<div class="hd"><span class="addr id">1.0.1.0.3</span>`) && head.includes(`<span class="by">${idOf('1.0.1')} · `), 'the head\'s address and the byline\'s owner');
   assert.ok(head.includes('<p class="sp blk-para indent" data-addr="1.0.1.0.3" data-pos="1" data-width="8">Tumbler.</p>'), 'the document\'s own words carry no face of the client\'s');
-  const st = (/** @type {Partial<import('../model/records.js').Doc>} */ o) => (/<span class="st">(.*?)<\/span><span class="by">/.exec(articleHTML(doc(o), view(), '1.0.1')) || [])[1];
-  assert.equal(st({ refused: 'withheld' }), tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' }), 'a withheld document\'s state line');
-  assert.equal(st({ refused: 'unregistered' }), tHTML('B1.doc_not_registered', { address: '1.0.1.0.3' }, { address: 'id' }), 'an unregistered address');
-  assert.equal(st({}), esc(t('B1.state-line')), 'a state line naming no address: the client\'s words alone');
   const enroll = { pos: 1, width: 1, kind: /** @type {const} */ ('atom'), text: JSON.stringify({ type: 'skep-enroll', keys: [{ label: 'dev-notebook', anchor: false }] }), origin: null };
   const other = articleHTML(doc({ addr: '1.0.2.0.1', account: '1.0.2', blocks: [enroll] }), view(), '1.0.2');
   assert.ok(other.includes(`<span class="rec-words">${tHTML('F.home-record.other', { owner: '1.0.2' }, { owner: 'id' })}</span>`), 'another\'s home record names its owner in the identifier\'s face');
