@@ -542,6 +542,7 @@ last. Each stands until a later decision says it changes it.
 - **#368**: below its reading scale a kept document's label carries its clause after its address, at the address's size and never after its first line, which gives way first, and at far scale the account's label carries "⟨n⟩ as last read" (changes #23, #345) → FP-26, FP-23
 - **#369**: the status region names a kept place as the mirror does — a document by its first line's first six words then its address, the board by its mirror item's name — and says "⟨name⟩ as last read ⟨when⟩" as its clause appears, "⟨name⟩ current, unchanged" or "current, changed" as its reads set it, and "still as last read" with the failure's words where a read fails, in one message per cause naming the place nearest the focus and counting the rest by outcome (changes #345) → FP-36, FP-23
 - **#380**: a reading scene's pane makes its byline as it is set, from its owner's facts as the page holds them then, owner facts the page takes anew are told to the scene as a drop naming the documents that owner holds, and a pane's facts read that a drop of the byline causes overtook is asked again up to DROP_ATTEMPTS → FP-23, FP-33, FP-34
+- **#411**: text the person may edit is a draft whose address's account is the session's account, at the reading scale, decided by the address alone, never by the owner store — one test binding the plane's keys, the pointer's click, the swallow's line and a scene's panes
 
 ## What these rule out
 
