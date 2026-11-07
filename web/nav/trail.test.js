@@ -14,7 +14,9 @@
 // entry, the cursor's and one whose text was read after the member was
 // published; a counted chain re-taking on each such entry the member its own
 // text was, by the position it was read at, and the entries' readings it is
-// counted for; a change of the page's class dropping what each entry's view
+// counted for; each such re-take recording the newest member named, a later
+// arrival or count raising it, and a departure writing the boxes an arrival
+// marked as the reader left; a change of the page's class dropping what each entry's view
 // read; an entry a reading scene was opened as re-taking the scene as the reader
 // leaves it, its place never re-taken, and a change of class dropping where
 // they stood in it and keeping the stop they stood on, a stop the panes'
@@ -197,7 +199,7 @@ test('a newer version\'s arrival re-takes the member the trunk\'s text was on ev
   T.push(e('d', 9), awayIn('d', 80, 5));
   T.back(awayIn('d', 90, 5));
   // the entries, oldest first: d read at 5; a claim at d; x, its view reading d; d, read at 9; d.1; f; a scene's entry; d — the cursor's; d, ahead of it
-  T.arrivedAt('d', 'd.2', 8);
+  T.arrivedAt('d', 'd.2', 8, 3);
   assert.deepEqual(T.all().map(named), [
     ['d.2', 'd.2', 'd.2'],
     ['d', 'd.2', 'd.2'],
@@ -210,9 +212,13 @@ test('a newer version\'s arrival re-takes the member the trunk\'s text was on ev
     ['d.2', 'd.2', 'd.2'],
   ], 'the member read: on every entry behind and ahead naming d, a claim\'s place kept; none on the entry whose view read d after the member was published, on d.1, on f, on the scene\'s entry or on the cursor\'s');
   assert.equal(T.all()[0].reading?.at, 5, 'what the view read kept beside the member: its position and when its text was read');
-  T.arrivedAt('d', 'd.3', null);
+  const d3 = { d: 3 };
+  assert.deepEqual(T.all().map((x) => x.newer), [d3, d3, d3, {}, {}, {}, {}, {}, d3], 'every entry re-taken records the newest member named, version 3 — the claim and x by what their views read; none other marked (issue #240)');
+  T.arrivedAt('d', 'd.3', null, 4);
   assert.deepEqual(named(T.all()[3]), ['d.3', 'd.3', 'd.3'], 'the newer member\'s position not known: a text read at any position counts as read before it');
   assert.deepEqual([named(T.all()[1]), named(T.all()[6]), named(T.all()[7])], [['d', 'd.2', 'd.2'], ['d', 'd', 'd'], ['d', 'd', 'd']], 'a claim\'s place, a scene\'s entry and the cursor\'s left as they stand');
+  const d4 = { d: 4 };
+  assert.deepEqual(T.all().map((x) => x.newer), [d4, d4, d4, d4, {}, {}, {}, {}, d4], 'version 4 arrived: each entry marked before raises the newest member to 4, and the one re-taken now records it; the cursor\'s and the scene\'s left to their departures');
 });
 
 test('a counted chain re-takes, on each entry the reader has left whose view read the trunk at its plain address, the member its own text was by the position it was read at — behind the cursor and ahead of it, at its place, the document its view read and the one its walk stood in — never on the cursor\'s entry, a claim\'s place while it reads, a reading scene\'s entry, one whose text the newest member is or was read at no known position, nor one on a member or another document; `readings` names what those entries read (issue #361; FP-22, FP-23)', () => {
@@ -232,7 +238,7 @@ test('a counted chain re-takes, on each entry the reader has left whose view rea
   /** @type {number[]} */
   const asked = [];
   // d's chain: d.1 minted at 1, d.2 at 5, d.3 — the newest — at 8
-  T.countedAt('d', (at) => { asked.push(at); return at >= 8 ? null : at >= 5 ? 'd.2' : at >= 1 ? 'd.1' : null; });
+  T.countedAt('d', (at) => { asked.push(at); return at >= 8 ? null : at >= 5 ? 'd.2' : at >= 1 ? 'd.1' : null; }, 3);
   assert.deepEqual(T.all().map(named), [
     ['d.1', 'd.1', 'd.1'],
     ['d', 'd.1', 'd.1'],
@@ -246,6 +252,27 @@ test('a counted chain re-takes, on each entry the reader has left whose view rea
     ['d.1', 'd.1', 'd.1'],
   ], 'each entry the member its own text was: d.1 read at 2, d.2 at 6, a claim\'s place kept; none where the newest member was read, at no known position, on d.1, on f, on the scene\'s entry or on the cursor\'s');
   assert.deepEqual([asked, T.all()[3].reading?.at], [[2, 2, 9, 6, 2], 6], 'the chain asked of each entry reading d at its plain address at a known position, by that position, which the entry keeps');
+  const d3 = { d: 3 };
+  assert.deepEqual(T.all().map((x) => x.newer), [d3, d3, {}, d3, {}, {}, {}, {}, {}, d3], 'each entry re-taken records the chain\'s count as the newest member named; none other marked (issue #240)');
+  T.countedAt('d', () => null, 5);
+  assert.deepEqual(T.all().map((x) => x.newer), [{ d: 5 }, { d: 5 }, {}, { d: 5 }, {}, {}, {}, {}, {}, { d: 5 }], 'the chain counted again at 5: each entry marked raises the newest member to the count, none other marked');
+});
+
+test('a departure writes the boxes a newer version\'s arrival marked as the reader leaves, by value, in the place of what the entry recorded; one carrying none leaves the record standing; a pushed entry marks nothing; a change of the page\'s class keeps the record (issue #240; FP-23)', () => {
+  T.push(e('d', 1), null);
+  const marked = { d: 3 };
+  T.push(e('f', 2), { ...away(10), newer: marked });
+  marked.d = 9;
+  assert.deepEqual(T.all().map((x) => x.newer), [{ d: 3 }, {}], 'the entry departed records the boxes marked, by value; the entry pushed none');
+  T.back({ ...away(20), newer: { d: 4, f: 2 } });
+  assert.deepEqual(T.all()[1].newer, { d: 4, f: 2 }, 'Back re-takes them on the entry it leaves, in the place of what it recorded');
+  T.forward(away(30));
+  assert.deepEqual(T.all()[0].newer, { d: 3 }, 'a departure carrying none leaves the record standing');
+  T.back({ ...away(40), newer: {} });
+  assert.deepEqual(T.all()[1].newer, {}, 'a departure where none stands marked clears it');
+  T.forward({ ...away(50), newer: { d: 5 } });
+  T.classChanged();
+  assert.deepEqual(T.all()[0].newer, { d: 5 }, 'a change of the page\'s class keeps it');
 });
 
 test('every departure re-takes what its view reads and where the walk stood beside the view — a push\'s, Back\'s, Forward\'s, a jump\'s and a jump\'s camera leaving; the entry pushed holds neither until one does (issue #221)', () => {

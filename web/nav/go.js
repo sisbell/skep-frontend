@@ -4,7 +4,8 @@
 // says of the passage it carried or followed and the run it stands at
 // (`landing`), its line's retry and its version offer, the light a one-step
 // move along the trail made, the trail entry the arrival stands at, the
-// version each document's box shows (`pins`), the count of the navigation
+// version each document's box shows (`pins`), the newest member named at
+// each box a newer version's arrival pinned (`newer`), the count of the navigation
 // acts made, the jump in the air, when its camera left and whether the
 // reader took it over, and the jump reaching. View state, never written
 // (FP-7).
@@ -23,7 +24,13 @@
 // standing there read in that member (`placedAgain`, `recheck`), the entry
 // re-taking that version as it is departed (N-TRAIL's `retakePlace`), and
 // every entry the reader left there re-taking the member its text was
-// (N-TRAIL's `arrivedAt`), whether or not the page holds that text now. A
+// (N-TRAIL's `arrivedAt`), whether or not the page holds that text now. The
+// arrival is marked where it pins a box (foundations §3.2; D5 K-57; FP-23):
+// the box keeps the newest member named since (`newer`), which its corner
+// offers to read in its place, a version move (`newerAt`), every later
+// arrival raising it and every act that takes the box to another version
+// ending it (`pinTo`); it is said once in the status region where the box is
+// read at its reading scale; a box the reader pinned is never marked. A
 // version move never flies (`toVersion`): the camera stays and the text
 // alone is replaced, the passage held — the selection, else the first
 // passage in view — found in
@@ -50,7 +57,8 @@
 // the document it reads — or, where the view reads none, the board, the
 // account or the mark's stop it stands on, else its place in a document
 // standing in that view — where that view shows it (`stoodIn`), the version
-// the entry's box shows, and
+// the entry's box shows, the boxes a newer version's arrival marked, each
+// with the newest member named (`newer`), and
 // a reading scene standing over it as the reader leaves it (SC's `asLeft`).
 // As its camera leaves, an act ends the chrome of the place it leaves
 // (`dismissChrome`; FP-25): the arrival and the surfaces standing as the act
@@ -307,7 +315,12 @@
 // return, never an arrival by address (FP-21, FP-25): it restores each
 // version the entry kept — the one its walk stood in, the one its view read,
 // then its place's, which keeps its own box where two of them share one
-// (`restoreVersions`; FP-22) — then finds the words its entry's view read —
+// (`restoreVersions`; FP-22) — each box marked as the entry records it:
+// where a newer version's arrival took the version kept, as the reader left
+// it or while they were away (N-TRAIL's `arrivedAt`, `countedAt`), offering
+// the newest member named, which the return says once (`arrivalSaid`,
+// `sayReturn`), and else unmarked, as it would stand had the reader stayed —
+// then finds the words its entry's view read —
 // the line the live hold keeps still, by its bytes (T-LAYER's `Reading`) —
 // in the text the entry's box shows now by BM-HELD's
 // rule (`foundIn`, `holdsIn`), and lands in that rule's states, shown where
@@ -525,6 +538,8 @@ let versionOffer = null;
 let here = null;
 /** @type {Map<string, string>} each box's version where one is pinned, by its document: a box absent shows its plain address, the trunk head (see the head) */
 const pins = new Map();
+/** @type {Map<string, number>} each box a newer version's arrival pinned, by its document, with the newest member named since: the version its corner offers to read (`newerAt`); a box absent is unmarked (see the head) */
+const newer = new Map();
 /** @type {Surfaces | null} the surfaces standing at the place the reader stands at as the latest act was made (`nextAct`): what that act's departure keeps (`leaveHere`) */
 let surfacesLeft = null;
 /** @type {Owed | null} what the latest return owes the entry it reached (see the head) */
@@ -589,15 +604,32 @@ const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
 export const shownIn = (addr) => { const box = boxOf(addr); return pins.get(box) ?? box; };
 
 /**
+ * The newer version a box's corner offers to read in its place (see the head;
+ * D5 K-57; FP-23): the newest member named since a newer version's arrival
+ * pinned the box, where `addr` is the member the box shows and that newest
+ * one follows it; null everywhere else — a box the reader pinned, one at its
+ * plain address, another version of the box. T-LAYER reads it through the
+ * reader the app hands it.
+ * @param {string} addr a version of a document: the one its corner stands for
+ * @returns {number | null}
+ */
+export function newerAt(addr) {
+  const box = boxOf(addr), n = newer.get(box), k = memberOf(addr);
+  return n != null && k != null && shownIn(box) === addr && k < n ? n : null;
+}
+
+/**
  * A box takes the version an act aimed at it arrives at, or a return
  * restores (see the head): a version address pins it there; the plain address
- * unpins it, to the trunk head. An address that names no document changes
- * nothing.
+ * unpins it, to the trunk head; and a version other than the one it shows
+ * ends the mark a newer version's arrival left on it (`newer`). An address
+ * that names no document changes nothing.
  * @param {string} addr
  */
 function pinTo(addr) {
   if (kindOf(addr) !== 'document') return;
   const box = boxOf(addr);
+  if (shownIn(box) !== addr) newer.delete(box);
   if (addr === box) pins.delete(box); else pins.set(box, addr);
   CAM.markDirty();
 }
@@ -605,7 +637,8 @@ function pinTo(addr) {
 /**
  * A departure (see the head): what the departed entry re-takes — the view
  * the camera is bound for (P-CAM's `destination`), what it reads, where the
- * walk stands and a reading scene standing over it (`leavingNow`) — and the
+ * walk stands, the boxes a newer version's arrival marked and a reading scene
+ * standing over it (`leavingNow`) — and the
  * entry's place re-taken where the box it names shows another version as it
  * is left — a newer version's arrival pinned it on the member being read
  * (`arrived`; N-TRAIL's `retakePlace`). Every navigation act departs through
@@ -621,11 +654,14 @@ function departure() {
 /**
  * What the entry the reader stands at re-takes as they leave it now (see the
  * head): the view the camera is bound for, what it reads and where the walk
- * stands in it (`leaving`), and the reading scene standing over it as they
- * leave it (SC's `asLeft`), which an entry a scene was opened as records.
+ * stands in it (`leaving`), the boxes a newer version's arrival marked, each
+ * with the newest member named (`newer`), which a return marks again where
+ * it restores their versions (`restoreVersions`), and the reading scene
+ * standing over it as they leave it (SC's `asLeft`), which an entry a scene
+ * was opened as records.
  * @returns {Departure}
  */
-function leavingNow() { return { ...leaving(CAM.destination()), scene: SCENE.asLeft() }; }
+function leavingNow() { return { ...leaving(CAM.destination()), newer: Object.fromEntries(newer), scene: SCENE.asLeft() }; }
 
 /**
  * What an entry left at a view re-takes (see the head; N-TRAIL's
@@ -2316,29 +2352,40 @@ async function againVersion(c, spans, was, addr, entry, byKey) {
  * again as that member with the passage being read kept in place (T-LAYER's
  * `holdAcross`), the walk and an arrival standing there with it
  * (`placedAgain`, `recheck`), and the box's version then named by the one
- * line and the corner; the selection standing in `D` has its bytes named now,
+ * line and the corner; the box marked with the newest member named, which its
+ * corner offers to read (`newer`, `newerAt`), the arrival said once in the
+ * status region where the box is read in view at its reading scale, no
+ * reading scene covering the plane; the
+ * selection standing in `D` has its bytes named now,
  * through the text the page holds, so the re-check carries it — and every
  * card on `D`, which names its own — to `D.k` once `D.k` holds that text
  * (`surfacesAcross`; FP-23's acts naming the member). Nothing where no member
  * held the text before it (k = 0); no pin where the box shows a pinned
  * version already, where the page holds none of the text, or where that text
- * was read after `D.(k+1)` was published, which is `D.(k+1)`'s own.
+ * was read after `D.(k+1)` was published, which is `D.(k+1)`'s own; where the
+ * pin is an arrival's, the newest member it offers raised, nothing said.
  * Where either position is not known, the text counts as read before. M-PUMP
  * hands it each such row before the row drops what the page held of `D`.
  * @param {string} member the member the row publishes
  * @param {number | null} [at] the position the row published it at; null where not known — a refresh's arrival, whose member is the one the text was read as
+ * @param {number | null} [newest] the newest member known, which may follow `member` — a refresh's chain's count; `member`'s own where none is given
  */
-export function arrived(member, at = null) {
+export function arrived(member, at = null, newest = null) {
   const doc = documentOf(member), k = memberOf(member);
   if (!doc || k == null || k < 2 || !isTrunkMember(member)) return;
-  const read = versionAddress(doc, k - 1);
-  TRAIL.arrivedAt(doc, read, at);
+  const read = versionAddress(doc, k - 1), n = Math.max(k, newest ?? k);
+  TRAIL.arrivedAt(doc, read, at, n);
+  const marked = newer.get(doc);
+  if (marked != null) { if (n > marked) { newer.set(doc, n); CAM.markDirty(); } return; }
   const d = !pins.has(doc) && REC.has(doc) ? REC.doc(doc) : null;
   if (!d || d.from < 0 || !TRAIL.readBefore(d.readAt, at)) return;
+  const reading = !SCENE.isOpen() && LAYER.inView(doc) && LAYER.atReadingScale(doc);
   const s = SEL.selected();
   if (s && s.addr === doc) across.bytes = { span: s, ids: REC.identityOf(doc, s.pos, s.width) };
   LAYER.holdAcross(doc, read);
   pinTo(read);
+  newer.set(doc, n);
+  if (reading) FOCUS.say(t('F.arrival.pane', { k: k - 1 }));
   const f = WALK.current();
   if (f && boxOf(f.addr) === doc) void WALK.focusTo(read, f.pos, false, false);
 }
@@ -2845,14 +2892,38 @@ async function askAgain(act, e, ask, at, to, first, byKey, told) {
  * The versions a return restores (see the head; FP-22): each box the entry's
  * record names takes the version the entry kept there — the document its
  * walk stood in, the one its view read, then its place — its place's version
- * where two of them name one box.
+ * where two of them name one box; and each is marked as the entry records it
+ * (`Entry.newer`; FP-23): where a newer version's arrival took the member
+ * kept, the newest member named, else unmarked, so a version the reader
+ * chose is never marked.
  * @param {Entry} e
  */
 function restoreVersions(e) {
   /** @type {Map<string, string>} each box's version, by the box */
   const kept = new Map();
   for (const addr of [e.stood && e.stood.addr, e.reading && e.reading.addr, e.addr]) if (addr && kindOf(addr) === 'document') kept.set(boxOf(addr), addr);
-  for (const addr of kept.values()) pinTo(addr);
+  for (const [box, addr] of kept) {
+    pinTo(addr);
+    const n = e.newer[box], k = memberOf(addr);
+    if (n != null && k != null && k < n) newer.set(box, Math.max(n, newer.get(box) ?? 0)); else newer.delete(box);
+  }
+}
+
+/**
+ * The arrival a return says (see the head; FP-36): F.arrival's first two
+ * clauses, as a pane says them (FP-23), for the version the box the entry
+ * stands on shows — its place's, else the document its view read — where a
+ * newer version's arrival marked that box (`newerAt`); null where none did.
+ * @param {Entry} e
+ * @returns {string | null}
+ */
+function arrivalSaid(e) {
+  for (const addr of [e.addr, e.reading && e.reading.addr]) {
+    if (!addr || kindOf(addr) !== 'document') continue;
+    const shows = shownIn(addr), k = memberOf(shows);
+    if (k != null && newerAt(shows) != null) return t('F.arrival.pane', { k });
+  }
+  return null;
 }
 
 /**
@@ -3270,7 +3341,8 @@ function markReturn(at, notice) {
  * (`offerVersion`, `holdingWhole`); "try again" where no answer told and a
  * retry may tell (`againReturn`). The line of a landing standing where the
  * walk does not land is said in the status region, for the item the walk
- * lands on does not carry it (FP-36).
+ * lands on does not carry it (FP-36); where no such line is said, the arrival
+ * that marked the box the return stands on is said there (`arrivalSaid`).
  * @param {number} act the return's act
  * @param {Entry} e the entry it reached
  * @param {Told | null} told
@@ -3278,8 +3350,9 @@ function markReturn(at, notice) {
  */
 function sayReturn(act, e, told, to) {
   if (act !== made) return;
-  const heard = !!to && tells(to), line = landingLine();
+  const heard = !!to && tells(to), line = landingLine(), arrival = arrivalSaid(e);
   if (!heard && line) FOCUS.say(line);
+  else if (arrival) FOCUS.say(arrival);
   if (!told) return;
   if (told.holds === 'none') showFound(floatingNotice(told.addr, told.to), heard);
   if (told.holds === 'unknown') retry = landed && landed.said && landed.said.again ? (byKey) => againReturn(e, byKey) : null;

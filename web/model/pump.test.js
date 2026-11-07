@@ -2553,6 +2553,7 @@ test('a refresh counts the chain of an edition a trail entry the reader has left
     await PUMP.refresh();
     assert.deepEqual(metadataAsked(fake, from), [D + '.1', D + '.2', D + '.3'], 'D\'s chain counted, each member asked once');
     assert.deepEqual([named(early), named(late)], [[D + '.1', D + '.1', D + '.1'], [D, D, D]], 'the entry read at 5 re-takes D.1, minted at 3 and followed by D.2, minted at 7; the one read at 8 read D.2, the newest, and stands at the plain address');
+    assert.deepEqual([early.newer, late.newer], [{ [D]: 2 }, {}], 'the chain\'s count told with it: the entry re-taken marked with D.2, the newest member; the other unmarked (issue #240)');
     const [again] = leftAt([5]);
     from = fake.asked.length;
     fake.fire('feed', naming(21, null));
@@ -2569,8 +2570,10 @@ test('a refresh counts once the chain of an edition whose text the page holds at
   PORT.boot(fake);
   /** @type {Record<string, string>} */
   const pins = {};
+  /** @type {Array<[string, number | null, number | null]>} each arrival as N-GO is told it: its member, its position and the newest member known */
+  const told = [];
   // the arrival as N-GO takes it: every entry left at D's plain address re-taking the member before the one published, and D's box pinned on it
-  PUMP.start({ onDirty: () => {}, shown: showing(pins), readings: TRAIL.readings, onCounted: TRAIL.countedAt, onPublish: (member, at) => { const k = memberOf(member); if (k != null && k >= 2) { TRAIL.arrivedAt(D, versionAddress(D, k - 1), at); pins[D] = versionAddress(D, k - 1); } } });
+  PUMP.start({ onDirty: () => {}, shown: showing(pins), readings: TRAIL.readings, onCounted: TRAIL.countedAt, onPublish: (member, at, newest) => { told.push([member, at, newest]); const k = memberOf(member); if (k != null && k >= 2) { TRAIL.arrivedAt(D, versionAddress(D, k - 1), at, Math.max(k, newest ?? k)); pins[D] = versionAddress(D, k - 1); } } });
   REC.setBoard({ board: 'b-1', name: '', origin: '' });
   REC.takeIndex(indexAt('complete'));
   // D's text held at its plain address, read at 5 — D.2's — and its chain probed to three members
@@ -2584,6 +2587,7 @@ test('a refresh counts once the chain of an edition whose text the page holds at
     assert.deepEqual(metadataAsked(fake, from), [D + '.3', D + '.4', D + '.2', D + '.1'], 'counted once from the end the record held, then down to D.1, the member minted at or before 2: each member asked once');
     assert.deepEqual([named(early), named(same)], [[D + '.1', D + '.1', D + '.1'], [D + '.2', D + '.2', D + '.2']], 'the entry read at 2 re-takes D.1, the one read at 5 D.2: each the member its own text was');
     assert.deepEqual([pins[D], REC.textBetween(D + '.2', 1, 31)], [D + '.2', BEFORE], 'the arrival taken after: D\'s box pinned on D.2, which holds the text');
+    assert.deepEqual([told, early.newer, same.newer], [[[D + '.3', null, 3]], { [D]: 3 }, { [D]: 3 }], 'the arrival told with the chain\'s count, version 3, as the newest member known, and each entry re-taken marked with it (issue #240)');
     assert.deepEqual(fake.unanswered, []);
   } finally { TRAIL._reset(); }
 });

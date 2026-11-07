@@ -93,9 +93,11 @@
 // an edition's state with "version ⟨k⟩ of ⟨n⟩" and R20's teaching — at a
 // pinned version its own number of the count its box's document holds
 // (FP-22) — a draft's kept state and its chip (C-28; ux-T2), the
-// whole-document link count, and in a reading scene's pane its act reading
-// another version there and the line saying the version it reads lacks the
-// passage that act carried (FP-23), whole or compact (FP-26). Its state's
+// whole-document link count, its act reading another version in its place —
+// in a reading scene's pane, and on the plane where a newer version's
+// arrival pinned its box (foundations §3.2; D5 K-57) — and in a pane the
+// line saying the version it reads lacks the passage that act carried
+// (FP-23), whole or compact (FP-26). Its state's
 // items are made by one rule
 // (`stateItems`), which the ARIA mirror's item voices whole too
 // (`cornerWords`), so the corner and the mirror never part (R94). A draft's
@@ -201,7 +203,7 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {(doc: string) => Decided} clauseOf C-67's clause beneath a withheld run of an origin document, decided over what the page holds of the origin's edition claims (T-LAYER's `clauseOf`, by `editionClause`); null where nothing renders in its place, `CLAUSE_READING` while a read it is decided from is out
  * @property {(account: string) => (AccountFacts | undefined)} keyOf an account's byline facts as the page holds them (M-REC's `accountKey`): its device key, or why its byline names none; undefined while they are read
  * @property {number | null} [members] the chain's member count the corner's version statement is of: on the plane its box's document's where the board ended the chain there (T-LAYER's `chainOf`), every version sharing the count, in a pane the pane's own; null where none is known to be the whole chain; absent, the document's own
- * @property {number | null} [read] a reading scene's pane's corner act, the one its Enter takes: the version it reads in the pane's place (SC; FP-23) — the newer one arrived, or the one the act left; absent or null, none
+ * @property {number | null} [read] the corner's act reading another version in its place (D5 K-57): in a reading scene's pane the version its Enter reads in the pane's place (SC; FP-23) — the newer one arrived, or the one the act left; on the plane the newest member named since a newer version's arrival pinned its box (N-GO's `newerAt`); absent or null, none
  * @property {number | null} [lacks] the version a pane's corner says holds none of the passage its act carried (SC; FP-23); absent or null, none
  * @property {boolean} [lags] the board lags past a second (M-PUMP's `boardKept`; FP-23): the corner names neither the latest version nor the chain's count; absent, false
  * @property {KeptState | null} [kept] a draft's kept state as the model holds it (M-REC's `keptOf`): the word its corner's slot shows; absent or null, no state is set and the slot stands empty
@@ -1167,15 +1169,17 @@ function stateHTML(i, v, compact) {
  * document holds (`members`), so the corner names the version its box shows
  * and offers the versions list there too (FP-22); in a reading scene's pane,
  * where the version its pane reads lacks the passage its act carried, a line
- * saying so (`lacks`), and its act reading another version in the pane's
- * place (`read`; FP-23); the whole-document link count (rule (i)). Compact
+ * saying so (`lacks`); its act reading another version in its place (`read`;
+ * D5 K-57; FP-23) — a pane's, and on the plane the newer version a newer
+ * version's arrival offers, a control the pointer and → reach, never a Tab
+ * stop (`control`); the whole-document link count (rule (i)). Compact
  * (FP-26): an edition's state its version marker — unlit at the bare
  * address, lit at a pinned version (foundations §3.1) — and a draft's chip a
  * glyph, each named by its whole words; "version ⟨k⟩ of ⟨n⟩", the
  * whole-document count, the kept word in its slot and the state of a document
  * a read refused keep their words. The holder makes the element they stand in
  * (`data-corner` naming the document), which is the corner's one stop: no
- * item takes a focus of its own (D5 K-57).
+ * item is a Tab stop of its own (D5 K-57).
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {boolean} [compact] the compact form
@@ -1184,7 +1188,7 @@ export function cornerHTML(d, v, compact = false) {
   const parts = stateItems(d, v).map((i) => stateHTML(i, v, compact));
   if (!d.refused && isPublished(d)) {
     if (v.lacks != null) parts.push(`<span class="lacks">${esc(t('F.floating.member', { k: v.lacks }))}</span>`);
-    if (v.read != null) parts.push(`<span class="read" data-read="${v.read}">${esc(t('F.versions.read', { k: v.read }))}</span>`);
+    if (v.read != null) parts.push(`<span class="read" data-read="${v.read}"${control(v.scene)}>${esc(t('F.versions.read', { k: v.read }))}</span>`);
   }
   if (v.wholeLinks > 0) parts.push(`<span class="whole-links">${esc(v.wholeLinks === 1 ? t('F.whole-links.1') : t('F.whole-links', { n: v.wholeLinks }))}</span>`);
   return parts.join('');

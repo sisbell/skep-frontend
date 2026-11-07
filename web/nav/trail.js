@@ -15,7 +15,11 @@
 // view read the trunk at its plain address at a known position, where a
 // newer member follows the one that text was (`countedAt`; `readings` names
 // what those entries read), so a return restores the version read there
-// (FP-22); beside the view, by value,
+// (FP-22); each such re-take, and every later arrival at that trunk, records
+// on the entry the newest member named (`Entry.newer`), as a departure
+// records the boxes an arrival marked where the reader stood (N-GO's), so a
+// return marks the version it restores as if the reader had stayed (FP-23);
+// beside the view, by value,
 // what that view reads — the line at its visible centre and the view around
 // it, by their positions and their bytes' identity, where the line stood in
 // its fold, and the position its text was read at (T-LAYER's
@@ -111,6 +115,7 @@
  * @property {View} view the view the camera is bound for
  * @property {Reading | null} reading what that view reads (T-LAYER's `readAt`); null where it reads no passage
  * @property {Stood | null} stood where the walk stands (N-GO's `stoodIn`): in the document that view reads, or, where the view reads none, on the board, an account or a mark's stop, else in a document standing in that view; null where it stands outside the document the view reads, in a document out of the view where it reads none, on no document where it reads one, or on a place that view does not show
+ * @property {Record<string, number>} [newer] the boxes a newer version's arrival marked as the reader leaves (N-GO's `newer`), by document, each with the newest member named: re-taken in the place of what the entry recorded (`Entry.newer`); absent, what it recorded stands
  * @property {import('../scene/scene.js').Left | null} [scene] the reading scene standing over the view, as the reader leaves it (SC's `asLeft`): re-taken on an entry a scene was opened as; null where none stands
  */
 
@@ -183,6 +188,7 @@
  * @property {View} view the view at the entry — the landing's, re-taken at departure; where the camera went, where its read brought no place
  * @property {Reading | null} reading what its view reads, written with the view (see the head): the words a return finds in the text it reaches, and places the view by; null where it reads no passage
  * @property {Stood | null} stood where the walk stood as the entry was last departed, or where a read placed the entry's landing since (`settle`) (see the head): a return puts it back there where the view it lands at shows it; null where neither held one (`Departure`)
+ * @property {Record<string, number>} newer each box whose version kept here a newer version's arrival took, by document, with the newest member named since (see the head): what a return marks the box by (N-GO's); a box absent is unmarked
  * @property {Step | null} step the step that left it for the entry after it, written as a push departed it; none while nothing has, and none where the push took no step this module records
  * @property {string | null} label the act's name where HOME or WHOLE BOARD pushed the entry, the strings table's; null for every other entry, whose document's words are read from the model as it is shown (see the head)
  * @property {Notice | null} notice the face the entry shows: its jump's reading face while the read is out, then the face its read brought, as the latest return to ask that read again found it; null where it shows none
@@ -212,9 +218,10 @@ const claims = new Map();
 /** @type {Pushed | null} the last push, until the next */
 let last = null;
 
-/** an entry re-takes a departure from it (see the head): the view, what it reads and where the walk stood, by value, and on an entry a reading scene was opened as the scene standing over it as the reader leaves it */
+/** an entry re-takes a departure from it (see the head): the view, what it reads and where the walk stood, by value, the boxes an arrival marked where it names them, and on an entry a reading scene was opened as the scene standing over it as the reader leaves it */
 function taken(/** @type {Entry} */ e, /** @type {Departure} */ d) {
   e.view = { ...d.view }; e.reading = d.reading; e.stood = d.stood;
+  if (d.newer) e.newer = { ...d.newer };
   if (d.scene && e.scene) e.scene = { ...e.scene, left: d.scene };
 }
 
@@ -251,18 +258,23 @@ export const readBefore = (readAt, at) => readAt == null || at == null || readAt
  * FP-22, FP-23): every entry the reader has left whose record names the
  * trunk at its plain address re-takes the member its text was — its place,
  * save a claim's while its read is out, the document its view read, and the
- * one its walk stood in — as the box the reader stands at takes it; none
- * whose view read the trunk's text after the newer member was published
- * (`readBefore`), for that text was the newer member's. The cursor's entry
- * is left to its departure, and a reading scene's entry to its panes.
+ * one its walk stood in — as the box the reader stands at takes it, and
+ * records the newest member named (`Entry.newer`); none whose view read the
+ * trunk's text after the newer member was published (`readBefore`), for that
+ * text was the newer member's. An entry whose record marks the trunk already
+ * raises the newest member it names. The cursor's entry is left to its
+ * departure, and a reading scene's entry to its panes.
  * @param {string} trunk the trunk's plain address
  * @param {string} member the member before the one published: the one a text read before it was
  * @param {number | null} at the position the newer member was published at; null where not known
+ * @param {number} newest the newest member named: the one published, or a refresh's chain's count past it
  */
-export function arrivedAt(trunk, member, at) {
+export function arrivedAt(trunk, member, at, newest) {
   entries.forEach((e, i) => {
-    if (i === cursor || e.scene || (e.reading && e.reading.addr === trunk && !readBefore(e.reading.at, at))) return;
-    retakeMember(e, trunk, member);
+    if (i === cursor || e.scene) return;
+    if (e.newer[trunk] != null) mark(e, trunk, newest);
+    if (e.reading && e.reading.addr === trunk && !readBefore(e.reading.at, at)) return;
+    retakeMember(e, trunk, member, newest);
   });
 }
 
@@ -283,25 +295,37 @@ export function readings() {
  * every entry the reader has left whose view read the trunk at its plain
  * address at a known position re-takes the member that text was, where a
  * newer member follows it — its place, save a claim's while its read is out,
- * the document its view read and the one its walk stood in, as an arrival
- * re-takes them (`arrivedAt`). The cursor's entry is left to its departure,
- * and a reading scene's entry to its panes.
+ * the document its view read and the one its walk stood in — and records the
+ * chain's count as the newest member named, as an arrival re-takes them
+ * (`arrivedAt`); an entry whose record marks the trunk already raises the
+ * newest member it names to that count. The cursor's entry is left to its
+ * departure, and a reading scene's entry to its panes.
  * @param {string} trunk the trunk's plain address
  * @param {(at: number) => string | null} memberAt the member a text read at a position was, where a newer member follows it; null where that member is the newest, or the chain cannot tell
+ * @param {number} newest the chain's count: its newest member
  */
-export function countedAt(trunk, memberAt) {
+export function countedAt(trunk, memberAt, newest) {
   entries.forEach((e, i) => {
-    if (i === cursor || e.scene || !e.reading || e.reading.addr !== trunk || e.reading.at == null) return;
+    if (i === cursor || e.scene) return;
+    if (e.newer[trunk] != null) mark(e, trunk, newest);
+    if (!e.reading || e.reading.addr !== trunk || e.reading.at == null) return;
     const member = memberAt(e.reading.at);
-    if (member) retakeMember(e, trunk, member);
+    if (member) retakeMember(e, trunk, member, newest);
   });
 }
 
-/** an entry re-takes a member of a trunk it names at the trunk's plain address: its place, save a claim's while its read is out, the document its view read and the one its walk stood in */
-function retakeMember(/** @type {Entry} */ e, /** @type {string} */ trunk, /** @type {string} */ member) {
-  if (e.addr === trunk && !claims.has(e)) e.addr = member;
-  if (e.reading && e.reading.addr === trunk) e.reading = { ...e.reading, addr: member };
-  if (e.stood && e.stood.addr === trunk) e.stood = { ...e.stood, addr: member };
+/** an entry re-takes a member of a trunk it names at the trunk's plain address — its place, save a claim's while its read is out, the document its view read and the one its walk stood in — and, where it re-took any, records the newest member named (`mark`) */
+function retakeMember(/** @type {Entry} */ e, /** @type {string} */ trunk, /** @type {string} */ member, /** @type {number} */ newest) {
+  let took = false;
+  if (e.addr === trunk && !claims.has(e)) { e.addr = member; took = true; }
+  if (e.reading && e.reading.addr === trunk) { e.reading = { ...e.reading, addr: member }; took = true; }
+  if (e.stood && e.stood.addr === trunk) { e.stood = { ...e.stood, addr: member }; took = true; }
+  if (took) mark(e, trunk, newest);
+}
+
+/** an entry records that a newer version's arrival took its version of a trunk's box: the newest member named, never lowered (`Entry.newer`) */
+function mark(/** @type {Entry} */ e, /** @type {string} */ trunk, /** @type {number} */ newest) {
+  e.newer = { ...e.newer, [trunk]: Math.max(newest, e.newer[trunk] ?? 0) };
 }
 
 /**
@@ -309,8 +333,9 @@ function retakeMember(/** @type {Entry} */ e, /** @type {string} */ trunk, /** @
  * re-taken there first and the step leaving it written on it, in the place
  * of any it held, and the entries ahead of the cursor dropped. The entry
  * pushed reads nothing and holds no walk until a departure or a landing
- * writes them; it is a reading scene's only where `scene` names one.
- * @param {Omit<Entry, 'step' | 'kept' | 'reading' | 'stood' | 'scene'> & {scene?: Opened | null}} e
+ * writes them, and marks no box; it is a reading scene's only where `scene`
+ * names one.
+ * @param {Omit<Entry, 'step' | 'kept' | 'reading' | 'stood' | 'newer' | 'scene'> & {scene?: Opened | null}} e
  * @param {Departure | null} departed the departure from the cursor's entry as the teleport left
  * @param {boolean} [claim] the landing waits on a read: the entry stands as a claim until `settle` answers it
  * @param {Step | null} [step] the step the teleport takes from the departed entry: a follow's, a carrying LEAP's, a reading scene's; none for any other move
@@ -319,7 +344,7 @@ function retakeMember(/** @type {Entry} */ e, /** @type {string} */ trunk, /** @
 export function push(e, departed, claim = false, step = null) {
   retake(departed);
   /** @type {Entry} */
-  const held = { ...e, view: { ...e.view }, reading: null, stood: null, step: null, kept: null, scene: e.scene ?? null };
+  const held = { ...e, view: { ...e.view }, reading: null, stood: null, newer: {}, step: null, kept: null, scene: e.scene ?? null };
   last = { entry: held, step: cursor >= 0 ? entries[cursor].step : null, dropped: entries.slice(cursor + 1) };
   if (cursor >= 0) entries[cursor].step = step;
   entries = entries.slice(0, cursor + 1);
@@ -370,8 +395,9 @@ export function keep(e, kept) { e.kept = kept; }
 
 /**
  * A change of the page's class (see the head; FP-23, FP-29): every entry
- * keeps its place, its number, its address, its positions, its view and its
- * step, and drops the notice the class it left met there — save a claim's,
+ * keeps its place, its number, its address, its positions, its view, its
+ * step and the boxes an arrival marked (`Entry.newer`), and drops the notice
+ * the class it left met there — save a claim's,
  * its read still out, which the new class answers — the arrival and the
  * surfaces it kept, what its view read and where the walk stood; a reading
  * scene's keeps its pair and its panes' versions, and drops where the reader

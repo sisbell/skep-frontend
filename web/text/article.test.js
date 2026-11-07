@@ -21,7 +21,8 @@
 // no line; a document's state said once, at its corner, the head stating
 // none in any state, a refused document's among them; the corner's items,
 // whole and compact, outside the article, a pane's with its read act and its
-// lacking line, a kept clause after them on a line of its own, neither the
+// lacking line, the plane's with the read an arrival offers as a control,
+// a kept clause after them on a line of its own, neither the
 // latest version nor the chain's count while the board lags, its state one
 // rule the words the ARIA mirror voices are made by; the record rule; a
 // typed line set as typed in the
@@ -424,15 +425,19 @@ test('the corner at a pinned version names it — its own number of the count it
   assert.ok(!cornerHTML(member, view()).includes('class="version"'), 'no count handed in, none of its own: no statement');
 });
 
-test('a reading scene\'s pane\'s corner, handed its act and the version its act found lacking the passage, offers "read version ⟨n⟩" and says the passage is not in that version; the plane\'s corner offers neither, and neither item is a stop of its own (issue #160)', () => {
+test('a reading scene\'s pane\'s corner, handed its act and the version its act found lacking the passage, offers "read version ⟨n⟩" and says the passage is not in that version, neither item a control; the plane\'s corner handed the read a newer version\'s arrival offers carries it as a control the pointer and → reach, in either form, never a Tab stop; a corner handed neither offers neither (issues #160, #240; D5 K-57)', () => {
   const member = doc({ addr: '1.0.1.0.3.2', members: null });
-  const pane = cornerHTML(member, view({ members: 3, read: 3, lacks: 2 }));
+  const pane = cornerHTML(member, view({ scene: true, members: 3, read: 3, lacks: 2 }));
   assert.ok(pane.includes(`<span class="read" data-read="3">${esc(t('F.versions.read', { k: 3 }))}</span>`), `the act, naming the version it reads: ${pane}`);
   assert.ok(pane.includes(`<span class="lacks">${esc(t('F.floating.member', { k: 2 }))}</span>`), 'the version said to lack the passage');
   assert.ok(pane.indexOf(t('F.version-of', { k: 2, n: 3 })) < pane.indexOf('class="lacks"') && pane.indexOf('class="lacks"') < pane.indexOf('class="read"'), 'in the corner\'s one order: the version statement, what it lacks, then the act');
+  assert.ok(!pane.includes('tabindex') && !pane.includes('role="button"'), 'in a pane no item is a control: its act is the pane\'s corner\'s, by Enter and a click (SC)');
+  const offered = cornerHTML(member, view({ members: 3, read: 3 })), compact = cornerHTML(member, view({ members: 3, read: 3 }), true);
+  const act = `<span class="read" data-read="3" role="button" tabindex="-1">${esc(t('F.versions.read', { k: 3 }))}</span>`;
+  assert.ok(offered.includes(act) && offered.indexOf(t('F.version-of', { k: 2, n: 3 })) < offered.indexOf(act), `the plane's: the read offered after the version statement, a control never in the Tab order — ${offered}`);
+  assert.ok(compact.includes(act), `compact as whole: the offer stands in either form (FP-26) — ${compact}`);
   const plane = cornerHTML(member, view({ members: 3 }));
-  assert.ok(!plane.includes('data-read') && !plane.includes('class="lacks"'), 'the plane\'s corner: neither');
-  assert.ok(![pane, plane].some((h) => h.includes('tabindex')), 'no item takes a focus of its own: the corner is one stop (K-57)');
+  assert.ok(!plane.includes('data-read') && !plane.includes('class="lacks"') && !plane.includes('tabindex'), 'handed neither: neither, and no item a stop of its own — the corner is one stop (K-57)');
 });
 
 test('the article holds no corner: its items stand beside it, outside the box that clips the article', () => {

@@ -6,6 +6,7 @@
 // click and a marked stretch's open the card of the end clicked; C-67's
 // pointer LEAPs to the claim's home whole, carrying no passage and lighting
 // no link, while the rest of the placeholder still conjures C-39's face; a
+// click on the read a corner offers is the version move to it; a
 // press at the readable em on text not yet standing is held for it and
 // becomes the text's click; a press or a click falls on every box the plane
 // draws, one the index does not list among them; an empty click ends a card's
@@ -423,6 +424,57 @@ test('a click on C-67\'s pointer LEAPs to the edition its claim names, landed in
     assert.equal(HOST.currentState()?.id, 'face:C-39', 'the rest of the placeholder conjures C-39\'s face');
     HOST.dismiss();
   } finally {
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+test('a click on the read a corner offers makes the version move to that version, landing in place — its trail entry taken at the act, the box showing the version, the camera where it stood — and opens no list (issue #240; D5 K-57)', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the corners' listeners, by event */
+  const corners = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  // E, an edition whose box a newer version's arrival pinned on its first member: each member read whole as a version move reads it
+  const E = '1.0.1.0.62', E1 = E + '.1', E2 = E + '.2', text = 'An edition.\n\nIts second paragraph.', n = byteLength(text);
+  const reads = (/** @type {string} */ doc) => ({
+    [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(doc) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + n }] } },
+    [FAKE.keyOf('op', { frame: F.docMetadata(doc) })]: { result: { as_of: 1, resp: 'doc_metadata', doc, published: true, owner: '1.0.1', birth: E1, birth_extent: String(n), placed: null, base_extent: null, source: null } },
+    [FAKE.keyOf('op', { frame: F.retrieveV(doc, 1, n) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: text }] } },
+    [FAKE.keyOf('op', { frame: F.image(doc, 1, n) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: E + '.0.1.1', width: String(n) }] } },
+    [FAKE.keyOf('op', { frame: F.findLinksV(doc, 1, n) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+  });
+  try {
+    const fake = FAKE.create({ ...reads(E1), ...reads(E2) });
+    PORT.boot(fake);
+    REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+    HOST.attach(/** @type {any} */ ({
+      ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
+      querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    }));
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(null), corners: listens(corners) }));
+    const onCorner = corners.get('click');
+    assert.ok(onCorner, 'the corners take a click');
+    CAM.setViewport(1440, 900);
+    TRAIL._reset();
+    const departing = GO.leapTo(E1, { pos: 1 });
+    await settled(() => GO.shownIn(E) === E1 && !GO.inAir());
+    await departing;
+    // E1's corner as T-LAYER stands it, the read it offers in it
+    const holder = { dataset: { corner: E1 }, querySelector: (/** @type {string} */ s) => (s === '[data-read]' ? offer : null) };
+    const offer = { dataset: { read: '2' }, closest: (/** @type {string} */ s) => (s === '[data-corner]' ? holder : s === '[data-read]' ? offer : null) };
+    const at = CAM.view(), n0 = TRAIL.length();
+    let stopped = false;
+    onCorner({ target: offer, stopPropagation() { stopped = true; } });
+    assert.deepEqual([stopped, TRAIL.length(), TRAIL.current()?.addr], [true, n0 + 1, E2], 'taken: the move\'s trail entry pushed at the act, at version 2');
+    await settled(() => GO.shownIn(E) === E2 && !GO.inAir());
+    const v = CAM.view();
+    assert.ok(v.x === at.x && v.y === at.y && v.scale === at.scale, 'landed in place: the camera where it stood');
+    assert.equal(HOST.currentState(), null, 'no list opened');
+    assert.deepEqual(fake.unanswered, []);
+  } finally {
+    TRAIL._reset();
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }
 });

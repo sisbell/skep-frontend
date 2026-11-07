@@ -71,6 +71,10 @@
 // was a span named — and a return reopens it from that (`reopen`), at the
 // version its box shows then, over the passage where its bytes stand,
 // standing at the document's box, its rows read again.
+// The corner's offered read (`readFromCorner`; foundations §3.2; D5 K-57),
+// where a newer version's arrival pinned the box, is a member's read act made
+// at the corner without the list: a version move to the version offered,
+// carrying the passage held as the corner's act holds it.
 // Rules: FP-1, FP-2, FP-13, FP-20, FP-21, FP-22, FP-34, FP-36.
 
 import * as HOST from './host.js';
@@ -378,5 +382,32 @@ export function fromCorner(corner, selection, byKey = false) {
   const inView = held ? null : firstInView(addr);
   const box = docBox(documentOf(addr) || addr);
   void open(addr, held ? held.pos : inView ? inView.pos : null, { el: statement, world: { x: box.x, y: box.y } }, held ? held.width : null, byKey);
+  return true;
+}
+
+/**
+ * The corner's offered read (see the head; D5 K-57), the act a click on it,
+ * Enter on it and Enter at a corner with no version statement take: the
+ * version move to the newer version the corner offers (N-GO's `toVersion`),
+ * landing in place, carrying the passage held as a member's read act carries
+ * it — the selection where it stands in the corner's document, named so,
+ * else the first span in view, whole — its reading face standing at that
+ * passage, else at the document's box. A corner offering no read has no such
+ * act.
+ * @param {HTMLElement} corner the corner's element (`data-corner` names the version its box shows; its `[data-read]` the version offered)
+ * @param {{addr: string, pos: number, width: number} | null} selection the selection, wherever it stands
+ * @param {boolean} [byKey] a key made the act
+ * @returns {boolean} whether the corner had the act
+ */
+export function readFromCorner(corner, selection, byKey = false) {
+  const addr = corner.dataset.corner || '', trunk = documentOf(addr) || addr;
+  const offer = /** @type {HTMLElement | null} */ (corner.querySelector('[data-read]'));
+  const k = offer ? Number(offer.dataset.read) : NaN;
+  if (!addr || !(k >= 1)) return false;
+  const held = selection && selection.addr === addr ? selection : null;
+  const inView = held ? null : firstInView(addr);
+  const carry = held ? { addr, pos: held.pos, width: held.width, selected: true } : inView ? { addr, pos: inView.pos, width: Math.max(1, inView.width) } : null;
+  const box = docBox(trunk);
+  void GO.toVersion(versionAddress(trunk, k), { carry, byKey, site: carry ? { span: { addr, pos: carry.pos } } : { world: { x: box.x, y: box.y } } });
   return true;
 }

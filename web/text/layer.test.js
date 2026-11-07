@@ -27,8 +27,9 @@
 // edition's links alone, at the row or drop that left it behind, the failed
 // read's words after it — its label carrying it after its address, none where
 // the one line names it, and its account counting it; and the plane's corner made again as the board's lag
-// begins and ends and as its box's chain is counted again, naming no count
-// the board did not end the chain at (FP-8, FP-12, FP-20, FP-22, FP-23,
+// begins and ends, as its box's chain is counted again, naming no count
+// the board did not end the chain at, and as the read a newer version's
+// arrival offers comes, rises and goes, a focus on it kept (FP-8, FP-12, FP-20, FP-22, FP-23,
 // FP-26, FP-30, FP-33, FP-34).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -1299,6 +1300,53 @@ test('the plane\'s corner claims no total the board did not give: a chain its pr
   REC.takeMembers(D, 8, true);
   LAYER.frame();
   assert.ok(items(D2).includes(esc(t('F.version-of', { k: 2, n: 8 }))), `the chain ended at 8: "version 2 of 8" — ${items(D2)}`);
+}));
+
+test('the plane\'s corner of a box a newer version\'s arrival pinned offers to read the newest member named — a control after its version statement, never a Tab stop — in the frame the offer stands, raises it in the frame it is raised and drops it in the frame it ends, its article standing all the while; a focus on the offer goes to the offer standing in its place, and to the corner once none does (issue #240; D5 K-57; FP-20, FP-23)', () => onCorner(() => {
+  /** the platform's focus, and each element of the page: the corner's controls as its items set them, read back as the platform reads them */
+  const page = /** @type {any} */ ({ activeElement: null });
+  page.createElement = () => {
+    /** @type {any[]} */
+    const controls = [];
+    let html = '';
+    const e = /** @type {any} */ ({
+      className: '', id: '', dataset: {}, style: {}, children: [], tabIndex: -1, offsetWidth: 160, offsetHeight: 40,
+      classList: { toggle() {} }, setAttribute() {}, removeAttribute() {}, appendChild(/** @type {unknown} */ c) { e.children.push(c); },
+      querySelector: () => null, getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }), remove() {},
+      getAttribute: (/** @type {string} */ a) => (a === 'tabindex' ? String(e.tabIndex) : null), focus() { page.activeElement = e; },
+      querySelectorAll: () => controls, contains: (/** @type {unknown} */ x) => x === e || controls.includes(x),
+      get innerHTML() { return html; },
+      set innerHTML(/** @type {string} */ v) {
+        html = v; controls.length = 0;
+        for (const m of v.matchAll(/data-read="(\d+)"[^>]*tabindex="(-?\d+)"/g)) { const c = { dataset: { read: m[1] }, getAttribute: (/** @type {string} */ a) => (a === 'tabindex' ? m[2] : null), focus() { page.activeElement = c; } }; controls.push(c); }
+      },
+    });
+    return e;
+  };
+  globalThis.document = page;
+  const offer = { n: /** @type {number | null} */ (null) };
+  LAYER.readers({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: (a) => (a === D || a === D2 ? D2 : a), newer: (a) => (a === D2 ? offer.n : null) });
+  REC.takeMembers(D, 3);
+  const corner = () => /** @type {any} */ (LAYER.cornerOf(D2)), items = () => corner()?.innerHTML ?? '';
+  const act = (/** @type {number} */ n) => `<span class="read" data-read="${n}" role="button" tabindex="-1">${esc(t('F.versions.read', { k: n }))}</span>`;
+  const mine = (/** @type {string} */ a) => a === D2;
+  LAYER.frame(mine);
+  assert.ok(LAYER.isMounted(D2) && items().includes(esc(t('F.version-of', { k: 2, n: 3 }))) && !items().includes('data-read'), `the box at version 2, no offer: "version 2 of 3" alone — ${items()}`);
+  const last = LAYER.mounts().at(-1);
+  offer.n = 3;
+  LAYER.frame(mine);
+  assert.ok(items().includes(act(3)) && items().indexOf('class="version"') < items().indexOf(act(3)), `the offer in that frame, after the version statement — ${items()}`);
+  const [read3] = corner().querySelectorAll();
+  read3.focus();
+  offer.n = 4;
+  LAYER.frame(mine);
+  const [read4] = corner().querySelectorAll();
+  assert.ok(items().includes(act(4)) && !items().includes(act(3)), `raised to version 4 in that frame — ${items()}`);
+  assert.ok(read4 && read4 !== read3 && page.activeElement === read4, 'the focus on the offer standing in its place');
+  offer.n = null;
+  LAYER.frame(mine);
+  assert.ok(!items().includes('data-read') && page.activeElement === corner(), `the offer gone in that frame, the focus on the corner — ${items()}`);
+  assert.ok(LAYER.isMounted(D2) && LAYER.mounts().at(-1) === last, 'its article standing: nothing mounted again');
 }));
 
 test('the plane\'s corner of a draft carries its kept state — the slot an empty box while none is set — its items made again in the frame the state is set, the frame the word\'s statement opens and the frame it closes, and the frame the state is cleared (B3-S2; D5 K-57, K-74; FP-34)', () => {

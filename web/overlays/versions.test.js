@@ -13,9 +13,10 @@
 // board ended it, a list whose probe stopped keeping every member read and
 // saying how far it read, "try again" going on from there, the version being
 // read and the members a feed row names listed "not read", a chain of ten
-// listed to its end, a board that answers nothing leaving no member; and the
+// listed to its end, a board that answers nothing leaving no member; the
 // list standing at the act's site — the corner's statement and the
-// document's box beside it.
+// document's box beside it; and the corner's offered read a version move
+// carrying the selection, no list opened.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -359,5 +360,23 @@ test('opened by the corner\'s act at its version statement, the list stands at i
   const b = docBox(T);
   assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['versions:' + T, { el: statement, world: { x: b.x, y: b.y } }]);
   HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the corner\'s offered read is a version move to the version it offers, carrying the selection where it stands in the corner\'s document — never the list — landing in place at the passage\'s counterpart there; a corner offering none has no such act (issue #240; D5 K-57)', async () => {
+  await run(GO.leapTo(T1));
+  assert.equal(GO.shownIn(T), T1, 'the box at version 1');
+  /** the corner's element as T-LAYER stands it for version 1, the read it offers in it */
+  const offer = { dataset: { read: '2' } };
+  const corner = { dataset: { corner: T1 }, querySelector: (/** @type {string} */ s) => (s === '[data-read]' ? offer : null) };
+  const at = CAM.view();
+  let flew = false;
+  assert.equal(VERSIONS.readFromCorner(/** @type {any} */ (corner), { addr: T1, ...HELD }), true, 'the corner has the act');
+  for (let i = 0; i < 200 && (GO.arrivalMark()?.addr !== T2 || GO.inAir()); i++) { await new Promise((r) => setTimeout(r, 0)); flew = flew || CAM.flying(); if (CAM.flying()) CAM.step(Infinity); }
+  assert.deepEqual(GO.arrivalMark(), { addr: T2, pos: HELD2.pos, runs: [{ pos: HELD2.pos, width: HELD.width }], link: null }, 'the selection carried: its counterpart outlined in version 2');
+  const v = CAM.view();
+  assert.ok(!flew && v.x === at.x && v.y === at.y && v.scale === at.scale, 'no flight: the camera where it stood');
+  assert.deepEqual([GO.shownIn(T), HOST.currentState()], [T2, null], 'the box takes version 2, and no list opens');
+  assert.equal(VERSIONS.readFromCorner(/** @type {any} */ ({ dataset: { corner: T2 }, querySelector: () => null }), null), false, 'a corner offering no read: no act');
   assert.deepEqual(fake.unanswered, []);
 });

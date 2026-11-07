@@ -376,7 +376,7 @@ let started = false;
 const plain = (/** @type {string} */ addr) => documentOf(addr) || addr;
 /** @type {(addr: string) => string} the version a document's box shows (N-GO's `shownIn`, handed in at `start`) */
 let shown = plain;
-/** @type {(member: string, at: number | null) => void} told of a trunk's next member arriving — a feed row publishing it, before the row drops anything, with the row's position; a refresh's, its member found from the text, with none (N-GO's `arrived`, handed in at `start`) */
+/** @type {(member: string, at: number | null, newest: number | null) => void} told of a trunk's next member arriving — a feed row publishing it, before the row drops anything, with the row's position; a refresh's, its member found from the text, with none, and with the chain's count as the newest member known (N-GO's `arrived`, handed in at `start`) */
 let onPublish = () => {};
 /** @type {(d: Dropped) => void} told of what each feed row the page takes, and every change of its class, dropped of what it held, after the drop (SC's `dropped`, handed in at `start`) */
 let onDrop = () => {};
@@ -386,7 +386,7 @@ let stands = () => [];
 let onOpen = () => {};
 /** @type {() => Array<{addr: string, at: number}>} what the trail's entries the reader has left read, each by its document and the position its text was read at (N-TRAIL's `readings`, handed in at `start`): a refresh counts the chain of each edition among them */
 let readings = () => [];
-/** @type {(trunk: string, memberAt: (at: number) => string | null) => void} told of each chain a refresh counts, with the member a text read at a position was where a newer member follows it (`mintedBy`; N-TRAIL's `countedAt`, handed in at `start`) */
+/** @type {(trunk: string, memberAt: (at: number) => string | null, newest: number) => void} told of each chain a refresh counts, with the member a text read at a position was where a newer member follows it (`mintedBy`) and the chain's count, its newest member (N-TRAIL's `countedAt`, handed in at `start`) */
 let onCounted = () => {};
 /** @type {() => (string | null)} the text an open find searches (N-FIND's `searched`, handed in at `start`): kept as the view keeps the documents it shows (`shownNow`); null where no find is open */
 let finding = () => null;
@@ -615,7 +615,7 @@ let subscribed = false;
  * they held as it stood with them (`unkeepAll`) and the board's lag, lets go
  * of the rows held, the gap and the faces kept, and forgets the positions the
  * catch-ups read.
- * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string, at: number | null) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], readings?: () => Array<{addr: string, at: number}>, onCounted?: (trunk: string, memberAt: (at: number) => string | null) => void, onOpen?: () => void, finding?: () => (string | null)}} opts `shown` the version each box shows, which the view reads; `onPublish` told of each trunk member `D.k+1` a `publish` row names, with the row's position, before the row drops what the page held of `D`, and of each a refresh finds past the member a text is, with none; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop, and of the documents whose byline owner facts taken anew decide; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `readings` what the trail's entries the reader has left read, each by its document and the position its text was read at, and `onCounted` told of each chain a refresh counts for them or for a text it holds, before any arrival it finds (`refresh`); `onOpen` told once a board the list read again found is open (`retryBoards`); `finding` the text an open find searches (N-FIND's `searched`), which the view keeps as it keeps the documents it shows
+ * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string, at: number | null, newest: number | null) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], readings?: () => Array<{addr: string, at: number}>, onCounted?: (trunk: string, memberAt: (at: number) => string | null, newest: number) => void, onOpen?: () => void, finding?: () => (string | null)}} opts `shown` the version each box shows, which the view reads; `onPublish` told of each trunk member `D.k+1` a `publish` row names, with the row's position, before the row drops what the page held of `D`, and of each a refresh finds past the member a text is, with none and the chain's count as the newest member known; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop, and of the documents whose byline owner facts taken anew decide; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `readings` what the trail's entries the reader has left read, each by its document and the position its text was read at, and `onCounted` told of each chain a refresh counts for them or for a text it holds, with the chain's count, before any arrival it finds (`refresh`); `onOpen` told once a board the list read again found is open (`retryBoards`); `finding` the text an open find searches (N-FIND's `searched`), which the view keeps as it keeps the documents it shows
  */
 export function start(opts) {
   dirty = opts.onDirty;
@@ -872,16 +872,18 @@ async function readAgainFirst(addr) {
 
 /**
  * A newer member's arrival at its trunk (FP-22, FP-23): told
- * to the app with the position it was published at (`onPublish`, N-GO's
- * `arrived`), which pins the trunk's box on the member its text is where the
- * box shows its plain address and the page holds that text, read before that
- * position; where it did, that member takes the trunk's text (M-REC's
- * `takeAsMember`), so the box keeps it standing and no read of it is made.
+ * to the app with the position it was published at and the newest member
+ * known (`onPublish`, N-GO's `arrived`), which pins the trunk's box on the
+ * member its text is where the box shows its plain address and the page
+ * holds that text, read before that position; where it did, that member
+ * takes the trunk's text (M-REC's `takeAsMember`), so the box keeps it
+ * standing and no read of it is made.
  * @param {string} member the trunk's newer member, `D.k+1`
  * @param {number | null} [at] the position a feed row published it at; null for a refresh's, whose `D.k` is the member the text was read as (`memberShown`)
+ * @param {number | null} [newest] the newest member known, which may follow `member`: a refresh's chain's count; none for a feed row's, whose member is the newest it names
  */
-function arrive(member, at = null) {
-  onPublish(member, at);
+function arrive(member, at = null, newest = null) {
+  onPublish(member, at, newest);
   const trunk = documentOf(member), k = memberOf(member);
   if (!trunk || k == null || k < 2) return;
   const read = versionAddress(trunk, k - 1);
@@ -2468,10 +2470,11 @@ export async function readClaims(origin) {
  * (`readings`), counted once (`countChain`), down to the earliest position
  * those texts were read at, at most MAX_INFLIGHT at once; once every one is,
  * each chain told to `onCounted` with the member a text read at a position
- * was, where a newer member follows it (`mintedBy`), so each entry re-takes
- * the member its own text was before any arrival is taken; then each edition
- * held whose chain advanced past the member its text is (`memberShown`) taking
- * the arrival of that member's successor (`arrive`), its box pinned on the member,
+ * was, where a newer member follows it (`mintedBy`), and its count, so each
+ * entry re-takes the member its own text was before any arrival is taken;
+ * then each edition held whose chain advanced past the member its text is
+ * (`memberShown`) taking the arrival of that member's successor (`arrive`),
+ * the chain's count the newest member known, its box pinned on the member,
  * which keeps the text — the box holding the view's centre last, so the
  * passage being read there is held across its move (T-LAYER's `holdAcross`) —
  * one whose member cannot be told, or whose box the app did not pin, left as
@@ -2513,7 +2516,7 @@ export async function refresh() {
     const left = new Set();
     /** @type {Set<string>} the members an advanced edition's text was handed to */
     const handed = new Set();
-    /** @type {Array<{doc: string, s: number}>} the editions whose chain advanced past the member their text is */
+    /** @type {Array<{doc: string, s: number, n: number}>} the editions whose chain advanced past the member their text is, `s`, to its count, `n` */
     const advanced = [];
     /** @type {Array<{trunk: string, c: Counted}>} each chain counted, by its trunk */
     const counted = [];
@@ -2535,16 +2538,16 @@ export async function refresh() {
       if (!holds) return;
       const s = memberShown(d, c);
       if (s == null) left.add(addr);
-      else if (s >= 1 && c.n > s) advanced.push({ doc: addr, s });
+      else if (s >= 1 && c.n > s) advanced.push({ doc: addr, s, n: c.n });
     });
     if (out()) return;
     // every chain told before any arrival: each entry re-takes the member its own text was, never the one a text the page holds is
-    for (const { trunk, c } of counted) onCounted(trunk, (at) => { const s = mintedBy(c, at); return s != null && s >= 1 && s < c.n ? versionAddress(trunk, s) : null; });
+    for (const { trunk, c } of counted) onCounted(trunk, (at) => { const s = mintedBy(c, at); return s != null && s >= 1 && s < c.n ? versionAddress(trunk, s) : null; }, c.n);
     // the box holding the view's centre arrives last: the passage being read is held across its move (T-LAYER's `holdAcross`), which a later arrival would end
     const centre = (/** @type {string} */ doc) => { const b = docBox(doc); return b.x <= cam.x && cam.x <= b.x + b.w && b.y <= cam.y && cam.y <= b.y + b.h ? 1 : 0; };
-    for (const { doc, s } of advanced.sort((a, b) => centre(a.doc) - centre(b.doc))) {
+    for (const { doc, s, n } of advanced.sort((a, b) => centre(a.doc) - centre(b.doc))) {
       const member = versionAddress(doc, s);
-      arrive(versionAddress(doc, s + 1));
+      arrive(versionAddress(doc, s + 1), null, n);
       if (shown(doc) === member) handed.add(member); else left.add(doc);
     }
     const showing = shownNow().filter((a) => !left.has(a));

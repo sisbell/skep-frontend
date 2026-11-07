@@ -165,8 +165,9 @@ the plane, while a caret alone in a pane gives the page's selection its
 highlight back. Mod+[ to the entry the reader left at an edition's plain
 address, after a `publish` row naming the member past its newest is handed to
 the page through the gate's feed door — reads alone — shows the member read
-there: the entry and the trail list's row name it and the paragraph read
-stands where it stood, Mod+] and Mod+[ again the same (issue #298's design
+there: the entry and the trail list's row name it, the paragraph read
+stands where it stood and its corner offers to read the member that arrived,
+Mod+] and Mod+[ again the same (issue #298's design
 decision); that row names a member the board never minted, so it comes after
 every check here that reads the edition's chain, and the page keeps its
 record. The page's own find (issue #222's design decision; B2-S5; D5 K-91):
@@ -971,7 +972,8 @@ def back_after_publish(ctx, r):
     paragraph under the view's centre, then a LEAP away; a `publish` row naming the member after that one, at a position
     past every one the board has journalled, handed to the page through the gate's feed door — reads alone, nothing
     written; then Mod+[: the box shows the member read there, its article alone, the trail's entry and the trail list's
-    row naming it, the paragraph's first line where it stood on screen at its em; Mod+] and Mod+[ again, the same. It
+    row naming it, the paragraph's first line where it stood on screen at its em, and its corner offering to read the
+    member that arrived (issue #240); Mod+] and Mod+[ again, the same. It
     runs after every check on this page that reads the edition's chain, for the row names a member the board never
     minted. The edition is left at its plain address; its figures"""
     seen = {}
@@ -1009,6 +1011,11 @@ def back_after_publish(ctx, r):
             {'cursor': [t0['cursor'], b['trail']['cursor']], 'entry': current['addr'], 'shown': b['shown'], 'mounted': b['mounted']})
     r.check(bool(before['line']) and bool(again['line']) and abs(again['line']['y'] - before['line']['y']) <= DRIFT_TOL_PX and abs(again['em'] - before['em']) <= 1e-6 * before['em'],
             f'the paragraph read there stands where it stood on screen, {DRIFT_TOL_PX} px either way, at its em (issue #298)', {'before': before, 'after': again})
+    ctx.frames(2)
+    offer = ctx.js('''((a) => { const o = document.querySelector(`#corners [data-corner="${a}"] [data-read]`);
+      return o ? {read: o.dataset.read, text: o.textContent, tab: o.getAttribute('tabindex'), role: o.getAttribute('role')} : null; })(%s)''' % json.dumps(newest))
+    want = {'read': str(k + 1), 'text': strings(ctx, 'F.versions.read', {'k': k + 1}), 'tab': '-1', 'role': 'button'}
+    r.check(offer == want, f'its corner offers to read {V}.{k + 1}, the version that arrived meanwhile, as it would had the reader stayed — a control the pointer and → reach, never a Tab stop (issue #240)', {'offer': offer, 'want': want})
     ctx.js('window.__skep.cards.trailList()')
     ctx.frames(2)
     listed = ctx.js('(() => { const e = document.querySelector(\'#overlay [aria-current="true"] .id\'); return e ? e.textContent : null; })()')

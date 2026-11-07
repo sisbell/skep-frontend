@@ -89,7 +89,9 @@
 // where a click on a block or on a marked stretch places the caret at the
 // character clicked, as the platform's own collapse of its selection names it
 // (T-LAYER's `caretFromPlatform`, `placeCaret`), the selection cleared, and
-// a symbol's click still opens its card (K-7). On the corners: the version
+// a symbol's click still opens its card (K-7). On the corners: the read a
+// corner offers where a newer version's arrival pinned its box takes that
+// read, a version move (O-VERSIONS' `readFromCorner`; D5 K-57); the version
 // statement opens the document's members (the corner's act, the one Enter
 // takes there — K-57), a draft's kept word opens its statement and closes it
 // again (T-LAYER's `openStatement`; K-57, K-74), a compact corner's glyph
@@ -221,13 +223,14 @@ export function attach(els) {
     if (Math.abs(e.clientX - lastDown.x) + Math.abs(e.clientY - lastDown.y) > 4) { e.stopPropagation(); return; }
     if (clickText(/** @type {HTMLElement} */ (e.target))) e.stopPropagation();
   });
-  // the corners: a click on the version statement takes the corner's act; one on a compact corner's glyph opens it whole, and one
-  // on the corner opened closes it again (FP-26)
+  // the corners: a click on the read it offers takes that read; one on the version statement takes the corner's act; one on a
+  // compact corner's glyph opens it whole, and one on the corner opened closes it again (FP-26)
   els.corners.addEventListener('click', (e) => {
     const target = /** @type {HTMLElement} */ (e.target);
     LINE.act();
     const holder = /** @type {HTMLElement | null} */ (target.closest('[data-corner]')), addr = holder ? holder.dataset.corner || '' : '';
-    if (holder && target.closest('.version')) { e.stopPropagation(); VERSIONS.fromCorner(holder, SEL.selected(), false); }
+    if (holder && target.closest('[data-read]')) { e.stopPropagation(); VERSIONS.readFromCorner(holder, SEL.selected(), false); }
+    else if (holder && target.closest('.version')) { e.stopPropagation(); VERSIONS.fromCorner(holder, SEL.selected(), false); }
     else if (holder && target.closest('.kept-word[data-kept]')) { e.stopPropagation(); LAYER.openStatement(addr); }
     else if (holder && (target.closest('.glyph') || LAYER.cornerAt(addr)?.opened)) { e.stopPropagation(); LAYER.openCorner(addr); }
   });

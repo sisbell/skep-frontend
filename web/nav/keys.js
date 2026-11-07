@@ -76,7 +76,10 @@
 // → move among its acts and every other key is the
 // act's own (K-22); at a corner Enter takes the corner's act (K-57) — a
 // draft's kept word opens its statement, an edition's version statement its
-// list — and its other keys are the platform's; in an overlay and at a landing's line every
+// list, and where neither stands the read the corner offers once a newer
+// version's arrival pinned its box (O-VERSIONS' `readFromCorner`) — → and ←
+// move the focus to that offered read and back, K-22's form, and Enter on it
+// takes it; its other keys are the platform's; in an overlay and at a landing's line every
 // key is the control's own; on the plane the walk's keys (K-1 … K-5) move
 // the walk, Enter activates the focus (K-7) — at a continuation's mark's stop
 // it opens the mark's list — and the paging keys page the camera (K-6);
@@ -105,6 +108,7 @@ import * as GO from './go.js';
 import * as WALK from './walk.js';
 import * as LEAP from './leap.js';
 import * as FIND from './find.js';
+import * as FOCUS from './focus.js';
 import * as REC from '../model/records.js';
 import * as HOST from '../overlays/host.js';
 import * as FACES from '../overlays/faces.js';
@@ -162,6 +166,8 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-52', chord: 'Mod+Shift+Enter', act: 'selection.scene', surface: 'selection' },
   { id: 'K-55', chord: 'Enter', act: 'cards.open', surface: 'cards' },
   { id: 'K-57', chord: 'Enter', act: 'corner.act', surface: 'corner' },
+  { id: 'K-57', chord: '→', act: 'corner.offer', surface: 'corner' },
+  { id: 'K-57', chord: '←', act: 'corner.leave', surface: 'corner' },
   { id: 'K-70', chord: 'Enter', act: 'caret.place', surface: 'plane' },
   { id: 'K-71', chord: '←', act: 'caret.left', surface: 'caret' },
   { id: 'K-71', chord: '→', act: 'caret.right', surface: 'caret' },
@@ -362,13 +368,22 @@ function route(e, chord, ctx) {
   if (chord === 'Mod+R' || e.key === 'F5') return () => true; // K-94: the plane is live; nothing reloads
   // the caret's keys (see the head): at a live caret, before the walk's
   if (ctx.where === 'caret') { const act = caretKey(e, chord); if (act) return act; }
-  // the corner (K-57): Enter takes its act — a draft's kept word's statement (K-74), else the version statement's list; its other keys are the platform's
+  // the corner (K-57): its offered read reached by → along it and left by ← (K-22's form); Enter takes the act the focus
+  // stands on — the offered read, else a draft's kept word's statement (K-74), else the version statement's list, else the
+  // offered read; its other keys are the platform's
   if (ctx.where === 'corner') {
-    const corner = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('[data-corner]'));
-    if (chord !== 'Enter' || !corner) return null;
+    const target = /** @type {HTMLElement} */ (e.target), corner = /** @type {HTMLElement | null} */ (target.closest('[data-corner]'));
+    if (!corner) return null;
+    const onOffer = !!target.closest('[data-read]');
+    if (chord === '→' || chord === '←') {
+      const to = chord === '←' ? (onOffer ? corner : null) : onOffer ? null : /** @type {HTMLElement | null} */ (corner.querySelector('[data-read]'));
+      return to ? () => { e.preventDefault(); FOCUS.land(to, { byKey }); return true; } : null;
+    }
+    if (chord !== 'Enter') return null;
     const addr = corner.dataset.corner || '';
+    if (onOffer) return () => VERSIONS.readFromCorner(corner, SEL.selected(), byKey);
     if (REC.keptOf(addr)) return () => { LAYER.openStatement(addr); return true; };
-    return () => VERSIONS.fromCorner(corner, SEL.selected(), byKey);
+    return () => VERSIONS.fromCorner(corner, SEL.selected(), byKey) || VERSIONS.readFromCorner(corner, SEL.selected(), byKey);
   }
   // the line is one stop (K-22): ← and → move among its acts; every other key is the act's own
   if (ctx.where === 'line') return chord === '←' || chord === '→' ? () => { e.preventDefault(); return LINE.step(chord === '→' ? 1 : -1); } : null;

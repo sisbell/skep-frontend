@@ -9,10 +9,11 @@
 // model's record stands; Esc leaves the text to the walk with the caret kept,
 // and Enter or a printable key at that span returns it; at another span of
 // the draft a printable key, a paste and a cut are answered by the draft's own
-// line, Space and another's text by K-9's; and Mod+S writes nothing, answered
+// line, Space and another's text by K-9's; Mod+S writes nothing, answered
 // at the corner with the kept state's statement whole at the first press in a
 // session and the corner's own word after it, the statement whole on the
-// word's act (D5 K-9, K-57, K-70, K-71, K-72, K-74, K-76, K-77, K-93; D6 BM-1,
+// word's act; and → and ← at a corner move the focus to the read it offers
+// and back (D5 K-9, K-57, K-70, K-71, K-72, K-74, K-76, K-77, K-93; D6 BM-1,
 // BM-3, BM-52, BM-54; FP-14).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -208,4 +209,25 @@ test('Mod+S writes nothing and is answered at the corner: where the draft has a 
   assert.equal(await KEYS.dispatch({ ...keyOf('Enter'), target }, { where: 'corner', byKey: true }), true);
   assert.ok(!LAYER.statementOpen(D), 'the act again closes it');
   assert.deepEqual([REC.edits(D), caret()], [[], null], 'the chord writes nothing and places no caret');
+}));
+
+test('at a corner offering a read, → moves the focus along it to the offered read and ← back to the corner, each a key the page takes; → at the read, ← at the corner, and either at a corner offering none are the platform\'s (D5 K-57, in K-22\'s form)', () => onPlane(async () => {
+  const doc = /** @type {any} */ (globalThis.document);
+  // a corner as T-LAYER stands it, the read it offers in it, and a corner offering none
+  const el = /** @type {any} */ ({ dataset: { corner: D }, focus() { doc.activeElement = el; } });
+  const act = /** @type {any} */ ({ dataset: { read: '3' }, focus() { doc.activeElement = act; } });
+  Object.assign(el, { closest: (/** @type {string} */ s) => (s === '[data-corner]' ? el : null), querySelector: (/** @type {string} */ s) => (s === '[data-read]' ? act : null) });
+  Object.assign(act, { closest: (/** @type {string} */ s) => (s === '[data-corner]' ? el : s === '[data-read]' ? act : null) });
+  const bare = /** @type {any} */ ({ dataset: { corner: D }, querySelector: () => null });
+  bare.closest = (/** @type {string} */ s) => (s === '[data-corner]' ? bare : null);
+  const at = (/** @type {string} */ key, /** @type {unknown} */ target) => KEYS.dispatch({ ...keyOf(key), target }, { where: 'corner', byKey: true });
+  doc.activeElement = el;
+  assert.equal(await at('ArrowRight', el), true);
+  assert.equal(doc.activeElement, act, '→: the focus on the offered read');
+  assert.deepEqual([await at('ArrowRight', act), doc.activeElement], [false, act], '→ at the read: nothing further along, the platform\'s');
+  assert.equal(await at('ArrowLeft', act), true);
+  assert.equal(doc.activeElement, el, '←: back to the corner');
+  assert.deepEqual([await at('ArrowLeft', el), doc.activeElement], [false, el], '← at the corner: the platform\'s');
+  assert.deepEqual([await at('ArrowRight', bare), await at('ArrowLeft', bare)], [false, false], 'a corner offering none: both the platform\'s');
+  assert.ok(KEYS.TABLE.some((r) => r.id === 'K-57' && r.chord === '→' && r.surface === 'corner') && KEYS.TABLE.some((r) => r.id === 'K-57' && r.chord === '←' && r.surface === 'corner'), 'the table binds them at the corner, K-57\'s');
 }));

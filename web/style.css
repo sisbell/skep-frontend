@@ -281,6 +281,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #corners .corner .kept-word[data-kept] { cursor:pointer; text-decoration:underline dotted; }
 .corner .kept-statement { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
 .corner .whole-links { display:block; margin-top:.3em; }
+/* the read a plane's corner offers where a newer version's arrival pinned its box (D5 K-57): a line of its own after the
+   version statement, its click cue its act's; a pane's own is set below */
+#corners .corner .read { display:block; margin-top:.3em; color:#cfd6df; cursor:pointer; text-decoration:underline dotted; }
 /* a kept document's clause, the corner's last item on a line of its own: its words whole in either form, wrapped and never
    cut, the room above it its own padding, so the corner is placed by the items above it alone (T-LAYER) */
 .corner .kept { display:block; padding-top:.3em; color:#cfd6df; white-space:normal; }

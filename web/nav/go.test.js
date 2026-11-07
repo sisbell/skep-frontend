@@ -18,7 +18,11 @@
 // entry kept, the member a newer version's arrival found a bare address's
 // text was among them, by the position its row names, an arrival standing
 // there read in that member, and the version a
-// landing's "read side by side" opens — a change of the page's class, where no
+// landing's "read side by side" opens — the mark a newer version's arrival
+// leaves on the box it pins: its corner offering the newest member, said once,
+// raised by a later arrival, taken by → and Enter, ended by a move elsewhere,
+// marked again by a return as the reader left it and never on a version the
+// reader chose — a change of the page's class, where no
 // board is held, the passage Back lands on — a return finding the words its
 // entry's view read in the text it reaches, and the arrival it keeps read
 // again there, one whose bytes were never named kept only on the text it was
@@ -2999,7 +3003,7 @@ async function farAgain() {
   await run(GO.leapTo(FAR));
 }
 
-test('Back to an edition read at its bare address shows the member read there once a newer version arrived while the reader was away — its entry, the trail list and the box naming it, the words read where they stood, nothing said — and the bare address while nothing has (issue #298\'s design decision: "Back pins the version that was read again")', async () => {
+test('Back to an edition read at its bare address shows the member read there once a newer version arrived while the reader was away — its entry, the trail list and the box naming it, the words read where they stood, nothing outlined and no face — its corner offering the newer version and the status region saying the arrival once, as if the reader had stayed; and the bare address, unmarked, while nothing has (issue #298\'s design decision: "Back pins the version that was read again … signed exactly as if the reader had stayed"; issue #240)', async () => {
   const platform = { getElementById: globalThis.document.getElementById };
   /** @type {any} */ (globalThis.document).getElementById = () => null;
   try {
@@ -3007,14 +3011,16 @@ test('Back to an edition read at its bare address shows the member read there on
     await run(GO.leapTo(FAR, { pos: FAR_HELD.pos }));
     await run(GO.leapTo(D));
     await run(GO.back());
-    assert.deepEqual([TRAIL.current()?.addr, GO.shownIn(FAR)], [FAR, FAR], 'nothing published since: the bare address');
+    assert.deepEqual([TRAIL.current()?.addr, GO.shownIn(FAR), GO.newerAt(FAR)], [FAR, FAR, null], 'nothing published since: the bare address, unmarked');
     const left = CAM.view();
     await run(GO.leapTo(D));
+    const said = statusSaid(), told = () => said.filter((x) => x === t('F.arrival.pane', { k: 2 })).length;
     publishFar3();
-    assert.deepEqual([TRAIL.all()[TRAIL.cursorIndex() - 1].addr, GO.shownIn(FAR)], [FAR2, FAR2], 'version 3 arrived: the entry the reader left re-takes version 2, as the box does');
+    assert.deepEqual([TRAIL.all()[TRAIL.cursorIndex() - 1].addr, GO.shownIn(FAR), told()], [FAR2, FAR2, 0], 'version 3 arrived: the entry the reader left re-takes version 2, as the box does — FAR out of view, nothing said');
     await run(GO.back());
     assert.deepEqual([TRAIL.current()?.addr, GO.shownIn(FAR), walkAt()], [FAR2, FAR2, ['block', FAR2, FAR_HELD.pos]], 'Back: version 2, the walk on the span it stood on — never the newer head');
-    assert.deepEqual([same(CAM.view(), left), GO.landing(), faceShown()], [true, null, null], 'the words read where they stood, nothing said');
+    assert.deepEqual([same(CAM.view(), left), GO.landing(), faceShown()], [true, null, null], 'the words read where they stood, nothing outlined and no face');
+    assert.deepEqual([GO.newerAt(FAR2), told()], [3, 1], 'its corner offers version 3, the arrival said once there');
     TRAILLIST.open();
     const row = (hostEl.innerHTML.match(/aria-current="true"><span class="k">[^<]*<\/span> (.*?)<\/button>/) || [])[1] || '';
     HOST.dismiss();
@@ -3056,10 +3062,31 @@ test('Forward and a trail jump to an entry left at an edition\'s bare address sh
   const ahead = TRAIL.all()[TRAIL.cursorIndex() + 1];
   assert.deepEqual([ahead.addr, GO.shownIn(FAR)], [FAR2, FAR2], 'the entry ahead of the cursor re-takes version 2, as the box does');
   await run(GO.forward());
-  assert.deepEqual([TRAIL.current() === ahead, GO.shownIn(FAR), walkAt()], [true, FAR2, ['block', FAR2, FAR_HELD.pos]], 'Forward: version 2, the walk on the span it stood on — never the newer head');
+  assert.deepEqual([TRAIL.current() === ahead, GO.shownIn(FAR), walkAt(), GO.newerAt(FAR2)], [true, FAR2, ['block', FAR2, FAR_HELD.pos], 3], 'Forward: version 2, the walk on the span it stood on — never the newer head — its corner offering version 3 (issue #240)');
   await run(GO.back());
+  assert.deepEqual([GO.shownIn(FAR), GO.newerAt(FAR2)], [FAR2, 3], 'Back to the entry behind, which names no box of FAR\'s: FAR\'s box as it stood');
   await run(GO.toTrailEntry(/** @type {number} */ (TRAIL.numbered().find((r) => r.entry === ahead)?.n)));
-  assert.deepEqual([TRAIL.current() === ahead, TRAIL.current()?.addr, GO.shownIn(FAR)], [true, FAR2, FAR2], 'a trail jump onto it: version 2');
+  assert.deepEqual([TRAIL.current() === ahead, TRAIL.current()?.addr, GO.shownIn(FAR), GO.newerAt(FAR2)], [true, FAR2, FAR2, 3], 'a trail jump onto it: version 2, its corner offering version 3');
+  await farAgain();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a return to an entry where the reader pinned a version themselves shows that version unmarked, whatever arrived meanwhile: the reader\'s own LEAP to version 2, a LEAP away, version 3 arriving, then Back — version 2, no offer, nothing said; and where an arrival marked that version on another entry since, Back to the reader\'s takes the mark off and Forward puts it back (issue #298\'s design decision: "signed exactly as if the reader had stayed"; issue #240)', async () => {
+  await farAfresh();
+  await run(GO.leapTo(FAR2, { pos: FAR_HELD.pos }));
+  await run(GO.leapTo(D));
+  const said = statusSaid();
+  publishFar3();
+  assert.deepEqual([GO.shownIn(FAR), GO.newerAt(FAR2)], [FAR2, null], 'the box pinned by the reader: the arrival marks nothing');
+  await run(GO.back());
+  assert.deepEqual([TRAIL.current()?.addr, GO.shownIn(FAR), GO.newerAt(FAR2), said.filter((x) => x === t('F.arrival.pane', { k: 2 }))], [FAR2, FAR2, null, []], 'Back: version 2, as the reader chose it — no offer, nothing said');
+  await run(GO.leapTo(FAR, { pos: FAR_HELD.pos }));
+  publishFar3();
+  assert.deepEqual([GO.shownIn(FAR), GO.newerAt(FAR2)], [FAR2, 3], 'a LEAP to the bare address, then version 3 arriving there: version 2 marked');
+  await run(GO.back());
+  assert.deepEqual([TRAIL.current()?.addr, GO.shownIn(FAR), GO.newerAt(FAR2)], [FAR2, FAR2, null], 'Back to the reader\'s own version 2: unmarked, as if they had stayed there');
+  await run(GO.forward());
+  assert.deepEqual([GO.shownIn(FAR), GO.newerAt(FAR2)], [FAR2, 3], 'Forward to the entry the arrival marked: marked again');
   await farAgain();
   assert.deepEqual(fake.unanswered, []);
 });
@@ -3128,6 +3155,88 @@ test('a newer version\'s arrival takes its member\'s position from its feed row 
   GO.arrived(FAR + '.3', readAt + 1);
   assert.deepEqual([GO.shownIn(FAR), e.addr, e.reading?.addr], [FAR2, FAR2, FAR2], 'published at 2, after it: version 2\'s — the box pinned on it and the entry re-taking it');
   await run(GO.leapTo(FAR));
+  assert.deepEqual(fake.unanswered, []);
+});
+
+// ---- THE ARRIVAL'S MARK: the corner offers the newer version (issue #240) --------------------------------------------
+
+// TRI: an edition of four members, each its text whole, which a version move to it reads
+const TRI = '1.0.1.0.61', TRI_TEXT = 'An edition read at its bare address.\n\nIts second paragraph.';
+/** TRI's k-th member */
+const tri = (/** @type {number} */ k) => `${TRI}.${k}`;
+Object.assign(script, ...[TRI, tri(1), tri(2), tri(3), tri(4)].map((a) => reads(a, TRI_TEXT, [])));
+/** TRI's k-th member arriving as M-PUMP hands it on (`arrive`): N-GO told, then, where TRI's box took the member before it, that member handed TRI's text */
+function publishTri(/** @type {number} */ k) {
+  REC.invalidate(tri(k - 1));
+  GO.arrived(tri(k));
+  if (GO.shownIn(TRI) === tri(k - 1)) REC.takeAsMember(TRI, tri(k - 1));
+}
+/** a version's corner as T-LAYER stands it, the read it offers in it: stand-ins the keys find their way through and the focus lands on */
+function offering(/** @type {string} */ addr, /** @type {number} */ n) {
+  const doc = /** @type {any} */ (globalThis.document);
+  const el = /** @type {any} */ ({ dataset: { corner: addr }, focus() { doc.activeElement = el; } });
+  const act = /** @type {any} */ ({ dataset: { read: String(n) }, focus() { doc.activeElement = act; } });
+  el.closest = (/** @type {string} */ s) => (s === '[data-corner]' ? el : null);
+  el.querySelector = (/** @type {string} */ s) => (s === '[data-read]' ? act : null);
+  act.closest = (/** @type {string} */ s) => (s === '[data-corner]' ? el : s === '[data-read]' ? act : null);
+  return { el, act };
+}
+/** a key at a corner, its target the element given, made by a key */
+const atCorner = (/** @type {string} */ key, /** @type {unknown} */ target) => KEYS.dispatch({ ...keyOf(key), target }, { where: 'corner', byKey: true });
+/** a version move a key made at a corner let land: whether the camera flew at any turn of it */
+async function landedAt(/** @type {string} */ addr) {
+  let flew = false;
+  for (let i = 0; i < 200 && (GO.shownIn(TRI) !== addr || GO.inAir()); i++) { await new Promise((r) => setTimeout(r, 0)); flew = flew || CAM.flying(); if (CAM.flying()) CAM.step(Infinity); }
+  assert.equal(GO.shownIn(TRI), addr, `the box shows ${addr}`);
+  return flew;
+}
+
+test('a newer version\'s arrival at a box read at its bare address marks it: the box pinned on the member read, its corner offering the newest member named, said once in the status region with the box read at its reading scale, and a later arrival raising the offer, saying nothing; → along the corner reaches the offer and ← leaves it; Enter on it — or at a corner with no version statement — moves the box to that member in place, a trail entry Back returns from, the offer standing again there; a version move elsewhere or a LEAP to the bare address ends the mark, and a box the reader pinned is never marked (issue #240; foundations §3.2; D5 K-57; FP-22, FP-23)', async () => {
+  const doc = /** @type {any} */ (globalThis.document);
+  const said = statusSaid(), told = (/** @type {number} */ k) => said.filter((x) => x === t('F.arrival.pane', { k })).length;
+  try {
+    await run(GO.leapTo(TRI, { pos: 1 }));
+    assert.deepEqual([GO.shownIn(TRI), GO.newerAt(TRI), LAYER.inView(TRI), LAYER.atReadingScale(TRI)], [TRI, null, true, true], 'TRI read at its bare address, in view at its reading scale: unmarked');
+    publishTri(3);
+    assert.deepEqual([GO.shownIn(TRI), GO.newerAt(tri(2)), GO.newerAt(TRI), told(2)], [tri(2), 3, null, 1], 'version 3 arrived: the box pinned on version 2, its corner offering version 3, the arrival said once');
+    const once = said.length;
+    GO.arrived(tri(4));
+    assert.deepEqual([GO.shownIn(TRI), GO.newerAt(tri(2)), told(2), said.length], [tri(2), 4, 1, once], 'version 4 arrived: the offer raised to version 4, nothing more said');
+    // the offer reached along the corner, and taken
+    const c = offering(tri(2), 4);
+    assert.equal(await atCorner('ArrowRight', c.el), true);
+    assert.equal(doc.activeElement, c.act, '→ along the corner: the focus on its offered read');
+    assert.deepEqual([await atCorner('ArrowRight', c.act), doc.activeElement], [false, c.act], '→ again: nothing further along, the key the platform\'s');
+    assert.equal(await atCorner('ArrowLeft', c.act), true);
+    assert.equal(doc.activeElement, c.el, '← back to the corner');
+    await atCorner('ArrowRight', c.el);
+    const at = CAM.view(), n = TRAIL.length();
+    assert.equal(await atCorner('Enter', c.act), true, 'Enter on the offer: taken');
+    assert.equal(await landedAt(tri(4)), false, 'a version move: no flight');
+    assert.ok(same(CAM.view(), at), 'the camera where it stood');
+    assert.deepEqual([TRAIL.length(), TRAIL.current()?.addr, GO.newerAt(tri(4)), GO.newerAt(tri(2))], [n + 1, tri(4), null, null], 'one entry pushed at version 4, the box showing it unmarked');
+    await run(GO.back());
+    assert.deepEqual([TRAIL.current()?.addr, GO.shownIn(TRI), GO.newerAt(tri(2)), told(2)], [tri(2), tri(2), 4, 2], 'Back: version 2 again, its corner offering version 4 as the reader left it, the arrival said again');
+    assert.equal(await atCorner('Enter', offering(tri(2), 4).el), true, 'Enter at a corner with no version statement: its offered read');
+    await landedAt(tri(4));
+    assert.deepEqual([TRAIL.current()?.addr, GO.newerAt(tri(4))], [tri(4), null], 'version 4, unmarked');
+    await run(GO.back());
+    assert.equal(GO.newerAt(tri(2)), 4, 'Back: the offer standing again at version 2');
+    await inPlace(GO.toVersion(tri(1)));
+    assert.deepEqual([GO.shownIn(TRI), GO.newerAt(tri(1)), GO.newerAt(tri(2))], [tri(1), null, null], 'a version move to version 1: the mark ended');
+    await run(GO.back());
+    assert.equal(GO.newerAt(tri(2)), 4, 'Back to version 2: marked again, as the reader left it there');
+    await run(GO.leapTo(TRI));
+    assert.deepEqual([GO.shownIn(TRI), GO.newerAt(TRI), GO.newerAt(tri(2))], [TRI, null, null], 'a LEAP to the bare address: the trunk head, unmarked');
+    await run(GO.leapTo(tri(2)));
+    const before = said.length;
+    GO.arrived(tri(5));
+    assert.deepEqual([GO.shownIn(TRI), GO.newerAt(tri(2)), said.length], [tri(2), null, before], 'a box the reader pinned: a newer version\'s arrival marks nothing and says nothing');
+  } finally {
+    doc.activeElement = null;
+    REC.invalidate(TRI);
+  }
+  await run(GO.leapTo(D));
   assert.deepEqual(fake.unanswered, []);
 });
 

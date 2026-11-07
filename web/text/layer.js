@@ -197,7 +197,10 @@
 // corner stands (`cornerPlace`). Its version statement counts its box's
 // chain only where the board ended the chain there (`chainOf`), every
 // version of the box sharing the count, its items made again as the chain
-// is counted again (`cornerKey`; FP-22, FP-23); the ARIA mirror's item
+// is counted again (`cornerKey`; FP-22, FP-23); where a newer version's
+// arrival pinned its box it offers to read the newest member named (the
+// reader `newer`; D5 K-57), a control the pointer and → reach and Tab never
+// does, its items made again as the offer comes and goes; the ARIA mirror's item
 // voices its state whole (`mirrorState`). A reading view frames the column
 // it reads with the corner and the edge beside it, at the landing's em
 // (`frameOf`; P-CAM's `landingPx`) — a document read whole, its first column
@@ -233,7 +236,8 @@
 // `cornerHTML`, `ArticleView.lags`), each corner's items made again as the
 // lag begins and ends (`placeCorners`). The element outlives its
 // article's remounts and its items are rewritten only where they change, so
-// a focus on it survives them; the focused document's corner is the plane's
+// a focus on it survives them, and one on its act is put back on the act
+// standing in their place (N-FOCUS's `keep`); the focused document's corner is the plane's
 // next Tab stop, named by its own words, and every other is out of the order
 // and hidden from assistive technology; while the reading scene stands over
 // the plane the corner layer is inert (`cover`, through N-FOCUS, the focus's
@@ -540,6 +544,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @property {(account: string) => boolean} region is an account named in view: the one line names it, or the canvas's last frame set its label (P-RENDER's `regionNamed`) — a held label's address drops its prefix there alone (P-LABEL's region rule)
  * @property {(addr: string, pos: number, ids: ISpan[]) => void} vanished told where the text a document is set again as holds none of the passage being read (`keepPlace`): the document, the position whose line keeps the passage's place, and the passage by identity (N-GO's `vanished`; FP-21)
  * @property {(addr: string) => number} atop how far a surface standing at a document's corner's place pushes the corner's items down, in px, by the document's box: an in-document find's box (N-FIND's `atop`); 0 where none stands
+ * @property {(addr: string) => (number | null)} newer the newer version a document's corner on the plane offers to read in its place, where a newer version's arrival pinned its box on the version it stands for (N-GO's `newerAt`); null where it offers none
  */
 
 /** the corner's distance from the text column, and from the edge of the room it stands in (px): P-REG's */
@@ -602,8 +607,8 @@ const openStatements = new Set();
 const shownCache = new Map();
 /** the box an address stands in: its document's, which every version of it shares */
 const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
-/** the readers until the app hands its owners' in: no selection and no focus, the line at the viewport's top, nowhere navigated, every box showing its plain address, no document and no account named */
-const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: boxOf, named: () => null, region: () => false, vanished: () => {}, atop: () => 0 });
+/** the readers until the app hands its owners' in: no selection and no focus, the line at the viewport's top, nowhere navigated, every box showing its plain address, no document and no account named, no corner offering a newer version */
+const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: boxOf, named: () => null, region: () => false, vanished: () => {}, atop: () => 0, newer: () => null });
 /** @type {Readers} */
 let read = noReaders();
 /** is a version the one its box shows (see the head)? */
@@ -799,7 +804,9 @@ function carriedSpan(d, s) {
  * The article's view state, from the owners' readers and LK: a byline's
  * facts the model's for its owner's account (M-REC's `accountKey`), never
  * this device's key; every fit it judges measured as the platform sets the
- * words (`widthOf`). A derived record's text is not the board's (M-DERIVE):
+ * words (`widthOf`); on the plane, the newer version its corner offers to
+ * read (the reader `newer`), a reading scene's pane handing its own in. A
+ * derived record's text is not the board's (M-DERIVE):
  * the links' places are the board's text's, so none is marked or counted in
  * it, and the focus and the selection are carried into it through the
  * page-local edits it was made with (`carriedFocus`, `carriedSpan`).
@@ -816,6 +823,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
     wholeLinks: LK.wholeLinks(d.addr).length,
     reader: REC.reader(),
     ...cornerFacts(d),
+    read: scene ? null : read.newer(d.addr),
     scene, originKinds,
     clauseOf, keyOf: REC.accountKey,
     keptOpen: openStatements.has(d.addr),
@@ -2126,8 +2134,8 @@ export function boardKeptIn() {
 /** does the board lag past a second (M-PUMP's `boardKept`): every corner names neither the latest version nor the chain's count (`ArticleView.lags`) */
 const lags = () => PUMP.boardKept() !== null;
 
-/** what a document's corner's items are made from beside its record and the links (`Mounted.corner`): the board's lag, its box's chain (`chainOf`), the draft's kept state and whether its statement stands open — the items made again where it moved */
-const cornerKey = (/** @type {string} */ addr) => JSON.stringify([lags(), chainOf(addr), REC.keptOf(addr), openStatements.has(addr)]);
+/** what a document's corner's items are made from beside its record and the links (`Mounted.corner`): the board's lag, its box's chain (`chainOf`), the newer version it offers to read (the reader `newer`), the draft's kept state and whether its statement stands open — the items made again where it moved */
+const cornerKey = (/** @type {string} */ addr) => JSON.stringify([lags(), chainOf(addr), read.newer(addr), REC.keptOf(addr), openStatements.has(addr)]);
 /** a document's corner's items made over its view, whole and compact, keyed by what they were made from (`cornerKey`) */
 const cornerOfView = (/** @type {Doc} */ d, /** @type {ArticleView} */ view) => ({ whole: cornerHTML(d, view), compact: cornerHTML(d, view, true), key: cornerKey(d.addr) });
 
@@ -2856,11 +2864,13 @@ function signsIn(/** @type {Mounted} */ rec, /** @type {number} */ ci) {
  * reading scale whose corner has items carries it — its items made again
  * where what they are made from moved since they were made (`cornerKey`):
  * the board's lag begun or ended (`lags`), its box's chain counted again as
- * a newer version arrives (`chainOf`; FP-23), a draft's kept state — and a
+ * a newer version arrives (`chainOf`; FP-23), the newer version it offers
+ * (the reader `newer`), a draft's kept state — and a
  * kept document's clause its last item where the one line does not name it
  * (`keptIn`, `keptHTML`), the corner placed by its items' height alone — the
  * rest are removed. The
- * writes come first (an element, its form and items where they changed, a cap
+ * writes come first (an element, its form and items where they changed — a
+ * focus on its act put back on the act in their place — a cap
  * that binds), the reads together after them (one layout for every corner
  * that changed, none in a frame where none did, and the signs in the edges the
  * corners stand beside), then the places: beside the column nearest the
@@ -2879,7 +2889,7 @@ function placeCorners(focused) {
   const shown = [];
   const centre = viewCentre();
   for (const rec of mounted.values()) {
-    // the board's lag begun or ended, its box's chain counted again, a draft's kept state set, its statement opened or closed: the corner's items made again over the view as it stands
+    // the board's lag begun or ended, its box's chain counted again, a newer version offered or no longer, a draft's kept state set, its statement opened or closed: the corner's items made again over the view as it stands
     if (rec.corner.key !== cornerKey(rec.d.addr)) rec.corner = cornerOfView(rec.d, viewFor(rec.d));
     if (!rec.corner.whole || !readsAt(rec.fs)) continue;
     const addr = rec.d.addr, box = docBox(addr), open = openWhole.has(addr);
@@ -2889,7 +2899,8 @@ function placeCorners(focused) {
     const at = besideOf(rec.fold, clearLeftOf(addr), p, cam.scale, c.blockedAt);
     // a kept document's clause its last item, where the one line does not name it (`keptIn`)
     const form = formFor(at.room, open, fit().compact), html = rec.corner[form] + keptHTML(boxOf(addr) === read.named() ? null : keptIn(addr));
-    if (c.html !== html) { c.el.innerHTML = html; c.html = html; c.stale = true; }
+    // its items rewritten, a focus on its act put back on the act standing in their place, else on the corner (FP-20)
+    if (c.html !== html) { FOCUS.keep(c.el, cornerControl, () => { c.el.innerHTML = html; }); c.html = html; c.stale = true; }
     if ((form === 'compact') !== c.compact) { c.compact = form === 'compact'; c.el.classList.toggle('compact', c.compact); c.stale = true; }
     // the room caps the corner only where not even its form's width fits there, a corner opened whole never
     const cap = open || at.room >= cornerWidth(c.compact) ? Infinity : at.room;
@@ -3086,6 +3097,9 @@ function makeCorner(into, addr) {
   corners.set(addr, c);
   return c;
 }
+
+/** the key a control in a corner bears, which a rewrite of its items puts a focus back on (N-FOCUS's `keep`): its offered read's; none for the corner's element itself, which a rewrite never replaces */
+const cornerControl = (/** @type {Element} */ el) => (/** @type {HTMLElement} */ (el).dataset?.read ? 'read' : null);
 
 /** remove a document's corner, and its opening whole with it; true where it held the focus */
 function dropCorner(/** @type {string} */ addr) {
