@@ -105,7 +105,7 @@
 // act. The pointer → APP-INPUT; the copy event → T-LAYER's `onCopy`; the
 // events `moment` → a walk's moment (O-FACES'), `held` → logged, not acted
 // on; the failure reporter (a line in the page, posted nowhere). No write is
-// composed or sent anywhere in this page (S-35 (a)).
+// composed or sent anywhere in this page.
 // Rules: FP-1, FP-2, FP-4, FP-5, FP-8, FP-9, FP-10, FP-11, FP-14, FP-15,
 // FP-20, FP-22, FP-23, FP-25, FP-26, FP-28, FP-29, FP-34, FP-35, FP-36.
 

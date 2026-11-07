@@ -2,7 +2,7 @@
 // request examples spell it (FP-16), the orphan preview among them, the
 // edition-claim and enrollment lookups and the edition-class links homed in
 // a document take `find_links_ftt`'s two-slot shape and never the audit
-// view's `edition_claims`, no write composer exists, every decoder reads the
+// view's `edition_claims`, READ_OPS names reads alone, every decoder reads the
 // wire's example answers — the age a link value and `doc_metadata` carry,
 // and the draft base, merge marker and source `doc_metadata` carries, among
 // them — a delivery keeps an item of a kind it does not know at its own
@@ -75,7 +75,7 @@ test('the read composers spell the wire examples exactly', () => {
   assert.equal(JSON.stringify(F.opAt(9, F.retrieveV('1.0.1.0.1', 1, 5))), EXAMPLES.op_at);
 });
 
-test('the orphan preview is a read this module composes as the wire spells it — `delete_orphans`, nothing written — and joins READ_OPS, which the static gate holds every op literal to (issue #410)', () => {
+test('the orphan preview is a read this module composes as the wire spells it — `delete_orphans`, nothing written — and joins READ_OPS, the list the page\'s frames are held to (issue #410)', () => {
   assert.equal(canon(F.deleteOrphans('1.0.1.0.1', 3, 2)), EXAMPLES.delete_orphans);
   assert.ok(F.READ_OPS.includes('delete_orphans'), 'a read of wire.md §Link discovery reads');
   assert.deepEqual(F.decodeOrphans(JSON.parse(WIRE.orphans)), ['1.0.1.0.1.0.2.1'], 'the links the delete would orphan');
@@ -87,7 +87,7 @@ test('the edition claims on an origin are the active view\'s lookup in the wire\
   assert.equal(canon(F.editionClaimsAt('1.0.1.0.1003')),
     '{"op":"find_links_ftt","q":{"from":"any","home":"any","to":[{"start":"1.0.1.0.1003","width":"0.0.0.0.1"}],"ty":[{"start":"1.1.0.1.0.1.0.3.14","width":"0.0.0.0.0.0.0.0.1"}]}}');
   assert.equal(F.EDITION_CLASS, '1.1.0.1.0.1.0.3.14');
-  assert.ok(!F.READ_OPS.includes('edition_claims'), 'edition_claims is no read this module composes (the static gate holds every `op` literal to READ_OPS)');
+  assert.ok(!F.READ_OPS.includes('edition_claims'), 'edition_claims is no read this module composes');
 });
 
 test('the edition-class links homed in a document are `find_links_ftt` in the wire\'s two-slot shape — the document\'s unit span in `home`, the edition class\'s in `ty` — a home slot naming a document, which takes no class-scan permit (wire.md §Link discovery reads)', () => {
@@ -103,10 +103,9 @@ test('the enrollment records naming an account are the lookup of their type in t
   assert.equal(F.ENROLL_CLASS, '1.1.0.1.0.1.0.3.1');
 });
 
-test('no write composer exists (S-35 (a)): every op this module names is a read', () => {
+test('READ_OPS, the list the page\'s frames are held to, names reads alone: no op of wire.md\'s writing sections is among them', () => {
   const WRITES = ['insert', 'delete', 'copy', 'reinstate', 'rearrange', 'version', 'publish', 'make_link', 'emit', 'nullify', 'assert_sup', 'edit_link', 'create_new_document', 'fork', 'delegate', 'register_node'];
-  for (const w of WRITES) assert.ok(!F.READ_OPS.includes(w), w + ' is not composed');
-  for (const name of Object.keys(F)) assert.ok(!/^(insert|delete|copy|reinstate|rearrange|version|publish|makeLink|emit|nullify|assertSup|editLink|createNewDocument|fork|delegate|registerNode)$/.test(name), 'no composer named ' + name);
+  for (const w of WRITES) assert.ok(!F.READ_OPS.includes(w), w + ' is a write');
 });
 
 test('a delivery places its items at byte positions; a withheld item its width', () => {

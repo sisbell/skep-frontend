@@ -60,7 +60,8 @@ so the mark comes off with the fix. What the gate writes (`results/`,
 `shots/`) is read locally and never committed. The board on 8642 and the provider on
 8742 are the owner's: never start, stop, claim, seed or write to them,
 and read `/health.log_position` before and after a run — it must not
-move.
+move. A test that needs a write's answer takes it from the fake port
+under `web/test/`, never from them.
 
 ## Issues
 

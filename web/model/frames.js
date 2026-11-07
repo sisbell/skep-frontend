@@ -1,6 +1,6 @@
 // M-FRAMES — the wire frames the page composes and the answers it decodes
 // (the structure record §3.2). Layer 1 (the model), pure: no state.
-// The reads alone (S-35 (a)): `retrieve_v`, `retrieve_doc_v_span_set`,
+// The reads alone: `retrieve_v`, `retrieve_doc_v_span_set`,
 // `doc_metadata`, `find_links_v`, `find_links_ftt`, `read_link`,
 // `follow_link`, `image`, `project`, `compare`, `show_origin`,
 // `find_docs_containing`, `effective_owner`, `principal_prefix`, `key_set`,
@@ -15,8 +15,8 @@
 // (PUB-8.46). The
 // enrollment records naming an account (R22; FP-34) are `find_links_ftt`'s
 // two-slot lookup too (`enrollmentsOf`; AUTH-2.113, AUTH-5.68). `count_v` is
-// not composed (E17 (a)). No write is composed here: the editor's bursts are
-// another module's, and this module only decodes what they are answered.
+// not composed (E17 (a)). No write is composed here; of the editor's writes,
+// this module decodes the answers alone.
 // The answers decoded: the delivery's items (`content`, `hex`, `atom`,
 // `atom_hex`, `ref`, `withheld`, and an item of a kind this module does not
 // know, kept at its own place — wire.md §Value encodings), a span set, an
@@ -61,7 +61,7 @@ import { byteLength } from '../util.js';
 /** @typedef {import('../bridge/shapes').RowKind} RowKind */
 /** @typedef {import('../bridge/shapes').Term} Term */
 
-/** the read op names this module composes; the gate holds every `"op"` literal under `web/` to this list */
+/** the read op names this module composes, no write among them: M-PUMP's test holds the frames the pump sends to this list, and the gate's wire case every frame the page sends the owner's provider from its boot through that case */
 export const READ_OPS = Object.freeze([
   'retrieve_v', 'retrieve_doc_v_span_set', 'doc_metadata', 'find_links_v', 'find_links_ftt', 'read_link',
   'follow_link', 'image', 'project', 'compare', 'show_origin', 'find_docs_containing', 'effective_owner',

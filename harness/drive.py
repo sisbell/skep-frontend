@@ -8,7 +8,11 @@ spikes/s11/cdp.py's two verbs, Python and the `websocket` module alone).
 Launches headless Chrome with a throwaway profile under the system temp dir,
 navigates to the gate URL, settles on the page's own signal, and runs the
 cases (one module per fence class under cases/), each writing
-results/<class>.json. Every browser claim the structure record left
+results/<class>.json. The owner's board's `/health.log_position` is read
+before the first case and after the last (`board_change`): the run exits
+non-zero where the two readings differ or either holds none, whatever its
+cases said, as it does on a failed case or an exception in the page.
+Every browser claim the structure record left
 unverified (§10 items 16–21) is settled by what these runs observe and
 recorded in results/browser.json. A case may hold the page's next `op` call
 of a kind — of one document, where it names one — at its answer (`hold_op`,
@@ -328,6 +332,18 @@ def daemon_health(board):
     return json.load(urllib.request.urlopen(f'{board}/health', timeout=10))
 
 
+def board_change(start, end):
+    """What a run did to the owner's board, by its `/health` read before the first case and after the last.
+
+    `unchanged` where both readings hold the same log position, `moved` where they hold two that differ, and `unread` where
+    either holds none, since a run whose position cannot be compared cannot show it left the board as it found it; a run
+    passes at `unchanged` alone."""
+    p0, p1 = start.get('log_position'), end.get('log_position')
+    if not isinstance(p0, int) or not isinstance(p1, int):
+        return 'unread'
+    return 'unchanged' if p0 == p1 else 'moved'
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--page', required=True)
@@ -394,6 +410,7 @@ def main():
         except Exception as e:
             env['close_at_unload'] = {'error': str(e)}
         env['health_end'] = daemon_health(a.board)
+        env['board_change'] = board_change(health0, env['health_end'])
         env['requests'] = [{k: v for k, v in r.items() if k in ('url', 'method', 'status', 'type', 'failed', 'blocked', 'cors')} for r in drv.requests if '8742' in str(r.get('url'))][:400]
         env['requests'] = [dict(r, url=str(r['url']).replace(secret, '<secret>')) for r in env['requests']]
         env['finished'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
@@ -405,7 +422,8 @@ def main():
     print('exceptions in the page:', len(drv.exceptions), flush=True)
     for e in drv.exceptions[:10]:
         print('  ', (e.get('desc') or e.get('text') or '')[:300])
-    sys.exit(1 if failed or drv.exceptions else 0)
+    print(f"the owner's board: log position {health0.get('log_position')} at the start, {env['health_end'].get('log_position')} at the end — {env['board_change']}", flush=True)
+    sys.exit(1 if failed or drv.exceptions or env['board_change'] != 'unchanged' else 0)
 
 
 if __name__ == '__main__':

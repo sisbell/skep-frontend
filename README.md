@@ -20,11 +20,13 @@ provider and renders it — the plane at its three scales, the DOM text
 layer at reading zoom, one module deciding which links show and how,
 the beams, navigation (LEAP, the trail, the walk, the chords), the one
 line acting as the signed-in person, the read overlays, and the reading
-scene. It composes no write. `harness/` drives the page in headless
-Chrome and asserts text, keys, layout, the wire, frames and the
-accessible rendering; `results/` and `shots/` hold what its last run
-wrote. Writes, the key ceremonies, annotation and the installed shell
-come in later lanes.
+scene. `harness/` drives the page in headless Chrome and asserts text,
+keys, layout, the wire, frames and the accessible rendering; `results/`
+and `shots/` hold what its last run wrote. Writes, the key ceremonies,
+annotation and the installed shell come in later lanes. The gate never
+changes the owner's board: a test that needs a write's answer takes it
+from the fake port under `web/test/`, never from the board or the
+provider.
 
 ## Where the design lives
 
@@ -91,8 +93,10 @@ claimed, seeded or written to by the gate. Everything is loopback.
        harness/run.sh
 
    It writes `results/*.json`, `results/report.md` and `shots/**`, and
-   exits non-zero on any failed case. `npm run check` and `npm test`
-   run the checker and the pure tests alone.
+   exits non-zero on any failed case, and where the board's log
+   position at the run's end is not the one it read at the start.
+   `npm run check` and `npm test` run the checker and the pure tests
+   alone.
 
 To look at the page yourself, serve it and open it with the secret:
 

@@ -2,7 +2,9 @@
 """The gate's report (the structure record §6.1; FP-18: the report says which
 machine): the tables per class and the figures, written to
 `results/report.md` and printed. Grown from spikes/s3/report.py and
-s11/report.py. Reads `results/*.json` as `drive.py` wrote them."""
+s11/report.py. Reads `results/*.json` as `drive.py` wrote them. The verdict
+is GREEN, and the exit status 0, only where every case passed, the page
+threw nothing and the driver found the owner's board unchanged."""
 import glob
 import json
 import os
@@ -65,9 +67,11 @@ def main():
     L.append('\nEvery figure below is this machine\'s under headless Chrome; none is a commodity claim.\n')
     L.append('## The board\n')
     h0, h1 = env.get('health_start') or {}, env.get('health_end') or {}
+    # the driver's verdict on the board (`drive.py`'s `board_change`), the one its exit took; results holding none read as unread
+    change = env.get('board_change') or 'unread'
     L.append(table([
         ['log_position at start', h0.get('log_position')], ['log_position at end', h1.get('log_position')],
-        ['equal', h0.get('log_position') == h1.get('log_position')], ['claimant', (h0.get('auth') or {}).get('claimant')],
+        ['the run left it', change], ['claimant', (h0.get('auth') or {}).get('claimant')],
         ['local_trust', (h0.get('auth') or {}).get('local_trust')], ['chain_head', h0.get('chain_head')], ['writes halted', (h0.get('writes') or {}).get('halted')],
     ], ['what', 'value']))
     L.append('\n## The fence — the cases\n')
@@ -149,8 +153,8 @@ def main():
         L.append('Dispatched at engine level: ' + ', '.join(k.get('chords_dispatched') or []) + '\n')
     st = (cases.get('static') or {}).get('figures') or {}
     if st:
-        L.append('## Static (FP-15 and the no-write grep)\n')
-        L.append(f"Files {st.get('files')}; op literals {st.get('op_literals')}; READ_OPS {st.get('read_ops')}; LK imports {st.get('lk_imports')}.\n")
+        L.append('## Static (FP-15\'s grep and the checks beside it)\n')
+        L.append(f"Files {st.get('files')}; LK imports {st.get('lk_imports')}.\n")
     sp = (cases.get('shapes') or {}).get('figures') or {}
     if sp:
         L.append(f"Shapes: served {sp.get('served_bytes')} bytes sha256 {sp.get('served_sha256')}; committed {sp.get('committed_bytes')} bytes sha256 {sp.get('committed_sha256')}.\n")
@@ -173,9 +177,9 @@ def main():
         for n, x in notes:
             L.append(f'- **{n}**: {x}')
     L.append('\n## Verdict\n')
-    allpass = all(c['pass'] for c in cases.values()) and not (env.get('exceptions') or [])
+    allpass = all(c['pass'] for c in cases.values()) and not (env.get('exceptions') or []) and change == 'unchanged'
     n_expected = sum(len(c.get('expected') or []) for c in cases.values())
-    L.append(f"{'GREEN' if allpass else 'RED'} — {sum(1 for c in cases.values() if c['pass'])} of {len(cases)} cases pass; expected failures {n_expected} (marked checks waiting on a page issue, listed above); page exceptions {len(env.get('exceptions') or [])}; log_position {'unchanged' if h0.get('log_position') == h1.get('log_position') else 'MOVED'}.\n")
+    L.append(f"{'GREEN' if allpass else 'RED'} — {sum(1 for c in cases.values() if c['pass'])} of {len(cases)} cases pass; expected failures {n_expected} (marked checks waiting on a page issue, listed above); page exceptions {len(env.get('exceptions') or [])}; log_position {change if change == 'unchanged' else change.upper()}.\n")
     text = '\n'.join(L)
     with open(os.path.join(RESULTS, 'report.md'), 'w') as fh:
         fh.write(text)

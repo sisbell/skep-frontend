@@ -9,9 +9,13 @@ writes".
     exactly the page's calls of the window; the window's two flights, WHOLE
     BOARD and Back, flown both — the launch frame the trail's first entry,
     so Back after the run's first teleport lands at the view it left;
-(ii) no dial of the whole run names a write route, every `op` frame the page
-    sent names a read of READ_OPS, and the daemon's `/health.log_position`
-    is unchanged from the run's start (the daemon-side oracle);
+(ii) every dial of the run so far names a route the read path dials — a
+    write frame rides `POST /op` as a read does, so no route tells one;
+    every `op` frame the page sent from its boot names a read of READ_OPS
+    and every call a row that reads (`READ_ROWS`), so no write and no key
+    ceremony crossed to the owner's provider; and the daemon's
+    `/health.log_position` is unchanged from the run's start (the
+    daemon-side oracle, which the driver reads again at the run's end);
 (iii) the figures: the cold open's calls and bytes (`places` among them) and
     a LEAP's — re-measured over the provider (its round trip, not the
     shell's);
@@ -31,8 +35,16 @@ from collections import Counter
 
 from . import DOC, FAR_LEAP, ROOT, WINDOW, Result
 
+# the daemon's routes the read path dials; a write frame rides `POST /op` as a read frame does, so a route never tells the
+# two apart: the `op` frames are held to READ_OPS, and the board to its log position
 READ_PATHS = {('POST', '/op'), ('POST', '/op-at'), ('GET', '/health'), ('GET', '/events'), ('GET', '/changes'),
               ('GET', '/chain'), ('GET', '/challenge'), ('POST', '/session'), ('POST', '/session/close')}
+# the bridge's rows the page may call of the owner's provider: those that read, and the session's open and close. Every
+# other row is refused: a row that writes or composes a write (the publication, merge and history families, `upload`,
+# `restore`, `resolve`), since no gate run sends the owner's provider a write; a key ceremony or an answer to one of its
+# moments (`answer`, `cancel`), since a ceremony writes the owner's key store where no board check sees it; and
+# `held.show`, which opens the shell's own window
+READ_ROWS = ('boards', 'session', 'close', 'fingerprint', 'health', 'probe', 'op', 'fetch', 'search', 'places', 'held', 'changes')
 
 
 def read_ops():
@@ -115,7 +127,7 @@ def run(ctx):
     quiet_surfaces(r, led1, 'camera window')
     r.check(led1['fetch'] == len(cl1), 'camera window: ledger.fetch == the call log length', {'fetch': led1['fetch'], 'calls': len(cl1)})
     r.check(page_window == prov_window, 'camera window: the provider\'s `call` entries between the window\'s seqs are exactly the page\'s calls', {'page': dict(Counter(page_window)), 'provider': dict(Counter(prov_window))})
-    r.check(all(e.get('path') in ('/op', '/health', '/events', '/changes', '/chain') for e in window_rows if e['kind'] == 'dial'), 'camera window: every dial a read route', Counter(e.get('path') for e in window_rows if e['kind'] == 'dial'))
+    r.check(all(e.get('path') in ('/op', '/health', '/events', '/changes', '/chain') for e in window_rows if e['kind'] == 'dial'), 'camera window: every dial a route the read path dials', Counter(e.get('path') for e in window_rows if e['kind'] == 'dial'))
     r.figures['camera_window'] = {'ms': 2500, 'frames': summary, 'page_calls': dict(Counter(page_window)), 'ops': dict(Counter(c['op'] for c in cl1[n0:] if c['name'] == 'op')),
                                   'bytes_in': sum(c['bytesIn'] for c in cl1[n0:]), 'bytes_out': sum(c['bytesOut'] for c in cl1[n0:]),
                                   'ledger_before': led0, 'ledger_after': led1, 'provider_seq': [seq_a + 1, log1[-1]['seq'] if log1 else None]}
@@ -144,13 +156,13 @@ def run(ctx):
     r.check(len(leap_calls) > 0, 'the LEAP read the far document', len(leap_calls))
     far = ctx.js('window.__skep.model.doc(%s)' % json.dumps(FAR_LEAP))
     r.check(far['from'] == 1 and far['to'] == (far['extent'] or 0) + 1, 'the LEAP\'s landing holds the whole far document', {'from': far['from'], 'to': far['to'], 'extent': far['extent']})
-    # ---- (ii) no write, the whole run ------------------------------------------
+    # ---- (ii) nothing written to the owner's board or provider, the run so far ---
     all_rows = [e for e in log2 if e['seq'] > ctx.seq0]
     dial_paths = Counter((e.get('method'), e.get('path')) for e in all_rows if e['kind'] == 'dial')
-    r.check(set(dial_paths) <= READ_PATHS, 'every dial of the run names a read route', {f'{m} {p}': n for (m, p), n in dial_paths.items()})
+    r.check(set(dial_paths) <= READ_PATHS, 'every dial of the run so far names a route the read path dials (a write frame rides POST /op as a read does: the frames and the log position tell one)', {f'{m} {p}': n for (m, p), n in dial_paths.items()})
     bad_ops = sorted(set(c['op'] for c in cl2 if c['name'] == 'op' and c['op'] not in ops_allowed))
-    r.check(not bad_ops, 'every `op` frame the page sent names a read (READ_OPS)', bad_ops)
-    r.check(all(c['name'] in ('boards', 'session', 'fingerprint', 'health', 'probe', 'places', 'op', 'close') for c in cl2), 'no call to a write or ceremonial row', sorted(set(c['name'] for c in cl2)))
+    r.check(not bad_ops, 'every `op` frame the page sent the owner\'s provider from its boot names a read (READ_OPS): no write crossed as it booted, moved the camera and leapt (FP-7)', bad_ops)
+    r.check(all(c['name'] in READ_ROWS for c in cl2), 'every call the page made of the owner\'s provider from its boot is a row that reads, or the session\'s own (READ_ROWS): no write, no key ceremony', sorted(set(c['name'] for c in cl2)))
     health1 = ctx.health()
     r.check(health1.get('log_position') == health0.get('log_position'), '/health.log_position unchanged across the run so far', {'start': health0.get('log_position'), 'now': health1.get('log_position')})
     r.figures['log_position'] = {'start': health0.get('log_position'), 'after_wire': health1.get('log_position')}

@@ -21,7 +21,7 @@
 // watchers, the port's own shape and no event of the declarations.
 // The write calls, the `publication`, `merge` and `history` families,
 // `held.show` and the ceremonial rows are declared here and called by no
-// screen (S-35 (a)).
+// screen.
 // Types: the generated declarations in `./shapes.d.ts` (S-16 (a); FP-16),
 // which the checker holds the port's rows and its events to.
 

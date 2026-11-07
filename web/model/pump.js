@@ -1,7 +1,7 @@
 // M-PUMP — view-driven, span-shaped fetching (the structure record §3.2).
 // Layer 1, port-bound: every read goes through B-PORT's `op` under the
 // page's session, or in the guest form where none stands; nothing here hands
-// a write frame to `op` (S-35 (a)), and what is read is M-REC's to hold.
+// a write frame to `op` (S-33 (b)), and what is read is M-REC's to hold.
 // State: the in-flight set and the view's scans among it; the keys answered
 // (`asked`), refused retry-class with the time they may go again (`retryAt`),
 // and held while the board did not answer (`unreached`); the refusals met;

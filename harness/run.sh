@@ -51,7 +51,7 @@ echo "== the driver"
 python3 harness/drive.py \
   --page "http://127.0.0.1:${PAGE_PORT}/index.html?provider=${SKEP_PROVIDER_SECRET}&gate=all" \
   --provider "${PROVIDER}" --board "${BOARD}" \
-  --cases all --results results --shots shots || { echo "GATE: a case is red (or the page threw)"; status=1; }
+  --cases all --results results --shots shots || { echo "GATE: a case is red, the page threw, or the board's log position moved or went unread"; status=1; }
 
 echo "== the report"
 python3 harness/report.py > /dev/null || status=1

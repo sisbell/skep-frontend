@@ -2,11 +2,11 @@
 record §6.3; C8: the full seven classes). The MEASURING code lives in the
 page's gate hooks (`web/gate/hooks.js`, `window.__skep`); the ASSERTING code
 lives here, one module per class — rendered, keys, text, layout, wire,
-frames, a11y — plus `static` (FP-15's grep and the no-write grep), `shapes`
-(the declarations' drift), `walks` (W-01 and W-05 as camera scripts with
-shots), `shots` (the threshold set) and `guest` (the page at guest class,
-opened under `?gate=guest`). Each module's `run(ctx)` returns a
-dict with `pass`, `checks`, `failures`, `expected` and its figures;
+frames, a11y — plus `static` (FP-15's grep and the checks beside it that
+read the tree), `shapes` (the declarations' drift), `walks` (W-01 and W-05
+as camera scripts with shots), `shots` (the threshold set) and `guest` (the
+page at guest class, opened under `?gate=guest`). Each module's `run(ctx)`
+returns a dict with `pass`, `checks`, `failures`, `expected` and its figures;
 `drive.py` writes it to `results/<name>.json`. A check that holds the page
 to what a named page issue still breaks is marked with that issue: it is
 counted under `expected` while it fails, and it FAILS the case the day it
