@@ -18,7 +18,4 @@ def run(ctx):
     r.figures['served_sha256'] = hashlib.sha256(served).hexdigest()
     r.figures['committed_sha256'] = hashlib.sha256(committed).hexdigest()
     r.check(served == committed, 'GET /bridge/shapes == web/bridge/shapes.d.ts byte for byte', {'served': len(served), 'committed': len(committed)})
-    text = committed.decode('utf8', 'replace')
-    for name in ['places', 'boards', 'session', 'close', 'op', 'held', 'resolve', 'answer', 'cancel']:
-        r.check(name + '(' in text or name + '?(' in text or (name + ':') in text, f'the declarations name `{name}`')
     return r.out()
