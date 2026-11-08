@@ -29,9 +29,11 @@
 // · see the links · follow · read side by side · link to… — each showing its
 // chord (D5-F8); annotate, quote and "link to…" are inert, each with its
 // reason (`INERT_REASON`): an inert slot keeps its place and gives its reason
-// when activated, at the slot and through the one status region (P47; the
-// focus record's rule 14). The selection's acts never take the focus,
-// however the selection was made (D5 §4 rule 4; rule 15): K-8 selects and
+// when activated — pressed (`inertAct`), or by its chord, which selects the
+// walk's focused span first where no selection stands and draws the card at
+// it with the reason given (`inertChord`) — at the slot and through the one
+// status region (P47; the focus record's rule 14). The selection's acts never
+// take the focus, however the selection was made (D5 §4 rule 4; rule 15): K-8 selects and
 // extends from the walk's element and leaves the focus there; the card is
 // reached by its chords or by Tab, and each act's card takes the focus as the
 // act was made — a chord or Enter on the slot, never a click (rule 16). A
@@ -168,11 +170,16 @@ const SLOTS = /** @type {const} */ ([
   ['links', 'B1.see-links', 'Mod+Shift+L'],
   ['follow', 'B1.follow', 'Mod+Enter'],
   ['scene', 'B1.side-by-side', 'Mod+Shift+Enter'],
-  ['linkto', 'D5.link-to', ''],
+  ['linkto', 'D5.link-to', 'Mod+K'],
 ]);
 
+/** @typedef {'annotate' | 'quote' | 'linkto'} InertSlot a slot inert with its reason (`INERT_REASON`) */
+
 /** the inert slots' reasons, by slot */
-const INERT_REASON = /** @type {Record<string, string>} */ ({ annotate: 'L.seam.annotate', quote: 'L.seam.quote', linkto: 'L.seam.link-to' });
+const INERT_REASON = /** @type {Record<InertSlot, string>} */ ({ annotate: 'L.seam.annotate', quote: 'L.seam.quote', linkto: 'L.seam.link-to' });
+
+/** an inert slot's reason, by its string's id: the words the slot gives as it is activated (P47) */
+export const reasonOf = (/** @type {InertSlot} */ slot) => INERT_REASON[slot];
 
 /**
  * An inert slot activated (P47; rule 14): it keeps its place, marked inert,
@@ -192,10 +199,12 @@ function inertAct(el, id) {
 /**
  * Rebuild the acts card at the selected span (FP-13); the card takes no focus
  * (rule 15), save a card a return reopens on the control it was left holding
- * it on.
+ * it on. A slot named `told` stands as `inertAct` leaves it: marked inert, its
+ * reason in the card's reason line.
  * @param {string | null} [focus] that control's key (O-HOST's `keyOf`)
+ * @param {InertSlot | null} [told] the inert slot whose reason the card gives
  */
-export function render(focus = null) {
+export function render(focus = null, told = null) {
   if (!sel) return;
   const span = sel;
   const { addr, pos } = span;
@@ -204,12 +213,14 @@ export function render(focus = null) {
   // the far end the follow and the scene name: its address, in the identifier's face, or the count of several
   const farLabel = n === 1 && drawn[0].far ? ` <span class="id">${esc(drawn[0].far)}</span>` : n > 1 ? ` ${n}` : '';
   const buttons = SLOTS.map(([id, strId, chord]) => {
-    const inert = id === 'annotate' || id === 'quote' || id === 'linkto' || ((id === 'follow' || id === 'scene') && n === 0);
+    const reason = id in INERT_REASON ? reasonOf(/** @type {InertSlot} */ (id)) : null;
+    const inert = !!reason || ((id === 'follow' || id === 'scene') && n === 0);
     const label = esc(t(strId)) + ((id === 'follow' || id === 'scene') ? farLabel : '');
-    const reason = inert && id in INERT_REASON ? t(INERT_REASON[id]) : '';
-    return `<button data-run="${id}" class="${inert ? 'inert' : ''}" ${reason ? `title="${esc(reason)}"` : ''}>${label}${chord ? ` <kbd>${esc(drawChord(chord))}</kbd>` : ''}</button>`;
+    return `<button data-run="${id}" class="${inert ? 'inert' : ''}" ${reason ? `title="${esc(t(reason))}"` : ''}${id === told ? ' data-inert="1"' : ''}>${label}${chord ? ` <kbd>${esc(drawChord(chord))}</kbd>` : ''}</button>`;
   }).join('');
-  const html = `<div class="selection-card"><span class="label"><span class="id">${esc(addr)}</span> · ${esc(t('F.position', { p: pos }))}</span><div class="slots">${buttons}</div><div class="note reason" hidden></div></div>`;
+  const said = told ? INERT_REASON[told] : null;
+  const reasonLine = said ? `<div class="note reason" data-string="${esc(said)}">${esc(t(said))}</div>` : '<div class="note reason" hidden></div>';
+  const html = `<div class="selection-card"><span class="label"><span class="id">${esc(addr)}</span> · ${esc(t('F.position', { p: pos }))}</span><div class="slots">${buttons}</div>${reasonLine}</div>`;
   HOST.show({
     kind: 'card', id: 'selection', anchor: { span }, html, takeFocus: focus != null, first: focus != null ? HOST.controlOf(focus) : undefined, about: { kind: 'selection' },
     acts: {
@@ -223,21 +234,32 @@ export function render(focus = null) {
 }
 
 /**
- * A slot's act (by chord or by its button); where no selection stands, the
- * walk's focused span is selected first, whole (D5 §1.6), and off a span
- * "see the links" asks for the links at the walk's place — none at a
- * continuation's mark, which is no document. The act's card takes the focus
- * where a key made the act (rule 16).
+ * The span a slot acts on: the selection, else the walk's focused span,
+ * selected whole first (D5 §1.6) with no card of its own, the slot's answer
+ * standing at it; null where no span is in focus.
+ * @returns {Span | null}
+ */
+function actedOn() {
+  if (sel) return sel;
+  const f = WALK.current();
+  if (!f || f.kind !== 'block' || f.pos == null) return null;
+  sel = wholeBlock(f.addr, f.pos);
+  LAYER.placeSelection(sel);
+  markDirty();
+  return sel;
+}
+
+/**
+ * A slot's act (by chord or by its button), on the span the slots act on
+ * (`actedOn`); off a span "see the links" asks for the links at the walk's
+ * place — none at a continuation's mark, which is no document. The act's
+ * card takes the focus where a key made the act (rule 16).
  * @param {'wrote' | 'uses' | 'links' | 'follow' | 'scene'} which
  * @param {boolean} [byKey] a key made the act: the card takes the focus; a follow's landing draws the ring
  */
 export function act(which, byKey = false) {
-  if (!sel) {
-    const f = WALK.current();
-    if (f && f.kind === 'block' && f.pos != null) { sel = wholeBlock(f.addr, f.pos); LAYER.placeSelection(sel); markDirty(); }
-    else { if (f && f.kind !== 'mark' && which === 'links') LINKS.show(f.addr, byKey); return; }
-  }
-  const span = sel;
+  const span = actedOn();
+  if (!span) { const f = WALK.current(); if (f && f.kind !== 'mark' && which === 'links') LINKS.show(f.addr, byKey); return; }
   const { addr, pos, width } = span;
   if (which === 'wrote') { PROV.wrote(addr, pos, width, byKey); return; }
   if (which === 'uses') { PROV.uses(addr, pos, width, byKey); return; }
@@ -245,6 +267,23 @@ export function act(which, byKey = false) {
   const drawn = LK.shownAt(addr, span);
   if (which === 'follow') { if (drawn.length === 1) GO.follow(drawn[0], byKey); else if (drawn.length > 1) which_(drawn, 'follow', byKey); return; }
   if (which === 'scene') { if (drawn.length === 1 && drawn[0].far) void GO.toScene(addr, LK.besideAt(drawn[0]), { posA: pos, widthA: width, posB: LK.farPos(drawn[0]), wholeB: drawn[0].farWhole }, { from: { shown: drawn[0] }, site: { span } }); else if (drawn.length > 1) which_(drawn, 'scene', byKey); }
+}
+
+/**
+ * An inert slot's chord (P47; D5 K-45, K-46, K-100): the card at the span
+ * the slots act on (`actedOn`), the slot standing as its press leaves it —
+ * marked inert, its reason given in the card — and the reason said through
+ * the status region; the card takes no focus (rule 15). False where no span
+ * is in focus: nothing is selected or shown, and the caller gives the reason
+ * where the focus is.
+ * @param {InertSlot} slot
+ * @returns {boolean}
+ */
+export function inertChord(slot) {
+  if (!actedOn()) return false;
+  render(null, slot);
+  FOCUS.say(t(INERT_REASON[slot]));
+  return true;
 }
 
 /**

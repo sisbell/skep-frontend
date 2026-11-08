@@ -6,7 +6,9 @@ NOTHING but show the K-9 line; Enter on the LEAP box as opened lands in
 place, ↓ choosing the first level, Enter on typed text that matches nothing
 goes nowhere — the box standing open over the text and its answer, the
 focus in its input, until Esc — and a typed account address a teleport
-with its trail entry (foundations §2.2, §2.3; K-31); a landing arriving
+with its trail entry (foundations §2.2, §2.3; K-31); Mod+K "link to…" and
+never the box: at the whole board, no span in focus, the one line giving its
+slot's reason with nothing moved (D5 K-30, K-100; P47); a landing arriving
 under the box the reader is typing in leaving it open with its text, its
 caret and its focus, Esc then closing it onto the landing, and the box as
 opened taking the address the line names once a landing changes it (#171's
@@ -95,10 +97,15 @@ follow was made, its follow holding the focus again (issue #264; FP-36);
 Mod+Shift+O with no selection standing selecting the
 walk's block whole and answering over it — the page's own placement of the
 platform's selection never read back as the person's, whose card, shown
-while the answer reads, would end its opening (O-HOST's); the
-selection's one continuous gesture (R11) — a pointer drag over a phrase of a
-shown paragraph selects that phrase's byte span, never its block: the acts
-ask the wire over those bytes, the copy names them as FP-27 names a copy —
+while the answer reads, would end its opening (O-HOST's); Mod+K, Mod+Shift+A
+and Mod+Shift+C with no selection standing each selecting it so and the
+selection's card giving its inert slot's reason — the slot marked inert with
+its chord drawn, the card's reason line and the status region its words —
+the card taking no focus and no box opening, and the "link to…" slot pressed
+with the pointer leaving the card as its chord does (D5 K-45, K-46, K-100;
+P47); the selection's one continuous gesture (R11) — a pointer drag over a
+phrase of a shown paragraph selects that phrase's byte span, never its block:
+the acts ask the wire over those bytes, the copy names them as FP-27 names a copy —
 the first edition read at its plain address, the member its text is by the
 harness's own reads of its chain, the bytes' positions in it and their
 identity (issue #244) — and the platform's
@@ -1173,6 +1180,29 @@ def strings(ctx, sid, values=None):
     return ctx.js('(async () => (await import("./strings.js")).t(%s, %s))()' % (json.dumps(sid), json.dumps(values or {})))
 
 
+def drawn_chord(ctx, name):
+    """a chord as the page draws it for this platform (N-KEYS' `drawChord`)"""
+    return ctx.js('(async () => (await import("./nav/keys.js")).drawChord(%s))()' % json.dumps(name))
+
+
+def told_in_line(ctx, sid):
+    """an inert slot's reason as the one line gives it (P47; N-KEYS' `inertSaid`): the words of the line's transient segment
+    carrying the reason's string — none where no such segment stands — beside the status region's words and the reason's own"""
+    got = ctx.js('''((sid) => { const s = document.querySelector(`#line .seg.transient[data-string="${sid}"]`);
+      return {line: s ? s.textContent : null, live: document.getElementById('live').textContent}; })(%s)''' % json.dumps(sid))
+    return dict(got, words=strings(ctx, sid))
+
+
+# the selection's card as it gives an inert slot's reason (P47; O-SELECTION's `inertAct`, `inertChord`): the overlay standing,
+# the slot's inert mark and its chord as drawn, the card's reason line where it shows — its string and its words — every slot
+# marked inert, the status region's words, the LEAP box, and whether the platform's focus stands in the overlay
+TOLD = '''((slot) => { const o = document.getElementById('overlay'), b = o.querySelector(`[data-run="${slot}"]`), l = o.querySelector('.selection-card .reason'), k = b && b.querySelector('kbd'), a = document.activeElement;
+  return {id: window.__skep.overlay().id, inert: b ? b.getAttribute('data-inert') : null, kbd: k ? k.textContent : null,
+          reason: l && !l.hidden ? {string: l.dataset.string || null, words: l.textContent} : null,
+          marked: [...o.querySelectorAll('[data-run][data-inert]')].map((e) => e.dataset.run), live: document.getElementById('live').textContent,
+          leap: window.__skep.leap.isOpen(), in_overlay: !!a && !!a.closest && !!a.closest('#overlay')}; })(%s)'''
+
+
 def far_words(ctx, doc, link):
     """the words a link's far end's label names it by after its address (LK's `farLabel`), the brackets around the client's
     words off (`L.client-words`): what a follow's face opens with (issue #224); '' where the label names the address alone"""
@@ -2071,8 +2101,9 @@ def focus_rules(ctx, r):
     """the focus and keyboard rules the one-owner lane added (FP-20). Enter and Space act on the × and the address
     segment, both native buttons (#119, #102, rule 14); the line is one Tab stop its ← and → move among (#96, K-22); ↓
     in a pane brings the next block's top to the pane's top, not a fixed 48 px (#121, K-60); Mod+L in the scene opens
-    the box over it (#118) and Mod+[ inside the box closes it and goes back (rule 18, M-1); a camera-key drag over an
-    article pans and selects nothing (#88, K-10); the focused block is lit only while a key drew the ring and goes dark
+    the box over it (#118), and Mod+K there opens none, the one line giving "link to…"'s reason with nothing the scene
+    covers moved (D5 K-100, M-4; P47); Mod+[ inside the box closes it and goes back (rule 18, M-1); a camera-key drag
+    over an article pans and selects nothing (#88, K-10); the focused block is lit only while a key drew the ring and goes dark
     after a click (D3); a scene opened through a card standing over a selection ends both, its close — one Esc, a Back —
     bringing both back, and Esc then closing the card before the selection (issue #264; D7)."""
     # #102 / #119: the address segment and the overlay's × are native buttons — Enter and Space act
@@ -2154,6 +2185,13 @@ def focus_rules(ctx, r):
     r.check(box['open'] and box['shown'] and box['focused'] and box['leap_z'] > box['scene_z'], 'Mod+L in the scene opens the box over it (#118): its z-index above the scene\'s, its input focused', box)
     chord(ctx, 'Escape')
     r.check(ctx.js('window.__skep.scene.isOpen()') and not ctx.js('window.__skep.leap.isOpen()'), 'the box\'s Esc closes the box and leaves the scene standing')
+    # Mod+K in the scene: "link to…" has nothing to act on there, so the one line gives its slot's reason
+    before = covered(ctx)
+    chord(ctx, 'k', mods=('Meta',))
+    after, said = covered(ctx), told_in_line(ctx, 'L.seam.link-to')
+    r.check(still(before, after) and not ctx.js('window.__skep.leap.isOpen()') and said['line'] == said['words'] and said['live'] == said['words'],
+            'Mod+K in the scene opens no LEAP box over it: the one line gives "link to…"\'s reason, said through the status region, and nothing the scene covers moves (D5 K-100, M-4; P47)',
+            dict(said, at=before['at'], moved=[k for k in ('cam', 'focus', 'trail', 'sel', 'overlay') if after[k] != before[k]], scene=after['scene']))
     chord(ctx, 'Escape')
     r.check(not ctx.js('window.__skep.scene.isOpen()'), 'a second Esc closes the scene')
     # rule 18 (M-1): Mod+[ inside the open box closes it and goes back
@@ -2412,7 +2450,7 @@ def run(ctx):
     r.check(before['open'] and before['selected'] and after == before, 'a composition\'s ↓, Enter and Esc in the LEAP box act on nothing: the box open, its text and selected row kept, no LEAP', {'before': before, 'after': after})
     chord(ctx, 'Escape')
     r.check(not state(ctx)['leap'], 'Esc outside a composition closes the box')
-    # ---- the LEAP box: Mod+L opens, Esc closes; Mod+K opens; typed address + Enter goes ----------
+    # ---- the LEAP box: Mod+L opens, Esc closes; Mod+K never; typed address + Enter goes ----------
     chord(ctx, 'l', mods=('Meta',))
     r.check(state(ctx)['leap'], 'Mod+L opens the LEAP box')
     held = ctx.js('document.getElementById("leapq").value')
@@ -2456,8 +2494,16 @@ def run(ctx):
     lod = ctx.js('window.__skep.view.lod()')['name']
     r.check(not s['leap'] and s['focus'] and s['focus']['kind'] == 'board' and lod in ('far', 'far~mid'), 'Mod+L, ↓, Enter goes to the first level the box lists: the whole board', {'focus': s['focus'], 'lod': lod})
     ring_drawn(ctx, r, 'Mod+L, ↓, Enter')
+    # Mod+K is "link to…", never the box: at the whole board no span is in focus, so the one line gives the slot's reason
+    before, t0 = state(ctx), trail(ctx)
     chord(ctx, 'k', mods=('Meta',))
-    r.check(state(ctx)['leap'], 'Mod+K opens the LEAP box too')
+    s, t1, said = state(ctx), trail(ctx), told_in_line(ctx, 'L.seam.link-to')
+    r.check(not s['leap'] and s['overlay'] is None and s['sel'] is None and same_view(before, s) and s['focus'] == before['focus']
+            and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']) and said['line'] == said['words'] and said['live'] == said['words'],
+            'Mod+K at the whole board opens no LEAP box: "link to…" finds no span in focus, so the one line gives its slot\'s reason, said through the status region — the camera, the walk, the trail and the selection as they were, no overlay (D5 K-30, K-100; P47)',
+            dict(said, leap=s['leap'], overlay=s['overlay'], sel=s['sel'], cam_same=same_view(before, s), focus=[before['focus'], s['focus']], cursor=[t0['cursor'], t1['cursor']]))
+    chord(ctx, 'l', mods=('Meta',))
+    r.check(state(ctx)['leap'], 'Mod+L opens the LEAP box at the whole board')
     ctx.js('(() => { const i = document.getElementById("leapq"); i.value = ""; })()')
     ctx.drv.ime('1.0.1.0.19')
     ctx.frames(2)
@@ -2864,6 +2910,37 @@ def run(ctx):
     chord(ctx, 'Escape')
     chord(ctx, 'Escape')
     r.check(state(ctx)['sel'] is None and state(ctx)['overlay'] is None, 'Esc dismisses the answer, then clears the selection the chord made')
+    # the inert slots' chords (P47): each, with no selection standing, selects the walk's block whole as every slot chord does,
+    # and the selection's card at it gives the slot's reason, taking no focus; then the "link to…" slot pressed with the pointer
+    keyed = {}
+    for key, mods, slot, sid, name, row in (('k', ('Meta',), 'linkto', 'L.seam.link-to', 'Mod+K', 'K-100'), ('A', ('Meta', 'Shift'), 'annotate', 'L.seam.annotate', 'Mod+Shift+A', 'K-45'),
+                                             ('C', ('Meta', 'Shift'), 'quote', 'L.seam.quote', 'Mod+Shift+C', 'K-46')):
+        ctx.leap(DOC, linked['pos'])
+        chord(ctx, key, mods=mods)
+        got, s, words = ctx.js(TOLD % json.dumps(slot)), state(ctx), strings(ctx, sid)
+        want = {'id': 'selection', 'inert': '1', 'kbd': drawn_chord(ctx, name), 'reason': {'string': sid, 'words': words}, 'marked': [slot], 'live': words, 'leap': False, 'in_overlay': False}
+        r.check(got == want and s['sel'] == {'addr': DOC, 'pos': linked['pos'], 'width': linked['width']},
+                '%s with no selection standing selects the walk\'s block whole, and the selection\'s card gives its slot\'s reason — the slot marked inert with its chord drawn, the card\'s reason line its words, said through the status region — the card taking no focus and no LEAP box opening (D5 %s; P47)' % (name, row),
+                {'got': got, 'want': want, 'sel': s['sel'], 'block': (linked['pos'], linked['width'])})
+        keyed[name] = got
+        chord(ctx, 'Escape')
+        chord(ctx, 'Escape')
+    ctx.leap(DOC, linked['pos'])
+    ctx.js('window.__skep.select(%s, %d)' % (json.dumps(DOC), linked['pos']))
+    ctx.frames(2)
+    at = ctx.js('''(() => { const b = document.querySelector('#overlay [data-run="linkto"]'); if (!b) return null; const q = b.getBoundingClientRect();
+      return {x: q.left + q.width / 2, y: q.top + q.height / 2, inert: b.getAttribute('data-inert'), hit: b.contains(document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2))}; })()''')
+    r.check(bool(at) and at['inert'] is None and at['hit'], 'the selection\'s card at the block the page selected shows the "link to…" slot under the pointer, no reason given yet', at)
+    if at:
+        ctx.drv.mouse(at['x'], at['y'])
+        ctx.frames(2)
+        pressed, chorded = ctx.js(TOLD % json.dumps('linkto')), keyed.get('Mod+K') or {}
+        marks = ('id', 'inert', 'kbd', 'reason', 'marked', 'live', 'leap')
+        r.check(pressed['reason'] is not None and all(pressed[k] == chorded.get(k) for k in marks),
+                'the "link to…" slot pressed with the pointer leaves the card as its chord does: the slot marked inert, the card\'s reason line and the status region its words (P47)',
+                {'pressed': pressed, 'chord': chorded})
+    chord(ctx, 'Escape')
+    chord(ctx, 'Escape')
     # ---- the drag: the selection IS the text it crosses (R11; foundations §2.4) ----------------------------
     ctx.leap(DOC, WINDOW[0])
     ph, seen = phrase_at(ctx, DOC)
@@ -3035,6 +3112,6 @@ def run(ctx):
     r.figures['back_after_publish'] = back_after_publish(ctx, r)
     # ---- the page's own find (issue #222's design decision) ------------------------------------------------------
     r.figures['find'] = find_holds(ctx, r)
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival']
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K at the whole board', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+K, Mod+Shift+A and Mod+Shift+C at the walk\'s block', 'a press on the "link to…" slot', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+K in the scene', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

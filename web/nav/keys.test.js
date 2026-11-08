@@ -1,5 +1,6 @@
 // N-KEYS's test. The table, read from the module's source: every row of the
-// table is read, D5's routed rows are present, every bound chord is a chord, a
+// table is read, D5's routed rows are present, Mod+L alone opens the LEAP box
+// and Mod+K is "link to…", every bound chord is a chord, a
 // navigation key or one of the platform's text keys at a caret — no plane
 // command rides a printable key (§2.7) — no row binds a bare letter, digit or
 // sign, and the dispatch guards the IME. Then the dispatch on a page of
@@ -12,9 +13,11 @@
 // line, Space and another's text by K-9's; Mod+S writes nothing, answered
 // at the corner with the kept state's statement whole at the first press in a
 // session and the corner's own word after it, the statement whole on the
-// word's act; and → and ← at a corner move the focus to the read it offers
-// and back (D5 K-9, K-57, K-70, K-71, K-72, K-74, K-76, K-77, K-93; D6 BM-1,
-// BM-3, BM-52, BM-54; FP-14).
+// word's act; → and ← at a corner move the focus to the read it offers
+// and back; and the inert slots' chords give their slot's reason at the
+// selection's card, else where the focus is (D5 K-9, K-30, K-45, K-46, K-57,
+// K-70, K-71, K-72, K-74, K-76, K-77, K-93, K-100; D6 BM-1, BM-3, BM-52,
+// BM-54; P47; FP-14).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
@@ -23,8 +26,10 @@ import * as FOCUS from './focus.js';
 import * as REC from '../model/records.js';
 import * as LAYER from '../text/layer.js';
 import * as SEL from '../overlays/selection.js';
+import * as HOST from '../overlays/host.js';
 import * as CAM from '../plane/camera.js';
 import { cornerHTML } from '../text/article.js';
+import { spanOfBlock } from '../text/span.js';
 import { docBox } from '../plane/projection.js';
 import { t } from '../strings.js';
 import { esc, byteLength } from '../util.js';
@@ -48,7 +53,14 @@ test('every row of the TABLE is read (a row the pattern misses would escape the 
 });
 
 test('the table holds D5\'s routed rows', () => {
-  for (const id of ['K-1', 'K-7', 'K-11', 'K-13', 'K-14', 'K-20', 'K-21', 'K-30', 'K-40', 'K-41', 'K-47', 'K-48', 'K-49', 'K-51', 'K-52', 'K-57', 'K-62', 'K-70', 'K-71', 'K-72', 'K-74', 'K-76', 'K-77']) assert.ok(rows.some((r) => r.id === id), id);
+  for (const id of ['K-1', 'K-7', 'K-11', 'K-13', 'K-14', 'K-20', 'K-21', 'K-30', 'K-40', 'K-41', 'K-45', 'K-46', 'K-47', 'K-48', 'K-49', 'K-51', 'K-52', 'K-57', 'K-62', 'K-70', 'K-71', 'K-72', 'K-74', 'K-76', 'K-77', 'K-100']) assert.ok(rows.some((r) => r.id === id), id);
+});
+
+test('Mod+L alone opens the LEAP box, and Mod+K is "link to…" at the selection, beside annotate\'s Mod+Shift+A and quote\'s Mod+Shift+C (D5 K-30, K-45, K-46, K-100)', () => {
+  assert.deepEqual(rows.filter((r) => r.act === 'leap.open').map((r) => r.chord), ['Mod+L']);
+  for (const [id, chord, act] of [['K-45', 'Mod+Shift+A', 'selection.annotate'], ['K-46', 'Mod+Shift+C', 'selection.quote'], ['K-100', 'Mod+K', 'selection.linkto']]) {
+    assert.deepEqual(rows.filter((r) => r.chord === chord), [{ id, chord, act, surface: 'selection' }], `${chord}: ${id}'s row alone`);
+  }
 });
 
 test('no plane command rides a printable key: every chord is Mod+… or Shift+a navigation key or a navigation key, a function key, or one of the platform\'s text keys bound at the caret alone', () => {
@@ -230,4 +242,45 @@ test('at a corner offering a read, → moves the focus along it to the offered r
   assert.deepEqual([await at('ArrowLeft', el), doc.activeElement], [false, el], '← at the corner: the platform\'s');
   assert.deepEqual([await at('ArrowRight', bare), await at('ArrowLeft', bare)], [false, false], 'a corner offering none: both the platform\'s');
   assert.ok(KEYS.TABLE.some((r) => r.id === 'K-57' && r.chord === '→' && r.surface === 'corner') && KEYS.TABLE.some((r) => r.id === 'K-57' && r.chord === '←' && r.surface === 'corner'), 'the table binds them at the corner, K-57\'s');
+}));
+
+/** the overlay host's stand-in element: what the host writes into it is the card a person meets */
+const hostEl = { className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {}, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }), contains: () => false };
+
+/** a slot of the selection's card as the host holds it: its button's markup, and the card's reason line's — null where that line is hidden */
+function slotIn(/** @type {string} */ slot) {
+  const button = hostEl.innerHTML.match(new RegExp(`<button data-run="${slot}"[^>]*>.*?</button>`));
+  const line = hostEl.innerHTML.match(/<div class="note reason"([^>]*)>(.*?)<\/div>/);
+  return { button: button ? button[0] : null, reason: line && !/\bhidden\b/.test(line[1]) ? line[0] : null };
+}
+
+test('the inert slots\' chords — Mod+K "link to…", never the LEAP box, Mod+Shift+A annotate and Mod+Shift+C quote — act on the selection, else select the walk\'s focused span whole, and the selection\'s card gives the slot\'s reason: the slot marked inert with its chord drawn, the card\'s reason line its words, said through the status region; off any span the reason is said where the focus is, nothing selected and no card shown (D5 K-30, K-45, K-46, K-100; P47)', () => onPlane(async ({ said }) => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const SHIFT = { ...MOD, shiftKey: true };
+  const block = spanOfBlock(O, /** @type {any} */ (REC.blockAt(O, 1)));
+  for (const [key, mods, slot, chord, reason] of /** @type {const} */ ([['k', MOD, 'linkto', 'Mod+K', 'L.seam.link-to'], ['A', SHIFT, 'annotate', 'Mod+Shift+A', 'L.seam.annotate'], ['C', SHIFT, 'quote', 'Mod+Shift+C', 'L.seam.quote']])) {
+    await focusOn(O, 1);
+    SEL.clear();
+    hostEl.innerHTML = '';
+    const n = said.length;
+    assert.equal(await KEYS.dispatch(keyOf(key, mods), PLANE), true, `${chord}: the page takes it`);
+    const s = slotIn(slot);
+    assert.deepEqual(SEL.selected(), block, `${chord}: no selection standing, the walk's focused span selected whole`);
+    assert.ok(!!s.button && s.button.includes('data-inert="1"') && s.button.includes(`<kbd>${esc(KEYS.drawChord(chord))}</kbd>`), `${chord}: its slot marked inert, its chord drawn — ${s.button}`);
+    assert.equal(s.reason, `<div class="note reason" data-string="${reason}">${esc(t(reason))}</div>`, `${chord}: the card's reason line gives the slot's words`);
+    assert.deepEqual(['annotate', 'quote', 'linkto'].filter((x) => (slotIn(x).button || '').includes('data-inert')), [slot], `${chord}: its slot alone marked`);
+    assert.deepEqual(said.slice(n), [t(reason)], `${chord}: said through the status region`);
+  }
+  await focusOn(O, 1);
+  SEL.select(O, 3, 4);
+  let n = said.length;
+  assert.equal(await KEYS.dispatch(keyOf('k', MOD), PLANE), true);
+  assert.deepEqual([SEL.selected(), slotIn('linkto').reason !== null, said.slice(n)], [{ addr: O, pos: 3, width: 4 }, true, [t('L.seam.link-to')]], 'Mod+K at a selection standing: the card at it gives the reason, the walk\'s span never selected over it');
+  SEL.clear();
+  hostEl.innerHTML = '';
+  await WALK.focusTo(O, null, true, true, null, true);
+  assert.equal(WALK.current()?.kind, 'document', 'the walk on the document whole: no span in focus');
+  n = said.length;
+  assert.equal(await KEYS.dispatch(keyOf('k', MOD), PLANE), true);
+  assert.deepEqual([SEL.selected(), hostEl.innerHTML, said.slice(n)], [null, '', [t('L.seam.link-to')]], 'Mod+K off any span: nothing selected, no card, the reason said where the focus is');
 }));

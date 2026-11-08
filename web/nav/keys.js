@@ -58,12 +58,16 @@
 // that span returns — and after them all the arrival (FP-21; N-GO's
 // `endArrival`); made at a landing, it passes over the box, over the find
 // and over an overlay whose own field holds the caret, the notice below that
-// overlay still closing first (FP-20). Mod+L and Mod+K
-// open the LEAP box (K-30), Mod+Y the trail's list (K-41), Mod+= and Mod+-
-// zoom the camera by 1.25 about the view's
-// centre and re-take the focus (K-11), Mod+Shift+P shows the one line's strip
-// (K-23), and the selection's slot chords (K-47 … K-52) and K-8's
-// select-by-span act from the plane and from a standing overlay alike. Find
+// overlay still closing first (FP-20). Mod+L alone opens the LEAP box (K-30),
+// Mod+Y the trail's list (K-41), Mod+= and Mod+- zoom the camera by 1.25
+// about the view's centre and re-take the focus (K-11), Mod+Shift+P shows the
+// one line's strip (K-23), and the selection's slot chords (K-45 … K-52,
+// K-100) and K-8's select-by-span act from the plane and from a standing
+// overlay alike. The inert slots' chords — annotate's, quote's and "link
+// to…"'s, Mod+K (K-45, K-46, K-100) — give their slot's reason (P47): at the
+// slot of the selection's card where a span is in focus, the walk's focused
+// span selected first where no selection stands (O-SELECTION's
+// `inertChord`), else, and over the scene, in the one line (`inertSaid`). Find
 // (K-91; `findAct`) acts from the plane, the scene, a field and every control
 // on them alike, the browser's own find never run: Mod+F opens the page's
 // find at the document the focus is in (N-FIND's `open`); Mod+G and
@@ -96,8 +100,8 @@
 // of its height everywhere else. Shift with ← and → is never dispatched: it
 // is the platform's own (K-71), and APP-INPUT reads what it does back into
 // the page's selection. Where no board is held (FP-35) the walk's keys at
-// the plane (K-1 … K-5, K-7), K-8, the selection's slot chords (K-47 … K-52),
-// the strip (K-23) and find's chords (K-91) each answer with O-FACES'
+// the plane (K-1 … K-5, K-7), K-8, the selection's slot chords (K-45 … K-52,
+// K-100), the strip (K-23) and find's chords (K-91) each answer with O-FACES'
 // no-board face, as HOME and
 // WHOLE BOARD do through N-GO; the paging keys and the zoom chords stay the
 // camera's. State (FP-10), beside the held keys: whether Mod+S has been
@@ -122,6 +126,8 @@ import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import { t } from '../strings.js';
+
+/** @typedef {import('../overlays/selection.js').InertSlot} InertSlot */
 
 /** the platform's primary command modifier: ⌘ on macOS, Ctrl elsewhere (D5 §0) */
 export const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '');
@@ -155,15 +161,17 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-21', chord: 'Mod+]', act: 'go.forward', surface: 'line' },
   { id: 'K-23', chord: 'Mod+Shift+P', act: 'line.strip', surface: 'line' },
   { id: 'K-30', chord: 'Mod+L', act: 'leap.open', surface: 'box' },
-  { id: 'K-30', chord: 'Mod+K', act: 'leap.open', surface: 'box' },
   { id: 'K-34', chord: 'Esc', act: 'esc', surface: 'box' },
   { id: 'K-40', chord: 'Mod+1…9', act: 'trail.jump', surface: 'trail' },
   { id: 'K-41', chord: 'Mod+Y', act: 'trail.list', surface: 'trail' },
+  { id: 'K-45', chord: 'Mod+Shift+A', act: 'selection.annotate', surface: 'selection' },
+  { id: 'K-46', chord: 'Mod+Shift+C', act: 'selection.quote', surface: 'selection' },
   { id: 'K-47', chord: 'Mod+Shift+O', act: 'selection.wrote', surface: 'selection' },
   { id: 'K-48', chord: 'Mod+Shift+R', act: 'selection.uses', surface: 'selection' },
   { id: 'K-49', chord: 'Mod+Shift+L', act: 'selection.links', surface: 'selection' },
   { id: 'K-51', chord: 'Mod+Enter', act: 'selection.follow', surface: 'selection' },
   { id: 'K-52', chord: 'Mod+Shift+Enter', act: 'selection.scene', surface: 'selection' },
+  { id: 'K-100', chord: 'Mod+K', act: 'selection.linkto', surface: 'selection' },
   { id: 'K-55', chord: 'Enter', act: 'cards.open', surface: 'cards' },
   { id: 'K-57', chord: 'Enter', act: 'corner.act', surface: 'corner' },
   { id: 'K-57', chord: '→', act: 'corner.offer', surface: 'corner' },
@@ -195,8 +203,10 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-94', chord: 'Mod+R', act: 'nothing', surface: 'platform' },
 ]));
 
-/** the selection's slot chords (K-47 … K-52): the TABLE's selection rows */
+/** the selection's slot chords (K-45 … K-52, K-100): the TABLE's selection rows */
 const SLOT_CHORDS = new Set(TABLE.filter((r) => r.surface === 'selection').map((r) => r.chord));
+/** the inert slots' chords (K-45, K-46, K-100), each with the slot it activates (O-SELECTION's `inertChord`) */
+const INERT_CHORDS = /** @type {Map<string, InertSlot>} */ (new Map([['Mod+Shift+A', 'annotate'], ['Mod+Shift+C', 'quote'], ['Mod+K', 'linkto']]));
 /** the walk's keys at the plane (K-1 … K-5, K-7) */
 const WALK_KEYS = new Set(['↓', '↑', '→', '←', 'Home', 'End', 'Enter']);
 /** a find chord's move (K-91): 1 the next, -1 the previous — Mod+G and Mod+Shift+G, and F3 and Shift+F3 elsewhere than macOS — 0 for any other chord */
@@ -341,7 +351,7 @@ function route(e, chord, ctx) {
   // Esc: the innermost thing, one order
   if (chord === 'Esc') return () => { esc(!!ctx.landed); return true; };
   // the LEAP box
-  if (chord === 'Mod+L' || chord === 'Mod+K') return () => { LEAP.open(); return true; };
+  if (chord === 'Mod+L') return () => { LEAP.open(); return true; };
   // the trail's list (K-41)
   if (chord === 'Mod+Y') return () => { TRAILLIST.open(byKey); return true; };
   if (chord === 'Mod+S') return () => { saveChord(); return true; }; // K-74: the chord writes nothing; the corner's kept state answers it
@@ -356,7 +366,9 @@ function route(e, chord, ctx) {
   // no board held (see the head): the selection's chords, K-8, the strip and find's chords answer why, as the walk's keys do below
   const lacking = REC.board() ? null : () => { FACES.noBoard(null); return true; };
   if (lacking && (SLOT_CHORDS.has(chord) || chord === 'Shift+↓' || chord === 'Shift+↑' || chord === 'Mod+Shift+P' || chord === 'Mod+F' || fd)) return lacking;
-  // the selection's slot chords (K-47 … K-52) and K-8's select-by-span — live from the plane and from a standing overlay alike; the selection's acts take no focus (rule 15), and the next K-8 press extends the selection from the walk's element
+  // the selection's slot chords (K-45 … K-52, K-100) and K-8's select-by-span — live from the plane and from a standing overlay alike; the selection's acts take no focus (rule 15), and the next K-8 press extends the selection from the walk's element
+  const inert = INERT_CHORDS.get(chord);
+  if (inert) return () => { if (!SEL.inertChord(inert)) inertSaid(inert); return true; };
   if (chord === 'Mod+Shift+O') return () => { SEL.act('wrote', byKey); return true; };
   if (chord === 'Mod+Shift+R') return () => { SEL.act('uses', byKey); return true; };
   if (chord === 'Mod+Shift+L') return () => { SEL.act('links', byKey); return true; };
@@ -524,9 +536,10 @@ async function replay() {
  * scene (K-63) — a Back from its entry (N-GO's `closeScene`) — and
  * Mod+Shift+P shows the one line's strip (K-23); the
  * selection's slot chords, which have nothing to act on in the scene, are
- * taken and do nothing, so the browser's own meanings never run (Mod+Shift+R
- * would reload), as F5 is (K-94). On the one line or a standing overlay every
- * other key is that control's own. Elsewhere ← closes the scene so (K-63); a
+ * taken, so the browser's own meanings never run (Mod+Shift+R would reload),
+ * as F5 is (K-94) — an inert slot's chord giving its slot's reason in the one
+ * line (`inertSaid`), every other doing nothing. On the one line or a
+ * standing overlay every other key is that control's own. Elsewhere ← closes the scene so (K-63); a
  * pane's own keys moved that pane, and Enter at a pane's corner took the
  * corner's act, before the dispatch (SC's `key`, K-60), and → and Enter
  * elsewhere in a pane, and Shift with the
@@ -542,6 +555,8 @@ function sceneKey(e, chord, ctx) {
   if (chord === 'Mod+R') return () => { SCENE.relevel(); return true; };
   if (chord === 'Mod+=') return () => true; // swallowed: nothing is nearer than the scene's reading scale
   if (chord === 'Mod+-') return () => { GO.closeScene(ctx.byKey); return true; };
+  const inert = INERT_CHORDS.get(chord);
+  if (inert) return () => { inertSaid(inert); return true; };
   if (SLOT_CHORDS.has(chord) || e.key === 'F5') return () => true;
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
   if (ctx.where === 'overlay' || ctx.where === 'line') return null; // the overlay's or the line's own keys
@@ -554,6 +569,12 @@ function sceneKey(e, chord, ctx) {
 /** a printable key no field takes: swallowed, the K-9 line at the focus until the next act (foundations §2.7) */
 function swallow(/** @type {KeyboardEvent} */ e) {
   LINE.transient(e.key === ' ' ? t('F.swallow.space', { 'paging key': 'PageDown' }) : t('F.swallow', { 'LEAP chord': drawChord('Mod+L') }));
+}
+
+/** an inert slot's chord where no card of the selection gives its reason — no span in focus, or the scene over the plane: the slot's reason in the one line at the focus until the next act, said through the status region (P47) */
+function inertSaid(/** @type {InertSlot} */ slot) {
+  const id = SEL.reasonOf(slot);
+  LINE.transient(t(id), id);
 }
 
 /**
