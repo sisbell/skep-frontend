@@ -111,8 +111,9 @@ def run(ctx):
     r.check(len(opened) == 1, 'the device\'s key store names the one key the session is opened with: one bound at this board for its principal, else the store\'s one key — no fallback for a key the store does not name',
             {'bound': [row.get('label') for row in bound], 'rows': [row.get('label') for row in store['rows']], 'refused': store['refused']})
     label = (opened[0].get('label') if len(opened) == 1 else None) or ctx.js('(async () => (await import("./strings.js")).t("L.slot.unlabelled"))()')
-    expect = 'acting as %s (principal %s) · %s · key present on this device · %s · LOCAL notebook' % (sess['account'], sess['principal'], label, board['origin'])
-    r.check(len(opened) == 1 and norm(expect) in norm(line['text']), 'the acting-as segment reads foundations §3.3\'s STATE 2 with the session\'s values, its device label the label of the key the session is opened with (FP-34)', {'expect': expect, 'line': line['text']})
+    expect = 'acting as %s (principal %s) on your LOCAL notebook · %s · key present on this device' % (sess['account'], sess['principal'], label)
+    r.check(len(opened) == 1 and norm(expect) in norm(line['text']) and board['origin'] not in line['text'],
+            'the acting-as segment reads foundations §3.3\'s STATE 2 with the session\'s values, its device label the label of the key the session is opened with (FP-34), naming no origin on the person\'s own notebook (issue #445)', {'expect': expect, 'line': line['text']})
     sweeps = {}
 
     def swept(where):

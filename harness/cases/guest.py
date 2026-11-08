@@ -21,8 +21,9 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     holds; and, read once the drafts are, in windows LINE_ROWS_PX wide,
     sign in among its acts at the line's start, every act and the address's
     fields whole inside the line and the window, no segment cut short, and
-    every segment inside the window — in the narrowest marked with
-    XFAIL_ACTING_WIDE, the guest line whole wider than its row (issue #310);
+    every segment inside the window (issue #310) — in the narrowest the guest
+    line compact, "guest", its act labelled by the guest line, the board's
+    origin and the venue whole as the line read them (issue #445);
 (c) HOME the board's extent (R92 rider (c)): the launch's focus the board,
     the trail's first entry, the address the clamp's line; the LEAP box
     listing no HOME level; Mod+Shift+H from a document returning there;
@@ -152,7 +153,7 @@ from collections import Counter
 
 from . import CLAUSE_READING, DOC, FAR_LEAP, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, WITHHELD, Result, item_words, unit_span
 from .keys import copied, member_of, placed_at, placed_at_box, placed_under, rebuilt_away, scene_set, stands_at
-from .layout import LINE_PARTS_JS, LINE_ROWS_PX, XFAIL_ACTING_WIDE
+from .layout import LINE_ACTING_JS, LINE_PARTS_JS, LINE_ROWS_PX
 
 OWNER = '1.0.1'
 # a stretch of the owner's bytes over the run, in characters with white space folded, that the guest's page must never hold
@@ -505,6 +506,8 @@ def run(ctx):
     ids = ctx.js('[...document.querySelectorAll("#line [data-string]")].map((e) => e.dataset.string)')
     signin = ctx.js('(() => { const b = document.querySelector("#line [data-act=signin]"); return b ? b.textContent : null; })()')
     origin = ctx.js('window.__skep.model.board().origin')
+    # the guest line's words as the line shows them whole, which its act is labelled by where it stands compact
+    whole = (ctx.js(LINE_ACTING_JS) or {}).get('text')
     labels = sorted({row['label'] for row in store['rows'] if row.get('label')})
     r.check(line['state'] == 1 and 'B1.guest-line' in ids and 'F.venue.notebook' in ids and 'F.acting-as' not in ids,
             '(b) the one line\'s acting-as segment is in state 1: the guest line and the venue', {'state': line['state'], 'strings': ids})
@@ -578,9 +581,12 @@ def run(ctx):
             r.check(v['actsFirst'] and first and not missing and not v['cut'],
                     f'(b) a {w} px window: the guest\'s line on its layout\'s step {lay.get("step")} in {len(lay.get("rows") or [])} rows — sign in among its acts at the line\'s start, every act and the address\'s fields whole inside the line and the window, no segment cut short (issue #310)',
                     {'layout': lay, 'missing': missing, 'cut': v['cut'], 'sign_in_first': first, 'fields': {k: x and {'inside': x['inside'], 'text': x['text'][:40]} for k, x in f.items()}})
-            # the guest line whole is some 320 px at the line's size on this machine: wider than the narrowest window's row
-            r.check(not v['past'], f'(b) a {w} px window: every segment of the guest\'s line inside the window (issue #310)', {'past': v['past'], 'vw': v['vw']},
-                    xfail=XFAIL_ACTING_WIDE if w == LINE_ROWS_PX[-1] else None)
+            r.check(not v['past'], f'(b) a {w} px window: every segment of the guest\'s line inside the window (issues #310, #445)', {'past': v['past'], 'vw': v['vw']})
+            if w == LINE_ROWS_PX[-1]:
+                act = ctx.js(LINE_ACTING_JS)
+                r.check(bool(act) and act['tag'] == 'button' and act['act'] == 'acting' and act['text'] == t(ctx, 'L.guest-line.short') and act['label'] == whole and act['inside'],
+                        f'(b) a {w} px window: the guest line compact — the board\'s origin and its venue given way, "{t(ctx, "L.guest-line.short")}" — one act labelled by the guest line as the wide window shows it (issue #445: "A board you only read: its class word")',
+                        {'act': act, 'whole': whole})
             rows[w] = lay
     finally:
         ctx.resize(*was)

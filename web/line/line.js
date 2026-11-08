@@ -5,9 +5,10 @@
 // said once as they arrive, when the page's class last changed with its
 // message not yet said (`changedAt`), the reading scenes' closes it last
 // took, whether one was said whole in the page's session and whether
-// forward ›'s label carries one (`closedSaid`), the canvas its words are
-// measured by (`ruler`), the layout it holds (`layout`) with what its parts
-// are measured by and the widths they were measured at (`measure`,
+// forward ›'s label carries one (`closedSaid`), whether the acting-as
+// segment's act opened its whole form (`actingOpen`), the canvas its words
+// are measured by (`ruler`), the layout it holds (`layout`) with what its
+// parts are measured by and the widths they were measured at (`measure`,
 // `measuredAt`), and its bottom edge as last published (`published`).
 // The line is the page's toolbar, named as it attaches (`L.the-line`), and
 // one Tab stop (D5 §1.3, K-22; §4 rule 5): its acts hold a roving stop — the
@@ -76,7 +77,8 @@
 // display names.
 // The acting-as segment (`actingSegment`), its state among foundations §3.3's
 // seven: state 2 through the signed session, the one a write may go out
-// under (`F.acting-as`), its device label a slot (FP-34; `deviceSlot`) —
+// under (`F.acting-as`, naming no origin: the board is the person's own
+// notebook), its device label a slot (FP-34; `deviceSlot`) —
 // the label of the key the session was opened with (M-REC's `device`), read
 // with the session, else why it names none, never the template's token;
 // state 3 through the keyless session for reading alone (`F.keyless-session`;
@@ -97,7 +99,25 @@
 // it re-opened none of M-PUMP's acquire asks for again (FP-28) — past a
 // second still out `L.reconnecting` in the segment's place, the session's
 // state kept; back, the segment as it stood; refused, the guest state boot
-// shows for that refusal, led by `L.reconnect-refused`. The daemon's segment
+// shows for that refusal, led by `L.reconnect-refused`. Its fields (`Field`;
+// FP-26, FP-32): the signed session's account, principal number, venue,
+// device label and the key's presence, its glyph (`KEY`) standing before its
+// words; a guest's guest line, the board's origin and its venue, after a
+// refused reconnect's lead and before the session's refusal. Its forms
+// (`formsOf`), in the order the layout tries them: whole; then the fields
+// giving way whole, each taking the separator before it — the principal
+// number, then a board only read's origin and venue, then the device label;
+// then the short form, the fields that stay shortened at once — the account
+// to "as ⟨account⟩", the venue to its word, the key's presence to its glyph,
+// the guest line to its class word. An exception keeps its words in every
+// form — a refused reconnect's lead, the session's refusal, the keyless
+// session, reconnecting, an ending's head (the guest line whole in its place
+// where this page holds none), the board list's words — and a segment of
+// exceptions alone has its whole form only. Short of its whole form the
+// segment is its act (`actingHTML`), a native button inside the line's one
+// stop, named and titled by its whole form's words, its press opening that
+// form in its place until the next act (`untilAct`); the glyph is hidden from
+// the accessibility tree. The daemon's segment
 // (`daemonSegment`): silent while the board runs; its stopped, unreachable
 // and halted-writes forms where it does not, their words whole (FP-26;
 // foundations §3.1). A jump's face out of view
@@ -117,24 +137,31 @@
 // close (N-GO's `closed`, through the reader the app hands in) is said after
 // it until the next act: the first in the page's session whole, a transient
 // segment; each after it as forward ›'s label (`closedSaid`).
-// The layout (FP-26, FP-20; `fit`, `layoutOf`): the line cuts no part's
-// words. Each part is measured at its reserved width — the acts with sign-in
-// whether it stands or not, the address part at the widest words it names
-// at the step, every other part at its words — the separator between two
-// parts of a row counted, and past the document's label, which gives way
-// first inside the address part's room, the line gives way in steps, each
-// keeping the ones before it: 1, the position's words go, its strip standing
-// alone, marked, its readout the strip's act; 2, each part with a compact
-// form takes it — no part of the line has one, so its widths there are step
-// 1's; 3, further rows, broken only between parts, the acts first, a part
-// wider than a row on a row of its own, its words whole past the row's end;
-// 4, where the address part is wider
-// than a row, the levels between its board and its deepest fold into one
-// mark (`L.fold`), whose act opens the LEAP box at those levels, the board's
-// field, the deepest level's fields, the strip and the marker never folding.
-// The layout — its step and its rows — is set again (`fit`) only as the app
-// tells it the window changed or a face arrived, at the launch, and at the
-// reader's act (`act`), never at a pan or a zoom
+// The layout (FP-26, FP-20; `fit`, `setLayout`, `layoutOf`): the line cuts
+// no part's words. Each part is measured at its reserved width — the acts
+// with sign-in whether it stands or not, the address part at the widest
+// words it names at the step, the acting-as segment in each of its forms,
+// every other part at its words — the separator between two parts of a row
+// counted, and past the document's label, which gives way first inside the
+// address part's room, the line gives way in steps, each keeping the ones
+// before it: 1, the position's words go, its strip standing alone, marked,
+// its readout the strip's act; 2, the acting-as segment takes the first of
+// its compact forms that holds the line in one row, its short form at the
+// last; 3, further rows, broken only between parts, the acts first, the
+// acting-as segment short, a part wider than a row on a row of its own — the
+// acting-as segment and the daemon's form taking the row's room at the most,
+// the segment broken between its fields and a field, or the daemon's form,
+// between its words (the style's), every other part's words whole past the
+// row's end; 4, where the address part is wider than a row, the levels
+// between its board and its deepest fold into one mark (`L.fold`), whose act
+// opens the LEAP box at those levels, the board's field, the deepest level's
+// fields, the strip and the marker never folding. The layout — its step, the
+// acting-as segment's form and its rows — is set again (`setLayout`) only as
+// the app tells it the window changed or a face arrived (`fit`), at the
+// launch, at the reader's act (`act`), and as the acting-as segment's fields
+// or the daemon's form change state (`render`, `shapeOf`) — a session ended or
+// keyless, a reconnect, a refusal, a halt standing or lifting, the board
+// stopping — never at a pan or a zoom
 // (`panned`), as a value ticks or as a statement arrives: a part that stands
 // past the last setting stands in its place in the line's order, in the row
 // of the part before it, where that row's room holds it, else beneath the
@@ -176,7 +203,7 @@
 // another module hands it (ST's `addressedHTML`) — and its other words in
 // the interface face (P-REG's FACE). The chip is no segment (ux-T2: the document's corner).
 // Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-22, FP-23, FP-25, FP-26,
-// FP-28, FP-29, FP-33, FP-34, FP-35, FP-36.
+// FP-28, FP-29, FP-32, FP-33, FP-34, FP-35, FP-36.
 
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
@@ -218,16 +245,20 @@ let closesTaken = 0;
 let closedWhole = false;
 /** forward ›'s label carries the close's words, until the next act (`closedSaid`) */
 let forwardSays = false;
-/** @typedef {0 | 1 | 2 | 3 | 4} Step how far the line has given way (see the head): 0 every part whole; 1 the position its strip alone; 2 each part with a compact form in it; 3 further rows; 4 the address folded */
+/** the acting-as segment's act opened its whole form, until the next act (`untilAct`) */
+let actingOpen = false;
+/** @typedef {0 | 1 | 2 | 3 | 4} Step how far the line has given way (see the head): 0 every part whole; 1 the position its strip alone; 2 the acting-as segment compact; 3 further rows; 4 the address folded */
 /**
- * @typedef {Object} Layout — the line's layout as `fit` last set it, held until it sets it again
+ * @typedef {Object} Layout — the line's layout as `setLayout` last set it, held until it sets it again
  * @property {Step} step
+ * @property {number} form the acting-as segment's form held, by its place in `Acting.forms`
  * @property {string[][]} rows each row's parts, by key, in order
  * @property {number} room a row's width, px
  * @property {number} gap the separator's width between two parts of a row, px
  * @property {Record<string, number>} reserved the acts' and the address part's widths at the step, px: the room each is held at whatever it shows
+ * @property {string} shape the acting-as segment's state and the strings its fields and the daemon's form read as it was set (`shapeOf`): where they change, it is set again
  */
-/** @type {Layout | null} the layout `fit` last set; null before the first, the line one row of its parts whole */
+/** @type {Layout | null} the layout `setLayout` last set; null before the first, the line one row of its parts whole */
 let layout = null;
 /** @typedef {(forms: string[]) => number[]} Measure each form's width on the line, px */
 /** @type {Measure | null} what the line's forms are measured by, as `fit` last took it: the page's own layout (`measured`), else the one it was handed */
@@ -296,6 +327,7 @@ export function attach(e, a) {
     if (which === 'back') acts.back(byKey); else if (which === 'forward') acts.forward(byKey); else if (which === 'address') acts.open(byKey); else if (which === 'trail') acts.trailList(byKey); else if (which === 'signin') acts.signIn(/** @type {HTMLElement} */ (b));
     else if (which === 'fold') acts.open(byKey, foldedAt(addressDisplay()));
     else if (which === 'strip') stripAct();
+    else if (which === 'acting') { actingOpen = true; render(true); }
     else if (which === 'unclaimed') transient(t('L.no-notebook-yet'), 'L.no-notebook-yet');
     else if (which === 'again') { if (acts.again) acts.again(); }
     else if (which && which.startsWith(WALK_ACT) && acts.walk) acts.walk(which.slice(WALK_ACT.length), byKey);
@@ -339,14 +371,15 @@ export function step(dir) {
 export function transient(/** @type {string} */ text, id = 'transient') { transientSeg = { html: addressedHTML(text), id }; FOCUS.say(text); render(true); }
 
 /**
- * What stands until the next act taken down — the transient segment and
- * forward ›'s close label — the closes made before it taken (`closedSaid`).
- * @returns {boolean} either stood
+ * What stands until the next act taken down — the transient segment,
+ * forward ›'s close label and the acting-as segment's whole form its act
+ * opened — the closes made before it taken (`closedSaid`).
+ * @returns {boolean} any of them stood
  */
 function untilAct() {
   if (acts && acts.closed) closesTaken = acts.closed();
-  const stood = !!transientSeg || forwardSays;
-  transientSeg = null; forwardSays = false;
+  const stood = !!transientSeg || forwardSays || actingOpen;
+  transientSeg = null; forwardSays = false; actingOpen = false;
   return stood;
 }
 
@@ -360,34 +393,39 @@ export function panned() { if (untilAct()) render(true); }
 const SEP = '<span class="sep">│</span>';
 
 /**
- * The line's layout for its parts (see the head): the least of the steps 0,
- * 1 and 2 whose parts stand in one row, else step 3's rows — each part after
- * the last on its row where the row's room holds it, else first on a new
- * one, a part wider than a row on a row of its own — or step 4's where the
- * address part at step 3 is wider than a row.
- * @param {string[]} keys the parts standing, by key, in their order; the address part's `address`
- * @param {(key: string, at: Step) => number} widthAt a part's width at a step, px
+ * The line's layout for its parts (see the head): the least of the steps 0
+ * and 1 whose parts stand in one row, the acting-as segment whole; else step
+ * 2's one row, the segment in the first of its compact forms that holds it;
+ * else step 3's rows, the segment in its short form — each part after the
+ * last on its row where the row's room holds it, else first on a new one, a
+ * part wider than a row on a row of its own — or step 4's where the address
+ * part at step 3 is wider than a row.
+ * @param {string[]} keys the parts standing, by key, in their order; the address part's `address`, the acting-as segment's `acting`
+ * @param {(key: string, at: Step, form: number) => number} widthAt a part's width at a step, the acting-as segment's in a form, px
  * @param {number} gap the separator's width, px
  * @param {number} room a row's width, px
- * @returns {{step: Step, rows: string[][]}}
+ * @param {number} [forms] the acting-as segment's forms (`Acting.forms`): its whole first, its short form last
+ * @returns {{step: Step, form: number, rows: string[][]}}
  */
-export function layoutOf(keys, widthAt, gap, room) {
-  const across = (/** @type {Step} */ at) => keys.reduce((w, k, i) => w + widthAt(k, at) + (i ? gap : 0), 0);
-  for (const at of /** @type {Step[]} */ ([0, 1, 2])) if (across(at) <= room) return { step: at, rows: [keys.slice()] };
+export function layoutOf(keys, widthAt, gap, room, forms = 1) {
+  const short = Math.max(0, forms - 1);
+  const across = (/** @type {Step} */ at, /** @type {number} */ form) => keys.reduce((w, k, i) => w + widthAt(k, at, form) + (i ? gap : 0), 0);
+  for (const at of /** @type {Step[]} */ ([0, 1])) if (across(at, 0) <= room) return { step: at, form: 0, rows: [keys.slice()] };
+  for (let form = Math.min(1, short); form <= short; form++) if (across(2, form) <= room) return { step: 2, form, rows: [keys.slice()] };
   /** @type {Step} */
-  const at = keys.includes('address') && widthAt('address', 3) > room ? 4 : 3;
+  const at = keys.includes('address') && widthAt('address', 3, short) > room ? 4 : 3;
   /** @type {string[][]} */
   const rows = [];
   /** @type {string[]} */
   let row = [];
   let used = 0;
   for (const k of keys) {
-    const w = widthAt(k, at);
+    const w = widthAt(k, at, short);
     if (row.length && used + gap + w > room) { rows.push(row); row = []; used = 0; }
     used += (row.length ? gap : 0) + w; row.push(k);
   }
   if (row.length) rows.push(row);
-  return { step: at, rows };
+  return { step: at, form: short, rows };
 }
 
 /** the room a row of the line's element holds, px: its width inside its padding; null where the platform lays it out nowhere */
@@ -431,36 +469,58 @@ function widths(forms) {
 }
 
 /**
- * Set the line's layout again (see the head): the parts standing measured at
- * each step at their reserved widths (`partsOf`'s `reserve`) and the step
- * `layoutOf` finds held, with the acts' and the
- * address part's widths there, then the line rebuilt on it. The app's at a
- * change of the window or a face's arrival and at the launch; the line's own
- * at the reader's act (`act`). A row's width is the one handed in, else the
- * line's element's, else the one the layout held was set at; where there is
- * none, the layout stands as it is.
+ * The acting-as segment's state and the strings its fields and the daemon's
+ * form read (see the head): the layout held is set again where they change —
+ * a session ended or keyless, a reconnect, a refusal, a halt standing or
+ * lifting, the board stopping — and never where a value in them ticks.
+ * @param {Shown} s
+ */
+const shapeOf = (s) => `${s.acting.state} ${s.acting.shape}|${s.daemon.id}`;
+
+/**
+ * Set the line's layout (see the head): the parts standing measured at each
+ * step at their reserved widths (`partsOf`'s `reserve`), the acting-as
+ * segment in each of its forms, and the step and the form `layoutOf` finds
+ * held, with the acts' and the address part's widths there and the strings
+ * the layout was set on (`shapeOf`). Its forms are measured by the measure
+ * `fit` took.
+ * @param {Shown} s
+ * @param {number} room a row's width, px
+ */
+function setLayout(s, room) {
+  const steps = /** @type {Step[]} */ ([0, 1, 2, 3, 4]).map((k) => partsOf(s, k, true));
+  const forms = s.acting.forms.map((_, f) => actingHTML(s.acting, f, false));
+  const all = [SEP, ...steps.flat().map((p) => p.html), ...forms], w = widths(all), got = new Map(all.map((f, i) => [f, w[i]]));
+  const widthAt = (/** @type {string} */ key, /** @type {Step} */ k, /** @type {number} */ form) => {
+    if (key === 'acting') return got.get(forms[form]) || 0;
+    const p = steps[k].find((x) => x.key === key);
+    return p ? got.get(p.html) || 0 : 0;
+  };
+  const gap = got.get(SEP) || 0, next = layoutOf(steps[0].map((p) => p.key), widthAt, gap, room, forms.length);
+  layout = { ...next, room, gap, reserved: { acts: widthAt('acts', next.step, next.form), address: widthAt('address', next.step, next.form) }, shape: shapeOf(s) };
+}
+
+/**
+ * Set the line's layout again (see the head; `setLayout`), then rebuild the
+ * line on it. The app's at a change of the window or a face's arrival and at
+ * the launch; the line's own at the reader's act (`act`). A row's width is
+ * the one handed in, else the line's element's, else the one the layout held
+ * was set at; where there is none, the layout stands as it is.
  * @param {{room?: number, measure?: Measure}} [at] a row's width and what the forms are measured by: where none is handed in, the line's own element's and the page's layout (`measured`)
  */
 export function fit(at = {}) {
   const room = at.room ?? roomOf() ?? (layout ? layout.room : null);
   if (at.measure) measure = at.measure;
   else if (!measure && room != null) measure = measured;
-  if (el && measure && room != null && room > 0) {
-    const s = shown();
-    const forms = /** @type {Step[]} */ ([0, 1, 2, 3, 4]).map((k) => partsOf(s, k, true));
-    const all = [SEP, ...forms.flat().map((p) => p.html)], w = widths(all), got = new Map(all.map((f, i) => [f, w[i]]));
-    const widthAt = (/** @type {string} */ key, /** @type {Step} */ k) => { const p = forms[k].find((x) => x.key === key); return p ? got.get(p.html) || 0 : 0; };
-    const gap = got.get(SEP) || 0, next = layoutOf(forms[0].map((p) => p.key), widthAt, gap, room);
-    layout = { ...next, room, gap, reserved: { acts: widthAt('acts', next.step), address: widthAt('address', next.step) } };
-  }
+  if (el && measure && room != null && room > 0) setLayout(shown(), room);
   render();
 }
 
 /** the faces changed (the app's `refaced`): every form measured again, and the layout set again on the widths they take now */
 export function refaced() { measuredAt.clear(); fit(); }
 
-/** the layout the line holds (the gate's): its step and its rows; null before the first setting */
-export const held = () => (layout ? { step: layout.step, rows: layout.rows.map((r) => r.slice()) } : null);
+/** the layout the line holds (the gate's): its step, the acting-as segment's form and its rows; null before the first setting */
+export const held = () => (layout ? { step: layout.step, form: layout.form, rows: layout.rows.map((r) => r.slice()) } : null);
 
 /**
  * A reading scene's close said after it (see the head), where the scenes
@@ -483,9 +543,10 @@ function closedSaid() {
 
 /**
  * A change of the page's class (see the head; FP-23, FP-29), told by the app
- * as M-PUMP tells it: the transient segment and
- * forward ›'s close label taken down — the strip's act quotes the text it was
- * made at — a scene's next close said whole again, the page's session being
+ * as M-PUMP tells it: the transient segment, forward ›'s close label and the
+ * acting-as segment's whole form its act opened taken down — the strip's act
+ * quotes the text it was made at, the act the session it was made in — a
+ * scene's next close said whole again, the page's session being
  * a new one, the kept places heard and what was still to say of them taken
  * down unsaid, the change's own stamp a cause its one message speaks for
  * (`keptSaid`), and that message held until the reads it asked answer
@@ -493,7 +554,7 @@ function closedSaid() {
  * @param {number | null} [at] the page's clock at the change (M-PUMP's `Dropped.at`)
  */
 export function classChanged(at = null) {
-  transientSeg = null; forwardSays = false; closedWhole = false; changedAt = performance.now();
+  transientSeg = null; forwardSays = false; actingOpen = false; closedWhole = false; changedAt = performance.now();
   keptHeard = new Map(); causes = new Map();
   if (at != null) changes.add(at);
   render(true);
@@ -800,18 +861,67 @@ function actsHTML(signIn) {
 /** the account a session's words name, set in the identifier's face (P-REG's FACE; ST's `tHTML`) */
 const ACCOUNT = /** @type {const} */ ({ account: 'id' });
 
+/** the key's presence drawn (see the head): a key in the text's colour — no character, so never an emoji or a padlock — hidden from the accessibility tree, which reads the words beside it or the act's name */
+const KEY = '<svg class="key" viewBox="0 0 16 10" aria-hidden="true" focusable="false"><circle cx="4" cy="5" r="3"/><path d="M7 5h8M12 5v3M14.5 5v2"/></svg>';
+/** the key's glyph alone, the short form's: no words after it */
+const KEY_ALONE = KEY.replace('class="key"', 'class="key alone"');
+/** the separator between two fields of the short form (see the head) */
+const SHORT_SEP = ' · ';
+
 /**
- * A string's words on either side of one of its tokens left unfilled — the
- * place a slot stands in the line (FP-34), so the token itself never reaches
- * the page; null where the string holds no such token.
- * @param {string} text the string, every other token filled — or its markup (ST's `tHTML`)
- * @param {string} token the token's name, without its brackets
- * @returns {[string, string] | null}
+ * @typedef {Object} Field — a field of the acting-as segment (see the head)
+ * @property {string} html its markup whole
+ * @property {string} words its words whole
+ * @property {string} sep the separator before it in the whole form; '' where it stands first
+ * @property {0 | 1 | 2 | 3} rank the turn it gives way at: 1 the principal number, 2 a board only read's origin and venue, 3 the device label; 0 never
+ * @property {string | null} short its markup in the short form; null where it keeps its words there
  */
-function aroundToken(text, token) {
-  const mark = '⟨' + token + '⟩', i = text.indexOf(mark);
-  return i < 0 ? null : [text.slice(0, i), text.slice(i + mark.length)];
+
+/**
+ * A field of the acting-as segment (`Field`).
+ * @param {string} html
+ * @param {string} words
+ * @param {string} [sep]
+ * @param {0 | 1 | 2 | 3} [rank]
+ * @param {string | null} [short]
+ * @returns {Field}
+ */
+function field(html, words, sep = '', rank = 0, short = null) { return { html, words, sep, rank, short }; }
+
+/**
+ * Fields as markup (see the head): each in a box holding its words and the
+ * separator after it up to that separator's closing space, which stands
+ * between the two boxes, where a line breaks — so the segment breaks between
+ * fields, and a field wider than its row between its words (the style's); in
+ * the short form each field's short markup where it has one, SHORT_SEP
+ * between two.
+ * @param {Field[]} fields
+ * @param {boolean} short
+ */
+function boxed(fields, short) {
+  return fields.map((f, i) => {
+    const next = fields[i + 1], sep = !next ? '' : short ? SHORT_SEP : next.sep, keep = sep.trimEnd();
+    return `<span class="field">${short && f.short != null ? f.short : f.html}${esc(keep)}</span>${sep.slice(keep.length)}`;
+  }).join('');
 }
+
+/**
+ * The acting-as segment's forms (see the head), in the order the layout
+ * tries them: its fields whole; then, for each turn of the giving way, the
+ * fields standing after it; then, where a field has a short form, the short
+ * form, every field that gives way gone.
+ * @param {Field[]} fields
+ * @returns {string[]}
+ */
+function formsOf(fields) {
+  const forms = [boxed(fields, false)];
+  for (const turn of /** @type {const} */ ([1, 2, 3])) if (fields.some((f) => f.rank === turn)) forms.push(boxed(fields.filter((f) => !f.rank || f.rank > turn), false));
+  if (fields.some((f) => f.short != null)) forms.push(boxed(fields.filter((f) => !f.rank), true));
+  return forms;
+}
+
+/** the words of fields whole: each after the separator before it */
+const wordsOf = (/** @type {Field[]} */ fields) => fields.map((f, i) => (i ? f.sep : '') + f.words).join('');
 
 /**
  * The device label's slot (FP-34): the label of the key this device opened
@@ -831,12 +941,106 @@ function deviceSlot(dev) {
 
 /**
  * @typedef {Object} Acting — the acting-as segment (`actingSegment`)
- * @property {string} html
+ * @property {string[]} forms its forms' markup in the order the layout tries them (`formsOf`): its whole form first, its short form last; its whole form alone where it has no compact form
+ * @property {{id: string, values: Record<string, string | number>} | null} name the string its whole form's words are and its tokens' values, the act's name where it has a compact form; null where it has none
+ * @property {string} shape the strings its fields read: where they change, the layout is set again (`shapeOf`)
  * @property {number} state its state among foundations §3.3's seven; 0 for none of them — no adapter, no board held
  * @property {string} words its words, what the status region says where they are said
  * @property {boolean} alarm its words said assertively once as they arrive (D4): the session's death, and a session a restart lost that M-PUMP's acquire could not get back
  * @property {boolean} signIn its one act, sign-in, offered: it stands among the line's acts
  */
+
+/**
+ * A segment of exceptions alone (see the head): one form, a string's words
+ * whole, a field at each of its separators.
+ * @param {string} id the string
+ * @param {string} words its words
+ * @param {string} markup its markup
+ * @param {{state: number, alarm: boolean, signIn: boolean}} as
+ * @returns {Acting}
+ */
+function keptWhole(id, words, markup, as) {
+  const w = words.split(' · '), h = markup.split(' · ');
+  const fields = w.length === h.length ? w.map((x, i) => field(h[i], x, i ? ' · ' : '')) : [field(markup, words)];
+  return { forms: [`<span data-string="${esc(id)}">${boxed(fields, false)}</span>`], name: null, shape: id, words, ...as };
+}
+
+/**
+ * The signed session's fields (see the head): `F.acting-as` cut at its
+ * separators and around its principal clause — the account, short "as
+ * ⟨account⟩"; the principal number, giving way first; the venue, short its
+ * word; the device label's slot, giving way third; the key's presence, its
+ * glyph before its words, short the glyph alone — so the whole form's words
+ * are the string's own; where the string will not cut so, its words whole as
+ * one field.
+ * @param {{account: string, N: number}} values the string's tokens but its device label, whose slot stands in its place
+ * @param {{shows: string, html: string}} slot
+ * @returns {Field[]}
+ */
+function signedFields(values, slot) {
+  const words = t('F.acting-as', values), markup = tHTML('F.acting-as', values, ACCOUNT);
+  /** the string's words or markup cut into its fields' own, in their order; null where it will not cut so */
+  const cut = (/** @type {string} */ x) => {
+    const [head, label, key, ...more] = x.split(' · '), m = /^(.*?) (\([^()]*\)) (.*)$/.exec(head);
+    return m && label === '⟨device label⟩' && key != null && !more.length ? [m[1], m[2], m[3], key] : null;
+  };
+  const w = cut(words), h = cut(markup);
+  if (!w || !h) return [field(markup.replace('⟨device label⟩', () => slot.html), words.replace('⟨device label⟩', () => slot.shows))];
+  return [
+    field(h[0], w[0], '', 0, `<span data-string="L.acting.as">${tHTML('L.acting.as', { account: values.account }, ACCOUNT)}</span>`),
+    field(h[1], w[1], ' ', 1),
+    field(h[2], w[2], ' ', 0, `<span data-string="F.venue.notebook">${esc(t('F.venue.notebook'))}</span>`),
+    field(slot.html, slot.shows, ' · ', 3),
+    field(KEY + h[3], w[3], ' · ', 0, KEY_ALONE),
+  ];
+}
+
+/**
+ * The signed session's segment (see the head): its fields (`signedFields`)
+ * in each of their forms — every form but the short one the words of
+ * `F.acting-as`, the short one's fields reading strings of their own — the
+ * act's name the string's words whole, the device label's slot's among them.
+ * @param {{account: string | null, principal: number}} s the session
+ * @returns {Acting}
+ */
+function signedSegment(s) {
+  const values = { account: s.account || '', N: s.principal }, slot = deviceSlot(REC.device()), fields = signedFields(values, slot), forms = formsOf(fields);
+  return {
+    forms: forms.map((f, i) => (i && i === forms.length - 1 ? f : `<span data-string="F.acting-as">${f}</span>`)),
+    name: forms.length > 1 ? { id: 'F.acting-as', values: { ...values, 'device label': slot.shows } } : null,
+    shape: 'F.acting-as', state: 2, words: wordsOf(fields), alarm: false, signIn: false,
+  };
+}
+
+/**
+ * A guest's segment (see the head): the reconnect's lead where a restart's
+ * was refused, the guest line, the board's origin and its venue, the
+ * session's refusal. Compact, the origin and the venue give way together — a
+ * board only read — and the guest line shortens to its class word, the lead
+ * and the refusal keeping their words, the act's name its fields whole
+ * (`L.guest-line.name`); else its one form, its words whole.
+ * @param {string} origin the board's origin, as `boards()` answered it
+ * @param {string | null} lead the account a restart's refused reconnect was for; null where none was
+ * @param {{name: string} | null} refused the session's refusal
+ * @param {{state: number, alarm: boolean, compact: boolean}} as
+ * @returns {Acting}
+ */
+function guestSegment(origin, lead, refused, as) {
+  const rank = as.compact ? 2 : 0;
+  const head = lead == null ? null : field(`<span data-string="L.reconnect-refused">${tHTML('L.reconnect-refused', { account: lead }, ACCOUNT)}</span>`, t('L.reconnect-refused', { account: lead }));
+  const guest = field(`<span data-string="B1.guest-line">${esc(t('B1.guest-line'))}</span>`, t('B1.guest-line'), head ? ' · ' : '', 0, as.compact ? `<span data-string="L.guest-line.short">${esc(t('L.guest-line.short'))}</span>` : null);
+  const board = origin ? field(esc(origin), origin, ' · ', rank) : null;
+  const venue = field(`<span data-string="F.venue.notebook">${esc(t('F.venue.notebook'))}</span>`, t('F.venue.notebook'), ' · ', rank);
+  const why = refused ? field(`<span class="dim" data-string="L.session-refused">${esc(t('L.session-refused', { name: refused.name }))}</span>`, t('L.session-refused', { name: refused.name }), ' ') : null;
+  const fields = [head, guest, board, venue, why].filter((f) => f != null), forms = formsOf(fields);
+  /** a field's words after its separator, as the act's name takes them; none where it does not stand */
+  const said = (/** @type {Field | null} */ f) => (f ? f.sep + f.words : '');
+  return {
+    forms, name: forms.length > 1 ? { id: 'L.guest-line.name', values: { lead: said(head), guest: said(guest), origin: said(board), venue: said(venue), refused: said(why) } } : null,
+    shape: [head ? 'L.reconnect-refused' : '', 'B1.guest-line', why ? 'L.session-refused' : ''].filter(Boolean).join(' '),
+    state: as.state, words: head ? head.words : guest.words, alarm: as.alarm, signIn: true,
+  };
+}
 
 /** the board list's "try again" (see the head): its id names it across the line's rebuilds, as sign-in's does */
 const AGAIN = `<button id="line-again" data-act="again">${esc(t('B1.try-again'))}</button>`;
@@ -854,64 +1058,50 @@ const AGAIN = `<button id="line-again" data-act="again">${esc(t('B1.try-again'))
  */
 function noBoardSegment() {
   const w = noBoardWords();
-  if (!w) return { html: '', state: 0, words: '', alarm: false, signIn: false };
+  if (!w) return { forms: [''], name: null, shape: '', state: 0, words: '', alarm: false, signIn: false };
   const html = w.doors ? `<button id="line-unclaimed" data-act="unclaimed" class="inert" data-string="${esc(w.id)}">${esc(w.text)}</button>`
     : `<span data-string="${esc(w.id)}">${esc(w.text)}</span>${w.again ? ' ' + AGAIN : ''}`;
-  return { html, state: 0, words: w.text, alarm: false, signIn: false };
+  return { forms: [html], name: null, shape: w.id, state: 0, words: w.text, alarm: false, signIn: false };
 }
 
 /**
- * The acting-as segment (see the head): its words, and its state among
- * foundations §3.3's seven — while M-PUMP's acquire is out past a second for
- * a session a restart lost, "reconnecting as" in the session's place, the
- * session's state kept; where it was refused, the guest state boot shows for
- * that refusal, led by "could not reconnect as" (FP-28); a death's words
- * O-FACES's (`deathWords`), the guest line's in
- * their place for an arm it holds none for — the guest's and the death arm's
- * one act, sign-in, offered to stand among the line's acts. Where no adapter stands beneath
- * the port or no board is held, why (`noBoardSegment`), and none of the
- * seven.
+ * The acting-as segment (see the head): its forms, its words, and its state
+ * among foundations §3.3's seven — while M-PUMP's acquire is out past a
+ * second for a session a restart lost, "reconnecting as" in the session's
+ * place, the session's state kept; where it was refused, the guest state boot
+ * shows for that refusal, led by "could not reconnect as" (FP-28); a death's
+ * words O-FACES's (`deathWords`), the guest line's in their place for an arm
+ * it holds none for — the guest's and the death arm's one act, sign-in,
+ * offered to stand among the line's acts. Where no adapter stands beneath the
+ * port or no board is held, why (`noBoardSegment`), and none of the seven.
  * @returns {Acting}
  */
 export function actingSegment() {
-  const s = REC.session(), b = REC.board(), dev = REC.device(), dead = REC.deathReason(), refused = REC.sessionRefused(), lost = REC.reconnect();
+  const s = REC.session(), b = REC.board(), dead = REC.deathReason(), refused = REC.sessionRefused(), lost = REC.reconnect();
   if (!PORT.hasAdapter() || !b) return noBoardSegment();
-  // the board's origin, as `boards()` answered it; the boot opens a session only on the board it holds
-  const origin = b.origin;
   if (s && lost && !lost.refused) {
-    const words = t('L.reconnecting', { account: lost.as || '' });
-    return { html: `<span data-string="L.reconnecting">${tHTML('L.reconnecting', { account: lost.as || '' }, ACCOUNT)}</span>`, state: s.writes ? 2 : 3, words, alarm: false, signIn: false };
+    const values = { account: lost.as || '' };
+    return keptWhole('L.reconnecting', t('L.reconnecting', values), tHTML('L.reconnecting', values, ACCOUNT), { state: s.writes ? 2 : 3, alarm: false, signIn: false });
   }
   if (s && !s.writes) {
-    const words = t('F.keyless-session', { account: s.account || '', origin });
-    return { html: `<span data-string="F.keyless-session">${tHTML('F.keyless-session', { account: s.account || '', origin }, ACCOUNT)}</span>`, state: 3, words, alarm: false, signIn: false };
+    const values = { account: s.account || '' };
+    return keptWhole('F.keyless-session', t('F.keyless-session', values), tHTML('F.keyless-session', values, ACCOUNT), { state: 3, alarm: false, signIn: false });
   }
-  if (s) {
-    // F.acting-as's every token filled but its device label, whose slot stands in its place
-    const values = { account: s.account || '', N: s.principal, origin }, text = t('F.acting-as', values), parts = aroundToken(text, 'device label'), slot = deviceSlot(dev);
-    const markup = tHTML('F.acting-as', values, ACCOUNT), around = aroundToken(markup, 'device label');
-    const words = parts ? parts[0] + slot.shows + parts[1] : text;
-    return { html: `<span data-string="F.acting-as">${around ? around[0] + slot.html + around[1] : markup}</span>`, state: 2, words, alarm: false, signIn: false };
-  }
-  const guest = `<span data-string="B1.guest-line">${esc(t('B1.guest-line'))}</span>${origin ? ` · ${esc(origin)}` : ''} · <span data-string="F.venue.notebook">${esc(t('F.venue.notebook'))}</span>`;
+  if (s) return signedSegment(s);
   if (dead) {
-    // C-137's words for the arm; an arm whose words this page does not hold reads as the guest the page now is
+    // C-137's words for the arm, an ending's head; an arm whose words this page does not hold reads as the guest the page now is, whole in the head's place
     const w = deathWords(dead);
-    return w ? { html: `<span data-string="${w.id}">${addressedHTML(w.text)}</span>`, state: 5, words: w.text, alarm: true, signIn: true } : { html: guest, state: 5, words: t('B1.guest-line'), alarm: true, signIn: true };
+    return w ? keptWhole(w.id, w.text, addressedHTML(w.text), { state: 5, alarm: true, signIn: true }) : guestSegment(b.origin, null, null, { state: 5, alarm: true, compact: false });
   }
-  const lead = lost && lost.refused ? t('L.reconnect-refused', { account: lost.as || '' }) : '';
-  const html = (lead ? `<span data-string="L.reconnect-refused">${tHTML('L.reconnect-refused', { account: lost && lost.as ? lost.as : '' }, ACCOUNT)}</span> · ` : '') + guest + (refused ? ` <span class="dim" data-string="L.session-refused">${esc(t('L.session-refused', { name: refused.name }))}</span>` : '');
-  return { html, state: refused && refused.name === 'no_key' ? 3 : 1, words: lead || t('B1.guest-line'), alarm: !!lead, signIn: true };
+  return guestSegment(b.origin, lost && lost.refused ? lost.as || '' : null, refused, { state: refused && refused.name === 'no_key' ? 3 : 1, alarm: !!(lost && lost.refused), compact: true });
 }
 
-/** the daemon's segment: silent while the board runs */
+/** the daemon's segment, by the string it reads (`id`): silent while the board runs */
 function daemonSegment() {
   const d = REC.daemon(), h = REC.health();
   const halted = !!(h && h.writes && h.writes.halted);
-  if (halted) return { html: `<span class="warn" data-string="F.daemon.notebook.halted">${esc(t('F.daemon.notebook.halted'))}</span>`, halted, words: t('F.daemon.notebook.halted') };
-  if (d === 'stopped') return { html: `<span class="warn" data-string="F.daemon.notebook.stopped">${esc(t('F.daemon.notebook.stopped'))}</span>`, halted, words: '' };
-  if (d === 'unreachable') return { html: `<span class="warn" data-string="F.daemon.unreachable">${esc(t('F.daemon.unreachable'))}</span>`, halted, words: '' };
-  return { html: '', halted, words: '' };
+  const id = halted ? 'F.daemon.notebook.halted' : d === 'stopped' ? 'F.daemon.notebook.stopped' : d === 'unreachable' ? 'F.daemon.unreachable' : '';
+  return { id, html: id ? `<span class="warn" data-string="${id}">${esc(t(id))}</span>` : '', halted, words: halted ? t(id) : '' };
 }
 
 /** the mode line: the flag-on transition at the first render after the pair changes (C-31), said through the status region */
@@ -1076,7 +1266,7 @@ function addressPart(a, at) {
  * @typedef {Object} Shown — what the line shows, read once for a rebuild or a setting of its layout
  * @property {AddressDisplay} a
  * @property {Acting} acting
- * @property {{html: string, halted: boolean, words: string}} daemon
+ * @property {{id: string, html: string, halted: boolean, words: string}} daemon
  * @property {{id: string, text: string} | null} aside a jump's face standing out of the visible view (O-HOST's `aside`)
  * @property {import('../text/layer.js').KeptClause | null} kept the document named's clause, else the board's: the board heads every place the display names
  */
@@ -1088,24 +1278,40 @@ function shown() {
 }
 
 /**
+ * The acting-as segment in a form (see the head): its whole form as it
+ * stands; any other — a compact one, or its whole one its act opened — its
+ * act, a native button named and titled by its whole form's words; a form
+ * past its last, its last.
+ * @param {Acting} a
+ * @param {number} form the form the layout holds (`Acting.forms`)
+ * @param {boolean} open its act opened its whole form
+ */
+function actingHTML(a, form, open) {
+  const at = open ? 0 : Math.min(form, a.forms.length - 1);
+  if (!a.name || (at === 0 && !open)) return `<span class="seg acting" data-state="${a.state}">${a.forms[0]}</span>`;
+  return `<button class="seg acting" data-act="acting" data-state="${a.state}" title="${esc(t(a.name.id, a.name.values))}" aria-label="${esc(t(a.name.id, a.name.values))}">${a.forms[at]}</button>`;
+}
+
+/**
  * The line's parts in their order at a step (see the head): the acts — with
  * sign-in where the acting-as segment offers it — the address part, a kept
- * clause, the acting-as segment, each walk's folded moment, the daemon's
- * form, a jump's face out of view and the transient segment — none of them
- * with a compact form, so each is the same at every step but the address
- * part. Where `reserve` asks the room each is held at, the acts hold
- * sign-in whether it stands or not, and the address part is its room alone,
- * as wide whatever it names.
+ * clause, the acting-as segment in a form (`actingHTML`), each walk's folded
+ * moment, the daemon's form, a jump's face out of view and the transient
+ * segment — none but the acting-as segment with a compact form, so each other
+ * is the same at every step but the address part. Where `reserve` asks the
+ * room each is held at, the acts hold sign-in whether it stands or not, and
+ * the address part is its room alone, as wide whatever it names.
  * @param {Shown} s
  * @param {Step} at
  * @param {boolean} [reserve]
+ * @param {number} [form] the acting-as segment's form, its whole one where its act opened it
  * @returns {Part[]}
  */
-function partsOf(s, at, reserve = false) {
+function partsOf(s, at, reserve = false, form = 0) {
   /** @type {Part[]} */
   const parts = [{ key: 'acts', html: actsHTML(reserve || s.acting.signIn) }, { key: 'address', html: reserve ? `<span class="address-part" style="--words:${RESERVE[at]}"></span>` : addressPart(s.a, at) }];
   if (s.kept) parts.push({ key: 'kept', html: `<span class="seg kept" data-string="${esc(s.kept.id)}">${esc(s.kept.text)}</span>` });
-  parts.push({ key: 'acting', html: `<span class="seg acting" data-state="${s.acting.state}">${s.acting.html}</span>` }, ...walkParts());
+  parts.push({ key: 'acting', html: actingHTML(s.acting, form, !reserve && actingOpen) }, ...walkParts());
   if (s.daemon.html) parts.push({ key: 'daemon', html: `<span class="seg daemon">${s.daemon.html}</span>` });
   if (s.aside) parts.push({ key: 'aside', html: `<span class="seg aside" data-string="${esc(s.aside.id)}">${addressedHTML(s.aside.text)}</span>` });
   if (transientSeg) parts.push({ key: 'transient', html: `<span class="seg transient" data-string="${esc(transientSeg.id)}">${transientSeg.html}</span>` });
@@ -1167,12 +1373,19 @@ function publish() {
   root.style.setProperty('--line-bottom', b + 'px');
 }
 
-/** rebuild the line from state on the layout held (`placed`); the focus kept on the act that held it (rule 11); the assertive words said once as they arrive (D4); its bottom edge published (`publish`) */
+/**
+ * Rebuild the line from state on the layout held (`placed`), the layout set
+ * again first where the acting-as segment's fields or the daemon's form
+ * changed state (`shapeOf`) — the act's whole form taken down with the form
+ * it opened; the focus kept on the act that held it (rule 11); the assertive
+ * words said once as they arrive (D4); its bottom edge published (`publish`).
+ */
 export function render(force = false) {
   if (!el) return;
   modeLine();
   closedSaid();
   const s = shown(), { acting, daemon } = s;
+  if (layout && shapeOf(s) !== layout.shape) { actingOpen = false; setLayout(s, roomOf() ?? layout.room); }
   if (changedAt != null) {
     // a change of the page's class: said once, its ending with what it covered, as the reads it asked answer — never the ending alone first
     if (!PUMP.rereading() || performance.now() - changedAt >= PUMP.UNREACHED_MS) { changedAt = null; if (acting.alarm) FOCUS.say(endingSaid(acting.words), true); }
@@ -1180,7 +1393,7 @@ export function render(force = false) {
   if (daemon.halted && !lastHalted) FOCUS.say(daemon.words, true);
   lastAlarm = acting.alarm ? acting.words : ''; lastHalted = daemon.halted;
   keptSaid();
-  const { rows, beneath } = placed(partsOf(s, layout ? layout.step : 0));
+  const { rows, beneath } = placed(partsOf(s, layout ? layout.step : 0, false, layout ? layout.form : 0));
   const html = rows.map((row) => `<div class="row">${row.map((p) => p.html).join(SEP)}</div>`).join('')
     + (beneath.length ? `<div class="beneath">${beneath.map((p) => p.html).join('')}</div>` : '');
   if (force || html !== lastHTML) {

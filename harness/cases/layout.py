@@ -378,18 +378,22 @@ any field.
 A WALK'S FOLDED MOMENT (issue #182's design decision: "It never yields when
 the line runs short"): a moment raised through the gate's door and folded by
 Esc stands as its segment of the one line, whole inside the line in a window
-WALK_PX wide, the acting-as segment before it whole, the line taking another
-row, its act unfolding it, the shell told nothing.
-THE ONE LINE SHORT OF ROOM (issue #310's design decision: "The line never
-clips"): landed at a position of the first edition in windows LINE_ROWS_PX
-wide, the line on the step and the rows its layout holds — the address folded
-at the narrowest — every act, the board's field, the document's field, the
-strip and the marker inside the line and the window, no segment of it cut
-short, and every segment inside the window — marked with XFAIL_ACTING_WIDE
-while the acting-as segment, which has no compact form, is wider than a row;
-the strip's act showing its readout inside the window; and with the LEAP box
-open, then a reading scene, each of the line's parts the element found at its
-own centre.
+WALK_PX wide, the acting-as segment before it inside the line too, the line
+taking another row, its act unfolding it, the shell told nothing.
+THE ONE LINE SHORT OF ROOM (issues #310, #445's design decisions: "The line
+never clips"; "The segment is never hidden, put behind an act, or cut"):
+landed at a position of the first edition in windows LINE_ROWS_PX wide, the
+line on the step and the rows its layout holds — the address folded at the
+narrowest — every act, the board's field, the document's field, the strip and
+the marker inside the line and the window, no segment of it cut short, and
+every segment inside the window; the acting-as segment compact, its act a
+button the AX tree names by the words it shows whole in the wide window, the
+key's glyph standing for nothing there, its press by Enter opening those words
+inside the window, the focus kept on it; the strip's act showing its readout
+inside the window; the board's writes halted through the gate's door, its
+halted form's words whole inside the window, broken between them; and with
+the LEAP box open, then a reading scene, each of the line's parts the element
+found at its own centre.
 A STOP ONLY THE PANES' `compare` DRAWS, LEFT FROM AND RETURNED TO (FP-20,
 FP-21, FP-25, FP-34): a whole-document scene left from the stop at a band's
 clipped end, and from a stroke's button, by WHOLE BOARD, and returned to by
@@ -505,9 +509,6 @@ LABEL_TOL_PX = 0.5
 # the windows the one line is read short of room in (issue #310's design decision): a narrow split's, a phone's, and one
 # narrower than the address part at its widest whole, where the address folds
 LINE_ROWS_PX = (480, 375, 280)
-# the page issue the line's every segment standing inside these windows waits on
-XFAIL_ACTING_WIDE = ("issue #445: the acting-as segment has no compact form, so the session's words — some 600 px at the line's size on "
-                     "this machine — stand whole on a row of their own wider than the row, past the window's edge (web/line/line.js)")
 # how far above the one line's bottom the first edition's box's top stands at S3's mid-extents: its address's line, set at
 # the floor half a gutter below the top of its outline's first row, wholly under the line, then across the line's bottom edge
 UNDER_LINE_PX = (20, 6)
@@ -3086,9 +3087,9 @@ def walk_holds(ctx, r):
     shell's event raises one, over nothing standing — whole, its face standing; Esc folds it into its segment of the one
     line, naming the walk and its step and that it waits on the reader, its face gone and the shell told nothing. In a
     window WALK_PX wide, too narrow for the line's every part in one row, the segment stands whole inside the line, the
-    acting-as segment before it whole too, the line taking another row (issue #310); its act unfolds the moment, the
-    focus on its first words, and Esc folds it again. The moment is the gate's own, which no walk waits on and the next
-    case's fresh page leaves behind; its figures"""
+    acting-as segment before it inside the line too, the line taking another row (issues #310, #445); its act unfolds the
+    moment, the focus on its first words, and Esc folds it again. The moment is the gate's own, which no walk waits on and
+    the next case's fresh page leaves behind; its figures"""
     walk, step = 'gate-182', 'name this device'
     m = {'id': 'gate-moment-182', 'kind': 'label', 'data': {'title': step, 'statements': [], 'default': None}, 'walk': walk, 'board': None, 'answerable': True}
     ctx.js('window.__skep.leap.close()')
@@ -3115,7 +3116,7 @@ def walk_holds(ctx, r):
         line, seg, acting = seen['line'], seen['walk'], seen['acting']
         r.check(bool(seg) and seg['text'] == words and seg['over'] <= 0 and seg['right'] <= line['right'] + 0.5
                 and bool(acting) and acting['over'] <= 1 and acting['right'] <= line['right'] + 0.5 and len((seen.get('layout') or {}).get('rows') or []) > 1,
-                f'a {WALK_PX} px window, short of room: the walk\'s segment stands whole inside the one line, its words uncut, the acting-as segment before it whole, the line taking another row (issues #182: "It never yields when the line runs short", #310)',
+                f'a {WALK_PX} px window, short of room: the walk\'s segment stands whole inside the one line, its words uncut, the acting-as segment before it inside the line too, the line taking another row (issues #182: "It never yields when the line runs short", #310, #445)',
                 seen)
         ctx.js("document.querySelector('#line .seg.walk').click()")
         ctx.frames(2)
@@ -3148,6 +3149,45 @@ LINE_PARTS_JS = '''(() => { const line = document.getElementById('line'), q = (e
   return {line: L, vw, fields, cut: segs.filter((x) => x.over > 1), past: segs.filter((x) => x.rect.x + x.rect.w > vw + 0.5 || x.rect.x < -0.5),
           layout: window.__skep.line().layout, actsFirst: !!first && first.classList.contains('acts') && first.parentElement === line.firstElementChild}; })()'''
 
+# the one line's acting-as segment as a person meets it (`line_rows_hold`): its element, its act and its accessible label,
+# its words and the lines its fields stand on, whether it stands inside the window, how far its words run past its box,
+# whether the platform's focus stands on it, the layout's form for it, and its key's glyphs — each hidden from the
+# accessibility tree or not, and the words it holds
+LINE_ACTING_JS = '''(() => { const a = document.querySelector('#line .seg.acting'); if (!a) return null; const b = a.getBoundingClientRect();
+  const lines = new Set([...a.querySelectorAll('.field')].map((f) => Math.round(f.getBoundingClientRect().top))).size;
+  return {tag: a.tagName.toLowerCase(), act: a.dataset.act || null, label: a.getAttribute('aria-label'), text: a.textContent, lines,
+          inside: b.width > 0 && b.left >= -0.5 && b.right <= window.innerWidth + 0.5, over: a.scrollWidth - a.clientWidth, focused: document.activeElement === a,
+          form: (window.__skep.line().layout || {}).form, glyphs: [...a.querySelectorAll('svg')].map((g) => ({hidden: g.getAttribute('aria-hidden') === 'true', text: g.textContent}))}; })()'''
+
+# the one line's daemon segment as a person meets it (`line_rows_hold`): its words, whether it stands inside the window, how
+# far its words run past its box, the line boxes its words take, and the segments of the line past the window's edge
+LINE_DAEMON_JS = '''(() => { const e = document.querySelector('#line .seg.daemon'), vw = window.innerWidth; if (!e) return null; const b = e.getBoundingClientRect(), w = e.querySelector('[data-string]');
+  const past = [...document.querySelectorAll('#line .seg')].filter((x) => { const q = x.getBoundingClientRect(); return q.right > vw + 0.5 || q.left < -0.5; }).map((x) => x.className);
+  return {text: e.textContent, inside: b.width > 0 && b.left >= -0.5 && b.right <= vw + 0.5, over: e.scrollWidth - e.clientWidth, lines: w ? w.getClientRects().length : 0, past, layout: window.__skep.line().layout}; })()'''
+
+
+def acting_ax(ctx):
+    """the one line's acting-as segment as the AX tree holds it, where CDP answers the tree: its node's role and name, and
+    whether its key's glyph stands for anything there — a node of its own the tree does not ignore; None where CDP does not
+    answer"""
+    ax = ctx.drv.ax_tree()
+    if 'error' in ax:
+        return None
+    by_dom = {n['backendDOMNodeId']: n for n in ax.get('nodes', []) if 'backendDOMNodeId' in n}
+
+    def node(selector):
+        """the AX node of the element a selector names, by its backend DOM node id; None where none stands"""
+        obj = ctx.drv.call('Runtime.evaluate', {'expression': 'document.querySelector(%s)' % json.dumps(selector)})['result']
+        if not obj.get('objectId'):
+            return None
+        try:
+            return by_dom.get(ctx.drv.call('DOM.describeNode', {'objectId': obj['objectId']})['node']['backendNodeId'])
+        finally:
+            ctx.drv.call('Runtime.releaseObject', {'objectId': obj['objectId']})
+    seg, glyph = node('#line .seg.acting'), node('#line .seg.acting svg')
+    return {'role': ((seg or {}).get('role') or {}).get('value'), 'name': ((seg or {}).get('name') or {}).get('value'), 'glyph_shown': bool(glyph) and not glyph.get('ignored')}
+
+
 # each of the one line's parts, and whether the element found at the centre of what of it the window shows is inside it
 # (`line_rows_hold`)
 LINE_HITS_JS = '''(() => [...document.querySelectorAll('#line .row > :not(.sep)')].map((p) => { const b = p.getBoundingClientRect(), x = (Math.max(b.left, 0) + Math.min(b.right, window.innerWidth)) / 2, y = b.top + b.height / 2;
@@ -3156,15 +3196,25 @@ LINE_HITS_JS = '''(() => [...document.querySelectorAll('#line .row > :not(.sep)'
 
 def line_rows_hold(ctx, r):
     """THE ONE LINE SHORT OF ROOM (issue #310's design decision: "The line never clips … The line's acts … stand first …
-    An address wider than a row folds the levels between its board and its deepest level into one mark"): in each window
-    LINE_ROWS_PX wide, landed at the window run's position in the first edition, the line stands on the step and the rows
-    its layout holds — folded in the narrowest — and every act, the board's field, the document's field, the strip and the
-    marker stand whole inside the line and the window, no segment of it cut short; every segment stands inside the window
-    — the acting-as segment, which has no compact form, whole on a row of its own wider than the row, marked with
-    XFAIL_ACTING_WIDE; the strip's act there shows its readout inside the window; and with the LEAP box open, then with a
-    reading scene open, each of the line's parts is the element found at the centre of what of it the window shows,
-    neither standing over it. Its figures"""
+    An address wider than a row folds the levels between its board and its deepest level into one mark"; issue #445's:
+    "The whole short segment is one act that opens the full form … A field wider than a row wraps between words"): the
+    acting-as segment's words read whole in the window the case opens in; then in each window LINE_ROWS_PX wide, landed at
+    the window run's position in the first edition, the line stands on the step and the rows its layout holds — folded in
+    the narrowest — and every act, the board's field, the document's field, the strip and the marker stand whole inside
+    the line and the window, no segment of it cut short; every segment stands inside the window; the acting-as segment
+    stands compact, its act a button whose accessible label and AX name are those whole words, its key's glyph hidden and
+    standing for nothing in the AX tree, and Enter at the act opens those words inside the window, uncut, the focus kept
+    on the act; the strip's act there shows its readout inside the window; the board's writes halted through the gate's
+    door, the halted form's words stand whole inside the window, broken between them, every segment inside the window,
+    and lifted they go; and with the LEAP box open, then with a reading scene open, each of the line's parts is the element
+    found at the centre of what of it the window shows, neither standing over it. Its figures"""
     figures = {}
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('new Promise((r) => setTimeout(r, 300))')  # the line redraws on its own cadence, every 120 ms
+    wide = ctx.js(LINE_ACTING_JS) or {}
+    whole = wide.get('text') if wide.get('form') == 0 and wide.get('tag') == 'span' else None
+    r.check(bool(whole), 'the window the case opens in: the acting-as segment whole, no act (issue #445)', wide)
+    halted = ctx.js('(async () => (await import("./strings.js")).t("F.daemon.notebook.halted"))()')
     was = ctx.resize(LINE_ROWS_PX[0], 900)
     try:
         for w in LINE_ROWS_PX:
@@ -3180,7 +3230,25 @@ def line_rows_hold(ctx, r):
             r.check(v['actsFirst'] and not missing and not v['cut'] and (folded if w == LINE_ROWS_PX[-1] else lay.get('step') == 3),
                     f'a {w} px window: the one line on its layout\'s step {lay.get("step")} in {len(lay.get("rows") or [])} rows — its acts first, every act, the board\'s field, the document\'s field, the strip and the marker whole inside the line and the window, no segment cut short{", the account folded into its mark" if w == LINE_ROWS_PX[-1] else ""} (issue #310)',
                     {'layout': lay, 'missing': missing, 'cut': v['cut'], 'fields': {k: x and {'inside': x['inside'], 'text': x['text'][:40]} for k, x in f.items()}, 'line': v['line']})
-            r.check(not v['past'], f'a {w} px window: every segment of the one line inside the window (issue #310)', {'past': v['past'], 'vw': v['vw']}, xfail=XFAIL_ACTING_WIDE)
+            r.check(not v['past'], f'a {w} px window: every segment of the one line inside the window (issues #310, #445)', {'past': v['past'], 'vw': v['vw']})
+            act, ax = ctx.js(LINE_ACTING_JS), acting_ax(ctx)
+            named = bool(act) and bool(whole) and act['tag'] == 'button' and act['act'] == 'acting' and act['label'] == whole and act['text'] != whole and act['inside'] and act['over'] <= 1
+            hidden = bool(act) and all(g['hidden'] and not g['text'].strip() for g in act['glyphs'])
+            if ax is None:
+                r.note(f'a {w} px window: Accessibility.getFullAXTree did not answer; the acting-as segment\'s act read from the DOM alone')
+            r.check(named and hidden and (ax is None or (ax['role'] == 'button' and ax['name'] == whole and not ax['glyph_shown'])),
+                    f'a {w} px window: the acting-as segment compact — "{(act or {}).get("text", "")}" — its act a button the AX tree names by the words it shows whole, its key\'s glyph hidden and standing for nothing there (issue #445: "Assistive technology reads the whole form, never the glyph")',
+                    {'act': act, 'ax': ax, 'whole': whole})
+            ctx.js("(() => { const b = document.querySelector('#line [data-act=acting]'); if (b) b.focus({preventScroll: true}); })()")
+            ctx.drv.key('Enter')
+            ctx.frames(2)
+            unfolded = ctx.js(LINE_ACTING_JS)
+            ctx.js('window.__skep.lineAct()')
+            ctx.js('document.activeElement && document.activeElement.blur && document.activeElement.blur()')
+            ctx.frames(2)
+            r.check(bool(unfolded) and unfolded['text'] == whole and unfolded['act'] == 'acting' and unfolded['inside'] and unfolded['over'] <= 1 and unfolded['focused'],
+                    f'a {w} px window: Enter at the act opens the acting-as segment\'s whole form inside the window, uncut, the focus kept on the act (issue #445: "The whole short segment is one act that opens the full form")',
+                    {'opened': unfolded, 'whole': whole})
             ctx.js("document.querySelector('#line button.slot[data-act=strip]') && document.querySelector('#line button.slot[data-act=strip]').click()")
             ctx.frames(2)
             readout = ctx.js('''(() => { const e = document.querySelector('#line .seg.transient[data-string="strip"]'); if (!e) return null; const b = e.getBoundingClientRect();
@@ -3189,6 +3257,15 @@ def line_rows_hold(ctx, r):
             ctx.frames(2)
             r.check(bool(readout) and readout['inside'] and readout['over'] <= 1 and readout['text'].startswith('position %d' % WINDOW[0]),
                     f'a {w} px window: the strip\'s act shows the position\'s readout, whole inside the line and the window (issue #310: "its readout opens on the strip\'s act")', readout)
+            ctx.js('window.__skep.halt(true)')
+            ctx.js('new Promise((r) => setTimeout(r, 300))')
+            halt = ctx.js(LINE_DAEMON_JS)
+            ctx.js('window.__skep.halt(false)')
+            ctx.js('new Promise((r) => setTimeout(r, 300))')
+            lifted = ctx.js("!document.querySelector('#line .seg.daemon')")
+            r.check(bool(halt) and halt['text'] == halted and halt['inside'] and halt['over'] <= 1 and not halt['past'] and lifted,
+                    f'a {w} px window: the board\'s writes halted, its halted form\'s words stand whole inside the window over {(halt or {}).get("lines")} line boxes, every segment inside the window; the halt lifted, they go (issue #445: "A field wider than a row wraps between words")',
+                    {'halt': halt, 'lifted': lifted})
             covered = {}
             ctx.js('window.__skep.leap.open()')
             ctx.frames(2)
@@ -3205,7 +3282,8 @@ def line_rows_hold(ctx, r):
             r.check(opened and all(covered.values()) and not any(under.values()),
                     f'a {w} px window: with the LEAP box open, then a reading scene, each of the one line\'s parts is the element found at its own centre — neither stands over the line\'s rows (issue #310)',
                     {'scene_opened': opened, 'covered': under, 'parts': len(covered.get('leap') or [])})
-            figures[w] = {'layout': lay, 'readout': readout and readout['text'][:60]}
+            figures[w] = {'layout': lay, 'acting': act and act['text'], 'acting_opened_lines': unfolded and unfolded['lines'], 'readout': readout and readout['text'][:60],
+                          'halt_lines': halt and halt['lines']}
     finally:
         ctx.resize(*was)
         ctx.settle()

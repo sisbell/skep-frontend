@@ -62,11 +62,6 @@ NARROW = (NARROW_PX, 900)
 KEPT_IDS = {'kept': 'B3.kept', 'not yet kept': 'B3.not-yet-kept', 'not kept': 'B3.not-kept'}
 # the seam's own route, which the provider logs as no call of the page's
 SEAM = 'script'
-# the page issues the marked checks wait on; each mark comes off the day its check passes
-XFAIL_HALTED_WIDE = ("issue #444: the daemon's halted form, whole, is wider than a row of the one line at the narrow width — some 505 px "
-                     "at the line's size on this machine, against the 460 px a 480 px window's row holds — and no rule says what the "
-                     "line keeps of a part that never yields and does not fit a row, so its words run past the window's edge "
-                     "(web/line/line.js)")
 
 # THE TABLE. `how` says what reaches the state; `claim` what a person meets, which the check holds the page to; `drawn`
 # whether the page draws the state at HEAD, with `why` naming the module or unit a state not drawn waits on
@@ -551,7 +546,7 @@ def run(ctx):
             vis = shown(ctx, '#line [data-string="F.daemon.notebook.halted"]')
             ok = consumed and seg == want and bool(h) and (h.get('writes') or {}).get('halted') is True and ctx.js('window.__skep.model.session()') is not None and len(vis) == 1
             return ok, {'consumed': consumed, 'segment': seg, 'want': want, 'writes': h and h.get('writes'), 'shown': len(vis)}
-        shoot('writes-halted', halted_check, marks={NARROW_PX: XFAIL_HALTED_WIDE})
+        shoot('writes-halted', halted_check)
         leave_page()
 
     # ---- (l) the sweep, the owner's page again, the write check over the harness's provider's log ---------------------------------

@@ -45,9 +45,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .warn { color:var(--warn); }
 
 /* THE ONE LINE — standing chrome, the only piece (foundations §3.1): its rows as L-LINE's layout sets them, each its parts
-   on their text's baseline, none of them cut short — a part wider than a row whole on a row of its own; beneath them, the
-   statements that arrived with no room, wrapping inside the window (L-LINE's `fit`; FP-26). Its bottom edge is
-   `--line-bottom`, which L-LINE publishes */
+   on their text's baseline, none of them cut short — a part wider than a row whole on a row of its own, the acting-as
+   segment and the daemon's form taking the row's room at the most and breaking inside it; beneath them, the statements
+   that arrived with no room, wrapping inside the window (L-LINE's `fit`; FP-26). Its bottom edge is `--line-bottom`, which
+   L-LINE publishes */
 #line { position:fixed; top:0; left:0; right:0; z-index:20; padding:3px 10px; font-size:11px; line-height:1.6; background:var(--bg); border-bottom:1px solid var(--line); }
 #line .row { display:flex; align-items:baseline; white-space:nowrap; }
 #line .row > * { flex:none; }
@@ -105,6 +106,16 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 /* a walk's folded moment, a kept clause and the daemon's stopped, unreachable and halted forms: their words whole (FP-26, FP-36) */
 #line .seg.walk { color:var(--warn); }
 #line .seg.kept { color:#cfd6df; }
+/* the acting-as segment and the daemon's form never cut: in a row, each shrinks to the row's room at the most and breaks
+   inside it — the segment's fields each a box no wider than the row with a space between two, so it breaks between fields
+   and a field wider than the row between its words (L-LINE's `boxed`; FP-26). Compact, the segment is its act, a native
+   button drawn as the segment it is; the key's presence is a drawn key in the text's colour, a gap after it where words
+   follow */
+#line .row > .seg.acting, #line .row > .seg.daemon { flex:0 1 auto; min-width:0; white-space:normal; }
+#line .seg.acting .field { display:inline-block; max-width:100%; }
+#line button.seg.acting { background:none; border:0; border-radius:0; padding:0; margin:0; color:inherit; font:inherit; line-height:inherit; text-align:left; white-space:normal; cursor:pointer; }
+#line .key { display:inline-block; width:1.15em; height:.72em; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; margin-right:.3em; }
+#line .key.alone { margin-right:0; }
 
 /* LEAP — the address segment opened (K-30); below the one line's bottom edge, however many rows it takes; above the reading
    scene, which it may open over, and above the overlay and the notice below it, so nothing shown while the reader types in

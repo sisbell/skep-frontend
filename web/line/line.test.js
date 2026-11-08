@@ -390,7 +390,7 @@ test('a restart the shell re-opened leaves the acting-as segment as it stood: no
   assert.equal(was.state, 2, 'acting as, through the signed session');
   fake.fire('session-died', { session: 's-1', reason: { arm: 'restart', reopened: true, session: 's-9' } });
   assert.deepEqual(LINE.actingSegment(), was, 'the same words and state under the re-opened session');
-  assert.ok(!LINE.actingSegment().html.includes('data-act="signin"'), 'no sign-in offered');
+  assert.ok(!LINE.actingSegment().forms.join('').includes('data-act="signin"'), 'no sign-in offered');
 });
 
 test('the sign-in act stands among the line\'s acts, after Back, Forward and the trail, for a guest and for the death arm, bearing its id as Back does: the session\'s face standing at it finds it again as the line is rebuilt (O-HOST\'s anchor; issue #310\'s design decision: "The line\'s acts — Back, Forward, and a guest\'s \'sign in\' … — stand first")', () => {
@@ -407,7 +407,7 @@ test('the sign-in act stands among the line\'s acts, after Back, Forward and the
     const dead = LINE.actingSegment(), asDead = line();
     assert.deepEqual([guest.state, dead.state], [1, 5], 'a guest\'s line, then the death arm');
     for (const [s, l] of /** @type {Array<[typeof guest, typeof asGuest]>} */ ([[guest, asGuest], [dead, asDead]])) {
-      assert.ok(s.signIn && !s.html.includes('data-act="signin"'), `state ${s.state}: sign-in offered, none in the acting-as segment's words`);
+      assert.ok(s.signIn && !s.forms.join('').includes('data-act="signin"'), `state ${s.state}: sign-in offered, none in the acting-as segment's words`);
       assert.deepEqual(l.signIn, ['<button id="line-signin" data-act="signin">'], `state ${s.state}: one sign-in act, bearing its id`);
       assert.ok(l.acts.endsWith(`<button id="line-signin" data-act="signin">${esc(t('F.sign-in'))}</button>`) && l.acts.includes('data-act="trail"'), `state ${s.state}: among the acts, after the trail: ${l.acts}`);
     }
@@ -422,7 +422,7 @@ test('the guest line names the board `boards()` found — its origin between the
     REC.setSession(null);
     REC.takeBoards({ result: [{ board: 'b-1', name: 'http://127.0.0.1:9000', origin: 'http://127.0.0.1:9000' }] });
     const found = LINE.actingSegment();
-    assert.deepEqual([found.state, shown(found.html), found.signIn], [1, `${t('B1.guest-line')} · http://127.0.0.1:9000 · ${t('F.venue.notebook')}`, true], 'a board found: its origin between the guest line and the venue, its sign-in among the line\'s acts');
+    assert.deepEqual([found.state, shown(found.forms[0]), found.signIn], [1, `${t('B1.guest-line')} · http://127.0.0.1:9000 · ${t('F.venue.notebook')}`, true], 'a board found: its origin between the guest line and the venue, its sign-in among the line\'s acts');
   } finally {
     REC.setBoard(was.board); REC.setSession(was.session);
   }
@@ -445,7 +445,7 @@ test('where `boards()` found no board the line names none — no guest line, ven
     REC.takeBoards({ result: [] });
     const empty = LINE.actingSegment();
     assert.deepEqual([empty.state, empty.words, empty.alarm], [0, t('F.unclaimed'), false], 'the list empty: why, none of the seven states, nothing said assertively');
-    assert.equal(empty.html, `<button id="line-unclaimed" data-act="unclaimed" class="inert" data-string="F.unclaimed">${esc(t('F.unclaimed'))}</button>`, 'the doors\' act, inert, standing alone in the guest line\'s place');
+    assert.deepEqual(empty.forms, [`<button id="line-unclaimed" data-act="unclaimed" class="inert" data-string="F.unclaimed">${esc(t('F.unclaimed'))}</button>`], 'the doors\' act, inert, standing alone in the guest line\'s place, its one form');
     LINE.render(true);
     for (const word of [t('B1.guest-line'), t('F.venue.notebook'), t('F.sign-in'), 'data-act="signin"', 'acting as']) assert.ok(!host.innerHTML.includes(word), `the line names no ${word}: ${host.innerHTML}`);
     live.textContent = '';
@@ -455,14 +455,14 @@ test('where `boards()` found no board the line names none — no guest line, ven
     LINE.act();
     REC.takeBoards({ refused: { kind: 'unreachable', name: 'unreachable', text: 'refused' } });
     const unreached = LINE.actingSegment();
-    assert.deepEqual([unreached.state, shown(unreached.html)], [0, `${t('L.boards-unread')} ${t('B1.try-again')}`], 'the board not answering: its words, and "try again"');
-    assert.ok(unreached.html.startsWith(`<span data-string="L.boards-unread">${esc(t('L.boards-unread'))}</span> <button id="line-again" data-act="again">`), unreached.html);
+    assert.deepEqual([unreached.state, unreached.forms.length, shown(unreached.forms[0])], [0, 1, `${t('L.boards-unread')} ${t('B1.try-again')}`], 'the board not answering: its words, and "try again", its one form');
+    assert.ok(unreached.forms[0].startsWith(`<span data-string="L.boards-unread">${esc(t('L.boards-unread'))}</span> <button id="line-again" data-act="again">`), unreached.forms[0]);
     LINE.render(true);
     press('again');
     assert.equal(again, 1, 'its press reads the list again: the act the app hands in');
     REC.takeBoards({ refused: { kind: 'shell', name: 'provider_403', status: 403, text: 'not admitted' } });
     const refused = LINE.actingSegment();
-    assert.deepEqual([refused.state, shown(refused.html), refused.html.includes('data-act')], [0, t('L.boards-unread'), false], 'the provider\'s own refusal: its words, and no retry offered where none may tell');
+    assert.deepEqual([refused.state, shown(refused.forms[0]), refused.forms[0].includes('data-act')], [0, t('L.boards-unread'), false], 'the provider\'s own refusal: its words, and no retry offered where none may tell');
   } finally {
     LINE.act(); REC.setBoard(was.board); REC.setSession(was.session);
   }
@@ -475,9 +475,9 @@ test('with no adapter beneath the port the acting-as segment says why none stand
     /** the segment where the port answers its own refusal, the list's answer taken as the boot takes it */
     const unreached = async (/** @type {boolean} */ badPort) => { PORT.boot(null, { badPort }); REC.takeBoards(await PORT.boards({})); return LINE.actingSegment(); };
     const bad = await unreached(true);
-    assert.deepEqual(bad, { html: `<span data-string="L.bad-port">${esc(t('L.bad-port'))}</span>`, state: 0, words: t('L.bad-port'), alarm: false, signIn: false }, 'the port named no port: its words alone, none of the seven, nothing said assertively');
+    assert.deepEqual(bad, { forms: [`<span data-string="L.bad-port">${esc(t('L.bad-port'))}</span>`], name: null, shape: 'L.bad-port', state: 0, words: t('L.bad-port'), alarm: false, signIn: false }, 'the port named no port: its words alone, one form, none of the seven, nothing said assertively');
     const none = await unreached(false);
-    assert.deepEqual(none, { html: `<span data-string="L.no-adapter">${esc(t('L.no-adapter'))}</span>`, state: 0, words: t('L.no-adapter'), alarm: false, signIn: false }, 'no shell and no provider: its words alone');
+    assert.deepEqual(none, { forms: [`<span data-string="L.no-adapter">${esc(t('L.no-adapter'))}</span>`], name: null, shape: 'L.no-adapter', state: 0, words: t('L.no-adapter'), alarm: false, signIn: false }, 'no shell and no provider: its words alone, one form');
   } finally {
     // the shared fake's calls given back, its events reaching the port through the subscription the first boot made
     PORT.boot({ ...fake, subscribe() {}, onStream() {} });
@@ -510,7 +510,7 @@ test('where no board is held the address display reads "go to an address" alone 
   } finally { REC.setBoard(was); }
 });
 
-test('the session\'s own `writes` decides the acting-as segment: the keyless session reads state 3\'s words over any key store, a session that writes reads state 2 with the label of the key it is opened with (foundations §3.1, §3.3; E16 (a′))', () => {
+test('the session\'s own `writes` decides the acting-as segment: the keyless session reads state 3\'s words over any key store, a session that writes reads state 2 with the label of the key it is opened with — each naming no origin, the board the person\'s own notebook (foundations §3.1, §3.3 state 2: "THE LOOPBACK ORIGIN … DROPPED"; E16 (a′); issue #445\'s design decision: "Your own notebook\'s segment shows no origin")', () => {
   const was = { board: REC.board(), session: REC.session() };
   const O = 'http://127.0.0.1:8642';
   /** a key of the store as `fingerprint` answers it */
@@ -524,9 +524,10 @@ test('the session\'s own `writes` decides the acting-as segment: the keyless ses
     for (const [store, holds] of stores) {
       REC.takeKeyStore(store, O);
       REC.setSession({ session: 's-2', principal: 1, account: '1.0.1', writes: false });
-      const seg = LINE.actingSegment();
-      assert.deepEqual([seg.state, seg.words], [3, t('F.keyless-session', { account: '1.0.1', origin: O })], `the keyless session over ${holds}: state 3's words`);
-      assert.deepEqual([seg.html.includes('data-string="F.keyless-session"'), seg.html.includes('F.acting-as'), seg.html.includes('key present on this device'), seg.html.includes('data-act="signin"')], [true, false, false, false], `over ${holds}: no acting-as, no key claimed, no sign-in`);
+      const seg = LINE.actingSegment(), html = seg.forms.join('');
+      assert.deepEqual([seg.state, seg.words, seg.forms.length, seg.name], [3, t('F.keyless-session', { account: '1.0.1' }), 1, null], `the keyless session over ${holds}: state 3's words, kept whole in its one form`);
+      assert.equal(seg.words, 'reading as 1.0.1 with no key — local trust; writing needs your key · on your LOCAL notebook', `over ${holds}: foundations §3.1's words, no origin after the venue`);
+      assert.deepEqual([html.includes('data-string="F.keyless-session"'), html.includes('F.acting-as'), html.includes('key present on this device'), html.includes('data-act="signin"'), html.includes(O)], [true, false, false, false, false], `over ${holds}: no acting-as, no key claimed, no sign-in, no origin`);
     }
     /** @type {Array<[ReturnType<typeof key>[], string, string]>} each key store, the label of the key the session is opened with, and what the store holds */
     const signed = [[[elsewhere, here], 'dev-notebook', 'the key bound here for its principal, after one bound at another board'], [[elsewhere], 'other-board', 'the store\'s one key, bound at another board alone']];
@@ -534,8 +535,10 @@ test('the session\'s own `writes` decides the acting-as segment: the keyless ses
       REC.takeKeyStore(store, O);
       REC.setSession({ session: 's-3', principal: 1, account: '1.0.1', writes: true });
       const seg = LINE.actingSegment();
-      assert.deepEqual([seg.state, seg.words], [2, t('F.acting-as', { account: '1.0.1', N: 1, 'device label': label, origin: O })], `a session that writes over ${holds}: state 2, naming ${label}`);
-      assert.ok(seg.html.includes(`<span class="slot" data-slot="label" role="img" aria-label="${esc(t('L.slot.named', { role: t('L.slot.device-label'), shows: label }))}">${esc(label)}</span>`), `over ${holds}: the device label's slot, named by its role and its label`);
+      assert.deepEqual([seg.state, seg.words], [2, t('F.acting-as', { account: '1.0.1', N: 1, 'device label': label })], `a session that writes over ${holds}: state 2, naming ${label}`);
+      assert.equal(seg.words, `acting as 1.0.1 (principal 1) on your LOCAL notebook · ${label} · key present on this device`, `over ${holds}: foundations §3.3 state 2's words, no origin`);
+      assert.ok(seg.forms[0].includes(`<span class="slot" data-slot="label" role="img" aria-label="${esc(t('L.slot.named', { role: t('L.slot.device-label'), shows: label }))}">${esc(label)}</span>`), `over ${holds}: the device label's slot, named by its role and its label`);
+      assert.ok(!seg.forms.join('').includes(O), `over ${holds}: no form names the origin`);
     }
   } finally {
     REC.takeKeyStore([], O); REC.setBoard(was.board); REC.setSession(was.session);
@@ -560,9 +563,10 @@ test('the one line\'s device label never shows its template placeholder: where t
     for (const [holds, store, id] of stores) {
       REC.takeKeyStore(store, O);
       const seg = LINE.actingSegment();
-      assert.deepEqual([seg.state, seg.words], [2, t('F.acting-as', { account: '1.0.1', N: 1, 'device label': t(id), origin: O })], `${holds}: state 2, its slot saying "${t(id)}"`);
-      assert.ok(seg.html.includes(`<span class="slot" data-slot="label" data-string="${id}" role="img" aria-label="${esc(t('L.slot.named', { role: t('L.slot.device-label'), shows: t(id) }))}">${esc(t(id))}</span>`), `${holds}: the slot carries its cause's string and its name: ${seg.html}`);
-      assert.ok(!/⟨[^⟩]*⟩/.test(seg.html) && !/⟨[^⟩]*⟩/.test(seg.words), `${holds}: no ⟨token⟩ in the line`);
+      assert.deepEqual([seg.state, seg.words], [2, t('F.acting-as', { account: '1.0.1', N: 1, 'device label': t(id) })], `${holds}: state 2, its slot saying "${t(id)}"`);
+      assert.ok(seg.forms[0].includes(`<span class="slot" data-slot="label" data-string="${id}" role="img" aria-label="${esc(t('L.slot.named', { role: t('L.slot.device-label'), shows: t(id) }))}">${esc(t(id))}</span>`), `${holds}: the slot carries its cause's string and its name: ${seg.forms[0]}`);
+      const said = [...seg.forms, seg.words, seg.name ? t(seg.name.id, seg.name.values) : ''];
+      assert.ok(!said.some((x) => /⟨[^⟩]*⟩/.test(x)), `${holds}: no ⟨token⟩ in any form, its words or the act's name`);
     }
   } finally {
     REC.takeKeyStore([], O); REC.setBoard(was.board); REC.setSession(was.session);
@@ -665,7 +669,8 @@ test('a restart that re-opened none leaves the acting-as segment as it stood for
   ctx.mock.timers.tick(PUMP.RECONNECTING_MS);
   const back = LINE.actingSegment();
   assert.deepEqual([back.state, back.words, back.alarm], [2, t('L.reconnecting', { account: '1.0.1' }), false], 'past it: reconnecting, the session\'s state kept');
-  assert.ok(back.html.includes('data-string="L.reconnecting"') && !back.html.includes('C-137') && !back.html.includes('data-act="signin"'), back.html);
+  assert.deepEqual([back.forms.length, back.name], [1, null], 'reconnecting keeps its words: one form, no act');
+  assert.ok(back.forms[0].includes('data-string="L.reconnecting"') && !back.forms[0].includes('C-137') && !back.forms[0].includes('data-act="signin"'), back.forms[0]);
   LINE.render();
   assert.equal(live.textContent, '', 'nothing said while it reconnects');
   call();
@@ -689,8 +694,9 @@ test('a restart whose call again is refused leaves the page in the guest state b
     await flush();
     const seg = LINE.actingSegment(), lead = t('L.reconnect-refused', { account: '1.0.1' });
     assert.deepEqual([REC.session(), seg.state, seg.words, seg.alarm], [null, 3, lead, true], 'a guest, in the keyless cell boot shows for no_key, led by the words');
-    assert.ok(seg.html.startsWith(`<span data-string="L.reconnect-refused">${tHTML('L.reconnect-refused', { account: '1.0.1' }, { account: 'id' })}</span> · <span data-string="B1.guest-line">`) && seg.html.includes('data-string="L.session-refused"') && seg.signIn, `boot's guest segment for the refusal after the words, the account in the identifier's face, its sign-in among the line's acts: ${seg.html}`);
-    assert.ok(!seg.html.includes('C-137'), 'never the signed-out words');
+    assert.ok(seg.forms[0].startsWith(`<span class="field"><span data-string="L.reconnect-refused">${tHTML('L.reconnect-refused', { account: '1.0.1' }, { account: 'id' })}</span> ·</span> <span class="field"><span data-string="B1.guest-line">`) && seg.forms[0].includes('data-string="L.session-refused"') && seg.signIn, `boot's guest segment for the refusal after the words, the account in the identifier's face, its sign-in among the line's acts: ${seg.forms[0]}`);
+    assert.ok(seg.forms.every((f) => f.includes(`<span data-string="L.reconnect-refused">`) && f.includes('data-string="L.session-refused"')), 'the lead and the refusal keep their words in every form');
+    assert.ok(!seg.forms.join('').includes('C-137'), 'never the signed-out words');
     LINE.render();
     assert.deepEqual([live.textContent, live.live], [lead, 'assertive'], 'said assertively as it arrives');
     live.textContent = '';
@@ -706,12 +712,13 @@ test('a death of an arm whose words this page does not hold — seeded, blocked,
       REC.setSession(was);
       REC.sessionDied(/** @type {import('../bridge/shapes').DeathReason} */ (reason));
       const seg = LINE.actingSegment();
-      assert.deepEqual([seg.state, seg.words, seg.alarm], [5, guest, true], `the ${reason.arm} arm: the death, in the guest line's words, said assertively`);
-      assert.ok(seg.html.startsWith('<span data-string="B1.guest-line">') && seg.signIn && !seg.html.includes('C-137'), `the ${reason.arm} arm, its sign-in among the line's acts: ${seg.html}`);
+      assert.deepEqual([seg.state, seg.words, seg.alarm, seg.forms.length, seg.name], [5, guest, true, 1, null], `the ${reason.arm} arm: the death, in the guest line's words whole in the head's place, said assertively`);
+      assert.ok(seg.forms[0].startsWith('<span class="field"><span data-string="B1.guest-line">') && seg.signIn && !seg.forms[0].includes('C-137'), `the ${reason.arm} arm, its sign-in among the line's acts: ${seg.forms[0]}`);
     }
     REC.setSession(was);
     REC.sessionDied({ arm: 'closed' });
-    assert.ok(LINE.actingSegment().html.startsWith('<span data-string="C-137.signed-out">'), 'the page\'s own close: "signed out"');
+    const closed = LINE.actingSegment();
+    assert.ok(closed.forms.length === 1 && closed.forms[0].startsWith('<span data-string="C-137.signed-out">'), 'the page\'s own close: "signed out", the ending\'s head kept whole (FP-32)');
   } finally { REC.setSession(was); }
 });
 
@@ -751,6 +758,8 @@ const counted = (forms) => forms.map((f) => {
 const SEP = '<span class="sep">│</span>';
 /** a part's key, from its markup as the line renders it */
 const keyOf = (/** @type {string} */ html) => (html.startsWith('<span class="acts">') ? 'acts' : html.startsWith('<span class="address-part"') ? 'address' : (/class="seg (\w+)/.exec(html) || [])[1] || '?');
+/** markup's words as a person reads them: its tags taken out, its characters unescaped */
+const plain = (/** @type {string} */ html) => html.replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
 /** the line's rows as it renders them, each its parts' markup, and what stands beneath them */
 const laidOut = (/** @type {string} */ html) => {
   const [rows, beneath = ''] = html.split('<div class="beneath">');
@@ -767,41 +776,63 @@ function clicked(/** @type {Partial<import('./line.js').Acts>} */ more = {}) {
   return { host, press };
 }
 
-test('the line\'s layout is the least step whose rows hold its parts at their widths: one row at steps 0 to 2, else rows broken between parts, and the address part folded where it is wider than a row', () => {
+test('the line\'s layout is the least step whose rows hold its parts at their widths: one row at steps 0 and 1, the acting-as segment whole; one row at step 2, the segment in the first of its compact forms that holds it — its fields giving way in turn, then its short form; else its short form on rows broken between parts, and the address part folded where it is wider than a row (issue #445\'s design decision)', () => {
   /** @type {Record<string, number[]>} each part's width at steps 0 to 4 */
-  const w = { acts: [200, 200, 200, 200, 200], address: [400, 280, 280, 280, 240], acting: [500, 500, 150, 150, 150], walk: [180, 180, 180, 180, 180] };
-  const at = (/** @type {string} */ k, /** @type {0 | 1 | 2 | 3 | 4} */ step) => w[k][step];
+  const w = { acts: [200, 200, 200, 200, 200], address: [400, 280, 280, 280, 240], walk: [180, 180, 180, 180, 180] };
+  /** the acting-as segment's width in each of its forms: whole, its principal number gone, its device label gone, short */
+  const acting = [500, 420, 340, 150];
+  const at = (/** @type {string} */ k, /** @type {0 | 1 | 2 | 3 | 4} */ step, /** @type {number} */ form) => (k === 'acting' ? acting[form] : w[k][step]);
   const keys = ['acts', 'address', 'acting', 'walk'];
-  assert.deepEqual(LINE.layoutOf(keys, at, 10, 1310), { step: 0, rows: [keys] }, 'every part whole in one row: 200 + 400 + 500 + 180 and three gaps');
-  assert.deepEqual(LINE.layoutOf(keys, at, 10, 1300), { step: 1, rows: [keys] }, 'ten short: the position its strip alone');
-  assert.deepEqual(LINE.layoutOf(keys, at, 10, 840), { step: 2, rows: [keys] }, 'the acting-as segment compact');
-  assert.deepEqual(LINE.layoutOf(keys, at, 10, 839), { step: 3, rows: [['acts', 'address', 'acting'], ['walk']] }, 'further rows, broken between parts');
-  assert.deepEqual(LINE.layoutOf(keys, at, 10, 300), { step: 3, rows: [['acts'], ['address'], ['acting'], ['walk']] }, 'a part a row');
-  assert.deepEqual(LINE.layoutOf(keys, at, 10, 279), { step: 4, rows: [['acts'], ['address'], ['acting'], ['walk']] }, 'the address part wider than a row: folded');
+  assert.deepEqual(LINE.layoutOf(keys, at, 10, 1310, 4), { step: 0, form: 0, rows: [keys] }, 'every part whole in one row: 200 + 400 + 500 + 180 and three gaps');
+  assert.deepEqual(LINE.layoutOf(keys, at, 10, 1300, 4), { step: 1, form: 0, rows: [keys] }, 'ten short: the position its strip alone, the segment whole');
+  assert.deepEqual(LINE.layoutOf(keys, at, 10, 1189, 4), { step: 2, form: 1, rows: [keys] }, 'short of the segment whole: its principal number gone');
+  assert.deepEqual(LINE.layoutOf(keys, at, 10, 1109, 4), { step: 2, form: 2, rows: [keys] }, 'short of that: its device label gone too');
+  assert.deepEqual(LINE.layoutOf(keys, at, 10, 1029, 4), { step: 2, form: 3, rows: [keys] }, 'short of that: its short form');
+  assert.deepEqual(LINE.layoutOf(keys, at, 10, 839, 4), { step: 3, form: 3, rows: [['acts', 'address', 'acting'], ['walk']] }, 'further rows, broken between parts, the segment short');
+  assert.deepEqual(LINE.layoutOf(keys, at, 10, 300, 4), { step: 3, form: 3, rows: [['acts'], ['address'], ['acting'], ['walk']] }, 'a part a row');
+  assert.deepEqual(LINE.layoutOf(keys, at, 10, 279, 4), { step: 4, form: 3, rows: [['acts'], ['address'], ['acting'], ['walk']] }, 'the address part wider than a row: folded');
+  // a segment with no compact form — an exception's words — is whole at every step
+  const whole = (/** @type {string} */ k, /** @type {0 | 1 | 2 | 3 | 4} */ step) => (k === 'acting' ? 500 : w[k][step]);
+  assert.deepEqual(LINE.layoutOf(keys, whole, 10, 1189), { step: 3, form: 0, rows: [['acts', 'address', 'acting'], ['walk']] }, 'one form: no step 2 to take, further rows, the segment whole');
 });
 
-test('short of room the line gives way in steps, each keeping the ones before it — the acts first and whole, a guest\'s sign-in among them; then the position its strip alone, still marked; then, no part of it having a compact form, further rows broken only between parts, each within its row or a part wider than a row alone on its own, the acting-as segment\'s words whole; then the address folded, its account in the fold mark\'s place, its board\'s field, its document\'s field, its strip and its marker whole (issue #310\'s design decision)', async () => {
+test('short of room the line gives way in steps, each keeping the ones before it — the acts first and whole, a guest\'s sign-in among them; then the position its strip alone, still marked; then the acting-as segment\'s fields giving way whole in turn — the principal number, a board only read\'s origin and venue, the device label — then its short form, every form short of the whole one act named and titled by the whole form\'s words, the key\'s glyph hidden from the accessibility tree; then further rows broken only between parts, the segment short, each within its row or a part wider than a row alone on its own; then the address folded, its account in the fold mark\'s place, its board\'s field, its document\'s field, its strip and its marker whole (issues #310, #445\'s design decisions)', async () => {
   const was = REC.session(), { host } = clicked();
   over(D, NEAR);
   await WALK.focusTo(D, 15);
-  /** @type {Array<[string, Array<[number, number]>]>} who the line acts as, and the rows it is laid out on, each with the step it reaches there */
-  const cases = [['a signed session', [[1300, 0], [1200, 1], [800, 3], [600, 3], [280, 4]]], ['a guest', [[900, 0], [800, 1], [600, 3], [280, 4]]]];
+  /** @type {Array<[string, Array<[number, number, number]>]>} who the line acts as, and the rows it is laid out on, each with the step and the acting-as segment's form it reaches there */
+  const cases = [
+    ['a signed session', [[1300, 0, 0], [1200, 1, 0], [1060, 2, 1], [1000, 2, 2], [800, 2, 3], [600, 3, 3], [280, 4, 3]]],
+    ['a guest', [[900, 0, 0], [800, 1, 0], [700, 2, 1], [600, 2, 2], [500, 3, 2], [280, 4, 2]]],
+  ];
   try {
     for (const [who, rooms] of cases) {
       if (who === 'a guest') REC.setSession(null);
-      const acting = LINE.actingSegment();
-      for (const [room, step] of rooms) {
+      const acting = LINE.actingSegment(), name = acting.name ? t(acting.name.id, acting.name.values) : '';
+      const label = acting.name ? String(acting.name.values['device label'] ?? '') : '';
+      /** each form's words, as the forms run: whole, then each turn given way, then short */
+      const words = who === 'a guest'
+        ? [`${t('B1.guest-line')} · ${t('F.venue.notebook')}`, t('B1.guest-line'), t('L.guest-line.short')]
+        : [`acting as 1.0.1 (principal 1) on your LOCAL notebook · ${label} · key present on this device`, `acting as 1.0.1 on your LOCAL notebook · ${label} · key present on this device`, 'acting as 1.0.1 on your LOCAL notebook · key present on this device', 'as 1.0.1 · LOCAL notebook · '];
+      assert.deepEqual([acting.forms.map(plain), name], [words, words[0]], `${who}: its forms' words, the act's name its whole form's`);
+      for (const [room, step, form] of rooms) {
         LINE.fit({ room, measure: counted });
         LINE.render(true);
         const { rows, beneath } = laidOut(host.innerHTML), parts = rows.flat(), where = `${who}, a row ${room} px wide`;
-        assert.equal(LINE.held()?.step, step, `${where}: step ${step}`);
+        assert.deepEqual([LINE.held()?.step, LINE.held()?.form], [step, form], `${where}: step ${step}, the acting-as segment's form ${form}`);
         assert.deepEqual(rows.map((r) => r.map(keyOf)), LINE.held()?.rows, `${where}: its rows as the layout holds them`);
         assert.equal(beneath, '', `${where}: nothing beneath the line`);
         const [acts, address] = [parts[0], parts.find((p) => keyOf(p) === 'address') || ''];
         assert.ok(keyOf(acts) === 'acts' && ['back', 'forward', 'trail'].every((a) => acts.includes(`data-act="${a}"`)) && acts.includes('data-act="signin"') === (who === 'a guest'), `${where}: the acts first and whole${who === 'a guest' ? ', sign-in among them' : ''}: ${acts}`);
         assert.equal(address.includes('class="pos"'), step < 1, `${where}: the position's words ${step < 1 ? 'stand' : 'gone'}`);
         assert.ok(/<button class="slot" data-act="strip"[^>]*><(b class="pos"[^>]*>[^<]*<\/b><)?span class="strip"><span class="strip-mark"/.test(address), `${where}: the strip whole and marked, the strip's act: ${address}`);
-        assert.equal(parts.find((p) => keyOf(p) === 'acting'), `<span class="seg acting" data-state="${acting.state}">${acting.html}</span>`, `${where}: the acting-as segment's words whole`);
+        const part = parts.find((p) => keyOf(p) === 'acting') || '';
+        assert.equal(part, form ? `<button class="seg acting" data-act="acting" data-state="${acting.state}" title="${esc(name)}" aria-label="${esc(name)}">${acting.forms[form]}</button>` : `<span class="seg acting" data-state="${acting.state}">${acting.forms[0]}</span>`,
+          `${where}: the acting-as segment ${form ? 'compact, its act named by its whole form' : 'whole, no act'}`);
+        assert.equal(plain(part), words[form], `${where}: its words in the form held`);
+        const glyphs = part.match(/<svg[^>]*>/g) || [];
+        assert.deepEqual(glyphs.map((g) => [/class="key( alone)?"/.test(g), g.includes('aria-hidden="true"'), g.includes('class="key alone"')]), who === 'a guest' ? [] : [[true, true, form === 3]],
+          `${where}: ${who === 'a guest' ? 'no key\'s glyph' : `the key's glyph drawn, hidden from the accessibility tree${form === 3 ? ', alone' : ', before its words'}`}`);
         for (const row of rows) assert.ok(row.length === 1 || counted(row).reduce((a, b) => a + b, 0) + counted([SEP])[0] * (row.length - 1) <= room, `${where}: a row within its room, or one part alone: ${row.map(keyOf)}`);
         const folded = /<b class="board" data-act="address" aria-hidden="true">1 › <\/b><button class="fold" data-act="fold" title="([^"]*)" aria-label="[^"]*">⋮<\/button><button class="seg address" data-act="address"[^>]*><b> › 1\.0\.1\.0\.3<\/b>/.exec(address);
         assert.equal(!!folded, step === 4, `${where}: ${step === 4 ? 'folded — the board\'s field, the mark in the account\'s place, the document\'s field' : 'unfolded'}: ${address}`);
@@ -812,28 +843,47 @@ test('short of room the line gives way in steps, each keeping the ones before it
   } finally { REC.setSession(was); clicked(); }
 });
 
-test('the layout holds until the window changes or the reader acts: the camera\'s scale changing what the address names, a position ticking and the daemon stopping move no part; the daemon\'s segment, arriving with no room on the last row, opens beneath the line, and the next act places it in a row (issue #310\'s design decision: "Re-set the layout only when the window changes or at the reader\'s act")', async () => {
-  const daemon = REC.daemon(), { host } = clicked();
+test('the layout holds until the window changes, the reader acts, or the acting-as segment\'s fields or the daemon\'s form change state: the camera\'s scale changing what the address names and a position ticking move no part, and a walk\'s moment arriving with no room on its row opens beneath the line until the next act places it in a row; the board stopping and running, a halt standing and lifting, the session keyless and the session ended each set it again at once, the segment in the form it has now, nothing beneath (issues #310, #445\'s design decisions: "The layout is also set again when one of these fields changes state")', async () => {
+  const daemon = REC.daemon(), health = REC.health(), mode = REC.mode(), was = /** @type {import('../bridge/shapes').SessionOpened} */ (REC.session());
+  /** @type {Array<{key: string, words: string}>} what O-FACES' `folded` answers */
+  let walks = [];
+  const { host } = clicked({ walks: () => walks });
   over(D, NEAR);
   await WALK.focusTo(D, 15);
+  /** the rows as rendered, each its parts' keys, and whether anything stands beneath */
+  const shown = () => { LINE.render(); const l = laidOut(host.innerHTML); return { rows: l.rows.map((r) => r.map(keyOf)), beneath: l.beneath }; };
   try {
-    LINE.fit({ room: 450, measure: counted });
+    LINE.fit({ room: 400, measure: counted });
     const held = LINE.held();
-    assert.deepEqual(held, { step: 3, rows: [['acts'], ['address'], ['acting']] }, 'a part a row');
-    /** the rows as rendered, each its parts' keys, and whether anything stands beneath */
-    const shown = () => { LINE.render(); const l = laidOut(host.innerHTML); return { rows: l.rows.map((r) => r.map(keyOf)), beneath: l.beneath }; };
+    assert.deepEqual(held, { step: 3, form: 3, rows: [['acts'], ['address'], ['acting']] }, 'a part a row, the acting-as segment short');
     over(D, MID);
     assert.deepEqual([shown(), LINE.held()], [{ rows: held?.rows, beneath: '' }, held], 'at mid, the account named: the layout as it stood');
     over(D, NEAR);
     await WALK.focusTo(D, 11);
     assert.deepEqual([shown(), LINE.held()], [{ rows: held?.rows, beneath: '' }, held], 'another position: the layout as it stood');
-    REC.setDaemon('stopped');
+    walks = [{ key: 'claim|b-1', words: t('L.walk.waits', { walk: 'claim', step: 'name this device' }) }];
     const arrived = shown();
-    assert.deepEqual([arrived.rows, LINE.held()], [held?.rows, held], 'the daemon stopped: its rows as they stood');
-    assert.ok(arrived.beneath.startsWith(`<span class="seg daemon"><span class="warn" data-string="F.daemon.notebook.stopped">`), `its segment beneath the line: ${host.innerHTML}`);
+    assert.deepEqual([arrived.rows, LINE.held()], [held?.rows, held], 'a walk\'s moment folded: the rows as they stood');
+    assert.ok(arrived.beneath.startsWith('<button class="seg walk"'), `its segment beneath the line: ${host.innerHTML}`);
     LINE.act();
-    assert.deepEqual(shown(), { rows: [['acts'], ['address'], ['acting'], ['daemon']], beneath: '' }, 'the next act: the daemon\'s segment placed in a row of its own');
-  } finally { REC.setDaemon(daemon); clicked(); }
+    assert.deepEqual(shown(), { rows: [['acts'], ['address'], ['acting'], ['walk']], beneath: '' }, 'the next act: the walk\'s segment placed in a row of its own');
+    walks = [];
+    LINE.act();
+    /** @type {Array<[string, () => void, {step: number, form: number, rows: string[][]}]>} each change of state, how it is made, and the layout set again at once */
+    const changes = [
+      ['the board stopped', () => REC.setDaemon('stopped'), { step: 3, form: 3, rows: [['acts'], ['address'], ['acting'], ['daemon']] }],
+      ['the board running again', () => REC.setDaemon('running'), { step: 3, form: 3, rows: [['acts'], ['address'], ['acting']] }],
+      ['a halt standing', () => REC.setHealth({ ...health, writes: { halted: true } }, mode), { step: 3, form: 3, rows: [['acts'], ['address'], ['acting'], ['daemon']] }],
+      ['the halt lifting', () => REC.setHealth({ ...health, writes: { halted: false } }, mode), { step: 3, form: 3, rows: [['acts'], ['address'], ['acting']] }],
+      ['the session keyless', () => REC.setSession({ ...was, writes: false }), { step: 3, form: 0, rows: [['acts'], ['address'], ['acting']] }],
+      ['the session ended', () => { REC.setSession(was); REC.sessionDied({ arm: 'closed' }); }, { step: 3, form: 0, rows: [['acts'], ['address', 'acting']] }],
+    ];
+    for (const [change, make, layout] of changes) {
+      make();
+      const now = shown();
+      assert.deepEqual([LINE.held(), now], [layout, { rows: layout.rows, beneath: '' }], `${change}: the layout set again at once, nothing beneath the line`);
+    }
+  } finally { REC.setDaemon(daemon); REC.setHealth(health, mode); REC.setSession(was); clicked(); }
 });
 
 test('a part arriving between settings stands in its place in the line\'s order — a walk\'s folded moment right after the acting-as segment, in that segment\'s row, ahead of the daemon\'s row — where that row\'s room holds it, no row moved (issue #310\'s design decision: "A statement that arrives with no room opens beneath the line")', async () => {
@@ -845,13 +895,64 @@ test('a part arriving between settings stands in its place in the line\'s order 
   await WALK.focusTo(D, 15);
   try {
     REC.setDaemon('stopped');
-    LINE.fit({ room: 1400, measure: counted });
-    assert.deepEqual(LINE.held(), { step: 3, rows: [['acts', 'address', 'acting'], ['daemon']] }, 'the daemon\'s form on a row of its own');
+    LINE.fit({ room: 1000, measure: counted });
+    assert.deepEqual(LINE.held(), { step: 3, form: 3, rows: [['acts', 'address', 'acting'], ['daemon']] }, 'the daemon\'s form on a row of its own, the acting-as segment short');
     walks = [{ key: 'claim|b-1', words: t('L.walk.waits', { walk: 'claim', step: 'name this device' }) }];
     LINE.render();
     const l = laidOut(host.innerHTML);
     assert.deepEqual([l.rows.map((r) => r.map(keyOf)), l.beneath, LINE.held()?.rows], [[['acts', 'address', 'acting', 'walk'], ['daemon']], '', [['acts', 'address', 'acting'], ['daemon']]], 'the walk\'s segment after the acting-as segment, in its row; the layout as it stood');
   } finally { REC.setDaemon(daemon); clicked(); }
+});
+
+test('short of its whole form the acting-as segment is its act: a press — a pointer\'s, or a key\'s after the next act the key itself made — opens its whole form in its place, still the act its focus is kept on by, in its row where that holds it, else beneath the line; a press while it stands opens it again, never folding it; the next act or a pan takes it down (issue #445\'s design decision: "The whole short segment is one act that opens the full form"; FP-26)', async () => {
+  const { host, press } = clicked();
+  over(D, NEAR);
+  await WALK.focusTo(D, 15);
+  try {
+    const acting = LINE.actingSegment(), name = acting.name ? t(acting.name.id, acting.name.values) : '';
+    const act = (/** @type {number} */ form) => `<button class="seg acting" data-act="acting" data-state="2" title="${esc(name)}" aria-label="${esc(name)}">${acting.forms[form]}</button>`;
+    /** the acting-as segment as the line renders it: in a row, or beneath the line */
+    const seen = () => { const l = laidOut(host.innerHTML); return { row: l.rows.flat().find((p) => keyOf(p) === 'acting') || null, beneath: l.beneath.replace(/<\/div>$/, '') }; };
+    LINE.fit({ room: 800, measure: counted });
+    assert.deepEqual(LINE.held(), { step: 2, form: 3, rows: [['acts', 'address', 'acting']] }, 'one row, the segment short');
+    assert.deepEqual(seen(), { row: act(3), beneath: '' }, 'its short form, its act');
+    press('acting');
+    assert.deepEqual(seen(), { row: null, beneath: act(0) }, 'pressed: its whole form, still its act, beneath the line, its row holding no room for it');
+    press('acting');
+    assert.deepEqual(seen(), { row: null, beneath: act(0) }, 'pressed again: open still');
+    LINE.act();
+    assert.deepEqual(seen(), { row: act(3), beneath: '' }, 'the next act: its short form again');
+    // the app's keydown makes the next act before the key's click reaches the act
+    LINE.act(); press('acting', 0);
+    assert.deepEqual(seen(), { row: null, beneath: act(0) }, 'Enter: open');
+    LINE.panned();
+    assert.deepEqual(seen(), { row: act(3), beneath: '' }, 'a pan: its short form again');
+    LINE.fit({ room: 600, measure: counted });
+    assert.deepEqual(LINE.held(), { step: 3, form: 3, rows: [['acts', 'address'], ['acting']] }, 'a row of its own, the segment short');
+    press('acting');
+    assert.deepEqual(seen(), { row: act(0), beneath: '' }, 'pressed: its whole form in its place, its own row holding it');
+    LINE.act();
+  } finally { clicked(); }
+});
+
+test('a guest\'s segment gives way as a board only read — its origin and its venue together — then its guest line takes its class word, a refused reconnect\'s lead and the session\'s refusal keeping their words in every form, the act named by its fields whole; where a death this page holds no words for stands the guest line in its head\'s place, it keeps its words whole (issue #445\'s design decision: "A board you only read: its class word … Exceptions keep their words … an ended session\'s head (FP-32)")', () => {
+  const was = { board: REC.board(), session: REC.session() }, O = 'http://127.0.0.1:9000';
+  /** the segment's forms as a person reads them, and its act's name */
+  const read = (/** @type {import('./line.js').Acting} */ a) => [a.state, a.forms.map(plain), a.name ? t(a.name.id, a.name.values) : null];
+  try {
+    REC.setSession(null);
+    REC.takeBoards({ result: [{ board: 'b-1', name: O, origin: O }] });
+    const whole = `${t('B1.guest-line')} · ${O} · ${t('F.venue.notebook')}`;
+    assert.deepEqual(read(LINE.actingSegment()), [1, [whole, t('B1.guest-line'), t('L.guest-line.short')], whole], 'a guest: the origin and the venue go together, then "guest"; the act named whole');
+    REC.setSession(was.session);
+    REC.sessionLost({ kind: 'shell', name: 'no_key' });
+    const lead = t('L.reconnect-refused', { account: '1.0.1' }), why = t('L.session-refused', { name: 'no_key' });
+    assert.deepEqual(read(LINE.actingSegment()), [3, [`${lead} · ${whole} ${why}`, `${lead} · ${t('B1.guest-line')} ${why}`, `${lead} · ${t('L.guest-line.short')} · ${why}`], `${lead} · ${whole} ${why}`],
+      'a restart\'s reconnect refused no_key: the lead and the refusal whole in every form, the guest\'s fields giving way between them');
+    REC.setSession(was.session); REC.setSessionRefused(null);
+    REC.sessionDied({ arm: 'seeded', account: '1.0.1.1', as_of: 9, writer: 'fp-2' });
+    assert.deepEqual(read(LINE.actingSegment()), [5, [whole], null], 'a death of an arm with no words here: the guest line whole in the head\'s place, one form, no act');
+  } finally { REC.setBoard(was.board); REC.setSession(was.session); REC.setSessionRefused(null); }
 });
 
 test('the strip is the strip\'s act, a native button named by the position: a press on it quotes the position and the passage\'s first words, and opens no LEAP box; at step 1, the position its strip alone, its readout opens on it, beneath the line where the last row has no room for it (issue #310\'s design decision: "its readout opens on the strip\'s act"; K-23)', async () => {

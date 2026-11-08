@@ -116,8 +116,8 @@ export const STRINGS = {
   'B1.withheld-run': { text: 'withheld · ⟨owner⟩ (⟨account⟩) · ⟨width⟩ positions · origin ⟨origin⟩', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S7' },
 
   // ---- DRAFT: designs/foundations.md ----------------------------------------
-  'F.acting-as': { text: 'acting as ⟨account⟩ (principal ⟨N⟩) · ⟨device label⟩ · key present on this device · ⟨origin⟩ · LOCAL notebook', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line, state 2' },
-  'F.keyless-session': { text: 'reading as ⟨account⟩ with no key — local trust; writing needs your key · on your LOCAL notebook · ⟨origin⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line, state 3' },
+  'F.acting-as': { text: 'acting as ⟨account⟩ (principal ⟨N⟩) on your LOCAL notebook · ⟨device label⟩ · key present on this device', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line, state 2' },
+  'F.keyless-session': { text: 'reading as ⟨account⟩ with no key — local trust; writing needs your key · on your LOCAL notebook', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line, state 3' },
   'F.venue.notebook': { text: 'LOCAL notebook', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line' },
   'F.venue.org': { text: 'PUBLIC org board', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line' },
   'F.daemon.running': { text: 'board running', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line' },
@@ -620,6 +620,13 @@ export const STRINGS = {
   // it is the person's own sign-out's alone (C-137)
   'L.reconnecting': { text: 'reconnecting as ⟨account⟩ after a restart', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.reconnect-refused': { text: 'could not reconnect as ⟨account⟩ after a restart', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
+  // the acting-as segment's short form (FP-26): the account's, the "as" kept so it never reads as part of the address; a
+  // guest's, its class word; and a guest's segment's accessible name where it stands as its act — its fields whole in their
+  // order, the reconnect's lead, the guest line, the board's origin, its venue, the session's refusal, each after its own
+  // separator, none where it is empty
+  'L.acting.as': { text: 'as ⟨account⟩', cls: 'DRAFT', source: '', screen: 'the one line, compact', lane: true },
+  'L.guest-line.short': { text: 'guest', cls: 'DRAFT', source: '', screen: 'the one line, compact', lane: true },
+  'L.guest-line.name': { text: '⟨lead⟩⟨guest⟩⟨origin⟩⟨venue⟩⟨refused⟩', cls: 'DRAFT', source: '', screen: 'the one line, compact', lane: true },
   // the one status message at a session's ending (FP-29): the ending's words — the one line's — then the documents the
   // view stood on that the reader can no longer read, each now its withheld box, "withheld · ⟨owner⟩"
   'L.covered': { text: '⟨ending⟩ — withheld from you now: ⟨documents⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },

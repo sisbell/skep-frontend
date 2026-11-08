@@ -42,7 +42,8 @@
 // holds (`line`), the overlay's text
 // with the notice standing below it (`overlay`), the in-document find as it
 // stands and the stretches of a text the model lacks (`find`), a
-// walk's moment raised and the folded moments (`moments`); the selection
+// walk's moment raised and the folded moments (`moments`), the board's
+// writes halted and the halt lifted (`halt`); the selection
 // beside the platform's own (`platformSelection`) and the copy door (`copy`);
 // the reveal's state and setters (`reveal`, `links`), each end `links.shown`
 // lists carrying its key and the withheld run it is drawn at, for the marks
@@ -661,6 +662,8 @@ export function install(deps) {
     overlay: () => { const n = HOST.notice(); return { id: HOST.currentState() ? HOST.currentState()?.id : null, kind: HOST.currentKind(), text: HOST.text(), notice: n ? { id: n.id ?? null, text: HOST.noticeText() } : null }; },
     /** a walk's moment raised as the shell's `moment` event raises one (O-FACES' `moment`; FP-36), and the folded moments the one line's walks' segments are, each its walk and its words (`folded`) */
     moments: { raise: (/** @type {import('../bridge/shapes').MomentEvent} */ m) => { FACES.moment(m); return true; }, folded: () => FACES.folded() },
+    /** the board's writes halted, or the halt lifted, as the board's `/health` answers it (M-REC's `setHealth`), the rest of its health and its mode kept: the one line's daemon segment stands or goes */
+    halt: (/** @type {boolean} */ on) => { const h = REC.health(); REC.setHealth({ ...h, writes: { ...(h && h.writes), halted: on } }, REC.mode()); CAM.markDirty(); return true; },
     selection: () => SEL.selected(),
     /** the platform's own selection: whether it is collapsed, whether it runs backward (its focus point before its anchor, read from the platform, never from the page), and the span it covers in a mounted article (null outside one) */
     platformSelection: () => {
