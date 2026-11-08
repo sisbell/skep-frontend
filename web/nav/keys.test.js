@@ -16,16 +16,21 @@
 // the statement whole on the word's act; → and ← at a corner move the focus
 // along its acts — the read it offers, a head's count of the items it folds —
 // and back; the inert slots' chords give their slot's reason at the
-// selection's card, else where the focus is; and every other slot's chord,
-// with nothing in focus that its slot acts on, gives "select a passage first"
-// where the focus is (D5 K-9, K-30, K-45 … K-52, K-57, K-70, K-71, K-72, K-74,
-// K-76, K-77, K-93, K-100, §1.6; D6 BM-1, BM-3, BM-52, BM-54; P47; FP-14,
-// FP-36).
+// selection's card, else where the focus is; every other slot's chord, with
+// nothing in focus that its slot acts on, gives "select a passage first"
+// where the focus is; and Mod+Enter at a live caret follows from a selection
+// standing alone — with none it selects nothing, follows nothing and leaves
+// the caret where it stands, giving the caret's follow line where the focus
+// is — while at a kept caret it acts on the kept span as on the plane (D5
+// K-9, K-30, K-45 … K-52, K-57, K-70, K-71, K-72, K-74, K-76, K-77, K-93,
+// K-100, §1.6; D6 BM-1, BM-3, BM-52, BM-54; B3-S13; P47; FP-14, FP-36).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
 import * as WALK from './walk.js';
 import * as FOCUS from './focus.js';
+import * as TRAIL from './trail.js';
+import * as LK from '../links/links.js';
 import * as REC from '../model/records.js';
 import * as LAYER from '../text/layer.js';
 import * as SEL from '../overlays/selection.js';
@@ -319,5 +324,75 @@ test('the other slots\' chords with nothing in focus that the slot acts on give 
   const n = said.length;
   assert.equal(await KEYS.dispatch(keyOf('L', SHIFT), PLANE), true);
   assert.deepEqual([HOST.currentState()?.id, said.slice(n)], ['links:' + O, []], 'Mod+Shift+L at a document whole opens the links card at it, no reason said');
+  HOST.dismiss();
+}));
+
+/** a link's end over `w` positions of a document's text from its ordinal `ord`, as the board names a slot's span */
+const endOf = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: doc.split('.').slice(0, 3).join('.'), whole: false, subspace: 1, ordinal: ord, positions: w });
+/** the follow's chord (K-51) */
+const MOD_ENTER = keyOf('Enter', MOD);
+/** the overlay standing, by its id; null where none stands */
+const overlay = () => HOST.currentState()?.id ?? null;
+
+/**
+ * The overlay host attached, and two links of the person's own homed in D, each from its first span to O, so a follow
+ * there asks which of them: D's first span, and L1's end as drawn there.
+ */
+function twoLinks() {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const L1 = D + '.0.2.1', L2 = D + '.0.2.2';
+  REC.takeLinks(D, [L1, L2]);
+  REC.takeLink(/** @type {any} */ ({ addr: L1, from: [endOf(D, 1, 5)], to: [endOf(O, 1, 4)], type: '1.1.0.1.0.1.0.3.13' }));
+  REC.takeLink(/** @type {any} */ ({ addr: L2, from: [endOf(D, 1, 5)], to: [endOf(O, 6, 4)], type: '1.1.0.1.0.1.0.3.13' }));
+  const first = spanOfBlock(D, /** @type {any} */ (REC.blockAt(D, 1)));
+  assert.equal(LK.shownAt(D, first).length, 2, 'both links drawn at D\'s first span');
+  return { first, l1: /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === L1)) };
+}
+
+test('Mod+Enter at the live caret Enter placed at the walk\'s span, its two links drawn there and no selection standing, selects nothing, lists and follows nothing and leaves the caret where it stands, the caret\'s follow line in the one line and said through the status region; with a selection standing at the live caret it follows from the selection; at the kept caret it acts on the kept span as on the plane (D5 K-51; B3-S13)', () => onPlane(async ({ said }) => {
+  const { first } = twoLinks();
+  const reason = t('B3.row.follow.inert');
+  await focusOn(D, 1);
+  await KEYS.dispatch(keyOf('Enter'), PLANE);
+  assert.deepEqual(caret(), [D, 1, true]);
+  let n = said.length;
+  const trail = TRAIL.all().length;
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true, 'taken: the platform runs nothing of its own');
+  assert.deepEqual([SEL.selected(), overlay(), caret(), TRAIL.all().length, said.slice(n)], [null, null, [D, 1, true], trail, [reason]],
+    'Mod+Enter at the bare caret: no span selected, no "which" list, the caret live where it stood, the trail as it was, the caret\'s follow line said');
+
+  // the caret kept: the text left to the walk at its span
+  assert.equal(await KEYS.dispatch(keyOf('Escape'), PLANE), true);
+  await tick();
+  assert.deepEqual([caret(), WALK.current()?.kind, WALK.current()?.pos], [[D, 1, false], 'block', 1]);
+  n = said.length;
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
+  assert.deepEqual([SEL.selected(), overlay(), caret(), said.slice(n).includes(reason)], [first, 'which', [D, 1, false], false],
+    'Mod+Enter at the kept caret\'s span: the span selected whole and its two links listed, as on the plane');
+  await KEYS.dispatch(keyOf('Escape'), PLANE);
+  await KEYS.dispatch(keyOf('Escape'), PLANE);
+  assert.deepEqual([overlay(), SEL.selected()], [null, null]);
+
+  // a selection standing at the live caret, as a drag or Shift with the arrows at the caret leaves one
+  assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+  assert.deepEqual(caret(), [D, 1, true], 'Enter at the kept span returns the caret');
+  SEL.select(D, 1, 5);
+  n = said.length;
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
+  assert.deepEqual([SEL.selected(), overlay(), caret(), said.slice(n).includes(reason)], [{ addr: D, pos: 1, width: 5 }, 'which', [D, 1, true], false],
+    'Mod+Enter with a selection standing at the live caret: its two links listed, the caret live where it stood, no line said');
+  HOST.dismiss();
+}));
+
+// placed last: the follow it guards against, where it is made, leaves a jump in the air for the tests after it
+test('Mod+Enter at a live caret a click placed in the draft\'s second line, the walk left on a link\'s stop in its first and no selection standing, follows no link from the stop — the trail as it was, nothing faced — and leaves the caret where it stands, the caret\'s follow line in the one line and said through the status region (D5 K-51; B3-S13)', () => onPlane(async ({ said }) => {
+  const { l1 } = twoLinks();
+  await WALK.focusTo(D, l1.pos, true, true, { link: l1.link.addr, key: l1.key }, true);
+  LAYER.placeCaret(D, 14);
+  assert.deepEqual([WALK.current()?.kind, WALK.current()?.link?.link.addr, caret()], ['link', l1.link.addr, [D, 14, true]], 'the walk on L1\'s stop, the caret live in the second line');
+  const n = said.length, trail = TRAIL.all().length;
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
+  assert.deepEqual([SEL.selected(), overlay(), caret(), TRAIL.all().length, said.slice(n)], [null, null, [D, 14, true], trail, [t('B3.row.follow.inert')]],
+    'Mod+Enter at the bare caret with the walk on a link\'s stop: no follow from the stop, no span selected, the caret live where it stood, the caret\'s follow line said');
   HOST.dismiss();
 }));

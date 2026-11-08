@@ -27,27 +27,30 @@
 // print, close, quit, minimize, hide, preferences — are never taken (K-92,
 // K-93). No key is dispatched while an input method's composition is open
 // (the IME guard).
-// THE CARET (D5 K-70, K-71, K-72, K-76, K-77; D6 BM-1, BM-52, BM-54): in
-// text the person may edit (T-LAYER's `editable`) Enter at the walk's focused
-// span places the caret at the span's start, or returns the kept one standing
-// in that span (`activateFocus`; T-LAYER's `caretToSpan`); while a live caret
-// stands on the plane the focus is at it (`Ctx.where` `caret`, read as a key
-// is pressed and again as a held key is made, `whereNow`), and its keys reach
-// it before the walk's (`caretKey`): the arrows move it, Backspace and
-// Delete take a character out, Enter and Shift+Enter put a new line in, Tab
-// a tab character, a printable key its character — each a change of the text
-// shown alone, nothing composed and nothing sent (T-LAYER; FP-14); every
-// other key acts as on the plane. At a span of such a draft where no caret
-// stands a printable key but Space is answered by the draft's own line,
-// "Enter places a caret here" (K-72, K-9), and a paste or a cut there by that
-// line in their own words, nothing placed and nothing removed (K-93); at the
-// span a kept caret stands in, a printable key returns it and types at it
-// (`typeAt`). Mod+S writes nothing (K-74): where the draft the caret stands in
-// — else the walk's document — has a kept state, it is answered at the
-// corner with the state's statement whole at the first press in a session
-// and with the corner's own word after it, the statement whole on the word's
-// act (`saveChord`; P41; T-LAYER's `openStatement`), the answer said in the
-// status region (FP-36); elsewhere it is taken and does nothing.
+// THE CARET (D5 K-51, K-70, K-71, K-72, K-76, K-77; D6 BM-1, BM-52, BM-54):
+// in text the person may edit (T-LAYER's `editable`) Enter at the walk's
+// focused span places the caret at the span's start, or returns the kept one
+// standing in that span (`activateFocus`; T-LAYER's `caretToSpan`); while a
+// live caret stands on the plane the focus is at it (`Ctx.where` `caret`, read
+// as a key is pressed and again as a held key is made, `whereNow`), and its
+// keys reach it before the walk's (`caretKey`): the arrows move it, Backspace
+// and Delete take a character out, Enter and Shift+Enter put a new line in,
+// Tab a tab character, a printable key its character — each a change of the
+// text shown alone, nothing composed and nothing sent (T-LAYER; FP-14). At a
+// live caret Mod+Enter follows from a selection standing alone: where none
+// stands it selects nothing, follows nothing and leaves the caret where it
+// stands, the caret's follow line shown in the one line (`followAtCaret`;
+// B3-S13); every other key acts as on the plane. At a span of such a draft
+// where no caret stands a printable key but Space is answered by the draft's
+// own line, "Enter places a caret here" (K-72, K-9), and a paste or a cut
+// there by that line in their own words, nothing placed and nothing removed
+// (K-93); at the span a kept caret stands in, a printable key returns it and
+// types at it (`typeAt`). Mod+S writes nothing (K-74): where the draft the
+// caret stands in — else the walk's document — has a kept state, it is
+// answered at the corner with the state's statement whole at the first press
+// in a session and with the corner's own word after it, the statement whole
+// on the word's act (`saveChord`; P41; T-LAYER's `openStatement`), the answer
+// said in the status region (FP-36); elsewhere it is taken and does nothing.
 // Esc closes the innermost thing, in one order (`esc`; §4 rule 7; D7): the
 // box, a card or scene still reading, the notice standing below the overlay
 // (FP-36; O-HOST's), the overlay, a jump reaching, the find — its current
@@ -69,9 +72,9 @@
 // span selected first where no selection stands (O-SELECTION's
 // `inertChord`), else, and over the scene, in the one line (`inertSaid`).
 // Every other slot's chord (K-47 … K-52) makes its slot's act on what is in
-// focus (O-SELECTION's `act`), and where nothing in focus is what the slot
-// acts on gives the slot's reason, "select a passage first", in the one line
-// (`selectFirst`; D5 §1.6; P47). Find
+// focus (O-SELECTION's `act`) — save Mod+Enter at a live caret (above) — and
+// where nothing in focus is what the slot acts on gives the slot's reason,
+// "select a passage first", in the one line (`selectFirst`; D5 §1.6; P47). Find
 // (K-91; `findAct`) acts from the plane, the scene, a field and every control
 // on them alike, the browser's own find never run: Mod+F opens the page's
 // find at the document the focus is in (N-FIND's `open`); Mod+G and
@@ -178,6 +181,7 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-48', chord: 'Mod+Shift+R', act: 'selection.uses', surface: 'selection' },
   { id: 'K-49', chord: 'Mod+Shift+L', act: 'selection.links', surface: 'selection' },
   { id: 'K-51', chord: 'Mod+Enter', act: 'selection.follow', surface: 'selection' },
+  { id: 'K-51', chord: 'Mod+Enter', act: 'caret.follow', surface: 'caret' },
   { id: 'K-52', chord: 'Mod+Shift+Enter', act: 'selection.scene', surface: 'selection' },
   { id: 'K-100', chord: 'Mod+K', act: 'selection.linkto', surface: 'selection' },
   { id: 'K-55', chord: 'Enter', act: 'cards.open', surface: 'cards' },
@@ -380,7 +384,8 @@ function route(e, chord, ctx) {
   const inert = INERT_CHORDS.get(chord);
   if (inert) return () => { if (!SEL.inertChord(inert)) inertSaid(inert); return true; };
   const live = LIVE_CHORDS.get(chord);
-  if (live) return () => { if (!SEL.act(live, byKey)) selectFirst(); return true; };
+  // Mod+Enter at a live caret follows from a selection standing alone, else gives the caret's follow line (K-51; `followAtCaret`)
+  if (live) return () => { if (live === 'follow' && ctx.where === 'caret' && !SEL.selected()) followAtCaret(); else if (!SEL.act(live, byKey)) selectFirst(); return true; };
   if (chord === 'Shift+↓') return () => { SEL.selectFocused('down'); return true; };
   if (chord === 'Shift+↑') return () => { SEL.selectFocused('up'); return true; };
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
@@ -593,6 +598,11 @@ function inertSaid(/** @type {InertSlot} */ slot) {
 /** a slot's chord where nothing in focus is what the slot acts on (O-SELECTION's `act`): its reason, "select a passage first", in the one line at the focus until the next act, said through the status region (D5 §1.6; P47) */
 function selectFirst() {
   LINE.transient(t('D5.select-first'), 'D5.select-first');
+}
+
+/** Mod+Enter at a live caret with no selection standing (D5 K-51; B3-S13): nothing selected, nothing followed, the caret where it stands — the caret's follow line in the one line at the focus until the next act, said through the status region */
+function followAtCaret() {
+  LINE.transient(t('B3.row.follow.inert'), 'B3.row.follow.inert');
 }
 
 /**
