@@ -1,5 +1,6 @@
 // ST's test: every entry is PINNED with a source or DRAFT with a screen; the
-// pinned strings are verbatim and a token filled leaves the rest, as words
+// pinned strings are verbatim, and the editor's lines stand as its design
+// words them, in its characters; a token filled leaves the rest, as words
 // or as markup reading the same words, a value asked for set in its class;
 // words made elsewhere set as markup in their faces, each address M-ADDR
 // reads in them the identifier's and nothing else; a time said in the one
@@ -70,6 +71,68 @@ test('every line of the editor\'s is PINNED from the copy inventory or DRAFT fro
   assert.equal(t('B3.kept'), 'kept');
   assert.equal(t('B3.own-bug'), 'a fault in this client, not a change to your text — nothing was written; your words are held here');
   assert.equal(t('B3.answers_lost', { board: 'board 1', time: '2 minutes' }), 'board 1 has not answered this change for 2 minutes — it may have reached the board: send again checks, and sends it only if it did not');
+});
+
+test('the editor\'s lines stand as its design words them, in its characters — B3-S2\'s discard of what the head-unreadable hold keeps, B3-S4\'s orphan line at one link, B3-S11\'s draft side\'s one line and leave line, B3-S13\'s formatting lines — and the selection\'s chords as D5 words them (issue #438)', () => {
+  /** @type {Array<[string, string, string]>} each line's id, the screen its entry's `screen` opens on, and its words */
+  const LINES = [
+    ['B3.head_unreadable.discard', 'B3-S2', 'discard what is held'],
+    ['B3.head_unreadable.discard.compact', 'B3-S2', 'discard'],
+    ['B3.head_unreadable.discard.name', 'B3-S2', 'discard what is held for ⟨label⟩'],
+    ['B3.head_unreadable.discard.said.typed', 'B3-S2', 'if discarded, what is held here is never sent, and the words you typed in it are removed from this device for good; if left held, it is sent once ⟨board⟩ can take it'],
+    ['B3.head_unreadable.discard.said', 'B3-S2', 'if discarded, what is held here is never sent; if left held, it is sent once ⟨board⟩ can take it'],
+    ['B3.head_unreadable.discard.said.compact', 'B3-S2', 'if discarded, what is held here is never sent'],
+    ['B3.deletion.links.1', 'B3-S4', '1\u00a0link on this passage leaves the current text with it\u00a0— undo, or this draft’s past states, puts the words and the link back'],
+    ['B3.deletion.links.past.1', 'B3-S4', '1\u00a0link on this passage left the current text with it\u00a0— undo, or this draft’s past states, puts the words and the link back'],
+    ['B3.merge.landed.draft', 'B3-S11', 'nothing is published\u00a0— ⟨into⟩ now holds version\u00a0⟨k⟩’s text with the changes from ⟨label⟩, which stays as it is; undo in ⟨into⟩ undoes the merge while this session lasts\u00a0— after it, making ⟨into⟩’s state before the merge current, in its past states, takes the words out'],
+    ['B3.merge.scene.line.draft', 'B3-S11', 'merging ⟨label⟩ with version\u00a0⟨k⟩ of ⟨D⟩ in ⟨into⟩\u00a0— it now holds version\u00a0⟨k⟩’s text with the changes from ⟨label⟩, which stays as it is; undo in ⟨into⟩ undoes the merge while this session lasts, and its past states keep it as it was; what needs a choice is listed first'],
+    ['B3.merge.scene.line.draft.new', 'B3-S11', 'merging ⟨label⟩ with version\u00a0⟨k⟩ of ⟨D⟩ in a new draft, ⟨into⟩\u00a0— it holds version\u00a0⟨k⟩’s text with the changes from ⟨label⟩, which stays as it is; ⟨into⟩ stays\u00a0— you can remove its words, never the document; what needs a choice is listed first'],
+    ['B3.merge.scene.line.draft.beside', 'B3-S11', 'merging ⟨label⟩ with version\u00a0⟨k⟩ of ⟨D⟩ in a new draft, ⟨into⟩\u00a0— it holds version\u00a0⟨k⟩’s text with the changes from ⟨label⟩, which stays as it is; ⟨into⟩ stays\u00a0— you can remove its words, never the document; ⟨level⟩ keeps its unpublished changes as you left them\u00a0— after this version is published, re-apply ⟨level⟩ to the head from its corner, or read it beside ⟨into⟩ and paste them in; what needs a choice is listed first'],
+    ['B3.notes.home', 'B3-S13', 'in Notes on ⟨draft⟩'],
+    ['B3.format.again.off', 'B3-S13', '⟨chord⟩ again takes its mark off them'],
+    ['B3.format.held', 'B3-S13', 'taken off with your next version of these words'],
+    ['B3.format.kept.notes.made', 'B3-S13', '— Notes on ⟨E⟩ made for it'],
+    ['B3.format.slot', 'B3-S13', 'format…'],
+    ['B3.format.strip.selection', 'B3-S13', 'format — the selection'],
+    ['B3.format.strip.focus', 'B3-S13', 'format — “⟨first words⟩”'],
+    ['B3.format.strip.caret', 'B3-S13', 'format — what you type next'],
+    ['B3.format.bold', 'B3-S13', 'bold'],
+    ['B3.format.italic', 'B3-S13', 'italic'],
+    ['B3.format.code', 'B3-S13', 'code'],
+    ['B3.format.strikethrough', 'B3-S13', 'strikethrough'],
+    ['B3.format.subscript', 'B3-S13', 'subscript'],
+    ['B3.format.superscript', 'B3-S13', 'superscript'],
+    ['B3.format.paragraph', 'B3-S13', 'paragraph'],
+    ['B3.format.heading', 'B3-S13', 'heading ⟨n⟩'],
+    ['B3.format.levels-differ', 'B3-S13', 'levels differ'],
+    ['B3.format.underline', 'B3-S13', 'there is no underline here — to emphasise words, italic: ⟨Mod+I⟩, or bold: ⟨Mod+B⟩'],
+    ['B3.format.underline.compact', 'B3-S13', 'no underline'],
+    ['B3.format.not-a-form', 'B3-S13', 'that is not a form this editor makes — its forms are under format… at a selection, and in the Format menu'],
+    ['B3.format.cycle', 'B3-S13', '⟨level⟩ — let go to set it'],
+    ['B3.format.style.on', 'B3-S13', '⟨form⟩ — what you type next; ⟨its chord or act⟩ again stops it'],
+    ['B3.format.style.off', 'B3-S13', 'not ⟨form⟩ — what you type next'],
+    ['B3.format.style.inside', 'B3-S13', '; the ⟨form⟩ either side stays'],
+    ['B3.format.style.on.compact', 'B3-S13', '⟨form⟩ next'],
+    ['B3.format.style.off.compact', 'B3-S13', 'not ⟨form⟩ next'],
+    ['B3.format.style.unkept', 'B3-S13', '⟨board⟩ has not kept these words, so their ⟨form⟩ is not made — once it has, select them and apply ⟨form⟩ again'],
+    ['B3.format.said', 'B3-S13', '⟨form⟩ — “⟨first words⟩”'],
+    ['B3.format.said.off', 'B3-S13', '⟨form⟩ off — “⟨first words⟩”'],
+    ['B3.format.said.union', 'B3-S13', '⟨form⟩ — “⟨first words⟩” and the ⟨form⟩ beside them'],
+    ['B3.format.said.style.on', 'B3-S13', '⟨form⟩ — what you type next'],
+    ['B3.format.said.style.off', 'B3-S13', 'not ⟨form⟩ — what you type next'],
+    ['B3.format.said.heading', 'B3-S13', 'heading ⟨n⟩ — “⟨first words⟩”'],
+    ['B3.format.said.paragraph', 'B3-S13', 'paragraph — “⟨first words⟩”'],
+  ];
+  for (const [id, screen, text] of LINES) {
+    const e = STRINGS[id];
+    assert.ok(e, id + ' entered');
+    assert.deepEqual({ text: e.text, cls: e.cls, source: e.source, screen: e.screen?.split(':')[0] }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen }, id);
+  }
+  assert.equal(t('B3.format.cycle', { level: t('B3.format.heading', { n: 2 }) }), 'heading 2 — let go to set it', 'the held cycle\'s line as B3\'s own example has it');
+  assert.equal(t('D5.slots'), 'annotate ⌘⇧A · quote ⌘⇧C · who wrote this? ⌘⇧O · who uses this? ⌘⇧R · see the links ⌘⇧L · follow ⌘↩ · read side by side ⌘⇧↩ · link to… ⌘K · format…');
+  for (const id of ['B3.deletion.links', 'B3.deletion.links.past', 'B3.deletion.links.unread', 'B3.merge.landed', 'B3.merge.scene.line', 'B3.merge.scene.line.new']) {
+    assert.ok(!/[\u00a0’]/.test(STRINGS[id].text), `${id}: B3 sets it in plain characters, and the table keeps them`);
+  }
 });
 
 test('a token left unfilled stays as the design writes it', () => {
