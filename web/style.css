@@ -38,8 +38,10 @@ button:focus-visible, [tabindex]:focus-visible { outline:2px solid var(--accent)
 button.inert { cursor:default; border-style:dashed; color:var(--dim); }
 button[disabled] { opacity:.45; cursor:default; }
 kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
-/* the chrome that stands over the plane is opaque: no text the plane holds shows through it */
-.panel { position:fixed; background:var(--bg); border:1px solid var(--line); border-radius:4px; padding:8px 10px; }
+/* the chrome that stands over the plane is opaque: no text the plane holds shows through it. A panel — the LEAP box, the
+   find box, the mirror — stands at its own width, never wider than the window less 8 px either side, so placed inside
+   the window it stands whole there at every window size (FP-26) */
+.panel { position:fixed; max-width:calc(100vw - 16px); background:var(--bg); border:1px solid var(--line); border-radius:4px; padding:8px 10px; }
 .dim { color:var(--dim); }
 .code { color:#cfd6df; }
 .warn { color:var(--warn); }

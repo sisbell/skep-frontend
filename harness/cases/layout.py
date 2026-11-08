@@ -400,6 +400,11 @@ inside the window; the board's writes halted through the gate's door, its
 halted form's words whole inside the window, broken between them; and with
 the LEAP box open, then a reading scene, each of the line's parts the element
 found at its own centre.
+THE PANELS IN A NARROW WINDOW (FP-26): in the same windows, landed at the
+same position, the LEAP box opened whole inside the window, its input too,
+and every row's address cell whole across it; the mirror a walk key shows,
+the ring drawn, whole inside the window; and the find box Mod+F opens whole
+inside the window, Esc closing it.
 A STOP ONLY THE PANES' `compare` DRAWS, LEFT FROM AND RETURNED TO (FP-20,
 FP-21, FP-25, FP-34): a whole-document scene left from the stop at a band's
 clipped end, and from a stroke's button, by WHOLE BOARD, and returned to by
@@ -430,7 +435,8 @@ article's order here, the click cues', which read the computed style here,
 the stand-in's, which sets its article and reads its blocks here, the
 measure's and the scene's columns, which read the columns' and the panes'
 boxes and the advance of a weighed sample of their text here, the scene's
-stop's, which reads pane B's box here, the type's,
+stop's, which reads pane B's box here, the panels', which read their boxes
+here, the type's,
 which reads the computed faces, the platform's font set and the characters
 each line begins at here, the longest edition,
 which the case finds by its own reads, and the first span in view, which
@@ -3404,6 +3410,66 @@ def line_rows_hold(ctx, r):
     return figures
 
 
+# the rect of each element the selectors name, in their order, and the window's (`panels_hold`)
+RECTS_JS = '''((sels) => ({window: {x: 0, y: 0, w: window.innerWidth, h: window.innerHeight},
+  rects: sels.flatMap((s) => [...document.querySelectorAll(s)].map((e) => { const b = e.getBoundingClientRect(); return {sel: s, x: b.left, y: b.top, w: b.width, h: b.height}; }))}))'''
+
+
+def panels_hold(ctx, r):
+    """THE PANELS IN A NARROW WINDOW (FP-26): in each window LINE_ROWS_PX wide, landed at the window run's position in the
+    first edition — the LEAP box opened stands whole inside the window, its input too, and the address cell of every row
+    stands whole across it; a walk key made there, the ring drawn, the mirror stands whole inside the window; and Mod+F
+    there opens the find box whole inside the window, Esc closing it. Its figures: each panel's left and right edges in
+    each window"""
+    figures = {}
+    seen = lambda q: {k: round(v, 1) for k, v in q.items() if k in ('x', 'w')}
+    was = ctx.resize(LINE_ROWS_PX[0], 900)
+    try:
+        for w in LINE_ROWS_PX:
+            ctx.resize(w, 900)
+            ctx.settle()
+            ctx.leap(DOC, WINDOW[0])
+            ctx.js('window.__skep.leap.open()')
+            ctx.frames(2)
+            leap = ctx.js('%s(["#leap", "#leapq", "#leaphits .hit > :first-child"])' % RECTS_JS)
+            ctx.js('window.__skep.leap.close()')
+            ctx.frames(2)
+            box, cells = leap['rects'][:2], leap['rects'][2:]
+            win = leap['window']
+            past = [q for q in box if not (q['w'] > 0 and inside(q, win))] + [q for q in cells if q['x'] < -LABEL_TOL_PX or q['x'] + q['w'] > win['w'] + LABEL_TOL_PX]
+            r.check(len(box) == 2 and bool(cells) and not past,
+                    f'a {w} px window: the LEAP box opened stands whole inside the window, its input too, and the address cell of each of its {len(cells)} rows whole across it (FP-26)',
+                    {'past': [dict(seen(q), sel=q['sel']) for q in past[:6]], 'box': [dict(seen(q), sel=q['sel']) for q in box], 'rows': len(cells), 'vw': win['w']})
+            ctx.drv.key('ArrowDown')
+            ctx.settle()
+            ctx.frames(2)
+            mirror = ctx.js('''(() => { const m = document.getElementById('mirror'), e = document.activeElement;
+              return {ring: window.__skep.focus().ring, shown: m.classList.contains('shown'), held: !!e && m.contains(e)}; })()''')
+            m = ctx.js('%s(["#mirror"])' % RECTS_JS)
+            mq = m['rects'][0]
+            r.check(mirror['ring'] and mirror['shown'] and mirror['held'] and mq['w'] > 0 and inside(mq, m['window']),
+                    f'a {w} px window: a walk key made at the landing, the ring drawn, the mirror stands whole inside the window (FP-26)',
+                    {'mirror': dict(mirror, **seen(mq)), 'vw': m['window']['w']})
+            ctx.drv.key('f', mods=('Meta',))
+            ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => { const s = window.__skep.find.stands(); return (s && !s.reading) || performance.now() - t0 > 15000 ? res(true) : setTimeout(tick, 50); }; tick(); })')
+            ctx.frames(2)
+            find = ctx.js('%s(["#find"])' % RECTS_JS)
+            opened = ctx.js('window.__skep.find.isOpen()')
+            ctx.drv.key('Escape')
+            ctx.frames(2)
+            closed = not ctx.js('window.__skep.find.isOpen()')
+            fq = find['rects'][0]
+            r.check(opened and closed and fq['w'] > 0 and inside(fq, find['window']),
+                    f'a {w} px window: Mod+F at the first edition opens the find box whole inside the window, and Esc closes it (FP-26)',
+                    {'find': seen(fq), 'opened': opened, 'closed': closed, 'vw': find['window']['w']})
+            figures[w] = {'leap': seen(box[0]) if box else None, 'leap_rows': len(cells), 'mirror': seen(mq), 'find': seen(fq)}
+    finally:
+        ctx.resize(*was)
+        ctx.js('document.activeElement && document.activeElement.blur && document.activeElement.blur()')
+        ctx.settle()
+    return figures
+
+
 def trail_view(ctx):
     """the plane's canvas along the segment between the trail's two newest entries, as far as the segment runs on screen
     inside the first edition's box, TRAIL_INSET_PX inside its edges, the disc about every entry's point left out: the
@@ -4815,6 +4881,7 @@ def run(ctx):
     r.figures['longest'] = longest_holds(ctx, r)
     r.figures['walk'] = walk_holds(ctx, r)
     r.figures['line_rows'] = line_rows_hold(ctx, r)
+    r.figures['panels'] = panels_hold(ctx, r)
     r.figures['scene_strokes'] = scene_strokes_hold(ctx, r)
     r.figures['scene_return'] = scene_return_holds(ctx, r)
     r.figures['scene_pane_return'] = scene_pane_return_holds(ctx, r)
