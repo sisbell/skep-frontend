@@ -220,18 +220,24 @@ act's chord mark sets the two ends level again (K-62); the panes are read,
 never clicked (SC; B1-S9) — no block, hairline or symbol in a pane, nor its
 corner's version statement, takes the click cues the plane's keep, no block
 there takes the hover ground, and a click on any of them leaves the scene
-standing over the page as it found it; each pane is one column at the
-plane's measure (issue #15: "side-by-side panes stay one column each, at the
-same line length"; the typography review's findings 7 and 16) — both panes
-at one size (issue #16's design decision), the reading size READING_PX at a
-window SCENE_WIDE_PX wide; at the run's window the text fills its pane beside
-its corner, its face set smaller to hold the measure there, and there and at
-the wide one its line holds a whole count of its face's average advance, in
-60–66, the same at both windows and in both panes, at the wide one against
-the pane's inner edge,
-its column's edge between them, where the bands leave it, its corner one gap
-beside it on the outer side,
-the plane under the scene parked meanwhile at the far band,
+standing over the page as it found it; each pane is one column whose
+measure the scene fits both panes to, its face never shrunk (issue #436's
+design decision, its reading scene's part; FP-12, FP-26) — both panes at
+the reading size READING_PX at every window, each line a whole count of its
+face's average advance, the same in both panes: at the run's window narrowed
+to HEAD_CH or more, short of the full measure, each corner compact on its
+pane's outer side, one gap from its text, its glyph's click and the corner's
+Enter opening it whole and the same act closing it; at a window
+SCENE_WIDE_PX wide the full measure, 60–66, each corner whole, room left past
+it; at either the column against the pane's inner edge, its column's edge
+between them, where the bands leave it; at a window SCENE_HEAD_PX wide, where
+beside its compact corner a pane keeps fewer than HEAD_CH characters, both
+corners at their documents' heads, across their columns' text and edge, both
+texts beginning at one depth, the measure the room beside the edge alone,
+the first rows held where they stand as both panes scroll and ↓ bringing the
+next block's top to the held row's foot, never under it; the first block in
+view at the run's window still first in view at each window after it; the
+plane under the scene parked meanwhile at the far band,
 where the view reads nothing, so the later cases meet the page as the check
 found it; back on the plane, the box an edition shares with its members
 holds one article; opened on a passage beside a document a far end of it
@@ -486,10 +492,11 @@ TIE_TOL_PX = 0.5
 # passage where the near passage's line stands out of pane A's view — the case's own, held apart from the page's
 EDGE_TOL_PX = 2.0
 STOP_AT_PX = 40
-# the scene's measure: a pane's line in its face's average advance — the plane's measure (issue #15: "side-by-side panes stay
-# one column each, at the same line length"), MEASURE_CH — the window wider than the measure needs that it is held at,
-# and how far a column's edge, or its width, may stand from where it is held
-SCENE_WIDE_PX = 2560
+# the scene's measure (issue #436's design decision, its reading scene's part): the window wider than the full measure needs
+# with both corners whole, MEASURE_CH; the window where beside its compact corner a pane keeps fewer than HEAD_CH characters,
+# so both corners stand at their documents' heads — the case's own, held apart from the page's HEAD_CPL; and how far a
+# column's edge, or its width, may stand from where it is held
+SCENE_WIDE_PX, SCENE_HEAD_PX, HEAD_CH = 2560, 1150, 40
 MEASURE_TOL_PX = 0.5
 CORNER = '#corners [data-corner="%s"]' % DOC
 # the case's own floor for a label, held apart from the page's constant so that lowering the page's cannot pass here
@@ -2061,43 +2068,100 @@ def scene_marks_hold(ctx, r):
 
 
 def pane_columns(ctx):
-    """each scene pane's text column as a person meets it, by side: the pane's content box, its article's box and its
-    text column inside it — the article's content box, its padding the column's edge on the pane's inner side (issue
-    #151) — its face's size, and its corner's, the flex gap between them, and its face's average advance at the body's
-    size as the case probes it in one of its typed lines (`ADVANCE_JS`); the window's size beside them"""
+    """each scene pane's text column as a person meets it, by side: the pane's content box and its padding's top, its
+    article's box — its top's depth in the pane's content, whatever its scroll — and its text column inside it — the
+    article's content box, its padding the column's edge on the pane's inner side (issue #151) — its face's size, and its
+    corner's box below the pane's visible top and the form it stands in, the flex gap between them, and its face's average
+    advance at the body's size as the case probes it in one of its typed lines (`ADVANCE_JS`); the window's size beside
+    them"""
     return ctx.js('''(() => { const advance = %s; const side = (id) => {
         const pane = document.getElementById(id), art = pane && pane.querySelector(':scope > article.dtext'), corner = pane && pane.querySelector(':scope > .corner');
         if (!art || !corner) return null;
-        const p = pane.getBoundingClientRect(), s = getComputedStyle(pane), x0 = p.left + pane.clientLeft, b = art.getBoundingClientRect(), c = corner.getBoundingClientRect(), as = getComputedStyle(art);
+        const p = pane.getBoundingClientRect(), s = getComputedStyle(pane), x0 = p.left + pane.clientLeft, y0 = p.top + pane.clientTop, b = art.getBoundingClientRect(), c = corner.getBoundingClientRect(), as = getComputedStyle(art);
         const pl = parseFloat(as.paddingLeft) + parseFloat(as.borderLeftWidth), pr = parseFloat(as.paddingRight) + parseFloat(as.borderRightWidth);
         const a = {left: b.left + pl, right: b.right - pr, width: b.width - pl - pr};
         const para = art.querySelector('.run > p.sp'), ch = para ? advance(para, 1) : null;
-        return {content: {left: x0 + parseFloat(s.paddingLeft), right: x0 + pane.clientWidth - parseFloat(s.paddingRight)},
-                box: {left: b.left, right: b.right, w: b.width}, text: {left: a.left, right: a.right, w: a.width}, edge: {left: pl, right: pr, font: parseFloat(as.fontSize)},
-                corner: {left: c.left, right: c.right, w: c.width}, gap: parseFloat(s.columnGap), ch};
+        const form = corner.classList.contains('head') ? 'head' : corner.classList.contains('compact') ? 'compact' : 'whole';
+        return {content: {left: x0 + parseFloat(s.paddingLeft), right: x0 + pane.clientWidth - parseFloat(s.paddingRight), top: parseFloat(s.paddingTop)},
+                box: {left: b.left, right: b.right, w: b.width, depth: b.top - y0 + pane.scrollTop}, text: {left: a.left, right: a.right, w: a.width}, edge: {left: pl, right: pr, font: parseFloat(as.fontSize)},
+                corner: {left: c.left, right: c.right, w: c.width, top: c.top - y0, bottom: c.bottom - y0, form}, gap: parseFloat(s.columnGap), ch, scroll: pane.scrollTop};
       };
       return {vw: window.innerWidth, vh: window.innerHeight, a: side('sceneA'), b: side('sceneB')}; })()''' % ADVANCE_JS)
 
 
+def pane_blocks(ctx, side):
+    """a scene pane's blocks as a person meets them, below what a head held at the pane's top covers: the foot of that
+    held row below the pane's visible top (0 where its corner stands beside its column), the first block meeting the view
+    below it, and every block near the view, each its first position and its top"""
+    return ctx.js('''((id) => { const pane = document.getElementById(id), art = pane && pane.querySelector(':scope > article.dtext'), c = pane && pane.querySelector(':scope > .corner');
+      if (!art || !c) return null;
+      const y0 = pane.getBoundingClientRect().top + pane.clientTop, held = c.classList.contains('head') ? c.getBoundingClientRect().bottom - y0 : 0;
+      const blocks = [...art.querySelectorAll('.run > .sp, .run > .withheld')].map((e) => { const q = e.getBoundingClientRect(); return {pos: Number(e.dataset.pos), top: q.top - y0, bottom: q.bottom - y0, h: q.height}; })
+        .filter((b) => b.h > 0 && b.bottom > -200 && b.top < pane.clientHeight + 200);
+      return {held, first: blocks.find((b) => b.bottom > held + 0.5 && b.top < pane.clientHeight) || null, blocks: blocks.map((b) => ({pos: b.pos, top: b.top}))}; })(%s)''' % json.dumps('scene' + side.upper()))
+
+
+def corner_opens(ctx, r, side='a'):
+    """A COMPACT CORNER OPENS WHOLE ON ITS ACT (FP-26): a pane's corner standing compact — a click on its state's glyph
+    opens it whole where it stands, its state in its words, whole wide over what stands beside it, the pane's text not
+    moved, and a click on it opened closes it; Enter at the corner, which offers no act of its own, does the same. Its
+    figures"""
+    pane = 'scene' + side.upper()
+    read = '''((id) => { const p = document.getElementById(id), c = p && p.querySelector(':scope > .corner'), a = p && p.querySelector(':scope > article.dtext'); if (!c || !a) return null;
+      const st = c.querySelector('.st'), g = c.querySelector('.glyph'), q = (g || c).getBoundingClientRect(), b = a.getBoundingClientRect(), k = c.getBoundingClientRect();
+      return {form: c.classList.contains('head') ? 'head' : c.classList.contains('compact') ? 'compact' : 'whole', open: c.classList.contains('open'), glyph: !!g, st: st ? st.textContent : null,
+              w: k.width, text: [b.left, b.right], x: q.left + q.width / 2, y: q.top + q.height / 2, hits: !!g && document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2) === g}; })(%s)''' % json.dumps(pane)
+    shut = ctx.js(read)
+    if shut and shut['hits']:
+        ctx.drv.mouse(shut['x'], shut['y'])
+        ctx.frames(2)
+    opened = ctx.js(read)
+    if opened and opened['open']:
+        ctx.drv.mouse(opened['x'], opened['y'])
+        ctx.frames(2)
+    closed = ctx.js(read)
+    still = bool(shut and opened and closed) and all(abs(v['text'][0] - shut['text'][0]) <= MEASURE_TOL_PX and abs(v['text'][1] - shut['text'][1]) <= MEASURE_TOL_PX for v in (opened, closed))
+    r.check(bool(shut) and shut['form'] == 'compact' and not shut['open'] and shut['glyph'] and shut['hits'] and bool(opened) and opened['open'] and not opened['glyph'] and bool(opened['st'])
+            and opened['w'] > shut['w'] + MEASURE_TOL_PX and bool(closed) and not closed['open'] and closed['glyph'] and still,
+            f'pane {side.upper()}\'s corner standing compact: a click on its state\'s glyph opens it whole where it stands — its state in its words, whole wide over what stands beside it, the pane\'s text not moved — and a click on it opened closes it (FP-26)',
+            {'compact': shut, 'opened': opened, 'closed': closed})
+    ctx.js('document.querySelector(%s).focus()' % json.dumps('#' + pane + ' > .corner'))
+    ctx.drv.key('Enter')
+    ctx.frames(2)
+    entered = ctx.js(read)
+    ctx.drv.key('Enter')
+    ctx.frames(2)
+    left = ctx.js(read)
+    r.check(bool(entered) and entered['open'] and bool(entered['st']) and not entered['glyph'] and bool(left) and not left['open'] and left['glyph'],
+            f'pane {side.upper()}\'s corner, which offers no act of its own: Enter at it opens it whole, and Enter again closes it (FP-26)', {'entered': entered, 'left': left})
+    ctx.js('document.getElementById(%s).focus()' % json.dumps(pane))
+    return {'glyph': shut and shut['st'], 'whole': opened and opened['st']}
+
+
 def scene_measure_holds(ctx, r):
-    """THE SCENE'S MEASURE (issue #15's design decision: "side-by-side panes stay one column each, at the same line
-    length"; the typography review's findings 7 and 16; issue #16's design decision: both panes take one size, by the
-    landing's rule): the scene on the first edition and the draft it windows. Both panes at one size at either window,
-    the reading size READING_PX at one SCENE_WIDE_PX wide. At the
-    run's window each pane's text fills its pane beside its corner, its face set smaller to hold the measure there; at
-    the run's window and at the wide one, where a pane holds more room than the measure, each pane's line
-    holds the plane's measure — a whole count of its face's average advance, MEASURE_CH, the same at both windows and in
-    both panes; at the wide one room left past it, the column against its pane's inner edge, its column's edge between
-    them — where the bands and lines leave the pane beyond its signs (foundations §2.5, §3.1; issue #151) — and its
-    corner one gap beside it on the outer side. While the window is wide the
-    plane under the scene stands at the far band, where the view reads nothing (M-PUMP's `pump`), so the run's later
-    cases meet the page as the scene's check found it; the window, the camera and the scene are put back as they stood.
-    Its figures"""
+    """THE SCENE'S MEASURE (issue #436's design decision, its reading scene's part; FP-12, FP-26): the scene on the first
+    edition and the draft it windows, both panes fitted once — the measure narrowing, never the face. At the run's window
+    both panes at the reading size READING_PX, each pane's line a whole count of its face's average advance, the same in
+    both, narrowed to HEAD_CH or more and short of the full measure, each corner compact on its pane's outer side, one gap
+    from its text, the column against its pane's inner edge, its column's edge between them, where the bands and lines
+    leave the pane beyond its signs (foundations §2.5, §3.1; issue #151); its glyph's click and Enter opening it whole
+    (`corner_opens`). At a window SCENE_WIDE_PX wide the full measure, MEASURE_CH, each corner whole beside it on the
+    outer side and room left past them, the column against the inner edge still. At a window SCENE_HEAD_PX wide, where
+    beside its compact corner a pane keeps fewer than HEAD_CH characters, both corners at their documents' heads, across
+    their columns' text and edge, both texts beginning at one depth below them, the measure the most characters the pane
+    holds beside the edge alone, at the reading size; both panes scrolled, each first row held where it stood; ↓ in pane A
+    bringing the next block's top to the held row's foot, never under it. The first block in view at the run's window is
+    first in view at each window after it. While the window is changed the plane under the scene stands at the far band,
+    where the view reads nothing (M-PUMP's `pump`), so the run's later cases meet the page as the scene's check found it;
+    the window, the camera and the scene are put back as they stood. Its figures"""
     ctx.leap(DOC, WINDOW[0])
     ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
     ctx.settle()
     ctx.frames(3)
     run = pane_columns(ctx)
+    opened = corner_opens(ctx, r)
+    ctx.frames(2)
+    firsts = {'run': {s: (pane_blocks(ctx, s) or {}).get('first') for s in 'ab'}}
     landing, box = ctx.camera(), ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
     # the plane parked at the far band: a document's box half the band's lower edge wide
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] / 2, ctx.js('window.__skep.constants.LOD_FAR_LO / 2 / window.__skep.constants.DOC_W'))
@@ -2105,9 +2169,25 @@ def scene_measure_holds(ctx, r):
     was = ctx.resize(SCENE_WIDE_PX, run['vh'])
     try:
         ctx.settle()
+        ctx.frames(2)
         wide = pane_columns(ctx)
+        firsts['wide'] = {s: (pane_blocks(ctx, s) or {}).get('first') for s in 'ab'}
         band = ctx.js('window.__skep.view.lod().name')
+        ctx.resize(SCENE_HEAD_PX, run['vh'])
+        ctx.settle()
+        ctx.frames(2)
+        head = pane_columns(ctx)
+        firsts['head'] = {s: (pane_blocks(ctx, s) or {}).get('first') for s in 'ab'}
         reads = ctx.js('window.__skep.bridge.calls().length') - asked
+        ctx.js('for (const id of ["sceneA", "sceneB"]) document.getElementById(id).scrollTop += 300')
+        ctx.frames(3)
+        scrolled = pane_columns(ctx)
+        before = pane_blocks(ctx, 'a') or {}
+        ctx.js('document.getElementById("sceneA").focus()')
+        ctx.drv.key('ArrowDown')
+        ctx.settle()
+        ctx.frames(2)
+        after = pane_blocks(ctx, 'a') or {}
     finally:
         ctx.resize(*was)
         ctx.set_view(landing['x'], landing['y'], landing['scale'])
@@ -2116,52 +2196,86 @@ def scene_measure_holds(ctx, r):
     back = ctx.js('[window.innerWidth, window.innerHeight]')
     sides = (('a', 'pane A'), ('b', 'pane B'))
     both = lambda v: bool(v['a'] and v['b'])
+    windows = (('run', run), ('wide', wide), ('head', head))
 
     def cpl(c):
         """a column's line in its face's average advance"""
         return c['text']['w'] / c['ch'] if c and c['ch'] else None
 
+    def whole_counts(v):
+        """each pane's line a whole count of its face's average advance, the two alike"""
+        ws = [cpl(v[s]) for s, _ in sides]
+        return both(v) and all(w is not None and abs(w - round(w)) <= MEASURE_CH_TOL for w in ws) and max(ws) - min(ws) <= 2 * MEASURE_CH_TOL
+
     def room(c):
         """the width a pane's content box holds for its text: its own, less its corner and the gap"""
         return c['content']['right'] - c['content']['left'] - c['corner']['w'] - c['gap']
 
-    def alike(v):
-        return both(v) and abs(v['a']['text']['w'] - v['b']['text']['w']) <= MEASURE_TOL_PX
+    def edged(v):
+        """each column against its pane's inner edge, its column's edge between them: pane A's edge on its text's right ending at
+        its content's right edge, pane B's on its text's left starting at its left edge"""
+        a, b = v['a'], v['b']
+        return both(v) and abs(a['edge']['right'] - EDGE_EM * a['edge']['font']) <= MEASURE_TOL_PX and a['edge']['left'] <= MEASURE_TOL_PX and abs(b['edge']['left'] - EDGE_EM * b['edge']['font']) <= MEASURE_TOL_PX and b['edge']['right'] <= MEASURE_TOL_PX \
+            and abs(a['box']['right'] - a['content']['right']) <= MEASURE_TOL_PX and abs(b['box']['left'] - b['content']['left']) <= MEASURE_TOL_PX
 
-    sizes = {'run': [run[s] and run[s]['edge']['font'] for s, _ in sides], 'wide': [wide[s] and wide[s]['edge']['font'] for s, _ in sides]}
-    r.check(both(run) and both(wide) and all(abs(v[0] - v[1]) <= 1e-6 for v in sizes.values()) and abs(sizes['wide'][0] - READING_PX) <= 1e-6 and sizes['run'][0] <= READING_PX + 1e-6,
-            f'the scene: both panes take one size at the run\'s {run["vw"]} px window and at a {SCENE_WIDE_PX} px one, the reading size, {READING_PX} px, at the wide one, and no larger at the run\'s (issue #16\'s design decision)',
+    def outside(v, form):
+        """each corner in `form` on its pane's outer side, one gap from its text, inside the pane's content box"""
+        a, b = v['a'], v['b']
+        return both(v) and a['corner']['form'] == form and b['corner']['form'] == form \
+            and abs(a['corner']['right'] + a['gap'] - a['text']['left']) <= MEASURE_TOL_PX and a['corner']['left'] >= a['content']['left'] - MEASURE_TOL_PX \
+            and abs(b['text']['right'] + b['gap'] - b['corner']['left']) <= MEASURE_TOL_PX and b['corner']['right'] <= b['content']['right'] + MEASURE_TOL_PX
+
+    def picked(v, keys):
+        return {name: v[s] and {k: v[s][k] for k in keys} for s, name in sides}
+
+    sizes = {k: [v[s] and v[s]['edge']['font'] for s, _ in sides] for k, v in windows}
+    r.check(all(both(v) for _, v in windows) and all(f is not None and abs(f - READING_PX) <= 1e-6 for fs in sizes.values() for f in fs),
+            f'the scene: both panes at the reading size, {READING_PX} px, at the run\'s {run["vw"]} px window, at a {SCENE_WIDE_PX} px one and at a {SCENE_HEAD_PX} px one — the face never set smaller to fit (FP-12, FP-26)',
             sizes)
-    fills = {name: run[s] and round(room(run[s]) - run[s]['box']['w'], 3) for s, name in sides}
-    r.check(both(run) and all(abs(f) <= MEASURE_TOL_PX for f in fills.values()) and alike(run),
-            f'the scene at the run\'s {run["vw"]} px window: each pane\'s text and its column\'s edge fill its pane beside its corner and one gap, {MEASURE_TOL_PX} px either way, the two columns alike',
-            {'room_less_column_and_edge': fills, 'columns': [run[s] and run[s]['text']['w'] for s, _ in sides]})
-    r.check(wide['vw'] == SCENE_WIDE_PX and band == 'far' and reads == 0 and back == [run['vw'], run['vh']],
-            f'the window set {SCENE_WIDE_PX} px wide with the plane under the scene at the far band, the page asking the board nothing while it stood so, and the window put back at the run\'s size after it',
-            {'wide': [wide['vw'], wide['vh']], 'band': band, 'reads': reads, 'back': back})
+    r.check(wide['vw'] == SCENE_WIDE_PX and head['vw'] == SCENE_HEAD_PX and band == 'far' and reads == 0 and back == [run['vw'], run['vh']],
+            f'the window set {SCENE_WIDE_PX} px, then {SCENE_HEAD_PX} px wide with the plane under the scene at the far band, the page asking the board nothing while it stood so, and the window put back at the run\'s size after it',
+            {'wide': [wide['vw'], wide['vh']], 'head': [head['vw'], head['vh']], 'band': band, 'reads': reads, 'back': back})
+    chars = {k: {name: cpl(v[s]) and round(cpl(v[s]), 3) for s, name in sides} for k, v in windows}
     lo, hi = MEASURE_CH
-    widths = {name: cpl(wide[s]) for s, name in sides}
-    narrow = {name: cpl(run[s]) for s, name in sides}
-    every = [w for w in [*widths.values(), *narrow.values()]]
-    r.check(both(wide) and both(run) and all(w is not None and lo - MEASURE_CH_TOL <= w <= hi + MEASURE_CH_TOL and abs(w - round(w)) <= MEASURE_CH_TOL for w in every) and max(every) - min(every) <= 2 * MEASURE_CH_TOL,
-            f'the scene: each pane\'s line holds the plane\'s measure — a whole count of its face\'s average advance, {lo}–{hi} — at the run\'s {run["vw"]} px window and at a {SCENE_WIDE_PX} px one alike, never the window\'s width, the two panes alike',
-            {'characters': {'run': {k: v and round(v, 3) for k, v in narrow.items()}, 'wide': {k: v and round(v, 3) for k, v in widths.items()}}, 'columns': [wide[s] and wide[s]['text']['w'] for s, _ in sides]})
-    r.check(both(wide) and all(room(wide[s]) > wide[s]['box']['w'] + MEASURE_TOL_PX for s, _ in sides),
-            f'at a {SCENE_WIDE_PX} px window each pane holds more room than its column and its edge take: the measure, not the pane, sets the line',
-            {name: wide[s] and {'room': room(wide[s]), 'column_and_edge': wide[s]['box']['w']} for s, name in sides})
-    a, b = wide['a'], wide['b']
-    # the column's edge on the pane's inner side (issue #151; foundations §3.1: "the bands leaving its inner edge beyond its counts")
-    edged = both(wide) and abs(a['edge']['right'] - EDGE_EM * a['edge']['font']) <= MEASURE_TOL_PX and a['edge']['left'] <= MEASURE_TOL_PX and abs(b['edge']['left'] - EDGE_EM * b['edge']['font']) <= MEASURE_TOL_PX and b['edge']['right'] <= MEASURE_TOL_PX
-    r.check(edged and abs(a['box']['right'] - a['content']['right']) <= MEASURE_TOL_PX and abs(b['box']['left'] - b['content']['left']) <= MEASURE_TOL_PX,
-            f'at a {SCENE_WIDE_PX} px window each column stands against its pane\'s inner edge, its column\'s edge between them, where the bands leave the pane beyond its signs: pane A\'s edge on its text\'s right ending at its content\'s right edge, pane B\'s on its text\'s left starting at its left edge, {MEASURE_TOL_PX} px either way',
-            {name: wide[s] and {'content': wide[s]['content'], 'box': wide[s]['box'], 'text': wide[s]['text'], 'edge': wide[s]['edge']} for s, name in sides})
-    r.check(both(wide) and abs(a['corner']['right'] + a['gap'] - a['text']['left']) <= MEASURE_TOL_PX and a['corner']['left'] >= a['content']['left'] - MEASURE_TOL_PX
-            and abs(b['text']['right'] + b['gap'] - b['corner']['left']) <= MEASURE_TOL_PX and b['corner']['right'] <= b['content']['right'] + MEASURE_TOL_PX,
-            f'at a {SCENE_WIDE_PX} px window each pane\'s corner stands on its outer side, one gap from its text, inside the pane\'s content box',
-            {name: wide[s] and {'content': wide[s]['content'], 'text': wide[s]['text'], 'corner': wide[s]['corner'], 'gap': wide[s]['gap']} for s, name in sides})
-    return {'window': {'run': [run['vw'], run['vh']], 'wide': [wide['vw'], wide['vh']]},
-            'characters': {'run': {name: cpl(run[s]) and round(cpl(run[s]), 2) for s, name in sides}, 'wide': {k: v and round(v, 2) for k, v in widths.items()}},
-            'character_px': run['a'] and run['a']['ch'], 'pane_px': sizes, 'band_while_wide': band, 'reads_while_wide': reads}
+    r.check(whole_counts(run) and all(HEAD_CH - MEASURE_CH_TOL <= cpl(run[s]) <= hi - 1 + MEASURE_CH_TOL for s, _ in sides) and outside(run, 'compact') and edged(run),
+            f'at the run\'s {run["vw"]} px window, too narrow for the full measure beside a whole corner: each corner compact on its pane\'s outer side, one gap from its text, and the measure narrowed — a whole count of its face\'s average advance, the same in both panes, {HEAD_CH} or more and short of {hi} — each column against its pane\'s inner edge, its column\'s edge between them, {MEASURE_TOL_PX} px either way',
+            {'characters': chars['run'], **picked(run, ('content', 'box', 'text', 'edge', 'corner', 'gap'))})
+    r.check(whole_counts(wide) and all(lo - MEASURE_CH_TOL <= cpl(wide[s]) <= hi + MEASURE_CH_TOL for s, _ in sides) and outside(wide, 'whole') and edged(wide)
+            and all(room(wide[s]) > wide[s]['box']['w'] + MEASURE_TOL_PX for s, _ in sides),
+            f'at a {SCENE_WIDE_PX} px window: the full measure — a whole count of its face\'s average advance, {lo}–{hi}, the same in both panes — each corner whole on its pane\'s outer side, one gap from its text, room left past them, each column against its pane\'s inner edge',
+            {'characters': chars['wide'], **picked(wide, ('content', 'box', 'text', 'edge', 'corner', 'gap'))})
+
+    def across(c):
+        """a corner at its document's head across its column's text and its edge, above the text, the text one band of rows
+        or more below the pane's content top"""
+        return c['corner']['form'] == 'head' and abs(c['corner']['left'] - c['box']['left']) <= MEASURE_TOL_PX and abs(c['corner']['right'] - c['box']['right']) <= MEASURE_TOL_PX \
+            and c['box']['depth'] - c['content']['top'] >= (c['corner']['bottom'] - c['corner']['top']) - MEASURE_TOL_PX
+
+    def holds(c, compact):
+        """the measure the room beside the edge alone: the most whole characters the pane's content box holds beside the
+        column's edge, fewer than HEAD_CH beside the compact corner"""
+        w = c['content']['right'] - c['content']['left']
+        return c['box']['w'] <= w + MEASURE_TOL_PX and w - c['box']['w'] < c['ch'] + MEASURE_TOL_PX and (w - compact - c['gap'] - EDGE_EM * c['edge']['font']) / c['ch'] < HEAD_CH
+
+    compact = run['a'] and run['a']['corner']['w']
+    r.check(whole_counts(head) and both(head) and all(across(head[s]) and holds(head[s], compact) for s, _ in sides) and abs(head['a']['box']['depth'] - head['b']['box']['depth']) <= MEASURE_TOL_PX
+            and edged(head),
+            f'at a {SCENE_HEAD_PX} px window, where beside its compact corner a pane keeps fewer than {HEAD_CH} characters: both corners at their documents\' heads, across their columns\' text and edge, both texts beginning at one depth below them, and the measure the most characters each pane holds beside the edge alone — its column against its inner edge',
+            {'characters': chars['head'], 'compact_corner': compact, **picked(head, ('content', 'box', 'text', 'edge', 'corner', 'gap'))})
+    held = both(head) and both(scrolled) and all(scrolled[s]['scroll'] > head[s]['scroll'] + 100 and abs(scrolled[s]['corner']['top'] - head[s]['corner']['top']) <= MEASURE_TOL_PX for s, _ in sides)
+    r.check(held, f'at a {SCENE_HEAD_PX} px window both panes scrolled: each head\'s first row held where it stood, the text passing under it',
+            {name: {'scroll': [head[s] and head[s]['scroll'], scrolled[s] and scrolled[s]['scroll']], 'corner_top': [head[s] and head[s]['corner']['top'], scrolled[s] and scrolled[s]['corner']['top']]} for s, name in sides})
+    want = next((b for b in (before.get('blocks') or []) if b['top'] > (before.get('held') or 0) + 1), None)
+    landed = want and next((b for b in (after.get('blocks') or []) if b['pos'] == want['pos']), None)
+    r.check(bool(want) and bool(landed) and after.get('held', 0) > 0 and abs(landed['top'] - after['held']) <= 1,
+            f'at a {SCENE_HEAD_PX} px window ↓ in pane A brings the next block\'s top to the foot of the head\'s held row, a pixel either way — never under it',
+            {'held': [before.get('held'), after.get('held')], 'next': want, 'landed': landed})
+    kept = {k: {s: v[s] and v[s]['pos'] for s in 'ab'} for k, v in firsts.items()}
+    r.check(all(kept['run'][s] is not None and kept['wide'][s] == kept['run'][s] and kept['head'][s] == kept['run'][s] for s in 'ab'),
+            f'the first block in view at the run\'s window is first in view at {SCENE_WIDE_PX} px and at {SCENE_HEAD_PX} px, below a held head\'s row: each refit keeps the reader\'s place', kept)
+    return {'window': {'run': [run['vw'], run['vh']], 'wide': [wide['vw'], wide['vh']], 'head': [head['vw'], head['vh']]},
+            'characters': chars, 'corners': {k: [v[s] and v[s]['corner']['form'] for s, _ in sides] for k, v in windows},
+            'character_px': run['a'] and run['a']['ch'], 'pane_px': sizes, 'opened': opened, 'first_in_view': kept, 'band_while_wide': band, 'reads_while_wide': reads}
 
 
 def scene_holds(ctx, r):

@@ -17,8 +17,9 @@
 // compacted before the measure narrows, else the most whole characters the
 // view holds beside it while those are forty or more, below forty the corner
 // at its document's head and its room the measure's, and the landing's em
-// smaller only where one does not fit — and a fold at a narrower measure
-// (FP-26, FP-31); the
+// smaller only where one does not fit, a reading scene's pane fitted by the
+// same arithmetic with no margin past its column's edge — and a fold at a
+// narrower measure (FP-26, FP-31); the
 // fold (FP-12) — every document at MEASURE_CPL characters a line, every line
 // in a column inside its room, columns COLUMN_LINES deep with the keeps held,
 // columns left to right then row by row, the standard size then steps each at
@@ -390,6 +391,30 @@ test('the fit: the full measure wherever the view holds a column at the reading 
   assert.deepEqual(fitFor(480, READ, CORNER), { cpl: alone(480), compact: true, head: true, px: READ }, 'a 480 px view: the corner at the head, the characters it holds beside the edge alone');
   assert.equal(alone(480), 46, 'forty-six at the shipped advance');
   assert.ok(fitFor(900, 20, CORNER).cpl <= fitFor(900, READ, CORNER).cpl && fitFor(700, 20, CORNER).cpl < fitFor(700, READ, CORNER).cpl, 'a larger reading size holds fewer');
+});
+
+/** the corner beside a reading scene's pane's column as the scene's style sets it: whole 121 px, compact 77 px, 14 px from the text */
+const PANE = { whole: 121, compact: 77, gap: 14 };
+/** the content box a pane needs for a column at the reading size beside its corner: the corner and its gap, the column and its edge, no margin past it */
+const paneNeeds = (/** @type {number} */ cpl, /** @type {number} */ corner) => corner + PANE.gap + cpl * CHAR_W * READ + EDGE * READ;
+
+test('a reading scene\'s pane is fitted by the plane\'s arithmetic with no margin past its column\'s edge, its padding holding that room: the full measure with its corner whole, the corner compacted before the measure narrows, the measure narrowing at the reading size to forty characters beside the compact corner, and one pixel short of that the corner at its document\'s head and the measure the room beside the edge alone — the face never shrunk (issue #217; FP-12, FP-26)', () => {
+  const whole = Math.ceil(paneNeeds(MEASURE_CPL, PANE.whole) - 1e-9), compact = Math.ceil(paneNeeds(MEASURE_CPL, PANE.compact) - 1e-9);
+  assert.deepEqual(fitFor(whole, READ, PANE, 0), { cpl: MEASURE_CPL, compact: false, head: false, px: READ }, `${whole} px: the full measure, the corner whole beside it`);
+  assert.deepEqual(fitFor(whole - 1, READ, PANE, 0), { cpl: MEASURE_CPL, compact: true, head: false, px: READ }, 'a px short of that: the corner compact, the measure kept');
+  assert.deepEqual(fitFor(compact, READ, PANE, 0), { cpl: MEASURE_CPL, compact: true, head: false, px: READ });
+  const forty = Math.ceil(paneNeeds(HEAD_CPL, PANE.compact) - 1e-9);
+  for (let vw = compact - 1; vw >= forty; vw -= 5) {
+    const f = fitFor(vw, READ, PANE, 0);
+    assert.ok(f.compact && !f.head && f.px === READ && f.cpl < MEASURE_CPL && paneNeeds(f.cpl, PANE.compact) <= vw + 1e-9 && paneNeeds(f.cpl + 1, PANE.compact) > vw, `${vw} px: the most characters the pane holds beside its compact corner, ${f.cpl}, at the reading size`);
+  }
+  assert.deepEqual(fitFor(forty, READ, PANE, 0), { cpl: HEAD_CPL, compact: true, head: false, px: READ }, `${forty} px: forty characters beside the compact corner`);
+  const head = fitFor(forty - 1, READ, PANE, 0), alone = Math.floor((forty - 1 - EDGE * READ) / (CHAR_W * READ));
+  assert.deepEqual(head, { cpl: alone, compact: true, head: true, px: READ }, `${forty - 1} px: the corner at the head, the measure the characters beside the edge alone`);
+  assert.ok(head.cpl > HEAD_CPL, `the head form's measure, ${head.cpl}, more than the forty the corner beside it would keep`);
+  const plane = fitFor(forty, READ, PANE);
+  assert.ok(plane.cpl < HEAD_CPL || plane.head, `the plane's gutter past the edge holds fewer at the same width: ${JSON.stringify(plane)}`);
+  assert.deepEqual(fitFor(whole, READ, PANE, GUTTER), fitFor(whole, READ, PANE), 'the plane\'s margin the gutter where none is given');
 });
 
 test('a reading view lands at the reading size wherever the view holds a column of one character beside its margins, and only where it holds none at the em that holds that one, never below 1 px (issue #16)', () => {

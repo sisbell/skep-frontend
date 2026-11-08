@@ -37,7 +37,8 @@ corner, the scene's acts (K-61; issues #160 and #331), with nothing the scene
 covers in the ring, nothing inside a pane's
 article a control or a stop in the AX tree (SC: the panes are read, never
 pressed), each pane's corner a group there named by its own words, which say
-what the pane shows, and Shift+Tab walking it back to the
+what the pane shows, a compact state's glyph by its whole words, and
+Shift+Tab walking it back to the
 line, Esc and Mod+[ from a pane each its Back (issue #50), ending it on the
 entry it opened over with the focus on the landing's item (K-63; rule 8); Back's light
 exposed (issue #152's design decision) — Mod+[ from a carried passage's
@@ -578,7 +579,8 @@ def run(ctx):
     # nothing inside a pane's article is a control (SC; B1-S9: "read both…; scroll each"): a pane's article is what
     # assistive technology reads — never hidden from it as the plane's is — so a mark a press acts on nothing in must be
     # no button there; the first edition's pane carries the presence ⟡, links touching it. Each pane's corner is its one
-    # stop beside it, a group named by its own words, which say what the pane shows (issue #160; D5 K-57)
+    # stop beside it, a group named by its own words, which say what the pane shows — a compact state's glyph by its whole
+    # words (issue #160; D5 K-57; FP-26)
     ax = ctx.drv.ax_tree()
     if 'error' in ax:
         r.figures['scene_ax'] = {'answered': False, 'error': ax['error']}
@@ -606,12 +608,15 @@ def run(ctx):
         for side in ('A', 'B'):
             sel = '#scene%s > .corner' % side
             node = by_dom.get(backend(sel)) or {}
-            said = ctx.js('(() => { const e = document.querySelector(%s); return e ? {words: e.textContent, tab: e.getAttribute("tabindex")} : null; })()' % json.dumps(sel)) or {}
+            # its own words, each compact sign read whole by the name it carries, as the plane's corner's are
+            said = ctx.js('''(() => { const e = document.querySelector(%s); if (!e) return null; const k = e.cloneNode(true);
+              k.querySelectorAll('.glyph[aria-label]').forEach((g) => { g.textContent = g.getAttribute('aria-label'); });
+              return {words: k.textContent, tab: e.getAttribute('tabindex'), glyphs: e.querySelectorAll('.glyph[aria-label]').length}; })()''' % json.dumps(sel)) or {}
             name = (node.get('name') or {}).get('value') or ''
             corners.append({'pane': side, 'role': (node.get('role') or {}).get('value'), 'ignored': node.get('ignored'), 'name': name[:120], 'words': (said.get('words') or '')[:120], 'tab': said.get('tab'),
-                            'named': bool(said.get('words')) and re.sub(r'\s+', '', name) == re.sub(r'\s+', '', said.get('words') or '')})
+                            'glyphs': said.get('glyphs'), 'named': bool(said.get('words')) and re.sub(r'\s+', '', name) == re.sub(r'\s+', '', said.get('words') or '')})
         r.check(all(c['role'] == 'group' and not c['ignored'] and c['named'] and c['tab'] == '0' for c in corners),
-                'the AX tree: each pane\'s corner is a stop of its own, a group named by its own words, which say what the pane shows (issue #160)', corners)
+                'the AX tree: each pane\'s corner is a stop of its own, a group named by its own words, which say what the pane shows — a compact state\'s glyph by its whole words (issue #160; FP-26)', corners)
         r.figures['scene_ax'] = {'answered': True, 'nodes_inside': inside, 'controls': len(controls), 'corners': corners}
     ring = []
     for _ in range(24):

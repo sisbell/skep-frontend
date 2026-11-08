@@ -280,7 +280,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    decision), whole — `--corner-w` wide — or compact — `--corner-compact-w`, its usual state a glyph whose act opens it
    whole (FP-26), or, where the view's width leaves the measure beside it short of forty characters, across the column at
    its document's head (below); the layer clips without scrolling, so a focus never moves it — the camera brings a focused
-   corner in (APP-INPUT). In the scene each pane's own stands on its outer side, held to the top of the pane's scroll. */
+   corner in (APP-INPUT). In the scene each pane's own stands on its outer side, whole or compact, held to the top of the
+   pane's scroll, or above its text at its document's head (below), as SC fits the panes. */
 #corners { position:fixed; inset:0; overflow:clip; pointer-events:none; contain:strict; z-index:5; }
 .corner { font-size:var(--corner-px); line-height:1.4; color:#8b8f96; user-select:none; -webkit-user-select:none; }
 #corners .corner { position:absolute; top:0; left:0; width:var(--corner-w); padding:4px var(--corner-pad); pointer-events:auto; background:var(--bg); border-radius:3px; will-change:transform; }
@@ -310,20 +311,21 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    cut, the room above it its own padding, so the corner is placed by the items above it alone (T-LAYER) */
 .corner .kept { display:block; padding-top:.3em; color:#cfd6df; white-space:normal; }
 /* A CORNER AT ITS DOCUMENT'S HEAD (FP-26, FP-31): across the column being read, its rows on the document's own ground at
-   the reading line's pitch, which T-LAYER sets — the first held below the one line and over the rest as they pass under it
-   — its element the first row's box, the focus's ring on it; the document's name on the first row, drawn and never
-   announced; each item in a slot of its own width T-LAYER sets, its words on one line, one whose words are wider than the
-   head wrapped on the rows it takes; the forms its acts open whole beneath its rows, wrapped and never cut */
+   the reading line's pitch, which T-LAYER sets — the first held below the one line, or at the top of a reading scene's
+   pane, and over the rest as they pass under it — its element the first row's box, the focus's ring on it; on the plane
+   the document's name on the first row, drawn and never announced; each item in a slot of its own width T-LAYER sets, its
+   words on one line, one whose words are wider than the head wrapped on the rows it takes; the forms its acts open whole
+   beneath its rows, wrapped and never cut */
 #corners .corner.head { padding:0; background:transparent; border-radius:0; }
-#corners .corner.head > .hrow { position:absolute; left:0; right:0; z-index:1; }
-#corners .corner.head > .hrow[data-row="0"] { z-index:2; }
+:is(#corners, .pane) .corner.head > .hrow { position:absolute; left:0; right:0; z-index:1; }
+:is(#corners, .pane) .corner.head > .hrow[data-row="0"] { z-index:2; }
 #corners .corner.head .name { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
 #corners .corner.head .name > span { position:absolute; top:0; white-space:pre; }
-#corners .corner.head .hslot { position:absolute; top:0; display:flex; align-items:center; white-space:nowrap; }
-#corners .corner.head .hslot.wraps { white-space:normal; align-items:flex-start; }
-#corners .corner.head .hslot > * { display:inline-block; margin:0; padding-top:0; }
-#corners .corner.head .more { color:#cfd6df; cursor:pointer; text-decoration:underline dotted; }
-#corners .corner.head > .opened { position:absolute; left:0; z-index:3; padding:4px var(--corner-pad); white-space:normal; }
+:is(#corners, .pane) .corner.head .hslot { position:absolute; top:0; display:flex; align-items:center; white-space:nowrap; }
+:is(#corners, .pane) .corner.head .hslot.wraps { white-space:normal; align-items:flex-start; }
+:is(#corners, .pane) .corner.head .hslot > * { display:inline-block; margin:0; padding-top:0; }
+:is(#corners, .pane) .corner.head .more { color:#cfd6df; cursor:pointer; text-decoration:underline dotted; }
+:is(#corners, .pane) .corner.head > .opened { position:absolute; left:0; z-index:3; padding:4px var(--corner-pad); white-space:normal; }
 /* A LABEL HELD BELOW THE ONE LINE over a mounted article's text (issue #169's design decision: "Held below the line"): one line
    of its type across the box's visible part, on the box's ground T-LAYER sets, with no rule, shadow, tint or border, so the box
    reads as continuing above; each part where P-LABEL's held line sets it, each run of it in its face. It takes the pointer where its
@@ -402,14 +404,13 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 
 /* THE READING SCENE (law 12): chrome over the plane; places unmoved. Its panes' articles are read and scrolled, never
    clicked, so they carry none of the plane's click cues; its acts are its bar's buttons, the dismissal drawn as a bare ×,
-   and a pane's corner's act, which reads another version in the pane's place (issue #160). Each
-   pane's text is one column at the plane's measure, `--measure` advances of its face (issue #15: "side-by-side panes
-   stay one column each, at the same line length"), both panes at one size — the reading size, smaller only where a
-   pane's column would be wider than its room beside its corner (SC sets it); it stands against the pane's inner edge,
-   its column's edge between them, where the bands and lines leave
-   the pane (foundations §2.5), its corner beside it on the outer side, so the room a wide window adds falls outside both —
-   before pane A's corner, after pane B's — and the text keeps its place beside the bands at every width. An auto margin
-   takes that room. It stands below the one line's bottom edge, however many rows the line takes */
+   and a pane's corner's act, which reads another version in the pane's place. Each pane's text is one column of
+   `--measure` advances of its face — the measure SC fits both panes to and sets on the scene — both panes at one size,
+   the reading size, never set smaller to fit (FP-12, FP-26); it stands against the pane's inner edge, its column's edge
+   between them, where the bands and lines leave the pane (foundations §2.5), its corner beside it on the outer side, so
+   the room a wide window adds falls outside both — before pane A's corner, after pane B's — and the text keeps its place
+   beside the bands at every width. An auto margin takes that room. It stands below the one line's bottom edge, however
+   many rows the line takes */
 #scene { position:fixed; inset:calc(var(--line-bottom, 29px) + 17px) 20px 20px 20px; z-index:26; display:none; background:var(--bg); border:1px solid #6b7382; border-radius:4px; }
 #scene.on { display:block; }
 #scenebar { position:absolute; left:0; right:0; top:0; height:26px; padding:4px 10px; border-bottom:1px solid var(--line); color:var(--dim); font-size:11px; white-space:nowrap; overflow:hidden; }
@@ -425,6 +426,23 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #sceneB .dtext .edge { left:auto; right:calc(100% + var(--edge-in)); text-align:right; }
 .pane .corner { position:sticky; top:0; flex:0 0 var(--corner-w); }
 #sceneA > .corner { margin-left:auto; }
+/* a pane's corner compact (FP-26): its compact width, its usual states glyphs whose act opens it whole where it stands —
+   whole wide over what stands beside it, on the scene's ground, its room the compact one, so nothing beside it moves — a
+   click on it opened closing it */
+.pane .corner.compact { flex-basis:var(--corner-compact-w); }
+.pane .corner .glyph { cursor:pointer; }
+.pane .corner.compact.open { flex-basis:var(--corner-w); z-index:1; background:var(--bg); }
+#sceneA > .corner.compact.open { margin-right:calc(var(--corner-compact-w) - var(--corner-w)); }
+#sceneB > .corner.compact.open { margin-left:calc(var(--corner-compact-w) - var(--corner-w)); }
+/* A PANE'S CORNER AT ITS DOCUMENT'S HEAD (FP-26): the pane a column, its corner above its text — pane B's first, though it
+   follows its article in the order — across the column's text and edge at the width SC sets, its first row its own box,
+   held at the pane's top as the pane scrolls, the band SC sets below it; its later rows and a form opened beneath them
+   SC places, on the scene's ground; each column against its pane's inner edge still */
+.pane.head { flex-direction:column; row-gap:0; }
+#sceneA.head { align-items:flex-end; }
+#sceneB.head > .corner { order:-1; }
+.pane .corner.head { flex:none; z-index:1; }
+.pane .corner.head > .hrow, .pane .corner.head > .opened { background:var(--bg); }
 /* a pane's corner's act — "read version ⟨n⟩" — the one click cue in a pane; the line saying the version it reads lacks
    the passage the act carried beside it */
 .pane .corner .read { display:block; margin-top:.3em; color:#cfd6df; cursor:pointer; text-decoration:underline dotted; }

@@ -13,7 +13,8 @@
 // head below forty characters — its rows, across the column on the band its
 // fold reserves, its first row held below the line, a form opened beneath it,
 // the band's change re-anchoring the camera — and a kept word said where it
-// changes; a
+// changes; a reading scene's pane's view at its measure and its corner,
+// compact beside its column or at its document's head, no row naming it; a
 // document's region and the view's window over it; the passage in view
 // keeping its place through a reveal, a feed row naming its document — the
 // article standing until the reads it makes again set it — a version move
@@ -1496,6 +1497,34 @@ test('a head\'s rows: the name\'s least room first, then the kept clause and the
   const clause = LAYER.headLayout(items.slice(0, 1), 50, { w: 60, words: 'as last read 09:05' }, 300, pitch);
   assert.deepEqual(clause.slots.map((s) => [s.k, s.row]), [[-1, 0], [0, 0]], 'the kept clause after the name, before the items');
   assert.ok(clause.slots[0].x > clause.name && clause.slots[0].x < clause.slots[1].x, 'the clause between the name and the items');
+});
+
+test('a reading scene\'s pane\'s view is at the pane\'s measure, and its corner stands compact beside its column, its usual state a glyph, or at its document\'s head: its rows across the pane\'s column and edge at the pane\'s em, at the reading line\'s pitch, no row naming the document, the kept clause first, the offered read folded into "⟨n⟩ more" where its row cannot hold it, every item whole beneath the rows where the reader\'s act opened it, and no rows where it carries nothing (issue #217; FP-12, FP-26)', () => {
+  deliver();
+  const d = { ...REC.doc(D), meta: /** @type {any} */ ({ published: true, birth: D + '.1' }) };
+  assert.equal(LAYER.sceneView(d).cpl, MEASURE_CPL, 'the full measure where none is given');
+  const view = { ...LAYER.sceneView(d, 1), members: 3, read: 2 }, px = 17, pitch = LINE_H * px, width = (1 * CHAR_W + EDGE) * px;
+  assert.equal(view.cpl, 1, 'the pane\'s measure');
+  const latest = t('F.corner.latest', { published: t('F.published.notebook') });
+  assert.ok(LAYER.sceneCorner(d, view, true).includes('class="st glyph"') && LAYER.sceneCorner(d, view, true).includes(`aria-label="${esc(latest)}"`) && !LAYER.sceneCorner(d, view).includes('glyph'), 'beside its column, compact: the state a glyph named by its words; whole: its words');
+  /** a head's rows: each its index, its top and its height, and its markup */
+  const rowsOf = (/** @type {string} */ html) => [...html.matchAll(/<div class="hrow" data-row="(\d+)" style="top:([\d.]+)px;height:([\d.]+)px">(.*?)<\/div>/g)].map((m) => ({ k: Number(m[1]), top: Number(m[2]), h: Number(m[3]), html: m[4] }));
+  const head = LAYER.sceneHead(d, view, { px, kept: null, open: false }), rows = rowsOf(head.html);
+  assert.ok(head.rows === 2 && rows.length === 2 && rows.every((r, i) => r.k === i && Math.abs(r.top - i * pitch) < 1e-6 && Math.abs(r.h - pitch) < 1e-6), `its rows at the reading line's pitch, each where its band sets it: ${JSON.stringify(rows)}`);
+  assert.ok(!head.html.includes('class="name"'), `no row naming the document: ${head.html}`);
+  const slots = [...head.html.matchAll(/class="hslot[^"]*" style="left:([\d.]+)px;width:([\d.]+)px;/g)].map((m) => Number(m[1]) + Number(m[2]));
+  assert.ok(slots.length && slots.every((r) => r <= width + 1e-6), `every slot inside the head's width, the column and its edge: ${slots} ≤ ${width}`);
+  assert.ok(rows[0].html.includes('class="st glyph"') && rows[0].html.includes('data-members="3"'), `the state's glyph and the version statement on the first row: ${rows[0].html}`);
+  assert.ok(rows[1].html.includes('data-more="1"') && rows[1].html.includes(esc(t('L.corner.more', { n: 1 }))) && !head.html.includes('data-read'), 'the offered read, which yields, folded into the count on the next row');
+  assert.ok(!head.html.includes('class="opened"'), 'nothing opened beneath');
+  const kept = { id: /** @type {const} */ ('L.kept.links'), text: t('L.kept.links', { when: '09:05' }), reason: '', since: 0 };
+  const clause = rowsOf(LAYER.sceneHead(d, { ...view, cpl: 8 }, { px, kept, open: false }).html)[0].html;
+  assert.ok(clause.indexOf('data-string="L.kept.links"') >= 0 && clause.indexOf('data-string="L.kept.links"') < clause.indexOf('class="st glyph"'), `the kept clause first on the first row, before the state's glyph: ${clause}`);
+  assert.ok(rowsOf(LAYER.sceneHead(d, view, { px, kept, open: false }).html)[0].html.includes('data-string="L.kept.links"'), 'a clause wider than the head on the first row, which nothing stands before, wrapped there');
+  const opened = LAYER.sceneHead(d, view, { px, kept, open: true });
+  const form = /<div class="opened" style="top:([\d.]+)px;width:([\d.]+)px">(.*)<\/div>$/.exec(opened.html);
+  assert.ok(form && Math.abs(Number(form[1]) - opened.rows * pitch) < 1e-6 && Math.abs(Number(form[2]) - width) < 1e-6 && form[3].includes(esc(latest)) && form[3].includes('data-read="2"'), `opened: every item whole beneath its rows, across the head: ${opened.html}`);
+  assert.deepEqual(LAYER.sceneHead({ ...d, kind: /** @type {any} */ ('unknown'), meta: null }, { ...view, read: null }, { px, kept: null, open: false }), { html: '', rows: 0 }, 'no item and no clause: no rows');
 });
 
 /**

@@ -8,8 +8,10 @@
 // with what its answer told and an act waiting on it, the panes' scrolls,
 // each pane's text — the record it was made from, the version it reads and
 // the address it names, the links and far ends and its owner's byline facts
-// it was set with — the settings reading and the acts and checks waiting on
-// them, the element it was opened
+// it was set with — and its corner — opened whole or not, its head's rows —
+// the fit both panes are set at and the band their heads reserve, the
+// settings reading and the acts and checks waiting on them, the element it
+// was opened
 // from, and its own end and the faces a returned stop shows, the app's to
 // hand in; view state, never written (FP-7).
 // Two documents at reading scale side by side over the plane, each pane
@@ -291,32 +293,56 @@
 // where its pane's words are read (`whereIn`), so a copy from a pane names
 // its words as one from the plane's box names the same words (FP-27); the
 // scene keeps no DOM text of its own. Each pane carries its own document's
-// corner (ux-T2; T-LAYER's `sceneCorner` makes its items) on its outer side —
-// pane A's left, pane B's right — held to the top of the pane's scroll, so
-// the bands and lines leave the inner edges clear of it (foundations §3.1);
-// the corner is
-// the pane's one Tab stop after the pane itself, a group named by its own
-// words (D5 K-57), and its Enter, or a click on the act, takes its act — a
-// press on the act leaving the selection standing in the pane, the passage
-// the act carries. Each pane's text is one column at the plane's measure
-// (FP-12): the style's `--measure` advances of its face, both panes at one
-// size — the reading size (P-CAM's), smaller only where a pane's column is
-// wider than its room beside its corner, then at the size the narrower room
-// holds (`fitMeasure`) — so the panes break the lines the plane breaks;
-// against the pane's inner edge with its corner beside it, its column's edge
-// between it and that inner edge — its counts and its withheld runs' marks
-// there, the bands leaving the pane beyond them (foundations §3.1; FP-26): a
-// window wider than the measure needs widens the outer margins, never the
-// line. The panes are read, not acted on (B1-S9): nothing in a pane's
-// article is a control (T-ARTICLE's scene-mode variant), and the keys a pane
-// takes move that pane alone (`key`). The bar names each pane by the address
-// it shows, in the identifier's face (P-REG's FACE). The scene's acts are its bar's
+// corner (ux-T2; T-LAYER's `sceneCorner` and `sceneHead` make its items): the
+// pane's one Tab stop after the pane itself in either form, a group named by
+// its own words (D5 K-57), and its Enter, or a click on the act, takes its
+// act — a press on the act leaving the selection standing in the pane, the
+// passage the act carries. The scene fits both panes once (`fitOf`; FP-12,
+// FP-26), by P-LAY's fit (`fitFor`) of the narrower pane's content box at the
+// reading size (P-CAM's), no margin past the column's edge — the pane's
+// padding holds that room — and never shrinks their face: each pane's text is
+// one column, the style's `--measure` advances of its face, both panes at the
+// fit's measure and em — MEASURE_CPL with both corners whole beside their
+// columns wherever a pane holds it so; else both compact, their usual states
+// glyphs, the measure kept while it holds, then narrowed in characters while
+// it keeps HEAD_CPL beside them; below that both corners stand at their
+// documents' heads and their room goes back to the measure, the room beside
+// the column's edge alone, the panes side by side however narrow it grows.
+// Beside its column a corner stands on the pane's outer side — pane A's
+// left, pane B's right — held to the top of the pane's scroll, so the bands
+// and lines leave the inner edges clear of it (foundations §3.1). At its
+// document's head (the plane's head form; T-LAYER's `sceneHead`) it stands
+// above its text across the column and its edge, its rows at the reading
+// line's pitch, both heads reserving the more of the two corners' rows, so
+// both texts begin at one depth (`setBand`) — its first row held at the
+// pane's top as the pane scrolls, its later rows scrolling with the text
+// under it (`placeHeads`) — and no line the re-level, ↓ or ↑, the stop's act
+// or a carried place brings to the pane's top stands under what that row and
+// a form opened beneath it cover (`clearOf`). A compact corner opens whole on
+// its act — a click on a glyph or on a head's count, or Enter at the corner
+// where it offers no act of its own — over what stands beside it, moving
+// nothing, and closes on the same act at the corner opened (`openWhole`;
+// FP-26). Each column stands against the pane's
+// inner edge, its column's edge between them — its counts and its withheld
+// runs' marks there, the bands leaving the pane beyond them (foundations
+// §3.1; FP-26): a window wider than the measure needs widens the outer
+// margins, never the line. The panes are read, not acted on (B1-S9): nothing
+// in a pane's article is a control (T-ARTICLE's scene-mode variant), and the
+// keys a pane takes move that pane alone (`key`). The bar names each pane by
+// the address it shows, in the identifier's face (P-REG's FACE), so no head's
+// row names it. The scene's acts are its bar's
 // buttons — re-level (K-62, its chord drawn for the platform, rule 19) and
 // the dismissal, the scene's own end — each pressed by a click anywhere on
 // it, by Enter or by Space, a pane's corner's act, and a stroke's.
-// A face that arrives once the panes are set refits them and measures their
-// ties again (`refaced`). An in-document find opened in the scene reads the
-// pane holding the focus, by the rule the scene's keys read it by
+// A change of the panes' size, or a face that arrives once they are set
+// (`refaced`), fits them again (`refit`): where the measure, the corners'
+// form or the em moves, both panes are set again in one step at it, their
+// texts kept, the reader's place — its first line in view — the selection
+// and the ends set level carried by their bytes (FP-8, FP-23); else the fit
+// is set on them again in place, their text kept where it stands on screen as
+// the heads' band moves; and the ties are measured again. An in-document find
+// opened in the scene
+// reads the pane holding the focus, by the rule the scene's keys read it by
 // (`paneRead`; N-FIND).
 // Figures: the ends level LEVEL_AT px below the panes' tops; every run a
 // band; a band's ground sameness's texture and its edges BAND_EDGE_W px of
@@ -344,8 +370,8 @@ import { drawChord } from '../nav/keys.js';
 import { copyText, keptHTML } from '../text/article.js';
 import { inkOf, strokeOf, strokeIn, cutAt, pointOn } from '../beams/beams.js';
 import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingOf } from '../beams/held.js';
-import { SAMENESS } from '../plane/register.js';
-import { LINE_H } from '../plane/layout.js';
+import { SAMENESS, cornerWidth } from '../plane/register.js';
+import { LINE_H, MEASURE_CPL, CHAR_W, EDGE, fitFor } from '../plane/layout.js';
 import { markDirty, READING_PX } from '../plane/camera.js';
 import { documentOf, homeOf, memberOf, versionAddress, isTrunkMember } from '../model/address.js';
 import { t, tHTML } from '../strings.js';
@@ -531,6 +557,15 @@ import { esc, byteOffsets } from '../util.js';
  * @property {{since: number, outcome: import('../model/records.js').Outcome} | null} lift how the last setting the board's events asked set it: whether it changed what the pane shows (M-REC's `shownBy`), and the stamp it stood kept from (`kept.at`); null where none has set it
  * @property {string | null} signs what the edition claims held as they are read again said as its article's withheld runs' kept signs were last set (T-LAYER's `keptRunsKey`); null where its article was set since
  * @property {AccountFacts | undefined} facts the owner's byline facts its article's byline was made with (`ownerFacts`), undefined where they were not read: what owner facts taken anew are checked against (`dropped`)
+ * @property {boolean} open the reader's act opened its corner whole where it stands compact or at its document's head (`openWhole`; FP-26), until the act again closes it
+ * @property {number} rows its corner's rows at its document's head as last written (`cornerForm`); 0 beside its column
+ */
+
+/**
+ * @typedef {Object} PaneFit — how the scene sets both panes, decided once for both from the narrower (`fitOf`; FP-12, FP-26)
+ * @property {number} cpl the measure each pane's column is set at, in characters of its face
+ * @property {'whole' | 'compact' | 'head'} corner where both corners stand and in which form: beside their columns, whole or compact, or at their documents' heads
+ * @property {number} px the em both articles are set at: the reading size, smaller only where even a column of one character is wider than the pane beside its edge
  */
 
 /**
@@ -567,6 +602,8 @@ import { esc, byteOffsets } from '../util.js';
  * @property {boolean} told the stop's appearance was said in the status region
  * @property {ISpan[] | null} stepped the passage of pane B the stop's act last went to (`toShared`), by identity through the image pane B's article was made from; null where it went to none since the scene was set level
  * @property {Returned | null} returned the stop drawn only by the panes' `compare` the reader left from, standing with the landing until its answer is taken and the reader has moved on (see the head); null where none stands
+ * @property {PaneFit} fit the measure, the corners' form and the em the panes are set at
+ * @property {number} band the rows both heads reserve above their text — the more of the two corners' (`Pane.rows`) — as last set (`setBand`); 0 where the corners stand beside their columns
  * @property {string} size the panes' sizes the ties were measured at
  * @property {number} updating the settings reading
  * @property {Array<() => void>} waiting the acts made while one reads, and the checks owner facts taken anew ask of the panes, in the order made (`whenSet`)
@@ -744,14 +781,22 @@ export function attach(e, acts = {}) {
     const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (ev.target).closest('[data-stroke]'));
     if (b && b.dataset.stroke) strokeAct(b.dataset.stroke, FOCUS.byKey(ev));
   });
-  /** is an event's target a pane's corner's act? */
-  const onAct = (/** @type {Event} */ ev) => { const tg = /** @type {HTMLElement | null} */ (ev.target); return !!tg && !!tg.closest && !!tg.closest('.corner [data-read]'); };
+  /** the event's target, where it stands in a pane's corner: on the corner's act, on what opens it whole — a glyph, a head's count — or on the corner opened whole; null elsewhere */
+  const onCorner = (/** @type {Event} */ ev) => {
+    const tg = /** @type {HTMLElement | null} */ (ev.target), side = ev.currentTarget === e.paneB ? 'b' : 'a';
+    if (!tg || !tg.closest || !tg.closest('.corner')) return null;
+    return tg.closest('[data-read]') ? 'act' : tg.closest('.glyph, [data-more]') || (scene && scene[side].open) ? 'whole' : null;
+  };
   for (const p of [e.paneA, e.paneB]) {
     p.addEventListener('scroll', () => draw());
-    // a press on a pane's corner's act leaves the platform's selection where it stands — the passage the act carries — as
-    // a press on text would not; a click on it takes the act, as the corner's Enter does
-    p.addEventListener('mousedown', (ev) => { if (onAct(ev)) ev.preventDefault(); });
-    p.addEventListener('click', (ev) => { if (onAct(ev)) act(p === e.paneB ? 'b' : 'a'); });
+    // a press on a pane's corner's act, or on what opens the corner whole, leaves the platform's selection where it stands —
+    // the passage the act carries — as a press on text would not; a click on the act takes it, as the corner's Enter does,
+    // and one on a glyph or a head's count opens the corner whole, one on the corner opened closing it (FP-26)
+    p.addEventListener('mousedown', (ev) => { if (onCorner(ev)) ev.preventDefault(); });
+    p.addEventListener('click', (ev) => {
+      const on = onCorner(ev), side = p === e.paneB ? 'b' : 'a';
+      if (on === 'act') act(side); else if (on === 'whole') openWhole(side);
+    });
   }
   // a click on an act is its button's wherever on the button it lands — the re-level's chord mark among them
   e.bar.addEventListener('click', (ev) => { const tg = /** @type {HTMLElement} */ (ev.target); if (tg.closest('[data-x]')) ending(FOCUS.byKey(ev)); else if (tg.closest('[data-relevel]')) relevel(); });
@@ -1296,11 +1341,32 @@ function paneAt(side, src, r) {
   return {
     side, doc: src, src, names, shows: kind === 'bare' ? src : names, kind, k, n: kind === 'draft' ? null : r.n, read: null, lacks: null,
     d: { ...r.d }, view: LAYER.sceneView(r.d), corner: '', placed: new Map(), place: null, el: null, serial: 0, sets: 0, kept: null, lift: null, signs: null, facts: undefined,
+    open: false, rows: 0,
   };
 }
 
-/** a pane's corner's items: T-ARTICLE's (`sceneCorner`), naming the version it shows, the chain's count as the pane knows it — neither the latest nor the count while the board lags (`lags`) — the act it offers and what it says the version it reads lacks, a draft's kept word as the model holds it with its statement where T-LAYER holds it open (B3-S2) — a derived record's slot empty — and its kept clause after them, where it stands kept (`paneKept`) */
-const cornerItems = (/** @type {Pane} */ P) => LAYER.sceneCorner(P.shows === P.d.addr ? P.d : { ...P.d, addr: P.shows }, { ...P.view, members: P.n, read: P.read, lacks: P.lacks, lags: lags(), kept: P.d.derived ? null : REC.keptOf(P.names), keptOpen: !P.d.derived && LAYER.statementOpen(P.names) }) + keptHTML(paneKept(P));
+/**
+ * A pane's corner's items in the form the scene's fit stands them in (see
+ * the head; FP-26), and its rows at its document's head: T-LAYER's, naming
+ * the version it shows, the chain's count as the pane knows it — neither the
+ * latest nor the count while the board lags (`lags`) — the act it offers and
+ * what it says the version it reads lacks, a draft's kept word as the model
+ * holds it with its statement where T-LAYER holds it open (B3-S2) — a derived
+ * record's slot empty — and its kept clause where it stands kept
+ * (`paneKept`): beside its column, whole, or compact — every item whole where
+ * the reader's act opened it (`Pane.open`) — the clause its last item
+ * (`sceneCorner`); at its document's head, the clause first on its first row
+ * and a form the act opened beneath its rows (`sceneHead`).
+ * @param {Pane} P
+ * @param {PaneFit} F
+ * @returns {{html: string, rows: number}}
+ */
+function cornerForm(P, F) {
+  const d = P.shows === P.d.addr ? P.d : { ...P.d, addr: P.shows };
+  const view = { ...P.view, members: P.n, read: P.read, lacks: P.lacks, lags: lags(), kept: P.d.derived ? null : REC.keptOf(P.names), keptOpen: !P.d.derived && LAYER.statementOpen(P.names) };
+  if (F.corner === 'head') return LAYER.sceneHead(d, view, { px: F.px, kept: paneKept(P), open: P.open });
+  return { html: LAYER.sceneCorner(d, view, F.corner === 'compact' && !P.open) + keptHTML(paneKept(P)), rows: 0 };
+}
 
 /** does the board lag past a second (M-PUMP's `boardKept`): every pane's corner names neither the latest version nor the chain's count, and is written again as the lag begins and ends (`markKept`) */
 const lags = () => PUMP.boardKept() !== null;
@@ -1329,10 +1395,11 @@ function paneKept(P) { return LAYER.keptWords(P.d, P.d, paneHeld(P)); }
 
 /**
  * Each pane's corner marked in place (see the head): its items written again
- * where they would read other than as last written (`cornerItems`) — its
+ * where they would read other than as last written (`cornerForm`) — its
  * kept clause changed (`paneKept`), a draft's kept word or its statement
  * moved — or the board's lag began or ended since (`lags`), the element kept
- * so a focus on it stays, and the withheld runs' kept signs in its article set
+ * so a focus on it stays, the heads' band set again where their rows changed
+ * (`setBand`), and the withheld runs' kept signs in its article set
  * where what the edition claims held say changed since they were set, or its
  * article was set since (T-LAYER's `keptRunsKey`, `markKeptSigns`). The
  * app's loop runs it on each dirty frame while the scene stands; the one line
@@ -1343,11 +1410,12 @@ export function markKept() {
   if (!S || !E) return;
   const signs = LAYER.keptRunsKey(), lagging = String(lags());
   for (const side of SIDES) {
-    const P = S[side], items = cornerItems(P);
+    const P = S[side], items = cornerForm(P, S.fit);
     const c = /** @type {HTMLElement | null} */ (paneEl(E, side).querySelector(':scope > .corner'));
-    if (c && (items !== P.corner || c.dataset.lags !== lagging)) writeCorner(E, P, items);
+    if (c && (items.html !== P.corner || c.dataset.lags !== lagging)) writeCorner(E, P, items);
     if (P.el && P.signs !== signs) { LAYER.markKeptSigns(P.el); P.signs = signs; }
   }
+  rebanded(E, S);
 }
 
 /**
@@ -1392,20 +1460,66 @@ export function paneLift(addr) {
 }
 /** a pane's corner's id: the group is named by its own words */
 const cornerId = (/** @type {'a' | 'b'} */ side) => (side === 'a' ? 'sceneA' : 'sceneB') + '-corner';
-/** a pane's corner's markup (see the head): its one Tab stop, a group named by its own words, as the plane's corner is (D5 K-57), marked with whether the board lagged as it was made (`data-lags`); the items it holds kept on the pane as last written (`Pane.corner`) */
-function cornerMarkup(/** @type {Pane} */ P) {
-  P.corner = cornerItems(P);
-  return `<div class="corner" data-corner="${esc(P.shows)}" data-lags="${lags()}" id="${cornerId(P.side)}" role="group" aria-labelledby="${cornerId(P.side)}" tabindex="0">${P.corner}</div>`;
+/** a pane's corner's element, beside its article */
+const cornerEl = (/** @type {NonNullable<typeof els>} */ E, /** @type {'a' | 'b'} */ side) => /** @type {HTMLElement | null} */ (paneEl(E, side).querySelector(':scope > .corner'));
+
+/** the classes a pane's corner takes in the fit's form (see the head): compact where it stands compact — open where the reader's act opened it whole there, over what stands beside it in its compact room — head at its document's head */
+const formClass = (/** @type {PaneFit} */ F, /** @type {Pane} */ P) => (F.corner === 'head' ? ' head' : F.corner === 'compact' ? (P.open ? ' compact open' : ' compact') : '');
+
+/**
+ * A pane's corner's markup (see the head): its one Tab stop, a group named by
+ * its own words, as the plane's corner is (D5 K-57), in the fit's form
+ * (`formClass`), marked with whether the board lagged as it was made
+ * (`data-lags`); the items it holds and its rows kept on the pane as last
+ * written (`Pane.corner`, `Pane.rows`).
+ * @param {Pane} P
+ * @param {PaneFit} F
+ */
+function cornerMarkup(P, F) {
+  const made = cornerForm(P, F);
+  P.corner = made.html; P.rows = made.rows;
+  return `<div class="corner${formClass(F, P)}" data-corner="${esc(P.shows)}" data-lags="${lags()}" id="${cornerId(P.side)}" role="group" aria-labelledby="${cornerId(P.side)}" tabindex="0">${P.corner}</div>`;
 }
 
-/** a pane's corner written again, in place: the element kept, so the focus standing on it stays; the items as given, else made now (`cornerItems`) */
-function writeCorner(/** @type {NonNullable<typeof els>} */ E, /** @type {Pane} */ P, items = cornerItems(P)) {
-  const c = /** @type {HTMLElement | null} */ (paneEl(E, P.side).querySelector(':scope > .corner'));
-  if (!c) return;
+/** the key a control in a pane's corner bears, which a rewrite of its items puts a focus back on (N-FOCUS's `keep`): a head's count of the items it folds; none for the corner's element itself, which a rewrite never replaces */
+const cornerControl = (/** @type {Element} */ el) => (/** @type {HTMLElement} */ (el).dataset?.more ? 'more' : null);
+
+/**
+ * A pane's corner shaped for the fit's form (see the head): its class
+ * (`formClass`) and, at its document's head, its width across the pane's
+ * column — its text and its edge — and its first row's height, the reading
+ * line's pitch; neither beside its column.
+ * @param {HTMLElement} c
+ * @param {PaneFit} F
+ * @param {Pane} P
+ */
+function shapeCorner(c, F, P) {
+  const head = F.corner === 'head';
+  c.className = 'corner' + formClass(F, P);
+  c.style.width = head ? (F.cpl * CHAR_W + EDGE) * F.px + 'px' : '';
+  c.style.height = head ? LINE_H * F.px + 'px' : '';
+}
+
+/**
+ * A pane's corner written again, in place, in the scene's fit (see the head):
+ * the element kept, so a focus standing on it stays, one on the count it
+ * holds put back on the count standing in its place (FP-20); shaped for the
+ * form (`shapeCorner`); the items as given, else made now (`cornerForm`), and
+ * its rows kept on the pane. The band the heads reserve is set apart
+ * (`setBand`).
+ * @param {NonNullable<typeof els>} E
+ * @param {Pane} P
+ * @param {{html: string, rows: number} | null} [items]
+ */
+function writeCorner(E, P, items = null) {
+  const S = scene, c = cornerEl(E, P.side);
+  if (!S || !c) return;
+  const made = items || cornerForm(P, S.fit);
   c.dataset.corner = P.shows;
   c.dataset.lags = String(lags());
-  c.innerHTML = items;
-  P.corner = items;
+  shapeCorner(c, S.fit, P);
+  FOCUS.keep(c, cornerControl, () => { c.innerHTML = made.html; });
+  P.corner = made.html; P.rows = made.rows;
 }
 
 /** the bar's name for a pane, written again: the address it shows */
@@ -1494,7 +1608,7 @@ const textOf = (/** @type {Source} */ x, /** @type {Doc} */ d) => ({ src: addrOf
  * sets from the runs and the passage held as pane A's text holds it
  * (`placedHeld`), whether the far end names pane B's document whole, the
  * near passage's positions, and the stop at its first passage, none measured
- * yet.
+ * yet; the full measure, the corners whole, until it stands (`stand`).
  * @param {Pane} pa
  * @param {Pane} pb
  * @param {ComparePair[]} pairs
@@ -1505,7 +1619,8 @@ function sceneOf(pa, pb, pairs, held) {
   const h = placedHeld(pa, held);
   return {
     a: pa, b: pb, pairs, level: levels(pairs, h), whole: !!h.wholeB, widthA: Math.max(1, h.widthA ?? 1),
-    bands: [], lines: [], strokes: [], listing: null, relist: null, shared: [], next: 0, at: null, told: false, stepped: null, returned: null, size: '', updating: 0, waiting: [],
+    bands: [], lines: [], strokes: [], listing: null, relist: null, shared: [], next: 0, at: null, told: false, stepped: null, returned: null,
+    fit: { cpl: MEASURE_CPL, corner: 'whole', px: READING_PX }, band: 0, size: '', updating: 0, waiting: [],
   };
 }
 
@@ -1576,9 +1691,10 @@ function sayFace(E, face) {
  * of the page's order; the bar naming each pane by the address it shows, and
  * the refusal the panes' `compare` met — and, where pane B is the whole
  * document a link's far end names, the hidden words pane B's name ends with
- * (`namePane`); each pane's article T-LAYER's mount, its corner on the pane's
- * outer side — pane A's before the article, pane B's after — and the panes
- * fitted to the measure.
+ * (`namePane`); both panes fitted once (`fitOf`), each pane's article
+ * T-LAYER's mount at the fit's measure, its corner in the fit's form on the
+ * pane's outer side — pane A's before the article, pane B's after — or at its
+ * document's head, and the fit set on the panes (`applyFit`).
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  * @param {string | null} face the refusal the `compare` met, by its name
@@ -1589,6 +1705,8 @@ function stand(E, S, face) {
   S.b.placed = placedInto(S.b.src, [...S.a.view.marks, ...S.b.view.marks]);
   coverPlane(true);
   E.root.classList.add('on');
+  S.fit = fitOf(E);
+  for (const side of SIDES) S[side].view = { ...S[side].view, cpl: S.fit.cpl };
   E.strokes.innerHTML = '';
   if (face) E.bar.dataset.face = face; else delete E.bar.dataset.face;
   E.bar.innerHTML = `<b class="id" data-name="a">${esc(S.a.shows)}</b> │ <b class="id" data-name="b">${esc(S.b.shows)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
@@ -1597,12 +1715,12 @@ function stand(E, S, face) {
     ` <button data-relevel="1">${esc(t('F.scene.relevel'))} <kbd>${esc(drawChord('Mod+R'))}</kbd></button><button class="x" data-x="1">× ${esc(t('F.scene.dismiss'))}</button>`;
   for (const side of SIDES) {
     const P = S[side], pane = paneEl(E, side);
-    pane.innerHTML = cornerMarkup(P);
+    pane.innerHTML = cornerMarkup(P, S.fit);
     swap(E, P);
     pane.setAttribute('tabindex', '0');
   }
   namePanes(E, S);
-  fitMeasure(E);
+  applyFit(E, S);
 }
 
 /**
@@ -1725,7 +1843,8 @@ async function paneAgain(side, v, stands) {
  * Each pane brought back to where the reader stood in it (`reopen`): its
  * place's line, where its text holds that byte — at its position in a
  * derived record the entry kept, whose text is the one left — at the height
- * it stood below the pane's visible top — any other pane left where the
+ * it stood below the pane's visible top, a line that stood in view kept below
+ * what a held head covers (`clearOf`) — any other pane left where the
  * re-level set it — and its selection put back on the same bytes; then the
  * ties drawn at the panes' scrolls.
  * @param {NonNullable<typeof els>} E
@@ -1737,7 +1856,7 @@ function placeAgain(E, S, spots) {
     const P = S[side], pane = paneEl(E, side), s = spots[side], image = P.d.image;
     const at = s.place ? REC.placedIn(image, s.place.ids) : [];
     const pos = at.length ? at[0].pos : s.place && P.d.derived ? s.place.pos : null;
-    if (s.place && pos != null) { const line = lineAt(pane, P.names, pos); if (line) pane.scrollTop = line.top - s.place.at; }
+    if (s.place && pos != null) { const line = lineAt(pane, P.names, pos); if (line) pane.scrollTop = line.top - (s.place.at >= 0 ? Math.max(s.place.at, clearOf(pane)) : s.place.at); }
     const sel = s.sel ? REC.placedIn(image, s.sel.ids) : [], z = sel[sel.length - 1];
     if (s.sel && z && P.el) LAYER.selectIn(P.el, { addr: P.names, pos: sel[0].pos, width: z.pos + z.width - sel[0].pos }, s.sel.backward);
   }
@@ -2370,11 +2489,35 @@ function lineAt(pane, addr, pos) {
   return null;
 }
 
-/** the first position of the first block of a pane's article whose box meets the pane's visible content — the first span in view; null where none does */
+/**
+ * The first position of a pane's text whose line stands in view (see the
+ * head): in the first span in view (`firstInView`), the first of its
+ * positions whose line's top stands at the pane's visible top or below it,
+ * that top taken below what a held head covers (`clearOf`) — else its last,
+ * whose line the top cuts — what a refit carries, its lines being broken
+ * anew; the span's own first where it is no paragraph.
+ * @param {Pane} P
+ * @param {HTMLElement} pane
+ * @returns {number | null}
+ */
+function firstLineIn(P, pane) {
+  const first = firstInView(pane), made = P.el ? LAYER.madeOf(P.el) : null;
+  const b = first != null && made ? made.blocks.find((x) => x.pos === first) : null;
+  if (!b || b.kind !== 'para' || b.width < 2) return first;
+  const top = pane.scrollTop + clearOf(pane) - 0.5;
+  /** the top of the line a position stands on, in px of the pane's content: its own line, else the last before it that sets a glyph */
+  const lineTop = (/** @type {number} */ p) => { const l = lineAt(pane, P.names, p); return l ? l.top : -Infinity; };
+  let lo = b.pos, hi = b.pos + b.width - 1;
+  if (lineTop(hi) < top) return hi;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (lineTop(m) >= top) hi = m; else lo = m + 1; }
+  return lo;
+}
+
+/** the first position of the first block of a pane's article whose box meets the pane's visible content below what a held head covers (`clearOf`) — the first span in view; null where none does */
 function firstInView(/** @type {HTMLElement} */ pane) {
   const art = articleIn(pane);
   if (!art) return null;
-  const r = pane.getBoundingClientRect(), top = r.top + pane.clientTop, bottom = top + pane.clientHeight;
+  const r = pane.getBoundingClientRect(), top = r.top + pane.clientTop + clearOf(pane), bottom = r.top + pane.clientTop + pane.clientHeight;
   for (const e of /** @type {NodeListOf<HTMLElement>} */ (art.el.querySelectorAll('.run > .sp, .run > .withheld'))) {
     const q = e.getBoundingClientRect();
     if (q.height > 0 && q.bottom > top && q.top < bottom) return Number(e.dataset.pos);
@@ -2399,29 +2542,156 @@ function placeAt(P, pos) {
 }
 
 /**
- * The panes' text at the plane's measure, both at one size (see the head):
- * each article, the style's `--measure` advances of its face and its column's
- * edge wide — every width of it in its own em — set at the reading size
- * (P-CAM's), or where a pane's content beside its corner and the gap holds
- * less, at the size whose column the narrower room holds.
+ * The panes' fit, decided once for both (see the head; FP-12, FP-26): P-LAY's
+ * fit (`fitFor`) of the narrower pane's content box at the reading size
+ * (P-CAM's), each corner beside its column whole or compact with the pane's
+ * gap between them, and no margin past the column's edge — the pane's padding
+ * holds that room; the full measure at the reading size, the corners whole,
+ * where the platform lays out no pane.
  * @param {NonNullable<typeof els>} E
+ * @returns {PaneFit}
  */
-function fitMeasure(E) {
-  /** @type {Array<{art: HTMLElement, room: number}>} */
-  const set = [];
-  for (const pane of [E.paneA, E.paneB]) {
-    const art = /** @type {HTMLElement | null} */ (pane.querySelector(':scope > article.dtext'));
-    if (!art) continue;
-    const corner = pane.querySelector(':scope > .corner'), cs = getComputedStyle(pane);
-    set.push({ art, room: pane.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (corner ? corner.getBoundingClientRect().width + (parseFloat(cs.columnGap) || 0) : 0) });
-  }
-  for (const x of set) x.art.style.fontSize = READING_PX + 'px';
-  // an article's width grows with its size alone, so the size a room holds it at is read off its width at the reading size
-  const fs = set.reduce((k, x) => { const w = x.art.getBoundingClientRect().width; return x.room > 0 && w > x.room ? Math.min(k, READING_PX * (x.room / w)) : k; }, READING_PX);
-  for (const x of set) x.art.style.fontSize = fs + 'px';
+function fitOf(E) {
+  /** a pane's content box and the gap its corner keeps from its text, px; null where the platform lays it out nowhere */
+  const room = (/** @type {HTMLElement} */ pane) => {
+    if (typeof getComputedStyle !== 'function' || !(pane.clientWidth > 0)) return null;
+    const cs = getComputedStyle(pane);
+    return { w: pane.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), gap: parseFloat(cs.columnGap) || 0 };
+  };
+  const rooms = [room(E.paneA), room(E.paneB)].filter((r) => r != null);
+  if (!rooms.length) return { cpl: MEASURE_CPL, corner: 'whole', px: READING_PX };
+  const r = rooms.reduce((x, y) => (y.w < x.w ? y : x));
+  const F = fitFor(r.w, READING_PX, { whole: cornerWidth(false), compact: cornerWidth(true), gap: r.gap }, 0);
+  return { cpl: F.cpl, corner: F.head ? 'head' : F.compact ? 'compact' : 'whole', px: F.px };
 }
 
-/** a face arrived once the panes were set (APP's, as a face loads late): the next frame refits the panes and measures their ties again (`draw`) */
+/**
+ * The scene's fit set on the panes (see the head): the measure on the scene,
+ * which each article's column reads (the style's `--measure`), both articles
+ * at the fit's em, each pane standing its corner beside its column or, at its
+ * document's head, above its text, each corner shaped for the form
+ * (`shapeCorner`), and the band its heads reserve (`setBand`) — `keep` the
+ * text standing where it is on screen as the band moves. Nothing where the
+ * platform lays out no pane.
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ * @param {boolean} [keep]
+ */
+function applyFit(E, S, keep = false) {
+  if (typeof getComputedStyle !== 'function') return;
+  const F = S.fit;
+  E.root.style.setProperty('--measure', String(F.cpl));
+  for (const side of SIDES) {
+    const pane = paneEl(E, side), art = articleIn(pane), c = cornerEl(E, side);
+    pane.classList.toggle('head', F.corner === 'head');
+    if (art) art.el.style.fontSize = F.px + 'px';
+    if (c) shapeCorner(c, F, S[side]);
+  }
+  setBand(E, S, keep);
+}
+
+/**
+ * The band the panes' heads reserve above their text set (see the head;
+ * FP-26): at their documents' heads, the more of the two corners' rows (`Pane.rows`)
+ * at the reading line's pitch, so both texts begin at one depth — each
+ * corner's first row its own box, the rest of the band below it — and none
+ * beside their columns; where it moved and `keep` asks, each pane scrolled by
+ * as much, so its text stands where it stood on screen (FP-8).
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ * @param {boolean} keep
+ * @returns {boolean} the band moved
+ */
+function setBand(E, S, keep) {
+  const pitch = LINE_H * S.fit.px, band = S.fit.corner === 'head' ? Math.max(S.a.rows, S.b.rows, 1) : 0, was = S.band;
+  S.band = band;
+  for (const side of SIDES) {
+    const c = cornerEl(E, side);
+    if (c) c.style.marginBottom = band > 1 ? (band - 1) * pitch + 'px' : '';
+    if (keep && band !== was && was > 0 && band > 0) paneEl(E, side).scrollTop += (band - was) * pitch;
+  }
+  return band !== was;
+}
+
+/** the heads' band set again where the corners' rows changed since it was set (`setBand`), each pane's text kept where it stands on screen, and the ties measured again and drawn */
+function rebanded(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} */ S) {
+  if (S.fit.corner === 'head' && setBand(E, S, true)) { measure(); draw(); }
+}
+
+/**
+ * The panes fitted again as their size or a face changed (see the head): the
+ * fit read again (`fitOf`); where its measure, its corners' form or its em
+ * moved, both panes set again in one step at it (`setPanes`) — their texts
+ * and what they were set with kept, the reader's place, the selection and the
+ * ends set level carried by their bytes, the ties measured anew — else the fit
+ * set on the panes again in place (`applyFit`), their text kept where it
+ * stands, the room below each article and the ties measured anew.
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ * @returns {boolean} the panes were set again — and drawn
+ */
+function refit(E, S) {
+  const F = fitOf(E), was = S.fit;
+  if (F.cpl === was.cpl && F.corner === was.corner && F.px === was.px) {
+    applyFit(E, S, true);
+    roomBelow(E);
+    measure();
+    return false;
+  }
+  S.fit = F;
+  setPanes(S, SIDES.map((side) => {
+    const P = S[side];
+    return { side, same: true, next: { d: P.d, view: P.view, kind: P.kind, src: P.src, names: P.names, shows: P.shows, k: P.k, n: P.n, read: P.read, lacks: P.lacks, hold: null } };
+  }), null);
+  return true;
+}
+
+/**
+ * The heads' later rows and the forms opened beneath them placed at the
+ * panes' scrolls (see the head; FP-26): each corner's first row held at its
+ * pane's top by the style, its later rows where the band sets them, scrolling
+ * with the text and hidden once they have passed wholly under the first, a
+ * form opened beneath them below the last of its rows, or below the first as
+ * they pass under it.
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ */
+function placeHeads(E, S) {
+  if (S.fit.corner !== 'head') return;
+  const pitch = LINE_H * S.fit.px;
+  for (const side of SIDES) {
+    const c = cornerEl(E, side), art = articleIn(paneEl(E, side));
+    if (!c || !art) continue;
+    // how far the pane's scroll has carried the held row below where the band sets it
+    const shift = c.getBoundingClientRect().top - (art.el.getBoundingClientRect().top - S.band * pitch);
+    for (const r of /** @type {NodeListOf<HTMLElement>} */ (c.querySelectorAll(':scope > .hrow'))) {
+      const k = Number(r.dataset.row), y = k * pitch - shift;
+      if (!k) continue;
+      r.style.top = Math.max(0, y) + 'px';
+      r.style.visibility = y < 0 ? 'hidden' : '';
+    }
+    const o = /** @type {HTMLElement | null} */ (c.querySelector(':scope > .opened'));
+    if (o) o.style.top = Math.max(pitch, S[side].rows * pitch - shift) + 'px';
+  }
+}
+
+/**
+ * How far below a pane's visible top its head covers it, held there (see the
+ * head; FP-26): to the foot of its first row — held where the pane's padding
+ * leaves it — and of a form opened beneath it, px, as the pane stands — what
+ * no act that brings a line to the pane's top leaves that line under; 0 where
+ * its corner stands beside its column.
+ * @param {HTMLElement} pane
+ * @returns {number}
+ */
+function clearOf(pane) {
+  const c = /** @type {HTMLElement | null} */ (pane.querySelector(':scope > .corner.head'));
+  if (!c) return 0;
+  const o = /** @type {HTMLElement | null} */ (c.querySelector(':scope > .opened'));
+  return c.getBoundingClientRect().bottom - (pane.getBoundingClientRect().top + pane.clientTop) + (o ? o.offsetHeight : 0);
+}
+
+/** a face arrived once the panes were set (APP's, as a face loads late): the next frame refits the panes and measures their ties again (`draw`, `refit`) */
 export function refaced() { if (scene) { scene.size = ''; markDirty(); } }
 
 /** each pane's article given a pane's height of room below its end, so any of its lines can be scrolled to the pane's top */
@@ -2608,41 +2878,47 @@ function measure() {
  * passage by the position that act names — the runs of shared identity
  * between the panes taken, the far ends crossing into each kept, and the ties
  * measured anew and drawn, so no tie is drawn over text it was not measured
- * on; a stroke's list standing checked again (`recheckList`). A pane taken
- * down to its cover at a change of the page's class carries nothing into the
- * text it takes: its reader's place is kept for the read at the new class
- * that sets it again.
+ * on; a stroke's list standing checked again (`recheckList`). Every article
+ * is made at the scene's fit, its corner in the fit's form, and the fit set on
+ * the panes (`applyFit`) before anything is carried, a place's line that
+ * stood in view carried below what a held head covers (`clearOf`). A pane
+ * taken down to its cover at a change of the page's class carries nothing
+ * into the text it takes: its reader's place is kept for the read at the new
+ * class that sets it again. A pane set again at a new fit alone (`refit`)
+ * keeps its text, its lines broken anew: its place is its first line in view
+ * (`firstLineIn`), no `compare` read against it is outdated by it, and a
+ * place kept for such a read stays kept.
  * @param {Scene} S
- * @param {Array<{side: 'a' | 'b', next: Next, down?: boolean}>} sets `down` the pane taken down to its cover at a change of the page's class
+ * @param {Array<{side: 'a' | 'b', next: Next, down?: boolean, same?: boolean}>} sets `down` the pane taken down to its cover at a change of the page's class; `same` the pane set again at a new fit, its text the one it shows
  * @param {ComparePair[] | null} pairs the runs of shared identity between the panes now; null where they stand as they were
  */
 function setPanes(S, sets, pairs) {
   const E = els;
   if (!E) return;
   const set = new Set(sets.map((x) => x.side));
-  const carried = sets.map(({ side, next, down }) => {
-    const P = S[side], made = P.el ? LAYER.madeOf(P.el) : null, image = made ? made.image : [];
-    const here = placeAt(P, next.hold ? next.hold.from : firstInView(paneEl(E, side)));
-    if (down) { P.place = P.place || here; return { side, next, place: null, sel: null, level: null }; }
-    const place = P.place || here;
-    P.place = null;
+  const carried = sets.map(({ side, next, down, same }) => {
+    const P = S[side], made = P.el ? LAYER.madeOf(P.el) : null, image = made ? made.image : [], pane = paneEl(E, side);
+    const here = placeAt(P, next.hold ? next.hold.from : same ? firstLineIn(P, pane) : firstInView(pane));
+    if (down) { P.place = P.place || here; return { side, next, same, place: null, sel: null, level: null }; }
+    const place = same ? here : P.place || here;
+    if (!same) P.place = null;
     const sel = P.el ? LAYER.selectionIn(P.el) : null, lv = S.level[side];
     return {
-      side, next, place,
+      side, next, same, place,
       sel: sel ? { ids: REC.identityIn(image, sel.span.pos, sel.span.width), backward: sel.backward } : null,
       level: lv != null ? { pos: lv, ids: REC.identityIn(image, lv, 1) } : null,
     };
   });
-  for (const { side, next } of carried) {
-    const P = S[side], view = next.view ?? LAYER.sceneView(next.d);
+  for (const { side, next, same } of carried) {
+    const P = S[side], view = { ...(next.view ?? LAYER.sceneView(next.d)), cpl: S.fit.cpl };
     Object.assign(P, { d: { ...next.d }, view, kind: next.kind, src: next.src, names: next.names, shows: next.shows, k: next.k, n: next.n, read: next.read, lacks: next.lacks });
-    P.sets++;
+    if (!same) P.sets++;
     swap(E, P);
     writeCorner(E, P);
     nameBar(E, P);
   }
   namePanes(E, S);
-  fitMeasure(E);
+  applyFit(E, S);
   roomBelow(E);
   for (const { side, next, place, sel, level } of carried) {
     const P = S[side], pane = paneEl(E, side), image = P.d.image;
@@ -2652,7 +2928,8 @@ function setPanes(S, sets, pairs) {
       const at = REC.placedIn(image, x.ids);
       return at.length ? at[0].pos : x.pos;
     };
-    if (place) { const line = lineAt(pane, P.names, there(place)); if (line) pane.scrollTop = line.top - place.at; }
+    // a line that stood in view stays in view, below what a held head covers
+    if (place) { const line = lineAt(pane, P.names, there(place)); if (line) pane.scrollTop = line.top - (place.at >= 0 ? Math.max(place.at, clearOf(pane)) : place.at); }
     if (sel && P.el) {
       const at = REC.placedIn(image, sel.ids), z = at[at.length - 1];
       if (z) LAYER.selectIn(P.el, { addr: P.names, pos: at[0].pos, width: z.pos + z.width - at[0].pos }, sel.backward);
@@ -2841,6 +3118,7 @@ function count(S, side, m) {
   if (P.read != null && P.k != null && P.read > P.k) P.read = m;
   P.n = m;
   writeCorner(E, P);
+  rebanded(E, S);
 }
 
 /**
@@ -2981,6 +3259,25 @@ export function readIn(side, k, passage = null) {
   });
 }
 
+/**
+ * A pane's compact corner opened whole where it stands, on its act — a click
+ * on a glyph or on a head's count, or Enter at the corner where it offers no
+ * act of its own (`key`) — and closed again by the same act at the corner
+ * opened (FP-26): beside its column, its items whole over what stands beside
+ * it, its room the compact one, so nothing beside it moves (the style's); at
+ * its document's head, every item whole beneath its rows. An act in the scene
+ * (`actedIn`).
+ * @param {'a' | 'b'} side
+ */
+function openWhole(side) {
+  const S = scene, E = els;
+  if (!S || !E) return;
+  actedIn(S);
+  S[side].open = !S[side].open;
+  writeCorner(E, S[side]);
+  draw();
+}
+
 /** set the two ends level — each pane's matched line at one height, the bands' and lines' ends measured anew — once no pane is being set again (`whenSet`); an act in the scene (`actedIn`) */
 export function relevel() { actedIn(scene); whenSet(level); }
 
@@ -2993,8 +3290,9 @@ function level() {
   roomBelow(E);
   const la = S.level.a != null ? lineIn(E.paneA, S.a.names, S.level.a, restIn(S.a.d.blocks, S.level.a)) : null;
   const lb = S.level.b != null ? lineIn(E.paneB, S.b.names, S.level.b, restIn(S.b.d.blocks, S.level.b)) : null;
-  // a pane scrolls a line up its pane, never below where it stands unscrolled: the two meet at LEVEL_AT, or higher where one stands above it
-  const at = Math.min(LEVEL_AT, la ? la.top : Infinity, lb ? lb.top : Infinity);
+  // a pane scrolls a line up its pane, never below where it stands unscrolled: the two meet at LEVEL_AT, or higher where one
+  // stands above it, and never under what a held head covers
+  const at = Math.max(Math.min(LEVEL_AT, la ? la.top : Infinity, lb ? lb.top : Infinity), clearOf(E.paneA), clearOf(E.paneB));
   E.paneA.scrollTop = la ? la.top - at : 0;
   E.paneB.scrollTop = lb ? lb.top - at : 0;
   measure();
@@ -3003,7 +3301,9 @@ function level() {
 
 /**
  * Draw the bands, the strokes and the lines on the scene's canvas at the
- * panes' scrolls now: each band at its extent (`drawBand`), held inside each
+ * panes' scrolls now — the panes fitted again first where their size changed
+ * since the ties were measured (`refit`): each band at its extent
+ * (`drawBand`), held inside each
  * pane's visible height; each stroke whose two heights stand in their panes'
  * visible heights (`drawStroke`); each line's end where its passage's line
  * stands — a whole document's at its pane's facing edge, level with the
@@ -3011,13 +3311,14 @@ function level() {
  * (`wholeEdges`, `drawEdge`); the strokes' buttons and the stop placed
  * (`placeStrokes`, `placeStop`) — a stop the reader returned to standing
  * until it is answered and they have moved on from it, then under the
- * scene's own rules.
+ * scene's own rules — and the heads' later rows placed at the panes' scrolls
+ * (`placeHeads`).
  */
 export function draw() {
   const S = scene, E = els;
   if (!S || !E) return;
   if (S.returned && S.returned.answer && movedOn(S.returned)) S.returned = null;
-  if (sizeOf(E) !== S.size) { fitMeasure(E); roomBelow(E); measure(); }
+  if (sizeOf(E) !== S.size && refit(E, S)) return;
   const cv = E.canvas, ctx = cv.getContext('2d'); if (!ctx) return;
   const c = cv.getBoundingClientRect();
   const DPR = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
@@ -3085,6 +3386,7 @@ export function draw() {
   drawnStrokes = struck;
   placeStrokes(E, S);
   placeStop(E, S);
+  placeHeads(E, S);
 }
 
 /**
@@ -3393,9 +3695,10 @@ function placeStop(E, S) {
 /**
  * The stop's act (see the head): pane B scrolled so the shared passage the
  * stop stands for has its first line level with the near passage's, where
- * that line stands in pane A's view, else LEVEL_AT px below the pane's top;
- * the next act going to the passage after it, round again, the passage gone
- * to kept by its bytes' identity. Nothing else moves.
+ * that line stands in pane A's view, else LEVEL_AT px below the pane's top —
+ * never under what pane B's held head covers (`clearOf`); the next act going
+ * to the passage after it, round again, the passage gone to kept by its
+ * bytes' identity. Nothing else moves.
  */
 function toShared() {
   const S = scene, E = els;
@@ -3403,7 +3706,7 @@ function toShared() {
   if (!S || !E || !p || S.at == null) return;
   const la = S.level.a != null ? lineIn(E.paneA, S.a.names, S.level.a, S.widthA) : null;
   const seen = la ? la.y - E.paneA.scrollTop : -1;
-  E.paneB.scrollTop = p.top - (la && seen >= 0 && seen <= E.paneA.clientHeight ? la.top - E.paneA.scrollTop : LEVEL_AT);
+  E.paneB.scrollTop = p.top - Math.max(la && seen >= 0 && seen <= E.paneA.clientHeight ? la.top - E.paneA.scrollTop : LEVEL_AT, clearOf(E.paneB));
   S.next = (S.at + 1) % S.shared.length;
   S.stepped = idsIn(S.b, p.pos, p.width);
   draw();
@@ -3458,6 +3761,7 @@ export function close() {
   drawnStrokes = [];
   coverPlane(false);
   els.root.classList.remove('on'); els.paneA.innerHTML = ''; els.paneB.innerHTML = ''; els.strokes.innerHTML = ''; delete els.bar.dataset.face;
+  for (const p of [els.paneA, els.paneB]) p.classList.toggle('head', false);
   els.stop.hidden = true;
   els.stop.textContent = '';
   FOCUS.close('scene');
@@ -3465,25 +3769,27 @@ export function close() {
 }
 
 /**
- * The top of the block next below (dir 1) or above (dir −1) a pane's scroll,
- * in px of the pane's content — the first block whose top lies past the
- * scroll by more than a pixel; the pane's end past the last block, its top
- * before the first. Null where the pane holds no article.
+ * The scroll that brings the block next below (dir 1) or above (dir −1) the
+ * pane's visible top to it, in px of the pane's content — the first block
+ * whose top lies past that top by more than a pixel, the pane's visible top
+ * taken below what a held head covers (`clearOf`), so the block stands clear
+ * of it; the pane's end past the last block, its top before the first. Null
+ * where the pane holds no article.
  * @param {HTMLElement} pane
  * @param {1 | -1} dir
  * @returns {number | null}
  */
 function blockTop(pane, dir) {
   const art = articleIn(pane); if (!art) return null;
-  const origin = pane.getBoundingClientRect().top + pane.clientTop - pane.scrollTop;
+  const origin = pane.getBoundingClientRect().top + pane.clientTop - pane.scrollTop, clear = clearOf(pane);
   const tops = [...art.el.querySelectorAll('.run > .sp, .run > .withheld')].map((e) => e.getBoundingClientRect().top - origin);
-  const at = pane.scrollTop;
+  const at = pane.scrollTop + clear;
   const next = dir > 0 ? tops.find((y) => y > at + 1) : tops.slice().reverse().find((y) => y < at - 1);
   if (next == null) return dir > 0 ? pane.scrollHeight : 0;
-  return Math.max(0, Math.round(next));
+  return Math.max(0, Math.round(next - clear));
 }
 
-/** a pane's own key now (K-60): ↓/↑ by block — the next block's top brought to the pane's top — PageDown/PageUp by most of the pane, Home/End to its ends */
+/** a pane's own key now (K-60): ↓/↑ by block — the next block's top brought to the pane's top, below what a held head covers — PageDown/PageUp by most of the pane, Home/End to its ends */
 function move(/** @type {HTMLElement} */ pane, /** @type {string} */ k) {
   const step = pane.clientHeight * 0.8;
   if (k === 'PageDown') pane.scrollTop += step; else if (k === 'PageUp') pane.scrollTop -= step;
@@ -3496,12 +3802,14 @@ function move(/** @type {HTMLElement} */ pane, /** @type {string} */ k) {
 /**
  * The scene's own keys: a pane's (K-60) move the pane the focus stands in —
  * pane A where it stands in neither — and Enter at a pane's corner takes the
- * corner's act (D5 K-57, as the plane's corner): a draft's kept word's
- * statement opened or closed where the draft has a kept state (T-LAYER's
+ * corner's act (D5 K-57, as the plane's corner): on a head's count, the
+ * corner opened whole (`openWhole`); else a draft's kept word's statement
+ * opened or closed where the draft has a kept state (T-LAYER's
  * `openStatement`; K-74), else the version its corner offers read in its
- * place (`act`); each waits for a pane being set again (`whenSet`), the key
- * taken meanwhile. False for any other key, and for Enter at a corner that
- * offers no act.
+ * place (`act`), else, where it stands compact or at its document's head, the
+ * corner opened whole, or closed again (FP-26); each move and the read wait
+ * for a pane being set again (`whenSet`), the key taken meanwhile. False for
+ * any other key, and for Enter at a whole corner that offers no act.
  * @param {string} k the chord (N-KEYS's `chordOf`)
  * @returns {boolean} the scene took the key
  */
@@ -3511,10 +3819,13 @@ export function key(k) {
   const at = typeof document !== 'undefined' ? /** @type {HTMLElement | null} */ (document.activeElement) : null;
   const pane = at && E.paneB.contains(at) ? E.paneB : E.paneA, side = pane === E.paneB ? 'b' : 'a';
   if (k === 'Enter') {
-    const onCorner = !!at && !!at.classList && at.classList.contains('corner') && pane.contains(at), P = S[side];
-    if (onCorner && !P.d.derived && REC.keptOf(P.names)) { LAYER.openStatement(P.names); writeCorner(E, P); return true; }
-    if (!onCorner || P.read == null) return false;
-    act(side);
+    const corner = at && at.closest ? at.closest('.corner') : null, P = S[side];
+    if (!at || !corner || !pane.contains(corner)) return false;
+    if (at.closest('[data-more]')) { openWhole(side); return true; }
+    if (!P.d.derived && REC.keptOf(P.names)) { LAYER.openStatement(P.names); writeCorner(E, P); rebanded(E, S); return true; }
+    if (P.read != null) { act(side); return true; }
+    if (S.fit.corner === 'whole' && !P.open) return false;
+    openWhole(side);
     return true;
   }
   if (!MOVES.includes(k)) return false;

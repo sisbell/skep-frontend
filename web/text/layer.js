@@ -334,9 +334,12 @@
 // The reading scene's panes borrow the mount (`sceneArticle`; FP-12; the
 // structure record §3.4 (vii)): each pane's article is made here,
 // T-ARTICLE's scene-mode variant laid out by the pane's own style — one
-// column at the plane's measure — from a record and the view it draws
-// (`sceneView`), which the scene keeps so a pane is set again from them with
-// no read (SC; FP-23), and what it was made from is kept beside it as a
+// column at the measure the scene fits both panes to (SC) — from a record and
+// the view it draws at that measure (`sceneView`), which the scene keeps so a
+// pane is set again from them with no read (SC; FP-23); its corner's items
+// are made here too, beside its column whole or compact (`sceneCorner`), or
+// at its document's head in the plane's head form (`sceneHead`; FP-26); and
+// what it was made from is kept beside it as a
 // mounted article's is (`madeOf`) — its document's blocks, runs and image as
 // the model held them, which the model replaces whole and never edits in
 // place, so they stay the article's own while it stands. Every position in
@@ -1107,10 +1110,12 @@ function headBand(d, v) {
  * the kept clause, then the corner's items in their one order while they fit,
  * all after the name standing at the row's end and the name's room before
  * them (`HeadLayout.name`); an item that never yields and does not fit beside
- * those before it wrapped whole onto the next row, its words wrapped where it
- * is wider than the head, taking the rows they need at `pitch` (`linesAt`); an
- * item that yields and does not fit beside those before it folded into the
- * count, "⟨n⟩ more", which takes the next slot after the last placed.
+ * those before it wrapped whole onto the next row — kept on its own row where
+ * nothing stands before it, as on a first row a name of no room leaves empty —
+ * its words wrapped where it is wider than the head, taking the rows they need
+ * at `pitch` (`linesAt`); an item that yields and does not fit beside those
+ * before it folded into the count, "⟨n⟩ more", which takes the next slot
+ * after the last placed.
  * @param {Array<{w: number, yields: boolean, words: string}>} items the corner's items, compact, at the interface's size (`headItems`)
  * @param {number} name the least room the name keeps, px (`nameWidth`)
  * @param {{w: number, words: string} | null} clause the kept clause (`clauseWidth`); null where none stands
@@ -1127,7 +1132,7 @@ export function headLayout(items, name, clause, width, pitch) {
   const place = (/** @type {number} */ k, /** @type {number} */ w, /** @type {string} */ words, /** @type {boolean} */ yields) => {
     if (at() + w <= width + 1e-6) { slots.push({ k, row, x: at(), w, rows: 1 }); x = at() + w; return; }
     if (yields) { folded++; return; }
-    row += 1;
+    if (x > 0) row += 1;
     if (w <= width + 1e-6) { slots.push({ k, row, x: 0, w, rows: 1 }); x = w; return; }
     const rows = Math.max(1, Math.ceil(linesAt(words, width) * CORNER_LINE / pitch - 1e-9));
     slots.push({ k, row, x: 0, w: width, rows });
@@ -3952,29 +3957,30 @@ export function symbolRect(/** @type {string} */ addr, /** @type {string} */ lin
 /**
  * The view a reading scene's pane's article draws (T-ARTICLE's scene-mode
  * variant): the links LK shows at its document now, their counts, its
- * corner's state — what the scene keeps beside the pane as it sets it, so the
- * pane's marks and lines stay the ones its text was set with, and it is set
- * again from them with no read (SC; FP-23).
+ * corner's state, at the pane's measure — what the scene keeps beside the
+ * pane as it sets it, so the pane's marks and lines stay the ones its text was
+ * set with, and it is set again from them with no read (SC; FP-23).
  * @param {Doc} d
+ * @param {number} [cpl] the pane's measure, in characters of its face: the full measure where none is given
  * @returns {ArticleView}
  */
-export const sceneView = (d) => viewFor(d, true);
+export const sceneView = (d, cpl = MEASURE_CPL) => ({ ...viewFor(d, true), cpl });
 
 /**
  * A document's article for a reading scene's pane — the scene borrows the
  * mount (FP-12's second target; the structure record §3.4 (vii)): T-ARTICLE's
  * scene-mode variant, laid out by the pane's own style in one column at the
- * plane's measure and never transformed, and never hidden from assistive
- * technology as the plane's articles are, a pane's text being what it reads
- * there; what it was made from, and where its words were read, are kept
- * beside it (`madeOf`, `namedIn`) for as long as the element lives. The scene
- * places the element in its pane; this is the one place it is made — from a
- * record and the view it draws, the model's now or what the scene kept of
- * them as it last set the pane, and named by the addresses the scene gives
- * it: the one its acts name and its positions are mapped against — at an
- * edition read at its bare address, the member its text is (SC; FP-23) — and
- * the one its head shows; a copy from it names its words where the scene
- * says they were read (FP-27).
+ * measure the scene fits the pane to and never transformed, and never hidden
+ * from assistive technology as the plane's articles are, a pane's text being
+ * what it reads there; what it was made from, and where its words were read,
+ * are kept beside it (`madeOf`, `namedIn`) for as long as the element lives.
+ * The scene places the element in its pane; this is the one place it is
+ * made — from a record and the view it draws, the model's now or what the
+ * scene kept of them as it last set the pane, and named by the addresses the
+ * scene gives it: the one its acts name and its positions are mapped
+ * against — at an edition read at its bare address, the member its text is
+ * (SC; FP-23) — and the one its head shows; a copy from it names its words
+ * where the scene says they were read (FP-27).
  * @param {Doc} d the record its text is made from
  * @param {{view?: ArticleView, names?: string, shows?: string, where?: Where}} [as] `view` the view it draws — the record's now (`sceneView`) where none is given; `names` the address it is made as (`Made.addr`), which its spans are measured against — the record's where none is given; `shows` the address its head names — `names` where none is given; `where` where its words were read, which a copy from it names — as a box showing the record names them (`shownWhere`) where none is given
  * @returns {HTMLElement}
@@ -3999,15 +4005,54 @@ export function sceneArticle(d, as = {}) {
 export function planOf(d) { d = shownDoc(d); return articlePlan(d, viewFor(d), REC.ownerAccount(d)); }
 
 /**
- * A pane's corner items (ux-T2: each pane its own), from the view the pane's
- * article is made from — the record's now where none is given (`sceneView`);
- * the scene holds their element, on the pane's outer side, and hands in the
- * version it names, the chain's count and the corner's act (SC).
+ * A pane's corner items beside its column (ux-T2: each pane its own), whole
+ * or compact (FP-26), from the view the pane's article is made from — the
+ * record's now where none is given (`sceneView`); the scene holds their
+ * element, on the pane's outer side, and hands in the version it names, the
+ * chain's count and the corner's act (SC).
  * @param {Doc} d
  * @param {ArticleView} [view]
+ * @param {boolean} [compact] the compact form: its usual states glyphs named by their words
  * @returns {string}
  */
-export function sceneCorner(d, view = viewFor(d, true)) { return cornerHTML(d, view); }
+export function sceneCorner(d, view = viewFor(d, true), compact = false) { return cornerHTML(d, view, compact); }
+
+/**
+ * A pane's corner at its document's head (FP-26; the plane's head form,
+ * `headOf`): its rows across the pane's column — its text and its edge, at
+ * the pane's measure and em — at the reading line's pitch (`headLayout`): the
+ * pane's kept clause first, then the corner's items in their one order and
+ * compact forms, each in its slot, those that never yield wrapped whole onto
+ * the rows after, the offered read folded into "⟨n⟩ more" where its row
+ * cannot hold it; beneath its rows the form a reader's act opened — every item
+ * whole on a glyph's or the count's act, a draft's kept statement on its kept
+ * word's (K-74). No row names the document: the scene's bar names each pane's.
+ * Its rows stand where its band sets them, each row and the form beneath
+ * absolutely placed (the scene moves them as its pane scrolls); no rows where
+ * it carries neither an item nor a clause.
+ * @param {Doc} d
+ * @param {ArticleView} view the pane's view, at its measure (`sceneView`), with the corner's state the scene hands in
+ * @param {{px: number, kept: KeptClause | null, open: boolean}} as `px` the em the pane's text is set at; `kept` the pane's kept clause; `open` its items opened whole by the reader's act
+ * @returns {{html: string, rows: number}}
+ */
+export function sceneHead(d, view, as) {
+  const items = cornerItems(d, view, true, false), clause = as.kept;
+  if (!items.length && !clause) return { html: '', rows: 0 };
+  const pitch = LINE_H * as.px, width = ((view.cpl ?? MEASURE_CPL) * CHAR_W + EDGE) * as.px;
+  const L = headLayout(headItems(items), 0, clause ? { w: cornerPx(clause.text), words: clause.text } : null, width, pitch);
+  /** @type {string[]} each row's markup, by row */
+  const rows = Array.from({ length: L.rows }, () => '');
+  for (const s of L.slots) {
+    const html = s.k === -1 ? keptHTML(clause)
+      : s.k === -2 ? `<span class="more" data-more="${L.folded}" role="button" tabindex="-1">${esc(t('L.corner.more', { n: L.folded }))}</span>`
+        : items[s.k].html;
+    rows[s.row] += `<span class="hslot${s.rows > 1 ? ' wraps' : ''}" style="left:${s.x}px;width:${s.w}px;height:${s.rows * pitch}px;line-height:${s.rows > 1 ? '' : pitch + 'px'}">${html}</span>`;
+  }
+  const form = as.open ? cornerHTML(d, view) : view.kept && view.keptOpen ? statementHTML(view.kept) : '';
+  const html = rows.map((r, i) => `<div class="hrow" data-row="${i}" style="top:${i * pitch}px;height:${pitch}px">${r}</div>`).join('')
+    + (form ? `<div class="opened" style="top:${L.rows * pitch}px;width:${width}px">${form}</div>` : '');
+  return { html, rows: L.rows };
+}
 
 /** a document's corner on the plane, or null where it carries none now (the gate's containment check reads it) */
 export function cornerOf(/** @type {string} */ addr) { const c = corners.get(addr); return c ? c.el : null; }

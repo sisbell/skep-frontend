@@ -68,7 +68,9 @@
 // the view holds beside the edge alone — and the em a reading view sets the
 // text at: the reading size, smaller only where even a column of one
 // character is wider than the view beside its margins. It reads the view's
-// width and the reading size alone, so zoom never changes it.
+// width and the reading size alone, so zoom never changes it. One arithmetic
+// fits the plane's view and a reading scene's pane: the plane keeps a gutter
+// beside the edge, a pane none, its own padding holding that room.
 // The advance (`CHAR_W`): the reading face's average advance, the mean of its
 // lowercase letters and the space by the weights of the OS/2 table's average
 // character width (`ADVANCE_WEIGHTS`, `advanceOf`), measured from the face as
@@ -381,27 +383,28 @@ export const HEAD_CPL = 40;
  * The fit (see the head): the measure a view `vw` px wide sets every line
  * at — MEASURE_CPL where it holds a column at the reading size with both its
  * margins beside it: on its left the corner and its gap, on its right the
- * column's edge, and a gutter's room between them and the view's sides; the
- * corner whole, else compact; else, the corner compact, the most whole
- * characters the view holds beside them, while those are HEAD_CPL or more;
- * else the corner at its document's head, its room the measure's: the most
- * whole characters the view holds beside the edge and the gutter alone, up to
+ * column's edge, and `margin` between them and the view's sides; the corner
+ * whole, else compact; else, the corner compact, the most whole characters
+ * the view holds beside them, while those are HEAD_CPL or more; else the
+ * corner at its document's head, its room the measure's: the most whole
+ * characters the view holds beside the edge and the margin alone, up to
  * MEASURE_CPL, one at the least — and the em a reading view sets the text at:
  * the reading size where the view holds a character beside the column's
  * margins, else the em at which it holds that one. It reads the view's width
  * and the reading size alone: zoom never changes it.
- * @param {number} vw the view's width, in px
+ * @param {number} vw the view's width, in px: the plane's viewport, or a reading scene's pane's content box
  * @param {number} readPx the reading size: the em a reading view sets a document's text at where the view holds it, in px
  * @param {CornerSize} corner
+ * @param {number} [margin] the room kept beside the column's edge, in the body's em: a gutter on the plane, where none is given; none in a pane, whose padding holds it
  * @returns {Fit}
  */
-export function fitFor(vw, readPx, corner) {
-  const holds = (/** @type {number} */ cw) => Math.floor((vw - cw - (EDGE + GUTTER) * readPx) / (CHAR_W * readPx) + 1e-9);
+export function fitFor(vw, readPx, corner, margin = GUTTER) {
+  const holds = (/** @type {number} */ cw) => Math.floor((vw - cw - (EDGE + margin) * readPx) / (CHAR_W * readPx) + 1e-9);
   if (holds(corner.whole + corner.gap) >= MEASURE_CPL) return { cpl: MEASURE_CPL, compact: false, head: false, px: readPx };
   const beside = holds(corner.compact + corner.gap);
   if (beside >= HEAD_CPL) return { cpl: Math.min(MEASURE_CPL, beside), compact: true, head: false, px: readPx };
   const cpl = holds(0);
-  const px = cpl >= 1 ? readPx : Math.max(1, Math.min(readPx, vw / (CHAR_W + EDGE + GUTTER)));
+  const px = cpl >= 1 ? readPx : Math.max(1, Math.min(readPx, vw / (CHAR_W + EDGE + margin)));
   return { cpl: Math.max(1, Math.min(MEASURE_CPL, cpl)), compact: true, head: true, px };
 }
 
