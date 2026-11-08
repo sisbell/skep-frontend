@@ -6,11 +6,12 @@
 // it short — the zoom-in bound raised per E18 (a) by the deepest place and
 // by every size a document is set at and never lowered, a re-anchor keeping
 // a passage's place and size on screen with an aimed flight's start moved
-// with it and no destination moved (FP-8, FP-25), the measure in force moved
-// by a resize or the reader's root size alone (FP-26), the reading size
-// 1.0625 of the root's and the landing's em smaller only where a column of
-// one character does not fit, and the edge stub's cut and triangle on the
-// true bearing inside the visible view.
+// with it and no destination moved (FP-8, FP-25), the measure in force and
+// where the corner stands moved by a resize or the reader's root size alone
+// (FP-26, FP-31), the reading size 1.0625 of the root's and the landing's em
+// smaller only where a column of one character does not fit, the least pan
+// that brings a rect inside the visible view (FP-20), and the edge stub's cut
+// and triangle on the true bearing inside the visible view.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as CAM from './camera.js';
@@ -258,14 +259,15 @@ test('the stub\'s triangle stands behind its tip on the bearing, STUB.length lon
   assert.ok(Math.abs(Math.hypot(p.x - q.x, p.y - q.y) - STUB.width) < 1e-9 && Math.abs((p.x - q.x) * ux + (p.y - q.y) * uy) < 1e-9, 'the base STUB.width across, square to the bearing');
 });
 
-test('the measure in force is the fit of the viewport\'s width at the reading size: the full measure at 1440 px, fewer whole characters at 480, and back at the full on a reset; a zoom or a pan moves none of it (issue #151)', () => {
+test('the measure in force is the fit of the viewport\'s width at the reading size: the full measure at 1440 px, the corner whole beside it; fewer whole characters at 480, the corner at its document\'s head; back at the full on a reset; a zoom or a pan moves none of it (issue #151; FP-31)', () => {
   CAM._reset();
-  assert.deepEqual([CAM.READING_PX, CAM.measure(), CAM.fit()], [17, MEASURE_CPL, { cpl: MEASURE_CPL, compact: false, px: 17 }], 'before any viewport: the full measure, the landing at the reading size');
+  assert.deepEqual([CAM.READING_PX, CAM.measure(), CAM.fit()], [17, MEASURE_CPL, { cpl: MEASURE_CPL, compact: false, head: false, px: 17 }], 'before any viewport: the full measure, the corner beside it, the landing at the reading size');
   CAM.setViewport(1440, 900);
-  assert.deepEqual(CAM.fit(), { cpl: MEASURE_CPL, compact: false, px: 17 }, '1440 px: the full measure, the corner whole');
+  assert.deepEqual(CAM.fit(), { cpl: MEASURE_CPL, compact: false, head: false, px: 17 }, '1440 px: the full measure, the corner whole beside it');
   CAM.setViewport(480, 900);
   const narrow = CAM.fit();
-  assert.ok(narrow.compact && narrow.cpl === fitFor(480, 17, { whole: cornerWidth(false), compact: cornerWidth(true), gap: CORNER.gap }).cpl && narrow.cpl < MEASURE_CPL && narrow.px === 17, `480 px: fewer characters beside the compact corner, at the reading size: ${JSON.stringify(narrow)}`);
+  assert.deepEqual(narrow, fitFor(480, 17, { whole: cornerWidth(false), compact: cornerWidth(true), gap: CORNER.gap }), '480 px: P-LAY\'s fit of the view at the reading size');
+  assert.ok(narrow.head && narrow.compact && narrow.cpl < MEASURE_CPL && narrow.px === 17, `480 px: fewer characters, the corner at its document's head, at the reading size: ${JSON.stringify(narrow)}`);
   CAM.set({ x: 1000, y: 1000, scale: 3 }); CAM.zoomAt(2, 100, 100); CAM.panBy(40, 10);
   assert.deepEqual(CAM.fit(), narrow, 'a zoom and a pan: the measure as it was');
   assert.deepEqual(CAM.viewAt({ x: 5, y: 6 }, 2), { x: 5, y: 6, scale: CAM.landingPx() / 2 }, 'a reading view at the landing\'s em where none is given');
@@ -285,11 +287,25 @@ test('every arrival at reading scale sets the document\'s em at 1.0625 of the ro
   assert.equal(CAM.READING_PX, 21.25, 'no root size read: nothing moves');
   CAM.setRoot(16);
   assert.deepEqual(CAM.fit(), at16, 'back at 16 px: the measure as it was');
-  CAM.setViewport(150, 700);
-  assert.ok(CAM.measure() === 1 && CAM.landingPx() < 17 && CAM.landingPx() >= 1, `a 150 px view: one character, the landing smaller — ${JSON.stringify(CAM.fit())}`);
+  CAM.setViewport(130, 700);
+  assert.ok(CAM.measure() === 1 && CAM.landingPx() < 17 && CAM.landingPx() >= 1, `a 130 px view: one character, the landing smaller — ${JSON.stringify(CAM.fit())}`);
   assert.deepEqual(CAM.viewAt({ x: 0, y: 0 }, 2).scale, CAM.landingPx() / 2, 'a reading view there at the landing\'s em');
   CAM._reset();
   assert.equal(CAM.READING_PX, 17, 'a reset: a 16 px root again');
+});
+
+test('the least pan brings a screen rect inside the visible view: none where it stands inside; else the nearer edge brought to the view\'s, along each axis, and its start where it is longer than the view (FP-20)', () => {
+  CAM._reset(); CAM.setViewport(480, 900);
+  CAM.set({ x: 1000, y: 1000, scale: 2 });
+  const seen = CAM.visibleView(30);
+  const at = CAM.view();
+  assert.deepEqual(CAM.panInto({ x: 20, y: 100, w: 77, h: 60 }, seen), { dx: 0, dy: 0 }, 'inside the view: no pan');
+  assert.deepEqual(CAM.view(), at, 'the camera where it stood');
+  assert.deepEqual(CAM.panInto({ x: -78, y: 100, w: 77, h: 60 }, seen), { dx: 78, dy: 0 }, 'left of the view: its left edge brought to the view\'s');
+  assert.equal(CAM.sx(at.x - 78 / 2), 240, 'the camera moved by the pan alone, the world carried right');
+  assert.deepEqual(CAM.panInto({ x: 440, y: 10, w: 77, h: 60 }, seen), { dx: -37, dy: 20 }, 'past the right edge and under the line: both edges brought in');
+  assert.deepEqual(CAM.panInto({ x: 100, y: 200, w: 600, h: 60 }, seen), { dx: -100, dy: 0 }, 'wider than the view: its start at the view\'s');
+  CAM._reset();
 });
 
 test('the dirty mark is taken once', () => {

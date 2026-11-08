@@ -3178,7 +3178,8 @@ function offering(/** @type {string} */ addr, /** @type {number} */ n) {
   const act = /** @type {any} */ ({ dataset: { read: String(n) }, focus() { doc.activeElement = act; } });
   el.closest = (/** @type {string} */ s) => (s === '[data-corner]' ? el : null);
   el.querySelector = (/** @type {string} */ s) => (s === '[data-read]' ? act : null);
-  act.closest = (/** @type {string} */ s) => (s === '[data-corner]' ? el : s === '[data-read]' ? act : null);
+  el.querySelectorAll = (/** @type {string} */ s) => (s === '[data-read], [data-more]' ? [act] : []);
+  act.closest = (/** @type {string} */ s) => (s === '[data-corner]' ? el : s === '[data-read]' || s === '[data-read], [data-more]' ? act : null);
   return { el, act };
 }
 /** a key at a corner, its target the element given, made by a key */

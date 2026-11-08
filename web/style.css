@@ -260,8 +260,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    beside the article, never inside the box that clips it. On the plane T-LAYER places each in the corner layer, over
    the beams and under the chrome, by translate alone, beside the column nearest the view's centre (issue #151's design
    decision), whole — `--corner-w` wide — or compact — `--corner-compact-w`, its usual state a glyph whose act opens it
-   whole (FP-26); the layer clips without scrolling, so a focus never moves it. In the scene each pane's own stands on its
-   outer side, held to the top of the pane's scroll. */
+   whole (FP-26), or, where the view's width leaves the measure beside it short of forty characters, across the column at
+   its document's head (below); the layer clips without scrolling, so a focus never moves it — the camera brings a focused
+   corner in (APP-INPUT). In the scene each pane's own stands on its outer side, held to the top of the pane's scroll. */
 #corners { position:fixed; inset:0; overflow:clip; pointer-events:none; contain:strict; z-index:5; }
 .corner { font-size:var(--corner-px); line-height:1.4; color:#8b8f96; user-select:none; -webkit-user-select:none; }
 #corners .corner { position:absolute; top:0; left:0; width:var(--corner-w); padding:4px var(--corner-pad); pointer-events:auto; background:var(--bg); border-radius:3px; will-change:transform; }
@@ -290,6 +291,21 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 /* a kept document's clause, the corner's last item on a line of its own: its words whole in either form, wrapped and never
    cut, the room above it its own padding, so the corner is placed by the items above it alone (T-LAYER) */
 .corner .kept { display:block; padding-top:.3em; color:#cfd6df; white-space:normal; }
+/* A CORNER AT ITS DOCUMENT'S HEAD (FP-26, FP-31): across the column being read, its rows on the document's own ground at
+   the reading line's pitch, which T-LAYER sets — the first held below the one line and over the rest as they pass under it
+   — its element the first row's box, the focus's ring on it; the document's name on the first row, drawn and never
+   announced; each item in a slot of its own width T-LAYER sets, its words on one line, one whose words are wider than the
+   head wrapped on the rows it takes; the forms its acts open whole beneath its rows, wrapped and never cut */
+#corners .corner.head { padding:0; background:transparent; border-radius:0; }
+#corners .corner.head > .hrow { position:absolute; left:0; right:0; z-index:1; }
+#corners .corner.head > .hrow[data-row="0"] { z-index:2; }
+#corners .corner.head .name { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+#corners .corner.head .name > span { position:absolute; top:0; white-space:pre; }
+#corners .corner.head .hslot { position:absolute; top:0; display:flex; align-items:center; white-space:nowrap; }
+#corners .corner.head .hslot.wraps { white-space:normal; align-items:flex-start; }
+#corners .corner.head .hslot > * { display:inline-block; margin:0; padding-top:0; }
+#corners .corner.head .more { color:#cfd6df; cursor:pointer; text-decoration:underline dotted; }
+#corners .corner.head > .opened { position:absolute; left:0; z-index:3; padding:4px var(--corner-pad); white-space:normal; }
 /* A LABEL HELD BELOW THE ONE LINE over a mounted article's text (issue #169's design decision: "Held below the line"): one line
    of its type across the box's visible part, on the box's ground T-LAYER sets, with no rule, shadow, tint or border, so the box
    reads as continuing above; each part where P-LABEL's held line sets it, each run of it in its face. It takes the pointer where its

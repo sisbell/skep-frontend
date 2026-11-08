@@ -97,14 +97,19 @@
 // in a reading scene's pane, and on the plane where a newer version's
 // arrival pinned its box (foundations §3.2; D5 K-57) — and in a pane the
 // line saying the version it reads lacks the passage that act carried
-// (FP-23), whole or compact (FP-26). Its state's
+// (FP-23), whole or compact (FP-26), each with its words, its width as the
+// view measures them and whether it may fold into the corner's count where a
+// head's row cannot hold it — the offered read alone; the state, its version
+// statement, the kept word, the chip and the whole-document count never
+// yield (`cornerItems`; foundations §3.1). Its state's
 // items are made by one rule
 // (`stateItems`), which the ARIA mirror's item voices whole too
 // (`cornerWords`), so the corner and the mirror never part (R94). A draft's
 // kept state (B3-S2; D5 K-57, K-74) is its word in a slot of fixed width —
 // the longest of the three words', as the view measures them — in both
 // forms, an empty box while no state is set (FP-34), the word's own act
-// opening its statement whole on a line of its own below it
+// opening its statement whole on a line of its own below it — beneath a
+// head's rows, where its holder sets it there (`statementHTML`) —
 // (`keptStatement`; P41): at "kept" the save chord's answer, at the other
 // two "nothing to save —" before the word and the reason on the act; the
 // statement is Mod+S's answer too (N-KEYS). The corner carries no
@@ -1063,21 +1068,33 @@ export function keptStatement(k) {
 const keptSlotEm = (measure) => Math.max(...Object.values(KEPT_WORDS).map((id) => measure(t(id), 'client')));
 
 /**
+ * A kept state's statement as the corner opens it whole (`keptStatement`): a
+ * line of its own, its words wrapped and never cut.
+ * @param {KeptState} k
+ * @returns {string}
+ */
+export function statementHTML(k) {
+  const st = keptStatement(k);
+  return `<span class="kept-statement" data-string="${esc(st.id)}">${esc(st.text)}</span>`;
+}
+
+/**
  * A draft's kept line (see the head; B3-S2; FP-34): the kept word in its
  * slot of fixed width (`keptSlotEm`), carrying the state's word and its
  * string — an empty box of the same width, hidden from assistive technology,
- * while no state is set — and, where its act opened it, the statement whole
- * on a line of its own after it (`keptStatement`). The word takes no focus
- * of its own: the corner is one stop (D5 K-57), its act the holder's.
+ * while no state is set — and, where its act opened it and `statement` asks,
+ * the statement whole on a line of its own after it (`statementHTML`). The
+ * word takes no focus of its own: the corner is one stop (D5 K-57), its act
+ * the holder's.
  * @param {ArticleView} v
+ * @param {boolean} [statement] the statement opened stands after the slot; false where its holder opens it elsewhere — beneath a head's rows (T-LAYER)
  */
-function keptLineHTML(v) {
+function keptLineHTML(v, statement = true) {
   const em = keptSlotEm(v.measure), k = v.kept ?? null;
   const slot = k
     ? `<span class="kept-word" data-kept="${esc(k.word)}" data-string="${esc(KEPT_WORDS[k.word])}" style="width:${em}em">${esc(t(KEPT_WORDS[k.word]))}</span>`
     : `<span class="kept-word pending" aria-hidden="true" style="width:${em}em"></span>`;
-  const st = k && v.keptOpen ? keptStatement(k) : null;
-  return `<span class="kept-line">${slot}</span>` + (st ? `<span class="kept-statement" data-string="${esc(st.id)}">${esc(st.text)}</span>` : '');
+  return `<span class="kept-line">${slot}</span>` + (k && v.keptOpen && statement ? statementHTML(k) : '');
 }
 
 /** is a document published: its metadata's word where read, else its index's kind */
@@ -1159,21 +1176,44 @@ export const cornerWords = (d, v) => stateItems(d, v).filter((i) => i.id).map((i
 
 /**
  * A corner's state item as markup (`stateItems`): a draft's kept word its
- * kept line (`keptLineHTML`); a usual state, compact, its glyph named by its
- * words, which assistive technology reads and its act opens whole (FP-26);
- * else its words, an owner it names in the identifier's face, a draft's chip
- * marked so and the version statement carrying the count it is of for its
- * act.
+ * kept line (`keptLineHTML`), its statement after it where `statement` asks;
+ * a usual state, compact, its glyph named by its words, which assistive
+ * technology reads and its act opens whole (FP-26); else its words, an owner
+ * it names in the identifier's face, a draft's chip marked so and the version
+ * statement carrying the count it is of for its act.
  * @param {StateItem} i
  * @param {ArticleView} v
  * @param {boolean} compact
+ * @param {boolean} [statement]
  */
-function stateHTML(i, v, compact) {
-  if (i.cls === 'kept') return keptLineHTML(v);
+function stateHTML(i, v, compact, statement = true) {
+  if (i.cls === 'kept') return keptLineHTML(v, statement);
   const extra = i.cls === 'chip' ? ' data-chip="1"' : i.members != null ? ` data-members="${i.members}"` : '';
   if (compact && i.glyph) return `<span class="${i.cls} glyph"${extra} role="img" aria-label="${esc(t(i.id, i.vals))}">${esc(t(i.glyph))}</span>`;
   return `<span class="${i.cls}"${extra}>${Object.keys(i.faces).length ? htmlIn(i.id, i.vals, i.faces) : esc(t(i.id, i.vals))}</span>`;
 }
+
+/**
+ * A string's width filled, in em at 1 em (`Measure`): each stretch of its
+ * words in the client's face, each value a token names in the face `faces`
+ * gives it.
+ * @param {string} id
+ * @param {Record<string, string | number>} vals
+ * @param {Record<string, Face>} faces
+ * @param {Measure} measure
+ */
+function filledEm(id, vals, faces, measure) {
+  return t(id).split(/⟨([^⟩]+)⟩/).reduce((w, s, k) => w + (k % 2 ? measure(String(vals[s] ?? `⟨${s}⟩`), faces[s] || 'client') : s ? measure(s, 'client') : 0), 0);
+}
+
+/**
+ * @typedef {Object} CornerItem — one item of a corner in foundations' one order (`cornerItems`): its markup and its words in the form asked, its width, and how it meets a narrow room
+ * @property {string} cls its class
+ * @property {string} html its markup
+ * @property {string} words its words as a person reads them
+ * @property {number} em its width in em of the corner's size, as the view measures its words (`Measure`): its slot's, where it has one of fixed width — a kept word's
+ * @property {boolean} yields it may fold into the corner's count where a row cannot hold it: the offered read alone; every other item never yields (foundations §3.1)
+ */
 
 /**
  * The corner's items in foundations' one order (§3.1): its document's state
@@ -1189,22 +1229,42 @@ function stateHTML(i, v, compact) {
  * address, lit at a pinned version (foundations §3.1) — and a draft's chip a
  * glyph, each named by its whole words; "version ⟨k⟩ of ⟨n⟩", the
  * whole-document count, the kept word in its slot and the state of a document
- * a read refused keep their words. The holder makes the element they stand in
- * (`data-corner` naming the document), which is the corner's one stop: no
- * item is a Tab stop of its own (D5 K-57).
+ * a read refused keep their words. Each with its words and its width
+ * (`CornerItem`): the state, its version statement, a draft's kept word, its
+ * chip and the whole-document count never yield; the offered read does.
+ * @param {Doc} d
+ * @param {ArticleView} v
+ * @param {boolean} [compact] the compact form
+ * @param {boolean} [statement] a draft's kept statement, opened, stands after its word; false where its holder opens it elsewhere (`keptLineHTML`)
+ * @returns {CornerItem[]}
+ */
+export function cornerItems(d, v, compact = false, statement = true) {
+  /** @type {CornerItem[]} */
+  const out = stateItems(d, v).map((i) => {
+    const words = i.cls === 'kept' ? (i.id ? t(i.id) : '') : t(i.id, i.vals), glyph = compact && i.glyph ? t(i.glyph) : null;
+    const em = i.cls === 'kept' ? keptSlotEm(v.measure) : glyph != null ? v.measure(glyph, 'client') : filledEm(i.id, i.vals, i.faces, v.measure) + (i.cls === 'chip' ? 0.8 : 0);
+    return { cls: i.cls, html: stateHTML(i, v, compact, statement), words, em, yields: false };
+  });
+  /** an item of words alone */
+  const words = (/** @type {string} */ cls, /** @type {string} */ text, /** @type {string} */ html, yields = false) => out.push({ cls, html, words: text, em: v.measure(text, 'client'), yields });
+  if (!d.refused && isPublished(d)) {
+    if (v.lacks != null) { const s = t('F.floating.member', { k: v.lacks }); words('lacks', s, `<span class="lacks">${esc(s)}</span>`); }
+    if (v.read != null) { const s = t('F.versions.read', { k: v.read }); words('read', s, `<span class="read" data-read="${v.read}"${control(v.scene)}>${esc(s)}</span>`, true); }
+  }
+  if (v.wholeLinks > 0) { const s = v.wholeLinks === 1 ? t('F.whole-links.1') : t('F.whole-links', { n: v.wholeLinks }); words('whole-links', s, `<span class="whole-links">${esc(s)}</span>`); }
+  return out;
+}
+
+/**
+ * The corner's items as markup (`cornerItems`), in their one order. The
+ * holder makes the element they stand in (`data-corner` naming the
+ * document), which is the corner's one stop: no item is a Tab stop of its
+ * own (D5 K-57).
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {boolean} [compact] the compact form
  */
-export function cornerHTML(d, v, compact = false) {
-  const parts = stateItems(d, v).map((i) => stateHTML(i, v, compact));
-  if (!d.refused && isPublished(d)) {
-    if (v.lacks != null) parts.push(`<span class="lacks">${esc(t('F.floating.member', { k: v.lacks }))}</span>`);
-    if (v.read != null) parts.push(`<span class="read" data-read="${v.read}"${control(v.scene)}>${esc(t('F.versions.read', { k: v.read }))}</span>`);
-  }
-  if (v.wholeLinks > 0) parts.push(`<span class="whole-links">${esc(v.wholeLinks === 1 ? t('F.whole-links.1') : t('F.whole-links', { n: v.wholeLinks }))}</span>`);
-  return parts.join('');
-}
+export const cornerHTML = (d, v, compact = false) => cornerItems(d, v, compact).map((i) => i.html).join('');
 
 /**
  * A kept clause as the corner's last item (FP-23; T-LAYER's `keptWords`): a

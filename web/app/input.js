@@ -10,24 +10,25 @@
 // platform's selection on the mounted layer — and that selection is the
 // page's (R11): as the drag ends, and whenever the platform's selection
 // changes outside a drag, the span it covers is read through T-LAYER's
-// mapping and handed to O-SELECTION. The drag is T-LAYER's press, from the
-// button going down on an article to its release, the platform's cancel or a
-// context menu; this module reports its start and its end. Below the
-// readable threshold every press is the canvas's, over bars or mounted text
-// alike, so a drag there selects nothing and a click is the place's — keyed
-// on the document's own em at the readable threshold (T-LAYER's
-// `atReadingScale`), never on whether text is mounted. At the readable
-// threshold and above a press acts on the text (FP-12), never dropped and
-// never a move to the place: a press the canvas takes on a document's column
-// there — the text under it not yet standing — is held, the frame marked
-// dirty, until the frame after it has set that text, then acted on as a
-// press on any standing article is (`afterFrame`): released, the text
+// mapping and handed to O-SELECTION, its focus point the end the act moved,
+// which T-LAYER keeps clear of its document's head. The drag is T-LAYER's
+// press, from the button going down on an article to its release, the
+// platform's cancel or a context menu; this module reports its start and its
+// end. Below the readable threshold every press is the canvas's, over bars or
+// mounted text alike, so a drag there selects nothing and a click is the
+// place's — keyed on the document's own em at the readable threshold
+// (T-LAYER's `atReadingScale`), never on whether text is mounted. At the
+// readable threshold and above a press acts on the text (FP-12), never
+// dropped and never a move to the place: a press the canvas takes on a
+// document's column there — the text under it not yet standing — is held, the
+// frame marked dirty, until the frame after it has set that text, then acted
+// on as a press on any standing article is (`afterFrame`): released, the text
 // layer's click at the element under it; the button still down, the
-// platform's drag from the press's point (T-LAYER's `caretAt`), its other
-// end carried as the pointer moves (`extendTo`) and taken as the page's
-// selection at the release. A camera move, the person's next press, chrome
-// standing over it, or the text standing with none of it under the press
-// drops it; a press in a gutter acts on nothing.
+// platform's drag from the press's point (T-LAYER's `caretAt`), its other end
+// carried as the pointer moves (`extendTo`) and taken as the page's selection
+// at the release. A camera move, the person's next press, chrome standing
+// over it, or the text standing with none of it under the press drops it; a
+// press in a gutter acts on nothing.
 // The camera pans by the wheel and two-finger scroll and by the camera key's
 // drag (K-10: Mod held, wherever the pointer is — M-8: a drag begun on an
 // article with the key held is the camera's, the pointer captured by the
@@ -96,13 +97,16 @@
 // takes there — K-57), a draft's kept word opens its statement and closes it
 // again (T-LAYER's `openStatement`; K-57, K-74), a compact corner's glyph
 // opens the corner whole and a click on the corner opened closes it again
-// (T-LAYER's `openCorner`; FP-26).
+// (T-LAYER's `openCorner`; FP-26), as a click on the count a corner standing
+// at its document's head folds its items into does; and a focus landing in a
+// corner the view does not show whole moves the camera by the least pan that
+// brings it in (P-CAM's `panInto`; FP-20), no flight running.
 // Figures: a press that moves more than 4 px is a drag, not a click; a wheel
 // series ends at SERIES_MS (220 ms, unmeasured) of quiet, and the re-take
 // follows a wheel 220 ms after it; a pinch zooms by e^(-Δy·0.012), Mod+wheel
 // by e^(-Δy·0.0022).
-// Rules: FP-1, FP-2, FP-9, FP-12, FP-21, FP-22, FP-24, FP-25, FP-26, FP-30,
-// FP-34, FP-35.
+// Rules: FP-1, FP-2, FP-9, FP-12, FP-20, FP-21, FP-22, FP-24, FP-25, FP-26,
+// FP-30, FP-34, FP-35, FP-37.
 
 import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
@@ -224,7 +228,8 @@ export function attach(els) {
     if (clickText(/** @type {HTMLElement} */ (e.target))) e.stopPropagation();
   });
   // the corners: a click on the read it offers takes that read; one on the version statement takes the corner's act; one on a
-  // compact corner's glyph opens it whole, and one on the corner opened closes it again (FP-26)
+  // compact corner's glyph, or on a head's count of the items it folds, opens it whole, and one on the corner opened closes
+  // it again (FP-26)
   els.corners.addEventListener('click', (e) => {
     const target = /** @type {HTMLElement} */ (e.target);
     LINE.act();
@@ -232,7 +237,14 @@ export function attach(els) {
     if (holder && target.closest('[data-read]')) { e.stopPropagation(); VERSIONS.readFromCorner(holder, SEL.selected(), false); }
     else if (holder && target.closest('.version')) { e.stopPropagation(); VERSIONS.fromCorner(holder, SEL.selected(), false); }
     else if (holder && target.closest('.kept-word[data-kept]')) { e.stopPropagation(); LAYER.openStatement(addr); }
-    else if (holder && (target.closest('.glyph') || LAYER.cornerAt(addr)?.opened)) { e.stopPropagation(); LAYER.openCorner(addr); }
+    else if (holder && (target.closest('.glyph, [data-more]') || LAYER.cornerAt(addr)?.opened)) { e.stopPropagation(); LAYER.openCorner(addr); }
+  });
+  // a focus landing in a corner the view does not show whole brings it in by the least pan, no flight running (FP-20)
+  els.corners.addEventListener('focusin', (e) => {
+    const holder = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('[data-corner]'));
+    if (!holder || CAM.flying()) return;
+    const q = holder.getBoundingClientRect(), moved = CAM.panInto({ x: q.left, y: q.top, w: q.width, h: q.height }, CAM.visibleView(LINE.bottom()));
+    if (moved.dx || moved.dy) CAM.markDirty();
   });
   window.addEventListener('wheel', (e) => {
     const t = /** @type {HTMLElement} */ (e.target);
@@ -417,11 +429,11 @@ export function afterFrame() {
   carrying = true;
 }
 
-/** the platform's selection, where it stands in a mounted article, becomes the page's (R11): view state alone changes; one the page already holds, or placed itself, is left as it is — so a slot's chord that selects the walk's block before it asks shows no card of the selection while its answer reads, which would end that answer's opening (O-HOST's) */
+/** the platform's selection, where it stands in a mounted article, becomes the page's (R11): view state alone changes, its focus point the end the press or the platform's own keys moved (T-LAYER's `keepClear`); one the page already holds, or placed itself, is left as it is — so a slot's chord that selects the walk's block before it asks shows no card of the selection while its answer reads, which would end that answer's opening (O-HOST's) */
 function takeSelection() {
   const span = LAYER.spanOfSelection();
   if (!span || sameSpan(span, SEL.selected()) || sameSpan(span, LAYER.placedSpan())) return;
-  SEL.select(span.addr, span.pos, span.width);
+  SEL.select(span.addr, span.pos, span.width, 'focus');
 }
 
 /** a click on the plane: a tail lists its links; an outlined run of an arrival in several, below its document's reading scale, is a step to it; a continuation's mark's newest label goes to that member, and the rest of the mark opens its list; a place goes; an account at far goes to its region, where a board is held; else a card or scene still reading ends, the overlay standing under it standing, or else the notice below the overlay dismisses, else the overlay */

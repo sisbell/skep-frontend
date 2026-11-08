@@ -17,17 +17,26 @@ the reading face's average advance, measured as rendered) — in the design's
 60–66, one count for every column;
 and in a window NARROW_PX wide (issue #151's design decisions: the measure
 narrows to what the view holds, the margins compacted first, never on a
-zoom) every column a whole count fewer than the full measure, the page's
-measure in force, the landed line's column, its corner — compact — and its
-edge inside the view at the reading size, a zoom changing no count, and the
-window put back the full measure again, the line under the view's centre at
-the height it stood; and Back made once the window is put back lands on the
+zoom; issue #436's: below forty characters beside it the corner stands at the
+document's head) every column a whole count fewer than the full measure, the
+page's measure in force, the landed line's column and its edge inside the view
+at the reading size, the corner across them at the document's head, a zoom
+changing no count, and the window put back the full measure again, the line
+under the view's centre at the height it stood; a window narrowed to REFIT_PX
+after a LEAP in the wide one framing the view across the landed line's column,
+its corner compact beside it inside the view, the line at its height (issue
+#436); in the narrow window a selection K-8 or the platform extends to a line
+under the head's held row bringing that line below the row by the camera moved
+down alone (issue #436); a corner standing left of the view tabbed to brought
+in by the camera moved across alone (issue #436); and Back made once the
+window is put back lands on the
 passage left in the narrow one, which the view left there no longer reads —
 the same line under the visible view's centre, at the height it stood and at
 its em (issue #221); and a LEAP into the first edition at the window run's
 first position, its lines set at no measure in force there — the view away
-at the far edition as the window narrowed, its fold P-LAY's prediction, half
-a line or more off at that position — lands on its lines as rendered, the
+at the far edition as the window narrowed, to the first of RENDERED_PX where
+its fold, P-LAY's prediction, stands half a line or more off at that
+position — lands on its lines as rendered, the
 camera at that line's frame, 1 px either way, at the landing's em (issue
 #296); and a LEAP there from the far edition at the full measure, the window
 set NARROW_PX wide while its camera flies — the first edition folded again at
@@ -501,6 +510,13 @@ READING_PX = 17
 # the window the narrow view is held at (issue #151's design decision: "a narrow window ... the measure narrows to what the view
 # holds") — and the passage LEAPt to there: the first edition's paragraph that holds the window run, its longest
 NARROW_PX, PASSAGE = 480, 541
+# the window a resize narrows the measure to with the corner still beside its column (issue #436's design decision: "A refold
+# keeps the passage's line in place and frames sideways the way a LEAP does, with the corner included")
+REFIT_PX = 600
+# the windows a LEAP onto lines set at no measure in force is held in (issue #296), the first where P-LAY's prediction of the
+# line holding the window run's first position stands half a line or more from the platform's: the seed's text sets that
+# line where the prediction does at some measures
+RENDERED_PX = (NARROW_PX, REFIT_PX, 720, 540, 820)
 # the window a walk's folded moment is read in (issue #182's design decision: "It never yields when the line runs short"): too
 # narrow for the one line's every segment, wide enough for its acts and the walk's segment
 WALK_PX = 900
@@ -3728,14 +3744,14 @@ def corner_follows(ctx, r):
     over(0)
     first = corner_rect(ctx)
     whole = first['corner']['rect']['w'] if first['corner'] else None
-    r.check(bool(first['corner']) and first['placed'] == {'column': 0, 'compact': False, 'opened': False} and first['corner']['inView'],
+    r.check(bool(first['corner']) and first['placed'] == {'column': 0, 'compact': False, 'opened': False, 'head': False} and first['corner']['inView'],
             f'em {READING_PX} over the first column: the first edition\'s corner beside it, whole, in view', first)
     over(1)
     v = corner_rect(ctx)
     c, col, col0 = v['corner'], v['columns'][1], v['columns'][0]
     beside = bool(c) and abs(c['rect']['x'] + c['rect']['w'] - (col['left'] - CORNER_GAP_PX)) <= 1 and c['inView'] and c['inClip'] and c['rect']['y'] >= v['line'] - 0.5
     clear = bool(c) and c['rect']['x'] >= col0['right'] - 0.5 and c['rect']['x'] >= v['box']['left'] and c['rect']['x'] + c['rect']['w'] <= v['box']['right']
-    compact = bool(c) and whole is not None and c['rect']['w'] < whole - 1 and v['placed'] == {'column': 1, 'compact': True, 'opened': False}
+    compact = bool(c) and whole is not None and c['rect']['w'] < whole - 1 and v['placed'] == {'column': 1, 'compact': True, 'opened': False, 'head': False}
     r.check(beside and clear and compact,
             f'em {READING_PX} over the second column: the corner beside it — its right edge {CORNER_GAP_PX} px short of the column\'s text, below the one line, in view — in the gutter, clear of the first column\'s text and inside its own document\'s box, compact: narrower than its {whole} px whole',
             {'corner': c and c['rect'], 'placed': v['placed'], 'column': col, 'first_column': col0, 'box': v['box'], 'whole_px': whole})
@@ -3751,8 +3767,8 @@ def corner_follows(ctx, r):
     ctx.frames(3)
     closed = corner_rect(ctx)
     oc, cc = opened['corner'], closed['corner']
-    r.check(acted and bool(oc and cc) and abs(oc['rect']['w'] - whole) <= 1 and abs(oc['rect']['x'] + oc['rect']['w'] - (col['left'] - CORNER_GAP_PX)) <= 1 and opened['placed'] == {'column': 1, 'compact': False, 'opened': True}
-            and abs(cc['rect']['w'] - c['rect']['w']) <= 1 and closed['placed'] == {'column': 1, 'compact': True, 'opened': False},
+    r.check(acted and bool(oc and cc) and abs(oc['rect']['w'] - whole) <= 1 and abs(oc['rect']['x'] + oc['rect']['w'] - (col['left'] - CORNER_GAP_PX)) <= 1 and opened['placed'] == {'column': 1, 'compact': False, 'opened': True, 'head': False}
+            and abs(cc['rect']['w'] - c['rect']['w']) <= 1 and closed['placed'] == {'column': 1, 'compact': True, 'opened': False, 'head': False},
             'the compact corner\'s glyph opens it whole on its act, standing where it stood, and the act at the corner opened compacts it again', {'opened': oc and oc['rect'], 'closed': cc and cc['rect'], 'acted': acted})
     return {'whole_px': whole, 'compact': c and c['rect'], 'opened': oc and oc['rect']}
 
@@ -3772,12 +3788,14 @@ def line_from(ctx, pos, mid):
 
 def measure_narrows(ctx, r):
     """THE MEASURE NARROWS TO WHAT THE VIEW HOLDS (issue #151's design decisions; FP-26: "margins compact first, then the
-    measure narrows in characters ... zoom never changes the measure"): the window set NARROW_PX wide and the first
-    edition LEAPt to a passage — every mounted column a whole count of its face's average advance fewer than the full
-    measure, one for every column, the page's measure in force; the landed line's column, the corner beside it and the
-    column's edge, EDGE_EM em at the reading size, inside the visible view at the reading size, the corner compact; a
-    zoom changing no count; and the window put back — every column at the full measure again, the line under the view's
-    centre at the height it stood, from the view's centre, at its em; its figures"""
+    measure narrows in characters ... zoom never changes the measure"; issue #436's: "Below forty, the corner moves to the
+    document's head, across the column being read, and its room goes back to the measure"): the window set NARROW_PX wide
+    and the first edition LEAPt to a passage — every mounted column a whole count of its face's average advance fewer than
+    the full measure, one for every column, the page's measure in force, the corner at the document's head; the landed
+    line's column and its edge, EDGE_EM em at the reading size, inside the visible view at the reading size, the corner
+    across them, in view below the one line; a zoom changing no count; and the window put back — every column at the full
+    measure again, the line under the view's centre at the height it stood, from the view's centre, at its em; its
+    figures"""
     pos = PASSAGE
     was = ctx.resize(NARROW_PX, 900)
     try:
@@ -3788,19 +3806,20 @@ def measure_narrows(ctx, r):
         cols = measure_view(ctx)
         cpl = [c for a in cols for c in (a['cpl'] or [])]
         whole = bool(cpl) and all(abs(c - round(c)) <= MEASURE_CH_TOL and abs(c - cpl[0]) <= 2 * MEASURE_CH_TOL for c in cpl)
-        r.check(whole and round(cpl[0]) < MEASURE_CH[1] and abs(round(cpl[0]) - fit['cpl']) <= 0 and fit['compact'],
-                f'a {NARROW_PX} px window: every mounted column a whole count of its face\'s average advance fewer than the full measure, one count for every column — the page\'s measure in force, its corner compacted first',
+        r.check(whole and round(cpl[0]) < MEASURE_CH[1] and abs(round(cpl[0]) - fit['cpl']) <= 0 and fit['compact'] and fit['head'],
+                f'a {NARROW_PX} px window: every mounted column a whole count of its face\'s average advance fewer than the full measure, one count for every column — the page\'s measure in force, its corner at the document\'s head',
                 {'cpl': sorted(set(round(c, 3) for c in cpl)), 'fit': fit})
         v, at = corner_rect(ctx), ctx.js('window.__skep.centreOf(%s, %d)' % (json.dumps(DOC), pos))
         cam, vp = ctx.camera(), v['view']
         line_x = (at['x'] - cam['x']) * cam['scale'] + vp['VW'] / 2
         col = next((k for k in v['columns'] if k['left'] <= line_x <= k['right']), None)
         c = v['corner']
-        framed = bool(col and c) and c['rect']['x'] >= -0.5 and col['left'] >= c['rect']['x'] + c['rect']['w'] and col['right'] + EDGE_EM * READING_PX <= vp['VW'] + 0.5 and c['rect']['y'] >= v['line'] - 0.5
+        edge = col and col['right'] + EDGE_EM * READING_PX
+        framed = bool(col and c) and col['left'] >= -0.5 and edge <= vp['VW'] + 0.5 and abs(c['rect']['x'] - col['left']) <= 1 and abs(c['rect']['x'] + c['rect']['w'] - edge) <= 1 and c['rect']['y'] >= v['line'] - 0.5
         em = ctx.js('window.__skep.fold(%s).fs' % json.dumps(DOC)) * cam['scale']
-        r.check(framed and abs(em - READING_PX) < 1e-6 and v['placed'] and v['placed']['compact'],
-                f'a {NARROW_PX} px window: the landed line\'s column, its corner beside it — compact — and its {EDGE_EM} em edge inside the view, at the reading size, {READING_PX} px an em',
-                {'corner': c and c['rect'], 'column': col, 'edge_right': col and col['right'] + EDGE_EM * READING_PX, 'view': vp, 'em': em, 'placed': v['placed']})
+        r.check(framed and abs(em - READING_PX) < 1e-6 and v['placed'] and v['placed']['head'],
+                f'a {NARROW_PX} px window: the landed line\'s column and its {EDGE_EM} em edge inside the view, at the reading size, {READING_PX} px an em — the corner across them at the document\'s head, below the one line',
+                {'corner': c and c['rect'], 'column': col, 'edge_right': edge, 'view': vp, 'em': em, 'placed': v['placed']})
         ctx.set_view(cam['x'], cam['y'], cam['scale'] * 1.6)
         zoomed = [c for a in measure_view(ctx) for c in (a['cpl'] or [])]
         r.check(bool(zoomed) and all(abs(z - cpl[0]) <= 2 * MEASURE_CH_TOL for z in zoomed) and ctx.js('window.__skep.measure()') == fit,
@@ -3822,6 +3841,184 @@ def measure_narrows(ctx, r):
             f'the window put back: every column at the full measure again, the line under the visible view\'s centre at the height it stood from that centre, 1 px either way, at its em',
             {'back': sorted(set(round(b, 3) for b in back)), 'before': before, 'after': after, 'pos': under})
     return {'window': NARROW_PX, 'cpl': round(cpl[0], 3) if cpl else None, 'fit': fit, 'before': before, 'after': after}
+
+
+def resize_frames(ctx, r):
+    """A RESIZE FRAMES THE VIEW ACROSS THE COLUMN BEING READ (issue #436's design decision: "A refold keeps the passage's
+    line in place and frames sideways the way a LEAP does, with the corner included"): the first edition LEAPt to a
+    passage in the wide window, then the window set REFIT_PX wide — the measure narrowed, the corner compact beside the
+    landed line's column — the corner inside the view below the one line, the column and its edge in view, the line under
+    the visible view's centre at the height it stood from that centre, at its em; its figures"""
+    ctx.leap(DOC, PASSAGE)
+    ctx.frames(3)
+    mid = seen_centre(ctx)
+    under = ctx.js('window.__skep.posAt(%s, %s, %s)' % (json.dumps(DOC), mid['x'], mid['y']))
+    before = line_from(ctx, under, mid)
+    before['em'] = ctx.js('window.__skep.fold(%s).fs' % json.dumps(DOC)) * ctx.camera()['scale']
+    was = ctx.resize(REFIT_PX, 900)
+    try:
+        ctx.settle()
+        ctx.frames(3)
+        fit, v = ctx.js('window.__skep.measure()'), corner_rect(ctx)
+        after = line_from(ctx, under, seen_centre(ctx))
+        after['em'] = ctx.js('window.__skep.fold(%s).fs' % json.dumps(DOC)) * ctx.camera()['scale']
+        at, cam, vp = ctx.js('window.__skep.centreOf(%s, %s)' % (json.dumps(DOC), json.dumps(under))), ctx.camera(), v['view']
+        line_x = (at['x'] - cam['x']) * cam['scale'] + vp['VW'] / 2
+        col, c = next((k for k in v['columns'] if k['left'] <= line_x <= k['right']), None), v['corner']
+        inside = bool(c and col) and c['rect']['x'] >= -0.5 and c['rect']['x'] + c['rect']['w'] <= col['left'] + 0.5 and col['right'] + EDGE_EM * READING_PX <= vp['VW'] + 0.5 and c['rect']['y'] >= v['line'] - 0.5
+        r.check(fit['cpl'] < MEASURE_CH[1] and not fit['head'] and bool(v['placed']) and v['placed']['compact'] and not v['placed']['head'] and inside
+                and abs(after['dy'] - before['dy']) <= 1 and abs(after['em'] - before['em']) <= 1e-6,
+                f'the window set {REFIT_PX} px wide after a LEAP in the wide one: the corner compact beside the landed line\'s column, inside the view below the one line, the column and its {EDGE_EM} em edge in view, the line under the visible view\'s centre at the height it stood from that centre, 1 px either way, at its em (issue #436)',
+                {'fit': fit, 'placed': v['placed'], 'corner': c and c['rect'], 'column': col, 'view': vp, 'line': v['line'], 'before': before, 'after': after})
+    finally:
+        ctx.resize(*was)
+    ctx.settle()
+    ctx.frames(3)
+    return {'window': REFIT_PX, 'pos': under, 'corner': c and c['rect'], 'before': before, 'after': after}
+
+
+# the first text node of a block's first part in a document's mounted article that carries the block's own characters, the
+# chrome inside it skipped (T-SPAN's CHROME) — where the harness sets the platform's selection
+OWN_TEXT = '''((addr, pos) => { const el = document.querySelector(`#domlayer article.dtext[data-addr="${addr}"] .run > .sp[data-pos="${pos}"]`);
+  if (!el) return null; const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  for (let n = w.nextNode(); n; n = w.nextNode()) if (!n.parentElement.closest('.hairline, .pubmark, .sym, .edge') && n.data.trim()) return n;
+  return null; })'''
+
+
+def line_top(ctx, pos):
+    """the top of the line holding a position of the first edition, on screen, where its fold sets it at the camera now"""
+    return ctx.js('''((a, p, k) => { const S = window.__skep, c = S.centreOf(a, p), v = S.view.camera(), vp = S.view.viewport(), fs = S.fold(a).fs;
+      return (c.y - v.y) * v.scale + vp.VH / 2 - k * fs * v.scale / 2; })(%s, %d, %s)''' % (json.dumps(DOC), pos, LINE_RATIO))
+
+
+def below_head(ctx, pos):
+    """the camera moved up or down alone so the line holding a position of the first edition stands 2 px below what its
+    head covers (`headClear`) — its corner at its head, the first row held below the one line; what the head covers
+    then, or None where no head stands"""
+    clear = None
+    for _ in range(4):
+        ctx.frames(2)
+        clear = ctx.js('window.__skep.headClear(%s)' % json.dumps(DOC))
+        if clear is None:
+            return None
+        delta = clear + 2 - line_top(ctx, pos)
+        if abs(delta) < 0.5:
+            break
+        cam = ctx.camera()
+        ctx.set_view(cam['x'], cam['y'] - delta / cam['scale'], cam['scale'])
+    return clear
+
+
+def head_guards(ctx, r):
+    """NOTHING LEFT UNDER THE HEAD'S HELD ROW (issue #436's design decision: "No caret, focus, selection or landing
+    stands under that row"; FP-37): in a window NARROW_PX wide, the first edition's corner standing at its head and the
+    paragraph at PASSAGE set just below the held row — Shift+↑ (K-8) selecting it whole moving nothing; Shift+↑ again,
+    extending the selection to the typed line before it, whose first line stands under the row, bringing that line to
+    the row's bottom by the camera moved down alone, by the least pan; and a selection the platform holds, its focus
+    point on that first line under the row, taken as the page's, so too; its figures"""
+    sel_clear = '(async () => { (await import("./overlays/selection.js")).clear(); window.getSelection().removeAllRanges(); })()'
+    blocks = ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC)) or []
+    i = next((k for k, x in enumerate(blocks) if x['pos'] == PASSAGE), None)
+    b, prev = (blocks[i], blocks[i - 1]) if i else (None, None)
+    ok = bool(b and prev) and b['kind'] == 'para' and prev['kind'] == 'para' and bool(prev['text'].strip())
+    r.check(ok, f'the first edition holds a typed line before its paragraph at {PASSAGE} (what the checks below stand on)', {'block': b and b['pos'], 'before': prev and prev['pos']})
+    if not ok:
+        return {'block': b and b['pos'], 'before': prev and prev['pos']}
+    was = ctx.resize(NARROW_PX, 900)
+    try:
+        ctx.settle()
+        ctx.js(sel_clear)
+        ctx.leap(DOC, PASSAGE)
+        focus = ctx.js('window.__skep.view.focus()')
+        clear = below_head(ctx, PASSAGE)
+        r.check(clear is not None and bool(focus) and focus['kind'] == 'block' and focus['pos'] == PASSAGE,
+                f'a {NARROW_PX} px window: the first edition\'s corner at its head, the walk on the paragraph at {PASSAGE}, its first line set just below the held row (what the checks below stand on)',
+                {'focus': focus, 'clear': clear})
+        if clear is None:
+            return {'focus': focus}
+        cam0 = ctx.camera()
+        ctx.drv.key('ArrowUp', mods=('Shift',))
+        ctx.frames(3)
+        whole, cam1, under = ctx.js('window.__skep.selection()'), ctx.camera(), line_top(ctx, prev['pos'])
+        r.check(whole == {'addr': DOC, 'pos': b['pos'], 'width': b['width']} and same_view(cam1, cam0) and under < clear - 1,
+                f'Shift+↑ selects the paragraph at {PASSAGE} whole, its first line clear of the held row, the camera unmoved — the typed line before it under the row',
+                {'selection': whole, 'camera': [cam0, cam1], 'before_top': under, 'clear': clear})
+        ctx.drv.key('ArrowUp', mods=('Shift',))
+        ctx.frames(3)
+        ctx.settle()
+        ctx.frames(2)
+        grown, cam2, top2, clear2 = ctx.js('window.__skep.selection()'), ctx.camera(), line_top(ctx, prev['pos']), ctx.js('window.__skep.headClear(%s)' % json.dumps(DOC))
+        down = (cam1['y'] - cam2['y']) * cam2['scale']
+        r.check(grown == {'addr': DOC, 'pos': prev['pos'], 'width': b['pos'] + b['width'] - prev['pos']} and clear2 is not None and abs(top2 - clear2) <= 1
+                and abs(down - (clear - under)) <= 1 and abs(cam2['x'] - cam1['x']) < 1e-9 and abs(cam2['scale'] - cam1['scale']) < 1e-12,
+                'Shift+↑ again extends the selection to the typed line before it, and the camera moves down alone by the least pan, that line\'s first line at the held row\'s bottom',
+                {'selection': grown, 'down_px': down, 'want_px': clear - under, 'top': top2, 'clear': clear2, 'camera': [cam1, cam2]})
+        ctx.js(sel_clear)
+        ctx.frames(2)
+        clear = below_head(ctx, PASSAGE)
+        cam3, under3 = ctx.camera(), line_top(ctx, prev['pos'])
+        made = ctx.js('''((a, p, q) => { const own = %s, x = own(a, p), y = own(a, q); if (!x || !y) return false;
+          window.getSelection().setBaseAndExtent(x, Math.min(2, x.length), y, 0); return true; })(%s, %d, %d)''' % (OWN_TEXT, json.dumps(DOC), b['pos'], prev['pos']))
+        ctx.frames(4)
+        ctx.settle()
+        ctx.frames(2)
+        taken, cam4, top4, clear4 = ctx.js('window.__skep.selection()'), ctx.camera(), line_top(ctx, prev['pos']), ctx.js('window.__skep.headClear(%s)' % json.dumps(DOC))
+        down4 = (cam3['y'] - cam4['y']) * cam4['scale']
+        r.check(bool(made) and bool(taken) and taken['pos'] == prev['pos'] and clear is not None and under3 < clear - 1 and clear4 is not None and abs(top4 - clear4) <= 1
+                and abs(down4 - (clear - under3)) <= 1 and abs(cam4['x'] - cam3['x']) < 1e-9,
+                'a selection the platform holds from the paragraph back to the first line of the typed line before it, under the held row, taken as the page\'s: the camera moves down alone by the least pan, that line at the held row\'s bottom',
+                {'made': made, 'selection': taken, 'down_px': down4, 'want_px': clear is not None and clear - under3, 'top': top4, 'clear': clear4})
+    finally:
+        ctx.js(sel_clear)
+        ctx.resize(*was)
+    ctx.settle()
+    ctx.frames(3)
+    return {'window': NARROW_PX, 'block': b['pos'], 'before': prev['pos'], 'k8_down_px': down, 'platform_down_px': down4}
+
+
+# the first edition's corner on the plane: its rect on screen, whether it holds the platform's focus, the one line's bottom
+CORNER_AT = '''((a) => { const e = document.querySelector(`#corners [data-corner="${a}"]`); if (!e) return null; const q = e.getBoundingClientRect();
+  return {x: q.left, y: q.top, w: q.width, h: q.height, focus: document.activeElement === e, line: document.getElementById('line').getBoundingClientRect().bottom}; })(%s)'''
+
+
+def corner_tabbed(ctx, r):
+    """A CORNER TABBED TO OUT OF VIEW (issue #436's design decision: "When focus lands in the corner, the camera pans it
+    into view"; FP-20): in a window REFIT_PX wide the first edition LEAPt to a passage, the camera then moved alone so its
+    corner stands left of the view while the view's centre stays over the column it stands beside; Tab from the walk's
+    item lands on the corner, and the camera moves across alone by the least pan, the corner's left edge at the view's;
+    its figures"""
+    was = ctx.resize(REFIT_PX, 900)
+    try:
+        ctx.settle()
+        ctx.leap(DOC, PASSAGE)
+        ctx.frames(3)
+        placed = ctx.js('window.__skep.corner(%s)' % json.dumps(DOC))
+        col = ctx.js('window.__skep.fold(%s).columns[%d]' % (json.dumps(DOC), placed['column'] if placed else 0))
+        cam = ctx.camera()
+        # the column's text 4 px in from the view's left: its corner, a gap short of it, wholly left of the view (the hook's
+        # columns in world units)
+        left = (col['x'] - cam['x']) * cam['scale'] + REFIT_PX / 2
+        ctx.set_view(cam['x'] + (left - 4) / cam['scale'], cam['y'], cam['scale'])
+        ctx.frames(3)
+        before, cam0 = ctx.js(CORNER_AT % json.dumps(DOC)), ctx.camera()
+        r.check(bool(placed) and not placed['head'] and bool(before) and before['x'] + before['w'] <= 0.5 and ctx.js('window.__skep.corner(%s).column' % json.dumps(DOC)) == placed['column'],
+                f'a {REFIT_PX} px window, the camera moved alone: the first edition\'s corner beside the column under the view\'s centre, wholly left of the view (what the next check stands on)',
+                {'placed': placed, 'corner': before})
+        ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})')
+        ctx.frames(1)
+        ctx.drv.key('Tab')
+        ctx.frames(3)
+        after, cam1 = ctx.js(CORNER_AT % json.dumps(DOC)), ctx.camera()
+        across = (cam0['x'] - cam1['x']) * cam1['scale']
+        r.check(bool(after) and after['focus'] and abs(after['x']) <= 1 and after['x'] + after['w'] <= REFIT_PX + 0.5 and after['y'] >= after['line'] - 0.5 and after['y'] + after['h'] <= 900.5
+                and bool(before) and abs(across + before['x']) <= 1 and abs(cam1['y'] - cam0['y']) < 1e-9 and abs(cam1['scale'] - cam0['scale']) < 1e-12,
+                'Tab from the walk\'s item lands on the corner, and the camera moves across alone by the least pan, the corner inside the view below the one line, its left edge at the view\'s',
+                {'before': before, 'after': after, 'across_px': across, 'camera': [cam0, cam1]})
+    finally:
+        ctx.resize(*was)
+    ctx.settle()
+    ctx.frames(3)
+    return {'window': REFIT_PX, 'before': before, 'after': after, 'across_px': across}
 
 
 def back_after_resize(ctx, r):
@@ -3867,41 +4064,46 @@ def back_after_resize(ctx, r):
 
 def leap_onto_rendered(ctx, r):
     """THE LINES A LEAP LANDS ON (issue #296: "The flight lands on the line the passage is actually on"): the first edition
-    set at the full measure, the view away at the far edition and the window set NARROW_PX wide — the first edition's lines
-    set at no measure in force, its fold P-LAY's prediction, which places the line holding the window run's first position
-    half a line or more from where the platform sets it; a LEAP there lands on its lines as rendered: the camera at the
-    frame of that line in the fold the first edition stands mounted in, 1 px either way, its em the landing's; its
-    figures"""
+    set at the full measure, the view away at the far edition and the window set narrower — the first edition's lines set
+    at no measure in force, its fold P-LAY's prediction — at the first of RENDERED_PX where that prediction places the line
+    holding the window run's first position half a line or more from where the platform sets it; a LEAP there lands on
+    its lines as rendered: the camera at the frame of that line in the fold the first edition stands mounted in, 1 px
+    either way, its em the landing's; its figures"""
     pos = WINDOW[0]
-    ctx.leap(DOC, pos)
-    ctx.leap(FAR_LEAP)
-    was = ctx.resize(NARROW_PX, 900)
-    try:
+    tried = []
+    for px in RENDERED_PX:
+        ctx.leap(DOC, pos)
+        ctx.leap(FAR_LEAP)
+        was = ctx.resize(px, 900)
+        try:
+            ctx.settle()
+            ctx.frames(3)
+            # the line's middle as the first edition's fold stands unmounted, read by the hook that sets no line
+            predicted = ctx.js('window.__skep.centreOf(%s, %d)' % (json.dumps(DOC), pos))
+            ctx.leap(DOC, pos)
+            ctx.frames(3)
+            cam, fit = ctx.camera(), ctx.js('window.__skep.measure()')
+            at = ctx.js('window.__skep.frameOf(%s, %d)' % (json.dumps(DOC), pos))
+            rendered = ctx.js('window.__skep.centreOf(%s, %d)' % (json.dumps(DOC), pos))
+            mounted = ctx.js('window.__skep.mounted(%s)' % json.dumps(DOC))
+        finally:
+            ctx.resize(*was)
         ctx.settle()
         ctx.frames(3)
-        # the line's middle as the first edition's fold stands unmounted, read by the hook that sets no line
-        predicted = ctx.js('window.__skep.centreOf(%s, %d)' % (json.dumps(DOC), pos))
-        ctx.leap(DOC, pos)
-        ctx.frames(3)
-        cam, fit = ctx.camera(), ctx.js('window.__skep.measure()')
-        at = ctx.js('window.__skep.frameOf(%s, %d)' % (json.dumps(DOC), pos))
-        rendered = ctx.js('window.__skep.centreOf(%s, %d)' % (json.dumps(DOC), pos))
-        mounted = ctx.js('window.__skep.mounted(%s)' % json.dumps(DOC))
-    finally:
-        ctx.resize(*was)
-    ctx.settle()
-    ctx.frames(3)
-    line_px = fit['px'] * LINE_RATIO
-    apart = math.hypot(rendered['x'] - predicted['x'], rendered['y'] - predicted['y']) * cam['scale']
+        line_px = fit['px'] * LINE_RATIO
+        apart = math.hypot(rendered['x'] - predicted['x'], rendered['y'] - predicted['y']) * cam['scale']
+        tried.append({'window': px, 'cpl': fit['cpl'], 'apart_px': apart, 'line_px': line_px})
+        if apart >= line_px / 2:
+            break
     r.check(apart >= line_px / 2,
-            f'a {NARROW_PX} px window, the view away: the first edition\'s fold, its lines set at no measure in force, places the line holding the window run\'s first position half a line or more from where the platform sets it',
-            {'pos': pos, 'predicted': predicted, 'rendered': rendered, 'apart_px': apart, 'line_px': line_px})
+            f'a window of {px} px, the view away: the first edition\'s fold, its lines set at no measure in force, places the line holding the window run\'s first position half a line or more from where the platform sets it',
+            {'pos': pos, 'predicted': predicted, 'rendered': rendered, 'tried': tried})
     off = {'dx': (at['x'] - cam['x']) * cam['scale'], 'dy': (at['y'] - cam['y']) * cam['scale']}
     em = mounted['fs'] * cam['scale'] if mounted else None
     r.check(mounted is not None and abs(off['dx']) <= 1 and abs(off['dy']) <= 1 and abs(em - fit['px']) < 1e-6,
             f'a LEAP into the first edition there lands on its lines as rendered: the camera at the frame of the line holding that position in the fold it stands mounted in, 1 px either way, at the landing\'s em, {fit["px"]} px (issue #296)',
             {'pos': pos, 'camera': cam, 'frame': at, 'off_px': off, 'em': em, 'landing_px': fit['px']})
-    return {'window': NARROW_PX, 'pos': pos, 'apart_px': apart, 'line_px': line_px, 'off_px': off, 'em': em}
+    return {'window': px, 'pos': pos, 'tried': tried, 'off_px': off, 'em': em}
 
 
 # every frame from here on sampled until stopped: whether the camera flew in it, and the viewport's width the page held
@@ -4044,6 +4246,12 @@ def run(ctx):
     # the corner follows the column nearest the view's centre, and the measure narrows to what a narrow view holds (issue #151)
     r.figures['corner_follows'] = corner_follows(ctx, r)
     r.figures['measure_narrows'] = measure_narrows(ctx, r)
+    # a resize that narrows the measure frames the view across the column being read, the corner in view (issue #436)
+    r.figures['resize_frames'] = resize_frames(ctx, r)
+    # no selection an act makes is left under a head's held row (issue #436)
+    r.figures['head_guards'] = head_guards(ctx, r)
+    # a focus landing in a corner the view does not show brings it in (issue #436)
+    r.figures['corner_tabbed'] = corner_tabbed(ctx, r)
     # Back after the window was put back from a narrow one lands on the passage left there (issue #221)
     r.figures['back_after_resize'] = back_after_resize(ctx, r)
     # a LEAP into a document whose lines are set at no measure in force lands on its lines as rendered (issue #296)

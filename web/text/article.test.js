@@ -20,7 +20,8 @@
 // the first run of an origin carrying its kept sign below them, empty, setting
 // no line; a document's state said once, at its corner, the head stating
 // none in any state, a refused document's among them; the corner's items,
-// whole and compact, outside the article, a pane's with its read act and its
+// whole and compact, one by one with their words, their widths and whether
+// they yield to a head's narrow row, outside the article, a pane's with its read act and its
 // lacking line, the plane's with the read an arrival offers as a control,
 // a kept clause after them on a line of its own, neither the
 // latest version nor the chain's count while the board lags, its state one
@@ -41,7 +42,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, cornerWords, keptHTML, keptStatement, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, cornerItems, cornerWords, keptHTML, keptStatement, statementHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
@@ -415,6 +416,19 @@ test('a draft\'s corner carries its kept state in a slot of fixed width — the 
   assert.deepEqual([keptStatement({ word: 'kept', reason: 'ignored' }), keptStatement({ word: 'not kept', reason: 'r' })], [{ id: 'B3.save.kept', text: t('B3.save.kept') }, { id: 'B3.save.before', text: `${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-kept'), reason: 'r' })}` }], 'the statement by the word: at "kept" its own line whatever reason stands; at the others the word and the reason');
   for (const h of [empty, kept, held, refused]) assert.ok(!h.includes(t('B3.past-states')) && !h.includes('tabindex'), 'no "past states" act: the strings table holds its words and no reason for an inert one; no item takes a focus of its own (K-57)');
   assert.ok(!cornerHTML(doc(), view({ kept: { word: 'kept', reason: null }, keptOpen: true })).includes('kept-'), 'an edition\'s corner carries no kept slot, whatever state is handed in');
+});
+
+test('the corner\'s items one by one, in their one order: each its markup — the corner\'s, joined — its words and its width as the view measures them, a kept word its slot\'s; the offered read alone yields, the state, its version statement, the kept word, the chip and the whole-document count never do; a draft\'s statement left out of its slot where its holder opens it beneath a head (issue #436; foundations §3.1; FP-26)', () => {
+  const edition = doc(), v = view({ members: 3, read: 4, wholeLinks: 2 });
+  const items = cornerItems(edition, v, true);
+  assert.equal(items.map((i) => i.html).join(''), cornerHTML(edition, v, true), 'the corner\'s markup, item by item');
+  assert.deepEqual(items.map((i) => [i.cls, i.yields]), [['st', false], ['version', false], ['read', true], ['whole-links', false]], 'the state, its version statement, the read offered — which alone yields — and the whole-document count');
+  assert.deepEqual(items.map((i) => i.em), [advances(t('L.corner.bare')), advances(t('F.version-of', { k: 3, n: 3 })), advances(t('F.versions.read', { k: 4 })), advances(t('F.whole-links', { n: 2 }))], 'each its words\' width, the state\'s glyph compact');
+  const draft = doc({ kind: 'draft', meta: null }), kept = view({ kept: { word: 'kept', reason: null }, keptOpen: true });
+  const d = cornerItems(draft, kept, true, false);
+  assert.deepEqual(d.map((i) => [i.cls, i.yields]), [['kept', false], ['chip', false]], 'a draft: its kept word, then its chip, neither yielding');
+  assert.ok(d[0].em === Math.max(...['B3.kept', 'B3.not-yet-kept', 'B3.not-kept'].map((id) => advances(t(id)))) && d[0].words === t('B3.kept'), 'the kept word\'s width its slot\'s, its words the word');
+  assert.ok(!d[0].html.includes('kept-statement') && cornerItems(draft, kept, true)[0].html.endsWith(statementHTML({ word: 'kept', reason: null })), 'its statement left out where its holder opens it beneath, else after its slot');
 });
 
 test('the corner at a pinned version names it — its own number of the count its box\'s document holds — and offers the versions list there too; its own record holding no count, it takes the box\'s (issue #154)', () => {

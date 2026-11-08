@@ -5,7 +5,13 @@
 // centre, whole or compact by its room, held below the one line by the one
 // hold a label holds by and never meeting a held label's line; a reading
 // view framing its column with both margins; the measure in force and a
-// resize re-setting the article being read with the passage held; a
+// resize re-setting the article being read with the passage held at its height
+// and the view framed across its column, its corner inside the view, a return
+// by the trail across a refit landing framed; the corner at its document's
+// head below forty characters — its rows, across the column on the band its
+// fold reserves, its first row held below the line, a form opened beneath it,
+// the band's change re-anchoring the camera — and a kept word said where it
+// changes; a
 // document's region and the view's window over it; the passage in view
 // keeping its place through a reveal, a feed row naming its document — the
 // article standing until the reads it makes again set it — a version move
@@ -34,7 +40,7 @@
 // begins and ends, as its box's chain is counted again, naming no count
 // the board did not end the chain at, and as the read a newer version's
 // arrival offers comes, rises and goes, a focus on it kept (FP-8, FP-12, FP-20, FP-22, FP-23,
-// FP-26, FP-27, FP-30, FP-33, FP-34).
+// FP-26, FP-27, FP-30, FP-31, FP-33, FP-34, FP-36, FP-37).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -44,6 +50,7 @@ import * as FAKE from '../test/fake-port.js';
 import * as LK from '../links/links.js';
 import * as F from '../model/frames.js';
 import * as LAYER from './layer.js';
+import * as FOCUS from '../nav/focus.js';
 import * as CAM from '../plane/camera.js';
 import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, columnOfLine, setAdvance, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER, EDGE, CHAR_W, LINE_H } from '../plane/layout.js';
 import { CORNER, ADDRESS, COL, cornerWidth } from '../plane/register.js';
@@ -333,7 +340,7 @@ test('a document read whole whose first column the visible view below the one li
   }
 });
 
-test('the measure in force: every document folded at what the view holds — the full measure at 1440 px, fewer characters at 480 — and a resize that moves it sets again the article being read, the line under the view\'s centre kept where it stood in the view, at its size; never a zoom (issue #151; FP-26)', () => onLayer(() => {
+test('the measure in force: every document folded at what the view holds — the full measure at 1440 px, fewer characters at 480 — and a resize that moves it sets again the article being read, the line under the view\'s centre kept at its height in the view and at its size, the view\'s centre framed across that line\'s column as a landing frames it; never a zoom (issue #151, #436; FP-8, FP-26)', () => onLayer(() => {
   deliver();
   const box = docBox(D), f0 = LAYER.foldOf(REC.doc(D));
   assert.equal(f0.cpl, MEASURE_CPL, '1440 px: the full measure');
@@ -355,7 +362,8 @@ test('the measure in force: every document folded at what the view holds — the
     LAYER.frame();
     const f = LAYER.foldOf(REC.doc(D)), now = fromCentre();
     assert.ok(f.cpl === cpl && f.columns.every((k) => Math.abs(k.w - columnW(cpl) * f.fs) < 1e-6) && f.lines.every((l) => l.w <= cpl + 1e-9), `${w} px: every column and line at ${cpl} characters`);
-    assert.ok(Math.abs(now.x - was.x) < 1e-6 && Math.abs(now.y - was.y) < 1e-6, `${w} px: the line where it stood in the view, from its centre — ${JSON.stringify(was)} → ${JSON.stringify(now)}`);
+    assert.ok(Math.abs(now.y - was.y) < 1e-6, `${w} px: the line at the height it stood in the view, from its centre — ${JSON.stringify(was)} → ${JSON.stringify(now)}`);
+    assert.ok(Math.abs(CAM.cam.x - LAYER.frameOf(D, pos, em).x) < 1e-6, `${w} px: the view's centre framed across the line's column, at its em — ${CAM.cam.x} against ${LAYER.frameOf(D, pos, em).x}`);
     assert.ok(Math.abs(CAM.cam.scale * f.fs - em) < 1e-9, `${w} px: at its size on screen`);
   }
   const f = LAYER.foldOf(REC.doc(D));
@@ -1113,7 +1121,7 @@ test('an owner\'s byline facts arriving set a standing article again, its byline
   }, 1440, 900, new Map([['.slot.cut', [label]]]));
 });
 
-test('a face arriving after the first layout is a re-set: the type measured again, every standing article set again in the fold its words now take, the line under the view\'s centre kept where it stood on screen, at its size (issue #16; FP-8, FP-12)', () => onLayer(() => {
+test('a face arriving after the first layout is a re-set: the type measured again, every standing article set again in the fold its words now take, the line under the view\'s centre kept at its height on screen and at its size, the view\'s centre framed across its column as a landing frames it (issue #16, #436; FP-8, FP-12)', () => onLayer(() => {
   deliver();
   const box = docBox(D), f0 = LAYER.foldOf(REC.doc(D)), c = f0.columns[3];
   CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h * 0.4, scale: 12 / f0.fs });
@@ -1128,7 +1136,8 @@ test('a face arriving after the first layout is a re-set: the type measured agai
     const f = LAYER.foldOf(REC.doc(D)), now = screen();
     assert.ok(f !== f0 && f.fs !== f0.fs, `folded again at the new advance: ${f0.fs} → ${f.fs}`);
     assert.ok(LAYER.mountedSet().get(D)?.el !== el, 'the standing article set again on an element of its own');
-    assert.ok(Math.abs(now.x - was.x) < 1e-6 && Math.abs(now.y - was.y) < 1e-6, `the line where it stood: ${JSON.stringify(was)} → ${JSON.stringify(now)}`);
+    assert.ok(Math.abs(now.y - was.y) < 1e-6, `the line at the height it stood: ${JSON.stringify(was)} → ${JSON.stringify(now)}`);
+    assert.ok(Math.abs(CAM.cam.x - LAYER.frameOf(D, pos, em).x) < 1e-6, 'the view\'s centre framed across its column, at its em');
     assert.ok(Math.abs(CAM.cam.scale * f.fs - em) < 1e-9, 'at its size on screen');
   } finally { setAdvance(before); LAYER.refaced(); }
 }, 1440, 900));
@@ -1466,3 +1475,183 @@ test('the plane\'s corner of a draft carries its kept state — the slot an empt
     assert.equal(LAYER.openStatement(D), false, 'no state set: there is no statement to open');
   } finally { LAYER.press(false); LAYER.clear(); globalThis.document = platform.document; globalThis.window = platform.window; }
 });
+
+// ---- the corner at its document's head; the view framed sideways through a refit (FP-8, FP-26, FP-31, FP-36) ----------
+
+test('a head\'s rows: the name\'s least room first, then the kept clause and the items in their one order while they fit, standing at the first row\'s end, the name\'s room before them; an item that never yields wrapped whole onto the next row, its words wrapped onto the rows they take where it is wider than the head; one that yields folded into "⟨n⟩ more", which takes the next slot (issue #436; FP-26)', () => {
+  const pitch = LINE_H * 17;
+  const items = [{ w: 11, yields: false, words: '○' }, { w: 70, yields: false, words: 'version 2 of 3' }, { w: 80, yields: true, words: 'read version 3' }, { w: 190, yields: false, words: '12 links to this document as a whole' }];
+  const L = LAYER.headLayout(items, 50, null, 220, pitch);
+  const at = (/** @type {number} */ k) => L.slots.find((s) => s.k === k);
+  assert.deepEqual([at(0)?.row, at(1)?.row, at(2), at(3)?.row, L.folded], [0, 0, undefined, 1, 1], 'the glyph and the version beside the name; the read, which yields, folded; the whole-document count, which never does, whole on the next row');
+  const first = L.slots.filter((s) => s.row === 0);
+  assert.ok(Math.abs(Math.max(...first.map((s) => s.x + s.w)) - 220) < 1e-9 && Math.abs(L.name - (Math.min(...first.map((s) => s.x)) - CORNER.pad)) < 1e-9 && L.name >= 50, `the first row's items at its end, the name's room before them: ${L.name}`);
+  const more = at(-2);
+  assert.ok(more && more.row >= 1 && more.w > 0, `the count of those folded in the next slot: ${JSON.stringify(more)}`);
+  assert.equal(L.rows, Math.max(...L.slots.map((s) => s.row + s.rows)), 'its rows every slot\'s');
+  const wide = LAYER.headLayout([{ w: 400, yields: false, words: 'nothing this board will say about this address' }], 50, null, 220, pitch);
+  assert.ok(wide.slots[0].row === 1 && wide.slots[0].w === 220 && wide.slots[0].rows >= 1 && wide.rows === 1 + wide.slots[0].rows, `an item wider than the head: its own row, the head's width, its words on the rows they take — ${JSON.stringify(wide)}`);
+  const clause = LAYER.headLayout(items.slice(0, 1), 50, { w: 60, words: 'as last read 09:05' }, 300, pitch);
+  assert.deepEqual(clause.slots.map((s) => [s.k, s.row]), [[-1, 0], [0, 0]], 'the kept clause after the name, before the items');
+  assert.ok(clause.slots[0].x > clause.name && clause.slots[0].x < clause.slots[1].x, 'the clause between the name and the items');
+});
+
+/**
+ * An element of a stand-in page: its classes kept, its markup's rows and the form opened beneath them read back as the
+ * platform lays them out — each row by `data-row`, the form `formH` px tall — and the corner as wide as the style sets it,
+ * whole or compact (P-REG's `cornerWidth`)
+ */
+function standIn(formH = 30) {
+  const classes = new Set();
+  /** @type {Map<string, any>} */
+  let parts = new Map();
+  let html = '';
+  const part = (/** @type {string} */ key, /** @type {Record<string, string>} */ dataset = {}) => { if (!parts.has(key)) parts.set(key, { dataset, style: {}, offsetHeight: formH }); return parts.get(key); };
+  const e = /** @type {any} */ ({
+    className: '', id: '', dataset: {}, style: {}, children: [], tabIndex: -1, offsetHeight: 40,
+    get offsetWidth() { return cornerWidth(classes.has('compact')); },
+    classList: { add: (/** @type {string} */ c) => { classes.add(c); }, remove: (/** @type {string} */ c) => { classes.delete(c); }, toggle: (/** @type {string} */ c, /** @type {boolean} */ on) => { if (on ?? !classes.has(c)) classes.add(c); else classes.delete(c); }, contains: (/** @type {string} */ c) => classes.has(c) },
+    setAttribute() {}, removeAttribute() {}, appendChild(/** @type {unknown} */ c) { e.children.push(c); },
+    get innerHTML() { return html; }, set innerHTML(/** @type {string} */ v) { html = v; parts = new Map(); },
+    querySelector: (/** @type {string} */ sel) => (sel === ':scope > .opened' && html.includes('class="opened"') ? part('opened') : null),
+    querySelectorAll: (/** @type {string} */ sel) => (sel === ':scope > .hrow' ? [...html.matchAll(/class="hrow" data-row="(\d+)"/g)].map((m) => part('row' + m[1], { row: m[1] })) : []),
+    getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }), contains: () => false, remove() {},
+    part: (/** @type {string} */ key) => parts.get(key),
+    classes,
+  });
+  return e;
+}
+
+/** where a corner element stands on screen, from its transform */
+const standsAt = (/** @type {any} */ el) => { const m = /translate\(([-\d.]+)px, ([-\d.]+)px\)/.exec(el.style.transform || ''); return m ? { x: Number(m[1]), y: Number(m[2]) } : null; };
+
+/**
+ * The plane's corners over a stand-in page (`standIn`): `body` run with the corner layer attached, D a draft of the
+ * session's account delivered whole, the one line's bottom at `LINE_PX`, the status region keeping what it was told
+ * (`said`), the viewport 1440 × 900
+ * @param {(p: {said: string[]}) => void} body
+ */
+function onHead(body) {
+  const platform = { document: globalThis.document, window: globalThis.window };
+  /** @type {string[]} */
+  const said = [];
+  globalThis.document = /** @type {any} */ ({ createElement: () => standIn(), activeElement: null });
+  globalThis.window = /** @type {any} */ ({ getSelection: () => null });
+  FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { said.push(v); }, get textContent() { return said[said.length - 1] ?? ''; } }) });
+  try {
+    REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: 'd', standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+    REC.takeDelivery(D, [{ pos: 1, width: EXTENT, kind: 'content', text: TEXT, ref: null, origin: null }]);
+    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: EXTENT }]);
+    CAM._reset(); CAM.setViewport(1440, 900);
+    LAYER.attach(/** @type {any} */ ({ clientWidth: 1440, clientHeight: 900, appendChild() {} }), /** @type {any} */ (standIn()));
+    LAYER.readers({ top: () => LINE_PX });
+    body({ said });
+  } finally { LAYER.press(false); LAYER.clear(); LAYER.readers({}); CAM._reset(); globalThis.document = platform.document; globalThis.window = platform.window; }
+}
+/** the one line's bottom over the stand-in page */
+const LINE_PX = 30;
+/** the camera at D's reading frame of a position, at the landing's em */
+const landAt = (/** @type {number | null} */ pos) => { const at = LAYER.frameOf(D, pos); CAM.set(CAM.viewAt(at, at.fs)); };
+
+test('a resize that narrows the measure frames the view across the column being read: the corner, compact beside it, stands inside the view, never left of it, the line at its height and its size (issue #436; FP-8, FP-26)', () => onHead(() => {
+  const d = REC.doc(D), later = d.blocks[Math.floor(d.blocks.length * 0.4)];
+  landAt(later.pos);
+  LAYER.frame();
+  const el = LAYER.cornerOf(D), wide = standsAt(el);
+  assert.ok(wide && wide.x >= 0 && LAYER.cornerAt(D)?.head === false, `1440 px: the corner beside its column, in view — ${JSON.stringify(wide)}`);
+  const box = docBox(D), line = () => { const p = placeOf(LAYER.foldOf(REC.doc(D)), later.pos); return CAM.sy(box.y + p.y) - 450; };
+  const y = line(), em = CAM.cam.scale * LAYER.foldOf(REC.doc(D)).fs;
+  CAM.setViewport(600, 900);
+  LAYER.frame();
+  const at = standsAt(LAYER.cornerOf(D)), placed = LAYER.cornerAt(D);
+  assert.ok(CAM.measure() < MEASURE_CPL && placed && placed.compact && !placed.head, `600 px: a narrower measure, the corner compact beside its column — ${JSON.stringify(placed)}`);
+  assert.ok(at && at.x >= 0 && at.x + cornerWidth(true) <= 600, `the corner inside the view: ${JSON.stringify(at)}`);
+  assert.ok(Math.abs(line() - y) < 1e-6 && Math.abs(CAM.cam.scale * LAYER.foldOf(REC.doc(D)).fs - em) < 1e-9, 'the line at its height, at its size');
+}));
+
+test('below forty characters beside its column the corner stands at its document\'s head: across the column, inside the view below the one line, on the band its fold reserves above its first row, its first row holding the kept word in its slot; its first row held below the line as the document scrolls, the rest passing under it; a form its act opens beneath its rows; and no held label set over that document\'s text (issue #436; FP-26, FP-31, FP-37)', () => onHead(() => {
+  REC.setKept(D, { word: 'kept', reason: null });
+  CAM.setViewport(480, 900);
+  assert.ok(CAM.fit().head, '480 px: the corner at the head');
+  landAt(null);
+  LAYER.frame();
+  const f = LAYER.foldOf(REC.doc(D)), el = LAYER.cornerOf(D), placed = LAYER.cornerAt(D), box = docBox(D);
+  assert.ok(f.band > 0 && placed && placed.head && placed.compact, `the fold reserves the head's band, the corner at the head — ${JSON.stringify(placed)}, band ${f.band}`);
+  const at = /** @type {{x: number, y: number}} */ (standsAt(el)), col = f.columns[placed.column], w = parseFloat(el.style.width);
+  assert.ok(Math.abs(at.x - Math.round(CAM.sx(box.x + col.x))) < 1e-9 && Math.abs(w - (col.w + EDGE * f.fs) * CAM.cam.scale) < 1e-6, `across the column, its text and its edge: x ${at.x}, ${w} px wide`);
+  assert.ok(at.x >= 0 && at.x + w <= 480 && at.y >= LINE_PX, `inside the view, below the one line: ${JSON.stringify(at)}, ${w} px`);
+  assert.ok(Math.abs(at.y - Math.round(CAM.sy(box.y + col.y - f.band))) <= 1, 'on the band, above the first line');
+  const row0 = /** @type {string} */ (el.innerHTML).split('class="hrow" data-row="1"')[0];
+  assert.ok(row0.includes('data-row="0"') && row0.includes('data-kept="kept"') && row0.includes(`>${esc(t('B3.kept'))}<`), `the kept word in its slot on the first row: ${row0.slice(0, 400)}`);
+  assert.equal(LAYER.heldOf(D), null, 'no held label over the text: the head names it');
+  // scrolled down past the band: the first row held below the line, over the text
+  CAM.set({ ...CAM.view(), y: CAM.cam.y + 200 / CAM.cam.scale });
+  LAYER.frame();
+  const held = /** @type {{x: number, y: number}} */ (standsAt(LAYER.cornerOf(D)));
+  assert.ok(Math.abs(held.y - (LINE_PX + 8)) <= 1 && LAYER.headClear(D) === held.y + LINE_H * f.fs * CAM.cam.scale, `held below the line, its first row what it covers: ${JSON.stringify(held)}, ${LAYER.headClear(D)}`);
+  // the kept word's act opens its statement beneath the head's rows
+  LAYER.openStatement(D, true);
+  LAYER.frame();
+  const opened = LAYER.cornerOf(D);
+  assert.ok(String(opened.innerHTML).includes(`<div class="opened"`) && String(opened.innerHTML).includes(esc(t('B3.save.kept'))), 'the statement opened beneath the rows');
+  assert.ok(/** @type {number} */ (LAYER.headClear(D)) > held.y + LINE_H * f.fs * CAM.cam.scale, 'what it covers runs to the form\'s foot');
+  LAYER.openStatement(D, false);
+}));
+
+test('a standing corner\'s kept word is said once in the status region where it changes, beside its column and at its document\'s head alike; never at the frame it first stands, nor for a state cleared (issue #436; FP-36)', () => onHead(({ said }) => {
+  for (const vw of [1440, 480]) {
+    CAM.setViewport(vw, 900);
+    landAt(null);
+    REC.setKept(D, { word: 'kept', reason: null });
+    LAYER.frame();
+    const before = said.length;
+    LAYER.frame();
+    assert.equal(said.length, before, `${vw} px: nothing said while the word stands`);
+    REC.setKept(D, { word: 'not yet kept', reason: null });
+    LAYER.frame();
+    assert.deepEqual(said.slice(before), [t('B3.not-yet-kept')], `${vw} px: the new word said once`);
+    LAYER.frame();
+    REC.setKept(D, null);
+    LAYER.frame();
+    assert.deepEqual(said.slice(before), [t('B3.not-yet-kept')], `${vw} px: a state cleared says nothing`);
+  }
+}));
+
+test('a change of the head\'s rows changes the band its fold reserves, and the article set again re-anchors the camera on the passage being read: its line at its height and its size (issue #436; FP-8)', () => onLayer(() => {
+  deliver();
+  REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.1', birth: D + '.1', birthExtent: EXTENT, placed: null, baseExtent: null, source: null, asOf: 1 });
+  // a link to D as a whole: its count on the head's first row beside the state's glyph
+  const W1 = OTHER_HOME + '.0.2.900';
+  REC.takeLinks(D, [W1]);
+  REC.takeLink({ addr: W1, from: [span(OTHER_HOME, 1, 1)], to: [whole(D)], type: CITE });
+  CAM.setViewport(320, 900);
+  assert.ok(CAM.fit().head, '320 px: the corner at the head');
+  const box = docBox(D), f0 = LAYER.foldOf(REC.doc(D)), c = f0.columns[0];
+  CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h * 0.4, scale: 17 / f0.fs });
+  LAYER.frame();
+  const pos = /** @type {number} */ (LAYER.posAt(D, CAM.cam.x, CAM.cam.y));
+  const line = () => { const p = placeOf(LAYER.foldOf(REC.doc(D)), pos); return CAM.sy(box.y + p.y); };
+  const y = line(), em = CAM.cam.scale * f0.fs;
+  // the chain counted: the version statement joins the corner's items before the count, which the head's first row no longer holds
+  REC.takeMembers(D, 3);
+  const f = LAYER.foldOf(REC.doc(D));
+  assert.ok(f.band > f0.band, `the band deeper: ${f0.band} → ${f.band}`);
+  LAYER.frame();
+  assert.ok(Math.abs(line() - y) < 1e-6, `the passage's line at its height: ${y} → ${line()}`);
+  assert.ok(Math.abs(CAM.cam.scale * f.fs - em) < 1e-9, 'at its size on screen');
+}, 320, 900));
+
+test('a view read under one fit and returned to under another lands framed across the column its line stands in, at the em it was read at, the line at its height; returned to under the same fit, where it stood (issue #436; FP-8, FP-25)', () => onLayer(() => {
+  deliver();
+  const box = docBox(D), f0 = LAYER.foldOf(REC.doc(D)), c = f0.columns[6];
+  CAM.set({ x: box.x + c.x + c.w / 2 + 40 / (12 / f0.fs), y: box.y + c.y + c.h * 0.4, scale: 12 / f0.fs });
+  const view = CAM.view(), r = /** @type {import('./layer.js').Reading} */ (LAYER.readAt(view));
+  assert.ok(r && r.addr === D, 'the view reads D');
+  assert.deepEqual(LAYER.keptAt(view, r, r.pos), view, 'the same fit: the view where it stood');
+  CAM.setViewport(600, 900);
+  const v = /** @type {{x: number, y: number, scale: number}} */ (LAYER.keptAt(view, r, r.pos)), f = LAYER.foldOf(REC.doc(D)), em = view.scale * f0.fs;
+  assert.ok(f.cpl < MEASURE_CPL && Math.abs(v.scale * f.fs - em) < 1e-9, `600 px: a narrower measure, the em it was read at — ${v.scale * f.fs}`);
+  assert.ok(Math.abs(v.x - LAYER.frameOf(D, r.pos, em).x) < 1e-6, 'its centre framed across the line\'s column');
+  const p0 = placeOf(f0, r.pos), p = placeOf(f, r.pos);
+  assert.ok(Math.abs((box.y + p.y - v.y) * v.scale - (box.y + p0.y - view.y) * view.scale) < 1e-6, 'the line at its height from the view\'s centre');
+}, 1440, 900));

@@ -23,7 +23,10 @@ served, and the provider outlives the run: each arm is checked consumed
 before the next state, and any arm left standing is served at the end
 (`Context.clear_arms`). The dotted route's intake (#327) is proved on the
 page's own port: a canned `publication.open` answer reaches the page as
-armed, and a `publication` event fired by hand reaches its subscriber.
+armed, and a `publication` event fired by hand reaches its subscriber. At the
+narrow width, where the own draft's corner stands at its head, the live caret
+moved up under the head's held row brings the camera down alone, the caret's
+mark at the row's bottom (`caret_under_head`; issue #436).
 
 The own draft is the seeded board's windowed draft of principal 1 (`OWN`,
 1340 bytes). The seed's staging draft (`STAGING`) holds every edition's
@@ -60,8 +63,6 @@ KEPT_IDS = {'kept': 'B3.kept', 'not yet kept': 'B3.not-yet-kept', 'not kept': 'B
 # the seam's own route, which the provider logs as no call of the page's
 SEAM = 'script'
 # the page issues the marked checks wait on; each mark comes off the day its check passes
-XFAIL_CORNER_NARROW = ("issue #436: at the narrow width the column fills the view and the corner is placed beside it, wholly outside the "
-                       "view — its kept word shown to no one (web/text/layer.js `placeCorners`)")
 XFAIL_LINE_NARROW = ("issue #310: at the narrow width the one line's acts and a daemon form need more room than the line holds — the "
                      "address segment gives way to the form, whose words still run past the line's end (web/style.css, `#line`'s "
                      "segments)")
@@ -231,6 +232,43 @@ def fold(s):
     return re.sub(r'\s+', ' ', s or '').strip()
 
 
+# the caret's mark as the platform lays it out: its top and its height, on screen; null where none stands
+CARET_MARK = '(() => { const m = document.querySelector("#domlayer .caret-mark"); if (!m) return null; const q = m.getBoundingClientRect(); return {top: q.top, h: q.height}; })()'
+
+
+def caret_under_head(ctx, doc):
+    """THE CARET UNDER A HEAD'S HELD ROW (issue #436's design decision: "No caret, focus, selection or landing stands
+    under that row"): in a window NARROW_PX wide, the live caret standing in a draft whose corner stands at its head,
+    the camera moved alone so the caret's mark stands 2 px below what the head covers (`headClear`), then ↑ (K-71) —
+    the caret moved up, under the row, and the camera moved down alone by the least pan, the mark at the row's bottom;
+    what the head covered, the mark, the caret and the camera before and after, and whether all of it held"""
+    was = ctx.resize(*NARROW)
+    try:
+        ctx.settle(10); ctx.frames(3)
+        clear, mark = None, None
+        for _ in range(4):
+            ctx.frames(2)
+            clear, mark = ctx.js('window.__skep.headClear(%s)' % json.dumps(doc)), ctx.js(CARET_MARK)
+            if clear is None or mark is None:
+                return {'ok': False, 'clear': clear, 'mark': mark}
+            delta = clear + 2 - mark['top']
+            if abs(delta) < 0.5:
+                break
+            cam = ctx.camera()
+            ctx.set_view(cam['x'], cam['y'] - delta / cam['scale'], cam['scale'])
+        before, cam0, c0 = ctx.js(CARET_MARK), ctx.camera(), ctx.js('window.__skep.caret()')
+        ctx.drv.key('ArrowUp')
+        ctx.frames(3)
+        ctx.frames(2)
+        after, cam1, c1, clear1 = ctx.js(CARET_MARK), ctx.camera(), ctx.js('window.__skep.caret()'), ctx.js('window.__skep.headClear(%s)' % json.dumps(doc))
+        down = (cam0['y'] - cam1['y']) * cam1['scale']
+        ok = (bool(c0 and c1) and c1['live'] and c1['pos'] < c0['pos'] and bool(after) and clear1 is not None and abs(after['top'] - clear1) <= 1
+              and down > 1 and abs(cam1['x'] - cam0['x']) < 1e-9 and abs(cam1['scale'] - cam0['scale']) < 1e-12)
+        return {'ok': ok, 'clear': [clear, clear1], 'mark': [before, after], 'caret': [c0, c1], 'down_px': down}
+    finally:
+        ctx.resize(*was); ctx.frames(3)
+
+
 def run(ctx):
     r = Result()
     rows = {s['state']: dict(s, outcome=('pending' if s['drawn'] else 'not drawn')) for s in STATES}
@@ -337,7 +375,7 @@ def run(ctx):
         reason = t(ctx, 'B3.own-bug') if word == 'not kept' else None
         ctx.js('window.__skep.model.setKept(%s, %s)' % (json.dumps(OWN), json.dumps({'word': word, 'reason': reason})))
         ctx.frames(2)
-        shoot(state, kept_check(word), marks={NARROW_PX: XFAIL_CORNER_NARROW})
+        shoot(state, kept_check(word))
     # the save chord answered at the corner (K-74): the statement whole, once in a session
     ctx.js('window.__skep.model.setKept(%s, %s)' % (json.dumps(OWN), json.dumps({'word': 'kept', 'reason': None}))); ctx.frames(2)
     ctx.drv.key('s', mods=('Meta',)); ctx.frames(2)
@@ -346,7 +384,7 @@ def run(ctx):
         got, want = corner_kept(ctx), t(ctx, 'B3.save.kept')
         ok = bool(got) and got['statement'] == want and got['statement_id'] == 'B3.save.kept' and got['word'] == t(ctx, 'B3.kept') and len(shown(ctx, CORNER + ' .kept-statement')) == 1
         return ok, {'corner': got, 'want': want}
-    shoot('save-answered', save_check, marks={NARROW_PX: XFAIL_CORNER_NARROW})
+    shoot('save-answered', save_check)
     ctx.js('(async () => { const L = await import("./text/layer.js"); L.openStatement(%s, false); })()' % json.dumps(OWN))
     ctx.js('window.__skep.model.setKept(%s, null)' % json.dumps(OWN)); ctx.frames(2)
 
@@ -367,6 +405,10 @@ def run(ctx):
         ok = bool(c) and c['live'] and c['addr'] == OWN and c['pos'] == target['pos'] and len(marks) == 1 and not kept
         return ok, {'caret': c, 'marks_shown': len(marks), 'kept': kept}
     shoot('caret-placed', placed_check, recentre)
+    # the caret moved a line up under the own draft's held head row at the narrow width (issue #436; FP-37), then put back
+    under = caret_under_head(ctx, OWN)
+    r.check(under['ok'], f"at {NARROW_PX} px, the own draft's corner at its head: the live caret moved up (K-71) under the held row brings the camera down alone, by the least pan, its mark at the row's bottom (issue #436)", under)
+    ctx.js('(async () => (await import("./text/layer.js")).placeCaret(%s, %d))()' % (json.dumps(OWN), target['pos'])); ctx.frames(2)
     for ch in word:
         ctx.drv.key(ch)
     ctx.frames(2)

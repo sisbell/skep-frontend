@@ -15,13 +15,16 @@
 // edge each column is followed by (FP-26); the fit — the full measure
 // wherever the view holds a column with both its margins, the corner
 // compacted before the measure narrows, else the most whole characters the
-// view holds, and the landing's em smaller only where one does not fit — and
-// a fold at a narrower measure (FP-26); the
+// view holds beside it while those are forty or more, below forty the corner
+// at its document's head and its room the measure's, and the landing's em
+// smaller only where one does not fit — and a fold at a narrower measure
+// (FP-26, FP-31); the
 // fold (FP-12) — every document at MEASURE_CPL characters a line, every line
 // in a column inside its room, columns COLUMN_LINES deep with the keeps held,
 // columns left to right then row by row, the standard size then steps each at
 // least doubling the capacity, the outline one edge, the estimate never more
-// columns than the text; positions placed and read back, unheld positions
+// columns than the text, the head's band reserved above the first row inside
+// the room; positions placed and read back, unheld positions
 // estimated, the view's window over a fold, the paging key's next column, a
 // document's first line where its label sets it, and a passage held across
 // two folds — a version's by the pair of positions a version move names
@@ -31,8 +34,8 @@ import assert from 'node:assert/strict';
 import * as LAY from './layout.js';
 import {
   layoutOf, heightOf, wrap, breakBetween, cssMeasures, lineBox, columnsOf, fold, estimate, estimatedSpan, slot, outline, outlineRects, boundsOf, firstRow, padded,
-  bars, placeOf, posAt, columnAt, pageTarget, windowIn, holdOf, leadOf, standardFs, stepAt, stepFor, gapOf, edgeOf, fitFor, columnW, advanceOf, setAdvance,
-  MEASURE, BORDER, LINE_H, LAY_FS, CHAR_W, MEASURE_CPL, COLUMN_LINES, COLUMN_H, COLUMN_W, GUTTER, EDGE, EDGE_GAP, STANDARD_GRID, STANDARD_FS, ADVANCE_WEIGHTS,
+  bars, placeOf, posAt, columnAt, pageTarget, windowIn, holdOf, leadOf, standardFs, stepAt, stepFor, gapOf, edgeOf, fitFor, columnW, advanceOf, setAdvance, inFirstRow,
+  MEASURE, BORDER, LINE_H, LAY_FS, CHAR_W, MEASURE_CPL, COLUMN_LINES, COLUMN_H, COLUMN_W, GUTTER, EDGE, EDGE_GAP, STANDARD_GRID, STANDARD_FS, ADVANCE_WEIGHTS, HEAD_CPL,
 } from './layout.js';
 import { DOC_W, DOC_H } from './projection.js';
 
@@ -359,29 +362,42 @@ const READ = 17;
 /** the view a column at the reading size needs beside its margins, in px: the corner and its gap, the column, its edge and a gutter */
 const needs = (/** @type {number} */ cpl, /** @type {number} */ corner, readPx = READ) => corner + CORNER.gap + cpl * CHAR_W * readPx + (EDGE + GUTTER) * readPx;
 
-test('the fit: the full measure wherever the view holds a column at the reading size with both its margins, the corner whole, else compact — the corner compacted before the measure narrows — else the most whole characters the view holds beside them (issue #151; FP-26)', () => {
-  assert.deepEqual(fitFor(1440, READ, CORNER), { cpl: MEASURE_CPL, compact: false, px: READ }, 'a 1440 px view: the full measure, the corner whole');
+test('the fit: the full measure wherever the view holds a column at the reading size with both its margins, the corner whole, else compact — the corner compacted before the measure narrows — else the most whole characters the view holds beside them while those are forty or more; below forty the corner at its document\'s head, its room back to the measure: the most whole characters the view holds beside the column\'s edge alone (issue #151, #436; FP-26, FP-31)', () => {
+  assert.deepEqual(fitFor(1440, READ, CORNER), { cpl: MEASURE_CPL, compact: false, head: false, px: READ }, 'a 1440 px view: the full measure, the corner whole beside it');
   const whole = needs(MEASURE_CPL, CORNER.whole), compact = needs(MEASURE_CPL, CORNER.compact);
-  assert.deepEqual(fitFor(Math.ceil(whole), READ, CORNER), { cpl: MEASURE_CPL, compact: false, px: READ }, `${Math.ceil(whole)} px: still whole`);
-  assert.deepEqual(fitFor(Math.floor(whole) - 1, READ, CORNER), { cpl: MEASURE_CPL, compact: true, px: READ }, 'a px short of that: the corner compacts first, the measure kept');
-  assert.deepEqual(fitFor(Math.ceil(compact), READ, CORNER), { cpl: MEASURE_CPL, compact: true, px: READ });
+  assert.deepEqual(fitFor(Math.ceil(whole), READ, CORNER), { cpl: MEASURE_CPL, compact: false, head: false, px: READ }, `${Math.ceil(whole)} px: still whole`);
+  assert.deepEqual(fitFor(Math.floor(whole) - 1, READ, CORNER), { cpl: MEASURE_CPL, compact: true, head: false, px: READ }, 'a px short of that: the corner compacts first, the measure kept');
+  assert.deepEqual(fitFor(Math.ceil(compact), READ, CORNER), { cpl: MEASURE_CPL, compact: true, head: false, px: READ });
+  /** the narrowest view that keeps HEAD_CPL characters beside the compact corner */
+  const beside = Math.ceil(needs(HEAD_CPL, CORNER.compact) - 1e-9);
   let prev = MEASURE_CPL;
-  for (let vw = Math.floor(compact) - 1; vw >= 320; vw -= 7) {
+  for (let vw = Math.floor(compact) - 1; vw >= beside; vw -= 7) {
     const f = fitFor(vw, READ, CORNER);
-    assert.ok(f.compact && Number.isInteger(f.cpl) && f.cpl < MEASURE_CPL && f.cpl <= prev, `${vw} px: a narrower whole count, never wider than at a wider view`);
+    assert.ok(f.compact && !f.head && Number.isInteger(f.cpl) && f.cpl < MEASURE_CPL && f.cpl <= prev, `${vw} px: a narrower whole count beside the corner, never wider than at a wider view`);
     assert.ok(needs(f.cpl, CORNER.compact) <= vw + 1e-9 && needs(f.cpl + 1, CORNER.compact) > vw, `${vw} px: the most characters the view holds beside the compact corner, ${f.cpl}`);
     prev = f.cpl;
   }
-  assert.equal(fitFor(480, READ, CORNER).cpl, Math.floor((480 - CORNER.compact - CORNER.gap - (EDGE + GUTTER) * READ) / (CHAR_W * READ)), 'a 480 px view: the characters it holds beside the compact corner');
+  assert.deepEqual(fitFor(beside, READ, CORNER), { cpl: HEAD_CPL, compact: true, head: false, px: READ }, `${beside} px: forty characters beside the compact corner`);
+  /** the characters a view holds beside the column's edge and a gutter alone */
+  const alone = (/** @type {number} */ vw) => Math.floor((vw - (EDGE + GUTTER) * READ) / (CHAR_W * READ));
+  const under = fitFor(beside - 1, READ, CORNER);
+  assert.deepEqual(under, { cpl: alone(beside - 1), compact: true, head: true, px: READ }, `${beside - 1} px: thirty-nine beside the corner, so the corner stands at the document's head and its room goes back to the measure`);
+  assert.ok(under.cpl > HEAD_CPL, `the measure the head form keeps, ${under.cpl}, more than the forty the corner beside it would`);
+  for (let vw = beside - 1; vw >= 150; vw -= 7) {
+    const f = fitFor(vw, READ, CORNER);
+    assert.ok(f.head && f.compact && f.cpl === Math.max(1, alone(vw)), `${vw} px: the corner at the head, the most characters beside the edge alone, ${f.cpl}`);
+  }
+  assert.deepEqual(fitFor(480, READ, CORNER), { cpl: alone(480), compact: true, head: true, px: READ }, 'a 480 px view: the corner at the head, the characters it holds beside the edge alone');
+  assert.equal(alone(480), 46, 'forty-six at the shipped advance');
   assert.ok(fitFor(900, 20, CORNER).cpl <= fitFor(900, READ, CORNER).cpl && fitFor(700, 20, CORNER).cpl < fitFor(700, READ, CORNER).cpl, 'a larger reading size holds fewer');
 });
 
 test('a reading view lands at the reading size wherever the view holds a column of one character beside its margins, and only where it holds none at the em that holds that one, never below 1 px (issue #16)', () => {
-  for (const vw of [1440, 900, 480, 320, 230]) assert.equal(fitFor(vw, READ, CORNER).px, READ, `${vw} px: the reading size`);
-  const tight = Math.floor(needs(1, CORNER.compact)) - 20, f = fitFor(tight, READ, CORNER);
-  assert.ok(f.cpl === 1 && f.px < READ, `${tight} px: one character, at a smaller em — ${JSON.stringify(f)}`);
-  assert.ok(Math.abs(CORNER.compact + CORNER.gap + (CHAR_W + EDGE + GUTTER) * f.px - tight) < 1e-9, 'the em at which the one character and its margins fill the view');
-  assert.deepEqual(fitFor(1, READ, CORNER), { cpl: 1, compact: true, px: 1 }, 'never below one character, nor below 1 px');
+  for (const vw of [1440, 900, 480, 320, 230, 150]) assert.equal(fitFor(vw, READ, CORNER).px, READ, `${vw} px: the reading size`);
+  const tight = Math.floor((CHAR_W + EDGE + GUTTER) * READ) - 20, f = fitFor(tight, READ, CORNER);
+  assert.ok(f.cpl === 1 && f.head && f.px < READ, `${tight} px: one character, the corner at the head, at a smaller em — ${JSON.stringify(f)}`);
+  assert.ok(Math.abs((CHAR_W + EDGE + GUTTER) * f.px - tight) < 1e-9, 'the em at which the one character and its margins fill the view');
+  assert.deepEqual(fitFor(1, READ, CORNER), { cpl: 1, compact: true, head: true, px: 1 }, 'never below one character, nor below 1 px');
 });
 
 test('the reading face\'s advance is the mean of its lowercase letters and the space by the OS/2 table\'s weights, a thousand in all; set from the face as rendered, the column, the standard size, the steps and the style\'s advance move with it (issue #16)', () => {
@@ -499,13 +515,47 @@ test('the paging key continues at the next column\'s top where the view shows it
   const f = fold(layoutOf(article(Array.from({ length: 30 }, (_, i) => words(30, i))).rows).lines, ROOM);
   const c0 = f.columns[0], c1 = f.columns[1], half = (GUTTER / 2) * f.fs;
   const whole = { x0: c0.x - half, y0: c0.y - half, x1: c0.x + c0.w + half, y1: c0.y + c0.h + 10 * half };
-  assert.deepEqual(pageTarget(f, whole, 1), { column: 1, x: c1.x + c1.w / 2, top: c1.y - half }, 'the foot in view: the next column\'s top, half a gutter above its text');
+  assert.deepEqual(pageTarget(f, whole, 1), { column: 1, x: c1.x + c1.w / 2, top: c1.y - half, first: true }, 'the foot in view: the next column\'s top, half a gutter above its text');
   const part = { ...whole, y1: c0.y + c0.h / 2 };
   assert.equal(pageTarget(f, part, 1), null, 'the foot below the view: page within the column');
   const second = { x0: c1.x - half, y0: c1.y - half, x1: c1.x + c1.w + half, y1: c1.y + c1.h };
-  assert.deepEqual(pageTarget(f, second, -1), { column: 0, x: c0.x + c0.w / 2, top: c0.y - half }, 'PageUp from a column\'s top: the previous column\'s top');
+  assert.deepEqual(pageTarget(f, second, -1), { column: 0, x: c0.x + c0.w / 2, top: c0.y - half, first: true }, 'PageUp from a column\'s top: the previous column\'s top');
   const last = f.columns[f.columns.length - 1];
   assert.equal(pageTarget(f, { x0: last.x - half, y0: last.y - half, x1: last.x + last.w + half, y1: last.y + last.h + 4 * half }, 1), null, 'past the last column: nothing to continue at');
+  // the head's band above the first row: a first-row column's top with it, a later row's without
+  const b = fold(layoutOf(article(Array.from({ length: 60 }, (_, i) => words(30, i))).rows).lines, ROOM, { band: 2 * LINE_H }), g = (GUTTER / 2) * b.fs;
+  const k = b.across - 1, end = b.columns[k], next = b.columns[k + 1], before = b.columns[k - 1];
+  assert.ok(next && !inFirstRow(b, next), 'a column past the first row');
+  assert.deepEqual(pageTarget(b, { x0: end.x - g, y0: end.y - g, x1: end.x + end.w + g, y1: end.y + end.h + 4 * g }, 1), { column: k + 1, x: next.x + next.w / 2, top: next.y - g, first: false }, 'into the second row: half a gutter above its text, no band');
+  assert.deepEqual(pageTarget(b, { x0: end.x - g, y0: end.y - 2 * g, x1: end.x + end.w + g, y1: end.y + end.h }, -1), { column: k - 1, x: before.x + before.w / 2, top: before.y - g - b.band, first: true }, 'within the first row: half a gutter above its band');
+});
+
+test('a band reserved above the first row for the head stands every column that much lower, inside its room: the first row\'s padded slots run up through it, so the outline holds it and the head stands on the document\'s ground; positions placed and read back; and the step\'s capacity counts it (issue #436; FP-26)', () => {
+  const lines = layoutOf(article(Array.from({ length: 60 }, (_, i) => words(30, i))).rows).lines, band = 2 * LINE_H;
+  const f = fold(lines, ROOM, { band }), plain = fold(lines, ROOM), g = (GUTTER / 2) * f.fs;
+  assert.ok(close(f.band, band * f.fs) && plain.band === 0, 'the band in world units, none where none is asked');
+  f.columns.forEach((c, i) => assert.ok(close(c.y, (Math.floor(i / f.across) * (COLUMN_H + GUTTER) + GUTTER / 2 + band) * f.fs), `column ${i} the band lower than its row sets it`));
+  for (const c of f.columns) {
+    const q = padded(f, c), first = inFirstRow(f, c);
+    assert.ok(close(q.y, c.y - g - (first ? f.band : 0)) && close(q.h, c.h + 2 * g + (first ? f.band : 0)), `${first ? 'a first-row' : 'a later'} column's slot ${first ? 'through' : 'without'} the band`);
+    assert.ok(q.y >= -1e-6 && q.x >= -1e-6 && q.y + q.h <= ROOM.h + 1e-6 && q.x + q.w <= ROOM.w + 1e-6, 'every slot inside the room');
+  }
+  assert.ok(close(boundsOf(f).y, 0) && close(firstRow(f).h, (COLUMN_H + GUTTER) * f.fs + f.band), 'the outline from the room\'s top, its first row the band\'s depth taller');
+  const area = outlineRects(f).reduce((a, r) => a + r.w * r.h, 0), slots = f.columns.reduce((a, c) => { const q = padded(f, c); return a + q.w * q.h; }, 0);
+  assert.ok(Math.abs(area - slots) < 1e-6 * slots, 'the outline\'s rects the padded slots, the band among them');
+  let checked = 0;
+  for (let i = 0; i < f.lines.length; i += 7) {
+    const l = f.lines[i];
+    if (l.at == null || (i && f.lines[i - 1].at === l.at)) continue;
+    const p = placeOf(f, l.at);
+    assert.equal(posAt(f, p.x + p.w / 2, p.y + p.h / 2), l.at, `line ${i}'s position read back`);
+    checked++;
+  }
+  assert.ok(checked > 10, `${checked} positions`);
+  assert.ok(stepAt(ROOM, 0, MEASURE_CPL, band).fs < stepAt(ROOM, 0).fs && STANDARD_GRID[1] * (COLUMN_H + GUTTER) + band <= ROOM.h / stepAt(ROOM, 0, MEASURE_CPL, band).fs + 1e-9, 'the standard size holds its rows beneath the band');
+  const e = estimate(600, ROOM, MEASURE_CPL, band), e0 = estimate(600, ROOM);
+  assert.ok(close(e.columns[0].y - e0.columns[0].y * (e.fs / e0.fs), e.band) && close(placeOf(e, 1).y - e.columns[0].y, placeOf(e0, 1).y * (e.fs / e0.fs) - e0.columns[0].y * (e.fs / e0.fs)), 'an estimate beneath the band, its positions where its columns are');
+  assert.ok(close(slot(ROOM, MEASURE_CPL, band).columns[0].y, (GUTTER / 2 + band) * slot(ROOM, MEASURE_CPL, band).fs), 'a slot beneath the band');
 });
 
 test('a passage read in one fold is held to its place in another: its position\'s line, the offset kept at the new size, and the scale\'s factor the sizes\' ratio', () => {

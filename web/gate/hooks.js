@@ -22,7 +22,8 @@
 // bars for a document beside its mounted article's blocks (`barsOf`); a
 // document's fold on the plane, where a position stands in it and which
 // position stands under a point (`fold`, `centreOf`, `posAt`), the measure in
-// force (`measure`), a document's corner as placed (`corner`), its label held
+// force (`measure`), a document's corner as placed (`corner`) and what one
+// standing at its document's head covers (`headClear`), its label held
 // below the one line (`heldLabel`), its first line and the lead its label
 // sets (`firstLine`), the size an address is set at in a label (`address`),
 // the places the line names (`named`) and
@@ -750,10 +751,12 @@ export function install(deps) {
     scaleFor: (/** @type {string} */ addr, /** @type {'em' | 'doc'} */ kind, /** @type {number} */ v) => (kind === 'doc' ? v / docBox(addr).w : v / LAYER.foldOf(REC.doc(addr)).fs),
     boxOf: (/** @type {string} */ addr) => docBox(addr), accountCell: (/** @type {string} */ a) => accountCell(a), boardCell: (/** @type {string} */ b) => boardCell(b), boardLabelCell: (/** @type {string} */ b) => boardLabelCell(b), depthOf: (/** @type {string} */ a) => depthOfDoc(a),
     constants: { DOC_W, STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, EDGE, EDGE_GAP, READING_PX: CAM.READING_PX, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME },
-    /** the measure in force (P-CAM's fit; FP-26): the characters every document's line is set at, and whether a column at the reading size stands beside its corner compact */
+    /** the measure in force (P-CAM's fit; FP-26, FP-31): the characters every document's line is set at, whether a column at the reading size stands beside its corner compact, whether the corner stands at its document's head, and the landing's em */
     measure: () => ({ ...CAM.fit() }),
-    /** a document's corner as T-LAYER placed it: the column it stands beside and whether it stands compact; null where none stands */
+    /** a document's corner as T-LAYER placed it: the column it stands beside — or across, at its document's head — whether it stands compact, whether a reader's act opened it whole, and whether it stands at its head; null where none stands */
     corner: (/** @type {string} */ addr) => LAYER.cornerAt(addr),
+    /** where a corner standing at its document's head leaves the view clear of it, on screen: the bottom of its first row, or of a form opened beneath it (T-LAYER's `headClear`); null where none stands at the head */
+    headClear: (/** @type {string} */ addr) => LAYER.headClear(addr),
     /** a document's label T-LAYER held below the one line over its mounted article (FP-26): its parts' words, its rect on screen and whether it takes the pointer; null where none stands */
     heldLabel: (/** @type {string} */ addr) => LAYER.heldOf(addr),
     /** the places the one line names (L-LINE's `named`; FP-26): its board, its account and its document by its box */

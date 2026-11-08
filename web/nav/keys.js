@@ -46,8 +46,8 @@
 // — else the walk's document — has a kept state, it is answered at the
 // corner with the state's statement whole at the first press in a session
 // and with the corner's own word after it, the statement whole on the word's
-// act (`saveChord`; P41; T-LAYER's `openStatement`); elsewhere it is taken
-// and does nothing.
+// act (`saveChord`; P41; T-LAYER's `openStatement`), the answer said in the
+// status region (FP-36); elsewhere it is taken and does nothing.
 // Esc closes the innermost thing, in one order (`esc`; §4 rule 7; D7): the
 // box, a card or scene still reading, the notice standing below the overlay
 // (FP-36; O-HOST's), the overlay, a jump reaching, the find — its current
@@ -82,8 +82,10 @@
 // draft's kept word opens its statement, an edition's version statement its
 // list, and where neither stands the read the corner offers once a newer
 // version's arrival pinned its box (O-VERSIONS' `readFromCorner`) — → and ←
-// move the focus to that offered read and back, K-22's form, and Enter on it
-// takes it; its other keys are the platform's; in an overlay and at a landing's line every
+// move the focus along its acts in order and back to it, K-22's form — that
+// offered read, and at a corner standing at its document's head the count of
+// the items it folds — and Enter on one takes it, the count opening its items
+// whole (T-LAYER's `openCorner`); its other keys are the platform's; in an overlay and at a landing's line every
 // key is the control's own; on the plane the walk's keys (K-1 … K-5) move
 // the walk, Enter activates the focus (K-7) — at a continuation's mark's stop
 // it opens the mark's list — and the paging keys page the camera (K-6);
@@ -106,7 +108,7 @@
 // WHOLE BOARD do through N-GO; the paging keys and the zoom chords stay the
 // camera's. State (FP-10), beside the held keys: whether Mod+S has been
 // answered whole this session (`saveAnswered`).
-// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-14, FP-20, FP-21, FP-25, FP-35.
+// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-14, FP-20, FP-21, FP-25, FP-35, FP-36.
 
 import * as GO from './go.js';
 import * as WALK from './walk.js';
@@ -126,6 +128,7 @@ import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import { t } from '../strings.js';
+import { keptWord, keptStatement } from '../text/article.js';
 
 /** @typedef {import('../overlays/selection.js').InertSlot} InertSlot */
 
@@ -380,20 +383,23 @@ function route(e, chord, ctx) {
   if (chord === 'Mod+R' || e.key === 'F5') return () => true; // K-94: the plane is live; nothing reloads
   // the caret's keys (see the head): at a live caret, before the walk's
   if (ctx.where === 'caret') { const act = caretKey(e, chord); if (act) return act; }
-  // the corner (K-57): its offered read reached by → along it and left by ← (K-22's form); Enter takes the act the focus
-  // stands on — the offered read, else a draft's kept word's statement (K-74), else the version statement's list, else the
-  // offered read; its other keys are the platform's
+  // the corner (K-57): its acts — the offered read, a head's count of the items it folds — reached in order by → and left
+  // back by ← (K-22's form); Enter takes the act the focus stands on — the offered read, the count opening its items whole —
+  // else a draft's kept word's statement (K-74), else the version statement's list, else the offered read; its other keys
+  // are the platform's
   if (ctx.where === 'corner') {
     const target = /** @type {HTMLElement} */ (e.target), corner = /** @type {HTMLElement | null} */ (target.closest('[data-corner]'));
     if (!corner) return null;
-    const onOffer = !!target.closest('[data-read]');
+    const on = /** @type {HTMLElement | null} */ (target.closest('[data-read], [data-more]'));
     if (chord === '→' || chord === '←') {
-      const to = chord === '←' ? (onOffer ? corner : null) : onOffer ? null : /** @type {HTMLElement | null} */ (corner.querySelector('[data-read]'));
+      const acts = /** @type {HTMLElement[]} */ ([...corner.querySelectorAll('[data-read], [data-more]')]), i = on ? acts.indexOf(on) : -1;
+      const to = chord === '←' ? (on ? acts[i - 1] || corner : null) : acts[i + 1] || null;
       return to ? () => { e.preventDefault(); FOCUS.land(to, { byKey }); return true; } : null;
     }
     if (chord !== 'Enter') return null;
     const addr = corner.dataset.corner || '';
-    if (onOffer) return () => VERSIONS.readFromCorner(corner, SEL.selected(), byKey);
+    if (on && on.dataset.more) return () => { LAYER.openCorner(addr); return true; };
+    if (on) return () => VERSIONS.readFromCorner(corner, SEL.selected(), byKey);
     if (REC.keptOf(addr)) return () => { LAYER.openStatement(addr); return true; };
     return () => VERSIONS.fromCorner(corner, SEL.selected(), byKey) || VERSIONS.readFromCorner(corner, SEL.selected(), byKey);
   }
@@ -484,16 +490,19 @@ function typeAt(e) {
  * (M-REC's `keptOf`), the state's statement is opened whole at its corner at
  * the first press in a session (T-LAYER's `openStatement`); after it the
  * corner's own word answers, the statement whole on the word's act (P41).
- * Nothing where no such state stands, or the scene covers the plane.
+ * Either answer is said in the status region (FP-36). Nothing where no such
+ * state stands, or the scene covers the plane.
  */
 function saveChord() {
   if (SCENE.isOpen()) return;
   const c = LAYER.caret(), f = WALK.current();
   const addr = c ? c.addr : f && (f.kind === 'document' || f.kind === 'block' || f.kind === 'link') ? f.addr : null;
-  if (!addr || !REC.keptOf(addr)) return;
-  if (saveAnswered) return;
+  const k = addr ? REC.keptOf(addr) : null;
+  if (!addr || !k) return;
+  if (saveAnswered) { FOCUS.say(keptWord(k).text); return; }
   saveAnswered = true;
   LAYER.openStatement(addr, true);
+  FOCUS.say(keptStatement(k).text);
 }
 
 /**

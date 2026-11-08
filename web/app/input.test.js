@@ -17,10 +17,12 @@
 // symbol opens its ends' card or list, never C-39's face; a byline's cut
 // label opens and closes on its clicks, selecting nothing; where no board is
 // held a click at far scale is an empty one, and where one is held it goes to
-// the account whose cell holds it, in a continuation too; and a
+// the account whose cell holds it, in a continuation too; a
 // continuation's mark is two targets, its newest label going to that member
-// and the rest opening its list, the pointer's shape over each its own (FP-12,
-// FP-21, FP-24, FP-25, FP-30, FP-34, FP-35).
+// and the rest opening its list, the pointer's shape over each its own; and a
+// focus landing in a corner the view does not show whole pans the camera by
+// the least that brings it in below the one line, never while a flight runs
+// (FP-12, FP-20, FP-21, FP-24, FP-25, FP-30, FP-34, FP-35).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';
@@ -37,6 +39,7 @@ import * as TRAIL from '../nav/trail.js';
 import * as WALK from '../nav/walk.js';
 import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
+import * as LINE from '../line/line.js';
 import { lodOf } from '../plane/lod.js';
 import { articleHTML, entitlementArm } from '../text/article.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
@@ -949,5 +952,43 @@ test('a click on a block of a draft the person may edit places the caret at the 
     HOST.dismiss(); SEL.clear(); LAYER.clear();
     REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement; globalThis.Node = platform.Node;
+  }
+});
+
+test('a focus landing in a corner the view does not show whole moves the camera by the least pan that brings the whole corner into the view below the one line; one the view shows whole, or one landing while a flight runs, moves nothing (FP-20)', () => {
+  const platform = { document: globalThis.document, window: globalThis.window };
+  /** @type {Map<string, (e: unknown) => void>} the corners' listeners, by event */
+  const corners = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  try {
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(null), corners: listens(corners) }));
+    // the one line, its bottom edge 30 px down the viewport: the visible view stands below it
+    LINE.attach(/** @type {any} */ ({ ...listens(null), setAttribute() {}, querySelectorAll: () => [], getBoundingClientRect: () => ({ bottom: 30 }) }), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+    const onFocus = corners.get('focusin');
+    assert.ok(onFocus, 'the corners take a focus landing in them');
+    CAM.setViewport(1440, 900);
+    const start = { x: 5000, y: 5000, scale: 2 };
+    // a corner's element as the platform lays it out on screen, and a control inside it the focus lands on
+    let rect = { left: -60, top: 300, width: 77, height: 54 };
+    const holder = { dataset: { corner: '1.0.1.0.3' }, getBoundingClientRect: () => ({ ...rect, right: rect.left + rect.width, bottom: rect.top + rect.height }) };
+    const inside = { closest: (/** @type {string} */ s) => (s === '[data-corner]' ? holder : null) };
+    /** the camera after a focus lands in the corner standing at `r`, from the start's view */
+    const landed = (/** @type {typeof rect} */ r) => { CAM.set(start); rect = r; onFocus({ target: inside }); return CAM.view(); };
+    assert.deepEqual(landed({ left: -60, top: 300, width: 77, height: 54 }), { ...start, x: start.x - 60 / start.scale }, 'its left edge 60 px past the view\'s: panned 60 px right, the corner\'s left edge at the view\'s');
+    assert.deepEqual(landed({ left: 1400, top: 300, width: 77, height: 54 }), { ...start, x: start.x + 37 / start.scale }, 'its right edge 37 px past the view\'s: panned 37 px left');
+    assert.deepEqual(landed({ left: 200, top: 10, width: 77, height: 54 }), { ...start, y: start.y - 20 / start.scale }, 'its top 20 px under the one line: panned 20 px down, its top at the line\'s bottom');
+    assert.deepEqual(landed({ left: 200, top: 880, width: 77, height: 54 }), { ...start, y: start.y + 34 / start.scale }, 'its foot 34 px below the view\'s: panned 34 px up');
+    assert.deepEqual(landed({ left: 200, top: 300, width: 77, height: 54 }), start, 'shown whole: nothing moves');
+    CAM.set(start);
+    rect = { left: -60, top: 300, width: 77, height: 54 };
+    void CAM.fly({ x: 6000, y: 6000, scale: 2 }, 620, 0);
+    onFocus({ target: inside });
+    assert.deepEqual([CAM.flying(), CAM.view()], [true, start], 'a flight running: nothing moves, the flight runs on');
+    CAM.set(start);
+  } finally {
+    CAM._reset();
+    globalThis.document = platform.document; globalThis.window = platform.window;
   }
 });

@@ -7,8 +7,9 @@
 // from the platform's own selection through T-LAYER's mapping as the drag
 // ends and as it changes — or by a key: a click on a block and Enter at the
 // focused span select the block whole; K-8's Shift+↓ / Shift+↑ select the
-// focused span and then extend it by a span each press. The platform's
-// highlight is the selection's one mark (§2.1), and the selection the
+// focused span and then extend it by a span each press, naming the end each
+// press moved, which T-LAYER keeps clear of its document's head. The
+// platform's highlight is the selection's one mark (§2.1), and the selection the
 // platform's own (foundations §2.1; D5 §2): a change of it rebuilds no
 // article — T-LAYER marks the blocks it touches in place — so a selection
 // the person made stands as they left it, its anchor where they set it, for
@@ -52,7 +53,7 @@
 // drawn again with it — over the bytes that version holds of it (`restore`),
 // saying nothing where the move's own landing says it (N-GO's
 // `surfacesAcross`; FP-22).
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13, FP-20, FP-22, FP-36.
+// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13, FP-20, FP-22, FP-36, FP-37.
 
 import * as HOST from './host.js';
 import * as REC from '../model/records.js';
@@ -125,15 +126,18 @@ function wholeBlock(/** @type {string} */ addr, /** @type {number} */ pos) {
  * holding `pos` (a click, Enter at the focused span, the gate's door). The
  * platform's highlight is placed over it — where the platform's selection
  * already covers it, that one stands — the next frame marks the blocks it
- * touches in place, rebuilding no article, and its acts appear at it.
+ * touches in place, rebuilding no article, and its acts appear at it; the
+ * end the act moved kept clear of its document's head (T-LAYER's
+ * `keepClear`).
  * @param {string} addr
  * @param {number} pos the span's first position
  * @param {number | null} [width] positions; null selects the block at `pos` whole
+ * @param {import('../text/layer.js').SelectionEnd | null} [moved] the end the act moved — K-8's extended end, the platform's focus point after a press; null for an act that moves none
  */
-export function select(addr, pos, width = null) {
+export function select(addr, pos, width = null, moved = null) {
   const span = width != null && width > 0 ? { addr, pos, width } : wholeBlock(addr, pos);
   sel = span;
-  LAYER.placeSelection(span);
+  LAYER.placeSelection(span, moved);
   markDirty();
   render();
   FOCUS.say(`${span.addr} · ${t('F.position', { p: span.pos })}`);
@@ -142,15 +146,16 @@ export function select(addr, pos, width = null) {
 /**
  * K-8 (Shift+↓ / Shift+↑): the first press selects the walk's focused span
  * whole; each further press extends the selection by a span in the
- * direction pressed. The focus stays on the walk's element (rule 15).
+ * direction pressed, that end the one the press moved (`select`). The focus
+ * stays on the walk's element (rule 15).
  * @param {'down' | 'up'} [dir]
  */
 export function selectFocused(dir = 'down') {
-  const f = WALK.current();
+  const f = WALK.current(), moved = dir === 'up' ? 'start' : 'end';
   if (!f || f.kind !== 'block' || f.pos == null) return;
-  if (!sel || sel.addr !== f.addr) { select(f.addr, f.pos, null); return; }
+  if (!sel || sel.addr !== f.addr) { select(f.addr, f.pos, null, moved); return; }
   const e = extended(REC.doc(sel.addr).blocks, sel, dir);
-  select(e.addr, e.pos, e.width);
+  select(e.addr, e.pos, e.width, moved);
 }
 
 /** clear the selection: the platform's highlight, its acts and its marks with it */
