@@ -7,7 +7,9 @@
 // view framing its column with both margins; the measure in force and a
 // resize re-setting the article being read with the passage held at its height
 // and the view framed across its column, its corner inside the view, a return
-// by the trail across a refit landing framed; the corner at its document's
+// by the trail across a refit landing framed; a passage read below one bottom
+// of the one line, set again or returned to below another, kept at its
+// height from the visible view's centre; the corner at its document's
 // head below forty characters — its rows, across the column on the band its
 // fold reserves, its first row held below the line, a form opened beneath it,
 // the band's change re-anchoring the camera — and a kept word said where it
@@ -1640,6 +1642,49 @@ test('a change of the head\'s rows changes the band its fold reserves, and the a
   assert.ok(Math.abs(line() - y) < 1e-6, `the passage's line at its height: ${y} → ${line()}`);
   assert.ok(Math.abs(CAM.cam.scale * f.fs - em) < 1e-9, 'at its size on screen');
 }, 320, 900));
+
+/** the one line's bottom the layer's readers give, as a test sets it: one row of the line, then three */
+const lineAt = { top: 25 };
+/** the readers with the one line's bottom at `lineAt.top` */
+const rowsOfLine = () => LAYER.readers({ selection: () => null, focus: () => null, top: () => lineAt.top, handOff: () => {}, navigated: () => null });
+/** a world height's distance from the visible view's centre, on screen, with the camera at a view and the one line's bottom at `top` */
+const fromCentre = (/** @type {number} */ y, /** @type {{y: number, scale: number}} */ view, /** @type {number} */ top) => (y - view.y) * view.scale + VH / 2 - (top + VH) / 2;
+
+test('a view read below one bottom of the one line and returned to below another — the line having taken rows — lands its line at the height it stood from the visible view\'s centre (issue #310; FP-8, FP-25)', () => onLayer(() => {
+  lineAt.top = 25;
+  rowsOfLine();
+  deliver();
+  const box = docBox(D), f0 = LAYER.foldOf(REC.doc(D)), c = f0.columns[6];
+  CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h * 0.4, scale: 12 / f0.fs });
+  LAYER.frame();
+  const view = CAM.view(), r = /** @type {import('./layer.js').Reading} */ (LAYER.readAt(view));
+  assert.ok(r && r.addr === D && r.top === 25, 'the view reads D below one row of the line');
+  const was = fromCentre(box.y + placeOf(f0, r.pos).y, view, 25);
+  lineAt.top = 61;
+  const v = /** @type {{x: number, y: number, scale: number}} */ (LAYER.keptAt(view, r, r.pos));
+  const now = fromCentre(box.y + placeOf(LAYER.foldOf(REC.doc(D)), r.pos).y, v, 61);
+  assert.ok(Math.abs(now - was) < 1e-6 && v.scale === view.scale, `below three rows: the line at the height it stood from the visible centre — ${was} → ${now}`);
+}, 1440, 900));
+
+test('an article set again while the one line has taken rows keeps the passage the reader last saw at the visible view\'s centre at its height from that centre as it stands now (issue #310; FP-8)', () => onLayer(() => {
+  lineAt.top = 25;
+  rowsOfLine();
+  deliver();
+  const box = docBox(D), f0 = LAYER.foldOf(REC.doc(D)), c = f0.columns[6];
+  CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h * 0.4, scale: 12 / f0.fs });
+  LAYER.frame();
+  // the passage at the visible centre below one row of the line, and its line's height from that centre
+  const centre = CAM.cam.y + 25 / (2 * CAM.cam.scale), pos = /** @type {number} */ (LAYER.posAt(D, CAM.cam.x, centre));
+  const was = fromCentre(box.y + placeOf(f0, pos).y, CAM.view(), 25);
+  // the line takes two rows more as the article goes stale: a reveal re-breaks it
+  lineAt.top = 61;
+  LK.reveal(D, 2); LAYER.bump();
+  LAYER.frame();
+  const f = LAYER.foldOf(REC.doc(D)), now = fromCentre(box.y + placeOf(f, pos).y, CAM.view(), 61);
+  assert.ok(placeOf(f, pos).column !== placeOf(f0, pos).column || Math.abs(placeOf(f, pos).y - placeOf(f0, pos).y) > f0.fs, 'the reveal re-breaks the article: the passage moves in its room');
+  assert.ok(Math.abs(now - was) < 1e-6, `the passage at the height it stood from the visible centre, below three rows now — ${was} → ${now}`);
+  LK.hide(D);
+}, 1440, 900));
 
 test('a view read under one fit and returned to under another lands framed across the column its line stands in, at the em it was read at, the line at its height; returned to under the same fit, where it stood (issue #436; FP-8, FP-25)', () => onLayer(() => {
   deliver();

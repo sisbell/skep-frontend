@@ -86,7 +86,11 @@
 // and in which form, the advance (`fitKey`) — the view's centre is framed
 // across the passage's column as a landing frames it (`frameAcross`), its line
 // kept at its height and its size (`keepPlace`), and a return by the trail
-// lands so too (`keptAt`). The fold (`foldOf`;
+// lands so too (`keptAt`). The passage being read is the one at the centre of
+// the visible view as the reader last saw it — below the one line's bottom as
+// the layer last framed it (`framedTop`) — and kept at its height from that
+// centre as the line stands then, the line having taken or given up rows
+// meanwhile. The fold (`foldOf`;
 // FP-12, FP-8): every document is set at one line length and one line height
 // in P-LAY's equal columns inside its room, broken at the lines as rendered,
 // after the reader's font and spacing settings apply: an article is laid out
@@ -593,6 +597,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @property {ISpan[]} ids the bytes of the line `pos` opens, by identity, read through the image the article was made from (M-REC's `identityIn`): where the text set again holds the first of them now is the line that takes the passage's (FP-8, FP-23) — none where that image did not cover it
  * @property {{x: number, y: number, scale: number} | null} left the camera as a re-set whose text came before its image left it, by position: `ids` kept for the re-set the image's arrival makes, while the camera stands there (`still`); null where it is no such hold
  * @property {string} fit the fit it was read under (`fitKey`): an article set again under another frames the passage sideways (`keepPlace`)
+ * @property {number} top the one line's bottom it was read under, px: set again under another, the passage keeps its height from the visible view's centre (`keepPlace`)
  */
 /**
  * @typedef {Object} Reading — what a view reads (`readAt`), by value — positions, bytes by identity and a place, no fold and no words: what N-TRAIL keeps beside an entry's view, so a return finds those words wherever its document was set since (N-GO's) and lands at the view that keeps the line it finds them at where the line read stood (`keptAt`)
@@ -606,6 +611,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @property {{x: number, y: number}} line where the fold set that position's line, in world units relative to the room (P-LAY's `placeOf`)
  * @property {number} fs the fold's em, in world units
  * @property {string} fit the fit it was read under (`fitKey`): a return under another frames the line sideways (`keptAt`)
+ * @property {number} top the one line's bottom it was read under, px: a return under another keeps the line at its height from the visible view's centre (`keptAt`)
  */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
 /** @typedef {import('../model/records.js').ImageRun} ImageRun */
@@ -679,6 +685,8 @@ let kept = null;
 let owed = null;
 /** @type {Hold | null} */
 let hold = null;
+/** the one line's bottom as the layer last framed it, px: the visible view the reader last saw, the passage being read taken at its centre (`seenTop`); NaN before the first frame */
+let framedTop = NaN;
 /** @type {Caret | null} the page's own caret (see the head); null where none stands */
 let caret_ = null;
 /** the caret was placed or moved since the platform's selection was last collapsed at it: the frame does so once its part stands */
@@ -1222,17 +1230,17 @@ export function regionOf(addr) {
   return { x: s.x - w, y: s.y, w: s.w + w, h: s.h };
 }
 
-/** the visible view in world units: the viewport below the one line, unpadded — with the camera where it stands, or at a view it is bound for */
-function seenWorld(/** @type {{x: number, y: number, scale: number} | null} */ at = null) {
-  const s = visibleView(read.top());
+/** the visible view in world units: the viewport below the one line, unpadded — with the camera where it stands, or at a view it is bound for — below the line's bottom as it stands, or another */
+function seenWorld(/** @type {{x: number, y: number, scale: number} | null} */ at = null, top = read.top()) {
+  const s = visibleView(top);
   if (!at) return { x0: wx(s.x), y0: wy(s.y), x1: wx(s.x + s.w), y1: wy(s.y + s.h) };
   const { VW, VH } = viewport(), x = (/** @type {number} */ px) => (px - VW / 2) / at.scale + at.x, y = (/** @type {number} */ py) => (py - VH / 2) / at.scale + at.y;
   return { x0: x(s.x), y0: y(s.y), x1: x(s.x + s.w), y1: y(s.y + s.h) };
 }
 
-/** the visible view's centre in world units — the viewport's below the one line — with the camera at a view (`readAt`) */
-function centreAt(/** @type {{x: number, y: number, scale: number}} */ at) {
-  const v = seenWorld(at);
+/** the visible view's centre in world units — the viewport's below the one line, as it stands or below another bottom of it — with the camera at a view (`readAt`) */
+function centreAt(/** @type {{x: number, y: number, scale: number}} */ at, top = read.top()) {
+  const v = seenWorld(at, top);
   return { x: (v.x0 + v.x1) / 2, y: (v.y0 + v.y1) / 2 };
 }
 
@@ -1372,8 +1380,11 @@ export function posAt(addr, x, y) { const box = docBox(addr); return posIn(foldO
 /** does a world rect hold a point? */
 const holds = (/** @type {Rect} */ r, /** @type {{x: number, y: number}} */ p) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
 
-/** the visible view's centre, in world units: the viewport's below the one line */
-function viewCentre() { const s = visibleView(read.top()); return { x: wx(s.x + s.w / 2), y: wy(s.y + s.h / 2) }; }
+/** the visible view's centre, in world units: the viewport's below the one line — as it stands, or as it stood below another bottom of the line's */
+function viewCentre(top = read.top()) { const s = visibleView(top); return { x: wx(s.x + s.w / 2), y: wy(s.y + s.h / 2) }; }
+
+/** the one line's bottom as the reader last saw it (see the head): as the layer last framed it, else as it stands */
+const seenTop = () => (Number.isFinite(framedTop) ? framedTop : read.top());
 
 /**
  * The document whose outline holds a world point: a mounted one first, else
@@ -2689,21 +2700,22 @@ function viewNow() {
 
 /**
  * The passage being read: the mounted article at its readable em or above
- * whose outline holds the visible view's centre, where in its room that
+ * whose outline holds the centre of the visible view as the reader last saw
+ * it (`seenTop`), where in its room that
  * centre stands, the position the line there opens at and that line's bytes
  * by identity through the image the article was made from (`lineOf`) — what
  * the text set again holds of them is where the passage stands then
  * (`keepPlace`) — read under the fit the article was mounted under
- * (`Mounted.fit`); null where none does.
+ * (`Mounted.fit`) and the line's bottom it was seen below; null where none does.
  * @returns {Hold | null}
  */
 function readingNow() {
-  const c = viewCentre();
+  const top = seenTop(), c = viewCentre(top);
   for (const rec of mounted.values()) {
     if (!readsAt(rec.fs) || !holds(shapeAt(rec.d.addr, rec.fold), c)) continue;
     const box = docBox(rec.d.addr), p = { x: c.x - box.x, y: c.y - box.y }, pos = posIn(rec.fold, p.x, p.y);
     const line = pos != null ? lineOf(rec.fold, rec.made.blocks, pos) : null;
-    return { addr: rec.d.addr, fold: rec.fold, p, pair: null, pos, ids: line ? REC.identityIn(rec.made.image, line.pos, line.width) : [], left: null, fit: rec.fit };
+    return { addr: rec.d.addr, fold: rec.fold, p, pair: null, pos, ids: line ? REC.identityIn(rec.made.image, line.pos, line.width) : [], left: null, fit: rec.fit, top };
   }
   return null;
 }
@@ -2780,7 +2792,9 @@ const imageCovers = (/** @type {Doc} */ d) => !!d.imageFor && d.extent != null &
  * fit than it was read under (`Hold.fit`) — a resize, the reader's own size, a
  * face arriving — the view's centre is framed across the column the passage
  * stands in now as a landing frames it (`frameAcross`), at the em the
- * re-anchor keeps, its line kept at its height.
+ * re-anchor keeps, its line kept at its height. Below another bottom of the
+ * one line than it was read under (`Hold.top`), its height is kept from the
+ * visible view's centre as it stands now.
  * @param {Hold} h
  * @param {Mounted} rec the article standing again
  * @returns {boolean} whether the camera moved
@@ -2791,7 +2805,7 @@ function keepPlace(h, rec) {
   const at = holdOf(h.fold, rec.fold, h.p, by);
   if (!at) return false;
   const box = docBox(rec.d.addr);
-  const a = { x: box.x + h.p.x, y: box.y + h.p.y };
+  const a = { x: box.x + h.p.x, y: box.y + h.p.y + (read.top() - h.top) / (2 * cam.scale) };
   const across = h.fit === fitKey() ? at.to.x : frameAcross(rec.d.addr, rec.fold, Math.max(0, placeIn(rec.fold, by ? by.to : at.pos).column), rec.fold.fs * cam.scale * at.k) + (a.x - cam.x) / at.k;
   const b = { x: box.x + across, y: box.y + at.to.y };
   if (Math.abs(a.x - b.x) < 1e-9 && Math.abs(a.y - b.y) < 1e-9 && Math.abs(at.k - 1) < 1e-12) return false;
@@ -2818,7 +2832,7 @@ export function holdAcross(from, to, at = null) {
   if (!rec) { if (hold && boxOf(hold.addr) === boxOf(from)) hold = null; return; }
   /** @type {Hold | null} */
   let h = null;
-  if (at) { const p = placeIn(rec.fold, at.from); h = { addr: to, fold: rec.fold, p: { x: p.x, y: p.y }, pair: at, pos: at.from, ids: [], left: null, fit: rec.fit }; }
+  if (at) { const p = placeIn(rec.fold, at.from); h = { addr: to, fold: rec.fold, p: { x: p.x, y: p.y }, pair: at, pos: at.from, ids: [], left: null, fit: rec.fit, top: seenTop() }; }
   else { const r = readingNow(); h = r && r.addr === from ? { ...r, addr: to } : null; }
   if (from !== to) { hold = h; return; }
   hold = null;
@@ -2841,7 +2855,7 @@ export function holdAcross(from, to, at = null) {
  * @returns {Reading | null}
  */
 export function readAt(view) {
-  const c = centreAt(view);
+  const top = seenTop(), c = centreAt(view, top);
   for (const d of REC.docs()) {
     if (d.from < 0 || d.system || !isShown(d.addr) || !holds(docBox(d.addr), c) || !holds(shapeIn(d), c)) continue;
     const f = foldOf(d);
@@ -2849,7 +2863,7 @@ export function readAt(view) {
     const box = docBox(d.addr), p = { x: c.x - box.x, y: c.y - box.y }, pos = posIn(f, p.x, p.y);
     if (pos == null) continue;
     const at = placeIn(f, pos), width = lineOf(f, d.blocks, pos).width;
-    return { addr: d.addr, at: d.readAt, pos, width, ids: REC.identityOf(d.addr, pos, width), around: aroundOf(d, f, view), p, line: { x: at.x, y: at.y }, fs: f.fs, fit: fitKey() };
+    return { addr: d.addr, at: d.readAt, pos, width, ids: REC.identityOf(d.addr, pos, width), around: aroundOf(d, f, view), p, line: { x: at.x, y: at.y }, fs: f.fs, fit: fitKey(), top };
   }
   return null;
 }
@@ -2886,7 +2900,9 @@ function aroundOf(d, f, view) {
  * stands where the line read stood. Read under another fit than the one in
  * force (`Reading.fit`), the view's centre framed across the column that line
  * stands in as a landing frames it (`frameAcross`), at the em kept, the line
- * at its height. Null where the page holds none of that document's text: a
+ * at its height; below another bottom of the one line than it was read under
+ * (`Reading.top`), its height kept from the visible view's centre as it
+ * stands now. Null where the page holds none of that document's text: a
  * read must bring it first.
  * @param {{x: number, y: number, scale: number}} view
  * @param {Reading} r what it read
@@ -2896,10 +2912,10 @@ function aroundOf(d, f, view) {
 export function keptAt(view, r, to) {
   const addr = read.shown(r.addr), d = REC.has(addr) ? REC.doc(addr) : null;
   if (!d || d.from < 0) return null;
-  const f = renderedFold(d), now = placeIn(f, to), s = f.fs / r.fs, k = r.fs / f.fs, framed = r.fit !== fitKey();
-  if (!framed && now.x === r.line.x && now.y === r.line.y && s === 1) return view;
+  const f = renderedFold(d), now = placeIn(f, to), s = f.fs / r.fs, k = r.fs / f.fs, framed = r.fit !== fitKey(), lower = read.top() - r.top;
+  if (!framed && now.x === r.line.x && now.y === r.line.y && s === 1 && lower === 0) return view;
   const box = docBox(addr);
-  const a = { x: box.x + r.p.x, y: box.y + r.p.y };
+  const a = { x: box.x + r.p.x, y: box.y + r.p.y + lower / (2 * view.scale) };
   const across = framed ? frameAcross(addr, f, Math.max(0, now.column), f.fs * view.scale * k) + (a.x - view.x) / k : now.x + (r.p.x - r.line.x) * s;
   return reanchored(view, a, { x: box.x + across, y: box.y + now.y + (r.p.y - r.line.y) * s }, k);
 }
@@ -2937,7 +2953,8 @@ export function keptAt(view, r, to) {
  * mounted under it given the pointer as its scale asks — and the parts the
  * drag meets stand. The first frame after the press sets again what went
  * stale, gives or takes the pointer where the scale now asks, and places the
- * range the release took over the article set again.
+ * range the release took over the article set again. The one line's bottom
+ * it framed below is kept (`framedTop`).
  * @param {(addr: string) => boolean} [focused] whether a document is the walk's focused one: the one residue document of its cell that mounts, the first in the limit's order, and the one whose corner is a Tab stop (D5 K-57)
  */
 export function frame(focused = () => false) {
@@ -2991,6 +3008,7 @@ export function frame(focused = () => false) {
   last.mounted = spent;
   last.standing = 0; last.lines = 0;
   for (const rec of mounted.values()) { if (rec.banded) last.standing++; last.lines += rec.lines.size; }
+  framedTop = read.top();
 }
 
 /**
@@ -4397,10 +4415,10 @@ export function openStatement(addr, on = !openStatements.has(addr)) {
 /** does a draft's kept word's statement stand open in its corner (`openStatement`)? */
 export const statementOpen = (/** @type {string} */ addr) => openStatements.has(addr);
 
-/** unmount everything and take the corners, the held labels, the caret and the open statements down (a board change); a corner that held the focus hands it to the walk */
+/** unmount everything and take the corners, the held labels, the caret and the open statements down (a board change), the line's bottom it framed below forgotten; a corner that held the focus hands it to the walk */
 export function clear() {
   for (const a of [...mounted.keys()]) unmount(a);
-  hold = null;
+  hold = null; framedTop = NaN;
   owed = null;
   clearing = null;
   caret_ = null; caretMoved = false;

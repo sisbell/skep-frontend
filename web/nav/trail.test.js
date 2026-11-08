@@ -35,7 +35,7 @@ const addrs = () => T.all().map((x) => x.addr);
 /** a departure at the view n, which reads no passage, the walk in no document read */
 const at = (/** @type {number} */ n) => ({ view: v(n), reading: null, stood: null });
 /** what the view n reads: the line at its centre, its position n, one position wide, and the view around it, its text read at no known position */
-const readOf = (/** @type {number} */ n) => ({ addr: 'd', at: null, pos: n, width: 1, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], around: [{ pos: n, width: 1, prefix: 'd.0.1', ordinal: n }], p: { x: n, y: n }, line: { x: 0, y: n }, fs: 1 });
+const readOf = (/** @type {number} */ n) => ({ addr: 'd', at: null, pos: n, width: 1, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], around: [{ pos: n, width: 1, prefix: 'd.0.1', ordinal: n }], p: { x: n, y: n }, line: { x: 0, y: n }, fs: 1, top: 0 });
 /** a departure at the view n, which reads the passage at n, the walk standing there */
 const away = (/** @type {number} */ n) => ({ view: v(n), reading: readOf(n), stood: { addr: 'd', pos: n, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], of: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], end: null } });
 /** what an entry keeps of the departure from it: its view's x, what that view reads, where the walk stood */

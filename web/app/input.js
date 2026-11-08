@@ -39,7 +39,10 @@
 // trackpad's momentum never moves the camera the jump took; any other wheel
 // or pinch event, and the camera key's drag as it moves, takes the camera
 // over (N-GO's `takeOver`). A wheel schedules the walk's re-take, and the
-// camera key's drag re-takes as it ends (N-WALK's `retakeFromView`). Whether
+// camera key's drag re-takes as it ends (N-WALK's `retakeFromView`); it takes
+// down what stands on the one line until the next act, and leaves the line's
+// layout as it stands (L-LINE's `panned`), where a click is the reader's act
+// (L-LINE's `act`). Whether
 // a key made an act is never read here: a pointer's act opens a card without
 // the focus (D5 §4 rule 4).
 // A click acts on what is under the pointer, keyed on legibility. On the
@@ -252,7 +255,7 @@ export function attach(els) {
     e.preventDefault();
     if (dropped(e.timeStamp)) return;
     GO.takeOver();
-    LINE.act();
+    LINE.panned();
     const wantZoom = e.ctrlKey || e.metaKey;
     if (wantZoom) CAM.zoomAt(Math.exp(-e.deltaY * (e.ctrlKey && !e.metaKey ? 0.012 : 0.0022)), e.clientX, e.clientY);
     else CAM.panBy(-e.deltaX, -e.deltaY);

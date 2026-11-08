@@ -1,6 +1,7 @@
 // N-LEAP's test, on stand-ins of the box's elements whose focus lands where
 // the platform's would: the box as opened holds the current address and
-// takes the new one the line names as a landing changes it, while a box
+// takes the new one the line names as a landing changes it — one opened at
+// the levels the line's fold mark folds holding them until then — while a box
 // typed in or with a row chosen keeps its text and its rows and a closed box
 // is written nothing; an opening of the box standing with the caret leaves
 // it as it stands; a landing never closes the box, whose close then gives
@@ -85,6 +86,18 @@ test('the box as opened holds the current address, selected, its levels beneath 
   line = '1.0.2.0.9';
   LEAP.takeAddress();
   assert.deepEqual(shown(), { open: true, value: '1.0.2.0.9', selected: true, rows: ['1', '1.0.2', '1.0.2.0.9'] }, 'the new address, selected, its own levels beneath it');
+});
+
+test('a box opened at the levels the line\'s fold mark folds holds them while the line names the place it opened at, and takes the new address the line names once a landing changes it (issue #310\'s design decision: "The mark opens the address box at those levels")', () => {
+  LEAP.open('1.0.1');
+  assert.deepEqual(shown(), { open: true, value: '1.0.1', selected: true, rows: ['1', '1.0.1', '1.0.1.0.3'] }, 'the account the mark folds, selected, the levels of the place the line names beneath it, the folded one among them');
+  input.selected = null;
+  LEAP.takeAddress();
+  LEAP.takeAddress();
+  assert.deepEqual([input.value, input.selected], ['1.0.1', null], 'the line naming the document it opened at: the folded levels kept, nothing written');
+  line = '1.0.2.0.9';
+  LEAP.takeAddress();
+  assert.deepEqual(shown(), { open: true, value: '1.0.2.0.9', selected: true, rows: ['1', '1.0.2', '1.0.2.0.9'] }, 'a landing elsewhere: the new address the line names, selected');
 });
 
 test('each row\'s cells stand in their faces: its address the identifier\'s, a document\'s label the reading face\'s, a level\'s words the client\'s, a trail entry\'s number then its address, and its words its first line\'s (issue #16)', () => {

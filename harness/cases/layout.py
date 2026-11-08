@@ -378,8 +378,18 @@ any field.
 A WALK'S FOLDED MOMENT (issue #182's design decision: "It never yields when
 the line runs short"): a moment raised through the gate's door and folded by
 Esc stands as its segment of the one line, whole inside the line in a window
-WALK_PX wide while the acting-as segment before it is cut short, its act
-unfolding it, the shell told nothing.
+WALK_PX wide, the acting-as segment before it whole, the line taking another
+row, its act unfolding it, the shell told nothing.
+THE ONE LINE SHORT OF ROOM (issue #310's design decision: "The line never
+clips"): landed at a position of the first edition in windows LINE_ROWS_PX
+wide, the line on the step and the rows its layout holds — the address folded
+at the narrowest — every act, the board's field, the document's field, the
+strip and the marker inside the line and the window, no segment of it cut
+short, and every segment inside the window — marked with XFAIL_ACTING_WIDE
+while the acting-as segment, which has no compact form, is wider than a row;
+the strip's act showing its readout inside the window; and with the LEAP box
+open, then a reading scene, each of the line's parts the element found at its
+own centre.
 A STOP ONLY THE PANES' `compare` DRAWS, LEFT FROM AND RETURNED TO (FP-20,
 FP-21, FP-25, FP-34): a whole-document scene left from the stop at a band's
 clipped end, and from a stroke's button, by WHOLE BOARD, and returned to by
@@ -492,6 +502,12 @@ BELOW_MOUNT_EM, ABOVE_MOUNT_EM = 6.0, 7.0
 # its one width, wide enough for its acts and the segment's fields
 LINE_NARROW_PX = 600
 LABEL_TOL_PX = 0.5
+# the windows the one line is read short of room in (issue #310's design decision): a narrow split's, a phone's, and one
+# narrower than the address part at its widest whole, where the address folds
+LINE_ROWS_PX = (480, 375, 280)
+# the page issue the line's every segment standing inside these windows waits on
+XFAIL_ACTING_WIDE = ("issue #445: the acting-as segment has no compact form, so the session's words — some 600 px at the line's size on "
+                     "this machine — stand whole on a row of their own wider than the row, past the window's edge (web/line/line.js)")
 # how far above the one line's bottom the first edition's box's top stands at S3's mid-extents: its address's line, set at
 # the floor half a gutter below the top of its outline's first row, wholly under the line, then across the line's bottom edge
 UNDER_LINE_PX = (20, 6)
@@ -2992,8 +3008,8 @@ def address_dots(ctx, r):
     return {'px': v['px'], 'weight': v['weight'], 'dots': len(dots), 'min_gap_px': min((g for x in dots for g in x['gaps'] if g is not None), default=None)}
 
 
-LINE_LABEL_JS = '''((probes) => { const b = document.querySelector('#line button.address'), lab = b && b.querySelector('.label');
-  if (!b || !lab) return null;
+LINE_LABEL_JS = '''((probes) => { const b = document.querySelector('#line button.address'), lab = b && b.querySelector('.label'), part = b && b.closest('.address-part');
+  if (!b || !lab || !part) return null;
   const q = (e) => { const x = e.getBoundingClientRect(); return {x: x.left, y: x.top, w: x.width, h: x.height}; }, box = lab.getBoundingClientRect(), words = [];
   const w = document.createTreeWalker(lab, NodeFilter.SHOW_TEXT), range = document.createRange();
   for (let n = w.nextNode(); n; n = w.nextNode()) for (const m of n.data.matchAll(/\\S+/g)) {
@@ -3002,7 +3018,7 @@ LINE_LABEL_JS = '''((probes) => { const b = document.querySelector('#line button
   // the widths the label's words would take, in its face at its size, set apart from it
   const widths = probes.map((t) => { const e = document.createElement('span'); e.textContent = t; e.style.cssText = 'position:absolute;visibility:hidden;white-space:pre';
     e.style.font = getComputedStyle(lab).font; document.body.appendChild(e); const x = e.getBoundingClientRect().width; e.remove(); return x; });
-  return {button: q(b), label: q(lab), text: lab.textContent, words, place: q(b.querySelector('b')), slot: q(b.querySelector('.slot')), marker: q(b.querySelector('.marker')),
+  return {button: q(part), label: q(lab), text: lab.textContent, words, place: q(b.querySelector('b')), slot: q(part.querySelector('.slot')), marker: q(part.querySelector('.marker')),
           vw: window.innerWidth, address: window.__skep.line().address, widths}; })'''
 
 
@@ -3022,7 +3038,7 @@ def line_label_holds(ctx, r):
     labels give way before fields"): landed at the reading size in an edition of the claimant's whose first line's two first words
     fit the room the address segment leaves its label, the segment's document field is followed by its label — the page's lead for
     it, whole or cut on a word — then its position; in a window LINE_NARROW_PX wide the label gives way a whole word at a time —
-    every word it shows whole inside it — while every field stands whole inside the segment and the window; its figures"""
+    every word it shows whole inside it — while every field stands whole inside the address part and the window; its figures"""
     places = ctx.js('window.__skep.model.places()')
     tried, chosen, wide, lead = [], None, None, ''
     for doc in [DOC] + [p['doc'] for p in places if p['account'] == account_of(DOC) and not p.get('system') and p['kind'] == 'edition' and len((p['label'] or '').split()) >= 3][:10]:
@@ -3058,10 +3074,10 @@ def line_label_holds(ctx, r):
     top = narrow['label']['y'] if narrow else 0
     on = [x for x in (narrow or {}).get('words', []) if abs(x['top'] - top) <= 2]
     cut = [x for x in on if x['lines'] > 1 or x['right'] > narrow['label']['x'] + narrow['label']['w'] + LABEL_TOL_PX]
-    gave = bool(narrow) and narrow['label']['w'] < wide['label']['w'] - LABEL_TOL_PX
+    gave = bool(narrow) and bool(wide) and narrow['label']['w'] < wide['label']['w'] - LABEL_TOL_PX
     r.check(fields and not cut and gave,
-            f'a {LINE_NARROW_PX} px window: the line\'s document label gives way first, a whole word at a time — every word it shows whole inside it — and every field stands whole inside the segment and the window (issue #23)',
-            {'wide_label_w': wide['label']['w'], 'narrow': narrow and {k: narrow[k] for k in ('button', 'label', 'place', 'slot', 'marker', 'vw')}, 'shown': [x['word'] for x in on], 'cut': cut})
+            f'a {LINE_NARROW_PX} px window: the line\'s document label gives way first, a whole word at a time — every word it shows whole inside it — and every field stands whole inside the address part and the window (issues #23, #310)',
+            {'wide_label_w': wide and wide['label']['w'], 'narrow': narrow and {k: narrow[k] for k in ('button', 'label', 'place', 'slot', 'marker', 'vw')}, 'shown': [x['word'] for x in on], 'cut': cut})
     return {'chosen': chosen, 'lead': lead, 'shown': shown, 'narrow_shown': [x['word'] for x in on], 'narrow_label_w': narrow and narrow['label']['w'], 'tried': tried}
 
 def walk_holds(ctx, r):
@@ -3069,9 +3085,10 @@ def walk_holds(ctx, r):
     is there … It never yields when the line runs short"): a label box owed an answer raised through the gate's door as the
     shell's event raises one, over nothing standing — whole, its face standing; Esc folds it into its segment of the one
     line, naming the walk and its step and that it waits on the reader, its face gone and the shell told nothing. In a
-    window WALK_PX wide, too narrow for the line's every segment, the segment stands whole inside the line while the
-    acting-as segment before it is cut short; its act unfolds the moment, the focus on its first words, and Esc folds it
-    again. The moment is the gate's own, which no walk waits on and the next case's fresh page leaves behind; its figures"""
+    window WALK_PX wide, too narrow for the line's every part in one row, the segment stands whole inside the line, the
+    acting-as segment before it whole too, the line taking another row (issue #310); its act unfolds the moment, the
+    focus on its first words, and Esc folds it again. The moment is the gate's own, which no walk waits on and the next
+    case's fresh page leaves behind; its figures"""
     walk, step = 'gate-182', 'name this device'
     m = {'id': 'gate-moment-182', 'kind': 'label', 'data': {'title': step, 'statements': [], 'default': None}, 'walk': walk, 'board': None, 'answerable': True}
     ctx.js('window.__skep.leap.close()')
@@ -3094,10 +3111,11 @@ def walk_holds(ctx, r):
         ctx.js('new Promise((r) => setTimeout(r, 300))')  # the line redraws on its own cadence, every 120 ms
         seen = ctx.js('''(() => { const line = document.getElementById('line'), q = (e) => { if (!e) return null; const b = e.getBoundingClientRect();
             return {left: b.left, right: b.right, width: b.width, over: e.scrollWidth - e.clientWidth, text: e.textContent}; };
-          return {line: q(line), walk: q(line.querySelector('.seg.walk')), acting: q(line.querySelector('.seg.acting'))}; })()''')
+          return {line: q(line), walk: q(line.querySelector('.seg.walk')), acting: q(line.querySelector('.seg.acting')), layout: window.__skep.line().layout}; })()''')
         line, seg, acting = seen['line'], seen['walk'], seen['acting']
-        r.check(bool(seg) and seg['text'] == words and seg['over'] <= 0 and seg['right'] <= line['right'] + 0.5 and bool(acting) and acting['over'] > 0,
-                f'a {WALK_PX} px window, short of room: the walk\'s segment stands whole inside the one line, its words uncut, the acting-as segment before it cut short (issue #182: "It never yields when the line runs short")',
+        r.check(bool(seg) and seg['text'] == words and seg['over'] <= 0 and seg['right'] <= line['right'] + 0.5
+                and bool(acting) and acting['over'] <= 1 and acting['right'] <= line['right'] + 0.5 and len((seen.get('layout') or {}).get('rows') or []) > 1,
+                f'a {WALK_PX} px window, short of room: the walk\'s segment stands whole inside the one line, its words uncut, the acting-as segment before it whole, the line taking another row (issues #182: "It never yields when the line runs short", #310)',
                 seen)
         ctx.js("document.querySelector('#line .seg.walk').click()")
         ctx.frames(2)
@@ -3111,6 +3129,87 @@ def walk_holds(ctx, r):
     r.check('answer' not in calls and 'cancel' not in calls and ctx.js('window.__skep.moments.folded()') == [{'key': walk + '|', 'words': words}],
             'folded, unfolded and folded again, the moment told the shell nothing — no answer, no cancel — and stands folded', sorted(set(calls)))
     return {'window': WALK_PX, 'line': seen['line'], 'walk': seen['walk'], 'acting': seen['acting']}
+
+
+# the one line as it stands (`line_rows_hold`; the guest case's): its rect and the window's width, its acts and the address
+# part's fields — each whole inside the line and the window or not — the segments cut short and those past the window's
+# edge, the layout it holds, and whether its acts stand first in its first row
+LINE_PARTS_JS = '''(() => { const line = document.getElementById('line'), q = (e) => { const b = e.getBoundingClientRect(); return {x: b.left, y: b.top, w: b.width, h: b.height}; };
+  const L = q(line), vw = window.innerWidth;
+  const inside = (b) => b.w > 0 && b.h > 0 && b.x >= -0.5 && b.x + b.w <= vw + 0.5 && b.x >= L.x - 0.5 && b.x + b.w <= L.x + L.w + 0.5 && b.y >= L.y - 0.5 && b.y + b.h <= L.y + L.h + 0.5;
+  const btn = line.querySelector('button.seg.address'), part = btn && btn.closest('.address-part');
+  const els = {back: line.querySelector('[data-act=back]'), forward: line.querySelector('[data-act=forward]'), trail: line.querySelector('[data-act=trail]'), signin: line.querySelector('[data-act=signin]'),
+               address: btn, place: btn && btn.querySelector('b'), board: part && part.querySelector('.board'), fold: line.querySelector('button.fold'),
+               strip: line.querySelector('button.slot[data-act=strip]'), marker: part && part.querySelector('.marker')};
+  const fields = {};
+  for (const [k, e] of Object.entries(els)) fields[k] = e ? {inside: inside(q(e)), text: e.textContent, rect: q(e)} : null;
+  const segs = [...line.querySelectorAll('.seg')].map((e) => ({cls: e.className, over: e.scrollWidth - e.clientWidth, rect: q(e), text: e.textContent.slice(0, 60)}));
+  const first = line.querySelector('.row > :first-child');
+  return {line: L, vw, fields, cut: segs.filter((x) => x.over > 1), past: segs.filter((x) => x.rect.x + x.rect.w > vw + 0.5 || x.rect.x < -0.5),
+          layout: window.__skep.line().layout, actsFirst: !!first && first.classList.contains('acts') && first.parentElement === line.firstElementChild}; })()'''
+
+# each of the one line's parts, and whether the element found at the centre of what of it the window shows is inside it
+# (`line_rows_hold`)
+LINE_HITS_JS = '''(() => [...document.querySelectorAll('#line .row > :not(.sep)')].map((p) => { const b = p.getBoundingClientRect(), x = (Math.max(b.left, 0) + Math.min(b.right, window.innerWidth)) / 2, y = b.top + b.height / 2;
+  const hit = document.elementFromPoint(x, y); return {part: p.className, at: [x, y], found: !!hit && p.contains(hit), hit: hit ? (hit.id || hit.className || hit.tagName) : null}; }))()'''
+
+
+def line_rows_hold(ctx, r):
+    """THE ONE LINE SHORT OF ROOM (issue #310's design decision: "The line never clips … The line's acts … stand first …
+    An address wider than a row folds the levels between its board and its deepest level into one mark"): in each window
+    LINE_ROWS_PX wide, landed at the window run's position in the first edition, the line stands on the step and the rows
+    its layout holds — folded in the narrowest — and every act, the board's field, the document's field, the strip and the
+    marker stand whole inside the line and the window, no segment of it cut short; every segment stands inside the window
+    — the acting-as segment, which has no compact form, whole on a row of its own wider than the row, marked with
+    XFAIL_ACTING_WIDE; the strip's act there shows its readout inside the window; and with the LEAP box open, then with a
+    reading scene open, each of the line's parts is the element found at the centre of what of it the window shows,
+    neither standing over it. Its figures"""
+    figures = {}
+    was = ctx.resize(LINE_ROWS_PX[0], 900)
+    try:
+        for w in LINE_ROWS_PX:
+            ctx.resize(w, 900)
+            ctx.settle()
+            ctx.leap(DOC, WINDOW[0])
+            ctx.js('new Promise((r) => setTimeout(r, 300))')  # the line redraws on its own cadence, every 120 ms
+            v = ctx.js(LINE_PARTS_JS)
+            f, lay = v['fields'], v.get('layout') or {}
+            need = ['back', 'forward', 'trail', 'address', 'place', 'strip', 'marker'] + (['board', 'fold'] if lay.get('step') == 4 else [])
+            missing = [k for k in need if not (f.get(k) or {}).get('inside')]
+            folded = lay.get('step') == 4 and bool(f.get('board')) and f['board']['text'].startswith('1') and bool(f.get('fold')) and (f.get('place') or {}).get('text', '').endswith(DOC)
+            r.check(v['actsFirst'] and not missing and not v['cut'] and (folded if w == LINE_ROWS_PX[-1] else lay.get('step') == 3),
+                    f'a {w} px window: the one line on its layout\'s step {lay.get("step")} in {len(lay.get("rows") or [])} rows — its acts first, every act, the board\'s field, the document\'s field, the strip and the marker whole inside the line and the window, no segment cut short{", the account folded into its mark" if w == LINE_ROWS_PX[-1] else ""} (issue #310)',
+                    {'layout': lay, 'missing': missing, 'cut': v['cut'], 'fields': {k: x and {'inside': x['inside'], 'text': x['text'][:40]} for k, x in f.items()}, 'line': v['line']})
+            r.check(not v['past'], f'a {w} px window: every segment of the one line inside the window (issue #310)', {'past': v['past'], 'vw': v['vw']}, xfail=XFAIL_ACTING_WIDE)
+            ctx.js("document.querySelector('#line button.slot[data-act=strip]') && document.querySelector('#line button.slot[data-act=strip]').click()")
+            ctx.frames(2)
+            readout = ctx.js('''(() => { const e = document.querySelector('#line .seg.transient[data-string="strip"]'); if (!e) return null; const b = e.getBoundingClientRect();
+              return {text: e.textContent, inside: b.width > 0 && b.left >= -0.5 && b.right <= window.innerWidth + 0.5 && b.bottom <= document.getElementById('line').getBoundingClientRect().bottom + 0.5, over: e.scrollWidth - e.clientWidth}; })()''')
+            ctx.js('window.__skep.lineAct()')
+            ctx.frames(2)
+            r.check(bool(readout) and readout['inside'] and readout['over'] <= 1 and readout['text'].startswith('position %d' % WINDOW[0]),
+                    f'a {w} px window: the strip\'s act shows the position\'s readout, whole inside the line and the window (issue #310: "its readout opens on the strip\'s act")', readout)
+            covered = {}
+            ctx.js('window.__skep.leap.open()')
+            ctx.frames(2)
+            covered['leap'] = ctx.js(LINE_HITS_JS)
+            ctx.js('window.__skep.leap.close()')
+            ctx.frames(2)
+            ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(VERSIONED + '.1'), json.dumps(VERSIONED)))
+            wait_for(ctx, 'window.__skep.scene.isOpen()')
+            opened = ctx.js('window.__skep.scene.isOpen()')
+            covered['scene'] = ctx.js(LINE_HITS_JS) if opened else None
+            ctx.js('window.__skep.scene.close()')
+            ctx.frames(2)
+            under = {k: [x for x in hits if not x['found']] for k, hits in covered.items() if hits is not None}
+            r.check(opened and all(covered.values()) and not any(under.values()),
+                    f'a {w} px window: with the LEAP box open, then a reading scene, each of the one line\'s parts is the element found at its own centre — neither stands over the line\'s rows (issue #310)',
+                    {'scene_opened': opened, 'covered': under, 'parts': len(covered.get('leap') or [])})
+            figures[w] = {'layout': lay, 'readout': readout and readout['text'][:60]}
+    finally:
+        ctx.resize(*was)
+        ctx.settle()
+    return figures
 
 
 def trail_view(ctx):
@@ -3486,7 +3585,7 @@ def kept_holds(ctx, r):
       const sep = seg && seg.previousElementSibling, before = sep && sep.previousElementSibling;
       const held = K.PUMP.kept(a);
       return {words: held && d.linksRead ? K.ST.t('L.kept.links', {when: K.ST.lastRead(held.since)}) : null, kept: !!held, since: held ? held.since : null, named: window.__skep.named(),
-        seg: seg && {text: seg.textContent, id: seg.dataset.string, beside: !!before && before.matches('button.address')},
+        seg: seg && {text: seg.textContent, id: seg.dataset.string, beside: !!before && before.matches('.address-part')},
         corner: c && {kept: k ? {text: k.textContent, id: k.dataset.string, last: c.lastElementChild === k} : null, top: c.getBoundingClientRect().top, items: [...c.children].filter((e) => e !== k).map(box)},
         mirror: li && {kept: li.dataset.kept || '', text: li.textContent}}; })(%s)''' % json.dumps(DOC)
     # every frame watched from now until the one whose model holds the text set again: what stands in that frame
@@ -4523,6 +4622,7 @@ def run(ctx):
     r.figures['kept_label'] = kept_label_holds(ctx, r)
     r.figures['longest'] = longest_holds(ctx, r)
     r.figures['walk'] = walk_holds(ctx, r)
+    r.figures['line_rows'] = line_rows_hold(ctx, r)
     r.figures['scene_strokes'] = scene_strokes_hold(ctx, r)
     r.figures['scene_return'] = scene_return_holds(ctx, r)
     r.figures['scene_pane_return'] = scene_pane_return_holds(ctx, r)

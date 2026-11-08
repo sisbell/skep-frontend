@@ -29,10 +29,12 @@
 // `--char-w`), the root's size as the reader's own settings render it, the
 // reading size 1.0625 of it (P-CAM's `setRoot`) — and the viewport fit again;
 // a face that arrives later is a re-set (FP-8, FP-12): the type measured
-// again, and T-LAYER, P-RENDER and the scene set again from it
-// (`refaced`). Then the launch (`launch`): the launch
+// again, and T-LAYER, P-RENDER, the scene and the one line's layout set
+// again from it (`refaced`). Then the launch (`launch`): the launch
 // frame HOME, the trail's first entry (foundations §2.2; W-01; N-GO's
-// `launch`), or with no board the walk's root, saying why, and no entry; a
+// `launch`), or with no board the walk's root, saying why, and no entry, and
+// the one line's first layout (L-LINE's `fit`), set again at every change of
+// the window's size; a
 // board the list read again finds launches the same way (M-PUMP's `onOpen`).
 // What a module reads of an owner above it is handed in once as the page
 // boots (FP-10, FP-11): T-LAYER's readers (the selection, the walk's focus,
@@ -197,7 +199,7 @@ function typeSet() {
 }
 
 /** a face that arrived after the first layout (see the head): the type measured again, and every surface that measured words set again from it */
-function refaced() { typeSet(); LAYER.refaced(); RENDER.refaced(); SCENE.refaced(); }
+function refaced() { typeSet(); LAYER.refaced(); RENDER.refaced(); SCENE.refaced(); LINE.refaced(); }
 
 function loop(/** @type {number} */ now) {
   requestAnimationFrame(loop);
@@ -275,14 +277,15 @@ function whereIs(/** @type {EventTarget | null} */ target) {
  * the index lists (P-CAM's `setDeepest`), then the launch frame (N-GO's
  * `launch`) — HOME, the trail's first entry, where a board is held; the
  * walk's root, saying why, where none is — the platform's focus on the walk's
- * element with the ring out (rule 21). At boot, and where the list read again
- * opens a board the boot found none of (M-PUMP's `onOpen`).
+ * element with the ring out (rule 21); then the one line's first layout
+ * (L-LINE's `fit`). At boot, and where the list read again opens a board the
+ * boot found none of (M-PUMP's `onOpen`).
  */
 async function launch() {
   let deepest = 0; for (const p of REC.places()) if (!p.system) deepest = Math.max(deepest, depthOfDoc(p.doc));
   CAM.setDeepest(deepest); bootInfo.deepestDepth = deepest;
   await GO.launch();
-  LINE.render(true);
+  LINE.fit();
 }
 
 async function boot() {
@@ -302,12 +305,12 @@ async function boot() {
     { end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, at, told) => FACES.floating(far, at, null, told), held: FACES.held } });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
   FIND.attach({ box: el('find'), input: /** @type {HTMLInputElement} */ (el('findq')), count: el('findcount'), prev: /** @type {HTMLButtonElement} */ (el('findprev')), next: /** @type {HTMLButtonElement} */ (el('findnext')), note: el('findnote') });
-  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed(), panes: SCENE.keptPanes, paneLift: SCENE.paneLift });
+  LINE.attach(el('line'), { open: (byKey, at) => LEAP.open(at), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed(), panes: SCENE.keptPanes, paneLift: SCENE.paneLift });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a), vanished: GO.vanished, atop: FIND.atop, newer: GO.newerAt });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn, first: LAYER.firstOfFar });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords() });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
-  window.addEventListener('resize', resize); resize();
+  window.addEventListener('resize', () => { resize(); LINE.fit(); }); resize();
   document.addEventListener('copy', (e) => { const b = REC.board(); LAYER.onCopy(e, b ? b.origin : ''); });
   window.addEventListener('keydown', async (e) => {
     // a chord the LEAP box closed on acts as anywhere (M-1): read at the focus the close returned, not at the box

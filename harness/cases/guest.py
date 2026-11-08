@@ -18,7 +18,11 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     venue, its one act sign in standing — never pressed: what it does for a
     guest who has not tried is the design's to rule — and no acting-as
     words, no key-present claim, no label of any key the device's store
-    holds;
+    holds; and, read once the drafts are, in windows LINE_ROWS_PX wide,
+    sign in among its acts at the line's start, every act and the address's
+    fields whole inside the line and the window, no segment cut short, and
+    every segment inside the window — in the narrowest marked with
+    XFAIL_ACTING_WIDE, the guest line whole wider than its row (issue #310);
 (c) HOME the board's extent (R92 rider (c)): the launch's focus the board,
     the trail's first entry, the address the clamp's line; the LEAP box
     listing no HOME level; Mod+Shift+H from a document returning there;
@@ -148,6 +152,7 @@ from collections import Counter
 
 from . import CLAUSE_READING, DOC, FAR_LEAP, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, WITHHELD, Result, item_words, unit_span
 from .keys import copied, member_of, placed_at, placed_at_box, placed_under, rebuilt_away, scene_set, stands_at
+from .layout import LINE_PARTS_JS, LINE_ROWS_PX, XFAIL_ACTING_WIDE
 
 OWNER = '1.0.1'
 # a stretch of the owner's bytes over the run, in characters with white space folded, that the guest's page must never hold
@@ -555,6 +560,32 @@ def run(ctx):
     ctx.view_doc_px(DOC, 120)
     seen['extents'] = draws_no_draft('the extents about the first edition')
     r.figures['views'] = seen
+    # (b) the guest's line short of room (issue #310's design decision: "The line's acts — Back, Forward, and a guest's
+    # 'sign in' … — stand first, at the line's start. They never yield or shorten"), read once the drafts are
+    rows = {}
+    was = ctx.resize(LINE_ROWS_PX[0], 900)
+    try:
+        for w in LINE_ROWS_PX:
+            ctx.resize(w, 900)
+            ctx.settle()
+            ctx.leap(DOC, None)
+            ctx.js('new Promise((r) => setTimeout(r, 300))')  # the line redraws on its own cadence, every 120 ms
+            v = ctx.js(LINE_PARTS_JS)
+            f, lay = v['fields'], v.get('layout') or {}
+            need = ['back', 'forward', 'trail', 'signin', 'address', 'place', 'marker'] + (['board', 'fold'] if lay.get('step') == 4 else [])
+            missing = [k for k in need if not (f.get(k) or {}).get('inside')]
+            first = ctx.js('!!document.querySelector("#line > .row:first-child > .acts [data-act=signin]")')
+            r.check(v['actsFirst'] and first and not missing and not v['cut'],
+                    f'(b) a {w} px window: the guest\'s line on its layout\'s step {lay.get("step")} in {len(lay.get("rows") or [])} rows — sign in among its acts at the line\'s start, every act and the address\'s fields whole inside the line and the window, no segment cut short (issue #310)',
+                    {'layout': lay, 'missing': missing, 'cut': v['cut'], 'sign_in_first': first, 'fields': {k: x and {'inside': x['inside'], 'text': x['text'][:40]} for k, x in f.items()}})
+            # the guest line whole is some 320 px at the line's size on this machine: wider than the narrowest window's row
+            r.check(not v['past'], f'(b) a {w} px window: every segment of the guest\'s line inside the window (issue #310)', {'past': v['past'], 'vw': v['vw']},
+                    xfail=XFAIL_ACTING_WIDE if w == LINE_ROWS_PX[-1] else None)
+            rows[w] = lay
+    finally:
+        ctx.resize(*was)
+        ctx.settle()
+    r.figures['line_rows'] = rows
 
     # (e) the window run at 1467, withheld
     ctx.leap(DOC, WINDOW[0])

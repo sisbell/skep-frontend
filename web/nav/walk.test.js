@@ -1429,6 +1429,79 @@ test('while the board lags past a second its mirror item carries the clause the 
   } finally { globalThis.document = platform; }
 });
 
+/**
+ * A mirror laid out as the panel lays it out: its items one under another below the panel's top, each a row of ROW_PX
+ * until its words are written again in place, which then take GROWN_ROWS rows; its window `clientHeight` px tall, its
+ * scroll its `scrollTop`
+ */
+function laidOutMirror(/** @type {number} */ clientHeight) {
+  const ROW_PX = 20, GROWN_ROWS = 3, TOP = 500;
+  /** @typedef {{attrs: Record<string, string>, dataset: Record<string, string>, rows: number, innerHTML: string, getBoundingClientRect: () => {top: number, height: number}}} Laid */
+  /** @type {Laid[]} */
+  let items = [];
+  const mirror = {
+    tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} }, clientTop: 0, clientHeight, scrollTop: 0,
+    getBoundingClientRect: () => ({ top: TOP, height: clientHeight }),
+    get innerHTML() { return ''; },
+    set innerHTML(/** @type {string} */ html) { items = [...html.matchAll(/<li\b([^>]*)>(.*?)<\/li>/g)].map((m) => laid(m[1], m[2])); },
+    querySelectorAll: (/** @type {string} */ sel) => (sel === 'li[role="treeitem"]' ? items : []),
+  };
+  /** an item as the rebuild writes it, standing below every item before it */
+  function laid(/** @type {string} */ attrsHTML, /** @type {string} */ words) {
+    /** @type {Record<string, string>} */
+    const attrs = Object.fromEntries([...attrsHTML.matchAll(/ ([\w-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
+    let html = words;
+    /** @type {Laid} */
+    const it = {
+      attrs, dataset: { i: attrs['data-i'], kept: attrs['data-kept'], state: attrs['data-state'] }, rows: 1,
+      get innerHTML() { return html; },
+      set innerHTML(/** @type {string} */ w) { html = w; it.rows = GROWN_ROWS; },
+      getBoundingClientRect: () => {
+        let top = TOP - mirror.scrollTop;
+        for (const x of items) { if (x === it) break; top += x.rows * ROW_PX; }
+        return { top, height: it.rows * ROW_PX };
+      },
+    };
+    return it;
+  }
+  /** the item for `addr`, where in the panel's window it stands: its top and bottom edges from the window's top */
+  const at = (/** @type {string} */ addr) => {
+    const it = items.find((x) => x.attrs['data-addr'] === addr), r = it ? it.getBoundingClientRect() : null;
+    return r && { top: r.top - TOP, bottom: r.top - TOP + r.height };
+  };
+  return { mirror, at };
+}
+
+test('words written again in place keep the current item a row the panel shows where the panel\'s window held it whole — an item above it taller, or its own — and leave the panel\'s scroll where the reader\'s scroll left the current item outside the window (D5 §4 rule 8; FP-20)', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  const { mirror, at } = laidOutMirror(40);
+  const kept = [D, E].map((a) => ({ addr: a, members: REC.doc(a).members, ended: REC.doc(a).ended }));
+  /** a newer version of a document counted: its item's state changed, so written again in place */
+  const counted = (/** @type {string} */ addr) => REC.takeMembers(addr, (REC.doc(addr).members || 1) + 1);
+  try {
+    // at mid, the walk on E, D's item above it, both inside the window
+    const b = docBox(D);
+    CAM.set({ x: b.x + b.w / 2, y: b.y + b.h / 2, scale: 120 / DOC_W });
+    WALK.attach(/** @type {any} */ (mirror));
+    await WALK.focusTo(E, null);
+    assert.deepEqual([WALK.current()?.addr, at(D), at(E)], [E, { top: 0, bottom: 20 }, { top: 20, bottom: 40 }], 'E current, whole in the window below D');
+    counted(D);
+    WALK.markKept();
+    assert.deepEqual([at(D)?.bottom, at(E), mirror.scrollTop], [20, { top: 20, bottom: 40 }, 40], 'D written again three rows tall: the panel scrolled by what it grew, E whole in the window still');
+    counted(E);
+    WALK.markKept();
+    assert.deepEqual([at(E), mirror.scrollTop], [{ top: -20, bottom: 40 }, 80], 'E\'s own words written again: its bottom brought inside the window, the least scroll');
+    mirror.scrollTop = 0;
+    counted(D);
+    WALK.markKept();
+    assert.deepEqual([at(E)?.top, mirror.scrollTop], [60, 0], 'the reader\'s scroll left E outside the window: D written again, the scroll stands');
+  } finally {
+    for (const k of kept) REC.takeMembers(k.addr, /** @type {number} */ (k.members), k.ended);
+    globalThis.document = platform;
+  }
+});
+
 test('the page\'s own death takes the mirror down at once where the view stood on nothing — no item quoting what the dead session read, the draft it could read listed as its cover, the editions read as published listed still — and takes the walk again on the span it stood on once its document is read at the guest\'s class (FP-23; issues #160, #350)', async () => {
   const platform = globalThis.document;
   globalThis.document = /** @type {any} */ ({ activeElement: null });

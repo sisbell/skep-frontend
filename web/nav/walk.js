@@ -128,7 +128,9 @@
 // clause its kept sign shows while the origin's edition claims stand so
 // (`claimsKeptIn`), and the board's while it lags so (`boardKeptIn`), each
 // item marked again in place on each dirty frame where its clause or a
-// document's state changed (`markKept`); a mark's stop by its count,
+// document's state changed (`markKept`), the current item, where the panel's
+// window held it whole, held there as words above it or its own change
+// height; a mark's stop by its count,
 // the words the mark shows (ST's `markCount`), its item saying a list opens
 // on it (`aria-haspopup`); a link's item names its far end as its tail does
 // (LK's `farLabel`), and says BM-HELD's line where the
@@ -575,12 +577,18 @@ const stateOf = (/** @type {Node} */ n) => LAYER.mirrorState(REC.doc(n.addr));
  * frame: a clause appears once its read again has stood a second and lifts
  * in the frame its read sets it, and a document's item says what its corner
  * says in the frame its corner says it — its chain counted again, the
- * board's lag begun or ended — between the walk's moves.
+ * board's lag begun or ended — between the walk's moves. Words written again
+ * change an item's height: the current item, where the panel's window held it
+ * whole, is brought inside it again (`showInPanel`), and where the reader's
+ * scroll had left it outside, the scroll stands.
  */
 export function markKept() {
   if (!mirrorEl || typeof mirrorEl.querySelectorAll !== 'function') return;
   const total = siblings.length, runs = PUMP.keptAll().origins.length > 0;
-  for (const li of /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[role="treeitem"]')])) {
+  const items = /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[role="treeitem"]')]);
+  const current = items.find((li) => Number(li.dataset.i) === idx) || null, held = !!current && inPanel(current);
+  let wrote = false;
+  for (const li of items) {
     const i = Number(li.dataset.i), n = siblings[i];
     // a span's item carries a clause only while an origin's edition claims stand kept, or carries one still
     if (!n || (n.kind !== 'document' && n.kind !== 'board' && (n.kind !== 'block' || (!runs && !li.dataset.kept)))) continue;
@@ -589,7 +597,9 @@ export function markKept() {
     li.dataset.kept = words;
     if (state !== null) li.dataset.state = state;
     li.innerHTML = named(n, i, total).html;
+    wrote = true;
   }
+  if (wrote && current && held) showInPanel(current);
 }
 
 /** does Back's light stand on a node (see the head): a span holding a stretch of the passage carried, or the link's end the follow was made at — at a withheld run, where LK draws that end there, the run's item */
@@ -721,11 +731,30 @@ export function focusItem(opts = {}) {
  * @param {HTMLElement} item
  */
 function showInPanel(item) {
-  if (!mirrorEl || typeof item.getBoundingClientRect !== 'function') return;
+  const at = placeInPanel(item);
+  if (!at || !mirrorEl) return;
+  if (at.top < 0) mirrorEl.scrollTop += at.top;
+  else if (at.bottom > mirrorEl.clientHeight) mirrorEl.scrollTop += at.bottom - mirrorEl.clientHeight;
+}
+
+/**
+ * Where an item stands in the panel's scroll window: its top and bottom
+ * edges measured from the panel's padding box, in px; null where the platform
+ * lays it out nowhere.
+ * @param {HTMLElement} item
+ * @returns {{top: number, bottom: number} | null}
+ */
+function placeInPanel(item) {
+  if (!mirrorEl || typeof item.getBoundingClientRect !== 'function') return null;
   const panel = mirrorEl.getBoundingClientRect(), r = item.getBoundingClientRect();
-  const top = r.top - (panel.top + mirrorEl.clientTop), bottom = top + r.height;
-  if (top < 0) mirrorEl.scrollTop += top;
-  else if (bottom > mirrorEl.clientHeight) mirrorEl.scrollTop += bottom - mirrorEl.clientHeight;
+  const top = r.top - (panel.top + mirrorEl.clientTop);
+  return { top, bottom: top + r.height };
+}
+
+/** is an item inside the panel's scroll window, whole? */
+function inPanel(/** @type {HTMLElement} */ item) {
+  const at = placeInPanel(item);
+  return !!at && !!mirrorEl && at.top >= 0 && at.bottom <= mirrorEl.clientHeight;
 }
 
 /** the mirror's item i's name (the gate reads it) */

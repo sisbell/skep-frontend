@@ -2,7 +2,8 @@
 // D5 §1.4). Layer 2, engine-bound. State (FP-10): open or closed, the rows,
 // the selected row, whether ↓/↑ has carried the choice into the rows,
 // whether the box stands as opened — nothing typed in it, no row chosen —
-// the status region's markup as last written, whether the rows stand over an
+// and the address the line named as it opened (`openedAt`), the status
+// region's markup as last written, whether the rows stand over an
 // index a change of class dropped, and the current address's reader, the
 // line's. A control that rebuilds itself from its state (FP-13).
 // Opened (`open`), the box holds the current address, selected, and lists
@@ -32,7 +33,8 @@
 // (`open`) — and its close then gives the focus to that surface where it
 // stands, else to the walk's element; the box as opened takes the address
 // the line names as that changes (`takeAddress`), so it never holds a place
-// the line does not show (K-30). The box stands over the overlay and the
+// the line does not show (K-30) — opened by the line's fold mark at the
+// levels it folds, it holds them until then. The box stands over the overlay and the
 // notice below it, so nothing shown while the reader types in it covers its
 // input or its rows (FP-36). The box is gone with
 // the next act (M-1): a chord inside it acts as anywhere, the box closed
@@ -93,8 +95,10 @@ let rows = [];
 let sel = -1;
 /** ↓ or ↑ has carried the choice into the rows — set only where a row stands, so `sel` names one */
 let inRows = false;
-/** the box stands as opened: nothing typed in it, no row chosen — it holds the current address the line names (`takeAddress`) */
+/** the box stands as opened: nothing typed in it, no row chosen — it holds the address it opened at until the line names another (`takeAddress`) */
 let asOpened = false;
+/** the address the line named as the box opened, or as it last took one (`takeAddress`) */
+let openedAt = '';
 /** the status region's markup as last written */
 let noteHTML = '';
 /** the rows stand computed over an index a change of the page's class dropped: computed again once the new class's index answers (`takeIndex`) */
@@ -168,7 +172,8 @@ function comboState() {
 }
 
 /**
- * Open the box holding the current address, selected (K-30) — a card or
+ * Open the box holding the current address, selected (K-30) — or the
+ * address an act hands in, the levels the line's fold mark folds — a card or
  * scene still reading ended first, what stands staying (O-HOST's opening);
  * its input takes the focus, the opener remembered by the focus's owner. A
  * box standing open with its input holding the caret stands as it is, its
@@ -179,7 +184,7 @@ export function open(prefill = currentAddress() || '') {
   if (openState && document.activeElement === els.input) return;
   HOST.endOpening();
   const from = document.activeElement;
-  openState = true; asOpened = true;
+  openState = true; asOpened = true; openedAt = currentAddress() || '';
   els.box.classList.add('on');
   els.input.value = prefill;
   compute('');
@@ -192,13 +197,17 @@ export function open(prefill = currentAddress() || '') {
 /**
  * The box as opened takes the address the line names (see the head; FP-20):
  * while nothing is typed in it and no row chosen, a landing, a version move
- * or a camera move that changes the current address puts that address in the
- * box, selected, its levels listed beneath it. The app's loop runs it beside
- * the line's rebuild; a box typed in, or with a row chosen, keeps its text.
+ * or a camera move that changes the current address from the one it opened
+ * at, or last took, puts that address in the box, selected, its levels listed
+ * beneath it — so a box opened at the levels the line's fold mark folds holds
+ * them until the line names another place. The app's loop runs it beside the
+ * line's rebuild; a box typed in, or with a row chosen, keeps its text.
  */
 export function takeAddress() {
   if (!els || !openState || !asOpened) return;
   const addr = currentAddress() || '';
+  if (addr === openedAt) return;
+  openedAt = addr;
   if (els.input.value === addr) return;
   els.input.value = addr;
   compute('');

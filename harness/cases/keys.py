@@ -2031,8 +2031,8 @@ def retake_holds(ctx, r):
     account, and past the board's left edge the board; the one line names that place as mid scale names it, no
     document named; and
     the ring stands around the place's cell clamped to the visible view: at the view's border where the cell is wider than
-    the view, on the view's right edge where the board lies to the right of it. THE ADDRESS SEGMENT IS ONE WIDTH: the
-    acting segment's left edge stands at one x, the segment at one width, at WHOLE BOARD, at HOME, on the board and the
+    the view, on the view's right edge where the board lies to the right of it. THE ADDRESS PART IS ONE WIDTH: the
+    acting segment's left edge stands at one x, the address part at one width, at WHOLE BOARD, at HOME, on the board and the
     account so re-taken — their slot, strip and marker empty — on the far edition below its reading scale — its
     position strip drawn bare, no position and no window marked on it (issue #236) — and at a position. The step ends
     at the first edition's landing"""
@@ -2040,7 +2040,7 @@ def retake_holds(ctx, r):
         """the walk, the line, its position strip and the acting segment as the page stands, the line given time to redraw
         (every 120 ms)"""
         ctx.js('new Promise((r) => setTimeout(r, 300))')
-        return ctx.js('''(() => { const S = window.__skep, f = S.view.focus(), a = document.querySelector("#line .seg.acting"), b = document.querySelector("#line button.address"), s = document.querySelector("#line .slot .strip");
+        return ctx.js('''(() => { const S = window.__skep, f = S.view.focus(), a = document.querySelector("#line .seg.acting"), b = document.querySelector("#line .address-part"), s = document.querySelector("#line .slot .strip");
           return {focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}, address: S.line().address, lod: S.view.lod().name,
                   acting: a ? a.getBoundingClientRect().left : null, segment: b ? b.getBoundingClientRect().width : null,
                   empty: !!document.querySelector("#line .slot .strip.none") && !!document.querySelector("#line .marker.none"),
@@ -2092,7 +2092,7 @@ def retake_holds(ctx, r):
     first = states['the whole board']
     moved = {w: (q['acting'], q['segment']) for w, q in states.items() if q['acting'] is None or first['acting'] is None or abs(q['acting'] - first['acting']) > 0.5 or abs(q['segment'] - first['segment']) > 0.5}
     r.check(not moved and states['a position']['address']['pos'] is not None and states['the far edition below its reading scale']['address']['pos'] is None,
-            'the address segment is one width: the acting segment stands at one x at WHOLE BOARD, at HOME, on the board and the account a re-take stood the walk on, below a document\'s reading scale and at a position (issue #141)',
+            'the address part is one width: the acting segment stands at one x at WHOLE BOARD, at HOME, on the board and the account a re-take stood the walk on, below a document\'s reading scale and at a position (issues #141, #310)',
             {w: {'acting': q['acting'], 'segment': q['segment'], 'address': q['address']['text']} for w, q in states.items()})
     return {'free': free, 'rings': rings, 'acting': {w: q['acting'] for w, q in states.items()}, 'segment': first['segment']}
 

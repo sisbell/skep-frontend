@@ -863,6 +863,10 @@ export const STRINGS = {
   'L.corner.draft': { text: '◌', cls: 'DRAFT', source: '', screen: 'the corner, compact', lane: true },
   // a corner at its document's head (FP-26): the items its rows cannot hold, folded into one count that opens them whole
   'L.corner.more': { text: '⟨n⟩ more', cls: 'DRAFT', source: '', screen: 'the corner, at its document\'s head', lane: true },
+  // the one line compact (FP-26): the mark an address wider than a row folds the levels between its board and its deepest
+  // into, and what it is named by
+  'L.fold': { text: '⋮', cls: 'DRAFT', source: '', screen: 'the one line, compact', lane: true },
+  'L.fold.name': { text: 'the levels folded here: ⟨levels⟩', cls: 'DRAFT', source: '', screen: 'the one line, compact', lane: true },
   // the slots (FP-34): a slot's accessible name, its roles, what a slot being read shows; the causes — an account whose
   // writes are signed with the keys of one above it (R42's term), a genesis entry with no label, a read refused for another
   // reason — and the one line's own: the device's key store not read, the session's key not named among several

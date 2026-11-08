@@ -44,9 +44,18 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .code { color:#cfd6df; }
 .warn { color:var(--warn); }
 
-/* THE ONE LINE — standing chrome, the only piece (foundations §3.1); never wraps */
-#line { position:fixed; top:0; left:0; right:0; z-index:20; padding:3px 10px; font-size:11px; line-height:1.6; background:var(--bg); border-bottom:1px solid var(--line); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-#line .seg { display:inline; }
+/* THE ONE LINE — standing chrome, the only piece (foundations §3.1): its rows as L-LINE's layout sets them, each its parts
+   on their text's baseline, none of them cut short — a part wider than a row whole on a row of its own; beneath them, the
+   statements that arrived with no room, wrapping inside the window (L-LINE's `fit`; FP-26). Its bottom edge is
+   `--line-bottom`, which L-LINE publishes */
+#line { position:fixed; top:0; left:0; right:0; z-index:20; padding:3px 10px; font-size:11px; line-height:1.6; background:var(--bg); border-bottom:1px solid var(--line); }
+#line .row { display:flex; align-items:baseline; white-space:nowrap; }
+#line .row > * { flex:none; }
+/* the forms L-LINE measures, in a row of the line's own out of sight, each in a box of its own as wide as its margins */
+#line .row.measure { position:absolute; left:0; top:0; width:max-content; visibility:hidden; pointer-events:none; }
+#line .row.measure > .form { display:inline-flex; align-items:baseline; }
+#line .beneath { white-space:normal; overflow-wrap:anywhere; border-top:1px solid var(--line); padding:1px 0; }
+#line .beneath > * { display:block; }
 #line .sep { color:#4a5260; padding:0 6px; }
 #line b { color:var(--accent); font-weight:600; }
 #line .address { cursor:pointer; }
@@ -60,8 +69,11 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #line .strip-window.open-end { border-right-width:0; }
 /* the position's slot: its words as wide as the document's widest position, then the strip — the words empty below the
    document's reading scale, where the strip stands bare; both empty where no document is named or a read refused it, the
-   room of both kept, so nothing after it on the line moves */
-#line .slot .pos { display:inline-block; }
+   room of both kept, so nothing after it on the line moves. Where a position is named it is the strip's act, a native
+   button drawn as the slot it is (K-23) */
+#line .slot { display:inline-flex; align-items:baseline; }
+#line .slot .pos { display:inline-block; font-family:var(--face-client); }
+#line button.slot { background:none; border:0; border-radius:0; padding:0; margin:0; color:inherit; font:inherit; line-height:inherit; cursor:pointer; }
 #line .strip.none { visibility:hidden; }
 #line .strip-run { position:absolute; top:1px; bottom:1px; min-width:2px; box-sizing:border-box; border:1px solid var(--hue-you); }
 #line .strip-run.current { background:var(--hue-you); }
@@ -72,37 +84,32 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 /* a jump's face whose document stands out of view, carried by the line in the face's own colour (FP-25) */
 #line .aside { color:#ffe2b8; }
 #line button { padding:0 5px; }
-/* the address segment is a native button (K-22; rule 14), drawn as the segment it is, not as a key — one width at every
-   scale and focus: the widest words it names, which the line sets on it (`--words`, in characters of its
-   face — the identifier's, every one the same width, which the addresses it names are set in and the position's words
-   never pass), then the strip's room (its 64px and 6px either side) and the marker's 2ch, its content clipped past it,
-   so nothing after it on the line moves; set at the line's top. Its fields stand at their own widths and the document's
-   label after its field takes the room they leave (`flex`, from none), its words wrapping onto a line it hides, so
-   short of room it gives way a whole word at a time — its first word too, after the empty lead-in it opens with, which
-   a line may break after and which gives an empty label its line, so it stands on the segment's baseline; past its
-   label the segment's own box narrows over its fields, `overflow:clip` cutting them at its end */
-#line button.address { display:inline-flex; align-items:baseline; width:calc(var(--words) * 1ch + 76px + 2ch); overflow:clip; text-align:left; background:none; border:0; border-radius:0; padding:0; margin:0; color:inherit; font:inherit; font-family:var(--face-ident); font-size:11px; line-height:inherit; cursor:pointer; vertical-align:top; }
+/* the address part — the address segment, its position's slot and its version marker — one width at every scale and focus
+   at the step the layout holds: the widest words it names there, which the line sets on it (`--words`, in characters of
+   the identifier's face, every one the same width, which the addresses it names are set in and the position's words never
+   pass), then the strip's room (its 64px and 6px either side) and the marker's 2ch. Its fields stand at their own widths,
+   whole; the document's label after its field takes the room they leave (`flex`, from none), its words wrapping onto a
+   line it hides, so it gives way a whole word at a time — its first word too, after the empty lead-in it opens with, which
+   a line may break after and which gives an empty label its line, so it stands on the segment's baseline. Folded, the
+   board's field and the fold mark stand before the segment, the mark 2ch wide; the board's field and the version marker
+   bear the segment's act */
+#line .address-part { display:inline-flex; align-items:baseline; width:calc(var(--words) * 1ch + 76px + 2ch); font-family:var(--face-ident); font-size:11px; vertical-align:top; }
+#line .address-part > * { flex:none; }
+#line .address-part b { white-space:pre; }
+#line .address-part > .board, #line .address-part > .marker { cursor:pointer; }
+#line button.address { display:inline-flex; align-items:baseline; flex:1 1 auto; min-width:0; text-align:left; background:none; border:0; border-radius:0; padding:0; margin:0; color:inherit; font:inherit; line-height:inherit; cursor:pointer; }
 #line button.address > * { flex:none; }
 #line button.address > .label { flex:1 1 0; width:0; min-width:0; height:1lh; margin:0 .25em; overflow:hidden; white-space:normal; overflow-wrap:normal; font-family:var(--face-reading); color:var(--ink); }
 #line button.address > .label > .lead-in { display:inline-block; width:0; }
-#line button.address .pos { font-family:var(--face-client); }
-/* the line is one row of its acts and its segments, set on their text's baseline. Short of room the acting-as segment, a
-   jump's face out of view and a transient segment are cut first; then the address segment narrows, its document label
-   giving way a word at a time before its fields; a walk's folded moment, a kept clause and the daemon's forms are never
-   cut (FP-26, FP-36; foundations §3.1). With room, the address segment stands at its one width */
-#line { display:flex; align-items:baseline; }
-#line > * { flex:none; }
-#line > .seg { flex:0 1000 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; }
-#line > button.address { flex:0 1 auto; }
-#line > .seg.walk { flex:none; overflow:visible; color:var(--warn); }
-/* a kept document's clause beside the address that names it (FP-23): its words whole, never cut short of room */
-#line > .seg.kept { flex:none; overflow:visible; color:#cfd6df; }
-/* the daemon's stopped, unreachable and halted forms (FP-26): their words whole, never cut short of room */
-#line > .seg.daemon { flex:none; overflow:visible; }
+#line button.fold { width:2ch; padding:0; margin:0; border:0; border-radius:0; background:none; color:var(--ink); font:inherit; line-height:inherit; text-align:center; }
+/* a walk's folded moment, a kept clause and the daemon's stopped, unreachable and halted forms: their words whole (FP-26, FP-36) */
+#line .seg.walk { color:var(--warn); }
+#line .seg.kept { color:#cfd6df; }
 
-/* LEAP — the address segment opened (K-30); above the reading scene, which it may open over, and above the overlay and the
-   notice below it, so nothing shown while the reader types in it covers its input or its rows (FP-36) */
-#leap { top:34px; left:50%; transform:translateX(-50%); width:620px; display:none; z-index:31; }
+/* LEAP — the address segment opened (K-30); below the one line's bottom edge, however many rows it takes; above the reading
+   scene, which it may open over, and above the overlay and the notice below it, so nothing shown while the reader types in
+   it covers its input or its rows (FP-36) */
+#leap { top:calc(var(--line-bottom, 29px) + 5px); left:50%; transform:translateX(-50%); width:620px; display:none; z-index:31; }
 #leap.on { display:block; }
 #leapq { width:100%; background:#14181d; border:1px solid var(--line); color:var(--ink); padding:6px 8px; font:inherit; border-radius:4px; outline:none; }
 #leapq:focus { border-color:var(--accent); }
@@ -391,8 +398,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    its column's edge between them, where the bands and lines leave
    the pane (foundations §2.5), its corner beside it on the outer side, so the room a wide window adds falls outside both —
    before pane A's corner, after pane B's — and the text keeps its place beside the bands at every width. An auto margin
-   takes that room */
-#scene { position:fixed; inset:46px 20px 20px 20px; z-index:26; display:none; background:var(--bg); border:1px solid #6b7382; border-radius:4px; }
+   takes that room. It stands below the one line's bottom edge, however many rows the line takes */
+#scene { position:fixed; inset:calc(var(--line-bottom, 29px) + 17px) 20px 20px 20px; z-index:26; display:none; background:var(--bg); border:1px solid #6b7382; border-radius:4px; }
 #scene.on { display:block; }
 #scenebar { position:absolute; left:0; right:0; top:0; height:26px; padding:4px 10px; border-bottom:1px solid var(--line); color:var(--dim); font-size:11px; white-space:nowrap; overflow:hidden; }
 #scenebar b { color:var(--accent); }
