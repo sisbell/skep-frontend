@@ -35,19 +35,21 @@
 // a write's `ack` and `ack_addr` (A-62, A-63), the `held` answer to a burst
 // the shell holds (`decodeHeld`), the held lines `held(session)` lists
 // (`decodeHeldRows`), the `held` event with the hands that moved a document
-// (`decodeHeldEvent`), `history.restore`'s `Restored`, `held.show`'s
-// `{shown}`, the merge family's `MergeReport`, `MergeLanded`, `Undone` and
-// `Withdrawn`, and the publication family's panel, its `{count, price}` and
-// `confirm`'s three outcomes — the acknowledgment, the re-statement and the
-// typed refusal — each narrowed to what the editor's screens read. Every
-// decoder reads one answer and returns its typed value: an absent or null
-// member null, and a malformed answer — a member not of the type the
-// declarations give it — the decoder's typed failure, null, as the other
-// decoders give it. None composes or sends anything.
+// (`decodeHeldEvent`), the shell's `held_lines` refusal of a whole-draft
+// write — the draft holding the lines, an address, and their count, one or
+// more (`decodeHeldLinesRefusal`) — `history.restore`'s `Restored`,
+// `held.show`'s `{shown}`, the merge family's `MergeReport`, `MergeLanded`,
+// `Undone` and `Withdrawn`, and the publication family's panel, its
+// `{count, price}` and `confirm`'s three outcomes — the acknowledgment, the
+// re-statement and the typed refusal — each narrowed to what the editor's
+// screens read. Every decoder reads one answer and returns its typed value:
+// an absent or null member null, and a malformed answer — a member not of
+// the type the declarations give it — the decoder's typed failure, null, as
+// the other decoders give it. None composes or sends anything.
 // Rules: FP-1, FP-2, FP-6, FP-16 (this module's test pins every frame to the
 // wire document's examples).
 
-import { vSpan, unitSpan, parseVSpan, resolveSpan } from './address.js';
+import { vSpan, unitSpan, parseVSpan, resolveSpan, isAddress } from './address.js';
 import { byteLength } from '../util.js';
 
 /** @typedef {import('./address.js').EndRef} EndRef */
@@ -679,6 +681,28 @@ export function decodeHeldEvent(/** @type {unknown} */ data) {
     cause: opt(a.cause, string),
     hands: opt(a.hands, (hs) => array(hs).map((h) => { const x = object(h); return { key: oneOf(x.key, HAND_KEYS), fingerprint: opt(x.fingerprint, string), label: opt(x.label, string) }; })) || [],
   }));
+}
+
+/**
+ * @typedef {Object} HeldLinesRefusal — the shell's `held_lines` refusal (`HeldLinesRefusal`): a whole-draft write refused, nothing sent, while a draft it writes holds lines the board has not kept (D6 BM-62)
+ * @property {string} doc the draft holding the lines
+ * @property {number} held how many of the acting principal's lines it holds, one or more
+ */
+
+/**
+ * The shell's `held_lines` refusal → the draft and how many lines it holds;
+ * null for a refusal of any other kind or name, and for one whose `doc` is no
+ * address or whose `held` is no whole count of one or more.
+ * @param {unknown} refusal an outcome's `refused`, as the port hands it up
+ * @returns {HeldLinesRefusal | null}
+ */
+export function decodeHeldLinesRefusal(refusal) {
+  return decode(refusal, (r) => {
+    if (r.kind !== 'shell' || r.name !== 'held_lines') fail();
+    const doc = string(r.doc), held = number(r.held);
+    if (!isAddress(doc) || !Number.isInteger(held) || held < 1) fail();
+    return /** @type {HeldLinesRefusal} */ ({ doc, held });
+  });
 }
 
 /**

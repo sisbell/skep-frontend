@@ -6,9 +6,9 @@
 // wire's example answers — the age a link value and `doc_metadata` carry,
 // and the draft base, merge marker and source `doc_metadata` carries, among
 // them — a delivery keeps an item of a kind it does not know at its own
-// place, and each of the editor's answers and events decodes from the wire's
-// or the declarations' own example, its absent members null and a malformed
-// form the decoder's null.
+// place, and each of the editor's answers and events, and the shell's
+// `held_lines` refusal, decodes from the wire's or the declarations' own
+// example, its absent members null and a malformed form the decoder's null.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as F from './frames.js';
@@ -206,6 +206,7 @@ const SHAPES = {
   event_holding: { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 1, state: 'holding', cause: 'unreachable' },
   event_moved: { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 2, state: 'moved', cause: 'arrangement_moved', hands: [{ key: 'own', fingerprint: 'fp-1', label: 'laptop' }, { key: 'other', fingerprint: 'fp-2' }, { key: 'bare' }, { key: 'lost' }] },
   event_kept: { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 0, state: 'kept' },
+  held_lines: { kind: 'shell', name: 'held_lines', doc: '1.0.1.0.1013', held: 2 },
   restored: { draft: '1.0.1.0.1013', at: 9, position: 17, as_of: 16, marker: null },
   restored_marked: { draft: '1.0.1.0.1013', at: 9, position: 17, as_of: 16, marker: { sides: ['1.0.1.0.1.1.1'], head: '1.0.1.0.1.2', head_copied: '6', at: 14 } },
   undone: { draft: '1.0.1.0.1013', position: 17, record: null, restored: { base: '1.0.1.0.1.1', extent: 5 } },
@@ -263,6 +264,16 @@ test('the `held` event decodes as the declarations give it — the document\'s s
   assert.deepEqual(F.decodeHeldEvent(SHAPES.event_kept), { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 0, state: 'kept', cause: null, hands: [] }, 'kept: no cause, no hands');
   for (const bad of [null, {}, { ...SHAPES.event_holding, state: 'late' }, { ...SHAPES.event_holding, held: '1' }, { ...SHAPES.event_moved, hands: [{ key: 'agent' }] }, { ...SHAPES.event_moved, hands: [{ fingerprint: 'fp-1' }] }, { ...SHAPES.event_moved, hands: 'own' }, { ...SHAPES.event_holding, doc: null }]) {
     assert.equal(F.decodeHeldEvent(bad), null, JSON.stringify(bad));
+  }
+});
+
+test('the shell\'s `held_lines` refusal decodes to the draft holding the lines and how many it holds; a refusal of another kind or name, a draft that is no address, or a count that is no whole number of one or more is null', () => {
+  assert.deepEqual(F.decodeHeldLinesRefusal(SHAPES.held_lines), { doc: '1.0.1.0.1013', held: 2 });
+  assert.deepEqual(F.decodeHeldLinesRefusal({ ...SHAPES.held_lines, held: 1 }), { doc: '1.0.1.0.1013', held: 1 }, 'one line held');
+  for (const bad of [null, 'held_lines', {}, { kind: 'shell', name: 'held_lines' }, { ...SHAPES.held_lines, kind: 'refused' }, { ...SHAPES.held_lines, name: 'another_window' }, SHAPES.row_lost.refusal,
+    { ...SHAPES.held_lines, doc: undefined }, { ...SHAPES.held_lines, doc: 1013 }, { ...SHAPES.held_lines, doc: 'the draft' }, { ...SHAPES.held_lines, doc: '1.0.1.0.1013.' },
+    { ...SHAPES.held_lines, held: undefined }, { ...SHAPES.held_lines, held: '2' }, { ...SHAPES.held_lines, held: 0 }, { ...SHAPES.held_lines, held: -1 }, { ...SHAPES.held_lines, held: 1.5 }]) {
+    assert.equal(F.decodeHeldLinesRefusal(bad), null, JSON.stringify(bad));
   }
 });
 
