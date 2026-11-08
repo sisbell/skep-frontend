@@ -15,10 +15,12 @@
 // whole at the first press in a session and the corner's own word after it,
 // the statement whole on the word's act; → and ← at a corner move the focus
 // along its acts — the read it offers, a head's count of the items it folds —
-// and back; and the inert slots' chords give their slot's reason at the
-// selection's card, else where the focus is (D5 K-9, K-30, K-45, K-46, K-57,
-// K-70, K-71, K-72, K-74, K-76, K-77, K-93, K-100; D6 BM-1, BM-3, BM-52,
-// BM-54; P47; FP-14, FP-36).
+// and back; the inert slots' chords give their slot's reason at the
+// selection's card, else where the focus is; and every other slot's chord,
+// with nothing in focus that its slot acts on, gives "select a passage first"
+// where the focus is (D5 K-9, K-30, K-45 … K-52, K-57, K-70, K-71, K-72, K-74,
+// K-76, K-77, K-93, K-100, §1.6; D6 BM-1, BM-3, BM-52, BM-54; P47; FP-14,
+// FP-36).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
@@ -294,4 +296,28 @@ test('the inert slots\' chords — Mod+K "link to…", never the LEAP box, Mod+S
   n = said.length;
   assert.equal(await KEYS.dispatch(keyOf('k', MOD), PLANE), true);
   assert.deepEqual([SEL.selected(), hostEl.innerHTML, said.slice(n)], [null, '', [t('L.seam.link-to')]], 'Mod+K off any span: nothing selected, no card, the reason said where the focus is');
+}));
+
+test('the other slots\' chords with nothing in focus that the slot acts on give its reason, "select a passage first", where the focus is, nothing selected and no card shown: at a document whole Mod+Shift+O, Mod+Shift+R, Mod+Enter and Mod+Shift+Enter, its links card opening at Mod+Shift+L; at an account and at the whole board all five (D5 K-47, K-48, K-49, K-51, K-52, §1.6; P47)', () => onPlane(async ({ said }) => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const SHIFT = { ...MOD, shiftKey: true };
+  /** @type {Array<[string, object, string]>} each chord: its key, its modifiers, its name */
+  const PASSAGE = [['O', SHIFT, 'Mod+Shift+O'], ['R', SHIFT, 'Mod+Shift+R'], ['Enter', MOD, 'Mod+Enter'], ['Enter', SHIFT, 'Mod+Shift+Enter']];
+  const ALL = [...PASSAGE, ['L', SHIFT, 'Mod+Shift+L']];
+  for (const [at, kind, chords] of /** @type {const} */ ([[O, 'document', PASSAGE], ['1.0.2', 'account', ALL], ['1', 'board', ALL]])) {
+    await WALK.focusTo(at, null, true, true, null, true);
+    assert.equal(WALK.current()?.kind, kind, `the walk on the ${kind}: no span in focus`);
+    for (const [key, mods, chord] of chords) {
+      SEL.clear();
+      hostEl.innerHTML = '';
+      const n = said.length;
+      assert.equal(await KEYS.dispatch(keyOf(key, mods), PLANE), true, `${chord} at the ${kind}: the page takes it`);
+      assert.deepEqual([SEL.selected(), hostEl.innerHTML, said.slice(n)], [null, '', [t('D5.select-first')]], `${chord} at the ${kind}: nothing selected, no card, the slot's reason said where the focus is`);
+    }
+  }
+  await WALK.focusTo(O, null, true, true, null, true);
+  const n = said.length;
+  assert.equal(await KEYS.dispatch(keyOf('L', SHIFT), PLANE), true);
+  assert.deepEqual([HOST.currentState()?.id, said.slice(n)], ['links:' + O, []], 'Mod+Shift+L at a document whole opens the links card at it, no reason said');
+  HOST.dismiss();
 }));

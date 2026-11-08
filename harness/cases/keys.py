@@ -8,7 +8,10 @@ goes nowhere — the box standing open over the text and its answer, the
 focus in its input, until Esc — and a typed account address a teleport
 with its trail entry (foundations §2.2, §2.3; K-31); Mod+K "link to…" and
 never the box: at the whole board, no span in focus, the one line giving its
-slot's reason with nothing moved (D5 K-30, K-100; P47); a landing arriving
+slot's reason with nothing moved (D5 K-30, K-100; P47); Mod+Shift+O,
+Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter there, finding
+nothing they act on, the one line giving their slot's reason, "select a
+passage first", with nothing moved (D5 K-47 … K-52, §1.6; P47); a landing arriving
 under the box the reader is typing in leaving it open with its text, its
 caret and its focus, Esc then closing it onto the landing, and the box as
 opened taking the address the line names once a landing changes it (#171's
@@ -1186,8 +1189,9 @@ def drawn_chord(ctx, name):
 
 
 def told_in_line(ctx, sid):
-    """an inert slot's reason as the one line gives it (P47; N-KEYS' `inertSaid`): the words of the line's transient segment
-    carrying the reason's string — none where no such segment stands — beside the status region's words and the reason's own"""
+    """a slot's reason as the one line gives it, by the reason's string (P47; N-KEYS' `inertSaid`, `selectFirst`): the words of
+    the line's transient segment carrying that string — none where no such segment stands — beside the status region's words
+    and the reason's own"""
     got = ctx.js('''((sid) => { const s = document.querySelector(`#line .seg.transient[data-string="${sid}"]`);
       return {line: s ? s.textContent : null, live: document.getElementById('live').textContent}; })(%s)''' % json.dumps(sid))
     return dict(got, words=strings(ctx, sid))
@@ -2502,6 +2506,17 @@ def run(ctx):
             and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']) and said['line'] == said['words'] and said['live'] == said['words'],
             'Mod+K at the whole board opens no LEAP box: "link to…" finds no span in focus, so the one line gives its slot\'s reason, said through the status region — the camera, the walk, the trail and the selection as they were, no overlay (D5 K-30, K-100; P47)',
             dict(said, leap=s['leap'], overlay=s['overlay'], sel=s['sel'], cam_same=same_view(before, s), focus=[before['focus'], s['focus']], cursor=[t0['cursor'], t1['cursor']]))
+    # every other slot's chord at the whole board finds nothing it acts on — no span, no link, no document for "see the links" —
+    # so the one line gives the slot's reason, "select a passage first"
+    for key, mods, name, row in (('O', ('Meta', 'Shift'), 'Mod+Shift+O', 'K-47'), ('R', ('Meta', 'Shift'), 'Mod+Shift+R', 'K-48'), ('L', ('Meta', 'Shift'), 'Mod+Shift+L', 'K-49'),
+                                 ('Enter', ('Meta',), 'Mod+Enter', 'K-51'), ('Enter', ('Meta', 'Shift'), 'Mod+Shift+Enter', 'K-52')):
+        before, t0 = state(ctx), trail(ctx)
+        chord(ctx, key, mods=mods)
+        s, t1, said = state(ctx), trail(ctx), told_in_line(ctx, 'D5.select-first')
+        r.check(s['overlay'] is None and s['sel'] is None and not s['scene'] and not s['leap'] and same_view(before, s) and s['focus'] == before['focus']
+                and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']) and said['line'] == said['words'] and said['live'] == said['words'],
+                '%s at the whole board finds nothing it acts on, so the one line says "select a passage first", said through the status region — the camera, the walk, the trail and the selection as they were, no overlay and no scene (D5 %s, §1.6; P47)' % (name, row),
+                dict(said, overlay=s['overlay'], sel=s['sel'], scene=s['scene'], cam_same=same_view(before, s), focus=[before['focus'], s['focus']], cursor=[t0['cursor'], t1['cursor']]))
     chord(ctx, 'l', mods=('Meta',))
     r.check(state(ctx)['leap'], 'Mod+L opens the LEAP box at the whole board')
     ctx.js('(() => { const i = document.getElementById("leapq"); i.value = ""; })()')
@@ -3112,6 +3127,6 @@ def run(ctx):
     r.figures['back_after_publish'] = back_after_publish(ctx, r)
     # ---- the page's own find (issue #222's design decision) ------------------------------------------------------
     r.figures['find'] = find_holds(ctx, r)
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K at the whole board', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+K, Mod+Shift+A and Mod+Shift+C at the walk\'s block', 'a press on the "link to…" slot', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+K in the scene', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival']
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K at the whole board', 'Mod+Shift+O, Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter at the whole board', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+K, Mod+Shift+A and Mod+Shift+C at the walk\'s block', 'a press on the "link to…" slot', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+K in the scene', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

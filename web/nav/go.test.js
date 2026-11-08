@@ -14,7 +14,9 @@
 // withheld document, the chrome a landing leaves standing and a field that
 // keeps its caret, cards opened while an act reads, a face a read brings
 // standing below a card the reader opened, Enter at a withheld run and a
-// tail pressed, the box's version — a return restoring the versions its
+// tail pressed, the slots' chords at a link's stop of the walk — a follow and
+// a reading scene made from that link, the reason given where no span is in
+// focus — the box's version — a return restoring the versions its
 // entry kept, the member a newer version's arrival found a bare address's
 // text was among them, by the position its row names, an arrival standing
 // there read in that member, and the version a
@@ -1626,6 +1628,39 @@ test('Back returns the walk to where the step it crossed began — the link\'s i
   const far = await carriedFrom((v) => ({ ...v, scale: v.scale / 3 }));
   assert.ok(LAYER.lineInView(D, 11, far) && !LAYER.atReadingScale(D, far.scale), 'D left below its reading scale, the passage\'s line in view');
   assert.deepEqual([walkAt(), GO.arrivalMark()?.runs], [['document', D, null], [{ pos: 11, width: 5 }]], 'the walk on the document whole, the grain the view gives');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('at a link\'s stop of the walk, no selection standing, Mod+Enter follows that link and Mod+Shift+Enter opens the reading scene from it, its end\'s own bytes set level with where its far end stands; Mod+Shift+O there finds no span, selects nothing and gives the slot\'s reason (D5 K-47, K-51, K-52, §1.6, §4 rule 6)', async () => {
+  /** @type {string[]} */
+  const said = [];
+  FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { said.push(v); } }) });
+  /** the walk on the citation's stop in the first edition, as Back across its follow leaves it, no selection standing */
+  const onStop = async () => {
+    await run(GO.leapTo(D));
+    await run(GO.follow(drawn(PASSAGE)));
+    await run(GO.back(true));
+    SEL.clear();
+    assert.deepEqual([walkAt(), WALK.current()?.link?.key, SEL.selected()], [['link', D, 11], drawn(PASSAGE).key, null], 'the walk on the citation\'s stop, no selection standing');
+  };
+  await onStop();
+  assert.equal(await KEYS.dispatch(keyOf('Enter', MOD), PLANE), true);
+  await drained();
+  await reopening();
+  assert.deepEqual(marks(), [{ addr: FAR, pos: 20, runs: [{ pos: 20, width: 5 }], link: PASSAGE }, [PASSAGE]], 'Mod+Enter: the follow made, its far end outlined, the link lit');
+  assert.deepEqual(departed()?.step, { kind: 'follow', link: PASSAGE, near: D, key: drawn(PASSAGE).key, far: FAR, spans: [{ prefix: FAR + '.0.1', ordinal: 20, width: 5 }] }, 'the entry it departed records the follow from the end the stop names');
+  await onStop();
+  const pressed = KEYS.dispatch(keyOf('Enter', { ...MOD, shiftKey: true }), PLANE);
+  const opened = TRAIL.current()?.scene;
+  assert.deepEqual(opened && [opened.a, opened.b, opened.held], [D, FAR, { posA: 11, widthA: 5, posB: 20, wholeB: false }], 'Mod+Shift+Enter: the scene beside the far edition, the end\'s own bytes set level with where its far end stands');
+  assert.deepEqual(departed()?.step, { kind: 'scene', near: D, link: PASSAGE, key: drawn(PASSAGE).key, spans: null }, 'a step on the trail from the end the stop names');
+  assert.equal(await pressed, true);
+  // no scene to show here: its opening gives its entry back
+  await new Promise((r) => setTimeout(r, 0));
+  await onStop();
+  const n = said.length, standing = HOST.currentState();
+  assert.equal(await KEYS.dispatch(keyOf('O', { ...MOD, shiftKey: true }), PLANE), true);
+  assert.deepEqual([SEL.selected(), HOST.currentState(), said.slice(n)], [null, standing, [t('D5.select-first')]], 'Mod+Shift+O at the stop: no span in focus — nothing selected, no card, the slot\'s reason said');
   assert.deepEqual(fake.unanswered, []);
 });
 

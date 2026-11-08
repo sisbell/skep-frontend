@@ -33,15 +33,22 @@
 // when activated — pressed (`inertAct`), or by its chord, which selects the
 // walk's focused span first where no selection stands and draws the card at
 // it with the reason given (`inertChord`) — at the slot and through the one
-// status region (P47; the focus record's rule 14). The selection's acts never
-// take the focus, however the selection was made (D5 §4 rule 4; rule 15): K-8 selects and
-// extends from the walk's element and leaves the focus there; the card is
-// reached by its chords or by Tab, and each act's card takes the focus as the
-// act was made — a chord or Enter on the slot, never a click (rule 16). A
-// selection made is said through the status region (D4). Dismissed with the
-// selection; an act's card taking the acts' place is a replacement, not a
-// dismissal, and the selection stands under it. The focus and the mirror
-// stay at block grain (D5-F11).
+// status region (P47; the focus record's rule 14). Every other slot acts on
+// the selection, else on the walk's focused span selected whole first (D5
+// §1.6); off a span it acts only where the walk's element names what it acts
+// on — follow and read side by side the link whose stop the walk stands on,
+// at that end's own bytes (K-51, K-52; D5 §4 rule 6), "see the links" the
+// document the walk stands in, at its own stop or a link's in it (K-49) — and
+// anywhere else it acts on nothing and tells its caller so (`act`), the
+// caller giving the slot's reason where the focus is (D5 §1.6). The
+// selection's acts never take the focus, however the selection was made (D5
+// §4 rule 4; rule 15): K-8 selects and extends from the walk's element and
+// leaves the focus there; the card is reached by its chords or by Tab, and
+// each act's card takes the focus as the act was made — a chord or Enter on
+// the slot, never a click (rule 16). A selection made is said through the
+// status region (D4). Dismissed with the selection; an act's card taking the
+// acts' place is a replacement, not a dismissal, and the selection stands
+// under it. The focus and the mirror stay at block grain (D5-F11).
 // The selection is a surface of its place (FP-36): leaving the place ends
 // it (N-GO's departure, `clear`), which keeps it by its bytes' identity
 // (`asLeft`), its card and the "which" list by what they are about (O-HOST's
@@ -179,6 +186,7 @@ const SLOTS = /** @type {const} */ ([
 ]);
 
 /** @typedef {'annotate' | 'quote' | 'linkto'} InertSlot a slot inert with its reason (`INERT_REASON`) */
+/** @typedef {'wrote' | 'uses' | 'links' | 'follow' | 'scene'} LiveSlot a slot that acts (`act`) */
 
 /** the inert slots' reasons, by slot */
 const INERT_REASON = /** @type {Record<InertSlot, string>} */ ({ annotate: 'L.seam.annotate', quote: 'L.seam.quote', linkto: 'L.seam.link-to' });
@@ -256,22 +264,48 @@ function actedOn() {
 
 /**
  * A slot's act (by chord or by its button), on the span the slots act on
- * (`actedOn`); off a span "see the links" asks for the links at the walk's
- * place — none at a continuation's mark, which is no document. The act's
- * card takes the focus where a key made the act (rule 16).
- * @param {'wrote' | 'uses' | 'links' | 'follow' | 'scene'} which
+ * (`actedOn`); off a span, at a link's stop of the walk, follow and read side
+ * by side act on that link at its end's own bytes (K-51, K-52; D5 §4 rule
+ * 6), and "see the links" asks for the links at the document the walk stands
+ * in, at its own stop or a link's in it (K-49). The act's card takes the
+ * focus where a key made the act (rule 16).
+ * @param {LiveSlot} which
  * @param {boolean} [byKey] a key made the act: the card takes the focus; a follow's landing draws the ring
+ * @returns {boolean} false where nothing in focus is what the slot acts on — no span, no link's stop for follow and read side by side, and for "see the links" no document: nothing is selected or shown, and the caller gives the reason where the focus is (D5 §1.6)
  */
 export function act(which, byKey = false) {
   const span = actedOn();
-  if (!span) { const f = WALK.current(); if (f && f.kind !== 'mark' && which === 'links') LINKS.show(f.addr, byKey); return; }
+  if (!span) {
+    const f = WALK.current(), end = f && f.kind === 'link' ? f.link : null;
+    if (which === 'links' && f && (f.kind === 'document' || end)) LINKS.show(f.addr, byKey);
+    else if (which === 'follow' && end) GO.follow(end, byKey);
+    else if (which === 'scene' && end) sceneFrom(end, { addr: end.near, pos: end.pos, width: end.width });
+    else return false;
+    return true;
+  }
   const { addr, pos, width } = span;
-  if (which === 'wrote') { PROV.wrote(addr, pos, width, byKey); return; }
-  if (which === 'uses') { PROV.uses(addr, pos, width, byKey); return; }
-  if (which === 'links') { LINKS.show(addr, byKey); return; }
+  if (which === 'wrote') { PROV.wrote(addr, pos, width, byKey); return true; }
+  if (which === 'uses') { PROV.uses(addr, pos, width, byKey); return true; }
+  if (which === 'links') { LINKS.show(addr, byKey); return true; }
   const drawn = LK.shownAt(addr, span);
-  if (which === 'follow') { if (drawn.length === 1) GO.follow(drawn[0], byKey); else if (drawn.length > 1) which_(drawn, 'follow', byKey); return; }
-  if (which === 'scene') { if (drawn.length === 1 && drawn[0].far) void GO.toScene(addr, LK.besideAt(drawn[0]), { posA: pos, widthA: width, posB: LK.farPos(drawn[0]), wholeB: drawn[0].farWhole }, { from: { shown: drawn[0] }, site: { span } }); else if (drawn.length > 1) which_(drawn, 'scene', byKey); }
+  if (drawn.length > 1) which_(drawn, which, byKey);
+  else if (drawn.length === 1 && which === 'follow') GO.follow(drawn[0], byKey);
+  else if (drawn.length === 1) sceneFrom(drawn[0], span);
+  return true;
+}
+
+/**
+ * The reading scene opened from a link's end beside the passage held at it
+ * (K-52; N-GO's `toScene`): a step on the trail from that end, beside the
+ * document LK names for it (`besideAt`), the passage set level with where the
+ * far end stands there (`farPos`) — or, where the far end names its document
+ * whole, with nothing of it (SC's `Held.wholeB`; FP-30). Nothing where the
+ * far end names no document.
+ * @param {import('../links/links.js').Shown} s the link's end drawn at the passage
+ * @param {Span} span the passage held: the selection, or the end's own bytes
+ */
+function sceneFrom(s, span) {
+  if (s.far) void GO.toScene(span.addr, LK.besideAt(s), { posA: span.pos, widthA: span.width, posB: LK.farPos(s), wholeB: s.farWhole }, { from: { shown: s }, site: { span } });
 }
 
 /**
@@ -306,6 +340,6 @@ function which_(drawn, what, byKey, focus = null) {
   const html = `<span class="label">${esc(t(what === 'follow' ? 'B1.follow' : 'B1.side-by-side'))}</span><ul class="rows">${drawn.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · <span class="id">${esc(s.link.owner || '')}</span> · ${LK.farLabelHTML(s)}</button></li>`).join('')}</ul>`;
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
-  drawn.forEach((s, i) => { acts['w' + i] = (_el, byKey) => { if (what === 'follow') GO.follow(s, byKey); else if (s.far && sel) void GO.toScene(sel.addr, LK.besideAt(s), { posA: sel.pos, widthA: sel.width, posB: LK.farPos(s), wholeB: s.farWhole }, { from: { shown: s }, site: { span: sel } }); }; });
+  drawn.forEach((s, i) => { acts['w' + i] = (_el, byKey) => { if (what === 'follow') GO.follow(s, byKey); else if (sel) sceneFrom(s, sel); }; });
   HOST.show({ kind: 'list', id: 'which', anchor: sel ? { span: sel } : null, html, acts, takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : undefined, about: { kind: 'which', what } });
 }

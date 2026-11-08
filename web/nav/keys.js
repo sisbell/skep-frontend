@@ -67,7 +67,11 @@
 // to…"'s, Mod+K (K-45, K-46, K-100) — give their slot's reason (P47): at the
 // slot of the selection's card where a span is in focus, the walk's focused
 // span selected first where no selection stands (O-SELECTION's
-// `inertChord`), else, and over the scene, in the one line (`inertSaid`). Find
+// `inertChord`), else, and over the scene, in the one line (`inertSaid`).
+// Every other slot's chord (K-47 … K-52) makes its slot's act on what is in
+// focus (O-SELECTION's `act`), and where nothing in focus is what the slot
+// acts on gives the slot's reason, "select a passage first", in the one line
+// (`selectFirst`; D5 §1.6; P47). Find
 // (K-91; `findAct`) acts from the plane, the scene, a field and every control
 // on them alike, the browser's own find never run: Mod+F opens the page's
 // find at the document the focus is in (N-FIND's `open`); Mod+G and
@@ -131,6 +135,7 @@ import { t } from '../strings.js';
 import { keptWord, keptStatement } from '../text/article.js';
 
 /** @typedef {import('../overlays/selection.js').InertSlot} InertSlot */
+/** @typedef {import('../overlays/selection.js').LiveSlot} LiveSlot */
 
 /** the platform's primary command modifier: ⌘ on macOS, Ctrl elsewhere (D5 §0) */
 export const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '');
@@ -210,6 +215,8 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
 const SLOT_CHORDS = new Set(TABLE.filter((r) => r.surface === 'selection').map((r) => r.chord));
 /** the inert slots' chords (K-45, K-46, K-100), each with the slot it activates (O-SELECTION's `inertChord`) */
 const INERT_CHORDS = /** @type {Map<string, InertSlot>} */ (new Map([['Mod+Shift+A', 'annotate'], ['Mod+Shift+C', 'quote'], ['Mod+K', 'linkto']]));
+/** every other slot's chord (K-47 … K-52), each with the slot whose act it makes (O-SELECTION's `act`) */
+const LIVE_CHORDS = /** @type {Map<string, LiveSlot>} */ (new Map([['Mod+Shift+O', 'wrote'], ['Mod+Shift+R', 'uses'], ['Mod+Shift+L', 'links'], ['Mod+Enter', 'follow'], ['Mod+Shift+Enter', 'scene']]));
 /** the walk's keys at the plane (K-1 … K-5, K-7) */
 const WALK_KEYS = new Set(['↓', '↑', '→', '←', 'Home', 'End', 'Enter']);
 /** a find chord's move (K-91): 1 the next, -1 the previous — Mod+G and Mod+Shift+G, and F3 and Shift+F3 elsewhere than macOS — 0 for any other chord */
@@ -372,11 +379,8 @@ function route(e, chord, ctx) {
   // the selection's slot chords (K-45 … K-52, K-100) and K-8's select-by-span — live from the plane and from a standing overlay alike; the selection's acts take no focus (rule 15), and the next K-8 press extends the selection from the walk's element
   const inert = INERT_CHORDS.get(chord);
   if (inert) return () => { if (!SEL.inertChord(inert)) inertSaid(inert); return true; };
-  if (chord === 'Mod+Shift+O') return () => { SEL.act('wrote', byKey); return true; };
-  if (chord === 'Mod+Shift+R') return () => { SEL.act('uses', byKey); return true; };
-  if (chord === 'Mod+Shift+L') return () => { SEL.act('links', byKey); return true; };
-  if (chord === 'Mod+Enter') return () => { SEL.act('follow', byKey); return true; };
-  if (chord === 'Mod+Shift+Enter') return () => { SEL.act('scene', byKey); return true; };
+  const live = LIVE_CHORDS.get(chord);
+  if (live) return () => { if (!SEL.act(live, byKey)) selectFirst(); return true; };
   if (chord === 'Shift+↓') return () => { SEL.selectFocused('down'); return true; };
   if (chord === 'Shift+↑') return () => { SEL.selectFocused('up'); return true; };
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
@@ -584,6 +588,11 @@ function swallow(/** @type {KeyboardEvent} */ e) {
 function inertSaid(/** @type {InertSlot} */ slot) {
   const id = SEL.reasonOf(slot);
   LINE.transient(t(id), id);
+}
+
+/** a slot's chord where nothing in focus is what the slot acts on (O-SELECTION's `act`): its reason, "select a passage first", in the one line at the focus until the next act, said through the status region (D5 §1.6; P47) */
+function selectFirst() {
+  LINE.transient(t('D5.select-first'), 'D5.select-first');
 }
 
 /**
