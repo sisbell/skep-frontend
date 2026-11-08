@@ -17,12 +17,15 @@
 // the page's copy of what it keeps standing was left behind is said by
 // `lastRead`, from the page's own clock — the hour and the minute, the day
 // first where it was not today — and never as an age; a continuation's mark's count is said in what
-// it counts by `markCount`; a formatting form is named by its one entry wherever
-// a form is named (`formName`), a type the table lacks by the name its card
-// gives it, forms named together in the format strip's order, a comma alone
-// between two and each other hand's after the document's own as a group led by
-// the hand (`formsNamed`), and a form's act and take-off said in one pattern
-// each around the label of the set they write into (`formAct`, `formTakeOff`);
+// it counts by `markCount`; a formatting form is named by its one entry
+// (`formName`), a heading's with the level of the one block it names and a type
+// the table lacks by the name its card gives it; forms named together stand in
+// the format strip's order, each once, a comma alone between two and each other
+// hand's after the document's own as a group led by the hand — the forms the
+// sets on a document draw each by its form alone, never by a value its type
+// carries (`formsNamed`), the forms at one place in the text each by its name
+// there (`formsAt`); and a form's act and take-off said in one pattern each
+// around the label of the set they write into (`formAct`, `formTakeOff`);
 // `pinned` lists the pinned entries for the gate's text case, which holds each
 // to its source.
 // Rules: FP-1, FP-2, FP-13, FP-32, FP-34.
@@ -773,7 +776,7 @@ export const STRINGS = {
   'B3.format.subscript': { text: 'subscript', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s act; every place that names the form' },
   'B3.format.superscript': { text: 'superscript', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s act; every place that names the form' },
   'B3.format.paragraph': { text: 'paragraph', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s heading group; the held cycle\'s level; every place that names the form' },
-  'B3.format.heading': { text: 'heading ⟨n⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s heading group; the held cycle\'s level; every place that names the form' },
+  'B3.format.heading': { text: 'heading\u00a0⟨n⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s heading group; the held cycle\'s level; every place that names one block\'s heading' },
   'B3.format.levels-differ': { text: 'levels differ', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s heading group where its blocks\' levels differ' },
   'B3.format.underline': { text: 'there is no underline here — to emphasise words, ⟨italic⟩: ⟨Mod+I⟩, or ⟨bold⟩: ⟨Mod+B⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: Mod+U at the focus, whole at the first press in a session' },
   'B3.format.underline.compact': { text: 'no underline', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: Mod+U at the focus, compact' },
@@ -1087,11 +1090,13 @@ export const STRINGS = {
   'L.slot.unread': { text: 'not read', cls: 'DRAFT', source: '', screen: 'the byline', lane: true },
   'L.slot.store-unread': { text: 'key store not read', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.slot.key-untold': { text: 'key not named', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
-  // the formatting forms (B3-S13): `3.23.4`'s name, beside the strip's names of the rest (`formName`); the words forms named
-  // together take — a form that is off, another hand's group led by the hand, the reader's own hand (`formsNamed`); and a
-  // form's act and take-off in one pattern each, ⟨set⟩ the label of the set they write into, a heading's in its own words
+  // the formatting forms (B3-S13): `3.23.4`'s name, beside the strip's names of the rest (`formName`), and the heading
+  // form's in a list of the forms the sets draw, whatever its levels (B1-S4's); the words forms named together take — a
+  // form that is off, another hand's group led by the hand, the reader's own hand (`formsNamed`, `formsAt`); and a form's
+  // act and take-off in one pattern each, ⟨set⟩ the label of the set they write into, a heading's in its own words
   // (`formAct`, `formTakeOff`)
   'L.format.flag': { text: 'flag', cls: 'DRAFT', source: '', screen: 'B3-S13: the format strip\'s last slot; every place that names 3.23.4', lane: true },
+  'L.format.headings': { text: 'headings', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S4: the formatting switch\'s forms, the heading form whatever levels its blocks take; every list of the forms the sets on a document draw' },
   'L.format.not': { text: 'not ⟨form⟩', cls: 'DRAFT', source: '', screen: 'B3-S13: forms named together, a form that is off — the format strip, the typing style\'s line, the ARIA mirror; B1-S4: the formatting switch', lane: true },
   'L.format.hand': { text: '⟨hand⟩: ⟨forms⟩', cls: 'DRAFT', source: '', screen: 'B3-S13: forms named together, another hand\'s group after the document\'s own — the format strip, the ARIA mirror; B1-S4: the formatting switch', lane: true },
   'L.format.yours': { text: 'yours', cls: 'DRAFT', source: '', screen: 'B3-S13: forms named together, the reader\'s own hand leading its group — the format strip, the ARIA mirror; B1-S4: the formatting switch', lane: true },
@@ -1239,11 +1244,13 @@ const HEADING_LEVELS = 6;
 
 /**
  * The formatting forms the table names, in the format strip's order (B3-S13):
- * each by its commons path, the entry that names it, and whether this editor
- * makes it — by a chord, or by a strip or Format menu item acting as one; a
- * paragraph is a heading taken off (D5 K-96), and a flag is made by no act of
- * this editor (B3-S13).
- * @type {ReadonlyArray<{path: string, name: string, made: boolean}>}
+ * each by its commons path, the entry that names it, the entry that names it
+ * in a list of the forms the sets draw where the two differ — a form whose
+ * type carries a parameter, one item there named by the form and never by its
+ * values — and whether this editor makes it — by a chord, or by a strip or
+ * Format menu item acting as one; a paragraph is a heading taken off (D5
+ * K-96), and a flag is made by no act of this editor (B3-S13).
+ * @type {ReadonlyArray<{path: string, name: string, list?: string, made: boolean}>}
  */
 const FORMS = [
   { path: '3.23.2', name: 'B3.format.bold', made: true },
@@ -1253,7 +1260,7 @@ const FORMS = [
   { path: '3.23.6', name: 'B3.format.subscript', made: true },
   { path: '3.23.7', name: 'B3.format.superscript', made: true },
   { path: '3.21', name: 'B3.format.paragraph', made: false },
-  { path: HEADING, name: 'B3.format.heading', made: true },
+  { path: HEADING, name: 'B3.format.heading', list: 'L.format.headings', made: true },
   { path: '3.23.4', name: 'L.format.flag', made: false },
 ];
 
@@ -1272,8 +1279,9 @@ function namedForm(ty, level) {
 }
 
 /**
- * A formatting form's name, the one every place that names the form reads:
- * its entry in the table (`FORMS`), a heading's with its level; a type the
+ * A formatting form's name, the one every place that names a form reads save
+ * a list of the forms the sets draw (`formsNamed`): its entry in the table
+ * (`FORMS`), a heading's with the level of the one block it names; a type the
  * table lacks, or a heading at a level it lacks, the name its card gives it
  * (`typeName`), so no place that names a form stands blank (FP-34).
  * @param {string | null} ty the type as a link stores it
@@ -1286,16 +1294,29 @@ export function formName(ty, level) {
 }
 
 /**
- * @typedef {Object} FormNamed — a formatting form, as a list of forms names it (`formsNamed`)
+ * @typedef {Object} FormNamed — a form the sets on a document draw, as a list of them names it (`formsNamed`): by its type alone, never a value its type carries
+ * @property {string | null} ty its type, as a link stores it
+ * @property {boolean} [off] the form is off at what the words describe, so named after "not"
+ */
+
+/**
+ * @typedef {Object} FormAt — a form at one place in the text, as the forms there are named (`formsAt`): a heading by its level
  * @property {string | null} ty its type, as a link stores it
  * @property {number} [level] a heading's level, its type slot's parameter
  * @property {boolean} [off] the form is off at what the words describe, so named after "not"
  */
 
 /**
+ * @template F
  * @typedef {Object} HandForms — the forms one hand other than the document's own set, named as a group
  * @property {string} hand the hand as the group is led by it: the reader's own "yours" (`L.format.yours`), else its account
- * @property {FormNamed[]} forms
+ * @property {F[]} forms
+ */
+
+/**
+ * @typedef {Object} Listed — a form as a group names it
+ * @property {[number, number]} at its place in the format strip's order: its row's, then its place within the row
+ * @property {string} name
  */
 
 /** what parts two forms named together: a comma alone, so a list cut from its end is still a list */
@@ -1304,21 +1325,42 @@ const FORM_SEP = ', ';
 const HAND_SEP = '; ';
 
 /**
- * One group's forms by their names (`formName`), in the format strip's order
- * (`FORMS`) — a heading by its level, a type the table lacks after every form
- * it names, in the order given — each form once, a form that is off after
- * "not" (`L.format.not`), parted by `FORM_SEP`; '' where the group holds none.
- * @param {FormNamed[]} forms
+ * A form the sets draw as their list names it: at its row, by the row's list
+ * name, else its name; a type the table lacks by its card's name
+ * (`typeName`), past every row.
+ * @param {FormNamed} f
+ * @returns {Listed}
+ */
+function drawn(f) {
+  const r = formOf(f.ty);
+  return r ? { at: [FORMS.indexOf(r), 0], name: t(r.list ?? r.name) } : { at: [FORMS.length, 0], name: typeName(f.ty) };
+}
+
+/**
+ * A form at one place in the text by its name there (`formName`): at its
+ * row, a heading then by its level; past every row where the table lacks its
+ * name.
+ * @param {FormAt} f
+ * @returns {Listed}
+ */
+function placed(f) {
+  const r = namedForm(f.ty, f.level);
+  return { at: r ? [FORMS.indexOf(r), r.path === HEADING ? /** @type {number} */ (f.level) : 0] : [FORMS.length, 0], name: formName(f.ty, f.level) };
+}
+
+/**
+ * One group's forms as `named` names them, in the format strip's order — a
+ * type the table lacks after every form it names, in the order given — each
+ * name once, a form that is off after "not" (`L.format.not`), parted by
+ * `FORM_SEP`; '' where the group holds none.
+ * @template {{off?: boolean}} F
+ * @param {F[]} forms
+ * @param {(f: F) => Listed} named
  * @returns {string}
  */
-function listed(forms) {
-  /** a form's place in the strip's order: its row's, then a heading's level; past every row where the table lacks its name */
-  const place = (/** @type {FormNamed} */ f) => {
-    const r = namedForm(f.ty, f.level);
-    return r ? [FORMS.indexOf(r), r.path === HEADING ? /** @type {number} */ (f.level) : 0] : [FORMS.length, 0];
-  };
+function listed(forms, named) {
   const names = forms
-    .map((f) => ({ at: place(f), name: f.off ? t('L.format.not', { form: formName(f.ty, f.level) }) : formName(f.ty, f.level) }))
+    .map((f) => { const n = named(f); return { at: n.at, name: f.off ? t('L.format.not', { form: n.name }) : n.name }; })
     .sort((a, b) => a.at[0] - b.at[0] || a.at[1] - b.at[1])
     .map((x) => x.name);
   return [...new Set(names)].join(FORM_SEP);
@@ -1328,14 +1370,40 @@ function listed(forms) {
  * Forms named together: the document's own, then each other hand's as a
  * group led by the hand (`L.format.hand`), the groups parted by `HAND_SEP`
  * and a group holding no form dropped (`listed`).
+ * @template {{off?: boolean}} F
+ * @param {F[]} own the forms the document's own hand set
+ * @param {HandForms<F>[]} hands each other hand's, in the order they are named
+ * @param {(f: F) => Listed} named
+ * @returns {string}
+ */
+function grouped(own, hands, named) {
+  return [listed(own, named), ...hands.map((h) => { const forms = listed(h.forms, named); return forms && t('L.format.hand', { hand: h.hand, forms }); })]
+    .filter(Boolean)
+    .join(HAND_SEP);
+}
+
+/**
+ * The forms the sets on a document draw, named together (`grouped`), as the
+ * formatting switch (B1-S4) names a set's: each by its form alone (`drawn`), a
+ * heading "headings" whatever levels its blocks take.
  * @param {FormNamed[]} own the forms the document's own hand set
- * @param {HandForms[]} [hands] each other hand's, in the order they are named
+ * @param {HandForms<FormNamed>[]} [hands] each other hand's, in the order they are named
  * @returns {string}
  */
 export function formsNamed(own, hands = []) {
-  return [listed(own), ...hands.map((h) => { const forms = listed(h.forms); return forms && t('L.format.hand', { hand: h.hand, forms }); })]
-    .filter(Boolean)
-    .join(HAND_SEP);
+  return grouped(own, hands, drawn);
+}
+
+/**
+ * The forms at one place in the text — a block, or a span of one — named
+ * together (`grouped`), as the ARIA mirror's item names them: each by its
+ * name there (`placed`), a heading's with its level.
+ * @param {FormAt[]} own the forms the document's own hand set there
+ * @param {HandForms<FormAt>[]} [hands] each other hand's, in the order they are named
+ * @returns {string}
+ */
+export function formsAt(own, hands = []) {
+  return grouped(own, hands, placed);
 }
 
 /**
