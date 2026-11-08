@@ -17,7 +17,12 @@
 // the page's copy of what it keeps standing was left behind is said by
 // `lastRead`, from the page's own clock — the hour and the minute, the day
 // first where it was not today — and never as an age; a continuation's mark's count is said in what
-// it counts by `markCount`;
+// it counts by `markCount`; a formatting form is named by its one entry wherever
+// a form is named (`formName`), a type the table lacks by the name its card
+// gives it, forms named together in the format strip's order, a comma alone
+// between two and each other hand's after the document's own as a group led by
+// the hand (`formsNamed`), and a form's act and take-off said in one pattern
+// each around the label of the set they write into (`formAct`, `formTakeOff`);
 // `pinned` lists the pinned entries for the gate's text case, which holds each
 // to its source.
 // Rules: FP-1, FP-2, FP-13, FP-32, FP-34.
@@ -554,29 +559,25 @@ export const STRINGS = {
   'B3.format.original.first': { text: 'this is your own original of a mark version ⟨k⟩ took off — readers no longer see it, and no later version publishes it; this takes it off your own view too — for good: undo does not bring it back', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the drawn original\'s unmaking, whole at its first showing' },
   'B3.format.original': { text: 'your own original of a mark version ⟨k⟩ took off — readers no longer see it, and no later version publishes it; ⟨the chord⟩ over it takes it off your view too — for good: undo does not bring it back', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the drawn original\'s compact mark, whole on its act' },
   'B3.format.unseen': { text: 'readers of ⟨E⟩ do not see it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a mark in the notes document, its first showing' },
-  'B3.format.bold.notes': { text: 'make it bold in Notes on ⟨E⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the chord at an edition\'s selection' },
-  'B3.format.heading.notes': { text: 'make it a heading in Notes on ⟨E⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the chord at an edition\'s selection' },
   'B3.format.kept.notes': { text: 'kept in Notes on ⟨E⟩ — shown to you and whoever reads that set', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the one line after a mark in the notes document' },
   'B3.format.kept.notes.compact': { text: 'kept in Notes on ⟨E⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the one line after a mark in the notes document, compact' },
   'B3.format.kept.notes.made': { text: '— Notes on ⟨E⟩ made for it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the one line after a mark in the notes document, where the act mints it' },
   'B3.format.in.notes': { text: 'in Notes on ⟨E⟩ (private)', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a mark\'s set at the card' },
-  'B3.format.bold.off': { text: 'take the bold off in Notes on ⟨E⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the chord at a mark of the notes document' },
-  'B3.format.heading.off': { text: 'take the heading off in Notes on ⟨E⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the chord at a mark of the notes document' },
   'B3.format.taken-off.notes': { text: 'taken off in Notes on ⟨E⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the one line after a mark is taken off in the notes document' },
   'B3.format.slot': { text: 'format…', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the selection row\'s act at its end' },
   'B3.format.strip.selection': { text: 'format — the selection', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s label at a selection' },
   'B3.format.strip.focus': { text: 'format — “⟨first words⟩”', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s label at the walk\'s focus' },
   'B3.format.strip.caret': { text: 'format — what you type next', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s label at a bare caret' },
-  'B3.format.bold': { text: 'bold', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s act' },
-  'B3.format.italic': { text: 'italic', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s act' },
-  'B3.format.code': { text: 'code', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s act' },
-  'B3.format.strikethrough': { text: 'strikethrough', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s act' },
-  'B3.format.subscript': { text: 'subscript', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s act' },
-  'B3.format.superscript': { text: 'superscript', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s act' },
-  'B3.format.paragraph': { text: 'paragraph', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s heading group; the held cycle\'s level' },
-  'B3.format.heading': { text: 'heading ⟨n⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s heading group; the held cycle\'s level' },
+  'B3.format.bold': { text: 'bold', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s act; every place that names the form' },
+  'B3.format.italic': { text: 'italic', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s act; every place that names the form' },
+  'B3.format.code': { text: 'code', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s act; every place that names the form' },
+  'B3.format.strikethrough': { text: 'strikethrough', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s act; every place that names the form' },
+  'B3.format.subscript': { text: 'subscript', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s act; every place that names the form' },
+  'B3.format.superscript': { text: 'superscript', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s act; every place that names the form' },
+  'B3.format.paragraph': { text: 'paragraph', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s heading group; the held cycle\'s level; every place that names the form' },
+  'B3.format.heading': { text: 'heading ⟨n⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s heading group; the held cycle\'s level; every place that names the form' },
   'B3.format.levels-differ': { text: 'levels differ', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s heading group where its blocks\' levels differ' },
-  'B3.format.underline': { text: 'there is no underline here — to emphasise words, italic: ⟨Mod+I⟩, or bold: ⟨Mod+B⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: Mod+U at the focus, whole at the first press in a session' },
+  'B3.format.underline': { text: 'there is no underline here — to emphasise words, ⟨italic⟩: ⟨Mod+I⟩, or ⟨bold⟩: ⟨Mod+B⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: Mod+U at the focus, whole at the first press in a session' },
   'B3.format.underline.compact': { text: 'no underline', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: Mod+U at the focus, compact' },
   'B3.format.not-a-form': { text: 'that is not a form this editor makes — its forms are under format… at a selection, and in the Format menu', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a format input the engine offers that this editor does not make, at the focus' },
   'B3.format.cycle': { text: '⟨level⟩ — let go to set it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the held cycle\'s level at the focus, whole at the first use in a session' },
@@ -586,13 +587,11 @@ export const STRINGS = {
   'B3.format.style.on.compact': { text: '⟨form⟩ next', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the typing style\'s line, compact' },
   'B3.format.style.off.compact': { text: 'not ⟨form⟩ next', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the typing style\'s line, a form left off, compact' },
   'B3.format.style.unkept': { text: '⟨board⟩ has not kept these words, so their ⟨form⟩ is not made — once it has, select them and apply ⟨form⟩ again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the focus where a hold answers in place of the ack a typing style\'s mark waits on' },
-  'B3.format.said': { text: '⟨form⟩ — “⟨first words⟩”', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a formatting outcome spoken in the status region' },
+  'B3.format.said': { text: '⟨form⟩ — “⟨first words⟩”', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a formatting outcome spoken in the status region, a heading\'s level and a paragraph among them' },
   'B3.format.said.off': { text: '⟨form⟩ off — “⟨first words⟩”', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a formatting outcome spoken in the status region, a form taken off' },
   'B3.format.said.union': { text: '⟨form⟩ — “⟨first words⟩” and the ⟨form⟩ beside them', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a formatting outcome spoken in the status region, a union' },
   'B3.format.said.style.on': { text: '⟨form⟩ — what you type next', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a formatting outcome spoken in the status region, the typing style' },
   'B3.format.said.style.off': { text: 'not ⟨form⟩ — what you type next', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a formatting outcome spoken in the status region, the typing style leaving a form off' },
-  'B3.format.said.heading': { text: 'heading ⟨n⟩ — “⟨first words⟩”', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a formatting outcome spoken in the status region, a heading level' },
-  'B3.format.said.paragraph': { text: 'paragraph — “⟨first words⟩”', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a formatting outcome spoken in the status region, a paragraph' },
 
   // ---- DRAFT: strings no design document carries (`lane: true`) -------------
   'L.no-adapter': { text: 'no shell and no provider — this page reaches nothing', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
@@ -886,6 +885,18 @@ export const STRINGS = {
   'L.slot.unread': { text: 'not read', cls: 'DRAFT', source: '', screen: 'the byline', lane: true },
   'L.slot.store-unread': { text: 'key store not read', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.slot.key-untold': { text: 'key not named', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
+  // the formatting forms (B3-S13): `3.23.4`'s name, beside the strip's names of the rest (`formName`); the words forms named
+  // together take — a form that is off, another hand's group led by the hand, the reader's own hand (`formsNamed`); and a
+  // form's act and take-off in one pattern each, ⟨set⟩ the label of the set they write into, a heading's in its own words
+  // (`formAct`, `formTakeOff`)
+  'L.format.flag': { text: 'flag', cls: 'DRAFT', source: '', screen: 'B3-S13: the format strip\'s last slot; every place that names 3.23.4', lane: true },
+  'L.format.not': { text: 'not ⟨form⟩', cls: 'DRAFT', source: '', screen: 'B3-S13: forms named together, a form that is off — the format strip, the typing style\'s line, the ARIA mirror; B1-S4: the formatting switch', lane: true },
+  'L.format.hand': { text: '⟨hand⟩: ⟨forms⟩', cls: 'DRAFT', source: '', screen: 'B3-S13: forms named together, another hand\'s group after the document\'s own — the format strip, the ARIA mirror; B1-S4: the formatting switch', lane: true },
+  'L.format.yours': { text: 'yours', cls: 'DRAFT', source: '', screen: 'B3-S13: forms named together, the reader\'s own hand leading its group — the format strip, the ARIA mirror; B1-S4: the formatting switch', lane: true },
+  'L.format.make': { text: 'make it ⟨name⟩ in ⟨set⟩', cls: 'DRAFT', source: '', screen: 'B3-S13: the chord, or a Format menu item acting as one, at an edition\'s words the person\'s draft does not hold', lane: true },
+  'L.format.make.heading': { text: 'make it a heading in ⟨set⟩', cls: 'DRAFT', source: '', screen: 'B3-S13: the heading\'s chord at an edition\'s words the person\'s draft does not hold', lane: true },
+  'L.format.take-off': { text: 'take the ⟨name⟩ off in ⟨set⟩', cls: 'DRAFT', source: '', screen: 'B3-S13: the chord, or a Format menu item acting as one, at a mark of that form in the set; the format strip\'s act at a form it does not offer', lane: true },
+  'L.format.take-off.heading': { text: 'take the heading off in ⟨set⟩', cls: 'DRAFT', source: '', screen: 'B3-S13: the heading\'s chord at a heading in the set', lane: true },
 };
 
 /**
@@ -998,14 +1009,159 @@ export function lacking() {
 }
 
 /**
+ * A commons type's path under the registry document's subspace 3, exactly as
+ * stored: "1.1.0.1.0.1.0.3.23.4" → "3.23.4"; null where the type is no
+ * commons type.
+ * @param {string | null} ty
+ * @returns {string | null}
+ */
+function pathOf(ty) {
+  const c = commonsType(ty);
+  return c ? ['3', c.ordinal, ...c.sub].join('.') : null;
+}
+
+/**
  * A link type's name as the page shows it: on a notebook with no commons
  * registry document seeded every type reads R5's form (`R5.undocumented`),
  * ⟨T⟩ the commons path's tail.
  * @param {string | null} ty
  */
 export function typeName(ty) {
-  const c = commonsType(ty);
-  return t('R5.undocumented', { T: c ? '3.' + [c.ordinal, ...c.sub].join('.') : ty || '—' });
+  return t('R5.undocumented', { T: pathOf(ty) ?? (ty || '—') });
+}
+
+/** the heading's commons path: its level a parameter of its type slot (B3-S13), never a subtype */
+const HEADING = '3.20';
+/** the heading's levels the table names, 1 to this */
+const HEADING_LEVELS = 6;
+
+/**
+ * The formatting forms the table names, in the format strip's order (B3-S13):
+ * each by its commons path, the entry that names it, and whether this editor
+ * makes it — by a chord, or by a strip or Format menu item acting as one; a
+ * paragraph is a heading taken off (D5 K-96), and a flag is made by no act of
+ * this editor (B3-S13).
+ * @type {ReadonlyArray<{path: string, name: string, made: boolean}>}
+ */
+const FORMS = [
+  { path: '3.23.2', name: 'B3.format.bold', made: true },
+  { path: '3.23.1', name: 'B3.format.italic', made: true },
+  { path: '3.23.3', name: 'B3.format.code', made: true },
+  { path: '3.23.5', name: 'B3.format.strikethrough', made: true },
+  { path: '3.23.6', name: 'B3.format.subscript', made: true },
+  { path: '3.23.7', name: 'B3.format.superscript', made: true },
+  { path: '3.21', name: 'B3.format.paragraph', made: false },
+  { path: HEADING, name: 'B3.format.heading', made: true },
+  { path: '3.23.4', name: 'L.format.flag', made: false },
+];
+
+/** the table's row for a type, null where the table names no form of it */
+const formOf = (/** @type {string | null} */ ty) => FORMS.find((f) => f.path === pathOf(ty)) ?? null;
+
+/**
+ * The table's row that names a form: a heading's only at a level the table
+ * names; null where the table lacks a name for it.
+ * @param {string | null} ty
+ * @param {number | undefined} level
+ */
+function namedForm(ty, level) {
+  const f = formOf(ty);
+  return f && (f.path !== HEADING || (level !== undefined && Number.isInteger(level) && level >= 1 && level <= HEADING_LEVELS)) ? f : null;
+}
+
+/**
+ * A formatting form's name, the one every place that names the form reads:
+ * its entry in the table (`FORMS`), a heading's with its level; a type the
+ * table lacks, or a heading at a level it lacks, the name its card gives it
+ * (`typeName`), so no place that names a form stands blank (FP-34).
+ * @param {string | null} ty the type as a link stores it
+ * @param {number} [level] a heading's level, its type slot's parameter
+ * @returns {string}
+ */
+export function formName(ty, level) {
+  const f = namedForm(ty, level);
+  return !f ? typeName(ty) : f.path === HEADING ? t(f.name, { n: /** @type {number} */ (level) }) : t(f.name);
+}
+
+/**
+ * @typedef {Object} FormNamed — a formatting form, as a list of forms names it (`formsNamed`)
+ * @property {string | null} ty its type, as a link stores it
+ * @property {number} [level] a heading's level, its type slot's parameter
+ * @property {boolean} [off] the form is off at what the words describe, so named after "not"
+ */
+
+/**
+ * @typedef {Object} HandForms — the forms one hand other than the document's own set, named as a group
+ * @property {string} hand the hand as the group is led by it: the reader's own "yours" (`L.format.yours`), else its account
+ * @property {FormNamed[]} forms
+ */
+
+/** what parts two forms named together: a comma alone, so a list cut from its end is still a list */
+const FORM_SEP = ', ';
+/** what parts one hand's group of forms from the next */
+const HAND_SEP = '; ';
+
+/**
+ * One group's forms by their names (`formName`), in the format strip's order
+ * (`FORMS`) — a heading by its level, a type the table lacks after every form
+ * it names, in the order given — each form once, a form that is off after
+ * "not" (`L.format.not`), parted by `FORM_SEP`; '' where the group holds none.
+ * @param {FormNamed[]} forms
+ * @returns {string}
+ */
+function listed(forms) {
+  /** a form's place in the strip's order: its row's, then a heading's level; past every row where the table lacks its name */
+  const place = (/** @type {FormNamed} */ f) => {
+    const r = namedForm(f.ty, f.level);
+    return r ? [FORMS.indexOf(r), r.path === HEADING ? /** @type {number} */ (f.level) : 0] : [FORMS.length, 0];
+  };
+  const names = forms
+    .map((f) => ({ at: place(f), name: f.off ? t('L.format.not', { form: formName(f.ty, f.level) }) : formName(f.ty, f.level) }))
+    .sort((a, b) => a.at[0] - b.at[0] || a.at[1] - b.at[1])
+    .map((x) => x.name);
+  return [...new Set(names)].join(FORM_SEP);
+}
+
+/**
+ * Forms named together: the document's own, then each other hand's as a
+ * group led by the hand (`L.format.hand`), the groups parted by `HAND_SEP`
+ * and a group holding no form dropped (`listed`).
+ * @param {FormNamed[]} own the forms the document's own hand set
+ * @param {HandForms[]} [hands] each other hand's, in the order they are named
+ * @returns {string}
+ */
+export function formsNamed(own, hands = []) {
+  return [listed(own), ...hands.map((h) => { const forms = listed(h.forms); return forms && t('L.format.hand', { hand: h.hand, forms }); })]
+    .filter(Boolean)
+    .join(HAND_SEP);
+}
+
+/**
+ * A form's act, the words that make it in a set: "make it ⟨name⟩ in ⟨set⟩"
+ * (`L.format.make`), a heading's in its own words (`L.format.make.heading`);
+ * null for a form this editor makes by no act (`FORMS`) and for a type the
+ * table lacks.
+ * @param {string | null} ty the type as a link stores it
+ * @param {string} set the label of the set the act writes into
+ * @returns {string | null}
+ */
+export function formAct(ty, set) {
+  const f = formOf(ty);
+  if (!f?.made) return null;
+  return f.path === HEADING ? t('L.format.make.heading', { set }) : t('L.format.make', { name: t(f.name), set });
+}
+
+/**
+ * A form's take-off, the words that take it off in a set: "take the ⟨name⟩
+ * off in ⟨set⟩" (`L.format.take-off`), a heading's in its own words
+ * (`L.format.take-off.heading`); every form has one, a type the table lacks
+ * named as its card names it (`formName`).
+ * @param {string | null} ty the type as a link stores it
+ * @param {string} set the label of the set the take-off writes into
+ * @returns {string}
+ */
+export function formTakeOff(ty, set) {
+  return formOf(ty)?.path === HEADING ? t('L.format.take-off.heading', { set }) : t('L.format.take-off', { name: formName(ty), set });
 }
 
 /** a count noun: `one` where n is 1, else `many` with ⟨n⟩ filled */

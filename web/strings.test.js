@@ -9,7 +9,11 @@
 // clock, the hour and the minute, the day first where it was not today; what
 // the status region says of a kept place, by its name; no words said of a
 // passage held counting "places"; a
-// continuation's mark's count in what it counts;
+// continuation's mark's count in what it counts; a formatting form named by
+// its one entry, a type the table lacks by its card's name, forms named
+// together in the strip's order with each qualifier on its own form and each
+// other hand's after the document's own, a form's act and take-off one
+// pattern each, and no other entry spelling a form's name;
 // the entries no design document carries are listed; and every accessible name the page
 // sets is read from ST — none stands in the markup, and none is written as a
 // literal in a module.
@@ -17,7 +21,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { sep } from 'node:path';
-import { STRINGS, t, tHTML, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, markCount } from './strings.js';
+import { STRINGS, t, tHTML, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, markCount, typeName, formName, formsNamed, formAct, formTakeOff } from './strings.js';
+
+/** a commons type as a link stores it, by its path under the registry document's subspace 3 */
+const commons = (/** @type {string} */ path) => '1.1.0.1.0.1.0.' + path;
+const BOLD = commons('3.23.2'), ITALIC = commons('3.23.1'), CODE = commons('3.23.3'), STRIKE = commons('3.23.5'), SUB = commons('3.23.6'), SUP = commons('3.23.7');
+const PARAGRAPH = commons('3.21'), HEADING = commons('3.20'), FLAG = commons('3.23.4'), UNKNOWN = commons('3.23.8');
 
 test('every entry is classed and sourced', () => {
   for (const [id, e] of Object.entries(STRINGS)) {
@@ -105,7 +114,7 @@ test('the editor\'s lines stand as its design words them, in its characters — 
     ['B3.format.paragraph', 'B3-S13', 'paragraph'],
     ['B3.format.heading', 'B3-S13', 'heading ⟨n⟩'],
     ['B3.format.levels-differ', 'B3-S13', 'levels differ'],
-    ['B3.format.underline', 'B3-S13', 'there is no underline here — to emphasise words, italic: ⟨Mod+I⟩, or bold: ⟨Mod+B⟩'],
+    ['B3.format.underline', 'B3-S13', 'there is no underline here — to emphasise words, ⟨italic⟩: ⟨Mod+I⟩, or ⟨bold⟩: ⟨Mod+B⟩'],
     ['B3.format.underline.compact', 'B3-S13', 'no underline'],
     ['B3.format.not-a-form', 'B3-S13', 'that is not a form this editor makes — its forms are under format… at a selection, and in the Format menu'],
     ['B3.format.cycle', 'B3-S13', '⟨level⟩ — let go to set it'],
@@ -120,8 +129,6 @@ test('the editor\'s lines stand as its design words them, in its characters — 
     ['B3.format.said.union', 'B3-S13', '⟨form⟩ — “⟨first words⟩” and the ⟨form⟩ beside them'],
     ['B3.format.said.style.on', 'B3-S13', '⟨form⟩ — what you type next'],
     ['B3.format.said.style.off', 'B3-S13', 'not ⟨form⟩ — what you type next'],
-    ['B3.format.said.heading', 'B3-S13', 'heading ⟨n⟩ — “⟨first words⟩”'],
-    ['B3.format.said.paragraph', 'B3-S13', 'paragraph — “⟨first words⟩”'],
   ];
   for (const [id, screen, text] of LINES) {
     const e = STRINGS[id];
@@ -129,6 +136,9 @@ test('the editor\'s lines stand as its design words them, in its characters — 
     assert.deepEqual({ text: e.text, cls: e.cls, source: e.source, screen: e.screen?.split(':')[0] }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen }, id);
   }
   assert.equal(t('B3.format.cycle', { level: t('B3.format.heading', { n: 2 }) }), 'heading 2 — let go to set it', 'the held cycle\'s line as B3\'s own example has it');
+  assert.equal(t('B3.format.underline', { italic: formName(ITALIC), bold: formName(BOLD) }), 'there is no underline here — to emphasise words, italic: ⟨Mod+I⟩, or bold: ⟨Mod+B⟩', 'Mod+U\'s answer as B3 words it, its forms named by their one names');
+  assert.deepEqual([formName(HEADING, 2), formName(PARAGRAPH)].map((form) => t('B3.format.said', { form, 'first words': 'Tumbler' })), ['heading 2 — “Tumbler”', 'paragraph — “Tumbler”'],
+    'a level\'s spoken outcome is the outcome\'s one line with its form\'s name, as B3 words its "heading ⟨n⟩" and "paragraph" forms');
   assert.equal(t('D5.slots'), 'annotate ⌘⇧A · quote ⌘⇧C · who wrote this? ⌘⇧O · who uses this? ⌘⇧R · see the links ⌘⇧L · follow ⌘↩ · read side by side ⌘⇧↩ · link to… ⌘K · format…');
   for (const id of ['B3.deletion.links', 'B3.deletion.links.past', 'B3.deletion.links.unread', 'B3.merge.landed', 'B3.merge.scene.line', 'B3.merge.scene.line.new']) {
     assert.ok(!/[\u00a0’]/.test(STRINGS[id].text), `${id}: B3 sets it in plain characters, and the table keeps them`);
@@ -200,6 +210,50 @@ test('no words a landing, a link\'s far end, a reading scene\'s returned stop or
 
 test('a continuation\'s mark\'s count says what it counts — "152 newer documents", one in its own words — and is a lower bound where the counts are (issue #42\'s design decision)', () => {
   assert.deepEqual([markCount(152, true), markCount(1, true), markCount(152, false)], ['152 newer documents', '1 newer document', '≥ 152 newer documents']);
+});
+
+test('each formatting form has one name — the strip\'s, a heading\'s by its level, 3.23.4 "flag" from the table and never the board\'s registry — and a type the table lacks, or a heading at a level it lacks, the name its card gives it, so none stands blank (issue #442\'s design decision)', () => {
+  assert.deepEqual([BOLD, ITALIC, CODE, STRIKE, SUB, SUP, PARAGRAPH, FLAG].map((ty) => formName(ty)), ['bold', 'italic', 'code', 'strikethrough', 'subscript', 'superscript', 'paragraph', 'flag']);
+  assert.deepEqual([1, 2, 6].map((n) => formName(HEADING, n)), ['heading 1', 'heading 2', 'heading 6']);
+  assert.equal(formName(FLAG), t('L.format.flag'));
+  for (const [ty, level] of [[UNKNOWN], [HEADING, 7], [HEADING, 0], [HEADING]]) {
+    assert.equal(formName(ty, level), typeName(ty), `${ty} at level ${level}: the card's name, never a placeholder`);
+  }
+  assert.equal(formName(UNKNOWN), 'link of type 3.23.8 — undocumented here');
+});
+
+test('forms named together stand in the strip\'s order with a comma alone, "not" before each one off, each named once, and each other hand\'s forms after the document\'s own as a group led by the hand, semicolons between groups (issue #442\'s design decision)', () => {
+  assert.equal(formsNamed([{ ty: ITALIC }, { ty: FLAG }, { ty: BOLD }, { ty: HEADING, level: 2 }]), 'bold, italic, heading 2, flag', 'the strip\'s order, whatever the order given');
+  assert.equal(formsNamed([{ ty: SUP }, { ty: STRIKE }, { ty: HEADING, level: 3 }, { ty: HEADING, level: 1 }, { ty: PARAGRAPH }, { ty: SUB }, { ty: CODE }]),
+    'code, strikethrough, subscript, superscript, paragraph, heading 1, heading 3', 'the headings by their levels, after the paragraph');
+  assert.equal(formsNamed([{ ty: UNKNOWN }, { ty: FLAG }, { ty: BOLD }, { ty: HEADING, level: 9 }]), `bold, flag, ${typeName(UNKNOWN)}, ${typeName(HEADING)}`, 'what the table lacks after every form it names, in the order given');
+  assert.equal(formsNamed([{ ty: ITALIC, off: true }, { ty: CODE, off: true }, { ty: BOLD }]), 'bold, not italic, not code', 'no qualifier across a comma: "not" before each form that is off');
+  assert.equal(formsNamed([{ ty: BOLD }, { ty: ITALIC, off: true }], [{ hand: t('L.format.yours'), forms: [{ ty: SUB }, { ty: CODE }] }]), 'bold, not italic; yours: code, subscript');
+  assert.equal(formsNamed([], [{ hand: t('L.format.yours'), forms: [{ ty: HEADING, level: 2 }] }]), 'yours: heading 2', 'the mirror\'s: the hand leads its group');
+  assert.equal(formsNamed([{ ty: BOLD }], [{ hand: '1.0.2', forms: [] }, { hand: t('L.format.yours'), forms: [{ ty: ITALIC }] }]), 'bold; yours: italic', 'a hand\'s group holding no form dropped');
+  assert.equal(formsNamed([{ ty: BOLD }, { ty: BOLD }, { ty: HEADING, level: 2 }, { ty: HEADING, level: 2 }]), 'bold, heading 2', 'each form named once');
+  assert.equal(formsNamed([]), '');
+});
+
+test('a form\'s act and its take-off are one pattern each around the label of the set they write into, a heading\'s "a heading" and "the heading" — every form taking the take-off, every form this editor makes the act, and a flag, a paragraph and a type the table lacks none (issue #442\'s design decision)', () => {
+  const SET = 'Tumbler';
+  assert.deepEqual([BOLD, ITALIC, CODE, STRIKE, SUB, SUP, HEADING].map((ty) => formAct(ty, SET)),
+    ['make it bold in Tumbler', 'make it italic in Tumbler', 'make it code in Tumbler', 'make it strikethrough in Tumbler', 'make it subscript in Tumbler', 'make it superscript in Tumbler', 'make it a heading in Tumbler']);
+  assert.deepEqual([FLAG, PARAGRAPH, UNKNOWN].map((ty) => formAct(ty, SET)), [null, null, null], 'a flag made by no act of this editor; a paragraph a heading taken off');
+  assert.deepEqual([BOLD, ITALIC, CODE, STRIKE, SUB, SUP, PARAGRAPH, HEADING, FLAG].map((ty) => formTakeOff(ty, SET)),
+    ['take the bold off in Tumbler', 'take the italic off in Tumbler', 'take the code off in Tumbler', 'take the strikethrough off in Tumbler', 'take the subscript off in Tumbler', 'take the superscript off in Tumbler',
+      'take the paragraph off in Tumbler', 'take the heading off in Tumbler', 'take the flag off in Tumbler']);
+  assert.equal(formTakeOff(UNKNOWN, SET), t('L.format.take-off', { name: typeName(UNKNOWN), set: SET }), 'a type the table lacks named as its card names it');
+  for (const id of ['B3.format.bold.notes', 'B3.format.heading.notes', 'B3.format.bold.off', 'B3.format.heading.off']) assert.ok(!(id in STRINGS), `${id}: one pattern for every form, never a line of one form's own`);
+});
+
+test('no entry spells a formatting form\'s name save the form\'s own and a heading\'s act and take-off, so every place that names a form reads its one name — and none says "struck" (issue #442\'s design decision)', () => {
+  const NAMES = /\b(bold|italic|code|strikethrough|subscript|superscript|paragraph|headings?|flag|struck)\b/i;
+  const own = new Set(['B3.format.bold', 'B3.format.italic', 'B3.format.code', 'B3.format.strikethrough', 'B3.format.subscript', 'B3.format.superscript', 'B3.format.paragraph', 'B3.format.heading', 'L.format.flag',
+    'L.format.make.heading', 'L.format.take-off.heading']);
+  for (const id of own) assert.ok(NAMES.test(STRINGS[id].text), `${id} names a form`);
+  // a token is a slot a name is filled into, never words of the entry's own
+  assert.deepEqual(Object.entries(STRINGS).filter(([id, e]) => !own.has(id) && NAMES.test(e.text.replace(/⟨[^⟩]*⟩/g, ''))).map(([id]) => id), []);
 });
 
 test('the lane\'s own strings are listed for the report', () => {
