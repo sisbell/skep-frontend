@@ -18,12 +18,17 @@
 // and back; the inert slots' chords give their slot's reason at the
 // selection's card, else where the focus is; every other slot's chord, with
 // nothing in focus that its slot acts on, gives "select a passage first"
-// where the focus is; and Mod+Enter at a live caret follows from a selection
-// standing alone — with none it selects nothing, follows nothing and leaves
-// the caret where it stands, giving the caret's follow line where the focus
-// is — while at a kept caret it acts on the kept span as on the plane (D5
-// K-9, K-30, K-45 … K-52, K-57, K-70, K-71, K-72, K-74, K-76, K-77, K-93,
-// K-100, §1.6; D6 BM-1, BM-3, BM-52, BM-54; B3-S13; P47; FP-14, FP-36).
+// where the focus is; a key moving the caret stands the walk on the caret's
+// span, the ring's rule as it stood, and a camera move leaves it there, so a
+// slot chord at the caret acts on that span; a caret at the text's end stands
+// in its last span, which Esc leaves the walk on and where Enter or a
+// printable key returns it; and Mod+Enter at a live caret follows from a
+// selection standing alone — with none it selects nothing, follows nothing
+// and leaves the caret where it stands, giving the caret's follow line where
+// the focus is — while at a kept caret it acts on the kept span as on the
+// plane (D5 K-9, K-30, K-45 … K-52, K-57, K-70, K-71, K-72, K-74, K-76, K-77,
+// K-93, K-100, §1.6, §4 rules 2 and 3; D6 BM-1, BM-3, BM-4, BM-52, BM-54;
+// B3-S13; P47; FP-14, FP-36).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
@@ -327,6 +332,62 @@ test('the other slots\' chords with nothing in focus that the slot acts on give 
   HOST.dismiss();
 }));
 
+test('a key moving a live caret into another span stands the walk on that span, naming the span\'s own first position, the ring\'s rule as it stood — drawn where a key drew it, out where a pointer put it out — so a slot chord pressed at the caret acts on the caret\'s span: ↓ from the first line takes the walk to the second, Mod+K there selecting the second whole, and ↑ takes it back (B3-S13; D5 K-71, K-100; §4 rule 2)', () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  await focusOn(D, 1);
+  assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+  assert.deepEqual([caret(), WALK.current()?.pos, FOCUS.ringShown()], [[D, 1, true], 1, true], 'the caret live at the first span\'s start, the walk there, a key\'s ring drawn');
+  assert.equal(await KEYS.dispatch(keyOf('ArrowDown'), PLANE), true);
+  assert.deepEqual([caret(), WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos, WALK.landedAt(), FOCUS.ringShown()], [[D, 14, true], 'block', D, 14, 14, true],
+    '↓: the caret in the second line, the walk on its span naming the span\'s own first position, the ring drawn as it stood');
+  assert.equal(await KEYS.dispatch(keyOf('k', MOD), PLANE), true);
+  assert.deepEqual([SEL.selected(), caret()], [spanOfBlock(D, /** @type {any} */ (REC.blockAt(D, 14))), [D, 14, true]], 'Mod+K at the caret: the caret\'s span selected whole, never the first; the caret where it stood');
+  SEL.clear();
+  assert.equal(await KEYS.dispatch(keyOf('ArrowUp'), PLANE), true);
+  assert.deepEqual([caret(), WALK.current()?.pos], [[D, 1, true], 1], '↑: the caret back in the first line, the walk with it');
+  // the caret kept, the walk landed at its span by a pointer — the ring out — and the caret returned there
+  await KEYS.dispatch(keyOf('Escape'), PLANE);
+  await tick();
+  await WALK.focusTo(D, 1, false, true, null, true);
+  assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+  assert.deepEqual([caret(), FOCUS.ringShown()], [[D, 1, true], false], 'the kept caret returned live, the ring out');
+  assert.equal(await KEYS.dispatch(keyOf('ArrowDown'), PLANE), true);
+  assert.deepEqual([WALK.current()?.pos, FOCUS.ringShown()], [14, false], '↓: the walk on the second span, the ring still out');
+}));
+
+test('a caret at the end of a draft\'s text stands in its last span: Esc there leaves the text to the walk on that span, the caret kept, and Enter at that span, or a printable key, returns the kept caret where it stood (D5 K-70, K-72, K-77; BM-4, BM-52)', () => onPlane(async () => {
+  await focusOn(D, 14);
+  LAYER.placeCaret(D, N + 1);
+  assert.deepEqual(caret(), [D, N + 1, true], 'the caret live at the text\'s end, one past its last position');
+  assert.equal(await KEYS.dispatch(keyOf('Escape'), PLANE), true);
+  await tick();
+  assert.deepEqual([caret(), WALK.current()?.kind, WALK.current()?.pos], [[D, N + 1, false], 'block', 14], 'Esc: the caret kept at the end, the walk on the last span, never the first');
+  assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+  assert.deepEqual([caret(), REC.edits(D)], [[D, N + 1, true], []], 'Enter at the last span returns the kept caret at the end, nothing inserted');
+  await KEYS.dispatch(keyOf('Escape'), PLANE);
+  await tick();
+  assert.equal(await KEYS.dispatch(keyOf('z'), PLANE), true);
+  assert.deepEqual([caret(), REC.edits(D).map((e) => [e.pos, e.width, e.text])], [[D, N + 2, true], [[N + 1, 0, 'z']]], 'a printable key at the last span returns the kept caret and types at the end');
+}));
+
+test('a camera move leaves the walk at a live caret\'s span, the focus being the caret, which no camera move moves, so a slot chord pressed after it acts there; once Esc leaves the text to the walk, the same re-take takes the walk under the view\'s centre (D5 §4 rule 3; B3-S13; K-77, K-100)', () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  await focusOn(D, 14);
+  assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+  const under = WALK.elementUnder(CAM.view());
+  assert.deepEqual([caret(), under.kind, under.addr, under.pos !== 14], [[D, 14, true], 'block', D, true], 'the caret live in the second span; the view\'s centre over another span of the draft');
+  await WALK.retakeFromView();
+  assert.deepEqual([WALK.current()?.kind, WALK.current()?.pos, caret()], ['block', 14, [D, 14, true]], 'the re-take leaves the walk at the caret\'s span, the caret live');
+  assert.equal(await KEYS.dispatch(keyOf('k', MOD), PLANE), true);
+  assert.deepEqual(SEL.selected(), spanOfBlock(D, /** @type {any} */ (REC.blockAt(D, 14))), 'Mod+K after the camera move: the caret\'s span selected whole');
+  SEL.clear();
+  assert.equal(await KEYS.dispatch(keyOf('Escape'), PLANE), true);
+  await tick();
+  assert.deepEqual([caret(), WALK.current()?.pos], [[D, 14, false], 14], 'Esc: the caret kept, the walk on its span');
+  await WALK.retakeFromView();
+  assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos], [under.kind, under.addr, under.pos], 'no live caret standing: the re-take takes the walk under the view\'s centre');
+}));
+
 /** a link's end over `w` positions of a document's text from its ordinal `ord`, as the board names a slot's span */
 const endOf = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: doc.split('.').slice(0, 3).join('.'), whole: false, subspace: 1, ordinal: ord, positions: w });
 /** the follow's chord (K-51) */
@@ -385,7 +446,7 @@ test('Mod+Enter at the live caret Enter placed at the walk\'s span, its two link
 }));
 
 // placed last: the follow it guards against, where it is made, leaves a jump in the air for the tests after it
-test('Mod+Enter at a live caret a click placed in the draft\'s second line, the walk left on a link\'s stop in its first and no selection standing, follows no link from the stop — the trail as it was, nothing faced — and leaves the caret where it stands, the caret\'s follow line in the one line and said through the status region (D5 K-51; B3-S13)', () => onPlane(async ({ said }) => {
+test('Mod+Enter at a live caret placed in the draft\'s second line while the walk stands on a link\'s stop in its first, no selection standing, follows no link from the stop — the trail as it was, nothing faced — and leaves the caret where it stands, the caret\'s follow line in the one line and said through the status region (D5 K-51; B3-S13)', () => onPlane(async ({ said }) => {
   const { l1 } = twoLinks();
   await WALK.focusTo(D, l1.pos, true, true, { link: l1.link.addr, key: l1.key }, true);
   LAYER.placeCaret(D, 14);

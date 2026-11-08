@@ -92,18 +92,20 @@
 // (R11) — save in text the person may edit (T-LAYER's `editable`; D5 K-70),
 // where a click on a block or on a marked stretch places the caret at the
 // character clicked, as the platform's own collapse of its selection names it
-// (T-LAYER's `caretFromPlatform`, `placeCaret`), the selection cleared, and
-// a symbol's click still opens its card (K-7). On the corners: the read a
-// corner offers where a newer version's arrival pinned its box takes that
-// read, a version move (O-VERSIONS' `readFromCorner`; D5 K-57); the version
-// statement opens the document's members (the corner's act, the one Enter
-// takes there — K-57), a draft's kept word opens its statement and closes it
-// again (T-LAYER's `openStatement`; K-57, K-74), a compact corner's glyph
-// opens the corner whole and a click on the corner opened closes it again
-// (T-LAYER's `openCorner`; FP-26), as a click on the count a corner standing
-// at its document's head folds its items into does; and a focus landing in a
-// corner the view does not show whole moves the camera by the least pan that
-// brings it in (P-CAM's `panInto`; FP-20), no flight running.
+// (T-LAYER's `caretFromPlatform`, `placeCaret`), the selection cleared and
+// the walk standing on the span it is placed in, the ring out (N-WALK's
+// `followCaret`), and a symbol's click still opens its card (K-7). On the
+// corners: the read a corner offers where a newer version's arrival pinned
+// its box takes that read, a version move (O-VERSIONS' `readFromCorner`; D5
+// K-57); the version statement opens the document's members (the corner's
+// act, the one Enter takes there — K-57), a draft's kept word opens its
+// statement and closes it again (T-LAYER's `openStatement`; K-57, K-74), a
+// compact corner's glyph opens the corner whole and a click on the corner
+// opened closes it again (T-LAYER's `openCorner`; FP-26), as a click on the
+// count a corner standing at its document's head folds its items into does;
+// and a focus landing in a corner the view does not show whole moves the
+// camera by the least pan that brings it in (P-CAM's `panInto`; FP-20), no
+// flight running.
 // Figures: a press that moves more than 4 px is a drag, not a click; a wheel
 // series ends at SERIES_MS (220 ms, unmeasured) of quiet, and the re-take
 // follows a wheel 220 ms after it; a pinch zooms by e^(-Δy·0.012), Mod+wheel
@@ -372,11 +374,11 @@ function clickText(target) {
   // the platform selected text under the click (a double-click's word): the selection IS that span (R11)
   const span = LAYER.spanOfSelection();
   if (span && !sameSpan(span, LAYER.placedSpan())) { SEL.select(span.addr, span.pos, span.width); return true; }
-  // text the person may edit: the click places the caret at the character clicked, where the platform collapsed its selection (K-70) — a marked stretch takes it as any text does, the card its symbol's (K-7)
+  // text the person may edit: the click places the caret at the character clicked, where the platform collapsed its selection (K-70) — a marked stretch takes it as any text does, the card its symbol's (K-7) — and the walk stands on its span, the ring out
   const own = /** @type {HTMLElement | null} */ (target.closest('.sp'));
   if (own && LAYER.editable(own.dataset.addr || '')) {
     const at = LAYER.caretFromPlatform();
-    if (at && at.addr === own.dataset.addr) { SEL.clear(); LAYER.placeCaret(at.addr, at.pos); return true; }
+    if (at && at.addr === own.dataset.addr) { SEL.clear(); LAYER.placeCaret(at.addr, at.pos); void WALK.followCaret(false); return true; }
   }
   const marked = target.closest('.lip');
   if (marked) { took = true; const m = /** @type {HTMLElement} */ (marked); const s = endAt(m, (m.dataset.links || '').split(' ')[0], (m.dataset.ends || '').split(' ')[0]); if (s) { ANATOMY.open(s, m, false); return true; } }

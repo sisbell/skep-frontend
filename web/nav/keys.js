@@ -36,7 +36,9 @@
 // keys reach it before the walk's (`caretKey`): the arrows move it, Backspace
 // and Delete take a character out, Enter and Shift+Enter put a new line in,
 // Tab a tab character, a printable key its character — each a change of the
-// text shown alone, nothing composed and nothing sent (T-LAYER; FP-14). At a
+// text shown alone, nothing composed and nothing sent (T-LAYER; FP-14) — and
+// the walk then stands on the span the caret is in (N-WALK's `followCaret`;
+// B3-S13), so the slot chords and K-8 act at the caret's span. At a
 // live caret Mod+Enter follows from a selection standing alone: where none
 // stands it selects nothing, follows nothing and leaves the caret where it
 // stands, the caret's follow line shown in the one line (`followAtCaret`;
@@ -455,9 +457,12 @@ function findAct(e, dir, ctx) {
  * A key at a live caret (see the head; K-71, K-72, K-76): the arrows move it,
  * Backspace and Delete take a character out, Enter and Shift+Enter put a new
  * line in, Tab a tab character, a printable key its character — each a change
- * of the text shown alone (T-LAYER). Null for any other key, which acts as on
- * the plane. The platform's default is prevented first: an arrow would scroll
- * the mirror, Tab would move the focus, Backspace would go back.
+ * of the text shown alone (T-LAYER) — and the walk then stands on the span
+ * the caret is in (N-WALK's `followCaret`), the act ending once it does, so
+ * the next key, a held one too (`replay`), acts there. Null for any other
+ * key, which acts as on the plane. The platform's default is prevented
+ * first: an arrow would scroll the mirror, Tab would move the focus,
+ * Backspace would go back.
  * @param {KeyboardEvent} e
  * @param {string} chord
  * @returns {Act | null}
@@ -465,12 +470,14 @@ function findAct(e, dir, ctx) {
 function caretKey(e, chord) {
   /** @type {Record<string, 'left' | 'right' | 'up' | 'down'>} */
   const moves = { '←': 'left', '→': 'right', '↑': 'up', '↓': 'down' };
-  if (chord in moves) return () => { e.preventDefault(); LAYER.caretMove(moves[chord]); return true; };
-  if (chord === 'Backspace') return () => { e.preventDefault(); LAYER.caretErase(-1); return true; };
-  if (chord === 'Delete') return () => { e.preventDefault(); LAYER.caretErase(1); return true; };
-  if (chord === 'Enter' || chord === 'Shift+Enter') return () => { e.preventDefault(); LAYER.caretType('\n'); return true; };
-  if (chord === 'Tab') return () => { e.preventDefault(); LAYER.caretType('\t'); return true; };
-  if (printable(e)) return () => { e.preventDefault(); LAYER.caretType(e.key); return true; };
+  /** the key's change made at the caret, the walk following it */
+  const at = (/** @type {() => boolean} */ change) => async () => { e.preventDefault(); change(); await WALK.followCaret(); return true; };
+  if (chord in moves) return at(() => LAYER.caretMove(moves[chord]));
+  if (chord === 'Backspace') return at(() => LAYER.caretErase(-1));
+  if (chord === 'Delete') return at(() => LAYER.caretErase(1));
+  if (chord === 'Enter' || chord === 'Shift+Enter') return at(() => LAYER.caretType('\n'));
+  if (chord === 'Tab') return at(() => LAYER.caretType('\t'));
+  if (printable(e)) return at(() => LAYER.caretType(e.key));
   return null;
 }
 

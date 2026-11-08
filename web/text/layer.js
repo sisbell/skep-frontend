@@ -4220,15 +4220,28 @@ export function caretToSpan(addr, pos) {
 }
 
 /**
+ * A position of a draft's shown text carried back into the model's text
+ * (M-DERIVE's `toBase`), at or past the text's end its last position — the
+ * caret's line held there (`caretSpanIn`) — so the caret at the end stands in
+ * the text's last span (N-WALK's grain).
+ * @param {string} addr
+ * @param {number} shownPos
+ */
+function basePos(addr, shownPos) {
+  const pos = toBase(REC.edits(addr), shownPos), d = REC.has(addr) ? REC.doc(addr) : null;
+  return d && d.from >= 0 ? Math.min(pos, Math.max(d.from, d.to - 1)) : pos;
+}
+
+/**
  * Does a position of a draft's shown text stand in the span of the model's
- * text whose first position is `blockPos` (N-WALK's grain) — the kept caret's
- * span (BM-52)?
+ * text whose first position is `blockPos` (N-WALK's grain; `basePos`) — the
+ * kept caret's span (BM-52)?
  * @param {string} addr
  * @param {number} shownPos
  * @param {number} blockPos
  */
 export function sameBlock(addr, shownPos, blockPos) {
-  const b = REC.blockAt(addr, toBase(REC.edits(addr), shownPos));
+  const b = REC.blockAt(addr, basePos(addr, shownPos));
   return !!b && b.pos === blockPos;
 }
 
@@ -4237,13 +4250,13 @@ export const caretInSpan = (/** @type {string} */ addr, /** @type {number} */ bl
 
 /**
  * The span the caret stands in, in the model's text (N-WALK's grain): the
- * caret's position carried back through the edits, and the block holding it;
- * null where no caret stands.
+ * caret's position carried back through the edits, at the text's end its last
+ * position (`basePos`), and the block holding it; null where no caret stands.
  * @returns {{addr: string, pos: number, block: number | null} | null}
  */
 export function caretSpan() {
   if (!caret_) return null;
-  const pos = toBase(REC.edits(caret_.addr), caret_.pos), b = REC.blockAt(caret_.addr, pos);
+  const pos = basePos(caret_.addr, caret_.pos), b = REC.blockAt(caret_.addr, pos);
   return { addr: caret_.addr, pos, block: b ? b.pos : null };
 }
 

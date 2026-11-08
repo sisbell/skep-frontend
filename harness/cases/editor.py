@@ -26,7 +26,10 @@ page's own port: a canned `publication.open` answer reaches the page as
 armed, and a `publication` event fired by hand reaches its subscriber. At the
 narrow width, where the own draft's corner stands at its head, the live caret
 moved up under the head's held row brings the camera down alone, the caret's
-mark at the row's bottom (`caret_under_head`; issue #436).
+mark at the row's bottom (`caret_under_head`; issue #436). A person's click in
+another paragraph of the own draft places the caret there and stands the walk
+on that paragraph's span, Mod+K at the caret selecting it (`click_follows`;
+B3-S13).
 
 The own draft is the seeded board's windowed draft of principal 1 (`OWN`,
 1340 bytes). The seed's staging draft (`STAGING`) holds every edition's
@@ -265,6 +268,42 @@ def caret_under_head(ctx, doc):
         ctx.resize(*was); ctx.frames(3)
 
 
+def click_follows(ctx, doc, target, other):
+    """THE WALK AT A CARET A CLICK PLACES (B3-S13: "the walk's focus at the caret's span"; D5 K-70): the walk landed on
+    `target`, the view moved alone to `other` — another paragraph of the draft, no re-take made — a person's click on
+    that paragraph's first character as the platform hit-tests it, then Mod+K at the caret (K-100); the walk before the
+    click, the point and what lies under it, the caret, the walk's element and the selection the chord made, and whether
+    all of it held: the caret live in `other`, the walk on its span, the chord's selection that span whole, never
+    `target`. The selection and the caret are let go after."""
+    if not other:
+        return {'ok': False, 'why': 'the draft holds no paragraph but the one the walk lands on'}
+    ctx.leap(doc, target['pos'])
+    ctx.view_at(doc, other['pos'])
+    before = ctx.js('window.__skep.view.focus()')
+    lead = len(other['text']) - len(other['text'].lstrip())
+    at = ctx.js('''((addr, pos, block) => { const rs = window.__skep.spanRects(addr, pos, 1); if (!rs) return null;
+      const q = rs[0], x = q.x + q.w / 2, y = q.y + q.h / 2, hit = document.elementFromPoint(x, y), sp = hit && hit.closest('.sp');
+      return {x, y, hits: !!sp && sp.dataset.addr === addr && Number(sp.dataset.pos) === block}; })(%s, %d, %d)'''
+                % (json.dumps(doc), other['pos'] + len(other['text'][:lead].encode('utf8')), other['pos']))
+    if not at:
+        return {'ok': False, 'why': "no character of the paragraph stands in view", 'focus_before': before}
+    try:
+        ctx.drv.mouse(at['x'], at['y']); ctx.frames(2)
+        caret, focus = ctx.js('window.__skep.caret()'), ctx.js('window.__skep.view.focus()')
+        ctx.drv.key('k', mods=('Meta',)); ctx.frames(2)
+        sel = ctx.js('window.__skep.selection()')
+    finally:
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), L = await import("./text/layer.js"); S.clear(); L.dropCaret(); })()')
+        ctx.frames(2)
+    ok = (bool(before) and before['kind'] == 'block' and before['pos'] == target['pos'] and at['hits']
+          and bool(caret) and caret['live'] and caret['addr'] == doc and other['pos'] <= caret['pos'] < other['pos'] + other['width']
+          and bool(focus) and focus['kind'] == 'block' and focus['addr'] == doc and focus['pos'] == other['pos']
+          and sel == {'addr': doc, 'pos': other['pos'], 'width': other['width']})
+    return {'ok': ok, 'focus_before': before and {'kind': before['kind'], 'pos': before['pos']}, 'at': at, 'caret': caret,
+            'focus': focus and {'kind': focus['kind'], 'addr': focus['addr'], 'pos': focus['pos']}, 'selection': sel,
+            'other': {'pos': other['pos'], 'width': other['width']}}
+
+
 def run(ctx):
     r = Result()
     rows = {s['state']: dict(s, outcome=('pending' if s['drawn'] else 'not drawn')) for s in STATES}
@@ -429,6 +468,10 @@ def run(ctx):
     ctx.js('(async () => { const L = await import("./text/layer.js"), R = await import("./model/records.js"); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(OWN))
     ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(OWN)); ctx.settle(); ctx.frames(2)
     r.check(ctx.js('window.__skep.caret()') is None and ctx.js('window.__skep.model.edits(%s).length' % json.dumps(OWN)) == 0, 'the caret is dropped and the edits cleared after the caret states', None)
+    # a click placing the caret in another paragraph stands the walk on its span, so a slot chord at the caret acts there (B3-S13)
+    later = [p for p in paras if p['pos'] > target['pos']]
+    follows = click_follows(ctx, OWN, target, later[0] if later else next((p for p in paras if p['pos'] != target['pos']), None))
+    r.check(follows['ok'], "a click placing the caret in another paragraph of the own draft stands the walk on that paragraph's span, and Mod+K at the caret selects that span whole, never the span the walk stood on (B3-S13; D5 K-70, K-100)", follows)
 
     # ---- (e) B3-S13: the swallow's draft form at a span with no caret (K-72) ---------------------------------------------
     ctx.leap(OWN, target['pos'])
