@@ -91,7 +91,8 @@
 // state kept; back, the segment as it stood; refused, the guest state boot
 // shows for that refusal, led by `L.reconnect-refused`. The daemon's segment
 // (`daemonSegment`): silent while the board runs; its stopped, unreachable
-// and halted-writes forms where it does not. A jump's face out of view
+// and halted-writes forms where it does not, never cut short of room (FP-26;
+// foundations §3.1; the style's). A jump's face out of view
 // (FP-25): the words of a jump's face whose document stands out of the
 // visible view, in a segment of their own while the plane hides the face
 // (O-HOST's `aside`, read through the reader the app hands in), said already
@@ -101,14 +102,14 @@
 // waits on the reader (O-FACES' `folded`), said through the status region as
 // it folds — its act, inside the line's one stop, unfolding it (O-FACES'
 // `unfold`); short of room every other segment is cut first, the address's
-// last, and the walk's never (the style's). The transient segments (the
-// swallow line K-9; the mode line C-31 where the pair flipped) stand until
-// the next act (`act`) — a press of one of the line's own acts among them —
-// or a change of the page's class, which takes one quoting what the class it
-// left read down with it (`classChanged`). A reading scene's close (N-GO's
-// `closed`, through the reader the app hands in) is said after it until the
-// next act: the first in the page's session whole, a transient segment; each
-// after it as forward ›'s label (`closedSaid`).
+// last, and the walk's and the daemon's never (the style's). The transient
+// segments (the swallow line K-9; the mode line C-31 where the pair flipped)
+// stand until the next act (`act`) — a press of one of the line's own acts
+// among them — or a change of the page's class, which takes one quoting what
+// the class it left read down with it (`classChanged`). A reading scene's
+// close (N-GO's `closed`, through the reader the app hands in) is said after
+// it until the next act: the first in the page's session whole, a transient
+// segment; each after it as forward ›'s label (`closedSaid`).
 // The rebuild keeps the focus (rule 11; `render`): the line is rebuilt
 // whenever its words change — every frame of a flight — and the act that held
 // the focus has it back by its `data-act`, through the focus's owner; an

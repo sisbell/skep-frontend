@@ -79,17 +79,17 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    so nothing after it on the line moves; set at the line's top. Its fields stand at their own widths and the document's
    label after its field takes the room they leave (`flex`, from none), its words wrapping onto a line it hides, so
    short of room it gives way a whole word at a time — its first word too, after the empty lead-in it opens with, which
-   a line may break after and which gives an empty label its line, so it stands on the segment's baseline; the segment
-   shrinks no narrower than its fields (`overflow:clip` keeps its content's least width its least) */
+   a line may break after and which gives an empty label its line, so it stands on the segment's baseline; past its
+   label the segment's own box narrows over its fields, `overflow:clip` cutting them at its end */
 #line button.address { display:inline-flex; align-items:baseline; width:calc(var(--words) * 1ch + 76px + 2ch); overflow:clip; text-align:left; background:none; border:0; border-radius:0; padding:0; margin:0; color:inherit; font:inherit; font-family:var(--face-ident); font-size:11px; line-height:inherit; cursor:pointer; vertical-align:top; }
 #line button.address > * { flex:none; }
 #line button.address > .label { flex:1 1 0; width:0; min-width:0; height:1lh; margin:0 .25em; overflow:hidden; white-space:normal; overflow-wrap:normal; font-family:var(--face-reading); color:var(--ink); }
 #line button.address > .label > .lead-in { display:inline-block; width:0; }
 #line button.address .pos { font-family:var(--face-client); }
-/* the line is one row of its acts and its segments, set on their text's baseline: short of room the segments are cut — the
-   acting-as segment and every one after it first, then the address's document label, a word at a time, its fields never —
-   and a walk's folded moment never (issue #182's design decision: "It never yields when the line runs short"); with
-   room, the address segment stands at its one width */
+/* the line is one row of its acts and its segments, set on their text's baseline. Short of room the acting-as segment, a
+   jump's face out of view and a transient segment are cut first; then the address segment narrows, its document label
+   giving way a word at a time before its fields; a walk's folded moment, a kept clause and the daemon's forms are never
+   cut (FP-26, FP-36; foundations §3.1). With room, the address segment stands at its one width */
 #line { display:flex; align-items:baseline; }
 #line > * { flex:none; }
 #line > .seg { flex:0 1000 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; }
@@ -97,6 +97,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #line > .seg.walk { flex:none; overflow:visible; color:var(--warn); }
 /* a kept document's clause beside the address that names it (FP-23): its words whole, never cut short of room */
 #line > .seg.kept { flex:none; overflow:visible; color:#cfd6df; }
+/* the daemon's stopped, unreachable and halted forms (FP-26): their words whole, never cut short of room */
+#line > .seg.daemon { flex:none; overflow:visible; }
 
 /* LEAP — the address segment opened (K-30); above the reading scene, which it may open over, and above the overlay and the
    notice below it, so nothing shown while the reader types in it covers its input or its rows (FP-36) */

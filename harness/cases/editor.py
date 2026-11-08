@@ -62,8 +62,9 @@ SEAM = 'script'
 # the page issues the marked checks wait on; each mark comes off the day its check passes
 XFAIL_CORNER_NARROW = ("issue #436: at the narrow width the column fills the view and the corner is placed beside it, wholly outside the "
                        "view — its kept word shown to no one (web/text/layer.js `placeCorners`)")
-XFAIL_LINE_DAEMON = ("issue #435: the one line's daemon segment is cut short of room at the desktop width and hidden whole at the narrow "
-                     "one — the stopped and halted forms' words unreadable (web/line/line.js `daemonSegment`)")
+XFAIL_LINE_NARROW = ("issue #310: at the narrow width the one line's acts and a daemon form need more room than the line holds — the "
+                     "address segment gives way to the form, whose words still run past the line's end (web/style.css, `#line`'s "
+                     "segments)")
 
 # THE TABLE. `how` says what reaches the state; `claim` what a person meets, which the check holds the page to; `drawn`
 # whether the page draws the state at HEAD, with `why` naming the module or unit a state not drawn waits on
@@ -436,7 +437,7 @@ def run(ctx):
         vis = shown(ctx, '#line [data-string="F.daemon.notebook.stopped"]')
         ok = came and seg == want and len(vis) == 1
         return ok, {'fired': fired, 'segment': seg, 'want': want, 'daemon': ctx.js('window.__skep.model.daemon()'), 'shown': len(vis)}
-    shoot('stopped', stopped_check, marks={WIDE[0]: XFAIL_LINE_DAEMON, NARROW_PX: XFAIL_LINE_DAEMON})
+    shoot('stopped', stopped_check, marks={NARROW_PX: XFAIL_LINE_NARROW})
     ctx.fire('daemon', {'board': board_id, 'state': 'running'})
     back = wait_for(ctx, 'window.__skep.model.daemon() === "running" && !document.querySelector(%s)' % json.dumps('#line [data-string="F.daemon.notebook.stopped"]'))
     r.check(back, 'the `daemon` event fired running again takes the stopped segment down', {'daemon': ctx.js('window.__skep.model.daemon()'), 'segment': line_segment(ctx, 'F.daemon.notebook.stopped')})
@@ -507,7 +508,7 @@ def run(ctx):
             vis = shown(ctx, '#line [data-string="F.daemon.notebook.halted"]')
             ok = consumed and seg == want and bool(h) and (h.get('writes') or {}).get('halted') is True and ctx.js('window.__skep.model.session()') is not None and len(vis) == 1
             return ok, {'consumed': consumed, 'segment': seg, 'want': want, 'writes': h and h.get('writes'), 'shown': len(vis)}
-        shoot('writes-halted', halted_check, marks={WIDE[0]: XFAIL_LINE_DAEMON, NARROW_PX: XFAIL_LINE_DAEMON})
+        shoot('writes-halted', halted_check, marks={NARROW_PX: XFAIL_LINE_NARROW})
         leave_page()
 
     # ---- (l) the sweep, the owner's page again, the write check over the harness's provider's log ---------------------------------
