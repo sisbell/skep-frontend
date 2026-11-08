@@ -17,7 +17,9 @@
 // qualifier on its own form and each other hand's after the document's own —
 // the forms the sets draw each by its form alone, the heading form "headings"
 // whatever its levels, and one block's heading by its level — a form's act and
-// take-off one pattern each, and no other entry spelling a form's name;
+// take-off one pattern each, a form's Format menu title its name with its
+// first letter capitalised, a line's place for a form's chord its act's name
+// where no chord is bound, and no other entry spelling a form's name;
 // the entries no design document carries are listed; and every accessible name the page
 // sets is read from ST — none stands in the markup, and none is written as a
 // literal in a module.
@@ -25,7 +27,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { sep } from 'node:path';
-import { STRINGS, t, tHTML, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, markCount, typeName, formName, formsNamed, formsAt, formAct, formTakeOff } from './strings.js';
+import { STRINGS, t, tHTML, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, markCount, typeName, formName, formsNamed, formsAt, formAct, formTakeOff, formTitle, formAgain } from './strings.js';
 
 /** a commons type as a link stores it, by its path under the registry document's subspace 3 */
 const commons = (/** @type {string} */ path) => '1.1.0.1.0.1.0.' + path;
@@ -529,6 +531,31 @@ test('a form\'s act and its take-off are one pattern each around the label of th
       'take the paragraph off in Tumbler', 'take the heading off in Tumbler', 'take the flag off in Tumbler']);
   assert.equal(formTakeOff(UNKNOWN, SET), t('L.format.take-off', { name: typeName(UNKNOWN), set: SET }), 'a type the table lacks named as its card names it');
   for (const id of ['B3.format.bold.notes', 'B3.format.heading.notes', 'B3.format.bold.off', 'B3.format.heading.off']) assert.ok(!(id in STRINGS), `${id}: one pattern for every form, never a line of one form's own`);
+});
+
+test('every Format menu titles a form by its one name with its first letter capitalised — "Strikethrough", "Subscript", "Superscript" — a heading by its level, and a type the table lacks, or a heading at a level it lacks, by its card\'s name so, the table entering no title of its own (issue #463\'s design decision)', () => {
+  assert.deepEqual([BOLD, ITALIC, CODE, STRIKE, SUB, SUP, PARAGRAPH, FLAG].map((ty) => formTitle(ty)), ['Bold', 'Italic', 'Code', 'Strikethrough', 'Subscript', 'Superscript', 'Paragraph', 'Flag']);
+  assert.deepEqual([1, 2, 3].map((n) => formTitle(HEADING, n)), ['Heading 1', 'Heading 2', 'Heading 3']);
+  for (const [ty, level] of [[STRIKE], [SUB], [SUP], [HEADING, 2], [HEADING, 7], [HEADING], [UNKNOWN]]) {
+    const name = formName(ty, level);
+    assert.equal(formTitle(ty, level), name[0].toUpperCase() + name.slice(1), `${ty} at level ${level}: its one name, only its first letter changed`);
+  }
+  assert.equal(formTitle(UNKNOWN), 'Link of type 3.23.8 — undocumented here');
+  assert.deepEqual(Object.entries(STRINGS).filter(([, e]) => /^(Bold|Italic|Code|Strikethrough|Subscript|Superscript|Paragraph|Headings?|Flag)\b/.test(e.text)).map(([id]) => id), [], 'no entry holds a title: each is its form\'s name');
+});
+
+test('a line that would name a form\'s chord names, where none is bound, the act by the form\'s one name and keeps its shape — strikethrough, subscript and superscript, which have no chord — and a chord bound takes the name\'s place, as bold\'s does, the place never blank (issue #463\'s design decision)', () => {
+  assert.equal(t('B3.format.style.on', { form: formName(STRIKE), 'its chord or act': formAgain(STRIKE, null) }), 'strikethrough — what you type next; strikethrough again stops it', 'the decision\'s own example');
+  for (const ty of [SUB, SUP]) {
+    const form = formName(ty);
+    assert.equal(t('B3.format.style.on', { form, 'its chord or act': formAgain(ty, null) }), `${form} — what you type next; ${form} again stops it`, form);
+  }
+  assert.equal(t('B3.format.again', { chord: formAgain(SUP, null) }), 'superscript again marks these words');
+  assert.equal(t('B3.format.again.off', { chord: formAgain(SUB, null) }), 'subscript again takes its mark off them');
+  assert.equal(t('B3.format.carried', { E: 'Tumbler', chord: formAgain(STRIKE, null) }), 'Tumbler is published — formatting is made here, in your draft: strikethrough again marks these words');
+  assert.equal(t('B3.format.again', { chord: formAgain(BOLD, '⌘B') }), '⌘B again marks these words', 'a chord bound is named');
+  assert.equal(formAgain(STRIKE, '⌘⇧X'), '⌘⇧X', 'a chord bound later replaces the act\'s name');
+  assert.deepEqual([formAgain(SUP, ''), formAgain(HEADING, null, 2), formAgain(UNKNOWN, null)], ['superscript', 'heading 2', typeName(UNKNOWN)], 'never blank: a heading by its level, a type the table lacks by its card\'s name');
 });
 
 test('no entry spells a formatting form\'s name save the form\'s own — the heading form\'s in a list among them — and a heading\'s act and take-off, so every place that names a form reads its one name — and none says "struck" (issue #442\'s design decision)', () => {

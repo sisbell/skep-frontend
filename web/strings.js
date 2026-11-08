@@ -24,10 +24,14 @@
 // hand's after the document's own as a group led by the hand — the forms the
 // sets on a document draw each by its form alone, never by a value its type
 // carries (`formsNamed`), the forms at one place in the text each by its name
-// there (`formsAt`); and a form's act and take-off said in one pattern each
-// around the label of the set they write into (`formAct`, `formTakeOff`);
-// `pinned` lists the pinned entries for the gate's text case, which holds each
-// to its source.
+// there (`formsAt`); a form's act and take-off said in one pattern each around
+// the label of the set they write into (`formAct`, `formTakeOff`); a form's
+// item in every Format menu titled by its name with its first letter
+// capitalised, the table holding no title of its own (`formTitle`); and the
+// place a line keeps for a form's chord filled by its chord where one is
+// bound, else by its act, named by the form's name (`formAgain`); `pinned`
+// lists the pinned entries for the gate's text case, which holds each to its
+// source.
 // Rules: FP-1, FP-2, FP-13, FP-32, FP-34.
 
 import { fill, esc, dayOf, timeOf } from './util.js';
@@ -1432,6 +1436,36 @@ export function formAct(ty, set) {
  */
 export function formTakeOff(ty, set) {
   return formOf(ty)?.path === HEADING ? t('L.format.take-off.heading', { set }) : t('L.format.take-off', { name: formName(ty), set });
+}
+
+/**
+ * A form's title in every Format menu — the menu bar's and the context
+ * menu's, native or the page's: its name (`formName`) with its first letter
+ * capitalised, "Strikethrough", a heading's with its level; a type the table
+ * lacks, or a heading at a level it lacks, its card's name so.
+ * @param {string | null} ty the type as a link stores it
+ * @param {number} [level] a heading's level, its type slot's parameter
+ * @returns {string}
+ */
+export function formTitle(ty, level) {
+  const name = formName(ty, level);
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+/**
+ * What fills the place a line keeps for a form's chord — the words before
+ * "again" in the typing style's line (`B3.format.style.on`) and the landing
+ * line's formatting clause (`B3.format.again`, `B3.format.again.off`,
+ * `B3.format.carried`): the form's chord where one is bound, else its act,
+ * named by the form's name (`formName`), so the line keeps its shape, names
+ * no chord or menu path the form lacks, and never stands blank (FP-34).
+ * @param {string | null} ty the type as a link stores it
+ * @param {string | null} chord the form's chord as N-KEYS draws it (`drawChord`), null where none is bound
+ * @param {number} [level] a heading's level, its type slot's parameter
+ * @returns {string}
+ */
+export function formAgain(ty, chord, level) {
+  return chord || formName(ty, level);
 }
 
 /** a count noun: `one` where n is 1, else `many` with ⟨n⟩ filled */
