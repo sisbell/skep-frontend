@@ -10,6 +10,12 @@
 // column's edge — is never a byte of the document; the one selector here
 // names it (`CHROME`) for T-LAYER's walk of a block's text nodes and the
 // copy. K-8's extension (D5 §1.1) is arithmetic over the document's blocks.
+// So is the walk's grain (D5 §4 rule 20): which blocks are elements of the
+// walk (`isElement`) — none a typed line of white space alone, nor the
+// newlines before a run's first typed line — and the element a position of a
+// document stands on (`elementIn`), the block holding it where it is one,
+// else the last element before it, else the first; N-WALK steps and lands by
+// it, and T-LAYER matches a kept caret to the span the walk stands on by it.
 // Rules: FP-1, FP-2, FP-7, FP-8.
 
 import { byteOffsets } from '../util.js';
@@ -72,6 +78,28 @@ export const sameSpan = (/** @type {Span | null | undefined} */ a, /** @type {Sp
 /** does a block hold any position of a span? */
 export const touches = (/** @type {{pos: number, width: number}} */ block, /** @type {{pos: number, width: number}} */ span) =>
   span.pos < block.pos + block.width && block.pos < span.pos + span.width;
+
+/** is a block an element of the walk (D5 §4 rule 20): any but a typed line of white space alone, or the newlines before a run's first typed line */
+export const isElement = (/** @type {Block} */ b) => b.kind !== 'para' || b.text.trim() !== '';
+
+/**
+ * The element of the walk a position of a document stands on (D5 §4 rule
+ * 20): the block holding it where that block is an element (`isElement`);
+ * else — white space — the last element before it; else the first element.
+ * Null where no block holds the position, or none is an element.
+ * @param {Block[]} blocks the document's blocks in position order
+ * @param {number} pos
+ * @returns {Block | null}
+ */
+export function elementIn(blocks, pos) {
+  const at = blocks.find((b) => pos >= b.pos && pos < b.pos + b.width);
+  if (!at) return null;
+  if (isElement(at)) return at;
+  /** @type {Block | null} */
+  let before = null;
+  for (const b of blocks) if (b.pos < at.pos && isElement(b)) before = b;
+  return before || blocks.find(isElement) || null;
+}
 
 /**
  * K-8's extension: the span widened by one block in the direction pressed —

@@ -29,8 +29,11 @@
 // the page makes of its own releasing it — until the person's next walk move
 // or landing; Shift with an arrow at a live caret moves it and
 // runs the selection from where it stood to it, while off one Shift+↓ stays
-// K-8's; a caret at the text's end stands in its last span, which Esc leaves
-// the walk on and where Enter or a printable key returns it; Mod+Enter at
+// K-8's; a caret at the text's end stands in its last span, and one kept in
+// white space alone — a line of spaces, the newlines before the first typed
+// line — in the span the walk stands on there, each a span Esc leaves the
+// walk on and where Enter or a printable key returns the caret, a paste there
+// the platform's; Mod+Enter at
 // a live caret follows from a selection drawn in the caret's own text alone —
 // with none there, whatever a slot chord made before it and wherever else a
 // selection stands, it selects nothing, follows nothing and leaves the caret
@@ -415,6 +418,54 @@ test('a caret at the end of a draft\'s text stands in its last span: Esc there l
   await tick();
   assert.equal(await KEYS.dispatch(keyOf('z'), PLANE), true);
   assert.deepEqual([caret(), REC.edits(D).map((e) => [e.pos, e.width, e.text])], [[D, N + 2, true], [[N + 1, 0, 'z']]], 'a printable key at the last span returns the kept caret and types at the end');
+}));
+
+/** D's text read again as `text`, delivered whole */
+function deliverD(/** @type {string} */ text) {
+  const n = byteLength(text);
+  REC.invalidate(D);
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
+  REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n }]);
+}
+
+test('a caret kept in a line of white space alone stands in the span the walk stands on there, the span before it: Esc leaves the walk on that span, and there Enter returns the kept caret where it stood, a printable key returns it and types at it and a paste is the platform\'s, never the line of a span holding no caret; at the span after the line Enter places a caret of its own (D5 §4 rule 20; K-70, K-72, K-77, K-93; BM-52)', () => onPlane(async ({ said }) => {
+  deliverD('First line.\n\n   \n\nSecond line here.\n');
+  assert.deepEqual(REC.doc(D).blocks.map((b) => [b.pos, b.text]), [[1, 'First line.'], [14, '   '], [19, 'Second line here.']], 'a line of three spaces between two typed lines');
+  assert.equal(LAYER.editable(D), true);
+  await focusOn(D, 1);
+  LAYER.placeCaret(D, 15);
+  assert.deepEqual(caret(), [D, 15, true], 'the caret live in the line of spaces');
+  assert.equal(await KEYS.dispatch(keyOf('Escape'), PLANE), true);
+  await tick();
+  assert.deepEqual([caret(), WALK.current()?.kind, WALK.current()?.pos], [[D, 15, false], 'block', 1], 'Esc: the caret kept in the line of spaces, the walk on the span before it');
+  assert.deepEqual([LAYER.caretInSpan(D, 1), LAYER.caretSpan()?.block], [true, 1], 'the kept caret stands in the span the walk stands on');
+  assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+  assert.deepEqual([caret(), REC.edits(D)], [[D, 15, true], []], 'Enter at that span returns the kept caret where it stood, nothing inserted');
+  await KEYS.dispatch(keyOf('Escape'), PLANE);
+  await tick();
+  const before = said.length;
+  assert.equal(await KEYS.dispatch(keyOf('v', MOD), PLANE), false, 'a paste at the kept caret\'s span: the platform\'s own');
+  assert.deepEqual([said.length, caret()], [before, [D, 15, false]], 'no line said, the caret kept');
+  assert.equal(await KEYS.dispatch(keyOf('z'), PLANE), true);
+  assert.deepEqual([caret(), REC.edits(D).map((e) => [e.pos, e.width, e.text]), WALK.current()?.pos], [[D, 16, true], [[15, 0, 'z']], 1], 'a printable key at that span returns the kept caret and types at it, the walk on the span');
+  await KEYS.dispatch(keyOf('Escape'), PLANE);
+  await tick();
+  await focusOn(D, 19);
+  assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+  assert.deepEqual(caret(), [D, 20, true], 'Enter at the span after the line: a caret at that span\'s start, the kept caret not returned there');
+}));
+
+test('a caret kept in the newlines before a draft\'s first typed line stands in that line\'s span, the one the walk stands on there: Esc leaves the walk on it, and Enter at it returns the kept caret where it stood, never a caret at the span\'s start (D5 §4 rule 20; K-70, K-77; BM-52)', () => onPlane(async () => {
+  deliverD('\n\nFirst line.\n');
+  assert.deepEqual(REC.doc(D).blocks.map((b) => [b.pos, b.text]), [[1, ''], [3, 'First line.']], 'the newlines before the first typed line one block of no text');
+  await focusOn(D, 3);
+  LAYER.placeCaret(D, 1);
+  assert.equal(await KEYS.dispatch(keyOf('Escape'), PLANE), true);
+  await tick();
+  assert.deepEqual([caret(), WALK.current()?.kind, WALK.current()?.pos], [[D, 1, false], 'block', 3], 'Esc: the caret kept before the first typed line, the walk on that line\'s span');
+  assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+  assert.deepEqual([caret(), REC.edits(D)], [[D, 1, true], []], 'Enter at that span returns the kept caret where it stood');
 }));
 
 test('a camera move leaves the walk at a live caret\'s span, the focus being the caret, which no camera move moves, so a slot chord pressed after it acts there; once Esc, a zoom past the caret\'s reading scale or a key pressed below that scale leaves the caret kept, its span holds the walk — a re-take with a line of it in view at a scale the person may edit it at takes the walk back to it, whatever stands under the view\'s centre, so a printable key there types at the kept caret, and one with none of it in view takes the place under the centre — until the person\'s next walk move or landing releases it, the re-take then taking the walk under the view\'s centre (B3-S1; D5 §4 rule 3, M-2; B3-S13; K-11, K-77, K-100)', () => onPlane(async () => {

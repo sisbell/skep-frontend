@@ -386,10 +386,13 @@
 // the caret's span, a move of the walk, a zoom past its reading scale (D5
 // M-2, K-77; N-KEYS', N-WALK's) — keeps the caret at its position
 // (`leaveCaret`), which Enter or a printable key at its span returns
-// (`returnCaret`) — whether a line of its span, carried into the text shown,
-// stands in the visible view read here for N-WALK's hold on it
-// (`spanInView`); its line stands while it holds the caret (`heldParts`),
-// the platform's selection is collapsed at it as the page moves it — save
+// (`returnCaret`) — its span the one the walk stands on at its position, by
+// T-SPAN's rule: in white space alone the span before it, or the first where
+// none stands before it (`caretSpan`, `caretInSpan`; D5 §4 rule 20); whether
+// a line of its span, carried into the text shown, stands in the visible view
+// read here for N-WALK's hold on it (`spanInView`); its line stands while it
+// holds the caret (`heldParts`), the platform's selection is collapsed at it
+// as the page moves it — save
 // by a step that extends a selection, whose range the page places
 // (`placeSelection`) — and its mark —
 // the page's own, of no width, hollow where kept — is set at its character
@@ -417,7 +420,7 @@ import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerWords, keptHTM
 import { farShort, whyOf } from '../beams/held.js';
 import { applyEdits, toBase, toShown, boundaries } from '../model/derive.js';
 import { homeOf, documentOf, memberOf, versionAddress, accountOf } from '../model/address.js';
-import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
+import { posOfChar, charOfPos, sameSpan, elementIn, CHROME } from './span.js';
 import { esc, byteLength } from '../util.js';
 import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
 
@@ -4248,8 +4251,9 @@ export function placeCaret(addr, pos) {
 /**
  * Enter at a focused span of a draft the person may edit (K-70; BM-52): the
  * caret placed at the span's start — the model's position carried into the
- * text shown — or, where a kept caret stands in that span, returned where it
- * stood. Null where the text is none the person may edit.
+ * text shown — or, where a kept caret stands in that span, the one the walk
+ * stands on at the caret (`sameBlock`), returned where it stood. Null where
+ * the text is none the person may edit.
  * @param {string} addr
  * @param {number} pos the span's first position in the model's text (N-WALK's)
  * @returns {Caret | null}
@@ -4274,30 +4278,45 @@ function basePos(addr, shownPos) {
 }
 
 /**
+ * The span of a draft's model text the walk stands on at a position of it
+ * (N-WALK's grain): the element T-SPAN's rule stands the position on
+ * (`elementIn`; D5 §4 rule 20) — in white space alone the span before it, or
+ * the first where none stands before it — over the blocks the model holds;
+ * null where it holds no block there, or none is an element.
+ * @param {string} addr
+ * @param {number} pos a position of the model's text
+ * @returns {Block | null}
+ */
+const grainAt = (addr, pos) => elementIn(REC.has(addr) ? REC.doc(addr).blocks : [], pos);
+
+/**
  * Does a position of a draft's shown text stand in the span of the model's
- * text whose first position is `blockPos` (N-WALK's grain; `basePos`) — the
- * kept caret's span (BM-52)?
+ * text whose first position is `blockPos` — the span the walk stands on there
+ * (`grainAt`), the position carried back into the model's text (`basePos`) —
+ * the kept caret's span (BM-52)?
  * @param {string} addr
  * @param {number} shownPos
  * @param {number} blockPos
  */
 export function sameBlock(addr, shownPos, blockPos) {
-  const b = REC.blockAt(addr, basePos(addr, shownPos));
+  const b = grainAt(addr, basePos(addr, shownPos));
   return !!b && b.pos === blockPos;
 }
 
-/** does a caret — live or kept — stand in the span of a draft's text whose first position is `blockPos` (N-WALK's grain; BM-52)? */
+/** does a caret — live or kept — stand in the span of a draft's text whose first position is `blockPos`, the span the walk stands on at it (`sameBlock`; BM-52)? */
 export const caretInSpan = (/** @type {string} */ addr, /** @type {number} */ blockPos) => !!caret_ && caret_.addr === addr && sameBlock(addr, caret_.pos, blockPos);
 
 /**
  * The span the caret stands in, in the model's text (N-WALK's grain): the
  * caret's position carried back through the edits, at the text's end its last
- * position (`basePos`), and the block holding it; null where no caret stands.
+ * position (`basePos`), and the first position of the span the walk stands on
+ * there (`grainAt`), which `caretInSpan` answers true for; null where no caret
+ * stands.
  * @returns {{addr: string, pos: number, block: number | null} | null}
  */
 export function caretSpan() {
   if (!caret_) return null;
-  const pos = basePos(caret_.addr, caret_.pos), b = REC.blockAt(caret_.addr, pos);
+  const pos = basePos(caret_.addr, caret_.pos), b = grainAt(caret_.addr, pos);
   return { addr: caret_.addr, pos, block: b ? b.pos : null };
 }
 

@@ -3,10 +3,12 @@
 // character resolving past it as `sliceBytes` cuts; K-8's extension widens
 // by one block in the direction pressed and stops at the document's edges;
 // a block is touched by the span that overlaps it, and two spans are the
-// same where they name the same bytes.
+// same where they name the same bytes; and a block of white space alone is
+// no element of the walk, a position in one standing on the element before
+// it, else on the first.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { posOfChar, charOfPos, extended, touches, sameSpan, spanOfBlock } from './span.js';
+import { posOfChar, charOfPos, extended, touches, sameSpan, spanOfBlock, isElement, elementIn } from './span.js';
 import { sliceBytes, byteLength } from '../util.js';
 
 /** @returns {import('../model/records.js').Block} */
@@ -41,4 +43,19 @@ test('a block is touched by the span that overlaps it; the same span names the s
   assert.ok(touches(b, { pos: 18, width: 10 }) && touches(b, { pos: 1, width: 12 }) && !touches(b, { pos: 1, width: 10 }) && !touches(b, { pos: 21, width: 4 }));
   assert.ok(sameSpan({ addr: 'd', pos: 1, width: 2 }, { addr: 'd', pos: 1, width: 2 }));
   assert.ok(!sameSpan({ addr: 'd', pos: 1, width: 2 }, { addr: 'd', pos: 1, width: 3 }) && !sameSpan(null, { addr: 'd', pos: 1, width: 2 }));
+});
+
+test('a block of white space alone is no element of the walk, and a position in one stands on the element before it, else on the first; a position no block holds, or a document of white space alone, stands on none (D5 §4 rule 20)', () => {
+  // '\n\nSecond.\n\n \n\nThird.': the newlines before the first typed line, a span, a line of one space, a span
+  const blocks = [block(1, '', 2), block(3, 'Second.'), block(12, ' '), block(15, 'Third.', 0)];
+  /** @type {import('../model/records.js').Block} */
+  const run = { pos: 21, width: 4, kind: 'withheld', text: '', origin: '1.0.2.0.2' };
+  assert.deepEqual([...blocks, run].map(isElement), [false, true, false, true, true], 'the newlines and the space are no elements; a span and a withheld run are');
+  const at = (/** @type {number} */ pos) => elementIn(blocks, pos)?.pos ?? null;
+  assert.deepEqual([at(5), at(16)], [3, 15], 'a position in a span: that span');
+  assert.equal(at(13), 3, 'in the line of one space: the span before it');
+  assert.equal(at(1), 3, 'in the newlines before the first typed line, no element before them: the first span');
+  assert.equal(at(99), null, 'a position no block holds: none');
+  assert.equal(elementIn([block(1, 'aaa'), block(6, ' ', 1), block(8, '\t', 1), block(10, 'bbb', 0)], 8)?.pos, 1, 'past two lines of white space: the last element before them');
+  assert.equal(elementIn([block(1, '', 2), block(3, '  ', 0)], 3), null, 'a document of white space alone: none');
 });

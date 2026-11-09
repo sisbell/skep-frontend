@@ -69,9 +69,10 @@
 // below, never a link of the document's own — the run's item saying how many
 // end there and standing expanded, → entering them, Enter at each opening
 // its card (K-55) and Enter at the run still showing its face. A block whose
-// text is only white space is no element of the walk (rule 20): the mirror
-// lists none, and a landing inside one stands on the element before it; a
-// position no block holds stands on the first span. A landing the index does
+// text is only white space is no element of the walk, by T-SPAN's rule
+// (`isElement`, `elementIn`; rule 20): the mirror lists none, and a landing
+// inside one stands on the element before it; a position no block holds
+// stands on the first span. A landing the index does
 // not list — a withheld document, one unchanged since the index's floor, its
 // account — lands on its own node, placed among the listed siblings in
 // address order (`among`; rule 12). → steps in to the child the plane draws
@@ -210,11 +211,10 @@ import { farSays } from '../beams/held.js';
 import { docBox, accountCell, boardCell, accountAt, clearLeftOf, continuationCell, withinContinuation, membersAt, markKey, continuationOf } from '../plane/projection.js';
 import { lodOf, residueDepth, markScale } from '../plane/lod.js';
 import { cmpAddr, accountOf, documentOf } from '../model/address.js';
-import { touches } from '../text/span.js';
+import { touches, isElement, elementIn } from '../text/span.js';
 import { esc, fill } from '../util.js';
 import { t, tHTML, addressedHTML, markCount } from '../strings.js';
 
-/** @typedef {import('../model/records.js').Block} Block */
 /** @typedef {import('../links/links.js').Shown} Shown */
 
 /**
@@ -323,9 +323,6 @@ export function focusedSpan() { return focus && focus.kind === 'block' && focus.
 /** is the ring drawn — the focus's owner's rule (rule 10): the plane holds the focus and a key moved it */
 export const ringShown = () => FOCUS.ringShown();
 
-/** is a block an element of the walk (rule 20): any but a typed line of white space alone, or the newlines before a run's first typed line */
-export const isElement = (/** @type {Block} */ b) => b.kind !== 'para' || b.text.trim() !== '';
-
 /** is a document below its reading scale at the view the camera is bound for (see the head; T-LAYER's one test) — `scale` that view's, where a pass over the mirror's items read it once */
 const below = (/** @type {string} */ addr, scale = CAM.destination().scale) => !LAYER.atReadingScale(addr, scale);
 /**
@@ -389,22 +386,18 @@ function elementsOf(/** @type {string} */ addr) {
 
 /**
  * The index of the element of the walk standing on a position, among a
- * document's elements (rule 20): the span holding it; where the block holding
- * it is no element of the walk — white space — the element before it; where no
- * block holds it, or no element stands before it, the first.
+ * document's elements: the span T-SPAN's rule stands it on (`elementIn`; rule
+ * 20), read over the document's blocks as the model holds them; the first
+ * where that rule stands it on none — no block holds the position, or none is
+ * an element.
  * @param {Node[]} kids the document's elements (`elementsOf`)
  * @param {string} addr the document
  * @param {number} pos
  * @returns {number}
  */
 function elementAt(kids, addr, pos) {
-  const b = REC.blockAt(addr, pos);
-  if (!b) return 0;
-  const i = kids.findIndex((n) => n.kind === 'block' && n.pos === b.pos);
-  if (i >= 0) return i;
-  let before = 0;
-  kids.forEach((n, k) => { if (n.kind === 'block' && n.pos != null && n.pos <= pos) before = k; });
-  return before;
+  const b = elementIn(REC.has(addr) ? REC.doc(addr).blocks : [], pos);
+  return b ? Math.max(0, kids.findIndex((n) => n.kind === 'block' && n.pos === b.pos)) : 0;
 }
 
 /** the ends LK draws at the withheld run a document's block at `pos` is, in the order it draws them; none for any other block */
@@ -1150,7 +1143,7 @@ function liveCaret() {
  */
 export async function followCaret(byKey = null) {
   const at = liveCaret() ? LAYER.caretSpan() : null;
-  // the walk already on the block the caret stands in, as at every key typed inside a span: answered before the document's elements are listed
+  // the walk already on the span the caret stands in (T-LAYER's `caretSpan`), as at every key typed inside a span: answered before the document's elements are listed
   if (!at || (focus && focus.kind === 'block' && focus.addr === at.addr && focus.pos === at.block)) return;
   const kids = elementsOf(at.addr), el = kids[elementAt(kids, at.addr, at.pos)];
   if (!el || (focus && focus.kind === el.kind && focus.addr === el.addr && focus.pos === el.pos)) return;

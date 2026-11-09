@@ -72,6 +72,7 @@ import { LOD_TXT_LO, markScale } from '../plane/lod.js';
 import { standardFs, placeOf, EDGE } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
 import { entitlementArm } from '../text/article.js';
+import { isElement } from '../text/span.js';
 import { STRINGS, t, tHTML, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
 import * as TRAIL from './trail.js';
@@ -3433,7 +3434,7 @@ test('Back to a passage whose text a feed row dropped while the reader was away 
 
 test('Back puts the walk where it stood as the reader left the entry, never on the landing made there: three spans on by ↓, the camera following, a LEAP away, then Back — the walk on the span it stood on (issue #221)', async () => {
   await PUMP.loadWhole(LONG);
-  const spans = REC.doc(LONG).blocks.filter(WALK.isElement), at = spans[40];
+  const spans = REC.doc(LONG).blocks.filter(isElement), at = spans[40];
   await run(GO.leapTo(LONG, { pos: at.pos + 4 }));
   assert.deepEqual([walkAt(), WALK.landedAt()], [['block', LONG, at.pos], at.pos + 4], 'the LEAP\'s landing');
   for (let i = 0; i < 3; i++) await run(WALK.key('down'));
@@ -3648,7 +3649,7 @@ test('Back to a draft where an edit moved the paragraph the walk stood on out of
 
 test('a departure keeps no place the walk stood on that the view it leaves does not show: the camera moved down LONG with no re-take, a LEAP away and Back — the walk on the line read, never on the paragraph the camera left (issue #237; FP-25)', async () => {
   await PUMP.loadWhole(LONG);
-  const spans = REC.doc(LONG).blocks.filter(WALK.isElement), [tenth, read] = [spans[9], spans[80]];
+  const spans = REC.doc(LONG).blocks.filter(isElement), [tenth, read] = [spans[9], spans[80]];
   await run(GO.leapTo(LONG, { pos: tenth.pos }));
   assert.deepEqual(walkAt(), ['block', LONG, tenth.pos], 'the walk on the tenth paragraph');
   CAM.set(GO.viewFor(LONG, read.pos));
