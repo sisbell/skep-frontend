@@ -1,6 +1,7 @@
 // O-SELECTION — the selection and its acts in fixed slots (the structure
 // record §3.2; foundations §3.1; D5 §1.6). Layer 2. ENGINE-BOUND. State
-// (FP-10): the selection; T-LAYER reads it through the reader handed in.
+// (FP-10): the selection, and how Shift with ← or → moves its ends (`ends`);
+// T-LAYER reads the selection through the reader handed in.
 // The selection is the span (R11; foundations §3.1): a byte range of one
 // document, `{addr, pos, width}` in V-positions, made in one continuous
 // gesture — a drag over the mounted text at reading scale (§2.4), read back
@@ -11,14 +12,20 @@
 // at a live caret, Shift with each arrow, Home or End moves the caret a step
 // and the selection runs from its anchor to the caret (`extendFromCaret`; D5
 // K-71, §1.6), as Shift with ← or → does at the span a kept caret stands in
-// once N-KEYS' returns the caret (K-70, K-77) — each press naming the end it
+// once N-KEYS' returns the caret (K-70, K-77); at the walk's focused span in
+// text the person may not edit, Shift with ← or → moves the selection's
+// moving end a character, its anchor standing — the selection standing in
+// the walk's document, or one the platform made wherever it stands — else
+// selects one character from the span's edge, its start for → and the end of
+// its text for ← (`extendFromFocus`; D5 K-70) — each press naming the end it
 // moved, which T-LAYER keeps clear of its document's head. The platform's
 // highlight is the selection's one mark (§2.1), and the selection the
 // platform's own (foundations §2.1; D5 §2): a change of it rebuilds no
 // article — T-LAYER marks the blocks it touches in place — so a selection the
 // person made stands as they left it, its anchor where they set it, for the
-// platform's own keys to extend where neither a live caret nor the kept
-// caret's span takes them (D5 K-71); T-LAYER places it over a span
+// platform's own keys to extend where neither a live caret, the kept caret's
+// span nor the walk's span in text the person may not edit takes them (D5
+// K-71); T-LAYER places it over a span
 // the page selects and puts it back, its anchor at the same end, after a
 // remount — never over a selection the person holds outside the plane's
 // text, in a reading scene's pane or an overlay's text, which stands as they
@@ -84,13 +91,15 @@ import * as LINKS from './links-card.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { extended, sameSpan, spanOfBlock } from '../text/span.js';
+import { boundaries } from '../model/derive.js';
 import { t, typeName } from '../strings.js';
-import { esc } from '../util.js';
+import { esc, byteLength } from '../util.js';
 import { markDirty } from '../plane/camera.js';
 import { drawChord } from '../nav/keys.js';
 
 /** @typedef {import('../text/span.js').Span} Span */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
+/** @typedef {import('../text/layer.js').SelectionEnd} SelectionEnd */
 
 /** @typedef {{kind: 'selection', at?: Left} | {kind: 'which', what: 'follow' | 'scene', at?: Left}} About what the acts card and the "which" list are about (O-HOST's): the selection, which a departure keeps by its bytes (`asLeft`); else the span a slot's act was made over, which the card or the list holds alone (`at`; see the head) */
 
@@ -102,8 +111,22 @@ import { drawChord } from '../nav/keys.js';
  * @property {ISpan[]} ids its bytes by identity (M-REC's `identityOf`), which a return places in the text then; none where the held image did not cover them
  */
 
+/**
+ * @typedef {Object} Ends — how Shift with ← or → moves the selection's ends (`extendFromFocus`; D5 K-70)
+ * @property {'start' | 'end'} moves the end a press moves, the other the anchor: the end the act that made the selection moved — the platform's focus point where the platform made it — else its end, T-LAYER placing its anchor at its start
+ * @property {boolean} platform the platform made the selection — a drag, or its own keys — and the presses since moved it: it extends where it stands, wherever the walk stands
+ */
+
+/** a selection anchored at its start, as T-LAYER places a span the page selects: a press moves its end */
+const AT_START = /** @type {Ends} */ (Object.freeze({ moves: 'end', platform: false }));
+
 /** @type {Span | null} */
 let sel = null;
+/** @type {Ends} how Shift with ← or → moves the selection's ends while it stands, set with it (`hold`) */
+let ends = AT_START;
+
+/** the selection set, and how its ends move: the one place either is written */
+function hold(/** @type {Span | null} */ span, /** @type {Ends} */ how = AT_START) { sel = span; ends = how; }
 
 /** the selection, read-only (T-LAYER's reader): the one the screen draws, never a span a card or a list holds (see the head) */
 export const selected = () => sel;
@@ -128,7 +151,7 @@ export const asLeft = () => (sel ? bytesOf(sel) : null);
  * @param {boolean} [say] the status region says where it stands: false where the landing that carried it says it
  */
 export function restore(span, left, say = true) {
-  sel = span;
+  hold(span);
   LAYER.placeSelection(span);
   markDirty();
   const a = left ? left.about : null, focus = left ? left.focus : null;
@@ -167,15 +190,31 @@ function wholeBlock(/** @type {string} */ addr, /** @type {number} */ pos) {
  * already covers it, that one stands — the next frame marks the blocks it
  * touches in place, rebuilding no article, and its acts appear at it; the
  * end the act moved kept clear of its document's head (T-LAYER's
- * `keepClear`).
+ * `keepClear`), and the one Shift with ← or → moves next (`Ends`) — where the
+ * platform made the selection, the end its focus point stands at (T-LAYER's
+ * `selectionBackward`); where the act moved none, its end.
  * @param {string} addr
  * @param {number} pos the span's first position
  * @param {number | null} [width] positions; null selects the block at `pos` whole
- * @param {import('../text/layer.js').SelectionEnd | null} [moved] the end the act moved — K-8's extended end, the platform's focus point after a press; null for an act that moves none
+ * @param {SelectionEnd | null} [moved] the end the act moved — K-8's extended end, the platform's focus point after a press; null for an act that moves none
  */
 export function select(addr, pos, width = null, moved = null) {
   const span = width != null && width > 0 ? { addr, pos, width } : wholeBlock(addr, pos);
-  sel = span;
+  const platform = moved === 'focus';
+  take(span, moved, { moves: moved === 'start' || (platform && LAYER.selectionBackward()) ? 'start' : 'end', platform });
+}
+
+/**
+ * The selection taken (`select`, `extendFromFocus`): set with how its ends
+ * move (`hold`), the platform's highlight placed over it (T-LAYER's
+ * `placeSelection`), its acts shown at it, and where it stands said through
+ * the status region (D4).
+ * @param {Span} span
+ * @param {SelectionEnd | null} moved the end the act moved
+ * @param {Ends} how
+ */
+function take(span, moved, how) {
+  hold(span, how);
   LAYER.placeSelection(span, moved);
   markDirty();
   render();
@@ -226,10 +265,62 @@ function anchorAt(/** @type {import('../text/layer.js').Caret} */ c) {
   return sel.pos + sel.width === c.pos ? sel.pos : c.pos;
 }
 
+/**
+ * Shift with ← or → at the walk's focused span in text the person may not
+ * edit (D5 K-70, K-71): where the selection stands in the walk's document, or
+ * the platform made it wherever it stands (`Ends`), its moving end is stepped
+ * a character that way in the text shown — an item whole (M-DERIVE's
+ * `boundaries`) — its anchor standing; else one character is selected from
+ * the span's edge — its start for →, the end of its text for ←, never the
+ * newline after it — a selection in another document replaced, as K-8's
+ * first press replaces it (`selectFocused`). Where the step brings the moving
+ * end back to the anchor, no selection stands (`clear`). The focus stays on
+ * the walk's element (rule 15).
+ * @param {'left' | 'right'} dir
+ * @returns {boolean} false where the walk stands on no span, or the text holds no character that way: nothing changes
+ */
+export function extendFromFocus(dir) {
+  const f = WALK.current();
+  if (!f || f.kind !== 'block' || f.pos == null) return false;
+  if (sel && (sel.addr === f.addr || ends.platform)) {
+    const { addr, pos, width } = sel, end = pos + width;
+    return runTo(addr, ends.moves === 'end' ? pos : end, stepFrom(addr, ends.moves === 'end' ? end : pos, dir), ends.platform);
+  }
+  const b = REC.blockByPos(f.addr, f.pos);
+  if (!b) return false;
+  const edge = dir === 'right' ? b.pos : b.kind === 'para' ? b.pos + byteLength(b.text) : b.pos + b.width;
+  return runTo(f.addr, edge, stepFrom(f.addr, edge, dir), false);
+}
+
+/** the position a character from `pos` that way in a document's text shown, an item whole (M-DERIVE's `boundaries`); null where it holds none that way */
+function stepFrom(/** @type {string} */ addr, /** @type {number} */ pos, /** @type {'left' | 'right'} */ dir) {
+  const b = boundaries(LAYER.shownOf(addr).runs, pos);
+  return dir === 'left' ? b.before : b.after;
+}
+
+/**
+ * The selection made to run from an anchor to the position its moving end
+ * stepped to (`extendFromFocus`), that end the one the press moved; none
+ * where the two meet (`clear`).
+ * @param {string} addr
+ * @param {number} anchor
+ * @param {number | null} to null where no step was made: nothing changes
+ * @param {boolean} platform the platform made the selection the step extends (`Ends`)
+ * @returns {boolean} whether the selection changed
+ */
+function runTo(addr, anchor, to, platform) {
+  if (to == null) return false;
+  if (to === anchor) { clear(); return true; }
+  /** @type {'start' | 'end'} */
+  const moved = to < anchor ? 'start' : 'end';
+  take({ addr, pos: Math.min(anchor, to), width: Math.abs(to - anchor) }, moved, { moves: moved, platform });
+  return true;
+}
+
 /** clear the selection: the platform's highlight, its acts and its marks with it */
 export function clear() {
   if (!sel) return;
-  sel = null;
+  hold(null);
   LAYER.placeSelection(null);
   if (HOST.currentIs('selection')) HOST.dismiss();
   markDirty();
@@ -307,7 +398,7 @@ export function render(focus = null, told = null, at = null) {
       linkto: (el) => inertAct(el, INERT_REASON.linkto),
       wrote: (_el, byKey) => act('wrote', byKey, span), uses: (_el, byKey) => act('uses', byKey, span), links: (_el, byKey) => act('links', byKey, span), follow: (_el, byKey) => act('follow', byKey, span), scene: (_el, byKey) => act('scene', byKey, span),
     },
-    onDismiss: (replaced) => { if (!replaced && atSelection && sameSpan(sel, span)) { sel = null; LAYER.placeSelection(null); markDirty(); } },
+    onDismiss: (replaced) => { if (!replaced && atSelection && sameSpan(sel, span)) { hold(null); LAYER.placeSelection(null); markDirty(); } },
   });
 }
 

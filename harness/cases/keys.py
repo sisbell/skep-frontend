@@ -120,10 +120,17 @@ identity (issue #244) — and the platform's
 highlight survives the remount the links card causes; the platform's
 selection standing as the person left it — a drag from a phrase's end to its
 start marked in place, the article standing and the selection running
-backward, and put back backward after the links card's two remounts; Shift+→
-twice then Shift+← (K-71, the platform's own keys) taking back the second
-step, the start unmoved; the focus ring following the walk to the block Enter
-selects — with figures for where Chrome moves a selection with Shift+→; and the press holds
+backward, and put back backward after the links card's two remounts, Shift+←
+with the walk's item holding the focus then moving its start back a
+character, the drag's anchor standing; after a drag from a phrase's start to
+its end, Shift+→ twice then Shift+← taking back the second step, the start
+unmoved; at the walk's span with nothing selected, Shift+→ twice then Shift+←
+three times selecting its first character, its first two, its first, none,
+then the last character of its text (D5 K-70); the focus ring following the
+walk to the block Enter selects, and Shift+→ at Enter's selection and at
+K-8's moving its end a character, its start standing — the platform's
+selection the page's and the walk and the focus where they stood at every
+press; and the press holds
 what the drag is anchored in — a feed row naming the document with the
 button down (the gate's `model.feed` door, reads alone) keeps its text as
 held and leaves the half-dragged bytes reading back and the drag's article
@@ -405,17 +412,65 @@ def focus_at(ctx):
                   'return at + ": " + e.tagName.toLowerCase() + (e.id ? "#" + e.id : ""); })()')
 
 
-def shifted(ctx, r, made):
-    """Shift+→ at a selection the page made, and where the focus stood: whether the platform moved its selection, and the
-    check that nothing drifts — the page's span the platform's where it moved, the page's own unchanged where it did not"""
-    before, focus = ctx.js(NOW), focus_at(ctx)
-    chord(ctx, 'ArrowRight', mods=('Shift',))
-    after = ctx.js(NOW)
-    moved = after['platform']['span'] != before['platform']['span']
-    r.check(bool(before['sel']) and (after['sel'] == after['platform']['span'] if moved else after['sel'] == before['sel']),
-            'Shift+→ at a selection %s made: nothing drifts — the page\'s span is the platform\'s where the platform moved it, its own where it did not' % made,
-            {'before': before, 'after': after, 'moved': moved, 'focus': focus})
-    return {'focus': focus, 'moved': moved, 'before': before['sel'], 'after': after['sel']}
+# the walk's element: its kind, its document and its position
+WALK_AT = '(() => { const f = window.__skep.view.focus(); return f && {kind: f.kind, addr: f.addr, pos: f.pos}; })()'
+
+# the walk's item in the mirror given the platform's focus, as a key landing there leaves it
+FOCUS_ITEM = '(() => { const i = document.querySelector("#mirror [role=treeitem][aria-selected=true]"); if (i) i.focus(); return !!i && document.activeElement === i; })()'
+
+
+def char_bytes(text):
+    """the bytes of each character of a text, in order: the steps a selection's end takes over it"""
+    return [len(c.encode('utf8')) for c in text]
+
+
+def standing(ctx):
+    """the page's selection, the platform's own, the walk's element and where the platform's focus stands"""
+    return dict(ctx.js(NOW), walk=ctx.js(WALK_AT), focus=focus_at(ctx))
+
+
+def shifts(ctx, keys):
+    """Shift with each of `keys` pressed in turn: what stands after each (`standing`)"""
+    out = []
+    for key in keys:
+        chord(ctx, key, mods=('Shift',))
+        out.append(standing(ctx))
+    return out
+
+
+def held_still(start, steps):
+    """after every press the page's span is the platform's, and the walk and the platform's focus stand where they stood"""
+    return all(s['platform']['span'] == s['sel'] and s['walk'] == start['walk'] and s['focus'] == start['focus'] for s in steps)
+
+
+def from_the_edge(ctx, r, block):
+    """Shift+→ twice, then Shift+← three times, at the walk's span in the first edition, nothing selected and the walk's
+    item holding the focus (D5 K-70): the page's selection after each press the span's first character, its first two,
+    its first, none, then the last character of its text — never the newline after it — the platform's selection the
+    page's at every press, the walk and the focus where they stood"""
+    p, cs = block['pos'], char_bytes(block['text'])
+    span = lambda pos, width: {'addr': DOC, 'pos': pos, 'width': width}
+    want = [span(p, cs[0]), span(p, cs[0] + cs[1]), span(p, cs[0]), None, span(p + sum(cs) - cs[-1], cs[-1])] if block['kind'] == 'para' and len(cs) > 1 else None
+    start = standing(ctx)
+    steps = shifts(ctx, ('ArrowRight', 'ArrowRight', 'ArrowLeft', 'ArrowLeft', 'ArrowLeft'))
+    r.check(start['sel'] is None and start['focus'].startswith('the mirror') and bool(want) and [s['sel'] for s in steps] == want and held_still(start, steps),
+            'Shift+→ twice then Shift+← three times at the walk\'s span, nothing selected and the walk\'s item holding the focus: its first character, its first two, its first, none, then the last character of its text, never its newline — the platform\'s selection the page\'s at every press, the walk and the focus where they stood (D5 K-70)',
+            {'start': start, 'want': want, 'steps': steps, 'block': {'pos': p, 'kind': block['kind'], 'text': block['text']}})
+
+
+def end_on(ctx, r, made, blocks):
+    """Shift+→ at the selection `made` made over the walk's block whole, the walk's item holding the focus (D5 K-70): its
+    end a character on — the first of the text after the block — its start standing, the platform's selection the page's,
+    the walk and the focus where they stood"""
+    start = standing(ctx)
+    sel = start['sel']
+    after = next((b for b in blocks if sel and b['pos'] == sel['pos'] + sel['width']), None)
+    step = None if after is None else (char_bytes(after['text'])[0] if after['text'] else 1) if after['kind'] == 'para' else after['width']
+    want = {'addr': sel['addr'], 'pos': sel['pos'], 'width': sel['width'] + step} if sel and step else None
+    steps = shifts(ctx, ('ArrowRight',))
+    r.check(start['focus'].startswith('the mirror') and bool(want) and steps[0]['sel'] == want and held_still(start, steps),
+            'Shift+→ at the selection %s made: its end a character on, the first of the text after the block, its start standing — the platform\'s selection the page\'s, the walk and the focus on the walk\'s item where they stood (D5 K-70)' % made,
+            {'start': start, 'want': want, 'after': steps[0]})
 
 
 def anchor_stands(ctx, r):
@@ -423,13 +478,15 @@ def anchor_stands(ctx, r):
     transient"; D5 §2: "Constant: the selection is the platform's own"). A drag from a phrase's end to its start is marked in
     place — the article the drag was made in stands, the block the span touches carries the mark, and the platform's
     selection runs backward, its anchor at the phrase's end — and the two remounts of the links card's opening and its
-    dismissal put it back so. After a drag from a phrase's start to its end, Shift+→ twice and Shift+← (D5 K-71, the
-    platform's own keys) end where the first Shift+→ put the end, the start never moved, the page's span the platform's at
-    every press. ↓ moves the walk's focus ring to the next block, and Enter there selects it: the ring and the selection's
-    mark on that one block. The figures say whether Chrome on this machine moves a selection with Shift+→ where a drag made
-    it, where Enter made it (the focus on the mirror's item) and where K-8 made it (the focus in the selection's card); at
-    the last two the check holds only that nothing drifts. The Safari pass repeats these steps by hand (FP-19): the gate
-    runs Chrome alone."""
+    dismissal put it back so; then, the walk's item holding the focus, Shift+← moves its start — the end the drag moved —
+    back a character, the anchor at the phrase's end standing. After a drag from a phrase's start to its end, Shift+→ twice
+    and Shift+← (D5 K-70, the walk standing on a span of the first edition) end where the first Shift+→ put the end, the
+    start never moved, the page's span the platform's at every press. ↓ moves the walk's focus ring to the next block;
+    there, nothing selected, Shift+→ twice then Shift+← three times select its first character, its first two, its first,
+    none, then the last character of its text; Enter there selects the block — the ring and the selection's mark on that
+    one block — and Shift+→ at Enter's selection, and at K-8's, moves its end a character, its start standing; at every
+    press the walk and the platform's focus stand where they stood. The Safari pass repeats these steps by hand (FP-19): the
+    gate runs Chrome alone."""
     figures = {'machine': {'chrome': ctx.env.get('chrome'), 'platform': ctx.js('navigator.platform')}}
     art = article(DOC)
     ctx.leap(DOC, WINDOW[0])
@@ -459,11 +516,22 @@ def anchor_stands(ctx, r):
             r.check(closed['id'] is None and closed['rebuilt'] and closed['sel'] == sel and closed['platform']['span'] == sel and closed['platform']['backward'],
                     'its dismissal rebuilds the article again and the selection is put back so: the same bytes, still backward', closed)
             figures['remounts'] = {'opened': opened, 'closed': closed}
+            # the walk's item holding the focus, Shift+← moves the end the drag moved, the selection's start
+            ctx.js(FOCUS_ITEM)
+            start = standing(ctx)
+            text, off = ph['block']['text'].encode('utf8'), sel['pos'] - ph['block']['pos']
+            back = len(text[:off].decode('utf8', 'ignore')[-1:].encode('utf8')) if off > 0 else 0
+            want = {'addr': DOC, 'pos': sel['pos'] - back, 'width': sel['width'] + back} if back else None
+            steps = shifts(ctx, ('ArrowLeft',))
+            r.check(start['sel'] == sel and bool(start['walk']) and start['walk']['kind'] == 'block' and start['walk']['addr'] == DOC and start['focus'].startswith('the mirror')
+                    and bool(want) and steps[0]['sel'] == want and held_still(start, steps),
+                    'after the drag from a phrase\'s end to its start, the walk\'s item holding the focus, Shift+← moves the end the drag moved — its start — back a character, the anchor at the phrase\'s end standing; the platform\'s selection the page\'s, the walk and the focus where they stood (D5 K-70)',
+                    {'start': start, 'want': want, 'after': steps[0]})
         chord(ctx, 'Escape')
         chord(ctx, 'Escape')
-    # Shift with → and ← are the platform's own (K-71): from the anchor a drag set, each press moves the selection's other end
+    # Shift with → and ← at the walk's span of the first edition (K-70): from the anchor a drag set, each press moves the selection's other end
     ph, seen = phrase_at(ctx, DOC)
-    r.check(ph is not None, 'a phrase of the first edition is shown at the landing, for the platform\'s keys', seen)
+    r.check(ph is not None, 'a phrase of the first edition is shown at the landing, for Shift with the arrows', seen)
     if ph:
         ctx.drv.drag(*ph['start'], *ph['end'])
         ctx.frames(3)
@@ -475,29 +543,32 @@ def anchor_stands(ctx, r):
         r.check(all(s['sel'] and s['sel'] == s['platform']['span'] for s in steps), 'after the drag and after each of Shift+→, Shift+→, Shift+← the page\'s span is the platform\'s', steps)
         ends = [s['pos'] + s['width'] if s else None for s in spans]
         r.check(all(spans) and all(s['pos'] == spans[0]['pos'] for s in spans) and ends[0] < ends[1] < ends[2] and ends[3] == ends[1],
-                'Shift+→ twice then Shift+← ends where the first Shift+→ put the end, the start never moved: the platform extends the selection from the anchor the drag set',
+                'Shift+→ twice then Shift+← ends where the first Shift+→ put the end, the start never moved: the selection extends from the anchor the drag set',
                 {'spans': spans, 'ends': ends, 'phrase': (ph['p0'], ph['p1'])})
-        figures['shift_arrows'] = {'drag': {'focus': steps[0]['focus'], 'moved': spans[1] != spans[0], 'spans': spans}}
         chord(ctx, 'Escape')
         chord(ctx, 'Escape')
-    # the focus ring follows the walk, and Enter's selection stands on the block it holds; then Shift+→ there, the focus
-    # on the mirror's item, and at K-8's selection, the focus in the selection's card
+    # the focus ring follows the walk; Shift with ← and → select from the walk's span, nothing selected; Enter's selection
+    # stands on the block the walk holds; and Shift+→ moves its end, and K-8's, the focus on the mirror's item throughout
     ctx.leap(DOC, WINDOW[0])
-    item = ctx.js('(() => { const i = document.querySelector("#mirror [role=treeitem][aria-selected=true]"); if (i) i.focus(); return !!i && document.activeElement === i; })()')
+    item = ctx.js(FOCUS_ITEM)
     chord(ctx, 'ArrowDown')
     f, lit = state(ctx)['focus'], marks(ctx, 'lit')
     r.check(item and bool(f) and f['kind'] == 'block' and f['addr'] == DOC and lit == [f['pos']], '↓ moves the focus ring to the next block: the article marks the focused block, no other', {'focus': f, 'lit': lit})
+    blocks = ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC))
+    block = next((b for b in blocks if f and b['pos'] == f['pos']), None)
+    r.check(block is not None, 'the walk\'s block is the model\'s', {'focus': f})
+    if block:
+        from_the_edge(ctx, r, block)
     chord(ctx, 'Enter')
     s = state(ctx)
     got = {'focus': s['focus'], 'sel': s['sel'], 'lit': marks(ctx, 'lit'), 'marked': marks(ctx, 'sel')}
     r.check(bool(f) and bool(s['sel']) and s['sel']['pos'] == f['pos'] and got['lit'] == [f['pos']] and got['marked'] == [f['pos']],
             'Enter selects the focused block: the focus ring and the selection\'s mark stand on that one block', got)
-    arrows = figures.setdefault('shift_arrows', {})
-    arrows['enter'] = shifted(ctx, r, 'Enter')
+    end_on(ctx, r, 'Enter', blocks)
     chord(ctx, 'Escape')
     chord(ctx, 'Escape')
     chord(ctx, 'ArrowDown', mods=('Shift',))
-    arrows['k8'] = shifted(ctx, r, 'K-8')
+    end_on(ctx, r, 'K-8', blocks)
     chord(ctx, 'Escape')
     chord(ctx, 'Escape')
     r.figures['anchor'] = figures

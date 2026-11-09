@@ -2497,8 +2497,24 @@ export function selectionIn(el) {
   if (!el.contains(range.commonAncestorContainer)) return null;
   const span = spanIn(el, made, range);
   if (!span) return null;
+  return { span, backward: runsBackward(s) };
+}
+
+/** does a platform selection run backward, its focus point before its anchor? False where either point is missing */
+function runsBackward(/** @type {Selection} */ s) {
+  if (!s.anchorNode || !s.focusNode) return false;
   const anchor = document.createRange(); anchor.setStart(s.anchorNode, s.anchorOffset);
-  return { span, backward: anchor.comparePoint(s.focusNode, s.focusOffset) < 0 };
+  return anchor.comparePoint(s.focusNode, s.focusOffset) < 0;
+}
+
+/**
+ * Does the platform's selection run backward, its focus point before its
+ * anchor (`runsBackward`), so the end a drag or the platform's own keys
+ * moved is its start? False where none stands, or it is collapsed.
+ */
+export function selectionBackward() {
+  const s = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+  return !!s && s.rangeCount > 0 && !s.isCollapsed && runsBackward(s);
 }
 
 /**

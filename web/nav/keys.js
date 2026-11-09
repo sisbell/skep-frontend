@@ -135,9 +135,14 @@
 // continues at the next column's top where the view shows the foot of the
 // column it reads (T-LAYER's `pageTarget`; FP-12), and pages the view by 0.9
 // of its height everywhere else. Off a live caret, Shift with ← and → is
-// dispatched only at the span a kept caret stands in (`extendAtKept`):
-// anywhere else it is the platform's own (K-71), and APP-INPUT reads what it
-// does back into the page's selection. Where no board is held (FP-35) the
+// dispatched at the span a kept caret stands in (`extendAtKept`), and at the
+// walk's focused span in text the person may not edit at its reading scale,
+// where it moves the selection's moving end a character, else selects one
+// from the span's edge (`readOnlySpan`; O-SELECTION's `extendFromFocus`;
+// K-70): anywhere else — a span of a draft the person may edit holding no
+// caret, a document below its reading scale, off a span — it is the
+// platform's own (K-71), and APP-INPUT reads what it does back into the
+// page's selection. Where no board is held (FP-35) the
 // walk's keys at the plane (K-1 … K-5, K-7), K-8, the selection's slot chords
 // (K-45 … K-52, K-100), the strip (K-23) and find's chords (K-91) each answer
 // with O-FACES' no-board face, as HOME and
@@ -219,6 +224,8 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-57', chord: '→', act: 'corner.offer', surface: 'corner' },
   { id: 'K-57', chord: '←', act: 'corner.leave', surface: 'corner' },
   { id: 'K-70', chord: 'Enter', act: 'caret.place', surface: 'plane' },
+  { id: 'K-70', chord: 'Shift+←', act: 'select.extendLeft', surface: 'plane' },
+  { id: 'K-70', chord: 'Shift+→', act: 'select.extendRight', surface: 'plane' },
   { id: 'K-71', chord: '←', act: 'caret.left', surface: 'caret' },
   { id: 'K-71', chord: '→', act: 'caret.right', surface: 'caret' },
   { id: 'K-71', chord: '↑', act: 'caret.up', surface: 'caret' },
@@ -365,6 +372,21 @@ function keptSpan(/** @type {Ctx} */ ctx) {
 }
 
 /**
+ * The walk's focused span where the focus is the plane's and its text is one
+ * the person may not edit, at its reading scale — the site Shift with ← or →
+ * extends a selection from the focus's edge (K-70; O-SELECTION's
+ * `extendFromFocus`); null anywhere else: a draft the person may edit, a
+ * document below its reading scale, off a span, the scene over the plane.
+ * @param {Ctx} ctx
+ * @returns {{addr: string, pos: number} | null}
+ */
+function readOnlySpan(ctx) {
+  if (ctx.where !== 'plane' || SCENE.isOpen()) return null;
+  const f = WALK.current();
+  return f && f.kind === 'block' && f.pos != null && LAYER.atReadingScale(f.addr) && !LAYER.editable(f.addr) ? { addr: f.addr, pos: f.pos } : null;
+}
+
+/**
  * Dispatch a key: true where the page took it (the caller then prevents the
  * default). A branch that waits before it answers prevents the default
  * itself, before the wait — the platform runs the default as soon as the
@@ -443,8 +465,11 @@ function route(e, chord, ctx) {
   // K-8 off a live caret: at one, Shift with the arrows is the caret's (K-71; `caretKey`)
   if (chord === 'Shift+↓' && ctx.where !== 'caret') return () => { SEL.selectFocused('down'); return true; };
   if (chord === 'Shift+↑' && ctx.where !== 'caret') return () => { SEL.selectFocused('up'); return true; };
-  // Shift with ← or → at the span a kept caret stands in: the caret returned and a selection extended from it (K-70, K-77); anywhere else off a live caret, the platform's
+  // Shift with ← or → at the span a kept caret stands in: the caret returned and a selection extended from it (K-70, K-77); at
+  // the walk's span in text the person may not edit, a selection extended from the focus's edge, the platform's own extension
+  // prevented (K-70); anywhere else off a live caret, the platform's
   if ((chord === 'Shift+←' || chord === 'Shift+→') && keptSpan(ctx)) return async () => { await extendAtKept(e, chord === 'Shift+←' ? 'left' : 'right'); return true; };
+  if ((chord === 'Shift+←' || chord === 'Shift+→') && readOnlySpan(ctx)) return () => { e.preventDefault(); SEL.extendFromFocus(chord === 'Shift+←' ? 'left' : 'right'); return true; };
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
   if (chord === 'Mod+R' || e.key === 'F5') return () => true; // K-94: the plane is live; nothing reloads
   // the caret's keys (see the head): at a live caret, before the walk's

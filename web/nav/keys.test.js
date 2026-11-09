@@ -32,9 +32,14 @@
 // K-8's; Shift with ← or → at the span a kept caret stands in returns it and
 // extends a selection from it a character — from the caret, never from the
 // span's edge — and where the caret cannot move that way returns it alone,
-// the selection standing, while at a span holding no caret and at another's
-// text it is the platform's; a caret at the text's end stands in its last
-// span, and one kept in
+// the selection standing, while at a span of the draft holding no caret it is
+// the platform's; at the walk's span in text the person may not edit it
+// selects from the focus's edge a character a press — → from the span's
+// start, ← from the end of its text — then moves the selection's moving end,
+// its anchor standing, a selection the page made in another document
+// replaced and one the platform made extended where it stands, and below the
+// span's reading scale it is the platform's; a caret at the text's end stands
+// in its last span, and one kept in
 // white space alone — a line of spaces, the newlines before the first typed
 // line — in the span the walk stands on there, each a span Esc leaves the
 // walk on and where Enter or a printable key returns the caret, a paste there
@@ -425,17 +430,17 @@ test('a caret at the end of a draft\'s text stands in its last span: Esc there l
   assert.deepEqual([caret(), REC.edits(D).map((e) => [e.pos, e.width, e.text])], [[D, N + 2, true], [[N + 1, 0, 'z']]], 'a printable key at the last span returns the kept caret and types at the end');
 }));
 
-/** D's text read again as `text`, delivered whole */
-function deliverD(/** @type {string} */ text) {
+/** a document's text read again as `text`, delivered whole */
+function deliver(/** @type {string} */ addr, /** @type {string} */ text) {
   const n = byteLength(text);
-  REC.invalidate(D);
-  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
-  REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
-  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n }]);
+  REC.invalidate(addr);
+  REC.takeSpanSet(addr, [{ subspace: 1, ordinal: 1, positions: n }]);
+  REC.takeDelivery(addr, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+  REC.takeImage(addr, 1, [{ iStart: addr + '.0.1.1', width: n }]);
 }
 
 test('a caret kept in a line of white space alone stands in the span the walk stands on there, the span before it: Esc leaves the walk on that span, and there Enter returns the kept caret where it stood, a printable key returns it and types at it and a paste is the platform\'s, never the line of a span holding no caret; at the span after the line Enter places a caret of its own (D5 §4 rule 20; K-70, K-72, K-77, K-93; BM-52)', () => onPlane(async ({ said }) => {
-  deliverD('First line.\n\n   \n\nSecond line here.\n');
+  deliver(D, 'First line.\n\n   \n\nSecond line here.\n');
   assert.deepEqual(REC.doc(D).blocks.map((b) => [b.pos, b.text]), [[1, 'First line.'], [14, '   '], [19, 'Second line here.']], 'a line of three spaces between two typed lines');
   assert.equal(LAYER.editable(D), true);
   await focusOn(D, 1);
@@ -462,7 +467,7 @@ test('a caret kept in a line of white space alone stands in the span the walk st
 }));
 
 test('a caret kept in the newlines before a draft\'s first typed line stands in that line\'s span, the one the walk stands on there: Esc leaves the walk on it, and Enter at it returns the kept caret where it stood, never a caret at the span\'s start (D5 §4 rule 20; K-70, K-77; BM-52)', () => onPlane(async () => {
-  deliverD('\n\nFirst line.\n');
+  deliver(D, '\n\nFirst line.\n');
   assert.deepEqual(REC.doc(D).blocks.map((b) => [b.pos, b.text]), [[1, ''], [3, 'First line.']], 'the newlines before the first typed line one block of no text');
   await focusOn(D, 3);
   LAYER.placeCaret(D, 1);
@@ -914,7 +919,7 @@ test('Home and End at a live caret move it to the start and the end of its line 
   for (const c of ['Home', 'End', 'Shift+Home', 'Shift+End']) assert.ok(KEYS.TABLE.some((r) => r.id === 'K-71' && r.chord === c && r.surface === 'caret'), `the table binds ${c} at the caret, K-71's`);
 }));
 
-test('Shift with ← or → at the span a kept caret stands in returns the caret and extends a selection from it a character, as at a live caret — from the caret, never from the span\'s edge where K-8\'s selection stands, the acts card shown and the walk following the caret into the next span — and a printable key then replaces that selection; where the caret cannot move that way the caret is returned live and K-8\'s selection stands with its card; at a span of the draft holding no caret, and at another\'s text, Shift with ← or → is the platform\'s, the kept caret not returned (D5 K-70, K-71, K-77; B3-S1; D6 BM-70)', () => onPlane(async () => {
+test('Shift with ← or → at the span a kept caret stands in returns the caret and extends a selection from it a character, as at a live caret — from the caret, never from the span\'s edge where K-8\'s selection stands, the acts card shown and the walk following the caret into the next span — and a printable key then replaces that selection; where the caret cannot move that way the caret is returned live and K-8\'s selection stands with its card; at a span of the draft holding no caret Shift with ← or → is the platform\'s, and at another\'s text the page\'s, selecting from the walk\'s span in K-8\'s selection\'s place — the kept caret returned at neither (D5 K-70, K-71, K-77; B3-S1; D6 BM-70)', () => onPlane(async () => {
   HOST.attach(/** @type {any} */ (hostEl));
   const SHIFT = { shiftKey: true };
   /** the caret placed live at `pos` and kept by Esc, the walk on its span */
@@ -957,15 +962,70 @@ test('Shift with ← or → at the span a kept caret stands in returns the caret
   await press('ArrowLeft', SHIFT);
   assert.deepEqual([caret(), SEL.selected(), overlay(), walkAt()], [[D, 1, true], whole, 'selection', ['block', D, 1]], 'Shift+← where the caret cannot move: the caret returned live, K-8\'s selection and its card standing');
 
-  // a span of the draft holding no caret, and another's text: the platform's
+  // a span of the draft holding no caret: the platform's; another's text: the page's
   await focusOn(D, 14);
   assert.deepEqual([await KEYS.dispatch(keyOf('ArrowRight', SHIFT), PLANE), await KEYS.dispatch(keyOf('ArrowLeft', SHIFT), PLANE), caret()], [false, false, [D, 1, false]],
     'at the draft\'s other span: the platform\'s, the kept caret not returned');
   await focusOn(O, 1);
-  assert.deepEqual([await KEYS.dispatch(keyOf('ArrowRight', SHIFT), PLANE), await KEYS.dispatch(keyOf('ArrowLeft', SHIFT), PLANE), caret()], [false, false, [D, 1, false]],
-    'at another\'s text: the platform\'s, the kept caret not returned');
+  assert.equal(await KEYS.dispatch(keyOf('ArrowRight', SHIFT), PLANE), true, 'Shift+→ at another\'s text: the page takes it');
+  assert.deepEqual([SEL.selected(), caret()], [{ addr: O, pos: 1, width: 1 }, [D, 1, false]], 'K-8\'s selection in the draft replaced by the first character of the walk\'s span, the kept caret not returned');
+  assert.equal(await KEYS.dispatch(keyOf('ArrowLeft', SHIFT), PLANE), true, 'Shift+← there: the page takes it');
+  assert.deepEqual([SEL.selected(), caret()], [null, [D, 1, false]], 'the character taken back, no selection standing, the kept caret not returned');
   assert.deepEqual(editsOfD(), [[3, 1, 'q']], 'nothing typed but q');
   assert.ok(['Shift+←', 'Shift+→'].every((c) => KEYS.TABLE.some((r) => r.id === 'K-77' && r.chord === c && r.surface === 'plane')), 'the table binds them at the kept span, K-77\'s');
+  HOST.dismiss();
+}));
+
+test('Shift with ← or → at the walk\'s span in text the person may not edit selects from the focus\'s edge a character a press — with nothing selected, → from the span\'s start and ← from the end of its text, never its newline — then moves the selection\'s moving end, its anchor standing, none standing where the two meet, each selection\'s card shown and said, the walk where it stood; a character of two bytes is taken whole; after K-8\'s selection → moves its end; a selection the page made in another document is replaced at the walk\'s span, one the platform made extended where it stands; below the span\'s reading scale the keys are the platform\'s; a kept caret in the draft stays kept (D5 K-8, K-70, K-71)', () => onPlane(async ({ said }) => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const SHIFT = { shiftKey: true }, here = ['block', O, 1];
+  await focusOn(D, 1);
+  LAYER.placeCaret(D, 3);
+  await press('Escape');
+  await tick();
+  await focusOn(O, 1);
+  assert.deepEqual([caret(), SEL.selected(), walkAt(), LAYER.editable(O), LAYER.atReadingScale(O)], [[D, 3, false], null, here, false, true],
+    'the caret kept in D, nothing selected, the walk on the first span of O, text the person may not edit, at its reading scale');
+  /** Shift with an arrow at the walk's span, taken: the selection, the card standing and the walk's element after it */
+  const shifted = async (/** @type {string} */ key) => { assert.equal(await KEYS.dispatch(keyOf(key, SHIFT), PLANE), true, `Shift+${key}: the page takes it`); return [SEL.selected(), overlay(), walkAt()]; };
+  assert.deepEqual(await shifted('ArrowRight'), [{ addr: O, pos: 1, width: 1 }, 'selection', here], 'Shift+→: the first character of the span, its card shown, the walk where it stood');
+  assert.equal(said.at(-1), `${O} · ${t('F.position', { p: 1 })}`, 'the selection said through the status region');
+  assert.deepEqual(await shifted('ArrowRight'), [{ addr: O, pos: 1, width: 2 }, 'selection', here], 'Shift+→ again: its end a character on, its start standing');
+  assert.deepEqual(await shifted('ArrowLeft'), [{ addr: O, pos: 1, width: 1 }, 'selection', here], 'Shift+←: its end back a character');
+  assert.deepEqual(await shifted('ArrowLeft'), [null, null, here], 'Shift+← again: its end at its anchor, no selection standing and no card');
+  assert.deepEqual(await shifted('ArrowLeft'), [{ addr: O, pos: 11, width: 1 }, 'selection', here], 'Shift+← with nothing selected: the last character of the span\'s text, never the newline after it');
+  assert.deepEqual(await shifted('ArrowLeft'), [{ addr: O, pos: 10, width: 2 }, 'selection', here], 'Shift+← again: its start back a character, its end standing');
+  assert.deepEqual(await shifted('ArrowRight'), [{ addr: O, pos: 11, width: 1 }, 'selection', here], 'Shift+→: its start on a character, the end ← moved being the one that moves');
+
+  // a text ending in a character of two bytes
+  SEL.clear();
+  deliver(O, 'Café\n');
+  await focusOn(O, 1);
+  assert.deepEqual(await shifted('ArrowLeft'), [{ addr: O, pos: 4, width: 2 }, 'selection', here], 'Shift+← at a text ending in é: both its bytes, never one');
+
+  // K-8's selection, then Shift+→
+  SEL.clear();
+  deliver(O, TEXT);
+  await focusOn(O, 1);
+  await press('ArrowDown', SHIFT);
+  assert.deepEqual(SEL.selected(), spanOfBlock(O, /** @type {any} */ (REC.blockAt(O, 1))), 'Shift+↓: K-8\'s, the span whole');
+  assert.deepEqual(await shifted('ArrowRight'), [{ addr: O, pos: 1, width: 14 }, 'selection', here], 'Shift+→ after it: its end a character on, the first of the next line, its start standing');
+
+  // a selection in another document
+  SEL.select(D, 3, 4);
+  assert.deepEqual(await shifted('ArrowRight'), [{ addr: O, pos: 1, width: 1 }, 'selection', here], 'a selection the page made in D: replaced by the first character of the walk\'s span');
+  SEL.select(D, 3, 4, 'focus');
+  assert.deepEqual(await shifted('ArrowRight'), [{ addr: D, pos: 3, width: 5 }, 'selection', here], 'a selection the platform made in D: its end a character on, where it stands');
+  assert.deepEqual(await shifted('ArrowLeft'), [{ addr: D, pos: 3, width: 4 }, 'selection', here], 'and back, its start standing');
+
+  // below the span's reading scale
+  SEL.clear();
+  const reading = CAM.view(), f = LAYER.foldOf(REC.doc(O));
+  CAM.set({ ...reading, scale: 7 / f.fs });
+  assert.deepEqual([await KEYS.dispatch(keyOf('ArrowRight', SHIFT), PLANE), await KEYS.dispatch(keyOf('ArrowLeft', SHIFT), PLANE), SEL.selected()], [false, false, null], 'below O\'s reading scale: the platform\'s, nothing selected');
+  CAM.set(reading);
+  assert.deepEqual([caret(), REC.edits(D), REC.edits(O)], [[D, 3, false], [], []], 'the caret kept where it stood throughout, nothing typed');
+  assert.ok(['Shift+←', 'Shift+→'].every((c) => KEYS.TABLE.some((r) => r.id === 'K-70' && r.chord === c && r.surface === 'plane')), 'the table binds them at the plane, K-70\'s');
   HOST.dismiss();
 }));
 
