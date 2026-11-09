@@ -15,12 +15,16 @@
 // far box shows (FP-22); and a bundle's label — its far end's words cut on a
 // word, alike ones cut apart — placed above or below its end inside the
 // visible view, saying what its beams' far texts hold where they agree, in
-// its short form (FP-21).
+// its short form (FP-21); and in a draft holding typed words a near end met
+// where the text shown holds it and a far end carried there (issue #515).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
-import { bundlesOf, beamOf, labelPlace, labelText, labelRuns, bundleLabels, pastSigns, inkOf, strokeOf, pointOn, strokeIn, WORDS_CH } from './beams.js';
+import * as LAYER from '../text/layer.js';
+import * as CAM from '../plane/camera.js';
+import { docBox } from '../plane/projection.js';
+import { bundlesOf, beamOf, labelPlace, labelText, labelRuns, bundleLabels, pastSigns, inkOf, strokeOf, pointOn, strokeIn, pageGeometry, WORDS_CH } from './beams.js';
 import { edgeStub } from '../plane/camera.js';
 import { HUE, NEUTRAL_HUE, STUB } from '../plane/register.js';
 import { t } from '../strings.js';
@@ -434,4 +438,60 @@ test('a bundle\'s label names its far end\'s words as its tail would, cut on a w
   assert.deepEqual(together, [`${H} · Notes … third quarter`, `${K} · Notes … ninth quarter`], 'read alike once cut: apart where they differ');
   REC.takeRefused(K, 'withheld');
   assert.equal(labelText(/** @type {typeof bs[number]} */ (bundlesOf(met([D])).find((b) => b.far === K))), `${K} · ${t('L.client-words', { words: t('F.corner.withheld', { owner: '1.0.2' }) })}`, 'withheld: the client\'s words in its first line\'s place, bracketed');
+});
+
+// ---- A DRAFT HOLDING TYPED WORDS (issue #515) ------------------------------------------------------------------
+
+test('in a draft holding typed words a beam leaves its near end where the text shown holds it, already there and moved no further, and ends where the far text\'s words typed before its passage carry it (issue #515)', () => {
+  build([OWN]);
+  LK.readers({ text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null) });
+  try {
+    REC.addEdit(D, { pos: 1, width: 0, text: 'xyz' });
+    REC.addEdit(H, { pos: 1, width: 0, text: 'ab' });
+    const s = own();
+    assert.deepEqual([s.pos, s.farRuns], [53, [{ pos: 1, width: 5 }]], 'LK: the near end in the text shown, the far end as `project` answered it');
+    const base = geometry({ farMounted: true, centre: { x: 750, y: 415 } });
+    /** @type {import('./beams.js').Geometry} */
+    const g = {
+      ...base,
+      lines: (addr, pos, width) => (addr === D && pos === 53 && width === 10 ? NEAR : addr === H && pos === 3 && width === 5 ? FAR : []),
+      block: (addr, pos) => (addr === D && pos >= 53 && pos < 63 ? [NEAR_BLOCK] : addr === H && pos >= 3 && pos < 8 ? [FAR_BLOCK] : []),
+    };
+    const b = beamOf(s, g);
+    assert.deepEqual(b && [b.line, b.to], [NEAR[0], { x: 600, y: 425.5 }], 'the near line and the far line where the text shown holds them');
+  } finally { LK.readers({}); }
+});
+
+/**
+ * The test run on the text layer over a page of stand-ins — its element 1440 × 900 px — each answering a selector
+ * with the stand-ins `answers` names for it, else with none; every article taken down and the platform's globals
+ * put back after.
+ */
+function onPage(/** @type {() => void} */ body, /** @type {Map<string, unknown[]>} */ answers) {
+  const platform = { document: globalThis.document, window: globalThis.window };
+  const element = () => { const e = { className: '', innerHTML: '', dataset: {}, style: {}, children: /** @type {unknown[]} */ ([]), classList: { toggle() {} }, setAttribute() {}, appendChild(/** @type {unknown} */ c) { e.children.push(c); }, querySelectorAll: (/** @type {string} */ sel) => answers.get(sel) || [], getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }), remove() {} }; return e; };
+  globalThis.document = /** @type {any} */ ({ createElement: element });
+  globalThis.window = /** @type {any} */ ({ getSelection: () => null });
+  CAM.setViewport(1440, 900);
+  LAYER.attach(/** @type {any} */ ({ clientWidth: 1440, clientHeight: 900, appendChild() {} }), /** @type {any} */ (null));
+  try { body(); } finally { LAYER.clear(); LAYER.attach(/** @type {any} */ (null), null); globalThis.document = platform.document; globalThis.window = platform.window; }
+}
+
+test('the page\'s geometry reads a block of the text the page shows: at a position past words typed above it, the block that text holds there, never the block the model\'s text holds at that number (issue #515)', () => {
+  const text = 'A first paragraph.\n\nA second paragraph.\n', typed = 'ab', board = text.indexOf('A second') + 1, shown = board + 2;
+  /** a block part's stand-in, standing at a rect */
+  const part = (/** @type {number} */ x) => ({ getClientRects: () => [{ left: x, top: 10, width: 50, height: 16 }] });
+  const answers = new Map([[`.sp[data-pos="${shown}"]`, [part(100)]], [`.sp[data-pos="${board}"]`, [part(900)]]]);
+  onPage(() => {
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: text.length }]);
+    REC.takeDelivery(D, [{ pos: 1, width: text.length, kind: 'content', text, ref: null, origin: null }]);
+    REC.addEdit(D, { pos: 1, width: 0, text: typed });
+    const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), c = f.columns[0];
+    CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 3, scale: 12 / f.fs });
+    LAYER.frame();
+    assert.ok(LAYER.isMounted(D), 'its article stands');
+    assert.deepEqual([LAYER.shownOf(D).blocks[1].pos, REC.doc(D).blocks[1].pos], [shown, board], 'the second block in each text');
+    const g = pageGeometry(CAM.visibleView(0));
+    assert.deepEqual(g.block(D, shown + 1), [{ x: 100, y: 10, w: 50, h: 16 }], 'the block the text shown holds there');
+  }, answers);
 });

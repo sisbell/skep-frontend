@@ -15,7 +15,10 @@
 // of one width with no dot or break at the change (`strokeIn`); a stub keeps
 // its near end's colour to the border.
 // Both ends stand where the link's bytes stand now, never where its slot
-// stores them. A beam leaves the text at its span's own line, from the
+// stores them, each in the text the page shows of its document: LK's `runs`
+// already are, and the far end's `project` answer, which is the board's, is
+// carried there (T-LAYER's `shownRun`). A beam leaves the text at its span's
+// own line, from the
 // right edge of the part of the block holding that line, past the sign the
 // column's edge holds level with it (`leaveAt`, `pastSigns`; foundations
 // §2.1, §3.1; S1 Q1) — of the stretches LK's `runs` name, the line nearest
@@ -72,7 +75,7 @@ import { sx, sy, viewport, visibleView, edgeStub, stubTriangle } from '../plane/
 import { docBox } from '../plane/projection.js';
 import { COL } from '../plane/register.js';
 import { drawRun, runWidth, face, inFace, plain, runsOf, cutWords, apartTexts, LEAD_WORDS } from '../plane/labels.js';
-import { doc, blockAt } from '../model/records.js';
+import { blockIn } from '../model/records.js';
 import { CLIENT_CLOSE } from '../strings.js';
 import { farShort } from './held.js';
 
@@ -115,10 +118,10 @@ import { farShort } from './held.js';
 
 /**
  * @typedef {Object} Geometry — what `beamOf` lays a beam out from, on screen: the mounted articles' rects (T-LAYER's) and the documents' boxes, read through their owners' exports and handed in, so the rule is tested apart from the page
- * @property {(addr: string, pos: number, width: number) => Rect[]} lines the line rects of a span's own bytes in a mounted article; none where they are not laid out
- * @property {(addr: string, pos: number) => Rect[]} block the boxes of the block holding a position in a mounted article, one for each column that holds a part of it; none where it is not laid out
+ * @property {(addr: string, pos: number, width: number) => Rect[]} lines the line rects of a span's own bytes in a mounted article, positions of the text the page shows of it; none where they are not laid out
+ * @property {(addr: string, pos: number) => Rect[]} block the boxes of the block holding a position of that text in a mounted article, one for each column that holds a part of it; none where it is not laid out
  * @property {(addr: string) => (Rect | null)} first the box of a mounted article's first block: the anchor of a whole-work end, and of one that floats
- * @property {(addr: string, pos: number) => Rect[]} signs the signs its column's edge holds beside the block holding a position in a mounted article — its others' count, a withheld run's mark — where they stand; none elsewhere
+ * @property {(addr: string, pos: number) => Rect[]} signs the signs its column's edge holds beside the block holding a position of that text in a mounted article — its others' count, a withheld run's mark — where they stand; none elsewhere
  * @property {(addr: string) => boolean} mounted
  * @property {(addr: string) => Rect} box a document's box: a far end not laid out stands at its centre, and a beam's colour changes on the ground between two of them (`changeAt`)
  * @property {Rect} view the visible view (P-CAM's `visibleView`)
@@ -165,7 +168,7 @@ function pickLine(/** @type {Anchor[]} */ anchors, /** @type {Point} */ p) {
  * plane). Null where none of its stretches has a line laid out.
  * @param {Geometry} g
  * @param {string} addr the document it is drawn at
- * @param {Array<{pos: number, width: number}>} runs the stretches it stands in (LK's `runs`)
+ * @param {Array<{pos: number, width: number}>} runs the stretches it stands in (LK's `runs`), in the text the page shows of it
  * @param {Point | null} [toward]
  * @returns {{line: Rect, from: Point} | null}
  */
@@ -347,8 +350,9 @@ function stretch(/** @type {CanvasRenderingContext2D} */ c2d, /** @type {Cubic} 
 
 /**
  * Where a beam's far end anchors in its mounted far article: the lines of
- * every stretch `project` places the far passage in (LK's `farRuns`), each
- * with its block; the far article's first block for a whole-work end and for
+ * every stretch `project` places the far passage in (LK's `farRuns`), carried
+ * into the text the page shows (T-LAYER's `shownRun`), each with its block; the
+ * far article's first block for a whole-work end and for
  * one that floats, where its follow lands; null where nothing places it —
  * its projection not read, or refused — so it stands at the far document's
  * box's centre, never at the position the link stores.
@@ -358,7 +362,7 @@ function stretch(/** @type {CanvasRenderingContext2D} */ c2d, /** @type {Cubic} 
  */
 function farAnchors(s, g) {
   if (s.farWhole || LK.floats(s)) { const b = g.first(s.farAt); return b ? [{ line: b, block: b, signs: [] }] : []; }
-  return s.farRuns ? anchorsOf(g, s.farAt, s.farRuns) : null;
+  return s.farRuns ? anchorsOf(g, s.farAt, s.farRuns.map((r) => LAYER.shownRun(s.farAt, r))) : null;
 }
 
 /**
@@ -537,21 +541,23 @@ function byColumn(/** @type {Rect[]} */ lines) {
   return [...out.values()];
 }
 
-/** the page's geometry: T-LAYER's rects of the mounted articles — a line standing in no part where its fold sets it — the camera's projection of the boxes, the visible view; P-RENDER's tails leave the text through it too (`leaveAt`) */
+/** the page's geometry: T-LAYER's rects of the mounted articles, read by positions of the text the page shows — a line standing in no part where its fold sets it — the camera's projection of the boxes, the visible view; P-RENDER's tails leave the text through it too (`leaveAt`) */
 export function pageGeometry(/** @type {Rect} */ seen = seenNow()) {
+  /** the block of the text the page shows of a document holding a position of it (T-LAYER's `shownOf`) */
+  const blockOf = (/** @type {string} */ addr, /** @type {number} */ pos) => blockIn(LAYER.shownOf(addr).blocks, pos);
   /** the boxes of the block keyed by its first position in a mounted article: one for each of its parts standing, a column's each; where none stands, one for each column its lines are set in */
   const parts = (/** @type {string} */ addr, /** @type {number} */ pos) => {
     const rs = LAYER.spanRects(addr, pos) || [];
     if (rs.length) return rs;
-    const b = blockAt(addr, pos);
+    const b = blockOf(addr, pos);
     return b ? byColumn(LAYER.lineBoxes(addr, b.pos, b.width) || []) : [];
   };
   /** @type {Geometry} */
   const g = {
     lines: (addr, pos, width) => { const rs = (LAYER.spanRects(addr, pos, width) || []).filter((r) => r.w > 0 && r.h > 0); return rs.length ? rs : LAYER.lineBoxes(addr, pos, width) || []; },
-    block: (addr, pos) => { const b = blockAt(addr, pos); return b ? parts(addr, b.pos) : []; },
-    first: (addr) => parts(addr, (doc(addr).blocks[0] || { pos: 1 }).pos)[0] || null,
-    signs: (addr, pos) => { const b = blockAt(addr, pos); return b ? LAYER.signRects(addr, b.pos) : []; },
+    block: (addr, pos) => { const b = blockOf(addr, pos); return b ? parts(addr, b.pos) : []; },
+    first: (addr) => parts(addr, (LAYER.shownOf(addr).blocks[0] || { pos: 1 }).pos)[0] || null,
+    signs: (addr, pos) => { const b = blockOf(addr, pos); return b ? LAYER.signRects(addr, b.pos) : []; },
     mounted: LAYER.isMounted,
     box: (addr) => { const b = docBox(addr), x = sx(b.x), y = sy(b.y); return { x, y, w: sx(b.x + b.w) - x, h: sy(b.y + b.h) - y }; },
     view: seen,

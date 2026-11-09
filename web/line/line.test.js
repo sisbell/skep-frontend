@@ -27,7 +27,8 @@
 // port in its own words — and "go to an address" alone; a jump's face out of
 // view and a walk's folded moment as segments; a reading scene's close said
 // after it until the next act, whole once a session and as forward ›'s label
-// after; the places the line names;
+// after; the places the line names; the strip's window over a typed draft
+// in the model's text, a text held in part keeping the window its estimates name;
 // a kept document's clause in a segment of its own beside the address that
 // names it, and the board's wherever it names no kept document; what the
 // status region says of a kept place, by its name as the mirror finds it —
@@ -353,6 +354,40 @@ test('while the walk keeps its document in view off the view\'s centre, the stri
   assert.deepEqual([a.doc, a.pos, a.strip, a.window], [C1, null, true, null], `${C1}: named, its strip standing, no position and no window`);
   LINE.render(true);
   assert.ok(host.innerHTML.includes('<span class="strip"></span>'), `${C1}: the strip bare, neither the window nor a position marked on it — ${host.innerHTML}`);
+});
+
+test('the strip\'s window over a text holding typed words stands in the model\'s text, beside the walk\'s position and the extent; a text held in part keeps the window its estimates name, never cut back to what is held (FP-26; issue #515)', async () => {
+  const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
+  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  await PUMP.loadWhole(LONG);
+  const typed = 'A paragraph typed above the reader.\n\n', k = typed.length;
+  /** the view above the document's first line, its first row's tops in view, the walk kept on its first span */
+  const keptAbove = async () => {
+    const f = LAYER.foldOf(REC.doc(LONG)), s = LAYER.shapeOf(LONG);
+    await WALK.focusTo(LONG, 1, false, true, null, true);
+    CAM.set({ x: LAYER.centreOf(LONG, null).x, y: s.y - 10 * f.fs, scale: 12.5 / f.fs });
+    await WALK.retakeFromView(true);
+    assert.ok(WALK.kept() && LINE.addressDisplay().doc === LONG, 'the walk kept on the document, off the view\'s centre');
+  };
+  REC.addEdit(LONG, { pos: 1, width: 0, text: typed });
+  try {
+    await keptAbove();
+    const a = LINE.addressDisplay(), w = /** @type {import('../plane/layout.js').Window} */ (LAYER.windowIn(LONG));
+    assert.ok(w.to > k, 'the view shows the delivered text past the typed words');
+    assert.deepEqual(a.window, { ...w, from: 1, to: w.to - k }, 'its window carried from the text shown back into the model\'s text');
+  } finally { REC.clearEdits(LONG); }
+  // held in part: its first ten paragraphs, the rest of its columns estimated from its extent
+  const held = LONG_TEXT.split('\n\n').slice(0, 10).join('\n\n') + '\n\n', extent = LONG_TEXT.length;
+  REC.invalidate(LONG);
+  REC.takeSpanSet(LONG, [{ subspace: 1, ordinal: 1, positions: extent }]);
+  REC.takeDelivery(LONG, [{ pos: 1, width: held.length, kind: 'content', text: held, ref: null, origin: null }]);
+  try {
+    await keptAbove();
+    const a = LINE.addressDisplay(), w = /** @type {import('../plane/layout.js').Window} */ (LAYER.windowIn(LONG));
+    assert.ok(w.to > REC.doc(LONG).to - 1, `the window names a position estimated past what is held: ${w.to}, ${REC.doc(LONG).to}`);
+    assert.deepEqual(a.window, w, 'as it stands, no position cut back to the held text');
+  } finally { REC.invalidate(LONG); await PUMP.loadWhole(LONG); }
+  assert.deepEqual(fake.unanswered, []);
 });
 
 test('where an arrival in several runs stands in the document named, the strip outlines each run as an extent along it, from its first position to its last, the one the landing stands at filled — at the document\'s reading scale and on its bare strip below it; an arrival in another document draws none there (issues #158: "Draw the runs on the address line\'s position strip as outlined extents", #236)', async () => {

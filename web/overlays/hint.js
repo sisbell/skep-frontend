@@ -24,7 +24,8 @@
 // Where it stands (`place`), on each dirty frame, beside the focus the press
 // was made at, which it keeps while it stands: the walk's span at its reading
 // scale — the line holding the caret standing in it, else the position a
-// landing named in it, else its first — at the text's edge, past the signs
+// landing named in it, else its first, each read in the text the page shows
+// of it — at the text's edge, past the signs
 // that edge holds level with the line, its top that line's, its width the
 // room to the next column's text, else its document's box's edge (O-LAND's
 // `edgeAt`; FP-31); an element the press was made at — a corner, the one
@@ -69,7 +70,7 @@ import { esc } from '../util.js';
 
 /**
  * @typedef {Object} Site — the focus a press was made at, which the hint stands beside while it stands
- * @property {{addr: string, pos: number, first: number} | null} text the walk's span at its reading scale: the position its line is read at, and the span's first
+ * @property {{addr: string, pos: number, first: number} | null} text the walk's span at its reading scale: the position its line is read at, and the span's first, positions of the text the page shows of it
  * @property {Element | null} el the element the press was made at, where the walk's focus is not it
  */
 
@@ -144,8 +145,8 @@ function siteOf(at) {
   const f = WALK.current();
   if (!f || f.kind !== 'block' || f.pos == null || !LAYER.atReadingScale(f.addr)) return { text: null, el: null };
   const c = LAYER.caret(), landed = WALK.landedAt();
-  const pos = c && LAYER.caretInSpan(f.addr, f.pos) ? c.pos : landed != null && landed >= f.pos ? landed : f.pos;
-  return { text: { addr: f.addr, pos, first: f.pos }, el: null };
+  const pos = c && LAYER.caretInSpan(f.addr, f.pos) ? c.pos : LAYER.shownPos(f.addr, landed != null && landed >= f.pos ? landed : f.pos);
+  return { text: { addr: f.addr, pos, first: LAYER.shownPos(f.addr, f.pos) }, el: null };
 }
 
 /**

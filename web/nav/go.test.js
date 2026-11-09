@@ -43,7 +43,9 @@
 // at the run it stood at, and the passage being read gone from it — and the
 // surfaces standing
 // through a version move or a newer version's arrival, the selection, a card
-// and a list re-checked against the version their box shows then (FP-8,
+// and a list re-checked against the version their box shows then, and a
+// draft holding typed words — the walk, the trail and a landing in the
+// model's text, the layout asked in the text shown (FP-8,
 // FP-20, FP-21, FP-22, FP-25, FP-29, FP-35, FP-36). The overlay host stands on stand-in elements — the
 // overlay's and the notice's below it — the platform's document a stand-in
 // beside them, so a face a landing shows is read back from what the host
@@ -4068,6 +4070,224 @@ test('a change of the page\'s class drops what every entry keeps of its surfaces
   await run(GO.back()); await reopening();
   assert.deepEqual([TRAIL.current()?.addr, HOST.currentState()], [D, null], 'Back to D: no card');
   assert.ok(!fake.asked.slice(from).includes(FAKE.keyOf('op', { frame: F.showOrigin(D, 11, 5) })), 'nothing asked for it');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+// ---- A DRAFT HOLDING TYPED WORDS: the walk and the trail in the model's text, the layout asked in the text shown -------
+
+/** the reader the app hands LK: a document's ends stand in the text the page shows of it (T-LAYER's `shownOf`) */
+const shownText = { text: (/** @type {string} */ a) => (REC.has(a) ? LAYER.shownOf(a) : null) };
+/** the view that frames a position of the text a document shows, at the landing's em */
+const framed = (/** @type {string} */ addr, /** @type {number} */ pos) => { const at = LAYER.frameOf(addr, pos); return CAM.viewAt(at, at.fs, CAM.landingPx()); };
+
+test('a follow into a text holding typed words lands at the view that reads its span where the text shown holds it, the outline there too; the walk, the entry and the landing stand on the model\'s position (FP-21, FP-25; issue #515)', async () => {
+  REC.addEdit(FAR, { pos: 1, width: 0, text: 'ab' });
+  try {
+    await run(GO.leapTo(D));
+    await run(GO.follow(drawn(PASSAGE)));
+    const at = framed(FAR, 22), there = framed(FAR, 20);
+    assert.ok(!same(at, there), 'the two positions stand on different lines of the text shown');
+    assert.ok(same(CAM.view(), at), `the camera at the line the text shown holds the span on: ${JSON.stringify(CAM.view())}`);
+    assert.ok(same(GO.viewFor(FAR, 20), at), 'the view for the model\'s position reads it there');
+    assert.deepEqual([walkAt(), WALK.landedAt(), TRAIL.current()?.pos, TRAIL.current()?.width], [['block', FAR, 19], 20, 20, 5], 'the walk and the entry on the span\'s position in the model\'s text');
+    assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: 22, runs: [{ pos: 22, width: 5 }], link: PASSAGE }, 'the outline where the text shown holds it');
+  } finally { REC.clearEdits(FAR); GO.endArrival(); }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('where the walk stands is tested against the layout in the text shown: a departure keeps a span a long passage typed above it carried into the view it leaves, whose number names a line out of that view (FP-25; issue #515)', async () => {
+  setDraft(CUT, EIGHTY, [[CUT, 1, EIGHTY.length]]);
+  await PUMP.loadWhole(CUT);
+  const at = REC.doc(CUT).blocks[9];
+  REC.addEdit(CUT, { pos: 1, width: 0, text: INSERTED.repeat(30) });
+  try {
+    await run(GO.leapTo(CUT, { pos: at.pos }));
+    assert.ok(!LAYER.lineInView(CUT, at.pos, CAM.view()), 'the line the model\'s position names in the text shown stands out of this view');
+    await run(GO.leapTo(FAR));
+    const e = TRAIL.all()[TRAIL.cursorIndex() - 1];
+    assert.deepEqual([e.addr, e.stood && e.stood.addr, e.stood && e.stood.pos], [CUT, CUT, at.pos], 'the entry keeps the walk where it stood');
+  } finally { REC.clearEdits(CUT); }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back to a draft a paragraph was typed above the line the reader left lands on that line\'s own bytes where the text shown holds them, at the height it stood and its em, the walk on its span in the model\'s text (issue #515)', async () => {
+  const { at, was } = await leftCut(), k = INSERTED.length;
+  REC.addEdit(CUT, { pos: 1, width: 0, text: INSERTED });
+  try {
+    await run(GO.back());
+    assert.ok(samePassage(under(CUT, CAM.view()), { ...was, pos: was.pos + k }), `the line's bytes under the visible centre, where the text shown holds them: ${JSON.stringify([under(CUT, CAM.view()), was])}`);
+    assert.deepEqual([walkAt(), GO.landing(), faceShown()], [['block', CUT, at.pos], null, null], 'the walk on its span in the model\'s text, nothing said: all of it in one piece');
+  } finally { REC.clearEdits(CUT); }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('what a view read below typed words is named by its own bytes, read of the text shown, and Back after more typing finds them where they stand now (issue #515)', async () => {
+  setDraft(CUT, EIGHTY, [[CUT, 1, EIGHTY.length]]);
+  await PUMP.loadWhole(CUT);
+  const at = REC.doc(CUT).blocks[9], k = INSERTED.length;
+  REC.addEdit(CUT, { pos: 1, width: 0, text: INSERTED });
+  try {
+    await run(GO.leapTo(CUT, { pos: at.pos }));
+    const was = under(CUT, CAM.view());
+    assert.equal(was.pos, at.pos + k, 'the camera on the line, where the text shown holds it');
+    await run(GO.leapTo(FAR));
+    const r = /** @type {import('../text/layer.js').Reading} */ (TRAIL.all()[TRAIL.cursorIndex() - 1].reading);
+    assert.deepEqual([r.pos, r.ids], [at.pos + k, REC.identityOf(CUT, at.pos, r.width)], 'the view read a position of the text shown, named by the line\'s own bytes');
+    REC.addEdit(CUT, { pos: 1, width: 0, text: 'ab' });
+    await run(GO.back());
+    assert.ok(samePassage(under(CUT, CAM.view()), { ...was, pos: was.pos + 2 }), `its line where it stood, past the words typed meanwhile: ${JSON.stringify([under(CUT, CAM.view()), was])}`);
+    assert.deepEqual([walkAt(), GO.landing()], [['block', CUT, at.pos], null], 'the walk on its span in the model\'s text');
+  } finally { REC.clearEdits(CUT); }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back to a line of typed words, which names no bytes, keeps that line where it stood; the walk on the span it stood on in the model\'s text (issue #515)', async () => {
+  setDraft(CUT, EIGHTY, [[CUT, 1, EIGHTY.length]]);
+  await PUMP.loadWhole(CUT);
+  const at = REC.doc(CUT).blocks[9];
+  REC.addEdit(CUT, { pos: at.pos, width: 0, text: 'A line the reader typed.\n\n' });
+  try {
+    await run(GO.leapTo(CUT, { pos: at.pos }));
+    CAM.set(framed(CUT, at.pos));
+    const left = CAM.view(), r = LAYER.readAt(left);
+    assert.deepEqual(r && [r.pos, r.ids], [at.pos, []], 'the view reads the typed line, whose words name no bytes');
+    await run(GO.leapTo(FAR));
+    await run(GO.back());
+    assert.ok(same(CAM.view(), left), 'the view as left');
+    assert.deepEqual([under(CUT, CAM.view()).pos, walkAt(), GO.landing(), faceShown()], [at.pos, ['block', CUT, at.pos], null, null], 'its line under the centre, the walk on the span it stood on, nothing said');
+  } finally { REC.clearEdits(CUT); }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back to a line of typed words with the walk standing nowhere in that view stands it at the place in the model\'s text the words were typed, where the view shows it (FP-25; issue #515)', async () => {
+  setDraft(CUT, EIGHTY, [[CUT, 1, EIGHTY.length]]);
+  await PUMP.loadWhole(CUT);
+  const first = 'A typed opening line of some length. '.repeat(3) + '\n\n';
+  assert.ok(first.length + 1 >= REC.doc(CUT).blocks[1].pos, 'the second typed line\'s number stands in another span of the model\'s text');
+  REC.addEdit(CUT, { pos: 1, width: 0, text: first + 'A second typed line.\n\n' });
+  try {
+    await run(GO.leapTo(CUT, { pos: 1 }));
+    CAM.set(framed(CUT, first.length + 1));
+    const left = CAM.view(), r = LAYER.readAt(left);
+    assert.deepEqual(r && [r.pos, r.ids], [first.length + 1, []], 'the view reads the second typed line, no bytes named');
+    await WALK.focusTo('1.0.1', null);
+    await run(GO.leapTo(FAR));
+    assert.equal(TRAIL.all()[TRAIL.cursorIndex() - 1].stood, null, 'the walk stood in no place that view shows');
+    await run(GO.back());
+    assert.deepEqual([same(CAM.view(), left), under(CUT, CAM.view()).pos, walkAt()], [true, first.length + 1, ['block', CUT, 1]], 'its line where it stood, the walk on the span at the place in the model\'s text the words were typed');
+  } finally { REC.clearEdits(CUT); }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a flight into a draft holding typed words lands on its passage where its bytes stand in the text shown, whatever is set under it in the air (FP-8, FP-25; issue #515)', async () => {
+  setDraft(CUT, EIGHTY, [[CUT, 1, EIGHTY.length]]);
+  await PUMP.loadWhole(CUT);
+  const at = REC.doc(CUT).blocks[9].pos, more = INSERTED.repeat(3);
+  REC.addEdit(CUT, { pos: 1, width: 0, text: 'ab' });
+  try {
+    await run(GO.leapTo(FAR));
+    await across(GO.leapTo(CUT, { pos: at }), () => setDraft(CUT, EIGHTY.slice(0, at) + more + EIGHTY.slice(at), [[CUT, 1, at], [FOREIGN, 1, more.length], [CUT, at + 1, EIGHTY.length - at]]));
+    assert.ok(same(CAM.view(), framed(CUT, at + 2)), `the camera on the passage's first byte where the text shown holds it, the words set after it standing past it: ${JSON.stringify(CAM.view())}`);
+  } finally { REC.clearEdits(CUT); }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a Back that must read first flies at once for the line the held text places the words on, carried into the text shown (FP-25; issue #515)', async () => {
+  const { at, left, r } = await leftCut(), k = INSERTED.length;
+  setDraft(CUT, EIGHTY, [[CUT, 1, at.pos + 8]]);
+  REC.addEdit(CUT, { pos: 1, width: 0, text: INSERTED });
+  try {
+    const back = GO.back(), want = /** @type {{x: number, y: number, scale: number}} */ (LAYER.keptAt(left, r, at.pos + k));
+    assert.ok(same(CAM.destination(), want), `the camera bound for the line the held bytes place, in the text shown: ${JSON.stringify([CAM.destination(), want])}`);
+    await run(back);
+    assert.deepEqual([under(CUT, CAM.view()).pos, walkAt()], [at.pos + k, ['block', CUT, at.pos]], 'the read answered: on the line\'s bytes, the walk on its span');
+  } finally { REC.clearEdits(CUT); }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a departure names the link\'s end the walk stands on by the bytes it holds, where the text shown holds them (FP-21, FP-36; issue #515)', async () => {
+  LK.readers(shownText);
+  REC.addEdit(D, { pos: 1, width: 0, text: 'xx' });
+  try {
+    await run(GO.leapTo(D));
+    await run(GO.follow(drawn(PASSAGE)));
+    await run(GO.back(true));
+    assert.deepEqual([walkAt(), WALK.current()?.link?.pos], [['link', D, 11], 13], 'the walk on the link\'s stop, at its position in the model\'s text, its end where the text shown holds it');
+    await run(GO.leapTo(FAR));
+    assert.deepEqual(TRAIL.all()[TRAIL.cursorIndex() - 1].stood?.of, [{ prefix: D + '.0.1', ordinal: 11, width: 5 }], 'the element it stood on by its own bytes');
+  } finally { LK.readers({}); REC.clearEdits(D); GO.endArrival(); }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back across a follow made at a withheld run a draft holds below typed words marks the whole run where the text shown holds it, the walk on its item in the model\'s text (FP-30; issue #515)', async () => {
+  const RD = '1.0.1.0.48', O = '1.0.2.0.30', RL = RD + '.0.2.1', text = 'Tumbler.\n\n', n = text.length, RUN = n + 1;
+  REC.takeSpanSet(RD, [{ subspace: 1, ordinal: 1, positions: n + 8 }]);
+  REC.takeMetadata(RD, { doc: RD, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeDelivery(RD, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: RUN, width: 8, kind: 'withheld', text: '', ref: null, origin: O }]);
+  REC.takeImage(RD, 1, [{ iStart: RD + '.0.1.1', width: n }, { iStart: O + '.0.1.1', width: 8 }]);
+  REC.takeLinks(RD, [RL]);
+  REC.takeLink({ addr: RL, from: [span(O, 3, 3)], to: [whole(FAR)], type: CITE });
+  REC.takeEditionClaims(O, []);
+  script[FAKE.keyOf('op', { frame: F.project(RL, 2, FAR) })] = { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + FAR_EXTENT }] } };
+  LK.readers(shownText);
+  REC.addEdit(RD, { pos: 1, width: 0, text: 'ab' });
+  try {
+    const s = /** @type {import('../links/links.js').Shown} */ (LK.shown(RD).find((x) => x.link.addr === RL));
+    assert.deepEqual([s.pos, s.run && s.run.pos], [RUN + 2, RUN + 2], 'drawn at the run where the text shown holds it');
+    await run(GO.leapTo(RD, { pos: RUN }));
+    await run(GO.follow(s));
+    await run(GO.back());
+    assert.deepEqual(marks(), [{ addr: RD, pos: RUN + 2, runs: [{ pos: RUN + 2, width: 8 }], link: RL }, [RL]], 'the whole run outlined where the text shown holds it, moved once');
+    assert.deepEqual(walkAt(), ['block', RD, RUN], 'the walk on the run\'s item in the model\'s text');
+  } finally { LK.readers({}); GO.endArrival(); REC.invalidate(RD); }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the passage being read gone from a text holding typed words lands in the none state at its position in the model\'s text (FP-21; issue #515)', async () => {
+  setDraft(CUT, EIGHTY, [[CUT, 1, EIGHTY.length]]);
+  await PUMP.loadWhole(CUT);
+  await run(GO.leapTo(CUT));
+  REC.addEdit(CUT, { pos: 1, width: 0, text: 'ab' });
+  try {
+    GO.vanished(CUT, 13, [{ prefix: CUT + '.0.1', ordinal: 11, width: 5 }]);
+    assert.deepEqual([GO.landing()?.pos, GO.landing()?.floating, HOST.currentState()?.anchor], [11, true, { span: { addr: CUT, pos: 13 }, sign: CUT }], 'the landing in the model\'s text, its face at the line kept in the text shown');
+  } finally { HOST.dismiss(); REC.clearEdits(CUT); GO.endArrival(); }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a selection below typed words a return finds part of says so with its landing at its position in the model\'s text (FP-21, FP-36; issue #515)', async () => {
+  Object.assign(script, draftReads(SETA, SETA_TEXT), noClaims(SETA));
+  const platform = { window: globalThis.window }, n = SETA_TEXT.length, last = SETA_TEXT.indexOf('A last') + 1;
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  try {
+    REC.invalidate(SETA);
+    placeSeta([[1, n]]);
+    REC.addEdit(SETA, { pos: 1, width: 0, text: 'ab' });
+    await run(GO.leapTo(SETA, { pos: last }));
+    SEL.select(SETA, 3, 6);
+    await run(GO.leapTo(FAR));
+    placeSeta([[4, n - 3]]);
+    await run(GO.back()); await reopening();
+    assert.deepEqual([SEL.selected(), GO.landing()?.pos, GO.landing()?.said?.state], [{ addr: SETA, pos: 3, width: 3 }, 1, 'part'], 'the selection on what stands where the text shown holds it, the landing at its position in the model\'s text');
+  } finally { HOST.dismiss(); SEL.clear(); GO.endArrival(); REC.clearEdits(SETA); REC.invalidate(SETA); globalThis.window = platform.window; }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a selection below typed words a return finds none of lands in the none state at its position in the model\'s text, the dead end\'s face at the place it stood (FP-21, FP-36; issue #515)', async () => {
+  Object.assign(script, draftReads(SETA, SETA_TEXT), noClaims(SETA));
+  const platform = { window: globalThis.window }, n = SETA_TEXT.length, last = SETA_TEXT.indexOf('A last') + 1, opening = 'A note set again.\n\n'.length;
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  try {
+    REC.invalidate(SETA);
+    placeSeta([[1, n]]);
+    REC.addEdit(SETA, { pos: 1, width: 0, text: 'ab' });
+    await run(GO.leapTo(SETA, { pos: last }));
+    SEL.select(SETA, 3, 6);
+    await run(GO.leapTo(FAR));
+    placeSeta([[opening + 1, n - opening]]);
+    await run(GO.back()); await reopening();
+    assert.deepEqual([SEL.selected(), GO.landing()?.pos, GO.landing()?.floating, faceShown()?.id], [null, 1, true, 'face:floating'], 'nothing selected, the landing at the selection\'s position in the model\'s text, the dead end\'s face');
+  } finally { HOST.dismiss(); SEL.clear(); GO.endArrival(); REC.clearEdits(SETA); REC.invalidate(SETA); globalThis.window = platform.window; }
   assert.deepEqual(fake.unanswered, []);
 });
 

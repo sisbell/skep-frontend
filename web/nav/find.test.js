@@ -8,7 +8,9 @@
 // trail entry its later moves share, so Back returns to where find opened;
 // Esc leaves the match selected, the walk and the focus on it and the camera
 // still — in a draft holding typed text, the match selected where it was
-// found in the text shown and the walk on its span in the model's text; a
+// found in the text shown and the walk on its span in the model's text; in
+// a text holding typed words every move's walk and trail entry standing in
+// the model's text and its outline in the text shown; a
 // miss names the document and the version searched and the withheld
 // text it did not search; a part the board will not give is said, with why;
 // each answer is said once; off any document the one line says where words
@@ -265,6 +267,87 @@ test('Esc in a draft holding text typed before the match leaves the match select
     assert.deepEqual([s, s && REC.textOf(d.runs, s.pos, s.pos + s.width)], [{ addr: E, pos: at, width: 7 }, 'tumbler'], 'the match selected where it was found: "tumbler" in the text shown');
     assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos], ['block', E, 1], 'the walk on the span holding it in the model\'s text');
   } finally { REC.clearEdits(E); }
+});
+
+/** D's text held whole, its image its own bytes, as a read of it leaves it */
+function heldWhole() {
+  REC.takeDelivery(D, [{ pos: HELD + 1, width: N - HELD, kind: 'content', text: REST, ref: null, origin: null }], 1);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: N }]);
+}
+
+test('in a text holding typed words a move takes the walk and its trail entry to the match\'s position in the model\'s text and outlines the match where the text shown holds it; Mod+G writes the next match\'s position on that entry; and Back, more typed while away, outlines it where its bytes stand now (FP-21, FP-25; issue #515)', async () => {
+  const typed = 'Forty bytes typed before the first word.';
+  assert.equal(bytes(typed), 40);
+  heldWhole();
+  REC.addEdit(D, { pos: 1, width: 0, text: typed });
+  try {
+    await standAt(D);
+    await KEYS.dispatch(keyOf('f', MOD), PLANE);
+    await settle();
+    type('tumbler'); await settle();
+    const [first, second] = FIND.stands()?.matches ?? [], entry = TRAIL.current(), board = second.pos - 40, block = /** @type {NonNullable<ReturnType<typeof REC.blockAt>>} */ (REC.blockAt(D, board));
+    assert.deepEqual(GO.arrivalMark(), { addr: D, pos: 41, runs: [{ pos: 41, width: 7 }], link: null }, 'the first match outlined where the text shown holds it');
+    assert.deepEqual([first.pos, WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos, WALK.landedAt(), entry?.pos, entry?.width], [41, 'block', D, 1, 1, 1, 7], 'the walk and the entry on the match\'s position in the model\'s text');
+    await KEYS.dispatch(keyOf('g', MOD), { where: 'field', byKey: true });
+    await settle();
+    assert.deepEqual([TRAIL.current() === entry, entry?.pos, entry?.width, WALK.current()?.pos, WALK.landedAt(), GO.arrivalMark()?.runs], [true, board, 7, block.pos, board, [{ pos: second.pos, width: 7 }]], 'Mod+G: the walk and the one entry on the next match in the model\'s text, its outline in the text shown');
+    assert.ok(same(CAM.view(), GO.viewFor(D, board)), 'the camera at the view that reads the match where the text shown holds it');
+    REC.addEdit(D, { pos: 1, width: 0, text: 'cd' });
+    assert.deepEqual(GO.arrivalMark()?.runs, [{ pos: second.pos + 2, width: 7 }], 'words typed above it: the outline stays on the match');
+    await standAt(E);
+    assert.deepEqual(entry?.kept?.arrival?.held, [{ prefix: D + '.0.1', ordinal: board, width: 7 }], 'the entry keeps the match\'s own bytes');
+    REC.addEdit(D, { pos: 1, width: 0, text: 'ab' });
+    GO.back(true); await settle();
+    assert.deepEqual([TRAIL.current() === entry, GO.arrivalMark()?.runs], [true, [{ pos: second.pos + 4, width: 7 }]], 'Back: outlined where its bytes stand now, past the words typed meanwhile');
+  } finally { REC.clearEdits(D); }
+});
+
+test('a match in words the page made outlines them where the text shown holds them, and names no bytes; the walk and the entry stand at the place in the model\'s text the words were typed (FP-21; issue #515)', async () => {
+  heldWhole();
+  REC.addEdit(D, { pos: 1, width: 0, text: 'a tumbler typed here.\n\n' });
+  try {
+    await standAt(D);
+    await KEYS.dispatch(keyOf('f', MOD), PLANE);
+    await settle();
+    type('tumbler typed'); await settle();
+    const entry = TRAIL.current();
+    assert.deepEqual([FIND.stands()?.matches, GO.arrivalMark()], [[{ pos: 3, width: 13 }], { addr: D, pos: 3, runs: [{ pos: 3, width: 13 }], link: null }], 'found and outlined in the typed words');
+    assert.deepEqual([WALK.current()?.addr, WALK.current()?.pos, entry?.pos, entry?.width], [D, 1, 1, 13], 'the walk and the entry at the place the words were typed');
+    await standAt(E);
+    assert.equal(entry?.kept?.arrival?.held, undefined, 'no bytes named: the page made them');
+  } finally { REC.clearEdits(D); }
+});
+
+test('a match across bytes an edit took out stands in the text shown as the move makes it, its bytes named, and a return reads it again from them, each stretch outlined where the text shown holds it (FP-21; issue #515)', async () => {
+  heldWhole();
+  REC.addEdit(D, { pos: 3, width: 2, text: '' });
+  try {
+    await standAt(D);
+    await KEYS.dispatch(keyOf('f', MOD), PLANE);
+    await settle();
+    type('tuler'); await settle();
+    const entry = TRAIL.current();
+    assert.deepEqual([GO.arrivalMark()?.runs, entry?.pos], [[{ pos: 1, width: 5 }], 1], 'outlined whole in the text shown, the walk at its first byte');
+    await standAt(E);
+    assert.deepEqual(entry?.kept?.arrival?.held, [{ prefix: D + '.0.1', ordinal: 1, width: 2 }, { prefix: D + '.0.1', ordinal: 5, width: 3 }], 'its bytes named on either side of the bytes taken out');
+    GO.back(true); await settle();
+    assert.deepEqual(GO.arrivalMark()?.runs, [{ pos: 1, width: 2 }, { pos: 3, width: 3 }], 'read again from its bytes: each stretch where the text shown holds it');
+  } finally { REC.clearEdits(D); }
+});
+
+test('Esc at a match in words typed after the text\'s last span leaves the walk on that last span, never the first: a position past the model\'s text carried back to its last (FP-20; issue #515)', async () => {
+  heldWhole();
+  await standAt(D);
+  await KEYS.dispatch(keyOf('f', MOD), PLANE);
+  await settle();
+  REC.addEdit(D, { pos: N + 1, width: 0, text: 'one more word typed' });
+  try {
+    type('one more'); await settle();
+    const m = FIND.stands()?.matches, last = /** @type {import('../model/records.js').Block} */ ([...REC.doc(D).blocks].reverse().find((b) => b.text.trim()));
+    assert.deepEqual(m, [{ pos: N + 1, width: 8 }], 'found past the model\'s text, in the typed words');
+    inField('Escape'); await settle();
+    assert.deepEqual([SEL.selected(), WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos], [{ addr: D, pos: N + 1, width: 8 }, 'block', D, last.pos], 'the match selected in the text shown, the walk on the model\'s last span');
+  } finally { REC.clearEdits(D); }
 });
 
 test('a miss names the document and the version searched, and says the withheld text it did not search; the withheld run holds no match, nor joins its neighbours\' text', async () => {

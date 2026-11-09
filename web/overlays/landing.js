@@ -4,7 +4,9 @@
 // Where a carried or followed passage lands and the text landed in holds
 // only part of it, all of it in pieces, or no answer told, or holds it in
 // several runs (N-GO's `landing`; BM-HELD's line and labels), one line stands
-// at the text's edge beside the landing: past the right edge of the part of
+// at the text's edge beside the landing, each position its landing names
+// carried into the text the page shows of it (T-LAYER's `shownPos`): past the
+// right edge of the part of
 // the block holding the line of the run the landing stands at, its top level
 // with that line's (BM's `leaveAt`, the point a beam leaves the text by) —
 // where that text is not laid out, beside its document's box — stacked
@@ -177,7 +179,7 @@ const markup = (/** @type {LineState} */ s) =>
  * stands at the text's edge by it too (O-HINT's).
  * @param {Geometry} g
  * @param {string} addr
- * @param {number} pos the run's first position
+ * @param {number} pos the run's first position in the text the page shows of it
  * @returns {{x: number, y: number, room: number} | null}
  */
 export function edgeAt(g, addr, pos) {
@@ -233,7 +235,7 @@ export function stacks(anchors) {
 function anchorsOf(p, addr, current, seen) {
   const g = pageGeometry(seen);
   return p.runs.flatMap((r, i) => {
-    const e = edgeAt(g, addr, r.pos);
+    const e = edgeAt(g, addr, LAYER.shownPos(addr, r.pos));
     if (!e) return [];
     const words = mergedLabel(p, [i], current);
     const h = i === current ? heightOf(words, Math.min(LINE_FACE.max, e.room), LINE_FACE) + LINE_FACE.acts : heightOf(words, e.room);
@@ -287,7 +289,7 @@ function place(anchor) {
   const l = GO.landing();
   if (!el || !l) return;
   const seen = visibleView(LINE.bottom());
-  const at = anchor ? null : leaveAt(pageGeometry(seen), l.addr, [{ pos: l.pos, width: 1 }]);
+  const at = anchor ? null : leaveAt(pageGeometry(seen), l.addr, [{ pos: LAYER.shownPos(l.addr, l.pos), width: 1 }]);
   const b = docBox(l.addr);
   let x = anchor ? anchor.x : at ? at.from.x + GAP : sx(b.x + b.w) + GAP, y = anchor ? anchor.y : at ? at.line.y : sy(b.y);
   const vw = seen.x + seen.w;

@@ -374,9 +374,11 @@
 // position the fold places or answers is one of the text shown (`posAt`,
 // `centreOf`, `frameOf`), and a position of the model's text — the walk's —
 // crosses into it and back through one pair (`shownPos`, `basePos`), a link's
-// end, standing on bytes the model's text holds, back through `boardPos`; the
-// walk's span is carried into the text shown as the block holding it there
-// (`shownBlockOf`, `carriedFocus`). The
+// end, standing on bytes the model's text holds, back through `boardPos`, and
+// a run of the model's text — an arrival's, a link's far end's — into it
+// whole through `shownRun`; the walk's span is carried into the text shown as
+// the block holding it there (`shownBlockOf`, `carriedFocus`), and what a view
+// reads is read of that text (`readAt`). The
 // caret (D5 K-70, K-72, K-76, K-77; D6 BM-4, BM-52, BM-54, BM-70, BM-75): the
 // page's own, one at a time, in text the person may edit — a draft under the
 // session's account, by its address alone, at reading scale (`editable`) — a
@@ -628,10 +630,10 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @typedef {Object} Reading — what a view reads (`readAt`), by value — positions, bytes by identity and a place, no fold and no words: what N-TRAIL keeps beside an entry's view, so a return finds those words wherever its document was set since (N-GO's) and lands at the view that keeps the line it finds them at where the line read stood (`keptAt`)
  * @property {string} addr the document: the version its box showed
  * @property {number | null} at the position its text was read at (M-REC's `Doc.readAt`): at a bare address, what tells the member that text was from a newer one published after it (N-TRAIL's `arrivedAt`, `countedAt`); null where no delivery said
- * @property {number} pos the position the line under the view's visible centre opens at (P-LAY's `posAt`)
+ * @property {number} pos the position the line under the view's visible centre opens at (P-LAY's `posAt`), in the text the page showed of it (`shownOf`): the fold's
  * @property {number} width that line's positions (`lineOf`): the words the live hold keeps still
- * @property {ISpan[]} ids that line's bytes by identity, in its order, through the document's held image (M-REC's `identityOf`); none where the image did not cover them
- * @property {ImageRun[]} around the view around them: the held image's runs cut to the positions the view showed of the document (P-LAY's `windowIn`), each at its position then — what a text holding none of the words is placed nearest by (N-GO's); none where the image covered none of them
+ * @property {ISpan[]} ids that line's bytes by identity, in its order, through the image of the text shown (M-REC's `identityIn`); none where that image did not cover them: words the page made hold no identity
+ * @property {ImageRun[]} around the view around them: the runs of that image cut to the positions the view showed of the document (P-LAY's `windowIn`), each at its position then — what a text holding none of the words is placed nearest by (N-GO's); none where the image covered none of them
  * @property {{x: number, y: number}} p the visible centre, in world units relative to the room
  * @property {{x: number, y: number}} line where the fold set that position's line, in world units relative to the room (P-LAY's `placeOf`)
  * @property {number} fs the fold's em, in world units
@@ -1004,6 +1006,19 @@ export function basePos(addr, pos) {
  * @returns {number}
  */
 export const boardPos = (addr, pos) => toBase(REC.edits(addr), pos);
+
+/**
+ * A run of the model's text carried into the text the page shows of a draft
+ * (M-DERIVE's `toShown`): from where its first byte stands to one past where
+ * its last does, so words typed at its end stay outside it.
+ * @param {string} addr
+ * @param {{pos: number, width: number}} run a stretch of the model's text, a position at the least
+ * @returns {{pos: number, width: number}} that stretch in the text shown (`shownOf`)
+ */
+export function shownRun(addr, run) {
+  const pos = shownPos(addr, run.pos);
+  return { pos, width: shownPos(addr, run.pos + run.width - 1) + 1 - pos };
+}
 
 /**
  * The walk's focus carried into a record derived from the typed text: the
@@ -1492,7 +1507,7 @@ const fitKey = () => { const F = fit(); return `${F.cpl}|${F.compact}|${F.head}|
  * there: N-GO's Back, which returns the focus to where the step it crossed
  * began only where the view it lands at shows it.
  * @param {string} addr
- * @param {number} pos
+ * @param {number} pos a position of the text shown (`shownOf`)
  * @param {{x: number, y: number, scale: number}} view
  * @returns {boolean}
  */
@@ -3022,9 +3037,9 @@ export function holdAcross(from, to, at = null) {
  * it and only where the page holds its text, with the position that text was
  * read at; the position the line under that centre opens at (P-LAY's `posAt`)
  * and that line's positions (`lineOf`), its bytes by identity through the
- * document's held image, the image's runs the view shows (`aroundOf`), and
- * where the fold sets that line and the centre. Null where the view reads no
- * document so.
+ * image of the text the page shows of it (`shownDoc`), that image's runs the
+ * view shows (`aroundOf`), and where the fold sets that line and the centre.
+ * Null where the view reads no document so.
  * @param {{x: number, y: number, scale: number}} view
  * @returns {Reading | null}
  */
@@ -3036,18 +3051,18 @@ export function readAt(view) {
     if (!readsAt(f.fs, view.scale)) continue;
     const box = docBox(d.addr), p = { x: c.x - box.x, y: c.y - box.y }, pos = posIn(f, p.x, p.y);
     if (pos == null) continue;
-    const at = placeIn(f, pos), width = lineOf(f, d.blocks, pos).width;
-    return { addr: d.addr, at: d.readAt, pos, width, ids: REC.identityOf(d.addr, pos, width), around: aroundOf(d, f, view), p, line: { x: at.x, y: at.y }, fs: f.fs, fit: fitKey(), top };
+    const text = shownDoc(d), at = placeIn(f, pos), width = lineOf(f, text.blocks, pos).width;
+    return { addr: d.addr, at: d.readAt, pos, width, ids: REC.identityIn(text.image, pos, width), around: aroundOf(text, f, view), p, line: { x: at.x, y: at.y }, fs: f.fs, fit: fitKey(), top };
   }
   return null;
 }
 
 /**
- * The held image's runs a view shows of a document (`Reading.around`): cut
- * to its window's positions (P-LAY's `windowIn`), from the position the first
- * line in the visible view opens at to the end of the last, each at its
- * position; none where no line in view names a position.
- * @param {Doc} d
+ * The image runs a view shows of a document (`Reading.around`): cut to its
+ * window's positions (P-LAY's `windowIn`), from the position the first line
+ * in the visible view opens at to the end of the last, each at its position;
+ * none where no line in view names a position.
+ * @param {Doc} d the record of the text the fold sets (`shownDoc`)
  * @param {Fold} f the fold it stands in
  * @param {{x: number, y: number, scale: number}} view
  * @returns {ImageRun[]}
@@ -3080,7 +3095,7 @@ function aroundOf(d, f, view) {
  * read must bring it first.
  * @param {{x: number, y: number, scale: number}} view
  * @param {Reading} r what it read
- * @param {number} to the position, in the text its box shows now, whose line takes the line read's place: where N-GO finds the words read there, else the passage it lands at in their place
+ * @param {number} to the position of the text the page shows of the version its box shows now (`shownOf`) whose line takes the line read's place: where N-GO finds the words read there, else the passage it lands at in their place
  * @returns {{x: number, y: number, scale: number} | null}
  */
 export function keptAt(view, r, to) {
@@ -3697,7 +3712,7 @@ function dropCorner(/** @type {string} */ addr) {
  * name, the run's own boxes, one for each part of its gap standing, never a
  * line at an offset inside the gap (see the head).
  * @param {string} addr
- * @param {number} pos the block's first position, or the span's
+ * @param {number} pos the block's first position, or the span's, in the text shown (`shownOf`)
  * @param {number | null} [width] the span's positions
  * @returns {Array<{x: number, y: number, w: number, h: number}> | null}
  */
@@ -3739,7 +3754,7 @@ export function signRects(addr, pos) {
  * along the trail draws with its marks); null where no part standing holds
  * any of it.
  * @param {string} addr
- * @param {number} pos
+ * @param {number} pos a position of the text shown (`shownOf`)
  * @param {number} width
  * @returns {Array<{x: number, y: number, w: number, h: number}> | null}
  */
@@ -4262,14 +4277,14 @@ export function holdsText(addr, x, y) {
  * (FP-21), and what `lineBoxes` reads; none where the document's text has
  * not arrived.
  * @param {string} addr
- * @param {number} pos
+ * @param {number} pos a position of the text shown (`shownOf`)
  * @param {number} width
  * @returns {Array<{line: number, column: number, rect: Rect}>}
  */
 export function foldBoxes(addr, pos, width) {
   const rec = mounted.get(addr), d = REC.doc(addr);
   if (!rec && d.from < 0) return [];
-  const f = rec ? rec.fold : foldOf(d), blocks = rec ? rec.made.blocks : d.blocks, box = docBox(addr), end = pos + Math.max(1, width);
+  const f = rec ? rec.fold : foldOf(d), blocks = rec ? rec.made.blocks : shownDoc(d).blocks, box = docBox(addr), end = pos + Math.max(1, width);
   /** @type {Array<{line: number, column: number, rect: Rect}>} */
   const out = [];
   f.columns.forEach((c, ci) => {
@@ -4293,7 +4308,7 @@ export function foldBoxes(addr, pos, width) {
  * band (`foldBoxes`): BM's beams leave a line that stands in no part where its
  * fold sets it; null where no such article stands.
  * @param {string} addr
- * @param {number} pos
+ * @param {number} pos a position of the text shown (`shownOf`)
  * @param {number} width
  * @returns {Rect[] | null}
  */

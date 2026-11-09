@@ -90,7 +90,8 @@
 // numbered newest-first at the label floor, and no path between them
 // (foundations §2.2); the focus ring, its box clamped inside the visible view
 // (P-REG's RING; `drawFocus`, around `focusBox`, which a hint stands beside
-// too) — at a continuation's mark's stop, and at a
+// too; a span's the lines the text the page shows holds it on) — at a
+// continuation's mark's stop, and at a
 // document a mark drawn the stronger holds, on the mark, that member's name
 // and place among the mark's members set on the mark while it stands, in the
 // count's place; and the arrival mark, every run of the span
@@ -950,14 +951,14 @@ function ringBox(b, seen) {
 /**
  * The lines of the walk's span on screen where its article stands and no
  * mark the last frame drew the stronger holds its document (`holding`):
- * T-LAYER's `lineBoxes` of the block the span names; null for any other
- * element of the walk.
+ * T-LAYER's `lineBoxes` of the block of the text shown holding the span
+ * (T-LAYER's `shownBlockOf`); null for any other element of the walk.
  * @param {import('../nav/walk.js').Node} f
  * @returns {Rect[] | null}
  */
 function spanLines(f) {
   if (f.kind !== 'block' || holding(f.addr) || !LAYER.isMounted(f.addr)) return null;
-  const blk = f.pos != null ? REC.blockByPos(f.addr, f.pos) : null;
+  const blk = f.pos != null ? LAYER.shownBlockOf(f.addr, f.pos) : null;
   return blk ? LAYER.lineBoxes(f.addr, blk.pos, blk.width) || [] : [];
 }
 
@@ -1051,7 +1052,8 @@ function foldExtents(addr, pos, width) {
 
 /**
  * The arrival mark (foundations §2.1, §3.2; FP-21): every run the landing's
- * text holds the span in outlined, and nothing between them, in view or
+ * text holds the span in, where the text the page shows holds it (N-GO's
+ * `arrivalMark`), outlined, and nothing between them, in view or
  * not: line by line on its own bytes' line-rects where its lines
  * stand as text in its article (T-LAYER's `standingRects`), and on its
  * fold's lines where they stand in no part — out of the view's padding, or
@@ -1078,7 +1080,7 @@ function drawArrival() {
   const take = (/** @type {Rect[]} */ rs, /** @type {number} */ run) => { for (const r of rs) if (r.w > 0 && r.h > 0) out.push({ x: r.x, y: r.y, w: r.w, h: r.h, run }); };
   if (a.runs) a.runs.forEach((r, i) => take([...(LAYER.standingRects(a.addr, r.pos, r.width) || []), ...unstood(r.pos, r.width)], i));
   else {
-    const b = REC.blockAt(a.addr, a.pos);
+    const b = REC.blockIn(LAYER.shownOf(a.addr).blocks, a.pos);
     if (b) take(LAYER.spanRects(a.addr, b.pos) || unstood(b.pos, b.width), -1);
   }
   ctx.strokeStyle = HUE.you; ctx.lineWidth = 2; ctx.setLineDash([]);

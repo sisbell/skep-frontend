@@ -352,7 +352,7 @@ export function install(deps) {
     if (!a) return null;
     const rec = LAYER.mountedSet().get(a.addr);
     const words = rec && a.link ? [...rec.el.querySelectorAll(`.lip[data-links~="${a.link}"]`)].flatMap((w) => [...w.getClientRects()].map((r) => ({ x: r.left, y: r.top, w: r.width, h: r.height }))) : [];
-    const b = REC.blockAt(a.addr, a.pos);
+    const b = REC.blockIn(LAYER.shownOf(a.addr).blocks, a.pos);
     const block = rec && b ? rec.el.querySelector(`.sp[data-pos="${b.pos}"]`) : null;
     return { ...a, outline: RENDER.stats.arrival.slice(), words, block: block ? rectOf(block) : null, article: rec ? rectOf(rec.el) : null };
   }

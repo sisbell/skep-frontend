@@ -218,7 +218,9 @@ match — outlined alone, its line mounted — with one trail entry the next
 move, Mod+G, shares; Esc leaves the match selected with the focus on its
 item and the camera still; Back returns to where the find opened; and at
 WHOLE BOARD Mod+F opens nothing and the one line says where words are found.
-Every other step leaves the page as it found it."""
+In the own draft, words typed at a span, the hint a bare key raises at a later
+span and a landing's line and outline stand where the text shown holds their
+places. Every other step leaves the page as it found it."""
 import json
 
 from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, account_of, item_words, key_fingerprint, trunk_of
@@ -2659,6 +2661,63 @@ def who_wrote_typed(ctx, r):
             {'read_at': read_at, 'asked': got, 'want': want, 'anchor': anchor, 'span': span, 'answer': answer[:200], 'edits': edits})
 
 
+def typed_surfaces(ctx, r):
+    """THE SURFACES BESIDE THE WALK OVER TYPED WORDS (FP-21, FP-26, FP-31): the walk landed on the own draft's second paragraph,
+    Enter placing the caret at its start, `ab` typed and Esc pressed — the caret kept — then the walk taken by ↓ to the next
+    paragraph, which holds no caret: a bare key raises the draft's line as its hint, at the text's edge level with that
+    paragraph's first line where the text shown holds it, two positions on; and a LEAP naming two runs of a passage in that
+    paragraph lands its line at the text's edge level with the run's line and its outline on the run, both where the text shown
+    holds them, the walk on the span in the model's text. The caret, the arrival and the edits are let go after, and the draft
+    read again."""
+    doc = WINDOW[2]
+    ctx.leap(doc, None)
+    paras = [b for b in ctx.js('window.__skep.model.doc(%s)' % json.dumps(doc))['blocks'] if b['kind'] == 'para' and len(b['text'].strip()) >= 16]
+    if not r.check(len(paras) >= 3, 'the own draft holds three paragraphs of sixteen characters or more (what the next checks stand on)', [b['pos'] for b in paras]):
+        return
+    para, later = paras[1], paras[2]
+    ctx.leap(doc, para['pos'])
+    ctx.drv.key('Enter'); ctx.frames(2)
+    P, typed = later['pos'], 2
+    hint, walked, hint_line, ids, landed, line_rects, outline, focus = None, None, None, None, None, None, None, None
+    try:
+        for ch in 'ab':
+            ctx.drv.key(ch)
+        ctx.frames(2)
+        ctx.drv.key('Escape'); ctx.frames(2)
+        for _ in range(16):
+            chord(ctx, 'ArrowDown')
+            walked = ctx.js('window.__skep.view.focus()') or {}
+            if walked.get('kind') == 'block' and walked.get('pos') == P:
+                break
+        chord(ctx, 'k')
+        hint = ctx.js('window.__skep.hint()') or {}
+        hint_line = ctx.js('window.__skep.spanRects(%s, %d, 1)' % (json.dumps(doc), P + typed))
+        chord(ctx, 'Escape')
+        ids = ctx.js('window.__skep.model.identity(%s, %d, 12)' % (json.dumps(doc), P))
+        if ids and len(ids) == 1:
+            runs = [{'pos': P, 'width': 4}, {'pos': P + 8, 'width': 4}]
+            ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(doc), P, json.dumps({'runs': runs, 'passage': ids[0]})))
+            ctx.settle(); ctx.frames(3)
+            landed = ctx.js('window.__skep.landingLine()')
+            line_rects = ctx.js('window.__skep.spanRects(%s, %d, 4)' % (json.dumps(doc), P + typed))
+            outline = (ctx.js('window.__skep.arrivalAnchors()') or {}).get('outline')
+            focus = ctx.js('window.__skep.view.focus()')
+    finally:
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), R = await import("./model/records.js"), G = await import("./nav/go.js"); H.dismiss(); S.clear(); G.endArrival(); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
+        ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
+    placed = (hint or {}).get('placed') or {}
+    r.check(bool(hint_line) and (hint or {}).get('id') == 'B3.caret.enter' and placed.get('by') == 'edge' and abs(placed['anchor']['y'] - hint_line[0]['y']) <= 0.5,
+            'a bare key at a paragraph of the draft below typed words raises the hint at the text\'s edge, level with that paragraph\'s first line where the text shown holds it (FP-31)',
+            {'hint': hint, 'walked': walked, 'line': hint_line and hint_line[0]})
+    near = lambda a, b: abs(a['x'] - b['x']) <= 0.5 and abs(a['y'] - b['y']) <= 0.5 and abs(a['w'] - b['w']) <= 0.5 and abs(a['h'] - b['h']) <= 0.5
+    r.check(bool(ids) and len(ids) == 1 and bool(landed) and bool(line_rects) and abs(landed['rect']['y'] - line_rects[0]['y']) <= 0.5,
+            'a landing in a draft below typed words stands its line at the text\'s edge, level with its run\'s line where the text shown holds it (FP-21)',
+            {'ids': ids, 'line': landed, 'run_lines': line_rects})
+    r.check(bool(outline) and bool(line_rects) and outline[0]['run'] == 0 and near(outline[0], line_rects[0]) and bool(focus) and focus.get('pos') == P,
+            'its outline stands on the run where the text shown holds it, the walk on the span in the model\'s text (FP-21)',
+            {'outline': outline, 'run_lines': line_rects, 'focus': focus, 'P': P})
+
+
 def tabbed_to_hint(ctx, r):
     """Tab reaches the hint standing in its compact form without ending it; Enter at it opens its notice whole, said in the
     status region, the focus kept on it; the next act takes it down, its focus handed to the walk's item (issue #468's design
@@ -3414,6 +3473,8 @@ def run(ctx):
     ended()
     # ---- who wrote this? over a span holding typed words: the board asked by the base's positions as of its read --------
     who_wrote_typed(ctx, r)
+    # ---- the hint and a landing's line over typed words: each where the text shown holds its place ------------------
+    typed_surfaces(ctx, r)
     # ---- the copy of an item that holds no text: the claimant's key record (issue #161) -------------------------------
     r.figures['record_copy'] = record_copy(ctx, r)
     ctx.leap(DOC, WINDOW[0])

@@ -17,7 +17,9 @@
 // one where it is too small, and a member the walk's ring stands on ringed
 // on the mark with its name and place (issue #42); and a box's history strip
 // holding the version its box shows in the window mark, the head in its own
-// triangle only where the board ended the chain there (FP-22, FP-26).
+// triangle only where the board ended the chain there (FP-22, FP-26); and in
+// a draft holding typed words the arrival outlined and the walk's span ringed
+// on the lines the text shown holds them on (FP-21; issue #515).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -36,6 +38,7 @@ import { markScale, lodOf } from './lod.js';
 import { leadOf, firstRow, GUTTER } from './layout.js';
 import { COL, TARGET, ADDRESS, WINDOW, STRIP } from './register.js';
 import { recorder } from '../test/canvas.js';
+import { visibleView } from './camera.js';
 import { t, markCount, lastRead } from '../strings.js';
 import { byteLength } from '../util.js';
 
@@ -377,4 +380,74 @@ test('a box\'s history strip marks its document\'s members in chain order, the h
     REC._reset(); CAM.setViewport(1440, 900);
     globalThis.document = platform.document; globalThis.window = platform.window;
   }
+});
+
+// ---- A DRAFT HOLDING TYPED WORDS (issue #515) ------------------------------------------------------------------
+
+/** a draft of three paragraphs held whole, its image its own bytes, with a paragraph typed above them: the document, a word of its second paragraph's first line by its position in the model's text and its width, and the bytes typed */
+function typedDraft() {
+  const doc = '1.0.1.0.3', text = 'A first paragraph of the text.\n\nA second paragraph of the text.\n\nA third paragraph of the text.\n', typed = 'Words typed above the text the board served, enough to set a line of their own.\n\n';
+  REC._reset();
+  REC.setBoard({ board: 'b-1', name: '', origin: 'http://127.0.0.1:8642' });
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true });
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc, kind: 'draft', label: 'draft', standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  REC.takeSpanSet(doc, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
+  REC.takeDelivery(doc, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
+  REC.takeImage(doc, 1, [{ iStart: doc + '.0.1.1', width: byteLength(text) }]);
+  REC.addEdit(doc, { pos: 1, width: 0, text: typed });
+  return { doc, board: text.indexOf('second') + 1, width: 'second'.length, k: byteLength(typed) };
+}
+
+test('an arrival in a text holding typed words is outlined on the lines the text shown holds its runs on, where no part of them stands (FP-21; issue #515)', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window }, listens = { addEventListener() {} };
+  globalThis.document = /** @type {any} */ ({ ...listens, activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens, getSelection: () => null });
+  const { ctx } = recorder();
+  RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
+  CAM.setViewport(4000, 900);
+  const { doc, board, width, k } = typedDraft();
+  try {
+    const b = docBox(doc), view = { x: b.x + b.w / 2, y: b.y + b.h / 2, scale: 3 / LAYER.foldOf(REC.doc(doc)).fs };
+    const leap = GO.leapTo(doc, { pos: board, runs: [{ pos: board, width }], link: doc + '.0.2.1', how: 'leap' });
+    CAM.set(view);
+    await leap;
+    RENDER.draw();
+    const rects = (/** @type {number} */ at) => LAYER.foldBoxes(doc, at, width).map(({ rect: r }) => [r.x, r.y, r.w, r.h]);
+    assert.deepEqual(GO.arrivalMark()?.runs, [{ pos: board + k, width }], 'the run where the text shown holds it');
+    assert.ok(rects(board + k).length === 1 && JSON.stringify(rects(board)) !== JSON.stringify(rects(board + k)), 'the two positions stand on different lines');
+    assert.deepEqual(RENDER.stats.arrival.map((r) => [r.x, r.y, r.w, r.h, r.run]), rects(board + k).map((r) => [...r, 0]), 'outlined on the line the text shown holds it on');
+    // a landing naming the document whole: the block the text shown holds at its head, past the words typed there
+    const leapAgain = GO.leapTo(doc, { pos: null, link: doc + '.0.2.1', how: 'leap' });
+    CAM.set(view);
+    await leapAgain;
+    RENDER.draw();
+    const head = /** @type {import('../model/records.js').Block} */ (REC.blockIn(LAYER.shownOf(doc).blocks, 1 + k));
+    assert.equal(GO.arrivalMark()?.pos, 1 + k, 'its position where the text shown holds the head');
+    assert.ok(RENDER.stats.arrival.length === 1 && RENDER.stats.arrival[0].run === -1, 'one rect, the block\'s');
+    assert.deepEqual([RENDER.stats.arrival[0].x, RENDER.stats.arrival[0].y], [LAYER.foldBoxes(doc, head.pos, head.width)[0].rect.x, LAYER.foldBoxes(doc, head.pos, head.width)[0].rect.y], 'on the block at that head, its typed words apart');
+  } finally { GO.endArrival(); REC._reset(); CAM.setViewport(1440, 900); globalThis.document = platform.document; globalThis.window = platform.window; }
+});
+
+test('the walk\'s span in a text holding typed words is ringed on the lines the text shown holds it on (the focus record\'s D3; issue #515)', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window }, listens = { addEventListener() {} };
+  /** an element the text layer mounts into, a stand-in */
+  const element = () => { const e = { className: '', innerHTML: '', dataset: {}, style: {}, children: /** @type {unknown[]} */ ([]), classList: { toggle() {} }, setAttribute() {}, appendChild(/** @type {unknown} */ c) { e.children.push(c); }, querySelectorAll: () => [], getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }), remove() {} }; return e; };
+  globalThis.document = /** @type {any} */ ({ ...listens, activeElement: null, body: null, createElement: element });
+  globalThis.window = /** @type {any} */ ({ ...listens, getSelection: () => null });
+  CAM.setViewport(1440, 900);
+  LAYER.attach(/** @type {any} */ ({ clientWidth: 1440, clientHeight: 900, appendChild() {} }), /** @type {any} */ (null));
+  const { doc, board, k } = typedDraft();
+  try {
+    const f = LAYER.foldOf(REC.doc(doc)), b = docBox(doc), c = f.columns[0];
+    CAM.set({ x: b.x + c.x + c.w / 2, y: b.y + c.y + c.h / 3, scale: 12 / f.fs });
+    await WALK.focusTo(doc, board, true, true, null, true);
+    LAYER.frame();
+    const start = /** @type {import('../model/records.js').Block} */ (REC.blockAt(doc, board)).pos;
+    assert.ok(LAYER.isMounted(doc) && WALK.current()?.pos === start, 'its article stands, the walk on the second paragraph\'s span in the model\'s text');
+    const shown = /** @type {import('../model/records.js').Block} */ (LAYER.shownBlockOf(doc, start));
+    assert.equal(shown.pos, start + k, 'the span where the text shown holds it');
+    const lines = /** @type {Array<{x: number, y: number, w: number, h: number}>} */ (LAYER.lineBoxes(doc, shown.pos, shown.width));
+    const x = Math.min(...lines.map((r) => r.x)), y = Math.min(...lines.map((r) => r.y));
+    assert.deepEqual(RENDER.focusBox(visibleView(0)), { x, y, w: Math.max(...lines.map((r) => r.x + r.w)) - x, h: Math.max(...lines.map((r) => r.y + r.h)) - y }, 'the ring\'s box the bounds of the lines the text shown holds the span on');
+  } finally { LAYER.clear(); LAYER.attach(/** @type {any} */ (null), null); REC._reset(); globalThis.document = platform.document; globalThis.window = platform.window; }
 });

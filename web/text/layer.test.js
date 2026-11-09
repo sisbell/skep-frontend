@@ -16,7 +16,9 @@
 // changes; a reading scene's pane's view at its measure and its corner,
 // compact beside its column or at its document's head, no row naming it; a
 // document's region and the view's window over it; a span in the visible
-// view, read in a draft's typed text where the edits carried it; the passage in view
+// view, read in a draft's typed text where the edits carried it; what a view
+// reads in a draft's typed text read of the text shown, and a run carried
+// into it whole; the passage in view
 // keeping its place through a reveal, a feed row naming its document — the
 // article standing until the reads it makes again set it — a version move
 // and an edit above the view, by its bytes' identity, the view's centre on an
@@ -243,6 +245,32 @@ test('a document\'s region is its outline\'s bounds widened leftward by the stri
     LAYER.readers({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null });
     CAM._reset();
   }
+});
+
+test('what a view reads in a text holding typed words is read of the text the page shows: the line\'s position and its width in that text, its own bytes and the runs around it named through that text\'s image (FP-8; issue #515)', () => {
+  deliver();
+  CAM._reset(); CAM.setViewport(1440, 900);
+  const typed = 'typed words set before the rest of the text\n\n', k = new TextEncoder().encode(typed).length;
+  REC.addEdit(D, { pos: 1, width: 0, text: typed });
+  try {
+    const box = docBox(D), f = LAYER.foldOf(REC.doc(D)), c = f.columns[3];
+    const r = LAYER.readAt({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h * 0.4, scale: 12 / f.fs });
+    assert.ok(r && r.addr === D && r.width > 1, 'the view reads a line of D');
+    assert.deepEqual(r.ids, [{ prefix: D + '.0.1', ordinal: r.pos - k, width: r.width }], 'that line\'s own bytes, its position in the text shown carried back through the image of that text');
+    assert.ok(r.around.length > 0 && r.around.every((x) => x.ordinal === x.pos - k), 'the view around it named through the same image');
+  } finally { REC.clearEdits(D); CAM._reset(); }
+});
+
+test('a run of the model\'s text carried into the text shown stands from its first byte to one past its last: words typed at its end stay outside it, words typed inside it within (issue #515)', () => {
+  const run = { pos: 5, width: 3 };
+  assert.deepEqual(LAYER.shownRun(D, run), run, 'no edits: as it stands');
+  REC.addEdit(D, { pos: 1, width: 0, text: 'ab' });
+  assert.deepEqual(LAYER.shownRun(D, run), { pos: 7, width: 3 }, 'words typed before it move it');
+  REC.addEdit(D, { pos: 10, width: 0, text: 'zz' });
+  assert.deepEqual(LAYER.shownRun(D, run), { pos: 7, width: 3 }, 'words typed at its end stay outside it');
+  REC.addEdit(D, { pos: 8, width: 0, text: 'q' });
+  assert.deepEqual(LAYER.shownRun(D, run), { pos: 7, width: 4 }, 'words typed inside it stand within');
+  REC.clearEdits(D);
 });
 
 test('a span of the model\'s text stands in the visible view while the middle of a line holding it does, below the one line; in a draft\'s typed text the span is read where the page-local edits carried it, never at its own positions there (B3-S1; D5 §4 rule 3)', () => {
