@@ -108,7 +108,7 @@ import { accountOf, isUnder } from '../model/address.js';
  * @property {string} key its end's key there (LK's `endKey`)
  * @property {number} pos where the end's bytes stood there: its first position
  * @property {number} width its positions
- * @property {ISpan[]} ids its bytes by identity (M-REC's `identityOf`); none where the held image did not cover them
+ * @property {ISpan[]} ids its bytes by identity (T-LAYER's `shownIdentity`); none where the text shown holds no identity for them
  * @property {boolean} others the claims behind the lineage's line stood listed in its place
  */
 
@@ -136,7 +136,7 @@ import { accountOf, isUnder } from '../model/address.js';
 /** a passage in withheld text in words (see the head): "withheld · ⟨owner⟩", the owner of the run's origin by the one owner rule its placeholder names — the client's words, the owner marked the identifier's (P-LABEL's `inFace`) */
 const withheldWords = (/** @type {string | null} */ origin) => t('F.corner.withheld', { owner: origin ? inFace('ident', LAYER.originOwner(origin)) : '' });
 
-/** the first words of a passage, the document's own marked the reading face's (P-LABEL's `inFace`): from the model where delivered, else one read, each stretch it answers withheld in a withheld run's words (see the head) */
+/** the first words of a passage of the model's text, a far end's or a near end's carried there (T-LAYER's `boardPos`), the document's own marked the reading face's (P-LABEL's `inFace`): from the model where delivered, else one read, each stretch it answers withheld in a withheld run's words (see the head) */
 async function fragment(/** @type {string} */ addr, /** @type {number | null} */ pos, /** @type {number} */ width) {
   if (REC.doc(addr).refused === 'unregistered') return null;
   if (pos == null) { const p = REC.place(addr), first = p && p.label ? p.label : REC.textBetween(addr, 1, 80); return first ? inFace('reading', first) : null; }
@@ -304,7 +304,7 @@ async function farPassage(s, runs) {
  */
 function cardReads(s) {
   return Promise.all([
-    s.run ? withheldWords(s.run.origin) : fragment(s.near, s.pos, s.width),
+    s.run ? withheldWords(s.run.origin) : fragment(s.near, LAYER.boardPos(s.near, s.pos), s.width),
     s.far ? farPlace(s).then(async (runs) => ({ runs, words: await farPassage(s, runs) })) : Promise.resolve({ runs: null, words: null }),
     PUMP.lineage(s.link.addr),
   ]);
@@ -374,12 +374,12 @@ function showCard(s, read, anchorEl, byKey, others = false, focus = null) {
     supersessionRows(lineage, who, others) +
     `<div class="acts"><button data-run="follow">${esc(t('B1.follow'))} → ${far ? `<span class="id">${esc(far)}</span>` : ''}</button><button data-run="beside" ${dead || !far ? 'class="inert"' : ''}>${esc(t('B1.side-by-side'))}</button></div>`;
   /** @type {EndAbout} */
-  const about = { kind: 'anatomy', near, link: l.addr, key: s.key, pos: nearPos, width: nearWidth, ids: REC.identityOf(near, nearPos, nearWidth), others };
+  const about = { kind: 'anatomy', near, link: l.addr, key: s.key, pos: nearPos, width: nearWidth, ids: LAYER.shownIdentity(near, nearPos, nearWidth), others };
   HOST.show({
     kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl, span: bytes } : { span: bytes }, html, takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : '[data-run="follow"]', about,
     acts: {
       follow: (_el, byKey) => GO.follow(s, byKey),
-      beside: () => { if (far && !dead) void GO.toScene(near, LK.besideAt(s), { posA: nearPos, widthA: nearWidth, posB: farRuns && farRuns.length ? farRuns[0].pos : null, wholeB: s.farWhole }, { from: { shown: s }, site: { span: bytes } }); },
+      beside: () => { if (far && !dead) void GO.toScene(LAYER.paneSource(near), LK.besideAt(s), { posA: nearPos, widthA: nearWidth, posB: farRuns && farRuns.length ? farRuns[0].pos : null, wholeB: s.farWhole }, { from: { shown: s }, site: { span: bytes } }); },
       claims: () => showCard(s, read, anchorEl, false, true),
     },
   });
@@ -456,7 +456,7 @@ export function reopen(left) {
 }
 
 /** what a run's ends' list is about (`EndsAbout`): the run, where the first end stands, by position and identity, and each end */
-const endsAbout = (/** @type {Shown[]} */ ends) => /** @type {EndsAbout} */ ({ kind: 'ends', near: ends[0].near, pos: ends[0].pos, width: ends[0].width, ids: REC.identityOf(ends[0].near, ends[0].pos, ends[0].width), ends: ends.map((s) => ({ link: s.link.addr, key: s.key })) });
+const endsAbout = (/** @type {Shown[]} */ ends) => /** @type {EndsAbout} */ ({ kind: 'ends', near: ends[0].near, pos: ends[0].pos, width: ends[0].width, ids: LAYER.shownIdentity(ends[0].near, ends[0].pos, ends[0].width), ends: ends.map((s) => ({ link: s.link.addr, key: s.key })) });
 
 /**
  * The one symbol a withheld run's ends merge into, pressed where it stands

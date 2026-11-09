@@ -6,8 +6,9 @@
 // link's type, the index), P-REG (the values) and ST (the words a far end is
 // named in) alone, with M-ADDR's arithmetic beneath (FP-11); N-GO's links
 // lit and the version each box shows, P-RENDER's test of which documents
-// the plane draws, T-LAYER's owner rule and T-ARTICLE's first-line rule are
-// read through the readers the app hands in (`readers`), the seam importing
+// the plane draws, T-LAYER's owner rule and the text it shows of a document,
+// and T-ARTICLE's first-line rule are read through the readers the app hands
+// in (`readers`), the seam importing
 // nothing of their layer.
 // Which links show at a document and at a span, and how each is marked
 // (foundations §2.1's link row; R60's default composition; the counts'
@@ -37,10 +38,14 @@
 //     where it is the trunk the span's address lies under, or where its held
 //     text places the span — a passage it transcludes from another document,
 //     a version member's bytes (M-REC's `holdsEnd`; foundations §1.1); each
-//     end drawn at a document is its stored span read back to the document's
-//     held text through the V→I image (M-REC's `placed`) — every stretch it
-//     stands in, its marks, symbol and counts there and never at the stored
-//     ordinal — and an end the held text places nowhere is not drawn; the end
+//     end drawn at a document is its stored span read back through the V→I
+//     image of the text the page shows of the document (the reader `text`) —
+//     a draft's with its page-local edits applied, whose new words are placed
+//     by no identity and so hold no end — every stretch it stands in, its
+//     marks, symbol and counts there and never at the stored ordinal, and an
+//     end that text places nowhere is not drawn; a surface shown from another
+//     record — a reading scene's pane, an article set from a derived record —
+//     hands that record in (`shown`, `symbols`, `countAt`, `utmost`); the end
 //     is told apart by its stored span (`nearEnd`; its key, `endKey`)
 //     wherever it stands, and every mark and symbol drawn for it carries that
 //     key, so a click opens the card of the end clicked, never another of
@@ -165,6 +170,7 @@ import { commonsType, documentOf, accountOf, isUnder, fieldsOf } from '../model/
 import { t, facedHTML, bracketed, withheldLine } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Link} Link */
+/** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
 /** @typedef {import('../model/address.js').EndRef} EndRef */
 /** @typedef {import('../plane/register.js').Mark} Mark */
@@ -203,8 +209,8 @@ import { t, facedHTML, bracketed, withheldLine } from '../strings.js';
  * @property {'from' | 'to'} end which end this document holds
  * @property {EndRef} nearEnd the span of the slot this end draws, as stored: the bytes' identity, by which an end met from both its documents is told apart wherever it stands
  * @property {string} key `nearEnd`'s key (`endKey`): what every mark and symbol drawn for this end carries, so a click on one finds this end and no other of the link's
- * @property {Stretch[]} runs where `nearEnd` is drawn in the near document's held text now (`drawnIn` over M-REC's `placed`), in the text's order — never empty: an end the held text places nowhere is not drawn
- * @property {WithheldRun | null} run the withheld run it is drawn at, where the held text holds it wholly inside withheld text — `runs` the run's whole extent; null where it is drawn on text the reader can read
+ * @property {Stretch[]} runs where `nearEnd` is drawn in the near document's text as the page shows it (`drawnIn` over `placedOver`), in that text's order — never empty: an end that text places nowhere is not drawn
+ * @property {WithheldRun | null} run the withheld run it is drawn at, where that text holds it wholly inside withheld text — `runs` the run's whole extent; null where it is drawn on text the reader can read
  * @property {number} pos the first stretch's first position
  * @property {number} width the first stretch's positions
  * @property {Mark} mark the mark the near document gives the link (`markOf` at `near`): the one its symbol takes here, and a beam's colour at this end
@@ -223,6 +229,7 @@ import { t, facedHTML, bracketed, withheldLine } from '../strings.js';
  * @property {(addr: string) => boolean} drawn does the plane draw a document somewhere — at its box, or in the continuation's mark holding it, a version member at its document's (P-RENDER's `drawsDoc`)
  * @property {(addr: string) => string} owner the owner account of a document, by the one owner rule (T-LAYER's `originOwner`)
  * @property {(addr: string) => string} shown the version a document's box shows: the plain address, or the version pinned there (N-GO's `shownIn`)
+ * @property {(addr: string) => (Doc | null)} text the record of the text the page shows of a document (T-LAYER's `shownOf`), the one its ends are placed in; null where the model holds no record of it
  * @property {(d: import('../model/records.js').Doc | null, label: string | null) => Array<{text: string, face: import('../plane/register.js').Face}>} first a readable document's first line by the one rule a box's label reads (T-ARTICLE's `firstLineOf`): its record as the model holds it, or none; the index's first line at its bare address, or null
  */
 /**
@@ -269,8 +276,8 @@ const STRUCTURAL_ORDINALS = new Set([22, 23, 24, 25, 26, 27, 28, 29]);
 const reveals = new Map();
 /** @type {Set<string>} the followed links, the session's (D-3) */
 const visitedSet = new Set();
-/** the readers until the app hands its owners' in: no link lit, every document drawn, a document's owner its account, every box showing the version named, a document's first line the index's alone */
-const noReaders = () => /** @type {Readers} */ ({ lit: () => [], drawn: () => true, owner: (addr) => accountOf(addr) || '', shown: (addr) => addr, first: (_d, label) => (label ? [{ text: label, face: 'reading' }] : []) });
+/** the readers until the app hands its owners' in: no link lit, every document drawn, a document's owner its account, every box showing the version named, the text of a document the model's record, a document's first line the index's alone */
+const noReaders = () => /** @type {Readers} */ ({ lit: () => [], drawn: () => true, owner: (addr) => accountOf(addr) || '', shown: (addr) => addr, text: (addr) => (REC.has(addr) ? REC.doc(addr) : null), first: (_d, label) => (label ? [{ text: label, face: 'reading' }] : []) });
 /** @type {Readers} */
 let read = noReaders();
 
@@ -470,7 +477,7 @@ export function draws(l, addr) {
  * surface reads a drawn end's place by, through `shown` and the others' count
  * (`countAt`).
  * @param {Block[]} blocks the text's blocks, in position order
- * @param {Stretch[]} placed where the end's bytes stand in the text (M-REC's `placed`), in the text's order
+ * @param {Stretch[]} placed where the end's bytes stand in the text (`placedOver`), in the text's order
  * @returns {Drawn}
  */
 export function drawnIn(blocks, placed) {
@@ -495,25 +502,32 @@ export function drawnIn(blocks, placed) {
   return { runs: [{ pos: b.pos, width: b.width }], run: { pos: b.pos, width: b.width, origin: b.origin } };
 }
 
-/** the blocks the model holds of a document's text; none where it holds no record of it */
-const blocksOf = (/** @type {string} */ addr) => (REC.has(addr) ? REC.doc(addr).blocks : []);
+/** the text a document's ends are placed in, where the caller hands in none: what the page shows of it (the reader `text`) */
+const textOf = (/** @type {string} */ addr) => read.text(addr);
+
+/** where an end's stored span stands in a text (M-REC's `placedIn`), by its bytes' identity: none where the record holds none of them — no text, a span naming a document whole, or words the page made, which hold no identity */
+function placedOver(/** @type {Doc | null} */ over, /** @type {EndRef} */ e) {
+  const id = REC.identityOfEnd(e);
+  return over && id ? REC.placedIn(over.image, [id]) : [];
+}
 
 /**
  * A link's end drawn at a document: its stored span and that span's key
- * (`endKey`), where the span is drawn in the document's held text now
- * (`drawnIn`) — the withheld run it is drawn at, where it lies wholly inside
+ * (`endKey`), where the span is drawn in the record's text now (`drawnIn` over
+ * `placedOver`) — the withheld run it is drawn at, where it lies wholly inside
  * one — its mark, and its far end with where that stands in the current
  * text of the version its box shows (`farAt`) and the mark that version gives
- * the link; null where the held text places the end nowhere.
+ * the link; null where that text places the end nowhere.
  * @param {Link} l
  * @param {string} addr the document holding the end (`endsIn`), whichever document minted its bytes
  * @param {'you' | 'owner' | 'others'} linker
  * @param {'from' | 'to'} end
  * @param {EndRef} e
+ * @param {Doc | null} over the record of the text it is placed in
  * @returns {Shown | null}
  */
-function drawnEnd(l, addr, linker, end, e) {
-  const { runs, run } = drawnIn(blocksOf(addr), REC.placed(addr, e));
+function drawnEnd(l, addr, linker, end, e, over) {
+  const { runs, run } = drawnIn(over ? over.blocks : [], placedOver(over, e));
   if (!runs.length) return null;
   const farSlot = end === 'from' ? 2 : 1;
   const far = (end === 'from' ? l.to : l.from)[0] || null;
@@ -526,11 +540,11 @@ function drawnEnd(l, addr, linker, end, e) {
   };
 }
 
-/** every end of a link a document draws, as its held text places it (`drawnEnd`) */
-function endsDrawn(/** @type {Link} */ l, /** @type {string} */ addr, /** @type {'you' | 'owner' | 'others'} */ linker) {
+/** every end of a link a document draws, as a record's text places it (`drawnEnd`) */
+function endsDrawn(/** @type {Link} */ l, /** @type {string} */ addr, /** @type {'you' | 'owner' | 'others'} */ linker, /** @type {Doc | null} */ over) {
   /** @type {Shown[]} */
   const out = [];
-  for (const { end, e } of endsIn(l, addr)) { const s = drawnEnd(l, addr, linker, end, e); if (s) out.push(s); }
+  for (const { end, e } of endsIn(l, addr)) { const s = drawnEnd(l, addr, linker, end, e, over); if (s) out.push(s); }
   return out;
 }
 
@@ -538,14 +552,15 @@ function endsDrawn(/** @type {Link} */ l, /** @type {string} */ addr, /** @type 
  * The links to mark in a document's article, each with its mark: what the
  * document draws (`draws`) — the owner's and the person's own at their
  * spans; others' only where the toggle or a lens admits them — each end
- * where its held text places it.
+ * where the record's text places it, in that text's positions.
  * @param {string} addr
+ * @param {Doc | null} [over] the record of the text its ends are placed in; by default the text the page shows of it (the reader `text`)
  * @returns {Shown[]}
  */
-export function shown(addr) {
+export function shown(addr, over = textOf(addr)) {
   /** @type {Shown[]} */
   const out = [];
-  for (const l of REC.linksTouching(addr)) if (draws(l, addr)) out.push(...endsDrawn(l, addr, linkerOf(l, addr)));
+  for (const l of REC.linksTouching(addr)) if (draws(l, addr)) out.push(...endsDrawn(l, addr, linkerOf(l, addr), over));
   return out;
 }
 
@@ -709,8 +724,8 @@ export function farLabelHTML(s) {
   return facedHTML([{ text: s.far, face: 'ident' }, ...(words.length ? [{ text: ' · ', face: /** @type {const} */ ('client') }, ...words] : [])]);
 }
 
-/** the symbols: stage 2 and above — the shown set at its spans */
-export function symbols(/** @type {string} */ addr) { return state(addr).stage >= 2 ? shown(addr) : []; }
+/** the symbols: stage 2 and above — the shown set at its spans, in a record's text (`shown`) */
+export function symbols(/** @type {string} */ addr, /** @type {Doc | null} */ over = textOf(addr)) { return state(addr).stage >= 2 ? shown(addr, over) : []; }
 /** the beams: stage 3 — the shown set with its far ends, a tailed end apart (`tailed`), which its tail stands in for */
 export function beams(/** @type {string} */ addr) { return state(addr).stage >= 3 ? shown(addr).filter((s) => !tailed(s)) : []; }
 
@@ -719,9 +734,10 @@ export function beams(/** @type {string} */ addr) { return state(addr).stage >= 
  * count (rule (i)–(iii)), a withheld run's the ends drawn at it (`drawnIn`);
  * zero where none.
  * @param {string} addr
- * @param {Block} block
+ * @param {Block} block a block of the record's text
+ * @param {Doc | null} [over] the record of the text its ends are placed in (`shown`)
  */
-export function countAt(addr, block) { return countUnder(state(addr), addr, block); }
+export function countAt(addr, block, over = textOf(addr)) { return countUnder(state(addr), addr, block, over); }
 
 /**
  * The most link chrome any reveal can set in a document's text: every
@@ -733,34 +749,36 @@ export function countAt(addr, block) { return countUnder(state(addr), addr, bloc
  * other size. The "+⟨n⟩ others" count is none of it: it stands in its
  * column's edge and sets no line (A-254; FP-26).
  * @param {string} addr
+ * @param {Doc | null} [over] the record of the text its ends are placed in (`shown`)
  * @returns {{shown: Shown[]}}
  */
-export function utmost(addr) {
+export function utmost(addr, over = textOf(addr)) {
   /** @type {Shown[]} */
   const all = [];
-  for (const l of REC.linksTouching(addr)) if (classify(l) === 'passage') all.push(...endsDrawn(l, addr, linkerOf(l, addr)));
+  for (const l of REC.linksTouching(addr)) if (classify(l) === 'passage') all.push(...endsDrawn(l, addr, linkerOf(l, addr), over));
   return { shown: all };
 }
 
 /**
  * The others' passage links touching a block that a reveal does not show —
- * an end drawn in the block where its held text places it (`drawnIn` over
- * M-REC's `placed`): on its readable stretches, or at the withheld run it
- * lies wholly inside, counted at that run's block — and whether a social link
+ * an end drawn in the block where the record's text places it (`drawnIn` over
+ * `placedOver`): on its readable stretches, or at the withheld run it lies
+ * wholly inside, counted at that run's block — and whether a social link
  * touches the document.
  * @param {Reveal} r
  * @param {string} addr
  * @param {Block} block
+ * @param {Doc | null} over the record of the text its ends are placed in
  */
-function countUnder(r, addr, block) {
+function countUnder(r, addr, block, over) {
   let n = 0, social = false;
-  const blocks = blocksOf(addr);
+  const blocks = over ? over.blocks : [];
   for (const l of REC.linksTouching(addr)) {
     const kind = classify(l);
     if (kind === 'social') { social = true; continue; }
     if (kind !== 'passage') continue;
     if (linkerOf(l, addr) !== 'others' || lets(r, l, 'others')) continue;
-    if (endsIn(l, addr).some(({ e }) => drawnIn(blocks, REC.placed(addr, e)).runs.some((p) => meets(p, block)))) n++;
+    if (endsIn(l, addr).some(({ e }) => drawnIn(blocks, placedOver(over, e)).runs.some((p) => meets(p, block)))) n++;
   }
   return { n, social };
 }

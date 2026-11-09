@@ -72,7 +72,11 @@
 // from it (D5 K-8, K-9,
 // K-30, K-45 … K-52, K-57, K-70, K-71, K-72, K-74, K-76, K-77, K-93, K-100,
 // M-2, M-13, §1.6, §4 rules 2, 3 and 8; D6 BM-1, BM-3, BM-4, BM-52, BM-54,
-// BM-70, BM-75; B3-S1, B3-S13; P47; FP-10, FP-14, FP-36).
+// BM-70, BM-75; B3-S1, B3-S13; P47; FP-10, FP-14, FP-36). In a draft holding
+// typed text the slots' chords act on the span the text shown holds: the
+// board asked by its base's positions and the card standing at that span, and
+// over a span wholly of new words follow and read side by side give their
+// reason at the slot and its chord (FP-30).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
@@ -82,6 +86,7 @@ import * as TRAIL from './trail.js';
 import * as GO from './go.js';
 import * as PORT from '../bridge/port.js';
 import * as FAKE from '../test/fake-port.js';
+import * as F from '../model/frames.js';
 import * as LK from '../links/links.js';
 import * as REC from '../model/records.js';
 import * as LAYER from '../text/layer.js';
@@ -1127,6 +1132,69 @@ test('K-8 in a draft holding text typed above the walk\'s span selects that span
   await press('q');
   assert.deepEqual([shown(), caret(), SEL.selected()], ['abFirst line.\n\nq', [D, 17, true], null], 'q: the line selected replaced by it, the line break before it standing, the caret after it');
   HOST.dismiss();
+}));
+
+test('a slot chord at the walk\'s span in a draft holding typed text acts on that span where the text shown holds it, the board asked by the base\'s positions: with "ab" typed above the walk\'s line Mod+Shift+O and Mod+Shift+R answer over its bytes and their cards stand at the line shown, two positions on, nothing selected (D5 K-47, K-48)', () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const SHIFT = { ...MOD, shiftKey: true }, line = { addr: D, pos: 16, width: 18 };
+  const origin = F.showOrigin(D, 14, 18), users = F.findDocsContaining([{ doc: D, spans: [{ ordinal: 14, positions: 18 }] }]);
+  const fake = FAKE.create({ [FAKE.keyOf('op', { frame: origin })]: { result: { as_of: 1, resp: 'addrs', addrs: [D] } }, [FAKE.keyOf('op', { frame: users })]: { result: { as_of: 1, resp: 'addrs', addrs: [D] } } });
+  PORT.boot(fake);
+  try {
+    REC.addEdit(D, { pos: 1, width: 0, text: 'ab' });
+    await focusOn(D, 14);
+    await press('O', SHIFT);
+    await tick();
+    assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor, SEL.selected()], ['provenance:wrote', { span: line }, null], 'who wrote this? at the line the text shown holds, nothing selected');
+    HOST.dismiss();
+    await press('R', SHIFT);
+    await tick();
+    assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['provenance:uses', { span: line }], 'who uses this? the same');
+    assert.deepEqual(fake.asked, [FAKE.keyOf('op', { frame: origin }), FAKE.keyOf('op', { frame: users })], 'asked by the line\'s positions in the delivered text, no read told yet of when it was read');
+    assert.deepEqual(fake.unanswered, []);
+  } finally { PORT.boot(null); }
+}));
+
+test('over a span wholly of words typed here follow and read side by side keep their places, inert but focusable, their reason on the button; pressed, or by their chords, they give it at the card and through the status region, nothing followed and nothing opened (D5 K-51, K-52; P47)', () => onPlane(async ({ said }) => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const reason = t('L.new.no-link'), trail = TRAIL.all().length, SHIFT_MOD = { ...MOD, shiftKey: true };
+  const words = 'abc', typed = { addr: D, pos: 1, width: byteLength(words) };
+  REC.addEdit(D, { pos: 1, width: 0, text: words });
+  await focusOn(D, 1);
+  SEL.select(typed.addr, typed.pos, typed.width);
+  for (const slot of ['follow', 'scene']) {
+    const b = /** @type {string} */ (slotIn(slot).button);
+    assert.ok(b.includes('class="inert"') && !b.includes('disabled') && b.includes(`title="${esc(reason)}"`), `${slot}: inert, focusable, its reason on the button — ${b}`);
+  }
+  for (const [key, mods, slot] of /** @type {const} */ ([['Enter', MOD, 'follow'], ['Enter', SHIFT_MOD, 'scene']])) {
+    const n = said.length;
+    assert.equal(await KEYS.dispatch(keyOf(key, mods), PLANE), true, `${slot}'s chord: taken`);
+    const s = slotIn(slot);
+    assert.ok(/** @type {string} */ (s.button).includes('data-inert="1"'), `${slot}: the slot marked as a press leaves it`);
+    assert.equal(s.reason, `<div class="note reason" data-string="L.new.no-link">${esc(reason)}</div>`, `${slot}: the card's reason line says it`);
+    assert.deepEqual([SEL.selected(), HOST.currentState()?.anchor, TRAIL.all().length, said.slice(n)], [typed, { span: typed }, trail, [reason]], `${slot}: the card at the selection, the selection standing, nothing followed or opened, said once`);
+  }
+  // a press on the card's button, as a click or Enter makes it, says the same at the slot
+  const n = said.length;
+  let marked = false;
+  /** @type {any} */ (HOST.currentState()?.acts?.follow)(/** @type {any} */ ({ setAttribute: () => { marked = true; }, closest: () => null }), false);
+  assert.deepEqual([marked, said.slice(n), TRAIL.all().length], [true, [reason], trail], 'the button marks itself and says the reason, following nothing');
+}));
+
+test('over a span of typed words beside the draft\'s own, follow acts as ever where a link\'s end stands on its board bytes, and the slots name none on the typed words alone (D5 K-51)', () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const L = D + '.0.2.9';
+  REC.takeLinks(D, [L]);
+  REC.takeLink({ addr: L, from: [{ start: D + '.0.1.1', width: '0.0.0.0.0.0.0.5', doc: D, account: '1.0.1', whole: false, subspace: 1, ordinal: 1, positions: 5 }], to: [{ start: O, width: '0.0.0.0.1', doc: O, account: '1.0.2', whole: true, subspace: null, ordinal: null, positions: null }], type: '1.1.0.1.0.1.0.3.13' });
+  LK.readers({ text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null) });
+  try {
+    REC.addEdit(D, { pos: 1, width: 0, text: 'ab' });
+    assert.deepEqual([LK.shownAt(D, { pos: 1, width: 2 }).length, LK.shownAt(D, { pos: 1, width: 7 }).length], [0, 1], 'the end stands on the board bytes the span holds, none on the words typed');
+    SEL.select(D, 1, 2);
+    assert.ok(/** @type {string} */ (slotIn('follow').button).includes(`title="${esc(t('L.new.no-link'))}"`), 'the typed words alone: the slot says why');
+    SEL.select(D, 1, 7);
+    assert.ok(!/** @type {string} */ (slotIn('follow').button).includes('title='), 'the span holding board bytes: the slot acts');
+  } finally { LK.readers({}); }
 }));
 
 // placed last: the follow it guards against, where it is made, leaves a jump in the air for the tests after it

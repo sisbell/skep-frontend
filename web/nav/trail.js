@@ -121,7 +121,7 @@
 
 /**
  * @typedef {Object} Opened — the reading scene an entry was opened as (see the head)
- * @property {string} a the document the scene opened its first pane on
+ * @property {string | import('../model/records.js').Doc} a what the scene opened its first pane on: a document's address, read from the board, or the record of the text the page showed of it (SC's `Source`)
  * @property {string} b the one it opened its second on
  * @property {import('../scene/scene.js').Held} held the passage its opener held, which the scene sets level
  * @property {import('../scene/scene.js').Left | null} left the scene as the reader last left the entry, which a return reopens; null until they leave it

@@ -257,6 +257,34 @@ test('the card: a key opens it on follow, the line standing before follow; the l
   assert.deepEqual(fake.unanswered, []);
 });
 
+test('at an end in a draft holding typed text the card quotes the words its bytes hold, stands at the end where the text shown holds it, is left by those bytes and reads no position of the typed text (FP-30, FP-36)', async () => {
+  const p = cardPage();
+  HOST.attach(/** @type {any} */ (p.host));
+  const D = '1.0.1.0.2', FAR = '1.0.1.0.127', L2 = D + '.0.2.1', TEXT = 'Tumbler.\n\nThe first field.';
+  REC.takeDelivery(D, [{ pos: 1, width: TEXT.length, kind: 'content', text: TEXT, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: TEXT.length }]);
+  REC.takeLinks(D, [L2]);
+  REC.takeLink({ addr: L2, from: [resolveSpan({ start: D + '.0.1.11', width: '0.0.0.0.0.0.0.5' })], to: [resolveSpan({ start: FAR, width: '0.0.0.0.1' })], type: '1.1.0.1.0.1.0.3.13', age: UNDATED });
+  const fake = FAKE.create({
+    [FAKE.keyOf('op', { frame: F.inClaims(L2, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
+    [FAKE.keyOf('op', { frame: F.outClaims(L2, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
+  });
+  PORT.boot(fake);
+  LK.readers({ text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null) });
+  try {
+    REC.addEdit(D, { pos: 1, width: 0, text: 'ab' });
+    const s = /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === L2));
+    assert.deepEqual([s.pos, s.width], [13, 5], 'drawn two positions on, past the words typed');
+    await ANATOMY.open(s, null, false);
+    const c = HOST.currentState();
+    assert.deepEqual(c?.anchor, { span: { addr: D, pos: 13, width: 5 } }, 'the card stands at the end as the text shown holds it');
+    assert.deepEqual(/** @type {any} */ (c?.about).ids, [{ prefix: D + '.0.1', ordinal: 11, width: 5 }], 'left by the bytes it stands on');
+    assert.ok(text(p.host.innerHTML).includes('The f'), `the near end's words are its bytes' own: ${text(p.host.innerHTML)}`);
+    HOST.dismiss();
+    assert.deepEqual(fake.unanswered, []);
+  } finally { REC.clearEdits(D); LK.readers({}); }
+});
+
 test('the card says when its link was made: "made" and the day of the commit that minted it, as its read answered, between the owner row and the lineage — "not recorded" where the board holds no reading of the time, "on or before" the later day where only an hour\'s anchor dates it and that hour crosses midnight — and never an age or a log position (issue #22\'s design decision: "The row reads \'made 12 March 2026\'. Drop the \'age\' label and any log position")', async () => {
   const p = cardPage();
   HOST.attach(/** @type {any} */ (p.host));

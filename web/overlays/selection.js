@@ -33,11 +33,15 @@
 // remount — never over a selection the person holds outside the plane's
 // text, in a reading scene's pane or an overlay's text, which stands as they
 // made it. The acts take the span exactly: "who wrote this?" and "who uses
-// this?" ask over its bytes; "follow" and "read side by side" count only the
-// links drawn at the span (LK's `shownAt`), inert where none, asking which
-// only at two or more and naming the far document at one, the scene opened
-// as a step on the trail from the link's end chosen (N-GO's `toScene`) beside
-// the document LK names for it (`besideAt`) — where its far end names its
+// this?" ask over its bytes (O-PROV's; a span of the text shown, its board
+// runs alone asked of the board); "follow" and "read side by side" count only
+// the links drawn at the span (LK's `shownAt`), inert where none — over a span
+// wholly of bytes the page made (`wholeNew`), inert with their reason, kept
+// focusable as an inert slot is (`NEW_WORDS`) — asking which only at two or
+// more and naming the far document at one, the scene opened as a step on the
+// trail from the link's end chosen (N-GO's `toScene`) on what the page shows
+// of the span's document (T-LAYER's `paneSource`), beside the document LK
+// names for it (`besideAt`) — where its far end names its
 // document whole, that whole document, nothing of it set level with the
 // selection (SC's `Held.wholeB`; FP-30) — every
 // address the card and the list set in the identifier's face (P-REG's FACE). The slots, in this
@@ -94,7 +98,7 @@ import * as LINKS from './links-card.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { extended, sameSpan, spanOfBlock } from '../text/span.js';
-import { boundaries } from '../model/derive.js';
+import { boundaries, spanRuns } from '../model/derive.js';
 import { t, typeName } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { markDirty } from '../plane/camera.js';
@@ -111,7 +115,7 @@ import { drawChord } from '../nav/keys.js';
  * @property {string} addr the document it stood in: the version its box showed
  * @property {number} pos its first position there
  * @property {number} width its positions
- * @property {ISpan[]} ids its bytes by identity (M-REC's `identityOf`), which a return places in the text then; none where the held image did not cover them
+ * @property {ISpan[]} ids its bytes by identity (T-LAYER's `shownIdentity`), which a return places in the text then; none where the text shown holds no identity for them
  */
 
 /**
@@ -134,8 +138,8 @@ function hold(/** @type {Span | null} */ span, /** @type {Ends} */ how = AT_STAR
 /** the selection, read-only (T-LAYER's reader): the one the screen draws, never a span a card or a list holds (see the head) */
 export const selected = () => sel;
 
-/** a span by its bytes as it stands now (`Left`) */
-const bytesOf = (/** @type {Span} */ s) => ({ addr: s.addr, pos: s.pos, width: s.width, ids: REC.identityOf(s.addr, s.pos, s.width) });
+/** a span by its bytes as the page shows them now (`Left`): none named where it holds words the page made */
+const bytesOf = (/** @type {Span} */ s) => ({ addr: s.addr, pos: s.pos, width: s.width, ids: LAYER.shownIdentity(s.addr, s.pos, s.width) });
 
 /** the selection as the reader leaves its place (see the head): by its bytes' identity; null where none stands */
 export const asLeft = () => (sel ? bytesOf(sel) : null);
@@ -180,10 +184,10 @@ export function reopen(left, span) {
   if (drawn.length > 1) which_(drawn, a.what, span, false, left.focus); else render(null, null, span);
 }
 
-/** the block of the model's text holding a position, whole — the walk's focused span, which a slot acts on (`actedOn`); a position in no delivered block names one position */
+/** the walk's focused span, a block of the model's text, whole as the text shown holds it (T-LAYER's `shownBlockOf`) — what a slot acts on (`actedOn`); a position in no delivered block names one position there */
 function wholeBlock(/** @type {string} */ addr, /** @type {number} */ pos) {
-  const b = REC.blockAt(addr, pos);
-  return b ? spanOfBlock(addr, b) : { addr, pos, width: 1 };
+  const b = LAYER.shownBlockOf(addr, pos);
+  return b ? spanOfBlock(addr, b) : { addr, pos: LAYER.shownPos(addr, pos), width: 1 };
 }
 
 /** the block of the text shown holding a position of it, whole (T-LAYER's `shownOf`); a position in no block of it names one position */
@@ -356,12 +360,21 @@ const SLOTS = /** @type {const} */ ([
 
 /** @typedef {'annotate' | 'quote' | 'linkto'} InertSlot a slot inert with its reason (`INERT_REASON`) */
 /** @typedef {'wrote' | 'uses' | 'links' | 'follow' | 'scene'} LiveSlot a slot that acts (`act`) */
+/** @typedef {'follow' | 'scene'} FarSlot a slot that goes by a link's far end: inert over a span wholly of new words (`wholeNew`), its reason `NEW_WORDS` */
 
 /** the inert slots' reasons, by slot */
 const INERT_REASON = /** @type {Record<InertSlot, string>} */ ({ annotate: 'L.seam.annotate', quote: 'L.seam.quote', linkto: 'L.seam.link-to' });
+/** why follow and read side by side do nothing over a span wholly of new words (`wholeNew`) */
+const NEW_WORDS = 'L.new.no-link';
 
 /** an inert slot's reason, by its string's id: the words the slot gives as it is activated (P47) */
 export const reasonOf = (/** @type {InertSlot} */ slot) => INERT_REASON[slot];
+
+/** the reason a slot gives over a span, by its string's id: an inert slot's own, `NEW_WORDS` for follow and read side by side where the span is wholly new; null where the slot acts */
+const reasonAt = (/** @type {string} */ slot, /** @type {boolean} */ fresh) => (slot in INERT_REASON ? INERT_REASON[/** @type {InertSlot} */ (slot)] : fresh && (slot === 'follow' || slot === 'scene') ? NEW_WORDS : null);
+
+/** is every byte of a span one the page made, which the delivered text lacks and no link's end stands on (M-DERIVE's `spanRuns`)? */
+const wholeNew = (/** @type {Span} */ s) => spanRuns(REC.edits(s.addr), s.pos, s.width).every((r) => r.base == null);
 
 /**
  * An inert slot activated (P47; rule 14): it keeps its place, marked inert,
@@ -384,9 +397,11 @@ function inertAct(el, id) {
  * slots acting there; nothing where neither is given. The card takes no
  * focus (rule 15), save a card a return reopens on the control it was left
  * holding it on. A slot named `told` stands as `inertAct` leaves it: marked
- * inert, its reason in the card's reason line.
+ * inert, its reason in the card's reason line. Over a span wholly of new
+ * words follow and read side by side keep their places, inert and focusable,
+ * their reason saying so (`NEW_WORDS`).
  * @param {string | null} [focus] that control's key (O-HOST's `keyOf`)
- * @param {InertSlot | null} [told] the inert slot whose reason the card gives
+ * @param {InertSlot | FarSlot | null} [told] the inert slot whose reason the card gives
  * @param {Span | null} [at] the span a slot's act was made over (`actedOn`); none draws the card at the selection
  */
 export function render(focus = null, told = null, at = null) {
@@ -394,16 +409,16 @@ export function render(focus = null, told = null, at = null) {
   if (!span) return;
   const { addr, pos } = span, atSelection = sameSpan(span, sel);
   const drawn = LK.shownAt(addr, span);
-  const n = drawn.length;
+  const n = drawn.length, fresh = wholeNew(span);
   // the far end the follow and the scene name: its address, in the identifier's face, or the count of several
   const farLabel = n === 1 && drawn[0].far ? ` <span class="id">${esc(drawn[0].far)}</span>` : n > 1 ? ` ${n}` : '';
   const buttons = SLOTS.map(([id, strId, chord]) => {
-    const reason = id in INERT_REASON ? reasonOf(/** @type {InertSlot} */ (id)) : null;
+    const reason = reasonAt(id, fresh);
     const inert = !!reason || ((id === 'follow' || id === 'scene') && n === 0);
     const label = esc(t(strId)) + ((id === 'follow' || id === 'scene') ? farLabel : '');
     return `<button data-run="${id}" class="${inert ? 'inert' : ''}" ${reason ? `title="${esc(t(reason))}"` : ''}${id === told ? ' data-inert="1"' : ''}>${label}${chord ? ` <kbd>${esc(drawChord(chord))}</kbd>` : ''}</button>`;
   }).join('');
-  const said = told ? INERT_REASON[told] : null;
+  const said = told ? reasonAt(told, true) : null;
   const reasonLine = said ? `<div class="note reason" data-string="${esc(said)}">${esc(t(said))}</div>` : '<div class="note reason" hidden></div>';
   const html = `<div class="selection-card"><span class="label"><span class="id">${esc(addr)}</span> · ${esc(t('F.position', { p: pos }))}</span><div class="slots">${buttons}</div>${reasonLine}</div>`;
   HOST.show({
@@ -413,7 +428,8 @@ export function render(focus = null, told = null, at = null) {
       annotate: (el) => inertAct(el, INERT_REASON.annotate),
       quote: (el) => inertAct(el, INERT_REASON.quote),
       linkto: (el) => inertAct(el, INERT_REASON.linkto),
-      wrote: (_el, byKey) => act('wrote', byKey, span), uses: (_el, byKey) => act('uses', byKey, span), links: (_el, byKey) => act('links', byKey, span), follow: (_el, byKey) => act('follow', byKey, span), scene: (_el, byKey) => act('scene', byKey, span),
+      wrote: (_el, byKey) => act('wrote', byKey, span), uses: (_el, byKey) => act('uses', byKey, span), links: (_el, byKey) => act('links', byKey, span),
+      follow: (el, byKey) => { if (fresh) inertAct(el, NEW_WORDS); else act('follow', byKey, span); }, scene: (el, byKey) => { if (fresh) inertAct(el, NEW_WORDS); else act('scene', byKey, span); },
     },
     onDismiss: (replaced) => { if (!replaced && atSelection && sameSpan(sel, span)) { hold(null); LAYER.placeSelection(null); markDirty(); } },
   });
@@ -459,6 +475,7 @@ export function act(which, byKey = false, at = null) {
   if (which === 'wrote') { PROV.wrote(addr, pos, width, byKey, sameSpan(span, sel)); return true; }
   if (which === 'uses') { PROV.uses(addr, pos, width, byKey, sameSpan(span, sel)); return true; }
   if (which === 'links') { LINKS.show(addr, byKey); return true; }
+  if (wholeNew(span)) { render(null, which, span); FOCUS.say(t(NEW_WORDS)); return true; }
   const drawn = LK.shownAt(addr, span);
   if (drawn.length > 1) which_(drawn, which, span, byKey);
   else if (drawn.length === 1 && which === 'follow') GO.follow(drawn[0], byKey);
@@ -468,8 +485,9 @@ export function act(which, byKey = false, at = null) {
 
 /**
  * The reading scene opened from a link's end beside the passage held at it
- * (K-52; N-GO's `toScene`): a step on the trail from that end, beside the
- * document LK names for it (`besideAt`), the passage set level with where the
+ * (K-52; N-GO's `toScene`): a step on the trail from that end, its first pane
+ * on what the page shows of the passage's document (T-LAYER's `paneSource`),
+ * beside the document LK names for it (`besideAt`), the passage set level with where the
  * far end stands there (`farPos`) — or, where the far end names its document
  * whole, with nothing of it (SC's `Held.wholeB`; FP-30). Nothing where the
  * far end names no document.
@@ -477,7 +495,7 @@ export function act(which, byKey = false, at = null) {
  * @param {Span} span the passage held: the selection, or the end's own bytes
  */
 function sceneFrom(s, span) {
-  if (s.far) void GO.toScene(span.addr, LK.besideAt(s), { posA: span.pos, widthA: span.width, posB: LK.farPos(s), wholeB: s.farWhole }, { from: { shown: s }, site: { span } });
+  if (s.far) void GO.toScene(LAYER.paneSource(span.addr), LK.besideAt(s), { posA: span.pos, widthA: span.width, posB: LK.farPos(s), wholeB: s.farWhole }, { from: { shown: s }, site: { span } });
 }
 
 /**

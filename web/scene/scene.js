@@ -275,9 +275,12 @@
 // it, its article is made from the record as given, its corner and its place
 // are kept as a read pane's, and the entry a leaving records keeps the record
 // itself (`Version.derived`), so a return reopens it reading nothing. A
-// derived pane is read only: no `compare` is asked against it and no far end
-// is placed in it, no row of the board's sets it again (its text is the
-// page's, not the board's), its corner offers no version and its kept slot
+// derived pane is read only: no `compare` is asked against it and no
+// `project` into it — the links shown at it and the far ends crossing into it
+// stand where their bytes stand in its own image, and none on bytes the page
+// made (`placedInto`; LK's `shown`) — no row of the board's sets it again (its
+// text is the page's, not the board's), its corner offers no version and its
+// kept slot
 // stands empty; a change of the page's class sets it again from the model's
 // record of its document, as every pane (FP-29). A pane of a draft carries
 // the draft's kept word in its corner (T-ARTICLE's draft arm; B3-S2), the
@@ -1167,19 +1170,22 @@ function unplaced(A, B) {
 }
 
 /**
- * Where the far ends of the links crossing into a pane stand in its text now,
- * as the model holds `project`'s answers: what the pane keeps as it is set,
- * its lines read from it and never the model's now (`measure`).
- * @param {string} src the record the pane's text is made from
+ * Where the far ends of the links crossing into a pane stand in its text now:
+ * as the model holds `project`'s answers, or, in a derived record — whose
+ * positions are not the board's, and which no `project` is asked of — where
+ * its bytes stand through the image it was made with. What the pane keeps as
+ * it is set, its lines read from it and never the model's now (`measure`).
+ * @param {Pick<Pane, 'src' | 'd'>} P the pane
  * @param {Shown[]} shown the links shown at either pane
  * @returns {Map<string, Stretch[] | Declined>}
  */
-function placedInto(src, shown) {
+function placedInto(P, shown) {
   /** @type {Map<string, Stretch[] | Declined>} */
   const out = new Map();
   for (const s of shown) {
-    if (!s.far || !oneBox(s.far, src) || !s.farEnd || s.farWhole) continue;
-    const held = REC.projection(s.link.addr, s.farSlot, src);
+    if (!s.far || !oneBox(s.far, P.src) || !s.farEnd || s.farWhole) continue;
+    const id = P.d.derived ? REC.identityOfEnd(s.farEnd) : null;
+    const held = P.d.derived ? (id ? REC.placedIn(P.d.image, [id]) : undefined) : REC.projection(s.link.addr, s.farSlot, P.src);
     if (held !== undefined) out.set(s.link.addr + ' ' + s.farSlot, held);
   }
   return out;
@@ -1274,14 +1280,15 @@ const metOf = (/** @type {Doc} */ d) => (d.refused ? { kind: 'refused', name: d.
 /**
  * The two texts' `compare` whole (see the head): the runs of shared identity;
  * none, and no `compare` asked, where either holds no text, which tells
- * nothing for the refusal its text met; the refusal it met, its `unheard`
- * too where the board did not answer.
+ * nothing for the refusal its text met, or is a derived record, no text of the
+ * board's; the refusal it met, its `unheard` too where the board did not
+ * answer.
  * @param {Pick<Text, 'src' | 'd'>} A
  * @param {Pick<Text, 'src' | 'd'>} B
  * @returns {Promise<Compared>}
  */
 async function compareBetween(A, B) {
-  const holds = (/** @type {Doc} */ d) => !d.refused && d.extent != null;
+  const holds = (/** @type {Doc} */ d) => !d.refused && d.extent != null && !d.derived;
   const whole = (/** @type {Pick<Text, 'src' | 'd'>} */ x) => [{ doc: x.src, spans: [{ ordinal: 1, positions: Math.max(1, x.d.extent || 1) }] }];
   if (!holds(A.d) || !holds(B.d)) return { pairs: [], told: false, refused: null, why: metOf(!holds(A.d) ? A.d : B.d), unheard: null };
   const cmp = await PUMP.read(F.compare(whole(A), whole(B)));
@@ -1318,7 +1325,7 @@ async function placeBetween(A, B) {
 async function readBetween(A, B, compare = true) {
   /** @type {Compared} */
   const none = { pairs: [], told: false, refused: null, why: null, unheard: null };
-  // a derived record is no text of the board's: nothing to compare it against, and no far end placed in it (see the head)
+  // a derived record is no text of the board's: nothing to compare it against, and no `project` to ask of it (see the head)
   if (A.d.derived || B.d.derived) return none;
   const [cmp, placed] = await Promise.all([compare ? compareBetween(A, B) : Promise.resolve(none), placeBetween(A, B)]);
   return { ...cmp, unheard: cmp.unheard || placed };
@@ -1600,8 +1607,8 @@ export async function open(a, b, held = {}, as = {}) {
   return out;
 }
 
-/** one side of the reads between the panes as a scene opens (`Text`): a derived record shows no link of the board's text (see the head) */
-const textOf = (/** @type {Source} */ x, /** @type {Doc} */ d) => ({ src: addrOf(x), d, shown: d.derived ? [] : LK.shown(addrOf(x)) });
+/** one side of the reads between the panes as a scene opens (`Text`): the links shown at the record its text is made from, a derived record's where its image places them (LK's `shown`) */
+const textOf = (/** @type {Source} */ x, /** @type {Doc} */ d) => ({ src: addrOf(x), d, shown: LK.shown(addrOf(x), d) });
 
 /**
  * A scene on two panes as it opens (`open`, `reopen`): the ends `levels`
@@ -1701,8 +1708,8 @@ function sayFace(E, face) {
  */
 function stand(E, S, face) {
   scene = S;
-  S.a.placed = placedInto(S.a.src, [...S.b.view.marks, ...S.a.view.marks]);
-  S.b.placed = placedInto(S.b.src, [...S.a.view.marks, ...S.b.view.marks]);
+  S.a.placed = placedInto(S.a, [...S.b.view.marks, ...S.a.view.marks]);
+  S.b.placed = placedInto(S.b, [...S.a.view.marks, ...S.b.view.marks]);
   coverPlane(true);
   E.root.classList.add('on');
   S.fit = fitOf(E);
@@ -1753,7 +1760,7 @@ export async function reopen(o, as = {}) {
     const pa = ra.pane, pb = rb.pane;
     if (!pa || !pb) { if (stands()) out.refused = ra.refused || rb.refused; return null; }
     if (!stands()) return null;
-    const between = await readBetween({ src: pa.src, d: pa.d, shown: LK.shown(pa.src) }, { src: pb.src, d: pb.d, shown: LK.shown(pb.src) }, !o.held.wholeB);
+    const between = await readBetween({ src: pa.src, d: pa.d, shown: LK.shown(pa.src, pa.d) }, { src: pb.src, d: pb.d, shown: LK.shown(pb.src, pb.d) }, !o.held.wholeB);
     return { pa, pb, between };
   }, ({ pa, pb, between }) => {
     const E = els;
@@ -2939,7 +2946,7 @@ function setPanes(S, sets, pairs) {
   if (pairs) S.pairs = pairs;
   for (const side of SIDES) {
     const P = S[side], Q = S[otherSide(side)];
-    const now = placedInto(P.src, [...Q.view.marks, ...P.view.marks]);
+    const now = placedInto(P, [...Q.view.marks, ...P.view.marks]);
     P.placed = set.has(side) ? now : new Map([...P.placed, ...now]);
   }
   measure();
@@ -3024,7 +3031,7 @@ async function update(side, how = {}) {
     }
     for (;;) {
       const seen = Q.sets;
-      const mine = { src, d, shown: LK.shown(src) }, theirs = { src: Q.src, d: Q.d, shown: Q.view.marks };
+      const mine = { src, d, shown: LK.shown(src, d) }, theirs = { src: Q.src, d: Q.d, shown: Q.view.marks };
       const between = await readBetween(side === 'a' ? mine : theirs, side === 'a' ? theirs : mine);
       if (stale()) return;
       if (Q.sets !== seen) continue;

@@ -2618,6 +2618,47 @@ def others_line(ctx, r):
             'the key and the paste place nothing: no caret, nothing selected, the camera and the walk\'s element where they stood', {'before': before, 'after': after})
 
 
+def who_wrote_typed(ctx, r):
+    """WHO WROTE THIS? OVER A SPAN HOLDING TYPED WORDS (FP-14): the walk landed on the own draft's second paragraph, Enter
+    placing the caret at its start, `ab` typed and Esc pressed — the caret kept, the walk on its span — then Mod+Shift+O:
+    the card stands over the span the text shown holds, `ab` with it, the page says `ab` is new, and the `show_origin` it
+    asks over the paragraph's bytes goes by their positions in the board's text, in the `/op-at` form as of the read its
+    text came from. The card, the caret and the edits are let go after, and the draft read again."""
+    doc = WINDOW[2]
+    ctx.leap(doc, None)
+    paras = [b for b in ctx.js('window.__skep.model.doc(%s)' % json.dumps(doc))['blocks'] if b['kind'] == 'para' and b['text'].strip()]
+    para = paras[1] if len(paras) > 1 else paras[0]
+    ctx.leap(doc, para['pos'])
+    ctx.drv.key('Enter'); ctx.frames(2)
+    answer, frames, anchor, edits, read_at = '', [], None, [], None
+    try:
+        for ch in 'ab':
+            ctx.drv.key(ch)
+        ctx.frames(2)
+        ctx.drv.key('Escape'); ctx.frames(2)
+        read_at = ctx.js('(async () => { const R = await import("./model/records.js"); return R.doc(%s).readAt; })()' % json.dumps(doc))
+        n_calls = len(ctx.js('window.__skep.bridge.calls()'))
+        ctx.drv.key('O', mods=('Meta', 'Shift'))
+        overlay_up(ctx, 'provenance:wrote')
+        answer = ctx.js('window.__skep.overlay().text') or ''
+        frames = [json.loads(c['frame']) for c in ctx.js('window.__skep.bridge.calls()')[n_calls:] if c.get('op') == 'show_origin']
+        anchor = ctx.js('(async () => { const H = await import("./overlays/host.js"); const c = H.currentState(); return c && c.anchor ? c.anchor.span : null; })()')
+        edits = ctx.js('window.__skep.model.edits(%s)' % json.dumps(doc))
+    finally:
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), R = await import("./model/records.js"); H.dismiss(); S.clear(); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
+        ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
+    def asked(f):
+        inner = f.get('frame') or {}
+        s = inner.get('span') or {}
+        return [f.get('at'), inner.get('op'), int(s.get('start', '0.0').split('.')[-1]), int(s.get('width', '0.0').split('.')[-1])]
+    got, want = [asked(f) for f in frames], [[read_at, 'show_origin', para['pos'], para['width']]]
+    span = {'addr': doc, 'pos': para['pos'], 'width': para['width'] + 2}
+    new_words = ctx.js('(async () => (await import("./strings.js")).t("L.new.wrote"))()')
+    r.check(read_at is not None and got == want and anchor == span and '“ab”' in answer and new_words in answer and ''.join(e['text'] for e in edits) == 'ab',
+            'Mod+Shift+O over a span holding typed words stands the card at the span the text shown holds, `ab` named by its first words as new, and asks `show_origin` over the board\'s bytes by their positions in its text, in the `/op-at` form as of the read its text came from',
+            {'read_at': read_at, 'asked': got, 'want': want, 'anchor': anchor, 'span': span, 'answer': answer[:200], 'edits': edits})
+
+
 def tabbed_to_hint(ctx, r):
     """Tab reaches the hint standing in its compact form without ending it; Enter at it opens its notice whole, said in the
     status region, the focus kept on it; the next act takes it down, its focus handed to the walk's item (issue #468's design
@@ -3371,6 +3412,8 @@ def run(ctx):
             'Enter on the scene\'s × is its own end, a Back (issue #50): the cursor on the entry it opened over, nothing pushed or dropped, no selection, and the focus on the walk\'s item there (K-63)',
             {'focused_x': on, 'scene': after['scene'], 'focus_on_item': item, 'at': after['at'], 'sel': after['sel'], 'cursor': [t0['cursor'], t1['cursor']], 'entries': [len(t0['entries']), len(t1['entries'])]})
     ended()
+    # ---- who wrote this? over a span holding typed words: the board asked by the base's positions as of its read --------
+    who_wrote_typed(ctx, r)
     # ---- the copy of an item that holds no text: the claimant's key record (issue #161) -------------------------------
     r.figures['record_copy'] = record_copy(ctx, r)
     ctx.leap(DOC, WINDOW[0])

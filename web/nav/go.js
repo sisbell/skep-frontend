@@ -1597,7 +1597,7 @@ export function wordsHTML(e) {
 export function scenePair(e) {
   const o = e.scene;
   if (!o) return null;
-  return o.left ? [o.left.panes.a.shows, o.left.panes.b.shows] : [o.a, o.b];
+  return o.left ? [o.left.panes.a.shows, o.left.panes.b.shows] : [addrOf(o.a), o.b];
 }
 
 /**
@@ -2514,6 +2514,9 @@ function sceneStep(from) {
   return spans.length ? { kind: 'scene', near: p.addr, link: null, key: null, spans } : null;
 }
 
+/** the address a reading scene's pane is opened on (SC's `Source`): the document named, or the one a record of its text shows */
+const addrOf = (/** @type {string | import('../model/records.js').Doc} */ x) => (typeof x === 'string' ? x : x.addr);
+
 /**
  * A reading scene opened beside the place the reader stands at (see the
  * head; FP-25): the next act, its entry pushed as the act is made — the
@@ -2525,7 +2528,7 @@ function sceneStep(from) {
  * back; where its reads were refused, given back too, the refusal faced at
  * the act's site as O-HOST's notice (`asNotice`). Where no board is held, the
  * act answered where it was made (FP-35).
- * @param {string} a the document its first pane opens on: the reader's, save at a landing's line, the source of the passage landed
+ * @param {string | import('../model/records.js').Doc} a the document its first pane opens on: the reader's, save at a landing's line, the source of the passage landed; or the record the page shows of it (T-LAYER's `paneSource`), where the opener's positions are that text's
  * @param {string} b the one its second pane opens on
  * @param {import('../scene/scene.js').Held} [held] the passage the opener holds, which the scene sets level
  * @param {{beside?: 'a' | 'b', from?: {shown: Shown} | {passage: Span} | null, site?: Site | null}} [opts] `beside` the pane holding the document opened beside the reader's, the entry's address — the second where none is named; `from` the link's end or the passage the scene is opened from, which Back lights (`sceneStep`); `site` where the act was made. The scene takes the focus however the act was made (SC's)
@@ -2534,7 +2537,7 @@ function sceneStep(from) {
 export async function toScene(a, b, held = {}, opts = {}) {
   const act = nextAct();
   if (!REC.board()) { FACES.noBoard(opts.site ?? null); return false; }
-  const departed = departure(), addr = opts.beside === 'a' ? a : b;
+  const departed = departure(), addr = addrOf(opts.beside === 'a' ? a : b);
   const entry = TRAIL.push({ addr, pos: null, width: null, view: departed.view, label: null, notice: null, scene: { a, b, held, left: null } }, departed, false, sceneStep(opts.from ?? null));
   reach = { act, addr, entry };
   const out = await SCENE.open(a, b, held, { leaving: () => { reach = null; dismissChrome(entry); } });
@@ -2706,8 +2709,8 @@ function lightOf(left, e, by) {
 function returnTo(l, view) {
   const e = l.end, s = e ? LK.shown(e.addr).find((x) => x.link.addr === e.link && x.key === e.key) : null;
   const m = !e && l.passage ? placedMark(l.passage, null) : null;
-  const at = e && s ? { addr: e.addr, pos: s.pos, end: { link: e.link, key: e.key } } : m ? { addr: m.addr, pos: m.pos, end: null } : null;
-  return at && LAYER.atReadingScale(at.addr, view.scale) && LAYER.lineInView(at.addr, at.pos, view) ? at : null;
+  const at = e && s ? { addr: e.addr, pos: LAYER.boardPos(e.addr, s.pos), end: { link: e.link, key: e.key } } : m ? { addr: m.addr, pos: m.pos, end: null } : null;
+  return at && LAYER.atReadingScale(at.addr, view.scale) && LAYER.lineInView(at.addr, LAYER.shownPos(at.addr, at.pos), view) ? at : null;
 }
 
 /**
@@ -3628,17 +3631,18 @@ async function placedNow(s) {
 
 /**
  * A subject placed by the landing rule in the text its box shows now (see
- * the head; FP-36): its bytes by identity there (M-REC's `placedIdentity`) —
- * all of them standing, part, or none, and the span from their first stretch
- * to the end of their last; where its bytes were not named — the held image
- * did not cover them as it was left — where it stood, by position.
+ * the head; FP-36): its bytes by identity there, as the page shows that text
+ * (T-LAYER's `placedShown`) — all of them standing, part, or none, and the
+ * span from their first stretch to the end of their last; where its bytes
+ * were not named — the held image did not cover them as it was left, or they
+ * held words the page made — where it stood, by position.
  * @param {Subject} s
  * @returns {Placed}
  */
 function placeBytes(s) {
   const addr = shownIn(s.addr), width = s.ids.reduce((n, x) => n + x.width, 0);
   if (!width) return { holds: 'all', span: { addr, pos: s.pos, width: s.width } };
-  const runs = REC.placedIdentity(addr, s.ids);
+  const runs = LAYER.placedShown(addr, s.ids);
   if (!runs.length) return { holds: 'none', span: null };
   const first = runs[0], last = runs[runs.length - 1], stands = runs.reduce((n, r) => n + r.width, 0);
   return { holds: stands < width ? 'part' : 'all', span: { addr, pos: first.pos, width: last.pos + last.width - first.pos } };

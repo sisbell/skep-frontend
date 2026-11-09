@@ -1262,6 +1262,20 @@ test('the walk takes each box as the version it shows (issues #154, #23): an acc
 
 // placed last: the death empties the model every test above reads
 // attaches a mirror of its own, as the tests around it do
+test('in a draft holding typed text a link\'s stop of the walk stands at its bytes\' position in the model\'s text, its end at its position in the text shown, so the walk names the span holding the end and the end\'s own bytes are drawn where the text shown holds them', async () => {
+  await PUMP.loadWhole(T);
+  const L = T + '.0.2.9';
+  REC.takeLinks(T, [L]);
+  REC.takeLink({ addr: L, from: [{ start: T + '.0.1.14', width: '0.0.0.0.0.0.0.5', doc: T, account: '1.0.1', whole: false, subspace: 1, ordinal: 14, positions: 5 }], to: [{ start: D, width: '0.0.0.0.1', doc: D, account: '1.0.1', whole: true, subspace: null, ordinal: null, positions: null }], type: '1.1.0.1.0.1.0.3.13' });
+  LK.readers({ text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null) });
+  try {
+    REC.addEdit(T, { pos: 1, width: 0, text: 'Typed line.\n\n' });
+    const stop = (await WALK.childrenOf({ kind: 'document', addr: T, pos: null, link: null })).find((n) => n.kind === 'link');
+    assert.deepEqual([stop?.pos, stop?.link?.pos, stop?.link?.width], [14, 27, 5], 'the walk\'s stop at Bravo\'s position in the model\'s text, the end drawn thirteen positions on where the text shown holds it');
+    assert.deepEqual(LK.shownAt(T, { pos: 27, width: 5 }).map((s) => s.link.addr), [L], 'the span a slot reads meets it where the text shown holds it');
+  } finally { REC.clearEdits(T); LK.readers({}); }
+});
+
 test('the count, the article\'s symbols and the mirror name the same ends, two lying inside a withheld run among them (issue #202: "Add a test that the count, the symbols and the mirror agree for an end inside a withheld run"): the presence words count three; the text\'s end is its own symbol and the run\'s two one symbol at the run carrying both; the document\'s links the text\'s end alone, the run\'s item counting its two and holding them a level below, → entering them and ← back; Back\'s light at one marks the run\'s item', async () => {
   const W = '1.0.2.0.6', O = '1.0.1.0.1003', CITE = '1.1.0.1.0.1.0.3.13', text = 'Tumbler.\n\n', n = byteLength(text), RUN = n + 1;
   const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => resolveSpan({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w });

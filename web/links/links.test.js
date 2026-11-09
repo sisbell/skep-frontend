@@ -19,8 +19,10 @@
 // of in one state, decided by the address, the session and the index, its
 // whole form beginning with the short form that names it, and a tail of
 // several carrying that short form only where every far end shares it
-// (FP-21, FP-26); and the most a reveal can set in
-// a text, which no stage, toggle or lens moves (FP-12).
+// (FP-21, FP-26); the most a reveal can set in
+// a text, which no stage, toggle or lens moves (FP-12); and, in a draft
+// holding typed text, each end drawn where its bytes stand in the text the
+// page shows, none on the words typed (FP-30).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -28,6 +30,7 @@ import * as LK from './links.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
 import { t } from '../strings.js';
 import { firstLineOf } from '../text/article.js';
+import { applyEdits } from '../model/derive.js';
 
 const CITE = '1.1.0.1.0.1.0.3.13', ENROLL = '1.1.0.1.0.1.0.3.1', CLAIM = '1.1.0.1.0.1.0.3.3', ENDORSE = '1.1.0.1.0.1.0.3.42';
 const D = '1.0.1.0.3', OTHER_HOME = '1.0.2.0.5';
@@ -648,4 +651,46 @@ test('an end lying wholly inside withheld text is drawn at the run\'s start — 
   windowed('content');
   assert.deepEqual(at(), [{ pos: 45, width: 4, runs: [{ pos: 45, width: 4 }], run: null }], 'the run readable: the end on its own words');
   assert.deepEqual(REC.doc(D).blocks.map((b) => LK.countAt(D, b).n), [1, 1, 0], 'another\'s counted at the paragraph its words stand in');
+});
+
+/** D as the page shows it with its page-local edits applied (M-DERIVE's `applyEdits`), the reader handed in as the app hands in T-LAYER's `shownOf` */
+function typed(/** @type {import('../model/records.js').Edit[]} */ edits) {
+  const doc = applyEdits(REC.doc(D), edits).doc;
+  LK.readers({ text: (a) => (a === D ? doc : REC.has(a) ? REC.doc(a) : null) });
+  return doc;
+}
+/** the end of the owner's citation as LK draws it at D, null where it draws none */
+const citation = () => LK.shown(D).find((s) => s.link.addr === D + '.0.2.1') ?? null;
+
+test('in a draft holding typed text an end is drawn where its bytes stand in the text the page shows — marks, the others\' count, the span a slot reads and the size the text is folded for agreeing — and none on the words typed (FP-30)', () => {
+  const doc = typed([{ pos: 1, width: 0, text: 'ab' }]);
+  assert.deepEqual([citation()?.pos, citation()?.width, citation()?.runs, citation()?.nearEnd.ordinal], [52, 10, [{ pos: 52, width: 10 }], 50], 'the citation stored at 50 two positions on, its stored span kept as its identity');
+  assert.deepEqual(LK.shownAt(D, { pos: 52, width: 10 }).map((s) => s.link.addr), [D + '.0.2.1'], 'the span a slot reads meets it there');
+  assert.deepEqual(LK.shownAt(D, { pos: 50, width: 2 }), [], 'and nothing at the two positions it is stored at');
+  assert.deepEqual(LK.shownAt(D, { pos: 1, width: 2 }), [], 'and nothing on the words typed');
+  assert.deepEqual(doc.blocks.map((b) => LK.countAt(D, b).n), [1, 0], 'another\'s link stored at 3 counted at the paragraph it stands in now');
+  assert.deepEqual(LK.utmost(D).shown.map((s) => [s.link.addr, s.pos]), [[D + '.0.2.1', 52], [OTHER_HOME + '.0.2.1', 5]], 'the size\'s bound where they stand');
+  LK.reveal(D, 2);
+  assert.deepEqual(LK.symbols(D).map((s) => s.pos), [52], 'its symbol there');
+});
+
+test('words typed inside an end cut it in two stretches, and an end whose bytes the edits took out is not drawn, the badge reading no position (FP-30)', () => {
+  typed([{ pos: 55, width: 0, text: 'zz' }]);
+  assert.deepEqual([citation()?.pos, citation()?.width, citation()?.runs], [50, 5, [{ pos: 50, width: 5 }, { pos: 57, width: 5 }]], 'the end on its two stretches, the words typed none of it');
+  assert.deepEqual(LK.shownAt(D, { pos: 55, width: 2 }), [], 'a slot over the words typed alone finds none of it');
+  build();
+  typed([{ pos: 50, width: 10, text: '' }]);
+  assert.equal(citation(), null, 'its bytes taken out: not drawn');
+  assert.equal(LK.countDoc(D).n, 1, 'the link still counted at the document');
+  build();
+  typed([{ pos: 52, width: 3, text: 'nu' }]);
+  assert.deepEqual(citation()?.runs, [{ pos: 50, width: 2 }, { pos: 54, width: 5 }], 'three of its bytes replaced: the bytes either side, the words typed none of it');
+});
+
+test('a surface set from a record of its own hands it in: `shown`, `symbols`, `countAt` and `utmost` place the ends in that record, whatever the text the page shows of the document', () => {
+  const doc = applyEdits(REC.doc(D), [{ pos: 1, width: 0, text: 'ab' }]).doc;
+  LK.reveal(D, 2);
+  assert.deepEqual([LK.shown(D)[0].pos, LK.shown(D, doc)[0].pos, LK.symbols(D, doc)[0].pos, LK.utmost(D, doc).shown[0].pos], [50, 52, 52, 52], 'no reader handed in: the model\'s record; the record handed in: its own places');
+  assert.deepEqual([LK.countAt(D, doc.blocks[0], doc).n, LK.countAt(D, doc.blocks[1], doc).n], [1, 0]);
+  assert.deepEqual(LK.shown(D, null), [], 'no text to place them in: none drawn');
 });

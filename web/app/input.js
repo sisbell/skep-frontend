@@ -393,7 +393,7 @@ function clickText(target) {
   }
   // text that takes no caret: the walk on the span clicked (K-70) — a marked stretch's, which opens its end's card (K-7), or a block's, selected whole (R11)
   const marked = target.closest('.lip');
-  if (marked) { took = true; const m = /** @type {HTMLElement} */ (marked); const s = endAt(m, (m.dataset.links || '').split(' ')[0], (m.dataset.ends || '').split(' ')[0]); if (s) { walkOn(s.near, s.pos); ANATOMY.open(s, m, false); return true; } }
+  if (marked) { took = true; const m = /** @type {HTMLElement} */ (marked); const s = endAt(m, (m.dataset.links || '').split(' ')[0], (m.dataset.ends || '').split(' ')[0]); if (s) { walkOn(s.near, LAYER.boardPos(s.near, s.pos)); ANATOMY.open(s, m, false); return true; } }
   const sp = target.closest('.sp');
   if (sp) { const s = /** @type {HTMLElement} */ (sp), addr = s.dataset.addr || '', pos = Number(s.dataset.pos); SEL.select(addr, pos); walkOn(addr, pos); return true; }
   return took;

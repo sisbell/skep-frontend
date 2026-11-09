@@ -20,7 +20,10 @@
 // page-local edits a draft's caret makes (K-72) — positions and text alone,
 // never a frame — and `toShown`/`toBase` carry a position across them, so a
 // span the walk names in the delivered text is found in the typed text and
-// back. The texts' positions are bytes (wire.md §Value encodings).
+// back; `spanRuns` splits a span of the typed text into what the delivered
+// text holds and what the edits made, the one reading of a span the board is
+// asked about, so no question reaches the board by a position of the typed
+// text. The texts' positions are bytes (wire.md §Value encodings).
 // Rules: FP-1, FP-2, FP-6, FP-7, FP-14.
 
 import { deriveBlocks, placedIn } from './records.js';
@@ -468,6 +471,66 @@ export function toBase(edits, pos) {
     else if (p > e.pos) p = e.pos;
   }
   return p;
+}
+
+/**
+ * @typedef {Object} SpanRun — one stretch of a span of the typed text (`spanRuns`)
+ * @property {number} pos its first position in the typed text
+ * @property {number} width its positions
+ * @property {number | null} base its first position in the delivered text, where it stands at `toBase` of `pos`; null where an edit made its bytes, which the delivered text lacks
+ */
+
+/**
+ * A span of the typed text split into runs (see the head), in the text's
+ * order: each edit unwound from the last, so a position inside bytes an edit
+ * inserted is new and any other moves back past the edit. Two neighbours join
+ * only where they continue each other in both texts: new bytes beside new
+ * bytes, or delivered bytes beside the delivered bytes after them, so bytes
+ * removed between two stretches leave them two runs and the span is never
+ * read by its two ends.
+ * @param {readonly Edit[]} edits
+ * @param {number} pos the span's first position in the typed text
+ * @param {number} width its positions; none where it is not above zero
+ * @returns {SpanRun[]}
+ */
+export function spanRuns(edits, pos, width) {
+  /** @type {SpanRun[]} */
+  let runs = width > 0 ? [{ pos, width, base: pos }] : [];
+  for (let i = edits.length - 1; i >= 0; i--) {
+    const e = edits[i];
+    runs = runs.flatMap((r) => unwound(r, e.pos, e.pos + byteLength(e.text), e.width - byteLength(e.text)));
+  }
+  /** @type {SpanRun[]} */
+  const out = [];
+  for (const r of runs) {
+    const last = out[out.length - 1];
+    if (last && (last.base == null ? r.base == null : r.base === last.base + last.width)) last.width += r.width;
+    else out.push({ ...r });
+  }
+  return out;
+}
+
+/**
+ * A run of the text after an edit carried back before it: a new run stands
+ * new; of any other, the part before the bytes the edit inserted stands, the
+ * part inside them is new, and the part after them moves by what the edit
+ * changed.
+ * @param {SpanRun} r
+ * @param {number} from the first position of the bytes the edit inserted
+ * @param {number} to one past their last
+ * @param {number} by the positions it removed, less the bytes it inserted
+ * @returns {SpanRun[]}
+ */
+function unwound(r, from, to, by) {
+  const at = r.base;
+  if (at == null) return [r];
+  const end = at + r.width, part = (/** @type {number} */ lo, /** @type {number} */ hi, /** @type {number | null} */ base) => ({ pos: r.pos + lo - at, width: hi - lo, base });
+  /** @type {SpanRun[]} */
+  const out = [];
+  if (at < from) out.push(part(at, Math.min(end, from), at));
+  if (Math.max(at, from) < Math.min(end, to)) out.push(part(Math.max(at, from), Math.min(end, to), null));
+  if (end > to) { const lo = Math.max(at, to); out.push(part(lo, end, lo + by)); }
+  return out;
 }
 
 /**

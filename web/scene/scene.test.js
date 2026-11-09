@@ -114,6 +114,7 @@ import { inkOf } from '../beams/beams.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA, SAMENESS } from '../plane/register.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as PROV from '../overlays/provenance.js';
+import * as SEL from '../overlays/selection.js';
 import { recorder } from '../test/canvas.js';
 
 /** @returns {import('../model/frames.js').ComparePair} */
@@ -2107,4 +2108,56 @@ test('a scene on one document in both panes opens — each pane the document, na
   await SCENE.reopen({ a: A, b: A, held: { posA: 14, widthA: 3 }, left });
   assert.deepEqual([SCENE.isOpen(), SCENE.panes()?.a.src, SCENE.panes()?.b.src, SCENE.pairs()?.level], [true, A, A, { a: 14, b: 14 }], 'reopened on the one document twice, level as before');
   assert.deepEqual(fake.unanswered, []);
+}));
+
+test('read side by side at a link\'s end in a draft holding typed words opens the draft\'s pane as shown, new words included, its link standing where its bytes do, levelled at the shown position, no text read for it and no `compare` asked', () => onPage(async (p) => {
+  const L = A + '.0.2.77', CITE = '1.1.0.1.0.1.0.3.13';
+  await onTrail(p);
+  LK.readers({ text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null) });
+  try {
+    REC.takeLinks(A, [L]);
+    REC.takeLink({ addr: L, from: [passage(A, 25, 3)], to: [passage(B, 1, 3)], type: CITE, age: { at: null, time: null, from: null } });
+    REC.addEdit(A, { pos: 1, width: 0, text: 'ab' });
+    const before = fake.asked.length;
+    SEL.act('scene', true, { addr: A, pos: 27, width: 3 });
+    await flown();
+    assert.equal(SCENE.isOpen(), true, 'the scene shows');
+    const panes = SCENE.panes();
+    assert.deepEqual([panes?.a.src, panes?.a.derived, panes?.a.blocks[0].text.startsWith('abThe window.'), panes?.b.src, panes?.b.derived], [A, true, true, B, false], 'pane A the draft as shown, new words included; pane B the board\'s');
+    assert.deepEqual(SCENE.pairs()?.level.a, 27, 'level at the shown position');
+    assert.ok(fake.asked.slice(before).every((k) => !k.includes(A) && !k.includes('"compare"')), `nothing read for pane A, no compare asked: ${JSON.stringify(fake.asked.slice(before))}`);
+  } finally { SCENE.close(); REC.clearEdits(A); LK.readers({}); }
+}));
+
+test('a whole-document far end beside an edited draft\'s pane asks no `compare` as it shows, its derived text no text of the board\'s; its entry and the trail name the pane by the document it shows', () => onPage(async (p) => {
+  await onTrail(p);
+  REC.addEdit(A, { pos: 1, width: 0, text: 'ab' });
+  try {
+    const before = fake.asked.length, pane = LAYER.paneSource(A);
+    assert.ok(typeof pane !== 'string' && !!pane.derived, 'the page derives what it shows of the draft');
+    assert.equal(LAYER.paneSource(B), B, 'a document holding no edits: its address, read from the board');
+    assert.equal(await GO.toScene(pane, B, { posA: 3, wholeB: true }, { beside: 'a' }), true, 'the scene shows');
+    await flown();
+    assert.deepEqual([SCENE.panes()?.a.derived, SCENE.pairs()?.level.a], [true, 3], 'level at the shown position');
+    assert.ok(fake.asked.slice(before).every((k) => !k.includes('"compare"')), 'no compare asked as it shows');
+    const e = /** @type {NonNullable<ReturnType<typeof TRAIL.current>>} */ (TRAIL.current());
+    assert.deepEqual([e.addr, GO.scenePair(e)], [A, [A, B]], 'the entry and the pair the trail\'s list names are addresses, whatever the pane was opened on');
+  } finally { SCENE.close(); REC.clearEdits(A); }
+}));
+
+test('"who wrote this?" over a span shown after typing opens its side-by-side on the draft as shown, level at the shown position, the step it records naming the base\'s bytes', () => onPage(async (p) => {
+  await onTrail(p);
+  const asOf = /** @type {number} */ (REC.doc(A).readAt);
+  const asked = FAKE.keyOf('op', { frame: F.opAt(asOf, F.showOrigin(A, 14, 3)) });
+  script[asked] = { result: { as_of: 1, resp: 'addrs', addrs: [B] } };
+  REC.addEdit(A, { pos: 1, width: 0, text: 'ab' });
+  try {
+    await PROV.wrote(A, 16, 3);
+    const card = HOST.currentState();
+    assert.deepEqual([card?.id, card?.anchor], ['provenance:wrote', { span: { addr: A, pos: 16, width: 3 } }], 'the card at the span shown');
+    card?.acts?.beside0(/** @type {any} */ (p.item), false);
+    await flown();
+    assert.deepEqual([SCENE.isOpen(), SCENE.panes()?.a.derived, SCENE.panes()?.b.src, SCENE.pairs()?.level.a], [true, true, B, 16], 'its pane A the draft as shown, level at the shown position');
+    assert.deepEqual(TRAIL.all()[TRAIL.cursorIndex() - 1].step, { kind: 'scene', near: A, link: null, key: null, spans: [{ prefix: A + '.0.1', ordinal: 14, width: 3 }] }, 'the step records the passage by the bytes of the base, never a position of the text shown');
+  } finally { SCENE.close(); REC.clearEdits(A); delete script[asked]; }
 }));

@@ -376,15 +376,15 @@ export async function childrenOf(node) {
   }
   if (node.kind === 'document') return (await PUMP.loadWhole(node.addr)) ? elementsOf(node.addr) : [];
   // a withheld run's: the ends drawn at it (see the head)
-  if (node.kind === 'block' && node.pos != null) return runEnds(node.addr, node.pos).map((s) => ({ kind: /** @type {const} */ ('link'), addr: node.addr, pos: s.pos, link: s }));
+  if (node.kind === 'block' && node.pos != null) return runEnds(node.addr, node.pos).map((s) => ({ kind: /** @type {const} */ ('link'), addr: node.addr, pos: LAYER.boardPos(node.addr, s.pos), link: s }));
   return [];
 }
 
-/** a document's elements of the walk as the model holds its text now: its blocks that are elements, then the ends LK draws in its text — a document's children once it is read whole (`childrenOf`) */
+/** a document's elements of the walk as the model holds its text now: its blocks that are elements, then the ends LK draws in the text the page shows, each stop at its bytes' position in the model's text (T-LAYER's `boardPos`) — a document's children once it is read whole (`childrenOf`) */
 function elementsOf(/** @type {string} */ addr) {
   /** @type {Node[]} */
   const out = REC.doc(addr).blocks.filter(isElement).map((b) => ({ kind: /** @type {const} */ ('block'), addr, pos: b.pos, link: null }));
-  for (const s of LK.shown(addr)) if (!s.run) out.push({ kind: 'link', addr, pos: s.pos, link: s });
+  for (const s of LK.shown(addr)) if (!s.run) out.push({ kind: 'link', addr, pos: LAYER.boardPos(addr, s.pos), link: s });
   return out;
 }
 
@@ -404,8 +404,8 @@ function elementAt(kids, addr, pos) {
   return b ? Math.max(0, kids.findIndex((n) => n.kind === 'block' && n.pos === b.pos)) : 0;
 }
 
-/** the ends LK draws at the withheld run a document's block at `pos` is, in the order it draws them; none for any other block */
-const runEnds = (/** @type {string} */ addr, /** @type {number} */ pos) => LK.shown(addr).filter((s) => !!s.run && s.run.pos === pos);
+/** the ends LK draws at the withheld run a document's block of the model's text at `pos` is, in the order it draws them; none for any other block */
+const runEnds = (/** @type {string} */ addr, /** @type {number} */ pos) => LK.shown(addr).filter((s) => !!s.run && s.run.pos === LAYER.shownPos(addr, pos));
 
 /** the accessible name of a node (what the mirror's item says), from ST's entries (`named`) */
 export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type {number} */ total) { return named(n, i, total).text; }

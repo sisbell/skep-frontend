@@ -368,10 +368,13 @@
 // derives from the model's — its delivered runs with the page-local edits
 // applied (`shownDoc`; K-72) — mounted, folded and measured in the model's
 // record's place and set again as the edits move, the model's own record
-// standing as the board served it; the ARIA mirror reads the model. Every
+// standing as the board served it; the ARIA mirror reads the model. A link's
+// end stands in that text where its bytes stand, and none stands on the
+// words the page made (LK's `shown`). Every
 // position the fold places or answers is one of the text shown (`posAt`,
 // `centreOf`, `frameOf`), and a position of the model's text — the walk's —
-// crosses into it and back through one pair (`shownPos`, `basePos`); the
+// crosses into it and back through one pair (`shownPos`, `basePos`), a link's
+// end, standing on bytes the model's text holds, back through `boardPos`; the
 // walk's span is carried into the text shown as the block holding it there
 // (`shownBlockOf`, `carriedFocus`). The
 // caret (D5 K-70, K-72, K-76, K-77; D6 BM-4, BM-52, BM-54, BM-70, BM-75): the
@@ -883,6 +886,57 @@ function shownDoc(d) {
 /** the record the page shows of a document by its address (`shownDoc`): the gate's and the tests' reading of a draft's typed text */
 export const shownOf = (/** @type {string} */ addr) => shownDoc(REC.doc(addr));
 
+/**
+ * A stretch of the text the page shows of a document by identity (M-REC's
+ * `identityIn`, through that text's image): what a span of it is left by and
+ * returned to. None where the stretch holds bytes the page made, which carry
+ * no identity, or the model holds no record of the document.
+ * @param {string} addr
+ * @param {number} pos a position of the text shown (`shownOf`)
+ * @param {number} width its positions
+ * @returns {ISpan[]}
+ */
+export const shownIdentity = (addr, pos, width) => (REC.has(addr) ? REC.identityIn(shownOf(addr).image, pos, width) : []);
+
+/**
+ * Where bytes named by identity stand in the text the page shows of a
+ * document (M-REC's `placedIn`, through that text's image); none where that
+ * text places none of them, or the model holds no record of the document.
+ * @param {string} addr
+ * @param {ISpan[]} ids
+ * @returns {Array<{pos: number, width: number}>} positions of the text shown (`shownOf`)
+ */
+export const placedShown = (addr, ids) => (REC.has(addr) ? REC.placedIn(shownOf(addr).image, ids) : []);
+
+/**
+ * What a reading scene opens a document's pane on where the act names a span
+ * of the text shown (SC's `Source`): the record the page shows, new words
+ * included, where it derives one (`shownDoc`), since the span's positions are
+ * that text's; else the document's address, read from the board.
+ * @param {string} addr
+ * @returns {string | Doc}
+ */
+export function paneSource(addr) {
+  const d = REC.has(addr) ? shownOf(addr) : null;
+  return d && d.derived ? d : addr;
+}
+
+/**
+ * The first words of a stretch of the text the page shows of a document
+ * (`shownOf`), NAME_WORDS at the most, cut on a word as `placeName` cuts a
+ * document's name: what a run of a span is named by where the runs answer
+ * differently (O-PROV's); '' where the stretch holds no words.
+ * @param {string} addr
+ * @param {number} pos a position of the text shown
+ * @param {number} width its positions
+ * @returns {string}
+ */
+export function firstWords(addr, pos, width) {
+  const words = REC.textOf(shownOf(addr).runs, pos, pos + width).trim().replace(/\s+/g, ' ');
+  const fits = (/** @type {string} */ s) => wordsIn(s) <= NAME_WORDS;
+  return !words || fits(words) ? words : cutWords(words, fits) || '';
+}
+
 /** the page-local edits a record derived from a draft's typed text was made with (M-REC's `edits`; M-DERIVE's `applyEdits`); none for any other record */
 const editsOf = (/** @type {Doc} */ d) => (d.derived && d.derived.edits ? REC.edits(d.addr) : []);
 
@@ -941,6 +995,17 @@ export function basePos(addr, pos) {
 }
 
 /**
+ * A position of bytes the model's text holds carried back from the text shown
+ * (M-DERIVE's `toBase`), never moved past the text's end: a link's end's
+ * position (LK's `Shown.pos`), which stands on such bytes alone, for the
+ * readers of the model's text.
+ * @param {string} addr
+ * @param {number} pos a position of the text shown (`shownOf`)
+ * @returns {number}
+ */
+export const boardPos = (addr, pos) => toBase(REC.edits(addr), pos);
+
+/**
  * The walk's focus carried into a record derived from the typed text: the
  * block of that text holding the focused block's first position as the edits
  * moved it (`blockCarried`); null where none holds it. Any other record's
@@ -959,22 +1024,22 @@ function carriedFocus(d, f) {
  * facts the model's for its owner's account (M-REC's `accountKey`), never
  * this device's key; every fit it judges measured as the platform sets the
  * words (`widthOf`); on the plane, the newer version its corner offers to
- * read (the reader `newer`), a reading scene's pane handing its own in. A
- * derived record's text is not the board's (M-DERIVE):
- * the links' places are the board's text's, so none is marked or counted in
- * it, and the walk's focus, a span of the model's text, is carried into it
- * through the page-local edits it was made with (`carriedFocus`); the
- * selection is a span of the text shown already (O-SELECTION's).
+ * read (the reader `newer`), a reading scene's pane handing its own in. The
+ * links are placed by their bytes in the record handed in (LK's `shown`,
+ * `symbols`, `countAt`), so a derived record draws them on the bytes its image
+ * holds and none on the words the page made. The walk's focus, a span of the
+ * model's text, is carried into a record derived from the typed text through
+ * the page-local edits it was made with (`carriedFocus`); the selection is a
+ * span of the text shown already (O-SELECTION's).
  */
 export function viewFor(/** @type {Doc} */ d, scene = false) {
   /** @type {Map<string, 'edition' | 'draft' | 'unknown'>} */
   const originKinds = new Map();
   for (const o of d.origins) { const od = REC.doc(o.doc); const p = REC.place(o.doc); originKinds.set(o.doc, p ? p.kind : od.meta ? (od.meta.published ? 'edition' : 'draft') : od.kind); }
-  const linked = !d.derived;
   /** @type {ArticleView} */
   const v = {
     selected: read.selection(), focus: carriedFocus(d, litFocus(scene)),
-    marks: linked ? LK.shown(d.addr) : [], mergedMark: LK.mergedMark, symbols: linked ? LK.symbols(d.addr) : [], says: farShort, countAt: linked ? (b) => LK.countAt(d.addr, b) : () => ({ n: 0, social: false }),
+    marks: LK.shown(d.addr, d), mergedMark: LK.mergedMark, symbols: LK.symbols(d.addr, d), says: farShort, countAt: (b) => LK.countAt(d.addr, b, d),
     wholeLinks: LK.wholeLinks(d.addr).length,
     reader: REC.reader(),
     ...cornerFacts(d),
@@ -1091,7 +1156,7 @@ function folded(d) {
   const v = viewFor(d), owner = REC.ownerAccount(d);
   const now = articlePlan(d, v, owner);
   const m = measured.get(d.addr), set = m && m.key === layoutKey(d, v, owner, cpl) ? m : null;
-  const u = LK.utmost(d.addr);
+  const u = LK.utmost(d.addr, d);
   const rows = articlePlan(d, { ...v, marks: u.shown, symbols: u.shown }, owner);
   const after = Math.max(0, (d.extent || 0) + 1 - d.to);
   const band = headBand(d, v);

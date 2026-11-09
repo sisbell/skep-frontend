@@ -3935,6 +3935,33 @@ test('a second move made at once, while a return still reopens the card it owes,
   assert.deepEqual(fake.unanswered, []);
 });
 
+test('over a span shown after typing, who wrote this? asks by the base\'s positions as of its read and stands at the span shown, its origin\'s LEAP carries those bytes, and after more typing Back reopens the card and the selection over the same characters (FP-36)', async () => {
+  const platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  try {
+    await run(GO.leapTo(D));
+    const asOf = REC.doc(D).readAt;
+    assert.ok(asOf != null, 'the first edition\'s text read at a position');
+    const asked = FAKE.keyOf('op', { frame: F.opAt(asOf, F.showOrigin(D, 11, 5)) });
+    script[asked] = { result: { as_of: 1, resp: 'addrs', addrs: [FAR] } };
+    REC.addEdit(D, { pos: 1, width: 0, text: 'ab' });
+    SEL.select(D, 13, 5);
+    SEL.act('wrote'); await reopening();
+    const card = HOST.currentState();
+    assert.deepEqual([card?.id, card?.anchor, SEL.selected()], ['provenance:wrote', { span: { addr: D, pos: 13, width: 5 } }, { addr: D, pos: 13, width: 5 }], 'the card over the selection, where the text shown holds it');
+    assert.ok(fake.asked.includes(asked), '`show_origin` over the base\'s positions, as of the read');
+    await run(Promise.resolve(card?.acts?.src0(/** @type {any} */ (hostEl), false)));
+    assert.equal(TRAIL.current()?.addr, FAR, 'the origin\'s LEAP landed');
+    assert.deepEqual(departed()?.step, { kind: 'carry', from: D, to: FAR, spans: [{ prefix: D + '.0.1', ordinal: 11, width: 5 }] }, 'the bytes of the base carried, never a position of the text shown');
+    KEYS.esc();
+    REC.addEdit(D, { pos: 1, width: 0, text: 'cd' });
+    const from = fake.asked.length;
+    await run(GO.back()); await reopening();
+    assert.deepEqual([TRAIL.current()?.addr, SEL.selected(), HOST.currentState()?.id, HOST.currentState()?.anchor], [D, { addr: D, pos: 15, width: 5 }, 'provenance:wrote', { span: { addr: D, pos: 15, width: 5 } }], 'Back to the place: the selection and the card over the same characters, two positions further on');
+    assert.ok(fake.asked.slice(from).includes(asked), 'and asked over the same bytes of the base');
+  } finally { HOST.dismiss(); SEL.clear(); REC.clearEdits(D); globalThis.window = platform.window; }
+});
+
 test('a selection standing under the card one of its acts opened ends as a jump leaves its place, and Back brings both back (issue #264): "who wrote this?" over the selection, then its origin\'s row — the selection gone at the landing, Esc ending the arrival; Back to the place, the selection over its bytes and the card asked again over them (FP-36)', async () => {
   const platform = { window: globalThis.window };
   globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
