@@ -3,12 +3,15 @@
 // (FP-10): the selection, and how Shift with ← or → moves its ends (`ends`);
 // T-LAYER reads the selection through the reader handed in.
 // The selection is the span (R11; foundations §3.1): a byte range of one
-// document, `{addr, pos, width}` in V-positions, made in one continuous
-// gesture — a drag over the mounted text at reading scale (§2.4), read back
-// from the platform's own selection through T-LAYER's mapping as the drag
-// ends and as it changes — or by a key: a click on a block and Enter at the
-// focused span select the block whole; off a live caret, K-8's Shift+↓ /
-// Shift+↑ select the focused span and then extend it by a span each press;
+// document, `{addr, pos, width}` in V-positions of the text the page shows of
+// it (T-LAYER's `shownOf`) — a draft's with its page-local edits applied —
+// whoever makes it, made in one continuous gesture — a drag over the mounted
+// text at reading scale (§2.4), read back from the platform's own selection
+// through T-LAYER's mapping as the drag ends and as it changes — or by a key:
+// a click on a block and Enter at the focused span select the block of the
+// text shown whole (`wholeShown`); off a live caret, K-8's Shift+↓ / Shift+↑
+// select the walk's focused span whole as the text shown holds it (T-LAYER's
+// `shownBlockOf`) and then extend it by a span of that text each press;
 // at a live caret, Shift with each arrow, Home or End moves the caret a step
 // and the selection runs from its anchor to the caret (`extendFromCaret`; D5
 // K-71, §1.6), as Shift with ← or → does at the span a kept caret stands in
@@ -177,16 +180,23 @@ export function reopen(left, span) {
   if (drawn.length > 1) which_(drawn, a.what, span, false, left.focus); else render(null, null, span);
 }
 
-/** the block holding a position, whole; a position in no delivered block names one position */
+/** the block of the model's text holding a position, whole — the walk's focused span, which a slot acts on (`actedOn`); a position in no delivered block names one position */
 function wholeBlock(/** @type {string} */ addr, /** @type {number} */ pos) {
   const b = REC.blockAt(addr, pos);
   return b ? spanOfBlock(addr, b) : { addr, pos, width: 1 };
 }
 
+/** the block of the text shown holding a position of it, whole (T-LAYER's `shownOf`); a position in no block of it names one position */
+function wholeShown(/** @type {string} */ addr, /** @type {number} */ pos) {
+  const b = REC.blockIn(LAYER.shownOf(addr).blocks, pos);
+  return b ? spanOfBlock(addr, b) : { addr, pos, width: 1 };
+}
+
 /**
- * Select a span: the bytes named, or, with no width, the whole of the block
- * holding `pos` (a click, Enter at the focused span, the gate's door). The
- * platform's highlight is placed over it — where the platform's selection
+ * Select a span of the text shown: the bytes named, or, with no width, the
+ * whole of its block holding `pos` (`wholeShown`; a click, Enter at the
+ * focused span, the gate's door). The platform's highlight is placed over
+ * it — where the platform's selection
  * already covers it, that one stands — the next frame marks the blocks it
  * touches in place, rebuilding no article, and its acts appear at it; the
  * end the act moved kept clear of its document's head (T-LAYER's
@@ -199,7 +209,7 @@ function wholeBlock(/** @type {string} */ addr, /** @type {number} */ pos) {
  * @param {SelectionEnd | null} [moved] the end the act moved — K-8's extended end, the platform's focus point after a press; null for an act that moves none
  */
 export function select(addr, pos, width = null, moved = null) {
-  const span = width != null && width > 0 ? { addr, pos, width } : wholeBlock(addr, pos);
+  const span = width != null && width > 0 ? { addr, pos, width } : wholeShown(addr, pos);
   const platform = moved === 'focus';
   take(span, moved, { moves: moved === 'start' || (platform && LAYER.selectionBackward()) ? 'start' : 'end', platform });
 }
@@ -223,16 +233,23 @@ function take(span, moved, how) {
 
 /**
  * K-8 (Shift+↓ / Shift+↑): the first press selects the walk's focused span
- * whole; each further press extends the selection by a span in the
- * direction pressed, that end the one the press moved (`select`). The focus
- * stays on the walk's element (rule 15).
+ * whole as the text shown holds it — the span of the model's text the walk
+ * stands on, carried into the text shown (T-LAYER's `shownBlockOf`) — and
+ * nothing where the text shown holds none of it; each further press extends
+ * the selection by a span of the text shown in the direction pressed, that
+ * end the one the press moved (`select`). The focus stays on the walk's
+ * element (rule 15).
  * @param {'down' | 'up'} [dir]
  */
 export function selectFocused(dir = 'down') {
   const f = WALK.current(), moved = dir === 'up' ? 'start' : 'end';
   if (!f || f.kind !== 'block' || f.pos == null) return;
-  if (!sel || sel.addr !== f.addr) { select(f.addr, f.pos, null, moved); return; }
-  const e = extended(REC.doc(sel.addr).blocks, sel, dir);
+  if (!sel || sel.addr !== f.addr) {
+    const b = LAYER.shownBlockOf(f.addr, f.pos);
+    if (b) { const s = spanOfBlock(f.addr, b); select(s.addr, s.pos, s.width, moved); }
+    return;
+  }
+  const e = extended(LAYER.shownOf(sel.addr).blocks, sel, dir);
   select(e.addr, e.pos, e.width, moved);
 }
 

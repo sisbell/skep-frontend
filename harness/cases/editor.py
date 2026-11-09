@@ -50,7 +50,10 @@ the kept caret's span return it and extend a selection from it a character,
 the platform's selection the page's, and at the draft's first position, K-8's
 selection standing, Shift+← returns the caret and the platform's selection
 stands over K-8's span, never collapsed at the caret (`kept_span_extends`; D5
-K-70, K-77).
+K-70, K-77). With `ab` typed at a paragraph's start and the caret kept, ↓
+walks to a later span, and the block the platform draws lit is that span
+where the text shown holds it, two positions on (`lit_after_typing`; D3; D5
+§4 rule 2).
 
 The own draft is the seeded board's windowed draft of principal 1 (`OWN`,
 1340 bytes). The seed's staging draft (`STAGING`) holds every edition's
@@ -632,6 +635,46 @@ def kept_span_extends(ctx, doc, para):
             'steps': {k: {f: s[f] for f in ('caret', 'sel', 'platform', 'focus')} for k, s in steps.items()}, 'edits': edits}
 
 
+# the walk's element, by its kind, its address and its position
+WALKED = '(() => { const f = window.__skep.view.focus(); return f ? {kind: f.kind, addr: f.addr, pos: f.pos} : null; })()'
+# the own draft's block parts the platform draws lit — the ring's reading-scale form — each by the first position it names
+LIT = '''((doc) => [...document.querySelectorAll("#domlayer article.dtext")].filter((a) => a.dataset.addr === doc)
+  .flatMap((a) => [...a.querySelectorAll(".sp.lit")].map((e) => Number(e.dataset.pos))))(%s)'''
+
+
+def lit_after_typing(ctx, doc, para):
+    """THE LIT BLOCK PAST TEXT TYPED ABOVE IT (the focus record's D3; D5 §4 rule 2; K-72): the walk landed on `para`,
+    Enter placing the caret at its start, `ab` typed and Esc pressed — the caret kept, the walk on its span — then ↓,
+    the walk's key, pressed until the walk stands on a later span of the draft; the walk's element, the ring's rule, the
+    first positions the own draft's lit block parts name as the platform draws them, and the edits; and whether all of
+    it held: the walk on that later span by its position in the model's text, the ring drawn, and every lit block part
+    the block of the text shown holding that span — two positions on, past `ab` — at least one standing. The caret, the
+    selection and the edits are let go after, and the draft read again."""
+    ctx.leap(doc, para['pos'])
+    walked, lit, ring, edits = None, [], None, []
+    try:
+        ctx.drv.key('Enter'); ctx.frames(2)
+        for ch in 'ab':
+            ctx.drv.key(ch)
+        ctx.frames(2)
+        ctx.drv.key('Escape'); ctx.frames(2)
+        for _ in range(6):
+            ctx.drv.key('ArrowDown'); ctx.settle(); ctx.frames(2)
+            walked = ctx.js(WALKED)
+            if walked and walked['kind'] == 'block' and walked['addr'] == doc and walked['pos'] > para['pos']:
+                break
+        ctx.frames(2)
+        lit, ring = ctx.js(LIT % json.dumps(doc)), ctx.js('window.__skep.focus().ring')
+        edits = ctx.js('window.__skep.model.edits(%s)' % json.dumps(doc))
+    finally:
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), R = await import("./model/records.js"); H.dismiss(); S.clear(); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
+        ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
+    later = bool(walked) and walked['kind'] == 'block' and walked['addr'] == doc and walked['pos'] > para['pos']
+    want = walked['pos'] + 2 if later else None
+    ok = later and ring is True and ''.join(e['text'] for e in edits) == 'ab' and len(lit) > 0 and all(p == want for p in lit)
+    return {'ok': ok, 'para': {'pos': para['pos'], 'width': para['width']}, 'walked': walked, 'ring': ring, 'lit': lit, 'want': want, 'edits': edits}
+
+
 def run(ctx):
     r = Result()
     rows = {s['state']: dict(s, outcome=('pending' if s['drawn'] else 'not drawn')) for s in STATES}
@@ -824,6 +867,10 @@ def run(ctx):
     extends_kept = kept_span_extends(ctx, OWN, target)
     figures['kept_span_extends'] = extends_kept
     r.check(extends_kept['ok'], "at the kept caret's span in the own draft, Shift+→ and Shift+← return the caret live a character on and back, each selecting the character between from the caret, the platform's selection the page's; at the draft's first position, K-8's selection standing over the span, Shift+← returns the caret and the platform's selection stands over that span as K-8 left it, never collapsed at the caret; nothing typed (B3-S1; D5 K-70, K-77)", extends_kept)
+    # the lit block is the walk's span where the text typed above it moved it (D3; D5 §4 rule 2; K-72)
+    lit = lit_after_typing(ctx, OWN, target)
+    figures['lit_after_typing'] = lit
+    r.check(lit['ok'], "with `ab` typed at the start of a paragraph of the own draft and the caret kept, ↓ walks to a later span and the block drawn lit is that span where the text shown holds it, two positions on past `ab` (D3; D5 §4 rule 2, K-72; issue #491)", lit)
 
     # ---- (e) B3-S13: the swallow's draft form at a span with no caret (K-72) ---------------------------------------------
     ctx.leap(OWN, target['pos'])

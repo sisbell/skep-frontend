@@ -7,7 +7,9 @@
 // camera to the match, outlined alone as the arrival, the first pushing one
 // trail entry its later moves share, so Back returns to where find opened;
 // Esc leaves the match selected, the walk and the focus on it and the camera
-// still; a miss names the document and the version searched and the withheld
+// still — in a draft holding typed text, the match selected where it was
+// found in the text shown and the walk on its span in the model's text; a
+// miss names the document and the version searched and the withheld
 // text it did not search; a part the board will not give is said, with why;
 // each answer is said once; off any document the one line says where words
 // are found; Mod+G steps the find where it stands, and opens it where nothing
@@ -247,6 +249,22 @@ test('Esc closes the find with its match selected, the walk and the focus on it 
   type('zzz'); await settle();
   inField('Escape'); await settle();
   assert.deepEqual([FIND.isOpen(), globalThis.document.activeElement === /** @type {any} */ (walkEl)], [false, true], 'no match: the focus returned to where find was opened from');
+});
+
+test('Esc in a draft holding text typed before the match leaves the match selected where the find found it, in the text shown, and the walk on its span in the model\'s text (FP-20, FP-24; issue #491)', async () => {
+  const typed = 'Typed first. ', at = bytes(typed + 'A note on a ') + 1;
+  REC.addEdit(E, { pos: 1, width: 0, text: typed });
+  try {
+    await standAt(E);
+    await KEYS.dispatch(keyOf('f', MOD), PLANE);
+    await settle();
+    type('tumbler'); await settle();
+    assert.deepEqual(FIND.stands()?.matches, [{ pos: at, width: 7 }], 'found in the text shown, past the words typed');
+    inField('Escape'); await settle();
+    const s = SEL.selected(), d = LAYER.shownOf(E);
+    assert.deepEqual([s, s && REC.textOf(d.runs, s.pos, s.pos + s.width)], [{ addr: E, pos: at, width: 7 }, 'tumbler'], 'the match selected where it was found: "tumbler" in the text shown');
+    assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos], ['block', E, 1], 'the walk on the span holding it in the model\'s text');
+  } finally { REC.clearEdits(E); }
 });
 
 test('a miss names the document and the version searched, and says the withheld text it did not search; the withheld run holds no match, nor joins its neighbours\' text', async () => {

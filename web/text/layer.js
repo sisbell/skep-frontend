@@ -162,14 +162,15 @@
 // withheld run's owner and C-67's clause beneath it from what the model
 // holds of its origin (`originOwner`, `clauseOf`), the article made again
 // as the origin's edition claims and the reads of them arrive, fail and go
-// (M-REC's revision); the selection from O-SELECTION and the focus from
-// N-WALK are handed to T-ARTICLE as values at mount, and each frame marks a
-// standing article's blocks for them in place by T-ARTICLE's one rule
-// (`blockMarks`), so a change of the selection or the focus rebuilds no
-// article and the platform's selection stands as the person left it
-// (foundations §2.1; D5 §2); its symbols are marked heavier, in place, where
-// every link one stands for is lit at an arrival (LK's `lit`, T-ARTICLE's
-// `symbolLit`; FP-30), so an arrival sets no line (`markLit`). The byline
+// (M-REC's revision); each frame marks a standing article's blocks in place
+// by T-ARTICLE's one rule (`blockMarks`) for the selection from O-SELECTION —
+// a span of the text shown — and the walk's focus from N-WALK, a span of the
+// model's text carried into the text the article shows (`carriedFocus`), so
+// a change of the selection or the focus rebuilds no article and the
+// platform's selection stands as the person left it (foundations §2.1; D5
+// §2); its symbols are marked heavier, in place, where every link one stands
+// for is lit at an arrival (LK's `lit`, T-ARTICLE's `symbolLit`; FP-30), so
+// an arrival sets no line (`markLit`). The byline
 // (FP-34): each article's byline is made from its owner's facts as the model
 // holds them (M-REC's `accountKey`, the view's `keyOf`), never this device's
 // key, and its lines are kept by the article with its slots read, their
@@ -368,6 +369,8 @@
 // applied (`shownDoc`; K-72) — mounted, folded and measured in the model's
 // record's place and set again as the edits move, the model's own record
 // standing as the board served it; the ARIA mirror reads the model. The
+// walk's span, a span of the model's text, is carried into the text shown
+// as the block holding it there (`shownBlockOf`, `carriedFocus`). The
 // caret (D5 K-70, K-72, K-76, K-77; D6 BM-4, BM-52, BM-54, BM-70, BM-75): the
 // page's own, one at a time, in text the person may edit — a draft under the
 // session's account, by its address alone, at reading scale (`editable`) — a
@@ -881,34 +884,44 @@ export const shownOf = (/** @type {string} */ addr) => shownDoc(REC.doc(addr));
 const editsOf = (/** @type {Doc} */ d) => (d.derived && d.derived.edits ? REC.edits(d.addr) : []);
 
 /**
+ * The block of a record the page shows holding a position of the model's
+ * text: in a record derived from the typed text, the position as the edits
+ * carried it (M-DERIVE's `toShown`), clamped to the text the record holds, so
+ * a block the edits took out whole answers the block standing in its place;
+ * in any other record, the position itself. Null where the record holds no
+ * block there.
+ * @param {Doc} d the record shown (`shownDoc`)
+ * @param {number} pos a position of the model's text
+ * @returns {Block | null}
+ */
+function blockCarried(d, pos) {
+  const edits = editsOf(d);
+  return REC.blockIn(d.blocks, edits.length ? Math.min(toShown(edits, pos), Math.max(d.from, d.to - 1)) : pos);
+}
+
+/**
+ * The block of the text the page shows of a document (`shownOf`) holding a
+ * position of the model's text — the walk's span carried into the text shown
+ * (`blockCarried`), the span O-SELECTION's K-8 selects whole; null where the
+ * text shown holds no block there.
+ * @param {string} addr
+ * @param {number} pos a position of the model's text: the walk's (N-WALK's)
+ * @returns {Block | null}
+ */
+export const shownBlockOf = (addr, pos) => blockCarried(shownOf(addr), pos);
+
+/**
  * The walk's focus carried into a record derived from the typed text: the
  * block of that text holding the focused block's first position as the edits
- * moved it (M-DERIVE's `toShown`); null where none holds it. Any other
- * record's focus as given.
+ * moved it (`blockCarried`); null where none holds it. Any other record's
+ * focus as given.
  * @param {Doc} d
  * @param {{addr: string, pos: number} | null} f
  */
 function carriedFocus(d, f) {
-  if (!f || f.addr !== d.addr) return f;
-  const edits = editsOf(d);
-  if (!edits.length) return f;
-  const b = REC.blockIn(d.blocks, Math.min(toShown(edits, f.pos), Math.max(d.from, d.to - 1)));
+  if (!f || f.addr !== d.addr || !editsOf(d).length) return f;
+  const b = blockCarried(d, f.pos);
   return b ? { addr: f.addr, pos: b.pos } : null;
-}
-
-/**
- * The selection carried into a record derived from the typed text: its ends
- * moved by the edits (M-DERIVE's `toShown`); null where nothing of it
- * remains. Any other record's selection as given.
- * @param {Doc} d
- * @param {Span | null} s
- */
-function carriedSpan(d, s) {
-  if (!s || s.addr !== d.addr) return s;
-  const edits = editsOf(d);
-  if (!edits.length) return s;
-  const pos = toShown(edits, s.pos), end = toShown(edits, s.pos + s.width);
-  return end > pos ? { addr: s.addr, pos, width: end - pos } : null;
 }
 
 /**
@@ -919,8 +932,9 @@ function carriedSpan(d, s) {
  * read (the reader `newer`), a reading scene's pane handing its own in. A
  * derived record's text is not the board's (M-DERIVE):
  * the links' places are the board's text's, so none is marked or counted in
- * it, and the focus and the selection are carried into it through the
- * page-local edits it was made with (`carriedFocus`, `carriedSpan`).
+ * it, and the walk's focus, a span of the model's text, is carried into it
+ * through the page-local edits it was made with (`carriedFocus`); the
+ * selection is a span of the text shown already (O-SELECTION's).
  */
 export function viewFor(/** @type {Doc} */ d, scene = false) {
   /** @type {Map<string, 'edition' | 'draft' | 'unknown'>} */
@@ -929,7 +943,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
   const linked = !d.derived;
   /** @type {ArticleView} */
   const v = {
-    selected: carriedSpan(d, read.selection()), focus: carriedFocus(d, litFocus(scene)),
+    selected: read.selection(), focus: carriedFocus(d, litFocus(scene)),
     marks: linked ? LK.shown(d.addr) : [], mergedMark: LK.mergedMark, symbols: linked ? LK.symbols(d.addr) : [], says: farShort, countAt: linked ? (b) => LK.countAt(d.addr, b) : () => ({ n: 0, social: false }),
     wholeLinks: LK.wholeLinks(d.addr).length,
     reader: REC.reader(),
@@ -2546,12 +2560,15 @@ const marksKey = (/** @type {string} */ addr, /** @type {Span | null} */ s, /** 
  * T-ARTICLE's rule (`blockMarks`) where either changed in its document since
  * they were last marked: a class set or taken off where it differs, on each
  * part of a block, nothing rebuilt, so the platform's selection in the
- * article stands.
+ * article stands. The focus is carried into the text the article shows
+ * (`carriedFocus`), so the lit block is the walk's span wherever the
+ * page-local edits moved it.
  * @param {Mounted} rec
- * @param {Span | null} selected
- * @param {{addr: string, pos: number} | null} focus
+ * @param {Span | null} selected a span of the text shown (O-SELECTION's)
+ * @param {{addr: string, pos: number} | null} walked the walk's focused block, by its first position in the model's text (N-WALK's)
  */
-function markBlocks(rec, selected, focus) {
+function markBlocks(rec, selected, walked) {
+  const focus = carriedFocus(rec.d, walked);
   const key = marksKey(rec.d.addr, selected, focus);
   if (key === rec.markedFor) return;
   rec.markedFor = key;

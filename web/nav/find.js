@@ -47,10 +47,11 @@
 // as any in view (N-GO's `toMatch`): the first pushes one trail entry, each
 // after it re-uses that entry, so Back returns to where the find opened. A
 // part's arrival moves nothing: the current match is kept by its place. Esc
-// closes it (`close`; N-KEYS's order), the current match left selected — its
-// span in the text as the board served it — the walk on its span, the camera
-// still and the focus there (N-FOCUS's `close`, `toWalk`), else the focus
-// returned as any region's close returns it.
+// closes it (`close`; N-KEYS's order), the current match left selected where
+// it was found, in the text the page shows, the walk on its span carried
+// into the text as the board served it, the camera still and the focus there
+// (N-FOCUS's `close`, `toWalk`), else the focus returned as any region's
+// close returns it.
 // Its life (FP-36): it belongs to its document — its own moves, and any move
 // that keeps the cursor on an entry in its box or whose view reads it, keep
 // it, searching the version its box shows (FP-22); a move to another place
@@ -399,10 +400,11 @@ function unmark(/** @type {Find} */ s) {
 
 /**
  * Esc (see the head; FP-20): the find closes; its current match, where a
- * move took the camera to it, selected — its span carried into the text as
- * the board served it (M-DERIVE's `toBase`) — the walk on its span, the
- * camera still and the focus on the walk's element in the place of the
- * find's opener; where none stands, the focus returned as any region's close
+ * move took the camera to it, selected as found — a span of the text the
+ * page shows, as O-SELECTION's selection is — the walk on its span, carried
+ * into the text as the board served it (M-DERIVE's `toBase`), the camera
+ * still and the focus on the walk's element in the place of the find's
+ * opener; where none stands, the focus returned as any region's close
  * returns it.
  * @param {boolean} [byKey] a key made the act
  */
@@ -412,9 +414,8 @@ export async function close(byKey = true) {
   const m = s.marked && s.current >= 0 && !s.side ? s.matches[s.current] : null;
   hide();
   if (!m) { FOCUS.close('find'); return; }
-  const edits = REC.edits(s.addr), pos = toBase(edits, m.pos), end = toBase(edits, m.pos + m.width);
-  SEL.select(s.addr, pos, Math.max(1, end - pos));
-  await WALK.focusTo(s.addr, pos, byKey, false, null, true);
+  SEL.select(s.addr, m.pos, m.width);
+  await WALK.focusTo(s.addr, toBase(REC.edits(s.addr), m.pos), byKey, false, null, true);
   FOCUS.close('find', { toWalk: true });
 }
 

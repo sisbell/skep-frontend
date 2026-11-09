@@ -34,7 +34,10 @@
 // the page makes of its own releasing it — until the person's next walk move
 // or landing; Shift with an arrow at a live caret moves it and
 // runs the selection from where it stood to it, while off one Shift+↓ stays
-// K-8's; Shift with ← or → at the span a kept caret stands in returns it and
+// K-8's, which in a draft holding typed text selects the walk's span whole
+// where the text shown holds it and extends by that text's spans, a key then
+// replacing just the span selected; Shift with ← or → at the span a kept
+// caret stands in returns it and
 // extends a selection from it a character — from the caret, never from the
 // span's edge — and where the caret cannot move that way returns it alone,
 // the selection standing, while at a span of the draft holding no caret it is
@@ -1101,6 +1104,28 @@ test('Shift with ← or → at the walk\'s span in text the person may not edit 
   CAM.set(reading);
   assert.deepEqual([caret(), REC.edits(D), REC.edits(O)], [[D, 3, false], [], []], 'the caret kept where it stood throughout, nothing typed');
   assert.ok(['Shift+←', 'Shift+→'].every((c) => KEYS.TABLE.some((r) => r.id === 'K-70' && r.chord === c && r.surface === 'plane')), 'the table binds them at the plane, K-70\'s');
+  HOST.dismiss();
+}));
+
+test('K-8 in a draft holding text typed above the walk\'s span selects that span whole where the text shown holds it, and extends by the spans of that text: with "ab" typed at the draft\'s start and the caret kept in its second line, Shift+↓ selects the second line two positions on, Shift+↑ runs the selection to the start of the text shown, and a printable key replaces the line Shift+↓ selected and nothing beside it (D5 K-8, K-70, K-72; issue #491)', () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const SHIFT = { shiftKey: true };
+  /** the selection, by its positions and the text shown there */
+  const selectedText = () => { const s = SEL.selected(), d = LAYER.shownOf(D); return s && [s.addr, s.pos, s.width, REC.textOf(d.runs, s.pos, s.pos + s.width)]; };
+  REC.addEdit(D, { pos: 1, width: 0, text: 'ab' });
+  await focusOn(D, 14);
+  LAYER.placeCaret(D, 18);
+  await press('Escape');
+  await tick();
+  assert.deepEqual([caret(), walkAt(), shown()], [[D, 18, false], ['block', D, 14], 'ab' + TEXT], 'the caret kept in the second line of the text shown, the walk on that line\'s span in the model\'s text');
+  await press('ArrowDown', SHIFT);
+  assert.deepEqual(selectedText(), [D, 16, 18, 'Second line here.\n'], 'Shift+↓: the second line whole where the text shown holds it');
+  await press('ArrowUp', SHIFT);
+  assert.deepEqual(selectedText(), [D, 1, 33, 'ab' + TEXT], 'Shift+↑: extended to the first line of the text shown');
+  SEL.clear();
+  await press('ArrowDown', SHIFT);
+  await press('q');
+  assert.deepEqual([shown(), caret(), SEL.selected()], ['abFirst line.\n\nq', [D, 17, true], null], 'q: the line selected replaced by it, the line break before it standing, the caret after it');
   HOST.dismiss();
 }));
 
