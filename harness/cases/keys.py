@@ -2,8 +2,14 @@
 lane built, dispatched at engine level (`Input.dispatchKeyEvent`, Meta as Mod
 on this Mac), then the camera, the focus, the trail and the one line read
 back; the IME guard, on the plane and in the LEAP box; a bare key does
-NOTHING but raise the K-9 line as its hint beside the focused line — at the
-text's edge, level with it, below the one line, moving nothing — Tab
+NOTHING but raise its site's line as its hint: at the first edition, an
+edition of the session's account, C-45 naming it, whole at every press,
+beside the focused line — at the text's edge, level with it, below the one
+line, moving nothing (D5 K-72) — below its reading scale, the walk on it
+whole, the K-9 line, its first clause at a later press, beside the walk's
+element, moving nothing; and at the commons registry, another account's
+document, B3-S13's line naming its owner, a paste answered alike, nothing
+placed (D5 K-72, K-93); Space its own K-9 line, Tab
 reaching it without ending it and Enter there opening its notice whole, the
 next act taking it down onto the walk's item (issue #468's design decision);
 Enter on the LEAP box as opened lands in
@@ -215,7 +221,7 @@ WHOLE BOARD Mod+F opens nothing and the one line says where words are found.
 Every other step leaves the page as it found it."""
 import json
 
-from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, item_words, key_fingerprint, trunk_of
+from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, account_of, item_words, key_fingerprint, trunk_of
 from .layout import DRIFT_TOL_PX, box_of, click_on, inside, lacking_of, level_holds, line_of, passage_at, scene_level, ties_hold
 
 # the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
@@ -234,6 +240,9 @@ PANE_EDGE_PX = 40
 CODES = {'[': 'BracketLeft', ']': 'BracketRight', '=': 'Equal', '-': 'Minus', '0': 'Digit0', '1': 'Digit1', '2': 'Digit2', '/': 'Slash', '+': 'Equal'}
 # the board's longest edition: six columns at the measure, the page holding at its landing the columns in view and one past them
 FIND_DOC = '1.0.1.0.303'
+# the commons registry, an edition of the system account: the one document of another account than the session's whose words
+# the seed holds — the agent space's home and the second account's edition hold none — and a position in its third paragraph
+REGISTRY = ('1.1.0.1.0.1', 28)
 
 
 def state(ctx):
@@ -2530,24 +2539,83 @@ def signs_at(ctx):
               lines: b ? (S.spanRects(f.addr, b.pos, b.width) || []).map((q) => [q.x, q.y, q.w, q.h]) : []}; })()''')
 
 
-def swallowed(ctx, r, base, signs):
-    """the K-9 line a bare key raised, after its presses (issue #468's design decision): its hint standing, its first clause —
-    the presses after the first in the session — at the text's edge beside the walk's span's line, its top level with that
-    line's and its left past that line's right end, below the one line and outside it; the camera, the one line's bottom
-    edge, the corners and the span's lines as they stood before the first press"""
-    got = ctx.js('''(() => { const S = window.__skep, el = document.getElementById('hint'), q = el.getBoundingClientRect(), l = document.getElementById('line');
+def hint_placed(ctx):
+    """the hint standing as a person meets it, where its element stands, and the one line's bottom edge"""
+    return ctx.js('''(() => { const S = window.__skep, el = document.getElementById('hint'), q = el.getBoundingClientRect(), l = document.getElementById('line');
       return {hint: S.hint(), rect: {x: q.left, y: q.top, w: q.width, h: q.height}, shown: getComputedStyle(el).display !== 'none',
               in_line: l.contains(el), line_bottom: l.getBoundingClientRect().bottom}; })()''')
+
+
+def swallowed(ctx, r, base, signs):
+    """the line a bare key raised at the first edition, an edition of the session's account, after its presses (D5 K-72;
+    issue #468's design decision): C-45 naming the document as its hint, whole at every press, at the text's edge beside the
+    walk's span's line, its top level with that line's and its left past that line's right end, below the one line and
+    outside it; the camera, the one line's bottom edge, the corners and the span's lines as they stood before the first
+    press"""
+    got = hint_placed(ctx)
     after, hint, rect = signs_at(ctx), got['hint'] or {}, got['rect']
     beside = [ln for ln in signs['lines'] if abs(ln[1] - rect['y']) <= 0.5]
-    r.check(hint.get('id') == 'F.swallow' and hint.get('words') == 'typing goes nowhere here' and not hint.get('open') and got['shown'],
-            'a bare key raises the K-9 line as its hint, its first clause at a later press: "typing goes nowhere here"', hint)
+    words = strings(ctx, 'C-45', {'D': DOC})
+    r.check(hint.get('id') == 'C-45' and hint.get('words') == words and hint.get('open') and got['shown'],
+            'a bare key at an edition of the session\'s account raises C-45 naming the document as its hint, whole at every press — never the K-9 line (D5 K-72)', {'hint': hint, 'want': words})
     r.check((hint.get('placed') or {}).get('by') == 'edge' and bool(beside) and all(rect['x'] >= ln[0] + ln[2] for ln in beside)
             and rect['y'] >= got['line_bottom'] and not got['in_line'],
             'the hint stands beside the focused line at the text\'s edge — its top level with the line\'s, its left past the line\'s end — below the one line and outside it (FP-31)',
             {'rect': rect, 'placed': hint.get('placed'), 'lines': signs['lines'], 'line_bottom': got['line_bottom']})
     r.check(after == signs, 'the presses and their hint move nothing: the camera, the one line\'s bottom edge, the corners and the span\'s lines stand as they stood',
             {'before': signs, 'after': after})
+
+
+def swallowed_below(ctx, r):
+    """the K-9 line where no document's line keys the site (issue #468's design decision): the first edition below its
+    reading scale, the walk re-taken on it whole, two bare keys raising it as its hint, its first clause at the later press,
+    beside the walk's element below the one line and outside it, the presses moving the camera and the walk nothing"""
+    for _ in range(OUT_STEPS * 2):
+        f = ctx.js('window.__skep.view.focus()') or {}
+        if f.get('kind') == 'document':
+            break
+        chord(ctx, '-', mods=('Meta',))
+    ctx.frames(3)
+    before = state(ctx)
+    r.check(bool(before['focus']) and before['focus']['kind'] == 'document' and before['focus']['addr'] == DOC,
+            'Mod+- past the first edition\'s reading scale re-takes the walk on it whole (what the next checks stand on)', before['focus'])
+    chord(ctx, 't')
+    chord(ctx, 'k')
+    got, after = hint_placed(ctx), state(ctx)
+    hint = got['hint'] or {}
+    r.check(hint.get('id') == 'F.swallow' and hint.get('words') == 'typing goes nowhere here' and not hint.get('open') and got['shown'],
+            'below the edition\'s reading scale a bare key raises the K-9 line as its hint, its first clause at a later press: "typing goes nowhere here" — no document\'s line keys the site (D5 K-72)', hint)
+    r.check((hint.get('placed') or {}).get('by') == 'beside' and got['rect']['y'] >= got['line_bottom'] and not got['in_line'],
+            'the hint stands beside the walk\'s element, below the one line and outside it (FP-26)', {'rect': got['rect'], 'placed': hint.get('placed'), 'line_bottom': got['line_bottom']})
+    r.check(same_view(before, after) and after['focus'] == before['focus'] and after['overlay'] is None and not after['leap'],
+            'the presses and their hint move nothing: the camera and the walk\'s element stand as they stood, nothing opened', {'before': before, 'after': after})
+
+
+def others_line(ctx, r):
+    """B3-S13's line at another account's document (D5 K-72, K-93): at the commons registry's span, at its reading scale, a
+    bare key raises it as its hint, naming the document's account as its owner and the annotate chord drawn for the
+    platform — never C-45, never the K-9 line — and a paste is answered by the same line, its first clause at that later
+    press, nothing placed: no caret, nothing selected, the camera and the walk where they stood"""
+    doc, pos = REGISTRY
+    ctx.leap(doc, pos)
+    before = state(ctx)
+    r.check(bool(before['focus']) and before['focus']['kind'] == 'block' and before['focus']['addr'] == doc and ctx.js('window.__skep.view.lod()')['name'] == 'near',
+            'a LEAP into the commons registry\'s third paragraph stands the walk on its span at reading scale (what the next checks stand on)', before['focus'])
+    values = {'owner': account_of(doc), 'annotate chord': drawn_chord(ctx, 'Mod+Shift+A')}
+    whole, clause = hint_words(ctx, 'B3.row.others-document', values), hint_words(ctx, 'B3.row.others-document', values, whole=False)
+    chord(ctx, 't')
+    key = state(ctx)
+    hint = key['hint'] or {}
+    r.check(hint.get('id') == 'B3.row.others-document' and hint.get('whole') == whole and hint.get('words') in (whole, clause),
+            'a bare key at another account\'s document raises B3-S13\'s line as its hint, naming its owner and the annotate chord — never C-45, never the K-9 line (D5 K-72)', {'hint': hint, 'want': whole})
+    chord(ctx, 'v', mods=('Meta',))
+    after = state(ctx)
+    pasted = after['hint'] or {}
+    r.check(pasted.get('id') == 'B3.row.others-document' and pasted.get('words') == clause and not pasted.get('open'),
+            'a paste there is answered by the same line, its first clause at the later press (D5 K-72, K-93)', {'hint': pasted, 'want': clause})
+    r.check(same_view(before, after) and after['focus'] == before['focus'] and after['overlay'] is None and not after['leap'] and after['sel'] is None
+            and ctx.js('window.__skep.caret()') is None,
+            'the key and the paste place nothing: no caret, nothing selected, the camera and the walk\'s element where they stood', {'before': before, 'after': after})
 
 
 def tabbed_to_hint(ctx, r):
@@ -2583,12 +2651,17 @@ def run(ctx):
     ctx.leap(DOC, WINDOW[0])
     base, signs = state(ctx), signs_at(ctx)
     r.check(base['focus'] and base['focus']['kind'] == 'block', 'the landing\'s focus is a span', base['focus'])
-    # ---- bare keys do nothing (K-9) -------------------------------------------------------
+    # ---- bare keys do nothing (K-9; K-72 at an edition of the session's account) --------------
     for k in ['t', '/', '0', 'k', 'h', '?', '+', 'g']:
         chord(ctx, k)
         s = state(ctx)
         r.check(same_view(base, s) and s['focus'] == base['focus'] and s['overlay'] is None and not s['leap'] and s['trail'] == base['trail'], f'bare `{k}` changes nothing', {'cam_same': same_view(base, s), 'overlay': s['overlay'], 'leap': s['leap']})
     swallowed(ctx, r, base, signs)
+    swallowed_below(ctx, r)
+    others_line(ctx, r)
+    # back at the landing, where the Space key and the IME guard are read
+    ctx.leap(DOC, WINDOW[0])
+    base = state(ctx)
     # the Space key: its own line, its hint
     chord(ctx, ' ', code='Space')
     hint = state(ctx)['hint'] or {}

@@ -28,7 +28,10 @@ box there, the one line naming that address whole with its position and its
 version marker lit, and the plain address taking the box back to the trunk
 head, the marker unlit (issue #154); a face's words
 alone — the fifth cell's at a typed ghost address, with no wire token above
-them and no act beneath (B1-S8; C-42); the anatomy card's rows — the card opened on a drawn
+them and no act beneath (B1-S8; C-42); a printable key's line, its hint at the
+focus — C-45 naming the first edition, an edition of the session's account,
+whole, and below its reading scale the K-9 line with the LEAP chord drawn for
+the platform, the one line holding neither (D5 K-72; issue #468); the anatomy card's rows — the card opened on a drawn
 link of the first edition homed in a published document, the first whose
 `read_link` the harness's token-free oracle answers — each a value the page
 holds (a bare dash reads as B1-S5's "none"), the row after the owner's
@@ -190,21 +193,38 @@ def run(ctx):
     ctx.esc()
     r.check(ctx.js('window.__skep.overlay()')['kind'] is None, 'Esc dismisses the face')
     r.figures['face'] = face['text'][:300]
-    # ---- the swallow line (K-9): its hint at the focus (issue #468's design decision) ----------------------------
+    # ---- a printable key's line, its hint at the focus: C-45 at an edition of the session's account, the K-9 line below its
+    # reading scale (D5 K-72; issue #468's design decision) ---------------------------------------------------------------
+    hinted = '''(async (id, values) => { const {t} = await import("./strings.js"), {drawChord} = await import("./nav/keys.js"), h = window.__skep.hint(), b = document.querySelector('#hint button');
+      const d = b && document.getElementById(b.getAttribute('aria-describedby'));
+      return {hint: h, shown: b ? b.textContent : null, described: d ? d.textContent : null, line: window.__skep.line().text,
+              whole: t(id, id === 'F.swallow' ? {'LEAP chord': drawChord('Mod+L')} : values)}; })(%s, %s)'''
     ctx.leap(DOC, WINDOW[0])
     ctx.drv.key('t')
     ctx.frames(2)
-    swallow = ctx.js('''(async () => { const {t} = await import("./strings.js"), {drawChord} = await import("./nav/keys.js"), h = window.__skep.hint(), b = document.querySelector('#hint button');
-      const d = b && document.getElementById(b.getAttribute('aria-describedby'));
-      return {hint: h, shown: b ? b.textContent : null, described: d ? d.textContent : null, line: window.__skep.line().text,
-              whole: t('F.swallow', {'LEAP chord': drawChord('Mod+L')})}; })()''')
+    edition = ctx.js(hinted % (json.dumps('C-45'), json.dumps({'D': DOC})))
+    hint = edition['hint'] or {}
+    r.check(hint.get('id') == 'C-45' and edition['shown'] == edition['whole'] and edition['described'] == edition['whole'] and edition['whole'].startswith(DOC + ' is published')
+            and 'advances by versions' not in edition['line'],
+            'a printable key at an edition of the session\'s account raises C-45 naming the document as its hint — whole at every press, described by the notice whole — the one line holding none of it (D5 K-72)',
+            edition)
+    zooms = 0
+    while zooms < 8 and (ctx.js('window.__skep.view.focus()') or {}).get('kind') != 'document':
+        ctx.drv.key('-', code='Minus', mods=('Meta',))
+        ctx.settle()
+        ctx.frames(2)
+        zooms += 1
+    ctx.drv.key('t')
+    ctx.frames(2)
+    swallow = dict(ctx.js(hinted % (json.dumps('F.swallow'), json.dumps({}))), zooms=zooms, focus=ctx.js('window.__skep.view.focus()'))
     hint = swallow['hint'] or {}
     r.check(hint.get('id') == 'F.swallow' and swallow['shown'] in (swallow['whole'], 'typing goes nowhere here') and swallow['described'] == swallow['whole'] and '⌘L' in swallow['whole']
-            and 'typing goes nowhere' not in swallow['line'],
-            'a printable key raises the K-9 line as its hint — whole at its first press in the session, its first clause after — described by the notice whole with the LEAP chord drawn for the platform, the one line holding none of it',
+            and 'typing goes nowhere' not in swallow['line'] and (swallow['focus'] or {}).get('addr') == DOC,
+            'below the edition\'s reading scale, the walk on it whole, a printable key raises the K-9 line as its hint — whole at its first press in the session, its first clause after — described by the notice whole with the LEAP chord drawn for the platform, the one line holding none of it',
             swallow)
-    # the next act takes the hint down, so nothing after this stands beside it
+    # the next act takes the hint down, and the landing is made again, so nothing after this stands beside it or below it
     ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()'); ctx.frames(2)
+    ctx.leap(DOC, WINDOW[0])
     # ---- the anatomy card's rows: each a value the page holds -------------------------------
     # the card opened on a drawn link of the first edition whose read the harness's token-free oracle answers — one homed in
     # a published document, dated here apart from the page's session; a link homed in a draft answers no link to that oracle

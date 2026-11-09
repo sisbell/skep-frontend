@@ -10,9 +10,14 @@
 // model's record stands; Esc leaves the text to the walk with the caret kept,
 // and Enter or a printable key at that span returns it; at another span of
 // the draft a printable key, a paste and a cut are answered by the draft's own
-// line, Space and another's text by K-9's, each line its hint at the focus —
-// whole at its first press in the session, its first clause after, an
-// auto-repeat answered by nothing; Mod+S writes nothing, answered
+// line, Space by K-9's, at another's document a printable key and a paste by
+// B3-S13's line naming its owner, a cut the platform's, and at an edition of
+// the session's account by C-45 naming the document, whole at every press —
+// K-9's line standing there where no read told the edition is published,
+// where the owner the line would name is the session's own account and where
+// no session names an account — each line its hint at the focus, whole at its
+// first press in the session, its first clause after, an auto-repeat answered
+// by nothing; Mod+S writes nothing, answered
 // at the corner and in the status region with the kept state's statement
 // whole at the first press in a session and the corner's own word after it,
 // the statement whole on the word's act; → and ← at a corner move the focus
@@ -225,7 +230,7 @@ test('Enter at the walk\'s focused span of a draft the person may edit places th
   assert.deepEqual([caret(), shown().slice(0, 5)], [[D, 5, true], 'i\t\nzr'], 'Enter at the kept span returns the caret alone, inserting nothing');
 }));
 
-test('at a span of a draft the person may edit holding no caret a printable key is answered by the draft\'s own line and a paste or a cut by that line in their own words, nothing placed and nothing removed; Space keeps K-9\'s line; a kept caret in another span is not returned there, and Enter places a new caret at the span\'s start; at another\'s text K-9\'s line stands, a paste is the platform\'s, Enter selects the span and no caret is placed, the walk\'s move there leaving a live caret kept; each line its hint at the focus, whole at its first press in the session and its first clause at every later one, a held key\'s auto-repeat answered by nothing (K-9, K-70, K-72, K-93; BM-52)', () => onPlane(async ({ said }) => {
+test('at a span of a draft the person may edit holding no caret a printable key is answered by the draft\'s own line and a paste or a cut by that line in their own words, nothing placed and nothing removed; Space keeps K-9\'s line; a kept caret in another span is not returned there, and Enter places a new caret at the span\'s start; at another\'s document a printable key and a paste are answered by B3-S13\'s line naming its owner — never K-9\'s, never C-45 — a cut is the platform\'s, Space keeps K-9\'s line, Enter selects the span and no caret is placed, the walk\'s move there leaving a live caret kept; each line its hint at the focus, whole at its first press in the session and its first clause at every later one, a held key\'s auto-repeat answered by nothing (K-9, K-70, K-72, K-93; BM-52)', () => onPlane(async ({ said }) => {
   await focusOn(D, 14);
   assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
   assert.deepEqual([said.at(-1), caret(), REC.edits(D)], [t('B3.caret.enter'), null, []], 'the draft\'s own line; nothing typed, no caret');
@@ -249,18 +254,88 @@ test('at a span of a draft the person may edit holding no caret a printable key 
   assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
   assert.deepEqual(caret(), [D, 1, true], 'Enter at another span places the caret at its start: one caret stands at a time');
   await focusOn(O, 1);
+  const theirs = t('B3.row.others-document', { owner: '1.0.2', 'annotate chord': KEYS.drawChord('Mod+Shift+A') }), clause = 'this is 1.0.2\'s document';
   assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
-  assert.deepEqual([said.at(-1), caret()], [t('F.swallow', { 'LEAP chord': KEYS.drawChord('Mod+L') }), [D, 1, false]], 'at text the person may not edit K-9\'s line, whole at its first press; the walk\'s move away left the live caret kept');
+  assert.deepEqual([said.at(-1), HINT.standing()?.id, caret()], [theirs, 'B3.row.others-document', [D, 1, false]], 'at another\'s document its line naming its owner, whole at its first press; the walk\'s move away left the live caret kept');
   assert.equal(await KEYS.dispatch(keyOf('w'), PLANE), true);
-  assert.deepEqual([said.at(-1), HINT.standing()?.words, HINT.standing()?.open], ['typing goes nowhere here', 'typing goes nowhere here', false], 'a later press: its first clause, said again');
-  const n = said.length;
+  assert.deepEqual([said.at(-1), HINT.standing()?.words, HINT.standing()?.open], [clause, clause, false], 'a later press: its first clause, said again');
+  let n = said.length;
   assert.equal(await KEYS.dispatch(keyOf('w', { repeat: true }), PLANE), true, 'an auto-repeat is taken, typing nothing');
   await tick();
-  assert.deepEqual([said.length, HINT.standing()?.words], [n, 'typing goes nowhere here'], 'and answered by nothing: its press was answered');
-  assert.equal(await KEYS.dispatch(keyOf('v', MOD), PLANE), false, 'a paste there is the platform\'s own, never taken');
+  assert.deepEqual([said.length, HINT.standing()?.words], [n, clause], 'and answered by nothing: its press was answered');
+  assert.equal(await KEYS.dispatch(keyOf('v', MOD), PLANE), true, 'a paste there: taken');
+  await tick();
+  assert.deepEqual([said.slice(n), HINT.standing()?.id], [[clause], 'B3.row.others-document'], 'and answered by the same line, said again');
+  assert.equal(await KEYS.dispatch(keyOf('x', MOD), PLANE), false, 'a cut there is the platform\'s own, never taken');
+  n = said.length;
+  assert.equal(await KEYS.dispatch(keyOf(' '), PLANE), true);
+  assert.deepEqual([said.slice(n), HINT.standing()?.id], [['Space does not page here'], 'F.swallow.space'], 'Space: K-9\'s own line wherever it is swallowed');
   assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
   assert.deepEqual([SEL.selected()?.addr, SEL.selected()?.pos, caret()], [O, 1, [D, 1, false]], 'Enter selects the span whole (D8): no caret in another\'s text');
   assert.deepEqual([REC.edits(D), REC.edits(O)], [[], []]);
+}));
+
+/** an edition of the session's account, and a document of the session's account's sub-account */
+const E = '1.0.1.0.3', A = '1.0.1.1.0.1';
+
+/**
+ * The index listing D and O as `onPlane` lists them and, beside them, each of `more` by its kind, each of those holding
+ * the text D holds.
+ * @param {Array<[string, string]>} more each document's address and its kind
+ */
+function listed(more) {
+  const row = (/** @type {string} */ doc, /** @type {string} */ kind) => ({ doc, kind, label: null, standing: kind === 'draft' ? 'yours_to_read' : 'public' });
+  REC.takeIndex(/** @type {any} */ ({ docs: [row(D, 'draft'), row(O, 'draft'), ...more.map(([doc, kind]) => row(doc, kind))], counts: [{ account: '1.0.1', documents: 1 }, { account: '1.0.2', documents: 1 }], state: { arm: 'complete' } }));
+  for (const [a] of more) {
+    REC.takeSpanSet(a, [{ subspace: 1, ordinal: 1, positions: N }]);
+    REC.takeDelivery(a, [{ pos: 1, width: N, kind: 'content', text: TEXT, ref: null, origin: null }]);
+    REC.takeImage(a, 1, [{ iStart: a + '.0.1.1', width: N }]);
+  }
+}
+
+test('at the walk\'s span of an edition of the session\'s account, at its reading scale, a printable key and a paste are answered by C-45 naming the document — whole at every press — nothing placed, no caret and nothing selected, a cut the platform\'s and Space K-9\'s line; K-9\'s line stands where no read has told the document is published, where the owner another\'s document would name is the session\'s own account, and at another\'s document where no session names an account (D5 K-72, K-93; foundations §2.7)', () => onPlane(async ({ said }) => {
+  listed([[E, 'edition']]);
+  assert.deepEqual([LAYER.editable(E), LAYER.atReadingScale(E)], [false, true], 'an edition of the session\'s account: text the person may not edit, at its reading scale');
+  await focusOn(E, 14);
+  const c45 = t('C-45', { D: E });
+  assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
+  assert.deepEqual([said.at(-1), HINT.standing()], [c45, { id: 'C-45', words: c45, whole: c45, open: true }], 'q: C-45 naming the document, whole');
+  let n = said.length;
+  assert.equal(await KEYS.dispatch(keyOf('w'), PLANE), true);
+  await tick();
+  assert.deepEqual([said.slice(n), HINT.standing()?.words], [[c45], c45], 'a later press: C-45 whole again, said again');
+  n = said.length;
+  assert.equal(await KEYS.dispatch(keyOf('v', MOD), PLANE), true, 'a paste: taken');
+  await tick();
+  assert.deepEqual([said.slice(n), HINT.standing()?.id], [[c45], 'C-45'], 'and answered by C-45');
+  assert.equal(await KEYS.dispatch(keyOf('x', MOD), PLANE), false, 'a cut: the platform\'s own, never taken');
+  assert.equal(await KEYS.dispatch(keyOf(' '), PLANE), true);
+  assert.deepEqual([said.at(-1), HINT.standing()?.id], [t('F.swallow.space', { 'paging key': 'PageDown' }), 'F.swallow.space'], 'Space: K-9\'s own line');
+  assert.deepEqual([caret(), SEL.selected(), REC.edits(E)], [null, null, []], 'nothing placed: no caret, nothing selected, nothing edited');
+
+  // no read has told E is published — the index lists it no more, and no metadata is read — then its metadata tells it
+  listed([]);
+  assert.equal(REC.doc(E).kind, 'unknown');
+  await focusOn(E, 14);
+  assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
+  assert.deepEqual([said.at(-1), HINT.standing()?.id], [t('F.swallow', { 'LEAP chord': KEYS.drawChord('Mod+L') }), 'F.swallow'], 'a document of the session\'s account no read has told is published: K-9\'s line, never C-45');
+  REC.takeMetadata(E, { doc: E, published: true, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
+  assert.equal(HINT.standing()?.id, 'C-45', 'its metadata read as published: C-45');
+
+  // a document of the session's sub-account whose owner is the session's own account
+  listed([[A, 'edition']]);
+  REC.takeOwner('1.0.1.1', { prefix: '1.0.1', principal: 1 });
+  await focusOn(A, 1);
+  assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
+  assert.deepEqual([said.at(-1), HINT.standing()?.id], ['typing goes nowhere here', 'F.swallow'], 'another account\'s document whose owner is the session\'s account: K-9\'s line, never naming the reader as another');
+
+  // no session names an account: another's document keeps K-9's line
+  REC.setSession(null);
+  await focusOn(O, 1);
+  assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
+  assert.equal(HINT.standing()?.id, 'F.swallow', 'no session: K-9\'s line at another\'s document');
+  assert.deepEqual([REC.edits(E), REC.edits(A), REC.edits(O)], [[], [], []], 'nothing edited anywhere');
 }));
 
 test('Mod+S writes nothing and is answered at the corner and in the status region: where the draft has a kept state, its statement whole at the first press in a session — the save chord\'s line at "kept" — and the corner\'s own word after it, the statement whole on the word\'s act, "nothing to save —" before the word and its reason at the other two; with no kept state the chord is taken, nothing opens and nothing is said; Enter at the corner is the word\'s act (K-57, K-74; BM-3; P41; FP-36)', () => onPlane(async ({ said }) => {

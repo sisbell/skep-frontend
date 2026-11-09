@@ -21,11 +21,17 @@
 // No plane command rides a printable key (§2.7): every command is a chord
 // (Mod = ⌘ on macOS, Ctrl elsewhere; D5 §0) or a navigation key with the
 // platform's meaning; a printable key on the plane is swallowed, never
-// dispatched, the K-9 line its hint at the focus (`swallow`; O-HINT's
-// `show`), save in text the person may edit (below); Mod+R and F5 are taken
-// and nothing reloaded
-// (K-94), and the platform's own chords — copy, paste, cut, select all,
-// print, close, quit, minimize, hide, preferences — are never taken (K-92,
+// dispatched, its hint at the focus the line its site keys (O-HINT's
+// `show`): in text the person may edit the caret's (below); at the walk's
+// span, at its reading scale, in text the person may not edit, every key but
+// Space answered by its document's line, and a paste there by the same line,
+// nothing placed (`siteSays`; D5 K-72, K-93) — at an edition of the session's
+// account C-45 naming the document, at a document of another account
+// B3-S13's line naming its owner; Space wherever it is swallowed, and every
+// other key at every other site, K-9's line (`swallow`). Mod+R and F5 are
+// taken and nothing reloaded (K-94), and the platform's own chords — copy,
+// paste, cut, select all, print, close, quit, minimize, hide, preferences —
+// are never taken save where a site's line answers a paste or a cut (K-92,
 // K-93). No key is dispatched while an input method's composition is open
 // (the IME guard).
 // THE CARET (D5 K-51, K-70, K-71, K-72, K-76, K-77; D6 BM-1, BM-52, BM-54,
@@ -169,7 +175,8 @@ import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as HINT from '../overlays/hint.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
-import { keptWord, keptStatement } from '../text/article.js';
+import { keptWord, keptStatement, isPublished } from '../text/article.js';
+import { accountOf, documentOf } from '../model/address.js';
 
 /** @typedef {import('../overlays/selection.js').InertSlot} InertSlot */
 /** @typedef {import('../overlays/selection.js').LiveSlot} LiveSlot */
@@ -375,8 +382,10 @@ function keptSpan(/** @type {Ctx} */ ctx) {
  * The walk's focused span where the focus is the plane's and its text is one
  * the person may not edit, at its reading scale — the site Shift with ← or →
  * extends a selection from the focus's edge (K-70; O-SELECTION's
- * `extendFromFocus`); null anywhere else: a draft the person may edit, a
- * document below its reading scale, off a span, the scene over the plane.
+ * `extendFromFocus`), and a printable key or a paste is answered by its
+ * document's line (`siteSays`); null anywhere else: a draft the person may
+ * edit, a document below its reading scale, off a span, the scene over the
+ * plane.
  * @param {Ctx} ctx
  * @returns {{addr: string, pos: number} | null}
  */
@@ -384,6 +393,36 @@ function readOnlySpan(ctx) {
   if (ctx.where !== 'plane' || SCENE.isOpen()) return null;
   const f = WALK.current();
   return f && f.kind === 'block' && f.pos != null && LAYER.atReadingScale(f.addr) && !LAYER.editable(f.addr) ? { addr: f.addr, pos: f.pos } : null;
+}
+
+/**
+ * A printable key or a paste at the walk's span in text the person may not
+ * edit (`readOnlySpan`) answered by its document's line, its hint at the
+ * focus, nothing placed (see the head; D5 K-72, K-93; foundations §2.7): at
+ * an edition of the session's account — its trunk read as published by its
+ * metadata, else by the index's kind (T-ARTICLE's `isPublished`) — C-45
+ * naming the trunk; at a document of another account B3-S13's line naming
+ * its owner (M-REC's `ownerAccount`). Nothing is answered, and K-9's line is
+ * the caller's, where no session names an account, where no read has told a
+ * document of the session's account is published, and where the owner the
+ * line would name is the session's own account.
+ * @param {KeyboardEvent} e
+ * @param {Ctx} ctx
+ * @returns {boolean} whether a line answered the key
+ */
+function siteSays(e, ctx) {
+  const s = readOnlySpan(ctx), account = REC.session()?.account, doc = s && documentOf(s.addr);
+  if (!s || !account || !doc) return false;
+  const d = REC.doc(REC.has(doc) ? doc : s.addr);
+  if (accountOf(doc) === account) {
+    if (!isPublished(d)) return false;
+    HINT.show('C-45', { D: doc }, hinted(e, ctx));
+    return true;
+  }
+  const owner = REC.ownerAccount(d);
+  if (!owner || owner === account) return false;
+  HINT.show('B3.row.others-document', { owner, 'annotate chord': drawChord('Mod+Shift+A') }, hinted(e, ctx));
+  return true;
 }
 
 /**
@@ -406,6 +445,8 @@ export async function dispatch(e, ctx) {
   ctx = whereNow(ctx);
   // a paste or a cut at a span of a draft the person may edit holding no caret (K-93, K-72): the draft's line in their own words, its hint, nothing placed and nothing removed
   if (mod && !e.shiftKey && (chord === 'Mod+V' || chord === 'Mod+X') && bareDraftSpan(ctx)) { HINT.show(chord === 'Mod+V' ? 'B3.caret.enter.paste' : 'B3.caret.cut', null, hinted(e, ctx)); return true; }
+  // a paste at the walk's span of an edition of the person's own or of another's document (K-72, K-93): its document's line, its hint, nothing placed
+  if (mod && !e.shiftKey && chord === 'Mod+V' && siteSays(e, ctx)) return true;
   // the platform's own, never taken (K-92, K-93)
   if (mod && !e.shiftKey && ['C', 'V', 'X', 'A', 'P', 'W', 'Q', 'M', 'H', ','].includes(chord.slice(4))) return false;
   if (ctx.where === 'field') {
@@ -508,7 +549,7 @@ function route(e, chord, ctx) {
   if (chord === 'End') return async () => { e.preventDefault(); await WALK.key('last'); return true; };
   if (chord === 'PageDown' || chord === 'PageUp') return () => { page(chord === 'PageDown' ? 1 : -1); CAM.markDirty(); WALK.retakeFromView(byKey); return true; };
   if (chord === 'Enter') return async () => { await activateFocus(byKey); return true; };
-  // a printable key on the plane: typed at the kept caret standing in the focused span as at a live caret, answered by the draft's line at a span of a draft the person may edit holding none, else swallowed with the K-9 line (`typeAt`)
+  // a printable key on the plane: typed at the kept caret standing in the focused span as at a live caret, answered by the draft's line at a span of a draft the person may edit holding none, by its document's line at a span of an edition of the person's own or of another's document, else swallowed with the K-9 line (`typeAt`)
   if (printable(e)) return async () => { await typeAt(e, ctx); return true; };
   return null;
 }
@@ -616,8 +657,10 @@ function editAtCaret(text, erase) {
  * text (K-70; BM-52; `editAtCaret`), the walk then standing on the span the
  * caret is in (N-WALK's `followCaret`), the platform's default prevented
  * before it waits; at a span holding no caret (`bareDraftSpan`), the draft's
- * own line, "Enter places a caret here", its hint (K-72; K-9); anywhere else,
- * and for Space, swallowed with the K-9 line (`swallow`).
+ * own line, "Enter places a caret here", its hint (K-72; K-9); at the walk's
+ * span of an edition of the session's account or of another's document,
+ * every key but Space, its document's line (`siteSays`; K-72); anywhere
+ * else, and for Space, swallowed with the K-9 line (`swallow`).
  * @param {KeyboardEvent} e
  * @param {Ctx} ctx
  * @returns {Promise<void>}
@@ -625,6 +668,7 @@ function editAtCaret(text, erase) {
 async function typeAt(e, ctx) {
   if (e.key !== ' ' && keptSpan(ctx)) { e.preventDefault(); LAYER.returnCaret(); editAtCaret(e.key); await WALK.followCaret(); return; }
   if (e.key !== ' ' && bareDraftSpan(ctx)) { HINT.show('B3.caret.enter', null, hinted(e, ctx)); return; }
+  if (e.key !== ' ' && siteSays(e, ctx)) return;
   swallow(e, ctx);
 }
 

@@ -576,6 +576,10 @@ test('a one-line hint\'s compact form is its notice\'s first clause, the text be
   assert.deepEqual(hintOf('B3.caret.enter.paste'), { whole: 'Enter places a caret here — then paste', clause: 'Enter places a caret here' });
   assert.equal(hintOf('L.find.off', { 'find chord': '⌘F' }).clause, 'words are found in a document');
   assert.equal(hintOf('F.swallow', { 'LEAP chord': 'x — y' }).clause, 'typing goes nowhere here', 'a value holding the separator moves no cut');
+  assert.deepEqual(hintOf('B3.row.others-document', { owner: '1.0.2', 'annotate chord': '⌘⇧A' }),
+    { whole: 'this is 1.0.2\'s document — to write about a passage here, select it, then annotate: ⌘⇧A, or link to it from a document of yours', clause: 'this is 1.0.2\'s document' }, 'another\'s document: its owner named in its first clause');
+  const c45 = hintOf('C-45', { D: '1.0.1.0.3' });
+  assert.ok(isPinned('C-45') && STRINGS['C-45'].hint === 'whole' && c45.whole.startsWith('1.0.1.0.3 is published — ') && c45.clause === c45.whole, 'C-45: pinned and marked whole, never cut');
   for (const id of ['D5.select-first', 'B3.caret.enter', 'B3.caret.cut', 'B3.caret.back', 'B3.row.follow.inert', 'L.no-notebook-yet']) {
     const h = hintOf(id);
     assert.ok(!h.whole.includes(' — ') && h.clause === h.whole, `${id}: no " — " in it, its compact form the notice whole`);
@@ -607,10 +611,10 @@ test('every hint the page raises is marked in the table whether it compacts — 
   const raised = new Set();
   for (const f of modules) {
     const src = readFileSync(new URL(f, WEB), 'utf8');
-    for (const m of src.matchAll(/(?:HINT\.show|acts\.hint)\(([^,]+),/g)) for (const id of m[1].matchAll(/'([A-Z][\w-]*\.[^']+)'/g)) raised.add(id[1]);
-    for (const m of src.matchAll(/INERT_REASON = [^;]*?\(\{([^}]*)\}\)/g)) for (const id of m[1].matchAll(/'([A-Z][\w-]*\.[^']+)'/g)) raised.add(id[1]);
+    for (const m of src.matchAll(/(?:HINT\.show|acts\.hint)\(([^,]+),/g)) for (const id of m[1].matchAll(/'([A-Z][\w-]*(?:\.[^']+)?)'/g)) raised.add(id[1]);
+    for (const m of src.matchAll(/INERT_REASON = [^;]*?\(\{([^}]*)\}\)/g)) for (const id of m[1].matchAll(/'([A-Z][\w-]*(?:\.[^']+)?)'/g)) raised.add(id[1]);
   }
-  for (const id of ['F.swallow', 'F.swallow.space', 'B3.caret.enter', 'B3.caret.enter.paste', 'B3.caret.cut', 'D5.select-first', 'B3.row.follow.inert', 'L.find.off', 'L.no-notebook-yet', 'L.seam.annotate', 'L.seam.quote', 'L.seam.link-to']) {
+  for (const id of ['F.swallow', 'F.swallow.space', 'B3.caret.enter', 'B3.caret.enter.paste', 'B3.caret.cut', 'D5.select-first', 'B3.row.follow.inert', 'L.find.off', 'L.no-notebook-yet', 'L.seam.annotate', 'L.seam.quote', 'L.seam.link-to', 'C-45', 'B3.row.others-document']) {
     assert.ok(raised.has(id), `${id}: raised as a hint`);
   }
   assert.deepEqual([...raised].filter((id) => !STRINGS[id] || !STRINGS[id].hint), [], 'every one marked');
