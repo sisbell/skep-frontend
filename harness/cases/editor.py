@@ -28,8 +28,9 @@ narrow width, where the own draft's corner stands at its head, the live caret
 moved up under the head's held row brings the camera down alone, the caret's
 mark at the row's bottom (`caret_under_head`; issue #436). A person's click in
 another paragraph of the own draft places the caret there and stands the walk
-on that paragraph's span, Mod+K at the caret selecting it (`click_follows`;
-B3-S13). Shift with the arrows at a live caret moves it and runs the selection
+on that paragraph's span, Mod+K at the caret drawing the acts card there and
+selecting nothing (`click_follows`; B3-S13; issue #471). Shift with the arrows
+at a live caret moves it and runs the selection
 from where it stood to it, the platform's selection the page's
 (`shift_extends`; D5 K-71).
 
@@ -275,9 +276,10 @@ def click_follows(ctx, doc, target, other):
     """THE WALK AT A CARET A CLICK PLACES (B3-S13: "the walk's focus at the caret's span"; D5 K-70): the walk landed on
     `target`, the view moved alone to `other` — another paragraph of the draft, no re-take made — a person's click on
     that paragraph's first character as the platform hit-tests it, then Mod+K at the caret (K-100); the walk before the
-    click, the point and what lies under it, the caret, the walk's element and the selection the chord made, and whether
-    all of it held: the caret live in `other`, the walk on its span, the chord's selection that span whole, never
-    `target`. The selection and the caret are let go after."""
+    click, the point and what lies under it, the caret, the walk's element, the selection after the chord and the card it
+    drew, and whether all of it held: the caret live in `other`, the walk on its span, the acts card at that span —
+    its label naming `other`'s position, never `target`'s — and nothing selected (issue #471's design decision: "A key
+    acts on the selection the screen draws"). The card, the selection and the caret are let go after."""
     if not other:
         return {'ok': False, 'why': 'the draft holds no paragraph but the one the walk lands on'}
     ctx.leap(doc, target['pos'])
@@ -295,15 +297,17 @@ def click_follows(ctx, doc, target, other):
         caret, focus = ctx.js('window.__skep.caret()'), ctx.js('window.__skep.view.focus()')
         ctx.drv.key('k', mods=('Meta',)); ctx.frames(2)
         sel = ctx.js('window.__skep.selection()')
+        card = ctx.js('(() => { const l = document.querySelector("#overlay .selection-card .label"); return {id: window.__skep.overlay().id, label: l ? l.textContent : null}; })()')
+        where = ctx.js('(async () => (await import("./strings.js")).t("F.position", {p: %d}))()' % other['pos'])
     finally:
-        ctx.js('(async () => { const S = await import("./overlays/selection.js"), L = await import("./text/layer.js"); S.clear(); L.dropCaret(); })()')
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"); H.dismiss(); S.clear(); L.dropCaret(); })()')
         ctx.frames(2)
     ok = (bool(before) and before['kind'] == 'block' and before['pos'] == target['pos'] and at['hits']
           and bool(caret) and caret['live'] and caret['addr'] == doc and other['pos'] <= caret['pos'] < other['pos'] + other['width']
           and bool(focus) and focus['kind'] == 'block' and focus['addr'] == doc and focus['pos'] == other['pos']
-          and sel == {'addr': doc, 'pos': other['pos'], 'width': other['width']})
+          and sel is None and card == {'id': 'selection', 'label': '%s · %s' % (doc, where)})
     return {'ok': ok, 'focus_before': before and {'kind': before['kind'], 'pos': before['pos']}, 'at': at, 'caret': caret,
-            'focus': focus and {'kind': focus['kind'], 'addr': focus['addr'], 'pos': focus['pos']}, 'selection': sel,
+            'focus': focus and {'kind': focus['kind'], 'addr': focus['addr'], 'pos': focus['pos']}, 'selection': sel, 'card': card,
             'other': {'pos': other['pos'], 'width': other['width']}}
 
 
@@ -525,7 +529,7 @@ def run(ctx):
     # a click placing the caret in another paragraph stands the walk on its span, so a slot chord at the caret acts there (B3-S13)
     later = [p for p in paras if p['pos'] > target['pos']]
     follows = click_follows(ctx, OWN, target, later[0] if later else next((p for p in paras if p['pos'] != target['pos']), None))
-    r.check(follows['ok'], "a click placing the caret in another paragraph of the own draft stands the walk on that paragraph's span, and Mod+K at the caret selects that span whole, never the span the walk stood on (B3-S13; D5 K-70, K-100)", follows)
+    r.check(follows['ok'], "a click placing the caret in another paragraph of the own draft stands the walk on that paragraph's span, and Mod+K at the caret draws the acts card at that span, never the span the walk stood on, selecting nothing (B3-S13; D5 K-70, K-100; issue #471)", follows)
     # Shift with the arrows at a live caret extends a selection from where the caret stood (D5 K-71, §1.6)
     extends = shift_extends(ctx, OWN, target)
     figures['shift_extends'] = extends

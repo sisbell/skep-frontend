@@ -34,8 +34,10 @@
 // shows it, else on the element under that view's centre, on what stands of
 // the element it stood on, in the none state where none of it stands, and a
 // landing out of view said in the status region — the surfaces a place keeps —
-// the selection, a card, a list — ended as the reader leaves and reopened as
-// left on a return, their subjects placed again by their bytes, and a text
+// the selection, a card, a list, a card a slot's act opened at the walk's
+// span holding that span with nothing selected — ended as the reader leaves
+// and reopened as left on a return, their subjects placed again by their
+// bytes, and a text
 // set again under the reader — an arrival placed again by its runs' bytes
 // and read again by the landing rule, its runs labelled and its landing kept
 // at the run it stood at, and the passage being read gone from it — and the
@@ -2895,6 +2897,29 @@ test('a version move keeps the selection standing (issue #266\'s design decision
   assert.deepEqual(fake.unanswered, []);
 });
 
+test('a version move carries a card a slot\'s act opened at the walk\'s focused span, no selection standing, as it carries the selection\'s own: Mod+K\'s acts card at FAR\'s second paragraph, moved to FAR\'s second member, is drawn again over the paragraph\'s counterpart there, holding it, nothing selected (issue #471; FP-22, FP-36)', async () => {
+  const platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  REC.takeMembers(FAR, 2);
+  await sharedBytes();
+  /** the card standing: its id, where it stands, and the span it holds of its own (O-SELECTION's `About.at`) */
+  const card = () => { const o = HOST.currentState(), a = /** @type {any} */ (o?.about); return [o?.id ?? null, o?.anchor ?? null, a && a.at ? { addr: a.at.addr, pos: a.at.pos, width: a.at.width } : null]; };
+  try {
+    await run(GO.leapTo(FAR));
+    SEL.clear();
+    await WALK.focusTo(FAR, FAR_HELD.pos);
+    const b = /** @type {import('../model/records.js').Block} */ (REC.blockAt(FAR, FAR_HELD.pos)), para = { addr: FAR, pos: b.pos, width: b.width };
+    assert.equal(SEL.inertChord('linkto'), true);
+    assert.deepEqual([SEL.selected(), card()], [null, ['selection', { span: para }, para]], 'the acts card at the paragraph, which it holds, nothing selected');
+    await inPlace(GO.toVersion(FAR2, { carry: { addr: FAR, ...FAR_HELD } }));
+    await reopening();
+    const there = { ...para, addr: FAR2 };
+    assert.deepEqual([GO.shownIn(FAR), SEL.selected(), card()], [FAR2, null, ['selection', { span: there }, there]], 'moved: the card drawn again over the paragraph\'s counterpart in the member, holding it, nothing selected');
+    await run(GO.leapTo(FAR));
+  } finally { HOST.dismiss(); SEL.clear(); ownBytes(); globalThis.window = platform.window; }
+  assert.deepEqual(fake.unanswered, []);
+});
+
 test('a card stands through a version move however early it was opened (issue #266\'s design decision: "open cards alike, however early they were opened"): one open as the move is made stands while it reads, the move\'s reading face the notice below it until the read answers; one opened while the move reads stands over that face; each, once the move lands, is asked again over the version moved to; one whose span the version moved to holds none of stays on the version it names, said, the dead end\'s face below it', async () => {
   const origin = (/** @type {string} */ doc) => FAKE.keyOf('op', { frame: F.showOrigin(doc, 20, 5) });
   const about = () => /** @type {PROV.About | undefined} */ (HOST.currentState()?.about);
@@ -3928,6 +3953,39 @@ test('a selection standing under the card one of its acts opened ends as a jump 
     await run(GO.back()); await reopening();
     assert.deepEqual([TRAIL.current()?.addr, SEL.selected(), HOST.currentState()?.id], [D, { addr: D, pos: 11, width: 5 }, 'provenance:wrote'], 'Back to D: the selection over its bytes, the card over it again');
     assert.ok(fake.asked.slice(from).includes(origin), '`show_origin` asked again');
+  } finally { HOST.dismiss(); SEL.clear(); globalThis.window = platform.window; }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a card a slot\'s act opened at the walk\'s focused span, no selection standing, holds that span alone and returns with its place: Mod+K\'s acts card and "who wrote this?" over D\'s second paragraph select nothing — the provenance card naming its span as no selection of the reader\'s — and Back to D reopens each at the paragraph\'s bytes, nothing selected (issue #471; FP-10, FP-36)', async () => {
+  const platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  try {
+    await run(GO.leapTo(D));
+    SEL.clear();
+    await WALK.focusTo(D, 11);
+    const b = /** @type {import('../model/records.js').Block} */ (REC.blockAt(D, 11)), para = { addr: D, pos: b.pos, width: b.width };
+    script[FAKE.keyOf('op', { frame: F.showOrigin(D, b.pos, b.width) })] = { result: { as_of: 1, resp: 'addrs', addrs: [FAR] } };
+    /** the card standing: its id, where it stands, and the span it holds of its own (O-SELECTION's `About.at`) or the provenance card's span and whether it names it the selection's */
+    const card = () => {
+      const o = HOST.currentState(), a = /** @type {any} */ (o?.about);
+      return { id: o?.id ?? null, anchor: o?.anchor ?? null, about: a && (a.kind === 'selection' ? a.at && { addr: a.at.addr, pos: a.at.pos, width: a.at.width } : [a.pos, a.width, a.selected]) };
+    };
+    assert.equal(SEL.inertChord('linkto'), true);
+    const acts = { id: 'selection', anchor: { span: para }, about: para };
+    assert.deepEqual([SEL.selected(), card()], [null, acts], 'Mod+K at the walk\'s span: the acts card at the paragraph, which it holds, nothing selected');
+    await run(GO.leapTo(FAR));
+    assert.deepEqual([SEL.selected(), HOST.currentState()], [null, null], 'leaving: the card ended');
+    await run(GO.back()); await reopening();
+    assert.deepEqual([TRAIL.current()?.addr, SEL.selected(), card()], [D, null, acts], 'Back to D: the acts card reopened at the paragraph\'s bytes, nothing selected');
+    HOST.dismiss();
+    await WALK.focusTo(D, 11);
+    assert.equal(SEL.act('wrote'), true); await reopening();
+    const wrote = { id: 'provenance:wrote', anchor: { span: para }, about: [b.pos, b.width, false] };
+    assert.deepEqual([SEL.selected(), card()], [null, wrote], '"who wrote this?" at the walk\'s span: the card over the paragraph, naming it no selection of the reader\'s, nothing selected');
+    await run(GO.leapTo(FAR));
+    await run(GO.back()); await reopening();
+    assert.deepEqual([TRAIL.current()?.addr, SEL.selected(), card()], [D, null, wrote], 'Back to D: the card asked again over the paragraph, nothing selected');
   } finally { HOST.dismiss(); SEL.clear(); globalThis.window = platform.window; }
   assert.deepEqual(fake.unanswered, []);
 });

@@ -439,7 +439,7 @@ export function afterFrame() {
   carrying = true;
 }
 
-/** the platform's selection, where it stands in a mounted article, becomes the page's (R11): view state alone changes, its focus point the end the press or the platform's own keys moved (T-LAYER's `keepClear`); one the page already holds, or placed itself, is left as it is — so a slot's chord that selects the walk's block before it asks shows no card of the selection while its answer reads, which would end that answer's opening (O-HOST's) */
+/** the platform's selection, where it stands in a mounted article, becomes the page's (R11): view state alone changes, its focus point the end the press or the platform's own keys moved (T-LAYER's `keepClear`); one the page already holds, or placed itself, is left as it is — so the page's own placement is never taken as a new selection, whose card would end a card's opening still reading (O-HOST's) */
 function takeSelection() {
   const span = LAYER.spanOfSelection();
   if (!span || sameSpan(span, SEL.selected()) || sameSpan(span, LAYER.placedSpan())) return;

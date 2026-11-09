@@ -801,8 +801,7 @@ def run(ctx):
               labelledby: by, name: named ? (named.textContent || '').trim() : null, label: o.getAttribute('aria-label')}; })()''')
     r.check((links['id'] or '').startswith('links:') and links['first_run'] and links['first_run'] != 'x', 'rule 13: Mod+Shift+L opens the links card with the focus on its first act, never the × (#99)', links)
     r.check(bool(links['labelledby']) and bool(links['name']), 'D5: the overlay dialog is named by its own caption (aria-labelledby a non-empty element), #87, #112', links)
-    ctx.esc()  # the links card
-    ctx.esc()  # the selection Mod+Shift+L made first (the slot selects the focused block where none stands)
+    ctx.esc()  # the links card; the chord selected nothing behind it
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
     ctx.frames(1)
     # ---- rule 18 / D2: the open LEAP box is the line's stop; Tab out of it closes it ----------------------------------

@@ -22,8 +22,9 @@ opened taking the address the line names once a landing changes it (#171's
 rule 2); a key pressed while a jump is in the air and made at its landing
 taking nothing from the box the reader opened from the one line and typed in
 meanwhile — Mod+Y's list opening beside it, said by its own name and standing
-under it, Esc in the box giving the list the focus, Mod+Shift+O's selection
-placing no range until the box closes, an Esc and a Mod+L made there leaving
+under it, Esc in the box giving the list the focus, Mod+Shift+O asking over the
+walk's block with nothing selected, Shift+↓'s selection placing no range until
+the box closes, an Esc and a Mod+L made there leaving
 the box as it stands (issue #267's design decision; FP-20, FP-36); an address the board
 says nothing about, the page holding nothing of it, flown to at once and
 faced where the camera went, keeping its entry, Mod+[ undoing that jump
@@ -2295,8 +2296,10 @@ def keys_through_landing(ctx, r):
     status region by its own name and standing under it where the two meet, the box standing with its text, its caret and
     its focus, a character typed after the landing landing in it; Esc in the box then gives the list the focus on its newest
     row, and the next Esc closes the list onto the walk's element. Mod+Shift+O, made there with no selection standing,
-    selects the walk's block and asks who wrote it, the box keeping its caret: no range is placed in the plane's text until
-    the box closes. An Esc made there passes over the box; a Mod+L made there leaves it as it stands"""
+    asks who wrote the walk's block and selects nothing, the box keeping its caret: no range is placed in the plane's text,
+    before the box closes or after (issue #471). Shift+↓ made there selects the walk's block, the box keeping its caret: no
+    range is placed in the plane's text until the box closes. An Esc made there passes over the box; a Mod+L made there
+    leaves it as it stands"""
     box = lambda: ctx.js('''(() => { const q = document.getElementById('leapq');
       return {open: window.__skep.leap.isOpen(), focused: document.activeElement === q, value: q.value, caret: [q.selectionStart, q.selectionEnd]}; })()''')
     platform = lambda: ctx.js('''(() => { const s = window.getSelection(), n = s && s.anchorNode;
@@ -2355,18 +2358,40 @@ def keys_through_landing(ctx, r):
     home = ctx.js('''(() => { const a = document.activeElement;
       return {overlay: window.__skep.overlay().id, item: !!a && a.getAttribute('role') === 'treeitem' && !!a.closest('#mirror'), id: a ? a.id : null, current: 'walk-' + window.__skep.mirror.index()}; })()''')
     r.check(home['overlay'] is None and home['item'] and home['id'] == home['current'], 'the next Esc closes the list onto the walk\'s element', home)
-    # Mod+Shift+O, no selection standing: the walk's block selected, the caret the box's — no range placed until it closes
+    # Mod+Shift+O, no selection standing: the walk's block asked over and nothing selected, the caret the box's — no range
+    # placed, before the box closes or after
     air = flown('O', mods=('Meta', 'Shift'), pos=1)
     overlay_up(ctx, 'provenance:')
     landed, sel, walk, plat = box(), ctx.js('window.__skep.selection()'), ctx.js('window.__skep.view.focus()'), platform()
+    asked = ctx.js('window.__skep.overlay().text') or ''
+    over = '%s · %s' % (FAR_LEAP, strings(ctx, 'F.position', {'p': walk['pos']})) if walk and walk.get('pos') else None
     ctx.drv.ime('!')
     ctx.frames(2)
     more = box()
     r.check(air['air'] and air['box'] == typed and air['answered'],
             'Mod+Shift+O pressed on the plane while the jump is in the air is held, the box opened and typed in meanwhile (what the next check stands on)', air)
-    r.check(landed == typed and more['focused'] and more['value'] == NO_MATCH + '!' and bool(sel) and bool(walk) and walk['kind'] == 'block' and sel['addr'] == FAR_LEAP and sel['pos'] == walk['pos']
+    r.check(landed == typed and more['focused'] and more['value'] == NO_MATCH + '!' and sel is None and bool(walk) and walk['kind'] == 'block' and bool(over) and over in asked
             and ctx.js('window.__skep.overlay().id') == 'provenance:wrote' and not plat['layer'],
-            'Mod+Shift+O made at the landing, no selection standing, selects the walk\'s block and asks who wrote it, the box keeping its text and its caret: a character typed after it lands in the box, and no range stands in the plane\'s text (FP-20: "A field the reader types in keeps the caret through every move the page makes")',
+            'Mod+Shift+O made at the landing, no selection standing, asks who wrote the walk\'s block and selects nothing, the box keeping its text and its caret: a character typed after it lands in the box, and no range stands in the plane\'s text (FP-20: "A field the reader types in keeps the caret through every move the page makes"; issue #471\'s design decision: "A key acts on the selection the screen draws")',
+            {'box': [landed, more], 'selection': sel, 'walk': walk, 'asked': asked[:160], 'over': over, 'platform': plat, 'overlay': ctx.js('window.__skep.overlay().id')})
+    chord(ctx, 'Escape')
+    placed, still = platform(), ctx.js('window.__skep.selection()')
+    r.check(not placed['leap'] and not (placed['layer'] and placed['text']) and still is None, 'Esc closes the box: nothing selected, so no range is placed in the plane\'s text then', dict(placed, selection=still))
+    for _ in range(3):
+        if ctx.js('window.__skep.overlay().id') is None and not ctx.js('window.__skep.selection()'):
+            break
+        chord(ctx, 'Escape')
+    # Shift+↓ (K-8), no selection standing: the walk's block selected, the caret the box's — no range placed until it closes
+    air = flown('ArrowDown', mods=('Shift',), pos=1)
+    landed, sel, walk, plat = box(), ctx.js('window.__skep.selection()'), ctx.js('window.__skep.view.focus()'), platform()
+    ctx.drv.ime('!')
+    ctx.frames(2)
+    more = box()
+    r.check(air['air'] and air['box'] == typed and air['answered'],
+            'Shift+↓ pressed on the plane while the jump is in the air is held, the box opened and typed in meanwhile (what the next check stands on)', air)
+    r.check(landed == typed and more['focused'] and more['value'] == NO_MATCH + '!' and bool(sel) and bool(walk) and walk['kind'] == 'block' and sel['addr'] == FAR_LEAP and sel['pos'] == walk['pos']
+            and ctx.js('window.__skep.overlay().id') == 'selection' and not plat['layer'],
+            'Shift+↓ made at the landing, no selection standing, selects the walk\'s block, its card standing, the box keeping its text and its caret: a character typed after it lands in the box, and no range stands in the plane\'s text (FP-20: "A field the reader types in keeps the caret through every move the page makes")',
             {'box': [landed, more], 'selection': sel, 'walk': walk, 'platform': plat, 'overlay': ctx.js('window.__skep.overlay().id')})
     chord(ctx, 'Escape')
     placed = platform()
@@ -2988,35 +3013,50 @@ def run(ctx):
         chord(ctx, 'Escape')
     ctx.js('window.__skep.links.hide(%s)' % json.dumps(BEAMED))
     ctx.frames(2)
-    # a slot's chord with no selection standing selects the walk's block whole and asks over it (D5 §1.6). The platform's
-    # selection the page places reads back without the block's separator, and is never taken as a new one (APP-INPUT's
-    # `takeSelection`): its card, shown while the answer reads, would be an act on the chrome ending the answer's opening
-    # (O-HOST's), and the chord would answer nothing. The answer's read is no need of the pump's, so it is waited on itself
+    # a slot's chord with no selection standing acts on the walk's block whole and selects nothing (D5 §1.6; issue #471's
+    # design decision: "A key acts on the selection the screen draws"): no page selection and no platform range, the
+    # `show_origin` frame on the wire over the block's bytes, one Esc dismissing the answer with nothing standing behind it.
+    # The answer's read is no need of the pump's, so it is waited on itself
     ctx.leap(DOC, linked['pos'])
+    n_calls = len(ctx.js('window.__skep.bridge.calls()'))
     chord(ctx, 'O', mods=('Meta', 'Shift'))
     ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.overlay().id === "provenance:wrote" || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
     s = state(ctx)
     answer = ctx.js('window.__skep.overlay().text') or ''
     plat = ctx.js('window.__skep.platformSelection()')
-    r.check(not plat['collapsed'] and bool(plat['span']) and plat['span']['pos'] == linked['pos'] and plat['span']['width'] < linked['width'],
-            'the platform\'s selection the chord placed reads back as the block\'s text, its separator not among it: a span other than the page\'s, which only the page\'s record of its own placement tells from a new one', {'platform': plat, 'block': (linked['pos'], linked['width'])})
-    r.check(ctx.js('window.__skep.overlay().id') == 'provenance:wrote' and 'written by' in answer and bool(s['sel']) and s['sel']['addr'] == DOC and s['sel']['pos'] == linked['pos'] and s['sel']['width'] == linked['width'],
-            'Mod+Shift+O with no selection standing selects the walk\'s block whole and answers "who wrote this?" over it: the page\'s own selection, read back, ends no card it asked', {'overlay': ctx.js('window.__skep.overlay().id'), 'sel': s['sel'], 'block': (linked['pos'], linked['width']), 'answer': answer[:120]})
+    asked = [json.loads(c['frame']) for c in ctx.js('window.__skep.bridge.calls()')[n_calls:] if c.get('op') == 'show_origin']
+    spans = [(int(f['span']['start'].split('.')[-1]), int(f['span']['width'].split('.')[-1])) for f in asked]
+    r.check(ctx.js('window.__skep.overlay().id') == 'provenance:wrote' and 'written by' in answer and s['sel'] is None and plat['span'] is None and spans == [(linked['pos'], linked['width'])],
+            'Mod+Shift+O with no selection standing answers "who wrote this?" over the walk\'s block whole — the `show_origin` frame on the wire over its bytes — and selects nothing: no page selection, no platform range in the plane\'s text (issue #471)',
+            {'overlay': ctx.js('window.__skep.overlay().id'), 'sel': s['sel'], 'platform': plat, 'asked': spans, 'block': (linked['pos'], linked['width']), 'answer': answer[:120]})
+    chord(ctx, 'Escape')
+    r.check(state(ctx)['sel'] is None and state(ctx)['overlay'] is None, 'one Esc dismisses the answer: no selection stands behind it')
+    # the page's own selection — Enter at the walk's block selects it whole (D8) — reads back from the platform without the
+    # block's separator, and is never taken as a new one (APP-INPUT's `takeSelection`)
+    ctx.leap(DOC, linked['pos'])
+    chord(ctx, 'Enter')
+    s, plat = state(ctx), ctx.js('window.__skep.platformSelection()')
+    r.check(not plat['collapsed'] and bool(plat['span']) and plat['span']['pos'] == linked['pos'] and plat['span']['width'] < linked['width']
+            and s['sel'] == {'addr': DOC, 'pos': linked['pos'], 'width': linked['width']},
+            'Enter at the walk\'s block selects it whole, and the platform\'s selection the page placed reads back as the block\'s text, its separator not among it: a span other than the page\'s, which only the page\'s record of its own placement tells from a new one — the page\'s selection stands as the block whole',
+            {'platform': plat, 'sel': s['sel'], 'block': (linked['pos'], linked['width'])})
     chord(ctx, 'Escape')
     chord(ctx, 'Escape')
-    r.check(state(ctx)['sel'] is None and state(ctx)['overlay'] is None, 'Esc dismisses the answer, then clears the selection the chord made')
-    # the inert slots' chords (P47): each, with no selection standing, selects the walk's block whole as every slot chord does,
-    # and the selection's card at it gives the slot's reason, taking no focus; then the "link to…" slot pressed with the pointer
+    # the inert slots' chords (P47): each, with no selection standing, acts on the walk's block whole as every slot chord does,
+    # selecting nothing, and the acts card at it — its label naming the block's position — gives the slot's reason, taking no
+    # focus; then the "link to…" slot pressed with the pointer
     keyed = {}
+    at_block = '%s · %s' % (DOC, strings(ctx, 'F.position', {'p': linked['pos']}))
     for key, mods, slot, sid, name, row in (('k', ('Meta',), 'linkto', 'L.seam.link-to', 'Mod+K', 'K-100'), ('A', ('Meta', 'Shift'), 'annotate', 'L.seam.annotate', 'Mod+Shift+A', 'K-45'),
                                              ('C', ('Meta', 'Shift'), 'quote', 'L.seam.quote', 'Mod+Shift+C', 'K-46')):
         ctx.leap(DOC, linked['pos'])
         chord(ctx, key, mods=mods)
         got, s, words = ctx.js(TOLD % json.dumps(slot)), state(ctx), strings(ctx, sid)
+        label = ctx.js('(() => { const l = document.querySelector("#overlay .selection-card .label"); return l ? l.textContent : null; })()')
         want = {'id': 'selection', 'inert': '1', 'kbd': drawn_chord(ctx, name), 'reason': {'string': sid, 'words': words}, 'marked': [slot], 'live': words, 'leap': False, 'in_overlay': False}
-        r.check(got == want and s['sel'] == {'addr': DOC, 'pos': linked['pos'], 'width': linked['width']},
-                '%s with no selection standing selects the walk\'s block whole, and the selection\'s card gives its slot\'s reason — the slot marked inert with its chord drawn, the card\'s reason line its words, said through the status region — the card taking no focus and no LEAP box opening (D5 %s; P47)' % (name, row),
-                {'got': got, 'want': want, 'sel': s['sel'], 'block': (linked['pos'], linked['width'])})
+        r.check(got == want and s['sel'] is None and label == at_block,
+                '%s with no selection standing draws the acts card at the walk\'s block whole, selecting nothing, and the card gives its slot\'s reason — the slot marked inert with its chord drawn, the card\'s reason line its words, said through the status region — the card taking no focus and no LEAP box opening (D5 %s; P47; issue #471)' % (name, row),
+                {'got': got, 'want': want, 'sel': s['sel'], 'label': label, 'at': at_block})
         keyed[name] = got
         chord(ctx, 'Escape')
         chord(ctx, 'Escape')

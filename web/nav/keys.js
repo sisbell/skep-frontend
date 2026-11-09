@@ -42,10 +42,11 @@
 // composed and nothing sent (T-LAYER; FP-14) — and the walk then stands on
 // the span the caret is in (N-WALK's `followCaret`; B3-S13), so the slot
 // chords act at the caret's span. At a
-// live caret Mod+Enter follows from a selection standing alone: where none
-// stands it selects nothing, follows nothing and leaves the caret where it
-// stands, the caret's follow line its hint (`followAtCaret`; B3-S13); every
-// other key acts as on the plane. At a span of such a draft where no caret
+// live caret Mod+Enter follows from a selection drawn in the caret's own text
+// alone (`selectedAtCaret`): where none is drawn there it selects nothing,
+// follows nothing and leaves the caret where it stands, the caret's follow
+// line its hint (`followAtCaret`; B3-S13); every other key acts as on the
+// plane. At a span of such a draft where no caret
 // stands a printable key but Space is answered by the draft's own line,
 // "Enter places a caret here" (K-72, K-9), and a paste or a cut there by
 // that line in their own words, each its hint, nothing placed and nothing
@@ -76,9 +77,9 @@
 // K-100) and K-8's select-by-span act from the plane and from a standing
 // overlay alike. The inert slots' chords — annotate's, quote's and "link
 // to…"'s, Mod+K (K-45, K-46, K-100) — give their slot's reason (P47): at the
-// slot of the selection's card where a span is in focus, the walk's focused
-// span selected first where no selection stands (O-SELECTION's
-// `inertChord`), else, and over the scene, as its hint (`inertSaid`).
+// slot of the acts card drawn at the span in focus — the selection, else the
+// walk's focused span, nothing selected (O-SELECTION's `inertChord`) — else,
+// and over the scene, as its hint (`inertSaid`).
 // Every other slot's chord (K-47 … K-52) makes its slot's act on what is in
 // focus (O-SELECTION's `act`) — save Mod+Enter at a live caret (above) — and
 // where nothing in focus is what the slot acts on gives the slot's reason,
@@ -397,8 +398,8 @@ function route(e, chord, ctx) {
   const inert = INERT_CHORDS.get(chord);
   if (inert) return () => { if (!SEL.inertChord(inert)) inertSaid(inert, e, ctx); return true; };
   const live = LIVE_CHORDS.get(chord);
-  // Mod+Enter at a live caret follows from a selection standing alone, else gives the caret's follow line (K-51; `followAtCaret`)
-  if (live) return () => { if (live === 'follow' && ctx.where === 'caret' && !SEL.selected()) followAtCaret(e, ctx); else if (!SEL.act(live, byKey)) selectFirst(e, ctx); return true; };
+  // Mod+Enter at a live caret follows from a selection drawn in the caret's own text alone, else gives the caret's follow line (K-51; `followAtCaret`)
+  if (live) return () => { if (live === 'follow' && ctx.where === 'caret' && !selectedAtCaret()) followAtCaret(e, ctx); else if (!SEL.act(live, byKey)) selectFirst(e, ctx); return true; };
   // K-8 off a live caret: at one, Shift with the arrows is the caret's (K-71; `caretKey`)
   if (chord === 'Shift+↓' && ctx.where !== 'caret') return () => { SEL.selectFocused('down'); return true; };
   if (chord === 'Shift+↑' && ctx.where !== 'caret') return () => { SEL.selectFocused('up'); return true; };
@@ -627,7 +628,7 @@ function swallow(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
   else HINT.show('F.swallow', { 'LEAP chord': drawChord('Mod+L') }, hinted(e, ctx));
 }
 
-/** an inert slot's chord where no card of the selection gives its reason — no span in focus, or the scene over the plane: the slot's reason its hint at the focus until the next act (P47) */
+/** an inert slot's chord where no acts card gives its reason — no span in focus, or the scene over the plane: the slot's reason its hint at the focus until the next act (P47) */
 function inertSaid(/** @type {InertSlot} */ slot, /** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
   HINT.show(SEL.reasonOf(slot), null, hinted(e, ctx));
 }
@@ -637,7 +638,13 @@ function selectFirst(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
   HINT.show('D5.select-first', null, hinted(e, ctx));
 }
 
-/** Mod+Enter at a live caret with no selection standing (D5 K-51; B3-S13): nothing selected, nothing followed, the caret where it stands — the caret's follow line its hint at the focus until the next act */
+/** the selection the screen draws in the text the live caret stands in — what Mod+Enter at the caret follows from (D5 K-51; see the head); null where none is drawn there, whatever an earlier act did and wherever else a selection stands */
+function selectedAtCaret() {
+  const s = SEL.selected(), c = LAYER.caret();
+  return s && c && s.addr === c.addr ? s : null;
+}
+
+/** Mod+Enter at a live caret with no selection drawn in its text (`selectedAtCaret`; D5 K-51; B3-S13): nothing selected, nothing followed, the caret where it stands — the caret's follow line its hint at the focus until the next act */
 function followAtCaret(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
   HINT.show('B3.row.follow.inert', null, hinted(e, ctx));
 }

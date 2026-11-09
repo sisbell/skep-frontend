@@ -975,7 +975,7 @@ test('a click on a block of a draft the person may edit places the caret at the 
   assert.equal(LAYER.statementOpen(D), false, 'and again closes it');
 }));
 
-test('a click placing the caret in a draft the person may edit stands the walk on the span it is placed in, the ring out, so a slot chord pressed there acts on that span: with the walk on the draft\'s first span, Mod+K at the caret a click placed in its second selects the second whole (B3-S13; D5 K-70, K-100)', () => onDrafts(async ({ D, clickAt }) => {
+test('a click placing the caret in a draft the person may edit stands the walk on the span it is placed in, the ring out, so a slot chord pressed there acts on that span: with the walk on the draft\'s first span, Mod+K at the caret a click placed in its second draws the acts card at the second whole, selecting nothing (B3-S13; D5 K-70, K-100)', () => onDrafts(async ({ D, clickAt }) => {
   const second = REC.doc(D).blocks[1];
   await WALK.focusTo(D, 1, true, true, null, true);
   assert.deepEqual([WALK.current()?.kind, WALK.current()?.pos, FOCUS.ringShown()], ['block', 1, true], 'the walk on the first span, a key\'s ring drawn');
@@ -984,7 +984,7 @@ test('a click placing the caret in a draft the person may edit stands the walk o
   assert.deepEqual([LAYER.caret(), WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos, WALK.landedAt(), FOCUS.ringShown()], [{ addr: D, pos: second.pos, live: true }, 'block', D, second.pos, second.pos, false],
     'the caret live where the click fell; the walk on its span, naming the span\'s own first position, the ring out');
   assert.equal(await KEYS.dispatch(keyOf('k', MOD), { where: 'plane', byKey: true }), true);
-  assert.deepEqual([SEL.selected(), LAYER.caret()], [spanOfBlock(D, second), { addr: D, pos: second.pos, live: true }], 'Mod+K at the caret: the caret\'s span selected whole, never the first; the caret where it stood');
+  assert.deepEqual([HOST.currentState()?.anchor, SEL.selected(), LAYER.caret()], [{ span: spanOfBlock(D, second) }, null, { addr: D, pos: second.pos, live: true }], 'Mod+K at the caret: the acts card at the caret\'s span whole, never the first, nothing selected; the caret where it stood');
 }));
 
 test('a click placing the caret in a draft the person may edit while the walk stands in another\'s document keeps the caret live for the next key, which types at it (D5 K-70, K-72; BM-1)', () => onDrafts(async ({ D, O, clickAt }) => {

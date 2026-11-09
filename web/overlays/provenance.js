@@ -6,7 +6,7 @@
 // documents whose arrangement holds the passage, short by a stated copy and
 // by any document the reader may not read, which the blind-spot line says
 // (C-72), every address either names in the identifier's face (P-REG's
-// FACE). Each act takes the span exactly as selected (R11); asked by a
+// FACE). Each act takes the span it is asked over exactly (R11); asked by a
 // position alone, it takes the block holding it, whole. An origin and a
 // container are each another arrangement of the passage's material, so each
 // is a LEAP that carries the span asked over, re-projected and marked at the
@@ -85,7 +85,7 @@ function spanOf(addr, pos, width) {
  */
 const carried = (to, addr, sp, selected, byKey) => GO.leapTo(to, { how: 'leap', byKey, carry: { addr, pos: sp.ordinal, width: sp.positions, selected }, site: { span: { addr, pos: sp.ordinal, width: sp.positions } } });
 
-/** is the span asked over the selection's bytes — a width named — rather than the block a position names? */
+/** is the span asked over the selection's bytes, where the asker does not say — a width named — rather than the block a position names? */
 const isSelection = (/** @type {number | null} */ width) => width != null && width > 0;
 
 /**
@@ -138,10 +138,11 @@ export function reopen(left, at) {
  * @param {number} pos the span's first position
  * @param {number | null} [width] the span's positions; null asks over the block holding `pos`
  * @param {boolean} [byKey] a key made the act: the card takes the focus on its first act
+ * @param {boolean} [selected] the span is the selection's bytes (`About.selected`); by default, where a width names it (`isSelection`)
  * @returns {Promise<void>} settled once the card or its face shows, or nothing will
  */
-export function wrote(addr, pos, width = null, byKey = false) {
-  return wroteOver(addr, spanOf(addr, pos, width), isSelection(width), { byKey, focus: null, left: null });
+export function wrote(addr, pos, width = null, byKey = false, selected = isSelection(width)) {
+  return wroteOver(addr, spanOf(addr, pos, width), selected, { byKey, focus: null, left: null });
 }
 
 /**
@@ -179,10 +180,11 @@ function wroteOver(addr, sp, selected, how) {
  * @param {number} pos the span's first position
  * @param {number | null} [width] the span's positions; null asks over the block holding `pos`
  * @param {boolean} [byKey] a key made the act: the card takes the focus on its first act
+ * @param {boolean} [selected] the span is the selection's bytes (`About.selected`); by default, where a width names it (`isSelection`)
  * @returns {Promise<void>} settled once the card or its face shows, or nothing will
  */
-export function uses(addr, pos, width = null, byKey = false) {
-  return usesOver(addr, spanOf(addr, pos, width), isSelection(width), { byKey, focus: null, left: null });
+export function uses(addr, pos, width = null, byKey = false, selected = isSelection(width)) {
+  return usesOver(addr, spanOf(addr, pos, width), selected, { byKey, focus: null, left: null });
 }
 
 /**

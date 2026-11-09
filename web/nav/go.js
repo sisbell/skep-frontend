@@ -180,8 +180,9 @@
 // (O-SELECTION's `restore`); then the card or the list by its owner, from
 // what it is about, its reads — counts and claims — made again, taking the
 // focus on the control it was left holding it on (`reopen`). A subject that
-// is a span's bytes — the selection, a provenance card's span, the versions
-// list's passage held, a card's link's end — is placed by the landing rule
+// is a span's bytes — the selection, a provenance card's span, the span the
+// acts card or the "which" list holds of its own, the versions list's
+// passage held, a card's link's end — is placed by the landing rule
 // (`placedNow`): all of it standing, the surface moves there; part, it stands
 // on what stands, the line saying so in the status region — and, where no
 // arrival's line stands, beside the landing, the latest member holding it
@@ -3523,7 +3524,7 @@ async function restore(e, act) {
   try {
     await walking;
     if (act !== made || owed !== o) return;
-    const sel = o.selection, on = o.overlay, mine = on && (on.about.kind === 'selection' || on.about.kind === 'which') ? on : null;
+    const sel = o.selection, on = o.overlay, mine = on && selectionsOwnAbout(on.about) ? on : null;
     if (sel) {
       const at = await placedNow(sel);
       if (act !== made || owed !== o) return;
@@ -3577,7 +3578,8 @@ async function reopen(left, act, o) {
 function subjectOf(a) {
   return a.kind === 'anatomy' || a.kind === 'ends' ? { addr: a.near, pos: a.pos, width: a.width, ids: a.ids }
     : a.kind === 'wrote' || a.kind === 'uses' ? { addr: a.addr, pos: a.pos, width: a.width, ids: a.ids }
-      : a.kind === 'versions' && a.held ? { addr: a.addr, ...a.held } : null;
+      : a.kind === 'versions' && a.held ? { addr: a.addr, ...a.held }
+        : (a.kind === 'selection' || a.kind === 'which') && a.at ? a.at : null;
 }
 
 /** what the landing's line names a card's or a list's subject as (BM-HELD's `Subject`): a link's passage, else the selection where it was the selection's bytes, else the text read */
@@ -3598,6 +3600,7 @@ async function reopenBy(left, span) {
   if (a.kind === 'anatomy' || a.kind === 'ends' || a.kind === 'tail') await ANATOMY.reopen({ about: a, focus });
   else if (a.kind === 'versions') await VERSIONS.reopen({ about: a, focus }, span);
   else if ((a.kind === 'wrote' || a.kind === 'uses') && span) await PROV.reopen({ about: a, focus }, span);
+  else if ((a.kind === 'selection' || a.kind === 'which') && span) SEL.reopen({ about: a, focus }, span);
   else if (a.kind === 'links') LINKS.reopen({ about: a, focus }, shownIn(a.addr));
   else if (a.kind === 'mark') await MARKLIST.reopen({ about: a, focus });
 }
@@ -3688,10 +3691,13 @@ const readIn = (/** @type {string} */ addr) => { const d = REC.has(addr) ? REC.d
 /** the key a selection re-checked across a version is kept by (`Across.sel`): its span, and the version its box shows */
 const acrossKey = (/** @type {Span} */ s, /** @type {string} */ shown) => `${s.addr} ${s.pos} ${s.width} ${shown}`;
 
-/** the card or the list standing where it is the selection's own — its card, its "which" list — which stands and moves with it; null for every other */
+/** is a card or a list the selection's own — its card, its "which" list — which stands and moves with it, rather than one holding a span of its own (O-SELECTION's `About.at`)? */
+const selectionsOwnAbout = (/** @type {import('../overlays/host.js').About} */ a) => (a.kind === 'selection' || a.kind === 'which') && !a.at;
+
+/** the card or the list standing where it is the selection's own (`selectionsOwnAbout`); null for every other */
 function selectionsOwn() {
   const left = HOST.asLeft();
-  return left && (left.about.kind === 'selection' || left.about.kind === 'which') ? left : null;
+  return left && selectionsOwnAbout(left.about) ? left : null;
 }
 
 /**
@@ -3730,9 +3736,11 @@ function acrossSelection() {
 
 /**
  * The documents a card or a list stands on, each the version its box showed
- * as it was shown (see the head): none for a surface no box's version bounds
- * — a mark's list — and none for the selection's own card and list, which
- * stand and move with it (`acrossSelection`).
+ * as it was shown (see the head): the acts card's and the "which" list's
+ * where they hold a span of their own (O-SELECTION's `About.at`); none for a
+ * surface no box's version bounds — a mark's list — and none for the
+ * selection's own card and list, which stand and move with it
+ * (`acrossSelection`).
  * @param {import('../overlays/host.js').About} a
  * @returns {string[]}
  */
@@ -3740,6 +3748,7 @@ function standsOn(a) {
   if (a.kind === 'anatomy' || a.kind === 'ends') return [a.near];
   if (a.kind === 'wrote' || a.kind === 'uses' || a.kind === 'versions' || a.kind === 'links') return [a.addr];
   if (a.kind === 'tail') return a.docs;
+  if ((a.kind === 'selection' || a.kind === 'which') && a.at) return [a.at.addr];
   return [];
 }
 
