@@ -30,6 +30,12 @@
 // landing's rule and from the model as it is held, naming the span's own
 // first position — a click's move putting the ring out, a key's leaving the
 // ring's rule as it stands — so every act on the walk's element acts there.
+// Every other move of the walk — a walk key, a landing, a step, a re-take —
+// leaves a live caret as it is made, kept where it stood (D5 M-2, §4 rule 3;
+// T-LAYER's `leaveCaret`), so the next key acts where the walk stands and
+// never at a caret it did not land at; save a reading scene's close, whose
+// landing returns the focus to the plane as the scene found it, a live caret
+// standing live (`returnFocusTo`; D5 §4 rule 8, K-63).
 // The linearization: board › account › document › block | link in record
 // order (S3 Q6), each box once, as the version it shows (FP-22; the `shown`
 // reader): an account's documents are every box the plane draws — the
@@ -74,7 +80,9 @@
 // `aimIn`; FP-8) — and the focus follows the camera: any other move re-takes
 // it at the scale's grain (`retakeFromView`), save while a live caret stands
 // in text the person may edit at the camera's scale, the focus then the
-// caret, which no camera move moves (D5 §4 rule 3). The re-take's order, so
+// caret, which no camera move moves (D5 §4 rule 3); a live caret whose text
+// that scale does not read — a zoom past its reading scale — is left kept as
+// the re-take is made (D5 M-2). The re-take's order, so
 // the walk never stands on a place out of view nor on one the plane does not
 // draw: a continuation's mark whose cell holds the view's centre — the walk's
 // focus kept where it stands on one of the mark's members, a span or a link in
@@ -878,15 +886,17 @@ function childUnder(node, view) {
 /**
  * A walk key: ↓ ↑ siblings, → in, ← out, Home/End first/last, Enter acts;
  * off a live caret, Shift+↓ / Shift+↑ select by span (K-8, the selection's
- * owner's, which leaves the focus here — rule 15). → steps in to the child
- * drawn under the centre of the view the camera is bound for as the key is
- * made, else to the first (`childUnder`); it reads the children first, and
+ * owner's, which leaves the focus here — rule 15). A live caret is left kept
+ * as the key is made (see the head). → steps in to the child drawn under the
+ * centre of the view the camera is bound for as the key is made, else to the
+ * first (`childUnder`); it reads the children first, and
  * enters nothing where a later move overtook it meanwhile, nor at a document
  * below its reading scale (`collapsed`), whose spans Enter's act reaches.
  * @param {'down' | 'up' | 'in' | 'out' | 'first' | 'last'} k
  * @returns {Promise<boolean>}
  */
 export async function key(k) {
+  LAYER.leaveCaret();
   if (!focus) { await enter(); return true; }
   if (k === 'down' || k === 'up' || k === 'first' || k === 'last') {
     const ni = k === 'down' ? Math.min(siblings.length - 1, idx + 1) : k === 'up' ? Math.max(0, idx - 1) : k === 'first' ? 0 : siblings.length - 1;
@@ -909,8 +919,9 @@ export async function key(k) {
   return false;
 }
 
-/** the plane takes focus with nothing focused yet: the board */
+/** the plane takes focus with nothing focused yet: the board, a live caret left kept (see the head) */
 export async function enter() {
+  LAYER.leaveCaret();
   const move = ++moves;
   const kids = await childrenOf(null);
   if (move !== moves) return;
@@ -936,15 +947,47 @@ export async function enter() {
  * stands it on the mark's stop where the plane draws that mark at the scale
  * the camera is bound for, else on the mark's account. A re-take from what a
  * change of the page's class left (`asHeld`) reads no text: a span's levels are
- * its document's elements as the model holds them (`elementsOf`).
+ * its document's elements as the model holds them (`elementsOf`). A live
+ * caret is left kept as the move is made, before anything is read (see the
+ * head; T-LAYER's `leaveCaret`).
  * @param {string} addr a document, an account or a board; a mark's name (P-PROJ's `markKey`)
  * @param {number | null} pos
  * @param {boolean | null} [byKey] a key made the act; null where the move is no act of its own and the ring's rule stands (a key's caret followed, `followCaret`)
  * @param {boolean} [take] the platform's focus goes to the landing's item wherever it stood (an act); false carries it only where the mirror held it (a camera's re-take)
  * @param {End | null} [end] the link's end to stand on, at `pos`
  * @param {boolean} [asHeld] a span's levels taken as the model holds them, its document's text read for none (`dropped`, `followCaret`)
+ * @returns {Promise<void>}
  */
 export async function focusTo(addr, pos, byKey = false, take = true, end = null, asHeld = false) {
+  LAYER.leaveCaret();
+  await standOn(addr, pos, byKey, take, end, asHeld);
+}
+
+/**
+ * The walk moves to a landing that returns the focus to the plane a reading
+ * scene was opened over (see the head; D5 §4 rule 8, K-63): as `focusTo`,
+ * save that a live caret stands live.
+ * @param {string} addr
+ * @param {number | null} pos
+ * @param {boolean | null} [byKey] a key made the act
+ * @param {boolean} [take] the platform's focus goes to the landing's item wherever it stood
+ * @param {End | null} [end] the link's end to stand on, at `pos`
+ * @returns {Promise<void>}
+ */
+export function returnFocusTo(addr, pos, byKey = false, take = true, end = null) { return standOn(addr, pos, byKey, take, end); }
+
+/**
+ * The walk stood on a landing as `focusTo` names it, a live caret untouched:
+ * the move `focusTo` and `returnFocusTo` make, and `followCaret`'s.
+ * @param {string} addr
+ * @param {number | null} pos
+ * @param {boolean | null} [byKey]
+ * @param {boolean} [take]
+ * @param {End | null} [end]
+ * @param {boolean} [asHeld]
+ * @returns {Promise<void>}
+ */
+async function standOn(addr, pos, byKey = false, take = true, end = null, asHeld = false) {
   const move = ++moves;
   const held = mirrorHolds();
   // a mark's name is no address: read before any address is taken from it
@@ -997,7 +1040,8 @@ function liveCaret() {
  * walk the caret's span is by the landing's rule (T-LAYER's `caretSpan`;
  * `elementAt`), its levels taken as the model holds them and no text read
  * (`focusTo`'s `asHeld`), naming that element's own first position, so the
- * one line never names a position the caret has left. Like a camera-made
+ * one line never names a position the caret has left, the caret standing
+ * live through the move (`standOn`; see the head). Like a camera-made
  * re-take, it carries the platform's focus to the new item only where the
  * mirror held it. Nothing where the walk stands on that element already, or
  * no live caret stands (`liveCaret`).
@@ -1010,7 +1054,7 @@ export async function followCaret(byKey = null) {
   if (!at || (focus && focus.kind === 'block' && focus.addr === at.addr && focus.pos === at.block)) return;
   const kids = elementsOf(at.addr), el = kids[elementAt(kids, at.addr, at.pos)];
   if (!el || (focus && focus.kind === el.kind && focus.addr === el.addr && focus.pos === el.pos)) return;
-  await focusTo(at.addr, el.pos, byKey, false, null, true);
+  await standOn(at.addr, el.pos, byKey, false, null, true);
 }
 
 /** does a world rect hold a point? */
@@ -1122,11 +1166,14 @@ export function elementUnder(view) {
  * only where the mirror held it, the ring out, and says nothing until the
  * next keyboard act (rule 12). While a live caret stands in text the person
  * may edit at the camera's scale the focus is the caret, which no camera move
- * moves (D5 §4 rule 3): the walk stays at the caret's span (`liveCaret`).
+ * moves (D5 §4 rule 3): the walk stays at the caret's span (`liveCaret`). A
+ * live caret whose text that scale does not read is left kept, whether or not
+ * the walk moves (D5 M-2; T-LAYER's `leaveCaret`).
  * @param {boolean} [byKey] a key made the camera move
  */
 export async function retakeFromView(byKey = false) {
   if (liveCaret()) return;
+  LAYER.leaveCaret();
   const view = CAM.view(), at = elementUnder(view), lod = lodOf(view.scale).name;
   if (at.kind === 'mark') {
     const own = focus && inDocument(focus) && membersOf(at.addr).includes(documentOf(focus.addr) || focus.addr) ? focus : null;

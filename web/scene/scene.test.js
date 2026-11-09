@@ -37,7 +37,8 @@
 // Back lighting the passage it was opened from, the scene recorded as left
 // and reopened so by Forward and by Back after a teleport out, the focus on
 // the stop it stood on, an opening abandoned or refused giving its entry
-// back (FP-25), the card it was opened from reopened by its close (FP-36);
+// back (FP-25), the card it was opened from reopened by its close (FP-36),
+// a live caret it was opened at standing live through its close (D5 K-63);
 // each pane's article
 // T-LAYER's mount on the inner side of its corner, its byline's facts read
 // before the pane is set (FP-12, FP-34), a copy from it named where the
@@ -819,6 +820,29 @@ test('leaving a scene\'s entry by a teleport records the scene, and Back onto th
   assert.ok(p.said.slice(told).includes(`${t('L.scene-label')} · ${A} │ ${B}`), `the status region names the reopened pair: ${JSON.stringify(p.said.slice(told))}`);
   assert.deepEqual([GO.shownIn(A), GO.shownIn(B)], [A, B], 'no box\'s version changed (FP-22)');
   assert.deepEqual(fake.unanswered, []);
+}));
+
+/** a draft of the session's account, which no index lists, read whole as its reads answer */
+const WRITING = '1.0.1.0.70', WRITING_TEXT = 'A draft.\n\nIts passage stands here.';
+Object.assign(script, { ...reads(WRITING, WRITING_TEXT, { published: false }), ...compared(WRITING, WRITING_TEXT, B, B_TEXT), ...compared(B, B_TEXT, WRITING, WRITING_TEXT) });
+
+test('a reading scene opened at a live caret and closed returns the focus to the plane as the scene found it: the close\'s Back leaves the caret live where it stood, so Backspace after it takes the character before the caret out, where every other teleport leaves the caret kept (D5 §4 rule 8, K-63, M-2)', () => onPage(async (p) => {
+  await onTrail(p);
+  await PUMP.loadWhole(WRITING);
+  const leap = GO.leapTo(WRITING, { pos: 1 }); await flown(); await leap;
+  assert.equal(LAYER.editable(WRITING), true, 'the session\'s own draft, at its reading scale');
+  try {
+    LAYER.placeCaret(WRITING, 3);
+    assert.equal(await GO.toScene(WRITING, B), true, 'the scene shows');
+    assert.deepEqual(LAYER.caret(), { addr: WRITING, pos: 3, live: true }, 'the caret live under the scene');
+    await KEYS.esc(); await flown();
+    assert.deepEqual([SCENE.isOpen(), walkAt(), LAYER.caret()], [false, ['block', WRITING, 1], { addr: WRITING, pos: 3, live: true }], 'Esc: the scene closed, the walk on the caret\'s span, the caret live where it stood');
+    assert.equal(await KEYS.dispatch(keyOf('Backspace'), { where: 'plane', byKey: true }), true, 'Backspace: the caret\'s key');
+    assert.deepEqual([REC.edits(WRITING).map((x) => [x.pos, x.width, x.text]), LAYER.caret()], [[[2, 1, '']], { addr: WRITING, pos: 2, live: true }], 'the character before the caret taken out');
+    const elsewhere = GO.leapTo(WRITING, { pos: 11 }); await flown(); await elsewhere;
+    assert.deepEqual([walkAt(), LAYER.caret()], [['block', WRITING, 11], { addr: WRITING, pos: 2, live: false }], 'a LEAP to the draft\'s second span: the caret kept where it stood');
+    assert.deepEqual(fake.unanswered, []);
+  } finally { REC.clearEdits(WRITING); LAYER.dropCaret(); }
 }));
 
 test('a reading scene\'s opening reaches as a jump only a read can place does (FP-25): Esc and Back made while its reads are out abandon it, its entry given back — the trail as it stood, nothing opened, the camera still; a read refused gives its entry back too, the refusal faced at the act\'s site', () => onPage(async (p) => {

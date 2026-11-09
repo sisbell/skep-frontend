@@ -459,6 +459,7 @@ import { esc } from '../util.js';
  * @property {Aim | null} [aim] that view read again each frame as the camera flies (see the head; `aimAt`); none where the view stands fixed
  * @property {End | null} [end] the link's end the walk stands on there
  * @property {boolean} [take] the platform's focus goes to the walk's element — save where named false: a walk's moment unfolded holds it (`toView`)
+ * @property {boolean} [returns] the move is a reading scene's close, which returns the focus to the plane as the scene found it: a live caret stands live (N-WALK's `returnFocusTo`; D5 §4 rule 8, K-63); every other landing leaves it kept (N-WALK's `focusTo`)
  */
 
 /**
@@ -1618,13 +1619,15 @@ const headOf = (/** @type {import('../model/records.js').Doc} */ d) => (d.blocks
  * only where its view reads the document at its reading scale, else to the
  * document whole (see the head), to the link's end it names where it names
  * one — the platform's focus with it, save where the place says it stays
- * where it is, and the ring drawn at it where a key made the act; the move
- * kept (`walking`) for the surfaces a return reopens to wait on.
+ * where it is, and the ring drawn at it where a key made the act; a live
+ * caret left kept, save at a reading scene's close (`Destination.returns`);
+ * the move kept (`walking`) for the surfaces a return reopens to wait on.
  * @param {Destination} at
  * @param {boolean | undefined} byKey
  */
 function focusOn(at, byKey) {
-  walking = WALK.focusTo(at.addr, at.pos != null && LAYER.atReadingScale(at.addr, at.view.scale) ? at.pos : null, byKey, at.take ?? true, at.end ?? null);
+  const to = at.returns ? WALK.returnFocusTo : WALK.focusTo;
+  walking = to(at.addr, at.pos != null && LAYER.atReadingScale(at.addr, at.view.scale) ? at.pos : null, byKey, at.take ?? true, at.end ?? null);
   CAM.markDirty();
 }
 
@@ -2749,14 +2752,16 @@ function returnTo(l, view) {
  * and reopened beside the flight once the place is landed at (`restore`) —
  * never at a covered place, nor where the reader took the camera over or the
  * read an entry still reading waited on met a failure. An entry a reading
- * scene was opened as reopens the scene (`sceneAt`).
+ * scene was opened as reopens the scene (`sceneAt`). A reading scene's close
+ * returns the focus to the plane as the scene found it (`returns`).
  * @param {Entry} e the entry the move reached
  * @param {number} act the move's count
  * @param {boolean} byKey a key made the move
  * @param {Light | null} l the move's light
+ * @param {boolean} [returns] the move is a reading scene's close (`Destination.returns`)
  */
-async function landAtCursor(e, act, byKey, l) {
-  if (e.scene) { await sceneAt(e, act, byKey); return; }
+async function landAtCursor(e, act, byKey, l, returns = false) {
+  if (e.scene) { await sceneAt(e, act, byKey, returns); return; }
   const answer = TRAIL.pending(e);
   const kept = e.kept ? e.kept.surfaces : null;
   owed = kept ? { entry: e, ...kept } : null;
@@ -2768,14 +2773,14 @@ async function landAtCursor(e, act, byKey, l) {
   // where Back's light returns the walk, the element it stood on is not where it lands: nothing is said of it
   const told = at && !at.reads.length ? markReturn(back ? { ...at, gone: null } : at, e.notice) : null;
   /** @type {Destination} where the move puts the camera and the walk */
-  const to = cover === 'covered' ? coveredAt(e.addr) : back ? { ...back, view, aim } : { ...walkOf(e, at), view, aim };
+  const to = { ...(cover === 'covered' ? coveredAt(e.addr) : back ? { ...back, view, aim } : { ...walkOf(e, at), view, aim }), returns };
   const first = leave(act, e, to, byKey, 500);
   if (at && ask) { await askAgain(act, e, ask, at, to, first, byKey, told); return; }
   if (e.notice) showFound(e.notice, !!landed && (landed.floating || landed.withheld) && landed.addr === e.notice.addr && tells(to));
   if (cover === 'covered') showCover(e.addr);
   if (!answer) {
-    if (cover === 'unread') await coverRead(act, e, first, byKey);
-    else if (at && at.reads.length) await placeRead(act, e, at.reads, first, byKey);
+    if (cover === 'unread') await coverRead(act, e, first, byKey, returns);
+    else if (at && at.reads.length) await placeRead(act, e, at.reads, first, byKey, null, returns);
     else { if (!cover) { sayReturn(act, e, told, to); void restore(e, act); } endAir(act, await first); }
     return;
   }
@@ -2785,7 +2790,7 @@ async function landAtCursor(e, act, byKey, l) {
   const n = e.notice;
   if (n && n.face !== 'floating' && n.face !== 'withheld') { failed(act, null, n, byKey, to); return; }
   restoreVersions(e);
-  await placeRead(act, e, returning(e).reads, first, byKey, n);
+  await placeRead(act, e, returning(e).reads, first, byKey, n, returns);
 }
 
 /**
@@ -2877,7 +2882,7 @@ async function askAgain(act, e, ask, at, to, first, byKey, told) {
   if (act !== made) return;
   if (reads) FACES.endReading();
   if (notice && notice.face !== 'withheld') {
-    if (at.reads.length) { await placeRead(act, e, at.reads, first, byKey, notice); return; }
+    if (at.reads.length) { await placeRead(act, e, at.reads, first, byKey, notice, !!to.returns); return; }
     showFound(notice);
     sayReturn(act, e, told, takenAt === act ? null : to);
     if (takenAt === act) return;
@@ -2886,7 +2891,7 @@ async function askAgain(act, e, ask, at, to, first, byKey, told) {
     endAir(act, await first);
     return;
   }
-  await placeRead(act, e, returning(e).reads, first, byKey, notice);
+  await placeRead(act, e, returning(e).reads, first, byKey, notice, !!to.returns);
 }
 
 /**
@@ -2940,12 +2945,13 @@ function arrivalSaid(e) {
  * @param {Entry} e the entry the move reached
  * @param {number} act the move's count
  * @param {boolean} byKey a key made the move
+ * @param {boolean} [returns] the move is the close of a reading scene opened over this one (`Destination.returns`)
  */
-async function sceneAt(e, act, byKey) {
+async function sceneAt(e, act, byKey, returns = false) {
   const o = /** @type {import('./trail.js').Opened} */ (e.scene);
   arrival = null; landed = null; light = null; lit = [];
   const at = returning(e);
-  const first = leave(act, e, { ...walkOf(e, at), view: at.view, aim: at.aim, take: false }, byKey, 500);
+  const first = leave(act, e, { ...walkOf(e, at), view: at.view, aim: at.aim, take: false, returns }, byKey, 500);
   const out = await SCENE.reopen(o);
   if (act !== made) return;
   if (!out.shown && out.refused) FACES.showRefusal(null, out.refused, e.addr, asNotice(act));
@@ -3427,14 +3433,15 @@ async function readTexts(texts) {
  * @param {Promise<boolean>} first the move's flight
  * @param {boolean} byKey a key made the move
  * @param {Notice | null} [n] the entry's notice its read brought once it answered
+ * @param {boolean} [returns] the move is a reading scene's close (`Destination.returns`)
  */
-async function placeRead(act, e, texts, first, byKey, n = null) {
+async function placeRead(act, e, texts, first, byKey, n = null, returns = false) {
   const met = await readTexts(texts);
   if (act !== made) return;
   const at = returning(e, true, met), told = markReturn(at, e.notice);
   if (takenAt === act) { if (n) showFound(n); sayReturn(act, e, told, null); return; }
   /** @type {Destination} */
-  const to = { ...walkOf(e, at), view: at.view, aim: at.aim };
+  const to = { ...walkOf(e, at), view: at.view, aim: at.aim, returns };
   const flight = goOn(act, first, to, byKey, 500);
   if (n) showFound(n);
   sayReturn(act, e, told, to);
@@ -3490,13 +3497,14 @@ function showCover(addr, found = false) { const site = placeAt(addr); FACES.with
  * @param {Entry} e the entry the move reached
  * @param {Promise<boolean>} first the move's flight
  * @param {boolean} byKey a key made the move
+ * @param {boolean} [returns] the move is a reading scene's close (`Destination.returns`)
  */
-async function coverRead(act, e, first, byKey) {
+async function coverRead(act, e, first, byKey, returns = false) {
   await PUMP.wholeOf(e.addr);
   if (act !== made) return;
-  if (!REC.covered(e.addr)) { await placeRead(act, e, returning(e).reads, first, byKey); return; }
+  if (!REC.covered(e.addr)) { await placeRead(act, e, returning(e).reads, first, byKey, null, returns); return; }
   if (takenAt === act) { showCover(e.addr, true); return; }
-  const flight = goOn(act, first, coveredAt(e.addr), byKey, 500);
+  const flight = goOn(act, first, { ...coveredAt(e.addr), returns }, byKey, 500);
   showCover(e.addr, true);
   await flight;
 }
@@ -3812,7 +3820,8 @@ function carrySelection(c, addr, placed) {
  * Back abandons it and does nothing more: the camera never left the entry it
  * was made from (see the head). A move one entry back from the entry a
  * reading scene was opened as, the scene standing, is its close, counted
- * (`closed`).
+ * (`closed`), its landing returning the focus to the plane as the scene found
+ * it (`Destination.returns`).
  * @param {(departed: Departure) => (Entry | null)} move N-TRAIL's move
  * @param {boolean} byKey a key made the act
  * @param {boolean} [abandons] the move is Back, which abandons a jump reaching
@@ -3824,9 +3833,10 @@ async function moveCursor(move, byKey, abandons = false) {
   const e = move(departure());
   if (!e) return false;
   const act = nextAct();
-  if (standing && TRAIL.cursorIndex() === from - 1) closes++;
+  const closing = standing && TRAIL.cursorIndex() === from - 1;
+  if (closing) closes++;
   dismissChrome(e);
-  await landAtCursor(e, act, byKey, lightOf(left, e, TRAIL.cursorIndex() - from));
+  await landAtCursor(e, act, byKey, lightOf(left, e, TRAIL.cursorIndex() - from), closing);
   return true;
 }
 

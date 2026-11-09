@@ -89,7 +89,10 @@
 // platform, selecting an item whole wherever a selection touches it (FP-24),
 // would otherwise make of it at every click; a selection the platform made
 // (a double-click's word) is the page's; a click on a block selects it whole
-// (R11) — save in text the person may edit (T-LAYER's `editable`; D5 K-70),
+// (R11); and each of these three in text the person may not edit — the
+// stretch's, the word's, the block's — moves the walk's focus to the span
+// clicked, the ring out, a live caret left kept (D5 K-70, M-2; `walkOn`) —
+// save in text the person may edit (T-LAYER's `editable`; D5 K-70),
 // where a click on a block or on a marked stretch places the caret at the
 // character clicked, as the platform's own collapse of its selection names it
 // (T-LAYER's `caretFromPlatform`, `placeCaret`), the selection cleared and
@@ -376,21 +379,32 @@ function clickText(target) {
   }
   const wh = target.closest('[data-withheld]');
   if (wh) { const w = /** @type {HTMLElement} */ (wh), run = runOf(w); FACES.c39(w.dataset.owner || '', REC.reader(), run ? { el: w, span: run } : w); return true; }
-  // the platform selected text under the click (a double-click's word): the selection IS that span (R11)
+  // the platform selected text under the click (a double-click's word): the selection IS that span (R11), the walk on its span in text the person may not edit (K-70)
   const span = LAYER.spanOfSelection();
-  if (span && !sameSpan(span, LAYER.placedSpan())) { SEL.select(span.addr, span.pos, span.width); return true; }
+  if (span && !sameSpan(span, LAYER.placedSpan())) { SEL.select(span.addr, span.pos, span.width); if (!LAYER.editable(span.addr)) walkOn(span.addr, span.pos); return true; }
   // text the person may edit: the click places the caret at the character clicked, where the platform collapsed its selection (K-70) — a marked stretch takes it as any text does, the card its symbol's (K-7) — and the walk stands on its span, the ring out
   const own = /** @type {HTMLElement | null} */ (target.closest('.sp'));
   if (own && LAYER.editable(own.dataset.addr || '')) {
     const at = LAYER.caretFromPlatform();
     if (at && at.addr === own.dataset.addr) { SEL.clear(); LAYER.placeCaret(at.addr, at.pos); void WALK.followCaret(false); return true; }
   }
+  // text that takes no caret: the walk on the span clicked (K-70) — a marked stretch's, which opens its end's card (K-7), or a block's, selected whole (R11)
   const marked = target.closest('.lip');
-  if (marked) { took = true; const m = /** @type {HTMLElement} */ (marked); const s = endAt(m, (m.dataset.links || '').split(' ')[0], (m.dataset.ends || '').split(' ')[0]); if (s) { ANATOMY.open(s, m, false); return true; } }
+  if (marked) { took = true; const m = /** @type {HTMLElement} */ (marked); const s = endAt(m, (m.dataset.links || '').split(' ')[0], (m.dataset.ends || '').split(' ')[0]); if (s) { walkOn(s.near, s.pos); ANATOMY.open(s, m, false); return true; } }
   const sp = target.closest('.sp');
-  if (sp) { const s = /** @type {HTMLElement} */ (sp); SEL.select(s.dataset.addr || '', Number(s.dataset.pos)); return true; }
+  if (sp) { const s = /** @type {HTMLElement} */ (sp), addr = s.dataset.addr || '', pos = Number(s.dataset.pos); SEL.select(addr, pos); walkOn(addr, pos); return true; }
   return took;
 }
+
+/**
+ * A click on text that places no caret moves the walk's focus to the span
+ * holding the position clicked (D5 K-70): the ring out, the platform's focus
+ * carried there only where the mirror held it, the span's levels as the model
+ * holds them — a live caret left kept (N-WALK's `focusTo`).
+ * @param {string} addr
+ * @param {number} pos
+ */
+function walkOn(addr, pos) { void WALK.focusTo(addr, pos, false, false, null, true); }
 
 /**
  * The document whose text a press at a screen point is on, at the readable

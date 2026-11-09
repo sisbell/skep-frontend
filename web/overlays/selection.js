@@ -8,10 +8,10 @@
 // ends and as it changes — or by a key: a click on a block and Enter at the
 // focused span select the block whole; off a live caret, K-8's Shift+↓ /
 // Shift+↑ select the focused span and then extend it by a span each press;
-// at a live caret, Shift with each arrow moves the caret a step and the
-// selection runs from its anchor to the caret (`extendFromCaret`; D5 K-71,
-// §1.6) — each press naming the end it moved, which T-LAYER keeps clear of
-// its document's head. The platform's highlight is the selection's one mark
+// at a live caret, Shift with each arrow, Home or End moves the caret a step
+// and the selection runs from its anchor to the caret (`extendFromCaret`; D5
+// K-71, §1.6) — each press naming the end it moved, which T-LAYER keeps clear
+// of its document's head. The platform's highlight is the selection's one mark
 // (§2.1), and the selection the platform's own (foundations §2.1; D5 §2): a
 // change of it rebuilds no article — T-LAYER marks the blocks it touches in
 // place — so a selection the person made stands as they left it, its anchor
@@ -196,13 +196,13 @@ export function selectFocused(dir = 'down') {
 }
 
 /**
- * Shift with an arrow at a live caret (D5 K-71, §1.6): the caret moved a step
- * that way (T-LAYER's `caretMove`) and the selection made to run from its
- * anchor to the caret, the end the caret stands at the one the press moved
- * (`select`), in the text shown, as the caret's positions are; where the step
- * brings the caret back to its anchor, no selection stands (`clear`). The
- * focus stays where it is (rule 15).
- * @param {'left' | 'right' | 'up' | 'down'} dir
+ * Shift with an arrow, Home or End at a live caret (D5 K-71, §1.6): the caret
+ * moved a step that way (T-LAYER's `caretMove`) and the selection made to run
+ * from its anchor to the caret, the end the caret stands at the one the press
+ * moved (`select`), in the text shown, as the caret's positions are; where
+ * the step brings the caret back to its anchor, no selection stands
+ * (`clear`). The focus stays where it is (rule 15).
+ * @param {import('../text/layer.js').CaretStep} dir
  * @returns {boolean} false where no live caret stands or it cannot move that way: nothing changes
  */
 export function extendFromCaret(dir) {

@@ -37,7 +37,11 @@ issue #471). Shift with the arrows at a live caret moves it and runs the
 selection from where it stood to it, the platform's selection the page's
 (`shift_extends`; D5 K-71); a printable key or Backspace there then replaces
 that selection, and an arrow without Shift ends it, the caret at its start
-for ← (`shift_replaces`; D5 K-72; D6 BM-75).
+for ← (`shift_replaces`; D5 K-72; D6 BM-75). End and Home at a live caret in
+a wrapped paragraph move it to its line's end and its start, the camera and
+the walk standing, and a LEAP to another paragraph of the draft leaves it
+kept, its mark hollow, a printable key there answered by the draft's own
+line (`home_end_leap`; D5 K-71, M-13, M-2).
 
 The own draft is the seeded board's windowed draft of principal 1 (`OWN`,
 1340 bytes). The seed's staging draft (`STAGING`) holds every edition's
@@ -431,6 +435,73 @@ def shift_replaces(ctx, doc, para):
                            shows=fold(w[3]) in fold(s['text'])) for s, w in zip(steps, want)]}
 
 
+# the caret, its mark as the platform lays it out — whether hollow, its box on screen — the camera, whether it flies, and
+# the walk's element
+AT_MARK = '''(() => { const S = window.__skep, m = document.querySelector("#domlayer .caret-mark"), q = m ? m.getBoundingClientRect() : null, f = S.view.focus();
+  return {caret: S.caret(), mark: q ? {kept: m.classList.contains("kept"), top: q.top, left: q.left, h: q.height} : null, cam: S.view.camera(),
+          flying: S.view.flying(), focus: f ? {kind: f.kind, addr: f.addr, pos: f.pos} : null}; })()'''
+
+
+def home_end_leap(ctx, doc, para, other):
+    """HOME AND END AT A LIVE CARET, AND A LEAP AWAY FROM IT (D5 K-71, M-13, M-2): the walk landed on `para`, the longest
+    paragraph of the draft, which the measure wraps, the live caret placed two characters into its first line at `c0`,
+    then End and Home — after each the caret, its mark, the camera and the walk's element — then a LEAP to `other`,
+    another paragraph of the draft, and `x` there; and whether all of it held: End puts the caret at its first line's
+    end, before any white space the wrap broke at, its mark on the line box it stood on, against the right edge of the
+    line's last character, the next line's first character on a line box below; Home, made at that end, puts it at the
+    paragraph's first position,
+    against its first character's left edge; neither moves the camera or the walk off `para`'s span; the LEAP leaves the
+    caret kept where Home put it, its mark hollow, the walk on `other`'s span, and `x` there is answered by the draft's
+    own line, nothing typed. The hint, the caret and any edit are let go after, and the draft read again."""
+    if not other:
+        return {'ok': False, 'why': 'the draft holds no paragraph but the one the caret is placed in'}
+    text = para['text']
+    nb = lambda s: len(s.encode('utf8'))
+    # each character's first position, and the text's end
+    at = [para['pos'] + nb(text[:i]) for i in range(len(text) + 1)]
+    lead = len(text) - len(text.lstrip())
+    c0 = at[lead + 2]
+    rect = lambda i: (ctx.js('window.__skep.spanRects(%s, %d, %d)' % (json.dumps(doc), at[i], at[i + 1] - at[i])) or [None])[0]
+    ctx.leap(doc, para['pos'])
+    try:
+        placed = ctx.js('(async () => (await import("./text/layer.js")).placeCaret(%s, %d))()' % (json.dumps(doc), c0))
+        ctx.frames(3)
+        before = ctx.js(AT_MARK)
+        ctx.drv.key('End'); ctx.frames(3)
+        end = ctx.js(AT_MARK)
+        c1 = end['caret']['pos'] if end['caret'] else None
+        i1 = at.index(c1) if c1 in at else None
+        nxt = next((j for j in range(i1, len(text)) if not text[j].isspace()), None) if i1 is not None else None
+        last, first = (rect(i1 - 1) if i1 else None), (rect(nxt) if nxt is not None else None)
+        ctx.drv.key('Home'); ctx.frames(3)
+        home = ctx.js(AT_MARK)
+        start = rect(0)
+        ctx.leap(doc, other['pos'])
+        away = ctx.js(AT_MARK)
+        ctx.drv.key('x'); ctx.frames(2)
+        answered, edits = hint(ctx), ctx.js('window.__skep.model.edits(%s)' % json.dumps(doc))
+        kept = ctx.js('window.__skep.caret()')
+    finally:
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), N = await import("./overlays/hint.js"), L = await import("./text/layer.js"), R = await import("./model/records.js"); H.dismiss(); N.act(); S.clear(); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
+        ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
+    middle = lambda m: m['top'] + m['h'] / 2
+    on = lambda m, q: bool(m) and bool(q) and q['y'] - 0.5 <= middle(m) <= q['y'] + q['h'] + 0.5
+    still = lambda s: (not s['flying'] and s['cam'] == before['cam'] and s['focus'] == {'kind': 'block', 'addr': doc, 'pos': para['pos']})
+    wraps = bool(end['caret']) and c1 is not None and c0 < c1 < at[len(text.rstrip())]
+    ok = (bool(placed) and placed['live'] and bool(before['mark']) and not before['mark']['kept']
+          and wraps and end['caret']['live'] and bool(end['mark']) and abs(end['mark']['top'] - before['mark']['top']) <= 1 and still(end)
+          and on(end['mark'], last) and abs(end['mark']['left'] - (last['x'] + last['w'])) <= 1.5
+          and bool(first) and first['y'] + first['h'] / 2 > end['mark']['top'] + end['mark']['h']
+          and bool(home['caret']) and home['caret']['live'] and home['caret']['pos'] == para['pos'] and bool(home['mark']) and still(home)
+          and on(home['mark'], start) and abs(home['mark']['left'] - start['x']) <= 1.5
+          and away['caret'] == {'addr': doc, 'pos': para['pos'], 'live': False} and bool(away['mark']) and away['mark']['kept']
+          and away['focus'] == {'kind': 'block', 'addr': doc, 'pos': other['pos']}
+          and (answered['hint'] or {}).get('id') == 'B3.caret.enter' and edits == [] and kept == away['caret'])
+    return {'ok': ok, 'c0': c0, 'para': {'pos': para['pos'], 'width': para['width'], 'chars': len(text)}, 'other': other['pos'], 'wraps': wraps,
+            'before': before, 'end': dict(end, last_char=last, next_line=first), 'home': dict(home, first_char=start),
+            'away': away, 'answered': answered['hint'], 'edits': edits}
+
+
 def run(ctx):
     r = Result()
     rows = {s['state']: dict(s, outcome=('pending' if s['drawn'] else 'not drawn')) for s in STATES}
@@ -610,6 +681,11 @@ def run(ctx):
     replaces = shift_replaces(ctx, OWN, target)
     figures['shift_replaces'] = replaces
     r.check(replaces['ok'], "at a live caret in the own draft with a selection drawn from it, a printable key replaces the selection and Backspace takes it out, the caret after what the key put in, and ← puts the caret at the selection's start; after each, no selection stands — the page's none, the platform's collapsed — and no card (D5 K-71, K-72; D6 BM-70, BM-75)", replaces)
+    # Home and End move a live caret along its line, and a LEAP to another span of the draft leaves the caret kept (D5 K-71, M-13, M-2)
+    wrapped = max(paras, key=lambda p: len(p['text']))
+    ends = home_end_leap(ctx, OWN, wrapped, next((p for p in paras if p['pos'] != wrapped['pos']), None))
+    figures['home_end_leap'] = ends
+    r.check(ends['ok'], "at a live caret in a wrapped paragraph of the own draft, End puts the caret at its line's end — its mark against the line's last character, the next line on a line box below — and Home at the paragraph's start, neither moving the camera or the walk; a LEAP to another paragraph of the draft then leaves the caret kept, its mark hollow, and a printable key there is answered by the draft's own line, nothing typed (D5 K-71, M-13, M-2)", ends)
 
     # ---- (e) B3-S13: the swallow's draft form at a span with no caret (K-72) ---------------------------------------------
     ctx.leap(OWN, target['pos'])

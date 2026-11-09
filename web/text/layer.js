@@ -374,19 +374,22 @@
 // position of the text shown, placed by Enter at a focused span at the span's
 // start (`caretToSpan`), by a click at the character clicked
 // (`caretFromPlatform`, `placeCaret`), moved by the arrows a character or a
-// line (`caretMove`) — with Shift, a step O-SELECTION extends a selection from
-// it by (`extendFromCaret`; K-71) — and typed at: a printable key, Enter and
-// Tab put their characters in, Backspace and Delete take a character out
+// line, by Home and End to the start or the end of its line as the fold sets
+// the line (`caretMove`) — with Shift, a step O-SELECTION extends a selection
+// from it by (`extendFromCaret`; K-71) — and typed at: a printable key, Enter
+// and Tab put their characters in, Backspace and Delete take a character out
 // (`caretType`, `caretErase`), or, where a selection whole in the text shown
 // stands in the caret's text, its bytes are replaced by the key's text, none
 // for Backspace and Delete (`caretReplace`) — each an edit added to the
 // model's page-local list and shown through the derived record, nothing
-// composed and nothing sent (FP-14). Esc leaves the text to the walk at the
-// caret's span with the caret KEPT at its position (`leaveCaret`), which
-// Enter or a printable key there returns (`returnCaret`); its line stands
-// while it holds the caret (`heldParts`), the platform's selection is
-// collapsed at it as the page moves it — save by a step that extends a
-// selection, whose range the page places (`placeSelection`) — and its mark —
+// composed and nothing sent (FP-14). Leaving the text — Esc to the walk at
+// the caret's span, a move of the walk, a zoom past its reading scale (D5
+// M-2, K-77; N-KEYS', N-WALK's) — keeps the caret at its position
+// (`leaveCaret`), which Enter or a printable key at its span returns
+// (`returnCaret`); its line stands while it holds the caret (`heldParts`),
+// the platform's selection is collapsed at it as the page moves it — save
+// by a step that extends a selection, whose range the page places
+// (`placeSelection`) — and its mark —
 // the page's own, of no width, hollow where kept — is set at its character
 // boundary in the standing part each frame (`placeCaretMark`) and is no byte
 // of the document. A draft's kept word opens its statement in its corner on
@@ -4276,7 +4279,7 @@ export function caretSpan() {
   return { addr: caret_.addr, pos, block: b ? b.pos : null };
 }
 
-/** Esc leaves the text (K-77; BM-4): the caret kept where it stood, the keys no longer reaching it; the span it stands in, for the walk; null where no live caret stood */
+/** the text left — Esc, a move of the walk, a zoom past its reading scale (K-77; BM-4; D5 M-2): the caret kept where it stood, the keys no longer reaching it; the span it stands in, for the walk; null where no live caret stood */
 export function leaveCaret() {
   if (!caret_ || !caret_.live) return null;
   setCaret({ ...caret_, live: false });
@@ -4341,16 +4344,19 @@ export function caretErase(dir) {
   return true;
 }
 
+/** @typedef {'left' | 'right' | 'up' | 'down' | 'home' | 'end'} CaretStep a step of the caret (K-71; `caretMove`): a character either way, a line up or down, its line's start or its end */
+
 /**
  * The caret moved (K-71): ← and → a character — an item whole — ↑ and ↓ a
  * line: where the platform stands the text, the character boundary under
  * the caret's mark a line above or below (`caretPoint`); else the same
- * offset into the typed line before or after the caret's. A move that
- * extends a selection (`extending`; O-SELECTION's `extendFromCaret`) keeps
- * the platform's selection the page places over it; any other collapses it
- * at the caret. False where no live caret stands, or the text holds nothing
- * that way.
- * @param {'left' | 'right' | 'up' | 'down'} dir
+ * offset into the typed line before or after the caret's. Home and End to
+ * the start or the end of its line as the fold sets it (`caretLineEnd`). A
+ * move that extends a selection (`extending`; O-SELECTION's
+ * `extendFromCaret`) keeps the platform's selection the page places over it;
+ * any other collapses it at the caret. False where no live caret stands, or
+ * the text holds nothing that way.
+ * @param {CaretStep} dir
  * @param {boolean} [extending] the move extends a selection from the caret
  */
 export function caretMove(dir, extending = false) {
@@ -4359,12 +4365,49 @@ export function caretMove(dir, extending = false) {
   /** @type {number | null} */
   let to = null;
   if (dir === 'left' || dir === 'right') { const b = boundaries(d.runs, caret_.pos); to = dir === 'left' ? b.before : b.after; }
-  else {
-    to = caretLineStep(d, dir === 'up' ? -1 : 1);
-  }
+  else if (dir === 'home' || dir === 'end') to = caretLineEnd(d, dir);
+  else to = caretLineStep(d, dir === 'up' ? -1 : 1);
   if (to == null || to === caret_.pos) return false;
   setCaret({ ...caret_, pos: clampPos(d, to) }, extending ? 'keep' : 'collapse');
   return true;
+}
+
+/**
+ * The start or the end of the line holding the caret (`caretMove`), as the
+ * fold the text shown stands in sets it — its lines set as the platform sets
+ * them first where they are not (`renderedFold`): the line holding its
+ * position (P-LAY's `placeOf`), save where a later line of its block opens
+ * at that position with no white space before it — a break after a hyphen,
+ * or inside a word — the caret then standing at the end of the line before
+ * it. Home the position the line opens at (P-LAY's `Line.at`); End, where a
+ * later line of its block opens, the line's last character's end, the white
+ * space the wrap broke at left after it, else the end of its block's text,
+ * the newline left after it — an item's line its item whole. Null where the
+ * caret stands in no line the fold holds.
+ * @param {Doc} d the text shown
+ * @param {'home' | 'end'} dir
+ * @returns {number | null}
+ */
+function caretLineEnd(d, dir) {
+  const c = /** @type {Caret} */ (caret_), f = renderedFold(REC.doc(c.addr));
+  let i = placeIn(f, c.pos).line;
+  const holding = i == null ? null : f.lines[i], b = holding ? d.blocks.find((x) => x.pos === holding.pos) : null;
+  if (i == null || !holding || !b || holding.at == null) return null;
+  if (b.kind !== 'para') return dir === 'home' ? holding.at : b.pos + b.width;
+  const ci = charOfPos(b, c.pos);
+  if (holding.at === c.pos && holding.nth > 0 && ci > 0 && !isSpace(/** @type {number} */ (b.text.codePointAt(ci - 1)))) {
+    for (let k = i - 1; k >= 0 && f.lines[k].pos === b.pos; k--) if (f.lines[k].at != null) { i = k; break; }
+  }
+  const opens = /** @type {number} */ (f.lines[i].at);
+  if (dir === 'home') return opens;
+  /** @type {number | null} the position the next line of its block opens at */
+  let next = null;
+  for (let k = i + 1; k < f.lines.length && f.lines[k].pos === b.pos; k++) { const a = f.lines[k].at; if (a != null && a > opens) { next = a; break; } }
+  if (next == null) return b.pos + byteLength(b.text);
+  const from = charOfPos(b, opens);
+  let to = charOfPos(b, next);
+  while (to > from && isSpace(/** @type {number} */ (b.text.codePointAt(to - 1)))) to--;
+  return posOfChar(b, to);
 }
 
 /**

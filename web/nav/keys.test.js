@@ -36,16 +36,27 @@
 // drawn in the caret's own text, the selection and its card ended, and types
 // at the caret where that selection is not whole in the text shown or the
 // selection is another document's; and an arrow without Shift there ends that
-// selection, ← and → putting the caret at its start and its end (D5 K-8, K-9,
+// selection, ← and → putting the caret at its start and its end; every
+// teleport into a live caret's own draft — a LEAP, Back, Forward, a find's
+// move — leaves the caret kept where it stood, a printable key at the landing
+// answered by the draft's own line, and a zoom past its reading scale leaves
+// it kept too, a key pressed below that scale typing nothing; and Home and
+// End at a live caret move it to the start and the end of its line — a
+// wrap's white space left after it, a break after a hyphen standing on the
+// line before — the walk and the camera still, Shift extending a selection
+// from it (D5 K-8, K-9,
 // K-30, K-45 … K-52, K-57, K-70, K-71, K-72, K-74, K-76, K-77, K-93, K-100,
-// §1.6, §4 rules 2 and 3; D6 BM-1, BM-3, BM-4, BM-52, BM-54, BM-70, BM-75;
-// B3-S13; P47; FP-10, FP-14, FP-36).
+// M-2, M-13, §1.6, §4 rules 2 and 3; D6 BM-1, BM-3, BM-4, BM-52, BM-54,
+// BM-70, BM-75; B3-S13; P47; FP-10, FP-14, FP-36).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
 import * as WALK from './walk.js';
 import * as FOCUS from './focus.js';
 import * as TRAIL from './trail.js';
+import * as GO from './go.js';
+import * as PORT from '../bridge/port.js';
+import * as FAKE from '../test/fake-port.js';
 import * as LK from '../links/links.js';
 import * as REC from '../model/records.js';
 import * as LAYER from '../text/layer.js';
@@ -623,6 +634,129 @@ test('a selection in the caret\'s text not whole in the text shown — running p
   await press('r');
   assert.deepEqual([shown(), caret(), SEL.selected(), overlay(), editsOfD()], ['qr' + TEXT, [D, 3, true], null, null, [[1, 0, 'q'], [2, 0, 'r']]],
     'both typed at the caret, the selection and its card ended');
+}));
+
+/** an act let land: every read it sets going answered and every flight it starts stepped to its last frame, no jump left in the air */
+async function landed(/** @type {Promise<unknown> | null} */ act = null) {
+  let done = !act;
+  if (act) void act.then(() => { done = true; });
+  for (let i = 0; i < 200 && !(done && !CAM.flying() && !GO.inAir()); i++) { await tick(); if (CAM.flying()) CAM.step(Infinity); }
+  assert.ok(done && !CAM.flying() && !GO.inAir(), 'the act landed');
+}
+
+/** the walk's element: its kind, its place, its position */
+const walkAt = () => { const f = WALK.current(); return f && [f.kind, f.addr, f.pos]; };
+
+test('every teleport into the live caret\'s own draft — a LEAP, Back, Forward, a find\'s move — leaves the caret kept where it stood and the walk on its landing, so a printable key there is answered by the draft\'s own line, nothing typed, and Enter there places a caret of its own (D5 M-2, §4 rule 3; K-70, K-77)', () => onPlane(async ({ said }) => {
+  const fake = FAKE.create({});
+  PORT.boot(fake);
+  HOST.attach(/** @type {any} */ (hostEl));
+  TRAIL._reset();
+  // D's metadata and links held beside its text, so a LEAP to it reads nothing
+  REC.takeMetadata(D, { doc: D, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(D, []);
+  try {
+    await landed(GO.leapTo(D, { pos: 1 }));
+    assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+    assert.deepEqual([walkAt(), caret()], [['block', D, 1], [D, 1, true]], 'the LEAP lands on D\'s first span, where Enter places the caret');
+    /** @type {Array<[string, () => (Promise<unknown> | null), number, number]>} each teleport, the span it lands on and the span the caret it leaves stands in */
+    const jumps = [
+      ['a LEAP to the second span', () => GO.leapTo(D, { pos: 14 }), 14, 1],
+      ['Back', () => GO.back(), 1, 14],
+      ['Forward', () => GO.forward(), 14, 1],
+      ['a find\'s move to a match in the first span', () => { GO.toMatch(D, { pos: 1, width: 5 }); return null; }, 1, 14],
+    ];
+    for (const [what, jump, to, from] of jumps) {
+      assert.deepEqual(caret(), [D, from, true], `before ${what}: the caret live at ${from}`);
+      await landed(jump());
+      assert.deepEqual([caret(), walkAt()], [[D, from, false], ['block', D, to]], `${what}: the caret kept where it stood, the walk on the span it landed on`);
+      const n = said.length;
+      assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
+      await tick();
+      assert.deepEqual([REC.edits(D), caret(), HINT.standing()?.id, said.at(-1), said.length > n], [[], [D, from, false], 'B3.caret.enter', t('B3.caret.enter'), true], `${what}: q is answered there by the draft's own line, said again, nothing typed`);
+      assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+      assert.deepEqual(caret(), [D, to, true], `${what}: Enter places a caret at the span landed on`);
+    }
+    assert.deepEqual(fake.unanswered, []);
+  } finally { PORT.boot(null); TRAIL._reset(); }
+}));
+
+test('a zoom past a live caret\'s reading scale leaves the caret kept, the walk re-taken on its draft whole, so the next printable key is swallowed with K-9\'s line, nothing typed; a key pressed below that scale before any re-take finds the caret its scale does not read and leaves it kept, typing nothing; and the re-take leaves such a caret kept where the walk stays where it stands (D5 M-2, K-11; FP-12)', () => onPlane(async ({ said }) => {
+  const f = LAYER.foldOf(REC.doc(D)), reading = CAM.view();
+  await focusOn(D, 1);
+  assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+  assert.deepEqual(caret(), [D, 1, true]);
+  for (let i = 0; i < 4 && LAYER.atReadingScale(D); i++) { assert.equal(await KEYS.dispatch(keyOf('-', MOD), PLANE), true); await tick(); }
+  assert.equal(LAYER.atReadingScale(D), false, 'Mod+- past D\'s reading scale');
+  assert.deepEqual([caret(), walkAt()], [[D, 1, false], ['document', D, null]], 'the caret kept where it stood; the walk re-taken on D whole');
+  let n = said.length;
+  assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
+  assert.deepEqual([REC.edits(D), caret(), HINT.standing()?.id, said.length > n], [[], [D, 1, false], 'F.swallow', true], 'q: swallowed with K-9\'s line, nothing typed');
+
+  // the caret returned live at reading scale, then the camera set below that scale with no re-take after it
+  CAM.set(reading);
+  await focusOn(D, 1);
+  assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+  assert.deepEqual(caret(), [D, 1, true], 'Enter at its span returns the kept caret');
+  CAM.set({ ...reading, scale: 7 / f.fs });
+  n = said.length;
+  assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
+  assert.deepEqual([REC.edits(D), caret(), HINT.standing()?.id, said.length > n], [[], [D, 1, false], 'F.swallow', true], 'q below the scale before any re-take: the caret left kept, nothing typed');
+
+  // a live caret in the draft the walk stands on whole: the re-take below its reading scale moves no walk and leaves the caret kept
+  CAM.set(reading);
+  await WALK.focusTo(D, null, true, true, null, true);
+  LAYER.placeCaret(D, 14);
+  assert.deepEqual([caret(), walkAt()], [[D, 14, true], ['document', D, null]]);
+  CAM.set({ ...reading, scale: 7 / f.fs });
+  await WALK.retakeFromView();
+  assert.deepEqual([caret(), walkAt()], [[D, 14, false], ['document', D, null]], 'the re-take: the walk where it stood, the caret kept');
+}));
+
+test('Home and End at a live caret move it to the start and the end of its line — the end before the white space a wrap broke the line at, and before the typed line\'s newline — the walk staying on the caret\'s span and the camera still; with Shift each extends a selection from the caret, and without it each ends that selection, a line\'s start or end from where the caret stands (D5 K-71, M-13)', () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  await focusOn(D, 14);
+  LAYER.placeCaret(D, 17);
+  const view = CAM.view();
+  /** a key at the caret, taken: the caret, the walk's position and whether the camera stood still after it */
+  const at = async (/** @type {string} */ key, /** @type {object} */ mods = {}) => { assert.equal(await KEYS.dispatch(keyOf(key, mods), PLANE), true, `${key}: the page takes it`); return [caret(), WALK.current()?.pos, !CAM.flying() && CAM.view().x === view.x && CAM.view().y === view.y && CAM.view().scale === view.scale]; };
+  assert.deepEqual(await at('End'), [[D, 31, true], 14, true], 'End: the caret before the line\'s newline (14 + 17), the walk on its span, the camera still');
+  assert.deepEqual(await at('Home'), [[D, 14, true], 14, true], 'Home: the caret at the line\'s start');
+  LAYER.placeCaret(D, 17);
+  assert.deepEqual([await at('End', { shiftKey: true }), SEL.selected()], [[[D, 31, true], 14, true], { addr: D, pos: 17, width: 14 }], 'Shift+End: the selection from where the caret stood to the line\'s end');
+  assert.deepEqual([await at('Home', { shiftKey: true }), SEL.selected()], [[[D, 14, true], 14, true], { addr: D, pos: 14, width: 3 }], 'Shift+Home: on from the same anchor to the line\'s start');
+  assert.deepEqual([await at('End'), SEL.selected()], [[[D, 31, true], 14, true], null], 'End without Shift: the selection ended, the caret at the line\'s end from where it stood');
+  assert.deepEqual(REC.edits(D), [], 'nothing typed');
+
+  // a typed line the measure wraps: each line's start and end as the fold sets it, single spaces between its words
+  const LONG = Array.from({ length: 40 }, (_, i) => 'word' + i).join(' ') + '\n', n = byteLength(LONG);
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
+  REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text: LONG, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n }]);
+  const opens = LAYER.foldOf(REC.doc(D)).lines.filter((l) => l.pos === 1 && l.at != null).map((l) => /** @type {number} */ (l.at));
+  assert.ok(opens.length >= 3 && opens[0] === 1, `the typed line wraps: its lines open at ${opens}`);
+  const [, second, third] = opens;
+  await focusOn(D, 1);
+  LAYER.placeCaret(D, 3);
+  assert.deepEqual((await at('End'))[0], [D, second - 1, true], 'End on the first line: before the space the wrap broke at, never on the next line');
+  assert.ok(LONG[second - 2] === ' ' && LONG[second - 3] !== ' ', 'that position the space after the line\'s last word');
+  LAYER.placeCaret(D, second + 2);
+  assert.deepEqual((await at('Home'))[0], [D, second, true], 'Home on the second line: its first character');
+  assert.deepEqual((await at('End'))[0], [D, third - 1, true], 'End on the second line: before the space the next wrap broke at');
+
+  // a typed line the measure wraps after its hyphens, no white space at a break: the line's end is where the next line opens, and the caret there stands on the first
+  const HYPHENED = Array.from({ length: 30 }, (_, i) => 'part' + i).join('-') + '\n', h = byteLength(HYPHENED);
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: h }]);
+  REC.takeDelivery(D, [{ pos: 1, width: h, kind: 'content', text: HYPHENED, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: h }]);
+  const broken = LAYER.foldOf(REC.doc(D)).lines.filter((l) => l.pos === 1 && l.at != null).map((l) => /** @type {number} */ (l.at));
+  assert.ok(broken.length >= 2 && HYPHENED[broken[1] - 2] === '-', `the typed line wraps after a hyphen: its lines open at ${broken}`);
+  await focusOn(D, 1);
+  LAYER.placeCaret(D, 3);
+  assert.deepEqual((await at('End'))[0], [D, broken[1], true], 'End on the first line: after its last hyphen, where the next line opens');
+  assert.deepEqual((await at('End'))[0], [D, broken[1], true], 'End again: the caret stands at that line\'s end');
+  assert.deepEqual((await at('Home'))[0], [D, 1, true], 'Home there: the first line\'s start, never the next line\'s');
+  for (const c of ['Home', 'End', 'Shift+Home', 'Shift+End']) assert.ok(KEYS.TABLE.some((r) => r.id === 'K-71' && r.chord === c && r.surface === 'caret'), `the table binds ${c} at the caret, K-71's`);
 }));
 
 // placed last: the follow it guards against, where it is made, leaves a jump in the air for the tests after it

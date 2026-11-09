@@ -22,8 +22,10 @@
 // and the rest opening its list, the pointer's shape over each its own; a
 // click placing the caret in a draft the person may edit stands the walk on
 // its span, the ring out, so a slot chord acts there and the next key types
-// at it wherever the walk stood; and a focus landing in a corner the view
-// does not show whole pans the camera by the least that brings it in below
+// at it wherever the walk stood; a click on a block of text the person may
+// not edit stands the walk on that block, the ring out, a live caret left
+// kept, so the next key types nothing; and a focus landing in a corner the
+// view does not show whole pans the camera by the least that brings it in below
 // the one line, never while a flight runs (FP-12, FP-20, FP-21, FP-24, FP-25,
 // FP-30, FP-34, FP-35).
 import { test, before } from 'node:test';
@@ -996,6 +998,19 @@ test('a click placing the caret in a draft the person may edit while the walk st
   assert.equal(await KEYS.dispatch(keyOf('q'), { where: 'plane', byKey: true }), true);
   assert.deepEqual([REC.edits(D).map((e) => [e.pos, e.width, e.text]), LAYER.caret(), WALK.current()?.addr], [[[second.pos, 0, 'q']], { addr: D, pos: second.pos + 1, live: true }, D],
     'the key typed at the caret the click placed, the caret live after it, the walk in its draft');
+}));
+
+test('a click on a block of text the person may not edit, a caret live in a draft of theirs, selects the block whole and stands the walk on its span, the ring out and the caret left kept where it stood, so the next printable key is answered by K-9\'s line there and types nothing (D5 K-70, M-2)', () => onDrafts(async ({ D, O, clickAt }) => {
+  const second = REC.doc(D).blocks[1];
+  clickAt(D, second.pos);
+  await tick();
+  assert.deepEqual([LAYER.caret(), WALK.current()?.addr, WALK.current()?.pos], [{ addr: D, pos: second.pos, live: true }, D, second.pos], 'the click in D: the caret live where it fell, the walk on its span');
+  clickAt(O, second.pos);
+  await tick();
+  assert.deepEqual([SEL.selected()?.addr, SEL.selected()?.pos, WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos, FOCUS.ringShown(), LAYER.caret()],
+    [O, second.pos, 'block', O, second.pos, false, { addr: D, pos: second.pos, live: false }], 'the click on O\'s block: selected whole, the walk on its span with the ring out, the caret kept in D');
+  assert.equal(await KEYS.dispatch(keyOf('q'), { where: 'plane', byKey: true }), true);
+  assert.deepEqual([REC.edits(D), REC.edits(O), LAYER.caret()], [[], [], { addr: D, pos: second.pos, live: false }], 'q: nothing typed in either');
 }));
 
 test('a focus landing in a corner the view does not show whole moves the camera by the least pan that brings the whole corner into the view below the one line; one the view shows whole, or one landing while a flight runs, moves nothing (FP-20)', () => {

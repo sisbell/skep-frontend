@@ -32,13 +32,18 @@
 // BM-70, BM-75): in text the person may edit (T-LAYER's `editable`) Enter at
 // the walk's focused span places the caret at the span's start, or returns
 // the kept one standing in that span (`activateFocus`; T-LAYER's
-// `caretToSpan`); while a live caret stands on the plane the focus is at it
-// (`Ctx.where` `caret`, read as a key is pressed and again as a held key is
-// made, `whereNow`), and its keys reach it before the walk's and K-8's
-// (`caretKey`): the arrows move it, and with Shift move it and extend a
-// selection from it (O-SELECTION's `extendFromCaret`; D5 §1.6); Backspace and
-// Delete take a character out, Enter and Shift+Enter put a new line in, Tab a
-// tab character, a printable key its character — each a change of the text
+// `caretToSpan`); while a live caret stands on the plane in text the person
+// may edit at the camera's scale the focus is at it (`Ctx.where` `caret`,
+// read as a key is pressed and again as a held key is made, `whereNow`) — a
+// live caret in text that scale does not read, or one the walk stands
+// outside of in another document, left kept as the key finds it (D5 M-2),
+// every other move of the walk leaving it as the move is made (N-WALK's) —
+// and its keys reach it before the walk's and K-8's (`caretKey`): the arrows
+// move it a character or a line, Home and End to the start or the end of its
+// line (D5 M-13), and with Shift move it and extend a selection from it
+// (O-SELECTION's `extendFromCaret`; D5 §1.6); Backspace and Delete take a
+// character out, Enter and Shift+Enter put a new line in, Tab a tab
+// character, a printable key its character — each a change of the text
 // shown alone, nothing composed and nothing sent (T-LAYER; FP-14) — and the
 // walk then stands on the span the caret is in (N-WALK's `followCaret`;
 // B3-S13), so the slot chords act at the caret's span. A selection the screen
@@ -48,8 +53,9 @@
 // standing in its bytes' place, the caret after it (`editAtCaret`; T-LAYER's
 // `caretReplace`), and an arrow without Shift puts the caret at the
 // selection's start for ← and at its end for →, and steps it a line from
-// where it stands for ↑ and ↓ (`stepCaret`). At a live caret Mod+Enter
-// follows from such a selection alone: where none is drawn there it selects
+// where it stands for ↑ and ↓, Home and End to the start or the end of the
+// caret's line (`stepCaret`). At a live caret Mod+Enter follows from such a
+// selection alone: where none is drawn there it selects
 // nothing, follows nothing and leaves the caret where it stands, the caret's
 // follow line its hint (`followAtCaret`; B3-S13); every other key acts as on
 // the plane. At a span of such a draft where no caret stands a printable key
@@ -156,6 +162,7 @@ import { keptWord, keptStatement } from '../text/article.js';
 
 /** @typedef {import('../overlays/selection.js').InertSlot} InertSlot */
 /** @typedef {import('../overlays/selection.js').LiveSlot} LiveSlot */
+/** @typedef {import('../text/layer.js').CaretStep} CaretStep */
 
 /** the platform's primary command modifier: ⌘ on macOS, Ctrl elsewhere (D5 §0) */
 export const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '');
@@ -214,6 +221,10 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-71', chord: 'Shift+→', act: 'caret.extendRight', surface: 'caret' },
   { id: 'K-71', chord: 'Shift+↑', act: 'caret.extendUp', surface: 'caret' },
   { id: 'K-71', chord: 'Shift+↓', act: 'caret.extendDown', surface: 'caret' },
+  { id: 'K-71', chord: 'Home', act: 'caret.lineStart', surface: 'caret' },
+  { id: 'K-71', chord: 'End', act: 'caret.lineEnd', surface: 'caret' },
+  { id: 'K-71', chord: 'Shift+Home', act: 'caret.extendLineStart', surface: 'caret' },
+  { id: 'K-71', chord: 'Shift+End', act: 'caret.extendLineEnd', surface: 'caret' },
   { id: 'K-72', chord: 'Backspace', act: 'caret.erase', surface: 'caret' },
   { id: 'K-72', chord: 'Delete', act: 'caret.erase', surface: 'caret' },
   { id: 'K-74', chord: 'Mod+S', act: 'save.answer', surface: 'plane' },
@@ -301,10 +312,11 @@ export const holding = () => held.length + (making ? 1 : 0);
 /**
  * Where the focus is, read now (see the head): the plane while a live caret
  * stands in text the person may edit is the caret; everywhere else as the
- * app read it. A live caret the walk has left behind — its focus landed in
- * another document, a teleport's or a click's — is left to the walk as the
- * key finds it, kept where it stood (K-77; D5 §4 rule 8): no landing hands
- * the next key to a caret it did not land at.
+ * app read it. A live caret whose text the person may not edit at the
+ * camera's scale (T-LAYER's `editable`) — a zoom past its reading scale
+ * before the re-take that follows it — or which the walk stands outside of,
+ * in another document, is left to the walk as the key finds it, kept where
+ * it stood (D5 M-2, K-77), and the key acts as on the plane.
  * @param {Ctx} ctx
  * @returns {Ctx}
  */
@@ -312,7 +324,7 @@ function whereNow(ctx) {
   if (ctx.where !== 'plane' || SCENE.isOpen()) return ctx;
   const c = LAYER.caret(), f = WALK.current();
   if (!c || !c.live) return ctx;
-  if (f && f.addr !== c.addr) { LAYER.leaveCaret(); return ctx; }
+  if ((f && f.addr !== c.addr) || !LAYER.editable(c.addr)) { LAYER.leaveCaret(); return ctx; }
   return { ...ctx, where: 'caret' };
 }
 
@@ -474,7 +486,8 @@ function findAct(e, dir, ctx) {
 }
 
 /**
- * A key at a live caret (see the head; K-71, K-72, K-76): the arrows move it,
+ * A key at a live caret (see the head; K-71, K-72, K-76): the arrows move it a
+ * character or a line, Home and End to its line's start or its end, each
  * ending a selection drawn in the caret's own text (`stepCaret`), and with
  * Shift move it and extend a selection from it (O-SELECTION's
  * `extendFromCaret`); Backspace and Delete take a character out, Enter and
@@ -485,15 +498,15 @@ function findAct(e, dir, ctx) {
  * act ending once it does, so the next key, a held one too (`replay`), acts
  * there. Each is taken even where the caret cannot move that way. Null for
  * any other key, which acts as on the plane. The platform's default is
- * prevented first: an arrow would scroll the mirror, Tab would move the
- * focus, Backspace would go back.
+ * prevented first: an arrow would scroll the mirror, Home and End the page,
+ * Tab would move the focus, Backspace would go back.
  * @param {KeyboardEvent} e
  * @param {string} chord
  * @returns {Act | null}
  */
 function caretKey(e, chord) {
-  /** @type {Record<string, 'left' | 'right' | 'up' | 'down'>} */
-  const moves = { '←': 'left', '→': 'right', '↑': 'up', '↓': 'down' };
+  /** @type {Record<string, CaretStep>} */
+  const moves = { '←': 'left', '→': 'right', '↑': 'up', '↓': 'down', Home: 'home', End: 'end' };
   /** the key's change made at the caret, the walk following it */
   const at = (/** @type {() => boolean} */ change) => async () => { e.preventDefault(); change(); await WALK.followCaret(); return true; };
   if (chord in moves) return at(() => stepCaret(moves[chord]));
@@ -508,12 +521,13 @@ function caretKey(e, chord) {
 }
 
 /**
- * An arrow without Shift at the live caret (see the head; K-71): where a
- * selection is drawn in the caret's own text (`selectedAtCaret`), the
+ * An arrow, Home or End without Shift at the live caret (see the head; K-71):
+ * where a selection is drawn in the caret's own text (`selectedAtCaret`), the
  * selection ends, its card with it (O-SELECTION's `clear`), and ← puts the
  * caret at the selection's start, → at its end, ↑ and ↓ a line from the
- * caret; where none is, the caret steps that way (T-LAYER's `caretMove`).
- * @param {'left' | 'right' | 'up' | 'down'} dir
+ * caret, Home and End at the start or the end of the caret's line; where none
+ * is, the caret steps that way (T-LAYER's `caretMove`).
+ * @param {CaretStep} dir
  * @returns {boolean} whether the caret or the selection changed
  */
 function stepCaret(dir) {
