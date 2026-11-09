@@ -2354,8 +2354,9 @@ async function againVersion(c, spans, was, addr, entry, byKey) {
  * page holds the text it shows, read before `D.(k+1)` was published — so
  * `D.k`'s (N-TRAIL's `readBefore`) — pins the box on `D.k`, its article set
  * again as that member with the passage being read kept in place (T-LAYER's
- * `holdAcross`), the walk and an arrival standing there with it
- * (`placedAgain`, `recheck`), and the box's version then named by the one
+ * `holdAcross`), the walk standing there with it, a move no act made
+ * (N-WALK's `standAgain`), and an arrival with it (`placedAgain`, `recheck`),
+ * and the box's version then named by the one
  * line and the corner; the box marked with the newest member named, which its
  * corner offers to read (`newer`, `newerAt`), the arrival said once in the
  * status region where the box is read in view at its reading scale, no
@@ -2391,7 +2392,7 @@ export function arrived(member, at = null, newest = null) {
   newer.set(doc, n);
   if (reading) FOCUS.say(t('F.arrival.pane', { k: k - 1 }));
   const f = WALK.current();
-  if (f && boxOf(f.addr) === doc) void WALK.focusTo(read, f.pos, false, false);
+  if (f && boxOf(f.addr) === doc) void WALK.standAgain(read, f.pos);
 }
 
 /**

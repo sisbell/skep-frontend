@@ -41,7 +41,11 @@ for ← (`shift_replaces`; D5 K-72; D6 BM-75). End and Home at a live caret in
 a wrapped paragraph move it to its line's end and its start, the camera and
 the walk standing, and a LEAP to another paragraph of the draft leaves it
 kept, its mark hollow, a printable key there answered by the draft's own
-line (`home_end_leap`; D5 K-71, M-13, M-2).
+line (`home_end_leap`; D5 K-71, M-13, M-2). With the caret kept by Esc
+after typing, the wheel turned a few lines over the plane, the caret's
+paragraph still in view and another element under the view's centre, leaves
+the walk on the kept caret's span, and a printable key there types at the
+kept caret (`kept_span_held`; B3-S1; D5 §4 rule 3).
 
 The own draft is the seeded board's windowed draft of principal 1 (`OWN`,
 1340 bytes). The seed's staging draft (`STAGING`) holds every edition's
@@ -502,6 +506,62 @@ def home_end_leap(ctx, doc, para, other):
             'away': away, 'answered': answered['hint'], 'edits': edits}
 
 
+# the wheel's turns of 40 px `kept_span_held` makes: a few lines, the caret's paragraph still in view
+WHEEL_TURNS = 3
+# the element of the walk under the view's centre, as the re-take finds it where nothing keeps the walk (N-WALK's `elementUnder`)
+UNDER = '''(async () => { const W = await import("./nav/walk.js"), C = await import("./plane/camera.js"), u = W.elementUnder(C.view());
+  return {kind: u.kind, addr: u.addr, pos: u.pos}; })()'''
+
+
+def clear_point(ctx):
+    """a point over the plane clear of the one line, the box, the overlay, the scene and the mirror: the wheel's target there
+    pans the camera; None where the probe finds none"""
+    return ctx.js('''(() => { const p = window.__skep.view.viewport();
+      for (const [fx, fy] of [[0.75, 0.6], [0.85, 0.75], [0.6, 0.85], [0.9, 0.4], [0.4, 0.6]]) {
+        const x = Math.round(p.VW * fx), y = Math.round(p.VH * fy), e = document.elementFromPoint(x, y);
+        if (e && !e.closest('#line, #leap, #overlay, #scene, #mirror')) return {x, y};
+      }
+      return null; })()''')
+
+
+def kept_span_held(ctx, doc, para):
+    """THE KEPT CARET'S SPAN HOLDS THE WALK (B3-S1; D5 §4 rule 3): the walk landed on `para`, Enter placing the caret at its
+    start, `ab` typed and Esc pressed — the caret kept, the walk on its span — then the wheel turned over the plane by
+    WHEEL_TURNS turns of 40 px, and the re-take let run after the wheel's rest; then `x`; and whether all of it held: the
+    element under the view's centre is another than `para`'s span (N-WALK's `elementUnder`), a line of `para` still
+    stands below the one line, the re-take leaves the walk on `para`'s span, and `x` there returns the kept caret and
+    types at it, after `ab`. The hint, the caret and the edits are let go after, and the draft read again."""
+    ctx.leap(doc, para['pos'])
+    try:
+        ctx.drv.key('Enter'); ctx.frames(2)
+        for ch in 'ab':
+            ctx.drv.key(ch)
+        ctx.frames(2)
+        ctx.drv.key('Escape'); ctx.frames(2)
+        left = ctx.js(AT_MARK)
+        at = clear_point(ctx)
+        for _ in range(WHEEL_TURNS if at is not None else 0):
+            ctx.drv.wheel(at['x'], at['y'], dy=40)
+        under = ctx.js(UNDER)
+        ctx.js('new Promise((res) => setTimeout(res, 400))')  # the re-take waits 220 ms on the wheel's rest
+        ctx.settle(); ctx.frames(2)
+        held = ctx.js(AT_MARK)
+        # a line of the paragraph, its typed `ab` with it, below the one line's bottom and above the window's foot
+        seen = ctx.js('''((doc, pos, width) => { const line = document.getElementById("line"), top = line ? line.getBoundingClientRect().bottom : 0;
+          return (window.__skep.spanRects(doc, pos, width) || []).some((q) => q.y + q.h / 2 >= top && q.y + q.h / 2 <= window.innerHeight); })(%s, %d, %d)''' % (json.dumps(doc), para['pos'], para['width'] + 2))
+        ctx.drv.key('x'); ctx.frames(2)
+        typed, edits = ctx.js('window.__skep.caret()'), ctx.js('window.__skep.model.edits(%s)' % json.dumps(doc))
+    finally:
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), N = await import("./overlays/hint.js"), L = await import("./text/layer.js"), R = await import("./model/records.js"); H.dismiss(); N.act(); S.clear(); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
+        ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
+    span = {'kind': 'block', 'addr': doc, 'pos': para['pos']}
+    ok = (left['caret'] == {'addr': doc, 'pos': para['pos'] + 2, 'live': False} and left['focus'] == span
+          and at is not None and under != span and seen and held['focus'] == span
+          and typed == {'addr': doc, 'pos': para['pos'] + 3, 'live': True} and ''.join(e['text'] for e in edits) == 'abx')
+    return {'ok': ok, 'para': {'pos': para['pos'], 'width': para['width']}, 'point': at, 'turns': WHEEL_TURNS, 'left': left, 'under': under,
+            'para_in_view': seen, 'held': held, 'typed': typed, 'edits': edits}
+
+
 def run(ctx):
     r = Result()
     rows = {s['state']: dict(s, outcome=('pending' if s['drawn'] else 'not drawn')) for s in STATES}
@@ -686,6 +746,10 @@ def run(ctx):
     ends = home_end_leap(ctx, OWN, wrapped, next((p for p in paras if p['pos'] != wrapped['pos']), None))
     figures['home_end_leap'] = ends
     r.check(ends['ok'], "at a live caret in a wrapped paragraph of the own draft, End puts the caret at its line's end — its mark against the line's last character, the next line on a line box below — and Home at the paragraph's start, neither moving the camera or the walk; a LEAP to another paragraph of the draft then leaves the caret kept, its mark hollow, and a printable key there is answered by the draft's own line, nothing typed (D5 K-71, M-13, M-2)", ends)
+    # the kept caret's span holds the walk through the wheel's re-take while a line of it stands in view (B3-S1; D5 §4 rule 3)
+    held_span = kept_span_held(ctx, OWN, target)
+    figures['kept_span_held'] = held_span
+    r.check(held_span['ok'], "Esc at a live caret in the own draft after typing, then the wheel over the plane a few lines, the caret's paragraph still in view and another element under the view's centre: the re-take leaves the walk on the kept caret's span, and a printable key there returns the caret and types at it (B3-S1; D5 §4 rule 3, K-77)", held_span)
 
     # ---- (e) B3-S13: the swallow's draft form at a span with no caret (K-72) ---------------------------------------------
     ctx.leap(OWN, target['pos'])

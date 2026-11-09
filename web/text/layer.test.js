@@ -15,7 +15,8 @@
 // the band's change re-anchoring the camera — and a kept word said where it
 // changes; a reading scene's pane's view at its measure and its corner,
 // compact beside its column or at its document's head, no row naming it; a
-// document's region and the view's window over it; the passage in view
+// document's region and the view's window over it; a span in the visible
+// view, read in a draft's typed text where the edits carried it; the passage in view
 // keeping its place through a reveal, a feed row naming its document — the
 // article standing until the reads it makes again set it — a version move
 // and an edit above the view, by its bytes' identity, the view's centre on an
@@ -239,6 +240,43 @@ test('a document\'s region is its outline\'s bounds widened leftward by the stri
     assert.deepEqual(w, windowIn(f, v), 'the window read over the visible view, in the room\'s units');
     assert.ok(w && !w.start && !w.end, `the first column's top under the one line: the start not run past — ${JSON.stringify(w)}`);
   } finally {
+    LAYER.readers({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null });
+    CAM._reset();
+  }
+});
+
+test('a span of the model\'s text stands in the visible view while the middle of a line holding it does, below the one line; in a draft\'s typed text the span is read where the page-local edits carried it, never at its own positions there (B3-S1; D5 §4 rule 3)', () => {
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: 'd', standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  REC.takeDelivery(D, [{ pos: 1, width: EXTENT, kind: 'content', text: TEXT, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: EXTENT }]);
+  CAM._reset(); CAM.setViewport(1440, 900);
+  const TOP = 30, b = REC.doc(D).blocks[0];
+  LAYER.readers({ selection: () => null, focus: () => null, top: () => TOP, handOff: () => {}, navigated: () => null });
+  /** the camera at an em of 40 px, the middle of the line holding a position of the text shown at a screen height, its column centred across the view */
+  const lineAt = (/** @type {number} */ pos, /** @type {number} */ py) => {
+    const c = LAYER.centreOf(D, pos), scale = 40 / LAYER.foldOf(REC.doc(D)).fs;
+    CAM.set({ x: c.x, y: c.y - (py - 450) / scale, scale });
+  };
+  try {
+    lineAt(b.pos, 450);
+    assert.equal(LAYER.spanInView(D, b.pos, b.width), true, 'its first line at the view\'s centre: in view');
+    const boxes = LAYER.foldBoxes(D, b.pos, b.width), rise = boxes[boxes.length - 1].rect.y - boxes[0].rect.y;
+    assert.ok(boxes.length > 1 && boxes.every((x) => x.column === boxes[0].column), `its ${boxes.length} lines in one column`);
+    lineAt(b.pos, TOP - rise - 2);
+    assert.equal(LAYER.spanInView(D, b.pos, b.width), false, 'its last line\'s middle under the one line: out of view');
+    lineAt(b.pos, TOP - rise + 2);
+    assert.equal(LAYER.spanInView(D, b.pos, b.width), true, 'its last line\'s middle below the line: in view');
+    // four hundred short lines typed at the text's start, more bytes than the span holds: its own positions now the typed lines'
+    const typed = 'x\n\n'.repeat(400);
+    assert.ok(typed.length > b.width);
+    REC.addEdit(D, { pos: 1, width: 0, text: typed });
+    lineAt(b.pos + typed.length, 450);
+    assert.equal(LAYER.spanInView(D, b.pos, b.width), true, 'the camera over where the edits carried it: in view');
+    assert.equal(LAYER.lineInView(D, b.pos, CAM.view()), false, 'the typed line its own positions name: out of view');
+    lineAt(b.pos, 450);
+    assert.equal(LAYER.spanInView(D, b.pos, b.width), false, 'the camera over the typed lines its own positions name: out of view');
+  } finally {
+    REC.clearEdits(D);
     LAYER.readers({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null });
     CAM._reset();
   }

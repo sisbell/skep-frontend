@@ -386,7 +386,9 @@
 // the caret's span, a move of the walk, a zoom past its reading scale (D5
 // M-2, K-77; N-KEYS', N-WALK's) — keeps the caret at its position
 // (`leaveCaret`), which Enter or a printable key at its span returns
-// (`returnCaret`); its line stands while it holds the caret (`heldParts`),
+// (`returnCaret`) — whether a line of its span, carried into the text shown,
+// stands in the visible view read here for N-WALK's hold on it
+// (`spanInView`); its line stands while it holds the caret (`heldParts`),
 // the platform's selection is collapsed at it as the page moves it — save
 // by a step that extends a selection, whose range the page places
 // (`placeSelection`) — and its mark —
@@ -1383,6 +1385,26 @@ const fitKey = () => { const F = fit(); return `${F.cpl}|${F.compact}|${F.head}|
 export function lineInView(addr, pos, view) {
   const c = centreOf(addr, pos), v = seenWorld(view);
   return c.x >= v.x0 && c.x <= v.x1 && c.y >= v.y0 && c.y <= v.y1;
+}
+
+/**
+ * Does a line of a span of a document's text stand in the visible view: the
+ * middle of a line of its fold holding a position of the span inside the
+ * viewport below the one line, as `lineInView` reads one line
+ * (`foldBoxes`) — in a draft's typed text, the lines holding the span where
+ * the page-local edits carried it (M-DERIVE's `toShown`). N-WALK's hold on
+ * the kept caret's span reads it.
+ * @param {string} addr
+ * @param {number} pos the span's first position in the model's text
+ * @param {number} width
+ * @returns {boolean}
+ */
+export function spanInView(addr, pos, width) {
+  const edits = REC.edits(addr), from = toShown(edits, pos), s = visibleView(read.top());
+  return foldBoxes(addr, from, toShown(edits, pos + width) - from).some(({ rect: r }) => {
+    const x = r.x + r.w / 2, y = r.y + r.h / 2;
+    return x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h;
+  });
 }
 
 /**

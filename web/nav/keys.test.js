@@ -23,7 +23,11 @@
 // focus that its slot acts on, gives "select a passage first" where the focus
 // is; a key moving the caret stands the walk on the caret's span, the ring's
 // rule as it stood, and a camera move leaves it there, so a slot chord at the
-// caret acts on that span; Shift with an arrow at a live caret moves it and
+// caret acts on that span; once Esc, a zoom past its reading scale or a key
+// pressed below that scale leaves the caret kept, its span holds the walk,
+// each re-take with a line of it in view taking the walk back there — no move
+// the page makes of its own releasing it — until the person's next walk move
+// or landing; Shift with an arrow at a live caret moves it and
 // runs the selection from where it stood to it, while off one Shift+↓ stays
 // K-8's; a caret at the text's end stands in its last span, which Esc leaves
 // the walk on and where Enter or a printable key returns it; Mod+Enter at
@@ -46,8 +50,8 @@
 // line before — the walk and the camera still, Shift extending a selection
 // from it (D5 K-8, K-9,
 // K-30, K-45 … K-52, K-57, K-70, K-71, K-72, K-74, K-76, K-77, K-93, K-100,
-// M-2, M-13, §1.6, §4 rules 2 and 3; D6 BM-1, BM-3, BM-4, BM-52, BM-54,
-// BM-70, BM-75; B3-S13; P47; FP-10, FP-14, FP-36).
+// M-2, M-13, §1.6, §4 rules 2, 3 and 8; D6 BM-1, BM-3, BM-4, BM-52, BM-54,
+// BM-70, BM-75; B3-S1, B3-S13; P47; FP-10, FP-14, FP-36).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
@@ -413,11 +417,19 @@ test('a caret at the end of a draft\'s text stands in its last span: Esc there l
   assert.deepEqual([caret(), REC.edits(D).map((e) => [e.pos, e.width, e.text])], [[D, N + 2, true], [[N + 1, 0, 'z']]], 'a printable key at the last span returns the kept caret and types at the end');
 }));
 
-test('a camera move leaves the walk at a live caret\'s span, the focus being the caret, which no camera move moves, so a slot chord pressed after it acts there; once Esc leaves the text to the walk, the same re-take takes the walk under the view\'s centre (D5 §4 rule 3; B3-S13; K-77, K-100)', () => onPlane(async () => {
+test('a camera move leaves the walk at a live caret\'s span, the focus being the caret, which no camera move moves, so a slot chord pressed after it acts there; once Esc, a zoom past the caret\'s reading scale or a key pressed below that scale leaves the caret kept, its span holds the walk — a re-take with a line of it in view at a scale the person may edit it at takes the walk back to it, whatever stands under the view\'s centre, so a printable key there types at the kept caret, and one with none of it in view takes the place under the centre — until the person\'s next walk move or landing releases it, the re-take then taking the walk under the view\'s centre (B3-S1; D5 §4 rule 3, M-2; B3-S13; K-11, K-77, K-100)', () => onPlane(async () => {
   HOST.attach(/** @type {any} */ (hostEl));
+  const f = LAYER.foldOf(REC.doc(D)), reading = CAM.view();
+  /** the walk's element: its kind, its place, its position */
+  const at = () => { const n = WALK.current(); return n && [n.kind, n.addr, n.pos]; };
+  /** a zoom chord pressed until D stands at its reading scale or below it */
+  const zoomTo = async (/** @type {boolean} */ readable) => {
+    for (let i = 0; i < 4 && LAYER.atReadingScale(D) !== readable; i++) { assert.equal(await KEYS.dispatch(keyOf(readable ? '=' : '-', MOD), PLANE), true); await tick(); }
+    assert.equal(LAYER.atReadingScale(D), readable);
+  };
   await focusOn(D, 14);
   assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
-  const under = WALK.elementUnder(CAM.view());
+  const under = WALK.elementUnder(reading), there = [under.kind, under.addr, under.pos];
   assert.deepEqual([caret(), under.kind, under.addr, under.pos !== 14], [[D, 14, true], 'block', D, true], 'the caret live in the second span; the view\'s centre over another span of the draft');
   await WALK.retakeFromView();
   assert.deepEqual([WALK.current()?.kind, WALK.current()?.pos, caret()], ['block', 14, [D, 14, true]], 'the re-take leaves the walk at the caret\'s span, the caret live');
@@ -428,7 +440,94 @@ test('a camera move leaves the walk at a live caret\'s span, the focus being the
   await tick();
   assert.deepEqual([caret(), WALK.current()?.pos], [[D, 14, false], 14], 'Esc: the caret kept, the walk on its span');
   await WALK.retakeFromView();
-  assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos], [under.kind, under.addr, under.pos], 'no live caret standing: the re-take takes the walk under the view\'s centre');
+  assert.deepEqual([at(), caret()], [['block', D, 14], [D, 14, false]], 'the re-take: the walk held on the kept caret\'s span, its line in view, never moved under the view\'s centre');
+  assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
+  assert.deepEqual([caret(), shown()], [[D, 15, true], TEXT.slice(0, 13) + 'q' + TEXT.slice(13)], 'q at the held span returns the kept caret and types at it');
+
+  // none of the kept span in view: the place under the view's centre; back over it, the span again
+  await KEYS.dispatch(keyOf('Escape'), PLANE);
+  await tick();
+  CAM.set({ ...reading, y: reading.y + 2000 / reading.scale });
+  const away = WALK.elementUnder(CAM.view());
+  assert.ok(!LAYER.inView(D) && away.addr !== D, `D's text out of view, the centre over ${away.kind} ${away.addr}`);
+  await WALK.retakeFromView();
+  assert.deepEqual(at(), [away.kind, away.addr, away.pos], 'none of the kept span in view: the re-take takes the place under the view\'s centre');
+  CAM.set(reading);
+  await WALK.retakeFromView();
+  assert.deepEqual([at(), caret()], [['block', D, 14], [D, 15, false]], 'the camera back over it: the walk on the kept caret\'s span, the re-take\'s own move releasing nothing');
+
+  // a zoom out over the draft and back: from the kept caret, then — Esc's hold released by a landing — from a live one
+  await zoomTo(false);
+  assert.deepEqual(at(), ['document', D, null], 'Mod+- past D\'s reading scale: the walk re-taken on D whole');
+  await zoomTo(true);
+  assert.deepEqual([at(), caret()], [['block', D, 14], [D, 15, false]], 'Mod+= back to it: the walk on the kept caret\'s span');
+  await focusOn(D, 14);
+  assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+  assert.deepEqual(caret(), [D, 15, true], 'Enter at the span landed on returns the kept caret');
+  await zoomTo(false);
+  assert.deepEqual([at(), caret()], [['document', D, null], [D, 15, false]], 'a zoom past its reading scale from the live caret: the caret kept, the walk on D whole');
+  await zoomTo(true);
+  assert.deepEqual(at(), ['block', D, 14], 'and back: the walk on the kept caret\'s span, the zoom having left the caret with its span held');
+
+  // a key pressed below the caret's reading scale before any re-take: the caret kept, its span held
+  CAM.set(reading);
+  await focusOn(D, 14);
+  assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+  CAM.set({ ...reading, scale: 7 / f.fs });
+  assert.equal(await KEYS.dispatch(keyOf('w'), PLANE), true);
+  assert.deepEqual([caret(), at()], [[D, 15, false], ['block', D, 14]], 'w below the scale: swallowed, the caret kept, the walk where it stood');
+  CAM.set(reading);
+  await WALK.retakeFromView();
+  assert.deepEqual(at(), ['block', D, 14], 'at reading scale again: the re-take keeps the walk on the kept caret\'s span');
+
+  // the person's next walk move releases the hold
+  await landed(KEYS.dispatch(keyOf('ArrowUp'), PLANE));
+  await landed(KEYS.dispatch(keyOf('ArrowDown'), PLANE));
+  assert.deepEqual(at(), ['block', D, 14], '↑ then ↓: the walk on the kept caret\'s span by the person\'s own moves');
+  CAM.set(reading);
+  await WALK.retakeFromView();
+  assert.deepEqual([at(), caret()], [there, [D, 15, false]], 'released by the walk moves: the re-take takes the walk under the view\'s centre, the caret kept');
+
+  // and so does a landing, on the kept caret's span itself
+  await focusOn(D, 14);
+  assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+  assert.equal(await KEYS.dispatch(keyOf('Escape'), PLANE), true);
+  await tick();
+  await WALK.retakeFromView();
+  assert.deepEqual(at(), ['block', D, 14], 'Esc again: the span holds the walk');
+  await focusOn(D, 14);
+  await WALK.retakeFromView();
+  assert.deepEqual(at(), there, 'released by the landing: the re-take takes the walk under the view\'s centre');
+}));
+
+test('the moves the page makes of its own — the box the walk stands in shown on a newer version, a reading scene\'s close returning the focus as the scene found it, a change of the page\'s class — leave the kept caret\'s span holding the walk, the next re-take with it in view taking the walk back there (B3-S1; D5 §4 rules 3 and 8; FP-22, FP-29)', () => onPlane(async () => {
+  const fake = FAKE.create({});
+  PORT.boot(fake);
+  // D's metadata and links held beside its text, so reading it whole reads nothing
+  REC.takeMetadata(D, { doc: D, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(D, []);
+  const under = WALK.elementUnder(CAM.view());
+  /** the walk's element: its kind, its place, its position */
+  const at = () => { const n = WALK.current(); return n && [n.kind, n.addr, n.pos]; };
+  try {
+    await focusOn(D, 14);
+    assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+    assert.equal(await KEYS.dispatch(keyOf('Escape'), PLANE), true);
+    await tick();
+    assert.deepEqual([at(), caret(), under.pos !== 14], [['block', D, 14], [D, 14, false], true], 'Esc: the caret kept, the walk on its span, the view\'s centre over another span');
+    /** @type {Array<[string, () => Promise<unknown>]>} each move the page makes of its own */
+    const moves = [
+      ['the box shown on a newer version', () => WALK.standAgain(D, under.pos)],
+      ['a reading scene\'s close', () => WALK.returnFocusTo(D, under.pos, true, true)],
+      ['a change of the page\'s class', () => WALK.dropped({ row: null, addrs: null, at: Date.now() })],
+    ];
+    for (const [what, move] of moves) {
+      await move();
+      await WALK.retakeFromView();
+      assert.deepEqual([at(), caret()], [['block', D, 14], [D, 14, false]], `${what}: the re-take takes the walk back to the kept caret's span`);
+    }
+    assert.deepEqual(fake.unanswered, []);
+  } finally { PORT.boot(null); }
 }));
 
 test('Shift with each arrow at a live caret moves it — ↓ and ↑ a line, → and ← a character — and the selection runs from where it stood to it, then on from that anchor, the walk following the caret\'s span and the selection\'s card shown, none standing where the caret comes back to the anchor and nothing typed; with the caret kept, Shift+↓ is K-8\'s, the walk\'s span selected whole (D5 K-8, K-71, §1.6)', () => onPlane(async () => {

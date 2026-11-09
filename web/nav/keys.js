@@ -35,9 +35,10 @@
 // `caretToSpan`); while a live caret stands on the plane in text the person
 // may edit at the camera's scale the focus is at it (`Ctx.where` `caret`,
 // read as a key is pressed and again as a held key is made, `whereNow`) — a
-// live caret in text that scale does not read, or one the walk stands
-// outside of in another document, left kept as the key finds it (D5 M-2),
-// every other move of the walk leaving it as the move is made (N-WALK's) —
+// live caret in text that scale does not read, its span then holding the
+// walk (N-WALK's `holdCaret`), or one the walk stands outside of in another
+// document, left kept as the key finds it (D5 M-2), every other move of the
+// walk leaving it as the move is made (N-WALK's) —
 // and its keys reach it before the walk's and K-8's (`caretKey`): the arrows
 // move it a character or a line, Home and End to the start or the end of its
 // line (D5 M-13), and with Shift move it and extend a selection from it
@@ -80,7 +81,9 @@
 // scene — its close a Back from its entry (N-GO's `closeScene`) — the
 // selection, then a live caret — the text left to the walk at the caret's
 // span, the caret KEPT there (K-77; BM-4), which Enter or a printable key at
-// that span returns — and after them all the arrival (FP-21; N-GO's
+// that span returns, the span holding the walk through the camera's moves
+// until the person's next walk move or landing (N-WALK's `leaveText`) — and
+// after them all the arrival (FP-21; N-GO's
 // `endArrival`); made at a landing, it passes over the box, over the find
 // and over an overlay whose own field holds the caret, the notice below that
 // overlay still closing first (FP-20). Mod+L alone opens the LEAP box (K-30),
@@ -314,9 +317,10 @@ export const holding = () => held.length + (making ? 1 : 0);
  * stands in text the person may edit is the caret; everywhere else as the
  * app read it. A live caret whose text the person may not edit at the
  * camera's scale (T-LAYER's `editable`) — a zoom past its reading scale
- * before the re-take that follows it — or which the walk stands outside of,
- * in another document, is left to the walk as the key finds it, kept where
- * it stood (D5 M-2, K-77), and the key acts as on the plane.
+ * before the re-take that follows it — is left to the walk as the key finds
+ * it, kept where it stood, its span holding the walk (D5 M-2, K-77; N-WALK's
+ * `holdCaret`); one the walk stands outside of, in another document, is left
+ * kept, nothing held; and the key acts as on the plane.
  * @param {Ctx} ctx
  * @returns {Ctx}
  */
@@ -324,7 +328,8 @@ function whereNow(ctx) {
   if (ctx.where !== 'plane' || SCENE.isOpen()) return ctx;
   const c = LAYER.caret(), f = WALK.current();
   if (!c || !c.live) return ctx;
-  if ((f && f.addr !== c.addr) || !LAYER.editable(c.addr)) { LAYER.leaveCaret(); return ctx; }
+  if (f && f.addr !== c.addr) { LAYER.leaveCaret(); return ctx; }
+  if (!LAYER.editable(c.addr)) { WALK.holdCaret(); return ctx; }
   return { ...ctx, where: 'caret' };
 }
 
@@ -725,9 +730,10 @@ function followAtCaret(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
  * (N-FIND's `close`; FP-20) — the scene — its close a Back from its entry
  * (N-GO's `closeScene`), which brings back the selection the place it opened
  * over kept — then the selection, then a live caret — the text left to the walk at
- * the caret's span, the caret kept there (K-77; T-LAYER's `leaveCaret`,
- * N-WALK's `focusTo`) — then the arrival — its outline, its labels and
- * its line (FP-21; N-GO's `endArrival`); on the bare plane nothing. Made at a
+ * the caret's span, the caret kept there and its span holding the walk
+ * through the camera's moves (K-77; N-WALK's `leaveText`) — then the arrival
+ * — its outline, its labels and its line (FP-21; N-GO's `endArrival`); on the
+ * bare plane nothing. Made at a
  * jump's landing, it ends no chrome a field the reader types in stands in
  * (FP-20): it passes over the box, the find, and an overlay whose own field
  * holds the caret (O-HOST's `typing`) — the notice below that overlay closing first
@@ -742,8 +748,7 @@ export function esc(landed = false) {
   if (FIND.isOpen() && !landed) { void FIND.close(true); return; }
   if (SCENE.isOpen()) { GO.closeScene(true); return; }
   if (SEL.selected()) { SEL.clear(); return; }
-  const left = LAYER.leaveCaret();
-  if (left) { void WALK.focusTo(left.addr, left.pos, true, true, null, true); return; }
+  if (WALK.leaveText()) return;
   GO.endArrival();
 }
 

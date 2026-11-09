@@ -3,7 +3,8 @@
 // the tree arithmetic pure, the mirror engine-bound. State (FP-10): the
 // walk's position — the element the walk stands on, its siblings and the
 // levels above — the position a landing named inside the focused span (W-01
-// step 3), kept until the walk moves; the count of its moves; the mirror's
+// step 3), kept until the walk moves; the count of its moves; whether the
+// walk holds the span of a caret the person left kept; the mirror's
 // element; and the readers the app hands in (`readers`; FP-11): where Back's
 // light stands and what a landing says (N-GO's `backLight` and `described`),
 // the version each box shows (N-GO's `shownIn`) and why no board is held
@@ -36,6 +37,22 @@
 // never at a caret it did not land at; save a reading scene's close, whose
 // landing returns the focus to the plane as the scene found it, a live caret
 // standing live (`returnFocusTo`; D5 §4 rule 8, K-63).
+// The kept caret's span holds the walk (B3-S1's THE KEPT CARET; D5 §4 rule
+// 3): where the person leaves the text at a live caret and no act of theirs
+// moves the walk — Esc, which stands the walk on the caret's span at its
+// position (`leaveText`; N-KEYS'), or a camera move past the caret's reading
+// scale (`holdCaret`; the re-take's own, and N-KEYS' `whereNow`) — every
+// re-take that ends with a line of that span in the visible view, in text the
+// person may edit at the camera's scale (T-LAYER's `editable`, `spanInView`),
+// stands the walk on it at the caret's position, whatever stands under the
+// view's centre (`heldSpan`), so a scroll that keeps the span in view, or a
+// zoom out over the draft and back, ends at a caret a key acts at. The
+// person's next walk move, click or teleport releases it — a walk key's
+// move, a landing (`focusTo`) — and no move the page makes of its own does:
+// a re-take, the caret followed (`followCaret`), a reading scene's close
+// returning the focus as the scene found it (`returnFocusTo`), a change of the
+// page's class (`dropped`), the box the walk stands in shown on a newer
+// version (`standAgain`).
 // The linearization: board › account › document › block | link in record
 // order (S3 Q6), each box once, as the version it shows (FP-22; the `shown`
 // reader): an account's documents are every box the plane draws — the
@@ -82,9 +99,11 @@
 // in text the person may edit at the camera's scale, the focus then the
 // caret, which no camera move moves (D5 §4 rule 3); a live caret whose text
 // that scale does not read — a zoom past its reading scale — is left kept as
-// the re-take is made (D5 M-2). The re-take's order, so
-// the walk never stands on a place out of view nor on one the plane does not
-// draw: a continuation's mark whose cell holds the view's centre — the walk's
+// the re-take is made, its span holding the walk (D5 M-2; `holdCaret`). The
+// re-take's order, so the walk never stands on a place out of view nor on one
+// the plane does not draw: the kept caret's span, where it holds the walk and
+// a line of it stands in the visible view (above); else a continuation's mark
+// whose cell holds the view's centre — the walk's
 // focus kept where it stands on one of the mark's members, a span or a link in
 // one taken to the member whole, else the mark's stop, never the member under
 // the centre, and no list opened; else the document whose region holds the
@@ -243,6 +262,8 @@ let stack = [];
 let landed = null;
 /** the walk's moves, each counted as it starts: a move a later one has overtaken sets nothing */
 let moves = 0;
+/** the walk holds the kept caret's span (see the head): set where the person leaves the text at a live caret and no act of theirs moves the walk, released by their next walk move or landing */
+let caretHeld = false;
 /** @type {HTMLElement | null} */
 let mirrorEl = null;
 /** @type {Array<(n: Node | null) => void>} */
@@ -855,8 +876,8 @@ function aimIn(addr, view) {
   return () => { if (REC.has(addr) && REC.doc(addr).from >= 0) last = view(); return last; };
 }
 
-/** a walk key's move: the mirror rebuilt, the platform's focus on the new item with the ring drawn (rules 10, 12), the watchers told */
-function stepped() { render(); focusItem({ byKey: true }); moved(); }
+/** a walk key's move: the kept caret's hold released (see the head), the mirror rebuilt, the platform's focus on the new item with the ring drawn (rules 10, 12), the watchers told */
+function stepped() { caretHeld = false; render(); focusItem({ byKey: true }); moved(); }
 
 /**
  * The child of a node → steps in to (D5 K-3), read from what the plane draws
@@ -945,20 +966,22 @@ export async function enter() {
  * crossed): the walk stands on that link's item where the document's
  * elements list it, else on the span holding the position. A mark's name
  * stands it on the mark's stop where the plane draws that mark at the scale
- * the camera is bound for, else on the mark's account. A re-take from what a
- * change of the page's class left (`asHeld`) reads no text: a span's levels are
- * its document's elements as the model holds them (`elementsOf`). A live
- * caret is left kept as the move is made, before anything is read (see the
- * head; T-LAYER's `leaveCaret`).
+ * the camera is bound for, else on the mark's account. A move taken from what
+ * the model holds (`asHeld`) reads no text: a span's levels are its
+ * document's elements as the model holds them (`elementsOf`). A landing
+ * is the person's act: the kept caret's hold is released and a live caret
+ * left kept as the move is made, before anything is read (see the head;
+ * T-LAYER's `leaveCaret`).
  * @param {string} addr a document, an account or a board; a mark's name (P-PROJ's `markKey`)
  * @param {number | null} pos
  * @param {boolean | null} [byKey] a key made the act; null where the move is no act of its own and the ring's rule stands (a key's caret followed, `followCaret`)
  * @param {boolean} [take] the platform's focus goes to the landing's item wherever it stood (an act); false carries it only where the mirror held it (a camera's re-take)
  * @param {End | null} [end] the link's end to stand on, at `pos`
- * @param {boolean} [asHeld] a span's levels taken as the model holds them, its document's text read for none (`dropped`, `followCaret`)
+ * @param {boolean} [asHeld] a span's levels taken as the model holds them, its document's text read for none (`dropped`, `followCaret`, `leaveText`)
  * @returns {Promise<void>}
  */
 export async function focusTo(addr, pos, byKey = false, take = true, end = null, asHeld = false) {
+  caretHeld = false;
   LAYER.leaveCaret();
   await standOn(addr, pos, byKey, take, end, asHeld);
 }
@@ -966,7 +989,8 @@ export async function focusTo(addr, pos, byKey = false, take = true, end = null,
 /**
  * The walk moves to a landing that returns the focus to the plane a reading
  * scene was opened over (see the head; D5 §4 rule 8, K-63): as `focusTo`,
- * save that a live caret stands live.
+ * save that a live caret stands live and the kept caret's hold stands, as
+ * the scene found them.
  * @param {string} addr
  * @param {number | null} pos
  * @param {boolean | null} [byKey] a key made the act
@@ -977,8 +1001,10 @@ export async function focusTo(addr, pos, byKey = false, take = true, end = null,
 export function returnFocusTo(addr, pos, byKey = false, take = true, end = null) { return standOn(addr, pos, byKey, take, end); }
 
 /**
- * The walk stood on a landing as `focusTo` names it, a live caret untouched:
- * the move `focusTo` and `returnFocusTo` make, and `followCaret`'s.
+ * The walk stood on a landing as `focusTo` names it, a live caret untouched
+ * and the kept caret's hold neither set nor released: the move `focusTo` and
+ * `returnFocusTo` make, `followCaret`'s, `leaveText`'s, the re-take's, and
+ * the moves the page makes of its own (`restand`).
  * @param {string} addr
  * @param {number | null} pos
  * @param {boolean | null} [byKey]
@@ -1027,6 +1053,80 @@ async function standOn(addr, pos, byKey = false, take = true, end = null, asHeld
   render();
   if (take || held) focusItem(ring); else FOCUS.land(null, ring);
   moved();
+}
+
+/**
+ * A move the page makes of its own (see the head): a live caret left kept
+ * as it is made (T-LAYER's `leaveCaret`), the walk stood as `standOn` stands
+ * it, the kept caret's hold standing.
+ * @param {string} addr
+ * @param {number | null} pos
+ * @param {boolean | null} [byKey]
+ * @param {boolean} [take]
+ * @param {End | null} [end]
+ * @param {boolean} [asHeld]
+ * @returns {Promise<void>}
+ */
+function restand(addr, pos, byKey = false, take = true, end = null, asHeld = false) {
+  LAYER.leaveCaret();
+  return standOn(addr, pos, byKey, take, end, asHeld);
+}
+
+/**
+ * The walk stood on the version the box it stands in shows now, at the
+ * position it stands at — a newer version's arrival pinning that box on the
+ * member being read (N-GO's `arrived`; FP-22, FP-23): a move the page makes
+ * of its own (`restand`), the platform's focus carried only where the mirror
+ * held it, the ring out.
+ * @param {string} addr the version the box shows
+ * @param {number | null} pos
+ * @returns {Promise<void>}
+ */
+export function standAgain(addr, pos) { return restand(addr, pos, false, false); }
+
+/**
+ * A live caret left without a move of the walk (see the head): kept where it
+ * stood (T-LAYER's `leaveCaret`), its span holding the walk from now — a
+ * camera move past the caret's reading scale, read by the re-take
+ * (`retakeFromView`) or by the key that meets it first (N-KEYS' `whereNow`),
+ * and Esc (`leaveText`).
+ * @returns {{addr: string, pos: number, block: number | null} | null} the span the caret stands in, in the model's text (T-LAYER's `caretSpan`); null where no live caret stood, nothing then held
+ */
+export function holdCaret() {
+  const left = LAYER.leaveCaret();
+  if (left) caretHeld = true;
+  return left;
+}
+
+/**
+ * Esc at a live caret (K-77; see the head): the caret kept and its span
+ * holding the walk (`holdCaret`), the walk stood on that span at the caret's
+ * position with the ring drawn — the text left to the walk, no act of the
+ * walk's, so the hold stands.
+ * @returns {boolean} a live caret stood
+ */
+export function leaveText() {
+  const left = holdCaret();
+  if (left) void standOn(left.addr, left.pos, true, true, null, true);
+  return !!left;
+}
+
+/**
+ * The element of the walk the kept caret's span is, where that span holds the
+ * walk (see the head): a kept caret standing in text the person may edit at
+ * the camera's scale (T-LAYER's `editable`), its element found by the
+ * landing's rule as the walk follows a caret (`followCaret`), a line of it
+ * standing in the visible view (T-LAYER's `spanInView`); null where no hold
+ * stands, or no such span does.
+ * @returns {{node: Node, pos: number} | null} the element, and the caret's position in the model's text, which the walk names there
+ */
+function heldSpan() {
+  const c = caretHeld ? LAYER.caret() : null;
+  const at = c && !c.live && LAYER.editable(c.addr) ? LAYER.caretSpan() : null;
+  if (!at) return null;
+  const kids = elementsOf(at.addr), node = kids[elementAt(kids, at.addr, at.pos)];
+  const b = node && node.kind === 'block' && node.pos != null ? REC.blockByPos(at.addr, node.pos) : null;
+  return b && LAYER.spanInView(at.addr, b.pos, b.width) ? { node, pos: at.pos } : null;
 }
 
 /** the live caret the walk follows (`followCaret`): one standing in text the person may edit at the camera's scale (T-LAYER's `editable`); null where none does */
@@ -1118,7 +1218,8 @@ export function kept() {
 
 /**
  * The element of the walk the plane draws under a view's centre, in the
- * re-take's order without its two rules of keeping (see the head): nearer
+ * re-take's order without its rules of keeping — the kept caret's span, a
+ * member a mark holds, the walk's own document (see the head): nearer
  * than far, a continuation's mark whose cell holds the centre (`markAt`),
  * else the document whose region holds it (`documentAt`) — the span in the
  * column under it where the view reads that document at its own reading
@@ -1153,11 +1254,15 @@ export function elementUnder(view) {
  * The focus follows the camera (rule 3): after a camera move — the wheel,
  * the camera key's drag, a zoom chord, PageDown — re-take it at the scale's
  * grain, in the re-take's order (see the head), on the element under the
- * view's centre (`elementUnder`) save where one of its two rules keeps the
- * walk. A continuation's mark under the centre keeps the walk's own document
- * where the mark holds it, a span or a link in it taken to the document
- * whole, else takes the mark's stop; never the member under the centre, and
- * no list opened. Where no document stands under the centre nearer than far,
+ * view's centre (`elementUnder`) save where one of its rules keeps the walk.
+ * The kept caret's span, where it holds the walk, a line of it in the visible
+ * view at a scale the person may edit it at, takes the walk back, at the
+ * caret's position, whatever stands under the centre (`heldSpan`); the walk
+ * standing there already, nothing moves. A continuation's mark under the
+ * centre keeps the walk's own document where the mark holds it, a span or a
+ * link in it taken to the document whole, else takes the mark's stop; never
+ * the member under the centre, and no list opened. Where no document stands
+ * under the centre nearer than far,
  * the walk's own document is kept while its region meets the visible view, a
  * span or a link in it taken to the document where it stands below its
  * reading scale; else the account or the board under the centre takes it. A
@@ -1167,28 +1272,35 @@ export function elementUnder(view) {
  * next keyboard act (rule 12). While a live caret stands in text the person
  * may edit at the camera's scale the focus is the caret, which no camera move
  * moves (D5 §4 rule 3): the walk stays at the caret's span (`liveCaret`). A
- * live caret whose text that scale does not read is left kept, whether or not
- * the walk moves (D5 M-2; T-LAYER's `leaveCaret`).
+ * live caret whose text that scale does not read is left kept, its span
+ * holding the walk, whether or not the walk moves (D5 M-2; `holdCaret`). No
+ * move of the re-take's releases the hold.
  * @param {boolean} [byKey] a key made the camera move
  */
 export async function retakeFromView(byKey = false) {
   if (liveCaret()) return;
-  LAYER.leaveCaret();
+  holdCaret();
+  const held = heldSpan();
+  if (held) {
+    const n = held.node;
+    if (!focus || focus.kind !== 'block' || focus.addr !== n.addr || focus.pos !== n.pos) await standOn(n.addr, held.pos, byKey, byKey, null, true);
+    return;
+  }
   const view = CAM.view(), at = elementUnder(view), lod = lodOf(view.scale).name;
   if (at.kind === 'mark') {
     const own = focus && inDocument(focus) && membersOf(at.addr).includes(documentOf(focus.addr) || focus.addr) ? focus : null;
-    if (own) { if (own.kind !== 'document') await focusTo(own.addr, null, byKey, byKey); }
-    else if (!focus || focus.addr !== at.addr) await focusTo(at.addr, null, byKey, byKey);
+    if (own) { if (own.kind !== 'document') await standOn(own.addr, null, byKey, byKey); }
+    else if (!focus || focus.addr !== at.addr) await standOn(at.addr, null, byKey, byKey);
     return;
   }
-  if (at.kind === 'block') { if (!focus || focus.addr !== at.addr || focus.pos !== at.pos) await focusTo(at.addr, at.pos, byKey, byKey); return; }
-  if (at.kind === 'document') { if (!focus || focus.addr !== at.addr || focus.kind !== 'document') await focusTo(at.addr, null, byKey, byKey); return; }
+  if (at.kind === 'block') { if (!focus || focus.addr !== at.addr || focus.pos !== at.pos) await standOn(at.addr, at.pos, byKey, byKey); return; }
+  if (at.kind === 'document') { if (!focus || focus.addr !== at.addr || focus.kind !== 'document') await standOn(at.addr, null, byKey, byKey); return; }
   // the walk's own document, while it is in view: below its reading scale its spans are no stops, so it stands whole
   if (lod !== 'far' && lod !== 'far~mid' && focus && inDocument(focus) && LAYER.inView(focus.addr)) {
-    if (focus.kind !== 'document' && !LAYER.atReadingScale(focus.addr)) await focusTo(focus.addr, null, byKey, byKey);
+    if (focus.kind !== 'document' && !LAYER.atReadingScale(focus.addr)) await standOn(focus.addr, null, byKey, byKey);
     return;
   }
-  if (!focus || focus.addr !== at.addr) await focusTo(at.addr, null, byKey, byKey);
+  if (!focus || focus.addr !== at.addr) await standOn(at.addr, null, byKey, byKey);
 }
 
 /**
@@ -1203,8 +1315,8 @@ export async function retakeFromView(byKey = false) {
  * document is read at the new class, taken again there, on that span or that
  * end. A move made meanwhile overtakes it (the order of moves). Like a
  * camera-made re-take, it carries the platform's focus only where the mirror
- * held it. A feed row names what it dropped and leaves the walk where it
- * stands.
+ * held it, and each of its moves is the page's own (`restand`). A feed row
+ * names what it dropped and leaves the walk where it stands.
  * @param {import('../model/pump.js').Dropped} x
  * @returns {Promise<void>}
  */
@@ -1214,11 +1326,11 @@ export async function dropped(x) {
   const at = landed ?? f.pos, doc = inDocument(f) ? f.addr : null;
   const end = f.kind === 'link' && f.link ? { link: f.link.link.addr, key: f.link.key } : null;
   const kept = !!doc && f.kind !== 'document' && REC.has(doc) && REC.doc(doc).blocks.length > 0;
-  await focusTo(f.addr, kept ? at : null, false, false, kept ? end : null, kept);
+  await restand(f.addr, kept ? at : null, false, false, kept ? end : null, kept);
   if (!doc) return;
   const move = moves;
   await PUMP.loadWhole(doc);
-  if (move === moves) await focusTo(doc, f.kind === 'document' ? null : at, false, false, end);
+  if (move === moves) await restand(doc, f.kind === 'document' ? null : at, false, false, end);
 }
 
 /** @returns {Node[]} the siblings in order (the gate's a11y case) */
