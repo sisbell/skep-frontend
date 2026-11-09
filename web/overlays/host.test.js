@@ -27,7 +27,13 @@
 // under its box and carried by the one line out of view, closed first by
 // Esc and an empty click, raised alone as the overlay above it ends, ended
 // below it by its own completion, and taken down by leaving the place, by a
-// version move with the faces alone, and by a change of class (FP-36).
+// version move with the faces alone, and by a change of class (FP-36); and
+// the room below the one line — the overlay and the notice below it capped
+// to it, scrolling inside themselves, the shorter keeping its own height up
+// to half where they share it; an element written with another overlay
+// opening at its top, a rebuild keeping its scroll; and the control the
+// focus moves to, or stands on as the caps change, brought into view, the
+// reader's own scroll standing (FP-20, FP-26).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -516,9 +522,10 @@ test('what a departure keeps of the overlay standing (issue #264\'s design decis
 // ---- a notice: a face a read brought once it answered (issue #265's design decision; FP-36) ----------------------------
 
 /**
- * A stand-in of one of the host's elements, `w` by `h` px where the host
- * placed it: its attributes kept, its face's parts read from the markup the
- * host wrote (`faceParts`).
+ * A stand-in of one of the host's elements, `w` px wide where the host placed
+ * it and as tall as its content's `h` px, save where the host capped it
+ * shorter (`style.maxHeight`), which it then scrolls inside: its attributes
+ * kept, its face's parts read from the markup the host wrote (`faceParts`).
  * @param {number} w
  * @param {number} h
  */
@@ -526,10 +533,13 @@ function boxEl(w, h) {
   /** @type {Record<string, string>} */
   const attrs = {};
   const e = {
-    className: '', innerHTML: '', style: /** @type {Record<string, string>} */ ({}), attrs, addEventListener() {}, contains: (/** @type {unknown} */ _x) => false,
+    className: '', innerHTML: '', style: /** @type {Record<string, string>} */ ({}), attrs, addEventListener() {}, contains: (/** @type {unknown} */ _x) => false, scrollTop: 0,
     setAttribute: (/** @type {string} */ k, /** @type {string} */ v) => { attrs[k] = v; }, removeAttribute: (/** @type {string} */ k) => { delete attrs[k]; },
     querySelector: (/** @type {string} */ sel) => faceParts(e.innerHTML, sel)[0] || null, querySelectorAll: (/** @type {string} */ sel) => faceParts(e.innerHTML, sel),
-    getBoundingClientRect: () => { const x = parseFloat(e.style.left) || 0, y = parseFloat(e.style.top) || 0; return { left: x, top: y, right: x + w, bottom: y + h, width: w, height: h }; },
+    getBoundingClientRect: () => {
+      const x = parseFloat(e.style.left) || 0, y = parseFloat(e.style.top) || 0, cap = parseFloat(e.style.maxHeight), shown = Number.isNaN(cap) ? h : Math.min(h, cap);
+      return { left: x, top: y, right: x + w, bottom: y + shown, width: w, height: shown };
+    },
   };
   return e;
 }
@@ -538,9 +548,15 @@ function boxEl(w, h) {
 const aNotice = (/** @type {string} */ id, /** @type {string} */ words, /** @type {import('./host.js').Anchor | null} */ anchor = null, told = false) =>
   HOST.show({ kind: 'face', id, anchor, told, notice: true, html: `<div class="face-text" data-string="F.floating">${words}</div>` });
 
-/** the host attached to its two stand-ins for the run of `body`, then to the file's own again */
-async function stacking(/** @type {(main: ReturnType<typeof boxEl>, under: ReturnType<typeof boxEl>) => (void | Promise<void>)} */ body) {
-  const main = boxEl(300, 120), under = boxEl(280, 60);
+/**
+ * The host attached to its two stand-ins for the run of `body`, then to the
+ * file's own again: the overlay's 300 px wide and the notice's 280, each as
+ * tall as its content's height given.
+ * @param {(main: ReturnType<typeof boxEl>, under: ReturnType<typeof boxEl>) => (void | Promise<void>)} body
+ * @param {{main: number, under: number}} [tall] the heights of their contents, px
+ */
+async function stacking(body, tall = { main: 120, under: 60 }) {
+  const main = boxEl(300, tall.main), under = boxEl(280, tall.under);
   HOST.attach(/** @type {any} */ (main), /** @type {any} */ (under));
   try { await body(main, under); } finally { HOST.leave(); HOST.attach(/** @type {any} */ (hostEl)); }
 }
@@ -666,4 +682,116 @@ test('the notice below stands under the overlay\'s box at its left, the two clam
     HOST.place();
     assert.deepEqual([under.style.visibility, HOST.aside(), at(main)], ['hidden', { id: 'F.floating', text: 'its passage is not here' }, { x: 1134, y: 774 }], 'its document out of view: hidden, the line carrying its words, the card held in the viewport by its own height');
   });
+});
+
+// ---- the room below the one line: what is taller scrolls inside itself (FP-26, FP-20) -----------------------------------
+
+/** the one line attached to a stand-in whose bottom edge stands `bottom` px down the window */
+const lineAt = (/** @type {number} */ bottom) => LINE.attach(/** @type {any} */ ({ innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ bottom }) }), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+
+/** where one of the host's stand-ins stands, px: its top, its bottom and its height */
+const extent = (/** @type {ReturnType<typeof boxEl>} */ e) => { const q = e.getBoundingClientRect(); return { top: q.top, bottom: q.bottom, h: q.height }; };
+
+/** a card conjured at a screen point below the line, by its id */
+const cardAt = (/** @type {string} */ id) => HOST.show({ kind: 'card', id, anchor: { screen: { x: 100, y: 200 } }, html: `<span class="label">${id}</span>`, acts: {} });
+
+test('an overlay and the notice below it taller than the room below the one line are capped to it, each scrolling inside itself, the overlay\'s top held below the line and the two inside the window: the overlay alone takes the whole room; the two keep their own heights where both fit, else the shorter its own up to half and the longer the rest (FP-26, FP-36)', async () => {
+  // the room: from 6 px below the line's bottom edge, 93, to 6 px above the window's foot, 394 — 301 px; the two share 295, less the 6 between them
+  CAM.setViewport(1440, 400);
+  lineAt(87);
+  try {
+    await stacking((main) => {
+      cardAt('a card');
+      assert.deepEqual(extent(main), { top: 93, bottom: 394, h: 301 }, 'a card 600 px tall alone: capped to the room');
+    }, { main: 600, under: 60 });
+    /** @type {Array<[string, {main: number, under: number}, {top: number, bottom: number, h: number}, {top: number, bottom: number, h: number}]>} each pair's contents' heights, and where the card and the notice stand */
+    const pairs = [
+      ['both fit: each its own height, the card at its anchor', { main: 120, under: 60 }, { top: 200, bottom: 320, h: 120 }, { top: 326, bottom: 386, h: 60 }],
+      ['the notice the shorter: its own height, the card the rest', { main: 300, under: 60 }, { top: 93, bottom: 328, h: 235 }, { top: 334, bottom: 394, h: 60 }],
+      ['the card the shorter: its own height, the notice the rest', { main: 100, under: 500 }, { top: 93, bottom: 193, h: 100 }, { top: 199, bottom: 394, h: 195 }],
+      ['both taller than half the room: half each', { main: 400, under: 400 }, { top: 93, bottom: 240.5, h: 147.5 }, { top: 246.5, bottom: 394, h: 147.5 }],
+    ];
+    for (const [what, tall, card, notice] of pairs) {
+      await stacking((main, under) => {
+        cardAt('a card');
+        aNotice('face:a', 'its passage is not here');
+        assert.deepEqual([extent(main), extent(under)], [card, notice], what);
+      }, tall);
+    }
+  } finally {
+    lineAt(0);
+    CAM.setViewport(1440, 900);
+  }
+});
+
+test('an element written with another overlay than it held opens at its top — another card in the card\'s place, a later notice below, a notice raised into the card\'s place — and a rebuild, a redraw and the same notice shown again keep its scroll (FP-26)', async () => {
+  await stacking((main, under) => {
+    cardAt('a card');
+    main.scrollTop = 120; // the reader scrolled it
+    cardAt('a card');
+    assert.equal(main.scrollTop, 120, 'a rebuild by its own act: its scroll kept');
+    assert.equal(HOST.redraw({ kind: 'card', id: 'a card', anchor: { screen: { x: 100, y: 200 } }, html: '<span class="label">a card, read again</span>', acts: {} }), true);
+    assert.equal(main.scrollTop, 120, 'a redraw by its owner: kept');
+    cardAt('another card');
+    assert.equal(main.scrollTop, 0, 'another card in its place: at its top');
+    aNotice('face:a', 'its passage is not here');
+    under.scrollTop = 40;
+    aNotice('face:a', 'its passage is not here');
+    assert.equal(under.scrollTop, 40, 'the same notice shown again below: kept');
+    aNotice('face:b', 'board unreachable');
+    assert.equal(under.scrollTop, 0, 'a later notice in its place below: at its top');
+    main.scrollTop = 80;
+    HOST.dismiss();
+    assert.deepEqual([standing(), main.scrollTop], ['face:b', 0], 'the card dismissed: the notice raised into its place, at its top');
+  }, { main: 600, under: 600 });
+});
+
+/**
+ * A stand-in of an element inside one of the host's: `at` px down its
+ * parent's content and `h` px tall — given `view`, a scroller that shows
+ * that many px of it from its `scrollTop` — its rect read through its
+ * parent's scroll, as the platform reads it.
+ * @param {any} parent
+ * @param {number} at
+ * @param {number} h
+ * @param {number} [view]
+ */
+function within(parent, at, h, view) {
+  const shown = view ?? h;
+  return {
+    parentElement: parent, scrollTop: 0, scrollHeight: h, clientHeight: shown, clientTop: 0, overflowY: view == null ? 'visible' : 'auto',
+    getBoundingClientRect: () => { const top = parent.getBoundingClientRect().top + parent.clientTop + at - parent.scrollTop; return { top, bottom: top + shown, height: shown }; },
+  };
+}
+
+test('the control the focus moves to in a capped overlay is brought into view — its list\'s rows scrolled first, then the overlay, each by the least that shows it — and again where a notice arriving below shrinks the overlay; the reader\'s own scroll, the focus unmoved, stands (FP-20, FP-26)', async () => {
+  const doc = /** @type {any} */ (globalThis.document), platform = { style: globalThis.getComputedStyle, active: doc.activeElement };
+  globalThis.getComputedStyle = /** @type {any} */ ((/** @type {{overflowY: string}} */ e) => ({ overflowY: e.overflowY }));
+  CAM.setViewport(1440, 400);
+  lineAt(87);
+  try {
+    await stacking((main) => {
+      // the card a scroller of its own, 600 px of content; its list of forty rows 16 px tall, 20 px down it, showing 300 px of them
+      Object.assign(main, { parentElement: null, clientTop: 0, scrollHeight: 600, overflowY: 'auto', contains: (/** @type {any} */ x) => { for (let p = x; p; p = p.parentElement) if (p === main) return true; return false; } });
+      Object.defineProperty(main, 'clientHeight', { get: () => main.getBoundingClientRect().height });
+      cardAt('the trail');
+      const rows = within(main, 20, 640, 300), first = within(rows, 0, 16), last = within(rows, 624, 16);
+      doc.activeElement = last; // ↓ landed the focus on the last row, scrolling nothing
+      HOST.place();
+      assert.deepEqual([rows.scrollTop, main.scrollTop, last.getBoundingClientRect().bottom], [340, 19, 394], 'the last row: the rows scrolled to show it, then the card, its foot on the card\'s');
+      main.scrollTop = 0; // the reader's own wheel
+      HOST.place();
+      assert.equal(main.scrollTop, 0, 'the reader\'s own scroll, the focus unmoved: it stands');
+      aNotice('face:a', 'its passage is not here');
+      assert.deepEqual([extent(main).h, main.scrollTop, last.getBoundingClientRect().bottom], [235, 85, 328], 'a notice arriving below shrinks the card: the row brought back into view, its foot on the card\'s');
+      doc.activeElement = first;
+      HOST.place();
+      assert.deepEqual([rows.scrollTop, main.scrollTop, first.getBoundingClientRect().top], [0, 20, 93], 'the first row: the rows scrolled back to it, then the card, its top on the card\'s');
+      doc.activeElement = null;
+    }, { main: 600, under: 60 });
+  } finally {
+    globalThis.getComputedStyle = platform.style; doc.activeElement = platform.active;
+    lineAt(0);
+    CAM.setViewport(1440, 900);
+  }
 });

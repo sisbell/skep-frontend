@@ -3476,6 +3476,86 @@ def panels_hold(ctx, r):
     return figures
 
 
+# how much shorter than the trail's list, in px, the room below the one line is made (`overlay_room_holds`): the list
+# measured in a window 900 px tall, the window then set so that the room — from 6 px below the line's bottom edge to 6 px
+# above the window's foot — is this much shorter than the list
+ROOM_SHORT_PX = 60
+
+# the overlay as it stands (`overlay_room_holds`): its id, its rect, its scroll's height and its view's, the one line's
+# bottom edge, the window's height, its rows and the one the focus stands on
+OVERLAY_ROOM_JS = '''(() => { const o = document.getElementById('overlay'), q = o.getBoundingClientRect(), rows = [...o.querySelectorAll('[data-run^="j"]')];
+  return {id: window.__skep.overlay().id, top: q.top, bottom: q.bottom, h: q.height, scroll: o.scrollHeight, client: o.clientHeight,
+          line: document.getElementById('line').getBoundingClientRect().bottom, vh: window.innerHeight, rows: rows.length, at: rows.indexOf(document.activeElement)}; })()'''
+
+# the overlay's row the focus stands on as a person sees it (`overlay_room_holds`): its rect, whether it stands inside the
+# window, each scroller between it and the overlay — the overlay too — whose view does not hold it whole, and whether
+# the element found at its centre is inside it
+ROW_SEEN_JS = '''(() => { const o = document.getElementById('overlay'), a = document.activeElement, rows = [...o.querySelectorAll('[data-run^="j"]')], i = rows.indexOf(a);
+  if (i < 0) return null; const q = a.getBoundingClientRect(), clipped = [];
+  for (let s = a.parentElement; s && o.contains(s); s = s.parentElement) {
+    if (getComputedStyle(s).overflowY === 'visible') continue;
+    const b = s.getBoundingClientRect(), top = b.top + s.clientTop;
+    if (q.top < top - 0.5 || q.bottom > top + s.clientHeight + 0.5) clipped.push({el: s.id || s.className, top, bottom: top + s.clientHeight, scrolled: s.scrollTop});
+  }
+  const hit = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2);
+  return {at: i, last: rows.length - 1, rect: {y: q.top, h: q.height}, inside: q.top >= -0.5 && q.bottom <= window.innerHeight + 0.5, clipped,
+          found: !!hit && a.contains(hit), hit: hit ? (hit.id || hit.className || hit.tagName) : null}; })()'''
+
+
+def overlay_room_holds(ctx, r):
+    """AN OVERLAY TALLER THAN THE ROOM BELOW THE ONE LINE (FP-26, FP-20): in a window 1440 px wide, then LINE_ROWS_PX[-1]
+    px wide — the one line on several rows — landed at the window run's position in the first edition, the trail's list
+    Mod+Y opens in a window 900 px tall is measured; then in a window short enough that the room below the line is
+    ROOM_SHORT_PX less than that, the list Mod+Y opens stands with its top below the line's bottom edge and its bottom
+    inside the window, scrolling inside itself; and ↓ made from its newest row to its last brings that row into view —
+    whole inside every scroller holding it and the window, the element found at its centre inside it. Its figures: the
+    list's height in the tall window, and in the short one the window's height, the room, the list's height and its
+    rows"""
+    figures = {}
+    was = ctx.resize(1440, 900)
+    try:
+        for w in (1440, LINE_ROWS_PX[-1]):
+            ctx.resize(w, 900)
+            ctx.settle()
+            ctx.leap(DOC, WINDOW[0])
+            ctx.drv.key('y', mods=('Meta',))
+            ctx.settle()
+            ctx.frames(2)
+            tall = ctx.js(OVERLAY_ROOM_JS)
+            ctx.esc()
+            if tall['id'] != 'trail-list':
+                r.check(False, f'a {w} px window 900 px tall: Mod+Y opens the trail\'s list', tall)
+                continue
+            vh = int(tall['line'] + 12 + tall['h'] - ROOM_SHORT_PX)
+            ctx.resize(w, vh)
+            ctx.settle()
+            ctx.drv.key('y', mods=('Meta',))
+            ctx.settle()
+            ctx.frames(2)
+            short = ctx.js(OVERLAY_ROOM_JS)
+            room = short['vh'] - short['line'] - 12
+            r.check(short['id'] == 'trail-list' and tall['h'] - room >= ROOM_SHORT_PX - 20 and short['top'] >= short['line'] - LABEL_TOL_PX
+                    and short['bottom'] <= short['vh'] + LABEL_TOL_PX and short['scroll'] > short['client'],
+                    f'a {w} px window {vh} px tall, the room below the one line {round(room)} px for a list {round(tall["h"])} px tall: the trail\'s list Mod+Y opens stands with its top below the line\'s bottom edge and its bottom inside the window, scrolling inside itself (issue #481)',
+                    {'tall': tall, 'short': short, 'room': room})
+            for _ in range(short['rows'] + 2):
+                if ctx.js(OVERLAY_ROOM_JS)['at'] >= short['rows'] - 1:
+                    break
+                ctx.drv.key('ArrowDown')
+            ctx.frames(2)
+            seen = ctx.js(ROW_SEEN_JS)
+            ctx.esc()
+            r.check(bool(seen) and seen['at'] == seen['last'] and seen['inside'] and not seen['clipped'] and seen['found'],
+                    f'a {w} px window {vh} px tall: ↓ made from the list\'s newest row to its last brings that row into view, whole inside every scroller holding it and the window, the element at its centre inside it (FP-20; issue #481)',
+                    seen)
+            figures[w] = {'list_900': round(tall['h'], 1), 'window_h': vh, 'room': round(room, 1), 'list': round(short['h'], 1), 'rows': short['rows']}
+    finally:
+        ctx.resize(*was)
+        ctx.js('document.activeElement && document.activeElement.blur && document.activeElement.blur()')
+        ctx.settle()
+    return figures
+
+
 def trail_view(ctx):
     """the plane's canvas along the segment between the trail's two newest entries, as far as the segment runs on screen
     inside the first edition's box, TRAIL_INSET_PX inside its edges, the disc about every entry's point left out: the
@@ -4888,6 +4968,7 @@ def run(ctx):
     r.figures['walk'] = walk_holds(ctx, r)
     r.figures['line_rows'] = line_rows_hold(ctx, r)
     r.figures['panels'] = panels_hold(ctx, r)
+    r.figures['overlay_room'] = overlay_room_holds(ctx, r)
     r.figures['scene_strokes'] = scene_strokes_hold(ctx, r)
     r.figures['scene_return'] = scene_return_holds(ctx, r)
     r.figures['scene_pane_return'] = scene_pane_return_holds(ctx, r)

@@ -361,8 +361,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #hint button:hover { background:#1e2530; }
 
 /* THE OVERLAYS — one at a time, conjured by an act, dismissed by its end; and below it the notice a read brought while it
-   stood (O-HOST's; FP-36), placed under its box, drawn as a face is wherever it stands */
-#overlay, #notice { position:fixed; left:0; top:0; z-index:30; display:none; max-width:min(560px, 92vw); background:#1b1f25;
+   stood (O-HOST's; FP-36), placed under its box, drawn as a face is wherever it stands. Each scrolls inside itself past
+   the height O-HOST caps it to, the room below the one line, its dismiss scrolling with its content */
+#overlay, #notice { position:fixed; left:0; top:0; z-index:30; display:none; max-width:min(560px, 92vw); overflow-y:auto; background:#1b1f25;
   border:1px solid #6b7382; border-radius:4px; padding:8px 24px 8px 10px; box-shadow:0 2px 12px rgba(0,0,0,.5); font-size:11.5px; }
 #overlay.on, #notice.on { display:block; }
 #overlay.face, #notice.face { border-color:var(--warn); }

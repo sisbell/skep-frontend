@@ -4,7 +4,9 @@
 // with Esc, the next act or its own completion, never a fixed region. Layer
 // 2. ENGINE-BOUND. State (FP-10): the current overlay, the notice standing
 // below it, and the opening still reading — with the surface it reopens,
-// where it reopens one — and the count of the acts made on the chrome.
+// where it reopens one — the count of the acts made on the chrome, and the
+// control last brought into view in either, with the caps it stood under
+// then (`reveal`).
 // The opening: chrome that opens on its reads — the reading scene, the
 // versions list, the provenance cards, the anatomy card, a face stating a
 // withheld origin whose clause's reads are out (O-FACES; FP-33) — opens
@@ -125,8 +127,18 @@
 // at the viewport's corner only where its anchor names nothing that stands
 // (`place`). Wherever it stands its top is held below the one line's bottom
 // edge, however many rows the line takes (L-LINE's `bottom`; FP-26), and its
-// bottom inside the viewport where the room below the line holds it, the
-// notice below it with it, so neither covers a part of the line. A jump's
+// bottom inside the viewport, the notice below it with it, so neither covers
+// a part of the line nor runs past the window's foot: each is capped to the
+// room below the line and scrolls inside itself past its cap (`fit`) — the
+// overlay alone takes the whole room; with the notice the two share it, each
+// keeping its own height where both fit, else the shorter its own up to half
+// and the longer the rest. An element written with another overlay than it
+// held opens at its top; a rebuild and a redraw keep its scroll. The control
+// the platform's focus stands on in either is brought into view as the focus
+// moves to it or the caps it stands under change, and only then, so the
+// reader's own scroll with the focus unmoved stands (`reveal`): each scroller
+// between it and its element, innermost first, moved by the least that shows
+// it, its top first where it is taller than the scroller's view. A jump's
 // face — its reading, its reaching, the failure it met — shows where the
 // camera is (FP-25): its anchor names the document it stands
 // at (`sign`), and while that document's region is out of the visible view
@@ -200,6 +212,8 @@ let made = 0;
 let reading = 0;
 /** @type {Left | null} the surface the opening still reading reopens, as the reader left it (`opening`'s `left`); read only while `reading` stands */
 let reopening = null;
+/** @type {{at: Element | null, caps: string}} the control `reveal` last brought into view — null while the focus stands outside the host's elements — and the caps `fit` set as it did */
+let revealed = { at: null, caps: '' };
 
 /** the key a control of the overlay bears: its `data-run`, or `x` for the dismiss */
 const keyOf = (/** @type {Element} */ e) => /** @type {HTMLElement} */ (e).dataset.run || (/** @type {HTMLElement} */ (e).dataset.x ? 'x' : null);
@@ -227,6 +241,8 @@ export function asLeft() {
 const FIRST = '[data-run], button:not([data-x]), input, [tabindex="0"]';
 /** the room between the overlay's box and the notice below it, px */
 const STACK_GAP = 6;
+/** the room kept between the host's elements and the one line's bottom edge, and the window's edges, px */
+const EDGE = 6;
 
 /**
  * Attach the overlay's element, and the element a notice stands in below it
@@ -327,11 +343,22 @@ function wordsOf(/** @type {string} */ html) {
   return faceWords(scratch.content);
 }
 
-/** an overlay written into one of the host's elements: its kind, the name the gate reads, its markup with the dismiss after it, and the dialog's name under the element's prefix (`name`) */
-function writeInto(/** @type {HTMLElement} */ host, /** @type {Overlay} */ o, prefix = 'overlay') {
+/**
+ * An overlay written into one of the host's elements: its kind, the name the
+ * gate reads, its markup with the dismiss after it, and the dialog's name
+ * under the element's prefix (`name`); written fresh — another overlay than
+ * the element held — it opens at its top, where a rebuild or a redraw keeps
+ * the element's scroll (see the head).
+ * @param {HTMLElement} host
+ * @param {Overlay} o
+ * @param {string} prefix `overlay`, or `notice` for the element below it
+ * @param {boolean} fresh `o` is another overlay than the element held
+ */
+function writeInto(host, o, prefix, fresh) {
   host.className = 'on ' + o.kind;
   host.setAttribute('data-id', o.id || o.kind);
   host.innerHTML = o.html + dismissButton();
+  if (fresh) host.scrollTop = 0;
   name(host, o, prefix);
 }
 
@@ -385,7 +412,7 @@ export function show(o) {
   const replacing = !!current && !rebuild;
   if (replacing) { /* the previous overlay's end runs, told so */ const prev = /** @type {Overlay} */ (current); current = null; if (prev.onDismiss) prev.onDismiss(true); }
   current = o;
-  const write = () => writeInto(host, o);
+  const write = () => writeInto(host, o, 'overlay', !rebuild);
   if (rebuild) {
     const kept = FOCUS.keep(host, keyOf, write);
     if (!kept && o.takeFocus) FOCUS.open('overlay', { el: host, from, byKey: true, first: firstControl(host, o.first) });
@@ -413,8 +440,8 @@ function stack(o) {
   const say = !o.told || typing();
   if (!stackEl) { const words = say ? wordsOf(o.html) : ''; if (words) FOCUS.say(words); return; }
   const host = stackEl;
-  if (stacked) { stacked = o; FOCUS.keep(host, keyOf, () => writeInto(host, o, 'notice')); }
-  else { stacked = o; writeInto(host, o, 'notice'); FOCUS.open('notice', { el: host, byKey: false }); }
+  if (stacked) { const fresh = stacked.id !== o.id; stacked = o; FOCUS.keep(host, keyOf, () => writeInto(host, o, 'notice', fresh)); }
+  else { stacked = o; writeInto(host, o, 'notice', true); FOCUS.open('notice', { el: host, byKey: false }); }
   place();
   if (say) FOCUS.say(faceWords(host));
   markDirty();
@@ -432,7 +459,7 @@ function stack(o) {
 function toStack(o, from) {
   if (!stackEl) return;
   stacked = o;
-  writeInto(stackEl, o, 'notice');
+  writeInto(stackEl, o, 'notice', true);
   FOCUS.open('notice', { el: stackEl, from, byKey: false });
 }
 
@@ -447,7 +474,7 @@ function raise() {
   const o = stacked, at = document.activeElement, held = !!at && stackEl.contains(at), key = held && at ? keyOf(at) : null;
   stacked = null;
   current = o;
-  writeInto(el, o);
+  writeInto(el, o, 'overlay', true);
   emptied(stackEl);
   if (held) FOCUS.land((key ? el.querySelector(controlOf(key)) : null) || firstControl(el, o.first), {});
   FOCUS.close('notice');
@@ -470,7 +497,7 @@ export function redraw(o) {
   const host = below ? stackEl : current && current.id === o.id ? el : null;
   if (!host) return false;
   if (below) stacked = o; else current = o;
-  FOCUS.keep(host, keyOf, () => writeInto(host, o, below ? 'notice' : 'overlay'));
+  FOCUS.keep(host, keyOf, () => writeInto(host, o, below ? 'notice' : 'overlay', false));
   place();
   markDirty();
   return true;
@@ -495,16 +522,17 @@ const away = (/** @type {Overlay | null} */ o) => !!o && !!o.anchor && !!o.ancho
 
 /**
  * Place the overlay at its anchor — per frame, its top held below the one
- * line's bottom edge and its bottom inside the viewport where the room below
- * the line holds it (see the head): beneath the element it was conjured at
- * while that stands (`standing`); else beneath its span's first line in the
- * mounted article, or at the document's box where none is mounted; else at
- * its world point, else at its screen point; else, its anchor naming nothing
- * that stands, at the viewport's corner. A notice below it stands under its
- * box, at its left, the two held there together. A jump's face whose
- * document stands out of the visible view is hidden there, the one line
- * carrying its words (`aside`) — a notice below so hidden takes no room in
- * the clamp.
+ * line's bottom edge and its bottom inside the viewport, capped to the room
+ * below the line (`fit`), and the control the focus stands on brought into
+ * view where it moved or its caps changed (`reveal`; see the head): beneath
+ * the element it was conjured at while that stands (`standing`); else
+ * beneath its span's first line in the mounted article, or at the document's
+ * box where none is mounted; else at its world point, else at its screen
+ * point; else, its anchor naming nothing that stands, at the viewport's
+ * corner. A notice below it stands under its box, at its left, the two held
+ * there together. A jump's face whose document stands out of the visible
+ * view is hidden there, the one line carrying its words (`aside`) — a notice
+ * below so hidden takes no room in the caps or the clamp.
  */
 export function place() {
   if (!el || !current) return;
@@ -520,14 +548,64 @@ export function place() {
     else { const b = docBox(a.span.addr); x = sx(b.x + b.w); y = sy(b.y); }
   } else if (a && a.world) { x = sx(a.world.x); y = sy(a.world.y); }
   else if (a && a.screen) { x = a.screen.x; y = a.screen.y; }
-  const r = el.getBoundingClientRect();
   const below = stacked && stackEl ? stackEl : null, shown = !!below && !away(stacked);
   if (below) below.style.visibility = shown ? '' : 'hidden';
-  const n = shown && below ? below.getBoundingClientRect() : null;
-  x = Math.max(6, Math.min(VW - Math.max(r.width, n ? n.width : 0) - 6, x));
-  y = Math.max(LINE.bottom() + 6, Math.min(VH - r.height - (n ? STACK_GAP + n.height : 0) - 6, y));
+  const top = LINE.bottom() + EDGE, caps = fit(el, shown ? below : null, VH - top - EDGE);
+  const r = el.getBoundingClientRect(), n = shown && below ? below.getBoundingClientRect() : null;
+  x = Math.max(EDGE, Math.min(VW - Math.max(r.width, n ? n.width : 0) - EDGE, x));
+  y = Math.max(top, Math.min(VH - r.height - (n ? STACK_GAP + n.height : 0) - EDGE, y));
   el.style.left = x + 'px'; el.style.top = y + 'px';
   if (below) { below.style.left = x + 'px'; below.style.top = (y + r.height + STACK_GAP) + 'px'; }
+  reveal(caps);
+}
+
+/**
+ * Cap the overlay's element, and the notice's shown below it, to the room
+ * below the one line (see the head): the overlay alone takes the room; with
+ * the notice the two share it less STACK_GAP — the overlay capped first at
+ * half of it, the notice at what the overlay then leaves, and the overlay at
+ * what the notice then leaves — so each keeps its own height where both
+ * fit, else the shorter its own up to half and the longer the rest. Each cap
+ * is read from the heights the elements render under the caps set before
+ * it, never from a cap cleared to measure, which would take a scrolled
+ * element back to its top; none is set below 0 px.
+ * @param {HTMLElement} over the overlay's element
+ * @param {HTMLElement | null} under the notice's element, where the notice is shown below the overlay
+ * @param {number} room the height below the line the two stand in, px
+ * @returns {string} the caps set, the overlay's then the notice's
+ */
+function fit(over, under, room) {
+  const cap = (/** @type {HTMLElement} */ e, /** @type {number} */ h) => { e.style.maxHeight = Math.max(0, h) + 'px'; return e.getBoundingClientRect().height; };
+  if (!under) { cap(over, room); return over.style.maxHeight; }
+  const share = Math.max(0, room - STACK_GAP);
+  const first = cap(over, share / 2), n = cap(under, share - first);
+  cap(over, share - n);
+  return over.style.maxHeight + ' ' + under.style.maxHeight;
+}
+
+/**
+ * Bring the control the platform's focus stands on in the overlay or the
+ * notice below it into view (see the head), where the focus moved to it or
+ * the caps it stands under changed since it was last brought in, and only
+ * then: each scroller between it and its element, innermost first — a
+ * list's rows, then the element — moved by the least that shows it, its top
+ * first where it is taller than the scroller's view. It moves no focus and
+ * scrolls nothing outside the host's elements.
+ * @param {string} caps the caps `fit` set this frame
+ */
+function reveal(caps) {
+  const a = document.activeElement;
+  const host = !a ? null : el && el.contains(a) ? el : stackEl && stackEl.contains(a) ? stackEl : null;
+  if (!host || !a) { revealed = { at: null, caps }; return; }
+  if (a === revealed.at && caps === revealed.caps) return;
+  revealed = { at: a, caps };
+  for (let s = a.parentElement; s && host.contains(s); s = s.parentElement) {
+    if (s.scrollHeight <= s.clientHeight || !/^(auto|scroll)$/.test(getComputedStyle(s).overflowY)) continue;
+    const c = a.getBoundingClientRect(), from = s.getBoundingClientRect().top + s.clientTop;
+    const up = c.top - from, down = c.bottom - (from + s.clientHeight);
+    if (up < 0) s.scrollTop += up;
+    else if (down > 0) s.scrollTop += Math.min(up, down);
+  }
 }
 
 /** dismiss the current overlay — the chrome's next act, so an opening still reading ends with it; its end runs; the focus returns through the controller, to the chain's opener or the walk's element; a notice below it stays, alone in its place (`raise`) */

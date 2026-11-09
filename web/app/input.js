@@ -33,7 +33,10 @@
 // drag (K-10: Mod held, wherever the pointer is — M-8: a drag begun on an
 // article with the key held is the camera's, the pointer captured by the
 // plane, and selects nothing); it zooms by the pinch (Ctrl+wheel, as a
-// trackpad sends it) and by Mod+wheel (K-12). While a jump is in the air
+// trackpad sends it) and by Mod+wheel (K-12). A wheel over the chrome — the
+// overlay and the notice below it, the reading scene, the LEAP box, the
+// mirror, the one line — is the chrome's own, scrolling what of it scrolls,
+// and moves no camera. While a jump is in the air
 // (FP-25) a wheel series — wheel events less than SERIES_MS apart — begun
 // before the jump's camera left (N-GO's `airSince`) is dropped whole, so a
 // trackpad's momentum never moves the camera the jump took; any other wheel
@@ -257,7 +260,7 @@ export function attach(els) {
   });
   window.addEventListener('wheel', (e) => {
     const t = /** @type {HTMLElement} */ (e.target);
-    if (t.closest && t.closest('#overlay, #scene, #leap, #mirror, #line')) return;
+    if (t.closest && t.closest('#overlay, #notice, #scene, #leap, #mirror, #line')) return;
     e.preventDefault();
     if (dropped(e.timeStamp)) return;
     GO.takeOver();

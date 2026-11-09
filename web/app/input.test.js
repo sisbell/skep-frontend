@@ -12,7 +12,8 @@
 // draws, one the index does not list among them; an empty click ends a card's
 // opening alone, then dismisses the card; a press on a placeholder starts no selection; a wheel
 // series under way as a jump's camera left is dropped whole, and a later
-// wheel, a pinch or the camera key's drag takes the camera over; a press on
+// wheel, a pinch or the camera key's drag takes the camera over; a wheel over
+// the overlay or the notice below it is theirs, the camera staying; a press on
 // an outlined run below reading scale is a step to it; a withheld run's one
 // symbol opens its ends' card or list, never C-39's face; a byline's cut
 // label opens and closes on its clicks, selecting nothing; where no board is
@@ -725,6 +726,34 @@ test('a wheel series under way as a jump\'s camera left is dropped whole — the
       assert.deepEqual([GO.inAir(), CAM.flying()], [false, false], `${what} takes the camera over`);
       assert.equal(await jump, null);
     }
+  } finally {
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+test('a wheel over the overlay or the notice below it is theirs: its default stands, so it scrolls what of them scrolls, and the camera stays; over the plane the wheel is the camera\'s', () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the window's listeners, by event */
+  const win = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(win), getSelection: () => null, setTimeout: () => 0 });
+  try {
+    CAM.setViewport(1440, 900);
+    CAM.set({ x: 0, y: 0, scale: 1 });
+    INPUT.attach(/** @type {any} */ ({ plane: { ...listens(null), setPointerCapture() {}, classList: { add() {}, remove() {} } }, layer: listens(null), corners: listens(null) }));
+    const wheel = /** @type {(e: unknown) => void} */ (win.get('wheel'));
+    /** a wheel over an element inside the region `id` names — the one `closest` finds for any selector list naming it: whether its default was prevented, and whether the camera moved */
+    const over = (/** @type {string} */ id) => {
+      const was = CAM.view();
+      let prevented = false;
+      wheel({ target: { closest: (/** @type {string} */ sel) => (sel.split(',').map((s) => s.trim()).includes(id) ? { id } : null) }, preventDefault() { prevented = true; }, ctrlKey: false, metaKey: false, deltaX: 0, deltaY: 40, clientX: 700, clientY: 450, timeStamp: performance.now() });
+      const now = CAM.view();
+      return { prevented, moved: now.x !== was.x || now.y !== was.y || now.scale !== was.scale };
+    };
+    for (const id of ['#overlay', '#notice']) assert.deepEqual(over(id), { prevented: false, moved: false }, `over ${id}: its default stands, the camera stays`);
+    assert.equal(over('#plane').prevented, true, 'over the plane: the wheel is the camera\'s, its default prevented');
   } finally {
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }
