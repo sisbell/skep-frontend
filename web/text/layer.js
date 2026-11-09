@@ -385,16 +385,16 @@
 // composed and nothing sent (FP-14). Leaving the text — Esc to the walk at
 // the caret's span, a move of the walk, a zoom past its reading scale (D5
 // M-2, K-77; N-KEYS', N-WALK's) — keeps the caret at its position
-// (`leaveCaret`), which Enter or a printable key at its span returns
-// (`returnCaret`) — its span the one the walk stands on at its position, by
-// T-SPAN's rule: in white space alone the span before it, or the first where
-// none stands before it (`caretSpan`, `caretInSpan`; D5 §4 rule 20); whether
-// a line of its span, carried into the text shown, stands in the visible view
-// read here for N-WALK's hold on it (`spanInView`); its line stands while it
-// holds the caret (`heldParts`), the platform's selection is collapsed at it
-// as the page moves it — save
-// by a step that extends a selection, whose range the page places
-// (`placeSelection`) — and its mark —
+// (`leaveCaret`), which Enter, a printable key or Shift with ← or → at its
+// span returns (`returnCaret`; N-KEYS') — its span the one the walk stands
+// on at its position, by T-SPAN's rule: in white space alone the span before
+// it, or the first where none stands before it (`caretSpan`, `caretInSpan`;
+// D5 §4 rule 20); whether a line of its span, carried into the text shown,
+// stands in the visible view read here for N-WALK's hold on it
+// (`spanInView`); its line stands while it holds the caret (`heldParts`), the
+// platform's selection is collapsed at it as the page sets it — save by a
+// step that extends a selection, or the return such a step is made from,
+// whose range the page places (`placeSelection`) — and its mark —
 // the page's own, of no width, hollow where kept — is set at its character
 // boundary in the standing part each frame (`placeCaretMark`) and is no byte
 // of the document. A draft's kept word opens its statement in its corner on
@@ -4327,10 +4327,18 @@ export function leaveCaret() {
   return caretSpan();
 }
 
-/** a kept caret returned where it stood (K-70, K-77; BM-52): the keys reach it again; null where none is kept */
-export function returnCaret() {
+/**
+ * A kept caret returned where it stood (K-70, K-77; BM-52): the keys reach it
+ * again. A return a selection is extended from (`extending`; O-SELECTION's
+ * `extendFromCaret`) keeps the platform's selection as it stands, so a step
+ * the caret cannot make leaves the selection drawn; any other collapses it at
+ * the caret. Null where no caret stands.
+ * @param {boolean} [extending] a selection is extended from the caret returned
+ * @returns {Caret | null} the caret as returned
+ */
+export function returnCaret(extending = false) {
   if (!caret_) return null;
-  setCaret({ ...caret_, live: true });
+  setCaret({ ...caret_, live: true }, extending ? 'keep' : 'collapse');
   return caret();
 }
 

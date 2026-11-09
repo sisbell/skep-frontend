@@ -45,7 +45,12 @@ line (`home_end_leap`; D5 K-71, M-13, M-2). With the caret kept by Esc
 after typing, the wheel turned a few lines over the plane, the caret's
 paragraph still in view and another element under the view's centre, leaves
 the walk on the kept caret's span, and a printable key there types at the
-kept caret (`kept_span_held`; B3-S1; D5 §4 rule 3).
+kept caret (`kept_span_held`; B3-S1; D5 §4 rule 3). Shift+→ and Shift+← at
+the kept caret's span return it and extend a selection from it a character,
+the platform's selection the page's, and at the draft's first position, K-8's
+selection standing, Shift+← returns the caret and the platform's selection
+stands over K-8's span, never collapsed at the caret (`kept_span_extends`; D5
+K-70, K-77).
 
 The own draft is the seeded board's windowed draft of principal 1 (`OWN`,
 1340 bytes). The seed's staging draft (`STAGING`) holds every edition's
@@ -562,6 +567,71 @@ def kept_span_held(ctx, doc, para):
             'para_in_view': seen, 'held': held, 'typed': typed, 'edits': edits}
 
 
+def kept_span_extends(ctx, doc, para):
+    """SHIFT WITH ← OR → AT THE KEPT CARET'S SPAN (D5 K-70, K-77; B3-S1): the walk landed on `para`, the live caret placed
+    two characters into its text at `c0` and kept by Esc, the walk on its span; then Shift+→, Esc twice — the selection
+    and its card closed, the caret kept a character on — and Shift+←; then the walk landed at the draft's first position
+    `start`, the caret placed there and kept by Esc, K-8's Shift+↓ selecting the span the walk stands on whole, and
+    Shift+←. After each press the caret, the page's selection, the platform's own and the walk's element, and whether all
+    of it held: Shift+→ returns the caret live a character past `c0` and Shift+← back at `c0`, each selecting the
+    character between from the caret, the platform's selection the page's, the walk on `para`'s span; at `start`, where
+    the caret cannot move that way, Shift+← returns it live and K-8's selection stands, the platform's selection still
+    over it as K-8 left it, never collapsed at the caret; nothing is typed. The selection, the card and the caret are let
+    go after."""
+    text = para['text']
+    lead = len(text) - len(text.lstrip())
+    nb = lambda s: len(s.encode('utf8'))
+    c0 = para['pos'] + nb(text[:lead + 2])
+    c1 = c0 + nb(text[lead + 2])
+    place = lambda pos: ctx.js('(async () => (await import("./text/layer.js")).placeCaret(%s, %d))()' % (json.dumps(doc), pos))
+
+    def press(key, shift=False, n=1):
+        for _ in range(n):
+            ctx.drv.key(key, mods=('Shift',) if shift else ()); ctx.frames(3)
+    steps = {}
+    try:
+        ctx.leap(doc, para['pos'])
+        placed = place(c0)
+        ctx.frames(2)
+        press('Escape')
+        steps['kept'] = ctx.js(AT_CARET)
+        press('ArrowRight', shift=True)
+        steps['right'] = ctx.js(AT_CARET)
+        press('Escape', n=2)
+        steps['kept_on'] = ctx.js(AT_CARET)
+        press('ArrowLeft', shift=True)
+        steps['left'] = ctx.js(AT_CARET)
+        press('Escape', n=2)
+        start = ctx.js('window.__skep.model.doc(%s).from' % json.dumps(doc))
+        ctx.leap(doc, start)
+        place(start)
+        ctx.frames(2)
+        press('Escape')
+        press('ArrowDown', shift=True)
+        steps['whole'] = ctx.js(AT_CARET)
+        press('ArrowLeft', shift=True)
+        steps['stuck'] = ctx.js(AT_CARET)
+        edits = ctx.js('window.__skep.model.edits(%s)' % json.dumps(doc))
+    finally:
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"); H.dismiss(); S.clear(); L.dropCaret(); })()')
+        ctx.frames(2)
+    span = {'kind': 'block', 'addr': doc, 'pos': para['pos']}
+    one = {'addr': doc, 'pos': c0, 'width': c1 - c0}
+    caret = lambda s, pos, live: s['caret'] == {'addr': doc, 'pos': pos, 'live': live}
+    drawn = lambda s, sel: s['sel'] == sel and not s['platform']['collapsed'] and s['platform']['span'] == sel
+    whole, stuck = steps['whole'], steps['stuck']
+    ok = (bool(placed) and placed['live'] and placed['pos'] == c0
+          and caret(steps['kept'], c0, False) and steps['kept']['sel'] is None and steps['kept']['focus'] == span
+          and caret(steps['right'], c1, True) and drawn(steps['right'], one) and steps['right']['focus'] == span
+          and caret(steps['kept_on'], c1, False) and steps['kept_on']['sel'] is None
+          and caret(steps['left'], c0, True) and drawn(steps['left'], one) and steps['left']['focus'] == span
+          and caret(whole, start, False) and bool(whole['sel']) and not whole['platform']['collapsed']
+          and caret(stuck, start, True) and stuck['sel'] == whole['sel'] and stuck['platform'] == whole['platform']
+          and edits == [])
+    return {'ok': ok, 'c0': c0, 'c1': c1, 'start': start, 'para': {'pos': para['pos'], 'width': para['width']},
+            'steps': {k: {f: s[f] for f in ('caret', 'sel', 'platform', 'focus')} for k, s in steps.items()}, 'edits': edits}
+
+
 def run(ctx):
     r = Result()
     rows = {s['state']: dict(s, outcome=('pending' if s['drawn'] else 'not drawn')) for s in STATES}
@@ -750,6 +820,10 @@ def run(ctx):
     held_span = kept_span_held(ctx, OWN, target)
     figures['kept_span_held'] = held_span
     r.check(held_span['ok'], "Esc at a live caret in the own draft after typing, then the wheel over the plane a few lines, the caret's paragraph still in view and another element under the view's centre: the re-take leaves the walk on the kept caret's span, and a printable key there returns the caret and types at it (B3-S1; D5 §4 rule 3, K-77)", held_span)
+    # Shift with ← or → at the kept caret's span returns the caret and extends a selection from it (B3-S1; D5 K-70, K-77)
+    extends_kept = kept_span_extends(ctx, OWN, target)
+    figures['kept_span_extends'] = extends_kept
+    r.check(extends_kept['ok'], "at the kept caret's span in the own draft, Shift+→ and Shift+← return the caret live a character on and back, each selecting the character between from the caret, the platform's selection the page's; at the draft's first position, K-8's selection standing over the span, Shift+← returns the caret and the platform's selection stands over that span as K-8 left it, never collapsed at the caret; nothing typed (B3-S1; D5 K-70, K-77)", extends_kept)
 
     # ---- (e) B3-S13: the swallow's draft form at a span with no caret (K-72) ---------------------------------------------
     ctx.leap(OWN, target['pos'])

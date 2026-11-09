@@ -10,13 +10,15 @@
 // Shift+↑ select the focused span and then extend it by a span each press;
 // at a live caret, Shift with each arrow, Home or End moves the caret a step
 // and the selection runs from its anchor to the caret (`extendFromCaret`; D5
-// K-71, §1.6) — each press naming the end it moved, which T-LAYER keeps clear
-// of its document's head. The platform's highlight is the selection's one mark
-// (§2.1), and the selection the platform's own (foundations §2.1; D5 §2): a
-// change of it rebuilds no article — T-LAYER marks the blocks it touches in
-// place — so a selection the person made stands as they left it, its anchor
-// where they set it, for the platform's own keys to extend where no live
-// caret stands (D5 K-71); T-LAYER places it over a span
+// K-71, §1.6), as Shift with ← or → does at the span a kept caret stands in
+// once N-KEYS' returns the caret (K-70, K-77) — each press naming the end it
+// moved, which T-LAYER keeps clear of its document's head. The platform's
+// highlight is the selection's one mark (§2.1), and the selection the
+// platform's own (foundations §2.1; D5 §2): a change of it rebuilds no
+// article — T-LAYER marks the blocks it touches in place — so a selection the
+// person made stands as they left it, its anchor where they set it, for the
+// platform's own keys to extend where neither a live caret nor the kept
+// caret's span takes them (D5 K-71); T-LAYER places it over a span
 // the page selects and puts it back, its anchor at the same end, after a
 // remount — never over a selection the person holds outside the plane's
 // text, in a reading scene's pane or an overlay's text, which stands as they
@@ -196,12 +198,13 @@ export function selectFocused(dir = 'down') {
 }
 
 /**
- * Shift with an arrow, Home or End at a live caret (D5 K-71, §1.6): the caret
- * moved a step that way (T-LAYER's `caretMove`) and the selection made to run
- * from its anchor to the caret, the end the caret stands at the one the press
- * moved (`select`), in the text shown, as the caret's positions are; where
- * the step brings the caret back to its anchor, no selection stands
- * (`clear`). The focus stays where it is (rule 15).
+ * Shift with an arrow, Home or End at a live caret (D5 K-71, §1.6) — Shift
+ * with ← or → at the kept caret's span once N-KEYS' returns it (K-70, K-77):
+ * the caret moved a step that way (T-LAYER's `caretMove`) and the selection
+ * made to run from its anchor to the caret, the end the caret stands at the
+ * one the press moved (`select`), in the text shown, as the caret's positions
+ * are; where the step brings the caret back to its anchor, no selection
+ * stands (`clear`). The focus stays where it is (rule 15).
  * @param {import('../text/layer.js').CaretStep} dir
  * @returns {boolean} false where no live caret stands or it cannot move that way: nothing changes
  */
