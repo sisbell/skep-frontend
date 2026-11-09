@@ -1214,9 +1214,9 @@ test('a row naming a pane\'s document the plane shows too — kept there while t
   } finally { CAM._reset(); }
 }));
 
-/** the one line attached over the page, speaking for the scene's panes through the readers the app hands in (SC's `keptPanes`, `paneLift`) */
+/** the one line attached over the page, one row deep — its bottom edge 29 px down the viewport — speaking for the scene's panes through the readers the app hands in (SC's `keptPanes`, `paneLift`) */
 function lineOver() {
-  LINE.attach(/** @type {any} */ ({ innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [], contains: () => false }), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {}, panes: SCENE.keptPanes, paneLift: SCENE.paneLift });
+  LINE.attach(/** @type {any} */ ({ innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ bottom: 29 }) }), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {}, panes: SCENE.keptPanes, paneLift: SCENE.paneLift });
   LINE.classChanged();
 }
 

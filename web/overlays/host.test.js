@@ -9,8 +9,9 @@
 // in its place, no act on the chrome; no module of the page loading another
 // by `import()` (S-22 (a)); the anchor — beneath its element while that
 // stands, at the span beside it once the text layer takes the element away,
-// an element redrawn from state found again by its id; a face said through
-// the status region save a told one, and a face that
+// an element redrawn from state found again by its id; every overlay held
+// below the one line's bottom edge however many rows the line takes (FP-26);
+// a face said through the status region save a told one, and a face that
 // answers an act named by the act's caption and described by its words; a
 // jump's face hidden exactly while its document is out of the visible view,
 // the one line carrying its words (FP-25); a face shown while the standing
@@ -37,6 +38,7 @@ import * as TRAILLIST from './trail-list.js';
 import * as KEYS from '../nav/keys.js';
 import * as LEAP from '../nav/leap.js';
 import * as FOCUS from '../nav/focus.js';
+import * as LINE from '../line/line.js';
 import * as CAM from '../plane/camera.js';
 import { docBox } from '../plane/projection.js';
 import { t } from '../strings.js';
@@ -402,6 +404,31 @@ test('an element its owner redrew from state is found again by its id: the overl
     HOST.place();
     assert.deepEqual(placed(), { x: 14, y: 36 }, 'beneath the Back the line holds now, found by its id');
   } finally {
+    globalThis.document.getElementById = find;
+    HOST.dismiss();
+  }
+});
+
+test('an overlay is held below the one line\'s bottom edge however many rows the line takes: the trail\'s list conjured at Back in the line\'s first row, and an overlay whose anchor names nothing, stand below the line\'s last row — four rows deep, then one — never over a row of it; one whose anchor stands below the line keeps its place (FP-26)', () => {
+  /** the one line's bottom edge on screen, px: four rows deep */
+  let bottom = 87;
+  LINE.attach(/** @type {any} */ ({ innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ bottom }) }), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  const back = conjuredAt({ x: 10, y: 4, w: 40, h: 20 }, 'line-back'), find = globalThis.document.getElementById;
+  globalThis.document.getElementById = /** @type {any} */ ((/** @type {string} */ id) => (id === back.id ? back : null));
+  CAM.setViewport(1440, 900);
+  try {
+    TRAILLIST.open();
+    assert.deepEqual([standing(), placed()], ['trail-list', { x: 10, y: 93 }], 'the trail\'s list beneath Back, held below the line\'s fourth row');
+    bottom = 29;
+    HOST.place();
+    assert.deepEqual(placed(), { x: 10, y: 35 }, 'the line one row deep: below that row');
+    bottom = 87;
+    card('provenance:wrote')('its origin');
+    assert.deepEqual([standing(), placed()], ['provenance:wrote', { x: 20, y: 93 }], 'an anchor naming nothing: the viewport\'s corner below the line\'s fourth row');
+    HOST.show({ kind: 'card', id: 'a card', anchor: { screen: { x: 300, y: 120 } }, html: '<span class="label">a card</span>', acts: {} });
+    assert.deepEqual(placed(), { x: 300, y: 120 }, 'an anchor below the line: its place kept');
+  } finally {
+    bottom = 0;
     globalThis.document.getElementById = find;
     HOST.dismiss();
   }

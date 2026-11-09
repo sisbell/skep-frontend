@@ -3326,8 +3326,9 @@ def line_rows_hold(ctx, r):
     standing for nothing in the AX tree, and Enter at the act opens those words inside the window, uncut, the focus kept
     on the act; the strip's act there shows its readout inside the window; the board's writes halted through the gate's
     door, the halted form's words stand whole inside the window, broken between them, every segment inside the window,
-    and lifted they go; and with the LEAP box open, then with a reading scene open, each of the line's parts is the element
-    found at the centre of what of it the window shows, neither standing over it. Its figures"""
+    and lifted they go; and with the LEAP box open, then with a reading scene open, then with the trail's list opened
+    from the line's act, each of the line's parts is the element found at the centre of what of it the window shows, none
+    standing over it. Its figures"""
     figures = {}
     ctx.leap(DOC, WINDOW[0])
     ctx.js('new Promise((r) => setTimeout(r, 300))')  # the line redraws on its own cadence, every 120 ms
@@ -3398,10 +3399,15 @@ def line_rows_hold(ctx, r):
             covered['scene'] = ctx.js(LINE_HITS_JS) if opened else None
             ctx.js('window.__skep.scene.close()')
             ctx.frames(2)
+            ctx.js("document.querySelector('#line [data-act=trail]') && document.querySelector('#line [data-act=trail]').click()")
+            ctx.frames(2)
+            listed = ctx.js('window.__skep.overlay().id') == 'trail-list'
+            covered['trail'] = ctx.js(LINE_HITS_JS) if listed else None
+            ctx.esc()
             under = {k: [x for x in hits if not x['found']] for k, hits in covered.items() if hits is not None}
             r.check(opened and all(covered.values()) and not any(under.values()),
-                    f'a {w} px window: with the LEAP box open, then a reading scene, each of the one line\'s parts is the element found at its own centre — neither stands over the line\'s rows (issue #310)',
-                    {'scene_opened': opened, 'covered': under, 'parts': len(covered.get('leap') or [])})
+                    f'a {w} px window: with the LEAP box open, then a reading scene, then the trail\'s list opened from the line\'s act, each of the one line\'s parts is the element found at its own centre — none stands over the line\'s rows (issues #310, #475)',
+                    {'scene_opened': opened, 'trail_listed': listed, 'covered': under, 'parts': len(covered.get('leap') or [])})
             figures[w] = {'layout': lay, 'acting': act and act['text'], 'acting_opened_lines': unfolded and unfolded['lines'], 'readout': readout and readout['text'][:60],
                           'halt_lines': halt and halt['lines']}
     finally:

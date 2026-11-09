@@ -271,28 +271,31 @@ def overlay_up(ctx, prefix):
 
 def placed_at(ctx, addr, pos, width):
     """where the overlay stands, beside where the host places an overlay at a span's bytes (O-HOST's `place`): beneath their
-    first line, clamped into the viewport by the overlay's own size"""
+    first line, held below the one line and inside the viewport by the overlay's own size"""
     return ctx.js('''(() => { const o = document.getElementById('overlay'), q = o.getBoundingClientRect(), p = window.__skep.view.viewport();
-      const rs = window.__skep.spanRects(%s, %d, %d);
+      const rs = window.__skep.spanRects(%s, %d, %d), top = document.getElementById('line').getBoundingClientRect().bottom + 6;
       return {at: {x: parseFloat(o.style.left), y: parseFloat(o.style.top)}, first: rs ? rs[0] : null,
-              want: rs ? {x: Math.max(6, Math.min(p.VW - q.width - 6, rs[0].x)), y: Math.max(34, Math.min(p.VH - q.height - 6, rs[0].y + rs[0].h + 4))} : null}; })()''' % (json.dumps(addr), pos, width))
+              want: rs ? {x: Math.max(6, Math.min(p.VW - q.width - 6, rs[0].x)), y: Math.max(top, Math.min(p.VH - q.height - 6, rs[0].y + rs[0].h + 4))} : null}; })()''' % (json.dumps(addr), pos, width))
 
 
 def placed_under(ctx, rect):
     """where the overlay stands, beside where the host places one at the element it was conjured at (O-HOST's `place`):
-    beneath the element's rect on screen, clamped into the viewport by the overlay's own size"""
+    beneath the element's rect on screen, held below the one line and inside the viewport by the overlay's own size"""
     return ctx.js('''((r) => { const o = document.getElementById('overlay'), q = o.getBoundingClientRect(), p = window.__skep.view.viewport();
+      const top = document.getElementById('line').getBoundingClientRect().bottom + 6;
       return {at: {x: parseFloat(o.style.left), y: parseFloat(o.style.top)}, rect: r,
-              want: {x: Math.max(6, Math.min(p.VW - q.width - 6, r.x)), y: Math.max(34, Math.min(p.VH - q.height - 6, r.y + r.h + 4))}}; })(%s)''' % json.dumps(rect))
+              want: {x: Math.max(6, Math.min(p.VW - q.width - 6, r.x)), y: Math.max(top, Math.min(p.VH - q.height - 6, r.y + r.h + 4))}}; })(%s)''' % json.dumps(rect))
 
 
 def placed_at_box(ctx, addr):
     """where the overlay stands, beside where the host places one at a span of a document no article of which is mounted
-    (O-HOST's `place`): at the document's box, its top-right on screen, clamped into the viewport by the overlay's own size"""
+    (O-HOST's `place`): at the document's box, its top-right on screen, held below the one line and inside the viewport by
+    the overlay's own size"""
     return ctx.js('''(() => { const o = document.getElementById('overlay'), q = o.getBoundingClientRect(), p = window.__skep.view.viewport();
       const b = window.__skep.boxOf(%s), c = window.__skep.view.camera(), x = (b.x + b.w - c.x) * c.scale + p.VW / 2, y = (b.y - c.y) * c.scale + p.VH / 2;
+      const top = document.getElementById('line').getBoundingClientRect().bottom + 6;
       return {at: {x: parseFloat(o.style.left), y: parseFloat(o.style.top)}, box: {x, y},
-              want: {x: Math.max(6, Math.min(p.VW - q.width - 6, x)), y: Math.max(34, Math.min(p.VH - q.height - 6, y))}}; })()''' % json.dumps(addr))
+              want: {x: Math.max(6, Math.min(p.VW - q.width - 6, x)), y: Math.max(top, Math.min(p.VH - q.height - 6, y))}}; })()''' % json.dumps(addr))
 
 
 def rebuilt_away(ctx, selector, act):

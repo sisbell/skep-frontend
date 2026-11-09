@@ -123,8 +123,12 @@
 // point, which still stands once T-LAYER has rebuilt or taken down the
 // article the element stood in, or rewritten its corner. An overlay stands
 // at the viewport's corner only where its anchor names nothing that stands
-// (`place`). A jump's face — its reading, its reaching, the failure it met —
-// shows where the camera is (FP-25): its anchor names the document it stands
+// (`place`). Wherever it stands its top is held below the one line's bottom
+// edge, however many rows the line takes (L-LINE's `bottom`; FP-26), and its
+// bottom inside the viewport where the room below the line holds it, the
+// notice below it with it, so neither covers a part of the line. A jump's
+// face — its reading, its reaching, the failure it met — shows where the
+// camera is (FP-25): its anchor names the document it stands
 // at (`sign`), and while that document's region is out of the visible view
 // (T-LAYER's `inView`) the face is hidden on the plane and the one line
 // carries its words in its place (`aside`, read through the reader the app
@@ -137,12 +141,13 @@
 // dismissed, the focus returning through the controller — save a jump's
 // reading or reaching face, whose read the new class answers, and a moment's
 // face, which is the shell's.
-// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20, FP-25, FP-29, FP-36.
+// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20, FP-25, FP-26, FP-29, FP-36.
 
 import { sx, sy, viewport, markDirty } from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import * as FOCUS from '../nav/focus.js';
 import { drawChord } from '../nav/keys.js';
+import * as LINE from '../line/line.js';
 import { docBox } from '../plane/projection.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
@@ -489,15 +494,17 @@ function standing(e) {
 const away = (/** @type {Overlay | null} */ o) => !!o && !!o.anchor && !!o.anchor.sign && !LAYER.inView(o.anchor.sign);
 
 /**
- * Place the overlay at its anchor — per frame, clamped into the viewport:
- * beneath the element it was conjured at while that stands (`standing`);
- * else beneath its span's first line in the mounted article, or at the
- * document's box where none is mounted; else at its world point, else at its
- * screen point; else, its anchor naming nothing that stands, at the
- * viewport's corner. A notice below it stands under its box, at its left,
- * the two clamped into the viewport together. A jump's face whose document
- * stands out of the visible view is hidden there, the one line carrying its
- * words (`aside`) — a notice below so hidden takes no room in the clamp.
+ * Place the overlay at its anchor — per frame, its top held below the one
+ * line's bottom edge and its bottom inside the viewport where the room below
+ * the line holds it (see the head): beneath the element it was conjured at
+ * while that stands (`standing`); else beneath its span's first line in the
+ * mounted article, or at the document's box where none is mounted; else at
+ * its world point, else at its screen point; else, its anchor naming nothing
+ * that stands, at the viewport's corner. A notice below it stands under its
+ * box, at its left, the two held there together. A jump's face whose
+ * document stands out of the visible view is hidden there, the one line
+ * carrying its words (`aside`) — a notice below so hidden takes no room in
+ * the clamp.
  */
 export function place() {
   if (!el || !current) return;
@@ -518,7 +525,7 @@ export function place() {
   if (below) below.style.visibility = shown ? '' : 'hidden';
   const n = shown && below ? below.getBoundingClientRect() : null;
   x = Math.max(6, Math.min(VW - Math.max(r.width, n ? n.width : 0) - 6, x));
-  y = Math.max(34, Math.min(VH - r.height - (n ? STACK_GAP + n.height : 0) - 6, y));
+  y = Math.max(LINE.bottom() + 6, Math.min(VH - r.height - (n ? STACK_GAP + n.height : 0) - 6, y));
   el.style.left = x + 'px'; el.style.top = y + 'px';
   if (below) { below.style.left = x + 'px'; below.style.top = (y + r.height + STACK_GAP) + 'px'; }
 }
