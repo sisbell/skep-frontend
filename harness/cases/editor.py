@@ -13,25 +13,28 @@ STATES is the table: each row a screen, a state, how the page is brought to
 it — a hook, keys, an arm of a call's next answer, an event fired by hand —
 and the walk step B3 names for its screen. A row the page draws at HEAD is
 driven and CHECKED — the words a person meets are `strings.js`'s entries for
-the state, an arm consumed where one was made — at the desktop width and
-again at the narrow one, and shot at each as
+the state and stand inside the window, a document's text at the reading
+size, an arm consumed where one was made — at the desktop width and again at
+the narrow one, and shot at each as
 `shots/B3-<Sn>/<state>-<walk>-<step>-w<width>.png`. A row whose surface is
 not built stays in the table marked not drawn, naming the module or unit it
 waits on, and is never shot. A check that fails leaves its row red with the
-detail, unshot. The seam keeps one armed answer per call until it is
-served, and the provider outlives the run: each arm is checked consumed
-before the next state, and any arm left standing is served at the end
-(`Context.clear_arms`). The dotted route's intake (#327) is proved on the
-page's own port: a canned `publication.open` answer reaches the page as
-armed, and a `publication` event fired by hand reaches its subscriber. At the
-narrow width, where the own draft's corner stands at its head, the live caret
-moved up under the head's held row brings the camera down alone, the caret's
-mark at the row's bottom (`caret_under_head`; issue #436). A person's click in
-another paragraph of the own draft places the caret there and stands the walk
-on that paragraph's span, Mod+K at the caret drawing the acts card there and
-selecting nothing (`click_follows`; B3-S13; issue #471). Shift with the arrows
-at a live caret moves it and runs the selection
-from where it stood to it, the platform's selection the page's
+detail, unshot; one marked at a width with the page issue it waits on counts
+expected there while it fails, the row reading expected red with its detail
+and shot as the issue's evidence (`shoot`). The seam keeps one armed answer
+per call until it is served, and the provider outlives the run: each arm is
+checked consumed before the next state, and any arm left standing is served
+at the end (`Context.clear_arms`). The dotted route's intake (#327) is
+proved on the page's own port: a canned `publication.open` answer reaches
+the page as armed, and a `publication` event fired by hand reaches its
+subscriber. At the narrow width, where the own draft's corner stands at its
+head, the live caret moved up under the head's held row brings the camera
+down alone, the caret's mark at the row's bottom (`caret_under_head`; issue
+#436). A person's click in another paragraph of the own draft places the
+caret there and stands the walk on that paragraph's span, Mod+K at the caret
+drawing the acts card there and selecting nothing (`click_follows`; B3-S13;
+issue #471). Shift with the arrows at a live caret moves it and runs the
+selection from where it stood to it, the platform's selection the page's
 (`shift_extends`; D5 K-71).
 
 The own draft is the seeded board's windowed draft of principal 1 (`OWN`,
@@ -60,9 +63,10 @@ from .wire import READ_PATHS, READ_ROWS, read_ops
 OWN = WINDOW[2]
 # the seed's staging draft D of principal 1: 6.27 MB at the owner's seed, every edition's bytes inserted into it in turn
 STAGING = '1.0.1.0.2'
-# the two widths every drawn state is shot at (the survey's "a desktop and a narrow width"; the owner's ruling: 480)
+# the two widths every drawn state is shot at (the survey's "a desktop and a narrow width"): the driver's desktop size, and
+# the editor's narrow width, the NARROW frame of B3's layout page
 WIDE = (1440, 900)
-NARROW_PX = 480
+NARROW_PX = 390
 NARROW = (NARROW_PX, 900)
 # each kept word's string (T-ARTICLE's KEPT_WORDS)
 KEPT_IDS = {'kept': 'B3.kept', 'not yet kept': 'B3.not-yet-kept', 'not kept': 'B3.not-kept'}
@@ -114,7 +118,8 @@ STATES = [
          why='the machine (U4)'),
     dict(screen='B3-S2', state='moved-scene', walk='W-08', step=7, drawn=True,
          how='`scene.openHeld(own, [an insert row])`: the current text beside the held version re-derived (D6 BM-14; #411)',
-         claim='a scene stands with the own draft in pane A and the derived record in pane B, derived, no compare asked'),
+         claim="a scene stands with the own draft in pane A and the derived record in pane B, derived, no compare asked; both panes' "
+               "text at the reading size, no word cut at a pane's edge; the bar's re-level and dismiss acts in view"),
     dict(screen='B3-S2', state='stopped', walk='W-08', step=7, drawn=True,
          how="fire `daemon` {board, state: 'stopped'} (D6 BM-9)",
          claim="the one line's daemon segment in its own-board stopped form (F.daemon.notebook.stopped)"),
@@ -126,7 +131,7 @@ STATES = [
          why="no seam reaches it: the harness's provider runs `--session signed`"),
     dict(screen='B3-S2', state='death-retired', walk='W-08', step=7, drawn=True,
          how="fire `session-died` {session, reason: {arm: 'retired', …}} (D6 BM-24)",
-         claim="the line's death arm, C-137's words with sign in, and the own draft covered as a guest meets it"),
+         claim="the line's death arm, C-137's words with sign in, each in view, and the own draft covered as a guest meets it"),
     dict(screen='B3-S2', state='halted-store', walk='W-08', step=7, drawn=False,
          how='arm `held` with the refusal `store_halted` (D6 BM-30)', claim='',
          why='the machine (U4): nothing calls `held(session)`'),
@@ -168,7 +173,7 @@ STATES = [
          how='retract and edit at the anatomy card (K-98)', claim='', why="the owner's acts on the card (S12 #122) and the composer (U3)"),
     dict(screen='B3-S13', state='swallow-draft', walk='W-08', step=4, drawn=True,
          how="a printable key at a span of the own draft with no caret (K-72; D6 BM-52)",
-         claim='the hint beside the focused line reads "Enter places a caret here" (B3.caret.enter)'),
+         claim='the hint beside the focused line reads "Enter places a caret here" (B3.caret.enter), inside the window below the one line'),
     dict(screen='B3-S13', state='row-inert', walk='W-08', step=4, drawn=False,
          how="the selection's row inert while a line is held, one reason (D6 BM-62)", claim='', why='the machine (U4) and its reasons'),
 ]
@@ -216,9 +221,13 @@ def line_segment(ctx, sid):
 
 
 def hint(ctx):
-    """the hint a refused press raised beside the focus (O-HINT's), as a person meets it: its string and the words its button
-    shows, or None where none stands; and whether the one line holds a transient segment"""
-    return ctx.js('(() => { const h = window.__skep.hint(); return {hint: h && {id: h.id, words: h.words, by: h.placed && h.placed.by}, line: !!document.querySelector("#line .seg.transient")}; })()')
+    """the hint a refused press raised beside the focus (O-HINT's), as a person meets it: its string, the words its button
+    shows and what it was set by, or None where none stands; its box on screen, and whether that box stands whole inside
+    the window below the one line; and whether the one line holds a transient segment"""
+    return ctx.js('''(() => { const h = window.__skep.hint(), q = document.getElementById("hint").getBoundingClientRect(), top = document.getElementById("line").getBoundingClientRect().bottom;
+      return {hint: h && {id: h.id, words: h.words, by: h.placed && h.placed.by}, box: h && {x: q.left, y: q.top, w: q.width, h: q.height},
+              seen: !!h && q.width > 0 && q.height > 0 && q.left >= -0.5 && q.right <= window.innerWidth + 0.5 && q.top >= top - 0.5 && q.bottom <= window.innerHeight + 0.5,
+              line: !!document.querySelector("#line .seg.transient")}; })()''')
 
 
 def live(ctx):
@@ -234,6 +243,11 @@ def page_calls(ctx):
 def fold(s):
     return re.sub(r'\s+', ' ', s or '').strip()
 
+
+# each reading scene pane as a person reads it: its article's em beside the reading size, and how far its content runs past
+# the pane's width
+PANE_TEXT = '''(() => ["sceneA", "sceneB"].map((id) => { const p = document.getElementById(id), a = p && p.querySelector(":scope > article.dtext");
+  return {pane: id, px: a ? parseFloat(getComputedStyle(a).fontSize) : null, reading: window.__skep.boot.type.readingPx, over: p ? p.scrollWidth - p.clientWidth : null}; }))()'''
 
 # the caret's mark as the platform lays it out: its top and its height, on screen; null where none stands
 CARET_MARK = '(() => { const m = document.querySelector("#domlayer .caret-mark"); if (!m) return null; const q = m.getBoundingClientRect(); return {top: q.top, h: q.height}; })()'
@@ -383,9 +397,11 @@ def run(ctx):
     def shoot(state, check, recentre=None, marks=None):
         """a drawn state checked and shot at both widths: at each, the window set, the camera brought back where the state
         stands (`recentre`), the check made with the width, the shot taken; a check that fails leaves the row red from
-        there, unshot. `marks` names, by width, the page issue a check there waits on: the check is marked with it —
-        counted expected while it fails, and failing the case the day it passes — and the shot is still taken, as the
-        issue's evidence, the row reading expected and never shot and passed"""
+        there, unshot. A check of several parts answers each by its name, `{part: (ok, detail)}`, and each part counts
+        as a check of its own, named after the row's claim. `marks` names, by width, the page issue a check there waits
+        on — by part, `{part: issue}`, for a check of parts: the check is marked with it — counted expected while it
+        fails, and failing the case the day it passes — and the shot is still taken, as the issue's evidence, the row
+        reading expected and never shot and passed"""
         row = rows[state]
         shots, expected = [], []
         was = ctx.resize(*WIDE)
@@ -395,14 +411,15 @@ def run(ctx):
                 if recentre:
                     recentre()
                 ctx.settle(10); ctx.frames(3)
-                ok, detail = check(w)
-                xf = (marks or {}).get(w)
-                r.check(ok, f"{row['screen']} · {state} at {w} px: {row['claim']}", detail, xfail=xf)
-                if not ok and not xf:
-                    red(state, {'width': w, 'detail': detail})
-                    return False
-                if not ok:
-                    expected.append({'width': w, 'issue': xf, 'detail': json.dumps(detail, default=str)[:300]})
+                got, mark = check(w), (marks or {}).get(w)
+                for part, (ok, detail) in (got.items() if isinstance(got, dict) else [(None, got)]):
+                    xf = mark.get(part) if isinstance(mark, dict) else mark
+                    r.check(ok, f"{row['screen']} · {state} at {w} px{f' ({part})' if part else ''}: {row['claim']}", detail, xfail=xf)
+                    if not ok and not xf:
+                        red(state, {'width': w, 'part': part, 'detail': detail} if part else {'width': w, 'detail': detail})
+                        return False
+                    if not ok:
+                        expected.append({'width': w, 'issue': xf, 'detail': json.dumps(detail, default=str)[:300]})
                 shots.append(ctx.shot(f"{row['screen']}/{state}-{row['walk']}-{row['step']:02d}-w{w}.png"))
         finally:
             ctx.resize(*was); ctx.frames(3)
@@ -542,7 +559,8 @@ def run(ctx):
 
     def swallow_check(w):
         want, got = t(ctx, 'B3.caret.enter'), hint(ctx)
-        ok = got['hint'] == {'id': 'B3.caret.enter', 'words': want, 'by': 'edge'} and not got['line'] and ctx.js('window.__skep.caret()') is None and said_at_key == want
+        ok = (got['hint'] == {'id': 'B3.caret.enter', 'words': want, 'by': 'edge'} and got['seen'] and not got['line'] and ctx.js('window.__skep.caret()') is None
+              and said_at_key == want)
         return ok, {'got': got, 'want': want, 'status_region': said_at_key}
     shoot('swallow-draft', swallow_check)
     # the person's next act takes the hint down (O-HINT's `act`); none of what follows is an act of theirs
@@ -566,8 +584,12 @@ def run(ctx):
         panes_shown = ctx.js('["sceneA", "sceneB"].map((id) => { const p = document.getElementById(id); const q = p ? p.getBoundingClientRect() : null; return !!p && !!p.querySelector("article.dtext") && !!q && q.width > 0 && q.height > 0 && q.left >= 0 && q.right <= window.innerWidth + 0.5; })')
         ok = (bool(opened) and opened['shown'] and opened['applied'] == 1 and opened['stopped'] is None and ctx.js('window.__skep.scene.isOpen()')
               and pa.get('doc') == OWN and not pa.get('derived') and pb.get('derived') is True and inserted and not compared and all(panes_shown))
-        return ok, {'opened': opened, 'a': {k: pa.get(k) for k in ('doc', 'derived', 'kind')}, 'b': {k: pb.get(k) for k in ('doc', 'derived', 'kind')}, 'inserted': inserted, 'compare_calls': len(compared), 'panes_shown': panes_shown}
-    shoot('moved-scene', scene_check)
+        text, bar = ctx.js(PANE_TEXT), {k: len(shown(ctx, '#scenebar [%s]' % k)) for k in ('data-relevel', 'data-x')}
+        return {'the scene': (ok, {'opened': opened, 'a': {k: pa.get(k) for k in ('doc', 'derived', 'kind')}, 'b': {k: pb.get(k) for k in ('doc', 'derived', 'kind')},
+                                   'inserted': inserted, 'compare_calls': len(compared), 'panes_shown': panes_shown}),
+                "the panes' text": (all(p['px'] is not None and abs(p['px'] - p['reading']) < 1e-6 and p['over'] <= 1 for p in text), text),
+                'the bar': (bar == {'data-relevel': 1, 'data-x': 1}, {'shown': bar})}
+    shoot('moved-scene', scene_check, marks={NARROW_PX: {"the panes' text": '#467', 'the bar': '#489'}})
     ctx.js('window.__skep.scene.close()'); ctx.frames(2)
 
     # ---- (g) B3-S2: STOPPED — the `daemon` event fired by hand (D6 BM-9) -----------------------------------------------------
@@ -623,8 +645,10 @@ def run(ctx):
         want, seg = t(ctx, 'C-137.self'), line_segment(ctx, 'C-137.self')
         signin = ctx.js('(() => { const b = document.querySelector("#line [data-act=signin]"); return b ? b.textContent : null; })()')
         d, mounted = ctx.js('window.__skep.model.doc(%s)' % json.dumps(OWN)), ctx.js('window.__skep.mountedAddrs()')
-        ok = fell and covered and seg == want and signin == t(ctx, 'F.sign-in') and d['refused'] == 'withheld' and OWN not in mounted and ctx.js('window.__skep.model.session()') is None
-        return ok, {'fell': fell, 'covered': covered, 'segment': seg, 'want': want, 'sign_in': signin, 'refused': d['refused'], 'mounted': OWN in mounted}
+        vis = {k: len(shown(ctx, s)) for k, s in (('segment', '#line [data-string="C-137.self"]'), ('sign_in', '#line [data-act=signin]'))}
+        ok = (fell and covered and seg == want and signin == t(ctx, 'F.sign-in') and vis == {'segment': 1, 'sign_in': 1} and d['refused'] == 'withheld'
+              and OWN not in mounted and ctx.js('window.__skep.model.session()') is None)
+        return ok, {'fell': fell, 'covered': covered, 'segment': seg, 'want': want, 'sign_in': signin, 'shown': vis, 'refused': d['refused'], 'mounted': OWN in mounted}
     shoot('death-retired', death_check)
     r.check(said.startswith(t(ctx, 'C-137.self')) and OWN in said, "the status region says the ending once, then what it covered — the own draft among it (issue #177)", said[:300])
     # the dead page's session on the harness's provider closed by the page's own `close(session)`, which writes nothing to the board
