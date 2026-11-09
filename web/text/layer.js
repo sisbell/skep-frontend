@@ -368,9 +368,12 @@
 // derives from the model's — its delivered runs with the page-local edits
 // applied (`shownDoc`; K-72) — mounted, folded and measured in the model's
 // record's place and set again as the edits move, the model's own record
-// standing as the board served it; the ARIA mirror reads the model. The
-// walk's span, a span of the model's text, is carried into the text shown
-// as the block holding it there (`shownBlockOf`, `carriedFocus`). The
+// standing as the board served it; the ARIA mirror reads the model. Every
+// position the fold places or answers is one of the text shown (`posAt`,
+// `centreOf`, `frameOf`), and a position of the model's text — the walk's —
+// crosses into it and back through one pair (`shownPos`, `basePos`); the
+// walk's span is carried into the text shown as the block holding it there
+// (`shownBlockOf`, `carriedFocus`). The
 // caret (D5 K-70, K-72, K-76, K-77; D6 BM-4, BM-52, BM-54, BM-70, BM-75): the
 // page's own, one at a time, in text the person may edit — a draft under the
 // session's account, by its address alone, at reading scale (`editable`) — a
@@ -911,6 +914,33 @@ function blockCarried(d, pos) {
 export const shownBlockOf = (addr, pos) => blockCarried(shownOf(addr), pos);
 
 /**
+ * A position of a draft's model text carried into the text the page shows of
+ * it (M-DERIVE's `toShown`), where its fold places it: the span or the link's
+ * end N-WALK's flight frames (`frameOf`), a span tested in view (`spanInView`)
+ * and the span Enter places the caret at (`caretToSpan`).
+ * @param {string} addr
+ * @param {number} pos a position of the model's text
+ * @returns {number} the position in the text shown (`shownOf`)
+ */
+export const shownPos = (addr, pos) => toShown(REC.edits(addr), pos);
+
+/**
+ * A position of a draft's shown text carried back into the model's text
+ * (M-DERIVE's `toBase`), at or past the text's end its last position — the
+ * caret's line held there (`caretSpanIn`) — so a position at the end, or in
+ * text typed after the last span, stands in the text's last span (N-WALK's
+ * grain): the caret's span (`caretSpan`), and the position N-WALK's re-take
+ * and → read under the view's centre (`posAt`).
+ * @param {string} addr
+ * @param {number} pos a position of the text shown (`shownOf`)
+ * @returns {number} the position in the model's text
+ */
+export function basePos(addr, pos) {
+  const at = toBase(REC.edits(addr), pos), d = REC.has(addr) ? REC.doc(addr) : null;
+  return d && d.from >= 0 ? Math.min(at, Math.max(d.from, d.to - 1)) : at;
+}
+
+/**
  * The walk's focus carried into a record derived from the typed text: the
  * block of that text holding the focused block's first position as the edits
  * moved it (`blockCarried`); null where none holds it. Any other record's
@@ -1318,12 +1348,12 @@ const shapeIn = (/** @type {Doc} */ d) => shapeOf(d.addr);
 const shapeAt = (/** @type {string} */ addr, /** @type {Fold} */ f) => { const box = docBox(addr), b = boundsOf(f); return { x: box.x + b.x, y: box.y + b.y, w: b.w, h: b.h }; };
 
 /**
- * The middle of the line holding a position, in world units: centred across
- * its column (P-LAY's `placeOf`); the first column's centre where no position
- * is named — what a reading view frames (`frameOf`) and Back's test of a
- * line in view reads (`lineInView`).
+ * The middle of the line holding a position of the text shown (`shownOf`), in
+ * world units: centred across its column (P-LAY's `placeOf`); the first
+ * column's centre where no position is named — what a reading view frames
+ * (`frameOf`) and Back's test of a line in view reads (`lineInView`).
  * @param {string} addr
- * @param {number | null} pos
+ * @param {number | null} pos a position of the text shown
  * @returns {{x: number, y: number}}
  */
 export function centreOf(addr, pos) {
@@ -1334,8 +1364,9 @@ export function centreOf(addr, pos) {
 }
 
 /**
- * Where a reading view of a document at a position centres so that it frames
- * the column (FP-26), and the em of the fold it frames: the line holding the
+ * Where a reading view of a document at a position of the text shown
+ * (`shownOf`) centres so that it frames the column (FP-26), and the em of the
+ * fold it frames: the line holding the
  * position (`centreOf`) — the first column's middle where none is named — in
  * the document's lines as rendered, set first where they are not
  * (`renderedFold`), moved across so the column's text, the corner beside it
@@ -1345,14 +1376,15 @@ export function centreOf(addr, pos) {
  * at the document's head — centred where the visible view below the one line
  * holds it, else moved down so the column's outline tops the visible view and
  * the document's head stands in it, never under the line (FP-37). N-GO's
- * landing and N-WALK's flight to a span read it, the view's
+ * landing and N-WALK's flight to a span — its position carried into the text
+ * shown (`shownPos`) — read it, the view's
  * scale from its em (P-CAM's `viewAt`), so the place and the size are one
  * fold's, and read it again each frame as the camera flies there (P-CAM's
  * `Aim`), so it lands on the fold its document is set in then; the measure in
  * force is one the view holds them at, at the landing's em (P-LAY's `fitFor`,
  * P-CAM's `landingPx`).
  * @param {string} addr
- * @param {number | null} pos
+ * @param {number | null} pos a position of the text shown
  * @param {number} [fsPx] the em the view reads the document at, in px: the landing's where none is given
  * @returns {{x: number, y: number, fs: number}} the view's centre, and the document's em in the fold it frames, in world units
  */
@@ -1409,25 +1441,26 @@ export function lineInView(addr, pos, view) {
  * middle of a line of its fold holding a position of the span inside the
  * viewport below the one line, as `lineInView` reads one line
  * (`foldBoxes`) — in a draft's typed text, the lines holding the span where
- * the page-local edits carried it (M-DERIVE's `toShown`). N-WALK's hold on
- * the kept caret's span reads it.
+ * the page-local edits carried it (`shownPos`). N-WALK's hold on the kept
+ * caret's span reads it.
  * @param {string} addr
  * @param {number} pos the span's first position in the model's text
  * @param {number} width
  * @returns {boolean}
  */
 export function spanInView(addr, pos, width) {
-  const edits = REC.edits(addr), from = toShown(edits, pos), s = visibleView(read.top());
-  return foldBoxes(addr, from, toShown(edits, pos + width) - from).some(({ rect: r }) => {
+  const from = shownPos(addr, pos), s = visibleView(read.top());
+  return foldBoxes(addr, from, shownPos(addr, pos + width) - from).some(({ rect: r }) => {
     const x = r.x + r.w / 2, y = r.y + r.h / 2;
     return x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h;
   });
 }
 
 /**
- * The position under a world point of a document's fold (P-LAY's `posAt`):
- * N-WALK's re-take at reading scale; null where the column under it holds
- * no line naming one.
+ * The position under a world point of a document's fold (P-LAY's `posAt`): a
+ * position of the text shown (`shownOf`), which N-WALK's re-take and → carry
+ * back into the model's text (`basePos`); null where the column under it
+ * holds no line naming one.
  * @param {string} addr
  * @param {number} x
  * @param {number} y
@@ -4294,20 +4327,7 @@ export function placeCaret(addr, pos) {
 export function caretToSpan(addr, pos) {
   if (!editable(addr)) return null;
   if (caret_ && caret_.addr === addr && !caret_.live && sameBlock(addr, caret_.pos, pos)) return returnCaret();
-  return placeCaret(addr, toShown(REC.edits(addr), pos));
-}
-
-/**
- * A position of a draft's shown text carried back into the model's text
- * (M-DERIVE's `toBase`), at or past the text's end its last position — the
- * caret's line held there (`caretSpanIn`) — so the caret at the end stands in
- * the text's last span (N-WALK's grain).
- * @param {string} addr
- * @param {number} shownPos
- */
-function basePos(addr, shownPos) {
-  const pos = toBase(REC.edits(addr), shownPos), d = REC.has(addr) ? REC.doc(addr) : null;
-  return d && d.from >= 0 ? Math.min(pos, Math.max(d.from, d.to - 1)) : pos;
+  return placeCaret(addr, shownPos(addr, pos));
 }
 
 /**
@@ -4328,11 +4348,11 @@ const grainAt = (addr, pos) => elementIn(REC.has(addr) ? REC.doc(addr).blocks : 
  * (`grainAt`), the position carried back into the model's text (`basePos`) —
  * the kept caret's span (BM-52)?
  * @param {string} addr
- * @param {number} shownPos
+ * @param {number} pos a position of the text shown
  * @param {number} blockPos
  */
-export function sameBlock(addr, shownPos, blockPos) {
-  const b = grainAt(addr, basePos(addr, shownPos));
+export function sameBlock(addr, pos, blockPos) {
+  const b = grainAt(addr, basePos(addr, pos));
   return !!b && b.pos === blockPos;
 }
 

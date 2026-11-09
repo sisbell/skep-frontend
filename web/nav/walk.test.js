@@ -19,7 +19,9 @@
 // reading scale frames it short of that scale; the grain below a document is
 // the document's own and the re-take's order holds at every band, the element
 // under a view's centre read at any view the one the re-take takes where it
-// keeps nothing; → steps in
+// keeps nothing, never a line of white space alone; in a draft holding typed
+// text the re-take, → and a step's flight read each span where the typing
+// carried it, a line typed after the last span standing on the last; → steps in
 // to the child drawn under the centre of the view the camera is bound for,
 // else to the first; the re-take and → find every box the plane draws under
 // the centre, one the index does not list among them; a
@@ -1175,6 +1177,67 @@ test('the element under a view\'s centre, read at a view the camera does not sta
   } finally {
     index([D, E]);
   }
+});
+
+/** a draft of the session's account, three typed lines each a span of the walk: Alpha at 1, Bravo at 14, Charlie at 27 */
+const T = '1.0.1.0.15';
+const T_TEXT = 'Alpha line.\n\nBravo line.\n\nCharlie line.';
+
+test('in a draft holding typed text the walk reads every position its fold places where the typing carried it: the re-take and → stand on the span the text shown sets under the view\'s centre, never the model\'s span at that position; a step flies to the line the text shown sets its span on; and over a line typed after the last span the re-take stands on the last, never the first (issue #501)', async () => {
+  Object.assign(script, reads(T, [{ content: T_TEXT }], T_TEXT.length, [{ i_start: T + '.0.1.1', width: String(T_TEXT.length) }]), {
+    [FAKE.keyOf('op', { frame: F.docMetadata(T) })]: { result: { as_of: 1, resp: 'doc_metadata', doc: T, published: false, owner: '1.0.1', birth: null, birth_extent: null, placed: null, base_extent: null, source: null } },
+  });
+  /** the view a walk's flight frames a position of the text shown at */
+  const framing = (/** @type {number} */ pos) => { const f = LAYER.frameOf(T, pos); return CAM.viewAt(f, f.fs); };
+  /** two views the same, within a flight's rounding */
+  const near = (/** @type {{x: number, y: number, scale: number}} */ a, /** @type {{x: number, y: number, scale: number}} */ b) => [a.x - b.x, a.y - b.y, a.scale - b.scale].every((d, i) => Math.abs(d) <= 1e-9 * Math.max(1, Math.abs([b.x, b.y, b.scale][i])));
+  await PUMP.loadWhole(T);
+  try {
+    assert.deepEqual(REC.doc(T).blocks.map((b) => b.pos), [1, 14, 27]);
+    REC.addEdit(T, { pos: 1, width: 0, text: 'Typed line.\n\n' });
+    assert.deepEqual(LAYER.shownOf(T).blocks.map((b) => [b.pos, b.text]), [[1, 'Typed line.'], [14, 'Alpha line.'], [27, 'Bravo line.'], [40, 'Charlie line.']], 'a line typed before Alpha: each span shown thirteen positions on');
+    // the view's centre on Bravo's line, 27 in the text shown, the position the model's Charlie opens at
+    await WALK.focusTo(D, 15);
+    at(LAYER.centreOf(T, 27), 12.5 / LAYER.foldOf(REC.doc(T)).fs);
+    assert.equal(LAYER.posAt(T, CAM.cam.x, CAM.cam.y), 27, 'the fold answers the text shown\'s position');
+    await WALK.retakeFromView(true);
+    assert.deepEqual(walkAt(), ['block', T, 14], 'the re-take: Bravo, never Charlie');
+    await WALK.focusTo(T, null);
+    await run(WALK.key('in'));
+    assert.deepEqual(walkAt(), ['block', T, 14], '→: Bravo, never Charlie');
+    // the walk on Alpha, the camera on its line: ↓ to Bravo flies to Bravo's line, never to the line its model position names in the text shown
+    await WALK.focusTo(T, 1);
+    CAM.set(framing(14));
+    await run(WALK.key('down'));
+    assert.deepEqual(walkAt(), ['block', T, 14]);
+    assert.ok(near(CAM.view(), framing(27)) && !near(CAM.view(), framing(14)), `↓: the camera on Bravo's line, 27 in the text shown — ${JSON.stringify(CAM.view())}`);
+    // a line typed after Charlie, the last span: no model position names it
+    REC.addEdit(T, { pos: 53, width: 0, text: '\n\nDelta typed.' });
+    assert.deepEqual(LAYER.shownOf(T).blocks.map((b) => b.pos), [1, 14, 27, 40, 55], 'Delta shown at 55');
+    at(LAYER.centreOf(T, 55), 12.5 / LAYER.foldOf(REC.doc(T)).fs);
+    await WALK.retakeFromView(true);
+    assert.deepEqual(walkAt(), ['block', T, 27], 'over Delta: Charlie, the last span, never Alpha, the first');
+    assert.deepEqual(fake.unanswered, []);
+  } finally {
+    REC.clearEdits(T);
+    REC.invalidate(T);
+  }
+});
+
+test('the element under a view\'s centre over a typed line of white space alone is the span before it — the line no element of the walk — and the re-take that stands there moves the walk nothing at the next (rule 20)', async () => {
+  let told = 0;
+  WALK.onFocus(() => { told++; });
+  const view = { ...LAYER.centreOf(E, 12), scale: 12.5 / LAYER.foldOf(REC.doc(E)).fs };
+  assert.equal(LAYER.posAt(E, view.x, view.y), 12, 'the view\'s centre on E\'s line of one space');
+  const u = WALK.elementUnder(view);
+  assert.deepEqual([u.kind, u.addr, u.pos], ['block', E, 3], 'the span before it, never the line of one space');
+  await WALK.focusTo(D, 15);
+  at(view, view.scale);
+  await WALK.retakeFromView(true);
+  assert.deepEqual(walkAt(), ['block', E, 3], 'the re-take stands on it');
+  const was = told;
+  await WALK.retakeFromView(true);
+  assert.deepEqual([walkAt(), told], [['block', E, 3], was], 'the next re-take there stands the walk nowhere again: its watchers told nothing');
 });
 
 test('the walk takes each box as the version it shows (issues #154, #23): an account\'s documents list the version its box shows, named by that version\'s own first line, a landing at the document stands on that version\'s span, and a re-take over its box stands there', async () => {

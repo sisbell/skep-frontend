@@ -71,8 +71,8 @@
 // its card (K-55) and Enter at the run still showing its face. A block whose
 // text is only white space is no element of the walk, by T-SPAN's rule
 // (`isElement`, `elementIn`; rule 20): the mirror lists none, and a landing
-// inside one stands on the element before it; a position no block holds
-// stands on the first span. A landing the index does
+// inside one, or a view's centre over one, stands on the element before it;
+// a position no block holds stands on the first span. A landing the index does
 // not list — a withheld document, one unchanged since the index's floor, its
 // account — lands on its own node, placed among the listed siblings in
 // address order (`among`; rule 12). → steps in to the child the plane draws
@@ -80,8 +80,10 @@
 // else to the first in record order (D5 K-3; `childUnder`): at the board the
 // account whose cell holds the centre; at an account the mark whose cell
 // holds it, else, nearer than far, the document whose region holds it; at a
-// document the element standing on the position its fold holds there, by the
-// landing's rule (`elementAt`); at a withheld run its first end. The camera
+// document the element standing on the position its fold holds there — a
+// position of the text shown, carried back into the model's text (T-LAYER's
+// `basePos`) — by the landing's rule (`elementAt`); at a withheld run its
+// first end. The camera
 // follows the focus — a walk move flies to the element at its level's scale
 // (`flyToFocus`): the mark's stop, and a member the walk lists after it, to
 // the mark centred at the scale nearest the camera's that draws it (P-LOD's
@@ -90,8 +92,10 @@
 // reading size where the scale the move was made at reads it at its reading
 // scale, else no nearer than just short of that (T-LAYER's
 // `scaleBelowReading`), so no step takes a document to its reading scale from
-// below it; a span to its line, its column framed at the landing's em
-// (T-LAYER's `frameOf`); a document's frame and a span's line read again
+// below it; a span to its line where the text shown sets it — its position
+// carried there through a draft's typed text (T-LAYER's `shownPos`) — its
+// column framed at the landing's em (T-LAYER's `frameOf`); a document's frame
+// and a span's line read again
 // each frame as the document is set while the camera flies, at the position
 // the walk's node holds and under the cap decided as the move is made, their
 // last answer kept while the page holds none of its text (P-CAM's `Aim`;
@@ -821,11 +825,13 @@ function heldBy(addr) {
  * size where the scale the camera was bound for as the move was made reads it
  * at its reading scale, else no nearer than just short of that (T-LAYER's
  * `scaleBelowReading`), so a step never takes a document to its reading scale
- * from below it; a span's line, its column framed with both its margins, at
- * the landing's em (T-LAYER's `frameOf`; P-CAM's `landingPx`) — the document's
- * frame and the span's line each read again as the camera flies (`aimIn`) —
- * nowhere where the document's extent is read first and a later move overtook
- * this one meanwhile.
+ * from below it; a span's line, or a link's end's, where the text shown sets
+ * it — its position carried there through a draft's typed text (T-LAYER's
+ * `shownPos`) — its column framed with both its margins, at the landing's em
+ * (T-LAYER's `frameOf`; P-CAM's `landingPx`) — the document's frame and the
+ * span's line each read again as the camera flies (`aimIn`) — nowhere where
+ * the document's extent is read first and a later move overtook this one
+ * meanwhile.
  * @param {number} move the move's count
  */
 async function flyToFocus(move) {
@@ -849,7 +855,7 @@ async function flyToFocus(move) {
     }), 300);
   } else {
     const addr = focus.addr, pos = focus.pos;
-    await CAM.fly(aimIn(addr, () => { const at = LAYER.frameOf(addr, pos); return CAM.viewAt(at, at.fs); }), 260);
+    await CAM.fly(aimIn(addr, () => { const at = LAYER.frameOf(addr, pos == null ? null : LAYER.shownPos(addr, pos)); return CAM.viewAt(at, at.fs); }), 260);
   }
   CAM.markDirty();
 }
@@ -880,9 +886,11 @@ function stepped() { caretHeld = false; render(); focusItem({ byKey: true }); mo
  * else, nearer than far, where the plane draws documents, the document whose
  * region holds it, as the version its box shows (`documentAt`); at a
  * document, the element standing on the position its fold holds under the
- * centre (`elementAt`), where its region holds the centre. It answers that
- * child's index among the node's children once they are read, and the first's
- * where none of them is drawn under the centre.
+ * centre, where its region holds the centre — a position of the text shown,
+ * carried back into the model's text once the children are read (T-LAYER's
+ * `basePos`), by the landing's rule (`elementAt`). It answers that child's
+ * index among the node's children once they are read, and the first's where
+ * none of them is drawn under the centre.
  * @param {Node} node
  * @param {import('../plane/camera.js').View} view the view the camera is bound for
  * @returns {(kids: Node[]) => number}
@@ -894,7 +902,7 @@ function childUnder(node, view) {
   if (node.kind === 'board') return named(REC.board() ? accountAt(x, y, BOARD.addr) : null);
   if (node.kind === 'account') { const mark = markAt(x, y, scale); return named(mark ? mark.key : lodOf(scale).name === 'far' ? null : documentAt(x, y, scale)); }
   const pos = node.kind === 'document' && holdsPoint(LAYER.regionOf(node.addr), x, y) ? LAYER.posAt(node.addr, x, y) : null;
-  return (kids) => (pos == null ? 0 : elementAt(kids, node.addr, pos));
+  return (kids) => (pos == null ? 0 : elementAt(kids, node.addr, LAYER.basePos(node.addr, pos)));
 }
 
 /**
@@ -1214,14 +1222,17 @@ export function kept() {
  * re-take's order without its rules of keeping — the kept caret's span, a
  * member a mark holds, the walk's own document (see the head): nearer
  * than far, a continuation's mark whose cell holds the centre (`markAt`),
- * else the document whose region holds it (`documentAt`) — the span in the
- * column under it where the view reads that document at its own reading
- * scale (T-LAYER's fold and its one test), else the document whole; else,
- * and at far scale, where the grain stops at the account, the account whose
- * region holds the centre, else the board — the root alone where no board is
- * held. The re-take reads it at the camera (`retakeFromView`), and a return
- * at the view it lands at as the act is made, before the camera is there
- * (N-GO's).
+ * else the document whose region holds it (`documentAt`) — where the view
+ * reads that document at its own reading scale (T-LAYER's fold and its one
+ * test) and it holds an element of the walk, the element T-SPAN's rule
+ * stands the position under the centre on (`elementIn`; rule 20) — the text
+ * shown's position there (T-LAYER's `posAt`), carried back into the model's
+ * text (T-LAYER's `basePos`) — else its first element; else the document
+ * whole; else, and at far scale, where the grain stops at the account, the
+ * account whose region holds the centre, else the board — the root alone
+ * where no board is held. The re-take reads it at the camera
+ * (`retakeFromView`), and a return at the view it lands at as the act is
+ * made, before the camera is there (N-GO's).
  * @param {import('../plane/camera.js').View} view
  * @returns {Node}
  */
@@ -1232,10 +1243,10 @@ export function elementUnder(view) {
     if (mark) return { kind: 'mark', addr: mark.key, pos: null, link: null };
     const doc = documentAt(x, y, scale);
     if (doc) {
-      const d = REC.doc(doc);
-      if (!LAYER.atReadingScale(doc, scale) || !d.blocks.length) return { kind: 'document', addr: doc, pos: null, link: null };
+      const d = REC.doc(doc), first = d.blocks.find(isElement);
+      if (!LAYER.atReadingScale(doc, scale) || !first) return { kind: 'document', addr: doc, pos: null, link: null };
       const pos = LAYER.posAt(doc, x, y);
-      const b = (pos != null && d.blocks.find((q) => pos >= q.pos && pos < q.pos + q.width)) || d.blocks[0];
+      const b = (pos != null && elementIn(d.blocks, LAYER.basePos(doc, pos))) || first;
       return { kind: 'block', addr: doc, pos: b.pos, link: null };
     }
   }
