@@ -56,10 +56,12 @@
 // in several, the walks' folded moments with the act that unfolds each —
 // O-FACES' `folded`, `unfold` — the reading scenes closed, N-GO's
 // `closed`, and the scene's panes standing kept with how each was set,
-// SC's `keptPanes`, `paneLift`); SC's own end, a Back from its entry
+// SC's `keptPanes`, `paneLift`, and the hint its inert act raises and a press
+// of its acts ends, O-HINT's `show`, `act`); SC's own end, a Back from its entry
 // (N-GO's `closeScene`), and
 // the faces a stop the reader returned to shows at its site (O-FACES'
 // `reaching`, `floating`, `held`); O-LAND's hand-off and its pieces' element;
+// O-HINT's hand-off;
 // and M-PUMP's (`shownIn`, N-GO's `arrived` for each feed row publishing a
 // trunk's next member, `dropped` for what each row and each change of the
 // page's class dropped, the places the trail's entries name — a reading
@@ -80,7 +82,8 @@
 // place (N-WALK's `markExpanded`, `markLocated`, `markDescribed`,
 // `markKept`), then P-RENDER, BM, O-HOST's place and the find's (N-FIND's
 // `place`), the landing's line
-// (O-LAND's `render`), the scene's ties and its panes' kept clauses where the
+// (O-LAND's `render`), the hint (O-HINT's `render`), the scene's ties and its
+// panes' kept clauses where the
 // scene is open (SC's `draw`, `markKept`), the one line where what M-PUMP
 // holds as it stands while it reads it again moved (`keptRevision`), so a
 // kept clause appears and lifts on every surface in one frame (FP-23), then the press
@@ -94,7 +97,8 @@
 // address beside it and, standing over a change of the page's class, the
 // index its new class reads (N-LEAP's `takeAddress`, `takeIndex`).
 // A change of the page's class (`dropped`): the overlay host, the faces, the
-// LEAP box, the find, N-GO and the one line first, so what the class the page left
+// LEAP box, the find, N-GO, the one line and the hint first, so what the
+// class the page left
 // could read goes with it (FP-29), then each reading scene's pane and the
 // walk (FP-23).
 // The global key listener → N-KEYS, each key handed where the focus is
@@ -107,7 +111,10 @@
 // keys go first (SC's `key`); ↓ and ↑ in an overlay, or in the notice below
 // it (O-HOST's), move among the controls of the one holding the focus
 // through the controller; every key but Tab and Shift is the line's next
-// act. The pointer → APP-INPUT; the copy event → T-LAYER's `onCopy`; the
+// act, and every one but an auto-repeat a hint's (O-HINT's `act`) — Enter
+// and Space at the hint its button's own, ending nothing, and every other
+// key there made as at the plane's stop. The pointer → APP-INPUT; the copy
+// event → T-LAYER's `onCopy`; the
 // events `moment` → a walk's moment (O-FACES'), `held` → logged, not acted
 // on; the failure reporter (a line in the page, posted nowhere). No write is
 // composed or sent anywhere in this page.
@@ -128,6 +135,7 @@ import * as FACES from '../overlays/faces.js';
 import * as SEL from '../overlays/selection.js';
 import * as TRAILLIST from '../overlays/trail-list.js';
 import * as LANDING from '../overlays/landing.js';
+import * as HINT from '../overlays/hint.js';
 import * as LINE from '../line/line.js';
 import * as LEAP from '../nav/leap.js';
 import * as FIND from '../nav/find.js';
@@ -224,6 +232,7 @@ function loop(/** @type {number} */ now) {
     HOST.place();
     FIND.place();
     LANDING.render();
+    HINT.render();
     if (SCENE.isOpen()) { SCENE.draw(); SCENE.markKept(); }
     // the one line in the frame what is kept moved, so a kept clause appears and lifts there with the corners and the mirror
     if (krev !== lastKeptRev) LINE.render();
@@ -244,7 +253,8 @@ function loop(/** @type {number} */ now) {
  * What a feed row or a change of the page's class dropped, told by M-PUMP
  * after the drop (its `onDrop`): at a change of class — FP-23, FP-29 — the
  * overlay, the faces' memory of what they showed whole, the LEAP box's rows,
- * what the find measured, the arrival and the trail's notices, and the one line's transient taken
+ * what the find measured, the arrival and the trail's notices, the one
+ * line's transient, and the hint with the notices it showed whole, taken
  * down from the model at once, the overlay first so the focus a closing card
  * hands back stands on the walk's element as the walk is taken again; then
  * each reading scene's pane kept fresh by its kind, and the walk taken again
@@ -252,7 +262,7 @@ function loop(/** @type {number} */ now) {
  * @param {import('../model/pump.js').Dropped} x
  */
 function dropped(x) {
-  if (!x.addrs) { HOST.classChanged(); FACES.classChanged(); LEAP.classChanged(); FIND.classChanged(); GO.classChanged(); LINE.classChanged(x.at); }
+  if (!x.addrs) { HOST.classChanged(); FACES.classChanged(); LEAP.classChanged(); FIND.classChanged(); GO.classChanged(); LINE.classChanged(x.at); HINT.classChanged(); }
   SCENE.dropped(x);
   void WALK.dropped(x);
 }
@@ -265,6 +275,7 @@ function whereIs(/** @type {EventTarget | null} */ target) {
   if (FOCUS.isField(t)) return /** @type {const} */ ('field');
   if (t.closest('#overlay, #notice')) return /** @type {const} */ ('overlay');
   if (t.closest('#landing')) return /** @type {const} */ ('landing');
+  if (t.closest('#hint')) return /** @type {const} */ ('hint');
   if (t.closest('#line')) return /** @type {const} */ ('line');
   if (t.closest('#scenebar, #scenestop, #scenestrokes')) return /** @type {const} */ ('scene-acts');
   if (t.closest('#scene')) return /** @type {const} */ ('scene');
@@ -301,11 +312,12 @@ async function boot() {
   FOCUS.attach({ live: el('live') });
   WALK.attach(el('mirror'));
   LANDING.attach(el('landing'), { handOff: () => WALK.focusItem(), pieces: el('pieces') });
+  HINT.attach(el('hint'), { handOff: () => WALK.focusItem() });
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')), stop: /** @type {HTMLButtonElement} */ (el('scenestop')), strokes: el('scenestrokes') },
     { end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, at, told) => FACES.floating(far, at, null, told), held: FACES.held } });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
   FIND.attach({ box: el('find'), input: /** @type {HTMLInputElement} */ (el('findq')), count: el('findcount'), prev: /** @type {HTMLButtonElement} */ (el('findprev')), next: /** @type {HTMLButtonElement} */ (el('findnext')), note: el('findnote') });
-  LINE.attach(el('line'), { open: (byKey, at) => LEAP.open(at), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed(), panes: SCENE.keptPanes, paneLift: SCENE.paneLift });
+  LINE.attach(el('line'), { open: (byKey, at) => LEAP.open(at), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed(), panes: SCENE.keptPanes, paneLift: SCENE.paneLift, hint: (id, at) => HINT.show(id, null, { at }), acted: () => HINT.act() });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a), vanished: GO.vanished, atop: FIND.atop, newer: GO.newerAt });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn, first: LAYER.firstOfFar });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords() });
@@ -322,8 +334,10 @@ async function boot() {
       const box = /** @type {HTMLElement | null} */ (document.activeElement && document.activeElement.closest('#overlay, #notice')) || el('overlay');
       const items = /** @type {HTMLElement[]} */ ([...box.querySelectorAll('button:not([disabled]), input, [tabindex="0"]')]); const i = items.indexOf(/** @type {HTMLElement} */ (document.activeElement)); const n = items[Math.max(0, Math.min(items.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]; if (n) FOCUS.land(n, { byKey }); e.preventDefault(); return;
     }
-    if (e.key !== 'Tab' && e.key !== 'Shift') LINE.act();
-    const took = await KEYS.dispatch(e, { where, byKey });
+    // the hint's button takes Enter and Space as its own, its act ending nothing; every other key at it is made as at the plane's stop
+    if (where === 'hint' && (e.key === 'Enter' || e.key === ' ') && !e.metaKey && !e.ctrlKey && !e.altKey) return;
+    if (e.key !== 'Tab' && e.key !== 'Shift') { LINE.act(); if (!e.repeat) HINT.act(); }
+    const took = await KEYS.dispatch(e, { where: where === 'hint' ? 'plane' : where, byKey });
     if (took) e.preventDefault();
   });
 

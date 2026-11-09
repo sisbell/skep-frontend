@@ -89,7 +89,8 @@
 // its document's outline, whose ground would cover it; then the trail's pips
 // numbered newest-first at the label floor, and no path between them
 // (foundations §2.2); the focus ring, its box clamped inside the visible view
-// (P-REG's RING; `drawFocus`) — at a continuation's mark's stop, and at a
+// (P-REG's RING; `drawFocus`, around `focusBox`, which a hint stands beside
+// too) — at a continuation's mark's stop, and at a
 // document a mark drawn the stronger holds, on the mark, that member's name
 // and place among the mark's members set on the mark while it stands, in the
 // count's place; and the arrival mark, every run of the span
@@ -947,46 +948,73 @@ function ringBox(b, seen) {
 }
 
 /**
- * The focus ring at the walk's element while the plane holds the focus and
- * a key moved it (N-FOCUS's rule; D5 §4 rule 2) — its document's outline's
- * bounds for a document or a link (T-LAYER's `shapeOf`), the account's
- * region, the board's — none at the walk's root where no board is held,
- * whose cell names none (FP-35); a continuation's mark at its stop, and a
- * document the mark drawn the stronger holds — or a span or a link in one —
- * which the frame draws nowhere but in it (`holding`), on the mark — its rect
- * as the frame drew it, its continuation's cell where the frame drew it
- * nowhere; a span whose article
- * stands is marked by its lit block instead, the ring's reading-scale form
- * (D3), wherever a line of it meets the visible view, so the canvas circles
- * no document whose text is laid out — and where none does (a span the
- * re-take keeps while its document stays in view, N-WALK's), at its lines
- * (T-LAYER's `lineBoxes`).
- * Its box clamped to the visible view (`ringBox`). `stats.ring` is the box it
- * outlined.
- * @param {Rect} seen the visible view
+ * The lines of the walk's span on screen where its article stands and no
+ * mark the last frame drew the stronger holds its document (`holding`):
+ * T-LAYER's `lineBoxes` of the block the span names; null for any other
+ * element of the walk.
+ * @param {import('../nav/walk.js').Node} f
+ * @returns {Rect[] | null}
  */
-function drawFocus(seen) {
-  if (!ctx || !FOCUS.ringShown()) return;
-  const f = WALK.current(); if (!f || (f.kind === 'board' && !REC.board())) return;
+function spanLines(f) {
+  if (f.kind !== 'block' || holding(f.addr) || !LAYER.isMounted(f.addr)) return null;
+  const blk = f.pos != null ? REC.blockByPos(f.addr, f.pos) : null;
+  return blk ? LAYER.lineBoxes(f.addr, blk.pos, blk.width) || [] : [];
+}
+
+/**
+ * The walk's element's box on screen, clamped inside the visible view
+ * (`ringBox`): its document's outline's bounds for a document or a link
+ * (T-LAYER's `shapeOf`), the account's region, the board's; a continuation's
+ * mark at its stop, and a document the mark drawn the stronger holds — or a
+ * span or a link in one — which the frame draws nowhere but in it
+ * (`holding`), on the mark — its rect as the frame drew it, its
+ * continuation's cell where the frame drew it nowhere; a span whose article
+ * stands, the bounds of its lines (`spanLines`). Null at the walk's root
+ * where no board is held, whose cell names none (FP-35), at a mark the frame
+ * drew nowhere and at a span none of whose lines is laid out. What the ring
+ * circles (`drawFocus`), and what a hint stands beside (O-HINT's).
+ * @param {Rect} seen the visible view
+ * @returns {Rect | null}
+ */
+export function focusBox(seen) {
+  const f = WALK.current(); if (!f || (f.kind === 'board' && !REC.board())) return null;
   /** @type {Rect} the element's box on screen */
   let b;
   const mark = f.kind === 'mark' ? stats.residueMarks.find((m) => m.key === f.addr) : holding(f.addr);
   const cont = f.kind === 'mark' && !mark ? continuationOf(f.addr) : null;
+  const lines = spanLines(f);
   if (mark) b = mark.rect;
   else if (cont) { const w = continuationCell(cont.account, cont.k); b = { x: sx(w.x), y: sy(w.y), w: w.w * cam.scale, h: w.h * cam.scale }; }
-  else if (f.kind === 'mark') return;
-  else if (f.kind === 'block' && LAYER.isMounted(f.addr)) {
-    const blk = f.pos != null ? REC.blockByPos(f.addr, f.pos) : null;
-    const lines = blk ? LAYER.lineBoxes(f.addr, blk.pos, blk.width) || [] : [];
-    const meets = (/** @type {Rect} */ r) => r.x < seen.x + seen.w && r.x + r.w > seen.x && r.y < seen.y + seen.h && r.y + r.h > seen.y;
-    if (!lines.length || lines.some(meets)) return;
+  else if (f.kind === 'mark') return null;
+  else if (lines) {
+    if (!lines.length) return null;
     const x0 = Math.min(...lines.map((r) => r.x)), y0 = Math.min(...lines.map((r) => r.y));
     b = { x: x0, y: y0, w: Math.max(...lines.map((r) => r.x + r.w)) - x0, h: Math.max(...lines.map((r) => r.y + r.h)) - y0 };
   } else {
     const w = f.kind === 'account' ? accountCell(f.addr) : f.kind === 'board' ? boardCell(f.addr) : LAYER.shapeOf(f.addr);
     b = { x: sx(w.x), y: sy(w.y), w: w.w * cam.scale, h: w.h * cam.scale };
   }
-  const r = ringBox(b, seen), g = RING.gap;
+  return ringBox(b, seen);
+}
+
+/**
+ * The focus ring at the walk's element while the plane holds the focus and
+ * a key moved it (N-FOCUS's rule; D5 §4 rule 2), around its box (`focusBox`);
+ * a span whose article stands is marked by its lit block instead, the ring's
+ * reading-scale form (D3), wherever a line of it meets the visible view, so
+ * the canvas circles no document whose text is laid out — and where none
+ * does (a span the re-take keeps while its document stays in view,
+ * N-WALK's), at its lines. `stats.ring` is the box it outlined.
+ * @param {Rect} seen the visible view
+ */
+function drawFocus(seen) {
+  if (!ctx || !FOCUS.ringShown()) return;
+  const f = WALK.current(), lines = f ? spanLines(f) : null;
+  const meets = (/** @type {Rect} */ r) => r.x < seen.x + seen.w && r.x + r.w > seen.x && r.y < seen.y + seen.h && r.y + r.h > seen.y;
+  if (lines && lines.some(meets)) return;
+  const r = focusBox(seen);
+  if (!r) return;
+  const g = RING.gap;
   ctx.strokeStyle = COL.focus; ctx.lineWidth = RING.width; rrect(ctx, r.x - g, r.y - g, r.w + 2 * g, r.h + 2 * g, Math.min(8, r.w * 0.06)); ctx.stroke();
   stats.ring = r;
 }

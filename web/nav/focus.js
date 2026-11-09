@@ -2,8 +2,9 @@
 // record's rules 10–22). Layer 2, a leaf: it imports nothing of the page and
 // keeps no DOM of its own, moving the focus of elements their owners hand it.
 // State (FP-10): whether a key made the last move of the focus (the ring's
-// rule), the last input's kind, and the opener stack — which region took the
-// focus, from which element, and the region each waits on to take it next.
+// rule), the last input's kind, the opener stack — which region took the
+// focus, from which element, and the region each waits on to take it next —
+// and the words the status region waits to say on the next frame (`saying`).
 // The page has one focus, the platform's (`document.activeElement`; rule 10),
 // and no `.focus()` call stands outside this module: five entries, which
 // every module calls and none bypasses —
@@ -50,10 +51,11 @@
 // re-take, and whenever the focus leaves the plane; a move that leaves the
 // focus in a field sets the rule the landing takes once the field closes onto
 // it. The status region (D4): one standing `role="status"` region this
-// module alone writes (`say`), polite unless the caller asks assertive; a
-// key-made landing is told by the focus move alone (rule 12), never repeated
-// here. N-WALK registers the plane's stop and the walk's element, the app the
-// status region (`attach`).
+// module alone writes (`say`), polite unless the caller asks assertive, and
+// words it holds already said again on the next frame where the caller asks;
+// a key-made landing is told by the focus move alone (rule 12), never
+// repeated here. N-WALK registers the plane's stop and the walk's element,
+// the app the status region (`attach`).
 // Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-20, FP-36.
 
 /**
@@ -297,18 +299,36 @@ export function keep(region, keyOf, rebuild) {
  */
 export function cover(el, on) { /** @type {HTMLElement} */ (el).inert = on; }
 
+/** a function run on the next frame — the platform's next paint, else the next task where nothing paints (the node tests) — by its handle */
+const nextFrame = (/** @type {() => void} */ f) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(f) : Number(setTimeout(f, 0)));
+/** a function `nextFrame` holds, let go unrun */
+const cancelFrame = (/** @type {number} */ h) => (typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame(h) : clearTimeout(h));
+/** the status region's words waiting for the next frame (`say`, asked again): its handle, 0 where none waits */
+let saying = 0;
+
 /**
  * The status region (D4) written: one standing region this module alone
  * writes, polite unless the caller asks assertive. Nothing is said for a
- * camera move, and a landing is told by the focus move alone.
+ * camera move, and a landing is told by the focus move alone. Asked `again`,
+ * words the region holds already are said again: the region emptied now and
+ * written on the next frame, so the platform meets a change; any write before
+ * that frame takes its place.
  * @param {string} text
  * @param {boolean} [assertive]
+ * @param {boolean} [again] the words are said again where the region holds them already (O-HINT's every press)
  */
-export function say(text, assertive = false) {
+export function say(text, assertive = false, again = false) {
   if (!liveEl) return;
-  liveEl.setAttribute('aria-live', assertive ? 'assertive' : 'polite');
-  liveEl.textContent = text;
+  const live = liveEl;
+  if (saying) { cancelFrame(saying); saying = 0; }
+  live.setAttribute('aria-live', assertive ? 'assertive' : 'polite');
+  if (again && live.textContent === text) {
+    live.textContent = '';
+    saying = nextFrame(() => { saying = 0; live.textContent = text; });
+    return;
+  }
+  live.textContent = text;
 }
 
-/** the tests' reset: the stack emptied, the ring's rule off, the registered parts kept */
-export function _reset() { stack.length = 0; ringByKey = false; modality = 'key'; }
+/** the tests' reset: the stack emptied, the ring's rule off, no words waiting, the registered parts kept */
+export function _reset() { stack.length = 0; ringByKey = false; modality = 'key'; if (saying) { cancelFrame(saying); saying = 0; } }

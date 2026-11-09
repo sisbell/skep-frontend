@@ -7,7 +7,10 @@
 // keeping the focus, and the host's cases: which control an overlay gives
 // the focus as a key or a pointer opens it, as a rebuild, a replacement or a
 // face takes its place, and as it is dismissed, and a notice below it, which
-// takes none and closes first (FP-20, FP-36; the focus record's rules 10–16).
+// takes none and closes first; and the status region, written once for
+// words it is told, asked again saying words it holds already by emptying it
+// and writing them on the next frame (FP-20, FP-36; the focus record's rules
+// 10–16).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -334,6 +337,30 @@ test('a rebuild keeps the focus on the control bearing the same key, else on the
   other.focus();
   FOCUS.keep(/** @type {any} */ (line.r), keyOf, () => line.make([{ key: 'back', tabindex: '0' }]));
   assert.equal(p.at(), 'the item', 'a focus elsewhere is left where it is');
+});
+
+test('the status region: words it is told written once, polite unless asked assertive; asked again, words it holds already said again — the region emptied now and written on the next frame — and any write before that frame taking its place (issue #468\'s design decision: "What it shows is spoken in the status region")', async () => {
+  /** each write of the region, in order, and the politeness each was made at */
+  const writes = /** @type {string[]} */ ([]);
+  let words = '', live = '';
+  FOCUS.attach({ live: /** @type {any} */ ({ setAttribute(/** @type {string} */ _k, /** @type {string} */ v) { live = v; }, set textContent(/** @type {string} */ v) { words = v; writes.push(v); }, get textContent() { return words; } }) });
+  const frame = () => new Promise((r) => setTimeout(r, 0));
+  FOCUS.say('typing goes nowhere here');
+  FOCUS.say('typing goes nowhere here');
+  assert.deepEqual([writes, live], [['typing goes nowhere here', 'typing goes nowhere here'], 'polite'], 'unasked, the same words are written as they stand, which the platform may not say again');
+  writes.length = 0;
+  FOCUS.say('typing goes nowhere here', false, true);
+  assert.deepEqual(writes, [''], 'asked again: the region emptied now');
+  await frame();
+  assert.deepEqual(writes, ['', 'typing goes nowhere here'], 'and the words written on the next frame');
+  writes.length = 0;
+  FOCUS.say('select a passage first', false, true);
+  assert.deepEqual(writes, ['select a passage first'], 'words the region does not hold are written at once');
+  writes.length = 0;
+  FOCUS.say('select a passage first', false, true);
+  FOCUS.say('board unreachable', true);
+  await frame();
+  assert.deepEqual([writes, live], [['', 'board unreachable'], 'assertive'], 'a write before the next frame takes the waiting words\' place');
 });
 
 test('cover: a region chrome stands over is inert while it does', () => {

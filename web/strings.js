@@ -16,7 +16,12 @@
 // never from the reader's clock, in one form of a date on every surface; when
 // the page's copy of what it keeps standing was left behind is said by
 // `lastRead`, from the page's own clock — the hour and the minute, the day
-// first where it was not today — and never as an age; a continuation's mark's count is said in what
+// first where it was not today — and never as an age; a one-line hint's
+// notice is marked whether it compacts (`StringEntry.hint`), and `hintOf`
+// gives it whole and in its compact form, its first clause — its template's
+// text before the first " — ", cut before its tokens are filled — the whole
+// notice where the template has none, where it is pinned and where it is
+// marked whole (FP-26); a continuation's mark's count is said in what
 // it counts by `markCount`; a formatting form is named by its one entry
 // (`formName`), a heading's with the level of the one block it names and a type
 // the table lacks by the name its card gives it; forms named together stand in
@@ -44,6 +49,7 @@ import { commonsType, isAddress } from './model/address.js';
  * @property {string} source the design file that carries it (`ux/copy.md`, `requirements.md`, `designs/foundations.md`, `designs/B1-reader.md`, `designs/B2-finding.md`, `designs/B3-editor.md`, `designs/D5-keys.md`, `designs/D6-burst-machine.md`), or `''` where none does
  * @property {string} [screen] the screen that needed it (DRAFT)
  * @property {boolean} [lane] true where no design document carries the string
+ * @property {'clause' | 'whole'} [hint] a one-line hint's notice (`hintOf`): `clause` where its first clause, read alone, says why the key did nothing or what works instead, so it stands for the notice once the notice was shown whole; `whole` where it does not, the notice whole at every press
  */
 
 /** @type {Record<string, StringEntry>} */
@@ -171,8 +177,8 @@ export const STRINGS = {
   'F.floating': { text: 'its passage is not in ⟨D⟩\'s current text', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S6, B1-S4; B1-S9: a stop returned to; a return by the trail' },
   'F.floating.read': { text: 'read version ⟨k⟩, the last that holds it', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S6' },
   'F.floating.member': { text: 'its passage is not in version ⟨k⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S6; B1-S9: a stop returned to; a return by the trail' },
-  'F.swallow': { text: 'typing goes nowhere here — to go somewhere, the address line: ⟨LEAP chord⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the plane (K-9)' },
-  'F.swallow.space': { text: 'Space does not page here — ⟨paging key⟩ does', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the plane (K-9)' },
+  'F.swallow': { text: 'typing goes nowhere here — to go somewhere, the address line: ⟨LEAP chord⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the plane (K-9)', hint: 'clause' },
+  'F.swallow.space': { text: 'Space does not page here — ⟨paging key⟩ does', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the plane (K-9)', hint: 'clause' },
   'F.board-residue': { text: 'not counted here: drafts you may not read, links homed on other boards — counted from ⟨floor⟩; documents unchanged since then are not shown', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
   'F.card-clause': { text: 'links homed on other boards are not counted here', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S4' },
   'F.leap.none': { text: 'nothing you can read on this board goes by that name or holds those words', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S11' },
@@ -239,7 +245,7 @@ export const STRINGS = {
 
   // ---- DRAFT: designs/D5-keys.md --------------------------------------------
   'D5.slots': { text: 'annotate ⌘⇧A · quote ⌘⇧C · who wrote this? ⌘⇧O · who uses this? ⌘⇧R · see the links ⌘⇧L · follow ⌘↩ · read side by side ⌘⇧↩ · link to… ⌘K · format…', cls: 'DRAFT', source: 'designs/D5-keys.md', screen: 'the selection' },
-  'D5.select-first': { text: 'select a passage first', cls: 'DRAFT', source: 'designs/D5-keys.md', screen: 'the selection; the one line' },
+  'D5.select-first': { text: 'select a passage first', cls: 'DRAFT', source: 'designs/D5-keys.md', screen: 'the selection; a hint at the focus', hint: 'clause' },
   'D5.annotate': { text: 'annotate', cls: 'DRAFT', source: 'designs/D5-keys.md', screen: 'the selection' },
   'D5.quote': { text: 'quote', cls: 'DRAFT', source: 'designs/D5-keys.md', screen: 'the selection' },
   'D5.link-to': { text: 'link to…', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the selection' },
@@ -261,11 +267,11 @@ export const STRINGS = {
   'B3.start-document': { text: 'start a new document with this as its first line', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the LEAP box\'s creation row' },
   'B3.last-wrote': { text: 'you last wrote in ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the launch (D6 BM-53)' },
   'B3.kept-in': { text: 'kept in ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the launch\'s recent rows; B3-S5: a quote\'s line; B3-S9: the composer\'s end' },
-  'B3.caret.enter': { text: 'Enter places a caret here', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1, B3-S13: a printable key at a span of the draft with no caret (D6 BM-52)' },
-  'B3.caret.enter.paste': { text: 'Enter places a caret here — then paste', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a paste at a span of the draft with no caret' },
-  'B3.caret.cut': { text: 'select the passage to cut it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a cut at a span of the draft with no caret' },
-  'B3.caret.back': { text: 'your text is back with Shift+Tab', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a printable key at a control of the corner (D6 BM-52)' },
-  'B3.caret.mark': { text: 'a mark — ↓ moves to the words beside it, and Enter there places a caret', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a printable key at a mark of the draft' },
+  'B3.caret.enter': { text: 'Enter places a caret here', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1, B3-S13: a printable key at a span of the draft with no caret (D6 BM-52)', hint: 'clause' },
+  'B3.caret.enter.paste': { text: 'Enter places a caret here — then paste', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a paste at a span of the draft with no caret', hint: 'clause' },
+  'B3.caret.cut': { text: 'select the passage to cut it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a cut at a span of the draft with no caret', hint: 'clause' },
+  'B3.caret.back': { text: 'your text is back with Shift+Tab', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a printable key at a control of the corner (D6 BM-52)', hint: 'clause' },
+  'B3.caret.mark': { text: 'a mark — ↓ moves to the words beside it, and Enter there places a caret', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a printable key at a mark of the draft', hint: 'whole' },
   'B3.mint.stays': { text: 'it stays — you can remove its words, never the document', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the mint\'s clause beside the creation copy, whole at the session\'s first mint; B3-S10: the staging and alternative acts\' mint' },
   'B3.slot.capture.inert': { text: 'a thought here goes public from a document of yours — quote it into a document of yours, then publish that — publishing asks what of it goes public', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the corner\'s publish slot inert at capture\'s default document, its reason' },
   'B3.slot.notes.inert': { text: 'this version publishes no notes document whole — to publish a note\'s words, quote them into a document of yours, then publish that — publishing asks what of it goes public', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the corner\'s publish slot inert at a notes document, its reason' },
@@ -738,7 +744,7 @@ export const STRINGS = {
   'B3.row.held.resolve': { text: '⟨label⟩ holds words the board has not kept — resolve them where they are marked, then take this', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the row inert where an act of the person\'s comes first (D6 BM-62)' },
   'B3.keyless': { text: 'writing needs your key — this session reads your notebook and keeps nothing you type', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13, B3-S9: every caret and writing act in the bare session (D6 BM-58)' },
   'B3.stopped.act': { text: '⟨the act\'s object⟩ is not held on this device as typing is, and your notebook ⟨has stopped | has halted its writes⟩ — ⟨start | restart⟩ it here, then ⟨the act⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: an act the store cannot hold under a stopped notebook (D6 BM-59)' },
-  'B3.row.follow.inert': { text: 'select the passage to follow its link or its source', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: follow\'s line at a bare caret, Mod+Enter with no selection standing (D5 K-51)' },
+  'B3.row.follow.inert': { text: 'select the passage to follow its link or its source', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: follow\'s line at a bare caret, Mod+Enter with no selection standing (D5 K-51)', hint: 'clause' },
   'B3.row.no-link': { text: 'no link is drawn at this passage — to read another document beside this one, open it beside from the address line', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: read side by side at a passage with no link' },
   'B3.row.others-document': { text: 'this is ⟨owner⟩\'s document — to write about a passage here, select it, then annotate: ⟨annotate chord⟩, or link to it from a document of yours', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a key typed at another\'s document' },
   'B3.notes.label': { text: 'Notes on ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13, B3-S6: the notes document\'s label' },
@@ -810,11 +816,11 @@ export const STRINGS = {
   // the empty list's statement
   'L.boards-unread': { text: 'the boards on this machine could not be read — that does not mean there are none', cls: 'DRAFT', source: '', screen: 'the one line; the ARIA mirror; an act that needs a board', lane: true },
   'L.go-to-address': { text: 'go to an address', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
-  'L.no-notebook-yet': { text: 'beginning a notebook isn\'t built yet', cls: 'DRAFT', source: '', screen: 'the one line; an act that needs a board', lane: true },
+  'L.no-notebook-yet': { text: 'beginning a notebook isn\'t built yet', cls: 'DRAFT', source: '', screen: 'a hint at the one line\'s act; an act that needs a board', lane: true, hint: 'clause' },
   'L.refused': { text: '⟨name⟩ — refused; nothing was written', cls: 'DRAFT', source: '', screen: 'a face', lane: true },
-  'L.seam.annotate': { text: 'annotate — comes with the annotation lane; nothing is written here', cls: 'DRAFT', source: '', screen: 'the selection; the one line', lane: true },
-  'L.seam.quote': { text: 'quote — comes with the annotation lane; nothing is written here', cls: 'DRAFT', source: '', screen: 'the selection; the one line', lane: true },
-  'L.seam.link-to': { text: 'link to… — comes with the editor\'s lane; nothing is written here', cls: 'DRAFT', source: '', screen: 'the selection; the one line', lane: true },
+  'L.seam.annotate': { text: 'annotate — comes with the annotation lane; nothing is written here', cls: 'DRAFT', source: '', screen: 'the selection; a hint at the focus', lane: true, hint: 'whole' },
+  'L.seam.quote': { text: 'quote — comes with the annotation lane; nothing is written here', cls: 'DRAFT', source: '', screen: 'the selection; a hint at the focus', lane: true, hint: 'whole' },
+  'L.seam.link-to': { text: 'link to… — comes with the editor\'s lane; nothing is written here', cls: 'DRAFT', source: '', screen: 'the selection; a hint at the focus', lane: true, hint: 'whole' },
   'L.arriving': { text: 'arriving', cls: 'DRAFT', source: '', screen: 'B1-S2, B1-S3', lane: true },
   'L.lower-bound': { text: '≥ ⟨n⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
   'L.whole-board': { text: 'WHOLE BOARD', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
@@ -849,7 +855,7 @@ export const STRINGS = {
   'L.find.member': { text: 'version ⟨k⟩ of ⟨name⟩', cls: 'DRAFT', source: '', screen: 'B2-S5: the find\'s miss', lane: true },
   'L.find.withheld': { text: 'withheld text here was not searched', cls: 'DRAFT', source: '', screen: 'B2-S5: the find\'s answer', lane: true },
   'L.find.part': { text: 'searched only part of it — ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'B2-S5: the find\'s answer', lane: true },
-  'L.find.off': { text: 'words are found in a document — go into one, then ⟨find chord⟩', cls: 'DRAFT', source: '', screen: 'B2-S5: the find\'s chord off any document', lane: true },
+  'L.find.off': { text: 'words are found in a document — go into one, then ⟨find chord⟩', cls: 'DRAFT', source: '', screen: 'B2-S5: the find\'s chord off any document', lane: true, hint: 'clause' },
   // a walk's moment (FP-36): its face's caption by its kind, its answers, its cancel named by its walk and beside it that
   // what cancelling leaves behind is not told to the page, a label box's default and its empty field flagged, a moment the
   // shell no longer holds; and the walk's segment of the one line
@@ -1120,6 +1126,29 @@ export function t(id, values) {
   const e = STRINGS[id];
   if (!e) throw new Error('no string ' + id);
   return values ? fill(e.text, values) : e.text;
+}
+
+/** what parts a notice's first clause from the rest of it (`hintOf`) */
+const CLAUSE_SEP = ' — ';
+
+/**
+ * A one-line hint's notice whole and in its compact form (FP-26): its first
+ * clause, its template's text before the first " — ", cut before its tokens
+ * are filled, so no value filled in moves the cut; the whole notice where the
+ * template has none, where the entry is pinned and where it is marked whole
+ * (`StringEntry.hint`). Throws for an id the table lacks, or marks no hint.
+ * @param {string} id
+ * @param {Record<string, string | number>} [values]
+ * @returns {{whole: string, clause: string}}
+ */
+export function hintOf(id, values) {
+  const e = STRINGS[id];
+  if (!e) throw new Error('no string ' + id);
+  if (!e.hint) throw new Error('no hint ' + id);
+  const whole = values ? fill(e.text, values) : e.text, at = e.text.indexOf(CLAUSE_SEP);
+  if (e.hint === 'whole' || e.cls === 'PINNED' || at < 0) return { whole, clause: whole };
+  const head = e.text.slice(0, at);
+  return { whole, clause: values ? fill(head, values) : head };
 }
 
 /**

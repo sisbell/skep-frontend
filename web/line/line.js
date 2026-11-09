@@ -89,8 +89,9 @@
 // session's refusal beside it, state 3 where the refusal
 // was `no_key`); where no board is held, none of the seven: why, as O-FACES'
 // one entry says it (`noBoardWords`; FP-35), in the guest line's place — at
-// an empty list `F.unclaimed`, the doors' act, inert, saying beginning a
-// notebook isn't built yet as it is pressed; at a list refused its words and,
+// an empty list `F.unclaimed`, the doors' act, inert, its press answered by
+// the hint beside it saying beginning a notebook isn't built yet (O-HINT's,
+// through the act the app hands in); at a list refused its words and,
 // where a retry may tell, `B1.try-again`, the list read again (the app's
 // act); the death arm where the session died (O-FACES's `deathWords`, the
 // guest line's in their place for an arm this page holds none for, "signed
@@ -130,9 +131,10 @@
 // waits on the reader (O-FACES' `folded`), said through the status region as
 // it folds — its act, inside the line's one stop, unfolding it (O-FACES'
 // `unfold`). The transient
-// segments (the swallow line K-9; the mode line C-31 where the pair flipped)
+// segments (the strip's readout; the mode line C-31 where the pair flipped)
 // stand until the next act (`act`) — a press of one of the line's own acts
-// among them — or a change of the page's class, which takes one quoting what
+// among them, which is the next act of a hint standing too (the act the app
+// hands in) — or a change of the page's class, which takes one quoting what
 // the class it left read down with it (`classChanged`). A reading scene's
 // close (N-GO's `closed`, through the reader the app hands in) is said after
 // it until the next act: the first in the page's session whole, a transient
@@ -300,6 +302,8 @@ const changes = new Set();
  * @property {() => (Pieces | null)} [pieces] the runs of an arrival in several, in the document landed in (N-GO's landing); null where none stands
  * @property {() => Array<{key: string, words: string}>} [walks] the walks' folded moments, each its walk and its segment's words (O-FACES' `folded`)
  * @property {(key: string, byKey: boolean) => void} [walk] a walk's segment's act: its moment unfolded (O-FACES' `unfold`)
+ * @property {(id: string, at: HTMLElement) => void} [hint] an inert act's press answered: its notice the hint beside the act (O-HINT's `show`)
+ * @property {() => void} [acted] a press of one of the line's acts told as the reader's next act to what stands until it beside the line: a hint (O-HINT's `act`)
  * @property {() => number} [closed] the reading scenes closed so far (N-GO's `closed`): a new one is said after the close (`closedSaid`)
  * @property {() => import('../scene/scene.js').PaneKept[]} [panes] the reading scene's panes standing kept (SC's `keptPanes`), which the status region speaks for (`keptSaid`)
  * @property {(addr: string) => ({since: number, outcome: import('../model/records.js').Outcome} | null)} [paneLift] how the setting the board's events asked set the pane naming an address (SC's `paneLift`)
@@ -324,11 +328,12 @@ export function attach(e, a) {
     const byKey = FOCUS.byKey(ev);
     // a press on one of the line's acts is the person's next act: what stood until it goes first
     act();
+    if (acts.acted) acts.acted();
     if (which === 'back') acts.back(byKey); else if (which === 'forward') acts.forward(byKey); else if (which === 'address') acts.open(byKey); else if (which === 'trail') acts.trailList(byKey); else if (which === 'signin') acts.signIn(/** @type {HTMLElement} */ (b));
     else if (which === 'fold') acts.open(byKey, foldedAt(addressDisplay()));
     else if (which === 'strip') stripAct();
     else if (which === 'acting') { actingOpen = true; render(true); }
-    else if (which === 'unclaimed') transient(t('L.no-notebook-yet'), 'L.no-notebook-yet');
+    else if (which === 'unclaimed') { if (acts.hint) acts.hint('L.no-notebook-yet', /** @type {HTMLElement} */ (b)); }
     else if (which === 'again') { if (acts.again) acts.again(); }
     else if (which && which.startsWith(WALK_ACT) && acts.walk) acts.walk(which.slice(WALK_ACT.length), byKey);
     ev.stopPropagation();
@@ -1050,8 +1055,8 @@ const AGAIN = `<button id="line-again" data-act="again">${esc(t('B1.try-again'))
  * as O-FACES' one entry says it (`noBoardWords`), in the guest line's place,
  * naming no venue, origin, claimant or sign-in — with no adapter beneath the
  * port, why none stands, `L.bad-port` or `L.no-adapter`; at an empty list
- * `F.unclaimed`, the doors' act, inert in this build, saying so as it is
- * pressed; at a list refused its words, and "try again" beside them where a
+ * `F.unclaimed`, the doors' act, inert in this build, its hint saying so as
+ * it is pressed; at a list refused its words, and "try again" beside them where a
  * retry may tell; nothing while the list has not answered. None of §3.3's
  * seven states.
  * @returns {Acting}

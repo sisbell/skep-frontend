@@ -349,6 +349,17 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #pieces { position:fixed; left:0; top:0; width:0; height:0; z-index:24; pointer-events:none; }
 #pieces .piece { position:absolute; font-size:10px; line-height:13px; color:var(--hue-you); white-space:normal; overflow-wrap:break-word; }
 
+/* A ONE-LINE HINT (O-HINT places it, and fades it in by its opacity alone at each press it answers): beside the focus a
+   refused press was made at, over the plane, the beams, the corners, a landing's line and the reading scene, under the find
+   box, the overlay and the LEAP box; opaque, as all chrome over the plane is, its border the warning hue its words take;
+   one button, its words wrapping inside the room it is given (FP-26, FP-31) */
+#hint { position:fixed; left:0; top:0; z-index:27; display:none; max-width:360px; }
+#hint.on { display:block; }
+#hint.covered { display:none; }
+#hint button { display:block; max-width:100%; margin:0; padding:3px 8px; white-space:normal; text-align:left; font-size:11px; line-height:1.45;
+  color:var(--warn); background:#1b1f25; border:1px solid var(--warn); border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,.45); }
+#hint button:hover { background:#1e2530; }
+
 /* THE OVERLAYS — one at a time, conjured by an act, dismissed by its end; and below it the notice a read brought while it
    stood (O-HOST's; FP-36), placed under its box, drawn as a face is wherever it stands */
 #overlay, #notice { position:fixed; left:0; top:0; z-index:30; display:none; max-width:min(560px, 92vw); background:#1b1f25;

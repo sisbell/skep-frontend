@@ -39,7 +39,8 @@
 // buffer, each frame's counts (`Frame`), for the frame-cost checks; the
 // bridge client's call log, the pump's counts and the settle signal
 // (`settled`, `settle`); the trail, the one line's text with the layout it
-// holds (`line`), the overlay's text
+// holds (`line`), the hint answering a refused press as it stands (`hint`),
+// the overlay's text
 // with the notice standing below it (`overlay`), the in-document find as it
 // stands and the stretches of a text the model lacks (`find`), a
 // walk's moment raised and the folded moments (`moments`), the board's
@@ -96,6 +97,7 @@ import * as PROV from '../overlays/provenance.js';
 import * as VERSIONS from '../overlays/versions.js';
 import * as TRAILLIST from '../overlays/trail-list.js';
 import * as LANDING from '../overlays/landing.js';
+import * as HINT from '../overlays/hint.js';
 import * as KEYS from '../nav/keys.js';
 import * as FOCUS from '../nav/focus.js';
 import * as SCENE from '../scene/scene.js';
@@ -658,6 +660,8 @@ export function install(deps) {
     lineAct: () => LINE.act(),
     trail: () => ({ entries: TRAIL.all(), cursor: TRAIL.cursorIndex(), numbered: TRAIL.numbered().map((r) => ({ n: r.n, addr: r.entry.addr, pos: r.entry.pos, current: r.current })) }),
     line: () => ({ text: LINE.text(), state: LINE.state(), address: LINE.addressDisplay(), layout: LINE.held() }),
+    /** the hint answering a refused press as it stands (O-HINT's): its notice's string, the words it shows and the notice whole, whether it shows the notice whole, the presses its element was drawn for, whether the scene covers it, and where it was set beside what; null where none stands */
+    hint: () => HINT.shown(),
     /** the overlay standing — its id, its kind, its text — and the notice standing below it (O-HOST's; FP-36): its id and its text, null where none stands there */
     overlay: () => { const n = HOST.notice(); return { id: HOST.currentState() ? HOST.currentState()?.id : null, kind: HOST.currentKind(), text: HOST.text(), notice: n ? { id: n.id ?? null, text: HOST.noticeText() } : null }; },
     /** a walk's moment raised as the shell's `moment` event raises one (O-FACES' `moment`; FP-36), and the folded moments the one line's walks' segments are, each its walk and its words (`folded`) */

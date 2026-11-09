@@ -20,7 +20,7 @@
 // `cornerPlace`), else at the top of the document's region, held below the
 // one line and inside the viewport, and in a scene at its pane's top
 // (`place`). Off any document — the board, an account, a mark — none opens:
-// the one line says where words are found (L-LINE's `transient`).
+// its hint beside the focus says where words are found (O-HINT's `show`).
 // What it searches (FP-6, FP-24): the version's text as the page shows it
 // (T-LAYER's `shownOf`; a pane's own record), every content run — quoted and
 // transcluded text among them; the page's own signs are no part of it — the
@@ -68,6 +68,7 @@ import * as LAYER from '../text/layer.js';
 import * as HELD from '../beams/held.js';
 import * as HOST from '../overlays/host.js';
 import * as SEL from '../overlays/selection.js';
+import * as HINT from '../overlays/hint.js';
 import * as SCENE from '../scene/scene.js';
 import * as LINE from '../line/line.js';
 import * as GO from './go.js';
@@ -188,14 +189,15 @@ function targetOf(at) {
  * Open the find at the document the focus is in (see the head): its field
  * takes the focus, its text selected, the text typed before kept; a find
  * standing at another document is ended first, its text typed carried. Off
- * any document the one line says where words are found, and nothing opens.
+ * any document its hint says where words are found, and nothing opens.
  * @param {string | null} [at] the document a corner the focus stands on names
  * @param {boolean} [byKey] a key made the act
+ * @param {{repeat?: boolean, at?: Element | null}} [key] what the hint is told of the key (O-HINT's `show`): its auto-repeat, and the element it was pressed at
  */
-export function open(at = null, byKey = true) {
+export function open(at = null, byKey = true, key = {}) {
   if (!els) return;
   const to = targetOf(at);
-  if (!to) { LINE.transient(t('L.find.off', { 'find chord': drawChord('Mod+F') })); return; }
+  if (!to) { HINT.show('L.find.off', { 'find chord': drawChord('Mod+F') }, key); return; }
   const s = state, query = s ? s.query : els.input.value;
   if (s && (s.box !== to.box || s.side !== to.side)) quit(false);
   HOST.endOpening();

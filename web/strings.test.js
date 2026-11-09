@@ -19,7 +19,10 @@
 // whatever its levels, and one block's heading by its level — a form's act and
 // take-off one pattern each, a form's Format menu title its name with its
 // first letter capitalised, a line's place for a form's chord its act's name
-// where no chord is bound, and no other entry spelling a form's name;
+// where no chord is bound, and no other entry spelling a form's name; a
+// one-line hint's compact form its notice's first clause, cut from its
+// template before its tokens are filled, the whole notice where it has none,
+// is pinned or is marked whole, and every hint the page raises marked;
 // the entries no design document carries are listed; and every accessible name the page
 // sets is read from ST — none stands in the markup, and none is written as a
 // literal in a module.
@@ -27,7 +30,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { sep } from 'node:path';
-import { STRINGS, t, tHTML, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, markCount, typeName, formName, formsNamed, formsAt, formAct, formTakeOff, formTitle, formAgain } from './strings.js';
+import { STRINGS, t, tHTML, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, markCount, typeName, formName, formsNamed, formsAt, formAct, formTakeOff, formTitle, formAgain, hintOf } from './strings.js';
 
 /** a commons type as a link stores it, by its path under the registry document's subspace 3 */
 const commons = (/** @type {string} */ path) => '1.1.0.1.0.1.0.' + path;
@@ -567,6 +570,26 @@ test('no entry spells a formatting form\'s name save the form\'s own — the hea
   assert.deepEqual(Object.entries(STRINGS).filter(([id, e]) => !own.has(id) && NAMES.test(e.text.replace(/⟨[^⟩]*⟩/g, ''))).map(([id]) => id), []);
 });
 
+test('a one-line hint\'s compact form is its notice\'s first clause, the text before its template\'s first " — ", cut before its tokens are filled so no value moves it; the whole notice where the template has none, where it is pinned and where it is marked whole; a string the table lacks, or marks no hint, throws (issue #468\'s design decision)', () => {
+  assert.deepEqual(hintOf('F.swallow', { 'LEAP chord': '⌘L' }), { whole: 'typing goes nowhere here — to go somewhere, the address line: ⌘L', clause: 'typing goes nowhere here' });
+  assert.deepEqual(hintOf('F.swallow.space', { 'paging key': 'PageDown' }), { whole: 'Space does not page here — PageDown does', clause: 'Space does not page here' });
+  assert.deepEqual(hintOf('B3.caret.enter.paste'), { whole: 'Enter places a caret here — then paste', clause: 'Enter places a caret here' });
+  assert.equal(hintOf('L.find.off', { 'find chord': '⌘F' }).clause, 'words are found in a document');
+  assert.equal(hintOf('F.swallow', { 'LEAP chord': 'x — y' }).clause, 'typing goes nowhere here', 'a value holding the separator moves no cut');
+  for (const id of ['D5.select-first', 'B3.caret.enter', 'B3.caret.cut', 'B3.caret.back', 'B3.row.follow.inert', 'L.no-notebook-yet']) {
+    const h = hintOf(id);
+    assert.ok(!h.whole.includes(' — ') && h.clause === h.whole, `${id}: no " — " in it, its compact form the notice whole`);
+  }
+  for (const id of ['L.seam.annotate', 'L.seam.quote', 'L.seam.link-to', 'B3.caret.mark']) {
+    const h = hintOf(id);
+    assert.ok(STRINGS[id].hint === 'whole' && h.whole.includes(' — ') && h.clause === h.whole, `${id}: its first clause says no why on its own — marked whole, never cut`);
+  }
+  STRINGS['T.pinned-hint'] = { text: 'a pinned notice — its rest', cls: 'PINNED', source: 'ux/copy.md', hint: 'clause' };
+  try { assert.equal(hintOf('T.pinned-hint').clause, 'a pinned notice — its rest', 'a pinned notice is never cut'); } finally { delete STRINGS['T.pinned-hint']; }
+  assert.throws(() => hintOf('F.published'), /no hint F\.published/);
+  assert.throws(() => hintOf('T.none'), /no string T\.none/);
+});
+
 test('the lane\'s own strings are listed for the report', () => {
   const l = lacking();
   assert.ok(l.some((x) => x.id === 'L.no-adapter'));
@@ -578,6 +601,20 @@ const WEB = new URL('./', import.meta.url);
 const modules = readdirSync(WEB, { recursive: true })
   .map((f) => String(f).split(sep).join('/'))
   .filter((f) => f.endsWith('.js') && !f.endsWith('.test.js') && !f.startsWith('test/') && !f.startsWith('gate/'));
+
+test('every hint the page raises is marked in the table whether it compacts — each string a module hands O-HINT, the one line\'s inert act\'s among them, and each inert slot\'s reason (issue #468\'s design decision)', () => {
+  /** @type {Set<string>} */
+  const raised = new Set();
+  for (const f of modules) {
+    const src = readFileSync(new URL(f, WEB), 'utf8');
+    for (const m of src.matchAll(/(?:HINT\.show|acts\.hint)\(([^,]+),/g)) for (const id of m[1].matchAll(/'([A-Z][\w-]*\.[^']+)'/g)) raised.add(id[1]);
+    for (const m of src.matchAll(/INERT_REASON = [^;]*?\(\{([^}]*)\}\)/g)) for (const id of m[1].matchAll(/'([A-Z][\w-]*\.[^']+)'/g)) raised.add(id[1]);
+  }
+  for (const id of ['F.swallow', 'F.swallow.space', 'B3.caret.enter', 'B3.caret.enter.paste', 'B3.caret.cut', 'D5.select-first', 'B3.row.follow.inert', 'L.find.off', 'L.no-notebook-yet', 'L.seam.annotate', 'L.seam.quote', 'L.seam.link-to']) {
+    assert.ok(raised.has(id), `${id}: raised as a hint`);
+  }
+  assert.deepEqual([...raised].filter((id) => !STRINGS[id] || !STRINGS[id].hint), [], 'every one marked');
+});
 
 test('every accessible name the page sets is read from ST: the markup carries none, and a module sets one only as t(…)', () => {
   assert.ok(modules.includes('nav/walk.js') && modules.includes('app/main.js'), 'the page\'s modules are read');

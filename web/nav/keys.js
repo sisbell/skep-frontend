@@ -3,7 +3,7 @@
 // pure; the dispatch acts on the owners it names, the one layer-2 module
 // that imports across the layer (S-7 (a)). State (FP-10): the keys a jump in
 // the air holds for its landing, in the order they were pressed, and whether
-// they are being made; the swallow's transient mark is the line's.
+// they are being made; the hint a refused press raises is O-HINT's.
 // The dispatch (`dispatch`; FP-25): the navigation acts — Mod+[ and Mod+]
 // (K-20, K-21), Mod+1…9 (K-40), Mod+0 and Mod+Shift+H (K-13, K-14) — are
 // made at once, a jump in the air abandoned (N-GO); every other key the page
@@ -21,8 +21,9 @@
 // No plane command rides a printable key (§2.7): every command is a chord
 // (Mod = ⌘ on macOS, Ctrl elsewhere; D5 §0) or a navigation key with the
 // platform's meaning; a printable key on the plane is swallowed, never
-// dispatched, the K-9 line shown at the focus (`swallow`), save in text the
-// person may edit (below); Mod+R and F5 are taken and nothing reloaded
+// dispatched, the K-9 line its hint at the focus (`swallow`; O-HINT's
+// `show`), save in text the person may edit (below); Mod+R and F5 are taken
+// and nothing reloaded
 // (K-94), and the platform's own chords — copy, paste, cut, select all,
 // print, close, quit, minimize, hide, preferences — are never taken (K-92,
 // K-93). No key is dispatched while an input method's composition is open
@@ -43,13 +44,16 @@
 // chords act at the caret's span. At a
 // live caret Mod+Enter follows from a selection standing alone: where none
 // stands it selects nothing, follows nothing and leaves the caret where it
-// stands, the caret's follow line shown in the one line (`followAtCaret`;
-// B3-S13); every other key acts as on the plane. At a span of such a draft
-// where no caret stands a printable key but Space is answered by the draft's
-// own line, "Enter places a caret here" (K-72, K-9), and a paste or a cut
-// there by that line in their own words, nothing placed and nothing removed
-// (K-93); at the span a kept caret stands in, a printable key returns it and
-// types at it (`typeAt`). Mod+S writes nothing (K-74): where the draft the
+// stands, the caret's follow line its hint (`followAtCaret`; B3-S13); every
+// other key acts as on the plane. At a span of such a draft where no caret
+// stands a printable key but Space is answered by the draft's own line,
+// "Enter places a caret here" (K-72, K-9), and a paste or a cut there by
+// that line in their own words, each its hint, nothing placed and nothing
+// removed (K-93); at the span a kept caret stands in, a printable key
+// returns it and types at it (`typeAt`). Every hint stands beside the focus
+// the key was pressed at — the walk's element, or the control or the pane
+// the key found the focus on — and an auto-repeat is the press it repeats
+// (O-HINT's `show`). Mod+S writes nothing (K-74): where the draft the
 // caret stands in — else the walk's document — has a kept state, it is
 // answered at the corner with the state's statement whole at the first press
 // in a session and with the corner's own word after it, the statement whole
@@ -74,14 +78,15 @@
 // to…"'s, Mod+K (K-45, K-46, K-100) — give their slot's reason (P47): at the
 // slot of the selection's card where a span is in focus, the walk's focused
 // span selected first where no selection stands (O-SELECTION's
-// `inertChord`), else, and over the scene, in the one line (`inertSaid`).
+// `inertChord`), else, and over the scene, as its hint (`inertSaid`).
 // Every other slot's chord (K-47 … K-52) makes its slot's act on what is in
 // focus (O-SELECTION's `act`) — save Mod+Enter at a live caret (above) — and
 // where nothing in focus is what the slot acts on gives the slot's reason,
-// "select a passage first", in the one line (`selectFirst`; D5 §1.6; P47). Find
+// "select a passage first", as its hint (`selectFirst`; D5 §1.6; P47). Find
 // (K-91; `findAct`) acts from the plane, the scene, a field and every control
 // on them alike, the browser's own find never run: Mod+F opens the page's
-// find at the document the focus is in (N-FIND's `open`); Mod+G and
+// find at the document the focus is in, off any document its hint saying
+// where words are found (N-FIND's `open`); Mod+G and
 // Mod+Shift+G — F3 and Shift+F3 too elsewhere than macOS — step its matches
 // where it stands (N-FIND's `step`), else the next and the previous run of an
 // arrival in several runs (N-GO's `step`; FP-21) while such an arrival
@@ -136,9 +141,9 @@ import * as TRAILLIST from '../overlays/trail-list.js';
 import * as MARKLIST from '../overlays/mark-list.js';
 import * as VERSIONS from '../overlays/versions.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
+import * as HINT from '../overlays/hint.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
-import { t } from '../strings.js';
 import { keptWord, keptStatement } from '../text/article.js';
 
 /** @typedef {import('../overlays/selection.js').InertSlot} InertSlot */
@@ -336,8 +341,8 @@ export async function dispatch(e, ctx) {
   const chord = chordOf(e);
   const mod = MAC ? e.metaKey : e.ctrlKey;
   ctx = whereNow(ctx);
-  // a paste or a cut at a span of a draft the person may edit holding no caret (K-93, K-72): the draft's line in their own words, nothing placed and nothing removed
-  if (mod && !e.shiftKey && (chord === 'Mod+V' || chord === 'Mod+X') && bareDraftSpan(ctx)) { LINE.transient(t(chord === 'Mod+V' ? 'B3.caret.enter.paste' : 'B3.caret.cut')); return true; }
+  // a paste or a cut at a span of a draft the person may edit holding no caret (K-93, K-72): the draft's line in their own words, its hint, nothing placed and nothing removed
+  if (mod && !e.shiftKey && (chord === 'Mod+V' || chord === 'Mod+X') && bareDraftSpan(ctx)) { HINT.show(chord === 'Mod+V' ? 'B3.caret.enter.paste' : 'B3.caret.cut', null, hinted(e, ctx)); return true; }
   // the platform's own, never taken (K-92, K-93)
   if (mod && !e.shiftKey && ['C', 'V', 'X', 'A', 'P', 'W', 'Q', 'M', 'H', ','].includes(chord.slice(4))) return false;
   if (ctx.where === 'field') {
@@ -390,10 +395,10 @@ function route(e, chord, ctx) {
   if (lacking && (SLOT_CHORDS.has(chord) || chord === 'Shift+↓' || chord === 'Shift+↑' || chord === 'Mod+Shift+P' || chord === 'Mod+F' || fd)) return lacking;
   // the selection's slot chords (K-45 … K-52, K-100) and K-8's select-by-span — live from the plane and from a standing overlay alike; the selection's acts take no focus (rule 15), and the next K-8 press extends the selection from the walk's element
   const inert = INERT_CHORDS.get(chord);
-  if (inert) return () => { if (!SEL.inertChord(inert)) inertSaid(inert); return true; };
+  if (inert) return () => { if (!SEL.inertChord(inert)) inertSaid(inert, e, ctx); return true; };
   const live = LIVE_CHORDS.get(chord);
   // Mod+Enter at a live caret follows from a selection standing alone, else gives the caret's follow line (K-51; `followAtCaret`)
-  if (live) return () => { if (live === 'follow' && ctx.where === 'caret' && !SEL.selected()) followAtCaret(); else if (!SEL.act(live, byKey)) selectFirst(); return true; };
+  if (live) return () => { if (live === 'follow' && ctx.where === 'caret' && !SEL.selected()) followAtCaret(e, ctx); else if (!SEL.act(live, byKey)) selectFirst(e, ctx); return true; };
   // K-8 off a live caret: at one, Shift with the arrows is the caret's (K-71; `caretKey`)
   if (chord === 'Shift+↓' && ctx.where !== 'caret') return () => { SEL.selectFocused('down'); return true; };
   if (chord === 'Shift+↑' && ctx.where !== 'caret') return () => { SEL.selectFocused('up'); return true; };
@@ -436,7 +441,7 @@ function route(e, chord, ctx) {
   if (chord === 'PageDown' || chord === 'PageUp') return () => { page(chord === 'PageDown' ? 1 : -1); CAM.markDirty(); WALK.retakeFromView(byKey); return true; };
   if (chord === 'Enter') return async () => { await activateFocus(byKey); return true; };
   // a printable key on the plane: typed at the kept caret standing in the focused span, answered by the draft's line at a span of a draft the person may edit holding none, else swallowed with the K-9 line (`typeAt`)
-  if (printable(e)) return () => { typeAt(e); return true; };
+  if (printable(e)) return () => { typeAt(e, ctx); return true; };
   return null;
 }
 
@@ -457,7 +462,7 @@ function findAct(e, dir, ctx) {
   if (dir && FIND.isOpen()) return () => { e.preventDefault(); FIND.step(dir, ctx.byKey); return true; };
   if (dir && !SCENE.isOpen() && (GO.steps() || GO.inAir())) return () => { e.preventDefault(); GO.step(dir, ctx.byKey); return true; };
   const corner = ctx.where === 'corner' && e.target ? /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('[data-corner]')) : null;
-  return () => { e.preventDefault(); FIND.open(corner ? corner.dataset.corner || null : null, ctx.byKey); return true; };
+  return () => { e.preventDefault(); FIND.open(corner ? corner.dataset.corner || null : null, ctx.byKey, hinted(e, ctx)); return true; };
 }
 
 /**
@@ -496,19 +501,20 @@ function caretKey(e, chord) {
  * A printable key on the plane where no live caret stands (see the head): at
  * the walk's focused span of a draft the person may edit, every key but Space
  * — the kept caret standing in that span returned and the key typed at it
- * (K-70; BM-52), else the draft's own line, "Enter places a caret here"
- * (K-72; K-9); anywhere else, and for Space, swallowed with the K-9 line
+ * (K-70; BM-52), else the draft's own line, "Enter places a caret here", its
+ * hint (K-72; K-9); anywhere else, and for Space, swallowed with the K-9 line
  * (`swallow`).
  * @param {KeyboardEvent} e
+ * @param {Ctx} ctx
  */
-function typeAt(e) {
+function typeAt(e, ctx) {
   const f = WALK.current();
   if (e.key !== ' ' && f && f.kind === 'block' && f.pos != null && LAYER.editable(f.addr)) {
     if (LAYER.caretInSpan(f.addr, f.pos)) { LAYER.returnCaret(); LAYER.caretType(e.key); return; }
-    LINE.transient(t('B3.caret.enter'));
+    HINT.show('B3.caret.enter', null, hinted(e, ctx));
     return;
   }
-  swallow(e);
+  swallow(e, ctx);
 }
 
 /**
@@ -573,15 +579,15 @@ async function replay() {
  * Mod+Shift+P shows the one line's strip (K-23); the
  * selection's slot chords, which have nothing to act on in the scene, are
  * taken, so the browser's own meanings never run (Mod+Shift+R would reload),
- * as F5 is (K-94) — an inert slot's chord giving its slot's reason in the one
- * line (`inertSaid`), every other doing nothing. On the one line or a
+ * as F5 is (K-94) — an inert slot's chord giving its slot's reason as its
+ * hint (`inertSaid`), every other doing nothing. On the one line or a
  * standing overlay every other key is that control's own. Elsewhere ← closes the scene so (K-63); a
  * pane's own keys moved that pane, and Enter at a pane's corner took the
  * corner's act, before the dispatch (SC's `key`, K-60), and → and Enter
  * elsewhere in a pane, and Shift with the
  * arrows, are the platform's; on the scene's acts every other key is the
  * button's own — Enter and Space press it; a printable key anywhere else is
- * swallowed, the K-9 line shown.
+ * swallowed, the K-9 line its hint.
  * @param {KeyboardEvent} e
  * @param {string} chord
  * @param {Ctx} ctx
@@ -592,35 +598,48 @@ function sceneKey(e, chord, ctx) {
   if (chord === 'Mod+=') return () => true; // swallowed: nothing is nearer than the scene's reading scale
   if (chord === 'Mod+-') return () => { GO.closeScene(ctx.byKey); return true; };
   const inert = INERT_CHORDS.get(chord);
-  if (inert) return () => { inertSaid(inert); return true; };
+  if (inert) return () => { inertSaid(inert, e, ctx); return true; };
   if (SLOT_CHORDS.has(chord) || e.key === 'F5') return () => true;
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
   if (ctx.where === 'overlay' || ctx.where === 'line') return null; // the overlay's or the line's own keys
   if (chord === '←') return () => { GO.closeScene(ctx.byKey); return true; };
   if (ctx.where === 'scene-acts') return null; // the button's own keys
-  if (printable(e)) return () => { swallow(e); return true; };
+  if (printable(e)) return () => { swallow(e, ctx); return true; };
   return null;
 }
 
-/** a printable key no field takes: swallowed, the K-9 line at the focus until the next act (foundations §2.7) */
-function swallow(/** @type {KeyboardEvent} */ e) {
-  LINE.transient(e.key === ' ' ? t('F.swallow.space', { 'paging key': 'PageDown' }) : t('F.swallow', { 'LEAP chord': drawChord('Mod+L') }));
+/**
+ * What a hint a key raises is told of the key (O-HINT's `show`): whether it
+ * is an auto-repeat, and the element it was pressed at where the walk's
+ * focus is not it — a control, a corner, the line, a reading scene's pane.
+ * @param {KeyboardEvent} e
+ * @param {Ctx} ctx
+ * @returns {{repeat: boolean, at: Element | null}}
+ */
+function hinted(e, ctx) {
+  const at = /** @type {Element | null} */ (ctx.where === 'plane' || ctx.where === 'caret' ? null : e.target);
+  return { repeat: !!e.repeat, at: at && typeof at.getBoundingClientRect === 'function' ? at : null };
 }
 
-/** an inert slot's chord where no card of the selection gives its reason — no span in focus, or the scene over the plane: the slot's reason in the one line at the focus until the next act, said through the status region (P47) */
-function inertSaid(/** @type {InertSlot} */ slot) {
-  const id = SEL.reasonOf(slot);
-  LINE.transient(t(id), id);
+/** a printable key no field takes: swallowed, the K-9 line its hint at the focus until the next act (foundations §2.7) */
+function swallow(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
+  if (e.key === ' ') HINT.show('F.swallow.space', { 'paging key': 'PageDown' }, hinted(e, ctx));
+  else HINT.show('F.swallow', { 'LEAP chord': drawChord('Mod+L') }, hinted(e, ctx));
 }
 
-/** a slot's chord where nothing in focus is what the slot acts on (O-SELECTION's `act`): its reason, "select a passage first", in the one line at the focus until the next act, said through the status region (D5 §1.6; P47) */
-function selectFirst() {
-  LINE.transient(t('D5.select-first'), 'D5.select-first');
+/** an inert slot's chord where no card of the selection gives its reason — no span in focus, or the scene over the plane: the slot's reason its hint at the focus until the next act (P47) */
+function inertSaid(/** @type {InertSlot} */ slot, /** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
+  HINT.show(SEL.reasonOf(slot), null, hinted(e, ctx));
 }
 
-/** Mod+Enter at a live caret with no selection standing (D5 K-51; B3-S13): nothing selected, nothing followed, the caret where it stands — the caret's follow line in the one line at the focus until the next act, said through the status region */
-function followAtCaret() {
-  LINE.transient(t('B3.row.follow.inert'), 'B3.row.follow.inert');
+/** a slot's chord where nothing in focus is what the slot acts on (O-SELECTION's `act`): its reason, "select a passage first", its hint at the focus until the next act (D5 §1.6; P47) */
+function selectFirst(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
+  HINT.show('D5.select-first', null, hinted(e, ctx));
+}
+
+/** Mod+Enter at a live caret with no selection standing (D5 K-51; B3-S13): nothing selected, nothing followed, the caret where it stands — the caret's follow line its hint at the focus until the next act */
+function followAtCaret(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
+  HINT.show('B3.row.follow.inert', null, hinted(e, ctx));
 }
 
 /**

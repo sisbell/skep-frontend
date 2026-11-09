@@ -167,7 +167,7 @@ STATES = [
          how='retract and edit at the anatomy card (K-98)', claim='', why="the owner's acts on the card (S12 #122) and the composer (U3)"),
     dict(screen='B3-S13', state='swallow-draft', walk='W-08', step=4, drawn=True,
          how="a printable key at a span of the own draft with no caret (K-72; D6 BM-52)",
-         claim='the one line\'s transient segment reads "Enter places a caret here" (B3.caret.enter)'),
+         claim='the hint beside the focused line reads "Enter places a caret here" (B3.caret.enter)'),
     dict(screen='B3-S13', state='row-inert', walk='W-08', step=4, drawn=False,
          how="the selection's row inert while a line is held, one reason (D6 BM-62)", claim='', why='the machine (U4) and its reasons'),
 ]
@@ -214,9 +214,10 @@ def line_segment(ctx, sid):
     return ctx.js('(() => { const e = document.querySelector(%s); return e ? e.textContent : null; })()' % json.dumps('#line [data-string="%s"]' % sid))
 
 
-def transient(ctx):
-    """the one line's transient segment: its text, or None where none stands"""
-    return ctx.js('(() => { const e = document.querySelector("#line .seg.transient"); return e ? e.textContent : null; })()')
+def hint(ctx):
+    """the hint a refused press raised beside the focus (O-HINT's), as a person meets it: its string and the words its button
+    shows, or None where none stands; and whether the one line holds a transient segment"""
+    return ctx.js('(() => { const h = window.__skep.hint(); return {hint: h && {id: h.id, words: h.words, by: h.placed && h.placed.by}, line: !!document.querySelector("#line .seg.transient")}; })()')
 
 
 def live(ctx):
@@ -536,13 +537,13 @@ def run(ctx):
     said_at_key = live(ctx)
 
     def swallow_check(w):
-        want, seg = t(ctx, 'B3.caret.enter'), transient(ctx)
-        ok = seg == want and ctx.js('window.__skep.caret()') is None and said_at_key == want
-        return ok, {'segment': seg, 'want': want, 'status_region': said_at_key}
+        want, got = t(ctx, 'B3.caret.enter'), hint(ctx)
+        ok = got['hint'] == {'id': 'B3.caret.enter', 'words': want, 'by': 'edge'} and not got['line'] and ctx.js('window.__skep.caret()') is None and said_at_key == want
+        return ok, {'got': got, 'want': want, 'status_region': said_at_key}
     shoot('swallow-draft', swallow_check)
-    # the person's next act clears the transient segment (L-LINE's `act`); none of what follows is an act of theirs
-    ctx.js('(async () => { (await import("./line/line.js")).act(); })()'); ctx.frames(2)
-    r.check(transient(ctx) is None, "the next act clears the swallow's line", transient(ctx))
+    # the person's next act takes the hint down (O-HINT's `act`); none of what follows is an act of theirs
+    ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()'); ctx.frames(2)
+    r.check(hint(ctx)['hint'] is None, "the next act takes the swallow's hint down", hint(ctx))
 
     # ---- (f) B3-S2: the moved scene's held version as a derived pane (issue #411; D6 BM-14) ---------------------------------
     first = paras[0]

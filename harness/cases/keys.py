@@ -2,15 +2,19 @@
 lane built, dispatched at engine level (`Input.dispatchKeyEvent`, Meta as Mod
 on this Mac), then the camera, the focus, the trail and the one line read
 back; the IME guard, on the plane and in the LEAP box; a bare key does
-NOTHING but show the K-9 line; Enter on the LEAP box as opened lands in
+NOTHING but raise the K-9 line as its hint beside the focused line — at the
+text's edge, level with it, below the one line, moving nothing — Tab
+reaching it without ending it and Enter there opening its notice whole, the
+next act taking it down onto the walk's item (issue #468's design decision);
+Enter on the LEAP box as opened lands in
 place, ↓ choosing the first level, Enter on typed text that matches nothing
 goes nowhere — the box standing open over the text and its answer, the
 focus in its input, until Esc — and a typed account address a teleport
 with its trail entry (foundations §2.2, §2.3; K-31); Mod+K "link to…" and
-never the box: at the whole board, no span in focus, the one line giving its
+never the box: at the whole board, no span in focus, its hint giving its
 slot's reason with nothing moved (D5 K-30, K-100; P47); Mod+Shift+O,
 Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter there, finding
-nothing they act on, the one line giving their slot's reason, "select a
+nothing they act on, their hint giving their slot's reason, "select a
 passage first", with nothing moved (D5 K-47 … K-52, §1.6; P47); a landing arriving
 under the box the reader is typing in leaving it open with its text, its
 caret and its focus, Esc then closing it onto the landing, and the box as
@@ -225,7 +229,7 @@ FIND_DOC = '1.0.1.0.303'
 
 
 def state(ctx):
-    return ctx.js('({cam: window.__skep.view.camera(), focus: window.__skep.view.focus(), line: window.__skep.line().text, overlay: window.__skep.overlay().kind, leap: window.__skep.leap.isOpen(), trail: window.__skep.trail().cursor, scene: window.__skep.scene.isOpen(), sel: window.__skep.selection()})')
+    return ctx.js('({cam: window.__skep.view.camera(), focus: window.__skep.view.focus(), line: window.__skep.line().text, hint: window.__skep.hint(), overlay: window.__skep.overlay().kind, leap: window.__skep.leap.isOpen(), trail: window.__skep.trail().cursor, scene: window.__skep.scene.isOpen(), sel: window.__skep.selection()})')
 
 
 def trail(ctx):
@@ -1175,9 +1179,12 @@ def find_holds(ctx, r):
     prevented_probe(ctx)
     chord(ctx, 'f', mods=('Meta',))
     seen = ctx.js('window.__gateKeydown')
-    off = ctx.js('({open: window.__skep.find.isOpen(), line: window.__skep.line().text})')
-    words = strings(ctx, 'L.find.off', {'find chord': '⌘F'})
-    r.check(bool(seen) and seen['prevented'] and not off['open'] and words in off['line'], 'at WHOLE BOARD Mod+F opens nothing — its default prevented all the same — and the one line says where words are found', {'probe': seen, **off, 'want': words})
+    off = ctx.js('({open: window.__skep.find.isOpen(), line: window.__skep.line().text, hint: window.__skep.hint()})')
+    hint = off['hint'] or {}
+    words = hint_words(ctx, 'L.find.off', {'find chord': '⌘F'}, whole=bool(hint.get('open')))
+    r.check(bool(seen) and seen['prevented'] and not off['open'] and hint.get('id') == 'L.find.off' and hint.get('words') == words and words not in off['line'],
+            'at WHOLE BOARD Mod+F opens nothing — its default prevented all the same — and its hint beside the focus says where words are found, the notice whole at its first press in the session and its first clause after (issue #468\'s design decision)',
+            {'probe': seen, **off, 'want': words})
     return {'lacked': lacked, 'reads': reads, 'word': word, 'found': found}
 
 
@@ -1191,13 +1198,19 @@ def drawn_chord(ctx, name):
     return ctx.js('(async () => (await import("./nav/keys.js")).drawChord(%s))()' % json.dumps(name))
 
 
-def told_in_line(ctx, sid):
-    """a slot's reason as the one line gives it, by the reason's string (P47; N-KEYS' `inertSaid`, `selectFirst`): the words of
-    the line's transient segment carrying that string — none where no such segment stands — beside the status region's words
-    and the reason's own"""
-    got = ctx.js('''((sid) => { const s = document.querySelector(`#line .seg.transient[data-string="${sid}"]`);
-      return {line: s ? s.textContent : null, live: document.getElementById('live').textContent}; })(%s)''' % json.dumps(sid))
-    return dict(got, words=strings(ctx, sid))
+def hint_words(ctx, sid, values=None, whole=True):
+    """the words a hint of a string shows (`strings.js`'s `hintOf`): its notice whole, else its compact form, its tokens filled"""
+    return ctx.js('(async () => { const h = (await import("./strings.js")).hintOf(%s, %s); return %s ? h.whole : h.clause; })()' % (json.dumps(sid), json.dumps(values or {}), 'true' if whole else 'false'))
+
+
+def told_by_hint(ctx, sid):
+    """a slot's reason as its hint gives it, by the reason's string (P47; N-KEYS' `inertSaid`, `selectFirst`; O-HINT's): the
+    words the hint's button shows — none where no hint of that string stands — and the words its notice shows by the compact
+    rule, whole where the hint stands open (`hint_words`), beside the status region's words and the one line's segment
+    carrying that string, which no hint stands in"""
+    got = ctx.js('''((sid) => { const h = window.__skep.hint(), s = document.querySelector(`#line [data-string="${sid}"]`);
+      return {hint: h && h.id === sid ? h.words : null, open: !!h && h.open, line: s ? s.textContent : null, live: document.getElementById('live').textContent}; })(%s)''' % json.dumps(sid))
+    return dict(got, words=hint_words(ctx, sid, whole=got['open']))
 
 
 # the selection's card as it gives an inert slot's reason (P47; O-SELECTION's `inertAct`, `inertChord`): the overlay standing,
@@ -2192,12 +2205,12 @@ def focus_rules(ctx, r):
     r.check(box['open'] and box['shown'] and box['focused'] and box['leap_z'] > box['scene_z'], 'Mod+L in the scene opens the box over it (#118): its z-index above the scene\'s, its input focused', box)
     chord(ctx, 'Escape')
     r.check(ctx.js('window.__skep.scene.isOpen()') and not ctx.js('window.__skep.leap.isOpen()'), 'the box\'s Esc closes the box and leaves the scene standing')
-    # Mod+K in the scene: "link to…" has nothing to act on there, so the one line gives its slot's reason
+    # Mod+K in the scene: "link to…" has nothing to act on there, so its hint gives its slot's reason
     before = covered(ctx)
     chord(ctx, 'k', mods=('Meta',))
-    after, said = covered(ctx), told_in_line(ctx, 'L.seam.link-to')
-    r.check(still(before, after) and not ctx.js('window.__skep.leap.isOpen()') and said['line'] == said['words'] and said['live'] == said['words'],
-            'Mod+K in the scene opens no LEAP box over it: the one line gives "link to…"\'s reason, said through the status region, and nothing the scene covers moves (D5 K-100, M-4; P47)',
+    after, said = covered(ctx), told_by_hint(ctx, 'L.seam.link-to')
+    r.check(still(before, after) and not ctx.js('window.__skep.leap.isOpen()') and said['hint'] == said['words'] and said['live'] == said['words'] and said['line'] is None,
+            'Mod+K in the scene opens no LEAP box over it: its hint gives "link to…"\'s reason, said through the status region, the one line holding none of it, and nothing the scene covers moves (D5 K-100, M-4; P47)',
             dict(said, at=before['at'], moved=[k for k in ('cam', 'focus', 'trail', 'sel', 'overlay') if after[k] != before[k]], scene=after['scene']))
     chord(ctx, 'Escape')
     r.check(not ctx.js('window.__skep.scene.isOpen()'), 'a second Esc closes the scene')
@@ -2410,27 +2423,91 @@ def stacked_notice(ctx, r):
     r.check(ctx.js('window.__skep.overlay().id') is None, 'the next Esc closes the list', ctx.js('window.__skep.overlay()'))
 
 
+def signs_at(ctx):
+    """what a hint must move nothing of: the camera, the one line's bottom edge as the style holds it, every corner's rect, and
+    the walk's span's line rects — its block's, where it stands on one"""
+    return ctx.js('''(() => { const S = window.__skep, f = S.view.focus();
+      const b = f && f.kind === 'block' ? S.model.doc(f.addr).blocks.find((x) => x.pos === f.pos) : null;
+      const box = (q) => [Math.round(q.left * 2) / 2, Math.round(q.top * 2) / 2, Math.round(q.width * 2) / 2, Math.round(q.height * 2) / 2];
+      return {cam: S.view.camera(), line_bottom: getComputedStyle(document.documentElement).getPropertyValue('--line-bottom').trim(),
+              corners: [...document.querySelectorAll('#corners [data-corner]')].map((e) => [e.dataset.corner, ...box(e.getBoundingClientRect())]),
+              lines: b ? (S.spanRects(f.addr, b.pos, b.width) || []).map((q) => [q.x, q.y, q.w, q.h]) : []}; })()''')
+
+
+def swallowed(ctx, r, base, signs):
+    """the K-9 line a bare key raised, after its presses (issue #468's design decision): its hint standing, its first clause —
+    the presses after the first in the session — at the text's edge beside the walk's span's line, its top level with that
+    line's and its left past that line's right end, below the one line and outside it; the camera, the one line's bottom
+    edge, the corners and the span's lines as they stood before the first press"""
+    got = ctx.js('''(() => { const S = window.__skep, el = document.getElementById('hint'), q = el.getBoundingClientRect(), l = document.getElementById('line');
+      return {hint: S.hint(), rect: {x: q.left, y: q.top, w: q.width, h: q.height}, shown: getComputedStyle(el).display !== 'none',
+              in_line: l.contains(el), line_bottom: l.getBoundingClientRect().bottom}; })()''')
+    after, hint, rect = signs_at(ctx), got['hint'] or {}, got['rect']
+    beside = [ln for ln in signs['lines'] if abs(ln[1] - rect['y']) <= 0.5]
+    r.check(hint.get('id') == 'F.swallow' and hint.get('words') == 'typing goes nowhere here' and not hint.get('open') and got['shown'],
+            'a bare key raises the K-9 line as its hint, its first clause at a later press: "typing goes nowhere here"', hint)
+    r.check((hint.get('placed') or {}).get('by') == 'edge' and bool(beside) and all(rect['x'] >= ln[0] + ln[2] for ln in beside)
+            and rect['y'] >= got['line_bottom'] and not got['in_line'],
+            'the hint stands beside the focused line at the text\'s edge — its top level with the line\'s, its left past the line\'s end — below the one line and outside it (FP-31)',
+            {'rect': rect, 'placed': hint.get('placed'), 'lines': signs['lines'], 'line_bottom': got['line_bottom']})
+    r.check(after == signs, 'the presses and their hint move nothing: the camera, the one line\'s bottom edge, the corners and the span\'s lines stand as they stood',
+            {'before': signs, 'after': after})
+
+
+def tabbed_to_hint(ctx, r):
+    """Tab reaches the hint standing in its compact form without ending it; Enter at it opens its notice whole, said in the
+    status region, the focus kept on it; the next act takes it down, its focus handed to the walk's item (issue #468's design
+    decision)"""
+    before = ctx.js('window.__skep.hint()') or {}
+    at = None
+    for _ in range(10):
+        chord(ctx, 'Tab')
+        at = ctx.js('(() => { const a = document.activeElement; return a && a.closest && a.closest("#hint") ? a.dataset.hint || "" : (a && (a.id || a.tagName)) || null; })()')
+        if at == before.get('id'):
+            break
+    held = ctx.js('window.__skep.hint()') or {}
+    r.check(bool(before) and at == before.get('id') and held.get('id') == before.get('id') and held.get('words') == before.get('words'),
+            'Tab reaches the hint standing, which moving to it does not end', {'before': before, 'at': at, 'held': held})
+    chord(ctx, 'Enter')
+    opened = ctx.js('''(() => { const h = window.__skep.hint(), b = document.querySelector('#hint button'), d = b && document.getElementById(b.getAttribute('aria-describedby'));
+      return {hint: h, expanded: b && b.getAttribute('aria-expanded'), described: d ? d.textContent : null, live: document.getElementById('live').textContent,
+              focused: !!b && document.activeElement === b}; })()''')
+    h = opened['hint'] or {}
+    r.check(h.get('open') and h.get('words') == h.get('whole') and opened['described'] == h.get('whole') and opened['live'] == h.get('whole') and opened['focused']
+            and opened['expanded'] == 'true',
+            'Enter at the hint opens its notice whole — its description the notice whole all the while — said through the status region, the focus kept on it',
+            opened)
+    chord(ctx, 'Escape')
+    gone = ctx.js('({hint: window.__skep.hint(), item: !!document.activeElement && document.activeElement.id === "walk-" + window.__skep.mirror.index()})')
+    r.check(gone['hint'] is None and gone['item'], 'the next act takes the hint down, the focus it held handed to the walk\'s item', gone)
+
+
 def run(ctx):
     r = Result()
     ctx.leap(DOC, WINDOW[0])
-    base = state(ctx)
+    base, signs = state(ctx), signs_at(ctx)
     r.check(base['focus'] and base['focus']['kind'] == 'block', 'the landing\'s focus is a span', base['focus'])
     # ---- bare keys do nothing (K-9) -------------------------------------------------------
     for k in ['t', '/', '0', 'k', 'h', '?', '+', 'g']:
         chord(ctx, k)
         s = state(ctx)
         r.check(same_view(base, s) and s['focus'] == base['focus'] and s['overlay'] is None and not s['leap'] and s['trail'] == base['trail'], f'bare `{k}` changes nothing', {'cam_same': same_view(base, s), 'overlay': s['overlay'], 'leap': s['leap']})
-    s = state(ctx)
-    r.check('typing goes nowhere here' in s['line'], 'the K-9 swallow line shows at the focus', s['line'][-120:])
-    # the Space key: its own line
+    swallowed(ctx, r, base, signs)
+    # the Space key: its own line, its hint
     chord(ctx, ' ', code='Space')
-    r.check('Space does not page here' in state(ctx)['line'], 'Space shows its own K-9 line (PageDown pages)')
+    hint = state(ctx)['hint'] or {}
+    words = hint_words(ctx, 'F.swallow.space', {'paging key': 'PageDown'}, whole=bool(hint.get('open')))
+    r.check(hint.get('id') == 'F.swallow.space' and hint.get('words') == words, 'Space raises its own K-9 line as its hint (PageDown pages), whole at its first press in the session and its first clause after', {'hint': hint, 'want': words})
+    chord(ctx, ' ', code='Space')
+    hint = state(ctx)['hint'] or {}
+    r.check(hint.get('words') == 'Space does not page here' and not hint.get('open'), 'Space again: its first clause', hint)
+    tabbed_to_hint(ctx, r)
     # ---- the IME guard: a composition key is never dispatched -----------------------------------
     ctx.drv.call('Input.dispatchKeyEvent', {'type': 'keyDown', 'key': 'Process', 'code': 'KeyT', 'windowsVirtualKeyCode': 229, 'text': 't', 'unmodifiedText': 't'})
     ctx.drv.call('Input.dispatchKeyEvent', {'type': 'keyUp', 'key': 'Process', 'code': 'KeyT', 'windowsVirtualKeyCode': 229})
     ctx.frames(2)
     s = state(ctx)
-    r.check(same_view(base, s) and s['overlay'] is None and not s['leap'] and 'typing goes nowhere' not in s['line'], 'a composition key (keyCode 229) is not dispatched: nothing changes and no swallow line', s['line'][-80:])
+    r.check(same_view(base, s) and s['overlay'] is None and not s['leap'] and s['hint'] is None, 'a composition key (keyCode 229) is not dispatched: nothing changes and no swallow line', s['hint'])
     ctx.drv.ime('漢')
     ctx.frames(2)
     s = state(ctx)
@@ -2501,24 +2578,24 @@ def run(ctx):
     lod = ctx.js('window.__skep.view.lod()')['name']
     r.check(not s['leap'] and s['focus'] and s['focus']['kind'] == 'board' and lod in ('far', 'far~mid'), 'Mod+L, ↓, Enter goes to the first level the box lists: the whole board', {'focus': s['focus'], 'lod': lod})
     ring_drawn(ctx, r, 'Mod+L, ↓, Enter')
-    # Mod+K is "link to…", never the box: at the whole board no span is in focus, so the one line gives the slot's reason
+    # Mod+K is "link to…", never the box: at the whole board no span is in focus, so its hint gives the slot's reason
     before, t0 = state(ctx), trail(ctx)
     chord(ctx, 'k', mods=('Meta',))
-    s, t1, said = state(ctx), trail(ctx), told_in_line(ctx, 'L.seam.link-to')
+    s, t1, said = state(ctx), trail(ctx), told_by_hint(ctx, 'L.seam.link-to')
     r.check(not s['leap'] and s['overlay'] is None and s['sel'] is None and same_view(before, s) and s['focus'] == before['focus']
-            and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']) and said['line'] == said['words'] and said['live'] == said['words'],
-            'Mod+K at the whole board opens no LEAP box: "link to…" finds no span in focus, so the one line gives its slot\'s reason, said through the status region — the camera, the walk, the trail and the selection as they were, no overlay (D5 K-30, K-100; P47)',
+            and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']) and said['hint'] == said['words'] and said['live'] == said['words'] and said['line'] is None,
+            'Mod+K at the whole board opens no LEAP box: "link to…" finds no span in focus, so its hint gives its slot\'s reason, said through the status region — the camera, the walk, the trail and the selection as they were, no overlay (D5 K-30, K-100; P47)',
             dict(said, leap=s['leap'], overlay=s['overlay'], sel=s['sel'], cam_same=same_view(before, s), focus=[before['focus'], s['focus']], cursor=[t0['cursor'], t1['cursor']]))
     # every other slot's chord at the whole board finds nothing it acts on — no span, no link, no document for "see the links" —
-    # so the one line gives the slot's reason, "select a passage first"
+    # so its hint gives the slot's reason, "select a passage first", at every press
     for key, mods, name, row in (('O', ('Meta', 'Shift'), 'Mod+Shift+O', 'K-47'), ('R', ('Meta', 'Shift'), 'Mod+Shift+R', 'K-48'), ('L', ('Meta', 'Shift'), 'Mod+Shift+L', 'K-49'),
                                  ('Enter', ('Meta',), 'Mod+Enter', 'K-51'), ('Enter', ('Meta', 'Shift'), 'Mod+Shift+Enter', 'K-52')):
         before, t0 = state(ctx), trail(ctx)
         chord(ctx, key, mods=mods)
-        s, t1, said = state(ctx), trail(ctx), told_in_line(ctx, 'D5.select-first')
+        s, t1, said = state(ctx), trail(ctx), told_by_hint(ctx, 'D5.select-first')
         r.check(s['overlay'] is None and s['sel'] is None and not s['scene'] and not s['leap'] and same_view(before, s) and s['focus'] == before['focus']
-                and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']) and said['line'] == said['words'] and said['live'] == said['words'],
-                '%s at the whole board finds nothing it acts on, so the one line says "select a passage first", said through the status region — the camera, the walk, the trail and the selection as they were, no overlay and no scene (D5 %s, §1.6; P47)' % (name, row),
+                and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']) and said['hint'] == said['words'] and said['live'] == said['words'] and said['line'] is None,
+                '%s at the whole board finds nothing it acts on, so its hint says "select a passage first", said through the status region — the camera, the walk, the trail and the selection as they were, no overlay and no scene (D5 %s, §1.6; P47)' % (name, row),
                 dict(said, overlay=s['overlay'], sel=s['sel'], scene=s['scene'], cam_same=same_view(before, s), focus=[before['focus'], s['focus']], cursor=[t0['cursor'], t1['cursor']]))
     chord(ctx, 'l', mods=('Meta',))
     r.check(state(ctx)['leap'], 'Mod+L opens the LEAP box at the whole board')

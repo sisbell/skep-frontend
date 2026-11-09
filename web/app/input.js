@@ -42,7 +42,7 @@
 // camera key's drag re-takes as it ends (N-WALK's `retakeFromView`); it takes
 // down what stands on the one line until the next act, and leaves the line's
 // layout as it stands (L-LINE's `panned`), where a click is the reader's act
-// (L-LINE's `act`). Whether
+// (L-LINE's `act`); either takes a hint down (O-HINT's `act`). Whether
 // a key made an act is never read here: a pointer's act opens a card without
 // the focus (D5 §4 rule 4).
 // A click acts on what is under the pointer, keyed on legibility. On the
@@ -123,6 +123,7 @@ import * as LINKS from '../overlays/links-card.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as MARKLIST from '../overlays/mark-list.js';
 import * as LINE from '../line/line.js';
+import * as HINT from '../overlays/hint.js';
 import * as LK from '../links/links.js';
 import * as REC from '../model/records.js';
 import * as FACES from '../overlays/faces.js';
@@ -227,7 +228,7 @@ export function attach(els) {
   document.addEventListener('selectionchange', () => { if (!LAYER.pressing()) takeSelection(); });
   // the layer: a click on a symbol, the ⟡, a hairline, the scene-offer, a withheld run; a selection the platform made (a double-click's word); a click on a marked span or a block
   els.layer.addEventListener('click', (e) => {
-    LINE.act();
+    acted();
     // a drag's own click: the pointer moved, and the selection it made was taken as it ended
     if (Math.abs(e.clientX - lastDown.x) + Math.abs(e.clientY - lastDown.y) > 4) { e.stopPropagation(); return; }
     if (clickText(/** @type {HTMLElement} */ (e.target))) e.stopPropagation();
@@ -237,7 +238,7 @@ export function attach(els) {
   // it again (FP-26)
   els.corners.addEventListener('click', (e) => {
     const target = /** @type {HTMLElement} */ (e.target);
-    LINE.act();
+    acted();
     const holder = /** @type {HTMLElement | null} */ (target.closest('[data-corner]')), addr = holder ? holder.dataset.corner || '' : '';
     if (holder && target.closest('[data-read]')) { e.stopPropagation(); VERSIONS.readFromCorner(holder, SEL.selected(), false); }
     else if (holder && target.closest('.version')) { e.stopPropagation(); VERSIONS.fromCorner(holder, SEL.selected(), false); }
@@ -258,6 +259,7 @@ export function attach(els) {
     if (dropped(e.timeStamp)) return;
     GO.takeOver();
     LINE.panned();
+    HINT.act();
     const wantZoom = e.ctrlKey || e.metaKey;
     if (wantZoom) CAM.zoomAt(Math.exp(-e.deltaY * (e.ctrlKey && !e.metaKey ? 0.012 : 0.0022)), e.clientX, e.clientY);
     else CAM.panBy(-e.deltaX, -e.deltaY);
@@ -268,6 +270,9 @@ export function attach(els) {
 
 let retakeT = 0;
 function scheduleRetake() { clearTimeout(retakeT); retakeT = window.setTimeout(() => WALK.retakeFromView(), 220); }
+
+/** a click is the reader's next act (see the head): what stands on the one line until it, and a hint, taken down */
+function acted() { LINE.act(); HINT.act(); }
 
 /**
  * The pointer's shape over the plane where no drag stands (see the head):
@@ -425,7 +430,7 @@ export function afterFrame() {
   const art = el ? el.closest('#domlayer article.dtext') : null;
   if (!el || !art) { if (LAYER.isMounted(h.addr) || (el && el.id !== 'plane')) held = null; return; }
   held = null;
-  LINE.act();
+  acted();
   if (h.released && h.moved <= 4) { LAYER.caretAt(h.x, h.y); clickText(el); return; }
   LAYER.press(true);
   if (!LAYER.caretAt(h.x, h.y)) { LAYER.press(false); return; }
@@ -443,7 +448,7 @@ function takeSelection() {
 
 /** a click on the plane: a tail lists its links; an outlined run of an arrival in several, below its document's reading scale, is a step to it; a continuation's mark's newest label goes to that member, and the rest of the mark opens its list; a place goes; an account at far goes to its region, where a board is held; else a card or scene still reading ends, the overlay standing under it standing, or else the notice below the overlay dismisses, else the overlay */
 function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
-  LINE.act();
+  acted();
   const tail = RENDER.tailAtScreen(px, py);
   if (tail) { ANATOMY.fromTail(tail, false); return; }
   // an outlined run stands only where its document is drawn whole, never inside a continuation's mark

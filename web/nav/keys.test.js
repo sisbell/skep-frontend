@@ -10,7 +10,9 @@
 // model's record stands; Esc leaves the text to the walk with the caret kept,
 // and Enter or a printable key at that span returns it; at another span of
 // the draft a printable key, a paste and a cut are answered by the draft's own
-// line, Space and another's text by K-9's; Mod+S writes nothing, answered
+// line, Space and another's text by K-9's, each line its hint at the focus —
+// whole at its first press in the session, its first clause after, an
+// auto-repeat answered by nothing; Mod+S writes nothing, answered
 // at the corner and in the status region with the kept state's statement
 // whole at the first press in a session and the corner's own word after it,
 // the statement whole on the word's act; → and ← at a corner move the focus
@@ -41,6 +43,7 @@ import * as REC from '../model/records.js';
 import * as LAYER from '../text/layer.js';
 import * as SEL from '../overlays/selection.js';
 import * as HOST from '../overlays/host.js';
+import * as HINT from '../overlays/hint.js';
 import * as CAM from '../plane/camera.js';
 import { cornerHTML } from '../text/article.js';
 import { spanOfBlock } from '../text/span.js';
@@ -105,7 +108,7 @@ test('the dispatch guards the IME: nothing is dispatched during a composition', 
 const D = '1.0.1.0.2', O = '1.0.2.0.1';
 const TEXT = 'First line.\n\nSecond line here.\n', N = byteLength(TEXT);
 /** a key as the platform delivers it */
-const keyOf = (/** @type {string} */ key, /** @type {{metaKey?: boolean, ctrlKey?: boolean, shiftKey?: boolean}} */ mods = {}) => /** @type {any} */ ({ type: 'keydown', key, keyCode: 0, isComposing: false, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, preventDefault() {}, ...mods });
+const keyOf = (/** @type {string} */ key, /** @type {{metaKey?: boolean, ctrlKey?: boolean, shiftKey?: boolean, repeat?: boolean}} */ mods = {}) => /** @type {any} */ ({ type: 'keydown', key, keyCode: 0, isComposing: false, repeat: false, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, preventDefault() {}, ...mods });
 /** the platform's command modifier (D5 §0) */
 const MOD = KEYS.MAC ? { metaKey: true } : { ctrlKey: true };
 const PLANE = /** @type {const} */ ({ where: 'plane', byKey: true });
@@ -120,18 +123,19 @@ const focusOn = (/** @type {string} */ addr, /** @type {number} */ pos) => WALK.
 
 /**
  * The test run on a page of stand-ins — the platform's focus on nothing, the status region keeping what it was told
- * (`said`) — with D and O held as drafts, the session 1.0.1's, the camera at D's reading scale; every caret, edit and
- * selection let go after it.
+ * (`said`), an emptied region telling nothing — with D and O held as drafts, the session 1.0.1's, the camera at D's
+ * reading scale, and no hint standing or shown whole yet; every caret, edit, selection and hint let go after it.
  * @param {(p: {said: string[]}) => Promise<void>} body
  */
 async function onPlane(body) {
   const platform = { document: globalThis.document, window: globalThis.window };
   /** @type {string[]} */
   const said = [];
-  const live = { setAttribute() {}, set textContent(/** @type {string} */ v) { said.push(v); }, get textContent() { return said[said.length - 1] ?? ''; } };
+  let words = '';
+  const live = { setAttribute() {}, set textContent(/** @type {string} */ v) { words = v; if (v) said.push(v); }, get textContent() { return words; } };
   globalThis.document = /** @type {any} */ ({ activeElement: null, body: null });
   globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
-  REC._reset();
+  REC._reset(); HINT._reset();
   REC.setBoard({ board: 'b-1', name: '', origin: '' });
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: null, standing: 'yours_to_read' }, { doc: O, kind: 'draft', label: null, standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }, { account: '1.0.2', documents: 1 }], state: { arm: 'complete' } }));
@@ -144,7 +148,7 @@ async function onPlane(body) {
   CAM.setViewport(1440, 900);
   const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), c = f.columns[0];
   CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2, scale: 12 / f.fs });
-  try { await body({ said }); } finally { LAYER.clear(); SEL.clear(); REC._reset(); globalThis.document = platform.document; globalThis.window = platform.window; }
+  try { await body({ said }); } finally { LAYER.clear(); SEL.clear(); REC._reset(); HINT._reset(); globalThis.document = platform.document; globalThis.window = platform.window; }
 }
 
 test('Enter at the walk\'s focused span of a draft the person may edit places the caret at the span\'s start; a printable key inserts at it, Backspace and Delete take a character out, the arrows move it, Tab puts a tab in and Enter a new line — the text shown changing as a page-local edit list while the model\'s record stands — and Esc leaves the text to the walk at the caret\'s span with the caret kept, a printable key or Enter at that span returning it (K-70, K-71, K-72, K-76, K-77; BM-1, BM-52, BM-54; FP-14)', () => onPlane(async () => {
@@ -185,7 +189,7 @@ test('Enter at the walk\'s focused span of a draft the person may edit places th
   assert.deepEqual([caret(), shown().slice(0, 5)], [[D, 5, true], 'i\t\nzr'], 'Enter at the kept span returns the caret alone, inserting nothing');
 }));
 
-test('at a span of a draft the person may edit holding no caret a printable key is answered by the draft\'s own line and a paste or a cut by that line in their own words, nothing placed and nothing removed; Space keeps K-9\'s line; a kept caret in another span is not returned there, and Enter places a new caret at the span\'s start; at another\'s text K-9\'s line stands, a paste is the platform\'s, Enter selects the span and no caret is placed, the walk\'s move there leaving a live caret kept (K-9, K-70, K-72, K-93; BM-52)', () => onPlane(async ({ said }) => {
+test('at a span of a draft the person may edit holding no caret a printable key is answered by the draft\'s own line and a paste or a cut by that line in their own words, nothing placed and nothing removed; Space keeps K-9\'s line; a kept caret in another span is not returned there, and Enter places a new caret at the span\'s start; at another\'s text K-9\'s line stands, a paste is the platform\'s, Enter selects the span and no caret is placed, the walk\'s move there leaving a live caret kept; each line its hint at the focus, whole at its first press in the session and its first clause at every later one, a held key\'s auto-repeat answered by nothing (K-9, K-70, K-72, K-93; BM-52)', () => onPlane(async ({ said }) => {
   await focusOn(D, 14);
   assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
   assert.deepEqual([said.at(-1), caret(), REC.edits(D)], [t('B3.caret.enter'), null, []], 'the draft\'s own line; nothing typed, no caret');
@@ -194,7 +198,10 @@ test('at a span of a draft the person may edit holding no caret a printable key 
   assert.equal(await KEYS.dispatch(keyOf('x', MOD), PLANE), true);
   assert.equal(said.at(-1), t('B3.caret.cut'), 'a cut: the line in its own words');
   assert.equal(await KEYS.dispatch(keyOf(' '), PLANE), true);
-  assert.equal(said.at(-1), t('F.swallow.space', { 'paging key': 'PageDown' }), 'Space: K-9\'s own line');
+  assert.equal(said.at(-1), t('F.swallow.space', { 'paging key': 'PageDown' }), 'Space: K-9\'s own line, whole at its first press');
+  assert.equal(await KEYS.dispatch(keyOf(' '), PLANE), true);
+  assert.deepEqual([said.at(-1), HINT.standing()], ['Space does not page here', { id: 'F.swallow.space', words: 'Space does not page here', whole: t('F.swallow.space', { 'paging key': 'PageDown' }), open: false }],
+    'Space again: its first clause, the notice whole kept as its description');
   assert.deepEqual([REC.edits(D), shown()], [[], TEXT], 'nothing placed and nothing removed');
   await KEYS.dispatch(keyOf('Enter'), PLANE);
   assert.deepEqual(caret(), [D, 14, true]);
@@ -207,7 +214,13 @@ test('at a span of a draft the person may edit holding no caret a printable key 
   assert.deepEqual(caret(), [D, 1, true], 'Enter at another span places the caret at its start: one caret stands at a time');
   await focusOn(O, 1);
   assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
-  assert.deepEqual([said.at(-1), caret()], [t('F.swallow', { 'LEAP chord': KEYS.drawChord('Mod+L') }), [D, 1, false]], 'at text the person may not edit K-9\'s line; the walk\'s move away left the live caret kept');
+  assert.deepEqual([said.at(-1), caret()], [t('F.swallow', { 'LEAP chord': KEYS.drawChord('Mod+L') }), [D, 1, false]], 'at text the person may not edit K-9\'s line, whole at its first press; the walk\'s move away left the live caret kept');
+  assert.equal(await KEYS.dispatch(keyOf('w'), PLANE), true);
+  assert.deepEqual([said.at(-1), HINT.standing()?.words, HINT.standing()?.open], ['typing goes nowhere here', 'typing goes nowhere here', false], 'a later press: its first clause, said again');
+  const n = said.length;
+  assert.equal(await KEYS.dispatch(keyOf('w', { repeat: true }), PLANE), true, 'an auto-repeat is taken, typing nothing');
+  await tick();
+  assert.deepEqual([said.length, HINT.standing()?.words], [n, 'typing goes nowhere here'], 'and answered by nothing: its press was answered');
   assert.equal(await KEYS.dispatch(keyOf('v', MOD), PLANE), false, 'a paste there is the platform\'s own, never taken');
   assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
   assert.deepEqual([SEL.selected()?.addr, SEL.selected()?.pos, caret()], [O, 1, [D, 1, false]], 'Enter selects the span whole (D8): no caret in another\'s text');
@@ -306,7 +319,9 @@ test('the inert slots\' chords — Mod+K "link to…", never the LEAP box, Mod+S
   assert.equal(WALK.current()?.kind, 'document', 'the walk on the document whole: no span in focus');
   n = said.length;
   assert.equal(await KEYS.dispatch(keyOf('k', MOD), PLANE), true);
-  assert.deepEqual([SEL.selected(), hostEl.innerHTML, said.slice(n)], [null, '', [t('L.seam.link-to')]], 'Mod+K off any span: nothing selected, no card, the reason said where the focus is');
+  await tick();
+  assert.deepEqual([SEL.selected(), hostEl.innerHTML, said.slice(n), HINT.standing()?.id], [null, '', [t('L.seam.link-to')], 'L.seam.link-to'],
+    'Mod+K off any span: nothing selected, no card, the reason its hint at the focus, said again though the region held those words');
 }));
 
 test('the other slots\' chords with nothing in focus that the slot acts on give its reason, "select a passage first", where the focus is, nothing selected and no card shown: at a document whole Mod+Shift+O, Mod+Shift+R, Mod+Enter and Mod+Shift+Enter, its links card opening at Mod+Shift+L; at an account and at the whole board all five (D5 K-47, K-48, K-49, K-51, K-52, §1.6; P47)', () => onPlane(async ({ said }) => {
@@ -323,7 +338,9 @@ test('the other slots\' chords with nothing in focus that the slot acts on give 
       hostEl.innerHTML = '';
       const n = said.length;
       assert.equal(await KEYS.dispatch(keyOf(key, mods), PLANE), true, `${chord} at the ${kind}: the page takes it`);
-      assert.deepEqual([SEL.selected(), hostEl.innerHTML, said.slice(n)], [null, '', [t('D5.select-first')]], `${chord} at the ${kind}: nothing selected, no card, the slot's reason said where the focus is`);
+      await tick();
+      assert.deepEqual([SEL.selected(), hostEl.innerHTML, said.slice(n), HINT.standing()?.id], [null, '', [t('D5.select-first')], 'D5.select-first'],
+        `${chord} at the ${kind}: nothing selected, no card, the slot's reason its hint at the focus, said at every press`);
     }
   }
   await WALK.focusTo(O, null, true, true, null, true);

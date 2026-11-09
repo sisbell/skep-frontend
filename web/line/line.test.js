@@ -428,16 +428,18 @@ test('the guest line names the board `boards()` found — its origin between the
   }
 });
 
-test('where `boards()` found no board the line names none — no guest line, venue, origin, claimant or sign-in — but says why in the guest line\'s place, none of §3.3\'s states: at an empty list `F.unclaimed`, an inert act whose press says beginning a notebook isn\'t built yet; at a list refused, its words, with "try again" beside them where a retry may tell — the board not answering — and none where it may not — the provider\'s own refusal (issue #215\'s design decision; FP-35)', () => {
+test('where `boards()` found no board the line names none — no guest line, venue, origin, claimant or sign-in — but says why in the guest line\'s place, none of §3.3\'s states: at an empty list `F.unclaimed`, an inert act whose press raises the hint beside it saying beginning a notebook isn\'t built yet, the line holding no segment for it; at a list refused, its words, with "try again" beside them where a retry may tell — the board not answering — and none where it may not — the provider\'s own refusal (issue #215\'s design decision; FP-35)', () => {
   const was = { board: REC.board(), session: REC.session() };
   /** the segment's words as the line shows them, its tags taken out */
   const shown = (/** @type {string} */ html) => html.replace(/<[^>]*>/g, '');
   /** @type {{click: ((ev: any) => void) | null}} the line's click listener, as it attaches */
   const on = { click: null };
-  let again = 0;
+  let again = 0, acted = 0;
+  /** @type {Array<[string, any]>} the hints the line's acts raised, each its string and the element it stands beside */
+  const hinted = [];
   const host = { innerHTML: '', setAttribute() {}, addEventListener(/** @type {string} */ type, /** @type {(ev: any) => void} */ fn) { if (type === 'click') on.click = fn; }, querySelectorAll: () => [], contains: () => false };
   FOCUS.attach({ live: /** @type {any} */ (live) });
-  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {}, again: () => { again++; } });
+  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {}, again: () => { again++; }, hint: (id, at) => { hinted.push([id, at]); }, acted: () => { acted++; } });
   /** a pointer's press on the line's act named */
   const press = (/** @type {string} */ act) => on.click?.({ type: 'click', detail: 1, target: { closest: () => ({ dataset: { act } }) }, stopPropagation() {} });
   try {
@@ -448,10 +450,9 @@ test('where `boards()` found no board the line names none — no guest line, ven
     assert.deepEqual(empty.forms, [`<button id="line-unclaimed" data-act="unclaimed" class="inert" data-string="F.unclaimed">${esc(t('F.unclaimed'))}</button>`], 'the doors\' act, inert, standing alone in the guest line\'s place, its one form');
     LINE.render(true);
     for (const word of [t('B1.guest-line'), t('F.venue.notebook'), t('F.sign-in'), 'data-act="signin"', 'acting as']) assert.ok(!host.innerHTML.includes(word), `the line names no ${word}: ${host.innerHTML}`);
-    live.textContent = '';
     press('unclaimed');
-    assert.ok(host.innerHTML.includes(`<span class="seg transient" data-string="L.no-notebook-yet">${esc(t('L.no-notebook-yet'))}</span>`), `its press says beginning a notebook isn't built yet, in the line: ${host.innerHTML}`);
-    assert.equal(live.textContent, t('L.no-notebook-yet'), 'and through the status region');
+    assert.deepEqual([acted, hinted.map(([id, at]) => [id, at?.dataset?.act])], [1, [['L.no-notebook-yet', 'unclaimed']]], 'its press is the next act of a hint standing, then raises the hint saying beginning a notebook isn\'t built yet beside the act pressed (O-HINT\'s)');
+    assert.ok(!host.innerHTML.includes('seg transient') && !host.innerHTML.includes(esc(t('L.no-notebook-yet'))), `the line holds no segment for it: ${host.innerHTML}`);
     LINE.act();
     REC.takeBoards({ refused: { kind: 'unreachable', name: 'unreachable', text: 'refused' } });
     const unreached = LINE.actingSegment();
@@ -459,7 +460,7 @@ test('where `boards()` found no board the line names none — no guest line, ven
     assert.ok(unreached.forms[0].startsWith(`<span data-string="L.boards-unread">${esc(t('L.boards-unread'))}</span> <button id="line-again" data-act="again">`), unreached.forms[0]);
     LINE.render(true);
     press('again');
-    assert.equal(again, 1, 'its press reads the list again: the act the app hands in');
+    assert.deepEqual([again, acted, hinted.length], [1, 2, 1], 'its press reads the list again — the act the app hands in — the next act of a hint standing, raising none');
     REC.takeBoards({ refused: { kind: 'shell', name: 'provider_403', status: 403, text: 'not admitted' } });
     const refused = LINE.actingSegment();
     assert.deepEqual([refused.state, shown(refused.forms[0]), refused.forms[0].includes('data-act')], [0, t('L.boards-unread'), false], 'the provider\'s own refusal: its words, and no retry offered where none may tell');

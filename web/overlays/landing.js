@@ -173,13 +173,14 @@ const markup = (/** @type {LineState} */ s) =>
  * right edge of the part of the block holding its first line, and past the
  * signs that edge holds level with it, by GAP, its top that line's (BM's
  * `leaveAt`) — and its room, to the next column's text, else to its
- * document's box's right edge. Null where its line is not laid out.
+ * document's box's right edge. Null where its line is not laid out. A hint
+ * stands at the text's edge by it too (O-HINT's).
  * @param {Geometry} g
  * @param {string} addr
  * @param {number} pos the run's first position
  * @returns {{x: number, y: number, room: number} | null}
  */
-function edgeAt(g, addr, pos) {
+export function edgeAt(g, addr, pos) {
   const at = leaveAt(g, addr, [{ pos, width: 1 }]);
   if (!at) return null;
   const box = docBox(addr), right = sx(box.x + box.w), x = at.from.x + GAP;
