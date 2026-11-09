@@ -877,12 +877,12 @@ function childUnder(node, view) {
 
 /**
  * A walk key: ↓ ↑ siblings, → in, ← out, Home/End first/last, Enter acts;
- * Shift+↓ / Shift+↑ select by span (K-8, the selection's owner's, which
- * leaves the focus here — rule 15). → steps in to the child drawn under the
- * centre of the view the camera is bound for as the key is made, else to the
- * first (`childUnder`); it reads the children first, and enters nothing where
- * a later move overtook it meanwhile, nor at a document below its reading
- * scale (`collapsed`), whose spans Enter's act reaches.
+ * off a live caret, Shift+↓ / Shift+↑ select by span (K-8, the selection's
+ * owner's, which leaves the focus here — rule 15). → steps in to the child
+ * drawn under the centre of the view the camera is bound for as the key is
+ * made, else to the first (`childUnder`); it reads the children first, and
+ * enters nothing where a later move overtook it meanwhile, nor at a document
+ * below its reading scale (`collapsed`), whose spans Enter's act reaches.
  * @param {'down' | 'up' | 'in' | 'out' | 'first' | 'last'} k
  * @returns {Promise<boolean>}
  */

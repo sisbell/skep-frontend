@@ -373,16 +373,19 @@
 // account, by its address alone, at reading scale (`editable`) — a position
 // of the text shown, placed by Enter at a focused span at the span's start
 // (`caretToSpan`), by a click at the character clicked (`caretFromPlatform`,
-// `placeCaret`), moved by the arrows a character or a line (`caretMove`),
-// and typed at: a printable key, Enter and Tab put their characters in,
-// Backspace and Delete take a character out (`caretType`, `caretReplace`,
-// `caretErase`), each an edit added to the model's page-local list and shown
-// through the derived record, nothing composed and nothing sent (FP-14). Esc
-// leaves the text to the walk at the caret's span with the caret KEPT at its
-// position (`leaveCaret`), which Enter or a printable key there returns
-// (`returnCaret`); its line stands while it holds the caret (`heldParts`), the
-// platform's selection is collapsed at it as the page moves it, and its mark
-// — the page's own, of no width, hollow where kept — is set at its character
+// `placeCaret`), moved by the arrows a character or a line (`caretMove`) —
+// with Shift, a step O-SELECTION extends a selection from it by
+// (`extendFromCaret`; K-71) — and typed at: a printable key, Enter and Tab
+// put their characters in, Backspace and Delete take a character out
+// (`caretType`, `caretReplace`, `caretErase`), each an edit added to the
+// model's page-local list and shown through the derived record, nothing
+// composed and nothing sent (FP-14). Esc leaves the text to the walk at the
+// caret's span with the caret KEPT at its position (`leaveCaret`), which
+// Enter or a printable key there returns (`returnCaret`); its line stands
+// while it holds the caret (`heldParts`), the platform's selection is
+// collapsed at it as the page moves it — save by a step that extends a
+// selection, whose range the page places (`placeSelection`) — and its mark —
+// the page's own, of no width, hollow where kept — is set at its character
 // boundary in the standing part each frame (`placeCaretMark`) and is no byte
 // of the document. A draft's kept word opens its statement in its corner on
 // its act (`openStatement`; K-57, K-74; FP-26), the corner's items made
@@ -692,8 +695,13 @@ let hold = null;
 let framedTop = NaN;
 /** @type {Caret | null} the page's own caret (see the head); null where none stands */
 let caret_ = null;
-/** the caret was placed or moved since the platform's selection was last collapsed at it: the frame does so once its part stands */
-let caretMoved = false;
+/**
+ * @typedef {'collapse' | 'keep'} CaretOwed what the frame owes a caret placed or moved since it last set the caret's
+ * mark: the mark brought into view, and the platform's selection collapsed at it (`collapse`), or kept as the page
+ * placed it over the selection a move at the caret extends (`keep`)
+ */
+/** @type {CaretOwed | null} what the frame owes the caret once its part stands (`placeCaretMark`); null where nothing is owed */
+let caretOwed = null;
 /** @type {Set<string>} the drafts whose kept word's statement stands open in their corner (`openStatement`) */
 const openStatements = new Set();
 /** @type {Map<string, {key: string, doc: Doc}>} the record derived from each draft's delivered runs and its page-local edits, by document, as last made (`shownDoc`) */
@@ -4184,8 +4192,14 @@ export function editable(addr, scale = cam.scale) {
 /** the caret as it stands, by value; null where none stands */
 export const caret = () => (caret_ ? { ...caret_ } : null);
 
-/** the caret set: placed, moved or kept — the frame collapses the platform's selection at it once its part stands */
-function setCaret(/** @type {Caret | null} */ c) { caret_ = c; caretMoved = !!c; markDirty(); }
+/**
+ * The caret set: placed, moved or kept — the frame brings its mark into view
+ * once its part stands and collapses the platform's selection there, save
+ * where `owed` keeps that selection.
+ * @param {Caret | null} c
+ * @param {CaretOwed} [owed]
+ */
+function setCaret(c, owed = 'collapse') { caret_ = c; caretOwed = c ? owed : null; markDirty(); }
 
 /** a position of a draft's shown text clamped to the text it holds: its first position to one past its last; 1 where it holds none */
 function clampPos(/** @type {Doc} */ d, /** @type {number} */ pos) { return d.from < 0 ? 1 : Math.max(d.from, Math.min(pos, d.to)); }
@@ -4324,11 +4338,15 @@ export function caretErase(dir) {
  * The caret moved (K-71): ← and → a character — an item whole — ↑ and ↓ a
  * line: where the platform stands the text, the character boundary under
  * the caret's mark a line above or below (`caretPoint`); else the same
- * offset into the typed line before or after the caret's. False where no
- * live caret stands, or the text holds nothing that way.
+ * offset into the typed line before or after the caret's. A move that
+ * extends a selection (`extending`; O-SELECTION's `extendFromCaret`) keeps
+ * the platform's selection the page places over it; any other collapses it
+ * at the caret. False where no live caret stands, or the text holds nothing
+ * that way.
  * @param {'left' | 'right' | 'up' | 'down'} dir
+ * @param {boolean} [extending] the move extends a selection from the caret
  */
-export function caretMove(dir) {
+export function caretMove(dir, extending = false) {
   if (!caret_ || !caret_.live) return false;
   const d = shownOf(caret_.addr);
   /** @type {number | null} */
@@ -4338,7 +4356,7 @@ export function caretMove(dir) {
     to = caretLineStep(d, dir === 'up' ? -1 : 1);
   }
   if (to == null || to === caret_.pos) return false;
-  setCaret({ ...caret_, pos: clampPos(d, to) });
+  setCaret({ ...caret_, pos: clampPos(d, to) }, extending ? 'keep' : 'collapse');
   return true;
 }
 
@@ -4427,13 +4445,14 @@ const CARET_MARK = 'caret-mark';
  * the head), each frame: every mark standing taken down, the text nodes
  * about it joined again, and one set where the caret stands in a mounted
  * article whose part holds its position — hollow where the caret is kept;
- * and, where the page placed or moved the caret since, the platform's
- * selection collapsed there once, save under a press or while a field holds
- * the caret of its own — the camera then moved by the least pan that brings
- * the mark inside the visible view, below the one line and below what a
- * corner standing at its document's head covers (`headClear`), so no act
- * leaves the caret under them (FP-37), no flight running. Nothing where the
- * platform does not set the articles.
+ * and, where the page placed or moved the caret since (`caretOwed`), once,
+ * save under a press or while a field holds the caret of its own: the
+ * platform's selection collapsed there, save where the move extended a
+ * selection the page placed, which stands — the camera then moved by the
+ * least pan that brings the mark inside the visible view, below the one line
+ * and below what a corner standing at its document's head covers
+ * (`headClear`), so no act leaves the caret under them (FP-37), no flight
+ * running. Nothing where the platform does not set the articles.
  */
 function placeCaretMark() {
   if (!engine || !layer) return;
@@ -4446,9 +4465,10 @@ function placeCaretMark() {
   mark.className = CARET_MARK + (c.live ? '' : ' kept');
   mark.setAttribute('aria-hidden', 'true');
   const r = document.createRange(); r.setStart(at.node, at.offset); r.collapse(true); r.insertNode(mark);
-  if (caretMoved && !pressed && !typing()) {
+  if (caretOwed && !pressed && !typing()) {
     const s = window.getSelection();
-    if (s) { s.collapse(mark.parentNode, [...(/** @type {Node} */ (mark.parentNode)).childNodes].indexOf(mark)); caretMoved = false; }
+    if (caretOwed === 'collapse' && s) s.collapse(mark.parentNode, [...(/** @type {Node} */ (mark.parentNode)).childNodes].indexOf(mark));
+    caretOwed = null;
     const q = mark.getBoundingClientRect(), clear = Math.max(read.top(), headClear(c.addr) ?? 0), { VW, VH } = viewport();
     if (q.height > 0 && !flying()) { const moved = panInto({ x: q.left, y: q.top, w: 1, h: q.height }, { x: 0, y: clear, w: VW, h: VH - clear }); if (moved.dx || moved.dy) markDirty(); }
   }
@@ -4479,7 +4499,7 @@ export function clear() {
   hold = null; framedTop = NaN;
   owed = null;
   clearing = null;
-  caret_ = null; caretMoved = false;
+  caret_ = null; caretOwed = null;
   openStatements.clear();
   shownCache.clear();
   let lost = false;

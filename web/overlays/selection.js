@@ -6,14 +6,17 @@
 // gesture — a drag over the mounted text at reading scale (§2.4), read back
 // from the platform's own selection through T-LAYER's mapping as the drag
 // ends and as it changes — or by a key: a click on a block and Enter at the
-// focused span select the block whole; K-8's Shift+↓ / Shift+↑ select the
-// focused span and then extend it by a span each press, naming the end each
-// press moved, which T-LAYER keeps clear of its document's head. The
-// platform's highlight is the selection's one mark (§2.1), and the selection the
-// platform's own (foundations §2.1; D5 §2): a change of it rebuilds no
-// article — T-LAYER marks the blocks it touches in place — so a selection
-// the person made stands as they left it, its anchor where they set it, for
-// the platform's own keys to extend (D5 K-71); T-LAYER places it over a span
+// focused span select the block whole; off a live caret, K-8's Shift+↓ /
+// Shift+↑ select the focused span and then extend it by a span each press;
+// at a live caret, Shift with each arrow moves the caret a step and the
+// selection runs from its anchor to the caret (`extendFromCaret`; D5 K-71,
+// §1.6) — each press naming the end it moved, which T-LAYER keeps clear of
+// its document's head. The platform's highlight is the selection's one mark
+// (§2.1), and the selection the platform's own (foundations §2.1; D5 §2): a
+// change of it rebuilds no article — T-LAYER marks the blocks it touches in
+// place — so a selection the person made stands as they left it, its anchor
+// where they set it, for the platform's own keys to extend where no live
+// caret stands (D5 K-71); T-LAYER places it over a span
 // the page selects and puts it back, its anchor at the same end, after a
 // remount — never over a selection the person holds outside the plane's
 // text, in a reading scene's pane or an overlay's text, which stands as they
@@ -163,6 +166,34 @@ export function selectFocused(dir = 'down') {
   if (!sel || sel.addr !== f.addr) { select(f.addr, f.pos, null, moved); return; }
   const e = extended(REC.doc(sel.addr).blocks, sel, dir);
   select(e.addr, e.pos, e.width, moved);
+}
+
+/**
+ * Shift with an arrow at a live caret (D5 K-71, §1.6): the caret moved a step
+ * that way (T-LAYER's `caretMove`) and the selection made to run from its
+ * anchor to the caret, the end the caret stands at the one the press moved
+ * (`select`), in the text shown, as the caret's positions are; where the step
+ * brings the caret back to its anchor, no selection stands (`clear`). The
+ * focus stays where it is (rule 15).
+ * @param {'left' | 'right' | 'up' | 'down'} dir
+ * @returns {boolean} false where no live caret stands or it cannot move that way: nothing changes
+ */
+export function extendFromCaret(dir) {
+  const c = LAYER.caret();
+  if (!c || !c.live) return false;
+  const anchor = anchorAt(c);
+  if (!LAYER.caretMove(dir, true)) return false;
+  const to = /** @type {import('../text/layer.js').Caret} */ (LAYER.caret()).pos;
+  if (to === anchor) clear();
+  else select(c.addr, Math.min(anchor, to), Math.abs(to - anchor), to < anchor ? 'start' : 'end');
+  return true;
+}
+
+/** the anchor a selection extended from a caret runs from (`extendFromCaret`): the selection's other end where a selection in the caret's draft ends at the caret, else the caret's own position */
+function anchorAt(/** @type {import('../text/layer.js').Caret} */ c) {
+  if (!sel || sel.addr !== c.addr) return c.pos;
+  if (sel.pos === c.pos) return sel.pos + sel.width;
+  return sel.pos + sel.width === c.pos ? sel.pos : c.pos;
 }
 
 /** clear the selection: the platform's highlight, its acts and its marks with it */

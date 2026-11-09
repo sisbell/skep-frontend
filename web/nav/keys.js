@@ -33,12 +33,14 @@
 // standing in that span (`activateFocus`; T-LAYER's `caretToSpan`); while a
 // live caret stands on the plane the focus is at it (`Ctx.where` `caret`, read
 // as a key is pressed and again as a held key is made, `whereNow`), and its
-// keys reach it before the walk's (`caretKey`): the arrows move it, Backspace
-// and Delete take a character out, Enter and Shift+Enter put a new line in,
-// Tab a tab character, a printable key its character — each a change of the
-// text shown alone, nothing composed and nothing sent (T-LAYER; FP-14) — and
-// the walk then stands on the span the caret is in (N-WALK's `followCaret`;
-// B3-S13), so the slot chords and K-8 act at the caret's span. At a
+// keys reach it before the walk's and K-8's (`caretKey`): the arrows move it,
+// and with Shift move it and extend a selection from it (O-SELECTION's
+// `extendFromCaret`; D5 §1.6); Backspace and Delete take a character out,
+// Enter and Shift+Enter put a new line in, Tab a tab character, a printable
+// key its character — each a change of the text shown alone, nothing
+// composed and nothing sent (T-LAYER; FP-14) — and the walk then stands on
+// the span the caret is in (N-WALK's `followCaret`; B3-S13), so the slot
+// chords act at the caret's span. At a
 // live caret Mod+Enter follows from a selection standing alone: where none
 // stands it selects nothing, follows nothing and leaves the caret where it
 // stands, the caret's follow line shown in the one line (`followAtCaret`;
@@ -108,12 +110,12 @@
 // §2.2); at its reading scale → enters its spans (K-3). The paging key
 // continues at the next column's top where the view shows the foot of the
 // column it reads (T-LAYER's `pageTarget`; FP-12), and pages the view by 0.9
-// of its height everywhere else. Shift with ← and → is never dispatched: it
-// is the platform's own (K-71), and APP-INPUT reads what it does back into
-// the page's selection. Where no board is held (FP-35) the walk's keys at
-// the plane (K-1 … K-5, K-7), K-8, the selection's slot chords (K-45 … K-52,
-// K-100), the strip (K-23) and find's chords (K-91) each answer with O-FACES'
-// no-board face, as HOME and
+// of its height everywhere else. Off a live caret, Shift with ← and → is
+// never dispatched: it is the platform's own (K-71), and APP-INPUT reads what
+// it does back into the page's selection. Where no board is held (FP-35) the
+// walk's keys at the plane (K-1 … K-5, K-7), K-8, the selection's slot chords
+// (K-45 … K-52, K-100), the strip (K-23) and find's chords (K-91) each answer
+// with O-FACES' no-board face, as HOME and
 // WHOLE BOARD do through N-GO; the paging keys and the zoom chords stay the
 // camera's. State (FP-10), beside the held keys: whether Mod+S has been
 // answered whole this session (`saveAnswered`).
@@ -195,6 +197,10 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-71', chord: '→', act: 'caret.right', surface: 'caret' },
   { id: 'K-71', chord: '↑', act: 'caret.up', surface: 'caret' },
   { id: 'K-71', chord: '↓', act: 'caret.down', surface: 'caret' },
+  { id: 'K-71', chord: 'Shift+←', act: 'caret.extendLeft', surface: 'caret' },
+  { id: 'K-71', chord: 'Shift+→', act: 'caret.extendRight', surface: 'caret' },
+  { id: 'K-71', chord: 'Shift+↑', act: 'caret.extendUp', surface: 'caret' },
+  { id: 'K-71', chord: 'Shift+↓', act: 'caret.extendDown', surface: 'caret' },
   { id: 'K-72', chord: 'Backspace', act: 'caret.erase', surface: 'caret' },
   { id: 'K-72', chord: 'Delete', act: 'caret.erase', surface: 'caret' },
   { id: 'K-74', chord: 'Mod+S', act: 'save.answer', surface: 'plane' },
@@ -388,8 +394,9 @@ function route(e, chord, ctx) {
   const live = LIVE_CHORDS.get(chord);
   // Mod+Enter at a live caret follows from a selection standing alone, else gives the caret's follow line (K-51; `followAtCaret`)
   if (live) return () => { if (live === 'follow' && ctx.where === 'caret' && !SEL.selected()) followAtCaret(); else if (!SEL.act(live, byKey)) selectFirst(); return true; };
-  if (chord === 'Shift+↓') return () => { SEL.selectFocused('down'); return true; };
-  if (chord === 'Shift+↑') return () => { SEL.selectFocused('up'); return true; };
+  // K-8 off a live caret: at one, Shift with the arrows is the caret's (K-71; `caretKey`)
+  if (chord === 'Shift+↓' && ctx.where !== 'caret') return () => { SEL.selectFocused('down'); return true; };
+  if (chord === 'Shift+↑' && ctx.where !== 'caret') return () => { SEL.selectFocused('up'); return true; };
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
   if (chord === 'Mod+R' || e.key === 'F5') return () => true; // K-94: the plane is live; nothing reloads
   // the caret's keys (see the head): at a live caret, before the walk's
@@ -455,14 +462,16 @@ function findAct(e, dir, ctx) {
 
 /**
  * A key at a live caret (see the head; K-71, K-72, K-76): the arrows move it,
- * Backspace and Delete take a character out, Enter and Shift+Enter put a new
- * line in, Tab a tab character, a printable key its character — each a change
- * of the text shown alone (T-LAYER) — and the walk then stands on the span
- * the caret is in (N-WALK's `followCaret`), the act ending once it does, so
- * the next key, a held one too (`replay`), acts there. Null for any other
- * key, which acts as on the plane. The platform's default is prevented
- * first: an arrow would scroll the mirror, Tab would move the focus,
- * Backspace would go back.
+ * and with Shift move it and extend a selection from it (O-SELECTION's
+ * `extendFromCaret`), Backspace and Delete take a character out, Enter and
+ * Shift+Enter put a new line in, Tab a tab character, a printable key its
+ * character — each a change of the text shown alone (T-LAYER) — and the walk
+ * then stands on the span the caret is in (N-WALK's `followCaret`), the act
+ * ending once it does, so the next key, a held one too (`replay`), acts
+ * there. Each is taken even where the caret cannot move that way. Null for
+ * any other key, which acts as on the plane. The platform's default is
+ * prevented first: an arrow would scroll the mirror, Tab would move the
+ * focus, Backspace would go back.
  * @param {KeyboardEvent} e
  * @param {string} chord
  * @returns {Act | null}
@@ -473,6 +482,8 @@ function caretKey(e, chord) {
   /** the key's change made at the caret, the walk following it */
   const at = (/** @type {() => boolean} */ change) => async () => { e.preventDefault(); change(); await WALK.followCaret(); return true; };
   if (chord in moves) return at(() => LAYER.caretMove(moves[chord]));
+  const shifted = chord.startsWith('Shift+') ? chord.slice(6) : '';
+  if (shifted in moves) return at(() => SEL.extendFromCaret(moves[shifted]));
   if (chord === 'Backspace') return at(() => LAYER.caretErase(-1));
   if (chord === 'Delete') return at(() => LAYER.caretErase(1));
   if (chord === 'Enter' || chord === 'Shift+Enter') return at(() => LAYER.caretType('\n'));

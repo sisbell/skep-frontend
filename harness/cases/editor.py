@@ -29,7 +29,9 @@ moved up under the head's held row brings the camera down alone, the caret's
 mark at the row's bottom (`caret_under_head`; issue #436). A person's click in
 another paragraph of the own draft places the caret there and stands the walk
 on that paragraph's span, Mod+K at the caret selecting it (`click_follows`;
-B3-S13).
+B3-S13). Shift with the arrows at a live caret moves it and runs the selection
+from where it stood to it, the platform's selection the page's
+(`shift_extends`; D5 K-71).
 
 The own draft is the seeded board's windowed draft of principal 1 (`OWN`,
 1340 bytes). The seed's staging draft (`STAGING`) holds every edition's
@@ -304,6 +306,57 @@ def click_follows(ctx, doc, target, other):
             'other': {'pos': other['pos'], 'width': other['width']}}
 
 
+# the caret, the page's selection, the platform's own, the caret's mark on screen, the camera and the walk's element
+AT_CARET = '''(() => { const S = window.__skep, m = document.querySelector("#domlayer .caret-mark"), q = m ? m.getBoundingClientRect() : null, f = S.view.focus();
+  return {caret: S.caret(), sel: S.selection(), platform: S.platformSelection(), mark: q ? {top: q.top, h: q.height} : null, cam: S.view.camera(),
+          focus: f ? {kind: f.kind, addr: f.addr, pos: f.pos} : null}; })()'''
+
+
+def shift_extends(ctx, doc, para):
+    """SHIFT WITH THE ARROWS AT A LIVE CARET (D5 K-71, §1.6): the walk landed on `para`, the live caret placed two
+    characters into its text at `c0`, then Shift+↓, Shift+→, Shift+↑ and Shift+← twice, the last running the selection
+    back from `c0` — after each press the caret, the page's selection, the platform's own, the caret's mark and the
+    camera, and whether all of it held: Shift+↓ moves the caret down by a line box or more, on screen with the camera's
+    move taken out; after every press the page's selection runs from `c0` to the caret, none standing where the two
+    meet, and the platform's selection is the page's — not collapsed, over the same span — wherever one stands; nothing
+    is typed. The selection and the caret are let go after."""
+    ctx.leap(doc, para['pos'])
+    lead = len(para['text']) - len(para['text'].lstrip())
+    want0 = para['pos'] + len(para['text'][:lead + 2].encode('utf8'))
+    steps = []
+    try:
+        placed = ctx.js('(async () => (await import("./text/layer.js")).placeCaret(%s, %d))()' % (json.dumps(doc), want0))
+        ctx.frames(3)
+        before = ctx.js(AT_CARET)
+        for key in ('ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft', 'ArrowLeft'):
+            ctx.drv.key(key, mods=('Shift',)); ctx.frames(3)
+            steps.append(dict(ctx.js(AT_CARET), key='Shift+' + key))
+        edits = ctx.js('window.__skep.model.edits(%s)' % json.dumps(doc))
+    finally:
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), L = await import("./text/layer.js"); S.clear(); L.dropCaret(); })()')
+        ctx.frames(2)
+    c0 = placed and placed['pos']
+
+    def runs_from_anchor(s):
+        """the page's selection runs from `c0` to the caret, none where they meet; the platform's is the page's"""
+        c = s['caret']
+        if not c or not c['live'] or c['addr'] != doc:
+            return False
+        want = None if c['pos'] == c0 else {'addr': doc, 'pos': min(c0, c['pos']), 'width': abs(c['pos'] - c0)}
+        p = s['platform']
+        return s['sel'] == want and (p['collapsed'] if want is None else (not p['collapsed'] and p['span'] == want))
+    down = steps[0] if steps else None
+    # the mark's move on screen with the camera's move taken out: how far down the text it went, in px at the scale
+    moved = (down['mark']['top'] - before['mark']['top'] + (down['cam']['y'] - before['cam']['y']) * down['cam']['scale']
+             if down and before and down['mark'] and before['mark'] else None)
+    ok = (bool(placed) and placed['live'] and bool(before) and before['sel'] is None and before['platform']['collapsed']
+          and bool(down) and bool(down['caret']) and down['caret']['pos'] > c0 and moved is not None and moved > 0.5 * before['mark']['h']
+          and len(steps) == 5 and all(runs_from_anchor(s) for s in steps) and edits == [])
+    return {'ok': ok, 'c0': c0, 'para': {'pos': para['pos'], 'width': para['width']}, 'moved_px': moved, 'line_px': before and before['mark'] and before['mark']['h'],
+            'before': before and {k: before[k] for k in ('caret', 'sel', 'platform')},
+            'steps': [{k: s[k] for k in ('key', 'caret', 'sel', 'platform', 'focus')} for s in steps], 'edits': edits}
+
+
 def run(ctx):
     r = Result()
     rows = {s['state']: dict(s, outcome=('pending' if s['drawn'] else 'not drawn')) for s in STATES}
@@ -472,6 +525,10 @@ def run(ctx):
     later = [p for p in paras if p['pos'] > target['pos']]
     follows = click_follows(ctx, OWN, target, later[0] if later else next((p for p in paras if p['pos'] != target['pos']), None))
     r.check(follows['ok'], "a click placing the caret in another paragraph of the own draft stands the walk on that paragraph's span, and Mod+K at the caret selects that span whole, never the span the walk stood on (B3-S13; D5 K-70, K-100)", follows)
+    # Shift with the arrows at a live caret extends a selection from where the caret stood (D5 K-71, §1.6)
+    extends = shift_extends(ctx, OWN, target)
+    figures['shift_extends'] = extends
+    r.check(extends['ok'], "Shift with the arrows at a live caret in the own draft moves it — Shift+↓ a line down, Shift+→ and Shift+← a character — and the selection runs from where it stood to it after each press, none where the two meet, the platform's selection the page's, nothing typed (D5 K-71, §1.6)", extends)
 
     # ---- (e) B3-S13: the swallow's draft form at a span with no caret (K-72) ---------------------------------------------
     ctx.leap(OWN, target['pos'])
