@@ -26,15 +26,20 @@
 // caret acts on that span; Shift with an arrow at a live caret moves it and
 // runs the selection from where it stood to it, while off one Shift+↓ stays
 // K-8's; a caret at the text's end stands in its last span, which Esc leaves
-// the walk on and where Enter or a printable key returns it; and Mod+Enter at
+// the walk on and where Enter or a printable key returns it; Mod+Enter at
 // a live caret follows from a selection drawn in the caret's own text alone —
 // with none there, whatever a slot chord made before it and wherever else a
 // selection stands, it selects nothing, follows nothing and leaves the caret
 // where it stands, giving the caret's follow line where the focus is — while
-// at a kept caret it acts on the kept span as on the plane (D5 K-8, K-9,
+// at a kept caret it acts on the kept span as on the plane; a key that puts
+// text in or takes it out at the caret, live or kept, replaces a selection
+// drawn in the caret's own text, the selection and its card ended, and types
+// at the caret where that selection is not whole in the text shown or the
+// selection is another document's; and an arrow without Shift there ends that
+// selection, ← and → putting the caret at its start and its end (D5 K-8, K-9,
 // K-30, K-45 … K-52, K-57, K-70, K-71, K-72, K-74, K-76, K-77, K-93, K-100,
-// §1.6, §4 rules 2 and 3; D6 BM-1, BM-3, BM-4, BM-52, BM-54; B3-S13; P47;
-// FP-10, FP-14, FP-36).
+// §1.6, §4 rules 2 and 3; D6 BM-1, BM-3, BM-4, BM-52, BM-54, BM-70, BM-75;
+// B3-S13; P47; FP-10, FP-14, FP-36).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
@@ -534,6 +539,90 @@ test('Mod+Enter at a live caret with a selection drawn in another document, no l
   assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
   assert.deepEqual([SEL.selected(), overlay(), caret(), TRAIL.all().length, said.slice(n), HINT.standing()?.id], [{ addr: O, pos: 14, width: 4 }, 'selection', [D, 1, true], trail, [t('B3.row.follow.inert')], 'B3.row.follow.inert'],
     'Mod+Enter: O\'s selection and its card standing, nothing followed, the caret live where it stood, the caret\'s follow line said');
+}));
+
+/** a key's chord at the caret: the key with its modifiers, dispatched on the plane, `n` times; whether the page took each */
+const press = async (/** @type {string} */ key, /** @type {object} */ mods = {}, n = 1) => { for (let i = 0; i < n; i++) assert.equal(await KEYS.dispatch(keyOf(key, mods), PLANE), true, `${key}: the page takes it`); };
+/** the page-local edits of D, each its position, its width and its text */
+const editsOfD = () => REC.edits(D).map((e) => [e.pos, e.width, e.text]);
+
+test('a printable key, Tab, Enter, Backspace and Delete at a live caret with a selection drawn in its text replace the selection — the key\'s text, none for Backspace and Delete, in its bytes\' place — the caret after it, the selection and its card ended; at the kept caret\'s span a printable key returns the caret, replaces the selection drawn in its text and stands the walk on the span the caret is in then; with a selection drawn in another document alone, the key types at the caret, that selection and its card standing (D5 K-70, K-71, K-72, K-76; D6 BM-70, BM-75)', () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const SHIFT = { shiftKey: true };
+  await focusOn(D, 1);
+  LAYER.placeCaret(D, 3);
+  await press('ArrowRight', SHIFT, 3);
+  assert.deepEqual([SEL.selected(), caret(), overlay()], [{ addr: D, pos: 3, width: 3 }, [D, 6, true], 'selection'], 'Shift+→ three times: "rst" selected from the caret, its card shown');
+  await press('q');
+  assert.deepEqual([shown(), caret(), SEL.selected(), overlay(), editsOfD()], [TEXT.slice(0, 2) + 'q' + TEXT.slice(5), [D, 4, true], null, null, [[3, 3, 'q']]],
+    'a printable key: the selection replaced by it, one edit, the caret after it, the selection and its card ended');
+  await press('ArrowLeft', SHIFT, 2);
+  assert.deepEqual(SEL.selected(), { addr: D, pos: 2, width: 2 }, 'Shift+← twice: "iq" selected');
+  await press('Tab');
+  assert.deepEqual([shown().slice(0, 4), caret(), SEL.selected()], ['F\t l', [D, 3, true], null], 'Tab: a tab character in its place');
+  await press('ArrowRight', SHIFT, 2);
+  await press('Enter');
+  assert.deepEqual([shown().slice(0, 5), caret(), SEL.selected()], ['F\t\nin', [D, 4, true], null], 'Enter: a new line in the place of " l"');
+  await press('ArrowRight', SHIFT, 2);
+  await press('Backspace');
+  assert.deepEqual([shown().slice(0, 5), caret(), SEL.selected()], ['F\t\ne.', [D, 4, true], null], 'Backspace: "in" taken out, nothing put in, the caret where it began');
+  await press('ArrowLeft', SHIFT, 2);
+  await press('Delete');
+  assert.deepEqual([shown(), caret(), SEL.selected(), overlay()], ['F' + TEXT.slice(9), [D, 2, true], null, null], 'Delete: the tab and the new line taken out, not the character after the caret');
+  assert.deepEqual(editsOfD(), [[3, 3, 'q'], [2, 2, '\t'], [3, 2, '\n'], [4, 2, ''], [2, 2, '']], 'each key one edit replacing the selection');
+  assert.equal(REC.textOf(REC.doc(D).runs, 1, N + 1), TEXT, 'the model\'s own record stands as the board served it');
+
+  // the caret kept on the first span, a selection drawn over "Second", and a printable key at the kept caret's span
+  await press('Escape');
+  await tick();
+  assert.deepEqual([caret(), WALK.current()?.kind, WALK.current()?.pos], [[D, 2, false], 'block', 1], 'Esc: the caret kept, the walk on its span');
+  SEL.select(D, 6, 6);
+  assert.equal(overlay(), 'selection');
+  await press('z');
+  assert.deepEqual([shown(), caret(), SEL.selected(), overlay(), WALK.current()?.pos], ['Fe.\n\nz line here.\n', [D, 7, true], null, null, 14],
+    'z at the kept caret\'s span: the caret returned, "Second" replaced, the selection and its card ended, the walk on the second span, where the caret stands now');
+
+  // a selection drawn in another document alone
+  SEL.select(O, 14, 4);
+  await press('y');
+  assert.deepEqual([shown(), caret(), SEL.selected(), overlay(), REC.edits(O)], ['Fe.\n\nzy line here.\n', [D, 8, true], { addr: O, pos: 14, width: 4 }, 'selection', []],
+    'y with a selection in O alone: typed at the caret, O\'s selection and its card standing');
+  HOST.dismiss();
+}));
+
+test('an arrow without Shift at a live caret with a selection drawn in its text ends the selection and its card — ← putting the caret at the selection\'s start, → at its end, ↓ a line from the caret — nothing typed; Mod+K at the caret then draws the acts card at the caret\'s span, nothing selected (D5 K-71, K-100; issue #471)', () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const SHIFT = { shiftKey: true };
+  await focusOn(D, 1);
+  LAYER.placeCaret(D, 3);
+  await press('ArrowRight', SHIFT, 2);
+  assert.deepEqual([SEL.selected(), caret(), overlay()], [{ addr: D, pos: 3, width: 2 }, [D, 5, true], 'selection'], 'Shift+→ twice: two characters selected, the caret at their end');
+  await press('ArrowLeft');
+  assert.deepEqual([caret(), SEL.selected(), overlay()], [[D, 3, true], null, null], '←: the caret at the selection\'s start, the selection and its card ended');
+  await press('ArrowLeft', SHIFT, 2);
+  assert.deepEqual([SEL.selected(), caret()], [{ addr: D, pos: 1, width: 2 }, [D, 1, true]], 'Shift+← twice: two characters selected, the caret at their start');
+  await press('ArrowRight');
+  assert.deepEqual([caret(), SEL.selected(), overlay()], [[D, 3, true], null, null], '→: the caret at the selection\'s end, the selection and its card ended');
+  await press('ArrowRight', SHIFT);
+  assert.deepEqual(SEL.selected(), { addr: D, pos: 3, width: 1 });
+  await press('ArrowDown');
+  assert.deepEqual([caret(), SEL.selected(), overlay(), WALK.current()?.pos], [[D, 17, true], null, null, 14], '↓: a line from the caret (14 + 3), the selection ended, the walk on the caret\'s span');
+  await press('k', MOD);
+  assert.deepEqual([holds(), SEL.selected(), caret()], [spanOfBlock(D, /** @type {any} */ (REC.blockAt(D, 14))), null, [D, 17, true]], 'Mod+K: the acts card at the caret\'s span whole, nothing selected');
+  HOST.dismiss();
+  assert.deepEqual(REC.edits(D), [], 'nothing typed');
+}));
+
+test('a selection in the caret\'s text not whole in the text shown — running past its end — is not replaced: a printable key types at the caret, the selection ended, and the next key types after it (D5 K-72; M-DERIVE\'s `applyEdits`)', () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  await focusOn(D, 1);
+  LAYER.placeCaret(D, 1);
+  SEL.select(D, N - 2, 10);
+  assert.deepEqual(SEL.selected(), { addr: D, pos: N - 2, width: 10 }, 'a selection running past the text\'s end');
+  await press('q');
+  await press('r');
+  assert.deepEqual([shown(), caret(), SEL.selected(), overlay(), editsOfD()], ['qr' + TEXT, [D, 3, true], null, null, [[1, 0, 'q'], [2, 0, 'r']]],
+    'both typed at the caret, the selection and its card ended');
 }));
 
 // placed last: the follow it guards against, where it is made, leaves a jump in the air for the tests after it

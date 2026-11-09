@@ -35,7 +35,9 @@ caret there and stands the walk on that paragraph's span, Mod+K at the caret
 drawing the acts card there and selecting nothing (`click_follows`; B3-S13;
 issue #471). Shift with the arrows at a live caret moves it and runs the
 selection from where it stood to it, the platform's selection the page's
-(`shift_extends`; D5 K-71).
+(`shift_extends`; D5 K-71); a printable key or Backspace there then replaces
+that selection, and an arrow without Shift ends it, the caret at its start
+for ← (`shift_replaces`; D5 K-72; D6 BM-75).
 
 The own draft is the seeded board's windowed draft of principal 1 (`OWN`,
 1340 bytes). The seed's staging draft (`STAGING`) holds every edition's
@@ -376,6 +378,59 @@ def shift_extends(ctx, doc, para):
             'steps': [{k: s[k] for k in ('key', 'caret', 'sel', 'platform', 'focus')} for s in steps], 'edits': edits}
 
 
+# after a key at the caret: the caret, the page's selection, the platform's own, the overlay standing, a draft's page-local
+# edits and the text the page shows of it
+AFTER_KEY = '''((doc) => { const S = window.__skep;
+  return {caret: S.caret(), sel: S.selection(), platform: S.platformSelection(), overlay: S.overlay().id, edits: S.model.edits(doc),
+          text: (S.mounted(doc) || {}).text || ""}; })(%s)'''
+
+
+def shift_replaces(ctx, doc, para):
+    """A KEY AT A LIVE CARET WITH A SELECTION DRAWN IN ITS TEXT (D5 K-71, K-72; D6 BM-70, BM-75): the walk landed on
+    `para`, the live caret placed two characters into its text at `c0`, then Shift+→ three times and `q`, Shift+→ twice
+    and Backspace, Shift+→ twice and ← — the selection each run of Shift+→ made, and after each of `q`, Backspace and ←
+    the caret, the page's selection, the platform's own, the overlay standing, the page-local edits and the text the page
+    shows of the draft, and whether all of it held: `q` replaces the three characters selected, the caret after it,
+    Backspace takes the two selected out, ← puts the caret at the selection's start and types nothing; after each no
+    selection stands — the page's none, the platform's collapsed — and no card. The selection, the caret and the edits are
+    let go after, and the draft read again."""
+    text = para['text']
+    lead = len(text) - len(text.lstrip())
+    nb = lambda s: len(s.encode('utf8'))
+    c0 = para['pos'] + nb(text[:lead + 2])
+    w3, w2, w4 = nb(text[lead + 2:lead + 5]), nb(text[lead + 5:lead + 7]), nb(text[lead + 7:lead + 9])
+    ctx.leap(doc, para['pos'])
+    steps = []
+    try:
+        placed = ctx.js('(async () => (await import("./text/layer.js")).placeCaret(%s, %d))()' % (json.dumps(doc), c0))
+        ctx.frames(3)
+        for n, key in ((3, 'q'), (2, 'Backspace'), (2, 'ArrowLeft')):
+            for _ in range(n):
+                ctx.drv.key('ArrowRight', mods=('Shift',)); ctx.frames(2)
+            selected = ctx.js('window.__skep.selection()')
+            ctx.drv.key(key); ctx.frames(3)
+            steps.append(dict(ctx.js(AFTER_KEY % json.dumps(doc)), key=key, selected=selected))
+    finally:
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), R = await import("./model/records.js"); H.dismiss(); S.clear(); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
+        ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
+    typed = {'pos': c0, 'width': w3, 'text': 'q'}
+    erased = {'pos': c0 + 1, 'width': w2, 'text': ''}
+    # each step: the selection Shift+→ made, the caret after the key, the edits after it, a stretch of the text it shows
+    want = [({'addr': doc, 'pos': c0, 'width': w3}, c0 + 1, [typed], text[:lead + 2] + 'q' + text[lead + 5:lead + 15]),
+            ({'addr': doc, 'pos': c0 + 1, 'width': w2}, c0 + 1, [typed, erased], text[:lead + 2] + 'q' + text[lead + 7:lead + 17]),
+            ({'addr': doc, 'pos': c0 + 1, 'width': w4}, c0 + 1, [typed, erased], text[:lead + 2] + 'q' + text[lead + 7:lead + 17])]
+
+    def held(s, w):
+        selected, pos, edits, stretch = w
+        c = s['caret']
+        return (s['selected'] == selected and bool(c) and c['live'] and c['addr'] == doc and c['pos'] == pos and s['sel'] is None
+                and s['platform']['collapsed'] and s['overlay'] is None and s['edits'] == edits and fold(stretch) in fold(s['text']))
+    ok = bool(placed) and placed['live'] and placed['pos'] == c0 and len(steps) == 3 and all(held(s, w) for s, w in zip(steps, want))
+    return {'ok': ok, 'c0': c0, 'para': {'pos': para['pos'], 'width': para['width']},
+            'steps': [dict({k: s[k] for k in ('key', 'selected', 'caret', 'sel', 'platform', 'overlay', 'edits')}, held=held(s, w),
+                           shows=fold(w[3]) in fold(s['text'])) for s, w in zip(steps, want)]}
+
+
 def run(ctx):
     r = Result()
     rows = {s['state']: dict(s, outcome=('pending' if s['drawn'] else 'not drawn')) for s in STATES}
@@ -551,6 +606,10 @@ def run(ctx):
     extends = shift_extends(ctx, OWN, target)
     figures['shift_extends'] = extends
     r.check(extends['ok'], "Shift with the arrows at a live caret in the own draft moves it — Shift+↓ a line down, Shift+→ and Shift+← a character — and the selection runs from where it stood to it after each press, none where the two meet, the platform's selection the page's, nothing typed (D5 K-71, §1.6)", extends)
+    # a key at a live caret replaces the selection drawn in its text, and an arrow without Shift ends it (D5 K-71, K-72; D6 BM-75)
+    replaces = shift_replaces(ctx, OWN, target)
+    figures['shift_replaces'] = replaces
+    r.check(replaces['ok'], "at a live caret in the own draft with a selection drawn from it, a printable key replaces the selection and Backspace takes it out, the caret after what the key put in, and ← puts the caret at the selection's start; after each, no selection stands — the page's none, the platform's collapsed — and no card (D5 K-71, K-72; D6 BM-70, BM-75)", replaces)
 
     # ---- (e) B3-S13: the swallow's draft form at a span with no caret (K-72) ---------------------------------------------
     ctx.leap(OWN, target['pos'])

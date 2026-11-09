@@ -368,16 +368,18 @@
 // applied (`shownDoc`; K-72) — mounted, folded and measured in the model's
 // record's place and set again as the edits move, the model's own record
 // standing as the board served it; the ARIA mirror reads the model. The
-// caret (D5 K-70, K-72, K-76, K-77; D6 BM-4, BM-52, BM-54): the page's own,
-// one at a time, in text the person may edit — a draft under the session's
-// account, by its address alone, at reading scale (`editable`) — a position
-// of the text shown, placed by Enter at a focused span at the span's start
-// (`caretToSpan`), by a click at the character clicked (`caretFromPlatform`,
-// `placeCaret`), moved by the arrows a character or a line (`caretMove`) —
-// with Shift, a step O-SELECTION extends a selection from it by
-// (`extendFromCaret`; K-71) — and typed at: a printable key, Enter and Tab
-// put their characters in, Backspace and Delete take a character out
-// (`caretType`, `caretReplace`, `caretErase`), each an edit added to the
+// caret (D5 K-70, K-72, K-76, K-77; D6 BM-4, BM-52, BM-54, BM-70, BM-75): the
+// page's own, one at a time, in text the person may edit — a draft under the
+// session's account, by its address alone, at reading scale (`editable`) — a
+// position of the text shown, placed by Enter at a focused span at the span's
+// start (`caretToSpan`), by a click at the character clicked
+// (`caretFromPlatform`, `placeCaret`), moved by the arrows a character or a
+// line (`caretMove`) — with Shift, a step O-SELECTION extends a selection from
+// it by (`extendFromCaret`; K-71) — and typed at: a printable key, Enter and
+// Tab put their characters in, Backspace and Delete take a character out
+// (`caretType`, `caretErase`), or, where a selection whole in the text shown
+// stands in the caret's text, its bytes are replaced by the key's text, none
+// for Backspace and Delete (`caretReplace`) — each an edit added to the
 // model's page-local list and shown through the derived record, nothing
 // composed and nothing sent (FP-14). Esc leaves the text to the walk at the
 // caret's span with the caret KEPT at its position (`leaveCaret`), which
@@ -4305,14 +4307,19 @@ export function caretType(text) {
 }
 
 /**
- * A selection of the caret's draft replaced by text typed (K-71; BM-70): one
- * edit removing its bytes and placing the text, the caret after the text.
- * False where no live caret stands, or the span is another document's.
+ * A selection of the caret's draft replaced by the text a key puts in at the
+ * caret (K-70, K-72, K-76; BM-70, BM-75): one edit removing its bytes and
+ * placing the text — none for Backspace and Delete — the caret after it.
+ * False where no live caret stands, the span is another document's, or it is
+ * not whole in the text shown (`shownOf`): M-DERIVE applies no edit past one
+ * outside that text (`applyEdits`).
  * @param {Span} span the selection, in the text shown
- * @param {string} text
+ * @param {string} text the key's text: its character, a new line, a tab; '' for Backspace and Delete
  */
 export function caretReplace(span, text) {
   if (!caret_ || !caret_.live || span.addr !== caret_.addr) return false;
+  const d = shownOf(caret_.addr);
+  if (d.from < 0 || span.width < 1 || span.pos < d.from || span.pos + span.width > d.to) return false;
   REC.addEdit(caret_.addr, { pos: span.pos, width: span.width, text });
   setCaret({ ...caret_, pos: span.pos + byteLength(text) });
   return true;
