@@ -441,7 +441,7 @@ function siteSays(e, ctx) {
   }
   const owner = REC.ownerAccount(d);
   if (!owner || owner === account) return false;
-  HINT.show('B3.row.others-document', { owner, 'annotate chord': drawChord('Mod+Shift+A') }, hinted(e, ctx));
+  HINT.show('B3.row.others-document', { owner }, hinted(e, ctx));
   return true;
 }
 

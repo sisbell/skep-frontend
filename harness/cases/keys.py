@@ -2627,26 +2627,28 @@ def swallowed_below(ctx, r):
 
 def others_line(ctx, r):
     """B3-S13's line at another account's document (D5 K-72, K-93): at the commons registry's span, at its reading scale, a
-    bare key raises it as its hint, naming the document's account as its owner and the annotate chord drawn for the
-    platform — never C-45, never the K-9 line — and a paste is answered by the same line, its first clause at that later
-    press, nothing placed: no caret, nothing selected, the camera and the walk where they stood"""
+    bare key raises it as its hint, naming the document's account as its owner — never C-45, never the K-9 line — and a
+    paste is answered by the same line, its first clause at that later press — the words before the em dash a no-break
+    space sets off, shorter than the line — nothing placed: no caret, nothing selected, the camera and the walk where they
+    stood"""
     doc, pos = REGISTRY
     ctx.leap(doc, pos)
     before = state(ctx)
     r.check(bool(before['focus']) and before['focus']['kind'] == 'block' and before['focus']['addr'] == doc and ctx.js('window.__skep.view.lod()')['name'] == 'near',
             'a LEAP into the commons registry\'s third paragraph stands the walk on its span at reading scale (what the next checks stand on)', before['focus'])
-    values = {'owner': account_of(doc), 'annotate chord': drawn_chord(ctx, 'Mod+Shift+A')}
+    owner = account_of(doc)
+    values = {'owner': owner}
     whole, clause = hint_words(ctx, 'B3.row.others-document', values), hint_words(ctx, 'B3.row.others-document', values, whole=False)
     chord(ctx, 't')
     key = state(ctx)
     hint = key['hint'] or {}
     r.check(hint.get('id') == 'B3.row.others-document' and hint.get('whole') == whole and hint.get('words') in (whole, clause),
-            'a bare key at another account\'s document raises B3-S13\'s line as its hint, naming its owner and the annotate chord — never C-45, never the K-9 line (D5 K-72)', {'hint': hint, 'want': whole})
+            'a bare key at another account\'s document raises B3-S13\'s line as its hint, naming its owner — never C-45, never the K-9 line (D5 K-72)', {'hint': hint, 'want': whole})
     chord(ctx, 'v', mods=('Meta',))
     after = state(ctx)
     pasted = after['hint'] or {}
-    r.check(pasted.get('id') == 'B3.row.others-document' and pasted.get('words') == clause and not pasted.get('open'),
-            'a paste there is answered by the same line, its first clause at the later press (D5 K-72, K-93)', {'hint': pasted, 'want': clause})
+    r.check(pasted.get('id') == 'B3.row.others-document' and pasted.get('words') == clause == "this is %s's document" % owner and clause != whole and not pasted.get('open'),
+            'a paste there is answered by the same line, its first clause at the later press — "this is ⟨owner⟩\'s document", the line cut at its em dash (D5 K-72, K-93)', {'hint': pasted, 'want': clause, 'whole': whole})
     r.check(same_view(before, after) and after['focus'] == before['focus'] and after['overlay'] is None and not after['leap'] and after['sel'] is None
             and ctx.js('window.__skep.caret()') is None,
             'the key and the paste place nothing: no caret, nothing selected, the camera and the walk\'s element where they stood', {'before': before, 'after': after})

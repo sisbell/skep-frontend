@@ -54,7 +54,9 @@ of `strings.js` equal to its source at the design repository's HEAD —
 `ux/copy.md` by `C-n`, `requirements.md` for R56, R59 and R5 — compared
 fragment by fragment around the ⟨tokens⟩ with whitespace folded (the design
 files wrap at 72 columns). DRAFT strings that name a design file are located
-there too and reported, never failed (a design document drafts in prose).
+there too and reported, never failed (a design document drafts in prose);
+those found there only inside its quotes of its own earlier wording — "as it
+stood …", "as first drawn …" and their kin — are reported apart, as retired.
 The strings the lane LACKED are listed. The fifth cell met by a follow is
 W-01 step 7's (`walks`), which runs after `keys` reads LK's visited set."""
 import json
@@ -64,6 +66,8 @@ from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, VERSIONED, WINDOW, Result, byli
 
 TOKEN = re.compile(r'⟨[^⟩]*⟩')
 BLANK = re.compile(r'[\s\-–—·.…]*')  # a value that is no value: dashes, dots and spaces, or nothing
+# a design file's quote of its own earlier wording: the words that lead it, then a space, then its opening quote
+EARLIER = re.compile(r'\b(?:as it stood|as they stood|as first drawn|as entered|it read|and before that)[,:]?\s+(?P<q>["“])')
 
 
 def norm(s):
@@ -93,6 +97,40 @@ def located(text, source):
     frags = [f for f in frags if len(f) >= 3]
     missing = [f for f in frags if f not in src]
     return missing
+
+
+def closing(source, start, opener):
+    """the index of the quote that closes one `opener` opened just before `start`, -1 where none does: a curly quote's
+    matching ”, the curly quotes inside it counted; a straight quote's matching ", the straight quotes inside it counted —
+    one a space or a parenthesis leads and a letter or a digit follows opening a quote, every other closing one"""
+    depth = 1
+    for i in range(start, len(source)):
+        c = source[i]
+        if opener == '“' and c in '“”':
+            depth += 1 if c == '“' else -1
+        elif opener == '"' and c == '"':
+            depth += 1 if source[i - 1] in ' (' and source[i + 1:i + 2].isalnum() else -1
+        else:
+            continue
+        if not depth:
+            return i
+    return -1
+
+
+def live_wording(source):
+    """a design file with its quotes of its own earlier wording taken out (`EARLIER`), save a quote the file declares a
+    string it draws — one `(DRAFT` follows — whose words stand"""
+    out, at = [], 0
+    for m in EARLIER.finditer(source):
+        if m.start() < at:
+            continue
+        end = closing(source, m.end(), m.group('q'))
+        if end < 0 or source[end + 1:end + 8] == ' (DRAFT':
+            continue
+        out.append(source[at:m.end()])
+        at = end + 1
+    out.append(source[at:])
+    return ''.join(out)
 
 
 def run(ctx):
@@ -380,7 +418,9 @@ def run(ctx):
     drafts = ctx.js('Object.entries(window.__skepStrings || {}).length') if False else None
     all_strings = ctx.js('''(async () => { const m = await import('../strings.js'); return Object.entries(m.STRINGS).map(([id, e]) => ({id, text: e.text, cls: e.cls, source: e.source, screen: e.screen || '', lane: !!e.lane})); })()''')
     draft_unlocated = []
+    draft_retired = []
     draft_checked = 0
+    lives = {}
     for e in all_strings:
         if e['cls'] != 'DRAFT' or not e['source'] or e['lane']:
             continue
@@ -395,8 +435,14 @@ def run(ctx):
         missing = located(e['text'], src)
         if missing:
             draft_unlocated.append({'id': e['id'], 'source': e['source'], 'missing_fragments': missing[:3]})
-    r.figures['draft'] = {'checked': draft_checked, 'not_located_verbatim': draft_unlocated}
+            continue
+        if e['source'] not in lives:
+            lives[e['source']] = live_wording(src)
+        retired = located(e['text'], lives[e['source']])
+        if retired:
+            draft_retired.append({'id': e['id'], 'source': e['source'], 'earlier_fragments': retired[:3]})
+    r.figures['draft'] = {'checked': draft_checked, 'not_located_verbatim': draft_unlocated, 'retired': draft_retired}
     r.figures['lacking'] = ctx.js('window.__skep.strings.lacking()')
     r.figures['counts'] = {'pinned': sum(1 for e in all_strings if e['cls'] == 'PINNED'), 'draft': sum(1 for e in all_strings if e['cls'] == 'DRAFT' and not e['lane']), 'lane': sum(1 for e in all_strings if e['lane'])}
-    r.note('DRAFT strings a design document drafts in prose are located by fragment and reported, not failed; the lane\'s own placeholders (lane: true) are the strings the inventory LACKED')
+    r.note('DRAFT strings a design document drafts in prose are located by fragment and reported, not failed — those found only inside the design\'s quotes of its earlier wording reported apart as retired; the lane\'s own placeholders (lane: true) are the strings the inventory LACKED')
     return r.out()

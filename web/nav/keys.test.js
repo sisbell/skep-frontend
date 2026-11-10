@@ -271,7 +271,7 @@ test('at a span of a draft the person may edit holding no caret a printable key 
   assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
   assert.deepEqual(caret(), [D, 1, true], 'Enter at another span places the caret at its start: one caret stands at a time');
   await focusOn(O, 1);
-  const theirs = t('B3.row.others-document', { owner: '1.0.2', 'annotate chord': KEYS.drawChord('Mod+Shift+A') }), clause = 'this is 1.0.2\'s document';
+  const theirs = t('B3.row.others-document', { owner: '1.0.2' }), clause = 'this is 1.0.2\'s document';
   assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
   assert.deepEqual([said.at(-1), HINT.standing()?.id, caret()], [theirs, 'B3.row.others-document', [D, 1, false]], 'at another\'s document its line naming its owner, whole at its first press; the walk\'s move away left the live caret kept');
   assert.equal(await KEYS.dispatch(keyOf('w'), PLANE), true);
