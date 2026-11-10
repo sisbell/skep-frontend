@@ -54,6 +54,8 @@ import { byteLength } from '../util.js';
 
 /** @typedef {import('./address.js').EndRef} EndRef */
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
+/** @typedef {import('../bridge/shapes').HeldAnswer} HeldAnswer */
+/** @typedef {import('../bridge/shapes').HeldEvent} HeldEvent */
 /** @typedef {import('../bridge/shapes').HandKey} HandKey */
 /** @typedef {import('../bridge/shapes').BaseStanding} BaseStanding */
 /** @typedef {import('../bridge/shapes').AckVia} AckVia */
@@ -533,13 +535,14 @@ const strings = (v) => array(v).map(string);
  */
 const opt = (v, f) => (v == null ? null : f(v));
 /**
- * one of a set of literals, else malformed
+ * one of a declared union's literals, else malformed
  * @template {string} T
  * @param {unknown} v
- * @param {readonly T[]} set
+ * @param {Record<T, null>} set every literal of the union, as a key: each set is typed `Record<U, null>` for its declared
+ * union `U`, so the checker refuses one that misses a literal of the declarations or holds one they lack (FP-16)
  * @returns {T}
  */
-const oneOf = (v, set) => (typeof v === 'string' && set.includes(/** @type {T} */ (v)) ? /** @type {T} */ (v) : fail());
+const oneOf = (v, set) => (typeof v === 'string' && Object.hasOwn(set, v) ? /** @type {T} */ (v) : fail());
 /**
  * One answer read as `read` reads it: null where the answer is no object or
  * where any member it reads is not of the type the declarations give it.
@@ -586,15 +589,15 @@ export function decodeAckAddr(/** @type {unknown} */ answer) {
   return decode(answer, (a) => (a.resp === 'ack_addr' ? /** @type {AckAddr} */ ({ addr: string(a.addr), at: number(a.at) }) : fail()));
 }
 
-/** the classes of a device's refusal to keep a held line (`HeldAnswer.unwritable_class`) */
-const UNWRITABLE_CLASSES = /** @type {const} */ (['full', 'read_only', 'other']);
+/** @type {Record<NonNullable<HeldAnswer['unwritable_class']>, null>} the classes of a device's refusal to keep a held line (`HeldAnswer.unwritable_class`) */
+const UNWRITABLE_CLASSES = { full: null, read_only: null, other: null };
 
 /**
  * @typedef {Object} Held — the `op` answer where the burst's board is held (`HeldAnswer`): accepted, not acked
  * @property {number} held the line's ordinal in the held store
  * @property {string} cause the hold's token
  * @property {string | null} unwritable why the device refused the line, or the held file is out of reach; null where it took it
- * @property {'full' | 'read_only' | 'other' | null} unwritableClass the class the page keys its act by, beside `unwritable`; null with it
+ * @property {NonNullable<HeldAnswer['unwritable_class']> | null} unwritableClass the class the page keys its act by, beside `unwritable`; null with it
  */
 
 /** the `held` answer → the line's ordinal, the hold's cause and the device's refusal where one stands; null for any other answer */
@@ -651,14 +654,15 @@ export function decodeHeldRows(answer) {
   } catch (e) { if (e instanceof Malformed) return null; throw e; }
 }
 
-/** the states a document's held state moves through (`HeldEvent.state`) */
-const HELD_STATES = /** @type {const} */ (['holding', 'sending', 'kept', 'refused', 'moved']);
-/** the hands a moved document's rows name (`HandKey`) */
-const HAND_KEYS = /** @type {const} */ (['own', 'other', 'bare', 'lost']);
+/** @type {Record<HeldEvent['state'], null>} the states a document's held state moves through (`HeldEvent.state`) */
+const HELD_STATES = { holding: null, sending: null, kept: null, refused: null, moved: null };
+/** @type {Record<HandKey, null>} the hands a moved document's rows name (`HandKey`) */
+const HAND_KEYS = { own: null, other: null, bare: null, lost: null, unread: null };
 
 /**
  * @typedef {Object} HeldHand — one hand whose row moved a held document (`Hand`)
- * @property {HandKey} key `own` this store's key, `other` another's, `bare` an unsigned hand under local trust, `lost` a row whose testimony the board lost
+ * @property {HandKey} key `own` this store's key, `other` another's, `bare` an unsigned hand under local trust, `lost` a row
+ * whose testimony the board lost, `unread` the hands not read yet (D6 BM-78)
  * @property {string | null} fingerprint the key's, for `own` and `other`; null for the rest
  * @property {string | null} label the label the shell's key store holds for the key; null where it holds none
  */
@@ -669,7 +673,7 @@ const HAND_KEYS = /** @type {const} */ (['own', 'other', 'bare', 'lost']);
  * @property {string} session
  * @property {string} doc
  * @property {number} held the count of lines still held on the document
- * @property {'holding' | 'sending' | 'kept' | 'refused' | 'moved'} state
+ * @property {HeldEvent['state']} state
  * @property {string | null} cause the hold's token while holding, the refusal's while refused; null where the event carries none
  * @property {HeldHand[]} hands with the `moved` state, each hand once; empty where the event carries none
  */
@@ -728,7 +732,8 @@ export function decodeShown(/** @type {unknown} */ answer) {
  * @typedef {Object} Undone — `merge.undo`'s answer: the landing taken back
  * @property {string} draft the draft the merge was taken back out of
  * @property {number} position the write's commit
- * @property {string | null} record the replacing record's public link; null where no record of the landing stood
+ * @property {string | null} record the replacing record's link, homed in its private journal; null where no record of the
+ * landing stood
  * @property {{base: string, extent: number} | null} restored the base restored, its address and extent; null where the draft records none
  */
 
@@ -744,7 +749,8 @@ export function decodeUndone(/** @type {unknown} */ answer) {
  * @typedef {Object} Withdrawn — `merge.withdraw`'s answer: the marker cleared, the words kept
  * @property {string} draft
  * @property {number} position the write's commit
- * @property {string | null} record the replacing record's public link; null where no record of the landing stood
+ * @property {string | null} record the replacing record's link, homed in its private journal; null where no record of the
+ * landing stood
  */
 
 /** `merge.withdraw` → the draft, the commit and the record; null where a member is not as declared */
@@ -752,19 +758,29 @@ export function decodeWithdrawn(/** @type {unknown} */ answer) {
   return decode(answer, (a) => /** @type {Withdrawn} */ ({ draft: string(a.draft), position: number(a.position), record: opt(a.record, string) }));
 }
 
-/** the ways an acknowledgment was reached (`AckVia`) */
-const ACK_VIAS = /** @type {const} */ (['answer', 'twin', 'records', 'walk', 'edition_claim']);
-/** the standings of a draft's base against its document's head (`BaseStanding`) */
-const STANDINGS = /** @type {const} */ (['at_head', 'behind', 'first', 'superseded_first']);
-/** the kinds of a merge's gap (`GapKind`) */
-const GAP_KINDS = /** @type {const} */ (['order', 'anchor', 'corner', 'cut', 'collision', 'moves']);
-/** the terms of a publication's price (`Term`) */
-const TERMS = /** @type {const} */ (['runs', 'places', 'links', 'retract', 'read_with', 'body', 'values', 'reads', 'bytes']);
+/** @type {Record<AckVia, null>} the ways an acknowledgment was reached (`AckVia`) */
+const ACK_VIAS = { answer: null, twin: null, records: null, walk: null, edition_claim: null };
+/** @type {Record<BaseStanding, null>} the standings of a draft's base against its document's head (`BaseStanding`) */
+const STANDINGS = { at_head: null, behind: null, first: null, superseded_first: null };
+/** @type {Record<GapKind, null>} the kinds of a merge's gap (`GapKind`) */
+const GAP_KINDS = { order: null, anchor: null, corner: null, cut: null, collision: null, moves: null };
+/** @type {Record<Extract<GapPlacement, string>, null>} the placements of a gap but an order of its sides (`GapPlacement`) */
+const GAP_PLACEMENTS = { after: null, before: null, omitted: null };
+/** @type {Record<Term, null>} the terms of a publication's price (`Term`) */
+const TERMS = { runs: null, places: null, links: null, retract: null, read_with: null, body: null, values: null, reads: null, bytes: null };
+/** @type {Record<import('../bridge/shapes').MergeReport['outcome'], null>} the outcomes of a merge's composition (`MergeReport.outcome`) */
+const MERGE_OUTCOMES = { landed: null, reopened: null, merged: null };
+/** @type {Record<import('../bridge/shapes').MergeReport['form'], null>} the forms of a merge's side (`MergeReport.form`) */
+const MERGE_FORMS = { daughter: null, draft: null };
+/** @type {Record<import('../bridge/shapes').MergeSide['role'], null>} the roles of a merge record's side (`MergeSide.role`) */
+const SIDE_ROLES = { head: null, alternative: null, draft: null, fork: null };
+/** @type {Record<import('../bridge/shapes').MergeRun['family'], null>} the families of a run of M (`MergeRun.family`) */
+const RUN_FAMILIES = { own: null, window: null, draft_native: null };
 
 /**
  * @typedef {Object} MergeSide — one side of the merge record (`MergeSide`)
  * @property {string} at the member or the draft
- * @property {'head' | 'alternative' | 'draft' | 'fork'} role
+ * @property {import('../bridge/shapes').MergeSide['role']} role
  * @property {number | null} position the board position a draft side was read at; null at a member
  */
 
@@ -774,7 +790,7 @@ const TERMS = /** @type {const} */ (['runs', 'places', 'links', 'retract', 'read
  * @property {number} iStart
  * @property {number} width
  * @property {number | null} side the side that placed it, 0 the head; null for the base's own
- * @property {'own' | 'window' | 'draft_native'} family
+ * @property {import('../bridge/shapes').MergeRun['family']} family
  */
 
 /**
@@ -791,12 +807,12 @@ const TERMS = /** @type {const} */ (['runs', 'places', 'links', 'retract', 'read
 
 /**
  * @typedef {Object} MergeReport — `merge.compose`'s answer (`MergeReport`): M landed, re-opened or already merged
- * @property {'landed' | 'reopened' | 'merged'} outcome
+ * @property {import('../bridge/shapes').MergeReport['outcome']} outcome
  * @property {string} doc the trunk
  * @property {string} head the trunk's head the merge was composed on
  * @property {string} base the member both sides descend from
  * @property {string} side the daughter or the draft composed
- * @property {'daughter' | 'draft'} form
+ * @property {import('../bridge/shapes').MergeReport['form']} form
  * @property {MergeSide[]} sides
  * @property {MergeRun[]} runs
  * @property {MergeGap[]} gaps the gap report
@@ -809,7 +825,8 @@ const TERMS = /** @type {const} */ (['runs', 'places', 'links', 'retract', 'read
  * @property {number | null} position the write's commit, or the marker's at a re-open; null where nothing landed
  * @property {boolean} fresh a fresh draft was staged for the landing
  * @property {string | null} headMoved the trunk's newer head where one stands
- * @property {string | null} recordLink the merge record's public link; null where it could not be written
+ * @property {string | null} recordLink the merge record's link, homed in the person's private journal beside the record; null
+ * where the record could not be written
  * @property {Refusal | null} unrecorded why the record could not be written
  * @property {string | null} member the member a claim of the person's names, at the `merged` outcome
  * @property {string[]} claims the claims standing at the daughter, at the `merged` outcome; empty elsewhere
@@ -818,7 +835,7 @@ const TERMS = /** @type {const} */ (['runs', 'places', 'links', 'retract', 'read
 /** @param {unknown} v @returns {GapPlacement} */
 function placementOf(v) {
   if (Array.isArray(v)) return v.map(number);
-  return oneOf(v, /** @type {const} */ (['after', 'before', 'omitted']));
+  return oneOf(v, GAP_PLACEMENTS);
 }
 
 /** `merge.compose` → the report, its sides, runs and gaps typed; null where a member is not as declared */
@@ -827,10 +844,10 @@ export function decodeMergeReport(/** @type {unknown} */ answer) {
     const counts = object(a.counts);
     /** @type {MergeReport} */
     const report = {
-      outcome: oneOf(a.outcome, /** @type {const} */ (['landed', 'reopened', 'merged'])),
-      doc: string(a.doc), head: string(a.head), base: string(a.base), side: string(a.side), form: oneOf(a.form, /** @type {const} */ (['daughter', 'draft'])),
-      sides: array(a.sides).map((s) => { const x = object(s); return { at: string(x.at), role: oneOf(x.role, /** @type {const} */ (['head', 'alternative', 'draft', 'fork'])), position: opt(x.position, number) }; }),
-      runs: array(a.runs).map((r) => { const x = object(r); return { origin: string(x.origin), iStart: number(x.i_start), width: number(x.width), side: opt(x.side, number), family: oneOf(x.family, /** @type {const} */ (['own', 'window', 'draft_native'])) }; }),
+      outcome: oneOf(a.outcome, MERGE_OUTCOMES),
+      doc: string(a.doc), head: string(a.head), base: string(a.base), side: string(a.side), form: oneOf(a.form, MERGE_FORMS),
+      sides: array(a.sides).map((s) => { const x = object(s); return { at: string(x.at), role: oneOf(x.role, SIDE_ROLES), position: opt(x.position, number) }; }),
+      runs: array(a.runs).map((r) => { const x = object(r); return { origin: string(x.origin), iStart: number(x.i_start), width: number(x.width), side: opt(x.side, number), family: oneOf(x.family, RUN_FAMILIES) }; }),
       gaps: array(a.gaps).map((g) => {
         const x = object(g);
         return {
@@ -856,7 +873,8 @@ export function decodeMergeReport(/** @type {unknown} */ answer) {
  * @property {boolean} claim whether the edition claim rode in the write
  * @property {string[]} supersede the daughters the write claimed superseded
  * @property {boolean} daughter the head moved under a shot naming no daughter, and the member landed as one
- * @property {string | null} record the merge record's public link; null where it could not be written
+ * @property {string | null} record the merge record's link, homed in the person's private journal; null where it could not be
+ * written
  * @property {Refusal | null} unrecorded why the record could not be written
  * @property {string[]} claims the supersession claims standing at the daughters whose `new` is the member
  * @property {number} retries the record's
@@ -885,7 +903,7 @@ export function decodeMergeLanded(/** @type {unknown} */ answer) {
 
 /**
  * @typedef {Object} Price — the five terms against their caps (`Price`)
- * @property {number[]} lists the five lists' counts: runs, places, links, retract, read_with
+ * @property {number[]} lists the six lists' counts: runs, places, links, retract, read_with, originals
  * @property {number} body the signed body's bytes
  * @property {number} values the distinct draft-native positions
  * @property {number} reads the in-lock reads
@@ -940,16 +958,13 @@ export function decodeCount(/** @type {unknown} */ answer) {
  */
 
 /**
- * @typedef {Object} Window — one own-origin window the three answers are asked for (`Window`)
- * @property {number} run the run's index in the selection — the key `answers` take
+ * @typedef {Object} Window — one window of the selection P2 (i) asks its answers at (`Window`)
+ * @property {number} run the run's index in the selection, the first half of the `⟨run⟩.⟨part⟩` key `answers` take
  * @property {string} origin
  * @property {string} owner the origin's account
  * @property {number} iStart where in the origin the passage was written
  * @property {number} width
- * @property {{run: number, draft: string, record: string, from: ISpan, to: ISpan} | null} counterpart the counterpart offered first; null where no record names the run's words as published
  */
-
-/** @typedef {{chain: string, first: number, width: number}} ISpan — a content I-span (`ISpan`) */
 
 /**
  * @typedef {Object} PublicationPanel — `publication.open`'s answer (`PublicationPanel`): the composition's first steps, every member data
@@ -957,7 +972,8 @@ export function decodeCount(/** @type {unknown} */ answer) {
  * @property {{marks: string[], cut: number, removals: Removal[]}} formatting the formatting line
  * @property {Record<string, boolean>} readWith per published document of the person's, whether the edition is read with it now
  * @property {Count} count at the switches' default
- * @property {Price} price as the request would stand with every window kept private
+ * @property {Price} price as the request would stand with every window part a record names taken by its counterpart and every
+ * other kept private
  * @property {Window[]} windows
  * @property {Array<{draft: string, passages: number}>} inherited per draft `also` names, the statement's count
  * @property {BaseStanding | null} standing the base typed against the document's head; null at the mint form
@@ -967,11 +983,11 @@ export function decodeCount(/** @type {unknown} */ answer) {
 
 /** @param {unknown} v @returns {Array<{start: string, width: string}>} */
 const spansOf = (v) => array(v).map((s) => { const x = object(s); return { start: string(x.start), width: string(x.width) }; });
-/** @param {unknown} v @returns {ISpan} */
-const iSpanOf = (v) => { const x = object(v); return { chain: string(x.chain), first: number(x.first), width: number(x.width) }; };
+/** @type {Record<Extract<RowKind, string>, null>} the kinds of a panel's set but public, which carries whether the edition is read with it (`RowKind`) */
+const ROW_KINDS = { own: null, notes: null, private: null };
 /** @param {unknown} v @returns {RowKind} */
 function rowKindOf(v) {
-  if (typeof v === 'string') return oneOf(v, /** @type {const} */ (['own', 'notes', 'private']));
+  if (typeof v === 'string') return oneOf(v, ROW_KINDS);
   const pub = object(object(v).public);
   return { public: { read_with: boolean(pub.read_with) } };
 }
@@ -1001,10 +1017,7 @@ export function decodePublicationPanel(/** @type {unknown} */ answer) {
       count: countOf(a.count), price: priceOf(a.price),
       windows: array(a.windows).map((w) => {
         const x = object(w);
-        return {
-          run: number(x.run), origin: string(x.origin), owner: string(x.owner), iStart: number(x.i_start), width: number(x.width),
-          counterpart: opt(x.counterpart, (c) => { const y = object(c); return { run: number(y.run), draft: string(y.draft), record: string(y.record), from: iSpanOf(y.from), to: iSpanOf(y.to) }; }),
-        };
+        return { run: number(x.run), origin: string(x.origin), owner: string(x.owner), iStart: number(x.i_start), width: number(x.width) };
       }),
       inherited: array(a.inherited).map((i) => { const x = object(i); return { draft: string(x.draft), passages: number(x.passages) }; }),
       standing: opt(a.standing, (s) => oneOf(s, STANDINGS)), leftBehind: strings(a.left_behind),

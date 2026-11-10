@@ -189,6 +189,7 @@ test('every line the editor\'s screens carry stands as B3 words it at the design
     ['B3.death.ending.shown', 'B3-S2', '— the words held on this device that were never sent are shown there too'],
     ['B3.death.ending.unshown', 'B3-S2', '— the words held on this device that were never sent stay there; this version of the app shows them only in the drafts still open in this window, and not after it closes'],
     ['B3.death.mark', 'B3-S2', 'words held on this device, never sent'],
+    ['B3.hand.unread', 'B3-S2', '— its hand not read yet'],
     ['B3.undo.taken-back.cut', 'B3-S3', 'taken back from ⟨label⟩'],
     ['B3.paste.other-board', 'B3-S5', 'this passage is on ⟨board⟩ — a paste from another board is not offered in this version; when it comes it places the same material here, never a copy; where the other app drops the trace, the words arrive as new bytes; to write about it, annotate it where it stands — ⟨annotate chord⟩ at its passage — or write in your own words in a document of yours — ⟨capture chord⟩ captures them from here — and tie your note to it with link to…'],
     ['B3.quote.other-board.inert', 'B3-S5', 'quoting from another board is not offered in this version — when it comes it places the same material here, never a copy; to write about this passage, annotate it — ⟨annotate chord⟩ — or write in your own words in a document of yours — ⟨capture chord⟩ captures them from here — and tie your note to it with link to…'],

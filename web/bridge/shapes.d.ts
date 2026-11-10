@@ -15,14 +15,14 @@ export type OriginAnswer = 'publish_first' | 'drop' | 'keep_private' | 'counterp
 export type Placement = { whole: { ordinal: number } } | { split: [number, number, number][] } | 'absent';
 export type Term = 'runs' | 'places' | 'links' | 'retract' | 'read_with' | 'body' | 'values' | 'reads' | 'bytes';
 export type AckVia = 'answer' | 'twin' | 'records' | 'walk' | 'edition_claim';
-export type Inert = 'unchanged' | { unanswered: number[] } | { publish_first: number[] };
+export type Inert = 'unchanged' | { unanswered: { run: number; part: number; named: boolean }[] } | { publish_first: { run: number; part: number }[] };
 export type Missing = { copy: number } | { retraction: number };
-export type HandKey = 'own' | 'other' | 'bare' | 'lost';
+export type HandKey = 'own' | 'other' | 'bare' | 'lost' | 'unread';
 export type BaseStanding = 'at_head' | 'behind' | 'first' | 'superseded_first';
 export type GapKind = 'order' | 'anchor' | 'corner' | 'cut' | 'collision' | 'moves';
 export type GapPlacement = number[] | 'after' | 'before' | 'omitted';
 export type MergeChoice = 'keep_both' | 'omit' | { order: number[] } | { keep_only: number } | { after: string } | { before: string };
-export type Refusal = RefusedByBoard | HaltFace | BlockedFace | Unreachable | HeldLinesRefusal | ShellRefusal;
+export type Refusal = RefusedByBoard | HaltFace | BlockedFace | Unreachable | HeldLinesRefusal | WindowPartsOwedRefusal | LandingUnreadRefusal | ShellRefusal;
 export type Outcome<T> = { result: T } | { refused: Refusal };
 export type EventName = 'mode' | 'session-died' | 'daemon' | 'feed' | 'index' | 'moment' | 'held' | 'publication' | 'another-window';
 
@@ -259,7 +259,26 @@ export interface HeldLinesRefusal {
   held: number;
 }
 
-/** a refusal: the shell's own, its detail beside the name (`held_lines`'s declared whole as `HeldLinesRefusal`) */
+/** a refusal: the shell's own `window_parts_owed` (skep #932) — `merge.land`, or an agent's merge tool once one lands, met a window part with no answer: nothing was published, and the landing composes no answer the caller did not give, at any window part. FINAL in meaning and the same for every caller, `skep merge --publish`'s printed refusal composed from the same library data. `parts` every part that needs an answer, `answers` the answers that stand beside them, `misfits` an answer of the shot's that fits nothing or names words another also answers, `left_private` the private sets the shot left out of `merge.land` (each with its count, none at the shot), `defaults` the merge's places left at their defaults (kind, where, as placed). `merge.land` then again with `answers` in the panel's form, each part keyed `⟨run⟩.⟨part⟩` */
+export interface WindowPartsOwedRefusal {
+  kind: 'shell';
+  name: 'window_parts_owed';
+  parts: WindowPart[];
+  answers: WindowPart[];
+  misfits: WindowMisfit[];
+  left_private: LeftPrivate[];
+  defaults: MergeDefault[];
+}
+
+/** a refusal: the shell's own `landing_unread` (§3c.4; skep #866) — `resolve(session, {held, act: 'drop'})` on a line handed over as `answers_lost` with `sent` true reads for the line's landing before it drops anything, since a dial whose answer was lost can commit late and a `poisoned` commit is rebuilt at the board's restart; where that read cannot tell, nothing is dropped and the drop is refused naming `held`, the line, and `why`: `unanswered` the board gave the read no answer, or is not answering the shell, which then makes no read; `unread` the board answered it with no page; `undecided` a row could be the line's landing and the read could not confirm it; `stopped`, `poisoned` or `halted` that hold stands at the board, no read made — the drop is asked again once the board answers and takes writes, and an `undecided` line leaves by `send`, which the board judges by its typed state; the page draws the line as still held, never as discarded */
+export interface LandingUnreadRefusal {
+  kind: 'shell';
+  name: 'landing_unread';
+  held: number;
+  why: 'unanswered' | 'unread' | 'undecided' | 'stopped' | 'poisoned' | 'halted';
+}
+
+/** a refusal: the shell's own, its detail beside the name (`held_lines`'s declared whole as `HeldLinesRefusal`, `window_parts_owed`'s as `WindowPartsOwedRefusal`, `landing_unread`'s as `LandingUnreadRefusal`) */
 export interface ShellRefusal {
   kind: 'shell';
   name: string;
@@ -301,7 +320,7 @@ export interface DeathReason {
   [member: string]: unknown;
 }
 
-/** `daemon(board, state)` */
+/** `daemon(board, state)` — `unreachable` once where a `/health` read of the board goes unanswered, `running` once where one answers again after it: the probe's verdict alone, never one request's failure, the commit stream's among them (P37; skep #863); `stopped` and `running` as the own node's owner stops and starts it, no `unreachable` said while the stop stands */
 export interface DaemonEvent {
   board: string;
   state: 'running' | 'stopped' | 'unreachable';
@@ -376,7 +395,7 @@ export interface HeldAnswer {
   unwritable_class?: 'full' | 'read_only' | 'other';
 }
 
-/** `held(session)` — one held burst of the acting principal at the session's board, in resend order (§3c.2): `held` the ordinal — the line's for the shell's life, naming it until it leaves and no other line after (skep #856) — `doc` the draft, `base` the resend's read start, `frame` the wire frame (no attest) — the page's as composed, or as the shell last shifted it through another writer's change, every position it names moved by one displacement and its `as_of` the state they are true of — `anchors` the page's, where the burst carried them (the `op` row's member): the identities on either side of the span the frame edits and, for a delete or a rearrange, the I-runs of the units it holds, by which the shell shifts it, `sent` whether a dial of the line was attempted since the last read, so it may have landed — a first dial whose answer was lost (the board's `internal_panic` among them), a `poisoned` answer, or any resend, which marks its line before it dials (§3c.2) — kept through a move, `refusal` the verdict for a refused run — the board's, a refusal at a resend under a code the shell's table holds nowhere among them, handed to the person at once, or the shell's `answers_lost` where it handed the person a line no landing of which was found two minutes after its first failed send, whatever the failure (§3c.4): `last` the last failure's token, the held cause or the board's, and `elapsed_ms` the milliseconds since that first failed send — its `sent` kept; at a line held `moved` because the board refused it as typed against an older state and the shift could not move it through the change exactly, the board's `arrangement_moved` (`site.as_of` the state it was typed against, `site.current` the document's); at a line held `head_unreadable`, the shell's refusal naming why its signature could not be made, the line holding all the same (SP-14); at a line held `session_died`, the shell's `session_died` refusal once the session's end derives the death, its `reason` the death's arm (§4b.2; the `retired` arm's `own` among its members), the line holding all the same until a session of the principal's that may write stands and resends it (§3c.4) */
+/** `held(session)` — one held burst of the acting principal at the session's board, in resend order (§3c.2): `held` the ordinal — the line's for the shell's life, naming it until it leaves and no other line after (skep #856) — `doc` the draft, `base` the resend's read start, `frame` the wire frame (no attest) — the page's as composed, or as the shell last shifted it through another writer's change, every position it names moved by one displacement and its `as_of` the state they are true of — `anchors` the page's, where the burst carried them (the `op` row's member): the identities on either side of the span the frame edits and, for a delete or a rearrange, the I-runs of the units it holds, by which the shell shifts it, `sent` whether a dial of the line was attempted since the last read, so it may have landed — a first dial whose answer was lost (the board's `internal_panic` among them), a `poisoned` answer, or any resend, which marks its line before it dials (§3c.2) — kept through a move, `refusal` the verdict for a refused run — the board's, a refusal at a resend under a code the shell's table holds nowhere among them, handed to the person at once, or the shell's `answers_lost` where it handed the person a line no landing of which was found two minutes after its first failed send, whatever the failure (§3c.4): `last` the last failure's token, the held cause or the board's, and `elapsed_ms` the milliseconds since that first failed send — its `sent` kept, a drop of it then reading for its landing first (`Resolve`; skep #866); at a line held `moved` because the board refused it as typed against an older state and the shift could not move it through the change exactly, the board's `arrangement_moved` (`site.as_of` the state it was typed against, `site.current` the document's); at a line held `head_unreadable`, the shell's refusal naming why its signature could not be made, the line holding all the same (SP-14); at a line held `session_died`, the shell's `session_died` refusal once the session's end derives the death, its `reason` the death's arm (§4b.2; the `retired` arm's `own` among its members), the line holding all the same until a session of the principal's that may write stands and resends it (§3c.4) */
 export interface HeldRow {
   held: number;
   doc: string;
@@ -403,7 +422,7 @@ export interface BurstPiece {
   width: number;
 }
 
-/** `held(board, session, {doc, held, state, cause?, hands?})` (§4b.2) — a document's held state as it moves, always under the session it is about (never the guest face, P39); `held` the count of lines still held on the document, `cause` the line's cause — the hold's token while `holding`, the refusal's token while `refused`; `hands` with the `moved` state, EACH HAND ONCE, read off the `under=` rows since the burst's typed state or the person's last `send` on the document, whichever is later (a document moved again after that `send` names only the hands since it) — the board's refusal of it as typed against an older state (`arrangement_moved`), at its first dial or at a resend, where the shell could not shift the burst through the change exactly (no anchors, a delete or a rearrange without its span, an anchor lost or at two places, the span between them cut or refilled), is the one route to `moved`; a burst it shifts is sent again and lands, no `moved` said; the resend's read judges only whether the line's own write landed (§3c.5); emitted at a hold's start, at each line's resolution or drop, and at each state the resend moves the document through — never when a principal's file is read at its session's open, whose lines `held(session)` lists, nor for a line a call enters, shifts and settles within itself */
+/** `held(board, session, {doc, held, state, cause?, hands?})` (§4b.2) — a document's held state as it moves, always under the session it is about (never the guest face, P39); `held` the count of lines still held on the document, `cause` the line's cause — the hold's token while `holding`, the refusal's token while `refused`; `hands` with the `moved` state, EACH HAND ONCE, read off the `under=` rows since the burst's typed state or the person's last `send` on the document, whichever is later (a document moved again after that `send` names only the hands since it) — the board's refusal of it as typed against an older state (`arrangement_moved`), at its first dial or at a resend, where the shell could not shift the burst through the change exactly (no anchors, a delete or a rearrange without its span, an anchor lost or at two places, the span between them cut or refilled), is the one route to `moved`; a burst it shifts is sent again and lands, no `moved` said; a shift whose live read the board gave no answer to is not tried and says no `moved`, the document `holding` until the board answers; the resend's read judges only whether the line's own write landed (§3c.5); emitted at a hold's start, at each line's resolution or drop, and at each state the resend moves the document through — the one document a resend the board's silence cut back to `holding`, the documents the pass did not reach said nothing (skep #863) — never when a principal's file is read at its session's open, whose lines `held(session)` lists, nor for a line a call enters, shifts and settles within itself */
 export interface HeldEvent {
   board: string;
   session: string;
@@ -414,14 +433,14 @@ export interface HeldEvent {
   hands?: Hand[];
 }
 
-/** one hand whose row moved a held document (§3c.5): `own` this store's own key with its fingerprint, `other` another key with its fingerprint and the label the shell's key store holds for it (rendered inert), `bare` an unsigned hand under local trust, `lost` a row whose testimony the board lost — the data of the three forms the moved face draws, the strings `ux/copy.md`'s */
+/** one hand whose row moved a held document (§3c.5): `own` this store's own key with its fingerprint, `other` another key with its fingerprint and the label the shell's key store holds for it (rendered inert), `bare` an unsigned hand under local trust, `lost` a row whose testimony the board lost — the data of the three forms the moved face draws, the strings `ux/copy.md`'s; `unread`, the one hand, where the board gave the read of the rows no answer after a real verdict — the hands not read yet, never `lost`, read again when the board answers and the `moved` state said once more with them (skep #863) */
 export interface Hand {
   key: HandKey;
   fingerprint?: string;
   label?: string;
 }
 
-/** `resolve(session, {held, act})` — the person's act at a REFUSED run's face or a MOVED document's */
+/** `resolve(session, {held, act})` — the person's act at a REFUSED run's face or a MOVED document's; answered `{}`, save a `drop` of a line handed over as `answers_lost` with `sent` true, which reads for the line's landing first (§3c.4; skep #866): a landing found keeps the line, nothing dropped, the lines behind it going out in order, answered `{kept: true}`; none that could be its landing drops it, answered `{}`; a read that cannot tell drops nothing, refused `landing_unread` (`LandingUnreadRefusal`); a read the death signal met ends the session, `session_died` — the page takes the outcome from the answer, the `held` event saying `kept` with `held: 0` after a drop as after a keep */
 export interface Resolve {
   session: string;
   held: number;
@@ -441,7 +460,7 @@ export interface Run {
   width: number;
 }
 
-/** `publication.open(session, {draft, also?, doc?, mint?, claim?, selection?, notes?, readable_drafts?, published?})` — THE PANEL: the composition's first steps run by the shell (`enumerate` → `panel` → the price), every member DATA with a code or a kind and never a string a person reads; `draft` the RENDERING draft, `also` the OTHER private drafts of the person's own whose words this publication re-mints as the document's own beside it (the Nelson way — the family: the staging draft and the alternatives made from it, never the notes), each keeping its own records; the draft's BASE the shell's own read off the board, never the page's — the base the board records for the draft, the version its `stage` copied (the bare document while the chain is empty) or the member its newest publication made — so the shot lands after it, or as its daughter where the trunk has moved past it; a draft the board records no base for is refused `base_unrecorded {draft, doc, reason}` — `reason` `no_record` (minted and never staged), `other_chain` (a base in another document's chain) or `free_standing` (an alternative of a draft with no base) — the one refusal of a base, every standing of a recorded one told; `rows` the sets in the RULED order — own, notes, private, public by address; `read_with` per published document of the person's whether the edition is read with it now; `count` at the switches' DEFAULT — every private row OFF; `price` the five terms against their caps, as the request would stand with every window kept private; `windows` the own-origin windows the three answers are asked for, the drafts `also` names EXCLUDED; `inherited` per draft `also` names, in its order, THE STATEMENT's count — the passages first written in it (B3-S11 P2 (i)); `standing` the base TYPED against the document's head before any act — `at_head`, `behind` (told and never refused: the shot lands the base's daughter, the head unmoved), `first` (the bare document, its chain empty) or `superseded_first` (the draft was begun from the bare document and version 1 has since been published: told, never refused — the shot lands beside version 1 as its daughter, the head unmoved) — absent at the mint form; `left_behind` the drafts of the family this publication leaves behind, by address: every draft `also` names, then, where it becomes the head (`at_head`, `first`), every other draft of the person's own whose recorded base is this draft's — empty at the mint form; `hold` where a HELD publication of this draft stood and is re-opened as it stands, with the switches and answers the page last sent it (item 1 (a)), its standing typed again */
+/** `publication.open(session, {draft, also?, doc?, mint?, claim?, selection?, notes?, readable_drafts?, published?})` — THE PANEL: the composition's first steps run by the shell (`enumerate` → `panel` → the price), every member DATA with a code or a kind and never a string a person reads; `draft` the RENDERING draft, `also` the OTHER private drafts of the person's own whose words this publication re-mints as the document's own beside it (the Nelson way — the family: the staging draft and the alternatives made from it, never the notes), each keeping its own records; the draft's BASE the shell's own read off the board, never the page's — the base the board records for the draft, the version its `stage` copied (the bare document while the chain is empty) or the member its newest publication made — so the shot lands after it, or as its daughter where the trunk has moved past it; a draft the board records no base for is refused `base_unrecorded {draft, doc, reason}` — `reason` `no_record` (minted and never staged), `other_chain` (a base in another document's chain) or `free_standing` (an alternative of a draft with no base) — the one refusal of a base, every standing of a recorded one told; `rows` the sets in the RULED order — own, notes, private, public by address; `read_with` per published document of the person's whether the edition is read with it now; `count` at the switches' DEFAULT — every private row OFF — and every window awaiting its answer, which counts toward nothing; `price` the five terms against their caps, as the request would stand with every window part a record names taken by its counterpart and every other kept private; `windows` the own-origin windows, each in its PARTS with the answers each part admits (B3-S11 P2 (i)), the drafts `also` names EXCLUDED; `parts` what each part's answer brings, the answered row's clause's data; `inherited` per draft `also` names, in its order, THE STATEMENT's count — the passages first written in it (B3-S11 P2 (i)); `merge_records` per named draft whose runs of the selection hold any, in the selection's order, the merge records the publication leaves out — no publication publishes a merge record, so a journal's records stay private and its arrangement keeps them, and a selection of merge records alone is refused `only_merge_records {draft}`; `edition_links` how many of the document's own links lie on the words this publication re-inserts — the ⟨n⟩ of the link-sets design §5.2's line "⟨n⟩ of ⟨E⟩'s own links on these words stay on this draft's earlier words", read once at the open, nothing written for them and no answer changing it; `p3_stands` whether P3 stands (E4 1.4): a private row holding a link not unchanged since the recorded base, the formatting line's marks or listed removals, a re-offered original, a public row's link on words this version publishes as new, or `edition_links` above zero — where none stands, P2's own line says the links stayed private; `standing` the base TYPED against the document's head before any act — `at_head`, `behind` (told and never refused: the shot lands the base's daughter, the head unmoved), `first` (the bare document, its chain empty) or `superseded_first` (the draft was begun from the bare document and version 1 has since been published: told, never refused — the shot lands beside version 1 as its daughter, the head unmoved) — absent at the mint form; `left_behind` the drafts of the family this publication leaves behind, by address: every draft `also` names, then, where it becomes the head (`at_head`, `first`), every other draft of the person's own whose recorded base is this draft's — empty at the mint form; `hold` where a HELD publication of this draft stood and is re-opened as it stands, with the switches and answers the page last sent it (item 1 (a)), its standing typed again */
 export interface PublicationPanel {
   rows: PublicationRow[];
   formatting: Formatting;
@@ -449,13 +468,17 @@ export interface PublicationPanel {
   count: Count;
   price: Price;
   windows: Window[];
+  parts: PartCounts[];
   inherited: Inherited[];
+  merge_records: MergeRecords[];
+  edition_links: number;
+  p3_stands: boolean;
   standing?: BaseStanding;
   left_behind: string[];
   hold?: Hold;
 }
 
-/** one set of the panel: `home` the set, `kind` own, notes, private or public with whether the edition is read with it, `label` the home's first line (rendered INERT, AUTH-5.2), `links` the row's offered links BY ADDRESS, `types` the fold by type with each type's count and its far documents, `line` the five counts P3's lines are drawn from, `read_through` the private move's share where the row stays OFF */
+/** one set of the panel: `home` the set, `kind` own, notes, private or public with whether the edition is read with it, `label` the home's first line (rendered INERT, AUTH-5.2), `links` the row's offered links BY ADDRESS, `types` the fold by type with each type's count and its far documents, `line` the five counts P3's lines are drawn from, `read_through` the private move's share where the row stays OFF, `unchanged` the row's links UNCHANGED SINCE THE RECORDED BASE (E4 1.1: made before the version the request's `base` names, every word it touches on the selection held by that version, none new) BY ADDRESS, in `links`' order, `fold` the two counts (E4 1.8) — a private row whose every link is unchanged is drawn compact, one with any changed whole, folded by change; where the base is no version member nothing is unchanged — and `changed_types` and `unchanged_types` the same fold by type as `types` over each side of `fold` alone (E4 1.3): a row folded by change draws its head's type counts and far documents from `changed_types`, not `types`, and the line under it from `unchanged_types`, a far document reached from both sides standing in both */
 export interface PublicationRow {
   home: string;
   kind: RowKind;
@@ -464,13 +487,23 @@ export interface PublicationRow {
   types: TypeFold[];
   line: RowLine;
   read_through: number;
+  unchanged: string[];
+  fold: RowFold;
+  changed_types: TypeFold[];
+  unchanged_types: TypeFold[];
 }
 
-/** the links of one type in a row: the type's address, how many of the row's links carry it, each far document they point into in address order */
+/** the links of one type among those a row's fold by type takes: the type's address, how many of those links carry it, each far document they point into in address order */
 export interface TypeFold {
   ty: string;
   n: number;
   far: string[];
+}
+
+/** a row's links counted by the fold's test (E4 1.8): `unchanged` those unchanged since the recorded base, `changed` the rest */
+export interface RowFold {
+  unchanged: number;
+  changed: number;
 }
 
 /** the five counts of a row's line: ⟨p⟩ links with an end into a private document, ⟨d⟩ links with an end wholly on words of the draft the selection leaves out, ⟨c⟩ links with an end running past the selection's cut, ⟨t⟩ links typed by a private document, ⟨u⟩ revisions of links already published, not offered */
@@ -489,7 +522,7 @@ export interface Formatting {
   removals: Removal[];
 }
 
-/** one held removal on the job list: `record` the `3.24` record in the draft, `mark` the published mark it names, `mark_value` the mark's value as stored, `on_selection` whether the mark is on the selection's words, `spent` whether a retraction of it already stands, `remake` the formatting-line mark that re-makes it, where one does */
+/** one held removal on the job list: `record` the `3.24` record in the draft, `mark` the published mark it names, `mark_value` the mark's value as stored, `on_selection` whether the mark is on the selection's words, `spent` whether a retraction of it already stands, `remake` the formatting-line mark that re-makes it, where one does; `original` the person's own original the mark stands for — the `old` of the mark's accept claim, found from the copy — where the mark is of the formatting types and such a claim stands, which the one commit ENDS with the mark through the request's `originals` rider (outside the signed body), null for a mark of another type or one with no original standing; `rest` the original's words no copy ever covered, kept formatted by a fresh mark of its type in the one commit, empty where none */
 export interface Removal {
   record: string;
   mark: string;
@@ -497,6 +530,8 @@ export interface Removal {
   on_selection: boolean;
   spent: boolean;
   remake: string | null;
+  original: string | null;
+  rest: ISpan[];
 }
 
 /** a link's value as stored: the three slots as spans, and the position of the commit that minted it — null where the board serves none */
@@ -513,7 +548,7 @@ export interface LinkSpan {
   width: string;
 }
 
-/** `publication.count(session, {switches, answers})` — THE COUNT: PUB-3.8's four numbers as DATA (DECISION 5) — ⟨l⟩ the switched-on sets' `links` entries plus the `read_with` entries, ⟨n⟩ the formatting line's marks that re-make nothing, ⟨r⟩ the `retract` entries no re-make covers, ⟨e⟩ the re-makes — `claim` whether the one write carries the edition claim, `read_with` the entries the switches need: each switched-on row's destination other than the member, once, where the edition is not already read with it; `supersede` THE SUPERSESSION CLAIM the one write carries — the published daughters the draft's merge marker names, each one claim in the commit marking the daughter superseded by the member (the slot's merge form, B3-S11's THE MERGE SCENE) — composed by the shell at the open off the board's marker alone, never session memory, and ONLY where the marker's head is the trunk's head as read at the open: empty at an unmarked draft, at a marked draft behind the head, and at a draft-side merge, whose side is a private draft no public claim supersedes */
+/** `publication.count(session, {switches, answers})` — THE COUNT: PUB-3.8's four numbers as DATA (DECISION 5) — ⟨l⟩ the switched-on sets' `links` entries plus the `read_with` entries, ⟨n⟩ the formatting line's marks that re-make nothing, ⟨r⟩ the `retract` entries no re-make covers, ⟨e⟩ the re-makes — `claim` whether the one write carries the edition claim, `read_with` the entries the switches need: each switched-on row's destination other than the member, once, where the edition is not already read with it; `supersede` THE SUPERSESSION CLAIM the one write carries — the published daughters the draft's merge marker names, each one claim in the commit marking the daughter superseded by the member (the slot's merge form, B3-S11's THE MERGE SCENE) — composed by the shell off the board's marker alone, never session memory, at the open and again at a confirm that finds the draft's base moved, and ONLY where the marker's head is the trunk's head as read there: empty at an unmarked draft, at a marked draft behind the head, and at a draft-side merge, whose side is a private draft no public claim supersedes */
 export interface Count {
   l: number;
   n: number;
@@ -524,7 +559,7 @@ export interface Count {
   supersede: string[];
 }
 
-/** THE PRICE: the five terms against their caps — `lists` the five lists (`runs`, `places`, `links`, `retract`, `read_with`; 4,096 each), `body` the signed body (8 MiB), `values` the distinct draft-native positions (131,072), `reads` the in-lock reads (65,536), `bytes` the staged bytes (64 MiB) — and `over`, each term past its cap with how far: a non-empty `over` is refused `over_cap` at `confirm` BEFORE ANY FRAME (P13); `count` re-runs it over the rows as switched, so the caps are decided at P3 as a set flips */
+/** THE PRICE: the five terms against their caps — `lists` the six lists (`runs`, `places`, `links`, `retract`, `read_with`, `originals`; 4,096 each), `body` the signed body (8 MiB), `values` the distinct draft-native positions (131,072), `reads` the in-lock reads (65,536), `bytes` the staged bytes (64 MiB) — and `over`, each term past its cap with how far: a non-empty `over` is refused `over_cap` at `confirm` BEFORE ANY FRAME (P13); `count` re-runs it over the rows as switched, so the caps are decided at P3 as a set flips */
 export interface Price {
   lists: number[];
   body: number;
@@ -540,14 +575,75 @@ export interface PriceOver {
   by: number;
 }
 
-/** one own-origin window P2 (i) asks the three answers for: a run of the selection that windows an unpublished draft of the person's own — the drafts `also` names EXCLUDED, their runs re-minted as the document's own words and not windowed (their count is `inherited`) — `run` the run's index in the selection (the key `answers` take), `origin` and `width` the run's own, `owner` the origin's account, `i_start` WHERE IN ⟨origin⟩ THE PASSAGE WAS WRITTEN (the run's first ordinal in ⟨origin⟩'s I-space), `counterpart` where a record of a draft the person reads names the run's words as published, offered FIRST and re-read at every open; NO ANSWER PRE-SELECTED (P50) */
+/** one window P2 (i) asks its answers at: a run of the selection that windows an unpublished draft of the person's own or, at a merge, another account's unpublished document (skep #932; a published origin is never asked) — the drafts `also` names EXCLUDED, their runs re-minted as the document's own words and not windowed (their count is `inherited`) — `run` the run's index in the selection, `origin` and `width` the run's own, `owner` the origin's account, `i_start` WHERE IN ⟨origin⟩ THE PASSAGE WAS WRITTEN (the run's first ordinal in ⟨origin⟩'s I-space), `parts` the stretches the draft arranges of it, cut where a record of a draft the person reads names its words as published, each answered on its own and re-read at every open; NO ANSWER PRE-SELECTED (P50), and a window awaiting its answer counts toward nothing */
 export interface Window {
   run: number;
   origin: string;
   owner: string;
   i_start: number;
   width: number;
-  counterpart?: Counterpart;
+  parts: Part[];
+}
+
+/** one part of a window — the key `answers` take is `⟨run⟩.⟨part⟩` — `from` its words on ⟨origin⟩'s chain, `ordinal` where the draft arranges its first word, `admits` the answers it takes: where a record names its words as published, `record` that record and `to` the published words it names — THE COUNTERPART — and `admits` the counterpart ("window them from version ⟨j⟩") and `drop` alone, a placeholder over words anyone reads at the published version being no answer; where none does, `publish_first`, `drop` and `keep_private`, `publish_first` not at another account's words, which are not the person's to publish */
+export interface Part {
+  part: number;
+  from: ISpan;
+  ordinal: number;
+  admits: OriginAnswer[];
+  record?: string;
+  to?: ISpan;
+}
+
+/** one window part as the landing names it — a part that needs an answer in `window_parts_owed`, or an answer given in `MergeLanded.answers`: `run` and `part` its key as `publication.confirm` takes it (`⟨run⟩.⟨part⟩`), `words` its first words (`null` where the merger may not read them) and `after` the words it stands after in the merged text (`null` at the start, empty where the words before are not readable), each rendered inert; `ordinal` its first position in the merged text; `origin` its origin, `owner` that origin's owner where it is not the person; `span` its words on the origin's chain; where a record names them as published, `record` the record, `counterpart` the published words it names and `version` ⟨E.j⟩, the member that publishes them; `sides` each published side of the merge whose version shows the part as a placeholder; `admits` the answers it takes; `answer` the answer given, where one stands; `named_since` whether a record named the part only after its answer was given (PUB-3.108) */
+export interface WindowPart {
+  run: number;
+  part: number;
+  words: string | null;
+  after: string | null;
+  ordinal: number;
+  origin: string;
+  owner: string | null;
+  span: ISpan;
+  record: string | null;
+  counterpart: ISpan | null;
+  version: string | null;
+  sides: string[];
+  admits: OriginAnswer[];
+  answer: OriginAnswer | null;
+  named_since: boolean;
+}
+
+/** one answer of `skep merge --publish`'s the landing cannot place: `flag` the answer (`window`, `leave_out`, `keep_private`) and `key` its address; with `second`, two answers name the same words; without it, the answer fits nothing here, `published_in` the versions that publish the words of an origin the answer named where a record names all of them */
+export interface WindowMisfit {
+  flag: 'window' | 'leave_out' | 'keep_private';
+  second?: 'window' | 'leave_out' | 'keep_private';
+  key: string;
+  published_in: string[];
+}
+
+/** a private set the landing left out, as `merge.land`'s acknowledgment and refusal name it (`stayed private: ⟨links⟩ links in ⟨set⟩ — your next version offers them again`) */
+export interface LeftPrivate {
+  set: string;
+  links: number;
+}
+
+/** one of the merge's places left at its default, as the reveal lists them: `id` its gap, `kind`, `after` and `before` its anchors, `placed` as placed */
+export interface MergeDefault {
+  id: number;
+  kind: 'order' | 'anchor' | 'corner' | 'cut' | 'collision' | 'moves';
+  after: string | null;
+  before: string | null;
+  placed: number[] | 'after' | 'before' | 'omitted';
+}
+
+/** what one window part's answer brings — the data of the answered row's clause (B3-S11 P2 (i)), the words the page's: the part by `run` and `part`; taken by its counterpart, `marks` the formatting line's marks on the published words, which go out with them, and `links` the private rows' offered links on them, offered next; kept behind a placeholder, `kept_marks` the person's formatting marks on its words, which stay in the draft until a version shows them; zeros at a part left out or awaiting its answer */
+export interface PartCounts {
+  run: number;
+  part: number;
+  marks: number;
+  links: number;
+  kept_marks: number;
 }
 
 /** THE STATEMENT's count for one draft `also` names (B3-S11 P2 (i)'s statement before the act — "⟨n⟩ passages first written in ⟨D⟩ publish as ⟨E⟩'s own words; ⟨D⟩ keeps a record of where they went" — the statement itself the page's): `draft` the draft, `passages` ⟨n⟩ — the selection's runs of that origin, consecutive runs of one origin in the selection's V-order counted once; the rendering draft's own words are counted nowhere */
@@ -556,13 +652,10 @@ export interface Inherited {
   passages: number;
 }
 
-/** the counterpart offered first at a window: `record` the record of `draft`, a draft the person reads, that names the run's words as published — `from` the part of the run it covers, on the run's own chain, `to` the published span that part became */
-export interface Counterpart {
-  run: number;
+/** the merge records of one named draft the selection holds, which the publication leaves out — the data of "⟨n⟩ merge records in ⟨label⟩ stay private and are not published with it" (one: "1 merge record in ⟨label⟩ stays private and is not published with it"), the statement the page's: `draft` the draft the records were written in, `n` ⟨n⟩ */
+export interface MergeRecords {
   draft: string;
-  record: string;
-  from: ISpan;
-  to: ISpan;
+  n: number;
 }
 
 /** a content I-span: `chain` the content chain (`document.0.1`), `first` its first ordinal, `width` its positions */
@@ -594,7 +687,7 @@ export interface Acknowledged {
   via: AckVia;
 }
 
-/** `publication.confirm` — THE RE-STATEMENT: P4's RE-READ found the draft moved since the panel — `left` links gone or retracted, `superseded` links a claim of the person's superseded since, `came` links arrived, `removals_undone` and `removals_came` the held removals' job list moved, `selection` held runs whose placement changed with where each stands now — or THE BASE's STANDING moved — NOTHING SENT (PUB-3.108): the page re-renders P2 from it and confirms again; `race` where the re-statement follows the board's `kept_place_moved`, the newest row under the draft that refusal named — the rendering draft, or one `also` names — since the request's reads and its key; `standing` where the base's standing moved since the panel — a sibling's shot landing while it stood, `at_head` → `behind`, or `first` → `superseded_first` for a draft begun from the bare document, whose shot then lands beside version 1 as its daughter — as the re-read typed it, the panel's own from then on (a re-read finding the base no longer recorded refuses as the open does, `base_unrecorded`) */
+/** `publication.confirm` — THE RE-STATEMENT: P4's RE-READ found the draft moved since the panel — `left` links gone or retracted, `superseded` links a claim of the person's superseded since, `came` links arrived, `removals_undone` and `removals_came` the held removals' job list moved, `selection` held runs whose placement changed with where each stands now — or THE DRAFT'S BASE, or its STANDING, moved — NOTHING SENT (PUB-3.108; D4 (b′)): the page re-renders P2 from it and confirms again; `parts` the window parts named, un-named or named by another record since the panel — an origin published meanwhile — each `{run, part, record}` with the record naming it now, null where none does, its answer asked again unless it left the words out; `left_out` where the board refused an entry by its LINEAGE (B3-S11 P4) — its words already carrying its copy (`superseded`), or its original retracted (`retracted`) — the entry by its index, the original, the cause: the original left out of the panel from then on, the re-statement saying what the version now publishes, never the own-bug class alone; `race` where the re-statement follows the board's `kept_place_moved`, the newest row under the draft that refusal named — the rendering draft, or one `also` names — since the request's reads and its key, or a lineage refusal a change of the person's since those reads explains, the newest row under that change's home; `base` where the draft's recorded base differs from the panel's in member or extent — another publication of this draft or a merge landed in it since the panel, which a moved standing need not show (`at_head` both times where the draft itself made the new head) — the base as the re-read read it, present only then: the panel re-composed on it and the claim on the marker as it stands (`Count.supersede`), so the next confirm sends against that base and the request's `base` is the member the panel was tested against; a panel of the whole draft re-takes what the draft now arranges, `selection` then empty, the runs' indices no longer lining up, a draft emptied since keeping the held runs, re-stated absent — a selection the page passed stays held, re-stated over what is left, and a confirm over one the draft has wholly left is refused `selection_not_arranged`, nothing sent; `standing` where the base's standing moved since the panel — a sibling's shot landing while it stood, `at_head` → `behind`, or `first` → `superseded_first` for a draft begun from the bare document, whose shot then lands beside version 1 as its daughter — as the re-read typed it, the panel's own from then on (a re-read finding the base no longer recorded refuses as the open does, `base_unrecorded`) */
 export interface Restated {
   outcome: 'restated';
   left: string[];
@@ -603,7 +696,10 @@ export interface Restated {
   removals_undone: string[];
   removals_came: string[];
   selection: { run: number; placement: Placement }[];
+  parts?: { run: number; part: number; record: string | null }[];
+  left_out?: { entry: number; original: string; cause: 'superseded' | 'retracted' }[];
   race?: RaceKey;
+  base?: string;
   standing?: BaseStanding;
 }
 
@@ -630,7 +726,7 @@ export interface PublicationEvent {
   [member: string]: unknown;
 }
 
-/** `merge.compose(session, {doc, alternative, into?})` — or THE DRAFT SIDE, `merge.compose(session, {doc, draft, into?})` — THE REPORT, brief-shaped as the publication panel is, every member DATA and never a string: `outcome` — `landed`, M landed into `into` by ONE `set_arrangement` (the draft named, or a FRESH draft staged from the head first where none is named, `fresh` true), typed against the compose's read of the draft, the draft's recorded base re-recorded to the head and the marker set beside it, `position` the write's commit, `head_moved` the trunk's newer head where one stands (LAND AND TELL: the write landed on the head it composed on), `record_link` the merge record's public link, or null where the record could not be written and the landing stands (`unrecorded` the refusal, for a later `merge.compose` to record); `reopened`, the draft `into` already carrying this merge (its marker naming the side and the head): the report with NOTHING landed, the side read as compose read it — at the marker's position, `position` — and each unsettled gap's state read off the draft as it stands, settled `person` where the draft no longer arranges the gap's default as M placed it (its runs removed whole, or reordered); `merged`, a daughter a supersession claim of the person's own already names: `member` the member that claim names, `claims` the claims standing at the daughter, `record_link` the record of that merge — written now where none named it — and nothing landed; `doc` the trunk, `head` the trunk's head the merge was composed on (the marker's at a re-open), `base` the member both sides descend from, derived, `side` the daughter or the draft composed, `form` which, `sides` the record's sides with the position a draft side was read at, `runs` M with each run's side and family, `gaps` THE GAP REPORT — each gap its kind (`order`, `corner`, `cut`, `collision`, `moves` unsettled; `anchor` settled by the rules), its anchors, the runs placed with their sides, the placement as it stands (the default), `settled` and `resolved_by` (`rule`, `person`, `agent`, `answer:<address>`, or null) — `counts` the run counts, `m` against `cap`, `over_cap` where it passes it (the composition answered, nothing landed, the refusal `over_cap`), `record` the merge record's body as it stands — unlanded at a re-open — and `as_of` the one board position every read was made at */
+/** `merge.compose(session, {doc, alternative, into?})` — or THE DRAFT SIDE, `merge.compose(session, {doc, draft, into?})` — THE REPORT, brief-shaped as the publication panel is, every member DATA and never a string: `outcome` — `landed`, M landed into `into` by ONE `set_arrangement` (the draft named, or a FRESH draft staged from the head first where none is named, `fresh` true where this call staged it — false for a draft named and for a landing of the person's own of the key found standing, nothing staged), typed against the compose's read of the draft, the draft's recorded base re-recorded to the head and the marker set beside it, `position` the write's commit, `head_moved` the trunk's newer head where one stands (LAND AND TELL: the write landed on the head it composed on), `record_link` the merge record's link, homed in the person's private journal beside the record, or null where the record could not be written and the landing stands (`unrecorded` the refusal, for a later `merge.compose` to record); `reopened`, the draft `into` already carrying this merge (its marker naming the side and the head): the report with NOTHING landed, the side read as compose read it — at the marker's position, `position` — and each unsettled gap's state read off the draft as it stands, settled `person` where the draft no longer arranges the gap's default as M placed it (its runs removed whole, or reordered); `merged`, a daughter a supersession claim of the person's own already names: `member` the member that claim names, `claims` the claims standing at the daughter, `record_link` the record of that merge — the person's own, written now where none of theirs named it — and nothing landed; `doc` the trunk, `head` the trunk's head the merge was composed on (the marker's at a re-open), `base` the member both sides descend from, derived, `side` the daughter or the draft composed, `form` which, `sides` the record's sides with the position a draft side was read at, `runs` M with each run's side and family, `gaps` THE GAP REPORT — each gap its kind (`order`, `corner`, `cut`, `collision`, `moves` unsettled; `anchor` settled by the rules), its anchors, the runs placed with their sides, the placement as it stands (the default), `settled` and `resolved_by` (`rule`, `person`, `agent`, `answer:<address>`, or null) — `counts` the run counts, `m` against `cap`, `over_cap` where it passes it (the composition answered, nothing landed, the refusal `over_cap`), `record` the merge record's body as it stands — unlanded at a re-open — and `as_of` the one board position every read was made at */
 export interface MergeReport {
   outcome: 'landed' | 'reopened' | 'merged';
   doc: string;
@@ -698,7 +794,7 @@ export interface RunCounts {
   m: number;
 }
 
-/** `merge.land(session, {resolutions?})` — THE LANDING ON THE TRUNK: the shot through the publication family's one composition and send from the draft the composition landed in — the panel standing for it, with the switches and answers the page last sent, or one the shell opens over the whole draft, every private row OFF and every window kept private — THE REQUEST CARRYING THE SUPERSESSION CLAIM as the panel composed it at its open (`Count.supersede`), then THE MERGE RECORD, its own write, idempotent by reading first: `member` the member minted, `at` its commit, `via` and `claim` the acknowledgment's, `supersede` the daughters the write claimed superseded (`Acknowledged.supersede`), `daughter` whether the head moved under a shot naming NO daughter — the draft side's — and the member landed as a daughter, reported as a race is and never a silent success, `record` the merge record's public link, null where the member stands and its record could not be written (`unrecorded` the refusal; the next `merge.compose` of the daughter records it), `claims` the supersession claims standing at the daughters whose `new` is the member, `retries` the record's; the composition is gone with the landing; the panel's RE-STATEMENT (`Restated`) and its typed REFUSAL (`PublicationRefused`) are the other two shapes — the race, `supersede_refused` with `detail` `head_moved` and `head` the trunk's, crossing as the board answered it, NOTHING RE-SENT, the composition gone, to be made again on that head; `no_merge` where nothing is composed; `held_lines` (`HeldLinesRefusal`) where the draft the composition landed in, or a draft the shot names `also`, holds lines of yours the board has not kept, nothing sent */
+/** `merge.land(session, {resolutions?, answers?})` — THE LANDING ON THE TRUNK: the shot through the publication family's one composition and send from the draft the composition landed in — the panel standing for it, with the switches and answers the page last sent, or one the shell opens over the whole draft, every private row OFF, under the answers the call names (`Record<string, OriginAnswer>`, keyed `⟨run⟩.⟨part⟩` as `publication.confirm`'s are), the landing composing NO answer the caller did not give at any window part — an unanswered part refuses `window_parts_owed` (`WindowPartsOwedRefusal`), every part named whole, nothing sent — THE REQUEST CARRYING THE SUPERSESSION CLAIM as the panel composed it, at its open or at a confirm that found the draft's base moved (`Count.supersede`), then THE MERGE RECORD, its own write, idempotent by reading first: `member` the member minted, `at` its commit, `via` and `claim` the acknowledgment's, `supersede` the daughters the write claimed superseded (`Acknowledged.supersede`), `daughter` whether the head moved under a shot naming NO daughter — the draft side's — and the member landed as a daughter, reported as a race is and never a silent success, `record` the merge record's link, homed in the person's private journal, null where the member stands and its record could not be written (`unrecorded` the refusal; the next `merge.compose` of the daughter records it), `claims` the supersession claims standing at the daughters whose `new` is the member, `retries` the record's, `answers` each window part's answer as given, `left_private` each private set this landing left out with its count, `defaults` each of the merge's places left at its default; the composition is gone with the landing; the panel's RE-STATEMENT (`Restated`) and its typed REFUSAL (`PublicationRefused`) are the other two shapes — the race, `supersede_refused` with `detail` `head_moved` and `head` the trunk's, crossing as the board answered it, NOTHING RE-SENT, the composition gone, to be made again on that head; `no_merge` where nothing is composed; `held_lines` (`HeldLinesRefusal`) where the draft the composition landed in, or a draft the shot names `also`, holds lines of yours the board has not kept, nothing sent */
 export interface MergeLanded {
   outcome: 'landed';
   member: string;
@@ -711,9 +807,12 @@ export interface MergeLanded {
   unrecorded?: Refusal;
   claims: string[];
   retries: number;
+  answers: WindowPart[];
+  left_private: LeftPrivate[];
+  defaults: MergeDefault[];
 }
 
-/** `merge.undo(session)` — the landing's one undo step while the session that landed it stands: ONE `set_arrangement` carrying the arrangement the draft held before the landing, its runs mapped through the correspondence records where a publication made its words public since, its old base as the base to record, and no marker, typed against this shell's own last acknowledged arrangement write on the draft, or the landing's position where that is later (the library's R6 with P3's editor rule: the person's own later changes, taken back first, never refuse it; a write to the draft since by another hand refuses it `arrangement_moved`, nothing wiped); `draft` the draft the merge was taken back out of, `position` the write's commit, `record` the replacing record's public link (null where no record of the landing stood), `restored` the base restored, address and extent (null where the draft records none); the composition is gone with the undo; `no_merge` where nothing is composed, `nothing_to_undo {draft, why}` where the merge is not one an undo takes back, `held_lines` (`HeldLinesRefusal`) where the draft holds lines of yours the board has not kept, nothing sent */
+/** `merge.undo(session)` — the landing's one undo step while the session that landed it stands: ONE `set_arrangement` carrying the arrangement the draft held before the landing, its runs mapped through the correspondence records where a publication made its words public since, its old base as the base to record, and no marker, typed against this shell's own last acknowledged arrangement write on the draft, or the landing's position where that is later (the library's R6 with P3's editor rule: the person's own later changes, taken back first, never refuse it; a write to the draft since by another hand refuses it `arrangement_moved`, nothing wiped); `draft` the draft the merge was taken back out of, `position` the write's commit, `record` the replacing record's link, homed in its private journal (null where no record of the landing stood), `restored` the base restored, address and extent (null where the draft records none); the composition is gone with the undo; `no_merge` where nothing is composed, `nothing_to_undo {draft, why}` where the merge is not one an undo takes back, `held_lines` (`HeldLinesRefusal`) where the draft holds lines of yours the board has not kept, nothing sent */
 export interface Undone {
   draft: string;
   position: number;
@@ -721,7 +820,7 @@ export interface Undone {
   restored: { base: string; extent: number } | null;
 }
 
-/** `merge.withdraw(session, {draft})` — THE WITHDRAWAL, in any session: ONE `set_arrangement` of the draft's current runs with its recorded base re-sent unmoved and no `merge`, clearing the marker and keeping the words, typed against the shell's read of the draft; `draft` the draft, `position` the write's commit, `record` the replacing record's public link (null where no record of the landing stood); `no_merge {draft}` where the draft carries no marker, `not_owner {addr}` where it is another account's or published, `held_lines` (`HeldLinesRefusal`) where the draft holds lines of yours the board has not kept, nothing sent */
+/** `merge.withdraw(session, {draft})` — THE WITHDRAWAL, in any session: ONE `set_arrangement` of the draft's current runs with its recorded base re-sent unmoved and no `merge`, clearing the marker and keeping the words, typed against the shell's read of the draft; `draft` the draft, `position` the write's commit, `record` the replacing record's link, homed in its private journal (null where no record of the landing stood); `no_merge {draft}` where the draft carries no marker, `not_owner {addr}` where it is another account's or published, `held_lines` (`HeldLinesRefusal`) where the draft holds lines of yours the board has not kept, nothing sent */
 export interface Withdrawn {
   draft: string;
   position: number;
@@ -764,11 +863,11 @@ export interface Bridge {
   probe(args: {}): Promise<Outcome<Probe>>;
   op(args: { session: string; frame: unknown; anchors?: Anchors; after?: string } | { guest: true; board?: string; origin?: string; frame: unknown }): Promise<Outcome<unknown>>;
   'publication.open'(args: { session: string; draft: string; also?: string[]; doc?: string; mint?: string; claim?: boolean; selection?: Run[]; notes?: string[]; readable_drafts?: string[]; published?: string[] }): Promise<Outcome<PublicationPanel>>;
-  'publication.count'(args: { session: string; switches?: Switches; answers?: Record<string, OriginAnswer> }): Promise<Outcome<{ count: Count; price: Price }>>;
+  'publication.count'(args: { session: string; switches?: Switches; answers?: Record<string, OriginAnswer> }): Promise<Outcome<{ count: Count; price: Price; rows: PublicationRow[]; formatting: Formatting; windows: Window[]; parts: PartCounts[]; edition_links: number; p3_stands: boolean }>>;
   'publication.confirm'(args: { session: string; switches?: Switches; answers?: Record<string, OriginAnswer> }): Promise<Outcome<Acknowledged | Restated | PublicationRefused>>;
   'publication.cancel'(args: { session: string }): Promise<Outcome<Empty>>;
   'merge.compose'(args: { session: string; doc: string; alternative?: string; draft?: string; into?: string }): Promise<Outcome<MergeReport>>;
-  'merge.land'(args: { session: string; resolutions?: Record<string, MergeChoice> }): Promise<Outcome<MergeLanded | Restated | PublicationRefused>>;
+  'merge.land'(args: { session: string; resolutions?: Record<string, MergeChoice>; answers?: Record<string, OriginAnswer> }): Promise<Outcome<MergeLanded | Restated | PublicationRefused>>;
   'merge.undo'(args: { session: string }): Promise<Outcome<Undone>>;
   'merge.withdraw'(args: { session: string; draft: string }): Promise<Outcome<Withdrawn>>;
   'history.restore'(args: { session: string; draft: string; at: number; as_of: number }): Promise<Outcome<Restored>>;
@@ -779,7 +878,7 @@ export interface Bridge {
   places(args: { session: string; board?: string; opts?: PlacesOpts } | { guest: true; board?: string; origin?: string; opts?: PlacesOpts }): Promise<Outcome<PlacesAnswer>>;
   held(args: { session: string }): Promise<Outcome<HeldRow[]>>;
   'held.show'(args: { session: string }): Promise<Outcome<{ shown: boolean }>>;
-  resolve(args: { session: string; held: number; act: 'drop' | 'send' }): Promise<Outcome<Empty>>;
+  resolve(args: { session: string; held: number; act: 'drop' | 'send' }): Promise<Outcome<{ kept?: true }>>;
   changes(args: { session: string; since: number; limit?: number; class?: 'drafts' } | { guest: true; board?: string; origin?: string; since: number; limit?: number }): Promise<Outcome<ChangesAnswer>>;
   answer(args: Answer): Promise<Outcome<Empty>>;
   cancel(args: Cancel): Promise<Outcome<Empty>>;

@@ -8,9 +8,12 @@
 // them — a delivery keeps an item of a kind it does not know at its own
 // place, and each of the editor's answers and events, and the shell's
 // `held_lines` refusal, decodes from the wire's or the declarations' own
-// example, its absent members null and a malformed form the decoder's null.
+// example, its absent members null and a malformed form the decoder's null —
+// every literal the fetched declarations give a union the decoders check
+// taken, and no member the declarations lack read.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import * as F from './frames.js';
 import { unitSpan } from './address.js';
 import { canon } from '../test/fake-port.js';
@@ -205,6 +208,7 @@ const SHAPES = {
   row_lost: { held: 5, doc: '1.0.1.0.1013', base: 40, frame: { op: 'insert', doc: '1.0.1.0.1013', as_of: 44 }, anchors: { before: null, after: null }, cause: 'answers_lost', sent: true, time: 1786838400080, refusal: { kind: 'shell', name: 'answers_lost', last: 'unreachable', elapsed_ms: 120480 } },
   event_holding: { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 1, state: 'holding', cause: 'unreachable' },
   event_moved: { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 2, state: 'moved', cause: 'arrangement_moved', hands: [{ key: 'own', fingerprint: 'fp-1', label: 'laptop' }, { key: 'other', fingerprint: 'fp-2' }, { key: 'bare' }, { key: 'lost' }] },
+  event_unread: { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 1, state: 'moved', cause: 'arrangement_moved', hands: [{ key: 'unread' }] },
   event_kept: { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 0, state: 'kept' },
   held_lines: { kind: 'shell', name: 'held_lines', doc: '1.0.1.0.1013', held: 2 },
   restored: { draft: '1.0.1.0.1013', at: 9, position: 17, as_of: 16, marker: null },
@@ -214,16 +218,20 @@ const SHAPES = {
   withdrawn: { draft: '1.0.1.0.1013', position: 18, record: null },
   report: { outcome: 'landed', doc: '1.0.1.0.1', head: '1.0.1.0.1.2', base: '1.0.1.0.1.1', side: '1.0.1.0.1.1.1', form: 'daughter', sides: [{ at: '1.0.1.0.1.2', role: 'head', position: null }, { at: '1.0.1.0.1.1.1', role: 'alternative', position: null }], runs: [{ origin: '1.0.1.0.1', i_start: 1, width: 5, side: null, family: 'own' }, { origin: '1.0.1.0.1.1.1', i_start: 6, width: 3, side: 1, family: 'draft_native' }], gaps: [], counts: { a: 1, b: 1, m: 2 }, cap: 4096, over_cap: false, record: null, as_of: 15, into: '1.0.1.0.1013', position: 14, fresh: false, head_moved: null, record_link: null },
   report_reopened: { outcome: 'reopened', doc: '1.0.1.0.1', head: '1.0.1.0.1.2', base: '1.0.1.0.1.1', side: '1.0.1.0.1.1.1', form: 'daughter', sides: [], runs: [], gaps: [{ id: 1, kind: 'order', after: '1.0.1.0.1.0.1.4', before: null, runs: [{ side: 0, i_start: '1.0.1.0.1.0.1.5', width: 2 }, { side: 1, i_start: '1.0.1.0.1.1.1.0.1.1', width: 3 }], placed: [0, 1], settled: false, resolved_by: null }, { id: 2, kind: 'anchor', after: null, before: '1.0.1.0.1.0.1.9', runs: [], placed: 'before', settled: true, resolved_by: 'rule' }], counts: { a: 2, b: 2, m: 3 }, cap: 4096, over_cap: false, record: { sides: [] }, as_of: 20, into: '1.0.1.0.1013', position: 14 },
-  landed: { outcome: 'landed', member: '1.0.1.0.1.3', at: 16, via: 'answer', claim: true, supersede: ['1.0.1.0.1.1.1'], daughter: false, record: null, claims: [], retries: 0 },
-  panel: { rows: [], formatting: { marks: [], cut: 0, removals: [] }, read_with: {}, count: { l: 0, n: 0, r: 0, e: 0, claim: false, read_with: [], supersede: [] }, price: { lists: [0, 0, 0, 0, 0], body: 0, values: 0, reads: 0, bytes: 0, over: [] }, windows: [], inherited: [{ draft: '1.0.1.0.1014', passages: 1 }], left_behind: [] },
+  landed: { outcome: 'landed', member: '1.0.1.0.1.3', at: 16, via: 'answer', claim: true, supersede: ['1.0.1.0.1.1.1'], daughter: false, record: null, claims: [], retries: 0, answers: [], left_private: [{ set: '1.0.1.0.9', links: 2 }], defaults: [] },
+  panel: { rows: [], formatting: { marks: [], cut: 0, removals: [] }, read_with: {}, count: { l: 0, n: 0, r: 0, e: 0, claim: false, read_with: [], supersede: [] }, price: { lists: [0, 0, 0, 0, 0, 0], body: 0, values: 0, reads: 0, bytes: 0, over: [] }, windows: [], parts: [], inherited: [{ draft: '1.0.1.0.1014', passages: 1 }], merge_records: [], edition_links: 0, p3_stands: false, left_behind: [] },
   panel_full: {
-    rows: [{ home: '1.0.1.0.1013', kind: 'own', label: 'Tumbler.', links: ['1.0.1.0.1013.0.2.1'], types: [{ ty: '1.1.0.1.0.1.0.3.13', n: 1, far: ['1.0.1.0.127'] }], line: { p: 0, d: 0, c: 1, t: 0, u: 0 }, read_through: 0 },
-      { home: '1.0.1.0.9', kind: { public: { read_with: true } }, label: 'Notes', links: [], types: [], line: { p: 1, d: 0, c: 0, t: 0, u: 0 }, read_through: 2 }],
-    formatting: { marks: ['1.0.1.0.1013.0.2.2'], cut: 1, removals: [{ record: '1.0.1.0.1013.0.2.3', mark: '1.0.1.0.1.0.2.4', mark_value: { from: [], to: [{ start: '1.0.1.0.1.0.1.1', width: '0.0.0.0.0.0.0.5' }], ty: [{ start: '1.1.0.1.0.1.0.3.23', width: '0.0.0.0.0.0.0.0.1' }], at: 12 }, on_selection: true, spent: false, remake: null }] },
+    rows: [{ home: '1.0.1.0.1013', kind: 'own', label: 'Tumbler.', links: ['1.0.1.0.1013.0.2.1'], types: [{ ty: '1.1.0.1.0.1.0.3.13', n: 1, far: ['1.0.1.0.127'] }], line: { p: 0, d: 0, c: 1, t: 0, u: 0 }, read_through: 0,
+      unchanged: [], fold: { unchanged: 0, changed: 1 }, changed_types: [{ ty: '1.1.0.1.0.1.0.3.13', n: 1, far: ['1.0.1.0.127'] }], unchanged_types: [] },
+    { home: '1.0.1.0.9', kind: { public: { read_with: true } }, label: 'Notes', links: [], types: [], line: { p: 1, d: 0, c: 0, t: 0, u: 0 }, read_through: 2, unchanged: [], fold: { unchanged: 0, changed: 0 }, changed_types: [], unchanged_types: [] }],
+    formatting: { marks: ['1.0.1.0.1013.0.2.2'], cut: 1, removals: [{ record: '1.0.1.0.1013.0.2.3', mark: '1.0.1.0.1.0.2.4', mark_value: { from: [], to: [{ start: '1.0.1.0.1.0.1.1', width: '0.0.0.0.0.0.0.5' }], ty: [{ start: '1.1.0.1.0.1.0.3.23', width: '0.0.0.0.0.0.0.0.1' }], at: 12 }, on_selection: true, spent: false, remake: null, original: '1.0.1.0.1013.0.2.5', rest: [] }] },
     read_with: { '1.0.1.0.9': true }, count: { l: 1, n: 1, r: 0, e: 0, claim: true, read_with: ['1.0.1.0.9'], supersede: [] },
-    price: { lists: [3, 1, 1, 0, 1], body: 512, values: 7, reads: 4, bytes: 64, over: [{ term: 'links', by: 2 }] },
-    windows: [{ run: 2, origin: '1.0.1.0.1014', owner: '1.0.1', i_start: 40, width: 12, counterpart: { run: 2, draft: '1.0.1.0.1014', record: '1.0.1.0.1014.0.2.1', from: { chain: '1.0.1.0.1014.0.1', first: 40, width: 12 }, to: { chain: '1.0.1.0.7.0.1', first: 1, width: 12 } } }],
-    inherited: [], standing: 'behind', left_behind: ['1.0.1.0.1014'], hold: { since: 1786838400052 },
+    price: { lists: [3, 1, 1, 0, 1, 0], body: 512, values: 7, reads: 4, bytes: 64, over: [{ term: 'links', by: 2 }] },
+    windows: [{ run: 2, origin: '1.0.1.0.1014', owner: '1.0.1', i_start: 40, width: 12, parts: [
+      { part: 0, from: { chain: '1.0.1.0.1014.0.1', first: 40, width: 8 }, ordinal: 30, admits: ['counterpart', 'drop'], record: '1.0.1.0.1014.0.2.1', to: { chain: '1.0.1.0.7.0.1', first: 1, width: 8 } },
+      { part: 1, from: { chain: '1.0.1.0.1014.0.1', first: 48, width: 4 }, ordinal: 38, admits: ['publish_first', 'drop', 'keep_private'] }] }],
+    parts: [{ run: 2, part: 0, marks: 0, links: 0, kept_marks: 0 }, { run: 2, part: 1, marks: 0, links: 0, kept_marks: 0 }],
+    inherited: [], merge_records: [{ draft: '1.0.1.0.1014', n: 1 }], edition_links: 1, p3_stands: true, standing: 'behind', left_behind: ['1.0.1.0.1014'], hold: { since: 1786838400052 },
   },
   acknowledged: { outcome: 'acknowledged', member: '1.0.1.0.1013.1', edition: null, claim: false, supersede: [], at: 12, via: 'answer' },
   restated: { outcome: 'restated', left: ['1.0.1.0.1013.0.2.1'], superseded: [], came: [], removals_undone: [], removals_came: [], selection: [{ run: 1, placement: { whole: { ordinal: 4 } } }, { run: 2, placement: { split: [[1, 2, 3]] } }, { run: 3, placement: 'absent' }], race: { at: 44, key: 'bare', signed: false }, standing: 'superseded_first' },
@@ -258,9 +266,11 @@ test('`held(session)`\'s rows decode in their order — each line\'s frame as co
   }
 });
 
-test('the `held` event decodes as the declarations give it — the document\'s state among the five, its cause and the hands that moved it, each hand\'s key among the four with its fingerprint and label where it carries them; a state or a hand\'s key outside its set, or a missing member, is null', () => {
+test('the `held` event decodes as the declarations give it — the document\'s state among the five, its cause and the hands that moved it, each hand\'s key among the five with its fingerprint and label where it carries them; a state or a hand\'s key outside its set, or a missing member, is null', () => {
   assert.deepEqual(F.decodeHeldEvent(SHAPES.event_holding), { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 1, state: 'holding', cause: 'unreachable', hands: [] });
-  assert.deepEqual(F.decodeHeldEvent(SHAPES.event_moved)?.hands, [{ key: 'own', fingerprint: 'fp-1', label: 'laptop' }, { key: 'other', fingerprint: 'fp-2', label: null }, { key: 'bare', fingerprint: null, label: null }, { key: 'lost', fingerprint: null, label: null }], 'each hand once, the four forms');
+  assert.deepEqual(F.decodeHeldEvent(SHAPES.event_moved)?.hands, [{ key: 'own', fingerprint: 'fp-1', label: 'laptop' }, { key: 'other', fingerprint: 'fp-2', label: null }, { key: 'bare', fingerprint: null, label: null }, { key: 'lost', fingerprint: null, label: null }], 'each hand once, the four forms a read names');
+  assert.deepEqual(F.decodeHeldEvent(SHAPES.event_unread), { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 1, state: 'moved', cause: 'arrangement_moved', hands: [{ key: 'unread', fingerprint: null, label: null }] },
+    'a real moved verdict whose hands the board gave no answer to: the one hand, not read yet, the event kept whole');
   assert.deepEqual(F.decodeHeldEvent(SHAPES.event_kept), { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 0, state: 'kept', cause: null, hands: [] }, 'kept: no cause, no hands');
   for (const bad of [null, {}, { ...SHAPES.event_holding, state: 'late' }, { ...SHAPES.event_holding, held: '1' }, { ...SHAPES.event_moved, hands: [{ key: 'agent' }] }, { ...SHAPES.event_moved, hands: [{ fingerprint: 'fp-1' }] }, { ...SHAPES.event_moved, hands: 'own' }, { ...SHAPES.event_holding, doc: null }]) {
     assert.equal(F.decodeHeldEvent(bad), null, JSON.stringify(bad));
@@ -312,7 +322,7 @@ test('`merge.compose`\'s report decodes with its sides, runs and gaps typed — 
   for (const bad of [null, {}, { ...SHAPES.report, outcome: 'done' }, { ...SHAPES.report, form: 'fork' }, { ...SHAPES.report, runs: [{ ...SHAPES.report.runs[0], family: 'copy' }] }, { ...SHAPES.report, sides: [{ at: '1.0.1.0.1.2', role: 'base', position: null }] }, { ...SHAPES.report, counts: { a: 1 } }]) assert.equal(F.decodeMergeReport(bad), null, JSON.stringify(bad));
 });
 
-test('`merge.land`\'s landing decodes — the member, its commit, how it was acknowledged, the claim, the record and the retries — and `decodeLanding` reads whichever of its three outcomes the answer is; a landing lacking a member, or acknowledged a way the declarations do not name, is null', () => {
+test('`merge.land`\'s landing decodes — the member, its commit, how it was acknowledged, the claim, the record and the retries, beside the parts answered, the sets left private and the places left at their defaults it carries — and `decodeLanding` reads whichever of its three outcomes the answer is; a landing lacking a member, or acknowledged a way the declarations do not name, is null', () => {
   assert.deepEqual(F.decodeMergeLanded(SHAPES.landed), { outcome: 'landed', member: '1.0.1.0.1.3', at: 16, via: 'answer', claim: true, supersede: ['1.0.1.0.1.1.1'], daughter: false, record: null, unrecorded: null, claims: [], retries: 0 });
   const unrecorded = { kind: 'shell', name: 'write_busy' };
   assert.deepEqual(F.decodeMergeLanded({ ...SHAPES.landed, record: null, unrecorded })?.unrecorded, unrecorded, 'why the record could not be written');
@@ -323,17 +333,17 @@ test('`merge.land`\'s landing decodes — the member, its commit, how it was ack
   assert.equal(F.decodeLanding({ outcome: 'cancelled' }), null);
 });
 
-test('`publication.open`\'s panel decodes with its rows, formatting, windows and standing typed — the default panel\'s empty lists, the full panel\'s every member — and `publication.count`\'s `{count, price}`; a row\'s kind, a price\'s term or a standing outside its set is null', () => {
+test('`publication.open`\'s panel decodes with its rows, formatting, windows and standing typed — the default panel\'s empty lists, the full panel\'s every member it reads — and `publication.count`\'s `{count, price}`; a row\'s kind, a price\'s term or a standing outside its set is null', () => {
   const p = F.decodePublicationPanel(SHAPES.panel);
-  assert.deepEqual(p, { rows: [], formatting: { marks: [], cut: 0, removals: [] }, readWith: {}, count: { l: 0, n: 0, r: 0, e: 0, claim: false, readWith: [], supersede: [] }, price: { lists: [0, 0, 0, 0, 0], body: 0, values: 0, reads: 0, bytes: 0, over: [] }, windows: [], inherited: [{ draft: '1.0.1.0.1014', passages: 1 }], standing: null, leftBehind: [], hold: null }, 'the mint form: no standing, nothing left behind, no hold');
+  assert.deepEqual(p, { rows: [], formatting: { marks: [], cut: 0, removals: [] }, readWith: {}, count: { l: 0, n: 0, r: 0, e: 0, claim: false, readWith: [], supersede: [] }, price: { lists: [0, 0, 0, 0, 0, 0], body: 0, values: 0, reads: 0, bytes: 0, over: [] }, windows: [], inherited: [{ draft: '1.0.1.0.1014', passages: 1 }], standing: null, leftBehind: [], hold: null }, 'the mint form: no standing, nothing left behind, no hold');
   const f = F.decodePublicationPanel(SHAPES.panel_full);
   assert.deepEqual(f?.rows, [
     { home: '1.0.1.0.1013', kind: 'own', label: 'Tumbler.', links: ['1.0.1.0.1013.0.2.1'], types: [{ ty: '1.1.0.1.0.1.0.3.13', n: 1, far: ['1.0.1.0.127'] }], line: { p: 0, d: 0, c: 1, t: 0, u: 0 }, readThrough: 0 },
     { home: '1.0.1.0.9', kind: { public: { read_with: true } }, label: 'Notes', links: [], types: [], line: { p: 1, d: 0, c: 0, t: 0, u: 0 }, readThrough: 2 },
   ]);
   assert.deepEqual(f?.formatting, { marks: ['1.0.1.0.1013.0.2.2'], cut: 1, removals: [{ record: '1.0.1.0.1013.0.2.3', mark: '1.0.1.0.1.0.2.4', markValue: { from: [], to: [{ start: '1.0.1.0.1.0.1.1', width: '0.0.0.0.0.0.0.5' }], ty: [{ start: '1.1.0.1.0.1.0.3.23', width: '0.0.0.0.0.0.0.0.1' }], at: 12 }, onSelection: true, spent: false, remake: null }] });
-  assert.deepEqual([f?.readWith, f?.count, f?.price], [{ '1.0.1.0.9': true }, { l: 1, n: 1, r: 0, e: 0, claim: true, readWith: ['1.0.1.0.9'], supersede: [] }, { lists: [3, 1, 1, 0, 1], body: 512, values: 7, reads: 4, bytes: 64, over: [{ term: 'links', by: 2 }] }]);
-  assert.deepEqual(f?.windows, [{ run: 2, origin: '1.0.1.0.1014', owner: '1.0.1', iStart: 40, width: 12, counterpart: { run: 2, draft: '1.0.1.0.1014', record: '1.0.1.0.1014.0.2.1', from: { chain: '1.0.1.0.1014.0.1', first: 40, width: 12 }, to: { chain: '1.0.1.0.7.0.1', first: 1, width: 12 } } }]);
+  assert.deepEqual([f?.readWith, f?.count, f?.price], [{ '1.0.1.0.9': true }, { l: 1, n: 1, r: 0, e: 0, claim: true, readWith: ['1.0.1.0.9'], supersede: [] }, { lists: [3, 1, 1, 0, 1, 0], body: 512, values: 7, reads: 4, bytes: 64, over: [{ term: 'links', by: 2 }] }]);
+  assert.deepEqual(f?.windows, [{ run: 2, origin: '1.0.1.0.1014', owner: '1.0.1', iStart: 40, width: 12 }], 'a window as the declarations give it, its counterpart in its parts: no member they lack read, none standing as null');
   assert.deepEqual([f?.inherited, f?.standing, f?.leftBehind, f?.hold], [[], 'behind', ['1.0.1.0.1014'], { since: 1786838400052 }]);
   assert.deepEqual(F.decodeCount({ count: SHAPES.panel.count, price: SHAPES.panel.price }), { count: p?.count, price: p?.price });
   for (const bad of [null, {}, { count: SHAPES.panel.count }, { count: SHAPES.panel.count, price: { ...SHAPES.panel.price, over: [{ term: 'marks', by: 1 }] } }, { count: { ...SHAPES.panel.count, l: '0' }, price: SHAPES.panel.price }]) assert.equal(F.decodeCount(bad), null, JSON.stringify(bad));
@@ -357,6 +367,39 @@ test('`publication.confirm`\'s three outcomes decode — the acknowledgment\'s m
   assert.equal(F.decodeConfirmed(SHAPES.refused)?.outcome, 'refused');
   assert.equal(F.decodeConfirmed(SHAPES.landed), null, 'a landing is no confirm outcome');
   assert.equal(F.decodeConfirmed(null), null);
+});
+
+/** the declarations as fetched from the shell, which the gate holds equal to the provider's byte for byte (FP-16) */
+const DECLARED = readFileSync(new URL('../bridge/shapes.d.ts', import.meta.url), 'utf8');
+/** the string literals of a union, as the declarations spell it */
+const literals = (/** @type {string} */ union) => [...union.matchAll(/'([^']*)'/g)].map((m) => m[1]);
+/** a declared alias's literals @param {string} name */
+const aliasOf = (name) => literals(/** @type {RegExpMatchArray} */ (DECLARED.match(new RegExp(`^export type ${name} = (.+);$`, 'm')))[1]);
+/** a declared interface member's literals @param {string} iface @param {string} member */
+const memberOf = (iface, member) => literals(/** @type {RegExpMatchArray} */ (DECLARED.match(new RegExp(`^export interface ${iface} \\{\\n(?:  .*\\n)*?  ${member}\\??: (.+);$`, 'm')))[1]);
+
+test('every literal the fetched declarations give a union a decoder checks decodes as itself — a hand, a held state, a device\'s refusal class, an acknowledgment\'s way, a base\'s standing, a gap\'s kind and placement, a price\'s term, a merge\'s outcome, form, side role and run family, a panel set\'s kind — so an event or an answer carrying one is kept, never dropped as malformed (FP-16)', () => {
+  /** @type {Array<[string, string[], (x: string) => unknown, (x: string) => unknown]>} each union: its name, its literals as declared, what a decoder makes of an answer carrying one, and that answer as decoded */
+  const UNIONS = [
+    ['HandKey', aliasOf('HandKey'), (key) => F.decodeHeldEvent({ ...SHAPES.event_moved, hands: [{ key }] })?.hands, (key) => [{ key, fingerprint: null, label: null }]],
+    ['HeldEvent.state', memberOf('HeldEvent', 'state'), (state) => F.decodeHeldEvent({ ...SHAPES.event_holding, state })?.state, (x) => x],
+    ['HeldAnswer.unwritable_class', memberOf('HeldAnswer', 'unwritable_class'), (c) => F.decodeHeld({ ...SHAPES.held_unwritable, unwritable_class: c })?.unwritableClass, (x) => x],
+    ['AckVia', aliasOf('AckVia'), (via) => [F.decodeAcknowledged({ ...SHAPES.acknowledged, via })?.via, F.decodeMergeLanded({ ...SHAPES.landed, via })?.via], (x) => [x, x]],
+    ['BaseStanding', aliasOf('BaseStanding'), (standing) => [F.decodePublicationPanel({ ...SHAPES.panel, standing })?.standing, F.decodeRestated({ ...SHAPES.restated, standing })?.standing], (x) => [x, x]],
+    ['GapKind', aliasOf('GapKind'), (kind) => F.decodeMergeReport({ ...SHAPES.report_reopened, gaps: [{ ...SHAPES.report_reopened.gaps[0], kind }] })?.gaps[0].kind, (x) => x],
+    ['GapPlacement', aliasOf('GapPlacement'), (placed) => F.decodeMergeReport({ ...SHAPES.report_reopened, gaps: [{ ...SHAPES.report_reopened.gaps[0], placed }] })?.gaps[0].placed, (x) => x],
+    ['Term', aliasOf('Term'), (term) => F.decodeCount({ count: SHAPES.panel.count, price: { ...SHAPES.panel.price, over: [{ term, by: 1 }] } })?.price.over, (term) => [{ term, by: 1 }]],
+    ['MergeReport.outcome', memberOf('MergeReport', 'outcome'), (outcome) => F.decodeMergeReport({ ...SHAPES.report, outcome })?.outcome, (x) => x],
+    ['MergeReport.form', memberOf('MergeReport', 'form'), (form) => F.decodeMergeReport({ ...SHAPES.report, form })?.form, (x) => x],
+    ['MergeSide.role', memberOf('MergeSide', 'role'), (role) => F.decodeMergeReport({ ...SHAPES.report, sides: [{ ...SHAPES.report.sides[0], role }] })?.sides[0].role, (x) => x],
+    ['MergeRun.family', memberOf('MergeRun', 'family'), (family) => F.decodeMergeReport({ ...SHAPES.report, runs: [{ ...SHAPES.report.runs[0], family }] })?.runs[0].family, (x) => x],
+    ['RowKind', aliasOf('RowKind'), (kind) => F.decodePublicationPanel({ ...SHAPES.panel_full, rows: [{ ...SHAPES.panel_full.rows[0], kind }] })?.rows[0].kind, (x) => x],
+  ];
+  for (const [name, declared, decoded, expected] of UNIONS) {
+    assert.ok(declared.length > 1, `${name}: its literals read from the declarations`);
+    for (const x of declared) assert.deepEqual(decoded(x), expected(x), `${name} '${x}'`);
+  }
+  assert.ok(aliasOf('HandKey').includes('unread'), 'the hands not read yet, among the declared');
 });
 
 test('the lineage\'s claims decode as the wire gives them; any other answer is null, never no claim', () => {

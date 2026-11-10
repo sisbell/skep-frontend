@@ -291,6 +291,7 @@ export const STRINGS = {
   'B3.hand.device': { text: '— by ⟨device label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, a hand of this store\'s or a labelled key\'s (D6 BM-13); B3-S11 P4' },
   'B3.hand.unsigned': { text: '— by an unsigned write', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, a bare hand (D6 BM-13); B3-S11 P4' },
   'B3.hand.lost': { text: '— its hand not recorded', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, a hand the board lost (D6 BM-13); B3-S11 P4' },
+  'B3.hand.unread': { text: '— its hand not read yet', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, its hands not read yet (D6 BM-78)' },
   'B3.send-again': { text: 'send again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the refused run\'s face, the moved face (D6 BM-10, BM-17, BM-26)' },
   'B3.discard': { text: 'discard this change', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the refused run\'s face (D6 BM-10, BM-27)' },
   'B3.refused.discard': { text: 'these words were never kept on the board — discarding removes them from this device for good', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the refused run\'s face, before its discard (D6 BM-10)' },
