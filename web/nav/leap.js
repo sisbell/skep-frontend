@@ -4,8 +4,9 @@
 // whether the box stands as opened — nothing typed in it, no row chosen —
 // and the address the line named as it opened (`openedAt`), the status
 // region's markup as last written, whether the rows stand over an
-// index a change of class dropped, and the current address's reader, the
-// line's. A control that rebuilds itself from its state (FP-13).
+// index a change of class dropped, the list's room as the row chosen was
+// last brought into view, and the current address's reader, the line's. A
+// control that rebuilds itself from its state (FP-13).
 // Opened (`open`), the box holds the current address, selected, and lists
 // beneath it the address's levels, the landmarks and the trail's entries
 // (N-MATCH's `levels`), no row chosen, until a key is typed: Enter on the box
@@ -36,7 +37,13 @@
 // the line does not show (K-30) — opened by the line's fold mark at the
 // levels it folds, it holds them until then. The box stands over the overlay and the
 // notice below it, so nothing shown while the reader types in it covers its
-// input or its rows (FP-36). The box is gone with
+// input or its rows (FP-36). The row chosen stands in the view of the rows'
+// list, the one part of the box that gives way to a short window (FP-26): as
+// the rows are drawn, after the status region has taken its share of the box,
+// the list moves by the least that shows that row, and again where its room
+// moves while a row is chosen (`roomChanged`). A list with no row chosen
+// stands at its top, and the reader's own wheel over the rows stands until
+// the next list or choice. The box is gone with
 // the next act (M-1): a chord inside it acts as anywhere, the box closed
 // first and the chord read at the focus the close returned; the field's own
 // chords — select all, copy, paste, cut, undo, the caret's — stay the
@@ -69,7 +76,7 @@
 // copies and typing replaces (D5 K-30; §4 rule 4). The answer and the
 // index's state are the box's own status region (D4), written only when its
 // words change, so an arrow or a further keystroke repeats nothing.
-// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20, FP-29, FP-35, FP-36.
+// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20, FP-26, FP-29, FP-35, FP-36.
 
 import * as REC from '../model/records.js';
 import * as TRAIL from './trail.js';
@@ -103,6 +110,8 @@ let openedAt = '';
 let noteHTML = '';
 /** the rows stand computed over an index a change of the page's class dropped: computed again once the new class's index answers (`takeIndex`) */
 let stale = false;
+/** the list's room, as `roomOf` reads it, when the row chosen was last brought into view */
+let listRoom = '';
 /** @type {() => string | null} the current address's reader (the line's) */
 let currentAddress = () => null;
 
@@ -111,6 +120,9 @@ const FIELD_CHORDS = new Set(['a', 'c', 'v', 'x', 'z', 'Backspace', 'Delete', 'A
 
 /** the id of row i — the input's active descendant names it */
 const rowId = (/** @type {number} */ i) => `leap-row-${i}`;
+
+/** the room the list stands in: its width beside its height, for a row's height follows the width its cells wrap in */
+const roomOf = (/** @type {HTMLElement} */ list) => `${list.clientWidth}×${list.clientHeight}`;
 
 /** @param {{box: HTMLElement, input: HTMLInputElement, rows: HTMLElement, note: HTMLElement}} e @param {() => string | null} cur */
 export function attach(e, cur) {
@@ -276,7 +288,37 @@ export function close() {
   markDirty();
 }
 
-/** rebuild the rows, the input's combobox state and the status region — the answer, then the index's state; where no board is held, why in their place (FP-13, FP-35) */
+/**
+ * Bring the list to the row chosen (see the head): moved by the least that
+ * shows that row, its top first where it is taller than the list's view. A
+ * list with no row chosen goes to its top; a choice naming no row — typed
+ * text that lists nothing — leaves the list as it stands.
+ */
+function reveal() {
+  if (!els) return;
+  const list = els.rows;
+  listRoom = roomOf(list);
+  if (sel < 0) { list.scrollTop = 0; return; }
+  const row = list.children[sel];
+  if (!row) return;
+  const c = row.getBoundingClientRect(), from = list.getBoundingClientRect().top + list.clientTop;
+  const up = c.top - from, down = c.bottom - (from + list.clientHeight);
+  if (up < 0) list.scrollTop += up;
+  else if (down > 0) list.scrollTop += Math.min(up, down);
+}
+
+/**
+ * Bring the list back to the row chosen where its room has moved since the
+ * row was last brought into view (see the head) — by the window's size or by
+ * the one line's rows. The app's loop runs it beside the line's rebuild. With
+ * no row chosen, or the room as it stood, the list stays where the reader's
+ * wheel left it.
+ */
+export function roomChanged() {
+  if (els && openState && sel >= 0 && roomOf(els.rows) !== listRoom) reveal();
+}
+
+/** rebuild the rows, the input's combobox state and the status region — the answer, then the index's state; where no board is held, why in their place — then bring the list to the row chosen, in the room the status region left it (FP-13, FP-26, FP-35) */
 export function render() {
   if (!els) return;
   const st = REC.indexState();
@@ -288,9 +330,8 @@ export function render() {
   const answer = why ? `<span data-string="${esc(why.id)}">${esc(why.text)}</span>` : !rows.length && typed ? `<span data-string="F.leap.none">${esc(t('F.leap.none'))}</span>` : '';
   const stateLine = st && st.arm !== 'complete' ? `<span data-string="F.index.state">${esc(t('F.index.state', { arm: st.arm }))}</span>${floor != null ? ` · <span data-string="F.leap.floor">${esc(t('F.leap.floor', { floor }))}</span>` : ''}${st.arm === 'building' || st.arm === 'widening' ? ` · <span data-string="F.leap.arriving">${esc(t('F.leap.arriving'))}</span>` : ''}` : '';
   const note = [answer, stateLine].filter(Boolean).join(' · ');
-  if (note === noteHTML) return;
-  noteHTML = note;
-  els.note.innerHTML = note;
+  if (note !== noteHTML) { noteHTML = note; els.note.innerHTML = note; }
+  reveal();
 }
 
 /**

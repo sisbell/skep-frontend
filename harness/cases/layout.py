@@ -3556,6 +3556,120 @@ def overlay_room_holds(ctx, r):
     return figures
 
 
+# what `leap_room_holds` types in the LEAP box: every address in the owner's account begins with it, so the list runs to its
+# limit of rows, more than it shows in any window
+LEAP_LIST_TEXT = '1.0.1.0.'
+# the room below the one line's bottom edge in `leap_room_holds`' short window, in px: the window 260 px tall where the line
+# stands on one row
+LEAP_SHORT_ROOM_PX = 231
+# the gap above the rows' list, in px: the margin the box sets above it
+LEAP_GAP_PX = 6
+
+# the LEAP box as it stands (`leap_room_holds`): whether it is open with the focus in its input, the one line's bottom edge,
+# the window's height, the box's edges, its input's height and the gap above the rows' list, the list's scroll and view,
+# its rows, and the row chosen as a person sees it — its place in the list, its edges from the top of the list's view,
+# its height, and whether the element found at the middle of its part in view is inside it
+LEAP_ROOM_JS = """(() => { const input = document.getElementById('leapq'), list = document.getElementById('leaphits'), b = document.getElementById('leap').getBoundingClientRect();
+  const q = input.getBoundingClientRect(), n = document.getElementById('leapnote').getBoundingClientRect(), l = list.getBoundingClientRect(), from = l.top + list.clientTop;
+  const rows = [...list.children], row = list.querySelector('[aria-selected="true"]');
+  let chosen = null;
+  if (row) { const c = row.getBoundingClientRect(), hit = document.elementFromPoint(c.left + c.width / 2, c.top + Math.min(c.height, list.clientHeight) / 2);
+    chosen = {at: rows.indexOf(row), top: c.top - from, bottom: c.bottom - from, h: c.height, found: !!hit && row.contains(hit), hit: hit ? (hit.id || hit.className || hit.tagName) : null}; }
+  return {open: window.__skep.leap.isOpen(), held: document.activeElement === input, line: document.getElementById('line').getBoundingClientRect().bottom, vh: window.innerHeight,
+          top: b.top, bottom: b.bottom, input: q.height, gap: l.top - (n.height ? n.bottom : q.bottom), scroll: list.scrollHeight, view: list.clientHeight, scrolled: list.scrollTop, rows: rows.length, chosen}; })()"""
+
+
+def leap_chosen_seen(s):
+    """does the row chosen stand whole in the list's view — a row taller than the view its top on the view's — the element
+    found at its middle inside it?"""
+    c = s['chosen']
+    return bool(c) and c['found'] and c['top'] >= -LABEL_TOL_PX and (c['bottom'] <= s['view'] + LABEL_TOL_PX or (c['h'] > s['view'] and c['top'] <= LABEL_TOL_PX))
+
+
+def leap_room_holds(ctx, r):
+    """THE LEAP BOX IN A SHORT WINDOW AND ITS ROW CHOSEN (FP-26): in a window 1440 px wide, then LINE_ROWS_PX[-1] px wide — the
+    one line on several rows — and 900 px tall, ↓ made down a list longer than its view brings each row into view, its last
+    whole in the list and found at its middle; a new list typed stands at its first row, and the box closed and opened again
+    at the top of its list, no row chosen. In a window short enough that the box cannot stand at its full height the box
+    stands below the line and inside the window, its input as tall and the gap above its rows as in the tall window, its
+    list the part that gave way and scrolling inside itself; the shortening keeps the row chosen in view, and ↓ made down a
+    new list there brings its last row into view. Its figures: the window's height and the list's view in each window"""
+    figures = {}
+    state = lambda: ctx.js(LEAP_ROOM_JS)
+
+    def typed(text):
+        ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+        ctx.drv.ime(text)
+        ctx.frames(2)
+        return state()
+
+    def to_last():
+        """↓ made until the list's last row is the one chosen; the box as it then stands"""
+        s = state()
+        for _ in range(s['rows'] + 2):
+            if s['chosen'] and s['chosen']['at'] >= s['rows'] - 1:
+                break
+            ctx.drv.key('ArrowDown')
+            s = state()
+        ctx.frames(2)
+        return state()
+
+    was = ctx.resize(1440, 900)
+    try:
+        for w in (1440, LINE_ROWS_PX[-1]):
+            ctx.resize(w, 900)
+            ctx.settle()
+            ctx.js('window.__skep.leap.open()')
+            ctx.frames(2)
+            tall = typed(LEAP_LIST_TEXT)
+            r.check(tall['open'] and tall['held'] and tall['scroll'] > tall['view'] and bool(tall['chosen']) and tall['chosen']['at'] == 0 and tall['scrolled'] == 0,
+                    f'a {w} px window 900 px tall: {LEAP_LIST_TEXT} typed in the LEAP box lists more than its list shows, the first row chosen at the list\'s top (what the next checks stand on)', tall)
+            last = to_last()
+            r.check(last['chosen']['at'] == last['rows'] - 1 and leap_chosen_seen(last),
+                    f'a {w} px window 900 px tall: ↓ made down the LEAP box\'s list leaves its last row whole in the list\'s view, the element at its middle inside it (issue #511)', last)
+            ctx.js('document.getElementById("leapq").select()')
+            ctx.drv.key('e')
+            ctx.frames(2)
+            retyped = state()
+            r.check(retyped['scroll'] > retyped['view'] and bool(retyped['chosen']) and retyped['chosen']['at'] == 0 and retyped['scrolled'] == 0 and leap_chosen_seen(retyped),
+                    f'a {w} px window 900 px tall: a list typed after ↓ stands at its first row, chosen and in view (issue #511)', retyped)
+            scrolled = to_last()['scrolled']
+            ctx.drv.key('Escape')
+            ctx.frames(2)
+            ctx.js('window.__skep.leap.open()')
+            ctx.frames(2)
+            again = state()
+            r.check(scrolled > 0 and again['open'] and again['chosen'] is None and again['scrolled'] == 0 and again['scroll'] > again['view'],
+                    f'a {w} px window 900 px tall: the box closed at the foot of its list and opened again stands at the top of a list longer than its view, no row chosen (issue #511)', {'scrolled_before': scrolled, 'again': again})
+            typed(LEAP_LIST_TEXT)
+            to_last()
+            vh = math.ceil(tall['line']) + LEAP_SHORT_ROOM_PX
+            ctx.resize(w, vh)
+            ctx.settle()
+            ctx.frames(2)
+            short = state()
+            r.check(short['open'] and short['held'] and short['top'] >= short['line'] - LABEL_TOL_PX and short['bottom'] <= short['vh'] + LABEL_TOL_PX
+                    and short['view'] < tall['view'] and short['scroll'] > short['view'] and abs(short['input'] - tall['input']) <= LABEL_TOL_PX
+                    and abs(short['gap'] - LEAP_GAP_PX) <= LABEL_TOL_PX and abs(tall['gap'] - LEAP_GAP_PX) <= LABEL_TOL_PX,
+                    f'a {w} px window {vh} px tall: the LEAP box stands below the one line and inside the window, its input as tall and the gap above its rows {LEAP_GAP_PX} px as in the tall window, its list giving way and scrolling inside itself (issue #511)',
+                    {'tall': tall, 'short': short})
+            r.check(bool(short['chosen']) and short['chosen']['at'] == short['rows'] - 1 and leap_chosen_seen(short),
+                    f'a {w} px window shortened to {vh} px: the row chosen stands in view of the list\'s shorter view (issue #511)', short)
+            typed(LEAP_LIST_TEXT)
+            low = to_last()
+            r.check(low['chosen']['at'] == low['rows'] - 1 and leap_chosen_seen(low),
+                    f'a {w} px window {vh} px tall: ↓ made down a new list leaves its last row whole in the list\'s view, the element at its middle inside it (issue #511)', low)
+            ctx.drv.key('Escape')
+            ctx.frames(2)
+            figures[w] = {'window_h': vh, 'list_900': tall['view'], 'list': short['view'], 'rows': short['rows']}
+    finally:
+        ctx.js('window.__skep.leap.close()')
+        ctx.resize(*was)
+        ctx.js('document.activeElement && document.activeElement.blur && document.activeElement.blur()')
+        ctx.settle()
+    return figures
+
+
 def trail_view(ctx):
     """the plane's canvas along the segment between the trail's two newest entries, as far as the segment runs on screen
     inside the first edition's box, TRAIL_INSET_PX inside its edges, the disc about every entry's point left out: the
@@ -4969,6 +5083,7 @@ def run(ctx):
     r.figures['line_rows'] = line_rows_hold(ctx, r)
     r.figures['panels'] = panels_hold(ctx, r)
     r.figures['overlay_room'] = overlay_room_holds(ctx, r)
+    r.figures['leap_room'] = leap_room_holds(ctx, r)
     r.figures['scene_strokes'] = scene_strokes_hold(ctx, r)
     r.figures['scene_return'] = scene_return_holds(ctx, r)
     r.figures['scene_pane_return'] = scene_pane_return_holds(ctx, r)

@@ -119,19 +119,22 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #line .key { display:inline-block; width:1.15em; height:.72em; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; margin-right:.3em; }
 #line .key.alone { margin-right:0; }
 
-/* LEAP — the address segment opened (K-30); below the one line's bottom edge, however many rows it takes; above the reading
-   scene, which it may open over, and above the overlay and the notice below it, so nothing shown while the reader types in
-   it covers its input or its rows (FP-36) */
-#leap { top:calc(var(--line-bottom, 29px) + 5px); left:50%; transform:translateX(-50%); width:620px; display:none; z-index:31; }
-#leap.on { display:block; }
-#leapq { width:100%; background:#14181d; border:1px solid var(--line); color:var(--ink); padding:6px 8px; font:inherit; border-radius:4px; outline:none; }
+/* LEAP — the address segment opened (K-30); below the one line's bottom edge, however many rows it takes, and no lower than
+   8 px above the window's foot, the rows' list the one part that gives way and scrolls (FP-26); above the reading scene,
+   which it may open over, and above the overlay and the notice below it, so nothing shown while the reader types in it
+   covers its input or its rows (FP-36) */
+#leap { top:calc(var(--line-bottom, 29px) + 5px); left:50%; transform:translateX(-50%); width:620px; max-height:calc(100vh - var(--line-bottom, 29px) - 5px - 8px); display:none; z-index:31; }
+#leap.on { display:flex; flex-direction:column; }
+#leapq { flex:none; width:100%; background:#14181d; border:1px solid var(--line); color:var(--ink); padding:6px 8px; font:inherit; border-radius:4px; outline:none; }
 #leapq:focus { border-color:var(--accent); }
-#leapnote { margin-top:6px; color:var(--dim); font-size:11px; }
+#leapnote { flex:none; margin-top:6px; color:var(--dim); font-size:11px; }
+/* the status region with no words sets no gap of its own, the rows' margin alone standing under the input; it stays rendered, so words written to it are announced */
+#leapnote:empty { margin-top:0; }
 /* the rows share three columns, so every row's title starts at one x: the address, as wide as the widest (up to 40% of
    the box); the title, the room the others leave; the address or label the row names, as wide as the widest (up to 30%
    of the box) — a cell longer than its column (a document's first line, a typed URL) wraps inside it, an address in it
    whole */
-#leaphits { max-height:340px; overflow:auto; margin-top:6px; display:grid; grid-template-columns:fit-content(40%) minmax(0, 1fr) fit-content(30%); column-gap:8px; align-content:start; }
+#leaphits { max-height:340px; min-height:0; overflow:auto; margin-top:6px; display:grid; grid-template-columns:fit-content(40%) minmax(0, 1fr) fit-content(30%); column-gap:8px; align-content:start; }
 .hit { grid-column:1 / -1; display:grid; grid-template-columns:subgrid; padding:3px 6px; border-radius:3px; cursor:pointer; overflow-wrap:anywhere; }
 .hit .a { color:var(--dim); }
 /* an address in a row is exact: never greyed and never broken across lines (FP-26) */

@@ -9,9 +9,12 @@
 // rows standing in the box again from the model, at once and as the new
 // class's index answers, its text, its caret and its focus as they stood;
 // each row's cells set in their faces — an address the identifier's, a
-// document's words the reading face's; and where no board is held the box
-// lists no board's level, says why, and Enter closes it onto the no-board
-// face with no LEAP made (FP-20, FP-29, FP-35).
+// document's words the reading face's; the rows' list stands at the row
+// chosen, moved by the least that shows it, at its top where none is chosen,
+// and again where its room moves, the reader's own scroll otherwise standing;
+// and where no board is held the box lists no board's level, says why, and
+// Enter closes it onto the no-board face with no LEAP made (FP-20, FP-26,
+// FP-29, FP-35).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as LEAP from './leap.js';
@@ -57,6 +60,18 @@ function element(id, o = {}) {
 const input = element('the box\'s input', { field: true }), rows = element('the box\'s rows'), note = element('the box\'s note');
 const box = element('the box');
 box.contains = (x) => x === box || x === input || x === rows || x === note;
+/** the rows' list as a test sets it, px: where its view begins, how tall each row and its view stand, how wide it is, and what a status region with words takes of its view */
+const list = { top: 100, row: 20, view: 100, width: 600, note: 20 };
+/** the list's rows, one per row drawn, each standing where the list's scroll leaves it */
+const drawn = () => Array.from({ length: (String(rows.innerHTML).match(/data-i=/g) || []).length }, (_, i) => ({
+  getBoundingClientRect: () => ({ top: list.top + i * list.row - /** @type {any} */ (rows).scrollTop, bottom: list.top + (i + 1) * list.row - /** @type {any} */ (rows).scrollTop }),
+}));
+Object.assign(rows, { scrollTop: 0, clientTop: 0, getBoundingClientRect: () => ({ top: list.top }) });
+Object.defineProperties(rows, {
+  children: { get: drawn },
+  clientWidth: { get: () => list.width },
+  clientHeight: { get: () => list.view - (note.innerHTML ? list.note : 0) },
+});
 const item = element('the item'), landed = element('the landing\'s item');
 let line = '1.0.1.0.3';
 let walk = item;
@@ -67,9 +82,22 @@ FOCUS.attach({ home: () => /** @type {any} */ (walk) });
 const shown = () => ({ open: LEAP.isOpen(), value: input.value, selected: !!input.selected && input.selected[0] === 0 && input.selected[1] === input.value.length, rows: LEAP.currentRows().map((r) => r.addr) });
 /** a key the box's input is handed, as the platform hands it */
 const key = (/** @type {string} */ k) => input.fire('keydown', { key: k, keyCode: 0, isComposing: false, metaKey: false, ctrlKey: false, stopPropagation() {}, preventDefault() {} });
+/** the box's text replaced, as typing it would */
+const type = (/** @type {string} */ text) => { input.value = text; input.fire('input'); };
+/** the key made n times */
+const press = (/** @type {string} */ k, /** @type {number} */ n) => { for (let i = 0; i < n; i++) key(k); };
+/** the index as a listing of `n` editions under the account, whose state is the given arm */
+const listing = (/** @type {number} */ n, arm = 'complete') => /** @type {any} */ ({
+  docs: Array.from({ length: n }, (_, i) => ({ doc: `1.0.1.0.${i + 1}`, kind: 'edition', label: `notes ${i + 1}`, standing: 'public' })),
+  counts: [{ account: '1.0.1', documents: n }], state: { arm },
+});
+/** the box opened, 30 editions in the index, and its text typed so 24 rows are listed, the first chosen: more than the list's view shows */
+const longList = () => { REC.takeIndex(listing(30)); LEAP.open(); type('1.0.1.0.'); };
 
 beforeEach(() => {
   LEAP.close();
+  Object.assign(list, { top: 100, row: 20, view: 100, width: 600, note: 20 });
+  /** @type {any} */ (rows).scrollTop = 0;
   // the board the page opened, whose level the box lists first
   REC.setBoard({ board: 'b-1', name: '', origin: '' });
   line = '1.0.1.0.3'; walk = item;
@@ -209,6 +237,99 @@ test('a change of the page\'s class computes the rows standing in the box again 
     LEAP.takeIndex();
     assert.deepEqual([shown().rows, input.value, globalThis.document.activeElement], [[EDITION.doc], 'notes', /** @type {any} */ (input)], 'the guest\'s index answered: the rows over it, the text and the focus kept');
   } finally { REC._reset(); TRAIL._reset(); }
+});
+
+test('↓ and ↑ move the rows\' list by the least that shows the row chosen, and not at all while that row stands in its view (issue #511; FP-26)', () => {
+  try {
+    longList();
+    assert.equal(rows.scrollTop, 0, 'typed: the first row chosen, the list at its top');
+    press('ArrowDown', 4);
+    assert.equal(rows.scrollTop, 0, 'the view\'s last row chosen: the list stands');
+    key('ArrowDown');
+    assert.equal(rows.scrollTop, 20, 'the row below it: the list moves one row');
+    press('ArrowDown', 18);
+    assert.equal(rows.scrollTop, 380, 'the list\'s last row: its foot on the view\'s');
+    press('ArrowUp', 4);
+    assert.equal(rows.scrollTop, 380, 'the view\'s first row chosen: the list stands');
+    key('ArrowUp');
+    assert.equal(rows.scrollTop, 360, 'the row above it: the list moves one row');
+  } finally { REC._reset(); }
+});
+
+test('a row taller than the list\'s view is brought in by its top (issue #511; FP-26)', () => {
+  try {
+    longList();
+    list.row = 300;
+    key('ArrowDown');
+    assert.equal(rows.scrollTop, 300, 'the second row: its top on the view\'s, its foot left below');
+    key('ArrowUp');
+    assert.equal(rows.scrollTop, 0, 'the first row above it: its top on the view\'s');
+  } finally { REC._reset(); }
+});
+
+test('a new list stands at the row it chooses or, with none chosen, at its top; text that lists nothing leaves the list as it stands (issue #511; FP-26)', () => {
+  try {
+    longList();
+    press('ArrowDown', 23);
+    assert.equal(rows.scrollTop, 380, 'the list at its last row');
+    type('notes');
+    assert.equal(rows.scrollTop, 0, 'typed text: its first match chosen, the list at its top');
+    press('ArrowDown', 23);
+    type('');
+    assert.equal(rows.scrollTop, 0, 'the text taken away: no row chosen, the list at its top');
+    /** @type {any} */ (rows).scrollTop = 40;
+    assert.doesNotThrow(() => type('nothing lists this'), 'typed text that lists nothing: no row to bring in');
+    assert.deepEqual([LEAP.currentRows(), rows.scrollTop], [[], 40], 'no row listed: the list as it stands');
+    LEAP.close();
+    /** @type {any} */ (rows).scrollTop = 200;
+    LEAP.open();
+    assert.equal(rows.scrollTop, 0, 'reopened: no row chosen, the list at its top');
+    /** @type {any} */ (rows).scrollTop = 40;
+    line = '1.0.2.0.9';
+    LEAP.takeAddress();
+    assert.equal(rows.scrollTop, 0, 'the box as opened taking a new address: its new levels from their top');
+  } finally { REC._reset(); }
+});
+
+test('the list is brought to the row chosen in the room the status region\'s words leave it, written first (issue #511; FP-26)', () => {
+  try {
+    longList();
+    press('ArrowDown', 3);
+    assert.equal(rows.scrollTop, 0, 'the fourth row in view, no words in the status region');
+    REC.takeIndex(listing(30, 'building'));
+    key('ArrowDown');
+    assert.notEqual(note.innerHTML, '', 'the same render wrote the index\'s state');
+    assert.equal(rows.scrollTop, 20, 'the fifth row, its foot on a view the words made one row shorter');
+  } finally { REC._reset(); }
+});
+
+test('the list is brought back to the row chosen where its room moves, and stands where the reader scrolled it where its room stands or no row is chosen (issue #511; FP-26)', () => {
+  try {
+    longList();
+    press('ArrowDown', 4);
+    assert.equal(rows.scrollTop, 0, 'the view\'s last row chosen');
+    list.view = 60;
+    LEAP.roomChanged();
+    assert.equal(rows.scrollTop, 40, 'a shorter view: the row\'s foot on it');
+    /** @type {any} */ (rows).scrollTop = 0;
+    LEAP.roomChanged();
+    assert.equal(rows.scrollTop, 0, 'the room as it stood: the reader\'s scroll stands, the row out of view');
+    list.width = 400;
+    LEAP.roomChanged();
+    assert.equal(rows.scrollTop, 40, 'a narrower list, its rows wrapping anew: the row brought back');
+    LEAP.close();
+    LEAP.open();
+    /** @type {any} */ (rows).scrollTop = 60;
+    list.view = 40;
+    LEAP.roomChanged();
+    assert.equal(rows.scrollTop, 60, 'no row chosen: the reader\'s scroll stands');
+    key('ArrowDown');
+    LEAP.close();
+    /** @type {any} */ (rows).scrollTop = 7;
+    list.view = 90;
+    LEAP.roomChanged();
+    assert.equal(rows.scrollTop, 7, 'the box closed: nothing written');
+  } finally { REC._reset(); }
 });
 
 test('where no board is held the box opens empty and lists no board\'s level, its status region says why in the answer\'s place, and Enter — on the box as opened, a typed address or a typed URL — closes it onto the no-board face, no LEAP made (issue #215\'s design decision; FP-35)', () => {

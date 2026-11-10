@@ -95,7 +95,9 @@
 // T-LAYER stood — its new mounts, its articles in the mount band and their
 // lines. Every 120 ms the line is rebuilt and the LEAP box takes the
 // address beside it and, standing over a change of the page's class, the
-// index its new class reads (N-LEAP's `takeAddress`, `takeIndex`).
+// index its new class reads, then keeps its row chosen in view of the room
+// the line and the window leave it (N-LEAP's `takeAddress`, `takeIndex`,
+// `roomChanged`).
 // A change of the page's class (`dropped`): the overlay host, the faces, the
 // LEAP box, the find, N-GO, the one line and the hint first, so what the
 // class the page left
@@ -246,7 +248,7 @@ function loop(/** @type {number} */ now) {
     lastRev = rev; lastLayerRev = lrev; lastKeptRev = krev; lastCam = { x: CAM.cam.x, y: CAM.cam.y, scale: CAM.cam.scale };
   }
   lastT = now;
-  if (now - lineT > 120) { lineT = now; LINE.render(); LEAP.takeAddress(); LEAP.takeIndex(); }
+  if (now - lineT > 120) { lineT = now; LINE.render(); LEAP.takeAddress(); LEAP.takeIndex(); LEAP.roomChanged(); }
 }
 
 /**
