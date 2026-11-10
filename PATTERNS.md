@@ -62,16 +62,21 @@ fix; nothing here depends on their names.
   beams are redrawn. Nothing drawn on the canvas is updated in place.
   The screen cannot drift from the state because it is rebuilt from
   the state.
-- **FP-9 Input never draws.** A handler changes view state, or asks
-  the model to fetch, and marks the frame dirty. That is all it does.
+- **FP-9 Input never draws.** A handler changes view state, asks
+  the model to fetch, or hands `web/write/` an edit, and marks the
+  frame dirty. That is all it does.
 - **FP-10 One owner per piece of state.** Each concern's state lives
   in one module and is read through that module's exported functions.
   No module keeps a copy of another's state. No module touches
   another's DOM.
 - **FP-11 Dependencies run one way.** The bridge, then the model,
-  then, beside each other, the plane, text, beams, navigation, the
-  overlays, the one line and the scene, then the one module that
-  wires them and starts the loop. A module never imports one above
+  then the write layer (`web/write/`), then, beside each other, the
+  plane, text, beams, navigation, the overlays, the one line and the
+  scene, then the one module that wires them and starts the loop. The
+  write layer imports the bridge, the model and `util.js` alone, and
+  draws nothing. Only it sends a write through the port: the
+  publication, merge and history families, `upload`, `restore`,
+  `resolve`, and any `op` frame outside the read operations. A module never imports one above
   it. Within one layer a module reads another only through its
   exported functions (FP-10). The model's view-driven needs, which
   spans and which documents to ask for, are computed from the plane's
@@ -106,7 +111,8 @@ fix; nothing here depends on their names.
   its rows, the mirror, the trail, the one line, the status line, the
   live region and the cards are ordinary DOM. Each is a function that
   rebuilds its own element from state when that part of the state
-  changes. No observers, no binding.
+  changes. No observers, no binding. A rebuild spares a composer's
+  field until the composer closes.
 
 ## The fit
 
