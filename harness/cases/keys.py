@@ -16,7 +16,11 @@ Enter on the LEAP box as opened lands in
 place, ↓ choosing the first level, Enter on typed text that matches nothing
 goes nowhere — the box standing open over the text and its answer, the
 focus in its input, until Esc — and a typed account address a teleport
-with its trail entry (foundations §2.2, §2.3; K-31); Mod+K "link to…" and
+with its trail entry (foundations §2.2, §2.3; K-31); Mod+Shift+Enter in the
+box at reading scale, on the box as opened, opening nothing, the box
+standing and the hint beside it saying why, and on a typed address of
+another document opening the reading scene on the document in view and it,
+its entry pushed, Esc its Back (issue #332; D5 K-101); Mod+K "link to…" and
 never the box: at the whole board, no span in focus, its hint giving its
 slot's reason with nothing moved (D5 K-30, K-100; P47); Mod+Shift+O,
 Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter there, finding
@@ -2753,6 +2757,51 @@ def typed_surfaces(ctx, r):
             {'outline': outline, 'run_lines': line_rects, 'focus': focus, 'P': P})
 
 
+def leap_beside(ctx, r, in_view):
+    """"OPEN BESIDE" IN THE LEAP BOX (issue #332; D5 K-101; foundations §2.3), `in_view` the document read at its reading
+    scale: Mod+Shift+Enter on the box as opened opens nothing — the box standing with its text and its focus, the hint
+    beside the box saying it needs a place, said through the status region, the trail and the scene as they were; on a
+    typed address of another document, whose row offers its "open beside", it closes the box and opens the reading scene
+    on the document in view and that document, its entry pushed at the act and the focus in the far pane; Esc then closes
+    the scene, a Back onto the entry it opened over"""
+    t0 = trail(ctx)
+    chord(ctx, 'l', mods=('Meta',))
+    chord(ctx, 'Enter', mods=('Meta', 'Shift'))
+    s, t1, said = state(ctx), trail(ctx), told_by_hint(ctx, 'L.leap.beside.choose')
+    box = ctx.js('''(() => { const q = document.getElementById('leapq'), b = document.getElementById('leap').getBoundingClientRect(), h = window.__skep.hint();
+      return {focused: document.activeElement === q, value: q.value, rect: {x: b.left, y: b.top, w: b.width, h: b.height}, placed: h ? h.placed : null, vw: window.innerWidth}; })()''')
+    placed = box['placed'] or {}
+    anchor, rect, b = placed.get('anchor') or {}, placed.get('rect') or {}, box['rect']
+    beside = placed.get('by') == 'beside' and all(abs(anchor.get(k, -1e9) - b[k]) <= 1 for k in ('x', 'y', 'w', 'h'))
+    apart = bool(rect) and (rect['x'] >= b['x'] + b['w'] or rect['x'] + rect['w'] <= b['x'] or rect['y'] >= b['y'] + b['h'] or rect['y'] + rect['h'] <= b['y'])
+    r.check(s['leap'] and box['focused'] and box['value'] == in_view and not s['scene'] and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries'])
+            and said['hint'] == said['words'] and said['live'] == said['words'] and said['line'] is None and beside and apart,
+            'Mod+Shift+Enter on the LEAP box as opened, no row chosen, opens nothing: the box stands with its text and its focus, and the hint beside the box, clear of it, says it needs a place, said through the status region — the trail and the scene as they were (issue #332; D5 K-101; issue #468)',
+            dict(said, box=box, scene=s['scene'], cursor=[t0['cursor'], t1['cursor']]))
+    ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+    ctx.drv.ime(DOC)
+    ctx.frames(2)
+    offered = ctx.js('[...document.querySelectorAll("#leaphits [data-beside]")].map((e) => window.__skep.leap.rows()[Number(e.dataset.beside)].addr)')
+    r.check(offered == [DOC] and ctx.js('window.__skep.hint()') is None, 'typed, the address of another document: its row offers "open beside", and the text typed took the hint down', {'offered': offered})
+    chord(ctx, 'Enter', mods=('Meta', 'Shift'))
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.scene.isOpen() || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
+    ctx.settle()
+    ctx.frames(2)
+    s, t2 = state(ctx), trail(ctx)
+    pair = ctx.js('window.__skep.scene.pair()')
+    opened = t2['entries'][t2['cursor']] if t2['entries'] else {}
+    far = ctx.js('(() => { const e = document.activeElement; return !!e && !!e.closest && !!e.closest("#sceneB"); })()')
+    # each pane names the version it reads: an edition read at its bare address, the member it is
+    panes = {k: trunk_of(v) for k, v in (pair or {}).items()}
+    r.check(not s['leap'] and s['scene'] and panes == {'a': trunk_of(in_view), 'b': DOC} and len(t2['entries']) == len(t0['entries']) + 1 and t2['cursor'] == t0['cursor'] + 1
+            and bool(opened.get('scene')) and opened.get('addr') == DOC and far,
+            'Mod+Shift+Enter on it opens the reading scene on the document in view and that document, the box closed, the scene\'s entry pushed at the act, the focus in the far pane (issue #332; D5 K-101)',
+            {'leap': s['leap'], 'scene': s['scene'], 'pair': pair, 'entries': [len(t0['entries']), len(t2['entries'])], 'cursor': [t0['cursor'], t2['cursor']], 'entry': opened.get('addr'), 'far_pane': far})
+    chord(ctx, 'Escape')
+    s, t3 = state(ctx), trail(ctx)
+    r.check(not s['scene'] and t3['cursor'] == t0['cursor'], 'Esc closes the scene, a Back onto the entry it opened over', {'scene': s['scene'], 'cursor': [t0['cursor'], t3['cursor']]})
+
+
 def tabbed_to_hint(ctx, r):
     """Tab reaches the hint standing in its compact form without ending it; Enter at it opens its notice whole, said in the
     status region, the focus kept on it; the next act takes it down, its focus handed to the walk's item (issue #468's design
@@ -2916,6 +2965,7 @@ def run(ctx):
     r.check(s['trail'] == trail_before + 1, 'the LEAP pushed a trail entry', {'before': trail_before, 'after': s['trail']})
     r.check(ctx.js('window.__skep.view.lod()')['name'] == 'near', 'the landing is at reading scale')
     ring_drawn(ctx, r, 'Enter on a typed address')
+    leap_beside(ctx, r, s['focus']['addr'])
     # a typed account's address is a teleport too (foundations §2.2): the account's region, an entry on the trail, and Back
     # returns to the view the LEAP left
     left, t0 = state(ctx), trail(ctx)
@@ -3530,6 +3580,6 @@ def run(ctx):
     r.figures['back_after_publish'] = back_after_publish(ctx, r)
     # ---- the page's own find (issue #222's design decision) ------------------------------------------------------
     r.figures['find'] = find_holds(ctx, r)
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K at the whole board', 'Mod+Shift+O, Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter at the whole board', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+K, Mod+Shift+A and Mod+Shift+C at the walk\'s block', 'a press on the "link to…" slot', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+K in the scene', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival']
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K at the whole board', 'Mod+Shift+O, Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter at the whole board', 'Enter', 'Mod+Shift+Enter in the LEAP box as opened and on a typed address, Esc closing the scene', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+K, Mod+Shift+A and Mod+Shift+C at the walk\'s block', 'a press on the "link to…" slot', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+K in the scene', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

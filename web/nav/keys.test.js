@@ -1,6 +1,7 @@
 // N-KEYS's test. The table, read from the module's source: every row of the
 // table is read, D5's routed rows are present, Mod+L alone opens the LEAP box
-// and Mod+K is "link to…", every bound chord is a chord, a
+// and Mod+K is "link to…", Mod+Shift+Enter is read side by side at the
+// selection and "open beside" in the LEAP box, every bound chord is a chord, a
 // navigation key or one of the platform's text keys at a caret — no plane
 // command rides a printable key (§2.7) — no row binds a bare letter, digit or
 // sign, and the dispatch guards the IME. Then the dispatch on a page of
@@ -132,7 +133,11 @@ test('every row of the TABLE is read (a row the pattern misses would escape the 
 });
 
 test('the table holds D5\'s routed rows', () => {
-  for (const id of ['K-1', 'K-7', 'K-11', 'K-13', 'K-14', 'K-20', 'K-21', 'K-30', 'K-40', 'K-41', 'K-45', 'K-46', 'K-47', 'K-48', 'K-49', 'K-51', 'K-52', 'K-57', 'K-62', 'K-70', 'K-71', 'K-72', 'K-74', 'K-76', 'K-77', 'K-100']) assert.ok(rows.some((r) => r.id === id), id);
+  for (const id of ['K-1', 'K-7', 'K-11', 'K-13', 'K-14', 'K-20', 'K-21', 'K-30', 'K-40', 'K-41', 'K-45', 'K-46', 'K-47', 'K-48', 'K-49', 'K-51', 'K-52', 'K-57', 'K-62', 'K-70', 'K-71', 'K-72', 'K-74', 'K-76', 'K-77', 'K-100', 'K-101']) assert.ok(rows.some((r) => r.id === id), id);
+});
+
+test('Mod+Shift+Enter is "read side by side" wherever it stands: the selection\'s slot, and in the LEAP box its row\'s "open beside" (D5 K-52, K-101)', () => {
+  assert.deepEqual(rows.filter((r) => r.chord === 'Mod+Shift+Enter'), [{ id: 'K-101', chord: 'Mod+Shift+Enter', act: 'leap.beside', surface: 'box' }, { id: 'K-52', chord: 'Mod+Shift+Enter', act: 'selection.scene', surface: 'selection' }]);
 });
 
 test('Mod+L alone opens the LEAP box, and Mod+K is "link to…" at the selection, beside annotate\'s Mod+Shift+A and quote\'s Mod+Shift+C (D5 K-30, K-45, K-46, K-100)', () => {

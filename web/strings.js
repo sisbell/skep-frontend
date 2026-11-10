@@ -1064,6 +1064,11 @@ export const STRINGS = {
   'L.address.name': { text: '⟨place⟩⟨label⟩⟨position⟩⟨version⟩⟨state⟩', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.leap-label': { text: 'LEAP — an address, or a document\'s first line', cls: 'DRAFT', source: 'designs/plane.html', screen: 'B1-S11' },
   'L.leap-rows-label': { text: 'LEAP', cls: 'DRAFT', source: '', screen: 'B1-S11', lane: true },
+  // "open beside" refused in the LEAP box (D5 K-101), each its hint beside the box: no row chosen and none answered; no
+  // document read at its reading scale; a row naming no document but the one read, or none at all
+  'L.leap.beside.choose': { text: 'open beside needs a place — choose a row with ↓, or type an address or a first line', cls: 'DRAFT', source: '', screen: 'B1-S11: Mod+Shift+Enter in the LEAP box with no row chosen or none answered', lane: true, hint: 'clause' },
+  'L.leap.beside.reading': { text: 'open beside needs a document you are reading — go into one first', cls: 'DRAFT', source: '', screen: 'B1-S11: Mod+Shift+Enter in the LEAP box with no document at its reading scale', lane: true, hint: 'clause' },
+  'L.leap.beside.other': { text: 'this row names no other document — open beside opens another document beside the one you are reading', cls: 'DRAFT', source: '', screen: 'B1-S11: Mod+Shift+Enter in the LEAP box at a row naming no other document', lane: true, hint: 'clause' },
   'L.scene-label': { text: 'the reading scene: two places side by side', cls: 'DRAFT', source: 'designs/plane.html', screen: 'B1-S9' },
   'L.mirror-label': { text: 'the board in record order', cls: 'DRAFT', source: 'designs/plane.html', screen: 'the ARIA mirror' },
   'L.mirror-level': { text: 'level ⟨n⟩', cls: 'DRAFT', source: 'designs/plane.js', screen: 'the ARIA mirror' },

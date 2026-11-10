@@ -3023,17 +3023,22 @@ def version_holds(ctx, r):
 
 
 def chrome_holds(ctx, r):
-    """THE CHROME's checks: the LEAP box's columns, among its rows a trail entry carrying the longest label a place has
-    (a document's first line, up to 200 characters); the opaque chrome over the plane; its figures"""
+    """THE CHROME's checks: the LEAP box's columns — each row's go, among its rows a trail entry carrying the longest label
+    a place has (a document's first line, up to 200 characters), and the "open beside" a row naming another document
+    offers past it; the opaque chrome over the plane; its figures"""
     ctx.leap(FAR_LEAP)
     ctx.leap(DOC, WINDOW[0])
     ctx.js('window.__skep.leap.open()')
     ctx.frames(2)
-    cells = ctx.js('''[...document.querySelectorAll('#leaphits .hit')].map((h) => [...h.children].map((c) => { const q = c.getBoundingClientRect();
+    cells = ctx.js('''[...document.querySelectorAll('#leaphits .hit')].map((h) => [...(h.querySelector('.go') || h).children].map((c) => { const q = c.getBoundingClientRect();
       return {x: q.left, w: q.width, row: h.getBoundingClientRect().width, over: c.scrollWidth - c.clientWidth, chars: c.textContent.length}; }))''')
     whole = len(cells) >= 3 and all(len(row) == 3 for row in cells)
     ragged = {i: [round(row[i]['x'], 2) for row in cells] for i in range(3) if whole and max(row[i]['x'] for row in cells) - min(row[i]['x'] for row in cells) > LABEL_TOL_PX}
     r.check(whole and not ragged, f'the LEAP box: its rows share their columns — each column\'s cells start at one x, {LABEL_TOL_PX} px either way', {'rows': len(cells), 'cells': [len(row) for row in cells], 'ragged': ragged})
+    acts = ctx.js('''[...document.querySelectorAll('#leaphits [data-beside]')].map((b) => { const q = b.getBoundingClientRect(), g = b.closest('.hit').querySelector('.go').getBoundingClientRect();
+      return {x: q.left, go: g.right}; })''')
+    r.check(bool(acts) and all(a['x'] >= a['go'] - LABEL_TOL_PX for a in acts) and max(a['x'] for a in acts) - min(a['x'] for a in acts) <= LABEL_TOL_PX,
+            f'the LEAP box: each row\'s "open beside" stands in a column of its own past the row\'s go, at one x across the rows that offer it, {LABEL_TOL_PX} px either way (issue #332)', acts)
     longest = max((c['chars'] for row in cells for c in row), default=0)
     over = [[i, j, c['over']] for i, row in enumerate(cells) for j, c in enumerate(row) if c['over'] > 1]
     narrow = [[i, round(row[1]['w'], 1), round(row[1]['row'], 1)] for i, row in enumerate(cells) if whole and row[1]['w'] < row[1]['row'] / 4]
@@ -3424,7 +3429,8 @@ RECTS_JS = '''((sels) => ({window: {x: 0, y: 0, w: window.innerWidth, h: window.
 def panels_hold(ctx, r):
     """THE PANELS IN A NARROW WINDOW (FP-26): in each window LINE_ROWS_PX wide, landed at the window run's position in the
     first edition — the LEAP box opened stands whole inside the window, its input too, and the address cell of every row
-    stands whole across it; a walk key made there, the ring drawn, the mirror stands whole inside the window; and Mod+F
+    and each row's "open beside" stand whole across it; a walk key made there, the ring drawn, the mirror stands whole
+    inside the window; and Mod+F
     there opens the find box whole inside the window, Esc closing it. Its figures: each panel's left and right edges in
     each window"""
     figures = {}
@@ -3437,15 +3443,17 @@ def panels_hold(ctx, r):
             ctx.leap(DOC, WINDOW[0])
             ctx.js('window.__skep.leap.open()')
             ctx.frames(2)
-            leap = ctx.js('%s(["#leap", "#leapq", "#leaphits .hit > :first-child"])' % RECTS_JS)
+            leap = ctx.js('%s(["#leap", "#leapq", "#leaphits .hit > .go > :first-child", "#leaphits [data-beside]"])' % RECTS_JS)
             ctx.js('window.__skep.leap.close()')
             ctx.frames(2)
-            box, cells = leap['rects'][:2], leap['rects'][2:]
+            box = [q for q in leap['rects'] if q['sel'] in ('#leap', '#leapq')]
+            cells = [q for q in leap['rects'] if q['sel'].endswith(':first-child')]
+            acts = [q for q in leap['rects'] if q['sel'].endswith('[data-beside]')]
             win = leap['window']
-            past = [q for q in box if not (q['w'] > 0 and inside(q, win))] + [q for q in cells if q['x'] < -LABEL_TOL_PX or q['x'] + q['w'] > win['w'] + LABEL_TOL_PX]
+            past = [q for q in box if not (q['w'] > 0 and inside(q, win))] + [q for q in cells + acts if q['x'] < -LABEL_TOL_PX or q['x'] + q['w'] > win['w'] + LABEL_TOL_PX]
             r.check(len(box) == 2 and bool(cells) and not past,
-                    f'a {w} px window: the LEAP box opened stands whole inside the window, its input too, and the address cell of each of its {len(cells)} rows whole across it (FP-26)',
-                    {'past': [dict(seen(q), sel=q['sel']) for q in past[:6]], 'box': [dict(seen(q), sel=q['sel']) for q in box], 'rows': len(cells), 'vw': win['w']})
+                    f'a {w} px window: the LEAP box opened stands whole inside the window, its input too, and the address cell of each of its {len(cells)} rows and each of its {len(acts)} "open beside" whole across it (FP-26)',
+                    {'past': [dict(seen(q), sel=q['sel']) for q in past[:6]], 'box': [dict(seen(q), sel=q['sel']) for q in box], 'rows': len(cells), 'acts': len(acts), 'vw': win['w']})
             ctx.drv.key('ArrowDown')
             ctx.settle()
             ctx.frames(2)

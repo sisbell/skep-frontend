@@ -295,8 +295,9 @@ SWEEP_PAGE = r'''(async () => {
   return hits;
 })()'''
 
-# the AX tree's roles whose text is the DOM's own, swept there: a text run, and a listbox option, whose name is its row's text nodes
-SWEEP_AX_SKIP = {'StaticText', 'InlineTextBox', 'option'}
+# the AX tree's roles whose text is the DOM's own, swept there: a text run, and a grid's row and cell, whose names are its
+# text nodes
+SWEEP_AX_SKIP = {'StaticText', 'InlineTextBox', 'row', 'gridcell'}
 
 
 def placeholder_sweep(ctx):

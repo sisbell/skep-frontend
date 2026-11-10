@@ -123,19 +123,29 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    8 px above the window's foot, the rows' list the one part that gives way and scrolls (FP-26); above the reading scene,
    which it may open over, and above the overlay and the notice below it, so nothing shown while the reader types in it
    covers its input or its rows (FP-36) */
-#leap { top:calc(var(--line-bottom, 29px) + 5px); left:50%; transform:translateX(-50%); width:620px; max-height:calc(100vh - var(--line-bottom, 29px) - 5px - 8px); display:none; z-index:31; }
+#leap { top:calc(var(--line-bottom, 29px) + 5px); left:50%; transform:translateX(-50%); width:620px; max-height:calc(100vh - var(--line-bottom, 29px) - 5px - 8px); display:none; z-index:31; container:leap / inline-size; }
 #leap.on { display:flex; flex-direction:column; }
 #leapq { flex:none; width:100%; background:#14181d; border:1px solid var(--line); color:var(--ink); padding:6px 8px; font:inherit; border-radius:4px; outline:none; }
 #leapq:focus { border-color:var(--accent); }
 #leapnote { flex:none; margin-top:6px; color:var(--dim); font-size:11px; }
 /* the status region with no words sets no gap of its own, the rows' margin alone standing under the input; it stays rendered, so words written to it are announced */
 #leapnote:empty { margin-top:0; }
-/* the rows share three columns, so every row's title starts at one x: the address, as wide as the widest (up to 40% of
+/* the rows share four columns, so every row's title starts at one x: the address, as wide as the widest (up to 40% of
    the box); the title, the room the others leave; the address or label the row names, as wide as the widest (up to 30%
    of the box) — a cell longer than its column (a document's first line, a typed URL) wraps inside it, an address in it
-   whole */
-#leaphits { max-height:340px; min-height:0; overflow:auto; margin-top:6px; display:grid; grid-template-columns:fit-content(40%) minmax(0, 1fr) fit-content(30%); column-gap:8px; align-content:start; }
+   whole — the three a row's go spans; then the row's "open beside", as wide as its act where a row offers one */
+#leaphits { max-height:340px; min-height:0; overflow:auto; margin-top:6px; display:grid; grid-template-columns:fit-content(40%) minmax(0, 1fr) fit-content(30%) auto; column-gap:8px; align-content:start; }
 .hit { grid-column:1 / -1; display:grid; grid-template-columns:subgrid; padding:3px 6px; border-radius:3px; cursor:pointer; overflow-wrap:anywhere; }
+.hit > .go { grid-column:1 / span 3; display:grid; grid-template-columns:subgrid; }
+.hit > .beside { grid-column:4; align-self:start; }
+.hit > .beside button { margin:0; }
+/* a box narrower than 40em leaves no room for a fourth column beside two whole addresses and a title a quarter of the
+   row wide: the rows keep three columns, and each row's "open beside" stands on a line of its own beneath its go — an
+   empty one taking no height */
+@container leap (width < 40em) {
+  #leaphits { grid-template-columns:fit-content(40%) minmax(0, 1fr) fit-content(30%); }
+  .hit > .beside { grid-column:1 / -1; }
+}
 .hit .a { color:var(--dim); }
 /* an address in a row is exact: never greyed and never broken across lines (FP-26) */
 .hit .id { color:var(--ink); white-space:nowrap; overflow-wrap:normal; }
@@ -354,9 +364,11 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 
 /* A ONE-LINE HINT (O-HINT places it, and fades it in by its opacity alone at each press it answers): beside the focus a
    refused press was made at, over the plane, the beams, the corners, a landing's line and the reading scene, under the find
-   box, the overlay and the LEAP box; opaque, as all chrome over the plane is, its border the warning hue its words take;
-   one button, its words wrapping inside the room it is given (FP-26, FP-31) */
+   box, the overlay and the LEAP box — save while the LEAP box stands, when it is the box's own refused press's, beside the
+   box and over it where it finds no room outside it; opaque, as all chrome over the plane is, its border the warning hue
+   its words take; one button, its words wrapping inside the room it is given (FP-26, FP-31) */
 #hint { position:fixed; left:0; top:0; z-index:27; display:none; max-width:360px; }
+#leap.on ~ #hint { z-index:32; }
 #hint.on { display:block; }
 #hint.covered { display:none; }
 #hint button { display:block; max-width:100%; margin:0; padding:3px 8px; white-space:normal; text-align:left; font-size:11px; line-height:1.45;

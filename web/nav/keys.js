@@ -97,6 +97,8 @@
 // `endArrival`); made at a landing, it passes over the box, over the find
 // and over an overlay whose own field holds the caret, the notice below that
 // overlay still closing first (FP-20). Mod+L alone opens the LEAP box (K-30),
+// whose Mod+Shift+Enter is its own "open beside" and never reaches the
+// dispatch (K-101; N-LEAP's `beside`),
 // Mod+Y the trail's list (K-41), Mod+= and Mod+- zoom the camera by 1.25
 // about the view's centre and re-take the focus (K-11), Mod+Shift+P shows the
 // one line's strip (K-23), and the selection's slot chords (K-45 … K-52,
@@ -222,6 +224,7 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-23', chord: 'Mod+Shift+P', act: 'line.strip', surface: 'line' },
   { id: 'K-30', chord: 'Mod+L', act: 'leap.open', surface: 'box' },
   { id: 'K-34', chord: 'Esc', act: 'esc', surface: 'box' },
+  { id: 'K-101', chord: 'Mod+Shift+Enter', act: 'leap.beside', surface: 'box' },
   { id: 'K-40', chord: 'Mod+1…9', act: 'trail.jump', surface: 'trail' },
   { id: 'K-41', chord: 'Mod+Y', act: 'trail.list', surface: 'trail' },
   { id: 'K-45', chord: 'Mod+Shift+A', act: 'selection.annotate', surface: 'selection' },

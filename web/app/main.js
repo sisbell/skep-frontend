@@ -46,7 +46,10 @@
 // is set again as, N-GO's `vanished`, FP-21 — how far an in-document
 // find's box pushes a corner's items down, N-FIND's `atop` — and the newer
 // version a corner offers to read where an arrival pinned its box, N-GO's
-// `newerAt`, FP-23);
+// `newerAt`, FP-23); N-LEAP's (the current address, L-LINE's
+// `currentAddress`, and the document in view — the document the line's
+// `addressDisplay` names at its reading scale, as the version its box shows,
+// N-GO's `shownIn`, FP-22 — beside which a row opens its place, `reading`);
 // LK's (the links lit, P-RENDER's `drawsDoc`, T-LAYER's
 // owner rule, `shownIn`, and a far document's first line, T-LAYER's
 // `firstOfFar` by T-ARTICLE's one rule); N-WALK's (Back's light, what a landing says,
@@ -95,9 +98,10 @@
 // T-LAYER stood — its new mounts, its articles in the mount band and their
 // lines. Every 120 ms the line is rebuilt and the LEAP box takes the
 // address beside it and, standing over a change of the page's class, the
-// index its new class reads, then keeps its row chosen in view of the room
-// the line and the window leave it (N-LEAP's `takeAddress`, `takeIndex`,
-// `roomChanged`).
+// index its new class reads, draws its rows' acts again where the document
+// in view changed, then keeps its row chosen in view of the room the line
+// and the window leave it (N-LEAP's `takeAddress`, `takeIndex`,
+// `takeReading`, `roomChanged`).
 // A change of the page's class (`dropped`): the overlay host, the faces, the
 // LEAP box, the find, N-GO, the one line and the hint first, so what the
 // class the page left
@@ -249,7 +253,13 @@ function loop(/** @type {number} */ now) {
     lastRev = rev; lastLayerRev = lrev; lastKeptRev = krev; lastCam = { x: CAM.cam.x, y: CAM.cam.y, scale: CAM.cam.scale };
   }
   lastT = now;
-  if (now - lineT > 120) { lineT = now; LINE.render(); LEAP.takeAddress(); LEAP.takeIndex(); LEAP.roomChanged(); }
+  if (now - lineT > 120) { lineT = now; LINE.render(); LEAP.takeAddress(); LEAP.takeIndex(); LEAP.takeReading(); LEAP.roomChanged(); }
+}
+
+/** the document in view a row of the LEAP box opens beside (N-LEAP's reader): the document the one line names at its reading scale, as the version its box shows; null where none is */
+function reading() {
+  const a = LINE.addressDisplay();
+  return a.doc && a.pos != null ? GO.shownIn(a.doc) : null;
 }
 
 /**
@@ -318,7 +328,7 @@ async function boot() {
   HINT.attach(el('hint'), { handOff: () => WALK.focusItem() });
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')), stop: /** @type {HTMLButtonElement} */ (el('scenestop')), strokes: el('scenestrokes') },
     { end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, at, told) => FACES.floating(far, at, null, told), held: FACES.held } });
-  LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
+  LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress(), reading);
   FIND.attach({ box: el('find'), input: /** @type {HTMLInputElement} */ (el('findq')), count: el('findcount'), prev: /** @type {HTMLButtonElement} */ (el('findprev')), next: /** @type {HTMLButtonElement} */ (el('findnext')), note: el('findnote') });
   LINE.attach(el('line'), { open: (byKey, at) => LEAP.open(at), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed(), panes: SCENE.keptPanes, paneLift: SCENE.paneLift, hint: (id, at) => HINT.show(id, null, { at }), acted: () => HINT.act() });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a), vanished: GO.vanished, atop: FIND.atop, newer: GO.newerAt });

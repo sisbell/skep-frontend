@@ -814,7 +814,7 @@ test('every hint the page raises is marked in the table whether it compacts — 
     for (const m of src.matchAll(/(?:HINT\.show|acts\.hint)\(([^,]+),/g)) for (const id of m[1].matchAll(/'([A-Z][\w-]*(?:\.[^']+)?)'/g)) raised.add(id[1]);
     for (const m of src.matchAll(/INERT_REASON = [^;]*?\(\{([^}]*)\}\)/g)) for (const id of m[1].matchAll(/'([A-Z][\w-]*(?:\.[^']+)?)'/g)) raised.add(id[1]);
   }
-  for (const id of ['F.swallow', 'F.swallow.space', 'B3.caret.enter', 'B3.caret.enter.paste', 'B3.caret.cut', 'D5.select-first', 'B3.row.follow.inert', 'L.find.off', 'L.no-notebook-yet', 'L.seam.annotate', 'L.seam.quote', 'L.seam.link-to', 'C-45', 'B3.row.others-document']) {
+  for (const id of ['F.swallow', 'F.swallow.space', 'B3.caret.enter', 'B3.caret.enter.paste', 'B3.caret.cut', 'D5.select-first', 'B3.row.follow.inert', 'L.find.off', 'L.no-notebook-yet', 'L.seam.annotate', 'L.seam.quote', 'L.seam.link-to', 'C-45', 'B3.row.others-document', 'L.leap.beside.choose', 'L.leap.beside.reading', 'L.leap.beside.other']) {
     assert.ok(raised.has(id), `${id}: raised as a hint`);
   }
   assert.deepEqual([...raised].filter((id) => !STRINGS[id] || !STRINGS[id].hint), [], 'every one marked');
