@@ -7,10 +7,11 @@
 // same kernel and a position carried across them both ways; a span of the
 // typed text split into what the delivered text holds and what the edits made;
 // a past state's record from an `/op-at` delivery; and the character
-// boundaries about a position (FP-6, FP-7, FP-14).
+// boundaries and the word stops about a position, the stops macOS's own (FP-6,
+// FP-7, FP-14).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyHeld, applyEdits, toShown, toBase, spanRuns, recordAt, boundaries } from './derive.js';
+import { applyHeld, applyEdits, toShown, toBase, spanRuns, recordAt, boundaries, wordStop } from './derive.js';
 import { deriveBlocks, textOf } from './records.js';
 import { vSpan } from './address.js';
 import { byteLength } from '../util.js';
@@ -157,4 +158,51 @@ test('the character boundaries about a position: the byte before it and the byte
   assert.deepEqual(boundaries(runs, 1), { before: null, after: 2 }, 'nothing before the first position');
   assert.deepEqual(boundaries(runs, 5), { before: 4, after: 6 }, 'the atom is one position whole');
   assert.deepEqual(boundaries(runs, 7), { before: 6, after: null }, 'nothing after the end');
+});
+
+/** a content run of `text` from `pos` */
+const contentRun = (/** @type {number} */ pos, /** @type {string} */ text) => /** @type {import('./frames.js').Run} */ ({ pos, width: byteLength(text), kind: 'content', text, ref: null, origin: null });
+/** every stop a word step reaches from `pos`, in the order it reaches them */
+const stops = (/** @type {import('./frames.js').Run[]} */ runs, /** @type {number} */ pos, /** @type {-1 | 1} */ dir) => {
+  const out = [];
+  for (let p = wordStop(runs, pos, dir); p != null; p = wordStop(runs, p, dir)) { assert.ok(out.length < 64 && p !== pos, `the step from ${pos} moves on, at ${p}`); out.push(p); pos = p; }
+  return out;
+};
+
+test('a word step stops where macOS\'s own does: → at the end of the first word ending after the position, ← at the start of the last word beginning before it, white space, punctuation and lines holding no word passed over, the text\'s end where no word lies that way, and no stop past it (K-71)', () => {
+  const lines = [contentRun(1, 'First line.\n\nSecond line here.\n')];
+  assert.deepEqual(stops(lines, 3, 1), [6, 11, 20, 25, 30, 32], 'mid-word to its end, over the blank line, past the last word to the text\'s end');
+  assert.deepEqual(stops(lines, 31, -1), [26, 21, 14, 7, 1]);
+  assert.deepEqual([wordStop(lines, 32, 1), wordStop(lines, 1, -1)], [null, null], 'nothing that way at either end');
+  const mixed = 'Hello, world. Next (one) two-three don\'t 3.14 foo_bar "quoted"  x';
+  assert.deepEqual(stops([contentRun(1, mixed)], 1, 1), [6, 13, 19, 24, 29, 35, 41, 46, 54, 62, 66], 'punctuation passed over, an apostrophe, a decimal point and an underscore inside a word');
+  assert.deepEqual(stops([contentRun(1, mixed)], 66, -1), [65, 56, 47, 42, 36, 30, 26, 21, 15, 8, 1]);
+  const dashes = [contentRun(1, '"Hi" -- ok...\n---\n***end')];
+  assert.deepEqual(stops(dashes, 1, 1), [4, 11, 25], 'a line of dashes holds no word');
+  assert.deepEqual(stops(dashes, 25, -1), [22, 9, 2, 1], 'the text\'s start where no word lies that way');
+  assert.deepEqual(stops([contentRun(1, 'abc   \n   \ndef  ')], 4, 1), [15, 17], 'a line of spaces passed over, the spaces after the last word to the text\'s end');
+});
+
+test('a word step reads the text by bytes across the runs that touch: a word split between two runs is one word, a multi-byte word and an astral character counted in bytes, an item one word whole, and no step crossing a gap in the text held (K-71)', () => {
+  assert.deepEqual(stops([contentRun(1, 'Sec'), contentRun(4, 'ond word')], 1, 1), [7, 12], 'split between two runs');
+  assert.deepEqual(stops([contentRun(1, 'café olé\n')], 1, 1), [6, 11, 12], 'é is two bytes');
+  assert.deepEqual(stops([contentRun(1, 'café olé\n')], 12, -1), [7, 1]);
+  assert.deepEqual(stops([contentRun(1, '😀 wörd')], 1, 1), [11], 'the emoji\'s four bytes passed over, ö two');
+  const item = [contentRun(1, 'ab '), /** @type {import('./frames.js').Run} */ ({ pos: 4, width: 1, kind: 'atom', text: 'x', ref: null, origin: null }), contentRun(5, ' cd')];
+  assert.deepEqual(stops(item, 1, 1), [3, 5, 8], 'the atom one word');
+  assert.deepEqual(stops(item, 8, -1), [6, 4, 1]);
+  const gap = [contentRun(1, 'alpha beta  '), contentRun(100, 'gamma')];
+  assert.deepEqual(stops(gap, 8, 1), [11, 13], 'the spaces after the last word to the held stretch\'s end, nothing past the gap');
+  assert.deepEqual(stops(gap, 103, -1), [100], 'the held stretch\'s start, nothing before the gap');
+  assert.equal(wordStop(gap, 50, 1), null, 'a position in the gap holds nothing');
+});
+
+test('a word step extending a selection stops at its anchor rather than crossing it, and leaves it again on the next step, as macOS\'s does; one that reaches the anchor or starts there is unchanged (K-71)', () => {
+  const runs = [contentRun(1, 'First line.')];
+  assert.equal(wordStop(runs, 6, -1, 3), 3, '← from the end of "First" holds at the anchor inside it');
+  assert.equal(wordStop(runs, 3, 1, 5), 5, '→ past the anchor holds there');
+  assert.equal(wordStop(runs, 3, 1, 6), 6, 'a stop at the anchor is the anchor');
+  assert.equal(wordStop(runs, 3, 1, 3), 6, 'from the anchor the step goes on');
+  assert.equal(wordStop(runs, 3, -1, 3), 1);
+  assert.equal(wordStop(runs, 3, 1), 6, 'no anchor: the word\'s end');
 });

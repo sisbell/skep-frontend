@@ -76,7 +76,11 @@
 // typed text the slots' chords act on the span the text shown holds: the
 // board asked by its base's positions and the card standing at that span, and
 // over a span wholly of new words follow and read side by side give their
-// reason at the slot and its chord (FP-30).
+// reason at the slot and its chord (FP-30). On macOS Option with ← or → is a
+// word step wherever the page makes the step — at a live caret, at the kept
+// caret's span and at the walk's span in text the person may not edit, the
+// step extending a selection stopping at its anchor — and no other key means
+// anything new with Option held (D5 §0, K-70, K-71, K-77).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
@@ -129,11 +133,11 @@ test('Mod+L alone opens the LEAP box, and Mod+K is "link to…" at the selection
   }
 });
 
-test('no plane command rides a printable key: every chord is Mod+… or Shift+a navigation key or a navigation key, a function key, or one of the platform\'s text keys bound at the caret alone', () => {
+test('no plane command rides a printable key: every chord is Mod+…, a navigation key alone or with Shift, Alt or both, a function key, or one of the platform\'s text keys bound at the caret alone', () => {
   for (const r of rows) {
-    const bare = r.chord.replace(/^(Mod\+)?(Shift\+)?/, '');
+    const bare = r.chord.replace(/^(Mod\+)?(Alt\+)?(Shift\+)?/, '');
     const isChord = r.chord.startsWith('Mod+');
-    const isNav = NAV.has(bare) && !r.chord.startsWith('Mod') ? (r.chord === bare || r.chord === 'Shift+' + bare) : false;
+    const isNav = NAV.has(bare) && !r.chord.startsWith('Mod') ? [bare, 'Shift+' + bare, 'Alt+' + bare, 'Alt+Shift+' + bare].includes(r.chord) : false;
     const isText = TEXT_KEYS.has(r.chord) && r.surface === 'caret';
     const isFn = FN.test(r.chord);
     assert.ok(isChord || isNav || isText || isFn, `${r.id} ${r.chord} is a bare printable binding`);
@@ -157,7 +161,7 @@ test('the dispatch guards the IME: nothing is dispatched during a composition', 
 const D = '1.0.1.0.2', O = '1.0.2.0.1';
 const TEXT = 'First line.\n\nSecond line here.\n', N = byteLength(TEXT);
 /** a key as the platform delivers it */
-const keyOf = (/** @type {string} */ key, /** @type {{metaKey?: boolean, ctrlKey?: boolean, shiftKey?: boolean, repeat?: boolean}} */ mods = {}) => /** @type {any} */ ({ type: 'keydown', key, keyCode: 0, isComposing: false, repeat: false, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, preventDefault() {}, ...mods });
+const keyOf = (/** @type {string} */ key, /** @type {{metaKey?: boolean, ctrlKey?: boolean, shiftKey?: boolean, altKey?: boolean, repeat?: boolean}} */ mods = {}) => /** @type {any} */ ({ type: 'keydown', key, keyCode: 0, isComposing: false, repeat: false, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, preventDefault() {}, ...mods });
 /** the platform's command modifier (D5 §0) */
 const MOD = KEYS.MAC ? { metaKey: true } : { ctrlKey: true };
 const PLANE = /** @type {const} */ ({ where: 'plane', byKey: true });
@@ -1195,6 +1199,107 @@ test('over a span of typed words beside the draft\'s own, follow acts as ever wh
     SEL.select(D, 1, 7);
     assert.ok(!/** @type {string} */ (slotIn('follow').button).includes('title='), 'the span holding board bytes: the slot acts');
   } finally { LK.readers({}); }
+}));
+
+/** Option's word step is macOS's alone: elsewhere D5's Alt+← is Back's, so the step is not bound there */
+const ON_MACOS = { skip: KEYS.MAC ? false : 'Option is macOS\'s' };
+/** Option held */
+const OPTION = { altKey: true };
+/** Option and Shift held */
+const OPTION_SHIFT = { altKey: true, shiftKey: true };
+
+test('chordOf leaves Option out on macOS, for every key: only the word step at the sites that make it reads Option, so Option with Enter, Backspace, Tab, ↓, Home or Esc means what the key means without it (D5 §0)', ON_MACOS, () => onPlane(async () => {
+  /** @type {Array<[string, object, string]>} */
+  const spelled = [['Enter', OPTION, 'Enter'], ['Tab', OPTION, 'Tab'], ['Backspace', OPTION, 'Backspace'], ['Escape', OPTION, 'Esc'], ['ArrowDown', OPTION, '↓'], ['Home', OPTION, 'Home'], ['ArrowRight', OPTION, '→'], ['ArrowLeft', OPTION_SHIFT, 'Shift+←']];
+  for (const [key, mods, chord] of spelled) assert.equal(KEYS.chordOf(keyOf(key, mods)), chord, `Option+${key}`);
+  await focusOn(D, 1);
+  LAYER.placeCaret(D, 3);
+  await press('ArrowDown', OPTION);
+  assert.deepEqual(caret(), [D, 16, true], 'Option+↓: a line, as ↓');
+  await press('Enter', OPTION);
+  assert.deepEqual([shown().slice(13, 17), caret()], ['Se\nc', [D, 17, true]], 'Option+Enter: a new line, as Enter');
+  await press('Backspace', OPTION);
+  assert.deepEqual([shown().slice(13, 17), caret()], ['Seco', [D, 16, true]], 'Option+Backspace: the one character, as Backspace');
+}));
+
+test('Option with → and ← at a live caret moves it a word — to the end of the word ahead, across punctuation and a blank line, and back to each word\'s start, nothing typed and the walk following its span — and with a selection drawn in the caret\'s text ends it, stepping a word from where the caret stands; plain ← and → stay a character (D5 §0, K-71)', ON_MACOS, () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  await focusOn(D, 1);
+  LAYER.placeCaret(D, 3);
+  /** a key at the caret: where the caret and the walk's span stand after it */
+  const at = async (/** @type {string} */ key, /** @type {object} */ mods) => { await press(key, mods); return [caret(), WALK.current()?.pos]; };
+  assert.deepEqual(await at('ArrowRight', OPTION), [[D, 6, true], 1], 'Option+→ mid-word: to the end of "First"');
+  assert.deepEqual(await at('ArrowRight', OPTION), [[D, 11, true], 1], 'again: to the end of "line"');
+  assert.deepEqual(await at('ArrowRight', OPTION), [[D, 20, true], 14], 'again: past the full stop and the blank line to the end of "Second", the walk on the second span');
+  assert.deepEqual(await at('ArrowLeft', OPTION), [[D, 14, true], 14], 'Option+←: to the start of "Second"');
+  assert.deepEqual(await at('ArrowLeft', OPTION), [[D, 7, true], 1], 'again: back over the blank line to the start of "line"');
+  assert.deepEqual(await at('ArrowRight', {}), [[D, 8, true], 1], 'plain →: a character');
+  assert.deepEqual(await at('ArrowLeft', {}), [[D, 7, true], 1], 'plain ←: a character');
+  assert.deepEqual(REC.edits(D), [], 'nothing typed');
+  await press('ArrowRight', OPTION_SHIFT);
+  assert.deepEqual([SEL.selected(), caret(), overlay()], [{ addr: D, pos: 7, width: 4 }, [D, 11, true], 'selection'], 'a selection drawn over "line", its card shown, the caret at its end');
+  await press('ArrowLeft', OPTION);
+  assert.deepEqual([caret(), SEL.selected(), overlay()], [[D, 7, true], null, null], 'Option+←: the selection and its card ended, the caret a word back from where it stood');
+}));
+
+test('Option and Shift with → and ← at a live caret run a selection from where it stood by a word a press, the walk following the caret — and a step that would cross the anchor stops there, no selection standing, the next step leaving it the other way (D5 §0, K-71)', ON_MACOS, () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  await focusOn(D, 1);
+  LAYER.placeCaret(D, 3);
+  /** Option and Shift with an arrow: the selection, the caret and the walk's span after it */
+  const extend = async (/** @type {string} */ key) => { await press(key, OPTION_SHIFT); return [SEL.selected(), caret(), WALK.current()?.pos]; };
+  assert.deepEqual(await extend('ArrowRight'), [{ addr: D, pos: 3, width: 3 }, [D, 6, true], 1], 'a word on: "rst" from the caret to the end of "First"');
+  assert.equal(overlay(), 'selection', 'the selection\'s card shown');
+  assert.deepEqual(await extend('ArrowRight'), [{ addr: D, pos: 3, width: 8 }, [D, 11, true], 1], 'on to the end of "line", the anchor standing');
+  assert.deepEqual(await extend('ArrowRight'), [{ addr: D, pos: 3, width: 17 }, [D, 20, true], 14], 'on across the blank line, the walk on the second span');
+  assert.deepEqual(await extend('ArrowLeft'), [{ addr: D, pos: 3, width: 11 }, [D, 14, true], 14], 'back to the start of "Second"');
+  assert.deepEqual(await extend('ArrowLeft'), [{ addr: D, pos: 3, width: 4 }, [D, 7, true], 1], 'back to the start of "line"');
+  assert.deepEqual(await extend('ArrowLeft'), [null, [D, 3, true], 1], 'the start of "First" lies past the anchor: the step stops at it, no selection standing');
+  assert.equal(overlay(), null, 'and no card of one');
+  assert.deepEqual(await extend('ArrowLeft'), [{ addr: D, pos: 1, width: 2 }, [D, 1, true], 1], 'from the anchor the next step goes on that way');
+  assert.deepEqual(REC.edits(D), [], 'nothing typed');
+}));
+
+test('Option and Shift with → or ← at the span a kept caret stands in return it and extend a selection from it by a word, the walk following; Option alone there stays the walk\'s key, the caret kept and nothing selected (D5 K-70, K-71, K-77)', ON_MACOS, () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  await focusOn(D, 1);
+  LAYER.placeCaret(D, 3);
+  await press('Escape');
+  await tick();
+  assert.deepEqual([caret(), walkAt()], [[D, 3, false], ['block', D, 1]], 'Esc: the caret kept in the first span, the walk on it');
+  const walked = KEYS.dispatch(keyOf('ArrowRight', OPTION), PLANE);
+  await landed(walked);
+  assert.deepEqual([await walked, caret(), SEL.selected(), REC.edits(D)], [true, [D, 3, false], null, []], 'Option+→ without Shift: the walk\'s key — the caret kept, nothing selected, nothing typed');
+  await focusOn(D, 1);
+  await press('ArrowRight', OPTION_SHIFT);
+  assert.deepEqual([caret(), SEL.selected(), overlay()], [[D, 6, true], { addr: D, pos: 3, width: 3 }, 'selection'], 'Option+Shift+→: the caret returned live a word on, the selection from where it stood');
+  await press('Escape', {}, 2);
+  await tick();
+  LAYER.placeCaret(D, 20);
+  await press('Escape');
+  await tick();
+  assert.deepEqual([caret(), walkAt()], [[D, 20, false], ['block', D, 14]]);
+  await press('ArrowLeft', OPTION_SHIFT);
+  assert.deepEqual([caret(), SEL.selected(), walkAt()], [[D, 14, true], { addr: D, pos: 14, width: 6 }, ['block', D, 14]], 'Option+Shift+←: the caret returned live at the start of "Second", the selection from where it stood, the walk on its span');
+  HOST.dismiss();
+}));
+
+test('Option and Shift with → or ← at the walk\'s span in text the person may not edit select by a word: with nothing selected, → the span\'s first word and ← back from the end of its text; a further press moves the selection\'s moving end, its anchor standing, a step that would cross the anchor stopping there, nothing selected; the walk and the focus where they stood (D5 K-70, K-71)', ON_MACOS, () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const here = ['block', O, 1];
+  await focusOn(O, 1);
+  assert.deepEqual([LAYER.editable(O), LAYER.atReadingScale(O), SEL.selected()], [false, true, null], 'O: text the person may not edit, at its reading scale, nothing selected');
+  /** Option and Shift with an arrow at the walk's span: the selection, the card and the walk's element after it */
+  const shifted = async (/** @type {string} */ key) => { assert.equal(await KEYS.dispatch(keyOf(key, OPTION_SHIFT), PLANE), true, `Option+Shift+${key}: the page takes it`); return [SEL.selected(), overlay(), walkAt()]; };
+  assert.deepEqual(await shifted('ArrowRight'), [{ addr: O, pos: 1, width: 5 }, 'selection', here], '→: "First", the span\'s first word, its card shown');
+  assert.deepEqual(await shifted('ArrowRight'), [{ addr: O, pos: 1, width: 10 }, 'selection', here], '→ again: on to the end of "line", the anchor standing');
+  assert.deepEqual(await shifted('ArrowLeft'), [{ addr: O, pos: 1, width: 6 }, 'selection', here], '←: back to the start of "line"');
+  assert.deepEqual(await shifted('ArrowLeft'), [null, null, here], '← again: back to the anchor, no selection standing and no card');
+  assert.deepEqual(await shifted('ArrowLeft'), [{ addr: O, pos: 7, width: 5 }, 'selection', here], '← with nothing selected: from the end of its text — after the full stop, never its newline — to the start of "line"');
+  SEL.clear();
+  SEL.select(O, 3, 3, 'end');
+  assert.deepEqual(await shifted('ArrowLeft'), [null, null, here], '← from the selection\'s end: the start of "First" lies past its anchor, so the step stops there, no selection standing');
+  assert.deepEqual([REC.edits(D), REC.edits(O), caret()], [[], [], null], 'nothing typed, no caret');
 }));
 
 // placed last: the follow it guards against, where it is made, leaves a jump in the air for the tests after it

@@ -17,11 +17,12 @@
 // K-71, §1.6), as Shift with ← or → does at the span a kept caret stands in
 // once N-KEYS' returns the caret (K-70, K-77); at the walk's focused span in
 // text the person may not edit, Shift with ← or → moves the selection's
-// moving end a character, its anchor standing — the selection standing in
-// the walk's document, or one the platform made wherever it stands — else
-// selects one character from the span's edge, its start for → and the end of
-// its text for ← (`extendFromFocus`; D5 K-70) — each press naming the end it
-// moved, which T-LAYER keeps clear of its document's head. The platform's
+// moving end a character or a word, its anchor standing — the selection
+// standing in the walk's document, or one the platform made wherever it
+// stands — else selects one character or word from the span's edge, its start
+// for → and the end of its text for ← (`extendFromFocus`; D5 K-70) — each
+// press naming the end it moved, which T-LAYER keeps clear of its document's
+// head. The platform's
 // highlight is the selection's one mark (§2.1), and the selection the
 // platform's own (foundations §2.1; D5 §2): a change of it rebuilds no
 // article — T-LAYER marks the blocks it touches in place — so a selection the
@@ -98,7 +99,7 @@ import * as LINKS from './links-card.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { extended, sameSpan, spanOfBlock } from '../text/span.js';
-import { boundaries, spanRuns } from '../model/derive.js';
+import { boundaries, spanRuns, wordStop } from '../model/derive.js';
 import { t, typeName } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { markDirty } from '../plane/camera.js';
@@ -272,7 +273,7 @@ export function extendFromCaret(dir) {
   const c = LAYER.caret();
   if (!c || !c.live) return false;
   const anchor = anchorAt(c);
-  if (!LAYER.caretMove(dir, true)) return false;
+  if (!LAYER.caretMove(dir, anchor)) return false;
   const to = /** @type {import('../text/layer.js').Caret} */ (LAYER.caret()).pos;
   if (to === anchor) clear();
   else select(c.addr, Math.min(anchor, to), Math.abs(to - anchor), to < anchor ? 'start' : 'end');
@@ -290,32 +291,44 @@ function anchorAt(/** @type {import('../text/layer.js').Caret} */ c) {
  * Shift with ← or → at the walk's focused span in text the person may not
  * edit (D5 K-70, K-71): where the selection stands in the walk's document, or
  * the platform made it wherever it stands (`Ends`), its moving end is stepped
- * a character that way in the text shown — an item whole (M-DERIVE's
- * `boundaries`) — its anchor standing; else one character is selected from
- * the span's edge — its start for →, the end of its text for ←, never the
- * newline after it — a selection in another document replaced, as K-8's
- * first press replaces it (`selectFocused`). Where the step brings the moving
- * end back to the anchor, no selection stands (`clear`). The focus stays on
- * the walk's element (rule 15).
- * @param {'left' | 'right'} dir
- * @returns {boolean} false where the walk stands on no span, or the text holds no character that way: nothing changes
+ * that way in the text shown (`stepFrom`), its anchor standing; else one step
+ * is selected from the span's edge — its start for →, the end of its text for
+ * ←, never the newline after it — a selection in another document replaced,
+ * as K-8's first press replaces it (`selectFocused`). Where the step brings
+ * the moving end back to the anchor, no selection stands (`clear`). The focus
+ * stays on the walk's element (rule 15).
+ * @param {import('../text/layer.js').ArrowStep} dir
+ * @returns {boolean} false where the walk stands on no span, or the text holds nothing that way: nothing changes
  */
 export function extendFromFocus(dir) {
   const f = WALK.current();
   if (!f || f.kind !== 'block' || f.pos == null) return false;
   if (sel && (sel.addr === f.addr || ends.platform)) {
     const { addr, pos, width } = sel, end = pos + width;
-    return runTo(addr, ends.moves === 'end' ? pos : end, stepFrom(addr, ends.moves === 'end' ? end : pos, dir), ends.platform);
+    const [anchor, moving] = ends.moves === 'end' ? [pos, end] : [end, pos];
+    return runTo(addr, anchor, stepFrom(addr, moving, dir, anchor), ends.platform);
   }
   const b = REC.blockByPos(f.addr, f.pos);
   if (!b) return false;
-  const edge = dir === 'right' ? b.pos : b.kind === 'para' ? b.pos + byteLength(b.text) : b.pos + b.width;
-  return runTo(f.addr, edge, stepFrom(f.addr, edge, dir), false);
+  const edge = dir === 'right' || dir === 'wordRight' ? b.pos : b.kind === 'para' ? b.pos + byteLength(b.text) : b.pos + b.width;
+  return runTo(f.addr, edge, stepFrom(f.addr, edge, dir, null), false);
 }
 
-/** the position a character from `pos` that way in a document's text shown, an item whole (M-DERIVE's `boundaries`); null where it holds none that way */
-function stepFrom(/** @type {string} */ addr, /** @type {number} */ pos, /** @type {'left' | 'right'} */ dir) {
-  const b = boundaries(LAYER.shownOf(addr).runs, pos);
+/**
+ * The position a step from `pos` reaches in a document's text shown: a
+ * character that way, an item whole (M-DERIVE's `boundaries`), or a word, no
+ * further than the anchor (M-DERIVE's `wordStop`); null where it holds
+ * nothing that way.
+ * @param {string} addr
+ * @param {number} pos
+ * @param {import('../text/layer.js').ArrowStep} dir
+ * @param {number | null} anchor the anchor of the selection the step extends; null where it extends none
+ * @returns {number | null}
+ */
+function stepFrom(addr, pos, dir, anchor) {
+  const runs = LAYER.shownOf(addr).runs;
+  if (dir === 'wordLeft' || dir === 'wordRight') return wordStop(runs, pos, dir === 'wordLeft' ? -1 : 1, anchor);
+  const b = boundaries(runs, pos);
   return dir === 'left' ? b.before : b.after;
 }
 

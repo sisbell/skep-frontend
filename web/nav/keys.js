@@ -46,8 +46,9 @@
 // document, left kept as the key finds it (D5 M-2), every other move of the
 // walk leaving it as the move is made (N-WALK's) —
 // and its keys reach it before the walk's and K-8's (`caretKey`): the arrows
-// move it a character or a line, Home and End to the start or the end of its
-// line (D5 M-13), and with Shift move it and extend a selection from it
+// move it a character or a line — ← and → a word with Option held on macOS
+// (`arrowStep`; K-71) — Home and End to the start or the end of its line
+// (D5 M-13), and with Shift move it and extend a selection from it
 // (O-SELECTION's `extendFromCaret`; D5 §1.6); Backspace and Delete take a
 // character out, Enter and Shift+Enter put a new line in, Tab a tab
 // character, a printable key its character — each a change of the text
@@ -143,9 +144,10 @@
 // of its height everywhere else. Off a live caret, Shift with ← and → is
 // dispatched at the span a kept caret stands in (`extendAtKept`), and at the
 // walk's focused span in text the person may not edit at its reading scale,
-// where it moves the selection's moving end a character, else selects one
-// from the span's edge (`readOnlySpan`; O-SELECTION's `extendFromFocus`;
-// K-70): anywhere else — a span of a draft the person may edit holding no
+// where it moves the selection's moving end a step, else selects one from the
+// span's edge (`readOnlySpan`; O-SELECTION's `extendFromFocus`; K-70), each a
+// word with Option held on macOS and a character otherwise (`arrowStep`):
+// anywhere else — a span of a draft the person may edit holding no
 // caret, a document below its reading scale, off a span — it is the
 // platform's own (K-71), and APP-INPUT reads what it does back into the
 // page's selection. Where no board is held (FP-35) the
@@ -181,6 +183,7 @@ import { accountOf, documentOf } from '../model/address.js';
 /** @typedef {import('../overlays/selection.js').InertSlot} InertSlot */
 /** @typedef {import('../overlays/selection.js').LiveSlot} LiveSlot */
 /** @typedef {import('../text/layer.js').CaretStep} CaretStep */
+/** @typedef {import('../text/layer.js').ArrowStep} ArrowStep */
 
 /** the platform's primary command modifier: ⌘ on macOS, Ctrl elsewhere (D5 §0) */
 export const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '');
@@ -193,7 +196,7 @@ export const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(na
  * @property {'plane' | 'line' | 'box' | 'trail' | 'selection' | 'cards' | 'corner' | 'scene' | 'caret' | 'platform'} surface `caret` a key at a live caret in text the person may edit
  */
 
-/** the table: every chord the page binds, by D5's row — K-9's swallow, K-72's printable key at a caret, K-10's quasimode and K-12's pinch are APP-INPUT's and the dispatch's own */
+/** the table: every chord the page binds, by D5's row — K-9's swallow, K-72's printable key at a caret, K-10's quasimode and K-12's pinch are APP-INPUT's and the dispatch's own; `Alt+` is Option on macOS, the only platform the page takes it on (`arrowStep`) */
 export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-1', chord: '↓', act: 'walk.down', surface: 'plane' },
   { id: 'K-2', chord: '↑', act: 'walk.up', surface: 'plane' },
@@ -233,6 +236,8 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-70', chord: 'Enter', act: 'caret.place', surface: 'plane' },
   { id: 'K-70', chord: 'Shift+←', act: 'select.extendLeft', surface: 'plane' },
   { id: 'K-70', chord: 'Shift+→', act: 'select.extendRight', surface: 'plane' },
+  { id: 'K-70', chord: 'Alt+Shift+←', act: 'select.extendWordLeft', surface: 'plane' },
+  { id: 'K-70', chord: 'Alt+Shift+→', act: 'select.extendWordRight', surface: 'plane' },
   { id: 'K-71', chord: '←', act: 'caret.left', surface: 'caret' },
   { id: 'K-71', chord: '→', act: 'caret.right', surface: 'caret' },
   { id: 'K-71', chord: '↑', act: 'caret.up', surface: 'caret' },
@@ -245,6 +250,10 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-71', chord: 'End', act: 'caret.lineEnd', surface: 'caret' },
   { id: 'K-71', chord: 'Shift+Home', act: 'caret.extendLineStart', surface: 'caret' },
   { id: 'K-71', chord: 'Shift+End', act: 'caret.extendLineEnd', surface: 'caret' },
+  { id: 'K-71', chord: 'Alt+←', act: 'caret.wordLeft', surface: 'caret' },
+  { id: 'K-71', chord: 'Alt+→', act: 'caret.wordRight', surface: 'caret' },
+  { id: 'K-71', chord: 'Alt+Shift+←', act: 'caret.extendWordLeft', surface: 'caret' },
+  { id: 'K-71', chord: 'Alt+Shift+→', act: 'caret.extendWordRight', surface: 'caret' },
   { id: 'K-72', chord: 'Backspace', act: 'caret.erase', surface: 'caret' },
   { id: 'K-72', chord: 'Delete', act: 'caret.erase', surface: 'caret' },
   { id: 'K-74', chord: 'Mod+S', act: 'save.answer', surface: 'plane' },
@@ -254,6 +263,8 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-77', chord: 'Esc', act: 'caret.leave', surface: 'caret' },
   { id: 'K-77', chord: 'Shift+←', act: 'caret.returnExtendLeft', surface: 'plane' },
   { id: 'K-77', chord: 'Shift+→', act: 'caret.returnExtendRight', surface: 'plane' },
+  { id: 'K-77', chord: 'Alt+Shift+←', act: 'caret.returnExtendWordLeft', surface: 'plane' },
+  { id: 'K-77', chord: 'Alt+Shift+→', act: 'caret.returnExtendWordRight', surface: 'plane' },
   { id: 'K-91', chord: 'Mod+F', act: 'find.open', surface: 'plane' },
   { id: 'K-91', chord: 'Mod+G', act: 'find.next', surface: 'plane' },
   { id: 'K-91', chord: 'Mod+Shift+G', act: 'find.previous', surface: 'plane' },
@@ -280,7 +291,7 @@ const WALK_KEYS = new Set(['↓', '↑', '→', '←', 'Home', 'End', 'Enter']);
 /** a find chord's move (K-91): 1 the next, -1 the previous — Mod+G and Mod+Shift+G, and F3 and Shift+F3 elsewhere than macOS — 0 for any other chord */
 const findDir = (/** @type {string} */ chord) => (chord === 'Mod+G' || (!MAC && chord === 'F3') ? 1 : chord === 'Mod+Shift+G' || (!MAC && chord === 'Shift+F3') ? -1 : 0);
 
-/** the chord a KeyboardEvent spells, in D5's notation — `Mod+Shift+L`, `↓`, `Enter`, or the printable key itself */
+/** the chord a KeyboardEvent spells, in D5's notation — `Mod+Shift+L`, `↓`, `Enter`, or the printable key itself; Option on macOS spells nothing (D5 §0), so a key means what it means without it, the word step reading Option itself (`arrowStep`) */
 export function chordOf(/** @type {KeyboardEvent} */ e) {
   const mod = MAC ? e.metaKey : e.ctrlKey;
   const parts = [];
@@ -298,6 +309,12 @@ export function chordOf(/** @type {KeyboardEvent} */ e) {
 
 /** is the key printable (it would type a character in a field)? */
 export const printable = (/** @type {KeyboardEvent} */ e) => e.key.length === 1 && !(MAC ? e.metaKey : e.ctrlKey) && !e.altKey;
+
+/** the step ← or → makes where the page makes it (K-70, K-71, K-77): a word with Option held on macOS, else a character */
+function arrowStep(/** @type {KeyboardEvent} */ e) {
+  const left = e.key === 'ArrowLeft';
+  return /** @type {ArrowStep} */ (MAC && e.altKey ? (left ? 'wordLeft' : 'wordRight') : left ? 'left' : 'right');
+}
 
 /** how a chord is drawn for this platform (D5 §0) */
 export const drawChord = (/** @type {string} */ chord) => (MAC ? chord.replace('Mod+', '⌘').replace('Shift+', '⇧').replace('Enter', '↩') : chord.replace('Mod', 'Ctrl'));
@@ -509,8 +526,8 @@ function route(e, chord, ctx) {
   // Shift with ← or → at the span a kept caret stands in: the caret returned and a selection extended from it (K-70, K-77); at
   // the walk's span in text the person may not edit, a selection extended from the focus's edge, the platform's own extension
   // prevented (K-70); anywhere else off a live caret, the platform's
-  if ((chord === 'Shift+←' || chord === 'Shift+→') && keptSpan(ctx)) return async () => { await extendAtKept(e, chord === 'Shift+←' ? 'left' : 'right'); return true; };
-  if ((chord === 'Shift+←' || chord === 'Shift+→') && readOnlySpan(ctx)) return () => { e.preventDefault(); SEL.extendFromFocus(chord === 'Shift+←' ? 'left' : 'right'); return true; };
+  if ((chord === 'Shift+←' || chord === 'Shift+→') && keptSpan(ctx)) return async () => { await extendAtKept(e, arrowStep(e)); return true; };
+  if ((chord === 'Shift+←' || chord === 'Shift+→') && readOnlySpan(ctx)) return () => { e.preventDefault(); SEL.extendFromFocus(arrowStep(e)); return true; };
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
   if (chord === 'Mod+R' || e.key === 'F5') return () => true; // K-94: the plane is live; nothing reloads
   // the caret's keys (see the head): at a live caret, before the walk's
@@ -576,7 +593,8 @@ function findAct(e, dir, ctx) {
 
 /**
  * A key at a live caret (see the head; K-71, K-72, K-76): the arrows move it a
- * character or a line, Home and End to its line's start or its end, each
+ * character or a line — ← and → a word with Option on macOS (`arrowStep`) —
+ * Home and End to its line's start or its end, each
  * ending a selection drawn in the caret's own text (`stepCaret`), and with
  * Shift move it and extend a selection from it (O-SELECTION's
  * `extendFromCaret`); Backspace and Delete take a character out, Enter and
@@ -595,7 +613,7 @@ function findAct(e, dir, ctx) {
  */
 function caretKey(e, chord) {
   /** @type {Record<string, CaretStep>} */
-  const moves = { '←': 'left', '→': 'right', '↑': 'up', '↓': 'down', Home: 'home', End: 'end' };
+  const moves = { '←': arrowStep(e), '→': arrowStep(e), '↑': 'up', '↓': 'down', Home: 'home', End: 'end' };
   /** the key's change made at the caret, the walk following it */
   const at = (/** @type {() => boolean} */ change) => async () => { e.preventDefault(); change(); await WALK.followCaret(); return true; };
   if (chord in moves) return at(() => stepCaret(moves[chord]));
@@ -613,9 +631,10 @@ function caretKey(e, chord) {
  * An arrow, Home or End without Shift at the live caret (see the head; K-71):
  * where a selection is drawn in the caret's own text (`selectedAtCaret`), the
  * selection ends, its card with it (O-SELECTION's `clear`), and ← puts the
- * caret at the selection's start, → at its end, ↑ and ↓ a line from the
- * caret, Home and End at the start or the end of the caret's line; where none
- * is, the caret steps that way (T-LAYER's `caretMove`).
+ * caret at the selection's start, → at its end, ↑ and ↓ a line, and a word
+ * step a word, from the caret, Home and End at the start or the end of the
+ * caret's line; where none is, the caret steps that way (T-LAYER's
+ * `caretMove`).
  * @param {CaretStep} dir
  * @returns {boolean} whether the caret or the selection changed
  */
@@ -675,15 +694,16 @@ async function typeAt(e, ctx) {
 /**
  * Shift with ← or → at the span a kept caret stands in (see the head; K-70,
  * K-77; B3-S1): the caret returned where it stood and a selection extended
- * from it a character as at a live caret, never from the span's edge
- * (O-SELECTION's `extendFromCaret`) — where the caret cannot move that way,
+ * from it a step — a word with Option on macOS (`arrowStep`) — as at a live
+ * caret, never from the span's edge (O-SELECTION's `extendFromCaret`) — where
+ * the caret cannot move that way,
  * the caret live and the selection standing as it stood, its highlight with
  * it (T-LAYER's `returnCaret`) — the walk then standing on the span the caret
  * is in (N-WALK's `followCaret`). The platform's default is prevented first,
  * before the walk's move is waited on: the selection the key makes is the
  * page's to place.
  * @param {KeyboardEvent} e
- * @param {'left' | 'right'} dir
+ * @param {ArrowStep} dir
  * @returns {Promise<void>}
  */
 async function extendAtKept(e, dir) {

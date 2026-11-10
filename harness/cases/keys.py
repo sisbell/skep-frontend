@@ -132,7 +132,9 @@ character, the drag's anchor standing; after a drag from a phrase's start to
 its end, Shift+→ twice then Shift+← taking back the second step, the start
 unmoved; at the walk's span with nothing selected, Shift+→ twice then Shift+←
 three times selecting its first character, its first two, its first, none,
-then the last character of its text (D5 K-70); the focus ring following the
+then the last character of its text (D5 K-70), and on macOS Option and Shift
+with → and ← selecting there by a word, the step that would cross the anchor
+stopping at it (D5 K-70, K-71); the focus ring following the
 walk to the block Enter selects, and Shift+→ at Enter's selection and at
 K-8's moving its end a character, its start standing — the platform's
 selection the page's and the walk and the focus where they stood at every
@@ -222,6 +224,7 @@ In the own draft, words typed at a span, the hint a bare key raises at a later
 span and a landing's line and outline stand where the text shown holds their
 places. Every other step leaves the page as it found it."""
 import json
+import re
 
 from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, account_of, item_words, key_fingerprint, trunk_of
 from .layout import DRIFT_TOL_PX, box_of, click_on, inside, lacking_of, level_holds, line_of, passage_at, scene_level, ties_hold
@@ -469,6 +472,33 @@ def from_the_edge(ctx, r, block):
             {'start': start, 'want': want, 'steps': steps, 'block': {'pos': p, 'kind': block['kind'], 'text': block['text']}})
 
 
+def word_edges(text):
+    """the byte offsets each of a span's words starts and ends at, in order: its letters and digits, an apostrophe inside a word kept in it"""
+    return [(len(text[:m.start()].encode('utf8')), len(text[:m.end()].encode('utf8'))) for m in re.finditer(r"[^\W_]+(?:['’][^\W_]+)*", text)]
+
+
+def by_word(ctx, r, block):
+    """Option and Shift with → twice then with ← until no selection stands, at the walk's span in the first edition, nothing
+    selected and the walk's item holding the focus (D5 K-70, K-71; macOS alone): the page's selection after each press runs
+    from the span's start to the end of its first word, of its second, back to the second's start, back to the first's —
+    where anything stands before that word — then none, the step that would cross the anchor stopping at it; the platform's
+    selection the page's at every press, the walk and the focus where they stood"""
+    if not ctx.js('navigator.platform').startswith('Mac'):
+        return
+    p, edges = block['pos'], word_edges(block['text'])
+    span = lambda width: {'addr': DOC, 'pos': p, 'width': width}
+    first = edges[0][0] if edges else 0
+    want = [span(edges[0][1]), span(edges[1][1]), span(edges[1][0])] + ([span(first), None] if first else [None]) if block['kind'] == 'para' and len(edges) > 1 else None
+    start = standing(ctx)
+    steps = []
+    for key in ['ArrowRight', 'ArrowRight'] + ['ArrowLeft'] * (len(want) - 2 if want else 0):
+        chord(ctx, key, mods=('Alt', 'Shift'))
+        steps.append(standing(ctx))
+    r.check(start['sel'] is None and start['focus'].startswith('the mirror') and bool(want) and [s['sel'] for s in steps] == want and held_still(start, steps),
+            'Option+Shift+→ twice then Option+Shift+← at the walk\'s span, nothing selected and the walk\'s item holding the focus: from its start to the end of its first word and its second, back to the second\'s start and the first\'s, then none, stopping at the anchor rather than crossing it — the platform\'s selection the page\'s at every press, the walk and the focus where they stood (D5 K-70, K-71)',
+            {'start': start, 'want': want, 'steps': steps, 'block': {'pos': p, 'kind': block['kind'], 'text': block['text']}})
+
+
 def end_on(ctx, r, made, blocks):
     """Shift+→ at the selection `made` made over the walk's block whole, the walk's item holding the focus (D5 K-70): its
     end a character on — the first of the text after the block — its start standing, the platform's selection the page's,
@@ -493,7 +523,8 @@ def anchor_stands(ctx, r):
     back a character, the anchor at the phrase's end standing. After a drag from a phrase's start to its end, Shift+→ twice
     and Shift+← (D5 K-70, the walk standing on a span of the first edition) end where the first Shift+→ put the end, the
     start never moved, the page's span the platform's at every press. ↓ moves the walk's focus ring to the next block;
-    there, nothing selected, Shift+→ twice then Shift+← three times select its first character, its first two, its first,
+    there, nothing selected, Option and Shift with → twice then with ← until none stands select by a word, and Shift+→
+    twice then Shift+← three times select its first character, its first two, its first,
     none, then the last character of its text; Enter there selects the block — the ring and the selection's mark on that
     one block — and Shift+→ at Enter's selection, and at K-8's, moves its end a character, its start standing; at every
     press the walk and the platform's focus stand where they stood. The Safari pass repeats these steps by hand (FP-19): the
@@ -569,6 +600,7 @@ def anchor_stands(ctx, r):
     block = next((b for b in blocks if f and b['pos'] == f['pos']), None)
     r.check(block is not None, 'the walk\'s block is the model\'s', {'focus': f})
     if block:
+        by_word(ctx, r, block)
         from_the_edge(ctx, r, block)
     chord(ctx, 'Enter')
     s = state(ctx)

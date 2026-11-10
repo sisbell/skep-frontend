@@ -385,9 +385,10 @@
 // position of the text shown, placed by Enter at a focused span at the span's
 // start (`caretToSpan`), by a click at the character clicked
 // (`caretFromPlatform`, `placeCaret`), moved by the arrows a character or a
-// line, by Home and End to the start or the end of its line as the fold sets
-// the line (`caretMove`) — with Shift, a step O-SELECTION extends a selection
-// from it by (`extendFromCaret`; K-71) — and typed at: a printable key, Enter
+// line or by ← and → a word, by Home and End to the start or the end of its
+// line as the fold sets the line (`caretMove`) — with Shift, a step
+// O-SELECTION extends a selection from it by (`extendFromCaret`; K-71) — and
+// typed at: a printable key, Enter
 // and Tab put their characters in, Backspace and Delete take a character out
 // (`caretType`, `caretErase`), or, where a selection whole in the text shown
 // stands in the caret's text, its bytes are replaced by the key's text, none
@@ -429,7 +430,7 @@ import { CORNER, HOLD, COL, ADDRESS, cornerWidth } from '../plane/register.js';
 import { holdTop, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords } from '../plane/labels.js';
 import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerWords, keptHTML, statementHTML, keptWord, keptStatement, blockMarks, symbolLit, editionClause, copyText, firstLineOf, isPublished, statedChain } from './article.js';
 import { farShort, whyOf } from '../beams/held.js';
-import { applyEdits, toBase, toShown, boundaries } from '../model/derive.js';
+import { applyEdits, toBase, toShown, boundaries, wordStop } from '../model/derive.js';
 import { homeOf, documentOf, memberOf, versionAddress, accountOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, elementIn, CHROME } from './span.js';
 import { esc, byteLength } from '../util.js';
@@ -4526,31 +4527,35 @@ export function caretErase(dir) {
   return true;
 }
 
-/** @typedef {'left' | 'right' | 'up' | 'down' | 'home' | 'end'} CaretStep a step of the caret (K-71; `caretMove`): a character either way, a line up or down, its line's start or its end */
+/** @typedef {'left' | 'right' | 'wordLeft' | 'wordRight'} ArrowStep the step ← or → makes where the page makes it (K-70, K-71, K-77): a character or a word that way */
+
+/** @typedef {ArrowStep | 'up' | 'down' | 'home' | 'end'} CaretStep a step of the caret (K-71; `caretMove`): a character or a word either way, a line up or down, its line's start or its end */
 
 /**
- * The caret moved (K-71): ← and → a character — an item whole — ↑ and ↓ a
- * line: where the platform stands the text, the character boundary under
- * the caret's mark a line above or below (`caretPoint`); else the same
- * offset into the typed line before or after the caret's. Home and End to
- * the start or the end of its line as the fold sets it (`caretLineEnd`). A
- * move that extends a selection (`extending`; O-SELECTION's
- * `extendFromCaret`) keeps the platform's selection the page places over it;
- * any other collapses it at the caret. False where no live caret stands, or
- * the text holds nothing that way.
+ * The caret moved (K-71): ← and → a character — an item whole — or a word
+ * (M-DERIVE's `wordStop`); ↑ and ↓ a line: where the platform stands the
+ * text, the character boundary under the caret's mark a line above or below
+ * (`caretPoint`); else the same offset into the typed line before or after
+ * the caret's. Home and End to the start or the end of its line as the fold
+ * sets it (`caretLineEnd`). A move that extends a selection (`anchor`;
+ * O-SELECTION's `extendFromCaret`) keeps the platform's selection the page
+ * places over it, a word step stopping at that anchor rather than crossing
+ * it; any other collapses it at the caret. False where no live caret stands,
+ * or the text holds nothing that way.
  * @param {CaretStep} dir
- * @param {boolean} [extending] the move extends a selection from the caret
+ * @param {number | null} [anchor] the anchor of the selection the move extends from the caret; null for a move that extends none
  */
-export function caretMove(dir, extending = false) {
+export function caretMove(dir, anchor = null) {
   if (!caret_ || !caret_.live) return false;
   const d = shownOf(caret_.addr);
   /** @type {number | null} */
   let to = null;
   if (dir === 'left' || dir === 'right') { const b = boundaries(d.runs, caret_.pos); to = dir === 'left' ? b.before : b.after; }
+  else if (dir === 'wordLeft' || dir === 'wordRight') to = wordStop(d.runs, caret_.pos, dir === 'wordLeft' ? -1 : 1, anchor);
   else if (dir === 'home' || dir === 'end') to = caretLineEnd(d, dir);
   else to = caretLineStep(d, dir === 'up' ? -1 : 1);
   if (to == null || to === caret_.pos) return false;
-  setCaret({ ...caret_, pos: clampPos(d, to) }, extending ? 'keep' : 'collapse');
+  setCaret({ ...caret_, pos: clampPos(d, to) }, anchor != null ? 'keep' : 'collapse');
   return true;
 }
 

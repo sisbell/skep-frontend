@@ -23,7 +23,9 @@
 // back; `spanRuns` splits a span of the typed text into what the delivered
 // text holds and what the edits made, the one reading of a span the board is
 // asked about, so no question reaches the board by a position of the typed
-// text. The texts' positions are bytes (wire.md §Value encodings).
+// text. `boundaries` and `wordStop` read a text's characters and its words
+// about a position, for the steps a caret and a selection's end make (K-70,
+// K-71, K-77). The texts' positions are bytes (wire.md §Value encodings).
 // Rules: FP-1, FP-2, FP-6, FP-7, FP-14.
 
 import { deriveBlocks, placedIn } from './records.js';
@@ -581,4 +583,48 @@ export function boundaries(runs, pos) {
     }
   }
   return { before, after };
+}
+
+/** the word boundaries `wordStop` steps by: the runtime's own, for the reader's locale */
+const WORDS = new Intl.Segmenter(undefined, { granularity: 'word' });
+
+/** the words of a run, in order, each its first position and one past its last: a content run's word-like segments, any other run one word whole */
+function wordsOf(/** @type {Run} */ r) {
+  if (r.kind !== 'content') return [[r.pos, r.pos + r.width]];
+  /** @type {number[][]} */
+  const out = [];
+  let at = r.pos;
+  for (const s of WORDS.segment(r.text)) {
+    const end = at + byteLength(s.segment);
+    if (s.isWordLike) out.push([at, end]);
+    at = end;
+  }
+  return out;
+}
+
+/**
+ * The position a word step from a position reaches (K-70, K-71, K-77; D6
+ * BM-70), at macOS's own stops: → the end of the first word ending after
+ * `pos`, ← the start of the last word beginning before it, across the runs
+ * that touch, white space and punctuation passed over and an item counted as
+ * one word; where no word lies that way, the end of those runs on that side,
+ * so the step never crosses a gap in the text held. A step extending a
+ * selection stops at its anchor rather than crossing it, as macOS's does.
+ * Null where the text holds nothing that way.
+ * @param {Run[]} runs
+ * @param {number} pos
+ * @param {-1 | 1} dir
+ * @param {number | null} [anchor] the anchor of the selection the step extends; null for a step that extends none
+ * @returns {number | null}
+ */
+export function wordStop(runs, pos, dir, anchor = null) {
+  const all = merged(runs);
+  const at = all.findIndex((r) => (dir > 0 ? r.pos <= pos && pos < r.pos + r.width : r.pos < pos && pos <= r.pos + r.width));
+  if (at < 0) return null;
+  let lo = at, hi = at;
+  while (lo > 0 && all[lo - 1].pos + all[lo - 1].width === all[lo].pos) lo--;
+  while (hi < all.length - 1 && all[hi].pos + all[hi].width === all[hi + 1].pos) hi++;
+  const words = all.slice(lo, hi + 1).flatMap(wordsOf);
+  const stop = dir > 0 ? words.find((w) => w[1] > pos)?.[1] ?? all[hi].pos + all[hi].width : words.filter((w) => w[0] < pos).pop()?.[0] ?? all[lo].pos;
+  return anchor != null && (pos - anchor) * (stop - anchor) < 0 ? anchor : stop;
 }
