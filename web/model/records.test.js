@@ -25,8 +25,11 @@
 // the change ends the session, else waiting to be read — that read alone
 // covering, confirming or lifting it, a drop keeping it owed; the identity a
 // byte the page made keeps until the board mints it and the address it is
-// named by after, each mint counted through a change of class; and those
-// watching a change of class told once it is taken.
+// named by after, each mint counted through a change of class; a passage
+// written out of the page named part by part — the board's bytes, the page's
+// unminted ones under the page's load, a gap where no run places it —
+// spelled through the mints at the call; and those watching a change of class
+// told once it is taken.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from './records.js';
@@ -947,6 +950,40 @@ test('a byte the page made keeps the page\'s own identity until the board mints 
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.sessionDied({ arm: 'closed' });
   assert.deepEqual([REC.mintedOf(D), REC.mintsOf(D)], [[], 1], 'a change of class drops what was minted, the count standing');
+});
+
+/** an image's run at its positions (M-REC's `ImageRun`) */
+const imageRun = (/** @type {number} */ pos, /** @type {number} */ width, /** @type {string} */ prefix, /** @type {number} */ ordinal) => ({ pos, width, prefix, ordinal });
+
+test('a passage written out of the page is named part by part, every position it holds in the text\'s order: the board\'s bytes by their addresses, the page\'s unminted ones by its own name tagged with the page\'s load, a stretch no run of the image places a gap of its width — nothing closed up across a part of another identity, runs that continue joined, the widths the stretch\'s; where the image places a stretch with no byte of the page\'s, the bytes `identityIn` names (issue #432\'s design decision: "A copy names every position it holds, in the order the text shows them. Nothing is dropped or closed up")', () => {
+  const D = '1.0.1.0.2', OWN = D + '.0.1', own = REC.pageSpace(D), X = '1.0.2.0.9.0.1', load = REC.PAGE_LOAD;
+  // D's own 1st to 4th, three bytes the page made, D's own 5th to 10th, its 11th to 14th — continuing them — then nothing read
+  // to position 29, and X's 9th to 13th
+  const image = [imageRun(1, 4, OWN, 1), imageRun(5, 3, own, 1), imageRun(8, 6, OWN, 5), imageRun(14, 4, OWN, 11), imageRun(30, 5, X, 9)];
+  const parts = REC.identityParts(image, 2, 33);
+  assert.deepEqual(parts, [
+    { prefix: OWN, ordinal: 2, width: 3 }, { prefix: own, ordinal: 1, width: 3, load }, { prefix: OWN, ordinal: 5, width: 10 }, { gap: 'unread', width: 12 }, { prefix: X, ordinal: 9, width: 5 },
+  ], 'D\'s own bytes either side of the page\'s never joined across them; its 5th to 14th one part; the stretch no run places a gap');
+  assert.equal(parts.reduce((n, p) => n + p.width, 0), 33, 'their widths the stretch\'s');
+  assert.deepEqual(REC.identityIn(image, 2, 33), [], 'the whole-span test names none of it');
+  assert.deepEqual([REC.identityIn(image, 8, 10), REC.identityParts(image, 8, 10)], [[{ prefix: OWN, ordinal: 5, width: 6 }, { prefix: OWN, ordinal: 11, width: 4 }], [{ prefix: OWN, ordinal: 5, width: 10 }]], 'a stretch with no byte of the page\'s: the same bytes, joined');
+  assert.deepEqual(REC.identityParts(image, 18, 14), [{ gap: 'unread', width: 12 }, { prefix: X, ordinal: 9, width: 2 }], 'a gap first');
+  assert.deepEqual([REC.identityParts([], 1, 7), REC.identityParts(image, 3, 0)], [[{ gap: 'unread', width: 7 }], []], 'no image: one gap the stretch\'s width; no width: no part');
+});
+
+test('a passage written out of the page names the page\'s bytes as the model names them at the call: an image made before an ack names the bytes it minted by their addresses, the page\'s still unminted by its own name and its load (issue #432\'s design decision: "An article made before the ack still names it")', () => {
+  const D = '1.0.1.0.2', OWN = D + '.0.1', own = REC.pageSpace(D), load = REC.PAGE_LOAD;
+  const image = [imageRun(1, 4, OWN, 1), imageRun(5, 3, own, 1), imageRun(8, 6, OWN, 5)];
+  assert.deepEqual(REC.identityParts(image, 4, 5), [{ prefix: OWN, ordinal: 4, width: 1 }, { prefix: own, ordinal: 1, width: 3, load }, { prefix: OWN, ordinal: 5, width: 1 }], 'none minted');
+  REC.mint(D, 1, 2, OWN + '.40', 9);
+  assert.deepEqual(REC.identityParts(image, 4, 5), [{ prefix: OWN, ordinal: 4, width: 1 }, { prefix: OWN, ordinal: 40, width: 2 }, { prefix: own, ordinal: 3, width: 1, load }, { prefix: OWN, ordinal: 5, width: 1 }], 'the first two minted: by the addresses the ack named, the third the page\'s still');
+});
+
+test('the page\'s load is an id drawn once as the page loads: another load of the page draws another (issue #432\'s design decision: "tagged with an id drawn at page load, so no later load reads it as other bytes")', async () => {
+  const again = await import('./records.js?another-load');
+  assert.match(REC.PAGE_LOAD, /^[0-9a-f]{32}$/, 'sixteen random bytes, in hex');
+  assert.equal(REC.PAGE_LOAD, REC.PAGE_LOAD, 'the same id however often it is read');
+  assert.notEqual(again.PAGE_LOAD, REC.PAGE_LOAD, 'another load\'s id');
 });
 
 test('those watching a change of the page\'s class are told once it is taken — at a death, at a lost session and at one regained as another principal, never at one regained as the same — everything the class wrote gone before they are (FP-29)', () => {

@@ -226,7 +226,11 @@ item and the camera still; Back returns to where the find opened; and at
 WHOLE BOARD Mod+F opens nothing and the one line says where words are found.
 In the own draft, words typed at a span, the hint a bare key raises at a later
 span and a landing's line and outline stand where the text shown holds their
-places. Every other step leaves the page as it found it."""
+places; and the words typed and the bytes after them, copied on the plane and
+from a reading scene's pane on the text shown, are named position by position
+in the text's order — the typed bytes by the page's own name tagged with the
+page's load, the board's after them by their addresses, the widths the span's
+(issue #432's design decision). Every other step leaves the page as it found it."""
 import json
 import re
 
@@ -1085,15 +1089,33 @@ def own(ctx, span, addr=None):
     return ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(addr or span['addr']), span['pos'], span['pos'] + span['width'])) if span else None
 
 
+def joined(ids):
+    """a passage's identity as a copy's entry names it (issue #432's design decision: "Parts merge only where they are
+    adjacent in the text shown"): each part joined to the one before it where it continues it — gaps of one reason, or bytes
+    of one space and one load whose ordinals follow on — and to nothing across a part of another identity or a gap"""
+    out = []
+    for p in ids or []:
+        last = out[-1] if out else None
+        if last and ('gap' in last or 'gap' in p):
+            on = 'gap' in last and 'gap' in p and last['gap'] == p['gap']
+        else:
+            on = bool(last) and last['prefix'] == p['prefix'] and last.get('load') == p.get('load') and last['ordinal'] + last['width'] == p['ordinal']
+        if on:
+            last['width'] += p['width']
+        else:
+            out.append(dict(p))
+    return out
+
+
 def flavor_of(ctx, span, doc, member, plain, ids=None):
     """the skep flavor FP-27 names a copy of `span` by: the board; `doc`, the document its words were read in; `member`, the
     member its text is, with the span's positions in it — none where no member is named, as for a draft, whose positions
-    move; whether it was read at a published document's plain address; and its bytes by identity — `ids`, else the span
-    read through `doc`'s held image by the model's `identity` door"""
+    move; whether it was read at a published document's plain address; and every position it holds by identity — `ids`,
+    else the span read through `doc`'s held image by the model's `identity` door — the parts that continue each other joined"""
     if ids is None:
         ids = ctx.js('window.__skep.model.identity(%s, %d, %d)' % (json.dumps(doc), span['pos'], span['width']))
     at = {'pos': span['pos'], 'width': span['width']} if member else {'pos': None, 'width': None}
-    return dict(board=ctx.js('window.__skep.model.board().origin'), doc=doc, member=member, plain=plain, ids=ids, **at)
+    return dict(board=ctx.js('window.__skep.model.board().origin'), doc=doc, member=member, plain=plain, ids=joined(ids), **at)
 
 
 def names(ctx, c, doc, member, plain, p0, p1, ids=None):
@@ -2757,6 +2779,68 @@ def typed_surfaces(ctx, r):
             {'outline': outline, 'run_lines': line_rects, 'focus': focus, 'P': P})
 
 
+def typed_copy(ctx, r):
+    """THE COPY OF A DRAFT'S TYPED WORDS (issue #432's design decision: "A copy names every position it holds, in the order
+    the text shows them. Nothing is dropped or closed up"; FP-27, FP-38): the walk landed on the own draft's second
+    paragraph, Enter placing the caret at its start, `ab` typed and Esc pressed, then `ab` and the ten bytes after it
+    selected as the page selects them and copied: the copy's flavor names the draft — no member and no positions — and every
+    position the span holds by identity in the text's order, `ab` by the page's own name of its bytes tagged with the page's
+    load, then the ten bytes by the model's identity of them, the widths the span's; its plain text `ab` and the paragraph's
+    own bytes after it. Then the scene opened on the draft's text shown beside the first edition, as an act opening it from
+    a span opens it, and the same span selected in pane A and copied: named alike. The scene, the selection, the caret and
+    the edits are let go after, and the draft read again."""
+    doc = WINDOW[2]
+    ctx.leap(doc, None)
+    paras = [b for b in ctx.js('window.__skep.model.doc(%s)' % json.dumps(doc))['blocks'] if b['kind'] == 'para' and len(b['text'].strip()) >= 16]
+    if not r.check(len(paras) >= 2, 'the own draft holds two paragraphs of sixteen characters or more (what the next checks stand on)', [b['pos'] for b in paras]):
+        return
+    P, rest = paras[1]['pos'], 10
+    ctx.leap(doc, P)
+    ctx.drv.key('Enter'); ctx.frames(2)
+    span, edits, ids, mine, load, plane, pane, opened, in_pane = None, [], [], None, None, None, None, False, False
+    try:
+        for ch in 'ab':
+            ctx.drv.key(ch)
+        ctx.frames(2)
+        ctx.drv.key('Escape'); ctx.frames(2)
+        edits = ctx.js('window.__skep.write.edits(%s)' % json.dumps(doc))
+        typed = sum(len(e['text'].encode('utf8')) for e in edits)
+        span = {'addr': doc, 'pos': P, 'width': typed + rest}
+        ids = ctx.js('window.__skep.model.identity(%s, %d, %d)' % (json.dumps(doc), P, rest))
+        mine = ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(doc), P, P + rest))
+        load = ctx.js('window.__skep.model.load()')
+        # on the plane: the span selected as the page selects it, then copied
+        ctx.js('window.__skep.select(%s, %d, %d)' % (json.dumps(doc), P, span['width']))
+        ctx.frames(2)
+        plane = copied(ctx)
+        # in a reading scene's pane on the draft's text shown: the same span selected there, then copied
+        ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); })()')
+        ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(doc), json.dumps(DOC)))
+        opened = ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.scene.isOpen() || performance.now() - t0 > 10000 ? res(window.__skep.scene.isOpen()) : setTimeout(tick, 50)); tick(); })') and scene_set(ctx)
+        if opened:
+            in_pane = ctx.js('''(async (span) => { const L = await import("./text/layer.js"), el = document.querySelector("#sceneA article.dtext");
+              return !!el && L.selectIn(el, span, false); })(%s)''' % json.dumps(span))
+            ctx.frames(2)
+            pane = copied(ctx)
+    finally:
+        ctx.js('window.__skep.scene.isOpen() && window.__skep.scene.close()')
+        ctx.settle()
+        ctx.js('(async () => { const s = window.getSelection(); if (s) s.removeAllRanges(); const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), W = await import("./write/write.js"); H.dismiss(); S.clear(); L.dropCaret(); W.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
+        ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
+    own_name = doc + '.0.p'
+    page = [{'prefix': own_name, 'ordinal': e['page'], 'width': len(e['text'].encode('utf8')), 'load': load} for e in edits if e['text'] and e.get('page') is not None]
+    want = flavor_of(ctx, span, doc, None, False, page + ids) if span and ids else None
+    width = lambda f: sum(p['width'] for p in (f or {}).get('ids') or [])
+    text = ''.join(e['text'] for e in edits)
+    r.check(text == 'ab' and bool(load) and bool(ids) and bool(plane) and plane['span'] == span and plane['flavor'] == want and width(plane['flavor']) == span['width'] and plane['plain'] == text + (mine or ''),
+            'the copy of `ab` typed in the own draft and the ten bytes after it, on the plane: its flavor names the draft — no member, no positions — and every position it holds in the text\'s order, `ab` by the page\'s own name of its bytes tagged with the page\'s load, then the board\'s ten by their addresses, the widths the span\'s; its plain text `ab` and the paragraph\'s own bytes (issue #432\'s design decision)',
+            {'span': span, 'copy': plane, 'want': want, 'edits': edits, 'load': load})
+    r.check(opened and in_pane and bool(pane) and bool(plane) and pane['span'] == span and pane['flavor'] == want and pane['flavor'] == plane['flavor'] and pane['plain'] == plane['plain'],
+            'the same span selected in a reading scene\'s pane on the draft\'s text shown and copied: named alike, position by position, its plain text the same (issue #432\'s design decision; FP-38)',
+            {'opened': opened, 'selected': in_pane, 'pane': pane, 'plane': plane and plane['flavor']})
+    r.figures['typed_copy'] = {'span': span, 'plane': plane and plane['flavor'], 'pane': pane and pane['flavor']}
+
+
 def leap_beside(ctx, r, in_view):
     """"OPEN BESIDE" IN THE LEAP BOX (issue #332; D5 K-101; foundations §2.3), `in_view` the document read at its reading
     scale: Mod+Shift+Enter on the box as opened opens nothing — the box standing with its text and its focus, the hint
@@ -3560,6 +3644,8 @@ def run(ctx):
     who_wrote_typed(ctx, r)
     # ---- the hint and a landing's line over typed words: each where the text shown holds its place ------------------
     typed_surfaces(ctx, r)
+    # ---- the copy of typed words, on the plane and from a pane: every position named, in the text's order ------------
+    typed_copy(ctx, r)
     # ---- the copy of an item that holds no text: the claimant's key record (issue #161) -------------------------------
     r.figures['record_copy'] = record_copy(ctx, r)
     ctx.leap(DOC, WINDOW[0])

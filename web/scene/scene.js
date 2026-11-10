@@ -1959,7 +1959,8 @@ const bytesIn = (/** @type {ISpan[]} */ ids) => ids.reduce((n, s) => n + s.width
  * text is a published member — a version, or an edition at its bare address
  * whose member is known — never a draft's; and whether it is read at the
  * plain address. Its article is made with it (`swap`), so a copy from the
- * pane and a stop it records name a passage alike (`named`).
+ * pane (T-LAYER's `namedIn`) and a stop it records (`named`) name alike where
+ * a passage was read.
  * @param {Pane} P
  * @returns {Where}
  */

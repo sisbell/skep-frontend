@@ -45,7 +45,13 @@
 // the model which of the page's bytes took the addresses from it (`mint`),
 // each mint counted and the count never falling (`mintsOf`), the byte named
 // by that address from then on wherever bytes are named or placed
-// (`pageIds`, `placedIn`).
+// (`pageIds`, `placedIn`). A passage written out of the page is named part
+// by part, every position it holds in the text's order (`identityParts`): a
+// byte the board holds by its permanent address — one the page made by the
+// address the board minted it at, read through the mints at the call — one
+// the page made that the board has not minted by the page's own name tagged
+// with the page's load, an id drawn once as the page loads (`PAGE_LOAD`),
+// and a stretch no run of the image places as a gap of its width and why.
 // A link's slot names bytes, never a place (wire.md §Links): where a stored
 // span stands in a document's text is read through that document's held V→I
 // image (`placed`) — moved where the image puts it, cut in two as two
@@ -118,8 +124,8 @@
 // nothing of pixels, zoom, selection or lenses: the links touching an
 // address are the raw set as delivered, and which of them show, and how, is
 // LK's.
-// Rules: FP-1, FP-2, FP-6, FP-7, FP-10, FP-14, FP-22, FP-23, FP-29, FP-34,
-// FP-35.
+// Rules: FP-1, FP-2, FP-6, FP-7, FP-10, FP-14, FP-22, FP-23, FP-27, FP-29,
+// FP-34, FP-35, FP-38.
 
 import { accountOf, documentOf, homeOf, cmpAddr, memberOf, isUnder, isTrunkMember, docOneOf } from './address.js';
 import { byteOffsets, sliceBytes } from '../util.js';
@@ -193,6 +199,22 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {number} ordinal the last field of their first permanent address
  * @property {number} width
  */
+
+/**
+ * @typedef {Object} PageName — bytes the page made that the board has not minted, as a passage written out of the page names them (`identityParts`): the page's own name of them, tagged with the page's load (`PAGE_LOAD`), so no other load of the page takes them for the bytes it made under that name
+ * @property {string} prefix the page's space of the draft (`pageSpace`)
+ * @property {number} ordinal the page's ordinal for the first of them (`Edit.page`)
+ * @property {number} width
+ * @property {string} load the load of the page that made them (`PAGE_LOAD`)
+ */
+
+/**
+ * @typedef {Object} Gap — a stretch of a passage the page holds no identity for, as a passage written out of the page names it (`identityParts`): its positions and why
+ * @property {'unread'} gap why it is named by nothing: `unread` the image the passage was read through holds no run there
+ * @property {number} width its positions
+ */
+
+/** @typedef {ISpan | PageName | Gap} IdentityPart one part of a passage written out of the page (`identityParts`): bytes the board holds, by their permanent addresses; bytes the page made that the board has not minted (`PageName`); or a stretch named by nothing (`Gap`) */
 
 /**
  * @typedef {'withheld' | 'unregistered' | {refused: string}} Declined — a `project` the board refused, by what its refusal
@@ -1284,6 +1306,50 @@ export function identityIn(image, pos, width) {
 }
 
 /**
+ * A stretch of a text by identity, part by part, as a passage written out of
+ * the page names it (see the head) — skep's clipboard entry for a copy
+ * (T-LAYER's `namedIn`): every position of the stretch, in the text's order,
+ * through an image that may cover it in part. Each image run it crosses, cut
+ * to it, is named as the model names its bytes now (`spelled`), so an image
+ * made before an ack names the bytes that ack minted by their addresses; a
+ * byte the page made that the board has not minted keeps the page's own
+ * name, tagged with the page's load (`PageName`); each stretch no run places
+ * is a gap of its width (`Gap`). A part joins the one before it only where it
+ * continues it (`continues`), so nothing is closed up across a part of
+ * another identity or a gap, and the widths sum to the stretch's.
+ * @param {ImageRun[]} image in position order
+ * @param {number} pos
+ * @param {number} width
+ * @returns {IdentityPart[]}
+ */
+export function identityParts(image, pos, width) {
+  /** @type {IdentityPart[]} */
+  const out = [];
+  if (width < 1) return out;
+  const take = (/** @type {IdentityPart} */ p) => { const last = out[out.length - 1]; if (last && continues(last, p)) last.width += p.width; else out.push(p); };
+  const end = pos + width;
+  let at = pos;
+  for (const r of image) {
+    if (r.pos + r.width <= at) continue;
+    if (r.pos >= end) break;
+    if (r.pos > at) take({ gap: 'unread', width: r.pos - at });
+    const from = Math.max(at, r.pos), hi = Math.min(end, r.pos + r.width);
+    for (const s of spelled({ prefix: r.prefix, ordinal: r.ordinal + (from - r.pos), width: hi - from })) take(isPage(s.prefix) ? { ...s, load: PAGE_LOAD } : s);
+    at = hi;
+  }
+  if (at < end) take({ gap: 'unread', width: end - at });
+  return out;
+}
+
+/** does a part continue the one before it, so the two are one (`identityParts`): gaps of one reason, or bytes of one space and one load whose ordinals follow on */
+function continues(/** @type {IdentityPart} */ a, /** @type {IdentityPart} */ b) {
+  if ('gap' in a || 'gap' in b) return 'gap' in a && 'gap' in b && a.gap === b.gap;
+  return a.prefix === b.prefix && loadOf(a) === loadOf(b) && a.ordinal + a.width === b.ordinal;
+}
+/** the load a part's bytes are named under: the page's, for its own name of bytes it made (`PageName`); none for the board's */
+const loadOf = (/** @type {ISpan | PageName} */ p) => ('load' in p ? p.load : null);
+
+/**
  * Does a document hold a link's end as a passage? Where it is the span's
  * `doc` — the trunk the span's address lies under, its bytes minted in that
  * trunk's I-space or a member's chain — decided from the span alone, its text
@@ -1839,6 +1905,14 @@ export const pageSpace = (/** @type {string} */ addr) => addr + '.0.p';
 export const isPage = (/** @type {string} */ prefix) => prefix.endsWith('.0.p');
 /** the draft a page space is of (`pageSpace`) */
 const draftOf = (/** @type {string} */ prefix) => prefix.slice(0, -4);
+/**
+ * The page's load (see the head): an id drawn once as the page loads —
+ * sixteen random bytes, in hex — that tags the page's own name of the bytes
+ * it made wherever a passage is written out of the page (`PageName`), so no
+ * other load of the page, which names the bytes it makes from the same
+ * ordinals, takes them for its own.
+ */
+export const PAGE_LOAD = [...globalThis.crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('');
 
 /**
  * Bytes the page made, minted (see the head): `width` of them from the

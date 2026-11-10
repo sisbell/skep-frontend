@@ -382,8 +382,12 @@
 // article's head starts at its first block, and a range that touches an item
 // covers it whole (`posOfPoint`), as it is drawn — and beside it, never in
 // it, in a flavor only a skep client reads, skep's own entry names the
-// passage (`namedIn`; FP-27): its bytes by identity through the image the
-// article was made from, the board and the document its words were read in,
+// passage (`namedIn`; FP-27): every position it holds by identity, part by
+// part, through the image the article was made from as the model names its
+// bytes at the copy (M-REC's `identityParts`) — a byte the page made by the
+// address the board minted it at, else by the page's own name and its load,
+// a stretch that image does not place a gap of its width — the board and
+// the document its words were read in,
 // and, where its text is a published member, that member by its version
 // address with the span's positions in it, marked where the words were read
 // at the plain address — never a draft's positions. Where the words were
@@ -502,15 +506,17 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  */
 
 /**
- * @typedef {Object} Named — a passage named as FP-27 names a copy (`namedIn`; SC's stops, as the reader leaves them): where its words were read (`Where`), on its board, its bytes by identity, and, where a member is named, its positions in that member — never a draft's, which move
+ * @typedef {Object} Copied — a passage as skep's clipboard entry names a copy of it (`namedIn`; FP-27): where its words were read (`Where`), on its board, every position it holds by identity, part by part, and, where a member is named, its positions in that member — never a draft's, which move
  * @property {string} board the board's origin
  * @property {string} doc the document read (`Where.doc`)
  * @property {string | null} member the member its text is (`Where.member`)
  * @property {boolean} plain read at a published document's plain address (`Where.plain`)
- * @property {number | null} pos its first position in `member`; null where no member is named, or no one stretch of it holds the passage
+ * @property {number | null} pos its first position in `member`; null where no member is named
  * @property {number | null} width its positions there; null with `pos`
- * @property {ISpan[]} ids its bytes by identity, through the image its article was made from (M-REC's `identityIn`); none where the passage holds no byte, or that image does not cover it
+ * @property {IdentityPart[]} ids every position it holds, in the text's order, through the image its article was made from (M-REC's `identityParts`): the board's bytes by their permanent addresses, the page's unminted ones by its own name and its load, each stretch that image does not place a gap — their widths the passage's
  */
+
+/** @typedef {Omit<Copied, 'ids'> & {ids: ISpan[]}} Named a passage named in the frame a copy of it is (`Copied`; SC's stops, as the reader leaves them), its positions in the member null also where no one stretch of the member holds it, and its bytes by identity whole, read back through an image (M-REC's `placedIn`) — none where the passage holds no byte, or the image it was read through does not cover it */
 
 /**
  * @typedef {Object} BlockPart — a block's element in a part of a mounted article: the block whole, or the stretch of it the part holds
@@ -710,6 +716,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @property {number} top the one line's bottom it was read under, px: a return under another keeps the line at its height from the visible view's centre (`keptAt`)
  */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
+/** @typedef {import('../model/records.js').IdentityPart} IdentityPart */
 /** @typedef {import('../model/records.js').ImageRun} ImageRun */
 
 /**
@@ -4271,25 +4278,28 @@ export function madeOf(el) {
 }
 
 /**
- * A span of an article named as FP-27 names a copy (`Named`): where the
- * article's words were read (`Where`) — a mounted article's as its box
- * showed them as it mounted, a pane's as the scene handed them in
- * (`sceneArticle`) — on the board; the span's bytes by identity, through the
- * image the article was made from (M-REC's `identityIn`), each byte the board
- * holds by its permanent address and none by the page's own, so words the
- * board has not minted travel as words alone; and its positions where a
- * member is named, the article's text being that member's. Null where the
- * element is no such article, or the span is another document's.
+ * A span of an article named as skep's clipboard entry names a copy
+ * (`Copied`; FP-27): where the article's words were read (`Where`) — a
+ * mounted article's as its box showed them as it mounted, a pane's as the
+ * scene handed them in (`sceneArticle`) — on the board; every position of the
+ * span by identity, part by part, through the image the article was made
+ * from, as the model names its bytes at the call (M-REC's `identityParts`;
+ * FP-38) — a byte the page made by the address the board minted it at, though
+ * the article was made before the ack, else by the page's own name and its
+ * load, and a stretch that image does not place a gap of its width; and its
+ * positions where a member is named, the article's text being that member's.
+ * Null where the element is no such article, or the span is another
+ * document's.
  * @param {HTMLElement} el the article's element
  * @param {Span} span a span of its text
  * @param {string} board the board's origin
- * @returns {Named | null}
+ * @returns {Copied | null}
  */
 export function namedIn(el, span, board) {
   const a = articleAt(el);
   if (!a || span.addr !== a.made.addr) return null;
   const { doc, member, plain } = a.where;
-  return { board, doc, member, plain, pos: member ? span.pos : null, width: member ? span.width : null, ids: REC.identityIn(a.made.image, span.pos, span.width).filter((x) => !REC.isPage(x.prefix)) };
+  return { board, doc, member, plain, pos: member ? span.pos : null, width: member ? span.width : null, ids: REC.identityParts(a.made.image, span.pos, span.width) };
 }
 
 /** the article a range starts in, else the one it ends in; null where it lies in none */
@@ -5165,15 +5175,15 @@ export function clear() {
  * in a flavor only a skep client reads, names the passage as FP-27 names a
  * copy (`namedIn`): the span the platform's selection covers in the article
  * it starts in, else ends in (`spanIn`), through the blocks that article was
- * made from, its bytes by identity, where its words were read and, where a
- * member is named, its positions in that member — never a draft's — written
- * whether or not the span holds text. The plain text is the span's items in
- * the text's order as the article was made from them (T-ARTICLE's
- * `copyText`) — the bytes the person selected, whatever the model has
- * delivered since, each item that holds no text a stand-in in square
- * brackets in its place, so a span of a record alone is never an empty
- * clipboard — and a paste anywhere else carries the passage alone and no
- * label of the page (the head's, a hairline's, a mark's, a symbol's, a
+ * made from, every position it holds by identity, part by part, where its
+ * words were read and, where a member is named, its positions in that member
+ * — never a draft's — written whether or not the span holds text. The plain
+ * text is the span's items in the text's order as the article was made from
+ * them (T-ARTICLE's `copyText`) — the bytes the person selected, whatever the
+ * model has delivered since, each item that holds no text a stand-in in
+ * square brackets in its place, so a span of a record alone is never an
+ * empty clipboard — and a paste anywhere else carries the passage alone and
+ * no label of the page (the head's, a hairline's, a mark's, a symbol's, a
  * count's, an item's rendering). A selection in no article leaves the event
  * to the platform.
  * @param {{clipboardData: {setData(format: string, data: string): void} | null, preventDefault(): void}} e the clipboard event (the gate's door hands a stub)

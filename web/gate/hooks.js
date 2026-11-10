@@ -3,16 +3,18 @@
 // app installs them on `window.__skep` with its loop's frame buffer
 // (`install`); nothing here is shipped chrome, and nothing posts anywhere.
 // What they expose, for the harness's cases: the model's held records, a
-// stretch of a held text by identity (`model.identity`), what a feed row
-// naming a document out of view does to the model alone (`model.invalidate`),
-// a row taken as the feed hands one (`model.feed`); the words being written
-// (W-WRITE's) — a draft's kept state set as the machine will set it
-// (`write.setKept`) and a draft's page-local edits (`write.edits`); the
-// page's own caret as it stands (`caret`); the mounted articles' text and
-// what stands of each by line (`mountedLines`); the mirror's items; the
-// camera, the focus and its owner's state, the focus ring the canvas drew
-// (`view.ring`) and the bounds it is clamped to (`view.ringBounds`); the
-// registration drift of each mounted box (`driftSample`), the containment of
+// stretch of a held text by identity (`model.identity`), the page's load a
+// copy's entry tags the page's unminted bytes with (`model.load`), what a
+// feed row naming a document out of view does to the model alone
+// (`model.invalidate`), a row taken as the feed hands one (`model.feed`);
+// the words being written (W-WRITE's) — a draft's kept state set as the
+// machine will set it (`write.setKept`) and a draft's page-local edits
+// (`write.edits`); the page's own caret as it stands (`caret`); the mounted
+// articles' text and what stands of each by line (`mountedLines`); the
+// mirror's items; the camera, the focus and its owner's state, the focus
+// ring the canvas drew (`view.ring`) and the bounds it is clamped to
+// (`view.ringBounds`); the registration drift of each mounted box
+// (`driftSample`), the containment of
 // each article's rows, its corner and the signs in its columns' edges
 // (`overlapCheck`) and the visibility
 // oracle (`visible`), for the layout checks; the beams' anchors beside their
@@ -52,8 +54,9 @@
 // beside the platform's own (`platformSelection`) and the copy door (`copy`);
 // the reveal's state and setters (`reveal`, `links`), each end `links.shown`
 // lists carrying its key and the withheld run it is drawn at, for the marks
-// and mirror checks; the reading scene — opened as a step on the trail, with
-// the passage its opener holds, and closed by its own end, a Back
+// and mirror checks; the reading scene — opened as a step on the trail, its
+// first pane on what the page shows of its document, with the passage its
+// opener holds, and closed by its own end, a Back
 // (`scene.open`, `scene.close`), opened apart from the trail on a document
 // beside the record the page derives from it with held lines applied
 // (`scene.openHeld`; M-DERIVE's `applyHeld`), its pairs, a passage's line in a pane
@@ -649,6 +652,8 @@ export function install(deps) {
       loadWhole: (/** @type {string} */ addr) => PUMP.loadWhole(addr).then((d) => !!d),
       /** a stretch of a held text by identity, through its held image (M-REC's `identityOf`): none where the image does not cover it */
       identity: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width) => REC.identityOf(addr, pos, width),
+      /** the page's load (M-REC's `PAGE_LOAD`): the id a copy's entry tags the page's own name of its unminted bytes with */
+      load: () => REC.PAGE_LOAD,
       /** what a feed row naming a document out of view does to the model alone: its delivered state dropped and its reads asked again — reads alone, nothing written, no reader told */
       invalidate: (/** @type {string} */ addr) => { REC.invalidate(addr); PUMP.forget(addr); CAM.markDirty(); },
       /** a feed row taken as the feed hands one (M-PUMP's `takeRow`): the model, the view and a reading scene's panes kept fresh from it — reads alone, nothing written */
@@ -763,8 +768,8 @@ export function install(deps) {
       trailList: () => { TRAILLIST.open(false); return true; },
     },
     scene: {
-      /** the scene opened on two documents as a step on the trail, the second the one opened beside, with the passage its opener holds (N-GO's `toScene`; SC's `Held`), and its own end, a Back from its entry (N-GO's `closeScene`) */
-      open: (/** @type {string} */ a, /** @type {string} */ b, /** @type {import('../scene/scene.js').Held} */ held = {}) => GO.toScene(a, b, held), close: () => GO.closeScene(), isOpen: () => SCENE.isOpen(), pair: () => SCENE.pair(),
+      /** the scene opened on two documents as a step on the trail, the second the one opened beside, the first on what the page shows of it (T-LAYER's `paneSource`) as an act opening it from a span opens it, with the passage its opener holds (N-GO's `toScene`; SC's `Held`), and its own end, a Back from its entry (N-GO's `closeScene`) */
+      open: (/** @type {string} */ a, /** @type {string} */ b, /** @type {import('../scene/scene.js').Held} */ held = {}) => GO.toScene(LAYER.paneSource(a), b, held), close: () => GO.closeScene(), isOpen: () => SCENE.isOpen(), pair: () => SCENE.pair(),
       /** the scene opened apart from the trail on a document and, in its second pane, the record the page derives from it with held lines applied in the order given (M-DERIVE's `applyHeld`; B3-S2, D6 BM-14): page state alone, nothing read for the derived pane; whether the scene shows, how many rows applied and why the apply stopped, where it did */
       openHeld: async (/** @type {string} */ a, /** @type {import('../model/frames.js').HeldLine[]} */ rows) => {
         const out = DERIVE.applyHeld(REC.doc(a), rows, (addr) => (REC.has(addr) ? REC.doc(addr) : null));

@@ -41,8 +41,10 @@
 // its ground and its hairlines alone (FP-31); C-67's clause from the model; what an article was
 // made from; a copy named where
 // its words were read — a box's at its version, the head its corner names at
-// a plain address, and a pane's alike — by its bytes' identity, never a
-// draft's positions; the zoom-in bound;
+// a plain address, and a pane's alike — by every position's identity part by
+// part — a typed byte by its minted address, else the page's own name and
+// load, a stretch its image does not place a gap — never a draft's
+// positions; the zoom-in bound;
 // symbols marked heavier in place, titled with their far ends' state in its
 // short form, and a span inside a withheld run at the
 // run's boxes; a byline's facts arriving and its cut label opening in
@@ -1335,15 +1337,27 @@ test('a reading scene\'s pane names a copy where the scene says its words were r
   assert.equal(LAYER.namedIn(pane, { addr: D, ...AT }, 'origin-1'), null, 'a span measured against another address: none');
 }, 1440, 900));
 
-test('a copy of a draft\'s typed words names the minted identity of each byte that has one, and no identity of the page\'s own: words the board has not minted travel as words alone (FP-27; the unsent-typing decision §1 (c))', () => onLayer(() => {
+test('a copy of a draft\'s typed words names every position it holds in the text\'s order, each byte by the identity the page holds for it at the copy: the typed bytes by the page\'s own name tagged with the page\'s load until the board mints them, then — in an article made before the ack as in one made after it — those minted by their addresses, the rest by the page\'s name still, the board\'s bytes after them; nothing dropped or closed up (issue #432\'s design decision: "A copy names every position it holds, in the order the text shows them. Nothing is dropped or closed up"; FP-27, FP-38)', () => onLayer(() => {
   deliver();
   WRITE.addEdit(D, { pos: 1, width: 0, text: 'abc' });
-  const span = { addr: D, pos: 1, width: 5 };
-  const named = () => LAYER.namedIn(LAYER.sceneArticle(LAYER.shownOf(D)), span, 'origin-1')?.ids;
-  assert.deepEqual(named(), [{ prefix: D + '.0.1', ordinal: 1, width: 2 }], 'three typed bytes and two of the board\'s: the board\'s alone are named');
-  REC.mint(D, /** @type {number} */ (WRITE.edits(D)[0].page), 2, `${D}.0.1.${FRESH}`, 12);
-  assert.deepEqual(named(), [{ prefix: D + '.0.1', ordinal: FRESH, width: 2 }, { prefix: D + '.0.1', ordinal: 1, width: 2 }], 'two of them minted: named by their addresses, the third still by none');
+  const span = { addr: D, pos: 1, width: 5 }, page = /** @type {number} */ (WRITE.edits(D)[0].page), own = REC.pageSpace(D), load = REC.PAGE_LOAD;
+  const named = (/** @type {HTMLElement} */ el) => LAYER.namedIn(el, span, 'origin-1')?.ids;
+  const before = LAYER.sceneArticle(LAYER.shownOf(D));
+  assert.deepEqual(named(before), [{ prefix: own, ordinal: page, width: 3, load }, { prefix: D + '.0.1', ordinal: 1, width: 2 }], 'three typed bytes by the page\'s own name and its load, then the board\'s two');
+  REC.mint(D, page, 2, `${D}.0.1.${FRESH}`, 12);
+  const minted = [{ prefix: D + '.0.1', ordinal: FRESH, width: 2 }, { prefix: own, ordinal: page + 2, width: 1, load }, { prefix: D + '.0.1', ordinal: 1, width: 2 }];
+  assert.deepEqual(named(before), minted, 'two of them minted, the article made before the ack: those two by their addresses, the third by the page\'s name still');
+  assert.deepEqual(named(LAYER.sceneArticle(LAYER.shownOf(D))), minted, 'an article made after the ack names them alike');
+  assert.equal(minted.reduce((n, p) => n + p.width, 0), span.width, 'their widths the span\'s');
   WRITE.clearEdits(D);
+}, 1440, 900));
+
+test('a copy over a span its article\'s image places in part names the bytes it places by their addresses and the rest as a gap of its width, never nothing; a span it places none of is one gap the span\'s width (issue #432\'s design decision: "An uncovered stretch becomes a gap carrying its width and its reason")', () => onLayer(() => {
+  REC.takeDelivery(D, [{ pos: 1, width: EXTENT, kind: 'content', text: TEXT, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 99 }]);
+  const pane = LAYER.sceneArticle(REC.doc(D));
+  assert.deepEqual(LAYER.namedIn(pane, { addr: D, pos: 95, width: 10 }, 'origin-1')?.ids, [{ prefix: D + '.0.1', ordinal: 95, width: 5 }, { gap: 'unread', width: 5 }], 'the five the image places, then a gap of five');
+  assert.deepEqual(LAYER.namedIn(pane, { addr: D, pos: 200, width: 10 }, 'origin-1')?.ids, [{ gap: 'unread', width: 10 }], 'none placed: one gap');
 }, 1440, 900));
 
 // ---- the zoom-in bound -------------------------------------------------------------------------------------------------
