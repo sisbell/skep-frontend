@@ -54,15 +54,20 @@
 // walk on and where Enter or a printable key returns the caret, a paste there
 // the platform's; Mod+Enter at
 // a live caret follows from a selection drawn in the caret's own text alone —
-// with none there, whatever a slot chord made before it and wherever else a
-// selection stands, it selects nothing, follows nothing and leaves the caret
-// where it stands, giving the caret's follow line where the focus is — while
-// at a kept caret it acts on the kept span as on the plane; a key that puts
+// with none there, whatever a slot chord made before it, it selects nothing,
+// follows nothing and leaves the caret where it stands, giving the caret's
+// follow line where the focus is — while at a kept caret it acts on the kept
+// span as on the plane; a selection put in another document keeps a live
+// caret first, owing the frame nothing, and stands the walk at it, so
+// Mod+Enter lists the links there and a printable key is answered by that
+// document's line; a key that puts
 // text in or takes it out at the caret, live or kept, replaces a selection
 // drawn in the caret's own text, the selection and its card ended, and types
-// at the caret where that selection is not whole in the text shown or the
-// selection is another document's; and an arrow without Shift there ends that
-// selection, ← and → putting the caret at its start and its end; every
+// at the caret where that selection is not whole in the text shown; and an
+// arrow without Shift there ends that selection, ← and → putting the caret at
+// its start and its end; a printable key swallowed outside the draft last
+// written, its caret kept there, ends its line with where the person was
+// writing, the label's act a LEAP back to the kept caret's span; every
 // teleport into a live caret's own draft — a LEAP, Back, Forward, a find's
 // move — leaves the caret kept where it stood, a printable key at the landing
 // answered by the draft's own line, and a zoom past its reading scale leaves
@@ -268,7 +273,7 @@ test('at a span of a draft the person may edit holding no caret a printable key 
   assert.equal(await KEYS.dispatch(keyOf(' '), PLANE), true);
   assert.equal(said.at(-1), t('F.swallow.space', { 'paging key': 'PageDown' }), 'Space: K-9\'s own line, whole at its first press');
   assert.equal(await KEYS.dispatch(keyOf(' '), PLANE), true);
-  assert.deepEqual([said.at(-1), HINT.standing()], ['Space does not page here', { id: 'F.swallow.space', words: 'Space does not page here', whole: t('F.swallow.space', { 'paging key': 'PageDown' }), open: false }],
+  assert.deepEqual([said.at(-1), HINT.standing()], ['Space does not page here', { id: 'F.swallow.space', words: 'Space does not page here', whole: t('F.swallow.space', { 'paging key': 'PageDown' }), open: false, writing: null }],
     'Space again: its first clause, the notice whole kept as its description');
   assert.deepEqual([WRITE.edits(D), shown()], [[], TEXT], 'nothing placed and nothing removed');
   await KEYS.dispatch(keyOf('Enter'), PLANE);
@@ -326,7 +331,7 @@ test('at the walk\'s span of an edition of the session\'s account, at its readin
   await focusOn(E, 14);
   const c45 = t('C-45', { D: E });
   assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
-  assert.deepEqual([said.at(-1), HINT.standing()], [c45, { id: 'C-45', words: c45, whole: c45, open: true }], 'q: C-45 naming the document, whole');
+  assert.deepEqual([said.at(-1), HINT.standing()], [c45, { id: 'C-45', words: c45, whole: c45, open: true, writing: null }], 'q: C-45 naming the document, whole');
   let n = said.length;
   assert.equal(await KEYS.dispatch(keyOf('w'), PLANE), true);
   await tick();
@@ -802,16 +807,23 @@ test('a slot chord made at a live caret with no selection standing selects nothi
   assert.deepEqual([SEL.selected(), caret()], [{ addr: D, pos: 1, width: 1 }, [D, 2, true]], 'Shift+→ after Mod+Shift+L: the caret a character on, the selection from where it stood to it');
 }));
 
-test('Mod+Enter at a live caret with a selection drawn in another document, no link drawn there, counts that selection nothing: it follows nothing and gives the caret\'s follow line, the selection and its card standing and the caret live where it stands (issue #471; D5 K-51; B3-S13)', () => onPlane(async ({ said }) => {
-  HOST.attach(/** @type {any} */ (hostEl));
+test('a selection put in another document than a live caret\'s keeps the caret first and stands the walk on the span its moving end is in, so Mod+Enter acts on that selection: its two links listed at it, the caret kept where it stood, no follow line said and nothing followed (issue #496\'s design decision; D5 K-51; B3-S13)', () => onPlane(async ({ said }) => {
+  twoLinks();
+  REC.takeLinks(O, [D + '.0.2.1', D + '.0.2.2']);
+  const at = { addr: O, pos: 1, width: 10 };
+  assert.equal(LK.shownAt(O, at).length, 2, 'the two links\' far ends drawn at O\'s first span');
   await focusOn(D, 1);
   await KEYS.dispatch(keyOf('Enter'), PLANE);
-  SEL.select(O, 14, 4);
-  assert.deepEqual([caret(), SEL.selected(), overlay()], [[D, 1, true], { addr: O, pos: 14, width: 4 }, 'selection'], 'the caret live in D, a selection drawn in O, its card standing');
+  assert.deepEqual(caret(), [D, 1, true], 'the caret live in D');
+  SEL.select(O, 1, 10);
+  await tick();
+  assert.deepEqual([caret(), LAYER.caretOwes(), SEL.selected(), overlay(), WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos, FOCUS.ringShown()], [[D, 1, false], null, at, 'selection', 'block', O, 1, false],
+    'the selection in O: the caret kept first, owing the frame nothing, the selection and its card standing, the walk on the span holding its moving end, the ring out');
   const n = said.length, trail = TRAIL.all().length;
   assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
-  assert.deepEqual([SEL.selected(), overlay(), caret(), TRAIL.all().length, said.slice(n), HINT.standing()?.id], [{ addr: O, pos: 14, width: 4 }, 'selection', [D, 1, true], trail, [t('B3.row.follow.inert')], 'B3.row.follow.inert'],
-    'Mod+Enter: O\'s selection and its card standing, nothing followed, the caret live where it stood, the caret\'s follow line said');
+  assert.deepEqual([SEL.selected(), overlay(), holds(), caret(), TRAIL.all().length, said.slice(n).includes(t('B3.row.follow.inert'))], [at, 'which', null, [D, 1, false], trail, false],
+    'Mod+Enter: the two links at O\'s selection listed there, the list holding no span of its own, the caret kept where it stood, nothing followed and no follow line said');
+  HOST.dismiss();
 }));
 
 /** a key's chord at the caret: the key with its modifiers, dispatched on the plane, `n` times; whether the page took each */
@@ -819,7 +831,7 @@ const press = async (/** @type {string} */ key, /** @type {object} */ mods = {},
 /** the page-local edits of D, each its position, its width and its text */
 const editsOfD = () => WRITE.edits(D).map((e) => [e.pos, e.width, e.text]);
 
-test('a printable key, Tab, Enter, Backspace and Delete at a live caret with a selection drawn in its text replace the selection — the key\'s text, none for Backspace and Delete, in its bytes\' place — the caret after it, the selection and its card ended; at the kept caret\'s span a printable key returns the caret, replaces the selection drawn in its text and stands the walk on the span the caret is in then; with a selection drawn in another document alone, the key types at the caret, that selection and its card standing (D5 K-70, K-71, K-72, K-76; D6 BM-70, BM-75)', () => onPlane(async () => {
+test('a printable key, Tab, Enter, Backspace and Delete at a live caret with a selection drawn in its text replace the selection — the key\'s text, none for Backspace and Delete, in its bytes\' place — the caret after it, the selection and its card ended; at the kept caret\'s span a printable key returns the caret, replaces the selection drawn in its text and stands the walk on the span the caret is in then; a selection put in another document then keeps the caret first and stands the walk at it, so a printable key is answered by that document\'s line, ending with where the person was writing, nothing typed and that selection and its card standing (D5 K-70, K-71, K-72, K-76; D6 BM-70, BM-75; issue #496\'s design decision)', () => onPlane(async () => {
   HOST.attach(/** @type {any} */ (hostEl));
   const SHIFT = { shiftKey: true };
   await focusOn(D, 1);
@@ -855,11 +867,14 @@ test('a printable key, Tab, Enter, Backspace and Delete at a live caret with a s
   assert.deepEqual([shown(), caret(), SEL.selected(), overlay(), WALK.current()?.pos], ['Fe.\n\nz line here.\n', [D, 7, true], null, null, 6],
     'z at the kept caret\'s span: the caret returned, "Second" replaced, the selection and its card ended, the walk on the second span of the text shown, where the caret stands now');
 
-  // a selection drawn in another document alone
+  // a selection put in another document
   SEL.select(O, 14, 4);
+  await tick();
+  assert.deepEqual([caret(), WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos], [[D, 7, false], 'block', O, 14], 'the selection in O: the caret kept first, the walk on the span holding its moving end');
   await press('y');
-  assert.deepEqual([shown(), caret(), SEL.selected(), overlay(), WRITE.edits(O)], ['Fe.\n\nzy line here.\n', [D, 8, true], { addr: O, pos: 14, width: 4 }, 'selection', []],
-    'y with a selection in O alone: typed at the caret, O\'s selection and its card standing');
+  const end = t('B3.undo.last-writing', { label: LAYER.boxName(D).name });
+  assert.deepEqual([shown(), caret(), SEL.selected(), overlay(), WRITE.edits(O), HINT.standing()?.words, HINT.standing()?.writing], ['Fe.\n\nz line here.\n', [D, 7, false], { addr: O, pos: 14, width: 4 }, 'selection', [], t('B3.row.others-document', { owner: '1.0.2' }), end],
+    'y: answered by O\'s line naming its owner, ending with where the person was writing — nothing typed in either, O\'s selection and its card standing');
   HOST.dismiss();
 }));
 
@@ -939,6 +954,48 @@ test('every teleport into the live caret\'s own draft — a LEAP, Back, Forward,
       assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
       assert.deepEqual(caret(), [D, to, true], `${what}: Enter places a caret at the span landed on`);
     }
+    assert.deepEqual(fake.unanswered, []);
+  } finally { PORT.boot(null); TRAIL._reset(); }
+}));
+
+test('a printable key swallowed outside the draft last written in the page\'s session, its caret kept there, ends its line with where the person was writing — at another\'s document and off any document alike, said with the line — while at another span of that draft, and before anything is written, the line ends with itself; the label\'s act takes the hint down and LEAPs back to the kept caret\'s span, where the next printable key types at the caret (issue #496\'s design decision; D5 K-9, K-72; B3-S13)', () => onPlane(async ({ said }) => {
+  const fake = FAKE.create({});
+  PORT.boot(fake);
+  TRAIL._reset();
+  // D's metadata and links held beside its text, so the LEAP back to it reads nothing
+  REC.takeMetadata(D, { doc: D, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(D, []);
+  const theirs = t('B3.row.others-document', { owner: '1.0.2' }), clause = 'this is 1.0.2\'s document';
+  try {
+    await focusOn(D, 1);
+    await press('Enter');
+    await focusOn(O, 1);
+    await press('q');
+    assert.deepEqual([caret(), HINT.standing()?.id, HINT.standing()?.writing, said.at(-1)], [[D, 1, false], 'B3.row.others-document', null, theirs], 'nothing written yet: O\'s line ends with itself, the caret kept in D');
+    await focusOn(D, 1);
+    await press('Enter');
+    await press('a');
+    await focusOn(O, 1);
+    assert.deepEqual([caret(), WRITE.lastWritten()], [[D, 2, false], D], '"a" typed in D, the walk on O leaving the caret kept');
+    const end = t('B3.undo.last-writing', { label: LAYER.boxName(D).name });
+    await press('q');
+    assert.deepEqual([HINT.standing()?.id, HINT.standing()?.words, HINT.standing()?.writing, said.at(-1)], ['B3.row.others-document', clause, end, `${clause} ${end}`], 'at O: its line, ending with where the person was writing, said together');
+    await WALK.focusTo('1.0.2', null, true, true, null, true);
+    await press('q');
+    assert.deepEqual([HINT.standing()?.id, HINT.standing()?.writing], ['F.swallow', end], 'off any document: K-9\'s line, ending the same');
+    // D's second span in the text shown, one position on past "a"
+    await focusOn(D, LAYER.shownOf(D).blocks[1].pos);
+    await press('q');
+    assert.deepEqual([HINT.standing()?.id, HINT.standing()?.writing, caret()], ['B3.caret.enter', null, [D, 2, false]], 'at another span of D, the draft last written: the draft\'s own line, ending with itself, the caret kept');
+    await focusOn(O, 1);
+    await press('q');
+    assert.equal(HINT.standing()?.writing, end);
+    HINT.writingAct(true);
+    assert.equal(HINT.standing(), null, 'the label\'s act takes the hint down');
+    await landed();
+    assert.deepEqual([walkAt(), caret(), TRAIL.current()?.addr], [['block', D, 1], [D, 2, false], D], 'and LEAPs back: the walk on the kept caret\'s span, its trail entry D\'s, the caret kept');
+    await press('z');
+    assert.deepEqual([WRITE.edits(D).map((e) => [e.pos, e.width, e.text]), caret()], [[[1, 0, 'a'], [2, 0, 'z']], [D, 3, true]], 'z there returns the caret and types at it');
     assert.deepEqual(fake.unanswered, []);
   } finally { PORT.boot(null); TRAIL._reset(); }
 }));

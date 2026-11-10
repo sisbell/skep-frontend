@@ -2,9 +2,10 @@
 // model — a draft's kept state; its page-local edits in the order made, each
 // act one step, the bytes an edit makes named by the draft's next ordinals
 // and a put-back making none, counted with each of M-REC's mints of their
-// bytes; and what D6's machine holds of a draft, its held lines and its
-// flight — every change counted for the loop, and a change of the page's
-// class letting go of all of it, every flight ended and its waiters told.
+// bytes; what D6's machine holds of a draft, its held lines and its flight;
+// and the draft last written — every change counted for the loop, and a
+// change of the page's class letting go of all of it, every flight ended and
+// its waiters told.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as WRITE from './write.js';
@@ -121,4 +122,18 @@ test('what D6\'s machine holds of a draft is set by the machine alone: its held 
   classChanges();
   await dropped;
   assert.deepEqual([WRITE.inFlight(D), WRITE.heldOf(D)], [false, []], 'a change of class ends every flight, its waiters told, and drops the held lines');
+});
+
+test('the draft last written in the page\'s session is the one whose edits were added last, an act that made none naming none, a clearing of its edits keeping it — and a change of class forgets it (issue #496\'s design decision)', () => {
+  const D = '1.0.1.0.2', E = '1.0.1.0.3';
+  assert.equal(WRITE.lastWritten(), null, 'nothing written yet');
+  WRITE.addEdit(D, { pos: 1, width: 0, text: 'a' });
+  assert.equal(WRITE.lastWritten(), D);
+  WRITE.addEdits(E, [{ pos: 1, width: 0, text: 'b' }, { pos: 2, width: 0, text: 'c' }]);
+  WRITE.addEdits(D, []);
+  assert.equal(WRITE.lastWritten(), E, 'the draft an act last added edits to; an act that made none names none');
+  WRITE.clearEdits(E);
+  assert.equal(WRITE.lastWritten(), E, 'its edits let go, it is still the draft last written');
+  classChanges();
+  assert.equal(WRITE.lastWritten(), null, 'a change of class forgets it');
 });

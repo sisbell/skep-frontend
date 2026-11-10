@@ -230,7 +230,11 @@ places; and the words typed and the bytes after them, copied on the plane and
 from a reading scene's pane on the text shown, are named position by position
 in the text's order — the typed bytes by the page's own name tagged with the
 page's load, the board's after them by their addresses, the widths the span's
-(issue #432's design decision). Every other step leaves the page as it found it."""
+(issue #432's design decision). With the caret live in the own draft and its line
+wheeled above the visible view, a selection put in the first edition keeps the
+caret, its mark hollow, and leaves the camera where the wheel left it, the walk
+on the edition's span (issue #496's design decision). Every other step leaves the
+page as it found it."""
 import json
 import re
 
@@ -2779,6 +2783,69 @@ def typed_surfaces(ctx, r):
             {'outline': outline, 'run_lines': line_rects, 'focus': focus, 'P': P})
 
 
+# the caret, its mark as the platform lays it out — whether hollow, its box on screen — the one line's bottom, the camera,
+# whether it flies, and the walk's element
+CARET_AT = '''(() => { const S = window.__skep, m = document.querySelector("#domlayer .caret-mark"), q = m ? m.getBoundingClientRect() : null, l = document.getElementById("line"), f = S.view.focus();
+  return {caret: S.caret(), mark: q ? {kept: m.classList.contains("kept"), top: q.top, h: q.height} : null, line: l ? l.getBoundingClientRect().bottom : 0, cam: S.view.camera(),
+          flying: S.view.flying(), focus: f ? {kind: f.kind, addr: f.addr, pos: f.pos} : null}; })()'''
+# a point over the plane clear of the chrome — the one line, the box, the overlay, the scene, the mirror — the wheel's target there
+# pans the camera; null where the probe finds none
+WHEEL_POINT = '''(() => { const p = window.__skep.view.viewport();
+  for (const [fx, fy] of [[0.75, 0.6], [0.85, 0.75], [0.6, 0.85], [0.9, 0.4], [0.4, 0.6]]) {
+    const x = Math.round(p.VW * fx), y = Math.round(p.VH * fy), e = document.elementFromPoint(x, y);
+    if (e && !e.closest('#line, #leap, #overlay, #scene, #mirror')) return {x, y};
+  }
+  return null; })()'''
+
+
+def kept_elsewhere(ctx, r):
+    """A SELECTION PUT IN ANOTHER DOCUMENT KEEPS THE CARET, OWING THE FRAME NOTHING (issue #496's design decision: "on the
+    plane, a selection put in another document — pointer, key or harness hook — keeps the caret first"): the walk landed on
+    the own draft's second paragraph, Enter placing the caret at its start, the wheel then turned over the plane until the
+    caret's line stands above the visible view, the draft still at its reading scale and its re-take let run; then a
+    selection put in the first edition's first paragraph through the gate's door, and the frames after it; and whether all
+    of it held: the caret kept where it stood, its mark hollow and still above the view, the camera where the wheel left
+    it — never brought back to the kept caret, nor flying — and the walk on the first edition's span the selection's end
+    stands in. The selection, its card and the caret are let go after."""
+    doc = WINDOW[2]
+    ctx.leap(doc, None)
+    paras = [b for b in ctx.js('window.__skep.model.doc(%s)' % json.dumps(doc))['blocks'] if b['kind'] == 'para' and b['text'].strip()]
+    para = paras[1] if len(paras) > 1 else paras[0]
+    ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(DOC)); ctx.settle()
+    first = next((b for b in ctx.js('window.__skep.model.doc(%s)' % json.dumps(DOC))['blocks'] if b['kind'] == 'para' and len(b['text'].strip()) >= 8), None)
+    if not r.check(first is not None, "the first edition holds a paragraph of eight characters or more (what the selection is put in)", None):
+        return
+    ctx.leap(doc, para['pos'])
+    ctx.drv.key('Enter'); ctx.frames(2)
+    placed, wheeled, after, at, turns = ctx.js(CARET_AT), None, None, None, 0
+    try:
+        at = ctx.js(WHEEL_POINT)
+        if placed['mark'] and at:
+            # the wheel's turns of 40 px that take the caret's line above the visible view's top, 24 px clear
+            turns = max(1, -(-(placed['mark']['top'] + placed['mark']['h'] - placed['line'] + 24) // 40))
+            for _ in range(int(turns)):
+                ctx.drv.wheel(at['x'], at['y'], dy=40)
+            ctx.js('new Promise((res) => setTimeout(res, 400))')  # the re-take waits 220 ms on the wheel's rest
+            ctx.settle(); ctx.frames(2)
+        wheeled = ctx.js(CARET_AT)
+        ctx.js('window.__skep.select(%s, %d, 8)' % (json.dumps(DOC), first['pos']))
+        ctx.settle(); ctx.frames(3)
+        after = ctx.js(CARET_AT)
+    finally:
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"); H.dismiss(); S.clear(); L.dropCaret(); })()')
+        ctx.frames(2)
+    still = lambda a, b: bool(a) and bool(b) and abs(a['x'] - b['x']) < 1e-9 and abs(a['y'] - b['y']) < 1e-9 and abs(a['scale'] - b['scale']) < 1e-12
+    reading = ctx.js('(async () => (await import("./text/layer.js")).atReadingScale(%s))()' % json.dumps(doc))
+    above = bool(wheeled and wheeled['mark']) and wheeled['mark']['top'] + wheeled['mark']['h'] <= wheeled['line']
+    ok = (bool(placed['caret']) and placed['caret']['live'] and bool(wheeled) and bool(wheeled['caret']) and wheeled['caret']['live'] and above and reading
+          and bool(after) and after['caret'] == {'addr': doc, 'pos': para['pos'], 'live': False} and bool(after['mark']) and after['mark']['kept']
+          and after['mark']['top'] + after['mark']['h'] <= after['line'] and still(wheeled['cam'], after['cam']) and not after['flying']
+          and bool(after['focus']) and after['focus']['kind'] == 'block' and after['focus']['addr'] == DOC and after['focus']['pos'] == first['pos'])
+    r.check(ok, "with the caret live in the own draft and its line wheeled above the visible view, a selection put in the first edition keeps the caret where it stood, its mark hollow and still above the view, and owes the frame nothing: the camera stays where the wheel left it, never brought back to the kept caret, and the walk stands on the first edition's span the selection's end is in (issue #496's design decision: \"a selection put in another document — pointer, key or harness hook — keeps the caret first\")",
+            {'para': {'pos': para['pos'], 'width': para['width']}, 'first': {'pos': first['pos'], 'width': first['width']}, 'point': at, 'turns': turns,
+             'placed': placed, 'wheeled': wheeled, 'after': after, 'at_reading_scale': reading})
+
+
 def typed_copy(ctx, r):
     """THE COPY OF A DRAFT'S TYPED WORDS (issue #432's design decision: "A copy names every position it holds, in the order
     the text shows them. Nothing is dropped or closed up"; FP-27, FP-38): the walk landed on the own draft's second
@@ -3646,6 +3713,8 @@ def run(ctx):
     typed_surfaces(ctx, r)
     # ---- the copy of typed words, on the plane and from a pane: every position named, in the text's order ------------
     typed_copy(ctx, r)
+    # ---- a selection put in another document keeps the caret, owing the frame nothing (issue #496) --------------------
+    kept_elsewhere(ctx, r)
     # ---- the copy of an item that holds no text: the claimant's key record (issue #161) -------------------------------
     r.figures['record_copy'] = record_copy(ctx, r)
     ctx.leap(DOC, WINDOW[0])

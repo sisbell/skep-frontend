@@ -384,6 +384,12 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #hint button { display:block; max-width:100%; margin:0; padding:3px 8px; white-space:normal; text-align:left; font-size:11px; line-height:1.45;
   color:var(--warn); background:#1b1f25; border:1px solid var(--warn); border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,.45); }
 #hint button:hover { background:#1e2530; }
+/* a line that ends with where the person was writing: the notice and its ending one box, its words flowing as one line,
+   the ending's label a button of its own */
+#hint.writing { padding:3px 8px; font-size:11px; line-height:1.45; color:var(--warn); background:#1b1f25; border:1px solid var(--warn); border-radius:4px;
+  box-shadow:0 2px 8px rgba(0,0,0,.45); }
+#hint.writing button { display:inline; padding:0; font:inherit; color:inherit; background:none; border:none; border-radius:0; box-shadow:none; }
+#hint.writing button[data-writing] { text-decoration:underline dotted; cursor:pointer; }
 
 /* THE OVERLAYS — one at a time, conjured by an act, dismissed by its end; and below it the notice a read brought while it
    stood (O-HOST's; FP-36), placed under its box, drawn as a face is wherever it stands. Each scrolls inside itself past

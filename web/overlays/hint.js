@@ -2,10 +2,15 @@
 // beside the focus the press was made at (FP-26, FP-31, FP-20). Layer 2.
 // ENGINE-BOUND. State (FP-10): the hint standing — its notice's string, the
 // notice whole and in its compact form, whether it shows the notice whole,
-// the focus the press was made at and whether that was on the plane — the
+// where the person was writing where its line ends with it, the focus the
+// press was made at and whether that was on the plane — the
 // notices shown whole in the page's session (`seen`), the presses it has
 // answered and the last its element was drawn for, the state its element was
 // last written from, and the place it was last set beside.
+// A key swallowed away from the draft the person last wrote in ends its line
+// with where they were writing (N-KEYS'; `Writing`): "— you were last writing
+// in ⟨label⟩" after the notice, whole or compact alike, its label the act
+// back to that draft's kept caret, said with the notice in the status region.
 // Raised (`show`) by the press it answers — N-KEYS' swallow, the caret's
 // lines, an inert slot's reason, "select a passage first", the caret's
 // follow line; N-FIND's chord off any document; the one line's inert act,
@@ -39,13 +44,17 @@
 // inside the visible view; it moves nothing, standing in no text, line or
 // label. Where the reading scene stands over the plane it was raised on, it
 // is covered (N-FOCUS's `cover`).
-// Its element (`#hint`; FP-13): one native button, in the page's order after
-// the notice below the overlay (D5 §4 rule 5), named by the words it shows
-// and described by the whole notice, the notice's string on it; never a stop
-// of the walk, it takes no focus unasked and holds no key. Its act — a
+// Its element (`#hint`; FP-13): the notice's native button, in the page's
+// order after the notice below the overlay (D5 §4 rule 5), named by the words
+// it shows and described by the whole notice, the notice's string on it, and
+// where its line ends with where the person was writing, that ending after it
+// on the same line, its label a native button of its own; neither is a stop
+// of the walk, takes the focus unasked or holds a key. The notice's act — a
 // click, or Enter or Space once Tab reached it — opens the notice whole and
-// folds it again where it has a compact form, saying what it shows; moving
-// the focus to it ends nothing. A rebuild keeps the focus on it (N-FOCUS's
+// folds it again where it has a compact form, saying what it shows; the
+// label's takes the hint down and makes the act it was handed, a key's or
+// the pointer's as made (`writingAct`); moving the focus to either ends
+// nothing. A rebuild keeps the focus on the button it stood on (N-FOCUS's
 // `keep`), and a hint gone while it held the focus hands it to the walk's
 // element (`handOff`, the app's).
 // Figures: a fade-in of FADE_MS (160 ms, unmeasured); GAP 8 px beside what
@@ -63,10 +72,19 @@ import * as LAYER from '../text/layer.js';
 import { focusBox } from '../plane/render.js';
 import { pageGeometry } from '../beams/beams.js';
 import { visibleView, markDirty } from '../plane/camera.js';
-import { hintOf, addressedHTML } from '../strings.js';
+import { hintOf, addressedHTML, t } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect */
+
+/**
+ * @typedef {Object} Writing — where the person was writing, which a swallowed key's line ends with (see the head): handed in by the press
+ * @property {string} label the draft's name, as the status region names a box (T-LAYER's `boxName`)
+ * @property {(byKey: boolean) => void} act the label's act: back to the draft's kept caret, a key's or the pointer's
+ */
+
+/** the ending a line takes where the person was writing elsewhere (`Writing`) */
+const WRITING = 'B3.undo.last-writing';
 
 /**
  * @typedef {Object} Site — the focus a press was made at, which the hint stands beside while it stands
@@ -80,6 +98,7 @@ import { esc } from '../util.js';
  * @property {string} whole the notice whole
  * @property {string} clause its compact form: the notice whole where it has none (ST's `hintOf`)
  * @property {boolean} open it shows the notice whole
+ * @property {Writing | null} writing where the person was writing, which its line ends with; null where it ends with the notice
  * @property {Site} site
  * @property {boolean} plane the press was made on the plane: the reading scene covers it
  */
@@ -127,11 +146,19 @@ let handOff = () => {};
 export function attach(e, r = {}) {
   el = e;
   if (r.handOff) handOff = r.handOff;
-  e.addEventListener('click', (ev) => { if (/** @type {HTMLElement} */ (ev.target).closest('button[data-hint]')) toggle(); });
+  e.addEventListener('click', (ev) => {
+    const at = /** @type {HTMLElement} */ (ev.target);
+    if (at.closest('button[data-hint]')) toggle();
+    else if (at.closest('button[data-writing]')) writingAct(FOCUS.byKey(ev));
+  });
 }
 
-/** the words the hint shows */
+/** the words the hint's notice shows */
 const wordsOf = (/** @type {Hint} */ h) => (h.open ? h.whole : h.clause);
+/** the words its line ends with where the person was writing elsewhere (`Writing`); '' where it ends with the notice */
+const endOf = (/** @type {Hint} */ h) => (h.writing ? t(WRITING, { label: h.writing.label }) : '');
+/** the words the status region says of it: the notice's, and the ending after them */
+const saidOf = (/** @type {Hint} */ h) => [wordsOf(h), endOf(h)].filter(Boolean).join(' ');
 
 /**
  * The focus a press was made at (see the head): the element handed in; else
@@ -152,20 +179,21 @@ function siteOf(at) {
 /**
  * A refused press answered (see the head): the hint raised beside the focus
  * the press was made at — whole at its notice's first press in the page's
- * session, compact at every later one — said in the status region, and
- * drawn on the next dirty frame (FP-9). An auto-repeat answers nothing.
+ * session, compact at every later one, its line ending with where the person
+ * was writing where the press hands that in — said in the status region,
+ * and drawn on the next dirty frame (FP-9). An auto-repeat answers nothing.
  * Throws for a string the table marks no hint (ST's `hintOf`).
  * @param {string} id
  * @param {Record<string, string | number> | null} [values]
- * @param {{repeat?: boolean, at?: Element | null}} [o] `repeat` the key's auto-repeat; `at` the element the press was made at, where the walk's focus is not it
+ * @param {{repeat?: boolean, at?: Element | null, writing?: Writing | null}} [o] `repeat` the key's auto-repeat; `at` the element the press was made at, where the walk's focus is not it; `writing` where the person was writing, which the line ends with
  */
 export function show(id, values = null, o = {}) {
   if (o.repeat) return;
   const h = hintOf(id, values ?? undefined), open = !seen.has(id);
   seen.add(id);
-  hint = { id, whole: h.whole, clause: h.clause, open, site: siteOf(o.at ?? null), plane: !SCENE.isOpen() };
+  hint = { id, whole: h.whole, clause: h.clause, open, writing: o.writing ?? null, site: siteOf(o.at ?? null), plane: !SCENE.isOpen() };
   presses++;
-  FOCUS.say(wordsOf(hint), false, true);
+  FOCUS.say(saidOf(hint), false, true);
   markDirty();
 }
 
@@ -178,8 +206,21 @@ export function toggle() {
   const h = hint;
   if (!h) return;
   if (h.whole !== h.clause) h.open = !h.open;
-  FOCUS.say(wordsOf(h), false, true);
+  FOCUS.say(saidOf(h), false, true);
   markDirty();
+}
+
+/**
+ * The act of the label the line ends with (see the head; `Writing`): the
+ * hint taken down, then the act the press handed in made — back to where the
+ * person was writing. Nothing where no such ending stands.
+ * @param {boolean} byKey a key made the act
+ */
+export function writingAct(byKey) {
+  const w = hint && hint.writing;
+  if (!w) return;
+  act();
+  w.act(byKey);
 }
 
 /** the reader's next act (see the head): the hint taken down, its focus handed on as the next frame writes it gone (`render`) */
@@ -195,11 +236,18 @@ export function classChanged() {
   act();
 }
 
-/** the hint's markup: its button, named by the words it shows, described by the notice whole — open or folded where it has a compact form */
+/** the hint's markup: its button, named by the words it shows, described by the notice whole — open or folded where it has a compact form — and after it the ending where the person was writing, its label a button of its own */
 function markup(/** @type {Hint} */ h) {
   const folds = h.whole !== h.clause ? ` aria-expanded="${h.open}"` : '';
   return `<button type="button" data-hint="${esc(h.id)}" data-string="${esc(h.id)}" aria-describedby="hint-whole"${folds}>${addressedHTML(wordsOf(h))}</button>`
+    + (h.writing ? ` ${endingHTML(h.writing)}` : '')
     + `<span id="hint-whole" hidden>${esc(h.whole)}</span>`;
+}
+
+/** the ending where the person was writing (`Writing`): the line's words, its label a button */
+function endingHTML(/** @type {Writing} */ w) {
+  const [before, after] = t(WRITING).split('⟨label⟩');
+  return `<span class="writing" data-string="${WRITING}">${esc(before)}<button type="button" data-writing="1">${addressedHTML(w.label)}</button>${esc(after ?? '')}</span>`;
 }
 
 /**
@@ -211,13 +259,14 @@ function markup(/** @type {Hint} */ h) {
  */
 export function render() {
   if (!el) return;
-  const host = el, h = hint, key = h ? JSON.stringify([h.id, h.whole, wordsOf(h)]) : '';
+  const host = el, h = hint, key = h ? JSON.stringify([h.id, h.whole, wordsOf(h), endOf(h)]) : '';
   if (key !== written) {
     const at = typeof document !== 'undefined' ? document.activeElement : null;
     const held = !!at && at !== host && host.contains(at);
-    FOCUS.keep(host, (x) => x.getAttribute('data-hint'), () => {
+    FOCUS.keep(host, (x) => x.getAttribute('data-hint') ?? (x.getAttribute('data-writing') ? WRITING : null), () => {
       host.innerHTML = h ? markup(h) : '';
       host.classList.toggle('on', !!h);
+      host.classList.toggle('writing', !!h && !!h.writing);
     });
     written = key;
     if (held && !host.contains(document.activeElement)) handOff();
@@ -309,27 +358,29 @@ function boxOf(/** @type {Site} */ s, /** @type {Rect} */ seen) {
 
 /**
  * The hint standing, read-only (N-KEYS' tests read it): its notice's string,
- * the words it shows, the notice whole, and whether it shows it whole; null
- * where none stands.
- * @returns {{id: string, words: string, whole: string, open: boolean} | null}
+ * the words it shows, the notice whole, whether it shows it whole, and the
+ * words its line ends with where the person was writing elsewhere, else
+ * null; null where none stands.
+ * @returns {{id: string, words: string, whole: string, open: boolean, writing: string | null} | null}
  */
 export function standing() {
   const h = hint;
-  return h ? { id: h.id, words: wordsOf(h), whole: h.whole, open: h.open || h.whole === h.clause } : null;
+  return h ? { id: h.id, words: wordsOf(h), whole: h.whole, open: h.open || h.whole === h.clause, writing: h.writing ? endOf(h) : null } : null;
 }
 
 /**
  * The hint as a person meets it (the gate reads it): its notice's string, the
  * words its button shows and the notice whole, whether it shows the notice
- * whole, the presses its element was drawn for, whether the scene covers it,
- * where it was set and what beside; null where none stands.
+ * whole, the words its line's ending shows where it ends with where the
+ * person was writing, the presses its element was drawn for, whether the
+ * scene covers it, where it was set and what beside; null where none stands.
  */
 export function shown() {
   const h = standing();
   if (!el || !h) return null;
-  const b = el.querySelector('button[data-hint]');
+  const b = el.querySelector('button[data-hint]'), w = el.querySelector('.writing');
   return {
-    ...h, words: b ? b.textContent || '' : '', presses: drawn,
+    ...h, words: b ? b.textContent || '' : '', writing: w ? w.textContent || '' : null, presses: drawn,
     covered: el.classList.contains('covered'), placed: placed ? { by: placed.by, anchor: { ...placed.anchor }, rect: { ...placed.rect } } : null,
   };
 }

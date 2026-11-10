@@ -24,7 +24,12 @@
 // stands — else selects one character or word from the span's edge, its start
 // for → and the end of its text for ← (`extendFromFocus`; D5 K-70) — each
 // press naming the end it moved, which T-LAYER keeps clear of its document's
-// head. The platform's
+// head. A selection put in another document than a live caret's — by the
+// pointer, a key or the gate's door — keeps the caret first, where it stood,
+// owing the frame nothing (T-LAYER's `leaveCaret`), and stands the walk on
+// the span its moving end is in, the ring out (N-WALK's `focusTo`), so the
+// next key acts at the selection and never types at the caret (`leaveFor`).
+// The platform's
 // highlight is the selection's one mark (§2.1), and the selection the
 // platform's own (foundations §2.1; D5 §2): a change of it rebuilds no
 // article — T-LAYER marks the blocks it touches in place — so a selection the
@@ -253,7 +258,8 @@ export function select(addr, pos, width = null, moved = null) {
 }
 
 /**
- * The selection taken (`select`, `extendFromFocus`): set with how its ends
+ * The selection taken (`select`, `extendFromFocus`): a live caret in another
+ * document kept first (`leaveFor`), then the selection set with how its ends
  * move (`hold`), the platform's highlight placed over it (T-LAYER's
  * `placeSelection`), its acts shown at it, and where it stands said through
  * the status region (D4).
@@ -262,11 +268,30 @@ export function select(addr, pos, width = null, moved = null) {
  * @param {Ends} how
  */
 function take(span, moved, how) {
+  leaveFor(span, how);
   hold(span, how);
   LAYER.placeSelection(span, moved);
   markDirty();
   render();
   FOCUS.say(`${span.addr} · ${t('F.position', { p: span.pos })}`);
+}
+
+/**
+ * A selection put in another document than a live caret's (see the head):
+ * the caret kept where it stood, owing the frame nothing (T-LAYER's
+ * `leaveCaret`), and the walk stood on the span of the text shown holding the
+ * selection's moving end — its first byte where its start moves, else its
+ * last — the ring out and the platform's focus carried only where the mirror
+ * held it (N-WALK's `focusTo`). Nothing where no live caret stands, or it
+ * stands in the selection's document.
+ * @param {Span} span
+ * @param {Ends} how
+ */
+function leaveFor(span, how) {
+  const c = LAYER.caret();
+  if (!c || !c.live || c.addr === span.addr) return;
+  LAYER.leaveCaret(false);
+  void WALK.focusTo(span.addr, how.moves === 'start' ? span.pos : span.pos + Math.max(1, span.width) - 1, false, false, null, true);
 }
 
 /**

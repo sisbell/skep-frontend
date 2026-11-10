@@ -19,15 +19,17 @@
 // ack (`setFlight`, `inFlight`), which an act that names characters to the
 // board asks the machine to commit (`machine`, `commit`) and waits out
 // (`landed`). No machine is handed in until one is built: nothing is then in
-// flight. The identity of a byte the page made — the page's space of the
+// flight. Beside them, one draft: the one whose edits were added last in the
+// page's session (`lastWritten`), which a key swallowed elsewhere names
+// (N-KEYS'). The identity of a byte the page made — the page's space of the
 // draft, and the addresses the board minted for it — is M-REC's (`pageSpace`,
 // `mint`, `pageIds`): a draft's count of the changes to its edits counts each
 // of M-REC's mints of their bytes beside its own (`editRev`), so a record
 // derived from them is made again whoever told the mint. Every change here is
 // counted (`rev`), the app's loop reading the count beside the model's. A
 // change of the page's class (M-REC's `onClass`; FP-29) lets go of every
-// draft's edits, kept state and held lines and ends every flight, those
-// waiting on it told.
+// draft's edits, kept state and held lines, forgets the draft last written
+// and ends every flight, those waiting on it told.
 // Rules: FP-1, FP-2, FP-10, FP-11, FP-14, FP-29, FP-34, FP-38.
 
 import * as REC from '../model/records.js';
@@ -56,6 +58,8 @@ const held = new Map();
 const flights = new Map();
 /** @type {Machine | null} D6's machine, where one was handed in (`machine`) */
 let handed = null;
+/** @type {string | null} the draft whose edits were added last in the page's session (`addEdits`); null before any, and after a change of the page's class */
+let last = null;
 /** how many times anything held here has changed (`rev`) */
 let revision = 0;
 
@@ -66,11 +70,12 @@ export const rev = () => revision;
 
 REC.onClass(classChanged);
 
-/** a change of the page's class (see the head): every draft's edits let go — its ordinals and steps counting on — its kept state and held lines dropped, and every flight ended, those waiting told */
+/** a change of the page's class (see the head): every draft's edits let go — its ordinals and steps counting on — its kept state and held lines dropped, the draft last written forgotten, and every flight ended, those waiting told */
 function classChanged() {
   kept.clear();
   for (const x of drafts.values()) { x.list = []; x.rev++; }
   held.clear();
+  last = null;
   for (const addr of [...flights.keys()]) endFlight(addr);
   bump();
 }
@@ -140,8 +145,11 @@ export function addEdits(addr, list) {
   });
   x.list = [...x.list, ...made];
   x.rev++;
+  last = addr;
   bump();
 }
+/** the draft last written in the page's session: the one whose edits were added last (`addEdits`); null before any edit, and after a change of the page's class */
+export const lastWritten = () => last;
 /** a draft's page-local edits let go: the page shows its delivered text again */
 export function clearEdits(/** @type {string} */ addr) {
   const x = drafts.get(addr);
@@ -208,5 +216,5 @@ export function landed(addr) {
 
 /** reset everything held here (tests): the drafts' ordinals start again, and no machine stands */
 export function _reset() {
-  kept.clear(); drafts.clear(); held.clear(); flights.clear(); handed = null; revision = 0;
+  kept.clear(); drafts.clear(); held.clear(); flights.clear(); handed = null; last = null; revision = 0;
 }

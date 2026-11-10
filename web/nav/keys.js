@@ -30,6 +30,11 @@
 // edition of the session's account C-45 naming the document, at a document of
 // another account B3-S13's line naming its owner; Space wherever it is
 // swallowed, and every other key at every other site, K-9's line (`swallow`).
+// Each of those lines a printable key raises — the scene's swallow among them
+// — ends with where the person was writing, "— you were last writing in
+// ⟨label⟩", where the key was pressed outside the draft last written in the
+// page's session and that draft's caret stands kept: its label one act back
+// to the kept caret (`writingElsewhere`; W-WRITE's `lastWritten`).
 // Mod+R and F5 are taken and nothing reloaded (K-94), and the platform's own
 // chords — copy, paste, cut, select all, print, close, quit, minimize, hide,
 // preferences — are never taken save where a site's line answers a paste or a
@@ -45,7 +50,9 @@
 // live caret in text that scale does not read, its span then holding the
 // walk (N-WALK's `holdCaret`), or one the walk stands outside of in another
 // document, left kept as the key finds it (D5 M-2), every other move of the
-// walk leaving it as the move is made (N-WALK's) —
+// walk leaving it as the move is made (N-WALK's), and a pointer's act on
+// another document, or a selection put there, as the act is made
+// (APP-INPUT's, O-SELECTION's) —
 // and its keys reach it before the walk's and K-8's (`caretKey`): the arrows
 // move it a character or a line — ← and → a word with Option held on macOS
 // (`arrowStep`; K-71) — Home and End to the start or the end of its line
@@ -96,7 +103,9 @@
 // `leaveText`) — and after them all the arrival (FP-21; N-GO's
 // `endArrival`); made at a landing, it passes over the box, over the find
 // and over an overlay whose own field holds the caret, the notice below that
-// overlay still closing first (FP-20). Mod+L alone opens the LEAP box (K-30),
+// overlay still closing first (FP-20). An empty click on the plane takes the
+// same order one step a click, the pointer's, its last step the live caret's
+// (APP-INPUT's). Mod+L alone opens the LEAP box (K-30),
 // whose Mod+Shift+Enter is its own "open beside" and never reaches the
 // dispatch (K-101; N-LEAP's `beside`),
 // Mod+Y the trail's list (K-41), Mod+= and Mod+- zoom the camera by 1.25
@@ -438,20 +447,21 @@ function readOnlySpan(ctx) {
  * line would name is the session's own account.
  * @param {KeyboardEvent} e
  * @param {Ctx} ctx
+ * @param {import('../overlays/hint.js').Writing | null} [writing] where the person was writing, which a printable key's line ends with (`writingElsewhere`); null for a paste
  * @returns {boolean} whether a line answered the key
  */
-function siteSays(e, ctx) {
+function siteSays(e, ctx, writing = null) {
   const s = readOnlySpan(ctx), account = REC.session()?.account, doc = s && documentOf(s.addr);
   if (!s || !account || !doc) return false;
   const d = REC.doc(REC.has(doc) ? doc : s.addr);
   if (accountOf(doc) === account) {
     if (!isPublished(d)) return false;
-    HINT.show('C-45', { D: doc }, hinted(e, ctx));
+    HINT.show('C-45', { D: doc }, { ...hinted(e, ctx), writing });
     return true;
   }
   const owner = REC.ownerAccount(d);
   if (!owner || owner === account) return false;
-  HINT.show('B3.row.others-document', { owner }, hinted(e, ctx));
+  HINT.show('B3.row.others-document', { owner }, { ...hinted(e, ctx), writing });
   return true;
 }
 
@@ -699,9 +709,37 @@ function editAtCaret(text, erase) {
  */
 async function typeAt(e, ctx) {
   if (e.key !== ' ' && keptSpan(ctx)) { e.preventDefault(); LAYER.returnCaret(); editAtCaret(e.key); await WALK.followCaret(); return; }
-  if (e.key !== ' ' && bareDraftSpan(ctx)) { HINT.show('B3.caret.enter', null, hinted(e, ctx)); return; }
-  if (e.key !== ' ' && siteSays(e, ctx)) return;
-  swallow(e, ctx);
+  const writing = writingElsewhere(walkSite());
+  if (e.key !== ' ' && bareDraftSpan(ctx)) { HINT.show('B3.caret.enter', null, { ...hinted(e, ctx), writing }); return; }
+  if (e.key !== ' ' && siteSays(e, ctx, writing)) return;
+  swallow(e, ctx, writing);
+}
+
+/** the document the walk stands in — its element the document, or a span or a link in it — the site a printable key on the plane was pressed at (`writingElsewhere`); null off any document */
+function walkSite() {
+  const f = WALK.current();
+  return f && (f.kind === 'document' || f.kind === 'block' || f.kind === 'link') ? f.addr : null;
+}
+
+/**
+ * Where the person was writing, which the line a swallowed printable key
+ * raises ends with (see the head; B3.undo.last-writing): the draft last
+ * written in the page's session (W-WRITE's `lastWritten`), where its caret
+ * stands kept and the key was pressed outside that draft — named as the
+ * status region names its box (T-LAYER's `boxName`), its label a LEAP to the
+ * span the kept caret stands in as the label's act is made, the caret's own
+ * position named (N-GO's `leapTo`), so the next printable key there types at
+ * it (`typeAt`). Null anywhere else.
+ * @param {string | null} site the document the key was pressed at; null where it was pressed at none
+ * @returns {import('../overlays/hint.js').Writing | null}
+ */
+function writingElsewhere(site) {
+  const w = WRITE.lastWritten(), c = LAYER.caret();
+  if (!w || !c || c.live || c.addr !== w || site === w) return null;
+  return {
+    label: LAYER.boxName(w).name,
+    act: (byKey) => { const at = LAYER.caretSpan(); void GO.leapTo(w, { pos: at && at.addr === w ? at.pos : null, how: byKey ? 'key' : 'click', byKey }); },
+  };
 }
 
 /**
@@ -813,7 +851,7 @@ function sceneKey(e, chord, ctx) {
   if (ctx.where === 'overlay' || ctx.where === 'line') return null; // the overlay's or the line's own keys
   if (chord === '←') return () => { GO.closeScene(ctx.byKey); return true; };
   if (ctx.where === 'scene-acts') return null; // the button's own keys
-  if (printable(e)) return () => { swallow(e, ctx); return true; };
+  if (printable(e)) return () => { swallow(e, ctx, writingElsewhere(ctx.where === 'scene' ? SCENE.paneRead()?.names ?? null : null)); return true; };
   return null;
 }
 
@@ -830,10 +868,10 @@ function hinted(e, ctx) {
   return { repeat: !!e.repeat, at: at && typeof at.getBoundingClientRect === 'function' ? at : null };
 }
 
-/** a printable key no field takes: swallowed, the K-9 line its hint at the focus until the next act (foundations §2.7) */
-function swallow(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
-  if (e.key === ' ') HINT.show('F.swallow.space', { 'paging key': 'PageDown' }, hinted(e, ctx));
-  else HINT.show('F.swallow', { 'LEAP chord': drawChord('Mod+L') }, hinted(e, ctx));
+/** a printable key no field takes: swallowed, the K-9 line its hint at the focus until the next act, ending with where the person was writing where `writing` names it (foundations §2.7; `writingElsewhere`) */
+function swallow(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx, /** @type {import('../overlays/hint.js').Writing | null} */ writing = null) {
+  if (e.key === ' ') HINT.show('F.swallow.space', { 'paging key': 'PageDown' }, { ...hinted(e, ctx), writing });
+  else HINT.show('F.swallow', { 'LEAP chord': drawChord('Mod+L') }, { ...hinted(e, ctx), writing });
 }
 
 /** an inert slot's chord where no acts card gives its reason — no span in focus, or the scene over the plane: the slot's reason its hint at the focus until the next act (P47) */
@@ -875,18 +913,24 @@ function followAtCaret(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
  * jump's landing, it ends no chrome a field the reader types in stands in
  * (FP-20): it passes over the box, the find, and an overlay whose own field
  * holds the caret (O-HOST's `typing`) — the notice below that overlay closing first
- * all the same — and closes the next thing in the order.
+ * all the same — and closes the next thing in the order. An empty click on
+ * the plane is the pointer's Esc (APP-INPUT's): one thing closed in the same
+ * order at each click, the find's close and the scene's made as the
+ * pointer's, the ring out, and the live caret's the last — the caret kept,
+ * its span holding the walk with the ring drawn — so no click ends an
+ * arrival (FP-21).
  * @param {boolean} [landed] a key held while a jump was in the air made it at the landing (`Ctx.landed`)
+ * @param {boolean} [pointer] an empty click on the plane made it, not a key
  */
-export function esc(landed = false) {
+export function esc(landed = false, pointer = false) {
   if (LEAP.isOpen() && !landed) { LEAP.close(); return; }
   if (HOST.pending()) { HOST.endOpening(); return; }
   if (HOST.current() && !(landed && HOST.typing() && !HOST.notice())) { HOST.dismissInnermost(); return; }
   if (GO.abandon()) return;
-  if (FIND.isOpen() && !landed) { void FIND.close(true); return; }
-  if (SCENE.isOpen()) { GO.closeScene(true); return; }
+  if (FIND.isOpen() && !landed) { void FIND.close(!pointer); return; }
+  if (SCENE.isOpen()) { GO.closeScene(!pointer); return; }
   if (SEL.selected()) { SEL.clear(); return; }
-  if (WALK.leaveText()) return;
+  if (WALK.leaveText() || pointer) return;
   GO.endArrival();
 }
 

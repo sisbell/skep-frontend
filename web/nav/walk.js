@@ -51,8 +51,9 @@
 // standing live (`returnFocusTo`; D5 §4 rule 8, K-63).
 // The kept caret's span holds the walk (B3-S1's THE KEPT CARET; D5 §4 rule
 // 3): where the person leaves the text at a live caret and no act of theirs
-// moves the walk — Esc, which stands the walk on the caret's span at its
-// position (`leaveText`; N-KEYS'), or a camera move past the caret's reading
+// moves the walk — Esc, or the empty click that is the pointer's Esc, which
+// stands the walk on the caret's span at its position (`leaveText`; N-KEYS',
+// APP-INPUT's), or a camera move past the caret's reading
 // scale (`holdCaret`; the re-take's own, and N-KEYS' `whereNow`) — every
 // re-take that ends with a line of that span in the visible view, in text the
 // person may edit at the camera's scale (T-LAYER's `editable`, `spanInView`),
@@ -60,7 +61,9 @@
 // view's centre (`heldSpan`), so a scroll that keeps the span in view, or a
 // zoom out over the draft and back, ends at a caret a key acts at. The
 // person's next walk move, click or teleport releases it — a walk key's
-// move, a landing (`focusTo`) — and no move the page makes of its own does:
+// move, a landing (`focusTo`), a pointer's act on another document or a
+// selection put there (APP-INPUT's, O-SELECTION's) — and no move the page
+// makes of its own does:
 // a re-take, the caret followed (`followCaret`), a reading scene's close
 // returning the focus as the scene found it (`returnFocusTo`), a change of the
 // page's class (`dropped`), the box the walk stands in shown on a newer

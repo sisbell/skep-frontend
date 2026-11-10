@@ -28,10 +28,16 @@
 // its span, the ring out, so a slot chord acts there and the next key types
 // at it wherever the walk stood; a click on a block of text the person may
 // not edit stands the walk on that block, the ring out, a live caret left
-// kept, so the next key types nothing; and a focus landing in a corner the
+// kept, so the next key types nothing; a click on any other of another
+// document's things keeps a live caret, owing the frame nothing, and stands
+// the walk on what it marks, else on the stop nearest the point, and one on
+// the caret's own draft's things but its text and its corner leaves the caret
+// live with the walk on its span; an empty click is the pointer's Esc, one
+// step of its order a click, the live caret's its last and no arrival ended;
+// and a focus landing in a corner the
 // view does not show whole pans the camera by the least that brings it in below
 // the one line, never while a flight runs (FP-12, FP-20, FP-21, FP-24, FP-25,
-// FP-30, FP-34, FP-35).
+// FP-30, FP-34, FP-35, FP-36).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';
@@ -56,6 +62,7 @@ import { lodOf } from '../plane/lod.js';
 import { articleHTML, entitlementArm, edgeStatementHTML, placeholderOf, originRunsOf, sourceStatementHTML, carriesC33 } from '../text/article.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
 import { accountCell, boardCell, docBox } from '../plane/projection.js';
+import { outlineRects } from '../plane/layout.js';
 import { t, tHTML, addressedHTML } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { spanOfBlock } from '../text/span.js';
@@ -354,8 +361,8 @@ test('a click on the one symbol a withheld run\'s ends merge into opens its one 
     const d = REC.doc(D), article = articleHTML(d, LAYER.viewFor(d), REC.ownerAccount(d));
     const tag = /** @type {string} */ ((article.match(/<span class="sym at-run [^"]*"[^>]*>/) || [])[0]);
     assert.ok(tag, `the run's one symbol in the plane's article: ${article}`);
-    const run = { dataset: { withheld: '1', owner: '1.0.2', pos: String(n + 1), width: '8' } };
     const holder = { dataset: { addr: D } };
+    const run = { dataset: { withheld: '1', owner: '1.0.2', pos: String(n + 1), width: '8' }, closest: (/** @type {string} */ sel) => (sel === 'article' ? holder : null) };
     /** a click on a symbol carrying these attributes, inside the run's gap */
     const press = async (/** @type {Record<string, string>} */ dataset) => {
       const el = Object.assign(new globalThis.HTMLElement(), { dataset, isConnected: false, getBoundingClientRect: () => ({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 }) });
@@ -941,23 +948,35 @@ test('a click on a continuation\'s mark acts by the target it falls on: its newe
 });
 
 /**
+ * @typedef {Object} Drafts — what `onDrafts` hands its body
+ * @property {string} D a draft of the session's account, at its reading scale
+ * @property {string} O another account's draft, holding the same text
+ * @property {(addr: string, pos: number) => void} clickAt a click on a block's part with the platform's selection collapsed at its start, as a click leaves it
+ * @property {(e: unknown) => void} onCorner the corners' click listener
+ * @property {(target: unknown, at: {x: number, y: number}) => void} press a press and its click on the text layer at a world point, on the element `target` stands in for, the platform's selection standing nowhere
+ * @property {(target: unknown, at: {x: number, y: number}) => void} cornerAt a click on the corner layer at a world point, on the element `target` stands in for
+ * @property {(at: {x: number, y: number}) => void} planeAt a press and its release on the plane, unmoved, at a world point
+ */
+
+/**
  * A page of stand-ins for a click in a draft's text: D a draft of the session's account and O another's, each holding
- * the same text, the camera at D's reading scale, the text layer's and the corners' listeners attached; the body clicks
- * a block's part with the platform's selection collapsed at its start, as a click leaves it (`clickAt`), and every
- * caret, selection and card is let go after it.
- * @param {(p: {D: string, O: string, clickAt: (addr: string, pos: number) => void, onCorner: (e: unknown) => void}) => void | Promise<void>} body
+ * the same text, the camera at D's reading scale, the plane's, the text layer's, the corners' and the window's listeners
+ * attached; the body clicks a block's part with the platform's selection collapsed at its start, as a click leaves it
+ * (`clickAt`), or presses and clicks on stand-ins of the page's elements at a world point (`press`, `cornerAt`,
+ * `planeAt`), and every caret, selection and card is let go after it.
+ * @param {(p: Drafts) => void | Promise<void>} body
  */
 async function onDrafts(body) {
   const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement, Node: globalThis.Node };
-  /** @type {Map<string, (e: unknown) => void>} the text layer's and the corners' listeners, by event */
-  const layer = new Map(), corners = new Map();
+  /** @type {Map<string, (e: unknown) => void>} the plane's, the text layer's, the corners' and the window's listeners, by event */
+  const plane = new Map(), layer = new Map(), corners = new Map(), win = new Map();
   const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
   globalThis.HTMLElement = /** @type {any} */ (class {});
   globalThis.Node = /** @type {any} */ ({ ELEMENT_NODE: 1 });
   /** @type {unknown} the platform's selection as the click left it */
   let selection = null;
   globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null, createElement: () => ({ className: '', innerHTML: '', dataset: {} }) });
-  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => selection });
+  globalThis.window = /** @type {any} */ ({ ...listens(win), getSelection: () => selection });
   const D = '1.0.1.0.2', O = '1.0.2.0.1', text = 'First line.\n\nSecond line here.\n', n = byteLength(text);
   try {
     REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
@@ -984,13 +1003,27 @@ async function onDrafts(body) {
       ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
       querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
     }));
-    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(corners) }));
+    INPUT.attach(/** @type {any} */ ({ plane: { ...listens(plane), setPointerCapture() {}, classList: { add() {}, remove() {} } }, layer: listens(layer), corners: listens(corners) }));
     // the text layer's element, which the page's selection is read against as it is cleared
     LAYER.attach(/** @type {any} */ ({ clientWidth: 1440, clientHeight: 900, appendChild() {}, contains: () => false }), null);
     const click = layer.get('click'), onCorner = corners.get('click');
     assert.ok(click && onCorner, 'the text layer and the corners take a click');
-    const clickAt = (/** @type {string} */ addr, /** @type {number} */ pos) => { const sp = partOf(addr, pos); selection = collapsedAt(sp); click({ target: sp, clientX: 0, clientY: 0, stopPropagation() {} }); };
-    await body({ D, O, clickAt, onCorner });
+    /** a world point on screen */
+    const screen = (/** @type {{x: number, y: number}} */ at) => ({ clientX: CAM.sx(at.x), clientY: CAM.sy(at.y) });
+    /** a press on the text layer, its release and its click at a screen point, as the platform delivers them */
+    const pressAt = (/** @type {unknown} */ target, /** @type {{clientX: number, clientY: number}} */ p) => {
+      layer.get('pointerdown')?.({ ...p, target, ctrlKey: false, metaKey: false, pointerId: 1 });
+      win.get('pointerup')?.({ ...p, target });
+      click({ ...p, target, stopPropagation() {} });
+    };
+    const clickAt = (/** @type {string} */ addr, /** @type {number} */ pos) => { const sp = partOf(addr, pos); selection = collapsedAt(sp); pressAt(sp, { clientX: 0, clientY: 0 }); };
+    const press = (/** @type {unknown} */ target, /** @type {{x: number, y: number}} */ at) => { selection = null; pressAt(target, screen(at)); };
+    const cornerAt = (/** @type {unknown} */ target, /** @type {{x: number, y: number}} */ at) => onCorner({ ...screen(at), target, stopPropagation() {} });
+    const planeAt = (/** @type {{x: number, y: number}} */ at) => {
+      const p = { ...screen(at), ctrlKey: false, metaKey: false, pointerId: 1 };
+      plane.get('pointerdown')?.(p); plane.get('pointerup')?.(p); win.get('pointerup')?.(p);
+    };
+    await body({ D, O, clickAt, onCorner, press, cornerAt, planeAt });
   } finally {
     HOST.dismiss(); SEL.clear(); LAYER.clear();
     REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
@@ -1056,6 +1089,140 @@ test('a click on a block of text the person may not edit, a caret live in a draf
     [O, second.pos, 'block', O, second.pos, false, { addr: D, pos: second.pos, live: false }], 'the click on O\'s block: selected whole, the walk on its span with the ring out, the caret kept in D');
   assert.equal(await KEYS.dispatch(keyOf('q'), { where: 'plane', byKey: true }), true);
   assert.deepEqual([WRITE.edits(D), WRITE.edits(O), LAYER.caret()], [[], [], { addr: D, pos: second.pos, live: false }], 'q: nothing typed in either');
+}));
+
+/** every read a card or a face an act opened let answer, and what it opened taken down */
+async function closeAll() {
+  for (let i = 0; i < 20; i++) await tick();
+  if (HOST.pending()) HOST.endOpening();
+  HOST.dismiss(); SEL.clear();
+}
+
+/** the plane's last frame as a page of stand-ins holds it: no tail, outlined run or mark drawn */
+function noneDrawn() { RENDER.stats.tails = []; RENDER.stats.arrival = []; RENDER.stats.residueMarks = []; }
+
+/**
+ * A point of a document's ground at its reading scale: inside its outline, left of its first column's text, level
+ * with the line a position opens — on the plane, where the press is the canvas's (`textAt` none).
+ * @param {string} addr
+ * @param {number} pos
+ */
+function groundOf(addr, pos) {
+  const f = LAYER.foldOf(REC.doc(addr)), box = docBox(addr), c = f.columns[0], r = outlineRects(f)[0], at = { x: box.x + (r.x + c.x) / 2, y: LAYER.centreOf(addr, pos).y };
+  assert.ok(r.x < c.x && RENDER.docAtScreen(CAM.sx(at.x), CAM.sy(at.y)) === addr && !LAYER.holdsText(addr, at.x, at.y), `a point of ${addr}'s ground: on its outline, in none of its columns`);
+  return at;
+}
+
+test('with the caret live in a draft the person may edit, a click on any of another document\'s things — a link\'s symbol, the ⟡, its byline\'s cut label, a withheld run\'s gap, a column\'s blank room, a sign in its column\'s edge, its corner, its held label, its ground on the plane — keeps the caret where it stood and stands the walk on what was acted on — the span the symbol, the gap or the sign marks, else the stop nearest the point — the ring out, so the next printable key types nothing (issue #496\'s design decision)', () => onDrafts(async ({ D, O, clickAt, press, cornerAt, planeAt }) => {
+  PORT.boot(FAKE.create({}));
+  noneDrawn();
+  const second = REC.doc(O).blocks[1], L = D + '.0.2.1';
+  const endOf = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: doc.split('.').slice(0, 3).join('.'), whole: false, subspace: 1, ordinal: ord, positions: w });
+  // a link of the reader's own from D's first span to O's second, its far end drawn at O
+  REC.takeLinks(O, [L]);
+  REC.takeLink({ addr: L, from: [endOf(D, 1, 5)], to: [endOf(O, second.pos, 6)], type: '1.1.0.1.0.1.0.3.13', age: { at: null, time: null, from: null } });
+  const end = /** @type {import('../links/links.js').Shown} */ (LK.shown(O).find((s) => s.link.addr === L));
+  assert.deepEqual([end && end.near, end && end.pos], [O, second.pos], 'its end drawn at O\'s second span');
+  /** a world point over O's first line, and one over its second */
+  const first = LAYER.centreOf(O, 1), near = LAYER.centreOf(O, second.pos), art = { dataset: { addr: O } };
+  /** a stand-in of an element of O's article: itself for the selectors it is, the article for `article` */
+  const inO = (/** @type {string[]} */ is, /** @type {Record<string, string>} */ dataset = {}) => {
+    const el = { dataset, isConnected: false, getBoundingClientRect: () => ({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 }), closest: (/** @type {string} */ sel) => (is.includes(sel) ? el : sel === 'article' ? art : null) };
+    return el;
+  };
+  /** a stand-in of an element of the corner layer: `found` for the selector it stands under */
+  const inCorners = (/** @type {string} */ under, /** @type {unknown} */ found) => ({ closest: (/** @type {string} */ sel) => (sel === under ? found : null) });
+  /** @type {Array<[string, () => void, number]>} each thing of O's: what it is, the click on it, and the position the walk then stands on — the span the thing marks, else the one nearest the point */
+  const things = [
+    ['a link\'s symbol, clicked at O\'s first line', () => press(inO(['.sym'], { link: L, end: end.key }), first), second.pos],
+    ['the ⟡', () => press(inO(['.sym'], { reveal: O }), near), second.pos],
+    ['the byline\'s cut label', () => press(inO(['.slot[data-cut]'], { cut: '1' }), near), second.pos],
+    ['a withheld run\'s gap, clicked at O\'s first line', () => press(inO(['[data-withheld]'], { withheld: '1', owner: '1.0.2', pos: String(second.pos), width: '6' }), first), second.pos],
+    ['a column\'s blank room', () => press(inO([]), near), second.pos],
+    ['a sign in its column\'s edge, clicked at O\'s first line', () => cornerAt(inCorners('.edge-sign', { dataset: { addr: O, pos: String(second.pos), width: '6', origin: '1.0.3.0.1', sign: 'statement' } }), first), second.pos],
+    ['its corner', () => cornerAt(inCorners('[data-corner]', { dataset: { corner: O } }), near), second.pos],
+    ['its held label', () => cornerAt(inCorners('[data-held]', { dataset: { held: O } }), near), second.pos],
+    ['its ground on the plane', () => planeAt(groundOf(O, second.pos)), second.pos],
+  ];
+  for (const [what, act, pos] of things) {
+    clickAt(D, 1);
+    await tick();
+    assert.deepEqual([LAYER.caret(), WALK.current()?.addr, WALK.current()?.pos], [{ addr: D, pos: 1, live: true }, D, 1], `${what}: before it, the caret live in D, the walk on its span`);
+    act();
+    await tick();
+    assert.deepEqual([LAYER.caret(), LAYER.caretOwes(), WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos, FOCUS.ringShown()], [{ addr: D, pos: 1, live: false }, null, 'block', O, pos, false],
+      `${what}: the caret kept where it stood, owing the frame nothing — neither its mark brought into view nor the platform's selection collapsed at it — the walk on O's span holding ${pos}, the ring out`);
+    assert.equal(await KEYS.dispatch(keyOf('q'), { where: 'plane', byKey: true }), true);
+    assert.deepEqual([WRITE.edits(D), WRITE.edits(O), LAYER.caret()], [[], [], { addr: D, pos: 1, live: false }], `${what}: q types nothing, the caret kept`);
+    await closeAll();
+  }
+}));
+
+test('with the caret live in a draft the person may edit and the walk elsewhere in it, a click on the draft\'s own things but its text and its corner — its byline\'s cut label, a column\'s blank room, a sign in its column\'s edge, its held label, its ground on the plane — leaves the caret live and stands the walk on its span, so the next printable key types at the caret; a click on its corner leaves the caret live and the walk where it stood (issue #496\'s design decision)', () => onDrafts(async ({ D, press, cornerAt, planeAt }) => {
+  PORT.boot(FAKE.create({}));
+  noneDrawn();
+  const second = REC.doc(D).blocks[1], near = LAYER.centreOf(D, 1), art = { dataset: { addr: D } };
+  /** a stand-in of an element of D's article: itself for the selectors it is, the article for `article` */
+  const inD = (/** @type {string[]} */ is, /** @type {Record<string, string>} */ dataset = {}) => {
+    const el = { dataset, isConnected: false, getBoundingClientRect: () => ({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 }), closest: (/** @type {string} */ sel) => (is.includes(sel) ? el : sel === 'article' ? art : null) };
+    return el;
+  };
+  const inCorners = (/** @type {string} */ under, /** @type {unknown} */ found) => ({ closest: (/** @type {string} */ sel) => (sel === under ? found : null) });
+  /** @type {Array<[string, () => void, number]>} each thing of D's: what it is, the click on it — each at D's first line — and the position the walk then stands on */
+  const things = [
+    ['the byline\'s cut label', () => press(inD(['.slot[data-cut]'], { cut: '1' }), near), second.pos],
+    ['a column\'s blank room', () => press(inD([]), near), second.pos],
+    ['a sign in its column\'s edge', () => cornerAt(inCorners('.edge-sign', { dataset: { addr: D, pos: '1', width: '5', origin: '1.0.3.0.1', sign: 'statement' } }), near), second.pos],
+    ['its held label', () => cornerAt(inCorners('[data-held]', { dataset: { held: D } }), near), second.pos],
+    ['its ground on the plane', () => planeAt(groundOf(D, 1)), second.pos],
+    ['its corner', () => cornerAt(inCorners('[data-corner]', { dataset: { corner: D } }), near), 1],
+  ];
+  for (const [what, act, pos] of things) {
+    await WALK.focusTo(D, 1, false, true, null, true);
+    LAYER.placeCaret(D, second.pos);
+    assert.deepEqual([LAYER.caret(), WALK.current()?.pos], [{ addr: D, pos: second.pos, live: true }, 1], `${what}: before it, the caret live in D's second span, the walk on its first`);
+    act();
+    await tick();
+    assert.deepEqual([LAYER.caret(), WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos], [{ addr: D, pos: second.pos, live: true }, 'block', D, pos], `${what}: the caret live, the walk on the span holding ${pos}`);
+    assert.equal(await KEYS.dispatch(keyOf('q'), { where: 'plane', byKey: true }), true);
+    assert.deepEqual(WRITE.edits(D).map((e) => [e.pos, e.width, e.text]), [[second.pos, 0, 'q']], `${what}: q typed at the caret`);
+    WRITE.clearEdits(D);
+    await closeAll();
+  }
+}));
+
+test('an empty click is the pointer\'s Esc, one step of its order a click: with a selection standing in a draft the person may edit and its caret live, the first takes the selection\'s card down and the selection with it, the second keeps the caret, its span holding the walk with the ring drawn, and the third ends no arrival (issue #496\'s design decision; FP-21)', () => onDrafts(async ({ D, clickAt, planeAt }) => {
+  PORT.boot(FAKE.create({}));
+  noneDrawn();
+  // D's metadata and links held beside its text, so a find's move to it reads nothing
+  REC.takeMetadata(D, { doc: D, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(D, []);
+  TRAIL._reset();
+  try {
+    const second = REC.doc(D).blocks[1];
+    GO.toMatch(D, { pos: 1, width: 5 });
+    await settled(() => !GO.inAir());
+    assert.ok(GO.arrivalMark(), 'an arrival at D\'s first line, as a find\'s move stands one');
+    clickAt(D, second.pos);
+    await tick();
+    SEL.select(D, 1, 3);
+    assert.deepEqual([LAYER.caret(), SEL.selected(), HOST.currentState()?.id], [{ addr: D, pos: second.pos, live: true }, { addr: D, pos: 1, width: 3 }, 'selection'], 'the caret live in D\'s second span, a selection in its first, its card standing');
+    // nothing under the point: the camera far from every box, at D's reading scale
+    const view = CAM.view();
+    CAM.set({ x: -1e9, y: -1e9, scale: view.scale });
+    const nothing = { x: CAM.wx(720), y: CAM.wy(450) };
+    assert.deepEqual([RENDER.docAtScreen(720, 450), lodOf(view.scale).name !== 'far', LAYER.editable(D)], [null, true, true], 'the click falls on nothing, nearer than far, D still text the person may edit');
+    planeAt(nothing);
+    assert.deepEqual([HOST.currentState(), SEL.selected(), LAYER.caret()], [null, null, { addr: D, pos: second.pos, live: true }], 'the first: the card down and the selection with it, the caret live');
+    planeAt(nothing);
+    await tick();
+    assert.deepEqual([LAYER.caret(), LAYER.caretOwes(), WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos, FOCUS.ringShown()], [{ addr: D, pos: second.pos, live: false }, 'collapse', 'block', D, second.pos, true],
+      'the second: the caret kept as Esc keeps it, owing the frame its mark in view, its span holding the walk, the ring drawn');
+    planeAt(nothing);
+    await tick();
+    assert.deepEqual([GO.arrivalMark()?.addr, LAYER.caret()?.live], [D, false], 'the third: the arrival standing, nothing else to close');
+    CAM.set(view);
+  } finally { GO.endArrival(); TRAIL._reset(); }
 }));
 
 test('a focus landing in a corner the view does not show whole moves the camera by the least pan that brings the whole corner into the view below the one line; one the view shows whole, or one landing while a flight runs, moves nothing (FP-20)', () => {

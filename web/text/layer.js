@@ -435,9 +435,10 @@
 // for Backspace and Delete (`caretReplace`) — each an edit handed to W-WRITE
 // and shown through the derived record, nothing composed and nothing sent
 // (FP-14). Leaving the text — Esc to the walk at
-// the caret's span, a move of the walk, a zoom past its reading scale (D5
-// M-2, K-77; N-KEYS', N-WALK's) — keeps the caret at its position
-// (`leaveCaret`), which Enter, a printable key or Shift with ← or → at its
+// the caret's span, a move of the walk, a zoom past its reading scale, a
+// pointer's act on another document or a selection put there (D5 M-2, K-77;
+// N-KEYS', N-WALK's, APP-INPUT's, O-SELECTION's) — keeps the caret at its
+// position (`leaveCaret`), which Enter, a printable key or Shift with ← or → at its
 // span returns (`returnCaret`; N-KEYS') — its span the one the walk stands
 // on at its position, by T-SPAN's rule: in white space alone the span before
 // it, or the first where none stands before it (`caretSpan`, `caretInSpan`;
@@ -447,7 +448,9 @@
 // (`spanInView`); its line stands while it holds the caret (`heldParts`), the
 // platform's selection is collapsed at it as the page sets it — save by a
 // step that extends a selection, or the return such a step is made from,
-// whose range the page places (`placeSelection`) — and its mark —
+// whose range the page places (`placeSelection`), and save as a pointer's
+// act on another document or a selection put there keeps it, which owe it
+// nothing — and its mark —
 // the page's own, of no width, hollow where kept — is set at its character
 // boundary in the standing part each frame (`placeCaretMark`) and is no byte
 // of the document. A draft's kept word opens its statement in its corner on
@@ -4781,13 +4784,15 @@ export function editable(addr, scale = cam.scale) {
 
 /** the caret as it stands, by value; null where none stands */
 export const caret = () => (caret_ ? { ...caret_ } : null);
+/** what the next frame owes the caret (`placeCaretMark`): its mark in view and the platform's selection collapsed there, or kept as the page placed it; null where nothing is owed — read by the tests, the frame alone consuming it */
+export const caretOwes = () => caretOwed;
 
 /**
  * The caret set: placed, moved or kept — the frame brings its mark into view
  * once its part stands and collapses the platform's selection there, save
- * where `owed` keeps that selection.
+ * where `owed` keeps that selection, or owes it nothing (null).
  * @param {Caret | null} c
- * @param {CaretOwed} [owed]
+ * @param {CaretOwed | null} [owed]
  */
 function setCaret(c, owed = 'collapse') { caret_ = c; caretOwed = c ? owed : null; markDirty(); }
 
@@ -4870,10 +4875,20 @@ export function caretSpan() {
   return { addr: caret_.addr, pos, block: b ? b.pos : null };
 }
 
-/** the text left — Esc, a move of the walk, a zoom past its reading scale (K-77; BM-4; D5 M-2): the caret kept where it stood, the keys no longer reaching it; the span it stands in, for the walk; null where no live caret stood */
-export function leaveCaret() {
+/**
+ * The text left (K-77; BM-4; D5 M-2): the caret kept where it stood, the keys
+ * no longer reaching it. Esc, a move of the walk and a zoom past its reading
+ * scale leave the frame owing it its mark brought into view and the
+ * platform's selection collapsed there (`placeCaretMark`); a pointer's act on
+ * another document, or a selection put there (APP-INPUT's, O-SELECTION's),
+ * leaves it owing nothing, the view and the platform's selection standing on
+ * what the act was made on (FP-37).
+ * @param {boolean} [owing] the frame owes the kept caret its mark in view and the selection collapsed at it; false where the act's target lies elsewhere
+ * @returns {{addr: string, pos: number, block: number | null} | null} the span it stands in, for the walk; null where no live caret stood
+ */
+export function leaveCaret(owing = true) {
   if (!caret_ || !caret_.live) return null;
-  setCaret({ ...caret_, live: false });
+  setCaret({ ...caret_, live: false }, owing ? 'collapse' : null);
   return caretSpan();
 }
 
