@@ -55,7 +55,12 @@ walks to a later span, and the block the platform draws lit is that span
 where the text shown holds it, past `ab` (`lit_after_typing`; D3; D5
 §4 rule 2). With a line typed above a paragraph — text the board does not
 hold — the walk, the find and Back each land on the typed words, at both
-widths (`typed_lands`; the unsent-typing decision).
+widths (`typed_lands`; the unsent-typing decision). Tab from the plane's stop
+on the own draft takes the focus to its corner, where a printable key raises
+the line naming the way back to the draft's text beside the corner, at both
+widths, and Shift+Tab then returns the focus to the plane's stop, where the
+next key is answered by the draft's own line (`corner_key`, `corner_back`;
+B3-S13; D5 K-72; D6 BM-52).
 
 The own draft is the seeded board's windowed draft of principal 1 (`OWN`,
 1340 bytes). The seed's staging draft (`STAGING`) holds every edition's
@@ -194,6 +199,9 @@ STATES = [
     dict(screen='B3-S13', state='swallow-draft', walk='W-08', step=4, drawn=True,
          how="a printable key at a span of the own draft with no caret (K-72; D6 BM-52)",
          claim='the hint beside the focused line reads "Enter places a caret here" (B3.caret.enter), inside the window below the one line'),
+    dict(screen='B3-S13', state='corner-way-back', walk='W-08', step=4, drawn=True,
+         how="Tab from the walk's span of the own draft to its corner, then a printable key at the corner (K-72; D6 BM-52)",
+         claim='the hint beside the own draft\'s corner reads "your text is back with Shift+Tab" (B3.caret.back), inside the window below the one line and said in the status region, no caret placed and nothing typed'),
     dict(screen='B3-S13', state='row-inert', walk='W-08', step=4, drawn=False,
          how="the selection's row inert while a line is held, one reason (D6 BM-62)", claim='', why='the machine (U4) and its reasons'),
 ]
@@ -741,6 +749,56 @@ def typed_lands(ctx, doc, para, away):
     return out
 
 
+# where the platform's focus stands: the corner it is on, the element's id, the mirror's current item's index and whether
+# the element is that item, and the walk's element
+FOCUS_AT = '''(() => { const e = document.activeElement, c = e && e.closest ? e.closest("#corners [data-corner]") : null, f = window.__skep.view.focus();
+  return {corner: c ? c.dataset.corner : null, id: e ? e.id || null : null, idx: window.__skep.mirror.index(), sel: e ? e.getAttribute("aria-selected") : null,
+          walk: f ? {kind: f.kind, addr: f.addr, pos: f.pos} : null}; })()'''
+
+
+def corner_key(ctx, doc):
+    """A PRINTABLE KEY AT THE OWN DRAFT's CORNER (B3-S13; D5 K-72; D6 BM-52): the hint taken down, the platform's focus
+    put on the mirror's current item — the plane's one stop, the walk on a span of `doc` — then Tab, which lands on
+    `doc`'s corner (K-57), then `x` there; where Tab put the focus, the hint as a person meets it and the box it was set
+    beside, the corner's box, what the status region said, the caret, `doc`'s edits and the `op` frames sent after the
+    key, and whether it held: the focus on `doc`'s corner, the hint B3.caret.back set beside that corner inside the window
+    below the one line, no transient in the one line, its words said, no caret placed and nothing typed"""
+    ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
+    ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})'); ctx.frames(1)
+    ctx.drv.key('Tab'); ctx.settle(); ctx.frames(2)
+    at = ctx.js(FOCUS_AT)
+    n = len(page_calls(ctx))
+    ctx.drv.key('x'); ctx.frames(2)
+    got, said, want = hint(ctx), live(ctx), t(ctx, 'B3.caret.back')
+    anchor = ctx.js('(() => { const h = window.__skep.hint(); return h && h.placed ? h.placed.anchor : null; })()')
+    box = ctx.js('(() => { const e = document.querySelector(%s); if (!e) return null; const q = e.getBoundingClientRect(); return {x: q.left, y: q.top, w: q.width, h: q.height}; })()'
+                 % json.dumps('#corners [data-corner="%s"]' % doc))
+    caret, edits = ctx.js('window.__skep.caret()'), ctx.js('window.__skep.write.edits(%s).length' % json.dumps(doc))
+    beside = bool(anchor and box) and all(abs(anchor[k] - box[k]) <= 1 for k in ('x', 'y', 'w', 'h'))
+    ok = (at['corner'] == doc and got['hint'] == {'id': 'B3.caret.back', 'words': want, 'by': 'beside'} and got['seen'] and beside and not got['line']
+          and said == want and caret is None and edits == 0)
+    return {'ok': ok, 'focus': at, 'hint': got, 'want': want, 'anchor': anchor, 'corner': box, 'status_region': said, 'caret': caret, 'edits': edits,
+            'ops_after': [c['op'] for c in page_calls(ctx)[n:] if c['name'] == 'op']}
+
+
+def corner_back(ctx, doc):
+    """THE WAY BACK THE CORNER's LINE NAMES (B3-S13: "your text is back with Shift+Tab"): `doc`'s corner reached and a key
+    pressed there as `corner_key` does, then Shift+Tab, then `x`; the corner's state, where Shift+Tab put the focus, the
+    hint and whether it held: the corner's state held, the focus back on the mirror's current item with the walk on a span
+    of `doc`, and `x` there answered at the text's edge by the draft's own line, "Enter places a caret here"
+    (B3.caret.enter), no caret placed and nothing typed"""
+    first = corner_key(ctx, doc)
+    ctx.drv.key('Tab', mods=('Shift',)); ctx.settle(); ctx.frames(2)
+    at = ctx.js(FOCUS_AT)
+    ctx.drv.key('x'); ctx.frames(2)
+    got, want = hint(ctx), t(ctx, 'B3.caret.enter')
+    caret, edits = ctx.js('window.__skep.caret()'), ctx.js('window.__skep.write.edits(%s).length' % json.dumps(doc))
+    walk = at['walk'] or {}
+    ok = (first['ok'] and at['id'] == 'walk-%d' % at['idx'] and at['sel'] == 'true' and walk.get('kind') == 'block' and walk.get('addr') == doc
+          and got['hint'] == {'id': 'B3.caret.enter', 'words': want, 'by': 'edge'} and got['seen'] and caret is None and edits == 0)
+    return {'ok': ok, 'corner': {k: first[k] for k in ('ok', 'focus', 'hint')}, 'focus': at, 'hint': got, 'want': want, 'caret': caret, 'edits': edits}
+
+
 def run(ctx):
     r = Result()
     rows = {s['state']: dict(s, outcome=('pending' if s['drawn'] else 'not drawn')) for s in STATES}
@@ -963,6 +1021,17 @@ def run(ctx):
     # the person's next act takes the hint down (O-HINT's `act`); none of what follows is an act of theirs
     ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()'); ctx.frames(2)
     r.check(hint(ctx)['hint'] is None, "the next act takes the swallow's hint down", hint(ctx))
+
+    # ---- (e′) B3-S13: a printable key at the own draft's corner names the way back to its text (K-72; D6 BM-52) -----------
+    def corner_check(w):
+        got = corner_key(ctx, OWN)
+        return got['ok'], got
+    shoot('corner-way-back', corner_check, lambda: ctx.leap(OWN, target['pos']))
+    ctx.leap(OWN, target['pos'])
+    way_back = corner_back(ctx, OWN)
+    figures['corner_back'] = way_back
+    r.check(way_back['ok'], "Shift+Tab from the own draft's corner, after a printable key there, returns the focus to the plane's stop on the own draft's span, where `x` is answered at the text's edge by the draft's own line (B3.caret.enter) — the way back the corner's line names (B3-S13; D5 K-72; D6 BM-52)", way_back)
+    ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()'); ctx.frames(2)
 
     # ---- (f) B3-S2: the moved scene's held version as a derived pane (issue #411; D6 BM-14) ---------------------------------
     first = paras[0]

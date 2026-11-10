@@ -28,13 +28,19 @@
 // not edit, every key but Space answered by its document's line, and a paste
 // there by the same line, nothing placed (`siteSays`; D5 K-72, K-93) — at an
 // edition of the session's account C-45 naming the document, at a document of
-// another account B3-S13's line naming its owner; Space wherever it is
-// swallowed, and every other key at every other site, K-9's line (`swallow`).
-// Each of those lines a printable key raises — the scene's swallow among them
-// — ends with where the person was writing, "— you were last writing in
-// ⟨label⟩", where the key was pressed outside the draft last written in the
-// page's session and that draft's caret stands kept: its label one act back
-// to the kept caret (`writingElsewhere`; W-WRITE's `lastWritten`).
+// another account B3-S13's line naming its owner; at a control of the corner
+// of a draft the person may edit, every key but Space — the control's as the
+// platform takes it — answered by B3-S13's line naming the way back to the
+// draft's text, "your text is back with Shift+Tab", nothing placed
+// (`cornerSays`; D5 K-72; D6 BM-52), and at any other corner every key the
+// platform's; Space wherever it is swallowed, and every other key at every
+// other site, K-9's line (`swallow`).
+// Each of those lines a printable key raises — the corner's and the scene's
+// swallow among them — ends with where the person was writing, "— you were
+// last writing in ⟨label⟩", where the key was pressed outside the draft last
+// written in the page's session and that draft's caret stands kept: its label
+// one act back to the kept caret (`writingElsewhere`; W-WRITE's
+// `lastWritten`).
 // Mod+R and F5 are taken and nothing reloaded (K-94), and the platform's own
 // chords — copy, paste, cut, select all, print, close, quit, minimize, hide,
 // preferences — are never taken save where a site's line answers a paste or a
@@ -142,8 +148,10 @@
 // move the focus along its acts in order and back to it, K-22's form — that
 // offered read, and at a corner standing at its document's head the count of
 // the items it folds — and Enter on one takes it, the count opening its items
-// whole (T-LAYER's `openCorner`); its other keys are the platform's; in an overlay and at a landing's line every
-// key is the control's own; on the plane the walk's keys (K-1 … K-5) move
+// whole (T-LAYER's `openCorner`); at a draft the person may edit a printable
+// key but Space is answered by the way back to its text (`cornerSays`, above);
+// its other keys are the platform's; in an overlay and at a landing's line
+// every key is the control's own; on the plane the walk's keys (K-1 … K-5) move
 // the walk, Enter activates the focus (K-7) — at a continuation's mark's stop
 // it opens the mark's list — and the paging keys page the camera (K-6);
 // while the scene stands its keys alone are read (`sceneKey`; D5 M-4), and
@@ -212,7 +220,7 @@ export const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(na
  * @property {'plane' | 'line' | 'box' | 'trail' | 'selection' | 'cards' | 'corner' | 'scene' | 'caret' | 'platform'} surface `caret` a key at a live caret in text the person may edit
  */
 
-/** the table: every chord the page binds, by D5's row — K-9's swallow, K-72's printable key at a caret, K-10's quasimode and K-12's pinch are APP-INPUT's and the dispatch's own; `Alt+` is Option on macOS, the only platform the page takes it on (`arrowStep`) */
+/** the table: every chord the page binds, by D5's row — K-9's swallow, K-72's printable keys at a caret, at a draft's span and at its corner, K-10's quasimode and K-12's pinch are APP-INPUT's and the dispatch's own; `Alt+` is Option on macOS, the only platform the page takes it on (`arrowStep`) */
 export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-1', chord: '↓', act: 'walk.down', surface: 'plane' },
   { id: 'K-2', chord: '↑', act: 'walk.up', surface: 'plane' },
@@ -555,13 +563,16 @@ function route(e, chord, ctx) {
   if (chord === 'Mod+R' || e.key === 'F5') return () => true; // K-94: the plane is live; nothing reloads
   // the caret's keys (see the head): at a live caret, before the walk's
   if (ctx.where === 'caret') { const act = caretKey(e, chord); if (act) return act; }
-  // the corner (K-57): its acts — the offered read, a head's count of the items it folds — reached in order by → and left
-  // back by ← (K-22's form); Enter takes the act the focus stands on — the offered read, the count opening its items whole —
-  // else a draft's kept word's statement (K-74), else the version statement's list, else the offered read; its other keys
-  // are the platform's
+  // the corner (K-57): a printable key but Space at a corner of a draft the person may edit answered by the way back to its
+  // text (K-72; `cornerSays`); its acts — the offered read, a head's count of the items it folds — reached in order by → and
+  // left back by ← (K-22's form); Enter takes the act the focus stands on — the offered read, the count opening its items
+  // whole — else a draft's kept word's statement (K-74), else the version statement's list, else the offered read; its
+  // other keys are the platform's
   if (ctx.where === 'corner') {
     const target = /** @type {HTMLElement} */ (e.target), corner = /** @type {HTMLElement | null} */ (target.closest('[data-corner]'));
     if (!corner) return null;
+    const addr = corner.dataset.corner || '';
+    if (printable(e) && e.key !== ' ' && LAYER.editable(addr)) return () => { cornerSays(e, ctx, addr); return true; };
     const on = /** @type {HTMLElement | null} */ (target.closest('[data-read], [data-more]'));
     if (chord === '→' || chord === '←') {
       const acts = /** @type {HTMLElement[]} */ ([...corner.querySelectorAll('[data-read], [data-more]')]), i = on ? acts.indexOf(on) : -1;
@@ -569,7 +580,6 @@ function route(e, chord, ctx) {
       return to ? () => { e.preventDefault(); FOCUS.land(to, { byKey }); return true; } : null;
     }
     if (chord !== 'Enter') return null;
-    const addr = corner.dataset.corner || '';
     if (on && on.dataset.more) return () => { LAYER.openCorner(addr); return true; };
     if (on) return () => VERSIONS.readFromCorner(corner, SEL.selected(), byKey);
     if (WRITE.keptOf(addr)) return () => { LAYER.openStatement(addr); return true; };
@@ -872,6 +882,21 @@ function hinted(e, ctx) {
 function swallow(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx, /** @type {import('../overlays/hint.js').Writing | null} */ writing = null) {
   if (e.key === ' ') HINT.show('F.swallow.space', { 'paging key': 'PageDown' }, { ...hinted(e, ctx), writing });
   else HINT.show('F.swallow', { 'LEAP chord': drawChord('Mod+L') }, { ...hinted(e, ctx), writing });
+}
+
+/**
+ * A printable key but Space at a control of the corner of a draft the person
+ * may edit (see the head; B3-S13; D5 K-72; D6 BM-52): its line naming the way
+ * back to the draft's text, "your text is back with Shift+Tab", its hint at
+ * the control until the next act, ending with where the person was writing
+ * where they last wrote in another draft (`writingElsewhere`); nothing placed,
+ * and a caret standing where it stood.
+ * @param {KeyboardEvent} e
+ * @param {Ctx} ctx
+ * @param {string} addr the corner's document
+ */
+function cornerSays(e, ctx, addr) {
+  HINT.show('B3.caret.back', null, { ...hinted(e, ctx), writing: writingElsewhere(addr) });
 }
 
 /** an inert slot's chord where no acts card gives its reason — no span in focus, or the scene over the plane: the slot's reason its hint at the focus until the next act (P47) */

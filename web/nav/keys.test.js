@@ -23,11 +23,16 @@
 // whole at the first press in a session and the corner's own word after it,
 // the statement whole on the word's act; → and ← at a corner move the focus
 // along its acts — the read it offers, a head's count of the items it folds —
-// and back; the inert slots' chords give their slot's reason at the acts
-// card drawn at the selection, else at the walk's focused span, which nothing
-// selects, else where the focus is; every other slot's chord, with nothing in
-// focus that its slot acts on, gives "select a passage first" where the focus
-// is; a key moving the caret stands the walk on the caret's span, the ring's
+// and back; a printable key but Space at the corner of a draft the person may
+// edit is answered there by the line naming the way back to its text, ending
+// with where the person was writing as a swallowed key's line does, nothing
+// typed and a live caret standing, while at the corner of another's document
+// or of an edition every key is the platform's; the inert slots' chords give
+// their slot's reason at the acts card drawn at the selection, else at the
+// walk's focused span, which nothing selects, else where the focus is; every
+// other slot's chord, with nothing in focus that its slot acts on, gives
+// "select a passage first" where the focus is; a key moving the caret stands
+// the walk on the caret's span, the ring's
 // rule as it stood, and a camera move leaves it there, so a slot chord at the
 // caret acts on that span; once Esc, a zoom past its reading scale or a key
 // pressed below that scale leaves the caret kept, its span holds the walk,
@@ -422,6 +427,64 @@ test('at a corner offering acts, → moves the focus along them in order — the
   assert.deepEqual([await at('ArrowLeft', el), doc.activeElement], [false, el], '← at the corner: the platform\'s');
   assert.deepEqual([await at('ArrowRight', bare), await at('ArrowLeft', bare)], [false, false], 'a corner offering none: both the platform\'s');
   assert.ok(KEYS.TABLE.some((r) => r.id === 'K-57' && r.chord === '→' && r.surface === 'corner') && KEYS.TABLE.some((r) => r.id === 'K-57' && r.chord === '←' && r.surface === 'corner'), 'the table binds them at the corner, K-57\'s');
+}));
+
+/** a key pressed at a document's corner as T-LAYER stands it, the platform's focus on the corner: whether the page took it */
+function atCorner(/** @type {string} */ addr, /** @type {string} */ key, /** @type {object} */ mods = {}) {
+  const el = /** @type {any} */ ({ dataset: { corner: addr }, querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }) });
+  el.closest = (/** @type {string} */ s) => (s === '[data-corner]' ? el : null);
+  return KEYS.dispatch({ ...keyOf(key, mods), target: el }, { where: 'corner', byKey: true });
+}
+
+test('a printable key but Space at the corner of a draft the person may edit is answered there by the line naming the way back to its text — whole at every press, Shift\'s among them, said again, an auto-repeat answered by nothing — nothing typed and a live caret standing where it stood, so the next key at the plane types at it; Space, a key with ⌘ or Ctrl held, and every key at the corner of another\'s draft or of an edition stay the platform\'s, nothing said (B3-S13; D5 K-72; D6 BM-52)', () => onPlane(async ({ said }) => {
+  listed([[E, 'edition']]);
+  assert.deepEqual([LAYER.editable(D), LAYER.editable(O), LAYER.editable(E)], [true, false, false], 'D a draft the person may edit; O another\'s draft; E an edition of the session\'s account');
+  const back = t('B3.caret.back'), standing = { id: 'B3.caret.back', words: back, whole: back, open: true, writing: null };
+  await focusOn(D, 1);
+  assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+  assert.deepEqual(caret(), [D, 1, true], 'the caret live at D\'s first span');
+  let n = said.length;
+  assert.equal(await atCorner(D, 'q'), true, 'q at D\'s corner: taken');
+  assert.deepEqual([HINT.standing(), said.slice(n), caret(), WRITE.edits(D)], [standing, [back], [D, 1, true], []], 'the way back to the text, whole, its hint at the corner and said; the caret live where it stood; nothing typed');
+  n = said.length;
+  assert.equal(await atCorner(D, 'Q', { shiftKey: true }), true);
+  await tick();
+  assert.deepEqual([HINT.standing(), said.slice(n)], [standing, [back]], 'a later press, with Shift: whole again, said again');
+  n = said.length;
+  assert.equal(await atCorner(D, 'q', { repeat: true }), true, 'an auto-repeat: taken, typing nothing');
+  await tick();
+  assert.equal(said.length, n, 'and answered by nothing: its press was answered');
+  HINT.act();
+  for (const [key, mods, what] of /** @type {const} */ ([[' ', {}, 'Space'], ['e', MOD, 'a key with ⌘ or Ctrl held']])) {
+    assert.equal(await atCorner(D, key, mods), false, `${what} at D's corner: the platform's`);
+  }
+  for (const [addr, what] of [[O, 'another\'s draft'], [E, 'an edition of the session\'s account']]) {
+    assert.equal(await atCorner(addr, 'q'), false, `q at the corner of ${what}: the platform's`);
+  }
+  await tick();
+  assert.deepEqual([HINT.standing(), said.length, caret(), WRITE.edits(D)], [null, n, [D, 1, true], []], 'nothing raised, nothing said, the caret live where it stood');
+  assert.equal(await KEYS.dispatch(keyOf('z'), PLANE), true);
+  assert.deepEqual([shown(), caret()], ['z' + TEXT, [D, 2, true]], 'back at the plane, z types at the live caret');
+}));
+
+test('the line a printable key raises at the corner of a draft the person may edit ends with where they were writing where they last wrote in another draft whose caret stands kept, said with the line, and ends with itself at the corner of the draft last written (issue #496\'s design decision; B3-S13; D5 K-72)', () => onPlane(async ({ said }) => {
+  const D2 = '1.0.1.0.4';
+  listed([[D2, 'draft']]);
+  assert.equal(LAYER.editable(D2), true, 'D2: another draft the person may edit');
+  const back = t('B3.caret.back');
+  await focusOn(D, 1);
+  for (const key of ['Enter', 'a', 'Escape']) assert.equal(await KEYS.dispatch(keyOf(key), PLANE), true, `${key}: taken`);
+  await tick();
+  assert.deepEqual([caret(), WRITE.lastWritten()], [[D, 2, false], D], '"a" typed in D, the caret kept by Esc');
+  await focusOn(D2, 1);
+  assert.equal(await atCorner(D2, 'q'), true);
+  const end = t('B3.undo.last-writing', { label: LAYER.boxName(D).name });
+  assert.deepEqual([HINT.standing()?.id, HINT.standing()?.writing, said.at(-1)], ['B3.caret.back', end, `${back} ${end}`], 'at D2\'s corner: the way back, ending with where the person was writing, said together');
+  await focusOn(D, 1);
+  assert.equal(await atCorner(D, 'q'), true);
+  await tick();
+  assert.deepEqual([HINT.standing()?.id, HINT.standing()?.writing, said.at(-1)], ['B3.caret.back', null, back], 'at D\'s corner, the draft last written: the line ends with itself');
+  assert.deepEqual([caret(), WRITE.edits(D2)], [[D, 2, false], []], 'the caret kept where it stood, nothing typed in D2');
 }));
 
 /** the overlay host's stand-in element: what the host writes into it is the card a person meets */
