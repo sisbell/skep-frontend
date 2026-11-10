@@ -193,7 +193,7 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
 /** @typedef {import('../model/records.js').Reader} Reader */
 /** @typedef {import('../model/records.js').AccountFacts} AccountFacts */
 /** @typedef {import('../model/records.js').RecordValue} RecordValue */
-/** @typedef {import('../model/records.js').KeptState} KeptState */
+/** @typedef {import('../write/write.js').KeptState} KeptState */
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../plane/register.js').Mark} Mark */
 /** @typedef {import('./span.js').Span} Span */
@@ -225,7 +225,7 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {number | null} [read] the corner's act reading another version in its place (D5 K-57): in a reading scene's pane the version its Enter reads in the pane's place (SC; FP-23) — the newer one arrived, or the one the act left; on the plane the newest member named since a newer version's arrival pinned its box (N-GO's `newerAt`); absent or null, none
  * @property {number | null} [lacks] the version a pane's corner says holds none of the passage its act carried (SC; FP-23); absent or null, none
  * @property {boolean} [lags] the board lags past a second (M-PUMP's `boardKept`; FP-23): the corner names neither the latest version nor the chain's count; absent, false
- * @property {KeptState | null} [kept] a draft's kept state as the model holds it (M-REC's `keptOf`): the word its corner's slot shows; absent or null, no state is set and the slot stands empty
+ * @property {KeptState | null} [kept] a draft's kept state (W-WRITE's `keptOf`): the word its corner's slot shows; absent or null, no state is set and the slot stands empty
  * @property {boolean} [keptOpen] the kept word's statement stands open in the corner, on its act (T-LAYER's `openStatement`, SC's); absent, closed
  * @property {number} [cpl] the measure the article's column is set at, in characters of its face (P-CAM's measure in force on the plane, the full measure in a pane): what a withheld run's gap holds is read at it (`gapHolds`); absent, the full measure
  * @property {Measure} measure a string's width in a face as the platform sets it (T-LAYER's `widthOf`): every fit the article judges — what a gap holds, a label's cut, a slot's box — reads it

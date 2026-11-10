@@ -366,6 +366,7 @@
 
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
+import * as WRITE from '../write/write.js';
 import * as F from '../model/frames.js';
 import * as LAYER from '../text/layer.js';
 import * as LK from '../links/links.js';
@@ -1380,7 +1381,7 @@ function paneAt(side, src, r) {
  */
 function cornerForm(P, F) {
   const d = P.shows === P.d.addr ? P.d : { ...P.d, addr: P.shows };
-  const view = { ...P.view, members: P.n, read: P.read, lacks: P.lacks, lags: lags(), kept: P.d.derived ? null : REC.keptOf(P.names), keptOpen: !P.d.derived && LAYER.statementOpen(P.names) };
+  const view = { ...P.view, members: P.n, read: P.read, lacks: P.lacks, lags: lags(), kept: P.d.derived ? null : WRITE.keptOf(P.names), keptOpen: !P.d.derived && LAYER.statementOpen(P.names) };
   if (F.corner === 'head') return LAYER.sceneHead(d, view, { px: F.px, kept: paneKept(P), open: P.open });
   return { html: LAYER.sceneCorner(d, view, F.corner === 'compact' && !P.open) + keptHTML(paneKept(P)), rows: 0 };
 }
@@ -3971,7 +3972,7 @@ export function key(k) {
     const corner = at && at.closest ? at.closest('.corner') : null, P = S[side];
     if (!at || !corner || !pane.contains(corner)) return false;
     if (at.closest('[data-more]')) { openWhole(side); return true; }
-    if (!P.d.derived && REC.keptOf(P.names)) { LAYER.openStatement(P.names); writeCorner(E, P); rebanded(E, S); return true; }
+    if (!P.d.derived && WRITE.keptOf(P.names)) { LAYER.openStatement(P.names); writeCorner(E, P); rebanded(E, S); return true; }
     if (P.read != null) { act(side); return true; }
     if (S.fit.corner === 'whole' && !P.open) return false;
     openWhole(side);

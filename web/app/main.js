@@ -75,10 +75,10 @@
 // N-FIND's `searched` — FP-6, FP-22, FP-23, FP-29).
 // The loop (`loop`, on `requestAnimationFrame`): step the camera's flight,
 // pump every 90 ms, and on a dirty frame — the mark, a camera move, a model,
-// layer or kept revision, a flight, an overlay standing, a phase — run T-LAYER's
-// frame first, so what stands is decided before anything is drawn (FP-8),
-// then the landing rule at an arrival whose text was set again (N-GO's
-// `recheck`; FP-21) and at every surface standing on a version its box no
+// write (W-WRITE's), layer or kept revision, a flight, an overlay standing, a
+// phase — run T-LAYER's frame first, so what stands is decided before
+// anything is drawn (FP-8), then the landing rule at an arrival whose text
+// was set again (N-GO's `recheck`; FP-21) and at every surface standing on a version its box no
 // longer shows (N-GO's `surfacesAcross`; FP-36), the find read again
 // (N-FIND's `refresh`), mark the mirror's
 // documents, Back's light, the landing's description and the kept clauses in
@@ -131,6 +131,7 @@ import * as PORT from '../bridge/port.js';
 import * as DEV from '../bridge/dev.js';
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
+import * as WRITE from '../write/write.js';
 import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
 import * as LAYER from '../text/layer.js';
@@ -175,7 +176,7 @@ const phase = { name: '' };
 /** @type {Record<string, unknown>} what boot found, for the report */
 const bootInfo = {};
 let lastT = performance.now(), pumpT = 0, lineT = 0;
-let lastRev = -1, lastLayerRev = -1, lastKeptRev = -1;
+let lastRev = -1, lastWriteRev = -1, lastLayerRev = -1, lastKeptRev = -1;
 let lastCam = { x: NaN, y: NaN, scale: NaN };
 
 /** @param {string} kind @param {string} msg @param {string} [stack] */
@@ -220,8 +221,8 @@ function loop(/** @type {number} */ now) {
   const anim = CAM.step(now);
   if (now - pumpT > 90) { pumpT = now; if (PUMP.pump()) CAM.markDirty(); }
   const camMoved = CAM.cam.x !== lastCam.x || CAM.cam.y !== lastCam.y || CAM.cam.scale !== lastCam.scale;
-  const rev = REC.rev(), lrev = LAYER.revision(), krev = PUMP.keptRevision();
-  const dirty = CAM.takeDirty() || camMoved || rev !== lastRev || lrev !== lastLayerRev || krev !== lastKeptRev || anim || HOST.hasCurrent() || phase.name;
+  const rev = REC.rev(), wrev = WRITE.rev(), lrev = LAYER.revision(), krev = PUMP.keptRevision();
+  const dirty = CAM.takeDirty() || camMoved || rev !== lastRev || wrev !== lastWriteRev || lrev !== lastLayerRev || krev !== lastKeptRev || anim || HOST.hasCurrent() || phase.name;
   if (dirty) {
     const t0 = performance.now();
     if (!bootInfo.firstFrame) bootInfo.firstFrame = SHIPPED.map((f) => [f, document.fonts.check(f)]);
@@ -250,7 +251,7 @@ function loop(/** @type {number} */ now) {
     const neither = new Set([...S.yielded.filter((a) => !LAYER.standing(a)), ...S.yieldedLines.filter(([a, i]) => !LAYER.lineStands(a, i)).map(([a]) => a)]).size;
     frames.push({ t: now, interval: now - lastT, drawMs, lod: lod.name, docs: S.docsDrawn, both, neither, barred: S.barred, mounted: stood.mounted, standing: stood.standing, lines: stood.lines, phase: phase.name || undefined });
     if (frames.length > FRAME_CAP) frames.splice(0, frames.length - FRAME_CAP);
-    lastRev = rev; lastLayerRev = lrev; lastKeptRev = krev; lastCam = { x: CAM.cam.x, y: CAM.cam.y, scale: CAM.cam.scale };
+    lastRev = rev; lastWriteRev = wrev; lastLayerRev = lrev; lastKeptRev = krev; lastCam = { x: CAM.cam.x, y: CAM.cam.y, scale: CAM.cam.scale };
   }
   lastT = now;
   if (now - lineT > 120) { lineT = now; LINE.render(); LEAP.takeAddress(); LEAP.takeIndex(); LEAP.takeReading(); LEAP.roomChanged(); }

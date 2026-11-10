@@ -90,6 +90,7 @@ import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
 import * as REC from '../model/records.js';
+import * as WRITE from '../write/write.js';
 import * as PUMP from '../model/pump.js';
 import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
@@ -569,7 +570,7 @@ const script = { ...reads(A, A_TEXT), ...reads(B, B_TEXT), ...compared(A, A_TEXT
 /** @type {ReturnType<typeof FAKE.create>} */
 let fake;
 before(() => {
-  REC._reset();
+  REC._reset(); WRITE._reset();
   // the platform's element class, which an overlay's anchor is told apart from (O-HOST's): none of the stand-ins is one
   globalThis.HTMLElement = /** @type {any} */ (class {});
   fake = FAKE.create(script);
@@ -842,11 +843,11 @@ test('a reading scene opened at a live caret and closed returns the focus to the
     await KEYS.esc(); await flown();
     assert.deepEqual([SCENE.isOpen(), walkAt(), LAYER.caret()], [false, ['block', WRITING, 1], { addr: WRITING, pos: 3, live: true }], 'Esc: the scene closed, the walk on the caret\'s span, the caret live where it stood');
     assert.equal(await KEYS.dispatch(keyOf('Backspace'), { where: 'plane', byKey: true }), true, 'Backspace: the caret\'s key');
-    assert.deepEqual([REC.edits(WRITING).map((x) => [x.pos, x.width, x.text]), LAYER.caret()], [[[2, 1, '']], { addr: WRITING, pos: 2, live: true }], 'the character before the caret taken out');
+    assert.deepEqual([WRITE.edits(WRITING).map((x) => [x.pos, x.width, x.text]), LAYER.caret()], [[[2, 1, '']], { addr: WRITING, pos: 2, live: true }], 'the character before the caret taken out');
     const elsewhere = GO.leapTo(WRITING, { pos: 10 }); await flown(); await elsewhere;
     assert.deepEqual([walkAt(), LAYER.caret()], [['block', WRITING, 10], { addr: WRITING, pos: 2, live: false }], 'a LEAP to the draft\'s second span, one position back in the text shown: the caret kept where it stood');
     assert.deepEqual(fake.unanswered, []);
-  } finally { REC.clearEdits(WRITING); LAYER.dropCaret(); }
+  } finally { WRITE.clearEdits(WRITING); LAYER.dropCaret(); }
 }));
 
 test('a reading scene\'s opening reaches as a jump only a read can place does (FP-25): Esc and Back made while its reads are out abandon it, its entry given back — the trail as it stood, nothing opened, the camera still; a read refused gives its entry back too, the refusal faced at the act\'s site', () => onPage(async (p) => {
@@ -2139,7 +2140,7 @@ test('read side by side at a link\'s end in a draft holding typed words opens th
   try {
     REC.takeLinks(A, [L]);
     REC.takeLink({ addr: L, from: [passage(A, 25, 3)], to: [passage(B, 1, 3)], type: CITE, age: { at: null, time: null, from: null } });
-    REC.addEdit(A, { pos: 1, width: 0, text: 'ab' });
+    WRITE.addEdit(A, { pos: 1, width: 0, text: 'ab' });
     const before = fake.asked.length;
     SEL.act('scene', true, { addr: A, pos: 27, width: 3 });
     await flown();
@@ -2148,12 +2149,12 @@ test('read side by side at a link\'s end in a draft holding typed words opens th
     assert.deepEqual([panes?.a.src, panes?.a.derived, panes?.a.blocks[0].text.startsWith('abThe window.'), panes?.b.src, panes?.b.derived], [A, true, true, B, false], 'pane A the draft as shown, new words included; pane B the board\'s');
     assert.deepEqual(SCENE.pairs()?.level.a, 27, 'level at the shown position');
     assert.ok(fake.asked.slice(before).every((k) => !k.includes(A) && !k.includes('"compare"')), `nothing read for pane A, no compare asked: ${JSON.stringify(fake.asked.slice(before))}`);
-  } finally { SCENE.close(); REC.clearEdits(A); LK.readers({}); }
+  } finally { SCENE.close(); WRITE.clearEdits(A); LK.readers({}); }
 }));
 
 test('a whole-document far end beside an edited draft\'s pane asks no `compare` as it shows, its derived text no text of the board\'s; its entry and the trail name the pane by the document it shows', () => onPage(async (p) => {
   await onTrail(p);
-  REC.addEdit(A, { pos: 1, width: 0, text: 'ab' });
+  WRITE.addEdit(A, { pos: 1, width: 0, text: 'ab' });
   try {
     const before = fake.asked.length, pane = LAYER.paneSource(A);
     assert.ok(typeof pane !== 'string' && !!pane.derived, 'the page derives what it shows of the draft');
@@ -2164,7 +2165,7 @@ test('a whole-document far end beside an edited draft\'s pane asks no `compare` 
     assert.ok(fake.asked.slice(before).every((k) => !k.includes('"compare"')), 'no compare asked as it shows');
     const e = /** @type {NonNullable<ReturnType<typeof TRAIL.current>>} */ (TRAIL.current());
     assert.deepEqual([e.addr, GO.scenePair(e)], [A, [A, B]], 'the entry and the pair the trail\'s list names are addresses, whatever the pane was opened on');
-  } finally { SCENE.close(); REC.clearEdits(A); }
+  } finally { SCENE.close(); WRITE.clearEdits(A); }
 }));
 
 test('"who wrote this?" over a span shown after typing opens its side-by-side on the draft as shown, level at the shown position, the step it records naming the base\'s bytes', () => onPage(async (p) => {
@@ -2172,7 +2173,7 @@ test('"who wrote this?" over a span shown after typing opens its side-by-side on
   const asOf = /** @type {number} */ (REC.doc(A).readAt);
   const asked = FAKE.keyOf('op', { frame: F.opAt(asOf, F.showOrigin(A, 14, 3)) });
   script[asked] = { result: { as_of: 1, resp: 'addrs', addrs: [B] } };
-  REC.addEdit(A, { pos: 1, width: 0, text: 'ab' });
+  WRITE.addEdit(A, { pos: 1, width: 0, text: 'ab' });
   try {
     await PROV.wrote(A, 16, 3);
     const card = HOST.currentState();
@@ -2181,5 +2182,5 @@ test('"who wrote this?" over a span shown after typing opens its side-by-side on
     await flown();
     assert.deepEqual([SCENE.isOpen(), SCENE.panes()?.a.derived, SCENE.panes()?.b.src, SCENE.pairs()?.level.a], [true, true, B, 16], 'its pane A the draft as shown, level at the shown position');
     assert.deepEqual(TRAIL.all()[TRAIL.cursorIndex() - 1].step, { kind: 'scene', near: A, link: null, key: null, spans: [{ prefix: A + '.0.1', ordinal: 14, width: 3 }] }, 'the step records the passage by the bytes of the base, never a position of the text shown');
-  } finally { SCENE.close(); REC.clearEdits(A); delete script[asked]; }
+  } finally { SCENE.close(); WRITE.clearEdits(A); delete script[asked]; }
 }));

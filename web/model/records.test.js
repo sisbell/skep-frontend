@@ -25,8 +25,8 @@
 // the change ends the session, else waiting to be read — that read alone
 // covering, confirming or lifting it, a drop keeping it owed; the identity a
 // byte the page made keeps until the board mints it and the address it is
-// named by after; the steps a draft's edits are made in; and what D6's
-// machine holds of a draft, its held lines and its flight.
+// named by after, each mint counted through a change of class; and those
+// watching a change of class told once it is taken.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from './records.js';
@@ -922,110 +922,49 @@ test('a session is a reference, never a token; the death signal drops it', () =>
   assert.equal(REC.deathReason()?.arm, 'closed');
 });
 
-test('a draft\'s kept state is set and read by address — the word and its reason, none a null reason — cleared with null, each setting a change of the model, and dropped with the class the page reads at (B3-S2; FP-29)', () => {
-  const D = '1.0.1.0.2', E = '1.0.1.0.3';
-  assert.equal(REC.keptOf(D), null, 'none set');
-  const rev = REC.rev();
-  REC.setKept(D, { word: 'not yet kept', reason: 'the board is not answering' });
-  assert.deepEqual(REC.keptOf(D), { word: 'not yet kept', reason: 'the board is not answering' });
-  assert.ok(REC.rev() > rev, 'a change of the model: every surface reading it is made again');
-  REC.setKept(D, { word: 'kept', reason: null });
-  REC.setKept(E, { word: 'not kept', reason: 'refused: out_of_bounds' });
-  assert.deepEqual([REC.keptOf(D), REC.keptOf(E)], [{ word: 'kept', reason: null }, { word: 'not kept', reason: 'refused: out_of_bounds' }], 'each draft its own');
-  REC.setKept(D, null);
-  assert.deepEqual([REC.keptOf(D), REC.keptOf(E)], [null, { word: 'not kept', reason: 'refused: out_of_bounds' }], 'cleared with null, the other standing');
-  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
-  REC.sessionDied({ arm: 'closed' });
-  assert.equal(REC.keptOf(E), null, 'a change of class drops every kept state');
-});
-
-test('a draft\'s page-local edits are kept in the order made and counted, applied through M-DERIVE over the delivered runs they give the typed text while the model\'s own record stands as the board served it, and a clearing or a change of class lets them go (K-72; FP-14, FP-29)', () => {
-  const D = '1.0.1.0.2', text = 'First line.\n\nSecond.\n', n = byteLength(text);
-  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
-  REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
-  assert.deepEqual([REC.edits(D), REC.editRev(D)], [[], 0], 'none typed');
-  const rev = REC.rev();
-  REC.addEdit(D, { pos: 7, width: 0, text: 'typed ' });
-  REC.addEdit(D, { pos: 1, width: 6, text: '' });
-  assert.deepEqual([REC.edits(D), REC.editRev(D), REC.rev() > rev], [[{ pos: 7, width: 0, text: 'typed ', page: 1, back: null, step: 1 }, { pos: 1, width: 6, text: '', page: null, back: null, step: 2 }], 2, true], 'in the order made, each counted and a step of its own, the bytes an edit makes named by the page\'s next ordinals, the model moved');
-  const shown = applyEdits(REC.doc(D), REC.edits(D)).doc;
-  assert.equal(REC.textOf(shown.runs, shown.from, shown.to), 'typed line.\n\nSecond.\n', 'the typed text: the edits applied over the delivered runs');
-  assert.deepEqual([REC.textOf(REC.doc(D).runs, 1, n + 1), REC.doc(D).derived, shown.derived?.from, shown.derived?.edits], [text, undefined, D, 2], 'the model\'s record as the board served it; the derived one named so');
-  REC.clearEdits(D);
-  assert.deepEqual([REC.edits(D), REC.editRev(D)], [[], 3], 'let go, the change counted');
-  REC.addEdit(D, { pos: 1, width: 0, text: 'x' });
-  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
-  REC.sessionDied({ arm: 'closed' });
-  assert.deepEqual(REC.edits(D), [], 'a change of class drops them: nothing the class it left typed survives');
-});
-
-test('a byte the page made keeps the page\'s own identity until the board mints it, and is named by its I-address after: an ordinal of the draft\'s own never used twice, told the first address an insert\'s ack named, the byte one byte under both its names wherever bytes are placed (wire.md §The response envelope)', () => {
+test('a byte the page made keeps the page\'s own identity until the board mints it, and is named by its I-address after: an ordinal of the draft\'s own in the page\'s space of it, told the first address an insert\'s ack named, the byte one byte under both its names wherever bytes are placed, each mint counted and the count standing through a change of class (wire.md §The response envelope)', () => {
   const D = '1.0.1.0.2', text = 'First line.\n', n = byteLength(text), own = REC.pageSpace(D);
   REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
   REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
   REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n }]);
-  REC.addEdit(D, { pos: 1, width: 0, text: 'ab' });
-  REC.addEdit(D, { pos: 3, width: 0, text: 'cde' });
-  assert.deepEqual([REC.edits(D).map((e) => e.page), REC.isPage(own), REC.isPage(D + '.0.1')], [[1, 3], true, false], 'each edit\'s bytes take the next ordinals, in the page\'s space of the draft, which is no I-space of the board\'s');
+  /** @type {import('./records.js').Edit[]} two edits as W-WRITE makes them: "ab" taking the draft's ordinals 1–2, "cde" 3–5 */
+  const edits = [{ pos: 1, width: 0, text: 'ab', page: 1, back: null, step: 1 }, { pos: 3, width: 0, text: 'cde', page: 3, back: null, step: 2 }];
+  assert.deepEqual([REC.isPage(own), REC.isPage(D + '.0.1')], [true, false], 'the page\'s space of the draft is no I-space of the board\'s');
   assert.deepEqual(REC.pageIds(D, 1, 5), [{ prefix: own, ordinal: 1, width: 5 }], 'not minted: named by the page\'s own ordinals');
-  const derived = () => applyEdits(REC.doc(D), REC.edits(D), (page, width) => REC.pageIds(D, page, width)).doc;
+  const derived = () => applyEdits(REC.doc(D), edits, (page, width) => REC.pageIds(D, page, width)).doc;
   const before = derived(), held = REC.identityIn(before.image, 2, 3);
   assert.deepEqual(held, [{ prefix: own, ordinal: 2, width: 3 }], '"bcd", held by the page\'s identity');
   // the burst\'s ack: `ack_addr` names the first address minted, the bytes it carried taking the addresses from it on
   const ack = F.decodeAckAddr({ addr: D + '.0.1.40', at: 9, resp: 'ack_addr' });
   assert.ok(ack);
-  const rev = REC.editRev(D);
+  assert.equal(REC.mintsOf(D), 0, 'none minted');
   REC.mint(D, 1, 4, ack.addr, ack.at);
-  assert.deepEqual([REC.mintedOf(D), REC.editRev(D) > rev], [[{ page: 1, width: 4, prefix: D + '.0.1', ordinal: 40, at: 9 }], true], 'minted: the record derived from the edits is made again');
+  assert.deepEqual([REC.mintedOf(D), REC.mintsOf(D)], [[{ page: 1, width: 4, prefix: D + '.0.1', ordinal: 40, at: 9 }], 1], 'minted, and counted: a record derived from the edits is made again');
   assert.deepEqual(REC.pageIds(D, 1, 5), [{ prefix: D + '.0.1', ordinal: 40, width: 4 }, { prefix: own, ordinal: 5, width: 1 }], 'the four the ack named by their I-addresses, the fifth the page\'s still');
   const after = derived();
   assert.deepEqual(REC.identityIn(after.image, 2, 3), [{ prefix: D + '.0.1', ordinal: 41, width: 3 }], 'read again, the same bytes are named by their I-addresses');
   assert.deepEqual([REC.placedIn(after.image, held), REC.placedIn(before.image, REC.identityIn(after.image, 2, 3)), REC.firstPlacedIn(after.image, held)], [[{ pos: 2, width: 3 }], [{ pos: 2, width: 3 }], 2], 'what held them by the page\'s identity finds them still, and the address finds them in a text made before the ack: one byte under both names');
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.sessionDied({ arm: 'closed' });
-  assert.deepEqual(REC.mintedOf(D), [], 'a change of class drops what was minted with the edits');
+  assert.deepEqual([REC.mintedOf(D), REC.mintsOf(D)], [[], 1], 'a change of class drops what was minted, the count standing');
 });
 
-test('the edits of one act are one step, and a put-back names the bytes an earlier edit removed (FP-14)', () => {
+test('those watching a change of the page\'s class are told once it is taken — at a death, at a lost session and at one regained as another principal, never at one regained as the same — everything the class wrote gone before they are (FP-29)', () => {
   const D = '1.0.1.0.2';
-  REC.addEdit(D, { pos: 1, width: 3, text: '' });
-  REC.addEdits(D, [{ pos: 5, width: 0, text: '', back: { of: 0, from: 1, width: 2 } }, { pos: 1, width: 0, text: '', back: { of: 0, from: 0, width: 1 } }]);
-  REC.addEdits(D, []);
-  assert.deepEqual(REC.edits(D).map((e) => [e.step, e.page, e.back]), [[1, null, null], [2, null, { of: 0, from: 1, width: 2 }], [2, null, { of: 0, from: 0, width: 1 }]], 'the two put-backs share one step, and make no byte of the page\'s own');
-  assert.equal(REC.editRev(D), 2, 'one change counted for the act; none for an act that made no edit');
-});
-
-test('what D6\'s machine holds of a draft is set by the machine alone: its held lines as `held(session)` listed them, and whether a burst of it is in flight, which an act that names characters to the board asks to be committed and waits out; with no machine handed in nothing is in flight (B3-S2; foundations §3.1)', async () => {
-  const D = '1.0.1.0.2';
-  assert.deepEqual([REC.heldOf(D), REC.inFlight(D)], [[], false], 'nothing held, nothing in flight');
-  let waited = false;
-  await REC.landed(D).then(() => { waited = true; });
-  assert.equal(waited, true, 'nothing in flight: landed at once');
-  const rows = F.decodeHeldRows([{ held: 1, doc: D, base: 5, frame: { op: 'insert', at: { ordinal: '3', subspace: '1' }, values: ['x'] }, cause: 'unreachable', sent: false, time: 1 }]);
-  assert.ok(rows);
-  REC.setHeld(D, rows);
-  assert.deepEqual(REC.heldOf(D).map((r) => [r.held, r.frame.op]), [[1, 'insert']], 'the held lines, as listed');
-  REC.setHeld(D, []);
-  assert.deepEqual(REC.heldOf(D), [], 'cleared with none');
-  /** @type {string[]} */
-  const asked = [];
-  REC.commit(D);
-  REC.machine({ commit: (addr) => asked.push(addr) });
-  REC.commit(D);
-  assert.deepEqual(asked, [], 'no burst in flight: nothing to commit');
-  REC.setFlight(D, true);
-  REC.commit(D);
-  let landed = false;
-  const wait = REC.landed(D).then(() => { landed = true; });
-  await Promise.resolve();
-  assert.deepEqual([asked, REC.inFlight(D), landed], [[D], true, false], 'in flight: the machine asked to commit the open burst, the act waiting');
-  REC.setFlight(D, false);
-  await wait;
-  assert.deepEqual([REC.inFlight(D), landed], [false, true], 'its ack landed: the one waiting told');
-  REC.setFlight(D, true);
-  const dropped = REC.landed(D);
+  /** @type {number[]} how many minted runs of the draft each telling found */
+  const told = [];
+  REC.onClass(() => told.push(REC.mintedOf(D).length));
+  const mint = () => REC.mint(D, 1, 1, D + '.0.1.40', 9);
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.sessionRegained({ session: 's-2', principal: 1, account: '1.0.1' });
+  assert.deepEqual(told, [], 'the same principal: no change of class');
+  mint();
+  REC.sessionRegained({ session: 's-3', principal: 2, account: '1.0.2' });
+  mint();
+  REC.sessionLost({ kind: 'shell', name: 'session_ended' });
+  REC.setSession({ session: 's-4', principal: 1, account: '1.0.1' });
+  mint();
   REC.sessionDied({ arm: 'closed' });
-  await dropped;
-  assert.deepEqual([REC.inFlight(D), REC.heldOf(D)], [false, []], 'a change of class ends every flight, its waiters told, and drops the held lines');
+  assert.deepEqual(told, [0, 0, 0], 'told three times, each once what was minted had gone');
 });
+

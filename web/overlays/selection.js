@@ -101,6 +101,7 @@
 
 import * as HOST from './host.js';
 import * as REC from '../model/records.js';
+import * as WRITE from '../write/write.js';
 import * as LAYER from '../text/layer.js';
 import * as LK from '../links/links.js';
 import * as GO from '../nav/go.js';
@@ -143,13 +144,13 @@ let sel = null;
 /** @type {Ends} how Shift with ← or → moves the selection's ends while it stands, set with it (`hold`) */
 let ends = AT_START;
 
-/** @type {{ids: ISpan[], rev: number} | null} the selection's bytes by identity as it was set, and how many times its document's page-local edits had changed then (M-REC's `editRev`): what it is carried by where they moved (`carry`) */
+/** @type {{ids: ISpan[], rev: number} | null} the selection's bytes by identity as it was set, and how many times its document's page-local edits had changed then (W-WRITE's `editRev`): what it is carried by where they moved (`carry`) */
 let stood = null;
 
 /** the selection set, and how its ends move: the one place either is written, its bytes read with it */
 function hold(/** @type {Span | null} */ span, /** @type {Ends} */ how = AT_START) {
   sel = span; ends = how;
-  stood = span ? { ids: LAYER.shownIdentity(span.addr, span.pos, span.width), rev: REC.editRev(span.addr) } : null;
+  stood = span ? { ids: LAYER.shownIdentity(span.addr, span.pos, span.width), rev: WRITE.editRev(span.addr) } : null;
 }
 
 /**
@@ -161,8 +162,8 @@ function hold(/** @type {Span | null} */ span, /** @type {Ends} */ how = AT_STAR
  * named, as it is.
  */
 function carry() {
-  if (!sel || !stood || REC.editRev(sel.addr) === stood.rev) return;
-  stood.rev = REC.editRev(sel.addr);
+  if (!sel || !stood || WRITE.editRev(sel.addr) === stood.rev) return;
+  stood.rev = WRITE.editRev(sel.addr);
   const now = stood.ids.length ? LAYER.placedShown(sel.addr, stood.ids) : [];
   if (!now.length) return;
   const span = { addr: sel.addr, pos: now[0].pos, width: now[now.length - 1].pos + now[now.length - 1].width - now[0].pos };
@@ -420,12 +421,12 @@ export const reasonOf = (/** @type {InertSlot} */ slot) => INERT_REASON[slot];
  * The row rule's reason while a document holds a line the board has not kept
  * (foundations §3.1; P47), keyed on what ends the state: where a held line
  * stands refused, an act of the person's comes first; else a resend follows.
- * Read from the held lines alone (M-REC's `heldOf`); null where none is held.
+ * Read from the held lines alone (W-WRITE's `heldOf`); null where none is held.
  * @param {string} addr
  * @returns {Reason | null}
  */
 function heldReason(addr) {
-  const rows = REC.heldOf(addr);
+  const rows = WRITE.heldOf(addr);
   if (!rows.length) return null;
   const id = rows.some((r) => r.refusal) ? 'B3.row.held.resolve' : 'B3.row.held.resend';
   return { id, text: t(id, { label: LAYER.boxName(addr).name }) };
@@ -596,7 +597,7 @@ export const sent = () => sending;
  * An act that sends a name for characters, made at a slot or by its chord
  * (foundations §3.1's row rule; D5 K-73; P46): it names the characters as the
  * board holds them, so it takes effect only once the board holds them. While
- * a burst of the span's draft is open or awaits its ack (M-REC's `inFlight`)
+ * a burst of the span's draft is open or awaits its ack (W-WRITE's `inFlight`)
  * it asks for the burst's commit and waits for it to land — no mark, no word
  * and no focus moved meanwhile — the span held by its bytes, so the keys typed
  * meanwhile move it with its words; then, and at once where nothing is in
@@ -616,10 +617,10 @@ export const sent = () => sending;
 function send(slot, span, el = null) {
   sending = (async () => {
     let at = span;
-    if (!heldReason(span.addr) && REC.inFlight(span.addr)) {
+    if (!heldReason(span.addr) && WRITE.inFlight(span.addr)) {
       const held = bytesOf(span);
-      REC.commit(span.addr);
-      await REC.landed(span.addr);
+      WRITE.commit(span.addr);
+      await WRITE.landed(span.addr);
       const now = held.ids.length ? LAYER.placedShown(span.addr, held.ids) : [];
       if (held.ids.length && !now.length) return;
       if (now.length) at = { addr: span.addr, pos: now[0].pos, width: now[now.length - 1].pos + now[now.length - 1].width - now[0].pos };

@@ -38,6 +38,7 @@ import * as INPUT from './input.js';
 import * as HOST from '../overlays/host.js';
 import * as SEL from '../overlays/selection.js';
 import * as REC from '../model/records.js';
+import * as WRITE from '../write/write.js';
 import * as LAYER from '../text/layer.js';
 import * as LK from '../links/links.js';
 import * as PORT from '../bridge/port.js';
@@ -855,7 +856,7 @@ test('a click on the plane at far scale goes to the account whose cell holds it 
   globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
   globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
   try {
-    REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
     HOST.attach(/** @type {any} */ ({
       ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
       querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
@@ -876,7 +877,7 @@ test('a click on the plane at far scale goes to the account whose cell holds it 
     }
   } finally {
     HOST.dismiss();
-    REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }
 });
@@ -893,7 +894,7 @@ test('a click on a continuation\'s mark acts by the target it falls on: its newe
   globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
   try {
     // an account of sixty documents and nothing else: at HOME its first continuation, the twelve from the 49th, is one mark; its newest's text held, so a LEAP to it reads nothing
-    REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
     REC.takeIndex(/** @type {any} */ ({ docs: Array.from({ length: 60 }, (_, i) => ({ doc: `1.0.1.0.${i + 1}`, kind: 'edition', label: `Notes on ${i + 1}`, standing: 'public' })), counts: [{ account: '1.0.1', documents: 60 }], state: { arm: 'complete' } }));
     const NEWEST = '1.0.1.0.60', text = 'Notes on 60';
     REC.takeSpanSet(NEWEST, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
@@ -934,7 +935,7 @@ test('a click on a continuation\'s mark acts by the target it falls on: its newe
   } finally {
     HOST.dismiss();
     RENDER.stats.residueMarks = [];
-    REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }
 });
@@ -959,7 +960,7 @@ async function onDrafts(body) {
   globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => selection });
   const D = '1.0.1.0.2', O = '1.0.2.0.1', text = 'First line.\n\nSecond line here.\n', n = byteLength(text);
   try {
-    REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+    REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
     REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: null, standing: 'yours_to_read' }, { doc: O, kind: 'draft', label: null, standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }, { account: '1.0.2', documents: 1 }], state: { arm: 'complete' } }));
     for (const a of [D, O]) {
       REC.takeSpanSet(a, [{ subspace: 1, ordinal: 1, positions: n }]);
@@ -992,7 +993,7 @@ async function onDrafts(body) {
     await body({ D, O, clickAt, onCorner });
   } finally {
     HOST.dismiss(); SEL.clear(); LAYER.clear();
-    REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement; globalThis.Node = platform.Node;
   }
 }
@@ -1012,7 +1013,7 @@ test('a click on a block of a draft the person may edit places the caret at the 
   clickAt(O, second.pos);
   assert.deepEqual([SEL.selected()?.addr, SEL.selected()?.pos, LAYER.caret()?.addr], [O, second.pos, D], 'another\'s block: selected whole, no caret placed in it');
   // the corner's kept word
-  REC.setKept(D, { word: 'kept', reason: null });
+  WRITE.setKept(D, { word: 'kept', reason: null });
   const holder = { dataset: { corner: D } };
   const word = /** @type {any} */ ({ closest: (/** @type {string} */ sel) => (sel === '[data-corner]' ? holder : sel === '.kept-word[data-kept]' ? word : null) });
   onCorner({ target: word, stopPropagation() {} });
@@ -1040,7 +1041,7 @@ test('a click placing the caret in a draft the person may edit while the walk st
   clickAt(D, second.pos);
   await tick();
   assert.equal(await KEYS.dispatch(keyOf('q'), { where: 'plane', byKey: true }), true);
-  assert.deepEqual([REC.edits(D).map((e) => [e.pos, e.width, e.text]), LAYER.caret(), WALK.current()?.addr], [[[second.pos, 0, 'q']], { addr: D, pos: second.pos + 1, live: true }, D],
+  assert.deepEqual([WRITE.edits(D).map((e) => [e.pos, e.width, e.text]), LAYER.caret(), WALK.current()?.addr], [[[second.pos, 0, 'q']], { addr: D, pos: second.pos + 1, live: true }, D],
     'the key typed at the caret the click placed, the caret live after it, the walk in its draft');
 }));
 
@@ -1054,7 +1055,7 @@ test('a click on a block of text the person may not edit, a caret live in a draf
   assert.deepEqual([SEL.selected()?.addr, SEL.selected()?.pos, WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos, FOCUS.ringShown(), LAYER.caret()],
     [O, second.pos, 'block', O, second.pos, false, { addr: D, pos: second.pos, live: false }], 'the click on O\'s block: selected whole, the walk on its span with the ring out, the caret kept in D');
   assert.equal(await KEYS.dispatch(keyOf('q'), { where: 'plane', byKey: true }), true);
-  assert.deepEqual([REC.edits(D), REC.edits(O), LAYER.caret()], [[], [], { addr: D, pos: second.pos, live: false }], 'q: nothing typed in either');
+  assert.deepEqual([WRITE.edits(D), WRITE.edits(O), LAYER.caret()], [[], [], { addr: D, pos: second.pos, live: false }], 'q: nothing typed in either');
 }));
 
 test('a focus landing in a corner the view does not show whole moves the camera by the least pan that brings the whole corner into the view below the one line; one the view shows whole, or one landing while a flight runs, moves nothing (FP-20)', () => {

@@ -23,6 +23,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
+import * as WRITE from '../write/write.js';
 import * as PUMP from '../model/pump.js';
 import * as PORT from '../bridge/port.js';
 import * as FAKE from '../test/fake-port.js';
@@ -46,7 +47,7 @@ import { byteLength } from '../util.js';
 const addressOf = (/** @type {import('./labels.js').SetLabel} */ l) => (l.lines.find((x) => x.runs.every((r) => r.face === 'ident')) || { text: null }).text;
 
 test('while the shell\'s index reports changes it could not place, the board\'s label says so and no count is exact; at the floor it states the residue; complete, nothing (issue #212)', () => {
-  REC._reset();
+  REC._reset(); WRITE._reset();
   REC.takeIndex(/** @type {any} */ ({ docs: [], counts: [{ account: '1.0.1', documents: 3 }], state: { arm: 'complete' } }));
   assert.deepEqual([boardStatements(), REC.countOf('1.0.1').exact], [[], true], 'complete: nothing said, the counts exact');
   REC.setIndexState({ arm: 'at_the_floor', floor: 8265 });
@@ -57,7 +58,7 @@ test('while the shell\'s index reports changes it could not place, the board\'s 
 });
 
 test('while the board lags past a second its clause stands first among the board\'s statements — "as last read" at the stream\'s drop — and not within the second, nor once the catch-up\'s rows are taken (issue #367\'s design decision: "Meanwhile the board carries the clause")', async (ctx) => {
-  REC._reset();
+  REC._reset(); WRITE._reset();
   const fake = FAKE.create({ [FAKE.keyOf('changes', { session: 's-1', since: 10 })]: { result: { entries: [], next: 10, head: 10 } } });
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
@@ -91,7 +92,7 @@ test('where no board is held the plane names none — no board\'s outline, label
   };
   /** the launch's view, the board's extent; and an account's cell at mid scale */
   const whole = CAM.viewForCell(boardCell('1'), 0.92), mid = CAM.viewForCell(accountCell('1.0.1'), 0.85);
-  REC._reset();
+  REC._reset(); WRITE._reset();
   try {
     // the walk on its root, a key having moved it there: the ring drawn where a place is named
     await WALK.focusTo('1', null, true);
@@ -104,7 +105,7 @@ test('where no board is held the plane names none — no board\'s outline, label
     const atWhole = frame(whole), atMid = frame(mid);
     assert.ok(atWhole.labels.includes('board 1') && atWhole.lines.some((s) => s.includes('http://127.0.0.1:8642')) && atWhole.texts.length > 0 && atWhole.ring != null, `the board held: its label, its origin set, the ring at the root: ${JSON.stringify(atWhole)}`);
     assert.ok(atMid.labels.includes('frame 1.0.1'), `and the frame of the account under the view: ${JSON.stringify(atMid.labels)}`);
-  } finally { REC._reset(); }
+  } finally { REC._reset(); WRITE._reset(); }
 });
 
 test('at mid scale a document\'s label is its contents line: its first line from where those words stand in its first column, cut on a word, its address at the end of that row — past its region\'s prefix where the one line names the region, whole where nothing in view names it — each line on a plate of its own and its address in the title\'s ink (issue #23)', () => {
@@ -112,7 +113,7 @@ test('at mid scale a document\'s label is its contents line: its first line from
   const { ctx, inked, rects } = recorder();
   RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
   CAM.setViewport(4000, 900);
-  REC._reset();
+  REC._reset(); WRITE._reset();
   try {
     REC.setBoard({ board: 'b-1', name: '', origin: 'http://127.0.0.1:8642' });
     REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true });
@@ -152,7 +153,7 @@ test('at mid scale a document\'s label is its contents line: its first line from
     const shut = RENDER.stats.labels.find((x) => x.kind === 'doc' && x.place === D);
     assert.equal(shut && shut.lines[0].text, t('L.client-words', { words: t('F.corner.withheld', { owner: '1.0.1' }) }), 'its first line\'s place: its withheld box\'s words, bracketed');
     assert.ok(inked.some((x) => x.text === '1.0.1' && x.ink === COL.title) && inked.some((x) => x.text.includes('withheld') && x.ink === COL.text), `the owner in the title's ink, the words around it in the text's: ${JSON.stringify(inked.slice(0, 8))}`);
-  } finally { REC._reset(); CAM.setViewport(1440, 900); }
+  } finally { REC._reset(); WRITE._reset(); CAM.setViewport(1440, 900); }
 });
 
 test('below its reading scale a kept document\'s label carries its clause after its address — on its row, ending at the row\'s end, the address a space before it, at the address\'s size and in the title\'s ink — and at far scale its account\'s label counts it after its documents; neither within the second, nor once its read again sets it (issue #368\'s design decision: "On the canvas label, the clause follows the address, at the address\'s small size"; "At far scale, the account\'s label carries \'⟨n⟩ as last read\'")', async (ctx) => {
@@ -160,7 +161,7 @@ test('below its reading scale a kept document\'s label carries its clause after 
   const { ctx: canvas } = recorder();
   RENDER.attach(/** @type {any} */ ({ getContext: () => canvas }));
   CAM.setViewport(4000, 900);
-  REC._reset();
+  REC._reset(); WRITE._reset();
   const fake = FAKE.create({});
   try {
     PORT.boot(fake);
@@ -202,12 +203,12 @@ test('below its reading scale a kept document\'s label carries its clause after 
     release();
     for (let i = 0; i < 50 && PUMP.kept(D); i++) await new Promise((r) => setImmediate(r));
     assert.deepEqual([PUMP.kept(D), ...told(frame(far)), ...told(frame(mid))], [null, false, false, false, false], 'its read again set it: neither');
-  } finally { REC._reset(); CAM.setViewport(1440, 900); PORT.boot(null); }
+  } finally { REC._reset(); WRITE._reset(); CAM.setViewport(1440, 900); PORT.boot(null); }
 });
 
 /** an account of sixty documents the index lists, each its first line "Notes on ⟨n⟩": at HOME the first 48 stand whole and the other twelve are its first continuation's one mark */
 function sixty() {
-  REC._reset();
+  REC._reset(); WRITE._reset();
   REC.setBoard({ board: 'b-1', name: '', origin: 'http://127.0.0.1:8642' });
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true });
   REC.takeIndex(/** @type {any} */ ({ docs: Array.from({ length: 60 }, (_, i) => ({ doc: `1.0.1.0.${i + 1}`, kind: 'edition', label: `Notes on ${i + 1}`, standing: 'public' })), counts: [{ account: '1.0.1', documents: 60 }], state: { arm: 'complete' } }));
@@ -252,7 +253,7 @@ test('a continuation\'s mark holding two targets is two: its newest member\'s la
     assert.equal(RENDER.residueAtScreen(atRest.x, atRest.y)?.target, 'list', 'a press on the rest: the list');
     assert.equal(RENDER.residueAtScreen(m.rect.x - 5, atRest.y), null, 'off the mark: neither');
   } finally {
-    REC._reset(); CAM.setViewport(1440, 900);
+    REC._reset(); WRITE._reset(); CAM.setViewport(1440, 900);
     globalThis.document = platform.document; globalThis.window = platform.window;
   }
 });
@@ -268,7 +269,7 @@ test('a mark too small to hold two targets sets no newest label, and the whole m
     assert.deepEqual([m.newestTarget, m.newestLines], [null, []], 'no newest target, no newest label');
     assert.ok(![...RENDER.stats.labels, ...RENDER.stats.labelsLeftOut].some((l) => l.kind === 'newest'), 'no newest label handed to the pass');
     for (const p of [middleOf(m.rect), { x: m.rect.x + 1, y: m.rect.y + m.rect.h - 1 }]) assert.equal(RENDER.residueAtScreen(p.x, p.y)?.target, 'list', `at ${JSON.stringify(p)}: the list`);
-  } finally { REC._reset(); CAM.setViewport(1440, 900); }
+  } finally { REC._reset(); WRITE._reset(); CAM.setViewport(1440, 900); }
 });
 
 test('the walk\'s ring on a member the mark holds stands on the mark, and the mark names the member and its place among its members in its count\'s place, its first stop the mark\'s own (issue #42\'s design decision: "A member\'s ring is drawn on the mark with its name and place")', async () => {
@@ -284,7 +285,7 @@ test('the walk\'s ring on a member the mark holds stands on the mark, and the ma
     await WALK.focusTo('1.0.1:1', null, true);
     RENDER.draw();
     assert.ok(sameRect(RENDER.stats.ring, firstMark().rect) && firstMark().lines.join(' ') === markCount(12, true), 'the mark\'s own stop: the ring on it, its count');
-  } finally { REC._reset(); CAM.setViewport(1440, 900); }
+  } finally { REC._reset(); WRITE._reset(); CAM.setViewport(1440, 900); }
 });
 
 test('a box\'s history strip marks its document\'s members in chain order, the head in a triangle of its own where the board ended the chain there, and the version the box shows in the one line\'s window mark — a pinned member its own, the plain address the head, else its last member counted with the window open past it — a pinned member past the count standing with every member before it, and a daughter in no member\'s window (issue #241\'s design decision: "History strips mark `go.shownIn`\'s version with the line\'s window mark, and the head keeps its shape")', async () => {
@@ -296,7 +297,7 @@ test('a box\'s history strip marks its document\'s members in chain order, the h
   const { ctx: canvas, rects, filled } = recorder();
   RENDER.attach(/** @type {any} */ ({ getContext: () => canvas }));
   CAM.setViewport(4000, 900);
-  REC._reset();
+  REC._reset(); WRITE._reset();
   const box = docBox(D);
   /** em 3 over the box, below its reading scale */
   let view = { x: box.x + box.w / 2, y: box.y + box.h / 2, scale: 1 };
@@ -377,7 +378,7 @@ test('a box\'s history strip marks its document\'s members in chain order, the h
     headAt(daughter, 3);
   } finally {
     await leave(D);
-    REC._reset(); CAM.setViewport(1440, 900);
+    REC._reset(); WRITE._reset(); CAM.setViewport(1440, 900);
     globalThis.document = platform.document; globalThis.window = platform.window;
   }
 });
@@ -387,14 +388,14 @@ test('a box\'s history strip marks its document\'s members in chain order, the h
 /** a draft of three paragraphs held whole, its image its own bytes, with a paragraph typed above them: the document, a word of its second paragraph's first line by its position in the model's text and its width, and the bytes typed */
 function typedDraft() {
   const doc = '1.0.1.0.3', text = 'A first paragraph of the text.\n\nA second paragraph of the text.\n\nA third paragraph of the text.\n', typed = 'Words typed above the text the board served, enough to set a line of their own.\n\n';
-  REC._reset();
+  REC._reset(); WRITE._reset();
   REC.setBoard({ board: 'b-1', name: '', origin: 'http://127.0.0.1:8642' });
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true });
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc, kind: 'draft', label: 'draft', standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
   REC.takeSpanSet(doc, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
   REC.takeDelivery(doc, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
   REC.takeImage(doc, 1, [{ iStart: doc + '.0.1.1', width: byteLength(text) }]);
-  REC.addEdit(doc, { pos: 1, width: 0, text: typed });
+  WRITE.addEdit(doc, { pos: 1, width: 0, text: typed });
   return { doc, board: text.indexOf('second') + 1, width: 'second'.length, k: byteLength(typed) };
 }
 
@@ -425,7 +426,7 @@ test('an arrival in a text holding typed words is outlined on the lines the text
     assert.deepEqual([GO.arrivalMark()?.pos, head.width], [1, k], 'its position the head of the text shown, the typed line');
     assert.ok(RENDER.stats.arrival.length === 1 && RENDER.stats.arrival[0].run === -1, 'one rect, the block\'s');
     assert.deepEqual([RENDER.stats.arrival[0].x, RENDER.stats.arrival[0].y], [LAYER.foldBoxes(doc, head.pos, head.width)[0].rect.x, LAYER.foldBoxes(doc, head.pos, head.width)[0].rect.y], 'on the block at that head');
-  } finally { GO.endArrival(); REC._reset(); CAM.setViewport(1440, 900); globalThis.document = platform.document; globalThis.window = platform.window; }
+  } finally { GO.endArrival(); REC._reset(); WRITE._reset(); CAM.setViewport(1440, 900); globalThis.document = platform.document; globalThis.window = platform.window; }
 });
 
 test('the walk\'s span in a text holding typed words is ringed on the lines the text shown holds it on (the focus record\'s D3; issue #515)', async () => {
@@ -449,5 +450,5 @@ test('the walk\'s span in a text holding typed words is ringed on the lines the 
     const lines = /** @type {Array<{x: number, y: number, w: number, h: number}>} */ (LAYER.lineBoxes(doc, shown.pos, shown.width));
     const x = Math.min(...lines.map((r) => r.x)), y = Math.min(...lines.map((r) => r.y));
     assert.deepEqual(RENDER.focusBox(visibleView(0)), { x, y, w: Math.max(...lines.map((r) => r.x + r.w)) - x, h: Math.max(...lines.map((r) => r.y + r.h)) - y }, 'the ring\'s box the bounds of the lines the text shown holds the span on');
-  } finally { LAYER.clear(); LAYER.attach(/** @type {any} */ (null), null); REC._reset(); globalThis.document = platform.document; globalThis.window = platform.window; }
+  } finally { LAYER.clear(); LAYER.attach(/** @type {any} */ (null), null); REC._reset(); WRITE._reset(); globalThis.document = platform.document; globalThis.window = platform.window; }
 });

@@ -53,6 +53,7 @@
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
+import * as WRITE from '../write/write.js';
 import * as F from '../model/frames.js';
 import * as GO from '../nav/go.js';
 import * as FACES from './faces.js';
@@ -156,7 +157,7 @@ const carryOf = (/** @type {RunAnswer} */ a) => ({ ordinal: a.run.pos, positions
  * @returns {object}
  */
 function asOfBase(addr, frame) {
-  const at = REC.edits(addr).length && REC.has(addr) ? REC.doc(addr).readAt : null;
+  const at = WRITE.edits(addr).length && REC.has(addr) ? REC.doc(addr).readAt : null;
   return at != null ? F.opAt(at, frame) : frame;
 }
 

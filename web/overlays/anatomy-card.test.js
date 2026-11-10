@@ -22,6 +22,7 @@ import * as ANATOMY from './anatomy-card.js';
 import * as HOST from './host.js';
 import * as PORT from '../bridge/port.js';
 import * as REC from '../model/records.js';
+import * as WRITE from '../write/write.js';
 import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as LK from '../links/links.js';
@@ -272,7 +273,7 @@ test('at an end in a draft holding typed text the card quotes the words its byte
   PORT.boot(fake);
   LK.readers({ text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null) });
   try {
-    REC.addEdit(D, { pos: 1, width: 0, text: 'ab' });
+    WRITE.addEdit(D, { pos: 1, width: 0, text: 'ab' });
     const s = /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === L2));
     assert.deepEqual([s.pos, s.width], [13, 5], 'drawn two positions on, past the words typed');
     await ANATOMY.open(s, null, false);
@@ -282,7 +283,7 @@ test('at an end in a draft holding typed text the card quotes the words its byte
     assert.ok(text(p.host.innerHTML).includes('The f'), `the near end's words are its bytes' own: ${text(p.host.innerHTML)}`);
     HOST.dismiss();
     assert.deepEqual(fake.unanswered, []);
-  } finally { REC.clearEdits(D); LK.readers({}); }
+  } finally { WRITE.clearEdits(D); LK.readers({}); }
 });
 
 test('the card says when its link was made: "made" and the day of the commit that minted it, as its read answered, between the owner row and the lineage — "not recorded" where the board holds no reading of the time, "on or before" the later day where only an hour\'s anchor dates it and that hour crosses midnight — and never an age or a log position (issue #22\'s design decision: "The row reads \'made 12 March 2026\'. Drop the \'age\' label and any log position")', async () => {

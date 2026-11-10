@@ -53,6 +53,7 @@ import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
 import * as REC from '../model/records.js';
+import * as WRITE from '../write/write.js';
 import * as PUMP from '../model/pump.js';
 import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
@@ -134,7 +135,7 @@ async function run(/** @type {Promise<unknown>} */ move) {
 }
 
 before(async () => {
-  REC._reset();
+  REC._reset(); WRITE._reset();
   fake = FAKE.create(script);
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
@@ -1237,7 +1238,7 @@ test('in a draft holding typed text the walk follows the text shown: its stops a
   try {
     assert.deepEqual(REC.doc(T).blocks.map((b) => b.pos), [1, 14, 27]);
     // a line typed between Alpha and Bravo: a stop of its own, each span after it thirteen positions on
-    REC.addEdit(T, { pos: 14, width: 0, text: 'Typed line.\n\n' });
+    WRITE.addEdit(T, { pos: 14, width: 0, text: 'Typed line.\n\n' });
     assert.deepEqual(LAYER.shownOf(T).blocks.map((b) => [b.pos, b.text]), [[1, 'Alpha line.'], [14, 'Typed line.'], [27, 'Bravo line.'], [40, 'Charlie line.']]);
     const kids = await WALK.childrenOf({ kind: 'document', addr: T, pos: null, link: null });
     assert.deepEqual(kids.map((n) => [n.kind, n.pos]), [['block', 1], ['block', 14], ['block', 27], ['block', 40]], 'the walk lists the blocks of the text shown, the typed line a stop among them');
@@ -1260,14 +1261,14 @@ test('in a draft holding typed text the walk follows the text shown: its stops a
     await run(WALK.key('in'));
     assert.deepEqual(walkAt(), ['block', T, 27], '→: Bravo, the block under the view\'s centre');
     // a line typed after Charlie, the last span: a stop of its own too
-    REC.addEdit(T, { pos: 53, width: 0, text: '\n\nDelta typed.' });
+    WRITE.addEdit(T, { pos: 53, width: 0, text: '\n\nDelta typed.' });
     assert.deepEqual(LAYER.shownOf(T).blocks.map((b) => b.pos), [1, 14, 27, 40, 55], 'Delta shown at 55');
     at(LAYER.centreOf(T, 55), 12.5 / LAYER.foldOf(REC.doc(T)).fs);
     await WALK.retakeFromView(true);
     assert.deepEqual(walkAt(), ['block', T, 55], 'over Delta: the typed line itself');
     assert.deepEqual(fake.unanswered, []);
   } finally {
-    REC.clearEdits(T);
+    WRITE.clearEdits(T);
     REC.invalidate(T);
   }
 });
@@ -1285,24 +1286,24 @@ test('a stop holds its place by its bytes through the person\'s edits: typing ab
     await WALK.focusTo(T, 14);
     assert.deepEqual([walkAt(), words()], [['block', T, 14], 'Bravo line.']);
     // typing above the focused stop: the same words, wherever they stand now
-    REC.addEdit(T, { pos: 1, width: 0, text: 'New first line.\n\n' });
+    WRITE.addEdit(T, { pos: 1, width: 0, text: 'New first line.\n\n' });
     assert.deepEqual([walkAt(), words(), WALK.siblingsNow().map((n) => n.pos)], [['block', T, 31], 'Bravo line.', [1, 18, 31, 44]], 'typed above it: the focus on the same words, seventeen positions on, the typed line listed');
     // its line partly deleted — its first word: it stays on what remains
-    REC.addEdit(T, { pos: 31, width: 6, text: '' });
+    WRITE.addEdit(T, { pos: 31, width: 6, text: '' });
     assert.deepEqual([walkAt(), words()], [['block', T, 31], 'line.'], 'partly deleted: it stays on the line');
     // an ack names the typed words' addresses: nothing in the walk moves
     const was = told;
-    REC.mint(T, /** @type {number} */ (REC.edits(T)[0].page), 17, T + '.0.1.500', 9);
+    REC.mint(T, /** @type {number} */ (WRITE.edits(T)[0].page), 17, T + '.0.1.500', 9);
     assert.deepEqual([walkAt(), words(), told], [['block', T, 31], 'line.', was], 'at the ack: the same element, its watchers told nothing');
     // its line deleted whole: no stop is left there, and the focus goes to the element after the removal point
-    REC.addEdit(T, { pos: 31, width: 7, text: '' });
+    WRITE.addEdit(T, { pos: 31, width: 7, text: '' });
     assert.deepEqual([LAYER.shownOf(T).blocks.map((b) => b.text), WALK.siblingsNow().map((n) => n.pos)], [['New first line.', 'Alpha line.', 'Charlie line.'], [1, 18, 31]], 'the deleted line is no block of the text shown and no stop');
     assert.deepEqual([walkAt(), words()], [['block', T, 31], 'Charlie line.'], 'the focus on the element after the point its bytes were removed at');
     // the last line deleted whole: none stands after it, so the one before
-    REC.addEdit(T, { pos: 29, width: 15, text: '' });
+    WRITE.addEdit(T, { pos: 29, width: 15, text: '' });
     assert.deepEqual([walkAt(), words()], [['block', T, 18], 'Alpha line.'], 'no element after: the one before; a stop is never lost');
   } finally {
-    REC.clearEdits(T);
+    WRITE.clearEdits(T);
     REC.invalidate(T);
   }
 });
@@ -1355,23 +1356,23 @@ test('the mirror reads the person\'s own typing, and says of words the board doe
   const itemAt = (/** @type {number} */ pos) => (mirror.innerHTML.match(new RegExp(`<li [^>]*data-pos="${pos}"[^>]*>.*?</li>`)) || [''])[0];
   const held = 'aria-describedby="walk-held"';
   try {
-    REC.addEdit(T, { pos: 14, width: 0, text: 'Typed line.\n\n' });
+    WRITE.addEdit(T, { pos: 14, width: 0, text: 'Typed line.\n\n' });
     await WALK.focusTo(T, 14);
     assert.ok(itemAt(14).includes('Typed line.') && mirror.innerHTML.includes(`<div id="walk-held" hidden>${t('L.held.device')}</div>`), 'the typed line is an item, read with its words');
     assert.ok(!mirror.innerHTML.includes(held), 'typed and unsent, no line held: no item says anything of it');
-    REC.setFlight(T, true);
+    WRITE.setFlight(T, true);
     WALK.render();
     assert.ok(!mirror.innerHTML.includes(held), 'in flight: nothing more');
-    REC.setFlight(T, false);
-    REC.setHeld(T, /** @type {import('../model/frames.js').HeldLine[]} */ (F.decodeHeldRows([{ held: 1, doc: T, base: 5, frame: { op: 'insert', at: { ordinal: '14', subspace: '1' }, values: ['Typed line.\n\n'] }, cause: 'unreachable', sent: false, time: 1 }])));
+    WRITE.setFlight(T, false);
+    WRITE.setHeld(T, /** @type {import('../model/frames.js').HeldLine[]} */ (F.decodeHeldRows([{ held: 1, doc: T, base: 5, frame: { op: 'insert', at: { ordinal: '14', subspace: '1' }, values: ['Typed line.\n\n'] }, cause: 'unreachable', sent: false, time: 1 }])));
     WALK.render();
     assert.ok(itemAt(14).includes(held), 'under a hold: the typed line\'s item is described "held on this device"');
     assert.ok(!itemAt(1).includes(held) && !itemAt(27).includes(held), 'and no item of words the board holds is');
-    REC.mint(T, /** @type {number} */ (REC.edits(T)[0].page), 13, T + '.0.1.500', 9);
+    REC.mint(T, /** @type {number} */ (WRITE.edits(T)[0].page), 13, T + '.0.1.500', 9);
     WALK.render();
     assert.ok(!mirror.innerHTML.includes(held), 'minted: on the board, described so no more');
   } finally {
-    REC.setHeld(T, []); REC.clearEdits(T); REC.invalidate(T);
+    WRITE.setHeld(T, []); WRITE.clearEdits(T); REC.invalidate(T);
     WALK.attach(/** @type {any} */ ({ innerHTML: '', tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} } }));
   }
 });
@@ -1385,16 +1386,16 @@ test('in a draft holding typed text a link\'s stop of the walk stands at its fir
   REC.takeLink({ addr: L, from: [{ start: T + '.0.1.14', width: '0.0.0.0.0.0.0.5', doc: T, account: '1.0.1', whole: false, subspace: 1, ordinal: 14, positions: 5 }], to: [{ start: D, width: '0.0.0.0.1', doc: D, account: '1.0.1', whole: true, subspace: null, ordinal: null, positions: null }], type: '1.1.0.1.0.1.0.3.13' });
   LK.readers({ text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null) });
   try {
-    REC.addEdit(T, { pos: 1, width: 0, text: 'Typed line.\n\n' });
+    WRITE.addEdit(T, { pos: 1, width: 0, text: 'Typed line.\n\n' });
     const stop = (await WALK.childrenOf({ kind: 'document', addr: T, pos: null, link: null })).find((n) => n.kind === 'link');
     assert.deepEqual([stop?.pos, stop?.link?.pos, stop?.link?.width], [27, 27, 5], 'the walk\'s stop at the end\'s first drawn byte, thirteen positions on where the text shown holds it');
     assert.deepEqual(LK.shownAt(T, { pos: 27, width: 5 }).map((s) => s.link.addr), [L], 'the span a slot reads meets it where the text shown holds it');
     // the stop holds its place by the end's bytes: more typed above it, it stands on the same link, where it is drawn now
     await WALK.focusTo(T, 27, false, true, { link: L, key: /** @type {import('../links/links.js').Shown} */ (stop?.link).key });
     assert.deepEqual([WALK.current()?.kind, WALK.current()?.pos], ['link', 27]);
-    REC.addEdit(T, { pos: 1, width: 0, text: 'ab' });
+    WRITE.addEdit(T, { pos: 1, width: 0, text: 'ab' });
     assert.deepEqual([WALK.current()?.kind, WALK.current()?.pos, WALK.current()?.link?.link.addr], ['link', 29, L], 'typed above it: the walk on the link\'s stop still, two positions on');
-  } finally { REC.clearEdits(T); LK.readers({}); }
+  } finally { WRITE.clearEdits(T); LK.readers({}); }
 });
 
 test('the count, the article\'s symbols and the mirror name the same ends, two lying inside a withheld run among them (issue #202: "Add a test that the count, the symbols and the mirror agree for an end inside a withheld run"): the presence words count three; the text\'s end is its own symbol and the run\'s two one symbol at the run carrying both; the document\'s links the text\'s end alone, the run\'s item counting its two and holding them a level below, → entering them and ← back; Back\'s light at one marks the run\'s item', async () => {

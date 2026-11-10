@@ -20,6 +20,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
+import * as WRITE from '../write/write.js';
 import * as LK from '../links/links.js';
 import * as LAYER from '../text/layer.js';
 import * as CAM from '../plane/camera.js';
@@ -50,7 +51,7 @@ const LINKS = {
 
 /** the model holding some of the links, D and H read — their images their own bytes, where nothing has moved them — the person's citation's far end projected where its slot stores it, the reveal at stage 3 at D with others' links on */
 function build(/** @type {string[]} */ addrs) {
-  REC._reset(); LK._reset();
+  REC._reset(); WRITE._reset(); LK._reset();
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   for (const a of addrs) REC.takeLink({ addr: a, ...LINKS[/** @type {keyof typeof LINKS} */ (a)], type: CITE });
   REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 100 }]);
@@ -446,8 +447,8 @@ test('in a draft holding typed words a beam leaves its near end where the text s
   build([OWN]);
   LK.readers({ text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null) });
   try {
-    REC.addEdit(D, { pos: 1, width: 0, text: 'xyz' });
-    REC.addEdit(H, { pos: 1, width: 0, text: 'ab' });
+    WRITE.addEdit(D, { pos: 1, width: 0, text: 'xyz' });
+    WRITE.addEdit(H, { pos: 1, width: 0, text: 'ab' });
     const s = own();
     assert.deepEqual([s.pos, s.farRuns], [53, [{ pos: 1, width: 5 }]], 'LK: the near end in the text shown, the far end as `project` answered it');
     const base = geometry({ farMounted: true, centre: { x: 750, y: 415 } });
@@ -485,7 +486,7 @@ test('the page\'s geometry reads a block of the text the page shows: at a positi
   onPage(() => {
     REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: text.length }]);
     REC.takeDelivery(D, [{ pos: 1, width: text.length, kind: 'content', text, ref: null, origin: null }]);
-    REC.addEdit(D, { pos: 1, width: 0, text: typed });
+    WRITE.addEdit(D, { pos: 1, width: 0, text: typed });
     const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), c = f.columns[0];
     CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 3, scale: 12 / f.fs });
     LAYER.frame();

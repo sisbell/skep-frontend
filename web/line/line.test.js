@@ -43,6 +43,7 @@ import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
 import * as REC from '../model/records.js';
+import * as WRITE from '../write/write.js';
 import * as PUMP from '../model/pump.js';
 import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
@@ -94,7 +95,7 @@ const MID = 120 / DOC_W;
 const over = (/** @type {string} */ doc, /** @type {number} */ scale) => { const b = docBox(doc); CAM.set({ x: b.x + b.w / 2, y: b.y + b.h / 2, scale }); };
 
 before(async () => {
-  REC._reset();
+  REC._reset(); WRITE._reset();
   fake = FAKE.create(script);
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
@@ -369,7 +370,7 @@ test('the strip over a text holding typed words follows the text shown: its wind
     await WALK.retakeFromView(true);
     assert.ok(WALK.kept() && LINE.addressDisplay().doc === LONG, 'the walk kept on the document, off the view\'s centre');
   };
-  REC.addEdit(LONG, { pos: 1, width: 0, text: typed });
+  WRITE.addEdit(LONG, { pos: 1, width: 0, text: typed });
   try {
     await keptAbove();
     const a = LINE.addressDisplay(), w = /** @type {import('../plane/layout.js').Window} */ (LAYER.windowIn(LONG));
@@ -380,11 +381,11 @@ test('the strip over a text holding typed words follows the text shown: its wind
     const extent = /** @type {number} */ (LAYER.shownOf(LONG).extent), width = ((w.to - 1) / extent * 100).toFixed(1) + '%';
     assert.equal(extent, /** @type {number} */ (REC.doc(LONG).extent) + k, 'the text shown: the model\'s and the typed words');
     assert.ok(host.innerHTML.includes(`<span class="strip-window open-start" style="left:0.0%;width:${width}"></span>`), `the window drawn along the text shown's length, ${width} of it: ${(host.innerHTML.match(/<span class="strip-window[^>]*>/) || [''])[0]}`);
-  } finally { REC.clearEdits(LONG); }
+  } finally { WRITE.clearEdits(LONG); }
   // a position's place along the strip is its place in the text shown: on the short document D, a long line typed at its start
   // moves its last span most of the way along, where the model's own length would put it past the strip's end
   const many = 'A long line typed at the start of a short document. '.repeat(4) + '\n\n', last = /** @type {import('../model/records.js').Block} */ ([...REC.doc(D).blocks].reverse().find((b) => b.kind === 'para' && b.text.trim()));
-  REC.addEdit(D, { pos: 1, width: 0, text: many });
+  WRITE.addEdit(D, { pos: 1, width: 0, text: many });
   try {
     await WALK.focusTo(D, last.pos + many.length, false, true, null, true);
     const c = LAYER.centreOf(D, last.pos + many.length);
@@ -393,7 +394,7 @@ test('the strip over a text holding typed words follows the text shown: its wind
     const extent = /** @type {number} */ (LAYER.shownOf(D).extent), left = ((last.pos + many.length - 1) / extent * 100).toFixed(1) + '%';
     assert.ok(last.pos + many.length - 1 > /** @type {number} */ (REC.doc(D).extent), 'the position lies past the model\'s own length');
     assert.ok(host.innerHTML.includes(`<span class="strip-mark" style="left:${left}"></span>`), `the mark at its place along the text shown's length, ${left}: ${(host.innerHTML.match(/<span class="strip-mark[^>]*>/) || [''])[0]}`);
-  } finally { REC.clearEdits(D); }
+  } finally { WRITE.clearEdits(D); }
   // held in part: its first ten paragraphs, the rest of its columns estimated from its extent
   const held = LONG_TEXT.split('\n\n').slice(0, 10).join('\n\n') + '\n\n', extent = LONG_TEXT.length;
   REC.invalidate(LONG);

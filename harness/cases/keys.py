@@ -2683,9 +2683,9 @@ def who_wrote_typed(ctx, r):
         answer = ctx.js('window.__skep.overlay().text') or ''
         frames = [json.loads(c['frame']) for c in ctx.js('window.__skep.bridge.calls()')[n_calls:] if c.get('op') == 'show_origin']
         anchor = ctx.js('(async () => { const H = await import("./overlays/host.js"); const c = H.currentState(); return c && c.anchor ? c.anchor.span : null; })()')
-        edits = ctx.js('window.__skep.model.edits(%s)' % json.dumps(doc))
+        edits = ctx.js('window.__skep.write.edits(%s)' % json.dumps(doc))
     finally:
-        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), R = await import("./model/records.js"); H.dismiss(); S.clear(); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), W = await import("./write/write.js"); H.dismiss(); S.clear(); L.dropCaret(); W.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
         ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
     def asked(f):
         inner = f.get('frame') or {}
@@ -2742,7 +2742,7 @@ def typed_surfaces(ctx, r):
             outline = (ctx.js('window.__skep.arrivalAnchors()') or {}).get('outline')
             focus = ctx.js('window.__skep.view.focus()')
     finally:
-        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), R = await import("./model/records.js"), G = await import("./nav/go.js"); H.dismiss(); S.clear(); G.endArrival(); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), W = await import("./write/write.js"), G = await import("./nav/go.js"); H.dismiss(); S.clear(); G.endArrival(); L.dropCaret(); W.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
         ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
     placed = (hint or {}).get('placed') or {}
     r.check(bool(hint_line) and (hint or {}).get('id') == 'B3.caret.enter' and placed.get('by') == 'edge' and abs(placed['anchor']['y'] - hint_line[0]['y']) <= 0.5,

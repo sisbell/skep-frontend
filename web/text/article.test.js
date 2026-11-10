@@ -429,7 +429,7 @@ test('the corner: version k of n with R20\'s teaching keyed by venue; a draft\'s
 
 test('a draft\'s corner carries its kept state in a slot of fixed width — the longest of the three words\' as the view measures them — the word and its string named on it, an empty box of that width hidden from assistive technology while no state is set, before the chip in either form; the word\'s act opens the statement whole on a line of its own, the save chord\'s line at "kept" and "nothing to save —" before the word and its reason at the other two; the corner carries no "past states" act while the strings table holds no reason for an inert one; an edition\'s corner is unchanged (B3-S1, B3-S2; D5 K-57, K-74; FP-34)', () => {
   const draft = doc({ kind: 'draft', meta: null });
-  /** @type {Array<[import('../model/records.js').KeptState['word'], string]>} */
+  /** @type {Array<[import('../write/write.js').KeptState['word'], string]>} */
   const WORDS = [['kept', 'B3.kept'], ['not yet kept', 'B3.not-yet-kept'], ['not kept', 'B3.not-kept']];
   const em = Math.max(...WORDS.map(([, id]) => advances(t(id))));
   assert.ok(em === advances(t('B3.not-yet-kept')) && em > advances(t('B3.kept')), 'the slot the longest word\'s, wider than the shortest');

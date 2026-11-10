@@ -394,11 +394,11 @@
 // the same words copied from a box and from a pane are named alike.
 // The text shown of a draft the person has typed in is the record M-DERIVE
 // derives from the model's — its delivered runs with the page-local edits
-// applied (`shownDoc`; K-72) — mounted, folded and measured in the model's
-// record's place and set again as the edits move, the model's own record
-// standing as the board served it. It is the one text every part of the page
-// follows there: every position the fold places or answers, the walk's, the
-// selection's, the caret's and an arrival's is one of it, computed to draw
+// W-WRITE holds applied (`shownDoc`; K-72) — mounted, folded and measured in
+// the model's record's place and set again as the edits move, the model's
+// own record standing as the board served it. It is the one text every part
+// of the page follows there: every position the fold places or answers, the
+// walk's, the selection's, the caret's and an arrival's is one of it, computed to draw
 // and to reach, and what holds a place across the person's edits holds it by
 // the identity of its bytes, read through that text's image (`shownIdentity`,
 // `placedShown`, `firstStanding`) — a byte the board holds by its permanent
@@ -428,9 +428,9 @@
 // and Tab put their characters in, Backspace and Delete take a character out
 // (`caretType`, `caretErase`), or, where a selection whole in the text shown
 // stands in the caret's text, its bytes are replaced by the key's text, none
-// for Backspace and Delete (`caretReplace`) — each an edit added to the
-// model's page-local list and shown through the derived record, nothing
-// composed and nothing sent (FP-14). Leaving the text — Esc to the walk at
+// for Backspace and Delete (`caretReplace`) — each an edit handed to W-WRITE
+// and shown through the derived record, nothing composed and nothing sent
+// (FP-14). Leaving the text — Esc to the walk at
 // the caret's span, a move of the walk, a zoom past its reading scale (D5
 // M-2, K-77; N-KEYS', N-WALK's) — keeps the caret at its position
 // (`leaveCaret`), which Enter, a printable key or Shift with ← or → at its
@@ -457,6 +457,7 @@
 
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
+import * as WRITE from '../write/write.js';
 import * as LK from '../links/links.js';
 import * as FOCUS from '../nav/focus.js';
 import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor, reanchored, measure, fit, landingPx, panBy, panInto, flying } from '../plane/camera.js';
@@ -562,7 +563,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @property {number} runFrom the model's record's window at mount
  * @property {number} runTo
  * @property {number} rev the model's record's revision at mount
- * @property {number} editRev how many times the draft's page-local edits had changed at mount (M-REC's `editRev`)
+ * @property {number} editRev how many times the draft's page-local edits had changed at mount (W-WRITE's `editRev`)
  * @property {Made} made what the article was made from
  * @property {Where} where where its words were read, as its box showed them as it mounted (`shownWhere`): a chain counted or metadata read since moves the record's revision, and the article mounted again names what they told
  * @property {number} grev the view revision at mount
@@ -955,9 +956,9 @@ function shownDoc(d) {
 
 /** the record derived from a draft's delivered runs and its page-local edits with what each edit removed (`shownDoc`, `removedBy`), as last made; null where the draft holds no edit */
 function derivedOf(/** @type {Doc} */ d) {
-  const edits = REC.edits(d.addr);
+  const edits = WRITE.edits(d.addr);
   if (!edits.length) { shownCache.delete(d.addr); return null; }
-  const key = `${d.rev}:${d.from}:${d.to}:${REC.editRev(d.addr)}`, c = shownCache.get(d.addr);
+  const key = `${d.rev}:${d.from}:${d.to}:${WRITE.editRev(d.addr)}`, c = shownCache.get(d.addr);
   if (c && c.key === key) return c;
   const out = applyEdits(d, edits, (page, width) => REC.pageIds(d.addr, page, width));
   const made = { key, doc: out.doc, removed: out.removed };
@@ -1091,8 +1092,8 @@ export const madeHere = (/** @type {string} */ addr, /** @type {number} */ pos, 
 /** does a span of the text shown hold a byte the page made that the board has not minted (`shownRuns`)? */
 export const unminted = (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width) => shownRuns(addr, pos, width).some((r) => r.made && !r.minted);
 
-/** does a draft hold a line the board has not kept — D6's machine's own record of its held lines (M-REC's `heldOf`), the one reading of any sign that words are not on the board */
-export const holding = (/** @type {string} */ addr) => REC.heldOf(addr).length > 0;
+/** does a draft hold a line the board has not kept — D6's machine's own record of its held lines (W-WRITE's `heldOf`), the one reading of any sign that words are not on the board */
+export const holding = (/** @type {string} */ addr) => WRITE.heldOf(addr).length > 0;
 
 /**
  * Does a stretch of the text shown hold what a hold keeps from the board
@@ -1112,7 +1113,7 @@ export function heldIn(addr, pos, width) {
   const image = shownOf(addr).image, end = pos + width;
   /** where the byte a held line names stands in the text shown, by its permanent address; -1 where the text places it nowhere */
   const at = (/** @type {string | null} */ i) => { const cut = i ? i.lastIndexOf('.') : -1; const [s] = i && cut > 0 ? REC.placedIn(image, [{ prefix: i.slice(0, cut), ordinal: Number(i.slice(cut + 1)), width: 1 }]) : []; return s ? s.pos : -1; };
-  return REC.heldOf(addr).some((row) => {
+  return WRITE.heldOf(addr).some((row) => {
     if (row.frame.op !== 'delete' || !row.anchors) return false;
     const before = at(row.anchors.before), after = at(row.anchors.after);
     return (before >= pos && before < end) || (after >= pos && after < end);
@@ -1152,7 +1153,7 @@ export const firstStanding = (addr, ids) => (REC.has(addr) ? REC.firstPlacedIn(s
 
 /**
  * @typedef {Object} Removal — a stretch of bytes one of the page's own edits removed from a draft and no edit since put back (`removals`)
- * @property {number} of the edit that removed them, an index into the draft's edits (M-REC's `edits`)
+ * @property {number} of the edit that removed them, an index into the draft's edits (W-WRITE's `edits`)
  * @property {number} from the first of the bytes it removed that the stretch holds, counted from 0
  * @property {number} width how many
  * @property {number} at where they stood, as a position of the text shown now: the removal point
@@ -1161,7 +1162,7 @@ export const firstStanding = (addr, ids) => (REC.has(addr) ? REC.firstPlacedIn(s
 
 /**
  * The page's own record of the bytes its edits removed from a draft and have
- * not put back (see the head; M-REC's `edits`): each stretch, by the edit that
+ * not put back (see the head; W-WRITE's `edits`): each stretch, by the edit that
  * removed it, its bytes by identity, and the removal point as the edits since
  * moved it. What a return reads to say the person removed a passage, and what
  * a put-back places again (`putBack`).
@@ -1170,7 +1171,7 @@ export const firstStanding = (addr, ids) => (REC.has(addr) ? REC.firstPlacedIn(s
  */
 export function removals(addr) {
   if (!REC.has(addr)) return [];
-  const edits = REC.edits(addr), took = removedBy(REC.doc(addr));
+  const edits = WRITE.edits(addr), took = removedBy(REC.doc(addr));
   /** @type {Removal[]} */
   const out = [];
   for (const [i, e] of edits.entries()) {
@@ -1250,7 +1251,7 @@ export function removedOf(addr, ids) {
  * (see the head; B3-S7's "put back in the current text"): each stretch of
  * them placed again at its own removal point by its identity (M-REC's
  * `Edit.back`), the last in the text first so no placing moves another's
- * point, all of them one step (M-REC's `addEdits`). Nothing is composed or
+ * point, all of them one step (W-WRITE's `addEdits`). Nothing is composed or
  * sent (FP-14). Nothing where the page's record holds no removal of them.
  * @param {string} addr
  * @param {ISpan[]} ids the bytes, by identity
@@ -1259,7 +1260,7 @@ export function removedOf(addr, ids) {
 export function putBack(addr, ids) {
   const { took } = removedOf(addr, ids);
   if (!took.length) return [];
-  REC.addEdits(addr, [...took].reverse().map((r) => ({ pos: r.at, width: 0, text: '', back: { of: r.of, from: r.from, width: r.width } })));
+  WRITE.addEdits(addr, [...took].reverse().map((r) => ({ pos: r.at, width: 0, text: '', back: { of: r.of, from: r.from, width: r.width } })));
   // the caret holds its place by the byte it stands before: words put back at or before it move it on with that byte
   if (caret_ && caret_.addr === addr) { let pos = caret_.pos; for (const r of [...took].reverse()) if (pos >= r.at) pos += r.width; if (pos !== caret_.pos) caret_ = { ...caret_, pos }; }
   markDirty();
@@ -1336,7 +1337,7 @@ export function chainOf(addr) {
  */
 function cornerFacts(d) {
   const h = REC.health();
-  return { members: chainOf(d.addr), lags: lags(), notebook: true, localTrust: !!(h && h.auth && h.auth.local_trust), kept: REC.keptOf(d.addr), originOwner };
+  return { members: chainOf(d.addr), lags: lags(), notebook: true, localTrust: !!(h && h.auth && h.auth.local_trust), kept: WRITE.keptOf(d.addr), originOwner };
 }
 
 // ---- the fold ---------------------------------------------------------------------------------------------------
@@ -1400,7 +1401,7 @@ function folded(d) {
   d = shownDoc(d);
   const room = docBox(d.addr), cpl = measure(), head = headKey(d);
   if (d.from < 0) {
-    const key = `${d.extent != null ? `est:${d.extent}` : 'slot'}:${cpl}${head ? `:${head}:${REC.rev()}` : ''}`;
+    const key = `${d.extent != null ? `est:${d.extent}` : 'slot'}:${cpl}${head ? `:${head}:${REC.rev()}:${WRITE.rev()}` : ''}`;
     const f = folds.get(d.addr);
     if (f && f.key === key) return f.fold;
     const band = head ? headBand(d, viewFor(d)) : 0, plan = `${d.extent}|${cpl}|${band}`;
@@ -1409,7 +1410,7 @@ function folded(d) {
     folds.set(d.addr, { key, plan, fold: out, set: false });
     return out;
   }
-  const key = `${d.rev}:${d.from}:${d.to}:${REC.rev()}:${grev}:${cpl}:${head}`;
+  const key = `${d.rev}:${d.from}:${d.to}:${REC.rev()}:${WRITE.rev()}:${grev}:${cpl}:${head}`;
   const f = folds.get(d.addr);
   if (f && f.key === key) return f.fold;
   const v = viewFor(d), owner = REC.ownerAccount(d);
@@ -2470,7 +2471,7 @@ function mount(d, v, span, banded) {
   const units = unitsOf(f.lines, made.blocks);
   /** @type {Mounted} */
   const rec = {
-    el, d, lay, runFrom: base.from, runTo: base.to, rev: base.rev, editRev: REC.editRev(d.addr), made, where: shownWhere(base), grev, fold: f, fs: f.fs, corner: cornerOfView(d, view),
+    el, d, lay, runFrom: base.from, runTo: base.to, rev: base.rev, editRev: WRITE.editRev(d.addr), made, where: shownWhere(base), grev, fold: f, fs: f.fs, corner: cornerOfView(d, view),
     template, units, cuts: new Map(), parts: [], lines: new Set(), banded, scale: 1, blockTops: [], marked: [], markedFor: '', litFor: null, labelFor: null, legible: false, fit: fitKey(),
     runs: originRunsAt(d, made, view, units, f),
   };
@@ -2827,7 +2828,7 @@ export function boardKeptIn() {
 const lags = () => PUMP.boardKept() !== null;
 
 /** what a document's corner's items are made from beside its record and the links (`Mounted.corner`): the board's lag, its box's chain (`chainOf`), the newer version it offers to read (the reader `newer`), the draft's kept state and whether its statement stands open — the items made again where it moved */
-const cornerKey = (/** @type {string} */ addr) => JSON.stringify([lags(), chainOf(addr), read.newer(addr), REC.keptOf(addr), openStatements.has(addr)]);
+const cornerKey = (/** @type {string} */ addr) => JSON.stringify([lags(), chainOf(addr), read.newer(addr), WRITE.keptOf(addr), openStatements.has(addr)]);
 /** a document's corner's items made over its view, whole and compact, and compact one by one for a head's rows, keyed by what they were made from (`cornerKey`) */
 const cornerOfView = (/** @type {Doc} */ d, /** @type {ArticleView} */ view) => ({ whole: cornerHTML(d, view), compact: cornerHTML(d, view, true), key: cornerKey(d.addr), items: cornerItems(d, view, true, false) });
 
@@ -3061,7 +3062,7 @@ function place(/** @type {Mounted} */ rec) {
  */
 const wentStale = (rec) => {
   const m = REC.doc(rec.d.addr);
-  return m.from !== rec.runFrom || m.to !== rec.runTo || m.rev !== rec.rev || rec.grev !== grev || rec.editRev !== REC.editRev(m.addr) || rec.fold !== foldOf(m);
+  return m.from !== rec.runFrom || m.to !== rec.runTo || m.rev !== rec.rev || rec.grev !== grev || rec.editRev !== WRITE.editRev(m.addr) || rec.fold !== foldOf(m);
 };
 
 /**
@@ -3827,7 +3828,7 @@ function headOf(c, rec, column, open) {
         : items[s.k].html;
     rows[s.row] += `<span class="hslot${s.rows > 1 ? ' wraps' : ''}" style="left:${s.x}px;width:${s.w}px;height:${s.rows * pitch}px;line-height:${s.rows > 1 ? '' : pitch + 'px'}">${html}</span>`;
   }
-  const kept = REC.keptOf(addr), formHTML = open ? rec.corner.whole : kept && openStatements.has(addr) ? statementHTML(kept) : '';
+  const kept = WRITE.keptOf(addr), formHTML = open ? rec.corner.whole : kept && openStatements.has(addr) ? statementHTML(kept) : '';
   const html = rows.map((r, i) => (r ? `<div class="hrow" data-row="${i}" style="height:${pitch}px;background:${ground}">${r}</div>` : '')).join('')
     + (formHTML ? `<div class="opened" style="width:${width}px;background:${ground}">${formHTML}</div>` : '');
   if (c.html !== html) { FOCUS.keep(c.el, cornerControl, () => { c.el.innerHTML = html; }); c.html = html; }
@@ -3889,7 +3890,7 @@ export function headClear(addr) { const c = corners.get(addr); return c && c.hea
  * @param {string} addr
  */
 function sayKept(c, addr) {
-  const k = REC.keptOf(addr), word = k ? k.word : null;
+  const k = WRITE.keptOf(addr), word = k ? k.word : null;
   if (word === c.word) return;
   c.word = word;
   if (k && c.html) FOCUS.say(keptWord(k).text);
@@ -4892,7 +4893,7 @@ export function dropCaret() { if (caret_) setCaret(null); }
  */
 export function caretType(text) {
   if (!caret_ || !caret_.live || !text) return false;
-  REC.addEdit(caret_.addr, { pos: caret_.pos, width: 0, text });
+  WRITE.addEdit(caret_.addr, { pos: caret_.pos, width: 0, text });
   setCaret({ ...caret_, pos: caret_.pos + byteLength(text) });
   return true;
 }
@@ -4911,7 +4912,7 @@ export function caretReplace(span, text) {
   if (!caret_ || !caret_.live || span.addr !== caret_.addr) return false;
   const d = shownOf(caret_.addr);
   if (d.from < 0 || span.width < 1 || span.pos < d.from || span.pos + span.width > d.to) return false;
-  REC.addEdit(caret_.addr, { pos: span.pos, width: span.width, text });
+  WRITE.addEdit(caret_.addr, { pos: span.pos, width: span.width, text });
   setCaret({ ...caret_, pos: span.pos + byteLength(text) });
   return true;
 }
@@ -4927,7 +4928,7 @@ export function caretErase(dir) {
   const d = shownOf(caret_.addr), b = boundaries(d.runs, caret_.pos);
   const from = dir < 0 ? b.before : caret_.pos, to = dir < 0 ? caret_.pos : b.after;
   if (from == null || to == null || to <= from) return false;
-  REC.addEdit(caret_.addr, { pos: from, width: to - from, text: '' });
+  WRITE.addEdit(caret_.addr, { pos: from, width: to - from, text: '' });
   setCaret({ ...caret_, pos: from });
   return true;
 }
@@ -5127,7 +5128,7 @@ function placeCaretMark() {
  * @returns {boolean} whether the statement stands open now
  */
 export function openStatement(addr, on = !openStatements.has(addr)) {
-  if (!REC.keptOf(addr)) on = false;
+  if (!WRITE.keptOf(addr)) on = false;
   if (on) openStatements.add(addr); else openStatements.delete(addr);
   markDirty();
   return on;

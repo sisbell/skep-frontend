@@ -434,6 +434,7 @@ import * as TRAIL from './trail.js';
 import * as WALK from './walk.js';
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
+import * as WRITE from '../write/write.js';
 import * as HOST from '../overlays/host.js';
 import * as LK from '../links/links.js';
 import * as SCENE from '../scene/scene.js';
@@ -518,7 +519,7 @@ import { esc } from '../util.js';
  * @property {Run[] | null} runs every run of the span, in the text's order, the one at `pos` among them, each outlined — a far end's projection, or what of a carried passage the text holds, each cut where its bytes break the passage's order, the landing's labelled runs (`Landing.pieces`) where it stands in several; null where the link names the far document whole, the mark then on the block holding `pos` — the far article's first, where the beams and the scene anchor such an end
  * @property {string | null} link the link followed; null where the landing re-projected a carried passage, or the light outlines one
  * @property {number} drops its document's drops as its positions were placed (M-REC's `dropsOf`): its runs stand on the bytes they were placed on while that count and `edited` stand
- * @property {number} edited how many times its document's page-local edits had changed as its positions were placed (M-REC's `editRev`)
+ * @property {number} edited how many times its document's page-local edits had changed as its positions were placed (W-WRITE's `editRev`)
  * @property {ISpan[]} [held] its passage by identity, in the passage's own order: what it is placed again by where the text its box shows is set or edited since, or is another version (`placedAgain`, `recheck`), and what a return reads it again by (`keptAgain`); absent where neither the act nor the image of the text shown named its bytes
  */
 
@@ -776,9 +777,9 @@ const landsAt = (/** @type {string} */ addr, /** @type {number | null} */ pos) =
 const textOf = (/** @type {string} */ addr) => LAYER.shownOf(addr);
 
 /** what a text stands as while positions placed in it hold (`Arrival.drops`, `Arrival.edited`): its document's drops and how many times its page-local edits have changed */
-const setOf = (/** @type {string} */ addr) => ({ drops: REC.dropsOf(addr), edited: REC.editRev(addr) });
+const setOf = (/** @type {string} */ addr) => ({ drops: REC.dropsOf(addr), edited: WRITE.editRev(addr) });
 /** does a text stand as it stood when an arrival's positions were placed in it (`setOf`)? */
-const standsAs = (/** @type {Arrival} */ a, /** @type {string} */ addr) => addr === a.addr && REC.dropsOf(addr) === a.drops && REC.editRev(addr) === a.edited;
+const standsAs = (/** @type {Arrival} */ a, /** @type {string} */ addr) => addr === a.addr && REC.dropsOf(addr) === a.drops && WRITE.editRev(addr) === a.edited;
 
 /**
  * A passage as the text its document's box shows holds it now (`shownIn`):
@@ -905,7 +906,7 @@ export function recheck() {
     CAM.markDirty();
     return;
   }
-  if (addr === a.addr && REC.dropsOf(addr) === a.drops && REC.editRev(addr) !== a.edited && !unbroken(a, addr)) { putOut(); return; }
+  if (addr === a.addr && REC.dropsOf(addr) === a.drops && WRITE.editRev(addr) !== a.edited && !unbroken(a, addr)) { putOut(); return; }
   if (!a.held || standsAs(a, addr)) return;
   const d = REC.has(addr) ? textOf(addr) : null;
   const h = d && d.from >= 0 && imageCovers(d) ? holdsIn(addr, a.held) : null;
@@ -3890,7 +3891,7 @@ let placedFor = null;
 function throughEdits() {
   const o = HOST.currentState(), a = o && !o.notice ? o.about : undefined, subject = a ? subjectOf(a) : null;
   if (!o || !a || !subject || !subject.ids.length || shownIn(subject.addr) !== subject.addr) { placedFor = null; return; }
-  const rev = REC.editRev(subject.addr);
+  const rev = WRITE.editRev(subject.addr);
   if (!placedFor || placedFor.overlay !== o) { placedFor = { overlay: o, rev }; return; }
   if (placedFor.rev === rev) return;
   placedFor.rev = rev;

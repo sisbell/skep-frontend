@@ -5,9 +5,10 @@
 // What they expose, for the harness's cases: the model's held records, a
 // stretch of a held text by identity (`model.identity`), what a feed row
 // naming a document out of view does to the model alone (`model.invalidate`),
-// a row taken as the feed hands one (`model.feed`), a draft's kept state
-// set as the machine will set it (`model.setKept`) and a draft's page-local
-// edits (`model.edits`); the page's own caret as it stands (`caret`); the mounted articles' text and
+// a row taken as the feed hands one (`model.feed`); the words being written
+// (W-WRITE's) — a draft's kept state set as the machine will set it
+// (`write.setKept`) and a draft's page-local edits (`write.edits`); the
+// page's own caret as it stands (`caret`); the mounted articles' text and
 // what stands of each by line (`mountedLines`); the mirror's items; the
 // camera, the focus and its owner's state, the focus ring the canvas drew
 // (`view.ring`) and the bounds it is clamped to (`view.ringBounds`); the
@@ -78,6 +79,7 @@
 // Rules: FP-1, FP-2, FP-5, FP-17, FP-18.
 
 import * as REC from '../model/records.js';
+import * as WRITE from '../write/write.js';
 import * as LAYER from '../text/layer.js';
 import * as WALK from '../nav/walk.js';
 import * as CAM from '../plane/camera.js';
@@ -651,10 +653,12 @@ export function install(deps) {
       invalidate: (/** @type {string} */ addr) => { REC.invalidate(addr); PUMP.forget(addr); CAM.markDirty(); },
       /** a feed row taken as the feed hands one (M-PUMP's `takeRow`): the model, the view and a reading scene's panes kept fresh from it — reads alone, nothing written */
       feed: (/** @type {import('../bridge/shapes').FeedUpdate} */ update) => { PUMP.takeRow(update); CAM.markDirty(); },
-      /** a draft's kept state set as D6's machine will set it (M-REC's `setKept`; B3-S2), or cleared with null: its corner's slot shows the word on the next frame — page state alone, nothing written */
-      setKept: (/** @type {string} */ addr, /** @type {import('../model/records.js').KeptState | null} */ s) => { REC.setKept(addr, s); CAM.markDirty(); },
-      /** a draft's page-local edits as the caret made them (M-REC's `edits`; K-72): each its position, the width it replaced and its text — page state alone, never sent */
-      edits: (/** @type {string} */ addr) => REC.edits(addr).map((e) => ({ ...e })),
+    },
+    write: {
+      /** a draft's kept state set as D6's machine will set it (W-WRITE's `setKept`; B3-S2), or cleared with null: its corner's slot shows the word on the next frame — page state alone, nothing written */
+      setKept: (/** @type {string} */ addr, /** @type {import('../write/write.js').KeptState | null} */ s) => { WRITE.setKept(addr, s); CAM.markDirty(); },
+      /** a draft's page-local edits as the caret made them (W-WRITE's `edits`; K-72): each its position, the width it replaced and its text — page state alone, never sent */
+      edits: (/** @type {string} */ addr) => WRITE.edits(addr).map((e) => ({ ...e })),
     },
     /** the page's own caret as it stands (T-LAYER's `caret`; D5 K-70, K-77): its document, its position in the text shown and whether the keys reach it — false where Esc left it kept; null where none stands */
     caret: () => LAYER.caret(),

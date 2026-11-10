@@ -171,6 +171,7 @@ import * as LEAP from './leap.js';
 import * as FIND from './find.js';
 import * as FOCUS from './focus.js';
 import * as REC from '../model/records.js';
+import * as WRITE from '../write/write.js';
 import * as HOST from '../overlays/host.js';
 import * as FACES from '../overlays/faces.js';
 import * as SEL from '../overlays/selection.js';
@@ -561,7 +562,7 @@ function route(e, chord, ctx) {
     const addr = corner.dataset.corner || '';
     if (on && on.dataset.more) return () => { LAYER.openCorner(addr); return true; };
     if (on) return () => VERSIONS.readFromCorner(corner, SEL.selected(), byKey);
-    if (REC.keptOf(addr)) return () => { LAYER.openStatement(addr); return true; };
+    if (WRITE.keptOf(addr)) return () => { LAYER.openStatement(addr); return true; };
     return () => VERSIONS.fromCorner(corner, SEL.selected(), byKey) || VERSIONS.readFromCorner(corner, SEL.selected(), byKey);
   }
   // the line is one stop (K-22): ← and → move among its acts; every other key is the act's own
@@ -728,7 +729,7 @@ async function extendAtKept(e, dir) {
 /**
  * Mod+S answered (see the head; K-74; BM-3): the chord writes nothing. Where
  * the draft the caret stands in — else the walk's document — has a kept state
- * (M-REC's `keptOf`), the state's statement is opened whole at its corner at
+ * (W-WRITE's `keptOf`), the state's statement is opened whole at its corner at
  * the first press in a session (T-LAYER's `openStatement`); after it the
  * corner's own word answers, the statement whole on the word's act (P41).
  * Either answer is said in the status region (FP-36). Nothing where no such
@@ -738,7 +739,7 @@ function saveChord() {
   if (SCENE.isOpen()) return;
   const c = LAYER.caret(), f = WALK.current();
   const addr = c ? c.addr : f && (f.kind === 'document' || f.kind === 'block' || f.kind === 'link') ? f.addr : null;
-  const k = addr ? REC.keptOf(addr) : null;
+  const k = addr ? WRITE.keptOf(addr) : null;
   if (!addr || !k) return;
   if (saveAnswered) { FOCUS.say(keptWord(k).text); return; }
   saveAnswered = true;

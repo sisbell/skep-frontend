@@ -98,7 +98,7 @@ SEAM = 'script'
 STATES = [
     # B3-S1 — a new document of the person's own: the kept state at the corner, the kept caret (W-08 steps 2–3)
     dict(screen='B3-S1', state='kept', walk='W-08', step=2, drawn=True,
-         how="`model.setKept(own, {word: 'kept'})` — D6's machine's word, set by the gate's hook",
+         how="`write.setKept(own, {word: 'kept'})` — D6's machine's word, set by the gate's hook",
          claim='the corner shows "kept" in its fixed-width slot (B3.kept)'),
     dict(screen='B3-S1', state='save-answered', walk='W-08', step=2, drawn=True,
          how='Mod+S at the corner while the word is kept (K-74)',
@@ -120,10 +120,10 @@ STATES = [
          why="the launch's search for the newest own row (S1 #17)"),
     # B3-S2 — the kept state and the held text (W-08 step 7 and its failure arms)
     dict(screen='B3-S2', state='not-yet-kept', walk='W-08', step=7, drawn=True,
-         how="`model.setKept(own, {word: 'not yet kept'})` (D6 BM-8)",
+         how="`write.setKept(own, {word: 'not yet kept'})` (D6 BM-8)",
          claim='the corner shows "not yet kept" in its slot (B3.not-yet-kept)'),
     dict(screen='B3-S2', state='not-kept', walk='W-08', step=7, drawn=True,
-         how="`model.setKept(own, {word: 'not kept', reason})`, the reason the refused run's own-bug words (D6 BM-10)",
+         how="`write.setKept(own, {word: 'not kept', reason})`, the reason the refused run's own-bug words (D6 BM-10)",
          claim='the corner shows "not kept" in its slot (B3.not-kept); Mod+S would answer with the reason'),
     dict(screen='B3-S2', state='held-bars', walk='W-08', step=7, drawn=False,
          how="arm `held` with rows before the page's `held(session)`; fire `held` holding (D6 BM-29)", claim='',
@@ -370,7 +370,7 @@ def shift_extends(ctx, doc, para):
         for key in ('ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft', 'ArrowLeft'):
             ctx.drv.key(key, mods=('Shift',)); ctx.frames(3)
             steps.append(dict(ctx.js(AT_CARET), key='Shift+' + key))
-        edits = ctx.js('window.__skep.model.edits(%s)' % json.dumps(doc))
+        edits = ctx.js('window.__skep.write.edits(%s)' % json.dumps(doc))
     finally:
         ctx.js('(async () => { const S = await import("./overlays/selection.js"), L = await import("./text/layer.js"); S.clear(); L.dropCaret(); })()')
         ctx.frames(2)
@@ -399,7 +399,7 @@ def shift_extends(ctx, doc, para):
 # after a key at the caret: the caret, the page's selection, the platform's own, the overlay standing, a draft's page-local
 # edits and the text the page shows of it
 AFTER_KEY = '''((doc) => { const S = window.__skep;
-  return {caret: S.caret(), sel: S.selection(), platform: S.platformSelection(), overlay: S.overlay().id, edits: S.model.edits(doc),
+  return {caret: S.caret(), sel: S.selection(), platform: S.platformSelection(), overlay: S.overlay().id, edits: S.write.edits(doc),
           text: (S.mounted(doc) || {}).text || ""}; })(%s)'''
 
 
@@ -429,7 +429,7 @@ def shift_replaces(ctx, doc, para):
             ctx.drv.key(key); ctx.frames(3)
             steps.append(dict(ctx.js(AFTER_KEY % json.dumps(doc)), key=key, selected=selected))
     finally:
-        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), R = await import("./model/records.js"); H.dismiss(); S.clear(); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), W = await import("./write/write.js"); H.dismiss(); S.clear(); L.dropCaret(); W.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
         ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
     typed = {'pos': c0, 'width': w3, 'text': 'q'}
     erased = {'pos': c0 + 1, 'width': w2, 'text': ''}
@@ -494,10 +494,10 @@ def home_end_leap(ctx, doc, para, other):
         ctx.leap(doc, other['pos'])
         away = ctx.js(AT_MARK)
         ctx.drv.key('x'); ctx.frames(2)
-        answered, edits = hint(ctx), ctx.js('window.__skep.model.edits(%s)' % json.dumps(doc))
+        answered, edits = hint(ctx), ctx.js('window.__skep.write.edits(%s)' % json.dumps(doc))
         kept = ctx.js('window.__skep.caret()')
     finally:
-        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), N = await import("./overlays/hint.js"), L = await import("./text/layer.js"), R = await import("./model/records.js"); H.dismiss(); N.act(); S.clear(); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), N = await import("./overlays/hint.js"), L = await import("./text/layer.js"), W = await import("./write/write.js"); H.dismiss(); N.act(); S.clear(); L.dropCaret(); W.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
         ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
     middle = lambda m: m['top'] + m['h'] / 2
     on = lambda m, q: bool(m) and bool(q) and q['y'] - 0.5 <= middle(m) <= q['y'] + q['h'] + 0.5
@@ -561,9 +561,9 @@ def kept_span_held(ctx, doc, para):
         seen = ctx.js('''((doc, pos, width) => { const line = document.getElementById("line"), top = line ? line.getBoundingClientRect().bottom : 0;
           return (window.__skep.spanRects(doc, pos, width) || []).some((q) => q.y + q.h / 2 >= top && q.y + q.h / 2 <= window.innerHeight); })(%s, %d, %d)''' % (json.dumps(doc), para['pos'], para['width'] + 2))
         ctx.drv.key('x'); ctx.frames(2)
-        typed, edits = ctx.js('window.__skep.caret()'), ctx.js('window.__skep.model.edits(%s)' % json.dumps(doc))
+        typed, edits = ctx.js('window.__skep.caret()'), ctx.js('window.__skep.write.edits(%s)' % json.dumps(doc))
     finally:
-        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), N = await import("./overlays/hint.js"), L = await import("./text/layer.js"), R = await import("./model/records.js"); H.dismiss(); N.act(); S.clear(); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), N = await import("./overlays/hint.js"), L = await import("./text/layer.js"), W = await import("./write/write.js"); H.dismiss(); N.act(); S.clear(); L.dropCaret(); W.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
         ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
     span = {'kind': 'block', 'addr': doc, 'pos': para['pos']}
     ok = (left['caret'] == {'addr': doc, 'pos': para['pos'] + 2, 'live': False} and left['focus'] == span
@@ -617,7 +617,7 @@ def kept_span_extends(ctx, doc, para):
         steps['whole'] = ctx.js(AT_CARET)
         press('ArrowLeft', shift=True)
         steps['stuck'] = ctx.js(AT_CARET)
-        edits = ctx.js('window.__skep.model.edits(%s)' % json.dumps(doc))
+        edits = ctx.js('window.__skep.write.edits(%s)' % json.dumps(doc))
     finally:
         ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"); H.dismiss(); S.clear(); L.dropCaret(); })()')
         ctx.frames(2)
@@ -668,9 +668,9 @@ def lit_after_typing(ctx, doc, para):
                 break
         ctx.frames(2)
         lit, ring = ctx.js(LIT % json.dumps(doc)), ctx.js('window.__skep.focus().ring')
-        edits = ctx.js('window.__skep.model.edits(%s)' % json.dumps(doc))
+        edits = ctx.js('window.__skep.write.edits(%s)' % json.dumps(doc))
     finally:
-        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), R = await import("./model/records.js"); H.dismiss(); S.clear(); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), W = await import("./write/write.js"); H.dismiss(); S.clear(); L.dropCaret(); W.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
         ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
     later = bool(walked) and walked['kind'] == 'block' and walked['addr'] == doc and walked['pos'] > para['pos']
     want = walked['pos'] if later else None
@@ -702,7 +702,7 @@ def typed_lands(ctx, doc, para, away):
         blocks = ctx.js('(async () => (await import("./text/layer.js")).shownOf(%s).blocks.map((b) => ({pos: b.pos, width: b.width, text: b.text})))()' % json.dumps(doc))
         line = next((b for b in blocks if b['text'] == TYPED_LINE), None)
         below = next((b for b in blocks if line and b['pos'] == line['pos'] + line['width']), None)
-        out.update(line=line, below=below and {'pos': below['pos']}, edits=ctx.js('window.__skep.model.edits(%s).length' % json.dumps(doc)))
+        out.update(line=line, below=below and {'pos': below['pos']}, edits=ctx.js('window.__skep.write.edits(%s).length' % json.dumps(doc)))
         if not line or not below:
             return out
         # THE WALK: from the paragraph below, ↑ lands on the typed line; its mirror item reads the typed words
@@ -736,7 +736,7 @@ def typed_lands(ctx, doc, para, away):
         back_ok = bool(back) and back['kind'] == 'block' and back['addr'] == doc and back['pos'] == line['pos'] and len(seen) > 0
         out.update(ok=walk_ok and find_ok and back_ok, walk_ok=walk_ok, find_ok=find_ok, back_ok=back_ok)
     finally:
-        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), R = await import("./model/records.js"), G = await import("./nav/go.js"), N = await import("./nav/find.js"); if (N.isOpen()) await N.close(false); H.dismiss(); S.clear(); G.endArrival(); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), W = await import("./write/write.js"), G = await import("./nav/go.js"), N = await import("./nav/find.js"); if (N.isOpen()) await N.close(false); H.dismiss(); S.clear(); G.endArrival(); L.dropCaret(); W.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
         ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
     return out
 
@@ -848,11 +848,11 @@ def run(ctx):
         return check
     for word, state in (('kept', 'kept'), ('not yet kept', 'not-yet-kept'), ('not kept', 'not-kept')):
         reason = t(ctx, 'B3.own-bug') if word == 'not kept' else None
-        ctx.js('window.__skep.model.setKept(%s, %s)' % (json.dumps(OWN), json.dumps({'word': word, 'reason': reason})))
+        ctx.js('window.__skep.write.setKept(%s, %s)' % (json.dumps(OWN), json.dumps({'word': word, 'reason': reason})))
         ctx.frames(2)
         shoot(state, kept_check(word))
     # the save chord answered at the corner (K-74): the statement whole, once in a session
-    ctx.js('window.__skep.model.setKept(%s, %s)' % (json.dumps(OWN), json.dumps({'word': 'kept', 'reason': None}))); ctx.frames(2)
+    ctx.js('window.__skep.write.setKept(%s, %s)' % (json.dumps(OWN), json.dumps({'word': 'kept', 'reason': None}))); ctx.frames(2)
     ctx.drv.key('s', mods=('Meta',)); ctx.frames(2)
 
     def save_check(w):
@@ -861,7 +861,7 @@ def run(ctx):
         return ok, {'corner': got, 'want': want}
     shoot('save-answered', save_check)
     ctx.js('(async () => { const L = await import("./text/layer.js"); L.openStatement(%s, false); })()' % json.dumps(OWN))
-    ctx.js('window.__skep.model.setKept(%s, null)' % json.dumps(OWN)); ctx.frames(2)
+    ctx.js('window.__skep.write.setKept(%s, null)' % json.dumps(OWN)); ctx.frames(2)
 
     # ---- (d) B3-S1: the caret placed, typed at, kept (issue #411) ----------------------------------------------------
     paras = [b for b in doc['blocks'] if b['kind'] == 'para' and b['text'].strip()]
@@ -889,7 +889,7 @@ def run(ctx):
     ctx.frames(2)
 
     def typed_check(w):
-        c, edits = ctx.js('window.__skep.caret()'), ctx.js('window.__skep.model.edits(%s)' % json.dumps(OWN))
+        c, edits = ctx.js('window.__skep.caret()'), ctx.js('window.__skep.write.edits(%s)' % json.dumps(OWN))
         text = fold(ctx.js('(window.__skep.mounted(%s) || {}).text || ""' % json.dumps(OWN)))
         typed = ''.join(e['text'] for e in edits)
         ok = (bool(c) and c['live'] and c['pos'] == target['pos'] + len(word.encode('utf8')) and typed == word and all(e['width'] == 0 for e in edits)
@@ -905,9 +905,9 @@ def run(ctx):
         return ok, {'caret': c, 'focus': f, 'kept_marks_shown': len(marks)}
     shoot('caret-kept', kept_caret_check, recentre)
     # the caret dropped and the edits cleared — page state alone — and the draft read again, so its text stands as the board holds it
-    ctx.js('(async () => { const L = await import("./text/layer.js"), R = await import("./model/records.js"); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(OWN))
+    ctx.js('(async () => { const L = await import("./text/layer.js"), W = await import("./write/write.js"); L.dropCaret(); W.clearEdits(%s); L.bump(); })()' % json.dumps(OWN))
     ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(OWN)); ctx.settle(); ctx.frames(2)
-    r.check(ctx.js('window.__skep.caret()') is None and ctx.js('window.__skep.model.edits(%s).length' % json.dumps(OWN)) == 0, 'the caret is dropped and the edits cleared after the caret states', None)
+    r.check(ctx.js('window.__skep.caret()') is None and ctx.js('window.__skep.write.edits(%s).length' % json.dumps(OWN)) == 0, 'the caret is dropped and the edits cleared after the caret states', None)
     # a click placing the caret in another paragraph stands the walk on its span, so a slot chord at the caret acts there (B3-S13)
     later = [p for p in paras if p['pos'] > target['pos']]
     follows = click_follows(ctx, OWN, target, later[0] if later else next((p for p in paras if p['pos'] != target['pos']), None))

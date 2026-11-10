@@ -226,6 +226,7 @@
 // FP-23, FP-24, FP-29, FP-33, FP-35.
 
 import * as REC from '../model/records.js';
+import * as WRITE from '../write/write.js';
 import * as LK from '../links/links.js';
 import * as PUMP from '../model/pump.js';
 import * as CAM from '../plane/camera.js';
@@ -528,7 +529,7 @@ function setFocus(sibs, i, at = null) {
 /**
  * @typedef {Object} Stood — the bytes the walk's focus stands on, where it is a span or a link's end in a document (see the head)
  * @property {string} addr the document
- * @property {number} text how many times the document's page-local edits had changed as they were read (M-REC's `editRev`): the walk is carried where they moved since
+ * @property {number} text how many times the document's page-local edits had changed as they were read (W-WRITE's `editRev`): the walk is carried where they moved since
  * @property {ISpan[]} ids the span's bytes, or the link's end's, by identity, in the text's order (T-LAYER's `shownIdentity`)
  * @property {ISpan[]} at the byte at the position a landing named inside the span (`landed`); none where it named none
  * @property {number | null} run for a link's end drawn at a withheld run, that run's first position as the bytes were read; null for every other element
@@ -544,7 +545,7 @@ function stand() {
   const b = f.kind === 'block' ? LAYER.blockByPos(f.addr, f.pos) : null, end = f.kind === 'link' ? f.link : null;
   const run = end && end.run ? end.run : null;
   const of = run ? { pos: run.pos, width: run.width } : end ? { pos: end.pos, width: Math.max(1, end.width) } : b ? { pos: b.pos, width: Math.max(1, b.width) } : { pos: f.pos, width: 1 };
-  stood = { addr: f.addr, text: REC.editRev(f.addr), ids: LAYER.shownIdentity(f.addr, of.pos, of.width), at: landed != null ? LAYER.shownIdentity(f.addr, landed, 1) : [], run: run ? run.pos : null };
+  stood = { addr: f.addr, text: WRITE.editRev(f.addr), ids: LAYER.shownIdentity(f.addr, of.pos, of.width), at: landed != null ? LAYER.shownIdentity(f.addr, landed, 1) : [], run: run ? run.pos : null };
 }
 
 /** do two lists of a document's elements name the same elements at the same places? */
@@ -567,9 +568,9 @@ const sameElements = (/** @type {Node[]} */ a, /** @type {Node[]} */ b) => a.len
  */
 export function carry() {
   const f = focus, was = stood;
-  if (!f || !was || f.pos == null || !REC.has(was.addr) || REC.editRev(was.addr) === was.text) return false;
+  if (!f || !was || f.pos == null || !REC.has(was.addr) || WRITE.editRev(was.addr) === was.text) return false;
   const addr = was.addr, kids = elementsOf(addr), deep = f.kind === 'link' && was.run != null;
-  if (!kids.length) { stood = { ...was, text: REC.editRev(addr) }; return false; }
+  if (!kids.length) { stood = { ...was, text: WRITE.editRev(addr) }; return false; }
   const first = LAYER.firstStanding(addr, was.ids);
   /** the element that takes the place of bytes the text shown no longer holds: the first at or after the point they were removed at, else the last before it */
   const after = (/** @type {number} */ p) => { const i = kids.findIndex((n) => n.kind === 'block' && n.pos != null && n.pos >= p); return i >= 0 ? i : Math.max(0, kids.map((n) => n.kind).lastIndexOf('block')); };

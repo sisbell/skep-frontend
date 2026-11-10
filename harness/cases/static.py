@@ -6,10 +6,14 @@ tree (T4; M5, M10).
     `web/gate/` — the bridge client is the page's only network code;
 (ii) the seam's import direction: LK imports M-REC, P-REG and ST — the
     words a far end is named in (issue #132) — (and M-ADDR's pure
-    `commonsType`, reported) and nothing of layer 2; the drawing modules
-    read LK and never the links card; the reveal's setters are called by the
-    card alone (`follow` by N-GO, S-32 (a); the gate's door excepted);
-(iii) the layers of the structure record §3.1: no module imports one above it;
+    `commonsType`, reported) and none of the drawing modules; the drawing
+    modules read LK and never the links card; the reveal's setters are called
+    by the card alone (`follow` by N-GO, S-32 (a); the gate's door excepted);
+(iii) the layers in FP-11's order — the bridge, the model, `web/write/`, the
+    drawing modules, the app — no module imports one above its own;
+    `web/write/` imports the bridge, the model and `util.js` alone; and no
+    module outside it, the gate's hooks and the tests apart, calls a bridge row
+    that writes or composes a write (`WRITE_ROWS`);
 (iv) `index.html` loads one module script and nothing outside `web/` (FP-5);
 (v) the shipped faces (issue #16): every `@font-face` in `style.css` loads a
     WOFF2 file under `web/fonts/` that is there — Charter in its four styles
@@ -27,13 +31,22 @@ from . import ROOT, Result
 
 WEB = os.path.join(ROOT, 'web')
 NETWORK = ['fetch(', 'XMLHttpRequest', 'EventSource', '__TAURI__', 'sendBeacon', 'WebSocket']
+# the layers in FP-11's order, bottom up, each by the folders and files it holds: its number is its place in this order, and the
+# check reports it by its name; the gate's hooks and the tests (9) import any
 LAYER = [
-    (0, ['bridge/']),
-    (1, ['model/', 'util.js', 'strings.js', 'plane/projection.js', 'plane/camera.js', 'plane/lod.js', 'plane/layout.js', 'plane/register.js', 'plane/labels.js']),
-    (2, ['links/', 'text/', 'beams/', 'nav/', 'line/', 'overlays/', 'scene/', 'plane/render.js']),
-    (3, ['app/']),
-    (9, ['gate/', 'test/']),
+    (0, 'the bridge', ['bridge/']),
+    (1, 'the model', ['model/', 'util.js', 'strings.js', 'plane/projection.js', 'plane/camera.js', 'plane/lod.js', 'plane/layout.js', 'plane/register.js', 'plane/labels.js']),
+    (2, 'the words being written', ['write/']),
+    (3, 'the drawing modules', ['links/', 'text/', 'beams/', 'nav/', 'line/', 'overlays/', 'scene/', 'plane/render.js']),
+    (4, 'the app', ['app/']),
+    (9, 'the gate and the tests', ['gate/', 'test/']),
 ]
+# what `web/write/` may import: the bridge, the model and the leaf `util.js` alone
+WRITE_IMPORTS = ['bridge/', 'model/', 'util.js']
+# B-PORT's exports for the bridge's rows that write or compose a write — the publication, merge and history families,
+# `upload`, `restore`, `resolve` (WIRE's READ_ROWS refuses each of the owner's provider): no module outside `web/write/` calls one
+WRITE_ROWS = ['publication', 'merge', 'history', 'upload', 'restore', 'resolve']
+PORT = 'bridge/port.js'
 DRAWERS = ['beams/beams.js', 'text/layer.js', 'plane/render.js', 'scene/scene.js', 'overlays/anatomy-card.js']
 SETTERS = ['reveal', 'hide', 'setOthers', 'lens', 'clearLens']
 # the rules: the bullet each heads in PATTERNS.md, a citation of one, and the range AGENTS.md states
@@ -55,16 +68,40 @@ def files():
 
 
 def layer_of(rel):
-    for n, prefixes in LAYER:
+    for n, _, prefixes in LAYER:
         for p in prefixes:
             if rel == p or rel.startswith(p):
                 return n
     return None
 
 
+def layer_name(n):
+    return next(name for m, name, _ in LAYER if m == n)
+
+
 def imports_of(src):
     """the static import targets of a module (relative paths)"""
     return re.findall(r"""^\s*import\s+(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]""", src, re.M)
+
+
+def target_of(f, imp):
+    """an import's target by its path under web/, from the module that names it"""
+    return os.path.normpath(os.path.join(os.path.dirname(f), imp)).replace(os.sep, '/')
+
+
+def write_calls(f, src):
+    """each call a module makes of a bridge row that writes (`WRITE_ROWS`): through the port's namespace, or a row it imports by
+    name"""
+    out = []
+    for names, imp in re.findall(r"""^\s*import\s+([^'"]*?)\s+from\s+['"]([^'"]+)['"]""", src, re.M):
+        if not imp.startswith('.') or target_of(f, imp) != PORT:
+            continue
+        spaces = re.findall(r'\*\s+as\s+(\w+)', names)
+        named = [n.split(' as ')[0].strip() for n in re.findall(r'\{([^}]*)\}', names)[0].split(',')] if '{' in names else []
+        out += [f'{f}: imports `{n}`' for n in named if n in WRITE_ROWS]
+        for ns in spaces:
+            out += [f'{f}:{src.count(chr(10), 0, m.start()) + 1}: {m.group(0)}' for m in re.finditer(r'\b' + ns + r'\.(' + '|'.join(WRITE_ROWS) + r')\b', src)]
+    return out
 
 
 def rule_heads(patterns):
@@ -125,26 +162,32 @@ def run(ctx):
     sel = sources.get('overlays/selection.js', '')
     sel_card_uses = set(re.findall(r'LINKS\.(\w+)', sel))
     r.check(sel_card_uses <= {'show'}, 'the selection asks the card to show and reads nothing of it', sorted(sel_card_uses))
-    # (iii) the layers
-    upward = []
+    # (iii) the layers, what `web/write/` imports, and who calls a row that writes
+    upward, beyond, writes = [], [], []
     for f, src in sources.items():
         if not f.endswith('.js') or f.endswith('.test.js'):
             continue
         lf = layer_of(f)
         if lf is None or lf == 9:
             continue
-        base = os.path.dirname(f)
         for imp in imports_of(src):
             if not imp.startswith('.'):
                 upward.append(f'{f}: bare import {imp}')
                 continue
-            target = os.path.normpath(os.path.join(base, imp)).replace(os.sep, '/')
+            target = target_of(f, imp)
             lt = layer_of(target)
             if lt is None:
                 upward.append(f'{f}: {imp} -> {target} (unknown layer)')
             elif lt > lf:
-                upward.append(f'{f} (layer {lf}) imports {target} (layer {lt})')
-    r.check(not upward, 'no module imports one above its layer (§3.1)', upward)
+                upward.append(f'{f} ({layer_name(lf)}) imports {target} ({layer_name(lt)})')
+            if f.startswith('write/') and not any(target == p or target.startswith(p) for p in WRITE_IMPORTS):
+                beyond.append(f'{f} imports {target}')
+        if not f.startswith('write/') and not f.startswith('bridge/'):
+            writes += write_calls(f, src)
+    r.check(not upward, "no module imports one above its layer in FP-11's order, `write/` between the model and the drawing modules (issue #434)", upward)
+    r.check(not beyond, 'web/write/ imports the bridge, the model and util.js alone (issue #434)', beyond)
+    r.check(not writes, 'no module outside web/write/ calls a bridge row that writes (FP-14; issue #434)', writes)
+    r.figures['write_rows'] = WRITE_ROWS
     # (iv) the page loads one module script and nothing outside web/
     html = sources.get('index.html', '')
     scripts = re.findall(r'<script[^>]*src="([^"]+)"', html)

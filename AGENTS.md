@@ -9,10 +9,12 @@ file under `web/`; a module's head comment cites the ones that bind it
 `web/` is the product and ships as written: plain JavaScript, ES
 modules, no build step, no framework (FP-1, FP-3, FP-4). Every value's
 shape is a JSDoc type, checked by `npx tsc -p jsconfig.json` (FP-2).
-The layers import downward only: `bridge/` → `model/` → the drawing
-modules (`plane/`, `text/`, `links/`, `beams/`, `nav/`, `line/`,
-`overlays/`, `scene/`) → `app/` (FP-11). One owner per piece of state
-(FP-10).
+The layers import downward only: `bridge/` → `model/` → `write/` →
+the drawing modules (`plane/`, `text/`, `links/`, `beams/`, `nav/`,
+`line/`, `overlays/`, `scene/`) → `app/` (FP-11). One owner per piece
+of state (FP-10). `web/write/` holds the words being written, once per
+document, and draws nothing; it imports the bridge and the model alone,
+and no other module sends a write through the port.
 
 The page never dials a board and never holds a key or a token (FP-14).
 It talks to one port, `web/bridge/port.js`; every shape that crosses it

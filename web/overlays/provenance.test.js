@@ -19,6 +19,7 @@ import * as LAYER from '../text/layer.js';
 import * as PORT from '../bridge/port.js';
 import * as FAKE from '../test/fake-port.js';
 import * as REC from '../model/records.js';
+import * as WRITE from '../write/write.js';
 import * as F from '../model/frames.js';
 import { t } from '../strings.js';
 import { byteLength } from '../util.js';
@@ -53,19 +54,19 @@ async function onCard(script, edits, body) {
   globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
   // the platform's element class, which an overlay's anchor is told apart from (O-HOST's): none of the stand-ins is one
   globalThis.HTMLElement = /** @type {any} */ (class {});
-  REC._reset();
+  REC._reset(); WRITE._reset();
   REC.setBoard({ board: 'b-1', name: '', origin: '' });
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: N }]);
   REC.takeDelivery(D, [{ pos: 1, width: N, kind: 'content', text: TEXT, ref: null, origin: null }], READ_AT);
   REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: N }]);
-  for (const e of edits) REC.addEdit(D, e);
+  for (const e of edits) WRITE.addEdit(D, e);
   FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, textContent: '' }) });
   HOST.attach(/** @type {any} */ (hostEl));
   hostEl.innerHTML = '';
   const fake = FAKE.create(script);
   PORT.boot(fake);
-  try { await body(fake); } finally { HOST.dismiss(); PORT.boot(null); REC._reset(); LAYER.clear(); globalThis.document = platform.document; globalThis.window = platform.window; }
+  try { await body(fake); } finally { HOST.dismiss(); PORT.boot(null); REC._reset(); WRITE._reset(); LAYER.clear(); globalThis.document = platform.document; globalThis.window = platform.window; }
 }
 
 test('asked after typing above the span, the board is asked over the span\'s bytes by the base\'s positions, as of that base\'s read, and the card stands at the span shown', () => onCard({
@@ -180,12 +181,12 @@ test('new words are the page\'s whether minted or not: who wrote them is the pag
   [key(F.image(D, 1, N + 3))]: { result: { as_of: 21, resp: 'runs', runs: [{ i_start: `${D}.0.1.1`, width: '2' }, { i_start: `${D}.0.1.${N + 50}`, width: '3' }, { i_start: `${D}.0.1.3`, width: String(N - 2) }] } },
   [key(F.opAt(21, users(3, 3)))]: addrs([D]),
 }, [{ pos: 1, width: 0, text: 'abc' }], async (fake) => {
-  const page = /** @type {number} */ (REC.edits(D)[0].page);
+  const page = /** @type {number} */ (WRITE.edits(D)[0].page);
   const held = /** @type {import('../model/frames.js').HeldLine[]} */ (F.decodeHeldRows([{ held: 1, doc: D, base: 5, frame: { op: 'insert', at: { ordinal: '1', subspace: '1' }, values: ['abc'] }, cause: 'unreachable', sent: false, time: 1 }]));
-  REC.setHeld(D, held);
+  WRITE.setHeld(D, held);
   await PROV.wrote(D, 1, 3);
   assert.deepEqual([lines(), fake.asked], [[['L.new.wrote.held', t('L.new.wrote.held')]], []], 'a line held, the words not minted: new in this draft, held on this device — no read');
-  REC.setHeld(D, []);
+  WRITE.setHeld(D, []);
   // the ack: the board minted them
   REC.mint(D, page, 3, `${D}.0.1.${N + 50}`, 12);
   await PROV.wrote(D, 1, 3);
@@ -201,7 +202,7 @@ test('minted words another document has taken up since are answered by the board
   [key(F.image(D, 1, N + 3))]: { result: { as_of: 21, resp: 'runs', runs: [{ i_start: `${D}.0.1.${N + 50}`, width: '3' }, { i_start: `${D}.0.1.1`, width: String(N) }] } },
   [key(F.opAt(21, users(1, 3)))]: addrs([D, FAR]),
 }, [{ pos: 1, width: 0, text: 'abc' }], async (fake) => {
-  REC.mint(D, /** @type {number} */ (REC.edits(D)[0].page), 3, `${D}.0.1.${N + 50}`, 12);
+  REC.mint(D, /** @type {number} */ (WRITE.edits(D)[0].page), 3, `${D}.0.1.${N + 50}`, 12);
   await PROV.uses(D, 1, 3);
   assert.deepEqual([lines().map((l) => l[0]), hostEl.innerHTML.includes(FAR), hostEl.innerHTML.includes('B1.C-72')], [['B1.uses'], true, true], 'used by FAR: the board\'s answer, with its blind spots');
   assert.deepEqual(fake.unanswered, []);
