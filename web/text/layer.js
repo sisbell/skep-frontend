@@ -5,8 +5,8 @@
 // made from and where its words were read, the fold it was set in, the parts
 // of it standing, its marks and whether it takes the pointer — the corners
 // beside the articles and the labels held over them, the signs standing in
-// the columns' edges and the run each withheld origin's statement stands
-// beside (`signed`, `anchors`), which corners and cut
+// the columns' edges and the run each origin's statement stands beside
+// (`signed`, `anchors`), which corners and cut
 // labels a reader's act opened whole, each document's fold and its lines as
 // the platform set them, the passage being read while its document is set
 // again (`hold`), what each reading scene's pane's article was made from and
@@ -292,17 +292,20 @@
 // (`besideCorner`), drawn and never announced, taking the pointer where its
 // article does (`placeHeld`, its line where `heldBand` sets it).
 // The edges' signs (FP-31; foundations §2.1): a withheld run's gap holds its
-// ground, its ends' symbol and its key alone (T-ARTICLE's), and every word of
+// ground, its ends' symbol and its key alone, a transcluded run's typed lines
+// its ground and its two hairlines alone (T-ARTICLE's), and every word of
 // another document's material stands once per origin in view, on the corner
 // layer, placed each frame (`placeSigns`): in each mounted document at reading
-// scale, each withheld origin whose clause is decided — as the article was
-// made with it (`withheldRunsOf`) — and a line of whose runs meets the visible
-// view states itself once, compact (T-ARTICLE's `edgeStatementHTML`), beside
-// the run it stood beside last frame while a line of that run is in view, else
-// beside its first run in view in reading order, the run held by its identity,
-// its origin and its first byte's permanent address (`RunAt.id`; FP-38); each
-// run in view adds a key too wide for its gap where the statement stands beside
-// another run, and its others' count. Each sign stands in the edge of the
+// scale, each origin — a withheld one whose clause is decided, as the article
+// was made with it, or one whose run the reader reads (`originRunsAt`) — a
+// line of whose runs meets the visible view states itself once, compact
+// (T-ARTICLE's `edgeStatementHTML`, `sourceStatementHTML`, C-33's words there
+// read as the frame stands — `originKind`), beside the run it stood beside
+// last frame while a line of that run is in view, else beside its first run
+// in view in reading order, the run held by its identity, its origin and its
+// first byte's permanent address (`RunAt.id`; FP-38); each run in view adds a
+// key no gap holds where the statement stands beside another run, and a
+// withheld run its others' count. Each sign stands in the edge of the
 // column holding its run's first line in view, the edge's width wide, at a
 // share of the text's size never below P-REG's LABEL_MIN_PX; a column's edge's
 // signs stack by the one hold (P-LABEL's `holdStack`) — each at its line, else
@@ -314,7 +317,8 @@
 // (`signRects`). Drawn and never announced: the mirror carries their words
 // (N-WALK). The statement's mark, a key and the pointer are the pointer's
 // acts (APP-INPUT): the whole wording's card (O-FACES's `withheldRun`), the
-// LEAP to the claim's home.
+// LEAP to the claim's home, and a transcluded run's key the gesture to its
+// source carrying the run (foundations §2.3).
 // The press rule's text half (foundations §2.4): an article takes the
 // pointer at reading scale alone — its em at the readable threshold and
 // above, the `legible` class the style gives its columns' pointer
@@ -461,7 +465,7 @@ import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, inFirstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX } from '../plane/labels.js';
-import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerWords, keptHTML, statementHTML, keptWord, keptStatement, blockMarks, symbolLit, editionClause, copyText, firstLineOf, isPublished, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML } from './article.js';
+import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerWords, keptHTML, statementHTML, keptWord, keptStatement, blockMarks, symbolLit, editionClause, copyText, firstLineOf, isPublished, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, carriesC33, sourceStatementHTML } from './article.js';
 import { farShort, whyOf } from '../beams/held.js';
 import { applyEdits, sourceRuns, fromBase, boundaries, wordStop } from '../model/derive.js';
 import { homeOf, documentOf, memberOf, versionAddress, accountOf } from '../model/address.js';
@@ -474,6 +478,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
 /** @typedef {import('../model/frames.js').Run} Run */
 /** @typedef {import('./article.js').ArticleView} ArticleView */
 /** @typedef {import('./article.js').RunInView} RunInView */
+/** @typedef {import('./article.js').OriginRun} OriginRun */
 /** @typedef {import('./span.js').Span} Span */
 /** @typedef {import('../plane/layout.js').Fold} Fold */
 /** @typedef {import('../plane/layout.js').Line} Line */
@@ -538,7 +543,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @typedef {Object} Cut — the point a line opens at in its unit's element, as the platform set it (`lineStart`), carried to any copy of the article
  * @property {number[]} path the child indexes from the unit's element down to the point's node
  * @property {number} offset the point's offset in that node
- * @property {boolean[]} before for each element between the unit's element and the point, outermost first, whether any text stands in it before the point: a part ending at the cut leaves out the first that holds none, and a part starting at the cut takes a run's opening where none does
+ * @property {boolean[]} before for each element between the unit's element and the point, outermost first, whether any text stands in it before the point: a part ending at the cut leaves out the first that holds none and gives up a run's closing in each that holds some, and a part starting at the cut takes a run's opening where none does
  * @property {number} char the unit's own characters before the point, its chrome apart: the character a part starting there starts at
  */
 
@@ -578,23 +583,23 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @property {boolean | null} labelFor whether its byline's cut label is marked open (`markLabel`); null where a part set since awaits its mark
  * @property {boolean} legible it takes the pointer: its em stood at P-LOD's readable threshold or above at the last frame no press stood through (`markLegible`)
  * @property {string} fit the fit it was mounted under (`fitKey`): the passage read in it is read under that fit (`readingNow`)
- * @property {RunAt[]} runs its withheld runs, as the article was made with them (`withheldRunsOf`): what the edges' signs stand for (`placeSigns`)
+ * @property {RunAt[]} runs its runs of other documents' material, as the article was made with them (`originRunsAt`): what the edges' signs stand for (`placeSigns`)
  */
 
 /**
- * @typedef {Object} RunAt — a withheld run of a mounted article as its column's edge reads it (`withheldRunsOf`), decided as the article was made
- * @property {Block} b the run's block, in the text the article was made from
- * @property {string} origin its origin document
+ * @typedef {Object} RunAt — a run of another document's material in a mounted article as its column's edge reads it (`originRunsAt`), decided as the article was made
+ * @property {OriginRun} run the run, in the text the article was made from: a withheld run, or a transcluded run the reader reads
+ * @property {Block | null} b a withheld run's block, in that text; null for a transcluded run
  * @property {string} id its identity: its origin and the permanent address of its first byte, through the image the article was made from; its origin and its position where that image covers none of it (FP-38)
- * @property {import('./article.js').GapHolds} holds what its gap holds (T-ARTICLE's `gapHolds`): 'reading' while its clause was not decided, 'edge' where its key stands in the edge
- * @property {number} first its first line, an index into the fold's lines
- * @property {number} end one past its last line
+ * @property {import('./article.js').GapHolds} holds what its gap holds (T-ARTICLE's `gapHolds`): 'reading' while a withheld run's clause was not decided, 'edge' where its key stands in the edge — a transcluded run's always
+ * @property {number} first its first line, an index into the fold's lines: a transcluded run's the one its first character stands on
+ * @property {number} end one past its last line: a transcluded run's past the one its last character stands on
  */
 
 /**
  * @typedef {Object} EdgeSign — a sign standing in a column's edge on the corner layer (`placeSigns`): its element, kept across frames
  * @property {HTMLElement} el
- * @property {'statement' | 'key' | 'count'} kind a withheld origin's statement; a run's key too wide for its gap; a run's others' count
+ * @property {'statement' | 'key' | 'count'} kind an origin's statement; a run's key, no gap holding it; a withheld run's others' count
  * @property {string} addr the document whose article it stands beside
  * @property {number} pos the run it stands for, by its first position
  * @property {string} origin the run's origin
@@ -740,7 +745,7 @@ const panes = new WeakMap();
 const corners = new Map();
 /** @type {Map<string, EdgeSign>} the signs standing in the columns' edges (`placeSigns`), by key: a statement's `⟨document⟩ ⟨origin⟩`, a run's sign's `⟨document⟩ ⟨position⟩ ⟨kind⟩` */
 const signed = new Map();
-/** @type {Map<string, Map<string, string>>} the run each withheld origin's statement stands beside, by document and then by origin: the run's identity (`RunAt.id`), kept while a line of that run is in view (`placeSigns`; T-ARTICLE's `edgeSignsFor`) */
+/** @type {Map<string, Map<string, string>>} the run each origin's statement stands beside, by document and then by origin: the run's identity (`RunAt.id`), kept while a line of that run is in view (`placeSigns`; T-ARTICLE's `edgeSignsFor`) */
 const anchors = new Map();
 /** @type {Set<string>} the documents whose corner a reader's act opened whole (`openCorner`), until it is closed or leaves */
 const openWhole = new Set();
@@ -1274,9 +1279,6 @@ export function putBack(addr, ids) {
  * the text shown (N-WALK's, O-SELECTION's).
  */
 export function viewFor(/** @type {Doc} */ d, scene = false) {
-  /** @type {Map<string, 'edition' | 'draft' | 'unknown'>} */
-  const originKinds = new Map();
-  for (const o of d.origins) { const od = REC.doc(o.doc); const p = REC.place(o.doc); originKinds.set(o.doc, p ? p.kind : od.meta ? (od.meta.published ? 'edition' : 'draft') : od.kind); }
   /** @type {ArticleView} */
   const v = {
     selected: read.selection(), focus: litFocus(scene),
@@ -1285,13 +1287,29 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
     reader: REC.reader(),
     ...cornerFacts(d),
     read: scene ? null : read.newer(d.addr),
-    scene, originKinds,
+    scene,
     clauseOf, keyOf: REC.accountKey,
     keptOpen: openStatements.has(d.addr),
     cpl: scene ? MEASURE_CPL : measure(),
     measure: widthOf,
   };
   return v;
+}
+
+/**
+ * An origin document's kind as the page reads it (T-ARTICLE's `carriesC33`):
+ * the index's, where it lists the origin; else its metadata's word, where a
+ * read answered it; else the record's, unknown where none is held. The one
+ * reading the plane's and a pane's statements of a transcluded origin and the
+ * ARIA mirror's description of it take, each as it stands (FP-33).
+ * @param {string} origin
+ * @returns {'edition' | 'draft' | 'unknown'}
+ */
+export function originKind(origin) {
+  const p = REC.place(origin);
+  if (p) return p.kind;
+  const d = REC.has(origin) ? REC.doc(origin) : null;
+  return !d ? 'unknown' : d.meta ? (d.meta.published ? 'edition' : 'draft') : d.kind;
 }
 
 /**
@@ -1955,8 +1973,8 @@ const spaceAt = (/** @type {string} */ s, /** @type {number} */ i) => isSpace(/*
 /**
  * The point a line of a block opens at: the first character inside the
  * block's element, chrome included and spaces apart, whose box's middle lies
- * below `y` — a line opened by a symbol, a hairline's label or C-33's mark
- * opening before that chrome; null where no character lies below it.
+ * below `y` — a line opened by a symbol opening before that symbol; null
+ * where no character lies below it.
  * @param {HTMLElement} el the block's element
  * @param {number} y the line's top, in client px
  * @returns {{node: Node, offset: number} | null}
@@ -1975,7 +1993,7 @@ function lineStart(el, y) {
   while (lo < hi) { const m = (lo + hi) >> 1; if (mid(atoms[m]) > y) hi = m; else lo = m + 1; }
   if (lo >= atoms.length) return null;
   const a = atoms[lo];
-  const chrome = a.node.parentElement ? /** @type {HTMLElement | null} */ (a.node.parentElement.closest('.sym, .hairline, .pubmark')) : null;
+  const chrome = a.node.parentElement ? /** @type {HTMLElement | null} */ (a.node.parentElement.closest('.sym')) : null;
   if (chrome && el.contains(chrome) && chrome !== el && a.offset === 0 && document.createTreeWalker(chrome, NodeFilter.SHOW_TEXT).nextNode() === a.node && chrome.parentNode) {
     return { node: chrome.parentNode, offset: [...chrome.parentNode.childNodes].indexOf(chrome) };
   }
@@ -2282,7 +2300,7 @@ function opened(/** @type {HTMLElement} */ el, /** @type {Cut} */ cut, /** @type
   }
 }
 
-/** a unit a part takes up to a cut: the first element no text of which stands before the cut left out */
+/** a unit a part takes up to a cut: the first element no text of which stands before the cut left out, and a run's closing given up in each element the cut falls inside, which goes on past it */
 function closed(/** @type {HTMLElement} */ el, /** @type {Cut} */ cut) {
   /** @type {Node} */
   let n = el;
@@ -2290,6 +2308,7 @@ function closed(/** @type {HTMLElement} */ el, /** @type {Cut} */ cut) {
     const next = n.lastChild;
     if (!next || next.nodeType !== Node.ELEMENT_NODE) return;
     if (!had) { /** @type {HTMLElement} */ (next).remove(); return; }
+    /** @type {HTMLElement} */ (next).classList.remove('closes');
     n = next;
   }
 }
@@ -2377,24 +2396,36 @@ function fill(rec, v, span) {
 }
 
 /**
- * A mounted article's withheld runs as its column's edge reads them (see the
- * head; `RunAt`): each run of the text the article was made from with an
- * origin, its identity through the image it was made from, what its gap
- * holds — decided over the view it was made with, as its gap was (T-ARTICLE's
- * `gapHolds`) — and the lines of its fold that set it.
+ * A mounted article's runs of other documents' material as its column's edge
+ * reads them (see the head; `RunAt`; T-ARTICLE's `originRunsOf`): each its
+ * identity through the image the article was made from and the lines of its
+ * fold that set it — a withheld run's its block's, with what its gap holds,
+ * decided over the view it was made with as its gap was (T-ARTICLE's
+ * `gapHolds`); a transcluded run's from the line its first character stands
+ * on to the one its last does (T-ARTICLE's `textIn`), the run's own positions
+ * where no typed line holds a character of it, its key in the edge. None for
+ * a run its fold holds no line for.
+ * @param {Doc} d the record the article was made from
  * @param {Made} made what the article was made from
  * @param {ArticleView} view the view it was made with
  * @param {Unit[]} units its fold's lines by the row elements that set them
+ * @param {Fold} f its fold
  * @returns {RunAt[]}
  */
-function withheldRunsOf(made, view, units) {
+function originRunsAt(d, made, view, units, f) {
   const cpl = view.cpl ?? MEASURE_CPL;
-  return made.blocks.flatMap((b) => {
-    const u = b.kind === 'withheld' && b.origin ? units.find((x) => x.pos === b.pos) : undefined;
-    if (!u || !b.origin) return [];
-    const p = placeholderOf(b, view.reader, view.originOwner, view.clauseOf), [first] = REC.identityIn(made.image, b.pos, 1);
-    const ends = view.marks.filter((s) => !!s.run && s.run.pos === b.pos).length;
-    return [{ b, origin: b.origin, id: first ? `${b.origin} ${first.prefix}.${first.ordinal}` : `${b.origin} @${b.pos}`, holds: gapHolds(p, b.width, cpl, view.measure, ends), first: u.first, end: u.end }];
+  return originRunsOf(d).flatMap(/** @returns {RunAt[]} */ (run) => {
+    const [byte] = REC.identityIn(made.image, run.pos, 1), id = byte ? `${run.origin} ${byte.prefix}.${byte.ordinal}` : `${run.origin} @${run.pos}`;
+    if (run.withheld) {
+      const b = made.blocks.find((x) => x.pos === run.pos), u = units.find((x) => x.pos === run.pos);
+      if (!b || !u) return [];
+      const p = placeholderOf(b, view.reader, view.originOwner, view.clauseOf);
+      const ends = view.marks.filter((s) => !!s.run && s.run.pos === b.pos).length;
+      return [{ run, b, id, holds: gapHolds(p, b.width, cpl, view.measure, ends), first: u.first, end: u.end }];
+    }
+    const at = textIn(made.blocks, run) || { from: run.pos, to: run.pos + run.width };
+    const first = placeIn(f, at.from).line, last = placeIn(f, at.to - 1).line;
+    return first == null || last == null ? [] : [{ run, b: null, id, holds: 'edge', first, end: last + 1 }];
   });
 }
 
@@ -2441,7 +2472,7 @@ function mount(d, v, span, banded) {
   const rec = {
     el, d, lay, runFrom: base.from, runTo: base.to, rev: base.rev, editRev: REC.editRev(d.addr), made, where: shownWhere(base), grev, fold: f, fs: f.fs, corner: cornerOfView(d, view),
     template, units, cuts: new Map(), parts: [], lines: new Set(), banded, scale: 1, blockTops: [], marked: [], markedFor: '', litFor: null, labelFor: null, legible: false, fit: fitKey(),
-    runs: withheldRunsOf(made, view, units),
+    runs: originRunsAt(d, made, view, units, f),
   };
   mounted.set(d.addr, rec);
   const t2 = performance.now();
@@ -3626,18 +3657,21 @@ const SIGN_ORDER = Object.freeze({ statement: 0, key: 1, count: 2 });
 /**
  * The edges' signs placed for the frame (see the head; FP-31): in each
  * mounted document at reading scale, the signs T-ARTICLE's one rule stands for
- * its withheld runs a line of which meets the visible view (`edgeSignsFor`) —
- * each origin's statement (`edgeStatementHTML`) beside the run it stood
+ * its runs of other documents' material a line of which meets the visible
+ * view (`edgeSignsFor`) — each origin's statement beside the run it stood
  * beside last frame while that run is in view, else beside the origin's first
- * run in view, held by the run's identity (`RunAt.id`); a key too wide for its
- * gap; an others' count (LK's `countAt`) — each in the edge of the column
- * holding its run's first line in view, at a share of the text's size never
- * below P-REG's LABEL_MIN_PX, the edge's width wide; the signs of one column's
- * edge stacked by the one hold (P-LABEL's `holdStack`) — at their lines, below
- * the hold, below a label held over the document or what its head covers in
- * that column, off the signs the article sets in that edge, inside the
- * column's padded foot. Elements are written only where their words or size
- * changed, their heights read together, then placed by translate alone.
+ * run in view, held by the run's identity (`RunAt.id`): a withheld origin's
+ * (`edgeStatementHTML`), a transcluded origin's (`sourceStatementHTML`), its
+ * C-33's words read as the frame stands (`originKind`, T-ARTICLE's
+ * `carriesC33`); a key no gap holds; a withheld run's others' count (LK's
+ * `countAt`) — each in the edge of the column holding its run's first line in
+ * view, at a share of the text's size never below P-REG's LABEL_MIN_PX, the
+ * edge's width wide; the signs of one column's edge stacked by the one hold
+ * (P-LABEL's `holdStack`) — at their lines, below the hold, below a label
+ * held over the document or what its head covers in that column, off the
+ * signs the article sets in that edge, inside the column's padded foot.
+ * Elements are written only where their words or size changed, their heights
+ * read together, then placed by translate alone.
  */
 function placeSigns() {
   if (!cornerLayer) return;
@@ -3663,15 +3697,16 @@ function placeSigns() {
     const at = new Map();
     for (const r of rec.runs) {
       const first = r.holds === 'reading' ? null : firstIn(r);
-      if (first) at.set({ b: r.b, id: r.id, holds: r.holds, count: LK.countAt(addr, r.b, rec.d) }, { r, ...first });
+      if (first) at.set({ run: r.run, id: r.id, holds: r.holds, count: r.b ? LK.countAt(addr, r.b, rec.d) : noCount() }, { r, ...first });
     }
     const chosen = edgeSignsFor([...at.keys()], anchors.get(addr) || new Map());
     beside.set(addr, chosen.beside);
     for (const sign of chosen.signs) {
-      const x = /** @type {{r: RunAt, column: number, y: number}} */ (at.get(sign.run)), origin = x.r.origin;
-      const html = sign.kind === 'statement' ? edgeStatementHTML(placeholderOf(x.r.b, REC.reader(), originOwner, clauseOf), claimsKeptIn(origin), false)
-        : sign.kind === 'key' ? edgeKeyHTML(origin, false) : edgeCountHTML(sign.run.count);
-      if (html) want.push({ key: sign.kind === 'statement' ? `${addr} ${origin}` : `${addr} ${x.r.b.pos} ${sign.kind}`, kind: sign.kind, rec, run: x.r, column: x.column, line: x.y, html });
+      const x = /** @type {{r: RunAt, column: number, y: number}} */ (at.get(sign.run)), run = x.r.run, origin = run.origin;
+      const html = sign.kind === 'statement'
+        ? (x.r.b ? edgeStatementHTML(placeholderOf(x.r.b, REC.reader(), originOwner, clauseOf), claimsKeptIn(origin), false) : sourceStatementHTML(origin, carriesC33(rec.d, originKind(origin)), false))
+        : sign.kind === 'key' ? edgeKeyHTML(run, false) : edgeCountHTML(sign.run.count);
+      if (html) want.push({ key: sign.kind === 'statement' ? `${addr} ${origin}` : `${addr} ${run.pos} ${sign.kind}`, kind: sign.kind, rec, run: x.r, column: x.column, line: x.y, html });
     }
   }
   anchors.clear();
@@ -3684,8 +3719,8 @@ function placeSigns() {
     const s = signed.get(w.key) || makeSign(/** @type {HTMLElement} */ (cornerLayer), w.key, w.kind), style = `${px}|${lh}|${width}`;
     if (s.html !== w.html) { s.el.innerHTML = w.html; s.html = w.html; s.stale = true; }
     if (s.style !== style) { Object.assign(s.el.style, { fontSize: px + 'px', lineHeight: lh + 'px', width: width + 'px' }); s.style = style; s.stale = true; }
-    Object.assign(s.el.dataset, { addr: w.rec.d.addr, pos: String(w.run.b.pos), width: String(w.run.b.width), origin: w.run.origin });
-    Object.assign(s, { addr: w.rec.d.addr, pos: w.run.b.pos, origin: w.run.origin, column: w.column, x: Math.round(sx(box.x + c.x + c.w) + EDGE_GAP * em), w: width, live: true });
+    Object.assign(s.el.dataset, { addr: w.rec.d.addr, pos: String(w.run.run.pos), width: String(w.run.run.width), origin: w.run.run.origin });
+    Object.assign(s, { addr: w.rec.d.addr, pos: w.run.run.pos, origin: w.run.run.origin, column: w.column, x: Math.round(sx(box.x + c.x + c.w) + EDGE_GAP * em), w: width, live: true });
     const k = `${w.rec.d.addr} ${w.column}`;
     (edges.get(k) || edges.set(k, []).get(k) || []).push({ s, w });
   }
@@ -3694,7 +3729,7 @@ function placeSigns() {
   for (const s of signed.values()) if (s.stale) { s.h = s.el.offsetHeight; s.stale = false; }
   for (const group of edges.values()) {
     const rec = group[0].w.rec, f = rec.fold, box = docBox(rec.d.addr), ci = group[0].s.column, c = f.columns[ci], q = padded(f, c);
-    group.sort((a, b) => a.w.line - b.w.line || a.w.run.b.pos - b.w.run.b.pos || SIGN_ORDER[a.s.kind] - SIGN_ORDER[b.s.kind]);
+    group.sort((a, b) => a.w.line - b.w.line || a.w.run.run.pos - b.w.run.run.pos || SIGN_ORDER[a.s.kind] - SIGN_ORDER[b.s.kind]);
     const band = heldBand(rec, seen, hold), head = corners.get(rec.d.addr);
     const top = Math.max(hold, band ? band.y + band.lh : -Infinity, head && head.head && head.column === ci ? head.bottom : -Infinity);
     const ys = holdStack(group.map((x) => ({ y: x.w.line, h: x.s.h })), sy(box.y + c.y), top, sy(box.y + q.y + q.h), SIGN_GAP, signsIn(rec, ci));

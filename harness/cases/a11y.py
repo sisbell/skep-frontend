@@ -889,10 +889,12 @@ def run(ctx):
 
     def described():
         """the item the platform's focus stands on, the element its `aria-describedby` names and that element's words, every
-        item described, and what the landing says"""
+        item described, and what the landing says — an origin's description, which every item of a run of it names (issue
+        #304), set apart"""
         return ctx.js('''(() => { const e = document.activeElement, sib = window.__skep.mirror.siblings();
-          const by = e && e.getAttribute ? e.getAttribute('aria-describedby') : null, d = by ? document.getElementById(by) : null;
-          const items = [...document.querySelectorAll('#mirror li[role="treeitem"][aria-describedby]')].map((li) => ({...sib[Number(li.dataset.i)]}));
+          const own = (el) => (el && el.getAttribute ? el.getAttribute('aria-describedby') || '' : '').split(' ').filter((id) => id && !id.startsWith('walk-origin-'));
+          const by = own(e).join(' ') || null, d = by ? document.getElementById(by) : null;
+          const items = [...document.querySelectorAll('#mirror li[role="treeitem"][aria-describedby]')].filter((li) => own(li).length).map((li) => ({...sib[Number(li.dataset.i)]}));
           return {focused: e && e.closest && e.closest('#mirror') ? {...sib[Number(e.dataset.i)]} : null, by, words: d ? d.textContent : null,
                   hidden: !!d && d.hidden, items: items.map((i) => [i.kind, i.pos]), said: window.__skep.go.described(), line: window.__skep.landingLine()}; })()''')
     d = described()
@@ -902,6 +904,17 @@ def run(ctx):
     ctx.leap(DOC, WINDOW[0])
     gone = described()
     r.check(not gone['items'] and gone['said'] is None, 'the next landing takes the description down with the line', gone)
+    # the window run's origin described once in the mirror, C-33's words, every item of the run naming it (issue #304's design
+    # decision: "The mirror gives each origin one description, and every run points to it")
+    origin = ctx.js('''((addr, lo, hi, id) => { const sib = window.__skep.mirror.siblings(), blocks = window.__skep.model.doc(addr).blocks;
+      const holds = (n) => n.kind === 'block' && n.addr === addr && blocks.some((b) => b.pos === n.pos && b.kind === 'para' && b.text.trim() && b.pos < hi && lo < b.pos + b.width);
+      const items = [...document.querySelectorAll('#mirror li[role="treeitem"]')].map((li) => ({n: sib[Number(li.dataset.i)], by: (li.getAttribute('aria-describedby') || '').split(' ')}));
+      const el = document.getElementById(id);
+      return {run: items.filter((i) => holds(i.n)).map((i) => [i.n.pos, i.by.includes(id)]), others: items.filter((i) => !holds(i.n) && i.by.includes(id)).map((i) => i.n.pos),
+              words: el ? el.textContent : null, hidden: !!el && el.hidden, count: document.querySelectorAll('#' + id).length}; })(%s, %d, %d, %s)''' % (json.dumps(DOC), WINDOW[0], WINDOW[0] + WINDOW[1], json.dumps('walk-origin-' + ''.join(c if c.isdigit() else '-' for c in WINDOW[2]))))
+    c33 = ctx.js('window.__skep.strings.pinned().find((s) => s.id === "C-33").text')
+    r.check(bool(origin['run']) and all(named for _, named in origin['run']) and not origin['others'] and origin['words'] == c33 and origin['hidden'] and origin['count'] == 1,
+            'the window run\'s origin has one hidden description in the mirror, C-33\'s words, which every item of the run names and no other item does (issue #304)', origin)
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
     ctx.frames(1)
     # ---- each run's item carries its label (issue #158): two typed lines of the first edition's own bytes, their first lines in
@@ -923,10 +936,12 @@ def run(ctx):
         ctx.frames(3)
 
         def pieces():
-            """the item the focus stands on, and each item described with the words of every description it names"""
+            """the item the focus stands on, and each item described with the words of every description it names, an
+            origin's description set apart"""
             return ctx.js('''(() => { const e = document.activeElement, sib = window.__skep.mirror.siblings();
-              const items = [...document.querySelectorAll('#mirror li[role="treeitem"][aria-describedby]')].map((li) => ({pos: sib[Number(li.dataset.i)].pos,
-                words: li.getAttribute('aria-describedby').split(' ').map((id) => (document.getElementById(id) || {}).textContent)}));
+              const own = (li) => li.getAttribute('aria-describedby').split(' ').filter((id) => id && !id.startsWith('walk-origin-'));
+              const items = [...document.querySelectorAll('#mirror li[role="treeitem"][aria-describedby]')].filter((li) => own(li).length).map((li) => ({pos: sib[Number(li.dataset.i)].pos,
+                words: own(li).map((id) => (document.getElementById(id) || {}).textContent)}));
               return {focused: e && e.closest && e.closest('#mirror') ? sib[Number(e.dataset.i)].pos : null, items, line: (window.__skep.landingLine() || {}).words}; })()''')
         label = ctx.js('import("./strings.js").then(({t}) => [t("L.piece", {k: 1, n: 2}), t("L.piece", {k: 2, n: 2})])')
         p = pieces()

@@ -3,10 +3,13 @@
 // where its first line holds the key as measured in the identifier's face,
 // never counted, a control on the plane and a line in a pane, its ground
 // alone while its clause is read, and no sign of it in the article's edge;
-// the one rule of the signs the edges stand for the runs in view — each
-// origin's statement once, kept beside its run by the run's identity, a key
-// too wide for its gap, a count — and the statement itself, headed by the
-// key, keeping the pointer alone of the clause and the kept clause; an item
+// the one rule of the signs the edges stand for the runs in view, withheld
+// and transcluded — each origin's statement once, kept beside its run by the
+// run's identity, a key no gap holds, a count — and the statements
+// themselves, headed by the key: a withheld origin's keeping the pointer
+// alone of the clause and the kept clause, a transcluded origin's its
+// gesture to its source and C-33's words where a draft's run stands in a
+// published document; the one list of an article's runs; an item
 // not rendered — one of a kind the page does not know among them, as a
 // delivery hands it — a gap of its positions, its words in it or in the
 // edge; every address the article sets in the identifier's face, a record's
@@ -14,10 +17,12 @@
 // decided over the origin's whole admitted-claim set, undecided while a read
 // it is decided from is out; links marked at their spans in the one mark
 // they merge into; the selection's and the focus's marks by the one rule; a
-// run's hairline and C-33's mark once per run; each symbol at its span, after
-// its last word and after a run's chrome, titled with what its far end
-// holds; each mark carrying the ends it draws; a typed line's others' count
-// in the column's edge, setting no line; a document's state said once, at
+// transcluded run one run across the typed lines its own newlines break, its
+// ground on every stretch, a hairline at each of its two ends and no word of
+// it in a line; each symbol at its span, after its last word, titled with
+// what its far end holds; each mark carrying the ends it draws; a typed
+// line's others' count in the column's edge, setting no line; a document's
+// state said once, at
 // its corner, the head stating none in any state, a refused document's among
 // them; the corner's items, whole and compact, one by one with their words,
 // their widths and whether they yield to a head's narrow row, outside the
@@ -41,7 +46,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, cornerHTML, cornerItems, cornerWords, keptHTML, keptStatement, statementHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, carriesC33, cornerHTML, cornerItems, cornerWords, keptHTML, keptStatement, statementHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
@@ -64,7 +69,7 @@ const advances = (/** @type {string} */ s) => [...s].length * CHAR_W;
 /** @returns {import('./article.js').ArticleView} */
 const view = (/** @type {Partial<import('./article.js').ArticleView>} */ o = {}) => ({
   selected: null, focus: null, marks: [], mergedMark, symbols: [], says: () => '', countAt: () => ({ n: 0, social: false }), wholeLinks: 0,
-  reader: SIGNED, localTrust: true, notebook: true, scene: false, originKinds: new Map(), originOwner: (a) => accountOf(a) || '', clauseOf: () => null,
+  reader: SIGNED, localTrust: true, notebook: true, scene: false, originOwner: (a) => accountOf(a) || '', clauseOf: () => null,
   keyOf: (a) => (a === '1.0.1' ? OWN_FACTS : undefined), measure: advances, ...o,
 });
 /** @returns {import('../model/records.js').Doc} */
@@ -130,10 +135,10 @@ test('what a gap holds is read from its key as the platform sets it in the ident
 
 test('the signs the columns\' edges stand for the withheld runs in view are one rule: each origin\'s statement once, beside the run it stood beside while that run is in view, held by its identity and never its position, else beside the origin\'s first run in view; a key too wide for its gap where the statement stands beside another run; an others\' count; nothing for a run whose clause is not decided (issue #288\'s design decision: "It sits beside that origin\'s first run in view in reading order and moves only when that run leaves"; FP-38)', () => {
   const O = '1.0.1.0.1003', P = '1.0.2.0.7', none = { n: 0, social: false };
-  /** a run in view: its block, its identity, what its gap holds, its count */
-  const run = (/** @type {number} */ pos, origin = O, /** @type {import('./article.js').GapHolds} */ holds = 'key', count = none) => ({ b: { ...runOf(20, pos), origin }, id: `${origin} ${origin}.0.1.${pos}`, holds, count });
+  /** a withheld run in view: the run, its identity, what its gap holds, its count */
+  const run = (/** @type {number} */ pos, origin = O, /** @type {import('./article.js').GapHolds} */ holds = 'key', count = none) => ({ run: { pos, width: 20, origin, withheld: true }, id: `${origin} ${origin}.0.1.${pos}`, holds, count });
   const a = run(1), b = run(100, O, 'edge', { n: 3, social: false }), c = run(200, P), reading = run(300, '1.0.3.0.1', 'reading');
-  const signs = (/** @type {ReturnType<typeof edgeSignsFor>} */ r) => r.signs.map((x) => [x.kind, x.run.b.pos]);
+  const signs = (/** @type {ReturnType<typeof edgeSignsFor>} */ r) => r.signs.map((x) => [x.kind, x.run.run.pos]);
   const first = edgeSignsFor([a, b, c, reading], new Map());
   assert.deepEqual(signs(first), [['statement', 1], ['key', 100], ['count', 100], ['statement', 200]], 'each origin\'s statement at its first run in view; the second run of O its key, which its gap does not hold, and its count; nothing for the run whose clause is read');
   assert.deepEqual([...first.beside], [[O, a.id], [P, c.id]], 'the run each statement stands beside, by identity');
@@ -143,7 +148,21 @@ test('the signs the columns\' edges stand for the withheld runs in view are one 
   assert.deepEqual(signs(edgeSignsFor([a, b, c], moved.beside)), [['statement', 100], ['count', 100], ['statement', 200]], 'a run earlier in reading order coming back into view moves no statement — it stands beside the run it stood beside while that run is in view — and that run\'s gap holds its key');
   assert.deepEqual(signs(edgeSignsFor([run(1, O, 'edge'), b, c], moved.beside)), [['statement', 100], ['key', 1], ['count', 100], ['statement', 200]], 'one whose gap does not hold its key: its key in the edge');
   // the same run at another position — words typed above it moved it — is the same run
-  assert.deepEqual(signs(edgeSignsFor([{ ...b, b: { ...b.b, pos: 140 } }, run(160)], moved.beside)), [['statement', 140], ['count', 140]], 'held by its identity, never its position: the run words typed above it moved keeps the statement, a run of O first at the old place takes none');
+  assert.deepEqual(signs(edgeSignsFor([{ ...b, run: { ...b.run, pos: 140 } }, run(160)], moved.beside)), [['statement', 140], ['count', 140]], 'held by its identity, never its position: the run words typed above it moved keeps the statement, a run of O first at the old place takes none');
+});
+
+test('a transcluded run the reader reads takes the same one rule: its origin stated once beside its first run in view and held there by its identity, every other run of it in view its key alone — no gap holds one — and no count, its typed lines carrying their own; beside a withheld origin\'s, each origin its own statement (issue #304\'s design decision: "Each origin, once per document in view")', () => {
+  const X = '1.0.1.0.1003', W = '1.0.2.0.7', none = { n: 0, social: false };
+  /** a transcluded run in view, its key in the edge */
+  const taken = (/** @type {number} */ pos) => ({ run: { pos, width: 30, origin: X, withheld: false }, id: `${X} ${X}.0.1.${pos}`, holds: /** @type {const} */ ('edge'), count: none });
+  const gap = { run: { pos: 400, width: 20, origin: W, withheld: true }, id: `${W} ${W}.0.1.1`, holds: /** @type {const} */ ('key'), count: { n: 2, social: false } };
+  const one = taken(10), two = taken(200), three = taken(600);
+  const signs = (/** @type {ReturnType<typeof edgeSignsFor>} */ r) => r.signs.map((x) => [x.kind, x.run.run.pos, x.run.run.origin]);
+  const first = edgeSignsFor([one, two, gap, three], new Map());
+  assert.deepEqual(signs(first), [['statement', 10, X], ['key', 200, X], ['key', 600, X], ['statement', 400, W], ['count', 400, W]], 'X stated once at its first run, its other two runs their keys; W\'s statement and its count');
+  const scrolled = edgeSignsFor([two, three], first.beside);
+  assert.deepEqual(signs(scrolled), [['statement', 200, X], ['key', 600, X]], 'its first run gone: the statement beside the next, which needs no key of its own');
+  assert.deepEqual(signs(edgeSignsFor([one, two, three], scrolled.beside)), [['statement', 200, X], ['key', 10, X], ['key', 600, X]], 'the run coming back stands its key: the statement moves only when the run it stands beside leaves');
 });
 
 test('a withheld origin\'s statement in its column\'s edge is its face compact, headed by its key: the origin\'s address with the mark that opens the whole wording, C-67\'s pointer where an admitted claim\'s edition holds bytes the reader can reach — a control on the plane, a line in a pane — never the QUOTING sibling or the unread place, the kept clause while the claims stand held, and nothing while the clause is not decided (issue #288\'s design decision: "In the edge it is always compact, keeps an admitted edition claim\'s pointer")', () => {
@@ -348,19 +367,52 @@ test('a block\'s marks are one rule, the article\'s and a standing article\'s al
   assert.deepEqual(classes.map((c) => ({ sel: c.includes('sel'), lit: c.includes('lit') })), blocks.map((b) => blockMarks(d.addr, b, across, at)), 'the article is made with the marks the rule names, block by block');
 });
 
-test('a transcluded run from a draft carries the hairline and C-33\'s mark in a published document', () => {
-  const d = doc({ blocks: [{ pos: 1, width: 12, kind: 'para', text: 'abcdefghijkl', origin: null }], origins: [{ pos: 5, width: 4, doc: '1.0.1.0.1003' }] });
-  const html = articleHTML(d, view({ originKinds: new Map([['1.0.1.0.1003', 'draft']]) }), '1.0.1');
-  assert.ok(html.includes('class="hairline whole"') && html.includes(`≡ ${idOf('1.0.1.0.1003')}`), 'the hairline\'s origin in the identifier\'s face');
-  assert.ok(html.includes(t('C-33')));
-  assert.ok(html.includes(`this document windows ${idOf('1.0.1.0.1003')}`), 'the scene-offer at a windowing document, its address the identifier\'s');
+/** a typed text's blocks as the model derives them from one delivered run */
+const typedBlocks = (/** @type {string} */ text) => deriveBlocks([{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
+/** each transcluded stretch of an article as `[its classes past "seg", its origin, its text]`, in the text's order */
+const sameIn = (/** @type {string} */ html) => [...html.matchAll(/<span class="seg ([^"]*same[^"]*)"[^>]*data-origin="([^"]*)">([^<]*)<\/span>/g)].map((m) => [m[1], m[2], m[3]]);
+
+test('a transcluded run is one run across the typed lines its own newlines break: its ground under every stretch of it, a hairline at its start and one at its end alone, and no word of it in any line — no label, no C-33 — so the plan holds the document\'s own characters alone (issue #304\'s design decision: "segmentsOf joins the run: hairlines at its two ends, texture on every line")', () => {
+  const X = '1.0.1.0.1003';
+  // "beta⏎", "gamma delta⏎" and "epsilon " are X's: both newlines its own, one run of three typed lines
+  const d = doc({ blocks: typedBlocks('alpha beta\ngamma delta\nepsilon zeta'), origins: [{ pos: 7, width: 25, doc: X }] });
+  const html = articleHTML(d, view({ reader: KEYLESS }), '1.0.1');
+  assert.deepEqual(sameIn(html), [['same opens', X, 'beta'], ['same', X, 'gamma delta'], ['same closes', X, 'epsilon ']], `its ground on every line, its hairlines at its two ends: ${html}`);
+  assert.ok(!html.includes('hairline') && !html.includes('pubmark') && !html.includes(t('C-33')) && !html.includes(t('L.origin-mark')), 'no label and no C-33 set in any line');
+  assert.deepEqual(articlePlan(d, view(), '1.0.1').filter((r) => r.pos != null).map((r) => r.pieces.map((p) => [p.text, p.own])), [[['alpha ', true], ['beta', true]], [['gamma delta', true]], [['epsilon ', true], ['zeta', true]]], 'every piece the document\'s own characters: the hairlines take no room');
+  for (const scene of [false, true]) assert.deepEqual(sameIn(articleHTML(d, view({ scene }), '1.0.1')).map(([c]) => c), ['same opens', 'same', 'same closes'], `${scene ? 'in a pane' : 'on the plane'}: the same one run`);
 });
 
-test('each hairline of a run carries the run\'s own positions in the document windowing it, the passage its gesture to the source carries', () => {
-  const blocks = [{ pos: 1, width: 12, kind: /** @type {const} */ ('para'), text: 'abcdefghijkl', origin: null }, { pos: 13, width: 12, kind: /** @type {const} */ ('para'), text: 'mnopqrstuvwx', origin: null }];
-  const html = articleHTML(doc({ blocks, origins: [{ pos: 9, width: 10, doc: '1.0.1.0.1003' }] }), view(), '1.0.1');
-  const hairlines = [...html.matchAll(/<span class="hairline (\w+)" data-src="([^"]*)" data-pos="(\d+)" data-width="(\d+)"/g)].map((m) => [m[1], m[2], Number(m[3]), Number(m[4])]);
-  assert.deepEqual(hairlines, [['whole', '1.0.1.0.1003', 9, 10], ['compact', '1.0.1.0.1003', 9, 10]], `the run, in each block it crosses: ${html}`);
+test('a newline of the document\'s own between two runs of one origin ends the first and opens the second, each with its hairlines; two origins meeting stand a hairline either side of where the origin changes (issue #304\'s design decision: "A native break ends it")', () => {
+  const X = '1.0.1.0.1003', Y = '1.0.2.0.7';
+  const parted = doc({ blocks: typedBlocks('alpha beta\ngamma delta'), origins: [{ pos: 7, width: 4, doc: X }, { pos: 12, width: 5, doc: X }] });
+  assert.deepEqual(sameIn(articleHTML(parted, view(), '1.0.1')), [['same opens closes', X, 'beta'], ['same opens closes', X, 'gamma']], 'the document\'s own newline between them: two runs, each opening and closing');
+  const meeting = doc({ blocks: typedBlocks('alpha beta gamma'), origins: [{ pos: 1, width: 6, doc: X }, { pos: 7, width: 4, doc: Y }] });
+  assert.deepEqual(sameIn(articleHTML(meeting, view(), '1.0.1')), [['same opens closes', X, 'alpha '], ['same opens closes', Y, 'beta']], 'X closing where Y opens');
+});
+
+test('the runs of other documents\' material an article states are one list: each withheld run by its block and each transcluded run touching no withheld run, in the text\'s order; the stretch the typed lines\' characters hold of a span, its newlines and items apart', () => {
+  const X = '1.0.1.0.1003', W = '1.0.2.0.7';
+  const blocks = [...typedBlocks('alpha beta\n'), { pos: 12, width: 20, kind: /** @type {const} */ ('withheld'), text: '', origin: W }, { pos: 32, width: 6, kind: /** @type {const} */ ('para'), text: 'gamma', origin: null }];
+  // the image places W's own bytes over its withheld run: that origin is the withheld run's, never a second run
+  const runs = originRunsOf({ blocks, origins: [{ pos: 7, width: 5, doc: X }, { pos: 12, width: 20, doc: W }, { pos: 32, width: 3, doc: X }] });
+  assert.deepEqual(runs, [{ pos: 7, width: 5, origin: X, withheld: false }, { pos: 12, width: 20, origin: W, withheld: true }, { pos: 32, width: 3, origin: X, withheld: false }]);
+  assert.deepEqual([textIn(blocks, { pos: 7, width: 5 }), textIn(blocks, { pos: 11, width: 25 }), textIn(blocks, { pos: 12, width: 20 })], [{ from: 7, to: 11 }, { from: 32, to: 36 }, null], 'its own characters: a newline, a withheld run apart, none in a gap');
+});
+
+test('a transcluded origin\'s statement in its column\'s edge is headed by its key — the origin\'s mark and its address, the run\'s gesture to its source, a control carrying the source on the plane, a line in a pane — then C-33\'s words where a draft\'s run stands in a published document; a run\'s key alone is the same key; the scene-offer stays at a windowing document (issue #304; foundations §2.1)', () => {
+  const X = '1.0.1.0.1003';
+  const key = `<span class="src-key" data-src="${X}" role="button" tabindex="-1">${esc(t('L.origin-mark'))} ${idOf(X)}</span>`;
+  const c33 = `<span class="c33" data-string="C-33">${esc(t('C-33'))}</span>`;
+  assert.equal(sourceStatementHTML(X, true, false), key + c33, 'on the plane: the key a control, C-33\'s words after it');
+  assert.equal(sourceStatementHTML(X, false, false), key, 'no C-33 where the run carries none');
+  assert.equal(sourceStatementHTML(X, true, true), `<span class="src-key">${esc(t('L.origin-mark'))} ${idOf(X)}</span>${c33}`, 'in a pane: lines');
+  assert.equal(edgeKeyHTML({ pos: 9, width: 4, origin: X, withheld: false }, false), key, 'a run\'s key alone');
+  assert.equal(edgeKeyHTML({ pos: 9, width: 4, origin: X, withheld: true }, false), `<span class="wh-key id" role="button" tabindex="-1">${X}</span>`, 'a withheld run\'s key its address alone');
+  const published = doc(), draft = doc({ kind: 'draft', meta: null });
+  assert.deepEqual([carriesC33(published, 'draft'), carriesC33(published, 'edition'), carriesC33(published, 'unknown'), carriesC33(draft, 'draft')], [true, false, false, false], 'a draft\'s run in a published document alone');
+  const html = articleHTML(doc({ blocks: [{ pos: 1, width: 12, kind: 'para', text: 'abcdefghijkl', origin: null }], origins: [{ pos: 5, width: 4, doc: X }] }), view(), '1.0.1');
+  assert.ok(html.includes(`this document windows ${idOf(X)}`), 'the scene-offer at a windowing document, its address the identifier\'s');
 });
 
 test('the corner: version k of n with R20\'s teaching keyed by venue; a draft\'s chip C-28', () => {
@@ -475,20 +527,17 @@ test('the plan\'s head is the article\'s: two lines — its address and its byli
   assert.ok(marked[2].pieces.map((p) => p.text).join('').endsWith(t('B1.presence.1')));
 });
 
-test('a block\'s plan carries its hairline\'s label, C-33\'s mark and its symbols, at its own size', () => {
+test('a block\'s plan carries its symbols at its own size and its own characters, a transcluded run in it adding no piece and no room (issue #304)', () => {
   const d = doc({ blocks: [{ pos: 1, width: 13, kind: 'para', text: '# abcdefgh ij', origin: null }], origins: [{ pos: 5, width: 4, doc: '1.0.1.0.1003' }] });
-  const v = view({ originKinds: new Map([['1.0.1.0.1003', 'draft']]), marks: [shown(9, 2)], symbols: [shown(9, 2)], countAt: () => ({ n: 3, social: false }) });
+  const v = view({ marks: [shown(9, 2)], symbols: [shown(9, 2)], countAt: () => ({ n: 3, social: false }) });
   const r = /** @type {import('../plane/layout.js').Row} */ (articlePlan(d, v, '1.0.1').find((x) => x.pos === 1));
   const k = 1;
   assert.equal(r.size, k, 'the typed line\'s box at the body\'s size, its "#" among its own characters');
-  const label = r.pieces.find((p) => p.text === '≡ 1.0.1.0.1003');
-  assert.ok(label && label.size === MEASURE.label * k && label.lead > 0, 'the hairline\'s label whole, at its size, led by the sameness boundary');
-  const mark = r.pieces.find((p) => p.text === t('C-33'));
-  assert.ok(mark && mark.box && mark.size === MEASURE.mark * k, 'C-33\'s mark: an inline-block');
   const sym = r.pieces.findIndex((p) => p.text === '⟡' && p.box);
   assert.equal(r.pieces.filter((p) => p.text === '⟡' && p.box).length, 1, 'one symbol');
   assert.deepEqual([r.pieces[sym - 1].text, r.pieces[sym + 1].text], ['gh', ' ij'], 'the symbol at its span: after its last word, before the word after it');
-  assert.equal(r.pieces.filter((p) => !p.box && p.text !== '≡ 1.0.1.0.1003').map((p) => p.text).join(''), '# abcdefgh ij', 'the document\'s own characters, every one');
+  assert.ok(r.pieces.every((p) => p.box ? p.text === '⟡' : p.own && p.lead === 0 && p.trail === 0), 'every other piece the document\'s own characters, with no room about it');
+  assert.equal(r.pieces.filter((p) => !p.box).map((p) => p.text).join(''), '# abcdefgh ij', 'the document\'s own characters, every one');
   assert.ok(!r.pieces.some((p) => p.text.includes(t('F.others-count', { n: 3 }))) && !('float' in r), 'the others\' count no piece of the plan');
 });
 
@@ -581,9 +630,9 @@ test('the corner\'s state and the words the mirror voices are one rule: a withhe
   assert.equal(cornerWords(doc({ addr: '1.0.1.0.3.2', members: null }), view({ members: null })), t('F.corner.pinned', { published: t('F.published.notebook'), k: 2 }), 'no count known: its version alone, no statement of the count');
 });
 
-/** a paragraph's pieces in the plan, a symbol as ⟡ and C-33's mark as its id, every other piece its text */
+/** a paragraph's pieces in the plan, each its text, a symbol's its ⟡ */
 const piecesOf = (/** @type {import('../model/records.js').Doc} */ d, /** @type {import('./article.js').ArticleView} */ v, /** @type {number} */ pos) =>
-  /** @type {import('../plane/layout.js').Row} */ (articlePlan(d, v, '1.0.1').find((x) => x.pos === pos)).pieces.map((p) => (p.box && p.text === t('C-33') ? 'C-33' : p.text));
+  /** @type {import('../plane/layout.js').Row} */ (articlePlan(d, v, '1.0.1').find((x) => x.pos === pos)).pieces.map((p) => p.text);
 /** the links' symbols in the HTML, in order (the head's presence ⟡ is no link's) */
 const symsIn = (/** @type {string} */ html) => html.match(/<span class="sym [^"]*" data-link="[^"]*"/g) || [];
 
@@ -614,31 +663,27 @@ test('a span across two paragraphs takes one symbol, in the last paragraph it to
   assert.ok(/data-pos="13"[^>]*>gamma<span class="sym/.test(html), html);
 });
 
-test('where its span\'s last word runs into a run\'s hairline, the symbol stands after the run\'s chrome; where the line may break before the hairline, before it', () => {
+test('a symbol stands after its span\'s last word whatever run opens beside it — before the space a run opens at, before the word after an em dash where the line may break — the run\'s hairlines taking no room in the line (issue #304)', () => {
   const X = '1.0.1.0.1003';
-  // the run opens at the space after "two": the label's ≡ joins "two" in the line, so the symbol stands after the chrome, before the space
+  // the run opens at the space after "two": nothing of the run stands in the line, so the symbol stands after "two", outside the run
   const d = doc({ blocks: [{ pos: 1, width: 13, kind: 'para', text: 'one two three', origin: null }], origins: [{ pos: 8, width: 6, doc: X }] });
-  const draft = view({ originKinds: new Map([[X, 'draft']]), symbols: [shown(5, 3)] });
-  assert.deepEqual(piecesOf(d, draft, 1), ['one two', '≡ ' + X, 'C-33', '⟡', ' three']);
-  assert.ok(/<span class="pubmark" data-mark="C-33">[^<]*<\/span><span class="sym [^"]*"[^>]*>⟡<\/span> three<\/span>/.test(articleHTML(d, draft, '1.0.1')), 'inside the run\'s stretch, after its chrome');
-  assert.deepEqual(piecesOf(d, view({ originKinds: new Map([[X, 'edition']]), symbols: [shown(5, 3)] }), 1), ['one two', '≡ ' + X, '⟡', ' three']);
-  // after an em dash the line may break before the hairline: the symbol stands before the run's chrome
+  const v = view({ symbols: [shown(5, 3)] });
+  assert.deepEqual(piecesOf(d, v, 1), ['one two', '⟡', ' three']);
+  assert.ok(/one two<span class="sym [^"]*"[^>]*>⟡<\/span><span class="seg same opens closes" data-origin="1\.0\.1\.0\.1003"> three<\/span><\/p>/.test(articleHTML(d, v, '1.0.1')), 'before the run\'s stretch, the run opening after it');
   const dash = doc({ blocks: [{ pos: 1, width: 15, kind: 'para', text: 'one—two three', origin: null }], origins: [{ pos: 7, width: 3, doc: X }] });
-  assert.deepEqual(piecesOf(dash, view({ symbols: [shown(1, 6)] }), 1), ['one—', '⟡', '≡ ' + X, 'two', ' three']);
+  assert.deepEqual(piecesOf(dash, view({ symbols: [shown(1, 6)] }), 1), ['one—', '⟡', 'two', ' three']);
 });
 
-test('a run cut by a mark and a symbol carries its boundary, its hairline and C-33\'s mark once, at its first stretch', () => {
+test('a run cut by a mark and a symbol opens once and closes once, its ground under each of its stretches, and the cuts add no piece of its own (issue #304)', () => {
   const X = '1.0.1.0.1003';
   const d = doc({ blocks: [{ pos: 1, width: 12, kind: 'para', text: 'abcdefghijkl', origin: null }], origins: [{ pos: 5, width: 4, doc: X }] });
-  const v = view({ originKinds: new Map([[X, 'draft']]), marks: [shown(6, 2)] });
+  const v = view({ marks: [shown(6, 2)] });
   const html = articleHTML(d, v, '1.0.1');
-  assert.equal((html.match(/class="hairline /g) || []).length, 1, html);
-  assert.equal((html.match(/data-mark="C-33"/g) || []).length, 1);
-  assert.equal((html.match(/class="seg[^"]*same opens"/g) || []).length, 1, 'the boundary at its first stretch alone');
-  assert.equal((html.match(/class="seg[^"]*same[^"]*"/g) || []).length, 3, 'its ground under each of its three stretches');
-  assert.deepEqual(piecesOf(d, v, 1), ['abcd', '≡ ' + X, 'C-33', 'e', 'fg', 'h', 'ijkl']);
+  assert.deepEqual(sameIn(html.replace(/ lip depth\d|style="[^"]*" |data-links="[^"]*" |data-ends="[^"]*" /g, '')).map(([c, , text]) => [c, text]), [['same opens', 'e'], ['same', 'fg'], ['same closes', 'h']], `the boundary at its first stretch, the closing at its last: ${html}`);
+  assert.deepEqual(piecesOf(d, v, 1), ['abcd', 'e', 'fg', 'h', 'ijkl']);
   const words = doc({ blocks: [{ pos: 1, width: 11, kind: 'para', text: 'ab cd ef gh', origin: null }], origins: [{ pos: 4, width: 5, doc: X }] });
-  assert.deepEqual(piecesOf(words, view({ symbols: [shown(4, 2)] }), 1), ['ab ', '≡ ' + X, 'cd', '⟡', ' ef', ' gh'], 'a symbol standing inside the run cuts it and repeats none of its chrome');
+  assert.deepEqual(piecesOf(words, view({ symbols: [shown(4, 2)] }), 1), ['ab ', 'cd', '⟡', ' ef', ' gh'], 'a symbol standing inside the run cuts it');
+  assert.deepEqual(sameIn(articleHTML(words, view({ symbols: [shown(4, 2)] }), '1.0.1')).map(([c, , text]) => [c, text]), [['same opens', 'cd'], ['same closes', ' ef']], 'opening before the symbol, closing after it');
 });
 
 test('an end standing in two stretches is marked in both, the text between them not, and takes one symbol, after the last word of its last stretch', () => {

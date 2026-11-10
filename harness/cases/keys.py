@@ -1104,7 +1104,7 @@ def names(ctx, c, doc, member, plain, p0, p1, ids=None):
 
 
 def bare(c, mine):
-    """is the copy's plain text the document's own bytes, no label of the page — a hairline's ≡, a symbol's ⟡ — among them?"""
+    """is the copy's plain text the document's own bytes, no label of the page — an origin's mark ≡, a symbol's ⟡ — among them?"""
     return c['plain'] is not None and c['plain'] == mine and not any(x in c['plain'] and x not in (mine or '') for x in '≡⟡')
 
 

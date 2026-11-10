@@ -59,7 +59,8 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     origin, no text — B1-S7's gap at the run (issue #288's design decision:
     no face in any gap; every run shows its gap and its key): its origin's
     key, the origin's address, in it where its first line holds it, no face
-    and no C-33 mark in it, none of the owner's bytes anywhere in the page;
+    in it and C-33's words neither in the article nor in a sign of its edges,
+    none of the owner's bytes anywhere in the page;
     the origin's statement standing once in its column's edge on the corner
     layer, headed by its key, beside the run, inside its column's padded
     slot and meeting no other sign, corner or held label (FP-31); C-67's
@@ -622,14 +623,15 @@ def run(ctx):
     head = t(ctx, 'B1.withheld-run', {'owner': OWNER, 'account': OWNER, 'width': WINDOW[1], 'origin': WINDOW[2]})
     arm = t(ctx, arm_id, {'owner': OWNER})
     mark = t(ctx, 'L.withheld.mark', {'origin': WINDOW[2]})
-    c33 = ctx.js('document.querySelectorAll(%s).length' % json.dumps('#domlayer article[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC))
+    # C-33's words, the entitled reader's alone, in the article or in a sign of its edges
+    c33 = ctx.js('[...document.querySelectorAll(%s)].filter((e) => e.textContent.includes(%s)).length' % (json.dumps('#domlayer article[data-addr="%s"], #corners .edge-sign[data-addr="%s"]' % (DOC, DOC)), json.dumps(t(ctx, 'C-33'))))
     # the run's gap holds its ground, its ends' symbol and its key where its first line holds it, and no face (issue #288's
     # design decision: "withheldBlockHTML sets no face in any gap. Every run shows its gap and its key")
     g = ph[0] if len(ph) == 1 else {}
     r.check(len(ph) == 1 and g['pos'] == WINDOW[0] and g['width'] == WINDOW[1] and g['origin'] == WINDOW[2] and g['owner'] == OWNER and c33 == 0
             and g['holds'] == 'key' and g['key'] == WINDOW[2] and not g['face'],
-            '(e) the mounted article holds B1-S7\'s gap at the run — its position, width, origin and its origin\'s owner — its key, %s, in it and no face, and no C-33 mark (issue #288)' % WINDOW[2],
-            {'gaps': ph, 'c33_marks': c33, 'key_here': store['key_here']})
+            '(e) the mounted article holds B1-S7\'s gap at the run — its position, width, origin and its origin\'s owner — its key, %s, in it and no face, and C-33\'s words stand neither in it nor in a sign of its edges (issues #288, #304)' % WINDOW[2],
+            {'gaps': ph, 'c33_words': c33, 'key_here': store['key_here']})
     leaked, legit_held = leaks(places)
     r.check(len(own) >= STRETCH and not leaked, f'(e) none of the owner\'s bytes over the run stands anywhere in the page: no stretch of {STRETCH} of its characters, white space folded, that the guest\'s own delivered text and labels do not hold', leaked[:4])
     # the origin's statement once, in its column's edge on the corner layer, beside the run, headed by its key, held inside its

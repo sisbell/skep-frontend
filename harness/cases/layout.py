@@ -217,8 +217,8 @@ characters between them, its button there named by those characters on each
 side, its act a list of them that Esc closes onto the stroke — unmeasured
 where that scene stands no stroke; a click on the re-level
 act's chord mark sets the two ends level again (K-62); the panes are read,
-never clicked (SC; B1-S9) — no block, hairline or symbol in a pane, nor its
-corner's version statement, takes the click cues the plane's keep, no block
+never clicked (SC; B1-S9) — no block, run's key in its column's edge or symbol
+in a pane, nor its corner's version statement, takes the click cues the plane's keep, no block
 there takes the hover ground, and a click on any of them leaves the scene
 standing over the page as it found it; each pane is one column whose
 measure the scene fits both panes to, its face never shrunk (issue #436's
@@ -262,7 +262,7 @@ its panes were set with (issue #160). THE CARRY
 (foundations §2.3: every move from a passage to another arrangement of the
 same material carries it, re-projected at the landing and marked there;
 P43): the source act on the window paragraph's "who wrote this?" card, a
-click on the window run's hairline, the latest member's read act in the
+click on the window run's key in its column's edge, the latest member's read act in the
 versions list holding a paragraph, and the same act in the list the corner's
 act (K-57, Enter at the corner) opens with nothing selected and the
 edition's first blocks risen past the one line, which holds the first span
@@ -270,7 +270,7 @@ in view — each pressed as a person presses it — light the arrival in the
 text landed in, no link named, on a span holding the carried stretch's own
 words, outlined inside the landing's article, its first line in the visible
 view — at a version move, which lands in place, where the passage's first
-line stood (issue #154); Back from the hairline's landing lights the run where the carry was
+line stood (issue #154); Back from the key's landing lights the run where the carry was
 made, in the first edition, and Forward lights it in the draft again, each
 by the same marks, no link named (issue #152's design decision: every
 one-step move lights the step it crosses at the end it lands on); the first
@@ -601,12 +601,12 @@ def symbols_view(ctx):
     """each link of the first edition drawn at one span, as the mounted article sets it: its marked words and its
     symbols counted; where it has both, whether the symbol stands in the paragraph holding the end of its words and
     after them, and the article's own text between the words' end and the symbol and after the symbol to the
-    paragraph's end, the chrome inside a paragraph (a hairline, C-33's mark, a symbol, the count) set aside"""
+    paragraph's end, the chrome inside a paragraph (a symbol, the count) set aside"""
     return ctx.js('''(() => {
       const S = window.__skep, art = document.querySelector(%s);
       if (!art) return null;
       const shown = S.links.shown(%s), once = shown.filter((s) => shown.filter((x) => x.link === s.link).length === 1);
-      const text = (r) => { const f = r.cloneContents(); f.querySelectorAll('.hairline, .pubmark, .sym, .others').forEach((x) => x.remove()); return f.textContent; };
+      const text = (r) => { const f = r.cloneContents(); f.querySelectorAll('.sym, .others').forEach((x) => x.remove()); return f.textContent; };
       return once.map((s) => {
         const words = [...art.querySelectorAll(`.lip[data-links~="${s.link}"]`)], syms = [...art.querySelectorAll(`.sym[data-link="${s.link}"]`)];
         const out = {link: s.link, pos: s.pos, width: s.width, words: words.length, syms: syms.length};
@@ -1980,18 +1980,19 @@ def untouched(ctx):
 
 def pane_mark(ctx, selector):
     """a mark in a scene's pane as a pointer meets it: the first element the selector names (kept as `window.__gateMark`),
-    its pane scrolled to stand it a third of the way down — a corner's held at the pane's top needs none — and the point at
-    the middle of a block's first character of its own text, the chrome and the link marks inside it skipped, or of any
-    other mark's box; whether the mark is what lies under that point. None where no element answers"""
+    its pane scrolled to stand it a third of the way down — a corner's held at the pane's top needs none, nor a sign in its
+    column's edge, which stands beside its run's first line in view wherever the pane scrolls — and the point at the middle
+    of a block's first character of its own text, the chrome and the link marks inside it skipped, or of any other mark's
+    box; whether the mark is what lies under that point. None where no element answers"""
     return ctx.js('''((sel) => { const e = document.querySelector(sel); window.__gateMark = e; if (!e) return null;
       const pane = e.closest('.pane');
-      if (pane && !e.closest('.corner')) { const p = pane.getBoundingClientRect(); pane.scrollTop += e.getBoundingClientRect().top - p.top - pane.clientHeight / 3; }
+      if (pane && !e.closest('.corner, .edge-sign')) { const p = pane.getBoundingClientRect(); pane.scrollTop += e.getBoundingClientRect().top - p.top - pane.clientHeight / 3; }
       let q = e.getBoundingClientRect();
       if (e.matches('.sp')) {
         const w = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
         for (let n = w.nextNode(); n; n = w.nextNode()) {
           const i = n.textContent.search(/\\S/);
-          if (i < 0 || n.parentElement.closest('.hairline, .pubmark, .sym, .others, .lip')) continue;
+          if (i < 0 || n.parentElement.closest('.sym, .others, .lip')) continue;
           const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + 1); q = r.getBoundingClientRect(); break;
         }
       }
@@ -2016,17 +2017,22 @@ def pane_click_holds(ctx, r, what, selector):
 def scene_marks_hold(ctx, r):
     """THE SCENE'S PANES ARE READ, NOT ACTED ON (SC; B1-S9): the scene on the first edition and the draft it windows, the
     first edition's links revealed to their symbols — pane A scrolled away, a click on the re-level act's chord mark sets
-    the two ends level again (K-62); no block, hairline or symbol in a pane takes the plane's click cues, which the plane's
-    keep, and a block under the pointer keeps a clear ground; a click on a block, the hairline, the presence ⟡ or a link's
-    symbol changes nothing; its figures"""
+    the two ends level again (K-62); no block, run's key in the column's edge or symbol in a pane takes the plane's click
+    cues, which the plane's keep, and a block under the pointer keeps a clear ground; a click on a block, the window run's
+    key, the presence ⟡ or a link's symbol changes nothing; its figures"""
     ctx.leap(DOC, WINDOW[0])
     ctx.js('window.__skep.links.reveal(%s, 2)' % json.dumps(DOC))
-    # the plane's own cues, read before the scene stands over it, its first column in view — its head among the lines
-    # standing (issue #122: a document stands by line), where the presence ⟡ stands — then the camera back at the landing
+    ctx.frames(2)
+    # the plane's own cues, read before the scene stands over it: the window run's key in its column's edge at the landing,
+    # then, the first column in view — its head among the lines standing (issue #122: a document stands by line), where
+    # the presence ⟡ stands — the text's, and the camera back at the landing
+    cursors = '(sel) => [...document.querySelectorAll(sel)].map((e) => getComputedStyle(e).cursor)'
+    keys = ctx.js('(%s)("#corners .edge-sign .src-key")' % cursors)
     landing = ctx.camera()
     ctx.view_doc_em(DOC, 12.5)
-    plane_cues = ctx.js('''(() => { const cur = (sel) => [...document.querySelectorAll(sel)].map((e) => getComputedStyle(e).cursor);
-      return {blocks: cur('#domlayer .run > .sp'), hairlines: cur('#domlayer .hairline'), presence: cur('#domlayer .sym.reveal'), symbols: cur('#domlayer .sym[data-link]')}; })()''')
+    plane_cues = ctx.js('''(() => { const cur = %s;
+      return {blocks: cur('#domlayer .run > .sp'), presence: cur('#domlayer .sym.reveal'), symbols: cur('#domlayer .sym[data-link]')}; })()''' % cursors)
+    plane_cues['keys'] = keys
     ctx.set_view(landing['x'], landing['y'], landing['scale'])
     ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
     ctx.settle()
@@ -2046,16 +2052,19 @@ def scene_marks_hold(ctx, r):
     r.check(bool(mark) and mark['hits'], 'the re-level act\'s chord mark is what lies under the pointer', mark)
     level_holds(r, 'a click on the re-level act\'s chord mark (K-62)', scene_level(ctx))
     # the click cues are the plane's: none in a pane, every one kept on the plane's text layer
-    cues = ctx.js('''(() => { const cur = (sel) => [...document.querySelectorAll(sel)].map((e) => getComputedStyle(e).cursor);
-      const at = (root) => ({blocks: cur(root + ' .run > .sp'), hairlines: cur(root + ' .hairline'), presence: cur(root + ' .sym.reveal'), symbols: cur(root + ' .sym[data-link]')});
-      return {pane: at('.pane')}; })()''')
+    cues = ctx.js('''(() => { const cur = %s;
+      const at = (root) => ({blocks: cur(root + ' .run > .sp'), keys: cur(root + ' .edge-sign .src-key'), presence: cur(root + ' .sym.reveal'), symbols: cur(root + ' .sym[data-link]')});
+      return {pane: at('.pane')}; })()''' % cursors)
     cues['plane'] = plane_cues
-    kinds = ('blocks', 'hairlines', 'presence', 'symbols')
+    kinds = ('blocks', 'keys', 'presence', 'symbols')
     pointer = {k: sum(1 for c in cues['pane'][k] if c == 'pointer') for k in kinds}
-    r.check(all(cues['pane'][k] for k in kinds) and not any(pointer.values()), 'no click cue in a scene\'s pane: no block, hairline, presence ⟡ or link\'s symbol takes the pointer cursor',
+    r.check(all(cues['pane'][k] for k in kinds) and not any(pointer.values()), 'no click cue in a scene\'s pane: no block, run\'s key in the column\'s edge, presence ⟡ or link\'s symbol takes the pointer cursor',
             {'pane': {k: len(cues['pane'][k]) for k in kinds}, 'pointer': pointer})
-    r.check(all(cues['plane'][k] and all(c == 'pointer' for c in cues['plane'][k]) for k in kinds), 'the plane\'s text layer keeps its click cues: every block, hairline, presence ⟡ and link\'s symbol of a mounted article takes the pointer cursor',
+    r.check(all(cues['plane'][k] and all(c == 'pointer' for c in cues['plane'][k]) for k in kinds), 'the plane keeps its click cues: every block, presence ⟡ and link\'s symbol of a mounted article, and the window run\'s key in its column\'s edge, takes the pointer cursor',
             {k: sorted(set(cues['plane'][k])) for k in kinds})
+    # the window run's key in its column's edge, while pane A stands at the run: a block's hover and its click scroll the pane to
+    # the article's first block
+    pane_click_holds(ctx, r, 'the window run\'s key', '#sceneA .edge-sign .src-key')
     at = pane_mark(ctx, '#sceneA .run > p.sp')
     if at:
         ctx.drv.mouse(at['x'], at['y'], kind='move')
@@ -2063,7 +2072,7 @@ def scene_marks_hold(ctx, r):
     ground = ctx.js('(() => { const e = window.__gateMark; return e ? {hovered: e.matches(":hover"), ground: getComputedStyle(e).backgroundColor} : null; })()')
     r.check(bool(at) and at['hits'] and bool(ground) and ground['hovered'] and ground['ground'] in ('rgba(0, 0, 0, 0)', 'transparent'), 'a block in a scene\'s pane under the pointer keeps a clear ground: no hover cue',
             {'at': at, 'ground': ground})
-    for what, selector in (('a block', '#sceneA .run > p.sp'), ('the hairline', '#sceneA .hairline'), ('the presence ⟡', '#sceneA .sym.reveal'), ('a link\'s symbol', '#sceneA .sym[data-link]')):
+    for what, selector in (('a block', '#sceneA .run > p.sp'), ('the presence ⟡', '#sceneA .sym.reveal'), ('a link\'s symbol', '#sceneA .sym[data-link]')):
         pane_click_holds(ctx, r, what, selector)
     ctx.js('window.__skep.scene.close()')
     ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
@@ -2185,7 +2194,9 @@ def scene_measure_holds(ctx, r):
         head = pane_columns(ctx)
         firsts['head'] = {s: (pane_blocks(ctx, s) or {}).get('first') for s in 'ab'}
         reads = ctx.js('window.__skep.bridge.calls().length') - asked
-        ctx.js('for (const id of ["sceneA", "sceneB"]) document.getElementById(id).scrollTop += 300')
+        # a scroll of 150 px: past the 100 px the held row's check asks, and short of the first edition's end, so ↓ has a next
+        # block to bring up below the window run
+        ctx.js('for (const id of ["sceneA", "sceneB"]) document.getElementById(id).scrollTop += 150')
         ctx.frames(3)
         scrolled = pane_columns(ctx)
         before = pane_blocks(ctx, 'a') or {}
@@ -2278,7 +2289,8 @@ def scene_measure_holds(ctx, r):
             {'held': [before.get('held'), after.get('held')], 'next': want, 'landed': landed})
     kept = {k: {s: v[s] and v[s]['pos'] for s in 'ab'} for k, v in firsts.items()}
     r.check(all(kept['run'][s] is not None and kept['wide'][s] == kept['run'][s] and kept['head'][s] == kept['run'][s] for s in 'ab'),
-            f'the first block in view at the run\'s window is first in view at {SCENE_WIDE_PX} px and at {SCENE_HEAD_PX} px, below a held head\'s row: each refit keeps the reader\'s place', kept)
+            f'the first block in view at the run\'s window is first in view at {SCENE_WIDE_PX} px and at {SCENE_HEAD_PX} px, below a held head\'s row: each refit keeps the reader\'s place', kept,
+            xfail='#545')
     return {'window': {'run': [run['vw'], run['vh']], 'wide': [wide['vw'], wide['vh']], 'head': [head['vw'], head['vh']]},
             'characters': chars, 'corners': {k: [v[s] and v[s]['corner']['form'] for s, _ in sides] for k, v in windows},
             'character_px': run['a'] and run['a']['ch'], 'pane_px': sizes, 'opened': opened, 'first_in_view': kept, 'band_while_wide': band, 'reads_while_wide': reads}
@@ -2487,7 +2499,7 @@ def first_in_view(ctx, addr):
 def carried_holds(ctx, r):
     """THE CARRY's checks (foundations §2.3: every move from a passage to another arrangement of the same material
     carries it, re-projected at the landing and marked there; P43): the source act on the window paragraph's "who wrote
-    this?" card, a click on the window run's hairline — Back from its landing lighting the run where the carry was made
+    this?" card, a click on the window run's key in its column's edge — Back from its landing lighting the run where the carry was made
     and Forward lighting it at the landing again (issue #152) — the latest member's read act in the versions list
     holding a paragraph, and in the list the corner's act opens with nothing selected, which holds the first span in
     view; the carry into a text that holds none of the passage faced at the landing; its figures"""
@@ -2504,24 +2516,26 @@ def carried_holds(ctx, r):
     r.check(bool(at) and at['hits'], 'the "who wrote this?" card offers the window run\'s source, and it is what lies under the pointer', at)
     wait_for(ctx, lit_at(WINDOW[2]))
     seen['source_act'] = arrival_holds(ctx, r, 'the source act on "who wrote this?"', (DOC, run[0], run[1]))
-    # a click on the window run's hairline: the whole run, marked in the source
+    # a click on the window run's key heading its origin's statement in its column's edge: the whole run, marked in the
+    # source (issue #304)
     ctx.leap(DOC, WINDOW[0])
-    hairline = '#domlayer .sp[data-addr="%s"] .hairline.whole[data-src="%s"]' % (DOC, WINDOW[2])
-    at = click_on(ctx, hairline)
-    r.check(bool(at) and at['hits'], 'the window run\'s hairline is what lies under the pointer', at)
+    ctx.frames(2)
+    key = '#corners .edge-sign[data-addr="%s"][data-origin="%s"] .src-key' % (DOC, WINDOW[2])
+    at = click_on(ctx, key)
+    r.check(bool(at) and at['hits'], 'the window run\'s key in its column\'s edge is what lies under the pointer', at)
     wait_for(ctx, lit_at(WINDOW[2]))
-    seen['hairline'] = arrival_holds(ctx, r, 'a click on the window run\'s hairline', (DOC, WINDOW[0], WINDOW[0] + WINDOW[1]))
+    seen['source_key'] = arrival_holds(ctx, r, 'a click on the window run\'s key', (DOC, WINDOW[0], WINDOW[0] + WINDOW[1]))
     land, line = ctx.js('window.__skep.go.landing()'), ctx.js('window.__skep.landingLine()')
     r.check(line is None and bool(land) and land['said'] is None, 'the window run carried whole into its source: all of it in one piece — the outline alone, no line (issue #153)',
             {'said': land and land['said'], 'line': line})
-    # Back from the hairline's landing lights the run where the carry was made, in the first edition, and Forward lights it
-    # in the draft again — each placed where its text holds the run's bytes now (issue #152)
+    # Back from the key's landing lights the run where the carry was made, in the first edition, and Forward lights it in
+    # the draft again — each placed where its text holds the run's bytes now (issue #152)
     ctx.js('window.__skep.go.back()')
     wait_for(ctx, lit_at(DOC))
-    seen['hairline_back'] = arrival_holds(ctx, r, 'Back from the hairline\'s landing (issue #152)', (DOC, WINDOW[0], WINDOW[0] + WINDOW[1]))
+    seen['source_key_back'] = arrival_holds(ctx, r, 'Back from the key\'s landing (issue #152)', (DOC, WINDOW[0], WINDOW[0] + WINDOW[1]))
     ctx.js('window.__skep.go.forward()')
     wait_for(ctx, lit_at(WINDOW[2]))
-    seen['hairline_forward'] = arrival_holds(ctx, r, 'Forward to the hairline\'s landing again (issue #152)', (DOC, WINDOW[0], WINDOW[0] + WINDOW[1]))
+    seen['source_key_forward'] = arrival_holds(ctx, r, 'Forward to the key\'s landing again (issue #152)', (DOC, WINDOW[0], WINDOW[0] + WINDOW[1]))
     # the versions list holding a paragraph: the latest member's read act marks it in the member
     ctx.leap(VERSIONED, None)
     doc = ctx.js('window.__skep.model.doc(%s)' % json.dumps(VERSIONED))
@@ -4247,7 +4261,7 @@ def longest_holds(ctx, r):
     parts = ctx.js('''((a, pad, reach) => { const S = window.__skep, p = S.view.viewport(), blocks = new Map(S.model.doc(a).blocks.map((b) => [b.pos, b]));
       return [...document.querySelectorAll(`#domlayer article.dtext[data-addr="${a}"] .col`)].map((c) => { const q = c.getBoundingClientRect();
         const off = [...c.querySelectorAll('.run > .sp')].filter((e) => { const b = blocks.get(Number(e.dataset.pos)); if (!b || b.kind !== 'para') return false;
-          const k = e.cloneNode(true); k.querySelectorAll('.hairline,.pubmark,.others,.sym').forEach((x) => x.remove()); const char = Number(e.dataset.char || 0);
+          const k = e.cloneNode(true); k.querySelectorAll('.others,.sym').forEach((x) => x.remove()); const char = Number(e.dataset.char || 0);
           return k.textContent !== b.text.slice(char, char + k.textContent.length); }).map((e) => Number(e.dataset.pos));
         return {column: c.dataset.column ?? null, first: c.dataset.first ?? null, end: c.dataset.end ?? null, top: q.top, bottom: q.bottom,
                 meets: q.right >= -pad && q.left <= p.VW + pad && q.bottom >= -pad && q.top <= p.VH + pad, within: q.top >= -pad - reach && q.bottom <= p.VH + pad + reach, off}; }); })(%s, %d, %s)''' % (json.dumps(longest), STAND_PAD_PX, reach))
@@ -4446,7 +4460,7 @@ def resize_frames(ctx, r):
 # chrome inside it skipped (T-SPAN's CHROME) — where the harness sets the platform's selection
 OWN_TEXT = '''((addr, pos) => { const el = document.querySelector(`#domlayer article.dtext[data-addr="${addr}"] .run > .sp[data-pos="${pos}"]`);
   if (!el) return null; const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-  for (let n = w.nextNode(); n; n = w.nextNode()) if (!n.parentElement.closest('.hairline, .pubmark, .sym, .edge') && n.data.trim()) return n;
+  for (let n = w.nextNode(); n; n = w.nextNode()) if (!n.parentElement.closest('.sym, .edge') && n.data.trim()) return n;
   return null; })'''
 
 

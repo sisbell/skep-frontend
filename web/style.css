@@ -182,12 +182,12 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    Charter, in the body's type, set as typed (FP-12): each typed line a block, its white space kept (`pre-wrap`), on a
    one-em indent where it opens a typed line (`indent`) and on none in a part that continues it (`data-char`), the empty
    lines typed after it whole line boxes below it (`--blank`), no other room between blocks and none below a part's last
-   block; the client's words inside the article — its head, a hairline's label, C-33's mark, a symbol, a sign in the
-   edge, a record, a withheld run, an item not rendered, the scene-offer — the client's face, an address in them the
-   identifier's (P-REG's FACE), no indent and no kept white space reaching a sign. Every element's line box is the
-   article's one unitless line height (P-LAY's LINE_H, set on the article by T-LAYER) of its own size — the chrome inside
-   a line (the hairline's label, C-33's mark, a symbol) is set at a line height of 1, so it never deepens its line; a
-   symbol's box is its count of advances wide whatever face sets its ⟡ — and every block is a plain block, so the
+   block; the client's words inside the article — its head, a symbol, a sign in the edge, a record, a withheld run, an
+   item not rendered, the scene-offer — the client's face, an address in them the identifier's (P-REG's FACE), no indent
+   and no kept white space reaching a sign. Every element's line box is the article's one unitless line height (P-LAY's
+   LINE_H, set on the article by T-LAYER) of its own size — the chrome inside a line (a symbol) is set at a line height
+   of 1, so it never deepens its line; a symbol's box is its count of advances wide whatever face sets its ⟡ — a
+   transcluded run's hairlines take no room at all, and every block is a plain block, so the
    margins about one that sets no line (the newlines before a run's first typed line) collapse into one, as P-LAY
    collapses an empty row's: the lines P-LAY lays the bars out on (foundations §2.4: the handoff moves no line). THE
    EDGE: a typed line's others' count and an item's words where its gap holds them not stand in their column's edge,
@@ -201,7 +201,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #domlayer { position:fixed; inset:0; overflow:hidden; pointer-events:none; contain:strict; z-index:3; }
 .dtext { position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform; box-sizing:content-box;
   font-family:var(--face-reading); font-synthesis:none; font-variant-numeric:normal; color:#b9c1cb; -webkit-font-smoothing:antialiased; cursor:text; user-select:text; }
-.dtext .hd, .dtext .hairline, .dtext .pubmark, .dtext .sym, .dtext .edge, .dtext .withheld, .dtext .rec, .dtext .sp.gap, .dtext .sp.blk-ref, .dtext .sp.empty, .dtext .offer {
+.dtext .hd, .dtext .sym, .dtext .edge, .dtext .withheld, .dtext .rec, .dtext .sp.gap, .dtext .sp.blk-ref, .dtext .sp.empty, .dtext .offer {
   font-family:var(--face-client); font-synthesis:initial; font-variant-numeric:tabular-nums; }
 .dtext .col { position:absolute; top:0; left:0; width:calc(var(--measure) * var(--char-w) * 1em); }
 .dtext .col > .run:first-child > :first-child { margin-top:0; }
@@ -235,14 +235,15 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .lip { text-decoration:underline; text-decoration-thickness:1px; text-decoration-color:var(--mark-hue, var(--hue-you)); opacity:var(--mark-value, 1); }
 .dtext .lip.depth2 { text-decoration-style:double; }
 .dtext .lip.depth3 { text-decoration-thickness:2px; }
-/* sameness: boundaries and a ground texture, never a tint; the hairline label the one gesture to the source. A run's
-   ground under each of its stretches, its boundary at the stretch that opens it alone — a mark's or a symbol's cut is
-   no change of origin */
+/* sameness: boundaries and a ground texture, never a tint, and no word in the line — the run's key in its column's edge
+   the one gesture to its source (below). A run's ground under each of its stretches on every line it crosses, a hairline
+   at its two ends alone — inside the stretch that opens it and the one that closes it, drawn as an inset shadow on that
+   end's fragment, so it takes no room and moves no word (FP-31); a mark's, a symbol's or a typed line's cut is no change of
+   origin */
 .dtext .same { background:var(--same-texture); }
-.dtext .same.opens { border-left:var(--border-same) solid var(--same-boundary); padding-left:var(--same-pad); }
-.dtext .hairline { color:var(--same-boundary); font-size:var(--label); line-height:1; margin-right:var(--label-gap); vertical-align:baseline; }
-.dtext .hairline.compact { opacity:.7; }
-.dtext .pubmark { display:inline-block; font-size:var(--mark); line-height:1; color:#cfd6df; border:var(--border-box) solid #4a5260; padding:0 var(--mark-pad); margin-right:var(--mark-gap); text-indent:0; }
+.dtext .same.opens { box-shadow:inset var(--border-same) 0 0 var(--same-boundary); }
+.dtext .same.closes { box-shadow:inset calc(-1 * var(--border-same)) 0 0 var(--same-boundary); }
+.dtext .same.opens.closes { box-shadow:inset var(--border-same) 0 0 var(--same-boundary), inset calc(-1 * var(--border-same)) 0 0 var(--same-boundary); }
 .dtext .sym { display:inline-block; border:var(--border-box) solid var(--mark-hue, #8b8f96); color:var(--mark-hue, #e8e6e1); padding:0 var(--sym-pad); font-size:var(--sym); line-height:1; margin-left:var(--sym-gap); vertical-align:baseline; opacity:var(--mark-value, 1);
   width:calc(var(--sym-chars, 1) * var(--char-w) * 1em + 2 * var(--sym-pad) + 2 * var(--border-box)); text-align:center; text-indent:0; }
 .dtext .sym.other { border-style:dashed; }
@@ -262,7 +263,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 /* an item not rendered: the room its positions take, its words in it where its gap holds them */
 .dtext .sp.gap { color:#4b5563; }
 /* the chrome inside a block is never the document's bytes: a drag crosses it unselected, the copy never carries it */
-.dtext .hairline, .dtext .pubmark, .dtext .sym, .dtext .edge { user-select:none; -webkit-user-select:none; }
+.dtext .sym, .dtext .edge { user-select:none; -webkit-user-select:none; }
 /* THE CARET'S MARK (D5 K-70; FP-31): the page's own caret, set by T-LAYER at its character boundary in the standing part
    each frame — a mark of no width, so it moves no word and sets no line, one em tall on the text's baseline; hollow
    where the caret is kept, the text left to the walk (K-77) */
@@ -276,9 +277,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .rec .derived { display:block; color:#8b8f96; }
 .dtext .offer { display:block; margin:var(--offer-gap) 0; color:#8b8f96; font-size:var(--offer); cursor:pointer; text-decoration:underline dotted; }
 /* the click cues stand where a click acts: APP-INPUT takes the clicks on the plane's text layer — a legible article's,
-   the only one the pointer reaches — and its corners, and on nothing a reading scene's pane holds — a pane's blocks,
-   hairlines and symbols are read, never clicked (SC) */
-#domlayer .dtext .sp, #domlayer .dtext .hairline, #domlayer .dtext .sym, #domlayer .dtext .slot.cut { cursor:pointer; }
+   the only one the pointer reaches — and its corners, and on nothing a reading scene's pane holds — a pane's blocks
+   and symbols are read, never clicked (SC) */
+#domlayer .dtext .sp, #domlayer .dtext .sym, #domlayer .dtext .slot.cut { cursor:pointer; }
 /* a withheld run's key, which opens the whole wording's card: the plane's act alone (a pane's is read, SC) */
 #domlayer .dtext .withheld .wh-key { cursor:pointer; text-decoration:underline dotted; }
 #domlayer .dtext .sp:hover { background:rgba(127,178,255,.08); }
@@ -345,16 +346,18 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #corners .held > span { position:absolute; top:0; white-space:pre; }
 
 /* THE EDGES' SIGNS (FP-31): a withheld origin's statement — its key, the mark that opens the whole wording's card, C-67's
-   pointer, the kept clause — and a run's key too wide for its gap and its others' count, each in a column's edge on the
-   corner layer, at the size, line height and width T-LAYER sets, placed by translate alone; the client's words, an address
-   the identifier's, never cut — an address is never broken, its words wrapped at their spaces alone. They take the pointer,
-   their acts the pointer's alone (APP-INPUT), and stand on no ground, the edge being the document's own room. In a reading
-   scene's pane each pane's own stand in its column's edge, read, never acted on (SC) */
+   pointer, the kept clause — a transcluded origin's — its key in sameness's boundary hue, the run's one gesture to its
+   source, and C-33's words — and a run's key no gap holds and a withheld run's others' count, each in a column's edge on
+   the corner layer, at the size, line height and width T-LAYER sets, placed by translate alone; the client's words, an
+   address the identifier's, never cut — an address is never broken, its words wrapped at their spaces alone. They take the
+   pointer, their acts the pointer's alone (APP-INPUT), and stand on no ground, the edge being the document's own room. In a
+   reading scene's pane each pane's own stand in its column's edge, read, never acted on (SC) */
 :is(#corners, .pane) .edge-sign { position:absolute; top:0; left:0; color:var(--dim); font-family:var(--face-client); font-variant-numeric:tabular-nums; white-space:normal; overflow-wrap:normal; user-select:none; -webkit-user-select:none; }
 #corners .edge-sign { pointer-events:auto; will-change:transform; }
-:is(#corners, .pane) .edge-sign .wh-mark, :is(#corners, .pane) .edge-sign .clause, :is(#corners, .pane) .edge-sign .kept { display:block; color:#cfd6df; }
+:is(#corners, .pane) .edge-sign .wh-mark, :is(#corners, .pane) .edge-sign .clause, :is(#corners, .pane) .edge-sign .kept, :is(#corners, .pane) .edge-sign .c33 { display:block; color:#cfd6df; }
+:is(#corners, .pane) .edge-sign .src-key { display:block; color:var(--same-boundary); }
 :is(#corners, .pane) .edge-sign .id { white-space:nowrap; }
-#corners .edge-sign .wh-mark, #corners .edge-sign .wh-key, #corners .edge-sign .clause[data-home] { cursor:pointer; text-decoration:underline dotted; }
+#corners .edge-sign .wh-mark, #corners .edge-sign .wh-key, #corners .edge-sign .clause[data-home], #corners .edge-sign .src-key { cursor:pointer; text-decoration:underline dotted; }
 
 /* A LANDING'S LINE (issue #153's design decision): at the text's edge beside the landing (O-LAND places it), over the
    beams and the corners, under the reading scene, the LEAP box and the overlay; opaque, as all chrome over the plane is,

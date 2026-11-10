@@ -10,7 +10,8 @@ harness's own fold of the daemon's documents (the census probe PUB-6.52
 names: `doc_metadata` over each account's document numbers — its oracle for
 `places`); the window run the guest meets WITHHELD shows the oracle its box
 and width (240), never its text, and shows the entitled reader (the signed
-session) C-33's mark over the same positions; a draft of the claimant's,
+session) the run whole across its typed lines with its origin stated in
+its column's edge, C-33's words there and none in its lines; a draft of the claimant's,
 read, shows C-28's chip at its corner, and the region at mid holds it — a
 box of its own, or, deep in its account's continuations, inside the
 continuation drawn as one mark; at HOME the account's first continuation is
@@ -245,7 +246,7 @@ def run(ctx):
         if held != x['text']:
             mism.append({'pos': x['pos'], 'width': x['width'], 'held': held[:80], 'oracle': x['text'][:80]})
     r.check(not mism, '(i) the model\'s held text equals the daemon\'s delivery, run by run', mism)
-    # the withheld run: the oracle's box and width, the entitled reader's text with C-33's mark
+    # the withheld run: the oracle's box and width, the entitled reader's text with C-33's words beside it
     r.check(len(withheld_runs) == 1 and withheld_runs[0]['pos'] == WINDOW[0] and withheld_runs[0]['width'] == WINDOW[1] and withheld_runs[0].get('origin') == WINDOW[2],
             'the guest\'s delivery withholds the window run at 1467, width 240, origin 1.0.1.0.1003 — its box and width, never its text', r.figures['oracle_runs'])
     origins = doc.get('origins') or []
@@ -256,14 +257,14 @@ def run(ctx):
     # (ii) the mounted article: the lines in view stand, by line (issue #122) — each block part standing, a block the
     # article cuts at a line (issue #15's fold, the view's edge) standing in parts, is its block's text over the
     # characters it holds, and the guest's delivery's bytes over the positions it holds wherever that delivery holds
-    # them (it withholds the window run): its own glyphs, its chrome (the sameness hairline, C-33's mark, the symbols,
-    # the "+n others" count) set aside, from the character it starts at
+    # them (it withholds the window run): its own glyphs, its chrome (the symbols, the "+n others" count) set aside,
+    # from the character it starts at
     mounted = ctx.js('window.__skep.mounted(%s)' % json.dumps(DOC))
     r.check(mounted is not None, 'the first edition is mounted at the landing')
     mtext = squash(mounted['text']) if mounted else ''
     parts = ctx.js('''((a) => { const enc = new TextEncoder(), blocks = new Map(window.__skep.model.doc(a).blocks.map((b) => [b.pos, b]));
       return [...document.querySelectorAll(`#domlayer .sp[data-addr="${a}"]`)].flatMap((el) => { const b = blocks.get(Number(el.dataset.pos)); if (!b || b.kind !== 'para') return [];
-        const c = el.cloneNode(true); c.querySelectorAll('.hairline,.pubmark,.others,.sym').forEach((x) => x.remove());
+        const c = el.cloneNode(true); c.querySelectorAll('.others,.sym').forEach((x) => x.remove());
         const own = c.textContent, char = Number(el.dataset.char || 0), p0 = b.pos + enc.encode(b.text.slice(0, char)).length;
         return [{pos: b.pos, char, p0, p1: p0 + enc.encode(own).length, own, model: b.text.slice(char, char + own.length)}]; }); })(%s)''' % json.dumps(DOC))
     held = {}
@@ -278,16 +279,25 @@ def run(ctx):
     r.check(bool(against) and not unsaid, '(ii) every block part standing over positions the guest\'s delivery holds is that delivery\'s bytes over them, character for character', {'compared': len(against), 'off': unsaid[:6]})
     r.figures['parts_standing'] = {'parts': len(parts), 'against_oracle': len(against), 'blocks': len({p['pos'] for p in parts}), 'of': sum(1 for b in doc['blocks'] if b['kind'] == 'para')}
     c33 = ctx.js('window.__skep.strings.pinned().find(s => s.id === "C-33").text')
-    r.check(squash(c33) in mtext, 'C-33\'s mark stands on the window run in the article', c33)
+    # the window run's origin stated once in its column's edge, C-33's words in its statement, none in the run's lines; the
+    # run one run across the paragraph break its own bytes make, its hairlines at its two ends (issue #304)
+    statement = '#corners .edge-sign[data-sign="statement"][data-addr="%s"][data-origin="%s"]' % (DOC, WINDOW[2])
+    stated = ctx.js('[...document.querySelectorAll(%s)].map((e) => e.textContent)' % json.dumps(statement))
+    r.check(len(stated) == 1 and squash(c33) in squash(stated[0]) and squash(c33) not in mtext, 'C-33\'s words stand once, in the window run\'s origin\'s statement in its column\'s edge, and nowhere in the article', {'statements': stated, 'in_article': squash(c33) in mtext})
+    ends = ctx.js('''((a, o) => ({opens: document.querySelectorAll(`#domlayer .sp[data-addr="${a}"] .same.opens[data-origin="${o}"]`).length,
+      closes: document.querySelectorAll(`#domlayer .sp[data-addr="${a}"] .same.closes[data-origin="${o}"]`).length,
+      same: document.querySelectorAll(`#domlayer .sp[data-addr="${a}"] .same[data-origin="${o}"]`).length}))(%s, %s)''' % (json.dumps(DOC), json.dumps(WINDOW[2])))
+    r.check(ends['opens'] == 1 and ends['closes'] <= 1 and ends['same'] >= 2, 'the window run stands as one run: its ground on its stretches across the typed lines it crosses, one opening where it begins — the landing\'s — and one closing at most among the parts standing', ends)
     window_block = next((b for b in doc['blocks'] if b['pos'] <= WINDOW[0] < b['pos'] + b['width']), None)
     r.check(window_block is not None, 'a block holds the window\'s first position')
-    # what the DOM holds against what the page shows: every block inside the article's clip, and C-33's mark with them
+    # what the DOM holds against what the page shows: every block inside the article's clip, and C-33's words inside the
+    # corner layer's
     blocks_vis = ctx.js('window.__skep.visible(%s)' % json.dumps('#domlayer .sp[data-addr="%s"]' % DOC))
     hidden = [{'pos': v['pos'], 'rect': v['rect'], 'clip': v['clip']} for v in blocks_vis if not v['inClip']]
     r.check(bool(blocks_vis) and not hidden, '(ii) every block of the mounted article lies inside its clip — glyphs the DOM holds past the clip are shown to no one', {'blocks': len(blocks_vis), 'hidden': hidden[:6]})
-    marks_vis = ctx.js('window.__skep.visible(%s)' % json.dumps('#domlayer .sp[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC))
-    r.check(bool(marks_vis) and all(m['inClip'] for m in marks_vis), 'C-33\'s mark on the window run lies inside the article\'s clip (shown, not merely held)', [m for m in marks_vis if not m['inClip']])
-    r.figures['shown'] = {'blocks': len(blocks_vis), 'blocks_past_clip': len(hidden), 'c33_marks': len(marks_vis), 'c33_marks_past_clip': sum(1 for m in marks_vis if not m['inClip'])}
+    marks_vis = ctx.js('window.__skep.visible(%s)' % json.dumps(statement + ' .c33'))
+    r.check(bool(marks_vis) and all(m['inClip'] and m['inView'] for m in marks_vis), 'C-33\'s words in the window run\'s origin\'s statement lie inside the corner layer\'s clip and the viewport (shown, not merely held)', [m for m in marks_vis if not (m['inClip'] and m['inView'])])
+    r.figures['shown'] = {'blocks': len(blocks_vis), 'blocks_past_clip': len(hidden), 'c33_words': len(marks_vis), 'c33_words_past_clip': sum(1 for m in marks_vis if not m['inClip']), 'run_ends': ends}
     # (iii) the mirror: an item for each element of the walk — every block but a typed line of white space alone and the
     # newlines before a run's first typed line (rule 20) — and each link drawn
     size = ctx.js('window.__skep.mirror.size()')

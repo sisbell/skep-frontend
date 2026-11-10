@@ -101,7 +101,7 @@ test('the article\'s line height is 1.45 of each element\'s own size, cut to the
 test('a line box is its own size\'s: the engine\'s font size on the 1/64 px grid, rounded, and the line height on it, floored', () => {
   assert.equal(lineBox(1), LINE_H, 'the body\'s line box is LINE_H');
   // Chrome 155 on the gate's machine, a single line of each size at LAY_FS in Charter with the article's unitless line height
-  const measured = [[MEASURE.head, 18.546875], [MEASURE.count, 16.6875], [MEASURE.label, 16.234375], [MEASURE.sym, 17.390625]];
+  const measured = [[MEASURE.head, 18.546875], [MEASURE.count, 16.6875], [MEASURE.sym, 17.390625]];
   for (const [size, px] of measured) assert.equal(lineBox(size) * LAY_FS, px, `${size} em: a line box of ${px} px`);
   for (const [size] of measured) assert.ok(Number.isInteger(lineBox(size) * LAY_FS * 64), `${size} em: on the 1/64 px grid`);
   assert.ok(Math.abs(lineBox(MEASURE.head) / MEASURE.head - LINE_H) < 0.01, 'its own size\'s LINE_H, within the grid');

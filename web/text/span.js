@@ -5,11 +5,11 @@
 // range: the platform's selection speaks in characters of a block's text,
 // and these functions carry a character boundary to its byte position and
 // back through the block's own byte-offset table, so a multi-byte character
-// never shifts a position. The chrome inside a block's element — the
-// sameness hairline's label, C-33's mark, a link's symbol, the signs in its
-// column's edge — is never a byte of the document; the one selector here
-// names it (`CHROME`) for T-LAYER's walk of a block's text nodes and the
-// copy. K-8's extension (D5 §1.1) is arithmetic over the document's blocks.
+// never shifts a position. The chrome inside a block's element — a link's
+// symbol, the signs in its column's edge — is never a byte of the document;
+// the one selector here names it (`CHROME`) for T-LAYER's walk of a block's
+// text nodes and the copy. K-8's extension (D5 §1.1) is arithmetic over the
+// document's blocks.
 // So is the walk's grain (D5 §4 rule 20): which blocks are elements of the
 // walk (`isElement`) — none a typed line of white space alone, nor the
 // newlines before a run's first typed line — and the element a position of a
@@ -29,8 +29,8 @@ import { byteOffsets } from '../util.js';
  * @property {number} width positions (bytes)
  */
 
-/** the chrome inside a block's element, never the document's bytes: the hairline label, C-33's mark, the symbols, the signs in its column's edge — the others' count, a withheld run's mark */
-export const CHROME = '.hairline, .pubmark, .sym, .edge';
+/** the chrome inside a block's element, never the document's bytes: the symbols, the signs in its column's edge — the others' count, an item's words its gap does not hold */
+export const CHROME = '.sym, .edge';
 
 /**
  * The byte position of a character boundary of a block's text: the block's

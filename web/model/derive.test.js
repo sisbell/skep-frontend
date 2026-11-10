@@ -7,7 +7,8 @@
 // same kernel, every byte of the typed text named by identity — the delivered
 // text's by its permanent address, an edit's by the identity handed in for it
 // — and by where it came from, a put-back placing removed bytes again as they
-// were; a span of the typed text split into what the delivered text holds and
+// were, its transcluded runs read by the stored record's one rule; a span of
+// the typed text split into what the delivered text holds and
 // what the edits made, and a stretch of the delivered text found in it;
 // a past state's record from an `/op-at` delivery; and the character
 // boundaries and the word stops about a position, the stops macOS's own (FP-6,
@@ -15,7 +16,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { applyHeld, applyEdits, sourceRuns, fromBase, recordAt, boundaries, wordStop } from './derive.js';
-import { deriveBlocks, textOf, identityIn, placedIn, pageSpace } from './records.js';
+import { deriveBlocks, textOf, identityIn, placedIn, pageSpace, transcludedRuns } from './records.js';
 import { vSpan } from './address.js';
 import { byteLength } from '../util.js';
 
@@ -131,6 +132,16 @@ test('every byte of the typed text has an identity that holds through insertion,
   const minted = applyEdits(d, typed, (page, width) => [{ prefix: D + '.0.1', ordinal: 100 + page, width }]).doc;
   assert.deepEqual(identityIn(minted.image, 7, 4), [{ prefix: D + '.0.1', ordinal: 101, width: 4 }], 'after its ack a typed byte is named by its I-address');
   assert.deepEqual(minted.derived?.source, one.derived?.source, 'and where it came from stands: the page made it');
+});
+
+test('the transcluded runs of the typed text are read by the stored record\'s one rule: one origin\'s image runs meeting one run, a byte the page made inside it parting it in two (issue #304; FP-38)', () => {
+  const quoted = { ...docOf(D, TEXT), origins: [{ pos: 1, width: 12, doc: S }] };
+  // "Alpha beta.⏎" is S's, in two image runs that meet in the text though S's addresses jump between them
+  quoted.image = [{ pos: 1, width: 6, prefix: S + '.0.1', ordinal: 1 }, { pos: 7, width: 6, prefix: S + '.0.1', ordinal: 40 }, { pos: 13, width: 14, prefix: D + '.0.1', ordinal: 13 }];
+  const derived = applyEdits(quoted, []).doc, typed = applyEdits(quoted, [{ pos: 4, width: 0, text: 'x', page: 1 }]).doc;
+  assert.deepEqual([derived.origins, typed.origins], [transcludedRuns(D, derived.image), transcludedRuns(D, typed.image)], 'the stored record\'s one rule, read over the typed text\'s image');
+  assert.deepEqual(derived.origins, [{ pos: 1, width: 12, doc: S }], 'the two image runs one run');
+  assert.deepEqual(typed.origins, [{ pos: 1, width: 3, doc: S }, { pos: 5, width: 9, doc: S }], 'a byte typed inside it: two runs either side of the page\'s own byte');
 });
 
 test('a put-back places the bytes an earlier edit removed again as they were — their text, their identity and where they came from — all of them or a stretch of them, and one of bytes no edit removed stops the apply', () => {

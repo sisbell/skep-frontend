@@ -7,9 +7,9 @@
 // state is its corner's alone, in every state, never set in the article's
 // lines, which are laid out once (FP-12). The faces (P-REG's FACE): the
 // document's own characters are the reading face's, and every word the
-// article sets of its own the client's — the head, a hairline's label, C-33's
-// mark, a symbol, a sign in the edge, a record's rendering, a withheld
-// origin's statement, an item not rendered, the scene-offer — save an
+// article sets of its own the client's — the head, a symbol, a sign in the
+// edge, a record's rendering, an origin's statement, an item not rendered,
+// the scene-offer — save an
 // address or a fingerprint, in the identifier's face wherever it stands,
 // inside a sentence as well (`.id`; ST's `tHTML`); inside a run the client's
 // words take the run's size. Where a fit is judged — what a gap holds, where
@@ -31,10 +31,13 @@
 // block), each by `blockMarks`, the one rule T-LAYER marks a standing
 // article by; the owner's and the person's links in place, each stretch in
 // the one mark its links merge into (the view's `mergedMark`); each
-// transcluded run's sameness boundary with the origin's label (the hairline,
-// whole at the first run of that origin, compact after) and C-33's mark on a
-// draft-origin run in a published document, set once per run in a block, at
-// its first stretch, however marks and symbols cut it (foundations §2.1);
+// transcluded run — one origin's stretch unbroken in the text, one run across
+// the typed lines its own newlines break, a newline of the document's own
+// ending it (M-REC's `transcludedRuns`) — its ground under each of its
+// stretches on every line, and a hairline of no width at each of its two
+// ends, on its first stretch holding text and its last, however marks,
+// symbols and typed lines cut it, and no word of it in a line (`runEndsOf`;
+// foundations §2.1; FP-31);
 // a typed line's others' count in its column's edge, level with the block's
 // first line and never inside the text, so it sets no line (`edgeStyle`;
 // A-254; FP-26); and the symbols the reveal asked for, each at its span
@@ -80,7 +83,16 @@
 // every admitted claim quotes the draft, the unread place where a read they
 // are decided from failed (FP-33), and nothing — the arm's own copy alone —
 // where none is admitted or the board refused their lookup as withheld from
-// the reader. An item this client cannot show is a gap of its positions too,
+// the reader. A transcluded run the reader reads states its origin in its
+// column's edge by the same one rule (`edgeSignsFor`), as the statement made
+// here (`sourceStatementHTML`): its key — the origin's mark and its address,
+// in the identifier's face — the run's one gesture to its source, on the
+// plane a control whose act goes to the source carrying the run it stands
+// beside (APP-INPUT; foundations §2.3), in a pane a line; then C-33's words
+// where the run is a draft's in a published document (`carriesC33`), which
+// the ARIA mirror's description of the origin says too (N-WALK). Every other
+// run of the origin in view stands its key alone there (`edgeKeyHTML`), no gap
+// holding it. An item this client cannot show is a gap of its positions too,
 // its words in it where the gap holds them, else in its column's edge
 // (`unshownHTML`; FP-26). The placeholder is one record (`placeholderOf`),
 // which the statement, the ARIA mirror's item at the run and its origin's
@@ -122,11 +134,11 @@
 // corner's element is its holder's, T-LAYER's beside the article on the plane
 // and each pane's own in the scene.
 // The plan (`articlePlan`): the same article as P-LAY's rows — the head's
-// lines, each block's text at its size with the inline pieces it carries
-// (the hairline's label, C-33's mark, the symbols), a record's words and
-// keys, the line a reference or an empty document takes, the gap of a
-// withheld run and of an item not rendered, its width, the scene-offers, and none of the signs a
-// column's edge holds, which set no line — each row carrying where a column
+// lines, each block's text at its size with the symbols it carries, a
+// record's words and keys, the line a reference or an empty document takes,
+// the gap of a withheld run and of an item not rendered, its width, the
+// scene-offers, and none of the signs a column's edge holds nor a run's
+// hairlines, which set no line — each row carrying where a column
 // may break at it and each piece whether its characters are the document's
 // own, so P-LAY folds the lines into the columns of the document's room and
 // names the position each line starts at (FP-12), and lays them out as the
@@ -206,7 +218,6 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {boolean} localTrust the board's flag (the chip's form)
  * @property {boolean} notebook the venue
  * @property {boolean} scene the scene-mode variant: a reading scene's pane's article — no scene-offer, and no mark a control
- * @property {Map<string, 'edition' | 'draft' | 'unknown'>} originKinds the kind of each origin document (for C-33)
  * @property {(doc: string) => string} originOwner the owner account of an origin document, by the one rule the byline's owner is found by (M-REC's `ownerAccount`): the owner a withheld run's placeholder names (R56)
  * @property {(doc: string) => Decided} clauseOf C-67's clause beneath a withheld run of an origin document, decided over what the page holds of the origin's edition claims (T-LAYER's `clauseOf`, by `editionClause`); null where nothing renders in its place, `CLAUSE_READING` while a read it is decided from is out
  * @property {(account: string) => (AccountFacts | undefined)} keyOf an account's byline facts as the page holds them (M-REC's `accountKey`): its device key, or why its byline names none; undefined while they are read
@@ -338,32 +349,15 @@ function bylineHTML(by) {
 }
 
 /**
- * @typedef {Object} Opening — what a run's first stretch in a block carries for the run: its boundary and its hairline, and C-33's mark where the run has one
- * @property {boolean} whole the hairline labelled whole: the first run of its origin in the article
- * @property {boolean} c33 C-33's mark: a draft's run in a published document
- */
-
-/**
  * @typedef {Object} Seg — a stretch of one block's text between two cuts, with what marks it and the symbols standing at it
  * @property {string} text the document's characters over it
  * @property {Shown[]} marks the links marked over it
  * @property {Mark | null} mark the one mark they merge into (the view's `mergedMark`); null where no link marks it
  * @property {Origin | null} origin the transcluded run it lies in
- * @property {Opening | null} opens the run's chrome, where it is the run's first stretch in the block; null at every other stretch
- * @property {Shown[]} chromeSyms the symbols standing after its run's chrome, before its text: their spans' last word runs into the hairline with no break between them (`standOf`)
+ * @property {boolean} opens it is its run's first stretch holding text: the run's hairline at its start
+ * @property {boolean} closes it is its run's last stretch holding text: the run's hairline at its end
  * @property {Shown[]} syms the symbols standing right after its text (`standOf`)
  */
-
-/**
- * @typedef {Object} Chrome — a run's chrome at its first stretch in a block, as P-LAY sets it in the line
- * @property {string} label the hairline's label
- * @property {boolean} box C-33's mark follows it, an inline-block
- */
-
-/** a run's hairline label: its origin's address after the origin's mark where the label is whole, the bare mark after */
-const labelOf = (/** @type {Origin} */ o, /** @type {Opening} */ at) => (at.whole ? t('L.origin-mark') + ' ' + o.doc : t('L.origin-mark'));
-/** a run's hairline label as markup (`labelOf`): its origin's address in the identifier's face */
-const labelHTML = (/** @type {Origin} */ o, /** @type {Opening} */ at) => esc(t('L.origin-mark')) + (at.whole ? ` <span class="${ID}">${esc(o.doc)}</span>` : '');
 
 /** a string's words as markup (ST's `tHTML`), each token `faces` sets in the identifier's face in its class */
 const htmlIn = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ values, /** @type {Record<string, Face>} */ faces) =>
@@ -903,30 +897,94 @@ export function withheldBlockHTML(b, v, at = { ends: [] }) {
 }
 
 /**
- * @typedef {Object} RunInView — a withheld run a line of which meets the view, as its column's edge reads it (`edgeSignsFor`)
- * @property {Block} b the run's block
- * @property {string} id its identity: its origin and the permanent address of its first byte, through the image its article was made from; its origin and its position where that image covers none of it (FP-38)
- * @property {GapHolds} holds what its gap holds (`gapHolds`), decided as its article was made
- * @property {{n: number, social: boolean}} count the others' count at it
+ * @typedef {Object} OriginRun — a run of another document's material in an article's text (`originRunsOf`)
+ * @property {number} pos its first position
+ * @property {number} width its positions
+ * @property {string} origin its origin document
+ * @property {boolean} withheld its bytes are withheld from the reader: a withheld run's gap; else a transcluded run the reader reads
  */
 
 /**
- * @typedef {Object} EdgeSignFor — a sign a column's edge stands for a withheld run in view (`edgeSignsFor`)
- * @property {'statement' | 'key' | 'count'} kind its origin's statement (`edgeStatementHTML`); its key too wide for its gap; its others' count
+ * The runs of another document's material in an article's text
+ * (`OriginRun`), in the text's order: each withheld run, by its block, and
+ * each transcluded run the reader reads — one origin's stretch unbroken in
+ * the text (M-REC's `transcludedRuns`) that touches no withheld run. The one
+ * list the plane's edges and a reading scene's panes stand their signs for
+ * (T-LAYER, SC).
+ * @param {Pick<Doc, 'blocks' | 'origins'>} d what the article was made from
+ * @returns {OriginRun[]}
+ */
+export function originRunsOf(d) {
+  /** @type {OriginRun[]} */
+  const out = [];
+  const gaps = d.blocks.filter((b) => b.kind === 'withheld');
+  for (const b of gaps) if (b.origin) out.push({ pos: b.pos, width: b.width, origin: b.origin, withheld: true });
+  for (const o of d.origins) if (!gaps.some((b) => touches(b, o))) out.push({ pos: o.pos, width: o.width, origin: o.doc, withheld: false });
+  return out.sort((a, b) => a.pos - b.pos);
+}
+
+/**
+ * The stretch the typed lines' characters hold of a span of a text: from the
+ * first of its positions a typed line's characters hold to one past the last
+ * — the newlines a typed line's block holds after its characters, and every
+ * item, apart; null where no typed line's characters hold any of it. Where a
+ * transcluded run's hairlines stand (`segmentsOf`), and the lines T-LAYER
+ * stands its signs beside.
+ * @param {Block[]} blocks the text's blocks, in position order
+ * @param {{pos: number, width: number}} s
+ * @returns {{from: number, to: number} | null}
+ */
+export function textIn(blocks, s) {
+  const end = s.pos + s.width;
+  let lo = 0, hi = blocks.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (blocks[m].pos + blocks[m].width <= s.pos) lo = m + 1; else hi = m; }
+  let from = Infinity, to = -Infinity;
+  for (let i = lo; i < blocks.length && blocks[i].pos < end; i++) {
+    const b = blocks[i];
+    if (b.kind !== 'para') continue;
+    const t0 = Math.max(s.pos, b.pos), t1 = Math.min(end, b.pos + byteLength(b.text));
+    if (t0 < t1) { from = Math.min(from, t0); to = t1; }
+  }
+  return from < to ? { from, to } : null;
+}
+
+/**
+ * Does a transcluded run the reader reads carry C-33's words (foundations
+ * §2.1): a draft's run in a published document. The one rule its origin's
+ * statement (`sourceStatementHTML`; T-LAYER, SC) and the ARIA mirror's
+ * description of its origin (N-WALK) are made by.
+ * @param {Pick<Doc, 'meta' | 'kind'>} d the document the run stands in
+ * @param {'edition' | 'draft' | 'unknown'} kind its origin's kind, as the page reads it (T-LAYER's `originKind`)
+ * @returns {boolean}
+ */
+export const carriesC33 = (d, kind) => kind === 'draft' && isPublished(d);
+
+/**
+ * @typedef {Object} RunInView — a run of another document's material a line of which meets the view, as its column's edge reads it (`edgeSignsFor`)
+ * @property {OriginRun} run the run
+ * @property {string} id its identity: its origin and the permanent address of its first byte, through the image its article was made from; its origin and its position where that image covers none of it (FP-38)
+ * @property {GapHolds} holds what its gap holds (`gapHolds`), decided as its article was made; 'edge' at a transcluded run, which has no gap to hold its key
+ * @property {{n: number, social: boolean}} count the others' count at a withheld run; none at a transcluded run, whose typed lines carry their own
+ */
+
+/**
+ * @typedef {Object} EdgeSignFor — a sign a column's edge stands for a run in view (`edgeSignsFor`)
+ * @property {'statement' | 'key' | 'count'} kind its origin's statement (`edgeStatementHTML`, `sourceStatementHTML`); its key, no gap holding it; its others' count
  * @property {RunInView} run the run it stands beside
  */
 
 /**
- * The signs the columns' edges stand for the withheld runs in view (see the
- * head; FP-31): for each origin among the runs whose clause is decided, its
+ * The signs the columns' edges stand for the runs of other documents'
+ * material in view (see the head; FP-31): for each origin among the runs
+ * whose clause is decided — a withheld run's — or that the reader reads, its
  * statement beside the run it stood beside — held by that run's identity,
  * never its position (FP-38) — while that run is in view, else beside the
  * origin's first run in view in reading order; and for each such run its key,
- * where its gap does not hold it and its statement stands beside another run
- * (the statement is headed by the key), and its others' count where any
- * stands. The one rule the plane's edges and a reading scene's panes stand
- * their signs by (T-LAYER, SC).
- * @param {RunInView[]} runs the withheld runs a line of which meets the view, in reading order
+ * where no gap holds it and its statement stands beside another run (the
+ * statement is headed by the key), and its others' count where any stands.
+ * The one rule the plane's edges and a reading scene's panes stand their
+ * signs by (T-LAYER, SC).
+ * @param {RunInView[]} runs the runs a line of which meets the view, in reading order
  * @param {ReadonlyMap<string, string>} was the run each origin's statement stood beside, by origin: its identity
  * @returns {{signs: EdgeSignFor[], beside: Map<string, string>}} the signs, each origin's statement first then its runs' signs in reading order; and the run each origin's statement stands beside now
  */
@@ -935,9 +993,9 @@ export function edgeSignsFor(runs, was) {
   const signs = [];
   /** @type {Map<string, string>} */
   const beside = new Map();
-  const decided = runs.filter((r) => r.holds !== 'reading' && r.b.origin);
-  for (const origin of new Set(decided.map((r) => /** @type {string} */ (r.b.origin)))) {
-    const of = decided.filter((r) => r.b.origin === origin), anchor = of.find((r) => r.id === was.get(origin)) || of[0];
+  const decided = runs.filter((r) => r.holds !== 'reading');
+  for (const origin of new Set(decided.map((r) => r.run.origin))) {
+    const of = decided.filter((r) => r.run.origin === origin), anchor = of.find((r) => r.id === was.get(origin)) || of[0];
     beside.set(origin, anchor.id);
     signs.push({ kind: 'statement', run: anchor });
     for (const r of of) {
@@ -948,11 +1006,39 @@ export function edgeSignsFor(runs, was) {
   return { signs, beside };
 }
 
-/** a withheld run's key as a sign in its column's edge (`edgeSignsFor`): its origin's address, on the plane a control opening the whole wording's card, in a reading scene's pane a line */
-export const edgeKeyHTML = (/** @type {string} */ origin, /** @type {boolean} */ scene) => `<span class="wh-key ${ID}"${control(scene)}>${esc(origin)}</span>`;
+/**
+ * A transcluded run's key (see the head): its origin's mark and its address,
+ * in the identifier's face — the run's one gesture to its source, on the plane
+ * a control carrying the source (`data-src`), whose act APP-INPUT takes, in a
+ * reading scene's pane a line.
+ * @param {string} origin
+ * @param {boolean} scene the scene-mode variant
+ */
+const sourceKeyHTML = (origin, scene) => `<span class="src-key"${scene ? '' : ` data-src="${esc(origin)}"`}${control(scene)}>${esc(t('L.origin-mark'))} <span class="${ID}">${esc(origin)}</span></span>`;
+
+/**
+ * A run's key as a sign in its column's edge (`edgeSignsFor`): a withheld
+ * run's its origin's address, on the plane a control opening the whole
+ * wording's card; a transcluded run's its source's key (`sourceKeyHTML`); in a
+ * reading scene's pane a line.
+ * @param {OriginRun} run
+ * @param {boolean} scene the scene-mode variant
+ */
+export const edgeKeyHTML = (run, scene) => (run.withheld ? `<span class="wh-key ${ID}"${control(scene)}>${esc(run.origin)}</span>` : sourceKeyHTML(run.origin, scene));
 
 /** a withheld run's others' count as a sign in its column's edge (`edgeSignsFor`): "+⟨n⟩ others", or the social types' one unnumbered mark */
 export const edgeCountHTML = (/** @type {{n: number, social: boolean}} */ c) => (c.n > 0 ? esc(t('F.others-count', { n: c.n })) : '◦');
+
+/**
+ * A transcluded origin's statement in its column's edge (see the head; FP-26,
+ * FP-31): its key heading it (`sourceKeyHTML`), then C-33's words where its
+ * run carries them (`carriesC33`), whole on a line of their own.
+ * @param {string} origin
+ * @param {boolean} c33 C-33's words stand in it
+ * @param {boolean} scene the scene-mode variant
+ * @returns {string}
+ */
+export const sourceStatementHTML = (origin, c33, scene) => sourceKeyHTML(origin, scene) + (c33 ? `<span class="c33" data-string="C-33">${esc(t('C-33'))}</span>` : '');
 
 /**
  * A withheld origin's statement in its column's edge (see the head; FP-26,
@@ -1075,7 +1161,7 @@ function keptLineHTML(v, statement = true) {
 }
 
 /** is a document published: its metadata's word where read, else its index's kind */
-export const isPublished = (/** @type {Doc} */ d) => (d.meta ? d.meta.published : d.kind === 'edition');
+export const isPublished = (/** @type {Pick<Doc, 'meta' | 'kind'>} */ d) => (d.meta ? d.meta.published : d.kind === 'edition');
 
 /**
  * The chain's count a published document's corner states (`stateItems`):
@@ -1262,49 +1348,53 @@ const isLow = (/** @type {number} */ u) => u >= 0xdc00 && u <= 0xdfff;
  * word its span touches — the first point at or after the span's last
  * character that is not a space where P-LAY may break its line
  * with no symbol in it: before a space, between a pair `breakBetween` allows,
- * beside an inline-block, at the text's end. Set there, a symbol adds room
- * to a line and no place to break it, so the article without its symbols is
- * never longer than with them, and the size T-LAYER folds it at for LK's
- * `utmost` holds it in its room at every stage; set inside a word it would
- * let the word's halves part. A run's chrome stands in the line as P-LAY
- * sets it, its hairline's label joined to the word before it where no break
- * falls between them: a word that runs into a hairline so takes its symbol
- * after the run's chrome, never inside it. A span of spaces alone takes its
- * symbol where it ends.
+ * at the text's end. Set there, a symbol adds room to a line and no place to
+ * break it, so the article without its symbols is never longer than with
+ * them, and the size T-LAYER folds it at for LK's `utmost` holds it in its
+ * room at every stage; set inside a word it would let the word's halves part.
+ * Nothing else stands in the line, a run's hairlines taking no room. A span
+ * of spaces alone takes its symbol where it ends.
  * @param {string} text the typed line's text
  * @param {number} c0 the span's first character in it
  * @param {number} c1 one past the span's last character in it
- * @param {(i: number) => (Chrome | null)} chromeAt the chrome of the run whose first stretch in the typed line starts at character `i`
- * @returns {{at: number, after: boolean}} the character the symbol stands before (the text's length at its end), and whether it stands after the chrome there
+ * @returns {number} the character the symbol stands before: the text's length at its end
  */
-export function standOf(text, c0, c1, chromeAt) {
+export function standOf(text, c0, c1) {
   const cp = (/** @type {number} */ i) => /** @type {number} */ (text.codePointAt(i));
   const startOf = (/** @type {number} */ i) => (i > 0 && isLow(text.charCodeAt(i)) ? i - 1 : i);
   const step = (/** @type {number} */ i) => i + (cp(i) > 0xffff ? 2 : 1);
   let j = startOf(c1 - 1);
   while (j >= c0 && isSpace(cp(j))) j = startOf(j - 1);
-  if (j < c0) return { at: c1, after: false };
-  // the line as P-LAY sets it (`wrap`'s `prev` and `before`): the last item set and the one before it — a character,
-  // 32 a space, -1 the row's start, -2 an inline-block
+  if (j < c0) return c1;
+  // the line as P-LAY sets it (`wrap`'s `prev` and `before`): the last character set and the one before it — 32 a space,
+  // -1 the row's start
   let prev = -1, before = -1;
   const set = (/** @type {number} */ c) => { if (isSpace(c)) prev = before = 32; else { before = prev; prev = c; } };
-  const setChrome = (/** @type {Chrome} */ ch) => { for (const c of ch.label) set(/** @type {number} */ (c.codePointAt(0))); if (ch.box) prev = before = -2; };
   /** may the line break before `c`, after what is set? */
-  const breaks = (/** @type {number} */ c) => prev === -2 || isSpace(c) || breakBetween(prev, c, before < 0 || before === 32);
-  // what stands before the span's last character: the chrome of a run whose first stretch starts there, else the character before it
-  const here = chromeAt(j);
-  if (here) setChrome(here); else if (j > 0) set(cp(startOf(j - 1)));
+  const breaks = (/** @type {number} */ c) => isSpace(c) || breakBetween(prev, c, before < 0 || before === 32);
+  if (j > 0) set(cp(startOf(j - 1)));
   set(cp(j));
   for (let k = step(j); k < text.length; k = step(k)) {
-    const c = cp(k), ch = chromeAt(k);
-    if (ch) {
-      if (breaks(/** @type {number} */ (ch.label.codePointAt(0)))) return { at: k, after: false };
-      setChrome(ch);
-      if (breaks(c)) return { at: k, after: true };
-    } else if (breaks(c)) return { at: k, after: false };
+    const c = cp(k);
+    if (breaks(c)) return k;
     set(c);
   }
-  return { at: text.length, after: false };
+  return text.length;
+}
+
+/**
+ * Where each transcluded run's hairlines stand (`textIn`), by the run
+ * (M-REC's `Doc.origins`): from the first position the typed lines'
+ * characters hold of it to one past the last, across every typed line it
+ * crosses; none for a run no typed line's characters hold.
+ * @param {Doc} d
+ * @returns {Map<Origin, {from: number, to: number}>}
+ */
+function runEndsOf(d) {
+  /** @type {Map<Origin, {from: number, to: number}>} */
+  const out = new Map();
+  for (const o of d.origins) { const at = textIn(d.blocks, o); if (at) out.set(o, at); }
+  return out;
 }
 
 /**
@@ -1312,36 +1402,20 @@ export function standOf(text, c0, c1, chromeAt) {
  * owner's and the person's links (LK's set) stand in, at the edges of the
  * transcluded runs, and where the symbols standing in the block stand
  * (`standOf`), each with the links marking it and the one mark they merge
- * into, and the symbols at it; each run's chrome — its boundary, its
- * hairline, C-33's mark — at its first stretch in the block alone, however
- * the run is cut, the hairline labelled whole at the first run of its origin
- * in the article.
+ * into, the run it lies in — whether it is that run's first stretch holding
+ * text, and whether its last, across the typed lines the run crosses
+ * (`runEndsOf`), however marks and symbols cut it — and the symbols at it.
  * @param {Block} b
  * @param {Doc} d
  * @param {ArticleView} v
- * @param {Set<string>} labelled the origins already labelled whole in this article
+ * @param {Map<Origin, {from: number, to: number}>} ends where each run's hairlines stand (`runEndsOf`)
  * @param {Array<{s: Shown, r: Stretch}>} standing the symbols standing in this block, each with the stretch it stands after: its last drawn stretch a typed line holds, which ends in this one
  * @returns {Seg[]}
  */
-function segmentsOf(b, d, v, labelled, standing) {
+function segmentsOf(b, d, v, ends, standing) {
   const marks = v.marks.filter((m) => runsIn(m, b).length > 0);
   const origins = d.origins.filter((o) => o.pos < b.pos + b.width && b.pos < o.pos + o.width);
-  const published = d.meta ? d.meta.published : d.kind === 'edition';
-  // each run's first stretch in the block, by the character it starts at, with what it carries
-  /** @type {Map<number, {o: Origin, opens: Opening}>} */
-  const opening = new Map();
-  for (const o of [...origins].sort((x, y) => x.pos - y.pos)) {
-    const at = charOfPos(b, Math.max(b.pos, o.pos));
-    if (at >= b.text.length) continue;
-    opening.set(at, { o, opens: { whole: !labelled.has(o.doc), c33: (v.originKinds.get(o.doc) || 'unknown') === 'draft' && published } });
-    labelled.add(o.doc);
-  }
-  /** the chrome standing before a character, as the line sets it */
-  const chromeAt = (/** @type {number} */ i) => { const r = opening.get(i); return r ? { label: labelOf(r.o, r.opens), box: r.opens.c33 } : null; };
-  const stands = standing.map(({ s, r }) => {
-    const st = standOf(b.text, charOfPos(b, Math.max(b.pos, r.pos)), charOfPos(b, Math.min(b.pos + b.width, r.pos + r.width)), chromeAt);
-    return { s, after: st.after, pos: posOfChar(b, st.at) };
-  });
+  const stands = standing.map(({ s, r }) => ({ s, pos: posOfChar(b, standOf(b.text, charOfPos(b, Math.max(b.pos, r.pos)), charOfPos(b, Math.min(b.pos + b.width, r.pos + r.width)))) }));
   // cut points in positions: the block's edges, the edges of every stretch a mark stands in, every origin's edges, every symbol's place
   const cuts = new Set([b.pos, b.pos + b.width]);
   for (const m of marks) for (const r of runsIn(m, b)) { cuts.add(Math.max(b.pos, r.pos)); cuts.add(Math.min(b.pos + b.width, r.pos + r.width)); }
@@ -1358,16 +1432,17 @@ function segmentsOf(b, d, v, labelled, standing) {
     const text = sliceBytes(b.text, p0 - b.pos, Math.min(total, p1 - b.pos));
     if (!text) continue;
     const origin = origins.find((o) => o.pos < p1 && p0 < o.pos + o.width) || null;
-    const open = origin ? opening.get(charOfPos(b, p0)) : undefined;
+    const at = origin ? ends.get(origin) : undefined;
     const over = marks.filter((m) => m.runs.some((r) => r.pos < p1 && p0 < r.pos + r.width));
     const [first, ...rest] = over;
-    out.push({ text, marks: over, mark: first ? v.mergedMark([first.mark, ...rest.map((m) => m.mark)]) : null, origin, opens: open && open.o === origin ? open.opens : null, chromeSyms: [], syms: [] });
+    out.push({
+      text, marks: over, mark: first ? v.mergedMark([first.mark, ...rest.map((m) => m.mark)]) : null, origin,
+      opens: !!at && p0 === at.from, closes: !!at && Math.min(p1, b.pos + total) === at.to, syms: [],
+    });
     starts.push(p0);
   }
-  // each symbol at its stretch: after the chrome of the run it stands in, else after the text of the stretch ending where it stands
+  // each symbol after the text of the stretch ending where it stands
   for (const st of stands) {
-    const opened = st.after ? starts.indexOf(st.pos) : -1;
-    if (opened >= 0) { out[opened].chromeSyms.push(st.s); continue; }
     let i = starts.length - 1;
     while (i > 0 && starts[i] >= st.pos) i--;
     if (out[i]) out[i].syms.push(st.s);
@@ -1399,7 +1474,9 @@ function headOf(d, v, owner) {
  * symbol stands in the last typed line its drawn stretches touch — the one
  * the last of them a typed line holds ends in — once however many it
  * crosses; an end LK draws at a withheld run (`Shown.run`) stands in that
- * run's gap at every stage, the gap having no text to mark (FP-30).
+ * run's gap at every stage, the gap having no text to mark (FP-30). A
+ * transcluded run is one run across every typed line it crosses: its
+ * hairlines stand where `runEndsOf` reads them over the whole document.
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} ownerAccount the owner by `effective_owner`, or the document's account
@@ -1409,8 +1486,7 @@ function walk(d, v, ownerAccount) {
   const owner = ownerAccount || d.account || '';
   const head = headOf(d, v, owner);
   if (d.refused) return { head, parts: null, empty: false, offers: [] };
-  /** @type {Set<string>} */
-  const labelled = new Set();
+  const ends = runEndsOf(d);
   // the symbols standing in each typed line, by its first position: the typed line the last of each one's drawn stretches a typed line holds ends in
   /** @type {Map<number, Array<{s: Shown, r: Stretch}>>} */
   const standing = new Map();
@@ -1437,7 +1513,7 @@ function walk(d, v, ownerAccount) {
     else {
       p.opens = opensLine(b, d.blocks[i - 1]);
       p.blank = blankOf(b, d.blocks[i - 1]);
-      p.segs = segmentsOf(b, d, v, labelled, standing.get(b.pos) || []);
+      p.segs = segmentsOf(b, d, v, ends, standing.get(b.pos) || []);
       p.count = v.countAt(b);
     }
     return p;
@@ -1508,11 +1584,11 @@ const typedHTML = (text) => esc(text).replace(/\r/g, '&#13;');
  * in the one mark they merge into — its hue, its value, `visited` where it is
  * drawn lighter — carrying the ends marking it, their links and their keys
  * (LK's `endKey`) in one order, the first the end whose card a click on it
- * opens (APP-INPUT); its run's ground and, where it opens its run, the run's
- * boundary, hairline and C-33's mark — the hairline naming the run's origin,
- * in the identifier's face, and carrying the run's own positions in this document, the passage its
- * gesture to the source carries (foundations §2.1, §2.3) — then
- * the symbols standing at it — the text's own characters untouched (`typedHTML`).
+ * opens (APP-INPUT); its run's ground, naming the run's origin (`same`,
+ * `data-origin`), and the run's hairline at its start where it opens the run
+ * (`opens`) and at its end where it closes it (`closes`), marks of no width
+ * the style draws (FP-31) — then the symbols standing at it — the text's own
+ * characters untouched (`typedHTML`), and no word of the run's in the line.
  * @param {Seg} s
  * @param {ArticleView} v the view: in its scene-mode variant the symbols no controls
  */
@@ -1524,16 +1600,13 @@ function segHTML(s, v) {
     attrs.push(`style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"`, `data-links="${s.marks.map((m) => m.link.addr).join(' ')}"`, `data-ends="${s.marks.map((m) => esc(m.key)).join(' ')}"`);
     if (s.mark.value < 1) cls.push('visited');
   }
-  const syms = s.syms.map((x) => symHTML(x, v)).join('');
   if (s.origin) {
-    const o = s.origin.doc, at = s.opens;
     cls.push('same');
-    if (at) cls.push('opens');
-    attrs.push(`data-origin="${esc(o)}"`);
-    const chrome = !at ? '' : `<span class="hairline ${at.whole ? 'whole' : 'compact'}" data-src="${esc(o)}" data-pos="${s.origin.pos}" data-width="${s.origin.width}" title="${esc(o)}">${labelHTML(s.origin, at)}</span>` +
-      (at.c33 ? `<span class="pubmark" data-mark="C-33">${esc(t('C-33'))}</span>` : '');
-    return `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${chrome}${s.chromeSyms.map((x) => symHTML(x, v)).join('')}${typedHTML(s.text)}</span>${syms}`;
+    if (s.opens) cls.push('opens');
+    if (s.closes) cls.push('closes');
+    attrs.push(`data-origin="${esc(s.origin.doc)}"`);
   }
+  const syms = s.syms.map((x) => symHTML(x, v)).join('');
   return (cls.length > 1 ? `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${typedHTML(s.text)}</span>` : typedHTML(s.text)) + syms;
 }
 
@@ -1640,9 +1713,8 @@ const row = (kind, pos, size, pieces, o = {}) => ({ kind, pos, size, pieces, bef
 
 /**
  * A typed line's inline pieces at its size, as `segHTML` sets them: each
- * stretch of its text — the one that opens a run led by the run's sameness
- * boundary, its hairline's label and C-33's mark where it carries one, and
- * the symbols standing after them — then the symbols standing after it.
+ * stretch of its text, then the symbols standing after it — a run's hairlines
+ * taking no room, so none is a piece.
  * @param {Part} p
  * @param {number} k the typed line's size, in the body's em
  * @returns {Piece[]}
@@ -1650,14 +1722,7 @@ const row = (kind, pos, size, pieces, o = {}) => ({ kind, pos, size, pieces, bef
 function paraPieces(p, k) {
   /** @type {Piece[]} */
   const out = [];
-  for (const s of p.segs) {
-    if (s.origin && s.opens) {
-      const l = MEASURE.label * k, m = MEASURE.mark * k, edge = borderEm(BORDER.box) + MEASURE.markPad * m;
-      out.push(piece(labelOf(s.origin, s.opens), l, borderEm(BORDER.same) + MEASURE.samePad * k, MEASURE.labelGap * l));
-      if (s.opens.c33) out.push({ text: t('C-33'), size: m, lead: edge, trail: edge + MEASURE.markGap * m, box: true, own: false });
-    }
-    out.push(...s.chromeSyms.map(() => symbol(k)), own(s.text, k), ...s.syms.map(() => symbol(k)));
-  }
+  for (const s of p.segs) out.push(own(s.text, k), ...s.syms.map(() => symbol(k)));
   return out;
 }
 

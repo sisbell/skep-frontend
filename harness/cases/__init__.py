@@ -279,7 +279,7 @@ SWEEP_PAGE = r'''(async () => {
     const s = strip(raw);
     for (const token of TOKENS) for (let i = s.indexOf(token); i >= 0; i = s.indexOf(token, i + token.length)) hits.push({source, token, context: s.slice(Math.max(0, i - 32), i + token.length + 32), at});
   };
-  const chrome = '.hairline, .pubmark, .sym, .edge, .rec';
+  const chrome = '.sym, .edge, .rec';
   const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let n = w.nextNode(); n; n = w.nextNode()) {
     const p = n.parentElement;

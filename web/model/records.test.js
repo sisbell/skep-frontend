@@ -298,6 +298,17 @@ test('the origins from an image mark the transcluded runs', () => {
   assert.deepEqual(REC.doc('1.0.1.0.3').origins, [{ pos: 5, width: 6, doc: '1.0.1.0.1003' }]);
 });
 
+test('a transcluded run is one origin\'s stretch unbroken in the text: image runs of one origin that meet are one run however their permanent addresses continue, a byte of the document\'s own between them — its own newline — parting them, and the image a draft\'s typed text derives is read by the same rule (issue #304\'s design decision: "A native break ends it")', () => {
+  const D = '1.0.1.0.3', X = '1.0.1.0.1003', Y = '1.0.2.0.7';
+  // D's own six bytes; X's 1st to 5th and its 40th to 44th, meeting in the text; D's own newline; X's 10th to 12th; Y's three
+  const image = [{ iStart: D + '.0.1.1', width: 6 }, { iStart: X + '.0.1.1', width: 5 }, { iStart: X + '.0.1.40', width: 5 }, { iStart: D + '.0.1.7', width: 1 }, { iStart: X + '.0.1.10', width: 3 }, { iStart: Y + '.0.1.1', width: 3 }];
+  REC.takeImage(D, 1, image);
+  const runs = [{ pos: 7, width: 10, doc: X }, { pos: 18, width: 3, doc: X }, { pos: 21, width: 3, doc: Y }];
+  assert.deepEqual(REC.doc(D).origins, runs, 'X\'s two image runs one run; parted from its third by D\'s own newline; Y\'s its own');
+  assert.deepEqual(REC.transcludedRuns(D, REC.doc(D).image), runs, 'the one rule the held image is read by');
+  assert.deepEqual(REC.transcludedRuns(D + '.2', REC.doc(D).image), runs, 'read for a member of D, D\'s own bytes are its own still');
+});
+
 /** a link's stored span in a document's I-space, as `read_link` spells it */
 const stored = (/** @type {string} */ space, /** @type {number} */ ord, /** @type {number} */ w) => resolveSpan({ start: `${space}.${ord}`, width: space.split('.').map(() => '0').join('.') + '.' + w });
 

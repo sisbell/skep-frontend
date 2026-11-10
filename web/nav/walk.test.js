@@ -6,7 +6,9 @@
 // node among the listed siblings; the mirror is one Tab stop, named from ST
 // with each level's group, a withheld run's item its own part — its kind,
 // length and origin — naming its origin's one description, which every run
-// of it names, made from the run's placeholder once its clause is read —
+// of it names, made from the run's placeholder once its clause is read, and
+// every item a transcluded draft's run touches in a published document
+// naming that origin's one description, C-33's words —
 // each block that holds no text by its kind, a withheld or untold document by
 // its state and a link's far end as its tail does, what its text holds of
 // its passage said whole — described, where the
@@ -91,6 +93,8 @@ const H = '1.0.1.0.40';
 const H_TEXT = Array.from({ length: 120 }, (_, i) => `Paragraph ${i + 1} of an edition longer than one column.`).join('\n\n');
 /** a document windowing two runs of one origin withheld from the reader, at 11 and 27, a paragraph between them */
 const R2 = '1.0.1.0.41', R2_ORIGIN = '1.0.2.0.8';
+/** a published document windowing a draft the reader reads: one run of it across two typed lines at 11 — the newline between them the draft's own — and a second at 44, a paragraph of the document's own between them */
+const T2 = '1.0.1.0.42', T2_ORIGIN = '1.0.1.0.1007', T2_TEXT = 'Tumbler.\n\nquoted one\nquoted two\n\nBetween.\n\nquoted three';
 // D: three spans: 1 "Tumbler.\n\n" (10), 11 "The first field." (16), 27 a withheld run (4)
 const script = {
   ...reads(D, [{ content: 'Tumbler.\n\nThe first field.' }, { withheld: { origin: '1.0.1.0.1003', width: '4' } }], 30, [{ i_start: D + '.0.1.1', width: '26' }, { i_start: '1.0.1.0.1003.0.1.1', width: '4' }]),
@@ -104,6 +108,9 @@ const script = {
   ...reads(R2, [{ content: 'Tumbler.\n\n' }, { withheld: { origin: R2_ORIGIN, width: '6' } }, { content: 'Between.\n\n' }, { withheld: { origin: R2_ORIGIN, width: '6' } }], 32,
     [{ i_start: R2 + '.0.1.1', width: '10' }, { i_start: R2_ORIGIN + '.0.1.1', width: '6' }, { i_start: R2 + '.0.1.11', width: '10' }, { i_start: R2_ORIGIN + '.0.1.7', width: '6' }]),
   [FAKE.keyOf('op', { frame: F.editionClaimsAt(R2_ORIGIN) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+  // T2: the draft's bytes at 11 to 31 and 44 to 55, the document's own about them
+  ...reads(T2, [{ content: T2_TEXT }], T2_TEXT.length,
+    [{ i_start: T2 + '.0.1.1', width: '10' }, { i_start: T2_ORIGIN + '.0.1.1', width: '21' }, { i_start: T2 + '.0.1.11', width: '12' }, { i_start: T2_ORIGIN + '.0.1.50', width: '12' }]),
 };
 
 /** @type {ReturnType<typeof FAKE.create>} */
@@ -1819,5 +1826,42 @@ test('where no board is held the walk\'s root names none: it says why, in the wo
   } finally {
     WALK.readers({});
     REC.setBoard(was.board); REC.setSession(was.session);
+  }
+});
+
+// placed last: it holds a document of the account the continuation's tests count, and attaches a mirror of its own
+test('a transcluded origin carrying C-33\'s words has one description in the mirror — those words — which every item its runs touch names, across the typed lines one run crosses and its other run alike, and an item of the document\'s own names none; an origin read as an edition carries none (issue #304\'s design decision: "The mirror gives each origin one description, and every run points to it")', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  /** @type {Array<{attrs: Record<string, string>, html: string}>} */
+  let items = [];
+  /** @type {Array<[string, string]>} the hidden descriptions the last rebuild wrote, in order, each its id and its words */
+  let hidden = [];
+  const mirror = {
+    tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} },
+    get innerHTML() { return ''; },
+    set innerHTML(/** @type {string} */ html) {
+      items = [...html.matchAll(/<li\b([^>]*)>(.*?)<\/li>/g)].map((m) => ({ attrs: Object.fromEntries([...m[1].matchAll(/ ([\w-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]])), html: m[2] }));
+      hidden = [...html.matchAll(/<div id="([\w-]+)" hidden>([^<]*)<\/div>/g)].map((m) => [m[1], m[2]]);
+    },
+    querySelectorAll: () => [], querySelector: () => null,
+  };
+  /** the draft's metadata as a read answers it: a draft, or its edition */
+  const meta = (/** @type {boolean} */ published) => ({ doc: T2_ORIGIN, published, owner: '1.0.1', birth: published ? T2_ORIGIN + '.1' : null, birthExtent: published ? 33 : null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  try {
+    REC.takeMetadata(T2_ORIGIN, meta(false));
+    await PUMP.loadWhole(T2);
+    assert.deepEqual(REC.doc(T2).origins, [{ pos: 11, width: 21, doc: T2_ORIGIN }, { pos: 44, width: 12, doc: T2_ORIGIN }], 'two runs of the draft, the first across two typed lines');
+    WALK.attach(/** @type {any} */ (mirror));
+    await WALK.focusTo(T2, 11);
+    const ids = hidden.filter(([, w]) => w === esc(t('C-33'))).map(([id]) => id);
+    assert.equal(ids.length, 1, `one description of ${T2_ORIGIN}, C-33's words: ${JSON.stringify(hidden)}`);
+    const names = (/** @type {number} */ pos) => { const item = items.find((i) => i.attrs['data-pos'] === String(pos)); return !!item && (item.attrs['aria-describedby'] || '').split(' ').includes(ids[0]); };
+    assert.deepEqual([1, 11, 22, 34, 44].map(names), [false, true, true, false, true], 'each item the draft\'s runs touch names it; the document\'s own items do not');
+    assert.deepEqual(WALK.originWords({ kind: 'block', addr: T2, pos: 22, link: null }), { origin: T2_ORIGIN, words: t('C-33') });
+    REC.takeMetadata(T2_ORIGIN, meta(true));
+    assert.equal(WALK.originWords({ kind: 'block', addr: T2, pos: 22, link: null }), null, 'the draft read as published: no C-33, no description');
+  } finally {
+    globalThis.document = platform;
   }
 });

@@ -76,8 +76,7 @@
 // or lists its several (O-ANATOMY's `fromSymbol`; FP-30), a target of its
 // own beside the run; the presence indicator's ⟡ asks to see the links; a
 // byline's cut label opens whole, and the act again closes it (T-LAYER's
-// `openLabel`; FP-34); a run's hairline label goes to its source carrying
-// the run (foundations §2.3; P43); the scene-offer opens the scene, a step on
+// `openLabel`; FP-34); the scene-offer opens the scene, a step on
 // the trail (N-GO's `toScene`); a withheld run's key in its gap opens the
 // run's whole wording's card (O-FACES's `withheldRun`), as Enter at the run
 // does (D5 K-7); the rest of a withheld run's gap conjures C-39's face naming the
@@ -107,12 +106,14 @@
 // and a focus landing in a corner the view does not show whole moves the
 // camera by the least pan that brings it in (P-CAM's `panInto`; FP-20), no
 // flight running. On the signs in the columns' edges (T-LAYER's): a withheld
-// origin's statement's mark, and a run's key, open the run's card; C-67's
-// pointer in the statement is a LEAP to the claim's home, the edition,
+// origin's statement's mark, and a withheld run's key, open the run's card;
+// C-67's pointer in the statement is a LEAP to the claim's home, the edition,
 // landed in whole and made at the run (B1-S7 → S6) — it carries no passage,
 // for an edition's bytes are fresh identity and no span of it resolves to the
 // origin (PUB-3.2; RES-66), and lights no link, the claim being a record LK
-// never draws (`signAct`).
+// never draws; a transcluded run's key — alone, or heading its origin's
+// statement — is the run's one gesture to its source, going there carrying
+// the run it stands beside (foundations §2.3; P43) (`signAct`).
 // Figures: a press that moves more than 4 px is a drag, not a click; a wheel
 // series ends at SERIES_MS (220 ms, unmeasured) of quiet, and the re-take
 // follows a wheel 220 ms after it; a pinch zooms by e^(-Δy·0.012), Mod+wheel
@@ -233,7 +234,7 @@ export function attach(els) {
   window.addEventListener('pointercancel', () => { held = null; carrying = false; LAYER.press(false); });
   window.addEventListener('contextmenu', () => { held = null; carrying = false; LAYER.press(false); });
   document.addEventListener('selectionchange', () => { if (!LAYER.pressing()) takeSelection(); });
-  // the layer: a click on a symbol, the ⟡, a hairline, the scene-offer, a withheld run; a selection the platform made (a double-click's word); a click on a marked span or a block
+  // the layer: a click on a symbol, the ⟡, the scene-offer, a withheld run; a selection the platform made (a double-click's word); a click on a marked span or a block
   els.layer.addEventListener('click', (e) => {
     acted();
     // a drag's own click: the pointer moved, and the selection it made was taken as it ended
@@ -246,7 +247,7 @@ export function attach(els) {
   els.corners.addEventListener('click', (e) => {
     const target = /** @type {HTMLElement} */ (e.target);
     acted();
-    // a sign in a column's edge: a withheld origin's statement, a run's key
+    // a sign in a column's edge: an origin's statement, a run's key
     const sign = /** @type {HTMLElement | null} */ (target.closest('.edge-sign'));
     if (sign) { e.stopPropagation(); signAct(sign, target); return; }
     const holder = /** @type {HTMLElement | null} */ (target.closest('[data-corner]')), addr = holder ? holder.dataset.corner || '' : '';
@@ -306,12 +307,10 @@ function inPlaceholder(/** @type {Node | null} */ n) {
 
 /**
  * The run an element of an article names, as its own positions in the
- * article that holds it, which T-ARTICLE sets on the element: a hairline's
- * transcluded run, the passage its gesture to the source carries
- * (foundations §2.1, §2.3); a placeholder's withheld run, where
- * C-39's face stands once the text layer rebuilds or takes down the
- * placeholder (O-HOST's anchor). Null where the element stands in no article
- * or names no run.
+ * article that holds it, which T-ARTICLE sets on the element: a placeholder's
+ * withheld run, where C-39's face stands once the text layer rebuilds or
+ * takes down the placeholder (O-HOST's anchor). Null where the element
+ * stands in no article or names no run.
  * @param {HTMLElement} at
  * @returns {import('../text/span.js').Span | null}
  */
@@ -339,7 +338,7 @@ function endAt(mark, link, key) {
 
 /**
  * A click on the text layer's text, at the element under it (see the head): a
- * symbol, the ⟡, a hairline, the scene-offer, a withheld run's key, a withheld run;
+ * symbol, the ⟡, the scene-offer, a withheld run's key, a withheld run;
  * a selection the platform made (a double-click's word); in text the person
  * may edit, the caret at the character clicked (K-70); a marked stretch; a
  * block, selected whole. The text layer's own clicks and a held press's
@@ -364,8 +363,6 @@ function clickText(target) {
       return true;
     }
   }
-  const hair = target.closest('.hairline');
-  if (hair) { const h = /** @type {HTMLElement} */ (hair), run = runOf(h); if (h.dataset.src) GO.leapTo(h.dataset.src, { how: 'leap', carry: run, site: run ? { span: run } : null }); return true; }
   const offer = target.closest('.offer');
   if (offer) { const [a, b] = (/** @type {HTMLElement} */ (offer).dataset.scene || '').split('|'); if (a && b) void GO.toScene(a, b); return true; }
   // a byline's cut label opens whole on its act, and closes on it again (FP-34)
@@ -413,7 +410,10 @@ function openRun(run) {
  * The act at a sign in a column's edge (see the head): C-67's pointer in a
  * withheld origin's statement is a LEAP to the claim's home, the edition,
  * landed in whole and made at the run it stands beside; the statement's mark
- * and a run's key open the run's card (`openRun`).
+ * and a withheld run's key open the run's card (`openRun`); a transcluded
+ * run's key, alone or heading its origin's statement, goes to its source
+ * carrying the run it stands beside, its own positions in the text shown
+ * (foundations §2.3; P43).
  * @param {HTMLElement} sign the sign's element (T-LAYER's), carrying its run
  * @param {HTMLElement} target what the click fell on
  */
@@ -422,6 +422,8 @@ function signAct(sign, target) {
   if (!run.addr || !(run.pos > 0)) return;
   const pointer = /** @type {HTMLElement | null} */ (target.closest('.clause[data-home]'));
   if (pointer) { if (pointer.dataset.home) void GO.leapTo(pointer.dataset.home, { how: 'leap', site: { span: run } }); return; }
+  const source = /** @type {HTMLElement | null} */ (target.closest('.src-key[data-src]'));
+  if (source) { if (source.dataset.src) GO.leapTo(source.dataset.src, { how: 'leap', carry: run, site: { span: run } }); return; }
   if (target.closest('.wh-mark, .wh-key')) openRun(run);
 }
 

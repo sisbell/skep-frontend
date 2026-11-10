@@ -25,10 +25,10 @@ import json
 from . import AGENT_SPACE, CLAUSE_READING, DOC, FAR_LEAP, GHOST, WINDOW, Result
 from .editor import NARROW, WIDE, typed_lands
 
-# C-33's mark at the window run's opening: the run's first stretch, where its hairline is labelled whole (the run crosses
-# a paragraph break, so a second block opens it again, compact, in a later column the view at its first line need not hold)
-C33_MARK = '#domlayer .sp[data-addr="%s"] .hairline.whole[data-src="%s"] + .pubmark[data-mark="C-33"]' % (DOC, WINDOW[2])
-ORIGIN_HAIRLINE = '#domlayer .sp[data-addr="%s"] .hairline.whole[data-src="%s"]' % (DOC, WINDOW[2])
+# the window run's opening hairline — the stretch that opens the run, one run across the paragraph break its own bytes
+# make — and its origin's statement in its column's edge, its key heading C-33's words (issue #304)
+RUN_OPENS = '#domlayer .sp[data-addr="%s"] .same.opens[data-origin="%s"]' % (DOC, WINDOW[2])
+ORIGIN_STATEMENT = '#corners .edge-sign[data-sign="statement"][data-addr="%s"][data-origin="%s"]' % (DOC, WINDOW[2])
 SCENE_OFFER = '#domlayer .offer[data-scene="%s|%s"]' % (DOC, WINDOW[2])
 PLACEHOLDER = '#domlayer article[data-addr="%s"] .withheld[data-pos="%d"]' % (DOC, WINDOW[0])
 
@@ -134,8 +134,11 @@ def run(ctx):
     ctx.leap(DOC, 541)
     step(ctx, r, 'W-05', 1, 'zoom for structure: reading', 'W-05 step 1: "reading = full text with span-anchored beams" — the LEAP to a named document lands at reading scale (law 6; R92 rider (a)).', 'reading')
     ctx.view_at(DOC, WINDOW[0])
-    step(ctx, r, 'W-05', 2, 'read: the same material', 'W-05 step 2: "transcluded content visibly THE SAME material, one gesture to the source (R2) — delivered per ORIGIN, position by position." The window run\'s hairline names 1.0.1.0.1003; the mark is C-33\'s.', 'same-material',
-         claims=[(C33_MARK, 'C-33\'s mark', None), (ORIGIN_HAIRLINE, 'the hairline naming the origin', None)])
+    step(ctx, r, 'W-05', 2, 'read: the same material', 'W-05 step 2: "transcluded content visibly THE SAME material, one gesture to the source (R2) — delivered per ORIGIN, position by position." The window run opens on its hairline, its ground on each of its lines; its origin, 1.0.1.0.1003, stated once in its column\'s edge — its key, the gesture to the source, then C-33\'s words.', 'same-material',
+         claims=[(RUN_OPENS, 'the run\'s opening hairline', None), (ORIGIN_STATEMENT, 'the origin\'s statement in the edge', None)])
+    c33 = ctx.js('window.__skep.strings.pinned().find((s) => s.id === "C-33").text')
+    said = ctx.js('(() => { const e = document.querySelector(%s); return e ? e.textContent : null; })()' % json.dumps(ORIGIN_STATEMENT))
+    r.check(bool(said) and WINDOW[2] in said and c33 in said, 'W-05 step 2: the statement holds the origin\'s key and C-33\'s words, as the note says', {'statement': said, 'c33': c33})
     last = ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC))[-1]
     ctx.view_at(DOC, last['pos'])
     step(ctx, r, 'W-05', 2, 'read: the scene offer', 'W-05 step 2: the scene offer stands at the article\'s end, below its last block in its last column: "this document windows 1.0.1.0.1003".', 'scene-offer',

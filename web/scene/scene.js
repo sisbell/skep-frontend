@@ -326,8 +326,9 @@
 // where it offers no act of its own — over what stands beside it, moving
 // nothing, and closes on the same act at the corner opened (`openWhole`;
 // FP-26). Each column stands against the pane's
-// inner edge, its column's edge between them — its counts there, and its
-// withheld origins' statements, each once per origin in the pane by the
+// inner edge, its column's edge between them — its counts there, and the
+// statements of the origins its runs of other documents' material are of,
+// withheld and transcluded alike, each once per origin in the pane by the
 // plane's one rule, held inside its text as the pane scrolls
 // (`placeStatements`; FP-31) — the bands leaving the pane beyond them
 // (foundations §3.1; FP-26): a window wider than the measure needs widens the outer
@@ -372,7 +373,7 @@ import * as HOST from '../overlays/host.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { drawChord } from '../nav/keys.js';
-import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML } from '../text/article.js';
+import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, carriesC33, sourceStatementHTML } from '../text/article.js';
 import { inkOf, strokeOf, strokeIn, cutAt, pointOn } from '../beams/beams.js';
 import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingOf } from '../beams/held.js';
 import { SAMENESS, HOLD, LABEL_MIN_PX, cornerWidth } from '../plane/register.js';
@@ -729,7 +730,7 @@ let lastMeasure = { runs: 0, bands: 0, strokes: 0, ms: 0 };
 let ending = (/** @type {boolean} */ _byKey) => close();
 /** @type {Faces | null} the faces a returned stop shows at its site, the app's to hand in (`attach`); none until it does */
 let faces = null;
-/** @type {Record<'a' | 'b', Map<string, string>>} the run each withheld origin's statement stands beside in each pane, by origin: the run's identity, kept while a line of that run is in view (`placeStatements`) */
+/** @type {Record<'a' | 'b', Map<string, string>>} the run each origin's statement stands beside in each pane, by origin: the run's identity, kept while a line of that run is in view (`placeStatements`) */
 const stood = { a: new Map(), b: new Map() };
 /** the room between two signs stacked in a pane's column's edge, px: the plane's (T-LAYER's) */
 const SIGN_GAP = 2;
@@ -1415,8 +1416,8 @@ function paneKept(P) { return LAYER.keptWords(P.d, P.d, paneHeld(P)); }
  * kept clause changed (`paneKept`), a draft's kept word or its statement
  * moved — or the board's lag began or ended since (`lags`), the element kept
  * so a focus on it stays, the heads' band set again where their rows changed
- * (`setBand`), and its withheld origins' statements placed again where what
- * the edition claims held say changed since they were placed, or its article
+ * (`setBand`), and its origins' statements placed again where what the
+ * edition claims held say changed since they were placed, or its article
  * was set since (T-LAYER's `keptRunsKey`; `placeStatements`). The
  * app's loop runs it on each dirty frame while the scene stands; the one line
  * speaks for the panes (`keptPanes`).
@@ -1552,7 +1553,7 @@ const ownerFacts = (/** @type {Pane} */ P) => REC.accountKey(REC.ownerAccount(P.
  * (`sceneArticle`), where its words are read handed in (`whereIn`; FP-27) —
  * and put in its place: the one it shows replaced, else
  * placed — pane A's after its corner, pane B's before it, so each corner
- * stands on its pane's outer side — its withheld origins' statements to be
+ * stands on its pane's outer side — its origins' statements to be
  * placed (`markKept`), and the owner's byline facts its byline was made with kept
  * beside it (`Pane.facts`); where they are not read, a read of them made
  * (`readFacts`; FP-34), whose take sets the pane again (`dropped`).
@@ -2692,24 +2693,29 @@ function placeHeads(E, S) {
 }
 
 /**
- * Each pane's withheld origins stated in its column's edge (see the head;
- * FP-31): the signs T-ARTICLE's one rule stands for the withheld runs of its
- * article a line of which meets the pane's visible height below what its head
- * covers (`edgeSignsFor`) — each origin's statement (`edgeStatementHTML`,
- * the scene-mode variant: lines) beside the run it stood beside while that run
- * is in view, else beside the origin's first run in view, held by the run's
- * identity through the image the article was made from (FP-38); a key too
- * wide for its gap; an others' count, as the pane was set with it — each in
- * the column's edge on the pane's inner side, beside its run's first line in
- * view, at a share of the pane's em never below P-REG's LABEL_MIN_PX, the
- * edge's width wide, the pane's signs stacked by the one hold (P-LABEL's
- * `holdStack`) — at their lines, else below what the head covers, off the
- * signs the article sets in that edge, held inside the article's text. They
- * stand in the pane's content, so they scroll with it, and are placed again as
- * it scrolls (`draw`) and as the claims' kept clause moves (`markKept`);
- * written only where their words or size changed; read in the pane's own
- * reading order after its text, for a pane's text is read where it stands.
- * Nothing where the platform lays out no pane.
+ * Each pane's origins stated in its column's edge (see the head; FP-31): the
+ * signs T-ARTICLE's one rule stands for the runs of other documents'
+ * material in its article (`originRunsOf`) a line of which meets the pane's
+ * visible height below what its head covers (`edgeSignsFor`) — each origin's
+ * statement (the scene-mode variant: lines) beside the run it stood beside
+ * while that run is in view, else beside the origin's first run in view, held
+ * by the run's identity through the image the article was made from (FP-38):
+ * a withheld origin's (`edgeStatementHTML`), a transcluded origin's
+ * (`sourceStatementHTML`), its C-33's words read as it is placed (T-LAYER's
+ * `originKind`, T-ARTICLE's `carriesC33`); a key no gap holds; a withheld
+ * run's others' count, as the pane was set with it — each in the column's
+ * edge on the pane's inner side, beside its run's first line in view — a
+ * transcluded run's the first line in view a character of it stands on, read
+ * from the platform's rects over its stretch in each typed line in turn
+ * (`textLineIn`) — at a share of the pane's em never below P-REG's
+ * LABEL_MIN_PX, the edge's width wide, the pane's signs stacked by the one
+ * hold (P-LABEL's `holdStack`) — at their lines, else below what the head
+ * covers, off the signs the article sets in that edge, held inside the
+ * article's text. They stand in the pane's content, so they scroll with it,
+ * and are placed again as it scrolls (`draw`) and as the claims' kept clause
+ * moves (`markKept`); written only where their words or size changed; read in
+ * the pane's own reading order after its text, for a pane's text is read
+ * where it stands. Nothing where the platform lays out no pane.
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  */
@@ -2725,13 +2731,23 @@ function placeStatements(E, S) {
     const px = S.fit.px, lh = LINE_H * px;
     /** @type {Map<import('../text/article.js').RunInView, {rect: DOMRect, y: number}>} each run a line of which meets the pane's visible height, and its first line in view */
     const at = new Map();
-    for (const e of /** @type {HTMLElement[]} */ ([...art.el.querySelectorAll('.run > .withheld[data-origin]')])) {
-      const b = art.made.blocks.find((x) => x.pos === Number(e.dataset.pos)), holds = /** @type {import('../text/article.js').GapHolds} */ (e.dataset.holds);
-      if (!b || !b.origin || holds === 'reading') continue;
+    /** @type {Map<import('../text/article.js').RunInView, Block>} each withheld run's block, which its statement is made from */
+    const gaps = new Map();
+    for (const run of originRunsOf({ blocks: art.made.blocks, origins: P.d.origins })) {
+      const [first] = REC.identityIn(art.made.image, run.pos, 1), id = first ? `${run.origin} ${first.prefix}.${first.ordinal}` : `${run.origin} @${run.pos}`;
+      if (!run.withheld) {
+        const line = textLineIn(art, run, vis, lh);
+        if (line) at.set({ run, id, holds: 'edge', count: { n: 0, social: false } }, line);
+        continue;
+      }
+      const e = /** @type {HTMLElement | null} */ (art.el.querySelector(`.run > .withheld[data-pos="${run.pos}"]`));
+      const b = art.made.blocks.find((x) => x.pos === run.pos), holds = /** @type {import('../text/article.js').GapHolds | undefined} */ (e ? e.dataset.holds : undefined);
+      if (!e || !b || !holds || holds === 'reading') continue;
       const r = e.getBoundingClientRect();
       if (r.bottom <= vis.top || r.top >= vis.bottom) continue;
-      const [first] = REC.identityIn(art.made.image, b.pos, 1);
-      at.set({ b, id: first ? `${b.origin} ${first.prefix}.${first.ordinal}` : `${b.origin} @${b.pos}`, holds, count: P.view.countAt(b) }, { rect: r, y: r.top >= vis.top ? r.top : r.top + Math.floor((vis.top - r.top) / lh) * lh });
+      const seen = { run, id, holds, count: P.view.countAt(b) };
+      at.set(seen, { rect: r, y: r.top >= vis.top ? r.top : r.top + Math.floor((vis.top - r.top) / lh) * lh });
+      gaps.set(seen, b);
     }
     const chosen = edgeSignsFor([...at.keys()], stood[side]);
     stood[side] = chosen.beside;
@@ -2739,11 +2755,12 @@ function placeStatements(E, S) {
     /** @type {Array<{el: HTMLElement, kind: 'statement' | 'key' | 'count', pos: number, rect: DOMRect, y: number}>} */
     const placing = [];
     for (const sign of chosen.signs) {
-      const x = /** @type {{rect: DOMRect, y: number}} */ (at.get(sign.run)), b = sign.run.b, o = /** @type {string} */ (b.origin);
-      const html = sign.kind === 'statement' ? edgeStatementHTML(placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf), LAYER.claimsKeptIn(o), true)
-        : sign.kind === 'key' ? edgeKeyHTML(o, true) : edgeCountHTML(sign.run.count);
+      const x = /** @type {{rect: DOMRect, y: number}} */ (at.get(sign.run)), run = sign.run.run, o = run.origin, b = gaps.get(sign.run);
+      const html = sign.kind === 'statement'
+        ? (b ? edgeStatementHTML(placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf), LAYER.claimsKeptIn(o), true) : sourceStatementHTML(o, carriesC33(P.d, LAYER.originKind(o)), true))
+        : sign.kind === 'key' ? edgeKeyHTML(run, true) : edgeCountHTML(sign.run.count);
       if (!html) continue;
-      const key = sign.kind === 'statement' ? `${o} statement` : `${b.pos} ${sign.kind}`;
+      const key = sign.kind === 'statement' ? `${o} statement` : `${run.pos} ${sign.kind}`;
       let el = standing.get(key);
       standing.delete(key);
       if (!el) {
@@ -2754,8 +2771,8 @@ function placeStatements(E, S) {
       }
       if (el.innerHTML !== html) el.innerHTML = html;
       Object.assign(el.style, { fontSize: size + 'px', lineHeight: Math.max(lh, size * LINE_BOX) + 'px', width: width + 'px' });
-      el.dataset.pos = String(b.pos);
-      placing.push({ el, kind: sign.kind, pos: b.pos, rect: x.rect, y: x.y });
+      el.dataset.pos = String(run.pos);
+      placing.push({ el, kind: sign.kind, pos: run.pos, rect: x.rect, y: x.y });
     }
     for (const e of standing.values()) e.remove();
     if (!placing.length) continue;
@@ -2770,6 +2787,38 @@ function placeStatements(E, S) {
       p.el.style.transform = `translate(${Math.round(x - left)}px, ${Math.round(ys[k] - origin + pane.scrollTop)}px)`;
     });
   }
+}
+
+/**
+ * The first line of a transcluded run in a pane's visible height (see
+ * `placeStatements`): over the stretch of each typed line of it in turn
+ * (T-ARTICLE's `textIn`), the first of the platform's rects whose line meets
+ * the visible height — its line's top in client px, set on its typed line's
+ * own grid of lines, which no drift down a long text moves — with that typed
+ * line's box, whose sides are the column's; null where none meets it.
+ * @param {{el: HTMLElement, made: import('../text/layer.js').Made}} art the pane's article and what it was made from
+ * @param {{pos: number, width: number}} run
+ * @param {{top: number, bottom: number}} vis the pane's visible height, client px
+ * @param {number} lh a body line box, px
+ * @returns {{rect: DOMRect, y: number} | null}
+ */
+function textLineIn(art, run, vis, lh) {
+  for (const b of art.made.blocks) {
+    if (b.kind !== 'para' || b.pos + b.width <= run.pos || b.pos >= run.pos + run.width) continue;
+    const at = textIn([b], run), el = /** @type {HTMLElement | null} */ (art.el.querySelector(`.run > [data-pos="${b.pos}"]`));
+    const range = at && el ? LAYER.rangeIn(art.el, { addr: art.made.addr, pos: at.from, width: at.to - at.from }) : null;
+    if (!range || !el) continue;
+    const box = el.getBoundingClientRect();
+    if (box.bottom <= vis.top) continue;
+    if (box.top >= vis.bottom) return null;
+    for (const q of range.getClientRects()) {
+      if (!q.width && !q.height) continue;
+      const y = box.top + Math.floor((q.top - box.top) / lh + 1e-3) * lh;
+      if (y >= vis.bottom) return null;
+      if (y + lh > vis.top) return { rect: box, y };
+    }
+  }
+  return null;
 }
 
 /**

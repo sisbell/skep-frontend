@@ -3,7 +3,8 @@
 // names, with the arm the rule gives that owner and this reader, anchored at
 // the run's own positions, and the act at the run's key in its gap or at its
 // origin's statement in the edge opens its whole wording's card; a
-// hairline's click LEAPs to its source carrying the run; a symbol's click and
+// transcluded run's key in its column's edge LEAPs to its source carrying the
+// run; a symbol's click and
 // a marked stretch's open the card of the end clicked; C-67's pointer in a
 // withheld origin's statement LEAPs to the claim's home whole, carrying no
 // passage and lighting no link, while the rest of the gap still conjures
@@ -51,7 +52,7 @@ import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
 import * as LINE from '../line/line.js';
 import { lodOf } from '../plane/lod.js';
-import { articleHTML, entitlementArm, edgeStatementHTML, placeholderOf } from '../text/article.js';
+import { articleHTML, entitlementArm, edgeStatementHTML, placeholderOf, originRunsOf, sourceStatementHTML, carriesC33 } from '../text/article.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
 import { accountCell, boardCell, docBox } from '../plane/projection.js';
 import { t, tHTML, addressedHTML } from '../strings.js';
@@ -136,10 +137,10 @@ test('the act at a withheld run\'s gap conjures C-39\'s face naming the owner it
   }
 });
 
-test('a click on a run\'s hairline LEAPs to its source carrying the run, the landing marked at the run\'s counterpart in the source\'s text', async () => {
+test('a click on a transcluded run\'s key in its column\'s edge — heading its origin\'s statement — LEAPs to its source carrying the run, the landing marked at the run\'s counterpart in the source\'s text; the article sets no hairline label to click (issue #304)', async () => {
   const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
-  /** @type {Map<string, (e: unknown) => void>} the text layer's listeners, by event */
-  const layer = new Map();
+  /** @type {Map<string, (e: unknown) => void>} the corner layer's listeners, by event */
+  const corners = new Map();
   const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
   globalThis.HTMLElement = /** @type {any} */ (class {});
   globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
@@ -163,20 +164,23 @@ test('a click on a run\'s hairline LEAPs to its source carrying the run, the lan
     REC.takeDelivery(D, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
     REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 22 }, { iStart: O + '.0.1.12', width: 15 }]);
     const d = REC.doc(D);
-    // the hairline as the plane's article holds it, in the article T-LAYER mounts from its view
-    const tag = (/<span class="hairline[^>]*>/.exec(articleHTML(d, LAYER.viewFor(d), REC.ownerAccount(d))) || [''])[0];
-    const article = { dataset: { addr: D } };
-    const hair = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf(tag) });
-    Object.assign(hair, { closest: (/** @type {string} */ sel) => (sel === '.hairline' ? hair : sel === 'article' ? article : null) });
-    assert.equal(hair.dataset.src, O, 'the hairline names the run\'s source');
+    assert.ok(!articleHTML(d, LAYER.viewFor(d), REC.ownerAccount(d)).includes('hairline'), 'the article sets no label in the run\'s line');
+    // the run the edge states, and its key heading the statement as T-LAYER places it, the sign carrying the run
+    const [taken] = originRunsOf(d);
+    assert.deepEqual(taken, { pos: run.pos, width: run.width, origin: O, withheld: false }, 'the run, its own positions in the document windowing it');
+    const tag = (/<span class="src-key"[^>]*>/.exec(sourceStatementHTML(taken.origin, carriesC33(d, LAYER.originKind(O)), false)) || [''])[0];
+    const sign = { dataset: { addr: D, pos: String(taken.pos), width: String(taken.width), origin: O, sign: 'statement' } };
+    const key = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf(tag) });
+    Object.assign(key, { closest: (/** @type {string} */ sel) => (sel === '.edge-sign' ? sign : sel === '.src-key[data-src]' ? key : null) });
+    assert.equal(key.dataset.src, O, 'the key names the run\'s source');
     HOST.attach(/** @type {any} */ ({
       ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
       querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
     }));
-    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(null) }));
-    const click = layer.get('click');
-    assert.ok(click, 'the text layer takes a click');
-    click({ target: hair, clientX: 0, clientY: 0, stopPropagation() {} });
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(null), corners: listens(corners) }));
+    const click = corners.get('click');
+    assert.ok(click, 'the corner layer takes a click');
+    click({ target: key, stopPropagation() {} });
     for (let i = 0; i < 200 && !GO.arrivalMark(); i++) await new Promise((r) => setTimeout(r, 0));
     assert.deepEqual(GO.arrivalMark(), { addr: O, pos: 12, runs: [{ pos: 12, width: 15 }], link: null }, 'the run marked where the source holds it');
     assert.deepEqual(fake.unanswered, [], 'the run carried, and no other passage');

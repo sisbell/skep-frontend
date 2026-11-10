@@ -163,7 +163,11 @@
 // claims decide one and nothing in its place where they do not — R56, B1-S7,
 // PUB-5.124 — and the clause the origin's statement shows while its claims
 // stand held), written once every read the clause waits on has answered and
-// kept as it stands on each dirty frame (`markDescribed`; FP-33); a document
+// kept as it stands on each dirty frame (`markDescribed`; FP-33); an item a
+// transcluded run touches says the material's origin in its own words and,
+// where the run carries C-33's words as its statement does (T-ARTICLE's
+// `carriesC33`), names those words as its origin's one description, which
+// every item of a run of that origin names (`originWords`); a document
 // is named by its address, then the first line its box's label sets as the
 // mirror says it (T-LAYER's `mirrorLabel`, the one the status region names it
 // by), the version's own — its words quoted, the client's words in their
@@ -227,7 +231,7 @@ import * as PUMP from '../model/pump.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import * as FOCUS from './focus.js';
-import { placeholderOf, itemOf, itemWords, itemLength, recordOf, CLAUSE_READING } from '../text/article.js';
+import { placeholderOf, itemOf, itemWords, itemLength, recordOf, carriesC33, CLAUSE_READING } from '../text/article.js';
 import { farSays } from '../beams/held.js';
 import { docBox, accountCell, boardCell, accountAt, clearLeftOf, continuationCell, withinContinuation, membersAt, markKey, continuationOf } from '../plane/projection.js';
 import { lodOf, residueDepth, markScale } from '../plane/lod.js';
@@ -657,7 +661,7 @@ export function render() {
   let html = `<ul role="group" aria-label="${esc(t('L.mirror-level', { n: lvl }))}">`;
   const at = read.located(), said = read.described(), scale = CAM.destination().scale;
   let pieces = '';
-  /** @type {Set<string>} the withheld origins whose description is written */
+  /** @type {Set<string>} the origins whose description is written */
   const origins = new Set();
   for (let i = lo; i < hi; i++) {
     const n = siblings[i];
@@ -717,21 +721,30 @@ function keptSentence(n) {
 }
 
 /**
- * A withheld origin's description, which every item of a run of it names
- * (see the head; R94): made from the run's placeholder record, as the plane's
- * statement and the run's card are (T-ARTICLE's `placeholderOf`) — the owner
- * of its origin, the entitlement arm for this reader, C-67's clause where the
- * origin's edition claims decide one and nothing in its place where they do
- * not (R56, B1-S7, PUB-5.124), and, while those claims stand held as they are
- * read again, the clause the origin's statement shows (T-LAYER's
- * `claimsKeptIn`; FP-23) — none while a read its clause waits on is out, so
- * none stands with a part missing (FP-33).
+ * An origin's description, which every item of a run of it names (see the
+ * head; R94). A withheld origin's is made from the run's placeholder record,
+ * as the plane's statement and the run's card are (T-ARTICLE's
+ * `placeholderOf`) — the owner of its origin, the entitlement arm for this
+ * reader, C-67's clause where the origin's edition claims decide one and
+ * nothing in its place where they do not (R56, B1-S7, PUB-5.124), and, while
+ * those claims stand held as they are read again, the clause the origin's
+ * statement shows (T-LAYER's `claimsKeptIn`; FP-23) — none while a read its
+ * clause waits on is out, so none stands with a part missing (FP-33). A
+ * transcluded origin's is C-33's words, where a run of it the item's block
+ * touches carries them as its statement does (T-ARTICLE's `carriesC33`, by
+ * T-LAYER's `originKind`); none where none does, the item's own words naming
+ * the material's origin.
  * @param {Node} n
- * @returns {{origin: string, words: string} | null} its origin, and its words; null where the node is no withheld run, or its clause is not decided
+ * @returns {{origin: string, words: string} | null} its origin, and its words; null where the node holds no such run, or a withheld run's clause is not decided
  */
 export function originWords(n) {
   const b = blockOf(n);
-  if (!b || b.kind !== 'withheld' || !b.origin) return null;
+  if (!b) return null;
+  if (b.kind !== 'withheld') {
+    const d = LAYER.shownOf(n.addr), org = d.origins.find((o) => touches(b, o) && carriesC33(d, LAYER.originKind(o.doc)));
+    return org ? { origin: org.doc, words: t('C-33') } : null;
+  }
+  if (!b.origin) return null;
   const w = placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf);
   if (w.clause === CLAUSE_READING) return null;
   const k = LAYER.claimsKeptIn(b.origin);
@@ -882,7 +895,7 @@ export function markDescribed() {
     const i = Number(li.dataset.i), n = siblings[i], piece = q(pieceId(i)), far = q(farId(i));
     if (n && piece) { const w = otherRuns(n, said); if (piece.textContent !== w) piece.textContent = w; }
     if (n && far) { const w = farWhole(n); if (far.textContent !== w) far.textContent = w; }
-    // a withheld origin's description: written where its clause was decided since the rebuild, its words set as they stand
+    // an origin's description: written where it came to stand since the rebuild — a withheld one's clause decided, C-33's kind read — its words set as they stand
     const o = n ? originWords(n) : null;
     let held = o ? q(originId(o.origin)) : null;
     if (o && !held && typeof mirrorEl.appendChild === 'function' && typeof document !== 'undefined') {

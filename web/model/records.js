@@ -14,7 +14,7 @@
 // (`takeIndex`), and kept by the feed's rows, never by enumerating
 // documents; documents — their index row, extent, delivered
 // runs and the blocks derived from them, metadata, V→I image as read with
-// the transclusion origins it shows, the raw set of links touching them,
+// the transcluded runs it shows (`transcludedRuns`), the raw set of links touching them,
 // their chain's count and whether the board ended it there, the position
 // their text was read at (`Doc.readAt`), and a refusal a read of them met;
 // each version member's age, which no feed row drops (`memberAge`); links as
@@ -132,7 +132,7 @@
 // Rules: FP-1, FP-2, FP-6, FP-7, FP-10, FP-14, FP-22, FP-23, FP-29, FP-34,
 // FP-35.
 
-import { accountOf, documentOf, homeOf, cmpAddr, elementOf, memberOf, isUnder, isTrunkMember, docOneOf } from './address.js';
+import { accountOf, documentOf, homeOf, cmpAddr, memberOf, isUnder, isTrunkMember, docOneOf } from './address.js';
 import { byteOffsets, sliceBytes, byteLength } from '../util.js';
 
 /** @typedef {import('./frames.js').Run} Run */
@@ -1122,24 +1122,45 @@ export function takeImage(addr, fromPos, runs) {
   d.rev++; bump();
 }
 
-/** an image's runs over a window into a record (`takeImage`, `setAgain`) */
+/** an image's runs over a window into a record (`takeImage`, `setAgain`), its transcluded runs read from the whole image held (`transcludedRuns`) */
 function imageInto(/** @type {Doc} */ d, /** @type {number} */ fromPos, /** @type {Array<{iStart: string, width: number}>} */ runs) {
   /** @type {ImageRun[]} */
   const image = [];
-  /** @type {Origin[]} */
-  const out = [];
   let pos = fromPos;
   for (const r of runs) {
     image.push({ pos, width: r.width, ...iPlace(r.iStart) });
-    const el = elementOf(r.iStart);
-    const origin = el ? el.doc : documentOf(r.iStart);
-    if (origin && origin !== d.addr && documentOf(origin) !== documentOf(d.addr)) out.push({ pos, width: r.width, doc: origin });
     pos += r.width;
   }
   const outside = (/** @type {{pos: number, width: number}} */ o) => o.pos + o.width <= fromPos || o.pos >= pos;
   d.image = d.image.filter(outside).concat(image).sort((a, b) => a.pos - b.pos);
-  d.origins = d.origins.filter(outside).concat(out).sort((a, b) => a.pos - b.pos);
+  d.origins = transcludedRuns(d.addr, d.image);
   d.imageFor = [fromPos, pos];
+}
+
+/**
+ * The transcluded runs of a text's image (`Origin`): each image run whose
+ * I-space is another document's, named by that document's trunk, and the
+ * runs of one origin that meet in the text one run — one origin's stretch
+ * unbroken in the text, however its permanent addresses continue — so a byte
+ * of any other I-space between them, the document's own newline among them,
+ * parts them. The one rule a held image (`takeImage`) and a derived one
+ * (M-DERIVE) are read by.
+ * @param {string} addr the document the image is of
+ * @param {ImageRun[]} image in position order
+ * @returns {Origin[]}
+ */
+export function transcludedRuns(addr, image) {
+  const own = documentOf(addr) || addr;
+  /** @type {Origin[]} */
+  const out = [];
+  for (const r of image) {
+    const doc = documentOf(r.prefix) || r.prefix;
+    if (doc === own) continue;
+    const last = out[out.length - 1];
+    if (last && last.doc === doc && last.pos + last.width === r.pos) last.width += r.width;
+    else out.push({ pos: r.pos, width: r.width, doc });
+  }
+  return out;
 }
 
 /**

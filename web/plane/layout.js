@@ -119,7 +119,7 @@ import { byteLength } from '../util.js';
  * @property {number} lead the room before its first character, in the body's em: a margin, a padding, a border
  * @property {number} trail the room after its last character, in the body's em
  * @property {boolean} box an inline-block: one unbreakable unit, a line free to break on either side of it
- * @property {boolean} own its characters are the document's own, its row's block's text in order; chrome (a hairline's label, C-33's mark, a symbol, a count) is not
+ * @property {boolean} own its characters are the document's own, its row's block's text in order; chrome (a symbol, a count) is not
  */
 
 /**
@@ -287,21 +287,15 @@ export const MEASURE = Object.freeze({
   head: 0.8,
   /** the scene-offer and the gap on either side of it */
   offer: 0.8, offerGap: 0.6,
-  /** the sameness hairline's label and the room after it */
-  label: 0.7, labelGap: 0.3,
-  /** C-33's mark: its size, its padding on either side, the room after it */
-  mark: 0.72, markPad: 0.3, markGap: 0.3,
   /** a link's symbol: its size, its padding on either side, the room before it */
   sym: 0.75, symPad: 0.3, symGap: 0.3,
   /** a sign in a column's edge: the others' count, a withheld run's mark */
   count: 0.72,
   /** the room above a withheld run's arm and above its clause, in its gap */
   faceGap: 0.3,
-  /** the sameness boundary's padding */
-  samePad: 0.25,
 });
 
-/** the borders, in px at LAY_FS: a mark's and a symbol's box, the sameness boundary */
+/** the borders, in px at LAY_FS: a symbol's box; a transcluded run's hairline, a mark of no width the style draws inside the run's own ends */
 export const BORDER = Object.freeze({ box: 1, same: 2 });
 
 /** the measure at its full: every document's line wherever the view holds it (`fitFor`), the plane's and a reading scene's pane's alike, in characters of its face (FP-12) */
@@ -349,10 +343,9 @@ export function cssMeasures() {
   const M = MEASURE;
   return {
     '--indent': em(M.indent), '--head': em(M.head),
-    '--offer': em(M.offer), '--offer-gap': em(M.offerGap), '--label': em(M.label), '--label-gap': em(M.labelGap),
-    '--mark': em(M.mark), '--mark-pad': em(M.markPad), '--mark-gap': em(M.markGap),
+    '--offer': em(M.offer), '--offer-gap': em(M.offerGap),
     '--sym': em(M.sym), '--sym-pad': em(M.symPad), '--sym-gap': em(M.symGap),
-    '--count': em(M.count), '--face-gap': em(M.faceGap), '--same-pad': em(M.samePad),
+    '--count': em(M.count), '--face-gap': em(M.faceGap),
     '--border-box': px(BORDER.box), '--border-same': px(BORDER.same),
     '--measure': String(MEASURE_CPL), '--char-w': String(CHAR_W), '--line-h': String(LINE_H),
     '--gutter': em(GUTTER), '--edge': em(EDGE), '--edge-gap': em(EDGE_GAP), '--line-box': em(LINE_H),

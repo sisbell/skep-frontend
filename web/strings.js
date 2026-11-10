@@ -1220,11 +1220,11 @@ export const STRINGS = {
   // the client's words standing in a document's first line's place — a record's rendering, a withheld box's statement, what
   // a board will say of a far end — bracketed wherever the first line is named, so none reads as the document's own words
   'L.client-words': { text: '[⟨words⟩]', cls: 'DRAFT', source: '', screen: 'a document\'s label: the plane, a tail, a bundle\'s end, a list row, the one line, the ARIA mirror', lane: true },
-  // the compact signs (FP-26): the mark keyed to a run's origin, a hairline's compact label; a withheld origin's face compact
-  // in its column's edge, headed by its key — the origin's address — with a mark that opens the whole wording's card
-  // (foundations §2.1); the corner's usual states as glyphs — an edition's its version marker, unlit at the bare address and
-  // lit at a pinned version (foundations §3.1's ○), a draft's chip
-  'L.origin-mark': { text: '≡', cls: 'DRAFT', source: '', screen: 'a run\'s hairline', lane: true },
+  // the compact signs (FP-26): the mark heading a transcluded run's key, its origin's address after it; a withheld
+  // origin's face compact in its column's edge, headed by its key — the origin's address — with a mark that opens the
+  // whole wording's card (foundations §2.1); the corner's usual states as glyphs — an edition's its version marker, unlit
+  // at the bare address and lit at a pinned version (foundations §3.1's ○), a draft's chip
+  'L.origin-mark': { text: '≡', cls: 'DRAFT', source: '', screen: 'a transcluded run\'s key, a column\'s edge', lane: true },
   'L.withheld.mark': { text: '⟨origin⟩ ▸', cls: 'DRAFT', source: '', screen: 'B1-S7, a column\'s edge', lane: true },
   'L.corner.bare': { text: '○', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner, compact' },
   'L.corner.pinned': { text: '●', cls: 'DRAFT', source: '', screen: 'the corner, compact', lane: true },

@@ -36,13 +36,12 @@
 // encodings).
 // Rules: FP-1, FP-2, FP-6, FP-7, FP-14.
 
-import { deriveBlocks, placedIn, pageSpace } from './records.js';
+import { deriveBlocks, placedIn, pageSpace, transcludedRuns } from './records.js';
 import { parseVSpan, documentOf, accountOf } from './address.js';
 import { byteLength, byteOffsets, sliceBytes } from '../util.js';
 
 /** @typedef {import('./records.js').Doc} Doc */
 /** @typedef {import('./records.js').ImageRun} ImageRun */
-/** @typedef {import('./records.js').Origin} Origin */
 /** @typedef {import('./records.js').ISpan} ISpan */
 /** @typedef {import('./records.js').Edit} Edit */
 /** @typedef {import('./records.js').Derivation} Derivation */
@@ -366,31 +365,11 @@ function applyFrame(t, frame, sources) {
 }
 
 /**
- * The origins of a derived image (M-REC's `Origin`): each image run whose
- * I-space is another document's, adjacent runs of one origin one.
- * @param {string} addr
- * @param {ImageRun[]} image
- * @returns {Origin[]}
- */
-function originsOf(addr, image) {
-  const own = documentOf(addr) || addr;
-  /** @type {Origin[]} */
-  const out = [];
-  for (const r of image) {
-    const doc = documentOf(r.prefix) || r.prefix;
-    if (doc === own) continue;
-    const last = out[out.length - 1];
-    if (last && last.doc === doc && last.pos + last.width === r.pos) last.width += r.width;
-    else out.push({ pos: r.pos, width: r.width, doc });
-  }
-  return out;
-}
-
-/**
  * A derived record over a text (see the head): the document's record with
- * the text's runs, the blocks derived from them, its image and origins, its
- * extent and window moved by the text's delta, and the derivation named. The
- * record handed in is read and never changed.
+ * the text's runs, the blocks derived from them, its image and the
+ * transcluded runs it shows (M-REC's `transcludedRuns`), its extent and window
+ * moved by the text's delta, and the derivation named. The record handed in
+ * is read and never changed.
  * @param {Doc} doc
  * @param {Text} t
  * @param {Derivation} derived
@@ -400,7 +379,7 @@ function recordOver(doc, t, derived) {
   const e = extentOf(t.runs);
   return {
     ...doc,
-    runs: t.runs, blocks: deriveBlocks(t.runs), image: t.image, origins: originsOf(doc.addr, t.image),
+    runs: t.runs, blocks: deriveBlocks(t.runs), image: t.image, origins: transcludedRuns(doc.addr, t.image),
     from: e ? e.from : -1, to: e ? e.to : -1,
     extent: doc.extent == null ? null : Math.max(0, doc.extent + t.delta), whole: doc.whole == null ? null : Math.max(0, doc.whole + t.delta),
     imageFor: doc.imageFor ? [doc.imageFor[0], doc.imageFor[1] + t.delta] : null,

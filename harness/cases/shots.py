@@ -58,8 +58,8 @@ def run(ctx):
     doc = ctx.js('window.__skep.model.doc(%s)' % json.dumps(DOC))
     ctx.view_doc_em(DOC, 14)
     ctx.view_at(DOC, WINDOW[0])
-    screen('B1-S7', 'the window run: C-33\'s mark for the entitled reader (a guest\'s placeholder at the run is the guest case\'s, shots/guest/), the corner held at the top of the document\'s visible part', 'B1-S7-window-run',
-           claims=[('#domlayer .sp[data-addr="%s"] .hairline.whole[data-src="%s"] + .pubmark[data-mark="C-33"]' % (DOC, WINDOW[2]), 'C-33\'s mark at the run\'s opening', None), (corner, 'the first edition\'s corner', None)])
+    screen('B1-S7', 'the window run: its origin stated in its column\'s edge with C-33\'s words for the entitled reader (a guest\'s placeholder at the run is the guest case\'s, shots/guest/), the corner held at the top of the document\'s visible part', 'B1-S7-window-run',
+           claims=[('#corners .edge-sign[data-sign="statement"][data-addr="%s"][data-origin="%s"] .c33' % (DOC, WINDOW[2]), 'C-33\'s words in the run\'s origin\'s statement', None), (corner, 'the first edition\'s corner', None)])
     ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(GHOST)); ctx.settle(); ctx.frames(2)
     screen('B1-S8', 'a dead reference: the ghost address faced', 'B1-S8-ghost')
     ctx.esc()

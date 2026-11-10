@@ -458,14 +458,21 @@ export function install(deps) {
   const paneOf = (/** @type {'a' | 'b'} */ side) => document.getElementById(side === 'a' ? 'sceneA' : 'sceneB');
   /** a pane's visible content on screen: inside its border, its scroll's window */
   function paneRect(/** @type {HTMLElement} */ pane) { const r = pane.getBoundingClientRect(); return { x: r.left + pane.clientLeft, y: r.top + pane.clientTop, w: pane.clientWidth, h: pane.clientHeight }; }
+  /** a range's own characters as the person meets them: its text, the chrome inside it (T-SPAN's `CHROME`) taken out, white space kept */
+  function ownText(/** @type {Range} */ range) {
+    const frag = range.cloneContents();
+    for (const c of frag.querySelectorAll('.sym, .edge')) c.remove();
+    return frag.textContent || '';
+  }
   /**
    * A passage in a reading scene's pane as the person meets it, read now
    * through T-LAYER's byte-span mapping over the pane's article and the
    * blocks it was made from (`madeOf`) — the text the pane shows, whatever
    * the model has delivered since: the first line it stands on (the first
-   * client rect of its range) and its first characters, white space
-   * collapsed; with no width, the passage runs to the end of the block holding
-   * `pos`. Null where the scene is not open.
+   * client rect of its range) and its first characters, the chrome inside it
+   * set aside (`ownText`) and white space collapsed; with no width, the passage
+   * runs to the end of the block holding `pos`. Null where the scene is not
+   * open.
    * @param {'a' | 'b'} side
    * @param {number} pos
    * @param {number | null} [width]
@@ -480,7 +487,7 @@ export function install(deps) {
     const w = width ?? (b ? b.pos + b.width - pos : 1);
     const range = art ? LAYER.rangeIn(art, { addr, pos, width: Math.max(1, w) }) : null;
     const r = range ? [...range.getClientRects()].find((q) => q.width > 0 && q.height > 0) : null;
-    return { addr, pos, line: r ? { x: r.left, y: r.top, w: r.width, h: r.height } : null, text: range ? range.toString().replace(/\s+/g, ' ').trim().slice(0, 60) : null, pane: paneRect(pane) };
+    return { addr, pos, line: r ? { x: r.left, y: r.top, w: r.width, h: r.height } : null, text: range ? ownText(range).replace(/\s+/g, ' ').trim().slice(0, 60) : null, pane: paneRect(pane) };
   }
   /**
    * The line boxes a stretch of a pane's article sets glyphs on, on screen,
@@ -547,10 +554,7 @@ export function install(deps) {
     const p = SCENE.pair(), pane = paneOf(side);
     const art = pane ? /** @type {HTMLElement | null} */ (pane.querySelector('article.dtext')) : null;
     const range = p && art && to > from ? LAYER.rangeIn(art, { addr: side === 'a' ? p.a : p.b, pos: from, width: to - from }) : null;
-    if (!range) return null;
-    const frag = range.cloneContents();
-    for (const c of frag.querySelectorAll('.hairline, .pubmark, .sym, .edge')) c.remove();
-    return frag.textContent;
+    return range ? ownText(range) : null;
   }
   /**
    * The reading scene's bands and lines as its last draw drew them, beside

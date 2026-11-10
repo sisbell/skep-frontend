@@ -52,6 +52,8 @@
 // another version in the pane's place with the passage held, a version
 // counting its chain alone, a link row re-reading the text, a row writing
 // an edition claim on the origin of a run a pane windows setting it again,
+// a transcluded run held in a pane as one run with none of its words, its
+// origin stated as lines by the plane's one rule,
 // acts made while a pane reads waiting in order, the page's death keeping a pane on a text
 // read as published — a draft's run in it withheld from that moment — and taking every other
 // down to its cover, reading each again as a guest, and a refresh pinning an edition whose
@@ -111,7 +113,7 @@ import { t, tHTML, lastRead } from '../strings.js';
 import { esc } from '../util.js';
 import * as LK from '../links/links.js';
 import { inkOf } from '../beams/beams.js';
-import { edgeStatementHTML, placeholderOf } from '../text/article.js';
+import { edgeStatementHTML, placeholderOf, originRunsOf, sourceStatementHTML, carriesC33 } from '../text/article.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA, SAMENESS } from '../plane/register.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as PROV from '../overlays/provenance.js';
@@ -1507,6 +1509,23 @@ test('a row writing an edition claim on the origin of a withheld run a pane show
   await landed();
   assert.ok(shownIn(p.paneB, 'b') !== was && statement().includes(pointer), `the pane set again: the pointer in its statement, a line in a pane: ${statement()}`);
   assert.equal(paneState('b')?.src, WR, 'the same document in its place');
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('a pane holds a transcluded run the reader reads as one run across the typed lines its own newline breaks — its ground, its two hairlines, none of its words — and the statement the plane\'s one rule makes for it from the pane\'s record is its key and C-33\'s words as lines, nothing a control (issue #304)', () => onPage(async (p) => {
+  // a published document windowing two typed lines of a draft, the newline between them the draft's own
+  const WE = '1.0.1.0.77', X = '1.0.1.0.1077', HEAD = 'A window.\n\n', RUN = 'quoted one\nquoted two', TAIL = '\n\nAfter.', TEXT = HEAD + RUN + TAIL;
+  const image = [{ i_start: WE + '.0.1.1', width: String(HEAD.length) }, { i_start: X + '.0.1.1', width: String(RUN.length) }, { i_start: `${WE}.0.1.${HEAD.length + 1}`, width: String(TAIL.length) }];
+  Object.assign(script, reads(VE1, VE_TEXT), reads(WE, TEXT, { image }), compared(VE1, VE_TEXT, WE, TEXT));
+  REC.takeMetadata(X, { doc: X, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  await SCENE.open(VE1, WE);
+  await landed();
+  const html = String(shownIn(p.paneB, 'b').innerHTML);
+  assert.deepEqual([...html.matchAll(/<span class="seg (same[^"]*)" data-origin="([^"]*)">([^<]*)<\/span>/g)].map((m) => [m[1], m[2], m[3]]), [['same opens', X, 'quoted one'], ['same closes', X, 'quoted two']], `one run across its two typed lines: ${html}`);
+  assert.ok(!html.includes(t('C-33')) && !html.includes(t('L.origin-mark')), 'none of its words in the pane\'s lines');
+  const d = REC.doc(WE), [run] = originRunsOf(d);
+  assert.deepEqual(run, { pos: HEAD.length + 1, width: RUN.length, origin: X, withheld: false }, 'the run the pane\'s edge states');
+  assert.equal(sourceStatementHTML(run.origin, carriesC33(d, LAYER.originKind(run.origin)), true), `<span class="src-key">${esc(t('L.origin-mark'))} <span class="id">${X}</span></span><span class="c33" data-string="C-33">${esc(t('C-33'))}</span>`, 'its key and C-33\'s words, lines, nothing a control');
   assert.deepEqual(fake.unanswered, []);
 }));
 

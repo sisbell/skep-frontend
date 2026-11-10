@@ -36,7 +36,9 @@
 // carries, no face in it; each withheld origin stated once per document in
 // view in its column's edge, beside its first run in view and moved only when
 // that run leaves, held below the hold and a held label and inside its
-// column's foot (FP-31); C-67's clause from the model; what an article was
+// column's foot, and a transcluded origin likewise — its key and C-33's
+// words, read as each frame stands, its other runs' keys alone — its lines
+// its ground and its hairlines alone (FP-31); C-67's clause from the model; what an article was
 // made from; a copy named where
 // its words were read — a box's at its version, the head its corner names at
 // a plain address, and a pane's alike — by its bytes' identity, never a
@@ -1181,6 +1183,50 @@ test('each withheld origin states itself once per document in view, in its colum
   LAYER.frame();
   assert.deepEqual(statementsOf(SO).map((s) => [s.pos, s.placed]), [[o2, placedBeside(o2, 0, HOLD.gap + lineHeight(12))]], 'its first line in view its third, at the view\'s top: held below the hold and the label held there');
 }));
+
+test('a transcluded origin the reader reads states itself once per document in view in its column\'s edge — its key, the run\'s gesture to its source, and C-33\'s words for a draft\'s run in a published document — beside its first run in view, at that run\'s first line; its second run in view stands its key alone there; its lines hold its ground and its two hairlines and none of its words (issue #304\'s design decision: "Each origin, once per document in view")', () => {
+  const X = '1.0.1.0.1003';
+  const platform = { document: globalThis.document, window: globalThis.window };
+  const element = () => {
+    const e = {
+      className: '', innerHTML: '', id: '', dataset: {}, style: /** @type {Record<string, string>} */ ({}), children: /** @type {unknown[]} */ ([]), tabIndex: -1, offsetWidth: 160, offsetHeight: 40,
+      classList: { toggle() {} }, setAttribute() {}, removeAttribute() {}, appendChild(/** @type {unknown} */ c) { e.children.push(c); },
+      querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }), contains: () => false, remove() {},
+      get textContent() { return e.innerHTML.replace(/<[^>]*>/g, ''); },
+    };
+    return e;
+  };
+  globalThis.document = /** @type {any} */ ({ createElement: element });
+  globalThis.window = /** @type {any} */ ({ getSelection: () => null });
+  try {
+    // D's own paragraph, X's two typed lines — the newline between them X's own — D's own thirty paragraphs, X's third line, D's last
+    const own1 = 'Tumbler.\n\n', q1 = 'quoted one\nquoted two', own2 = '\n\n' + Array.from({ length: 30 }, (_, i) => words(30, i)).join('\n\n') + '\n\n', q2 = 'quoted three', own3 = '\n\nAfter.';
+    const [a, b, c, e, g] = [own1, q1, own2, q2, own3].map((x) => new TextEncoder().encode(x).length);
+    const text = own1 + q1 + own2 + q2 + own3, n = a + b + c + e + g, r1 = a + 1, r2 = a + b + c + 1;
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
+    REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: a }, { iStart: X + '.0.1.1', width: b }, { iStart: `${D}.0.1.${a + 1}`, width: c }, { iStart: X + '.0.1.100', width: e }, { iStart: `${D}.0.1.${a + c + 1}`, width: g }]);
+    REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.1', birth: D + '.1', birthExtent: n, placed: null, baseExtent: null, source: null, asOf: 1 });
+    REC.takeMetadata(X, { doc: X, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+    assert.deepEqual(REC.doc(D).origins, [{ pos: r1, width: b, doc: X }, { pos: r2, width: e, doc: X }], 'two runs of X, parted by D\'s own newline');
+    CAM.setViewport(VW, VH);
+    LAYER.attach(/** @type {any} */ ({ clientWidth: VW, clientHeight: VH, appendChild() {} }), /** @type {any} */ (element()));
+    const f = LAYER.foldOf(REC.doc(D)), box = docBox(D);
+    CAM.set({ x: box.x + box.w / 2, y: box.y + box.h / 3, scale: 12 / f.fs });
+    LAYER.frame();
+    assert.ok(LAYER.isMounted(D) && f.columns.every((col) => CAM.sy(box.y + col.y) > 0 && CAM.sy(box.y + col.y + col.h) < VH), 'D whole in view');
+    const html = String(/** @type {any} */ (LAYER.mountedSet().get(D)).el.children[0].innerHTML);
+    assert.deepEqual([...html.matchAll(/<span class="seg (same[^"]*)" data-origin="([^"]*)">([^<]*)<\/span>/g)].map((m) => [m[1], m[3]]), [['same opens', 'quoted one'], ['same closes', 'quoted two'], ['same opens closes', 'quoted three']], `its ground on each of its lines, its hairlines at each run's two ends: ${html}`);
+    assert.ok(!html.includes(t('C-33')) && !html.includes(t('L.origin-mark')), 'none of its words in the article');
+    const top = (/** @type {number} */ pos) => CAM.sy(box.y + placeOf(f, pos).y);
+    assert.deepEqual(statementsOf(X).map((s) => [s.pos, s.column, s.placed, s.text]), [[r1, placeOf(f, r1).column, placedBeside(r1, top(r1)), `${t('L.origin-mark')} ${X}${t('C-33')}`]], 'stated once, beside its first run, at its first line: its key, then C-33\'s words');
+    assert.deepEqual(LAYER.signsStanding().filter((s) => s.kind !== 'statement').map((s) => [s.kind, s.pos, s.text]), [['key', r2, `${t('L.origin-mark')} ${X}`]], 'its second run its key alone, and no count');
+    // X read as published: C-33's words leave the statement in the next frame, nothing rebuilt
+    REC.takeMetadata(X, { doc: X, published: true, owner: '1.0.1', birth: X + '.1', birthExtent: b, placed: null, baseExtent: null, source: null, asOf: 2 });
+    LAYER.frame();
+    assert.deepEqual(statementsOf(X).map((s) => s.text), [`${t('L.origin-mark')} ${X}`], 'its origin an edition: its key alone');
+  } finally { LAYER.press(false); LAYER.clear(); LAYER.readers({}); globalThis.document = platform.document; globalThis.window = platform.window; }
+});
 
 // ---- C-67's clause, from what the model holds ---------------------------------------------------------------------------
 
