@@ -41,7 +41,8 @@
 // a live caret it was opened at standing live through its close (D5 K-63);
 // each pane's article
 // T-LAYER's mount on the inner side of its corner, its byline's facts read
-// before the pane is set (FP-12, FP-34), a copy from it named where the
+// before the pane is set (FP-12, FP-34), made with the image its whole read
+// asks where the page held its text with none, a copy from it named where the
 // scene read its words — an edition at its bare address its member, a draft
 // no member and no positions (FP-27); the opening ended by a navigation
 // act's dismissal, Esc or an overlay shown, asking no `compare` after it and
@@ -906,6 +907,18 @@ test('each pane holds T-LAYER\'s article of its document, made from the text the
     const html = String(/** @type {any} */ (placed.el).innerHTML);
     assert.ok(html.includes(`data-slot="label" data-string="F.slot.unsigned"`) && html.includes(`>${esc(t('F.slot.unsigned'))}</span>`) && !html.includes('slot pending'), `pane ${side}: its byline set with its owner's facts, read before the pane was set — never an empty box a pane set from its kept view would show again (FP-34)`);
   }
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('a pane opened on a text the page holds whole with no image is set with the image its whole read asks — its article made from it, every position of the text named by its bytes — never set with none (FP-27)', () => onPage(async (p) => {
+  REC.invalidate(A);
+  REC.takeSpanSet(A, [{ subspace: 1, ordinal: 1, positions: A_TEXT.length }]);
+  REC.takeDelivery(A, [{ pos: 1, width: A_TEXT.length, kind: 'content', text: A_TEXT, ref: null, origin: null }]);
+  const from = fake.asked.length, times = (/** @type {object} */ frame) => fake.asked.slice(from).filter((k) => k === FAKE.keyOf('op', { frame })).length;
+  await SCENE.open(A, B);
+  assert.deepEqual([times(F.image(A, 1, A_TEXT.length)), times(F.retrieveV(A, 1, A_TEXT.length))], [1, 0], 'its image asked once, its text held and not read again');
+  const made = LAYER.madeOf(/** @type {any} */ (p.paneA.placed[0].el));
+  assert.deepEqual([made?.image.length, REC.identityParts(made?.image ?? [], 1, A_TEXT.length).filter((x) => 'gap' in x)], [1, []], 'pane A\'s article made from the image read: every position named');
   assert.deepEqual(fake.unanswered, []);
 }));
 

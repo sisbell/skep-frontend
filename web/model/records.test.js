@@ -2,7 +2,8 @@
 // listing replacing the last whole with the rows taken meanwhile laid over
 // it; deliveries into blocks that tile their bytes, each typed line one and
 // each item one of its kind, runs and blocks replaced whole and never edited
-// in place; a link's stored span placed through the held V→I image, and an
+// in place, a delivery and the image read with it taken in one step; a
+// link's stored span placed through the held V→I image, and an
 // end held by the trunk its address lies under or by the text that places
 // it; a stretch named by identity and placed back through any image;
 // projections and failed reads held until their drops, every drop counted;
@@ -299,6 +300,24 @@ test('the origins from an image mark the transcluded runs', () => {
   REC.takeDelivery('1.0.1.0.3', [{ pos: 1, width: 10, kind: 'content', text: 'abcdefghij', ref: null, origin: null }]);
   REC.takeImage('1.0.1.0.3', 1, [{ iStart: '1.0.1.0.3.0.1.1', width: 4 }, { iStart: '1.0.1.0.1003.0.1.1', width: 6 }]);
   assert.deepEqual(REC.doc('1.0.1.0.3').origins, [{ pos: 5, width: 6, doc: '1.0.1.0.1003' }]);
+});
+
+test('a delivery taken with the image read with it sets both in one step — one revision and one change told — so no reader meets its text without the image that names its bytes', () => {
+  const D = '1.0.1.0.3', S = '1.0.1.0.1003';
+  let watching = true, told = 0, bare = false;
+  REC.watch(() => {
+    if (!watching) return;
+    told++;
+    const d = REC.doc(D);
+    if (d.from >= 0 && !REC.identityIn(d.image, d.from, d.to - d.from).length) bare = true;
+  });
+  const rev = REC.rev(), docRev = REC.doc(D).rev;
+  REC.takeDelivery(D, [{ pos: 1, width: 10, kind: 'content', text: 'abcdefghij', ref: null, origin: null }], 4, { from: 1, runs: [{ iStart: D + '.0.1.1', width: 4 }, { iStart: S + '.0.1.1', width: 6 }] });
+  watching = false;
+  const d = REC.doc(D);
+  assert.deepEqual([REC.rev() - rev, d.rev - docRev, told, bare], [1, 1, 1, false], 'one revision of the model and of the record, one change told, and the text never without its image');
+  assert.deepEqual([d.from, d.to, d.readAt, d.imageFor, d.origins], [1, 11, 4, [1, 11], [{ pos: 5, width: 6, doc: S }]], 'the text over its window, the image over the window it was read for, its transcluded run marked');
+  assert.deepEqual(REC.identityParts(d.image, 1, 10), [{ prefix: D + '.0.1', ordinal: 1, width: 4 }, { prefix: S + '.0.1', ordinal: 1, width: 6 }], 'every position named by its bytes, no gap');
 });
 
 test('a transcluded run is one origin\'s stretch unbroken in the text: image runs of one origin that meet are one run however their permanent addresses continue, a byte of the document\'s own between them — its own newline — parting them, and the image a draft\'s typed text derives is read by the same rule (issue #304\'s design decision: "A native break ends it")', () => {

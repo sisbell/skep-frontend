@@ -14,7 +14,8 @@
 // (`takeIndex`), and kept by the feed's rows, never by enumerating
 // documents; documents — their index row, extent, delivered
 // runs and the blocks derived from them, metadata, V→I image as read with
-// the transcluded runs it shows (`transcludedRuns`), the raw set of links touching them,
+// the transcluded runs it shows (`transcludedRuns`) — a delivery and the
+// image read with it taken in one step (`takeDelivery`) — the raw set of links touching them,
 // their chain's count and whether the board ended it there, the position
 // their text was read at (`Doc.readAt`), and a refusal a read of them met;
 // each version member's age, which no feed row drops (`memberAge`); links as
@@ -190,6 +191,8 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {string} prefix the run's first permanent address without its last field — the I-space it lies in: `1.0.1.0.3.0.1` for the document's own content, `1.0.1.0.3.2.0.1` for content minted under its second member's chain, another document's for a transcluded run
  * @property {number} ordinal the last field of its first permanent address
  */
+
+/** @typedef {{from: number, runs: Array<{iStart: string, width: number}>}} ImageRead a document's V→I image as `image` answered it over a window of its text (`F.decodeRuns`): the window's first position, and its runs in the text's order */
 
 /** @typedef {{pos: number, width: number}} Stretch a stretch of a document's text a stored span stands in: its first position and its positions */
 
@@ -944,16 +947,22 @@ export function takeRefused(/** @type {string} */ addr, /** @type {'unregistered
 /**
  * A delivery merged into the document's runs: adjacent content runs join,
  * the blocks are re-derived, the window [from, to) widened, the position it
- * was answered at kept (`Doc.readAt`). The document is given new runs and new
- * blocks, and the ones it held are left as they were, as `invalidate` leaves
- * them: an article made from them keeps them.
+ * was answered at kept (`Doc.readAt`); and the V→I image read with it, where
+ * one was, placed over the window it was read for in the same step, as
+ * `takeImage` places one — one revision and one change told for the two, so
+ * no reader meets the delivered text without the image that names its
+ * bytes (FP-27). The document is given new runs and new blocks, and the
+ * ones it held are left as they were, as `invalidate` leaves them: an
+ * article made from them keeps them.
  * @param {string} addr
  * @param {Run[]} runs
  * @param {number | null} [asOf] the delivery's `as_of`
+ * @param {ImageRead | null} [image] the image read with the delivery
  */
-export function takeDelivery(addr, runs, asOf = null) {
+export function takeDelivery(addr, runs, asOf = null, image = null) {
   const d = doc(addr);
   deliverInto(d, runs, asOf);
+  if (image) imageInto(d, image.from, image.runs);
   d.rev++; bump();
 }
 
@@ -1122,7 +1131,7 @@ export function takeImage(addr, fromPos, runs) {
   d.rev++; bump();
 }
 
-/** an image's runs over a window into a record (`takeImage`, `setAgain`), its transcluded runs read from the whole image held (`transcludedRuns`) */
+/** an image's runs over a window into a record (`takeImage`, `takeDelivery`, `setAgain`), its transcluded runs read from the whole image held (`transcludedRuns`) */
 function imageInto(/** @type {Doc} */ d, /** @type {number} */ fromPos, /** @type {Array<{iStart: string, width: number}>} */ runs) {
   /** @type {ImageRun[]} */
   const image = [];
@@ -1992,7 +2001,7 @@ function spelled(r) {
  * @property {Array<{subspace: number, ordinal: number, positions: number}>} [spans] its span set
  * @property {DocMeta} [meta]
  * @property {{runs: Run[], asOf: number | null}} [text] its text over the window it held, as the delivery placed it
- * @property {{from: number, runs: Array<{iStart: string, width: number}>}} [image] its V→I image over that window
+ * @property {ImageRead} [image] its V→I image over that window
  * @property {string[]} [links] the links touching it, as `find_links_v` answered
  * @property {LinkValue[]} [values] the values of those links, each read
  * @property {Array<{link: string, slot: 1 | 2, addr: string, runs: Stretch[] | Declined}>} [projections] where each

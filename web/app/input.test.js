@@ -405,6 +405,8 @@ test('a click on C-67\'s pointer in a withheld origin\'s statement LEAPs to the 
       [FAKE.keyOf('op', { frame: F.retrieveV(H, 1, m) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: edition }] } },
       [FAKE.keyOf('op', { frame: F.image(H, 1, m) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: H + '.0.1.1', width: String(m) }] } },
       [FAKE.keyOf('op', { frame: F.findLinksV(H, 1, m) })]: { result: { as_of: 1, resp: 'addrs', addrs: [CLAIM] } },
+      // D's image, its own bytes then O's run, which the LEAP to D's run asks of its text held whole
+      [FAKE.keyOf('op', { frame: F.image(D, 1, n + RUN) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.1', width: String(n) }, { i_start: O + '.0.1.1', width: String(RUN) }] } },
     });
     PORT.boot(fake);
     REC.setSession(null);

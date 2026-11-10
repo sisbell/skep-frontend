@@ -181,11 +181,12 @@ const takeLate = (/** @type {string} */ link, /** @type {string} */ far, /** @ty
   REC.invalidate(far); REC.takeSpanSet(far, [{ subspace: 1, ordinal: 1, positions: LATE_EXTENT }]);
   REC.takeLinks(D, [link]); REC.takeLink({ addr: link, from: [span(D, pos, 2)], to: [span(far, 3, 4)], type: CITE });
 };
-/** the reads of a citation met late: its projection answers; its far document's metadata and text refused by `name` */
+/** the reads of a citation met late: its projection answers; its far document's metadata, text and image refused by `name` */
 const late = (/** @type {string} */ link, /** @type {string} */ far, /** @type {string} */ name) => ({
   [FAKE.keyOf('op', { frame: F.project(link, 2, far) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.3', width: '0.4' }] } },
   [FAKE.keyOf('op', { frame: F.docMetadata(far) })]: { refused: { kind: 'refused', name, code: name } },
   [FAKE.keyOf('op', { frame: F.retrieveV(far, 1, LATE_EXTENT) })]: { refused: { kind: 'refused', name, code: name } },
+  [FAKE.keyOf('op', { frame: F.image(far, 1, LATE_EXTENT) })]: { refused: { kind: 'refused', name, code: name } },
 });
 /** FAR's head, where a dead end lands: its first paragraph's first position */
 const FAR_HEAD = 1;
@@ -224,7 +225,8 @@ const WINDOWS_TEXT = 'Tumbler.\n\n', RUN = WINDOWS_TEXT.length + 1, EDITION_TEXT
 /** the windowing edition, its run, and ORIGIN's two edition claims with their homes taken into the model, read whole as a landing's read leaves them */
 function takeWindows() {
   REC.takeSpanSet(WINDOWS, [{ subspace: 1, ordinal: 1, positions: RUN - 1 + 240 }]);
-  REC.takeDelivery(WINDOWS, [{ pos: 1, width: RUN - 1, kind: 'content', text: WINDOWS_TEXT, ref: null, origin: null }, { pos: RUN, width: 240, kind: 'withheld', text: '', ref: null, origin: ORIGIN }]);
+  REC.takeDelivery(WINDOWS, [{ pos: 1, width: RUN - 1, kind: 'content', text: WINDOWS_TEXT, ref: null, origin: null }, { pos: RUN, width: 240, kind: 'withheld', text: '', ref: null, origin: ORIGIN }], null,
+    { from: 1, runs: [{ iStart: WINDOWS + '.0.1.1', width: RUN - 1 }, { iStart: ORIGIN + '.0.1.1', width: 240 }] });
   REC.takeMetadata(WINDOWS, { doc: WINDOWS, published: true, owner: '1.0.1', birth: WINDOWS + '.1', birthExtent: RUN - 1 + 240, placed: null, baseExtent: null, source: null, asOf: 1 });
   REC.takeLinks(WINDOWS, []);
   const R20 = '1.1.0.1.0.1.0.3.14', theirs = (/** @type {object} */ end) => ({ ...end, account: '1.0.2' });
@@ -3771,6 +3773,8 @@ test('Back to a draft where a landing outlined and labelled a passage in two pie
 test('Back to a place whose outline named no bytes — the door\'s link landing on a draft held with no image — outlines it as the reader left it while that text stands as it was, and nothing once the text is set again, never the positions it was outlined at (issue #294)', async () => {
   const DW = '1.0.1.0.47', LINK = DW + '.0.2.1', text = 'A note held with no image.\n\nIts outlined words stand here.\n\nA last line.', lead = 'A new lead.\n';
   const P = text.indexOf('outlined') + 1, W = 'outlined'.length, outlined = { addr: DW, pos: P, runs: [{ pos: P, width: W }], link: LINK };
+  // the board not answering its image, which the landing's whole read asks: the draft stands held with no image
+  script[FAKE.keyOf('op', { frame: F.image(DW, 1, text.length) })] = { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } };
   setDraft(DW, text, []);
   REC.takeMetadata(DW, { doc: DW, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
   REC.takeLinks(DW, []);

@@ -53,9 +53,12 @@
 // origin told either way, and every other row leaving them held; a text past
 // one delivery's items read in parts — a whole read, an open find's read of
 // the rest, and a row's read again of the window held, the find's text kept as
-// the view's — a part refused for its size asked as its halves. With
-// SKEP_REPLAY naming a script the harness recorded, the model's snapshot is
-// printed for the gate.
+// the view's — a part refused for its size asked as its halves; each part of
+// the view's window and a whole read's text read with its image and taken
+// with it in one step, a part whose image read fails taken alone and its
+// image asked again on its own, and a text a whole read finds held with no
+// image covering it read for its image. With SKEP_REPLAY naming a script the
+// harness recorded, the model's snapshot is printed for the gate.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -1471,8 +1474,8 @@ test('a whole read across the page\'s own death begins again as a guest: the rec
   release();
   const d = await pending;
   assert.deepEqual([d?.extent, d?.meta?.doc, REC.textBetween(D, 1, 27)], [30, D, 'Tumbler.\n\nThe first field.'], 'the extent and metadata the death dropped read again, with the text');
-  assert.deepEqual(sent.slice(0, 3), ['s-1', 's-1', 's-1'], 'the pass before the death under the session');
-  assert.ok(sent.slice(3).every((x) => x === 'guest'), 'every read after it in the guest form');
+  assert.deepEqual(sent.slice(0, 4), ['s-1', 's-1', 's-1', 's-1'], 'the pass before the death under the session: its extent, its metadata, and its text with its image');
+  assert.ok(sent.slice(4).every((x) => x === 'guest'), 'every read after it in the guest form');
 });
 
 test('a whole read its document is dropped under at every pass ends after DROP_ATTEMPTS passes, holding nothing read before the last drop', async () => {
@@ -3374,6 +3377,71 @@ test('the view\'s window past one delivery\'s items reads each part of it the pa
   for (let i = 0; i < 12; i++) { PUMP.pump(); await flush(); }
   assert.equal(REC.textBetween(BIG, 1, n + 1), 'a'.repeat(cut) + 'b'.repeat(half) + 'c'.repeat(n - cut - half), 'the window whole, in parts');
   assert.deepEqual([timesAsked(fake, F.retrieveV(BIG, 1, n)), timesAsked(fake, F.retrieveV(BIG, cut + 1, n - cut))], [0, 1], 'never one delivery past the bound; the part refused for its size asked once, then as its halves');
+});
+
+/** D's chain as the view probes it: its birth its first member, its second not registered */
+const D_CHAIN = { [opKeyOf(F.docMetadata(D + '.2'))]: NOT_REGISTERED };
+/** the stretches of a document's held text its held image names by nothing */
+const gapsIn = (/** @type {string} */ addr) => { const d = REC.doc(addr); return REC.identityParts(d.image, d.from, d.to - d.from).filter((p) => 'gap' in p); };
+
+test('the view reads each part of its window\'s text with the image over the same positions and takes the two in one step: while the image is out none of the part\'s text is held, and no state holds the text without its image (FP-27)', async () => {
+  const fake = readingD({ ...script, ...D_CHAIN });
+  let watching = true, bare = false;
+  REC.watch(() => { const d = REC.doc(D); if (watching && d.from >= 0 && !REC.identityIn(d.image, d.from, d.to - d.from).length) bare = true; });
+  const release = fake.hold('op', { frame: F.image(D, 1, 30) });
+  try {
+    await untilAsked(fake, F.retrieveV(D, 1, 30), true);
+    for (let i = 0; i < 5; i++) { PUMP.pump(); await flush(); }
+    assert.deepEqual([askedOf(fake, F.image(D, 1, 30)), REC.doc(D).from, PUMP.settled()], [1, -1, false], 'the part\'s image asked with its text, none of its text held while the image is out, the page not settled');
+  } finally { release(); }
+  await settle();
+  watching = false;
+  assert.deepEqual([REC.doc(D).from, REC.doc(D).to, REC.doc(D).imageFor, gapsIn(D), askedOf(fake, F.image(D, 1, 30))], [1, 31, [1, 31], [], 1], 'answered: the text and its image held together, every position named, the image asked once');
+  assert.equal(bare, false, 'no state held the text without its image');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a part of the view\'s window whose image read is refused is taken alone at once, and the image of the text held is asked again on its own and placed over it', async () => {
+  const s = { ...script, ...D_CHAIN };
+  const image = inTurn(s, F.image(D, 1, 30), BUSY, script[opKeyOf(F.image(D, 1, 30))]);
+  const fake = readingD(s);
+  for (let i = 0; i < 20 && REC.doc(D).from < 0; i++) { PUMP.pump(); await flush(); }
+  assert.deepEqual([image.asks(), REC.textBetween(D, 1, 27), REC.doc(D).imageFor], [1, 'Tumbler.\n\nThe first field.', null], 'its image refused: the text taken alone, at once');
+  const release = fake.hold('op', { frame: F.image(D, 1, 30) });
+  PUMP.pump();
+  await flush();
+  assert.deepEqual([askedOf(fake, F.image(D, 1, 30)), REC.doc(D).imageFor], [2, null], 'the image of the text held asked again on its own');
+  release();
+  await settle();
+  assert.deepEqual([image.asks(), REC.doc(D).imageFor, gapsIn(D)], [2, [1, 31], []], 'placed over the text held, every position named');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a whole read asks its text\'s image with the text and takes the two in one step, and asks the image of a text it holds whole that no held image covers (FP-27)', async () => {
+  const fake = FAKE.create(script);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  const release = fake.hold('op', { frame: F.image(D, 1, 30) });
+  const pending = PUMP.loadWhole(D);
+  try {
+    await untilAsked(fake, F.image(D, 1, 30));
+    for (let i = 0; i < 5; i++) await flush();
+    assert.deepEqual([askedOf(fake, F.retrieveV(D, 1, 30)), REC.doc(D).from], [1, -1], 'the text and its image asked at once, none of the text held while the image is out');
+  } finally { release(); }
+  const d = await pending;
+  assert.deepEqual([d?.from, d?.to, d?.imageFor, gapsIn(D)], [1, 31, [1, 31], []], 'taken together: every position named');
+  assert.deepEqual(fake.unanswered, []);
+  // D's text held whole, as a refresh's setting again leaves a text carried with no image
+  REC._reset();
+  const held = FAKE.create(script);
+  PORT.boot(held);
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 30 }]);
+  REC.takeDelivery(D, F.decodeDelivery(/** @type {any} */ (script[opKeyOf(F.retrieveV(D, 1, 30))]).result, 1), 1);
+  await PUMP.loadWhole(D);
+  assert.deepEqual([askedOf(held, F.retrieveV(D, 1, 30)), askedOf(held, F.image(D, 1, 30)), REC.doc(D).imageFor, gapsIn(D)], [0, 1, [1, 31], []], 'its text not read again; its image asked once and placed over it, every position named');
+  assert.deepEqual(held.unanswered, []);
 });
 
 test('replay: a recorded script from the provider builds the model; the snapshot printed for the gate', async () => {

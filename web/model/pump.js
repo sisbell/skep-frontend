@@ -50,8 +50,12 @@
 // place read from every line before it — FP-12 — the parts it lacks read
 // alone where one delivery would not hold it, each of at most
 // MAX_DELIVERY_ITEMS positions, one the board refused for its size asked as
-// its halves, `halvedOf`) with its V→I image
-// (`image`), where each far end its links send from it stands in the far
+// its halves, `halvedOf`), each part read with its V→I image over the same
+// positions (`image`, in parts where the board refuses it for its size:
+// `imageParts`) and the two taken in one step (`withImage`, M-REC's
+// `takeDelivery`; FP-27) — a part whose image read fails taken alone, the
+// image of held text no image read covers asked on its own (`image`) —
+// where each far end its links send from it stands in the far
 // document's current text (`project`, A-53) into the version the far box
 // shows, from every passage end the document holds (M-REC's `holdsEnd`), the
 // edition claims on each origin its withheld runs name (`editionClaimsAt`,
@@ -70,7 +74,8 @@
 // what was written while the event stream was down, once it reopens
 // (`changes`; `closeGap`); the client index
 // (`readIndex`: `places`, at boot and at every change of class, the view
-// asking nothing while it is out); a whole document (`loadWhole`, `wholeOf`);
+// asking nothing while it is out); a whole document, its text taken with its
+// image in one step (`loadWhole`, `wholeOf`);
 // the rest of a document's text an open find searches, each part taken into
 // the model as it lands (`readRest`; FP-6);
 // the reads a face stating a withheld origin needs before it shows
@@ -1628,18 +1633,15 @@ export async function compareParts(a, b) {
  * @param {string} addr
  * @param {number} pos the region's first position
  * @param {number} width its positions
- * @param {Refusal | null} [met] the size refusal the region whole already met, so its halves are asked first
  * @returns {Promise<{runs: Array<{iStart: string, width: number}>} | {refused: Refusal}>}
  */
-export async function imageParts(addr, pos, width, met = null) {
+export async function imageParts(addr, pos, width) {
   /** @type {Array<{iStart: string, width: number}>} */
   const runs = [];
-  /** @type {Operand} */
-  const region = { doc: addr, pos, width };
-  if (met && width < 2) return { refused: met };
   /** @type {Operand[]} */
-  const todo = met ? halves(region) : [region];
-  let last = met;
+  const todo = [{ doc: addr, pos, width }];
+  /** @type {Refusal | null} the last size refusal met: the one handed up past the bound */
+  let last = null;
   for (let reads = 0; todo.length; reads++) {
     if (reads >= SPLIT_READS && last) return { refused: last };
     const o = /** @type {Operand} */ (todo.shift());
@@ -1709,6 +1711,29 @@ function partsOf(/** @type {Operand} */ o) {
 }
 
 /**
+ * @typedef {Object} PartRead — a part of a document's text as `withImage` answered it
+ * @property {unknown} text the part's `retrieve_v` answer
+ * @property {Array<{iStart: string, width: number}> | null} image the runs of its V→I image over the part, in the text's
+ * order; null where the image read failed — refused, unanswered, or still refused for its size past SPLIT_READS
+ */
+
+/**
+ * A part of a document's text and its V→I image over the same positions,
+ * asked at once — the text by its `retrieve_v`, the image in parts where the
+ * board refuses it for its size (`imageParts`) — and answered once both are:
+ * the text's refusal where it met one, else its answer with the image's runs,
+ * which M-REC takes together in one step (`takeDelivery`; FP-27), the text
+ * standing alone where the image read failed.
+ * @param {object} frame the part's `retrieve_v`
+ * @param {Operand} p the part
+ * @returns {Promise<{answer: PartRead} | {refused: Refusal}>}
+ */
+async function withImage(frame, p) {
+  const [text, image] = await Promise.all([read(frame), imageParts(p.doc, p.pos, p.width)]);
+  return 'refused' in text ? text : { answer: { text: text.answer, image: 'runs' in image ? image.runs : null } };
+}
+
+/**
  * Watch an address for a drop from now on, as a read of it goes out: the
  * watch reads true once what the page held of it has been dropped (M-REC's
  * `dropsOf`), and what the read learned is then of what the page does not
@@ -1754,18 +1779,24 @@ function hold(key) {
  * lookup after its origin's edition claims changed (`watchClaims`), frees its
  * slot and takes nothing — no answer, no refusal recorded, no hold, no retry
  * — its key left unasked, to be asked again as the view next needs it.
+ * The read is `frame` asked at the page's class (`read`), or what `ask`
+ * makes where one is given — a part of a text and its image, asked at once
+ * and answered together (`withImage`) — one key and one slot either way, its
+ * refusal the one `frame` met.
  * Returns whether the need is still MISSING — pending or not yet issued; a
  * refused need is not missing, nor is a held one (nothing will arrive for
  * either).
+ * @template [T=unknown]
  * @param {string} key
  * @param {object} frame
- * @param {(answer: unknown) => void} take
+ * @param {(answer: T) => void} take
  * @param {string} addr the document the read is for — a projection's, the document projected into: its drop voids the read, and a refusal is recorded against it
  * @param {(r: Refusal) => void} [onRefused] told of each refusal the need keeps — one the board gave, or the board not answering (`unreachable`), whose read is asked again past its pause — never of a retry-class one
  * @param {(addr: string) => () => boolean} [watch] the drop that voids the read, watched from the moment it goes out: `addr`'s (`watchDrops`), or, `addr` an origin, a change of its edition claims (`watchClaims`)
+ * @param {() => Promise<{answer: T} | {refused: Refusal}>} [ask] the read made in place of `frame`'s own
  * @returns {boolean} missing
  */
-function need(key, frame, take, addr, onRefused, watch = watchDrops) {
+function need(key, frame, take, addr, onRefused, watch = watchDrops, ask = () => /** @type {Promise<{answer: T} | {refused: Refusal}>} */ (read(frame))) {
   if (asked.has(key)) return false;
   if (inflight.has(key)) return true;
   if (held(key)) return false;
@@ -1776,7 +1807,7 @@ function need(key, frame, take, addr, onRefused, watch = watchDrops) {
   if (isScan && scansInFlight >= MAX_SCANS) return true;
   inflight.add(key); if (isScan) scansInFlight++;
   const dropped = watch(addr);
-  read(frame).then((out) => {
+  ask().then((out) => {
     inflight.delete(key); if (isScan) scansInFlight--;
     if (dropped()) return;
     if ('refused' in out) {
@@ -1965,12 +1996,14 @@ export function pump() {
         const parts = to - from <= F.MAX_DELIVERY_ITEMS ? [{ doc: d.addr, pos: from, width: to - from }] : partsOf({ doc: d.addr, pos: w[0], width: w[1] - w[0] });
         for (const p of halvedOf(parts)) {
           if (parts.length > 1 && holdsSpan(d, p.pos, p.pos + p.width)) continue;
-          const key = 'r:' + d.addr + ':' + p.pos + ':' + (p.pos + p.width);
-          if (need(key, F.retrieveV(d.addr, p.pos, p.width), (a) => REC.takeDelivery(d.addr, F.decodeDelivery(a, p.pos), F.asOf(a)), d.addr, (r) => { if (sized(r) && p.width >= 2) halved.add(key); else refuseDoc(d, r); })) missing++;
+          const key = 'r:' + d.addr + ':' + p.pos + ':' + (p.pos + p.width), part = F.retrieveV(d.addr, p.pos, p.width);
+          // the part's text and its image taken in one step, the text alone where the image read failed
+          const take = (/** @type {PartRead} */ a) => REC.takeDelivery(d.addr, F.decodeDelivery(a.text, p.pos), F.asOf(a.text), a.image && { from: p.pos, runs: a.image });
+          if (need(key, part, take, d.addr, (r) => { if (sized(r) && p.width >= 2) halved.add(key); else refuseDoc(d, r); }, watchDrops, () => withImage(part, p))) missing++;
         }
       }
       if (d.from >= 0 && (!d.imageFor || d.imageFor[0] > d.from || d.imageFor[1] < d.to)) {
-        // placed from the window it was asked for: a text read widening the window can land first
+        // the image of held text no image read covers — a part taken alone, its image read failing — placed from the window it was asked for: a text read widening the window can land first
         const from = d.from, to = d.to;
         if (need('i:' + d.addr + ':' + from + ':' + to, F.image(d.addr, from, to - from), (a) => REC.takeImage(d.addr, from, F.decodeRuns(a)), d.addr)) missing++;
       }
@@ -2262,9 +2295,11 @@ export async function probeChain(trunk, stands = () => true, from = 0) {
 
 /**
  * Read a whole document now — the scene, the walk and a landing ask for all
- * of it: the extent, every position, the image — in parts where the board
- * refuses it whole for its size (`imageParts`) — the links and their types,
- * and the edition claims on each origin its withheld runs name (`readClaims`).
+ * of it: the extent, every position with its V→I image — the two taken in one
+ * step, the image read in parts where the board refuses it whole for its size
+ * (`imageParts`), and read on its own for a text held whole that no held image
+ * covers (`readWhole`) — the links and their types, and the edition claims on
+ * each origin its withheld runs name (`readClaims`).
  * Each pass waits first for the reads again of a document the view keeps that
  * are not waiting on the board (`readAgainFirst`), so it reads what they set.
  * A pass the document was dropped under
@@ -2364,9 +2399,12 @@ export function textLacked(d) {
 
 /**
  * One pass of a whole read (`loadWhole`), each step asked where the record
- * lacks what it brings. Where the document is dropped while a step reads, the
- * pass ends there, taking nothing that step learned — an answer or a refusal
- * alike.
+ * lacks what it brings: the extent; the metadata; the text with its image,
+ * read at once and taken in one step (M-REC's `takeDelivery`; FP-27), the
+ * text alone where the image read fails — or, the text held whole, its image
+ * where no held image covers it; the links and their values; the edition
+ * claims. Where the document is dropped while a step reads, the pass ends
+ * there, taking nothing that step learned — an answer or a refusal alike.
  * @param {string} addr
  * @param {() => boolean} dropped the document dropped since the pass began
  * @returns {Promise<{doc: Doc | null, refused: Refusal | null} | 'dropped'>} the record — null where the board refused its extent — and the refusal its extent or its text met; 'dropped' where the document was dropped under the pass
@@ -2387,19 +2425,17 @@ async function readWhole(addr, dropped) {
   const extent = d.extent || 0;
   const whole = Math.min(extent, WHOLE_CAP);
   if (whole > 0 && !(d.from === 1 && d.to >= whole + 1)) {
-    const out = /** @type {{runs: import('./frames.js').Run[], asOf: number | null} | {refused: Refusal}} */ (await textParts(addr, 1, whole));
+    // the text and its image read at once and taken in one step, the text alone where the image read failed
+    const [text, im] = await Promise.all([textParts(addr, 1, whole), imageParts(addr, 1, whole)]);
     if (dropped()) return 'dropped';
+    const out = /** @type {{runs: import('./frames.js').Run[], asOf: number | null} | {refused: Refusal}} */ (text);
     if ('refused' in out) { refuseDoc(d, out.refused); dirty(); return { doc: d, refused: out.refused }; }
-    REC.takeDelivery(addr, out.runs, out.asOf);
-    const im = await read(F.image(addr, 1, whole));
+    REC.takeDelivery(addr, out.runs, out.asOf, 'runs' in im ? { from: 1, runs: im.runs } : null);
+  } else if (whole > 0 && !REC.identityIn(d.image, 1, whole).length) {
+    // a text held whole that no held image covers: its image read
+    const im = await imageParts(addr, 1, whole);
     if (dropped()) return 'dropped';
-    if (!('refused' in im)) REC.takeImage(addr, 1, F.decodeRuns(im.answer));
-    else if (sized(im.refused)) {
-      // a text of more runs than one `image` answers: its image read in parts, taken whole, so every run is placed
-      const parts = await imageParts(addr, 1, whole, im.refused);
-      if (dropped()) return 'dropped';
-      if ('runs' in parts) REC.takeImage(addr, 1, parts.runs);
-    }
+    if ('runs' in im) REC.takeImage(addr, 1, im.runs);
   }
   if (!d.linksRead && extent > 0) {
     const out = await readScan(F.findLinksV(addr, 1, extent), addr);
