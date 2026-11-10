@@ -44,14 +44,14 @@
 // previous, wrapping; a move past the matches in hand while a part is out
 // waits for it (`waiting`). Each move takes the camera to the match at the
 // reading size, the match alone outlined as the arrival, its lines mounting
-// as any in view, the walk and the trail entry on the match's position in the
-// text as the board served it (N-GO's `toMatch`): the first pushes one trail
+// as any in view, the walk and the trail entry on the match where the text
+// shown holds it, held by its bytes (N-GO's `toMatch`): the first pushes one trail
 // entry, each after it re-uses that entry, so Back returns to where the find
 // opened. A
 // part's arrival moves nothing: the current match is kept by its place. Esc
 // closes it (`close`; N-KEYS's order), the current match left selected where
-// it was found, in the text the page shows, the walk on its span carried
-// into the text as the board served it, the camera still and the focus there
+// it was found, in the text the page shows, the walk on the block of that
+// text holding it, the camera still and the focus there
 // (N-FOCUS's `close`, `toWalk`), else the focus returned as any region's
 // close returns it.
 // Its life (FP-36): it belongs to its document — its own moves, and any move
@@ -402,8 +402,8 @@ function unmark(/** @type {Find} */ s) {
 /**
  * Esc (see the head; FP-20): the find closes; its current match, where a
  * move took the camera to it, selected as found — a span of the text the
- * page shows, as O-SELECTION's selection is — the walk on its span, carried
- * into the text as the board served it (T-LAYER's `basePos`), the camera
+ * page shows, as O-SELECTION's selection is — the walk on the block of that
+ * text holding it, the camera
  * still and the focus on the walk's element in the place of the find's
  * opener; where none stands, the focus returned as any region's close
  * returns it.
@@ -416,7 +416,7 @@ export async function close(byKey = true) {
   hide();
   if (!m) { FOCUS.close('find'); return; }
   SEL.select(s.addr, m.pos, m.width);
-  await WALK.focusTo(s.addr, LAYER.basePos(s.addr, m.pos), byKey, false, null, true);
+  await WALK.focusTo(s.addr, m.pos, byKey, false, null, true);
   FOCUS.close('find', { toWalk: true });
 }
 

@@ -356,7 +356,7 @@ test('while the walk keeps its document in view off the view\'s centre, the stri
   assert.ok(host.innerHTML.includes('<span class="strip"></span>'), `${C1}: the strip bare, neither the window nor a position marked on it — ${host.innerHTML}`);
 });
 
-test('the strip\'s window over a text holding typed words stands in the model\'s text, beside the walk\'s position and the extent; a text held in part keeps the window its estimates name, never cut back to what is held (FP-26; issue #515)', async () => {
+test('the strip over a text holding typed words follows the text shown: its window, the walk\'s position and its length all that text\'s; a text held in part keeps the window its estimates name, never cut back to what is held (FP-26; issue #515)', async () => {
   const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
   LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
   await PUMP.loadWhole(LONG);
@@ -374,8 +374,26 @@ test('the strip\'s window over a text holding typed words stands in the model\'s
     await keptAbove();
     const a = LINE.addressDisplay(), w = /** @type {import('../plane/layout.js').Window} */ (LAYER.windowIn(LONG));
     assert.ok(w.to > k, 'the view shows the delivered text past the typed words');
-    assert.deepEqual(a.window, { ...w, from: 1, to: w.to - k }, 'its window carried from the text shown back into the model\'s text');
+    assert.deepEqual([a.window, a.pos], [w, 1], 'its window the text shown\'s, the typed words in it, beside the walk\'s position there');
+    // the strip's length is the text shown's: the window's far end stands along it at its place in that text
+    LINE.render();
+    const extent = /** @type {number} */ (LAYER.shownOf(LONG).extent), width = ((w.to - 1) / extent * 100).toFixed(1) + '%';
+    assert.equal(extent, /** @type {number} */ (REC.doc(LONG).extent) + k, 'the text shown: the model\'s and the typed words');
+    assert.ok(host.innerHTML.includes(`<span class="strip-window open-start" style="left:0.0%;width:${width}"></span>`), `the window drawn along the text shown's length, ${width} of it: ${(host.innerHTML.match(/<span class="strip-window[^>]*>/) || [''])[0]}`);
   } finally { REC.clearEdits(LONG); }
+  // a position's place along the strip is its place in the text shown: on the short document D, a long line typed at its start
+  // moves its last span most of the way along, where the model's own length would put it past the strip's end
+  const many = 'A long line typed at the start of a short document. '.repeat(4) + '\n\n', last = /** @type {import('../model/records.js').Block} */ ([...REC.doc(D).blocks].reverse().find((b) => b.kind === 'para' && b.text.trim()));
+  REC.addEdit(D, { pos: 1, width: 0, text: many });
+  try {
+    await WALK.focusTo(D, last.pos + many.length, false, true, null, true);
+    const c = LAYER.centreOf(D, last.pos + many.length);
+    CAM.set({ x: c.x, y: c.y, scale: 12.5 / LAYER.foldOf(REC.doc(D)).fs });
+    LINE.render();
+    const extent = /** @type {number} */ (LAYER.shownOf(D).extent), left = ((last.pos + many.length - 1) / extent * 100).toFixed(1) + '%';
+    assert.ok(last.pos + many.length - 1 > /** @type {number} */ (REC.doc(D).extent), 'the position lies past the model\'s own length');
+    assert.ok(host.innerHTML.includes(`<span class="strip-mark" style="left:${left}"></span>`), `the mark at its place along the text shown's length, ${left}: ${(host.innerHTML.match(/<span class="strip-mark[^>]*>/) || [''])[0]}`);
+  } finally { REC.clearEdits(D); }
   // held in part: its first ten paragraphs, the rest of its columns estimated from its extent
   const held = LONG_TEXT.split('\n\n').slice(0, 10).join('\n\n') + '\n\n', extent = LONG_TEXT.length;
   REC.invalidate(LONG);

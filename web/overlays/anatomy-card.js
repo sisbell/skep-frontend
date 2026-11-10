@@ -136,7 +136,7 @@ import { accountOf, isUnder } from '../model/address.js';
 /** a passage in withheld text in words (see the head): "withheld · ⟨owner⟩", the owner of the run's origin by the one owner rule its placeholder names — the client's words, the owner marked the identifier's (P-LABEL's `inFace`) */
 const withheldWords = (/** @type {string | null} */ origin) => t('F.corner.withheld', { owner: origin ? inFace('ident', LAYER.originOwner(origin)) : '' });
 
-/** the first words of a passage of the model's text, a far end's or a near end's carried there (T-LAYER's `boardPos`), the document's own marked the reading face's (P-LABEL's `inFace`): from the model where delivered, else one read, each stretch it answers withheld in a withheld run's words (see the head) */
+/** the first words of a passage of the model's text, a far end's, the document's own marked the reading face's (P-LABEL's `inFace`): from the model where delivered, else one read, each stretch it answers withheld in a withheld run's words (see the head) */
 async function fragment(/** @type {string} */ addr, /** @type {number | null} */ pos, /** @type {number} */ width) {
   if (REC.doc(addr).refused === 'unregistered') return null;
   if (pos == null) { const p = REC.place(addr), first = p && p.label ? p.label : REC.textBetween(addr, 1, 80); return first ? inFace('reading', first) : null; }
@@ -146,6 +146,12 @@ async function fragment(/** @type {string} */ addr, /** @type {number | null} */
   if ('refused' in out) return null;
   const runs = F.decodeDelivery(out.answer, pos);
   return runs.map((r) => (r.kind === 'content' ? inFace('reading', r.text) : r.kind === 'withheld' ? withheldWords(r.origin) : '')).join('');
+}
+
+/** the first words of a link's near end, a passage of the text the page shows of its document (LK's `Shown.pos`; T-LAYER's `shownOf`), marked the reading face's: from that text where it holds them, else read as a far end's are (`fragment`) */
+function nearWords(/** @type {Shown} */ s) {
+  const held = REC.has(s.near) ? REC.textOf(LAYER.shownOf(s.near).runs, s.pos, s.pos + Math.min(s.width, 120)) : '';
+  return held ? inFace('reading', held) : fragment(s.near, s.pos, s.width);
 }
 
 /** an end's words as the card sets them, each stretch in the face its marks name (P-LABEL's `runsOf`; ST's `facedHTML`): the document's own the reading face's, the client's words with each address in them the identifier's */
@@ -304,7 +310,7 @@ async function farPassage(s, runs) {
  */
 function cardReads(s) {
   return Promise.all([
-    s.run ? withheldWords(s.run.origin) : fragment(s.near, LAYER.boardPos(s.near, s.pos), s.width),
+    s.run ? withheldWords(s.run.origin) : nearWords(s),
     s.far ? farPlace(s).then(async (runs) => ({ runs, words: await farPassage(s, runs) })) : Promise.resolve({ runs: null, words: null }),
     PUMP.lineage(s.link.addr),
   ]);

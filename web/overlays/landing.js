@@ -4,8 +4,8 @@
 // Where a carried or followed passage lands and the text landed in holds
 // only part of it, all of it in pieces, or no answer told, or holds it in
 // several runs (N-GO's `landing`; BM-HELD's line and labels), one line stands
-// at the text's edge beside the landing, each position its landing names
-// carried into the text the page shows of it (T-LAYER's `shownPos`): past the
+// at the text's edge beside the landing, each position its landing names one
+// of the text the page shows of its document: past the
 // right edge of the part of
 // the block holding the line of the run the landing stands at, its top level
 // with that line's (BM's `leaveAt`, the point a beam leaves the text by) —
@@ -36,7 +36,9 @@
 // side by side" with where the passage came from, where that text holds it
 // whole; "read version ⟨k⟩, the last that holds it" at a published landing,
 // once the latest member holding it whole is found; "try again", where a
-// retry may tell — each N-GO's (`landingAct`), told whether a key pressed it
+// retry may tell; "put back in the current text", where the person's own
+// removal took the rest of the passage and the line says so — each N-GO's
+// (`landingAct`), told whether a key pressed it
 // by the controller's one reading. No edge marks; no refusing, no asking
 // first. A rebuild keeps the focus on the act bearing the same key (N-FOCUS's
 // `keep`), and a line gone while its act held the focus hands it to the
@@ -65,7 +67,7 @@ import { esc } from '../util.js';
 /** @typedef {import('../beams/beams.js').Geometry} Geometry */
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect */
 
-/** @typedef {'beside' | 'version' | 'again' | 'next' | 'previous'} Act */
+/** @typedef {'beside' | 'version' | 'again' | 'back' | 'next' | 'previous'} Act */
 
 /**
  * @typedef {Object} LineState — what the line is written from
@@ -126,7 +128,7 @@ export function attach(e, r = {}) {
   e.addEventListener('click', (ev) => {
     const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (ev.target).closest('[data-act]'));
     const which = b ? b.dataset.act : null;
-    if (which === 'beside' || which === 'version' || which === 'again' || which === 'next' || which === 'previous') GO.landingAct(which, FOCUS.byKey(ev));
+    if (which === 'beside' || which === 'version' || which === 'again' || which === 'back' || which === 'next' || which === 'previous') GO.landingAct(which, FOCUS.byKey(ev));
   });
 }
 
@@ -160,7 +162,9 @@ export function stateNow(group) {
   if (l.beside) acts.push({ act: 'beside', label: t('B1.side-by-side') });
   if (offers.version && l.version != null) acts.push({ act: 'version', label: t('F.floating.read', { k: l.version }) });
   if (offers.again) acts.push({ act: 'again', label: t('B1.try-again') });
+  if (GO.offersBack()) acts.push({ act: 'back', label: t('B3.history.put-back') });
   const members = p && group && group.includes(l.current) ? group : [l.current];
+  if (l.removed) return { id: 'L.removed.part', words: line, acts };
   if (p) return { id: leadOf(p, members, l.current), words: mergedLabel(p, members, l.current), acts };
   return { id: 'L.held.' + /** @type {NonNullable<typeof l.said>} */ (l.said).state, words: line, acts };
 }
@@ -235,7 +239,7 @@ export function stacks(anchors) {
 function anchorsOf(p, addr, current, seen) {
   const g = pageGeometry(seen);
   return p.runs.flatMap((r, i) => {
-    const e = edgeAt(g, addr, LAYER.shownPos(addr, r.pos));
+    const e = edgeAt(g, addr, r.pos);
     if (!e) return [];
     const words = mergedLabel(p, [i], current);
     const h = i === current ? heightOf(words, Math.min(LINE_FACE.max, e.room), LINE_FACE) + LINE_FACE.acts : heightOf(words, e.room);
@@ -289,7 +293,7 @@ function place(anchor) {
   const l = GO.landing();
   if (!el || !l) return;
   const seen = visibleView(LINE.bottom());
-  const at = anchor ? null : leaveAt(pageGeometry(seen), l.addr, [{ pos: LAYER.shownPos(l.addr, l.pos), width: 1 }]);
+  const at = anchor ? null : leaveAt(pageGeometry(seen), l.addr, [{ pos: l.pos, width: 1 }]);
   const b = docBox(l.addr);
   let x = anchor ? anchor.x : at ? at.from.x + GAP : sx(b.x + b.w) + GAP, y = anchor ? anchor.y : at ? at.line.y : sy(b.y);
   const vw = seen.x + seen.w;

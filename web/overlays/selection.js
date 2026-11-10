@@ -1,6 +1,8 @@
 // O-SELECTION — the selection and its acts in fixed slots (the structure
 // record §3.2; foundations §3.1; D5 §1.6). Layer 2. ENGINE-BOUND. State
-// (FP-10): the selection, and how Shift with ← or → moves its ends (`ends`);
+// (FP-10): the selection, how Shift with ← or → moves its ends (`ends`), its
+// bytes as it was set, which the person's edits elsewhere carry it by
+// (`stood`, `carry`), and the latest act of a slot that sends (`sending`);
 // T-LAYER reads the selection through the reader handed in.
 // The selection is the span (R11; foundations §3.1): a byte range of one
 // document, `{addr, pos, width}` in V-positions of the text the page shows of
@@ -10,8 +12,8 @@
 // through T-LAYER's mapping as the drag ends and as it changes — or by a key:
 // a click on a block and Enter at the focused span select the block of the
 // text shown whole (`wholeShown`); off a live caret, K-8's Shift+↓ / Shift+↑
-// select the walk's focused span whole as the text shown holds it (T-LAYER's
-// `shownBlockOf`) and then extend it by a span of that text each press;
+// select the walk's focused span whole, a block of the text shown (T-LAYER's
+// `blockByPos`), and then extend it by a span of that text each press;
 // at a live caret, Shift with each arrow, Home or End moves the caret a step
 // and the selection runs from its anchor to the caret (`extendFromCaret`; D5
 // K-71, §1.6), as Shift with ← or → does at the span a kept caret stands in
@@ -34,11 +36,11 @@
 // remount — never over a selection the person holds outside the plane's
 // text, in a reading scene's pane or an overlay's text, which stands as they
 // made it. The acts take the span exactly: "who wrote this?" and "who uses
-// this?" ask over its bytes (O-PROV's; a span of the text shown, its board
-// runs alone asked of the board); "follow" and "read side by side" count only
+// this?" ask over its bytes (O-PROV's; a span of the text shown, the board
+// asked only about bytes it holds); "follow" and "read side by side" count only
 // the links drawn at the span (LK's `shownAt`), inert where none — over a span
-// wholly of bytes the page made (`wholeNew`), inert with their reason, kept
-// focusable as an inert slot is (`NEW_WORDS`) — asking which only at two or
+// wholly of bytes the page made that no link touches (`fresh`), inert with
+// their reason, kept focusable as an inert slot is (`NEW_WORDS`) — asking which only at two or
 // more and naming the far document at one, the scene opened as a step on the
 // trail from the link's end chosen (N-GO's `toScene`) on what the page shows
 // of the span's document (T-LAYER's `paneSource`), beside the document LK
@@ -48,13 +50,21 @@
 // address the card and the list set in the identifier's face (P-REG's FACE). The slots, in this
 // order and never moved: annotate · quote · who wrote this? · who uses this?
 // · see the links · follow · read side by side · link to… — each showing its
-// chord (D5-F8); annotate, quote and "link to…" are inert, each with its
-// reason (`INERT_REASON`): an inert slot keeps its place and gives its reason
-// when activated — pressed (`inertAct`), or by its chord, which draws the
-// card at the span the slots act on with the reason given (`inertChord`) —
-// at the slot and through the one status region (P47; the focus record's
-// rule 14). Every other slot acts on the selection, else on the walk's
-// focused span whole (D5 §1.6); off a span it acts only where the walk's
+// chord (D5-F8). Annotate, quote and "link to…" send a name for characters to
+// the board, so each takes effect only once the board holds them (`send`;
+// foundations §3.1's row rule): while a burst of the draft is in flight the
+// act asks for its commit and waits for its ack, nothing shown and no focus
+// moved; while the draft holds a line the board has not kept the slot stands
+// inert with the row rule's reason, keyed on what ends the state
+// (`heldReason`); and what then opens is the slot's own surface — its place in
+// the acts card with its own reason (`INERT_REASON`), no lane having built
+// one: an inert slot keeps its place and gives its reason when activated —
+// pressed (`inertAct`), or by its chord, which draws the card at the span the
+// slots act on with the reason given (`inertChord`) — at the slot and through
+// the one status region (P47; the focus record's rule 14). Every other slot
+// reads, and answers at once, in flight and under a hold alike: it acts on the
+// selection, else on the walk's focused span whole (D5 §1.6) — a block of the
+// text shown, at a live caret the block the caret is in; off a span it acts only where the walk's
 // element names what it acts on — follow and read side by side the link
 // whose stop the walk stands on, at that end's own bytes (K-51, K-52; D5 §4
 // rule 6), "see the links" the document the walk stands in, at its own stop
@@ -99,7 +109,7 @@ import * as LINKS from './links-card.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { extended, sameSpan, spanOfBlock } from '../text/span.js';
-import { boundaries, spanRuns, wordStop } from '../model/derive.js';
+import { boundaries, wordStop } from '../model/derive.js';
 import { t, typeName } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { markDirty } from '../plane/camera.js';
@@ -133,17 +143,45 @@ let sel = null;
 /** @type {Ends} how Shift with ← or → moves the selection's ends while it stands, set with it (`hold`) */
 let ends = AT_START;
 
-/** the selection set, and how its ends move: the one place either is written */
-function hold(/** @type {Span | null} */ span, /** @type {Ends} */ how = AT_START) { sel = span; ends = how; }
+/** @type {{ids: ISpan[], rev: number} | null} the selection's bytes by identity as it was set, and how many times its document's page-local edits had changed then (M-REC's `editRev`): what it is carried by where they moved (`carry`) */
+let stood = null;
 
-/** the selection, read-only (T-LAYER's reader): the one the screen draws, never a span a card or a list holds (see the head) */
-export const selected = () => sel;
+/** the selection set, and how its ends move: the one place either is written, its bytes read with it */
+function hold(/** @type {Span | null} */ span, /** @type {Ends} */ how = AT_START) {
+  sel = span; ends = how;
+  stood = span ? { ids: LAYER.shownIdentity(span.addr, span.pos, span.width), rev: REC.editRev(span.addr) } : null;
+}
 
-/** a span by its bytes as the page shows them now (`Left`): none named where it holds words the page made */
+/**
+ * The selection carried through the person's edits (see the head): where the
+ * page-local edits of its document moved since it was set, it stands over
+ * the span its bytes hold in the text shown now — from their first stretch to
+ * the end of their last — the platform's highlight placed there and its own
+ * card drawn again with it; where none of its bytes stand, or they were not
+ * named, as it is.
+ */
+function carry() {
+  if (!sel || !stood || REC.editRev(sel.addr) === stood.rev) return;
+  stood.rev = REC.editRev(sel.addr);
+  const now = stood.ids.length ? LAYER.placedShown(sel.addr, stood.ids) : [];
+  if (!now.length) return;
+  const span = { addr: sel.addr, pos: now[0].pos, width: now[now.length - 1].pos + now[now.length - 1].width - now[0].pos };
+  if (sameSpan(span, sel)) return;
+  const own = HOST.currentIs('selection') && sameSpan(/** @type {{span?: Span} | null} */ (HOST.currentState()?.anchor)?.span, sel);
+  sel = span;
+  LAYER.placeSelection(span);
+  markDirty();
+  if (own) render();
+}
+
+/** the selection, read-only (T-LAYER's reader): the one the screen draws, never a span a card or a list holds (see the head), where its bytes stand in the text shown now (`carry`) */
+export function selected() { carry(); return sel; }
+
+/** a span by its bytes as the page shows them now (`Left`): every byte named, one the page made by the page's own identity until the board mints it */
 const bytesOf = (/** @type {Span} */ s) => ({ addr: s.addr, pos: s.pos, width: s.width, ids: LAYER.shownIdentity(s.addr, s.pos, s.width) });
 
 /** the selection as the reader leaves its place (see the head): by its bytes' identity; null where none stands */
-export const asLeft = () => (sel ? bytesOf(sel) : null);
+export const asLeft = () => (selected() ? bytesOf(/** @type {Span} */ (sel)) : null);
 
 /**
  * The selection put back over the span its bytes hold in the text now — on
@@ -185,15 +223,9 @@ export function reopen(left, span) {
   if (drawn.length > 1) which_(drawn, a.what, span, false, left.focus); else render(null, null, span);
 }
 
-/** the walk's focused span, a block of the model's text, whole as the text shown holds it (T-LAYER's `shownBlockOf`) — what a slot acts on (`actedOn`); a position in no delivered block names one position there */
-function wholeBlock(/** @type {string} */ addr, /** @type {number} */ pos) {
-  const b = LAYER.shownBlockOf(addr, pos);
-  return b ? spanOfBlock(addr, b) : { addr, pos: LAYER.shownPos(addr, pos), width: 1 };
-}
-
-/** the block of the text shown holding a position of it, whole (T-LAYER's `shownOf`); a position in no block of it names one position */
+/** the block of the text shown holding a position of it, whole (T-LAYER's `blockAt`) — the walk's focused span, which at a live caret is the block the caret is in: what a slot acts on (`actedOn`), a click and Enter select; a position in no block of it names one position */
 function wholeShown(/** @type {string} */ addr, /** @type {number} */ pos) {
-  const b = REC.blockIn(LAYER.shownOf(addr).blocks, pos);
+  const b = LAYER.blockAt(addr, pos);
   return b ? spanOfBlock(addr, b) : { addr, pos, width: 1 };
 }
 
@@ -238,9 +270,8 @@ function take(span, moved, how) {
 
 /**
  * K-8 (Shift+↓ / Shift+↑): the first press selects the walk's focused span
- * whole as the text shown holds it — the span of the model's text the walk
- * stands on, carried into the text shown (T-LAYER's `shownBlockOf`) — and
- * nothing where the text shown holds none of it; each further press extends
+ * whole — a block of the text shown (T-LAYER's `blockByPos`) — and
+ * nothing where the text shown holds no block there; each further press extends
  * the selection by a span of the text shown in the direction pressed, that
  * end the one the press moved (`select`). The focus stays on the walk's
  * element (rule 15).
@@ -250,7 +281,7 @@ export function selectFocused(dir = 'down') {
   const f = WALK.current(), moved = dir === 'up' ? 'start' : 'end';
   if (!f || f.kind !== 'block' || f.pos == null) return;
   if (!sel || sel.addr !== f.addr) {
-    const b = LAYER.shownBlockOf(f.addr, f.pos);
+    const b = LAYER.blockByPos(f.addr, f.pos);
     if (b) { const s = spanOfBlock(f.addr, b); select(s.addr, s.pos, s.width, moved); }
     return;
   }
@@ -308,7 +339,7 @@ export function extendFromFocus(dir) {
     const [anchor, moving] = ends.moves === 'end' ? [pos, end] : [end, pos];
     return runTo(addr, anchor, stepFrom(addr, moving, dir, anchor), ends.platform);
   }
-  const b = REC.blockByPos(f.addr, f.pos);
+  const b = LAYER.blockByPos(f.addr, f.pos);
   if (!b) return false;
   const edge = dir === 'right' || dir === 'wordRight' ? b.pos : b.kind === 'para' ? b.pos + byteLength(b.text) : b.pos + b.width;
   return runTo(f.addr, edge, stepFrom(f.addr, edge, dir, null), false);
@@ -373,35 +404,63 @@ const SLOTS = /** @type {const} */ ([
 
 /** @typedef {'annotate' | 'quote' | 'linkto'} InertSlot a slot inert with its reason (`INERT_REASON`) */
 /** @typedef {'wrote' | 'uses' | 'links' | 'follow' | 'scene'} LiveSlot a slot that acts (`act`) */
-/** @typedef {'follow' | 'scene'} FarSlot a slot that goes by a link's far end: inert over a span wholly of new words (`wholeNew`), its reason `NEW_WORDS` */
+/** @typedef {'follow' | 'scene'} FarSlot a slot that goes by a link's far end: inert over a span of new words no link touches (`fresh`), its reason `NEW_WORDS` */
 
-/** the inert slots' reasons, by slot */
+/** the reasons the slots no lane has built yet give, by slot: what each gives where nothing stops it */
 const INERT_REASON = /** @type {Record<InertSlot, string>} */ ({ annotate: 'L.seam.annotate', quote: 'L.seam.quote', linkto: 'L.seam.link-to' });
-/** why follow and read side by side do nothing over a span wholly of new words (`wholeNew`) */
+/** why follow and read side by side do nothing over a span of new words no link touches (`fresh`) */
 const NEW_WORDS = 'L.new.no-link';
 
-/** an inert slot's reason, by its string's id: the words the slot gives as it is activated (P47) */
+/** @typedef {{id: string, text: string}} Reason a slot's reason: its string, and its words as the slot gives them */
+
+/** an inert slot's own reason, by its string's id: the words the slot gives as it is activated where no hold stands (P47) */
 export const reasonOf = (/** @type {InertSlot} */ slot) => INERT_REASON[slot];
 
-/** the reason a slot gives over a span, by its string's id: an inert slot's own, `NEW_WORDS` for follow and read side by side where the span is wholly new; null where the slot acts */
-const reasonAt = (/** @type {string} */ slot, /** @type {boolean} */ fresh) => (slot in INERT_REASON ? INERT_REASON[/** @type {InertSlot} */ (slot)] : fresh && (slot === 'follow' || slot === 'scene') ? NEW_WORDS : null);
+/**
+ * The row rule's reason while a document holds a line the board has not kept
+ * (foundations §3.1; P47), keyed on what ends the state: where a held line
+ * stands refused, an act of the person's comes first; else a resend follows.
+ * Read from the held lines alone (M-REC's `heldOf`); null where none is held.
+ * @param {string} addr
+ * @returns {Reason | null}
+ */
+function heldReason(addr) {
+  const rows = REC.heldOf(addr);
+  if (!rows.length) return null;
+  const id = rows.some((r) => r.refusal) ? 'B3.row.held.resolve' : 'B3.row.held.resend';
+  return { id, text: t(id, { label: LAYER.boxName(addr).name }) };
+}
 
-/** is every byte of a span one the page made, which the delivered text lacks and no link's end stands on (M-DERIVE's `spanRuns`)? */
-const wholeNew = (/** @type {Span} */ s) => spanRuns(REC.edits(s.addr), s.pos, s.width).every((r) => r.base == null);
+/**
+ * The reason a slot gives over a span; null where the slot acts. A slot that
+ * sends a name for characters (`InertSlot`): under a hold the row rule's
+ * (`heldReason`), else its own; follow and read side by side: `NEW_WORDS`
+ * over new words no link touches (`fresh`).
+ * @param {string} slot
+ * @param {Span} span
+ * @returns {Reason | null}
+ */
+function reasonAt(slot, span) {
+  if (slot in INERT_REASON) { const id = INERT_REASON[/** @type {InertSlot} */ (slot)]; return heldReason(span.addr) || { id, text: t(id) }; }
+  return (slot === 'follow' || slot === 'scene') && fresh(span) ? { id: NEW_WORDS, text: t(NEW_WORDS) } : null;
+}
+
+/** is a span wholly of words the page made that no link is drawn on (T-LAYER's `madeHere`; LK's `shownAt`): nothing can reach a byte the board has not minted, and once it has, the links made on it since are drawn */
+const fresh = (/** @type {Span} */ s) => LAYER.madeHere(s.addr, s.pos, s.width) && LK.shownAt(s.addr, s).length === 0;
 
 /**
  * An inert slot activated (P47; rule 14): it keeps its place, marked inert,
  * and gives its reason — at the slot, in the card's reason line, and through
  * the status region.
  * @param {HTMLElement} el the slot's button
- * @param {string} id the reason's string
+ * @param {Reason} reason
  */
-function inertAct(el, id) {
+function inertAct(el, reason) {
   el.setAttribute('data-inert', '1');
   const card = el.closest('.selection-card');
   const line = card ? /** @type {HTMLElement | null} */ (card.querySelector('.reason')) : null;
-  if (line) { line.textContent = t(id); line.dataset.string = id; line.hidden = false; }
-  FOCUS.say(t(id));
+  if (line) { line.textContent = reason.text; line.dataset.string = reason.id; line.hidden = false; }
+  FOCUS.say(reason.text);
 }
 
 /**
@@ -410,9 +469,10 @@ function inertAct(el, id) {
  * slots acting there; nothing where neither is given. The card takes no
  * focus (rule 15), save a card a return reopens on the control it was left
  * holding it on. A slot named `told` stands as `inertAct` leaves it: marked
- * inert, its reason in the card's reason line. Over a span wholly of new
- * words follow and read side by side keep their places, inert and focusable,
- * their reason saying so (`NEW_WORDS`).
+ * inert, its reason in the card's reason line. Over new words no link touches
+ * follow and read side by side keep their places, inert and focusable, their
+ * reason saying so (`NEW_WORDS`); a slot that sends a name for characters
+ * takes effect through `send`.
  * @param {string | null} [focus] that control's key (O-HOST's `keyOf`)
  * @param {InertSlot | FarSlot | null} [told] the inert slot whose reason the card gives
  * @param {Span | null} [at] the span a slot's act was made over (`actedOn`); none draws the card at the selection
@@ -422,27 +482,27 @@ export function render(focus = null, told = null, at = null) {
   if (!span) return;
   const { addr, pos } = span, atSelection = sameSpan(span, sel);
   const drawn = LK.shownAt(addr, span);
-  const n = drawn.length, fresh = wholeNew(span);
+  const n = drawn.length, unlinked = fresh(span);
   // the far end the follow and the scene name: its address, in the identifier's face, or the count of several
   const farLabel = n === 1 && drawn[0].far ? ` <span class="id">${esc(drawn[0].far)}</span>` : n > 1 ? ` ${n}` : '';
   const buttons = SLOTS.map(([id, strId, chord]) => {
-    const reason = reasonAt(id, fresh);
+    const reason = reasonAt(id, span);
     const inert = !!reason || ((id === 'follow' || id === 'scene') && n === 0);
     const label = esc(t(strId)) + ((id === 'follow' || id === 'scene') ? farLabel : '');
-    return `<button data-run="${id}" class="${inert ? 'inert' : ''}" ${reason ? `title="${esc(t(reason))}"` : ''}${id === told ? ' data-inert="1"' : ''}>${label}${chord ? ` <kbd>${esc(drawChord(chord))}</kbd>` : ''}</button>`;
+    return `<button data-run="${id}" class="${inert ? 'inert' : ''}" ${reason ? `title="${esc(reason.text)}"` : ''}${id === told ? ' data-inert="1"' : ''}>${label}${chord ? ` <kbd>${esc(drawChord(chord))}</kbd>` : ''}</button>`;
   }).join('');
-  const said = told ? reasonAt(told, true) : null;
-  const reasonLine = said ? `<div class="note reason" data-string="${esc(said)}">${esc(t(said))}</div>` : '<div class="note reason" hidden></div>';
+  const said = told ? reasonAt(told, span) || (told in INERT_REASON ? null : { id: NEW_WORDS, text: t(NEW_WORDS) }) : null;
+  const reasonLine = said ? `<div class="note reason" data-string="${esc(said.id)}">${esc(said.text)}</div>` : '<div class="note reason" hidden></div>';
   const html = `<div class="selection-card"><span class="label"><span class="id">${esc(addr)}</span> · ${esc(t('F.position', { p: pos }))}</span><div class="slots">${buttons}</div>${reasonLine}</div>`;
   HOST.show({
     kind: 'card', id: 'selection', anchor: { span }, html, takeFocus: focus != null, first: focus != null ? HOST.controlOf(focus) : undefined,
     about: atSelection ? { kind: 'selection' } : { kind: 'selection', at: bytesOf(span) },
     acts: {
-      annotate: (el) => inertAct(el, INERT_REASON.annotate),
-      quote: (el) => inertAct(el, INERT_REASON.quote),
-      linkto: (el) => inertAct(el, INERT_REASON.linkto),
+      annotate: (el) => { void send('annotate', span, el); },
+      quote: (el) => { void send('quote', span, el); },
+      linkto: (el) => { void send('linkto', span, el); },
       wrote: (_el, byKey) => act('wrote', byKey, span), uses: (_el, byKey) => act('uses', byKey, span), links: (_el, byKey) => act('links', byKey, span),
-      follow: (el, byKey) => { if (fresh) inertAct(el, NEW_WORDS); else act('follow', byKey, span); }, scene: (el, byKey) => { if (fresh) inertAct(el, NEW_WORDS); else act('scene', byKey, span); },
+      follow: (el, byKey) => { const r = reasonAt('follow', span); if (r) inertAct(el, r); else act('follow', byKey, span); }, scene: (el, byKey) => { const r = reasonAt('scene', span); if (r) inertAct(el, r); else act('scene', byKey, span); },
     },
     onDismiss: (replaced) => { if (!replaced && atSelection && sameSpan(sel, span)) { hold(null); LAYER.placeSelection(null); markDirty(); } },
   });
@@ -450,14 +510,15 @@ export function render(focus = null, told = null, at = null) {
 
 /**
  * The span a slot acts on: the selection, else the walk's focused span whole
- * (D5 §1.6), which nothing selects — the card or the list the act opens holds
- * it (see the head); null where no span is in focus.
+ * (D5 §1.6) — a block of the text shown, at a live caret the one the caret is
+ * in, the block T-LAYER draws lit — which nothing selects: the card or the
+ * list the act opens holds it (see the head); null where no span is in focus.
  * @returns {Span | null}
  */
 function actedOn() {
   if (sel) return sel;
   const f = WALK.current();
-  return f && f.kind === 'block' && f.pos != null ? wholeBlock(f.addr, f.pos) : null;
+  return f && f.kind === 'block' && f.pos != null ? wholeShown(f.addr, f.pos) : null;
 }
 
 /**
@@ -488,7 +549,7 @@ export function act(which, byKey = false, at = null) {
   if (which === 'wrote') { PROV.wrote(addr, pos, width, byKey, sameSpan(span, sel)); return true; }
   if (which === 'uses') { PROV.uses(addr, pos, width, byKey, sameSpan(span, sel)); return true; }
   if (which === 'links') { LINKS.show(addr, byKey); return true; }
-  if (wholeNew(span)) { render(null, which, span); FOCUS.say(t(NEW_WORDS)); return true; }
+  if (fresh(span)) { render(null, which, span); FOCUS.say(t(NEW_WORDS)); return true; }
   const drawn = LK.shownAt(addr, span);
   if (drawn.length > 1) which_(drawn, which, span, byKey);
   else if (drawn.length === 1 && which === 'follow') GO.follow(drawn[0], byKey);
@@ -512,21 +573,63 @@ function sceneFrom(s, span) {
 }
 
 /**
- * An inert slot's chord (P47; D5 K-45, K-46, K-100): the card at the span
- * the slots act on (`actedOn`), selecting nothing, the slot standing as its
- * press leaves it — marked inert, its reason given in the card — and the
- * reason said through the status region; the card takes no focus (rule 15).
- * False where no span is in focus: nothing is shown, and the caller gives the
- * reason where the focus is.
+ * The chord of a slot that sends a name for characters (D5 K-45, K-46,
+ * K-100; P47): made on the span the slots act on (`actedOn`), selecting
+ * nothing, through `send`. False where no span is in focus: nothing is shown,
+ * and the caller gives the reason where the focus is.
  * @param {InertSlot} slot
  * @returns {boolean}
  */
 export function inertChord(slot) {
   const span = actedOn();
   if (!span) return false;
-  render(null, slot, span);
-  FOCUS.say(t(INERT_REASON[slot]));
+  void send(slot, span);
   return true;
+}
+
+/** @type {Promise<void>} the latest act of a slot that sends, settled once it has taken effect or been given up (`send`) */
+let sending = Promise.resolve();
+/** the latest act of a slot that sends a name for characters, settled once it has taken effect (`send`): what the gate and the tests wait on */
+export const sent = () => sending;
+
+/**
+ * An act that sends a name for characters, made at a slot or by its chord
+ * (foundations §3.1's row rule; D5 K-73; P46): it names the characters as the
+ * board holds them, so it takes effect only once the board holds them. While
+ * a burst of the span's draft is open or awaits its ack (M-REC's `inFlight`)
+ * it asks for the burst's commit and waits for it to land — no mark, no word
+ * and no focus moved meanwhile — the span held by its bytes, so the keys typed
+ * meanwhile move it with its words; then, and at once where nothing is in
+ * flight, it takes effect on the span where its bytes stand: while the draft
+ * holds a line the board has not kept the slot stands inert with the row
+ * rule's reason (`heldReason`), else the slot's own surface opens — until its
+ * lane builds one, its place in the acts card with the slot's own reason
+ * (`INERT_REASON`). The reason is given at the slot pressed where its card
+ * still stands, else in the card drawn at the span, and through the status
+ * region; the card takes no focus (rule 15). Nothing where the span's bytes
+ * are gone once the burst lands.
+ * @param {InertSlot} slot
+ * @param {Span} span the span the act was made over
+ * @param {HTMLElement | null} [el] the slot's button, where it was pressed
+ * @returns {Promise<void>} settled once the act has taken effect
+ */
+function send(slot, span, el = null) {
+  sending = (async () => {
+    let at = span;
+    if (!heldReason(span.addr) && REC.inFlight(span.addr)) {
+      const held = bytesOf(span);
+      REC.commit(span.addr);
+      await REC.landed(span.addr);
+      const now = held.ids.length ? LAYER.placedShown(span.addr, held.ids) : [];
+      if (held.ids.length && !now.length) return;
+      if (now.length) at = { addr: span.addr, pos: now[0].pos, width: now[now.length - 1].pos + now[now.length - 1].width - now[0].pos };
+    }
+    const reason = /** @type {Reason} */ (reasonAt(slot, at));
+    if (el && el.isConnected && sameSpan(at, span)) { inertAct(el, reason); return; }
+    render(null, slot, at);
+    FOCUS.say(reason.text);
+  })();
+  return sending;
 }
 
 /**

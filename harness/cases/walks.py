@@ -15,10 +15,15 @@ never shown a note the shot contradicts. The card's controls are pressed as
 a person presses them (the switch's rect read, the click dispatched at
 engine level), and the card's state is read back before the shot — the
 switch's own words among it, the toggle's B1-S4 words in the state LK
-holds. What each step could not have on this lane is said in its note."""
+holds. What each step could not have on this lane is said in its note.
+After W-05, on the owner's page, a line typed in the own draft — text the
+board does not hold, the page's own and never sent — is walked to, found and
+returned to by Back at the desktop width and at the narrow one, each landing
+on the typed words (EDITOR's `typed_lands`), shot into `shots/W-05/`."""
 import json
 
 from . import AGENT_SPACE, CLAUSE_READING, DOC, FAR_LEAP, GHOST, WINDOW, Result
+from .editor import NARROW, WIDE, typed_lands
 
 # C-33's mark at the window run's opening: the run's first stretch, where its hairline is labelled whole (the run crosses
 # a paragraph break, so a second block opens it again, compact, in a later column the view at its first line need not hold)
@@ -212,6 +217,21 @@ def run(ctx):
     ctx.frames(2)
     step(ctx, r, 'W-05', 10, 'the empty view', 'W-05 step 10: "Empty view: the residue answer — a count, a cluster mark, a stub, or honest emptiness whose one action is ZOOM OUT, convergent (law 13)." The agent space 1.0.1.1: its home document holds the delegation\'s record and nothing else; the account\'s count says one.', 'agent-space')
     ctx.esc()
+    # ---- a typed draft's walk, find and Back land on the typed words, at both widths (the unsent-typing decision) -------
+    own = WINDOW[2]
+    ctx.leap(own, 1)
+    ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(own)); ctx.settle(); ctx.frames(2)
+    paras = [b for b in ctx.js('window.__skep.model.doc(%s)' % json.dumps(own))['blocks'] if b['kind'] == 'para' and b['text'].strip()]
+    if r.check(len(paras) >= 2, 'the own draft holds two paragraphs (what the next checks stand on)', [b['pos'] for b in paras]):
+        was = ctx.resize(*WIDE)
+        try:
+            for w, h in (WIDE, NARROW):
+                ctx.resize(w, h); ctx.settle(10); ctx.frames(3)
+                lands = typed_lands(ctx, own, paras[1], DOC)
+                r.figures['typed_lands_w%d' % w] = lands
+                r.check(lands['ok'], f"at {w} px, a line typed in the own draft is a stop of the walk its mirror item reads, the find finds it and Back returns to it — each landing on the typed words (the unsent-typing decision §1 (a), §2)", lands)
+        finally:
+            ctx.resize(*was); ctx.frames(3)
     ctx.leap(DOC, WINDOW[0])
     r.figures['walks_source'] = 'ux/walks.md @ ' + ctx.design_head()
     return r.out()

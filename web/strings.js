@@ -46,7 +46,7 @@ import { commonsType, isAddress } from './model/address.js';
  * @typedef {Object} StringEntry
  * @property {string} text the string, with its ⟨tokens⟩
  * @property {'PINNED' | 'DRAFT'} cls
- * @property {string} source the design file that carries it (`ux/copy.md`, `requirements.md`, `designs/foundations.md`, `designs/B1-reader.md`, `designs/B2-finding.md`, `designs/B3-editor.md`, `designs/D5-keys.md`, `designs/D6-burst-machine.md`), or `''` where none does
+ * @property {string} source the design file that carries it (`ux/copy.md`, `requirements.md`, `designs/foundations.md`, `designs/B1-reader.md`, `designs/B2-finding.md`, `designs/B3-editor.md`, `designs/D5-keys.md`, `designs/D6-burst-machine.md`, a decision under `ux/questions/`), or `''` where none does
  * @property {string} [screen] the screen that needed it (DRAFT)
  * @property {boolean} [lane] true where no design document carries the string
  * @property {'clause' | 'whole'} [hint] a one-line hint's notice (`hintOf`): `clause` where its first clause, read alone, says why the key did nothing or what works instead, so it stands for the notice once the notice was shown whole; `whole` where it does not, the notice whole at every press
@@ -821,6 +821,10 @@ export const STRINGS = {
   'L.new.wrote': { text: 'new in this draft, from this device', cls: 'DRAFT', source: '', screen: 'B1-S10: "who wrote this?" over words typed here that the board does not hold yet', lane: true },
   'L.new.uses': { text: 'no other document', cls: 'DRAFT', source: '', screen: 'B1-S10: "who uses this?" over words typed here that the board does not hold yet', lane: true },
   'L.new.no-link': { text: 'nothing links to new words', cls: 'DRAFT', source: '', screen: 'the selection: follow and read side by side over a span wholly of words typed here', lane: true },
+  'L.new.wrote.held': { text: 'new in this draft, held on this device', cls: 'DRAFT', source: 'ux/questions/2026-11-09-unsent-typing-which-text.decision.md', screen: 'B1-S10: "who wrote this?" over words typed here that the board has not minted, while the draft holds a line the board has not kept (B3-S2)' },
+  'L.held.device': { text: 'held on this device', cls: 'DRAFT', source: 'ux/questions/2026-11-09-unsent-typing-which-text.decision.md', screen: 'B3-S2: the ARIA mirror\'s description of an item holding words the board has not minted, or a held removal, while the draft holds a line the board has not kept' },
+  'L.removed.part': { text: 'only part of the passage — you removed the rest', cls: 'DRAFT', source: 'ux/questions/2026-11-09-unsent-typing-which-text.decision.md', screen: 'a return\'s landing line (FP-21) where the person\'s own removal took every byte the draft no longer holds' },
+  'L.removed.all': { text: 'you removed this passage', cls: 'DRAFT', source: 'ux/questions/2026-11-09-unsent-typing-which-text.decision.md', screen: 'the dead end\'s face at a return to a passage the person\'s own removal took whole (foundations §2.3)' },
   'L.run.not-yet': { text: 'cannot yet be answered', cls: 'DRAFT', source: '', screen: 'B1-S10: a stretch of the selection whose question the board could not answer as of the text the page read', lane: true },
   'L.run.named': { text: '“⟨words⟩” — ⟨answer⟩', cls: 'DRAFT', source: '', screen: 'B1-S10: one stretch of a selection whose stretches answer differently, named by its first words', lane: true },
   'L.seam.annotate': { text: 'annotate — comes with the annotation lane; nothing is written here', cls: 'DRAFT', source: '', screen: 'the selection; a hint at the focus', lane: true, hint: 'whole' },

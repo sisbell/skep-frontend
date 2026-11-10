@@ -33,7 +33,8 @@
 // to half where they share it; an element written with another overlay
 // opening at its top, a rebuild keeping its scroll; and the control the
 // focus moves to, or stands on as the caps change, brought into view, the
-// reader's own scroll standing (FP-20, FP-26).
+// reader's own scroll standing; and an overlay moved with its subject in
+// place (FP-20, FP-26, FP-36).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -123,6 +124,18 @@ test('an opening nothing interrupts is pending while it reads, nothing shown, an
   await o;
   assert.deepEqual([HOST.pending(), standing()], [false, 'provenance:wrote']);
   HOST.dismiss();
+});
+
+test('an overlay moved with its subject stands at the span handed in and is about it there, the same overlay — nothing drawn again, nothing dismissed — and what it is left by names that span; none standing at a span moves nothing (FP-36; issue #519)', () => {
+  const about = /** @type {any} */ ({ kind: 'wrote', addr: '1.0.1.0.3', pos: 11, width: 5, ids: [{ prefix: '1.0.1.0.3.0.1', ordinal: 11, width: 5 }], selected: false });
+  HOST.show({ kind: 'card', id: 'provenance:wrote', anchor: { span: { addr: '1.0.1.0.3', pos: 11, width: 5 } }, html: '<span class="label">its words</span>', about });
+  const o = HOST.currentState(), html = hostEl.innerHTML;
+  HOST.moveTo({ addr: '1.0.1.0.3', pos: 24, width: 5 }, { ...about, pos: 24 });
+  assert.deepEqual([HOST.currentState() === o, HOST.currentState()?.anchor, hostEl.innerHTML === html], [true, { span: { addr: '1.0.1.0.3', pos: 24, width: 5 } }, true], 'the same card, its markup untouched, at the span its bytes hold now');
+  assert.deepEqual(/** @type {any} */ (HOST.asLeft()?.about).pos, 24, 'left by the span it stands at');
+  HOST.dismiss();
+  HOST.moveTo({ addr: '1.0.1.0.3', pos: 30, width: 5 }, about);
+  assert.equal(HOST.currentState(), null, 'none standing: nothing moved');
 });
 
 test('a dismissal made while it reads, nothing standing, ends it: its answer shows nothing, and its reads are told it no longer stands', async () => {

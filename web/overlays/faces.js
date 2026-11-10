@@ -86,6 +86,8 @@
 // FP-21), its act, where N-GO hands one in, the version move its reads found
 // to the last member that holds the passage whole, the face standing drawn
 // again with it, no act on the chrome, as those reads answer (`offered`);
+// the face of a passage the person's own removal took whole from a draft, at
+// the removal point, its one act the put-back N-GO hands in (`removed`);
 // what a text holds of what a reading scene's stop the reader returned to
 // stood for, where it holds only part, all of it in pieces, or no answer
 // told, in BM-HELD's line at the stop (`held`), "try again" where a retry may
@@ -778,6 +780,28 @@ function floatingFace(far, at, offer, told, notice) {
  */
 export function floating(far, anchor, offer = null, told = false, notice = false) {
   HOST.show(floatingFace(far, toAnchor(anchor), offer, told, notice));
+}
+
+/**
+ * The face of a passage the person's own removal took whole from a draft
+ * (foundations §2.3's dead end at a draft of the person's own; FP-21): its
+ * words say so, and its act is the put-back, "put back in the current text"
+ * (B3-S7's words), which N-GO hands in. Shown at the return that landed at the
+ * removal point, as the dead end's is (`floating`): its words that landing's
+ * description where the focus lands (`told`), a notice where a read brought
+ * it (O-HOST's).
+ * @param {string} addr the draft
+ * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor the removal point landed on: where the face stands
+ * @param {() => void} back the put-back
+ * @param {boolean} [told] the landing's description says its words
+ * @param {Asked | null} [asked] where a read brought it once it answered: shown as O-HOST's notice, while that act still stands (N-GO's `asNotice`)
+ */
+export function removed(addr, anchor, back, told = false, asked = null) {
+  if (asked && asked.stands && !asked.stands()) return;
+  HOST.show({
+    kind: 'face', id: 'face:removed', anchor: toAnchor(anchor), told, notice: !!(asked && asked.notice), acts: { a0: () => back() },
+    html: faceHTML({ id: 'L.removed.all', text: t('L.removed.all'), acts: [{ label: t('B3.history.put-back') }] }),
+  });
 }
 
 /**

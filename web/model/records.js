@@ -41,7 +41,23 @@
 // caret made (`edits`, `addEdit`; K-72) — positions and text, each in the
 // text as it stood after the edits before it, never a frame — which M-DERIVE
 // applies over the delivered runs for what the page shows, the model's own
-// record standing as the board served it, and a change of class drops.
+// record standing as the board served it, and a change of class drops. Every
+// byte an edit makes takes the page's own identity as it is made — an ordinal
+// of the draft's own, never used twice (`Edit.page`), in the page's space of
+// the draft (`pageSpace`) — and keeps it until the board mints the byte: an
+// insert's `ack_addr` names the first permanent address it minted (wire.md
+// §The response envelope), and whoever sent the insert tells the model which
+// of the page's bytes took the addresses from it (`mint`), the byte named by
+// that address from then on wherever bytes are named or placed (`pageIds`,
+// `placedIn`). Each act's edits are one step (`Edit.step`, `addEdits`), and
+// an edit may put back bytes an earlier one removed (`Edit.back`). What D6's
+// machine holds of a draft is set here by the machine alone, as the kept
+// state is: the held lines `held(session)` lists for it (`setHeld`,
+// `heldOf`) — the one record any sign that words are not on the board reads —
+// and whether a burst of it is open or awaits its ack (`setFlight`,
+// `inFlight`), which an act that names characters to the board asks the
+// machine to commit (`machine`, `commit`) and waits out (`landed`). No
+// machine is handed in until one is built: nothing is then in flight.
 // A link's slot names bytes, never a place (wire.md §Links): where a stored
 // span stands in a document's text is read through that document's held V→I
 // image (`placed`) — moved where the image puts it, cut in two as two
@@ -117,12 +133,13 @@
 // FP-35.
 
 import { accountOf, documentOf, homeOf, cmpAddr, elementOf, memberOf, isUnder, isTrunkMember, docOneOf } from './address.js';
-import { byteOffsets, sliceBytes } from '../util.js';
+import { byteOffsets, sliceBytes, byteLength } from '../util.js';
 
 /** @typedef {import('./frames.js').Run} Run */
 /** @typedef {import('./frames.js').DocMeta} DocMeta */
 /** @typedef {import('./frames.js').LinkValue} LinkValue */
 /** @typedef {import('./frames.js').Age} Age */
+/** @typedef {import('./frames.js').HeldLine} HeldLine */
 /** @typedef {import('./address.js').EndRef} EndRef */
 /** @typedef {import('../bridge/shapes').Place} ShapePlace */
 /** @typedef {import('../bridge/shapes').PlacesAnswer} PlacesAnswer */
@@ -231,6 +248,7 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {number[]} rows the held lines applied, by ordinal, in the order applied
  * @property {number} edits the page-local edits applied
  * @property {number | null} at the board position a past state was read at; null for the held version and the typed text
+ * @property {ImageRun[]} [source] for the typed text, every byte of the record by where it came from, in position order (M-DERIVE's `applyEdits`): `prefix` 'base' and `ordinal` its position in the delivered text, or `prefix` 'page' and `ordinal` the page's own for a byte an edit made (`Edit.page`)
  */
 
 /**
@@ -245,7 +263,28 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {number} pos
  * @property {number} width
  * @property {string} text
+ * @property {number | null} [page] the page's ordinal for the first byte of `text`, its bytes taking the ordinals from it on (`addEdit` sets it): the page's own identity of the bytes it made; absent or null where the edit makes none
+ * @property {Back | null} [back] bytes an earlier edit removed, put back at `pos` as they were — their identity with them — where the edit is a put-back; `text` is then ''
+ * @property {number} [step] the act the edit was made by (`addEdit`, `addEdits`): the edits of one act share it
  */
+
+/**
+ * @typedef {Object} Back — what a put-back places (`Edit.back`): a stretch of the bytes an earlier edit of the draft removed
+ * @property {number} of that edit, an index into the draft's edits
+ * @property {number} from the first of its removed bytes placed, counted from 0
+ * @property {number} width how many of them
+ */
+
+/**
+ * @typedef {Object} Minted — bytes the page made that the board minted (`mint`)
+ * @property {number} page the page's ordinal for the first of them
+ * @property {number} width how many, their ordinals and their addresses both running on from the first
+ * @property {string} prefix the I-space the board minted them in: a permanent address without its last field
+ * @property {number} ordinal the last field of the first's permanent address
+ * @property {number} at the position of the commit that minted them, as its ack answered
+ */
+
+/** @typedef {{commit: (addr: string) => void}} Machine — what D6's machine hands the model (`machine`): `commit`, the open burst of a draft committed now */
 
 /**
  * @typedef {Object} Link — as delivered; raw (which show and how is LK's)
@@ -402,8 +441,16 @@ const state = {
   draftsAt: null,
   /** @type {Map<string, KeptState>} each draft's kept state, by address (`setKept`) */
   kept: new Map(),
-  /** @type {Map<string, {list: Edit[], rev: number}>} each draft's page-local edits in the order made, with a count of every change to them (`addEdit`, `editRev`) */
+  /** @type {Map<string, {list: Edit[], rev: number, next: number, steps: number}>} each draft's page-local edits in the order made, with a count of every change to them and to what the board minted of them (`addEdit`, `mint`, `editRev`), the next ordinal the page names a byte it makes by, and the steps made */
   edits: new Map(),
+  /** @type {Map<string, Minted[]>} the bytes the page made that the board minted, by draft, in the page's order (`mint`) */
+  minted: new Map(),
+  /** @type {Map<string, HeldLine[]>} each draft's held lines as `held(session)` listed them (`setHeld`); a draft absent holds none */
+  held: new Map(),
+  /** @type {Map<string, Array<() => void>>} the drafts a burst of which is open or awaits its ack (`setFlight`), each with those waiting for it to land (`landed`) */
+  flights: new Map(),
+  /** @type {Machine | null} D6's machine, where one was handed in (`machine`) */
+  machine: null,
   rev: 0,
   /** @type {Array<() => void>} */
   watchers: [],
@@ -516,6 +563,8 @@ function dropClass(stood, ended) {
   state.feed = state.feed.filter((r) => r.cls !== 'drafts');
   state.kept.clear();
   for (const e of state.edits.values()) { e.list = []; e.rev++; }
+  state.minted.clear(); state.held.clear();
+  for (const addr of [...state.flights.keys()]) endFlight(addr);
 }
 
 /**
@@ -1115,7 +1164,9 @@ export function placedIdentity(addr, spans) {
  * document's held image (`placedIdentity`), or the one an article was made
  * from, which outlives the model's (T-LAYER's `Made`): the positions whose
  * permanent addresses they name, in the text's order, stretches meeting in
- * the text joined. None where the image places none of them.
+ * the text joined. None where the image places none of them. A byte the page
+ * made is one byte under both its names: the page's own, and the permanent
+ * address the board minted it at (`spelled`).
  * @param {ImageRun[]} image
  * @param {ISpan[]} spans
  * @returns {Stretch[]}
@@ -1123,6 +1174,7 @@ export function placedIdentity(addr, spans) {
 export function placedIn(image, spans) {
   /** @type {Stretch[]} */
   const out = [];
+  if (state.minted.size) { image = image.flatMap(spelled); spans = spans.flatMap(spelled); }
   for (const s of spans) for (const r of image) {
     if (r.prefix !== s.prefix) continue;
     const lo = Math.max(s.ordinal, r.ordinal), hi = Math.min(s.ordinal + s.width, r.ordinal + r.width);
@@ -1136,6 +1188,31 @@ export function placedIn(image, spans) {
     if (last && s.pos <= last.pos + last.width) last.width = Math.max(last.width, s.pos + s.width - last.pos); else joined.push(s);
   }
   return joined;
+}
+
+/**
+ * Where the first of some bytes still standing stands in a text an image
+ * covers: the bytes taken in their own order — run by run, each run's by its
+ * addresses' order — the position of the first the image places; null where
+ * it places none of them. A byte the page made is one byte under both its
+ * names (`spelled`).
+ * @param {ImageRun[]} image
+ * @param {ISpan[]} spans the bytes, by identity, in their own order
+ * @returns {number | null}
+ */
+export function firstPlacedIn(image, spans) {
+  if (state.minted.size) { image = image.flatMap(spelled); spans = spans.flatMap(spelled); }
+  for (const s of spans) {
+    /** @type {{ordinal: number, pos: number} | null} */
+    let best = null;
+    for (const r of image) {
+      if (r.prefix !== s.prefix) continue;
+      const lo = Math.max(s.ordinal, r.ordinal), hi = Math.min(s.ordinal + s.width, r.ordinal + r.width);
+      if (lo < hi && (!best || lo < best.ordinal)) best = { ordinal: lo, pos: r.pos + (lo - r.ordinal) };
+    }
+    if (best) return best.pos;
+  }
+  return null;
 }
 
 /**
@@ -1785,19 +1862,38 @@ export function setKept(addr, s) {
  * @returns {readonly Edit[]}
  */
 export const edits = (addr) => state.edits.get(addr)?.list ?? [];
-/** how many times a draft's page-local edits have changed — each edit added, each clearing — so a record derived from them is made again where it moved */
+/** how many times a draft's page-local edits have changed — each act's edits added, each clearing, each minting of bytes they made — so a record derived from them is made again where it moved */
 export const editRev = (/** @type {string} */ addr) => state.edits.get(addr)?.rev ?? 0;
+/** a draft's edits with their counts, made where the draft holds none yet */
+function editsOf(/** @type {string} */ addr) {
+  let x = state.edits.get(addr);
+  if (!x) { x = { list: [], rev: 0, next: 1, steps: 0 }; state.edits.set(addr, x); }
+  return x;
+}
 /**
- * One page-local edit added to a draft's (`edits`): its positions in the
- * text as it stands after the edits before it. The model's own record stands
- * as the board served it; nothing is composed or sent.
+ * One page-local edit added to a draft's (`edits`), a step of its own: its
+ * positions in the text as it stands after the edits before it, the bytes it
+ * makes named by the page's next ordinals (`Edit.page`). The model's own
+ * record stands as the board served it; nothing is composed or sent.
  * @param {string} addr
  * @param {Edit} e
  */
-export function addEdit(addr, e) {
-  let x = state.edits.get(addr);
-  if (!x) { x = { list: [], rev: 0 }; state.edits.set(addr, x); }
-  x.list = [...x.list, { pos: e.pos, width: e.width, text: e.text }];
+export function addEdit(addr, e) { addEdits(addr, [e]); }
+/**
+ * The edits of one act added to a draft's (`edits`), in order, as one step
+ * (`Edit.step`): each as `addEdit` adds it. Nothing where the act made none.
+ * @param {string} addr
+ * @param {readonly Edit[]} list
+ */
+export function addEdits(addr, list) {
+  if (!list.length) return;
+  const x = editsOf(addr), step = ++x.steps;
+  const made = list.map((e) => {
+    const width = e.back ? 0 : byteLength(e.text), page = width ? x.next : null;
+    x.next += width;
+    return /** @type {Edit} */ ({ pos: e.pos, width: e.width, text: e.back ? '' : e.text, page, back: e.back ? { ...e.back } : null, step });
+  });
+  x.list = [...x.list, ...made];
   x.rev++;
   bump();
 }
@@ -1807,6 +1903,136 @@ export function clearEdits(/** @type {string} */ addr) {
   if (!x || !x.list.length) return;
   x.list = []; x.rev++;
   bump();
+}
+
+// ---- the page's own bytes -------------------------------------------------------
+
+/** the space a draft's page-made bytes are named in until the board mints them (see the head): no address of the board's, read as lying under the draft */
+export const pageSpace = (/** @type {string} */ addr) => addr + '.0.p';
+/** is an I-space the page's own of some draft (`pageSpace`)? */
+export const isPage = (/** @type {string} */ prefix) => prefix.endsWith('.0.p');
+/** the draft a page space is of (`pageSpace`) */
+const draftOf = (/** @type {string} */ prefix) => prefix.slice(0, -4);
+
+/**
+ * Bytes the page made, minted (see the head): `width` of them from the
+ * page's ordinal `page` in a draft are the permanent addresses from `start`
+ * on, as the ack of the insert that carried them answered (`ack_addr`'s
+ * `addr`, the first it minted; its `at`). Told by whoever sent the insert,
+ * once for each run of the page's ordinals the insert carried in order. The
+ * record derived from the draft's edits is made again, naming them so.
+ * @param {string} addr the draft
+ * @param {number} page the page's ordinal for the first of them (`Edit.page`)
+ * @param {number} width how many
+ * @param {string} start the permanent address of the first
+ * @param {number} at the position of the commit that minted them
+ */
+export function mint(addr, page, width, start, at) {
+  if (width < 1) return;
+  const list = (state.minted.get(addr) || []).filter((m) => m.page + m.width <= page || m.page >= page + width);
+  list.push({ page, width, ...iPlace(start), at });
+  state.minted.set(addr, list.sort((a, b) => a.page - b.page));
+  editsOf(addr).rev++;
+  bump();
+}
+/** the bytes the page made in a draft that the board minted, in the page's order (`mint`); none where it minted none */
+export const mintedOf = (/** @type {string} */ addr) => state.minted.get(addr) ?? [];
+
+/**
+ * The identity of bytes the page made in a draft (see the head), in order:
+ * each stretch the board minted by its permanent addresses, every other by
+ * the page's own ordinals in the page's space of the draft.
+ * @param {string} addr the draft
+ * @param {number} page the page's ordinal for the first of them
+ * @param {number} width how many
+ * @returns {ISpan[]}
+ */
+export function pageIds(addr, page, width) {
+  /** @type {ISpan[]} */
+  const out = [];
+  const end = page + width, own = pageSpace(addr);
+  let at = page;
+  for (const m of mintedOf(addr)) {
+    const lo = Math.max(at, m.page), hi = Math.min(end, m.page + m.width);
+    if (lo >= hi) continue;
+    if (lo > at) out.push({ prefix: own, ordinal: at, width: lo - at });
+    out.push({ prefix: m.prefix, ordinal: m.ordinal + (lo - m.page), width: hi - lo });
+    at = hi;
+  }
+  if (at < end) out.push({ prefix: own, ordinal: at, width: end - at });
+  return out;
+}
+
+/**
+ * A run named by identity as the model names it now (`placedIn`): one in the
+ * page's space of a draft, cut where the board minted its bytes and each such
+ * stretch named by its permanent addresses (`pageIds`); any other as given.
+ * @template {ISpan} T
+ * @param {T} r a run by identity, or an image's run
+ * @returns {T[]}
+ */
+function spelled(r) {
+  if (!isPage(r.prefix)) return [r];
+  const addr = draftOf(r.prefix);
+  if (!state.minted.has(addr)) return [r];
+  let off = 0;
+  return pageIds(addr, r.ordinal, r.width).map((x) => { const out = /** @type {T} */ ({ ...r, ...x, ...('pos' in r ? { pos: /** @type {number} */ (r.pos) + off } : {}) }); off += x.width; return out; });
+}
+
+// ---- what D6's machine holds of a draft -----------------------------------------
+
+/**
+ * A draft's held lines as `held(session)` listed them (see the head; B3-S2;
+ * M-FRAMES's `decodeHeldRows`), in resend order; none where the board holds
+ * every line of it, or none was ever listed.
+ * @param {string} addr
+ * @returns {readonly HeldLine[]}
+ */
+export const heldOf = (addr) => state.held.get(addr) ?? [];
+/**
+ * A draft's held lines set (`heldOf`), or cleared with none: set by D6's
+ * machine from `held(session)`, and by the gate's hook; no read sets it.
+ * @param {string} addr
+ * @param {readonly HeldLine[]} rows the rows naming the draft, in resend order
+ */
+export function setHeld(addr, rows) {
+  if (rows.length) state.held.set(addr, rows.map((r) => ({ ...r }))); else state.held.delete(addr);
+  bump();
+}
+
+/** D6's machine handed in, or taken out with null (see the head): what `commit` asks */
+export function machine(/** @type {Machine | null} */ m) { state.machine = m; }
+/** is a burst of a draft open, or awaiting its ack (`setFlight`)? */
+export const inFlight = (/** @type {string} */ addr) => state.flights.has(addr);
+/**
+ * A draft's flight set (see the head): a burst of it opened or sent (`on`),
+ * or its last ack landed or a hold answered in its place — those waiting on
+ * it then told (`landed`). Set by D6's machine, and by the gate's hook.
+ * @param {string} addr
+ * @param {boolean} on
+ */
+export function setFlight(addr, on) {
+  if (on) { if (!state.flights.has(addr)) state.flights.set(addr, []); } else endFlight(addr);
+  bump();
+}
+/** a draft's flight ended: those waiting on it told, in the order they waited */
+function endFlight(/** @type {string} */ addr) {
+  const waiting = state.flights.get(addr) || [];
+  state.flights.delete(addr);
+  for (const w of waiting) w();
+}
+/** the open burst of a draft committed now, where a machine stands to commit it (`machine`): what an act that names characters to the board asks before it waits (`landed`) */
+export function commit(/** @type {string} */ addr) { if (state.machine && state.flights.has(addr)) state.machine.commit(addr); }
+/**
+ * A draft's flight landed (see the head): settled once no burst of it is
+ * open or awaits its ack — at once where none is — whether its ack landed or
+ * a hold answered in its place, which the one waiting reads (`heldOf`).
+ * @param {string} addr
+ * @returns {Promise<void>}
+ */
+export function landed(addr) {
+  const waiting = state.flights.get(addr);
+  return waiting ? new Promise((done) => { waiting.push(done); }) : Promise.resolve();
 }
 
 // ---- the refresh ---------------------------------------------------------------
@@ -2019,7 +2245,7 @@ export function _reset() {
   state.keys = null; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.bare = false; state.docs.clear(); state.memberAges.clear();
   state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.owed.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.claimDrops.clear(); state.claimsRefreshed = 0;
   state.owners.clear(); state.keySets.clear(); state.accountKeys.clear(); state.keyDrops = 0; state.feed = []; state.feedAt = null; state.draftsAt = null; state.rev = 0;
-  state.kept.clear(); state.edits.clear();
+  state.kept.clear(); state.edits.clear(); state.minted.clear(); state.held.clear(); state.flights.clear(); state.machine = null;
 }
 
 /** a deep, serializable picture of the model for the gate and the fake-port test */

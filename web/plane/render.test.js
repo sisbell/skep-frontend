@@ -408,7 +408,7 @@ test('an arrival in a text holding typed words is outlined on the lines the text
   const { doc, board, width, k } = typedDraft();
   try {
     const b = docBox(doc), view = { x: b.x + b.w / 2, y: b.y + b.h / 2, scale: 3 / LAYER.foldOf(REC.doc(doc)).fs };
-    const leap = GO.leapTo(doc, { pos: board, runs: [{ pos: board, width }], link: doc + '.0.2.1', how: 'leap' });
+    const leap = GO.leapTo(doc, { pos: board + k, runs: [{ pos: board + k, width }], link: doc + '.0.2.1', how: 'leap' });
     CAM.set(view);
     await leap;
     RENDER.draw();
@@ -416,15 +416,15 @@ test('an arrival in a text holding typed words is outlined on the lines the text
     assert.deepEqual(GO.arrivalMark()?.runs, [{ pos: board + k, width }], 'the run where the text shown holds it');
     assert.ok(rects(board + k).length === 1 && JSON.stringify(rects(board)) !== JSON.stringify(rects(board + k)), 'the two positions stand on different lines');
     assert.deepEqual(RENDER.stats.arrival.map((r) => [r.x, r.y, r.w, r.h, r.run]), rects(board + k).map((r) => [...r, 0]), 'outlined on the line the text shown holds it on');
-    // a landing naming the document whole: the block the text shown holds at its head, past the words typed there
+    // a landing naming the document whole: the block at the head of the text shown, the line typed there
     const leapAgain = GO.leapTo(doc, { pos: null, link: doc + '.0.2.1', how: 'leap' });
     CAM.set(view);
     await leapAgain;
     RENDER.draw();
-    const head = /** @type {import('../model/records.js').Block} */ (REC.blockIn(LAYER.shownOf(doc).blocks, 1 + k));
-    assert.equal(GO.arrivalMark()?.pos, 1 + k, 'its position where the text shown holds the head');
+    const head = /** @type {import('../model/records.js').Block} */ (REC.blockIn(LAYER.shownOf(doc).blocks, 1));
+    assert.deepEqual([GO.arrivalMark()?.pos, head.width], [1, k], 'its position the head of the text shown, the typed line');
     assert.ok(RENDER.stats.arrival.length === 1 && RENDER.stats.arrival[0].run === -1, 'one rect, the block\'s');
-    assert.deepEqual([RENDER.stats.arrival[0].x, RENDER.stats.arrival[0].y], [LAYER.foldBoxes(doc, head.pos, head.width)[0].rect.x, LAYER.foldBoxes(doc, head.pos, head.width)[0].rect.y], 'on the block at that head, its typed words apart');
+    assert.deepEqual([RENDER.stats.arrival[0].x, RENDER.stats.arrival[0].y], [LAYER.foldBoxes(doc, head.pos, head.width)[0].rect.x, LAYER.foldBoxes(doc, head.pos, head.width)[0].rect.y], 'on the block at that head');
   } finally { GO.endArrival(); REC._reset(); CAM.setViewport(1440, 900); globalThis.document = platform.document; globalThis.window = platform.window; }
 });
 
@@ -440,11 +440,11 @@ test('the walk\'s span in a text holding typed words is ringed on the lines the 
   try {
     const f = LAYER.foldOf(REC.doc(doc)), b = docBox(doc), c = f.columns[0];
     CAM.set({ x: b.x + c.x + c.w / 2, y: b.y + c.y + c.h / 3, scale: 12 / f.fs });
-    await WALK.focusTo(doc, board, true, true, null, true);
+    await WALK.focusTo(doc, board + k, true, true, null, true);
     LAYER.frame();
     const start = /** @type {import('../model/records.js').Block} */ (REC.blockAt(doc, board)).pos;
-    assert.ok(LAYER.isMounted(doc) && WALK.current()?.pos === start, 'its article stands, the walk on the second paragraph\'s span in the model\'s text');
-    const shown = /** @type {import('../model/records.js').Block} */ (LAYER.shownBlockOf(doc, start));
+    const shown = /** @type {import('../model/records.js').Block} */ (LAYER.blockAt(doc, board + k));
+    assert.ok(LAYER.isMounted(doc) && WALK.current()?.pos === shown.pos, 'its article stands, the walk on the second paragraph\'s span');
     assert.equal(shown.pos, start + k, 'the span where the text shown holds it');
     const lines = /** @type {Array<{x: number, y: number, w: number, h: number}>} */ (LAYER.lineBoxes(doc, shown.pos, shown.width));
     const x = Math.min(...lines.map((r) => r.x)), y = Math.min(...lines.map((r) => r.y));

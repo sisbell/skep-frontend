@@ -17,7 +17,7 @@
 // Both ends stand where the link's bytes stand now, never where its slot
 // stores them, each in the text the page shows of its document: LK's `runs`
 // already are, and the far end's `project` answer, which is the board's, is
-// carried there (T-LAYER's `shownRun`). A beam leaves the text at its span's
+// found there (T-LAYER's `fromBoard`). A beam leaves the text at its span's
 // own line, from the
 // right edge of the part of the block holding that line, past the sign the
 // column's edge holds level with it (`leaveAt`, `pastSigns`; foundations
@@ -350,8 +350,8 @@ function stretch(/** @type {CanvasRenderingContext2D} */ c2d, /** @type {Cubic} 
 
 /**
  * Where a beam's far end anchors in its mounted far article: the lines of
- * every stretch `project` places the far passage in (LK's `farRuns`), carried
- * into the text the page shows (T-LAYER's `shownRun`), each with its block; the
+ * every stretch `project` places the far passage in (LK's `farRuns`), found
+ * in the text the page shows (T-LAYER's `fromBoard`), each with its block; the
  * far article's first block for a whole-work end and for
  * one that floats, where its follow lands; null where nothing places it —
  * its projection not read, or refused — so it stands at the far document's
@@ -362,7 +362,7 @@ function stretch(/** @type {CanvasRenderingContext2D} */ c2d, /** @type {Cubic} 
  */
 function farAnchors(s, g) {
   if (s.farWhole || LK.floats(s)) { const b = g.first(s.farAt); return b ? [{ line: b, block: b, signs: [] }] : []; }
-  return s.farRuns ? anchorsOf(g, s.farAt, s.farRuns.map((r) => LAYER.shownRun(s.farAt, r))) : null;
+  return s.farRuns ? anchorsOf(g, s.farAt, s.farRuns.flatMap((r) => LAYER.fromBoard(s.farAt, r))) : null;
 }
 
 /**

@@ -145,8 +145,8 @@ function siteOf(at) {
   const f = WALK.current();
   if (!f || f.kind !== 'block' || f.pos == null || !LAYER.atReadingScale(f.addr)) return { text: null, el: null };
   const c = LAYER.caret(), landed = WALK.landedAt();
-  const pos = c && LAYER.caretInSpan(f.addr, f.pos) ? c.pos : LAYER.shownPos(f.addr, landed != null && landed >= f.pos ? landed : f.pos);
-  return { text: { addr: f.addr, pos, first: LAYER.shownPos(f.addr, f.pos) }, el: null };
+  const pos = c && LAYER.caretInSpan(f.addr, f.pos) ? c.pos : landed != null && landed >= f.pos ? landed : f.pos;
+  return { text: { addr: f.addr, pos, first: f.pos }, el: null };
 }
 
 /**

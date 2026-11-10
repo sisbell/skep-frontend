@@ -52,8 +52,10 @@ selection standing, Shift+← returns the caret and the platform's selection
 stands over K-8's span, never collapsed at the caret (`kept_span_extends`; D5
 K-70, K-77). With `ab` typed at a paragraph's start and the caret kept, ↓
 walks to a later span, and the block the platform draws lit is that span
-where the text shown holds it, two positions on (`lit_after_typing`; D3; D5
-§4 rule 2).
+where the text shown holds it, past `ab` (`lit_after_typing`; D3; D5
+§4 rule 2). With a line typed above a paragraph — text the board does not
+hold — the walk, the find and Back each land on the typed words, at both
+widths (`typed_lands`; the unsent-typing decision).
 
 The own draft is the seeded board's windowed draft of principal 1 (`OWN`,
 1340 bytes). The seed's staging draft (`STAGING`) holds every edition's
@@ -74,7 +76,7 @@ import re
 import time
 from collections import Counter
 
-from . import Result, WINDOW
+from . import DOC, Result, WINDOW
 from .wire import READ_PATHS, READ_ROWS, read_ops
 
 # the own draft: the seed's windowed draft W of principal 1 (`WINDOW[2]`), text the person may edit (issue #411)
@@ -440,7 +442,8 @@ def shift_replaces(ctx, doc, para):
         selected, pos, edits, stretch = w
         c = s['caret']
         return (s['selected'] == selected and bool(c) and c['live'] and c['addr'] == doc and c['pos'] == pos and s['sel'] is None
-                and s['platform']['collapsed'] and s['overlay'] is None and s['edits'] == edits and fold(stretch) in fold(s['text']))
+                and s['platform']['collapsed'] and s['overlay'] is None and [{k: e[k] for k in ('pos', 'width', 'text')} for e in s['edits']] == edits
+                and fold(stretch) in fold(s['text']))
     ok = bool(placed) and placed['live'] and placed['pos'] == c0 and len(steps) == 3 and all(held(s, w) for s, w in zip(steps, want))
     return {'ok': ok, 'c0': c0, 'para': {'pos': para['pos'], 'width': para['width']},
             'steps': [dict({k: s[k] for k in ('key', 'selected', 'caret', 'sel', 'platform', 'overlay', 'edits')}, held=held(s, w),
@@ -647,9 +650,9 @@ def lit_after_typing(ctx, doc, para):
     Enter placing the caret at its start, `ab` typed and Esc pressed — the caret kept, the walk on its span — then ↓,
     the walk's key, pressed until the walk stands on a later span of the draft; the walk's element, the ring's rule, the
     first positions the own draft's lit block parts name as the platform draws them, and the edits; and whether all of
-    it held: the walk on that later span by its position in the model's text, the ring drawn, and every lit block part
-    the block of the text shown holding that span — two positions on, past `ab` — at least one standing. The caret, the
-    selection and the edits are let go after, and the draft read again."""
+    it held: the walk on that later span by its position in the text shown — past `ab` — the ring drawn, and every lit
+    block part that same block, at least one standing. The caret, the selection and the edits are let go after, and the
+    draft read again."""
     ctx.leap(doc, para['pos'])
     walked, lit, ring, edits = None, [], None, []
     try:
@@ -670,9 +673,72 @@ def lit_after_typing(ctx, doc, para):
         ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), R = await import("./model/records.js"); H.dismiss(); S.clear(); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
         ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
     later = bool(walked) and walked['kind'] == 'block' and walked['addr'] == doc and walked['pos'] > para['pos']
-    want = walked['pos'] + 2 if later else None
+    want = walked['pos'] if later else None
     ok = later and ring is True and ''.join(e['text'] for e in edits) == 'ab' and len(lit) > 0 and all(p == want for p in lit)
     return {'ok': ok, 'para': {'pos': para['pos'], 'width': para['width']}, 'walked': walked, 'ring': ring, 'lit': lit, 'want': want, 'edits': edits}
+
+
+# the line `typed_lands` types above a paragraph: words no document of the seed holds
+TYPED_LINE = 'Quorvex typed here.'
+
+
+def typed_lands(ctx, doc, para, away):
+    """A TYPED DRAFT's WALK, FIND AND BACK LAND ON THE TYPED WORDS (the unsent-typing decision §1 (a), §2; foundations
+    §2.7): the walk landed on `para`, Enter placing the caret at its start, TYPED_LINE and a blank line typed — a line of
+    its own in the text shown, which the board does not hold — and Esc pressed. THE WALK: ↑ from the paragraph below
+    stands on the typed line, a stop of its own, its mirror item reading the typed words. FIND: Mod+F and the typed
+    line's first word find it there, outlined, and Esc leaves it selected. BACK: a LEAP to `away` and Mod+[ return to
+    the typed line, the walk on it and a line of it in the window. Nothing is sent: the edits are the page's own. The
+    caret, the selection, the find, the arrival and the edits are let go after, and the draft read again."""
+    ctx.leap(doc, para['pos'])
+    n = len(TYPED_LINE.encode('utf8'))
+    out = {'ok': False, 'para': {'pos': para['pos'], 'width': para['width']}}
+    try:
+        ctx.drv.key('Enter'); ctx.frames(2)
+        for ch in TYPED_LINE:
+            ctx.drv.key(' ' if ch == ' ' else ch)
+        ctx.drv.key('Enter'); ctx.drv.key('Enter'); ctx.frames(2)
+        ctx.drv.key('Escape'); ctx.settle(); ctx.frames(2)
+        blocks = ctx.js('(async () => (await import("./text/layer.js")).shownOf(%s).blocks.map((b) => ({pos: b.pos, width: b.width, text: b.text})))()' % json.dumps(doc))
+        line = next((b for b in blocks if b['text'] == TYPED_LINE), None)
+        below = next((b for b in blocks if line and b['pos'] == line['pos'] + line['width']), None)
+        out.update(line=line, below=below and {'pos': below['pos']}, edits=ctx.js('window.__skep.model.edits(%s).length' % json.dumps(doc)))
+        if not line or not below:
+            return out
+        # THE WALK: from the paragraph below, ↑ lands on the typed line; its mirror item reads the typed words
+        ctx.leap(doc, below['pos'])
+        ctx.drv.key('ArrowUp'); ctx.settle(); ctx.frames(2)
+        walked = ctx.js(WALKED)
+        item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
+        out.update(walked=walked, mirror=item[:120])
+        walk_ok = bool(walked) and walked['kind'] == 'block' and walked['addr'] == doc and walked['pos'] == line['pos'] and TYPED_LINE in item
+        # FIND: the typed line's first word is found in the text shown, at the typed line, and outlined there
+        ctx.drv.key('f', mods=('Meta',)); ctx.settle(); ctx.frames(2)
+        ctx.drv.ime(TYPED_LINE.split(' ')[0]); ctx.settle(); ctx.frames(3)
+        found = ctx.js('window.__skep.find.stands()') or {}
+        matches = found.get('matches') or []
+        outline = (ctx.js('window.__skep.arrivalAnchors()') or {}).get('outline')
+        ctx.esc(); ctx.settle(); ctx.frames(2)
+        sel = ctx.js('(async () => (await import("./overlays/selection.js")).selected())()')
+        out.update(matches=matches, outline=bool(outline), selected=sel)
+        word = len(TYPED_LINE.split(' ')[0].encode('utf8'))
+        find_ok = matches == [{'pos': line['pos'], 'width': word}] and bool(outline) and sel == {'addr': doc, 'pos': line['pos'], 'width': word}
+        ctx.js('(async () => (await import("./overlays/selection.js")).clear())()')
+        # BACK: away and back again, the return landing on the typed line
+        ctx.leap(doc, line['pos'])
+        ctx.leap(away, None)
+        ctx.drv.key('[', mods=('Meta',)); ctx.settle(); ctx.frames(3)
+        back = ctx.js(WALKED)
+        rects = ctx.js('window.__skep.spanRects(%s, %d, %d)' % (json.dumps(doc), line['pos'], n)) or []
+        vp = ctx.js('window.__skep.view.viewport()')
+        seen = [q for q in rects if q['x'] >= 0 and q['y'] >= 0 and q['x'] + q['w'] <= vp['VW'] and q['y'] + q['h'] <= vp['VH']]
+        out.update(back=back, line_rects=rects[:2], viewport=vp)
+        back_ok = bool(back) and back['kind'] == 'block' and back['addr'] == doc and back['pos'] == line['pos'] and len(seen) > 0
+        out.update(ok=walk_ok and find_ok and back_ok, walk_ok=walk_ok, find_ok=find_ok, back_ok=back_ok)
+    finally:
+        ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"), R = await import("./model/records.js"), G = await import("./nav/go.js"), N = await import("./nav/find.js"); if (N.isOpen()) await N.close(false); H.dismiss(); S.clear(); G.endArrival(); L.dropCaret(); R.clearEdits(%s); L.bump(); })()' % json.dumps(doc))
+        ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
+    return out
 
 
 def run(ctx):
@@ -870,7 +936,18 @@ def run(ctx):
     # the lit block is the walk's span where the text typed above it moved it (D3; D5 §4 rule 2; K-72)
     lit = lit_after_typing(ctx, OWN, target)
     figures['lit_after_typing'] = lit
-    r.check(lit['ok'], "with `ab` typed at the start of a paragraph of the own draft and the caret kept, ↓ walks to a later span and the block drawn lit is that span where the text shown holds it, two positions on past `ab` (D3; D5 §4 rule 2, K-72; issue #491)", lit)
+    r.check(lit['ok'], "with `ab` typed at the start of a paragraph of the own draft and the caret kept, ↓ walks to a later span and the block drawn lit is that span where the text shown holds it, past `ab` (D3; D5 §4 rule 2, K-72; issue #491)", lit)
+    # a typed draft's walk, find and Back land on the typed words, at the desktop width and at the narrow one (the
+    # unsent-typing decision; issues #518, #523, #526)
+    was = ctx.resize(*WIDE)
+    try:
+        for w, h in (WIDE, NARROW):
+            ctx.resize(w, h); ctx.settle(10); ctx.frames(3)
+            lands = typed_lands(ctx, OWN, target, DOC)
+            figures['typed_lands_w%d' % w] = lands
+            r.check(lands['ok'], f"at {w} px, with a line typed above a paragraph of the own draft — text the board does not hold — the walk's ↑ from that paragraph lands on the typed line and its mirror item reads the typed words, the find finds its first word there, outlined and left selected, and Back from another place lands on the typed line with a line of it in the window (the unsent-typing decision §1 (a), §2; issues #518, #523, #526)", lands)
+    finally:
+        ctx.resize(*was); ctx.frames(3)
 
     # ---- (e) B3-S13: the swallow's draft form at a span with no caret (K-72) ---------------------------------------------
     ctx.leap(OWN, target['pos'])

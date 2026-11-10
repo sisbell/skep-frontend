@@ -4,15 +4,18 @@
 // image moving together and the derivation named; a row that cannot be
 // applied exactly stopping the apply at that row, named with why; the record
 // handed in never changed; the page-local edits a caret makes applied by the
-// same kernel and a position carried across them both ways; a span of the
-// typed text split into what the delivered text holds and what the edits made;
+// same kernel, every byte of the typed text named by identity — the delivered
+// text's by its permanent address, an edit's by the identity handed in for it
+// — and by where it came from, a put-back placing removed bytes again as they
+// were; a span of the typed text split into what the delivered text holds and
+// what the edits made, and a stretch of the delivered text found in it;
 // a past state's record from an `/op-at` delivery; and the character
 // boundaries and the word stops about a position, the stops macOS's own (FP-6,
 // FP-7, FP-14).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyHeld, applyEdits, toShown, toBase, spanRuns, recordAt, boundaries, wordStop } from './derive.js';
-import { deriveBlocks, textOf } from './records.js';
+import { applyHeld, applyEdits, sourceRuns, fromBase, recordAt, boundaries, wordStop } from './derive.js';
+import { deriveBlocks, textOf, identityIn, placedIn, pageSpace } from './records.js';
 import { vSpan } from './address.js';
 import { byteLength } from '../util.js';
 
@@ -98,50 +101,84 @@ test('a row that cannot be applied exactly stops the apply at that row and is na
   assert.equal(whys({ op: 'insert', at: at(1), values: 'x' }), 'frame', 'malformed');
 });
 
-test('the page\'s own edits ride the same kernel: each its positions in the text as it stands after the edits before it, an edit outside the text stopping the apply named by its index; a position is carried into the typed text and back', () => {
+test('the page\'s own edits ride the same kernel: each its positions in the text as it stands after the edits before it, an edit outside the text stopping the apply named by its index; the record names where every byte came from', () => {
   const d = docOf(D, TEXT), was = picture(d);
   /** @type {import('./records.js').Edit[]} */
-  const edits = [{ pos: 7, width: 0, text: 'new ' }, { pos: 1, width: 6, text: '' }, { pos: 12, width: 5, text: 'gamma' }];
+  const edits = [{ pos: 7, width: 0, text: 'new ', page: 1 }, { pos: 1, width: 6, text: '' }, { pos: 12, width: 5, text: 'gamma', page: 5 }];
   const out = applyEdits(d, edits);
   assert.equal(text(out.doc), 'new beta.\n\ngamma delta.\n', 'inserted, the head removed, five positions replaced');
-  assert.deepEqual([out.applied, out.stopped, out.doc.derived], [3, null, { from: D, rows: [], edits: 3, at: null }]);
+  assert.deepEqual([out.applied, out.stopped, out.doc.derived?.from, out.doc.derived?.edits], [3, null, D, 3]);
+  assert.deepEqual(out.doc.derived?.source, [{ pos: 1, width: 4, prefix: 'page', ordinal: 1 }, { pos: 5, width: 7, prefix: 'base', ordinal: 7 }, { pos: 12, width: 5, prefix: 'page', ordinal: 5 }, { pos: 17, width: 8, prefix: 'base', ordinal: 19 }], 'every byte by where it came from: the delivered text\'s position, or the page\'s ordinal for a byte an edit made');
   assert.equal(picture(d), was, 'the record handed in unchanged');
   const stopped = applyEdits(d, [{ pos: 1, width: 0, text: 'a' }, { pos: 99, width: 0, text: 'b' }]);
   assert.deepEqual([stopped.applied, stopped.stopped, text(stopped.doc)], [1, { index: 1, why: 'outside' }, 'a' + TEXT]);
-  const one = [edits[0]];
-  assert.deepEqual([toShown(one, 3), toShown(one, 7), toShown(one, 20)], [3, 11, 24], 'a position before the insert stands; at it and after it moves by the bytes added');
-  assert.deepEqual([toBase(one, 3), toBase(one, 11), toBase(one, 9), toBase(one, 24)], [3, 7, 7, 20], 'carried back: one inside the inserted bytes stands at the edit\'s place');
-  const cut = [edits[1]];
-  assert.deepEqual([toShown(cut, 1), toShown(cut, 4), toShown(cut, 7), toBase(cut, 1), toBase(cut, 5)], [1, 1, 1, 7, 11], 'across a removal: a position inside it stands at the cut, one after it moves up; carried back, the cut\'s place is the position after the bytes removed');
-  for (const p of [1, 5, 7, 9, 14, 16, 19, 27]) assert.equal(toBase(edits, toShown(edits, p)), p < 7 ? 7 : p >= 14 && p < 19 ? 14 : p, `${p}: carried there and back — a position inside a removed stretch lands after it, one inside a replaced stretch at its start`);
+});
+
+test('every byte of the typed text has an identity that holds through insertion, deletion and moves: a delivered byte its permanent address, a byte an edit made the identity handed in for it — the page\'s own space where none is — found again wherever the edits since moved it', () => {
+  const d = docOf(D, TEXT), own = pageSpace(D);
+  /** @type {import('./records.js').Edit[]} */
+  const typed = [{ pos: 7, width: 0, text: 'new ', page: 1 }];
+  const one = applyEdits(d, typed).doc;
+  assert.deepEqual(identityIn(one.image, 5, 8), [{ prefix: D + '.0.1', ordinal: 5, width: 2 }, { prefix: own, ordinal: 1, width: 4 }, { prefix: D + '.0.1', ordinal: 7, width: 2 }], 'a span across typed words is named whole: the delivered bytes either side, the page\'s own between');
+  const word = identityIn(one.image, 7, 3);
+  assert.deepEqual(word, [{ prefix: own, ordinal: 1, width: 3 }], '"new", by the page\'s identity');
+  // an insertion before it, a deletion around it — the byte before it and the byte after it — and the whole typed word still found by its identity
+  const moved = applyEdits(d, [...typed, { pos: 1, width: 0, text: 'ab', page: 5 }, { pos: 8, width: 1, text: '' }, { pos: 11, width: 1, text: '' }]).doc;
+  assert.equal(text(moved), 'abAlphanewbeta.\n\nGamma delta.\n');
+  assert.deepEqual(placedIn(moved.image, word), [{ pos: 8, width: 3 }], 'two positions on for the insertion, one back for the deletion before it: the same bytes');
+  assert.deepEqual(placedIn(moved.image, [{ prefix: own, ordinal: 4, width: 1 }]), [], 'the typed byte the deletion took stands nowhere');
+  // minted: the caller hands the board's addresses in for the page's ordinals, and the same bytes are named by them
+  const minted = applyEdits(d, typed, (page, width) => [{ prefix: D + '.0.1', ordinal: 100 + page, width }]).doc;
+  assert.deepEqual(identityIn(minted.image, 7, 4), [{ prefix: D + '.0.1', ordinal: 101, width: 4 }], 'after its ack a typed byte is named by its I-address');
+  assert.deepEqual(minted.derived?.source, one.derived?.source, 'and where it came from stands: the page made it');
+});
+
+test('a put-back places the bytes an earlier edit removed again as they were — their text, their identity and where they came from — all of them or a stretch of them, and one of bytes no edit removed stops the apply', () => {
+  const d = docOf(D, TEXT), base = applyEdits(d, []).doc;
+  /** @type {import('./records.js').Edit[]} */
+  const cut = [{ pos: 1, width: 6, text: '' }];
+  const out = applyEdits(d, cut);
+  assert.deepEqual([text(out.doc), out.removed], ['beta.\n\nGamma delta.\n', [[{ prefix: D + '.0.1', ordinal: 1, width: 6 }]]], 'what the edit removed, by identity');
+  const back = applyEdits(d, [...cut, { pos: 1, width: 0, text: '', back: { of: 0, from: 0, width: 6 } }]).doc;
+  assert.deepEqual([text(back), back.image, back.derived?.source], [TEXT, base.image, base.derived?.source], 'put back whole: the text, its image and its source as before the removal');
+  const part = applyEdits(d, [...cut, { pos: 1, width: 0, text: '', back: { of: 0, from: 2, width: 3 } }]).doc;
+  assert.deepEqual([text(part), identityIn(part.image, 1, 3)], ['phabeta.\n\nGamma delta.\n', [{ prefix: D + '.0.1', ordinal: 3, width: 3 }]], 'a stretch of them: the same bytes');
+  // a typed word removed and put back keeps the page's identity for it
+  const typed = applyEdits(d, [{ pos: 1, width: 0, text: 'xy', page: 1 }, { pos: 1, width: 2, text: '' }, { pos: 1, width: 0, text: '', back: { of: 1, from: 0, width: 2 } }]).doc;
+  assert.deepEqual([text(typed), identityIn(typed.image, 1, 2), sourceRuns(typed, 1, 2)], ['xy' + TEXT, [{ prefix: pageSpace(D), ordinal: 1, width: 2 }], [{ pos: 1, width: 2, base: null, page: 1 }]]);
+  const none = applyEdits(d, [{ pos: 1, width: 0, text: '', back: { of: 0, from: 0, width: 2 } }]);
+  assert.deepEqual([none.applied, none.stopped], [0, { index: 0, why: 'source' }], 'no edit removed them: stopped, named by its index');
 });
 
 test('a span of the typed text splits into runs in the text\'s order: delivered bytes keep their positions there and new bytes name none, a run moved by the edits before it, never read by the span\'s two ends', () => {
-  /** @type {import('./records.js').Edit[]} */
-  const insert = [{ pos: 7, width: 0, text: 'new ' }];
-  assert.deepEqual(spanRuns([], 3, 5), [{ pos: 3, width: 5, base: 3 }], 'no edits: the span itself');
-  assert.deepEqual(spanRuns(insert, 3, 2), [{ pos: 3, width: 2, base: 3 }], 'before the insert: where it stood');
-  assert.deepEqual(spanRuns(insert, 12, 3), [{ pos: 12, width: 3, base: 8 }], 'after the insert: moved back by the bytes added');
-  assert.deepEqual(spanRuns(insert, 8, 2), [{ pos: 8, width: 2, base: null }], 'inside the insert: new, and no position of the delivered text');
-  assert.deepEqual(spanRuns(insert, 1, 20), [{ pos: 1, width: 6, base: 1 }, { pos: 7, width: 4, base: null }, { pos: 11, width: 10, base: 7 }], 'across it: the bytes either side and the new bytes between');
-  assert.deepEqual(spanRuns([{ pos: 5, width: 2, text: 'xyz' }], 4, 5), [{ pos: 4, width: 1, base: 4 }, { pos: 5, width: 3, base: null }, { pos: 8, width: 1, base: 7 }], 'a replacement: the new bytes alone are new, the bytes it took out named by no run');
-  assert.deepEqual(spanRuns([{ pos: 5, width: 3, text: '' }], 3, 5), [{ pos: 3, width: 2, base: 3 }, { pos: 5, width: 3, base: 8 }], 'a removal inside the span keeps it two runs: the two ends would take in the bytes removed');
-  assert.deepEqual(spanRuns([{ pos: 3, width: 0, text: 'é' }], 3, 3), [{ pos: 3, width: 2, base: null }, { pos: 5, width: 1, base: 3 }], 'bytes, not characters');
-  assert.deepEqual(spanRuns(insert, 3, 0), [], 'no width: no run');
+  const d = docOf(D, TEXT);
+  const over = (/** @type {import('./records.js').Edit[]} */ edits) => applyEdits(d, edits).doc;
+  const insert = over([{ pos: 7, width: 0, text: 'new ', page: 1 }]);
+  assert.deepEqual(sourceRuns(d, 3, 5), [{ pos: 3, width: 5, base: 3, page: null }], 'no edits: the span itself');
+  assert.deepEqual(sourceRuns(insert, 3, 2), [{ pos: 3, width: 2, base: 3, page: null }], 'before the insert: where it stood');
+  assert.deepEqual(sourceRuns(insert, 12, 3), [{ pos: 12, width: 3, base: 8, page: null }], 'after the insert: moved back by the bytes added');
+  assert.deepEqual(sourceRuns(insert, 8, 2), [{ pos: 8, width: 2, base: null, page: 2 }], 'inside the insert: new, and no position of the delivered text');
+  assert.deepEqual(sourceRuns(insert, 1, 20), [{ pos: 1, width: 6, base: 1, page: null }, { pos: 7, width: 4, base: null, page: 1 }, { pos: 11, width: 10, base: 7, page: null }], 'across it: the bytes either side and the new bytes between');
+  assert.deepEqual(sourceRuns(over([{ pos: 5, width: 2, text: 'xyz', page: 1 }]), 4, 5), [{ pos: 4, width: 1, base: 4, page: null }, { pos: 5, width: 3, base: null, page: 1 }, { pos: 8, width: 1, base: 7, page: null }], 'a replacement: the new bytes alone are new, the bytes it took out named by no run');
+  assert.deepEqual(sourceRuns(over([{ pos: 5, width: 3, text: '' }]), 3, 5), [{ pos: 3, width: 2, base: 3, page: null }, { pos: 5, width: 3, base: 8, page: null }], 'a removal inside the span keeps it two runs: the two ends would take in the bytes removed');
+  assert.deepEqual(sourceRuns(over([{ pos: 3, width: 0, text: 'é', page: 1 }]), 3, 3), [{ pos: 3, width: 2, base: null, page: 1 }, { pos: 5, width: 1, base: 3, page: null }], 'bytes, not characters');
+  assert.deepEqual(sourceRuns(insert, 3, 0), [], 'no width: no run');
 });
 
-test('runs join only where they continue each other in both texts, and each delivered run stands at `toBase` of its first position, a typed word erased again leaving no seam', () => {
-  /** @type {import('./records.js').Edit[]} */
-  const typed = [{ pos: 1, width: 0, text: 'a' }, { pos: 2, width: 0, text: 'b' }];
-  assert.deepEqual(spanRuns(typed, 1, 4), [{ pos: 1, width: 2, base: null }, { pos: 3, width: 2, base: 1 }], 'two keys typed side by side: one new run');
-  assert.deepEqual(spanRuns([{ pos: 5, width: 0, text: 'ab' }, { pos: 5, width: 2, text: '' }], 3, 5), [{ pos: 3, width: 5, base: 3 }], 'typed and erased: the delivered bytes one run again');
-  /** @type {import('./records.js').Edit[]} */
-  const edits = [{ pos: 7, width: 0, text: 'new ' }, { pos: 1, width: 6, text: '' }, { pos: 12, width: 5, text: 'gamma' }, { pos: 3, width: 1, text: 'XY' }];
-  const runs = spanRuns(edits, 1, 24);
-  assert.equal(runs.reduce((n, r) => n + r.width, 0), 24, 'the runs cover the span');
+test('runs join only where they continue each other in both texts, a typed word erased again leaving no seam; and a stretch of the delivered text is found in the typed text wherever the edits left it standing', () => {
+  const d = docOf(D, TEXT);
+  const over = (/** @type {import('./records.js').Edit[]} */ edits) => applyEdits(d, edits).doc;
+  assert.deepEqual(sourceRuns(over([{ pos: 1, width: 0, text: 'a', page: 1 }, { pos: 2, width: 0, text: 'b', page: 2 }]), 1, 4), [{ pos: 1, width: 2, base: null, page: 1 }, { pos: 3, width: 2, base: 1, page: null }], 'two keys typed side by side: one new run');
+  assert.deepEqual(sourceRuns(over([{ pos: 5, width: 0, text: 'ab', page: 1 }, { pos: 5, width: 2, text: '' }]), 3, 5), [{ pos: 3, width: 5, base: 3, page: null }], 'typed and erased: the delivered bytes one run again');
+  const edited = over([{ pos: 7, width: 0, text: 'new ', page: 1 }, { pos: 1, width: 6, text: '' }, { pos: 12, width: 5, text: 'gamma', page: 5 }, { pos: 3, width: 1, text: 'XY', page: 10 }]);
+  const runs = sourceRuns(edited, 1, 25);
+  assert.equal(runs.reduce((n, r) => n + r.width, 0), 25, 'the runs cover the span');
   assert.ok(runs.every((r, i) => i === 0 || r.pos === runs[i - 1].pos + runs[i - 1].width), 'in order, without a gap');
-  for (const r of runs) if (r.base != null) assert.equal(r.base, toBase(edits, r.pos), `the run at ${r.pos} stands where the position is carried back`);
+  for (const r of runs) if (r.base != null) assert.deepEqual(fromBase(edited, r.base, r.width), [{ pos: r.pos, width: r.width }], `the run at ${r.pos} is the delivered stretch at ${r.base}, found back where it stands`);
   assert.ok(runs.some((r) => r.base == null) && runs.some((r) => r.base != null));
+  assert.deepEqual(fromBase(d, 3, 5), [{ pos: 3, width: 5 }], 'a record no edit derived: the stretch itself');
+  assert.deepEqual(fromBase(over([{ pos: 9, width: 0, text: '--', page: 1 }]), 7, 5), [{ pos: 7, width: 2 }, { pos: 11, width: 3 }], 'cut where words were typed inside it: two stretches');
+  assert.deepEqual(fromBase(over([{ pos: 1, width: 6, text: '' }]), 2, 3), [], 'removed whole: none');
 });
 
 test('a past state\'s record is derived from an `/op-at` delivery: the document\'s, at the board position read, its blocks derived, no image and no links read', () => {

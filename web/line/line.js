@@ -52,8 +52,9 @@
 // the line names a document whose text the reader may read, at every scale it
 // names it at (FP-26): where a position is named it marks the position, or,
 // while the walk keeps its document in view with the view's centre off its
-// region (N-WALK's `kept`), the view's window over it (`windowOver`), both in
-// the model's text, the extent's, open at whichever end the view has run
+// region (N-WALK's `kept`), the view's window over it (`windowOver`), its
+// length, the position and the window all the text shown's (T-LAYER's
+// `shownOf`), open at whichever end the view has run
 // past; below the document's reading
 // scale it stands bare, marking neither; where an arrival in several runs
 // stands in that document, each run is an outlined extent along it, the one
@@ -752,7 +753,7 @@ function keptSaid() {
  * @property {number | null} member the version member pinned
  * @property {boolean} whole the whole board is in view, at WHOLE BOARD's clamp
  * @property {boolean} strip the position strip stands: the line names a document whose text the reader may read (FP-26), the strip bare below the document's reading scale; false where none is named or a read refused it (FP-29)
- * @property {import('../plane/layout.js').Window | null} window the view's window over the document named, in the positions of the model's text the strip's mark and extent are in (`windowOver`), the strip's mark where the walk keeps it in view off the view's centre (N-WALK's `kept`); null where it is not kept, no position is named, or no line in view names one
+ * @property {import('../plane/layout.js').Window | null} window the view's window over the document named, in the positions of the text shown the strip's mark and extent are in (`windowOver`), the strip's mark where the walk keeps it in view off the view's centre (N-WALK's `kept`); null where it is not kept, no position is named, or no line in view names one
  */
 
 /** the address the display names: the LEAP box's prefill, so the box opens holding what the line shows (K-30) */
@@ -831,7 +832,7 @@ export function addressDisplay() {
     // a document a read refused — withheld, a covered one among them, or nothing the board will say of it — holds no text to stand a strip or name a position in
     const readable = !REC.doc(f.addr).refused;
     const pos = readable && LAYER.atReadingScale(f.addr) ? WALK.landedAt() ?? f.pos ?? 1 : null;
-    const widest = Math.max(1, REC.doc(f.addr).extent || 0, pos || 0);
+    const widest = Math.max(1, LAYER.shownOf(f.addr).extent || 0, pos || 0);
     const win = pos != null && WALK.kept() ? windowOver(f.addr) : null;
     return { text: place + positionWords(pos), place, label: LAYER.leadRuns(REC.doc(f.addr)), slot: positionWords(widest).length, addr: f.addr, doc: f.addr, pos, member: memberOf(f.addr), whole: false, strip: readable, window: win };
   }
@@ -841,11 +842,8 @@ export function addressDisplay() {
   return { text, place: text, label: [], slot: 0, addr: acct || '1', doc: null, pos: null, member: null, whole: false, strip: false, window: null };
 }
 
-/** the view's window over a document (T-LAYER's `windowIn`), its ends carried from the text the page shows back into the model's text, unclamped: a window of a text held in part may name positions estimated past what is held */
-function windowOver(/** @type {string} */ addr) {
-  const w = LAYER.windowIn(addr);
-  return w && { ...w, from: LAYER.boardPos(addr, w.from), to: LAYER.boardPos(addr, w.to) };
-}
+/** the view's window over a document (T-LAYER's `windowIn`), in the text the page shows of it, unclamped: a window of a text held in part may name positions estimated past what is held */
+const windowOver = (/** @type {string} */ addr) => LAYER.windowIn(addr);
 
 /** the sign-in act, the guest's and the death arm's, among the line's acts: its id names it across the line's rebuilds, as Back's does, so the session's face standing at it finds it again (O-HOST's anchor) */
 const SIGN_IN = `<button id="line-signin" data-act="signin">${esc(t('F.sign-in'))}</button>`;
@@ -1240,7 +1238,7 @@ function slot(a, at) {
  */
 function strip(a) {
   if (!a.strip || !a.doc) return '<span class="strip none" aria-hidden="true"></span>';
-  const extent = REC.doc(a.doc).extent || 0;
+  const extent = LAYER.shownOf(a.doc).extent || 0;
   /** a position's place along the strip, 0 to 1 */
   const along = (/** @type {number} */ p) => (extent ? Math.max(0, Math.min(1, (p - 1) / extent)) : 0);
   const pct = (/** @type {number} */ u) => (u * 100).toFixed(1) + '%';

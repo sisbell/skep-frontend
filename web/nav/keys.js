@@ -53,8 +53,8 @@
 // character out, Enter and Shift+Enter put a new line in, Tab a tab
 // character, a printable key its character — each a change of the text
 // shown alone, nothing composed and nothing sent (T-LAYER; FP-14) — and the
-// walk then stands on the span the caret is in (N-WALK's `followCaret`;
-// B3-S13), so the slot chords act at the caret's span. A selection the screen
+// walk then stands on the block of the text shown the caret is in (N-WALK's
+// `followCaret`; B3-S13), so the slot chords act on that block. A selection the screen
 // draws in the caret's own text (`selectedAtCaret`) ends with any of those
 // keys but Shift's, its card with it: each that puts text in or takes it out
 // replaces the selection, the key's text — none for Backspace and Delete —
@@ -100,8 +100,11 @@
 // about the view's centre and re-take the focus (K-11), Mod+Shift+P shows the
 // one line's strip (K-23), and the selection's slot chords (K-45 … K-52,
 // K-100) and K-8's select-by-span act from the plane and from a standing
-// overlay alike. The inert slots' chords — annotate's, quote's and "link
-// to…"'s, Mod+K (K-45, K-46, K-100) — give their slot's reason (P47): at the
+// overlay alike. The chords of the slots that send a name for characters —
+// annotate's, quote's and "link to…"'s, Mod+K (K-45, K-46, K-100) — take
+// effect once the board holds the words, and under a hold stand inert with
+// the row rule's reason (O-SELECTION's `send`); what then opens gives the
+// slot's reason (P47): at the
 // slot of the acts card drawn at the span in focus — the selection, else the
 // walk's focused span, nothing selected (O-SELECTION's `inertChord`) — else,
 // and over the scene, as its hint (`inertSaid`).
@@ -901,7 +904,7 @@ async function activateFocus(byKey) {
   if (f.kind === 'mark') { await MARKLIST.open(f.addr, byKey); return; }
   if (f.kind === 'document') { await GO.leapTo(f.addr, { how: 'key', byKey, site: { span: { addr: f.addr, pos: 1 } } }); return; }
   if (f.kind === 'block' && f.pos != null) {
-    const b = REC.blockByPos(f.addr, f.pos);
+    const b = LAYER.blockByPos(f.addr, f.pos);
     if (b && b.kind === 'withheld') FACES.withheldRun(f.addr, b, (home, byKey) => GO.leapTo(home, { how: 'leap', byKey, site: { span: { addr: f.addr, pos: b.pos, width: b.width } } }));
     else if (LAYER.editable(f.addr)) { SEL.clear(); LAYER.caretToSpan(f.addr, f.pos); }
     else SEL.select(f.addr, f.pos);

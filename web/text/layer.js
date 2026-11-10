@@ -55,7 +55,7 @@
 // an article left with such lines alone stands outside the mount band
 // (`isMounted` false). What assistive technology receives is the document
 // itself, never what stands: the articles are hidden from it, the ARIA
-// mirror's items being made from the model (S1 Q7). An article goes stale
+// mirror's items being made from the text shown (S1 Q7). An article goes stale
 // where its run, its revision, the view revision or its fold changed
 // (`wentStale`), and is rebuilt in its place; the walk's focused document is
 // the one residue document of its cell that mounts. While a press stands on
@@ -163,9 +163,8 @@
 // holds of its origin (`originOwner`, `clauseOf`), the article made again
 // as the origin's edition claims and the reads of them arrive, fail and go
 // (M-REC's revision); each frame marks a standing article's blocks in place
-// by T-ARTICLE's one rule (`blockMarks`) for the selection from O-SELECTION —
-// a span of the text shown — and the walk's focus from N-WALK, a span of the
-// model's text carried into the text the article shows (`carriedFocus`), so
+// by T-ARTICLE's one rule (`blockMarks`) for the selection from O-SELECTION
+// and the walk's focus from N-WALK, each a span of the text shown, so
 // a change of the selection or the focus rebuilds no article and the
 // platform's selection stands as the person left it (foundations §2.1; D5
 // §2); its symbols are marked heavier, in place, where every link one stands
@@ -368,17 +367,25 @@
 // derives from the model's — its delivered runs with the page-local edits
 // applied (`shownDoc`; K-72) — mounted, folded and measured in the model's
 // record's place and set again as the edits move, the model's own record
-// standing as the board served it; the ARIA mirror reads the model. A link's
-// end stands in that text where its bytes stand, and none stands on the
-// words the page made (LK's `shown`). Every
-// position the fold places or answers is one of the text shown (`posAt`,
-// `centreOf`, `frameOf`), and a position of the model's text — the walk's —
-// crosses into it and back through one pair (`shownPos`, `basePos`), a link's
-// end, standing on bytes the model's text holds, back through `boardPos`, and
-// a run of the model's text — an arrival's, a link's far end's — into it
-// whole through `shownRun`; the walk's span is carried into the text shown as
-// the block holding it there (`shownBlockOf`, `carriedFocus`), and what a view
-// reads is read of that text (`readAt`). The
+// standing as the board served it. It is the one text every part of the page
+// follows there: every position the fold places or answers, the walk's, the
+// selection's, the caret's and an arrival's is one of it, computed to draw
+// and to reach, and what holds a place across the person's edits holds it by
+// the identity of its bytes, read through that text's image (`shownIdentity`,
+// `placedShown`, `firstStanding`) — a byte the board holds by its permanent
+// address, a byte the page made by the page's own until the board mints it
+// (M-REC's `pageIds`). The carrier's views: its blocks (`blockAt`,
+// `blockByPos`, `grainAt`); a span split by what the page knows of its bytes
+// (`shownRuns`) — what the model's text holds, at its position there, the one
+// position the board is asked by, and what the page made, minted or not
+// (`madeHere`, `unminted`); a stretch the board placed by its own positions
+// found in it (`fromBoard`); the page's own record of what its edits removed
+// and where (`removals`, `removedOf`), which a put-back places again by
+// identity as one step (`putBack`); and what a hold keeps from the board, read
+// from the held lines alone (`holding`, `heldIn`). A link's end stands in that
+// text where its bytes stand, on a byte the page made once the board has
+// minted it and never before (LK's `shown`); what a view reads is read of
+// that text (`readAt`). The
 // caret (D5 K-70, K-72, K-76, K-77; D6 BM-4, BM-52, BM-54, BM-70, BM-75): the
 // page's own, one at a time, in text the person may edit — a draft under the
 // session's account, by its address alone, at reading scale (`editable`) — a
@@ -401,7 +408,8 @@
 // span returns (`returnCaret`; N-KEYS') — its span the one the walk stands
 // on at its position, by T-SPAN's rule: in white space alone the span before
 // it, or the first where none stands before it (`caretSpan`, `caretInSpan`;
-// D5 §4 rule 20); whether a line of its span, carried into the text shown,
+// D5 §4 rule 20), a block of the text shown, the one a slot chord acts on
+// (O-SELECTION's); whether a line of its span
 // stands in the visible view read here for N-WALK's hold on it
 // (`spanInView`); its line stands while it holds the caret (`heldParts`), the
 // platform's selection is collapsed at it as the page sets it — save by a
@@ -430,7 +438,7 @@ import { CORNER, HOLD, COL, ADDRESS, cornerWidth } from '../plane/register.js';
 import { holdTop, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords } from '../plane/labels.js';
 import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerWords, keptHTML, statementHTML, keptWord, keptStatement, blockMarks, symbolLit, editionClause, copyText, firstLineOf, isPublished, statedChain } from './article.js';
 import { farShort, whyOf } from '../beams/held.js';
-import { applyEdits, toBase, toShown, boundaries, wordStop } from '../model/derive.js';
+import { applyEdits, sourceRuns, fromBase, boundaries, wordStop } from '../model/derive.js';
 import { homeOf, documentOf, memberOf, versionAddress, accountOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, elementIn, CHROME } from './span.js';
 import { esc, byteLength } from '../util.js';
@@ -726,7 +734,7 @@ let caret_ = null;
 let caretOwed = null;
 /** @type {Set<string>} the drafts whose kept word's statement stands open in their corner (`openStatement`) */
 const openStatements = new Set();
-/** @type {Map<string, {key: string, doc: Doc}>} the record derived from each draft's delivered runs and its page-local edits, by document, as last made (`shownDoc`) */
+/** @type {Map<string, {key: string, doc: Doc, removed: Array<ISpan[] | null>}>} the record derived from each draft's delivered runs and its page-local edits, with what each edit removed, by document, as last made (`shownDoc`) */
 const shownCache = new Map();
 /** the box an address stands in: its document's, which every version of it shares */
 const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
@@ -868,32 +876,45 @@ export function refaced() { widths.clear(); measured.clear(); folds.clear(); mar
 /**
  * The record the page shows of a document (see the head): the model's, or,
  * where the draft holds page-local edits, the record M-DERIVE derives from its
- * delivered runs with them applied (`applyEdits`) — made again where the
- * model's record or the edits moved, the same object while neither has, so
- * what was made from it is read against one record. A record already derived
- * answers itself.
+ * delivered runs with them applied (`applyEdits`), every byte the page made
+ * named as the model names it (M-REC's `pageIds`) — made again where the
+ * model's record, the edits or what the board minted of them moved, the same
+ * object while none has, so what was made from it is read against one record.
+ * A record already derived answers itself.
  * @param {Doc} d
  * @returns {Doc}
  */
 function shownDoc(d) {
   if (d.derived) return d;
-  const edits = REC.edits(d.addr);
-  if (!edits.length) { shownCache.delete(d.addr); return d; }
-  const key = `${d.rev}:${d.from}:${d.to}:${REC.editRev(d.addr)}`, c = shownCache.get(d.addr);
-  if (c && c.key === key) return c.doc;
-  const doc = applyEdits(d, edits).doc;
-  shownCache.set(d.addr, { key, doc });
-  return doc;
+  const c = derivedOf(d);
+  return c ? c.doc : d;
 }
+
+/** the record derived from a draft's delivered runs and its page-local edits with what each edit removed (`shownDoc`, `removedBy`), as last made; null where the draft holds no edit */
+function derivedOf(/** @type {Doc} */ d) {
+  const edits = REC.edits(d.addr);
+  if (!edits.length) { shownCache.delete(d.addr); return null; }
+  const key = `${d.rev}:${d.from}:${d.to}:${REC.editRev(d.addr)}`, c = shownCache.get(d.addr);
+  if (c && c.key === key) return c;
+  const out = applyEdits(d, edits, (page, width) => REC.pageIds(d.addr, page, width));
+  const made = { key, doc: out.doc, removed: out.removed };
+  shownCache.set(d.addr, made);
+  return made;
+}
+
+/** what each of a draft's page-local edits removed from its text, by the edit's index, as bytes by identity (M-DERIVE's `applyEdits`); none where it holds no edit */
+const removedBy = (/** @type {Doc} */ d) => { const c = d.derived ? null : derivedOf(d); return c ? c.removed : []; };
 
 /** the record the page shows of a document by its address (`shownDoc`): the gate's and the tests' reading of a draft's typed text */
 export const shownOf = (/** @type {string} */ addr) => shownDoc(REC.doc(addr));
 
 /**
  * A stretch of the text the page shows of a document by identity (M-REC's
- * `identityIn`, through that text's image): what a span of it is left by and
- * returned to. None where the stretch holds bytes the page made, which carry
- * no identity, or the model holds no record of the document.
+ * `identityIn`, through that text's image): what a span of it is held by —
+ * left by and returned to, carried through the person's edits — a byte the
+ * page made named by the page's own identity until the board mints it. None
+ * where that image does not cover the stretch — the delivered text's image
+ * not read yet — or the model holds no record of the document.
  * @param {string} addr
  * @param {number} pos a position of the text shown (`shownOf`)
  * @param {number} width its positions
@@ -940,99 +961,246 @@ export function firstWords(addr, pos, width) {
   return !words || fits(words) ? words : cutWords(words, fits) || '';
 }
 
-/** the page-local edits a record derived from a draft's typed text was made with (M-REC's `edits`; M-DERIVE's `applyEdits`); none for any other record */
-const editsOf = (/** @type {Doc} */ d) => (d.derived && d.derived.edits ? REC.edits(d.addr) : []);
+/** the block of the text the page shows of a document (`shownOf`) holding a position of it; null where it holds none there, or the model no record of the document */
+export const blockAt = (/** @type {string} */ addr, /** @type {number} */ pos) => (REC.has(addr) ? REC.blockIn(shownOf(addr).blocks, pos) : null);
+
+/** the block of the text the page shows of a document (`shownOf`) whose first position is `pos`; null where none opens there */
+export const blockByPos = (/** @type {string} */ addr, /** @type {number} */ pos) => (REC.has(addr) ? shownOf(addr).blocks.find((b) => b.pos === pos) || null : null);
 
 /**
- * The block of a record the page shows holding a position of the model's
- * text: in a record derived from the typed text, the position as the edits
- * carried it (M-DERIVE's `toShown`), clamped to the text the record holds, so
- * a block the edits took out whole answers the block standing in its place;
- * in any other record, the position itself. Null where the record holds no
- * block there.
- * @param {Doc} d the record shown (`shownDoc`)
- * @param {number} pos a position of the model's text
- * @returns {Block | null}
+ * @typedef {Object} ShownRun — one stretch of a span of the text shown, by what the page knows of its bytes (`shownRuns`)
+ * @property {number} pos its first position in the text shown
+ * @property {number} width its positions
+ * @property {number | null} base its first position in the model's text — the text as the board served it, which the board is asked by, as of that text's read — where that text holds its bytes; null where the page made them
+ * @property {boolean} made the page made its bytes — typed here, or pasted as new bytes — and holds its record of making them
+ * @property {import('../model/records.js').Minted | null} minted where the page made its bytes and the board has minted them, the permanent address of its first byte and the commit that minted it; null for every other stretch
  */
-function blockCarried(d, pos) {
-  const edits = editsOf(d);
-  return REC.blockIn(d.blocks, edits.length ? Math.min(toShown(edits, pos), Math.max(d.from, d.to - 1)) : pos);
+
+/**
+ * A span of the text the page shows of a document split into runs by what
+ * the page knows of its bytes (see the head; M-DERIVE's `sourceRuns`): each
+ * stretch the model's text holds, at its position there; each stretch the
+ * page made, minted or not (M-REC's `mintedOf`). Neighbours are one run where
+ * they continue each other in the model's text, or in the board's addresses,
+ * or are both the page's and unminted; the one reading of a span the board is
+ * asked about.
+ * @param {string} addr
+ * @param {number} pos the span's first position in the text shown
+ * @param {number} width its positions
+ * @returns {ShownRun[]}
+ */
+export function shownRuns(addr, pos, width) {
+  /** @type {ShownRun[]} */
+  const out = [];
+  if (!REC.has(addr)) return width > 0 ? [{ pos, width, base: pos, made: false, minted: null }] : out;
+  const minted = REC.mintedOf(addr);
+  for (const r of sourceRuns(shownOf(addr), pos, width)) {
+    // a stretch the page made is cut where the board minted its bytes, each cut named apart
+    /** @type {ShownRun[]} */
+    const parts = [];
+    if (r.page == null) parts.push({ pos: r.pos, width: r.width, base: r.base, made: false, minted: null });
+    else {
+      let at = r.page;
+      const end = r.page + r.width, part = (/** @type {number} */ lo, /** @type {number} */ hi, /** @type {import('../model/records.js').Minted | null} */ m) => parts.push({ pos: r.pos + (lo - /** @type {number} */ (r.page)), width: hi - lo, base: null, made: true, minted: m });
+      for (const m of minted) {
+        const lo = Math.max(at, m.page), hi = Math.min(end, m.page + m.width);
+        if (lo >= hi) continue;
+        if (lo > at) part(at, lo, null);
+        part(lo, hi, { ...m, page: lo, width: hi - lo, ordinal: m.ordinal + (lo - m.page) });
+        at = hi;
+      }
+      if (at < end) part(at, end, null);
+    }
+    for (const x of parts) {
+      const last = out[out.length - 1];
+      const on = !!last && last.pos + last.width === x.pos && last.made === x.made && (x.made
+        ? (!last.minted && !x.minted) || (!!last.minted && !!x.minted && last.minted.prefix === x.minted.prefix && last.minted.ordinal + last.width === x.minted.ordinal && last.minted.at === x.minted.at)
+        : last.base != null && x.base === last.base + last.width);
+      if (last && on) last.width += x.width; else out.push(x);
+    }
+  }
+  return out;
+}
+
+/** is every byte of a span of the text shown one the page made and holds its record of making (`shownRuns`), minted or not — the NEW WORDS the page answers for itself? False for a span of no width */
+export const madeHere = (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width) => { const runs = shownRuns(addr, pos, width); return runs.length > 0 && runs.every((r) => r.made); };
+
+/** does a span of the text shown hold a byte the page made that the board has not minted (`shownRuns`)? */
+export const unminted = (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width) => shownRuns(addr, pos, width).some((r) => r.made && !r.minted);
+
+/** does a draft hold a line the board has not kept — D6's machine's own record of its held lines (M-REC's `heldOf`), the one reading of any sign that words are not on the board */
+export const holding = (/** @type {string} */ addr) => REC.heldOf(addr).length > 0;
+
+/**
+ * Does a stretch of the text shown hold what a hold keeps from the board
+ * (see the head; B3-S2): while the draft holds a line the board has not kept
+ * (`holding`), a byte the page made that the board has not minted, or the
+ * place of a held removal — a held line whose frame removes, found by the
+ * bytes it names on either side of what it took (M-FRAMES's `HeldAnchors`).
+ * False where no hold stands.
+ * @param {string} addr
+ * @param {number} pos the stretch's first position in the text shown
+ * @param {number} width its positions
+ * @returns {boolean}
+ */
+export function heldIn(addr, pos, width) {
+  if (!holding(addr) || !REC.has(addr)) return false;
+  if (unminted(addr, pos, width)) return true;
+  const image = shownOf(addr).image, end = pos + width;
+  /** where the byte a held line names stands in the text shown, by its permanent address; -1 where the text places it nowhere */
+  const at = (/** @type {string | null} */ i) => { const cut = i ? i.lastIndexOf('.') : -1; const [s] = i && cut > 0 ? REC.placedIn(image, [{ prefix: i.slice(0, cut), ordinal: Number(i.slice(cut + 1)), width: 1 }]) : []; return s ? s.pos : -1; };
+  return REC.heldOf(addr).some((row) => {
+    if (row.frame.op !== 'delete' || !row.anchors) return false;
+    const before = at(row.anchors.before), after = at(row.anchors.after);
+    return (before >= pos && before < end) || (after >= pos && after < end);
+  });
 }
 
 /**
- * The block of the text the page shows of a document (`shownOf`) holding a
- * position of the model's text — the walk's span carried into the text shown
- * (`blockCarried`), the span O-SELECTION's K-8 selects whole; null where the
- * text shown holds no block there.
+ * Where a stretch the board placed by its own positions — a link's far end,
+ * a passage it found — stands in the text the page shows of a document. In a
+ * draft holding the person's page-local edits: where the stretch's bytes are
+ * named, where that text's image places them (`placedShown`), so words the
+ * board minted since the model's text was read stand where they are shown;
+ * else every stretch of it, read as one of the model's text, the edits left
+ * standing (M-DERIVE's `fromBase`). In any other text, the stretch itself.
  * @param {string} addr
- * @param {number} pos a position of the model's text: the walk's (N-WALK's)
- * @returns {Block | null}
+ * @param {{pos: number, width: number}} run the stretch, by the board's positions
+ * @param {ISpan[]} [ids] its bytes by identity, where they are named
+ * @returns {Array<{pos: number, width: number}>} its stretches in the text shown (`shownOf`)
  */
-export const shownBlockOf = (addr, pos) => blockCarried(shownOf(addr), pos);
-
-/**
- * A position of a draft's model text carried into the text the page shows of
- * it (M-DERIVE's `toShown`), where its fold places it: the span or the link's
- * end N-WALK's flight frames (`frameOf`), a span tested in view (`spanInView`)
- * and the span Enter places the caret at (`caretToSpan`).
- * @param {string} addr
- * @param {number} pos a position of the model's text
- * @returns {number} the position in the text shown (`shownOf`)
- */
-export const shownPos = (addr, pos) => toShown(REC.edits(addr), pos);
-
-/**
- * A position of a draft's shown text carried back into the model's text
- * (M-DERIVE's `toBase`), at or past the text's end its last position — the
- * caret's line held there (`caretSpanIn`) — so a position at the end, or in
- * text typed after the last span, stands in the text's last span (N-WALK's
- * grain): the caret's span (`caretSpan`), and the position N-WALK's re-take
- * and → read under the view's centre (`posAt`).
- * @param {string} addr
- * @param {number} pos a position of the text shown (`shownOf`)
- * @returns {number} the position in the model's text
- */
-export function basePos(addr, pos) {
-  const at = toBase(REC.edits(addr), pos), d = REC.has(addr) ? REC.doc(addr) : null;
-  return d && d.from >= 0 ? Math.min(at, Math.max(d.from, d.to - 1)) : at;
+export function fromBoard(addr, run, ids = []) {
+  const d = REC.has(addr) ? shownOf(addr) : null;
+  if (!d || !d.derived) return [{ pos: run.pos, width: run.width }];
+  const placed = ids.length ? REC.placedIn(d.image, ids) : [];
+  return placed.length ? placed : fromBase(d, run.pos, Math.max(1, run.width));
 }
 
 /**
- * A position of bytes the model's text holds carried back from the text shown
- * (M-DERIVE's `toBase`), never moved past the text's end: a link's end's
- * position (LK's `Shown.pos`), which stands on such bytes alone, for the
- * readers of the model's text.
+ * Where the first of some bytes still standing stands in the text the page
+ * shows of a document (see the head; M-REC's `firstPlacedIn`): the bytes
+ * taken in their own order, the position of the first that text's image
+ * places; null where it places none of them.
  * @param {string} addr
- * @param {number} pos a position of the text shown (`shownOf`)
- * @returns {number}
+ * @param {ISpan[]} ids the bytes, by identity, in their own order
+ * @returns {number | null} a position of the text shown (`shownOf`)
  */
-export const boardPos = (addr, pos) => toBase(REC.edits(addr), pos);
+export const firstStanding = (addr, ids) => (REC.has(addr) ? REC.firstPlacedIn(shownOf(addr).image, ids) : null);
 
 /**
- * A run of the model's text carried into the text the page shows of a draft
- * (M-DERIVE's `toShown`): from where its first byte stands to one past where
- * its last does, so words typed at its end stay outside it.
- * @param {string} addr
- * @param {{pos: number, width: number}} run a stretch of the model's text, a position at the least
- * @returns {{pos: number, width: number}} that stretch in the text shown (`shownOf`)
+ * @typedef {Object} Removal — a stretch of bytes one of the page's own edits removed from a draft and no edit since put back (`removals`)
+ * @property {number} of the edit that removed them, an index into the draft's edits (M-REC's `edits`)
+ * @property {number} from the first of the bytes it removed that the stretch holds, counted from 0
+ * @property {number} width how many
+ * @property {number} at where they stood, as a position of the text shown now: the removal point
+ * @property {ISpan[]} ids the bytes, by identity
  */
-export function shownRun(addr, run) {
-  const pos = shownPos(addr, run.pos);
-  return { pos, width: shownPos(addr, run.pos + run.width - 1) + 1 - pos };
+
+/**
+ * The page's own record of the bytes its edits removed from a draft and have
+ * not put back (see the head; M-REC's `edits`): each stretch, by the edit that
+ * removed it, its bytes by identity, and the removal point as the edits since
+ * moved it. What a return reads to say the person removed a passage, and what
+ * a put-back places again (`putBack`).
+ * @param {string} addr
+ * @returns {Removal[]}
+ */
+export function removals(addr) {
+  if (!REC.has(addr)) return [];
+  const edits = REC.edits(addr), took = removedBy(REC.doc(addr));
+  /** @type {Removal[]} */
+  const out = [];
+  for (const [i, e] of edits.entries()) {
+    // the edits since moved each removal point: before the edit it stands, inside what it removed at its place, after it by what it changed
+    const grew = e.back ? e.back.width : byteLength(e.text);
+    for (const r of out) r.at = r.at >= e.pos + e.width ? r.at + grew - e.width : r.at > e.pos ? e.pos : r.at;
+    if (e.back) { const b = e.back; for (const r of [...out]) if (r.of === b.of) out.splice(out.indexOf(r), 1, ...lessBack(r, b.from, b.from + b.width)); }
+    const ids = took[i];
+    if (ids && e.width > 0) out.push({ of: i, from: 0, width: e.width, at: e.pos, ids });
+  }
+  return out.sort((a, b) => a.at - b.at || a.of - b.of || a.from - b.from);
+}
+
+/** a removal less the stretch of its bytes [lo, hi) an edit put back: what of it is still removed, before and after that stretch */
+function lessBack(/** @type {Removal} */ r, /** @type {number} */ lo, /** @type {number} */ hi) {
+  /** @type {Removal[]} */
+  const out = [];
+  const end = r.from + r.width, part = (/** @type {number} */ a, /** @type {number} */ b) => { if (b > a) out.push({ ...r, from: a, width: b - a, ids: cutIds(r.ids, a - r.from, b - a) }); };
+  part(r.from, Math.min(end, lo)); part(Math.max(r.from, hi), end);
+  return out;
+}
+
+/** bytes named by identity cut to `width` of them from the `from`-th, in their order */
+function cutIds(/** @type {ISpan[]} */ ids, /** @type {number} */ from, /** @type {number} */ width) {
+  /** @type {ISpan[]} */
+  const out = [];
+  let at = 0;
+  for (const x of ids) {
+    const lo = Math.max(from, at), hi = Math.min(from + width, at + x.width);
+    if (lo < hi) out.push({ prefix: x.prefix, ordinal: x.ordinal + (lo - at), width: hi - lo });
+    at += x.width;
+  }
+  return out;
+}
+
+/** the bytes two sets of identity share, as the first names them: each run of `ids` cut to what `of` names too */
+function shared(/** @type {ISpan[]} */ ids, /** @type {ISpan[]} */ of) {
+  /** @type {ISpan[]} */
+  const out = [];
+  for (const a of ids) for (const b of of) {
+    if (a.prefix !== b.prefix) continue;
+    const lo = Math.max(a.ordinal, b.ordinal), hi = Math.min(a.ordinal + a.width, b.ordinal + b.width);
+    if (lo < hi) out.push({ prefix: a.prefix, ordinal: lo, width: hi - lo });
+  }
+  return out;
+}
+
+/** how many bytes a set of identity names */
+const widthOfIds = (/** @type {ISpan[]} */ ids) => ids.reduce((n, x) => n + x.width, 0);
+
+/**
+ * What the page's own record holds of the removal of some bytes from a draft
+ * (see the head; `removals`): the stretches of its removals that took any of
+ * them, in the text's order, and whether they took every one the text shown
+ * no longer holds — the page then knows the whole cause of what is missing,
+ * and a put-back restores it (`putBack`).
+ * @param {string} addr
+ * @param {ISpan[]} ids the bytes, by identity
+ * @returns {{took: Removal[], all: boolean, at: number | null}} `took` each removal's stretch among them; `all` every byte of them the text shown lacks was taken by one; `at` the first removal point, null where the page removed none of them
+ */
+export function removedOf(addr, ids) {
+  /** @type {Removal[]} */
+  const took = [];
+  for (const r of removals(addr)) {
+    // the stretch of the removal that holds any of the bytes: from its first such byte to its last
+    let lo = Infinity, hi = -Infinity, at = 0;
+    for (const x of r.ids) { for (const y of shared([x], ids)) { lo = Math.min(lo, at + y.ordinal - x.ordinal); hi = Math.max(hi, at + y.ordinal - x.ordinal + y.width); } at += x.width; }
+    if (hi > lo) took.push({ ...r, from: r.from + lo, width: hi - lo, ids: shared(cutIds(r.ids, lo, hi - lo), ids) });
+  }
+  const standing = REC.has(addr) ? REC.placedIn(shownOf(addr).image, ids).reduce((n, s) => n + s.width, 0) : 0;
+  const missing = widthOfIds(ids) - standing, taken = took.reduce((n, r) => n + widthOfIds(r.ids), 0);
+  return { took, all: took.length > 0 && missing > 0 && taken >= missing, at: took.length ? took[0].at : null };
 }
 
 /**
- * The walk's focus carried into a record derived from the typed text: the
- * block of that text holding the focused block's first position as the edits
- * moved it (`blockCarried`); null where none holds it. Any other record's
- * focus as given.
- * @param {Doc} d
- * @param {{addr: string, pos: number} | null} f
+ * Bytes the page's own edits removed from a draft put back in the text shown
+ * (see the head; B3-S7's "put back in the current text"): each stretch of
+ * them placed again at its own removal point by its identity (M-REC's
+ * `Edit.back`), the last in the text first so no placing moves another's
+ * point, all of them one step (M-REC's `addEdits`). Nothing is composed or
+ * sent (FP-14). Nothing where the page's record holds no removal of them.
+ * @param {string} addr
+ * @param {ISpan[]} ids the bytes, by identity
+ * @returns {Array<{pos: number, width: number}>} where they stand in the text shown once put back, in its order
  */
-function carriedFocus(d, f) {
-  if (!f || f.addr !== d.addr || !editsOf(d).length) return f;
-  const b = blockCarried(d, f.pos);
-  return b ? { addr: f.addr, pos: b.pos } : null;
+export function putBack(addr, ids) {
+  const { took } = removedOf(addr, ids);
+  if (!took.length) return [];
+  REC.addEdits(addr, [...took].reverse().map((r) => ({ pos: r.at, width: 0, text: '', back: { of: r.of, from: r.from, width: r.width } })));
+  // the caret holds its place by the byte it stands before: words put back at or before it move it on with that byte
+  if (caret_ && caret_.addr === addr) { let pos = caret_.pos; for (const r of [...took].reverse()) if (pos >= r.at) pos += r.width; if (pos !== caret_.pos) caret_ = { ...caret_, pos }; }
+  markDirty();
+  return REC.placedIn(shownOf(addr).image, ids);
 }
 
 /**
@@ -1043,10 +1211,9 @@ function carriedFocus(d, f) {
  * read (the reader `newer`), a reading scene's pane handing its own in. The
  * links are placed by their bytes in the record handed in (LK's `shown`,
  * `symbols`, `countAt`), so a derived record draws them on the bytes its image
- * holds and none on the words the page made. The walk's focus, a span of the
- * model's text, is carried into a record derived from the typed text through
- * the page-local edits it was made with (`carriedFocus`); the selection is a
- * span of the text shown already (O-SELECTION's).
+ * holds — a byte the page made among them once the board has minted it — and
+ * none on a byte it has not. The walk's focus and the selection are spans of
+ * the text shown (N-WALK's, O-SELECTION's).
  */
 export function viewFor(/** @type {Doc} */ d, scene = false) {
   /** @type {Map<string, 'edition' | 'draft' | 'unknown'>} */
@@ -1054,7 +1221,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
   for (const o of d.origins) { const od = REC.doc(o.doc); const p = REC.place(o.doc); originKinds.set(o.doc, p ? p.kind : od.meta ? (od.meta.published ? 'edition' : 'draft') : od.kind); }
   /** @type {ArticleView} */
   const v = {
-    selected: read.selection(), focus: carriedFocus(d, litFocus(scene)),
+    selected: read.selection(), focus: litFocus(scene),
     marks: LK.shown(d.addr, d), mergedMark: LK.mergedMark, symbols: LK.symbols(d.addr, d), says: farShort, countAt: (b) => LK.countAt(d.addr, b, d),
     wholeLinks: LK.wholeLinks(d.addr).length,
     reader: REC.reader(),
@@ -1457,8 +1624,7 @@ export function centreOf(addr, pos) {
  * at the document's head — centred where the visible view below the one line
  * holds it, else moved down so the column's outline tops the visible view and
  * the document's head stands in it, never under the line (FP-37). N-GO's
- * landing and N-WALK's flight to a span — its position carried into the text
- * shown (`shownPos`) — read it, the view's
+ * landing and N-WALK's flight to a span read it, the view's
  * scale from its em (P-CAM's `viewAt`), so the place and the size are one
  * fold's, and read it again each frame as the camera flies there (P-CAM's
  * `Aim`), so it lands on the fold its document is set in then; the measure in
@@ -1521,17 +1687,15 @@ export function lineInView(addr, pos, view) {
  * Does a line of a span of a document's text stand in the visible view: the
  * middle of a line of its fold holding a position of the span inside the
  * viewport below the one line, as `lineInView` reads one line
- * (`foldBoxes`) — in a draft's typed text, the lines holding the span where
- * the page-local edits carried it (`shownPos`). N-WALK's hold on the kept
- * caret's span reads it.
+ * (`foldBoxes`). N-WALK's hold on the kept caret's span reads it.
  * @param {string} addr
- * @param {number} pos the span's first position in the model's text
+ * @param {number} pos the span's first position in the text shown
  * @param {number} width
  * @returns {boolean}
  */
 export function spanInView(addr, pos, width) {
-  const from = shownPos(addr, pos), s = visibleView(read.top());
-  return foldBoxes(addr, from, shownPos(addr, pos + width) - from).some(({ rect: r }) => {
+  const s = visibleView(read.top());
+  return foldBoxes(addr, pos, width).some(({ rect: r }) => {
     const x = r.x + r.w / 2, y = r.y + r.h / 2;
     return x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h;
   });
@@ -1539,9 +1703,8 @@ export function spanInView(addr, pos, width) {
 
 /**
  * The position under a world point of a document's fold (P-LAY's `posAt`): a
- * position of the text shown (`shownOf`), which N-WALK's re-take and → carry
- * back into the model's text (`basePos`); null where the column under it
- * holds no line naming one.
+ * position of the text shown (`shownOf`), which N-WALK's re-take and → read;
+ * null where the column under it holds no line naming one.
  * @param {string} addr
  * @param {number} x
  * @param {number} y
@@ -2674,15 +2837,12 @@ const marksKey = (/** @type {string} */ addr, /** @type {Span | null} */ s, /** 
  * T-ARTICLE's rule (`blockMarks`) where either changed in its document since
  * they were last marked: a class set or taken off where it differs, on each
  * part of a block, nothing rebuilt, so the platform's selection in the
- * article stands. The focus is carried into the text the article shows
- * (`carriedFocus`), so the lit block is the walk's span wherever the
- * page-local edits moved it.
+ * article stands.
  * @param {Mounted} rec
  * @param {Span | null} selected a span of the text shown (O-SELECTION's)
- * @param {{addr: string, pos: number} | null} walked the walk's focused block, by its first position in the model's text (N-WALK's)
+ * @param {{addr: string, pos: number} | null} focus the walk's focused block, by its first position in the text shown (N-WALK's)
  */
-function markBlocks(rec, selected, walked) {
-  const focus = carriedFocus(rec.d, walked);
+function markBlocks(rec, selected, focus) {
   const key = marksKey(rec.d.addr, selected, focus);
   if (key === rec.markedFor) return;
   rec.markedFor = key;
@@ -3874,9 +4034,11 @@ export function madeOf(el) {
  * article's words were read (`Where`) — a mounted article's as its box
  * showed them as it mounted, a pane's as the scene handed them in
  * (`sceneArticle`) — on the board; the span's bytes by identity, through the
- * image the article was made from (M-REC's `identityIn`); and its positions
- * where a member is named, the article's text being that member's. Null
- * where the element is no such article, or the span is another document's.
+ * image the article was made from (M-REC's `identityIn`), each byte the board
+ * holds by its permanent address and none by the page's own, so words the
+ * board has not minted travel as words alone; and its positions where a
+ * member is named, the article's text being that member's. Null where the
+ * element is no such article, or the span is another document's.
  * @param {HTMLElement} el the article's element
  * @param {Span} span a span of its text
  * @param {string} board the board's origin
@@ -3886,7 +4048,7 @@ export function namedIn(el, span, board) {
   const a = articleAt(el);
   if (!a || span.addr !== a.made.addr) return null;
   const { doc, member, plain } = a.where;
-  return { board, doc, member, plain, pos: member ? span.pos : null, width: member ? span.width : null, ids: REC.identityIn(a.made.image, span.pos, span.width) };
+  return { board, doc, member, plain, pos: member ? span.pos : null, width: member ? span.width : null, ids: REC.identityIn(a.made.image, span.pos, span.width).filter((x) => !REC.isPage(x.prefix)) };
 }
 
 /** the article a range starts in, else the one it ends in; null where it lies in none */
@@ -4397,43 +4559,46 @@ export function placeCaret(addr, pos) {
 
 /**
  * Enter at a focused span of a draft the person may edit (K-70; BM-52): the
- * caret placed at the span's start — the model's position carried into the
- * text shown — or, where a kept caret stands in that span, the one the walk
- * stands on at the caret (`sameBlock`), returned where it stood. Null where
- * the text is none the person may edit.
+ * caret placed at the span's start, or, where a kept caret stands in that
+ * span, the one the walk stands on at the caret (`sameBlock`), returned where
+ * it stood. Null where the text is none the person may edit.
  * @param {string} addr
- * @param {number} pos the span's first position in the model's text (N-WALK's)
+ * @param {number} pos the span's first position in the text shown (N-WALK's)
  * @returns {Caret | null}
  */
 export function caretToSpan(addr, pos) {
   if (!editable(addr)) return null;
   if (caret_ && caret_.addr === addr && !caret_.live && sameBlock(addr, caret_.pos, pos)) return returnCaret();
-  return placeCaret(addr, shownPos(addr, pos));
+  return placeCaret(addr, pos);
 }
 
 /**
- * The span of a draft's model text the walk stands on at a position of it
- * (N-WALK's grain): the element T-SPAN's rule stands the position on
- * (`elementIn`; D5 §4 rule 20) — in white space alone the span before it, or
- * the first where none stands before it — over the blocks the model holds;
- * null where it holds no block there, or none is an element.
+ * The span of the text the page shows of a document the walk stands on at a
+ * position of it (N-WALK's grain): the element T-SPAN's rule stands the
+ * position on (`elementIn`; D5 §4 rule 20) — in white space alone the span
+ * before it, or the first where none stands before it — over that text's
+ * blocks, a position at or past its end read at its last; null where it holds
+ * no block there, or none is an element.
  * @param {string} addr
- * @param {number} pos a position of the model's text
+ * @param {number} pos a position of the text shown
  * @returns {Block | null}
  */
-const grainAt = (addr, pos) => elementIn(REC.has(addr) ? REC.doc(addr).blocks : [], pos);
+export function grainAt(addr, pos) {
+  if (!REC.has(addr)) return null;
+  const d = shownOf(addr);
+  return elementIn(d.blocks, d.from >= 0 ? Math.min(pos, Math.max(d.from, d.to - 1)) : pos);
+}
 
 /**
- * Does a position of a draft's shown text stand in the span of the model's
- * text whose first position is `blockPos` — the span the walk stands on there
- * (`grainAt`), the position carried back into the model's text (`basePos`) —
- * the kept caret's span (BM-52)?
+ * Does a position of a draft's shown text stand in the span of that text
+ * whose first position is `blockPos` — the span the walk stands on there
+ * (`grainAt`) — the kept caret's span (BM-52)?
  * @param {string} addr
  * @param {number} pos a position of the text shown
  * @param {number} blockPos
  */
 export function sameBlock(addr, pos, blockPos) {
-  const b = grainAt(addr, basePos(addr, pos));
+  const b = grainAt(addr, pos);
   return !!b && b.pos === blockPos;
 }
 
@@ -4441,16 +4606,16 @@ export function sameBlock(addr, pos, blockPos) {
 export const caretInSpan = (/** @type {string} */ addr, /** @type {number} */ blockPos) => !!caret_ && caret_.addr === addr && sameBlock(addr, caret_.pos, blockPos);
 
 /**
- * The span the caret stands in, in the model's text (N-WALK's grain): the
- * caret's position carried back through the edits, at the text's end its last
- * position (`basePos`), and the first position of the span the walk stands on
- * there (`grainAt`), which `caretInSpan` answers true for; null where no caret
- * stands.
+ * The span the caret stands in, in the text shown (N-WALK's grain): the
+ * caret's position, at the text's end its last, and the first position of
+ * the block of the text shown the walk stands on there (`grainAt`) — the
+ * block the caret is in, which `caretInSpan` answers true for; null where no
+ * caret stands.
  * @returns {{addr: string, pos: number, block: number | null} | null}
  */
 export function caretSpan() {
   if (!caret_) return null;
-  const pos = basePos(caret_.addr, caret_.pos), b = grainAt(caret_.addr, pos);
+  const d = shownOf(caret_.addr), pos = d.from >= 0 ? Math.min(caret_.pos, Math.max(d.from, d.to - 1)) : caret_.pos, b = grainAt(caret_.addr, pos);
   return { addr: caret_.addr, pos, block: b ? b.pos : null };
 }
 

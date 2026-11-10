@@ -840,8 +840,8 @@ test('a reading scene opened at a live caret and closed returns the focus to the
     assert.deepEqual([SCENE.isOpen(), walkAt(), LAYER.caret()], [false, ['block', WRITING, 1], { addr: WRITING, pos: 3, live: true }], 'Esc: the scene closed, the walk on the caret\'s span, the caret live where it stood');
     assert.equal(await KEYS.dispatch(keyOf('Backspace'), { where: 'plane', byKey: true }), true, 'Backspace: the caret\'s key');
     assert.deepEqual([REC.edits(WRITING).map((x) => [x.pos, x.width, x.text]), LAYER.caret()], [[[2, 1, '']], { addr: WRITING, pos: 2, live: true }], 'the character before the caret taken out');
-    const elsewhere = GO.leapTo(WRITING, { pos: 11 }); await flown(); await elsewhere;
-    assert.deepEqual([walkAt(), LAYER.caret()], [['block', WRITING, 11], { addr: WRITING, pos: 2, live: false }], 'a LEAP to the draft\'s second span: the caret kept where it stood');
+    const elsewhere = GO.leapTo(WRITING, { pos: 10 }); await flown(); await elsewhere;
+    assert.deepEqual([walkAt(), LAYER.caret()], [['block', WRITING, 10], { addr: WRITING, pos: 2, live: false }], 'a LEAP to the draft\'s second span, one position back in the text shown: the caret kept where it stood');
     assert.deepEqual(fake.unanswered, []);
   } finally { REC.clearEdits(WRITING); LAYER.dropCaret(); }
 }));

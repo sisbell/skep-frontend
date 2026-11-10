@@ -17,8 +17,12 @@
 // compact beside its column or at its document's head, no row naming it; a
 // document's region and the view's window over it; a span in the visible
 // view, read in a draft's typed text where the edits carried it; what a view
-// reads in a draft's typed text read of the text shown, and a run carried
-// into it whole; the passage in view
+// reads in a draft's typed text read of the text shown, and a stretch the
+// board placed found in it; the identity every byte shown has — the page's
+// own for a byte it made, through an insertion, a deletion, its own removal
+// and its put-back, and its I-address once the board mints it — a span split
+// by what the page knows of its bytes, what a hold keeps read from the held
+// lines alone, and a typed draft's link marks on their own bytes; the passage in view
 // keeping its place through a reveal, a feed row naming its document — the
 // article standing until the reads it makes again set it — a version move
 // and an edit above the view, by its bytes' identity, the view's centre on an
@@ -80,6 +84,8 @@ const words = (/** @type {number} */ n, /** @type {number} */ seed) => Array.fro
 /** eighty-four typed lines, an empty line after each: eleven columns hidden, past the standard grid's twelve with its links' symbols */
 const TEXT = Array.from({ length: 84 }, (_, i) => words(30, i)).join('\n\n');
 const EXTENT = new TextEncoder().encode(TEXT).length;
+/** the ordinal the board mints next in D's own I-space, past every byte TEXT holds: where bytes typed here are minted */
+const FRESH = EXTENT + 1000;
 /** a model move that changes nothing the article shows: the model's revision moves, so no fold is read from before it */
 const moveModel = () => REC.setDaemon(REC.daemon() === 'running' ? 'stopped' : 'running');
 /** does every line of a fold stand in a column, and every column inside its room? */
@@ -261,19 +267,114 @@ test('what a view reads in a text holding typed words is read of the text the pa
   } finally { REC.clearEdits(D); CAM._reset(); }
 });
 
-test('a run of the model\'s text carried into the text shown stands from its first byte to one past its last: words typed at its end stay outside it, words typed inside it within (issue #515)', () => {
+test('a stretch the board placed by its own positions is found in the text shown: moved by words typed before it, words typed at its end outside it, cut where words are typed inside it — and by its bytes where they are named (issue #515)', () => {
+  deliver();
   const run = { pos: 5, width: 3 };
-  assert.deepEqual(LAYER.shownRun(D, run), run, 'no edits: as it stands');
+  assert.deepEqual(LAYER.fromBoard(D, run), [run], 'no edits: as it stands');
   REC.addEdit(D, { pos: 1, width: 0, text: 'ab' });
-  assert.deepEqual(LAYER.shownRun(D, run), { pos: 7, width: 3 }, 'words typed before it move it');
+  assert.deepEqual(LAYER.fromBoard(D, run), [{ pos: 7, width: 3 }], 'words typed before it move it');
   REC.addEdit(D, { pos: 10, width: 0, text: 'zz' });
-  assert.deepEqual(LAYER.shownRun(D, run), { pos: 7, width: 3 }, 'words typed at its end stay outside it');
+  assert.deepEqual(LAYER.fromBoard(D, run), [{ pos: 7, width: 3 }], 'words typed at its end stay outside it');
   REC.addEdit(D, { pos: 8, width: 0, text: 'q' });
-  assert.deepEqual(LAYER.shownRun(D, run), { pos: 7, width: 4 }, 'words typed inside it stand within');
+  assert.deepEqual(LAYER.fromBoard(D, run), [{ pos: 7, width: 1 }, { pos: 9, width: 2 }], 'words typed inside it are none of its bytes: two stretches');
+  assert.deepEqual(LAYER.fromBoard(D, { pos: 1, width: 1 }, [{ prefix: D + '.0.1', ordinal: 6, width: 2 }]), [{ pos: 9, width: 2 }], 'named by its bytes, it stands where the image of the text shown places them, whatever positions the board gave');
   REC.clearEdits(D);
 });
 
-test('a span of the model\'s text stands in the visible view while the middle of a line holding it does, below the one line; in a draft\'s typed text the span is read where the page-local edits carried it, never at its own positions there (B3-S1; D5 §4 rule 3)', () => {
+test('the page\'s own bytes have an identity that holds: a typed word keeps its place through an insertion before it, a deletion around it and its own removal and put-back, and after its ack is named by its I-address, what held it by the page\'s identity finding it still (the unsent-typing decision §1 (a))', () => {
+  deliver();
+  REC.addEdit(D, { pos: 5, width: 0, text: 'NEW' });
+  const held = LAYER.shownIdentity(D, 5, 3);
+  assert.deepEqual(held, [{ prefix: REC.pageSpace(D), ordinal: 1, width: 3 }], 'the typed word, by the page\'s own identity');
+  assert.deepEqual(LAYER.shownIdentity(D, 4, 5), [{ prefix: D + '.0.1', ordinal: 4, width: 1 }, ...held, { prefix: D + '.0.1', ordinal: 5, width: 1 }], 'a span of typed and delivered bytes is named whole');
+  REC.addEdit(D, { pos: 1, width: 0, text: 'ab' });
+  assert.deepEqual(LAYER.placedShown(D, held), [{ pos: 7, width: 3 }], 'an insertion before it: two positions on, the same bytes');
+  REC.addEdit(D, { pos: 6, width: 1, text: '' });
+  REC.addEdit(D, { pos: 9, width: 1, text: '' });
+  assert.deepEqual([LAYER.placedShown(D, held), LAYER.firstStanding(D, held)], [[{ pos: 6, width: 3 }], 6], 'the byte before it and the byte after it deleted: it stands, one position back');
+  REC.addEdit(D, { pos: 6, width: 3, text: '' });
+  assert.deepEqual([LAYER.placedShown(D, held), LAYER.firstStanding(D, held), LAYER.removedOf(D, held).at], [[], null, 6], 'removed: it stands nowhere, and the page\'s own record names the point it was removed at');
+  const steps = REC.edits(D).length;
+  assert.deepEqual(LAYER.putBack(D, held), [{ pos: 6, width: 3 }], 'put back at its own point');
+  assert.deepEqual([REC.edits(D).length - steps, LAYER.shownIdentity(D, 6, 3), REC.textOf(LAYER.shownOf(D).runs, 6, 9)], [1, held, 'NEW'], 'one edit, the same bytes by the same identity');
+  // the burst's ack names the first address the board minted: the page's bytes are named by it from then on
+  const ack = F.decodeAckAddr({ addr: `${D}.0.1.${FRESH}`, at: 12, resp: 'ack_addr' });
+  assert.ok(ack);
+  REC.mint(D, 1, 3, ack.addr, ack.at);
+  assert.deepEqual(LAYER.shownIdentity(D, 6, 3), [{ prefix: D + '.0.1', ordinal: FRESH, width: 3 }], 'after its ack: its I-address');
+  assert.deepEqual([LAYER.placedShown(D, held), REC.textOf(LAYER.shownOf(D).runs, 6, 9)], [[{ pos: 6, width: 3 }], 'NEW'], 'what held it by the page\'s identity finds it still, and the text shown has not moved');
+  REC.clearEdits(D);
+});
+
+test('a span of the text shown is split by what the page knows of its bytes: what the model\'s text holds at its position there — the one position the board is asked by — and what the page made, unminted or minted; new words are the page\'s whether minted or not (the unsent-typing decision §1 (b))', () => {
+  deliver();
+  REC.addEdit(D, { pos: 3, width: 0, text: 'xyz' });
+  assert.deepEqual(LAYER.shownRuns(D, 1, 8), [{ pos: 1, width: 2, base: 1, made: false, minted: null }, { pos: 3, width: 3, base: null, made: true, minted: null }, { pos: 6, width: 3, base: 3, made: false, minted: null }], 'board, new, board: each board run at its position in the model\'s text');
+  assert.deepEqual([LAYER.madeHere(D, 3, 3), LAYER.madeHere(D, 2, 3), LAYER.unminted(D, 1, 2), LAYER.unminted(D, 5, 3)], [true, false, false, true]);
+  REC.mint(D, 1, 2, `${D}.0.1.${FRESH}`, 12);
+  assert.deepEqual(LAYER.shownRuns(D, 3, 3), [{ pos: 3, width: 2, base: null, made: true, minted: { page: 1, width: 2, prefix: D + '.0.1', ordinal: FRESH, at: 12 } }, { pos: 5, width: 1, base: null, made: true, minted: null }], 'minted in part: cut where the board\'s addresses end');
+  assert.deepEqual([LAYER.madeHere(D, 3, 3), LAYER.unminted(D, 3, 2), LAYER.unminted(D, 3, 3)], [true, false, true], 'still the page\'s own words, the first two on the board');
+  REC.clearEdits(D);
+  assert.deepEqual(LAYER.shownRuns(D, 4, 2), [{ pos: 4, width: 2, base: 4, made: false, minted: null }], 'no edits: the span itself');
+});
+
+test('what a hold keeps from the board is read from the held lines alone: with none held nothing is, however much the text shown differs from the model\'s; with one held, every word the page made that the board has not minted, and the place of a held removal (the unsent-typing decision §1 (d); B3-S2)', () => {
+  deliver();
+  REC.addEdit(D, { pos: 3, width: 0, text: 'xyz' });
+  assert.deepEqual([LAYER.holding(D), LAYER.heldIn(D, 1, 20)], [false, false], 'typed words, no line held: nothing reads as held');
+  const rows = /** @type {import('../model/frames.js').HeldLine[]} */ (F.decodeHeldRows([
+    { held: 1, doc: D, base: 5, frame: { op: 'insert', at: { ordinal: '3', subspace: '1' }, values: ['xyz'] }, cause: 'unreachable', sent: false, time: 1 },
+    { held: 2, doc: D, base: 5, frame: { op: 'delete', p: { ordinal: '40', subspace: '1' }, width: '2' }, anchors: { before: D + '.0.1.39', after: D + '.0.1.42', span: [{ start: D + '.0.1.40', width: '2' }] }, cause: 'unreachable', sent: false, time: 2 },
+  ]));
+  REC.setHeld(D, rows);
+  assert.deepEqual([LAYER.holding(D), LAYER.heldIn(D, 3, 3), LAYER.heldIn(D, 1, 2), LAYER.heldIn(D, 10, 5)], [true, true, false, false], 'a hold stands: the unminted words are held, board words are not');
+  assert.equal(LAYER.heldIn(D, 41, 3), true, 'the stretch holding the byte before a held removal holds it: position 39 of the model\'s text, three on in the text shown');
+  REC.mint(D, 1, 3, `${D}.0.1.${FRESH}`, 12);
+  assert.equal(LAYER.heldIn(D, 3, 3), false, 'minted: on the board, held no more');
+  REC.setHeld(D, []); REC.clearEdits(D);
+});
+
+test('an article set from a draft holding a link and typed words draws the link\'s mark on the link\'s own bytes and none on the typed words — and on words typed here once the board has minted them and a link names them (issues #525, #512)', () => {
+  REC.takeDelivery(D, [{ pos: 1, width: EXTENT, kind: 'content', text: TEXT, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: EXTENT }]);
+  const L = D + '.0.2.1', M = D + '.0.2.2';
+  REC.takeLinks(D, [L]);
+  REC.takeLink({ addr: L, from: [span(D, 4, 3)], to: [whole(FAR)], type: CITE });
+  LK.reveal(D, 2);
+  REC.addEdit(D, { pos: 1, width: 0, text: 'typed ' });
+  const shown = LAYER.shownOf(D), v = LAYER.viewFor(shown);
+  assert.ok(shown.derived, 'the article is set from the text shown, the typed words in it');
+  assert.deepEqual(v.marks.map((m) => [m.link.addr, m.pos, m.width]), [[L, 10, 3]], 'the mark on the link\'s own bytes, six positions on, none on the typed words');
+  const html = articleHTML(shown, v);
+  assert.ok(html.includes(`data-links="${L}"`), 'and the article made from it carries the mark');
+  // a link made from another pane on the words typed here: before the board has minted them nothing can name them; after, it is drawn at them
+  REC.mint(D, 1, 6, `${D}.0.1.${FRESH}`, 12);
+  REC.takeLinks(D, [L, M]);
+  REC.takeLink({ addr: M, from: [span(D, FRESH, 5)], to: [whole(FAR)], type: CITE });
+  assert.deepEqual(LAYER.viewFor(LAYER.shownOf(D)).marks.map((m) => [m.link.addr, m.pos, m.width]).sort(), [[L, 10, 3], [M, 1, 5]], 'minted: the link made on the typed words is drawn at them');
+  REC.clearEdits(D);
+});
+
+test('the counts at the edge stand per block of the text shown: a paragraph a typed line break splits has two counts, each counting the links that touch its own bytes, a link touching both parts counted in each (issue #526; foundations §2.1)', () => {
+  REC.takeDelivery(D, [{ pos: 1, width: EXTENT, kind: 'content', text: TEXT, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: EXTENT }]);
+  const b = REC.doc(D).blocks[0], cut = 40;
+  // three links of another's on the first paragraph: one before the cut, one after it, one across it
+  const [A, B, C] = [1, 2, 3].map((j) => `${OTHER_HOME}.0.2.${j}`);
+  REC.takeLinks(D, [A, B, C]);
+  REC.takeLink({ addr: A, from: [span(OTHER_HOME, 1, 1)], to: [span(D, b.pos + 5, 4)], type: CITE });
+  REC.takeLink({ addr: B, from: [span(OTHER_HOME, 2, 1)], to: [span(D, b.pos + cut + 5, 4)], type: CITE });
+  REC.takeLink({ addr: C, from: [span(OTHER_HOME, 3, 1)], to: [span(D, b.pos + cut - 2, 6)], type: CITE });
+  const counts = () => { const d = LAYER.shownOf(D), v = LAYER.viewFor(d); return d.blocks.slice(0, 2).map((x) => [x.pos, v.countAt(x).n]); };
+  assert.deepEqual(counts()[0], [b.pos, 3], 'one paragraph: one count of all three');
+  // twelve bytes typed at the paragraph's start, then a line break typed where its fortieth byte stood
+  REC.addEdit(D, { pos: b.pos, width: 0, text: 'Typed words ' });
+  REC.addEdit(D, { pos: b.pos + 12 + cut, width: 0, text: '\n' });
+  assert.deepEqual(counts(), [[b.pos, 2], [b.pos + 12 + cut + 1, 2]], 'split by a typed break: two blocks, two counts — each the link on its own bytes and the one that touches both, wherever the typing moved them');
+  REC.clearEdits(D);
+});
+
+test('a span stands in the visible view while the middle of a line holding it does, below the one line; in a draft\'s typed text it is read at its positions in the text shown, where the page-local edits carried it (B3-S1; D5 §4 rule 3)', () => {
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: 'd', standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
   REC.takeDelivery(D, [{ pos: 1, width: EXTENT, kind: 'content', text: TEXT, ref: null, origin: null }]);
   REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: EXTENT }]);
@@ -299,10 +400,10 @@ test('a span of the model\'s text stands in the visible view while the middle of
     assert.ok(typed.length > b.width);
     REC.addEdit(D, { pos: 1, width: 0, text: typed });
     lineAt(b.pos + typed.length, 450);
-    assert.equal(LAYER.spanInView(D, b.pos, b.width), true, 'the camera over where the edits carried it: in view');
-    assert.equal(LAYER.lineInView(D, b.pos, CAM.view()), false, 'the typed line its own positions name: out of view');
+    assert.equal(LAYER.spanInView(D, b.pos + typed.length, b.width), true, 'the camera over where the edits carried it: in view at its positions in the text shown');
+    assert.equal(LAYER.spanInView(D, b.pos, b.width), false, 'the typed lines standing at the positions it had: out of view');
     lineAt(b.pos, 450);
-    assert.equal(LAYER.spanInView(D, b.pos, b.width), false, 'the camera over the typed lines its own positions name: out of view');
+    assert.equal(LAYER.spanInView(D, b.pos + typed.length, b.width), false, 'the camera over the typed lines: the span out of view');
   } finally {
     REC.clearEdits(D);
     LAYER.readers({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null });
@@ -1102,6 +1203,17 @@ test('a reading scene\'s pane names a copy where the scene says its words were r
   assert.deepEqual(LAYER.namedIn(pane, { addr: D2, ...AT }, 'origin-1'), box, 'the pane at the bare address, made as the scene makes it: the box\'s entry, over the same bytes');
   assert.deepEqual(LAYER.namedIn(LAYER.sceneArticle(REC.doc(D)), { addr: D, ...AT }, 'origin-1'), box, 'made with no word of where: as the box names it');
   assert.equal(LAYER.namedIn(pane, { addr: D, ...AT }, 'origin-1'), null, 'a span measured against another address: none');
+}, 1440, 900));
+
+test('a copy of a draft\'s typed words names the minted identity of each byte that has one, and no identity of the page\'s own: words the board has not minted travel as words alone (FP-27; the unsent-typing decision §1 (c))', () => onLayer(() => {
+  deliver();
+  REC.addEdit(D, { pos: 1, width: 0, text: 'abc' });
+  const span = { addr: D, pos: 1, width: 5 };
+  const named = () => LAYER.namedIn(LAYER.sceneArticle(LAYER.shownOf(D)), span, 'origin-1')?.ids;
+  assert.deepEqual(named(), [{ prefix: D + '.0.1', ordinal: 1, width: 2 }], 'three typed bytes and two of the board\'s: the board\'s alone are named');
+  REC.mint(D, /** @type {number} */ (REC.edits(D)[0].page), 2, `${D}.0.1.${FRESH}`, 12);
+  assert.deepEqual(named(), [{ prefix: D + '.0.1', ordinal: FRESH, width: 2 }, { prefix: D + '.0.1', ordinal: 1, width: 2 }], 'two of them minted: named by their addresses, the third still by none');
+  REC.clearEdits(D);
 }, 1440, 900));
 
 // ---- the zoom-in bound -------------------------------------------------------------------------------------------------

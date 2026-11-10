@@ -221,6 +221,7 @@ function loop(/** @type {number} */ now) {
   if (dirty) {
     const t0 = performance.now();
     if (!bootInfo.firstFrame) bootInfo.firstFrame = SHIPPED.map((f) => [f, document.fonts.check(f)]);
+    WALK.carry();
     LAYER.frame((addr) => { const f = WALK.current(); return !!f && f.addr === addr; });
     GO.recheck();
     GO.surfacesAcross();

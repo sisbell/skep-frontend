@@ -2699,7 +2699,7 @@ def typed_surfaces(ctx, r):
     paragraph, which holds no caret: a bare key raises the draft's line as its hint, at the text's edge level with that
     paragraph's first line where the text shown holds it, two positions on; and a LEAP naming two runs of a passage in that
     paragraph lands its line at the text's edge level with the run's line and its outline on the run, both where the text shown
-    holds them, the walk on the span in the model's text. The caret, the arrival and the edits are let go after, and the draft
+    holds them, the walk on the span there. The caret, the arrival and the edits are let go after, and the draft
     read again."""
     doc = WINDOW[2]
     ctx.leap(doc, None)
@@ -2719,7 +2719,7 @@ def typed_surfaces(ctx, r):
         for _ in range(16):
             chord(ctx, 'ArrowDown')
             walked = ctx.js('window.__skep.view.focus()') or {}
-            if walked.get('kind') == 'block' and walked.get('pos') == P:
+            if walked.get('kind') == 'block' and walked.get('pos') == P + typed:
                 break
         chord(ctx, 'k')
         hint = ctx.js('window.__skep.hint()') or {}
@@ -2727,8 +2727,9 @@ def typed_surfaces(ctx, r):
         chord(ctx, 'Escape')
         ids = ctx.js('window.__skep.model.identity(%s, %d, 12)' % (json.dumps(doc), P))
         if ids and len(ids) == 1:
-            runs = [{'pos': P, 'width': 4}, {'pos': P + 8, 'width': 4}]
-            ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(doc), P, json.dumps({'runs': runs, 'passage': ids[0]})))
+            # the landing names its runs where the text shown holds them, two positions on past `ab`
+            runs = [{'pos': P + typed, 'width': 4}, {'pos': P + typed + 8, 'width': 4}]
+            ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(doc), P + typed, json.dumps({'runs': runs, 'passage': ids[0]})))
             ctx.settle(); ctx.frames(3)
             landed = ctx.js('window.__skep.landingLine()')
             line_rects = ctx.js('window.__skep.spanRects(%s, %d, 4)' % (json.dumps(doc), P + typed))
@@ -2745,8 +2746,8 @@ def typed_surfaces(ctx, r):
     r.check(bool(ids) and len(ids) == 1 and bool(landed) and bool(line_rects) and abs(landed['rect']['y'] - line_rects[0]['y']) <= 0.5,
             'a landing in a draft below typed words stands its line at the text\'s edge, level with its run\'s line where the text shown holds it (FP-21)',
             {'ids': ids, 'line': landed, 'run_lines': line_rects})
-    r.check(bool(outline) and bool(line_rects) and outline[0]['run'] == 0 and near(outline[0], line_rects[0]) and bool(focus) and focus.get('pos') == P,
-            'its outline stands on the run where the text shown holds it, the walk on the span in the model\'s text (FP-21)',
+    r.check(bool(outline) and bool(line_rects) and outline[0]['run'] == 0 and near(outline[0], line_rects[0]) and bool(focus) and focus.get('pos') == P + typed,
+            'its outline stands on the run where the text shown holds it, the walk on the span there (FP-21)',
             {'outline': outline, 'run_lines': line_rects, 'focus': focus, 'P': P})
 
 

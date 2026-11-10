@@ -25,7 +25,8 @@
 // is pinned or is marked whole, and every hint the page raises marked;
 // the entries no design document carries are listed; and every accessible name the page
 // sets is read from ST — none stands in the markup, and none is written as a
-// literal in a module.
+// literal in a module; and the words of a draft holding unsent typing are
+// the decision's DRAFT strings.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -592,6 +593,18 @@ test('a one-line hint\'s compact form is its notice\'s first clause, the text be
   try { assert.equal(hintOf('T.pinned-hint').clause, 'a pinned notice — its rest', 'a pinned notice is never cut'); } finally { delete STRINGS['T.pinned-hint']; }
   assert.throws(() => hintOf('F.published'), /no hint F\.published/);
   assert.throws(() => hintOf('T.none'), /no string T\.none/);
+});
+
+test('the words of a draft holding unsent typing are the decision\'s DRAFT strings, each naming the decision and its screen, none the lane\'s own; the put-back\'s are B3-S7\'s', () => {
+  const D = 'ux/questions/2026-11-09-unsent-typing-which-text.decision.md';
+  /** @type {Array<[string, string]>} */
+  const DRAFTS = [['L.new.wrote.held', 'new in this draft, held on this device'], ['L.held.device', 'held on this device'], ['L.removed.part', 'only part of the passage — you removed the rest'], ['L.removed.all', 'you removed this passage']];
+  for (const [id, words] of DRAFTS) {
+    const { text, cls, source, screen, lane } = STRINGS[id];
+    assert.deepEqual([text, cls, source, !!screen, lane], [words, 'DRAFT', D, true, undefined], id);
+  }
+  assert.deepEqual([t('B3.history.put-back'), STRINGS['B3.history.put-back'].source], ['put back in the current text', 'designs/B3-editor.md']);
+  assert.ok(!lacking().some((x) => DRAFTS.some(([id]) => id === x.id)), 'none of them is listed as the lane\'s own');
 });
 
 test('the lane\'s own strings are listed for the report', () => {

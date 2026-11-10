@@ -28,7 +28,8 @@
 // what still works, a page URL whose `port` names no port saying so in the
 // entry, the face and every call's answer (FP-35); and the editor's refusal
 // names each mapped to their entry's words with no act, a name no document
-// drafts words for kept on the generic refusal line.
+// drafts words for kept on the generic refusal line; and the face of a
+// passage the person's own removal took, its act the put-back.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as FACES from './faces.js';
@@ -440,6 +441,20 @@ test('the fifth cell answering a follow says the far end\'s whole form in its on
   } finally {
     REC.takeIndex(/** @type {any} */ ({ docs: [], counts: [], state: { arm: 'none' } }));
   }
+});
+
+test('the face of a passage the person\'s own removal took says so in the decision\'s words and offers one act, "put back in the current text", the put-back handed in; a notice no longer standing to be shown shows nothing (foundations §2.3)', () => {
+  const D = '1.0.1.0.44', at = { span: { addr: D, pos: 12 }, sign: D };
+  let back = 0;
+  FACES.removed(D, at, () => { back++; }, true);
+  const f = faceShown(), o = HOST.currentState();
+  assert.deepEqual([f?.id, f?.words, f?.acts, o?.anchor, o?.told], ['face:removed', ['L.removed.all', t('L.removed.all')], ['a0'], at, true], 'the person removed this passage, at the removal point, told by its landing');
+  assert.ok(f && f.html.includes(`<button data-run="a0" class="">${esc(t('B3.history.put-back'))}</button>`), `its act in B3-S7's words: ${f && f.html}`);
+  o?.acts?.a0(/** @type {any} */ ({}), true);
+  assert.equal(back, 1, 'its act the put-back handed in');
+  HOST.dismiss();
+  FACES.removed(D, at, () => {}, false, { notice: true, stands: () => false });
+  assert.equal(HOST.currentState(), null, 'an act made since its read answered: nothing shown');
 });
 
 test('the dead end\'s face offers the version offer handed in — "read version ⟨k⟩, the last that holds it", its number filled and no token left, its act the version move — and no act where none is; drawn again in its place as the offer is found, still told by its landing, the act\'s words said once and the face\'s own not again; a face no longer standing at that document never drawn again (issue #57)', () => {

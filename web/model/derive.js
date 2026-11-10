@@ -18,17 +18,25 @@
 // are not three or four in order, a frame of another kind — the answer names
 // the row and why (`Applied`). `applyEdits` rides the same kernel for the
 // page-local edits a draft's caret makes (K-72) — positions and text alone,
-// never a frame — and `toShown`/`toBase` carry a position across them, so a
-// span the walk names in the delivered text is found in the typed text and
-// back; `spanRuns` splits a span of the typed text into what the delivered
-// text holds and what the edits made, the one reading of a span the board is
-// asked about, so no question reaches the board by a position of the typed
-// text. `boundaries` and `wordStop` read a text's characters and its words
-// about a position, for the steps a caret and a selection's end make (K-70,
-// K-71, K-77). The texts' positions are bytes (wire.md §Value encodings).
+// never a frame — and names every byte of the text it answers twice over:
+// its image places each by identity — a byte the delivered text holds by the
+// permanent address the document's image gives it, a byte an edit made by the
+// identity the caller spells for it (M-REC's `pageIds`: the page's own until
+// the board mints it, its permanent address after) — and its source
+// (`Derivation.source`) by where it came from, a position of the delivered
+// text or the page's ordinal for it. An edit that puts back what an earlier
+// edit removed (`Edit.back`) places those same bytes again, their identity
+// and their source with them. `sourceRuns` splits a span of that text into
+// what the delivered text holds and what the edits made — the one reading of
+// a span the board is asked about, so no question reaches the board by a
+// position of the typed text — and `fromBase` finds a stretch of the
+// delivered text in it. `boundaries` and `wordStop` read a text's characters
+// and its words about a position, for the steps a caret and a selection's end
+// make (K-70, K-71, K-77). The texts' positions are bytes (wire.md §Value
+// encodings).
 // Rules: FP-1, FP-2, FP-6, FP-7, FP-14.
 
-import { deriveBlocks, placedIn } from './records.js';
+import { deriveBlocks, placedIn, pageSpace } from './records.js';
 import { parseVSpan, documentOf, accountOf } from './address.js';
 import { byteLength, byteOffsets, sliceBytes } from '../util.js';
 
@@ -57,11 +65,17 @@ import { byteLength, byteOffsets, sliceBytes } from '../util.js';
 /** @typedef {(addr: string) => (Doc | null)} Sources — the records at hand a copy or a reinstate may take its material from, by document */
 
 /**
- * @typedef {Object} Text — a text as the kernel edits it: its runs in position order, its image placing them by identity, and how far its extent moved
+ * @typedef {Object} Text — a text as the kernel edits it: its runs in position order, its image placing them by identity, where each byte came from, and how far its extent moved
  * @property {Run[]} runs
  * @property {ImageRun[]} image
+ * @property {ImageRun[]} source every byte by where it came from (`Derivation.source`), as the image places it by identity: `BASE` and its position in the text the kernel started from, or `PAGE` and the page's ordinal for a byte an edit made; none where the caller tracks none
  * @property {number} delta the positions added, less the positions removed
  */
+
+/** the source of a byte the text the kernel started from holds: its ordinal that text's position (`Text.source`) */
+export const BASE = 'base';
+/** the source of a byte an edit made: its ordinal the page's own for it (`Text.source`; M-REC's `Edit.page`) */
+export const PAGE = 'page';
 
 /** a row the apply stopped at */
 class Stop extends Error {
@@ -159,17 +173,19 @@ const shiftedImage = (/** @type {ImageRun[]} */ image, /** @type {number} */ fro
  * @param {number} pos
  * @param {Run[]} placed the runs to place, each at its own position from 1: their positions are taken from `pos`
  * @param {ImageRun[]} ids the identity of the placed runs, each at its position from 1
+ * @param {ImageRun[]} [src] where the placed runs came from (`Text.source`), each at its position from 1; none where the caller tracks none
  * @returns {Text}
  */
-function placeAt(t, pos, placed, ids) {
+function placeAt(t, pos, placed, ids, src = []) {
   const e = extentOf(t.runs);
   if (e ? pos < e.from || pos > e.to : pos !== 1) throw new Stop('outside');
   const width = placed.reduce((n, r) => n + r.width, 0);
   if (!width) return t;
-  const runs = shifted(cutAt(t.runs, pos), pos, width), image = shiftedImage(cutImage(t.image, pos), pos, width);
+  const runs = shifted(cutAt(t.runs, pos), pos, width), image = shiftedImage(cutImage(t.image, pos), pos, width), source = shiftedImage(cutImage(t.source, pos), pos, width);
   for (const r of placed) runs.push({ ...r, pos: pos + r.pos - 1 });
   for (const r of ids) image.push({ ...r, pos: pos + r.pos - 1 });
-  return { runs: merged(runs), image: image.sort((a, b) => a.pos - b.pos), delta: t.delta + width };
+  for (const r of src) source.push({ ...r, pos: pos + r.pos - 1 });
+  return { runs: merged(runs), image: image.sort((a, b) => a.pos - b.pos), source: source.sort((a, b) => a.pos - b.pos), delta: t.delta + width };
 }
 
 /**
@@ -187,9 +203,13 @@ function removeAt(t, pos, width) {
   if (!width) return t;
   const end = pos + width;
   const runs = cutAt(cutAt(t.runs, pos), end).filter((r) => r.pos + r.width <= pos || r.pos >= end);
-  const image = cutImage(cutImage(t.image, pos), end).filter((r) => r.pos + r.width <= pos || r.pos >= end);
-  return { runs: merged(shifted(runs, end, -width)), image: shiftedImage(image, end, -width), delta: t.delta - width };
+  const outside = (/** @type {ImageRun[]} */ image) => cutImage(cutImage(image, pos), end).filter((r) => r.pos + r.width <= pos || r.pos >= end);
+  return { runs: merged(shifted(runs, end, -width)), image: shiftedImage(outside(t.image), end, -width), source: shiftedImage(outside(t.source), end, -width), delta: t.delta - width };
 }
+
+/** an image's runs over a span, each at its position from 1, cut to the span */
+const imageOver = (/** @type {ImageRun[]} */ image, /** @type {number} */ pos, /** @type {number} */ width) =>
+  cutImage(cutImage(image, pos), pos + width).filter((r) => r.pos >= pos && r.pos + r.width <= pos + width).map((r) => ({ ...r, pos: r.pos - pos + 1 }));
 
 /**
  * The runs of a text over a span, as runs of their own from position 1, and
@@ -329,13 +349,16 @@ function applyFrame(t, frame, sources) {
       if (!a || !b || !mu) throw new Stop('outside');
       const runs = cutAt(cutAt(t.runs, c0), cN).filter((r) => r.pos + r.width <= c0 || r.pos >= cN);
       const image = cutImage(cutImage(t.image, c0), cN).filter((r) => r.pos + r.width <= c0 || r.pos >= cN);
+      const source = cutImage(cutImage(t.source, c0), cN).filter((r) => r.pos + r.width <= c0 || r.pos >= cN);
       let pos = c0;
-      for (const s of [b, mu, a]) {
+      for (const [s, from] of /** @type {Array<[{runs: Run[], ids: ImageRun[]}, number]>} */ ([[b, cuts[cuts.length - 2]], [mu, cuts[1]], [a, c0]])) {
+        const width = s.runs.reduce((n, r) => n + r.width, 0);
         for (const r of s.runs) runs.push({ ...r, pos: pos + r.pos - 1 });
         for (const r of s.ids) image.push({ ...r, pos: pos + r.pos - 1 });
-        pos += s.runs.reduce((n, r) => n + r.width, 0);
+        for (const r of imageOver(t.source, from, width)) source.push({ ...r, pos: pos + r.pos - 1 });
+        pos += width;
       }
-      return { runs: merged(runs), image: image.sort((x, y) => x.pos - y.pos), delta: t.delta };
+      return { runs: merged(runs), image: image.sort((x, y) => x.pos - y.pos), source: source.sort((x, y) => x.pos - y.pos), delta: t.delta };
     }
     default:
       return stop('frame');
@@ -386,8 +409,8 @@ function recordOver(doc, t, derived) {
   };
 }
 
-/** a document's text as the kernel takes it: its runs and its image copied, nothing moved yet */
-const textOfDoc = (/** @type {Doc} */ doc) => /** @type {Text} */ ({ runs: doc.runs.map(copyRun), image: doc.image.map((r) => ({ ...r })), delta: 0 });
+/** a document's text as the kernel takes it: its runs and its image copied, nothing moved yet, no byte's source tracked */
+const textOfDoc = (/** @type {Doc} */ doc) => /** @type {Text} */ ({ runs: doc.runs.map(copyRun), image: doc.image.map((r) => ({ ...r })), source: [], delta: 0 });
 
 /**
  * A document's record with its held lines applied (see the head; BM-14,
@@ -416,123 +439,129 @@ export function applyHeld(doc, rows, sources = () => null) {
 
 /**
  * A document's record with the page's own edits applied (see the head;
- * K-72): each edit, in order, its `width` positions at `pos` replaced by its
- * text in the text as it stands after the edits before it — the same kernel
- * the held lines ride. An edit outside the text held stops the apply as a row
- * does, named by its index among the edits. The record handed in is never
- * changed.
+ * K-72): each edit, in order, in the text as it stands after the edits before
+ * it — its `width` positions at `pos` replaced by its text, the bytes it makes
+ * named by `ids` from its `page` ordinal on, or, for a put-back (`Edit.back`),
+ * the bytes an earlier edit removed placed again at `pos` as they were, their
+ * identity and their source with them — the same kernel the held lines ride.
+ * An edit outside the text held, or a put-back of bytes no earlier edit
+ * removed, stops the apply as a row does, named by its index among the edits.
+ * The record handed in is never changed.
  * @param {Doc} doc
  * @param {readonly Edit[]} edits
- * @returns {{doc: Doc, applied: number, stopped: {index: number, why: Why} | null}}
+ * @param {(page: number, width: number) => ISpan[]} [ids] the identity of `width` bytes the page made from its ordinal `page` on, in order (M-REC's `pageIds`); the page's own space of the document where left out
+ * @returns {{doc: Doc, applied: number, stopped: {index: number, why: Why} | null, removed: Array<ISpan[] | null>}} `removed` what each edit applied took out of the text, by its index, as bytes by identity in the text's order — none of them where the image named none; null for an edit that removed nothing
  */
-export function applyEdits(doc, edits) {
-  let t = textOfDoc(doc);
+export function applyEdits(doc, edits, ids = (page, width) => [{ prefix: pageSpace(doc.addr), ordinal: page, width }]) {
+  // every position the delivered text may hold is its own source, the ones the page holds no run of among them: its extent, its window and its image's reach
+  const reach = Math.max(doc.to, doc.extent != null ? doc.extent + 1 : 0, doc.imageFor ? doc.imageFor[1] : 0, 1);
+  let t = /** @type {Text} */ ({ ...textOfDoc(doc), source: reach > 1 ? [{ pos: 1, width: reach - 1, prefix: BASE, ordinal: 1 }] : [] });
   let applied = 0;
   /** @type {{index: number, why: Why} | null} */
   let stopped = null;
+  /** @type {Array<{runs: Run[], ids: ImageRun[], src: ImageRun[]} | null>} what each edit removed, by its index: what a put-back places again */
+  const removed = [];
   for (const [i, e] of edits.entries()) {
     try {
-      if (e.width > 0) t = removeAt(t, e.pos, e.width);
-      if (e.text) t = placeAt(t, e.pos, [{ pos: 1, width: byteLength(e.text), kind: 'content', text: e.text, ref: null, origin: null }], []);
+      removed[i] = null;
+      if (e.width > 0) {
+        const s = stretchOf(t.runs, t.image, e.pos, e.width);
+        if (!s) throw new Stop('outside');
+        removed[i] = { ...s, src: imageOver(t.source, e.pos, e.width) };
+        t = removeAt(t, e.pos, e.width);
+      }
+      if (e.back) {
+        const was = removed[e.back.of], part = was ? stretchOf(was.runs, was.ids, e.back.from + 1, e.back.width) : null;
+        if (!was || !part) throw new Stop('source');
+        t = placeAt(t, e.pos, part.runs, part.ids, imageOver(was.src, e.back.from + 1, e.back.width));
+      } else if (e.text) {
+        const width = byteLength(e.text);
+        /** @type {ImageRun[]} */
+        const named = [];
+        let at = 1;
+        if (e.page != null) for (const x of ids(e.page, width)) { named.push({ pos: at, width: x.width, prefix: x.prefix, ordinal: x.ordinal }); at += x.width; }
+        t = placeAt(t, e.pos, [{ pos: 1, width, kind: 'content', text: e.text, ref: null, origin: null }], named, [{ pos: 1, width, prefix: PAGE, ordinal: e.page ?? 0 }]);
+      }
       applied++;
     } catch (x) { if (x instanceof Stop) { stopped = { index: i, why: x.why }; break; } throw x; }
   }
-  return { doc: recordOver(doc, t, { from: doc.addr, rows: [], edits: applied, at: null }), applied, stopped };
+  return { doc: recordOver(doc, { ...t, image: joined(t.image) }, { from: doc.addr, rows: [], edits: applied, at: null, source: joined(t.source) }), applied, stopped, removed: removed.map((r) => (r ? r.ids.map((x) => ({ prefix: x.prefix, ordinal: x.ordinal, width: x.width })) : null)) };
 }
 
-/**
- * A position of the delivered text carried into the typed text (see the
- * head): moved by each edit before it; one inside the positions an edit
- * removed stands at the edit's place.
- * @param {readonly Edit[]} edits
- * @param {number} pos
- * @returns {number}
- */
-export function toShown(edits, pos) {
-  let p = pos;
-  for (const e of edits) {
-    if (p >= e.pos + e.width) p += byteLength(e.text) - e.width;
-    else if (p > e.pos) p = e.pos;
-  }
-  return p;
-}
-
-/**
- * A position of the typed text carried back into the delivered text (see
- * the head): the edits unwound from the last; one inside the bytes an edit
- * inserted stands at the edit's place.
- * @param {readonly Edit[]} edits
- * @param {number} pos
- * @returns {number}
- */
-export function toBase(edits, pos) {
-  let p = pos;
-  for (let i = edits.length - 1; i >= 0; i--) {
-    const e = edits[i], n = byteLength(e.text);
-    if (p >= e.pos + n) p -= n - e.width;
-    else if (p > e.pos) p = e.pos;
-  }
-  return p;
-}
-
-/**
- * @typedef {Object} SpanRun — one stretch of a span of the typed text (`spanRuns`)
- * @property {number} pos its first position in the typed text
- * @property {number} width its positions
- * @property {number | null} base its first position in the delivered text, where it stands at `toBase` of `pos`; null where an edit made its bytes, which the delivered text lacks
- */
-
-/**
- * A span of the typed text split into runs (see the head), in the text's
- * order: each edit unwound from the last, so a position inside bytes an edit
- * inserted is new and any other moves back past the edit. Two neighbours join
- * only where they continue each other in both texts: new bytes beside new
- * bytes, or delivered bytes beside the delivered bytes after them, so bytes
- * removed between two stretches leave them two runs and the span is never
- * read by its two ends.
- * @param {readonly Edit[]} edits
- * @param {number} pos the span's first position in the typed text
- * @param {number} width its positions; none where it is not above zero
- * @returns {SpanRun[]}
- */
-export function spanRuns(edits, pos, width) {
-  /** @type {SpanRun[]} */
-  let runs = width > 0 ? [{ pos, width, base: pos }] : [];
-  for (let i = edits.length - 1; i >= 0; i--) {
-    const e = edits[i];
-    runs = runs.flatMap((r) => unwound(r, e.pos, e.pos + byteLength(e.text), e.width - byteLength(e.text)));
-  }
-  /** @type {SpanRun[]} */
+/** an image's runs, or a source's, joined where each continues the one before it in the text and in what it names */
+function joined(/** @type {ImageRun[]} */ source) {
+  /** @type {ImageRun[]} */
   const out = [];
-  for (const r of runs) {
+  for (const r of source) {
     const last = out[out.length - 1];
-    if (last && (last.base == null ? r.base == null : r.base === last.base + last.width)) last.width += r.width;
+    if (last && last.prefix === r.prefix && last.pos + last.width === r.pos && last.ordinal + last.width === r.ordinal) last.width += r.width;
     else out.push({ ...r });
   }
   return out;
 }
 
 /**
- * A run of the text after an edit carried back before it: a new run stands
- * new; of any other, the part before the bytes the edit inserted stands, the
- * part inside them is new, and the part after them moves by what the edit
- * changed.
- * @param {SpanRun} r
- * @param {number} from the first position of the bytes the edit inserted
- * @param {number} to one past their last
- * @param {number} by the positions it removed, less the bytes it inserted
+ * @typedef {Object} SpanRun — one stretch of a span of the typed text (`sourceRuns`)
+ * @property {number} pos its first position in the typed text
+ * @property {number} width its positions
+ * @property {number | null} base its first position in the delivered text, where that text holds its bytes; null where an edit made them
+ * @property {number | null} page the page's ordinal for its first byte, where an edit made its bytes (M-REC's `Edit.page`); null where the delivered text holds them
+ */
+
+/**
+ * A span of the text a record shows split into runs by where its bytes came
+ * from (see the head), in the text's order: each stretch the delivered text
+ * holds at its position there, each stretch an edit made by the page's ordinal
+ * for it. Two neighbours are one run only where they continue each other in
+ * both texts, so bytes removed between two stretches leave them two runs and
+ * the span is never read by its two ends. A record no edit derived answers the
+ * span itself, at its own positions.
+ * @param {Doc} d the record shown: one `applyEdits` derived, or the delivered text's own
+ * @param {number} pos the span's first position in it
+ * @param {number} width its positions; none where it is not above zero
  * @returns {SpanRun[]}
  */
-function unwound(r, from, to, by) {
-  const at = r.base;
-  if (at == null) return [r];
-  const end = at + r.width, part = (/** @type {number} */ lo, /** @type {number} */ hi, /** @type {number | null} */ base) => ({ pos: r.pos + lo - at, width: hi - lo, base });
+export function sourceRuns(d, pos, width) {
+  if (width < 1) return [];
+  const source = d.derived ? d.derived.source : null;
+  if (!source) return [{ pos, width, base: pos, page: null }];
+  const end = pos + width;
   /** @type {SpanRun[]} */
   const out = [];
-  if (at < from) out.push(part(at, Math.min(end, from), at));
-  if (Math.max(at, from) < Math.min(end, to)) out.push(part(Math.max(at, from), Math.min(end, to), null));
-  if (end > to) { const lo = Math.max(at, to); out.push(part(lo, end, lo + by)); }
+  for (const r of source) {
+    const lo = Math.max(pos, r.pos), hi = Math.min(end, r.pos + r.width);
+    if (lo >= hi) continue;
+    const from = r.ordinal + (lo - r.pos);
+    out.push({ pos: lo, width: hi - lo, base: r.prefix === BASE ? from : null, page: r.prefix === PAGE ? from : null });
+  }
   return out;
+}
+
+/**
+ * Where a stretch of the delivered text stands in the text a record shows
+ * (see the head): every stretch of it the edits left standing, in the shown
+ * text's order — moved where an edit above it moved it, cut where one typed
+ * inside it, none where they removed it all. A record no edit derived answers
+ * the stretch itself.
+ * @param {Doc} d the record shown
+ * @param {number} pos the stretch's first position in the delivered text
+ * @param {number} width its positions
+ * @returns {Array<{pos: number, width: number}>}
+ */
+export function fromBase(d, pos, width) {
+  const source = d.derived ? d.derived.source : null;
+  if (!source) return width > 0 ? [{ pos, width }] : [];
+  const end = pos + width;
+  /** @type {Array<{pos: number, width: number}>} */
+  const out = [];
+  for (const r of source) {
+    if (r.prefix !== BASE) continue;
+    const lo = Math.max(pos, r.ordinal), hi = Math.min(end, r.ordinal + r.width);
+    if (lo >= hi) continue;
+    const at = r.pos + (lo - r.ordinal), last = out[out.length - 1];
+    if (last && last.pos + last.width === at) last.width += hi - lo; else out.push({ pos: at, width: hi - lo });
+  }
+  return out.sort((x, y) => x.pos - y.pos);
 }
 
 /**
@@ -547,7 +576,7 @@ function unwound(r, from, to, by) {
  * @returns {Doc}
  */
 export function recordAt(addr, runs, at) {
-  const t = /** @type {Text} */ ({ runs: merged(runs), image: [], delta: 0 });
+  const t = /** @type {Text} */ ({ runs: merged(runs), image: [], source: [], delta: 0 });
   const e = extentOf(t.runs);
   /** @type {Doc} */
   const base = {

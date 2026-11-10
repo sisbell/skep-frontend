@@ -3,7 +3,8 @@
 // the tree arithmetic pure, the mirror engine-bound. State (FP-10): the
 // walk's position — the element the walk stands on, its siblings and the
 // levels above — the position a landing named inside the focused span (W-01
-// step 3), kept until the walk moves; the count of its moves; whether the
+// step 3), kept until the walk moves; the bytes its focus stands on
+// (`stood`); the count of its moves; whether the
 // walk holds the span of a caret the person left kept; the mirror's
 // element; and the readers the app hands in (`readers`; FP-11): where Back's
 // light stands and what a landing says (N-GO's `backLight` and `described`),
@@ -26,9 +27,19 @@
 // position. At launch the platform's focus rests on the walk's element with
 // the ring out (rule 21). Enter at a focused span selects the block whole
 // (D8); at a withheld run it shows the run's face whole (K-7; N-KEYS').
+// The walk follows the text shown (foundations §2.7): in a draft holding the
+// person's page-local edits its elements are the blocks of the text the page
+// shows (T-LAYER's `shownOf`) and the links LK draws on them — a line the
+// person typed a stop, a line they removed whole none, each part of a line a
+// typed break split a stop of its own — and every position it keeps is one
+// of that text. Its focus holds its place by its bytes (`stand`, `carry`):
+// through an edit it stays on the element holding the first of them still
+// there, and gives its place up only where none is, to the element after the
+// point they were removed at, else the one before; nothing in it moves at a
+// commit or an ack.
 // The walk follows a live caret (`followCaret`; B3-S13): as a click places
-// it or a key at it moves it, the walk stands on the span it is in, by the
-// landing's rule and from the model as it is held, naming the span's own
+// it or a key at it moves it, the walk stands on the block of the text shown
+// the caret is in, by the landing's rule, naming the block's own
 // first position — a click's move putting the ring out, a key's leaving the
 // ring's rule as it stands — so every act on the walk's element acts there.
 // Every other move of the walk — a walk key, a landing, a step, a re-take —
@@ -80,10 +91,9 @@
 // else to the first in record order (D5 K-3; `childUnder`): at the board the
 // account whose cell holds the centre; at an account the mark whose cell
 // holds it, else, nearer than far, the document whose region holds it; at a
-// document the element standing on the position its fold holds there — a
-// position of the text shown, carried back into the model's text (T-LAYER's
-// `basePos`) — by the landing's rule (`elementAt`); at a withheld run its
-// first end. The camera
+// document the element standing on the position its fold holds there, a
+// position of the text shown, by the landing's rule (`elementAt`); at a
+// withheld run its first end. The camera
 // follows the focus — a walk move flies to the element at its level's scale
 // (`flyToFocus`): the mark's stop, and a member the walk lists after it, to
 // the mark centred at the scale nearest the camera's that draws it (P-LOD's
@@ -92,8 +102,7 @@
 // reading size where the scale the move was made at reads it at its reading
 // scale, else no nearer than just short of that (T-LAYER's
 // `scaleBelowReading`), so no step takes a document to its reading scale from
-// below it; a span to its line where the text shown sets it — its position
-// carried there through a draft's typed text (T-LAYER's `shownPos`) — its
+// below it; a span to its line where the text shown sets it, its
 // column framed at the landing's em (T-LAYER's `frameOf`); a document's frame
 // and a span's line read again
 // each frame as the document is set while the camera flies, at the position
@@ -189,6 +198,13 @@
 // run of a passage in several is described by those runs' labels, a hidden
 // description of its own, each written at the rebuild and marked again in
 // place (`markDescribed`), so the focus moving onto an item says it once. The
+// mirror reads the same elements as the walk, with the words as shown — the
+// person's own typing among them — its items written again in place, silently,
+// as the text under them changes (`rewrite`); for words in flight it says
+// nothing more, and while a draft holds a line the board has not kept an item
+// holding words the board has not minted, or a held removal, is described
+// "held on this device" (`isHeld`; T-LAYER's `heldIn`, read from the held
+// lines alone). The
 // mirror is rebuilt whole on every move (`render`), and its Tab stop with it:
 // the plane is one stop (D5 §4 rule 5) — the current item, while the tree's
 // container stands out of the order; the container is the stop only where
@@ -220,6 +236,7 @@ import { esc, fill } from '../util.js';
 import { t, tHTML, addressedHTML, markCount } from '../strings.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
+/** @typedef {import('../model/records.js').ISpan} ISpan */
 
 /**
  * @typedef {Object} Node — one element of the linearization
@@ -284,6 +301,8 @@ export function readers(/** @type {Partial<Readers>} */ r) { read = { ...noReade
 const DESCRIPTION = 'walk-landing';
 /** the id of the hidden description of the other runs an item holds, item i's (see the head) */
 const pieceId = (/** @type {number} */ i) => 'walk-piece-' + i;
+/** the id of the mirror's hidden description of an item holding what a hold keeps from the board, "held on this device" (see the head) */
+const HELD = 'walk-held';
 /** the id of the hidden description of a link item's far end the board will say nothing of, item i's (see the head) */
 const farId = (/** @type {number} */ i) => 'walk-far-' + i;
 
@@ -318,12 +337,12 @@ const mirrorHolds = () => !!mirrorEl && typeof document !== 'undefined' && mirro
  */
 export function cover(on) { if (mirrorEl) FOCUS.cover(mirrorEl, on); }
 export function onFocus(/** @type {(n: Node | null) => void} */ fn) { watchers.push(fn); }
-/** the walk's element, read-only */
-export const current = () => focus;
+/** the walk's element, read-only, as the text shown stands now: carried first where that text moved under it (`carry`) */
+export function current() { carry(); return focus; }
 /** the position a landing named inside the focused span, read-only — the one line's position (null: the span's own first) */
-export const landedAt = () => landed;
+export function landedAt() { carry(); return landed; }
 /** the focused span, for the article's `lit` mark */
-export function focusedSpan() { return focus && focus.kind === 'block' && focus.pos != null ? { addr: focus.addr, pos: focus.pos } : null; }
+export function focusedSpan() { carry(); return focus && focus.kind === 'block' && focus.pos != null ? { addr: focus.addr, pos: focus.pos } : null; }
 /** is the ring drawn — the focus's owner's rule (rule 10): the plane holds the focus and a key moved it */
 export const ringShown = () => FOCUS.ringShown();
 
@@ -376,36 +395,36 @@ export async function childrenOf(node) {
   }
   if (node.kind === 'document') return (await PUMP.loadWhole(node.addr)) ? elementsOf(node.addr) : [];
   // a withheld run's: the ends drawn at it (see the head)
-  if (node.kind === 'block' && node.pos != null) return runEnds(node.addr, node.pos).map((s) => ({ kind: /** @type {const} */ ('link'), addr: node.addr, pos: LAYER.boardPos(node.addr, s.pos), link: s }));
+  if (node.kind === 'block' && node.pos != null) return runEnds(node.addr, node.pos).map((s) => ({ kind: /** @type {const} */ ('link'), addr: node.addr, pos: s.pos, link: s }));
   return [];
 }
 
-/** a document's elements of the walk as the model holds its text now: its blocks that are elements, then the ends LK draws in the text the page shows, each stop at its bytes' position in the model's text (T-LAYER's `boardPos`) — a document's children once it is read whole (`childrenOf`) */
+/** a document's elements of the walk in the text the page shows of it now (T-LAYER's `shownOf`): its blocks that are elements — a line the person typed among them, none for one they removed whole — then the ends LK draws in that text, each one stop at its first drawn byte — a document's children once it is read whole (`childrenOf`) */
 function elementsOf(/** @type {string} */ addr) {
   /** @type {Node[]} */
-  const out = REC.doc(addr).blocks.filter(isElement).map((b) => ({ kind: /** @type {const} */ ('block'), addr, pos: b.pos, link: null }));
-  for (const s of LK.shown(addr)) if (!s.run) out.push({ kind: 'link', addr, pos: LAYER.boardPos(addr, s.pos), link: s });
+  const out = LAYER.shownOf(addr).blocks.filter(isElement).map((b) => ({ kind: /** @type {const} */ ('block'), addr, pos: b.pos, link: null }));
+  for (const s of LK.shown(addr)) if (!s.run) out.push({ kind: 'link', addr, pos: s.pos, link: s });
   return out;
 }
 
 /**
  * The index of the element of the walk standing on a position, among a
  * document's elements: the span T-SPAN's rule stands it on (`elementIn`; rule
- * 20), read over the document's blocks as the model holds them; the first
- * where that rule stands it on none — no block holds the position, or none is
- * an element.
+ * 20), read over the blocks of the text the page shows of it; the first where
+ * that rule stands it on none — no block holds the position, or none is an
+ * element.
  * @param {Node[]} kids the document's elements (`elementsOf`)
  * @param {string} addr the document
- * @param {number} pos
+ * @param {number} pos a position of the text shown
  * @returns {number}
  */
 function elementAt(kids, addr, pos) {
-  const b = elementIn(REC.has(addr) ? REC.doc(addr).blocks : [], pos);
+  const b = elementIn(REC.has(addr) ? LAYER.shownOf(addr).blocks : [], pos);
   return b ? Math.max(0, kids.findIndex((n) => n.kind === 'block' && n.pos === b.pos)) : 0;
 }
 
-/** the ends LK draws at the withheld run a document's block of the model's text at `pos` is, in the order it draws them; none for any other block */
-const runEnds = (/** @type {string} */ addr, /** @type {number} */ pos) => LK.shown(addr).filter((s) => !!s.run && s.run.pos === LAYER.shownPos(addr, pos));
+/** the ends LK draws at the withheld run a document's block at `pos` is, in the order it draws them; none for any other block */
+const runEnds = (/** @type {string} */ addr, /** @type {number} */ pos) => LK.shown(addr).filter((s) => !!s.run && s.run.pos === pos);
 
 /** the accessible name of a node (what the mirror's item says), from ST's entries (`named`) */
 export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type {number} */ total) { return named(n, i, total).text; }
@@ -452,7 +471,7 @@ function named(n, i, total) {
     return then(then({ text: t('L.mirror.document', { ...values, label: label.map((r) => r.text).join('') }), html: tHTML('L.mirror.document', { ...values, label }, { document: 'id' }) }, plainly(keptSentence(n))));
   }
   if (n.kind === 'block') {
-    const d = REC.doc(n.addr); const b = d.blocks.find((x) => x.pos === n.pos);
+    const d = LAYER.shownOf(n.addr); const b = d.blocks.find((x) => x.pos === n.pos);
     if (!b) return then(said('L.mirror.span.bare', { p: n.pos ?? '', document: n.addr }, { document: 'id' }));
     const kind = itemOf(b);
     if (kind === 'withheld') {
@@ -495,8 +514,104 @@ const levelOf = (/** @type {Node} */ n) => (n.kind === 'board' ? 1 : n.kind === 
  */
 function setFocus(sibs, i, at = null) {
   siblings = sibs; idx = i; focus = sibs[i] ?? null;
-  const held = at != null && focus && focus.kind === 'block' ? REC.blockAt(focus.addr, at) : null;
+  const held = at != null && focus && focus.kind === 'block' ? LAYER.blockAt(focus.addr, at) : null;
   landed = held && focus && held.pos === focus.pos ? at : null;
+  stand();
+}
+
+/**
+ * @typedef {Object} Stood — the bytes the walk's focus stands on, where it is a span or a link's end in a document (see the head)
+ * @property {string} addr the document
+ * @property {number} text how many times the document's page-local edits had changed as they were read (M-REC's `editRev`): the walk is carried where they moved since
+ * @property {ISpan[]} ids the span's bytes, or the link's end's, by identity, in the text's order (T-LAYER's `shownIdentity`)
+ * @property {ISpan[]} at the byte at the position a landing named inside the span (`landed`); none where it named none
+ * @property {number | null} run for a link's end drawn at a withheld run, that run's first position as the bytes were read; null for every other element
+ */
+
+/** @type {Stood | null} what the walk's focus stands on (`stand`), which an edit of the text shown carries it by (`carry`); null off a document's spans and links */
+let stood = null;
+
+/** the bytes the walk's focus stands on read from the text shown now (`Stood`): what `carry` finds it by once that text moves */
+function stand() {
+  const f = focus;
+  if (!f || (f.kind !== 'block' && f.kind !== 'link') || f.pos == null || !REC.has(f.addr)) { stood = null; return; }
+  const b = f.kind === 'block' ? LAYER.blockByPos(f.addr, f.pos) : null, end = f.kind === 'link' ? f.link : null;
+  const run = end && end.run ? end.run : null;
+  const of = run ? { pos: run.pos, width: run.width } : end ? { pos: end.pos, width: Math.max(1, end.width) } : b ? { pos: b.pos, width: Math.max(1, b.width) } : { pos: f.pos, width: 1 };
+  stood = { addr: f.addr, text: REC.editRev(f.addr), ids: LAYER.shownIdentity(f.addr, of.pos, of.width), at: landed != null ? LAYER.shownIdentity(f.addr, landed, 1) : [], run: run ? run.pos : null };
+}
+
+/** do two lists of a document's elements name the same elements at the same places? */
+const sameElements = (/** @type {Node[]} */ a, /** @type {Node[]} */ b) => a.length === b.length && a.every((n, i) => n.kind === b[i].kind && n.addr === b[i].addr && n.pos === b[i].pos && (n.link ? n.link.link.addr : null) === (b[i].link ? /** @type {Shown} */ (b[i].link).link.addr : null) && (n.link ? n.link.key : null) === (b[i].link ? /** @type {Shown} */ (b[i].link).key : null));
+
+/**
+ * The walk carried through a change of the text shown under it (see the
+ * head; D5 §4 rule 4): where the page-local edits of the document its focus
+ * stands in moved since the focus was read — a key typed, a put-back, bytes
+ * the board minted — the document's elements are listed again from
+ * it and the focus stands on the element holding the first of its bytes still
+ * there (T-LAYER's `firstStanding`); where none is, on the element after the
+ * point the page's own record says they were removed at (T-LAYER's
+ * `removedOf`), else after where they stood, else on the one before; a link's
+ * end on its own stop while LK still draws it. A stop is never lost, and where
+ * the elements stand as they stood nothing moves: the mirror is rebuilt only
+ * where they changed, the platform's focus kept on the walk's item where the
+ * mirror held it.
+ * @returns {boolean} whether the walk's element or its siblings changed
+ */
+export function carry() {
+  const f = focus, was = stood;
+  if (!f || !was || f.pos == null || !REC.has(was.addr) || REC.editRev(was.addr) === was.text) return false;
+  const addr = was.addr, kids = elementsOf(addr), deep = f.kind === 'link' && was.run != null;
+  if (!kids.length) { stood = { ...was, text: REC.editRev(addr) }; return false; }
+  const first = LAYER.firstStanding(addr, was.ids);
+  /** the element that takes the place of bytes the text shown no longer holds: the first at or after the point they were removed at, else the last before it */
+  const after = (/** @type {number} */ p) => { const i = kids.findIndex((n) => n.kind === 'block' && n.pos != null && n.pos >= p); return i >= 0 ? i : Math.max(0, kids.map((n) => n.kind).lastIndexOf('block')); };
+  const gone = first == null ? LAYER.removedOf(addr, was.ids).at ?? f.pos : null;
+  // the level of the document's elements: the walk's own, or, at a withheld run's ends, the one above it
+  const level = deep ? stack[stack.length - 1] : null, old = level ? level.siblings : siblings;
+  const end = f.kind === 'link' && f.link ? f.link : null;
+  let i = first != null ? elementAt(kids, addr, first) : after(/** @type {number} */ (gone));
+  if (end && !deep) { const k = kids.findIndex((n) => n.kind === 'link' && !!n.link && n.link.link.addr === end.link.addr && n.link.key === end.key); if (k >= 0) i = k; }
+  const changed = !sameElements(old, kids);
+  if (level) {
+    level.siblings = kids; level.idx = i;
+    const ends = kids[i] && kids[i].kind === 'block' && kids[i].pos != null ? runEnds(addr, /** @type {number} */ (kids[i].pos)).map((x) => /** @type {Node} */ ({ kind: 'link', addr, pos: x.pos, link: x })) : [];
+    const k = end ? ends.findIndex((n) => !!n.link && n.link.link.addr === end.link.addr && n.link.key === end.key) : -1;
+    if (k >= 0) { siblings = ends; idx = k; focus = ends[k]; } else { stack.pop(); siblings = kids; idx = i; focus = kids[i]; }
+  } else { siblings = kids; idx = i; focus = kids[i]; }
+  const at = was.at.length ? LAYER.firstStanding(addr, was.at) : null, b = at != null && focus && focus.kind === 'block' ? LAYER.blockAt(addr, at) : null;
+  landed = b && focus && b.pos === focus.pos ? at : null;
+  stand();
+  const moved_ = changed || !focus || focus.kind !== f.kind || focus.pos !== f.pos;
+  if (!moved_) { rewrite(); return false; }
+  // the same elements in the same order, each moved or its words changed: its items written again in place, silently; else the mirror rebuilt
+  if (old.length === kids.length && old.every((n, k) => n.kind === kids[k].kind) && focus && focus.kind === f.kind && !level) rewrite();
+  else { const held = mirrorHolds(); render(); if (held) focusItem(); }
+  moved();
+  return true;
+}
+
+/**
+ * The mirror's items written again in place where the text under them
+ * changed and the walk's elements stand as they stood (see the head): each
+ * item's words and its position, the item itself kept, so the platform's
+ * focus stays on the item it stands on and nothing is announced — the mirror
+ * reads the words as shown, the person's own typing among them, and changes
+ * silently as the text changes. The mirror rebuilt where the platform gives
+ * no items to write in.
+ */
+function rewrite() {
+  if (!mirrorEl) return;
+  if (typeof mirrorEl.querySelectorAll !== 'function') { render(); return; }
+  const total = siblings.length;
+  for (const li of /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[role="treeitem"]')])) {
+    const i = Number(li.dataset.i), n = siblings[i];
+    if (!n) continue;
+    if (n.pos != null && li.dataset.pos !== String(n.pos)) li.dataset.pos = String(n.pos);
+    const html = named(n, i, total).html;
+    if (li.innerHTML !== html) li.innerHTML = html;
+  }
 }
 
 /**
@@ -553,7 +668,7 @@ export function render() {
     const far = farWhole(n);
     if (far) pieces += `<div id="${farId(i)}" hidden>${esc(far)}</div>`;
   }
-  html += `</ul><div id="${DESCRIPTION}" hidden>${esc(said ? said.words : '')}</div>${pieces}`;
+  html += `</ul><div id="${DESCRIPTION}" hidden>${esc(said ? said.words : '')}</div><div id="${HELD}" hidden>${esc(t('L.held.device'))}</div>${pieces}`;
   mirrorEl.innerHTML = html;
   mirrorEl.tabIndex = idx >= lo && idx < hi ? -1 : 0;
 }
@@ -593,8 +708,8 @@ export function markExpanded() {
 function keptSentence(n) {
   if (n.kind === 'document') { const k = LAYER.keptIn(n.addr); return k ? t('L.mirror.clause', { clause: k.text }) : ''; }
   if (n.kind === 'board') { const k = LAYER.boardKeptIn(); return k ? t('L.mirror.clause', { clause: k.text }) : ''; }
-  const b = n.kind === 'block' && n.pos != null ? REC.blockByPos(n.addr, n.pos) : null;
-  if (!b || b.kind !== 'withheld' || !b.origin || REC.doc(n.addr).blocks.find((x) => x.kind === 'withheld' && x.origin === b.origin) !== b) return '';
+  const b = n.kind === 'block' && n.pos != null ? LAYER.blockByPos(n.addr, n.pos) : null;
+  if (!b || b.kind !== 'withheld' || !b.origin || LAYER.shownOf(n.addr).blocks.find((x) => x.kind === 'withheld' && x.origin === b.origin) !== b) return '';
   const k = LAYER.claimsKeptIn(b.origin);
   return k ? t('L.mirror.clause', { clause: k.text }) : '';
 }
@@ -640,7 +755,7 @@ function isLocated(/** @type {Node} */ n, /** @type {Located | null} */ at) {
   if (!at || n.addr !== at.addr) return false;
   const end = at.end;
   if (n.kind === 'link') return !!end && !!n.link && n.link.link.addr === end.link && n.link.key === end.key;
-  const b = n.kind === 'block' && n.pos != null ? REC.blockByPos(n.addr, n.pos) : null;
+  const b = n.kind === 'block' && n.pos != null ? LAYER.blockByPos(n.addr, n.pos) : null;
   if (!b) return false;
   if (end) return b.kind === 'withheld' && runEnds(n.addr, b.pos).some((s) => s.link.addr === end.link && s.key === end.key);
   return at.runs.some((r) => touches(b, r));
@@ -665,7 +780,7 @@ export function markLocated() {
 }
 
 /** the block a span node stands for; null for every other node */
-const blockOf = (/** @type {Node} */ n) => (n.kind === 'block' && n.pos != null ? REC.blockByPos(n.addr, n.pos) : null);
+const blockOf = (/** @type {Node} */ n) => (n.kind === 'block' && n.pos != null ? LAYER.blockByPos(n.addr, n.pos) : null);
 
 /** does a landing's description stand on a node (see the head): the span holding the landing's position, or its document, where the walk stands on it whole */
 function isDescribed(/** @type {Node} */ n, /** @type {Described | null} */ at) {
@@ -693,9 +808,16 @@ function farWhole(/** @type {Node} */ n) {
   return empty ? empty.whole.map((p) => p.text).join(' ') : '';
 }
 
+/** does a span node hold what a hold keeps from the board (see the head; T-LAYER's `heldIn`): words the board has not minted, or a held removal, while its draft holds a line the board has not kept */
+function isHeld(/** @type {Node} */ n) {
+  const b = blockOf(n);
+  return !!b && LAYER.heldIn(n.addr, b.pos, Math.max(1, b.width));
+}
+
 /**
  * The descriptions a node names (see the head): the landing's, where it
- * stands on it; its other runs' labels, where it holds any; its far end's
+ * stands on it; "held on this device", where it holds what a hold keeps from
+ * the board; its other runs' labels, where it holds any; its far end's
  * whole form, where the board will say nothing of its far document; null
  * where it names none.
  * @param {Node} n
@@ -707,6 +829,7 @@ function describedBy(n, i, at) {
   /** @type {string[]} */
   const ids = [];
   if (isDescribed(n, at)) ids.push(DESCRIPTION);
+  if (isHeld(n)) ids.push(HELD);
   if (otherRuns(n, at)) ids.push(pieceId(i));
   if (farWhole(n)) ids.push(farId(i));
   return ids.length ? ids.join(' ') : null;
@@ -792,10 +915,11 @@ function inPanel(/** @type {HTMLElement} */ item) {
 
 /** the mirror's item i's name (the gate reads it) */
 export function mirrorItem(/** @type {number} */ i) {
+  carry();
   const n = siblings[i]; return n ? nameOf(n, i, siblings.length) : null;
 }
-export const mirrorSize = () => siblings.length;
-export const mirrorIndex = () => idx;
+export function mirrorSize() { carry(); return siblings.length; }
+export function mirrorIndex() { carry(); return idx; }
 
 /** the walk moved: its watchers told, the plane redrawn */
 function moved() {
@@ -826,8 +950,7 @@ function heldBy(addr) {
  * at its reading scale, else no nearer than just short of that (T-LAYER's
  * `scaleBelowReading`), so a step never takes a document to its reading scale
  * from below it; a span's line, or a link's end's, where the text shown sets
- * it — its position carried there through a draft's typed text (T-LAYER's
- * `shownPos`) — its column framed with both its margins, at the landing's em
+ * it, its column framed with both its margins, at the landing's em
  * (T-LAYER's `frameOf`; P-CAM's `landingPx`) — the document's frame and the
  * span's line each read again as the camera flies (`aimIn`) — nowhere where
  * the document's extent is read first and a later move overtook this one
@@ -855,7 +978,7 @@ async function flyToFocus(move) {
     }), 300);
   } else {
     const addr = focus.addr, pos = focus.pos;
-    await CAM.fly(aimIn(addr, () => { const at = LAYER.frameOf(addr, pos == null ? null : LAYER.shownPos(addr, pos)); return CAM.viewAt(at, at.fs); }), 260);
+    await CAM.fly(aimIn(addr, () => { const at = LAYER.frameOf(addr, pos); return CAM.viewAt(at, at.fs); }), 260);
   }
   CAM.markDirty();
 }
@@ -886,9 +1009,8 @@ function stepped() { caretHeld = false; render(); focusItem({ byKey: true }); mo
  * else, nearer than far, where the plane draws documents, the document whose
  * region holds it, as the version its box shows (`documentAt`); at a
  * document, the element standing on the position its fold holds under the
- * centre, where its region holds the centre — a position of the text shown,
- * carried back into the model's text once the children are read (T-LAYER's
- * `basePos`), by the landing's rule (`elementAt`). It answers that child's
+ * centre, where its region holds the centre — a position of the text shown —
+ * by the landing's rule (`elementAt`). It answers that child's
  * index among the node's children once they are read, and the first's where
  * none of them is drawn under the centre.
  * @param {Node} node
@@ -902,7 +1024,7 @@ function childUnder(node, view) {
   if (node.kind === 'board') return named(REC.board() ? accountAt(x, y, BOARD.addr) : null);
   if (node.kind === 'account') { const mark = markAt(x, y, scale); return named(mark ? mark.key : lodOf(scale).name === 'far' ? null : documentAt(x, y, scale)); }
   const pos = node.kind === 'document' && holdsPoint(LAYER.regionOf(node.addr), x, y) ? LAYER.posAt(node.addr, x, y) : null;
-  return (kids) => (pos == null ? 0 : elementAt(kids, node.addr, LAYER.basePos(node.addr, pos)));
+  return (kids) => (pos == null ? 0 : elementAt(kids, node.addr, pos));
 }
 
 /**
@@ -969,7 +1091,7 @@ export async function enter() {
  * stands it on the mark's stop where the plane draws that mark at the scale
  * the camera is bound for, else on the mark's account. A move taken from what
  * the model holds (`asHeld`) reads no text: a span's levels are its
- * document's elements as the model holds them (`elementsOf`). A landing
+ * document's elements as the page shows them now (`elementsOf`). A landing
  * is the person's act: the kept caret's hold is released and a live caret
  * left kept as the move is made, before anything is read (see the head;
  * T-LAYER's `leaveCaret`).
@@ -978,7 +1100,7 @@ export async function enter() {
  * @param {boolean | null} [byKey] a key made the act; null where the move is no act of its own and the ring's rule stands (a key's caret followed, `followCaret`)
  * @param {boolean} [take] the platform's focus goes to the landing's item wherever it stood (an act); false carries it only where the mirror held it (a camera's re-take)
  * @param {End | null} [end] the link's end to stand on, at `pos`
- * @param {boolean} [asHeld] a span's levels taken as the model holds them, its document's text read for none (`dropped`, `followCaret`, `leaveText`)
+ * @param {boolean} [asHeld] a span's levels taken from the text the page shows now, its document's text read for none (`dropped`, `followCaret`, `leaveText`)
  * @returns {Promise<void>}
  */
 export async function focusTo(addr, pos, byKey = false, take = true, end = null, asHeld = false) {
@@ -1028,7 +1150,7 @@ async function standOn(addr, pos, byKey = false, take = true, end = null, asHeld
     stack = [{ siblings: [BOARD], idx: 0 }];
     if (i >= 0) { stack.push({ siblings: A.sibs, idx: A.i }); setFocus(M, i); } else setFocus(A.sibs, A.i);
   } else if (doc) {
-    const d = REC.doc(doc);
+    const d = LAYER.shownOf(doc);
     // the levels above the landing, each holding ITS OWN place in its siblings (so ← walks out to this document, this account)
     const A = among(await childrenOf(BOARD), { kind: 'account', addr: acct || '', pos: null, link: null });
     const D = among(await childrenOf({ kind: 'account', addr: acct || '', pos: null, link: null }), { kind: 'document', addr: doc, pos: null, link: null });
@@ -1091,7 +1213,7 @@ export function standAgain(addr, pos) { return restand(addr, pos, false, false);
  * camera move past the caret's reading scale, read by the re-take
  * (`retakeFromView`) or by the key that meets it first (N-KEYS' `whereNow`),
  * and Esc (`leaveText`).
- * @returns {{addr: string, pos: number, block: number | null} | null} the span the caret stands in, in the model's text (T-LAYER's `caretSpan`); null where no live caret stood, nothing then held
+ * @returns {{addr: string, pos: number, block: number | null} | null} the span the caret stands in, in the text shown (T-LAYER's `caretSpan`); null where no live caret stood, nothing then held
  */
 export function holdCaret() {
   const left = LAYER.leaveCaret();
@@ -1119,14 +1241,14 @@ export function leaveText() {
  * landing's rule as the walk follows a caret (`followCaret`), a line of it
  * standing in the visible view (T-LAYER's `spanInView`); null where no hold
  * stands, or no such span does.
- * @returns {{node: Node, pos: number} | null} the element, and the caret's position in the model's text, which the walk names there
+ * @returns {{node: Node, pos: number} | null} the element, and the caret's position in the text shown, which the walk names there
  */
 function heldSpan() {
   const c = caretHeld ? LAYER.caret() : null;
   const at = c && !c.live && LAYER.editable(c.addr) ? LAYER.caretSpan() : null;
   if (!at) return null;
   const kids = elementsOf(at.addr), node = kids[elementAt(kids, at.addr, at.pos)];
-  const b = node && node.kind === 'block' && node.pos != null ? REC.blockByPos(at.addr, node.pos) : null;
+  const b = node && node.kind === 'block' && node.pos != null ? LAYER.blockByPos(at.addr, node.pos) : null;
   return b && LAYER.spanInView(at.addr, b.pos, b.width) ? { node, pos: at.pos } : null;
 }
 
@@ -1139,7 +1261,7 @@ function liveCaret() {
 /**
  * The walk follows a live caret (B3-S13): it stands on the element of the
  * walk the caret's span is by the landing's rule (T-LAYER's `caretSpan`;
- * `elementAt`), its levels taken as the model holds them and no text read
+ * `elementAt`), its levels taken from the text the page shows and no text read
  * (`focusTo`'s `asHeld`), naming that element's own first position, so the
  * one line never names a position the caret has left, the caret standing
  * live through the move (`standOn`; see the head). Like a camera-made
@@ -1226,8 +1348,7 @@ export function kept() {
  * reads that document at its own reading scale (T-LAYER's fold and its one
  * test) and it holds an element of the walk, the element T-SPAN's rule
  * stands the position under the centre on (`elementIn`; rule 20) — the text
- * shown's position there (T-LAYER's `posAt`), carried back into the model's
- * text (T-LAYER's `basePos`) — else its first element; else the document
+ * shown's position there (T-LAYER's `posAt`) — else its first element; else the document
  * whole; else, and at far scale, where the grain stops at the account, the
  * account whose region holds the centre, else the board — the root alone
  * where no board is held. The re-take reads it at the camera
@@ -1243,10 +1364,10 @@ export function elementUnder(view) {
     if (mark) return { kind: 'mark', addr: mark.key, pos: null, link: null };
     const doc = documentAt(x, y, scale);
     if (doc) {
-      const d = REC.doc(doc), first = d.blocks.find(isElement);
+      const d = LAYER.shownOf(doc), first = d.blocks.find(isElement);
       if (!LAYER.atReadingScale(doc, scale) || !first) return { kind: 'document', addr: doc, pos: null, link: null };
       const pos = LAYER.posAt(doc, x, y);
-      const b = (pos != null && elementIn(d.blocks, LAYER.basePos(doc, pos))) || first;
+      const b = (pos != null && elementIn(d.blocks, pos)) || first;
       return { kind: 'block', addr: doc, pos: b.pos, link: null };
     }
   }
@@ -1337,5 +1458,5 @@ export async function dropped(x) {
   if (move === moves) await restand(doc, f.kind === 'document' ? null : at, false, false, end);
 }
 
-/** @returns {Node[]} the siblings in order (the gate's a11y case) */
-export const siblingsNow = () => siblings.slice();
+/** @returns {Node[]} the siblings in order, as the text shown stands now (the gate's a11y case) */
+export function siblingsNow() { carry(); return siblings.slice(); }

@@ -5,7 +5,11 @@
 // answered by the page, nothing read for them; one answer covers a span whose
 // runs agree and each run is named by its first words where they differ; a run
 // the board refuses among several, or a past state it could not read, says it
-// cannot yet be answered; the card stands at the span shown (FP-21, FP-36).
+// cannot yet be answered; the card stands at the span shown; new words are the
+// page's whether the board has minted them or not — who wrote them the page's
+// own answer, held on this device under a hold; what else uses them asked of
+// the board by their identity once minted, the page's words for none standing
+// across the ack (FP-21, FP-36).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PROV from './provenance.js';
@@ -169,4 +173,36 @@ test('nothing is asked once an act ended the opening between its runs', () => on
   release();
   await opening;
   assert.deepEqual([fake.asked, HOST.currentState()], [[key(asOf(origin(1, 2)))], null], 'the second run never asked, nothing shown');
+}));
+
+test('new words are the page\'s whether minted or not: who wrote them is the page\'s own answer on both sides of the ack — held on this device while a line is held and they are not minted — and who uses them, once minted, is asked of the board by their identity: the draft\'s image read then carries their address to a position, the question asked as of that read, and the page\'s words for none stand while nothing uses them (the unsent-typing decision §1 (b))', () => onCard({
+  [key(F.retrieveDocVSpanSet(D))]: { result: { as_of: 20, resp: 'span_set', set: [{ start: '1.1', width: '0.' + (N + 3) }] } },
+  [key(F.image(D, 1, N + 3))]: { result: { as_of: 21, resp: 'runs', runs: [{ i_start: `${D}.0.1.1`, width: '2' }, { i_start: `${D}.0.1.${N + 50}`, width: '3' }, { i_start: `${D}.0.1.3`, width: String(N - 2) }] } },
+  [key(F.opAt(21, users(3, 3)))]: addrs([D]),
+}, [{ pos: 1, width: 0, text: 'abc' }], async (fake) => {
+  const page = /** @type {number} */ (REC.edits(D)[0].page);
+  const held = /** @type {import('../model/frames.js').HeldLine[]} */ (F.decodeHeldRows([{ held: 1, doc: D, base: 5, frame: { op: 'insert', at: { ordinal: '1', subspace: '1' }, values: ['abc'] }, cause: 'unreachable', sent: false, time: 1 }]));
+  REC.setHeld(D, held);
+  await PROV.wrote(D, 1, 3);
+  assert.deepEqual([lines(), fake.asked], [[['L.new.wrote.held', t('L.new.wrote.held')]], []], 'a line held, the words not minted: new in this draft, held on this device — no read');
+  REC.setHeld(D, []);
+  // the ack: the board minted them
+  REC.mint(D, page, 3, `${D}.0.1.${N + 50}`, 12);
+  await PROV.wrote(D, 1, 3);
+  assert.deepEqual([lines(), fake.asked], [[['L.new.wrote', t('L.new.wrote')]], []], 'minted: who wrote them is still the page\'s own answer, no read');
+  await PROV.uses(D, 1, 3);
+  assert.deepEqual(fake.asked, [key(F.retrieveDocVSpanSet(D)), key(F.image(D, 1, N + 3)), key(F.opAt(21, users(3, 3)))], 'who uses them: the board asked by their identity — its image carries their address to position 3 as of its read, and the question is asked there, as of that read');
+  assert.deepEqual([lines(), hostEl.innerHTML.includes('B1.C-72')], [[['L.new.uses', t('L.new.uses')]], false], 'nothing else uses them: the page\'s own words for none, as before the ack, no blind-spot clause');
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('minted words another document has taken up since are answered by the board: the documents using them named, the blind spots stated', () => onCard({
+  [key(F.retrieveDocVSpanSet(D))]: { result: { as_of: 20, resp: 'span_set', set: [{ start: '1.1', width: '0.' + (N + 3) }] } },
+  [key(F.image(D, 1, N + 3))]: { result: { as_of: 21, resp: 'runs', runs: [{ i_start: `${D}.0.1.${N + 50}`, width: '3' }, { i_start: `${D}.0.1.1`, width: String(N) }] } },
+  [key(F.opAt(21, users(1, 3)))]: addrs([D, FAR]),
+}, [{ pos: 1, width: 0, text: 'abc' }], async (fake) => {
+  REC.mint(D, /** @type {number} */ (REC.edits(D)[0].page), 3, `${D}.0.1.${N + 50}`, 12);
+  await PROV.uses(D, 1, 3);
+  assert.deepEqual([lines().map((l) => l[0]), hostEl.innerHTML.includes(FAR), hostEl.innerHTML.includes('B1.C-72')], [['B1.uses'], true, true], 'used by FAR: the board\'s answer, with its blind spots');
+  assert.deepEqual(fake.unanswered, []);
 }));

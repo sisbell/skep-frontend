@@ -310,7 +310,7 @@ function showList(l, anchor, pos, width, byKey, focus = null) {
   }
   if (end && end.again) acts.again = (_el, byKey) => { void HOST.opening((stands) => listed(addr, pos, width, stands, l), (next) => showList(next, anchor, pos, width, byKey)); };
   /** @type {About} */
-  const about = { kind: 'versions', addr, held: held ? { ...held, ids: REC.identityOf(addr, held.pos, held.width) } : null, named: selected };
+  const about = { kind: 'versions', addr, held: held ? { ...held, ids: LAYER.shownIdentity(addr, held.pos, held.width) } : null, named: selected };
   HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor, html, acts, takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : '[data-run][aria-current="true"]', about });
 }
 
@@ -357,7 +357,7 @@ export function reopen(left, at) {
 function firstInView(addr) {
   const seen = visibleView(LINE.bottom());
   const meets = (/** @type {{x: number, y: number, w: number, h: number}} */ r) => r.w > 0 && r.h > 0 && r.x < seen.x + seen.w && seen.x < r.x + r.w && r.y < seen.y + seen.h && seen.y < r.y + r.h;
-  return REC.doc(addr).blocks.find((b) => (LAYER.spanRects(addr, b.pos) || []).some(meets)) || null;
+  return LAYER.shownOf(addr).blocks.find((b) => (LAYER.spanRects(addr, b.pos) || []).some(meets)) || null;
 }
 
 /**

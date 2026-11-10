@@ -80,7 +80,12 @@
 // word step wherever the page makes the step — at a live caret, at the kept
 // caret's span and at the walk's span in text the person may not edit, the
 // step extending a selection stopping at its anchor — and no other key means
-// anything new with Option held (D5 §0, K-70, K-71, K-77).
+// anything new with Option held (D5 §0, K-70, K-71, K-77). In a draft holding
+// unsent typing a slot chord acts on the block of the text shown the caret is
+// in; a read answers at once, in flight and under a hold; an act that sends a
+// name for characters takes effect at the burst's ack, and under a hold
+// stands inert with the row rule's reason; and a link made on typed words is
+// answered at them once the board has minted them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
@@ -232,7 +237,7 @@ test('Enter at the walk\'s focused span of a draft the person may edit places th
   assert.deepEqual(REC.edits(D).map((e) => [e.pos, e.width, e.text]), [[1, 0, 'a'], [1, 1, ''], [1, 1, ''], [2, 0, '\t'], [3, 0, '\n']], 'the page-local edit list: positions and text, never a frame');
   assert.equal(await KEYS.dispatch(keyOf('Escape'), PLANE), true);
   await tick();
-  assert.deepEqual([caret(), WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos], [[D, 4, false], 'block', D, 1], 'Esc: the caret kept at its position, the keys no longer reaching it; the walk on its span');
+  assert.deepEqual([caret(), WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos], [[D, 4, false], 'block', D, 4], 'Esc: the caret kept at its position, the keys no longer reaching it; the walk on the block of the text shown the caret is in — the part of the line after the typed break');
   assert.equal(await KEYS.dispatch(keyOf('z'), PLANE), true);
   assert.deepEqual([caret(), shown().slice(0, 5)], [[D, 5, true], 'i\t\nzr'], 'a printable key at the kept span returns the caret and types at it');
   await KEYS.dispatch(keyOf('Escape'), PLANE);
@@ -545,12 +550,12 @@ test('a caret kept in a line of white space alone stands in the span the walk st
   assert.equal(await KEYS.dispatch(keyOf('v', MOD), PLANE), false, 'a paste at the kept caret\'s span: the platform\'s own');
   assert.deepEqual([said.length, caret()], [before, [D, 15, false]], 'no line said, the caret kept');
   assert.equal(await KEYS.dispatch(keyOf('z'), PLANE), true);
-  assert.deepEqual([caret(), REC.edits(D).map((e) => [e.pos, e.width, e.text]), WALK.current()?.pos], [[D, 16, true], [[15, 0, 'z']], 1], 'a printable key at that span returns the kept caret and types at it, the walk on the span');
+  assert.deepEqual([caret(), REC.edits(D).map((e) => [e.pos, e.width, e.text]), WALK.current()?.pos], [[D, 16, true], [[15, 0, 'z']], 14], 'a printable key at that span returns the kept caret and types at it, the walk on the line the caret is in, which holds a character now and is an element of the walk');
   await KEYS.dispatch(keyOf('Escape'), PLANE);
   await tick();
-  await focusOn(D, 19);
+  await focusOn(D, 20);
   assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
-  assert.deepEqual(caret(), [D, 20, true], 'Enter at the span after the line: a caret at that span\'s start, the kept caret not returned there');
+  assert.deepEqual(caret(), [D, 20, true], 'Enter at the span after the line, one position on in the text shown: a caret at that span\'s start, the kept caret not returned there');
 }));
 
 test('a caret kept in the newlines before a draft\'s first typed line stands in that line\'s span, the one the walk stands on there: Esc leaves the walk on it, and Enter at it returns the kept caret where it stood, never a caret at the span\'s start (D5 §4 rule 20; K-70, K-77; BM-52)', () => onPlane(async () => {
@@ -837,8 +842,8 @@ test('a printable key, Tab, Enter, Backspace and Delete at a live caret with a s
   SEL.select(D, 6, 6);
   assert.equal(overlay(), 'selection');
   await press('z');
-  assert.deepEqual([shown(), caret(), SEL.selected(), overlay(), WALK.current()?.pos], ['Fe.\n\nz line here.\n', [D, 7, true], null, null, 14],
-    'z at the kept caret\'s span: the caret returned, "Second" replaced, the selection and its card ended, the walk on the second span, where the caret stands now');
+  assert.deepEqual([shown(), caret(), SEL.selected(), overlay(), WALK.current()?.pos], ['Fe.\n\nz line here.\n', [D, 7, true], null, null, 6],
+    'z at the kept caret\'s span: the caret returned, "Second" replaced, the selection and its card ended, the walk on the second span of the text shown, where the caret stands now');
 
   // a selection drawn in another document alone
   SEL.select(O, 14, 4);
@@ -1122,11 +1127,11 @@ test('K-8 in a draft holding text typed above the walk\'s span selects that span
   /** the selection, by its positions and the text shown there */
   const selectedText = () => { const s = SEL.selected(), d = LAYER.shownOf(D); return s && [s.addr, s.pos, s.width, REC.textOf(d.runs, s.pos, s.pos + s.width)]; };
   REC.addEdit(D, { pos: 1, width: 0, text: 'ab' });
-  await focusOn(D, 14);
+  await focusOn(D, 16);
   LAYER.placeCaret(D, 18);
   await press('Escape');
   await tick();
-  assert.deepEqual([caret(), walkAt(), shown()], [[D, 18, false], ['block', D, 14], 'ab' + TEXT], 'the caret kept in the second line of the text shown, the walk on that line\'s span in the model\'s text');
+  assert.deepEqual([caret(), walkAt(), shown()], [[D, 18, false], ['block', D, 16], 'ab' + TEXT], 'the caret kept in the second line of the text shown, the walk on that line\'s span there');
   await press('ArrowDown', SHIFT);
   assert.deepEqual(selectedText(), [D, 16, 18, 'Second line here.\n'], 'Shift+↓: the second line whole where the text shown holds it');
   await press('ArrowUp', SHIFT);
@@ -1146,7 +1151,7 @@ test('a slot chord at the walk\'s span in a draft holding typed text acts on tha
   PORT.boot(fake);
   try {
     REC.addEdit(D, { pos: 1, width: 0, text: 'ab' });
-    await focusOn(D, 14);
+    await focusOn(D, 16);
     await press('O', SHIFT);
     await tick();
     assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor, SEL.selected()], ['provenance:wrote', { span: line }, null], 'who wrote this? at the line the text shown holds, nothing selected');
@@ -1157,6 +1162,156 @@ test('a slot chord at the walk\'s span in a draft holding typed text acts on tha
     assert.deepEqual(fake.asked, [FAKE.keyOf('op', { frame: origin }), FAKE.keyOf('op', { frame: users })], 'asked by the line\'s positions in the delivered text, no read told yet of when it was read');
     assert.deepEqual(fake.unanswered, []);
   } finally { PORT.boot(null); }
+}));
+
+/** the lines of the provenance card standing, each its string's id and its words */
+const answers = () => [...hostEl.innerHTML.matchAll(/<div class="answer" data-string="([^"]*)">(.*?)<\/div>/g)].map((m) => [m[1], m[2]]);
+/** a line typed at the live caret, key by key, the walk following the caret as the page's keys make it */
+async function type(/** @type {string} */ text) { for (const ch of text) await press(ch === '\n' ? 'Enter' : ch); }
+/** D's held lines as `held(session)` lists them: one insert the board has not kept, refused where `refusal` names why */
+const heldRows = (/** @type {object | null} */ refusal = null) => /** @type {import('../model/frames.js').HeldLine[]} */ (F.decodeHeldRows([{ held: 1, doc: D, base: 5, frame: { op: 'insert', at: { ordinal: '14', subspace: '1' }, values: ['x'] }, cause: refusal ? 'refused' : 'unreachable', sent: false, time: 1, ...(refusal ? { refusal } : {}) }]));
+
+test('a slot chord at a caret acts on the block of the text shown the caret is in, the block drawn lit: on a wholly typed line Mod+Shift+O answers "new in this draft, from this device" at once with no read, Mod+Shift+R "no other document", Mod+Shift+Enter stands inert saying nothing links to new words, and Mod+Enter keeps the caret\'s line (issue #520; D5 K-47, K-48, K-51, K-52)', () => onPlane(async ({ said }) => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const SHIFT = { ...MOD, shiftKey: true };
+  const fake = FAKE.create({});
+  PORT.boot(fake);
+  try {
+    await focusOn(D, 14);
+    await press('Enter');
+    // a line of its own typed between the draft's two lines, the caret left in it
+    await type('Typed line.\n\n');
+    await press('ArrowUp');
+    const line = { addr: D, pos: 14, width: 13 };
+    assert.deepEqual([shown(), caret(), LAYER.shownOf(D).blocks.map((b) => [b.pos, b.text])], ['First line.\n\nTyped line.\n\nSecond line here.\n', [D, 14, true], [[1, 'First line.'], [14, 'Typed line.'], [27, 'Second line here.']]]);
+    /** the caret's block, the lit block — the walk's focused span, which the app hands T-LAYER to mark — and the chord's object: one block */
+    const one = (/** @type {{addr: string, pos: number, width: number}} */ span, /** @type {string} */ why) => assert.deepEqual([LAYER.caretSpan()?.block, WALK.focusedSpan(), HOST.currentState()?.anchor], [span.pos, { addr: D, pos: span.pos }, { span }], why);
+    await press('O', SHIFT);
+    await tick();
+    assert.deepEqual([HOST.currentState()?.id, answers(), fake.asked, SEL.selected()], ['provenance:wrote', [['L.new.wrote', t('L.new.wrote')]], [], null], 'who wrote this? on the typed line: the page\'s own answer, at once, the board asked nothing, nothing selected');
+    one(line, 'the caret\'s block, the block the walk stands on and draws lit, and the span the card stands at are the typed line');
+    HOST.dismiss();
+    await press('R', SHIFT);
+    await tick();
+    assert.deepEqual([HOST.currentState()?.id, answers(), fake.asked], ['provenance:uses', [['L.new.uses', t('L.new.uses')]], []], 'who uses this? on the typed line: no other document, no read');
+    HOST.dismiss();
+    const n = said.length, trail = TRAIL.all().length;
+    await press('Enter', SHIFT);
+    assert.deepEqual([slotIn('scene').reason, holds(), said.slice(n), TRAIL.all().length], [`<div class="note reason" data-string="L.new.no-link">${esc(t('L.new.no-link'))}</div>`, line, [t('L.new.no-link')], trail], 'read side by side on the typed line: inert in its slot at that line, saying nothing links to new words');
+    HOST.dismiss();
+    await press('Enter', MOD);
+    assert.deepEqual([said.at(-1), HOST.currentState(), caret()], [t('B3.row.follow.inert'), null, [D, 14, true]], 'Mod+Enter at the bare caret keeps its line: nothing selected, nothing followed');
+    assert.deepEqual(fake.unanswered, []);
+  } finally { PORT.boot(null); }
+}));
+
+test('on a board line a typed line break split, a slot chord at the caret acts on the part the caret is in alone: Mod+Shift+O asks the board about that part\'s bytes, by their positions in the model\'s text, and a part holding typed words beside them names each run by its first words (issue #520; the unsent-typing decision §3)', () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const SHIFT = { ...MOD, shiftKey: true };
+  // "Second line here." split after "Second ": the second part is "line here." — positions 21 to 31 of the model's text
+  const origin = F.showOrigin(D, 21, 11);
+  const fake = FAKE.create({ [FAKE.keyOf('op', { frame: origin })]: { result: { as_of: 1, resp: 'addrs', addrs: [D] } } });
+  PORT.boot(fake);
+  try {
+    await focusOn(D, 14);
+    LAYER.placeCaret(D, 21);
+    await WALK.followCaret();
+    await press('Enter');
+    assert.deepEqual([shown(), caret(), LAYER.shownOf(D).blocks.map((b) => [b.pos, b.width, b.text])], ['First line.\n\nSecond \nline here.\n', [D, 22, true], [[1, 13, 'First line.'], [14, 8, 'Second '], [22, 11, 'line here.']]], 'the typed break makes two blocks of the board line');
+    await press('O', SHIFT);
+    await tick();
+    assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor, fake.asked, WALK.focusedSpan()], ['provenance:wrote', { span: { addr: D, pos: 22, width: 11 } }, [FAKE.keyOf('op', { frame: origin })], { addr: D, pos: 22 }], 'the second part alone: asked by its own bytes\' positions in the model\'s text, the card and the lit block at it');
+    HOST.dismiss();
+    // the first part, which holds the typed break beside its share of the board line: one run the board's, one the page's
+    await press('ArrowUp');
+    assert.deepEqual([caret(), WALK.focusedSpan()], [[D, 14, true], { addr: D, pos: 14 }], 'the caret in the first part, the walk on it');
+    const first = F.showOrigin(D, 14, 7);
+    const again = FAKE.create({ [FAKE.keyOf('op', { frame: first })]: { result: { as_of: 1, resp: 'addrs', addrs: [D] } } });
+    PORT.boot(again);
+    await press('O', SHIFT);
+    await tick();
+    assert.deepEqual([again.asked, HOST.currentState()?.anchor, answers().map((a) => a[0])], [[FAKE.keyOf('op', { frame: first })], { span: { addr: D, pos: 14, width: 8 } }, ['L.run.named', 'L.run.named']], 'the first part: its share of the board line asked of the board, the typed break answered by the page, each run named where they differ');
+    assert.deepEqual([fake.unanswered, again.unanswered], [[], []]);
+  } finally { PORT.boot(null); }
+}));
+
+test('a read answers at once whatever the board holds of the words: who wrote this? over typed words in flight says they are new in this draft, from this device, with no wait and no read, and while the draft holds a line the board has not kept that they are held on this device; who uses this? says no other document in both (the unsent-typing decision §1 (b), (c); B1-S10)', () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const SHIFT = { ...MOD, shiftKey: true };
+  const fake = FAKE.create({});
+  PORT.boot(fake);
+  /** @type {string[]} */
+  const committed = [];
+  REC.machine({ commit: (addr) => committed.push(addr) });
+  try {
+    await focusOn(D, 1);
+    await press('Enter');
+    await type('abc');
+    SEL.select(D, 1, 3);
+    REC.setFlight(D, true);
+    await press('O', SHIFT);
+    await tick();
+    assert.deepEqual([HOST.currentState()?.id, answers(), committed, fake.asked], ['provenance:wrote', [['L.new.wrote', t('L.new.wrote')]], [], []], 'in flight: answered at once, the burst not committed for it, nothing waited on and nothing read');
+    await press('R', SHIFT);
+    await tick();
+    assert.deepEqual([HOST.currentState()?.id, answers(), committed], ['provenance:uses', [['L.new.uses', t('L.new.uses')]], []], 'who uses this? in flight: at once');
+    REC.setFlight(D, false);
+    REC.setHeld(D, heldRows());
+    await press('O', SHIFT);
+    await tick();
+    assert.deepEqual([HOST.currentState()?.id, answers()], ['provenance:wrote', [['L.new.wrote.held', t('L.new.wrote.held')]]], 'under a hold: answered at once, new in this draft, held on this device');
+    await press('R', SHIFT);
+    await tick();
+    assert.deepEqual([HOST.currentState()?.id, answers(), fake.asked], ['provenance:uses', [['L.new.uses', t('L.new.uses')]], []], 'who uses this? under a hold: no other document, the slot never inert');
+    assert.deepEqual(fake.unanswered, []);
+  } finally { REC.machine(null); REC.setHeld(D, []); PORT.boot(null); }
+}));
+
+test('an act that sends a name for characters takes effect only once the board holds them: Mod+Shift+A on a wholly typed line in flight asks for the burst\'s commit and shows nothing, moves no focus and says nothing until its ack, then opens on that line, its bytes named by their I-addresses; while the draft holds a line the board has not kept it stands inert with the row rule\'s reason, keyed on what ends the state (issue #520; foundations §3.1; D5 K-73)', () => onPlane(async ({ said }) => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const SHIFT = { ...MOD, shiftKey: true };
+  /** @type {string[]} */
+  const committed = [];
+  REC.machine({ commit: (addr) => committed.push(addr) });
+  try {
+    await focusOn(D, 14);
+    await press('Enter');
+    await type('Typed line.\n\n');
+    await press('ArrowUp');
+    const line = { addr: D, pos: 14, width: 13 }, page = /** @type {number} */ (REC.edits(D)[0].page);
+    // the machine's burst holds the typing: open, its ack not landed
+    REC.setFlight(D, true);
+    const n = said.length, walked = walkAt();
+    await press('A', SHIFT);
+    await tick();
+    assert.deepEqual([committed, HOST.currentState(), said.slice(n), walkAt(), caret()], [[D], null, [], walked, [D, 14, true]], 'in flight: the open burst asked to commit, and nothing shown, nothing said, no focus moved');
+    // a key typed meanwhile lands where it was aimed, above the line: the act holds the line by its bytes
+    LAYER.placeCaret(D, 1);
+    await type('ab');
+    // the ack: the first address the board minted, the typed line's bytes taking the addresses from it on
+    const ack = F.decodeAckAddr({ addr: `${D}.0.1.${N + 100}`, at: 9, resp: 'ack_addr' });
+    assert.ok(ack);
+    REC.mint(D, page, 13, ack.addr, ack.at);
+    REC.setFlight(D, false);
+    await SEL.sent();
+    const at = { ...line, pos: 16 };
+    assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor, holds(), slotIn('annotate').reason], ['selection', { span: at }, at, `<div class="note reason" data-string="L.seam.annotate">${esc(t('L.seam.annotate'))}</div>`], 'at the ack: the slot\'s surface opens at that line, where its words stand now');
+    assert.deepEqual(/** @type {any} */ (HOST.currentState()?.about).at.ids, [{ prefix: D + '.0.1', ordinal: N + 100, width: 13 }], 'the line\'s bytes named by the addresses the board minted');
+    HOST.dismiss();
+    // under a hold: inert in its slot, the row rule's reason — a resend follows
+    REC.setHeld(D, heldRows());
+    const m = said.length;
+    await press('A', SHIFT);
+    await SEL.sent();
+    const resend = t('B3.row.held.resend', { label: LAYER.boxName(D).name });
+    assert.deepEqual([slotIn('annotate').reason, said.slice(m), committed.length], [`<div class="note reason" data-string="B3.row.held.resend">${esc(resend)}</div>`, [resend], 1], 'a line held: inert with the reason that names what ends the state, nothing committed for it');
+    assert.ok(/** @type {string} */ (slotIn('annotate').button).includes(`title="${esc(resend)}"`) && !/** @type {string} */ (slotIn('wrote').button).includes('class="inert"'), 'the slot says why; who wrote this? stands live beside it');
+    // a refused run: an act of the person's comes first
+    REC.setHeld(D, heldRows({ kind: 'refused', name: 'out_of_bounds' }));
+    await press('K', MOD);
+    await SEL.sent();
+    assert.equal(slotIn('linkto').reason, `<div class="note reason" data-string="B3.row.held.resolve">${esc(t('B3.row.held.resolve', { label: LAYER.boxName(D).name }))}</div>`, 'a refused run held: resolve it first');
+  } finally { REC.machine(null); REC.setHeld(D, []); REC.setFlight(D, false); HOST.dismiss(); }
 }));
 
 test('over a span wholly of words typed here follow and read side by side keep their places, inert but focusable, their reason on the button; pressed, or by their chords, they give it at the card and through the status region, nothing followed and nothing opened (D5 K-51, K-52; P47)', () => onPlane(async ({ said }) => {
@@ -1199,6 +1354,29 @@ test('over a span of typed words beside the draft\'s own, follow acts as ever wh
     SEL.select(D, 1, 7);
     assert.ok(!/** @type {string} */ (slotIn('follow').button).includes('title='), 'the span holding board bytes: the slot acts');
   } finally { LK.readers({}); }
+}));
+
+test('a link made on words typed this session is drawn and answered at those words once the board has minted them: before the ack nothing can name them and follow says nothing links to new words; after it the link made on their addresses is counted at them, and follow names its far document (issue #512; the unsent-typing decision §1 (b))', () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const L = O + '.0.2.9', FRESH = N + 100;
+  LK.readers({ text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null) });
+  try {
+    await focusOn(D, 1);
+    await press('Enter');
+    await type('abc');
+    SEL.select(D, 1, 3);
+    assert.ok(/** @type {string} */ (slotIn('follow').button).includes(`title="${esc(t('L.new.no-link'))}"`), 'typed, not minted: nothing links to new words');
+    // the ack names their addresses; then a link made from another pane, homed in O, on those addresses
+    REC.mint(D, /** @type {number} */ (REC.edits(D)[0].page), 3, `${D}.0.1.${FRESH}`, 9);
+    assert.ok(/** @type {string} */ (slotIn('follow').button).includes(`title="${esc(t('L.new.no-link'))}"`), 'minted, no link made on them: the same words, nothing changed at the ack');
+    REC.takeLinks(D, [L]);
+    REC.takeLink({ addr: L, from: [{ start: `${D}.0.1.${FRESH}`, width: '0.0.0.0.0.0.0.3', doc: D, account: '1.0.1', whole: false, subspace: 1, ordinal: FRESH, positions: 3 }], to: [{ start: O, width: '0.0.0.0.1', doc: O, account: '1.0.2', whole: true, subspace: null, ordinal: null, positions: null }], type: '1.1.0.1.0.1.0.3.13' });
+    LK.reveal(D, 2); LK.setOthers(D, true);
+    assert.deepEqual(LK.shownAt(D, { pos: 1, width: 3 }).map((x) => [x.link.addr, x.pos, x.width]), [[L, 1, 3]], 'the link made on the typed words is drawn at them');
+    SEL.select(D, 1, 3);
+    const follow = /** @type {string} */ (slotIn('follow').button);
+    assert.ok(!follow.includes('title=') && !follow.includes('class="inert"') && follow.includes(O), `and follow answers at them, naming its far document: ${follow}`);
+  } finally { LK.readers({}); LK._reset(); }
 }));
 
 /** Option's word step is macOS's alone: elsewhere D5's Alt+← is Back's, so the step is not bound there */

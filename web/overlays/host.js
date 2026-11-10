@@ -64,6 +64,9 @@
 // faces alone — the notice below and a face in the overlay's place — every
 // card, list and moment standing, an opening still reading reading on
 // (`takeDownFaces`).
+// A card or a list standing at a span moves with its subject's bytes as the
+// person edits the text under it: its anchor and what it is about set to
+// where they stand, in place, nothing drawn again (`moveTo`; N-GO's).
 // A surface leaves and returns with its place (FP-36, FP-25): a card or a
 // list shows carrying what it is about (`about`) — a link's end, a span's
 // bytes, a document, a mark — by value, its owner's, never its words; the
@@ -557,6 +560,22 @@ export function place() {
   el.style.left = x + 'px'; el.style.top = y + 'px';
   if (below) { below.style.left = x + 'px'; below.style.top = (y + r.height + STACK_GAP) + 'px'; }
   reveal(caps);
+}
+
+/**
+ * The overlay standing moved with its subject (FP-36): its anchor's span set
+ * to where its subject's bytes stand now, and what it is about with it, in
+ * place — nothing drawn again, no act made on the chrome, its focus where it
+ * is; `place` stands it there on the next frame, and what it is left by
+ * (`asLeft`) names that span. Nothing where none stands at a span.
+ * @param {{addr: string, pos: number, width: number}} span where its subject stands now
+ * @param {About} about what it is about, named there
+ */
+export function moveTo(span, about) {
+  if (!current || !current.anchor || !current.anchor.span) return;
+  current.anchor = { ...current.anchor, span: { ...current.anchor.span, addr: span.addr, pos: span.pos, width: span.width } };
+  current.about = about;
+  markDirty();
 }
 
 /**

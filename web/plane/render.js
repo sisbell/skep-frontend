@@ -951,14 +951,14 @@ function ringBox(b, seen) {
 /**
  * The lines of the walk's span on screen where its article stands and no
  * mark the last frame drew the stronger holds its document (`holding`):
- * T-LAYER's `lineBoxes` of the block of the text shown holding the span
- * (T-LAYER's `shownBlockOf`); null for any other element of the walk.
+ * T-LAYER's `lineBoxes` of the span, a block of the text shown
+ * (T-LAYER's `blockByPos`); null for any other element of the walk.
  * @param {import('../nav/walk.js').Node} f
  * @returns {Rect[] | null}
  */
 function spanLines(f) {
   if (f.kind !== 'block' || holding(f.addr) || !LAYER.isMounted(f.addr)) return null;
-  const blk = f.pos != null ? LAYER.shownBlockOf(f.addr, f.pos) : null;
+  const blk = f.pos != null ? LAYER.blockByPos(f.addr, f.pos) : null;
   return blk ? LAYER.lineBoxes(f.addr, blk.pos, blk.width) || [] : [];
 }
 
