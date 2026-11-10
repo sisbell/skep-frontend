@@ -485,6 +485,20 @@ the top line means FP-37.
   unchanged, and says so at the focus and, politely, in the status
   region.
 
+## The text shown
+
+- **FP-38 A draft has one text, the text shown.** In a draft holding
+  words the board does not hold, every surface stands on the text
+  shown and holds its place by its bytes' identity: the text, the
+  caret and the selection; link marks, symbols, beams and counts; the
+  strip; the hint; the walk and the mirror; find; landings and
+  returns; trail entries; standing cards and lists; each scene pane.
+  The board is asked only about bytes it holds, by a name it resolves
+  to those bytes; the page answers for its own unminted words itself.
+  An act that sends a name for characters takes effect only once the
+  board holds them. Nothing drawn, reached, said or answered changes
+  at a commit or an ack, and nothing is keyed on the model's base.
+
 ## Decisions in force
 
 Design decisions taken on issues and built, one line each, newest
@@ -564,7 +578,7 @@ last. Each stands until a later decision says it changes it.
 - **#468**: a one-line hint's compact form is its notice's first clause — whole at its first press in a session and its clause at every later one, save a notice pinned or marked whole — standing beside the focus without taking it, drawn again with a fade-in and said at every refused press, an auto-repeat one press, and opened whole by a click or by Tab then Enter → FP-26, FP-31, FP-20
 - **#471**: a key acts on the selection the screen draws alone — a slot chord with no selection standing acts on the walk's focused span without selecting it, that span held by the card or the list the chord opens and gone with it, and Mod+Enter at a caret follows only a selection drawn in the caret's own text, else answering with the caret's follow line → FP-10, FP-36
 - **#512**: the slot acts, their counts, the "which" rows and the provenance card answer about a span of the text shown only by its base's positions, a run at a time and as of that base's read, the page answering for bytes it made — one answer over the selection where its runs agree, each run named by its first words where they differ, the card standing at the selection; a derived article draws links on its board runs alone; over a span wholly of new words follow and read side by side stand inert and focusable saying so, and elsewhere read side by side opens the draft's pane as shown, level at the shown position → FP-30, FP-36, FP-21
-- **#520, #524, #526** (`ux/questions/2026-11-09-unsent-typing-which-text.decision.md`): in a draft holding words the board does not hold, every part of the page follows the text shown and holds its place by its bytes' identity — a byte the page made by the page's own until its ack names the address the board minted — the board asked only about bytes it holds, by a name it resolves to those same bytes, and the page answering for its own words itself, at once. An act that sends a name for characters takes effect only once the board holds them — at the open burst's ack, and under a hold not at all — and nothing the person meets is keyed on the model's base (changes #512, #515) → FP-21, FP-23, FP-30, FP-36
+- **#520, #524, #526** (`ux/questions/2026-11-09-unsent-typing-which-text.decision.md`): in a draft holding words the board does not hold, every part of the page follows the text shown and holds its place by its bytes' identity — a byte the page made by the page's own until its ack names the address the board minted — the board asked only about bytes it holds, by a name it resolves to those same bytes, and the page answering for its own words itself, at once. An act that sends a name for characters takes effect only once the board holds them — at the open burst's ack, and under a hold not at all — and nothing the person meets is keyed on the model's base (changes #512, #515) → FP-38, FP-21, FP-23, FP-30, FP-36
 
 ## What these rule out
 
