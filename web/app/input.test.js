@@ -1,11 +1,13 @@
 // APP-INPUT's test, on a page of stand-ins and against the fake port: the
 // act at a withheld run's gap conjures C-39's face naming the owner the gap
 // names, with the arm the rule gives that owner and this reader, anchored at
-// the run's own positions, and the act at the run's compact face opens it
-// whole; a hairline's click LEAPs to its source carrying the run; a symbol's
-// click and a marked stretch's open the card of the end clicked; C-67's
-// pointer LEAPs to the claim's home whole, carrying no passage and lighting
-// no link, while the rest of the placeholder still conjures C-39's face; a
+// the run's own positions, and the act at the run's key in its gap or at its
+// origin's statement in the edge opens its whole wording's card; a
+// hairline's click LEAPs to its source carrying the run; a symbol's click and
+// a marked stretch's open the card of the end clicked; C-67's pointer in a
+// withheld origin's statement LEAPs to the claim's home whole, carrying no
+// passage and lighting no link, while the rest of the gap still conjures
+// C-39's face; a
 // click on the read a corner offers is the version move to it; a
 // press at the readable em on text not yet standing is held for it and
 // becomes the text's click; a press or a click falls on every box the plane
@@ -49,7 +51,7 @@ import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
 import * as LINE from '../line/line.js';
 import { lodOf } from '../plane/lod.js';
-import { articleHTML, entitlementArm } from '../text/article.js';
+import { articleHTML, entitlementArm, edgeStatementHTML, placeholderOf } from '../text/article.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
 import { accountCell, boardCell, docBox } from '../plane/projection.js';
 import { t, tHTML, addressedHTML } from '../strings.js';
@@ -64,10 +66,12 @@ const datasetOf = (/** @type {string} */ tag) =>
 // the board the page opened: the page makes every act below on the board `boards()` answered
 before(() => { REC.setBoard({ board: 'b-1', name: '', origin: '' }); });
 
-test('the act at a withheld run conjures C-39\'s face naming the owner its gap names, the arm beneath it the rule\'s for that owner and this reader; the act at its face compact in its column\'s edge opens the face whole', () => {
+test('the act at a withheld run\'s gap conjures C-39\'s face naming the owner its gap names, the arm beneath it the rule\'s for that owner and this reader; the act at its key in its gap, and at its origin\'s statement in its column\'s edge, opens its whole wording\'s card (issue #288\'s design decision: "The whole wording opens as a card on any run\'s act")', () => {
   const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
   /** @type {Map<string, (e: unknown) => void>} the text layer's listeners, by event */
   const layer = new Map();
+  /** @type {Map<string, (e: unknown) => void>} the corner layer's listeners, by event */
+  const corners = new Map();
   const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
   globalThis.HTMLElement = /** @type {any} */ (class {});
   globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
@@ -82,46 +86,48 @@ test('the act at a withheld run conjures C-39\'s face naming the owner its gap n
     const text = 'Tumbler.\n\n', n = new TextEncoder().encode(text).length;
     REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n + 300 }]);
     REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width: 300, kind: 'withheld', text: '', ref: null, origin: O }]);
-    // the edition claims on the origin read, none listed: every read the run's face waits on answered, so it shows at once
+    // the edition claims on the origin read, none listed: every read the run's card waits on answered, so it shows at once
     REC.takeEditionClaims(O, []);
     const d = REC.doc(D);
     HOST.attach(/** @type {any} */ ({
       ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
       querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
     }));
-    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(null) }));
-    const click = layer.get('click');
-    assert.ok(click, 'the text layer takes a click');
-    /** @type {Array<[string, Array<{bindings: string[]}>, string]>} each guest, the device's keys, and the arm the placeholder and the face carry */
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(corners) }));
+    const click = layer.get('click'), cornerClick = corners.get('click');
+    assert.ok(click && cornerClick, 'the text layer and the corner layer take a click');
+    /** @type {Array<[string, Array<{bindings: string[]}>, string]>} each guest, the device's keys, and the arm the placeholder and the card carry */
     const guests = [['a guest with no key', [], 'R56.key-absent'], ['a guest with a key for this board', BOUND, 'C-36.guest.key']];
     for (const [who, keys, id] of guests) {
       REC.takeKeyStore(keys, ORIGIN);
       // the placeholder as the plane's article holds it: T-LAYER mounts T-ARTICLE's HTML from its view
       const article = articleHTML(d, LAYER.viewFor(d), REC.ownerAccount(d));
-      const tag = (/<span class="withheld"[^>]*>/.exec(article) || [''])[0], arm = esc(entitlementArm({ account: null, keyPresent: keys.length > 0 }, owner).text);
-      // the face whole in its gap where 300 positions hold it — the key-present arm's — else compact in its column's edge: R56's arm is too deep for them
-      const inGap = (/<span class="arm">([^<]*)<\/span>/.exec(article) || [])[1] ?? null, marked = article.includes(`>${tHTML('L.withheld.mark', { owner }, { owner: 'id' })}</span>`);
-      assert.ok(id === 'R56.key-absent' ? inGap === null && marked : inGap === arm && !marked, `${who}: ${id === 'R56.key-absent' ? 'no arm in its gap, the face compact in its column\'s edge naming ' + owner : 'the face whole in its gap, the rule\'s arm'}`);
+      const tag = (/<span class="withheld"[^>]*>/.exec(article) || [''])[0], arm = entitlementArm({ account: null, keyPresent: keys.length > 0 }, owner).text;
+      assert.ok(!article.includes('class="arm"') && article.includes(`data-key="${O}"`), `${who}: no face in its gap, its key in it`);
       const run = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf(tag), isConnected: false });
       const holder = { dataset: { addr: D } };
       Object.assign(run, { closest: (/** @type {string} */ sel) => (sel === '[data-withheld]' ? run : sel === 'article' ? holder : null) });
       assert.deepEqual([run.dataset.origin, run.dataset.owner], [O, owner], `${who}: the gap carries its origin and its origin's owner, the seat above the origin's account`);
       click({ target: run, clientX: 0, clientY: 0, stopPropagation() {} });
       const face = HOST.currentOverlay();
-      assert.equal(face && face.id, 'face:C-39', `${who}: the act at the run conjures C-39's face`);
+      assert.equal(face && face.id, 'face:C-39', `${who}: the act at the gap conjures C-39's face`);
       assert.deepEqual(face && face.anchor, { el: run, span: { addr: D, pos: n + 1, width: 300 } }, `${who}: the face stands at the placeholder, the run's own positions beside it, where it stands once the text layer rebuilds or takes the placeholder down`);
       const html = face ? face.html : '';
       assert.ok(html.includes(`>${addressedHTML(t('C-39', { owner }))}</div>`) && html.includes(`<span class="id">${owner}</span>`), `${who}: the face names ${owner}, in the identifier's face, the owner the placeholder names — never the origin's account, 1.0.1.1`);
-      assert.ok(html.includes(`<div class="arm" data-string="${id}">${addressedHTML(entitlementArm({ account: null, keyPresent: keys.length > 0 }, owner).text)}</div>`), `${who}: the arm beneath it is the rule's for the run's origin's owner and this reader, ${id}: ${html}`);
+      assert.ok(html.includes(`<div class="arm" data-string="${id}">${addressedHTML(arm)}</div>`), `${who}: the arm beneath it is the rule's for the run's origin's owner and this reader, ${id}: ${html}`);
       HOST.dismiss();
-      // the run's face compact in its column's edge: its act opens the face whole, as Enter at the run does (D5 K-7)
-      if (!marked) continue;
-      const mark = Object.assign(new globalThis.HTMLElement(), { dataset: { mark: 'withheld' } });
-      Object.assign(mark, { closest: (/** @type {string} */ sel) => (sel === '.wh-mark' ? mark : sel === '[data-withheld]' ? run : sel === 'article' ? holder : null) });
-      click({ target: mark, clientX: 0, clientY: 0, stopPropagation() {} });
-      const whole = HOST.currentOverlay();
-      assert.equal(whole && whole.id, 'face:withheld-run', `${who}: the act at the edge's mark opens the run's face whole`);
-      assert.ok(!!whole && whole.html.includes(addressedHTML(entitlementArm({ account: null, keyPresent: keys.length > 0 }, owner).text)) && whole.html.includes(addressedHTML(t('B1.withheld-run', { owner, account: owner, width: 300, origin: O }))), `${who}: its head and the arm the rule gives, whole, each address in the identifier's face`);
+      /** the card standing: its id, its kind, and whether its head and the rule's arm stand in it whole */
+      const card = () => { const o = HOST.currentOverlay(); return o && [o.id, o.kind, o.html.includes(addressedHTML(t('B1.withheld-run', { owner, account: owner, width: 300, origin: O }))) && o.html.includes(addressedHTML(arm))]; };
+      // the key in its gap
+      const key = Object.assign(new globalThis.HTMLElement(), { closest: (/** @type {string} */ sel) => (sel === '.wh-key' ? key : run.closest(sel)) });
+      click({ target: key, clientX: 0, clientY: 0, stopPropagation() {} });
+      assert.deepEqual(card(), ['withheld:' + O, 'card', true], `${who}: the act at its key opens its whole wording's card, its head and the rule's arm whole`);
+      HOST.dismiss();
+      // its origin's statement in its column's edge, as T-LAYER places it: the mark heading it
+      const sign = { dataset: { addr: D, pos: String(n + 1), width: '300', origin: O, sign: 'statement' } };
+      const mark = Object.assign(new globalThis.HTMLElement(), { closest: (/** @type {string} */ sel) => (sel === '.edge-sign' ? sign : sel === '.wh-mark, .wh-key' ? mark : null) });
+      cornerClick({ target: mark, stopPropagation() {} });
+      assert.deepEqual(card(), ['withheld:' + O, 'card', true], `${who}: the act at its statement's mark opens the same card`);
       HOST.dismiss();
     }
   } finally {
@@ -366,17 +372,19 @@ test('a click on the one symbol a withheld run\'s ends merge into opens its one 
   }
 });
 
-test('a click on C-67\'s pointer LEAPs to the edition its claim names, landed in whole — a trail entry Back returns from, no passage carried, no link lit, no face — and a click on the rest of the placeholder conjures C-39\'s face', async () => {
+test('a click on C-67\'s pointer in a withheld origin\'s statement LEAPs to the edition its claim names, landed in whole and made at the run — a trail entry Back returns from, no passage carried, no link lit, no face — and a click on the rest of the gap conjures C-39\'s face', async () => {
   const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
   /** @type {Map<string, (e: unknown) => void>} the text layer's listeners, by event */
   const layer = new Map();
+  /** @type {Map<string, (e: unknown) => void>} the corner layer's listeners, by event */
+  const corners = new Map();
   const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
   globalThis.HTMLElement = /** @type {any} */ (class {});
   globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
   globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
   try {
-    // a guest at 1.0.2's document, which windows a run of 1.0.1's draft O — twelve lines deep, so its gap holds its face whole —
-    // and 1.0.1 published an edition, H, whose claim on O passes: its FROM H's own bytes, which no span of O holds
+    // a guest at 1.0.2's document, which windows a run of 1.0.1's draft O, twelve lines deep, and 1.0.1 published an edition, H,
+    // whose claim on O passes: its FROM H's own bytes, which no span of O holds
     const D = '1.0.2.0.6', O = '1.0.1.0.1004', H = '1.0.1.0.40', CLAIM = H + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14', RUN = 12 * 66;
     const text = 'Tumbler.\n\n', n = byteLength(text), edition = 'The published edition.', m = byteLength(edition);
     const fake = FAKE.create({
@@ -400,17 +408,20 @@ test('a click on C-67\'s pointer LEAPs to the edition its claim names, landed in
       ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
       querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
     }));
-    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(null) }));
-    const click = layer.get('click');
-    assert.ok(click, 'the text layer takes a click');
-    // the gap as the plane's article holds it, the face whole in it, and its pointer and its head as a click finds them in it
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(corners) }));
+    const click = layer.get('click'), cornerClick = corners.get('click');
+    assert.ok(click && cornerClick, 'the text layer and the corner layer take a click');
+    // the gap as the plane's article holds it, and the origin's statement as T-LAYER places it, its pointer as a click finds it
     const article = articleHTML(d, LAYER.viewFor(d), REC.ownerAccount(d)), holder = { dataset: { addr: D } };
     const run = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf((/<span class="withheld"[^>]*>/.exec(article) || [''])[0]) });
     Object.assign(run, { closest: (/** @type {string} */ sel) => (sel === '[data-withheld]' ? run : sel === 'article' ? holder : null) });
-    const ptr = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf((/<span class="clause"[^>]*>/.exec(article) || [''])[0]) });
-    Object.assign(ptr, { closest: (/** @type {string} */ sel) => (sel === '.clause[data-home]' ? ptr : run.closest(sel)) });
+    const statement = edgeStatementHTML(placeholderOf(d.blocks[1], REC.reader(), LAYER.originOwner, LAYER.clauseOf), null, false);
+    const sign = { dataset: { addr: D, pos: String(n + 1), width: String(RUN), origin: O, sign: 'statement' } };
+    const ptr = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf((/<span class="clause"[^>]*>/.exec(statement) || [''])[0]) });
+    Object.assign(ptr, { closest: (/** @type {string} */ sel) => (sel === '.edge-sign' ? sign : sel === '.clause[data-home]' ? ptr : null) });
     const head = Object.assign(new globalThis.HTMLElement(), { closest: (/** @type {string} */ sel) => run.closest(sel) });
     assert.deepEqual([ptr.dataset.claim, ptr.dataset.home], [CLAIM, H], 'the pointer carries the claim it follows and that claim\'s home');
+    assert.ok(!article.includes('class="clause"'), 'no clause in the gap: the pointer the statement\'s alone');
     // the reader stands at the run, a LEAP's landing
     CAM.setViewport(1440, 900);
     TRAIL._reset();
@@ -418,7 +429,7 @@ test('a click on C-67\'s pointer LEAPs to the edition its claim names, landed in
     await settled(() => WALK.current()?.pos === n + 1);
     await departing;
     const from = fake.asked.length;
-    click({ target: ptr, clientX: 0, clientY: 0, stopPropagation() {} });
+    cornerClick({ target: ptr, stopPropagation() {} });
     await settled(() => WALK.current()?.addr === H);
     const e = TRAIL.current();
     assert.deepEqual([e && [e.addr, e.pos, e.width], TRAIL.all()[TRAIL.cursorIndex() - 1]?.step], [[H, null, null], null], 'a trail entry at the edition, landed in whole, the run\'s entry recording no step: no link followed, no passage carried');
@@ -432,7 +443,7 @@ test('a click on C-67\'s pointer LEAPs to the edition its claim names, landed in
     await back;
     assert.deepEqual([WALK.current()?.kind, WALK.current()?.pos], ['block', n + 1], 'Back returns to the withheld run');
     click({ target: head, clientX: 0, clientY: 0, stopPropagation() {} });
-    assert.equal(HOST.currentState()?.id, 'face:C-39', 'the rest of the placeholder conjures C-39\'s face');
+    assert.equal(HOST.currentState()?.id, 'face:C-39', 'the rest of the gap conjures C-39\'s face');
     HOST.dismiss();
   } finally {
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;

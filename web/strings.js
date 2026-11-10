@@ -1085,17 +1085,19 @@ export const STRINGS = {
   'L.mirror.span': { text: 'span at position ⟨p⟩ of ⟨extent⟩ in ⟨document⟩⟨same⟩: "⟨text⟩".', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.span.bare': { text: 'span at position ⟨p⟩ in ⟨document⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.same': { text: ' (the same material as ⟨origin⟩)', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  // ⟨kind⟩ a withheld run's kind (L.item.withheld) and ⟨length⟩ its positions (L.item.positions), as a copy's stand-in names them
-  'L.mirror.withheld': { text: '⟨kind⟩ in ⟨document⟩: ⟨length⟩, owner ⟨owner⟩, origin ⟨origin⟩. ⟨arm⟩.⟨clause⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  // a block that holds no text, a withheld run apart where its clause is decided (FP-24, FP-33): its kind (L.item.*), where it
-  // stands, then what the plane shows of it — a record's words and keys, the length of an item this client cannot show or of
-  // a withheld run whose clause is read — never its raw value
+  // a withheld run's item, its own part: ⟨kind⟩ its kind (L.item.withheld) and ⟨length⟩ its positions (L.item.positions), as a
+  // copy's stand-in names them, and its origin; and its origin's description, one for every run of it (R94): the owner of its
+  // origin, the entitlement arm, C-67's clause where the claims decide one
+  'L.mirror.withheld': { text: '⟨kind⟩ in ⟨document⟩: ⟨length⟩, origin ⟨origin⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.withheld.origin': { text: 'owner ⟨owner⟩. ⟨arm⟩.⟨clause⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror: a withheld origin\'s description', lane: true },
+  // a block that holds no text, a withheld run apart (FP-24): its kind (L.item.*), where it stands, then what the plane shows of
+  // it — a record's words and keys, the length of an item this client cannot show — never its raw value
   'L.mirror.no-text': { text: '⟨kind⟩ at position ⟨p⟩ of ⟨extent⟩ in ⟨document⟩⟨same⟩⟨shown⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.shows': { text: ': ⟨shown⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  // C-67's clause after a withheld run's arm, where the origin's edition claims decide one (PUB-5.124), and a kept clause
-  // after an item's words (L.kept.*); the empty place says nothing
+  // C-67's clause after a withheld origin's arm, where its edition claims decide one (PUB-5.124), and a kept clause after an
+  // item's words or an origin's description (L.kept.*); the empty place says nothing
   'L.mirror.clause': { text: ' ⟨clause⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  // after a withheld run's face, the links drawn at the run, its item's children (FP-30): ⟨links⟩ their count (F.label.links)
+  // after a withheld run's own part, the links drawn at the run, its item's children (FP-30): ⟨links⟩ their count (F.label.links)
   'L.mirror.run-links': { text: ' ⟨links⟩ ending in it.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // C-67's place where a read of the edition claims failed (FP-33): a blank there would read as no claim
   'L.clause.unread': { text: 'edition claims not read', cls: 'DRAFT', source: '', screen: 'B1-S7; the document-level withheld face; the ARIA mirror', lane: true },
@@ -1218,12 +1220,12 @@ export const STRINGS = {
   // the client's words standing in a document's first line's place — a record's rendering, a withheld box's statement, what
   // a board will say of a far end — bracketed wherever the first line is named, so none reads as the document's own words
   'L.client-words': { text: '[⟨words⟩]', cls: 'DRAFT', source: '', screen: 'a document\'s label: the plane, a tail, a bundle\'s end, a list row, the one line, the ARIA mirror', lane: true },
-  // the compact signs (FP-26): the mark keyed to a run's origin — a hairline's compact label, and a withheld run's gap too
-  // short to carry its owner; a withheld run's face compact in its column's edge, its owner with a mark that opens it whole
+  // the compact signs (FP-26): the mark keyed to a run's origin, a hairline's compact label; a withheld origin's face compact
+  // in its column's edge, headed by its key — the origin's address — with a mark that opens the whole wording's card
   // (foundations §2.1); the corner's usual states as glyphs — an edition's its version marker, unlit at the bare address and
   // lit at a pinned version (foundations §3.1's ○), a draft's chip
-  'L.origin-mark': { text: '≡', cls: 'DRAFT', source: '', screen: 'a run\'s hairline; a withheld run\'s gap', lane: true },
-  'L.withheld.mark': { text: '⟨owner⟩ ▸', cls: 'DRAFT', source: '', screen: 'B1-S7, a column\'s edge', lane: true },
+  'L.origin-mark': { text: '≡', cls: 'DRAFT', source: '', screen: 'a run\'s hairline', lane: true },
+  'L.withheld.mark': { text: '⟨origin⟩ ▸', cls: 'DRAFT', source: '', screen: 'B1-S7, a column\'s edge', lane: true },
   'L.corner.bare': { text: '○', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner, compact' },
   'L.corner.pinned': { text: '●', cls: 'DRAFT', source: '', screen: 'the corner, compact', lane: true },
   'L.corner.draft': { text: '◌', cls: 'DRAFT', source: '', screen: 'the corner, compact', lane: true },

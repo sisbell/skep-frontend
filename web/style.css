@@ -190,14 +190,14 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    symbol's box is its count of advances wide whatever face sets its ⟡ — and every block is a plain block, so the
    margins about one that sets no line (the newlines before a run's first typed line) collapse into one, as P-LAY
    collapses an empty row's: the lines P-LAY lays the bars out on (foundations §2.4: the handoff moves no line). THE
-   EDGE (issue #151's design decision): a block's others' count, a withheld run's mark and
-   an item's words where its gap holds them not stand in their column's edge, placed out of the flow beside the block's
-   first line, `--edge-in` past the text and `--edge-w` wide in their own em (T-ARTICLE's `edgeStyle`), so no sign sets
-   a line. A run of positions with no glyphs — a withheld run, an item not rendered — is a gap as tall as its bars, the
-   last of its lines `--wh-last` advances wide, holding what its gap holds; a withheld run's ground is drawn on those
-   lines. An article on the plane takes the pointer at reading scale alone, the `legible` class T-LAYER sets at the
-   readable em 8 and above; below it the layer's `none` holds, and a press on its text falls to the canvas as one on its
-   bars does (foundations §2.4: "bars or mounted text alike"). */
+   EDGE: a typed line's others' count and an item's words where its gap holds them not stand in their column's edge,
+   placed out of the flow beside the block's first line, `--edge-in` past the text and `--edge-w` wide in their own em
+   (T-ARTICLE's `edgeStyle`), so no sign sets a line; a withheld origin's words stand in the edge on the corner layer
+   (below). A run of positions with no glyphs — a withheld run, an item not rendered — is a gap as tall as its bars, the
+   last of its lines `--wh-last` advances wide; a withheld run's ground is drawn on those lines, its ends' symbol and its
+   key on its first, no face in it. An article on the plane takes the pointer at reading scale alone, the `legible` class
+   T-LAYER sets at the readable em 8 and above; below it the layer's `none` holds, and a press on its text falls to the
+   canvas as one on its bars does (foundations §2.4: "bars or mounted text alike"). */
 #domlayer { position:fixed; inset:0; overflow:hidden; pointer-events:none; contain:strict; z-index:3; }
 .dtext { position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform; box-sizing:content-box;
   font-family:var(--face-reading); font-synthesis:none; font-variant-numeric:normal; color:#b9c1cb; -webkit-font-smoothing:antialiased; cursor:text; user-select:text; }
@@ -250,19 +250,15 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    `--sym-chars` its ⟡ and its count; and a symbol lit at an arrival, heavier by a ring that takes no room, so no line moves */
 .dtext .withheld .sym { margin-left:0; margin-right:var(--sym-gap); }
 .dtext .sym.heavier { box-shadow:0 0 0 var(--border-box) var(--mark-hue, #8b8f96); }
-/* a sign in its column's edge, beside its block's first line (see the head): the others' count, a withheld run's mark, an
-   item's words its gap does not hold — a run's count stacked below its mark by the `top` T-ARTICLE sets */
+/* a sign in its column's edge, beside its block's first line (see the head): a typed line's others' count, an item's
+   words its gap does not hold */
 .dtext .edge { position:absolute; top:0; left:calc(100% + var(--edge-in)); width:var(--edge-w); font-size:var(--count); font-weight:400; color:var(--dim); white-space:normal; text-indent:0; }
-.dtext .wh-mark { color:#cfd6df; }
-/* a withheld run's kept sign, below its mark and its count: empty, until the origin's edition claims stand held as they are
-   read again (T-LAYER fills it in place), so it sets no line */
-.dtext .wh-kept { color:#cfd6df; }
 .dtext .withheld { display:block; position:relative; isolation:isolate; margin:0; color:#cfd6df; }
 .dtext .withheld::before { content:''; position:absolute; inset:0; z-index:-1;
   background: repeating-linear-gradient(45deg, #1b1f25, #1b1f25 6px, #22272f 6px, #22272f 12px);
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--line-box)), calc(var(--wh-last) * var(--char-w) * 1em) calc(100% - var(--line-box)), calc(var(--wh-last) * var(--char-w) * 1em) 100%, 0 100%); }
-.dtext .withheld .wh-head, .dtext .withheld .wh-owner, .dtext .withheld .wh-origin { display:block; }
-.dtext .withheld .arm, .dtext .withheld .clause { display:block; color:#b9c1cb; margin-top:var(--face-gap); }
+/* a withheld run's key in its gap's first line, after its ends' symbol: its origin's address whole, never broken */
+.dtext .withheld .wh-key { white-space:nowrap; }
 /* an item not rendered: the room its positions take, its words in it where its gap holds them */
 .dtext .sp.gap { color:#4b5563; }
 /* the chrome inside a block is never the document's bytes: a drag crosses it unselected, the copy never carries it */
@@ -272,9 +268,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    where the caret is kept, the text left to the walk (K-77) */
 .dtext .caret-mark { display:inline-block; width:0; height:1em; vertical-align:text-bottom; border-left:1px solid var(--ink); margin-left:-.5px; pointer-events:none; user-select:none; -webkit-user-select:none; }
 .dtext .caret-mark.kept { border-left-style:dotted; opacity:.6; }
-/* an item that holds no text — a record, a reference, an item this client cannot show, a withheld run's face — is selected
+/* an item that holds no text — a record, a reference, an item this client cannot show, a withheld run's gap — is selected
    whole wherever a selection touches it, and drawn so: the span takes it whole, and a copy writes its stand-in in its place
-   (FP-24; issue #161). On the plane a press on a withheld run's face starts no selection: its click is its act's (APP-INPUT) */
+   (FP-24; issue #161). On the plane a press on a withheld run's gap starts no selection: its click is its act's (APP-INPUT) */
 .dtext .sp.blk-atom, .dtext .sp.blk-ref, .dtext .sp.blk-hex, .dtext .sp.blk-unknown, .dtext .withheld { user-select:all; -webkit-user-select:all; }
 .dtext .rec { display:block; color:#cfd6df; }
 .dtext .rec .derived { display:block; color:#8b8f96; }
@@ -283,9 +279,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    the only one the pointer reaches — and its corners, and on nothing a reading scene's pane holds — a pane's blocks,
    hairlines and symbols are read, never clicked (SC) */
 #domlayer .dtext .sp, #domlayer .dtext .hairline, #domlayer .dtext .sym, #domlayer .dtext .slot.cut { cursor:pointer; }
-/* C-67's pointer beneath a withheld run's arm, its LEAP to the edition, and the run's compact face in its column's edge,
-   which opens it whole: the plane's acts alone (a pane's are read, SC) */
-#domlayer .dtext .withheld .clause[data-home], #domlayer .dtext .wh-mark { cursor:pointer; text-decoration:underline dotted; }
+/* a withheld run's key, which opens the whole wording's card: the plane's act alone (a pane's is read, SC) */
+#domlayer .dtext .withheld .wh-key { cursor:pointer; text-decoration:underline dotted; }
 #domlayer .dtext .sp:hover { background:rgba(127,178,255,.08); }
 #beams { position:fixed; inset:0; pointer-events:none; z-index:4; }
 
@@ -348,6 +343,18 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #corners .held { position:absolute; top:0; left:0; overflow:hidden; pointer-events:none; will-change:transform; user-select:none; -webkit-user-select:none; }
 #corners .held.legible { pointer-events:auto; }
 #corners .held > span { position:absolute; top:0; white-space:pre; }
+
+/* THE EDGES' SIGNS (FP-31): a withheld origin's statement — its key, the mark that opens the whole wording's card, C-67's
+   pointer, the kept clause — and a run's key too wide for its gap and its others' count, each in a column's edge on the
+   corner layer, at the size, line height and width T-LAYER sets, placed by translate alone; the client's words, an address
+   the identifier's, never cut — an address is never broken, its words wrapped at their spaces alone. They take the pointer,
+   their acts the pointer's alone (APP-INPUT), and stand on no ground, the edge being the document's own room. In a reading
+   scene's pane each pane's own stand in its column's edge, read, never acted on (SC) */
+:is(#corners, .pane) .edge-sign { position:absolute; top:0; left:0; color:var(--dim); font-family:var(--face-client); font-variant-numeric:tabular-nums; white-space:normal; overflow-wrap:normal; user-select:none; -webkit-user-select:none; }
+#corners .edge-sign { pointer-events:auto; will-change:transform; }
+:is(#corners, .pane) .edge-sign .wh-mark, :is(#corners, .pane) .edge-sign .clause, :is(#corners, .pane) .edge-sign .kept { display:block; color:#cfd6df; }
+:is(#corners, .pane) .edge-sign .id { white-space:nowrap; }
+#corners .edge-sign .wh-mark, #corners .edge-sign .wh-key, #corners .edge-sign .clause[data-home] { cursor:pointer; text-decoration:underline dotted; }
 
 /* A LANDING'S LINE (issue #153's design decision): at the text's edge beside the landing (O-LAND places it), over the
    beams and the corners, under the reading scene, the LEAP box and the overlay; opaque, as all chrome over the plane is,

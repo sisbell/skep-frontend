@@ -193,17 +193,17 @@
 // what it is about, its reads — counts and claims — made again, taking the
 // focus on the control it was left holding it on (`reopen`). A subject that
 // is a span's bytes — the selection, a provenance card's span, the span the
-// acts card or the "which" list holds of its own, the versions list's
-// passage held, a card's link's end — is placed by the landing rule
-// (`placedNow`): all of it standing, the surface moves there; part, it stands
-// on what stands, the line saying so in the status region — and, where no
-// arrival's line stands, beside the landing, the latest member holding it
-// whole offered (`heldPart`); none, the dead end's face at its place, below a
-// surface of the reader's standing there, said, with the same offer
-// (`heldNone`). A departure before they show keeps what
-// is still owed, so a second move made at once loses nothing; a surface the
-// reader made meanwhile stands in their place. A covered place reopens
-// none, and a change of the page's class drops every entry's kept surfaces.
+// acts card or the "which" list holds of its own, the versions list's passage
+// held, a card's link's end, a withheld run's card's run — is placed by the
+// landing rule (`placedNow`): all of it standing, the surface moves there;
+// part, it stands on what stands, the line saying so in the status region —
+// and, where no arrival's line stands, beside the landing, the latest member
+// holding it whole offered (`heldPart`); none, the dead end's face at its
+// place, below a surface of the reader's standing there, said, with the same
+// offer (`heldNone`). A departure before they show keeps what is still owed,
+// so a second move made at once loses nothing; a surface the reader made
+// meanwhile stands in their place. A covered place reopens none, and a change
+// of the page's class drops every entry's kept surfaces.
 // The surfaces across a version (FP-36, FP-22): a surface standing on a
 // version its box no longer shows — the selection, a card or a list, opened
 // before a version move, while it read, or under a jump to a version address
@@ -3758,7 +3758,7 @@ async function reopen(left, act, o) {
  */
 function subjectOf(a) {
   return a.kind === 'anatomy' || a.kind === 'ends' ? { addr: a.near, pos: a.pos, width: a.width, ids: a.ids }
-    : a.kind === 'wrote' || a.kind === 'uses' ? { addr: a.addr, pos: a.pos, width: a.width, ids: a.ids }
+    : a.kind === 'wrote' || a.kind === 'uses' || a.kind === 'withheld' ? { addr: a.addr, pos: a.pos, width: a.width, ids: a.ids }
       : a.kind === 'versions' && a.held ? { addr: a.addr, ...a.held }
         : (a.kind === 'selection' || a.kind === 'which') && a.at ? a.at : null;
 }
@@ -3784,6 +3784,7 @@ async function reopenBy(left, span) {
   else if ((a.kind === 'selection' || a.kind === 'which') && span) SEL.reopen({ about: a, focus }, span);
   else if (a.kind === 'links') LINKS.reopen({ about: a, focus }, shownIn(a.addr));
   else if (a.kind === 'mark') await MARKLIST.reopen({ about: a, focus });
+  else if (a.kind === 'withheld' && span) FACES.reopenRun({ about: a, focus }, span, (home, byKey) => { void leapTo(home, { how: 'leap', byKey, site: { span } }); });
 }
 
 /**
@@ -3961,7 +3962,7 @@ function acrossSelection() {
  */
 function standsOn(a) {
   if (a.kind === 'anatomy' || a.kind === 'ends') return [a.near];
-  if (a.kind === 'wrote' || a.kind === 'uses' || a.kind === 'versions' || a.kind === 'links') return [a.addr];
+  if (a.kind === 'wrote' || a.kind === 'uses' || a.kind === 'versions' || a.kind === 'links' || a.kind === 'withheld') return [a.addr];
   if (a.kind === 'tail') return a.docs;
   if ((a.kind === 'selection' || a.kind === 'which') && a.at) return [a.at.addr];
   return [];

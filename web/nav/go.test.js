@@ -2647,7 +2647,7 @@ test('a key held while a jump is in the air and made at its landing takes nothin
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('Enter at a withheld run shows its face whole, C-67\'s pointer its act — run by a key, the LEAP to the edition its claim names, the ring drawn, Back returning to the run; the QUOTING sibling a line and no act; no claim, the head and the arm alone; Enter at any other span selects it', async () => {
+test('Enter at a withheld run opens its whole wording\'s card, which takes the focus as a key opened it — on C-67\'s pointer, its act, run by a key, the LEAP to the edition its claim names, the ring drawn, Back returning to the run; the QUOTING sibling a line and no act, the focus on its head; no claim, the head and the arm alone; Enter at any other span selects it (issue #288\'s design decision: "The whole wording opens as a card on any run\'s act")', async () => {
   const platform = { window: globalThis.window };
   globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
   /** Enter as the platform delivers it at the plane */
@@ -2660,34 +2660,37 @@ test('Enter at a withheld run shows its face whole, C-67\'s pointer its act — 
     await run(GO.leapTo(WINDOWS, { pos: RUN }));
     assert.deepEqual(walkAt(), ['block', WINDOWS, RUN], 'the walk on the run');
     const arm = entitlementArm({ account: '1.0.1', keyPresent: false }, '1.0.2');
-    const head = `<div class="face-text" data-string="B1.withheld-run">${addressedHTML(t('B1.withheld-run', { owner: '1.0.2', account: '1.0.2', width: 240, origin: ORIGIN }))}</div>`;
+    const head = `<div class="face-text" data-string="B1.withheld-run" tabindex="-1">${addressedHTML(t('B1.withheld-run', { owner: '1.0.2', account: '1.0.2', width: 240, origin: ORIGIN }))}</div>`;
     await press();
     let o = HOST.currentState();
-    assert.equal(o?.id, 'face:withheld-run', 'Enter at the run shows its face whole (K-7)');
+    assert.deepEqual([o?.id, o?.kind], ['withheld:' + ORIGIN, 'card'], 'Enter at the run opens its whole wording\'s card (K-7)');
     assert.ok(o && o.html.startsWith(head), `its head: ${o && o.html}`);
     assert.equal(below(), `<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div><div class="clause" data-string="C-67.pointer"><button data-run="follow" data-claim="${EDITION_CLAIM}" data-home="${EDITION}">${esc(t('C-67.pointer'))}</button></div>`,
       'the arm, then the pointer: a button following 1.0.2\'s passing claim');
-    assert.deepEqual([o?.takeFocus, SEL.selected(), GO.arrivalMark()], [undefined, null, null], 'it takes no focus; nothing selected, nothing marked');
+    assert.deepEqual([o?.takeFocus, o?.first, SEL.selected(), GO.arrivalMark()], [true, '[data-run="follow"]', null, null], 'it takes the focus a key opened it with, on the pointer; nothing selected, nothing marked');
+    assert.deepEqual(o?.about, { kind: 'withheld', addr: WINDOWS, pos: RUN, width: 240, ids: LAYER.shownIdentity(WINDOWS, RUN, 240), origin: ORIGIN }, 'about the run, by its bytes');
     const act = o && o.acts ? o.acts.follow : null;
-    assert.ok(act, 'the pointer is the face\'s act');
+    assert.ok(act, 'the pointer is the card\'s act');
     const n = TRAIL.length();
     await run(Promise.resolve(act(/** @type {any} */ ({}), true)));
     const e = TRAIL.current();
     assert.deepEqual([TRAIL.length(), e && [e.addr, e.pos, e.width], departed()?.step], [n + 1, [EDITION, null, null], null], 'a trail entry at the edition, landed in whole, the run\'s entry recording no step: no link followed, no passage carried');
-    assert.deepEqual([walkAt(), WALK.ringShown(), HOST.currentState(), marks()], [['document', EDITION, null], true, null, [null, []]], 'the walk on the edition, the ring drawn — a key made the act — the face gone, nothing lit');
+    assert.deepEqual([walkAt(), WALK.ringShown(), HOST.currentState(), marks()], [['document', EDITION, null], true, null, [null, []]], 'the walk on the edition, the ring drawn — a key made the act — the card gone with the place it stood at, nothing lit');
     await run(GO.back());
-    assert.deepEqual(walkAt(), ['block', WINDOWS, RUN], 'Back returns to the run');
+    for (let i = 0; i < 50 && !HOST.currentState(); i++) await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual([walkAt(), HOST.currentState()?.id, HOST.currentState()?.about?.kind], [['block', WINDOWS, RUN], 'withheld:' + ORIGIN, 'withheld'], 'Back returns to the run, the card the reader left it with reopened there (FP-36)');
+    KEYS.esc();
     REC.takeEditionClaims(ORIGIN, [QUOTING_CLAIM]);
     await press();
     o = HOST.currentState();
-    assert.deepEqual([o?.id, below(), Object.keys(o?.acts || {})], ['face:withheld-run', `<div class="arm" data-string="${arm.id}">${addressedHTML(arm.text)}</div><div class="clause" data-string="C-67.quoting">${addressedHTML(t('C-67.quoting', { claimant: '1.0.2' }))}</div>`, []], 'every claim quoting the draft: the QUOTING sibling a line, and no act');
+    assert.deepEqual([o?.id, below(), Object.keys(o?.acts || {}), o?.first], ['withheld:' + ORIGIN, `<div class="arm" data-string="${arm.id}">${addressedHTML(arm.text)}</div><div class="clause" data-string="C-67.quoting">${addressedHTML(t('C-67.quoting', { claimant: '1.0.2' }))}</div>`, [], '.face-text'], 'every claim quoting the draft: the QUOTING sibling a line, and no act, the focus on its head');
     KEYS.esc();
     REC.takeEditionClaims(ORIGIN, []);
     await press();
     o = HOST.currentState();
-    assert.deepEqual([o?.id, below(), Object.keys(o?.acts || {})], ['face:withheld-run', `<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div>`, []], 'no claim: the head and the arm alone');
+    assert.deepEqual([o?.id, below(), Object.keys(o?.acts || {})], ['withheld:' + ORIGIN, `<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div>`, []], 'no claim: the head and the arm alone');
     KEYS.esc();
-    assert.equal(HOST.currentState(), null, 'Esc dismisses the face');
+    assert.equal(HOST.currentState(), null, 'Esc dismisses the card');
     await run(WALK.key('up'));
     await press();
     assert.deepEqual([walkAt(), SEL.selected()], [['block', WINDOWS, 1], { addr: WINDOWS, pos: 1, width: RUN - 1 }], 'Enter at the span before the run selects it whole (D8)');

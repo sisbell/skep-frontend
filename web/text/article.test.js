@@ -1,48 +1,47 @@
 // T-ARTICLE's test: the article made from a record — a withheld run's gap as
-// tall as its bars, holding its face, its head, its owner or the origin's
-// mark by what its full lines hold as its words are measured in their faces,
-// never counted, the face compact in the column's edge otherwise and a
-// control on the plane alone, and its ground alone while its clause is read;
-// an item not rendered — one of a kind the page
-// does not know among them, as a delivery hands it — a gap of its positions,
-// its words in it or in the edge; every address the article sets in the
-// identifier's face, a record's keys and a face's arm and clause at the
-// run's size; the entitlement arm by the
-// reader; C-67's clause decided over the origin's whole admitted-claim set,
-// undecided while a read it is decided from is out,
-// the pointer a control on the plane and a line in a pane; links marked at
-// their spans in the one mark they merge into; the selection's and the
-// focus's marks by the one rule; a run's hairline and C-33's mark once per
-// run; each symbol at its span, after its last word and after a run's chrome,
-// titled with what its far end holds; each mark carrying the ends it draws;
-// the others' count in the column's edge, setting no line, and a withheld
-// run's below its mark by the lines the mark's words take as measured, and
-// the first run of an origin carrying its kept sign below them, empty, setting
-// no line; a document's state said once, at its corner, the head stating
-// none in any state, a refused document's among them; the corner's items,
-// whole and compact, one by one with their words, their widths and whether
-// they yield to a head's narrow row, outside the article, a pane's with its read act and its
-// lacking line, the plane's with the read an arrival offers as a control,
-// a kept clause after them on a line of its own, neither the
-// latest version nor the chain's count while the board lags, its state one
-// rule the words the ARIA mirror voices are made by; the record rule; a
-// typed line set as typed in the
-// body's type, a heading's marks its own characters, on its indent where it
-// opens a typed line, the empty lines typed after it whole line boxes below
-// it and no other room between blocks; the plan the bars are
-// laid out from, the same blocks as the HTML; the scene-mode variant with no
-// offer and no control; each withheld run naming its own origin's owner; the
-// item rule and the copy's plain text with its stand-ins; the ends drawn at
-// a withheld run as one symbol with its count, the plan unmoved; a symbol
-// lit where every link it stands for is lit; and the byline's slots, never a
-// placeholder, each box its face's width, cut on a word's end by its width
-// as set and whole on their act; and the first-line rule, the client's words
-// in a first line's place bracketed (FP-12, FP-21, FP-22, FP-23, FP-24,
-// FP-26, FP-30, FP-33, FP-34).
+// tall as its bars, no face in it: its ends' symbol and its origin's key
+// where its first line holds the key as measured in the identifier's face,
+// never counted, a control on the plane and a line in a pane, its ground
+// alone while its clause is read, and no sign of it in the article's edge;
+// the one rule of the signs the edges stand for the runs in view — each
+// origin's statement once, kept beside its run by the run's identity, a key
+// too wide for its gap, a count — and the statement itself, headed by the
+// key, keeping the pointer alone of the clause and the kept clause; an item
+// not rendered — one of a kind the page does not know among them, as a
+// delivery hands it — a gap of its positions, its words in it or in the
+// edge; every address the article sets in the identifier's face, a record's
+// keys at the run's size; the entitlement arm by the reader; C-67's clause
+// decided over the origin's whole admitted-claim set, undecided while a read
+// it is decided from is out; links marked at their spans in the one mark
+// they merge into; the selection's and the focus's marks by the one rule; a
+// run's hairline and C-33's mark once per run; each symbol at its span, after
+// its last word and after a run's chrome, titled with what its far end
+// holds; each mark carrying the ends it draws; a typed line's others' count
+// in the column's edge, setting no line; a document's state said once, at
+// its corner, the head stating none in any state, a refused document's among
+// them; the corner's items, whole and compact, one by one with their words,
+// their widths and whether they yield to a head's narrow row, outside the
+// article, a pane's with its read act and its lacking line, the plane's with
+// the read an arrival offers as a control, a kept clause after them on a line
+// of its own, neither the latest version nor the chain's count while the
+// board lags, its state one rule the words the ARIA mirror voices are made
+// by; the record rule; a typed line set as typed in the body's type, a
+// heading's marks its own characters, on its indent where it opens a typed
+// line, the empty lines typed after it whole line boxes below it and no other
+// room between blocks; the plan the bars are laid out from, the same blocks
+// as the HTML; the scene-mode variant with no offer and no control; each
+// withheld run carrying its own origin's key and owner; the item rule and the
+// copy's plain text with its stand-ins; the ends drawn at a withheld run as
+// one symbol with its count, the plan unmoved; a symbol lit where every link
+// it stands for is lit; and the byline's slots, never a placeholder, each box
+// its face's width, cut on a word's end by its width as set and whole on
+// their act; and the first-line rule, the client's words in a first line's
+// place bracketed (FP-12, FP-21, FP-22, FP-23, FP-24, FP-26, FP-30, FP-31,
+// FP-33, FP-34, FP-38).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, cornerItems, cornerWords, keptHTML, keptStatement, statementHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, cornerHTML, cornerItems, cornerWords, keptHTML, keptStatement, statementHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
@@ -83,14 +82,10 @@ const WIDE = 12 * MEASURE_CPL;
 const INNER = '((?:[^<]|<span class="id">[^<]*</span>)*)';
 /** an address in the identifier's face, as the article sets it */
 const idOf = (/** @type {string} */ a) => `<span class="id">${esc(a)}</span>`;
-/** B1-S7's head at a run, as the article sets it: its owner, its account and its origin in the identifier's face */
-const headOf = (/** @type {string} */ owner, /** @type {number} */ width, origin = '1.0.1.0.1003') => tHTML('B1.withheld-run', { owner, account: owner, width, origin }, { owner: 'id', account: 'id', origin: 'id' });
-/** a withheld run's mark in its column's edge, as the article sets it */
-const markOf = (/** @type {string} */ owner) => tHTML('L.withheld.mark', { owner }, { owner: 'id' });
 /**
  * A withheld run's gap as the HTML sets it, read apart from the page's code: its attributes, its height in the body's
- * em and its last line's width, what it holds — its head, its arm, its clause, its owner alone, the origin's mark — and
- * its edge's mark, with the attributes that make it a control
+ * em and its last line's width, its ends' symbol, its key — its words and whether it is a control — and whether any
+ * other sign stands in it or in its column's edge
  * @param {string} html
  * @param {number} [pos]
  */
@@ -98,79 +93,72 @@ const gapAt = (html, pos = 1) => {
   const m = new RegExp(`<span class="withheld" data-pos="${pos}"([^>]*)>(.*?)</span>(?=<span class="withheld"|<p|<h|</div>|$)`).exec(html);
   if (!m) return null;
   const at = (/** @type {string} */ k) => (new RegExp(` ${k}="([^"]*)"`).exec(m[1]) || [])[1] ?? null;
-  const inner = (/** @type {string} */ cls) => (new RegExp(`<span class="${cls}"[^>]*>${INNER}</span>`).exec(m[2]) || [])[1] ?? null;
-  const mark = new RegExp(`<span class="wh-mark edge" data-mark="withheld"([^>]*?) style="[^"]*">${INNER}</span>`).exec(m[2]);
+  const key = /^(?:<span class="sym at-run [^"]*"[^>]*>[^<]*<\/span>)?<span class="wh-key id" data-key="([^"]*)"([^>]*)>([^<]*)<\/span>$/.exec(m[2]);
   const style = at('style') || '';
   return {
-    owner: at('data-owner'), holds: at('data-holds'), width: Number(at('data-width')), height: Number((/height:([\d.]+)em/.exec(style) || [])[1]), last: Number((/--wh-last:(\d+)/.exec(style) || [])[1]),
-    head: inner('wh-head'), arm: inner('arm'), clause: inner('clause'), alone: inner('wh-owner'), origin: inner('wh-origin'),
-    mark: mark ? { text: mark[2], control: mark[1].includes('role="button"') && mark[1].includes('tabindex="-1"') } : null,
+    owner: at('data-owner'), origin: at('data-origin'), holds: at('data-holds'), width: Number(at('data-width')), height: Number((/height:([\d.]+)em/.exec(style) || [])[1]), last: Number((/--wh-last:(\d+)/.exec(style) || [])[1]),
+    key: key ? { origin: key[1], text: key[3], control: key[2].includes('role="button"') && key[2].includes('tabindex="-1"') } : null,
+    other: /class="(?:edge|wh-mark|wh-head|arm|clause|others|wh-kept)\b/.test(m[2]),
   };
 };
 
-test('a withheld run is a gap as tall as its bars — its last line its remainder — never its text: its face whole where its full lines hold it, else its head, else its origin\'s owner, else the origin\'s mark, the face compact in its column\'s edge then, every address in it the identifier\'s (issue #151; issue #16)', () => {
-  const owner = '1.0.1', head = (/** @type {number} */ w) => headOf(owner, w);
-  const mark = { text: markOf(owner), control: true };
-  // twelve full lines: the face whole, the head, the arm and nothing in the clause's place, no mark at the edge
-  const wide = /** @type {NonNullable<ReturnType<typeof gapAt>>} */ (gapAt(withheldBlockHTML(runOf(WIDE), doc(), view({ reader: KEYLESS }))));
-  assert.deepEqual({ ...wide, height: Math.round(wide.height / LINE_H * 1e9) / 1e9 }, { owner, holds: 'face', width: WIDE, height: 12, last: MEASURE_CPL, head: head(WIDE), arm: tHTML('R56.key-absent', { owner }, { owner: 'id' }), clause: null, alone: null, origin: null, mark: null }, 'twelve full lines: the face in place, R56\'s arm and all');
-  // 240 positions — three full lines and 42 — under R56's arm: the head alone, the face compact at the edge
-  const run = /** @type {NonNullable<ReturnType<typeof gapAt>>} */ (gapAt(withheldBlockHTML(runOf(240), doc(), view({ reader: KEYLESS }))));
-  assert.deepEqual([run.holds, run.head, run.arm, run.mark, run.last], ['head', head(240), null, mark, 240 - 3 * MEASURE_CPL], '240 positions: the head in its gap, the face compact at the edge');
+test('a withheld run is a gap as tall as its bars — its last line its remainder — never its text and no face: its origin\'s key, the origin\'s address in the identifier\'s face, in its first line where that holds it, else nothing, and no sign of it in the gap or the article\'s edge, whatever the reader\'s arm (issue #288\'s design decision: "withheldBlockHTML sets no face in any gap. Every run shows its gap and its key"; issue #151)', () => {
+  const owner = '1.0.1', origin = '1.0.1.0.1003';
+  for (const reader of [SIGNED, KEYED, KEYLESS]) {
+    const wide = /** @type {NonNullable<ReturnType<typeof gapAt>>} */ (gapAt(withheldBlockHTML(runOf(WIDE), view({ reader }))));
+    assert.deepEqual({ ...wide, height: Math.round(wide.height / LINE_H * 1e9) / 1e9 }, { owner, origin, holds: 'key', width: WIDE, height: 12, last: MEASURE_CPL, key: { origin, text: origin, control: true }, other: false }, `${JSON.stringify(reader)}, twelve full lines: its key alone, a control, no face`);
+  }
+  const run = /** @type {NonNullable<ReturnType<typeof gapAt>>} */ (gapAt(withheldBlockHTML(runOf(240), view({ reader: KEYLESS }))));
+  assert.deepEqual([run.holds, run.key?.text, run.other, run.last], ['key', origin, false, 240 - 3 * MEASURE_CPL], '240 positions: its key, nothing else');
   assert.ok(Math.abs(run.height - 4 * LINE_H) < 1e-9, `as tall as its four bars: ${run.height} em`);
-  // one full line: the head still; five positions: the owner's address alone; four: the origin's mark
-  assert.equal((gapAt(withheldBlockHTML(runOf(MEASURE_CPL), doc(), view({ reader: KEYLESS }))) || {}).holds, 'head', 'one full line holds the head');
-  const five = /** @type {NonNullable<ReturnType<typeof gapAt>>} */ (gapAt(withheldBlockHTML(runOf(5), doc(), view())));
-  assert.deepEqual([five.holds, five.alone, five.mark], ['owner', idOf(owner), mark], 'five positions: its origin\'s owner, the face at the edge');
-  const four = /** @type {NonNullable<ReturnType<typeof gapAt>>} */ (gapAt(withheldBlockHTML(runOf(4), doc(), view())));
-  assert.deepEqual([four.holds, four.origin, four.mark], ['mark', esc(t('L.origin-mark')), mark], 'four: the origin\'s mark, the face at the edge');
-  // in a reading scene's pane, where nothing is acted on, the edge's mark is no control
-  assert.equal((gapAt(withheldBlockHTML(runOf(4), doc(), view({ scene: true }))) || { mark: null }).mark?.control, false, 'in a pane the mark is a line');
-  // the rule over the face itself: the gap holds it where its lines — the arm at the run's size — fit its full lines, at a narrower measure too
-  const p = placeholderOf(runOf(240), SIGNED, (a) => accountOf(a) || '', () => null);
-  const face = layoutOf([{ kind: 'text', pos: null, size: 1, pieces: [{ text: p.head, size: 1, lead: 0, trail: 0, box: false, own: false }], before: 0, after: 0, width: 0, keep: 'whole' },
-    { kind: 'text', pos: null, size: 1, pieces: [{ text: p.arm.text, size: 1, lead: 0, trail: 0, box: false, own: false }], before: MEASURE.faceGap, after: 0, width: 0, keep: 'whole' }]).lines;
-  const deep = face[face.length - 1].top + face[face.length - 1].h;
-  assert.ok(deep <= 3 * LINE_H && deep > 2 * LINE_H, `the owner-grant face takes ${deep} em: more than two full lines, within three`);
-  assert.deepEqual([gapHolds(p, 3 * MEASURE_CPL, MEASURE_CPL, advances), gapHolds(p, 2 * MEASURE_CPL + 65, MEASURE_CPL, advances)], ['face', 'head'], 'three full lines hold it; two and a remainder do not');
-  assert.equal(gapHolds(p, 3 * 30, 30, advances), 'head', 'at a measure of thirty, where its head and its arm each take more lines, three full lines hold its head alone');
-  const html = withheldBlockHTML(runOf(WIDE), doc(), view());
-  assert.ok(!html.includes('class="clause"') && !html.includes(t('C-67.pointer')), 'no clause its origin\'s edition claims decide: nothing renders in its place');
+  // twelve positions hold the twelve characters of the key at the advance; eleven do not, and the gap holds its ground alone
+  const twelve = /** @type {NonNullable<ReturnType<typeof gapAt>>} */ (gapAt(withheldBlockHTML(runOf(12), view())));
+  const eleven = /** @type {NonNullable<ReturnType<typeof gapAt>>} */ (gapAt(withheldBlockHTML(runOf(11), view())));
+  assert.deepEqual([twelve.holds, twelve.key?.text], ['key', origin], 'twelve positions: the key');
+  assert.deepEqual([eleven.holds, eleven.key, eleven.other], ['edge', null, false], 'eleven: nothing in the gap, its key standing in the column\'s edge on the screen-sized layer (T-LAYER)');
+  // in a reading scene's pane, where nothing is acted on, the key is a line
+  assert.equal((gapAt(withheldBlockHTML(runOf(WIDE), view({ scene: true }))) || { key: null }).key?.control, false, 'in a pane the key is a line');
+  const html = withheldBlockHTML(runOf(WIDE), view({ clauseOf: () => ({ id: 'C-67.pointer', text: t('C-67.pointer'), claim: 'c', home: 'h' }) }));
+  assert.ok(!html.includes('class="clause"') && !html.includes(t('C-67.pointer')) && !html.includes(t('C-36.owner-grant.arm')), 'no clause and no arm in the gap, whatever the claims decide');
 });
 
-test('what a gap holds is read from its words as the platform sets them in their faces, never counted: where the client\'s words set wider than the reading face\'s advance, three full lines hold the owner-grant face no longer, nor five positions the owner\'s address where the identifier\'s face sets it wider (issue #16)', () => {
-  const p = placeholderOf(runOf(240), SIGNED, (a) => accountOf(a) || '', () => null);
-  const wider = (/** @type {string} */ x, /** @type {import('../plane/register.js').Face} */ f) => [...x].length * CHAR_W * (f === 'reading' ? 1 : 1.3);
-  assert.deepEqual([gapHolds(p, 3 * MEASURE_CPL, MEASURE_CPL, advances), gapHolds(p, 3 * MEASURE_CPL, MEASURE_CPL, wider)], ['face', 'head'], 'counted at the advance it fits; set wider, its head alone');
-  const q = placeholderOf(runOf(5), SIGNED, (a) => accountOf(a) || '', () => null), ident = (/** @type {string} */ x, /** @type {import('../plane/register.js').Face} */ f) => [...x].length * CHAR_W * (f === 'ident' ? 1.44 : 1);
-  assert.deepEqual([gapHolds(q, 5, MEASURE_CPL, advances), gapHolds(q, 5, MEASURE_CPL, ident)], ['owner', 'mark'], 'five positions hold "1.0.1" at the advance; in a face that sets it wider, the origin\'s mark');
+test('what a gap holds is read from its key as the platform sets it in the identifier\'s face, never counted: twelve positions hold "1.0.1.0.1003" at the advance and not in a face that sets it wider (issue #16)', () => {
+  const p = placeholderOf(runOf(12), SIGNED, (a) => accountOf(a) || '', () => null), ident = (/** @type {string} */ x, /** @type {import('../plane/register.js').Face} */ f) => [...x].length * CHAR_W * (f === 'ident' ? 1.44 : 1);
+  assert.deepEqual([gapHolds(p, 12, MEASURE_CPL, advances), gapHolds(p, 12, MEASURE_CPL, ident)], ['key', 'edge'], 'at the advance the key; set wider, the edge');
+  assert.deepEqual([gapHolds(p, 240, 10, advances), gapHolds(p, 240, 12, advances)], ['edge', 'key'], 'the gap\'s first line read at the measure: ten characters a line hold no twelve-character key, twelve do');
 });
 
-test('a withheld run\'s count stands below its mark in its column\'s edge by the lines the mark\'s words take as their faces set them: one at the advance, two where the identifier\'s face sets its owner wide enough to wrap it (FP-26; issue #16)', () => {
-  const wide = (/** @type {string} */ x, /** @type {import('../plane/register.js').Face} */ f) => [...x].length * CHAR_W * (f === 'reading' ? 1 : 3);
-  const at = { ends: [], count: { n: 2, social: false } };
-  /** the count's top below the run's first line, in the edge's lines */
-  const below = (/** @type {import('./article.js').ArticleView} */ v) => {
-    const html = withheldBlockHTML(runOf(240), doc(), v, at), m = /<span class="others edge" data-count="2" style="[^"]*;top:([\d.]+)em">/.exec(html);
-    return m && html.includes('class="wh-mark edge"') ? Math.round(Number(m[1]) / (LINE_H / MEASURE.count) * 1e9) / 1e9 : null;
-  };
-  assert.deepEqual([below(view({ reader: KEYLESS })), below(view({ reader: KEYLESS, measure: wide }))], [1, 2], 'under R56\'s arm, which no three lines hold: the mark on one edge line at the advance, on two set wide, the count stacked below it each time');
+test('the signs the columns\' edges stand for the withheld runs in view are one rule: each origin\'s statement once, beside the run it stood beside while that run is in view, held by its identity and never its position, else beside the origin\'s first run in view; a key too wide for its gap where the statement stands beside another run; an others\' count; nothing for a run whose clause is not decided (issue #288\'s design decision: "It sits beside that origin\'s first run in view in reading order and moves only when that run leaves"; FP-38)', () => {
+  const O = '1.0.1.0.1003', P = '1.0.2.0.7', none = { n: 0, social: false };
+  /** a run in view: its block, its identity, what its gap holds, its count */
+  const run = (/** @type {number} */ pos, origin = O, /** @type {import('./article.js').GapHolds} */ holds = 'key', count = none) => ({ b: { ...runOf(20, pos), origin }, id: `${origin} ${origin}.0.1.${pos}`, holds, count });
+  const a = run(1), b = run(100, O, 'edge', { n: 3, social: false }), c = run(200, P), reading = run(300, '1.0.3.0.1', 'reading');
+  const signs = (/** @type {ReturnType<typeof edgeSignsFor>} */ r) => r.signs.map((x) => [x.kind, x.run.b.pos]);
+  const first = edgeSignsFor([a, b, c, reading], new Map());
+  assert.deepEqual(signs(first), [['statement', 1], ['key', 100], ['count', 100], ['statement', 200]], 'each origin\'s statement at its first run in view; the second run of O its key, which its gap does not hold, and its count; nothing for the run whose clause is read');
+  assert.deepEqual([...first.beside], [[O, a.id], [P, c.id]], 'the run each statement stands beside, by identity');
+  // a pan: the first run of O left the view, the statement moves to the run now first; then O's first run comes back into view
+  const moved = edgeSignsFor([b, c], first.beside);
+  assert.deepEqual(signs(moved), [['statement', 100], ['count', 100], ['statement', 200]], 'its run left: beside the next, which no longer needs its key in the edge');
+  assert.deepEqual(signs(edgeSignsFor([a, b, c], moved.beside)), [['statement', 100], ['count', 100], ['statement', 200]], 'a run earlier in reading order coming back into view moves no statement — it stands beside the run it stood beside while that run is in view — and that run\'s gap holds its key');
+  assert.deepEqual(signs(edgeSignsFor([run(1, O, 'edge'), b, c], moved.beside)), [['statement', 100], ['key', 1], ['count', 100], ['statement', 200]], 'one whose gap does not hold its key: its key in the edge');
+  // the same run at another position — words typed above it moved it — is the same run
+  assert.deepEqual(signs(edgeSignsFor([{ ...b, b: { ...b.b, pos: 140 } }, run(160)], moved.beside)), [['statement', 140], ['count', 140]], 'held by its identity, never its position: the run words typed above it moved keeps the statement, a run of O first at the old place takes none');
 });
 
-test('the first withheld run of an origin in a document carries the origin\'s kept sign in its column\'s edge, empty and below its mark and its count by the lines their words take; a later run of that origin carries none; the plan holding no row for it (issue #345)', () => {
-  const at = { ends: [], count: { n: 2, social: false } }, second = runOf(240, 251);
-  const d = doc({ blocks: [runOf(240), second] }), v = view({ reader: KEYLESS });
-  /** the kept sign's top below the run's first line, in the edge's lines; null where none stands */
-  const keptAt = (/** @type {string} */ html) => {
-    const m = /<span class="wh-kept edge" data-kept="1\.0\.1\.0\.1003" style="([^"]*)"><\/span>/.exec(html);
-    return m ? Math.round(Number((/top:([\d.]+)em/.exec(m[1]) || [0, 0])[1]) / (LINE_H / MEASURE.count) * 1e9) / 1e9 : null;
-  };
-  const first = withheldBlockHTML(runOf(240), d, v, at);
-  assert.ok(first.includes('class="wh-mark edge"') && first.includes('class="others edge"'), 'the face compact in the edge, the count below it');
-  assert.equal(keptAt(first), 2, 'the kept sign below the mark\'s line and the count\'s, empty');
-  assert.equal(keptAt(withheldBlockHTML(second, d, v, at)), null, 'a later run of the origin: none');
-  assert.equal(keptAt(withheldBlockHTML(runOf(WIDE), doc({ blocks: [runOf(WIDE)] }), v)), 0, 'its face in the gap, no other sign in the edge: at the run\'s first line');
-  assert.ok(!JSON.stringify(articlePlan(d, v, '1.0.1')).includes('wh-kept'), 'the sign is no row of the plan: it sets no line');
+test('a withheld origin\'s statement in its column\'s edge is its face compact, headed by its key: the origin\'s address with the mark that opens the whole wording, C-67\'s pointer where an admitted claim\'s edition holds bytes the reader can reach — a control on the plane, a line in a pane — never the QUOTING sibling or the unread place, the kept clause while the claims stand held, and nothing while the clause is not decided (issue #288\'s design decision: "In the edge it is always compact, keeps an admitted edition claim\'s pointer")', () => {
+  const run = runOf(240), mark = `<span class="wh-mark" role="button" tabindex="-1">${tHTML('L.withheld.mark', { origin: ORIGIN }, { origin: 'id' })}</span>`;
+  const at = (/** @type {import('./article.js').Decided} */ clause) => placeholderOf(run, KEYLESS, (a) => accountOf(a) || '', () => clause);
+  const pointer = { id: /** @type {const} */ ('C-67.pointer'), text: t('C-67.pointer'), claim: '1.0.1.0.9.0.2.1', home: '1.0.1.0.9' };
+  assert.equal(edgeStatementHTML(at(null), null, false), mark, 'no claim: the key and its mark alone');
+  assert.equal(edgeStatementHTML(at(pointer), null, false), mark + `<span class="clause" data-claim="${pointer.claim}" data-home="${pointer.home}" role="button" tabindex="-1">${esc(t('C-67.pointer'))}</span>`, 'the pointer a control carrying its claim and its home');
+  assert.equal(edgeStatementHTML(at(pointer), null, true), `<span class="wh-mark">${tHTML('L.withheld.mark', { origin: ORIGIN }, { origin: 'id' })}</span><span class="clause">${esc(t('C-67.pointer'))}</span>`, 'in a pane the mark and the pointer lines');
+  assert.equal(edgeStatementHTML(at({ id: 'C-67.quoting', text: t('C-67.quoting', { claimant: OWNER }), claimant: OWNER }), null, false), mark, 'the QUOTING sibling is the card\'s alone');
+  assert.equal(edgeStatementHTML(at({ id: 'L.clause.unread', text: t('L.clause.unread') }), null, false), mark, 'so is the unread place');
+  const kept = { id: 'L.kept.links', text: t('L.kept.links', { when: '09:05' }) };
+  assert.equal(edgeStatementHTML(at(null), kept, false), mark + keptHTML(kept), 'the kept clause after it while the claims stand held');
+  assert.equal(edgeStatementHTML(at(CLAUSE_READING), kept, false), '', 'nothing while the clause is not decided');
+  assert.ok(t('L.withheld.mark', { origin: ORIGIN }).startsWith(ORIGIN) && !t('L.withheld.mark', { origin: ORIGIN }).includes(OWNER + ' '), 'headed by the key, never the owner');
 });
 
 test('a kept clause stands as the corner\'s last item, its own words whole, the same in either form; none where nothing is kept (issue #345)', () => {
@@ -180,18 +168,18 @@ test('a kept clause stands as the corner\'s last item, its own words whole, the 
   assert.equal(keptHTML(null), '');
 });
 
-test('the entitlement arm is one rule, by the reader, and the gap holding the face carries what it answers', () => {
+test('the entitlement arm is one rule, by the reader, and the placeholder every surface of a withheld run reads carries what it answers for the owner of the run\'s origin', () => {
   const ownerGrant = { id: 'C-36.owner-grant.arm', text: t('C-36.owner-grant.arm') };
   assert.deepEqual(entitlementArm(SIGNED, '1.0.2'), ownerGrant, 'a signed-in principal with no grant: the owner-grant default');
   assert.deepEqual(entitlementArm(BARE, '1.0.2'), ownerGrant, 'whatever key signed the session, or none');
   assert.deepEqual(entitlementArm(KEYED, '1.0.2'), { id: 'C-36.guest.key', text: t('C-36.guest.key') }, 'a guest whose device holds a key for this board: C-36\'s key-present default — sign in, then ask');
   assert.deepEqual(entitlementArm(KEYLESS, '1.0.2'), { id: 'R56.key-absent', text: t('R56.key-absent', { owner: '1.0.2' }) }, 'a guest with no key: R56\'s key-absent default, naming the owner');
   for (const reader of [SIGNED, BARE, KEYED, KEYLESS]) {
-    const html = withheldBlockHTML(runOf(WIDE), doc(), view({ reader }));
-    assert.ok(html.includes(`<span class="arm">${tHTML(entitlementArm(reader, '1.0.1').id, { owner: '1.0.1' }, { owner: 'id' })}</span>`), `the gap's arm is the rule's for ${JSON.stringify(reader)}, the owner it names in the identifier's face`);
+    const p = placeholderOf(runOf(WIDE), reader, (a) => accountOf(a) || '', () => null);
+    assert.deepEqual([p.origin, p.owner, p.arm], ['1.0.1.0.1003', '1.0.1', entitlementArm(reader, '1.0.1')], `the placeholder's arm is the rule's for ${JSON.stringify(reader)} and the run's origin's owner`);
   }
-  const keyed = withheldBlockHTML(runOf(WIDE), doc(), view({ reader: KEYED }));
-  assert.ok(keyed.includes(esc(t('C-36.guest.key'))) && !keyed.includes('no key on this device'), 'a guest whose device holds a key for this board meets C-36\'s key-present arm, and is never told it holds none');
+  const keyed = placeholderOf(runOf(WIDE), KEYED, (a) => accountOf(a) || '', () => null);
+  assert.ok(keyed.arm.text === t('C-36.guest.key') && !keyed.arm.text.includes('no key on this device'), 'a guest whose device holds a key for this board meets C-36\'s key-present arm, and is never told it holds none');
 });
 
 // ---- C-67's clause, decided over the origin's admitted claims ---------------------------------------------------------
@@ -294,30 +282,26 @@ test('the pointer follows the passing claim PUB-3.107\'s origin-keyed order pick
   assert.deepEqual(editionClause(ORIGIN, OWNER, [quotes, claim('1.0.1.1.0.5.0.2.1'), claim('1.0.1.1.0.4.0.2.1')]), pointer('1.0.1.1.0.4.0.2.1'), 'the lowest-addressed passing claim, the owner\'s quoting one followed nowhere');
 });
 
-test('on the plane the pointer is a control carrying the claim it follows and that claim\'s home; in a pane it is a line, and the QUOTING sibling and the unread place are lines everywhere', () => {
-  const run = runOf(WIDE);
-  const own = '1.0.1.0.9.0.2.1';
-  const passes = () => editionClause(ORIGIN, OWNER, [claim('1.0.1.1.0.4.0.2.1'), claim(own)]);
-  const quotes = () => editionClause(ORIGIN, OWNER, [claim(own, { from: [] })]);
-  /** the clause beneath the arm as the placeholder holds it: its attributes and its words */
-  const clauseIn = (/** @type {import('./article.js').ArticleView} */ v) => (new RegExp(`<span class="arm">[^<]*</span><span class="clause"([^>]*)>${INNER}</span></span>$`).exec(withheldBlockHTML(run, doc(), v)) || []).slice(1);
-  assert.deepEqual(clauseIn(view({ clauseOf: passes })), [` data-claim="${own}" data-home="1.0.1.0.9" role="button" tabindex="-1"`, esc(t('C-67.pointer'))], 'on the plane: a button carrying the owner\'s claim and its home, the edition');
-  assert.deepEqual(clauseIn(view({ clauseOf: passes, scene: true })), ['', esc(t('C-67.pointer'))], 'in a pane: a line, nothing in a pane acting on a mark (SC)');
-  for (const scene of [false, true]) assert.deepEqual(clauseIn(view({ clauseOf: quotes, scene })), ['', quotingHTML(OWNER)], `${scene ? 'in a pane' : 'on the plane'}: the QUOTING sibling follows nothing, its claimant in the identifier's face`);
-  for (const scene of [false, true]) assert.deepEqual(clauseIn(view({ clauseOf: () => editionClause(ORIGIN, OWNER, 'unread'), scene })), ['', esc(t('L.clause.unread'))], `${scene ? 'in a pane' : 'on the plane'}: "edition claims not read" follows nothing`);
+test('the pointer the origin\'s claims decide stands in its statement — on the plane a control carrying the claim it follows and that claim\'s home, in a pane a line — the QUOTING sibling and the unread place in it nowhere (issue #288\'s design decision: "keeps an admitted edition claim\'s pointer")', () => {
+  const run = runOf(WIDE), own = '1.0.1.0.9.0.2.1';
+  const passes = editionClause(ORIGIN, OWNER, [claim('1.0.1.1.0.4.0.2.1'), claim(own)]), quotes = editionClause(ORIGIN, OWNER, [claim(own, { from: [] })]);
+  /** the statement's pointer, as T-ARTICLE sets it: its attributes and its words; none where it holds none */
+  const pointerIn = (/** @type {import('./article.js').Decided} */ c, /** @type {boolean} */ scene) => (new RegExp(`<span class="clause"([^>]*)>${INNER}</span>`).exec(edgeStatementHTML(placeholderOf(run, SIGNED, (a) => accountOf(a) || '', () => c), null, scene)) || []).slice(1);
+  assert.deepEqual(pointerIn(passes, false), [` data-claim="${own}" data-home="1.0.1.0.9" role="button" tabindex="-1"`, esc(t('C-67.pointer'))], 'on the plane: a button carrying the owner\'s claim and its home, the edition');
+  assert.deepEqual(pointerIn(passes, true), ['', esc(t('C-67.pointer'))], 'in a pane: a line, nothing in a pane acting on a mark (SC)');
+  for (const scene of [false, true]) assert.deepEqual([pointerIn(quotes, scene), pointerIn(editionClause(ORIGIN, OWNER, 'unread'), scene)], [[], []], `${scene ? 'in a pane' : 'on the plane'}: the QUOTING sibling and "edition claims not read" stand in the card alone`);
 });
 
-test('the placeholder\'s clause is the one its origin\'s claims decide; where they decide none, the arm\'s own copy stands alone', () => {
+test('the placeholder\'s clause is the one its origin\'s claims decide, read by the statement and the card alike', () => {
   const run = runOf(WIDE);
   /** @type {Record<string, import('./article.js').ClaimSeen[]>} */
   const held = { [ORIGIN]: [claim('1.0.1.0.11.0.2.1', { from: [] })] };
   const clauseOf = (/** @type {string} */ o) => editionClause(o, OWNER, held[o] ?? null);
   assert.deepEqual(placeholderOf(run, SIGNED, (a) => accountOf(a) || '', clauseOf).clause, quoting(OWNER));
-  const html = withheldBlockHTML(run, doc(), view({ clauseOf }));
-  assert.ok(html.includes(`<span class="arm">${esc(t('C-36.owner-grant.arm'))}</span><span class="clause">${quotingHTML(OWNER)}</span>`), html);
   held[ORIGIN] = [];
-  const empty = withheldBlockHTML(run, doc(), view({ clauseOf }));
-  assert.ok(empty.includes(`<span class="arm">${esc(t('C-36.owner-grant.arm'))}</span></span>`) && !empty.includes('class="clause"'), `no claim: the arm's own copy alone, nothing in the clause's place: ${empty}`);
+  assert.equal(placeholderOf(run, SIGNED, (a) => accountOf(a) || '', clauseOf).clause, null, 'no claim: nothing in the clause\'s place');
+  delete held[ORIGIN];
+  assert.equal(placeholderOf(run, SIGNED, (a) => accountOf(a) || '', clauseOf).clause, CLAUSE_READING, 'its lookup not answered: not decided');
 });
 
 test('the owner\'s link is marked in place at its span and nowhere else', () => {
@@ -837,7 +821,7 @@ test('a device label its box does not hold is cut on a word\'s end with an ellip
   assert.deepEqual(by && { cls: by.slots[0].cls, shows: by.slots[0].shows, whole: by.slots[0].whole, title: by.slots[0].title, name: by.slots[0].name }, { cls: 'slot cut', shows: esc('Shane’s MacBook Pro…'), whole: esc(long), title: esc(long), name: named('label', long) }, 'cut in its box, whole beside it for its act, in its title and in its name');
 });
 
-test('each withheld run names its own origin\'s owner — in its head, its arm, its edge\'s mark and the owner it carries — whoever owns the document windowing it', () => {
+test('each withheld run carries its own origin\'s key and its origin\'s owner, whoever owns the document windowing it; the placeholder its card and its statement are made from names that owner (R56; B1-S7)', () => {
   const d = doc({ blocks: [
     { pos: 1, width: 10, kind: 'para', text: 'Tumbler.', origin: null },
     { pos: 11, width: WIDE, kind: 'withheld', text: '', origin: '1.0.2.0.2' },
@@ -846,17 +830,15 @@ test('each withheld run names its own origin\'s owner — in its head, its arm, 
     { pos: 261 + WIDE, width: 10, kind: 'para', text: 'After.', origin: null },
     { pos: 271 + WIDE, width: 4, kind: 'withheld', text: '', origin: '1.0.2.0.2' },
   ] });
-  const runs = [{ pos: 11, width: WIDE, origin: '1.0.2.0.2', owner: '1.0.2' }, { pos: 21 + WIDE, width: 240, origin: '1.0.1.0.1003', owner: '1.0.1' }, { pos: 271 + WIDE, width: 4, origin: '1.0.2.0.2', owner: '1.0.2' }];
+  const runs = [{ pos: 11, width: WIDE, origin: '1.0.2.0.2', owner: '1.0.2', holds: 'key' }, { pos: 21 + WIDE, width: 240, origin: '1.0.1.0.1003', owner: '1.0.1', holds: 'key' }, { pos: 271 + WIDE, width: 4, origin: '1.0.2.0.2', owner: '1.0.2', holds: 'edge' }];
   for (const reader of [SIGNED, KEYED, KEYLESS]) {
     const html = articleHTML(d, view({ reader }), '1.0.1');
     for (const r of runs) {
       const g = /** @type {NonNullable<ReturnType<typeof gapAt>>} */ (gapAt(html, r.pos)), what = `${JSON.stringify(reader)}: the run from ${r.origin}, in ${d.addr}, which 1.0.1 owns`;
-      assert.equal(g.owner, r.owner, `${what}: carries ${r.owner}`);
-      if (g.head != null) assert.equal(g.head, headOf(r.owner, r.width, r.origin), `${what}: its head names ${r.owner}, in the identifier's face`);
-      if (g.arm != null) assert.equal(g.arm, tHTML(entitlementArm(reader, r.owner).id, { owner: r.owner }, { owner: 'id' }), `${what}: its arm the one for ${r.owner}, in the identifier's face`);
-      assert.ok(g.holds === 'face' ? g.mark === null && g.arm != null : g.mark?.text === markOf(r.owner), `${what}: the face in its gap, else its edge's mark naming ${r.owner}`);
+      assert.deepEqual([g.owner, g.origin, g.holds, g.key ? g.key.text : null], [r.owner, r.origin, r.holds, r.holds === 'key' ? r.origin : null], `${what}: carries ${r.owner} and its own key, where its gap holds it`);
+      const p = placeholderOf(/** @type {import('../model/records.js').Block} */ (d.blocks.find((b) => b.pos === r.pos)), reader, (a) => accountOf(a) || '', () => null);
+      assert.deepEqual([p.head, p.arm], [t('B1.withheld-run', { owner: r.owner, account: r.owner, width: r.width, origin: r.origin }), entitlementArm(reader, r.owner)], `${what}: its card's head and arm name ${r.owner}`);
     }
-    assert.equal((gapAt(html, 11) || {}).holds, 'face', 'twelve full lines hold every reader\'s face');
   }
 });
 
@@ -1012,7 +994,7 @@ test('an item of a kind the page does not know, as a delivery hands it, stands a
   assert.equal(copyText({ addr: D, runs, blocks, image: [] }, { addr: D, pos: 1, width: 17 }, (a) => accountOf(a) || ''), `Before.\n${standIn.unshown(3)}After.`, 'its stand-in in its place, its length its own');
 });
 
-test('the ends drawn at a withheld run stand as ONE symbol at the start of its gap\'s first line, before the notice\'s words — every end\'s key on it, its count where it stands for two or more — at every stage of the reveal, no stretch of the gap marked; another\'s counted in the column\'s edge, below the face\'s compact mark; the plan unmoved (issue #202)', () => {
+test('the ends drawn at a withheld run stand as ONE symbol at the start of its gap\'s first line, before its key — every end\'s key on it, its count where it stands for two or more — at every stage of the reveal, no stretch of the gap marked, no others\' count in the article; the plan unmoved (issue #202)', () => {
   const O = '1.0.1.0.1003', RUN = { pos: 11, width: 240, origin: O };
   const d = doc({ blocks: [{ pos: 1, width: 10, kind: 'para', text: 'Tumbler.', origin: null }, runOf(240, 11)] });
   /** an end LK draws at the run (LK's `Shown.run`): its one stretch the run's whole extent */
@@ -1026,38 +1008,34 @@ test('the ends drawn at a withheld run stand as ONE symbol at the start of its g
   const syms = [...gap.matchAll(/<span class="sym at-run [^"]*" data-links="([^"]*)" data-ends="([^"]*)" style="([^"]*)" role="button" tabindex="-1" title="[^"]*">([^<]*)<\/span>/g)].map((m) => m.slice(1));
   assert.deepEqual(syms.map((m) => [m[0], m[1], m[3]]), [['R1 R2', 'k1 k2', '⟡2']], `one symbol at the run, carrying both ends and their count, a control on the plane, at stage 1: ${gap}`);
   assert.ok(syms[0][2].includes(`--mark-hue:${HUE.you}`) && syms[0][2].includes('--sym-chars:2'), 'in the mark its links merge into, its width its ⟡ and its count');
-  assert.ok(new RegExp(`^<span class="wh-mark edge"[^>]*>${INNER}</span><span class="others edge"[^>]*>[^<]*</span><span class="wh-kept edge"[^>]*></span><span class="wh-head"><span class="sym at-run `).test(gap), `first in the gap's first line, before the notice's words, after the edge's signs: ${gap}`);
-  assert.ok(!/class="[^"]*\blip\b/.test(gap) && !gap.includes('depth'), 'no stretch of the gap marked: it still reads as empty');
-  const count = /<span class="others edge" data-count="(\d+)" style="([^"]*)">([^<]*)<\/span>/.exec(gap);
-  assert.deepEqual(count && [count[1], count[3]], ['1', esc(t('F.others-count', { n: 1 }))], 'another\'s end there counted in the edge');
-  assert.ok(count && count[2].endsWith(`;top:${LINE_H / MEASURE.count}em`), `stacked one edge line below the face's compact mark: ${count && count[2]}`);
+  assert.ok(/^<span class="sym at-run [^>]*>⟡2<\/span><span class="wh-key id" /.test(gap), `first in the gap's first line, before its key: ${gap}`);
+  assert.ok(!/class="[^"]*\blip\b/.test(gap) && !gap.includes('depth') && !gap.includes('class="others'), 'no stretch of the gap marked, and no count in it: it still reads as empty, the count on the screen-sized layer (T-LAYER)');
   // one end alone: no count after its ⟡
   assert.ok(articleHTML(d, view({ reader: KEYLESS, marks: [a] }), '1.0.1').includes('data-links="R1" data-ends="k1" style="--mark-hue:' + HUE.you + ';--mark-value:1;--sym-chars:1" role="button" tabindex="-1" title="">⟡</span>'), 'one end: its ⟡ alone');
   // the plan: the gap's row and every block's the same, the ends drawn at the run or not
   const rows = (/** @type {import('./article.js').ArticleView} */ w) => JSON.stringify(articlePlan(d, w, '1.0.1').filter((r) => r.kind !== 'head'));
   assert.equal(rows(v), rows(view({ reader: KEYLESS, marks: [inText] })), 'no row moved: the gap stands on its bars');
-  // what the gap holds is measured with the symbol first in its first line: it steps the notice to a smaller form, never drops the symbol (FP-26)
-  const p = placeholderOf(runOf(5), SIGNED, (x) => accountOf(x) || '', () => null);
-  assert.deepEqual([gapHolds(p, 5, MEASURE_CPL, advances), gapHolds(p, 5, MEASURE_CPL, advances, 2)], ['owner', 'mark'], 'five positions hold the owner\'s address alone; with the symbol before it, the origin\'s mark');
-  const five = withheldBlockHTML(runOf(5), d, view(), { ends: [a, b], count: { n: 0, social: false } });
-  assert.ok(five.includes('data-holds="mark"') && five.includes('>⟡2</span>' + esc(t('L.origin-mark')) + '</span>'), `the symbol stands, before the origin's mark: ${five}`);
+  // what the gap holds is measured with the symbol first in its first line: the key goes to the edge, the symbol stands (FP-26)
+  const p = placeholderOf(runOf(14), SIGNED, (x) => accountOf(x) || '', () => null);
+  assert.deepEqual([gapHolds(p, 14, MEASURE_CPL, advances), gapHolds(p, 14, MEASURE_CPL, advances, 2)], ['key', 'edge'], 'fourteen positions hold the key alone; with the symbol before it, the key stands in the edge');
+  const fourteen = withheldBlockHTML(runOf(14), view(), { ends: [a, b] });
+  assert.ok(fourteen.includes('data-holds="edge"') && fourteen.endsWith('>⟡2</span></span>'), `the symbol stands alone in the gap: ${fourteen}`);
 });
 
-test('while a read its clause waits on is out, a withheld run\'s gap stands on its bars holding its ground alone — the symbol its ends merge into first in it, no head, owner, origin\'s mark, arm or clause, and nothing in its column\'s edge, the others\' count among it — its face and every sign of it standing together once the clause is decided; the plan the same in either state (issue #272\'s design decision: "a first read shows the gap, then the face with its clause")', () => {
+test('while a read its clause waits on is out, a withheld run\'s gap stands on its bars holding its ground alone — the symbol its ends merge into first in it, no key — its key standing with its origin\'s statement once the clause is decided; the plan the same in either state (issue #272\'s design decision: "a first read shows the gap, then the face with its clause")', () => {
   const O = '1.0.1.0.1003', run = runOf(240, 11), RUN = { pos: 11, width: 240, origin: O };
   const d = doc({ blocks: [{ pos: 1, width: 10, kind: 'para', text: 'Tumbler.', origin: null }, run] });
   const end = { ...shown(11, 240), link: { addr: 'R1', type: null }, key: 'k1', run: RUN, runs: [{ pos: 11, width: 240 }], mark: { hue: HUE.you, linker: 'you', form: [], value: 1, own: true } };
-  const at = { ends: [end], count: { n: 2, social: false } };
+  const at = { ends: [end] };
   const as = (/** @type {() => import('./article.js').Decided} */ clauseOf) => view({ reader: KEYLESS, clauseOf, marks: [end], countAt: (b) => ({ n: b.kind === 'withheld' ? 2 : 0, social: false }) });
-  const reading = withheldBlockHTML(run, d, as(() => CLAUSE_READING), at), decided = withheldBlockHTML(run, d, as(() => null), at);
+  const reading = withheldBlockHTML(run, as(() => CLAUSE_READING), at), decided = withheldBlockHTML(run, as(() => null), at);
   assert.ok(/^<span class="withheld" [^>]*data-holds="reading"[^>]*><span class="sym at-run [^"]*"[^>]*>⟡<\/span><\/span>$/.test(reading), `its ground and its one symbol, nothing else: ${reading}`);
-  for (const cls of ['wh-head', 'wh-owner', 'wh-origin', 'arm', 'clause', 'wh-mark', 'others']) assert.ok(!reading.includes(`class="${cls}`), `no ${cls} while the clause is read`);
   assert.equal(gapHolds(placeholderOf(run, KEYLESS, (a) => accountOf(a) || '', () => CLAUSE_READING), 240, MEASURE_CPL, advances, 1), 'reading');
-  assert.ok(['wh-head', 'wh-mark edge', 'others edge'].every((cls) => decided.includes(`class="${cls}`)), `decided: its head in the gap, its mark and its count in the edge together: ${decided}`);
+  assert.ok(decided.includes('data-holds="key"') && decided.includes(`<span class="wh-key id" data-key="${O}"`), `decided: its key in the gap: ${decided}`);
   const height = (/** @type {string} */ html) => (/^<span class="withheld" [^>]* style="([^"]*)"/.exec(html) || [])[1];
   assert.equal(height(reading), height(decided), 'the gap as tall as its bars in either state, its last line its remainder');
   const plan = (/** @type {() => import('./article.js').Decided} */ clauseOf) => JSON.stringify(articlePlan(d, as(clauseOf), '1.0.1'));
-  assert.equal(plan(() => CLAUSE_READING), plan(() => null), 'the plan the same: the face arriving moves no line');
+  assert.equal(plan(() => CLAUSE_READING), plan(() => null), 'the plan the same: the key arriving moves no line');
   assert.ok(articleHTML(d, as(() => CLAUSE_READING), '1.0.1').includes('data-holds="reading"'), 'the article draws the gap so');
 });
 

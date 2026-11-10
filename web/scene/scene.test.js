@@ -111,6 +111,7 @@ import { t, tHTML, lastRead } from '../strings.js';
 import { esc } from '../util.js';
 import * as LK from '../links/links.js';
 import { inkOf } from '../beams/beams.js';
+import { edgeStatementHTML, placeholderOf } from '../text/article.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA, SAMENESS } from '../plane/register.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as PROV from '../overlays/provenance.js';
@@ -1478,8 +1479,8 @@ test('a setting whose owner\'s byline cause a row touching a doc 1 kept as held,
   } finally { CAM._reset(); }
 }));
 
-test('a row writing an edition claim on the origin of a withheld run a pane shows sets the pane again, its clause the one the claims decide now, though the row names neither the pane\'s document nor the origin (issue #272)', () => onPage(async (p) => {
-  // a draft windowing a run withheld from the reader, wide enough that its gap holds its face whole; the claim a row writes later
+test('a row writing an edition claim on the origin of a withheld run a pane shows sets the pane again, its statement the one the claims decide now, though the row names neither the pane\'s document nor the origin (issues #272, #288)', () => onPage(async (p) => {
+  // a draft windowing a run withheld from the reader, wide enough that its gap holds its key; the claim a row writes later
   const WR = '1.0.1.0.21', OW = '1.0.1.0.1005', HOME = '1.0.1.0.22', CLAIM = HOME + '.0.2.1', WR_HEAD = 'A window.\n\n', RUN = 12 * 66, N = WR_HEAD.length + RUN;
   const lookup = FAKE.keyOf('op', { frame: F.editionClaimsAt(OW) }), claims = (/** @type {string[]} */ addrs) => ({ result: { as_of: 1, resp: 'addrs', addrs } });
   Object.assign(script, reads(VE1, VE_TEXT), {
@@ -1496,13 +1497,15 @@ test('a row writing an edition claim on the origin of a withheld run a pane show
   });
   await SCENE.open(VE1, WR);
   const pane = () => String(shownIn(p.paneB, 'b').innerHTML);
-  assert.ok(pane().includes('data-holds="face"') && !pane().includes('class="clause"'), `no claim on the origin: the face whole, its arm alone: ${pane()}`);
+  /** the statement the pane's run stands in its column's edge, as the pane holds its record: T-ARTICLE's, the scene-mode variant */
+  const statement = () => { const P = SCENE.panes()?.b, b = P && P.blocks.find((x) => x.kind === 'withheld'); return b ? edgeStatementHTML(placeholderOf({ ...b, origin: OW }, REC.reader(), LAYER.originOwner, LAYER.clauseOf), null, true) : ''; };
+  const was = shownIn(p.paneB, 'b'), pointer = `<span class="clause">${esc(t('C-67.pointer'))}</span>`;
+  assert.ok(pane().includes('data-holds="key"') && !pane().includes('class="clause"') && !statement().includes(pointer), `no claim on the origin: its key in its gap, no face there, no pointer in its statement: ${pane()}`);
   script[lookup] = claims([CLAIM]);
   fake.fire('feed', row(50, 'make_link', [HOME], 'published', CLAIM));
-  const pointer = `<span class="clause">${esc(t('C-67.pointer'))}</span>`;
-  for (let i = 0; i < 400 && !pane().includes(pointer); i++) await new Promise((r) => setTimeout(r, 0));
+  for (let i = 0; i < 400 && shownIn(p.paneB, 'b') === was; i++) await new Promise((r) => setTimeout(r, 0));
   await landed();
-  assert.ok(pane().includes(pointer), `the pane set again: the pointer beneath the arm, a line in a pane: ${pane()}`);
+  assert.ok(shownIn(p.paneB, 'b') !== was && statement().includes(pointer), `the pane set again: the pointer in its statement, a line in a pane: ${statement()}`);
   assert.equal(paneState('b')?.src, WR, 'the same document in its place');
   assert.deepEqual(fake.unanswered, []);
 }));

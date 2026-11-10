@@ -26,7 +26,8 @@
 // named in: a walk key names none, and the line reads the span's own first
 // position. At launch the platform's focus rests on the walk's element with
 // the ring out (rule 21). Enter at a focused span selects the block whole
-// (D8); at a withheld run it shows the run's face whole (K-7; N-KEYS').
+// (D8); at a withheld run it opens the run's whole wording's card (K-7;
+// N-KEYS').
 // The walk follows the text shown (foundations §2.7): in a draft holding the
 // person's page-local edits its elements are the blocks of the text the page
 // shows (T-LAYER's `shownOf`) and the links LK draws on them — a line the
@@ -152,33 +153,33 @@
 // repeats it (D4). Every block that holds no text is announced by its kind,
 // the item rule's (T-ARTICLE's `itemOf`; FP-24), in the strings table's
 // words, then what the plane shows of it — a record's words and keys, an
-// unshown item's length — and never its raw value; a withheld run's item is
-// made from the record the plane's placeholder is (T-ARTICLE's
-// `placeholderOf`: the owner of its origin, the entitlement arm for this
-// reader, C-67's clause where the origin's edition claims decide one and
-// nothing in its place where they do not — R56, B1-S7, PUB-5.124), and while
-// a read its clause waits on is out says what needs no read alone — its kind,
-// where it stands and its length, as the plane's gap shows its ground alone
-// (FP-33); a
-// document is named by its address, then the first line its box's label sets
-// as the mirror says it (T-LAYER's `mirrorLabel`, the one the status region
-// names it by), the version's own — its words quoted, the client's
-// words in their place bracketed — then its state (T-LAYER's
-// `mirrorState`): where a read answered its metadata its corner's state
-// whole, the version its box shows and the count of its chain among it
-// (FP-22), a draft's after its kind; one a read answered `withheld` by its
-// withheld box's words (B1-S2), its first line standing for none, one the
-// board said nothing about by the words for that (`L.far.unregistered`),
-// and one no read or listing has told the state of by no state at all
-// (FP-25) — and, while it stands kept as it is read again, the clause the
-// one line or its corner shows, as a sentence of its own (T-LAYER's
-// `keptIn`; FP-23, FP-33), the first withheld run of an origin in it the
-// clause its kept sign shows while the origin's edition claims stand so
-// (`claimsKeptIn`), and the board's while it lags so (`boardKeptIn`), each
-// item marked again in place on each dirty frame where its clause or a
-// document's state changed (`markKept`), the current item, where the panel's
-// window held it whole, held there as words above it or its own change
-// height; a mark's stop by its count,
+// unshown item's length — and never its raw value; a withheld run's item says
+// the run's own part, which needs no read — its kind, where it stands, its
+// length and its origin — and names by `aria-describedby` its origin's one
+// description, a hidden element every run of that origin the mirror holds
+// names (`originWords`), made from the record the plane's statement and the
+// run's card are (T-ARTICLE's `placeholderOf`: the owner of its origin, the
+// entitlement arm for this reader, C-67's clause where the origin's edition
+// claims decide one and nothing in its place where they do not — R56, B1-S7,
+// PUB-5.124 — and the clause the origin's statement shows while its claims
+// stand held), written once every read the clause waits on has answered and
+// kept as it stands on each dirty frame (`markDescribed`; FP-33); a document
+// is named by its address, then the first line its box's label sets as the
+// mirror says it (T-LAYER's `mirrorLabel`, the one the status region names it
+// by), the version's own — its words quoted, the client's words in their
+// place bracketed — then its state (T-LAYER's `mirrorState`): where a read
+// answered its metadata its corner's state whole, the version its box shows
+// and the count of its chain among it (FP-22), a draft's after its kind; one
+// a read answered `withheld` by its withheld box's words (B1-S2), its first
+// line standing for none, one the board said nothing about by the words for
+// that (`L.far.unregistered`), and one no read or listing has told the state
+// of by no state at all (FP-25) — and, while it stands kept as it is read
+// again, the clause the one line or its corner shows, as a sentence of its
+// own (T-LAYER's `keptIn`; FP-23, FP-33), and the board's while it lags so
+// (`boardKeptIn`), each item marked again in place on each dirty frame where
+// its clause or a document's state changed (`markKept`), the current item,
+// where the panel's window held it whole, held there as words above it or its
+// own change height; a mark's stop by its count,
 // the words the mark shows (ST's `markCount`), its item saying a list opens
 // on it (`aria-haspopup`); a link's item names its far end as its tail does
 // (LK's `farLabel`), and says BM-HELD's line where the
@@ -305,6 +306,8 @@ const pieceId = (/** @type {number} */ i) => 'walk-piece-' + i;
 const HELD = 'walk-held';
 /** the id of the hidden description of a link item's far end the board will say nothing of, item i's (see the head) */
 const farId = (/** @type {number} */ i) => 'walk-far-' + i;
+/** the id of the hidden description of a withheld origin, which every run of it the mirror holds names (see the head) */
+const originId = (/** @type {string} */ origin) => 'walk-origin-' + origin.replace(/[^0-9]/g, '-');
 
 /** the board's node */
 const BOARD = /** @type {Node} */ ({ kind: 'board', addr: '1', pos: null, link: null });
@@ -475,11 +478,10 @@ function named(n, i, total) {
     if (!b) return then(said('L.mirror.span.bare', { p: n.pos ?? '', document: n.addr }, { document: 'id' }));
     const kind = itemOf(b);
     if (kind === 'withheld') {
-      const w = placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf), ends = runEnds(n.addr, b.pos).length;
+      // the run's own part, which needs no read; its origin's words its description, one for every run of it (`originWords`)
+      const ends = runEnds(n.addr, b.pos).length;
       const links = ends ? t('L.mirror.run-links', { links: ends === 1 ? t('F.label.links.1') : t('F.label.links', { n: ends }) }) : '';
-      // its clause not decided: what needs no read alone, as the plane's gap shows its ground alone (FP-33)
-      if (w.clause === CLAUSE_READING) return then(then(said('L.mirror.no-text', { kind: itemWords(kind), p: b.pos, extent: d.extent ?? '?', document: n.addr, same: '', shown: t('L.mirror.shows', { shown: itemLength(b.width) }) }, { document: 'id' }), plainly(links)));
-      return then(then(then(said('L.mirror.withheld', { kind: itemWords(kind), document: n.addr, length: itemLength(b.width), owner: w.owner, origin: b.origin || '', arm: w.arm.text, clause: w.clause ? t('L.mirror.clause', { clause: w.clause.text }) : '' }, { document: 'id', owner: 'id', origin: 'id' }), plainly(keptSentence(n))), plainly(links)));
+      return then(then(said('L.mirror.withheld', { kind: itemWords(kind), document: n.addr, length: itemLength(b.width), origin: b.origin || '' }, { document: 'id', origin: 'id' }), plainly(links)));
     }
     const org = d.origins.find((o) => o.pos < b.pos + b.width && b.pos < o.pos + o.width);
     const same = org ? t('L.mirror.same', { origin: org.doc }) : '';
@@ -655,6 +657,8 @@ export function render() {
   let html = `<ul role="group" aria-label="${esc(t('L.mirror-level', { n: lvl }))}">`;
   const at = read.located(), said = read.described(), scale = CAM.destination().scale;
   let pieces = '';
+  /** @type {Set<string>} the withheld origins whose description is written */
+  const origins = new Set();
   for (let i = lo; i < hi; i++) {
     const n = siblings[i];
     const expanded = n.kind === 'document' ? ` aria-expanded="${!below(n.addr, scale)}"` : n.kind === 'block' && n.pos != null && runEnds(n.addr, n.pos).length ? ' aria-expanded="true"' : '';
@@ -667,6 +671,8 @@ export function render() {
     if (holdsRuns(n, said)) pieces += `<div id="${pieceId(i)}" hidden>${esc(otherRuns(n, said))}</div>`;
     const far = farWhole(n);
     if (far) pieces += `<div id="${farId(i)}" hidden>${esc(far)}</div>`;
+    const o = originWords(n);
+    if (o && !origins.has(o.origin)) { origins.add(o.origin); pieces += `<div id="${originId(o.origin)}" hidden>${esc(o.words)}</div>`; }
   }
   html += `</ul><div id="${DESCRIPTION}" hidden>${esc(said ? said.words : '')}</div><div id="${HELD}" hidden>${esc(t('L.held.device'))}</div>${pieces}`;
   mirrorEl.innerHTML = html;
@@ -698,20 +704,38 @@ export function markExpanded() {
  * The kept clause a node's item carries as its own sentence after its words
  * (see the head; FP-23, FP-33): a document's, the words its corner or the
  * one line shows (T-LAYER's `keptIn`); the board's while it lags, the words
- * the one line shows (T-LAYER's `boardKeptIn`); the first withheld run of an
- * origin in its document, while the origin's edition claims stand held as
- * they are read again, the words its kept sign shows (T-LAYER's
- * `claimsKeptIn`); '' for every other node, and where nothing is kept.
+ * the one line shows (T-LAYER's `boardKeptIn`); '' for every other node, and
+ * where nothing is kept — a withheld origin's claims' clause is its
+ * description's (`originWords`).
  * @param {Node} n
  * @returns {string}
  */
 function keptSentence(n) {
   if (n.kind === 'document') { const k = LAYER.keptIn(n.addr); return k ? t('L.mirror.clause', { clause: k.text }) : ''; }
   if (n.kind === 'board') { const k = LAYER.boardKeptIn(); return k ? t('L.mirror.clause', { clause: k.text }) : ''; }
-  const b = n.kind === 'block' && n.pos != null ? LAYER.blockByPos(n.addr, n.pos) : null;
-  if (!b || b.kind !== 'withheld' || !b.origin || LAYER.shownOf(n.addr).blocks.find((x) => x.kind === 'withheld' && x.origin === b.origin) !== b) return '';
+  return '';
+}
+
+/**
+ * A withheld origin's description, which every item of a run of it names
+ * (see the head; R94): made from the run's placeholder record, as the plane's
+ * statement and the run's card are (T-ARTICLE's `placeholderOf`) — the owner
+ * of its origin, the entitlement arm for this reader, C-67's clause where the
+ * origin's edition claims decide one and nothing in its place where they do
+ * not (R56, B1-S7, PUB-5.124), and, while those claims stand held as they are
+ * read again, the clause the origin's statement shows (T-LAYER's
+ * `claimsKeptIn`; FP-23) — none while a read its clause waits on is out, so
+ * none stands with a part missing (FP-33).
+ * @param {Node} n
+ * @returns {{origin: string, words: string} | null} its origin, and its words; null where the node is no withheld run, or its clause is not decided
+ */
+export function originWords(n) {
+  const b = blockOf(n);
+  if (!b || b.kind !== 'withheld' || !b.origin) return null;
+  const w = placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf);
+  if (w.clause === CLAUSE_READING) return null;
   const k = LAYER.claimsKeptIn(b.origin);
-  return k ? t('L.mirror.clause', { clause: k.text }) : '';
+  return { origin: b.origin, words: t('L.mirror.withheld.origin', { owner: w.owner, arm: w.arm.text, clause: w.clause ? t('L.mirror.clause', { clause: w.clause.text }) : '' }) + (k ? t('L.mirror.clause', { clause: k.text }) : '') };
 }
 
 /** a document's state as its item voices it (T-LAYER's `mirrorState`): the version its node names, as its corner states it */
@@ -732,14 +756,13 @@ const stateOf = (/** @type {Node} */ n) => LAYER.mirrorState(REC.doc(n.addr));
  */
 export function markKept() {
   if (!mirrorEl || typeof mirrorEl.querySelectorAll !== 'function') return;
-  const total = siblings.length, runs = PUMP.keptAll().origins.length > 0;
+  const total = siblings.length;
   const items = /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[role="treeitem"]')]);
   const current = items.find((li) => Number(li.dataset.i) === idx) || null, held = !!current && inPanel(current);
   let wrote = false;
   for (const li of items) {
     const i = Number(li.dataset.i), n = siblings[i];
-    // a span's item carries a clause only while an origin's edition claims stand kept, or carries one still
-    if (!n || (n.kind !== 'document' && n.kind !== 'board' && (n.kind !== 'block' || (!runs && !li.dataset.kept)))) continue;
+    if (!n || (n.kind !== 'document' && n.kind !== 'board')) continue;
     const words = keptSentence(n), state = n.kind === 'document' ? stateOf(n) : null;
     if (li.dataset.kept === words && (state === null || li.dataset.state === state)) continue;
     li.dataset.kept = words;
@@ -832,6 +855,8 @@ function describedBy(n, i, at) {
   if (isHeld(n)) ids.push(HELD);
   if (otherRuns(n, at)) ids.push(pieceId(i));
   if (farWhole(n)) ids.push(farId(i));
+  const o = originWords(n);
+  if (o) ids.push(originId(o.origin));
   return ids.length ? ids.join(' ') : null;
 }
 
@@ -857,8 +882,15 @@ export function markDescribed() {
     const i = Number(li.dataset.i), n = siblings[i], piece = q(pieceId(i)), far = q(farId(i));
     if (n && piece) { const w = otherRuns(n, said); if (piece.textContent !== w) piece.textContent = w; }
     if (n && far) { const w = farWhole(n); if (far.textContent !== w) far.textContent = w; }
+    // a withheld origin's description: written where its clause was decided since the rebuild, its words set as they stand
+    const o = n ? originWords(n) : null;
+    let held = o ? q(originId(o.origin)) : null;
+    if (o && !held && typeof mirrorEl.appendChild === 'function' && typeof document !== 'undefined') {
+      const e = document.createElement('div'); e.id = originId(o.origin); e.hidden = true; mirrorEl.appendChild(e); held = e;
+    }
+    if (o && held && held.textContent !== o.words) held.textContent = o.words;
     const by = n ? describedBy(n, i, said) : null;
-    const named = by ? by.split(' ').filter((x) => (x !== pieceId(i) || piece) && (x !== farId(i) || far)).join(' ') || null : null;
+    const named = by ? by.split(' ').filter((x) => (x !== pieceId(i) || piece) && (x !== farId(i) || far) && (!o || x !== originId(o.origin) || held)).join(' ') || null : null;
     if (named && li.getAttribute('aria-describedby') !== named) li.setAttribute('aria-describedby', named);
     else if (!named && li.getAttribute('aria-describedby') != null) li.removeAttribute('aria-describedby');
   }

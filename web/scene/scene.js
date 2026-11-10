@@ -144,13 +144,13 @@
 // lifting in the step that sets the pane; while the board lags (M-PUMP's
 // `boardKept`), each corner naming neither the latest version nor the
 // chain's count, written again as the lag begins and ends (`markKept`); a
-// withheld run's kept sign set in its article as the plane's are; and each
-// pane standing kept told to the one line, which speaks for it (`keptPanes`;
-// FP-36): its name as the mirror finds it, its clause past its second, the
-// stamp it stands from and whether it holds the focus — with how the setting
-// the board's events asked set it, changed or unchanged (`paneLift`), none
-// where an act of the reader's set it, nor where a change of the page's
-// class set it from what the change left.
+// withheld origin's held claims' clause in its statement, as the plane's; and
+// each pane standing kept told to the one line, which speaks for it
+// (`keptPanes`; FP-36): its name as the mirror finds it, its clause past its
+// second, the stamp it stands from and whether it holds the focus — with how
+// the setting the board's events asked set it, changed or unchanged
+// (`paneLift`), none where an act of the reader's set it, nor where a change
+// of the page's class set it from what the change left.
 // Every setting is one step (`setPanes`; FP-23): the reads first — the text
 // whole, the two texts' `compare`, where each far end crossing between them
 // stands (`readPane`, `readBetween`) — then, where the scene still stands
@@ -326,9 +326,11 @@
 // where it offers no act of its own — over what stands beside it, moving
 // nothing, and closes on the same act at the corner opened (`openWhole`;
 // FP-26). Each column stands against the pane's
-// inner edge, its column's edge between them — its counts and its withheld
-// runs' marks there, the bands leaving the pane beyond them (foundations
-// §3.1; FP-26): a window wider than the measure needs widens the outer
+// inner edge, its column's edge between them — its counts there, and its
+// withheld origins' statements, each once per origin in the pane by the
+// plane's one rule, held inside its text as the pane scrolls
+// (`placeStatements`; FP-31) — the bands leaving the pane beyond them
+// (foundations §3.1; FP-26): a window wider than the measure needs widens the outer
 // margins, never the line. The panes are read, not acted on (B1-S9): nothing
 // in a pane's article is a control (T-ARTICLE's scene-mode variant), and the
 // keys a pane takes move that pane alone (`key`). The bar names each pane by
@@ -370,11 +372,12 @@ import * as HOST from '../overlays/host.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { drawChord } from '../nav/keys.js';
-import { copyText, keptHTML } from '../text/article.js';
+import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML } from '../text/article.js';
 import { inkOf, strokeOf, strokeIn, cutAt, pointOn } from '../beams/beams.js';
 import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingOf } from '../beams/held.js';
-import { SAMENESS, cornerWidth } from '../plane/register.js';
-import { LINE_H, MEASURE_CPL, CHAR_W, EDGE, fitFor } from '../plane/layout.js';
+import { SAMENESS, HOLD, LABEL_MIN_PX, cornerWidth } from '../plane/register.js';
+import { LINE_H, MEASURE, MEASURE_CPL, CHAR_W, EDGE, EDGE_GAP, fitFor } from '../plane/layout.js';
+import { holdStack, LINE_BOX } from '../plane/labels.js';
 import { markDirty, READING_PX } from '../plane/camera.js';
 import { documentOf, homeOf, memberOf, versionAddress, isTrunkMember } from '../model/address.js';
 import { t, tHTML } from '../strings.js';
@@ -558,7 +561,7 @@ import { esc, byteOffsets } from '../util.js';
  * @property {number} sets the settings made of it: a `compare` read against its text before one is read again
  * @property {{since: number, at: number, met: Refusal | null} | null} kept a setting the board's events asked of it, out (`update`): when it began, by the platform's clock, the page's clock at the row or drop that left the pane behind (M-PUMP's `Dropped.at`), and the refusal that left its last reads unset — the board not answering among them, whereupon the setting is asked again once M-PUMP's pause ends — the pane standing as it shows; null where none is out
  * @property {{since: number, outcome: import('../model/records.js').Outcome} | null} lift how the last setting the board's events asked set it: whether it changed what the pane shows (M-REC's `shownBy`), and the stamp it stood kept from (`kept.at`); null where none has set it
- * @property {string | null} signs what the edition claims held as they are read again said as its article's withheld runs' kept signs were last set (T-LAYER's `keptRunsKey`); null where its article was set since
+ * @property {string | null} signs what the edition claims held as they are read again said as its withheld origins' statements were last placed (T-LAYER's `keptRunsKey`; `placeStatements`); null where its article was set since
  * @property {AccountFacts | undefined} facts the owner's byline facts its article's byline was made with (`ownerFacts`), undefined where they were not read: what owner facts taken anew are checked against (`dropped`)
  * @property {boolean} open the reader's act opened its corner whole where it stands compact or at its document's head (`openWhole`; FP-26), until the act again closes it
  * @property {number} rows its corner's rows at its document's head as last written (`cornerForm`); 0 beside its column
@@ -726,6 +729,12 @@ let lastMeasure = { runs: 0, bands: 0, strokes: 0, ms: 0 };
 let ending = (/** @type {boolean} */ _byKey) => close();
 /** @type {Faces | null} the faces a returned stop shows at its site, the app's to hand in (`attach`); none until it does */
 let faces = null;
+/** @type {Record<'a' | 'b', Map<string, string>>} the run each withheld origin's statement stands beside in each pane, by origin: the run's identity, kept while a line of that run is in view (`placeStatements`) */
+const stood = { a: new Map(), b: new Map() };
+/** the room between two signs stacked in a pane's column's edge, px: the plane's (T-LAYER's) */
+const SIGN_GAP = 2;
+/** the order signs standing for one run stack in: its origin's statement, its key, its others' count */
+const SIGN_ORDER = Object.freeze({ statement: 0, key: 1, count: 2 });
 
 /** the box an address stands in: its document's, which every version of it shares */
 const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
@@ -1406,9 +1415,9 @@ function paneKept(P) { return LAYER.keptWords(P.d, P.d, paneHeld(P)); }
  * kept clause changed (`paneKept`), a draft's kept word or its statement
  * moved — or the board's lag began or ended since (`lags`), the element kept
  * so a focus on it stays, the heads' band set again where their rows changed
- * (`setBand`), and the withheld runs' kept signs in its article set
- * where what the edition claims held say changed since they were set, or its
- * article was set since (T-LAYER's `keptRunsKey`, `markKeptSigns`). The
+ * (`setBand`), and its withheld origins' statements placed again where what
+ * the edition claims held say changed since they were placed, or its article
+ * was set since (T-LAYER's `keptRunsKey`; `placeStatements`). The
  * app's loop runs it on each dirty frame while the scene stands; the one line
  * speaks for the panes (`keptPanes`).
  */
@@ -1420,8 +1429,8 @@ export function markKept() {
     const P = S[side], items = cornerForm(P, S.fit);
     const c = /** @type {HTMLElement | null} */ (paneEl(E, side).querySelector(':scope > .corner'));
     if (c && (items.html !== P.corner || c.dataset.lags !== lagging)) writeCorner(E, P, items);
-    if (P.el && P.signs !== signs) { LAYER.markKeptSigns(P.el); P.signs = signs; }
   }
+  if (SIDES.some((side) => S[side].el && S[side].signs !== signs)) placeStatements(E, S);
   rebanded(E, S);
 }
 
@@ -1543,8 +1552,8 @@ const ownerFacts = (/** @type {Pane} */ P) => REC.accountKey(REC.ownerAccount(P.
  * (`sceneArticle`), where its words are read handed in (`whereIn`; FP-27) —
  * and put in its place: the one it shows replaced, else
  * placed — pane A's after its corner, pane B's before it, so each corner
- * stands on its pane's outer side — its withheld runs' kept signs to be set
- * (`markKept`), and the owner's byline facts its byline was made with kept
+ * stands on its pane's outer side — its withheld origins' statements to be
+ * placed (`markKept`), and the owner's byline facts its byline was made with kept
  * beside it (`Pane.facts`); where they are not read, a read of them made
  * (`readFacts`; FP-34), whose take sets the pane again (`dropped`).
  * @param {NonNullable<typeof els>} E
@@ -2683,6 +2692,87 @@ function placeHeads(E, S) {
 }
 
 /**
+ * Each pane's withheld origins stated in its column's edge (see the head;
+ * FP-31): the signs T-ARTICLE's one rule stands for the withheld runs of its
+ * article a line of which meets the pane's visible height below what its head
+ * covers (`edgeSignsFor`) — each origin's statement (`edgeStatementHTML`,
+ * the scene-mode variant: lines) beside the run it stood beside while that run
+ * is in view, else beside the origin's first run in view, held by the run's
+ * identity through the image the article was made from (FP-38); a key too
+ * wide for its gap; an others' count, as the pane was set with it — each in
+ * the column's edge on the pane's inner side, beside its run's first line in
+ * view, at a share of the pane's em never below P-REG's LABEL_MIN_PX, the
+ * edge's width wide, the pane's signs stacked by the one hold (P-LABEL's
+ * `holdStack`) — at their lines, else below what the head covers, off the
+ * signs the article sets in that edge, held inside the article's text. They
+ * stand in the pane's content, so they scroll with it, and are placed again as
+ * it scrolls (`draw`) and as the claims' kept clause moves (`markKept`);
+ * written only where their words or size changed; read in the pane's own
+ * reading order after its text, for a pane's text is read where it stands.
+ * Nothing where the platform lays out no pane.
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ */
+function placeStatements(E, S) {
+  const kept = LAYER.keptRunsKey();
+  for (const side of SIDES) {
+    const P = S[side], pane = paneEl(E, side), art = articleIn(pane);
+    P.signs = kept;
+    /** @type {Map<string, HTMLElement>} */
+    const standing = new Map([...pane.querySelectorAll(':scope > .edge-sign')].map((e) => [/** @type {HTMLElement} */ (e).dataset.key || '', /** @type {HTMLElement} */ (e)]));
+    if (!art || typeof pane.getBoundingClientRect !== 'function') { for (const e of standing.values()) e.remove(); stood[side].clear(); continue; }
+    const pr = pane.getBoundingClientRect(), origin = pr.top + pane.clientTop, vis = { top: origin + clearOf(pane), bottom: origin + pane.clientHeight };
+    const px = S.fit.px, lh = LINE_H * px;
+    /** @type {Map<import('../text/article.js').RunInView, {rect: DOMRect, y: number}>} each run a line of which meets the pane's visible height, and its first line in view */
+    const at = new Map();
+    for (const e of /** @type {HTMLElement[]} */ ([...art.el.querySelectorAll('.run > .withheld[data-origin]')])) {
+      const b = art.made.blocks.find((x) => x.pos === Number(e.dataset.pos)), holds = /** @type {import('../text/article.js').GapHolds} */ (e.dataset.holds);
+      if (!b || !b.origin || holds === 'reading') continue;
+      const r = e.getBoundingClientRect();
+      if (r.bottom <= vis.top || r.top >= vis.bottom) continue;
+      const [first] = REC.identityIn(art.made.image, b.pos, 1);
+      at.set({ b, id: first ? `${b.origin} ${first.prefix}.${first.ordinal}` : `${b.origin} @${b.pos}`, holds, count: P.view.countAt(b) }, { rect: r, y: r.top >= vis.top ? r.top : r.top + Math.floor((vis.top - r.top) / lh) * lh });
+    }
+    const chosen = edgeSignsFor([...at.keys()], stood[side]);
+    stood[side] = chosen.beside;
+    const size = Math.max(MEASURE.count * px, LABEL_MIN_PX), width = (EDGE - EDGE_GAP) * px;
+    /** @type {Array<{el: HTMLElement, kind: 'statement' | 'key' | 'count', pos: number, rect: DOMRect, y: number}>} */
+    const placing = [];
+    for (const sign of chosen.signs) {
+      const x = /** @type {{rect: DOMRect, y: number}} */ (at.get(sign.run)), b = sign.run.b, o = /** @type {string} */ (b.origin);
+      const html = sign.kind === 'statement' ? edgeStatementHTML(placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf), LAYER.claimsKeptIn(o), true)
+        : sign.kind === 'key' ? edgeKeyHTML(o, true) : edgeCountHTML(sign.run.count);
+      if (!html) continue;
+      const key = sign.kind === 'statement' ? `${o} statement` : `${b.pos} ${sign.kind}`;
+      let el = standing.get(key);
+      standing.delete(key);
+      if (!el) {
+        el = /** @type {HTMLElement} */ (document.createElement('div'));
+        el.className = 'edge-sign';
+        Object.assign(el.dataset, { key, sign: sign.kind, origin: o });
+        pane.appendChild(el);
+      }
+      if (el.innerHTML !== html) el.innerHTML = html;
+      Object.assign(el.style, { fontSize: size + 'px', lineHeight: Math.max(lh, size * LINE_BOX) + 'px', width: width + 'px' });
+      el.dataset.pos = String(b.pos);
+      placing.push({ el, kind: sign.kind, pos: b.pos, rect: x.rect, y: x.y });
+    }
+    for (const e of standing.values()) e.remove();
+    if (!placing.length) continue;
+    placing.sort((p, q) => p.y - q.y || p.pos - q.pos || SIGN_ORDER[p.kind] - SIGN_ORDER[q.kind]);
+    const heights = placing.map((p) => p.el.offsetHeight);
+    const rows = /** @type {HTMLElement[]} */ ([...art.el.querySelectorAll('.run > *')]), first = rows[0], last = rows[rows.length - 1];
+    const fixed = /** @type {HTMLElement[]} */ ([...art.el.querySelectorAll('.edge')]).map((e) => { const q = e.getBoundingClientRect(); return { y: q.top, h: q.height }; });
+    const ys = holdStack(placing.map((p, k) => ({ y: p.y, h: heights[k] })), first ? first.getBoundingClientRect().top : origin, vis.top + HOLD.gap, last ? last.getBoundingClientRect().bottom : vis.bottom, SIGN_GAP, fixed);
+    const left = pr.left + pane.clientLeft - pane.scrollLeft;
+    placing.forEach((p, k) => {
+      const x = side === 'a' ? p.rect.right + EDGE_GAP * px : p.rect.left - EDGE_GAP * px - width;
+      p.el.style.transform = `translate(${Math.round(x - left)}px, ${Math.round(ys[k] - origin + pane.scrollTop)}px)`;
+    });
+  }
+}
+
+/**
  * How far below a pane's visible top its head covers it, held there (see the
  * head; FP-26): to the foot of its first row — held where the pane's padding
  * leaves it — and of a form opened beneath it, px, as the pane stands — what
@@ -3318,8 +3408,9 @@ function level() {
  * (`wholeEdges`, `drawEdge`); the strokes' buttons and the stop placed
  * (`placeStrokes`, `placeStop`) — a stop the reader returned to standing
  * until it is answered and they have moved on from it, then under the
- * scene's own rules — and the heads' later rows placed at the panes' scrolls
- * (`placeHeads`).
+ * scene's own rules — the heads' later rows placed at the panes' scrolls
+ * (`placeHeads`), and each pane's withheld origins stated in its column's edge
+ * (`placeStatements`).
  */
 export function draw() {
   const S = scene, E = els;
@@ -3394,6 +3485,7 @@ export function draw() {
   placeStrokes(E, S);
   placeStop(E, S);
   placeHeads(E, S);
+  placeStatements(E, S);
 }
 
 /**
@@ -3766,6 +3858,7 @@ export function close() {
   drawnTies = [];
   drawnEdges = [];
   drawnStrokes = [];
+  for (const side of SIDES) stood[side].clear();
   coverPlane(false);
   els.root.classList.remove('on'); els.paneA.innerHTML = ''; els.paneB.innerHTML = ''; els.strokes.innerHTML = ''; delete els.bar.dataset.face;
   for (const p of [els.paneA, els.paneB]) p.classList.toggle('head', false);

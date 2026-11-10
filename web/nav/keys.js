@@ -895,8 +895,9 @@ export function esc(landed = false) {
  * document, where the face of a failure known at the act stands (N-GO) — a
  * continuation's mark opens its members' list, which takes the focus on its
  * newest row (O-MARK-LIST); a withheld
- * run shows its face whole (§2.1), C-67's pointer its offered act, a LEAP to
- * the edition its claim names made at the run, reached by Tab (K-58); in
+ * run opens its whole wording's card (§2.1; O-FACES's `withheldRun`), which
+ * takes the focus as a key opened it — on C-67's pointer where it offers one,
+ * a LEAP to the edition its claim names made at the run, else on its head; in
  * text the person may edit the span takes the caret — placed at its start,
  * or the kept one standing in it returned — the selection cleared (K-70;
  * BM-52; T-LAYER's `caretToSpan`); any other span is selected whole (D8), a
@@ -914,7 +915,7 @@ async function activateFocus(byKey) {
   if (f.kind === 'document') { await GO.leapTo(f.addr, { how: 'key', byKey, site: { span: { addr: f.addr, pos: 1 } } }); return; }
   if (f.kind === 'block' && f.pos != null) {
     const b = LAYER.blockByPos(f.addr, f.pos);
-    if (b && b.kind === 'withheld') FACES.withheldRun(f.addr, b, (home, byKey) => GO.leapTo(home, { how: 'leap', byKey, site: { span: { addr: f.addr, pos: b.pos, width: b.width } } }));
+    if (b && b.kind === 'withheld') FACES.withheldRun(f.addr, b, (home, byKey) => GO.leapTo(home, { how: 'leap', byKey, site: { span: { addr: f.addr, pos: b.pos, width: b.width } } }), byKey);
     else if (LAYER.editable(f.addr)) { SEL.clear(); LAYER.caretToSpan(f.addr, f.pos); }
     else SEL.select(f.addr, f.pos);
     return;

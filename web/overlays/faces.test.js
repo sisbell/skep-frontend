@@ -5,11 +5,12 @@
 // address before its words away from the document's place, whole the first
 // time a session shows it and compact the next, of the document the board
 // names in `site.addr`, named by the act's caption (FP-26); C-67's clause
-// beneath the arm in the same words on the document's face and a run's — the
-// pointer, the quoting sibling, "edition claims not read", nothing where the
-// lookup was refused as withheld — the claims read once before either shows
-// (FP-33); a withheld run's face whole as its placeholder's record, at the
-// run's positions, taking no focus; "who wrote this?" and "who uses this?"
+// beneath the arm in the same words on the document's face and a run's card
+// — the pointer, the quoting sibling, "edition claims not read", nothing
+// where the lookup was refused as withheld — the claims read once before
+// either shows (FP-33); a withheld run's whole wording a card made from its
+// placeholder's record, at the run's positions, about the run, described by
+// its words, taking the focus where a key opened it; "who wrote this?" and "who uses this?"
 // refused `withheld` showing that face; a jump reading and a jump reaching
 // (FP-25); the fifth cell a follow meets in its far end's words, its label's
 // first, and a typed address's in the board's alone (FP-21); the dead end's
@@ -82,7 +83,8 @@ const text = (/** @type {string} */ s) => s.replace(/&lt;/g, '<').replace(/&gt;/
  * with its text — a control's inside it among it — as a person reads it
  */
 const hostEl = {
-  className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {}, addEventListener() {}, querySelector: () => null,
+  className: '', innerHTML: '', style: {}, attrs: /** @type {Record<string, string>} */ ({}),
+  setAttribute(/** @type {string} */ k, /** @type {string} */ v) { hostEl.attrs[k] = v; }, removeAttribute(/** @type {string} */ k) { delete hostEl.attrs[k]; }, addEventListener() {}, querySelector: () => null,
   querySelectorAll: (/** @type {string} */ sel) => {
     const classes = sel.split(',').map((s) => s.trim().replace(/^\./, ''));
     return [...hostEl.innerHTML.matchAll(/<(div|span|button) class="([^"]*)"[^>]*>(.*?)<\/\1>/g)].filter((m) => m[2].split(/\s+/).some((c) => classes.includes(c))).map((m) => ({ textContent: text(m[3].replace(/<[^>]*>/g, '')) }));
@@ -173,7 +175,7 @@ test('the face of a `withheld` refusal is the document the board names in the re
   HOST.dismiss();
 });
 
-test('a withheld run\'s face whole is its placeholder\'s record: the head, the arm for its origin\'s owner and this reader, then C-67\'s clause — the pointer its act, the QUOTING sibling a line, nothing where no claim stands — at the run\'s own positions, taking no focus (D5 K-7, K-58)', () => {
+test('a withheld run\'s whole wording is a card made from its placeholder\'s record: the head, the arm for its origin\'s owner and this reader, then C-67\'s clause — the pointer its act, the QUOTING sibling a line, nothing where no claim stands — at the run\'s own positions, about the run by its bytes, named by its head and described by the words beneath it, taking the focus where a key opened it — on the pointer where it offers one, else on its head — and none where a pointer\'s click did (issue #288\'s design decision: "The whole wording opens as a card on any run\'s act"; D5 K-7)', () => {
   // 1.0.1's edition W, windowing a run of X — 1.0.2's draft in its sub-account — that the reader may not read
   const W = '1.0.1.0.5', text = 'Tumbler.\n\n', n = byteLength(text);
   REC.takeSpanSet(W, [{ subspace: 1, ordinal: 1, positions: n + 240 }]);
@@ -186,30 +188,30 @@ test('a withheld run\'s face whole is its placeholder\'s record: the head, the a
     const home = /** @type {string} */ (homeOf(c));
     REC.takeMetadata(home, { doc: home, published: true, owner: OWNER, birth: home + '.1', birthExtent: 20, placed: null, baseExtent: null, source: null, asOf: 1 });
   }
-  /** @type {Array<[string, string[], string, string[]]>} each state of X's claims the page holds, the clause beneath the arm it decides, and the clause's words */
+  /** @type {Array<[string, string[], string]>} each state of X's claims the page holds, and the clause beneath the arm it decides */
   const states = [
-    ['no claim on the origin', [], '', []],
-    ['an edition quoting the draft alone', [QUOTES], `<div class="clause" data-string="C-67.quoting">${addressedHTML(t('C-67.quoting', { claimant: OWNER }))}</div>`, [t('C-67.quoting', { claimant: OWNER })]],
-    ['1.0.2\'s edition over its own bytes', [QUOTES, OWN], `<div class="clause" data-string="C-67.pointer"><button data-run="follow" data-claim="${OWN}" data-home="${EDITION}">${esc(t('C-67.pointer'))}</button></div>`, [t('C-67.pointer')]],
+    ['no claim on the origin', [], ''],
+    ['an edition quoting the draft alone', [QUOTES], `<div class="clause" data-string="C-67.quoting">${addressedHTML(t('C-67.quoting', { claimant: OWNER }))}</div>`],
+    ['1.0.2\'s edition over its own bytes', [QUOTES, OWN], `<div class="clause" data-string="C-67.pointer"><button data-run="follow" data-claim="${OWN}" data-home="${EDITION}">${esc(t('C-67.pointer'))}</button></div>`],
   ];
   try {
     for (const reader of READERS) {
       readAs(reader);
       const arm = entitlementArm({ account: reader.session ? reader.session.account : null, keyPresent: reader.keys.length > 0 }, OWNER);
-      for (const [state, claims, clause, said] of states) {
-        const what = `${reader.who}, ${state}`;
+      for (const [state, claims, clause] of states) for (const byKey of [true, false]) {
+        const what = `${reader.who}, ${state}, ${byKey ? 'by a key' : 'by a click'}`;
         REC.takeEditionClaims(X, claims);
-        /** @type {Array<[string, boolean]>} the LEAPs the face's act asked for: the home, and whether a key made it */
+        /** @type {Array<[string, boolean]>} the LEAPs the card's act asked for: the home, and whether a key made it */
         const leaps = [];
-        FACES.withheldRun(W, run, (home, byKey) => { leaps.push([home, byKey]); });
+        FACES.withheldRun(W, run, (home, k) => { leaps.push([home, k]); }, byKey);
         const f = faceShown(), o = HOST.currentState(), head = t('B1.withheld-run', { owner: OWNER, account: OWNER, width: 240, origin: X });
-        assert.equal(f?.id, 'face:withheld-run', `${what}: the run's face`);
-        assert.deepEqual(f.words, ['B1.withheld-run', head], `${what}: the placeholder's head, naming ${OWNER}, the owner of the run's origin`);
-        assert.equal(live.textContent, [head, arm.text, ...said].join(' '), `${what}: the status region says the face whole — its head, its arm and its clause`);
+        assert.deepEqual([o?.kind, f?.id], ['card', 'withheld:' + X], `${what}: the run's card`);
+        assert.deepEqual(f?.words, ['B1.withheld-run', head], `${what}: the placeholder's head, naming ${OWNER}, the owner of the run's origin`);
         assert.ok(o?.html.endsWith(`<div class="arm" data-string="${arm.id}">${addressedHTML(arm.text)}</div>${clause}`), `${what}: the arm for ${OWNER} and this reader, each address it names in the identifier's face, then the clause the claims decide, and nothing after it: ${o?.html}`);
-        assert.ok(!f.html.includes('⟨') && !f.html.includes(C39), `${what}: no token left unfilled, and none of C-39's words`);
-        assert.deepEqual(o?.anchor, { span: { addr: W, pos: run.pos, width: 240 } }, `${what}: at the run's own positions`);
-        assert.ok(!o?.takeFocus, `${what}: it takes no focus (K-58)`);
+        assert.ok(!f?.html.includes('⟨') && !f?.html.includes(C39), `${what}: no token left unfilled, and none of C-39's words`);
+        assert.deepEqual([o?.anchor, o?.about], [{ span: { addr: W, pos: run.pos, width: 240 } }, { kind: 'withheld', addr: W, pos: run.pos, width: 240, ids: LAYER.shownIdentity(W, run.pos, 240), origin: X }], `${what}: at the run's own positions, about the run by its bytes`);
+        assert.deepEqual([o?.described, hostEl.attrs['aria-describedby']?.split(' ').length], [true, clause ? 2 : 1], `${what}: described by the words beneath its head`);
+        assert.deepEqual([!!o?.takeFocus, o?.first], [byKey, clause.includes('data-run') ? '[data-run="follow"]' : '.face-text'], `${what}: the focus, where a key opened it, on the pointer, else on its head`);
         assert.deepEqual(Object.keys(o?.acts || {}), clause.includes('data-run') ? ['follow'] : [], `${what}: the pointer its one act, and no act besides`);
         if (o && o.acts && o.acts.follow) { o.acts.follow(/** @type {any} */ ({}), true); assert.deepEqual(leaps, [[EDITION, true]], `${what}: its act the LEAP to the edition the claim names`); }
         HOST.dismiss();
@@ -277,7 +279,7 @@ test('a withheld document\'s own words carry C-67\'s pointer where the edition c
   assert.deepEqual([fake.asked.filter((k) => k === lookup).length, fake.unanswered], [1, []], 'the claims asked once');
 });
 
-test('every face stating a withheld origin carries C-67\'s clause in the same words beneath the arm — the document\'s own words and a run\'s face whole alike: the QUOTING sibling a line, with or without a LEAP; "edition claims not read" where the board refused the lookup another way or did not answer it; nothing where it refused the lookup as withheld from the reader — each face reading the claims before it shows, the description a landing at the document says carrying the clause too (issue #186\'s design decision: "One fact, one placement"; "A blank there would read as \'no claim\'"; "If the board refuses the read for documents withheld from the reader, no face carries the clause")', async () => {
+test('every face and card stating a withheld origin carries C-67\'s clause in the same words beneath the arm — the document\'s own words and a run\'s card alike: the QUOTING sibling a line, with or without a LEAP; "edition claims not read" where the board refused the lookup another way or did not answer it; nothing where it refused the lookup as withheld from the reader — each face reading the claims before it shows, the description a landing at the document says carrying the clause too (issue #186\'s design decision: "One fact, one placement"; "A blank there would read as \'no claim\'"; "If the board refuses the read for documents withheld from the reader, no face carries the clause")', async () => {
   // 1.0.2's drafts in its sub-account, withheld from the reader, each with a run of it 1.0.1's edition W windows; E, 1.0.2's
   // published edition, claiming the first by quoting it
   const W = '1.0.1.0.17', E = '1.0.2.0.13', QUOTES = E + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
@@ -313,18 +315,18 @@ test('every face stating a withheld origin carries C-67\'s clause in the same wo
     assert.ok(own?.id === 'face:withheld' && own.html.endsWith(armLine + clause), `${what}: the document's face, ${id ? `"${words}" a line beneath the arm` : 'nothing beneath the arm'}: ${own?.html}`);
     assert.deepEqual(Object.keys(own?.acts || {}), ['head'], `${what}: the clause offers no act`);
     HOST.dismiss();
-    // a run of it, its face whole, in the same words
+    // a run of it, its card, in the same words
     FACES.withheldRun(W, /** @type {import('../model/records.js').Block} */ ({ pos: 11, width: 240, kind: 'withheld', text: '', origin }), () => {});
     for (let i = 0; i < 50 && !HOST.currentState(); i++) await new Promise((r) => setTimeout(r, 0));
     const run = HOST.currentState();
-    assert.ok(run?.id === 'face:withheld-run' && run.html.endsWith(armLine + clause), `${what}: the run's face, the same clause beneath the arm: ${run?.html}`);
+    assert.ok(run?.id === 'withheld:' + origin && run.html.endsWith(armLine + clause), `${what}: the run's card, the same clause beneath the arm: ${run?.html}`);
     HOST.dismiss();
     assert.equal(FACES.withheldText(origin), [t('F.corner.withheld', { owner: OWNER }), arm.text, ...(words ? [words] : [])].join(' '), `${what}: the description a landing at the document says`);
   }
-  assert.deepEqual([[QUOTED, REFUSED, UNANSWERED, HIDDEN].map((o) => fake.asked.filter((k) => k === lookup(o)).length), fake.unanswered], [[1, 1, 1, 1], []], 'each lookup asked once between two drops of the claims: the run\'s face reads what the document\'s face left held, a failed read among it');
+  assert.deepEqual([[QUOTED, REFUSED, UNANSWERED, HIDDEN].map((o) => fake.asked.filter((k) => k === lookup(o)).length), fake.unanswered], [[1, 1, 1, 1], []], 'each lookup asked once between two drops of the claims: the run\'s card reads what the document\'s face left held, a failed read among it');
 });
 
-test('a withheld run\'s face reads the claims on its origin before it shows, where the model holds none: nothing stands while they are out, and the face shows once, its clause in its first frame (issue #186\'s design decision: "Make this read together with the reads that draw the face")', async () => {
+test('a withheld run\'s card reads the claims on its origin before it shows, where the model holds none: nothing stands while they are out, and the card shows once, its clause in its first frame (issue #186\'s design decision: "Make this read together with the reads that draw the face")', async () => {
   // a run of 1.0.2's draft X4 in 1.0.1's edition W4; 1.0.2's edition E4 claiming X4 from E4's own bytes
   const X4 = '1.0.2.1.0.10', W4 = '1.0.1.0.18', E4 = '1.0.2.0.14', CLAIM = E4 + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
   const fake = FAKE.create({
@@ -342,7 +344,7 @@ test('a withheld run\'s face reads the claims on its origin before it shows, whe
   release();
   for (let i = 0; i < 50 && !HOST.currentState(); i++) await new Promise((r) => setTimeout(r, 0));
   const o = HOST.currentState();
-  assert.ok(o?.id === 'face:withheld-run' && o.html.endsWith(`<div class="clause" data-string="C-67.pointer"><button data-run="follow" data-claim="${CLAIM}" data-home="${E4}">${esc(t('C-67.pointer'))}</button></div>`), `shown once the claims answer, the pointer in its first frame: ${o?.html}`);
+  assert.ok(o?.id === 'withheld:' + X4 && o.html.endsWith(`<div class="clause" data-string="C-67.pointer"><button data-run="follow" data-claim="${CLAIM}" data-home="${E4}">${esc(t('C-67.pointer'))}</button></div>`), `shown once the claims answer, the pointer in its first frame: ${o?.html}`);
   o?.acts?.follow(/** @type {any} */ ({}), true);
   assert.deepEqual(leaps, [[E4, true]], 'its act the LEAP to the edition the claim names');
   HOST.dismiss();

@@ -77,12 +77,15 @@
 // — the boot's, or the re-acquire's of a session a restart lost — and a
 // death's arm (C-137, by the death's reason: `deathWords`, the words the
 // line's death arm says too), "signed out" the sign-out marker's alone and
-// never a restart's (FP-28); a withheld run's face whole, Enter's act at the
-// run (D5 K-7), made from the run's placeholder record (T-ARTICLE's
+// never a restart's (FP-28); a withheld run's whole wording, a card — the
+// act at the run, Enter's (D5 K-7) and a click's on its key or its origin's
+// statement — made from the run's placeholder record (T-ARTICLE's
 // `placeholderOf`) once its clause's reads answer, C-67's pointer its offered
 // act, and, where the origin's edition claims stand held as they are read
-// again, the clause its kept sign shows after it (T-LAYER's `claimsKeptIn`;
-// FP-23, FP-33); the dead end's face at the head a landing stands at (`floating`;
+// again, the clause the origin's statement shows after it (T-LAYER's
+// `claimsKeptIn`; FP-23, FP-33), about the run, so it leaves and returns with
+// its place and stands through a version move (`withheldRun`, `reopenRun`;
+// FP-36); the dead end's face at the head a landing stands at (`floating`;
 // FP-21), its act, where N-GO hands one in, the version move its reads found
 // to the last member that holds the passage whole, the face standing drawn
 // again with it, no act on the chrome, as those reads answer (`offered`);
@@ -820,35 +823,61 @@ export function offered(far, offer) {
   if (HOST.redraw(floatingFace(far, o.anchor, offer, !!o.told, !!o.notice))) FOCUS.say(t('F.floating.read', { k: offer.k }));
 }
 
+/** @typedef {{kind: 'withheld', addr: string, pos: number, width: number, ids: import('../model/records.js').ISpan[], origin: string}} About what a withheld run's card is about (O-HOST's `about`): the run, by its position in the text shown and its bytes' identity, and its origin */
+
 /**
- * A withheld run's face whole, the act at the run by the keyboard (D5 K-7;
- * foundations §1 row 8), made from the run's placeholder as one record
- * (T-ARTICLE's
- * `placeholderOf`; R94): its head, the entitlement arm for its origin's owner
- * and this reader, then C-67's clause as the origin's edition claims decide
- * it (`clauseFace`) — the pointer the face's offered act, in its own words,
- * which LEAPs to the edition its claim names (B1-S7 → S6); the QUOTING
- * sibling and the unread place lines that offer nothing — and nothing past
- * the arm where they decide none; then, while those claims stand held as
- * they are read again, the clause the run's kept sign shows (T-LAYER's
- * `claimsKeptIn`), as it stands when the face shows; shown once the reads the
- * clause waits on answer, where the page holds no answer to one
- * (`whenRead`). It stands at
- * the run's own positions and takes no focus: it is heard through the status
- * region, and its act is reached by Tab (K-58).
+ * A withheld run's whole wording, the card the run's acts open — Enter at the
+ * run (D5 K-7; foundations §1 row 8), a click on its key or on its origin's
+ * statement in the edge (APP-INPUT) — made from the run's placeholder as one
+ * record (T-ARTICLE's `placeholderOf`; R94): its head, the card's caption, the
+ * entitlement arm for its origin's owner and this reader, then C-67's clause
+ * as the origin's edition claims decide it (`clauseFace`) — the pointer the
+ * card's act, in its own words, which LEAPs to the edition its claim names
+ * (B1-S7 → S6); the QUOTING sibling and the unread place lines that offer
+ * nothing — and nothing past the arm where they decide none; then, while
+ * those claims stand held as they are read again, the clause the origin's
+ * statement shows (T-LAYER's `claimsKeptIn`), as it stands when the card
+ * shows; shown once the reads the clause waits on answer, where the page
+ * holds no answer to one (`whenRead`). It stands at the run's own positions,
+ * named by its head and described by the words beneath it (O-HOST's
+ * `described`), and takes the focus where a key opened it — on the pointer
+ * where it offers one, else on its head — or where it reopens with the focus
+ * in it. It is about the run (`About`), so it leaves and returns with its
+ * place and stands through a version move, placed there by the run's bytes
+ * (FP-36; N-GO's).
  * @param {string} addr the document the run stands in
- * @param {import('../model/records.js').Block} b the withheld run
+ * @param {import('../model/records.js').Block} b the withheld run, in the text shown
  * @param {(home: string, byKey: boolean) => void} follow the pointer's act, handed in by its caller: the LEAP to the edition, the claim's home
+ * @param {boolean} [byKey] a key made the act that opens it
+ * @param {string | null} [focus] the key of the control the focus stood on in it as the reader left its place (O-HOST's `Left`), where it reopens; null where it opens afresh
  */
-export function withheldRun(addr, b, follow) {
+export function withheldRun(addr, b, follow, byKey = false, focus = null) {
   const show = () => {
     const p = placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf), clause = clauseFace(p.clause, follow);
     const k = b.origin ? LAYER.claimsKeptIn(b.origin) : null, kept = k ? `<div class="kept" data-string="${esc(k.id)}">${esc(k.text)}</div>` : '';
-    HOST.show({ kind: 'face', id: 'face:withheld-run', anchor: { span: { addr, pos: b.pos, width: b.width } }, acts: clause.follow ? { follow: clause.follow } : {},
-      html: faceHTML({ id: 'B1.withheld-run', text: p.head, acts: [] }, armHTML(p.arm) + clause.html + kept) });
+    HOST.show({
+      kind: 'card', id: 'withheld:' + (b.origin || ''), anchor: { span: { addr, pos: b.pos, width: b.width } }, acts: clause.follow ? { follow: clause.follow } : {},
+      html: `<div class="face-text" data-string="B1.withheld-run" tabindex="-1">${addressedHTML(p.head)}</div>` + armHTML(p.arm) + clause.html + kept,
+      takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : clause.follow ? '[data-run="follow"]' : '.face-text', described: true,
+      about: { kind: 'withheld', addr, pos: b.pos, width: b.width, ids: LAYER.shownIdentity(addr, b.pos, b.width), origin: b.origin || '' },
+    });
   };
   if (b.origin) whenRead(b.origin, show);
   else show();
+}
+
+/**
+ * A withheld run's card reopened from what it is about (see `withheldRun`;
+ * O-HOST's `Left`), at the run its bytes hold in the text shown now — N-GO
+ * places them — its clause's reads made again; nothing where no withheld run
+ * stands there.
+ * @param {{about: About, focus: string | null}} left
+ * @param {{addr: string, pos: number, width: number}} at where the run's bytes stand now
+ * @param {(home: string, byKey: boolean) => void} follow the pointer's act
+ */
+export function reopenRun(left, at, follow) {
+  const b = LAYER.blockAt(at.addr, at.pos);
+  if (b && b.kind === 'withheld') withheldRun(at.addr, b, follow, false, left.focus);
 }
 
 /**

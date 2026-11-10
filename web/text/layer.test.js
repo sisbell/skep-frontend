@@ -32,8 +32,12 @@
 // stood; what stands — every
 // readable document in the one frame, the limit's order below it, by line,
 // the selection's and the focus's lines held, hysteresis, stale articles set
-// again and a press holding them; the owner a withheld run names; C-67's
-// clause from the model; what an article was made from; a copy named where
+// again and a press holding them; the owner and the key a withheld run's gap
+// carries, no face in it; each withheld origin stated once per document in
+// view in its column's edge, beside its first run in view and moved only when
+// that run leaves, held below the hold and a held label and inside its
+// column's foot (FP-31); C-67's clause from the model; what an article was
+// made from; a copy named where
 // its words were read — a box's at its version, the head its corner names at
 // a plain address, and a pane's alike — by its bytes' identity, never a
 // draft's positions; the zoom-in bound;
@@ -62,9 +66,9 @@ import * as F from '../model/frames.js';
 import * as LAYER from './layer.js';
 import * as FOCUS from '../nav/focus.js';
 import * as CAM from '../plane/camera.js';
-import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, columnOfLine, setAdvance, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER, EDGE, CHAR_W, LINE_H } from '../plane/layout.js';
-import { CORNER, ADDRESS, COL, cornerWidth } from '../plane/register.js';
-import { holdTop, runsOf } from '../plane/labels.js';
+import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, columnOfLine, setAdvance, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER, EDGE, EDGE_GAP, CHAR_W, LINE_H } from '../plane/layout.js';
+import { CORNER, ADDRESS, COL, HOLD, cornerWidth } from '../plane/register.js';
+import { holdTop, holdStack, lineHeight, runsOf } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME } from '../plane/lod.js';
 import { CLAUSE_READING, articleHTML } from './article.js';
@@ -1075,7 +1079,7 @@ test('while a press stands no standing article is set again, but a document reac
 
 // ---- the owner a withheld run names ------------------------------------------------------------------------------------
 
-test('a guest meets a withheld run named for its origin\'s owner, whoever owns the document windowing it: on the plane\'s mounted article and in a reading scene\'s pane alike — in its gap\'s face where the gap holds it, its clause decided (issue #151)', () => onLayer(() => {
+test('a guest meets a withheld run carrying its origin\'s key and its origin\'s owner, whoever owns the document windowing it, and no face, on the plane\'s mounted article and in a reading scene\'s pane alike, its clause decided (issue #288\'s design decision: "withheldBlockHTML sets no face in any gap")', () => onLayer(() => {
   const O = '1.0.2.0.2', text = 'Tumbler.\n\n', width = 12 * 66, n = new TextEncoder().encode(text).length;
   REC.setSession(null);
   // the lookup of the edition claims on the run's origin answered: none
@@ -1089,15 +1093,94 @@ test('a guest meets a withheld run named for its origin\'s owner, whoever owns t
   LAYER.frame();
   const rec = LAYER.mountedSet().get(D);
   assert.ok(rec, 'at em 12 its article stands on the plane');
-  const head = tHTML('B1.withheld-run', { owner: '1.0.2', account: '1.0.2', width, origin: O }, { owner: 'id', account: 'id', origin: 'id' });
-  const arm = (/** @type {string} */ owner) => tHTML('R56.key-absent', { owner }, { owner: 'id' });
   /** @type {Array<[string, string]>} */
   const met = [['on the plane', String(/** @type {any} */ (rec.el).children[0].innerHTML)], ['in a pane', String(LAYER.sceneArticle(d).innerHTML)]];
   for (const [where, html] of met) {
-    assert.ok(html.includes(`<span class="wh-head">${head}</span><span class="arm">${arm('1.0.2')}</span>`), `${where}: the head and R56's key-absent arm name 1.0.2, the owner of the run's origin`);
-    assert.ok(!html.includes(arm('1.0.1')), `${where}: no arm names 1.0.1, the owner of the document windowing the run`);
+    assert.ok(html.includes(`data-origin="${O}" data-owner="1.0.2" data-holds="key"`) && html.includes(`data-key="${O}"`), `${where}: the gap carries 1.0.2, the owner of the run's origin, and its key: ${html}`);
+    assert.ok(!html.includes(t('R56.key-absent', { owner: '1.0.2' }).slice(0, 20)) && !html.includes('class="arm"') && !html.includes('wh-head'), `${where}: no face in the gap`);
   }
 }, 1440, 900));
+
+// ---- the edges' signs: a withheld origin stated once per document in view (FP-31) -----------------------------------------
+
+/** the withheld origins of the document the statements below are placed for, and the runs of them it windows */
+const SO = '1.0.2.0.2', SQ = '1.0.3.0.4';
+/**
+ * The test run over a stand-in page whose corner layer holds the edges' signs: D delivered as a short paragraph, a run of
+ * SO, thirty paragraphs, a second run of SO, a run of SQ and a last paragraph — each run 240 positions, every byte named
+ * through its image, the claims on both origins read — the camera at em 12 over D's first column; `body` handed each run's
+ * first position
+ * @param {(runs: {o1: number, o2: number, q: number}) => void} body
+ */
+function onEdges(body) {
+  const platform = { document: globalThis.document, window: globalThis.window };
+  const element = () => {
+    const e = {
+      className: '', innerHTML: '', id: '', dataset: {}, style: /** @type {Record<string, string>} */ ({}), children: /** @type {unknown[]} */ ([]), tabIndex: -1, offsetWidth: 160, offsetHeight: 40,
+      classList: { toggle() {} }, setAttribute() {}, removeAttribute() {}, appendChild(/** @type {unknown} */ c) { e.children.push(c); },
+      querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }), contains: () => false, remove() {},
+      get textContent() { return e.innerHTML.replace(/<[^>]*>/g, ''); },
+    };
+    return e;
+  };
+  globalThis.document = /** @type {any} */ ({ createElement: element });
+  globalThis.window = /** @type {any} */ ({ getSelection: () => null });
+  try {
+    const p1 = 'Tumbler.\n\n', p2 = Array.from({ length: 30 }, (_, i) => words(30, i)).join('\n\n') + '\n\n', p3 = 'After.';
+    const [n1, n2, n3] = [p1, p2, p3].map((x) => new TextEncoder().encode(x).length), W = 240;
+    const o1 = n1 + 1, o2 = o1 + W + n2, q = o2 + W, n = q + W + n3 - 1;
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
+    REC.takeDelivery(D, [
+      { pos: 1, width: n1, kind: 'content', text: p1, ref: null, origin: null }, { pos: o1, width: W, kind: 'withheld', text: '', ref: null, origin: SO },
+      { pos: o1 + W, width: n2, kind: 'content', text: p2, ref: null, origin: null }, { pos: o2, width: W, kind: 'withheld', text: '', ref: null, origin: SO },
+      { pos: q, width: W, kind: 'withheld', text: '', ref: null, origin: SQ }, { pos: q + W, width: n3, kind: 'content', text: p3, ref: null, origin: null },
+    ]);
+    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n1 }, { iStart: SO + '.0.1.1', width: W }, { iStart: `${D}.0.1.${n1 + 1}`, width: n2 }, { iStart: `${SO}.0.1.${W + 1}`, width: W }, { iStart: SQ + '.0.1.1', width: W }, { iStart: `${D}.0.1.${n1 + n2 + 1}`, width: n3 }]);
+    REC.takeEditionClaims(SO, []); REC.takeEditionClaims(SQ, []);
+    CAM.setViewport(VW, VH);
+    LAYER.attach(/** @type {any} */ ({ clientWidth: VW, clientHeight: VH, appendChild() {} }), /** @type {any} */ (element()));
+    body({ o1, o2, q });
+  } finally { LAYER.press(false); LAYER.clear(); LAYER.readers({}); globalThis.document = platform.document; globalThis.window = platform.window; }
+}
+/** the statements standing for an origin, as the last frame placed them */
+const statementsOf = (/** @type {string} */ origin) => LAYER.signsStanding().filter((s) => s.kind === 'statement' && s.origin === origin);
+/** the camera at em 12 with a run's first line `dy` px below the visible view's top — the view's top the one line's bottom, 0 here */
+function runLineAt(/** @type {number} */ pos, /** @type {number} */ dy) {
+  const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), p = placeOf(f, pos), scale = 12 / f.fs;
+  CAM.set({ x: box.x + p.x + p.w / 2, y: box.y + p.y - dy / scale + VH / 2 / scale, scale });
+}
+/** where a run's statement stands when it stands beside it, its line `top` on screen, below `hold`: as the one hold places one sign in its column's edge */
+function placedBeside(/** @type {number} */ pos, /** @type {number} */ top, hold = HOLD.gap) {
+  const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), ci = /** @type {number} */ (placeOf(f, pos).column), c = f.columns[ci], q = padded(f, c), em = f.fs * CAM.cam.scale;
+  return { x: Math.round(CAM.sx(box.x + c.x + c.w) + EDGE_GAP * em), y: Math.round(holdStack([{ y: top, h: 40 }], CAM.sy(box.y + c.y), hold, CAM.sy(box.y + q.y + q.h), 2)[0]), w: (EDGE - EDGE_GAP) * em, h: 40 };
+}
+
+test('each withheld origin states itself once per document in view, in its column\'s edge on the corner layer, beside its first run in view in reading order, at that run\'s first line in view or the hold, inside its column\'s padded foot, the edge\'s width wide; it moves only when that run leaves the view, held by the run\'s identity, and its words are the statement T-ARTICLE makes (issue #288\'s design decision: "Each origin, once per document in view … sits beside that origin\'s first run in view in reading order and moves only when that run leaves")', () => onEdges(({ o1, o2, q }) => {
+  const f = LAYER.foldOf(REC.doc(D)), box = docBox(D);
+  assert.ok(placeOf(f, o2).column !== placeOf(f, o1).column, 'its two runs in different columns');
+  // the whole of D in view: one statement for each origin, at its first run
+  const c0 = f.columns[0];
+  CAM.set({ x: box.x + box.w / 2, y: box.y + box.h / 3, scale: 12 / f.fs });
+  LAYER.frame();
+  assert.ok(LAYER.isMounted(D) && f.columns.every((c) => CAM.sy(box.y + c.y) > 0 && CAM.sy(box.y + c.y + c.h) < VH), `D whole in view: ${f.columns.length} columns, the first at ${CAM.sy(box.y + c0.y)}`);
+  const top = (/** @type {number} */ pos) => { const p = placeOf(f, pos); return CAM.sy(box.y + p.y); };
+  assert.deepEqual([statementsOf(SO).map((s) => [s.pos, s.column, s.placed]), statementsOf(SQ).map((s) => [s.pos, s.placed])], [[[o1, placeOf(f, o1).column, placedBeside(o1, top(o1))]], [[q, placedBeside(q, top(q))]]], 'one statement for each origin, beside its first run in view, at its first line, in its column\'s edge');
+  assert.equal(LAYER.signsStanding().length, 2, 'no other sign: each run\'s gap holds its key, no link\'s end is counted at it');
+  assert.deepEqual([statementsOf(SO)[0].text, statementsOf(SQ)[0].text], [t('L.withheld.mark', { origin: SO }), t('L.withheld.mark', { origin: SQ })], 'its words its key and the mark that opens the card, no claim admitted on either');
+  // the first run of SO leaves the view: the statement moves to its next run in view, at its first line in view
+  runLineAt(o2, 200);
+  LAYER.frame();
+  assert.ok(CAM.sy(box.y + placeOf(f, o1).y + LINE_H * f.fs * 4) < 0 || CAM.sx(box.x + f.columns[/** @type {number} */ (placeOf(f, o1).column)].x + f.columns[0].w) < 0, 'its first run out of view');
+  assert.deepEqual(statementsOf(SO).map((s) => [s.pos, s.placed]), [[o2, placedBeside(o2, 200)]], 'beside its next run in view, at its first line');
+  // both runs in view again: it stands beside the run it stood beside
+  CAM.set({ x: box.x + box.w / 2, y: box.y + box.h / 3, scale: 12 / f.fs });
+  LAYER.frame();
+  assert.deepEqual(statementsOf(SO).map((s) => s.pos), [o2], 'its run still in view: it moves only when that run leaves');
+  // that run's first line risen above the visible view's top, D's label held there: the statement below the label, at its run's first line in view
+  runLineAt(o2, -2 * LINE_H * 12);
+  LAYER.frame();
+  assert.deepEqual(statementsOf(SO).map((s) => [s.pos, s.placed]), [[o2, placedBeside(o2, 0, HOLD.gap + lineHeight(12))]], 'its first line in view its third, at the view\'s top: held below the hold and the label held there');
+}));
 
 // ---- C-67's clause, from what the model holds ---------------------------------------------------------------------------
 
@@ -1421,14 +1504,11 @@ test('a kept document carries one clause by one rule: a draft holding its text "
   assert.equal(LAYER.keptWords(draft, draft, kept, new Date(2026, 2, 13, 8).getTime())?.text, 'as last read 12 March 2026, 09:05', 'left behind another day: the day first');
 });
 
-test('a withheld run\'s kept sign carries nothing while no origin\'s edition claims stand kept, and a standing article\'s signs are emptied in place (issue #345)', () => {
+test('a withheld origin\'s held claims carry no clause while none stand kept, and its statement carries none (issue #345)', () => {
   const O = '1.0.1.0.1003';
   REC.takeEditionClaims(O, []);
   assert.equal(LAYER.claimsKeptIn(O), null, 'claims held, none kept: no clause');
-  /** a kept sign in an article: its origin, its words and the string they are */
-  const sign = { dataset: /** @type {Record<string, string>} */ ({ kept: O, string: 'L.kept.links' }), textContent: 'links as last read 09:05' };
-  LAYER.markKeptSigns(/** @type {any} */ ({ querySelectorAll: (/** @type {string} */ sel) => (sel === '.wh-kept[data-kept]' ? [sign] : []) }));
-  assert.deepEqual([sign.textContent, sign.dataset.string], ['', undefined], 'the claims kept no more: the sign emptied');
+  assert.equal(LAYER.keptRunsKey(), '', 'no origin\'s claims kept: nothing for a pane to place its statements again by');
 });
 
 test('a kept box\'s label carries its clause after its address — the words the page says of it wherever it names it, at P-REG\'s address size, in the title\'s ink, wrapped and never cut — and none within the second, where the one line names it, or once its read again sets it; its account counts it among its documents standing so (issue #368\'s design decision: "the clause follows the address, at the address\'s small size"; "At far scale, the account\'s label carries \'⟨n⟩ as last read\'")', async (ctx) => {

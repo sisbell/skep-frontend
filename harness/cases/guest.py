@@ -56,31 +56,35 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     near band re-taking it, never its account, and a click on its outline at
     mid going to it, its trail entry taken;
 (e) the window run at 1467 withheld: the model's block — its width, its
-    origin, no text — B1-S7's gap at the run (issue #151's design decision:
-    a gap of its true width, its face in it where it fits, else compact in
-    its column's edge): its head in it, the face whole there — the guest's
-    arm — where its lines hold it, else compact at the edge naming its
-    owner, and no C-33 mark, none of the owner's bytes anywhere in the page;
-    C-67's clause beneath the arm the one the origin's edition claims decide
-    (PUB-5.124), decided here from the page's own recorded reads of them —
-    the active view's lookup, its claims' links and their homes' metadata,
-    never the audit view's `edition_claims` — the pointer carrying the claim
-    PUB-3.107's order picks, "edition claims not read" where a read of them
-    failed (issue #186), and nothing in its place where they decide none,
-    in the gap where it holds the face and else in the face its mark opens
-    whole, every read the clause waits on answered (issue #272); a link
-    write homed elsewhere, its link no edition claim on the origin, handed
-    to the page through the gate's feed door — reads alone — leaving the
-    gap as it stood in every frame and asking no lookup of the claims
-    again, the row's link read once; the mirror's item the run's face whole — its kind in the words a
-    copy's stand-in names it by, its owner, its origin, the arm, and the
-    clause where the claims decide one (R94; FP-26); the gap shown; and under
-    R56's key-absent arm, the deepest a guest meets — where the page holds a
-    key present it reads its store as holding none for these checks and as
-    it held it after, page state alone — the gap holding its head, the face
-    compact at its column's edge, the mark's act opening it whole with R56's
-    arm and the clause, the gap standing on the run's bars, and every row of
-    the article inside its box; the content after the run
+    origin, no text — B1-S7's gap at the run (issue #288's design decision:
+    no face in any gap; every run shows its gap and its key): its origin's
+    key, the origin's address, in it where its first line holds it, no face
+    and no C-33 mark in it, none of the owner's bytes anywhere in the page;
+    the origin's statement standing once in its column's edge on the corner
+    layer, headed by its key, beside the run, inside its column's padded
+    slot and meeting no other sign, corner or held label (FP-31); C-67's
+    clause the one the origin's edition claims decide (PUB-5.124), decided
+    here from the page's own recorded reads of them — the active view's
+    lookup, its claims' links and their homes' metadata, never the audit
+    view's `edition_claims` — the pointer in the statement carrying the claim
+    PUB-3.107's order picks where it is one, and the card the statement's
+    mark opens carrying the clause whole — the pointer, the QUOTING sibling,
+    "edition claims not read" where a read of them failed (issue #186), and
+    nothing in its place where they decide none — every read the clause waits
+    on answered (issue #272); a link write homed elsewhere, its link no
+    edition claim on the origin, handed to the page through the gate's feed
+    door — reads alone — leaving the gap and the statement as they stood in
+    every frame and asking no lookup of the claims again, the row's link read
+    once; the mirror's item the run's own part — its kind in the words a
+    copy's stand-in names it by, its document, its length, its origin — and
+    the description it names its origin's: its owner, the arm, and the
+    clause where the claims decide one (R94); the gap shown; and under R56's
+    key-absent arm, the deepest a guest meets — where the page holds a key
+    present it reads its store as holding none for these checks and as it
+    held it after, page state alone — the gap holding what it held, the
+    statement's mark's act opening the card whole with R56's arm and the
+    clause, the gap standing on the run's bars, and every row of the article
+    inside its box; the content after the run
     opening with a separator alone, a block that sets no line, the margins
     about it collapsing into one as P-LAY collapses an empty row's — the
     block after it as far below the gap as its bars stand below the
@@ -91,7 +95,8 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     before, the run's stand-in in its place — its kind, its origin's owner, its
     length — and the text after, never the two joined, the gap drawn
     selected whole, the skep flavor naming the first edition read at its plain
-    address and the member its text is alike on both (issue #244); a person's
+    address and the member its text is alike on both (issue #244); the pane
+    stating the origin once in its own column's edge (issue #288); a person's
     click on the gap conjuring C-39's face and selecting nothing;
 (f) the guest's own acts: every link at the first edition drawn as its
     owner's, never "you"; each end LK draws there standing in the article the
@@ -102,10 +107,12 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     arm beneath, standing beneath the placeholder, at the run's own positions
     once the text layer rebuilds the article and takes the placeholder away,
     and at the document's box once the layer takes the article down — never
-    at the viewport's corner; Enter at the run, the walk's element, showing
-    the run's face whole (D5 K-7) — the placeholder's head, the guest's arm
-    and the clause, the pointer its one act — the focus staying on the item
-    and nothing selected; "who wrote this?" answering over a block;
+    at the viewport's corner; Enter at the run, the walk's element, opening
+    the run's whole wording's card (D5 K-7; issue #288) — the placeholder's
+    head, the guest's arm and the clause, the pointer its one act — the card
+    taking the focus a key opened it with, on the pointer where it offers
+    one, else on its head, and nothing selected; "who wrote this?" answering
+    over a block;
 (g) the owner's page whose own session ends falls to guest class: opened
     again, it reads one of the claimant's drafts and the window run's bytes,
     then its session is closed by the page's own `close(session)` — the call
@@ -240,28 +247,36 @@ STANDS_ON_BARS = '''((addr, pos) => { const h = window.__skep.barsOf(addr); if (
 
 def gaps(ctx):
     """each withheld run's gap in the first edition's mounted article as the page holds it: its position, width, origin,
-    the owner it carries and what it holds (issue #151's design decision) — its head, its own words apart from the symbol
-    the links drawn at the run merge into (issue #202), its arm, its clause and the claim the clause follows, and the mark
-    its column's edge holds where its face stands compact there"""
-    return ctx.js('''[...document.querySelectorAll(%s)].map((e) => { const q = (sel) => e.querySelector(sel);
-      const words = (x) => { if (!x) return null; const c = x.cloneNode(true); c.querySelectorAll('.sym').forEach((s) => s.remove()); return c.textContent || null; };
+    the owner it carries and what it holds (issue #288's design decision) — its key's words apart from the symbol the links
+    drawn at the run merge into (issue #202), and whether anything else stands in it or in its column's edge in the
+    article: a head, an arm, a clause, a mark"""
+    return ctx.js('''[...document.querySelectorAll(%s)].map((e) => { const k = e.querySelector('.wh-key');
       return {pos: Number(e.dataset.pos), width: Number(e.dataset.width), origin: e.dataset.origin, owner: e.dataset.owner, holds: e.dataset.holds || null,
-              head: words(q('.wh-head')), arm: (q('.arm') || {}).textContent || null, clause: (q('.clause') || {}).textContent || null,
-              claim: (q('.clause') || {dataset: {}}).dataset.claim || null, mark: (q(':scope > .wh-mark') || {}).textContent || null}; })''' % json.dumps('#domlayer article[data-addr="%s"] .withheld' % DOC))
+              key: k ? k.textContent : null, face: !!e.querySelector('.wh-head, .arm, .clause, .wh-mark, .edge')}; })''' % json.dumps('#domlayer article[data-addr="%s"] .withheld' % DOC))
 
 
-# the window run's gap as a frame shows it — what it holds, its clause and the mark its column's edge holds — in one string, or
-# None where no gap stands at the run
-GAP_NOW = '''(() => { const e = document.querySelector(%s); if (!e) return null;
-  return [e.dataset.holds || '', (e.querySelector('.clause') || {}).textContent || '', (e.querySelector(':scope > .wh-mark') || {}).textContent || ''].join('|'); })()''' % json.dumps(PLACEHOLDER)
+def statements(ctx, origin):
+    """the statements of an origin standing in the first edition's columns' edges on the corner layer, as the last frame
+    placed them (T-LAYER's `signsStanding`): each its run, its column, its words, and whether it carries C-67's pointer —
+    the claim it follows"""
+    return ctx.js('''((doc, origin) => window.__skep.edgeSigns().filter((s) => s.kind === 'statement' && s.addr === doc && s.origin === origin).map((s) => {
+      const e = document.querySelector('#corners .edge-sign[data-sign="statement"][data-addr="' + doc + '"][data-origin="' + origin + '"]'), p = e && e.querySelector('.clause[data-claim]');
+      return {pos: s.pos, column: s.column, text: s.text, rect: s.rect, claim: p ? p.dataset.claim : null}; }))(%s, %s)''' % (json.dumps(DOC), json.dumps(origin)))
+
+
+# the window run's gap and its origin's statement as a frame shows them — what the gap holds, its key, the statement's words —
+# in one string, or None where no gap stands at the run
+GAP_NOW = '''(() => { const e = document.querySelector(%s); if (!e) return null; const s = document.querySelector(%s), k = e.querySelector('.wh-key');
+  return [e.dataset.holds || '', k ? k.textContent : '', s ? s.textContent : ''].join('|'); })()''' % (json.dumps(PLACEHOLDER), json.dumps('#corners .edge-sign[data-sign="statement"][data-addr="%s"][data-origin="%s"]' % (DOC, WINDOW[2])))
 
 
 def claims_kept(ctx, r):
     """a link write changing no edition claim on the window run's origin (issue #272's design decision: "A write invalidates
     only what it can change"): a `make_link` homed in VERSIONED, its link an address past that home's frontier, handed to the
     page through the gate's feed door as the feed hands rows — reads alone. The page reads the row's link, which names no
-    edition claim, and leaves the claims on the origin held: the gap at the run as it stood in every frame from the row to
-    the settle, no lookup of the claims on the origin asked again, the row's link read once. Its figures"""
+    edition claim, and leaves the claims on the origin held: the gap at the run and its origin's statement as they stood in
+    every frame from the row to the settle, no lookup of the claims on the origin asked again, the row's link read once. Its
+    figures"""
     row = {'position': 0, 'at': 0, 'op': 'make_link', 'docs': [VERSIONED], 'link': VERSIONED + '.0.2.999999', 'class': 'published'}
     came = ctx.js('''((row) => { const S = window.__skep, n = S.bridge.calls().length, at = () => %s;
       window.__gateClaims = {frames: 0, kept: 0, was: at(), stop: false};
@@ -276,25 +291,25 @@ def claims_kept(ctx, r):
     lookups = [f for f in frames if f.get('op') == 'find_links_ftt' and (f.get('q') or {}).get('to') == [unit_span(WINDOW[2])]]
     links = [f for f in frames if f.get('op') == 'read_link' and f.get('a') == row['link']]
     r.check(watched['was'] is not None and watched['frames'] > 0 and watched['kept'] == watched['frames'] and watched['now'] == watched['was'],
-            '(e) a link write homed elsewhere, its link no edition claim on %s: the run\'s gap as it stood — what it holds, its clause, its edge\'s mark — in every frame from the row to the settle (issue #272)' % WINDOW[2], watched)
+            '(e) a link write homed elsewhere, its link no edition claim on %s: the run\'s gap and its origin\'s statement as they stood — what the gap holds, its key, the statement\'s words — in every frame from the row to the settle (issue #272)' % WINDOW[2], watched)
     r.check(not lookups and len(links) == 1,
             '(e) the page reads the row\'s link once and asks no lookup of the edition claims on %s again: a link write drops only the claims it writes, retracts or supersedes (issue #272)' % WINDOW[2],
             {'lookups': len(lookups), 'links_read': len(links), 'reads': sorted(set(f.get('op') for f in frames))})
     return {'row': row, 'frames': watched, 'lookups': len(lookups), 'links_read': len(links), 'reads': sorted(set(f.get('op') for f in frames))}
 
 
-def mark_face(ctx):
-    """the act at the run's face compact in its column's edge, as the input reads a click — its press and its release at one
-    point, dispatched at the mark — and the face it shows: its id, its words, its arm, its clause and the claim the pointer
-    follows; an empty face where no mark stands"""
+def statement_card(ctx):
+    """the act at the window run's origin's statement in its column's edge, as the input reads a click — its press and its
+    release at one point, dispatched at the statement's mark — and the card it opens: its id, its kind, its words, its arm,
+    its clause and the claim the pointer follows; an empty card where no statement stands"""
     ok = ctx.js('''(() => { const m = document.querySelector(%s); if (!m) return false; const q = m.getBoundingClientRect();
       const at = {bubbles: true, cancelable: true, composed: true, button: 0, clientX: q.left + q.width / 2, clientY: q.top + q.height / 2};
-      m.dispatchEvent(new PointerEvent('pointerdown', at)); m.dispatchEvent(new PointerEvent('pointerup', at)); m.dispatchEvent(new MouseEvent('click', at)); return true; })()''' % json.dumps(PLACEHOLDER + ' > .wh-mark'))
+      m.dispatchEvent(new PointerEvent('pointerdown', at)); m.dispatchEvent(new PointerEvent('pointerup', at)); m.dispatchEvent(new MouseEvent('click', at)); return true; })()''' % json.dumps('#corners .edge-sign[data-sign="statement"][data-addr="%s"][data-origin="%s"] .wh-mark' % (DOC, WINDOW[2])))
     ctx.settle(); ctx.frames(2)
     if not ok:
-        return {'id': None, 'words': None, 'arm': None, 'clause': None, 'claim': None}
+        return {'id': None, 'kind': None, 'words': None, 'arm': None, 'clause': None, 'claim': None}
     return ctx.js('''(() => { const o = document.getElementById('overlay'), q = (s) => o.querySelector(s), w = q('.face-text'), a = q('.arm'), c = q('.clause'), b = q('.clause [data-run]');
-      return {id: window.__skep.overlay().id, words: w ? w.textContent : null, arm: a ? a.textContent : null, clause: c ? c.textContent : null, claim: b ? b.dataset.claim : null}; })()''')
+      return {id: window.__skep.overlay().id, kind: window.__skep.overlay().kind, words: w ? w.textContent : null, arm: a ? a.textContent : null, clause: c ? c.textContent : null, claim: b ? b.dataset.claim : null}; })()''')
 
 
 def calls(ctx):
@@ -362,11 +377,11 @@ def copy_across_run(ctx, r, doc, kind):
         return c['plain'] == want and bool(member) and named, want
 
     def drawn(face):
-        """is a placeholder drawn selected whole: every glyph of it inside the platform's selection, and its words among the
-        selection's — which the platform leaves out of a selection over what it draws unselectable, the symbol of the links
-        drawn at the run among it (issue #202)"""
-        head = ctx.js('(() => { const e = document.querySelector(%s); if (!e) return null; const c = e.cloneNode(true); c.querySelectorAll(".sym").forEach((s) => s.remove()); return c.textContent; })()' % json.dumps(face + ' .wh-head'))
-        return bool(ctx.js(SELECTED_WHOLE % json.dumps(face))) and bool(head) and squash(head) in squash(ctx.js('String(window.getSelection())'))
+        """is a placeholder drawn selected whole: every glyph of it inside the platform's selection, and its key among the
+        selection's words — which the platform leaves out of a selection over what it draws unselectable, the symbol of the
+        links drawn at the run among it (issue #202)"""
+        key = ctx.js('(() => { const e = document.querySelector(%s); return e ? e.textContent : null; })()' % json.dumps(face + ' .wh-key'))
+        return bool(ctx.js(SELECTED_WHOLE % json.dumps(face))) and bool(key) and squash(key) in squash(ctx.js('String(window.getSelection())'))
 
     # (i) on the plane: the camera between the two points, at the readable em 9 or above, both in view
     a, b = (ctx.js('window.__skep.centreOf(%s, %d)' % (json.dumps(DOC), p)) for p in (p_start, p_end))
@@ -387,10 +402,10 @@ def copy_across_run(ctx, r, doc, kind):
         figures['plane'] = {'span': c['span'], 'plain_tail': (c['plain'] or '')[-120:]}
     ctx.esc()
     ctx.esc()
-    # (ii) a person's click on the placeholder's words, where the platform hit-tests them
+    # (ii) a person's click on the placeholder past its key, where the platform hit-tests it: its last line, which holds no key
     ctx.view_at(DOC, WINDOW[0])
-    hit = ctx.js('''((sel) => { const e = document.querySelector(sel); if (!e) return null; const q = e.getBoundingClientRect(), x = q.left + Math.min(30, q.width / 2), y = q.top + q.height / 2, h = document.elementFromPoint(x, y);
-      return {x, y, hits: !!h && e.contains(h)}; })(%s)''' % json.dumps(PLACEHOLDER + ' .wh-head'))
+    hit = ctx.js('''((sel) => { const e = document.querySelector(sel); if (!e) return null; const q = e.getBoundingClientRect(), x = q.left + Math.min(30, q.width / 2), y = q.bottom - 4, h = document.elementFromPoint(x, y);
+      return {x, y, hits: !!h && e.contains(h) && !h.closest('.wh-key')}; })(%s)''' % json.dumps(PLACEHOLDER))
     if hit and hit['hits']:
         ctx.drv.mouse(hit['x'], hit['y'])
         ctx.frames(2)
@@ -409,6 +424,13 @@ def copy_across_run(ctx, r, doc, kind):
     seen = all(e and e['line'] and inside_rect(e['line'], e['pane']) for e in ends)
     names = ((ctx.js('window.__skep.scene.panes()') or {}).get('a') or {}).get('names')
     r.check(opened and seen and bool(names), '(e) a reading scene stands on the first edition beside %s, as a guest, the text before the run and after it in view in pane A' % FAR_LEAP, {'opened': opened, 'ends': ends, 'names': names})
+    # the pane states the origin once in its own column's edge, a line, beside the run, inside the pane (issue #288)
+    pane_said = ctx.js('''((origin, run) => { const p = document.getElementById('sceneA'), q = p.getBoundingClientRect(), g = p.querySelector(run);
+      return [...p.querySelectorAll(':scope > .edge-sign[data-sign="statement"]')].filter((e) => e.dataset.origin === origin).map((e) => { const r = e.getBoundingClientRect(), b = g ? g.getBoundingClientRect() : null;
+        return {pos: Number(e.dataset.pos), text: e.textContent, controls: e.querySelectorAll('[role="button"]').length, inside: r.top >= q.top - 0.5 && r.bottom <= q.bottom + 0.5, beside: !!b && r.left >= b.right - 0.5}; }); })(%s, %s)''' % (json.dumps(WINDOW[2]), json.dumps('.withheld[data-pos="%d"]' % WINDOW[0])))
+    r.check(opened and len(pane_said) == 1 and pane_said[0]['pos'] == WINDOW[0] and pane_said[0]['text'].startswith(t(ctx, 'L.withheld.mark', {'origin': WINDOW[2]})) and pane_said[0]['controls'] == 0 and pane_said[0]['inside'] and pane_said[0]['beside'],
+            '(e) pane A states the window run\'s origin once in its column\'s edge beside the run, headed by its key, a line and no control, inside the pane (issue #288: "each scene pane its own")', pane_said)
+    figures['pane_statement'] = pane_said
     if opened and seen:
         s, e = ends[0]['line'], ends[1]['line']
         ctx.drv.drag(s['x'] + 0.5, s['y'] + s['h'] / 2, e['x'] + e['w'] - 0.5, e['y'] + e['h'] / 2)
@@ -599,55 +621,63 @@ def run(ctx):
     ph = gaps(ctx)
     head = t(ctx, 'B1.withheld-run', {'owner': OWNER, 'account': OWNER, 'width': WINDOW[1], 'origin': WINDOW[2]})
     arm = t(ctx, arm_id, {'owner': OWNER})
-    mark = t(ctx, 'L.withheld.mark', {'owner': OWNER})
+    mark = t(ctx, 'L.withheld.mark', {'origin': WINDOW[2]})
     c33 = ctx.js('document.querySelectorAll(%s).length' % json.dumps('#domlayer article[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC))
-    # the run's gap holds its face whole where its full lines hold it — the head, the guest's arm and the clause — else its head, the
-    # face compact at its column's edge, its owner and the mark that opens it whole (issue #151's design decision)
+    # the run's gap holds its ground, its ends' symbol and its key where its first line holds it, and no face (issue #288's
+    # design decision: "withheldBlockHTML sets no face in any gap. Every run shows its gap and its key")
     g = ph[0] if len(ph) == 1 else {}
-    face_in = g.get('holds') == 'face'
-    r.check(len(ph) == 1 and g['pos'] == WINDOW[0] and g['width'] == WINDOW[1] and g['origin'] == WINDOW[2] and g['head'] == head and c33 == 0
-            and (g['arm'] == arm and g['mark'] is None if face_in else g['holds'] == 'head' and g['arm'] is None and g['mark'] == mark),
-            '(e) the mounted article holds B1-S7\'s gap at the run — its position, width and origin, its head — the face whole in it where its lines hold it, the guest\'s arm for this device\'s key store (%s), else compact at its column\'s edge naming %s — and no C-33 mark' % (arm_id, OWNER),
+    r.check(len(ph) == 1 and g['pos'] == WINDOW[0] and g['width'] == WINDOW[1] and g['origin'] == WINDOW[2] and g['owner'] == OWNER and c33 == 0
+            and g['holds'] == 'key' and g['key'] == WINDOW[2] and not g['face'],
+            '(e) the mounted article holds B1-S7\'s gap at the run — its position, width, origin and its origin\'s owner — its key, %s, in it and no face, and no C-33 mark (issue #288)' % WINDOW[2],
             {'gaps': ph, 'c33_marks': c33, 'key_here': store['key_here']})
     leaked, legit_held = leaks(places)
     r.check(len(own) >= STRETCH and not leaked, f'(e) none of the owner\'s bytes over the run stands anywhere in the page: no stretch of {STRETCH} of its characters, white space folded, that the guest\'s own delivered text and labels do not hold', leaked[:4])
-    # C-67's clause beneath the arm is the one the origin's edition claims decide, decided here from the page's own reads
-    # of them — the active view's lookup, never the audit view's `edition_claims`, which refuses an origin the guest may
-    # not read — and where they decide none, nothing stands in its place: in the gap where it holds the face, else in the
-    # face its edge's mark opens whole
+    # the origin's statement once, in its column's edge on the corner layer, beside the run, headed by its key, held inside its
+    # column's padded slot and meeting no other sign, corner or held label (issue #288's design decision; FP-31)
+    ctx.view_doc_em(DOC, 17)
+    ctx.view_at(DOC, WINDOW[0])
+    said = statements(ctx, WINDOW[2])
+    sv = ctx.js('window.__skep.overlapCheck()')
+    r.check(len(said) == 1 and said[0]['pos'] == WINDOW[0] and said[0]['text'].startswith(mark) and not sv['signs_out'] and not sv['signs_meeting'],
+            '(e) the origin\'s statement stands once in its column\'s edge, beside the run, headed by its key — "%s" — inside its column\'s padded slot, meeting no other sign, corner or held label (issue #288; FP-31)' % mark,
+            {'statements': said, 'signs_out': sv['signs_out'][:4], 'signs_meeting': sv['signs_meeting'][:4]})
+    # C-67's clause is the one the origin's edition claims decide, decided here from the page's own reads of them — the active
+    # view's lookup, never the audit view's `edition_claims`, which refuses an origin the guest may not read: the pointer in the
+    # statement where it is one; and the card the statement's mark opens carrying the clause whole, nothing in its place where
+    # the claims decide none
     clause_id, decided = ctx.edition_clause(WINDOW[2], OWNER)
     clause = t(ctx, clause_id, {'claimant': decided.get('claimant', '')}) if clause_id not in (None, CLAUSE_READING) else None
-    shown_clause = g.get('clause') if face_in else None
-    shown_claim = g.get('claim') if face_in else None
-    if not face_in:
-        opened = mark_face(ctx)
-        shown_clause, shown_claim = opened['clause'], opened['claim']
-        ctx.esc()
-    r.check(decided['lookups'] >= 1 and not decided['audit'] and clause_id != CLAUSE_READING and len(ph) == 1 and shown_clause == clause and shown_claim == decided.get('claim'),
-            '(e) C-67\'s clause beneath the arm is the one the origin\'s edition claims decide, every read it waits on answered — read with the active view\'s lookup, never the audit view\'s edition_claims — the pointer following the claim PUB-3.107\'s order picks, and nothing stands in its place where they decide none (PUB-5.124; issue #272)',
-            {'decided': clause_id, 'shown': shown_clause, 'claim': shown_claim, 'in_the_gap': face_in, 'reads': decided})
+    opened = statement_card(ctx)
+    ctx.esc()
+    pointed = said[0]['claim'] if said else None
+    r.check(decided['lookups'] >= 1 and not decided['audit'] and clause_id != CLAUSE_READING and opened['kind'] == 'card' and opened['id'] == 'withheld:' + WINDOW[2]
+            and opened['words'] == head and opened['arm'] == arm and opened['clause'] == clause and opened['claim'] == decided.get('claim')
+            and pointed == (decided.get('claim') if clause_id == 'C-67.pointer' else None),
+            '(e) the statement\'s mark opens the run\'s whole wording as a card — B1-S7\'s head, the guest\'s arm (%s), and C-67\'s clause the origin\'s edition claims decide, every read it waits on answered, read with the active view\'s lookup, never the audit view\'s edition_claims — the pointer, in the card and in the statement, following the claim PUB-3.107\'s order picks, and nothing in the clause\'s place where they decide none (PUB-5.124; issues #272, #288)' % arm_id,
+            {'decided': clause_id, 'card': opened, 'statement_claim': pointed, 'reads': decided})
     r.figures['edition_clause'] = {'origin': WINDOW[2], 'decided': clause_id, 'reads': decided}
     r.figures['claims_kept'] = claims_kept(ctx, r)
-    # the mirror's item at the run says the face whole (FP-26: "the mirror reads every sign whole"): its words filled from the
-    # gap's own owner, the guest's arm and the clause the claims decide, the clause a sentence after the arm where one stands and
-    # nothing where none does, and the arm and the clause standing in it whole
+    # the mirror's item at the run says the run's own part, and names its origin's one description: the gap's own owner, the
+    # guest's arm and the clause the claims decide, a sentence after the arm where one stands and nothing where none does (R94)
+    ctx.leap(DOC, WINDOW[0])
     item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
-    shown = bool(g.get('owner'))
+    described = ctx.js("""(() => { const li = document.getElementById('walk-' + window.__skep.mirror.index()); const ids = li ? (li.getAttribute('aria-describedby') || '').split(' ').filter(Boolean) : [];
+      return ids.map((id) => { const e = document.getElementById(id); return e ? e.textContent : null; }); })()""") or []
     after = t(ctx, 'L.mirror.clause', {'clause': clause}) if clause else ''
     kinds = item_words(ctx)
-    words = t(ctx, 'L.mirror.withheld', {'kind': kinds['withheld'], 'document': DOC, 'length': t(ctx, 'L.item.positions', {'n': WINDOW[1]}), 'owner': g['owner'], 'origin': WINDOW[2], 'arm': arm, 'clause': after}) if shown else None
-    r.check(shown and item.startswith(words) and arm in item and (clause or '') in item,
-            '(e) the mirror\'s current item at the landing is the run\'s face whole: its kind in the words a copy\'s stand-in names it by (issue #161), its width, its owner, its origin, the arm, and the clause where the claims decide one (R56; R94)',
-            {'item': item, 'gap': {k: g.get(k) for k in ('owner', 'holds')}, 'arm': arm, 'clause': clause})
+    words = t(ctx, 'L.mirror.withheld', {'kind': kinds['withheld'], 'document': DOC, 'length': t(ctx, 'L.item.positions', {'n': WINDOW[1]}), 'origin': WINDOW[2]})
+    origin_words = t(ctx, 'L.mirror.withheld.origin', {'owner': g.get('owner') or '', 'arm': arm, 'clause': after})
+    r.check(item.startswith(words) and arm not in item and origin_words in described,
+            '(e) the mirror\'s current item at the landing is the run\'s own part — its kind in the words a copy\'s stand-in names it by (issue #161), its document, its width, its origin — and names its origin\'s one description: its owner, the arm, and the clause where the claims decide one (R56; R94; issue #288)',
+            {'item': item, 'described': described, 'origin_words': origin_words})
     ctx.view_doc_em(DOC, 14)
     ctx.view_at(DOC, WINDOW[0])
     vis = ctx.js('window.__skep.visible(%s)' % json.dumps(PLACEHOLDER))
     r.check(len(vis) == 1 and vis[0]['inClip'] and vis[0]['inView'], '(e) the gap is shown: inside the article\'s clip and the viewport', [{k: v[k] for k in ('rect', 'clip', 'inClip', 'inView')} for v in vis])
     # under R56's key-absent arm, the deepest a guest meets: where the page holds a key present it reads its store as holding none
     # for these checks, and as it held it after — the page's own state put back, never the harness's reading, so every check after
-    # this one meets what the page made. R56's face is deeper than the run's three full lines: the gap holds its head, the face
-    # compact at its column's edge, its mark opening it whole — the head, R56's arm and the clause — and the gap as tall as its
-    # bars, the column breaking where it did
+    # this one meets what the page made. The gap holds what it held, no face in it; the statement's mark opens the card whole —
+    # the head, R56's arm and the clause — and the gap as tall as its bars, the column breaking where it did
     here = ctx.js('window.__skep.overlapCheck()')
     held = ctx.js('(async () => (await import("./model/records.js")).keyPresent())()')
     if held:
@@ -656,22 +686,22 @@ def run(ctx):
     k = keyless[0] if len(keyless) == 1 else {}
     ov = ctx.js('window.__skep.overlapCheck()')
     absent = t(ctx, 'R56.key-absent', {'owner': OWNER})
-    whole = mark_face(ctx)
+    whole = statement_card(ctx)
     ctx.esc()
-    r.check(k.get('holds') == 'head' and k.get('head') == head and k.get('arm') is None and k.get('mark') == mark
-            and whole['id'] == 'face:withheld-run' and whole['words'] == head and whole['arm'] == absent and whole['clause'] == clause,
-            '(e) under R56\'s key-absent arm, too deep for the run\'s gap: the gap holds its head, the face compact at its column\'s edge naming %s, and its mark\'s act opens the face whole — the head, R56\'s arm and the clause' % OWNER,
-            {'gap': k, 'face': whole})
+    r.check(k.get('holds') == g.get('holds') and k.get('key') == g.get('key') and not k.get('face')
+            and whole['id'] == 'withheld:' + WINDOW[2] and whole['kind'] == 'card' and whole['words'] == head and whole['arm'] == absent and whole['clause'] == clause,
+            '(e) under R56\'s key-absent arm the gap holds what it held, its key and no face, and the statement\'s mark opens the card whole — the head, R56\'s arm naming %s and the clause' % OWNER,
+            {'gap': k, 'card': whole})
     stands = ctx.js(STANDS_ON_BARS % (json.dumps(DOC), WINDOW[0]))
     r.check(bool(stands) and abs(stands['text'][0] - stands['bars'][0]) <= 1 and abs(stands['text'][1] - stands['bars'][1]) <= 1 and stands['text'][2] == stands['bars'][2],
-            '(e) under R56\'s key-absent arm the gap stands on the run\'s bars: its top, its height and its lines, 1 px either way — no face reflows the text (issue #151)', stands)
+            '(e) under R56\'s key-absent arm the gap stands on the run\'s bars: its top, its height and its lines, 1 px either way — no word reflows the text (issue #151)', stands)
     r.check(not ov['blocks_cut'], '(e) containment at guest class under R56\'s key-absent arm: every row of the first edition — the gap and the text after it among them — lies inside its column, its clip and its box, the column breaking at the lines as rendered (issue #15)',
             {'blocks_cut': ov['blocks_cut'][:6], 'worst_overflow_px': ov['worst_overflow_px']})
     if held:
         read_store_as(ctx, store['rows'])
     again = gaps(ctx)
     b = again[0] if len(again) == 1 else {}
-    r.check(b.get('holds') == g.get('holds') and b.get('arm') == g.get('arm') and b.get('mark') == g.get('mark'),
+    r.check(b.get('holds') == g.get('holds') and b.get('key') == g.get('key') and b.get('face') == g.get('face'),
             '(e) after the measure the gap holds what it held under the guest\'s arm for this device\'s key store again (%s)' % arm_id, {'before': g, 'after': b})
     # the content after the run opens with a separator alone: the margins about that empty block collapse into one, as
     # P-LAY collapses an empty row's, so the block after it stands as far below the placeholder as its bars stand below
@@ -682,8 +712,8 @@ def run(ctx):
     r.check(empty and gap['bars_space'] is not None and abs(gap['space'] - gap['bars_space']) <= GAP_TOL_PX,
             f'(e) the margins about that empty block collapse into one: the block after it stands below the gap as its bars stand below the run\'s, at the layout size, {GAP_TOL_PX} px either way', gap)
     r.figures['shots'].append(ctx.shot('guest/window-run.png'))
-    r.figures['run'] = {'gap': ph, 'stretches_tested': len(stretches), 'stretches_the_guest_holds': legit_held, 'mirror_item': item, 'shown': vis,
-                        'blocks_cut': ov['blocks_cut'][:8], 'worst_overflow_px': ov['worst_overflow_px'], 'after_run': gap, 'under_r56': {'gap': k, 'face': whole, 'on_bars': stands},
+    r.figures['run'] = {'gap': ph, 'statements': said, 'stretches_tested': len(stretches), 'stretches_the_guest_holds': legit_held, 'mirror_item': item, 'described': described, 'shown': vis,
+                        'blocks_cut': ov['blocks_cut'][:8], 'worst_overflow_px': ov['worst_overflow_px'], 'after_run': gap, 'under_r56': {'gap': k, 'card': whole, 'on_bars': stands},
                         'under_the_guests_arm': {'arm': arm_id, 'blocks_cut': here['blocks_cut'][:8], 'worst_overflow_px': here['worst_overflow_px']}}
     r.figures['copy_across_run'] = copy_across_run(ctx, r, doc, kinds['withheld'])
 
@@ -719,11 +749,11 @@ def run(ctx):
     r.check(drawn_ok and runs_ok and all(listed.count(s['id']) == 1 for s in each) and len(listed) == len(each),
             '(f) one rule of where an end is drawn: every end LK draws at the first edition stands in its article — a mark or a symbol carrying its key, a withheld run\'s in the run\'s one symbol — and is listed once in the mirror, a withheld run\'s among its item\'s children (issue #202)',
             {'ends': [(s['id'], s['pos'], bool(s.get('run'))) for s in each], 'at_runs': agree['atRuns'], 'listed': listed})
-    # the act at the run, as the input reads a click: its press and its release at one point. The placeholder stands past the
-    # article's clip, where the platform hands a person's pointer to nothing, so the events are dispatched at the element
+    # the act at the run's gap past its key, as the input reads a click: its press and its release at one point. The placeholder
+    # stands past the article's clip, where the platform hands a person's pointer to nothing, so the events are dispatched at it
     ctx.js('''(() => { const e = document.querySelector(%s); if (!e) return false; const q = e.getBoundingClientRect();
       const at = {bubbles: true, cancelable: true, composed: true, button: 0, clientX: q.left + q.width / 2, clientY: q.top + q.height / 2};
-      e.dispatchEvent(new PointerEvent('pointerdown', at)); e.dispatchEvent(new PointerEvent('pointerup', at)); e.dispatchEvent(new MouseEvent('click', at)); return true; })()''' % json.dumps(PLACEHOLDER + ' .wh-head'))
+      e.dispatchEvent(new PointerEvent('pointerdown', at)); e.dispatchEvent(new PointerEvent('pointerup', at)); e.dispatchEvent(new MouseEvent('click', at)); return true; })()''' % json.dumps(PLACEHOLDER))
     ctx.frames(2)
     face = ctx.js('''(() => { const o = document.getElementById('overlay'), a = o.querySelector('.arm'), w = o.querySelector('.face-text');
       return {id: window.__skep.overlay().id, text: w ? w.textContent : null, arm: a ? a.textContent : null, arm_id: a ? a.dataset.string : null}; })()''')
@@ -752,22 +782,23 @@ def run(ctx):
     ctx.set_view(cam['x'], cam['y'], cam['scale'])
     r.figures['c39_placed'] = {'beneath_the_placeholder': under, 'rebuilt': rebuilt, 'taken_down': down}
     ctx.esc()
-    # the act at the run by the keyboard: Enter at the walk's element, the run a LEAP landed on (D5 K-7) — the run's face
-    # whole, made from the placeholder's record: its head, the guest's arm, and C-67's clause as the origin's edition claims
-    # decide it, the pointer the face's one act; it takes no focus (K-58) and selects nothing
+    # the act at the run by the keyboard: Enter at the walk's element, the run a LEAP landed on (D5 K-7) — the run's whole
+    # wording's card, made from the placeholder's record: its head, the guest's arm, and C-67's clause as the origin's edition
+    # claims decide it, the pointer the card's one act; it takes the focus a key opened it with — on the pointer where it
+    # offers one, else on its head — and selects nothing (issue #288)
     ctx.leap(DOC, WINDOW[0])
     at_run = ctx.js('(() => { const f = window.__skep.view.focus(), e = document.activeElement; return {focus: f && [f.kind, f.addr, f.pos], on_item: !!e && e.id === "walk-" + window.__skep.mirror.index()}; })()')
     ctx.drv.key('Enter')
     ctx.settle(); ctx.frames(2)
     whole = ctx.js('''(() => { const o = document.getElementById('overlay'), q = (s) => o.querySelector(s), e = document.activeElement, w = q('.face-text'), a = q('.arm'), c = q('.clause'), b = q('.clause [data-run]');
-      return {id: window.__skep.overlay().id, words_id: w ? w.dataset.string : null, words: w ? w.textContent : null, arm_id: a ? a.dataset.string : null, arm: a ? a.textContent : null,
+      return {id: window.__skep.overlay().id, kind: window.__skep.overlay().kind, words_id: w ? w.dataset.string : null, words: w ? w.textContent : null, arm_id: a ? a.dataset.string : null, arm: a ? a.textContent : null,
               clause_id: c ? c.dataset.string : null, clause: c ? c.textContent : null, claim: b ? b.dataset.claim : null, acts: o.querySelectorAll('[data-run]').length,
-              on_item: !!e && e.id === 'walk-' + window.__skep.mirror.index(), selection: window.__skep.selection()}; })()''')
-    r.check(at_run['focus'] == ['block', DOC, WINDOW[0]] and at_run['on_item'] and whole['id'] == 'face:withheld-run' and whole['words_id'] == 'B1.withheld-run' and whole['words'] == head
+              focus: !!e && o.contains(e) ? (e.dataset.run || (e.classList.contains('face-text') ? 'head' : e.tagName.toLowerCase())) : null, selection: window.__skep.selection()}; })()''')
+    r.check(at_run['focus'] == ['block', DOC, WINDOW[0]] and at_run['on_item'] and whole['id'] == 'withheld:' + WINDOW[2] and whole['kind'] == 'card' and whole['words_id'] == 'B1.withheld-run' and whole['words'] == head
             and whole['arm_id'] == arm_id and whole['arm'] == arm and whole['clause_id'] == clause_id and whole['clause'] == clause and whole['claim'] == decided.get('claim')
-            and whole['acts'] == (1 if clause_id == 'C-67.pointer' else 0) and whole['on_item'] and whole['selection'] is None,
-            '(f) Enter at the run — the walk\'s element, the platform\'s focus on its item — shows the run\'s face whole: B1-S7\'s head, the guest\'s arm (%s), and C-67\'s clause as the origin\'s edition claims decide it, the pointer its one act; the focus stays on the item and nothing is selected (D5 K-7, K-58)' % arm_id,
-            {'at_run': at_run, 'face': whole, 'decided': clause_id})
+            and whole['acts'] == (1 if clause_id == 'C-67.pointer' else 0) and whole['focus'] == ('follow' if clause_id == 'C-67.pointer' else 'head') and whole['selection'] is None,
+            '(f) Enter at the run — the walk\'s element, the platform\'s focus on its item — opens the run\'s whole wording\'s card: B1-S7\'s head, the guest\'s arm (%s), and C-67\'s clause as the origin\'s edition claims decide it, the pointer its one act; the card takes the focus on the pointer where it offers one, else on its head, and nothing is selected (D5 K-7; issue #288)' % arm_id,
+            {'at_run': at_run, 'card': whole, 'decided': clause_id})
     r.figures['run_face'] = whole
     ctx.esc()
     para = next((b for b in doc['blocks'] if b['kind'] == 'para'), None)

@@ -12,7 +12,8 @@
 // camera, the focus and its owner's state, the focus ring the canvas drew
 // (`view.ring`) and the bounds it is clamped to (`view.ringBounds`); the
 // registration drift of each mounted box (`driftSample`), the containment of
-// each article's rows and its corner (`overlapCheck`) and the visibility
+// each article's rows, its corner and the signs in its columns' edges
+// (`overlapCheck`) and the visibility
 // oracle (`visible`), for the layout checks; the beams' anchors beside their
 // spans' own rects and the edge a stroke leaves at (`beamAnchors`), the
 // labels the beams set at their bundles' ends (`beamLabels`), the tails the
@@ -24,7 +25,9 @@
 // position stands under a point (`fold`, `centreOf`, `posAt`), the measure in
 // force (`measure`), a document's corner as placed (`corner`) and what one
 // standing at its document's head covers (`headClear`), its label held
-// below the one line (`heldLabel`), its first line and the lead its label
+// below the one line (`heldLabel`), the signs standing in the columns'
+// edges — a withheld origin's statement among them — as the frame placed
+// them (`edgeSigns`), its first line and the lead its label
 // sets (`firstLine`), the size an address is set at in a label (`address`),
 // the places the line names (`named`) and
 // where a reading view frames a column (`frameOf`); the continuations' marks
@@ -103,7 +106,7 @@ import * as FOCUS from '../nav/focus.js';
 import * as SCENE from '../scene/scene.js';
 import * as DERIVE from '../model/derive.js';
 import { docBox, accountCell, boardCell, boardLabelCell, DOC_W, depthOfDoc } from '../plane/projection.js';
-import { STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, EDGE, EDGE_GAP, LINE_H, boundsOf, outlineRects, firstRow, edgeOf, leadOf } from '../plane/layout.js';
+import { STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, EDGE, EDGE_GAP, LINE_H, boundsOf, outlineRects, firstRow, edgeOf, leadOf, padded } from '../plane/layout.js';
 import { lodOf, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME } from '../plane/lod.js';
 import { RING, ADDRESS } from '../plane/register.js';
 import { pinned, lacking } from '../strings.js';
@@ -205,6 +208,12 @@ export function install(deps) {
    * none is named; a corner clipped by any box of the page is named with its
    * overflow; a corner reaching into another document's box — mounted or
    * only drawn on the canvas — is named with the box and the overlap in px.
+   * Each sign standing in a column's edge on the corner layer (FP-31) — a
+   * withheld origin's statement, a run's key, its others' count — is held
+   * inside its column's padded slot on screen, the outline's share it stands
+   * in, and one reaching past it is named with its overflow; any two of the
+   * signs, the corners and the labels held over the articles that meet are
+   * named with their overlap, where one of them is a sign.
    * The viewport is no part of containment: an article at em 30 is taller
    * than the window by design.
    */
@@ -244,7 +253,31 @@ export function install(deps) {
         if (w > 0.5 && h > 0.5) into.push({ addr: rec.d.addr, into: other, overlap_px: { w: r2(w), h: r2(h) } });
       }
     }
-    return { mounted: recs.length, intersecting_pairs: pairs, blocks_cut: cut, corners_missing: missing, corners_clipped: clipped, corners_into: into, worst_overflow_px: r2(Math.max(0, ...cut.map((c) => c.overflow_px), ...clipped.map((c) => c.overflow_px))) };
+    /** @type {Array<{addr: string, kind: string, pos: number, overflow_px: number}>} */
+    const signsOut = [];
+    const standing = LAYER.signsStanding();
+    for (const sg of standing) {
+      const rec = LAYER.mountedSet().get(sg.addr), c = rec ? rec.fold.columns[sg.column] : null;
+      if (!rec || !c) continue;
+      const box = docBox(sg.addr), q = padded(rec.fold, c), slot = { x: CAM.sx(box.x + q.x), y: CAM.sy(box.y + q.y), w: q.w * CAM.cam.scale, h: q.h * CAM.cam.scale };
+      const over = overflowOf(sg.rect, slot);
+      if (over > 0.5) signsOut.push({ addr: sg.addr, kind: sg.kind, pos: sg.pos, overflow_px: r2(over) });
+    }
+    /** @type {Array<{name: string, rect: Rect, sign: boolean}>} the signs, the corners and the held labels on the corner layer */
+    const layered = [
+      ...standing.map((sg) => ({ name: `${sg.kind} ${sg.addr} ${sg.pos}`, rect: sg.rect, sign: true })),
+      ...recs.flatMap((r) => { const c = LAYER.cornerOf(r.d.addr); return c ? [{ name: 'corner ' + r.d.addr, rect: rectOf(c), sign: false }] : []; }),
+      .../** @type {HTMLElement[]} */ ([...document.querySelectorAll('#corners .held')]).map((e) => ({ name: 'held ' + (e.dataset.held || ''), rect: rectOf(e), sign: false })),
+    ];
+    /** @type {Array<{a: string, b: string, overlap_px: {w: number, h: number}}>} */
+    const signsMeeting = [];
+    for (let i = 0; i < layered.length; i++) for (let j = i + 1; j < layered.length; j++) {
+      const a = layered[i], b = layered[j];
+      if (!a.sign && !b.sign) continue;
+      const w = Math.min(a.rect.x + a.rect.w, b.rect.x + b.rect.w) - Math.max(a.rect.x, b.rect.x), h = Math.min(a.rect.y + a.rect.h, b.rect.y + b.rect.h) - Math.max(a.rect.y, b.rect.y);
+      if (w > 0.5 && h > 0.5) signsMeeting.push({ a: a.name, b: b.name, overlap_px: { w: r2(w), h: r2(h) } });
+    }
+    return { mounted: recs.length, intersecting_pairs: pairs, blocks_cut: cut, corners_missing: missing, corners_clipped: clipped, corners_into: into, signs: standing.length, signs_out: signsOut, signs_meeting: signsMeeting, worst_overflow_px: r2(Math.max(0, ...cut.map((c) => c.overflow_px), ...clipped.map((c) => c.overflow_px))) };
   }
   /**
    * The visibility oracle: every element a selector matches, with its rect,
@@ -367,7 +400,7 @@ export function install(deps) {
    * column and the first line of the part it stands in, the character it
    * starts at, its top on screen, its height, and its height in its own line
    * boxes (its computed line height at the article's scale). A part the
-   * article draws as a withheld run's face is named so. Null where the
+   * article draws as a withheld run's gap is named so. Null where the
    * document's text has not arrived.
    * @param {string} addr
    */
@@ -767,6 +800,8 @@ export function install(deps) {
     headClear: (/** @type {string} */ addr) => LAYER.headClear(addr),
     /** a document's label T-LAYER held below the one line over its mounted article (FP-26): its parts' words, its rect on screen and whether it takes the pointer; null where none stands */
     heldLabel: (/** @type {string} */ addr) => LAYER.heldOf(addr),
+    /** the signs standing in the columns' edges on the corner layer as the last frame placed them (FP-31): each its kind — a withheld origin's statement, a run's key, its others' count — its document, its run, its origin, its column, its words and its rect on screen (T-LAYER's `signsStanding`) */
+    edgeSigns: () => LAYER.signsStanding(),
     /** the places the one line names (L-LINE's `named`; FP-26): its board, its account and its document by its box */
     named: () => LINE.named(),
     /** a document's first line as every surface naming it reads it (T-LAYER's `firstOf`, by T-ARTICLE's one rule), the client's words in its place bracketed, and the lead its label sets before its address (T-LAYER's `firstLine`): its first line with a draft's mark; '' where none is known */

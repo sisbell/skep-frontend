@@ -58,7 +58,9 @@
 // line, a held label standing while its bottom is in view; a held label
 // meeting one set before it — the held label of the region holding its place
 // — stands just below it. A label with no hold — the board's, a place the
-// line names, a count — keeps the rule above.
+// line names, a count — keeps the rule above. Signs stacked in one column's
+// edge — T-LAYER's and SC's, a withheld origin's statement among them — hold
+// by the same rule as a stack (`holdStack`; FP-31).
 // The faces (P-REG's FACE): each part is set in its face — the client's
 // where it names none, an address its own the identifier's, a first line the
 // reading face's — and a part's words may carry a stretch in another face
@@ -82,7 +84,7 @@
 // Figures: a line box 1.2 em; the stronger side of a crossfade at alpha 0.5
 // and above; a meeting more than half a px each way; a first line set where
 // two of its words fit (LEAD_WORDS).
-// Rules: FP-1, FP-2, FP-8, FP-10, FP-26.
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-26, FP-31.
 
 import { LABEL_MIN_PX, HOLD, FACE } from './register.js';
 
@@ -462,6 +464,45 @@ function linesOf(p, rows, fits) {
  * @returns {number}
  */
 export function holdTop(at, top, foot, h) { return Math.max(at, Math.min(Math.max(at, top), foot - h)); }
+
+/**
+ * Where signs stacked in one column's edge stand (see the head; FP-31): each
+ * at its own line's top, or at the hold where its line has risen above it,
+ * below the sign before it `gap` px apart and below anything already standing
+ * in the edge it would meet; then the stack pushed up by its place's foot
+ * rising, as one sign held is (`holdTop`), each kept above the sign after it
+ * and off what stands; never above its place's top, nor onto the sign before
+ * it or what stands — so where its place holds no room for the whole stack it
+ * runs past the foot, and no sign is hidden. One sign and nothing standing:
+ * `holdTop` with its line's top below the hold.
+ * @param {Array<{y: number, h: number}>} signs in their order down the edge: each its line's top on screen, and its height
+ * @param {number} at its place's top, on screen: no sign stands above it
+ * @param {number} top the hold: the height a sign whose line has risen above it stands at
+ * @param {number} foot the foot the stack never runs past where its place holds it
+ * @param {number} gap the room between two signs, px
+ * @param {Array<{y: number, h: number}>} [fixed] what already stands in the edge, which no sign meets
+ * @returns {number[]} each sign's top, in their order
+ */
+export function holdStack(signs, at, top, foot, gap, fixed = []) {
+  /** what stands that a sign at `y`, `h` tall, would meet */
+  const meets = (/** @type {number} */ y, /** @type {number} */ h) => fixed.find((f) => f.y < y + h && y < f.y + f.h);
+  /** a sign at `y` moved below what it would meet */
+  const below = (/** @type {number} */ y, /** @type {number} */ h) => { for (let f = meets(y, h); f; f = meets(y, h)) y = f.y + f.h + gap; return y; };
+  /** @type {number[]} */
+  const ys = [];
+  let next = -Infinity;
+  for (const s of signs) { const y = below(Math.max(s.y, top, next), s.h); ys.push(y); next = y + s.h + gap; }
+  let limit = foot;
+  for (let i = signs.length - 1; i >= 0; i--) {
+    const h = signs[i].h;
+    let y = Math.min(ys[i], limit - h);
+    for (let f = meets(y, h); f; f = meets(y, h)) y = f.y - gap - h;
+    ys[i] = y; limit = y - gap;
+  }
+  next = at;
+  for (let i = 0; i < signs.length; i++) { ys[i] = below(Math.max(ys[i], next), signs[i].h); next = ys[i] + signs[i].h + gap; }
+  return ys;
+}
 
 /**
  * The room across a held line (see the head) in a place drawn as rects

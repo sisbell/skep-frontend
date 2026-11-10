@@ -8,14 +8,13 @@
 // lines, which are laid out once (FP-12). The faces (P-REG's FACE): the
 // document's own characters are the reading face's, and every word the
 // article sets of its own the client's — the head, a hairline's label, C-33's
-// mark, a symbol, a sign in the edge, a record's rendering, a withheld run's
-// face, an item not rendered, the scene-offer — save an address or a
-// fingerprint, in the identifier's face wherever it stands, inside a sentence
-// as well (`.id`; ST's `tHTML`); inside a run the client's words take the
-// run's size. Where
-// a fit is judged — what a gap holds, how many lines a sign takes in the
-// edge, where a label is cut — the words are measured in their faces as the
-// view measures them (`measure`), never counted. The byline (`bylineOf`;
+// mark, a symbol, a sign in the edge, a record's rendering, a withheld
+// origin's statement, an item not rendered, the scene-offer — save an
+// address or a fingerprint, in the identifier's face wherever it stands,
+// inside a sentence as well (`.id`; ST's `tHTML`); inside a run the client's
+// words take the run's size. Where a fit is judged — what a gap holds, where
+// a label is cut — the words are measured in their faces as the view
+// measures them (`measure`), never counted. The byline (`bylineOf`;
 // foundations §2.1; FP-34): its owner's address, then its slots, each a box
 // of its own width whatever it shows — the device label's, LABEL_CH figures
 // of the client's face, and on a byline not the reader's own the fingerprint
@@ -36,9 +35,9 @@
 // whole at the first run of that origin, compact after) and C-33's mark on a
 // draft-origin run in a published document, set once per run in a block, at
 // its first stretch, however marks and symbols cut it (foundations §2.1);
-// the others' count in its column's edge, level with the block's first line
-// and never inside the text, so it sets no line (`edgeStyle`; A-254;
-// FP-26); and the symbols the reveal asked for, each at its span
+// a typed line's others' count in its column's edge, level with the block's
+// first line and never inside the text, so it sets no line (`edgeStyle`;
+// A-254; FP-26); and the symbols the reveal asked for, each at its span
 // (foundations §2.1; B1-S4): right after the last word its span touches, in
 // the last typed line its drawn stretches touch (`standOf`). Every link is
 // marked, and its symbol set, at the stretches LK says its end is drawn on
@@ -46,42 +45,46 @@
 // each mark and symbol carrying the ends it draws by their links and their
 // keys, so a click opens the card of the end clicked (APP-INPUT). The ends
 // drawn at a withheld run merge into one symbol at the start of its gap's
-// first line, before the notice's words, at every stage of the reveal — the
-// gap has no text to mark — in the one mark their links merge into, a count
-// after its ⟡ where it stands for two or more (`runSymHTML`), no stretch of
-// the gap marked, so the gap still reads as empty (FP-30); the others' links
-// drawn there are counted in its column's edge, below the face's compact
-// mark where that stands there. A symbol is lit — drawn heavier while an
-// arrival stands — where every link it stands for is lit (`symbolLit`),
-// marked in place by T-LAYER and never made into the article (FP-30); it is
-// titled with its type and with what its far end's text holds of its
-// passage where that is not all of it in one piece (the view's `says`;
+// first line, before its key, at every stage of the reveal — the gap has no
+// text to mark — in the one mark their links merge into, a count after its ⟡
+// where it stands for two or more (`runSymHTML`), no stretch of the gap
+// marked, so the gap still reads as empty (FP-30). A symbol is lit — drawn
+// heavier while an arrival stands — where every link it stands for is lit
+// (`symbolLit`), marked in place by T-LAYER and never made into the article
+// (FP-30); it is titled with its type and with what its far end's text holds
+// of its passage where that is not all of it in one piece (the view's `says`;
 // foundations §2.3; FP-21).
 // The withheld run is a gap occupying its positions, as tall as its bars,
-// each position one advance (F2.1-i), naming the owner of its run's origin,
-// whoever owns the document windowing it (R56; B1-S7) — its face in it where
-// the gap holds it as measured, else compact in its column's edge, so no face
-// reflows the text (`gapHolds`; foundations §2.1; FP-26) — and, while a read
-// its clause waits on is out, its ground alone, the symbol its ends merge
-// into in it, its face and its edge's signs standing in the frame every such
-// read has answered in, so no face stands with a part missing (FP-33). An
-// item this client cannot show is a gap of its positions too, its words in
-// it where the gap holds them, else in its column's edge (`unshownHTML`;
-// FP-26). The face: the entitlement arm for that owner and
-// this reader (`entitlementArm`; PUB-5.121, PUB-5.97) and C-67's clause
-// beneath, decided over the origin's whole admitted-claim set
-// (`editionClause`; PUB-5.124, RES-164), undecided (`CLAUSE_READING`)
-// while a read it is decided from is out: the pointer where an admitted
-// claim's edition holds bytes the reader can reach, naming the one claim it
-// follows (PUB-3.107; RES-152) — on the plane a control whose act is a LEAP
-// to that claim's home, the edition (B1-S7 → S6; APP-INPUT), in a reading
-// scene's pane a line, as every mark there is (SC) — the quoting sibling
-// where every admitted claim quotes the draft, the unread place where a read
-// they are decided from failed (FP-33), and nothing — the arm's own copy
-// alone — where none is admitted or the board refused their lookup as
-// withheld from the reader. The placeholder
-// is one record (`placeholderOf`), which the ARIA mirror's item at the run
-// (N-WALK) and the run's face whole (O-FACES's `withheldRun`) read too, so
+// each position one advance (F2.1-i), showing its ground on every line and
+// no face (foundations §2.1): the symbol its ends merge into, then its
+// origin's key — the origin's address, in the identifier's face — where its
+// first line holds the key as measured, else nothing, so no word reflows the
+// text (`gapHolds`; FP-26); while a read its clause waits on is out, its
+// ground and its symbol alone, its key standing in the frame every such read
+// has answered in (FP-33). On the plane the key is a control whose act opens
+// the whole wording's card (APP-INPUT; O-FACES's `withheldRun`); in a reading
+// scene's pane a line (SC). Its origin's words stand once per origin in view,
+// in a column's edge on the screen-sized layer (T-LAYER, SC), as the
+// statement made here (`edgeStatementHTML`): the face compact — its key with
+// the mark that opens the card — C-67's pointer where an admitted claim's
+// edition holds bytes the reader can reach, naming the one claim it follows
+// (PUB-3.107; RES-152), on the plane a control whose act is a LEAP to that
+// claim's home, the edition (B1-S7 → S6; APP-INPUT), and the kept clause
+// while the origin's edition claims stand held as they are read again. The
+// whole wording, the card's: the head naming the owner of the run's origin,
+// whoever owns the document windowing it (R56; B1-S7), the entitlement arm
+// for that owner and this reader (`entitlementArm`; PUB-5.121, PUB-5.97) and
+// C-67's clause beneath, decided over the origin's whole admitted-claim set
+// (`editionClause`; PUB-5.124, RES-164), undecided (`CLAUSE_READING`) while a
+// read it is decided from is out: the pointer, the quoting sibling where
+// every admitted claim quotes the draft, the unread place where a read they
+// are decided from failed (FP-33), and nothing — the arm's own copy alone —
+// where none is admitted or the board refused their lookup as withheld from
+// the reader. An item this client cannot show is a gap of its positions too,
+// its words in it where the gap holds them, else in its column's edge
+// (`unshownHTML`; FP-26). The placeholder is one record (`placeholderOf`),
+// which the statement, the ARIA mirror's item at the run and its origin's
+// description (N-WALK) and the card (O-FACES's `withheldRun`) read too, so
 // the run a sighted reader sees and the one a screen reader hears never part
 // (R94). A record atom renders as the record it is (`recordOf`; D13). The
 // scene-mode variant (the view's `scene`), a reading scene's pane's article:
@@ -162,7 +165,7 @@
 // face wide, the fingerprint cue's the cue's own CUE_CH characters of the
 // identifier's.
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-21, FP-22, FP-23, FP-24, FP-26,
-// FP-30, FP-33, FP-34.
+// FP-30, FP-31, FP-33, FP-34.
 
 import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint } from '../util.js';
 import { t, tHTML, plural, bracketed, withheldLine } from '../strings.js';
@@ -214,7 +217,7 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {KeptState | null} [kept] a draft's kept state as the model holds it (M-REC's `keptOf`): the word its corner's slot shows; absent or null, no state is set and the slot stands empty
  * @property {boolean} [keptOpen] the kept word's statement stands open in the corner, on its act (T-LAYER's `openStatement`, SC's); absent, closed
  * @property {number} [cpl] the measure the article's column is set at, in characters of its face (P-CAM's measure in force on the plane, the full measure in a pane): what a withheld run's gap holds is read at it (`gapHolds`); absent, the full measure
- * @property {Measure} measure a string's width in a face as the platform sets it (T-LAYER's `widthOf`): every fit the article judges — what a gap holds, a sign's lines in the edge, a label's cut, a slot's box — reads it
+ * @property {Measure} measure a string's width in a face as the platform sets it (T-LAYER's `widthOf`): every fit the article judges — what a gap holds, a label's cut, a slot's box — reads it
  */
 
 /**
@@ -362,46 +365,20 @@ const labelOf = (/** @type {Origin} */ o, /** @type {Opening} */ at) => (at.whol
 /** a run's hairline label as markup (`labelOf`): its origin's address in the identifier's face */
 const labelHTML = (/** @type {Origin} */ o, /** @type {Opening} */ at) => esc(t('L.origin-mark')) + (at.whole ? ` <span class="${ID}">${esc(o.doc)}</span>` : '');
 
-/**
- * A string's words as runs of one face each (P-REG's FACE): the value of
- * each token `faces` names in that face, the rest the client's.
- * @param {string} id
- * @param {Record<string, string | number>} values
- * @param {Record<string, Face>} faces
- * @returns {Faced[]}
- */
-function facedIn(id, values, faces) {
-  const text = t(id);
-  /** @type {Faced[]} */
-  const out = [];
-  let at = 0;
-  for (const m of text.matchAll(/⟨([^⟩]+)⟩/g)) {
-    const i = /** @type {number} */ (m.index);
-    if (i > at) out.push({ text: text.slice(at, i), face: 'client' });
-    out.push({ text: m[1] in values ? String(values[m[1]]) : m[0], face: faces[m[1]] || 'client' });
-    at = i + m[0].length;
-  }
-  if (at < text.length) out.push({ text: text.slice(at), face: 'client' });
-  return out;
-}
-
 /** a string's words as markup (ST's `tHTML`), each token `faces` sets in the identifier's face in its class */
 const htmlIn = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ values, /** @type {Record<string, Face>} */ faces) =>
   tHTML(id, values, Object.fromEntries(Object.entries(faces).filter(([, f]) => f === 'ident').map(([k]) => [k, ID])));
 
 /**
  * The lines words take across a width (FP-26): wrapped at their spaces, each
- * word as wide as its runs set in their faces (`measure`), a box before them
- * — a symbol — taking `lead` of the first line, a line free to break after
- * it; never fewer lines than the platform sets them on, which breaks at a
- * space at the least.
+ * word as wide as it is set in its face (`measure`); never fewer lines than
+ * the platform sets them on, which breaks at a space at the least.
  * @param {Faced[]} runs
  * @param {number} width the room across, in em of the words' size
  * @param {Measure} measure
- * @param {number} [lead] the box before the words, in em of their size
  * @returns {number}
  */
-function linesAt(runs, width, measure, lead = 0) {
+function linesAt(runs, width, measure) {
   /** @type {Faced[][]} */
   const words = [];
   let word = /** @type {Faced[]} */ ([]);
@@ -412,11 +389,10 @@ function linesAt(runs, width, measure, lead = 0) {
   if (word.length) words.push(word);
   const space = measure(' ', 'client');
   let lines = 0, used = 0;
-  const place = (/** @type {number} */ w, /** @type {number} */ gap) => {
-    if (!lines) { lines = 1; used = w; } else if (used + gap + w <= width + 1e-9) used += gap + w; else { lines++; used = w; }
-  };
-  if (lead > 0) place(lead, 0);
-  words.forEach((w, i) => place(w.reduce((n, x) => n + measure(x.text, x.face), 0), lead > 0 && i === 0 ? 0 : space));
+  for (const w of words) {
+    const wide = w.reduce((n, x) => n + measure(x.text, x.face), 0);
+    if (!lines) { lines = 1; used = wide; } else if (used + space + wide <= width + 1e-9) used += space + wide; else { lines++; used = wide; }
+  }
   return lines;
 }
 
@@ -427,42 +403,24 @@ function linesAt(runs, width, measure, lead = 0) {
  * so it stands level with it — never inside the text, so it sets no line
  * (A-254). Its sizes are in its own em, the count's of the block's,
  * read from P-LAY's body em; the style sets it on the text's side the edge
- * stands on (the plane's right; a reading scene's pane's inner side). A sign
- * stacked below another beside the same block — a withheld run's count below
- * its face's compact mark — stands the lines that sign takes below the
- * block's first line (`edgeLines`).
+ * stands on (the plane's right; a reading scene's pane's inner side).
  * @param {number} k the size of the block it stands beside, in the body's em
- * @param {number} [below] the edge's lines above it, of the signs before it beside the block
  * @returns {string} its inline style
  */
-function edgeStyle(k, below = 0) {
+function edgeStyle(k) {
   const s = MEASURE.count * k;
-  return `--edge-in:${EDGE_GAP / s}em;--edge-w:${(EDGE - EDGE_GAP) / s}em;line-height:${(k * LINE_H) / s}` + (below ? `;top:${(below * k * LINE_H) / s}em` : '');
+  return `--edge-in:${EDGE_GAP / s}em;--edge-w:${(EDGE - EDGE_GAP) / s}em;line-height:${(k * LINE_H) / s}`;
 }
 
 /**
- * The lines a sign's words take in its column's edge, at the size of the
- * block it stands beside (`edgeStyle`), wrapped across the edge's width as
- * measured in their faces (`linesAt`).
- * @param {Faced[]} runs
- * @param {number} k the size of the block it stands beside, in the body's em
- * @param {Measure} measure
- */
-const edgeLines = (runs, k, measure) => linesAt(runs, (EDGE - EDGE_GAP) / (MEASURE.count * k), measure);
-
-/**
- * The others' count in a block's column's edge: "+⟨n⟩ others", or the social
- * types' one unnumbered mark where none is counted; nothing where neither
- * stands.
+ * The others' count in a typed line's column's edge: "+⟨n⟩ others", or the
+ * social types' one unnumbered mark where none is counted; nothing where
+ * neither stands.
  * @param {{n: number, social: boolean}} c
  * @param {number} k the block's size, in the body's em
- * @param {number} [below] the edge's lines above it (`edgeStyle`)
  */
-const countHTML = (c, k, below = 0) => (c.n > 0 ? `<span class="others edge" data-count="${c.n}" style="${edgeStyle(k, below)}">${esc(t('F.others-count', { n: c.n }))}</span>`
-  : c.social ? `<span class="others edge social" data-count="0" style="${edgeStyle(k, below)}">◦</span>` : '');
-
-/** the others' count's words, as `countHTML` sets them: what the edge's lines below it are counted from; none where it stands for nothing */
-const countRuns = (/** @type {{n: number, social: boolean}} */ c) => /** @type {Faced[]} */ (c.n > 0 ? [{ text: t('F.others-count', { n: c.n }), face: 'client' }] : c.social ? [{ text: '◦', face: 'client' }] : []);
+const countHTML = (c, k) => (c.n > 0 ? `<span class="others edge" data-count="${c.n}" style="${edgeStyle(k)}">${esc(t('F.others-count', { n: c.n }))}</span>`
+  : c.social ? `<span class="others edge social" data-count="0" style="${edgeStyle(k)}">◦</span>` : '');
 
 /** the stretches of a drawn link's end that meet a block */
 const runsIn = (/** @type {Shown} */ m, /** @type {{pos: number, width: number}} */ b) => m.runs.filter((r) => touches(b, r));
@@ -513,7 +471,7 @@ export const symbolLit = (links, lit) => links.length > 0 && links.every((l) => 
  * @property {number} blank a typed line's: the empty lines typed after it, each a body line box below it (`blankOf`); 0 on every other block
  * @property {Seg[]} segs a typed line's stretches, the symbols standing in it among them
  * @property {Shown[]} ends a withheld run's: the ends drawn at it (LK's `Shown.run`), in the order LK drew them, which the one symbol at the start of its gap stands for
- * @property {{n: number, social: boolean}} count the others' count at a typed line or a withheld run
+ * @property {{n: number, social: boolean}} count the others' count at a typed line; none at any other block, a withheld run's standing on the screen-sized layer (T-LAYER)
  * @property {Rec | null} rec a record atom's record
  */
 
@@ -853,25 +811,12 @@ const unread = () => /** @type {Unread} */ ({ id: 'L.clause.unread', text: t('L.
 
 /**
  * @typedef {Object} Placeholder — what R56's placeholder at a withheld run shows a reader: existence and owner, never bytes (B1-S7)
+ * @property {string} origin the run's origin document: the key every run of it carries (see the head)
  * @property {string} owner the owner of the run's origin, whoever owns the document windowing the run
  * @property {string} head B1-S7's head: that owner, the run's width and its origin
- * @property {Record<string, string | number>} vals the values B1-S7's head is filled with, by token: what its words and its markup are made of (`headHTML`, `headRuns`)
  * @property {{id: string, text: string}} arm the entitlement arm for that owner and this reader (`entitlementArm`)
  * @property {Decided} clause C-67's clause beneath the arm (`editionClause`), the pointer naming the claim it follows; null where nothing renders in its place; `CLAUSE_READING` while a read it is decided from is out
  */
-
-/** the faces of B1-S7's head's tokens: the owner, the account and the origin addresses */
-const HEAD_FACES = /** @type {Record<string, Face>} */ ({ owner: 'ident', account: 'ident', origin: 'ident' });
-/** a placeholder's head as markup: its addresses in the identifier's face */
-const headHTML = (/** @type {Placeholder} */ p) => htmlIn('B1.withheld-run', p.vals, HEAD_FACES);
-/** a placeholder's head as runs in their faces, as it is measured */
-const headRuns = (/** @type {Placeholder} */ p) => facedIn('B1.withheld-run', p.vals, HEAD_FACES);
-/** an arm's words as runs in their faces, as it is measured: the owner R56's arm names in the identifier's */
-const armRuns = (/** @type {Placeholder} */ p) => facedIn(p.arm.id, { owner: p.owner }, { owner: 'ident' });
-/** an arm's words as markup: the owner R56's arm names in the identifier's face */
-const armHTML = (/** @type {Placeholder} */ p) => htmlIn(p.arm.id, { owner: p.owner }, { owner: 'ident' });
-/** a clause's words as runs in their faces: the claimant QUOTING names in the identifier's */
-const clauseRuns = (/** @type {Clause} */ c) => (c.id === 'C-67.quoting' ? facedIn(c.id, { claimant: c.claimant }, { claimant: 'ident' }) : [{ text: c.text, face: /** @type {Face} */ ('client') }]);
 
 /**
  * The R56 placeholder at a withheld run, as one record: existence and owner,
@@ -881,11 +826,11 @@ const clauseRuns = (/** @type {Clause} */ c) => (c.id === 'C-67.quoting' ? faced
  * the entitlement arm (`entitlementArm`) the one for it, then C-67's clause
  * as the origin's edition claims decide it (`clauseOf`), or nothing in its
  * place (R56) — `CLAUSE_READING` while a read it is decided from is out,
- * and none of the face stands then (FP-33). The plane's and a pane's
- * placeholder
- * (`withheldBlockHTML`), the ARIA mirror's item at the run (N-WALK) and the
- * run's face whole (O-FACES's `withheldRun`, D5 K-7) are all made from it:
- * R94's one record, never a second rendering that can drift.
+ * and none of it stands then (FP-33). The gap's key and the origin's
+ * statement in its column's edge (`withheldBlockHTML`, `edgeStatementHTML`),
+ * the ARIA mirror's item at the run and its origin's description (N-WALK)
+ * and the whole wording's card (O-FACES's `withheldRun`, D5 K-7) are all made
+ * from it: R94's one record, never a second rendering that can drift.
  * @param {Block} b the withheld run
  * @param {Reader} reader who reads (M-REC's `reader`)
  * @param {(doc: string) => string} originOwner the owner account of an origin document, by the one owner rule (T-LAYER's `originOwner`)
@@ -893,37 +838,29 @@ const clauseRuns = (/** @type {Clause} */ c) => (c.id === 'C-67.quoting' ? faced
  * @returns {Placeholder}
  */
 export function placeholderOf(b, reader, originOwner, clauseOf) {
-  const owner = b.origin ? originOwner(b.origin) : '';
-  const vals = { owner, account: owner, width: b.width, origin: b.origin || '' };
+  const origin = b.origin || '', owner = origin ? originOwner(origin) : '';
   return {
+    origin,
     owner,
-    head: t('B1.withheld-run', vals),
-    vals,
+    head: t('B1.withheld-run', { owner, account: owner, width: b.width, origin }),
     arm: entitlementArm(reader, owner),
-    clause: b.origin ? clauseOf(b.origin) : null,
+    clause: origin ? clauseOf(origin) : null,
   };
 }
 
 /**
- * @typedef {'reading' | 'face' | 'head' | 'owner' | 'mark'} GapHolds what a withheld run's gap holds (`gapHolds`): its ground alone, its clause not decided yet; its face whole; its head; the owner of its origin; the origin's mark
+ * @typedef {'reading' | 'key' | 'edge'} GapHolds what a withheld run's gap holds besides its ground and the symbol its ends merge into (`gapHolds`): nothing, its clause not decided yet; its origin's key; nothing, its key too wide for it, standing in its column's edge
  */
 
 /**
- * What a withheld run's gap holds at a measure (foundations §2.1; FP-26), so
- * the gap keeps encoding the width and no face reflows the text: while its
+ * What a withheld run's gap holds at a measure (see the head; FP-26), so the
+ * gap keeps encoding the width and no word reflows the text: while its
  * clause is not decided (`CLAUSE_READING`), its ground alone (FP-33); else
- * the run's face whole — its head, the arm and the clause beneath it, each
- * at the run's size, the room above the arm and the clause — where the gap's
- * full lines (P-LAY's `gapOf`) hold it, its words wrapped across the measure
- * as they are set in their faces (`linesAt`); else its head where they hold
- * that; else
- * its origin's owner, where a line of the gap holds the address; else the
- * origin's mark — each measured with the symbol the ends drawn at the run
- * merge into standing first in its first line (`runSymbol`; FP-30), so a
- * symbol there steps the notice to a smaller form and is never dropped.
- * Whatever it holds, the gap stands on the run's bars, and where its clause
- * is decided and its face is not in it the face stands compact in the
- * column's edge (`withheldBlockHTML`).
+ * its origin's key, the origin's address in the identifier's face at the
+ * run's size, where the gap's first line (P-LAY's `gapOf`) holds it as it is
+ * set, after the symbol the ends drawn at the run merge into (`runSymbol`;
+ * FP-30), which a key too wide never displaces; else nothing, the key
+ * standing in the column's edge at the run's first line in view (T-LAYER).
  * @param {Placeholder} p
  * @param {number} width the run's positions
  * @param {number} cpl the measure
@@ -933,65 +870,109 @@ export function placeholderOf(b, reader, originOwner, clauseOf) {
  */
 export function gapHolds(p, width, cpl, measure, ends = 0) {
   if (p.clause === CLAUSE_READING) return 'reading';
-  const gap = gapOf(width, cpl), full = gap.filter((w) => w >= cpl).length, room = cpl * CHAR_W;
-  const lead = ends ? boxWidth(runSymbol(1, ends)) * CHAR_W : 0, head = linesAt(headRuns(p), room, measure, lead);
-  const below = (/** @type {Faced[]} */ words) => MEASURE.faceGap + linesAt(words, room, measure) * LINE_H;
-  const deep = head * LINE_H + below(armRuns(p)) + (p.clause ? below(clauseRuns(p.clause)) : 0);
-  if (deep <= full * LINE_H + 1e-9) return 'face';
-  if (head <= full) return 'head';
-  if (lead + measure(p.owner, 'ident') <= (full ? cpl : gap[0]) * CHAR_W + 1e-9) return 'owner';
-  return 'mark';
+  const lead = ends ? boxWidth(runSymbol(1, ends)) * CHAR_W : 0;
+  return lead + measure(p.origin, 'ident') <= gapOf(width, cpl)[0] * CHAR_W + 1e-9 ? 'key' : 'edge';
 }
 
 /**
  * The gap occupying a withheld run (`placeholderOf`; F2.1-i): as tall as its
  * bars, its ground drawn over the run's own lines — the last its remainder
- * (`--wh-last`) — holding what `gapHolds` says it holds: while its clause is
- * not decided, nothing but the symbol its ends merge into, its face and every
- * sign of it in the column's edge — the others' count among them — standing
- * once each read the clause waits on has answered, so none stands with a part
- * missing and no sign in the edge moves as they land (FP-33); else its face
- * whole, its head, arm and, where one renders, clause (`clauseHTML`); else
- * its head, its origin's owner or the origin's mark, the face compact in the
- * column's edge level with the run's first line — the owner with a mark that
- * opens it whole (foundations §2.1), its act the run's face whole on the
- * plane (APP-INPUT; O-FACES's `withheldRun`), a line in a reading scene's
- * pane, where nothing is acted on (SC). Every address it names is set in the
- * identifier's face. The ends drawn at the run (`Part.ends`;
- * FP-30) stand as the one symbol they merge into, first in the gap's first
- * line, before whatever it holds (`runSymHTML`), and the others' links drawn
- * there are counted in the column's edge, below the face's compact mark where
- * that stands there, as many of the edge's lines down as the mark's words
- * take, measured (`countHTML`, `edgeLines`). The first run of its origin in
- * the document carries the origin's kept sign in the edge below those, empty,
- * which T-LAYER fills in place while the origin's edition claims stand held
- * as they are read again (`data-kept`; T-LAYER's `claimsKeptIn`), so the kept
- * part says so once at its own sign and sets no line (FP-23, FP-31). The
- * owner it names is carried (`data-owner`) for C-39's face at the run, which
- * names the same.
+ * (`--wh-last`) — the symbol the ends drawn at the run merge into first in its
+ * first line (`Part.ends`, `runSymHTML`; FP-30), then what `gapHolds` says it
+ * holds: nothing while its clause is not decided, so its key and its
+ * origin's statement stand together once each read the clause waits on has
+ * answered (FP-33); else its origin's key where its first line holds it — a
+ * control opening the whole wording's card on the plane (APP-INPUT; O-FACES's
+ * `withheldRun`), a line in a reading scene's pane, where nothing is acted on
+ * (SC) — else nothing. No face and no sign of the run stands in the gap or in
+ * the article's edge: its origin's statement, its others' count and a key too
+ * wide for the gap stand on the screen-sized layer (T-LAYER, SC). The owner
+ * it names is carried (`data-owner`) for C-39's face at the run, which names
+ * the same.
  * @param {Block} b the withheld run
- * @param {Doc} d
  * @param {ArticleView} v
- * @param {{ends: Shown[], count: {n: number, social: boolean}}} [at] the ends drawn at the run, and the others' count there
+ * @param {{ends: Shown[]}} [at] the ends drawn at the run
  */
-export function withheldBlockHTML(b, d, v, at = { ends: [], count: { n: 0, social: false } }) {
+export function withheldBlockHTML(b, v, at = { ends: [] }) {
   const p = placeholderOf(b, v.reader, v.originOwner, v.clauseOf);
   const cpl = v.cpl ?? MEASURE_CPL, gap = gapOf(b.width, cpl), holds = gapHolds(p, b.width, cpl, v.measure, at.ends.length);
   const [one, ...more] = at.ends;
   const sym = one ? runSymHTML([one, ...more], v) : '';
-  const open = `<span class="withheld" data-pos="${b.pos}" data-width="${b.width}" data-withheld="1" data-origin="${esc(b.origin || '')}" data-owner="${esc(p.owner)}" data-holds="${holds}" style="height:${gap.length * LINE_H}em;--wh-last:${gap[gap.length - 1]}">`;
-  if (p.clause === CLAUSE_READING) return `${open}${sym}</span>`;
-  const inside = holds === 'face' ? `<span class="wh-head">${sym}${headHTML(p)}</span><span class="arm">${armHTML(p)}</span>${clauseHTML(p.clause, v.scene)}`
-    : holds === 'head' ? `<span class="wh-head">${sym}${headHTML(p)}</span>`
-    : holds === 'owner' ? `<span class="wh-owner">${sym}<span class="${ID}">${esc(p.owner)}</span></span>`
-    : `<span class="wh-origin">${sym}${esc(t('L.origin-mark'))}</span>`;
-  const marked = /** @type {Record<string, Face>} */ ({ owner: 'ident' });
-  const mark = holds === 'face' ? '' : `<span class="wh-mark edge" data-mark="withheld"${control(v.scene)} style="${edgeStyle(1)}">${htmlIn('L.withheld.mark', { owner: p.owner }, marked)}</span>`;
-  const above = mark ? edgeLines(facedIn('L.withheld.mark', { owner: p.owner }, marked), 1, v.measure) : 0;
-  const count = countHTML(at.count, 1, above);
-  const first = !!b.origin && d.blocks.find((x) => x.kind === 'withheld' && x.origin === b.origin)?.pos === b.pos;
-  const kept = first ? `<span class="wh-kept edge" data-kept="${esc(b.origin || '')}" style="${edgeStyle(1, above + (count ? edgeLines(countRuns(at.count), 1, v.measure) : 0))}"></span>` : '';
-  return `${open}${mark}${count}${kept}${inside}</span>`;
+  const key = holds === 'key' ? `<span class="wh-key ${ID}" data-key="${esc(p.origin)}"${control(v.scene)}>${esc(p.origin)}</span>` : '';
+  return `<span class="withheld" data-pos="${b.pos}" data-width="${b.width}" data-withheld="1" data-origin="${esc(p.origin)}" data-owner="${esc(p.owner)}" data-holds="${holds}" style="height:${gap.length * LINE_H}em;--wh-last:${gap[gap.length - 1]}">${sym}${key}</span>`;
+}
+
+/**
+ * @typedef {Object} RunInView — a withheld run a line of which meets the view, as its column's edge reads it (`edgeSignsFor`)
+ * @property {Block} b the run's block
+ * @property {string} id its identity: its origin and the permanent address of its first byte, through the image its article was made from; its origin and its position where that image covers none of it (FP-38)
+ * @property {GapHolds} holds what its gap holds (`gapHolds`), decided as its article was made
+ * @property {{n: number, social: boolean}} count the others' count at it
+ */
+
+/**
+ * @typedef {Object} EdgeSignFor — a sign a column's edge stands for a withheld run in view (`edgeSignsFor`)
+ * @property {'statement' | 'key' | 'count'} kind its origin's statement (`edgeStatementHTML`); its key too wide for its gap; its others' count
+ * @property {RunInView} run the run it stands beside
+ */
+
+/**
+ * The signs the columns' edges stand for the withheld runs in view (see the
+ * head; FP-31): for each origin among the runs whose clause is decided, its
+ * statement beside the run it stood beside — held by that run's identity,
+ * never its position (FP-38) — while that run is in view, else beside the
+ * origin's first run in view in reading order; and for each such run its key,
+ * where its gap does not hold it and its statement stands beside another run
+ * (the statement is headed by the key), and its others' count where any
+ * stands. The one rule the plane's edges and a reading scene's panes stand
+ * their signs by (T-LAYER, SC).
+ * @param {RunInView[]} runs the withheld runs a line of which meets the view, in reading order
+ * @param {ReadonlyMap<string, string>} was the run each origin's statement stood beside, by origin: its identity
+ * @returns {{signs: EdgeSignFor[], beside: Map<string, string>}} the signs, each origin's statement first then its runs' signs in reading order; and the run each origin's statement stands beside now
+ */
+export function edgeSignsFor(runs, was) {
+  /** @type {EdgeSignFor[]} */
+  const signs = [];
+  /** @type {Map<string, string>} */
+  const beside = new Map();
+  const decided = runs.filter((r) => r.holds !== 'reading' && r.b.origin);
+  for (const origin of new Set(decided.map((r) => /** @type {string} */ (r.b.origin)))) {
+    const of = decided.filter((r) => r.b.origin === origin), anchor = of.find((r) => r.id === was.get(origin)) || of[0];
+    beside.set(origin, anchor.id);
+    signs.push({ kind: 'statement', run: anchor });
+    for (const r of of) {
+      if (r.holds === 'edge' && r !== anchor) signs.push({ kind: 'key', run: r });
+      if (r.count.n > 0 || r.count.social) signs.push({ kind: 'count', run: r });
+    }
+  }
+  return { signs, beside };
+}
+
+/** a withheld run's key as a sign in its column's edge (`edgeSignsFor`): its origin's address, on the plane a control opening the whole wording's card, in a reading scene's pane a line */
+export const edgeKeyHTML = (/** @type {string} */ origin, /** @type {boolean} */ scene) => `<span class="wh-key ${ID}"${control(scene)}>${esc(origin)}</span>`;
+
+/** a withheld run's others' count as a sign in its column's edge (`edgeSignsFor`): "+⟨n⟩ others", or the social types' one unnumbered mark */
+export const edgeCountHTML = (/** @type {{n: number, social: boolean}} */ c) => (c.n > 0 ? esc(t('F.others-count', { n: c.n })) : '◦');
+
+/**
+ * A withheld origin's statement in its column's edge (see the head; FP-26,
+ * FP-31): the face compact, its key heading it — the origin's address, with
+ * the mark that opens the whole wording's card — then C-67's pointer where an
+ * admitted edition claim's edition holds bytes the reader can reach, and,
+ * while the origin's edition claims stand held as they are read again, the
+ * clause they carry (T-LAYER's `claimsKeptIn`; FP-23). On the plane the mark
+ * and the pointer are controls (`control`), in a reading scene's pane lines.
+ * Nothing while the clause is not decided (FP-33).
+ * @param {Placeholder} p the placeholder of a run of the origin
+ * @param {{id: string, text: string} | null} kept the clause the origin's edition claims carry while they stand held; null where they do not
+ * @param {boolean} scene the scene-mode variant
+ * @returns {string}
+ */
+export function edgeStatementHTML(p, kept, scene) {
+  const c = p.clause;
+  if (c === CLAUSE_READING) return '';
+  const mark = `<span class="wh-mark"${control(scene)}>${htmlIn('L.withheld.mark', { origin: p.origin }, { origin: 'ident' })}</span>`;
+  return mark + (c && c.id === 'C-67.pointer' ? clauseHTML(c, scene) : '') + keptHTML(kept);
 }
 
 /**
@@ -1015,21 +996,17 @@ function unshownHTML(b, v, cls, at) {
 }
 
 /**
- * C-67's clause beneath a withheld run's arm, where one renders. On the plane
- * the pointer is a control (`control`) carrying the claim it follows and that
+ * C-67's pointer in a withheld origin's statement (`edgeStatementHTML`). On
+ * the plane it is a control (`control`) carrying the claim it follows and that
  * claim's home (`data-claim`, `data-home`): its act is the LEAP to the home,
  * the edition, that APP-INPUT makes (B1-S7 → S6). In a reading scene's pane,
- * where nothing acts on a mark (SC), it is a line; the QUOTING sibling, its
- * claimant in the identifier's face, and the unread place are lines
- * everywhere, for they follow nothing.
- * @param {Clause | null} c
+ * where nothing acts on a mark (SC), it is a line.
+ * @param {Pointer} c
  * @param {boolean} scene the scene-mode variant
  */
 function clauseHTML(c, scene) {
-  if (!c) return '';
-  const follows = c.id === 'C-67.pointer' && !scene ? ` data-claim="${esc(c.claim)}" data-home="${esc(c.home)}"${control(scene)}` : '';
-  const words = c.id === 'C-67.quoting' ? htmlIn(c.id, { claimant: c.claimant }, { claimant: 'ident' }) : esc(c.text);
-  return `<span class="clause"${follows}>${words}</span>`;
+  const follows = scene ? '' : ` data-claim="${esc(c.claim)}" data-home="${esc(c.home)}"${control(scene)}`;
+  return `<span class="clause"${follows}>${esc(c.text)}</span>`;
 }
 
 /** each kept word's entry in the strings table (B3-S1, B3-S2), by the state's word */
@@ -1414,8 +1391,8 @@ function headOf(d, v, owner) {
 
 /**
  * The one walk of a document both renderings are made from: the head, then
- * each block decided once — withheld, with the ends drawn at it and its
- * others' count, a record, a reference, an item not rendered, or a typed
+ * each block decided once — withheld, with the ends drawn at it, a record,
+ * a reference, an item not rendered, or a typed
  * line, whether it opens a typed line (`opensLine`), the empty lines typed
  * after it (`blankOf`), its stretches with the symbols standing at them and
  * its others' count — then the empty document's line and the scene-offers. A
@@ -1453,7 +1430,7 @@ function walk(d, v, ownerAccount) {
   const parts = d.blocks.map((b, i) => {
     /** @type {Part} */
     const p = { b, kind: 'para', opens: false, blank: 0, segs: [], ends: [], count: none, rec: null };
-    if (b.kind === 'withheld') { p.kind = 'withheld'; p.ends = v.marks.filter((s) => !!s.run && s.run.pos === b.pos); p.count = v.countAt(b); }
+    if (b.kind === 'withheld') { p.kind = 'withheld'; p.ends = v.marks.filter((s) => !!s.run && s.run.pos === b.pos); }
     else if (b.kind === 'ref') p.kind = 'ref';
     else if (itemOf(b) === 'unshown') p.kind = 'unshown';
     else if (b.kind === 'atom') { p.kind = 'record'; p.rec = recordOf(b, d, v.reader); }
@@ -1582,7 +1559,7 @@ export function articleHTML(d, v, ownerAccount) {
   let run = '';
   for (const p of w.parts) {
     const b = p.b;
-    if (p.kind === 'withheld') { run += withheldBlockHTML(b, d, v, { ends: p.ends, count: p.count }); continue; }
+    if (p.kind === 'withheld') { run += withheldBlockHTML(b, v, { ends: p.ends }); continue; }
     const mark = blockMarks(d.addr, b, v.selected, v.focus);
     const cls = ['sp', 'blk-' + b.kind];
     if (p.opens) cls.push('indent');

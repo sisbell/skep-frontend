@@ -8,13 +8,13 @@
 // control last brought into view in either, with the caps it stood under
 // then (`reveal`).
 // The opening: chrome that opens on its reads — the reading scene, the
-// versions list, the provenance cards, the anatomy card, a face stating a
-// withheld origin whose clause's reads are out (O-FACES; FP-33) — opens
-// through `opening`, one rule for all of them: as its reads begin it is the
-// chrome's next act, and its answer shows only where no act was made on the
-// chrome while it read — an overlay shown (`show`, whatever conjures it, save
-// a notice), a dismissal (`dismiss`, `dismissInnermost`, `leave`), the next
-// opening, or the end of the opening alone, what stands staying
+// versions list, the provenance cards, the anatomy card, a card or a face
+// stating a withheld origin whose clause's reads are out (O-FACES; FP-33) —
+// opens through `opening`, one rule for all of them: as its reads begin it is
+// the chrome's next act, and its answer shows only where no act was made on
+// the chrome while it read — an overlay shown (`show`, whatever conjures it,
+// save a notice), a dismissal (`dismiss`, `dismissInnermost`, `leave`), the
+// next opening, or the end of the opening alone, what stands staying
 // (`endOpening`: Esc's innermost thing, an empty click's, the LEAP box
 // opened, a navigation act as it is made) — so chrome asked for at a place
 // the person has left never opens over the next one, nor over chrome made
@@ -23,16 +23,16 @@
 // (`complete`): a jump's reading face taken down as its read answers — in the
 // overlay's place, or below it as a notice — ends no opening asked while it
 // stood, whose answer then shows where the camera is (FP-25). Nor is an
-// overlay drawn again in its place by the module that
-// showed it, from what its reads found since (`redraw`): the dead end's face
-// taking its version offer (O-FACES') ends no opening, and what it changed is
-// its owner's to say; nor is a notice shown. Until it shows or ends it is
-// `pending`; its reads may ask whether it `stands`, so one that has ended
-// asks no more. An opening begins in the act that asks for it, nothing
-// awaited first: the page imports every module it acts through as it loads,
-// the app alone loading its gate's by `import()` (S-22 (a)), for an act made
-// while a module loaded would end no opening, and the chrome would open over
-// the place that act reached.
+// overlay drawn again in its place by the module that showed it, from what
+// its reads found since (`redraw`): the dead end's face taking its version
+// offer (O-FACES') ends no opening, and what it changed is its owner's to
+// say; nor is a notice shown. Until it shows or ends it is `pending`; its
+// reads may ask whether it `stands`, so one that has ended asks no more. An
+// opening begins in the act that asks for it, nothing awaited first: the page
+// imports every module it acts through as it loads, the app alone loading its
+// gate's by `import()` (S-22 (a)), for an act made while a module loaded
+// would end no opening, and the chrome would open over the place that act
+// reached.
 // A notice (FP-36, FP-25): a face a read brought once it answered
 // (`Overlay.notice`; N-GO's) — a failure a jump's reads learned in the air,
 // the dead end or the withheld document a landing meets, a refusal a reach or
@@ -69,14 +69,14 @@
 // where they stand, in place, nothing drawn again (`moveTo`; N-GO's).
 // A surface leaves and returns with its place (FP-36, FP-25): a card or a
 // list shows carrying what it is about (`about`) — a link's end, a span's
-// bytes, a document, a mark — by value, its owner's, never its words; the
-// standing one, and the control the platform's focus stands on in it by its
-// key, is what a departure keeps (`asLeft`; N-GO's), and so is a surface an
-// opening still reading reopens on a return (`opening`'s `left`), for the act
-// that leaves is what ends it. Faces, moments and the trail's list carry
-// none: a notice returns with its entry, a moment is the shell's, and the
-// trail's list is about the trail. A surface reopened takes the focus on the
-// control it was left holding it on (`controlOf`), else none.
+// bytes, a document, a mark, a withheld run — by value, its owner's, never
+// its words; the standing one, and the control the platform's focus stands on
+// in it by its key, is what a departure keeps (`asLeft`; N-GO's), and so is a
+// surface an opening still reading reopens on a return (`opening`'s `left`),
+// for the act that leaves is what ends it. Faces, moments and the trail's
+// list carry none: a notice returns with its entry, a moment is the shell's,
+// and the trail's list is about the trail. A surface reopened takes the focus
+// on the control it was left holding it on (`controlOf`), else none.
 // The focus is N-FOCUS's (FP-20; D5 §4 rule 4): an overlay takes the focus
 // only where a key made the act that opened it — `takeFocus` is that act's
 // `byKey` — and no field the reader types in outside it holds the caret,
@@ -112,11 +112,14 @@
 // own words — by `aria-labelledby`; a string per kind from ST where no
 // caption stands. A face that answers an act, captioned by the act's own
 // words (O-FACES' `caption`), is named by that caption and described by its
-// words (`aria-describedby`), so it is met as the act's answer. A face a key
-// or the system raised is heard through the one status region without the
-// focus moving (D4; K-58), its caption before its words — save one whose
-// words the landing that met it says where the focus lands (`told`; N-WALK's
-// description), which is heard there once.
+// words (`aria-describedby`), so it is met as the act's answer; a card whose
+// words are its content (`described`) — a withheld run's whole wording — is
+// named by their head, as a face is, and described by what stands beneath it,
+// so the focus entering it meets them whole. A face a key or the system
+// raised is heard through the one status region without the focus moving (D4;
+// K-58), its caption before its words — save one whose words the landing that
+// met it says where the focus lands (`told`; N-WALK's description), which is
+// heard there once.
 // Each act is told whether a key ran it by the controller's one reading:
 // Enter on its control, taken here before the platform's click, or the click
 // the platform makes from a key (Space on a button), which carries no click
@@ -178,7 +181,7 @@ import { esc } from '../util.js';
 
 /** @typedef {(el: HTMLElement, byKey: boolean) => void} Act an overlay's act, run on the element that bears its `data-run`; `byKey` a key ran it */
 
-/** @typedef {import('./anatomy-card.js').About | import('./versions.js').About | import('./links-card.js').About | import('./provenance.js').About | import('./mark-list.js').About | import('./selection.js').About} About what a card or a list is about, by value (see the head): its owner's, which reopens it from it */
+/** @typedef {import('./anatomy-card.js').About | import('./versions.js').About | import('./links-card.js').About | import('./provenance.js').About | import('./mark-list.js').About | import('./selection.js').About | import('./faces.js').About} About what a card or a list is about, by value (see the head): its owner's, which reopens it from it */
 
 /**
  * @typedef {Object} Left — a surface as the reader leaves its place (see the head; `asLeft`)
@@ -199,6 +202,7 @@ import { esc } from '../util.js';
  * @property {string} [id] a name the gate reads
  * @property {About} [about] what a card or a list is about (see the head): what a departure keeps of it; none for a face, a moment and the trail's list
  * @property {boolean} [notice] a face a read brought once it answered, or a version move's reading face (see the head): no act on the chrome, standing below what the reader opened; it never takes the focus
+ * @property {boolean} [described] a card whose words are its content (see the head): named by its words' head, as a face is, and described by what stands beneath it
  */
 
 /** @type {HTMLElement | null} */
@@ -319,10 +323,11 @@ const dismissButton = () => `<button class="x" data-x="1" title="${esc(t('L.dism
  */
 function name(host, o, prefix) {
   const label = /** @type {HTMLElement | null} */ (host.querySelector('.label'));
-  const caption = label || (o.kind === 'face' ? /** @type {HTMLElement | null} */ (host.querySelector('.face-text')) : null);
+  const caption = label || (o.kind === 'face' || o.described ? /** @type {HTMLElement | null} */ (host.querySelector('.face-text')) : null);
   if (caption) { caption.id = prefix + '-name'; host.setAttribute('aria-labelledby', prefix + '-name'); host.removeAttribute('aria-label'); }
   else { host.removeAttribute('aria-labelledby'); host.setAttribute('aria-label', t('L.dialog.' + o.kind)); }
-  const said = label && o.kind === 'face' ? /** @type {HTMLElement[]} */ ([...host.querySelectorAll(SAID)]).filter((e) => e !== label) : [];
+  const said = label && o.kind === 'face' ? /** @type {HTMLElement[]} */ ([...host.querySelectorAll(SAID)]).filter((e) => e !== label)
+    : o.described ? /** @type {HTMLElement[]} */ ([...host.querySelectorAll(BENEATH)]) : [];
   said.forEach((e, i) => { e.id = prefix + '-said-' + i; });
   if (said.length) host.setAttribute('aria-describedby', said.map((e) => e.id).join(' '));
   else host.removeAttribute('aria-describedby');
@@ -333,6 +338,8 @@ export function firstControl(/** @type {HTMLElement} */ host, /** @type {string 
   return /** @type {HTMLElement | null} */ ((first && host.querySelector(first)) || host.querySelector(FIRST));
 }
 
+/** the parts beneath a described card's head that describe it (`Overlay.described`): its arm, its clause, its kept clause */
+const BENEATH = '.arm, .clause, .kept';
 /** the parts of a face's words, in their order: the caption of the act it answers, the address it names, its text, its arm, its clause, its note */
 const SAID = '.label, .face-addr, .face-text, .arm, .clause, .note';
 /** a face's words, for the status region: its parts' (`SAID`), the caption of the act it answers first */

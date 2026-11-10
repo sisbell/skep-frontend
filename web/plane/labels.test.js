@@ -15,7 +15,8 @@
 // stretch nearest the middle, between the ends and inside the visible view;
 // a tail's room rightward to the first shape its band meets, and its label
 // set in it; the hold (FP-26) — a sign held at its place's top or at the
-// hold and pushed up by its place's foot, a held label one line at the
+// hold and pushed up by its place's foot, signs stacked in one column's edge
+// held by the same rule, off what stands there, a held label one line at the
 // top-left of its place's visible part, its address first, its badge whole
 // or dropped and its words cut then dropped, one inside a region's held label
 // just below it, a label with no hold left out under the line, its room the
@@ -27,7 +28,7 @@
 // shape and no other line.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, holdTop, heldLine, heldContents, apartTexts, cutWords, across, inFace, plain, runsOf, figuresOf, face, LINE_BOX, LEAD_WORDS } from './labels.js';
+import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, holdTop, holdStack, heldLine, heldContents, apartTexts, cutWords, across, inFace, plain, runsOf, figuresOf, face, LINE_BOX, LEAD_WORDS } from './labels.js';
 import { LABEL_MIN_PX, HOLD, FACE } from './register.js';
 
 /** @typedef {import('./labels.js').Label} Label */
@@ -332,6 +333,17 @@ test('a sign held below the one line stands at its place\'s top while that stand
   assert.equal(holdTop(-100, 38, 900, 20), 38, 'its place\'s top risen past the line: at the hold');
   assert.equal(holdTop(-100, 38, 50, 20), 30, 'its place\'s foot risen: its height above the foot, under the line');
   assert.equal(holdTop(10, 38, 20, 20), 10, 'a place shorter than it: at its own top');
+});
+
+test('signs stacked in one column\'s edge hold by the one rule: each at its line, else at the hold, below the sign before it and off what stands in the edge; the stack pushed up by its place\'s foot, never above its place\'s top, and running past the foot only where the place holds no room for it; one sign and nothing standing, `holdTop` (FP-31; issue #288\'s design decision: "stacks under FP-31, and is held inside the outline")', () => {
+  // a column from 100 to 600 on screen, the hold at 38
+  assert.deepEqual(holdStack([{ y: 200, h: 30 }], 100, 38, 600, 2), [200], 'one sign at its line in view');
+  for (const [line, foot] of [[200, 600], [10, 600], [10, 120], [590, 600]]) assert.deepEqual(holdStack([{ y: line, h: 30 }], 0, 38, foot, 2), [Math.max(0, Math.min(Math.max(line, 38), foot - 30))], `one sign, its line at ${line}, the foot at ${foot}: the one hold`);
+  assert.deepEqual(holdStack([{ y: 200, h: 30 }, { y: 200, h: 20 }, { y: 210, h: 10 }], 100, 38, 600, 2), [200, 232, 254], 'three at one line: stacked downward, two px apart');
+  assert.deepEqual(holdStack([{ y: 200, h: 30 }, { y: 400, h: 20 }], 100, 38, 600, 2, [{ y: 190, h: 25 }]), [217, 400], 'off what stands in the edge: below the count the article set at that line');
+  assert.deepEqual(holdStack([{ y: 560, h: 30 }, { y: 570, h: 30 }], 100, 38, 600, 2), [538, 570], 'near the foot: the stack pushed up inside it');
+  assert.deepEqual(holdStack([{ y: 560, h: 30 }, { y: 570, h: 30 }], 100, 38, 600, 2, [{ y: 545, h: 20 }]), [513, 570], 'pushed up, and off what stands there');
+  assert.deepEqual(holdStack([{ y: 110, h: 300 }, { y: 120, h: 300 }], 100, 38, 600, 2), [100, 402], 'taller than its place holds: from its place\'s top, running past the foot, none hidden');
 });
 
 test('a held label\'s one line: its head whole, else none; a badge kept whole beside it, else dropped; a first line cut on a word to the room the two leave, ending in its ellipsis, else dropped (issue #169: "dropping words before address", "Its link badge holds with it"; issue #23)', () => {

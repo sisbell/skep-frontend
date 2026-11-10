@@ -4,8 +4,9 @@
 // re-take and put out by any other; a block of white space alone is no
 // element of the walk; a landing the index does not list stands on its own
 // node among the listed siblings; the mirror is one Tab stop, named from ST
-// with each level's group, its items naming a withheld run's placeholder —
-// its kind and length alone while its clause is read —
+// with each level's group, a withheld run's item its own part — its kind,
+// length and origin — naming its origin's one description, which every run
+// of it names, made from the run's placeholder once its clause is read —
 // each block that holds no text by its kind, a withheld or untold document by
 // its state and a link's far end as its tail does, what its text holds of
 // its passage said whole — described, where the
@@ -88,6 +89,8 @@ const C1_TEXT = 'Tumbler.\n\nThe first field.';
 /** a document longer than a column: a hundred and twenty paragraphs of a line each, folded into its room's columns */
 const H = '1.0.1.0.40';
 const H_TEXT = Array.from({ length: 120 }, (_, i) => `Paragraph ${i + 1} of an edition longer than one column.`).join('\n\n');
+/** a document windowing two runs of one origin withheld from the reader, at 11 and 27, a paragraph between them */
+const R2 = '1.0.1.0.41', R2_ORIGIN = '1.0.2.0.8';
 // D: three spans: 1 "Tumbler.\n\n" (10), 11 "The first field." (16), 27 a withheld run (4)
 const script = {
   ...reads(D, [{ content: 'Tumbler.\n\nThe first field.' }, { withheld: { origin: '1.0.1.0.1003', width: '4' } }], 30, [{ i_start: D + '.0.1.1', width: '26' }, { i_start: '1.0.1.0.1003.0.1.1', width: '4' }]),
@@ -97,6 +100,10 @@ const script = {
   ...reads(C1, [{ content: C1_TEXT }], C1_TEXT.length, [{ i_start: C1 + '.0.1.1', width: String(C1_TEXT.length) }]),
   // the edition claims on D's withheld run's origin: none
   [FAKE.keyOf('op', { frame: F.editionClaimsAt('1.0.1.0.1003') })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+  // R2: two runs of one withheld origin, a paragraph between them
+  ...reads(R2, [{ content: 'Tumbler.\n\n' }, { withheld: { origin: R2_ORIGIN, width: '6' } }, { content: 'Between.\n\n' }, { withheld: { origin: R2_ORIGIN, width: '6' } }], 32,
+    [{ i_start: R2 + '.0.1.1', width: '10' }, { i_start: R2_ORIGIN + '.0.1.1', width: '6' }, { i_start: R2 + '.0.1.11', width: '10' }, { i_start: R2_ORIGIN + '.0.1.7', width: '6' }]),
+  [FAKE.keyOf('op', { frame: F.editionClaimsAt(R2_ORIGIN) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
 };
 
 /** @type {ReturnType<typeof FAKE.create>} */
@@ -321,17 +328,15 @@ test('a walk step onto a document from below its reading scale frames it just sh
   assert.ok(Math.abs(em(E) - reading) < 1e-6, `E at the reading size, ${reading} px an em: ${em(E)}`);
 });
 
-test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin\'s owner, the entitlement arm for the reader and C-67\'s clause where the origin\'s edition claims decide one, as the plane\'s placeholder shows them — and while their reads are out, its kind, where it stands and its length alone, as the plane\'s gap shows its ground alone (R56; R94; PUB-5.124; issue #272)', () => {
+test('the mirror\'s item at a withheld run says the run\'s own part — its kind, its document, its length and its origin, which need no read — and its origin\'s one description is made from the run\'s placeholder: the owner of its origin, the entitlement arm for the reader and C-67\'s clause where the origin\'s edition claims decide one, none while their reads are out (R56; R94; PUB-5.124; issue #288\'s design decision: "The mirror gives each origin one description, and every run points to it")', () => {
   // a document of 1.0.2's windowing a run of 1.0.1.1's: an unallocated sub-account, whose owner is the seat above it
   const W = '1.0.2.0.5', O = '1.0.1.1.0.2', owner = '1.0.1';
   REC.takeOwner('1.0.1.1', { prefix: owner, principal: 900 });
   const text = 'Tumbler.\n\n', n = byteLength(text);
   REC.takeSpanSet(W, [{ subspace: 1, ordinal: 1, positions: n + 240 }]);
   REC.takeDelivery(W, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width: 240, kind: 'withheld', text: '', ref: null, origin: O }]);
-  const d = REC.doc(W), run = d.blocks[1];
+  const d = REC.doc(W), run = d.blocks[1], node = { kind: /** @type {const} */ ('block'), addr: W, pos: run.pos, link: null };
   assert.deepEqual([run.kind, run.origin], ['withheld', O]);
-  const words = STRINGS['L.mirror.withheld'].text;
-  assert.ok(['⟨kind⟩', '⟨length⟩', '⟨owner⟩', '⟨origin⟩', '⟨arm⟩', '⟨clause⟩'].every((k) => words.includes(k)), `the item's words carry its kind, its length, the owner, the origin, the arm and the clause: ${words}`);
   // two edition claims of the owner's, each homed in a published edition of theirs: one over its own fresh bytes, one quoting the draft
   const R20 = '1.1.0.1.0.1.0.3.14', OWN = '1.0.1.0.9.0.2.1', QUOTES = '1.0.1.0.11.0.2.1';
   for (const [c, from] of /** @type {Array<[string, string]>} */ ([[OWN, '1.0.1.0.9.0.1.1'], [QUOTES, O + '.0.1.1']])) {
@@ -339,51 +344,39 @@ test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin
     const home = /** @type {string} */ (homeOf(c));
     REC.takeMetadata(home, { doc: home, published: true, owner, birth: home + '.1', birthExtent: 20, placed: null, baseExtent: null, source: null, asOf: 1 });
   }
-  /** @type {Array<[string, () => void, string | null, string]>} each state of the origin's claims the page holds, the words of the clause it decides — `CLAUSE_READING` while their reads are out — and what the plane's clause carries besides them: the pointer the claim it follows and that claim's home, a control */
+  /** @type {Array<[string, () => void, string | null]>} each state of the origin's claims the page holds, and the words of the clause it decides — `CLAUSE_READING` while their reads are out */
   const states = [
-    ['no claim read', () => REC.claimsChanged(O, false), CLAUSE_READING, ''],
-    ['no claim on the origin', () => REC.takeEditionClaims(O, []), null, ''],
-    ['the owner\'s edition over its own bytes', () => REC.takeEditionClaims(O, [QUOTES, OWN]), t('C-67.pointer'), ` data-claim="${OWN}" data-home="1.0.1.0.9" role="button" tabindex="-1"`],
-    ['an edition quoting the draft alone', () => REC.takeEditionClaims(O, [QUOTES]), t('C-67.quoting', { claimant: owner }), ''],
+    ['no claim read', () => REC.claimsChanged(O, false), CLAUSE_READING],
+    ['no claim on the origin', () => REC.takeEditionClaims(O, []), null],
+    ['the owner\'s edition over its own bytes', () => REC.takeEditionClaims(O, [QUOTES, OWN]), t('C-67.pointer')],
+    ['an edition quoting the draft alone', () => REC.takeEditionClaims(O, [QUOTES]), t('C-67.quoting', { claimant: owner })],
   ];
   const signedIn = REC.session();
   // the device's key store as `fingerprint` answers it: a key bound at this board, or none
   const ORIGIN = 'http://127.0.0.1:8642', BOUND = [{ bindings: [ORIGIN + ' principal 1 account 1.0.1'] }];
   /** @type {Array<[typeof signedIn, Array<{bindings: string[]}>, string]>} each reader, the device's keys, and the arm the rule gives them */
   const readers = [[signedIn, BOUND, 'C-36.owner-grant.arm'], [null, BOUND, 'C-36.guest.key'], [null, [], 'R56.key-absent']];
-  /** @type {Set<boolean>} whether the gap held the face, over every reader and state */
-  const forms = new Set();
   try {
     for (const [reader, keys, id] of readers) {
       REC.setSession(reader); REC.takeKeyStore(keys, ORIGIN);
       const who = reader ? reader.account : keys.length ? 'a guest with a key for this board' : 'a guest with no key';
       const rule = entitlementArm({ account: reader ? reader.account : null, keyPresent: keys.length > 0 }, owner), arm = rule.text;
       assert.equal(rule.id, id, `${who}: the rule's arm is ${id}`);
-      for (const [state, hold, clause, follows] of states) {
+      for (const [state, hold, clause] of states) {
         hold();
-        const item = WALK.nameOf({ kind: 'block', addr: W, pos: run.pos, link: null }, 1, 2);
+        assert.equal(WALK.nameOf(node, 1, 2), t('L.mirror.withheld', { kind: t('L.item.withheld'), document: W, length: t('L.item.positions', { n: 240 }), origin: O }) + ' ' + t('L.mirror.item', { i: 2, n: 2 }),
+          `${who}, ${state}: the run's own part, in any state of its claims`);
+        const html = withheldBlockHTML(run, LAYER.viewFor(d));
         if (clause === CLAUSE_READING) {
-          assert.equal(item, t('L.mirror.no-text', { kind: t('L.item.withheld'), p: run.pos, extent: n + 240, document: W, same: '', shown: t('L.mirror.shows', { shown: t('L.item.positions', { n: 240 }) }) }) + ' ' + t('L.mirror.item', { i: 2, n: 2 }),
-            `${who}, ${state}: its kind, where it stands and its length — no owner, arm or clause before the reads they wait on answer`);
-          const html = withheldBlockHTML(run, d, LAYER.viewFor(d));
-          assert.ok(html.includes(' data-holds="reading"') && !html.includes('class="arm"') && !html.includes('wh-mark') && !html.includes('wh-head'), `${who}, ${state}: the plane's gap its ground alone: ${html}`);
+          assert.equal(WALK.originWords(node), null, `${who}, ${state}: no description before the reads it waits on answer`);
+          assert.ok(html.includes(' data-holds="reading"') && !html.includes('wh-key'), `${who}, ${state}: the plane's gap its ground alone: ${html}`);
           continue;
         }
-        assert.equal(item, t('L.mirror.withheld', { kind: t('L.item.withheld'), document: W, length: t('L.item.positions', { n: 240 }), owner, origin: O, arm, clause: clause ? t('L.mirror.clause', { clause }) : '' }) + ' ' + t('L.mirror.item', { i: 2, n: 2 }),
-          `${who}, ${state}: the owner of the run's origin, ${owner} — never ${W}'s account, nor ${O}'s — the arm for that owner and this reader, and the clause the claims decide`);
-        assert.ok(clause ? item.includes(`${arm}. ${clause}. `) : item.includes(`${arm}. `) && !/\.\s+\./.test(item), `${who}, ${state}: the clause a sentence of its own after the arm, or nothing in its place: ${item}`);
-        // the plane's gap: the same owner; where it holds the face whole, the same arm and clause, the pointer a control following
-        // the owner's passing claim; where it holds less, the face compact in its column's edge, naming the same owner
-        const html = withheldBlockHTML(run, d, LAYER.viewFor(d)), inGap = html.includes(' data-holds="face"');
-        forms.add(inGap);
-        const clauseHTML = clause === t('C-67.pointer') ? esc(clause) : tHTML('C-67.quoting', { claimant: owner }, { claimant: 'id' });
-        assert.ok(html.includes(` data-owner="${owner}"`) && (inGap
-          ? html.includes(`<span class="arm">${esc(arm)}</span>`) && (clause ? html.includes(`<span class="clause"${follows}>${clauseHTML}</span>`) : !html.includes('class="clause"'))
-          : !html.includes('class="arm"') && html.includes(`>${tHTML('L.withheld.mark', { owner }, { owner: 'id' })}</span>`)),
-          `${who}, ${state}: the plane's gap shows the same owner, and the same arm and clause where it holds the face, else the face compact at its column's edge: ${html}`);
+        assert.deepEqual(WALK.originWords(node), { origin: O, words: t('L.mirror.withheld.origin', { owner, arm, clause: clause ? t('L.mirror.clause', { clause }) : '' }) },
+          `${who}, ${state}: its origin's description names ${owner}, the owner of the run's origin — never ${W}'s account, nor ${O}'s — the arm for that owner and this reader, and the clause the claims decide, a sentence of its own or nothing in its place`);
+        assert.ok(html.includes(` data-owner="${owner}"`) && html.includes(`data-key="${O}"`), `${who}, ${state}: the plane's gap carries the same owner, and the run's key: ${html}`);
       }
     }
-    assert.equal(forms.size, 2, 'its gap holds some readers\' faces whole and not others\'');
   } finally {
     REC.setSession(signedIn); REC.takeKeyStore([], ORIGIN);
   }
@@ -790,18 +783,57 @@ test('where the landing\'s passage stands in several runs every other span holdi
     WALK.attach(/** @type {any} */ (mirror));
     WALK.readers({ described: () => said });
     await WALK.focusTo(D, 13);
-    assert.deepEqual(described(), [[11, ['piece 1 of 2 · all of the passage']], [27, ['piece 2 of 2']]], 'the landing\'s item its line, the other run\'s span its label');
+    // the span at 27 a withheld run: described by its origin's one description too, after the landing's words
+    const origin = /** @type {{words: string}} */ (WALK.originWords({ kind: 'block', addr: D, pos: 27, link: null })).words;
+    assert.deepEqual(described(), [[11, ['piece 1 of 2 · all of the passage']], [27, ['piece 2 of 2', origin]]], 'the landing\'s item its line, the other run\'s span its label');
     const was = rebuilds;
     said = { ...said, pos: 28, words: 'piece 2 of 2 · all of the passage' };
     WALK.markDescribed();
-    assert.deepEqual(described(), [[11, ['piece 1 of 2']], [27, ['piece 2 of 2 · all of the passage']]], 'a step: the landing\'s description moved to the run stepped to, the one left its own label');
+    assert.deepEqual(described(), [[11, ['piece 1 of 2']], [27, ['piece 2 of 2 · all of the passage', origin]]], 'a step: the landing\'s description moved to the run stepped to, the one left its own label');
     said = null;
     WALK.markDescribed();
-    assert.deepEqual(described(), [], 'the arrival ended: nothing described');
+    assert.deepEqual(described(), [[27, [origin]]], 'the arrival ended: the landing describes nothing, the withheld run its origin still');
     assert.equal(rebuilds, was, 'every mark made in place, nothing rebuilt');
   } finally {
     globalThis.document = platform;
     WALK.readers({});
+  }
+});
+
+// placed with the tests above: it attaches a mirror of its own
+test('two runs of one withheld origin in a document name one description, written once in the mirror, and the run\'s item itself never repeats it (issue #288\'s design decision: "The mirror gives each origin one description, and every run points to it")', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  /** @type {Array<{attrs: Record<string, string>, html: string}>} */
+  let items = [];
+  /** @type {Array<[string, string]>} the hidden descriptions the last rebuild wrote, in order, each its id and its words */
+  let hidden = [];
+  const mirror = {
+    tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} },
+    get innerHTML() { return ''; },
+    set innerHTML(/** @type {string} */ html) {
+      items = [...html.matchAll(/<li\b([^>]*)>(.*?)<\/li>/g)].map((m) => ({ attrs: Object.fromEntries([...m[1].matchAll(/ ([\w-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]])), html: m[2] }));
+      hidden = [...html.matchAll(/<div id="([\w-]+)" hidden>([^<]*)<\/div>/g)].map((m) => [m[1], m[2]]);
+    },
+    querySelectorAll: () => [], querySelector: () => null,
+  };
+  try {
+    await PUMP.loadWhole(R2);
+    const runs = REC.doc(R2).blocks.filter((b) => b.kind === 'withheld').map((b) => b.pos);
+    assert.deepEqual(runs, [11, 27], 'two runs of one origin, a paragraph between them');
+    WALK.attach(/** @type {any} */ (mirror));
+    await WALK.focusTo(R2, 11);
+    const words = /** @type {{origin: string, words: string}} */ (WALK.originWords({ kind: 'block', addr: R2, pos: 11, link: null }));
+    const ids = hidden.filter(([, w]) => w === esc(words.words)).map(([id]) => id);
+    assert.equal(ids.length, 1, `one description of ${R2_ORIGIN}: ${JSON.stringify(hidden)}`);
+    const at = (/** @type {number} */ pos) => items.find((i) => i.attrs['data-pos'] === String(pos));
+    for (const pos of runs) {
+      const item = at(pos);
+      assert.ok(item && (item.attrs['aria-describedby'] || '').split(' ').includes(ids[0]), `the run at ${pos} names it: ${JSON.stringify(item && item.attrs)}`);
+      assert.ok(item && !item.html.includes(esc(t('C-36.owner-grant.arm'))), `the run at ${pos} says its own part alone`);
+    }
+  } finally {
+    globalThis.document = platform;
   }
 });
 
