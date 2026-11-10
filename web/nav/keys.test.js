@@ -80,12 +80,16 @@
 // word step wherever the page makes the step — at a live caret, at the kept
 // caret's span and at the walk's span in text the person may not edit, the
 // step extending a selection stopping at its anchor — and no other key means
-// anything new with Option held (D5 §0, K-70, K-71, K-77). In a draft holding
-// unsent typing a slot chord acts on the block of the text shown the caret is
-// in; a read answers at once, in flight and under a hold; an act that sends a
-// name for characters takes effect at the burst's ack, and under a hold
-// stands inert with the row rule's reason; and a link made on typed words is
-// answered at them once the board has minted them.
+// anything new with Option held (D5 §0, K-70, K-71, K-77); a character Option
+// types is a printable key, typed at a live caret and at the kept caret's span
+// and answered by each other site's line, while a key with Ctrl held, Option
+// too, is none — typing nothing at a caret and answered by no line (D5 §0,
+// K-9, K-72, K-77). In a draft holding unsent typing a slot chord acts on the
+// block of the text shown the caret is in; a read answers at once, in flight
+// and under a hold; an act that sends a name for characters takes effect at
+// the burst's ack, and under a hold stands inert with the row rule's reason;
+// and a link made on typed words is answered at them once the board has
+// minted them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
@@ -1478,6 +1482,44 @@ test('Option and Shift with → or ← at the walk\'s span in text the person ma
   SEL.select(O, 3, 3, 'end');
   assert.deepEqual(await shifted('ArrowLeft'), [null, null, here], '← from the selection\'s end: the start of "First" lies past its anchor, so the step stops there, no selection standing');
   assert.deepEqual([REC.edits(D), REC.edits(O), caret()], [[], [], null], 'nothing typed, no caret');
+}));
+
+test('a character Option types is a printable key: at a live caret ⌥G\'s © and ⌥⇧-\'s — are typed, Backspace taking each out whole, and at the kept caret\'s span © returns the caret and is typed at it; at a span of the draft holding no caret, at another\'s document and off any span it is answered by that site\'s line, nothing typed; a key with Ctrl held, Option too, is none — at the live caret it types nothing, and at another\'s document no line answers it (D5 §0, K-9, K-72, K-77)', ON_MACOS, () => onPlane(async ({ said }) => {
+  /** a key with Option held at the walk's focus, taken: the hint it raised there */
+  const answered = async (/** @type {string} */ key) => { await press(key, OPTION); return HINT.standing()?.id; };
+  /** D's text with `s` typed two characters in */
+  const typed = (/** @type {string} */ s) => TEXT.slice(0, 2) + s + TEXT.slice(2);
+  await focusOn(D, 14);
+  assert.equal(await answered('©'), 'B3.caret.enter', 'at a span of the draft holding no caret: the draft\'s own line');
+  await focusOn(O, 1);
+  assert.equal(await answered('©'), 'B3.row.others-document', 'at another\'s document: its line naming its owner');
+  await tick();
+  const n = said.length;
+  assert.equal(await KEYS.dispatch(keyOf('e', { ctrlKey: true }), PLANE), false, 'Ctrl+E there: no printable key, the platform\'s');
+  await tick();
+  assert.equal(said.length, n, 'and no line said');
+  await WALK.focusTo(O, null, true, true, null, true);
+  assert.equal(await answered('©'), 'F.swallow', 'off any span: K-9\'s line');
+  assert.deepEqual([REC.edits(D), REC.edits(O), caret()], [[], [], null], 'nothing typed, no caret');
+
+  await focusOn(D, 1);
+  LAYER.placeCaret(D, 3);
+  await press('©', OPTION);
+  assert.deepEqual([shown(), caret()], [typed('©'), [D, 3 + byteLength('©'), true]], '⌥G\'s ©: typed at the caret, the caret after its two bytes');
+  await press('—', OPTION_SHIFT);
+  assert.deepEqual([shown(), caret()], [typed('©—'), [D, 3 + byteLength('©—'), true]], '⌥⇧-\'s —: typed after it');
+  for (const [key, mods] of /** @type {const} */ ([['e', { ctrlKey: true }], ['g', { ctrlKey: true, altKey: true }], ['©', { ctrlKey: true, altKey: true }]])) {
+    assert.equal(await KEYS.dispatch(keyOf(key, mods), PLANE), false, `${key} with Ctrl held at the caret: the platform's`);
+  }
+  assert.deepEqual([shown(), caret()], [typed('©—'), [D, 3 + byteLength('©—'), true]], 'Ctrl+E, Ctrl+Option+G and Ctrl with © typed nothing, the caret where it stood');
+  await press('Backspace', {}, 2);
+  assert.deepEqual([shown(), caret()], [TEXT, [D, 3, true]], 'Backspace twice: each character taken out whole');
+  await press('Escape');
+  await tick();
+  assert.deepEqual(caret(), [D, 3, false], 'Esc: the caret kept');
+  await press('©', OPTION);
+  assert.deepEqual([shown(), caret()], [typed('©'), [D, 5, true]], 'at the kept caret\'s span ©: the caret returned and © typed at it');
+  assert.equal(REC.textOf(REC.doc(D).runs, 1, N + 1), TEXT, 'the model\'s own record stands as the board served it');
 }));
 
 // placed last: the follow it guards against, where it is made, leaves a jump in the air for the tests after it

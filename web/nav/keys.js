@@ -20,20 +20,21 @@
 // among its acts, an overlay's and a landing's line's buttons.
 // No plane command rides a printable key (§2.7): every command is a chord
 // (Mod = ⌘ on macOS, Ctrl elsewhere; D5 §0) or a navigation key with the
-// platform's meaning; a printable key on the plane is swallowed, never
-// dispatched, its hint at the focus the line its site keys (O-HINT's
-// `show`): in text the person may edit the caret's (below); at the walk's
-// span, at its reading scale, in text the person may not edit, every key but
-// Space answered by its document's line, and a paste there by the same line,
-// nothing placed (`siteSays`; D5 K-72, K-93) — at an edition of the session's
-// account C-45 naming the document, at a document of another account
-// B3-S13's line naming its owner; Space wherever it is swallowed, and every
-// other key at every other site, K-9's line (`swallow`). Mod+R and F5 are
-// taken and nothing reloaded (K-94), and the platform's own chords — copy,
-// paste, cut, select all, print, close, quit, minimize, hide, preferences —
-// are never taken save where a site's line answers a paste or a cut (K-92,
-// K-93). No key is dispatched while an input method's composition is open
-// (the IME guard).
+// platform's meaning. A printable key (`printable`; D5 §0) — on macOS the
+// characters Option types among them, a key with ⌘ or Ctrl held never one —
+// on the plane is swallowed, never dispatched, its hint at the focus the line
+// its site keys (O-HINT's `show`): in text the person may edit the caret's
+// (below); at the walk's span, at its reading scale, in text the person may
+// not edit, every key but Space answered by its document's line, and a paste
+// there by the same line, nothing placed (`siteSays`; D5 K-72, K-93) — at an
+// edition of the session's account C-45 naming the document, at a document of
+// another account B3-S13's line naming its owner; Space wherever it is
+// swallowed, and every other key at every other site, K-9's line (`swallow`).
+// Mod+R and F5 are taken and nothing reloaded (K-94), and the platform's own
+// chords — copy, paste, cut, select all, print, close, quit, minimize, hide,
+// preferences — are never taken save where a site's line answers a paste or a
+// cut (K-92, K-93). No key is dispatched while an input method's composition
+// is open (the IME guard).
 // THE CARET (D5 K-51, K-70, K-71, K-72, K-76, K-77; D6 BM-1, BM-52, BM-54,
 // BM-70, BM-75): in text the person may edit (T-LAYER's `editable`) Enter at
 // the walk's focused span places the caret at the span's start, or returns
@@ -310,8 +311,13 @@ export function chordOf(/** @type {KeyboardEvent} */ e) {
   return parts.join('+');
 }
 
-/** is the key printable (it would type a character in a field)? */
-export const printable = (/** @type {KeyboardEvent} */ e) => e.key.length === 1 && !(MAC ? e.metaKey : e.ctrlKey) && !e.altKey;
+/**
+ * Is the key printable — one that types a character in a field (D5 §0)? It
+ * spells one character, and on macOS neither ⌘ nor Ctrl is held, the
+ * characters Option types among them (⌥G is ©); elsewhere neither Ctrl nor
+ * Alt is held.
+ */
+export const printable = (/** @type {KeyboardEvent} */ e) => e.key.length === 1 && (MAC ? !e.metaKey && !e.ctrlKey : !e.ctrlKey && !e.altKey);
 
 /** the step ← or → makes where the page makes it (K-70, K-71, K-77): a word with Option held on macOS, else a character */
 function arrowStep(/** @type {KeyboardEvent} */ e) {
