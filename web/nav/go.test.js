@@ -3550,6 +3550,22 @@ test('Back to a draft whose line lost its first half while a paragraph was set b
   assert.deepEqual(fake.unanswered, []);
 });
 
+test('Back to a draft whose held image places its text in two windows that meet, the line the reader left cut by an edit, lands on what stands of the line from what the page holds: no image read asked again (FP-21)', async () => {
+  const { at, was, r } = await leftCut();
+  const k = INSERTED.length, half = 20, text = INSERTED + EIGHTY.slice(0, at.pos - 1) + EIGHTY.slice(at.pos - 1 + half), n = text.length;
+  REC.setAgain(CUT, { spans: [{ subspace: 1, ordinal: 1, positions: n }], text: { runs: [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }], asOf: 9 } });
+  REC.takeImage(CUT, 1, [{ iStart: FOREIGN + '.0.1.1', width: k }, { iStart: CUT + '.0.1.1', width: at.pos - 1 }]);
+  REC.takeImage(CUT, k + at.pos, [{ iStart: `${CUT}.0.1.${at.pos + half}`, width: EIGHTY.length - at.pos - half + 1 }]);
+  const from = fake.asked.length;
+  await run(GO.back());
+  const to = k + at.pos;
+  assert.ok(samePassage(under(CUT, CAM.view()), { ...was, pos: to }), `the line holding what stands of it where the line read stood: ${JSON.stringify([under(CUT, CAM.view()), was])}`);
+  assert.deepEqual([GO.arrivalMark(), GO.landing()?.said?.state], [{ addr: CUT, pos: to, runs: [{ pos: to, width: r.width - half }], link: null }, 'part'], 'what stands of it outlined, the line saying only part of it is there');
+  assert.ok(!fake.asked.slice(from).some((q) => q.includes('"op":"image"')), 'no image read asked: the image held places every position');
+  GO.endArrival();
+  assert.deepEqual(fake.unanswered, []);
+});
+
 test('Back to a draft whose line an edit set a word inside lands at piece 1, both runs of the line outlined and labelled, its line "piece 1 of 2 · all of the passage", the step taking it to piece 2 (issue #297)', async () => {
   const { at, was, r } = await leftCut();
   const cut = at.pos - 1 + 8, word = 'new ';

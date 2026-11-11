@@ -54,9 +54,11 @@
 // one delivery's items read in parts — a whole read, an open find's read of
 // the rest, and a row's read again of the window held, the find's text kept as
 // the view's — a part refused for its size asked as its halves; each part of
-// the view's window and a whole read's text read with its image and taken
-// with it in one step, a part whose image read fails taken alone and its
-// image asked again on its own, and a text a whole read finds held with no
+// the view's window, a whole read's text and each part of an open find's
+// read of the rest read with its image and taken with it in one step, a part
+// whose image read fails taken alone, the view asking on its own only the
+// image its held text lacks, in parts, halved where refused for its size and
+// each refusal recorded once, and a text a whole read finds held with no
 // image covering it read for its image. With SKEP_REPLAY naming a script the
 // harness recorded, the model's snapshot is printed for the gate.
 import { test, beforeEach } from 'node:test';
@@ -1612,7 +1614,7 @@ test('an act\'s projection the document projected into is dropped under is asked
   assert.deepEqual([asks, REC.projection(L, 1, D)], [PUMP.DROP_ATTEMPTS, undefined], 'after DROP_ATTEMPTS asks, nothing held');
 });
 
-test('an image asked for a window a text read widens before it lands is placed from the window it was asked for', async () => {
+test('an image asked for a window a text read widens before it lands is placed from the window it was asked for, what the image read with the wider text placed outside that window kept', async () => {
   const s = { ...script, [FAKE.keyOf('op', { frame: F.image(D, 11, 20) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.11', width: '20' }] } } };
   const fake = readingD(s);
   // D's extent, metadata, links and chain held, and its text from 11 on
@@ -1626,7 +1628,7 @@ test('an image asked for a window a text read widens before it lands is placed f
   assert.deepEqual([fake.asked.includes(FAKE.keyOf('op', { frame: F.image(D, 11, 20) })), REC.doc(D).from], [true, 1], 'the image asked for 11 on, and the text read from 1 landed before it');
   release();
   await new Promise((r) => setTimeout(r, 0));
-  assert.deepEqual(REC.doc(D).image.map((r) => [r.pos, r.width, r.ordinal]), [[11, 20, 11]], 'placed at 11, where it was asked');
+  assert.deepEqual(REC.doc(D).image.map((r) => [r.pos, r.width, r.ordinal]), [[1, 10, 1], [11, 20, 11]], 'placed at 11, where it was asked, the first ten positions the image read with the text placed kept');
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -3327,6 +3329,10 @@ test('a text past one delivery\'s items is read in parts of at most MAX_DELIVERY
     [opKeyOf(F.retrieveV(SIZED, 1, 1000))]: { refused: { kind: 'refused', name: 'too_many_items', code: 'too_many_items' } },
     [opKeyOf(F.retrieveV(SIZED, 1, 500))]: filled('s', 500),
     [opKeyOf(F.retrieveV(SIZED, 501, 500))]: filled('z', 500),
+    // each part's image, asked with its text: the whole's set aside with the text refused, each half's taken with it
+    [opKeyOf(F.image(SIZED, 1, 1000))]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: SIZED + '.0.1.1', width: '1000' }] } },
+    [opKeyOf(F.image(SIZED, 1, 500))]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: SIZED + '.0.1.1', width: '500' }] } },
+    [opKeyOf(F.image(SIZED, 501, 500))]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: SIZED + '.0.1.501', width: '500' }] } },
   };
   // HUGE's two parts: the first text read, then the text a write left
   inTurn(s, F.retrieveV(HUGE, 1, cut), filled('a', cut), filled('c', cut));
@@ -3342,6 +3348,7 @@ test('a text past one delivery\'s items is read in parts of at most MAX_DELIVERY
   assert.deepEqual([timesAsked(fake, F.retrieveV(HUGE, 1, n)), timesAsked(fake, F.retrieveV(HUGE, 1, cut))], [0, 1], 'never one delivery past the bound');
   assert.deepEqual(await PUMP.readRest(SIZED), { refused: null });
   assert.equal(REC.textBetween(SIZED, 1, 1001), 's'.repeat(500) + 'z'.repeat(500), 'the find\'s read of the rest: the text refused whole read as its halves');
+  assert.deepEqual(REC.imageGaps(REC.doc(SIZED).image, 1, 1000), [], 'each half taken with its image');
   // a write to HUGE while a find searches it: kept as held, read again in parts and set in one step
   finding = HUGE;
   fake.fire('feed', writing(20, [HUGE]));
@@ -3442,6 +3449,136 @@ test('a whole read asks its text\'s image with the text and takes the two in one
   await PUMP.loadWhole(D);
   assert.deepEqual([askedOf(held, F.retrieveV(D, 1, 30)), askedOf(held, F.image(D, 1, 30)), REC.doc(D).imageFor, gapsIn(D)], [0, 1, [1, 31], []], 'its text not read again; its image asked once and placed over it, every position named');
   assert.deepEqual(held.unanswered, []);
+});
+
+test('a find\'s read of the rest asks each part\'s image with its text and takes the two in one step: while a part\'s image is out none of its text is held, and no state holds text its image does not place; a part whose image read fails is taken alone at once, the read answering no refusal (FP-27)', async () => {
+  const R = '1.0.1.0.14', n = 200000, head = 4096, cut = F.MAX_DELIVERY_ITEMS, rest = n - head;
+  /** R's own bytes from `pos`, as `image` answers them */
+  const own = (/** @type {number} */ pos, /** @type {number} */ width) => ({ result: { as_of: 1, resp: 'runs', runs: [{ i_start: `${R}.0.1.${pos}`, width: String(width) }] } });
+  /** @type {Record<string, unknown>} */
+  const s = {
+    [opKeyOf(F.retrieveV(R, head + 1, cut))]: filled('b', cut),
+    [opKeyOf(F.retrieveV(R, head + 1 + cut, rest - cut))]: filled('c', rest - cut),
+    [opKeyOf(F.image(R, head + 1, cut))]: own(head + 1, cut),
+  };
+  // the last part's image as the board answers it: then, refused
+  inTurn(s, F.image(R, head + 1 + cut, rest - cut), own(head + 1 + cut, rest - cut), BUSY);
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  /** R's extent, and its first window held with its image, as the view holds them */
+  const firstWindow = () => {
+    REC.invalidate(R);
+    REC.takeSpanSet(R, [{ subspace: 1, ordinal: 1, positions: n }]);
+    REC.takeDelivery(R, [{ pos: 1, width: head, kind: 'content', text: 'a'.repeat(head), ref: null, origin: null }], 1, { from: 1, runs: [{ iStart: R + '.0.1.1', width: head }] });
+  };
+  firstWindow();
+  let watching = true, bare = false;
+  REC.watch(() => { if (!watching) return; const d = REC.doc(R); if (d.from >= 0 && REC.imageGaps(d.image, d.from, d.to - d.from).length) bare = true; });
+  const release = fake.hold('op', { frame: F.image(R, head + 1, cut) });
+  const reading = PUMP.readRest(R);
+  try {
+    await untilAsked(fake, F.image(R, head + 1, cut));
+    for (let i = 0; i < 5; i++) await flush();
+    assert.deepEqual([askedOf(fake, F.retrieveV(R, head + 1, cut)), REC.doc(R).to], [1, head + 1], 'the part\'s image asked with its text, none of its text held while the image is out');
+  } finally { release(); }
+  assert.deepEqual(await reading, { refused: null });
+  watching = false;
+  assert.deepEqual([REC.doc(R).to, REC.imageGaps(REC.doc(R).image, 1, n), bare], [n + 1, [], false], 'every part taken with its image: no state held text its image did not place');
+  assert.deepEqual([askedOf(fake, F.retrieveV(R, head + 1 + cut, rest - cut)), askedOf(fake, F.image(R, head + 1 + cut, rest - cut))], [1, 1], 'the last part\'s image asked with its text');
+  firstWindow();
+  assert.deepEqual(await PUMP.readRest(R), { refused: null }, 'read again, the last part\'s image refused: no refusal of the text');
+  assert.deepEqual([REC.textBetween(R, n, n + 1), REC.imageGaps(REC.doc(R).image, 1, n)], ['c', [{ pos: head + 1 + cut, width: rest - cut }]], 'that part\'s text taken alone at once, its image left for the view to ask');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+/** D held as the view reads it — its extent, its metadata, its links and its chain — and its text whole, taken with the image read over a window where one is given */
+function heldD(/** @type {import('./records.js').ImageRead | null} */ image) {
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 30 }]);
+  REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.1', birth: D + '.1', birthExtent: 30, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(D, []); REC.takeMembers(D, 1);
+  REC.takeDelivery(D, F.decodeDelivery(/** @type {any} */ (script[opKeyOf(F.retrieveV(D, 1, 30))]).result, 1), 1, image);
+}
+/** the image reads the fake port was asked since `from`, each [first position, positions] */
+const imagesAsked = (/** @type {ReturnType<typeof FAKE.create>} */ fake, from = 0) => fake.asked.slice(from).filter((k) => k.includes('"op":"image"')).map((k) => {
+  const r = JSON.parse(k.slice(3)).region[0];
+  return [Number(r.start.split('.').pop()), Number(r.width.split('.').pop())];
+});
+/** D's image refused for its size, as the board refuses a region past M8's budget */
+const IMAGE_TOO_LARGE = { refused: { kind: 'refused', name: 'image_too_large', status: 200, code: 'image_too_large', detail: null, op: 'image', body: null } };
+/** D's image over its first fifteen positions, its own bytes; and over the fifteen after them, its own to 26 and four of the withheld run's origin */
+const [D_FIRST_HALF, D_SECOND_HALF] = [{ result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.1', width: '15' }] } }, { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.16', width: '11' }, { i_start: '1.0.1.0.1003.0.1.1', width: '4' }] } }];
+
+test('the view asks only the image its held text lacks, each placed where it was asked: the image held over the text\'s first half, its second half asked alone; images held over two windows that do not meet, the stretch between them alone (FP-27)', async () => {
+  const s = { ...script, ...D_CHAIN, [opKeyOf(F.image(D, 16, 15))]: D_SECOND_HALF, [opKeyOf(F.image(D, 11, 10))]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.11', width: '10' }] } } };
+  const fake = readingD(s);
+  heldD({ from: 1, runs: [{ iStart: D + '.0.1.1', width: 15 }] });
+  let from = fake.asked.length;
+  await settle();
+  assert.deepEqual([imagesAsked(fake, from), gapsIn(D)], [[[16, 15]], []], 'its second half asked alone, and placed there');
+  REC.invalidate(D); PUMP.forget(D);
+  heldD({ from: 1, runs: [{ iStart: D + '.0.1.1', width: 10 }] });
+  REC.takeImage(D, 21, [{ iStart: D + '.0.1.21', width: 6 }, { iStart: '1.0.1.0.1003.0.1.1', width: 4 }]);
+  from = fake.asked.length;
+  await settle();
+  assert.deepEqual([imagesAsked(fake, from), gapsIn(D)], [[[11, 10]], []], 'the stretch between the two windows asked alone, and placed there');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the view\'s image read the board refuses for its size is asked again as its halves and placed whole: a size refusal is no final answer of the image (FP-21, FP-27)', async () => {
+  const s = { ...script, ...D_CHAIN, [opKeyOf(F.image(D, 1, 30))]: IMAGE_TOO_LARGE, [opKeyOf(F.image(D, 1, 15))]: D_FIRST_HALF, [opKeyOf(F.image(D, 16, 15))]: D_SECOND_HALF };
+  const fake = readingD(s);
+  heldD(null);
+  await settle();
+  assert.deepEqual([imagesAsked(fake), gapsIn(D), REC.doc(D).origins], [[[1, 30], [1, 15], [16, 15]], [], [{ pos: 27, width: 4, doc: '1.0.1.0.1003' }]], 'refused whole for its size, asked as its halves: every position named');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('each refusal the view\'s image read meets is recorded once: the size refusal it went past by halving and the refusal a half met, which ends the read; the board not answering it, once for the outage (FP-21)', async (t) => {
+  let clock = 1000;
+  t.mock.method(performance, 'now', () => clock);
+  const s = { ...script, ...D_CHAIN, [opKeyOf(F.image(D, 1, 15))]: D_FIRST_HALF, [opKeyOf(F.image(D, 16, 15))]: { refused: { kind: 'refused', name: 'bad_region', code: 'bad_region' } } };
+  inTurn(s, F.image(D, 1, 30), IMAGE_TOO_LARGE, UNREACHABLE, UNREACHABLE, script[opKeyOf(F.image(D, 1, 30))]);
+  const fake = readingD(s);
+  const met = PUMP.refusalsMet().length;
+  /** the refusals recorded of D's image reads since the test began, by name */
+  const recorded = () => PUMP.refusalsMet().slice(met).filter((r) => r.frame === 'image' && r.addr === D).map((r) => r.refusal.name);
+  heldD(null);
+  await settle();
+  assert.deepEqual([imagesAsked(fake), recorded()], [[[1, 30], [1, 15], [16, 15]], ['image_too_large', 'bad_region']], 'halved for its size, its second half refused: each refusal recorded once');
+  REC.invalidate(D); PUMP.forget(D);
+  heldD(null);
+  await settle();
+  clock += PUMP.UNREACHED_MS;
+  await settle();
+  assert.deepEqual([imagesAsked(fake).length, recorded()], [5, ['image_too_large', 'bad_region', 'unreachable']], 'read again, the board not answering it twice in one outage: recorded once');
+  clock += PUMP.UNREACHED_MS;
+  await settle();
+  assert.deepEqual([recorded().length, gapsIn(D)], [3, []], 'answered: every position named');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('past the whole read\'s cap the view asks no image of positions it holds no text of: its first window and the window in view held with their images, nothing asked across the positions between them (FP-12, FP-27)', async () => {
+  const H = '1.0.1.0.15', n = 2000000, head = 4096;
+  const fake = FAKE.create({});
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: H, kind: 'edition', label: 'h', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  REC.takeSpanSet(H, [{ subspace: 1, ordinal: 1, positions: n }]);
+  REC.takeMetadata(H, { doc: H, published: true, owner: '1.0.1', birth: H + '.1', birthExtent: n, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(H, []); REC.takeMembers(H, 1);
+  /** H's text over [pos, pos + width), taken with its own bytes' image, as the view's read of a window takes it */
+  const held = (/** @type {number} */ pos, /** @type {number} */ width) => REC.takeDelivery(H, [{ pos, width, kind: 'content', text: 'x'.repeat(width), ref: null, origin: null }], 1, { from: pos, runs: [{ iStart: `${H}.0.1.${pos}`, width }] });
+  held(1, head);
+  const box = docBox(H), e = estimate(n, box), c = e.columns[300];
+  CAM.setViewport(1440, 900); CAM.reach(e.fs); CAM.set(CAM.viewAt({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2 }, e.fs));
+  const w = /** @type {[number, number]} */ (PUMP.spanWindow(REC.doc(H)));
+  assert.ok(w && w[0] > PUMP.WHOLE_CAP, `the window in view past the cap, apart from the first: ${JSON.stringify(w)}`);
+  held(w[0], w[1] - w[0]);
+  for (let i = 0; i < 6; i++) { PUMP.pump(); await flush(); }
+  assert.deepEqual(imagesAsked(fake), [], 'no image asked: every position held placed, and none asked of the positions between the windows');
 });
 
 test('replay: a recorded script from the provider builds the model; the snapshot printed for the gate', async () => {

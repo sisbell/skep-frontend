@@ -3322,9 +3322,6 @@ function carried(h, rec) {
   return now.length ? { from: h.pos, to: now[0].pos } : null;
 }
 
-/** does a document's held image cover its whole text, so a passage it places none of is in none of it? */
-const imageCovers = (/** @type {Doc} */ d) => !!d.imageFor && d.extent != null && d.imageFor[0] <= 1 && d.imageFor[1] >= d.extent + 1;
-
 /**
  * The passage held as its document's article was taken down, set again: the
  * camera re-anchored so it keeps its place and its size on screen (P-LAY's
@@ -3347,7 +3344,7 @@ const imageCovers = (/** @type {Doc} */ d) => !!d.imageFor && d.extent != null &
  */
 function keepPlace(h, rec) {
   const by = h.pair || carried(h, rec);
-  if (!by && h.pos != null && h.ids.length && imageCovers(rec.d)) read.vanished(rec.d.addr, h.pos, h.ids);
+  if (!by && h.pos != null && h.ids.length && REC.imageCovers(rec.d)) read.vanished(rec.d.addr, h.pos, h.ids);
   const at = holdOf(h.fold, rec.fold, h.p, by);
   if (!at) return false;
   const box = docBox(rec.d.addr);

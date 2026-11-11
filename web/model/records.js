@@ -13,8 +13,10 @@
 // answer replacing it whole with the feed rows taken meanwhile laid over it
 // (`takeIndex`), and kept by the feed's rows, never by enumerating
 // documents; documents — their index row, extent, delivered
-// runs and the blocks derived from them, metadata, V→I image as read with
-// the transcluded runs it shows (`transcludedRuns`) — a delivery and the
+// runs and the blocks derived from them, metadata, V→I image as read, each
+// image read replacing what the image held over its window alone
+// (`takeImage`), with the transcluded runs it shows (`transcludedRuns`) and
+// the stretches it places nothing of (`imageGaps`, `imageCovers`) — a delivery and the
 // image read with it taken in one step (`takeDelivery`) — the raw set of links touching them,
 // their chain's count and whether the board ended it there, the position
 // their text was read at (`Doc.readAt`), and a refusal a read of them met;
@@ -244,7 +246,7 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {Block[]} blocks
  * @property {ImageRun[]} image the V→I image as read, in position order: the permanent address of every position it covers
  * @property {Origin[]} origins the image's runs whose origin is another document — the transcluded runs
- * @property {[number, number] | null} imageFor the window the image was read for
+ * @property {[number, number] | null} imageFor the window the last image read was for
  * @property {Set<string>} links the addresses of the links touching this document, as `find_links_v` delivered them
  * @property {boolean} linksRead
  * @property {number | null} members the chain's member count where probed, else null
@@ -1119,8 +1121,9 @@ export const iSpanOf = (r) => ({ ...iPlace(r.iStart), width: r.width });
 /**
  * The V→I image's runs over a window, kept whole — each placed at its
  * positions, the permanent addresses `placed` reads a link's stored span
- * back to the text through — and the runs whose origin is another document,
- * the transcluded runs, marked as origins.
+ * back to the text through — in the place of what the held image placed over
+ * the window, what it placed outside the window kept; and the runs whose
+ * origin is another document, the transcluded runs, marked as origins.
  * @param {string} addr
  * @param {number} fromPos the window's first position
  * @param {Array<{iStart: string, width: number}>} runs
@@ -1131,7 +1134,7 @@ export function takeImage(addr, fromPos, runs) {
   d.rev++; bump();
 }
 
-/** an image's runs over a window into a record (`takeImage`, `takeDelivery`, `setAgain`), its transcluded runs read from the whole image held (`transcludedRuns`) */
+/** an image's runs over a window into a record (`takeImage`, `takeDelivery`, `setAgain`): the held image's runs over the window replaced and those outside it kept (`outsideOf`), its transcluded runs read from the whole image held (`transcludedRuns`) */
 function imageInto(/** @type {Doc} */ d, /** @type {number} */ fromPos, /** @type {Array<{iStart: string, width: number}>} */ runs) {
   /** @type {ImageRun[]} */
   const image = [];
@@ -1140,11 +1143,57 @@ function imageInto(/** @type {Doc} */ d, /** @type {number} */ fromPos, /** @typ
     image.push({ pos, width: r.width, ...iPlace(r.iStart) });
     pos += r.width;
   }
-  const outside = (/** @type {{pos: number, width: number}} */ o) => o.pos + o.width <= fromPos || o.pos >= pos;
-  d.image = d.image.filter(outside).concat(image).sort((a, b) => a.pos - b.pos);
+  d.image = outsideOf(d.image, fromPos, pos).concat(image).sort((a, b) => a.pos - b.pos);
   d.origins = transcludedRuns(d.addr, d.image);
   d.imageFor = [fromPos, pos];
 }
+
+/** an image's runs with the window [from, to) taken out of them: each run outside it kept, and each one crossing an edge of it cut there, its part outside kept with the permanent addresses it places there */
+function outsideOf(/** @type {ImageRun[]} */ image, /** @type {number} */ from, /** @type {number} */ to) {
+  /** @type {ImageRun[]} */
+  const out = [];
+  for (const r of image) {
+    const end = r.pos + r.width;
+    if (end <= from || r.pos >= to) { out.push(r); continue; }
+    if (r.pos < from) out.push({ ...r, width: from - r.pos });
+    if (end > to) out.push({ ...r, pos: to, ordinal: r.ordinal + (to - r.pos), width: end - to });
+  }
+  return out;
+}
+
+/**
+ * The stretches of a region of a text an image places nothing of, in the
+ * text's order, each its first position and its positions; none where the
+ * image places every position of the region.
+ * @param {ImageRun[]} image in position order
+ * @param {number} pos the region's first position
+ * @param {number} width its positions
+ * @returns {Stretch[]}
+ */
+export function imageGaps(image, pos, width) {
+  /** @type {Stretch[]} */
+  const out = [];
+  const end = pos + width;
+  let at = pos;
+  for (const r of image) {
+    if (at >= end || r.pos >= end) break;
+    if (r.pos + r.width <= at) continue;
+    if (r.pos > at) out.push({ pos: at, width: r.pos - at });
+    at = r.pos + r.width;
+  }
+  if (at < end) out.push({ pos: at, width: end - at });
+  return out;
+}
+
+/**
+ * Does a record's image place every position of its text (`imageGaps`), so a
+ * passage it places none of is in none of it — the model's record, or one
+ * M-DERIVE derives from it? False where its extent is not read, or its text
+ * holds no position.
+ * @param {Doc} d
+ * @returns {boolean}
+ */
+export const imageCovers = (d) => d.extent != null && d.extent > 0 && !imageGaps(d.image, 1, d.extent).length;
 
 /**
  * The transcluded runs of a text's image (`Origin`): each image run whose

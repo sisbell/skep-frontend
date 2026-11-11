@@ -53,8 +53,10 @@
 // its halves, `halvedOf`), each part read with its V→I image over the same
 // positions (`image`, in parts where the board refuses it for its size:
 // `imageParts`) and the two taken in one step (`withImage`, M-REC's
-// `takeDelivery`; FP-27) — a part whose image read fails taken alone, the
-// image of held text no image read covers asked on its own (`image`) —
+// `takeDelivery`; FP-27) — a part whose image read fails taken alone, and the
+// image of held text its held image places nothing of asked on its own, in
+// parts of at most MAX_DELIVERY_ITEMS positions, each halved where the board
+// refuses it for its size (`imageLacked`, `imageOf`) —
 // where each far end its links send from it stands in the far
 // document's current text (`project`, A-53) into the version the far box
 // shows, from every passage end the document holds (M-REC's `holdsEnd`), the
@@ -76,8 +78,9 @@
 // (`readIndex`: `places`, at boot and at every change of class, the view
 // asking nothing while it is out); a whole document, its text taken with its
 // image in one step (`loadWhole`, `wholeOf`);
-// the rest of a document's text an open find searches, each part taken into
-// the model as it lands (`readRest`; FP-6);
+// the rest of a document's text an open find searches, each part read with
+// its image and the two taken into the model in one step as they land
+// (`readRest`; FP-6, FP-27);
 // the reads a face stating a withheld origin needs before it shows
 // (`claimsToRead`, `readClaims`); where a link's end projects (`projectEnd`,
 // `projectedIn`); a member's extent (`extentOf`) and its age (`ageOf`),
@@ -228,8 +231,8 @@
 // far scale (`pump`), and none at far. A gap the stream stands open again
 // over ends at the change, the reads at the new class making the page whole;
 // one it has not reopened over stands.
-// Rules: FP-1, FP-2, FP-6, FP-9, FP-11, FP-21, FP-22, FP-23, FP-28, FP-29,
-// FP-34, FP-35.
+// Rules: FP-1, FP-2, FP-6, FP-9, FP-11, FP-21, FP-22, FP-23, FP-27, FP-28,
+// FP-29, FP-34, FP-35.
 
 import * as PORT from '../bridge/port.js';
 import * as REC from './records.js';
@@ -243,6 +246,7 @@ import { keyFingerprint } from '../util.js';
 
 /** @typedef {import('./records.js').Doc} Doc */
 /** @typedef {import('./records.js').Stretch} Stretch */
+/** @typedef {import('./records.js').ImageRead} ImageRead */
 /** @typedef {import('./records.js').AccountFacts} AccountFacts */
 /** @typedef {import('./records.js').KeyCause} KeyCause */
 /** @typedef {import('./records.js').Fresh} Fresh */
@@ -321,7 +325,7 @@ const SCAN_ATTEMPTS = 6;
 export const DROP_ATTEMPTS = 4;
 /** an acquire for a session lost that is not back within this long has the line read that the page is reconnecting (FP-28) */
 export const RECONNECTING_MS = 1000;
-/** an act's read the board refuses for its size (M-FRAMES's `SIZE_REFUSALS`) is asked in parts in at most this many reads in all (`compareParts`, `imageParts`), a text in at most this many past its first size refusal (`textParts`), and the view's text window in at most this many parts (`halvedOf`); past it the size refusal is handed up (unmeasured: no document on the seeded board meets a size refusal) */
+/** an act's read the board refuses for its size (M-FRAMES's `SIZE_REFUSALS`), and the view's read of an image, is asked in parts in at most this many reads in all (`compareParts`, `imageParts`), a text in at most this many past its first size refusal (`textParts`), and the view's text window in at most this many parts (`halvedOf`); past it the size refusal is handed up (unmeasured: no document on the seeded board meets a size refusal) */
 export const SPLIT_READS = 32;
 /** a run of feed rows is taken to be in once no row has come for this long: the shell emits a tick's rows back to back and announces no run's end (`skep-shell`'s feed thread; unmeasured) */
 export const RUN_QUIET_MS = 250;
@@ -1629,30 +1633,39 @@ export async function compareParts(a, b) {
  * asked on its own, their runs taken in the text's order, at most
  * SPLIT_READS reads in all. Any other refusal is handed up; so is a size
  * refusal past that bound, or of a single position. Every refusal met is
- * recorded.
+ * recorded once: as it is met; or, with `o.unrecorded`, the one handed up
+ * left for the caller to record by its own rule (`need`'s), and each size
+ * refusal halved and gone past recorded as the read ends.
  * @param {string} addr
  * @param {number} pos the region's first position
  * @param {number} width its positions
+ * @param {{unrecorded?: boolean}} [o]
  * @returns {Promise<{runs: Array<{iStart: string, width: number}>} | {refused: Refusal}>}
  */
-export async function imageParts(addr, pos, width) {
+export async function imageParts(addr, pos, width, o = {}) {
   /** @type {Array<{iStart: string, width: number}>} */
   const runs = [];
   /** @type {Operand[]} */
   const todo = [{ doc: addr, pos, width }];
-  /** @type {Refusal | null} the last size refusal met: the one handed up past the bound */
-  let last = null;
+  /** @type {Refusal[]} the size refusals met, each halved, in the order met: the last of them the one handed up past the bound */
+  const split = [];
+  const record = (/** @type {Refusal} */ r) => { refusals.push({ frame: 'image', refusal: r, addr }); };
+  /** the read's end, handing up `up`'s refusal — an index into `split`, or none: with `o.unrecorded`, every size refusal halved but the one handed up recorded */
+  const end = (/** @type {{runs: Array<{iStart: string, width: number}>} | {refused: Refusal}} */ out, up = -1) => {
+    if (o.unrecorded) split.forEach((r, i) => { if (i !== up) record(r); });
+    return out;
+  };
   for (let reads = 0; todo.length; reads++) {
-    if (reads >= SPLIT_READS && last) return { refused: last };
-    const o = /** @type {Operand} */ (todo.shift());
-    const out = await read(F.image(addr, o.pos, o.width));
+    if (reads >= SPLIT_READS && split.length) return end({ refused: split[split.length - 1] }, split.length - 1);
+    const p = /** @type {Operand} */ (todo.shift());
+    const out = await read(F.image(addr, p.pos, p.width));
     if (!('refused' in out)) { runs.push(...F.decodeRuns(out.answer)); continue; }
-    refusals.push({ frame: 'image', refusal: out.refused, addr });
-    if (!sized(out.refused) || o.width < 2) return { refused: out.refused };
-    last = out.refused;
-    todo.unshift(...halves(o));
+    if (!o.unrecorded) record(out.refused);
+    if (!sized(out.refused) || p.width < 2) return end({ refused: out.refused });
+    split.push(out.refused);
+    todo.unshift(...halves(p));
   }
-  return { runs };
+  return end({ runs });
 }
 
 /**
@@ -1663,13 +1676,16 @@ export async function imageParts(addr, pos, width) {
  * half asked on its own, the parts' runs taken in the text's order — at most
  * SPLIT_READS reads past the first size refusal. Any other refusal is handed
  * up; so is a size refusal past that bound, or of a single position. Every
- * refusal met is recorded. Each part is told to `part` as it lands, and no
- * part is asked once `stop` answers true. The text's `as_of` is the earliest
- * its parts were answered at, none where a part said none.
+ * refusal met is recorded. With `o.image`, each part's V→I image over the
+ * same positions is asked at once with its text (`imageParts`), a halved
+ * part's halves each with its own. Each part is told to `part` as it lands —
+ * with its image, where one was asked and answered — and no part is asked
+ * once `stop` answers true. The text's `as_of` is the earliest its parts were
+ * answered at, none where a part said none.
  * @param {string} addr
  * @param {number} pos the stretch's first position
  * @param {number} width its positions
- * @param {{part?: (runs: import('./frames.js').Run[], asOf: number | null) => void, stop?: () => boolean}} [o]
+ * @param {{part?: (runs: import('./frames.js').Run[], asOf: number | null, image: ImageRead | null) => void, stop?: () => boolean, image?: boolean}} [o]
  * @returns {Promise<{runs: import('./frames.js').Run[], asOf: number | null} | {refused: Refusal} | null>} null where `stop` ended it
  */
 export async function textParts(addr, pos, width, o = {}) {
@@ -1685,12 +1701,12 @@ export async function textParts(addr, pos, width, o = {}) {
     if (o.stop && o.stop()) return null;
     if (last && past >= SPLIT_READS) return { refused: last };
     const p = /** @type {Operand} */ (todo.shift());
-    const out = await read(F.retrieveV(addr, p.pos, p.width));
+    const [out, im] = await Promise.all([read(F.retrieveV(addr, p.pos, p.width)), o.image ? imageParts(addr, p.pos, p.width) : null]);
     if (last) past++;
     if (!('refused' in out)) {
       const got = F.decodeDelivery(out.answer, p.pos), at = F.asOf(out.answer);
       runs.push(...got); asOfs.push(at);
-      if (o.part) o.part(got, at);
+      if (o.part) o.part(got, at, im && 'runs' in im ? { from: p.pos, runs: im.runs } : null);
       continue;
     }
     refusals.push({ frame: 'retrieve_v', refusal: out.refused, addr });
@@ -1731,6 +1747,18 @@ function partsOf(/** @type {Operand} */ o) {
 async function withImage(frame, p) {
   const [text, image] = await Promise.all([read(frame), imageParts(p.doc, p.pos, p.width)]);
   return 'refused' in text ? text : { answer: { text: text.answer, image: 'runs' in image ? image.runs : null } };
+}
+
+/**
+ * A stretch's V→I image asked in parts (`imageParts`) and answered as a need's
+ * read is (`need`): its runs, or the refusal its parts handed up, left for the
+ * need to record.
+ * @param {Operand} p the stretch
+ * @returns {Promise<{answer: Array<{iStart: string, width: number}>} | {refused: Refusal}>}
+ */
+async function imageOf(p) {
+  const out = await imageParts(p.doc, p.pos, p.width, { unrecorded: true });
+  return 'runs' in out ? { answer: out.runs } : out;
 }
 
 /**
@@ -1781,8 +1809,9 @@ function hold(key) {
  * — its key left unasked, to be asked again as the view next needs it.
  * The read is `frame` asked at the page's class (`read`), or what `ask`
  * makes where one is given — a part of a text and its image, asked at once
- * and answered together (`withImage`) — one key and one slot either way, its
- * refusal the one `frame` met.
+ * and answered together (`withImage`), or an image asked in parts
+ * (`imageOf`) — one key and one slot either way, its refusal recorded under
+ * `frame`'s op.
  * Returns whether the need is still MISSING — pending or not yet issued; a
  * refused need is not missing, nor is a held one (nothing will arrive for
  * either).
@@ -1933,6 +1962,25 @@ function holdsSpan(/** @type {Doc} */ d, /** @type {number} */ from, /** @type {
 }
 
 /**
+ * The image the view asks of a document's held text (`pump`): each stretch of
+ * the positions its delivered runs hold that its held image places nothing of
+ * (M-REC's `imageGaps`), in the text's order, cut into parts of at most
+ * MAX_DELIVERY_ITEMS positions (`partsOf`), the parts its text is read in;
+ * none over positions it holds no text of.
+ * @param {Doc} d
+ * @returns {Operand[]}
+ */
+function imageLacked(d) {
+  /** @type {Array<{pos: number, width: number}>} the stretches its runs hold, joined where they meet */
+  const held = [];
+  for (const r of d.runs) {
+    const last = held[held.length - 1];
+    if (last && last.pos + last.width === r.pos) last.width += r.width; else held.push({ pos: r.pos, width: r.width });
+  }
+  return held.flatMap((s) => REC.imageGaps(d.image, s.pos, s.width)).flatMap((g) => partsOf({ doc: d.addr, pos: g.pos, width: g.width }));
+}
+
+/**
  * The reads the view needs now, issued within the budget — none while the
  * index is read (`readIndex`), which counts as a need missing; the places the
  * view stood on as the page's class last changed first (`reread`), at any
@@ -2002,10 +2050,9 @@ export function pump() {
           if (need(key, part, take, d.addr, (r) => { if (sized(r) && p.width >= 2) halved.add(key); else refuseDoc(d, r); }, watchDrops, () => withImage(part, p))) missing++;
         }
       }
-      if (d.from >= 0 && (!d.imageFor || d.imageFor[0] > d.from || d.imageFor[1] < d.to)) {
-        // the image of held text no image read covers — a part taken alone, its image read failing — placed from the window it was asked for: a text read widening the window can land first
-        const from = d.from, to = d.to;
-        if (need('i:' + d.addr + ':' + from + ':' + to, F.image(d.addr, from, to - from), (a) => REC.takeImage(d.addr, from, F.decodeRuns(a)), d.addr)) missing++;
+      for (const g of imageLacked(d)) {
+        // the image of held text its held image places nothing of — a part taken alone, its image read failing — asked in parts, placed from the stretch it was asked for: a text read widening the held text can land first
+        if (need('i:' + d.addr + ':' + g.pos + ':' + (g.pos + g.width), F.image(d.addr, g.pos, g.width), (/** @type {Array<{iStart: string, width: number}>} */ runs) => REC.takeImage(d.addr, g.pos, runs), d.addr, undefined, watchDrops, () => imageOf(g))) missing++;
       }
       for (const p of farEnds(d.addr).slice(0, 12)) {
         if (need('p:' + p.link + ':' + p.slot + ':' + p.far, F.project(p.link, p.slot, p.far), (a) => REC.takeProjection(p.link, p.slot, p.far, stretchesOf(a)), p.far, (r) => declined(p.link, p.slot, p.far, r))) missing++;
@@ -2333,8 +2380,10 @@ export async function wholeOf(addr) {
  * The rest of a document's text, for an open find (N-FIND; B2-S5's one read
  * at open): its extent first where the record lacks it, then every stretch of
  * its positions the record's delivered runs lack, in the text's order, each
- * read in parts (`textParts`), each part taken into the model as it lands
- * (M-REC's `takeDelivery`; FP-6) and told to `part`. Each pass waits first
+ * read in parts (`textParts`), each part's image asked with it, and each part
+ * taken into the model with its image in one step as it lands — alone where
+ * its image read failed (M-REC's `takeDelivery`; FP-6, FP-27) — and told to
+ * `part`. Each pass waits first
  * for the reads again of a document the view keeps (`readAgainFirst`); a pass
  * the document was dropped under takes nothing more and is begun again, at
  * most DROP_ATTEMPTS passes. Never a read per keystroke: the find asks it
@@ -2368,7 +2417,7 @@ async function restOf(addr, dropped, part) {
     REC.takeSpanSet(addr, F.decodeSpanSet(out.answer));
   }
   for (const [from, to] of textLacked(REC.doc(addr))) {
-    const out = await textParts(addr, from, to - from, { part: (runs, asOf) => { if (dropped()) return; REC.takeDelivery(addr, runs, asOf); part(); dirty(); }, stop: dropped });
+    const out = await textParts(addr, from, to - from, { image: true, part: (runs, asOf, image) => { if (dropped()) return; REC.takeDelivery(addr, runs, asOf, image); part(); dirty(); }, stop: dropped });
     if (!out || dropped()) return 'dropped';
     if ('refused' in out) { refuseDoc(REC.doc(addr), out.refused); dirty(); return { refused: out.refused }; }
   }

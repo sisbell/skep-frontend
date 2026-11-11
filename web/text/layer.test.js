@@ -27,7 +27,8 @@
 // article standing until the reads it makes again set it — a version move
 // and an edit above the view, by its bytes' identity, the view's centre on an
 // empty line typed below it as well, and the reader told where a text set
-// again holds none of it; a flight aimed at a passage of a document set again
+// again holds none of it, its image placing every position however many
+// reads placed it; a flight aimed at a passage of a document set again
 // under it landing on that passage, the line under the camera kept where it
 // stood; what stands — every
 // readable document in the one frame, the limit's order below it, by line,
@@ -863,6 +864,23 @@ test('a text set again holding none of the line being read, its image covering i
   fedKept(); LAYER.frame(); setD(TEXT2, [{ iStart: `${D}.0.1.${3 * n + 1}`, width: n }]); LAYER.frame();
   assert.deepEqual(told.map(([a, p]) => [a, p]), [[D, at2]], 'gone: the reader told once, at the position whose line keeps its place');
   assert.ok(told[0][2] > 0 && together(screen(at2), here2), 'the passage named by its bytes, its line kept by position');
+  LAYER.frame();
+  assert.equal(told.length, 1, 'told once for the setting');
+}, 1440, 900));
+
+test('a text set again holding none of the line being read, its image read in two windows that meet before the frame that sets it, is one its image covers whole: the reader told once (FP-21\'s landing rule)', () => onLayer(() => {
+  /** @type {Array<[string, number]>} each telling: the document, and the position whose line keeps the place */
+  const told = [];
+  LAYER.readers({ vanished: (addr, pos) => { told.push([addr, pos]); } });
+  const { screen } = readLater();
+  fedKept(); LAYER.frame(); setEdited(); LAYER.frame();
+  const at = /** @type {number} */ (LAYER.posAt(D, CAM.cam.x, CAM.cam.y)), here = screen(at), n = new TextEncoder().encode(TEXT2).length, half = Math.floor(n / 2);
+  // set again as bytes minted since, its text first and its image after it in two windows
+  fedKept(); LAYER.frame(); setD(TEXT2, null);
+  REC.takeImage(D, 1, [{ iStart: `${D}.0.1.${3 * n + 1}`, width: half }]);
+  REC.takeImage(D, half + 1, [{ iStart: `${D}.0.1.${3 * n + 1 + half}`, width: n - half }]);
+  LAYER.frame();
+  assert.deepEqual([told, together(screen(at), here)], [[[D, at]], true], 'gone: the reader told once, the line kept by position');
   LAYER.frame();
   assert.equal(told.length, 1, 'told once for the setting');
 }, 1440, 900));

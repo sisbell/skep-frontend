@@ -916,7 +916,7 @@ export function recheck() {
   if (addr === a.addr && REC.dropsOf(addr) === a.drops && WRITE.editRev(addr) !== a.edited && !unbroken(a, addr)) { putOut(); return; }
   if (!a.held || standsAs(a, addr)) return;
   const d = REC.has(addr) ? textOf(addr) : null;
-  const h = d && d.from >= 0 && imageCovers(d) ? holdsIn(addr, a.held) : null;
+  const h = d && d.from >= 0 && REC.imageCovers(d) ? holdsIn(addr, a.held) : null;
   if (!h) return;
   const subject = prior && prior.said ? prior.said.subject : a.link ? 'followed' : 'reading';
   if (h.held.holds !== 'none') {
@@ -1812,7 +1812,7 @@ async function heldByBytes(c, into, extent) {
   if (!ids.length) return { refused: PUMP.NOT_ANSWERED };
   const d = REC.has(into) ? REC.doc(into) : null;
   /** @type {import('../model/records.js').ImageRun[]} */
-  let image = d && d.from >= 0 && imageCovers(d) ? d.image : [];
+  let image = d && d.from >= 0 && REC.imageCovers(d) ? d.image : [];
   if (!image.length) {
     const im = await PUMP.imageParts(into, 1, extent);
     if ('refused' in im) return im;
@@ -1953,8 +1953,6 @@ async function idsOf(addr, runs) {
 
 /** the far end a follow takes by identity: its slot's stored spans (M-REC's `identityOfEnd`) — what the entry it departs records, and what its projection places */
 const slotSpans = (/** @type {Shown} */ s) => (s.farSlot === 2 ? s.link.to : s.link.from).flatMap((e) => { const i = REC.identityOfEnd(e); return i ? [i] : []; });
-/** does a document's held image cover its whole text? */
-const imageCovers = (/** @type {Doc} */ d) => !!d.imageFor && d.extent != null && d.imageFor[0] <= 1 && d.imageFor[1] >= d.extent + 1;
 /** does a projection's refusal say something of the far document — withheld from the reader, a place the follow lands at with its own withheld words (`landWithheld`), or nothing the board will say of the address, faced in the landing's place, there being nothing to land at? Every other refusal says nothing of it, and the follow lands, its line saying it could not tell */
 const ofDocument = (/** @type {Refusal} */ r) => r.kind === 'refused' && (r.name === 'withheld' || r.name === 'doc_not_registered');
 
@@ -2005,14 +2003,14 @@ async function followed(s, proj) {
   if (met && PUMP.sized(met)) {
     // a text of more runs than `project` answers over: its image read in parts, the slot's bytes placed through it
     const d = REC.doc(far);
-    if (d.extent != null && !imageCovers(d)) { const parts = await PUMP.imageParts(far, 1, d.extent); if ('runs' in parts) REC.takeImage(far, 1, parts.runs); else met = parts.refused; }
-    if (imageCovers(REC.doc(far))) { runs = REC.placedIdentity(far, slotSpans(s)); met = null; REC.takeProjection(s.link.addr, s.farSlot, far, runs); }
+    if (d.extent != null && !REC.imageCovers(d)) { const parts = await PUMP.imageParts(far, 1, d.extent); if ('runs' in parts) REC.takeImage(far, 1, parts.runs); else met = parts.refused; }
+    if (REC.imageCovers(REC.doc(far))) { runs = REC.placedIdentity(far, slotSpans(s)); met = null; REC.takeProjection(s.link.addr, s.farSlot, far, runs); }
   }
   // a far text holding the person's page-local edits: the slot's bytes placed by their identity in the text shown, never by the board's positions
   if (runs && REC.has(far) && textOf(far).derived) {
     const d = REC.doc(far);
-    if (d.extent != null && !imageCovers(d)) { const parts = await PUMP.imageParts(far, 1, d.extent); if ('runs' in parts) REC.takeImage(far, 1, parts.runs); }
-    runs = imageCovers(REC.doc(far)) ? LAYER.placedShown(far, slotSpans(s)) : runs.flatMap((r) => LAYER.fromBoard(far, r));
+    if (d.extent != null && !REC.imageCovers(d)) { const parts = await PUMP.imageParts(far, 1, d.extent); if ('runs' in parts) REC.takeImage(far, 1, parts.runs); }
+    runs = REC.imageCovers(REC.doc(far)) ? LAYER.placedShown(far, slotSpans(s)) : runs.flatMap((r) => LAYER.fromBoard(far, r));
   }
   if (met || !runs) return { runs: null, marked: false, said: HELD.unknownOf(met, 'followed', far), pieces: null };
   if (!runs.length) return { runs, marked: false, said: null, pieces: null };
@@ -3271,7 +3269,7 @@ function holdsIn(addr, spans) {
   if (!d || d.from < 0) return null;
   const width = spans.reduce((n, s) => n + s.width, 0), stretches = stretchesIn(addr, spans);
   const held = HELD.heldOf(stretches.map((s) => ({ at: s.at, width: s.width })), width, stretches.length);
-  if (held.holds !== 'all' && !imageCovers(d)) return null;
+  if (held.holds !== 'all' && !REC.imageCovers(d)) return null;
   return { held, stretches, pieces: HELD.piecesIn(stretches, width, showsWithheld(d)) };
 }
 
@@ -3600,7 +3598,7 @@ async function readTexts(texts) {
     const w = await PUMP.wholeOf(addr);
     met = met || w.refused;
     const d = w.doc;
-    if (w.refused || !d || d.from < 0 || d.extent == null || d.extent < 1 || imageCovers(d)) continue;
+    if (w.refused || !d || d.from < 0 || d.extent == null || d.extent < 1 || REC.imageCovers(d)) continue;
     const drops = REC.dropsOf(addr), im = await PUMP.imageParts(addr, 1, d.extent);
     if (!('runs' in im)) met = met || im.refused;
     else if (REC.dropsOf(addr) === drops) REC.takeImage(addr, 1, im.runs);
@@ -3923,7 +3921,7 @@ function throughEdits() {
 }
 
 /** does the page hold a version's text and an image covering it — what a surface's bytes are placed by across a version (see the head)? */
-const readIn = (/** @type {string} */ addr) => { const d = REC.has(addr) ? textOf(addr) : null; return !!d && d.from >= 0 && imageCovers(d); };
+const readIn = (/** @type {string} */ addr) => { const d = REC.has(addr) ? textOf(addr) : null; return !!d && d.from >= 0 && REC.imageCovers(d); };
 /** the key a selection re-checked across a version is kept by (`Across.sel`): its span, and the version its box shows */
 const acrossKey = (/** @type {Span} */ s, /** @type {string} */ shown) => `${s.addr} ${s.pos} ${s.width} ${shown}`;
 

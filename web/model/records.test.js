@@ -2,7 +2,9 @@
 // listing replacing the last whole with the rows taken meanwhile laid over
 // it; deliveries into blocks that tile their bytes, each typed line one and
 // each item one of its kind, runs and blocks replaced whole and never edited
-// in place, a delivery and the image read with it taken in one step; a
+// in place, a delivery and the image read with it taken in one step; an
+// image read replacing the held image over its own window alone, and the
+// stretches an image places nothing of read from it; a
 // link's stored span placed through the held V→I image, and an
 // end held by the trunk its address lies under or by the text that places
 // it; a stretch named by identity and placed back through any image;
@@ -318,6 +320,36 @@ test('a delivery taken with the image read with it sets both in one step — one
   assert.deepEqual([REC.rev() - rev, d.rev - docRev, told, bare], [1, 1, 1, false], 'one revision of the model and of the record, one change told, and the text never without its image');
   assert.deepEqual([d.from, d.to, d.readAt, d.imageFor, d.origins], [1, 11, 4, [1, 11], [{ pos: 5, width: 6, doc: S }]], 'the text over its window, the image over the window it was read for, its transcluded run marked');
   assert.deepEqual(REC.identityParts(d.image, 1, 10), [{ prefix: D + '.0.1', ordinal: 1, width: 4 }, { prefix: S + '.0.1', ordinal: 1, width: 6 }], 'every position named by its bytes, no gap');
+});
+
+test('an image read over a window replaces what the held image placed over that window alone: a run crossing its edge is cut there, its part outside kept naming the bytes it named, the transcluded runs read from what stands (FP-27)', () => {
+  const D = '1.0.1.0.3', S = '1.0.1.0.1003', OWN = D + '.0.1';
+  REC.takeImage(D, 1, [{ iStart: OWN + '.1', width: 20 }]);
+  REC.takeImage(D, 11, [{ iStart: S + '.0.1.1', width: 20 }]);
+  const d = REC.doc(D);
+  assert.deepEqual(d.image.map((r) => [r.pos, r.width, r.prefix, r.ordinal]), [[1, 10, OWN, 1], [11, 20, S + '.0.1', 1]], 'the first ten positions the first read placed kept');
+  assert.deepEqual([REC.identityIn(d.image, 1, 10), d.origins], [[{ prefix: OWN, ordinal: 1, width: 10 }], [{ pos: 11, width: 20, doc: S }]]);
+  REC.takeImage(D, 1, [{ iStart: OWN + '.1', width: 30 }]);
+  REC.takeImage(D, 11, [{ iStart: S + '.0.1.40', width: 5 }]);
+  assert.deepEqual(REC.doc(D).image.map((r) => [r.pos, r.width, r.ordinal]), [[1, 10, 1], [11, 5, 40], [16, 15, 16]], 'a window inside a wider one: the wider\'s either side kept, past the window its addresses running on from its sixteenth');
+  assert.deepEqual(REC.identityIn(REC.doc(D).image, 16, 15), [{ prefix: OWN, ordinal: 16, width: 15 }]);
+});
+
+test('the stretches of a text an image places nothing of are read from the image held, never from the window last read: over two windows that meet none, and the record\'s image covers its text; over two that do not, the stretch between them; no extent read, or none held, no cover (FP-27)', () => {
+  const D = '1.0.1.0.3', E = '1.0.1.0.4';
+  for (const a of [D, E]) REC.takeSpanSet(a, [{ subspace: 1, ordinal: 1, positions: 30 }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 15 }]);
+  assert.deepEqual([REC.imageGaps(REC.doc(D).image, 1, 30), REC.imageCovers(REC.doc(D))], [[{ pos: 16, width: 15 }], false], 'its first half placed');
+  REC.takeImage(D, 16, [{ iStart: D + '.0.1.16', width: 15 }]);
+  assert.deepEqual([REC.imageGaps(REC.doc(D).image, 1, 30), REC.imageCovers(REC.doc(D)), REC.doc(D).imageFor], [[], true, [16, 31]], 'two windows that meet: covered, the last read for the second alone');
+  REC.takeImage(E, 1, [{ iStart: E + '.0.1.1', width: 10 }]);
+  REC.takeImage(E, 21, [{ iStart: E + '.0.1.21', width: 10 }]);
+  const e = REC.doc(E).image;
+  assert.deepEqual([REC.imageGaps(e, 1, 30), REC.imageGaps(e, 5, 10), REC.imageGaps(e, 21, 10), REC.imageCovers(REC.doc(E))], [[{ pos: 11, width: 10 }], [{ pos: 11, width: 4 }], [], false], 'two windows that do not meet: the stretch between them, cut to the region asked');
+  assert.deepEqual(REC.imageGaps([], 3, 4), [{ pos: 3, width: 4 }], 'no image: the region whole');
+  REC.takeImage('1.0.1.0.5', 1, [{ iStart: '1.0.1.0.5.0.1.1', width: 10 }]);
+  REC.takeSpanSet('1.0.1.0.6', [{ subspace: 1, ordinal: 1, positions: 0 }]);
+  assert.deepEqual([REC.imageCovers(REC.doc('1.0.1.0.5')), REC.imageCovers(REC.doc('1.0.1.0.6'))], [false, false], 'its extent not read, or no position held: no cover');
 });
 
 test('a transcluded run is one origin\'s stretch unbroken in the text: image runs of one origin that meet are one run however their permanent addresses continue, a byte of the document\'s own between them — its own newline — parting them, and the image a draft\'s typed text derives is read by the same rule (issue #304\'s design decision: "A native break ends it")', () => {
