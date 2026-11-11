@@ -37,7 +37,9 @@
 // Back lighting the passage it was opened from, the scene recorded as left
 // and reopened so by Forward and by Back after a teleport out, the focus on
 // the stop it stood on, an opening abandoned or refused giving its entry
-// back (FP-25), the card it was opened from reopened by its close (FP-36),
+// back, one at a link's end whose far document the board will say nothing
+// of faced in the far end's words and, known so at the act, never leaving
+// (FP-21, FP-25), the card it was opened from reopened by its close (FP-36),
 // a live caret it was opened at standing live through its close (D5 K-63);
 // each pane's article
 // T-LAYER's mount on the inner side of its corner, its byline's facts read
@@ -120,7 +122,7 @@ import * as GO from '../nav/go.js';
 import * as TRAIL from '../nav/trail.js';
 import * as CAM from '../plane/camera.js';
 import { accountCell } from '../plane/projection.js';
-import { t, tHTML, lastRead } from '../strings.js';
+import { t, tHTML, lastRead, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
 import * as LK from '../links/links.js';
 import { inkOf } from '../beams/beams.js';
@@ -602,8 +604,9 @@ before(() => {
  * context, so the scene's draw places its stop and its strokes' buttons; the status region keeps what it was told, in
  * order (`said`); each pane keeps the listeners the scene attaches to it (`paneOn`). Where `acts` asks, each pane's
  * corner holds the buttons its markup sets as the platform would (`holdActs`), and the scene's root takes a style
- * property.
- * @param {{acts?: boolean}} [as]
+ * property. Where `notice` asks, the overlay host stands a notice below the overlay in an element of its own (O-HOST's);
+ * else a notice that would stand there is said through the status region alone.
+ * @param {{acts?: boolean, notice?: boolean}} [as]
  */
 function page(as = {}) {
   const body = { id: 'the body', focus() {} };
@@ -758,6 +761,7 @@ function page(as = {}) {
   const corner = element('the corner', () => !corners.inert);
   const line = element('the one line\'s ‹ back');
   const overlay = Object.assign(element('the overlay'), { querySelectorAll: () => [] });
+  const below = Object.assign(element('the notice below the overlay'), { querySelectorAll: () => [] });
   globalThis.document = /** @type {any} */ (doc);
   WALK.attach(/** @type {any} */ (mirror), /** @type {any} */ (element('the live region')));
   LAYER.attach(/** @type {any} */ (element('the text layer')), /** @type {any} */ (corners));
@@ -765,7 +769,7 @@ function page(as = {}) {
   SCENE.attach(/** @type {any} */ ({ root, bar, paneA, paneB, canvas, stop, strokes }), {
     end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, a, told) => FACES.floating(far, a, null, told), held: FACES.held },
   });
-  HOST.attach(/** @type {any} */ (overlay));
+  HOST.attach(/** @type {any} */ (overlay), as.notice ? /** @type {any} */ (below) : null);
   /** where the platform's focus stands */
   const at = () => doc.activeElement.id;
   /** the plane's two regions: is each inert? */
@@ -782,7 +786,7 @@ function page(as = {}) {
 }
 
 /** the test run on a page of stand-ins (`page`, as `as` asks), the platform's `document` put back after it */
-async function onPage(/** @type {(p: ReturnType<typeof page>) => Promise<void>} */ body, /** @type {{acts?: boolean}} */ as = {}) {
+async function onPage(/** @type {(p: ReturnType<typeof page>) => Promise<void>} */ body, /** @type {{acts?: boolean, notice?: boolean}} */ as = {}) {
   const platform = globalThis.document;
   try { await body(page(as)); } finally { SCENE.close(); globalThis.document = platform; }
 }
@@ -835,6 +839,8 @@ test('a focus the person moved out of the scene stays where they put it; one ope
 /** an address the board says nothing of: a scene opened on it is refused */
 const GONE = '1.0.1.0.29';
 Object.assign(script, { [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(GONE) })]: NOT_REGISTERED });
+/** a face's parts as its markup sets them, in order: its words, then each part beneath them, each its string and its markup */
+const partsOf = (/** @type {string | undefined} */ html) => [...(html || '').matchAll(/<div class="(?:face-text|note)" data-string="([^"]*)">(.*?)<\/div>/g)].map((m) => [m[1], m[2]]);
 /** the two first editions' `compare` whole: the read a scene on them makes last before it shows */
 const BOTH = F.compare([{ doc: A, spans: [{ ordinal: 1, positions: A_TEXT.length }] }], [{ doc: B, spans: [{ ordinal: 1, positions: B_TEXT.length }] }]);
 /** every flight a move started stepped to its end, and the reads, the walk's moves and the scene's opening it set going let answer */
@@ -948,9 +954,85 @@ test('a reading scene\'s opening reaches as a jump only a read can place does (F
   const site = { span: { addr: A, pos: 1, width: 3 } };
   assert.equal(await GO.toScene(A, GONE, {}, { site }), false);
   assert.deepEqual([SCENE.isOpen(), trailNow(), HOST.currentState()?.id, HOST.currentState()?.anchor], [false, before, 'face:doc_not_registered', { ...site, sign: A }], 'refused: its entry given back, the fifth cell faced at the act\'s site');
+  assert.deepEqual(partsOf(HOST.currentState()?.html), [['B1.doc_not_registered', addressedHTML(t('B1.doc_not_registered', { address: GONE }))]], 'opened from no link\'s end: the fifth cell in the board\'s words alone');
   HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 }));
+
+/**
+ * the first edition's links into GONE: one at its first word (DEAD_AT); two at its second paragraph's first, one into GONE
+ * (DEAD_ROW) and one into the second edition (LIVE_ROW), which the "which" list rows together; and one naming GONE whole at
+ * its sixth word (DEAD_WHOLE), whose lineage its anatomy card reads, no claims either way
+ */
+const DEAD_AT = A + '.0.2.41', DEAD_ROW = A + '.0.2.42', LIVE_ROW = A + '.0.2.43', DEAD_WHOLE = A + '.0.2.44';
+Object.assign(script, Object.fromEntries([F.inClaims(DEAD_WHOLE, 'audit'), F.outClaims(DEAD_WHOLE, 'audit')].map((frame) => [FAKE.keyOf('op', { frame }), { result: { as_of: 1, resp: 'claims', claims: [] } }])));
+
+test('"read side by side" at a link\'s end whose far document the board will say nothing of is faced in the far end\'s words, as a follow at that end is — from the selection\'s slot, a "which" row, the walk\'s stop on the link and the anatomy card: learned by its read, at the act\'s site below what stands, its entry given back; known at the act, no entry and no read, its face in the place of what stands (FP-21, FP-25)', () => onPage(async (p) => {
+  await onTrail(p);
+  const untyped = { at: null, time: null, from: null }, unanswered = fake.unanswered.length, platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  REC.takeLinks(A, [DEAD_AT, DEAD_ROW, LIVE_ROW, DEAD_WHOLE]);
+  REC.takeLink({ addr: DEAD_AT, from: [passage(A, 1, 3)], to: [passage(GONE, 1, 3)], type: CITE, age: untyped });
+  REC.takeLink({ addr: DEAD_ROW, from: [passage(A, 14, 3)], to: [passage(GONE, 4, 2)], type: CITE, age: untyped });
+  REC.takeLink({ addr: LIVE_ROW, from: [passage(A, 14, 3)], to: [passage(B, 1, 3)], type: CITE, age: untyped });
+  REC.takeLink({ addr: DEAD_WHOLE, from: [passage(A, 26, 6)], to: [wholeOf(GONE)], type: CITE, age: untyped });
+  try {
+    const before = trailNow(), words = LK.emptyAt(GONE).whole.map((x) => [x.id, addressedHTML(x.text)]);
+    assert.notEqual(words[0][0], 'B1.doc_not_registered', 'the far end\'s words lead with its own state, never the board\'s words alone');
+    const end = (/** @type {string} */ l) => /** @type {import('../links/links.js').Shown} */ (LK.shown(A).find((x) => x.link.addr === l));
+    const extentAsks = () => fake.asked.filter((k) => k === FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(GONE) })).length;
+    /** @type {Array<{what: string, from: string | null, site: {addr: string, pos: number, width: number}, press: () => Promise<void>}>} each place "read side by side" is pressed at, the overlay it is pressed from — standing through the act — and the link's own bytes there */
+    const presses = [
+      { what: 'the selection\'s slot', from: 'selection', site: { addr: A, pos: 1, width: 3 }, press: async () => { SEL.select(A, 1, 3); HOST.currentState()?.acts?.scene(/** @type {any} */ (p.doc.body), false); } },
+      {
+        what: 'a "which" row', from: 'which', site: { addr: A, pos: 14, width: 3 }, press: async () => {
+          SEL.select(A, 14, 3);
+          SEL.act('scene', true);
+          assert.equal(HOST.currentState()?.id, 'which', 'two links at the span: the list asks which');
+          const i = LK.shownAt(A, { pos: 14, width: 3 }).findIndex((x) => x.link.addr === DEAD_ROW);
+          HOST.currentState()?.acts?.['w' + i](/** @type {any} */ (p.doc.body), false);
+        },
+      },
+      {
+        what: 'the walk\'s stop on the link', from: null, site: { addr: A, pos: 1, width: 3 }, press: async () => {
+          await WALK.focusTo(A, 1, true, { link: DEAD_AT, key: end(DEAD_AT).key });
+          assert.deepEqual([walkAt(), SEL.selected()], [['link', A, 1], null], 'the walk on the link\'s stop, nothing selected');
+          SEL.act('scene', true);
+        },
+      },
+      { what: 'the anatomy card', from: 'anatomy:' + DEAD_WHOLE, site: { addr: A, pos: 26, width: 6 }, press: async () => { await ANATOMY.open(end(DEAD_WHOLE), null); HOST.currentState()?.acts?.beside(/** @type {any} */ (p.doc.body), false); } },
+    ];
+    for (const { what, from, site, press } of presses) {
+      REC.invalidate(GONE);
+      const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(GONE) });
+      await press();
+      assert.deepEqual([GO.isReaching(), trailNow().addrs.length], [true, before.addrs.length + 1], `${what}: the page not knowing yet, its entry taken at the act and reaching`);
+      release();
+      await flown();
+      const face = from ? HOST.notice() : HOST.currentState();
+      assert.deepEqual([SCENE.isOpen(), trailNow(), HOST.currentState()?.id, face?.id, face?.anchor], [false, before, from ?? 'face:doc_not_registered', 'face:doc_not_registered', { span: site, sign: A }],
+        `${what}: its read refused, its entry given back, the fifth cell at the act's site${from ? ' below what stands' : ''}`);
+      assert.deepEqual(partsOf(face?.html), words, `${what}: in the far end's words, its label's first, each later part beneath them`);
+      HOST.leave(); SEL.clear();
+    }
+    assert.equal(REC.doc(GONE).refused, 'unregistered', 'the page knows now that the board will say nothing of GONE');
+    for (const { what, site, press } of presses.slice(0, 3)) {
+      const asked = extentAsks();
+      await press();
+      assert.deepEqual([GO.isReaching(), trailNow(), HOST.currentState()?.id, HOST.notice(), HOST.currentState()?.anchor], [false, before, 'face:doc_not_registered', null, { span: site, sign: A }],
+        `${what}, known at the act: no entry, its face at the act's site in the place of what stands`);
+      assert.deepEqual(partsOf(HOST.currentState()?.html), words, `${what}, known at the act: in the far end's words`);
+      await flown();
+      assert.deepEqual([SCENE.isOpen(), trailNow(), extentAsks() - asked], [false, before, 0], `${what}, known at the act: nothing read, nothing opened`);
+      HOST.leave(); SEL.clear();
+    }
+    assert.deepEqual(fake.unanswered.slice(unanswered), []);
+  } finally {
+    HOST.leave(); SEL.clear();
+    globalThis.window = platform.window;
+    REC.invalidate(A); await PUMP.loadWhole(A);
+  }
+}, { notice: true }));
 
 test('the scene opened from a card\'s "read side by side", its own close — Esc, a Back — reopens the card over the place it was opened over, its read made again (issue #264\'s design decision: "Back and Forward reopen them as left"; FP-36)', () => onPage(async (p) => {
   await onTrail(p);

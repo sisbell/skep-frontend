@@ -112,7 +112,13 @@ first edition's citation of the ghost each time — faced at the
 followed link's own bytes, the face taking the place of the list or card it
 was pressed on (foundations §3.1, F-G3), the link joining no visited set,
 for its camera never left, while a follow that leaves — a citation of the
-far edition — joins it (D-3; FP-25); that card's "read side by side" at
+far edition — joins it (D-3; FP-25); "read side by side" from the selection
+at the ghost's citation — Mod+Shift+Enter, or its "which" row — faced as the
+follow is: the ghost known, its face at once at the act's site in the place
+of what stands, opening with the words the far end's label names it by, no
+scene, no entry and no read of the ghost; the ghost dropped from the model,
+its read refused faced below what stands in the same words, its entry given
+back (FP-21, FP-25); that card's "read side by side" at
 the same far end, inert with its reason its title and, pressed with the
 pointer and by Enter, giving the far end's whole form beneath the card's acts
 and through the status region — part for part the words its follow is faced
@@ -1474,6 +1480,14 @@ BESIDE = '''(() => { const o = document.getElementById('overlay'), b = o.querySe
           reason: lines.map((e) => ({string: e.dataset.string || null, words: e.textContent})),
           beneath: !!acts && lines.every((e) => !!(acts.compareDocumentPosition(e) & Node.DOCUMENT_POSITION_FOLLOWING)),
           live: document.getElementById('live').textContent, focus: a && a.closest && a.closest('#overlay') ? (a.dataset.run || null) : null}; })()'''
+# the "which" list's row naming a far address — each row names its far document by its address — and the middle of it on
+# screen, where the pointer presses it; null where no row names it (formatted with the address, as JSON)
+WHICH_ROW = '''((far) => { const b = [...document.querySelectorAll('#overlay [data-run^="w"]')].find((x) => x.textContent.includes(far)); if (!b) return null;
+  const q = b.getBoundingClientRect(); return {run: b.dataset.run, x: q.left + q.width / 2, y: q.top + q.height / 2}; })(%s)'''
+# the overlay an act asked for, or the notice standing below what the act was pressed from, waited on by a face's id for at
+# most ten seconds
+FACE_UP = '''new Promise((res) => { const t0 = performance.now(); const tick = () => { const o = window.__skep.overlay();
+  return (o.id || '').startsWith('face:') || (o.notice && (o.notice.id || '').startsWith('face:')) || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50); }; tick(); })'''
 
 
 def far_words(ctx, doc, link):
@@ -3713,8 +3727,7 @@ def run(ctx):
             r.check(s['overlay'] == 'list', 'Mod+Enter at a span with several links asks which', {'n': len(drawn_here), 'overlay': s['overlay']})
             # the row naming the ghost — each row names its far document by its address — pressed with the pointer follows that
             # row's link, the row gone with the list the face takes the place of
-            which = ctx.js('''((far) => { const b = [...document.querySelectorAll('#overlay [data-run^="w"]')].find((x) => x.textContent.includes(far)); if (!b) return null;
-              const q = b.getBoundingClientRect(); return {run: b.dataset.run, x: q.left + q.width / 2, y: q.top + q.height / 2}; })(%s)''' % json.dumps(GHOST))
+            which = ctx.js(WHICH_ROW % json.dumps(GHOST))
             r.check(which is not None, 'the list rows the links drawn at the span, the citation of the ghost named by its far address among them',
                     {'overlay': ctx.js('window.__skep.overlay().id'), 'rows': ctx.js('[...document.querySelectorAll(\'#overlay [data-run^="w"]\')].map((b) => b.textContent)')})
             if which is not None:
@@ -3734,6 +3747,45 @@ def run(ctx):
         chord(ctx, 'Escape')
         chord(ctx, 'Escape')
         r.check(state(ctx)['sel'] is None and state(ctx)['overlay'] is None, 'Esc clears the overlay, then the selection (one order)')
+        # "read side by side" at that end — Mod+Shift+Enter, then the ghost's row where the span draws several links — is
+        # faced as the follow there is (FP-21, FP-25): the page knowing the ghost says nothing, it never leaves, its face at once
+        # at the act's site in the place of what stands, opening with the words the far end's label names it by, no scene, the
+        # trail as it was and no read of the ghost asked; the ghost dropped from the model by the gate's door (reads alone),
+        # its read refused is faced below what stands in the same words, its entry given back
+        opens, stands = far_words(ctx, DOC, ghost['link']), 'selection' if len(drawn_here) == 1 else 'which'
+        for known in (True, False):
+            if not known:
+                ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(GHOST))
+            ctx.js('window.__skep.select(%s, %d)' % (json.dumps(DOC), linked['pos']))
+            ctx.frames(2)
+            b0, n0 = trail(ctx), ctx.js('window.__skep.bridge.calls().length')
+            chord(ctx, 'Enter', mods=('Meta', 'Shift'))
+            if stands == 'which':
+                row = ctx.js(WHICH_ROW % json.dumps(GHOST))
+                r.check(row is not None, 'Mod+Shift+Enter at a span with several links asks which, the citation of the ghost named by its far address among them', ctx.js('window.__skep.overlay()'))
+                if row is not None:
+                    ctx.drv.mouse(row['x'], row['y'])
+            ctx.js(FACE_UP)
+            ctx.settle()
+            ctx.frames(2)
+            o, s, b1 = ctx.js('window.__skep.overlay()'), state(ctx), trail(ctx)
+            face, asked = (o if known else o.get('notice')) or {}, ctx.js(extent_asks % n0)
+            said, kept = face.get('text') or '', b1['cursor'] == b0['cursor'] and len(b1['entries']) == len(b0['entries'])
+            seen = {'overlay': o, 'opens': opens, 'scene': s['scene'], 'cursor': [b0['cursor'], b1['cursor']], 'entries': [len(b0['entries']), len(b1['entries'])], 'extent_asks': asked}
+            if known:
+                placed = placed_at(ctx, DOC, linked['pos'], linked['width'])
+                r.check(o['id'] == 'face:doc_not_registered' and o.get('notice') is None and stands_at(placed) and bool(opens) and said.startswith(opens) and not s['scene'] and kept and asked == 0,
+                        '"read side by side" at the end of a link whose far document the page knows the board says nothing of never leaves: its face at once at the act\'s site in the place of what stands, opening with the words the far end\'s label names it by, as the follow\'s does — no scene, no entry, no read of the ghost asked (FP-21, FP-25)',
+                        dict(seen, placed=placed))
+            else:
+                r.check(o['id'] == stands and face.get('id') == 'face:doc_not_registered' and bool(opens) and said.startswith(opens) and not s['scene'] and kept and asked >= 1,
+                        '"read side by side" at that end, the ghost dropped from the model, reads it and is refused: faced below what stands in the far end\'s words, never the board\'s typed-address words, its entry given back (FP-21, FP-25)',
+                        seen)
+            for _ in range(4):
+                if state(ctx)['overlay'] is None and state(ctx)['sel'] is None:
+                    break
+                chord(ctx, 'Escape')
+            r.check(state(ctx)['overlay'] is None and state(ctx)['sel'] is None, 'Esc clears the face, what it stood with, then the selection (one order)')
     # the anatomy card's follow pressed with the pointer, at a link whose far end is a ghost the page knows says nothing (its
     # far document read whole, reads alone): the follow never leaves, and the control pressed stands in the card the
     # dead-reference face takes the place of, so the face stands at the act's site — the link's own bytes, beneath their first

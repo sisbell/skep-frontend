@@ -16,11 +16,11 @@
 // where this client holds no record of its own that the board answered for
 // the document, the unregistered-or-unreachable face, C-42's content; it
 // offers no act, for B1-S8's one act, "try again", is the unreachable node's,
-// and the board's answer here is byte-identical to never-held) — at a
-// followed link's far end, the far end's whole form in its one state (LK's
-// `emptyAt`; FP-21, FP-26), its first words the short form the far end's
-// label and rows name it by, each later part beneath them (`unregistered`;
-// `Asked.far`); `withheld` →
+// and the board's answer here is byte-identical to never-held) — at a link's
+// far end, met by a follow or by a reading scene opened from the link's end,
+// the far end's whole form in its one state (LK's `emptyAt`; FP-21, FP-26),
+// its first words the short form the far end's label and rows name it by,
+// each later part beneath them (`unregistered`; `Asked.far`); `withheld` →
 // the document-level withheld face (B1 §1's A-170; B1-S8; R56) — "who wrote
 // this?" or "who uses this?" asked of a document the reader may not read, a
 // follow's far end withheld — of the
@@ -193,7 +193,7 @@ import { esc } from '../util.js';
  * @property {boolean} [told] the landing that met the face says its words where the focus lands (N-GO's `described`): the status region does not repeat them
  * @property {boolean} [notice] the face is one a read brought once it answered (O-HOST's notice): no act on the chrome, standing below what the reader opened, its clause's reads made beside it (`whenRead`)
  * @property {() => boolean} [stands] a notice still stands to be shown — no act made since its read answered (N-GO's): one whose clause's reads answer after it no longer stands shows nothing
- * @property {boolean} [far] the fifth cell answers a follow at the link's far end (N-GO's): its words the far end's whole form (LK's `emptyAt`), not the board's alone
+ * @property {boolean} [far] the fifth cell answers an act at a link's far end — a follow, or a reading scene opened from the link's end (N-GO's): its words the far end's whole form (LK's `emptyAt`), not the board's alone
  */
 
 /**
@@ -431,15 +431,16 @@ function toAnchor(a) {
  * The fifth cell (B1-S8): an address this board will say nothing about — the
  * board answered `doc_not_registered` and this client holds no record that
  * it ever answered for the document — met by a typed address (B1-S11 → S8)
- * or by a followed link's far end (the dead reference, at its site or where
- * its camera went). At a typed address, C-42's content and nothing more; at a
+ * or at a link's far end (the dead reference): by a follow, at its site or
+ * where its camera went, or by a reading scene opened from the link's end, at
+ * its site. At a typed address, C-42's content and nothing more; at a
  * far end (`Asked.far`), the far end's whole form in its one state (LK's
  * `emptyAt`) — the words its label names it by first, as a face's words,
  * each later part beneath them, heard in that order. No act either way: the
  * answer is byte-identical to never-held, and the model keeps it as a fact.
  * @param {string} addr
  * @param {Anchor | HTMLElement | {x: number, y: number} | null} [anchor] the reference's site; null where an address was typed
- * @param {Asked} [asked] a notice where a read brought it once it answered; `far` where it answers a follow
+ * @param {Asked} [asked] a notice where a read brought it once it answered; `far` where it answers an act at a link's far end
  */
 export function unregistered(addr, anchor = null, asked = {}) {
   if (asked.far) {

@@ -270,7 +270,10 @@
 // read can place does: the camera still while SC's reads are out, Esc, Back
 // and every later act abandoning it, its entry given back, a refusal its
 // reads met faced at the act's site, the entry given back too; the chrome of
-// the place it leaves ends only as it shows (SC's `leaving`). It stands
+// the place it leaves ends only as it shows (SC's `leaving`). Opened from a
+// link's end whose far document the board will say nothing of, it is faced
+// in the far end's words, as a follow at that end is, and never leaves where
+// the page knows it at the act (LK's `farEmpty`). It stands
 // exactly while the cursor stands on its entry: its own end — Esc, the bar's
 // ×, zoom-out, ← — is Back (`closeScene`), as Mod+[ in it is, lighting the
 // step it was opened from where Back lands (`lightOf`), and each close is
@@ -333,10 +336,11 @@
 // that must read, the board marked unreachable — never leaves: no flight, no
 // entry, no read, the link not counted as followed, its face at the act's
 // site in the place of what stands there (`showNotice`), the chrome kept.
-// Wherever a follow meets a far end the board will say nothing of, its face
-// says the far end's words — the ones its label and rows name it by first,
-// then the rest of its one state (O-FACES' `unregistered`; LK's `emptyAt`;
-// FP-21) — and a jump to an address the board's words alone. A
+// Wherever a follow, or a reading scene opened from a link's end, meets a far
+// end the board will say nothing of, its face says the far end's words — the
+// ones its label and rows name it by first, then the rest of its one state
+// (O-FACES' `unregistered`; LK's `emptyAt`; FP-21) — and a jump to an address
+// the board's words alone. A
 // jump where only a read can place the destination reaches (`reachFor`): its
 // entry taken at the act, the camera still, its reaching face at the act's
 // site (O-FACES' `reaching`); Esc, Back and every later act abandon it, its
@@ -2697,17 +2701,25 @@ const addrOf = (/** @type {string | import('../model/records.js').Doc} */ x) => 
  * ended (`dismissChrome`), the entry the one the reader stands at from now.
  * Where a later act took its place or its opening ended, its entry is given
  * back; where its reads were refused, given back too, the refusal faced at
- * the act's site as O-HOST's notice (`asNotice`). Where no board is held, the
- * act answered where it was made (FP-35).
+ * the act's site as O-HOST's notice (`asNotice`) — where the scene is opened
+ * from a link's end and the board will say nothing of its far document, in
+ * the far end's words (O-FACES' `unregistered`; `Asked.far`), as a follow at
+ * that end is faced. Opened from a link's end the page knows the board will
+ * say nothing of (LK's `farEmpty`), it never leaves: no entry, no read, that
+ * face at the act's site in the place of what stands there, as a follow known
+ * to fail at the act is. Where no board is held, the act answered where it
+ * was made (FP-35).
  * @param {string | import('../model/records.js').Doc} a the document its first pane opens on: the reader's, save at a landing's line, the source of the passage landed; or the record the page shows of it (T-LAYER's `paneSource`), where the opener's positions are that text's
  * @param {string} b the one its second pane opens on
  * @param {import('../scene/scene.js').Held} [held] the passage the opener holds, which the scene sets level
- * @param {{beside?: 'a' | 'b', from?: {shown: Shown} | {passage: Span} | null, site?: Site | null}} [opts] `beside` the pane holding the document opened beside the reader's, the entry's address — the second where none is named; `from` the link's end or the passage the scene is opened from, which Back lights (`sceneStep`); `site` where the act was made. The scene takes the focus however the act was made (SC's)
+ * @param {{beside?: 'a' | 'b', from?: {shown: Shown} | {passage: Span} | null, site?: Site | null}} [opts] `beside` the pane holding the document opened beside the reader's, the entry's address — the second where none is named; `from` the link's end or the passage the scene is opened from, which Back lights (`sceneStep`), a link's end naming the far end a face at a far document the board will say nothing of speaks of; `site` where the act was made. The scene takes the focus however the act was made (SC's)
  * @returns {Promise<boolean>} the scene shows
  */
 export async function toScene(a, b, held = {}, opts = {}) {
   const act = nextAct();
   if (!REC.board()) { FACES.noBoard(opts.site ?? null); return false; }
+  const end = opts.from && 'shown' in opts.from ? opts.from.shown : null, site = signed(opts.site ?? null);
+  if (end && LK.farEmpty(end)) { FACES.unregistered(end.far, site, { far: true }); return false; }
   const departed = departure(), addr = addrOf(opts.beside === 'a' ? a : b);
   const entry = TRAIL.push({ addr, pos: null, width: null, view: departed.view, label: null, notice: null, scene: { a, b, held, left: null } }, departed, false, sceneStep(opts.from ?? null));
   reach = { act, addr, entry };
@@ -2716,7 +2728,10 @@ export async function toScene(a, b, held = {}, opts = {}) {
   if (!reach || reach.act !== act) return false;
   reach = null;
   TRAIL.giveBack(entry);
-  if (out.refused) FACES.showRefusal(signed(opts.site ?? null), out.refused, addr, asNotice(act));
+  if (!out.refused) return false;
+  // a link's end's near pane is a document the page draws: the board saying nothing of an address names the far one
+  if (end && out.refused.name === 'doc_not_registered') FACES.unregistered(end.far, site, { ...asNotice(act), far: true });
+  else FACES.showRefusal(site, out.refused, addr, asNotice(act));
   return false;
 }
 

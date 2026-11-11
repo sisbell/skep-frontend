@@ -1115,13 +1115,13 @@ export const STRINGS = {
   // complete index listing no document at the address, "no document here yet" — its whole form saying nothing has been made
   // there, then whether the account's next new document goes there — else "no document known here", its whole form that
   // short form, then the fifth cell's words (B1.doc_not_registered); the short form names the far end on every label and
-  // row and in its mirror item's name, and the whole form is the follow's face, the item's description and the reason its
-  // card's "read side by side" gives
+  // row and in its mirror item's name, and the whole form is the follow's face, the face of "read side by side" opened from
+  // the far end's link, the item's description and the reason its card's "read side by side" gives
   'L.far.empty': { text: 'no document here yet', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its tail, a merged tail, B1-S5, the "which" list, the ARIA mirror', lane: true },
-  'L.far.empty.whole': { text: 'no document here yet — nothing has been made at ⟨address⟩ in your account', cls: 'DRAFT', source: '', screen: 'a link\'s far end: the follow\'s face, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
-  'L.far.empty.next': { text: 'the next new document made in your account goes here, and this link will lead to it', cls: 'DRAFT', source: '', screen: 'a link\'s far end: the follow\'s face, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
-  'L.far.empty.order': { text: 'your account\'s new documents take its addresses in order', cls: 'DRAFT', source: '', screen: 'a link\'s far end: the follow\'s face, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
-  'L.far.unknown': { text: 'no document known here', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its tail, a merged tail, B1-S5, the "which" list, the follow\'s face, the ARIA mirror', lane: true },
+  'L.far.empty.whole': { text: 'no document here yet — nothing has been made at ⟨address⟩ in your account', cls: 'DRAFT', source: '', screen: 'a link\'s far end: the follow\'s face, the face of "read side by side" opened from it, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
+  'L.far.empty.next': { text: 'the next new document made in your account goes here, and this link will lead to it', cls: 'DRAFT', source: '', screen: 'a link\'s far end: the follow\'s face, the face of "read side by side" opened from it, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
+  'L.far.empty.order': { text: 'your account\'s new documents take its addresses in order', cls: 'DRAFT', source: '', screen: 'a link\'s far end: the follow\'s face, the face of "read side by side" opened from it, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
+  'L.far.unknown': { text: 'no document known here', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its tail, a merged tail, B1-S5, the "which" list, the follow\'s face, the face of "read side by side" opened from it, the ARIA mirror', lane: true },
   // a link whose far end's text holds none of its passage, part of it or all of it in pieces, or the board would not tell:
   // those words whole (BM-HELD's `farSays` — F.floating's, or its line), whose start its symbol and its stub say
   // (`farShort`)
