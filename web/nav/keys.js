@@ -69,7 +69,9 @@
 // shown alone, nothing composed and nothing sent (T-LAYER; FP-14) — and the
 // walk then stands on the block of the text shown the caret is in (N-WALK's
 // `followCaret`; B3-S13), so the slot chords act on that block. A selection the screen
-// draws in the caret's own text (`selectedAtCaret`) ends with any of those
+// draws in the caret's own text, reaching into no other document's text
+// (O-SELECTION's `reachesPast`; FP-40), is the caret's (`selectedAtCaret`):
+// it ends with any of those
 // keys but Shift's, its card with it: each that puts text in or takes it out
 // replaces the selection, the key's text — none for Backspace and Delete —
 // standing in its bytes' place, the caret after it (`editAtCaret`; T-LAYER's
@@ -165,13 +167,17 @@
 // continues at the next column's top where the view shows the foot of the
 // column it reads (T-LAYER's `pageTarget`; FP-12), and pages the view by 0.9
 // of its height everywhere else. Off a live caret, Shift with ← and → is
-// dispatched at the span a kept caret stands in (`extendAtKept`), and at the
+// dispatched at the span a kept caret stands in (`extendAtKept`), at any
+// other span of a draft the person may edit, where the caret is placed live
+// at the moving end of the selection standing in the draft, else at the
+// span's edge, and the selection extended from it as at a live caret, the
+// walk following the caret (`bareDraftSpan`; O-SELECTION's `extendFromSpan`;
+// K-70; FP-40), and at the
 // walk's focused span in text the person may not edit at its reading scale,
 // where it moves the selection's moving end a step, else selects one from the
 // span's edge (`readOnlySpan`; O-SELECTION's `extendFromFocus`; K-70), each a
 // word with Option held on macOS and a character otherwise (`arrowStep`):
-// anywhere else — a span of a draft the person may edit holding no
-// caret, a document below its reading scale, off a span — it is the
+// anywhere else — a document below its reading scale, off a span — it is the
 // platform's own (K-71), and APP-INPUT reads what it does back into the
 // page's selection. Where no board is held (FP-35) the
 // walk's keys at the plane (K-1 … K-5, K-7), K-8, the selection's slot chords
@@ -181,7 +187,7 @@
 // camera's. State (FP-10), beside the held keys: whether Mod+S has been
 // answered whole this session (`saveAnswered`).
 // Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-14, FP-20, FP-21, FP-25, FP-35,
-// FP-36, FP-39.
+// FP-36, FP-39, FP-40.
 
 import * as GO from './go.js';
 import * as WALK from './walk.js';
@@ -264,6 +270,10 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-70', chord: 'Shift+→', act: 'select.extendRight', surface: 'plane' },
   { id: 'K-70', chord: 'Alt+Shift+←', act: 'select.extendWordLeft', surface: 'plane' },
   { id: 'K-70', chord: 'Alt+Shift+→', act: 'select.extendWordRight', surface: 'plane' },
+  { id: 'K-70', chord: 'Shift+←', act: 'caret.placeExtendLeft', surface: 'plane' },
+  { id: 'K-70', chord: 'Shift+→', act: 'caret.placeExtendRight', surface: 'plane' },
+  { id: 'K-70', chord: 'Alt+Shift+←', act: 'caret.placeExtendWordLeft', surface: 'plane' },
+  { id: 'K-70', chord: 'Alt+Shift+→', act: 'caret.placeExtendWordRight', surface: 'plane' },
   { id: 'K-71', chord: '←', act: 'caret.left', surface: 'caret' },
   { id: 'K-71', chord: '→', act: 'caret.right', surface: 'caret' },
   { id: 'K-71', chord: '↑', act: 'caret.up', surface: 'caret' },
@@ -556,9 +566,12 @@ function route(e, chord, ctx) {
   if (chord === 'Shift+↓' && ctx.where !== 'caret') return () => { SEL.selectFocused('down'); return true; };
   if (chord === 'Shift+↑' && ctx.where !== 'caret') return () => { SEL.selectFocused('up'); return true; };
   // Shift with ← or → at the span a kept caret stands in: the caret returned and a selection extended from it (K-70, K-77); at
-  // the walk's span in text the person may not edit, a selection extended from the focus's edge, the platform's own extension
-  // prevented (K-70); anywhere else off a live caret, the platform's
+  // any other span of a draft the person may edit, the caret placed live where the step extends from and the selection
+  // extended from it, the walk following the caret (K-70; FP-40); at the walk's span in text the person may not edit, a
+  // selection extended from the focus's edge (K-70) — each the platform's own extension prevented; anywhere else off a live
+  // caret, the platform's
   if ((chord === 'Shift+←' || chord === 'Shift+→') && keptSpan(ctx)) return async () => { await extendAtKept(e, arrowStep(e)); return true; };
+  if ((chord === 'Shift+←' || chord === 'Shift+→') && bareDraftSpan(ctx)) return async () => { e.preventDefault(); SEL.extendFromSpan(arrowStep(e)); await WALK.followCaret(); return true; };
   if ((chord === 'Shift+←' || chord === 'Shift+→') && readOnlySpan(ctx)) return () => { e.preventDefault(); SEL.extendFromFocus(arrowStep(e)); return true; };
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
   if (chord === 'Mod+R' || e.key === 'F5') return () => true; // K-94: the plane is live; nothing reloads
@@ -910,10 +923,10 @@ function selectFirst(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
   HINT.show('D5.select-first', null, hinted(e, ctx));
 }
 
-/** the selection the screen draws in the text the live caret stands in — what a key's text at the caret replaces, what an arrow at it ends and what Mod+Enter at it follows from (D5 K-51, K-71, K-72; see the head); null where none is drawn there, whatever an earlier act did and wherever else a selection stands */
+/** the selection the screen draws in the text the live caret stands in — what a key's text at the caret replaces, what an arrow at it ends and what Mod+Enter at it follows from (D5 K-51, K-71, K-72; see the head); null where none is drawn there, whatever an earlier act did and wherever else a selection stands, and where it reaches into another document's text (O-SELECTION's `reachesPast`; FP-40) */
 function selectedAtCaret() {
   const s = SEL.selected(), c = LAYER.caret();
-  return s && c && s.addr === c.addr ? s : null;
+  return s && c && s.addr === c.addr && !SEL.reachesPast() ? s : null;
 }
 
 /** Mod+Enter at a live caret with no selection drawn in its text (`selectedAtCaret`; D5 K-51; B3-S13): nothing selected, nothing followed, the caret where it stands — the caret's follow line its hint at the focus until the next act */

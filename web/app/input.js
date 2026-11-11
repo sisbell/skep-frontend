@@ -24,20 +24,34 @@
 // frame marked dirty, until the frame after it has set that text, then acted
 // on as a press on any standing article is (`afterFrame`): released, the text
 // layer's click at the element under it; the button still down, the
-// platform's drag from the press's point (T-LAYER's `caretAt`), its other end
-// carried as the pointer moves (`extendTo`) and taken as the page's selection
-// at the release. A camera move, the person's next press, chrome standing
-// over it, or the text standing with none of it under the press drops it —
-// released there unmoved, a click on the document's ground (below).
-// Keys follow the person's last pointer act (FP-36, FP-20). A click in text
-// the person may edit places the caret there (below), one caret standing at a
-// time. Any other act on a document while a caret stands, live or kept, in
+// platform's drag from the press's point (T-LAYER's `caretAt`) — a Shift
+// press on a draft the person may edit from the anchor standing there, as
+// below — its other end carried as the pointer moves (`extendTo`) and taken
+// as the page's selection at the release. A camera move, the person's next
+// press, chrome standing over it, or the text standing with none of it under
+// the press drops it — released there unmoved, a click on the document's
+// ground (below).
+// Keys follow the person's last pointer act (FP-36, FP-20, FP-40). A click in
+// text the person may edit places the caret there (below), and a drag, a
+// double- or triple-click or a Shift+click there whose selection lies wholly
+// in that draft (T-LAYER's `movingPart`) leaves the caret live at the
+// selection's moving end — the platform's focus point: where a drag was
+// released, a word's or a line's end — the selection standing and the walk
+// following the caret onto its span, the ring out (`takeSelection`; N-WALK's
+// `followCaret`), one caret standing at a time. A Shift+click begun on such a
+// draft extends from the anchor standing there — the caret, live or kept,
+// else the end of the selection no step moves (O-SELECTION's `anchorIn`) —
+// the platform's selection collapsed there as the press begins (T-LAYER's
+// `collapseAt`); with none standing there, from the point pressed, the
+// Shift+click then a click (`anchorShift`). Any other act on a document while
+// a caret stands, live or kept, in
 // another document — on its text, a link's symbol or the stretch it marks, the
 // ⟡, a byline's label, a withheld run's gap, key or symbol, a sign in its
 // column's edge, its corner, its held label, its ground (a gutter, a margin, a
 // column's blank room), a tail from its words or its box — and a selection a
-// drag or a double-click makes there, in text the person may edit or not,
-// keeps the caret where it stood, owing the frame nothing,
+// pointer's gesture makes there, in text the person may not edit or reaching
+// past one draft into another document's text, by the document its moving end
+// lies in, keeps the caret where it stood, owing the frame nothing,
 // the act's target being what the view and the platform's selection stand on
 // (`leftCaret`; T-LAYER's `leaveCaret`; FP-37), and stands the walk on what was
 // acted on: the span clicked, the span a sign or a mark marks, the span the
@@ -109,11 +123,16 @@
 // layer rebuilds or takes it down, at the run's own positions (`runOf`;
 // O-HOST's anchor) — a press on the gap starts no selection, which the
 // platform, selecting an item whole wherever a selection touches it (FP-24),
-// would otherwise make of it at every click; a selection the platform made
-// (a double-click's word) is the page's; a click on a block selects it whole
-// (R11); and each of these three in text the person may not edit — the
-// stretch's, the word's, the block's — moves the walk's focus to the span
-// clicked, the ring out, a live caret left kept (D5 K-70, M-2; `walkOn`) —
+// would otherwise make of it at every click; a click that ends a double- or
+// triple-click or a Shift+click belongs to the selection the platform made
+// under it — the word, the line, the extension — which the press's release
+// takes as the page's (`takeSelection`), the caret at its moving end in text
+// the person may edit, and which reaches no block, stretch or caret act; a
+// click on a block selects it whole (R11); and each of these three in text
+// the person may not edit — the stretch's, the word's or the extension's, the
+// block's — moves the walk's focus to the span clicked, for the second the
+// span the selection's moving end is in, the ring out, a live caret left kept
+// (D5 K-70, M-2; `walkOn`) —
 // save in text the person may edit (T-LAYER's `editable`; D5 K-70),
 // where a click on a block or on a marked stretch places the caret at the
 // character clicked, as the platform's own collapse of its selection names it
@@ -144,7 +163,7 @@
 // follows a wheel 220 ms after it; a pinch zooms by e^(-Δy·0.012), Mod+wheel
 // by e^(-Δy·0.0022).
 // Rules: FP-1, FP-2, FP-9, FP-12, FP-20, FP-21, FP-22, FP-24, FP-25, FP-26,
-// FP-30, FP-34, FP-35, FP-36, FP-37.
+// FP-30, FP-34, FP-35, FP-36, FP-37, FP-40.
 
 import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
@@ -177,6 +196,7 @@ import { documentOf } from '../model/address.js';
  * @property {number} moved how far the pointer has moved since, in px
  * @property {boolean} released the button was released
  * @property {{x: number, y: number, scale: number}} view the camera as it was pressed
+ * @property {boolean} shift Shift was held as it was pressed: on a draft the person may edit it extends from the anchor standing there (`anchorShift`)
  */
 
 /** @type {Held | null} */
@@ -217,7 +237,7 @@ export function attach(els) {
     if (KEYS.MAC ? e.metaKey : e.ctrlKey) { cameraDrag(e); return; }
     // at the readable em a press on a document's column is the text's: held until the frame has set the text under it
     const addr = textAt(e.clientX, e.clientY);
-    if (addr) { held = { x: e.clientX, y: e.clientY, addr, at: { x: e.clientX, y: e.clientY }, moved: 0, released: false, view: CAM.view() }; drag = null; CAM.markDirty(); return; }
+    if (addr) { held = { x: e.clientX, y: e.clientY, addr, at: { x: e.clientX, y: e.clientY }, moved: 0, released: false, view: CAM.view(), shift: e.shiftKey }; drag = null; CAM.markDirty(); return; }
     drag = { px: e.clientX, py: e.clientY, moved: 0, cameraKey: false };
   });
   els.plane.addEventListener('pointermove', (e) => {
@@ -243,6 +263,8 @@ export function attach(els) {
     // the camera key held: the drag is the camera's wherever the pointer is (K-10, M-8) — no press on the text, no selection, no focus moved
     if (KEYS.MAC ? e.metaKey : e.ctrlKey) { e.preventDefault(); cameraDrag(e); return; }
     lastDown = { x: e.clientX, y: e.clientY }; LAYER.press(true);
+    // a Shift+click on a draft the person may edit extends from what stands there, set before the platform extends (see the head)
+    if (e.shiftKey) { const t = /** @type {HTMLElement | null} */ (e.target), art = t && t.closest ? /** @type {HTMLElement | null} */ (t.closest('article')) : null; anchorShift(art ? art.dataset.addr || '' : '', e.clientX, e.clientY); }
   });
   // a press on a withheld run's placeholder starts no selection: its click is its act's (see the head)
   els.layer.addEventListener('selectstart', (e) => { if (inPlaceholder(/** @type {Node | null} */ (e.target))) e.preventDefault(); });
@@ -255,17 +277,17 @@ export function attach(els) {
     if (held) { held.released = true; held.at = { x: e.clientX, y: e.clientY }; CAM.markDirty(); }
     carrying = false;
     if (!LAYER.pressing()) return;
-    LAYER.press(false); takeSelection(true);
+    LAYER.press(false); takeSelection(true, Math.abs(e.clientX - lastDown.x) + Math.abs(e.clientY - lastDown.y) > 4);
   });
   window.addEventListener('pointercancel', () => { held = null; carrying = false; LAYER.press(false); });
   window.addEventListener('contextmenu', () => { held = null; carrying = false; LAYER.press(false); });
   document.addEventListener('selectionchange', () => { if (!LAYER.pressing()) takeSelection(false); });
-  // the layer: a click on a symbol, the ⟡, the scene-offer, a withheld run; a selection the platform made (a double-click's word); a click on a marked span or a block; one on none of them, its document's ground
+  // the layer: a click on a symbol, the ⟡, the scene-offer, a withheld run; the click ending a double- or triple-click or a Shift+click, the selection the platform made under it; a click on a marked span or a block; one on none of them, its document's ground
   els.layer.addEventListener('click', (e) => {
     acted();
     // a drag's own click: the pointer moved, and the selection it made was taken as it ended
     if (Math.abs(e.clientX - lastDown.x) + Math.abs(e.clientY - lastDown.y) > 4) { e.stopPropagation(); return; }
-    if (clickText(/** @type {HTMLElement} */ (e.target), worldOf(e.clientX, e.clientY))) e.stopPropagation();
+    if (clickText(/** @type {HTMLElement} */ (e.target), worldOf(e.clientX, e.clientY), e.detail > 1 || e.shiftKey)) e.stopPropagation();
   });
   // the corners: a click on the read it offers takes that read; one on the version statement takes the corner's act; one on a
   // compact corner's glyph, or on a head's count of the items it folds, opens it whole, and one on the corner opened closes
@@ -371,17 +393,20 @@ function endAt(mark, link, key) {
 /**
  * A click on the text layer's text, at the element under it (see the head): a
  * symbol, the ⟡, the scene-offer, a withheld run's key, a withheld run;
- * a selection the platform made (a double-click's word); in text the person
- * may edit, the caret at the character clicked (K-70); a marked stretch; a
- * block, selected whole; else its document's ground. Each act on a
+ * the selection the platform made under it — the click ending a double- or
+ * triple-click or a Shift+click, whose word, line or extension the press's
+ * release took (`takeSelection`), or any the page has not taken; in text the
+ * person may edit, the caret at the character clicked (K-70); a marked
+ * stretch; a block, selected whole; else its document's ground. Each act on a
  * document's sign, mark or ground is the act the next key follows
  * (`followPointer`), the scene-offer's a departure. The text layer's own
  * clicks and a held press's release both act through it.
  * @param {HTMLElement} target
  * @param {{x: number, y: number}} at the world point the click fell on: what the stop nearest it is read from (`nearestStop`)
+ * @param {boolean} [gesture] the click ends a double- or triple-click or a Shift+click: it belongs to the selection the platform made under it
  * @returns {boolean} whether the text took the click
  */
-function clickText(target, at) {
+function clickText(target, at, gesture = false) {
   const art = /** @type {HTMLElement | null} */ (target.closest('article')), doc = art ? art.dataset.addr || '' : '';
   let took = false;
   const sym = target.closest('.sym');
@@ -415,9 +440,17 @@ function clickText(target, at) {
   }
   const wh = target.closest('[data-withheld]');
   if (wh) { const w = /** @type {HTMLElement} */ (wh), run = runOf(w); followPointer(doc, run ? run.pos : at); FACES.c39(w.dataset.owner || '', REC.reader(), run ? { el: w, span: run } : w); return true; }
-  // the platform selected text under the click (a double-click's word): the selection IS that span (R11), the walk on its span in text the person may not edit, and wherever the click left a caret in another document (K-70)
+  // the platform selected text under the click — a double- or triple-click's word or line, a Shift+click's extension: the
+  // selection IS that span (R11), taken as the press's release takes it — in text the person may edit the caret at its moving
+  // end (FP-40), in any other the walk on the span that end is in (K-70); no block, stretch or caret act
   const span = LAYER.spanOfSelection();
-  if (span && !sameSpan(span, LAYER.placedSpan())) { const left = leftCaret(span.addr); SEL.select(span.addr, span.pos, span.width); if (left || !LAYER.editable(span.addr)) walkOn(span.addr, span.pos); return true; }
+  if (span && (gesture || !sameSpan(span, LAYER.placedSpan()))) {
+    takeSelection(true, gesture);
+    const part = LAYER.movingPart();
+    if (part && !LAYER.editable(part.span.addr)) walkOn(part.span.addr, movingByte(part));
+    else if (!part && !LAYER.editable(span.addr)) walkOn(span.addr, span.pos);
+    return true;
+  }
   // text the person may edit: the click places the caret at the character clicked, where the platform collapsed its selection (K-70) — a marked stretch takes it as any text does, the card its symbol's (K-7) — and the walk stands on its span, the ring out
   const own = /** @type {HTMLElement | null} */ (target.closest('.sp'));
   if (own && LAYER.editable(own.dataset.addr || '')) {
@@ -467,6 +500,30 @@ function signAct(sign, target) {
   if (source) { if (source.dataset.src) GO.leapTo(source.dataset.src, { how: 'leap', carry: run, site: { span: run } }); return; }
   followPointer(run.addr, run.pos);
   if (target.closest('.wh-mark, .wh-key')) openRun(run);
+}
+
+/** the byte at the moving end of the part of the platform's selection T-LAYER reads (`movingPart`): its first where the selection runs backward, else its last — the one the walk stands on */
+const movingByte = (/** @type {{span: import('../text/span.js').Span, backward: boolean}} */ p) => (p.backward ? p.span.pos : p.span.pos + Math.max(1, p.span.width) - 1);
+
+/**
+ * A Shift+click begun on a draft the person may edit (see the head; K-70;
+ * FP-40): the platform's selection collapsed, as the press begins, at the
+ * anchor standing in that draft (O-SELECTION's `anchorIn`; T-LAYER's
+ * `collapseAt`), so the platform extends from it to the point pressed; with
+ * none standing there, or none a part of its article holds, at the point
+ * pressed itself (T-LAYER's `caretAt`), the Shift+click then a click. Nothing
+ * on any other document: there the platform extends what it holds.
+ * @param {string} addr the document pressed on
+ * @param {number} x the point pressed, on screen
+ * @param {number} y
+ * @returns {boolean} whether the selection was collapsed at an anchor standing in the draft
+ */
+function anchorShift(addr, x, y) {
+  if (!addr || !LAYER.editable(addr)) return false;
+  const from = SEL.anchorIn(addr);
+  if (from != null && LAYER.collapseAt(addr, from)) return true;
+  LAYER.caretAt(x, y);
+  return false;
 }
 
 /**
@@ -549,8 +606,11 @@ function textAt(px, py) {
  * layer's click at the element under it, the platform's selection collapsed
  * there first as the press would have set it; else the platform's drag from
  * the press's point to the pointer (`caretAt`, `extendTo`), taken as the
- * page's selection at the release, or carried on as the pointer moves until
- * it. A camera move drops it — the place it fell on has moved — and so does a
+ * page's selection at the release (`takeSelection`), or carried on as the
+ * pointer moves until it. A Shift press on a draft the person may edit drags
+ * from the anchor standing there, released or not (`anchorShift`); with none
+ * standing there it is a press. A camera move drops it — the place it fell
+ * on has moved — and so does a
  * frame that has set the document's text with none of it under the press, a
  * release there without moving a click on its ground (`followPointer`), or
  * one with chrome standing over it; where the document's text has not
@@ -573,11 +633,12 @@ export function afterFrame() {
   }
   held = null;
   acted();
-  if (h.released && h.moved <= 4) { LAYER.caretAt(h.x, h.y); clickText(el, at); return; }
+  const anchored = h.shift && anchorShift(h.addr, h.x, h.y);
+  if (!anchored && h.released && h.moved <= 4) { LAYER.caretAt(h.x, h.y); clickText(el, at); return; }
   LAYER.press(true);
-  if (!LAYER.caretAt(h.x, h.y)) { LAYER.press(false); return; }
+  if (!anchored && !LAYER.caretAt(h.x, h.y)) { LAYER.press(false); return; }
   LAYER.extendTo(h.at.x, h.at.y);
-  if (h.released) { LAYER.press(false); takeSelection(true); return; }
+  if (h.released) { LAYER.press(false); takeSelection(true, anchored || h.moved > 4); return; }
   carrying = true;
 }
 
@@ -587,18 +648,37 @@ export function afterFrame() {
  * or the platform's own keys moved (T-LAYER's `keepClear`); one the page
  * already holds, or placed itself, is left as it is — so the page's own
  * placement is never taken as a new selection, whose card would end a card's
- * opening still reading (O-HOST's). A drag's selection is the act the next key
- * follows (see the head): where a caret stands in another document than the
- * one it was made in, the caret is kept first (`leftCaret`) and the walk
- * stood on the span the drag ended in, the platform's focus point.
- * @param {boolean} dragged the selection is a drag's, taken as its press ends; false where the platform's own keys made it
+ * opening still reading (O-HOST's). A pointer's gesture — a drag, a double- or
+ * triple-click, a Shift+click — is the act the next key follows (see the head;
+ * FP-40): where its selection lies wholly in a draft the person may edit
+ * (T-LAYER's `movingPart`, `editable`), the caret is placed live at its moving
+ * end, the selection standing as the platform drew it (T-LAYER's
+ * `placeCaret`), and the walk follows the caret (N-WALK's `followCaret`) — a
+ * gesture made anew over the span the page holds setting the caret there all
+ * the same, where it does not stand there; anywhere else, by the document
+ * the moving end lies in, a caret standing in another is kept first
+ * (`leftCaret`) and the walk stood on the span that end is in, and a live
+ * caret standing in that one stays live, the walk on its span.
+ * @param {boolean} dragged the selection is a pointer's gesture's, taken as its press ends; false where the platform's own keys made it
+ * @param {boolean} [anew] the gesture moved the pointer, or ended a double- or triple-click or a Shift+click: its selection is the person's though it names the span the page holds
  */
-function takeSelection(dragged) {
+function takeSelection(dragged, anew = false) {
   const span = LAYER.spanOfSelection();
-  if (!span || sameSpan(span, SEL.selected()) || sameSpan(span, LAYER.placedSpan())) return;
-  const left = dragged && leftCaret(span.addr), ended = LAYER.selectionBackward() ? span.pos : span.pos + span.width - 1;
+  if (!span) return;
+  const part = LAYER.movingPart(), holds = sameSpan(span, SEL.selected()) || sameSpan(span, LAYER.placedSpan());
+  if (dragged && part && part.whole && LAYER.editable(part.span.addr)) {
+    const end = part.backward ? part.span.pos : part.span.pos + part.span.width, c = LAYER.caret();
+    if (holds && (!anew || (!!c && c.live && c.addr === part.span.addr && c.pos === end))) return;
+    LAYER.placeCaret(part.span.addr, end, true);
+    SEL.select(span.addr, span.pos, span.width, 'focus');
+    void WALK.followCaret(false);
+    return;
+  }
+  if (holds) return;
+  const at = part ? part.span.addr : span.addr, left = dragged && leftCaret(at);
   SEL.select(span.addr, span.pos, span.width, 'focus');
-  if (left) walkOn(span.addr, ended);
+  if (left) walkOn(at, part ? movingByte(part) : LAYER.selectionBackward() ? span.pos : span.pos + Math.max(1, span.width) - 1);
+  else if (dragged && LAYER.caret()) void WALK.followCaret(false);
 }
 
 /** a click on the plane: a tail lists its links; an outlined run of an arrival in several, below its document's reading scale, is a step to it; a continuation's mark's newest label goes to that member, and the rest of the mark opens its list; a place goes; a document's ground at its reading scale is the act the next key follows; an account at far goes to its region, where a board is held; else the click is the pointer's Esc, one step of its order (N-KEYS' `esc`) */

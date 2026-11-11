@@ -48,8 +48,12 @@
 // caret stands in returns it and
 // extends a selection from it a character — from the caret, never from the
 // span's edge — and where the caret cannot move that way returns it alone,
-// the selection standing, while at a span of the draft holding no caret it is
-// the platform's; at the walk's span in text the person may not edit it
+// the selection standing, while at a span of the draft holding no caret it
+// places the caret live where the step extends from — the moving end of the
+// selection standing in the draft, else the span's edge — and selects from
+// it, the walk following the caret and a key then replacing the selection,
+// Shift+↓ there staying K-8's and placing none; at the walk's span in text
+// the person may not edit it
 // selects from the focus's edge a character a press — → from the span's
 // start, ← from the end of its text — then moves the selection's moving end,
 // its anchor standing, a selection the page made in another document
@@ -1195,7 +1199,7 @@ test('Home and End at a live caret move it to the start and the end of its line 
   for (const c of ['Home', 'End', 'Shift+Home', 'Shift+End']) assert.ok(KEYS.TABLE.some((r) => r.id === 'K-71' && r.chord === c && r.surface === 'caret'), `the table binds ${c} at the caret, K-71's`);
 }));
 
-test('Shift with ← or → at the span a kept caret stands in returns the caret and extends a selection from it a character, as at a live caret — from the caret, never from the span\'s edge where K-8\'s selection stands, the acts card shown and the walk following the caret into the next span — and a printable key then replaces that selection; where the caret cannot move that way the caret is returned live and K-8\'s selection stands with its card; at a span of the draft holding no caret Shift with ← or → is the platform\'s, and at another\'s text the page\'s, selecting from the walk\'s span in K-8\'s selection\'s place — the kept caret returned at neither (D5 K-70, K-71, K-77; B3-S1; D6 BM-70)', () => onPlane(async () => {
+test('Shift with ← or → at the span a kept caret stands in returns the caret and extends a selection from it a character, as at a live caret — from the caret, never from the span\'s edge where K-8\'s selection stands, the acts card shown and the walk following the caret into the next span — and a printable key then replaces that selection; where the caret cannot move that way the caret is returned live and K-8\'s selection stands with its card; at a span of the draft holding no caret, K-8\'s selection standing over the span before it, Shift+→ places a caret live at that selection\'s moving end and moves the end a character, Shift+← moving it back; at another\'s text Shift with ← or → is the page\'s, selecting from the walk\'s span in the draft\'s selection\'s place, the caret kept (D5 K-70, K-71, K-77; B3-S1; D6 BM-70; FP-40)', () => onPlane(async () => {
   HOST.attach(/** @type {any} */ (hostEl));
   const SHIFT = { shiftKey: true };
   /** the caret placed live at `pos` and kept by Esc, the walk on its span */
@@ -1238,17 +1242,44 @@ test('Shift with ← or → at the span a kept caret stands in returns the caret
   await press('ArrowLeft', SHIFT);
   assert.deepEqual([caret(), SEL.selected(), overlay(), walkAt()], [[D, 1, true], whole, 'selection', ['block', D, 1]], 'Shift+← where the caret cannot move: the caret returned live, K-8\'s selection and its card standing');
 
-  // a span of the draft holding no caret: the platform's; another's text: the page's
+  // a span of the draft holding no caret, K-8's selection over the span before it: a caret placed at its moving end; another's text: the page's
   await focusOn(D, 14);
-  assert.deepEqual([await KEYS.dispatch(keyOf('ArrowRight', SHIFT), PLANE), await KEYS.dispatch(keyOf('ArrowLeft', SHIFT), PLANE), caret()], [false, false, [D, 1, false]],
-    'at the draft\'s other span: the platform\'s, the kept caret not returned');
+  assert.equal(await KEYS.dispatch(keyOf('ArrowRight', SHIFT), PLANE), true, 'Shift+→ at the draft\'s other span: the page takes it');
+  assert.deepEqual([caret(), SEL.selected(), walkAt()], [[D, 15, true], { addr: D, pos: 1, width: 14 }, ['block', D, 14]],
+    'a caret placed live at the moving end of K-8\'s selection, which runs on a character to it, the walk on the caret\'s span');
+  assert.equal(await KEYS.dispatch(keyOf('ArrowLeft', SHIFT), PLANE), true);
+  assert.deepEqual([caret(), SEL.selected()], [[D, 14, true], whole], 'Shift+← then: at the caret, the end back a character');
   await focusOn(O, 1);
   assert.equal(await KEYS.dispatch(keyOf('ArrowRight', SHIFT), PLANE), true, 'Shift+→ at another\'s text: the page takes it');
-  assert.deepEqual([SEL.selected(), caret()], [{ addr: O, pos: 1, width: 1 }, [D, 1, false]], 'K-8\'s selection in the draft replaced by the first character of the walk\'s span, the kept caret not returned');
+  assert.deepEqual([SEL.selected(), caret()], [{ addr: O, pos: 1, width: 1 }, [D, 14, false]], 'the draft\'s selection replaced by the first character of the walk\'s span, the caret kept');
   assert.equal(await KEYS.dispatch(keyOf('ArrowLeft', SHIFT), PLANE), true, 'Shift+← there: the page takes it');
-  assert.deepEqual([SEL.selected(), caret()], [null, [D, 1, false]], 'the character taken back, no selection standing, the kept caret not returned');
+  assert.deepEqual([SEL.selected(), caret()], [null, [D, 14, false]], 'the character taken back, no selection standing, the caret kept');
   assert.deepEqual(editsOfD(), [[3, 1, 'q']], 'nothing typed but q');
   assert.ok(['Shift+←', 'Shift+→'].every((c) => KEYS.TABLE.some((r) => r.id === 'K-77' && r.chord === c && r.surface === 'plane')), 'the table binds them at the kept span, K-77\'s');
+  HOST.dismiss();
+}));
+
+test('Shift with ← or → at a span of a draft the person may edit where no caret stands places the caret live where the step extends from and selects a character from it — → from the span\'s start, ← from the end of its text, never its newline — the selection standing with its card and the walk on the caret\'s span, so a printable key replaces it; Shift+↓ there stays K-8\'s, selecting the span whole and placing no caret, a printable key answered by the draft\'s own line (issue #568\'s design decision; D5 K-8, K-70, K-72; FP-40)', () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const SHIFT = { shiftKey: true }, second = spanOfBlock(D, /** @type {any} */ (REC.blockAt(D, 14)));
+  await focusOn(D, 14);
+  assert.deepEqual([caret(), SEL.selected(), walkAt()], [null, null, ['block', D, 14]], 'the walk on the draft\'s second span, no caret, nothing selected');
+  assert.equal(await KEYS.dispatch(keyOf('ArrowRight', SHIFT), PLANE), true, 'Shift+→: the page takes it');
+  assert.deepEqual([caret(), SEL.selected(), overlay(), walkAt()], [[D, 15, true], { addr: D, pos: 14, width: 1 }, 'selection', ['block', D, 14]],
+    'the caret placed live a character past the span\'s start, that character selected, its card shown, the walk on the caret\'s span');
+  await press('q');
+  assert.deepEqual([shown(), caret(), SEL.selected(), editsOfD()], [TEXT.slice(0, 13) + 'q' + TEXT.slice(14), [D, 15, true], null, [[14, 1, 'q']]], 'q: the character selected replaced by it, the caret after it');
+  WRITE.clearEdits(D); LAYER.dropCaret();
+  await focusOn(D, 14);
+  assert.equal(await KEYS.dispatch(keyOf('ArrowLeft', SHIFT), PLANE), true, 'Shift+←: the page takes it');
+  assert.deepEqual([caret(), SEL.selected()], [[D, 30, true], { addr: D, pos: 30, width: 1 }], 'the caret placed live a character back from the end of the span\'s text, never its newline, that character selected');
+  SEL.clear(); LAYER.dropCaret();
+  await focusOn(D, 14);
+  await press('ArrowDown', SHIFT);
+  assert.deepEqual([SEL.selected(), caret()], [second, null], 'Shift+↓: K-8\'s, the span selected whole, no caret placed');
+  await press('w');
+  assert.deepEqual([HINT.standing()?.id, editsOfD(), caret()], ['B3.caret.enter', [], null], 'a printable key there: the draft\'s own line, nothing typed');
+  assert.ok(['Shift+←', 'Shift+→'].every((c) => KEYS.TABLE.some((r) => r.id === 'K-70' && r.chord === c && r.act.startsWith('caret.') && r.surface === 'plane')), 'the table binds them at a span of the draft, K-70\'s');
   HOST.dismiss();
 }));
 

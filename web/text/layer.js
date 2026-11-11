@@ -432,9 +432,13 @@
 // session's account, by its address alone, at reading scale (`editable`) — a
 // position of the text shown, placed by Enter at a focused span at the span's
 // start (`caretToSpan`), by a click at the character clicked
-// (`caretFromPlatform`, `placeCaret`), moved by the arrows a character or a
-// line or by ← and → a word, by Home and End to the start or the end of its
-// line as the fold sets the line (`caretMove`) — with Shift, a step
+// (`caretFromPlatform`, `placeCaret`), by a drag, a double- or triple-click
+// or a Shift+click at the moving end of the selection it makes wholly in the
+// draft (`movingPart`; APP-INPUT's), by Shift with ← or → at a span holding
+// none at the edge the step extends from (O-SELECTION's `extendFromSpan`) —
+// each of these last the selection standing — moved by the arrows a
+// character or a line or by ← and → a word, by Home and End to the start or
+// the end of its line as the fold sets the line (`caretMove`) — with Shift, a step
 // O-SELECTION extends a selection from it by (`extendFromCaret`; K-71) — and
 // typed at: a printable key, Enter
 // and Tab put their characters in, Backspace and Delete take a character out
@@ -456,9 +460,12 @@
 // (`spanInView`); its line stands while it holds the caret (`heldParts`), the
 // platform's selection is collapsed at it as the page sets it — save by a
 // step that extends a selection, or the return such a step is made from,
-// whose range the page places (`placeSelection`), and save as a pointer's
-// act on another document or a selection put there keeps it, which owe it
-// nothing — and its mark —
+// whose range the page places (`placeSelection`), save where it is placed at
+// the moving end of the selection a pointer's gesture or a step made, which
+// stands, and save as a pointer's act on another document or a selection put
+// there keeps it, which owe it nothing; a Shift+click in the draft extends
+// from the anchor the platform's selection is collapsed at as the press
+// begins (`collapseAt`; APP-INPUT's) — and its mark —
 // the page's own, of no width, hollow where kept — is set at its character
 // boundary in the standing part each frame (`placeCaretMark`) and is no byte
 // of the document. A draft's kept word opens its statement in its corner on
@@ -469,7 +476,7 @@
 // (`frameStats`).
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-14, FP-20, FP-21, FP-22, FP-23,
 // FP-24, FP-25, FP-26, FP-27, FP-29, FP-30, FP-31, FP-33, FP-34, FP-36,
-// FP-37, FP-38, FP-39.
+// FP-37, FP-38, FP-39, FP-40.
 
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
@@ -810,8 +817,8 @@ let framedTop = NaN;
 let caret_ = null;
 /**
  * @typedef {'collapse' | 'keep'} CaretOwed what the frame owes a caret placed or moved since it last set the caret's
- * mark: the mark brought into view, and the platform's selection collapsed at it (`collapse`), or kept as the page
- * placed it over the selection a move at the caret extends (`keep`)
+ * mark: the mark brought into view, and the platform's selection collapsed at it (`collapse`), or kept as it stands
+ * — the page placed it over the selection a move at the caret extends, or a pointer's gesture made it (`keep`)
  */
 /** @type {CaretOwed | null} what the frame owes the caret once its part stands (`placeCaretMark`); null where nothing is owed */
 let caretOwed = null;
@@ -2968,6 +2975,26 @@ export function selectionBackward() {
 }
 
 /**
+ * The part of the platform's selection its moving end stands in — the end a
+ * drag, a Shift+click or the platform's own keys moved, its focus point
+ * (APP-INPUT's, O-SELECTION's; FP-40): the span the selection covers in the
+ * mounted article that point lies in (`spanIn`), whether it runs backward —
+ * the moving end that span's start, else its end — and whether the selection
+ * lies wholly in that article. Null where none stands, it is collapsed, or
+ * its focus point lies in no mounted article.
+ * @returns {{span: Span, backward: boolean, whole: boolean} | null}
+ */
+export function movingPart() {
+  const s = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+  if (!s || !s.rangeCount || s.isCollapsed || !s.focusNode) return null;
+  const e = elementOf(s.focusNode), art = e ? /** @type {HTMLElement | null} */ (e.closest('article.dtext')) : null;
+  const rec = art ? mounted.get(art.dataset.addr || '') : undefined;
+  if (!art || !rec || rec.el !== art) return null;
+  const range = s.getRangeAt(0), span = spanIn(art, rec.made, range);
+  return span ? { span, backward: runsBackward(s), whole: art.contains(range.commonAncestorContainer) } : null;
+}
+
+/**
  * The platform's selection placed over a span of an article — a mounted one,
  * or a reading scene's pane's (`rangeIn`) — its anchor at the span's end
  * where it runs backward, else at its start: a range added whole would set
@@ -4798,6 +4825,23 @@ export function extendTo(/** @type {number} */ x, /** @type {number} */ y) {
   if (p && s && s.rangeCount) s.extend(p.node, p.offset);
 }
 
+/**
+ * The platform's selection collapsed at a position of a mounted article's
+ * text (`pointAt`): the anchor a Shift+click in a draft the person may edit
+ * extends from, set as the press begins (APP-INPUT's; K-70). False where no
+ * article of the document stands, or no part standing holds the position.
+ * @param {string} addr
+ * @param {number} pos a position of the text shown (`shownOf`)
+ * @returns {boolean}
+ */
+export function collapseAt(addr, pos) {
+  const rec = mounted.get(addr), s = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+  const at = rec && s ? pointAt(rec, pos) : null;
+  if (!at || !s) return false;
+  s.collapse(at.node, at.offset);
+  return true;
+}
+
 // ---- the caret (see the head) -----------------------------------------------------
 
 /**
@@ -4834,15 +4878,19 @@ function clampPos(/** @type {Doc} */ d, /** @type {number} */ pos) { return d.fr
 
 /**
  * The caret placed at a position of a draft's shown text (K-70), live: one
- * caret stands at a time, so a caret in another document goes. Nothing where
- * the text is none the person may edit.
+ * caret stands at a time, so a caret in another document goes. The frame
+ * collapses the platform's selection at it, save where it is placed at the
+ * moving end of a selection that stands (`keep`): a pointer's gesture's, or
+ * the one a step extends from it (FP-40). Nothing where the text is none the
+ * person may edit.
  * @param {string} addr
  * @param {number} pos a position of the text shown (`shownOf`)
+ * @param {boolean} [keep] the platform's selection stands, the caret at its moving end: the frame keeps it as it stands
  * @returns {Caret | null} the caret as placed
  */
-export function placeCaret(addr, pos) {
+export function placeCaret(addr, pos, keep = false) {
   if (!editable(addr)) return null;
-  setCaret({ addr, pos: clampPos(shownOf(addr), pos), live: true });
+  setCaret({ addr, pos: clampPos(shownOf(addr), pos), live: true }, keep ? 'keep' : 'collapse');
   return caret();
 }
 

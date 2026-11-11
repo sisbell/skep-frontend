@@ -260,6 +260,15 @@ class Driver:
             self.call('Input.dispatchMouseEvent', {'type': 'mousePressed', 'x': x, 'y': y, 'button': 'left', 'clickCount': 1})
             self.call('Input.dispatchMouseEvent', {'type': 'mouseReleased', 'x': x, 'y': y, 'button': 'left', 'clickCount': 1})
 
+    def click(self, x, y, count=1, mods=()):
+        """a click at a point, its modifiers held throughout: `count` presses and releases one after another, each carrying
+        the count it makes — a double-click's second, a triple-click's third"""
+        m = sum(self.MODS[k] for k in mods)
+        self.call('Input.dispatchMouseEvent', {'type': 'mouseMoved', 'x': x, 'y': y, 'modifiers': m})
+        for n in range(1, count + 1):
+            self.call('Input.dispatchMouseEvent', {'type': 'mousePressed', 'x': x, 'y': y, 'button': 'left', 'buttons': 1, 'clickCount': n, 'modifiers': m})
+            self.call('Input.dispatchMouseEvent', {'type': 'mouseReleased', 'x': x, 'y': y, 'button': 'left', 'buttons': 0, 'clickCount': n, 'modifiers': m})
+
     def press(self, x, y):
         """the pointer moved to a point and its left button pressed there — held until `release`, so a case can act on the
         page while the press stands"""

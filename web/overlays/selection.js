@@ -17,18 +17,27 @@
 // at a live caret, Shift with each arrow, Home or End moves the caret a step
 // and the selection runs from its anchor to the caret (`extendFromCaret`; D5
 // K-71, §1.6), as Shift with ← or → does at the span a kept caret stands in
-// once N-KEYS' returns the caret (K-70, K-77); at the walk's focused span in
+// once N-KEYS' returns the caret (K-70, K-77), and at any other span of a
+// draft the person may edit once the caret is placed live where the step
+// extends from: the moving end of the selection standing in the walk's
+// document, else the span's edge, its start for → and the end of its text
+// for ← (`extendFromSpan`; K-70; FP-40); at the walk's focused span in
 // text the person may not edit, Shift with ← or → moves the selection's
 // moving end a character or a word, its anchor standing — the selection
 // standing in the walk's document, or one the platform made wherever it
-// stands — else selects one character or word from the span's edge, its start
-// for → and the end of its text for ← (`extendFromFocus`; D5 K-70) — each
+// stands — else selects one character or word from that edge
+// (`extendFromFocus`; D5 K-70) — each
 // press naming the end it moved, which T-LAYER keeps clear of its document's
-// head. A selection put in another document than a live caret's — by the
-// pointer, a key or the gate's door — keeps the caret first, where it stood,
+// head. A Shift+click in a draft the person may edit extends from the anchor
+// standing there (`anchorIn`; APP-INPUT's). A selection put in another
+// document than a live caret's — by the pointer, a key or the gate's door;
+// one the platform made by the document its moving end lies in (T-LAYER's
+// `movingPart`) — keeps the caret first, where it stood,
 // owing the frame nothing (T-LAYER's `leaveCaret`), and stands the walk on
 // the span its moving end is in, the ring out (N-WALK's `focusTo`), so the
 // next key acts at the selection and never types at the caret (`leaveFor`).
+// One the platform made reaching past its document into another's text
+// is so marked (`Ends.across`): no key at a caret replaces it (N-KEYS').
 // The platform's
 // highlight is the selection's one mark (§2.1), and the selection the
 // platform's own (foundations §2.1; D5 §2): a change of it rebuilds no
@@ -109,7 +118,8 @@
 // re-check carries it — its card or its list drawn again with it — over the
 // bytes that version holds of it (`restore`), saying nothing where the move's
 // own landing says it (N-GO's `surfacesAcross`; FP-22).
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13, FP-20, FP-22, FP-34, FP-36, FP-37.
+// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13, FP-20, FP-22, FP-34, FP-36, FP-37,
+// FP-40.
 
 import * as HOST from './host.js';
 import * as REC from '../model/records.js';
@@ -143,13 +153,17 @@ import { drawChord } from '../nav/keys.js';
  */
 
 /**
- * @typedef {Object} Ends — how Shift with ← or → moves the selection's ends (`extendFromFocus`; D5 K-70)
+ * @typedef {Object} Ends — how Shift with ← or → moves the selection's ends (`extendFromFocus`; D5 K-70), and how far the platform's range reaches
  * @property {'start' | 'end'} moves the end a press moves, the other the anchor: the end the act that made the selection moved — the platform's focus point where the platform made it — else its end, T-LAYER placing its anchor at its start
  * @property {boolean} platform the platform made the selection — a drag, or its own keys — and the presses since moved it: it extends where it stands, wherever the walk stands
+ * @property {boolean} across the platform's range reaches past the selection's document into another document's text (T-LAYER's `movingPart`): no key at a caret replaces it (`reachesPast`)
  */
 
 /** a selection anchored at its start, as T-LAYER places a span the page selects: a press moves its end */
-const AT_START = /** @type {Ends} */ (Object.freeze({ moves: 'end', platform: false }));
+const AT_START = /** @type {Ends} */ (Object.freeze({ moves: 'end', platform: false, across: false }));
+
+/** the byte at a span's moving end: its first where its start moves, else its last — the one the walk stands on */
+const movingByte = (/** @type {Span} */ span, /** @type {boolean} */ start) => (start ? span.pos : span.pos + Math.max(1, span.width) - 1);
 
 /** @type {Span | null} */
 let sel = null;
@@ -189,6 +203,9 @@ function carry() {
 
 /** the selection, read-only (T-LAYER's reader): the one the screen draws, never a span a card or a list holds (see the head), where its bytes stand in the text shown now (`carry`) */
 export function selected() { carry(); return sel; }
+
+/** does the selection standing reach past its document into another document's text (`Ends.across`): N-KEYS' reading, no key at a caret replacing it */
+export const reachesPast = () => !!sel && ends.across;
 
 /** a span by its bytes as the page shows them now (`Left`): every byte named, one the page made by the page's own identity until the board mints it */
 const bytesOf = (/** @type {Span} */ s) => ({ addr: s.addr, pos: s.pos, width: s.width, ids: LAYER.shownIdentity(s.addr, s.pos, s.width) });
@@ -252,7 +269,9 @@ function wholeShown(/** @type {string} */ addr, /** @type {number} */ pos) {
  * end the act moved kept clear of its document's head (T-LAYER's
  * `keepClear`), and the one Shift with ← or → moves next (`Ends`) — where the
  * platform made the selection, the end its focus point stands at (T-LAYER's
- * `selectionBackward`); where the act moved none, its end.
+ * `selectionBackward`), and whether its range reaches past the article its
+ * moving end stands in (T-LAYER's `movingPart`); where the act moved none,
+ * its end.
  * @param {string} addr
  * @param {number} pos the span's first position
  * @param {number | null} [width] positions; null selects the block at `pos` whole
@@ -260,8 +279,8 @@ function wholeShown(/** @type {string} */ addr, /** @type {number} */ pos) {
  */
 export function select(addr, pos, width = null, moved = null) {
   const span = width != null && width > 0 ? { addr, pos, width } : wholeShown(addr, pos);
-  const platform = moved === 'focus';
-  take(span, moved, { moves: moved === 'start' || (platform && LAYER.selectionBackward()) ? 'start' : 'end', platform });
+  const platform = moved === 'focus', part = platform ? LAYER.movingPart() : null;
+  take(span, moved, { moves: moved === 'start' || (platform && LAYER.selectionBackward()) ? 'start' : 'end', platform, across: platform && !(part && part.whole) });
 }
 
 /**
@@ -289,16 +308,35 @@ function take(span, moved, how) {
  * `leaveCaret`), and the walk stood on the span of the text shown holding the
  * selection's moving end — its first byte where its start moves, else its
  * last — the ring out and the platform's focus carried only where the mirror
- * held it (N-WALK's `focusTo`). Nothing where no live caret stands, or it
- * stands in the selection's document.
+ * held it (N-WALK's `focusTo`). Where the platform made the selection, the
+ * document and the moving end are its focus point's (T-LAYER's
+ * `movingPart`), so a range reaching into the caret's own draft from another
+ * leaves the caret as FP-40 leaves it there. Nothing where no live caret
+ * stands, or it stands in that document.
  * @param {Span} span
  * @param {Ends} how
  */
 function leaveFor(span, how) {
-  const c = LAYER.caret();
-  if (!c || !c.live || c.addr === span.addr) return;
+  const c = LAYER.caret(), part = how.platform ? LAYER.movingPart() : null;
+  const at = part ? part.span : span, start = part ? part.backward : how.moves === 'start';
+  if (!c || !c.live || c.addr === at.addr) return;
   LAYER.leaveCaret(false);
-  void WALK.focusTo(span.addr, how.moves === 'start' ? span.pos : span.pos + Math.max(1, span.width) - 1, false, false, null, true);
+  void WALK.focusTo(at.addr, movingByte(at, start), false, false, null, true);
+}
+
+/**
+ * The anchor a Shift+click in a draft extends from (APP-INPUT's; K-70;
+ * FP-40), a position of its text shown: the caret standing there, live or
+ * kept — the other end of a selection ending at it (`anchorAt`) — else the
+ * end of the selection standing there that no step moves (`Ends`); null
+ * where neither stands in the draft, the Shift+click then a click.
+ * @param {string} addr
+ * @returns {number | null}
+ */
+export function anchorIn(addr) {
+  const c = LAYER.caret();
+  if (c && c.addr === addr) return anchorAt(c);
+  return sel && sel.addr === addr ? (ends.moves === 'end' ? sel.pos : sel.pos + sel.width) : null;
 }
 
 /**
@@ -352,6 +390,35 @@ function anchorAt(/** @type {import('../text/layer.js').Caret} */ c) {
 }
 
 /**
+ * Shift with ← or → at the walk's focused span of a draft the person may edit
+ * where no caret stands in it (D5 K-70; FP-40): the caret placed live where
+ * the step extends from — the moving end of the selection standing in the
+ * walk's document (`Ends`), else the span's edge, its start for → and the end
+ * of its text for ←, never the newline after it — that selection standing
+ * (T-LAYER's `placeCaret`), then a step extended from it as at a live caret
+ * (`extendFromCaret`), a selection in another document replaced. Where the
+ * caret cannot step that way it stands live where it was placed, the
+ * selection standing as it stood. The focus stays on the walk's element
+ * (rule 15).
+ * @param {import('../text/layer.js').ArrowStep} dir
+ * @returns {boolean} false where the walk stands on no span the person may edit: nothing changes
+ */
+export function extendFromSpan(dir) {
+  const f = WALK.current(), s = selected();
+  if (!f || f.kind !== 'block' || f.pos == null) return false;
+  const here = s && s.addr === f.addr ? s : null, b = here ? null : LAYER.blockByPos(f.addr, f.pos);
+  const from = here ? (ends.moves === 'end' ? here.pos + here.width : here.pos) : b ? edgeOf(b, dir) : null;
+  if (from == null || !LAYER.placeCaret(f.addr, from, true)) return false;
+  if (!extendFromCaret(dir) && !sel) LAYER.placeCaret(f.addr, from);
+  return true;
+}
+
+/** the edge of a block a step with ← or → selects from where no selection stands (K-70): its start for →, the end of its text for ←, never the newline after it */
+function edgeOf(/** @type {import('../model/records.js').Block} */ b, /** @type {import('../text/layer.js').ArrowStep} */ dir) {
+  return dir === 'right' || dir === 'wordRight' ? b.pos : b.kind === 'para' ? b.pos + byteLength(b.text) : b.pos + b.width;
+}
+
+/**
  * Shift with ← or → at the walk's focused span in text the person may not
  * edit (D5 K-70, K-71): where the selection stands in the walk's document, or
  * the platform made it wherever it stands (`Ends`), its moving end is stepped
@@ -374,7 +441,7 @@ export function extendFromFocus(dir) {
   }
   const b = LAYER.blockByPos(f.addr, f.pos);
   if (!b) return false;
-  const edge = dir === 'right' || dir === 'wordRight' ? b.pos : b.kind === 'para' ? b.pos + byteLength(b.text) : b.pos + b.width;
+  const edge = edgeOf(b, dir);
   return runTo(f.addr, edge, stepFrom(f.addr, edge, dir, null), false);
 }
 
@@ -411,7 +478,7 @@ function runTo(addr, anchor, to, platform) {
   if (to === anchor) { clear(); return true; }
   /** @type {'start' | 'end'} */
   const moved = to < anchor ? 'start' : 'end';
-  take({ addr, pos: Math.min(anchor, to), width: Math.abs(to - anchor) }, moved, { moves: moved, platform });
+  take({ addr, pos: Math.min(anchor, to), width: Math.abs(to - anchor) }, moved, { moves: moved, platform, across: false });
   return true;
 }
 

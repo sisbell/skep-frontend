@@ -36,8 +36,16 @@
 // step of its order a click, the live caret's its last and no arrival ended;
 // and a focus landing in a corner the
 // view does not show whole pans the camera by the least that brings it in below
-// the one line, never while a flight runs (FP-12, FP-20, FP-21, FP-24, FP-25,
-// FP-30, FP-34, FP-35, FP-36).
+// the one line, never while a flight runs. On the DOM under `web/test/`, the
+// test standing for the platform's selection: a drag forward or backward, a
+// double-click and a Shift+click — from the live caret, the kept caret, a
+// selection's anchor or nothing — in a draft the person may edit, and a Shift
+// press the canvas holds until the text stands, each leave the caret live at
+// the selection's moving end, the selection standing, so a key replaces it
+// and Esc ends it before it keeps the caret; and a drag reaching past one
+// document places no caret, leaving the caret by the document its moving end
+// lies in (FP-12, FP-20, FP-21, FP-24, FP-25, FP-30, FP-34, FP-35, FP-36,
+// FP-40).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';
@@ -55,6 +63,7 @@ import * as TRAIL from '../nav/trail.js';
 import * as WALK from '../nav/walk.js';
 import * as KEYS from '../nav/keys.js';
 import * as FOCUS from '../nav/focus.js';
+import * as HINT from '../overlays/hint.js';
 import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
 import * as LINE from '../line/line.js';
@@ -67,6 +76,7 @@ import { t, tHTML, addressedHTML } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { spanOfBlock } from '../text/span.js';
 import { recorder } from '../test/canvas.js';
+import { page } from '../test/dom.js';
 
 /** the attributes of an element's opening tag, as the platform's `dataset` reads them */
 const datasetOf = (/** @type {string} */ tag) =>
@@ -1264,3 +1274,243 @@ test('a focus landing in a corner the view does not show whole moves the camera 
     globalThis.document = platform.document; globalThis.window = platform.window;
   }
 });
+
+/**
+ * @typedef {Object} Gestures — what `onGestures` hands its body
+ * @property {string} D a draft of the session's account, its article mounted at its reading scale
+ * @property {string} E another draft of the session's account, its article mounted after D's
+ * @property {string} O another account's draft holding the same text, its article mounted after both
+ * @property {(addr: string, pos: number) => {node: any, offset: number}} at the boundary point before a position of a mounted article's text — after its last character at the text's end — where the platform's selection names it
+ * @property {(from: {addr: string, pos: number}, to: {addr: string, pos: number}) => void} drag a drag pressed at one point and released at another, the platform's selection carried from the first to the second
+ * @property {(addr: string, pos: number) => void} click a click at a point, the platform's selection collapsed there as its press sets it
+ * @property {(addr: string, pos: number, word: {pos: number, width: number}) => void} doubleClick a double-click at a point: its first press a click, its second the platform's word selected
+ * @property {(addr: string, pos: number) => void} shiftClick a Shift+click at a point: the platform's selection extended from its anchor to it
+ * @property {() => any} platform the platform's selection, as the page's DOM holds it
+ * @property {ReturnType<typeof page>} dom the page's DOM
+ * @property {Map<string, (e: unknown) => void>} plane the plane's listeners, by event
+ */
+
+/** the two lines each draft of `onGestures` holds */
+const LINES = 'Tumbler words stand here.\n\nThe second line holds more words.\n';
+
+/**
+ * A page of the DOM under `web/test/` for a pointer's gestures in a draft's text: D and E drafts of the session's account
+ * and O another's, each holding `LINES`, all mounted as T-LAYER mounts them, in that order — the layer as wide as their
+ * boxes at D's reading scale — APP-INPUT's handlers attached to the layer, the window and the document; each gesture made as the platform
+ * makes it, the test standing for the platform's selection (`at`, the gestures), and every caret, edit, selection and
+ * card let go after it.
+ * @param {(g: Gestures) => void | Promise<void>} body
+ */
+async function onGestures(body) {
+  const dom = page({ width: 1440, height: 900 }), D = '1.0.1.0.2', E = '1.0.1.0.4', O = '1.0.2.0.1', n = byteLength(LINES);
+  dom.install();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  try {
+    REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+    REC.takeIndex(/** @type {any} */ ({ docs: [D, E, O].map((doc) => ({ doc, kind: 'draft', label: null, standing: 'yours_to_read' })), counts: [{ account: '1.0.1', documents: 2 }, { account: '1.0.2', documents: 1 }], state: { arm: 'complete' } }));
+    for (const a of [D, E, O]) {
+      REC.takeSpanSet(a, [{ subspace: 1, ordinal: 1, positions: n }]);
+      REC.takeDelivery(a, [{ pos: 1, width: n, kind: 'content', text: LINES, ref: null, origin: null }]);
+      REC.takeImage(a, 1, [{ iStart: a + '.0.1.1', width: n }]);
+    }
+    // the camera amid the three boxes at D's reading scale, the layer as wide and as tall as they are: each article stands
+    CAM.setViewport(1440, 900);
+    const f = LAYER.foldOf(REC.doc(D)), boxes = [D, E, O].map(docBox), scale = 12 / f.fs;
+    const x0 = Math.min(...boxes.map((q) => q.x)), y0 = Math.min(...boxes.map((q) => q.y)), x1 = Math.max(...boxes.map((q) => q.x + q.w)), y1 = Math.max(...boxes.map((q) => q.y + q.h));
+    CAM.set({ x: (x0 + x1) / 2, y: (y0 + y1) / 2, scale });
+    const layer = dom.element('div');
+    layer.id = 'domlayer'; layer.clientWidth = (x1 - x0) * scale + 200; layer.clientHeight = (y1 - y0) * scale + 200;
+    dom.document.body.appendChild(layer);
+    LAYER.attach(/** @type {any} */ (layer), null);
+    HOST.attach(/** @type {any} */ ({
+      ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
+      querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    }));
+    /** @type {Map<string, (e: unknown) => void>} */
+    const plane = new Map();
+    INPUT.attach(/** @type {any} */ ({ plane: { ...listens(plane), setPointerCapture() {}, classList: { add() {}, remove() {} } }, layer, corners: listens(null) }));
+    LAYER.frame();
+    assert.deepEqual([[D, E, O].map(LAYER.isMounted), [D, E, O].map((x) => LAYER.editable(x))], [[true, true, true], [true, true, false]], 'the three articles stand: D and E text the person may edit, O not');
+    assert.deepEqual([...LAYER.mountedSet().keys()], [D, E, O], 'mounted in that order: a range across two of them starts in the earlier');
+    const sel = dom.document.selection;
+    const at = (/** @type {string} */ addr, /** @type {number} */ pos) => {
+      const r = LAYER.rangeOf({ addr, pos, width: 1 });
+      if (r) return { node: r.startContainer, offset: r.startOffset };
+      const e = /** @type {Range} */ (LAYER.rangeOf({ addr, pos: pos - 1, width: 1 }));
+      return { node: e.endContainer, offset: e.endOffset };
+    };
+    // each point a gesture presses at stands at a screen x of its own, where the platform finds it again (`caretPositionFromPoint`)
+    /** @type {Array<{node: any, offset: number}>} */
+    const points = [];
+    dom.document.pointAt = (x) => points[x / 10 - 1] || null;
+    const screen = (/** @type {{node: any, offset: number}} */ p) => { points.push(p); return points.length * 10; };
+    const under = (/** @type {{node: any}} */ p) => (p.node.nodeType === 3 ? p.node.parentElement : p.node);
+    const event = (/** @type {any} */ target, /** @type {number} */ x, /** @type {object} */ more = {}) => ({ target, clientX: x, clientY: 0, metaKey: false, ctrlKey: false, shiftKey: false, pointerId: 1, detail: 1, preventDefault() {}, stopPropagation() {}, ...more });
+    /** a press and its release at one screen point, then its click, the platform's part made between the press and the release */
+    const press = (/** @type {{node: any, offset: number}} */ p, /** @type {() => void} */ platform, /** @type {object} */ more = {}) => {
+      const x = screen(p), target = under(p);
+      layer.fire('pointerdown', event(target, x, more));
+      platform();
+      dom.fire('window', 'pointerup', event(target, x, more));
+      layer.fire('click', event(target, x, more));
+      dom.fire('document', 'selectionchange', {});
+    };
+    const drag = (/** @type {{addr: string, pos: number}} */ from, /** @type {{addr: string, pos: number}} */ to) => {
+      const p = at(from.addr, from.pos), q = at(to.addr, to.pos), target = under(p);
+      layer.fire('pointerdown', event(target, screen(p)));
+      sel.set(p.node, p.offset, q.node, q.offset);
+      const x = screen(q);
+      dom.fire('window', 'pointerup', event(under(q), x));
+      layer.fire('click', event(under(q), x));
+      dom.fire('document', 'selectionchange', {});
+    };
+    const click = (/** @type {string} */ addr, /** @type {number} */ pos) => { const p = at(addr, pos); press(p, () => sel.collapse(p.node, p.offset)); };
+    const doubleClick = (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {{pos: number, width: number}} */ word) => {
+      click(addr, pos);
+      const p = at(addr, pos), w0 = at(addr, word.pos), w1 = at(addr, word.pos + word.width);
+      press(p, () => sel.set(w0.node, w0.offset, w1.node, w1.offset), { detail: 2 });
+    };
+    const shiftClick = (/** @type {string} */ addr, /** @type {number} */ pos) => { const p = at(addr, pos); press(p, () => sel.extend(p.node, p.offset), { shiftKey: true }); };
+    const platform = () => { const s = LAYER.movingPart(); return { collapsed: sel.isCollapsed, span: s ? s.span : null, backward: s ? s.backward : null }; };
+    await body({ D, E, O, at, drag, click, doubleClick, shiftClick, platform, dom, plane });
+  } finally {
+    HOST.dismiss(); SEL.clear(); LAYER.dropCaret(); LAYER.clear();
+    REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    dom.uninstall();
+  }
+}
+
+/** the walk's element: its kind, its place, its position */
+const walkAt = () => { const f = WALK.current(); return f && [f.kind, f.addr, f.pos]; };
+/** the caret as it stands: its document, its position and whether it is live */
+const caretNow = () => { const c = LAYER.caret(); return c && [c.addr, c.pos, c.live]; };
+/** the page-local edits of a draft, each its position, its width and its text */
+const editsOf = (/** @type {string} */ addr) => WRITE.edits(addr).map((e) => [e.pos, e.width, e.text]);
+/** a key as the platform delivers it, at the plane */
+const plainKey = (/** @type {string} */ key, /** @type {object} */ mods = {}) => /** @type {any} */ ({ type: 'keydown', key, keyCode: 0, isComposing: false, repeat: false, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, preventDefault() {}, ...mods });
+/** the plane's context for a key */
+const ON_PLANE = /** @type {const} */ ({ where: 'plane', byKey: true });
+
+test('a drag in a draft the person may edit leaves the caret live at the selection\'s moving end — where it was released, forward or backward — the selection standing as the platform drew it and the walk on the caret\'s span, the ring out; a printable key then replaces the selection, one edit, the caret after it; Esc ends the selection, the caret live, and a second Esc keeps it; a drag in another\'s text places none (issue #568\'s design decision; FP-40; D5 K-70, K-72, K-77)', () => onGestures(async ({ D, O, drag, platform }) => {
+  // "words stand", positions 9 to 19 of the first line
+  const words = { addr: D, pos: 9, width: 11 };
+  drag({ addr: D, pos: 9 }, { addr: D, pos: 20 });
+  await tick();
+  assert.deepEqual([caretNow(), SEL.selected(), platform(), walkAt(), FOCUS.ringShown()], [[D, 20, true], words, { collapsed: false, span: words, backward: false }, ['block', D, 1], false],
+    'forward: the caret live at the release, after "stand"; the selection standing, the platform\'s as it drew it; the walk on the caret\'s span, the ring out');
+  assert.equal(await KEYS.dispatch(plainKey('q'), ON_PLANE), true);
+  assert.deepEqual([editsOf(D), caretNow(), SEL.selected(), REC.textOf(LAYER.shownOf(D).runs, 1, 13)], [[[9, 11, 'q']], [D, 10, true], null, 'Tumbler q he'],
+    'q: the selection replaced by it, one edit, the caret after it, the selection ended');
+  WRITE.clearEdits(D);
+  drag({ addr: D, pos: 20 }, { addr: D, pos: 9 });
+  await tick();
+  assert.deepEqual([caretNow(), SEL.selected(), platform()], [[D, 9, true], words, { collapsed: false, span: words, backward: true }], 'backward: the caret live at the release, the selection\'s start');
+  assert.equal(await KEYS.dispatch(plainKey('Escape'), ON_PLANE), true);
+  assert.deepEqual([SEL.selected(), caretNow(), HOST.currentState()], [null, [D, 9, true], null], 'Esc: the selection and its card ended, the caret live at the moving end');
+  assert.equal(await KEYS.dispatch(plainKey('Escape'), ON_PLANE), true);
+  await tick();
+  assert.deepEqual([caretNow(), walkAt()], [[D, 9, false], ['block', D, 1]], 'a second Esc: the text left to the walk, the caret kept there');
+  LAYER.dropCaret();
+  drag({ addr: O, pos: 9 }, { addr: O, pos: 20 });
+  await tick();
+  assert.deepEqual([caretNow(), SEL.selected()], [null, { addr: O, pos: 9, width: 11 }], 'a drag in another\'s text: selected, no caret placed');
+}));
+
+test('a Shift+click in a draft the person may edit extends what stands there to the point clicked, the caret live there — from the live caret, from the kept caret, returned, and from a selection\'s anchor — whatever the platform\'s selection stood over; with nothing standing there it is a click: the caret at the point, nothing selected (issue #568\'s design decision; FP-40; D5 K-70)', () => onGestures(async ({ D, at, click, shiftClick, platform }) => {
+  const elsewhere = () => { const p = at(D, 28); globalThis.window.getSelection()?.collapse(p.node, p.offset); };
+  click(D, 9);
+  await tick();
+  assert.deepEqual(caretNow(), [D, 9, true], 'a click places the caret');
+  // the platform's selection put elsewhere, as an act on another part of the page leaves it: the anchor is the page's to set
+  elsewhere();
+  shiftClick(D, 20);
+  await tick();
+  assert.deepEqual([caretNow(), SEL.selected(), platform(), walkAt()], [[D, 20, true], { addr: D, pos: 9, width: 11 }, { collapsed: false, span: { addr: D, pos: 9, width: 11 }, backward: false }, ['block', D, 1]],
+    'from the live caret: the selection from the caret to the point clicked, the caret live there');
+  assert.equal(await KEYS.dispatch(plainKey('Escape'), ON_PLANE), true);
+  assert.equal(await KEYS.dispatch(plainKey('Escape'), ON_PLANE), true);
+  await tick();
+  assert.deepEqual([caretNow(), SEL.selected()], [[D, 20, false], null], 'Esc twice: the caret kept at 20, nothing selected');
+  elsewhere();
+  shiftClick(D, 9);
+  await tick();
+  assert.deepEqual([caretNow(), SEL.selected(), platform().backward], [[D, 9, true], { addr: D, pos: 9, width: 11 }, true], 'from the kept caret: returned, the selection running back from it to the point clicked, the caret live there');
+  LAYER.dropCaret(); SEL.clear();
+  SEL.select(D, 1, 7);
+  elsewhere();
+  shiftClick(D, 14);
+  await tick();
+  assert.deepEqual([caretNow(), SEL.selected()], [[D, 14, true], { addr: D, pos: 1, width: 13 }], 'from a selection\'s anchor, no caret standing: the selection from its start to the point clicked, the caret live there');
+  LAYER.dropCaret(); SEL.clear();
+  globalThis.window.getSelection()?.removeAllRanges();
+  shiftClick(D, 9);
+  await tick();
+  assert.deepEqual([caretNow(), SEL.selected(), platform().collapsed], [[D, 9, true], null, true], 'from nothing: a click, the caret at the point clicked, nothing selected');
+}));
+
+test('a double-click on a word of a draft the person may edit places the caret at its first press and leaves it live at the word\'s end, the word selected — never its paragraph — so a key replaces the word alone; in another\'s text the double-click\'s word stands selected, the walk on its span, a live caret elsewhere kept (issue #568\'s design decision; FP-40; D5 K-70)', () => onGestures(async ({ D, O, click, doubleClick, platform }) => {
+  const word = { pos: 9, width: 5 };
+  doubleClick(D, 11, word);
+  await tick();
+  assert.deepEqual([caretNow(), SEL.selected(), platform(), walkAt()], [[D, 14, true], { addr: D, ...word }, { collapsed: false, span: { addr: D, ...word }, backward: false }, ['block', D, 1]],
+    'the caret live at the word\'s end, "words" selected, the platform\'s as it drew it, the walk on its span');
+  assert.equal(await KEYS.dispatch(plainKey('q'), ON_PLANE), true);
+  assert.deepEqual([editsOf(D), caretNow()], [[[9, 5, 'q']], [D, 10, true]], 'q: the word replaced, nothing else of its paragraph');
+  WRITE.clearEdits(D);
+  click(D, 2);
+  await tick();
+  doubleClick(O, 11, word);
+  await tick();
+  assert.deepEqual([SEL.selected(), caretNow(), walkAt()], [{ addr: O, ...word }, [D, 2, false], ['block', O, 1]], 'in another\'s text: its word selected, the walk on its span, the caret in D kept');
+}));
+
+test('a drag reaching from one document into another places no caret, and leaves the caret by the document its moving end lies in, whichever article the range starts in: released in another document, a live caret is kept and the walk stands on the span the release is in, a printable key answered by that site\'s line; released in the caret\'s own draft, from a document before it or after it, the caret stays live with the walk on its span, and a printable key types at it, the selection replaced nowhere; with no caret, none placed (issue #568\'s design decision; FP-40; D5 K-72)', () => onGestures(async ({ D, E, O, click, drag }) => {
+  click(D, 2);
+  await tick();
+  assert.deepEqual(caretNow(), [D, 2, true]);
+  drag({ addr: D, pos: 9 }, { addr: O, pos: 31 });
+  await tick();
+  assert.deepEqual([caretNow(), walkAt(), SEL.reachesPast()], [[D, 2, false], ['block', O, 28], true], 'released in O: the caret kept where it stood, the walk on the span of O the release is in, the selection reaching past its document');
+  assert.equal(await KEYS.dispatch(plainKey('q'), ON_PLANE), true);
+  assert.deepEqual([editsOf(D), editsOf(O), HINT.standing()?.id, caretNow()], [[], [], 'B3.row.others-document', [D, 2, false]], 'q: nothing typed, O\'s line answering');
+  SEL.clear();
+  click(D, 2);
+  await tick();
+  drag({ addr: O, pos: 31 }, { addr: D, pos: 9 });
+  await tick();
+  assert.deepEqual([caretNow(), walkAt(), SEL.reachesPast()], [[D, 2, true], ['block', D, 1], true], 'released in D, the caret\'s own draft: the caret live where it stood, the walk on its span');
+  assert.equal(await KEYS.dispatch(plainKey('q'), ON_PLANE), true);
+  assert.deepEqual([editsOf(D), editsOf(O), caretNow()], [[[2, 0, 'q']], [], [D, 3, true]], 'q: typed at the caret, the selection replaced nowhere');
+  WRITE.clearEdits(D); SEL.clear();
+  click(E, 2);
+  await tick();
+  drag({ addr: D, pos: 9 }, { addr: E, pos: 9 });
+  await tick();
+  assert.deepEqual([caretNow(), walkAt(), SEL.selected()?.addr, SEL.reachesPast()], [[E, 2, true], ['block', E, 1], D, true], 'released in E, the caret\'s own draft, from D before it: the caret live where it stood, the walk on its span, though the page\'s selection is D\'s part');
+  assert.equal(await KEYS.dispatch(plainKey('q'), ON_PLANE), true);
+  assert.deepEqual([editsOf(D), editsOf(E), caretNow()], [[], [[2, 0, 'q']], [E, 3, true]], 'q: typed at the caret, the selection replaced nowhere');
+  WRITE.clearEdits(E); SEL.clear(); LAYER.dropCaret();
+  drag({ addr: D, pos: 9 }, { addr: O, pos: 31 });
+  await tick();
+  assert.deepEqual([caretNow(), SEL.reachesPast()], [null, true], 'with no caret: none placed');
+}));
+
+test('a Shift press the canvas takes on a draft the person may edit before the text under it stands — the caret live there — is held for the text and, once the frame sets it, extends from the caret to the point pressed, the caret live there and the selection standing (issue #568\'s design decision; FP-12, FP-40)', () => onGestures(async ({ D, at, dom, plane, platform }) => {
+  LAYER.clear();
+  LAYER.placeCaret(D, 9);
+  assert.deepEqual([LAYER.isMounted(D), caretNow()], [false, [D, 9, true]], 'no text of D stands, the caret live in it at 9');
+  // a point of D's first line on screen: once the frame sets the text, the platform finds its position 20 and its block there
+  const c = LAYER.centreOf(D, 1), x = CAM.sx(c.x), y = CAM.sy(c.y);
+  const there = (/** @type {number} */ px, /** @type {number} */ py) => px === x && py === y && LAYER.isMounted(D);
+  dom.document.pointAt = (px, py) => (there(px, py) ? at(D, 20) : null);
+  dom.document.elementAt = (px, py) => (there(px, py) ? at(D, 20).node.parentElement : null);
+  const press = { clientX: x, clientY: y, metaKey: false, ctrlKey: false, shiftKey: true, pointerId: 1 };
+  plane.get('pointerdown')?.(press);
+  dom.fire('window', 'pointerup', press);
+  INPUT.afterFrame();
+  assert.deepEqual([caretNow(), SEL.selected()], [[D, 9, true], null], 'held: nothing done before the text stands');
+  LAYER.frame();
+  INPUT.afterFrame();
+  await tick();
+  assert.deepEqual([caretNow(), SEL.selected(), platform().collapsed], [[D, 20, true], { addr: D, pos: 9, width: 11 }, false], 'the frame set the text: the selection from the caret to the point pressed, the caret live there');
+}));

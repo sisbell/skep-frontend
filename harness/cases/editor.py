@@ -33,7 +33,14 @@ down alone, the caret's mark at the row's bottom (`caret_under_head`; issue
 #436). A person's click in another paragraph of the own draft places the
 caret there and stands the walk on that paragraph's span, Mod+K at the caret
 drawing the acts card there and selecting nothing (`click_follows`; B3-S13;
-issue #471). Shift with the arrows at a live caret moves it and runs the
+issue #471). A drag across two words of the own draft leaves the caret live
+at its release, the selection standing, and a key then puts its character in
+the words' place, one edit (`drag_typed`, B3-S1's `drag-typed` row); every
+other pointer route to a selection there — a drag backward, a double-click on
+a word, a Shift+click from the live caret, from the kept caret and from
+nothing — leaves the caret live at the selection's moving end, Esc ending the
+selection before it keeps the caret (`drag_routes`; FP-40; D5 K-70, K-72,
+K-77). Shift with the arrows at a live caret moves it and runs the
 selection from where it stood to it, the platform's selection the page's
 (`shift_extends`; D5 K-71); a printable key or Backspace there then replaces
 that selection, and an arrow without Shift ends it, the caret at its start
@@ -117,6 +124,9 @@ STATES = [
     dict(screen='B3-S1', state='caret-kept', walk='W-08', step=3, drawn=True,
          how='Esc at the live caret (K-77; D6 BM-4, BM-52)',
          claim="the text is left to the walk at the caret's span, the caret kept there and its mark hollow"),
+    dict(screen='B3-S1', state='drag-typed', walk='W-08', step=2, drawn=True,
+         how='a drag across two words of the own draft, then a printable key (FP-40; K-70, K-72)',
+         claim="the key's character stands in the dragged words' place — one edit — the caret live after it, its mark shown"),
     dict(screen='B3-S1', state='mint-row', walk='W-08', step=2, drawn=False,
          how="the LEAP box's creation row and the one line's segment at a mint (A-63)", claim='',
          why='the composer (U3): no `create_new_document` is composed'),
@@ -646,8 +656,122 @@ def kept_span_extends(ctx, doc, para):
             'steps': {k: {f: s[f] for f in ('caret', 'sel', 'platform', 'focus')} for k, s in steps.items()}, 'edits': edits}
 
 
+def word_points(ctx, doc, para):
+    """the points a gesture over a paragraph of `doc` presses at, on its first line as it stands in view: each of its first
+    three words of three letters or more — its first and last positions, and the points mid-line at the left edge of its
+    first character, the middle of its middle one and the right edge of its last; None where the paragraph's first line
+    holds no three such words shown below the one line"""
+    text, nb = para['text'], (lambda s: len(s.encode('utf8')))
+    rect = lambda pos: (ctx.js('window.__skep.spanRects(%s, %d, 1)' % (json.dumps(doc), pos)) or [None])[0]
+    out = []
+    for m in re.finditer(r'[A-Za-z]{3,}', text):
+        p0, p1 = para['pos'] + nb(text[:m.start()]), para['pos'] + nb(text[:m.end()])
+        a, mid, b = rect(p0), rect(p0 + (p1 - p0) // 2), rect(p1 - 1)
+        if not (a and mid and b):
+            return None
+        y = a['y'] + a['h'] / 2
+        out.append({'word': m.group(0), 'pos': p0, 'end': p1, 'start_at': (a['x'] + 0.5, y), 'mid_at': (mid['x'] + mid['w'] / 2, y), 'end_at': (b['x'] + b['w'] - 0.5, y), 'top': a['y']})
+        if len(out) == 3:
+            break
+    top = ctx.js('document.getElementById("line").getBoundingClientRect().bottom')
+    return out if len(out) == 3 and all(abs(w['top'] - out[0]['top']) <= 1 and w['top'] >= top + 2 for w in out) else None
+
+
+def drag_typed(ctx, doc, para):
+    """A DRAG ACROSS WORDS OF THE OWN DRAFT, THEN A KEY (FP-40; D5 K-70, K-72): the walk landed on `para`, a drag from its first
+    word's first character to its second word's last, then `q`; the words the drag selected, the caret, the page's and the
+    platform's selections through the frames after the drag, then the edits and the caret after the key; and whether it held:
+    the caret live at the release, the selection the words and the platform's own, standing; `q` one edit in the words'
+    place, the caret after it, nothing selected. What it leaves stands for the state's shots: `let_go` takes it down"""
+    ctx.leap(doc, para['pos'])
+    w = word_points(ctx, doc, para)
+    if not w:
+        return {'ok': False, 'why': 'no three words of the paragraph shown on one line below the one line'}
+    ctx.drv.drag(*w[0]['start_at'], *w[1]['end_at']); ctx.frames(3)
+    after = ctx.js(AT_CARET)
+    sel = after['sel']
+    ctx.drv.key('q'); ctx.frames(2)
+    typed = ctx.js(AFTER_KEY % json.dumps(doc))
+    edits = [{k: e[k] for k in ('pos', 'width', 'text')} for e in typed['edits']]
+    ok = (bool(sel) and sel['addr'] == doc and abs(sel['pos'] - w[0]['pos']) <= 1 and abs(sel['pos'] + sel['width'] - w[1]['end']) <= 1
+          and after['caret'] == {'addr': doc, 'pos': sel['pos'] + sel['width'], 'live': True} and not after['platform']['collapsed'] and after['platform']['span'] == sel
+          and edits == [{'pos': sel['pos'], 'width': sel['width'], 'text': 'q'}] and typed['caret'] == {'addr': doc, 'pos': sel['pos'] + 1, 'live': True} and typed['sel'] is None)
+    tb = para['text'].encode('utf8')
+    shows = (tb[:sel['pos'] - para['pos']] + b'q' + tb[sel['pos'] - para['pos'] + sel['width']:]).decode('utf8', 'ignore')[:40] if sel else None
+    return {'ok': ok, 'words': [x['word'] for x in w[:2]], 'sel': sel, 'after_drag': {k: after[k] for k in ('caret', 'platform', 'focus')},
+            'after_key': {k: typed[k] for k in ('caret', 'sel')}, 'edits': edits, 'shows': shows}
+
+
+def let_go(ctx, doc):
+    """every caret, selection, card and edit a gesture's check left taken down, and the draft read again"""
+    ctx.js('(async () => { const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), N = await import("./overlays/hint.js"), L = await import("./text/layer.js"), W = await import("./write/write.js"); H.dismiss(); N.act(); S.clear(); L.dropCaret(); W.clearEdits(%s); L.bump(); const s = window.getSelection(); if (s) s.removeAllRanges(); })()' % json.dumps(doc))
+    ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(doc)); ctx.settle(); ctx.frames(2)
+
+
+def drag_routes(ctx, doc, para):
+    """EVERY POINTER ROUTE TO A SELECTION IN THE OWN DRAFT LEAVES THE CARET AT ITS MOVING END (FP-40; D5 K-70, K-72, K-77): in
+    `para`, landed at, its first three words on one line (`word_points`), each gesture made as a person makes it — a drag
+    backward from the second word's end to the first's start; Esc, then Esc again; a double-click on the third word, then
+    `q`; a click at the first word's start, then a Shift+click at the second's end; Esc twice, then a Shift+click at the
+    third's end; and, nothing standing, a Shift+click at the second's start — after each the caret, the page's selection and
+    the platform's own; and whether all of it held: the backward drag's caret live at the selection's start, the platform's
+    selection running backward; Esc ending the selection with the caret live, the second keeping it; the double-click's
+    word selected — never its paragraph — the caret live at its end, the platform's selection the word, and `q` replacing
+    the word alone; each Shift+click extending from the live caret, then from the kept caret, to the point clicked, the
+    caret live there; and with nothing standing a Shift+click a click, the caret at its point and nothing selected. Every
+    caret, edit and selection is let go after each (`let_go`), the paragraph landed at again and its words found again
+    where the draft read again sets them."""
+    def fresh():
+        let_go(ctx, doc)
+        ctx.leap(doc, para['pos'])
+        return word_points(ctx, doc, para)
+    w = fresh()
+    if not w:
+        return {'ok': False, 'why': 'no three words of the paragraph shown on one line below the one line'}
+    steps, ok = {}, True
+    live = lambda c, pos: c == {'addr': doc, 'pos': pos, 'live': True}
+    try:
+        ctx.drv.drag(*w[1]['end_at'], *w[0]['start_at']); ctx.frames(3)
+        s = steps['backward'] = ctx.js(AT_CARET)
+        ok &= bool(s['sel']) and live(s['caret'], s['sel']['pos']) and s['platform']['backward'] is True and s['platform']['span'] == s['sel']
+        ctx.drv.key('Escape'); ctx.frames(2)
+        s = steps['esc'] = ctx.js(AT_CARET)
+        ok &= s['sel'] is None and live(s['caret'], (steps['backward']['sel'] or {}).get('pos'))
+        ctx.drv.key('Escape'); ctx.frames(2)
+        s = steps['esc_again'] = ctx.js(AT_CARET)
+        ok &= bool(s['caret']) and not s['caret']['live']
+        w = fresh() or w
+        word = {'addr': doc, 'pos': w[2]['pos'], 'width': w[2]['end'] - w[2]['pos']}
+        ctx.drv.click(*w[2]['mid_at'], count=2); ctx.frames(3)
+        s = steps['double'] = ctx.js(AT_CARET)
+        ok &= s['sel'] == word and live(s['caret'], w[2]['end']) and not s['platform']['collapsed'] and s['platform']['span'] == word
+        ctx.drv.key('q'); ctx.frames(2)
+        typed = ctx.js(AFTER_KEY % json.dumps(doc))
+        steps['double_typed'] = [{k: e[k] for k in ('pos', 'width', 'text')} for e in typed['edits']]
+        ok &= steps['double_typed'] == [{'pos': word['pos'], 'width': word['width'], 'text': 'q'}]
+        w = fresh() or w
+        ctx.drv.click(*w[0]['start_at']); ctx.frames(2)
+        c0 = (ctx.js('window.__skep.caret()') or {}).get('pos')
+        ctx.drv.click(*w[1]['end_at'], mods=('Shift',)); ctx.frames(3)
+        s = steps['shift_live'] = dict(ctx.js(AT_CARET), c0=c0)
+        ok &= c0 is not None and bool(s['sel']) and s['sel']['pos'] == c0 and live(s['caret'], s['sel']['pos'] + s['sel']['width']) and s['platform']['span'] == s['sel']
+        ctx.drv.key('Escape'); ctx.drv.key('Escape'); ctx.frames(2)
+        k0 = ctx.js('window.__skep.caret()')
+        ctx.drv.click(*w[2]['end_at'], mods=('Shift',)); ctx.frames(3)
+        s = steps['shift_kept'] = dict(ctx.js(AT_CARET), kept=k0)
+        ok &= bool(k0) and not k0['live'] and bool(s['sel']) and s['sel']['pos'] == k0['pos'] and live(s['caret'], s['sel']['pos'] + s['sel']['width'])
+        w = fresh() or w
+        ctx.drv.click(*w[1]['start_at'], mods=('Shift',)); ctx.frames(3)
+        s = steps['shift_nothing'] = ctx.js(AT_CARET)
+        ok &= s['sel'] is None and live(s['caret'], w[1]['pos']) and s['platform']['collapsed']
+    finally:
+        let_go(ctx, doc)
+    trim = lambda s: {k: s[k] for k in ('caret', 'sel', 'platform', 'kept', 'c0') if k in s} if isinstance(s, dict) else s
+    return {'ok': bool(ok), 'words': [{k: x[k] for k in ('word', 'pos', 'end')} for x in w], 'steps': {k: trim(v) for k, v in steps.items()}}
+
+
 # the walk's element, by its kind, its address and its position
-WALKED = '(() => { const f = window.__skep.view.focus(); return f ? {kind: f.kind, addr: f.addr, pos: f.pos} : null; })()'
+WALKED ='(() => { const f = window.__skep.view.focus(); return f ? {kind: f.kind, addr: f.addr, pos: f.pos} : null; })()'
 # the own draft's block parts the platform draws lit — the ring's reading-scale form — each by the first position it names
 LIT = '''((doc) => [...document.querySelectorAll("#domlayer article.dtext")].filter((a) => a.dataset.addr === doc)
   .flatMap((a) => [...a.querySelectorAll(".sp.lit")].map((e) => Number(e.dataset.pos))))(%s)'''
@@ -966,6 +1090,23 @@ def run(ctx):
     ctx.js('(async () => { const L = await import("./text/layer.js"), W = await import("./write/write.js"); L.dropCaret(); W.clearEdits(%s); L.bump(); })()' % json.dumps(OWN))
     ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(OWN)); ctx.settle(); ctx.frames(2)
     r.check(ctx.js('window.__skep.caret()') is None and ctx.js('window.__skep.write.edits(%s).length' % json.dumps(OWN)) == 0, 'the caret is dropped and the edits cleared after the caret states', None)
+    # a drag across two words of the own draft, then a key: the key's character in their place (FP-40; D5 K-70, K-72)
+    dragged = drag_typed(ctx, OWN, target)
+    figures['drag_typed'] = dragged
+
+    def drag_typed_check(w):
+        c, edits = ctx.js('window.__skep.caret()'), ctx.js('window.__skep.write.edits(%s)' % json.dumps(OWN))
+        text = fold(ctx.js('(window.__skep.mounted(%s) || {}).text || ""' % json.dumps(OWN)))
+        held = bool(dragged.get('shows')) and fold(dragged['shows']) in text
+        ok = (dragged['ok'] and [{k: e[k] for k in ('pos', 'width', 'text')} for e in edits] == dragged['edits'] and c == {'addr': OWN, 'pos': dragged['sel']['pos'] + 1, 'live': True}
+              and held and len(shown(ctx, '#domlayer .caret-mark')) == 1)
+        return ok, {'dragged': dragged, 'caret': c, 'edits': edits, 'text_holds': held}
+    shoot('drag-typed', drag_typed_check, recentre)
+    let_go(ctx, OWN)
+    # every other pointer route to a selection in the own draft: the caret at its moving end, the selection standing (FP-40)
+    routes = drag_routes(ctx, OWN, target)
+    figures['drag_routes'] = routes
+    r.check(routes['ok'], "in a paragraph of the own draft, a drag backward leaves the caret live at the selection's start, the platform's selection running backward; Esc ends the selection with the caret live and a second Esc keeps it; a double-click selects its word — never its paragraph — the caret live at the word's end, and a key replaces the word alone; a Shift+click extends from the live caret, and from the kept caret, to the point clicked, the caret live there; and with nothing standing a Shift+click is a click (FP-40; D5 K-70, K-72, K-77)", routes)
     # a click placing the caret in another paragraph stands the walk on its span, so a slot chord at the caret acts there (B3-S13)
     later = [p for p in paras if p['pos'] > target['pos']]
     follows = click_follows(ctx, OWN, target, later[0] if later else next((p for p in paras if p['pos'] != target['pos']), None))
