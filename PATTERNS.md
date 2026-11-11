@@ -376,6 +376,16 @@ the top line means FP-37.
   face, so a face an act shows stands with the fact from its first
   frame, and the fact never moves the text around it.
 
+- **FP-39 A document's kind is said once, by one test, first.** Whether
+  a document is a draft or published is decided by one test, read from
+  its metadata, else the kind the model knows of it, else its box's
+  listing, and being read until one of these answers. The first slot of
+  its corner says it, and it leads every face that states the
+  document's state: its mirror item, a scene pane's name, a landing's
+  announcement into another document. No face that only names a
+  document carries it: a label, a list or trail row, the one line's
+  name, a name in the status region.
+
 ## The slot
 
 - **FP-34 A slot shows its value, that it is being read, or why it
@@ -590,7 +600,7 @@ last. Each stands until a later decision says it changes it.
 - **#434**: a typed word is its target document's from the keystroke, held once per document in `web/write/` — its own layer between the model and the drawing modules, drawing nothing, importing the bridge and the model alone and alone sending writes, a handler handing it an edit — a draft the person may edit typed in place in its own article, Tab typing a tab, and each composer an overlay naming its target at its head, standing beside the words and never over them, its field spared by a redraw until it closes → FP-38, FP-10, FP-11, FP-9, FP-13, FP-36, FP-20
 - **#432**: a copy's clipboard entry names every position it holds in the order the text shows them — a byte the board minted by its address as the page's mints read at the copy, an unminted one by the page's own name tagged with an id drawn at page load, a stretch its article's image does not place a gap of its width and reason — parts merging only where adjacent in the text shown, the plain text unchanged, anything else writing a passage's identity out of the page naming it so and anything reading one keeping a part it cannot resolve as words in their place → FP-27, FP-38
 - **#496**: keys follow the person's last pointer act — a click or a drag on anything of another document than the caret's keeps the caret where it stood and stands the walk on what was acted on, else on that document's stop nearest the point, one on the caret's own draft but its text and its corner leaving a live caret live with the walk on its span, an empty click taking one step of Esc's order down to the caret kept with its span holding the walk and the ring drawn, a selection put in another document keeping the caret first, and a key swallowed outside the draft last written in the page's session ending its line with "— you were last writing in ⟨label⟩", the label the act back to its kept caret (changes #471, #468) → FP-36, FP-20
-- **#423**: a document's kind is a state its corner's first slot says once — "draft" where an edition's says "published", in either form and never folded, a scene pane's too — read by one test from its metadata, else the kind the model knows of it, else its box's listing, being read until one answers and said once in the status region where it fills under the focus, leading its mirror item and a pane's region name, carried by no label nor any face that only names it, and said first in a landing into another document's one announcement (changes #153) → FP-33, FP-34, FP-36, FP-21
+- **#423**: a document's kind is a state its corner's first slot says once — "draft" where an edition's says "published", in either form and never folded, a scene pane's too — read by one test from its metadata, else the kind the model knows of it, else its box's listing, being read until one answers and said once in the status region where it fills under the focus, leading its mirror item and a pane's region name, carried by no label nor any face that only names it, and said first in a landing into another document's one announcement (changes #153) → FP-39, FP-33, FP-34, FP-36, FP-21
 
 ## What these rule out
 
