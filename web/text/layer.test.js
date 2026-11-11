@@ -1707,7 +1707,7 @@ test('while the board lags past a second the plane\'s corner names neither the l
     assert.ok(items().includes(counted), 'within the second: as it stood');
     ctx.mock.timers.tick(PUMP.KEPT_MS);
     LAYER.frame();
-    assert.ok(!items().includes(latest) && !items().includes(counted) && items().includes(`<span class="version">${esc(t('L.version', { k: 2 }))}</span>`), `the board lagging: its publication alone, "version 2" — ${items()}`);
+    assert.ok(!items().includes(latest) && !items().includes(counted) && items().includes(`<button type="button" class="version" tabindex="-1">${esc(t('L.version', { k: 2 }))}</button>`), `the board lagging: its publication alone, "version 2", its act — ${items()}`);
     fake.reopen();
     for (let i = 0; i < 20 && PUMP.boardKept(); i++) await new Promise((r) => setImmediate(r));
     LAYER.frame();
@@ -1750,7 +1750,7 @@ function onCorner(body) {
 test('the plane\'s corner of a box shown at a version names that version and its chain\'s count — after its kind and before its state — and counts the chain again in the frame a newer version\'s arrival counts it — "version 2 of 2", then "version 2 of 3" — its article standing all the while (FP-22, FP-23; foundations §3.1; issue #239\'s design decision: "it counts the chain again when a newer version arrives")', () => onCorner((items) => {
   showing({ at: D2 });
   REC.takeMembers(D, 2);
-  const of = (/** @type {number} */ n) => `<span class="version" data-members="${n}">${esc(t('F.version-of', { k: 2, n }))}</span>`;
+  const of = (/** @type {number} */ n) => `<button type="button" class="version" data-members="${n}" tabindex="-1">${esc(t('F.version-of', { k: 2, n }))}</button>`;
   LAYER.frame();
   assert.ok(LAYER.isMounted(D2) && items(D2).includes(esc(venued('F.corner.pinned', { k: 2 }))) && items(D2).includes(of(2)), `the box at version 2: its corner names it, "version 2 of 2" — ${items(D2)}`);
   const at = (/** @type {string} */ s) => items(D2).indexOf(s);
@@ -1792,50 +1792,79 @@ test('the plane\'s corner claims no total the board did not give: a chain its pr
   assert.ok(items(D2).includes(esc(t('F.version-of', { k: 2, n: 8 }))), `the chain ended at 8: "version 2 of 8" — ${items(D2)}`);
 }));
 
-test('the plane\'s corner of a box a newer version\'s arrival pinned offers to read the newest member named — a control after its version statement, never a Tab stop — in the frame the offer stands, raises it in the frame it is raised and drops it in the frame it ends, its article standing all the while; a focus on the offer goes to the offer standing in its place, and to the corner once none does (issue #240; D5 K-57; FP-20, FP-23)', () => onCorner(() => {
-  /** the platform's focus, and each element of the page: the corner's controls as its items set them, read back as the platform reads them */
+test('the plane\'s corner of a box a newer version\'s arrival pinned offers to read the newest member named — an act after its version statement, on the line of acts whose one Tab stop is its first act, the version statement — in the frame the offer stands, raises it in the frame it is raised and drops it in the frame it ends, its article standing all the while; a focus on the offer goes to the offer standing in its place, the line\'s one stop following it, and to the line\'s first act once none does (issue #240; D5 K-57; FP-20, FP-23)', () => onCorner(() => {
+  /** the platform's focus, and each element of the page — the corner's buttons as its items set them, each with its attributes — read back as the platform reads them, a move of the focus told to the corner layer as the platform tells it */
   const page = /** @type {any} */ ({ activeElement: null });
+  /** @type {Record<string, (ev: any) => void>} the corner layer's focus listeners */
+  const on = {};
+  /** an element holding its attributes, its `tabIndex` among them, the focus moving onto it as the platform moves it */
+  const node = (/** @type {Record<string, string>} */ attrs, /** @type {Record<string, unknown>} */ rest) => {
+    const e = /** @type {any} */ ({
+      ...rest, getAttribute: (/** @type {string} */ a) => attrs[a] ?? null, setAttribute: (/** @type {string} */ a, /** @type {string} */ v) => { attrs[a] = String(v); }, removeAttribute: (/** @type {string} */ a) => { delete attrs[a]; },
+      focus() { const was = page.activeElement; page.activeElement = e; if (was && on.focusout) on.focusout({ target: was, relatedTarget: e }); if (on.focusin) on.focusin({ target: e }); },
+    });
+    Object.defineProperty(e, 'tabIndex', { get: () => Number(attrs.tabindex ?? -1), set: (/** @type {number} */ v) => { attrs.tabindex = String(v); } });
+    return e;
+  };
   page.createElement = () => {
     /** @type {any[]} */
-    const controls = [];
+    const buttons = [];
     let html = '';
-    const e = /** @type {any} */ ({
-      className: '', id: '', dataset: {}, style: {}, children: [], tabIndex: -1, offsetWidth: 160, offsetHeight: 40,
-      classList: { toggle() {} }, setAttribute() {}, removeAttribute() {}, appendChild(/** @type {unknown} */ c) { e.children.push(c); },
+    const e = node({}, {
+      className: '', id: '', dataset: {}, style: {}, children: [], offsetWidth: 160, offsetHeight: 40,
+      classList: { toggle() {} }, appendChild(/** @type {unknown} */ c) { e.children.push(c); }, closest: (/** @type {string} */ s) => (s === '[data-corner]' ? e : null),
       querySelector: () => null, getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }), remove() {},
-      getAttribute: (/** @type {string} */ a) => (a === 'tabindex' ? String(e.tabIndex) : null), focus() { page.activeElement = e; },
-      querySelectorAll: () => controls, contains: (/** @type {unknown} */ x) => x === e || controls.includes(x),
-      get innerHTML() { return html; },
-      set innerHTML(/** @type {string} */ v) {
-        html = v; controls.length = 0;
-        for (const m of v.matchAll(/data-read="(\d+)"[^>]*tabindex="(-?\d+)"/g)) { const c = { dataset: { read: m[1] }, getAttribute: (/** @type {string} */ a) => (a === 'tabindex' ? m[2] : null), focus() { page.activeElement = c; } }; controls.push(c); }
+      querySelectorAll: () => buttons, contains: (/** @type {unknown} */ x) => x === e || buttons.includes(x),
+    });
+    Object.defineProperty(e, 'innerHTML', {
+      get: () => html,
+      set: (/** @type {string} */ v) => {
+        // a focused button the rewrite takes away leaves the focus on nothing, as the platform leaves it
+        if (buttons.includes(page.activeElement)) page.activeElement = null;
+        html = v; buttons.length = 0;
+        for (const m of v.matchAll(/<button ([^>]*)>/g)) {
+          /** @type {Record<string, string>} */
+          const attrs = {};
+          for (const a of m[1].matchAll(/([\w-]+)(?:="([^"]*)")?/g)) attrs[a[1]] = a[2] ?? '';
+          const dataset = Object.fromEntries(Object.entries(attrs).filter(([k]) => k.startsWith('data-')).map(([k, x]) => [k.slice(5), x]));
+          buttons.push(node(attrs, { dataset, disabled: false, classList: { contains: (/** @type {string} */ c) => (attrs.class || '').split(' ').includes(c) }, closest: (/** @type {string} */ s) => (s === '[data-corner]' ? e : null) }));
+        }
       },
     });
     return e;
   };
   globalThis.document = page;
+  LAYER.attach(/** @type {any} */ ({ clientWidth: VW, clientHeight: VH, appendChild() {} }), /** @type {any} */ ({ appendChild() {}, addEventListener: (/** @type {string} */ type, /** @type {(ev: any) => void} */ fn) => { on[type] = fn; } }));
   const offer = { n: /** @type {number | null} */ (null) };
   LAYER.readers({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: (a) => (a === D || a === D2 ? D2 : a), newer: (a) => (a === D2 ? offer.n : null) });
   REC.takeMembers(D, 3);
   const corner = () => /** @type {any} */ (LAYER.cornerOf(D2)), items = () => corner()?.innerHTML ?? '';
-  const act = (/** @type {number} */ n) => `<span class="read" data-read="${n}" role="button" tabindex="-1">${esc(t('F.versions.read', { k: n }))}</span>`;
+  /** the corner's buttons, each by its act's key (T-LAYER's `cornerAct`); and its Tab stops — its element and every button the page's Tab order takes */
+  const acts = () => [...corner().querySelectorAll('button')], keyed = (/** @type {string} */ k) => acts().find((b) => LAYER.cornerAct(b) === k) || null;
+  const stops = () => [corner(), ...acts()].filter((x) => x.getAttribute('tabindex') === '0').map((x) => (x === corner() ? 'corner' : LAYER.cornerAct(x)));
+  const act = (/** @type {number} */ n) => `<button type="button" class="read" data-read="${n}" tabindex="-1">${esc(t('F.versions.read', { k: n }))}</button>`;
   const mine = (/** @type {string} */ a) => a === D2;
   LAYER.frame(mine);
   assert.ok(LAYER.isMounted(D2) && items().includes(esc(t('F.version-of', { k: 2, n: 3 }))) && !items().includes('data-read'), `the box at version 2, no offer: "version 2 of 3" alone — ${items()}`);
+  assert.deepEqual([corner().getAttribute('role'), stops()], ['toolbar', ['version']], 'its line of acts a toolbar, its one Tab stop its first act, the version statement, the corner\'s element none');
   const last = LAYER.mounts().at(-1);
   offer.n = 3;
   LAYER.frame(mine);
   assert.ok(items().includes(act(3)) && items().indexOf('class="version"') < items().indexOf(act(3)), `the offer in that frame, after the version statement — ${items()}`);
-  const [read3] = corner().querySelectorAll();
+  assert.deepEqual(stops(), ['version'], 'the offer on the line, out of the Tab order: its one stop still the version statement');
+  const read3 = keyed('read');
   read3.focus();
+  assert.deepEqual(stops(), ['read'], 'the focus moved onto the offer, as → moves it: the line\'s one stop follows it');
   offer.n = 4;
   LAYER.frame(mine);
-  const [read4] = corner().querySelectorAll();
+  const read4 = keyed('read');
   assert.ok(items().includes(act(4)) && !items().includes(act(3)), `raised to version 4 in that frame — ${items()}`);
   assert.ok(read4 && read4 !== read3 && page.activeElement === read4, 'the focus on the offer standing in its place');
+  assert.deepEqual(stops(), ['read'], 'the rewrite leaves one Tab stop, on the act the focus stands on');
   offer.n = null;
   LAYER.frame(mine);
-  assert.ok(!items().includes('data-read') && page.activeElement === corner(), `the offer gone in that frame, the focus on the corner — ${items()}`);
+  assert.ok(!items().includes('data-read') && page.activeElement === keyed('version'), `the offer gone in that frame, the focus on the line's first act, the version statement — ${items()}`);
+  assert.deepEqual(stops(), ['version'], 'one Tab stop still, on the act the focus stands on');
   assert.ok(LAYER.isMounted(D2) && LAYER.mounts().at(-1) === last, 'its article standing: nothing mounted again');
 }));
 
@@ -1911,10 +1940,11 @@ test('a reading scene\'s pane\'s view is at the pane\'s measure, and its corner 
   assert.ok(LAYER.sceneCorner(d, view, true).includes('class="st glyph"') && LAYER.sceneCorner(d, view, true).includes(`aria-label="${esc(latest)}"`) && !LAYER.sceneCorner(d, view).includes('glyph'), 'beside its column, compact: the state a glyph named by its words; whole: its words');
   assert.ok([LAYER.sceneCorner(d, view), LAYER.sceneCorner(d, view, true)].every((c) => c.startsWith(`<span class="kind" data-kind="published" data-string="F.published"`)), 'its kind first, in either form');
   /** a head's rows: each its index, its top and its height, and its markup */
-  const rowsOf = (/** @type {string} */ html) => [...html.matchAll(/<div class="hrow" data-row="(\d+)" style="top:([\d.]+)px;height:([\d.]+)px">(.*?)<\/div>/g)].map((m) => ({ k: Number(m[1]), top: Number(m[2]), h: Number(m[3]), html: m[4] }));
+  const rowsOf = (/** @type {string} */ html) => [...html.matchAll(/<div class="hrow" data-row="(\d+)"( role="toolbar")? style="top:([\d.]+)px;height:([\d.]+)px">(.*?)<\/div>/g)].map((m) => ({ k: Number(m[1]), bar: !!m[2], top: Number(m[3]), h: Number(m[4]), html: m[5] }));
   const head = LAYER.sceneHead(d, view, { px, kept: null, open: false }), rows = rowsOf(head.html);
   assert.ok(head.rows === 3 && rows.length === 3 && rows.every((r, i) => r.k === i && Math.abs(r.top - i * pitch) < 1e-6 && Math.abs(r.h - pitch) < 1e-6), `its rows at the reading line's pitch, each where its band sets it: ${JSON.stringify(rows)}`);
   assert.ok(!head.html.includes('class="name"'), `no row naming the document: ${head.html}`);
+  assert.ok(rows.some((r) => r.bar) && rows.every((r) => r.bar === r.html.includes('<button')), `each row holding an act a line of acts, a toolbar, and no other row one: ${JSON.stringify(rows.map((r) => [r.k, r.bar]))}`);
   const slots = [...head.html.matchAll(/class="hslot[^"]*" style="left:([\d.]+)px;width:([\d.]+)px;/g)].map((m) => Number(m[1]) + Number(m[2]));
   assert.ok(slots.length && slots.every((r) => r <= width + 1e-6), `every slot inside the head's width, the column and its edge: ${slots} ≤ ${width}`);
   assert.ok(rows[0].html.includes('class="kind"') && !rows[0].html.includes('data-members') && !rows[0].html.includes('class="st glyph"'), `its kind alone on the first row, the version statement finding no room beside it: ${rows[0].html}`);
@@ -1926,7 +1956,7 @@ test('a reading scene\'s pane\'s view is at the pane\'s measure, and its corner 
   assert.ok(clause.indexOf('data-string="L.kept.links"') >= 0 && clauseHead.indexOf('data-string="L.kept.links"') < clauseHead.indexOf('class="kind"') && clauseHead.indexOf('class="kind"') < clauseHead.indexOf('class="st glyph"'), `the kept clause first on the first row, before the kind and the state's glyph: ${clauseHead}`);
   assert.ok(rowsOf(LAYER.sceneHead(d, view, { px, kept, open: false }).html)[0].html.includes('data-string="L.kept.links"'), 'a clause wider than the head on the first row, which nothing stands before, wrapped there');
   const opened = LAYER.sceneHead(d, view, { px, kept, open: true });
-  const form = /<div class="opened" style="top:([\d.]+)px;width:([\d.]+)px">(.*)<\/div>$/.exec(opened.html);
+  const form = /<div class="opened"(?: role="toolbar")? style="top:([\d.]+)px;width:([\d.]+)px">(.*)<\/div>$/.exec(opened.html);
   assert.ok(form && Math.abs(Number(form[1]) - opened.rows * pitch) < 1e-6 && Math.abs(Number(form[2]) - width) < 1e-6 && form[3].includes(esc(latest)) && form[3].includes('data-read="2"'), `opened: every item whole beneath its rows, across the head: ${opened.html}`);
   const reading = LAYER.sceneHead({ ...d, kind: /** @type {any} */ ('unknown'), meta: null }, { ...view, read: null, kind: 'reading' }, { px, kept: null, open: false });
   assert.ok(reading.rows === 1 && rowsOf(reading.html).length === 1 && rowsOf(reading.html)[0].html.includes('class="kind pending"'), `its kind being read: its one row its slot, an empty box: ${reading.html}`);

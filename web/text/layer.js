@@ -237,8 +237,8 @@
 // version of the box sharing the count, its items made again as the chain
 // is counted again (`cornerKey`; FP-22, FP-23); where a newer version's
 // arrival pinned its box it offers to read the newest member named (the
-// reader `newer`; D5 K-57), a control the pointer and → reach and Tab never
-// does, its items made again as the offer comes and goes; the ARIA mirror's item
+// reader `newer`; D5 K-57), an act of its own, its items made again as the
+// offer comes and goes; the ARIA mirror's item
 // voices its state whole, its first item leading (`mirrorLead`, `mirrorState`).
 // A reading view frames the column
 // it reads with the corner and the edge beside it, at the landing's em
@@ -275,9 +275,15 @@
 // lag begins and ends (`placeCorners`). The element outlives its
 // article's remounts and its items are rewritten only where they change, so
 // a focus on it survives them, and one on its act is put back on the act
-// standing in their place (N-FOCUS's `keep`); the focused document's corner is the plane's
-// next Tab stop, named by its own words, and every other is out of the order
-// and hidden from assistive technology; while the reading scene stands over
+// standing in their place (N-FOCUS's `keep`, by `cornerAct`). Its acts are
+// native buttons the platform activates (T-ARTICLE's), and the focused
+// document's corner alone stands in the Tab order, after the plane's stop
+// (`setStops`): each line of its acts a toolbar whose stop is its first act,
+// the stop following the focus along it and standing on its first act again
+// as the focus leaves it (`rove`), the corner's element no stop; a corner
+// holding no act its element's one stop, a group named by its own words;
+// every other corner out of the order and hidden from assistive technology.
+// While the reading scene stands over
 // the plane the corner layer is inert (`cover`, through N-FOCUS, the focus's
 // owner — FP-20), the scene's panes carrying their own (D5 §4 rule 5); a
 // corner that leaves while it holds the focus hands it to the walk (D5 §4
@@ -597,7 +603,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @property {number} grev the view revision at mount
  * @property {Fold} fold the fold it was set in: its size, its columns and the lines they hold
  * @property {number} fs the document's em in world units: its fold's
- * @property {{whole: string, compact: string, key: string, items: import('./article.js').CornerItem[]}} corner the corner's items, whole and compact (T-ARTICLE's `cornerHTML`), and compact one by one with their widths as a head's rows set them (`cornerItems`), as made at mount and again as what they are made from moved — the board's lag, its box's chain counted again, the draft's kept state, its statement open or closed (`cornerKey`); empty where it has none
+ * @property {{whole: string, compact: string, opened: string, key: string, items: import('./article.js').CornerItem[], openedItems: import('./article.js').CornerItem[], words: string[]}} corner the corner's items, whole, compact and opened whole on its act (T-ARTICLE's `cornerHTML`), compact one by one with their widths as a head's rows set them, closed and opened, and whole as their words alone, one by one (`cornerItems`; `cornerOfView`), as made at mount and again as what they are made from moved — the board's lag, its box's chain counted again, the draft's kept state, its statement open or closed (`cornerKey`); empty where it has none
  * @property {HTMLElement | null} template the article's one column, kept out of the page: what its parts are cut from; null where the platform does not set the article
  * @property {Unit[]} units its fold's lines by the row elements that set them
  * @property {Map<number, Cut | null>} cuts the points its lines open at, by line, as far as they were read; null where a line opens at no point found
@@ -843,7 +849,21 @@ const isShown = (/** @type {string} */ addr) => read.shown(addr) === addr;
  * @param {HTMLElement | null} cornersEl the corner layer's
  * @param {{measure?: boolean}} [opts] `measure` the platform sets the articles: their lines measured as rendered and their parts cut from them (the page; the node tests run without)
  */
-export function attach(el, cornersEl, opts = {}) { layer = el; cornerLayer = cornersEl; engine = !!opts.measure; styled = 0; }
+export function attach(el, cornersEl, opts = {}) {
+  layer = el; cornerLayer = cornersEl; engine = !!opts.measure; styled = 0;
+  // the stop of a corner's line of acts follows the focus in it, and stands on its first act again as the focus leaves it (`setStops`)
+  if (cornersEl && typeof cornersEl.addEventListener === 'function') {
+    cornersEl.addEventListener('focusin', (ev) => rove(ev.target, ev.target));
+    cornersEl.addEventListener('focusout', (ev) => rove(ev.target, ev.relatedTarget));
+  }
+}
+
+/** a corner's stops stood again as the focus moves in or out of it (`setStops`): `at` the element the focus goes to */
+function rove(/** @type {EventTarget | null} */ target, /** @type {EventTarget | null} */ at) {
+  const t = /** @type {HTMLElement | null} */ (target), el = t && typeof t.closest === 'function' ? /** @type {HTMLElement | null} */ (t.closest('[data-corner]')) : null;
+  const c = el ? corners.get(el.dataset.corner || '') : undefined;
+  if (el && c && c.el === el) setStops(el, c.mine, c.head, /** @type {Element | null} */ (at));
+}
 /**
  * The plane covered and uncovered (D5 §4 rule 5): while chrome stands over
  * the plane — the reading scene, whose panes carry their own corners — the
@@ -2883,8 +2903,19 @@ const lags = () => PUMP.boardKept() !== null;
 
 /** what a document's corner's items are made from beside its record and the links (`Mounted.corner`): its kind (`kindOf`) — which an index row or a failed read tells with no move of its record — the board's lag, its box's chain (`chainOf`), the newer version it offers to read (the reader `newer`), the draft's kept state and whether its statement stands open — the items made again where it moved */
 const cornerKey = (/** @type {string} */ addr) => JSON.stringify([kindOf(REC.doc(addr)), lags(), chainOf(addr), read.newer(addr), WRITE.keptOf(addr), openStatements.has(addr)]);
-/** a document's corner's items made over its view, whole and compact, and compact one by one for a head's rows, keyed by what they were made from (`cornerKey`) */
-const cornerOfView = (/** @type {Doc} */ d, /** @type {ArticleView} */ view) => ({ whole: cornerHTML(d, view), compact: cornerHTML(d, view, true), key: cornerKey(d.addr), items: cornerItems(d, view, true, false) });
+/**
+ * A document's corner's items made over its view (`Mounted.corner`), keyed by what they were made from (`cornerKey`):
+ * whole, compact, and opened whole on its act where its room holds its compact form alone; compact one by one for a
+ * head's rows, closed and opened; and their words alone, whole, for the form a head opens beneath its rows
+ * (`ArticleView.opened`, `ArticleView.acts`).
+ */
+function cornerOfView(/** @type {Doc} */ d, /** @type {ArticleView} */ view) {
+  const opened = { ...view, opened: true };
+  return {
+    whole: cornerHTML(d, view), compact: cornerHTML(d, view, true), opened: cornerHTML(d, opened), key: cornerKey(d.addr),
+    items: cornerItems(d, view, true, false), openedItems: cornerItems(d, opened, true, false), words: cornerItems(d, { ...view, acts: false }).map((i) => i.html),
+  };
+}
 
 /**
  * How many of an account's documents stand kept (`keptIn`; see the head):
@@ -3660,8 +3691,10 @@ function signsIn(/** @type {Mounted} */ rec, /** @type {number} */ ci) {
  * visible top below the one line, never past the outline's bottom beside a
  * row's first column, nor past its row's foot beside another, and below the
  * signs the edge before it holds (`cornerTop`); where they leave it no room,
- * the next frame stands it by its row's first column. In either form its
- * element keeps its one place in the Tab and reading order.
+ * the next frame stands it by its row's first column. Opened whole on its act
+ * where its room holds only its compact form, it stands in its opened form
+ * (`ArticleView.opened`). In either form its element keeps its one place in
+ * the reading order, its Tab stops the focused document's alone (`setStops`).
  * @param {(addr: string) => boolean} focused
  */
 function placeCorners(focused) {
@@ -3687,10 +3720,12 @@ function placeCorners(focused) {
     // a column the signs before it left no room beside is tried again once the view's centre has left it
     if (c.blockedAt !== columnAt(rec.fold, p.x, p.y)) c.blockedAt = -1;
     const at = besideOf(rec.fold, clearLeftOf(addr), p, cam.scale, c.blockedAt);
-    // a kept document's clause its last item, where the one line does not name it (`keptIn`)
-    const form = formFor(at.room, open, fit().compact), html = rec.corner[form] + keptHTML(boxOf(addr) === read.named() ? null : keptIn(addr));
-    // its items rewritten, a focus on its act put back on the act standing in their place, else on the corner (FP-20)
-    if (c.html !== html) { FOCUS.keep(c.el, cornerControl, () => { c.el.innerHTML = html; }); c.html = html; c.stale = true; }
+    // a kept document's clause its last item, where the one line does not name it (`keptIn`); opened whole where its room holds
+    // its compact form alone, its opened form
+    const form = formFor(at.room, open, fit().compact), opened = open && formFor(at.room, false, fit().compact) === 'compact';
+    const html = (opened ? rec.corner.opened : rec.corner[form]) + keptHTML(boxOf(addr) === read.named() ? null : keptIn(addr));
+    // its items rewritten, its stops stood again, a focus on its act put back on the act standing in their place, else on its first stop (FP-20)
+    if (c.html !== html) { FOCUS.keep(c.el, cornerAct, () => { c.el.innerHTML = html; setStops(c.el, c.mine, false); }); c.html = html; c.stale = true; }
     if ((form === 'compact') !== c.compact) { c.compact = form === 'compact'; c.el.classList.toggle('compact', c.compact); c.stale = true; }
     // the room caps the corner only where not even its form's width fits there, a corner opened whole never
     const cap = open || at.room >= cornerWidth(c.compact) ? Infinity : at.room;
@@ -3728,8 +3763,8 @@ function placeCorners(focused) {
     if (mine === c.mine) continue;
     if (!mine) lost = c.el.contains(document.activeElement) || lost;
     c.mine = mine;
-    if (mine) { c.el.tabIndex = 0; c.el.removeAttribute('aria-hidden'); }
-    else { c.el.removeAttribute('tabindex'); c.el.setAttribute('aria-hidden', 'true'); }
+    if (mine) c.el.removeAttribute('aria-hidden'); else c.el.setAttribute('aria-hidden', 'true');
+    setStops(c.el, mine, c.head);
   }
   if (lost) read.handOff();
 }
@@ -3878,14 +3913,16 @@ export function signsStanding() {
  * sets it (`heldContents`, `runHTML`), the kept clause after the address,
  * whole, where the line does not carry it beside its own address, then the
  * corner's items in their one order and compact forms, each in its slot with
- * its act, the count of those folded, "⟨n⟩ more", its act opening them whole;
- * the rest of its items on the rows after, whole; and beneath its rows the
- * forms its acts opened — every item whole on the count's or a glyph's act
- * (`openCorner`), a kept word's statement on its act or Mod+S's
+ * its act, the count of those folded, "⟨n⟩ more", its act opening them whole
+ * (`moreHTML`); the rest of its items on the rows after, whole, each row
+ * holding an act a line of acts of its own (`hrowHTML`); and beneath its rows
+ * the forms its acts opened — every item whole on the count's or a glyph's
+ * act (`openCorner`), its words alone where its rows hold its act
+ * (`openedHTML`), a kept word's statement on its act or Mod+S's
  * (`openStatement`). Each row stands on the document's own ground, the name
  * drawn and never announced. Its markup is written again only where it
- * changed, a focus on its act put back on the act standing in its place, else
- * on the corner (FP-20).
+ * changed, its stops stood again (`setStops`), a focus on its act put back on
+ * the act standing in its place, else on its first stop (FP-20).
  * @param {Corner} c
  * @param {Mounted} rec
  * @param {number} column the column nearest the view's centre
@@ -3895,7 +3932,7 @@ export function signsStanding() {
 function headOf(c, rec, column, open) {
   const f = rec.fold, d = rec.d, addr = d.addr, col = f.columns[column], scale = cam.scale;
   const pitch = LINE_H * f.fs * scale, width = (col.w + EDGE * f.fs) * scale, named = boxOf(addr) === read.named();
-  const k = keptIn(addr), items = rec.corner.items;
+  const k = keptIn(addr), items = open ? rec.corner.openedItems : rec.corner.items;
   const L = headLayout(headItems(items), nameWidth(d), k ? { w: clauseWidth(k), words: k.text } : null, width, pitch);
   const ground = d.refused === 'withheld' ? COL.withheld : COL.doc;
   /** @type {string[]} each row's markup, by row */
@@ -3908,14 +3945,14 @@ function headOf(c, rec, column, open) {
   }
   for (const s of L.slots) {
     const html = s.k === -1 ? (named ? '' : `<span class="kept" data-string="${esc(/** @type {KeptClause} */ (k).id)}" style="font-size:${ADDRESS.px}px">${esc(/** @type {KeptClause} */ (k).text)}</span>`)
-      : s.k === -2 ? `<span class="more" data-more="${L.folded}" role="button" tabindex="-1">${esc(t('L.corner.more', { n: L.folded }))}</span>`
+      : s.k === -2 ? moreHTML(L.folded, open)
         : items[s.k].html;
     rows[s.row] += `<span class="hslot${s.rows > 1 ? ' wraps' : ''}" style="left:${s.x}px;width:${s.w}px;height:${s.rows * pitch}px;line-height:${s.rows > 1 ? '' : pitch + 'px'}">${html}</span>`;
   }
-  const kept = WRITE.keptOf(addr), formHTML = open ? rec.corner.whole : kept && openStatements.has(addr) ? statementHTML(kept) : '';
-  const html = rows.map((r, i) => (r ? `<div class="hrow" data-row="${i}" style="height:${pitch}px;background:${ground}">${r}</div>` : '')).join('')
-    + (formHTML ? `<div class="opened" style="width:${width}px;background:${ground}">${formHTML}</div>` : '');
-  if (c.html !== html) { FOCUS.keep(c.el, cornerControl, () => { c.el.innerHTML = html; }); c.html = html; }
+  const kept = WRITE.keptOf(addr), formHTML = open ? openedHTML(rec.corner.words, items, L) : kept && openStatements.has(addr) ? statementHTML(kept) : '';
+  const html = rows.map((r, i) => (r ? hrowHTML(i, `height:${pitch}px;background:${ground}`, r) : '')).join('')
+    + (formHTML ? openedFormHTML(`width:${width}px;background:${ground}`, formHTML) : '');
+  if (c.html !== html) { FOCUS.keep(c.el, cornerAct, () => { c.el.innerHTML = html; setStops(c.el, c.mine, true); }); c.html = html; }
   c.el.style.width = width + 'px'; c.el.style.height = pitch + 'px';
   c.column = column; c.w = width; c.h = pitch;
   return { column, first: inFirstRow(f, col), pitch, rows: L.rows };
@@ -4140,10 +4177,11 @@ export function heldOf(/** @type {string} */ addr) {
 
 /**
  * A compact sign opened whole on its act (FP-26): a document's corner
- * standing compact made whole where it
- * stands, over what is beside it, until the act again — at the corner opened,
- * its version statement apart — closes it, or the corner leaves (APP-INPUT
- * takes the act at the corner's glyph, and at the corner opened).
+ * standing compact made whole where it stands, over what is beside it, until
+ * the act again — the words its opened form compacts it again by, a click on
+ * the corner opened, its other acts apart — closes it, or the corner leaves
+ * (APP-INPUT takes the act at the corner's glyph, at a head's count of the
+ * items it folds, and at the corner opened).
  * @param {string} addr
  */
 export function openCorner(addr) {
@@ -4152,9 +4190,10 @@ export function openCorner(addr) {
 }
 
 /**
- * A document's corner element in the corner layer: a group named by its own
- * words (no string of the page's: it labels itself), out of the Tab order
- * and hidden from assistive technology until it is the focused document's.
+ * A document's corner element in the corner layer: named by its own words
+ * (no string of the page's: it labels itself), a group or a line of acts as
+ * its stops stand (`setStops`), out of the Tab order and hidden from
+ * assistive technology until it is the focused document's.
  * @param {HTMLElement} into the corner layer
  * @param {string} addr
  * @returns {Corner}
@@ -4174,8 +4213,90 @@ function makeCorner(into, addr) {
   return c;
 }
 
-/** the key a control in a corner bears, which a rewrite of its items puts a focus back on (N-FOCUS's `keep`): its offered read's, a head's count of its items folded; none for the corner's element itself, which a rewrite never replaces */
-const cornerControl = (/** @type {Element} */ el) => (/** @type {HTMLElement} */ (el).dataset?.read ? 'read' : /** @type {HTMLElement} */ (el).dataset?.more ? 'more' : null);
+/**
+ * The key a corner's act bears (see the head), which a rewrite of its items
+ * puts a focus back on (N-FOCUS's `keep`): the offered read's, a head's count
+ * of the items it folds, the kept word's, the act that opens the corner whole
+ * or compacts it again, the version statement's; none for the corner's
+ * element itself, which a rewrite never replaces. A reading scene's pane keys
+ * its corner's acts by it too.
+ * @param {Element} el
+ * @returns {string | null}
+ */
+export function cornerAct(el) {
+  const e = /** @type {HTMLElement} */ (el), d = e.dataset || /** @type {DOMStringMap} */ ({});
+  if (d.read) return 'read';
+  if (d.more) return 'more';
+  if (d.kept) return 'kept';
+  if (d.whole != null) return 'whole';
+  return e.classList && typeof e.classList.contains === 'function' && e.classList.contains('version') ? 'version' : null;
+}
+
+/** an element's descendants a selector names, in the page's order; none where the element finds none */
+const allIn = (/** @type {Element} */ el, /** @type {string} */ sel) => (typeof el.querySelectorAll === 'function' ? /** @type {HTMLElement[]} */ ([...el.querySelectorAll(sel)]) : []);
+
+/** the element the platform's focus stands on; null where the page holds none */
+const focusedNow = () => (typeof document !== 'undefined' ? document.activeElement : null);
+
+/**
+ * A corner's Tab stops stood (see the head; D5 K-57; FP-20), on the plane and
+ * in a reading scene's pane, whose holder stands them on its own corner: where
+ * it holds acts, each line of them a toolbar — the corner beside its column,
+ * each row of a corner at its document's head and the form it opens beneath
+ * them (`hrowHTML`, `openedHTML`) — whose one stop is the act the focus stands
+ * on in it, else its first act, every other act out of the order, and the
+ * corner's element no stop; where it holds none, its element its one stop, a
+ * group named by its own words; and no stop at all where it is not in the
+ * order.
+ * @param {HTMLElement} el the corner's element
+ * @param {boolean} mine it is in the Tab order: the focused document's, a pane's
+ * @param {boolean} head it stands at its document's head
+ * @param {Element | null} [at] the element the focus stands on or goes to: the stop of the line it stands in
+ */
+export function setStops(el, mine, head, at = focusedNow()) {
+  const acts = allIn(el, 'button');
+  if (!acts.length) {
+    el.setAttribute('role', 'group');
+    if (mine) el.tabIndex = 0; else el.removeAttribute('tabindex');
+    return;
+  }
+  el.removeAttribute('tabindex');
+  el.setAttribute('role', head ? 'group' : 'toolbar');
+  for (const bar of head ? allIn(el, ':scope > [role="toolbar"]') : [el]) {
+    const own = allIn(bar, 'button'), stop = own.find((b) => b === at) || own[0];
+    for (const b of own) b.tabIndex = mine && b === stop ? 0 : -1;
+  }
+}
+
+/**
+ * The element a corner's first Tab stop stands on (`setStops`): its first
+ * line's stop, else its element — where a return to the corner lands (SC's).
+ * @param {HTMLElement} el the corner's element
+ * @returns {HTMLElement}
+ */
+export const cornerStop = (el) => allIn(el, 'button').find((b) => b.getAttribute('tabindex') === '0') || el;
+
+/** a head's count of the items its rows fold, "⟨n⟩ more" (`headLayout`): the act that opens them whole beneath its rows, saying whether they stand opened (D5 K-57; FP-26) */
+const moreHTML = (/** @type {number} */ n, /** @type {boolean} */ open) => `<button type="button" class="more" data-more="${n}" aria-expanded="${open}" tabindex="-1">${esc(t('L.corner.more', { n }))}</button>`;
+
+/** a head's row as markup: a row holding an act a line of acts of its own (`setStops`) */
+const hrowHTML = (/** @type {number} */ i, /** @type {string} */ style, /** @type {string} */ inner) => `<div class="hrow" data-row="${i}"${inner.includes('<button') ? ' role="toolbar"' : ''} style="${style}">${inner}</div>`;
+
+/**
+ * The form a head opens beneath its rows, every item whole (`openCorner`):
+ * each item its rows hold an act of in its words alone, each its rows fold
+ * its act, so no act stands twice.
+ * @param {string[]} words the items whole, their words alone (`ArticleView.acts`)
+ * @param {import('./article.js').CornerItem[]} items the items as its rows set them
+ * @param {HeadLayout} L where its rows set them
+ */
+function openedHTML(words, items, L) {
+  const placed = new Set(L.slots.map((s) => s.k));
+  return words.map((w, k) => (placed.has(k) ? w : items[k].html)).join('');
+}
+
+/** the form a head opens beneath its rows as markup, a line of acts where it holds one (`setStops`) */
+const openedFormHTML = (/** @type {string} */ style, /** @type {string} */ inner) => `<div class="opened"${inner.includes('<button') ? ' role="toolbar"' : ''} style="${style}">${inner}</div>`;
 
 /** remove a document's corner, and its opening whole with it; true where it held the focus */
 function dropCorner(/** @type {string} */ addr) {
@@ -4718,32 +4839,35 @@ export function sceneCorner(d, view = viewFor(d, true), compact = false) { retur
  * pane's kept clause first, then the corner's items in their one order and
  * compact forms, each in its slot, those that never yield wrapped whole onto
  * the rows after, the offered read folded into "⟨n⟩ more" where its row
- * cannot hold it; beneath its rows the form a reader's act opened — every item
- * whole on a glyph's or the count's act, a draft's kept statement on its kept
- * word's (K-74). No row names the document: the scene's bar names each pane's.
+ * cannot hold it (`moreHTML`), each row holding an act a line of acts of its
+ * own (`hrowHTML`); beneath its rows the form a reader's act opened — every
+ * item whole on a glyph's or the count's act, its words alone where its rows
+ * hold its act (`openedHTML`), a draft's kept statement on its kept word's
+ * (K-74). No row names the document: the scene's bar names each pane's.
  * Its rows stand where its band sets them, each row and the form beneath
  * absolutely placed (the scene moves them as its pane scrolls); every corner
  * carries an item, its kind's slot first, so it stands one row at the least.
+ * The scene stands its stops (`setStops`).
  * @param {Doc} d
  * @param {ArticleView} view the pane's view, at its measure (`sceneView`), with the corner's state the scene hands in
  * @param {{px: number, kept: KeptClause | null, open: boolean}} as `px` the em the pane's text is set at; `kept` the pane's kept clause; `open` its items opened whole by the reader's act
  * @returns {{html: string, rows: number}}
  */
 export function sceneHead(d, view, as) {
-  const items = cornerItems(d, view, true, false), clause = as.kept;
+  const items = cornerItems(d, { ...view, opened: as.open }, true, false), clause = as.kept;
   const pitch = LINE_H * as.px, width = ((view.cpl ?? MEASURE_CPL) * CHAR_W + EDGE) * as.px;
   const L = headLayout(headItems(items), 0, clause ? { w: cornerPx(clause.text), words: clause.text } : null, width, pitch);
   /** @type {string[]} each row's markup, by row */
   const rows = Array.from({ length: L.rows }, () => '');
   for (const s of L.slots) {
     const html = s.k === -1 ? keptHTML(clause)
-      : s.k === -2 ? `<span class="more" data-more="${L.folded}" role="button" tabindex="-1">${esc(t('L.corner.more', { n: L.folded }))}</span>`
+      : s.k === -2 ? moreHTML(L.folded, as.open)
         : items[s.k].html;
     rows[s.row] += `<span class="hslot${s.rows > 1 ? ' wraps' : ''}" style="left:${s.x}px;width:${s.w}px;height:${s.rows * pitch}px;line-height:${s.rows > 1 ? '' : pitch + 'px'}">${html}</span>`;
   }
-  const form = as.open ? cornerHTML(d, view) : view.kept && view.keptOpen ? statementHTML(view.kept) : '';
-  const html = rows.map((r, i) => `<div class="hrow" data-row="${i}" style="top:${i * pitch}px;height:${pitch}px">${r}</div>`).join('')
-    + (form ? `<div class="opened" style="top:${L.rows * pitch}px;width:${width}px">${form}</div>` : '');
+  const form = as.open ? openedHTML(cornerItems(d, { ...view, acts: false }).map((i) => i.html), items, L) : view.kept && view.keptOpen ? statementHTML(view.kept) : '';
+  const html = rows.map((r, i) => hrowHTML(i, `top:${i * pitch}px;height:${pitch}px`, r)).join('')
+    + (form ? openedFormHTML(`top:${L.rows * pitch}px;width:${width}px`, form) : '');
   return { html, rows: L.rows };
 }
 

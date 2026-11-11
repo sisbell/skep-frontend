@@ -1,7 +1,7 @@
 // O-VERSIONS — the members' list (the structure record §3.2; foundations
 // §2.1's version row; F2.1-e). Layer 2. ENGINE-BOUND. State: none. On the
-// corner's act — a click on its version statement, or Enter at the corner
-// (D5 K-57), both through `fromCorner`: the chain's members `D.1 … D.n`,
+// corner's act — its version statement's button, clicked by the pointer or
+// activated by Enter or Space (D5 K-57), through `fromCorner`: the chain's members `D.1 … D.n`,
 // every one M-PUMP's probe of the chain read (`probeChain`, to the chain's
 // end), each read act a version move that lands in place (N-GO's
 // `toVersion`; FP-22), carrying the passage held, re-projected into the
@@ -58,8 +58,8 @@
 // anchor; foundations §3.1): opened by the corner's act, beneath the version
 // statement, and at the document's box, on the left where the corner stands,
 // once T-LAYER rewrites the corner or takes it down. The list takes the
-// focus where a key made the act — Enter at the corner — on its current
-// member's read act, and never where a click on the statement did (D5 §4
+// focus where a key made the act — Enter or Space at the version statement —
+// on its current member's read act, and never where a pointer's click on the statement did (D5 §4
 // rule 4; the focus record's rules 13 and 16); shown again by its own "try
 // again", the focus stays on the control bearing the same act, else goes to
 // its first (rule 11). It opens on its reads (O-HOST's `opening`): where an
@@ -361,8 +361,8 @@ function firstInView(addr) {
 }
 
 /**
- * The corner's act (D5 K-57), the one a click on the version statement and
- * Enter at the corner both take: the list for the corner's document, standing
+ * The corner's act (D5 K-57), the one the version statement's button takes,
+ * clicked by the pointer or activated by Enter or Space: the list for the corner's document, standing
  * beneath the statement while it stands in the page, and at the document's
  * box — its top-left, the side the corner stands on — once T-LAYER rewrites
  * the corner or takes it down, holding the selection where it stands in that
@@ -370,7 +370,7 @@ function firstInView(addr) {
  * statement — a draft's, whose chip's list is a later lane's — has no act.
  * @param {HTMLElement} corner the corner's element (`data-corner` names its document)
  * @param {{addr: string, pos: number, width: number} | null} selection the selection, wherever it stands
- * @param {boolean} [byKey] a key made the act (Enter at the corner): the list takes the focus
+ * @param {boolean} [byKey] a key made the act (Enter or Space at the version statement): the list takes the focus
  * @returns {boolean} whether the corner had the act
  */
 export function fromCorner(corner, selection, byKey = false) {
@@ -385,8 +385,8 @@ export function fromCorner(corner, selection, byKey = false) {
 }
 
 /**
- * The corner's offered read (see the head; D5 K-57), the act a click on it,
- * Enter on it and Enter at a corner with no version statement take: the
+ * The corner's offered read (see the head; D5 K-57), the act its button takes,
+ * clicked by the pointer or activated by Enter or Space: the
  * version move to the newer version the corner offers (N-GO's `toVersion`),
  * landing in place, carrying the passage held as a member's read act carries
  * it — the selection where it stands in the corner's document, named so,

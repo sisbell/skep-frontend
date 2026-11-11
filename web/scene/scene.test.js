@@ -89,7 +89,12 @@
 // overtook asked again before the pane is set, facts a row dropped after its
 // reads read as it shows, and owner facts taken anew setting again each pane
 // whose byline said other once no setting reads, a corner's act out landing
-// as asked (FP-23, FP-34).
+// as asked (FP-23, FP-34); and a pane's corner's acts buttons on one line of
+// acts whose stop is its first — the kept word a disclosure its click opens
+// and closes, in a corner opened whole too, the dispatch leaving Enter and
+// Space to the button and taking an auto-repeat, ← and → walking the line
+// with the scene standing, and a return to the corner landing on its stop
+// (FP-20, FP-26).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -101,6 +106,7 @@ import * as FAKE from '../test/fake-port.js';
 import * as WALK from '../nav/walk.js';
 import * as LAYER from '../text/layer.js';
 import * as HOST from '../overlays/host.js';
+import * as HINT from '../overlays/hint.js';
 import * as FACES from '../overlays/faces.js';
 import * as FOCUS from '../nav/focus.js';
 import * as KEYS from '../nav/keys.js';
@@ -594,9 +600,12 @@ before(() => {
  * place, every element keeping the attributes set on it (`attrs`), its text its markup's (`textContent`); the strokes'
  * layer holds the buttons put in it, in order, as the platform's element does; the scene's canvas draws on a recording
  * context, so the scene's draw places its stop and its strokes' buttons; the status region keeps what it was told, in
- * order (`said`).
+ * order (`said`); each pane keeps the listeners the scene attaches to it (`paneOn`). Where `acts` asks, each pane's
+ * corner holds the buttons its markup sets as the platform would (`holdActs`), and the scene's root takes a style
+ * property.
+ * @param {{acts?: boolean}} [as]
  */
-function page() {
+function page(as = {}) {
   const body = { id: 'the body', focus() {} };
   /** a button the scene makes: in the page while the strokes' layer holds it, taking the focus while it stands there and the scene is shown */
   const button = (/** @type {string} */ tag) => {
@@ -643,6 +652,70 @@ function page() {
   const bar = Object.assign(element('the scene\'s bar', shown), { addEventListener: (/** @type {string} */ type, /** @type {(ev: any) => void} */ fn) => { barOn[type] = fn; } });
   const paneA = element('pane A', shown), paneB = element('pane B', shown);
   const cornerA = element('pane A\'s corner', shown), cornerB = element('pane B\'s corner', shown);
+  /** @type {Record<'a' | 'b', Record<string, (ev: any) => void>>} each pane's listeners, as the scene attaches them */
+  const paneOn = { a: {}, b: {} };
+  Object.assign(paneA, { addEventListener: (/** @type {string} */ type, /** @type {(ev: any) => void} */ fn) => { paneOn.a[type] = fn; } });
+  Object.assign(paneB, { addEventListener: (/** @type {string} */ type, /** @type {(ev: any) => void} */ fn) => { paneOn.b[type] = fn; } });
+  /**
+   * A pane's corner holding the buttons its markup sets — the items the scene writes in it, or the corner's element
+   * the scene writes in its pane — each holding its attributes, its `tabIndex` among them, answering the selectors
+   * asked of it as the platform answers them, and taking the focus as the platform moves it, the move told to its
+   * pane's listeners; a rewrite taking away a focused button leaves the focus on nothing. The buttons standing, in
+   * their order.
+   * @param {any} pane @param {any} c @param {Record<string, (ev: any) => void>} on
+   * @returns {any[]}
+   */
+  const holdActs = (pane, c, on) => {
+    /** @type {any[]} */
+    const acts = [];
+    let html = '', own = '';
+    /** does a selector name an element of a tag and attributes: one of its compounds of a tag, classes and attributes */
+    const names = (/** @type {string} */ sel, /** @type {string} */ tag, /** @type {Record<string, string>} */ attrs) => sel.split(',').some((one) => {
+      const s = one.trim(), parts = s.match(/^[a-z]+|\.[\w-]+|\[[\w-]+(?:="[^"]*")?\]/g) || [];
+      return parts.join('') === s && parts.every((q) => {
+        if (q.startsWith('.')) return (attrs.class || '').split(' ').includes(q.slice(1));
+        if (!q.startsWith('[')) return q === tag;
+        const [, k, v] = /^\[([\w-]+)(?:="([^"]*)")?\]$/.exec(q) || [];
+        return k in attrs && (v === undefined || attrs[k] === v);
+      });
+    });
+    c.closest = (/** @type {string} */ s) => (names(s, 'div', { ...c.attrs, class: 'corner', 'data-corner': '' }) ? c : null);
+    Object.defineProperty(c, 'tabIndex', { get: () => Number(c.attrs.tabindex ?? -1), set: (/** @type {number} */ x) => { c.attrs.tabindex = String(x); } });
+    const set =(/** @type {string} */ v) => {
+      if (acts.includes(doc.activeElement)) doc.activeElement = body;
+      html = String(v); acts.length = 0;
+      for (const m of html.matchAll(/<button ([^>]*)>/g)) {
+        /** @type {Record<string, string>} */
+        const attrs = {};
+        for (const a of m[1].matchAll(/([\w-]+)(?:="([^"]*)")?/g)) attrs[a[1]] = a[2] ?? '';
+        const dataset = Object.fromEntries(Object.entries(attrs).filter(([k]) => k.startsWith('data-')).map(([k, x]) => [k.slice(5), x]));
+        const b = /** @type {any} */ ({
+          id: `${c.id}: ${(attrs.class || '').split(' ')[0]}`, dataset, disabled: false, attrs,
+          classList: { contains: (/** @type {string} */ k) => (attrs.class || '').split(' ').includes(k) },
+          getAttribute: (/** @type {string} */ k) => attrs[k] ?? null, setAttribute: (/** @type {string} */ k, /** @type {string} */ x) => { attrs[k] = String(x); },
+          removeAttribute: (/** @type {string} */ k) => { delete attrs[k]; },
+          closest: (/** @type {string} */ s) => (names(s, 'button', attrs) ? b : c.closest(s)),
+          focus() {
+            if (!shown()) return;
+            const was = doc.activeElement;
+            doc.activeElement = b;
+            if (was === b) return;
+            if (on.focusout && pane.contains(was)) on.focusout({ target: was, relatedTarget: b });
+            if (on.focusin) on.focusin({ target: b });
+          },
+          blur() { if (doc.activeElement === b) doc.activeElement = body; },
+        });
+        Object.defineProperty(b, 'tabIndex', { get: () => Number(attrs.tabindex ?? -1), set: (/** @type {number} */ x) => { attrs.tabindex = String(x); } });
+        acts.push(b);
+      }
+    };
+    c.querySelectorAll = (/** @type {string} */ s) => (s === 'button' || s === 'button, input, [tabindex]' ? acts.slice() : []);
+    c.contains = (/** @type {unknown} */ x) => x === c || acts.includes(x);
+    Object.defineProperty(c, 'innerHTML', { get: () => html, set });
+    // the pane's markup as the scene stands it: the corner's own element holding the items, its acts among them
+    Object.defineProperty(pane, 'innerHTML', { get: () => own, set: (/** @type {string} */ v) => { own = String(v); const m = /^<div class="corner[^"]*"[^>]*>([\s\S]*)<\/div>$/.exec(own); set(m ? m[1] : ''); } });
+    return acts;
+  };
   const headA = element('the address pane A\'s head names'), headB = element('the address pane B\'s head names');
   paneA.querySelector = (s) => (s === ':scope > .corner' ? cornerA : s === '.hd .addr' ? headA : null);
   paneB.querySelector = (s) => (s === ':scope > .corner' ? cornerB : s === '.hd .addr' ? headB : null);
@@ -671,9 +744,12 @@ function page() {
   const live = element('the status region');
   Object.defineProperty(live, 'textContent', { get: () => said[said.length - 1] ?? '', set: (/** @type {string} */ v) => { said.push(v); } });
   FOCUS.attach({ live: /** @type {any} */ (live) });
-  root.contains = (x) => [root, bar, paneA, paneB, cornerA, cornerB, stop].includes(/** @type {any} */ (x)) || strokes.contains(x);
-  paneA.contains = (x) => x === paneA || x === cornerA;
-  paneB.contains = (x) => x === paneB || x === cornerB;
+  root.contains = (x) => [root, bar, paneA, paneB, stop].includes(/** @type {any} */ (x)) || cornerA.contains(x) || cornerB.contains(x) || strokes.contains(x);
+  paneA.contains = (x) => x === paneA || cornerA.contains(x);
+  paneB.contains = (x) => x === paneB || cornerB.contains(x);
+  /** each pane's corner's buttons, where the page's corners hold acts */
+  const acts = { a: as.acts ? holdActs(paneA, cornerA, paneOn.a) : [], b: as.acts ? holdActs(paneB, cornerB, paneOn.b) : [] };
+  if (as.acts) Object.assign(root.style, { setProperty() {} });
   const mirror = element('the tree', () => !mirror.inert);
   const item = element('the walk\'s current item', () => !mirror.inert);
   mirror.contains = (x) => x === item;
@@ -702,13 +778,13 @@ function page() {
     const ev = { type: 'click', detail: 0, target: { closest: (/** @type {string} */ s) => (s === '[data-stroke]' ? b : null) } };
     for (const fn of key == null ? stopOn : strokesOn) fn(ev);
   };
-  return { doc, item, corner, line, bar, paneA, paneB, cornerA, cornerB, headA, headB, stop, stopOn, strokes, names, said, at, covered, press, enter };
+  return { doc, item, corner, line, bar, paneA, paneB, cornerA, cornerB, headA, headB, stop, stopOn, strokes, names, said, at, covered, press, enter, paneOn, acts };
 }
 
-/** the test run on a page of stand-ins, the platform's `document` put back after it */
-async function onPage(/** @type {(p: ReturnType<typeof page>) => Promise<void>} */ body) {
+/** the test run on a page of stand-ins (`page`, as `as` asks), the platform's `document` put back after it */
+async function onPage(/** @type {(p: ReturnType<typeof page>) => Promise<void>} */ body, /** @type {{acts?: boolean}} */ as = {}) {
   const platform = globalThis.document;
-  try { await body(page()); } finally { SCENE.close(); globalThis.document = platform; }
+  try { await body(page(as)); } finally { SCENE.close(); globalThis.document = platform; }
 }
 
 test('the scene opened from the walk\'s item covers the plane while it stands; its end uncovers it and returns the focus to the item', () => onPage(async (p) => {
@@ -2164,6 +2240,88 @@ test('a pane\'s kind is said once in the status region where its corner\'s slot 
     assert.deepEqual(p.said.slice(after), [], 'filled while the focus stands in the other pane: nothing said');
   } finally { listing([]); }
 }));
+
+/** the platform laying the panes out 600 px wide with no padding and an 8 px gap, which fits both corners compact beside their columns (`fitOf`): the act that lays them out where the platform lays out none */
+function compactFit() {
+  const was = globalThis.getComputedStyle;
+  globalThis.getComputedStyle = /** @type {any} */ (() => ({ paddingLeft: '0px', paddingRight: '0px', columnGap: '8px' }));
+  return () => { if (was) globalThis.getComputedStyle = was; else delete (/** @type {any} */ (globalThis)).getComputedStyle; };
+}
+/** a click at an element of a pane's corner as the platform hands it to the pane: the one it makes from Enter or Space at a button where `byKey`, else a pointer's */
+const clickIn = (/** @type {ReturnType<typeof page>} */ p, /** @type {'a' | 'b'} */ side, /** @type {unknown} */ target, /** @type {boolean} */ byKey) =>
+  p.paneOn[side].click({ type: 'click', detail: byKey ? 0 : 1, target, currentTarget: side === 'a' ? p.paneA : p.paneB });
+/** a pane's corner's Tab stops, each by the act it is (T-LAYER's `cornerAct`), the corner's own element as `corner` */
+const stopsIn = (/** @type {any} */ c, /** @type {any[]} */ acts) => [c, ...acts].filter((x) => x.getAttribute('tabindex') === '0').map((x) => (x === c ? 'corner' : LAYER.cornerAct(x)));
+
+test('a pane\'s corner\'s acts are buttons, each act its click\'s: the corner one line of acts whose Tab stop is its first, its element none; the kept word a disclosure of the draft\'s kept statement, the click the platform makes from Enter or Space at it, or a pointer\'s, opening the statement and the next closing it, the focus kept on the word written again; and in the corner a glyph opened whole the kept word\'s click opens the statement still, the corner standing whole until the words the glyph opened are clicked; the scene\'s own keys take no Enter there (D5 K-57, K-74; B3-S2; FP-20, FP-26)', () => onPage(async (p) => {
+  const restore = compactFit();
+  WRITE.setKept(WRITING, { word: 'kept', reason: null });
+  try {
+    await SCENE.open(WRITING, B);
+    const c = p.cornerA, acts = p.acts.a, keyed = (/** @type {string} */ k) => acts.find((b) => LAYER.cornerAct(b) === k) || null;
+    assert.ok(String(c.className).split(' ').includes('compact'), `the panes fitted compact: ${c.className}`);
+    assert.deepEqual([acts.map(LAYER.cornerAct), c.getAttribute('role'), stopsIn(c, acts)], [['kept', 'whole'], 'toolbar', ['kept']],
+      'the draft\'s corner: its kept word and the glyph that opens it whole, one line of acts whose stop is its first act, its element no stop');
+    keyed('kept').focus();
+    assert.deepEqual([SCENE.key('Enter'), LAYER.statementOpen(WRITING)], [false, false], 'Enter at the kept word: the scene\'s own keys take none of it, and nothing opens');
+    clickIn(p, 'a', keyed('kept'), true);
+    assert.deepEqual([LAYER.statementOpen(WRITING), keyed('kept')?.getAttribute('aria-expanded'), p.at(), c.innerHTML.includes('class="kept-statement"')], [true, 'true', keyed('kept')?.id, true],
+      'the platform\'s click from Enter or Space at the kept word: its statement opened in the corner, the word saying so, the focus on the word written again');
+    clickIn(p, 'a', keyed('kept'), false);
+    assert.deepEqual([LAYER.statementOpen(WRITING), keyed('kept')?.getAttribute('aria-expanded'), p.at()], [false, 'false', keyed('kept')?.id], 'a pointer\'s click: closed again');
+    clickIn(p, 'a', keyed('whole'), false);
+    assert.deepEqual([String(c.className).split(' ').includes('open'), keyed('whole')?.getAttribute('aria-expanded')], [true, 'true'], 'the glyph\'s click opens the corner whole, the words it opened saying so');
+    clickIn(p, 'a', keyed('kept'), false);
+    assert.deepEqual([LAYER.statementOpen(WRITING), String(c.className).split(' ').includes('open')], [true, true], 'the kept word\'s click in the corner opened whole: the statement opened, the corner standing whole');
+    clickIn(p, 'a', keyed('whole'), true);
+    assert.deepEqual([String(c.className).split(' ').includes('open'), LAYER.statementOpen(WRITING)], [false, true], 'the words the glyph opened, clicked: the corner compact again, the statement standing');
+  } finally { LAYER.openStatement(WRITING, false); WRITE.setKept(WRITING, null); restore(); }
+}, { acts: true }));
+
+test('at a pane\'s corner\'s act the dispatch leaves Enter, Space and Shift+Space to the button, raising no line, and takes an auto-repeat, making nothing; ← and → walk the line\'s acts, its stop following the focus, the scene standing at its first act and its last; a printable key but Space is swallowed with K-9\'s line, as elsewhere in a pane (D5 K-9, K-57; FP-20)', () => onPage(async (p) => {
+  const restore = compactFit();
+  WRITE.setKept(WRITING, { word: 'kept', reason: null });
+  /** a key at an act of pane A's corner, as the app hands it to the dispatch there */
+  const at = (/** @type {any} */ target, /** @type {string} */ key, /** @type {object} */ mods = {}) => KEYS.dispatch({ ...keyOf(key), repeat: false, target, ...mods }, { where: 'scene', byKey: true });
+  try {
+    await SCENE.open(WRITING, B);
+    const acts = p.acts.a, keyed = (/** @type {string} */ k) => acts.find((b) => LAYER.cornerAct(b) === k) || null;
+    keyed('kept').focus();
+    HINT.act();
+    for (const [key, mods, what] of /** @type {Array<[string, object, string]>} */ ([['Enter', {}, 'Enter'], [' ', {}, 'Space'], [' ', { shiftKey: true }, 'Shift+Space']])) {
+      assert.equal(await at(keyed('kept'), key, mods), false, `${what} at the kept word: the button's own`);
+    }
+    assert.deepEqual([HINT.standing(), LAYER.statementOpen(WRITING), SCENE.isOpen()], [null, false, true], 'no line raised and nothing made by the dispatch — the platform\'s click makes the act — the scene standing');
+    assert.equal(await at(keyed('kept'), ' ', { repeat: true }), true, 'an auto-repeat of Space: taken');
+    assert.deepEqual([HINT.standing(), LAYER.statementOpen(WRITING)], [null, false], 'and making nothing');
+    assert.equal(await at(keyed('kept'), 'ArrowRight'), true);
+    assert.deepEqual([p.at(), stopsIn(p.cornerA, acts)], [keyed('whole')?.id, ['whole']], '→: the focus on the glyph, the line\'s stop following it');
+    assert.equal(await at(keyed('whole'), 'ArrowRight'), true);
+    assert.deepEqual([p.at(), SCENE.isOpen()], [keyed('whole')?.id, true], '→ at the line\'s last act: taken, nothing further, the scene standing');
+    assert.equal(await at(keyed('whole'), 'ArrowLeft'), true);
+    assert.equal(await at(keyed('kept'), 'ArrowLeft'), true);
+    assert.deepEqual([p.at(), stopsIn(p.cornerA, acts), SCENE.isOpen()], [keyed('kept')?.id, ['kept'], true], '← back to the kept word, then ← at the line\'s first act: the focus there, the scene standing — never its close');
+    assert.equal(await at(keyed('kept'), 'q'), true);
+    assert.equal(HINT.standing()?.id, 'F.swallow', 'a printable key: swallowed with K-9\'s line');
+  } finally { HINT.act(); LAYER.openStatement(WRITING, false); WRITE.setKept(WRITING, null); restore(); }
+}, { acts: true }));
+
+test('a pane\'s corner holding acts is returned to on its line\'s stop: left by WHOLE BOARD from its kept word, the scene\'s entry records the corner, and Back reopens it with the focus on the corner\'s first act written again, never on the corner\'s element (D5 K-57; FP-20, FP-25)', () => onPage(async (p) => {
+  WRITE.setKept(WRITING, { word: 'kept', reason: null });
+  try {
+    await onTrail(p);
+    assert.equal(await GO.toScene(WRITING, B), true);
+    await flown();
+    const acts = p.acts.a, kept = () => acts.find((b) => LAYER.cornerAct(b) === 'kept') || null;
+    assert.deepEqual([acts.map(LAYER.cornerAct), stopsIn(p.cornerA, acts)], [['kept'], ['kept']], 'the draft\'s corner beside its column holds one act, its kept word, the line\'s stop');
+    kept().focus();
+    const board = GO.wholeBoard(); await flown(); await board;
+    assert.deepEqual([SCENE.isOpen(), TRAIL.all().find((e) => e.scene)?.scene?.left?.stop], [false, 'a:corner'], 'WHOLE BOARD from the kept word: the scene ended, its entry recording the stop the focus stood on, the corner');
+    const back = GO.back(); await flown(); await back;
+    assert.deepEqual([SCENE.isOpen(), p.at()], [true, kept()?.id], 'Back reopens it, the focus on the corner\'s stop, its kept word written again');
+    assert.notEqual(p.at(), p.cornerA.id, 'never the corner\'s element, which holds no stop');
+  } finally { WRITE.setKept(WRITING, null); }
+}, { acts: true }));
 
 Object.assign(script, compared(A, A_TEXT, A, A_TEXT, [[1, 1, A_TEXT.length]]));
 

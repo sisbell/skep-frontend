@@ -37,6 +37,8 @@ button:hover { background:#1e2530; }
 button:focus-visible, [tabindex]:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
 button.inert { cursor:default; border-style:dashed; color:var(--dim); }
 button[disabled] { opacity:.45; cursor:default; }
+/* a corner's acts (D5 K-57): native buttons drawn as the words they are, each item's own look its class's (THE CORNER) */
+.corner button { font:inherit; color:inherit; background:none; border:0; border-radius:0; padding:0; margin:0; text-align:inherit; white-space:inherit; letter-spacing:inherit; word-spacing:inherit; }
 kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 /* the chrome that stands over the plane is opaque: no text the plane holds shows through it. A panel — the LEAP box, the
    find box, the mirror — stands at its own width, never wider than the window less 8 px either side, so placed inside
@@ -307,25 +309,26 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .corner .kind.pending { background:rgba(139,143,150,.12); border-radius:2px; }
 .corner .st { display:block; }
 .corner .version { display:block; color:#cfd6df; }
-/* the version statement's click cue on the plane's corner alone, whose act it is (K-57), and a compact state's glyph, which
-   opens the corner whole; a pane's corner is shown, not acted on */
-#corners .corner .version, #corners .corner .glyph { cursor:pointer; }
-#corners .corner .version { text-decoration:underline dotted; }
+/* the version statement's click cue on the plane's corner alone, where it is an act (K-57); a pane's version statement is
+   shown, not acted on. Every act's cursor is a button's */
+#corners .corner button.version { text-decoration:underline dotted; }
 .corner .chip { display:inline-block; border:1px solid #4a5260; border-radius:3px; padding:0 .4em; color:#e8e6e1; margin-top:.3em; }
 .corner .chip.glyph { border:0; padding:0; }
 /* A DRAFT'S KEPT LINE (B3-S2; FP-34): the kept word in a slot of fixed width — the longest of the three words', which
    T-ARTICLE sets on it in em — one line box tall whatever word stands, an empty box on a faint ground while no state is
-   set; its act on the plane's corner alone, as the version statement's is; the statement it opens whole on a line of its
-   own below it, wrapped and never cut */
+   set; its act a button on the plane's corner and on a pane's alike, its words alone where a head's opened form restates
+   them; the statement it opens whole on a line of its own below it, wrapped and never cut */
 .corner .kept-line { display:block; margin-top:.3em; }
 .corner .kept-word { display:inline-block; height:1lh; white-space:pre; overflow:hidden; vertical-align:top; color:#cfd6df; }
 .corner .kept-word.pending { background:rgba(139,143,150,.12); border-radius:2px; }
-#corners .corner .kept-word[data-kept] { cursor:pointer; text-decoration:underline dotted; }
+.corner button.kept-word { text-decoration:underline dotted; }
 .corner .kept-statement { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
 .corner .whole-links { display:block; margin-top:.3em; }
-/* the read a plane's corner offers where a newer version's arrival pinned its box (D5 K-57): a line of its own after the
-   version statement, its click cue its act's; a pane's own is set below */
-#corners .corner .read { display:block; margin-top:.3em; color:#cfd6df; cursor:pointer; text-decoration:underline dotted; }
+/* the read a corner offers where a newer version's arrival pinned its box, or a pane's corner offers in its place (D5
+   K-57): a line of its own after the version statement, its click cue its act's, none on its words a head's opened form
+   restates */
+.corner .read { display:block; margin-top:.3em; color:#cfd6df; }
+.corner button.read { text-decoration:underline dotted; }
 /* a kept document's clause, the corner's last item on a line of its own: its words whole in either form, wrapped and never
    cut, the room above it its own padding, so the corner is placed by the items above it alone (T-LAYER) */
 .corner .kept { display:block; padding-top:.3em; color:#cfd6df; white-space:normal; }
@@ -496,9 +499,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #sceneB.head > .corner { order:-1; }
 .pane .corner.head { flex:none; z-index:1; }
 .pane .corner.head > .hrow, .pane .corner.head > .opened { background:var(--bg); }
-/* a pane's corner's act — "read version ⟨n⟩" — the one click cue in a pane; the line saying the version it reads lacks
-   the passage the act carried beside it */
-.pane .corner .read { display:block; margin-top:.3em; color:#cfd6df; cursor:pointer; text-decoration:underline dotted; }
+/* the line saying the version a pane reads lacks the passage its corner's act carried, beside its read (THE CORNER) */
 .pane .corner .lacks { display:block; margin-top:.3em; color:var(--warn); }
 #scenebeams { position:absolute; inset:26px 0 0 0; width:100%; height:calc(100% - 26px); pointer-events:none; }
 /* the stop at a band's clipped end (SC's): over the stub's triangle in the gap against pane B's facing edge, above the

@@ -29,9 +29,14 @@
 // "nothing selected" after, naming Enter where Enter selects, Shift+↓ at a
 // span of the draft the person may edit and no act at a document or a live
 // caret, while a selection the page draws, a field and a selection the
-// platform holds leave the copy the platform's; → and ← at a corner move the focus
-// along its acts — the read it offers, a head's count of the items it folds —
-// and back; a printable key but Space at the corner of a draft the person may
+// platform holds leave the copy the platform's; a corner's acts are buttons
+// the platform activates, Enter and Space at one the platform's and an
+// auto-repeat of either taken, so a press activates once, and a key pressed
+// at one while a jump flies held and dropped at the landing; → and ← move the
+// focus along a line of its acts, staying at its ends and never crossing a
+// head's rows, the corner's element no stop of the line and Enter and Space at
+// the element of a corner holding no act the platform's; the kept word a
+// disclosure of its statement; a printable key but Space at the corner of a draft the person may
 // edit is answered there by the line naming the way back to its text, ending
 // with where the person was writing as a swallowed key's line does, nothing
 // typed and a live caret standing, while at the corner of another's document
@@ -440,7 +445,7 @@ test('a printable key at a span of a version its box shows is answered by the on
   assert.deepEqual([caret(), SEL.selected(), WRITE.edits(E), WRITE.edits(V)], [null, null, [], []], 'nothing placed: no caret, nothing selected, nothing edited');
 }));
 
-test('Mod+S writes nothing and is answered at the corner and in the status region: where the draft has a kept state, its statement whole at the first press in a session — the save chord\'s line at "kept" — and the corner\'s own word after it, the statement whole on the word\'s act, "nothing to save —" before the word and its reason at the other two; with no kept state the chord is taken, nothing opens and nothing is said; Enter at the corner is the word\'s act (K-57, K-74; BM-3; P41; FP-36)', () => onPlane(async ({ said }) => {
+test('Mod+S writes nothing and is answered at the corner and in the status region: where the draft has a kept state, its statement whole at the first press in a session — the save chord\'s line at "kept" — and the corner\'s own word after it, the statement whole on the word\'s act, "nothing to save —" before the word and its reason at the other two; with no kept state the chord is taken, nothing opens and nothing is said; the word a disclosure button whose click is its act, saying whether its statement stands open, Enter and Space at it the platform\'s, and Enter at the corner\'s container opening nothing (K-57, K-74; BM-3; P41; FP-36)', () => onPlane(async ({ said }) => {
   await focusOn(D, 1);
   const corner = () => cornerHTML(REC.doc(D), LAYER.viewFor(REC.doc(D)));
   const before = said.length;
@@ -456,13 +461,22 @@ test('Mod+S writes nothing and is answered at the corner and in the status regio
   assert.equal(await KEYS.dispatch(keyOf('s', MOD), PLANE), true);
   assert.ok(!LAYER.statementOpen(D) && corner().includes('data-kept="not yet kept"') && !corner().includes('kept-statement'), 'after the first press the corner\'s own word alone answers');
   assert.equal(said.at(-1), t('B3.not-yet-kept'), 'after the first press: the corner\'s own word said in the status region');
-  const target = /** @type {any} */ ({ closest: (/** @type {string} */ sel) => (sel === '[data-corner]' ? { dataset: { corner: D } } : null) });
-  assert.equal(await KEYS.dispatch({ ...keyOf('Enter'), target }, { where: 'corner', byKey: true }), true);
-  assert.ok(LAYER.statementOpen(D) && corner().includes(esc(`${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-yet-kept'), reason })}`)), `Enter at the corner, the word's act: the statement whole, the reason on it — ${corner()}`);
+  // the kept word, a button of the corner's: its click the act (APP-INPUT's `LAYER.openStatement`), Enter and Space at it the platform's
+  const holder = /** @type {any} */ ({ dataset: { corner: D } });
+  holder.closest = (/** @type {string} */ sel) => (sel === '[data-corner]' ? holder : null);
+  const word = /** @type {any} */ ({ dataset: { kept: 'not yet kept' }, closest: (/** @type {string} */ sel) => (sel === '[data-corner]' ? holder : sel === 'button' ? word : null) });
+  const CORNER = /** @type {const} */ ({ where: 'corner', byKey: true });
+  assert.ok(/<button type="button" class="kept-word" data-kept="not yet kept"[^>]* aria-expanded="false" tabindex="-1">/.test(corner()), `the kept word a disclosure button, its statement closed — ${corner()}`);
+  assert.deepEqual([await KEYS.dispatch({ ...keyOf('Enter'), target: word }, CORNER), await KEYS.dispatch({ ...keyOf(' '), target: word }, CORNER), LAYER.statementOpen(D)], [false, false, false],
+    'Enter and Space at the kept word: the platform\'s, which activates the button — the page opening nothing of its own');
+  assert.deepEqual([await KEYS.dispatch({ ...keyOf('Enter'), target: holder }, CORNER), LAYER.statementOpen(D)], [false, false], 'Enter at the corner\'s container: the platform\'s, opening nothing');
+  LAYER.openStatement(D);
+  assert.ok(LAYER.statementOpen(D) && corner().includes(esc(`${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-yet-kept'), reason })}`)) && corner().includes('aria-expanded="true"'),
+    `the word's act, its click: the statement whole, the reason on it, the word saying its statement stands open — ${corner()}`);
   WRITE.setKept(D, { word: 'not kept', reason: 'refused: out_of_bounds' });
   assert.ok(corner().includes(esc(`${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-kept'), reason: 'refused: out_of_bounds' })}`)), 'not kept: the same form with its word and reason');
-  assert.equal(await KEYS.dispatch({ ...keyOf('Enter'), target }, { where: 'corner', byKey: true }), true);
-  assert.ok(!LAYER.statementOpen(D), 'the act again closes it');
+  LAYER.openStatement(D);
+  assert.ok(!LAYER.statementOpen(D) && corner().includes('aria-expanded="false"'), 'the act again closes it');
   assert.deepEqual([WRITE.edits(D), caret()], [[], null], 'the chord writes nothing and places no caret');
 }));
 
@@ -504,32 +518,77 @@ test('Mod+C with nothing selected outside a field is taken at its keydown, its d
   try { assert.deepEqual(await copy(), { took: false, prevented: false }, 'a selection the platform holds with extent, anywhere: the copy the platform\'s'); } finally { globalThis.window.getSelection = plain; }
 }));
 
-test('at a corner offering acts, → moves the focus along them in order — the offered read, then a head\'s count of the items it folds — and ← back along them to the corner, each a key the page takes; → at the last act, ← at the corner, and either at a corner offering none are the platform\'s (D5 K-57, in K-22\'s form)', () => onPlane(async () => {
+/**
+ * A corner as T-LAYER stands it, its acts buttons on lines of acts (T-LAYER's `setStops`): beside its column the corner
+ * its one line, at its document's head each of its rows a toolbar of its own; stand-ins the keys find their way through
+ * and the focus lands on
+ * @param {string[][]} lines each line's acts, by the key each bears
+ * @param {boolean} head it stands at its document's head, each line a row of its own
+ */
+function cornerOf(lines, head = false) {
   const doc = /** @type {any} */ (globalThis.document);
-  // a corner as T-LAYER stands it at its document's head, the read it offers and the count of the items it folds in it, and a corner offering none
   const el = /** @type {any} */ ({ dataset: { corner: D }, focus() { doc.activeElement = el; } });
-  const act = /** @type {any} */ ({ dataset: { read: '3' }, focus() { doc.activeElement = act; } });
-  const more = /** @type {any} */ ({ dataset: { more: '1' }, focus() { doc.activeElement = more; } });
-  const ACTS = '[data-read], [data-more]';
-  Object.assign(el, { closest: (/** @type {string} */ s) => (s === '[data-corner]' ? el : null), querySelector: (/** @type {string} */ s) => (s === '[data-read]' ? act : null), querySelectorAll: (/** @type {string} */ s) => (s === ACTS ? [act, more] : []) });
-  Object.assign(act, { closest: (/** @type {string} */ s) => (s === '[data-corner]' ? el : s === '[data-read]' || s === ACTS ? act : null) });
-  Object.assign(more, { closest: (/** @type {string} */ s) => (s === '[data-corner]' ? el : s === ACTS ? more : null) });
-  const bare = /** @type {any} */ ({ dataset: { corner: D }, querySelector: () => null, querySelectorAll: () => [] });
-  bare.closest = (/** @type {string} */ s) => (s === '[data-corner]' ? bare : null);
-  const at = (/** @type {string} */ key, /** @type {unknown} */ target) => KEYS.dispatch({ ...keyOf(key), target }, { where: 'corner', byKey: true });
-  doc.activeElement = el;
-  assert.equal(await at('ArrowRight', el), true);
-  assert.equal(doc.activeElement, act, '→: the focus on the offered read');
-  assert.equal(await at('ArrowRight', act), true);
-  assert.equal(doc.activeElement, more, '→ again: on the count of the items the head folds');
-  assert.deepEqual([await at('ArrowRight', more), doc.activeElement], [false, more], '→ at the last act: nothing further along, the platform\'s');
-  assert.equal(await at('ArrowLeft', more), true);
-  assert.equal(doc.activeElement, act, '←: back to the offered read');
-  assert.equal(await at('ArrowLeft', act), true);
-  assert.equal(doc.activeElement, el, '← again: back to the corner');
-  assert.deepEqual([await at('ArrowLeft', el), doc.activeElement], [false, el], '← at the corner: the platform\'s');
-  assert.deepEqual([await at('ArrowRight', bare), await at('ArrowLeft', bare)], [false, false], 'a corner offering none: both the platform\'s');
+  /** @type {Record<string, any>} */
+  const acts = {};
+  const bars = lines.map((keys) => {
+    const bar = /** @type {any} */ ({ role: 'toolbar' });
+    const own = keys.map((k) => {
+      const b = /** @type {any} */ ({ key: k, dataset: { [k]: '1' }, focus() { doc.activeElement = b; } });
+      b.closest = (/** @type {string} */ s) => (s === '[data-corner]' ? el : s === 'button' ? b : s === '[role="toolbar"]' ? (head ? bar : null) : null);
+      acts[k] = b;
+      return b;
+    });
+    bar.querySelectorAll = (/** @type {string} */ s) => (s === 'button' ? own : []);
+    return own;
+  });
+  el.closest = (/** @type {string} */ s) => (s === '[data-corner]' ? el : null);
+  el.querySelectorAll = (/** @type {string} */ s) => (s === 'button' ? bars.flat() : []);
+  return { el, acts };
+}
+
+/** a key at a corner's element or act, as the platform delivers it: whether the page took it, and whether it prevented the platform's default */
+async function cornerPress(/** @type {unknown} */ target, /** @type {string} */ key, /** @type {object} */ mods = {}) {
+  let prevented = false;
+  const took = await KEYS.dispatch({ ...keyOf(key, mods), target, preventDefault() { prevented = true; } }, { where: 'corner', byKey: true });
+  return { took, prevented };
+}
+
+test('a corner\'s line of acts is a toolbar: → moves the focus to the next act and ← to the one before, each a key the page takes, staying at the line\'s ends; at its document\'s head each row is a line of its own, so ← and → never cross rows; the corner\'s element holding acts is no stop, and ← and → at it, and at a corner offering none, are the platform\'s (D5 K-57, in K-22\'s form; FP-20)', () => onPlane(async () => {
+  const doc = /** @type {any} */ (globalThis.document);
+  const at = async (/** @type {unknown} */ target, /** @type {string} */ key) => (await cornerPress(target, key)).took;
+  // beside its column: one line, the kept word, the version statement and the offered read
+  const { el, acts } = cornerOf([['kept', 'read', 'more']]);
+  acts.kept.focus();
+  assert.deepEqual([await at(acts.kept, 'ArrowRight'), doc.activeElement], [true, acts.read], '→: the focus on the next act');
+  assert.deepEqual([await at(acts.read, 'ArrowRight'), doc.activeElement], [true, acts.more], '→ again: on the last');
+  assert.deepEqual([await at(acts.more, 'ArrowRight'), doc.activeElement], [true, acts.more], '→ at the last act: taken, the focus staying there');
+  assert.deepEqual([await at(acts.more, 'ArrowLeft'), doc.activeElement], [true, acts.read], '←: back to the act before');
+  assert.deepEqual([await at(acts.read, 'ArrowLeft'), await at(acts.kept, 'ArrowLeft'), doc.activeElement], [true, true, acts.kept], '← to the first act, and ← there: taken, the focus staying on it');
+  assert.deepEqual([await at(el, 'ArrowRight'), await at(el, 'ArrowLeft')], [false, false], '← and → at the corner\'s element: the platform\'s — it is no stop of the line');
+  // at its document's head: the offered read on the first row, the count of the items it folds on the second
+  const head = cornerOf([['read'], ['more']], true);
+  head.acts.read.focus();
+  assert.deepEqual([await at(head.acts.read, 'ArrowRight'), doc.activeElement], [true, head.acts.read], 'at its document\'s head, → at its first row\'s one act: the focus staying on it, never on the next row');
+  head.acts.more.focus();
+  assert.deepEqual([await at(head.acts.more, 'ArrowLeft'), doc.activeElement], [true, head.acts.more], '← at the second row\'s one act: the focus staying on it');
+  const bare = cornerOf([]);
+  assert.deepEqual([await at(bare.el, 'ArrowRight'), await at(bare.el, 'ArrowLeft')], [false, false], 'a corner offering none: both the platform\'s');
   assert.ok(KEYS.TABLE.some((r) => r.id === 'K-57' && r.chord === '→' && r.surface === 'corner') && KEYS.TABLE.some((r) => r.id === 'K-57' && r.chord === '←' && r.surface === 'corner'), 'the table binds them at the corner, K-57\'s');
+}));
+
+test('Enter and Space — Shift+Space and Shift+Enter too — at a corner\'s act are the platform\'s, which activates its button once a press, the page preventing nothing; an auto-repeat of either is taken, its default prevented, so the press it repeats activates nothing more; at a corner holding no act its element is its one stop, and Enter and Space there are the platform\'s, acting on nothing; a printable key but Space at an act of the corner of a draft the person may edit keeps the way back to its text (D5 K-57, K-72; B3-S13; FP-20)', () => onPlane(async ({ said }) => {
+  const { acts } = cornerOf([['kept', 'read']]);
+  const bare = cornerOf([]);
+  const n = said.length;
+  for (const [key, mods, what] of /** @type {const} */ ([['Enter', {}, 'Enter'], [' ', {}, 'Space'], [' ', { shiftKey: true }, 'Shift+Space'], ['Enter', { shiftKey: true }, 'Shift+Enter']])) {
+    assert.deepEqual(await cornerPress(acts.read, key, mods), { took: false, prevented: false }, `${what} at an act: the platform's, which activates it`);
+    assert.deepEqual(await cornerPress(acts.read, key, { ...mods, repeat: true }), { took: true, prevented: true }, `${what}'s auto-repeat at an act: taken, its default prevented — it adds nothing`);
+    assert.deepEqual(await cornerPress(bare.el, key, mods), { took: false, prevented: false }, `${what} at the element of a corner holding no act: the platform's, acting on nothing`);
+  }
+  await tick();
+  assert.deepEqual([said.length, HINT.standing(), caret(), WRITE.edits(D)], [n, null, null, []], 'nothing said, no hint, no caret, nothing typed');
+  assert.deepEqual([await cornerPress(acts.kept, 'q'), HINT.standing()?.id, said.at(-1), WRITE.edits(D)], [{ took: true, prevented: false }, 'B3.caret.back', t('B3.caret.back'), []],
+    'a printable key but Space at an act of the corner of a draft the person may edit: the way back to its text, as at the corner\'s element, nothing typed');
 }));
 
 /** a key pressed at a document's corner as T-LAYER stands it, the platform's focus on the corner: whether the page took it */
@@ -1091,6 +1150,33 @@ async function landed(/** @type {Promise<unknown> | null} */ act = null) {
 
 /** the walk's element: its kind, its place, its position */
 const walkAt = () => { const f = WALK.current(); return f && [f.kind, f.addr, f.pos]; };
+
+test('a key pressed at a corner\'s act while a jump is in the air is held, its default prevented so the platform activates nothing, and dropped at the landing: Enter, Space and a printable key at the corner of a draft the person may edit each make nothing there — no statement, no hint, no overlay (D5 K-57; FP-25, FP-20)', () => onPlane(async ({ said }) => {
+  const fake = FAKE.create({});
+  PORT.boot(fake);
+  HOST.attach(/** @type {any} */ (hostEl));
+  TRAIL._reset();
+  // O's metadata and links held beside its text, so a LEAP to it reads nothing
+  REC.takeMetadata(O, { doc: O, published: false, owner: '1.0.2', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(O, []);
+  WRITE.setKept(D, { word: 'kept', reason: null });
+  try {
+    const { acts } = cornerOf([['kept']]);
+    assert.equal(LAYER.editable(D), true, 'D a draft the person may edit, its corner the kept word\'s');
+    const jump = GO.leapTo(O, { pos: 1 });
+    assert.equal(GO.inAir(), true, 'the LEAP in the air');
+    const n = said.length;
+    for (const key of ['Enter', ' ', 'q']) {
+      assert.deepEqual(await cornerPress(acts.kept, key), { took: true, prevented: true }, `${key === ' ' ? 'Space' : key} at the kept word while the jump flies: held, its default prevented`);
+    }
+    assert.equal(KEYS.holding(), 3, 'the three keys held for the landing');
+    await landed(jump);
+    for (let i = 0; i < 20 && KEYS.holding(); i++) await tick();
+    assert.deepEqual([KEYS.holding(), LAYER.statementOpen(D), HINT.standing(), HOST.currentState(), said.slice(n).filter((x) => x === t('B3.caret.back'))], [0, false, null, null, []],
+      'landed: each dropped, the statement closed, no hint, no overlay, nothing said of the corner');
+    assert.deepEqual(fake.unanswered, []);
+  } finally { PORT.boot(null); TRAIL._reset(); }
+}));
 
 test('every teleport into the live caret\'s own draft — a LEAP, Back, Forward, a find\'s move — leaves the caret kept where it stood and the walk on its landing, so a printable key there is answered by the draft\'s own line, nothing typed, and Enter there places a caret of its own (D5 M-2, §4 rule 3; K-70, K-77)', () => onPlane(async ({ said }) => {
   const fake = FAKE.create({});

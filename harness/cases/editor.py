@@ -64,9 +64,10 @@ where the text shown holds it, past `ab` (`lit_after_typing`; D3; D5
 §4 rule 2). With a line typed above a paragraph — text the board does not
 hold — the walk, the find and Back each land on the typed words, at both
 widths (`typed_lands`; the unsent-typing decision). Tab from the plane's stop
-on the own draft takes the focus to its corner, where a printable key raises
-the line naming the way back to the draft's text beside the corner, at both
-widths, and Shift+Tab then returns the focus to the plane's stop, where the
+on the own draft takes the focus to its corner's stop — its first act where
+it holds acts, else the corner — where a printable key raises the line
+naming the way back to the draft's text beside that stop, at both widths,
+and Shift+Tab then returns the focus to the plane's stop, where the
 next key is answered by the draft's own line (`corner_key`, `corner_back`;
 B3-S13; D5 K-72; D6 BM-52).
 
@@ -875,8 +876,8 @@ def typed_lands(ctx, doc, para, away):
     return out
 
 
-# where the platform's focus stands: the corner it is on, the element's id, the mirror's current item's index and whether
-# the element is that item, and the walk's element
+# where the platform's focus stands: the corner it stands in — on an act of it, or on the corner itself — the element's id,
+# the mirror's current item's index and whether the element is that item, and the walk's element
 FOCUS_AT = '''(() => { const e = document.activeElement, c = e && e.closest ? e.closest("#corners [data-corner]") : null, f = window.__skep.view.focus();
   return {corner: c ? c.dataset.corner : null, id: e ? e.id || null : null, idx: window.__skep.mirror.index(), sel: e ? e.getAttribute("aria-selected") : null,
           walk: f ? {kind: f.kind, addr: f.addr, pos: f.pos} : null}; })()'''
@@ -885,25 +886,25 @@ FOCUS_AT = '''(() => { const e = document.activeElement, c = e && e.closest ? e.
 def corner_key(ctx, doc):
     """A PRINTABLE KEY AT THE OWN DRAFT's CORNER (B3-S13; D5 K-72; D6 BM-52): the hint taken down, the platform's focus
     put on the mirror's current item — the plane's one stop, the walk on a span of `doc` — then Tab, which lands on
-    `doc`'s corner (K-57), then `x` there; where Tab put the focus, the hint as a person meets it and the box it was set
-    beside, the corner's box, what the status region said, the caret, `doc`'s edits and the `op` frames sent after the
-    key, and whether it held: the focus on `doc`'s corner, the hint B3.caret.back set beside that corner inside the window
-    below the one line, no transient in the one line, its words said, no caret placed and nothing typed"""
+    `doc`'s corner's stop (K-57) — its first act where it holds acts, else the corner — then `x` there; where Tab put the
+    focus and that stop's box, the hint as a person meets it and the box it was set beside, what the status region said,
+    the caret, `doc`'s edits and the `op` frames sent after the key, and whether it held: the focus in `doc`'s corner, the
+    hint B3.caret.back set beside the stop the focus stood on inside the window below the one line, no transient in the one
+    line, its words said, no caret placed and nothing typed"""
     ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
     ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})'); ctx.frames(1)
     ctx.drv.key('Tab'); ctx.settle(); ctx.frames(2)
     at = ctx.js(FOCUS_AT)
+    box = ctx.js('(() => { const e = document.activeElement; if (!e) return null; const q = e.getBoundingClientRect(); return {x: q.left, y: q.top, w: q.width, h: q.height}; })()')
     n = len(page_calls(ctx))
     ctx.drv.key('x'); ctx.frames(2)
     got, said, want = hint(ctx), live(ctx), t(ctx, 'B3.caret.back')
     anchor = ctx.js('(() => { const h = window.__skep.hint(); return h && h.placed ? h.placed.anchor : null; })()')
-    box = ctx.js('(() => { const e = document.querySelector(%s); if (!e) return null; const q = e.getBoundingClientRect(); return {x: q.left, y: q.top, w: q.width, h: q.height}; })()'
-                 % json.dumps('#corners [data-corner="%s"]' % doc))
     caret, edits = ctx.js('window.__skep.caret()'), ctx.js('window.__skep.write.edits(%s).length' % json.dumps(doc))
     beside = bool(anchor and box) and all(abs(anchor[k] - box[k]) <= 1 for k in ('x', 'y', 'w', 'h'))
     ok = (at['corner'] == doc and got['hint'] == {'id': 'B3.caret.back', 'words': want, 'by': 'beside'} and got['seen'] and beside and not got['line']
           and said == want and caret is None and edits == 0)
-    return {'ok': ok, 'focus': at, 'hint': got, 'want': want, 'anchor': anchor, 'corner': box, 'status_region': said, 'caret': caret, 'edits': edits,
+    return {'ok': ok, 'focus': at, 'hint': got, 'want': want, 'anchor': anchor, 'stop': box, 'status_region': said, 'caret': caret, 'edits': edits,
             'ops_after': [c['op'] for c in page_calls(ctx)[n:] if c['name'] == 'op']}
 
 

@@ -164,13 +164,17 @@
 // (T-LAYER's `caretFromPlatform`, `placeCaret`), the selection cleared and
 // the walk standing on the span it is placed in, the live caret its mark
 // (N-WALK's `followCaret`), and a symbol's click still opens its card (K-7). On the
-// corners: the read a corner offers where a newer version's arrival pinned
+// corners, whose acts are buttons — each click a pointer's or the one the
+// platform makes from Enter or Space at it, told apart by the focus owner's
+// one reading (N-FOCUS's `byKey`), a key's moving no walk: the read a corner
+// offers where a newer version's arrival pinned
 // its box takes that read, a version move (O-VERSIONS' `readFromCorner`; D5
 // K-57); the version statement opens the document's members (the corner's
-// act, the one Enter takes there — K-57), a draft's kept word opens its
+// act — K-57), a draft's kept word opens its
 // statement and closes it again (T-LAYER's `openStatement`; K-57, K-74), a
 // compact corner's glyph opens the corner whole and a click on the corner
-// opened closes it again (T-LAYER's `openCorner`; FP-26), as a click on the
+// opened, or on the words its glyph opened, closes it again (T-LAYER's
+// `openCorner`; FP-26), as a click on the
 // count a corner standing at its document's head folds its items into does;
 // and a focus landing in a corner the view does not show whole moves the
 // camera by the least pan that brings it in (P-CAM's `panInto`; FP-20), no
@@ -194,6 +198,7 @@ import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
 import * as GO from '../nav/go.js';
 import * as WALK from '../nav/walk.js';
+import * as FOCUS from '../nav/focus.js';
 import * as HOST from '../overlays/host.js';
 import * as SEL from '../overlays/selection.js';
 import * as LINKS from '../overlays/links-card.js';
@@ -345,23 +350,25 @@ export function attach(els) {
     if (clickText(/** @type {HTMLElement} */ (e.target), worldOf(e.clientX, e.clientY), e.detail > 1 || e.shiftKey)) e.stopPropagation();
   });
   // the corners: a click on the read it offers takes that read; one on the version statement takes the corner's act; one on a
-  // compact corner's glyph, or on a head's count of the items it folds, opens it whole, and one on the corner opened closes
-  // it again (FP-26); every one but the offered read, on another document's corner, and one on a held label, the act the
-  // next key follows (see the head)
+  // draft's kept word opens its statement or closes it; one on a compact corner's glyph, or on a head's count of the items it
+  // folds, opens it whole, and one on the corner opened — the words its glyph opened among it — closes it again (FP-26); each
+  // the pointer's, or the one the platform makes from Enter or Space at the act (D5 K-57). A pointer's — every one but the
+  // offered read — on another document's corner, and one on a held label, is the act the next key follows (see the head)
   els.corners.addEventListener('click', (e) => {
-    const target = /** @type {HTMLElement} */ (e.target), at = worldOf(e.clientX, e.clientY);
+    const target = /** @type {HTMLElement} */ (e.target), at = worldOf(e.clientX, e.clientY), byKey = FOCUS.byKey(e);
     acted();
     // a sign in a column's edge: an origin's statement, a run's key
     const sign = /** @type {HTMLElement | null} */ (target.closest('.edge-sign'));
     if (sign) { e.stopPropagation(); signAct(sign, target); return; }
     const holder = /** @type {HTMLElement | null} */ (target.closest('[data-corner]')), addr = holder ? holder.dataset.corner || '' : '';
     // another document's corner, the offered read apart, is the act the next key follows; the caret's own draft's, like the
-    // one line, takes keys only while it holds the focus, and moves no walk (`leftCaret` answers false there)
-    if (holder && !target.closest('[data-read]') && leftCaret(addr)) walkOn(addr, nearestStop(addr, at));
-    if (holder && target.closest('[data-read]')) { e.stopPropagation(); VERSIONS.readFromCorner(holder, SEL.selected(), false); }
-    else if (holder && target.closest('.version')) { e.stopPropagation(); VERSIONS.fromCorner(holder, SEL.selected(), false); }
+    // one line, takes keys only while it holds the focus, and moves no walk (`leftCaret` answers false there); a key's act at
+    // a corner stands on the corner the walk's document holds, its click naming no point
+    if (holder && !byKey && !target.closest('[data-read]') && leftCaret(addr)) walkOn(addr, nearestStop(addr, at));
+    if (holder && target.closest('[data-read]')) { e.stopPropagation(); VERSIONS.readFromCorner(holder, SEL.selected(), byKey); }
+    else if (holder && target.closest('.version')) { e.stopPropagation(); VERSIONS.fromCorner(holder, SEL.selected(), byKey); }
     else if (holder && target.closest('.kept-word[data-kept]')) { e.stopPropagation(); LAYER.openStatement(addr); }
-    else if (holder && (target.closest('.glyph, [data-more]') || LAYER.cornerAt(addr)?.opened)) { e.stopPropagation(); LAYER.openCorner(addr); }
+    else if (holder && (target.closest('.glyph, [data-more], [data-whole]') || LAYER.cornerAt(addr)?.opened)) { e.stopPropagation(); LAYER.openCorner(addr); }
     const label = /** @type {HTMLElement | null} */ (holder ? null : target.closest('[data-held]'));
     if (label && label.dataset.held) followPointer(label.dataset.held, at);
   });

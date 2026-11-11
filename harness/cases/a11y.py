@@ -25,12 +25,15 @@ collapsed where typed text matches nothing, the answer said once in the
 box's own status region, in the DOM and in the AX tree — and Tab from its
 input visiting each row's "open beside" in order, then leaving the box,
 which closes it (D5 §4 rule 5; issues #116 and #332); the document's corner as K-57's Tab stop (D5
-§4 rules 4 and 5) — reached by Tab from the plane's stop, a group named by
-its own words in the AX tree while every other corner is hidden from it,
-kept under the focus through the layer's remount, Enter its act (the
-versions list) with Esc returning the focus to it, Shift+Tab back to the
-plane's stop, and its leaving the plane handing the focus to the walk's
-current item; the focus's return as an overlay closes (D5 §4 rule 4) — the
+§4 rules 4 and 5; issue #557) — its acts buttons on one line whose stop is
+its first, an edition's version statement, reached by Tab from the plane's
+stop, the corner a toolbar named by its own words in the AX tree and the act
+a button named by its own, while every other corner, and every act of it, is
+out of the Tab order and hidden from it; the focus kept on the act through
+the layer's remount, Enter and Space at it its act (the versions list), the
+platform activating the button, with Esc returning the focus to it,
+Shift+Tab back to the plane's stop, and its leaving the plane handing the
+focus to the walk's current item; the focus's return as an overlay closes (D5 §4 rule 4) — the
 trail list and the LEAP box, opened by a key at the mirror's current item
 and closed by Esc once the wheel under them has rebuilt the mirror, leave
 the focus on the walk's current item; the selection's card, rebuilt by K-8's
@@ -43,8 +46,9 @@ corner's, pane, its corner, the strokes between its bands in view, pane, its
 corner, the scene's acts (K-61; issues #160 and #331), with nothing the scene
 covers in the ring, nothing inside a pane's
 article a control or a stop in the AX tree (SC: the panes are read, never
-pressed), each pane's corner a group there named by its own words, which say
-what the pane shows, a compact state's glyph by its whole words, and
+pressed), each pane's corner a stop there — its line of acts, whose stop is
+its first act, else itself — named by its own words, which say what the pane
+shows, a compact state's glyph by its whole words, and
 Shift+Tab walking it back to the
 line, Esc and Mod+[ from a pane each its Back (issue #50), ending it on the
 entry it opened over with the focus on the landing's item (K-63; rule 8); Back's light
@@ -378,17 +382,26 @@ def run(ctx):
     r.check(still == [] and writes == 0, 'the answer is said once: ↓, ↑ and a further keystroke that still matches nothing leave the status region unwritten', {'writes': writes, 'rows': len(still)})
     press('Escape')
     r.check(not ctx.js('window.__skep.leap.isOpen()'), 'Esc closes the box')
-    # ---- the corner: K-57's Tab stop (D5 §4 rules 4 and 5; foundations §3.1) ----------------------------------------
-    # The ring runs from the plane's stop — the mirror's current item — to the focused document's corner. The corner's
-    # element outlives the article's remounts, so the focus on it survives them; Enter takes its act and the list it
-    # opens returns the focus to it; a corner that leaves the plane while it holds the focus hands it to the walk.
+    # ---- the corner: K-57's Tab stop (D5 §4 rules 4 and 5; foundations §3.1; FP-20) --------------------------------
+    # The ring runs from the plane's stop — the mirror's current item — to the focused document's corner, whose acts are
+    # buttons on one line, its stop the first of them: an edition's version statement. The corner's element outlives the
+    # article's remounts, so the focus on its act survives them; Enter and Space at the act take it, the platform
+    # activating the button, and the list it opens returns the focus to it; a corner that leaves the plane while it holds
+    # the focus hands it to the walk.
     corner = '#corners [data-corner="%s"]' % DOC
 
     def at():
-        """where the platform's focus stands: the corner it is on, the element's id, the walk's index, the overlay"""
-        return ctx.js('''(() => { const e = document.activeElement, o = document.getElementById('overlay');
-          return {corner: e && e.dataset ? e.dataset.corner || null : null, id: e ? e.id || null : null, idx: window.__skep.mirror.index(),
+        """where the platform's focus stands: the corner it stands in and the act of it it stands on, by its class, the
+        element's id, the walk's index, the overlay"""
+        return ctx.js('''(() => { const e = document.activeElement, o = document.getElementById('overlay'), c = e && e.closest ? e.closest('#corners [data-corner]') : null;
+          return {corner: c ? c.dataset.corner || null : null, act: c && e.tagName === 'BUTTON' ? e.className.split(' ')[0] : null, id: e ? e.id || null : null, idx: window.__skep.mirror.index(),
                   sel: e ? e.getAttribute('aria-selected') : null, overlay: window.__skep.overlay().id, in_overlay: o.contains(e) && e !== o}; })()''')
+
+    def line_of(addr):
+        """a corner on the plane as its stops stand: its container's role and tabindex, and each act of it, its class and its
+        tabindex, in their order; None where no corner of the document stands"""
+        return ctx.js('''((a) => { const c = document.querySelector(`#corners [data-corner="${a}"]`); if (!c) return null;
+          return {role: c.getAttribute('role'), tab: c.getAttribute('tabindex'), acts: [...c.querySelectorAll('button')].map((b) => [b.className.split(' ')[0], b.getAttribute('tabindex')])}; })(%s)''' % json.dumps(addr))
 
     ctx.leap(DOC, WINDOW[0])
     # the line's last stop and the plane's are neighbours in the page's order (D5 §4 rule 5): Tab from the line's last stop
@@ -407,10 +420,13 @@ def run(ctx):
     ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})')
     ctx.frames(1)
     press('Tab')
-    f = at()
-    r.check(f['corner'] == DOC, 'Tab from the plane\'s stop (the mirror\'s current item) reaches the focused document\'s corner (K-57)', f)
-    others = ctx.js('[...document.querySelectorAll("#corners [data-corner]")].filter((e) => e.dataset.corner !== %s).map((e) => ({addr: e.dataset.corner, hidden: e.getAttribute("aria-hidden"), tab: e.getAttribute("tabindex")}))' % json.dumps(DOC))
-    r.check(all(o['hidden'] == 'true' and o['tab'] is None for o in others), 'every other corner on the plane is out of the Tab order and hidden from AT', others)
+    f, line = at(), line_of(DOC)
+    r.check(f['corner'] == DOC and f['act'] == 'version' and bool(line) and line['role'] == 'toolbar' and line['tab'] is None and bool(line['acts'])
+            and line['acts'][0] == ['version', '0'] and all(t == '-1' for _, t in line['acts'][1:]),
+            'Tab from the plane\'s stop (the mirror\'s current item) reaches the focused document\'s corner on its first act, its version statement: the corner a line of acts whose one stop that act is, its container no stop (K-57)', dict(f, line=line))
+    others = ctx.js('''[...document.querySelectorAll("#corners [data-corner]")].filter((e) => e.dataset.corner !== %s).map((e) => ({addr: e.dataset.corner, hidden: e.getAttribute("aria-hidden"), tab: e.getAttribute("tabindex"),
+      stops: [...e.querySelectorAll("button")].filter((b) => b.getAttribute("tabindex") !== "-1").length}))''' % json.dumps(DOC))
+    r.check(all(o['hidden'] == 'true' and o['tab'] is None and o['stops'] == 0 for o in others), 'every other corner on the plane is out of the Tab order — its container and every act of it — and hidden from AT', others)
     ax = ctx.drv.ax_tree()
     if 'error' in ax:
         r.figures['corner_ax'] = {'answered': False, 'error': ax['error']}
@@ -418,38 +434,48 @@ def run(ctx):
     else:
         by_dom = {n['backendDOMNodeId']: n for n in ax.get('nodes', []) if 'backendDOMNodeId' in n}
         node = by_dom.get(backend(corner)) or {}
+        act = by_dom.get(backend(corner + ' button.version')) or {}
         # its own words, each compact sign read whole by the name it carries (FP-26: a usual state's glyph named by its words)
         words = ctx.js('(() => { const e = document.querySelector(%s); if (!e) return null; const k = e.cloneNode(true); k.querySelectorAll(".glyph[aria-label]").forEach((g) => { g.textContent = g.getAttribute("aria-label"); }); return k.textContent; })()' % json.dumps(corner)) or ''
+        statement = ctx.js('(() => { const e = document.querySelector(%s); return e ? e.textContent : null; })()' % json.dumps(corner + ' button.version')) or ''
         ax_role, ax_name = (node.get('role') or {}).get('value'), (node.get('name') or {}).get('value') or ''
-        r.check(bool(node) and not node.get('ignored') and ax_role == 'group' and re.sub(r'\s+', '', ax_name) == re.sub(r'\s+', '', words) and words.strip() != '',
-                'the AX tree: the focused corner is a group, not hidden, named by its own words, a compact one\'s glyphs read whole', {'ignored': node.get('ignored'), 'role': ax_role, 'name': ax_name[:120], 'words': words[:120]})
-        r.figures['corner_ax'] = {'answered': True, 'role': ax_role, 'name': ax_name[:160]}
-    # the reveal bumps the layer: every mounted article is rebuilt, the corner's element is kept, and the focus with it
-    ctx.js('(() => { window.__gateCorner = document.activeElement; window.__gateArticle = document.querySelector(%s); })()' % json.dumps('#domlayer article[data-addr="%s"]' % DOC))
+        act_role, act_name = (act.get('role') or {}).get('value'), (act.get('name') or {}).get('value') or ''
+        focused = any(p['name'] == 'focused' and (p.get('value') or {}).get('value') for p in act.get('properties', []))
+        r.check(bool(node) and not node.get('ignored') and ax_role == 'toolbar' and re.sub(r'\s+', '', ax_name) == re.sub(r'\s+', '', words) and words.strip() != '',
+                'the AX tree: the focused corner is a toolbar, not hidden, named by its own words, a compact one\'s glyphs read whole', {'ignored': node.get('ignored'), 'role': ax_role, 'name': ax_name[:120], 'words': words[:120]})
+        r.check(act_role == 'button' and focused and statement.strip() != '' and re.sub(r'\s+', '', act_name) == re.sub(r'\s+', '', statement),
+                'the AX tree: the focus stands on the corner\'s version statement, a button named by its own words', {'role': act_role, 'focused': focused, 'name': act_name, 'words': statement})
+        r.figures['corner_ax'] = {'answered': True, 'role': ax_role, 'name': ax_name[:160], 'act': [act_role, act_name]}
+    # the reveal bumps the layer: every mounted article is rebuilt, the corner's element is kept, and the focus on its act with it
+    ctx.js('(() => { const e = document.activeElement; window.__gateCorner = e && e.closest("[data-corner]"); window.__gateAct = e && e.className; window.__gateArticle = document.querySelector(%s); })()' % json.dumps('#domlayer article[data-addr="%s"]' % DOC))
     ctx.js('window.__skep.links.reveal(%s, 2)' % json.dumps(DOC))
     ctx.settle()
     ctx.frames(3)
-    kept = ctx.js('({rebuilt: !!window.__gateArticle && !window.__gateArticle.isConnected, same: document.activeElement === window.__gateCorner && window.__gateCorner.isConnected})')
-    r.check(kept['rebuilt'] and kept['same'], 'the layer\'s remount rebuilds the article and leaves the focus on the same corner', kept)
+    kept = ctx.js('''(() => { const e = document.activeElement, c = window.__gateCorner;
+      return {rebuilt: !!window.__gateArticle && !window.__gateArticle.isConnected, same: !!c && c.isConnected && !!e && e.tagName === 'BUTTON' && e.closest('[data-corner]') === c && e.className === window.__gateAct}; })()''')
+    r.check(kept['rebuilt'] and kept['same'], 'the layer\'s remount rebuilds the article and leaves the focus on the same corner, on the same act of it', kept)
     ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
     ctx.frames(2)
-    # Enter: the corner's act, the versions list, which takes the focus; Esc returns it to the corner
-    press('Enter')
-    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.overlay().id || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
-    ctx.frames(2)
-    f = at()
-    first = ctx.js('(() => { const e = document.activeElement; return {run: e ? e.dataset.run : null, x: !!(e && e.dataset.x), current: e ? e.getAttribute("aria-current") : null}; })()')
-    r.check(f['overlay'] == 'versions:' + DOC and f['in_overlay'] and not first['x'] and (first['run'] or '').startswith('read'),
-            'Enter at the corner (a key) opens the versions list with the focus on its current member\'s read act, never the × (rule 13)', dict(f, first=first))
-    press('Escape')
-    f = at()
-    r.check(f['overlay'] is None and f['corner'] == DOC, 'Esc closes the list and the focus returns to the corner it was opened from', f)
+    # Enter and Space at the version statement: the corner's act, the versions list, which takes the focus — the platform
+    # activating the button, Enter at its press and Space at its release; Esc returns the focus to the statement
+    for name, key in (('Enter', 'Enter'), ('Space', ' ')):
+        press(key)
+        ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.overlay().id || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
+        ctx.frames(2)
+        f = at()
+        first = ctx.js('(() => { const e = document.activeElement; return {run: e ? e.dataset.run : null, x: !!(e && e.dataset.x), current: e ? e.getAttribute("aria-current") : null}; })()')
+        r.check(f['overlay'] == 'versions:' + DOC and f['in_overlay'] and not first['x'] and (first['run'] or '').startswith('read'),
+                '%s at the corner\'s version statement (a key) opens the versions list with the focus on its current member\'s read act, never the × (rule 13)' % name, dict(f, first=first))
+        press('Escape')
+        f = at()
+        r.check(f['overlay'] is None and f['corner'] == DOC and f['act'] == 'version', 'Esc closes the list %s opened and the focus returns to the version statement it was opened from' % name, f)
     press('Tab', mods=('Shift',))
     f = at()
-    r.check(f['id'] == 'walk-%d' % f['idx'] and f['sel'] == 'true', 'Shift+Tab from the corner goes back to the plane\'s stop, the mirror\'s current item', f)
+    r.check(f['id'] == 'walk-%d' % f['idx'] and f['sel'] == 'true', 'Shift+Tab from the corner\'s version statement goes back to the plane\'s stop, the mirror\'s current item', f)
     # the document zoomed below reading scale: its corner leaves the plane, and the focus it held goes to the walk
     press('Tab')
-    r.check(at()['corner'] == DOC, 'Tab reaches the corner again')
+    f = at()
+    r.check(f['corner'] == DOC and f['act'] == 'version', 'Tab reaches the corner\'s version statement again', f)
     unit = ctx.js('window.__skep.scaleFor(%s, "em", 1)' % json.dumps(DOC))
     readable = ctx.js('window.__skep.constants.LOD_TXT_LO')
     zooms = 0
@@ -553,11 +579,12 @@ def run(ctx):
     f = returned()
     r.check(f['overlay'] is None and f['opener'] and f['item'], 'Esc closes the answer, and the focus returns to the item the selection was made at', dict(f, answer=asked))
     press('Escape')
-    # K-8, then the person moves the focus to the corner (as Tab may): Esc closes the selection's card and leaves the focus where they put it (#33's clause)
+    # K-8, then the person moves the focus to the corner's stop (as Tab may): Esc closes the selection's card and leaves the focus where they put it (#33's clause)
     opened = from_item()
     press('ArrowDown', mods=('Shift',))
     carded = ctx.js('window.__skep.overlay().id === "selection"')
-    moved = ctx.js('(() => { const c = document.querySelector(%s); if (c) c.focus({preventScroll: true}); return !!c && document.activeElement === c; })()' % json.dumps(corner))
+    moved = ctx.js('''(() => { const c = document.querySelector(%s), s = c && ([...c.querySelectorAll('button')].find((b) => b.getAttribute('tabindex') === '0') || c);
+      if (s) s.focus({preventScroll: true}); return !!s && document.activeElement === s; })()''' % json.dumps(corner))
     ctx.frames(1)
     press('Escape')
     f = at()
@@ -572,15 +599,17 @@ def run(ctx):
     # (K-63); a navigation act from it moves the focus to the landing's element (rule 8).
     def stop():
         """the stop the platform's focus stands on, named by its region: the walk's current item or another of the mirror's,
-        a corner, the overlay's dismiss or another of its controls, the one line, a scene's pane or its bar's acts, the body"""
+        a corner — its act or itself — the overlay's dismiss or another of its controls, the one line, a scene's pane, its
+        corner or its bar's acts, the body"""
         return ctx.js('''(() => { const e = document.activeElement;
           if (!e || e === document.body) return 'the body';
           if (e.closest('#mirror')) return e.id === 'walk-' + window.__skep.mirror.index() ? 'the item' : 'the mirror: ' + (e.id || e.tagName.toLowerCase());
-          if (e.closest('#corners')) return 'the corner: ' + (e.dataset.corner || '');
+          if (e.closest('#corners')) return 'the corner: ' + ((e.closest('[data-corner]') || {dataset: {}}).dataset.corner || '');
           if (e.closest('#overlay')) return 'the overlay: ' + (e.dataset.x ? 'x' : e.dataset.run || e.tagName.toLowerCase());
           if (e.closest('#line')) return 'the line';
           if (e.id === 'sceneA' || e.id === 'sceneB') return 'pane ' + e.id.slice(-1);
-          if (e.classList.contains('corner') && e.closest('#sceneA, #sceneB')) return 'pane ' + e.closest('#sceneA, #sceneB').id.slice(-1) + "'s corner";
+          const pc = e.closest('#sceneA > .corner, #sceneB > .corner');
+          if (pc) return 'pane ' + pc.parentElement.id.slice(-1) + "'s corner";
           if (e.closest('#scenebar')) return 'the scene: ' + (e.dataset.relevel ? 're-level' : e.dataset.x ? 'x' : e.tagName.toLowerCase());
           if (e.closest('#scenestrokes')) return 'the scene: stroke';
           if (e.closest('#scene')) return 'the scene: ' + (e.className || e.tagName.toLowerCase());
@@ -618,8 +647,8 @@ def run(ctx):
     # nothing inside a pane's article is a control (SC; B1-S9: "read both…; scroll each"): a pane's article is what
     # assistive technology reads — never hidden from it as the plane's is — so a mark a press acts on nothing in must be
     # no button there; the first edition's pane carries the presence ⟡, links touching it. Each pane's corner is its one
-    # stop beside it, a group named by its own words, which say what the pane shows — a compact state's glyph by its whole
-    # words (issue #160; D5 K-57; FP-26)
+    # stop beside it — its line of acts, whose stop is its first act, else itself — named by its own words, which say what
+    # the pane shows, a compact state's glyph by its whole words (issue #160; D5 K-57; FP-20, FP-26)
     ax = ctx.drv.ax_tree()
     if 'error' in ax:
         r.figures['scene_ax'] = {'answered': False, 'error': ax['error']}
@@ -650,12 +679,17 @@ def run(ctx):
             # its own words, each compact sign read whole by the name it carries, as the plane's corner's are
             said = ctx.js('''(() => { const e = document.querySelector(%s); if (!e) return null; const k = e.cloneNode(true);
               k.querySelectorAll('.glyph[aria-label]').forEach((g) => { g.textContent = g.getAttribute('aria-label'); });
-              return {words: k.textContent, tab: e.getAttribute('tabindex'), glyphs: e.querySelectorAll('.glyph[aria-label]').length}; })()''' % json.dumps(sel)) or {}
-            name = (node.get('name') or {}).get('value') or ''
-            corners.append({'pane': side, 'role': (node.get('role') or {}).get('value'), 'ignored': node.get('ignored'), 'name': name[:120], 'words': (said.get('words') or '')[:120], 'tab': said.get('tab'),
-                            'glyphs': said.get('glyphs'), 'named': bool(said.get('words')) and re.sub(r'\s+', '', name) == re.sub(r'\s+', '', said.get('words') or '')})
-        r.check(all(c['role'] == 'group' and not c['ignored'] and c['named'] and c['tab'] == '0' for c in corners),
-                'the AX tree: each pane\'s corner is a stop of its own, a group named by its own words, which say what the pane shows — a compact state\'s glyph by its whole words (issue #160; FP-26)', corners)
+              return {words: k.textContent, tab: e.getAttribute('tabindex'), head: e.classList.contains('head'), acts: [...e.querySelectorAll('button')].map((b) => b.getAttribute('tabindex')),
+                      glyphs: e.querySelectorAll('.glyph[aria-label]').length}; })()''' % json.dumps(sel)) or {}
+            name, role, acts = (node.get('name') or {}).get('value') or '', (node.get('role') or {}).get('value'), said.get('acts') or []
+            # its stop: where it holds acts its first act, its container a line of them — a toolbar, or at its document's head
+            # a group of such lines — and no stop; where it holds none, its container, a group
+            one = (acts[:1] == ['0'] and said.get('tab') is None and (role == 'group' if said.get('head') else role == 'toolbar' and all(t == '-1' for t in acts[1:]))) if acts \
+                else (role == 'group' and said.get('tab') == '0')
+            corners.append({'pane': side, 'role': role, 'ignored': node.get('ignored'), 'name': name[:120], 'words': (said.get('words') or '')[:120], 'tab': said.get('tab'), 'acts': acts,
+                            'glyphs': said.get('glyphs'), 'stop': one, 'named': bool(said.get('words')) and re.sub(r'\s+', '', name) == re.sub(r'\s+', '', said.get('words') or '')})
+        r.check(all(c['stop'] and not c['ignored'] and c['named'] for c in corners),
+                'the AX tree: each pane\'s corner is a stop of its own — its line of acts, whose stop is its first act, else itself — named by its own words, which say what the pane shows, a compact state\'s glyph by its whole words (issue #160; FP-20, FP-26)', corners)
         r.figures['scene_ax'] = {'answered': True, 'nodes_inside': inside, 'controls': len(controls), 'corners': corners}
     ring = []
     for _ in range(24):

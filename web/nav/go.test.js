@@ -3253,8 +3253,8 @@ function offering(/** @type {string} */ addr, /** @type {number} */ n) {
   const act = /** @type {any} */ ({ dataset: { read: String(n) }, focus() { doc.activeElement = act; } });
   el.closest = (/** @type {string} */ s) => (s === '[data-corner]' ? el : null);
   el.querySelector = (/** @type {string} */ s) => (s === '[data-read]' ? act : null);
-  el.querySelectorAll = (/** @type {string} */ s) => (s === '[data-read], [data-more]' ? [act] : []);
-  act.closest = (/** @type {string} */ s) => (s === '[data-corner]' ? el : s === '[data-read]' || s === '[data-read], [data-more]' ? act : null);
+  el.querySelectorAll = (/** @type {string} */ s) => (s === 'button' ? [act] : []);
+  act.closest = (/** @type {string} */ s) => (s === '[data-corner]' ? el : s === 'button' || s === '[data-read]' ? act : null);
   return { el, act };
 }
 /** a key at a corner, its target the element given, made by a key */
@@ -3267,7 +3267,7 @@ async function landedAt(/** @type {string} */ addr) {
   return flew;
 }
 
-test('a newer version\'s arrival at a box read at its bare address marks it: the box pinned on the member read, its corner offering the newest member named, said once in the status region with the box read at its reading scale, and a later arrival raising the offer, saying nothing; → along the corner reaches the offer and ← leaves it; Enter on it — or at a corner with no version statement — moves the box to that member in place, a trail entry Back returns from, the offer standing again there; a version move elsewhere or a LEAP to the bare address ends the mark, and a box the reader pinned is never marked (issue #240; foundations §3.2; D5 K-57; FP-22, FP-23)', async () => {
+test('a newer version\'s arrival at a box read at its bare address marks it: the box pinned on the member read, its corner offering the newest member named, said once in the status region with the box read at its reading scale, and a later arrival raising the offer, saying nothing; at the offer, the corner\'s one act, → and ← move nothing and Enter and Space are the platform\'s, whose activation of its button — or a pointer\'s click on it — moves the box to that member in place, a trail entry Back returns from, the offer standing again there, and Enter at the corner\'s container is the platform\'s, doing nothing; a version move elsewhere or a LEAP to the bare address ends the mark, and a box the reader pinned is never marked (issue #240; foundations §3.2; D5 K-57; FP-22, FP-23)', async () => {
   const doc = /** @type {any} */ (globalThis.document);
   const said = statusSaid(), told = (/** @type {number} */ k) => said.filter((x) => x === t('F.arrival.pane', { k })).length;
   try {
@@ -3278,22 +3278,21 @@ test('a newer version\'s arrival at a box read at its bare address marks it: the
     const once = said.length;
     GO.arrived(tri(4));
     assert.deepEqual([GO.shownIn(TRI), GO.newerAt(tri(2)), told(2), said.length], [tri(2), 4, 1, once], 'version 4 arrived: the offer raised to version 4, nothing more said');
-    // the offer reached along the corner, and taken
+    // the offer, the corner's one act: the keys at it, then its button activated as the platform activates it from a key
     const c = offering(tri(2), 4);
-    assert.equal(await atCorner('ArrowRight', c.el), true);
-    assert.equal(doc.activeElement, c.act, '→ along the corner: the focus on its offered read');
-    assert.deepEqual([await atCorner('ArrowRight', c.act), doc.activeElement], [false, c.act], '→ again: nothing further along, the key the platform\'s');
-    assert.equal(await atCorner('ArrowLeft', c.act), true);
-    assert.equal(doc.activeElement, c.el, '← back to the corner');
-    await atCorner('ArrowRight', c.el);
+    c.act.focus();
+    assert.deepEqual([await atCorner('ArrowRight', c.act), await atCorner('ArrowLeft', c.act), doc.activeElement], [true, true, c.act], '→ and ← at the offer, the corner\'s one act: taken, the focus standing on it');
+    assert.deepEqual([await atCorner('Enter', c.act), await atCorner(' ', c.act)], [false, false], 'Enter and Space at the offer: the platform\'s, which activates its button');
     const at = CAM.view(), n = TRAIL.length();
-    assert.equal(await atCorner('Enter', c.act), true, 'Enter on the offer: taken');
+    assert.equal(VERSIONS.readFromCorner(c.el, SEL.selected(), true), true, 'the offer\'s button activated: its act taken');
     assert.equal(await landedAt(tri(4)), false, 'a version move: no flight');
     assert.ok(same(CAM.view(), at), 'the camera where it stood');
     assert.deepEqual([TRAIL.length(), TRAIL.current()?.addr, GO.newerAt(tri(4)), GO.newerAt(tri(2))], [n + 1, tri(4), null, null], 'one entry pushed at version 4, the box showing it unmarked');
     await run(GO.back());
     assert.deepEqual([TRAIL.current()?.addr, GO.shownIn(TRI), GO.newerAt(tri(2)), told(2)], [tri(2), tri(2), 4, 2], 'Back: version 2 again, its corner offering version 4 as the reader left it, the arrival said again');
-    assert.equal(await atCorner('Enter', offering(tri(2), 4).el), true, 'Enter at a corner with no version statement: its offered read');
+    const again = offering(tri(2), 4);
+    assert.deepEqual([await atCorner('Enter', again.el), GO.shownIn(TRI), TRAIL.current()?.addr], [false, tri(2), tri(2)], 'Enter at the corner\'s container: the platform\'s, and nothing done — the container takes no key');
+    assert.equal(VERSIONS.readFromCorner(again.el, SEL.selected(), false), true, 'the offer clicked by the pointer: its act taken');
     await landedAt(tri(4));
     assert.deepEqual([TRAIL.current()?.addr, GO.newerAt(tri(4))], [tri(4), null], 'version 4, unmarked');
     await run(GO.back());

@@ -226,8 +226,9 @@ design decision, its reading scene's part; FP-12, FP-26) — both panes at
 the reading size READING_PX at every window, each line a whole count of its
 face's average advance, the same in both panes: at the run's window narrowed
 to HEAD_CH or more, short of the full measure, each corner compact on its
-pane's outer side, one gap from its text, its glyph's click and the corner's
-Enter opening it whole and the same act closing it; at a window
+pane's outer side, one gap from its text, its glyph's click, and Enter and
+Space at the glyph, the corner's stop, opening it whole and the same act
+closing it, the focus kept on the act; at a window
 SCENE_WIDE_PX wide the full measure, 60–66, each corner whole, room left past
 it; at either the column against the pane's inner edge, its column's edge
 between them, where the bands leave it; at a window SCENE_HEAD_PX wide, where
@@ -264,7 +265,7 @@ same material carries it, re-projected at the landing and marked there;
 P43): the source act on the window paragraph's "who wrote this?" card, a
 click on the window run's key in its column's edge, the latest member's read act in the
 versions list holding a paragraph, and the same act in the list the corner's
-act (K-57, Enter at the corner) opens with nothing selected and the
+act (K-57, Enter at its version statement) opens with nothing selected and the
 edition's first blocks risen past the one line, which holds the first span
 in view — each pressed as a person presses it — light the arrival in the
 text landed in, no link named, on a span holding the carried stretch's own
@@ -1567,10 +1568,18 @@ def cutting(*cuts):
 
 
 def where_focus(ctx):
-    """where the platform's focus stands, the ARIA mirror beside it: the focused element's id, whether the mirror is out of the
-    page's order and holds the focus, and its current item"""
-    return ctx.js('''(() => { const e = document.activeElement, m = document.getElementById('mirror');
-      return {at: e ? e.id || e.tagName.toLowerCase() : null, inert: !!m.inert, holds: !!e && m.contains(e), item: window.__skep.mirror.index()}; })()''')
+    """where the platform's focus stands, the ARIA mirror beside it: the focused element's id — an act of a pane's corner by
+    the corner's id and the act's class — whether the mirror is out of the page's order and holds the focus, and its current
+    item"""
+    return ctx.js('''(() => { const e = document.activeElement, m = document.getElementById('mirror'), c = e && e.closest ? e.closest('.pane > .corner') : null;
+      return {at: e ? (c && e !== c ? c.id + ': ' + e.className.split(' ')[0] : e.id || e.tagName.toLowerCase()) : null, inert: !!m.inert, holds: !!e && m.contains(e), item: window.__skep.mirror.index()}; })()''')
+
+
+# a reading scene's stop the selector names focused, as Tab lands on it: a pane itself, or a pane's corner's stop — its first
+# act where it holds acts, else itself; the stop's name as `where_focus` gives it, null where the stop took no focus
+FOCUS_STOP = '''((sel) => { const e = document.querySelector(sel); if (!e) return null;
+  const s = e.matches('.corner') ? ([...e.querySelectorAll('button')].find((b) => b.getAttribute('tabindex') === '0') || e) : e;
+  s.focus(); return document.activeElement === s ? (s === e ? e.id : e.id + ': ' + s.className.split(' ')[0]) : null; })(%s)'''
 
 
 def focused_ax(ctx):
@@ -1756,30 +1765,32 @@ SCROLL_AWAY = '''((side, by) => { const p = document.getElementById(side === 'a'
 def scene_pane_return_holds(ctx, r):
     """A WHOLE-DOCUMENT SCENE LEFT FROM A PANE, RETURNED TO (FP-20, FP-25): the first edition's window run beside the draft
     it windows, the far end naming the draft whole, opened anew for each pane and each pane's corner; its panes scrolled
-    away from where the scene set them (`SCROLL_AWAY`), the focus put on the stop, the scene left by WHOLE BOARD and
-    returned to by Back with its `compare` held at its answer (`back_to`): before the answer the scene stands with no band
-    and no stop returned with it, the focus on the stop it was left from, the mirror out of the page's order holding none,
-    the AX tree's focused node that stop by its role, each pane where the reader left it, 1 px either way; the answer
-    released whole, its bands added and nothing else moved — each pane's scroll, 0.5 px either way, and the focus. The
-    driver's hold is lifted after; its figures, by stop"""
+    away from where the scene set them (`SCROLL_AWAY`), the focus put on the stop — a pane's corner's its first act where
+    it holds acts, else itself (`FOCUS_STOP`) — the scene left by WHOLE BOARD and returned to by Back with its `compare`
+    held at its answer (`back_to`): before the answer the scene stands with no band and no stop returned with it, the
+    focus on the stop it was left from, the mirror out of the page's order holding none, the AX tree's focused node that
+    stop by its role, each pane where the reader left it, 1 px either way; the answer released whole, its bands added and
+    nothing else moved — each pane's scroll, 0.5 px either way, and the focus. The driver's hold is lifted after; its
+    figures, by stop"""
     figures = {}
     held = {'posA': WINDOW[0], 'widthA': WINDOW[1], 'wholeB': True}
     banded = 'window.__skep.scene.isOpen() && window.__skep.scene.pairs().pairs.length > 0'
-    stops = (('a', '#sceneA', 'sceneA', 'region'), ('b', '#sceneB', 'sceneB', 'region'),
-             ('a:corner', '#sceneA > .corner', 'sceneA-corner', 'group'), ('b:corner', '#sceneB > .corner', 'sceneB-corner', 'group'))
+    stops = (('a', '#sceneA'), ('b', '#sceneB'), ('a:corner', '#sceneA > .corner'), ('b:corner', '#sceneB > .corner'))
     try:
         ctx.leap(DOC, WINDOW[0])
-        for stop, sel, at, role in stops:
-            name = f'a whole-document scene left from {at}'
+        for stop, sel in stops:
             ctx.js('window.__skep.scene.open(%s, %s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2]), json.dumps(held)))
             wait_for(ctx, banded)
             set_at = ctx.js(SCENE_SCROLLS)
             ctx.js(SCROLL_AWAY % (json.dumps('a'), 200))
             ctx.js(SCROLL_AWAY % (json.dumps('b'), 300))
-            ctx.js('document.querySelector(%s).focus()' % json.dumps(sel))
+            at = ctx.js(FOCUS_STOP % json.dumps(sel))
+            # its role in the AX tree: a pane's a region, a corner's act a button, a corner holding none a group
+            role = 'region' if ':' not in stop else 'button' if ': ' in (at or '') else 'group'
+            name = f'a whole-document scene left from {at}'
             ctx.frames(2)
             left, on = ctx.js(SCENE_SCROLLS), where_focus(ctx)
-            r.check(left['a'] != set_at['a'] and left['b'] > 0 and on['at'] == at,
+            r.check(bool(at) and left['a'] != set_at['a'] and left['b'] > 0 and on['at'] == at,
                     f'{name}: each pane scrolled away from where the scene set it, pane B past its top, the focus on the stop', {'set': set_at, 'left': left, 'focus': on})
             ret = back_to(ctx)
             now = ctx.js('({open: window.__skep.scene.isOpen(), pairs: (window.__skep.scene.pairs() || {pairs: null}).pairs, scrolls: %s})' % SCENE_SCROLLS)
@@ -2121,8 +2132,9 @@ def pane_blocks(ctx, side):
 def corner_opens(ctx, r, side='a'):
     """A COMPACT CORNER OPENS WHOLE ON ITS ACT (FP-26): a pane's corner standing compact — a click on its state's glyph
     opens it whole where it stands, its state in its words, whole wide over what stands beside it, the pane's text not
-    moved, and a click on it opened closes it; Enter at the corner, which offers no act of its own, does the same. Its
-    figures"""
+    moved, and a click on it opened closes it; Enter and Space at the glyph, the corner's stop, do the same as the
+    platform activates the button, the focus kept on the act — its state's words, expanded, while it stands opened (FP-20).
+    Its figures"""
     pane = 'scene' + side.upper()
     read = '''((id) => { const p = document.getElementById(id), c = p && p.querySelector(':scope > .corner'), a = p && p.querySelector(':scope > article.dtext'); if (!c || !a) return null;
       const st = c.querySelector('.st'), g = c.querySelector('.glyph'), q = (g || c).getBoundingClientRect(), b = a.getBoundingClientRect(), k = c.getBoundingClientRect();
@@ -2142,17 +2154,27 @@ def corner_opens(ctx, r, side='a'):
             and opened['w'] > shut['w'] + MEASURE_TOL_PX and bool(closed) and not closed['open'] and closed['glyph'] and still,
             f'pane {side.upper()}\'s corner standing compact: a click on its state\'s glyph opens it whole where it stands — its state in its words, whole wide over what stands beside it, the pane\'s text not moved — and a click on it opened closes it (FP-26)',
             {'compact': shut, 'opened': opened, 'closed': closed})
-    ctx.js('document.querySelector(%s).focus()' % json.dumps('#' + pane + ' > .corner'))
-    ctx.drv.key('Enter')
-    ctx.frames(2)
-    entered = ctx.js(read)
-    ctx.drv.key('Enter')
-    ctx.frames(2)
-    left = ctx.js(read)
-    r.check(bool(entered) and entered['open'] and bool(entered['st']) and not entered['glyph'] and bool(left) and not left['open'] and left['glyph'],
-            f'pane {side.upper()}\'s corner, which offers no act of its own: Enter at it opens it whole, and Enter again closes it (FP-26)', {'entered': entered, 'left': left})
+    # the corner's stop focused, as Tab lands on it, and the act the focus stands on in the corner after a key
+    stop = '''((id) => { const c = document.querySelector('#' + id + ' > .corner'), s = c && [...c.querySelectorAll('button')].find((b) => b.getAttribute('tabindex') === '0');
+      if (s) s.focus(); return s && document.activeElement === s ? {whole: s.matches('[data-whole]'), glyph: s.matches('.glyph'), expanded: s.getAttribute('aria-expanded')} : null; })(%s)''' % json.dumps(pane)
+    on = '''((id) => { const c = document.querySelector('#' + id + ' > .corner'), e = document.activeElement;
+      return !!c && !!e && c.contains(e) && e.tagName === 'BUTTON' ? {whole: e.matches('[data-whole]'), glyph: e.matches('.glyph'), expanded: e.getAttribute('aria-expanded')} : null; })(%s)''' % json.dumps(pane)
+    keyed = {}
+    for name, key in (('Enter', 'Enter'), ('Space', ' ')):
+        focused = ctx.js(stop)
+        ctx.drv.key(key)
+        ctx.frames(2)
+        entered, at_open = ctx.js(read), ctx.js(on)
+        ctx.drv.key(key)
+        ctx.frames(2)
+        left, at_shut = ctx.js(read), ctx.js(on)
+        r.check(focused == {'whole': True, 'glyph': True, 'expanded': 'false'} and bool(entered) and entered['open'] and bool(entered['st']) and not entered['glyph']
+                and at_open == {'whole': True, 'glyph': False, 'expanded': 'true'} and bool(left) and not left['open'] and left['glyph'] and at_shut == {'whole': True, 'glyph': True, 'expanded': 'false'},
+                f'pane {side.upper()}\'s corner, its stop the glyph that opens it whole: {name} at it opens it whole, the focus kept on the act — its state\'s words, expanded — and {name} again closes it, the focus back on the glyph (FP-20, FP-26)',
+                {'stop': focused, 'entered': entered, 'on_open': at_open, 'left': left, 'on_shut': at_shut})
+        keyed[name] = {'opened': at_open, 'closed': at_shut}
     ctx.js('document.getElementById(%s).focus()' % json.dumps(pane))
-    return {'glyph': shut and shut['st'], 'whole': opened and opened['st']}
+    return {'glyph': shut and shut['st'], 'whole': opened and opened['st'], 'keyed': keyed}
 
 
 def scene_measure_holds(ctx, r):
@@ -2161,8 +2183,8 @@ def scene_measure_holds(ctx, r):
     both panes at the reading size READING_PX, each pane's line a whole count of its face's average advance, the same in
     both, narrowed to HEAD_CH or more and short of the full measure, each corner compact on its pane's outer side, one gap
     from its text, the column against its pane's inner edge, its column's edge between them, where the bands and lines
-    leave the pane beyond its signs (foundations §2.5, §3.1; issue #151); its glyph's click and Enter opening it whole
-    (`corner_opens`). At a window SCENE_WIDE_PX wide the full measure, MEASURE_CH, each corner whole beside it on the
+    leave the pane beyond its signs (foundations §2.5, §3.1; issue #151); its glyph's click, and Enter and Space at the
+    glyph, opening it whole (`corner_opens`). At a window SCENE_WIDE_PX wide the full measure, MEASURE_CH, each corner whole beside it on the
     outer side and room left past them, the column against the inner edge still. At a window SCENE_HEAD_PX wide, where
     beside its compact corner a pane keeps fewer than HEAD_CH characters, both corners at their documents' heads, across
     their columns' text and edge, both texts beginning at one depth below them, the measure the most characters the pane
@@ -2553,7 +2575,7 @@ def carried_holds(ctx, r):
     seen['versions_list'] = arrival_holds(ctx, r, 'the versions list\'s read act, a paragraph held', (VERSIONED, para['pos'], para['pos'] + para['width']), stood)
     # the corner's act with nothing selected, the edition's first blocks risen past the one line: the list holds the first
     # span in view (§2.3: "the selection, else the first span in view"), never the document's first block. The act is
-    # taken by Enter at the corner (K-57), the one a click on the version statement takes
+    # taken by Enter at the version statement, the corner's stop (K-57), the platform activating its button as a click does
     ctx.leap(VERSIONED, None)
     rects = ctx.js('''[...document.querySelectorAll(%s)].map((e) => { const q = e.getBoundingClientRect(); return {pos: Number(e.dataset.pos), bottom: q.bottom, left: q.left}; })''' % json.dumps('#domlayer article[data-addr="%s"] .run > .sp' % VERSIONED))
     line = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
@@ -2572,8 +2594,9 @@ def carried_holds(ctx, r):
     ctx.frames(1)
     ctx.drv.key('Tab')
     ctx.frames(2)
-    on = ctx.js('(() => { const e = document.activeElement; return e && e.dataset ? e.dataset.corner || null : null; })()')
-    r.check(on == VERSIONED, 'Tab from the plane\'s stop reaches the edition\'s corner (K-57)', on)
+    on = ctx.js('''(() => { const e = document.activeElement, c = e && e.closest ? e.closest('#corners [data-corner]') : null;
+      return c ? {corner: c.dataset.corner || null, act: e !== c && e.tagName === 'BUTTON' ? e.className.split(' ')[0] : null} : null; })()''')
+    r.check(on == {'corner': VERSIONED, 'act': 'version'}, 'Tab from the plane\'s stop reaches the edition\'s corner on its version statement, the corner\'s stop (K-57)', on)
     ctx.drv.key('Enter')
     wait_for(ctx, 'document.querySelector(%s) !== null' % json.dumps('#overlay [data-run="read%d"]' % doc['members']))
     at = click_on(ctx, '#overlay [data-run="read%d"]' % doc['members'])
@@ -4559,17 +4582,19 @@ def head_guards(ctx, r):
     return {'window': NARROW_PX, 'block': b['pos'], 'before': prev['pos'], 'k8_down_px': down, 'platform_down_px': down4}
 
 
-# the first edition's corner on the plane: its rect on screen, whether it holds the platform's focus, the one line's bottom
-CORNER_AT = '''((a) => { const e = document.querySelector(`#corners [data-corner="${a}"]`); if (!e) return null; const q = e.getBoundingClientRect();
-  return {x: q.left, y: q.top, w: q.width, h: q.height, focus: document.activeElement === e, line: document.getElementById('line').getBoundingClientRect().bottom}; })(%s)'''
+# the first edition's corner on the plane: its rect on screen, whether the platform's focus stands in it and on which of its
+# acts, by the act's first class, and the one line's bottom
+CORNER_AT = '''((a) => { const e = document.querySelector(`#corners [data-corner="${a}"]`); if (!e) return null; const q = e.getBoundingClientRect(), f = document.activeElement;
+  return {x: q.left, y: q.top, w: q.width, h: q.height, focus: !!f && e.contains(f), act: !!f && f !== e && e.contains(f) && f.tagName === 'BUTTON' ? f.className.split(' ')[0] : null,
+          line: document.getElementById('line').getBoundingClientRect().bottom}; })(%s)'''
 
 
 def corner_tabbed(ctx, r):
     """A CORNER TABBED TO OUT OF VIEW (issue #436's design decision: "When focus lands in the corner, the camera pans it
     into view"; FP-20): in a window REFIT_PX wide the first edition LEAPt to a passage, the camera then moved alone so its
     corner stands left of the view while the view's centre stays over the column it stands beside; Tab from the walk's
-    item lands on the corner, and the camera moves across alone by the least pan, the corner's left edge at the view's;
-    its figures"""
+    item lands on the corner's stop, its version statement, the edition's line's first act, and the camera moves across
+    alone by the least pan, the corner's left edge at the view's; its figures"""
     was = ctx.resize(REFIT_PX, 900)
     try:
         ctx.settle()
@@ -4593,9 +4618,9 @@ def corner_tabbed(ctx, r):
         ctx.frames(3)
         after, cam1 = ctx.js(CORNER_AT % json.dumps(DOC)), ctx.camera()
         across = (cam0['x'] - cam1['x']) * cam1['scale']
-        r.check(bool(after) and after['focus'] and abs(after['x']) <= 1 and after['x'] + after['w'] <= REFIT_PX + 0.5 and after['y'] >= after['line'] - 0.5 and after['y'] + after['h'] <= 900.5
+        r.check(bool(after) and after['focus'] and after['act'] == 'version' and abs(after['x']) <= 1 and after['x'] + after['w'] <= REFIT_PX + 0.5 and after['y'] >= after['line'] - 0.5 and after['y'] + after['h'] <= 900.5
                 and bool(before) and abs(across + before['x']) <= 1 and abs(cam1['y'] - cam0['y']) < 1e-9 and abs(cam1['scale'] - cam0['scale']) < 1e-12,
-                'Tab from the walk\'s item lands on the corner, and the camera moves across alone by the least pan, the corner inside the view below the one line, its left edge at the view\'s',
+                'Tab from the walk\'s item lands on the corner\'s stop, its version statement, and the camera moves across alone by the least pan, the corner inside the view below the one line, its left edge at the view\'s',
                 {'before': before, 'after': after, 'across_px': across, 'camera': [cam0, cam1]})
     finally:
         ctx.resize(*was)

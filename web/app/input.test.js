@@ -9,7 +9,10 @@
 // withheld origin's statement LEAPs to the claim's home whole, carrying no
 // passage and lighting no link, while the rest of the gap still conjures
 // C-39's face; a
-// click on the read a corner offers is the version move to it; a
+// click on the read a corner offers is the version move to it, one on its
+// version statement opens its versions list, taking the focus where a key
+// made the click and Esc giving it back to the statement, and a key's click
+// at a corner's act moves no walk; a
 // press at the readable em on text not yet standing is held for it and
 // becomes the text's click; a press or a click falls on every box the plane
 // draws, one the index does not list among them; an empty click ends a card's
@@ -535,6 +538,68 @@ test('a click on the read a corner offers makes the version move to that version
     assert.deepEqual(fake.unanswered, []);
   } finally {
     TRAIL._reset();
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+test('a click on a corner\'s version statement opens its document\'s versions list, taking the focus where a key made the click — the platform\'s from Enter or Space at the statement\'s button — onto its current member\'s read, Esc then giving the focus back to the statement\'s button where nothing was written in the corner meanwhile, and none where the pointer made it, the focus standing where it stood (D5 K-57; FP-20)', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the corners' listeners, by event */
+  const corners = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  // E, an edition of one member read at its bare address, as the versions list reads it
+  const E = '1.0.1.0.63', E1 = E + '.1', text = 'An edition.\n\nIts second paragraph.', n = byteLength(text);
+  const reads = (/** @type {string} */ doc) => ({
+    [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(doc) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + n }] } },
+    [FAKE.keyOf('op', { frame: F.docMetadata(doc) })]: { result: { as_of: 1, resp: 'doc_metadata', doc, published: true, owner: '1.0.1', birth: E1, birth_extent: String(n), placed: null, base_extent: null, source: null } },
+    [FAKE.keyOf('op', { frame: F.retrieveV(doc, 1, n) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: text }] } },
+    [FAKE.keyOf('op', { frame: F.image(doc, 1, n) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: E + '.0.1.1', width: String(n) }] } },
+    [FAKE.keyOf('op', { frame: F.findLinksV(doc, 1, n) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+  });
+  try {
+    // the list's row for member 1: what it holds of the passage held, the edition's first block, which it holds whole
+    const held = F.compare([{ doc: E, spans: [{ ordinal: 1, positions: 13 }] }], [{ doc: E1, spans: [{ ordinal: 1, positions: n }] }]);
+    const fake = FAKE.create({
+      ...reads(E), ...reads(E1), [FAKE.keyOf('op', { frame: F.docMetadata(E + '.2') })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
+      [FAKE.keyOf('op', { frame: held })]: { result: { as_of: 1, resp: 'compare', pairs: [{ d1: E, d2: E1, u1: { ordinal: '1', subspace: '1' }, u2: { ordinal: '1', subspace: '1' }, width: '13' }] } },
+    });
+    PORT.boot(fake);
+    REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+    // the list's controls as the host finds them: its current member's read, taking the focus as the platform's would
+    const doc = /** @type {any} */ (globalThis.document);
+    const read = { isConnected: true, getAttribute: () => null, focus() { doc.activeElement = read; }, blur() { if (doc.activeElement === read) doc.activeElement = null; } };
+    HOST.attach(/** @type {any} */ ({
+      ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
+      querySelector: (/** @type {string} */ s) => (s.startsWith('[data-run]') ? read : null), querySelectorAll: () => [], contains: (/** @type {unknown} */ x) => x === read, getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    }));
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(null), corners: listens(corners) }));
+    const onCorner = corners.get('click');
+    assert.ok(onCorner, 'the corners take a click');
+    CAM.setViewport(1440, 900);
+    // E's corner as T-LAYER stands it, its version statement in it
+    const holder = { dataset: { corner: E }, querySelector: (/** @type {string} */ s) => (s === '.version' ? statement : null) };
+    const statement = {
+      dataset: {}, isConnected: true, focus() { doc.activeElement = statement; },
+      closest: (/** @type {string} */ s) => (s === '[data-corner]' ? holder : s === '.version' ? statement : null), getBoundingClientRect: () => ({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 }),
+    };
+    for (const byKey of [true, false]) {
+      let stopped = false;
+      // the platform's focus on the statement's button, as Tab to the corner puts it there
+      doc.activeElement = statement;
+      onCorner({ type: 'click', detail: byKey ? 0 : 1, clientX: 0, clientY: 0, target: statement, stopPropagation() { stopped = true; } });
+      await settled(() => HOST.currentState()?.id === 'versions:' + E);
+      assert.deepEqual([stopped, HOST.currentState()?.id, HOST.currentState()?.takeFocus, doc.activeElement === (byKey ? read : statement)], [true, 'versions:' + E, byKey, true],
+        byKey ? 'a key\'s click: the list opened, taking the focus onto its current member\'s read' : 'a pointer\'s click: the list opened, taking no focus, the focus standing on the statement');
+      KEYS.esc();
+      assert.deepEqual([HOST.currentState(), doc.activeElement === statement], [null, true],
+        byKey ? 'Esc: the list closed, the focus back on the statement\'s button it was opened from' : 'Esc: the list closed, the focus where it stood');
+    }
+    assert.deepEqual(fake.unanswered, []);
+  } finally {
+    HOST.dismiss();
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }
 });
@@ -1102,6 +1167,32 @@ test('a click on a block of a draft the person may edit places the caret at the 
   assert.equal(LAYER.statementOpen(D), true, 'the kept word\'s click opens the statement');
   onCorner({ target: word, stopPropagation() {} });
   assert.equal(LAYER.statementOpen(D), false, 'and again closes it');
+}));
+
+test('a key\'s click at a corner\'s act — the one the platform makes from Enter or Space at its button, naming no point — makes the act and moves no walk: on another document\'s corner, a caret kept in a draft of the person\'s, the kept word\'s opens its statement and again closes it, the walk on the draft\'s span and the caret kept as they stood; a pointer\'s click on the same act stands the walk on that document (D5 K-57, K-74; FP-20, FP-40)', () => onDrafts(async ({ D, O, onCorner }) => {
+  await WALK.focusTo(D, 1, true, null, true);
+  LAYER.placeCaret(D, 1);
+  LAYER.leaveCaret();
+  WRITE.setKept(O, { word: 'kept', reason: null });
+  const holder = { dataset: { corner: O } };
+  const word = /** @type {any} */ ({ closest: (/** @type {string} */ sel) => (sel === '[data-corner]' ? holder : sel === '.kept-word[data-kept]' ? word : null) });
+  const stood = () => [WALK.current()?.addr, WALK.current()?.pos, LAYER.caret()];
+  const before = stood();
+  assert.deepEqual(before, [D, 1, { addr: D, pos: 1, live: false }], 'the walk on the draft\'s first span, its caret kept there');
+  /** a click on the kept word, as the platform makes it from a key — no point, its count 0 — or as a pointer makes it at O's first line */
+  const at = LAYER.centreOf(O, 1);
+  const clicked = (/** @type {boolean} */ byKey) => onCorner(byKey ? { type: 'click', detail: 0, clientX: 0, clientY: 0, target: word, stopPropagation() {} }
+    : { type: 'click', detail: 1, clientX: CAM.sx(at.x), clientY: CAM.sy(at.y), target: word, stopPropagation() {} });
+  clicked(true);
+  await tick();
+  assert.deepEqual([LAYER.statementOpen(O), stood()], [true, before], 'the key\'s click opens the statement, the walk and the caret where they stood');
+  clicked(true);
+  await tick();
+  assert.deepEqual([LAYER.statementOpen(O), stood()], [false, before], 'and again closes it, nothing else moved');
+  clicked(false);
+  await tick();
+  assert.deepEqual([LAYER.statementOpen(O), WALK.current()?.addr, WALK.current()?.pos, LAYER.caret()], [true, O, 1, { addr: D, pos: 1, live: false }], 'the pointer\'s click opens it too, and stands the walk on O\'s stop nearest the point, the caret kept');
+  WRITE.setKept(O, null);
 }));
 
 test('a click placing the caret in a draft the person may edit stands the walk on the span it is placed in, the live caret its mark and no ring drawn, so a slot chord pressed there acts on that span: with the walk on the draft\'s first span, Mod+K at the caret a click placed in its second draws the acts card at the second whole, selecting nothing (B3-S13; D5 K-70, K-100)', () => onDrafts(async ({ D, clickAt }) => {

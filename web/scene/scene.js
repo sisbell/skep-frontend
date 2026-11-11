@@ -289,9 +289,9 @@
 // record of its document, as every pane (FP-29). A pane of a draft carries
 // the draft's kept word in its corner (T-ARTICLE's draft arm; B3-S2), the
 // statement open or closed as T-LAYER holds it (`openStatement`), its items
-// written again as the word or the statement moves (`markKept`), and Enter
-// at the corner opens the statement (D5 K-57, K-74) where the draft has a
-// kept state. The panes
+// written again as the word or the statement moves (`markKept`), and the
+// kept word's act opens the statement (D5 K-57, K-74; `keptAct`) where the
+// draft has a kept state. The panes
 // borrow T-LAYER's mount (FP-12; the structure record §3.4 (vii)):
 // `sceneArticle` makes each pane's article from the record and the view the
 // scene keeps, `madeOf` and `rangeIn` map a position through the blocks it
@@ -302,9 +302,11 @@
 // scene keeps no DOM text of its own. Each pane carries its own document's
 // corner (ux-T2; T-LAYER's `sceneCorner` and `sceneHead` make its items), its
 // first slot its document's kind by the one test (T-LAYER's `kindOf`; FP-33):
-// the pane's one Tab stop after the pane itself in either form, a group named by
-// its own words (D5 K-57), and its Enter, or a click on the act, takes its
-// act — a press on the act leaving the selection standing in the pane, the
+// named by its own words (D5 K-57), its stops the pane's next after the pane
+// itself in either form — a line of its acts holding one stop, or the corner
+// itself where it holds none (T-LAYER's `setStops`) — and an act's click,
+// the pointer's or the one the platform makes from its Enter or Space, takes
+// it — a press on the act leaving the selection standing in the pane, the
 // passage the act carries. The scene fits both panes once (`fitOf`; FP-12,
 // FP-26), by P-LAY's fit (`fitFor`) of the narrower pane's content box at the
 // reading size (P-CAM's), no margin past the column's edge — the pane's
@@ -326,11 +328,14 @@
 // pane's top as the pane scrolls, its later rows scrolling with the text
 // under it (`placeHeads`) — and no line the re-level, ↓ or ↑, the stop's act
 // or a carried place brings to the pane's top stands under what that row and
-// a form opened beneath it cover (`clearOf`). A compact corner opens whole on
-// its act — a click on a glyph or on a head's count, or Enter at the corner
-// where it offers no act of its own — over what stands beside it, moving
-// nothing, and closes on the same act at the corner opened (`openWhole`;
-// FP-26). Each column stands against the pane's
+// a form opened beneath it cover (`clearOf`). A corner's acts are buttons the
+// platform activates — Enter at its press, Space at its release — each act its
+// click's, a pointer's or the platform's (`attach`): the read offered, the
+// kept word opening its statement (`keptAct`), a glyph or a head's count
+// opening a compact corner whole over what stands beside it, moving nothing,
+// and the same act, the words a glyph opened among them, closing it again
+// (`openWhole`; FP-26); its stops are T-LAYER's (`setStops`), following the
+// focus along a line of acts (D5 K-57; FP-20). Each column stands against the pane's
 // inner edge, its column's edge between them — its counts there, and the
 // statements of the origins its runs of other documents' material are of,
 // withheld and transcluded alike, each once per origin in the pane by the
@@ -807,22 +812,33 @@ export function attach(e, acts = {}) {
     const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (ev.target).closest('[data-stroke]'));
     if (b && b.dataset.stroke) strokeAct(b.dataset.stroke, FOCUS.byKey(ev));
   });
-  /** the event's target, where it stands in a pane's corner: on the corner's act, on what opens it whole — a glyph, a head's count — or on the corner opened whole; null elsewhere */
+  /** the event's target, where it stands in a pane's corner: on the read it offers (`act`), on a draft's kept word (`kept`), on what opens it whole or compacts it again — a glyph, a head's count, the words a glyph opened — or anywhere on the corner opened whole (`whole`); null elsewhere */
   const onCorner = (/** @type {Event} */ ev) => {
     const tg = /** @type {HTMLElement | null} */ (ev.target), side = ev.currentTarget === e.paneB ? 'b' : 'a';
     if (!tg || !tg.closest || !tg.closest('.corner')) return null;
-    return tg.closest('[data-read]') ? 'act' : tg.closest('.glyph, [data-more]') || (scene && scene[side].open) ? 'whole' : null;
+    if (tg.closest('[data-read]')) return 'act';
+    if (tg.closest('.kept-word[data-kept]')) return 'kept';
+    return tg.closest('.glyph, [data-more], [data-whole]') || (scene && scene[side].open) ? 'whole' : null;
+  };
+  /** the stops of the line of a pane's corner's acts an element stands in, stood on `at` (T-LAYER's `setStops`) */
+  const rove = (/** @type {EventTarget | null} */ target, /** @type {EventTarget | null} */ at) => {
+    const c = target && typeof (/** @type {HTMLElement} */ (target)).closest === 'function' ? /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (target).closest('.corner')) : null;
+    if (scene && c) LAYER.setStops(c, true, scene.fit.corner === 'head', /** @type {Element | null} */ (at));
   };
   for (const p of [e.paneA, e.paneB]) {
     p.addEventListener('scroll', () => draw());
     // a press on a pane's corner's act, or on what opens the corner whole, leaves the platform's selection where it stands —
-    // the passage the act carries — as a press on text would not; a click on the act takes it, as the corner's Enter does,
-    // and one on a glyph or a head's count opens the corner whole, one on the corner opened closing it (FP-26)
+    // the passage the act carries — as a press on text would not; a click on an act takes it — a pointer's, or the one the
+    // platform makes from Enter or Space at the act — the kept word opening its statement or closing it, a glyph or a head's
+    // count opening the corner whole, and one on the corner opened closing it (FP-26)
     p.addEventListener('mousedown', (ev) => { if (onCorner(ev)) ev.preventDefault(); });
     p.addEventListener('click', (ev) => {
       const on = onCorner(ev), side = p === e.paneB ? 'b' : 'a';
-      if (on === 'act') act(side); else if (on === 'whole') openWhole(side);
+      if (on === 'act') act(side); else if (on === 'kept') keptAct(side); else if (on === 'whole') openWhole(side);
     });
+    // a corner's stop follows the focus along its line of acts, and stands on its first act again as the focus leaves it
+    p.addEventListener('focusin', (ev) => rove(ev.target, ev.target));
+    p.addEventListener('focusout', (ev) => rove(ev.target, ev.relatedTarget));
   }
   // a click on an act is its button's wherever on the button it lands — the re-level's chord mark among them
   e.bar.addEventListener('click', (ev) => { const tg = /** @type {HTMLElement} */ (ev.target); if (tg.closest('[data-x]')) ending(FOCUS.byKey(ev)); else if (tg.closest('[data-relevel]')) relevel(); });
@@ -1400,9 +1416,10 @@ const paneLead = (/** @type {Pane} */ P) => { const c = paneCorner(P); return co
  * what the pane holds (`paneCorner`) — its kind first, naming the version it
  * shows — and its kept clause where it stands kept (`paneKept`): beside its
  * column, whole, or compact — every item whole where the reader's act opened
- * it (`Pane.open`) — the clause its last item (`sceneCorner`); at its
- * document's head, the clause first on its first row and a form the act
- * opened beneath its rows (`sceneHead`).
+ * it (`Pane.open`), the glyph it opened in its words as the act that compacts
+ * it again (T-ARTICLE's `ArticleView.opened`) — the clause its last item
+ * (`sceneCorner`); at its document's head, the clause first on its first row
+ * and a form the act opened beneath its rows (`sceneHead`).
  * @param {Pane} P
  * @param {PaneFit} F
  * @returns {{html: string, rows: number}}
@@ -1410,7 +1427,8 @@ const paneLead = (/** @type {Pane} */ P) => { const c = paneCorner(P); return co
 function cornerForm(P, F) {
   const { d, view } = paneCorner(P);
   if (F.corner === 'head') return LAYER.sceneHead(d, view, { px: F.px, kept: paneKept(P), open: P.open });
-  return { html: LAYER.sceneCorner(d, view, F.corner === 'compact' && !P.open) + keptHTML(paneKept(P)), rows: 0 };
+  const compact = F.corner === 'compact';
+  return { html: LAYER.sceneCorner(d, { ...view, opened: compact && P.open }, compact && !P.open) + keptHTML(paneKept(P)), rows: 0 };
 }
 
 /** does the board lag past a second (M-PUMP's `boardKept`): every pane's corner names neither the latest version nor the chain's count, and is written again as the lag begins and ends (`markKept`) */
@@ -1515,11 +1533,12 @@ const cornerEl = (/** @type {NonNullable<typeof els>} */ E, /** @type {'a' | 'b'
 const formClass = (/** @type {PaneFit} */ F, /** @type {Pane} */ P) => (F.corner === 'head' ? ' head' : F.corner === 'compact' ? (P.open ? ' compact open' : ' compact') : '');
 
 /**
- * A pane's corner's markup (see the head): its one Tab stop, a group named by
- * its own words, as the plane's corner is (D5 K-57), in the fit's form
- * (`formClass`), marked with whether the board lagged as it was made
- * (`data-lags`); the items it holds and its rows kept on the pane as last
- * written (`Pane.corner`, `Pane.rows`).
+ * A pane's corner's markup (see the head): named by its own words, as the
+ * plane's corner is (D5 K-57), in the fit's form (`formClass`), marked with
+ * whether the board lagged as it was made (`data-lags`) — its element a
+ * group and its one Tab stop, until its stops are stood on its acts
+ * (T-LAYER's `setStops`); the items it holds and its rows kept on the pane as
+ * last written (`Pane.corner`, `Pane.rows`).
  * @param {Pane} P
  * @param {PaneFit} F
  */
@@ -1528,9 +1547,6 @@ function cornerMarkup(P, F) {
   P.corner = made.html; P.rows = made.rows;
   return `<div class="corner${formClass(F, P)}" data-corner="${esc(P.shows)}" data-lags="${lags()}" id="${cornerId(P.side)}" role="group" aria-labelledby="${cornerId(P.side)}" tabindex="0">${P.corner}</div>`;
 }
-
-/** the key a control in a pane's corner bears, which a rewrite of its items puts a focus back on (N-FOCUS's `keep`): a head's count of the items it folds; none for the corner's element itself, which a rewrite never replaces */
-const cornerControl = (/** @type {Element} */ el) => (/** @type {HTMLElement} */ (el).dataset?.more ? 'more' : null);
 
 /**
  * A pane's corner shaped for the fit's form (see the head): its class
@@ -1550,11 +1566,12 @@ function shapeCorner(c, F, P) {
 
 /**
  * A pane's corner written again, in place, in the scene's fit (see the head):
- * the element kept, so a focus standing on it stays, one on the count it
- * holds put back on the count standing in its place (FP-20); shaped for the
- * form (`shapeCorner`); the items as given, else made now (`cornerForm`), and
- * its rows kept on the pane. The band the heads reserve is set apart
- * (`setBand`).
+ * the element kept, its stops stood on the items written (T-LAYER's
+ * `setStops`), a focus standing on one of its acts put back on the act
+ * standing in its place, else on its first stop (FP-20; T-LAYER's
+ * `cornerAct`); shaped for the form (`shapeCorner`); the items as given, else
+ * made now (`cornerForm`), and its rows kept on the pane. The band the heads
+ * reserve is set apart (`setBand`).
  * @param {NonNullable<typeof els>} E
  * @param {Pane} P
  * @param {{html: string, rows: number} | null} [items]
@@ -1566,7 +1583,7 @@ function writeCorner(E, P, items = null) {
   c.dataset.corner = P.shows;
   c.dataset.lags = String(lags());
   shapeCorner(c, S.fit, P);
-  FOCUS.keep(c, cornerControl, () => { c.innerHTML = made.html; });
+  FOCUS.keep(c, LAYER.cornerAct, () => { c.innerHTML = made.html; LAYER.setStops(c, true, S.fit.corner === 'head', null); });
   P.corner = made.html; P.rows = made.rows;
 }
 
@@ -1783,6 +1800,8 @@ function stand(E, S, face) {
   for (const side of SIDES) {
     const P = S[side], pane = paneEl(E, side);
     pane.innerHTML = cornerMarkup(P, S.fit);
+    const c = cornerEl(E, side);
+    if (c) LAYER.setStops(c, true, S.fit.corner === 'head');
     swap(E, P);
     pane.setAttribute('tabindex', '0');
   }
@@ -1990,7 +2009,7 @@ function stopOf(E, S) {
 /** the element a stop names (`Stop`) as the scene stands now — a stop the panes' `compare` draws, the one standing returned (`returning`); null where it names none */
 function stopIn(/** @type {NonNullable<typeof els>} */ E, /** @type {Stop | null} */ stop) {
   if (stop === 'a' || stop === 'b') return paneEl(E, stop);
-  if (stop === 'a:corner' || stop === 'b:corner') return paneEl(E, stop === 'a:corner' ? 'a' : 'b').querySelector(':scope > .corner');
+  if (stop === 'a:corner' || stop === 'b:corner') { const c = cornerEl(E, stop === 'a:corner' ? 'a' : 'b'); return c ? LAYER.cornerStop(c) : null; }
   if (stop && typeof stop === 'object') return scene && scene.returned ? scene.returned.el : null;
   return stop === 'relevel' ? E.bar.querySelector('[data-relevel]') : stop === 'x' ? E.bar.querySelector('[data-x]') : null;
 }
@@ -3458,12 +3477,12 @@ export function readIn(side, k, passage = null) {
 
 /**
  * A pane's compact corner opened whole where it stands, on its act — a click
- * on a glyph or on a head's count, or Enter at the corner where it offers no
- * act of its own (`key`) — and closed again by the same act at the corner
- * opened (FP-26): beside its column, its items whole over what stands beside
- * it, its room the compact one, so nothing beside it moves (the style's); at
- * its document's head, every item whole beneath its rows. An act in the scene
- * (`actedIn`).
+ * on a glyph or on a head's count, the platform's from Enter or Space at them
+ * among them — and closed again by the same act at the corner opened, the
+ * words a glyph opened among them (FP-26): beside its column, its items whole
+ * over what stands beside it, its room the compact one, so nothing beside it
+ * moves (the style's); at its document's head, every item whole beneath its
+ * rows. An act in the scene (`actedIn`).
  * @param {'a' | 'b'} side
  */
 function openWhole(side) {
@@ -3473,6 +3492,25 @@ function openWhole(side) {
   S[side].open = !S[side].open;
   writeCorner(E, S[side]);
   draw();
+}
+
+/**
+ * A draft's kept word's act in a pane's corner (D5 K-57, K-74; B3-S2): its
+ * statement opened, or closed again (T-LAYER's `openStatement`), the corner
+ * written again in place and the heads' band with it; nothing where the pane
+ * holds a record the page derived or the draft has no kept state. An act in
+ * the scene (`actedIn`).
+ * @param {'a' | 'b'} side
+ */
+function keptAct(side) {
+  const S = scene, E = els;
+  if (!S || !E) return;
+  const P = S[side];
+  if (P.d.derived || !WRITE.keptOf(P.names)) return;
+  actedIn(S);
+  LAYER.openStatement(P.names);
+  writeCorner(E, P);
+  rebanded(E, S);
 }
 
 /** set the two ends level — each pane's matched line at one height, the bands' and lines' ends measured anew — once no pane is being set again (`whenSet`); an act in the scene (`actedIn`) */
@@ -4001,15 +4039,10 @@ function move(/** @type {HTMLElement} */ pane, /** @type {string} */ k) {
 
 /**
  * The scene's own keys: a pane's (K-60) move the pane the focus stands in —
- * pane A where it stands in neither — and Enter at a pane's corner takes the
- * corner's act (D5 K-57, as the plane's corner): on a head's count, the
- * corner opened whole (`openWhole`); else a draft's kept word's statement
- * opened or closed where the draft has a kept state (T-LAYER's
- * `openStatement`; K-74), else the version its corner offers read in its
- * place (`act`), else, where it stands compact or at its document's head, the
- * corner opened whole, or closed again (FP-26); each move and the read wait
- * for a pane being set again (`whenSet`), the key taken meanwhile. False for
- * any other key, and for Enter at a whole corner that offers no act.
+ * pane A where it stands in neither — each move waiting for a pane being set
+ * again (`whenSet`), the key taken meanwhile. False for any other key: a
+ * pane's corner's acts are buttons, whose Enter and Space the platform takes,
+ * each act its click's (`attach`).
  * @param {string} k the chord (N-KEYS's `chordOf`)
  * @returns {boolean} the scene took the key
  */
@@ -4017,17 +4050,7 @@ export function key(k) {
   const S = scene, E = els;
   if (!S || !E) return false;
   const at = typeof document !== 'undefined' ? /** @type {HTMLElement | null} */ (document.activeElement) : null;
-  const pane = at && E.paneB.contains(at) ? E.paneB : E.paneA, side = pane === E.paneB ? 'b' : 'a';
-  if (k === 'Enter') {
-    const corner = at && at.closest ? at.closest('.corner') : null, P = S[side];
-    if (!at || !corner || !pane.contains(corner)) return false;
-    if (at.closest('[data-more]')) { openWhole(side); return true; }
-    if (!P.d.derived && WRITE.keptOf(P.names)) { LAYER.openStatement(P.names); writeCorner(E, P); rebanded(E, S); return true; }
-    if (P.read != null) { act(side); return true; }
-    if (S.fit.corner === 'whole' && !P.open) return false;
-    openWhole(side);
-    return true;
-  }
+  const pane = at && E.paneB.contains(at) ? E.paneB : E.paneA;
   if (!MOVES.includes(k)) return false;
   actedIn(S);
   if (!S.updating) return move(pane, k);

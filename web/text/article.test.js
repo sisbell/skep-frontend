@@ -431,7 +431,7 @@ test('a transcluded origin\'s statement in its column\'s edge is headed by its k
 
 test('the corner: its kind first, then version k of n, then R20\'s teaching keyed by venue — the two items that never yield read first, on a notebook and on a realm board, at the bare address and at a pin, whole and compact; a draft\'s chip C-28 (foundations §3.1; C-346)', () => {
   /** the version statement as the corner sets it, carrying the count it is of */
-  const of = (/** @type {number} */ k, /** @type {number} */ n) => `<span class="version" data-members="${n}">${esc(t('F.version-of', { k, n }))}</span>`;
+  const of = (/** @type {number} */ k, /** @type {number} */ n) => `<button type="button" class="version" data-members="${n}" tabindex="-1">${esc(t('F.version-of', { k, n }))}</button>`;
   const c = cornerHTML(doc(), view());
   assert.ok(c.startsWith(kindSlot('published') + of(2, 2) + `<span class="st">${esc(venued('F.corner.latest'))}</span>`), `"published" in its slot, then "version 2 of 2", then the venue's clause and R20's teaching: ${c}`);
   assert.ok(c.includes('moves to each new one'));
@@ -441,13 +441,14 @@ test('the corner: its kind first, then version k of n, then R20\'s teaching keye
   const pinned = cornerHTML(doc({ addr: '1.0.1.0.3.1', members: null }), view({ members: 3 }));
   assert.ok(pinned.startsWith(kindSlot('published') + of(1, 3) + `<span class="st">${esc(venued('F.corner.pinned', { k: 1 }))}</span>`), `at a pin: "version 1 of 3", then its own version's state — ${pinned}`);
   const compact = cornerHTML(doc(), view(), true);
-  assert.ok(compact.startsWith(kindSlot('published') + of(2, 2) + `<span class="st glyph" role="img" aria-label="${esc(venued('F.corner.latest'))}">${esc(t('L.corner.bare'))}</span>`), `compact: the count where it stands whole, then the state's marker named by its words — ${compact}`);
+  assert.ok(compact.startsWith(kindSlot('published') + of(2, 2) + `<button type="button" class="st glyph" data-whole aria-expanded="false" aria-label="${esc(venued('F.corner.latest'))}" tabindex="-1">${esc(t('L.corner.bare'))}</button>`), `compact: the count where it stands whole, then the state's marker named by its words, the act that opens the corner whole — ${compact}`);
   const draft = cornerHTML(doc({ kind: 'draft', meta: null }), draftView({ localTrust: true }));
   assert.ok(draft.startsWith(kindSlot('draft')), `"draft" in its slot, where an edition's says "published": ${draft}`);
   assert.ok(draft.includes(t('C-28.flag-on')) && !draft.includes(t('C-28') + '<'), 'flag-on never renders "Readable by you alone"');
   const off = cornerHTML(doc({ kind: 'draft', meta: null }), draftView({ localTrust: false }));
   assert.ok(off.includes('Readable by you alone'));
-  assert.ok(![c, draft, off].some((h) => h.includes('tabindex')), 'no item takes a focus of its own: the corner is one stop (K-57)');
+  assert.ok([c, draft, off].every((h) => !h.includes('tabindex="0"')) && (c.match(/<button /g) || []).length === 1 && ![draft, off].some((h) => h.includes('<button')),
+    'the version statement the edition\'s one act, a button out of the Tab order as made — its holder stands the corner\'s stops (K-57) — and a draft\'s corner, no kept state set, holding none');
 });
 
 test('every corner\'s first slot is its document\'s kind, the one item it leads with, in a box the widest of its words wide whatever it shows: "draft" where an edition\'s says "published", in either form, its words never folded into a head\'s count; an empty box named as being read while no read has told it, the corner saying nothing past it; "not read" where its metadata\'s read failed; a refused document\'s corner its own words alone, no slot (issue #423\'s design decision: "every corner\'s first slot is the kind"; FP-34)', () => {
@@ -468,7 +469,7 @@ test('every corner\'s first slot is its document\'s kind, the one item it leads 
   }
 });
 
-test('a draft\'s corner carries its kept state in a slot of fixed width — the longest of the three words\' as the view measures them — the word and its string named on it, an empty box of that width hidden from assistive technology while no state is set, before the chip in either form; the word\'s act opens the statement whole on a line of its own, the save chord\'s line at "kept" and "nothing to save —" before the word and its reason at the other two; the corner carries no "past states" act while the strings table holds no reason for an inert one; an edition\'s corner is unchanged (B3-S1, B3-S2; D5 K-57, K-74; FP-34)', () => {
+test('a draft\'s corner carries its kept state in a slot of fixed width — the longest of the three words\' as the view measures them — the word and its string named on it, a disclosure button saying whether its statement stands open, its words alone where the view asks no act, an empty box of that width hidden from assistive technology while no state is set, before the chip in either form; the word\'s act opens the statement whole on a line of its own, the save chord\'s line at "kept" and "nothing to save —" before the word and its reason at the other two; the corner carries no "past states" act while the strings table holds no reason for an inert one; an edition\'s corner is unchanged (B3-S1, B3-S2; D5 K-57, K-74; FP-34)', () => {
   const draft = doc({ kind: 'draft', meta: null });
   /** @type {Array<[import('../write/write.js').KeptState['word'], string]>} */
   const WORDS = [['kept', 'B3.kept'], ['not yet kept', 'B3.not-yet-kept'], ['not kept', 'B3.not-kept']];
@@ -479,20 +480,22 @@ test('a draft\'s corner carries its kept state in a slot of fixed width — the 
   assert.ok(empty.startsWith(`${kind}<span class="kept-line"><span class="kept-word pending" aria-hidden="true" style="width:${em}em"></span></span><span class="chip"`), `no state set: after the kind, an empty box of the slot's width before the chip — ${empty}`);
   for (const [word, id] of WORDS) {
     const whole = cornerHTML(draft, draftView({ kept: { word, reason: null } })), compact = cornerHTML(draft, draftView({ kept: { word, reason: null } }), true);
-    const slot = `<span class="kept-line"><span class="kept-word" data-kept="${word}" data-string="${id}" style="width:${em}em">${esc(t(id))}</span></span>`;
+    const slot = `<span class="kept-line"><button type="button" class="kept-word" data-kept="${word}" data-string="${id}" style="width:${em}em" aria-expanded="false" tabindex="-1">${esc(t(id))}</button></span>`;
     assert.ok(whole.startsWith(kind + slot) && whole.indexOf('<span class="chip"') === kind.length + slot.length, `${word}: the kind, the word in its slot, the chip after it — ${whole}`);
     assert.ok(compact.startsWith(kind + slot) && compact.includes('class="chip glyph"'), `${word}: compact, the word keeps its words beside the glyph — ${compact}`);
     assert.ok(!whole.includes('kept-statement') && !compact.includes('kept-statement'), `${word}: the statement closed`);
+    const words = cornerHTML(draft, draftView({ kept: { word, reason: null }, acts: false }));
+    assert.ok(words.includes(`<span class="kept-line"><span class="kept-word" data-string="${id}" style="width:${em}em">${esc(t(id))}</span></span>`) && !words.includes('<button'), `${word}: its words alone where the view asks no act — ${words}`);
   }
   const kept = cornerHTML(draft, draftView({ kept: { word: 'kept', reason: null }, keptOpen: true }));
-  assert.ok(kept.includes(`</span><span class="kept-statement" data-string="B3.save.kept">${esc(t('B3.save.kept'))}</span><span class="chip"`), `kept: the save chord's line whole, on a line of its own after the word — ${kept}`);
+  assert.ok(kept.includes(`</span><span class="kept-statement" data-string="B3.save.kept">${esc(t('B3.save.kept'))}</span><span class="chip"`) && kept.includes('aria-expanded="true"'), `kept: the save chord's line whole, on a line of its own after the word, the word saying its statement stands open — ${kept}`);
   const reason = 'the board is not answering';
   const held = cornerHTML(draft, draftView({ kept: { word: 'not yet kept', reason }, keptOpen: true }));
   assert.ok(held.includes(`<span class="kept-statement" data-string="B3.save.before">${esc(`${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-yet-kept'), reason })}`)}</span>`), `not yet kept: "nothing to save —" before the word, the reason on the act — ${held}`);
   const refused = cornerHTML(draft, draftView({ kept: { word: 'not kept', reason: null }, keptOpen: true }));
   assert.ok(refused.includes(`<span class="kept-statement" data-string="B3.save.before">${esc(`${t('B3.save.before')} ${t('B3.not-kept')}`)}</span>`), 'not kept with no reason: "nothing to save —" before the word alone');
   assert.deepEqual([keptStatement({ word: 'kept', reason: 'ignored' }), keptStatement({ word: 'not kept', reason: 'r' })], [{ id: 'B3.save.kept', text: t('B3.save.kept') }, { id: 'B3.save.before', text: `${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-kept'), reason: 'r' })}` }], 'the statement by the word: at "kept" its own line whatever reason stands; at the others the word and the reason');
-  for (const h of [empty, kept, held, refused]) assert.ok(!h.includes(t('B3.past-states')) && !h.includes('tabindex'), 'no "past states" act: the strings table holds its words and no reason for an inert one; no item takes a focus of its own (K-57)');
+  for (const h of [empty, kept, held, refused]) assert.ok(!h.includes(t('B3.past-states')) && !h.includes('tabindex="0"') && (h.match(/<button /g) || []).length === (h === empty ? 0 : 1), 'no "past states" act: the strings table holds its words and no reason for an inert one; the kept word, where a state is set, the one act, out of the Tab order as made (K-57)');
   assert.ok(!cornerHTML(doc(), view({ kept: { word: 'kept', reason: null }, keptOpen: true })).includes('kept-'), 'an edition\'s corner carries no kept slot, whatever state is handed in');
 });
 
@@ -518,19 +521,20 @@ test('the corner at a pinned version names it — its own number of the count it
   assert.ok(!cornerHTML(member, view()).includes('class="version"'), 'no count handed in, none of its own: no statement');
 });
 
-test('a reading scene\'s pane\'s corner, handed its act and the version its act found lacking the passage, offers "read version ⟨n⟩" and says the passage is not in that version, neither item a control; the plane\'s corner handed the read a newer version\'s arrival offers carries it as a control the pointer and → reach, in either form, never a Tab stop; a corner handed neither offers neither (issues #160, #240; D5 K-57)', () => {
+test('a reading scene\'s pane\'s corner, handed its act and the version its act found lacking the passage, offers "read version ⟨n⟩" — its one act, a button — and says the passage is not in that version, its version statement words alone; the plane\'s corner handed the read a newer version\'s arrival offers carries it as a button after the version statement\'s, in either form, each out of the Tab order as made; a corner handed neither offers neither (issues #160, #240; D5 K-57)', () => {
   const member = doc({ addr: '1.0.1.0.3.2', members: null });
   const pane = cornerHTML(member, view({ scene: true, members: 3, read: 3, lacks: 2 }));
-  assert.ok(pane.includes(`<span class="read" data-read="3">${esc(t('F.versions.read', { k: 3 }))}</span>`), `the act, naming the version it reads: ${pane}`);
+  const act = `<button type="button" class="read" data-read="3" tabindex="-1">${esc(t('F.versions.read', { k: 3 }))}</button>`;
+  assert.ok(pane.includes(act), `the act, naming the version it reads: ${pane}`);
   assert.ok(pane.includes(`<span class="lacks">${esc(t('F.floating.member', { k: 2 }))}</span>`), 'the version said to lack the passage');
   assert.ok(pane.indexOf(t('F.version-of', { k: 2, n: 3 })) < pane.indexOf('class="lacks"') && pane.indexOf('class="lacks"') < pane.indexOf('class="read"'), 'in the corner\'s one order: the version statement, what it lacks, then the act');
-  assert.ok(!pane.includes('tabindex') && !pane.includes('role="button"'), 'in a pane no item is a control: its act is the pane\'s corner\'s, by Enter and a click (SC)');
+  assert.ok((pane.match(/<button /g) || []).length === 1 && pane.includes(`<span class="version" data-members="3">`) && !pane.includes('tabindex="0"'), 'in a pane the read its corner\'s one act, the version statement words alone (SC)');
   const offered = cornerHTML(member, view({ members: 3, read: 3 })), compact = cornerHTML(member, view({ members: 3, read: 3 }), true);
-  const act = `<span class="read" data-read="3" role="button" tabindex="-1">${esc(t('F.versions.read', { k: 3 }))}</span>`;
   assert.ok(offered.includes(act) && offered.indexOf(t('F.version-of', { k: 2, n: 3 })) < offered.indexOf(act), `the plane's: the read offered after the version statement, a control never in the Tab order — ${offered}`);
   assert.ok(compact.includes(act), `compact as whole: the offer stands in either form (FP-26) — ${compact}`);
   const plane = cornerHTML(member, view({ members: 3 }));
-  assert.ok(!plane.includes('data-read') && !plane.includes('class="lacks"') && !plane.includes('tabindex'), 'handed neither: neither, and no item a stop of its own — the corner is one stop (K-57)');
+  assert.ok(!plane.includes('data-read') && !plane.includes('class="lacks"') && !plane.includes('tabindex="0"') && (plane.match(/<button /g) || []).length === 1, 'handed neither: neither, the version statement its one act, out of the Tab order as made — its holder stands the corner\'s stops (K-57)');
+  assert.ok(!cornerHTML(member, view({ members: 3, read: 3, acts: false })).includes('<button'), 'where the view asks no act: words alone');
 });
 
 test('the article holds no corner: its items stand beside it, outside the box that clips the article', () => {
@@ -599,15 +603,20 @@ test('the others\' count stands in its column\'s edge — the block\'s first chi
   assert.ok([style1, style2].every((st) => Math.abs(own(st, 'line-height') * size(1) - LINE_H) < 1e-9), 'its first line as tall as its block\'s first line');
 });
 
-test('the corner compact: a usual state its glyph, named whole by its words, a number and an exception keeping theirs (FP-26; issue #151)', () => {
+test('the corner compact: a usual state its glyph, named whole by its words, the act that opens the corner whole, saying whether it stands opened — opened, its words the act that compacts it again — a number and an exception keeping theirs; words alone where the view asks no act (FP-26; issue #151)', () => {
   const latest = cornerHTML(doc(), view(), true), pinned = cornerHTML(doc({ addr: '1.0.1.0.3.1' }), view({ members: 3 }), true);
-  const words = (/** @type {string} */ html) => (/<span class="st glyph" role="img" aria-label="([^"]*)">([^<]*)<\/span>/.exec(html) || []).slice(1);
+  const words = (/** @type {string} */ html) => (/<button type="button" class="st glyph" data-whole aria-expanded="false" aria-label="([^"]*)" tabindex="-1">([^<]*)<\/button>/.exec(html) || []).slice(1);
   assert.deepEqual(words(latest), [esc(venued('F.corner.latest')), esc(t('L.corner.bare'))], 'the bare address: its version marker unlit, named by its state\'s words');
   assert.deepEqual(words(pinned), [esc(venued('F.corner.pinned', { k: 1 })), esc(t('L.corner.pinned'))], 'a pinned version: its marker lit');
-  assert.ok(latest.includes(`<span class="version" data-members="2">${esc(t('F.version-of', { k: 2, n: 2 }))}</span>`) && pinned.includes(esc(t('F.version-of', { k: 1, n: 3 }))), '"version ⟨k⟩ of ⟨n⟩" keeps its words');
+  assert.ok(latest.includes(`<button type="button" class="version" data-members="2" tabindex="-1">${esc(t('F.version-of', { k: 2, n: 2 }))}</button>`) && pinned.includes(esc(t('F.version-of', { k: 1, n: 3 }))), '"version ⟨k⟩ of ⟨n⟩" keeps its words');
   assert.ok(latest.startsWith(kindSlot('published')) && pinned.startsWith(kindSlot('published')), 'the kind keeps its words');
   const draft = cornerHTML(doc({ kind: 'draft', meta: null }), draftView(), true);
-  assert.ok(draft.includes(`<span class="chip glyph" data-chip="1" role="img" aria-label="${esc(t('C-28.flag-on'))}">${esc(t('L.corner.draft'))}</span>`), `a draft's chip its glyph, named by C-28's words: ${draft}`);
+  assert.ok(draft.includes(`<button type="button" class="chip glyph" data-chip="1" data-whole aria-expanded="false" aria-label="${esc(t('C-28.flag-on'))}" tabindex="-1">${esc(t('L.corner.draft'))}</button>`), `a draft's chip its glyph, named by C-28's words: ${draft}`);
+  const opened = cornerHTML(doc(), view({ opened: true }), true), whole = cornerHTML(doc(), view({ opened: true }));
+  assert.ok(opened.includes(`aria-label="${esc(venued('F.corner.latest'))}"`) && opened.includes('aria-expanded="true"'), `opened whole on its act, the glyph says the corner stands opened — ${opened}`);
+  assert.ok(whole.includes(`<button type="button" class="st" data-whole aria-expanded="true" tabindex="-1">${esc(venued('F.corner.latest'))}</button>`), `the corner opened whole: its state's words the act that compacts it again — ${whole}`);
+  const plain = cornerHTML(doc(), view({ acts: false }), true);
+  assert.ok(plain.includes(`<span class="st glyph" role="img" aria-label="${esc(venued('F.corner.latest'))}">${esc(t('L.corner.bare'))}</span>`) && !plain.includes('<button'), `where the view asks no act: the glyph named by its words, no act — ${plain}`);
   const counted = cornerHTML(doc(), view({ wholeLinks: 4 }), true), withheld = cornerHTML(doc({ refused: 'withheld' }), view(), true);
   assert.ok(counted.includes(esc(t('F.whole-links', { n: 4 }))) && withheld.includes(tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' })) && !withheld.includes('glyph'), 'the whole-document count and a withheld document\'s state keep their words, its owner in the identifier\'s face');
   assert.ok(!cornerHTML(doc(), view()).includes('glyph'), 'whole: no glyph');
@@ -616,10 +625,11 @@ test('the corner compact: a usual state its glyph, named whole by its words, a n
 test('while the board lags the corner names neither the latest version nor the chain\'s count: the bare address\'s state its kind, the version statement "version ⟨k⟩", standing for the versions list\'s act, then its venue\'s clause alone — compact, its marker unlit, named so; a pinned version\'s state keeps its words (issue #367\'s design decision: "corners drop \'the latest\' and \'of ⟨n⟩\'")', () => {
   const lagging = view({ lags: true });
   const latest = cornerHTML(doc(), lagging), compact = cornerHTML(doc(), lagging, true), pinned = cornerHTML(doc({ addr: '1.0.1.0.3.1' }), view({ members: 3, lags: true }));
-  assert.ok(latest.startsWith(`${kindSlot('published')}<span class="version">${esc(t('L.version', { k: 2 }))}</span><span class="st">${esc(t('F.published.notebook'))}</span>`) && !latest.includes(esc(t('F.corner.latest'))), `the bare address: its kind, "version 2", then its venue's clause alone, never the latest — ${latest}`);
-  assert.ok(compact.includes(`<span class="st glyph" role="img" aria-label="${esc(t('F.published.notebook'))}">${esc(t('L.corner.bare'))}</span>`), `compact: its marker unlit, named by its venue's clause alone — ${compact}`);
-  assert.ok(latest.includes(`<span class="version">${esc(t('L.version', { k: 2 }))}</span>`) && !latest.includes(esc(t('F.version-of', { k: 2, n: 2 }))), `"version ⟨k⟩", never of the count — ${latest}`);
-  assert.ok(pinned.includes(esc(venued('F.corner.pinned', { k: 1 }))) && pinned.includes(`<span class="version">${esc(t('L.version', { k: 1 }))}</span>`), `a pinned version: its state\'s words, its statement "version ⟨k⟩" — ${pinned}`);
+  const version = (/** @type {number} */ k) => `<button type="button" class="version" tabindex="-1">${esc(t('L.version', { k }))}</button>`;
+  assert.ok(latest.startsWith(`${kindSlot('published')}${version(2)}<span class="st">${esc(t('F.published.notebook'))}</span>`) && !latest.includes(esc(t('F.corner.latest'))), `the bare address: its kind, "version 2", then its venue's clause alone, never the latest — ${latest}`);
+  assert.ok(compact.includes(`<button type="button" class="st glyph" data-whole aria-expanded="false" aria-label="${esc(t('F.published.notebook'))}" tabindex="-1">${esc(t('L.corner.bare'))}</button>`), `compact: its marker unlit, named by its venue's clause alone — ${compact}`);
+  assert.ok(latest.includes(version(2)) && !latest.includes(esc(t('F.version-of', { k: 2, n: 2 }))), `"version ⟨k⟩", never of the count — ${latest}`);
+  assert.ok(pinned.includes(esc(venued('F.corner.pinned', { k: 1 }))) && pinned.includes(version(1)), `a pinned version: its state\'s words, its statement "version ⟨k⟩" — ${pinned}`);
   assert.ok(cornerHTML(doc(), view({ lags: false })).includes(esc(t('F.version-of', { k: 2, n: 2 }))), 'no lag: "version ⟨k⟩ of ⟨n⟩"');
 });
 
