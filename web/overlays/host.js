@@ -486,7 +486,7 @@ function raise() {
   current = o;
   writeInto(el, o, 'overlay', true);
   emptied(stackEl);
-  if (held) FOCUS.land((key ? el.querySelector(controlOf(key)) : null) || firstControl(el, o.first), {});
+  if (held) FOCUS.land((key ? el.querySelector(controlOf(key)) : null) || firstControl(el, o.first));
   FOCUS.close('notice');
   FOCUS.open('overlay', { el, from: held ? null : document.activeElement, byKey: false });
 }

@@ -161,10 +161,14 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #findnote { margin-top:4px; color:var(--dim); font-size:11px; }
 #findnote:empty { display:none; }
 
-/* the ARIA mirror (S3 Q6; law 7) — the one accessible rendering, off the visible plane; shown while the focus ring is
-   drawn (N-WALK sets `shown` by N-FOCUS's rule): a keyboard user sees the list they stand in, a pointer's landing shows none */
-#mirror { position:fixed; left:-10000px; top:0; width:520px; max-height:40vh; overflow:auto; z-index:15; }
-#mirror.shown { left:8px; top:auto; bottom:8px; }
+/* the ARIA mirror (S3 Q6; law 7) — the one accessible rendering, placed by N-WALK each frame (`place`): hidden, transparent
+   and standing over the walk's element's box on screen, its current item filling that box, so a magnifier that follows the
+   focus comes to where keys start; shown after a walk key's move (`shown`, the walk's panel), opaque, whole inside the window
+   and clear of that box: a keyboard user sees the list they stand in, and a pointer's act shows none. It takes no press, shown
+   or hidden: a press over it lands on what lies beneath */
+#mirror { position:fixed; left:-10000px; top:0; width:520px; max-height:40vh; overflow:auto; z-index:15; pointer-events:none; }
+#mirror:not(.shown) { opacity:0; padding:0; border-width:0; overflow:visible; max-height:none; max-width:none; }
+#mirror:not(.shown) li[aria-selected="true"] { position:absolute; left:0; top:0; width:100%; height:100%; }
 #mirror ul { list-style:none; margin:0; padding:0 0 0 10px; }
 #mirror li { padding:1px 4px; border-radius:3px; }
 #mirror li:focus { outline:2px solid var(--accent); background:#1c2430; }

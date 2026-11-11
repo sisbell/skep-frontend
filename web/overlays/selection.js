@@ -34,7 +34,7 @@
 // one the platform made by the document its moving end lies in (T-LAYER's
 // `movingPart`) — keeps the caret first, where it stood,
 // owing the frame nothing (T-LAYER's `leaveCaret`), and stands the walk on
-// the span its moving end is in, the ring out (N-WALK's `focusTo`), so the
+// the span its moving end is in, aimed at there (N-WALK's `focusTo`), so the
 // next key acts at the selection and never types at the caret (`leaveFor`).
 // One the platform made reaching past its document into another's text
 // is so marked (`Ends.across`): no key at a caret replaces it (N-KEYS').
@@ -307,7 +307,7 @@ function take(span, moved, how) {
  * the caret kept where it stood, owing the frame nothing (T-LAYER's
  * `leaveCaret`), and the walk stood on the span of the text shown holding the
  * selection's moving end — its first byte where its start moves, else its
- * last — the ring out and the platform's focus carried only where the mirror
+ * last — aimed at there, the platform's focus carried only where the mirror
  * held it (N-WALK's `focusTo`). Where the platform made the selection, the
  * document and the moving end are its focus point's (T-LAYER's
  * `movingPart`), so a range reaching into the caret's own draft from another
@@ -321,7 +321,7 @@ function leaveFor(span, how) {
   const at = part ? part.span : span, start = part ? part.backward : how.moves === 'start';
   if (!c || !c.live || c.addr === at.addr) return;
   LAYER.leaveCaret(false);
-  void WALK.focusTo(at.addr, movingByte(at, start), false, false, null, true);
+  void WALK.focusTo(at.addr, movingByte(at, start), false, null, true);
 }
 
 /**
@@ -641,7 +641,7 @@ function actedOn() {
  * open its scene, and at several they ask which. The
  * act's card takes the focus where a key made the act (rule 16).
  * @param {LiveSlot} which
- * @param {boolean} [byKey] a key made the act: the card takes the focus; a follow's landing draws the ring
+ * @param {boolean} [byKey] a key made the act: the card takes the focus
  * @param {Span | null} [at] the span the card whose slot made the act stands at; none for a chord, which acts on the span in focus
  * @returns {boolean} false where nothing in focus is what the slot acts on — no span, no link's stop for follow and read side by side, and for "see the links" no document: nothing is shown, and the caller gives the reason where the focus is (D5 §1.6)
  */

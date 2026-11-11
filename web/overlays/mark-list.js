@@ -86,7 +86,7 @@ export function reopen(left) {
 function opened(key, page, byKey, focus, left) {
   return HOST.opening(async (stands) => {
     if (!continuationOf(key)) return null;
-    await WALK.focusTo(key, null, byKey, true);
+    await WALK.focusTo(key, null);
     const f = WALK.current();
     return stands() && f && f.kind === 'mark' && f.addr === key ? key : null;
   }, () => { listing = { key, page }; render(byKey, focus); }, left);

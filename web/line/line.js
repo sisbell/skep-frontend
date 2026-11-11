@@ -370,7 +370,7 @@ export function step(dir) {
   const i = live.findIndex((b) => b === document.activeElement);
   const n = live[Math.max(0, Math.min(live.length - 1, (i < 0 ? 0 : i) + dir))];
   stop = n.dataset.act || stop; roving();
-  FOCUS.land(n, { byKey: true });
+  FOCUS.land(n);
   return true;
 }
 

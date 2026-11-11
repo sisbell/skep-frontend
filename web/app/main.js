@@ -60,7 +60,9 @@
 // O-FACES' `folded`, `unfold` — the reading scenes closed, N-GO's
 // `closed`, and the scene's panes standing kept with how each was set,
 // SC's `keptPanes`, `paneLift`, and the hint its inert act raises and a press
-// of its acts ends, O-HINT's `show`, `act`); SC's own end, a Back from its entry
+// of its acts ends, O-HINT's `show`, `act`); N-WALK's Enter at the walk's
+// element, an activation reaching a mirror item made as the line's and a
+// hint's next act and as N-KEYS' `activate`; SC's own end, a Back from its entry
 // (N-GO's `closeScene`), and
 // the faces a stop the reader returned to shows at its site (O-FACES'
 // `reaching`, `floating`, `held`); O-LAND's hand-off and its pieces' element;
@@ -83,8 +85,9 @@
 // (N-FIND's `refresh`), mark the mirror's
 // documents, Back's light, the landing's description and the kept clauses in
 // place (N-WALK's `markExpanded`, `markLocated`, `markDescribed`,
-// `markKept`), then P-RENDER, BM, O-HOST's place and the find's (N-FIND's
-// `place`), the landing's line
+// `markKept`), then P-RENDER, BM, the mirror placed by the walk's element's
+// box on screen (N-WALK's `place`, P-RENDER's `focusBox`), O-HOST's place and
+// the find's (N-FIND's `place`), the landing's line
 // (O-LAND's `render`), the hint (O-HINT's `render`), the scene's ties and its
 // panes' kept clauses where the
 // scene is open (SC's `draw`, `markKept`), the one line where what M-PUMP
@@ -240,6 +243,8 @@ function loop(/** @type {number} */ now) {
     WALK.markKept();
     const lod = RENDER.draw();
     BM.draw();
+    const top = LINE.bottom();
+    WALK.place(RENDER.focusBox(CAM.visibleView(top)), top, !CAM.flying());
     HOST.place();
     FIND.place();
     LANDING.render();
@@ -305,7 +310,7 @@ function whereIs(/** @type {EventTarget | null} */ target) {
  * the index lists (P-CAM's `setDeepest`), then the launch frame (N-GO's
  * `launch`) — HOME, the trail's first entry, where a board is held; the
  * walk's root, saying why, where none is — the platform's focus on the walk's
- * element with the ring out (rule 21); then the one line's first layout
+ * element, no act having aimed it (rule 21); then the one line's first layout
  * (L-LINE's `fit`). At boot, and where the list read again opens a board the
  * boot found none of (M-PUMP's `onOpen`).
  */
@@ -337,7 +342,7 @@ async function boot() {
   LINE.attach(el('line'), { open: (byKey, at) => LEAP.open(at), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed(), panes: SCENE.keptPanes, paneLift: SCENE.paneLift, hint: (id, at) => HINT.show(id, null, { at }), acted: () => HINT.act() });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a), vanished: GO.vanished, atop: FIND.atop, newer: GO.newerAt });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn, text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null), first: LAYER.firstOfFar });
-  WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords() });
+  WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords(), enter: () => { LINE.act(); HINT.act(); return KEYS.activate(); } });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
   window.addEventListener('resize', () => { resize(); LINE.fit(); }); resize();
   document.addEventListener('copy', (e) => {
@@ -356,7 +361,7 @@ async function boot() {
     if (where === 'scene' && SCENE.isOpen() && SCENE.key(KEYS.chordOf(e))) { e.preventDefault(); return; }
     if (where === 'overlay' && !e.shiftKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
       const box = /** @type {HTMLElement | null} */ (document.activeElement && document.activeElement.closest('#overlay, #notice')) || el('overlay');
-      const items = /** @type {HTMLElement[]} */ ([...box.querySelectorAll('button:not([disabled]), input, [tabindex="0"]')]); const i = items.indexOf(/** @type {HTMLElement} */ (document.activeElement)); const n = items[Math.max(0, Math.min(items.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]; if (n) FOCUS.land(n, { byKey }); e.preventDefault(); return;
+      const items = /** @type {HTMLElement[]} */ ([...box.querySelectorAll('button:not([disabled]), input, [tabindex="0"]')]); const i = items.indexOf(/** @type {HTMLElement} */ (document.activeElement)); const n = items[Math.max(0, Math.min(items.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]; if (n) FOCUS.land(n); e.preventDefault(); return;
     }
     // the hint's button takes Enter and Space as its own, its act ending nothing; every other key at it is made as at the plane's stop
     if (where === 'hint' && (e.key === 'Enter' || e.key === ' ') && !e.metaKey && !e.ctrlKey && !e.altKey) return;

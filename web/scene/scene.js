@@ -1844,7 +1844,7 @@ export async function reopen(o, as = {}) {
     // the far end's pane the scene's first control, which a region closing over it falls back to; the stop it stood on the focus's
     FOCUS.open('scene', { el: E.root, from, byKey: true, first: E.paneB });
     const stood = stopIn(E, was.stop);
-    if (stood && stood !== E.paneB) FOCUS.land(stood, {});
+    if (stood && stood !== E.paneB) FOCUS.land(stood);
     if (S.returned) S.returned.landed = document.activeElement === S.returned.el;
     FOCUS.say(`${t('L.scene-label')} · ${S.a.shows} │ ${S.b.shows}`);
     // a scene that read its `compare` before showing answers the stop at once: its name says it where the focus lands
@@ -1876,7 +1876,7 @@ function relisted(S) {
   const s = S.strokes.find((x) => x.key === l.key);
   if (!s) { FOCUS.say(t('L.scene.stroke.gone')); return; }
   const btn = buttonOf(E, l.key), at = document.activeElement, take = l.focus && !!at && E.root.contains(at);
-  if (btn && take) FOCUS.land(btn, {});
+  if (btn && take) FOCUS.land(btn);
   showChanges(S, l.key, countOf(s), rowsOf(S, s), btn, take);
 }
 
@@ -3710,7 +3710,7 @@ function placeStrokes(E, S) {
   for (const b of /** @type {HTMLElement[]} */ ([...box.children])) {
     if (want.has(b.dataset.stroke || '') || (R && b === R.el)) continue;
     b.remove();
-    if (b === held) FOCUS.land(E.paneB, {});
+    if (b === held) FOCUS.land(E.paneB);
   }
   const root = E.root.getBoundingClientRect(), [A, B] = sidesOf(S);
   /** @type {Element | null} the button standing after the last placed, before which one coming into view is set */
@@ -3877,7 +3877,7 @@ function placeStop(E, S) {
   const to = stopFor(S.shared, S.next, { top: pane.scrollTop, h: pane.clientHeight });
   S.at = to ? to.i : null;
   if (!to) {
-    if (!stop.hidden) { stop.hidden = true; if (held) FOCUS.land(pane, {}); }
+    if (!stop.hidden) { stop.hidden = true; if (held) FOCUS.land(pane); }
     return;
   }
   const n = S.shared.length, id = n > 1 ? 'L.scene.shared' : 'L.scene.shared.1', vals = { D: S.b.shows, n };

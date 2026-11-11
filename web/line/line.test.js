@@ -365,7 +365,7 @@ test('the strip over a text holding typed words follows the text shown: its wind
   /** the view above the document's first line, its first row's tops in view, the walk kept on its first span */
   const keptAbove = async () => {
     const f = LAYER.foldOf(REC.doc(LONG)), s = LAYER.shapeOf(LONG);
-    await WALK.focusTo(LONG, 1, false, true, null, true);
+    await WALK.focusTo(LONG, 1, true, null, true);
     CAM.set({ x: LAYER.centreOf(LONG, null).x, y: s.y - 10 * f.fs, scale: 12.5 / f.fs });
     await WALK.retakeFromView(true);
     assert.ok(WALK.kept() && LINE.addressDisplay().doc === LONG, 'the walk kept on the document, off the view\'s centre');
@@ -387,7 +387,7 @@ test('the strip over a text holding typed words follows the text shown: its wind
   const many = 'A long line typed at the start of a short document. '.repeat(4) + '\n\n', last = /** @type {import('../model/records.js').Block} */ ([...REC.doc(D).blocks].reverse().find((b) => b.kind === 'para' && b.text.trim()));
   WRITE.addEdit(D, { pos: 1, width: 0, text: many });
   try {
-    await WALK.focusTo(D, last.pos + many.length, false, true, null, true);
+    await WALK.focusTo(D, last.pos + many.length, true, null, true);
     const c = LAYER.centreOf(D, last.pos + many.length);
     CAM.set({ x: c.x, y: c.y, scale: 12.5 / LAYER.foldOf(REC.doc(D)).fs });
     LINE.render();

@@ -11,9 +11,11 @@
 // machine will set it (`write.setKept`) and a draft's page-local edits
 // (`write.edits`); the page's own caret as it stands (`caret`); the mounted
 // articles' text and what stands of each by line (`mountedLines`); the
-// mirror's items; the camera, the focus and its owner's state, the focus
-// ring the canvas drew (`view.ring`) and the bounds it is clamped to
-// (`view.ringBounds`); the registration drift of each mounted box
+// mirror's items; the camera, the focus and its owner's state — the walk's
+// panel among it (`focus`) — the focus ring the canvas drew (`view.ring`),
+// the bounds it is clamped to (`view.ringBounds`) and the walk's element's
+// box on screen it circles and the mirror's item stands over
+// (`view.ringBox`); the registration drift of each mounted box
 // (`driftSample`), the containment of
 // each article's rows, its corner and the signs in its columns' edges
 // (`overlapCheck`) and the visibility
@@ -675,9 +677,9 @@ export function install(deps) {
     mountedLines: (/** @type {string} */ addr) => LAYER.mountedLines(addr),
     spanRects: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number | null} */ width = null) => LAYER.spanRects(addr, pos, width),
     mirror: { item: (/** @type {number} */ i) => WALK.mirrorItem(i), size: () => WALK.mirrorSize(), index: () => WALK.mirrorIndex(), siblings: () => WALK.siblingsNow().map((n) => ({ kind: n.kind, addr: n.addr, pos: n.pos })) },
-    view: { camera: () => CAM.view(), flying: () => CAM.flying(), focus: () => WALK.current(), ring: () => (RENDER.stats.ring ? { ...RENDER.stats.ring } : null), ringBounds, lod: () => lodOf(CAM.cam.scale), viewport: () => CAM.viewport(), set: (/** @type {{x:number,y:number,scale:number}} */ v) => { CAM.set(v); CAM.markDirty(); }, bounds: () => CAM.bounds() },
-    /** the focus's owner as it stands: the ring's rule, whether the plane holds the focus, the regions holding it oldest first */
-    focus: () => ({ ring: FOCUS.ringShown(), plane: FOCUS.planeHolds(), standing: FOCUS.standing() }),
+    view: { camera: () => CAM.view(), flying: () => CAM.flying(), focus: () => WALK.current(), ring: () => (RENDER.stats.ring ? { ...RENDER.stats.ring } : null), ringBounds, ringBox: () => RENDER.focusBox(CAM.visibleView(LINE.bottom())), lod: () => lodOf(CAM.cam.scale), viewport: () => CAM.viewport(), set: (/** @type {{x:number,y:number,scale:number}} */ v) => { CAM.set(v); CAM.markDirty(); }, bounds: () => CAM.bounds() },
+    /** the focus's owner as it stands: the ring's rule, whether the plane holds the focus, the regions holding it oldest first, and whether the walk's panel shows (N-WALK's `panelShown`) */
+    focus: () => ({ ring: FOCUS.ringShown(), plane: FOCUS.planeHolds(), standing: FOCUS.standing(), panel: WALK.panelShown() }),
     driftSample, overlapCheck, visible,
     beamAnchors, arrivalAnchors, barsOf, tailAnchors,
     /** a document's fold as the plane sets it: its size, step, room, outline and columns */

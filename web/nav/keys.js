@@ -169,8 +169,11 @@
 // while the scene stands its keys alone are read (`sceneKey`; D5 M-4), and
 // nothing under it takes one. Whether a key made an act is the
 // focus owner's one reading, handed in by the app with each key (`Ctx.byKey`;
-// FP-20), so a teleport or a re-take a key made puts the platform's focus on
-// its landing wherever the key was pressed, the ring drawn (rules 10, 12). →
+// FP-20), so a re-take a key made puts the platform's focus on the element it
+// lands on wherever the key was pressed (rules 10, 12), and a surface a key
+// opens takes the focus. Every key but a walk key or K-8 made at the plane,
+// and a modifier going down, hides the walk's panel as it is pressed
+// (N-WALK's `hidePanel`; D5 §4 rule 2). →
 // at a document below its reading scale (N-WALK's `collapsed`) takes Enter's
 // act, a teleport to its reading scale pushed on the trail (foundations
 // §2.2); at its reading scale → enters its spans (K-3). The paging key
@@ -336,6 +339,10 @@ const INERT_CHORDS = /** @type {Map<string, InertSlot>} */ (new Map([['Mod+Shift
 const LIVE_CHORDS = /** @type {Map<string, LiveSlot>} */ (new Map([['Mod+Shift+O', 'wrote'], ['Mod+Shift+R', 'uses'], ['Mod+Shift+L', 'links'], ['Mod+Enter', 'follow'], ['Mod+Shift+Enter', 'scene']]));
 /** the walk's keys at the plane (K-1 … K-5, K-7) */
 const WALK_KEYS = new Set(['↓', '↑', '→', '←', 'Home', 'End', 'Enter']);
+/** the keys that make no act of their own as they go down: a modifier held for a chord */
+const MODIFIERS = new Set(['Shift', 'Meta', 'Control', 'Alt', 'AltGraph']);
+/** does a key at the focus keep the walk's panel standing: a walk key or K-8 made at the plane, or a modifier going down (N-WALK's `hidePanel`) */
+const keepsPanel = (/** @type {KeyboardEvent} */ e, /** @type {string} */ chord, /** @type {Ctx} */ ctx) => MODIFIERS.has(e.key) || (ctx.where === 'plane' && (WALK_KEYS.has(chord) || chord === 'Shift+↓' || chord === 'Shift+↑'));
 /** a find chord's move (K-91): 1 the next, -1 the previous — Mod+G and Mod+Shift+G, and F3 and Shift+F3 elsewhere than macOS — 0 for any other chord */
 const findDir = (/** @type {string} */ chord) => (chord === 'Mod+G' || (!MAC && chord === 'F3') ? 1 : chord === 'Mod+Shift+G' || (!MAC && chord === 'Shift+F3') ? -1 : 0);
 
@@ -504,7 +511,9 @@ function siteSays(e, ctx, writing = null) {
  * during an IME composition. The navigation acts are made at once; every
  * other key the page would act on while a jump is in the air — or while the
  * keys it held are being made — waits for its landing (`hold`; see the head),
- * save the line's ← and →, which move among its acts.
+ * save the line's ← and →, which move among its acts. Every key but a walk
+ * key or K-8 at the plane, and a modifier going down, hides the walk's panel
+ * as it is pressed (N-WALK's `hidePanel`; see the head).
  * @param {KeyboardEvent} e
  * @param {Ctx} ctx
  * @returns {Promise<boolean>}
@@ -514,6 +523,7 @@ export async function dispatch(e, ctx) {
   const chord = chordOf(e);
   const mod = MAC ? e.metaKey : e.ctrlKey;
   ctx = whereNow(ctx);
+  if (!keepsPanel(e, chord, ctx)) WALK.hidePanel();
   // a paste or a cut at a span of a draft the person may edit holding no caret (K-93, K-72): the draft's line in their own words, its hint, nothing placed and nothing removed
   if (mod && !e.shiftKey && (chord === 'Mod+V' || chord === 'Mod+X') && bareDraftSpan(ctx)) { HINT.show(chord === 'Mod+V' ? 'B3.caret.enter.paste' : 'B3.caret.cut', null, hinted(e, ctx)); return true; }
   // a paste at the walk's span of an edition of the person's own or of another's document (K-72, K-93): its document's line, its hint, nothing placed
@@ -605,7 +615,7 @@ function route(e, chord, ctx) {
     if (chord === '→' || chord === '←') {
       const acts = /** @type {HTMLElement[]} */ ([...corner.querySelectorAll('[data-read], [data-more]')]), i = on ? acts.indexOf(on) : -1;
       const to = chord === '←' ? (on ? acts[i - 1] || corner : null) : acts[i + 1] || null;
-      return to ? () => { e.preventDefault(); FOCUS.land(to, { byKey }); return true; } : null;
+      return to ? () => { e.preventDefault(); FOCUS.land(to); return true; } : null;
     }
     if (chord !== 'Enter') return null;
     if (on && on.dataset.more) return () => { LAYER.openCorner(addr); return true; };
@@ -1018,8 +1028,8 @@ function followAtCaret(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
  * all the same — and closes the next thing in the order. An empty click on
  * the plane is the pointer's Esc (APP-INPUT's): one thing closed in the same
  * order at each click, the find's close and the scene's made as the
- * pointer's, the ring out, and the live caret's the last — the caret kept,
- * its span holding the walk with the ring drawn — so no click ends an
+ * pointer's, and the live caret's the last — the caret kept, its span holding
+ * the walk with the ring drawn and the panel hidden — so no click ends an
  * arrival (FP-21).
  * @param {boolean} [landed] a key held while a jump was in the air made it at the landing (`Ctx.landed`)
  * @param {boolean} [pointer] an empty click on the plane made it, not a key
@@ -1029,7 +1039,7 @@ export function esc(landed = false, pointer = false) {
   if (HOST.pending()) { HOST.endOpening(); return; }
   if (HOST.current() && !(landed && HOST.typing() && !HOST.notice())) { HOST.dismissInnermost(); return; }
   if (GO.abandon()) return;
-  if (FIND.isOpen() && !landed) { void FIND.close(!pointer); return; }
+  if (FIND.isOpen() && !landed) { void FIND.close(); return; }
   if (SCENE.isOpen()) { GO.closeScene(!pointer); return; }
   if (SEL.selected()) { SEL.clear(); return; }
   if (WALK.leaveText() || pointer) return;
@@ -1071,6 +1081,9 @@ async function activateFocus(byKey) {
   if (f.kind === 'link' && f.link) ANATOMY.open(f.link, null, byKey);
 }
 
+/** Enter's act on the walk's element (K-7; `activateFocus`), a key's: what an activation reaching a mirror item makes there, once the walk stands on it (N-WALK's `activate`) */
+export const activate = () => activateFocus(true);
+
 /**
  * A paging key (K-6): at reading scale, the view's centre over a column whose
  * foot the view already shows (PageDown) or whose top it shows (PageUp), the
@@ -1086,7 +1099,7 @@ function page(dir) {
   CAM.panBy(0, dir > 0 ? -VH * 0.9 : VH * 0.9);
 }
 
-/** a zoom chord (K-11): the camera stepped about the view's centre, the focus re-taken at the new grain with the ring drawn (rule 10) */
+/** a zoom chord (K-11): the camera stepped about the view's centre, the focus re-taken at the new grain and taken there (rule 10), the re-take aiming nothing (N-WALK's) */
 function zoomAboutFocus(/** @type {number} */ factor, /** @type {boolean} */ byKey) {
   const { VW, VH } = CAM.viewport();
   CAM.zoomAt(factor, VW / 2, VH / 2);

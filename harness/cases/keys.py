@@ -47,16 +47,18 @@ while it read: the face standing below the list — under its box, apart from
 it, inside the viewport — taking no focus, Esc closing the face first, the
 focus kept on the list's row, then the list (issue #265's design decision;
 FP-36); the focus ring drawn
-at the focus every teleport a key made lands — the box's Enter, Mod+[ and Mod+],
-Mod+0, Mod+Shift+H, Enter on the line's ‹ back (K-22), Mod+3, Enter on a
-trail list row (K-41), Enter on a document (K-7) — and at the focus
-PageDown re-takes, the ring clamped to the visible view (issue #141's design
-decision); a camera move ending over no document's region — Mod+= at the near
-band over the board's label cell, over a cell its account's index lists
-nothing in, past the board's left edge — re-taking the board or the account
-holding the view's centre, the one line naming it as mid scale does, its slot,
-strip and marker empty, the ring at the view's border or, the board out of
-the view, on its facing edge; PageDown past the first edition's last line
+at the focus every teleport lands, whatever made it — the box's Enter, Mod+[
+and Mod+], Mod+0, Mod+Shift+H, Enter on the line's ‹ back (K-22) and a click
+on it, Mod+3, Enter on a trail list row (K-41), Enter on a document (K-7) — and
+none at the focus PageDown re-takes until ↓ moves the walk, the ring clamped to
+the visible view (issues #141, #559); a camera move ending over no document's
+region — Mod+= at the near band over the board's label cell, over a cell its
+account's index lists nothing in, past the board's left edge — re-taking the
+board or the account holding the view's centre, the one line naming it as mid
+scale does, its slot, strip and marker empty, the ring drawn only where an act
+put the walk on that place first — at the view's border or, the board out of
+the view, on its facing edge — and none where the re-take moved the walk off
+the place an act put it on; PageDown past the first edition's last line
 keeping the walk on its span, the strip marking the view's window, the ring
 on the view's top edge across the span's column; the address segment one
 width, the acting segment at one x at WHOLE BOARD, HOME, the board and the
@@ -81,8 +83,9 @@ column's top — the view over a column whose foot it shows brought to the
 next column's text, half a gutter below the one line, the line naming the
 document paged and no label held over its text (issue #169's design
 decision: "Anything brought into view ... lands below the label"), and back by PageUp
-(issue #15); and no ring after a click on ‹ back (D5 §4 rule 2: drawn
-once a key has moved the focus); the scene a step on the trail (issue #50's
+(issue #15); and a click on ‹ back drawing the ring at its landing and no
+panel (D5 §4 rule 2: drawn wherever an act put the walk; issue #559); the
+scene a step on the trail (issue #50's
 design decision) — its opening one entry at the act, the entry ahead of the
 cursor dropped; its own end — Esc, Mod+-, ← in a pane, Mod+[ — a Back onto
 the entry it opened over, nothing pushed or dropped, the camera where it
@@ -169,14 +172,18 @@ press is keyed on legibility, never on whether text is mounted (§2.4): at em
 the same point on its bars does, and a drag along that text selects nothing
 and pans nothing, while at em 9 a click on its text selects the block whole,
 and a double-click on a word there, the page's frames running between its
-presses, selects the word, the page's selection and the platform's both;
+presses, selects the word, the page's selection and the platform's both —
+each pressed where no panel stands, the ring drawn after it on the block it
+stood the walk on and no panel (issue #559);
 and a drag begun on legible text keeps its article through a zoom below the
 threshold with the button down, the release taking the whole phrase and the
 frame after it taking the pointer from the article. At em 9 a press that
 finds the text not standing under it — the view set and the press made in one
 evaluation, no frame between — is held for the text and acts on it once the
 frame sets it: a click selects the block, a drag the bytes it crosses, as on
-the standing text, and neither moves the camera or the trail (issue #122). The
+the standing text, and neither moves the camera or the trail (issue #122),
+each pressed where no panel stands and drawing the ring where it stood the
+walk, no panel after it (issue #559). The
 copy of an item that holds no text (issue #161's design decision): Enter at the
 claimant's key record selects it whole, and its copy is its stand-in — its
 kind in the strings table's words, each key's label and its fingerprint, the
@@ -390,8 +397,8 @@ def ring(ctx):
 
 
 def ring_drawn(ctx, r, made):
-    """the check that the ring stands at the focus a key moved (D5 §4 rule 2: drawn once a key has moved the focus, the
-    platform's focus-visible rule). At reading scale a span's ring is its lit block, the ring's reading-scale form (D3),
+    """the check that the ring stands at the focus an act moved (D5 §4 rule 2: drawn while the walk stands where an act of
+    the person's put it, whatever made the act). At reading scale a span's ring is its lit block, the ring's reading-scale form (D3),
     and the canvas circles no mounted document; elsewhere it is the canvas box around the focused element."""
     f = ctx.js('window.__skep.view.focus()')
     rule = ctx.js('window.__skep.focus().ring')
@@ -925,7 +932,7 @@ def below_reading(ctx, r):
     art = article(DOC)
     ctx.js('''window.__gateHit = (x, y) => { const e = document.elementFromPoint(x, y), a = e && e.closest("#domlayer article.dtext");
       return !e ? null : e.id === "plane" ? "the plane" : a ? "the article of " + a.dataset.addr : e.id || e.tagName.toLowerCase(); }''')
-    seen = lambda: ctx.js('({cam: window.__skep.view.camera(), focus: window.__skep.view.focus(), trail: window.__skep.trail(), sel: window.__skep.selection(), '
+    seen = lambda: ctx.js('({cam: window.__skep.view.camera(), focus: window.__skep.view.focus(), trail: window.__skep.trail(), sel: window.__skep.selection(), ring: window.__skep.focus().ring, panel: window.__skep.focus().panel, '
                           'platform: window.__skep.platformSelection(), mounted: window.__skep.mountedAddrs().includes(%s), '
                           'pointer: (() => { const a = %s; return a ? getComputedStyle(a).pointerEvents : null; })()})' % (json.dumps(DOC), art))
     landing = ctx.js('window.__skep.scaleFor(%s, "em", %s)' % (json.dumps(DOC), READING_PX))
@@ -1003,6 +1010,9 @@ def below_reading(ctx, r):
                 and after['trail']['cursor'] == before['trail']['cursor'] and len(after['trail']['entries']) == len(before['trail']['entries']),
                 'at em 9 a click on a paragraph\'s plain character belongs to the text: it selects the block whole, and neither the camera nor the trail moves',
                 {'sel': after['sel'], 'block': block and (block['pos'], block['width']), 'cam': [before['cam'], after['cam']], 'cursor': [before['trail']['cursor'], after['trail']['cursor']]})
+        r.check(before['panel'] is False and after['panel'] is False and after['ring'] is True and bool(after['focus']) and after['focus']['pos'] == ch['pos'],
+                'the click pressed where no panel stands and shows none after it: the ring drawn on the block it stood the walk on (issue #559)',
+                {'panel': [before['panel'], after['panel']], 'ring': after['ring'], 'focus': after['focus'], 'block': ch['pos']})
         figures['legible'] = {'sel': after['sel'], 'pointer': before['pointer']}
         chord(ctx, 'Escape')
         chord(ctx, 'Escape')
@@ -1027,6 +1037,9 @@ def below_reading(ctx, r):
                 and walk == {'kind': 'block', 'addr': DOC, 'pos': wd['block']['pos']},
                 'the double-click moves neither the camera nor the trail, and stands the walk on the word\'s block',
                 {'cam': [before['cam'], after['cam']], 'cursor': [before['trail']['cursor'], after['trail']['cursor']], 'walk': walk, 'block': wd['block']['pos']})
+        r.check(before['panel'] is False and after['panel'] is False and after['ring'] is True,
+                'the double-click\'s second press lands on the text, no panel standing after its first, and the ring stands on the word\'s block, no panel (issue #559)',
+                {'panel': [before['panel'], after['panel']], 'ring': after['ring']})
         figures['double_click'] = {'word': wd['word'], 'at': wd['at'], 'sel': sel, 'platform': plat['span']}
         chord(ctx, 'Escape')
         chord(ctx, 'Escape')
@@ -1084,7 +1097,7 @@ def held_press(ctx, r):
     figures = {}
     ctx.js('''window.__gateHit = (x, y) => { const e = document.elementFromPoint(x, y), a = e && e.closest("#domlayer article.dtext");
       return !e ? null : e.id === "plane" ? "the plane" : a ? "the article of " + a.dataset.addr : e.id || e.tagName.toLowerCase(); }''')
-    seen = lambda: ctx.js('({cam: window.__skep.view.camera(), trail: window.__skep.trail(), sel: window.__skep.selection(), platform: window.__skep.platformSelection()})')
+    seen = lambda: ctx.js('({cam: window.__skep.view.camera(), trail: window.__skep.trail(), sel: window.__skep.selection(), platform: window.__skep.platformSelection(), ring: window.__skep.focus().ring, panel: window.__skep.focus().panel})')
     ctx.leap(DOC, WINDOW[0])
     chord(ctx, 'Escape')
     chord(ctx, 'Escape')
@@ -1110,6 +1123,7 @@ def held_press(ctx, r):
         # the same view from em 4, its article down: the view set and the press made in one evaluation, no frame between
         ctx.view_doc_em(DOC, 4)
         down = ctx.js('window.__skep.mounted(%s)' % json.dumps(DOC)) is None
+        unpanelled = ctx.js('window.__skep.focus().panel') is False
         before = ctx.js(PRESS % (json.dumps(cam9), json.dumps(points)))
         ctx.settle()
         ctx.frames(3)
@@ -1123,6 +1137,9 @@ def held_press(ctx, r):
         r.check(same_view({'cam': before['cam']}, after) and after['trail']['cursor'] == before['trail']['cursor'] and len(after['trail']['entries']) == len(before['trail']['entries']),
                 f'the held {name} moves neither the camera nor the trail: never a move to the place',
                 {'cam': [before['cam'], after['cam']], 'cursor': [before['trail']['cursor'], after['trail']['cursor']]})
+        r.check(unpanelled and after['panel'] is False and after['ring'] is True,
+                f'the held {name} is pressed where no panel stands, and shows none after it: the ring drawn where it stood the walk (issue #559)',
+                {'unpanelled_before': unpanelled, 'panel': after['panel'], 'ring': after['ring']})
         figures[name] = {'standing': want, 'held': sel, 'hit': before['hit']}
         chord(ctx, 'Escape')
         chord(ctx, 'Escape')
@@ -2285,9 +2302,11 @@ def retake_holds(ctx, r):
     from a view at the near band — ending over no document's region re-takes the place holding the view's centre: over
     the board's label cell the board, over a document's cell no box the plane draws stands in (M-REC's `known`) the
     account, and past the board's left edge the board; the one line names that place as mid scale names it, no
-    document named; and
-    the ring stands around the place's cell clamped to the visible view: at the view's border where the cell is wider than
-    the view, on the view's right edge where the board lies to the right of it. THE ADDRESS PART IS ONE WIDTH: the
+    document named. THE RING STANDS ONLY WHERE AN ACT PUT THE WALK (issue #559's design decision): the re-take onto the
+    board from HOME's account draws none; with the place an act put the walk on first — the board by WHOLE BOARD, the
+    account by a typed LEAP — the re-take landing back on it draws the ring around the place's cell clamped to the
+    visible view: at the view's border where the cell is wider than the view, on the view's right edge where the board
+    lies to the right of it. THE ADDRESS PART IS ONE WIDTH: the
     acting segment's left edge stands at one x, the address part at one width, at WHOLE BOARD, at HOME, on the board and the
     account so re-taken — their slot, strip and marker empty — on the far edition below its reading scale — its
     position strip drawn bare, no position and no window marked on it (issue #236) — and at a position. The step ends
@@ -2318,8 +2337,25 @@ def retake_holds(ctx, r):
         places.insert(1, ('the cell of %s, where the plane draws no box' % free[1], box['x'] + box['w'] / 2, box['y'] + box['h'] / 2, ('account', free[0]), '1 › ' + free[0], 'border'))
     else:
         r.check(False, 'a document\'s cell no box the plane draws stands in, in the claimant\'s account or the second (what the account\'s re-take stands on)', None)
+    # from HOME's account, which Mod+Shift+H aimed the walk at, a re-take onto the board draws no ring
+    ctx.set_view(label['x'] + label['w'] / 2, label['y'] + label['h'] / 2, near)
+    chord(ctx, '=', mods=('Meta',))
+    off = {'focus': state(ctx)['focus'], 'rule': ctx.js('window.__skep.focus().ring'), 'canvas': ring(ctx)['ring']}
+    r.check(bool(off['focus']) and off['focus']['kind'] == 'board' and off['rule'] is False and off['canvas'] is None,
+            'Mod+= over the board\'s label cell from HOME re-takes the board and draws no ring there: the act put the walk on the account (issue #559)', off)
     rings = {}
     for where, x, y, focus, text, edge in places:
+        # the place an act put the walk on first: the board by WHOLE BOARD, the account by a typed LEAP
+        if focus[0] == 'board':
+            chord(ctx, '0', mods=('Meta',))
+        else:
+            chord(ctx, 'l', mods=('Meta',))
+            ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+            ctx.drv.ime(focus[1])
+            ctx.frames(2)
+            chord(ctx, 'Enter')
+        aimed = state(ctx)['focus']
+        r.check(bool(aimed) and (aimed['kind'], aimed['addr']) == focus, 'an act puts the walk on %s %s before the re-take over %s' % (focus[0], focus[1], where), aimed)
         ctx.set_view(x, y, near)
         chord(ctx, '=', mods=('Meta',))
         states[where] = q = seen()
@@ -2391,18 +2427,24 @@ def focus_rules(ctx, r):
     chord(ctx, 'ArrowLeft')
     r.check(ctx.js('(() => { const e = document.activeElement; return e.closest("#line") ? e.dataset.act : null; })()') == first, '← moves it back (K-22)', {'first': first})
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
-    # D3: the lit block follows the ring's rule — drawn after a walk key, gone after a click (a pointer act), as every control loses its ring
+    # D3: the lit block follows the ring's rule — drawn after a walk key, the panel shown, and after a click that moves the walk,
+    # on the block clicked, the panel hidden (issue #559's design decision)
     ctx.leap(DOC, WINDOW[0])
     ctx.js('(() => { const i = document.getElementById("walk-" + window.__skep.mirror.index()); if (i) i.focus(); })()')
     chord(ctx, 'ArrowDown')
-    after_key = {'ring': ctx.js('window.__skep.focus().ring'), 'lit': marks(ctx, 'lit')}
+    panel = '({panel: window.__skep.focus().panel, shown: document.getElementById("mirror").classList.contains("shown")})'
+    after_key = dict(ctx.js(panel), ring=ctx.js('window.__skep.focus().ring'), lit=marks(ctx, 'lit'))
     ph, seen = phrase_at(ctx, DOC)
     if ph:
-        ctx.drv.mouse(*ph['start'])  # a click selects a block and puts the ring out
+        ctx.drv.mouse(*ph['start'])  # a click selects a block and stands the walk on it
         ctx.settle(); ctx.frames(2)
-        after_click = {'ring': ctx.js('window.__skep.focus().ring'), 'lit': marks(ctx, 'lit')}
-        r.check(after_key['ring'] is True and after_click['ring'] is False and after_click['lit'] == [],
-                'D3: the lit block follows the ring\'s rule — drawn after a walk key, gone after a click (a pointer act), the canvas circling no mounted document', {'after_key': after_key, 'after_click': after_click})
+        after_click = dict(ctx.js(panel), ring=ctx.js('window.__skep.focus().ring'), lit=marks(ctx, 'lit'), focus=state(ctx)['focus'])
+        f = after_click['focus'] or {}
+        r.check(after_key['ring'] is True and after_key['panel'] is True and after_key['shown']
+                and after_click['ring'] is True and f.get('kind') == 'block' and f.get('pos') == ph['block']['pos'] and after_click['lit'] == [ph['block']['pos']]
+                and after_click['panel'] is False and not after_click['shown'],
+                'D3: the lit block follows the ring\'s rule — drawn after a walk key, the panel shown, and after a click that moves the walk, on the block clicked alone, the panel hidden, the canvas circling no mounted document (issue #559)',
+                {'after_key': after_key, 'after_click': after_click, 'block': ph['block']['pos']})
         chord(ctx, 'Escape')
     # #88: a camera-key drag (hold Mod) over an article pans and selects nothing (K-10, M-8)
     ctx.leap(DOC, WINDOW[0])
@@ -3412,7 +3454,7 @@ def run(ctx):
     r.check(s['trail'] == cur and s['focus']['kind'] == 'account', 'Mod+] goes forward again', {'cursor': s['trail'], 'focus': s['focus']})
     ring_drawn(ctx, r, 'Mod+]')
     # the line's ‹ back (K-22): Enter on it, focused by script, is a key's Back, the ring drawn at its landing; a click on it
-    # is the pointer's, and the ring is out. Mod+] after each returns the cursor to HOME's entry
+    # is the pointer's, the ring drawn at its landing too and no panel (issue #559). Mod+] after each returns the cursor to HOME's entry
     ctx.js('window.__skep.lineAct()')
     ctx.frames(2)
     focused = ctx.js('(() => { const b = document.getElementById("line-back"); if (b) b.focus(); return !!b && !b.disabled && document.activeElement === b; })()')
@@ -3425,9 +3467,11 @@ def run(ctx):
     ctx.drv.mouse(button['x'], button['y'])
     ctx.settle()
     ctx.frames(2)
-    s, g = state(ctx), ring(ctx)
+    s = state(ctx)
     r.check(s['trail'] == cur - 1 and s['focus']['kind'] == 'board', 'a click on ‹ back goes back one trail entry (to WHOLE BOARD)', {'cursor': s['trail'], 'focus': s['focus']})
-    r.check(g['ring'] is None, 'a click on ‹ back draws no ring at its landing: the pointer moved the focus', g)
+    ring_drawn(ctx, r, 'a click on ‹ back')
+    shown = ctx.js('({panel: window.__skep.focus().panel, shown: document.getElementById("mirror").classList.contains("shown")})')
+    r.check(shown == {'panel': False, 'shown': False}, 'a click on ‹ back shows no panel at its landing: the ring alone (issue #559)', shown)
     chord(ctx, ']', mods=('Meta',))
     # a jump whose read learns the board says nothing about its address keeps its entry (issue #136's design decision;
     # FP-25): Enter on the address — the page holding nothing of it, the gate's invalidation door (reads alone) dropping
@@ -3945,17 +3989,23 @@ def run(ctx):
     r.check(abs((c3['y'] - c2['y']) * c2['scale'] - 0.9 * vh) < 2, 'below reading scale (em 5) PageDown pages the view by 0.9 of its height', {'dy_px': (c3['y'] - c2['y']) * c2['scale'], 'vh': vh})
     chord(ctx, 'PageUp')
     r.figures['paging'] = paging_holds(ctx, r)
-    # a camera move a key made re-takes the focus with the ring drawn at it (D5 §4 rules 2, 3): PageDown from a landing the
-    # gate's door made on the longest edition, which draws none, its first column's foot in view, brings the next column's
-    # text under the view's centre and moves the focus to the span there
+    # a camera move a key made re-takes the focus and draws no ring of its own (D5 §4 rules 2, 3; issue #559): PageDown from the
+    # longest edition's landing, its first column's foot in view, brings the next column's text under the view's centre and
+    # moves the focus to the span there, no ring on it — no act put the walk there — until ↓ moves the walk
     longest, _, _ = ctx.longest_edition()
     ctx.leap(longest)
-    f0, g0 = state(ctx)['focus'], ring(ctx)
+    f0 = state(ctx)['focus']
+    rule0 = ctx.js('window.__skep.focus().ring')
     chord(ctx, 'PageDown')
     f1 = state(ctx)['focus']
-    r.check(g0['ring'] is None and bool(f0) and bool(f1) and f1['kind'] == 'block' and f1['addr'] == longest and (f1['kind'], f1['addr'], f1['pos']) != (f0['kind'], f0['addr'], f0['pos']),
-            'PageDown from a landing that drew no ring re-takes the focus at the span now under the view\'s centre', {'doc': longest, 'from': f0, 'to': f1, 'ring_before': g0['ring']})
-    ring_drawn(ctx, r, 'PageDown')
+    after = {'rule': ctx.js('window.__skep.focus().ring'), 'canvas': ring(ctx)['ring'],
+             'lit': ctx.js('document.querySelectorAll(%s).length' % json.dumps('#domlayer article.dtext[data-addr="%s"] .sp.lit' % longest)), 'panel': ctx.js('window.__skep.focus().panel')}
+    r.check(rule0 is True and bool(f0) and bool(f1) and f1['kind'] == 'block' and f1['addr'] == longest and (f1['kind'], f1['addr'], f1['pos']) != (f0['kind'], f0['addr'], f0['pos'])
+            and after == {'rule': False, 'canvas': None, 'lit': 0, 'panel': False},
+            'PageDown from the landing, the ring drawn there, re-takes the focus at the span now under the view\'s centre and draws no ring there: no act put the walk on it (issue #559)',
+            {'doc': longest, 'from': f0, 'to': f1, 'ring_before': rule0, 'after': after})
+    chord(ctx, 'ArrowDown')
+    ring_drawn(ctx, r, '↓ after PageDown')
     chord(ctx, 'PageUp')
     r.figures['kept'] = kept_holds(ctx, r)
     # ---- the scene (K-62, K-63, K-64) ----------------------------------------------------------------

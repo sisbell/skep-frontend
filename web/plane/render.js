@@ -975,7 +975,9 @@ function spanLines(f) {
  * stands, the bounds of its lines (`spanLines`). Null at the walk's root
  * where no board is held, whose cell names none (FP-35), at a mark the frame
  * drew nowhere and at a span none of whose lines is laid out. What the ring
- * circles (`drawFocus`), and what a hint stands beside (O-HINT's).
+ * circles (`drawFocus`), what a hint stands beside (O-HINT's), and where the
+ * mirror's current item stands and the walk's panel keeps clear of (N-WALK's
+ * `place`).
  * @param {Rect} seen the visible view
  * @returns {Rect | null}
  */
@@ -1002,7 +1004,8 @@ export function focusBox(seen) {
 
 /**
  * The focus ring at the walk's element while the plane holds the focus and
- * a key moved it (N-FOCUS's rule; D5 §4 rule 2), around its box (`focusBox`);
+ * the walk stands where an act of the person's put it (N-FOCUS's rule; D5 §4
+ * rule 2), around its box (`focusBox`);
  * a span whose article stands is marked by its lit block instead, the ring's
  * reading-scale form (D3), wherever a line of it meets the visible view, so
  * the canvas circles no document whose text is laid out — and where none

@@ -403,7 +403,8 @@ found at its own centre.
 THE PANELS IN A NARROW WINDOW (FP-26): in the same windows, landed at the
 same position, the LEAP box opened whole inside the window, its input too,
 and every row's address cell whole across it; the mirror a walk key shows,
-the ring drawn, whole inside the window; and the find box Mod+F opens whole
+the ring drawn, opaque and whole inside the window below the one line, clear
+of the walk's element's box (issue #559); and the find box Mod+F opens whole
 inside the window, Esc closing it.
 A STOP ONLY THE PANES' `compare` DRAWS, LEFT FROM AND RETURNED TO (FP-20,
 FP-21, FP-25, FP-34): a whole-document scene left from the stop at a band's
@@ -3444,8 +3445,8 @@ RECTS_JS = '''((sels) => ({window: {x: 0, y: 0, w: window.innerWidth, h: window.
 def panels_hold(ctx, r):
     """THE PANELS IN A NARROW WINDOW (FP-26): in each window LINE_ROWS_PX wide, landed at the window run's position in the
     first edition — the LEAP box opened stands whole inside the window, its input too, and the address cell of every row
-    and each row's "open beside" stand whole across it; a walk key made there, the ring drawn, the mirror stands whole
-    inside the window; and Mod+F
+    and each row's "open beside" stand whole across it; a walk key made there, the ring drawn, the mirror stands opaque
+    and whole inside the window below the one line, clear of the walk's element's box; and Mod+F
     there opens the find box whole inside the window, Esc closing it. Its figures: each panel's left and right edges in
     each window"""
     figures = {}
@@ -3473,12 +3474,14 @@ def panels_hold(ctx, r):
             ctx.settle()
             ctx.frames(2)
             mirror = ctx.js('''(() => { const m = document.getElementById('mirror'), e = document.activeElement;
-              return {ring: window.__skep.focus().ring, shown: m.classList.contains('shown'), held: !!e && m.contains(e)}; })()''')
+              return {ring: window.__skep.focus().ring, shown: m.classList.contains('shown'), held: !!e && m.contains(e), box: window.__skep.view.ringBox(),
+                      opacity: getComputedStyle(m).opacity, top: document.getElementById('line').getBoundingClientRect().bottom}; })()''')
             m = ctx.js('%s(["#mirror"])' % RECTS_JS)
-            mq = m['rects'][0]
-            r.check(mirror['ring'] and mirror['shown'] and mirror['held'] and mq['w'] > 0 and inside(mq, m['window']),
-                    f'a {w} px window: a walk key made at the landing, the ring drawn, the mirror stands whole inside the window (FP-26)',
-                    {'mirror': dict(mirror, **seen(mq)), 'vw': m['window']['w']})
+            mq, rb = m['rects'][0], mirror['box']
+            clear = not rb or not (mq['x'] < rb['x'] + rb['w'] and rb['x'] < mq['x'] + mq['w'] and mq['y'] < rb['y'] + rb['h'] and rb['y'] < mq['y'] + mq['h'])
+            r.check(mirror['ring'] and mirror['shown'] and mirror['held'] and mirror['opacity'] == '1' and mq['w'] > 0 and inside(mq, m['window']) and mq['y'] >= mirror['top'] and clear,
+                    f'a {w} px window: a walk key made at the landing, the ring drawn, the mirror stands opaque and whole inside the window below the one line, clear of the walk\'s element\'s box (FP-26; issue #559)',
+                    {'mirror': dict(mirror, **seen(mq), y=mq['y'], h=mq['h']), 'vw': m['window']['w']})
             ctx.drv.key('f', mods=('Meta',))
             ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => { const s = window.__skep.find.stands(); return (s && !s.reading) || performance.now() - t0 > 15000 ? res(true) : setTimeout(tick, 50); }; tick(); })')
             ctx.frames(2)

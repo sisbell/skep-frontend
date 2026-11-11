@@ -1,19 +1,18 @@
 // N-FOCUS — the one owner of the platform's focus (FP-20; D5 §4; the focus
 // record's rules 10–22). Layer 2, a leaf: it imports nothing of the page and
 // keeps no DOM of its own, moving the focus of elements their owners hand it.
-// State (FP-10): whether a key made the last move of the focus (the ring's
-// rule), the last input's kind, the opener stack — which region took the
-// focus, from which element, and the region each waits on to take it next —
-// and the words the status region waits to say on the next frame (`saying`).
+// State (FP-10): the last input's kind, the opener stack — which region took
+// the focus, from which element, and the region each waits on to take it
+// next — and the words the status region waits to say on the next frame
+// (`saying`).
 // The page has one focus, the platform's (`document.activeElement`; rule 10),
 // and no `.focus()` call stands outside this module: five entries, which
 // every module calls and none bypasses —
-//   land(el, {byKey})      an act moved the focus to an element (rule 12),
-//                          wherever the key was pressed; `byKey` sets the
-//                          ring's rule, and left out the rule stands (a
-//                          hand-off is no act). A field the reader types in
-//                          keeps the focus and its caret through it, and the
-//                          regions holding the field forget their openers.
+//   land(el)               an act moved the focus to an element (rule 12),
+//                          wherever the key was pressed. A field the reader
+//                          types in keeps the focus and its caret through it,
+//                          and the regions holding the field forget their
+//                          openers.
 //   open(region, {…})      a region took the focus from an element,
 //                          remembered once on one stack: a second opening of
 //                          a standing region keeps the first opener (rules
@@ -47,15 +46,18 @@
 // a click the platform made from a key (`detail` 0); and one of "a field the
 // reader types in", `isField(el)`: an input or a textarea. The ring
 // (`ringShown`; D5 §4 rule 2): drawn while the plane's stop holds the focus
-// and a key moved it there, put out by a pointer's landing, a camera-made
-// re-take, and whenever the focus leaves the plane; a move that leaves the
-// focus in a field sets the rule the landing takes once the field closes onto
-// it. The status region (D4): one standing `role="status"` region this
-// module alone writes (`say`), polite unless the caller asks assertive, and
-// words it holds already said again on the next frame where the caller asks;
-// a key-made landing is told by the focus move alone (rule 12), never
-// repeated here. N-WALK registers the plane's stop and the walk's element,
-// the app the status region (`attach`).
+// and the walk stands where an act of the person's put it — N-WALK's
+// reading, registered as `aimed`, which neither a key's reading nor a
+// click's count decides — and out whenever the focus leaves the plane; a
+// focus the platform moves into the plane after a key (Tab, Shift+Tab) is the
+// person's act, told to N-WALK (`entered`), and one it moves there after a
+// pointer tells nothing. The status region (D4): one standing `role="status"`
+// region this module alone writes (`say`), polite unless the caller asks
+// assertive, and words it holds already said again on the next frame where
+// the caller asks; a key-made landing is told by the focus move alone (rule
+// 12), never repeated here. N-WALK registers the plane's stop, the walk's
+// element and the walk's two readings of the ring, the app the status region
+// (`attach`).
 // Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-20, FP-36.
 
 /**
@@ -73,8 +75,10 @@ let planeEl = null;
 let home = () => null;
 /** @type {Element | null} the status region */
 let liveEl = null;
-/** a key made the last move of the focus the page made or saw (the ring's rule) */
-let ringByKey = false;
+/** @type {() => boolean} does the walk stand where an act of the person's put it (N-WALK's): what the ring is drawn by; false until the walk registers it */
+let aimed = () => false;
+/** @type {() => void} the person's own act put the focus on the plane's stop — a Tab — told to the walk (N-WALK's) */
+let entered = () => {};
 /** @type {'key' | 'pointer'} the last input the page saw: what a focus the platform moved on its own (a Tab, a click) was moved by */
 let modality = 'key';
 /** this module is moving the focus now: the plane's focus events read nothing from it */
@@ -100,22 +104,26 @@ export const isField = (e) => !!e && typeof e.matches === 'function' && e.matche
 
 /**
  * The owners register what the controller needs, each as it attaches: the
- * walk its mirror (the plane's stop) and its element, the app the status
- * region. The window's own inputs are read once, for the kind of input a
- * focus the platform moved on its own was moved by.
- * @param {{plane?: Element, home?: () => (Element | null), live?: Element}} parts
+ * walk its mirror (the plane's stop), its element and its two readings of the
+ * ring — whether it stands where an act put it (`aimed`), and the act that
+ * puts the focus on the plane's stop told to it (`entered`) — the app the
+ * status region. The window's own inputs are read once, for the kind of input
+ * a focus the platform moved on its own was moved by.
+ * @param {{plane?: Element, home?: () => (Element | null), live?: Element, aimed?: () => boolean, entered?: () => void}} parts
  */
 export function attach(parts) {
   if (parts.plane) {
     planeEl = parts.plane;
     if (typeof parts.plane.addEventListener === 'function') {
-      // a focus the platform moved into the plane on its own — a Tab, a click on the panel — was moved by the last input
-      parts.plane.addEventListener('focusin', () => { if (!moving) ringByKey = modality === 'key'; changed(); });
+      // a focus the platform moved into the plane on its own after a key — a Tab — is the person's act on the walk's element
+      parts.plane.addEventListener('focusin', () => { if (!moving && modality === 'key') entered(); changed(); });
       parts.plane.addEventListener('focusout', () => { changed(); setTimeout(changed, 0); });
     }
   }
   if (parts.home) home = parts.home;
   if (parts.live) liveEl = parts.live;
+  if (parts.aimed) aimed = parts.aimed;
+  if (parts.entered) entered = parts.entered;
   if (!wired && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
     wired = true;
     window.addEventListener('keydown', () => { modality = 'key'; }, true);
@@ -129,8 +137,8 @@ function changed() { for (const w of watchers) w(); }
 
 /** does the plane's stop hold the focus? */
 export function planeHolds() { const a = active(); return !!planeEl && !!a && planeEl.contains(a); }
-/** is the ring drawn: the plane holds the focus and a key moved it there (rule 10; D5 §4 rule 2) — before a plane is registered, the key alone */
-export const ringShown = () => ringByKey && (planeEl ? planeHolds() : true);
+/** is the ring drawn: the plane holds the focus and the walk stands where an act of the person's put it (rule 10; D5 §4 rule 2; `aimed`) — before a plane is registered, the walk's reading alone */
+export const ringShown = () => (planeEl ? planeHolds() : true) && aimed();
 /** the regions holding the focus, oldest first (the gate and the tests read it) */
 export const standing = () => stack.map((e) => e.region);
 
@@ -157,21 +165,15 @@ export function byKey(e) {
 
 /**
  * An act moved the focus to an element (rule 12): the focus goes there
- * wherever the key was pressed; `byKey` is the ring's rule — a key's landing
- * draws it, a pointer's puts it out; left out, the rule stands (a hand-off).
- * A null element moves nothing and sets the rule alone (a camera-made re-take
- * that carries no focus puts the ring out). A focus standing in a field the
- * reader types in stays there, its caret and its text with it (see the
- * head): the move sets the rule alone, and every region holding the
- * field forgets its opener, so the field's close gives the focus to the
- * region it waits on, else to the walk's element — where the move put the
- * walk (`close`).
+ * wherever the key was pressed. A focus standing in a field the reader types
+ * in stays there, its caret and its text with it (see the head): the move
+ * takes nothing from it, and every region holding the field forgets its
+ * opener, so the field's close gives the focus to the region it waits on,
+ * else to the walk's element — where the move put the walk (`close`).
  * @param {Element | null} el
- * @param {{byKey?: boolean}} [opts]
  * @returns {boolean} the focus stands on the element
  */
-export function land(el, opts = {}) {
-  if (opts.byKey !== undefined) ringByKey = opts.byKey;
+export function land(el) {
   const at = active();
   if (el && at && at !== el && isField(at)) {
     for (const s of stack) if (s.el.contains(at)) s.opener = null;
@@ -330,5 +332,5 @@ export function say(text, assertive = false, again = false) {
   live.textContent = text;
 }
 
-/** the tests' reset: the stack emptied, the ring's rule off, no words waiting, the registered parts kept */
-export function _reset() { stack.length = 0; ringByKey = false; modality = 'key'; if (saying) { cancelFrame(saying); saying = 0; } }
+/** the tests' reset: the stack emptied, the last input a key's, no words waiting, the registered parts kept */
+export function _reset() { stack.length = 0; modality = 'key'; if (saying) { cancelFrame(saying); saying = 0; } }

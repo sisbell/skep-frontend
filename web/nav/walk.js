@@ -5,29 +5,60 @@
 // levels above — the position a landing named inside the focused span (W-01
 // step 3), kept until the walk moves; the bytes its focus stands on
 // (`stood`); the count of its moves; whether the
-// walk holds the span of a caret the person left kept; the mirror's
-// element; and the readers the app hands in (`readers`; FP-11): where Back's
-// light stands and what a landing says (N-GO's `backLight` and `described`),
-// the version each box shows (N-GO's `shownIn`) and why no board is held
-// (O-FACES' `noBoardWords`). The walk is always live: it has no toggle.
+// walk holds the span of a caret the person left kept; the element the
+// person's last act aimed the walk at (`aim`); whether the walk's panel
+// shows (`panel`); the mirror's element; and the readers the app hands in
+// (`readers`; FP-11): where Back's light stands and what a landing says
+// (N-GO's `backLight` and `described`), the version each box shows (N-GO's
+// `shownIn`), why no board is held (O-FACES' `noBoardWords`) and Enter's act
+// on the walk's element (N-KEYS' `activate`). The walk is always live: it
+// has no toggle.
 // The order of moves: every move — a walk key, a landing, a re-take — counts
 // itself as it starts, and one whose reads a later move overtook sets
 // nothing when they answer and flies the camera nowhere, so the walk stands
 // where the latest move put it whatever order the reads answer in. The focus
 // is N-FOCUS's (FP-20): every move of it this module asks for goes through
-// the controller's `land` — a walk key, a landing and a key-made re-take
-// each put the platform's focus on the walk's element wherever the key was
-// pressed (rules 10, 12), the ring drawn where a key made the move and put
-// out by a pointer's landing or a camera-made re-take (D5 §4 rule 2); a
-// camera-made re-take carries the focus to the new element only where the
-// mirror held it, leaving a focus standing elsewhere where it is; and no
-// move takes the caret from a field the reader types in. Every move names a
-// position or none, so a landing's position never outlives the span it was
-// named in: a walk key names none, and the line reads the span's own first
-// position. At launch the platform's focus rests on the walk's element with
-// the ring out (rule 21). Enter at a focused span selects the block whole
-// (D8); at a withheld run it opens the run's whole wording's card (K-7;
-// N-KEYS').
+// the controller's `land` — a walk key, a landing, a pointer's act on a
+// document and a key-made re-take each put the platform's focus on the
+// walk's element wherever the act was made (rules 10, 12), the platform's
+// selection in the text layer standing through the move (T-LAYER's
+// `keepingSelection`); a re-take no key made carries the focus to the new
+// element only where the mirror held it, leaving a focus standing elsewhere
+// where it is; and no move takes the caret from a field the reader types in.
+// Every move names a position or none, so a landing's position never
+// outlives the span it was named in: a walk key names none, and the line
+// reads the span's own first position. At launch the platform's focus rests
+// on the walk's element, no act having aimed it there (`restAt`; rule 21).
+// Enter at a focused span selects the block whole (D8); at a withheld run it
+// opens the run's whole wording's card (K-7; N-KEYS').
+// The ring (D5 §4 rule 2; N-FOCUS's `ringShown`, which reads `aimed`): the
+// walk keeps the element the person's last act put it on (`aim`) — a walk
+// key's move, a landing (`focusTo`, `returnFocusTo`) — a teleport's, a
+// pointer's act on a document, a find's close — the caret followed
+// (`followCaret`), the text left at a live caret (`leaveText`), an activation
+// reaching a mirror item (`activate`) and Tab into the plane (`entered`) —
+// and the ring is drawn while the walk stands on that element, the plane
+// holds the focus and no live caret stands, the caret then being the mark.
+// A re-take aims nothing (`retakeFromView`): one that moves the walk off the
+// element aimed at leaves the ring out until the next act, and one that
+// brings the walk back to it draws the ring there again. The page's own
+// moves — the text shown carrying the walk (`carry`), a box shown on a newer
+// version (`standAgain`), a change of the page's class (`dropped`) — carry
+// the aim with the walk where it stood on it, and aim nothing of their own;
+// the launch aims nothing (`restAt`).
+// The walk's panel (`panel`) is not the ring: it shows after a walk key's
+// move (K-1 … K-5) while the plane holds the focus, and hides at every other
+// move of the walk, at every key the dispatch makes but a walk key or K-8
+// at the plane (`hidePanel`; N-KEYS'), at every pointer press and wheel
+// (APP-INPUT's), and once the focus stands on an element outside the plane.
+// It takes no press, shown or hidden: a press over it lands on what lies
+// beneath. Shown, it stands whole inside the window below the one line and
+// clear of the walk's element's box on screen — at the window's bottom left
+// where that is clear, else in the larger free room above or below the box,
+// its height capped to that room — placed again once the camera lands
+// (`place`; FP-26); hidden, it is transparent, its current item standing
+// over that box, so a magnifier that follows the focus comes to where keys
+// start, and off screen where the element has no box.
 // The walk follows the text shown (foundations §2.7): in a draft holding the
 // person's page-local edits its elements are the blocks of the text the page
 // shows (T-LAYER's `shownOf`) and the links LK draws on them — a line the
@@ -41,8 +72,8 @@
 // The walk follows a live caret (`followCaret`; B3-S13): as a click places
 // it or a key at it moves it, the walk stands on the block of the text shown
 // the caret is in, by the landing's rule, naming the block's own
-// first position — a click's move putting the ring out, a key's leaving the
-// ring's rule as it stands — so every act on the walk's element acts there.
+// first position, the live caret its mark — so every act on the walk's
+// element acts there.
 // Every other move of the walk — a walk key, a landing, a step, a re-take —
 // leaves a live caret as it is made, kept where it stood (D5 M-2, §4 rule 3;
 // T-LAYER's `leaveCaret`), so the next key acts where the walk stands and
@@ -224,9 +255,12 @@
 // mirror is rebuilt whole on every move (`render`), and its Tab stop with it:
 // the plane is one stop (D5 §4 rule 5) — the current item, while the tree's
 // container stands out of the order; the container is the stop only where
-// the mirror holds no item. The panel is shown while the ring is drawn.
-// While chrome stands over the plane the tree is inert (`cover`), out of the
-// order and of the accessibility tree.
+// the mirror holds no item. An activation reaching an item — the click the
+// platform sends the element itself, a screen reader's activate, whatever
+// its count — stands the walk on that item as an act and makes Enter's act
+// there (`activate`; K-7; the `enter` reader). While chrome stands over the
+// plane the tree is inert (`cover`), out of the order and of the
+// accessibility tree.
 // The page's own death, and every other change of its class (FP-23, FP-29),
 // takes the walk again where it stood, at once from the model the change
 // left — on the span it stood on where its document kept its text, else on
@@ -287,6 +321,7 @@ import { t, tHTML, addressedHTML, markCount } from '../strings.js';
  * @property {() => Described | null} described what the landing says of its passage, where it says anything (N-GO's `described`); null where nothing is said
  * @property {(addr: string) => string} shown the version a document's box shows (N-GO's `shownIn`): the one the walk stands on and lists there
  * @property {() => ({id: string, text: string} | null)} noBoard why no board is held, the words the root says in the board's place (O-FACES' `noBoardWords`); null where a board is held, or the list has not answered
+ * @property {() => (void | Promise<void>)} enter Enter's act on the walk's element (K-7; N-KEYS' `activate`), made where an activation reaches a mirror item (`activate`)
  */
 
 /** @type {Node | null} */
@@ -303,12 +338,16 @@ let landed = null;
 let moves = 0;
 /** the walk holds the kept caret's span (see the head): set where the person leaves the text at a live caret and no act of theirs moves the walk, released by their next walk move or landing */
 let caretHeld = false;
+/** @type {Node | null} the element the person's last act put the walk on (see the head): the ring is drawn while the walk stands on it; null where no act has */
+let aim = null;
+/** the walk's panel shows (see the head): a walk key's move put the walk where it stands, and no other act has been made since */
+let panel = false;
 /** @type {HTMLElement | null} */
 let mirrorEl = null;
 /** @type {Array<(n: Node | null) => void>} */
 const watchers = [];
-/** @returns {Readers} the readers before the app hands its owner's in: no light stands, no landing says anything, every box shows its plain address, and no board's absence is told */
-const noReaders = () => ({ located: () => null, described: () => null, shown: (/** @type {string} */ addr) => documentOf(addr) || addr, noBoard: () => null });
+/** @returns {Readers} the readers before the app hands its owner's in: no light stands, no landing says anything, every box shows its plain address, no board's absence is told, and an activation makes no act */
+const noReaders = () => ({ located: () => null, described: () => null, shown: (/** @type {string} */ addr) => documentOf(addr) || addr, noBoard: () => null, enter: () => {} });
 /** @type {Readers} */
 let read = noReaders();
 
@@ -333,15 +372,127 @@ const BOARD = /** @type {Node} */ ({ kind: 'board', addr: '1', pos: null, link: 
 
 /**
  * Attach the mirror: the plane's stop registered with the focus's owner,
- * which tells the walk when the ring's rule changes, so the panel follows it
- * and the plane is redrawn.
+ * which tells the walk when the focus moves, so the panel follows it —
+ * hidden once the focus stands on an element outside the plane — and the
+ * plane is redrawn; and an activation reaching an item heard (`activate`).
  * @param {HTMLElement} mirror
  */
 export function attach(mirror) {
   mirrorEl = mirror;
   mirror.setAttribute('aria-label', t('L.mirror-label'));
   FOCUS.attach({ plane: mirror, home: stopEl });
-  FOCUS.onChange(() => { if (mirrorEl && mirrorEl.classList) mirrorEl.classList.toggle('shown', FOCUS.ringShown()); CAM.markDirty(); });
+  FOCUS.onChange(() => { if (panel && focusOutside()) panel = false; markPanel(); CAM.markDirty(); });
+  if (typeof mirror.addEventListener === 'function') mirror.addEventListener('click', (e) => {
+    const on = /** @type {Element | null} */ (e.target), li = on && typeof on.closest === 'function' ? /** @type {HTMLElement | null} */ (on.closest('li[role="treeitem"]')) : null;
+    if (li && mirror.contains(li)) void activate(Number(li.dataset.i));
+  });
+}
+// the walk's two readings of the ring, registered with the focus's owner as the module loads, a mirror attached or none
+FOCUS.attach({ aimed, entered });
+
+/** does the platform's focus stand on an element outside the plane — never the body, where it stands for a moment as it moves between two of the plane's items */
+function focusOutside() {
+  if (typeof document === 'undefined' || !mirrorEl) return false;
+  const a = document.activeElement;
+  return !!a && a !== document.body && !mirrorEl.contains(a);
+}
+
+/** does the walk's panel show (see the head): a walk key's move put the walk where it stands, no other act made since, and the plane holds the focus */
+export const panelShown = () => panel && FOCUS.planeHolds();
+
+/** is the mirror marked shown now (`markPanel`) */
+let marked = false;
+
+/** the panel marked shown or hidden on the mirror as it stands (`panelShown`), and placed again at once where that changed (`place`) */
+function markPanel() {
+  if (!mirrorEl || !mirrorEl.classList) return;
+  const on = panelShown();
+  mirrorEl.classList.toggle('shown', on);
+  if (on !== marked) { marked = on; place(last.box, last.top, true); }
+}
+
+/** the room the shown panel keeps from the window's edges, the one line and the walk's element's box, px */
+const PANEL_GAP = 8;
+/** the shown panel's widest and its tallest share of the window's height (the style's `#mirror`) */
+const PANEL_W = 520, PANEL_H = 0.4;
+/** @typedef {{x: number, y: number, w: number, h: number}} Box a box on screen, px */
+/** @type {{box: Box | null, top: number}} what the last frame placed the mirror by: the walk's element's box on screen, and the one line's bottom */
+const last = { box: null, top: 0 };
+/** the placement last written on the mirror, as words naming it: a frame that names the same writes nothing */
+let placedAs = '';
+
+/**
+ * The mirror placed for the frame (see the head; FP-26). Hidden, it stands
+ * transparent over the walk's element's box on screen, its current item
+ * filling it (the style's), or off screen where the element has no box.
+ * Shown, it stands whole inside the window below the one line and clear of
+ * that box: at the window's bottom left where its tallest there meets the box
+ * nowhere, else in the larger free room above or below the box, its height
+ * capped to that room — chosen again only where the camera stands still
+ * (`settled`), the current item then brought inside the panel's window.
+ * Nothing is written where the placement named is the one written last.
+ * @param {Box | null} box the walk's element's box on screen (P-RENDER's `focusBox`); null where it has none
+ * @param {number} top the one line's bottom, px: the visible view's top
+ * @param {boolean} settled the camera stands still
+ */
+export function place(box, top, settled) {
+  last.box = box; last.top = top;
+  if (!mirrorEl || !mirrorEl.style) return;
+  const s = mirrorEl.style;
+  if (!marked) {
+    const as = box ? `at ${box.x} ${box.y} ${box.w} ${box.h}` : 'off';
+    if (as === placedAs) return;
+    placedAs = as;
+    s.bottom = 'auto'; s.maxHeight = '';
+    if (box) { s.left = box.x + 'px'; s.top = box.y + 'px'; s.width = box.w + 'px'; s.height = box.h + 'px'; }
+    else { s.left = '-10000px'; s.top = '0px'; s.width = ''; s.height = ''; }
+    return;
+  }
+  if (!settled && placedAs.startsWith('panel')) return;
+  const { VW, VH } = CAM.viewport(), g = PANEL_GAP;
+  const tall = Math.min(VH * PANEL_H, VH - top - 2 * g), corner = { x: g, y: VH - g - tall, w: Math.min(PANEL_W, VW - 2 * g), h: tall };
+  const meets = !!box && corner.x < box.x + box.w && box.x < corner.x + corner.w && corner.y < box.y + box.h && box.y < corner.y + corner.h;
+  const above = box ? box.y - g - (top + g) : 0, below = box ? VH - g - (box.y + box.h + g) : 0;
+  const as = !meets || !box ? 'panel bottom' : above >= below ? `panel ${top + g} ${above}` : `panel ${box.y + box.h + g} ${below}`;
+  if (as === placedAs) return;
+  placedAs = as;
+  s.left = g + 'px'; s.width = ''; s.height = '';
+  if (!meets || !box) { s.top = 'auto'; s.bottom = g + 'px'; s.maxHeight = ''; }
+  else { const [at, room] = above >= below ? [top + g, above] : [box.y + box.h + g, below]; s.top = at + 'px'; s.bottom = 'auto'; s.maxHeight = Math.max(0, room) + 'px'; }
+  const cur = stopEl();
+  if (cur && cur !== mirrorEl) showInPanel(/** @type {HTMLElement} */ (cur));
+}
+
+/** the walk's panel hidden (see the head): an act that is no walk key's move — a key the dispatch makes, a pointer's press, a wheel */
+export function hidePanel() {
+  if (!panel) return;
+  panel = false;
+  markPanel();
+  CAM.markDirty();
+}
+
+/** do two nodes name one element of the walk: its kind, its place, its position, and a link's end by its link and its key */
+const sameNode = (/** @type {Node | null} */ a, /** @type {Node | null} */ b) => !!a && !!b && a.kind === b.kind && a.addr === b.addr && a.pos === b.pos && endKey(a) === endKey(b);
+/** a link node's end, by its link and its key; null for every other node */
+const endKey = (/** @type {Node} */ n) => (n.link ? `${n.link.link.addr} ${n.link.key}` : null);
+
+/**
+ * Does the walk stand where an act of the person's put it (see the head): on
+ * the element its last act aimed at, as the text shown stands now (`carry`),
+ * no live caret standing — the caret then the mark. N-FOCUS draws the ring
+ * by it (`ringShown`).
+ * @returns {boolean}
+ */
+function aimed() {
+  carry();
+  const c = LAYER.caret();
+  return sameNode(aim, focus) && !(c && c.live);
+}
+
+/** the person's own act put the platform's focus on the plane's stop — a Tab, N-FOCUS's reading — an act on the walk's element: it is aimed at from now (see the head) */
+function entered() {
+  carry();
+  if (focus) aim = focus;
 }
 /** the plane's one stop now: the mirror's current item, or the tree itself where it holds no item */
 function stopEl() {
@@ -365,7 +516,7 @@ export function current() { carry(); return focus; }
 export function landedAt() { carry(); return landed; }
 /** the focused span, for the article's `lit` mark */
 export function focusedSpan() { carry(); return focus && focus.kind === 'block' && focus.pos != null ? { addr: focus.addr, pos: focus.pos } : null; }
-/** is the ring drawn — the focus's owner's rule (rule 10): the plane holds the focus and a key moved it */
+/** is the ring drawn — the focus's owner's rule (rule 10): the plane holds the focus and the walk stands where an act of the person's put it (`aimed`) */
 export const ringShown = () => FOCUS.ringShown();
 
 /** is a document below its reading scale at the view the camera is bound for (see the head; T-LAYER's one test) — `scale` that view's, where a pass over the mirror's items read it once */
@@ -564,7 +715,7 @@ function stand() {
 }
 
 /** do two lists of a document's elements name the same elements at the same places? */
-const sameElements = (/** @type {Node[]} */ a, /** @type {Node[]} */ b) => a.length === b.length && a.every((n, i) => n.kind === b[i].kind && n.addr === b[i].addr && n.pos === b[i].pos && (n.link ? n.link.link.addr : null) === (b[i].link ? /** @type {Shown} */ (b[i].link).link.addr : null) && (n.link ? n.link.key : null) === (b[i].link ? /** @type {Shown} */ (b[i].link).key : null));
+const sameElements = (/** @type {Node[]} */ a, /** @type {Node[]} */ b) => a.length === b.length && a.every((n, i) => sameNode(n, b[i]));
 
 /**
  * The walk carried through a change of the text shown under it (see the
@@ -578,7 +729,8 @@ const sameElements = (/** @type {Node[]} */ a, /** @type {Node[]} */ b) => a.len
  * end on its own stop while LK still draws it. A stop is never lost, and where
  * the elements stand as they stood nothing moves: the mirror is rebuilt only
  * where they changed, the platform's focus kept on the walk's item where the
- * mirror held it.
+ * mirror held it. The aim goes with the walk where it stood on it (see the
+ * head).
  * @returns {boolean} whether the walk's element or its siblings changed
  */
 export function carry() {
@@ -604,6 +756,7 @@ export function carry() {
   } else { siblings = kids; idx = i; focus = kids[i]; }
   const at = was.at.length ? LAYER.firstStanding(addr, was.at) : null, b = at != null && focus && focus.kind === 'block' ? LAYER.blockAt(addr, at) : null;
   landed = b && focus && b.pos === focus.pos ? at : null;
+  if (sameNode(aim, f)) aim = focus;
   stand();
   const moved_ = changed || !focus || focus.kind !== f.kind || focus.pos !== f.pos;
   if (!moved_) { rewrite(); return false; }
@@ -965,17 +1118,17 @@ export function markDescribed() {
 
 /**
  * The walk's element takes the platform's focus through the focus's owner —
- * the mirror's current item, brought inside the panel's window, or the mirror
- * itself where it holds no item — with the ring's rule set where the move is
- * an act's (`byKey` given), or kept where it is a hand-off: the app's, where
- * a control that held the focus has gone (a corner leaving the plane), and
- * the controller's own return to the walk's element (D5 §4 rule 4).
- * @param {{byKey?: boolean}} [opts]
+ * the mirror's current item, brought inside the panel's window where the
+ * panel shows, or the mirror itself where it holds no item — the platform's
+ * selection in the text layer standing through the move (T-LAYER's
+ * `keepingSelection`): at a move of the walk, and at a hand-off — the app's,
+ * where a control that held the focus has gone (a corner leaving the plane),
+ * and the controller's own return to the walk's element (D5 §4 rule 4).
  */
-export function focusItem(opts = {}) {
+export function focusItem() {
   const el = stopEl();
-  FOCUS.land(el, opts);
-  if (el && el !== mirrorEl) showInPanel(/** @type {HTMLElement} */ (el));
+  LAYER.keepingSelection(() => { FOCUS.land(el); });
+  if (el && el !== mirrorEl && panelShown()) showInPanel(/** @type {HTMLElement} */ (el));
 }
 
 /**
@@ -1001,8 +1154,8 @@ function showInPanel(item) {
  */
 function placeInPanel(item) {
   if (!mirrorEl || typeof item.getBoundingClientRect !== 'function') return null;
-  const panel = mirrorEl.getBoundingClientRect(), r = item.getBoundingClientRect();
-  const top = r.top - (panel.top + mirrorEl.clientTop);
+  const frame = mirrorEl.getBoundingClientRect(), r = item.getBoundingClientRect();
+  const top = r.top - (frame.top + mirrorEl.clientTop);
   return { top, bottom: top + r.height };
 }
 
@@ -1097,8 +1250,8 @@ function aimIn(addr, view) {
   return () => { if (REC.has(addr) && REC.doc(addr).from >= 0) last = view(); return last; };
 }
 
-/** a walk key's move: the kept caret's hold released (see the head), the mirror rebuilt, the platform's focus on the new item with the ring drawn (rules 10, 12), the watchers told */
-function stepped() { caretHeld = false; render(); focusItem({ byKey: true }); moved(); }
+/** a walk key's move: the kept caret's hold released, the element aimed at and the panel shown (see the head), the mirror rebuilt, the platform's focus on the new item (rules 10, 12), the watchers told */
+function stepped() { caretHeld = false; aim = focus; panel = true; render(); focusItem(); markPanel(); moved(); }
 
 /**
  * The child of a node → steps in to (D5 K-3), read from what the plane draws
@@ -1172,16 +1325,48 @@ export async function enter() {
 }
 
 /**
+ * An activation reaching a mirror item (see the head): the walk stood on that
+ * item as an act — aimed at, the panel hidden, a live caret left kept and the
+ * kept caret's hold released, the platform's focus on it, and the camera
+ * flown to it as a walk key's move flies where it is another item than the
+ * walk's — then Enter's act made there (K-7; the `enter` reader), at once,
+ * whatever the click's count; nothing where the walk's level holds no such
+ * item, and no act where a later move overtook the flight.
+ * @param {number} i the item's index among the walk's siblings
+ * @returns {Promise<void>}
+ */
+async function activate(i) {
+  carry();
+  if (!siblings[i]) return;
+  caretHeld = false;
+  hidePanel();
+  LAYER.leaveCaret();
+  if (i !== idx) {
+    const move = ++moves;
+    setFocus(siblings, i);
+    aim = focus;
+    render(); focusItem(); markPanel(); moved();
+    await flyToFocus(move);
+    if (move !== moves) return;
+  } else {
+    aim = focus;
+    focusItem(); markPanel(); moved();
+  }
+  await read.enter();
+}
+
+/**
  * The walk moves to a landing (a teleport, D5 §4 rule 8): the document — the
  * version its box shows (see the head) — or the span holding a position in
  * it — the position kept as the one the landing
  * named (`landedAt`); a place the index does not list on its own node among
  * the listed siblings (rule 12). The platform's focus goes to the landing's
  * item wherever the act was made — save from a field the reader types in
- * (see the head) — the ring drawn where a key made it and put
- * out where anything else did (D5 §4 rule 2); a camera-made re-take (`take`
- * false) carries the focus to the new item only where the mirror held it,
- * the ring out, and leaves a focus standing elsewhere where it is. The
+ * (see the head) — the element landed on aimed at, so the ring is drawn there
+ * whatever made the act, and the panel hidden (D5 §4 rule 2); a landing that
+ * names `take` false — a moment's view, a return the reader took the camera
+ * over at — carries the focus to the new item only where the mirror held it,
+ * and leaves a focus standing elsewhere where it is. The
  * landing's levels are read first — a span's, its document's whole text — and
  * where a later move overtook it meanwhile it sets nothing. A landing may
  * name a link's end in the document (`end`: Back's return to the follow it
@@ -1196,16 +1381,16 @@ export async function enter() {
  * T-LAYER's `leaveCaret`).
  * @param {string} addr a document, an account or a board; a mark's name (P-PROJ's `markKey`)
  * @param {number | null} pos
- * @param {boolean | null} [byKey] a key made the act; null where the move is no act of its own and the ring's rule stands (a key's caret followed, `followCaret`)
- * @param {boolean} [take] the platform's focus goes to the landing's item wherever it stood (an act); false carries it only where the mirror held it (a camera's re-take)
+ * @param {boolean} [take] the platform's focus goes to the landing's item wherever it stood (an act's); false carries it only where the mirror held it
  * @param {End | null} [end] the link's end to stand on, at `pos`
  * @param {boolean} [asHeld] a span's levels taken from the text the page shows now, its document's text read for none (`dropped`, `followCaret`, `leaveText`)
  * @returns {Promise<void>}
  */
-export async function focusTo(addr, pos, byKey = false, take = true, end = null, asHeld = false) {
+export async function focusTo(addr, pos, take = true, end = null, asHeld = false) {
   caretHeld = false;
+  hidePanel();
   LAYER.leaveCaret();
-  await standOn(addr, pos, byKey, take, end, asHeld);
+  await standOn(addr, pos, take, end, asHeld, 'aim');
 }
 
 /**
@@ -1215,36 +1400,58 @@ export async function focusTo(addr, pos, byKey = false, take = true, end = null,
  * the scene found them.
  * @param {string} addr
  * @param {number | null} pos
- * @param {boolean | null} [byKey] a key made the act
  * @param {boolean} [take] the platform's focus goes to the landing's item wherever it stood
  * @param {End | null} [end] the link's end to stand on, at `pos`
  * @returns {Promise<void>}
  */
-export function returnFocusTo(addr, pos, byKey = false, take = true, end = null) { return standOn(addr, pos, byKey, take, end); }
+export async function returnFocusTo(addr, pos, take = true, end = null) {
+  hidePanel();
+  await standOn(addr, pos, take, end, false, 'aim');
+}
+
+/**
+ * The walk stood on the launch frame's place (N-GO's `launch`; the focus
+ * record's rule 21): the platform's focus resting on its element, a live
+ * caret left kept and the kept caret's hold released, and no act having put
+ * the walk there, so no ring is drawn until one does (see the head).
+ * @param {string} addr
+ * @returns {Promise<void>}
+ */
+export async function restAt(addr) {
+  caretHeld = false;
+  hidePanel();
+  LAYER.leaveCaret();
+  await standOn(addr, null, true, null, false, 'rest');
+}
+
+/**
+ * @typedef {'aim' | 'carry' | 'keep' | 'rest'} Aims what a move does with the aim (see the head): `aim` the element it stands on is aimed at — an act's; `carry` the aim goes with the walk where it stood on it — the page's own move; `keep` it stands as it was — a re-take; `rest` none stands — the launch
+ */
 
 /**
  * The walk stood on a landing as `focusTo` names it, a live caret untouched
- * and the kept caret's hold neither set nor released: the move `focusTo` and
- * `returnFocusTo` make, `followCaret`'s, `leaveText`'s, the re-take's, and
- * the moves the page makes of its own (`restand`).
+ * and the kept caret's hold neither set nor released: the move `focusTo`,
+ * `returnFocusTo` and `restAt` make, `followCaret`'s, `leaveText`'s, the
+ * re-take's, and the moves the page makes of its own (`restand`); the aim
+ * set as `aims` names it, as the walk stands.
  * @param {string} addr
  * @param {number | null} pos
- * @param {boolean | null} [byKey]
- * @param {boolean} [take]
- * @param {End | null} [end]
- * @param {boolean} [asHeld]
- * @returns {Promise<void>}
+ * @param {boolean} take
+ * @param {End | null} end
+ * @param {boolean} asHeld
+ * @param {Aims} aims
+ * @returns {Promise<boolean>} the walk stands there: false where a later move overtook this one
  */
-async function standOn(addr, pos, byKey = false, take = true, end = null, asHeld = false) {
+async function standOn(addr, pos, take, end, asHeld, aims) {
   const move = ++moves;
-  const held = mirrorHolds();
+  const held = mirrorHolds(), wasAimed = sameNode(aim, focus);
   // a mark's name is no address: read before any address is taken from it
   const mark = continuationOf(addr);
   const doc = !mark && documentOf(addr) ? read.shown(addr) : null, acct = mark ? mark.account : accountOf(addr);
   if (mark) {
     const A = among(await childrenOf(BOARD), { kind: 'account', addr: mark.account, pos: null, link: null });
     const M = await childrenOf({ kind: 'account', addr: mark.account, pos: null, link: null });
-    if (move !== moves) return;
+    if (move !== moves) return false;
     const i = M.findIndex((n) => n.kind === 'mark' && n.addr === addr);
     stack = [{ siblings: [BOARD], idx: 0 }];
     if (i >= 0) { stack.push({ siblings: A.sibs, idx: A.i }); setFocus(M, i); } else setFocus(A.sibs, A.i);
@@ -1254,7 +1461,7 @@ async function standOn(addr, pos, byKey = false, take = true, end = null, asHeld
     const A = among(await childrenOf(BOARD), { kind: 'account', addr: acct || '', pos: null, link: null });
     const D = among(await childrenOf({ kind: 'account', addr: acct || '', pos: null, link: null }), { kind: 'document', addr: doc, pos: null, link: null });
     const kids = pos != null && d.blocks.length ? (asHeld ? elementsOf(doc) : await childrenOf({ kind: 'document', addr: doc, pos: null, link: null })) : [];
-    if (move !== moves) return;
+    if (move !== moves) return false;
     if (pos != null && kids.length) {
       const named = end ? kids.findIndex((n) => n.kind === 'link' && !!n.link && n.link.link.addr === end.link && n.link.key === end.key) : -1;
       stack = [{ siblings: [BOARD], idx: 0 }, { siblings: A.sibs, idx: A.i }, { siblings: D.sibs, idx: D.i }];
@@ -1265,33 +1472,36 @@ async function standOn(addr, pos, byKey = false, take = true, end = null, asHeld
     }
   } else if (acct) {
     const A = among(await childrenOf(BOARD), { kind: 'account', addr: acct, pos: null, link: null });
-    if (move !== moves) return;
+    if (move !== moves) return false;
     stack = [{ siblings: [BOARD], idx: 0 }];
     setFocus(A.sibs, A.i);
   } else {
     stack = []; setFocus([BOARD], 0);
   }
-  const ring = byKey === null ? {} : { byKey };
+  if (aims === 'aim' || (aims === 'carry' && wasAimed)) aim = focus;
+  else if (aims === 'rest') aim = null;
   render();
-  if (take || held) focusItem(ring); else FOCUS.land(null, ring);
+  if (take || held) focusItem();
+  markPanel();
   moved();
+  return true;
 }
 
 /**
  * A move the page makes of its own (see the head): a live caret left kept
  * as it is made (T-LAYER's `leaveCaret`), the walk stood as `standOn` stands
- * it, the kept caret's hold standing.
+ * it, the kept caret's hold standing, the aim going with the walk where it
+ * stood on it.
  * @param {string} addr
  * @param {number | null} pos
- * @param {boolean | null} [byKey]
  * @param {boolean} [take]
  * @param {End | null} [end]
  * @param {boolean} [asHeld]
  * @returns {Promise<void>}
  */
-function restand(addr, pos, byKey = false, take = true, end = null, asHeld = false) {
+async function restand(addr, pos, take = true, end = null, asHeld = false) {
   LAYER.leaveCaret();
-  return standOn(addr, pos, byKey, take, end, asHeld);
+  await standOn(addr, pos, take, end, asHeld, 'carry');
 }
 
 /**
@@ -1299,12 +1509,12 @@ function restand(addr, pos, byKey = false, take = true, end = null, asHeld = fal
  * position it stands at — a newer version's arrival pinning that box on the
  * member being read (N-GO's `arrived`; FP-22, FP-23): a move the page makes
  * of its own (`restand`), the platform's focus carried only where the mirror
- * held it, the ring out.
+ * held it.
  * @param {string} addr the version the box shows
  * @param {number | null} pos
  * @returns {Promise<void>}
  */
-export function standAgain(addr, pos) { return restand(addr, pos, false, false); }
+export function standAgain(addr, pos) { return restand(addr, pos, false); }
 
 /**
  * A live caret left without a move of the walk (see the head): kept where it
@@ -1321,15 +1531,16 @@ export function holdCaret() {
 }
 
 /**
- * Esc at a live caret (K-77; see the head): the caret kept and its span
- * holding the walk (`holdCaret`), the walk stood on that span at the caret's
- * position with the ring drawn — the text left to the walk, no act of the
- * walk's, so the hold stands.
+ * Esc at a live caret, and the empty click that is the pointer's Esc (K-77;
+ * see the head): the caret kept and its span holding the walk (`holdCaret`),
+ * the walk stood on that span at the caret's position and aimed at, so the
+ * ring is drawn there, the panel hidden — the text left to the walk, no act
+ * of the walk's, so the hold stands.
  * @returns {boolean} a live caret stood
  */
 export function leaveText() {
   const left = holdCaret();
-  if (left) void standOn(left.addr, left.pos, true, true, null, true);
+  if (left) { hidePanel(); void standOn(left.addr, left.pos, true, null, true, 'aim'); }
   return !!left;
 }
 
@@ -1363,20 +1574,24 @@ function liveCaret() {
  * `elementAt`), its levels taken from the text the page shows and no text read
  * (`focusTo`'s `asHeld`), naming that element's own first position, so the
  * one line never names a position the caret has left, the caret standing
- * live through the move (`standOn`; see the head). Like a camera-made
- * re-take, it carries the platform's focus to the new item only where the
- * mirror held it. Nothing where the walk stands on that element already, or
- * no live caret stands (`liveCaret`).
- * @param {boolean | null} [byKey] false where a click placed the caret, which puts the ring out; null where a key at the caret moved it, the ring's rule standing
+ * live through the move (`standOn`; see the head). It carries the platform's
+ * focus to the new item only where the mirror held it, the live caret the
+ * mark. The act that placed or moved the caret aims at the element the walk
+ * stands on — a click's, a key's — and hides the panel. Nothing more where
+ * the walk stands on that element already, and nothing where no live caret
+ * stands (`liveCaret`).
  * @returns {Promise<void>}
  */
-export async function followCaret(byKey = null) {
+export async function followCaret() {
+  hidePanel();
   const at = liveCaret() ? LAYER.caretSpan() : null;
+  if (!at) return;
   // the walk already on the span the caret stands in (T-LAYER's `caretSpan`), as at every key typed inside a span: answered before the document's elements are listed
-  if (!at || (focus && focus.kind === 'block' && focus.addr === at.addr && focus.pos === at.block)) return;
+  if (focus && focus.kind === 'block' && focus.addr === at.addr && focus.pos === at.block) { aim = focus; return; }
   const kids = elementsOf(at.addr), el = kids[elementAt(kids, at.addr, at.pos)];
-  if (!el || (focus && focus.kind === el.kind && focus.addr === el.addr && focus.pos === el.pos)) return;
-  await standOn(at.addr, el.pos, byKey, false, null, true);
+  if (!el) return;
+  if (sameNode(focus, el)) { aim = focus; return; }
+  await standOn(at.addr, el.pos, false, null, true, 'aim');
 }
 
 /** does a world rect hold a point? */
@@ -1475,6 +1690,21 @@ export function elementUnder(view) {
 }
 
 /**
+ * A re-take's move (`retakeFromView`): the panel hidden, the walk stood where
+ * the view shows it, the platform's focus taken there where a key made the
+ * camera move, the aim standing as it was (see the head).
+ * @param {string} addr
+ * @param {number | null} pos
+ * @param {boolean} byKey a key made the camera move
+ * @param {boolean} [asHeld] a span's levels taken from the text the page shows now
+ * @returns {Promise<boolean>}
+ */
+function retake(addr, pos, byKey, asHeld = false) {
+  hidePanel();
+  return standOn(addr, pos, byKey, null, asHeld, 'keep');
+}
+
+/**
  * The focus follows the camera (rule 3): after a camera move — the wheel,
  * the camera key's drag, a zoom chord, PageDown — re-take it at the scale's
  * grain, in the re-take's order (see the head), on the element under the
@@ -1491,9 +1721,11 @@ export function elementUnder(view) {
  * span or a link in it taken to the document where it stands below its
  * reading scale; else the account or the board under the centre takes it. A
  * key's move puts the platform's focus on the element wherever the key was
- * pressed, the ring drawn (rule 10); a pointer's or the wheel's carries it
- * only where the mirror held it, the ring out, and says nothing until the
- * next keyboard act (rule 12). While a live caret stands in text the person
+ * pressed (rule 10); a pointer's or the wheel's carries it only where the
+ * mirror held it, and says nothing until the next keyboard act (rule 12).
+ * The re-take aims nothing and hides the panel where it moves the walk
+ * (`retake`): the ring stands where it lands on the element the person's
+ * last act aimed at, and nowhere else (see the head). While a live caret stands in text the person
  * may edit at the camera's scale the focus is the caret, which no camera move
  * moves (D5 §4 rule 3): the walk stays at the caret's span (`liveCaret`). A
  * live caret whose text that scale does not read is left kept, its span
@@ -1507,24 +1739,24 @@ export async function retakeFromView(byKey = false) {
   const held = heldSpan();
   if (held) {
     const n = held.node;
-    if (!focus || focus.kind !== 'block' || focus.addr !== n.addr || focus.pos !== n.pos) await standOn(n.addr, held.pos, byKey, byKey, null, true);
+    if (!focus || focus.kind !== 'block' || focus.addr !== n.addr || focus.pos !== n.pos) await retake(n.addr, held.pos, byKey, true);
     return;
   }
   const view = CAM.view(), at = elementUnder(view), lod = lodOf(view.scale).name;
   if (at.kind === 'mark') {
     const own = focus && inDocument(focus) && membersOf(at.addr).includes(documentOf(focus.addr) || focus.addr) ? focus : null;
-    if (own) { if (own.kind !== 'document') await standOn(own.addr, null, byKey, byKey); }
-    else if (!focus || focus.addr !== at.addr) await standOn(at.addr, null, byKey, byKey);
+    if (own) { if (own.kind !== 'document') await retake(own.addr, null, byKey); }
+    else if (!focus || focus.addr !== at.addr) await retake(at.addr, null, byKey);
     return;
   }
-  if (at.kind === 'block') { if (!focus || focus.addr !== at.addr || focus.pos !== at.pos) await standOn(at.addr, at.pos, byKey, byKey); return; }
-  if (at.kind === 'document') { if (!focus || focus.addr !== at.addr || focus.kind !== 'document') await standOn(at.addr, null, byKey, byKey); return; }
+  if (at.kind === 'block') { if (!focus || focus.addr !== at.addr || focus.pos !== at.pos) await retake(at.addr, at.pos, byKey); return; }
+  if (at.kind === 'document') { if (!focus || focus.addr !== at.addr || focus.kind !== 'document') await retake(at.addr, null, byKey); return; }
   // the walk's own document, while it is in view: below its reading scale its spans are no stops, so it stands whole
   if (lod !== 'far' && lod !== 'far~mid' && focus && inDocument(focus) && LAYER.inView(focus.addr)) {
-    if (focus.kind !== 'document' && !LAYER.atReadingScale(focus.addr)) await standOn(focus.addr, null, byKey, byKey);
+    if (focus.kind !== 'document' && !LAYER.atReadingScale(focus.addr)) await retake(focus.addr, null, byKey);
     return;
   }
-  if (!focus || focus.addr !== at.addr) await standOn(at.addr, null, byKey, byKey);
+  if (!focus || focus.addr !== at.addr) await retake(at.addr, null, byKey);
 }
 
 /**
@@ -1537,9 +1769,9 @@ export async function retakeFromView(byKey = false) {
  * stood at, or the link's end it stood on, where its document kept its text
  * (M-REC's `dropClass`), else on its document whole; then, once that
  * document is read at the new class, taken again there, on that span or that
- * end. A move made meanwhile overtakes it (the order of moves). Like a
- * camera-made re-take, it carries the platform's focus only where the mirror
- * held it, and each of its moves is the page's own (`restand`). A feed row
+ * end. A move made meanwhile overtakes it (the order of moves). It carries
+ * the platform's focus only where the mirror held it, and each of its moves
+ * is the page's own (`restand`), the aim going with the walk. A feed row
  * names what it dropped and leaves the walk where it stands.
  * @param {import('../model/pump.js').Dropped} x
  * @returns {Promise<void>}
@@ -1550,11 +1782,11 @@ export async function dropped(x) {
   const at = landed ?? f.pos, doc = inDocument(f) ? f.addr : null;
   const end = f.kind === 'link' && f.link ? { link: f.link.link.addr, key: f.link.key } : null;
   const kept = !!doc && f.kind !== 'document' && REC.has(doc) && REC.doc(doc).blocks.length > 0;
-  await restand(f.addr, kept ? at : null, false, false, kept ? end : null, kept);
+  await restand(f.addr, kept ? at : null, false, kept ? end : null, kept);
   if (!doc) return;
   const move = moves;
   await PUMP.loadWhole(doc);
-  if (move === moves) await restand(doc, f.kind === 'document' ? null : at, false, false, end);
+  if (move === moves) await restand(doc, f.kind === 'document' ? null : at, false, end);
 }
 
 /** @returns {Node[]} the siblings in order, as the text shown stands now (the gate's a11y case) */

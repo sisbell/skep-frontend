@@ -40,8 +40,8 @@
 // walk's focused span, which nothing selects, else where the focus is; every
 // other slot's chord, with nothing in focus that its slot acts on, gives
 // "select a passage first" where the focus is; a key moving the caret stands
-// the walk on the caret's span, the ring's
-// rule as it stood, and a camera move leaves it there, so a slot chord at the
+// the walk on the caret's span, the live caret its mark and no ring drawn,
+// and a camera move leaves it there, so a slot chord at the
 // caret acts on that span; once Esc, a zoom past its reading scale or a key
 // pressed below that scale leaves the caret kept, its span holds the walk,
 // each re-take with a line of it in view taking the walk back there — no move
@@ -92,7 +92,8 @@
 // End at a live caret move it to the start and the end of its line — a
 // wrap's white space left after it, a break after a hyphen standing on the
 // line before — the walk and the camera still, Shift extending a selection
-// from it (D5 K-8, K-9,
+// from it; and every key the dispatch makes but a walk key or K-8 at the
+// plane hides the walk's panel, the ring standing (D5 K-8, K-9,
 // K-30, K-45 … K-52, K-57, K-70, K-71, K-72, K-74, K-76, K-77, K-93, K-100,
 // M-2, M-13, §1.6, §4 rules 2, 3 and 8; D6 BM-1, BM-3, BM-4, BM-52, BM-54,
 // BM-70, BM-75; B3-S1, B3-S13; P47; FP-10, FP-14, FP-36, FP-39). In a draft holding
@@ -213,7 +214,7 @@ const caret = () => { const c = LAYER.caret(); return c && [c.addr, c.pos, c.liv
 /** the walk's move let land */
 const tick = () => new Promise((r) => setTimeout(r, 0));
 /** the walk's focus on the span of `addr` holding `pos`, as a landing puts it there, reading nothing */
-const focusOn = (/** @type {string} */ addr, /** @type {number} */ pos) => WALK.focusTo(addr, pos, true, true, null, true);
+const focusOn = (/** @type {string} */ addr, /** @type {number} */ pos) => WALK.focusTo(addr, pos, true, null, true);
 
 /**
  * The test run on a page of stand-ins — the platform's focus on nothing, the status region keeping what it was told
@@ -483,7 +484,7 @@ test('Mod+C with nothing selected outside a field is taken at its keydown, its d
   await focusOn(D, 14);
   assert.deepEqual(await copy(), { took: true, prevented: true });
   assert.deepEqual([HINT.standing(), said.at(-1)], [{ id: 'L.copy.nothing', words: clause, whole: shift, open: false, writing: null }, clause], 'at a span of the draft the person may edit: its first clause, the line whole ending with Shift+↓\'s act');
-  await WALK.focusTo(O, null, true, true, null, true);
+  await WALK.focusTo(O, null, true, null, true);
   assert.deepEqual(await copy(), { took: true, prevented: true });
   assert.deepEqual([HINT.standing()?.whole, HINT.standing()?.words, said.at(-1)], [bare, clause, clause], 'at a document whole: FP-27\'s words alone, said again');
   await focusOn(D, 1);
@@ -629,7 +630,7 @@ test('the inert slots\' chords — Mod+K "link to…", never the LEAP box, Mod+S
   assert.deepEqual([SEL.selected(), holds(), slotIn('linkto').reason !== null, said.slice(n)], [{ addr: O, pos: 3, width: 4 }, null, true, [t('L.seam.link-to')]], 'Mod+K at a selection standing: the card at it gives the reason, holding no span of its own, the walk\'s span never taken over it');
   SEL.clear();
   hostEl.innerHTML = '';
-  await WALK.focusTo(O, null, true, true, null, true);
+  await WALK.focusTo(O, null, true, null, true);
   assert.equal(WALK.current()?.kind, 'document', 'the walk on the document whole: no span in focus');
   n = said.length;
   assert.equal(await KEYS.dispatch(keyOf('k', MOD), PLANE), true);
@@ -645,7 +646,7 @@ test('the other slots\' chords with nothing in focus that the slot acts on give 
   const PASSAGE = [['O', SHIFT, 'Mod+Shift+O'], ['R', SHIFT, 'Mod+Shift+R'], ['Enter', MOD, 'Mod+Enter'], ['Enter', SHIFT, 'Mod+Shift+Enter']];
   const ALL = [...PASSAGE, ['L', SHIFT, 'Mod+Shift+L']];
   for (const [at, kind, chords] of /** @type {const} */ ([[O, 'document', PASSAGE], ['1.0.2', 'account', ALL], ['1', 'board', ALL]])) {
-    await WALK.focusTo(at, null, true, true, null, true);
+    await WALK.focusTo(at, null, true, null, true);
     assert.equal(WALK.current()?.kind, kind, `the walk on the ${kind}: no span in focus`);
     for (const [key, mods, chord] of chords) {
       SEL.clear();
@@ -657,34 +658,36 @@ test('the other slots\' chords with nothing in focus that the slot acts on give 
         `${chord} at the ${kind}: nothing selected, no card, the slot's reason its hint at the focus, said at every press`);
     }
   }
-  await WALK.focusTo(O, null, true, true, null, true);
+  await WALK.focusTo(O, null, true, null, true);
   const n = said.length;
   assert.equal(await KEYS.dispatch(keyOf('L', SHIFT), PLANE), true);
   assert.deepEqual([HOST.currentState()?.id, said.slice(n)], ['links:' + O, []], 'Mod+Shift+L at a document whole opens the links card at it, no reason said');
   HOST.dismiss();
 }));
 
-test('a key moving a live caret into another span stands the walk on that span, naming the span\'s own first position, the ring\'s rule as it stood — drawn where a key drew it, out where a pointer put it out — so a slot chord pressed at the caret acts on the caret\'s span: ↓ from the first line takes the walk to the second, Mod+K there drawing its card at the second whole, and ↑ takes it back (B3-S13; D5 K-71, K-100; §4 rule 2)', () => onPlane(async () => {
+test('a key moving a live caret into another span stands the walk on that span, naming the span\'s own first position, the live caret its mark and no ring drawn while it stands live, so a slot chord pressed at the caret acts on the caret\'s span: ↓ from the first line takes the walk to the second, Mod+K there drawing its card at the second whole, and ↑ takes it back (B3-S13; D5 K-71, K-100; §4 rule 2; issue #559\'s design decision)', () => onPlane(async () => {
   HOST.attach(/** @type {any} */ (hostEl));
   await focusOn(D, 1);
+  assert.equal(FOCUS.ringShown(), true, 'the landing on the first span: the ring drawn');
   assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
-  assert.deepEqual([caret(), WALK.current()?.pos, FOCUS.ringShown()], [[D, 1, true], 1, true], 'the caret live at the first span\'s start, the walk there, a key\'s ring drawn');
+  assert.deepEqual([caret(), WALK.current()?.pos, FOCUS.ringShown()], [[D, 1, true], 1, false], 'the caret live at the first span\'s start, the walk there, the caret the mark: no ring');
   assert.equal(await KEYS.dispatch(keyOf('ArrowDown'), PLANE), true);
-  assert.deepEqual([caret(), WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos, WALK.landedAt(), FOCUS.ringShown()], [[D, 14, true], 'block', D, 14, 14, true],
-    '↓: the caret in the second line, the walk on its span naming the span\'s own first position, the ring drawn as it stood');
+  assert.deepEqual([caret(), WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos, WALK.landedAt(), FOCUS.ringShown()], [[D, 14, true], 'block', D, 14, 14, false],
+    '↓: the caret in the second line, the walk on its span naming the span\'s own first position, no ring while the caret stands live');
   assert.equal(await KEYS.dispatch(keyOf('k', MOD), PLANE), true);
   assert.deepEqual([holds(), SEL.selected(), caret()], [spanOfBlock(D, /** @type {any} */ (REC.blockAt(D, 14))), null, [D, 14, true]], 'Mod+K at the caret: the acts card at the caret\'s span whole, never the first, nothing selected; the caret where it stood');
   HOST.dismiss();
   assert.equal(await KEYS.dispatch(keyOf('ArrowUp'), PLANE), true);
   assert.deepEqual([caret(), WALK.current()?.pos], [[D, 1, true], 1], '↑: the caret back in the first line, the walk with it');
-  // the caret kept, the walk landed at its span by a pointer — the ring out — and the caret returned there
+  // Esc leaves the text at the caret's span, the caret kept: the ring drawn there; the caret returned, the ring out again
   await KEYS.dispatch(keyOf('Escape'), PLANE);
   await tick();
-  await WALK.focusTo(D, 1, false, true, null, true);
+  assert.deepEqual([caret(), WALK.current()?.pos, FOCUS.ringShown()], [[D, 1, false], 1, true], 'Esc: the caret kept, the walk on its span, the ring drawn there');
+  await WALK.focusTo(D, 1, true, null, true);
   assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
-  assert.deepEqual([caret(), FOCUS.ringShown()], [[D, 1, true], false], 'the kept caret returned live, the ring out');
+  assert.deepEqual([caret(), FOCUS.ringShown()], [[D, 1, true], false], 'the kept caret returned live, its mark the caret: no ring');
   assert.equal(await KEYS.dispatch(keyOf('ArrowDown'), PLANE), true);
-  assert.deepEqual([WALK.current()?.pos, FOCUS.ringShown()], [14, false], '↓: the walk on the second span, the ring still out');
+  assert.deepEqual([WALK.current()?.pos, FOCUS.ringShown()], [14, false], '↓: the walk on the second span, no ring while the caret stands live');
 }));
 
 test('a caret at the end of a draft\'s text stands in its last span: Esc there leaves the text to the walk on that span, the caret kept, and Enter at that span, or a printable key, returns the kept caret where it stood (D5 K-70, K-72, K-77; BM-4, BM-52)', () => onPlane(async () => {
@@ -851,7 +854,7 @@ test('the moves the page makes of its own — the box the walk stands in shown o
     /** @type {Array<[string, () => Promise<unknown>]>} each move the page makes of its own */
     const moves = [
       ['the box shown on a newer version', () => WALK.standAgain(D, under.pos)],
-      ['a reading scene\'s close', () => WALK.returnFocusTo(D, under.pos, true, true)],
+      ['a reading scene\'s close', () => WALK.returnFocusTo(D, under.pos, true)],
       ['a change of the page\'s class', () => WALK.dropped({ row: null, addrs: null, at: Date.now() })],
     ];
     for (const [what, move] of moves) {
@@ -982,8 +985,8 @@ test('a selection put in another document than a live caret\'s keeps the caret f
   assert.deepEqual(caret(), [D, 1, true], 'the caret live in D');
   SEL.select(O, 1, 10);
   await tick();
-  assert.deepEqual([caret(), LAYER.caretOwes(), SEL.selected(), overlay(), WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos, FOCUS.ringShown()], [[D, 1, false], null, at, 'selection', 'block', O, 1, false],
-    'the selection in O: the caret kept first, owing the frame nothing, the selection and its card standing, the walk on the span holding its moving end, the ring out');
+  assert.deepEqual([caret(), LAYER.caretOwes(), SEL.selected(), overlay(), WALK.current()?.kind, WALK.current()?.addr, WALK.current()?.pos, FOCUS.ringShown()], [[D, 1, false], null, at, 'selection', 'block', O, 1, true],
+    'the selection in O: the caret kept first, owing the frame nothing, the selection and its card standing, the walk on the span holding its moving end, the ring drawn there');
   const n = said.length, trail = TRAIL.all().length;
   assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
   assert.deepEqual([SEL.selected(), overlay(), holds(), caret(), TRAIL.all().length, said.slice(n).includes(t('B3.row.follow.inert'))], [at, 'which', null, [D, 1, false], trail, false],
@@ -1145,7 +1148,7 @@ test('a printable key swallowed outside the draft last written in the page\'s se
     const end = t('B3.undo.last-writing', { label: LAYER.boxName(D).name });
     await press('q');
     assert.deepEqual([HINT.standing()?.id, HINT.standing()?.words, HINT.standing()?.writing, said.at(-1)], ['B3.row.others-document', clause, end, `${clause} ${end}`], 'at O: its line, ending with where the person was writing, said together');
-    await WALK.focusTo('1.0.2', null, true, true, null, true);
+    await WALK.focusTo('1.0.2', null, true, null, true);
     await press('q');
     assert.deepEqual([HINT.standing()?.id, HINT.standing()?.writing], ['F.swallow', end], 'off any document: K-9\'s line, ending the same');
     // D's second span in the text shown, one position on past "a"
@@ -1189,7 +1192,7 @@ test('a zoom past a live caret\'s reading scale leaves the caret kept, the walk 
 
   // a live caret in the draft the walk stands on whole: the re-take below its reading scale moves no walk and leaves the caret kept
   CAM.set(reading);
-  await WALK.focusTo(D, null, true, true, null, true);
+  await WALK.focusTo(D, null, true, null, true);
   LAYER.placeCaret(D, 14);
   assert.deepEqual([caret(), walkAt()], [[D, 14, true], ['document', D, null]]);
   CAM.set({ ...reading, scale: 7 / f.fs });
@@ -1828,7 +1831,7 @@ test('a character Option types is a printable key: at a live caret ⌥G\'s © an
   assert.equal(await KEYS.dispatch(keyOf('e', { ctrlKey: true }), PLANE), false, 'Ctrl+E there: no printable key, the platform\'s');
   await tick();
   assert.equal(said.length, n, 'and no line said');
-  await WALK.focusTo(O, null, true, true, null, true);
+  await WALK.focusTo(O, null, true, null, true);
   assert.equal(await answered('©'), 'F.swallow', 'off any span: K-9\'s line');
   assert.deepEqual([WRITE.edits(D), WRITE.edits(O), caret()], [[], [], null], 'nothing typed, no caret');
 
@@ -1855,7 +1858,7 @@ test('a character Option types is a printable key: at a live caret ⌥G\'s © an
 // placed last: the follow it guards against, where it is made, leaves a jump in the air for the tests after it
 test('Mod+Enter at a live caret placed in the draft\'s second line while the walk stands on a link\'s stop in its first, no selection standing, follows no link from the stop — the trail as it was, nothing faced — and leaves the caret where it stands, the caret\'s follow line in the one line and said through the status region (D5 K-51; B3-S13)', () => onPlane(async ({ said }) => {
   const { l1 } = twoLinks();
-  await WALK.focusTo(D, l1.pos, true, true, { link: l1.link.addr, key: l1.key }, true);
+  await WALK.focusTo(D, l1.pos, true, { link: l1.link.addr, key: l1.key }, true);
   LAYER.placeCaret(D, 14);
   assert.deepEqual([WALK.current()?.kind, WALK.current()?.link?.link.addr, caret()], ['link', l1.link.addr, [D, 14, true]], 'the walk on L1\'s stop, the caret live in the second line');
   const n = said.length, trail = TRAIL.all().length;
@@ -1863,4 +1866,50 @@ test('Mod+Enter at a live caret placed in the draft\'s second line while the wal
   assert.deepEqual([SEL.selected(), overlay(), caret(), TRAIL.all().length, said.slice(n)], [null, null, [D, 14, true], trail, [t('B3.row.follow.inert')]],
     'Mod+Enter at the bare caret with the walk on a link\'s stop: no follow from the stop, no span selected, the caret live where it stood, the caret\'s follow line said');
   HOST.dismiss();
+}));
+
+// placed last: it attaches a mirror the walk's item takes the focus on, which no test after it should meet
+test('every key the dispatch makes but a walk key or K-8 at the plane hides the walk\'s panel as it is pressed — Esc on the bare plane, a printable key, Mod+K — and a walk key, Shift+↓, an Enter that selects and a modifier going down keep it, the ring standing through each (D5 §4 rule 2; issue #559\'s design decision)', () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  /** the mirror's items, each taking the platform's focus as the platform's would */
+  const doc = /** @type {{activeElement: unknown}} */ (globalThis.document);
+  /** @type {Map<string, {focus: () => void}>} */
+  const items = new Map();
+  const itemAt = (/** @type {string} */ id) => { let e = items.get(id); if (!e) { const it = { focus() { doc.activeElement = it; } }; items.set(id, it); e = it; } return e; };
+  /** @type {Set<string>} */
+  const classes = new Set();
+  WALK.attach(/** @type {any} */ ({
+    innerHTML: '', tabIndex: 0, style: {}, setAttribute() {}, contains: (/** @type {unknown} */ x) => [...items.values()].includes(/** @type {any} */ (x)),
+    classList: { toggle: (/** @type {string} */ c, /** @type {boolean} */ on) => { if (on) classes.add(c); else classes.delete(c); } },
+    querySelector: (/** @type {string} */ sel) => (sel.startsWith('#walk-') ? itemAt(sel.slice(1)) : null),
+  }));
+  /** a key dispatched, any flight its walk's move starts stepped to its end */
+  const press = async (/** @type {any} */ e) => {
+    let done = false;
+    const p = KEYS.dispatch(e, PLANE).then((x) => { done = true; return x; });
+    for (let i = 0; i < 100 && !done; i++) { await tick(); if (CAM.flying()) CAM.step(Infinity); }
+    return p;
+  };
+  /** the panel shown again by a walk key's move: ↑ from O's second span, ↓ from its first */
+  const shown = async () => { await press(keyOf(WALK.current()?.pos === 1 ? 'ArrowDown' : 'ArrowUp')); assert.equal(WALK.panelShown(), true, 'a walk key\'s move: the panel shown'); };
+  await focusOn(O, 1);
+  assert.deepEqual([WALK.panelShown(), FOCUS.ringShown()], [false, true], 'a landing: the ring drawn, no panel');
+  await shown();
+  /** @type {Array<[string, any, boolean]>} each key, as the platform delivers it, and whether the panel stands after it */
+  const keys = [
+    ['a modifier going down', keyOf('Shift', { shiftKey: true }), true],
+    ['Shift+↓', keyOf('ArrowDown', { shiftKey: true }), true],
+    ['an Enter that selects', keyOf('Enter'), true],
+    ['Esc', keyOf('Escape'), false],
+    ['Esc on the bare plane', keyOf('Escape'), false],
+    ['a printable key', keyOf('q'), false],
+    ['Mod+K', keyOf('k', MOD), false],
+  ];
+  for (const [what, e, stands] of keys) {
+    if (!WALK.panelShown()) await shown();
+    if (what === 'Esc on the bare plane') { SEL.clear(); HOST.dismiss(); }
+    await press(e);
+    assert.deepEqual([WALK.panelShown(), FOCUS.ringShown(), classes.has('shown')], [stands, true, stands], `${what}: the panel ${stands ? 'standing' : 'hidden'}, the ring standing`);
+    HOST.dismiss();
+  }
 }));

@@ -933,13 +933,13 @@ test('a Back made while a carried passage\'s compare reads goes back from the LE
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a teleport a key made draws the focus ring at its landing; one the pointer made puts it out', async () => {
+test('a teleport draws the focus ring at its landing, whatever made it: a key, a click on a place, a click on › forward (issue #559\'s design decision)', async () => {
   /** the teleport run to its end, and whether the ring stands at its landing */
   const ring = async (/** @type {Promise<unknown>} */ act) => { await run(act); return WALK.ringShown(); };
   assert.equal(await ring(GO.leapTo(D, { how: 'key', byKey: true })), true, 'Enter on a document');
-  assert.equal(await ring(GO.leapTo(FAR, { how: 'click' })), false, 'a click on a place');
+  assert.equal(await ring(GO.leapTo(FAR, { how: 'click' })), true, 'a click on a place');
   assert.equal(await ring(GO.back(true)), true, 'Mod+[');
-  assert.equal(await ring(GO.forward()), false, 'a click on › forward');
+  assert.equal(await ring(GO.forward()), true, 'a click on › forward');
   assert.equal(await ring(GO.follow(drawn(PASSAGE), true)), true, 'Mod+Enter');
   assert.equal(await ring(GO.wholeBoard(true)), true, 'Mod+0');
   assert.equal(await ring(GO.home(true)), true, 'Mod+Shift+H');
@@ -1315,7 +1315,7 @@ test('a LEAP to an address on a board the plane does not draw reaches for it: it
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a Back reaching a LEAP\'s entry while it reads puts the arrival out as it is made, lighting the step it crossed, and goes on nowhere once Forward has been made: the ring as Forward left it', async () => {
+test('a Back reaching a LEAP\'s entry while it reads puts the arrival out as it is made, lighting the step it crossed, and goes on nowhere once Forward has been made: the ring where Forward\'s landing put the walk', async () => {
   unread();
   await run(GO.leapTo(D));
   const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(C) });
@@ -1335,7 +1335,7 @@ test('a Back reaching a LEAP\'s entry while it reads puts the arrival out as it 
   assert.equal(TRAIL.current()?.addr, FAR);
   assert.ok(same(CAM.view(), landed), 'the camera at the follow\'s landing');
   assert.deepEqual(walkAt(), walked, 'the walk on the follow\'s span');
-  assert.equal(WALK.ringShown(), false, 'Forward, a pointer\'s, put the ring out; the Back a key made drew none after it');
+  assert.equal(WALK.ringShown(), true, 'Forward\'s landing, a pointer\'s, put the walk on the follow\'s span and drew the ring there; the Back moved nothing after it');
   assert.deepEqual(fake.unanswered, []);
 });
 

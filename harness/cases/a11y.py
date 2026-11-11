@@ -10,9 +10,13 @@ items the current item alone in the order, reached by Tab from the line's
 last stop and left by Shift+Tab back to it; the AX tree
 (`Accessibility.getFullAXTree`) compared where CDP answers it, else reported
 as not answered; the platform's focus carried by the mirror's rebuild to the
-current item — under the walk keys and under a LEAP's landing — with the
-panel scrolled so the focused item is a row the panel shows (D5 §4 rules 2,
-4 and 8); the LEAP box a combobox over its rows' grid (R94; WAI-ARIA's
+current item — under the walk keys, the panel scrolled so the focused item
+is a row the panel shows, and under a LEAP's landing, the panel hidden and
+the item, transparent, standing over the walk's element's box — the panel
+taking no press, shown or hidden (D5 §4 rules 2, 4 and 8; issue #559); the
+mirror's activate on an item — the click the platform sends the element
+itself — making Enter's act there, the walk on it and the ring drawn, no
+panel (issue #559); the LEAP box a combobox over its rows' grid (R94; WAI-ARIA's
 combobox with a grid popup, list autocomplete with automatic selection) —
 each row a row of two cells, its go and its "open beside"; the focus kept in
 the input, its active descendant the selected row's go once ↓ or ↑ carries
@@ -210,6 +214,12 @@ def run(ctx):
         r.check(ok, '%s: the focused item is a row the panel shows — inside its clip and the viewport' % key, v)
     seen = ctx.js('window.__gateKeydown')
     r.check(bool(seen) and seen['key'] == 'ArrowDown' and seen['prevented'] is True, 'the walk key\'s default is prevented before the listeners return (the platform never scrolls the mirror under the page)', seen)
+    # the panel the walk keys show takes no press: a press over its middle lands on what lies beneath (issue #559)
+    over = ctx.js('''(() => { const m = document.getElementById('mirror'), q = m.getBoundingClientRect(), e = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2);
+      return {shown: m.classList.contains('shown'), panel: window.__skep.focus().panel, pointer: getComputedStyle(m).pointerEvents, opacity: getComputedStyle(m).opacity,
+              under: !e ? null : m.contains(e) ? 'the mirror' : e.id || e.tagName.toLowerCase(), w: q.width}; })()''')
+    r.check(over['shown'] and over['panel'] is True and over['opacity'] == '1' and over['pointer'] == 'none' and over['w'] > 0 and over['under'] not in (None, 'the mirror'),
+            'the walk\'s panel, shown after the walk keys, opaque, takes no press: what lies beneath its middle takes it (issue #559)', over)
     # the fold: the panel scrolls within a capped height; End puts the current item at the set's end, and the panel
     # must scroll so the item the focus outlines is a row the panel shows
     press('End')
@@ -236,8 +246,13 @@ def run(ctx):
     f = focused()
     landed = ctx.js('window.__skep.view.focus()')
     r.check(bool(landed) and landed['addr'] == FAR_LEAP and f['active'] == 'walk-%d' % f['idx'] and f['sel'] == 'true', 'Enter LEAPs; the focus stands on the landing\'s item in the rebuilt tree', {'landed': landed, 'got': f})
-    ok, v = in_window(f['idx'])
-    r.check(ok, 'the landing\'s item is a row the panel shows — the panel scrolled to it on the landing', v)
+    stood = ctx.js('''((i) => { const e = document.getElementById('walk-' + i), m = document.getElementById('mirror'), q = e.getBoundingClientRect();
+      return {item: {x: q.left, y: q.top, w: q.width, h: q.height}, box: window.__skep.view.ringBox(), panel: window.__skep.focus().panel, ring: window.__skep.focus().ring,
+              shown: m.classList.contains('shown'), opacity: getComputedStyle(m).opacity, pointer: getComputedStyle(m).pointerEvents}; })(%d)''' % f['idx'])
+    box = stood['box']
+    r.check(stood['ring'] is True and stood['panel'] is False and not stood['shown'] and stood['opacity'] == '0' and stood['pointer'] == 'none'
+            and bool(box) and all(abs(stood['item'][k] - box[k]) <= 0.5 for k in ('x', 'y', 'w', 'h')),
+            'the LEAP\'s landing shows no panel: the ring drawn, and the landing\'s item, transparent and taking no press, stands over the walk\'s element\'s box, where a magnifier that follows the focus comes (issue #559)', stood)
     r.figures['mirror_panel']['landing'] = {'index': f['idx'], 'size': ctx.js('window.__skep.mirror.size()'), 'scroll_top': ctx.js('document.getElementById("mirror").scrollTop')}
     # ---- the LEAP box: a combobox over its rows' grid (R94; WAI-ARIA's combobox with a grid popup, list autocomplete
     # with automatic selection; issue #332) ----
@@ -742,7 +757,7 @@ def run(ctx):
     f = at()
     landed = ctx.js('window.__skep.view.focus()')
     r.check(back_btn and f['id'] == 'walk-%d' % f['idx'] and f['sel'] == 'true' and bool(landed), 'rule 10/12: Enter on the line\'s ‹ back lands the platform\'s focus on the landing\'s item, never the body (#105)', dict(f, landed=landed))
-    # a trail-list row opened by the POINTER: the row's click lands the focus on the item too (the ring out)
+    # a trail-list row opened by the POINTER: the row's click lands the focus on the item too, the ring drawn and no panel (issue #559)
     ctx.js('window.__skep.cards.trailList()')  # the gate's door opens it as a pointer does: no focus taken
     ctx.frames(2)
     took = ctx.js('!document.getElementById("overlay").contains(document.activeElement)')
@@ -753,6 +768,25 @@ def run(ctx):
         ctx.frames(2)
     f = at()
     r.check(bool(row) and took and f['overlay'] is None and f['id'] == 'walk-%d' % f['idx'] and f['sel'] == 'true', 'rule 16/10: a trail-list row opened by the pointer takes no focus, and the row\'s click lands the platform\'s focus on the item (#105, #106)', dict(f, row=row, pointer_opened_took_none=took))
+    lit = ctx.js('({ring: window.__skep.focus().ring, panel: window.__skep.focus().panel})')
+    r.check(lit == {'ring': True, 'panel': False}, 'the pointer\'s trail-list row draws the ring at its landing and shows no panel (issue #559)', lit)
+    # the mirror's activate: the click the platform sends an item itself — a screen reader's, whatever its count — is Enter's act on that item
+    ctx.leap(DOC, WINDOW[0])
+    pick = ctx.js('''(() => { const S = window.__skep, i = S.mirror.index(), sib = S.mirror.siblings(), j = sib.findIndex((n, k) => k > i && n.kind === 'block');
+      return j < 0 ? null : {i: j, pos: sib[j].pos}; })()''')
+    r.check(pick is not None, 'the first edition\'s landing holds a span item after the current one, for the activate', pick)
+    if pick:
+        ctx.js('document.getElementById("walk-%d").click()' % pick['i'])
+        ctx.settle()
+        ctx.frames(2)
+        acted = ctx.js('''(() => { const S = window.__skep, f = S.view.focus(), e = document.activeElement;
+          return {focus: f && {kind: f.kind, pos: f.pos}, sel: S.selection(), item: !!e && e.id === 'walk-' + S.mirror.index(), ring: S.focus().ring, panel: S.focus().panel}; })()''')
+        block = next((b for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC)) if b['pos'] == pick['pos']), None)
+        r.check(bool(block) and acted['focus'] == {'kind': 'block', 'pos': pick['pos']} and acted['sel'] == {'addr': DOC, 'pos': pick['pos'], 'width': block['width']}
+                and acted['item'] and acted['ring'] is True and acted['panel'] is False,
+                'the activate on a span\'s item stands the walk there and makes Enter\'s act — the block selected whole — the item holding the focus, the ring drawn, no panel (issue #559)', dict(acted, want=pick))
+        ctx.js('window.__skep.esc()')
+        ctx.frames(1)
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
     ctx.frames(1)
     # ---- rule 11: a control redrawn from state keeps the focus (#53, #100) --------------------------------------------

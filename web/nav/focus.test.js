@@ -1,7 +1,8 @@
 // N-FOCUS's test, on a page of stand-ins whose focus lands only where the
 // platform's would: one owner — no `.focus()` call stands in any module of
 // the page outside the controller — one reading of "a key made it", the
-// ring's rule, the opener stack remembered once and its close's return, a
+// ring's rule read from the walk's aim, whatever moved the focus, and a Tab
+// told to the walk, the opener stack remembered once and its close's return, a
 // field keeping its caret through a move the page makes and through a key's
 // opening beside it, whose region its close then gives the focus, a rebuild
 // keeping the focus, and the host's cases: which control an overlay gives
@@ -72,51 +73,67 @@ test('no `.focus()` call stands outside the controller: every module of the page
   assert.deepEqual(stray, []);
 });
 
-test('the ring\'s rule: drawn where a key moved the focus into the plane, out by a pointer\'s landing and whenever the plane does not hold the focus', () => {
+test('the ring\'s rule: drawn while the plane holds the focus and the walk stands where an act of the person\'s put it — the walk\'s reading, whatever moved the focus — and out whenever the plane does not hold it; a focus the platform moves into the plane after a key tells the walk of the act, one after a pointer tells nothing (issue #559\'s design decision)', () => {
   const p = page();
   const plane = p.element('the tree'), item = p.element('the item'), line = p.element('the line\'s act');
   plane.contains = (x) => x === item || x === plane;
-  FOCUS.attach({ plane: /** @type {any} */ (plane), home: () => /** @type {any} */ (item) });
-  assert.equal(FOCUS.land(/** @type {any} */ (item), { byKey: true }), true, 'a key\'s landing puts the focus on the item');
-  assert.equal(FOCUS.ringShown(), true, 'drawn: the plane holds the focus and a key moved it');
-  FOCUS.land(/** @type {any} */ (item), { byKey: false });
-  assert.equal(FOCUS.ringShown(), false, 'a pointer\'s landing puts it out');
-  FOCUS.land(/** @type {any} */ (item), { byKey: true });
-  FOCUS.land(/** @type {any} */ (line), { byKey: true });
-  assert.equal(FOCUS.planeHolds(), false);
-  assert.equal(FOCUS.ringShown(), false, 'the one line holds the focus: no ring, a key or not');
-  FOCUS.land(/** @type {any} */ (item), {});
-  assert.equal(FOCUS.ringShown(), true, 'a hand-off keeps the rule as it stood');
-  FOCUS.land(null, { byKey: false });
-  assert.equal(p.at(), 'the item', 'a camera-made re-take that carries no focus moves none');
-  assert.equal(FOCUS.ringShown(), false, '— and puts the ring out');
+  /** @type {Map<string, () => void>} the plane's listeners, by event; and the window's, the platform's input among them */
+  const heard = new Map(), input = new Map();
+  plane.addEventListener = (/** @type {string} */ type, /** @type {() => void} */ fn) => { heard.set(type, fn); };
+  const was = globalThis.window;
+  globalThis.window = /** @type {any} */ ({ addEventListener: (/** @type {string} */ type, /** @type {() => void} */ fn) => { input.set(type, fn); } });
+  let aimed = true, told = 0;
+  try {
+    FOCUS.attach({ plane: /** @type {any} */ (plane), home: () => /** @type {any} */ (item), aimed: () => aimed, entered: () => { told++; } });
+    assert.equal(FOCUS.land(/** @type {any} */ (item)), true, 'a landing puts the focus on the item');
+    assert.equal(FOCUS.ringShown(), true, 'drawn: the plane holds the focus and the walk stands where an act put it');
+    aimed = false;
+    assert.equal(FOCUS.ringShown(), false, 'the walk on another element than the act put it on: no ring, the focus where it stood');
+    aimed = true;
+    FOCUS.land(/** @type {any} */ (line));
+    assert.deepEqual([FOCUS.planeHolds(), FOCUS.ringShown()], [false, false], 'the one line holds the focus: no ring');
+    FOCUS.land(null);
+    assert.equal(p.at(), 'the line\'s act', 'a landing naming no element moves none');
+    // the platform moves the focus into the plane on its own
+    input.get('keydown')?.();
+    heard.get('focusin')?.();
+    assert.equal(told, 1, 'after a key — a Tab — the walk is told of the act');
+    input.get('pointerdown')?.();
+    heard.get('focusin')?.();
+    assert.equal(told, 1, 'after a pointer, nothing is told');
+  } finally {
+    globalThis.window = was;
+    FOCUS.attach({ aimed: () => false, entered: () => {} });
+  }
 });
 
-test('a field the reader types in keeps the caret through a move the page makes: the focus stays in it, the ring\'s rule set as asked, and the region holding it closes onto the walk\'s element — never its opener, which still takes the focus (#171\'s rule 2)', () => {
+test('a field the reader types in keeps the caret through a move the page makes: the focus stays in it, no ring drawn while it does, and the region holding it closes onto the walk\'s element — never its opener, which still takes the focus — the ring drawn there (#171\'s rule 2)', () => {
   const p = page();
   const plane = p.element('the tree'), item = p.element('the item'), landed = p.element('the landing\'s item'), box = p.element('the box'), rows = p.element('the box\'s rows');
   const field = Object.assign(p.element('the box\'s input'), { matches: (/** @type {string} */ sel) => sel.split(',').map((s) => s.trim()).includes('input') });
   plane.contains = (x) => x === item || x === landed || x === plane;
   box.contains = (x) => x === field || x === rows;
   let walk = item;
-  FOCUS.attach({ plane: /** @type {any} */ (plane), home: () => /** @type {any} */ (walk) });
+  // the walk stands where the landing put it: its reading of the ring
+  FOCUS.attach({ plane: /** @type {any} */ (plane), home: () => /** @type {any} */ (walk), aimed: () => true });
   assert.deepEqual([FOCUS.isField(/** @type {any} */ (field)), FOCUS.isField(/** @type {any} */ (item)), FOCUS.isField(null)], [true, false, false], 'one reading of a field: an input or a textarea, never another element');
   item.focus();
   FOCUS.open('box', { el: /** @type {any} */ (box), byKey: true, first: /** @type {any} */ (field) });
   assert.equal(p.at(), 'the box\'s input', 'the box\'s input takes the focus, the item its opener');
   walk = landed; // a landing arrives under the box: the walk stands on its item
-  assert.equal(FOCUS.land(/** @type {any} */ (landed), { byKey: true }), false, 'the landing\'s move puts the focus nowhere');
+  assert.equal(FOCUS.land(/** @type {any} */ (landed)), false, 'the landing\'s move puts the focus nowhere');
   assert.deepEqual([p.at(), FOCUS.ringShown()], ['the box\'s input', false], 'the caret stays in the field, no ring drawn while the plane does not hold the focus');
-  FOCUS.land(/** @type {any} */ (field), {});
+  FOCUS.land(/** @type {any} */ (field));
   assert.equal(p.at(), 'the box\'s input', 'a move onto the field itself is a move like any other');
   FOCUS.close('box');
-  assert.deepEqual([p.at(), FOCUS.ringShown()], ['the landing\'s item', true], 'its close gives the focus to the walk\'s element — the landing — never the item it was opened from, the ring as the landing\'s key set it');
+  assert.deepEqual([p.at(), FOCUS.ringShown()], ['the landing\'s item', true], 'its close gives the focus to the walk\'s element — the landing — never the item it was opened from, the ring drawn there');
   // a focus on a control of a region that is no field moves as ever
   FOCUS.open('box', { el: /** @type {any} */ (box), byKey: true, first: /** @type {any} */ (rows) });
   assert.equal(p.at(), 'the box\'s rows');
-  FOCUS.land(/** @type {any} */ (item), { byKey: true });
+  FOCUS.land(/** @type {any} */ (item));
   assert.equal(p.at(), 'the item', 'no field holds the focus: the move takes it');
   FOCUS.close('box');
+  FOCUS.attach({ aimed: () => false });
 });
 
 test('a key\'s opening beside a field the reader types in takes none of its caret: the region stands without the focus, said by its own name, and the field\'s close gives it the focus on its first control as that stands then — the region gone, or a face in its place, the walk\'s element (issue #267\'s design decision: "Esc in that field then gives the surface the focus")', () => {
@@ -143,7 +160,7 @@ test('a key\'s opening beside a field the reader types in takes none of its care
   const typing = () => {
     walk = item; item.focus(); shown = true;
     FOCUS.open('box', { el: /** @type {any} */ (box), byKey: true, first: /** @type {any} */ (field) });
-    walk = landed; FOCUS.land(/** @type {any} */ (landed), { byKey: true });
+    walk = landed; FOCUS.land(/** @type {any} */ (landed));
     assert.equal(p.at(), 'the box\'s input', 'the landing\'s move leaves the caret in the field');
   };
   /** the box closed as Esc in its input closes it: hidden, its input taking no focus from then */

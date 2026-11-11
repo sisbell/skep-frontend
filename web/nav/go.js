@@ -74,8 +74,8 @@
 // leaves alone (O-HOST's `takeDownFaces`), every card, list, moment and
 // selection standing beside it, a card still reading reading on. The camera is
 // flown (P-CAM's `fly`) and the walk moved to the landing (N-WALK's `focusTo`), the
-// ring drawn there where a key made the act, which only the caller knows, so
-// every act takes `byKey` from it (D5 §4 rules 2 and 8); a LEAP and a follow
+// element landed on aimed at, so the ring stands there whatever made the act
+// (D5 §4 rules 2 and 8); a LEAP and a follow
 // land at the reading size, framing the passage's column (`viewFor`). A
 // flight bound for a place in a document — a LEAP's, a follow's, a step's,
 // a return's, a cover's — flies its aim (`aimAt`; P-CAM's `Aim`; FP-8,
@@ -1326,8 +1326,8 @@ export function step(dir, byKey = false) {
  * (APP-INPUT): the landing standing there, its line the run's label, the
  * camera flown to the view that reads it at the reading size, its column
  * framed, by its aim (`toward`), and the walk on the span holding it, the
- * platform's focus there with the ring drawn where a key made the step
- * (N-WALK's `focusTo`; FP-20) — no trail move, no act counted, the arrival
+ * platform's focus there and the span aimed at, the ring drawn there whatever
+ * made the step (N-WALK's `focusTo`; FP-20) — no trail move, no act counted, the arrival
  * standing. Nothing where no step stands, or the run is none of its runs.
  * @param {number} i the run, an index into the landing's runs (`Landing.pieces`; the arrival's `runs`)
  * @param {boolean} [byKey] a key made the step
@@ -1338,7 +1338,7 @@ export function stepTo(i, byKey = false) {
   if (!l || !r) return false;
   landed = { ...l, pos: r.pos, current: i };
   if (arrival && arrival.addr === l.addr) arrival = { ...arrival, pos: r.pos };
-  void WALK.focusTo(l.addr, r.pos, byKey, true);
+  void WALK.focusTo(l.addr, r.pos);
   void CAM.fly(toward(l.addr, r.pos).aim, 420);
   CAM.markDirty();
   return true;
@@ -1587,8 +1587,8 @@ async function goOn(act, first, at, byKey, ms) {
  * shown there as O-HOST's notice (`showFound`), the walk re-taken without the
  * platform's focus — on the place, or where a return reaching the entry put
  * it (`to`) — save where the reader took the camera over, so the mirror names
- * what the read learned, the ring as the act left it, and the jump ended,
- * never landed.
+ * what the read learned, the place aimed at, and the jump ended, never
+ * landed.
  * @param {number} act
  * @param {Entry | null} entry
  * @param {Notice} n
@@ -1600,7 +1600,7 @@ function failed(act, entry, n, byKey, to = null) {
   if (entry) TRAIL.settle(entry, { notice: n });
   if (act !== made) return false;
   showFound(n);
-  if (takenAt !== act) { if (to) focusOn({ ...to, take: false }, byKey); else void WALK.focusTo(n.addr, null, !!byKey, false); }
+  if (takenAt !== act) { if (to) focusOn({ ...to, take: false }, byKey); else void WALK.focusTo(n.addr, null, false); }
   endAir(act, false);
   return true;
 }
@@ -1739,15 +1739,15 @@ const headOf = (/** @type {import('../model/records.js').Doc} */ d) => (d.blocks
  * only where its view reads the document at its reading scale, else to the
  * document whole (see the head), to the link's end it names where it names
  * one — the platform's focus with it, save where the place says it stays
- * where it is, and the ring drawn at it where a key made the act; a live
- * caret left kept, save at a reading scene's close (`Destination.returns`);
+ * where it is, and the place aimed at, so the ring stands there (N-WALK's); a
+ * live caret left kept, save at a reading scene's close (`Destination.returns`);
  * the move kept (`walking`) for the surfaces a return reopens to wait on.
  * @param {Destination} at
  * @param {boolean | undefined} byKey
  */
 function focusOn(at, byKey) {
   const to = at.returns ? WALK.returnFocusTo : WALK.focusTo;
-  walking = to(at.addr, at.pos != null && LAYER.atReadingScale(at.addr, at.view.scale) ? at.pos : null, byKey, at.take ?? true, at.end ?? null);
+  walking = to(at.addr, at.pos != null && LAYER.atReadingScale(at.addr, at.view.scale) ? at.pos : null, at.take ?? true, at.end ?? null);
   CAM.markDirty();
 }
 
@@ -2225,8 +2225,9 @@ function sayFollowed(act, s, entry, placed, pos) {
 /**
  * LEAP to a place: the next act — the trail gains the entry as it is made,
  * and the camera leaves at once (see the head): the chrome of the place it
- * leaves ended, the walk on the place it left for, the ring drawn at it where
- * a key made the act, the camera flying there, its reads beside the flight.
+ * leaves ended, the walk on the place it left for and aimed at, the ring
+ * drawn there whatever made the act, the camera flying there, its reads
+ * beside the flight.
  * A landing that names the link it followed outlines every run of the span it
  * landed on and lights that link — it names no end the link was followed
  * from, so the entry it departs records no step (the gate's door, its one
@@ -2396,10 +2397,10 @@ async function swapped(c, was, d, met) {
  * `pos`'s (T-LAYER's `holdAcross`) — the camera where it stands — the box
  * taking that version, the passage outlined where the version holds it and
  * the link lit; the selection the move carried moved as the landing placed
- * it (`carrySelection`); the walk moved to the landing, the ring drawn at it
- * where a key made the act — the platform's focus carried there only where
- * the mirror held it, where the reader took the camera over while the move
- * read (`take` false); then every surface standing re-checked against the
+ * it (`carrySelection`); the walk moved to the landing and aimed at it — the
+ * platform's focus carried there only where the mirror held it, where the
+ * reader took the camera over while the move read (`take` false); then every
+ * surface standing re-checked against the
  * version moved to (`surfacesAcross`).
  * @param {string} was the version the box showed
  * @param {Doc} d the version moved to
@@ -2418,7 +2419,7 @@ async function landInPlace(was, d, placed, link, spans, byKey, take = true, carr
   lit = link ? [link] : [];
   if (carry) carrySelection(carry, addr, placed);
   CAM.markDirty();
-  await WALK.focusTo(addr, LAYER.atReadingScale(addr, CAM.destination().scale) ? placed.pos : null, byKey, take);
+  await WALK.focusTo(addr, LAYER.atReadingScale(addr, CAM.destination().scale) ? placed.pos : null, take);
   surfacesAcross();
 }
 
@@ -2763,8 +2764,9 @@ export async function home(byKey = false) {
  * The launch frame — HOME (foundations §2.2) — set without a flight, and the
  * trail's first entry (W-01), so the
  * first teleport re-takes its view as it departs and Back returns to it. The
- * landing puts the platform's focus on the walk's element with the ring out
- * (the focus record's rule 21), so the first Tab moves on from it and a
+ * landing puts the platform's focus on the walk's element, no act having put
+ * the walk there, so no ring is drawn (N-WALK's `restAt`; the focus record's
+ * rule 21), so the first Tab moves on from it and a
  * screen reader lands on the place the launch names. Where no board is held
  * it names none (see the head): no entry is pushed, and the walk's root,
  * saying why, takes the focus.
@@ -2773,7 +2775,7 @@ export async function launch() {
   const h = homeFrame();
   CAM.set(h.view);
   if (REC.board()) here = TRAIL.push({ addr: h.addr, pos: null, width: null, view: h.view, label: t('F.level.home'), notice: null }, null);
-  await WALK.focusTo(h.addr, null);
+  await WALK.restAt(h.addr);
   CAM.markDirty();
 }
 

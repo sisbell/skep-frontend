@@ -1,7 +1,12 @@
 // N-WALK's test against the fake port: a landing keeps the position it named
 // inside the span it focuses while a walk key names none and a position no
-// span holds is never kept; the ring is drawn at a key-made landing or
-// re-take and put out by any other; a block of white space alone is no
+// span holds is never kept; the ring is drawn where an act put the walk,
+// whatever made it, and a re-take draws it only where it lands back on that
+// element; the walk's panel shows after a walk key's move alone, hidden at
+// every other act and once the focus stands outside the plane, placed over
+// the walk's element's box hidden and clear of it shown; an activation
+// reaching a mirror item stands the walk there as an act and makes Enter's
+// act; a block of white space alone is no
 // element of the walk; a landing the index does not list stands on its own
 // node among the listed siblings; the mirror is one Tab stop, named from ST
 // with each level's group, a withheld run's item its own part — its kind,
@@ -213,20 +218,23 @@ test('a landing the index does not list stands on its own node among the listed 
   assert.deepEqual(WALK.siblingsNow().map((n) => n.addr), ['1.0.1', '1.0.9']);
 });
 
-test('the ring is drawn at a landing a key made and put out by any other; a camera move re-takes the focus with it drawn where a key made the move', async () => {
-  await WALK.focusTo(D, 15, true);
-  assert.equal(WALK.ringShown(), true, 'a landing a key made draws the ring');
+test('the ring is drawn where an act put the walk, whatever made it, and nowhere a re-take alone put it: a key\'s re-take onto another element draws none, one back onto the element the act put the walk on draws it there again, and the launch\'s rest draws none (issue #559\'s design decision)', async () => {
   await WALK.focusTo(D, 15);
-  assert.equal(WALK.ringShown(), false, 'a landing made otherwise puts it out');
-  // the camera over the account's region at the whole board's scale, the focus on the document: the re-take moves it to the account
+  assert.equal(WALK.ringShown(), true, 'a landing: the ring drawn there');
+  // the camera over the account's region at the whole board's scale, the focus on the span: the re-take moves it to the account
   const cell = accountCell('1.0.1');
   CAM.set({ x: cell.x + cell.w / 2, y: cell.y + cell.h / 2, scale: CAM.viewForCell(boardCell('1'), 0.92).scale });
   assert.equal(lodOf(CAM.cam.scale).name, 'far~mid', 'the scale\'s grain is the account');
   await WALK.retakeFromView(true);
-  assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr, WALK.ringShown()], ['account', '1.0.1', true], 'a key\'s camera move re-takes the focus, the ring drawn');
-  await WALK.focusTo(D, null, true);
+  assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr, WALK.ringShown()], ['account', '1.0.1', false], 'a key\'s camera move re-takes the focus on the account: no ring, no act having put the walk there');
+  // back over the span's line at D's reading scale: the re-take brings the walk back to the span the landing put it on
+  CAM.set(CAM.viewAt(LAYER.centreOf(D, 11), LAYER.foldOf(REC.doc(D)).fs, 12.5));
   await WALK.retakeFromView();
-  assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr, WALK.ringShown()], ['account', '1.0.1', false], 'a pointer\'s re-takes it and puts the ring out');
+  assert.deepEqual([walkAt(), WALK.ringShown()], [['block', D, 11], true], 'a re-take back onto the span the landing put the walk on: the ring there again');
+  await WALK.restAt('1.0.1');
+  assert.deepEqual([walkAt(), WALK.ringShown()], [['account', '1.0.1', null], false], 'the launch\'s rest: no act put the walk there, no ring');
+  await run(WALK.key('in'));
+  assert.equal(WALK.ringShown(), true, 'a walk key\'s move from it: the ring drawn');
 });
 
 test('a landing whose read a later move overtook sets nothing when the read answers: the walk stands where the later move put it', async () => {
@@ -702,9 +710,9 @@ test('the items Back\'s light stands on carry aria-current="location" — each s
     assert.deepEqual(marked(), [], 'a light standing in another document marks no item here');
     assert.equal(rebuilds, was, 'every mark made in place, nothing rebuilt');
     at = null;
-    await WALK.focusTo(D, 15, false, true, { link: L, key });
+    await WALK.focusTo(D, 15, true, { link: L, key });
     assert.deepEqual(walkAt(), ['link', D, 15], 'a landing naming the link\'s end: the walk on its item');
-    await WALK.focusTo(D, 15, false, true, { link: L, key: key + '-another' });
+    await WALK.focusTo(D, 15, true, { link: L, key: key + '-another' });
     assert.deepEqual(walkAt(), ['block', D, 11], 'an end its document\'s elements do not list: the span holding the position');
   } finally {
     globalThis.document = platform;
@@ -947,10 +955,10 @@ test('a link\'s item whose far end the board will say nothing of is named by the
   const wholeOf = () => esc(LK.emptyAt(GHOST).whole.map((p) => p.text).join(' '));
   try {
     WALK.attach(/** @type {any} */ (mirror));
-    await WALK.focusTo(D, 15, false, true, { link: L, key: end().key });
+    await WALK.focusTo(D, 15, true, { link: L, key: end().key });
     assert.deepEqual([WALK.current()?.kind, describedAs()], ['link', []], 'nothing answered of its far document: no description');
     REC.takeProjection(L, 2, GHOST, 'unregistered');
-    await WALK.focusTo(D, 15, false, true, { link: L, key: end().key });
+    await WALK.focusTo(D, 15, true, { link: L, key: end().key });
     const name = WALK.mirrorItem(WALK.mirrorIndex()) || '';
     assert.ok(name.includes(`${GHOST} · ${t('L.client-words', { words: t('L.far.empty') })}`), `its name the short form: ${name}`);
     assert.deepEqual(describedAs(), [wholeOf()], 'its description the whole form');
@@ -983,7 +991,7 @@ test('in a document folded into columns the camera follows the walk to a span\'s
     // the span heading the second row's first column, below the middle of the room's width, and the span before it at the foot of the first row's last
     const i = d.blocks.findIndex((b) => columnOf(b.pos) === f.across), at = d.blocks[i], c = f.columns[f.across];
     assert.ok(i > 0 && columnOf(d.blocks[i - 1].pos) === f.across - 1 && c.x + c.w < box.w / 2);
-    await WALK.focusTo(H, d.blocks[i - 1].pos, true);
+    await WALK.focusTo(H, d.blocks[i - 1].pos);
     await run(WALK.key('down'));
     assert.deepEqual(walkAt(), ['block', H, at.pos], '↓ steps onto the span heading the next column');
     const line = placeOf(f, at.pos);
@@ -997,7 +1005,7 @@ test('in a document folded into columns the camera follows the walk to a span\'s
     near(CAM.view(), framed, '← to the document: its outline framed, never its room');
     // a document of one short column, framed whole, would be read far past reading size: ← from its span, at its reading size
     CAM.set(CAM.viewAt(LAYER.centreOf(D, 11), LAYER.foldOf(REC.doc(D)).fs));
-    await WALK.focusTo(D, 11, true);
+    await WALK.focusTo(D, 11);
     await run(WALK.key('out'));
     near(CAM.view(), { ...CAM.viewForCell(LAYER.shapeOf(D), 0.9), scale: read / LAYER.foldOf(REC.doc(D)).fs }, '← to a document of one short column: its outline at the reading size, no nearer');
     // the camera over a span part way down the second row's second column, at reading scale
@@ -1030,7 +1038,7 @@ test('the camera follows the walk through a resize in the air (FP-8): ↓ onto a
   try {
     const b = REC.doc(H).blocks[40];
     CAM.set(spanView(b.pos));
-    await WALK.focusTo(H, b.pos, true);
+    await WALK.focusTo(H, b.pos);
     const down = WALK.key('down'), next = /** @type {number} */ (WALK.current()?.pos), wide = spanView(next);
     await across(down, 400);
     assert.ok(!near(wide, spanView(next)), 'the narrow view folds H again: the span\'s line framed elsewhere');
@@ -1088,7 +1096,7 @@ test('where the plane draws a continuation as one mark, the account\'s level hol
   index(Array.from({ length: 60 }, (_, i) => '1.0.1.0.' + (i + 1)));
   try {
     CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
-    await WALK.focusTo('1.0.1:1', null, true);
+    await WALK.focusTo('1.0.1:1', null);
     const sibs = WALK.siblingsNow();
     assert.deepEqual([walkAt(), sibs.length, sibs.findIndex((n) => n.kind === 'mark')], [['mark', '1.0.1:1', null], 61, 48], 'the mark\'s stop, after the oldest 48, before its twelve');
     assert.deepEqual(sibs.slice(49).map((n) => [n.kind, n.addr]), Array.from({ length: 12 }, (_, i) => ['document', '1.0.1.0.' + (49 + i)]), 'its members after it, in record order');
@@ -1452,7 +1460,7 @@ test('in a draft holding typed text a link\'s stop of the walk stands at its fir
     assert.deepEqual([stop?.pos, stop?.link?.pos, stop?.link?.width], [27, 27, 5], 'the walk\'s stop at the end\'s first drawn byte, thirteen positions on where the text shown holds it');
     assert.deepEqual(LK.shownAt(T, { pos: 27, width: 5 }).map((s) => s.link.addr), [L], 'the span a slot reads meets it where the text shown holds it');
     // the stop holds its place by the end's bytes: more typed above it, it stands on the same link, where it is drawn now
-    await WALK.focusTo(T, 27, false, true, { link: L, key: /** @type {import('../links/links.js').Shown} */ (stop?.link).key });
+    await WALK.focusTo(T, 27, true, { link: L, key: /** @type {import('../links/links.js').Shown} */ (stop?.link).key });
     assert.deepEqual([WALK.current()?.kind, WALK.current()?.pos], ['link', 27]);
     WRITE.addEdit(T, { pos: 1, width: 0, text: 'ab' });
     assert.deepEqual([WALK.current()?.kind, WALK.current()?.pos, WALK.current()?.link?.link.addr], ['link', 29, L], 'typed above it: the walk on the link\'s stop still, two positions on');
@@ -1524,7 +1532,7 @@ test('the count, the article\'s symbols and the mirror name the same ends, two l
     assert.deepEqual(walkAt(), ['block', W, RUN], '← back to the run\'s item');
     // Back to a follow made at one of them: the walk on the run's item, which the light marks
     WALK.readers({ located: () => ({ addr: W, runs: [], end: { link: A, key: key(A) } }) });
-    await WALK.focusTo(W, RUN, false, true, { link: A, key: key(A) });
+    await WALK.focusTo(W, RUN, true, { link: A, key: key(A) });
     assert.deepEqual(walkAt(), ['block', W, RUN], 'Back naming the end: the run\'s item');
     assert.ok(/id="walk-1"[^>]*aria-current="location"/.test(mirror.innerHTML) && (mirror.innerHTML.match(/aria-current/g) || []).length === 1, `the light marks the run's item alone: ${mirror.innerHTML}`);
   } finally {
@@ -1980,6 +1988,85 @@ test('the kind of the document the walk stands in is said once in the status reg
     assert.deepEqual(said, [t('F.kind.draft')], 'a move of the walk onto a document whose kind is told: nothing said — its item\'s name leads with it');
   } finally {
     REC.invalidate(U); REC.invalidate(V);
+    globalThis.document = platform;
+  }
+});
+
+// placed last: it attaches a mirror whose items take the focus as the platform's would, which no test after it should meet
+test('the walk\'s panel shows after a walk key\'s move while the plane holds the focus, and hides at a landing, at `hidePanel`, once the focus stands on an element outside the plane and at a re-take that moves the walk; a Tab into the plane then draws the ring and shows no panel; hidden, the mirror stands over the box it is placed at, and shown, whole inside the window below the one line and clear of that box, standing where it stood while the camera flies; an activation reaching an item stands the walk on it, the ring drawn and no panel, and makes Enter\'s act there once a click (issue #559\'s design decision)', async () => {
+  const platform = globalThis.document;
+  const body = { id: 'the body' };
+  /** @type {{activeElement: unknown, body: unknown}} */
+  const doc = { activeElement: body, body };
+  globalThis.document = /** @type {any} */ (doc);
+  /** @typedef {{id: string, dataset: {i: string}, focus: () => void, getBoundingClientRect: () => {top: number, height: number}, closest: () => unknown}} Item */
+  /** @type {Map<string, Item>} the mirror's items as the platform holds them: each takes the focus, each a row of the panel */
+  const items = new Map();
+  const itemAt = (/** @type {string} */ id) => {
+    let e = items.get(id);
+    if (!e) { const it = /** @type {Item} */ ({ id, dataset: { i: id.slice(5) }, focus() { doc.activeElement = it; }, getBoundingClientRect: () => ({ top: 0, height: 20 }), closest: () => it }); items.set(id, it); e = it; }
+    return e;
+  };
+  /** @type {Map<string, (e?: unknown) => void>} the mirror's listeners, by event */
+  const heard = new Map();
+  /** @type {Set<string>} */
+  const classes = new Set();
+  /** @type {Record<string, string>} */
+  const style = {};
+  const mirror = {
+    innerHTML: '', tabIndex: 0, style, clientTop: 0, clientHeight: 300, scrollTop: 0, getBoundingClientRect: () => ({ top: 0, height: 300 }),
+    contains: (/** @type {unknown} */ x) => x === mirror || [...items.values()].includes(/** @type {any} */ (x)), setAttribute() {},
+    classList: { toggle: (/** @type {string} */ c, /** @type {boolean} */ on) => { if (on) classes.add(c); else classes.delete(c); } },
+    querySelector: (/** @type {string} */ sel) => (sel.startsWith('#walk-') ? itemAt(sel.slice(1)) : null),
+    addEventListener: (/** @type {string} */ type, /** @type {(e?: unknown) => void} */ fn) => { heard.set(type, fn); },
+  };
+  let enters = 0;
+  WALK.readers({ enter: () => { enters++; } });
+  /** the ring, the panel, and the panel's mark on the mirror */
+  const seen = () => [WALK.ringShown(), WALK.panelShown(), classes.has('shown')];
+  try {
+    WALK.attach(/** @type {any} */ (mirror));
+    await PUMP.loadWhole(D);
+    CAM.set(CAM.viewAt(LAYER.centreOf(D, 1), LAYER.foldOf(REC.doc(D)).fs, 12.5));
+    await WALK.focusTo(D, 1);
+    assert.deepEqual([walkAt(), ...seen()], [['block', D, 1], true, false, false], 'a landing on D\'s first span: the ring drawn, the panel hidden');
+    WALK.place({ x: 100, y: 200, w: 300, h: 40 }, 30, true);
+    assert.deepEqual([style.left, style.top, style.width, style.height], ['100px', '200px', '300px', '40px'], 'hidden: the mirror over the walk\'s element\'s box, its current item filling it');
+    WALK.place(null, 30, true);
+    assert.equal(style.left, '-10000px', 'hidden, no box: off screen');
+    await run(WALK.key('down'));
+    assert.deepEqual(seen(), [true, true, true], 'a walk key\'s move: the ring drawn and the panel shown');
+    const { VH } = CAM.viewport();
+    WALK.place({ x: 600, y: 100, w: 300, h: 40 }, 30, true);
+    assert.deepEqual([style.left, style.bottom, style.top], ['8px', '8px', 'auto'], 'shown, the bottom left clear of the box: the panel there');
+    WALK.place({ x: 100, y: VH - 200, w: 300, h: 40 }, 30, true);
+    assert.deepEqual([style.top, style.maxHeight, style.bottom], ['38px', `${VH - 200 - 8 - 38}px`, 'auto'], 'the box in the bottom left: the panel in the larger room, above it, below the one line, its height capped to that room');
+    WALK.place({ x: 100, y: 100, w: 300, h: 40 }, 30, false);
+    assert.equal(style.top, '38px', 'the camera flying: the shown panel stands where it stood');
+    WALK.hidePanel();
+    assert.deepEqual(seen(), [true, false, false], '`hidePanel`: the panel hidden, the ring standing');
+    await run(WALK.key('down'));
+    const line = { id: 'the line\'s act' };
+    doc.activeElement = line; heard.get('focusout')?.();
+    assert.deepEqual([WALK.ringShown(), WALK.panelShown()], [false, false], 'the focus on an element outside the plane: neither');
+    doc.activeElement = itemAt('walk-' + WALK.mirrorIndex()); heard.get('focusin')?.();
+    assert.deepEqual(seen(), [true, false, false], 'a Tab back into the plane: the ring drawn, no panel');
+    await run(WALK.key('up'));
+    assert.deepEqual(seen(), [true, true, true], 'a walk key\'s move again: the panel shown');
+    const cell = accountCell('1.0.1');
+    CAM.set({ x: cell.x + cell.w / 2, y: cell.y + cell.h / 2, scale: CAM.viewForCell(boardCell('1'), 0.92).scale });
+    await WALK.retakeFromView(true);
+    assert.deepEqual([walkAt(), ...seen()], [['account', '1.0.1', null], false, false, false], 'a key\'s re-take moving the walk to the account: the panel hidden and no ring');
+    await WALK.focusTo(D, 1);
+    assert.deepEqual([walkAt(), WALK.mirrorIndex()], [['block', D, 1], 0], 'the walk on D\'s first span');
+    heard.get('click')?.({ target: itemAt('walk-1') });
+    for (let i = 0; i < 100 && !enters; i++) { await new Promise((r) => setTimeout(r, 0)); if (CAM.flying()) CAM.step(Infinity); }
+    assert.deepEqual([walkAt(), enters, ...seen()], [['block', D, 11], 1, true, false, false], 'a click reaching the second item: the walk on its span, Enter\'s act made there once, the ring drawn, no panel');
+    heard.get('click')?.({ target: itemAt('walk-1') });
+    for (let i = 0; i < 20 && enters < 2; i++) await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual([walkAt(), enters], [['block', D, 11], 2], 'a click reaching the walk\'s own item: Enter\'s act made there again, the walk where it stands');
+  } finally {
+    WALK.readers({});
     globalThis.document = platform;
   }
 });

@@ -95,7 +95,7 @@ test('where no board is held the plane names none — no board\'s outline, label
   REC._reset(); WRITE._reset();
   try {
     // the walk on its root, a key having moved it there: the ring drawn where a place is named
-    await WALK.focusTo('1', null, true);
+    await WALK.focusTo('1', null);
     REC.takeBoards({ result: [] });
     for (const [where, v] of /** @type {Array<[string, typeof whole]>} */ ([['the board\'s extent', whole], ['an account\'s cell at mid scale', mid]])) {
       const f = frame(v);
@@ -238,6 +238,8 @@ test('a continuation\'s mark holding two targets is two: its newest member\'s la
     assert.equal(GO.shownIn('1.0.1.0.60'), V, 'the box shows its second version');
     CAM.set(home);
     await leap;
+    // the walk resting on the account, as the launch leaves it: no ring on a member, which would name it in the count's place
+    await WALK.restAt('1.0.1');
     RENDER.draw();
     const m = firstMark();
     assert.deepEqual([m.k, m.n, m.newest, m.members.length], [1, 12, '1.0.1.0.60', 12], 'the first continuation, its twelve members, its newest the highest-numbered');
@@ -276,13 +278,13 @@ test('the walk\'s ring on a member the mark holds stands on the mark, and the ma
   try {
     const home = sixty();
     CAM.set(home);
-    await WALK.focusTo('1.0.1.0.55', null, true);
-    assert.ok(WALK.ringShown(), 'a key put the walk there: the ring drawn');
+    await WALK.focusTo('1.0.1.0.55', null);
+    assert.ok(WALK.ringShown(), 'a landing put the walk there: the ring drawn');
     RENDER.draw();
     const m = firstMark();
     assert.ok(sameRect(RENDER.stats.ring, m.rect), `the ring on the mark, never on the member's own outline inside it: ${JSON.stringify([RENDER.stats.ring, m.rect])}`);
     assert.equal(m.lines.join(' '), t('L.mark.member', { name: '.0.55', i: 7, n: 12 }), 'the member\'s name and place among the mark\'s twelve, in its count\'s place');
-    await WALK.focusTo('1.0.1:1', null, true);
+    await WALK.focusTo('1.0.1:1', null);
     RENDER.draw();
     assert.ok(sameRect(RENDER.stats.ring, firstMark().rect) && firstMark().lines.join(' ') === markCount(12, true), 'the mark\'s own stop: the ring on it, its count');
   } finally { REC._reset(); WRITE._reset(); CAM.setViewport(1440, 900); }
@@ -441,7 +443,7 @@ test('the walk\'s span in a text holding typed words is ringed on the lines the 
   try {
     const f = LAYER.foldOf(REC.doc(doc)), b = docBox(doc), c = f.columns[0];
     CAM.set({ x: b.x + c.x + c.w / 2, y: b.y + c.y + c.h / 3, scale: 12 / f.fs });
-    await WALK.focusTo(doc, board + k, true, true, null, true);
+    await WALK.focusTo(doc, board + k, true, null, true);
     LAYER.frame();
     const start = /** @type {import('../model/records.js').Block} */ (REC.blockAt(doc, board)).pos;
     const shown = /** @type {import('../model/records.js').Block} */ (LAYER.blockAt(doc, board + k));

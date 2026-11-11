@@ -4,10 +4,12 @@
 // the page's own escaping undone), the selectors the page reads them by (tag,
 // class, attribute, `:scope`, `:not`, the child and descendant combinators,
 // lists), boundary points compared in tree order, ranges over them, a tree
-// walker of text nodes, and the one selection the platform holds — so a test
+// walker of text nodes, the one selection the platform holds — so a test
 // can stand in for the platform's selection over a mounted article's text,
 // placing it where a drag, a double-click's word or a Shift+click would, and
-// T-LAYER's mapping reads it as it reads the platform's. Nothing is laid out:
+// T-LAYER's mapping reads it as it reads the platform's — and the document's
+// one focus, which an element takes, taking away a selection standing outside
+// it where a test asks it to, as a WebKit engine's does. Nothing is laid out:
 // every box is empty, and a screen point names a boundary point or an element
 // only where a test says which (`DomDocument.pointAt`, `elementAt`). `page`
 // makes one, its window, its document and each element recording the
@@ -172,6 +174,16 @@ class DomElement extends DomNode {
   removeEventListener() {}
   /** each listener added for an event run with the event given, as the platform delivers it */
   fire(/** @type {string} */ type, /** @type {unknown} */ e) { for (const fn of this.listeners.get(type) || []) fn(e); }
+  /** the document's focus moved to this element; where the document clears a selection outside it as the focus moves (`DomDocument.focusClears`), that selection taken away first */
+  focus() {
+    const doc = this.ownerDocument;
+    if (!doc) return;
+    const r = doc.selection.range;
+    if (doc.focusClears && r && !this.contains(r.commonAncestorContainer)) doc.selection.removeAllRanges();
+    doc.activeElement = this;
+  }
+  /** the document's focus taken off this element, onto the body */
+  blur() { const doc = this.ownerDocument; if (doc && doc.activeElement === this) doc.activeElement = doc.body; }
 }
 
 /** the markup of a node, its text escaped as the page's own escaping writes it */
@@ -435,6 +447,8 @@ class DomDocument extends DomNode {
     this.pointAt = () => null;
     /** @type {(x: number, y: number) => (DomElement | null)} the element under a screen point, as a test lays the page out: none where it lays out nothing */
     this.elementAt = () => null;
+    /** a focus moved to an element takes away a selection standing outside it, as a WebKit engine's does; false, as a Blink engine's, where it keeps it */
+    this.focusClears = false;
   }
   /** the boundary point under a screen point (`pointAt`), as the platform's `caretPositionFromPoint` answers it */
   caretPositionFromPoint(/** @type {number} */ x, /** @type {number} */ y) { const p = this.pointAt(x, y); return p ? { offsetNode: p.node, offset: p.offset } : null; }

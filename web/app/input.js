@@ -52,8 +52,8 @@
 // in that draft (T-LAYER's `movingPart`) leaves the caret live at the
 // selection's moving end — the platform's focus point: where a drag was
 // released, a word's or a line's end — the selection standing and the walk
-// following the caret onto its span, the ring out (`takeSelection`; N-WALK's
-// `followCaret`), one caret standing at a time. A Shift+click begun on such a
+// following the caret onto its span, the live caret its mark (`takeSelection`;
+// N-WALK's `followCaret`), one caret standing at a time. A Shift+click begun on such a
 // draft extends from the anchor standing there — the caret, live or kept,
 // else the end of the selection no step moves (O-SELECTION's `anchorIn`) —
 // the platform's selection collapsed there as the press begins (T-LAYER's
@@ -74,8 +74,13 @@
 // The same acts on the caret's own draft, its text and its corner apart,
 // leave a live caret live and the walk on its span, so the next key types
 // there (`followPointer`; N-WALK's `followCaret`); its corner, like the one
-// line, takes keys only while it holds the focus. Where no caret stands they
-// move the walk only as said below. Camera moves and departures — a LEAP, a
+// line, takes keys only while it holds the focus. Where no live caret stands
+// they stand the walk on what was acted on all the same — on its own draft's
+// ground with the caret kept there too. Each act that moves the walk is the
+// person's: the walk's element takes the platform's focus and is aimed at, so
+// the ring stands there, the panel hidden (`walkOn`; N-WALK's `focusTo`), and
+// every pointer press hides the walk's panel as it is made (N-WALK's
+// `hidePanel`). Camera moves and departures — a LEAP, a
 // teleport, a version move, the scene-offer, a step to an arrival's run, a
 // continuation's mark — are their own.
 // The camera pans by the wheel and two-finger scroll and by the camera key's
@@ -83,9 +88,10 @@
 // article with the key held is the camera's, the pointer captured by the
 // plane, and selects nothing); it zooms by the pinch (Ctrl+wheel, as a
 // trackpad sends it) and by Mod+wheel (K-12). A wheel over the chrome — the
-// overlay and the notice below it, the reading scene, the LEAP box, the
-// mirror, the one line — is the chrome's own, scrolling what of it scrolls,
-// and moves no camera. While a jump is in the air
+// overlay and the notice below it, the reading scene, the LEAP box, the one
+// line — is the chrome's own, scrolling what of it scrolls, and moves no
+// camera; the mirror takes no pointer event, so a wheel over it is the
+// plane's. A wheel over the plane hides the walk's panel. While a jump is in the air
 // (FP-25) a wheel series — wheel events less than SERIES_MS apart — begun
 // before the jump's camera left (N-GO's `airSince`) is dropped whole, so a
 // trackpad's momentum never moves the camera the jump took; any other wheel
@@ -96,8 +102,8 @@
 // layout as it stands (L-LINE's `panned`), where a click is the reader's act
 // (L-LINE's `act`); either takes a hint down (O-HINT's `act`). Whether
 // a key made an act is never read here: a pointer's act opens a card without
-// the focus (D5 §4 rule 4), and only the empty click's last step, at a live
-// caret, draws the ring (N-KEYS' `esc`).
+// the focus (D5 §4 rule 4), and the ring follows the act that moved the walk,
+// whatever made it (N-WALK's).
 // A click acts on what is under the pointer, keyed on legibility. On the
 // plane (`clickPlane`): a tail — a link whose far document the plane draws
 // nowhere — lists its links or opens the card of its one (O-ANATOMY's
@@ -120,7 +126,7 @@
 // scene still reading (O-HOST's opening), the notice standing below the
 // overlay, the overlay (O-HOST's `dismissInnermost`; FP-36), a jump reaching,
 // the find, the selection, and last a live caret, kept with its span holding
-// the walk and the ring drawn — never an arrival (FP-21). At the
+// the walk and the ring drawn, the panel hidden — never an arrival (FP-21). At the
 // readable threshold and above the text takes the click (`clickText`): a
 // symbol opens the anatomy card of the link's end it stands for, and a
 // stretch links mark that of the first end marking it — each mark carries
@@ -150,14 +156,14 @@
 // press's release takes (`clickPlaced`); and each of these three in text
 // the person may not edit — the stretch's, the word's or the extension's, the
 // block's — moves the walk's focus to the span clicked, for the second the
-// span the selection's moving end is in, the ring out, a live caret left kept
-// (D5 K-70, M-2; `walkOn`) —
+// span the selection's moving end is in, the ring drawn there, a live caret
+// left kept (D5 K-70, M-2; `walkOn`) —
 // save in text the person may edit (T-LAYER's `editable`; D5 K-70),
 // where a click on a block or on a marked stretch places the caret at the
 // character clicked, as the platform's own collapse of its selection names it
 // (T-LAYER's `caretFromPlatform`, `placeCaret`), the selection cleared and
-// the walk standing on the span it is placed in, the ring out (N-WALK's
-// `followCaret`), and a symbol's click still opens its card (K-7). On the
+// the walk standing on the span it is placed in, the live caret its mark
+// (N-WALK's `followCaret`), and a symbol's click still opens its card (K-7). On the
 // corners: the read a corner offers where a newer version's arrival pinned
 // its box takes that read, a version move (O-VERSIONS' `readFromCorner`; D5
 // K-57); the version statement opens the document's members (the corner's
@@ -268,6 +274,8 @@ export function attach(els) {
     drag = { px: e.clientX, py: e.clientY, moved: 0, cameraKey: true };
     els.plane.setPointerCapture(e.pointerId); els.plane.classList.add('dragging');
   };
+  // every pointer press is an act that is no walk key's: the walk's panel hidden, wherever it falls
+  window.addEventListener('pointerdown', () => { WALK.hidePanel(); }, true);
   els.plane.addEventListener('pointerdown', (e) => {
     held = null;
     clickPlaced = null;
@@ -366,8 +374,9 @@ export function attach(els) {
   });
   window.addEventListener('wheel', (e) => {
     const t = /** @type {HTMLElement} */ (e.target);
-    if (t.closest && t.closest('#overlay, #notice, #scene, #leap, #mirror, #line')) return;
+    if (t.closest && t.closest('#overlay, #notice, #scene, #leap, #line')) return;
     e.preventDefault();
+    WALK.hidePanel();
     if (dropped(e.timeStamp)) return;
     GO.takeOver();
     LINE.panned();
@@ -500,11 +509,11 @@ function clickText(target, at, gesture = false) {
     else if (!part && !LAYER.editable(span.addr)) walkOn(span.addr, span.pos);
     return true;
   }
-  // text the person may edit: the click places the caret at the character clicked, where the platform collapsed its selection (K-70) — a marked stretch takes it as any text does, the card its symbol's (K-7) — and the walk stands on its span, the ring out
+  // text the person may edit: the click places the caret at the character clicked, where the platform collapsed its selection (K-70) — a marked stretch takes it as any text does, the card its symbol's (K-7) — and the walk stands on its span, the live caret its mark
   const own = /** @type {HTMLElement | null} */ (target.closest('.sp'));
   if (own && LAYER.editable(own.dataset.addr || '')) {
     const c = LAYER.caretFromPlatform();
-    if (c && c.addr === own.dataset.addr) { SEL.clear(); LAYER.placeCaret(c.addr, c.pos); void WALK.followCaret(false); return true; }
+    if (c && c.addr === own.dataset.addr) { SEL.clear(); LAYER.placeCaret(c.addr, c.pos); void WALK.followCaret(); return true; }
   }
   // text that takes no caret: the walk on the span clicked (K-70) — a marked stretch's, which opens its end's card (K-7), or a block's, selected whole (R11) — a caret in another document left kept first
   const marked = target.closest('.lip');
@@ -576,15 +585,15 @@ function anchorShift(addr, x, y) {
 }
 
 /**
- * A click on text that places no caret moves the walk's focus to the span
- * holding the position clicked (D5 K-70): the ring out, the platform's focus
- * carried there only where the mirror held it, the span's levels as the model
- * holds them — a live caret left kept (N-WALK's `focusTo`); with no position,
- * to the document whole.
+ * A pointer's act that places no caret moves the walk's focus to the span
+ * holding the position it names (D5 K-70): the walk's element taking the
+ * platform's focus and aimed at, so the ring stands there and the panel is
+ * hidden, the span's levels as the model holds them — a live caret left kept
+ * (N-WALK's `focusTo`); with no position, to the document whole.
  * @param {string} addr
  * @param {number | null} pos
  */
-function walkOn(addr, pos) { void WALK.focusTo(addr, pos, false, false, null, true); }
+function walkOn(addr, pos) { void WALK.focusTo(addr, pos, true, null, true); }
 
 /**
  * A pointer's act on a document leaves the caret where one stands in another
@@ -608,14 +617,16 @@ function leftCaret(addr) {
  * stands in another document it is kept (`leftCaret`) and the walk stood on
  * the position the act names, else on the document's stop nearest the point
  * (`nearestStop`); at the caret's own draft a live caret stands live, the walk
- * on its span (N-WALK's `followCaret`); nothing where no caret stands.
+ * on its span (N-WALK's `followCaret`); where no live caret stands, the walk
+ * stood on that position or that stop all the same (`walkOn`).
  * @param {string} addr the document acted on
  * @param {number | {x: number, y: number}} at the position of its text shown the act names, else the world point it fell on
  */
 function followPointer(addr, at) {
   if (!addr) return;
-  if (leftCaret(addr)) walkOn(addr, typeof at === 'number' ? at : nearestStop(addr, at));
-  else if (LAYER.caret()) void WALK.followCaret(false);
+  const c = LAYER.caret();
+  if (leftCaret(addr) || !c || !c.live) walkOn(addr, typeof at === 'number' ? at : nearestStop(addr, at));
+  else void WALK.followCaret();
 }
 
 /**
@@ -706,8 +717,9 @@ export function afterFrame() {
  * gesture made anew over the span the page holds setting the caret there all
  * the same, where it does not stand there; anywhere else, by the document
  * the moving end lies in, a caret standing in another is kept first
- * (`leftCaret`) and the walk stood on the span that end is in, and a live
- * caret standing in that one stays live, the walk on its span.
+ * (`leftCaret`) and the walk stood on the span that end is in — as it is
+ * where no live caret stands (`walkOn`) — and a live caret standing in that
+ * one stays live, the walk on its span.
  * @param {boolean} dragged the selection is a pointer's gesture's, taken as its press ends; false where the platform's own keys made it
  * @param {boolean} [anew] the gesture moved the pointer, or ended a double- or triple-click or a Shift+click: its selection is the person's though it names the span the page holds
  */
@@ -720,14 +732,16 @@ function takeSelection(dragged, anew = false) {
     if (holds && (!anew || (!!c && c.live && c.addr === part.span.addr && c.pos === end))) return;
     LAYER.placeCaret(part.span.addr, end, true);
     SEL.select(span.addr, span.pos, span.width, 'focus');
-    void WALK.followCaret(false);
+    void WALK.followCaret();
     return;
   }
   if (holds) return;
   const at = part ? part.span.addr : span.addr, left = dragged && leftCaret(at);
   SEL.select(span.addr, span.pos, span.width, 'focus');
-  if (left) walkOn(at, part ? movingByte(part) : LAYER.selectionBackward() ? span.pos : span.pos + Math.max(1, span.width) - 1);
-  else if (dragged && LAYER.caret()) void WALK.followCaret(false);
+  if (!dragged) return;
+  const c = LAYER.caret();
+  if (left || !c || !c.live) walkOn(at, part ? movingByte(part) : LAYER.selectionBackward() ? span.pos : span.pos + Math.max(1, span.width) - 1);
+  else void WALK.followCaret();
 }
 
 /** a click on the plane: a tail lists its links; an outlined run of an arrival in several, below its document's reading scale, is a step to it; a continuation's mark's newest label goes to that member, and the rest of the mark opens its list; a place goes; a document's ground at its reading scale is the act the next key follows; an account at far goes to its region, where a board is held; else the click is the pointer's Esc, one step of its order (N-KEYS' `esc`) */

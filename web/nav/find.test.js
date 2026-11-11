@@ -142,7 +142,7 @@ before(async () => {
 });
 
 beforeEach(async () => {
-  if (FIND.isOpen()) await FIND.close(false);
+  if (FIND.isOpen()) await FIND.close();
   for (const [doc, n, runs] of /** @type {Array<[string, number, import('../model/frames.js').Run[]]>} */ ([
     [D, N, [{ pos: 1, width: HELD, kind: 'content', text: HEAD, ref: null, origin: null }]],
     [E, E_N, [{ pos: 1, width: E_HELD, kind: 'content', text: E_HEAD, ref: null, origin: null }]],

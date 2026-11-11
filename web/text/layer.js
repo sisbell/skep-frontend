@@ -182,9 +182,9 @@
 // gap's, one for each part of it standing — never at an offset inside the
 // gap (`spanRects`; FP-30, FP-21). The lit block is the focus ring's
 // reading-scale form (the focus record's D3; D5 §4 rule 2): one mark, under
-// the ring's one rule — lit while the plane holds the focus and a key moved
-// it (N-FOCUS's `ringShown`), out after a pointer's landing — the canvas
-// circling no document whose text stands.
+// the ring's one rule — lit while the plane holds the focus and the walk
+// stands where an act of the person's put it (N-FOCUS's `ringShown`) — the
+// canvas circling no document whose text stands.
 // The corner (foundations §3.1; ux-T2; D5 K-57; FP-26): each mounted
 // document at reading scale carries its own beside its article, never inside
 // it, as an element of the corner layer this module keeps: on the document's
@@ -854,7 +854,7 @@ export function attach(el, cornersEl, opts = {}) { layer = el; cornerLayer = cor
 export function cover(on) { if (cornerLayer) FOCUS.cover(cornerLayer, on); }
 /** the owners hand their readers in once; a reader left out reads as the default does (`noReaders`) */
 export function readers(/** @type {Partial<Readers>} */ r) { read = { ...noReaders(), ...r }; }
-/** the block the `lit` mark stands on (D3): the walk's focused block while the ring is drawn — the plane holds the focus and a key moved it — else none; never in a scene's pane */
+/** the block the `lit` mark stands on (D3): the walk's focused block while the ring is drawn — the plane holds the focus and the walk stands where an act put it (N-FOCUS's `ringShown`) — else none; never in a scene's pane */
 const litFocus = (scene = false) => (!scene && FOCUS.ringShown() ? read.focus() : null);
 /** bump the view revision: every mounted article is rebuilt on the next frame */
 export function bump() { grev++; }
@@ -4609,6 +4609,25 @@ function placeAgain(span) {
   if (!rec || !selectIn(rec.el, span, backward)) { owed = rec ? span : null; return; }
   owed = null;
   placed = s.rangeCount ? spanOfRange(s.getRangeAt(0)) : null;
+}
+
+/**
+ * A move of the platform's focus the page makes over a selection the platform
+ * holds in the text layer (N-WALK's, as the walk's element takes the focus):
+ * the selection's two points read as they stand, the move made, and the
+ * selection put back over the same points, its anchor at the same end, where
+ * the move left it collapsed or took it away — as an engine that clears a
+ * selection outside a field when the focus moves does — and its points still
+ * stand in the page; left as the move left it everywhere else.
+ * @param {() => void} move
+ */
+export function keepingSelection(move) {
+  const s = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+  const was = s && s.rangeCount && !s.isCollapsed && s.anchorNode && s.focusNode && inLayer(s.getRangeAt(0))
+    ? { an: s.anchorNode, ao: s.anchorOffset, fn: s.focusNode, fo: s.focusOffset } : null;
+  move();
+  if (!was || !s || (s.rangeCount && !s.isCollapsed) || !was.an.isConnected || !was.fn.isConnected) return;
+  s.setBaseAndExtent(was.an, was.ao, was.fn, was.fo);
 }
 
 /**

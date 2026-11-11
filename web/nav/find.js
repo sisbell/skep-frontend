@@ -139,8 +139,8 @@ export function attach(e) {
     const mod = MAC ? ev.metaKey : ev.ctrlKey, k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
     const dir = (mod && k === 'g') || (!MAC && k === 'F3') || (ev.target === e.input && k === 'Enter') ? (ev.shiftKey ? -1 : 1) : 0;
     if (dir) { ev.preventDefault(); ev.stopPropagation(); step(dir, true); return; }
-    if (k === 'Escape') { ev.preventDefault(); ev.stopPropagation(); void close(true); return; }
-    if (mod && k === 'f') { ev.preventDefault(); ev.stopPropagation(); FOCUS.land(e.input, { byKey: true }); e.input.select(); }
+    if (k === 'Escape') { ev.preventDefault(); ev.stopPropagation(); void close(); return; }
+    if (mod && k === 'f') { ev.preventDefault(); ev.stopPropagation(); FOCUS.land(e.input); e.input.select(); }
   });
   // a press on the box's buttons moves without taking the focus off the field
   e.box.addEventListener('mousedown', (ev) => { if (ev.target !== e.input) ev.preventDefault(); });
@@ -400,23 +400,22 @@ function unmark(/** @type {Find} */ s) {
 }
 
 /**
- * Esc (see the head; FP-20): the find closes; its current match, where a
- * move took the camera to it, selected as found — a span of the text the
- * page shows, as O-SELECTION's selection is — the walk on the block of that
- * text holding it, the camera
- * still and the focus on the walk's element in the place of the find's
- * opener; where none stands, the focus returned as any region's close
- * returns it.
- * @param {boolean} [byKey] a key made the act
+ * Esc, or the empty click that is the pointer's (see the head; FP-20): the
+ * find closes; its current match, where a move took the camera to it,
+ * selected as found — a span of the text the page shows, as O-SELECTION's
+ * selection is — the walk on the block of that text holding it, aimed at
+ * there (N-WALK's `focusTo`), the camera still and the focus on the walk's
+ * element in the place of the find's opener; where none stands, the focus
+ * returned as any region's close returns it.
  */
-export async function close(byKey = true) {
+export async function close() {
   const s = state;
   if (!s || !els) return;
   const m = s.marked && s.current >= 0 && !s.side ? s.matches[s.current] : null;
   hide();
   if (!m) { FOCUS.close('find'); return; }
   SEL.select(s.addr, m.pos, m.width);
-  await WALK.focusTo(s.addr, m.pos, byKey, false, null, true);
+  await WALK.focusTo(s.addr, m.pos, false, null, true);
   FOCUS.close('find', { toWalk: true });
 }
 
