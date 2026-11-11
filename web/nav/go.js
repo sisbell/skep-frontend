@@ -117,7 +117,11 @@
 // against that text whole — in parts where the board refuses the read for
 // its size (M-PUMP's `compareParts`) — lands at its counterpart (SC's
 // `counterparts`) and marks every stretch the text holds; where it holds
-// none, the document's head (`headOf`) with the dead end's face.
+// none, the document's head (`headOf`) with the dead end's face. A carry
+// naming parts of its span — a source's words beside other words — carries
+// those alone, joined into one passage in the text's order (`Carry.parts`):
+// what the landing's text holds is read of them (`heldIn`), and stretches
+// following on in the passage and in that text both are one stretch there.
 // The four states (FP-21): every landing that carried or followed a passage
 // reads what the text landed in holds of it by BM-HELD's one rule — all of
 // it in one piece, the outline alone; part, or all in pieces, the outline
@@ -327,15 +331,17 @@
 // a follow to a far document the board withholds lands at the document
 // whole, the face of its own withheld words at its place as the notice, the
 // link lit and nothing outlined, told by the landing's description
-// (`landWithheld`), its claims read first (O-FACES' `prepare`); a withheld
-// document's face stands where it is shown whatever the camera does, no sign
-// hiding it, so its acts are reached by Tab with the face standing. A failure
-// known at the act — the board answered for the document with nothing; a
-// follow's far end projected into such a document, or into one withheld
-// whose text the page holds or held (O-FACES' `accessChanged`); for a jump
-// that must read, the board marked unreachable — never leaves: no flight, no
-// entry, no read, the link not counted as followed, its face at the act's
-// site in the place of what stands there (`showNotice`), the chrome kept.
+// (`landWithheld`), its claims read first (O-FACES' `prepare`) — a follow to
+// the source of the words it carries (`leapTo`'s `source`) lighting no link;
+// a withheld document's face stands where it is shown whatever the camera
+// does, no sign hiding it, so its acts are reached by Tab with the face
+// standing. A failure known at the act — the board answered for the document
+// with nothing; a follow's far end projected into such a document, or a
+// follow's far end or source withheld whose text the page holds or held
+// (O-FACES' `accessChanged`); for a jump that must read, the board marked
+// unreachable — never leaves: no flight, no entry, no read, the link not
+// counted as followed, its face at the act's site in the place of what
+// stands there (`showNotice`), the chrome kept.
 // Wherever a follow, or a reading scene opened from a link's end, meets a far
 // end the board will say nothing of, its face says the far end's words — the
 // ones its label and rows name it by first, then the rest of its one state
@@ -502,9 +508,30 @@ import { esc } from '../util.js';
  * @typedef {Object} Carry — a passage a LEAP carries (foundations §2.3; P43): a span of the text it is carried from, and what it was to the reader, which the landing's line names it by
  * @property {string} addr the document it is carried from
  * @property {number} pos its first position there
- * @property {number} width its positions
+ * @property {number} width its positions, from `pos` to the end of its last part
+ * @property {Run[]} [parts] the stretches of the span it carries, in the text's order, joined into one passage — a source's words in a span holding other words beside them (O-SELECTION's); absent, the span whole (`partsOf`)
  * @property {boolean} [selected] it is the reader's selection — "what you selected"; else "the text you were reading"
  */
+
+/** the stretches a carry carries, in the text's order (`Carry.parts`): its span whole where it names none */
+const partsOf = (/** @type {Carry} */ c) => (c.parts && c.parts.length ? c.parts : [{ pos: c.pos, width: Math.max(1, c.width) }]);
+/** the positions of the passage a carry carries: its parts' together */
+const carriedWidth = (/** @type {Carry} */ c) => partsOf(c).reduce((n, p) => n + p.width, 0);
+/** the passage a carry carries by identity, its parts' bytes joined in order, as the text shown names them now (T-LAYER's `shownIdentity`) */
+const carriedIds = (/** @type {Carry} */ c) => partsOf(c).flatMap((p) => LAYER.shownIdentity(c.addr, p.pos, p.width));
+/** a position of the text a carry is carried from as its offset into the passage carried, its parts joined in order; null where no part holds it */
+function offsetIn(/** @type {Carry} */ c, /** @type {number} */ pos) {
+  let off = 0;
+  for (const p of partsOf(c)) { if (pos >= p.pos && pos < p.pos + p.width) return off + pos - p.pos; off += p.width; }
+  return null;
+}
+/** an offset into the passage a carry carries as a position of the text it is carried from: the part holding it, else the end of the last */
+function posIn(/** @type {Carry} */ c, /** @type {number} */ off) {
+  const parts = partsOf(c);
+  for (const p of parts) { if (off < p.width) return p.pos + off; off -= p.width; }
+  const last = parts[parts.length - 1];
+  return last.pos + last.width;
+}
 
 /**
  * @typedef {Object} Landing — what a landing says of the passage it carried or followed, while its arrival stands (see the head)
@@ -1482,21 +1509,22 @@ const UNREACHABLE = /** @type {Refusal} */ ({ kind: 'unreachable', name: 'unreac
  * such a document, or a far document withheld from the reader — known so, or
  * by the far end's projection — whose text the page holds or held under the
  * class it left (O-FACES' `accessChanged`), any other withheld far document
- * being a place the follow lands at;
- * for a jump that must read, the board is marked unreachable — as a notice's
- * face, its site the caller's to give, the fifth cell a follow's in the far
- * end's words (`Notice.far`); null where none is known.
+ * being a place the follow lands at — a follow's source among them (`leapTo`'s
+ * `source`); for a jump that must read, the board is marked unreachable — as
+ * a notice's face, its site the caller's to give, the fifth cell a follow's in
+ * the far end's words (`Notice.far`); null where none is known.
  * @param {string} addr the place the jump names
  * @param {boolean} reads the jump must read before it lands
  * @param {{link: string, slot: 1 | 2} | null} [end] a follow's far end
+ * @param {boolean} [follows] the jump is a follow's: to a link's far end, or to the source of the words it carries
  * @returns {Notice | null}
  */
-function known(addr, reads, end = null) {
+function known(addr, reads, end = null, follows = !!end) {
   const d = REC.has(addr) ? REC.doc(addr) : null;
   const p = end ? REC.projection(end.link, end.slot, addr) : undefined;
   /** @type {Notice['face'] | null} */
   const face = (d && d.refused === 'unregistered') || p === 'unregistered' ? 'unregistered'
-    : end && ((d && d.refused === 'withheld') || p === 'withheld') && FACES.accessChanged(addr) ? 'withheld'
+    : follows && ((d && d.refused === 'withheld') || p === 'withheld') && FACES.accessChanged(addr) ? 'withheld'
       : reads && REC.daemon() === 'unreachable' ? 'refused' : null;
   if (!face) return null;
   return { face, addr, refusal: face === 'refused' ? UNREACHABLE : null, site: null, ...(end && face === 'unregistered' ? { far: true } : {}) };
@@ -1773,28 +1801,59 @@ async function land(at, byKey, ms) {
   return landed;
 }
 
+/** @typedef {{a: number, b: number, width: number, at: number}} Counterpart a stretch of shared identity a text holds of a passage (`heldIn`): its first position in the text the passage is carried from and in the text sought in, its positions, and its offset into the passage, the passage's parts joined in order */
+
 /**
  * What a text holds of a passage (BM-HELD's rule; FP-21): the passage
  * `compare`d against the text whole, in parts where
  * the board refuses the read for its size (M-PUMP's `compareParts`), every
- * stretch of it the text holds (SC's `counterparts`) — the one rule a
- * carried passage's landing, its line's version offer and the versions
- * list's rows read; none where the text holds no position; the refusal met
- * where no answer told.
- * @param {Span} c the passage
+ * stretch of it the text holds (SC's `counterparts`), cut to the passage's
+ * parts and joined where they follow on in the passage and in that text both
+ * (`inParts`) — the one rule a carried passage's landing, its line's version
+ * offer and the versions list's rows read; none where the text holds no
+ * position; the refusal met where no answer told.
+ * @param {Carry} c the passage: a span, or the parts of one a carry names
  * @param {string} into the document whose text it is sought in
  * @param {number} extent that text's positions
- * @returns {Promise<{held: Held, counterparts: Array<{a: number, b: number, width: number}>} | {refused: Refusal}>}
+ * @returns {Promise<{held: Held, counterparts: Counterpart[]} | {refused: Refusal}>}
  */
 export async function heldIn(c, into, extent) {
-  const w = Math.max(1, c.width);
+  const w = carriedWidth(c);
   if (extent <= 0) return { held: HELD.heldOf([], w), counterparts: [] };
   // a passage of a draft holding the person's page-local edits is named to the board by nothing of its positions there: its bytes by identity, placed in the other text through that text's image
   if (REC.has(c.addr) && textOf(c.addr).derived) return heldByBytes(c, into, extent);
-  const out = await PUMP.compareParts({ doc: c.addr, pos: c.pos, width: w }, { doc: into, pos: 1, width: extent });
+  const span = Math.max(1, c.width);
+  const out = await PUMP.compareParts({ doc: c.addr, pos: c.pos, width: span }, { doc: into, pos: 1, width: extent });
   if ('refused' in out) return out;
-  const counterparts = SCENE.counterparts(out.pairs, c.pos, w);
-  return { held: HELD.heldOf(counterparts.map((h) => ({ at: h.a - c.pos, width: h.width })), w), counterparts };
+  const counterparts = inParts(c, SCENE.counterparts(out.pairs, c.pos, span));
+  return { held: HELD.heldOf(counterparts.map((h) => ({ at: h.at, width: h.width })), w), counterparts };
+}
+
+/**
+ * The stretches of shared identity a text holds of a carried passage, cut to
+ * the passage's parts (`Carry.parts`), each with its offset into the passage
+ * (`offsetIn`), those that follow on in the passage and in the text sought in
+ * both joined into one — one unbroken stretch of that text holding them in
+ * the passage's order (FP-21) — in the order of the text carried from.
+ * @param {Carry} c
+ * @param {Array<{a: number, b: number, width: number}>} found the stretches, `a` a position of the text carried from, `b` of the text sought in
+ * @returns {Counterpart[]}
+ */
+function inParts(c, found) {
+  /** @type {Counterpart[]} */
+  const cut = [];
+  for (const h of found) for (const p of partsOf(c)) {
+    const lo = Math.max(h.a, p.pos), hi = Math.min(h.a + h.width, p.pos + p.width);
+    if (lo < hi) cut.push({ a: lo, b: h.b + (lo - h.a), width: hi - lo, at: /** @type {number} */ (offsetIn(c, lo)) });
+  }
+  /** @type {Counterpart[]} */
+  const out = [];
+  for (const h of cut.sort((x, y) => x.at - y.at || x.b - y.b)) {
+    const last = out[out.length - 1];
+    if (last && last.at + last.width === h.at && last.b + last.width === h.b) last.width += h.width;
+    else out.push({ ...h });
+  }
+  return out.sort((x, y) => x.a - y.a || x.b - y.b);
 }
 
 /**
@@ -1806,14 +1865,14 @@ export async function heldIn(c, into, extent) {
  * where the board refuses it for its size (M-PUMP's `imageParts`). The
  * refusal that read met; where the image of the text shown does not name the
  * passage's bytes, that no read answered (M-PUMP's `NOT_ANSWERED`).
- * @param {Span} c the passage, a span of the text shown
+ * @param {Carry} c the passage, a span of the text shown or the parts of one
  * @param {string} into the document whose text it is sought in
  * @param {number} extent that text's positions
- * @returns {Promise<{held: Held, counterparts: Array<{a: number, b: number, width: number}>} | {refused: Refusal}>}
+ * @returns {Promise<{held: Held, counterparts: Counterpart[]} | {refused: Refusal}>}
  */
 async function heldByBytes(c, into, extent) {
-  const w = Math.max(1, c.width), ids = LAYER.shownIdentity(c.addr, c.pos, w);
-  if (!ids.length) return { refused: PUMP.NOT_ANSWERED };
+  const w = carriedWidth(c), parts = partsOf(c).map((p) => ({ ...p, ids: LAYER.shownIdentity(c.addr, p.pos, p.width) }));
+  if (!parts.some((p) => p.ids.length)) return { refused: PUMP.NOT_ANSWERED };
   const d = REC.has(into) ? REC.doc(into) : null;
   /** @type {import('../model/records.js').ImageRun[]} */
   let image = d && d.from >= 0 && REC.imageCovers(d) ? d.image : [];
@@ -1824,17 +1883,19 @@ async function heldByBytes(c, into, extent) {
     image = im.runs.map((r) => { const run = { pos: at, ...REC.iSpanOf(r) }; at += r.width; return run; });
   }
   /** @type {Array<{a: number, b: number, width: number}>} */
-  const counterparts = [];
-  let off = 0;
-  for (const id of ids) {
-    for (const r of image) {
-      const lo = Math.max(id.ordinal, r.ordinal), hi = Math.min(id.ordinal + id.width, r.ordinal + r.width);
-      if (r.prefix === id.prefix && lo < hi) counterparts.push({ a: c.pos + off + (lo - id.ordinal), b: r.pos + (lo - r.ordinal), width: hi - lo });
+  const found = [];
+  for (const p of parts) {
+    let off = 0;
+    for (const id of p.ids) {
+      for (const r of image) {
+        const lo = Math.max(id.ordinal, r.ordinal), hi = Math.min(id.ordinal + id.width, r.ordinal + r.width);
+        if (r.prefix === id.prefix && lo < hi) found.push({ a: p.pos + off + (lo - id.ordinal), b: r.pos + (lo - r.ordinal), width: hi - lo });
+      }
+      off += id.width;
     }
-    off += id.width;
   }
-  counterparts.sort((x, y) => x.a - y.a || x.b - y.b);
-  return { held: HELD.heldOf(counterparts.map((h) => ({ at: h.a - c.pos, width: h.width })), w), counterparts };
+  const counterparts = inParts(c, found);
+  return { held: HELD.heldOf(counterparts.map((h) => ({ at: h.at, width: h.width })), w), counterparts };
 }
 
 /**
@@ -1847,7 +1908,7 @@ async function heldByBytes(c, into, extent) {
  * met where no answer told — the board refused the read, even in parts, or
  * the page could not read the text (`met`, its whole read's; null where that
  * met none).
- * @param {Span} c the passage carried
+ * @param {Carry} c the passage carried
  * @param {Doc} d the document landed in, read whole
  * @param {Refusal | null} met the refusal the text's whole read met
  * @returns {Promise<{held: Held, at: number, pos: number, runs: Run[], pieces: Pieces | null} | 'none' | {refused: Refusal | null}>} `at` the passage's own position the run landed at, `pos`, holds
@@ -1857,10 +1918,10 @@ async function reproject(c, d, met) {
   const out = await heldIn(c, d.addr, d.extent);
   if ('refused' in out) return out;
   if (!out.counterparts.length) return 'none';
-  const stretches = inTextOrder(out.counterparts.map((h) => ({ pos: h.b, width: h.width, at: h.a - c.pos })));
-  const pieces = HELD.piecesIn(stretches, Math.max(1, c.width), showsWithheld(d));
-  const first = pieces ? pieces.runs[pieces.order[0]] : { pos: out.counterparts[0].b, at: out.counterparts[0].a - c.pos };
-  return { held: out.held, at: c.pos + first.at, pos: first.pos, runs: stretches.map((s) => ({ pos: s.pos, width: s.width })), pieces };
+  const stretches = inTextOrder(out.counterparts.map((h) => ({ pos: h.b, width: h.width, at: h.at })));
+  const pieces = HELD.piecesIn(stretches, carriedWidth(c), showsWithheld(d));
+  const first = pieces ? pieces.runs[pieces.order[0]] : { pos: out.counterparts[0].b, at: out.counterparts[0].at };
+  return { held: out.held, at: posIn(c, first.at), pos: first.pos, runs: stretches.map((s) => ({ pos: s.pos, width: s.width })), pieces };
 }
 
 /** does a document's held text show withheld text — a run withheld from the reader, under which the rest of a passage may stand? */
@@ -1892,6 +1953,22 @@ function carriedLanding(c, d, held, asked) {
 function wholeAt(/** @type {string} */ addr, /** @type {ISpan[]} */ spans, /** @type {number} */ width) {
   const p = LAYER.placedShown(addr, spans);
   return p.length === 1 && p[0].width >= width ? p[0] : null;
+}
+
+/**
+ * Where the text a passage is carried from holds it whole (`wholeAt`): a
+ * carry of one part in one stretch; one of several parts (`Carry.parts`)
+ * every byte of it, in no more stretches than it has parts — from the first
+ * to the end of the last; null where it does not.
+ * @param {Carry} c
+ * @param {ISpan[]} carried the passage by identity (`carriedIds`)
+ * @returns {Run | null}
+ */
+function heldWhole(c, carried) {
+  const parts = partsOf(c);
+  if (parts.length === 1) return wholeAt(c.addr, carried, c.width);
+  const p = LAYER.placedShown(c.addr, carried), last = p[p.length - 1];
+  return p.length && p.length <= parts.length && p.reduce((n, x) => n + x.width, 0) >= carriedWidth(c) ? { pos: p[0].pos, width: last.pos + last.width - p[0].pos } : null;
 }
 
 /**
@@ -2047,9 +2124,9 @@ async function followed(s, proj) {
  * @param {(byKey: boolean) => Promise<void>} [again] the landing's read made again; a LEAP's by default
  */
 function sayCarried(act, c, carried, d, placed, entry, link, again = (byKey) => againCarried(c, carried, d.addr, entry, link, placed.pos, byKey)) {
-  const addr = d.addr, said = placed.said, pos = placed.pos ?? headOf(d), w = Math.max(1, c.width);
+  const addr = d.addr, said = placed.said, pos = placed.pos ?? headOf(d), w = carriedWidth(c);
   const offers = !!said && said.state !== 'unknown';
-  const source = offers && c.addr !== addr ? (carried.length ? wholeAt(c.addr, carried, c.width) : { pos: c.pos, width: c.width }) : null;
+  const source = offers && c.addr !== addr ? (carried.length ? heldWhole(c, carried) : { pos: c.pos, width: c.width }) : null;
   const pieces = placed.pieces;
   landed = { addr, pos, said, pieces, current: pieces ? pieces.order[0] : 0, floating: placed.none, withheld: false, beside: source ? { a: c.addr, held: { posA: source.pos, widthA: source.width, ids: carried } } : null, version: null, crossed: boxOf(c.addr) !== boxOf(addr) };
   retry = said && said.again ? again : null;
@@ -2058,10 +2135,10 @@ function sayCarried(act, c, carried, d, placed, entry, link, again = (byKey) => 
   if (offers && at != null) void offerVersion(act, addr, async (member) => {
     const e = await PUMP.extentOf(member);
     const h = 'extent' in e ? await heldIn(c, member, e.extent) : null;
-    const whole = h && 'held' in h && h.held.holds === 'all' ? h.counterparts.find((p) => p.a <= c.pos && p.a + p.width >= c.pos + w) : null;
+    const whole = h && 'held' in h && h.held.holds === 'all' ? h.counterparts.find((p) => p.at <= 0 && p.at + p.width >= w) : null;
     if (!whole) return null;
     /** @type {Placing} the landing's line here kept at the counterpart of the passage's position it holds, the passage outlined whole there */
-    const there = { from: pos, to: whole.b + (at - whole.a), runs: [{ pos: whole.b + (c.pos - whole.a), width: w }], spans: carried, link: null };
+    const there = { from: pos, to: whole.b + ((offsetIn(c, at) ?? 0) - whole.at), runs: [{ pos: whole.b - whole.at, width: w }], spans: carried, link: null };
     return (byKey) => { void toVersion(member, { placed: there, byKey, site: { span: { addr, pos } } }); };
   });
 }
@@ -2140,41 +2217,45 @@ async function landFollowed(act, s, entry, placed, byKey, first = null) {
 
 /**
  * A follow's landing at a far document withheld from the reader (see the
- * head), its reads having learned it in the air:
+ * head) — a link's far end, or the source of the words a follow carries —
+ * its reads having learned it in the air:
  * the claims its face decides C-67's pointer from read first (O-FACES'
  * `prepare`); its entry settled at the document whole — its view left as the
  * reader left it where they took the camera over there — with the face of
  * its own withheld words at its place as the notice; then, where no act was
  * made after `act`, the reading face ended, the box taking the address the
- * link names, the link lit and nothing outlined, the landing saying the
- * document is withheld (`described`), and — save where the reader took the
- * camera over while the follow was in the air, which only shows the face —
- * the walk and the camera moved on to the document from the first leg
- * (`goOn`), the face told there by the landing's description.
+ * follow names, the link lit where a link was followed and nothing outlined,
+ * the landing saying the document is withheld (`described`), and — save
+ * where the reader took the camera over while the follow was in the air,
+ * which only shows the face — the walk and the camera moved on to the
+ * document from the first leg (`goOn`), the face told there by the landing's
+ * description.
  * @param {number} act
- * @param {Shown} s
+ * @param {string} far the document withheld
+ * @param {string} near the document the follow was made at
+ * @param {string | null} link the link followed; null for a follow to a source
  * @param {Entry | null} entry
- * @param {boolean} byKey
+ * @param {boolean | undefined} byKey
  * @param {Promise<boolean>} first the follow's first leg, in the air
+ * @returns {Promise<boolean>} the camera landed there
  */
-async function landWithheld(act, s, entry, byKey, first) {
-  const far = s.far;
+async function landWithheld(act, far, near, link, entry, byKey, first) {
   await FACES.prepare(far);
   const at = toward(far, null);
   /** @type {Notice} the document's own withheld words at its place */
   const notice = { face: 'withheld', addr: far, refusal: null, site: placeAt(far) };
   if (entry) TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : seen(at.view, far, null)), pos: null, width: null, notice });
-  if (act !== made) return;
+  if (act !== made) return false;
   FACES.endReading();
   pinTo(far);
   arrival = null;
-  lit = [s.link.addr];
-  landed = { addr: far, pos: headOf(REC.doc(far)), said: null, pieces: null, current: 0, floating: false, withheld: true, beside: null, version: null, crossed: boxOf(s.near) !== boxOf(far) };
+  lit = link ? [link] : [];
+  landed = { addr: far, pos: headOf(REC.doc(far)), said: null, pieces: null, current: 0, floating: false, withheld: true, beside: null, version: null, crossed: boxOf(near) !== boxOf(far) };
   retry = null; versionOffer = null;
-  if (takenAt === act) { showFound(notice); return; }
+  if (takenAt === act) { showFound(notice); return false; }
   const flight = goOn(act, first, at, byKey, 620);
   showFound(notice, true);
-  await flight;
+  return flight;
 }
 
 /**
@@ -2248,10 +2329,17 @@ function sayFollowed(act, s, entry, placed, pos) {
  * line saying where that is only part of it, or all of it in pieces; where
  * the text holds none of it, the document's head, faced as a floating end is,
  * the face the entry's notice; where no answer told, the place as asked,
- * unmarked, the line saying it could not tell (`sayCarried`). The
+ * unmarked, the line saying it could not tell (`sayCarried`). A carry naming
+ * parts carries them alone, joined into one passage: the words between them
+ * are no part of what the landing reads its text holds (`heldIn`). The
  * entry it departs records the carry (see the head), the passage by the
  * permanent addresses of its bytes as the held image names them as the act
  * is made — none where the image does not cover it, and then no step. A LEAP
+ * that is follow's to the source of the words it carries (`source`) lands as
+ * a follow does at a source the board withholds from the reader: at that
+ * document whole, its own withheld words at its place (`landWithheld`), no
+ * link lit; and one whose text the page holds or held is faced at `site` at
+ * the act, captioned by the follow (`known`). A LEAP
  * whose failure is known at the act never leaves, its face at `site`, the
  * arrival standing — the door's link lit; one to
  * an address on a board the plane does not draw reaches for it first
@@ -2260,7 +2348,7 @@ function sayFollowed(act, s, entry, placed, pos) {
  * in the air its reads only mark; where an act was made while it read, it
  * goes on nowhere and faces nothing: its read fills its entry alone.
  * @param {string} addr a document address
- * @param {{pos?: number | null, runs?: Run[] | null, how?: 'click' | 'key' | 'leap' | 'follow', link?: string | null, passage?: ISpan | null, carry?: Carry | null, site?: Site | null, push?: boolean, ms?: number, byKey?: boolean}} [opts] `runs` every run of the span landed on, `pos` the first position of one of them, where the landing names a span; `passage` the passage those runs hold, by identity, which labels them (the door's); `carry` the passage a move to another arrangement of the same material carries (foundations §2.3's carry rule; P43), which places the landing in the place of `pos`; `site` where the act was made — a run's bytes, a card's span, a point of the plane — where the face of a failure known at the act stands, and a reaching face, null (the LEAP box) at the viewport's corner; `how` the act, for the flight's length alone — a click on a place flies in 420 ms, every other act in 620 ms; `byKey` a key made the act
+ * @param {{pos?: number | null, runs?: Run[] | null, how?: 'click' | 'key' | 'leap' | 'follow', link?: string | null, passage?: ISpan | null, carry?: Carry | null, source?: boolean, site?: Site | null, push?: boolean, ms?: number, byKey?: boolean}} [opts] `runs` every run of the span landed on, `pos` the first position of one of them, where the landing names a span; `passage` the passage those runs hold, by identity, which labels them (the door's); `carry` the passage a move to another arrangement of the same material carries (foundations §2.3's carry rule; P43), which places the landing in the place of `pos`; `source` the LEAP is follow's to the source of the words `carry` carries (O-SELECTION's), landing as a follow does at a source withheld from the reader; `site` where the act was made — a run's bytes, a card's span, a point of the plane — where the face of a failure known at the act stands, and a reaching face, null (the LEAP box) at the viewport's corner; `how` the act, for the flight's length alone — a click on a place flies in 420 ms, every other act in 620 ms; `byKey` a key made the act
  * @returns {Promise<import('../model/records.js').Doc | null>} the document landed in; null where it never left, faced in the place of a landing, an act made while it read took its place, the reader took the camera over, or its flight was cut short before it landed
  */
 export async function leapTo(addr, opts = {}) {
@@ -2271,12 +2359,17 @@ export async function leapTo(addr, opts = {}) {
   const c = opts.carry ?? null, passage = runs ? opts.passage ?? null : null;
   let d = REC.doc(addr);
   let unread = d.extent == null || d.from < 0;
-  const fails = known(addr, unread || !!c);
-  if (fails) { if (link) lit = [link]; showNotice({ ...fails, site: signed(site) }); return null; }
+  const fails = known(addr, unread || !!c, null, !!opts.source);
+  if (fails) {
+    if (link) lit = [link];
+    if (fails.face === 'withheld') showNotice({ ...fails, site: site && unsigned(site) }, false, `${t('B1.follow')} · ${addr}`);
+    else showNotice({ ...fails, site: signed(site) });
+    return null;
+  }
   /** the door's runs, read against the passage it names where the page holds the text: labelled, the landing at piece 1 */
   let named = passage && runs && !unread ? namedRuns(addr, runs, passage) : null;
   if (named && runs) { runs = named.runs; pos = firstOf(runs, named.pieces); }
-  const carried = c ? LAYER.shownIdentity(c.addr, c.pos, Math.max(1, c.width)) : [];
+  const carried = c ? carriedIds(c) : [];
   /** @type {Step | null} the carry, as the entry it departs records it: the passage by identity, from the document it was carried from to this one */
   const step = c && carried.length ? { kind: 'carry', from: c.addr, to: addr, spans: carried } : null;
   /** @type {Notice | null} the LEAP's reading notice, where its landing waits on a read — the text unread, or the carried passage's `compare` — at the place its camera leaves for */
@@ -2310,6 +2403,8 @@ export async function leapTo(addr, opts = {}) {
     if (failed(act, entry, { face: 'unregistered', addr, refusal: null, site: siteAt(addr, pos) }, opts.byKey)) lit = link ? [link] : [];
     return null;
   }
+  // a follow's source the board withholds from the reader: landed at its own withheld words, as a follow's far end is
+  if (opts.source && d.refused === 'withheld') return (await landWithheld(act, addr, c ? c.addr : actFrom || addr, null, entry, opts.byKey, first)) ? d : null;
   if (passage && runs && !named) { named = namedRuns(addr, runs, passage); runs = named.runs; pos = firstOf(runs, named.pieces); }
   const placed = c ? carriedLanding(c, d, await reproject(c, d, met), pos) : null;
   if (placed) { pos = placed.pos; runs = placed.runs; }
@@ -2659,17 +2754,17 @@ export async function follow(s, byKey = false) {
   const fd = REC.doc(far);
   if (fd.refused !== 'unregistered' && fd.extent == null) await PUMP.loadWhole(far);
   if (REC.doc(far).refused === 'unregistered') { faced(dead); return; }
-  if (REC.doc(far).refused === 'withheld') { await landWithheld(act, s, entry, byKey, first); return; }
+  if (REC.doc(far).refused === 'withheld') { await landWithheld(act, far, s.near, l.addr, entry, byKey, first); return; }
   const proj = await PUMP.projectEnd(l.addr, s.farSlot, far);
   if ('refused' in proj && ofDocument(proj.refused)) {
-    if (proj.refused.name === 'withheld') await landWithheld(act, s, entry, byKey, first);
+    if (proj.refused.name === 'withheld') await landWithheld(act, far, s.near, l.addr, entry, byKey, first);
     else faced(dead);
     return;
   }
   const d = REC.doc(far);
   if (d.extent == null || d.from < 0) await PUMP.loadWhole(far);
   if (REC.doc(far).refused === 'unregistered') { faced(dead); return; }
-  if (REC.doc(far).refused === 'withheld') { await landWithheld(act, s, entry, byKey, first); return; }
+  if (REC.doc(far).refused === 'withheld') { await landWithheld(act, far, s.near, l.addr, entry, byKey, first); return; }
   await landFollowed(act, s, entry, await followed(s, proj), byKey, first);
 }
 

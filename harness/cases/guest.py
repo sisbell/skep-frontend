@@ -113,8 +113,12 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     the run's whole wording's card (D5 K-7; issue #288) — the placeholder's
     head, the guest's arm and the clause, the pointer its one act — the card
     taking the focus a key opened it with, on the pointer where it offers
-    one, else on its head, and nothing selected; "who wrote this?" answering
-    over a block;
+    one, else on its head, and nothing selected; Mod+Enter at the run
+    following to its source — its one target, else asked which with the
+    source's row the last — and landing at the source's own withheld words,
+    the clause the run's card carries beneath them, the entry holding that
+    face, nothing outlined and no link lit (issue #572); "who wrote this?"
+    answering over a block;
 (g) the owner's page whose own session ends falls to guest class: opened
     again, it reads one of the claimant's drafts and the window run's bytes,
     then its session is closed by the page's own `close(session)` — the call
@@ -803,6 +807,34 @@ def run(ctx):
             {'at_run': at_run, 'card': whole, 'decided': clause_id})
     r.figures['run_face'] = whole
     ctx.esc()
+    # Mod+Enter at the run, the walk's element: the run's source is follow's target too (issue #572's design decision) — named
+    # "withheld · ⟨owner⟩" where it is the one target, and where links drawn at the run make several, asked which with its row
+    # the last — the follow flying to the source's place and landing at its own withheld words, C-67's clause the run's card
+    # carries beneath them, the entry holding that face, nothing outlined and no link lit
+    ctx.leap(DOC, WINDOW[0])
+    t0 = ctx.js('window.__skep.trail()')
+    ctx.drv.key('Enter', mods=('Meta',))
+    ctx.settle(); ctx.frames(2)
+    asked = ctx.js('(() => { const o = window.__skep.overlay(); return {id: o.id, rows: [...document.querySelectorAll("#overlay [data-run]")].map((b) => b.dataset.run)}; })()')
+    if asked['id'] == 'which':
+        ctx.js('(() => { const b = [...document.querySelectorAll(\'#overlay [data-run^="s"]\')].pop(); if (b) b.click(); })()')
+        ctx.settle(); ctx.frames(2)
+    wait_for(ctx, 'window.__skep.overlay().id === "face:withheld"')
+    # its own withheld words compact where a face showed them whole before in the page's session: its head opens the rest
+    ctx.js('(() => { const h = document.querySelector(\'#overlay .face-text[aria-expanded="false"]\'); if (h) h.click(); })()')
+    ctx.frames(1)
+    landed = ctx.js('''(() => { const S = window.__skep, tr = S.trail(), e = tr.entries[tr.cursor] || {}, o = document.getElementById('overlay'), q = (x) => o.querySelector(x), w = q('.face-text'), c = q('.clause'), f = S.view.focus();
+      return {cursor: tr.cursor, addr: e.addr || null, notice: e.notice ? e.notice.face : null, step: tr.cursor > 0 ? (tr.entries[tr.cursor - 1].step || {}).kind || null : null, id: S.overlay().id,
+              words: w ? w.textContent : null, clause_id: c ? c.dataset.string : null, clause: c ? c.textContent : null, mark: S.go.arrival(), focus: f && [f.kind, f.addr]}; })()''')
+    lit = ctx.js('(async () => (await import("./nav/go.js")).litLinks())()')
+    r.check(landed['cursor'] == t0['cursor'] + 1 and landed['addr'] == WINDOW[2] and landed['notice'] == 'withheld' and landed['step'] in ('carry', None) and landed['id'] == 'face:withheld'
+            and landed['words'] == t(ctx, 'F.corner.withheld', {'owner': OWNER}) and landed['clause_id'] == (clause_id if clause_id not in (None, CLAUSE_READING) else None)
+            and landed['clause'] == clause and landed['mark'] is None and lit == [],
+            '(f) Mod+Enter at the run — %s — follows to its source, the draft withheld from the guest: one trail entry there, the step a carry where the image names the run\'s bytes, landed at its own withheld words — "withheld · %s" — C-67\'s clause the run\'s card carries beneath them, the entry holding that face, nothing outlined, no link lit (issue #572\'s design decision; issue #179\'s)' % ('asked which, its row the last' if asked['id'] == 'which' else 'its one target', OWNER),
+            {'asked': asked, 'landed': landed, 'lit': lit, 'decided': clause_id})
+    r.figures['source_face'] = {'asked': asked, 'landed': landed}
+    ctx.esc()
+    ctx.leap(DOC, WINDOW[0])
     para = next((b for b in doc['blocks'] if b['kind'] == 'para'), None)
     if para:
         ctx.js('window.__skep.cards.wrote(%s, %d)' % (json.dumps(DOC), para['pos'])); ctx.settle(); ctx.frames(2)

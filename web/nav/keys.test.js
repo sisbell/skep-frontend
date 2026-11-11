@@ -122,12 +122,17 @@
 // and under a hold; an act that sends a name for characters takes effect at
 // the burst's ack, and under a hold stands inert with the row rule's reason;
 // and a link made on typed words is answered at them once the board has
-// minted them. Follow at a passage no link is drawn at whose material one
-// transcluded run holds whole — a selection, the walk's span, the slot
-// pressed, a selection at a live caret — goes to the run's source carrying
-// it, while a link drawn there is followed, a passage reaching the
-// document's own words keeps the no-link reason, and a bare caret in the run
-// keeps the caret's line.
+// minted them. Follow's targets are each link drawn at the passage and each
+// source of the runs it meets, counted once, the document's own words adding
+// none: at one target it goes there — a source reached carrying that
+// source's words alone, from a selection, the walk's span, the slot pressed
+// or a selection at a live caret, at a passage reaching the document's own
+// words and at two runs of one source alike — and at several it asks which,
+// the links' rows first, then a row per source naming its words and its
+// origin and carrying them where they stand, though the document holds the
+// same bytes again elsewhere, the list standing again on a return; a run withheld from the
+// reader is a target too, named "withheld · ⟨owner⟩" and reached at its own
+// withheld words; and a bare caret in a run keeps the caret's line.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
@@ -145,12 +150,14 @@ import * as LAYER from '../text/layer.js';
 import * as SEL from '../overlays/selection.js';
 import * as HOST from '../overlays/host.js';
 import * as HINT from '../overlays/hint.js';
+import * as FACES from '../overlays/faces.js';
 import * as CAM from '../plane/camera.js';
 import { cornerHTML } from '../text/article.js';
 import { spanOfBlock } from '../text/span.js';
 import { docBox } from '../plane/projection.js';
-import { t } from '../strings.js';
-import { esc, byteLength } from '../util.js';
+import { resolveSpan, unitSpan } from '../model/address.js';
+import { t, tHTML } from '../strings.js';
+import { esc, fill, byteLength } from '../util.js';
 
 // the table alone (the dispatch binds DOM modules the Node runner has no DOM for)
 const src = await import('node:fs').then((fs) => fs.readFileSync(new URL('./keys.js', import.meta.url), 'utf8'));
@@ -1250,16 +1257,112 @@ test('Mod+Enter at the walk\'s span, nothing selected, a typed line one transclu
   assert.deepEqual(fake.unanswered, []);
 }));
 
-test('follow at a transcluded run goes to its source only where no link is drawn there and the run holds the passage whole: a selection reaching past the run into the document\'s own words keeps the no-link reason, the trail as it was; a link drawn at the run is followed, its step a follow and its link lit, the slot naming its far document (D5 K-51; FP-34)', () => onQuote(O, [], async ({ said, fake }) => {
-  const L = D + '.0.2.9';
-  // "e.\n\nSeco": the end of O's own first line and the start of the run
+/** the reasons follow gives where its words lead nowhere, as the status region says them */
+const reasonsIn = (/** @type {string[]} */ words) => words.filter((w) => w === t('B3.row.no-link') || w === t('L.new.no-link'));
+/** a `compare` of a passage of a document against X's text whole, answered with the pairs named: each its position there, X's and its width */
+const compareX = (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width, /** @type {Array<[number, number, number]>} */ pairs) => ({
+  [FAKE.keyOf('op', { frame: F.compare([{ doc: addr, spans: [{ ordinal: pos, positions: width }] }], [{ doc: X, spans: [{ ordinal: 1, positions: byteLength(SOURCE) }] }]) })]:
+    { result: { as_of: 1, resp: 'compare', pairs: pairs.map(([u1, u2, w]) => ({ d1: addr, d2: X, u1: { ordinal: String(u1), subspace: '1' }, u2: { ordinal: String(u2), subspace: '1' }, width: String(w) })) } },
+});
+/** positions withheld from the reader, as a delivery hands them: a run of another document's material, its origin named */
+const withheldRun = (/** @type {number} */ pos, /** @type {number} */ width, /** @type {string} */ origin) => /** @type {import('../model/frames.js').Run} */ ({ pos, width, kind: 'withheld', text: '', ref: null, origin });
+/** a stretch of a document's own text from a position, as a delivery hands it */
+const ownText = (/** @type {number} */ pos, /** @type {string} */ text) => /** @type {import('../model/frames.js').Run} */ ({ pos, width: byteLength(text), kind: 'content', text, ref: null, origin: null });
+/**
+ * A document's text read again — `text` its own text whole, or the runs a delivery hands, withheld runs among them — its
+ * image the runs named, each its first byte's address and its width, its metadata and links held.
+ * @param {string} addr
+ * @param {string | import('../model/frames.js').Run[]} text
+ * @param {Array<[string, number]>} image
+ */
+function quoting(addr, text, image) {
+  const runs = typeof text === 'string' ? [ownText(1, text)] : text;
+  REC.invalidate(addr);
+  REC.takeSpanSet(addr, [{ subspace: 1, ordinal: 1, positions: runs.reduce((n, r) => n + r.width, 0) }]);
+  REC.takeDelivery(addr, runs);
+  REC.takeImage(addr, 1, image.map(([iStart, width]) => ({ iStart, width })));
+  REC.takeMetadata(addr, { doc: addr, published: false, owner: addr === D ? '1.0.1' : '1.0.2', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(addr, []);
+}
+
+test('follow at a selection reaching from the document\'s own words into a transcluded run goes to the run\'s source, its one target, the slot naming it: one entry there, the run\'s words alone carried and outlined at their counterpart, the landing saying nothing of the other words and no reason said (issue #572\'s design decision; D5 K-51; FP-21)', () => onQuote(O, [[14, 4, 4]], async ({ said, fake }) => {
+  // "e.\n\nSeco": the end of O's own first line, then the start of the run
   SEL.select(O, 10, 8);
-  let n = said.length;
+  assert.ok(/** @type {string} */ (slotIn('follow').button).includes(`${esc(t('B1.follow'))} <span class="id">${X}</span> <kbd>`), 'the follow slot names the run\'s source, its one target');
+  const n = said.length;
   assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
-  await tick();
-  assert.deepEqual([slotIn('follow').reason, said.slice(n), TRAIL.length(), GO.inAir()], [`<div class="note reason" data-string="B3.row.no-link">${esc(t('B3.row.no-link'))}</div>`, [t('B3.row.no-link')], 1, false],
-    'reaching the document\'s own words: the no-link reason at the slot and in the status region, nothing followed');
-  HOST.dismiss(); SEL.clear();
+  await landed();
+  assert.deepEqual(afterFollow(), [2, X, { kind: 'carry', from: O, to: X, spans: ofX(AT_X, 4) }, { addr: X, pos: AT_X, runs: [{ pos: AT_X, width: 4 }], link: null }, []],
+    'one entry at X, "Seco" alone carried — never O\'s own words — and outlined at its counterpart there, no link lit');
+  assert.deepEqual([GO.landingLine(), reasonsIn(said.slice(n))], [null, []], 'the outline alone: nothing said of O\'s own words, no reason said');
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('follow at the walk\'s span, nothing selected, a typed line of the document\'s own words and a transcluded run, goes to the run\'s source carrying the run\'s words alone (issue #572\'s design decision; D5 K-51)', () => onQuote(O, [], async ({ said, fake }) => {
+  // "As said, " O's own, "Second line here." X's 12 to 28, the newline after it O's own
+  quoting(O, 'First line.\n\nAs said, Second line here.\n', [[O + '.0.1.1', 22], [`${X}.0.1.${AT_X}`, 17], [O + '.0.1.40', 1]]);
+  await focusOn(O, 14);
+  assert.deepEqual([walkAt(), SEL.selected(), REC.doc(O).origins], [['block', O, 14], null, [{ pos: 23, width: 17, doc: X }]], 'the walk on the line, nothing selected, the run X\'s');
+  const n = said.length;
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
+  await landed();
+  assert.deepEqual(afterFollow(), [2, X, { kind: 'carry', from: O, to: X, spans: ofX(AT_X, 17) }, { addr: X, pos: AT_X, runs: [{ pos: AT_X, width: 17 }], link: null }, []],
+    'one entry at X, the run\'s seventeen positions carried and outlined, none of "As said, "');
+  assert.deepEqual([GO.landingLine(), reasonsIn(said.slice(n))], [null, []], 'the outline alone, no reason said');
+  assert.deepEqual(fake.unanswered, []);
+}, compareX(O, 23, 17, [[23, AT_X, 17]])));
+
+test('two runs of one source the document\'s own newline parts are one target, the source counted once: follow over both carries their words joined, never the newline between them, and the source holding them in one stretch outlines it whole, its landing saying nothing (issue #572\'s design decision; FP-21)', () => onQuote(O, [], async ({ said, fake }) => {
+  // "Second line" X's 12 to 22, then O's own newline, then " here." X's 23 to 28, then O's own newline
+  quoting(O, 'First line.\n\nSecond line\n here.\n', [[O + '.0.1.1', 13], [`${X}.0.1.12`, 11], [O + '.0.1.25', 1], [`${X}.0.1.23`, 6], [O + '.0.1.32', 1]]);
+  assert.deepEqual(REC.doc(O).origins, [{ pos: 14, width: 11, doc: X }, { pos: 26, width: 6, doc: X }], 'two runs of X, O\'s own newline between them');
+  SEL.select(O, 14, 18);
+  assert.ok(/** @type {string} */ (slotIn('follow').button).includes(`${esc(t('B1.follow'))} <span class="id">${X}</span> <kbd>`), 'the follow slot names X, one target');
+  const n = said.length;
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
+  await landed();
+  assert.deepEqual(afterFollow(), [2, X, { kind: 'carry', from: O, to: X, spans: [...ofX(12, 11), ...ofX(23, 6)] }, { addr: X, pos: 12, runs: [{ pos: 12, width: 17 }], link: null }, []],
+    'one entry at X, the two runs\' bytes carried — never O\'s newline — and outlined as the one stretch X holds them in');
+  assert.deepEqual([GO.landingLine(), GO.landing()?.pieces, reasonsIn(said.slice(n))], [null, null, []], 'all of it in one piece: no line, no pieces, no reason said');
+  assert.deepEqual(fake.unanswered, []);
+}, compareX(O, 14, 18, [[14, 12, 11], [26, 23, 6]])));
+
+test('runs of two sources are two targets: the slot counts them and follow asks which, a row per source in reading order — each naming the words of the selection its runs hold and its origin as the column\'s edge does — each row carrying its own source\'s words alone (issue #572\'s design decision; D5 K-51)', () => onQuote(O, [[14, 7, 7]], async ({ said, fake }) => {
+  // "Second " X's 12 to 18, "line here." Y's from its 5th, the newline after it O's own
+  const Y = '1.0.1.0.1004';
+  quoting(O, TEXT, [[O + '.0.1.1', 13], [`${X}.0.1.12`, 7], [`${Y}.0.1.5`, 10], [O + '.0.1.31', 1]]);
+  SEL.select(O, 14, 17);
+  assert.ok(/** @type {string} */ (slotIn('follow').button).includes(`${esc(t('B1.follow'))} 2 <kbd>`), 'the follow slot counts its two targets');
+  const n = said.length;
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
+  const list = HOST.currentState(), rows = [...(list?.html || '').matchAll(/<button data-run="(\w+)"[^>]*>(.*?)<\/button>/g)].map((m) => [m[1], m[2]]);
+  /** a source's row as the decision names it: its words, then its origin as the column's edge names it */
+  const row = (/** @type {string} */ words, /** @type {string} */ origin) => fill(esc(t('L.run.named')), { words: esc(words), answer: `${esc(t('L.origin-mark'))} <span class="id">${origin}</span>` });
+  assert.deepEqual([list?.id, rows], ['which', [['s0', row('Second', X)], ['s1', row('line here.', Y)]]], 'the "which" rows: X\'s, then Y\'s, in reading order');
+  assert.deepEqual([TRAIL.length(), reasonsIn(said.slice(n))], [1, []], 'nothing followed until a row is picked, no reason said');
+  /** @type {any} */ (list?.acts?.s0)({}, true);
+  await landed();
+  assert.deepEqual(afterFollow(), [2, X, { kind: 'carry', from: O, to: X, spans: ofX(12, 7) }, { addr: X, pos: 12, runs: [{ pos: 12, width: 7 }], link: null }, []], 'X\'s row: "Second " alone carried to X, never Y\'s words');
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('a source\'s row carries the words of the selection its runs hold where they stand, though the document holds the same bytes again elsewhere: never stretched across both copies (issue #572\'s design decision; FP-21)', () => onQuote(O, [], async ({ fake }) => {
+  // "Second " X's 12 to 18 twice — O's first line, and the start of its second — then "line here." Y's from its 5th
+  const Y = '1.0.1.0.1004';
+  quoting(O, 'Second \n\nSecond line here.\n', [[`${X}.0.1.12`, 7], [O + '.0.1.8', 2], [`${X}.0.1.12`, 7], [`${Y}.0.1.5`, 10], [O + '.0.1.27', 1]]);
+  SEL.select(O, 10, 17);
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
+  const list = HOST.currentState();
+  assert.deepEqual([list?.id, [...(list?.html || '').matchAll(/<button data-run="(\w+)"/g)].map((m) => m[1])], ['which', ['s0', 's1']], 'the "which" rows: X\'s, then Y\'s');
+  /** @type {any} */ (list?.acts?.s0)({}, true);
+  await landed();
+  assert.deepEqual(afterFollow(), [2, X, { kind: 'carry', from: O, to: X, spans: ofX(12, 7) }, { addr: X, pos: 12, runs: [{ pos: 12, width: 7 }], link: null }, []],
+    'X\'s row: the selection\'s "Second " alone carried and outlined, never the first line\'s copy nor the words between them');
+  assert.deepEqual(fake.unanswered, []);
+}, compareX(O, 10, 7, [[10, 12, 7]])));
+
+test('a link drawn at a transcluded run and the run\'s source are two targets: the slot counts them, follow asks which — the link\'s row first, then the source\'s — the source\'s row going to the source, the list standing again as left on Back, and the link\'s row following the link (issue #572\'s design decision; D5 K-51; FP-36)', () => onQuote(O, [[21, 4, 4]], async ({ said, fake }) => {
+  const L = D + '.0.2.9';
   // a link of the person's from "line" — the source's own bytes there — to D's first span, homed in D, whose metadata and links are held
   REC.takeLinks(O, [L]);
   REC.takeLink({ addr: L, from: [endOf(X, 19, 4)], to: [endOf(D, 1, 5)], type: '1.1.0.1.0.1.0.3.13' });
@@ -1267,30 +1370,90 @@ test('follow at a transcluded run goes to its source only where no link is drawn
   REC.takeLinks(D, [L]);
   assert.equal(LK.shownAt(O, { pos: 21, width: 4 }).length, 1, 'the link drawn at "line" in O, through its image');
   SEL.select(O, 21, 4);
-  assert.ok(/** @type {string} */ (slotIn('follow').button).includes(`<span class="id">${D}</span>`), 'the follow slot names the link\'s far document');
-  n = said.length;
+  assert.ok(/** @type {string} */ (slotIn('follow').button).includes(`${esc(t('B1.follow'))} 2 <kbd>`), 'the follow slot counts the link and the source');
+  const n = said.length;
   assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
-  assert.deepEqual([TRAIL.length(), TRAIL.current()?.addr, TRAIL.all()[0]?.step?.kind], [2, D, 'follow'], 'the link followed at the act, never the run\'s source');
+  const ids = () => [...(HOST.currentState()?.html || '').matchAll(/<button data-run="(\w+)"/g)].map((m) => m[1]);
+  assert.deepEqual([overlay(), ids(), TRAIL.length()], ['which', ['w0', 's0'], 1], 'the "which" rows: the link\'s, then the source\'s; nothing followed yet');
+  /** @type {any} */ (HOST.currentState()?.acts?.s0)({}, true);
   await landed();
-  assert.deepEqual([GO.litLinks(), said.slice(n).includes(t('B3.row.no-link'))], [[L], false], 'its link lit, no reason said');
+  assert.deepEqual(afterFollow(), [2, X, { kind: 'carry', from: O, to: X, spans: ofX(19, 4) }, { addr: X, pos: 19, runs: [{ pos: 19, width: 4 }], link: null }, []], 'the source\'s row: X reached, "line" carried and outlined, no link lit');
+  await landed(GO.back());
+  for (let i = 0; i < 50 && overlay() !== 'which'; i++) await tick();
+  assert.deepEqual([overlay(), ids(), SEL.selected()], ['which', ['w0', 's0'], { addr: O, pos: 21, width: 4 }], 'Back: the selection and the list standing again as left, both rows in it');
+  /** @type {any} */ (HOST.currentState()?.acts?.w0)({}, true);
+  assert.deepEqual([TRAIL.current()?.addr, TRAIL.all()[0]?.step?.kind], [D, 'follow'], 'the link\'s row: the link followed at the act');
+  await landed();
+  assert.deepEqual([GO.litLinks(), reasonsIn(said.slice(n))], [[L], []], 'its link lit, no reason said');
   assert.deepEqual(fake.unanswered, []);
 }, { [FAKE.keyOf('op', { frame: F.project(D + '.0.2.9', 2, D) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.5' }] } } }));
 
-test('follow at a run withheld from the reader keeps the no-link reason, whatever the image places over it: nothing followed (D5 K-51; FP-34)', () => onQuote(O, [], async ({ said, fake }) => {
-  // O read again: its second line's seventeen positions a run of X withheld from the reader, X's bytes in the image there
-  REC.invalidate(O);
-  REC.takeSpanSet(O, [{ subspace: 1, ordinal: 1, positions: N }]);
-  REC.takeDelivery(O, [{ pos: 1, width: 13, kind: 'content', text: 'First line.\n\n', ref: null, origin: null }, { pos: 14, width: 17, kind: 'withheld', text: '', ref: null, origin: X }, { pos: 31, width: 1, kind: 'content', text: '\n', ref: null, origin: null }]);
-  REC.takeImage(O, 1, [{ iStart: O + '.0.1.1', width: 13 }, { iStart: `${X}.0.1.${AT_X}`, width: 17 }, { iStart: O + '.0.1.31', width: 1 }]);
-  assert.deepEqual([REC.blockAt(O, 14)?.kind, REC.doc(O).origins], ['withheld', [{ pos: 14, width: 17, doc: X }]], 'the withheld run, X\'s bytes placed over it');
+/** a draft of another account's the board withholds from the reader, and the published edition of its owner's that claims it */
+const W = '1.0.2.0.9', W_OWNER = '1.0.2', W_EDITION = '1.0.2.0.40', W_CLAIM = W_EDITION + '.0.2.1';
+/** the board's answers withholding W from the reader: its span set and its metadata refused */
+const W_REFUSED = {
+  [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(W) })]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
+  [FAKE.keyOf('op', { frame: F.docMetadata(W) })]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
+};
+/** W's edition claims held: its owner's edition claims it from the edition's own bytes, so C-67's pointer stands beneath the arm of W's face */
+function claimsOnW() {
+  const m = 22;
+  REC.takeEditionClaims(W, [W_CLAIM]);
+  REC.takeLink({ addr: W_CLAIM, from: [resolveSpan({ start: W_EDITION + '.0.1.1', width: '0.0.0.0.0.0.0.' + m })], to: [resolveSpan(unitSpan(W))], type: '1.1.0.1.0.1.0.3.14' });
+  REC.takeMetadata(W_EDITION, { doc: W_EDITION, published: true, owner: W_OWNER, birth: W_EDITION + '.1', birthExtent: m, placed: null, baseExtent: null, source: null, asOf: 1 });
+}
+/** W's entry where a follow landed at its own withheld words: its address, its notice — its face at W's place — and the step carrying `width` of W's bytes from its 5th */
+const atWFace = (/** @type {number} */ width) => [W, { face: 'withheld', addr: W, refusal: null, site: { span: { addr: W, pos: 1 } } }, { kind: 'carry', from: O, to: W, spans: [{ prefix: W + '.0.1', ordinal: 5, width }] }];
+
+test('a run withheld from the reader leads to its source too, named and reached: the follow slot reads "withheld · ⟨owner⟩", and Mod+Enter flies to the source\'s place and lands at its own withheld words — the edition-claim clause beneath them, told by the landing\'s description — its entry holding that face, nothing outlined and no link lit, the step carrying the run (issue #572\'s design decision; issue #179\'s)', () => onQuote(O, [], async ({ said, fake }) => {
+  // O read again: its second line's seventeen positions a run of W withheld from the reader, W's bytes in the image there
+  quoting(O, [ownText(1, 'First line.\n\n'), withheldRun(14, 17, W), ownText(31, '\n')], [[O + '.0.1.1', 13], [`${W}.0.1.5`, 17], [O + '.0.1.31', 1]]);
+  claimsOnW();
+  assert.deepEqual([REC.blockAt(O, 14)?.kind, REC.doc(O).origins], ['withheld', [{ pos: 14, width: 17, doc: W }]], 'the withheld run, W\'s bytes placed over it');
   SEL.select(O, 14, 17);
+  const follow = /** @type {string} */ (slotIn('follow').button);
+  assert.ok(follow.includes(`${esc(t('B1.follow'))} ${tHTML('F.corner.withheld', { owner: W_OWNER }, { owner: 'id' })} <kbd>`) && !follow.includes('class="inert"'), `the follow slot live, reading "withheld · ${W_OWNER}": ${follow}`);
   const n = said.length;
   assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
-  await tick();
-  assert.deepEqual([slotIn('follow').reason, said.slice(n), TRAIL.length(), GO.inAir()], [`<div class="note reason" data-string="B3.row.no-link">${esc(t('B3.row.no-link'))}</div>`, [t('B3.row.no-link')], 1, false],
-    'the no-link reason at the slot and in the status region, nothing followed');
+  await landed();
+  for (let i = 0; i < 50 && overlay() !== 'face:withheld'; i++) await tick();
+  const e = TRAIL.current(), place = { span: { addr: W, pos: 1 } };
+  assert.deepEqual([TRAIL.length(), e?.addr, e?.notice, TRAIL.all()[0]?.step], [2, ...atWFace(17)], 'one entry at W, holding its own withheld words at its place; the step carrying the run');
+  assert.deepEqual([GO.arrivalMark(), GO.litLinks(), walkAt()], [null, [], ['document', W, null]], 'nothing outlined, no link lit, the walk on W');
+  const html = hostEl.innerHTML;
+  assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor, HOST.currentState()?.told], ['face:withheld', place, true], 'its face at W\'s place, told by the landing');
+  assert.ok(html.includes(esc(t('F.corner.withheld', { owner: W_OWNER })).replace(W_OWNER, `<span class="id">${W_OWNER}</span>`)) && html.includes(esc(t('C-67.pointer'))), `the withheld box's words naming ${W_OWNER}, the clause's pointer beneath them: ${html}`);
+  assert.deepEqual([GO.described()?.words, reasonsIn(said.slice(n))], [FACES.withheldText(W), []], 'the landing\'s description the face\'s words, the clause among them; no reason said');
   assert.deepEqual(fake.unanswered, []);
-}));
+}, W_REFUSED));
+
+test('a readable source and one withheld from the reader are two targets: the slot counts them and follow asks which, the readable source\'s row naming its words and its origin, the withheld one\'s naming its origin and reading "withheld · ⟨owner⟩" in its words\' place — that row going to the source\'s own withheld words carrying its run whole, which the selection touched (issue #572\'s design decision; FP-24)', () => onQuote(O, [], async ({ said, fake }) => {
+  // O read again: "Second " X's 12 to 18, then ten positions of W withheld from the reader, W's bytes from its 5th, then O's own newline
+  quoting(O, [ownText(1, 'First line.\n\nSecond '), withheldRun(21, 10, W), ownText(31, '\n')], [[O + '.0.1.1', 13], [`${X}.0.1.12`, 7], [`${W}.0.1.5`, 10], [O + '.0.1.31', 1]]);
+  claimsOnW();
+  // "Second " and the first two of the run's positions
+  SEL.select(O, 14, 9);
+  assert.ok(/** @type {string} */ (slotIn('follow').button).includes(`${esc(t('B1.follow'))} 2 <kbd>`), 'the follow slot counts its two targets');
+  const n = said.length;
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
+  const list = HOST.currentState(), rows = [...(list?.html || '').matchAll(/<button data-run="(\w+)"[^>]*>(.*?)<\/button>/g)].map((m) => [m[1], m[2]]);
+  /** a row's words, its markup taken off */
+  const words = (/** @type {string} */ html) => html.replace(/<[^>]*>/g, '');
+  const [xRow, wRow] = rows.map(([, html]) => html);
+  assert.deepEqual([list?.id, rows.map(([k]) => k), words(xRow || '')], ['which', ['s0', 's1'], fill(t('L.run.named'), { words: 'Second', answer: `${t('L.origin-mark')} ${X}` })],
+    'the "which" rows: X\'s, its words and its origin, then W\'s');
+  assert.ok(words(wRow || '') === `${W} · ${t('L.client-words', { words: t('F.corner.withheld', { owner: W_OWNER }) })}` && (wRow || '').startsWith(`<span class="id">${W}</span>`) && (wRow || '').includes(`<span class="id">${W_OWNER}</span>`),
+    `W's row: its origin, then "withheld · ⟨owner⟩" in its words' place, bracketed as a withheld far end is named, each address in the identifier's face: ${wRow}`);
+  assert.deepEqual([TRAIL.length(), reasonsIn(said.slice(n))], [1, []], 'nothing followed until a row is picked, no reason said');
+  /** @type {any} */ (list?.acts?.s1)({}, true);
+  await landed();
+  for (let i = 0; i < 50 && overlay() !== 'face:withheld'; i++) await tick();
+  const e = TRAIL.current();
+  assert.deepEqual([TRAIL.length(), e?.addr, e?.notice, TRAIL.all()[0]?.step, GO.arrivalMark(), GO.litLinks()], [2, ...atWFace(10), null, []],
+    'W\'s row: one entry at W, holding its own withheld words, the step carrying its run whole and none of X\'s words; nothing outlined, no link lit');
+  assert.equal(overlay(), 'face:withheld', 'its face standing at the landing');
+  assert.deepEqual(fake.unanswered, []);
+}, W_REFUSED));
 
 test('a bare live caret in a transcluded run of a draft the person may edit keeps the caret\'s follow line — Mod+Enter follows nothing there, the caret where it stood — while a selection drawn in the caret\'s text inside the run goes to the run\'s source carrying it (D5 K-51; B3-S13)', () => onQuote(D, [[21, 4, 4]], async ({ said, fake }) => {
   assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);

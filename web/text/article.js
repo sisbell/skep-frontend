@@ -94,13 +94,15 @@
 // where its holder says the run carries them (T-LAYER's `carriesC33`), which
 // the ARIA mirror's description of the origin says too (N-WALK). Every other
 // run of the origin in view stands its key alone there (`edgeKeyHTML`), no gap
-// holding it. The run a passage lies in whole is read by one rule
-// (`runHolding`): the passage's material, a typed line's newlines after its
-// characters apart, held from its first byte to its last by one run the
-// reader reads; follow at the passage goes to that run's source (O-SELECTION;
-// D5 K-51). An item this client cannot show is a gap of its positions too,
-// its words in it where the gap holds them, else in its column's edge
-// (`unshownHTML`; FP-26). The placeholder is one record (`placeholderOf`),
+// holding it. The sources a span's words lead to are read by one rule
+// (`sourcesIn`): each origin of the runs of other documents' material the
+// span meets, once, in reading order, with the span's positions each of its
+// runs holds — a withheld run's whole, a transcluded run's only where the
+// page draws the run in that share — the positions no run holds adding none;
+// follow's targets beside the links drawn there (O-SELECTION; D5 K-51).
+// An item this client cannot show is a gap of its positions too, its words
+// in it where the gap holds them, else in its column's edge (`unshownHTML`;
+// FP-26). The placeholder is one record (`placeholderOf`),
 // which the statement, the ARIA mirror's item at the run and its origin's
 // description (N-WALK) and the card (O-FACES's `withheldRun`) read too, so
 // the run a sighted reader sees and the one a screen reader hears never part
@@ -978,29 +980,60 @@ function firstPast(/** @type {Block[]} */ blocks, /** @type {number} */ pos) {
 }
 
 /**
- * The transcluded run a passage lies in whole, and the stretch of it the
- * passage holds (D5 K-51; foundations §2.3): the passage's material — its
- * positions, the newlines a typed line's block holds after its characters
- * apart, an item's positions its own — from its first byte to its last,
- * where one run the reader reads holds all of it (`originRunsOf`); null where
- * the passage holds no material, reaches the document's own words or a
- * second run, or lies in a run withheld from the reader. Follow at a passage
- * no link is drawn at goes to that run's source (O-SELECTION).
- * @param {Pick<Doc, 'blocks' | 'origins'>} d the text the passage is a span of
- * @param {{pos: number, width: number}} s the passage
- * @returns {{origin: string, pos: number, width: number} | null} the run's origin, and the passage's stretch of its material
+ * @typedef {Object} Source — a source a span's words lead to (`sourcesIn`): the origin of runs of another document's material the span meets
+ * @property {string} origin the origin document
+ * @property {boolean} withheld its bytes are withheld from the reader: every run of it the span meets is a withheld run's gap
+ * @property {Array<{pos: number, width: number}>} parts the span's positions each run of it holds, in the text's order — a withheld run's whole, as a selection touching it covers it (FP-24)
  */
-export function runHolding(d, s) {
-  const end = s.pos + s.width;
-  let from = Infinity, to = -Infinity;
-  for (let i = firstPast(d.blocks, s.pos); i < d.blocks.length && d.blocks[i].pos < end; i++) {
-    const b = d.blocks[i], top = b.kind === 'para' ? b.pos + byteLength(b.text) : b.pos + b.width;
-    const t0 = Math.max(s.pos, b.pos), t1 = Math.min(end, top);
-    if (t0 < t1) { from = Math.min(from, t0); to = t1; }
+
+/**
+ * Does a transcluded run's share of a span hold what the page draws of the
+ * run: a typed line's character or an item's position, or an empty line
+ * between the run's characters, whose ground is the run's (`blankIn`) —
+ * never a newline that ends a line alone?
+ * @param {Block[]} blocks the text's blocks, in position order
+ * @param {{pos: number, width: number}} run the run
+ * @param {number} from the share's first position
+ * @param {number} to one past its last
+ */
+function drawnIn(blocks, run, from, to) {
+  const chars = textIn(blocks, run);
+  for (let i = firstPast(blocks, from); i < blocks.length && blocks[i].pos < to; i++) {
+    const b = blocks[i], top = b.kind === 'para' ? b.pos + byteLength(b.text) : b.pos + b.width;
+    if (Math.max(from, b.pos) < Math.min(to, top)) return true;
+    if (b.kind !== 'para' || !chars) continue;
+    const end = b.pos + b.width, first = end - blankOf(b, blocks[i - 1]);
+    if (first < end && chars.from < first && chars.to > end && Math.max(from, first) < Math.min(to, end)) return true;
   }
-  if (!(from < to)) return null;
-  const run = originRunsOf(d).find((r) => r.pos <= from && to <= r.pos + r.width);
-  return run && !run.withheld ? { origin: run.origin, pos: from, width: to - from } : null;
+  return false;
+}
+
+/**
+ * The sources a span's words lead to (D5 K-51; foundations §2.3): each
+ * origin among the runs of other documents' material the span meets
+ * (`originRunsOf`), once, in reading order — by the first of its runs the
+ * span meets — with the span's positions each of its runs holds. A withheld
+ * run the span touches is its gap whole; a transcluded run counts only where
+ * its share of the span holds what the page draws of it (`drawnIn`), a share
+ * of the newline ending a line alone adding none. The positions no run holds
+ * — the document's own words and newlines, the words the person typed — add
+ * none. Follow's targets beside the links drawn at the span (O-SELECTION).
+ * @param {Pick<Doc, 'blocks' | 'origins'>} d the text the span is a span of
+ * @param {{pos: number, width: number}} s the span
+ * @returns {Source[]}
+ */
+export function sourcesIn(d, s) {
+  /** @type {Map<string, Source>} */
+  const by = new Map();
+  for (const r of originRunsOf(d)) {
+    if (!touches(r, s)) continue;
+    const pos = r.withheld ? r.pos : Math.max(s.pos, r.pos), end = r.withheld ? r.pos + r.width : Math.min(s.pos + s.width, r.pos + r.width);
+    if (!r.withheld && !drawnIn(d.blocks, r, pos, end)) continue;
+    const src = by.get(r.origin);
+    if (src) { src.parts.push({ pos, width: end - pos }); src.withheld = src.withheld && r.withheld; }
+    else by.set(r.origin, { origin: r.origin, withheld: r.withheld, parts: [{ pos, width: end - pos }] });
+  }
+  return [...by.values()];
 }
 
 /**

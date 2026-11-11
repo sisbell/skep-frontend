@@ -12,9 +12,10 @@
 // every return to a failed jump's entry asking its read again — after a
 // change of the page's class too — with the camera and the walk where the
 // reader left them, a follow's dead reference faced by every route in the
-// words its far end's label names it by, a follow to a
-// withheld document, the chrome a landing leaves standing and a field that
-// keeps its caret, cards opened while an act reads, a face a read brings
+// words its far end's label names it by, a follow to a withheld document —
+// a link's far end, or the source of the words a follow carries — a carry
+// naming parts of its span, the chrome a landing leaves standing and a field
+// that keeps its caret, cards opened while an act reads, a face a read brings
 // standing below a card the reader opened, Enter at a withheld run and a
 // tail pressed, the slots' chords at a link's stop of the walk — a follow and
 // a reading scene made from that link, the reason given where no span is in
@@ -834,6 +835,40 @@ test('a LEAP carrying a passage the text landed in holds in two stretches marks 
   assert.ok(!flew && same(CAM.view(), at), 'a version move (issue #154): no flight, the camera where it stood');
   assert.deepEqual([GO.shownIn(FAR), walkAt(), departed()?.step?.kind], [FAR1, ['block', FAR1, 1], 'carry'], 'the box takes the member, the walk on the line the landing stood on, the entry departed recording the carry');
   await run(GO.leapTo(FAR));
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a LEAP carrying parts of a span carries them alone, joined in the text\'s order: the words between them no part of the passage — each counterpart cut to its part, every stretch outlined and labelled by the parts\' own order, the entry departed naming only the parts\' bytes, the text carried from holding them all offered beside it (issue #572\'s design decision; FP-21)', async () => {
+  await run(GO.leapTo(D));
+  // MOVED's span, its 4th to 6th positions left out: D's 1st to 3rd at FAR's 25, its 7th to 10th at FAR's 3
+  await run(GO.leapTo(FAR, { how: 'leap', carry: { ...MOVED, parts: [{ pos: 1, width: 3 }, { pos: 7, width: 4 }] } }));
+  assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: 25, runs: [{ pos: 3, width: 4 }, { pos: 25, width: 3 }], link: null }, 'each part\'s counterpart outlined, no more: the landing at the first part\'s');
+  assert.deepEqual(departed()?.step, { kind: 'carry', from: D, to: FAR, spans: [{ prefix: D + '.0.1', ordinal: 1, width: 3 }, { prefix: D + '.0.1', ordinal: 7, width: 4 }] }, 'the entry departed names the parts\' bytes alone');
+  const piece = (/** @type {number} */ k) => t('L.piece', { k, n: 2 });
+  assert.deepEqual([GO.landing()?.said?.state, GO.landingLine()], ['pieces', [piece(1), t('L.piece.all'), t('L.piece.order')].join(' · ')], 'all of the passage, in pieces out of its order — never only part of it');
+  assert.deepEqual(GO.landing()?.beside, { a: D, held: { posA: 1, widthA: 10, ids: [{ prefix: D + '.0.1', ordinal: 1, width: 3 }, { prefix: D + '.0.1', ordinal: 7, width: 4 }] } }, 'the first edition holding every byte of it: read side by side with it, from the first part to the end of the last');
+  for (let i = 0; i < 50; i++) await new Promise((r) => setTimeout(r, 0));
+  assert.equal(GO.landing()?.version, null, 'FAR\'s first member holds the parts apart, never in one piece: no version offered');
+  await run(GO.leapTo(FAR));
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a follow\'s LEAP to the source of the words it carries, a source whose text the page holds and the board now withholds, never leaves: no entry and no flight, its own withheld words at the act\'s site named by the follow\'s caption, no link lit — as a follow to such a far end (issue #572\'s design decision; issue #179\'s)', async () => {
+  // a draft of 1.0.2's the page read before its owner withdrew it, a source of words the first edition carries
+  const WITHDRAWN = '1.0.2.0.77', text = 'A source read before its owner withdrew it.';
+  REC.takeSpanSet(WITHDRAWN, [{ subspace: 1, ordinal: 1, positions: text.length }]);
+  REC.takeDelivery(WITHDRAWN, [{ pos: 1, width: text.length, kind: 'content', text, ref: null, origin: null }]);
+  REC.takeRefused(WITHDRAWN, 'withheld');
+  Object.assign(script, noClaims(WITHDRAWN));
+  await run(GO.leapTo(D));
+  const n = TRAIL.length(), from = fake.asked.length, site = { span: { addr: D, pos: 5, width: 2 } };
+  await run(GO.leapTo(WITHDRAWN, { how: 'leap', source: true, carry: { addr: D, pos: 5, width: 2, parts: [{ pos: 5, width: 2 }] }, site }));
+  const o = HOST.currentState(), html = hostEl.innerHTML;
+  assert.deepEqual([TRAIL.length(), CAM.flying(), GO.litLinks()], [n, false, []], 'no entry, no flight, nothing lit');
+  assert.deepEqual(fake.asked.slice(from).filter((k) => !k.includes('"op":"find_links_ftt"')), [], 'nothing read of the source, no compare: only the edition claims its face\'s clause waits on');
+  assert.deepEqual([o?.id, o?.anchor], ['face:withheld', site], 'its face at the words the follow was made at');
+  assert.ok(html.startsWith(`<span class="label">${esc(t('B1.follow') + ' · ' + WITHDRAWN)}</span><div class="face-addr code id">${WITHDRAWN}</div>`), `named by the follow's caption, the source's address before its words: ${html}`);
+  HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });
 

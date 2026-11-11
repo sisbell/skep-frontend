@@ -51,22 +51,32 @@
 // text, in a reading scene's pane or an overlay's text, which stands as they
 // made it. The acts take the span exactly: "who wrote this?" and "who uses
 // this?" ask over its bytes (O-PROV's; a span of the text shown, the board
-// asked only about bytes it holds); "follow" and "read side by side" count only
-// the links drawn at the span (LK's `shownAt`), asking which only at two or
-// more and naming the far document at one, the scene opened as a step on the
+// asked only about bytes it holds). "follow" and "read side by side" go where
+// the span's words lead (`targetsAt`; D5 K-51, K-52): follow's targets are
+// each link drawn at the span (LK's `shownAt`), then each source of the runs
+// of other documents' material the span meets, once, in reading order
+// (T-ARTICLE's `sourcesIn`) — a withheld run's among them, the document's own
+// words adding none; read side by side's are the links drawn there alone. At
+// one target the act goes there, the slot naming it before anything moves
+// (`targetLabel`) — a link's far document, a source's origin, a withheld
+// source's "withheld · ⟨owner⟩" — and at two or more it asks which
+// (`which_`): the links' rows first, then a row per source naming the words
+// of the span its runs hold and its origin as the column's edge names it
+// (`sourceRowHTML`). Read side by side opens the scene as a step on the
 // trail from the link's end chosen (N-GO's `toScene`) on what the page shows
 // of the span's document (T-LAYER's `paneSource`), beside the document LK
-// names for it (`besideAt`) — where its far end names its
-// document whole, that whole document, nothing of it set level with the
-// selection (SC's `Held.wholeB`; FP-30). Where none is drawn, follow over a
-// span whose material one transcluded run the reader reads holds whole goes
-// to that run's source (D5 K-51; T-ARTICLE's `runHolding`): a LEAP carrying
-// the span's stretch of the run (N-GO's carry; foundations §2.3), named as
-// what the reader selected where it is the selection, made at the span, the
-// slot naming the source (`toSource`); else each is inert, kept focusable as
-// an inert slot is and giving its reason as one does (P47; `reasonAt`) — over
-// a span wholly of bytes the page made, that nothing links to new words
-// (`NEW_WORDS`); over any other, that no link is drawn there (`NO_LINK`).
+// names for it (`besideAt`) — where its far end names its document whole,
+// that whole document, nothing of it set level with the selection (SC's
+// `Held.wholeB`; FP-30). Follow to a source is a LEAP that is follow's (N-GO's
+// `leapTo`'s `source`) carrying that source's words alone — the span's
+// positions its runs hold, joined (N-GO's `Carry.parts`; foundations §2.3) —
+// named as what the reader selected where the span is the selection, made at
+// the span (`toSource`); a source withheld from the reader it reaches at its
+// own withheld words, as a follow's withheld far end is (N-GO's). Where a
+// slot's words lead nowhere it is inert, kept focusable as an inert slot is
+// and giving its reason as one does (P47; `reasonAt`) — over a span wholly of
+// bytes the page made, that nothing links to new words (`NEW_WORDS`); over
+// any other, that no link is drawn there (`NO_LINK`).
 // Every address the card and the list set in the identifier's face (P-REG's
 // FACE). The slots, in this
 // order and never moved: annotate · quote · who wrote this? · who uses this?
@@ -114,7 +124,7 @@
 // it (N-GO's departure, `clear`), which keeps it by its bytes' identity
 // (`asLeft`), its card and the "which" list by what they are about (O-HOST's
 // `about`); the return puts it back over the bytes it holds in the text then
-// (`restore`) — the card where it stood, the list over the links counted
+// (`restore`) — the card where it stood, the list over its targets counted
 // again — each taking the focus on the control it was left holding it on. A
 // card or a list holding a span stands on that span alone: a return, or its
 // box's taking another version, reopens it over the bytes that text holds of
@@ -123,8 +133,8 @@
 // re-check carries it — its card or its list drawn again with it — over the
 // bytes that version holds of it (`restore`), saying nothing where the move's
 // own landing says it (N-GO's `surfacesAcross`; FP-22).
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13, FP-20, FP-22, FP-34, FP-36, FP-37,
-// FP-40.
+// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13, FP-20, FP-21, FP-22, FP-34, FP-36,
+// FP-37, FP-40, FP-41.
 
 import * as HOST from './host.js';
 import * as REC from '../model/records.js';
@@ -137,14 +147,16 @@ import * as LINKS from './links-card.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { extended, sameSpan, spanOfBlock } from '../text/span.js';
-import { runHolding } from '../text/article.js';
+import { sourcesIn } from '../text/article.js';
 import { boundaries, wordStop } from '../model/derive.js';
-import { t, typeName } from '../strings.js';
-import { esc, byteLength } from '../util.js';
+import { t, tHTML, typeName, facedHTML, withheldLine } from '../strings.js';
+import { esc, fill, byteLength } from '../util.js';
 import { markDirty } from '../plane/camera.js';
 import { drawChord } from '../nav/keys.js';
 
 /** @typedef {import('../text/span.js').Span} Span */
+/** @typedef {import('../links/links.js').Shown} Shown */
+/** @typedef {import('../text/article.js').Source} Source */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
 /** @typedef {import('../text/layer.js').SelectionEnd} SelectionEnd */
 
@@ -225,9 +237,9 @@ export const asLeft = () => (selected() ? bytesOf(/** @type {Span} */ (sel)) : n
  * after a version change (see the head; N-GO's) — the platform's highlight
  * with it, said through the status region as a selection made is, save
  * where `say` is false; its card where it stood over it, or its "which" list
- * over the links counted again at it — the list where they are two or more,
- * else the card — each taking the focus on the control it was left holding
- * it on.
+ * over its targets counted again at it (`targetsAt`) — the list where they
+ * are two or more, else the card — each taking the focus on the control it
+ * was left holding it on.
  * @param {Span} span
  * @param {import('./host.js').Left | null} left the card or the list standing over it as the reader left it; null where none of the selection's stood
  * @param {boolean} [say] the status region says where it stands: false where the landing that carried it says it
@@ -237,7 +249,7 @@ export function restore(span, left, say = true) {
   LAYER.placeSelection(span);
   markDirty();
   const a = left ? left.about : null, focus = left ? left.focus : null;
-  if (a && a.kind === 'which') { const drawn = LK.shownAt(span.addr, span); if (drawn.length > 1) which_(drawn, a.what, span, false, focus); else render(); }
+  if (a && a.kind === 'which') { const tg = targetsAt(a.what, span); if (countOf(tg) > 1) which_(tg, a.what, span, false, focus); else render(); }
   else if (a && a.kind === 'selection') render(focus);
   if (say) FOCUS.say(`${span.addr} · ${t('F.position', { p: span.pos })}`);
 }
@@ -246,17 +258,17 @@ export function restore(span, left, say = true) {
  * A card or a "which" list holding the span a slot's act was made over (see
  * the head; `About.at`), reopened over the span its bytes hold in the text
  * now — on the reader's return to its place, or once its box shows another
- * version (N-GO's) — nothing selected: the list over the links counted again
- * there, where they are two or more, else the card; each taking the focus on
- * the control it was left holding it on.
+ * version (N-GO's) — nothing selected: the list over its targets counted
+ * again there (`targetsAt`), where they are two or more, else the card; each
+ * taking the focus on the control it was left holding it on.
  * @param {{about: About, focus: string | null}} left
  * @param {Span} span where its bytes stand now
  */
 export function reopen(left, span) {
   const a = left.about;
   if (a.kind !== 'which') { render(left.focus, null, span); return; }
-  const drawn = LK.shownAt(span.addr, span);
-  if (drawn.length > 1) which_(drawn, a.what, span, false, left.focus); else render(null, null, span);
+  const tg = targetsAt(a.what, span);
+  if (countOf(tg) > 1) which_(tg, a.what, span, false, left.focus); else render(null, null, span);
 }
 
 /** the block of the text shown holding a position of it, whole (T-LAYER's `blockAt`) — the walk's focused span, which at a live caret is the block the caret is in: what a slot acts on (`actedOn`), a click and Enter select; a position in no block of it names one position */
@@ -510,13 +522,13 @@ const SLOTS = /** @type {const} */ ([
 
 /** @typedef {'annotate' | 'quote' | 'linkto'} InertSlot a slot inert with its reason (`INERT_REASON`) */
 /** @typedef {'wrote' | 'uses' | 'links' | 'follow' | 'scene'} LiveSlot a slot that acts (`act`) */
-/** @typedef {'follow' | 'scene'} FarSlot a slot that goes by a link's far end: inert over a span no link is drawn at — follow save where one transcluded run holds the span whole, whose source it goes to (`toSource`) — its reason `NEW_WORDS` where the span is wholly of words the page made, else `NO_LINK` */
+/** @typedef {'follow' | 'scene'} FarSlot a slot that goes where the span's words lead (`targetsAt`): inert over a span they lead nowhere from, its reason `NEW_WORDS` where the span is wholly of words the page made, else `NO_LINK` */
 
 /** the reasons the slots no lane has built yet give, by slot: what each gives where nothing stops it */
 const INERT_REASON = /** @type {Record<InertSlot, string>} */ ({ annotate: 'L.seam.annotate', quote: 'L.seam.quote', linkto: 'L.seam.link-to' });
 /** why follow and read side by side do nothing over a span wholly of words the page made that no link is drawn at: nothing can reach a byte the board has not minted, and once it has, the links made on it since are drawn */
 const NEW_WORDS = 'L.new.no-link';
-/** why follow and read side by side do nothing over any other span no link is drawn at — follow where no transcluded run holds it whole (`sourceOf`) */
+/** why follow and read side by side do nothing over any other span their words lead nowhere from (`targetsAt`): no link drawn there, and for follow no run of another document's material */
 const NO_LINK = 'B3.row.no-link';
 
 /** @typedef {{id: string, text: string}} Reason a slot's reason: its string, and its words as the slot gives them */
@@ -543,26 +555,63 @@ function heldReason(addr) {
  * The reason a slot gives over a span; null where the slot acts. A slot that
  * sends a name for characters (`InertSlot`): under a hold the row rule's
  * (`heldReason`), else its own. Follow and read side by side (`FarSlot`)
- * where no link is drawn at the span (LK's `shownAt`) — follow none where
- * one transcluded run holds the span whole (`sourceOf`), whose source it goes
- * to: `NEW_WORDS` over a span wholly of words the page made (T-LAYER's
- * `madeHere`), else `NO_LINK`.
+ * where the span's words lead nowhere (`targetsAt`): `NEW_WORDS` over a span
+ * wholly of words the page made (T-LAYER's `madeHere`), else `NO_LINK`.
  * @param {string} slot
  * @param {Span} span
- * @param {number} [links] the links drawn at the span, where the caller has counted them
+ * @param {number} [n] the slot's targets at the span, where the caller has counted them (`countOf`)
  * @returns {Reason | null}
  */
-function reasonAt(slot, span, links) {
+function reasonAt(slot, span, n) {
   if (slot in INERT_REASON) { const id = INERT_REASON[/** @type {InertSlot} */ (slot)]; return heldReason(span.addr) || { id, text: t(id) }; }
   if (slot !== 'follow' && slot !== 'scene') return null;
-  if (links ?? LK.shownAt(span.addr, span).length) return null;
-  if (slot === 'follow' && sourceOf(span)) return null;
+  if (n ?? countOf(targetsAt(slot, span))) return null;
   const id = LAYER.madeHere(span.addr, span.pos, span.width) ? NEW_WORDS : NO_LINK;
   return { id, text: t(id) };
 }
 
-/** the transcluded run a span of the text shown lies in whole (T-ARTICLE's `runHolding`), read over the text the page shows of its document (T-LAYER's `shownOf`); null where none does, or the model holds no record of the document */
-const sourceOf = (/** @type {Span} */ span) => (REC.has(span.addr) ? runHolding(LAYER.shownOf(span.addr), span) : null);
+/**
+ * @typedef {Object} Targets — the far places a slot that goes where a span's words lead goes to (`targetsAt`)
+ * @property {Shown[]} links the links drawn at the span (LK's `shownAt`), in LK's order
+ * @property {Source[]} sources follow's alone: each source of the runs of other documents' material the span meets, once, in reading order (T-ARTICLE's `sourcesIn`); none for read side by side
+ */
+
+/**
+ * Where a slot's act at a span goes (see the head; D5 K-51, K-52): for
+ * follow, each link drawn at the span, then each source of the runs of other
+ * documents' material it meets, once, in reading order — a withheld run's
+ * among them, read over the text the page shows of the span's document
+ * (T-LAYER's `shownOf`), none where the model holds no record of it; for
+ * read side by side, the links drawn there alone.
+ * @param {FarSlot} slot
+ * @param {Span} span
+ * @returns {Targets}
+ */
+function targetsAt(slot, span) {
+  const sources = slot === 'follow' && REC.has(span.addr) ? sourcesIn(LAYER.shownOf(span.addr), span) : [];
+  return { links: LK.shownAt(span.addr, span), sources };
+}
+
+/** how many far places a slot's targets are (`targetsAt`) */
+const countOf = (/** @type {Targets} */ tg) => tg.links.length + tg.sources.length;
+
+/**
+ * What a slot going where the span's words lead names after its own words
+ * (see the head): its one target — a link's far document, a source's origin,
+ * a withheld source's "withheld · ⟨owner⟩", its owner by the one owner rule
+ * (T-LAYER's `originOwner`) — each address in the identifier's face; the
+ * count of several; nothing where it has none, or its one link names no far
+ * document.
+ * @param {Targets} tg
+ * @returns {string} markup, led by a space where it names anything
+ */
+function targetLabel(tg) {
+  const n = countOf(tg), [link] = tg.links, [src] = tg.sources;
+  if (n > 1) return ` ${n}`;
+  if (link) return link.far ? ` <span class="id">${esc(link.far)}</span>` : '';
+  if (!src) return '';
+  return ' ' + (src.withheld ? tHTML('F.corner.withheld', { owner: LAYER.originOwner(src.origin) }, { owner: 'id' }) : `<span class="id">${esc(src.origin)}</span>`);
+}
 
 /** an inert slot's reason said through the status region, at every press (rule 14): said again where the region holds those words already — the reason a press gave a moment ago, here or at another passage */
 const sayReason = (/** @type {Reason} */ reason) => FOCUS.say(reason.text, false, true);
@@ -590,10 +639,10 @@ function inertAct(el, reason) {
  * holding it on. A slot named `told` stands as `inertAct` leaves it: marked
  * inert, its reason in the card's reason line. A slot that gives a reason
  * over the span (`reasonAt`) keeps its place, inert and focusable, the
- * reason its title — follow and read side by side where no link is drawn
- * there, follow save where a transcluded run holds the span whole, its
- * button then naming the run's source (`sourceOf`); a slot that sends a name
- * for characters takes effect through `send`.
+ * reason its title — follow and read side by side where the span's words
+ * lead nowhere (`targetsAt`), each else naming its one target or the count
+ * of several (`targetLabel`); a slot that sends a name for characters takes
+ * effect through `send`.
  * @param {string | null} [focus] that control's key (O-HOST's `keyOf`)
  * @param {InertSlot | FarSlot | null} [told] the inert slot whose reason the card gives
  * @param {Span | null} [at] the span a slot's act was made over (`actedOn`); none draws the card at the selection
@@ -602,17 +651,17 @@ export function render(focus = null, told = null, at = null) {
   const span = at || sel;
   if (!span) return;
   const { addr, pos } = span, atSelection = sameSpan(span, sel);
-  const drawn = LK.shownAt(addr, span);
-  const n = drawn.length, source = n ? null : sourceOf(span);
-  // the far end the follow and the scene name: its address, in the identifier's face, or the count of several; follow's, where no link is drawn, the source of the run holding the span
-  const farLabel = n === 1 && drawn[0].far ? ` <span class="id">${esc(drawn[0].far)}</span>` : n > 1 ? ` ${n}` : '';
-  const named = (/** @type {string} */ id) => (id === 'follow' && source ? ` <span class="id">${esc(source.origin)}</span>` : id === 'follow' || id === 'scene' ? farLabel : '');
+  const follows = targetsAt('follow', span);
+  /** @type {Record<FarSlot, Targets>} where follow and read side by side go from the span: the links drawn there, and for follow the sources after them */
+  const far = { follow: follows, scene: { links: follows.links, sources: [] } };
+  /** the targets a slot counts: a far slot's, none for any other */
+  const counted = (/** @type {string} */ id) => (id === 'follow' || id === 'scene' ? countOf(far[id]) : undefined);
   const buttons = SLOTS.map(([id, strId, chord]) => {
-    const reason = reasonAt(id, span, n);
-    const label = esc(t(strId)) + named(id);
+    const reason = reasonAt(id, span, counted(id));
+    const label = esc(t(strId)) + (id === 'follow' || id === 'scene' ? targetLabel(far[id]) : '');
     return `<button data-run="${id}" class="${reason ? 'inert' : ''}" ${reason ? `title="${esc(reason.text)}"` : ''}${id === told ? ' data-inert="1"' : ''}>${label}${chord ? ` <kbd>${esc(drawChord(chord))}</kbd>` : ''}</button>`;
   }).join('');
-  const said = told ? reasonAt(told, span, n) : null;
+  const said = told ? reasonAt(told, span, counted(told)) : null;
   const reasonLine = said ? `<div class="note reason" data-string="${esc(said.id)}">${esc(said.text)}</div>` : '<div class="note reason" hidden></div>';
   const html = `<div class="selection-card"><span class="label"><span class="id">${esc(addr)}</span> · ${esc(t('F.position', { p: pos }))}</span><div class="slots">${buttons}</div>${reasonLine}</div>`;
   HOST.show({
@@ -650,13 +699,13 @@ function actedOn() {
  * links" asks for the links at the document the walk stands in, at its own
  * stop or a link's in it (K-49). "who wrote this?" and "who uses this?" name
  * their span as the selection's bytes only where it is the selection. Follow
- * at a span no link is drawn at whose material one transcluded run holds
- * whole goes to that run's source (`toSource`); read side by side at any span
- * no link is drawn at, and follow at any other, give their reason
- * (`reasonAt`): the card drawn at the span, the slot marked and the reason in
- * its line, said through the status region; at one link they follow it or
- * open its scene, and at several they ask which. The
- * act's card takes the focus where a key made the act (rule 16).
+ * and read side by side go where the span's words lead (`targetsAt`): where
+ * they lead nowhere they give their reason (`reasonAt`) — the card drawn at
+ * the span, the slot marked and the reason in its line, said through the
+ * status region; at one target follow goes there — a link followed, a source
+ * reached (`toSource`) — and read side by side opens its link's scene; at
+ * several they ask which (`which_`). The act's card takes the focus where a
+ * key made the act (rule 16).
  * @param {LiveSlot} which
  * @param {boolean} [byKey] a key made the act: the card takes the focus
  * @param {Span | null} [at] the span the card whose slot made the act stands at; none for a chord, which acts on the span in focus
@@ -676,28 +725,30 @@ export function act(which, byKey = false, at = null) {
   if (which === 'wrote') { PROV.wrote(addr, pos, width, byKey, sameSpan(span, sel)); return true; }
   if (which === 'uses') { PROV.uses(addr, pos, width, byKey, sameSpan(span, sel)); return true; }
   if (which === 'links') { LINKS.show(addr, byKey); return true; }
-  const drawn = LK.shownAt(addr, span), reason = reasonAt(which, span, drawn.length), [one] = drawn;
+  const tg = targetsAt(which, span), n = countOf(tg), reason = reasonAt(which, span, n), [one] = tg.links;
   if (reason) { render(null, which, span); sayReason(reason); }
-  else if (drawn.length > 1) which_(drawn, which, span, byKey);
-  else if (!one) toSource(span, byKey);
+  else if (n > 1) which_(tg, which, span, byKey);
+  else if (!one) toSource(span, tg.sources[0], byKey);
   else if (which === 'follow') GO.follow(one, byKey);
   else sceneFrom(one, span);
   return true;
 }
 
 /**
- * Follow at a span no link is drawn at whose material one transcluded run
- * holds whole (see the head; D5 K-51): a LEAP to the run's source carrying
- * the span's stretch of the run (N-GO's carry; foundations §2.3), named as
- * what the reader selected where the span is the selection, else as the text
- * they were reading, made at the span, where the face of a failure known at
- * the act stands. Nothing where no such run holds it (`sourceOf`).
+ * Follow to a source of the span's words (see the head; D5 K-51): a LEAP that
+ * is follow's (N-GO's `leapTo`'s `source`) to the source, carrying its words
+ * alone — `parts`, the span's positions its runs hold, joined (N-GO's
+ * `Carry.parts`; foundations §2.3) — named as what the reader selected where
+ * the span is the selection, else as the text they were reading, made at the
+ * span, where the face of a failure known at the act stands.
  * @param {Span} span
+ * @param {Source} src
  * @param {boolean} byKey a key made the act
+ * @param {Array<{pos: number, width: number}>} [parts] the source's parts where its bytes stand as the act is made; its own where none are handed in
  */
-function toSource(span, byKey) {
-  const held = sourceOf(span);
-  if (held) void GO.leapTo(held.origin, { how: 'leap', byKey, carry: { addr: span.addr, pos: held.pos, width: held.width, selected: sameSpan(span, sel) }, site: { span } });
+function toSource(span, src, byKey, parts = src.parts) {
+  const first = parts[0], last = parts[parts.length - 1];
+  void GO.leapTo(src.origin, { how: 'leap', byKey, source: true, carry: { addr: span.addr, pos: first.pos, width: last.pos + last.width - first.pos, parts, selected: sameSpan(span, sel) }, site: { span } });
 }
 
 /**
@@ -776,26 +827,72 @@ function send(slot, span, el = null) {
 }
 
 /**
- * The "which" list at two or more, at the span the act was made over — the
- * selection, else the span the list holds (see the head; `About.at`), each
- * row's scene opened from it: each choice by its type, its linker and its far
- * document (foundations §2.3), named as its tail and its mirror item name it,
- * each address in the identifier's face (LK's `farLabelHTML`); it takes the
- * focus on its first row where a key asked, and on the control a return
- * reopens it holding it on.
- * @param {import('../links/links.js').Shown[]} drawn
+ * The "which" list at two or more targets (`targetsAt`), at the span the act
+ * was made over — the selection, else the span the list holds (see the head;
+ * `About.at`), each row's scene opened from it: the links' rows first, each
+ * choice by its type, its linker and its far document (foundations §2.3),
+ * named as its tail and its mirror item name it, each address in the
+ * identifier's face (LK's `farLabelHTML`); then follow's row per source, in
+ * reading order (`sourceRowHTML`), its act the follow to that source with its
+ * parts placed where their bytes stand as the act is made (`heldParts`); it
+ * takes the focus on its first row where a key asked, and on the control a
+ * return reopens it holding it on.
+ * @param {Targets} tg
  * @param {'follow' | 'scene'} what
  * @param {Span} span the span the act was made over
  * @param {boolean} byKey
  * @param {string | null} [focus] the reopened list's control's key
  */
-function which_(drawn, what, span, byKey, focus = null) {
-  const html = `<span class="label">${esc(t(what === 'follow' ? 'B1.follow' : 'B1.side-by-side'))}</span><ul class="rows">${drawn.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · <span class="id">${esc(s.link.owner || '')}</span> · ${LK.farLabelHTML(s)}</button></li>`).join('')}</ul>`;
+function which_(tg, what, span, byKey, focus = null) {
+  const links = tg.links.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · <span class="id">${esc(s.link.owner || '')}</span> · ${LK.farLabelHTML(s)}</button></li>`);
+  const sources = tg.sources.map((src, i) => `<li><button data-run="s${i}">${sourceRowHTML(span.addr, src)}</button></li>`);
+  const html = `<span class="label">${esc(t(what === 'follow' ? 'B1.follow' : 'B1.side-by-side'))}</span><ul class="rows">${[...links, ...sources].join('')}</ul>`;
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
-  drawn.forEach((s, i) => { acts['w' + i] = (_el, byKey) => { if (what === 'follow') GO.follow(s, byKey); else sceneFrom(s, span); }; });
+  tg.links.forEach((s, i) => { acts['w' + i] = (_el, byKey) => { if (what === 'follow') GO.follow(s, byKey); else sceneFrom(s, span); }; });
+  tg.sources.forEach((src, i) => { const parts = heldParts(span.addr, src); acts['s' + i] = (_el, byKey) => toSource(span, src, byKey, parts()); });
   HOST.show({
     kind: 'list', id: 'which', anchor: { span }, html, acts, takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : undefined,
     about: sameSpan(span, sel) ? { kind: 'which', what } : { kind: 'which', what, at: bytesOf(span) },
   });
+}
+
+/**
+ * A source's row in the "which" list (see the head): the words of the span
+ * its runs hold, by their first words (T-LAYER's `firstWords`) — its first
+ * part's position where they hold none — then its origin as the column's
+ * edge names it, its mark and its address, in one stretch of the selection
+ * named by its words (`L.run.named`); a withheld source's origin's address,
+ * then "withheld · ⟨owner⟩" in its words' place, as a link's row names a
+ * withheld far end (LK's `farLabelHTML`; ST's `withheldLine`), its owner by
+ * the one owner rule (T-LAYER's `originOwner`).
+ * @param {string} addr the span's document
+ * @param {Source} src
+ * @returns {string} markup, each address in the identifier's face
+ */
+function sourceRowHTML(addr, src) {
+  if (src.withheld) return facedHTML([{ text: src.origin, face: 'ident' }, { text: ' · ', face: 'client' }, ...withheldLine(LAYER.originOwner(src.origin))]);
+  const [first] = src.parts, words = LAYER.firstWords(addr, first.pos, first.width) || t('F.position', { p: first.pos });
+  return fill(esc(t('L.run.named')), { words: esc(words), answer: `${esc(t('L.origin-mark'))} <span class="id">${esc(src.origin)}</span>` });
+}
+
+/**
+ * A source's parts held by their bytes for its row's act (see the head): as
+ * they stood where the document's page-local edits have not changed since the
+ * list opened (W-WRITE's `editRev`) — so bytes the text holds again elsewhere
+ * never stretch a part — else placed, as the act is made, where those bytes
+ * stand in the text shown, each from its first stretch to the end of its
+ * last, as the selection is carried (`carry`), so the person's edits move
+ * them with their words; a part as it stood where its bytes were not named or
+ * none stands.
+ * @param {string} addr the span's document
+ * @param {Source} src
+ * @returns {() => Array<{pos: number, width: number}>}
+ */
+function heldParts(addr, src) {
+  const rev = WRITE.editRev(addr), ids = src.parts.map((p) => LAYER.shownIdentity(addr, p.pos, p.width));
+  return () => (WRITE.editRev(addr) === rev ? src.parts : src.parts.map((p, i) => {
+    const now = ids[i].length ? LAYER.placedShown(addr, ids[i]) : [], last = now[now.length - 1];
+    return last ? { pos: now[0].pos, width: last.pos + last.width - now[0].pos } : p;
+  }));
 }

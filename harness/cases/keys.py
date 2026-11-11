@@ -135,12 +135,18 @@ selection's card giving its inert slot's reason — the slot marked inert with
 its chord drawn, the card's reason line and the status region its words —
 the card taking no focus and no box opening, and the "link to…" slot pressed
 with the pointer leaving the card as its chord does (D5 K-45, K-46, K-100;
-P47); Mod+Enter and Mod+Shift+Enter at a paragraph no link is drawn at, with
+P47); Mod+Enter and Mod+Shift+Enter at a paragraph no link is drawn at and no
+run of another document's material touches, with
 no selection standing, each drawing the acts card at the walk's block and
 giving the no-link reason — the slot inert with that reason its title, marked,
 the card's reason line and the status region its words — nothing selected,
 followed or opened, and the follow slot pressed with the pointer leaving the
-card as its chord does (D5 K-51, K-52; issue #324; FP-34); the selection's one
+card as its chord does (D5 K-51, K-52; issue #324; FP-34); Mod+Enter at the
+window run — a stretch of it selected, then a block holding the first
+edition's own words and a share of the run with nothing selected — going to
+the run's source, the draft, carrying the run's words alone, and asking which
+where links are drawn there too, the links' rows first (D5 K-51; issue #572);
+the selection's one
 continuous gesture (R11) — a pointer drag over a
 phrase of a shown paragraph selects that phrase's byte span, never its block:
 the acts ask the wire over those bytes, the copy names them as FP-27 names a copy —
@@ -3289,14 +3295,18 @@ def copy_nothing(ctx, r):
 
 
 def follow_to_source(ctx, r):
-    """FOLLOW AT A TRANSCLUDED RUN NO LINK IS DRAWN AT (issue #571; D5 K-51; foundations §2.3): Mod+Enter at a stretch of the
-    first edition's window run its run holds whole, no link drawn at it, selected, goes to the run's source, the draft,
-    carrying the selection — one trail entry there, the step its departing entry records the carry, the arrival outlined
-    there with no link lit — and the no-link reason is said nowhere; the board only read"""
+    """FOLLOW AT A TRANSCLUDED RUN (issues #571, #572; D5 K-51; foundations §2.3): Mod+Enter at a stretch of the first
+    edition's window run its run holds whole, no link drawn at it, selected, goes to the run's source, the draft, carrying
+    the selection — one trail entry there, the step its departing entry records the carry, the arrival outlined there with no
+    link lit — and the no-link reason is said nowhere; then at a block holding the document's own words and a share of the
+    run, nothing selected, follow's targets are the links drawn there and the run's source, counted once: one goes to the
+    source carrying the run's share of the block alone, and two or more ask which, the links' rows first and the source's
+    after them, its row going there; the board only read"""
     ctx.leap(DOC, WINDOW[0])
     at = ctx.js('''(async (doc, lo, hi, origin) => { const LK = await import("./links/links.js"), A = await import("./text/article.js"), d = window.__skep.model.doc(doc);
-      for (let p = lo; p + 40 <= hi; p += 10) { const h = A.runHolding(d, {pos: p, width: 40});
-        if (h && h.origin === origin && h.pos === p && h.width === 40 && !LK.shownAt(doc, {pos: p, width: 40}).length) return p; }
+      for (let p = lo; p + 40 <= hi; p += 10) { const s = A.sourcesIn(d, {pos: p, width: 40});
+        if (s.length === 1 && s[0].origin === origin && !s[0].withheld && s[0].parts.length === 1 && s[0].parts[0].pos === p && s[0].parts[0].width === 40
+          && !LK.shownAt(doc, {pos: p, width: 40}).length) return p; }
       return null; })(%s, %d, %d, %s)''' % (json.dumps(DOC), WINDOW[0], WINDOW[0] + WINDOW[1], json.dumps(WINDOW[2])))
     r.check(at is not None, 'a stretch of forty positions of the window run its run holds whole, no link drawn at it (what the next check stands on)', at)
     if at is None:
@@ -3316,6 +3326,46 @@ def follow_to_source(ctx, r):
             and bool(mark) and mark['addr'] == WINDOW[2] and mark['link'] is None and bool(mark['runs']) and no_link not in live,
             'Mod+Enter at a stretch of the window run no link is drawn at, selected, goes to the run\'s source carrying it: one trail entry at the draft, the step its departing entry records the carry, the arrival outlined there with no link lit, the no-link reason said nowhere (D5 K-51; issue #571)',
             {'at': at, 'cursor': [t0['cursor'], t1['cursor']], 'entries': len(t1['entries']), 'here': here.get('addr'), 'step': {k: step.get(k) for k in ('kind', 'from', 'to')}, 'mark': mark, 'live': live})
+    # a block of the first edition holding the document's own words and a share of the window run, the walk on it and nothing
+    # selected: its targets as the page counts them — the links drawn there, then the sources of the runs it meets — and the
+    # run's share of it, the stretch the source's follow carries
+    ctx.js('window.__skep.dismiss()')
+    ctx.js('(async () => (await import("./overlays/selection.js")).clear())()')
+    tg = ctx.js('''(async (doc, origin) => { const LK = await import("./links/links.js"), A = await import("./text/article.js"), d = window.__skep.model.doc(doc);
+      for (const b of d.blocks) {
+        if (b.kind !== "para") continue;
+        const span = {pos: b.pos, width: b.width}, sources = A.sourcesIn(d, span), x = sources.find((s) => s.origin === origin && !s.withheld);
+        if (x && x.parts.reduce((n, p) => n + p.width, 0) < b.width)
+          return {block: [b.pos, b.width], links: LK.shownAt(doc, span).map((s) => s.link.addr), sources: sources.map((s) => ({origin: s.origin, withheld: s.withheld, parts: s.parts}))}; }
+      return null; })(%s, %s)''' % (json.dumps(DOC), json.dumps(WINDOW[2])))
+    src = next((x for x in (tg or {}).get('sources', []) if x['origin'] == WINDOW[2]), None)
+    if tg:
+        ctx.leap(DOC, tg['block'][0])
+    on = ctx.js('(() => { const f = window.__skep.view.focus(); return f && [f.kind, f.addr, f.pos]; })()')
+    r.check(bool(tg) and src is not None and on == ['block', DOC, tg['block'][0]] and ctx.js('window.__skep.selection()') is None,
+            'the walk on a block of the first edition holding its own words and a share of the window run, nothing selected: the run\'s source among its targets (what the next checks stand on)', {'targets': tg, 'walk': on})
+    if tg and src is not None:
+        n, t0 = len(tg['links']) + len(tg['sources']), trail(ctx)
+        chord(ctx, 'Enter', mods=('Meta',))
+        if n > 1:
+            rows = ctx.js('[...document.querySelectorAll(\'#overlay [data-run]\')].map((b) => [b.dataset.run, b.textContent])')
+            names = [k for k, _ in rows]
+            want = ['w%d' % i for i in range(len(tg['links']))] + ['s%d' % i for i in range(len(tg['sources']))]
+            i = next((k for k, x in enumerate(tg['sources']) if x['origin'] == WINDOW[2]), 0)
+            r.check(ctx.js('window.__skep.overlay().id') == 'which' and names == want and WINDOW[2] in rows[len(tg['links']) + i][1],
+                    'Mod+Enter at the block, its targets several, asks which: the links\' rows first, then a row per source, the window run\'s naming its origin (issue #572\'s design decision)', {'rows': rows, 'targets': tg})
+            ctx.js('(() => { const b = document.querySelector(\'#overlay [data-run="s%d"]\'); if (b) b.click(); })()' % i)
+            ctx.settle()
+            ctx.frames(2)
+        t1, mark = trail(ctx), ctx.js('window.__skep.go.arrival()')
+        here = t1['entries'][t1['cursor']] if t1['cursor'] >= 0 else {}
+        step = (t1['entries'][t1['cursor'] - 1] if t1['cursor'] > 0 else {}).get('step') or {}
+        share = sum(p['width'] for p in src['parts'])
+        r.check(t1['cursor'] == t0['cursor'] + 1 and here.get('addr') == WINDOW[2] and (step.get('kind'), step.get('from'), step.get('to')) == ('carry', DOC, WINDOW[2])
+                and sum(x['width'] for x in step.get('spans') or []) == share
+                and bool(mark) and mark['addr'] == WINDOW[2] and mark['link'] is None and bool(mark['runs']) and sum(x['width'] for x in mark['runs']) <= share,
+                'the follow to the window run\'s source from the block, nothing selected, carries the run\'s share of it alone — one trail entry at the draft, the step a carry naming the share\'s bytes and none of the block\'s own, its runs outlined there no wider than the share, no link lit (issue #572\'s design decision; FP-21)',
+                {'targets': tg, 'share': share, 'cursor': [t0['cursor'], t1['cursor']], 'here': here.get('addr'), 'step': {k: step.get(k) for k in ('kind', 'from', 'to')}, 'spans': step.get('spans'), 'mark': mark})
 
 
 def run(ctx):
@@ -3744,6 +3794,8 @@ def run(ctx):
         # block): each far document read whole (reads alone), so the page knows the ghost says nothing before the follow is made
         # (FP-25: a failure known at the act)
         drawn_here = [x for x in shown if x['pos'] < linked['pos'] + linked['width'] and linked['pos'] < x['pos'] + x['width']]
+        # follow's targets there: those links, then the sources of the runs of other documents' material the block meets (issue #572)
+        sources_here = ctx.js('(async (doc, pos, width) => (await import("./text/article.js")).sourcesIn(window.__skep.model.doc(doc), {pos, width}).length)(%s, %d, %d)' % (json.dumps(DOC), linked['pos'], linked['width']))
         for far in dict.fromkeys(x['far'] for x in drawn_here if x['far']):
             ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(far))
         r.check(ctx.js('window.__skep.model.doc(%s).refused' % json.dumps(GHOST)) == 'unregistered',
@@ -3751,10 +3803,10 @@ def run(ctx):
         ctx.js('window.__skep.select(%s, %d)' % (json.dumps(DOC), linked['pos']))
         chord(ctx, 'Enter', mods=('Meta',))
         s = state(ctx)
-        if len(drawn_here) == 1:
+        if len(drawn_here) + sources_here == 1:
             r.check(s['overlay'] == 'face', 'Mod+Enter follows the one drawn link, the citation of the ghost: its target answers the dead-reference face', ctx.js('window.__skep.overlay().text')[:160])
         else:
-            r.check(s['overlay'] == 'list', 'Mod+Enter at a span with several links asks which', {'n': len(drawn_here), 'overlay': s['overlay']})
+            r.check(s['overlay'] == 'list', 'Mod+Enter at a span with several targets — the links drawn there, and the sources of its runs — asks which', {'links': len(drawn_here), 'sources': sources_here, 'overlay': s['overlay']})
             # the row naming the ghost — each row names its far document by its address — pressed with the pointer follows that
             # row's link, the row gone with the list the face takes the place of
             which = ctx.js(WHICH_ROW % json.dumps(GHOST))
@@ -3966,8 +4018,8 @@ def run(ctx):
     # each chord, with no selection standing, draws the acts card at the walk's block whole and gives the no-link reason — the
     # slot inert with that reason its title, marked as a press leaves it, the card's reason line its words, said through the
     # status region — nothing selected, no scene, the trail as it was, no hint to select a passage first; then the follow slot
-    # pressed with the pointer at a selection there. A paragraph a transcluded run touches is passed over: follow there may
-    # go to the run's source (D5 K-51)
+    # pressed with the pointer at a selection there. A paragraph a transcluded run touches is passed over: follow there goes
+    # to the run's source (D5 K-51; issue #572)
     bare = ctx.js('''(async (doc) => { const LK = await import("./links/links.js"), d = window.__skep.model.doc(doc);
       const b = d.blocks.find((x) => x.kind === "para" && x.width > 1 && LK.shownAt(doc, {pos: x.pos, width: x.width}).length === 0
         && !d.origins.some((o) => o.pos < x.pos + x.width && x.pos < o.pos + o.width));
