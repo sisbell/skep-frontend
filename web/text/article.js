@@ -111,22 +111,23 @@
 // it shows, as the view measures them — "draft" or "published", an empty box
 // named as being read while no read has told it, "not read" where its
 // metadata's read failed and nothing else tells it (`kindWord`; FP-34) — in
-// both forms; after it, an edition's state with "version ⟨k⟩ of ⟨n⟩" and
-// R20's teaching, its venue's clause first on a notebook (P7) — at a pinned
-// version its own number of the count its box's document holds (FP-22) — a
-// draft's kept state and its chip (C-28; ux-T2), the whole-document link
-// count, its act reading another version in its place — in a reading scene's
-// pane, and on the plane where a newer version's arrival pinned its box
-// (foundations §3.2; D5 K-57) — and in a pane the line saying the version it
-// reads lacks the passage that act carried (FP-23), whole or compact (FP-26),
-// each with its words, its width as the view measures them and whether it may
-// fold into the corner's count where a head's row cannot hold it — the
-// offered read alone; the kind, the state, its version statement, the kept
-// word, the chip and the whole-document count never yield (`cornerItems`;
-// foundations §3.1). Its state's items are made by one rule (`stateItems`),
-// which the ARIA mirror's item voices whole too — its first item leading the
-// item (`cornerLead`), the rest after the document's first line
-// (`cornerWords`) — so the corner and the mirror never part (R94). A draft's
+// both forms; after it, an edition's version statement, "version ⟨k⟩ of
+// ⟨n⟩" — at a pinned version its own number of the count its box's document
+// holds (FP-22) — and then its state, R20's teaching with its venue's clause
+// before it on a notebook (P7; C-346), a draft's kept state and its chip
+// (C-28; ux-T2), the whole-document link count, its act reading another
+// version in its place — in a reading scene's pane, and on the plane where a
+// newer version's arrival pinned its box (foundations §3.2; D5 K-57) — and in
+// a pane the line saying the version it reads lacks the passage that act
+// carried (FP-23), whole or compact (FP-26), each with its words, its width
+// as the view measures them and whether it may fold into the corner's count
+// where a head's row cannot hold it — the offered read alone; the kind, its
+// version statement, the state, the kept word, the chip and the
+// whole-document count never yield (`cornerItems`; foundations §3.1). Its
+// state's items are made by one rule (`stateItems`), which the ARIA mirror's
+// item voices whole too — its first item leading the item (`cornerLead`), the
+// rest after the document's first line (`cornerWords`) — so the corner and
+// the mirror never part (R94). A draft's
 // kept state (B3-S2; D5 K-57, K-74) is its word in a slot of fixed width —
 // the longest of the three words', as the view measures them — in both
 // forms, an empty box while no state is set (FP-34), the word's own act
@@ -1214,7 +1215,7 @@ export const statedChain = (d, n) => (n != null && n >= 1 && d.meta && d.meta.bi
 
 /**
  * @typedef {Object} StateItem — one item of a corner's state (`stateItems`): a string filled, in the class it stands in
- * @property {'kind' | 'st' | 'version' | 'kept' | 'chip'} cls the item: the document's kind, its state, its version statement, a draft's kept word, a draft's chip
+ * @property {'kind' | 'version' | 'st' | 'kept' | 'chip'} cls the item: the document's kind, its version statement, its state, a draft's kept word, a draft's chip
  * @property {string} id its string's id — the kind's `L.slot.reading` while it is being read, its slot an empty box; '' for a draft's kept word while no state is set, its slot an empty box
  * @property {Record<string, string | number>} vals the values its string is filled with
  * @property {Record<string, Face>} faces the faces of the tokens it sets in the identifier's: an owner it names
@@ -1224,19 +1225,19 @@ export const statedChain = (d, n) => (n != null && n >= 1 && d.meta && d.meta.bi
 
 /**
  * A document's state as its corner states it, in foundations' one order
- * (§3.1): withheld, its withheld box's words, its owner by the one owner
- * rule (`originOwner`); nothing the board will say of it, the words for that
- * (`L.far.unregistered`); every other document its kind first (`kind`), in
- * its slot, then by it — published, its state, its venue's clause before it
- * on a notebook (P7): "no versions yet" where its chain holds no member, its
- * own version at a pinned one, "the latest version" at the bare address, the
- * venue's clause alone while the board lags (FP-23) — then, where it states
- * its box's chain (`members`, `statedChain`), its version statement:
- * "version ⟨k⟩ of ⟨n⟩", its own number at a pinned version, the head's at
- * the bare address (FP-22), "version ⟨k⟩" while the board lags; a draft, its
- * kept word (B3-S2) then its chip (C-28); being read or not read, its slot
- * alone. The one rule the corner draws its state by (`cornerHTML`) and the
- * ARIA mirror's item voices it by (`cornerLead`, `cornerWords`; R94).
+ * (§3.1; C-346): withheld, its withheld box's words, its owner by the one
+ * owner rule (`originOwner`); nothing the board will say of it, the words for
+ * that (`L.far.unregistered`); every other document its kind first (`kind`),
+ * in its slot, then by it — published, where it states its box's chain
+ * (`members`, `statedChain`), its version statement: "version ⟨k⟩ of ⟨n⟩",
+ * its own number at a pinned version, the head's at the bare address
+ * (FP-22), "version ⟨k⟩" while the board lags; then its state, its venue's
+ * clause before it on a notebook (P7): "no versions yet" where its chain
+ * holds no member, its own version at a pinned one, "the latest version" at
+ * the bare address, the venue's clause alone while the board lags (FP-23); a
+ * draft, its kept word (B3-S2) then its chip (C-28); being read or not read,
+ * its slot alone. The one rule the corner draws its state by (`cornerHTML`)
+ * and the ARIA mirror's item voices it by (`cornerLead`, `cornerWords`; R94).
  * @param {Doc} d
  * @param {CornerFacts} v
  * @returns {[StateItem, ...StateItem[]]}
@@ -1260,8 +1261,9 @@ function stateItems(d, v) {
           : venued('F.corner.latest', {}, 'L.corner.bare');
     const of = statedChain(d, n);
     /** @type {[StateItem, ...StateItem[]]} */
-    const out = st ? [kind, st] : [kind];
+    const out = [kind];
     if (of != null) out.push(v.lags ? item('version', 'L.version', { k: k || of }) : item('version', 'F.version-of', { k: k || of, n: of }, null, { members: of }));
+    if (st) out.push(st);
     return out;
   }
   if (v.kind === 'draft') return [kind, item('kept', v.kept ? KEPT_WORDS[v.kept.word] : '', {}), item('chip', v.localTrust ? 'C-28.flag-on' : 'C-28', {}, 'L.corner.draft')];
@@ -1334,23 +1336,24 @@ function filledEm(id, vals, faces, measure) {
  */
 
 /**
- * The corner's items in foundations' one order (§3.1): its document's kind
- * and state (`stateItems`) — at a pinned version its own number of the count
- * its box's document holds (`members`), so the corner names the version its
- * box shows and offers the versions list there too (FP-22); at a published
- * document in a reading scene's pane, where the version its pane reads lacks
- * the passage its act carried, a line saying so (`lacks`); its act reading
- * another version in its place (`read`; D5 K-57; FP-23) — a pane's, and on
- * the plane the newer version a newer version's arrival offers, a control the
- * pointer and → reach, never a Tab stop (`control`); the whole-document link
- * count (rule (i)). Compact (FP-26): an edition's state its version marker —
- * unlit at the bare address, lit at a pinned version (foundations §3.1) — and
- * a draft's chip a glyph, each named by its whole words; the kind in its
- * slot, "version ⟨k⟩ of ⟨n⟩", the whole-document count, the kept word in its
- * slot and the state of a document a read refused keep their words. Each with
- * its words and its width (`CornerItem`): the kind, the state, its version
- * statement, a draft's kept word, its chip and the whole-document count never
- * yield; the offered read does.
+ * The corner's items in foundations' one order (§3.1): its document's kind,
+ * its version statement and its state (`stateItems`) — at a pinned version
+ * its own number of the count its box's document holds (`members`), so the
+ * corner names the version its box shows and offers the versions list there
+ * too (FP-22); at a published document in a reading scene's pane, where the
+ * version its pane reads lacks the passage its act carried, a line saying so
+ * (`lacks`); its act reading another version in its place (`read`; D5 K-57;
+ * FP-23) — a pane's, and on the plane the newer version a newer version's
+ * arrival offers, a control the pointer and → reach, never a Tab stop
+ * (`control`); the whole-document link count (rule (i)). Compact (FP-26): an
+ * edition's state its version marker — unlit at the bare address, lit at a
+ * pinned version (foundations §3.1) — and a draft's chip a glyph, each named
+ * by its whole words; the kind in its slot, "version ⟨k⟩ of ⟨n⟩", the
+ * whole-document count, the kept word in its slot and the state of a document
+ * a read refused keep their words. Each with its words and its width
+ * (`CornerItem`): the kind, its version statement, the state, a draft's kept
+ * word, its chip and the whole-document count never yield; the offered read
+ * does.
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {boolean} [compact] the compact form

@@ -26,7 +26,10 @@
 // its corner, the head stating none in any state, a refused document's among
 // them; every corner's first slot its document's kind, one width whatever it
 // shows, an empty box while it is being read and none at a refused document,
-// the item the mirror leads with; the corner's items, whole and compact, one by one with their words,
+// the item the mirror leads with, an edition's version statement after it and
+// its state — its venue's clause and R20's teaching — after that, whole and
+// compact, on a notebook and a realm board, in the corner and in the mirror's
+// words alike; the corner's items, whole and compact, one by one with their words,
 // their widths and whether they yield to a head's narrow row, outside the
 // article, a pane's with its read act and its lacking line, the plane's with
 // the read an arrival offers as a control, a kept clause after them on a line
@@ -76,7 +79,7 @@ const view = (/** @type {Partial<import('./article.js').ArticleView>} */ o = {})
 });
 /** a view of a draft (`view`) */
 const draftView = (/** @type {Partial<import('./article.js').ArticleView>} */ o = {}) => view({ kind: 'draft', ...o });
-/** an edition's state on a notebook as its corner sets it after its kind: its venue's clause, then the state's own words (`L.corner.venue`) */
+/** an edition's state on a notebook as its corner sets it after its kind and its version statement: its venue's clause, then the state's own words (`L.corner.venue`) */
 const venued = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ vals = {}) => t('L.corner.venue', { venue: t('F.published.notebook'), state: t(id, vals) });
 /** the kind slot's width, in em: the widest of the words it shows, at the advance */
 const KIND_EM = Math.max(...['F.kind.draft', 'F.published', 'L.slot.unread'].map((id) => advances(t(id))));
@@ -426,12 +429,19 @@ test('a transcluded origin\'s statement in its column\'s edge is headed by its k
   assert.ok(html.includes(`this document windows ${idOf(X)}`), 'the scene-offer at a windowing document, its address the identifier\'s');
 });
 
-test('the corner: its kind first, then version k of n with R20\'s teaching keyed by venue; a draft\'s chip C-28', () => {
+test('the corner: its kind first, then version k of n, then R20\'s teaching keyed by venue — the two items that never yield read first, on a notebook and on a realm board, at the bare address and at a pin, whole and compact; a draft\'s chip C-28 (foundations §3.1; C-346)', () => {
+  /** the version statement as the corner sets it, carrying the count it is of */
+  const of = (/** @type {number} */ k, /** @type {number} */ n) => `<span class="version" data-members="${n}">${esc(t('F.version-of', { k, n }))}</span>`;
   const c = cornerHTML(doc(), view());
-  assert.ok(c.startsWith(kindSlot('published') + `<span class="st">${esc(venued('F.corner.latest'))}</span>`), `"published" in its slot, then the venue's clause and R20's teaching: ${c}`);
-  assert.ok(c.includes(t('F.version-of', { k: 2, n: 2 })));
+  assert.ok(c.startsWith(kindSlot('published') + of(2, 2) + `<span class="st">${esc(venued('F.corner.latest'))}</span>`), `"published" in its slot, then "version 2 of 2", then the venue's clause and R20's teaching: ${c}`);
   assert.ok(c.includes('moves to each new one'));
   assert.ok(c.includes(t('F.published.notebook')));
+  const realm = cornerHTML(doc(), view({ notebook: false }));
+  assert.ok(realm.startsWith(kindSlot('published') + of(2, 2) + `<span class="st">${esc(t('F.corner.latest'))}</span>`) && !realm.includes(esc(t('F.published.notebook'))), `a board that is no notebook: "version 2 of 2", then R20's teaching, no venue's clause — ${realm}`);
+  const pinned = cornerHTML(doc({ addr: '1.0.1.0.3.1', members: null }), view({ members: 3 }));
+  assert.ok(pinned.startsWith(kindSlot('published') + of(1, 3) + `<span class="st">${esc(venued('F.corner.pinned', { k: 1 }))}</span>`), `at a pin: "version 1 of 3", then its own version's state — ${pinned}`);
+  const compact = cornerHTML(doc(), view(), true);
+  assert.ok(compact.startsWith(kindSlot('published') + of(2, 2) + `<span class="st glyph" role="img" aria-label="${esc(venued('F.corner.latest'))}">${esc(t('L.corner.bare'))}</span>`), `compact: the count where it stands whole, then the state's marker named by its words — ${compact}`);
   const draft = cornerHTML(doc({ kind: 'draft', meta: null }), draftView({ localTrust: true }));
   assert.ok(draft.startsWith(kindSlot('draft')), `"draft" in its slot, where an edition's says "published": ${draft}`);
   assert.ok(draft.includes(t('C-28.flag-on')) && !draft.includes(t('C-28') + '<'), 'flag-on never renders "Readable by you alone"');
@@ -486,12 +496,12 @@ test('a draft\'s corner carries its kept state in a slot of fixed width — the 
   assert.ok(!cornerHTML(doc(), view({ kept: { word: 'kept', reason: null }, keptOpen: true })).includes('kept-'), 'an edition\'s corner carries no kept slot, whatever state is handed in');
 });
 
-test('the corner\'s items one by one, in their one order: each its markup — the corner\'s, joined — its words and its width as the view measures them, the kind and a kept word their slots\'; the offered read alone yields, the kind, the state, its version statement, the kept word, the chip and the whole-document count never do; a draft\'s statement left out of its slot where its holder opens it beneath a head (issue #436; foundations §3.1; FP-26)', () => {
+test('the corner\'s items one by one, in their one order: each its markup — the corner\'s, joined — its words and its width as the view measures them, the kind and a kept word their slots\'; the offered read alone yields, the kind, its version statement, the state, the kept word, the chip and the whole-document count never do; a draft\'s statement left out of its slot where its holder opens it beneath a head (issue #436; foundations §3.1; FP-26)', () => {
   const edition = doc(), v = view({ members: 3, read: 4, wholeLinks: 2 });
   const items = cornerItems(edition, v, true);
   assert.equal(items.map((i) => i.html).join(''), cornerHTML(edition, v, true), 'the corner\'s markup, item by item');
-  assert.deepEqual(items.map((i) => [i.cls, i.yields]), [['kind', false], ['st', false], ['version', false], ['read', true], ['whole-links', false]], 'the kind, the state, its version statement, the read offered — which alone yields — and the whole-document count');
-  assert.deepEqual(items.map((i) => i.em), [KIND_EM, advances(t('L.corner.bare')), advances(t('F.version-of', { k: 3, n: 3 })), advances(t('F.versions.read', { k: 4 })), advances(t('F.whole-links', { n: 2 }))], 'each its words\' width, the kind its slot\'s, the state\'s glyph compact');
+  assert.deepEqual(items.map((i) => [i.cls, i.yields]), [['kind', false], ['version', false], ['st', false], ['read', true], ['whole-links', false]], 'the kind, its version statement, the state, the read offered — which alone yields — and the whole-document count');
+  assert.deepEqual(items.map((i) => i.em), [KIND_EM, advances(t('F.version-of', { k: 3, n: 3 })), advances(t('L.corner.bare')), advances(t('F.versions.read', { k: 4 })), advances(t('F.whole-links', { n: 2 }))], 'each its words\' width, the kind its slot\'s, the state\'s glyph compact');
   assert.equal(items[0].words, t('F.published'), 'the kind\'s words');
   const draft = doc({ kind: 'draft', meta: null }), kept = draftView({ kept: { word: 'kept', reason: null }, keptOpen: true });
   const d = cornerItems(draft, kept, true, false);
@@ -603,10 +613,10 @@ test('the corner compact: a usual state its glyph, named whole by its words, a n
   assert.ok(!cornerHTML(doc(), view()).includes('glyph'), 'whole: no glyph');
 });
 
-test('while the board lags the corner names neither the latest version nor the chain\'s count: the bare address\'s state its kind and its venue\'s clause alone — compact, its marker unlit, named so — and the version statement "version ⟨k⟩", standing for the versions list\'s act; a pinned version\'s state keeps its words (issue #367\'s design decision: "corners drop \'the latest\' and \'of ⟨n⟩\'")', () => {
+test('while the board lags the corner names neither the latest version nor the chain\'s count: the bare address\'s state its kind, the version statement "version ⟨k⟩", standing for the versions list\'s act, then its venue\'s clause alone — compact, its marker unlit, named so; a pinned version\'s state keeps its words (issue #367\'s design decision: "corners drop \'the latest\' and \'of ⟨n⟩\'")', () => {
   const lagging = view({ lags: true });
   const latest = cornerHTML(doc(), lagging), compact = cornerHTML(doc(), lagging, true), pinned = cornerHTML(doc({ addr: '1.0.1.0.3.1' }), view({ members: 3, lags: true }));
-  assert.ok(latest.startsWith(`${kindSlot('published')}<span class="st">${esc(t('F.published.notebook'))}</span>`) && !latest.includes(esc(t('F.corner.latest'))), `the bare address: its kind and its venue's clause alone, never the latest — ${latest}`);
+  assert.ok(latest.startsWith(`${kindSlot('published')}<span class="version">${esc(t('L.version', { k: 2 }))}</span><span class="st">${esc(t('F.published.notebook'))}</span>`) && !latest.includes(esc(t('F.corner.latest'))), `the bare address: its kind, "version 2", then its venue's clause alone, never the latest — ${latest}`);
   assert.ok(compact.includes(`<span class="st glyph" role="img" aria-label="${esc(t('F.published.notebook'))}">${esc(t('L.corner.bare'))}</span>`), `compact: its marker unlit, named by its venue's clause alone — ${compact}`);
   assert.ok(latest.includes(`<span class="version">${esc(t('L.version', { k: 2 }))}</span>`) && !latest.includes(esc(t('F.version-of', { k: 2, n: 2 }))), `"version ⟨k⟩", never of the count — ${latest}`);
   assert.ok(pinned.includes(esc(venued('F.corner.pinned', { k: 1 }))) && pinned.includes(`<span class="version">${esc(t('L.version', { k: 1 }))}</span>`), `a pinned version: its state\'s words, its statement "version ⟨k⟩" — ${pinned}`);
@@ -616,20 +626,20 @@ test('while the board lags the corner names neither the latest version nor the c
 test('a document\'s state is said once, at its corner: in every version state — at the bare address, an older pin, a pin on the newest version, a document with no versions, a reading scene\'s pane — the head states none and its plan sets no line for one, the corner names its kind, the version shown and the chain\'s count, and the words the ARIA mirror voices are the corner\'s state whole, its kind leading (issue #239\'s design decision: "State is said once per document, at its corner"; issue #423\'s: "the slot\'s word leads the item")', () => {
   const blocks = [{ pos: 1, width: 20, kind: /** @type {const} */ ('para'), text: 'abcdefghijklmnopqrst', origin: null }];
   const meta = /** @type {NonNullable<import('../model/records.js').Doc['meta']>} */ (doc().meta);
-  /** @type {Array<[string, import('../model/records.js').Doc, import('./article.js').ArticleView, string[]]>} each state, its document and view, and its corner's state's words after its kind */
+  /** @type {Array<[string, import('../model/records.js').Doc, import('./article.js').ArticleView, string[]]>} each state, its document and view, and its corner's state's words after its kind, in their order */
   const states = [
-    ['the bare address', doc({ blocks }), view({ members: 2 }), [venued('F.corner.latest'), t('F.version-of', { k: 2, n: 2 })]],
-    ['an older pin', doc({ addr: '1.0.1.0.3.1', blocks, members: null }), view({ members: 2 }), [venued('F.corner.pinned', { k: 1 }), t('F.version-of', { k: 1, n: 2 })]],
-    ['a pin on the newest version', doc({ addr: '1.0.1.0.3.2', blocks, members: null }), view({ members: 2 }), [venued('F.corner.pinned', { k: 2 }), t('F.version-of', { k: 2, n: 2 })]],
+    ['the bare address', doc({ blocks }), view({ members: 2 }), [t('F.version-of', { k: 2, n: 2 }), venued('F.corner.latest')]],
+    ['an older pin', doc({ addr: '1.0.1.0.3.1', blocks, members: null }), view({ members: 2 }), [t('F.version-of', { k: 1, n: 2 }), venued('F.corner.pinned', { k: 1 })]],
+    ['a pin on the newest version', doc({ addr: '1.0.1.0.3.2', blocks, members: null }), view({ members: 2 }), [t('F.version-of', { k: 2, n: 2 }), venued('F.corner.pinned', { k: 2 })]],
     ['a document with no versions', doc({ blocks, meta: { ...meta, birth: null } }), view({ members: null }), [venued('F.corner.no-versions')]],
-    ['a reading scene\'s pane', doc({ addr: '1.0.1.0.3.1', blocks, members: null }), view({ scene: true, members: 3, read: 3, lacks: 1 }), [venued('F.corner.pinned', { k: 1 }), t('F.version-of', { k: 1, n: 3 })]],
+    ['a reading scene\'s pane', doc({ addr: '1.0.1.0.3.1', blocks, members: null }), view({ scene: true, members: 3, read: 3, lacks: 1 }), [t('F.version-of', { k: 1, n: 3 }), venued('F.corner.pinned', { k: 1 })]],
   ];
   for (const [what, d, v, state] of states) {
     const head = (/^<div class="hd">(.*?)<\/div>/.exec(articleHTML(d, v, '1.0.1')) || [])[1] ?? '';
     assert.ok(head.startsWith(`<span class="addr id">${d.addr}</span><span class="by">`) && !head.includes('class="st"') && !/published|version/.test(head), `${what}: the head its address, then its byline, no state — ${head}`);
     assert.deepEqual(articlePlan(d, v, '1.0.1').filter((r) => r.kind === 'head').map((r) => r.pieces.map((p) => p.text).join('')), [d.addr, '1.0.1 · '], `${what}: the plan's head its address and its byline alone`);
-    const corner = cornerHTML(d, v);
-    assert.ok(corner.startsWith(kindSlot('published')) && state.every((words) => corner.includes(esc(words))), `${what}: the corner names its kind, then ${JSON.stringify(state)} — ${corner}`);
+    const corner = cornerHTML(d, v), at = state.map((words) => corner.indexOf(esc(words)));
+    assert.ok(corner.startsWith(kindSlot('published')) && at.every((i, k) => i > 0 && (k === 0 || i > at[k - 1])), `${what}: the corner names its kind, then ${JSON.stringify(state)} in that order — ${corner}`);
     assert.deepEqual([cornerLead(d, v), cornerWords(d, v)], [t('F.published'), state.join(', ')], `${what}: the mirror's words the corner's, its kind leading, then its state whole`);
   }
 });
@@ -650,7 +660,7 @@ test('a document a read refused states nothing in its head either, on the plane 
   }
 });
 
-test('the corner\'s state and the words the mirror voices are one rule: its first item leading — a withheld document\'s owner the one owner rule\'s, never its sub-account; a draft\'s kind, then its kept word where one is set, then its chip; while the board lags its venue\'s clause and "version ⟨k⟩"; a pane\'s act and lacking line no part of its state (R94)', () => {
+test('the corner\'s state and the words the mirror voices are one rule: its first item leading — a withheld document\'s owner the one owner rule\'s, never its sub-account; a draft\'s kind, then its kept word where one is set, then its chip; while the board lags "version ⟨k⟩" and its venue\'s clause; a pane\'s act and lacking line no part of its state (R94)', () => {
   const blocks = [{ pos: 1, width: 20, kind: /** @type {const} */ ('para'), text: 'abcdefghijklmnopqrst', origin: null }];
   const sub = doc({ addr: '1.0.2.1.0.2', account: '1.0.2.1', refused: 'withheld', meta: null }), seat = view({ originOwner: (a) => (a === sub.addr ? '1.0.2' : accountOf(a) || '') });
   assert.deepEqual([cornerLead(sub, seat), cornerWords(sub, seat)], [t('F.corner.withheld', { owner: '1.0.2' }), ''], 'withheld: its box\'s words leading, the seat above the sub-account');
@@ -658,9 +668,9 @@ test('the corner\'s state and the words the mirror voices are one rule: its firs
   const draft = doc({ kind: 'draft', meta: null, blocks });
   assert.deepEqual([cornerLead(draft, draftView()), cornerWords(draft, draftView())], [t('F.kind.draft'), t('C-28.flag-on')], 'a draft with no kept state: its kind, then its chip');
   assert.equal(cornerWords(draft, draftView({ kept: { word: 'not yet kept', reason: null }, localTrust: false })), [t('B3.not-yet-kept'), t('C-28')].join(', '), 'its kept word, then its chip');
-  assert.equal(cornerWords(doc({ addr: '1.0.1.0.3.1', members: null }), view({ members: 3, lags: true })), [venued('F.corner.pinned', { k: 1 }), t('L.version', { k: 1 })].join(', '), 'lagging at a pin: its own version, never of the count');
-  assert.equal(cornerWords(doc(), view({ members: 2, lags: true })), [t('F.published.notebook'), t('L.version', { k: 2 })].join(', '), 'lagging at the bare address: its venue\'s clause alone');
-  assert.equal(cornerWords(doc({ addr: '1.0.1.0.3.2', members: null }), view({ scene: true, members: 3, read: 3, lacks: 2 })), [venued('F.corner.pinned', { k: 2 }), t('F.version-of', { k: 2, n: 3 })].join(', '), 'a pane: its act and its lacking line said by the corner, no part of its state');
+  assert.equal(cornerWords(doc({ addr: '1.0.1.0.3.1', members: null }), view({ members: 3, lags: true })), [t('L.version', { k: 1 }), venued('F.corner.pinned', { k: 1 })].join(', '), 'lagging at a pin: its own version, never of the count');
+  assert.equal(cornerWords(doc(), view({ members: 2, lags: true })), [t('L.version', { k: 2 }), t('F.published.notebook')].join(', '), 'lagging at the bare address: its venue\'s clause alone');
+  assert.equal(cornerWords(doc({ addr: '1.0.1.0.3.2', members: null }), view({ scene: true, members: 3, read: 3, lacks: 2 })), [t('F.version-of', { k: 2, n: 3 }), venued('F.corner.pinned', { k: 2 })].join(', '), 'a pane: its act and its lacking line said by the corner, no part of its state');
   assert.equal(cornerWords(doc({ addr: '1.0.1.0.3.2', members: null }), view({ members: null })), venued('F.corner.pinned', { k: 2 }), 'no count known: its version alone, no statement of the count');
   assert.deepEqual(['reading', 'unread'].map((kind) => [cornerLead(doc({ kind: 'unknown', meta: null }), view({ kind: /** @type {any} */ (kind) })), cornerWords(doc({ kind: 'unknown', meta: null }), view({ kind: /** @type {any} */ (kind) }))]), [[t('L.slot.reading'), ''], [t('L.slot.unread'), '']], 'its kind being read, or not read: the slot\'s words leading, nothing after them');
 });

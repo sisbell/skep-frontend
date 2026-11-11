@@ -138,7 +138,7 @@ function partly() {
 }
 /** the walk's element: its kind, its place, its position */
 const walkAt = () => { const f = WALK.current(); return f && [f.kind, f.addr, f.pos]; };
-/** an edition's state on a notebook as its corner sets it after its kind: its venue's clause, then the state's own words (T-ARTICLE's `L.corner.venue`) */
+/** an edition's state on a notebook as its corner sets it after its kind and its version statement: its venue's clause, then the state's own words (T-ARTICLE's `L.corner.venue`) */
 const venued = (/** @type {string} */ id, /** @type {Record<string, number>} */ vals = {}) => t('L.corner.venue', { venue: t('F.published.notebook'), state: t(id, vals) });
 
 /** a walk move run to its end: the flight it starts stepped to its last frame */
@@ -1612,7 +1612,7 @@ test('a kept document\'s mirror item carries the clause its corner or the one li
   } finally { text(); globalThis.document = platform; }
 });
 
-test('a document\'s mirror item voices its corner\'s state whole, its kind leading — at the bare address, an older pin, a pin on the newest version, a document with no versions — the version its box shows and the count of its chain among it, and is written again in place as a newer version\'s arrival counts the chain again, nothing rebuilt (issue #239\'s design decision: "The ARIA mirror\'s item for a document voices the corner\'s state, whole")', async () => {
+test('a document\'s mirror item voices its corner\'s state whole, its kind leading — at the bare address, an older pin, a pin on the newest version, a document with no versions — the version its box shows and the count of its chain next, before its venue\'s clause and R20\'s teaching, and is written again in place as a newer version\'s arrival counts the chain again, nothing rebuilt (issue #239\'s design decision: "The ARIA mirror\'s item for a document voices the corner\'s state, whole"; foundations §3.1)', async () => {
   const D1 = D + '.1', D2 = D + '.2', N = '1.0.1.0.9', TEXT2 = 'Tumbler.\n\nThe second version.', unasked = fake.unanswered.length;
   Object.assign(script, reads(D2, [{ content: TEXT2 }], TEXT2.length, [{ i_start: D2 + '.0.1.1', width: String(TEXT2.length) }]));
   await PUMP.loadWhole(D2);
@@ -1620,8 +1620,8 @@ test('a document\'s mirror item voices its corner\'s state whole, its kind leadi
   REC.takeMetadata(D1, { doc: D, published: true, owner: '1.0.1', birth: D1, birthExtent: 30, placed: null, baseExtent: null, source: null, asOf: 1 });
   REC.takeMetadata(N, { doc: N, published: true, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
   REC.takeMembers(D, 2);
-  /** the corner's state after its kind at version `k` of a chain `n` members long, its words whole */
-  const pinned = (/** @type {number} */ k, /** @type {number} */ n) => [venued('F.corner.pinned', { k }), t('F.version-of', { k, n })].join(', ');
+  /** the corner's state after its kind at version `k` of a chain `n` members long, its words whole: its version statement, then its state */
+  const pinned = (/** @type {number} */ k, /** @type {number} */ n) => [t('F.version-of', { k, n }), venued('F.corner.pinned', { k })].join(', ');
   /** a document's item as the mirror names it, led by its kind, its state the words given */
   const itemSays = (/** @type {string} */ addr, /** @type {string} */ state) => {
     const d = REC.doc(addr);
@@ -1629,7 +1629,7 @@ test('a document\'s mirror item voices its corner\'s state whole, its kind leadi
   };
   /** @type {Array<[string, string, string]>} each version state, the version its box shows, and its corner's state's words after its kind */
   const states = [
-    ['the bare address', D, [venued('F.corner.latest'), t('F.version-of', { k: 2, n: 2 })].join(', ')],
+    ['the bare address', D, [t('F.version-of', { k: 2, n: 2 }), venued('F.corner.latest')].join(', ')],
     ['an older pin', D1, pinned(1, 2)],
     ['a pin on the newest version', D2, pinned(2, 2)],
     ['a document with no versions', N, venued('F.corner.no-versions')],

@@ -1031,14 +1031,14 @@ def run(ctx):
             'at mid over a box pinned to version 1 the mirror lists the box once, its current item, named by its kind, the version\'s address and that version\'s own first line, as its box\'s label names it (issues #154, #23, #423)',
             {'listed': [dict(i, text=i['text'][:120]) for i in listed], 'zooms': zooms, 'label': label, 'kind': published})
     # its state as its corner states it, whole (issue #239's design decision: "The ARIA mirror's item for a document voices
-    # the corner's state, whole"): the version it shows and the count of its chain, which the board ended — never the bare
-    # "published"
+    # the corner's state, whole"): the version it shows and the count of its chain, which the board ended, read first, then
+    # its venue's clause and R20's teaching (foundations §3.1; C-346) — never the bare "published"
     chain = ctx.js('((a) => { const d = window.__skep.model.doc(a); return {n: d.members, ended: d.ended}; })(%s)' % json.dumps(VERSIONED))
     said = ctx.js('''import("./strings.js").then(({t}) => { const venue = t("F.published.notebook"), c = %s;
-      return {state: [t("L.corner.venue", {venue, state: t("F.corner.pinned", {k: 1})}), c.ended && c.n ? t("F.version-of", {k: 1, n: c.n}) : null].filter(Boolean).join(", "), bare: t("F.published")}; })''' % json.dumps(chain))
+      return {state: [c.ended && c.n ? t("F.version-of", {k: 1, n: c.n}) : null, t("L.corner.venue", {venue, state: t("F.corner.pinned", {k: 1})})].filter(Boolean).join(", "), bare: t("F.published")}; })''' % json.dumps(chain))
     item = listed[0]['text'] if len(listed) == 1 else ''
     r.check(bool(chain['ended']) and said['state'] in item and ', %s,' % said['bare'] not in item,
-            'at mid over a box pinned to version 1 its mirror item voices its corner\'s state whole — the version it shows and the count of its chain — never the bare "published" (issue #239\'s design decision: "The ARIA mirror\'s item for a document voices the corner\'s state, whole")',
+            'at mid over a box pinned to version 1 its mirror item voices its corner\'s state whole — the version it shows and the count of its chain first, then its venue\'s clause and R20\'s teaching — never the bare "published" (issue #239\'s design decision: "The ARIA mirror\'s item for a document voices the corner\'s state, whole"; foundations §3.1)',
             {'item': item[:320], 'want': said['state'], 'chain': chain})
     r.figures['pinned_box'] = {'zooms': zooms, 'listed': [i['text'][:240] for i in listed]}
     ctx.leap(VERSIONED, None)

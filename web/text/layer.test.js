@@ -1668,7 +1668,7 @@ test('a kept box\'s label carries its clause after its address — the words the
 });
 
 
-/** an edition's state on a notebook as its corner sets it after its kind: its venue's clause, then the state's own words (T-ARTICLE's `L.corner.venue`) */
+/** an edition's state on a notebook as its corner sets it after its kind and its version statement: its venue's clause, then the state's own words (T-ARTICLE's `L.corner.venue`) */
 const venued = (/** @type {string} */ id, /** @type {Record<string, number>} */ vals = {}) => t('L.corner.venue', { venue: t('F.published.notebook'), state: t(id, vals) });
 test('while the board lags past a second the plane\'s corner names neither the latest version nor the chain\'s count — its items made again in the frame the lag begins, and again in the frame it ends with the catch-up\'s rows (issue #367\'s design decision: "corners drop \'the latest\' and \'of ⟨n⟩\'")', async (ctx) => {
   const platform = { document: globalThis.document, window: globalThis.window };
@@ -1747,12 +1747,14 @@ function onCorner(body) {
   } finally { LAYER.press(false); LAYER.clear(); LAYER.readers({}); globalThis.document = platform.document; globalThis.window = platform.window; }
 }
 
-test('the plane\'s corner of a box shown at a version names that version and its chain\'s count, and counts the chain again in the frame a newer version\'s arrival counts it — "version 2 of 2", then "version 2 of 3" — its article standing all the while (FP-22, FP-23; issue #239\'s design decision: "it counts the chain again when a newer version arrives")', () => onCorner((items) => {
+test('the plane\'s corner of a box shown at a version names that version and its chain\'s count — after its kind and before its state — and counts the chain again in the frame a newer version\'s arrival counts it — "version 2 of 2", then "version 2 of 3" — its article standing all the while (FP-22, FP-23; foundations §3.1; issue #239\'s design decision: "it counts the chain again when a newer version arrives")', () => onCorner((items) => {
   showing({ at: D2 });
   REC.takeMembers(D, 2);
   const of = (/** @type {number} */ n) => `<span class="version" data-members="${n}">${esc(t('F.version-of', { k: 2, n }))}</span>`;
   LAYER.frame();
   assert.ok(LAYER.isMounted(D2) && items(D2).includes(esc(venued('F.corner.pinned', { k: 2 }))) && items(D2).includes(of(2)), `the box at version 2: its corner names it, "version 2 of 2" — ${items(D2)}`);
+  const at = (/** @type {string} */ s) => items(D2).indexOf(s);
+  assert.ok(at('<span class="kind"') === 0 && at(of(2)) > 0 && at(of(2)) < at('class="st'), `its kind, then "version 2 of 2", then its state — ${items(D2)}`);
   const last = LAYER.mounts().at(-1);
   REC.takeMembers(D, 3);
   LAYER.frame();
@@ -1899,7 +1901,7 @@ test('a head\'s rows: the name\'s least room first, then the kept clause and the
   assert.ok(clause.slots[0].x > clause.name && clause.slots[0].x < clause.slots[1].x, 'the clause between the name and the items');
 });
 
-test('a reading scene\'s pane\'s view is at the pane\'s measure, and its corner stands compact beside its column, its usual state a glyph, or at its document\'s head: its rows across the pane\'s column and edge at the pane\'s em, at the reading line\'s pitch, no row naming the document, the kept clause first, the offered read folded into "⟨n⟩ more" where its row cannot hold it, every item whole beneath the rows where the reader\'s act opened it, and its kind\'s slot alone on one row while it is being read (issue #217; FP-12, FP-26, FP-34)', () => {
+test('a reading scene\'s pane\'s view is at the pane\'s measure, and its corner stands compact beside its column, its usual state a glyph, or at its document\'s head: its rows across the pane\'s column and edge at the pane\'s em, at the reading line\'s pitch, no row naming the document, the kept clause first, its kind, then its version statement before its state\'s glyph, the offered read folded into "⟨n⟩ more" where its row cannot hold it, every item whole beneath the rows where the reader\'s act opened it, and its kind\'s slot alone on one row while it is being read (issue #217; foundations §3.1; FP-12, FP-26, FP-34)', () => {
   deliver();
   const d = { ...REC.doc(D), meta: /** @type {any} */ ({ published: true, birth: D + '.1' }) };
   assert.equal(LAYER.sceneView(d).cpl, MEASURE_CPL, 'the full measure where none is given');
@@ -1911,12 +1913,13 @@ test('a reading scene\'s pane\'s view is at the pane\'s measure, and its corner 
   /** a head's rows: each its index, its top and its height, and its markup */
   const rowsOf = (/** @type {string} */ html) => [...html.matchAll(/<div class="hrow" data-row="(\d+)" style="top:([\d.]+)px;height:([\d.]+)px">(.*?)<\/div>/g)].map((m) => ({ k: Number(m[1]), top: Number(m[2]), h: Number(m[3]), html: m[4] }));
   const head = LAYER.sceneHead(d, view, { px, kept: null, open: false }), rows = rowsOf(head.html);
-  assert.ok(head.rows === 2 && rows.length === 2 && rows.every((r, i) => r.k === i && Math.abs(r.top - i * pitch) < 1e-6 && Math.abs(r.h - pitch) < 1e-6), `its rows at the reading line's pitch, each where its band sets it: ${JSON.stringify(rows)}`);
+  assert.ok(head.rows === 3 && rows.length === 3 && rows.every((r, i) => r.k === i && Math.abs(r.top - i * pitch) < 1e-6 && Math.abs(r.h - pitch) < 1e-6), `its rows at the reading line's pitch, each where its band sets it: ${JSON.stringify(rows)}`);
   assert.ok(!head.html.includes('class="name"'), `no row naming the document: ${head.html}`);
   const slots = [...head.html.matchAll(/class="hslot[^"]*" style="left:([\d.]+)px;width:([\d.]+)px;/g)].map((m) => Number(m[1]) + Number(m[2]));
   assert.ok(slots.length && slots.every((r) => r <= width + 1e-6), `every slot inside the head's width, the column and its edge: ${slots} ≤ ${width}`);
-  assert.ok(rows[0].html.includes('class="kind"') && rows[0].html.indexOf('class="kind"') < rows[0].html.indexOf('class="st glyph"'), `its kind, then the state's glyph, on the first row: ${rows[0].html}`);
-  assert.ok(rows[1].html.includes('data-members="3"') && rows[1].html.includes('data-more="1"') && rows[1].html.includes(esc(t('L.corner.more', { n: 1 }))) && !head.html.includes('data-read'), `the version statement wrapped whole onto the next row, the offered read, which yields, folded into the count there: ${rows[1].html}`);
+  assert.ok(rows[0].html.includes('class="kind"') && !rows[0].html.includes('data-members') && !rows[0].html.includes('class="st glyph"'), `its kind alone on the first row, the version statement finding no room beside it: ${rows[0].html}`);
+  assert.ok(rows[1].html.indexOf('data-members="3"') >= 0 && rows[1].html.indexOf('data-members="3"') < rows[1].html.indexOf('class="st glyph"'), `the version statement wrapped whole onto the next row, the state's glyph after it: ${rows[1].html}`);
+  assert.ok(rows[2].html.includes('data-more="1"') && rows[2].html.includes(esc(t('L.corner.more', { n: 1 }))) && !head.html.includes('data-read'), `the offered read, which yields, folded into the count on the row after them: ${rows[2].html}`);
   assert.ok(!head.html.includes('class="opened"'), 'nothing opened beneath');
   const kept = { id: /** @type {const} */ ('L.kept.links'), text: t('L.kept.links', { when: '09:05' }), reason: '', since: 0 };
   const clauseHead = LAYER.sceneHead(d, { ...view, cpl: 8 }, { px, kept, open: false }).html, clause = rowsOf(clauseHead)[0].html;

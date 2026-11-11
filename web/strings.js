@@ -1238,7 +1238,7 @@ export const STRINGS = {
   // a corner at its document's head (FP-26): the items its rows cannot hold, folded into one count that opens them whole
   'L.corner.more': { text: '⟨n⟩ more', cls: 'DRAFT', source: '', screen: 'the corner, at its document\'s head', lane: true },
   // an edition's state keyed by venue (P7): on a notebook ⟨venue⟩ its clause (F.published.notebook), then ⟨state⟩ the state's
-  // own words, as the corner set them after its kind
+  // own words, as the corner sets them after its kind and its version statement
   'L.corner.venue': { text: '⟨venue⟩ · ⟨state⟩', cls: 'DRAFT', source: '', screen: 'the corner: an edition\'s state on a notebook', lane: true },
   // the one line compact (FP-26): the mark an address wider than a row folds the levels between its board and its deepest
   // into, and what it is named by
