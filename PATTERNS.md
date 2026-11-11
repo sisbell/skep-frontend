@@ -277,6 +277,15 @@ the top line means FP-37.
   held it, and a face never takes it. The ring and the one status
   region are the owner's to write.
 
+- **FP-40 A click moves the walk, never takes the caret.** A click or
+  drag anywhere but the caret's own text leaves the caret where it
+  stood: kept if the click was in another document, live if it was on
+  its own draft. The walk stands on what was clicked, so the next walk
+  key starts there. A typed key away from the caret is not typed; it
+  says where the person was last writing. An empty click takes one
+  step of Esc's order, and its last step keeps the caret, never drops
+  it.
+
 ## The jump
 
 - **FP-25 A jump moves the reader when made; the read only fills the
@@ -599,7 +608,7 @@ last. Each stands until a later decision says it changes it.
 - **#304**: a transcluded run is one origin's stretch unbroken in the text, one run across the typed lines its own newlines break, its ground on every line, a hairline of no width at its two ends and none of its words in a line, its origin stated by #288's rule in a column's edge — headed by its key, the run's one gesture to its source, with C-33's words where a draft's run stands in a published document, those words its origin's one mirror description → FP-31, FP-26, FP-38
 - **#434**: a typed word is its target document's from the keystroke, held once per document in `web/write/` — its own layer between the model and the drawing modules, drawing nothing, importing the bridge and the model alone and alone sending writes, a handler handing it an edit — a draft the person may edit typed in place in its own article, Tab typing a tab, and each composer an overlay naming its target at its head, standing beside the words and never over them, its field spared by a redraw until it closes → FP-38, FP-10, FP-11, FP-9, FP-13, FP-36, FP-20
 - **#432**: a copy's clipboard entry names every position it holds in the order the text shows them — a byte the board minted by its address as the page's mints read at the copy, an unminted one by the page's own name tagged with an id drawn at page load, a stretch its article's image does not place a gap of its width and reason — parts merging only where adjacent in the text shown, the plain text unchanged, anything else writing a passage's identity out of the page naming it so and anything reading one keeping a part it cannot resolve as words in their place → FP-27, FP-38
-- **#496**: keys follow the person's last pointer act — a click or a drag on anything of another document than the caret's keeps the caret where it stood and stands the walk on what was acted on, else on that document's stop nearest the point, one on the caret's own draft but its text and its corner leaving a live caret live with the walk on its span, an empty click taking one step of Esc's order down to the caret kept with its span holding the walk and the ring drawn, a selection put in another document keeping the caret first, and a key swallowed outside the draft last written in the page's session ending its line with "— you were last writing in ⟨label⟩", the label the act back to its kept caret (changes #471, #468) → FP-36, FP-20
+- **#496**: keys follow the person's last pointer act — a click or a drag on anything of another document than the caret's keeps the caret where it stood and stands the walk on what was acted on, else on that document's stop nearest the point, one on the caret's own draft but its text and its corner leaving a live caret live with the walk on its span, an empty click taking one step of Esc's order down to the caret kept with its span holding the walk and the ring drawn, a selection put in another document keeping the caret first, and a key swallowed outside the draft last written in the page's session ending its line with "— you were last writing in ⟨label⟩", the label the act back to its kept caret (changes #471, #468) → FP-40, FP-36, FP-20
 - **#423**: a document's kind is a state its corner's first slot says once — "draft" where an edition's says "published", in either form and never folded, a scene pane's too — read by one test from its metadata, else the kind the model knows of it, else its box's listing, being read until one answers and said once in the status region where it fills under the focus, leading its mirror item and a pane's region name, carried by no label nor any face that only names it, and said first in a landing into another document's one announcement (changes #153) → FP-39, FP-33, FP-34, FP-36, FP-21
 
 ## What these rule out
