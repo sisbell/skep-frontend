@@ -89,7 +89,7 @@
 // in the identifier's face — the run's one gesture to its source, on the
 // plane a control whose act goes to the source carrying the run it stands
 // beside (APP-INPUT; foundations §2.3), in a pane a line; then C-33's words
-// where the run is a draft's in a published document (`carriesC33`), which
+// where its holder says the run carries them (T-LAYER's `carriesC33`), which
 // the ARIA mirror's description of the origin says too (N-WALK). Every other
 // run of the origin in view stands its key alone there (`edgeKeyHTML`), no gap
 // holding it. An item this client cannot show is a gap of its positions too,
@@ -957,17 +957,6 @@ export function textIn(blocks, s) {
 }
 
 /**
- * Does a transcluded run the reader reads carry C-33's words (foundations
- * §2.1): a draft's run in a published document. The one rule its origin's
- * statement (`sourceStatementHTML`; T-LAYER, SC) and the ARIA mirror's
- * description of its origin (N-WALK) are made by.
- * @param {Pick<Doc, 'meta' | 'kind'>} d the document the run stands in
- * @param {'edition' | 'draft' | 'unknown'} kind its origin's kind, as the page reads it (T-LAYER's `originKind`)
- * @returns {boolean}
- */
-export const carriesC33 = (d, kind) => kind === 'draft' && isPublished(d);
-
-/**
  * @typedef {Object} RunInView — a run of another document's material a line of which meets the view, as its column's edge reads it (`edgeSignsFor`)
  * @property {OriginRun} run the run
  * @property {string} id its identity: its origin and the permanent address of its first byte, through the image its article was made from; its origin and its position where that image covers none of it (FP-38)
@@ -1040,9 +1029,9 @@ export const edgeCountHTML = (/** @type {{n: number, social: boolean}} */ c) => 
 /**
  * A transcluded origin's statement in its column's edge (see the head; FP-26,
  * FP-31): its key heading it (`sourceKeyHTML`), then C-33's words where its
- * run carries them (`carriesC33`), whole on a line of their own.
+ * holder says its run carries them (`c33`), whole on a line of their own.
  * @param {string} origin
- * @param {boolean} c33 C-33's words stand in it
+ * @param {boolean} c33 C-33's words stand in it (T-LAYER's `carriesC33`)
  * @param {boolean} scene the scene-mode variant
  * @returns {string}
  */
@@ -1207,9 +1196,6 @@ function kindHTML(v) {
   if (v.kind === 'reading') return `<span class="kind pending" data-kind="reading" role="img" aria-label="${esc(t(KIND_WORDS.reading))}" style="width:${em}em"></span>`;
   return `<span class="kind" data-kind="${v.kind}" data-string="${w.id}" style="width:${em}em">${esc(w.text)}</span>`;
 }
-
-/** is a document published: its metadata's word where read, else its index's kind */
-export const isPublished = (/** @type {Pick<Doc, 'meta' | 'kind'>} */ d) => (d.meta ? d.meta.published : d.kind === 'edition');
 
 /**
  * The chain's count a published document's corner states (`stateItems`):

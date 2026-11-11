@@ -379,7 +379,7 @@ import * as HOST from '../overlays/host.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { drawChord } from '../nav/keys.js';
-import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, carriesC33, sourceStatementHTML, cornerLead, kindWord } from '../text/article.js';
+import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML, cornerLead, kindWord } from '../text/article.js';
 import { inkOf, strokeOf, strokeIn, cutAt, pointOn } from '../beams/beams.js';
 import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingOf } from '../beams/held.js';
 import { SAMENESS, HOLD, LABEL_MIN_PX, cornerWidth } from '../plane/register.js';
@@ -2753,7 +2753,7 @@ function placeHeads(E, S) {
  * by the run's identity through the image the article was made from (FP-38):
  * a withheld origin's (`edgeStatementHTML`), a transcluded origin's
  * (`sourceStatementHTML`), its C-33's words read as it is placed (T-LAYER's
- * `originKind`, T-ARTICLE's `carriesC33`); a key no gap holds; a withheld
+ * `carriesC33`, `originKind`); a key no gap holds; a withheld
  * run's others' count, as the pane was set with it — each in the column's
  * edge on the pane's inner side, beside its run's first line in view — a
  * transcluded run's the first line in view a character of it stands on, read
@@ -2808,7 +2808,7 @@ function placeStatements(E, S) {
     for (const sign of chosen.signs) {
       const x = /** @type {{rect: DOMRect, y: number}} */ (at.get(sign.run)), run = sign.run.run, o = run.origin, b = gaps.get(sign.run);
       const html = sign.kind === 'statement'
-        ? (b ? edgeStatementHTML(placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf), LAYER.claimsKeptIn(o), true) : sourceStatementHTML(o, carriesC33(P.d, LAYER.originKind(o)), true))
+        ? (b ? edgeStatementHTML(placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf), LAYER.claimsKeptIn(o), true) : sourceStatementHTML(o, LAYER.carriesC33(P.d, LAYER.originKind(o)), true))
         : sign.kind === 'key' ? edgeKeyHTML(run, true) : edgeCountHTML(sign.run.count);
       if (!html) continue;
       const key = sign.kind === 'statement' ? `${o} statement` : `${run.pos} ${sign.kind}`;

@@ -38,7 +38,10 @@
 // that run leaves, held below the hold and a held label and inside its
 // column's foot, and a transcluded origin likewise — its key and C-33's
 // words, read as each frame stands, its other runs' keys alone — its lines
-// its ground and its hairlines alone (FP-31); C-67's clause from the model; what an article was
+// its ground and its hairlines alone (FP-31); C-33's words standing by the
+// one test of each document's kind, asked by a record or an address — an
+// origin's its metadata's word whatever the index lists it as, a version's
+// its box's listing where its metadata is unread (FP-39); C-67's clause from the model; what an article was
 // made from; a copy named where
 // its words were read — a box's at its version, the head its corner names at
 // a plain address, and a pane's alike — by every position's identity part by
@@ -58,7 +61,7 @@
 // begins and ends, as its box's chain is counted again, naming no count
 // the board did not end the chain at, and as the read a newer version's
 // arrival offers comes, rises and goes, a focus on it kept (FP-8, FP-12, FP-20, FP-22, FP-23,
-// FP-26, FP-27, FP-30, FP-31, FP-33, FP-34, FP-36, FP-37).
+// FP-26, FP-27, FP-30, FP-31, FP-33, FP-34, FP-36, FP-37, FP-39).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -1111,13 +1114,12 @@ test('a guest meets a withheld run carrying its origin\'s key and its origin\'s 
 /** the withheld origins of the document the statements below are placed for, and the runs of them it windows */
 const SO = '1.0.2.0.2', SQ = '1.0.3.0.4';
 /**
- * The test run over a stand-in page whose corner layer holds the edges' signs: D delivered as a short paragraph, a run of
- * SO, thirty paragraphs, a second run of SO, a run of SQ and a last paragraph — each run 240 positions, every byte named
- * through its image, the claims on both origins read — the camera at em 12 over D's first column; `body` handed each run's
- * first position
- * @param {(runs: {o1: number, o2: number, q: number}) => void} body
+ * The test run over a stand-in page whose corner layer holds the edges' signs, each sign's words its markup's, the layer
+ * VW × VH px; every article taken down and the owners' readers handing in nothing after it, the platform's `document` and
+ * `window` put back
+ * @param {() => void} body
  */
-function onEdges(body) {
+function onSigns(body) {
   const platform = { document: globalThis.document, window: globalThis.window };
   const element = () => {
     const e = {
@@ -1131,6 +1133,19 @@ function onEdges(body) {
   globalThis.document = /** @type {any} */ ({ createElement: element });
   globalThis.window = /** @type {any} */ ({ getSelection: () => null });
   try {
+    CAM.setViewport(VW, VH);
+    LAYER.attach(/** @type {any} */ ({ clientWidth: VW, clientHeight: VH, appendChild() {} }), /** @type {any} */ (element()));
+    body();
+  } finally { LAYER.press(false); LAYER.clear(); LAYER.readers({}); globalThis.document = platform.document; globalThis.window = platform.window; }
+}
+/**
+ * The test run on the edges' signs' page (`onSigns`), D delivered as a short paragraph, a run of SO, thirty paragraphs, a
+ * second run of SO, a run of SQ and a last paragraph — each run 240 positions, every byte named through its image, the
+ * claims on both origins read; `body` handed each run's first position
+ * @param {(runs: {o1: number, o2: number, q: number}) => void} body
+ */
+function onEdges(body) {
+  onSigns(() => {
     const p1 = 'Tumbler.\n\n', p2 = Array.from({ length: 30 }, (_, i) => words(30, i)).join('\n\n') + '\n\n', p3 = 'After.';
     const [n1, n2, n3] = [p1, p2, p3].map((x) => new TextEncoder().encode(x).length), W = 240;
     const o1 = n1 + 1, o2 = o1 + W + n2, q = o2 + W, n = q + W + n3 - 1;
@@ -1142,10 +1157,8 @@ function onEdges(body) {
     ]);
     REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n1 }, { iStart: SO + '.0.1.1', width: W }, { iStart: `${D}.0.1.${n1 + 1}`, width: n2 }, { iStart: `${SO}.0.1.${W + 1}`, width: W }, { iStart: SQ + '.0.1.1', width: W }, { iStart: `${D}.0.1.${n1 + n2 + 1}`, width: n3 }]);
     REC.takeEditionClaims(SO, []); REC.takeEditionClaims(SQ, []);
-    CAM.setViewport(VW, VH);
-    LAYER.attach(/** @type {any} */ ({ clientWidth: VW, clientHeight: VH, appendChild() {} }), /** @type {any} */ (element()));
     body({ o1, o2, q });
-  } finally { LAYER.press(false); LAYER.clear(); LAYER.readers({}); globalThis.document = platform.document; globalThis.window = platform.window; }
+  });
 }
 /** the statements standing for an origin, as the last frame placed them */
 const statementsOf = (/** @type {string} */ origin) => LAYER.signsStanding().filter((s) => s.kind === 'statement' && s.origin === origin);
@@ -1187,49 +1200,63 @@ test('each withheld origin states itself once per document in view, in its colum
   assert.deepEqual(statementsOf(SO).map((s) => [s.pos, s.placed]), [[o2, placedBeside(o2, 0, HOLD.gap + lineHeight(12))]], 'its first line in view its third, at the view\'s top: held below the hold and the label held there');
 }));
 
-test('a transcluded origin the reader reads states itself once per document in view in its column\'s edge — its key, the run\'s gesture to its source, and C-33\'s words for a draft\'s run in a published document — beside its first run in view, at that run\'s first line; its second run in view stands its key alone there; its lines hold its ground and its two hairlines and none of its words (issue #304\'s design decision: "Each origin, once per document in view")', () => {
-  const X = '1.0.1.0.1003';
-  const platform = { document: globalThis.document, window: globalThis.window };
-  const element = () => {
-    const e = {
-      className: '', innerHTML: '', id: '', dataset: {}, style: /** @type {Record<string, string>} */ ({}), children: /** @type {unknown[]} */ ([]), tabIndex: -1, offsetWidth: 160, offsetHeight: 40,
-      classList: { toggle() {} }, setAttribute() {}, removeAttribute() {}, appendChild(/** @type {unknown} */ c) { e.children.push(c); },
-      querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }), contains: () => false, remove() {},
-      get textContent() { return e.innerHTML.replace(/<[^>]*>/g, ''); },
-    };
-    return e;
-  };
-  globalThis.document = /** @type {any} */ ({ createElement: element });
-  globalThis.window = /** @type {any} */ ({ getSelection: () => null });
-  try {
-    // D's own paragraph, X's two typed lines — the newline between them X's own — D's own thirty paragraphs, X's third line, D's last
-    const own1 = 'Tumbler.\n\n', q1 = 'quoted one\nquoted two', own2 = '\n\n' + Array.from({ length: 30 }, (_, i) => words(30, i)).join('\n\n') + '\n\n', q2 = 'quoted three', own3 = '\n\nAfter.';
-    const [a, b, c, e, g] = [own1, q1, own2, q2, own3].map((x) => new TextEncoder().encode(x).length);
-    const text = own1 + q1 + own2 + q2 + own3, n = a + b + c + e + g, r1 = a + 1, r2 = a + b + c + 1;
-    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
-    REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
-    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: a }, { iStart: X + '.0.1.1', width: b }, { iStart: `${D}.0.1.${a + 1}`, width: c }, { iStart: X + '.0.1.100', width: e }, { iStart: `${D}.0.1.${a + c + 1}`, width: g }]);
-    REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.1', birth: D + '.1', birthExtent: n, placed: null, baseExtent: null, source: null, asOf: 1 });
-    REC.takeMetadata(X, { doc: X, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
-    assert.deepEqual(REC.doc(D).origins, [{ pos: r1, width: b, doc: X }, { pos: r2, width: e, doc: X }], 'two runs of X, parted by D\'s own newline');
-    CAM.setViewport(VW, VH);
-    LAYER.attach(/** @type {any} */ ({ clientWidth: VW, clientHeight: VH, appendChild() {} }), /** @type {any} */ (element()));
-    const f = LAYER.foldOf(REC.doc(D)), box = docBox(D);
-    CAM.set({ x: box.x + box.w / 2, y: box.y + box.h / 3, scale: 12 / f.fs });
-    LAYER.frame();
-    assert.ok(LAYER.isMounted(D) && f.columns.every((col) => CAM.sy(box.y + col.y) > 0 && CAM.sy(box.y + col.y + col.h) < VH), 'D whole in view');
-    const html = String(/** @type {any} */ (LAYER.mountedSet().get(D)).el.children[0].innerHTML);
-    assert.deepEqual([...html.matchAll(/<span class="seg (same[^"]*)" data-origin="([^"]*)">([^<]*)<\/span>/g)].map((m) => [m[1], m[3]]), [['same opens', 'quoted one'], ['same closes', 'quoted two'], ['same opens closes', 'quoted three']], `its ground on each of its lines, its hairlines at each run's two ends: ${html}`);
-    assert.ok(!html.includes(t('C-33')) && !html.includes(t('L.origin-mark')), 'none of its words in the article');
-    const top = (/** @type {number} */ pos) => CAM.sy(box.y + placeOf(f, pos).y);
-    assert.deepEqual(statementsOf(X).map((s) => [s.pos, s.column, s.placed, s.text]), [[r1, placeOf(f, r1).column, placedBeside(r1, top(r1)), `${t('L.origin-mark')} ${X}${t('C-33')}`]], 'stated once, beside its first run, at its first line: its key, then C-33\'s words');
-    assert.deepEqual(LAYER.signsStanding().filter((s) => s.kind !== 'statement').map((s) => [s.kind, s.pos, s.text]), [['key', r2, `${t('L.origin-mark')} ${X}`]], 'its second run its key alone, and no count');
-    // X read as published: C-33's words leave the statement in the next frame, nothing rebuilt
-    REC.takeMetadata(X, { doc: X, published: true, owner: '1.0.1', birth: X + '.1', birthExtent: b, placed: null, baseExtent: null, source: null, asOf: 2 });
-    LAYER.frame();
-    assert.deepEqual(statementsOf(X).map((s) => s.text), [`${t('L.origin-mark')} ${X}`], 'its origin an edition: its key alone');
-  } finally { LAYER.press(false); LAYER.clear(); LAYER.readers({}); globalThis.document = platform.document; globalThis.window = platform.window; }
-});
+test('a transcluded origin the reader reads states itself once per document in view in its column\'s edge — its key, the run\'s gesture to its source, and C-33\'s words for a draft\'s run in a published document, the origin\'s kind its metadata\'s word whatever the index lists it as — beside its first run in view, at that run\'s first line; its second run in view stands its key alone there; its lines hold its ground and its two hairlines and none of its words (issue #304\'s design decision: "Each origin, once per document in view"; FP-39)', () => onSigns(() => {
+  const X = '1.0.1.0.1003', key = `${t('L.origin-mark')} ${X}`;
+  // D's own paragraph, X's two typed lines — the newline between them X's own — D's own thirty paragraphs, X's third line, D's last
+  const own1 = 'Tumbler.\n\n', q1 = 'quoted one\nquoted two', own2 = '\n\n' + Array.from({ length: 30 }, (_, i) => words(30, i)).join('\n\n') + '\n\n', q2 = 'quoted three', own3 = '\n\nAfter.';
+  const [a, b, c, e, g] = [own1, q1, own2, q2, own3].map((x) => new TextEncoder().encode(x).length);
+  const text = own1 + q1 + own2 + q2 + own3, n = a + b + c + e + g, r1 = a + 1, r2 = a + b + c + 1;
+  /** X's metadata as a read answers it */
+  const meta = (/** @type {boolean} */ published, /** @type {number} */ asOf) => ({ doc: X, published, owner: '1.0.1', birth: published ? X + '.1' : null, birthExtent: published ? b : null, placed: null, baseExtent: null, source: null, asOf });
+  /** the index listing D an edition and X as a kind */
+  const listing = (/** @type {'draft' | 'edition'} */ kind) => REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: X, kind, label: 'x', standing: kind === 'draft' ? 'yours_to_read' : 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
+  REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: a }, { iStart: X + '.0.1.1', width: b }, { iStart: `${D}.0.1.${a + 1}`, width: c }, { iStart: X + '.0.1.100', width: e }, { iStart: `${D}.0.1.${a + c + 1}`, width: g }]);
+  REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.1', birth: D + '.1', birthExtent: n, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeMetadata(X, meta(false, 1));
+  assert.deepEqual(REC.doc(D).origins, [{ pos: r1, width: b, doc: X }, { pos: r2, width: e, doc: X }], 'two runs of X, parted by D\'s own newline');
+  const f = LAYER.foldOf(REC.doc(D)), box = docBox(D);
+  CAM.set({ x: box.x + box.w / 2, y: box.y + box.h / 3, scale: 12 / f.fs });
+  LAYER.frame();
+  assert.ok(LAYER.isMounted(D) && f.columns.every((col) => CAM.sy(box.y + col.y) > 0 && CAM.sy(box.y + col.y + col.h) < VH), 'D whole in view');
+  const html = String(/** @type {any} */ (LAYER.mountedSet().get(D)).el.children[0].innerHTML);
+  assert.deepEqual([...html.matchAll(/<span class="seg (same[^"]*)" data-origin="([^"]*)">([^<]*)<\/span>/g)].map((m) => [m[1], m[3]]), [['same opens', 'quoted one'], ['same closes', 'quoted two'], ['same opens closes', 'quoted three']], `its ground on each of its lines, its hairlines at each run's two ends: ${html}`);
+  assert.ok(!html.includes(t('C-33')) && !html.includes(t('L.origin-mark')), 'none of its words in the article');
+  const top = (/** @type {number} */ pos) => CAM.sy(box.y + placeOf(f, pos).y);
+  assert.deepEqual(statementsOf(X).map((s) => [s.pos, s.column, s.placed, s.text]), [[r1, placeOf(f, r1).column, placedBeside(r1, top(r1)), key + t('C-33')]], 'stated once, beside its first run, at its first line: its key, then C-33\'s words');
+  assert.deepEqual(LAYER.signsStanding().filter((s) => s.kind !== 'statement').map((s) => [s.kind, s.pos, s.text]), [['key', r2, key]], 'its second run its key alone, and no count');
+  // X read as published: C-33's words leave the statement in the next frame, nothing rebuilt
+  REC.takeMetadata(X, meta(true, 2));
+  LAYER.frame();
+  assert.deepEqual(statementsOf(X).map((s) => s.text), [key], 'its origin an edition: its key alone');
+  // the index listing X as the other kind than its metadata's
+  listing('draft');
+  LAYER.frame();
+  assert.deepEqual([LAYER.kindOf(REC.doc(X)), statementsOf(X).map((s) => s.text)], ['published', [key]], 'listed a draft, its metadata read published: its key alone still, as X\'s own corner says "published"');
+  listing('edition');
+  REC.takeMetadata(X, meta(false, 3));
+  LAYER.frame();
+  assert.deepEqual([LAYER.kindOf(REC.doc(X)), statementsOf(X).map((s) => s.text)], ['draft', [key + t('C-33')]], 'listed an edition, its metadata read a draft: C-33\'s words, as X\'s own corner says "draft"');
+}));
+
+test('at a box showing a version whose metadata is unread, its box listed an edition, a draft\'s run carries C-33\'s words as the corner there says "published" — its origin\'s statement its key, then C-33\'s words — and a copy from it names that version itself, read at no plain address (FP-39, FP-27)', () => onSigns(() => {
+  const X = '1.0.1.0.1003', own1 = 'Tumbler.\n\n', q = 'quoted one', own2 = '\n\nAfter.';
+  const [a, b, c] = [own1, q, own2].map((x) => new TextEncoder().encode(x).length), n = a + b + c;
+  // D's second version, which its box shows: its own paragraph, a typed line of the draft X's, its own last — its text and its image held, no metadata read of it
+  REC.takeSpanSet(D2, [{ subspace: 1, ordinal: 1, positions: n }]);
+  REC.takeDelivery(D2, [{ pos: 1, width: n, kind: 'content', text: own1 + q + own2, ref: null, origin: null }]);
+  REC.takeImage(D2, 1, [{ iStart: D + '.0.1.1', width: a }, { iStart: X + '.0.1.1', width: b }, { iStart: `${D}.0.1.${a + 1}`, width: c }]);
+  REC.takeMetadata(X, { doc: X, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  showing({ at: D2 });
+  const d = REC.doc(D2);
+  assert.deepEqual([d.meta, d.kind, d.origins, LAYER.kindOf(d)], [null, 'unknown', [{ pos: a + 1, width: b, doc: X }], 'published'], 'its metadata unread and its record telling no kind, a run of X in it: its corner\'s slot "published", by its box\'s listing');
+  CAM.set({ ...LAYER.centreOf(D2, a + 1), scale: 12 / LAYER.foldOf(d).fs });
+  LAYER.frame();
+  assert.deepEqual([LAYER.isMounted(D2), statementsOf(X).map((s) => [s.addr, s.pos, s.text])], [true, [[D2, a + 1, `${t('L.origin-mark')} ${X}${t('C-33')}`]]], 'its origin stated beside its run: its key, then C-33\'s words');
+  const copied = copyOf(D2);
+  assert.deepEqual(copied && [copied.doc, copied.member, copied.plain], [D2, D2, false], 'a copy from it names the version itself, read at no plain address');
+}));
 
 // ---- C-67's clause, from what the model holds ---------------------------------------------------------------------------
 
@@ -1482,6 +1509,24 @@ test('a document\'s kind is one test, which its corner\'s first slot and its box
   REC.takeMetadata(U, meta(U, false));
   assert.deepEqual(at(U), [true, 'draft'], 'its metadata read: a draft');
   assert.deepEqual([LAYER.kindSaid(REC.doc(U)), LAYER.kindSaid(REC.doc(E))], [t('F.kind.draft'), t('F.published')], 'in the slot\'s words');
+});
+
+test('the one test is asked by a record or by an address, and each document\'s kind at a transcluded run is read by it: an origin\'s is its metadata\'s word whatever the index lists it as, and unknown where nothing tells it, no record made to ask; and a draft\'s run carries C-33\'s words in a document that test says is published — a version whose metadata is unread taking its box\'s listing — never in a draft, nor where nothing has told the document\'s kind (FP-39)', () => {
+  const X = '1.0.1.0.1003', Y = '1.0.1.0.1004', V = D + '.2', U = '1.0.4.0.2', NONE = '1.0.4.0.9';
+  const meta = (/** @type {string} */ doc, /** @type {boolean} */ published) => ({ doc, published, owner: doc.split('.').slice(0, 3).join('.'), birth: published ? doc + '.1' : null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: X, kind: 'draft', label: 'x', standing: 'yours_to_read' }, { doc: Y, kind: 'edition', label: 'y', standing: 'public' }], counts: [{ account: '1.0.1', documents: 3 }], state: { arm: 'complete' } }));
+  assert.deepEqual([LAYER.originKind(X), LAYER.originKind(Y)], ['draft', 'edition'], 'no metadata read: each as the index lists it');
+  REC.takeMetadata(X, meta(X, true)); REC.takeMetadata(Y, meta(Y, false));
+  assert.deepEqual([LAYER.originKind(X), LAYER.isDraft(X), LAYER.kindOf(REC.doc(X))], ['edition', false, 'published'], 'listed a draft, its metadata read published: an edition, by its address as by its record, as its own corner says');
+  assert.deepEqual([LAYER.originKind(Y), LAYER.isDraft(Y), LAYER.kindOf(REC.doc(Y))], ['draft', true, 'draft'], 'listed an edition, its metadata read a draft: a draft');
+  assert.deepEqual([REC.has(NONE), LAYER.originKind(NONE), LAYER.isDraft(NONE), REC.has(NONE)], [false, 'unknown', null, false], 'an address nothing tells of: unknown, and no record made to ask');
+  assert.deepEqual([REC.has(V), LAYER.isDraft(V), REC.has(V)], [false, false, false], 'a version the model holds no record of: its box\'s listing, no record made to ask');
+  /** does a run of an origin of each kind carry C-33's words in a document, by its record */
+  const carries = (/** @type {string} */ addr) => /** @type {const} */ (['draft', 'edition', 'unknown']).map((kind) => LAYER.carriesC33(REC.doc(addr), kind));
+  assert.deepEqual(carries(D), [true, false, false], 'in a document listed an edition: a draft\'s run alone');
+  assert.deepEqual([REC.doc(V).meta, REC.doc(V).kind, carries(V)], [null, 'unknown', [true, false, false]], 'in a version of it no read has answered, its record telling no kind: a draft\'s run still, by its box\'s listing');
+  assert.deepEqual(carries(Y), [false, false, false], 'in a draft: none');
+  assert.deepEqual([LAYER.isDraft(REC.doc(U)), carries(U)], [null, [false, false, false]], 'in a document nothing has told the kind of: none');
 });
 
 test('a box\'s label is its contents line: its first line leading, at its em, its words as typed in the reading face, cut on a word, a draft\'s carrying no kind; its address at P-REG\'s one size and weight in the identifier\'s face, past its region\'s prefix and whole beside it for where its region is not named, in the title\'s ink; a withheld box\'s statement bracketed, the owner it names the identifier\'s — on the canvas and in the chrome alike (issues #16, #23; issue #423\'s design decision: "a label names a document and carries no kind")', () => {

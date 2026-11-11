@@ -8,8 +8,8 @@
 // run's identity, a key no gap holds, a count — and the statements
 // themselves, headed by the key: a withheld origin's keeping the pointer
 // alone of the clause and the kept clause, a transcluded origin's its
-// gesture to its source and C-33's words where a draft's run stands in a
-// published document; the one list of an article's runs; an item
+// gesture to its source and C-33's words where its holder says its run
+// carries them; the one list of an article's runs; an item
 // not rendered — one of a kind the page does not know among them, as a
 // delivery hands it — a gap of its positions, its words in it or in the
 // edge; every address the article sets in the identifier's face, a record's
@@ -48,7 +48,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, carriesC33, cornerHTML, cornerItems, cornerLead, cornerWords, keptHTML, keptStatement, statementHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, cornerHTML, cornerItems, cornerLead, cornerWords, keptHTML, keptStatement, statementHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
@@ -413,7 +413,7 @@ test('the runs of other documents\' material an article states are one list: eac
   assert.deepEqual([textIn(blocks, { pos: 7, width: 5 }), textIn(blocks, { pos: 11, width: 25 }), textIn(blocks, { pos: 12, width: 20 })], [{ from: 7, to: 11 }, { from: 32, to: 36 }, null], 'its own characters: a newline, a withheld run apart, none in a gap');
 });
 
-test('a transcluded origin\'s statement in its column\'s edge is headed by its key — the origin\'s mark and its address, the run\'s gesture to its source, a control carrying the source on the plane, a line in a pane — then C-33\'s words where a draft\'s run stands in a published document; a run\'s key alone is the same key; the scene-offer stays at a windowing document (issue #304; foundations §2.1)', () => {
+test('a transcluded origin\'s statement in its column\'s edge is headed by its key — the origin\'s mark and its address, the run\'s gesture to its source, a control carrying the source on the plane, a line in a pane — then C-33\'s words where its holder says its run carries them; a run\'s key alone is the same key; the scene-offer stays at a windowing document (issue #304; foundations §2.1)', () => {
   const X = '1.0.1.0.1003';
   const key = `<span class="src-key" data-src="${X}" role="button" tabindex="-1">${esc(t('L.origin-mark'))} ${idOf(X)}</span>`;
   const c33 = `<span class="c33" data-string="C-33">${esc(t('C-33'))}</span>`;
@@ -422,8 +422,6 @@ test('a transcluded origin\'s statement in its column\'s edge is headed by its k
   assert.equal(sourceStatementHTML(X, true, true), `<span class="src-key">${esc(t('L.origin-mark'))} ${idOf(X)}</span>${c33}`, 'in a pane: lines');
   assert.equal(edgeKeyHTML({ pos: 9, width: 4, origin: X, withheld: false }, false), key, 'a run\'s key alone');
   assert.equal(edgeKeyHTML({ pos: 9, width: 4, origin: X, withheld: true }, false), `<span class="wh-key id" role="button" tabindex="-1">${X}</span>`, 'a withheld run\'s key its address alone');
-  const published = doc(), draft = doc({ kind: 'draft', meta: null });
-  assert.deepEqual([carriesC33(published, 'draft'), carriesC33(published, 'edition'), carriesC33(published, 'unknown'), carriesC33(draft, 'draft')], [true, false, false, false], 'a draft\'s run in a published document alone');
   const html = articleHTML(doc({ blocks: [{ pos: 1, width: 12, kind: 'para', text: 'abcdefghijkl', origin: null }], origins: [{ pos: 5, width: 4, doc: X }] }), view(), '1.0.1');
   assert.ok(html.includes(`this document windows ${idOf(X)}`), 'the scene-offer at a windowing document, its address the identifier\'s');
 });

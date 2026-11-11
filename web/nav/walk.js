@@ -168,7 +168,7 @@
 // stand held), written once every read the clause waits on has answered and
 // kept as it stands on each dirty frame (`markDescribed`; FP-33); an item a
 // transcluded run touches says the material's origin in its own words and,
-// where the run carries C-33's words as its statement does (T-ARTICLE's
+// where the run carries C-33's words as its statement does (T-LAYER's
 // `carriesC33`), names those words as its origin's one description, which
 // every item of a run of that origin names (`originWords`); a document
 // is named first by its corner's first item (T-LAYER's `mirrorLead`): its
@@ -243,7 +243,7 @@ import * as PUMP from '../model/pump.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import * as FOCUS from './focus.js';
-import { placeholderOf, itemOf, itemWords, itemLength, recordOf, carriesC33, kindWord, CLAUSE_READING } from '../text/article.js';
+import { placeholderOf, itemOf, itemWords, itemLength, recordOf, kindWord, CLAUSE_READING } from '../text/article.js';
 import { farSays } from '../beams/held.js';
 import { docBox, accountCell, boardCell, accountAt, clearLeftOf, continuationCell, withinContinuation, membersAt, markKey, continuationOf } from '../plane/projection.js';
 import { lodOf, residueDepth, markScale } from '../plane/lod.js';
@@ -748,9 +748,9 @@ function keptSentence(n) {
  * statement shows (T-LAYER's `claimsKeptIn`; FP-23) — none while a read its
  * clause waits on is out, so none stands with a part missing (FP-33). A
  * transcluded origin's is C-33's words, where a run of it the item's block
- * touches carries them as its statement does (T-ARTICLE's `carriesC33`, by
- * T-LAYER's `originKind`); none where none does, the item's own words naming
- * the material's origin.
+ * touches carries them as its statement does (T-LAYER's `carriesC33`,
+ * `originKind`); none where none does, the item's own words naming the
+ * material's origin.
  * @param {Node} n
  * @returns {{origin: string, words: string} | null} its origin, and its words; null where the node holds no such run, or a withheld run's clause is not decided
  */
@@ -758,7 +758,7 @@ export function originWords(n) {
   const b = blockOf(n);
   if (!b) return null;
   if (b.kind !== 'withheld') {
-    const d = LAYER.shownOf(n.addr), org = d.origins.find((o) => touches(b, o) && carriesC33(d, LAYER.originKind(o.doc)));
+    const d = LAYER.shownOf(n.addr), org = d.origins.find((o) => touches(b, o) && LAYER.carriesC33(d, LAYER.originKind(o.doc)));
     return org ? { origin: org.doc, words: t('C-33') } : null;
   }
   if (!b.origin) return null;

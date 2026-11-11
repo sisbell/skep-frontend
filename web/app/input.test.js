@@ -59,7 +59,7 @@ import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
 import * as LINE from '../line/line.js';
 import { lodOf } from '../plane/lod.js';
-import { articleHTML, entitlementArm, edgeStatementHTML, placeholderOf, originRunsOf, sourceStatementHTML, carriesC33 } from '../text/article.js';
+import { articleHTML, entitlementArm, edgeStatementHTML, placeholderOf, originRunsOf, sourceStatementHTML } from '../text/article.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
 import { accountCell, boardCell, docBox } from '../plane/projection.js';
 import { outlineRects } from '../plane/layout.js';
@@ -176,7 +176,7 @@ test('a click on a transcluded run\'s key in its column\'s edge — heading its 
     // the run the edge states, and its key heading the statement as T-LAYER places it, the sign carrying the run
     const [taken] = originRunsOf(d);
     assert.deepEqual(taken, { pos: run.pos, width: run.width, origin: O, withheld: false }, 'the run, its own positions in the document windowing it');
-    const tag = (/<span class="src-key"[^>]*>/.exec(sourceStatementHTML(taken.origin, carriesC33(d, LAYER.originKind(O)), false)) || [''])[0];
+    const tag = (/<span class="src-key"[^>]*>/.exec(sourceStatementHTML(taken.origin, LAYER.carriesC33(d, LAYER.originKind(O)), false)) || [''])[0];
     const sign = { dataset: { addr: D, pos: String(taken.pos), width: String(taken.width), origin: O, sign: 'statement' } };
     const key = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf(tag) });
     Object.assign(key, { closest: (/** @type {string} */ sel) => (sel === '.edge-sign' ? sign : sel === '.src-key[data-src]' ? key : null) });

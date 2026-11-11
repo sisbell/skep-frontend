@@ -180,7 +180,8 @@
 // WHOLE BOARD do through N-GO; the paging keys and the zoom chords stay the
 // camera's. State (FP-10), beside the held keys: whether Mod+S has been
 // answered whole this session (`saveAnswered`).
-// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-14, FP-20, FP-21, FP-25, FP-35, FP-36.
+// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-14, FP-20, FP-21, FP-25, FP-35,
+// FP-36, FP-39.
 
 import * as GO from './go.js';
 import * as WALK from './walk.js';
@@ -201,7 +202,7 @@ import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as HINT from '../overlays/hint.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
-import { keptWord, keptStatement, isPublished } from '../text/article.js';
+import { keptWord, keptStatement } from '../text/article.js';
 import { accountOf, documentOf } from '../model/address.js';
 
 /** @typedef {import('../overlays/selection.js').InertSlot} InertSlot */
@@ -446,13 +447,14 @@ function readOnlySpan(ctx) {
  * A printable key or a paste at the walk's span in text the person may not
  * edit (`readOnlySpan`) answered by its document's line, its hint at the
  * focus, nothing placed (see the head; D5 K-72, K-93; foundations §2.7): at
- * an edition of the session's account — its trunk read as published by its
- * metadata, else by the index's kind (T-ARTICLE's `isPublished`) — C-45
- * naming the trunk; at a document of another account B3-S13's line naming
- * its owner (M-REC's `ownerAccount`). Nothing is answered, and K-9's line is
- * the caller's, where no session names an account, where no read has told a
- * document of the session's account is published, and where the owner the
- * line would name is the session's own account.
+ * a document of the session's account the one test says is published, asked
+ * of the version the walk stands in as its corner asks it (T-LAYER's
+ * `isDraft`; FP-39), C-45 naming the document; at a document of another
+ * account B3-S13's line naming its owner (M-REC's `ownerAccount`). Nothing
+ * is answered, and K-9's line is the caller's, where no session names an
+ * account, where that test does not say published of a document of the
+ * session's account, and where the owner the line would name is the
+ * session's own account.
  * @param {KeyboardEvent} e
  * @param {Ctx} ctx
  * @param {import('../overlays/hint.js').Writing | null} [writing] where the person was writing, which a printable key's line ends with (`writingElsewhere`); null for a paste
@@ -461,13 +463,12 @@ function readOnlySpan(ctx) {
 function siteSays(e, ctx, writing = null) {
   const s = readOnlySpan(ctx), account = REC.session()?.account, doc = s && documentOf(s.addr);
   if (!s || !account || !doc) return false;
-  const d = REC.doc(REC.has(doc) ? doc : s.addr);
   if (accountOf(doc) === account) {
-    if (!isPublished(d)) return false;
+    if (LAYER.isDraft(s.addr) !== false) return false;
     HINT.show('C-45', { D: doc }, { ...hinted(e, ctx), writing });
     return true;
   }
-  const owner = REC.ownerAccount(d);
+  const owner = REC.ownerAccount(REC.doc(REC.has(doc) ? doc : s.addr));
   if (!owner || owner === account) return false;
   HINT.show('B3.row.others-document', { owner }, { ...hinted(e, ctx), writing });
   return true;

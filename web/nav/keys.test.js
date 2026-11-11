@@ -16,7 +16,9 @@
 // the session's account by C-45 naming the document, whole at every press —
 // K-9's line standing there where no read told the edition is published,
 // where the owner the line would name is the session's own account and where
-// no session names an account — each line its hint at the focus, whole at its
+// no session names an account, and at a version its box shows the one test
+// of that version deciding between the two, as its corner says it — each line
+// its hint at the focus, whole at its
 // first press in the session, its first clause after, an auto-repeat answered
 // by nothing; Mod+S writes nothing, answered
 // at the corner and in the status region with the kept state's statement
@@ -83,7 +85,7 @@
 // from it (D5 K-8, K-9,
 // K-30, K-45 … K-52, K-57, K-70, K-71, K-72, K-74, K-76, K-77, K-93, K-100,
 // M-2, M-13, §1.6, §4 rules 2, 3 and 8; D6 BM-1, BM-3, BM-4, BM-52, BM-54,
-// BM-70, BM-75; B3-S1, B3-S13; P47; FP-10, FP-14, FP-36). In a draft holding
+// BM-70, BM-75; B3-S1, B3-S13; P47; FP-10, FP-14, FP-36, FP-39). In a draft holding
 // typed text the slots' chords act on the span the text shown holds: the
 // board asked by its base's positions and the card standing at that span, and
 // over a span wholly of new words follow and read side by side give their
@@ -377,6 +379,54 @@ test('at the walk\'s span of an edition of the session\'s account, at its readin
   assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
   assert.equal(HINT.standing()?.id, 'F.swallow', 'no session: K-9\'s line at another\'s document');
   assert.deepEqual([WRITE.edits(E), WRITE.edits(A), WRITE.edits(O)], [[], [], []], 'nothing edited anywhere');
+}));
+
+test('a printable key at a span of a version its box shows is answered by the one test of that version, as its corner says it: its metadata read published, C-45 naming its document though that document\'s own record tells nothing; its kind still being read — its metadata unread, its box unlisted — K-9\'s line, though its document\'s metadata reads published; its metadata unread and its box listed an edition, C-45; and at an edition\'s bare address the index lists a draft, its metadata read published, C-45 (FP-39; D5 K-72)', () => onPlane(async () => {
+  const V = E + '.2', c45 = t('C-45', { D: E });
+  /** the version's text and image held, as the page reads them where its box shows it */
+  const holdVersion = () => {
+    REC.takeSpanSet(V, [{ subspace: 1, ordinal: 1, positions: N }]);
+    REC.takeDelivery(V, [{ pos: 1, width: N, kind: 'content', text: TEXT, ref: null, origin: null }]);
+    REC.takeImage(V, 1, [{ iStart: E + '.0.1.1', width: N }]);
+  };
+  /** a document's metadata as a read answers it: published */
+  const published = (/** @type {string} */ doc) => ({ doc, published: true, owner: '1.0.1', birth: E + '.1', birthExtent: N, placed: null, baseExtent: null, source: null, asOf: 1 });
+  /** q typed at the walk's span of an address: the line that answered it, by its string's id, and its words */
+  const typedAt = async (/** @type {string} */ addr) => {
+    await focusOn(addr, 14);
+    assert.deepEqual([WALK.current()?.addr, LAYER.editable(addr), LAYER.atReadingScale(addr)], [addr, false, true], `the walk on a span of ${addr}, text the person may not edit, at its reading scale`);
+    assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
+    return [HINT.standing()?.id, HINT.standing()?.whole];
+  };
+  // the box E shows its second version
+  WALK.readers({ shown: (a) => (a === E || a === V ? V : a) });
+  try {
+    // its metadata unread, its box listed an edition
+    listed([[E, 'edition']]);
+    holdVersion();
+    assert.deepEqual([REC.doc(V).meta, LAYER.kindOf(REC.doc(V))], [null, 'published'], 'the version\'s metadata unread, its box listed an edition: its corner\'s slot "published"');
+    assert.deepEqual(await typedAt(V), ['C-45', c45], 'C-45 naming its document');
+
+    // its metadata read published; its box unlisted, its document's own record telling nothing
+    listed([]);
+    REC.takeMetadata(V, published(V));
+    assert.deepEqual([REC.place(E), REC.doc(E).meta, REC.doc(E).kind, LAYER.kindOf(REC.doc(V))], [undefined, null, 'unknown', 'published'], 'its box unlisted, its document\'s record telling no kind; the version\'s metadata read: its corner\'s slot "published"');
+    assert.deepEqual(await typedAt(V), ['C-45', c45], 'C-45 naming its document, as its corner says "published"');
+
+    // its kind still being read: its metadata unread and its box unlisted, though its document's own metadata reads published
+    REC.invalidate(V);
+    holdVersion();
+    REC.takeMetadata(E, published(E));
+    assert.deepEqual([REC.doc(V).meta, LAYER.isDraft(E), LAYER.kindOf(REC.doc(V))], [null, false, 'reading'], 'the version\'s metadata unread, its box unlisted: its corner\'s slot being read, whatever its document\'s metadata says');
+    assert.deepEqual(await typedAt(V), ['F.swallow', t('F.swallow', { 'LEAP chord': KEYS.drawChord('Mod+L') })], 'K-9\'s line, never C-45: nothing has told this version\'s kind');
+  } finally { WALK.readers({}); }
+
+  // the bare address, the index listing a draft and its metadata read published
+  listed([[E, 'draft']]);
+  REC.takeMetadata(E, published(E));
+  assert.deepEqual([REC.place(E)?.kind, LAYER.kindOf(REC.doc(E))], ['draft', 'published'], 'listed a draft, its metadata read published: its corner\'s slot "published"');
+  assert.deepEqual(await typedAt(E), ['C-45', c45], 'C-45, by its metadata\'s word');
+  assert.deepEqual([caret(), SEL.selected(), WRITE.edits(E), WRITE.edits(V)], [null, null, [], []], 'nothing placed: no caret, nothing selected, nothing edited');
 }));
 
 test('Mod+S writes nothing and is answered at the corner and in the status region: where the draft has a kept state, its statement whole at the first press in a session — the save chord\'s line at "kept" — and the corner\'s own word after it, the statement whole on the word\'s act, "nothing to save —" before the word and its reason at the other two; with no kept state the chord is taken, nothing opens and nothing is said; Enter at the corner is the word\'s act (K-57, K-74; BM-3; P41; FP-36)', () => onPlane(async ({ said }) => {

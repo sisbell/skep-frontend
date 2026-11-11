@@ -118,7 +118,7 @@ import { t, tHTML, lastRead } from '../strings.js';
 import { esc } from '../util.js';
 import * as LK from '../links/links.js';
 import { inkOf } from '../beams/beams.js';
-import { edgeStatementHTML, placeholderOf, originRunsOf, sourceStatementHTML, carriesC33 } from '../text/article.js';
+import { edgeStatementHTML, placeholderOf, originRunsOf, sourceStatementHTML } from '../text/article.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA, SAMENESS } from '../plane/register.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as PROV from '../overlays/provenance.js';
@@ -1542,7 +1542,7 @@ test('a pane holds a transcluded run the reader reads as one run across the type
   assert.ok(!html.includes(t('C-33')) && !html.includes(t('L.origin-mark')), 'none of its words in the pane\'s lines');
   const d = REC.doc(WE), [run] = originRunsOf(d);
   assert.deepEqual(run, { pos: HEAD.length + 1, width: RUN.length, origin: X, withheld: false }, 'the run the pane\'s edge states');
-  assert.equal(sourceStatementHTML(run.origin, carriesC33(d, LAYER.originKind(run.origin)), true), `<span class="src-key">${esc(t('L.origin-mark'))} <span class="id">${X}</span></span><span class="c33" data-string="C-33">${esc(t('C-33'))}</span>`, 'its key and C-33\'s words, lines, nothing a control');
+  assert.equal(sourceStatementHTML(run.origin, LAYER.carriesC33(d, LAYER.originKind(run.origin)), true), `<span class="src-key">${esc(t('L.origin-mark'))} <span class="id">${X}</span></span><span class="c33" data-string="C-33">${esc(t('C-33'))}</span>`, 'its key and C-33\'s words, lines, nothing a control');
   assert.deepEqual(fake.unanswered, []);
 }));
 

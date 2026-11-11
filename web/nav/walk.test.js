@@ -8,7 +8,10 @@
 // length and origin — naming its origin's one description, which every run
 // of it names, made from the run's placeholder once its clause is read, and
 // every item a transcluded draft's run touches in a published document
-// naming that origin's one description, C-33's words —
+// naming that origin's one description, C-33's words, each document's kind
+// there read by the one test — an origin's its metadata's word whatever the
+// index lists it as, a version's its box's listing where its metadata is
+// unread —
 // each block that holds no text by its kind, a document led by its corner's
 // first item — its kind, being read where nothing told it, a withheld box's
 // words where no kind can be read — and a link's far end as its tail does, what its text holds of
@@ -51,7 +54,8 @@
 // mirror follow the text shown — a typed line a stop, a deleted one none, a
 // stop holding its place by its bytes, nothing moved at an ack, the mirror
 // reading the typed words and saying a hold from the held lines alone
-// (FP-8, FP-20, FP-21, FP-22, FP-23, FP-24, FP-29, FP-33, FP-34, FP-35, FP-36).
+// (FP-8, FP-20, FP-21, FP-22, FP-23, FP-24, FP-29, FP-33, FP-34, FP-35, FP-36,
+// FP-39).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -1887,7 +1891,7 @@ test('where no board is held the walk\'s root names none: it says why, in the wo
 });
 
 // placed last: it holds a document of the account the continuation's tests count, and attaches a mirror of its own
-test('a transcluded origin carrying C-33\'s words has one description in the mirror — those words — which every item its runs touch names, across the typed lines one run crosses and its other run alike, and an item of the document\'s own names none; an origin read as an edition carries none (issue #304\'s design decision: "The mirror gives each origin one description, and every run points to it")', async () => {
+test('a transcluded origin carrying C-33\'s words has one description in the mirror — those words — which every item its runs touch names, across the typed lines one run crosses and its other run alike, and an item of the document\'s own names none; an origin read as an edition carries none, its kind its metadata\'s word whatever the index lists it as, and a version whose metadata is unread carries them where its box is listed an edition (issue #304\'s design decision: "The mirror gives each origin one description, and every run points to it"; FP-39)', async () => {
   const platform = globalThis.document;
   globalThis.document = /** @type {any} */ ({ activeElement: null });
   /** @type {Array<{attrs: Record<string, string>, html: string}>} */
@@ -1905,6 +1909,12 @@ test('a transcluded origin carrying C-33\'s words has one description in the mir
   };
   /** the draft's metadata as a read answers it: a draft, or its edition */
   const meta = (/** @type {boolean} */ published) => ({ doc: T2_ORIGIN, published, owner: '1.0.1', birth: published ? T2_ORIGIN + '.1' : null, birthExtent: published ? 33 : null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  /** the index listing D, E and T2 as editions and the draft's origin as a kind */
+  const listing = (/** @type {'draft' | 'edition'} */ kind) => REC.takeIndex(/** @type {any} */ ({ docs: [...[D, E, T2].map((doc) => ({ doc, kind: 'edition', label: doc, standing: 'public' })), { doc: T2_ORIGIN, kind, label: T2_ORIGIN, standing: kind === 'draft' ? 'yours_to_read' : 'public' }], counts: [{ account: '1.0.1', documents: 4 }], state: { arm: 'complete' } }));
+  /** the item at a document's second typed line of the draft's */
+  const second = (/** @type {string} */ addr) => /** @type {import('./walk.js').Node} */ ({ kind: 'block', addr, pos: 22, link: null });
+  /** T2's second version, which nothing has read the metadata of */
+  const T2V = T2 + '.2';
   try {
     REC.takeMetadata(T2_ORIGIN, meta(false));
     await PUMP.loadWhole(T2);
@@ -1918,7 +1928,21 @@ test('a transcluded origin carrying C-33\'s words has one description in the mir
     assert.deepEqual(WALK.originWords({ kind: 'block', addr: T2, pos: 22, link: null }), { origin: T2_ORIGIN, words: t('C-33') });
     REC.takeMetadata(T2_ORIGIN, meta(true));
     assert.equal(WALK.originWords({ kind: 'block', addr: T2, pos: 22, link: null }), null, 'the draft read as published: no C-33, no description');
+    // the index listing the origin as the other kind than its metadata's
+    listing('draft');
+    assert.deepEqual([LAYER.kindOf(REC.doc(T2_ORIGIN)), WALK.originWords(second(T2))], ['published', null], 'listed a draft, its metadata read published: none still, as the origin\'s own corner says "published"');
+    listing('edition');
+    REC.takeMetadata(T2_ORIGIN, meta(false));
+    assert.deepEqual([LAYER.kindOf(REC.doc(T2_ORIGIN)), WALK.originWords(second(T2))], ['draft', { origin: T2_ORIGIN, words: t('C-33') }], 'listed an edition, its metadata read a draft: C-33\'s words, as the origin\'s own corner says "draft"');
+    // T2's second version: its text and its image held, its metadata unread, its box listed an edition
+    REC.takeSpanSet(T2V, [{ subspace: 1, ordinal: 1, positions: T2_TEXT.length }]);
+    REC.takeDelivery(T2V, [{ pos: 1, width: T2_TEXT.length, kind: 'content', text: T2_TEXT, ref: null, origin: null }]);
+    REC.takeImage(T2V, 1, [{ iStart: T2 + '.0.1.1', width: 10 }, { iStart: T2_ORIGIN + '.0.1.1', width: 21 }, { iStart: T2 + '.0.1.11', width: 12 }, { iStart: T2_ORIGIN + '.0.1.50', width: 12 }]);
+    assert.deepEqual([REC.doc(T2V).meta, REC.doc(T2V).kind, LAYER.kindOf(REC.doc(T2V)), WALK.originWords(second(T2V))], [null, 'unknown', 'published', { origin: T2_ORIGIN, words: t('C-33') }],
+      'its metadata unread and its record telling no kind: C-33\'s words, as its corner says "published" by its box\'s listing');
   } finally {
+    REC.invalidate(T2V);
+    index([D, E]);
     globalThis.document = platform;
   }
 });

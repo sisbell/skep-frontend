@@ -307,7 +307,8 @@
 // was made with it, or one whose run the reader reads (`originRunsAt`) — a
 // line of whose runs meets the visible view states itself once, compact
 // (T-ARTICLE's `edgeStatementHTML`, `sourceStatementHTML`, C-33's words there
-// read as the frame stands — `originKind`), beside the run it stood beside
+// read as the frame stands, the run's document's kind and its origin's each
+// by the one test — `carriesC33`), beside the run it stood beside
 // last frame while a line of that run is in view, else beside its first run
 // in view in reading order, the run held by its identity, its origin and its
 // first byte's permanent address (`RunAt.id`; FP-38); each run in view adds a
@@ -468,7 +469,7 @@
 // (`frameStats`).
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-14, FP-20, FP-21, FP-22, FP-23,
 // FP-24, FP-25, FP-26, FP-27, FP-29, FP-30, FP-31, FP-33, FP-34, FP-36,
-// FP-37, FP-38.
+// FP-37, FP-38, FP-39.
 
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
@@ -481,7 +482,7 @@ import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, inFirstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX } from '../plane/labels.js';
-import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, kindWord, keptHTML, statementHTML, keptWord, keptStatement, blockMarks, symbolLit, editionClause, copyText, firstLineOf, isPublished, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, carriesC33, sourceStatementHTML } from './article.js';
+import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, kindWord, keptHTML, statementHTML, keptWord, keptStatement, blockMarks, symbolLit, editionClause, copyText, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
 import { farShort, whyOf } from '../beams/held.js';
 import { applyEdits, sourceRuns, fromBase, boundaries, wordStop } from '../model/derive.js';
 import { homeOf, documentOf, memberOf, versionAddress, accountOf } from '../model/address.js';
@@ -1316,20 +1317,30 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
 }
 
 /**
- * An origin document's kind as the page reads it (T-ARTICLE's `carriesC33`):
- * the index's, where it lists the origin; else its metadata's word, where a
- * read answered it; else the record's, unknown where none is held. The one
+ * An origin document's kind as the page reads it, by the one test (`isDraft`;
+ * FP-39): a draft, an edition, or unknown where nothing has told it. The one
  * reading the plane's and a pane's statements of a transcluded origin and the
- * ARIA mirror's description of it take, each as it stands (FP-33).
+ * ARIA mirror's description of it take, each as it stands (FP-33). No record
+ * of the origin is made to answer.
  * @param {string} origin
  * @returns {'edition' | 'draft' | 'unknown'}
  */
 export function originKind(origin) {
-  const p = REC.place(origin);
-  if (p) return p.kind;
-  const d = REC.has(origin) ? REC.doc(origin) : null;
-  return !d ? 'unknown' : d.meta ? (d.meta.published ? 'edition' : 'draft') : d.kind;
+  const draft = isDraft(origin);
+  return draft === true ? 'draft' : draft === false ? 'edition' : 'unknown';
 }
+
+/**
+ * Does a transcluded run the reader reads carry C-33's words (foundations
+ * §2.1): a draft's run in a published document, the document's kind read by
+ * the one test as its corner reads it (`isDraft`; FP-39). The one rule its
+ * origin's statement on the plane and in a reading scene's pane (`placeSigns`;
+ * SC) and the ARIA mirror's description of its origin (N-WALK) are made by.
+ * @param {Doc} d the record of the document the run stands in, as the face stating it holds it: the version a box shows, a pane's own
+ * @param {'edition' | 'draft' | 'unknown'} kind its origin's kind (`originKind`)
+ * @returns {boolean}
+ */
+export const carriesC33 = (d, kind) => kind === 'draft' && isDraft(d) === false;
 
 /**
  * The chain's count a box's corner names (T-ARTICLE's `ArticleView.members`):
@@ -1607,17 +1618,17 @@ const madeFrom = (/** @type {Doc} */ d) => ({ addr: d.addr, blocks: d.blocks, ru
 /**
  * Where the words of a version a box shows are read (`Where`; FP-27): the
  * version itself; the member its text is — a version's own address, else, at
- * a published document's plain address (T-ARTICLE's `isPublished`), the head
- * of the chain its corner states (T-ARTICLE's `statedChain`, over its box's
- * count, `chainOf`), so a copy names the member the corner names (FP-22);
- * and whether it is that plain address. A draft names no member, nor a plain
- * address no read has told published.
+ * a published document's plain address (the one test's, `isDraft`; FP-39), the
+ * head of the chain its corner states (T-ARTICLE's `statedChain`, over its
+ * box's count, `chainOf`), so a copy names the member the corner names
+ * (FP-22); and whether it is that plain address. A draft names no member, nor
+ * a plain address nothing has told published.
  * @param {Doc} d the model's record of the version a box shows
  * @returns {Where}
  */
 function shownWhere(d) {
   if (memberOf(d.addr) != null) return { doc: d.addr, member: d.addr, plain: false };
-  const published = !d.refused && isPublished(d), n = published ? statedChain(d, chainOf(d.addr)) : null;
+  const published = !d.refused && isDraft(d) === false, n = published ? statedChain(d, chainOf(d.addr)) : null;
   return { doc: d.addr, member: n != null ? versionAddress(d.addr, n) : null, plain: published };
 }
 
@@ -2614,19 +2625,25 @@ export function withheldBox(d) { return t('F.corner.withheld', { owner: REC.owne
 /** a box's address as its label sets it where its region is named in view: the address of the version it shows past its region's prefix, led by the separator after the prefix — ".0.9", a pinned version's ".0.9.2", as the address display spells a field past a prefix (F-9; foundations §3.1) */
 export const shortAddr = (/** @type {Doc} */ d) => (d.account ? d.addr.slice(d.account.length) : d.addr);
 /**
- * Is a document a draft — the one test its kind is read by (FP-33), which
- * decides its corner's first slot (`kindOf`) and its box's edge below its
- * reading scale (P-RENDER's): its metadata's word, where a read answered it;
- * else the kind the model knows of its own record — its index row's, or its
+ * Is a document a draft — the one test its kind is read by (FP-39, FP-33),
+ * which decides its corner's first slot (`kindOf`), its box's edge below its
+ * reading scale (P-RENDER's), whether its text is one the person may edit
+ * (`editable`), where a copy says its words were read (`shownWhere`), C-33's
+ * words at a transcluded run (`carriesC33`, `originKind`) and C-45 at a key
+ * typed in it (N-KEYS'): its metadata's word, where a read answered it; else
+ * the kind the model knows of its own record — its index row's, or its
  * metadata's at its box; else its box's listing in the index; null where none
- * of them answers.
- * @param {Doc} d
+ * of them answers. Asked by an address, it reads the record the model holds
+ * of that address and makes none.
+ * @param {Doc | string} of the record a face states — the version a box shows, a pane's own — or a document's address
  * @returns {boolean | null}
  */
-export function isDraft(d) {
-  if (d.meta) return !d.meta.published;
-  if (d.kind !== 'unknown') return d.kind === 'draft';
-  const p = REC.place(boxOf(d.addr));
+export function isDraft(of) {
+  const addr = typeof of === 'string' ? of : of.addr;
+  const d = typeof of !== 'string' ? of : REC.has(of) ? REC.doc(of) : null;
+  if (d && d.meta) return !d.meta.published;
+  if (d && d.kind !== 'unknown') return d.kind === 'draft';
+  const p = REC.place(boxOf(addr));
   return p ? p.kind === 'draft' : null;
 }
 
@@ -3690,8 +3707,8 @@ const SIGN_ORDER = Object.freeze({ statement: 0, key: 1, count: 2 });
  * beside last frame while that run is in view, else beside the origin's first
  * run in view, held by the run's identity (`RunAt.id`): a withheld origin's
  * (`edgeStatementHTML`), a transcluded origin's (`sourceStatementHTML`), its
- * C-33's words read as the frame stands (`originKind`, T-ARTICLE's
- * `carriesC33`); a key no gap holds; a withheld run's others' count (LK's
+ * C-33's words read as the frame stands (`carriesC33`, over `originKind`); a
+ * key no gap holds; a withheld run's others' count (LK's
  * `countAt`) — each in the edge of the column holding its run's first line in
  * view, at a share of the text's size never below P-REG's LABEL_MIN_PX, the
  * edge's width wide; the signs of one column's edge stacked by the one hold
