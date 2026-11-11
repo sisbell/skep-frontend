@@ -7,7 +7,8 @@
 // decoded and its target empty. Label matching takes only text that parses
 // as none of these: the index's places whose address begins with the text or
 // whose label holds it, the system account's left out, at most `limit` rows,
-// ordered by where the text falls in the title and then by address. With
+// ordered by where the text falls in the title and then by address, each
+// naming its document by its label and its address and carrying no kind. With
 // nothing typed, the current address's levels — the whole board first, where
 // a board is held (FP-35), HOME where it differs from the board, the
 // account's region where it is not HOME, the whole document — then the
@@ -53,7 +54,7 @@ export function matches(text, ctx, limit = 24) {
   for (const p of ctx.places) {
     if (p.system) continue;
     const label = p.label || '';
-    if (p.doc.startsWith(q) || label.toLowerCase().includes(lq)) out.push({ kind: 'label', addr: p.doc, title: label || p.doc, sub: p.doc + (p.kind === 'draft' ? ' · draft' : ''), exact: false });
+    if (p.doc.startsWith(q) || label.toLowerCase().includes(lq)) out.push({ kind: 'label', addr: p.doc, title: label || p.doc, sub: p.doc, exact: false });
     if (out.length >= limit) break;
   }
   out.sort((a, b) => (a.title.toLowerCase().indexOf(lq) - b.title.toLowerCase().indexOf(lq)) || cmpAddr(a.addr, b.addr));

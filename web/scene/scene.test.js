@@ -41,7 +41,10 @@
 // a live caret it was opened at standing live through its close (D5 K-63);
 // each pane's article
 // T-LAYER's mount on the inner side of its corner, its byline's facts read
-// before the pane is set (FP-12, FP-34), made with the image its whole read
+// before the pane is set (FP-12, FP-34), its region named by its corner's
+// first item — its kind — then its address, its corner opening with that
+// kind, said once in the status region where it fills under the focus
+// (FP-33, FP-36), made with the image its whole read
 // asks where the page held its text with none, a copy from it named where the
 // scene read its words — an edition at its bare address its member, a draft
 // no member and no positions (FP-27); the opening ended by a navigation
@@ -1060,8 +1063,8 @@ test('a row naming a newer member pins an edition read at its bare address at on
   // at once, from the row, no read awaited
   assert.deepEqual(paneState('a'), { kind: 'pinned', src: ED2, names: ED2, shows: ED2, k: 2, n: 3, read: 3, lacks: null }, 'pinned to the member its text is, offering the newest');
   const corner = p.cornerA.innerHTML;
-  assert.ok(corner.includes(esc(t('F.corner.pinned', { published: t('F.published.notebook'), k: 2 }))) && corner.includes(esc(t('F.version-of', { k: 2, n: 3 }))), `its corner reads version 2 of 3, never the latest: ${corner}`);
-  assert.ok(!corner.includes(esc(t('F.corner.latest', { published: t('F.published.notebook') }))), 'never "the latest"');
+  assert.ok(corner.includes(esc(t('F.corner.pinned', { k: 2 }))) && corner.includes(esc(t('F.version-of', { k: 2, n: 3 }))), `its corner reads version 2 of 3, never the latest: ${corner}`);
+  assert.ok(!corner.includes(esc(t('F.corner.latest'))), 'never "the latest"');
   assert.ok(corner.includes(`data-read="3"`) && corner.includes(esc(t('F.versions.read', { k: 3 }))), 'its corner\'s act: read version 3');
   assert.ok(String(shownIn(p.paneA, 'a').innerHTML).includes(`<span class="addr id">${ED2}</span>`) && p.names.a.textContent === ED2, 'its head and the bar name the member');
   assert.deepEqual(p.said.slice(told), [arrived], 'the arrival said once, politely');
@@ -1604,16 +1607,16 @@ test('a scene on a document a far end names whole, left from a pane or a pane\'s
   assert.deepEqual(fake.unanswered.slice(unanswered), []);
 }));
 
-test('pane B, the whole document a far end names, is named by its address and the words saying the whole document is the link\'s end, and is the current location — pane A neither, nor pane B in a scene opened on a passage (issue #59\'s design decision: "its name says the whole document is the end … aria-current goes on the document")', () => onPage(async (p) => {
+test('pane B, the whole document a far end names, is named by its kind, its address and the words saying the whole document is the link\'s end, and is the current location — pane A by its kind and its address alone, neither current, nor pane B in a scene opened on a passage (issue #59\'s design decision: "its name says the whole document is the end … aria-current goes on the document"; issue #423\'s: "its region is named the same way")', () => onPage(async (p) => {
   const unanswered = fake.unanswered.length;
   p.item.focus();
   await SCENE.open(A, B, { ...NEAR, wholeB: true });
-  assert.deepEqual([p.headB.id, p.paneB.attrs['aria-labelledby'], p.paneB.attrs['aria-current']], ['sceneB-name', 'sceneB-name sceneB-whole', 'location'], 'pane B: its address, then the whole end\'s words; the current location');
-  assert.deepEqual([p.paneA.attrs['aria-labelledby'], p.paneA.attrs['aria-current']], ['sceneA-name', undefined], 'pane A: its address alone, and no current');
+  assert.deepEqual([p.headB.id, p.paneB.attrs['aria-labelledby'], p.paneB.attrs['aria-current']], ['sceneB-name', 'sceneB-kind sceneB-name sceneB-whole', 'location'], 'pane B: its kind, its address, then the whole end\'s words; the current location');
+  assert.deepEqual([p.paneA.attrs['aria-labelledby'], p.paneA.attrs['aria-current']], ['sceneA-kind sceneA-name', undefined], 'pane A: its kind and its address alone, and no current');
   assert.ok(p.bar.innerHTML.includes(`<span id="sceneB-whole" data-string="L.scene.whole-end" hidden>${esc(t('L.scene.whole-end'))}</span>`), `the words, hidden, in the bar: ${p.bar.innerHTML}`);
   SCENE.close();
   await SCENE.open(A, B, NEAR);
-  assert.deepEqual([p.paneB.attrs['aria-labelledby'], p.paneB.attrs['aria-current']], ['sceneB-name', undefined], 'opened on a passage: pane B its address alone, and no current');
+  assert.deepEqual([p.paneB.attrs['aria-labelledby'], p.paneB.attrs['aria-current']], ['sceneB-kind sceneB-name', undefined], 'opened on a passage: pane B its kind and its address alone, and no current');
   assert.ok(!p.bar.innerHTML.includes('sceneB-whole'), 'and no such words');
   assert.deepEqual(fake.unanswered.slice(unanswered), []);
 }));
@@ -2126,6 +2129,42 @@ test('a pane opened from a record the page derived — the kept text with a held
   assert.deepEqual(fake.unanswered, []);
 }));
 
+test('each pane is named by its corner\'s first item, then its address: the bar\'s hidden words its kind — "draft" at a draft, "published" at an edition — and its corner opening with that kind in its slot (issue #423\'s design decision: "A scene pane has no item, so its region is named the same way"; FP-33)', () => onPage(async (p) => {
+  const unanswered = fake.unanswered.length;
+  await SCENE.open(WRITING, B);
+  assert.ok(p.bar.innerHTML.includes(`<span id="sceneA-kind" hidden>${esc(t('F.kind.draft'))}</span>`) && p.bar.innerHTML.includes(`<span id="sceneB-kind" hidden>${esc(t('F.published'))}</span>`), `the bar's hidden words: each pane's kind — ${p.bar.innerHTML}`);
+  assert.deepEqual([p.paneA.attrs['aria-labelledby'], p.paneB.attrs['aria-labelledby']], ['sceneA-kind sceneA-name', 'sceneB-kind sceneB-name'], 'each pane named by its kind, then its address');
+  assert.ok(/<div class="corner[^"]*"[^>]*><span class="kind" data-kind="draft"/.test(p.paneA.innerHTML) && /<div class="corner[^"]*"[^>]*><span class="kind" data-kind="published"/.test(p.paneB.innerHTML), `each corner opens with its kind: ${p.paneA.innerHTML.slice(0, 300)} | ${p.paneB.innerHTML.slice(-600)}`);
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+test('a pane\'s kind is said once in the status region where its corner\'s slot fills while the platform\'s focus stands in the pane — a record opened with its kind being read, its box listed a draft — the corner and the bar\'s words its name leads with written again in place; nothing said where the focus stands elsewhere (issue #423\'s design decision: "If it fills while the focus is in that document, the status region says so once"; FP-36)', () => onPage(async (p) => {
+  const X = '1.0.1.0.72', Y = '1.0.1.0.73';
+  const listing = (/** @type {Array<{doc: string, kind: string}>} */ extra) => REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: A, kind: 'edition', label: 'a', standing: 'public' }, { doc: B, kind: 'edition', label: 'b', standing: 'public' }, ...extra.map((x) => ({ ...x, label: x.doc, standing: 'yours_to_read' }))], counts: [{ account: '1.0.1', documents: 2 + extra.length }], state: { arm: 'complete' } }));
+  /** a record the page holds of a document whose kind nothing has told: listed nowhere, no metadata read */
+  const untold = (/** @type {string} */ addr) => ({ ...draftOf(addr, 'An untold note.'), kind: /** @type {const} */ ('unknown'), derived: { from: addr, rows: [], edits: 0, at: null } });
+  try {
+    await SCENE.open(A, untold(X));
+    assert.ok(/<span class="kind pending" data-kind="reading"/.test(p.paneB.innerHTML) && p.bar.innerHTML.includes(`<span id="sceneB-kind" hidden>${esc(t('L.slot.reading'))}</span>`), 'its kind being read: the slot an empty box, its name leading with that');
+    p.paneB.focus();
+    const told = p.said.length;
+    SCENE.markKept();
+    assert.deepEqual(p.said.slice(told), [], 'nothing told yet: nothing said');
+    listing([{ doc: X, kind: 'draft' }]);
+    SCENE.markKept();
+    SCENE.markKept();
+    assert.deepEqual(p.said.slice(told), [t('F.kind.draft')], 'its slot filled under the focus: "draft", said once');
+    assert.ok(p.cornerB.innerHTML.startsWith('<span class="kind" data-kind="draft"'), `its corner written again in place: ${p.cornerB.innerHTML}`);
+    SCENE.close();
+    await SCENE.open(A, untold(Y));
+    p.paneA.focus();
+    const after = p.said.length;
+    listing([{ doc: X, kind: 'draft' }, { doc: Y, kind: 'draft' }]);
+    SCENE.markKept();
+    assert.deepEqual(p.said.slice(after), [], 'filled while the focus stands in the other pane: nothing said');
+  } finally { listing([]); }
+}));
+
 Object.assign(script, compared(A, A_TEXT, A, A_TEXT, [[1, 1, A_TEXT.length]]));
 
 test('a scene on one document in both panes opens — each pane the document, named by its own head, the two ends level at the passage held — and leaving records two spots, one per pane, each pane where the reader scrolled it; a reopening opens it on the one document twice (the survey\'s §6 #2, tufte\'s (4))', () => onPage(async (p) => {
@@ -2135,7 +2174,7 @@ test('a scene on one document in both panes opens — each pane the document, na
   const panes = SCENE.panes();
   assert.deepEqual([panes?.a.src, panes?.b.src, panes?.a.shows, panes?.b.shows, panes?.a.derived, panes?.b.derived], [A, A, A, A, false, false]);
   assert.deepEqual(SCENE.pairs()?.level, { a: 14, b: 14 }, 'the held passage level with itself');
-  assert.deepEqual([p.headA.id, p.headB.id, p.paneA.attrs['aria-labelledby'], p.paneB.attrs['aria-labelledby']], ['sceneA-name', 'sceneB-name', 'sceneA-name', 'sceneB-name'], 'each pane named by its own head');
+  assert.deepEqual([p.headA.id, p.headB.id, p.paneA.attrs['aria-labelledby'], p.paneB.attrs['aria-labelledby']], ['sceneA-name', 'sceneB-name', 'sceneA-kind sceneA-name', 'sceneB-kind sceneB-name'], 'each pane named by its kind and its own head');
   p.paneA.scrollTop = 30; p.paneB.scrollTop = 90;
   const left = SCENE.asLeft();
   assert.ok(left && left.spots && left.spots.a !== left.spots.b, 'two spots, one per pane');

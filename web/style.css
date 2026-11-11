@@ -297,6 +297,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .corner { font-size:var(--corner-px); line-height:1.4; color:#8b8f96; user-select:none; -webkit-user-select:none; }
 #corners .corner { position:absolute; top:0; left:0; width:var(--corner-w); padding:4px var(--corner-pad); pointer-events:auto; background:var(--bg); border-radius:3px; will-change:transform; }
 #corners .corner.compact { width:var(--corner-compact-w); }
+/* THE KIND SLOT (FP-34): the corner's first item, its document's kind in a slot of fixed width — the widest of its words,
+   which T-ARTICLE sets on it in em — one line box tall whatever it shows, an empty box on a faint ground while it is read */
+.corner .kind { display:block; height:1lh; white-space:pre; overflow:hidden; color:#cfd6df; }
+.corner .kind.pending { background:rgba(139,143,150,.12); border-radius:2px; }
 .corner .st { display:block; }
 .corner .version { display:block; color:#cfd6df; }
 /* the version statement's click cue on the plane's corner alone, whose act it is (K-57), and a compact state's glyph, which

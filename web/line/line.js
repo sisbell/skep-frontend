@@ -26,14 +26,14 @@
 // §3.2) — or, where the walk stands on an account or the board, that place
 // as mid scale names it, the document's fields blank; where no board is held
 // `L.go-to-address` alone, at every scale (FP-35). Its exact fields come
-// first, each followed by its label: the document's its box's lead, as its
-// label on the plane sets it (T-LAYER's `leadRuns`), in the reading face, cut
+// first, each followed by its label: the document's its box's first line, as
+// its label on the plane sets it (T-LAYER's `firstOf`), in the reading face, cut
 // on a word to the room the address part leaves past its fields at the step
 // the layout holds, each measured at the line's size (`labelHTML`,
 // `lineWidth`), giving way word by word and never a field (the style's); the
 // board and an account carry none, the page holding no name for either. Its accessible name is its fields in their
-// order, the document's label whole after its field and the document's state
-// in its short words (`addressName`). The places it names are
+// order and the document's label whole after its field — a name, carrying
+// no kind (`addressName`). The places it names are
 // the plane's running head (`named`; FP-26): the plane's labels and T-LAYER's
 // held labels read them through the reader the app hands in, so none of them
 // holds a label below the line. The address part — the address segment, the
@@ -745,7 +745,7 @@ function keptSaid() {
  * @typedef {Object} AddressDisplay — what the address segment names at the camera's scale (foundations §2.2)
  * @property {string} text the segment's fields: the place, then the position where one is named
  * @property {string} place the place's words — the board, the account, or board › account › document — before the position's slot
- * @property {import('../text/article.js').Faced[]} label the label after the document's field: its box's lead as its label on the plane sets it (T-LAYER's `leadRuns`), whole; none where no document is named or no first line is known
+ * @property {import('../text/article.js').Faced[]} label the label after the document's field: its box's first line as its label on the plane sets it (T-LAYER's `firstOf`), whole; none where no document is named or no first line is known
  * @property {number} slot the position's words' room, in characters: as many as the document's widest position takes in its words, which stand empty below the document's reading scale; 0 where no document is named
  * @property {string} addr the address named — the board, the account under the camera at mid, nearer the account or the board the walk stands on, or the document the walk stands in (its member where one is pinned): the LEAP box's prefill; '' where no board is held
  * @property {string | null} doc the document named, nearer than mid
@@ -834,7 +834,7 @@ export function addressDisplay() {
     const pos = readable && LAYER.atReadingScale(f.addr) ? WALK.landedAt() ?? f.pos ?? 1 : null;
     const widest = Math.max(1, LAYER.shownOf(f.addr).extent || 0, pos || 0);
     const win = pos != null && WALK.kept() ? windowOver(f.addr) : null;
-    return { text: place + positionWords(pos), place, label: LAYER.leadRuns(REC.doc(f.addr)), slot: positionWords(widest).length, addr: f.addr, doc: f.addr, pos, member: memberOf(f.addr), whole: false, strip: readable, window: win };
+    return { text: place + positionWords(pos), place, label: LAYER.firstOf(REC.doc(f.addr)), slot: positionWords(widest).length, addr: f.addr, doc: f.addr, pos, member: memberOf(f.addr), whole: false, strip: readable, window: win };
   }
   // nearer than mid the account or the board the walk stands on; at mid, or where it stands nowhere, the account under the camera
   const acct = f && nearer && (f.kind === 'account' || f.kind === 'board') ? (f.kind === 'account' ? f.addr : null) : accountAt(cam.x, cam.y, '1');
@@ -1198,15 +1198,14 @@ function labelHTML(a, at) {
 /**
  * The address segment's accessible name's words (see the head;
  * `L.address.name`): its fields in their order, the document's label after
- * its field whole, the position, the version pinned, then the document's
- * state in its short words (T-LAYER's `stateWords`), each after its own
- * separator, none where it is empty.
+ * its field whole, the position, then the version pinned, each after its own
+ * separator, none where it is empty — a name, which carries no kind.
  * @param {AddressDisplay} a
  * @returns {Record<string, string>}
  */
 function addressName(a) {
-  const label = a.label.map((r) => r.text).join(''), state = a.doc ? LAYER.stateWords(REC.doc(a.doc)) : '';
-  return { place: a.place, label: label ? ' ' + label : '', position: positionWords(a.pos), version: a.member ? ', ' + t('L.version', { k: a.member }) : '', state: state ? ', ' + state : '' };
+  const label = a.label.map((r) => r.text).join('');
+  return { place: a.place, label: label ? ' ' + label : '', position: positionWords(a.pos), version: a.member ? ', ' + t('L.version', { k: a.member }) : '' };
 }
 
 /**

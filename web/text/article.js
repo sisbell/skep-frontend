@@ -104,22 +104,29 @@
 // controls the plane's are (`control`).
 // The corner's items (`cornerHTML`; foundations §3.1): a withheld document's
 // state naming its owner by the one owner rule — the cover a reading scene's
-// pane shows (FP-29) — the words for a document the board says nothing of;
-// an edition's state with "version ⟨k⟩ of ⟨n⟩" and R20's teaching — at a
-// pinned version its own number of the count its box's document holds
-// (FP-22) — a draft's kept state and its chip (C-28; ux-T2), the
-// whole-document link count, its act reading another version in its place —
-// in a reading scene's pane, and on the plane where a newer version's
-// arrival pinned its box (foundations §3.2; D5 K-57) — and in a pane the
-// line saying the version it reads lacks the passage that act carried
-// (FP-23), whole or compact (FP-26), each with its words, its width as the
-// view measures them and whether it may fold into the corner's count where a
-// head's row cannot hold it — the offered read alone; the state, its version
-// statement, the kept word, the chip and the whole-document count never
-// yield (`cornerItems`; foundations §3.1). Its state's
-// items are made by one rule
-// (`stateItems`), which the ARIA mirror's item voices whole too
-// (`cornerWords`), so the corner and the mirror never part (R94). A draft's
+// pane shows (FP-29) — the words for a document the board says nothing of,
+// a refused document's corner carrying those words alone; every other
+// corner's first item its kind (the view's `kind`, decided by T-LAYER's one
+// test, `kindOf`; FP-33) in a slot of fixed width — the widest of the words
+// it shows, as the view measures them — "draft" or "published", an empty box
+// named as being read while no read has told it, "not read" where its
+// metadata's read failed and nothing else tells it (`kindWord`; FP-34) — in
+// both forms; after it, an edition's state with "version ⟨k⟩ of ⟨n⟩" and
+// R20's teaching, its venue's clause first on a notebook (P7) — at a pinned
+// version its own number of the count its box's document holds (FP-22) — a
+// draft's kept state and its chip (C-28; ux-T2), the whole-document link
+// count, its act reading another version in its place — in a reading scene's
+// pane, and on the plane where a newer version's arrival pinned its box
+// (foundations §3.2; D5 K-57) — and in a pane the line saying the version it
+// reads lacks the passage that act carried (FP-23), whole or compact (FP-26),
+// each with its words, its width as the view measures them and whether it may
+// fold into the corner's count where a head's row cannot hold it — the
+// offered read alone; the kind, the state, its version statement, the kept
+// word, the chip and the whole-document count never yield (`cornerItems`;
+// foundations §3.1). Its state's items are made by one rule (`stateItems`),
+// which the ARIA mirror's item voices whole too — its first item leading the
+// item (`cornerLead`), the rest after the document's first line
+// (`cornerWords`) — so the corner and the mirror never part (R94). A draft's
 // kept state (B3-S2; D5 K-57, K-74) is its word in a slot of fixed width —
 // the longest of the three words', as the view measures them — in both
 // forms, an empty box while no state is set (FP-34), the word's own act
@@ -217,6 +224,7 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {Reader} reader who reads (M-REC's `reader`): the acting account, or a guest's null, and whether a key for this board is present
  * @property {boolean} localTrust the board's flag (the chip's form)
  * @property {boolean} notebook the venue
+ * @property {Kind} kind the document's kind as its corner's first slot states it (T-LAYER's `kindOf`): what the corner's state after it is made from
  * @property {boolean} scene the scene-mode variant: a reading scene's pane's article — no scene-offer, and no mark a control
  * @property {(doc: string) => string} originOwner the owner account of an origin document, by the one rule the byline's owner is found by (M-REC's `ownerAccount`): the owner a withheld run's placeholder names (R56)
  * @property {(doc: string) => Decided} clauseOf C-67's clause beneath a withheld run of an origin document, decided over what the page holds of the origin's edition claims (T-LAYER's `clauseOf`, by `editionClause`); null where nothing renders in its place, `CLAUSE_READING` while a read it is decided from is out
@@ -1160,6 +1168,46 @@ function keptLineHTML(v, statement = true) {
   return `<span class="kept-line">${slot}</span>` + (k && v.keptOpen && statement ? statementHTML(k) : '');
 }
 
+/**
+ * @typedef {'draft' | 'published' | 'reading' | 'unread'} Kind — a document's kind as its corner's first slot states it (see the head; FP-34): a draft, or published; being read, while no read has told it; not read, where its metadata's read failed and nothing else tells it — T-LAYER's one test decides it (`kindOf`; FP-33)
+ */
+
+/** each kind's words in the strings table: a value's, that it is being read, or why it cannot be told (FP-34) */
+const KIND_WORDS = /** @type {const} */ ({ draft: 'F.kind.draft', published: 'F.published', reading: 'L.slot.reading', unread: 'L.slot.unread' });
+
+/**
+ * A document's kind in its slot's words (FP-34): its string's id and its
+ * words — "draft" or "published", "being read" while no read has told it,
+ * "not read" where none can. The words the corner's first slot shows, and
+ * that the ARIA mirror's item, a reading scene's pane's name and a landing
+ * into the document say first.
+ * @param {Kind} k
+ * @returns {{id: string, text: string}}
+ */
+export const kindWord = (k) => ({ id: KIND_WORDS[k], text: t(KIND_WORDS[k]) });
+
+/**
+ * The kind slot's width, in em of the corner's size (FP-34): the widest of
+ * the words it shows, as the view measures them in the client's face, so the
+ * slot holds its place whatever it shows, and its words filling the empty box
+ * that stands while it is being read move nothing beside it.
+ * @param {Measure} measure
+ */
+const kindSlotEm = (measure) => Math.max(...[KIND_WORDS.draft, KIND_WORDS.published, KIND_WORDS.unread].map((id) => measure(t(id), 'client')));
+
+/**
+ * A corner's kind slot as markup (see the head; FP-34): its words in a box of
+ * fixed width (`kindSlotEm`), carrying its kind and its string; while it is
+ * being read, an empty box of that width named so, which the corner's own
+ * name reads in its place.
+ * @param {ArticleView} v
+ */
+function kindHTML(v) {
+  const em = kindSlotEm(v.measure), w = kindWord(v.kind);
+  if (v.kind === 'reading') return `<span class="kind pending" data-kind="reading" role="img" aria-label="${esc(t(KIND_WORDS.reading))}" style="width:${em}em"></span>`;
+  return `<span class="kind" data-kind="${v.kind}" data-string="${w.id}" style="width:${em}em">${esc(w.text)}</span>`;
+}
+
 /** is a document published: its metadata's word where read, else its index's kind */
 export const isPublished = (/** @type {Pick<Doc, 'meta' | 'kind'>} */ d) => (d.meta ? d.meta.published : d.kind === 'edition');
 
@@ -1175,13 +1223,13 @@ export const isPublished = (/** @type {Pick<Doc, 'meta' | 'kind'>} */ d) => (d.m
 export const statedChain = (d, n) => (n != null && n >= 1 && d.meta && d.meta.birth ? n : null);
 
 /**
- * @typedef {Pick<ArticleView, 'members' | 'lags' | 'notebook' | 'localTrust' | 'kept' | 'originOwner'>} CornerFacts — what a corner's state is made from (`stateItems`): its box's chain, the board's lag, the venue, the local trust flag, a draft's kept state and the one owner rule
+ * @typedef {Pick<ArticleView, 'members' | 'lags' | 'notebook' | 'localTrust' | 'kept' | 'originOwner' | 'kind'>} CornerFacts — what a corner's state is made from (`stateItems`): its box's chain, the board's lag, the venue, the local trust flag, a draft's kept state, the one owner rule and the document's kind
  */
 
 /**
  * @typedef {Object} StateItem — one item of a corner's state (`stateItems`): a string filled, in the class it stands in
- * @property {'st' | 'version' | 'kept' | 'chip'} cls the item: the document's state, its version statement, a draft's kept word, a draft's chip
- * @property {string} id its string's id; '' for a draft's kept word while no state is set, its slot an empty box
+ * @property {'kind' | 'st' | 'version' | 'kept' | 'chip'} cls the item: the document's kind, its state, its version statement, a draft's kept word, a draft's chip
+ * @property {string} id its string's id — the kind's `L.slot.reading` while it is being read, its slot an empty box; '' for a draft's kept word while no state is set, its slot an empty box
  * @property {Record<string, string | number>} vals the values its string is filled with
  * @property {Record<string, Face>} faces the faces of the tokens it sets in the identifier's: an owner it names
  * @property {string | null} glyph the glyph its compact form draws, named by its words — a usual state's (FP-26); null where its words stand in either form
@@ -1192,19 +1240,20 @@ export const statedChain = (d, n) => (n != null && n >= 1 && d.meta && d.meta.bi
  * A document's state as its corner states it, in foundations' one order
  * (§3.1): withheld, its withheld box's words, its owner by the one owner
  * rule (`originOwner`); nothing the board will say of it, the words for that
- * (`L.far.unregistered`); published, its state — "no versions yet" where its
- * chain holds no member, its own version at a pinned one, "the latest
- * version" at the bare address, its publication alone while the board lags
- * (FP-23) — then, where it states its box's chain (`members`, `statedChain`),
- * its version statement: "version ⟨k⟩ of ⟨n⟩",
- * its own number at a pinned version, the head's at the bare address
- * (FP-22), "version ⟨k⟩" while the board lags; a draft, its kept word
- * (B3-S2) then its chip (C-28); none for any other. The one rule the corner
- * draws its state by (`cornerHTML`) and the ARIA mirror's item voices it by
- * (`cornerWords`; R94).
+ * (`L.far.unregistered`); every other document its kind first (`kind`), in
+ * its slot, then by it — published, its state, its venue's clause before it
+ * on a notebook (P7): "no versions yet" where its chain holds no member, its
+ * own version at a pinned one, "the latest version" at the bare address, the
+ * venue's clause alone while the board lags (FP-23) — then, where it states
+ * its box's chain (`members`, `statedChain`), its version statement:
+ * "version ⟨k⟩ of ⟨n⟩", its own number at a pinned version, the head's at
+ * the bare address (FP-22), "version ⟨k⟩" while the board lags; a draft, its
+ * kept word (B3-S2) then its chip (C-28); being read or not read, its slot
+ * alone. The one rule the corner draws its state by (`cornerHTML`) and the
+ * ARIA mirror's item voices it by (`cornerLead`, `cornerWords`; R94).
  * @param {Doc} d
  * @param {CornerFacts} v
- * @returns {StateItem[]}
+ * @returns {[StateItem, ...StateItem[]]}
  */
 function stateItems(d, v) {
   const k = memberOf(d.addr);
@@ -1213,43 +1262,63 @@ function stateItems(d, v) {
     /** @type {StateItem} */ ({ cls, id, vals, faces: {}, glyph, members: null, ...more });
   if (d.refused === 'withheld') return [item('st', 'F.corner.withheld', { owner: v.originOwner(d.addr) }, null, { faces: { owner: 'ident' } })];
   if (d.refused === 'unregistered') return [item('st', 'L.far.unregistered', {})];
-  if (isPublished(d)) {
-    const first = t(v.notebook ? 'F.published.notebook' : 'F.published'), n = v.members !== undefined ? v.members : d.members;
-    const st = d.meta && d.meta.birth === null && !k ? item('st', 'F.corner.no-versions', { published: first }, 'L.corner.bare')
-      : k ? item('st', 'F.corner.pinned', { published: first, k }, 'L.corner.pinned')
-        : v.lags ? item('st', v.notebook ? 'F.published.notebook' : 'F.published', {}, 'L.corner.bare')
-          : item('st', 'F.corner.latest', { published: first }, 'L.corner.bare');
+  const kind = item('kind', KIND_WORDS[v.kind], {});
+  if (v.kind === 'published') {
+    const n = v.members !== undefined ? v.members : d.members;
+    /** a state's words keyed by venue (P7): on a notebook, its clause before them */
+    const venued = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ vals, /** @type {string} */ glyph) =>
+      (v.notebook ? item('st', 'L.corner.venue', { venue: t('F.published.notebook'), state: t(id, vals) }, glyph) : item('st', id, vals, glyph));
+    const st = d.meta && d.meta.birth === null && !k ? venued('F.corner.no-versions', {}, 'L.corner.bare')
+      : k ? venued('F.corner.pinned', { k }, 'L.corner.pinned')
+        : v.lags ? (v.notebook ? item('st', 'F.published.notebook', {}, 'L.corner.bare') : null)
+          : venued('F.corner.latest', {}, 'L.corner.bare');
     const of = statedChain(d, n);
-    if (of == null) return [st];
-    return [st, v.lags ? item('version', 'L.version', { k: k || of }) : item('version', 'F.version-of', { k: k || of, n: of }, null, { members: of })];
+    /** @type {[StateItem, ...StateItem[]]} */
+    const out = st ? [kind, st] : [kind];
+    if (of != null) out.push(v.lags ? item('version', 'L.version', { k: k || of }) : item('version', 'F.version-of', { k: k || of, n: of }, null, { members: of }));
+    return out;
   }
-  if (d.kind === 'draft') return [item('kept', v.kept ? KEPT_WORDS[v.kept.word] : '', {}), item('chip', v.localTrust ? 'C-28.flag-on' : 'C-28', {}, 'L.corner.draft')];
-  return [];
+  if (v.kind === 'draft') return [kind, item('kept', v.kept ? KEPT_WORDS[v.kept.word] : '', {}), item('chip', v.localTrust ? 'C-28.flag-on' : 'C-28', {}, 'L.corner.draft')];
+  return [kind];
 }
 
 /**
- * A document's state as its corner states it, whole (`stateItems`): each
- * item's words — a draft's kept word where a state is set — joined as the
- * ARIA mirror's item voices them (R94); '' where the corner states none.
+ * A corner's first item in words (`stateItems`): the document's kind in its
+ * slot's words (`kindWord`) — "being read" while it is — or, at a document a
+ * read refused, its own words. What the ARIA mirror's item and a reading
+ * scene's pane's name lead with (R94).
  * @param {Doc} d
  * @param {CornerFacts} v
  * @returns {string}
  */
-export const cornerWords = (d, v) => stateItems(d, v).filter((i) => i.id).map((i) => t(i.id, i.vals)).join(', ');
+export const cornerLead = (d, v) => { const [i] = stateItems(d, v); return t(i.id, i.vals); };
 
 /**
- * A corner's state item as markup (`stateItems`): a draft's kept word its
- * kept line (`keptLineHTML`), its statement after it where `statement` asks;
- * a usual state, compact, its glyph named by its words, which assistive
- * technology reads and its act opens whole (FP-26); else its words, an owner
- * it names in the identifier's face, a draft's chip marked so and the version
- * statement carrying the count it is of for its act.
+ * A document's state as its corner states it after its first item, whole
+ * (`stateItems`): each item's words — a draft's kept word where a state is
+ * set — joined as the ARIA mirror's item voices them after the document's
+ * first line (R94); '' where the corner states none past its first item.
+ * @param {Doc} d
+ * @param {CornerFacts} v
+ * @returns {string}
+ */
+export const cornerWords = (d, v) => stateItems(d, v).slice(1).filter((i) => i.id).map((i) => t(i.id, i.vals)).join(', ');
+
+/**
+ * A corner's state item as markup (`stateItems`): the kind its slot
+ * (`kindHTML`), its words in either form; a draft's kept word its kept line
+ * (`keptLineHTML`), its statement after it where `statement` asks; a usual
+ * state, compact, its glyph named by its words, which assistive technology
+ * reads and its act opens whole (FP-26); else its words, an owner it names in
+ * the identifier's face, a draft's chip marked so and the version statement
+ * carrying the count it is of for its act.
  * @param {StateItem} i
  * @param {ArticleView} v
  * @param {boolean} compact
  * @param {boolean} [statement]
  */
 function stateHTML(i, v, compact, statement = true) {
+  if (i.cls === 'kind') return kindHTML(v);
   if (i.cls === 'kept') return keptLineHTML(v, statement);
   const extra = i.cls === 'chip' ? ' data-chip="1"' : i.members != null ? ` data-members="${i.members}"` : '';
   if (compact && i.glyph) return `<span class="${i.cls} glyph"${extra} role="img" aria-label="${esc(t(i.id, i.vals))}">${esc(t(i.glyph))}</span>`;
@@ -1274,27 +1343,28 @@ function filledEm(id, vals, faces, measure) {
  * @property {string} cls its class
  * @property {string} html its markup
  * @property {string} words its words as a person reads them
- * @property {number} em its width in em of the corner's size, as the view measures its words (`Measure`): its slot's, where it has one of fixed width — a kept word's
+ * @property {number} em its width in em of the corner's size, as the view measures its words (`Measure`): its slot's, where it has one of fixed width — the kind's, a kept word's
  * @property {boolean} yields it may fold into the corner's count where a row cannot hold it: the offered read alone; every other item never yields (foundations §3.1)
  */
 
 /**
- * The corner's items in foundations' one order (§3.1): its document's state
- * (`stateItems`) — at a pinned version its own number of the count its box's
- * document holds (`members`), so the corner names the version its box shows
- * and offers the versions list there too (FP-22); in a reading scene's pane,
- * where the version its pane reads lacks the passage its act carried, a line
- * saying so (`lacks`); its act reading another version in its place (`read`;
- * D5 K-57; FP-23) — a pane's, and on the plane the newer version a newer
- * version's arrival offers, a control the pointer and → reach, never a Tab
- * stop (`control`); the whole-document link count (rule (i)). Compact
- * (FP-26): an edition's state its version marker — unlit at the bare
- * address, lit at a pinned version (foundations §3.1) — and a draft's chip a
- * glyph, each named by its whole words; "version ⟨k⟩ of ⟨n⟩", the
- * whole-document count, the kept word in its slot and the state of a document
- * a read refused keep their words. Each with its words and its width
- * (`CornerItem`): the state, its version statement, a draft's kept word, its
- * chip and the whole-document count never yield; the offered read does.
+ * The corner's items in foundations' one order (§3.1): its document's kind
+ * and state (`stateItems`) — at a pinned version its own number of the count
+ * its box's document holds (`members`), so the corner names the version its
+ * box shows and offers the versions list there too (FP-22); at a published
+ * document in a reading scene's pane, where the version its pane reads lacks
+ * the passage its act carried, a line saying so (`lacks`); its act reading
+ * another version in its place (`read`; D5 K-57; FP-23) — a pane's, and on
+ * the plane the newer version a newer version's arrival offers, a control the
+ * pointer and → reach, never a Tab stop (`control`); the whole-document link
+ * count (rule (i)). Compact (FP-26): an edition's state its version marker —
+ * unlit at the bare address, lit at a pinned version (foundations §3.1) — and
+ * a draft's chip a glyph, each named by its whole words; the kind in its
+ * slot, "version ⟨k⟩ of ⟨n⟩", the whole-document count, the kept word in its
+ * slot and the state of a document a read refused keep their words. Each with
+ * its words and its width (`CornerItem`): the kind, the state, its version
+ * statement, a draft's kept word, its chip and the whole-document count never
+ * yield; the offered read does.
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {boolean} [compact] the compact form
@@ -1304,13 +1374,13 @@ function filledEm(id, vals, faces, measure) {
 export function cornerItems(d, v, compact = false, statement = true) {
   /** @type {CornerItem[]} */
   const out = stateItems(d, v).map((i) => {
-    const words = i.cls === 'kept' ? (i.id ? t(i.id) : '') : t(i.id, i.vals), glyph = compact && i.glyph ? t(i.glyph) : null;
-    const em = i.cls === 'kept' ? keptSlotEm(v.measure) : glyph != null ? v.measure(glyph, 'client') : filledEm(i.id, i.vals, i.faces, v.measure) + (i.cls === 'chip' ? 0.8 : 0);
+    const words = i.cls === 'kind' ? (v.kind === 'reading' ? '' : t(i.id)) : i.cls === 'kept' ? (i.id ? t(i.id) : '') : t(i.id, i.vals), glyph = compact && i.glyph ? t(i.glyph) : null;
+    const em = i.cls === 'kind' ? kindSlotEm(v.measure) : i.cls === 'kept' ? keptSlotEm(v.measure) : glyph != null ? v.measure(glyph, 'client') : filledEm(i.id, i.vals, i.faces, v.measure) + (i.cls === 'chip' ? 0.8 : 0);
     return { cls: i.cls, html: stateHTML(i, v, compact, statement), words, em, yields: false };
   });
   /** an item of words alone */
   const words = (/** @type {string} */ cls, /** @type {string} */ text, /** @type {string} */ html, yields = false) => out.push({ cls, html, words: text, em: v.measure(text, 'client'), yields });
-  if (!d.refused && isPublished(d)) {
+  if (!d.refused && v.kind === 'published') {
     if (v.lacks != null) { const s = t('F.floating.member', { k: v.lacks }); words('lacks', s, `<span class="lacks">${esc(s)}</span>`); }
     if (v.read != null) { const s = t('F.versions.read', { k: v.read }); words('read', s, `<span class="read" data-read="${v.read}"${control(v.scene)}>${esc(s)}</span>`, true); }
   }

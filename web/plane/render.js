@@ -25,7 +25,9 @@
 // the box's document's edge, landmark, badge, connections and tails, which
 // stand as they are whichever version it shows. A document's one edge
 // traces the outside of its columns (P-LAY's `outline`), the edition or
-// draft edge its weight, so length reads as a count of columns (FP-12); a
+// draft edge its weight, so length reads as a count of columns (FP-12) — the
+// draft edge where the one test reads the box's document a draft (T-LAYER's
+// `isDraft`; FP-33), the edition's where it reads none; a
 // document whose text has not arrived is its estimated columns, one whose
 // extent is unread its first column slot; its label, its contents
 // line (T-LAYER's `docLabel`) — its first line where those words stand in its
@@ -659,7 +661,7 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     // the version the box shows draws its text and its label; the box's document its edge, its landmark, its badge and its strip, which holds that version
     const doc = documentOf(d.addr) || d.addr, trunk = REC.doc(doc);
     const box = docBox(d.addr), f = LAYER.foldOf(d);
-    const draft = LAYER.isDraft(trunk);
+    const draft = LAYER.isDraft(trunk) === true;
     const landmark = /\.0\.1$/.test(doc);
     const ground = d.refused === 'withheld' ? COL.withheld : COL.doc;
     // the document's one edge, around its columns: no frame or rule around a column (FP-12)

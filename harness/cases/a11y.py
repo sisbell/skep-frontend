@@ -50,8 +50,11 @@ carry was made, every span item holding a stretch of it marked
 `aria-current="location"` and no other item, none once the next act puts the
 light out; a landing's line its item's description (issue #153's design
 decision) — a passage the draft holds part of, carried into it, the focus on
-the item at its first held piece, described by the line's words, the one
-item described, none once the next landing takes the line down; a landing
+the item at its first held piece, described by the draft's kind, the
+landing having crossed into it, then the line's words, the one item
+described, none once the next landing takes the line down; the draft's kind
+its corner's first item, no label carrying a kind, its document's item led
+by it (issue #423's design decision); a landing
 in several runs (issue #158's design decision: "Each run's accessible item
 carries its label from the moment of landing") — two typed lines of the first
 edition apart in one column, landed in through the gate's door naming the
@@ -893,14 +896,30 @@ def run(ctx):
         #304), set apart"""
         return ctx.js('''(() => { const e = document.activeElement, sib = window.__skep.mirror.siblings();
           const own = (el) => (el && el.getAttribute ? el.getAttribute('aria-describedby') || '' : '').split(' ').filter((id) => id && !id.startsWith('walk-origin-'));
-          const by = own(e).join(' ') || null, d = by ? document.getElementById(by) : null;
+          const ids = own(e), by = ids.join(' ') || null, ds = ids.map((id) => document.getElementById(id));
           const items = [...document.querySelectorAll('#mirror li[role="treeitem"][aria-describedby]')].filter((li) => own(li).length).map((li) => ({...sib[Number(li.dataset.i)]}));
-          return {focused: e && e.closest && e.closest('#mirror') ? {...sib[Number(e.dataset.i)]} : null, by, words: d ? d.textContent : null,
-                  hidden: !!d && d.hidden, items: items.map((i) => [i.kind, i.pos]), said: window.__skep.go.described(), line: window.__skep.landingLine()}; })()''')
+          return {focused: e && e.closest && e.closest('#mirror') ? {...sib[Number(e.dataset.i)]} : null, by, words: ds.map((x) => (x ? x.textContent : null)),
+                  hidden: ds.length > 0 && ds.every((x) => !!x && x.hidden), items: items.map((i) => [i.kind, i.pos]), said: window.__skep.go.described(), line: window.__skep.landingLine()}; })()''')
     d = described()
     f = d['focused']
-    r.check(bool(f) and f['addr'] == WINDOW[2] and bool(d['said']) and d['by'] == 'walk-landing' and d['hidden'] and d['words'] == d['said']['words'] and bool(d['line']) and d['line']['words'] == d['words'] and len(d['items']) == 1,
-            'a landing the draft holds part of: the focus on its item, described by the line\'s words — the one item described (issue #153)', d)
+    kind = ctx.js('window.__skep.kind(%s)' % json.dumps(WINDOW[2]))
+    r.check(bool(f) and f['addr'] == WINDOW[2] and bool(d['said']) and d['by'] == 'walk-landing-kind walk-landing' and d['hidden'] and d['said']['kind'] == kind['words']
+            and d['words'] == [d['said']['kind'], d['said']['words']] and bool(d['line']) and d['line']['words'] == d['said']['words'] and len(d['items']) == 1,
+            'a landing the draft holds part of, carried there from the first edition: the focus on its item, described by the draft\'s kind, "%s", then the line\'s words — the one item described (issues #153, #423)' % kind['words'], d)
+    # ---- a document's kind is a state said once, at its corner (issue #423's design decision: "every corner's first slot is
+    # the kind"; "a label names a document and carries no kind"; "the slot's word leads the item"): the draft landed in shows
+    # its kind as its corner's first item, in its slot; no label in view carries a kind; ← to its document's item, led by it
+    drafted = ctx.js('''((a) => { const c = document.getElementById('corner-' + a), items = c ? [...c.querySelectorAll('.kind, .st, .version, .kept-line, .chip, .whole-links, .read')] : [];
+      return {first: items.length ? {cls: items[0].className, text: items[0].textContent} : null, lead: window.__skep.firstLine(a).lead,
+              labels: window.__skep.labels().filter((l) => l.kind === 'doc').flatMap((l) => l.lines.map((x) => x.text))}; })(%s)''' % json.dumps(WINDOW[2]))
+    ctx.drv.key('ArrowLeft')
+    ctx.settle()
+    ctx.frames(2)
+    item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
+    word = kind['words']
+    r.check(kind['kind'] == 'draft' and bool(drafted['first']) and drafted['first']['cls'].split()[0] == 'kind' and drafted['first']['text'] == word
+            and not any((' · ' + word) in x for x in drafted['labels']) and not drafted['lead'].endswith(' · ' + word) and item.startswith('%s document %s,' % (word, WINDOW[2])),
+            'the draft landed in: "%s" its corner\'s first item, in its slot; no label carrying a kind; ← to its item, which leads with it (issue #423)' % word, dict(drafted, kind=kind, item=item[:160]))
     ctx.leap(DOC, WINDOW[0])
     gone = described()
     r.check(not gone['items'] and gone['said'] is None, 'the next landing takes the description down with the line', gone)
@@ -971,17 +990,18 @@ def run(ctx):
         zooms += 1
     ctx.frames(2)
     listed = ctx.js('''((a) => [...document.querySelectorAll('#mirror [role=treeitem]')].map((li) => ({text: li.textContent, current: li.getAttribute('aria-selected') === 'true'}))
-      .filter((i) => i.text.startsWith('document ' + a + ',') || i.text.startsWith('document ' + a + '.')))(%s)''' % json.dumps(VERSIONED))
+      .filter((i) => i.text.includes(' document ' + a + ',') || i.text.includes(' document ' + a + '.')))(%s)''' % json.dumps(VERSIONED))
     label = ctx.js('window.__skep.firstLine(%s).first' % json.dumps(member))
-    r.check(len(listed) == 1 and listed[0]['current'] and listed[0]['text'].startswith('document %s, %s,' % (member, '"%s"' % label if label else '')),
-            'at mid over a box pinned to version 1 the mirror lists the box once, its current item, named by the version\'s address and that version\'s own first line, as its box\'s label names it (issues #154, #23)',
-            {'listed': [dict(i, text=i['text'][:120]) for i in listed], 'zooms': zooms, 'label': label})
+    published = ctx.js('window.__skep.kind(%s).words' % json.dumps(member))
+    r.check(len(listed) == 1 and listed[0]['current'] and listed[0]['text'].startswith('%s document %s, %s,' % (published, member, '"%s"' % label if label else '')),
+            'at mid over a box pinned to version 1 the mirror lists the box once, its current item, named by its kind, the version\'s address and that version\'s own first line, as its box\'s label names it (issues #154, #23, #423)',
+            {'listed': [dict(i, text=i['text'][:120]) for i in listed], 'zooms': zooms, 'label': label, 'kind': published})
     # its state as its corner states it, whole (issue #239's design decision: "The ARIA mirror's item for a document voices
     # the corner's state, whole"): the version it shows and the count of its chain, which the board ended — never the bare
     # "published"
     chain = ctx.js('((a) => { const d = window.__skep.model.doc(a); return {n: d.members, ended: d.ended}; })(%s)' % json.dumps(VERSIONED))
-    said = ctx.js('''import("./strings.js").then(({t}) => { const published = t("F.published.notebook"), c = %s;
-      return {state: [t("F.corner.pinned", {published, k: 1}), c.ended && c.n ? t("F.version-of", {k: 1, n: c.n}) : null].filter(Boolean).join(", "), bare: t("F.published")}; })''' % json.dumps(chain))
+    said = ctx.js('''import("./strings.js").then(({t}) => { const venue = t("F.published.notebook"), c = %s;
+      return {state: [t("L.corner.venue", {venue, state: t("F.corner.pinned", {k: 1})}), c.ended && c.n ? t("F.version-of", {k: 1, n: c.n}) : null].filter(Boolean).join(", "), bare: t("F.published")}; })''' % json.dumps(chain))
     item = listed[0]['text'] if len(listed) == 1 else ''
     r.check(bool(chain['ended']) and said['state'] in item and ', %s,' % said['bare'] not in item,
             'at mid over a box pinned to version 1 its mirror item voices its corner\'s state whole — the version it shows and the count of its chain — never the bare "published" (issue #239\'s design decision: "The ARIA mirror\'s item for a document voices the corner\'s state, whole")',

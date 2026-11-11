@@ -227,14 +227,20 @@
 // page's selection a press, K-8 or the platform's own keys moved under what a
 // head covers (`keepClear`; FP-37). A standing
 // corner's kept word is said once in the status region where it changes
-// (`sayKept`; FP-36). Its version statement counts its box's
+// (`sayKept`; FP-36). Its first slot states the document's kind, read by
+// the one test (`isDraft`; FP-33) — its metadata's word, else the kind the
+// model knows of its record, else its box's listing — being read until one
+// answers and not read where its metadata's read failed (`kindOf`; FP-34),
+// its items made again as the kind is told (`cornerKey`). Its version
+// statement counts its box's
 // chain only where the board ended the chain there (`chainOf`), every
 // version of the box sharing the count, its items made again as the chain
 // is counted again (`cornerKey`; FP-22, FP-23); where a newer version's
 // arrival pinned its box it offers to read the newest member named (the
 // reader `newer`; D5 K-57), a control the pointer and → reach and Tab never
 // does, its items made again as the offer comes and goes; the ARIA mirror's item
-// voices its state whole (`mirrorState`). A reading view frames the column
+// voices its state whole, its first item leading (`mirrorLead`, `mirrorState`).
+// A reading view frames the column
 // it reads with the corner and the edge beside it, at the landing's em
 // (`frameOf`; P-CAM's `landingPx`) — a document read whole, its first column
 // where the visible view holds it, else its head at the top of the visible
@@ -281,8 +287,9 @@
 // name it (the reader `named`), its label stands held below the line as an
 // element of the corner layer over its text — the canvas's words for its
 // box, read here (`docLabel`), so the two never part: its first line from
-// the line's start, the box's lead (`leadRuns`, by T-ARTICLE's first-line
-// rule), and its address at the line's end, past its region's prefix where
+// the line's start, the box's lead (`firstOf`, by T-ARTICLE's first-line
+// rule), which names the document and carries no kind, and its address at
+// the line's end, past its region's prefix where
 // that region is named in view (the reader `region`), else whole — a space
 // short of its kept clause there where no corner carries the clause — its
 // address in the identifier's face and the document's words in the reading
@@ -460,7 +467,8 @@
 // the mount log (`mountedSet`, `mounts`); APP records each frame's counts
 // (`frameStats`).
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-14, FP-20, FP-21, FP-22, FP-23,
-// FP-24, FP-25, FP-26, FP-27, FP-29, FP-30, FP-31, FP-34, FP-36, FP-37, FP-38.
+// FP-24, FP-25, FP-26, FP-27, FP-29, FP-30, FP-31, FP-33, FP-34, FP-36,
+// FP-37, FP-38.
 
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
@@ -473,7 +481,7 @@ import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, inFirstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX } from '../plane/labels.js';
-import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerWords, keptHTML, statementHTML, keptWord, keptStatement, blockMarks, symbolLit, editionClause, copyText, firstLineOf, isPublished, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, carriesC33, sourceStatementHTML } from './article.js';
+import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, kindWord, keptHTML, statementHTML, keptWord, keptStatement, blockMarks, symbolLit, editionClause, copyText, firstLineOf, isPublished, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, carriesC33, sourceStatementHTML } from './article.js';
 import { farShort, whyOf } from '../beams/held.js';
 import { applyEdits, sourceRuns, fromBase, boundaries, wordStop } from '../model/derive.js';
 import { homeOf, documentOf, memberOf, versionAddress, accountOf } from '../model/address.js';
@@ -1340,14 +1348,15 @@ export function chainOf(addr) {
 /**
  * What a document's corner states its state from (T-ARTICLE's `CornerFacts`):
  * its box's chain (`chainOf`), the board's lag (`lags`), the venue, the local
- * trust flag, a draft's kept state and the one owner rule — the corner's
- * view's own (`viewFor`), read without the links the rest of the view reads.
+ * trust flag, a draft's kept state, the one owner rule and its kind by the
+ * one test (`kindOf`) — the corner's view's own (`viewFor`), read without the
+ * links the rest of the view reads.
  * @param {Doc} d
  * @returns {import('./article.js').CornerFacts}
  */
 function cornerFacts(d) {
   const h = REC.health();
-  return { members: chainOf(d.addr), lags: lags(), notebook: true, localTrust: !!(h && h.auth && h.auth.local_trust), kept: WRITE.keptOf(d.addr), originOwner };
+  return { members: chainOf(d.addr), lags: lags(), notebook: true, localTrust: !!(h && h.auth && h.auth.local_trust), kept: WRITE.keptOf(d.addr), originOwner, kind: kindOf(d) };
 }
 
 // ---- the fold ---------------------------------------------------------------------------------------------------
@@ -1486,7 +1495,8 @@ const headItems = (/** @type {import('./article.js').CornerItem[]} */ items) => 
  * fit (`headLayout`) — the head across its column's text and edge, its rows
  * at the reading line's pitch — the name's room and the kept clause counted
  * whether or not the one line names it, so the depth never moves with the
- * camera; none where its corner stands beside its column, or carries no item.
+ * camera; none where its corner stands beside its column. Every corner
+ * carries an item — its kind's slot, else a refused document's own words.
  * @param {Doc} d
  * @param {ArticleView} v its view (`viewFor`)
  * @returns {number}
@@ -1495,7 +1505,6 @@ function headBand(d, v) {
   const F = fit();
   if (!F.head) return 0;
   const items = cornerItems(d, v, true, false);
-  if (!items.length) return 0;
   const k = keptIn(d.addr), pitch = LINE_H * F.px;
   const L = headLayout(headItems(items), nameWidth(d), k ? { w: clauseWidth(k), words: k.text } : null, (F.cpl * CHAR_W + EDGE) * F.px, pitch);
   return L.rows * LINE_H;
@@ -2592,9 +2601,9 @@ export function clauseOf(origin) {
  * A document a read answered `withheld`, as the plane names it — B1-S2's
  * withheld box: existence and owner, never bytes — in the corner's own words,
  * "withheld · ⟨owner⟩" (foundations §3.1; FP-29), its owner by the
- * one owner rule (M-REC's `ownerAccount`). The document's state in the ARIA
- * mirror's item (`mirrorState`), the one line's name (`stateWords`) and the
- * face a refused read of it conjures (O-FACES's `withheld`) read it, and its
+ * one owner rule (M-REC's `ownerAccount`). The face a refused read of it
+ * conjures (O-FACES's `withheld`) reads it; its corner states the same words,
+ * which the ARIA mirror's item leads with (`mirrorLead`); and its
  * first line names it in the same words, bracketed (T-ARTICLE's
  * `firstLineOf`) — the box's label, a trail entry's words — so what a
  * sighted reader sees and what a screen reader hears never part (R94).
@@ -2604,8 +2613,38 @@ export function withheldBox(d) { return t('F.corner.withheld', { owner: REC.owne
 
 /** a box's address as its label sets it where its region is named in view: the address of the version it shows past its region's prefix, led by the separator after the prefix — ".0.9", a pinned version's ".0.9.2", as the address display spells a field past a prefix (F-9; foundations §3.1) */
 export const shortAddr = (/** @type {Doc} */ d) => (d.account ? d.addr.slice(d.account.length) : d.addr);
-/** a draft, by the index's kind or by its metadata where read */
-export const isDraft = (/** @type {Doc} */ d) => d.kind === 'draft' || (d.meta ? !d.meta.published : false);
+/**
+ * Is a document a draft — the one test its kind is read by (FP-33), which
+ * decides its corner's first slot (`kindOf`) and its box's edge below its
+ * reading scale (P-RENDER's): its metadata's word, where a read answered it;
+ * else the kind the model knows of its own record — its index row's, or its
+ * metadata's at its box; else its box's listing in the index; null where none
+ * of them answers.
+ * @param {Doc} d
+ * @returns {boolean | null}
+ */
+export function isDraft(d) {
+  if (d.meta) return !d.meta.published;
+  if (d.kind !== 'unknown') return d.kind === 'draft';
+  const p = REC.place(boxOf(d.addr));
+  return p ? p.kind === 'draft' : null;
+}
+
+/**
+ * A document's kind as its corner's first slot states it (T-ARTICLE's `Kind`;
+ * FP-34): a draft or published, by the one test (`isDraft`); not read, where
+ * its metadata's read failed and nothing else tells it (M-REC's
+ * `readFailed`); else being read.
+ * @param {Doc} d
+ * @returns {import('./article.js').Kind}
+ */
+export function kindOf(d) {
+  const draft = isDraft(d);
+  return draft === true ? 'draft' : draft === false ? 'published' : REC.readFailed(d.addr) ? 'unread' : 'reading';
+}
+
+/** a document's kind in its corner's first slot's words (`kindOf`; T-ARTICLE's `kindWord`): what a landing into the document says first (N-GO's `described`) */
+export const kindSaid = (/** @type {Doc} */ d) => kindWord(kindOf(d)).text;
 
 /**
  * A box's first line (T-ARTICLE's `firstLineOf`), read from what the model
@@ -2681,28 +2720,15 @@ export function boxName(addr) {
  */
 export const firstOfFar = (d, label) => firstLineOf(d, { label, reader: REC.reader(), owner: d ? REC.ownerAccount(d) : '' });
 
-/**
- * A box's lead, the words its label sets before its address (see the head):
- * its first line (`firstOf`) with a draft's mark after it, the client's (a
- * DRAFT convention, F-9), as stretches in their faces; none where no first
- * line is known. Its label on the plane, the one line after its field and a
- * trail entry's words all read it.
- * @param {Doc} d the version a box shows
- * @returns {import('./article.js').Faced[]}
- */
-export function leadRuns(d) {
-  const first = firstOf(d);
-  return first.length && d.refused !== 'withheld' && isDraft(d) ? [...first, { text: ' · ' + t('F.label.draft'), face: 'client' }] : first;
-}
-/** a box's lead as words (`leadRuns`) */
-export const firstLine = (/** @type {Doc} */ d) => leadRuns(d).map((r) => r.text).join('');
-/** a box's lead as a label on the plane sets it (`leadRuns`), each stretch in its face (P-LABEL's `inFace`) */
-export const labelLine = (/** @type {Doc} */ d) => leadRuns(d).map((r) => (r.face === 'client' ? r.text : inFace(r.face, r.text))).join('');
-/** a box's lead as markup (`leadRuns`; ST's `facedHTML`), wherever the page's chrome shows it: the document's words in the reading face (`.reading`), an address the identifier's (`.id`) */
-export const firstLineHTML = (/** @type {Doc} */ d) => facedHTML(leadRuns(d));
+/** a box's lead, the words its label sets before its address, as words: its first line (`firstOf`), which names the document and carries no kind — its label on the plane, the one line after its field and a trail entry's words all read it */
+export const firstLine = (/** @type {Doc} */ d) => firstOf(d).map((r) => r.text).join('');
+/** a box's lead as a label on the plane sets it (`firstOf`), each stretch in its face (P-LABEL's `inFace`) */
+export const labelLine = (/** @type {Doc} */ d) => firstOf(d).map((r) => (r.face === 'client' ? r.text : inFace(r.face, r.text))).join('');
+/** a box's lead as markup (`firstOf`; ST's `facedHTML`), wherever the page's chrome shows it: the document's words in the reading face (`.reading`), an address the identifier's (`.id`) */
+export const firstLineHTML = (/** @type {Doc} */ d) => facedHTML(firstOf(d));
 
 /**
- * A box's lead as a label's part sets it (`leadRuns`): at `px` in the
+ * A box's lead as a label's part sets it (`firstOf`): at `px` in the
  * reading face's words, in the ink of the text it stands for, cut on a word,
  * the bracket its client's words close with kept after a cut's ellipsis
  * (P-LABEL's `cutWords`); null where no first line is known.
@@ -2711,43 +2737,34 @@ export const firstLineHTML = (/** @type {Doc} */ d) => facedHTML(leadRuns(d));
  * @returns {import('../plane/labels.js').Part | null}
  */
 export function leadPart(d, px) {
-  const runs = leadRuns(d), last = runs[runs.length - 1];
+  const runs = firstOf(d), last = runs[runs.length - 1];
   if (!last) return null;
   return { text: labelLine(d), px, ink: COL.text, fit: 'cut', close: last.face === 'client' && last.text === CLIENT_CLOSE ? CLIENT_CLOSE : '' };
 }
 
 /**
- * A document's state in its short words (the one line's accessible name,
- * and the ARIA mirror's item where no read has answered what its corner
- * states it from — `mirrorState`; R94): withheld, its withheld box's words;
- * nothing the board will say of it, the words for that
- * (`L.far.unregistered`); a draft; published; none where nothing has told it
- * yet — its kind the index's place's for its box, else its own record's,
- * else its metadata's.
+ * What the ARIA mirror's item leads with (R94): its corner's first item in
+ * words, at any scale (T-ARTICLE's `cornerLead`, over `cornerFacts`) — its
+ * kind, "being read" while no read has told it — or, for a document a read
+ * refused, its own words: its withheld box's (`withheldBox`), or the words
+ * for one the board says nothing of.
  * @param {Doc} d the version a box shows
  * @returns {string}
  */
-export function stateWords(d) {
-  const p = REC.place(boxOf(d.addr));
-  const kind = p ? p.kind : d.kind !== 'unknown' ? d.kind : d.meta ? (d.meta.published ? 'edition' : 'draft') : null;
-  return d.refused === 'withheld' ? withheldBox(d) : d.refused === 'unregistered' ? t('L.far.unregistered') : kind === 'draft' ? t('L.mirror.draft') : kind === 'edition' ? t('F.published') : '';
-}
+export function mirrorLead(d) { return cornerLead(d, cornerFacts(d)); }
 
 /**
- * A document's state as the ARIA mirror's item voices it (R94): where a read
- * answered its metadata, its corner's state whole, as its corner states it
- * at any scale (T-ARTICLE's `cornerWords`, over `cornerFacts`) — a draft's
- * after its kind, which its label marks (`leadRuns`); else, and for a
- * document a read refused, its short words (`stateWords`), which claim
- * nothing a read has not told (FP-33).
+ * A document's state as the ARIA mirror's item voices it after its first
+ * line (R94): where a read answered its metadata, its corner's state after its
+ * first item, whole, as its corner states it at any scale (T-ARTICLE's
+ * `cornerWords`) — the version its box shows and the count of its chain among
+ * it (FP-22); none where no read has answered its metadata, which claims
+ * nothing a read has not told (FP-33), nor for a document a read refused,
+ * whose own words lead its item (`mirrorLead`).
  * @param {Doc} d the version a box shows
  * @returns {string}
  */
-export function mirrorState(d) {
-  if (d.refused || !d.meta) return stateWords(d);
-  const said = cornerWords(d, cornerFacts(d));
-  return isDraft(d) ? [t('L.mirror.draft'), said].filter(Boolean).join(', ') : said || stateWords(d);
-}
+export function mirrorState(d) { return d.refused || !d.meta ? '' : cornerWords(d, cornerFacts(d)); }
 
 /**
  * @typedef {Object} KeptClause — what a kept document, or a kept part of one, says beside its sign (FP-23, FP-33): its string's id and its words
@@ -2774,7 +2791,7 @@ export function mirrorState(d) {
  */
 export function keptWords(d, links, kept, now = Date.now()) {
   if (!kept || d.refused) return null;
-  if (isDraft(d) && d.from >= 0) return keptClause('L.kept.text', kept.since, kept.met, now);
+  if (isDraft(d) === true && d.from >= 0) return keptClause('L.kept.text', kept.since, kept.met, now);
   return links.linksRead ? keptClause('L.kept.links', kept.since, kept.met, now) : null;
 }
 
@@ -2804,7 +2821,7 @@ function keptClause(id, at, met, now) {
  */
 export function keptIn(addr) {
   const box = boxOf(addr), shows = read.shown(box), d = REC.doc(shows);
-  return keptWords(d, REC.doc(box), PUMP.kept(isDraft(d) ? shows : box));
+  return keptWords(d, REC.doc(box), PUMP.kept(isDraft(d) === true ? shows : box));
 }
 
 /**
@@ -2837,8 +2854,8 @@ export function boardKeptIn() {
 /** does the board lag past a second (M-PUMP's `boardKept`): every corner names neither the latest version nor the chain's count (`ArticleView.lags`) */
 const lags = () => PUMP.boardKept() !== null;
 
-/** what a document's corner's items are made from beside its record and the links (`Mounted.corner`): the board's lag, its box's chain (`chainOf`), the newer version it offers to read (the reader `newer`), the draft's kept state and whether its statement stands open — the items made again where it moved */
-const cornerKey = (/** @type {string} */ addr) => JSON.stringify([lags(), chainOf(addr), read.newer(addr), WRITE.keptOf(addr), openStatements.has(addr)]);
+/** what a document's corner's items are made from beside its record and the links (`Mounted.corner`): its kind (`kindOf`) — which an index row or a failed read tells with no move of its record — the board's lag, its box's chain (`chainOf`), the newer version it offers to read (the reader `newer`), the draft's kept state and whether its statement stands open — the items made again where it moved */
+const cornerKey = (/** @type {string} */ addr) => JSON.stringify([kindOf(REC.doc(addr)), lags(), chainOf(addr), read.newer(addr), WRITE.keptOf(addr), openStatements.has(addr)]);
 /** a document's corner's items made over its view, whole and compact, and compact one by one for a head's rows, keyed by what they were made from (`cornerKey`) */
 const cornerOfView = (/** @type {Doc} */ d, /** @type {ArticleView} */ view) => ({ whole: cornerHTML(d, view), compact: cornerHTML(d, view, true), key: cornerKey(d.addr), items: cornerItems(d, view, true, false) });
 
@@ -4629,8 +4646,8 @@ export function sceneCorner(d, view = viewFor(d, true), compact = false) { retur
  * whole on a glyph's or the count's act, a draft's kept statement on its kept
  * word's (K-74). No row names the document: the scene's bar names each pane's.
  * Its rows stand where its band sets them, each row and the form beneath
- * absolutely placed (the scene moves them as its pane scrolls); no rows where
- * it carries neither an item nor a clause.
+ * absolutely placed (the scene moves them as its pane scrolls); every corner
+ * carries an item, its kind's slot first, so it stands one row at the least.
  * @param {Doc} d
  * @param {ArticleView} view the pane's view, at its measure (`sceneView`), with the corner's state the scene hands in
  * @param {{px: number, kept: KeptClause | null, open: boolean}} as `px` the em the pane's text is set at; `kept` the pane's kept clause; `open` its items opened whole by the reader's act
@@ -4638,7 +4655,6 @@ export function sceneCorner(d, view = viewFor(d, true), compact = false) { retur
  */
 export function sceneHead(d, view, as) {
   const items = cornerItems(d, view, true, false), clause = as.kept;
-  if (!items.length && !clause) return { html: '', rows: 0 };
   const pitch = LINE_H * as.px, width = ((view.cpl ?? MEASURE_CPL) * CHAR_W + EDGE) * as.px;
   const L = headLayout(headItems(items), 0, clause ? { w: cornerPx(clause.text), words: clause.text } : null, width, pitch);
   /** @type {string[]} each row's markup, by row */
@@ -4779,7 +4795,7 @@ export function editable(addr, scale = cam.scale) {
   const s = REC.session();
   if (!s || !s.account || accountOf(addr) !== s.account || !REC.has(addr)) return false;
   const d = REC.doc(addr);
-  return isDraft(d) && d.from >= 0 && !d.refused && atReadingScale(addr, scale);
+  return isDraft(d) === true && d.from >= 0 && !d.refused && atReadingScale(addr, scale);
 }
 
 /** the caret as it stands, by value; null where none stands */

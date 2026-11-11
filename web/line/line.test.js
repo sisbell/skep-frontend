@@ -6,7 +6,7 @@
 // empty and as wide below it and its strip standing bare, the document's
 // field followed by its label —
 // its first line, cut on a word to the room past its fields — the segment
-// named by its fields, that label whole and the document's state, the
+// named by its fields and that label whole, carrying no kind, the
 // address part one width throughout, the strip
 // marking the view's window while the walk keeps its document off-centre at
 // its reading scale and outlining an arrival's runs at every scale, the
@@ -200,7 +200,7 @@ test('a document below its own reading scale is named with its strip standing ba
   }
 });
 
-test('at reading scale the document\'s field is followed by its label — its box\'s lead, as its label on the plane sets it — whole where the room the segment\'s one width leaves past its fields holds it, else cut on a word, its fields never; and the segment is named by its fields in their order, the label whole after the document\'s field, the position and the document\'s state (issue #23)', async () => {
+test('at reading scale the document\'s field is followed by its label — its box\'s lead, as its label on the plane sets it — whole where the room the segment\'s one width leaves past its fields holds it, else cut on a word, its fields never; and the segment is named by its fields in their order, the label whole after the document\'s field and the position, no kind among them (issue #23; issue #423\'s design decision: "Drop the state words from the one line\'s address name")', async () => {
   const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
   LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
   await PUMP.loadWhole(LONG);
@@ -217,7 +217,7 @@ test('at reading scale the document\'s field is followed by its label — its bo
     assert.deepEqual(a.label, [{ text, face: 'reading' }], `${doc}: its label its first line, the reading face's`);
     assert.deepEqual([seg.place, seg.label, seg.pos], [a.place, shown, ` › ${t('F.position', { p: 15 })}`], `${doc}: its fields whole, its label ${shown === text ? 'whole' : 'cut on a word'} between them`);
     assert.ok(seg.labelHTML.includes('<span class="reading">'), `${doc}: the label in the reading face: ${seg.labelHTML}`);
-    assert.equal(seg.name, `${a.place} ${text} › ${t('F.position', { p: 15 })}, ${t('F.published')}`, `${doc}: named by its fields, its label whole, its position and its state`);
+    assert.equal(seg.name, `${a.place} ${text} › ${t('F.position', { p: 15 })}`, `${doc}: named by its fields, its label whole and its position — a name, carrying no kind`);
   }
 });
 

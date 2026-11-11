@@ -1467,14 +1467,32 @@ test('a face arriving after the first layout is a re-set: the type measured agai
   } finally { setAdvance(before); LAYER.refaced(); }
 }, 1440, 900));
 
-test('a box\'s label is its contents line: its first line leading, at its em, its words as typed in the reading face, its draft mark the client\'s, cut on a word; its address at P-REG\'s one size and weight in the identifier\'s face, past its region\'s prefix and whole beside it for where its region is not named, in the title\'s ink; a withheld box\'s statement bracketed, the owner it names the identifier\'s — on the canvas and in the chrome alike (issues #16, #23)', () => {
+test('a document\'s kind is one test, which its corner\'s first slot and its box\'s edge read: its metadata\'s word where a read answered it, whatever its listing says; else the kind the model knows of its record; else its box\'s listing, a version taking its box\'s; and none where nothing answers, its slot being read then and not read where its metadata\'s read failed (issue #423\'s design decision: "It reads metadata where read, else the known kind, else the index\'s listing"; FP-33, FP-34)', () => {
+  const E = '1.0.1.0.8', U = '1.0.4.0.2';
+  const meta = (/** @type {string} */ doc, /** @type {boolean} */ published) => ({ doc, published, owner: doc.split('.').slice(0, 3).join('.'), birth: published ? doc + '.1' : null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  const at = (/** @type {string} */ addr) => [LAYER.isDraft(REC.doc(addr)), LAYER.kindOf(REC.doc(addr))];
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: 'd', standing: 'yours_to_read' }, { doc: E, kind: 'edition', label: 'e', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
+  assert.deepEqual(at(D), [true, 'draft'], 'listed a draft, no metadata read: the kind its record holds from its listing');
+  REC.takeMetadata(D, meta(D, true));
+  assert.deepEqual(at(D), [false, 'published'], 'its metadata read published: the metadata\'s word, whatever its listing says');
+  assert.deepEqual(at(E + '.2'), [false, 'published'], 'a version no read has answered: its box\'s listing');
+  assert.deepEqual(at(U), [null, 'reading'], 'listed nowhere and no metadata read: none, its slot being read');
+  REC.takeFailedRead(U);
+  assert.deepEqual(at(U), [null, 'unread'], 'its metadata\'s read failed: not read');
+  REC.takeMetadata(U, meta(U, false));
+  assert.deepEqual(at(U), [true, 'draft'], 'its metadata read: a draft');
+  assert.deepEqual([LAYER.kindSaid(REC.doc(U)), LAYER.kindSaid(REC.doc(E))], [t('F.kind.draft'), t('F.published')], 'in the slot\'s words');
+});
+
+test('a box\'s label is its contents line: its first line leading, at its em, its words as typed in the reading face, cut on a word, a draft\'s carrying no kind; its address at P-REG\'s one size and weight in the identifier\'s face, past its region\'s prefix and whole beside it for where its region is not named, in the title\'s ink; a withheld box\'s statement bracketed, the owner it names the identifier\'s — on the canvas and in the chrome alike (issues #16, #23; issue #423\'s design decision: "a label names a document and carries no kind")', () => {
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: '# The artifact chain', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
   const d = REC.doc(D), l = LAYER.docLabel(d, 12), first = /** @type {import('../plane/labels.js').Part} */ (l.lead);
   assert.deepEqual([l.address.text, l.address.whole, l.address.face, l.address.px, l.address.weight, l.address.ink, l.region], [LAYER.shortAddr(d), D, 'ident', ADDRESS.px, ADDRESS.weight, COL.title, '1.0.1'], 'the address past its region\'s prefix, whole beside it, at one size, never greyed');
   assert.deepEqual([first.px, first.fit, first.close], [12, 'cut', ''], 'the first line at the box\'s em, cut on a word');
-  assert.deepEqual(runsOf(first.text, first.face || 'client'), [{ text: '# The artifact chain', face: 'reading' }, { text: ' · ' + t('F.label.draft'), face: 'client' }], 'the first line\'s words the reading face\'s, its characters as typed, "#" among them; the draft mark the client\'s');
-  assert.equal(LAYER.firstLineHTML(d), `<span class="reading"># The artifact chain</span>${esc(' · ' + t('F.label.draft'))}`, 'in the chrome: the words in the reading face');
-  assert.equal(LAYER.firstLine(d), '# The artifact chain · ' + t('F.label.draft'), 'as words, the same');
+  assert.equal(LAYER.isDraft(d), true, 'a draft, as the index lists it');
+  assert.deepEqual(runsOf(first.text, first.face || 'client'), [{ text: '# The artifact chain', face: 'reading' }], 'the first line\'s words the reading face\'s, its characters as typed, "#" among them, and no kind after them');
+  assert.equal(LAYER.firstLineHTML(d), '<span class="reading"># The artifact chain</span>', 'in the chrome: the words in the reading face, no kind');
+  assert.equal(LAYER.firstLine(d), '# The artifact chain', 'as words, the same');
   REC.takeRefused(D, 'withheld');
   const held = /** @type {import('../plane/labels.js').Part} */ (LAYER.docLabel(REC.doc(D), 12).lead);
   assert.deepEqual(runsOf(held.text, held.face || 'client'), [{ text: '[withheld · ', face: 'client' }, { text: '1.0.1', face: 'ident' }, { text: ']', face: 'client' }], 'withheld: the statement the client\'s, bracketed, its owner the identifier\'s');
@@ -1604,6 +1622,9 @@ test('a kept box\'s label carries its clause after its address — the words the
   } finally { LAYER.readers({}); PORT.boot(null); CAM._reset(); }
 });
 
+
+/** an edition's state on a notebook as its corner sets it after its kind: its venue's clause, then the state's own words (T-ARTICLE's `L.corner.venue`) */
+const venued = (/** @type {string} */ id, /** @type {Record<string, number>} */ vals = {}) => t('L.corner.venue', { venue: t('F.published.notebook'), state: t(id, vals) });
 test('while the board lags past a second the plane\'s corner names neither the latest version nor the chain\'s count — its items made again in the frame the lag begins, and again in the frame it ends with the catch-up\'s rows (issue #367\'s design decision: "corners drop \'the latest\' and \'of ⟨n⟩\'")', async (ctx) => {
   const platform = { document: globalThis.document, window: globalThis.window };
   /** an element of the page: the corner's, the article's and its column's, measured as the platform lays them out */
@@ -1632,7 +1653,7 @@ test('while the board lags past a second the plane\'s corner names neither the l
     const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), c = f.columns[0];
     CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2, scale: 12 / f.fs });
     const items = () => /** @type {{innerHTML: string} | null} */ (/** @type {unknown} */ (LAYER.cornerOf(D)))?.innerHTML ?? '';
-    const latest = esc(t('F.corner.latest', { published: t('F.published.notebook') })), counted = esc(t('F.version-of', { k: 2, n: 2 }));
+    const latest = esc(venued('F.corner.latest')), counted = esc(t('F.version-of', { k: 2, n: 2 }));
     LAYER.frame();
     assert.ok(items().includes(latest) && items().includes(counted), `the corner at reading scale: the latest, "version 2 of 2" — ${items()}`);
     ctx.mock.timers.enable({ apis: ['setTimeout'] });
@@ -1684,9 +1705,9 @@ function onCorner(body) {
 test('the plane\'s corner of a box shown at a version names that version and its chain\'s count, and counts the chain again in the frame a newer version\'s arrival counts it — "version 2 of 2", then "version 2 of 3" — its article standing all the while (FP-22, FP-23; issue #239\'s design decision: "it counts the chain again when a newer version arrives")', () => onCorner((items) => {
   showing({ at: D2 });
   REC.takeMembers(D, 2);
-  const published = t('F.published.notebook'), of = (/** @type {number} */ n) => `<span class="version" data-members="${n}">${esc(t('F.version-of', { k: 2, n }))}</span>`;
+  const of = (/** @type {number} */ n) => `<span class="version" data-members="${n}">${esc(t('F.version-of', { k: 2, n }))}</span>`;
   LAYER.frame();
-  assert.ok(LAYER.isMounted(D2) && items(D2).includes(esc(t('F.corner.pinned', { published, k: 2 }))) && items(D2).includes(of(2)), `the box at version 2: its corner names it, "version 2 of 2" — ${items(D2)}`);
+  assert.ok(LAYER.isMounted(D2) && items(D2).includes(esc(venued('F.corner.pinned', { k: 2 }))) && items(D2).includes(of(2)), `the box at version 2: its corner names it, "version 2 of 2" — ${items(D2)}`);
   const last = LAYER.mounts().at(-1);
   REC.takeMembers(D, 3);
   LAYER.frame();
@@ -1694,16 +1715,31 @@ test('the plane\'s corner of a box shown at a version names that version and its
   assert.ok(LAYER.isMounted(D2) && LAYER.mounts().at(-1) === last, 'its article standing: nothing mounted again');
 }));
 
+test('the plane\'s corner opens with its document\'s kind and is made again in the frame the kind is told with no move of its record — a box showing a version no read has told the kind of, its slot an empty box being read, then "not read" as its metadata\'s read fails — its article standing (issue #423\'s design decision: "Until one of these answers, the slot says it is being read"; FP-34)', () => onCorner((items) => {
+  showing({ at: D2 });
+  REC.doc(D2).meta = null;
+  REC.takeIndex(/** @type {any} */ ({ docs: [], counts: [], state: { arm: 'complete' } }));
+  LAYER.frame();
+  assert.ok(LAYER.isMounted(D2) && items(D2).startsWith('<span class="kind pending" data-kind="reading" role="img"'), `no read nor listing tells its kind: the slot being read, an empty box — ${items(D2)}`);
+  const last = LAYER.mounts().at(-1), rev = REC.doc(D2).rev;
+  REC.takeFailedRead(D2);
+  LAYER.frame();
+  assert.ok(REC.doc(D2).rev === rev && items(D2).startsWith(`<span class="kind" data-kind="unread" data-string="L.slot.unread"`), `its metadata's read failed, its record unmoved: "not read" in that frame — ${items(D2)}`);
+  assert.ok(LAYER.isMounted(D2) && LAYER.mounts().at(-1) === last, 'its article standing: nothing mounted again');
+  REC.takeMetadata(D2, { doc: D, published: true, owner: '1.0.1', birth: D + '.1', birthExtent: EXTENT, placed: null, baseExtent: null, source: null, asOf: 1 });
+  LAYER.frame();
+  assert.ok(items(D2).startsWith(`<span class="kind" data-kind="published" data-string="F.published"`), `its metadata read: "published" — ${items(D2)}`);
+}));
+
 test('the plane\'s corner claims no total the board did not give: a chain its probe read part of — the board not answering that none follows — names no count at the bare address nor at a version, its state standing; the board ending the chain there, the count (FP-22; #184\'s rule: "nothing built from it claims a total or a latest")', () => onCorner((items) => {
   const box = { at: D };
   showing(box);
-  const published = t('F.published.notebook');
   REC.takeMembers(D, 8, false);
   LAYER.frame();
-  assert.ok(items(D).includes(esc(t('F.corner.latest', { published }))) && !items(D).includes('class="version"'), `the bare address: the latest version, no "version 8 of 8" — ${items(D)}`);
+  assert.ok(items(D).includes(esc(venued('F.corner.latest'))) && !items(D).includes('class="version"'), `the bare address: the latest version, no "version 8 of 8" — ${items(D)}`);
   box.at = D2;
   LAYER.frame();
-  assert.ok(items(D2).includes(esc(t('F.corner.pinned', { published, k: 2 }))) && !items(D2).includes('class="version"'), `at version 2: its own version, no "of 8" — ${items(D2)}`);
+  assert.ok(items(D2).includes(esc(venued('F.corner.pinned', { k: 2 }))) && !items(D2).includes('class="version"'), `at version 2: its own version, no "of 8" — ${items(D2)}`);
   REC.takeMembers(D, 8, true);
   LAYER.frame();
   assert.ok(items(D2).includes(esc(t('F.version-of', { k: 2, n: 8 }))), `the chain ended at 8: "version 2 of 8" — ${items(D2)}`);
@@ -1818,14 +1854,15 @@ test('a head\'s rows: the name\'s least room first, then the kept clause and the
   assert.ok(clause.slots[0].x > clause.name && clause.slots[0].x < clause.slots[1].x, 'the clause between the name and the items');
 });
 
-test('a reading scene\'s pane\'s view is at the pane\'s measure, and its corner stands compact beside its column, its usual state a glyph, or at its document\'s head: its rows across the pane\'s column and edge at the pane\'s em, at the reading line\'s pitch, no row naming the document, the kept clause first, the offered read folded into "⟨n⟩ more" where its row cannot hold it, every item whole beneath the rows where the reader\'s act opened it, and no rows where it carries nothing (issue #217; FP-12, FP-26)', () => {
+test('a reading scene\'s pane\'s view is at the pane\'s measure, and its corner stands compact beside its column, its usual state a glyph, or at its document\'s head: its rows across the pane\'s column and edge at the pane\'s em, at the reading line\'s pitch, no row naming the document, the kept clause first, the offered read folded into "⟨n⟩ more" where its row cannot hold it, every item whole beneath the rows where the reader\'s act opened it, and its kind\'s slot alone on one row while it is being read (issue #217; FP-12, FP-26, FP-34)', () => {
   deliver();
   const d = { ...REC.doc(D), meta: /** @type {any} */ ({ published: true, birth: D + '.1' }) };
   assert.equal(LAYER.sceneView(d).cpl, MEASURE_CPL, 'the full measure where none is given');
   const view = { ...LAYER.sceneView(d, 1), members: 3, read: 2 }, px = 17, pitch = LINE_H * px, width = (1 * CHAR_W + EDGE) * px;
   assert.equal(view.cpl, 1, 'the pane\'s measure');
-  const latest = t('F.corner.latest', { published: t('F.published.notebook') });
+  const latest = venued('F.corner.latest');
   assert.ok(LAYER.sceneCorner(d, view, true).includes('class="st glyph"') && LAYER.sceneCorner(d, view, true).includes(`aria-label="${esc(latest)}"`) && !LAYER.sceneCorner(d, view).includes('glyph'), 'beside its column, compact: the state a glyph named by its words; whole: its words');
+  assert.ok([LAYER.sceneCorner(d, view), LAYER.sceneCorner(d, view, true)].every((c) => c.startsWith(`<span class="kind" data-kind="published" data-string="F.published"`)), 'its kind first, in either form');
   /** a head's rows: each its index, its top and its height, and its markup */
   const rowsOf = (/** @type {string} */ html) => [...html.matchAll(/<div class="hrow" data-row="(\d+)" style="top:([\d.]+)px;height:([\d.]+)px">(.*?)<\/div>/g)].map((m) => ({ k: Number(m[1]), top: Number(m[2]), h: Number(m[3]), html: m[4] }));
   const head = LAYER.sceneHead(d, view, { px, kept: null, open: false }), rows = rowsOf(head.html);
@@ -1833,17 +1870,18 @@ test('a reading scene\'s pane\'s view is at the pane\'s measure, and its corner 
   assert.ok(!head.html.includes('class="name"'), `no row naming the document: ${head.html}`);
   const slots = [...head.html.matchAll(/class="hslot[^"]*" style="left:([\d.]+)px;width:([\d.]+)px;/g)].map((m) => Number(m[1]) + Number(m[2]));
   assert.ok(slots.length && slots.every((r) => r <= width + 1e-6), `every slot inside the head's width, the column and its edge: ${slots} ≤ ${width}`);
-  assert.ok(rows[0].html.includes('class="st glyph"') && rows[0].html.includes('data-members="3"'), `the state's glyph and the version statement on the first row: ${rows[0].html}`);
-  assert.ok(rows[1].html.includes('data-more="1"') && rows[1].html.includes(esc(t('L.corner.more', { n: 1 }))) && !head.html.includes('data-read'), 'the offered read, which yields, folded into the count on the next row');
+  assert.ok(rows[0].html.includes('class="kind"') && rows[0].html.indexOf('class="kind"') < rows[0].html.indexOf('class="st glyph"'), `its kind, then the state's glyph, on the first row: ${rows[0].html}`);
+  assert.ok(rows[1].html.includes('data-members="3"') && rows[1].html.includes('data-more="1"') && rows[1].html.includes(esc(t('L.corner.more', { n: 1 }))) && !head.html.includes('data-read'), `the version statement wrapped whole onto the next row, the offered read, which yields, folded into the count there: ${rows[1].html}`);
   assert.ok(!head.html.includes('class="opened"'), 'nothing opened beneath');
   const kept = { id: /** @type {const} */ ('L.kept.links'), text: t('L.kept.links', { when: '09:05' }), reason: '', since: 0 };
-  const clause = rowsOf(LAYER.sceneHead(d, { ...view, cpl: 8 }, { px, kept, open: false }).html)[0].html;
-  assert.ok(clause.indexOf('data-string="L.kept.links"') >= 0 && clause.indexOf('data-string="L.kept.links"') < clause.indexOf('class="st glyph"'), `the kept clause first on the first row, before the state's glyph: ${clause}`);
+  const clauseHead = LAYER.sceneHead(d, { ...view, cpl: 8 }, { px, kept, open: false }).html, clause = rowsOf(clauseHead)[0].html;
+  assert.ok(clause.indexOf('data-string="L.kept.links"') >= 0 && clauseHead.indexOf('data-string="L.kept.links"') < clauseHead.indexOf('class="kind"') && clauseHead.indexOf('class="kind"') < clauseHead.indexOf('class="st glyph"'), `the kept clause first on the first row, before the kind and the state's glyph: ${clauseHead}`);
   assert.ok(rowsOf(LAYER.sceneHead(d, view, { px, kept, open: false }).html)[0].html.includes('data-string="L.kept.links"'), 'a clause wider than the head on the first row, which nothing stands before, wrapped there');
   const opened = LAYER.sceneHead(d, view, { px, kept, open: true });
   const form = /<div class="opened" style="top:([\d.]+)px;width:([\d.]+)px">(.*)<\/div>$/.exec(opened.html);
   assert.ok(form && Math.abs(Number(form[1]) - opened.rows * pitch) < 1e-6 && Math.abs(Number(form[2]) - width) < 1e-6 && form[3].includes(esc(latest)) && form[3].includes('data-read="2"'), `opened: every item whole beneath its rows, across the head: ${opened.html}`);
-  assert.deepEqual(LAYER.sceneHead({ ...d, kind: /** @type {any} */ ('unknown'), meta: null }, { ...view, read: null }, { px, kept: null, open: false }), { html: '', rows: 0 }, 'no item and no clause: no rows');
+  const reading = LAYER.sceneHead({ ...d, kind: /** @type {any} */ ('unknown'), meta: null }, { ...view, read: null, kind: 'reading' }, { px, kept: null, open: false });
+  assert.ok(reading.rows === 1 && rowsOf(reading.html).length === 1 && rowsOf(reading.html)[0].html.includes('class="kind pending"'), `its kind being read: its one row its slot, an empty box: ${reading.html}`);
 });
 
 /**

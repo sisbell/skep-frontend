@@ -171,22 +171,27 @@
 // where the run carries C-33's words as its statement does (T-ARTICLE's
 // `carriesC33`), names those words as its origin's one description, which
 // every item of a run of that origin names (`originWords`); a document
-// is named by its address, then the first line its box's label sets as the
-// mirror says it (T-LAYER's `mirrorLabel`, the one the status region names it
-// by), the version's own — its words quoted, the client's words in their
-// place bracketed — then its state (T-LAYER's `mirrorState`): where a read
-// answered its metadata its corner's state whole, the version its box shows
-// and the count of its chain among it (FP-22), a draft's after its kind; one
-// a read answered `withheld` by its withheld box's words (B1-S2), its first
-// line standing for none, one the board said nothing about by the words for
-// that (`L.far.unregistered`), and one no read or listing has told the state
-// of by no state at all (FP-25) — and, while it stands kept as it is read
+// is named first by its corner's first item (T-LAYER's `mirrorLead`): its
+// kind — "draft" or "published", "being read" while no read or listing has
+// told it (FP-25, FP-34), "not read" where none can — or, for one a read
+// answered `withheld`, its withheld box's words (B1-S2), its first line
+// standing for none, and for one the board said nothing about the words for
+// that (`L.far.unregistered`); then by its address, then the first line its
+// box's label sets as the mirror says it (T-LAYER's `mirrorLabel`, the one the
+// status region names it by), the version's own — its words quoted, the
+// client's words in their place bracketed — then its state (T-LAYER's
+// `mirrorState`): where a read answered its metadata its corner's state after
+// that first item, whole, the version its box shows and the count of its
+// chain among it (FP-22) — and, while it stands kept as it is read
 // again, the clause the one line or its corner shows, as a sentence of its
 // own (T-LAYER's `keptIn`; FP-23, FP-33), and the board's while it lags so
 // (`boardKeptIn`), each item marked again in place on each dirty frame where
-// its clause or a document's state changed (`markKept`), the current item,
-// where the panel's window held it whole, held there as words above it or its
-// own change height; a mark's stop by its count,
+// its clause or a document's kind or state changed (`markKept`), the current
+// item, where the panel's window held it whole, held there as words above it
+// or its own change height; and where the corner's slot of the document the
+// walk stands in fills while the focus is in that document — on the walk's
+// item or in its corner — its words said once in the status region
+// (`sayKind`; FP-36); a mark's stop by its count,
 // the words the mark shows (ST's `markCount`), its item saying a list opens
 // on it (`aria-haspopup`); a link's item names its far end as its tail does
 // (LK's `farLabel`), and says BM-HELD's line where the
@@ -202,7 +207,10 @@
 // marked again in place on each dirty frame (`markLocated`). A landing's line
 // is its item's description (FP-21): the item a landing stands on carries
 // `aria-describedby` naming the mirror's hidden description, which holds what
-// the landing says (the `described` reader), and every span holding another
+// the landing says (the `described` reader) — where it crossed into its
+// document from another, that document's kind first, in a hidden description
+// of its own named before the line's, save on the document's own item, whose
+// name leads with it — and every span holding another
 // run of a passage in several is described by those runs' labels, a hidden
 // description of its own, each written at the rebuild and marked again in
 // place (`markDescribed`), so the focus moving onto an item says it once. The
@@ -226,7 +234,7 @@
 // (`dropped`) — on that document still where the new class may not read it,
 // named by its withheld box's words, its cover.
 // Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-13, FP-20, FP-21, FP-22,
-// FP-23, FP-24, FP-29, FP-33, FP-35.
+// FP-23, FP-24, FP-29, FP-33, FP-34, FP-35, FP-36.
 
 import * as REC from '../model/records.js';
 import * as WRITE from '../write/write.js';
@@ -235,7 +243,7 @@ import * as PUMP from '../model/pump.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import * as FOCUS from './focus.js';
-import { placeholderOf, itemOf, itemWords, itemLength, recordOf, carriesC33, CLAUSE_READING } from '../text/article.js';
+import { placeholderOf, itemOf, itemWords, itemLength, recordOf, carriesC33, kindWord, CLAUSE_READING } from '../text/article.js';
 import { farSays } from '../beams/held.js';
 import { docBox, accountCell, boardCell, accountAt, clearLeftOf, continuationCell, withinContinuation, membersAt, markKey, continuationOf } from '../plane/projection.js';
 import { lodOf, residueDepth, markScale } from '../plane/lod.js';
@@ -268,7 +276,8 @@ import { t, tHTML, addressedHTML, markCount } from '../strings.js';
  * @typedef {Object} Described — what a landing says of the passage it carried or followed (N-GO's `described`), which the mirror gives the items it stands on as their descriptions
  * @property {string} addr the document landed in
  * @property {number} pos where the landing stands: the run it stands at, or the landing point
- * @property {string} words the line's words — the label of the run it stands at, where the passage stands in several — or the dead end's where the text holds none of the passage
+ * @property {string} words the line's words — the label of the run it stands at, where the passage stands in several — or the dead end's where the text holds none of the passage; '' where the landing says only its document's kind
+ * @property {string | null} [kind] what it says first: the document's kind in its corner's first slot's words, where the landing crossed into it from another document (N-GO's `Landing.crossed`); null, or absent, where it did not, or the document is withheld from the reader
  * @property {Array<{pos: number, width: number, words: string}>} runs every run of the passage where it stands in several, each with its own label; none where it stands in one
  */
 
@@ -308,6 +317,8 @@ export function readers(/** @type {Partial<Readers>} */ r) { read = { ...noReade
 
 /** the id of the mirror's hidden description of the landing, which the item it stands on names (see the head) */
 const DESCRIPTION = 'walk-landing';
+/** the id of the mirror's hidden words for the kind of the document a landing crossed into, which the item it stands on names before the landing's description (see the head) */
+const KIND = 'walk-landing-kind';
 /** the id of the hidden description of the other runs an item holds, item i's (see the head) */
 const pieceId = (/** @type {number} */ i) => 'walk-piece-' + i;
 /** the id of the mirror's hidden description of an item holding what a hold keeps from the board, "held on this device" (see the head) */
@@ -475,10 +486,11 @@ function named(n, i, total) {
   // a mark's stop: its count, the words the mark shows (ST's `markCount`)
   if (n.kind === 'mark') return then(plainly(markCount(membersOf(n.addr).length, REC.countsExact())));
   if (n.kind === 'document') {
-    // a version named by its own first line, as its box's label names it (T-LAYER's `mirrorLabel`; FP-22), then its state as
-    // its corner states it, whole, where a read told it (T-LAYER's `mirrorState`)
+    // led by its corner's first item — its kind, else a refused document's own words (T-LAYER's `mirrorLead`) — a version named
+    // by its own first line, as its box's label names it (T-LAYER's `mirrorLabel`; FP-22), then its state as its corner states
+    // it after that item, whole, where a read told it (T-LAYER's `mirrorState`)
     const d = REC.doc(n.addr), label = LAYER.mirrorLabel(d);
-    const values = { document: n.addr, state: LAYER.mirrorState(d), extent: d.extent != null ? t('L.mirror.positions', { n: d.extent }) : '' };
+    const values = { kind: LAYER.mirrorLead(d), document: n.addr, state: LAYER.mirrorState(d), extent: d.extent != null ? t('L.mirror.positions', { n: d.extent }) : '' };
     return then(then({ text: t('L.mirror.document', { ...values, label: label.map((r) => r.text).join('') }), html: tHTML('L.mirror.document', { ...values, label }, { document: 'id' }) }, plainly(keptSentence(n))));
   }
   if (n.kind === 'block') {
@@ -651,7 +663,8 @@ export function among(sibs, node) {
  * item says whether it is expanded — at its reading scale — or collapsed
  * (see the head) — a withheld run's item, where ends are drawn at it, expanded,
  * → entering them — and the item a landing stands on its description (see the
- * head), held in the mirror's one hidden element after the items, each other
+ * head), held in the mirror's one hidden element after the items, the kind of
+ * a document it crossed into in one of its own named before it, each other
  * description an item names in a hidden element of its own after them. Replacing
  * the items removes the one the platform's focus may stand on; the callers
  * put it on the new current item through the focus's owner (`FOCUS.land`), as
@@ -682,7 +695,7 @@ export function render() {
     const o = originWords(n);
     if (o && !origins.has(o.origin)) { origins.add(o.origin); pieces += `<div id="${originId(o.origin)}" hidden>${esc(o.words)}</div>`; }
   }
-  html += `</ul><div id="${DESCRIPTION}" hidden>${esc(said ? said.words : '')}</div><div id="${HELD}" hidden>${esc(t('L.held.device'))}</div>${pieces}`;
+  html += `</ul><div id="${KIND}" hidden>${esc(said && said.kind ? said.kind : '')}</div><div id="${DESCRIPTION}" hidden>${esc(said ? said.words : '')}</div><div id="${HELD}" hidden>${esc(t('L.held.device'))}</div>${pieces}`;
   mirrorEl.innerHTML = html;
   mirrorEl.tabIndex = idx >= lo && idx < hi ? -1 : 0;
 }
@@ -755,23 +768,53 @@ export function originWords(n) {
   return { origin: b.origin, words: t('L.mirror.withheld.origin', { owner: w.owner, arm: w.arm.text, clause: w.clause ? t('L.mirror.clause', { clause: w.clause.text }) : '' }) + (k ? t('L.mirror.clause', { clause: k.text }) : '') };
 }
 
-/** a document's state as its item voices it (T-LAYER's `mirrorState`): the version its node names, as its corner states it */
-const stateOf = (/** @type {Node} */ n) => LAYER.mirrorState(REC.doc(n.addr));
+/** a document's kind and state as its item voices them (T-LAYER's `mirrorLead`, `mirrorState`): the version its node names, as its corner states them, a line each */
+const stateOf = (/** @type {Node} */ n) => { const d = REC.doc(n.addr); return `${LAYER.mirrorLead(d)}\n${LAYER.mirrorState(d)}`; };
+
+/** the document the walk stands in as last read, and its corner's slot as it stood then (`sayKind`); null where the walk stands in none */
+/** @type {{addr: string, kind: import('../text/article.js').Kind} | null} */
+let heard = null;
+
+/** does the platform's focus stand in a document: on the walk's item, or in the document's corner (T-LAYER's `cornerOf`) */
+function focusIn(/** @type {string} */ addr) {
+  if (mirrorHolds()) return true;
+  const c = LAYER.cornerOf(addr);
+  return !!c && typeof document !== 'undefined' && c.contains(document.activeElement);
+}
+
+/**
+ * The kind of the document the walk stands in, said once in the status region
+ * where its corner's slot fills while the focus is in that document (see the
+ * head; FP-36): the slot's words as it says them once no longer being read —
+ * a kind, or why it cannot be read (T-LAYER's `kindOf`; T-ARTICLE's
+ * `kindWord`). A move of the walk to another document says nothing: the
+ * item's own name leads with its kind.
+ */
+function sayKind() {
+  const f = focus, addr = f && inDocument(f) ? f.addr : null;
+  if (!addr) { heard = null; return; }
+  const k = LAYER.kindOf(REC.doc(addr)), was = heard && heard.addr === addr ? heard.kind : null;
+  heard = { addr, kind: k };
+  if (was === 'reading' && k !== 'reading' && focusIn(addr)) FOCUS.say(kindWord(k).text);
+}
 
 /**
  * The mirror's items marked in place where the kept clause they carry, or a
- * document's state, changed (see the head; `keptSentence`, `stateOf`): each
- * such item's words written again, the item itself kept, so the platform's
- * focus stays on the item it stands on. The app's loop runs it on each dirty
- * frame: a clause appears once its read again has stood a second and lifts
- * in the frame its read sets it, and a document's item says what its corner
- * says in the frame its corner says it — its chain counted again, the
- * board's lag begun or ended — between the walk's moves. Words written again
- * change an item's height: the current item, where the panel's window held it
- * whole, is brought inside it again (`showInPanel`), and where the reader's
- * scroll had left it outside, the scroll stands.
+ * document's kind or state, changed (see the head; `keptSentence`,
+ * `stateOf`): each such item's words written again, the item itself kept, so
+ * the platform's focus stays on the item it stands on. The app's loop runs it
+ * on each dirty frame: a clause appears once its read again has stood a
+ * second and lifts in the frame its read sets it, and a document's item says
+ * what its corner says in the frame its corner says it — its kind told, its
+ * chain counted again, the board's lag begun or ended — between the walk's
+ * moves, the kind of the document the walk stands in said once where it
+ * fills under the focus (`sayKind`). Words written again change an item's
+ * height: the current item, where the panel's window held it whole, is
+ * brought inside it again (`showInPanel`), and where the reader's scroll had
+ * left it outside, the scroll stands.
  */
 export function markKept() {
+  sayKind();
   if (!mirrorEl || typeof mirrorEl.querySelectorAll !== 'function') return;
   const total = siblings.length;
   const items = /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[role="treeitem"]')]);
@@ -856,7 +899,9 @@ function isHeld(/** @type {Node} */ n) {
 
 /**
  * The descriptions a node names (see the head): the landing's, where it
- * stands on it; "held on this device", where it holds what a hold keeps from
+ * stands on it — the kind of the document it crossed into first, save at the
+ * document's own item, whose name leads with it, then its line where it says
+ * one; "held on this device", where it holds what a hold keeps from
  * the board; its other runs' labels, where it holds any; its far end's
  * whole form, where the board will say nothing of its far document; null
  * where it names none.
@@ -868,7 +913,10 @@ function isHeld(/** @type {Node} */ n) {
 function describedBy(n, i, at) {
   /** @type {string[]} */
   const ids = [];
-  if (isDescribed(n, at)) ids.push(DESCRIPTION);
+  if (at && isDescribed(n, at)) {
+    if (at.kind && n.kind !== 'document') ids.push(KIND);
+    if (at.words) ids.push(DESCRIPTION);
+  }
   if (isHeld(n)) ids.push(HELD);
   if (otherRuns(n, at)) ids.push(pieceId(i));
   if (farWhole(n)) ids.push(farId(i));
@@ -879,8 +927,9 @@ function describedBy(n, i, at) {
 
 /**
  * The items' descriptions marked in place (see the head): the hidden
- * elements' words set to what they say now — the landing's line, each span's
- * other runs' labels, each link item's far end's whole form — and
+ * elements' words set to what they say now — the kind of the document a
+ * landing crossed into, its line, each span's other runs' labels, each link
+ * item's far end's whole form — and
  * `aria-describedby` on the items they stand on and on no other, naming an
  * item's own hidden description only where the rebuild wrote one, nothing
  * rebuilt, so the platform's focus stays on the item it stands on. The app's
@@ -891,10 +940,11 @@ function describedBy(n, i, at) {
  */
 export function markDescribed() {
   if (!mirrorEl || typeof mirrorEl.querySelectorAll !== 'function') return;
-  const said = read.described(), words = said ? said.words : '';
+  const said = read.described(), words = said ? said.words : '', kind = said && said.kind ? said.kind : '';
   const q = (/** @type {string} */ id) => (mirrorEl && typeof mirrorEl.querySelector === 'function' ? mirrorEl.querySelector('#' + id) : null);
-  const el = q(DESCRIPTION);
+  const el = q(DESCRIPTION), kel = q(KIND);
   if (el && el.textContent !== words) el.textContent = words;
+  if (kel && kel.textContent !== kind) kel.textContent = kind;
   for (const li of /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[role="treeitem"]')])) {
     const i = Number(li.dataset.i), n = siblings[i], piece = q(pieceId(i)), far = q(farId(i));
     if (n && piece) { const w = otherRuns(n, said); if (piece.textContent !== w) piece.textContent = w; }

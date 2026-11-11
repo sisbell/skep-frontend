@@ -160,12 +160,12 @@ export const STRINGS = {
   'F.daemon.notebook.halted': { text: 'writes stopped on your notebook — reading continues; stop it and start it again here to clear this', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line' },
   'F.durability': { text: '⟨board⟩ could not keep that yet — trying again', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B3-S2: `durability`\'s face on a third refusal, off the notebook (foundations §3.2)' },
   'F.others-count': { text: '+⟨n⟩ others', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S1' },
-  'F.corner.latest': { text: '⟨published⟩ · the latest version — this address, and a link to it, moves to each new one', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
-  'F.corner.pinned': { text: '⟨published⟩ · version ⟨k⟩ — this address, and a link to it, stays on this text forever', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
-  'F.corner.no-versions': { text: '⟨published⟩ · no versions yet — its first is made when you publish new text for it', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
+  'F.corner.latest': { text: 'the latest version — this address, and a link to it, moves to each new one', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
+  'F.corner.pinned': { text: 'version ⟨k⟩ — this address, and a link to it, stays on this text forever', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
+  'F.corner.no-versions': { text: 'no versions yet — its first is made when you publish new text for it', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
   'F.corner.withheld': { text: 'withheld · ⟨owner⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
-  'F.published.notebook': { text: 'published here — readable by anyone who can reach this notebook: anything on this machine, and nothing beyond it', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
-  'F.published': { text: 'published', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner; the versions list' },
+  'F.published.notebook': { text: 'readable by anyone who can reach this notebook: anything on this machine, and nothing beyond it', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner: an edition\'s state on a notebook' },
+  'F.published': { text: 'published', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner\'s kind slot; the ARIA mirror: a document\'s item; a reading scene\'s pane\'s name; a landing\'s description; the versions list' },
   'F.version-of': { text: 'version ⟨k⟩ of ⟨n⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
   'F.alternatives': { text: '· ⟨m⟩ alternatives', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
   'F.alternatives.1': { text: '· 1 alternative', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
@@ -214,7 +214,7 @@ export const STRINGS = {
   'F.label.documents.1': { text: '1 document', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S2' },
   'F.label.links': { text: '⟨n⟩ links', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S2' },
   'F.label.links.1': { text: '1 link', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S2' },
-  'F.label.draft': { text: 'draft', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S2' },
+  'F.kind.draft': { text: 'draft', cls: 'DRAFT', source: 'designs/plane.js', screen: 'the corner\'s kind slot; the ARIA mirror: a document\'s item; a reading scene\'s pane\'s name; a landing\'s description' },
   'F.scene.sameness': { text: 'sameness — one identity appearing twice', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S9' },
   'F.scene.link': { text: 'a link — a different relation, drawn differently', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S9' },
   'F.scene.relevel': { text: 're-level', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S9' },
@@ -1059,9 +1059,8 @@ export const STRINGS = {
   'L.time.on-or-before': { text: 'on or before ⟨date⟩', cls: 'DRAFT', source: '', screen: 'B1-S5; the versions list', lane: true },
   'L.the-line': { text: 'the one line', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   // the address segment's accessible name: its fields in their order, the document's label whole after its field, the
-  // position, the version pinned, then the document's state in its short words — each after its own separator, none
-  // where it is empty
-  'L.address.name': { text: '⟨place⟩⟨label⟩⟨position⟩⟨version⟩⟨state⟩', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
+  // position, then the version pinned — each after its own separator, none where it is empty
+  'L.address.name': { text: '⟨place⟩⟨label⟩⟨position⟩⟨version⟩', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.leap-label': { text: 'LEAP — an address, or a document\'s first line', cls: 'DRAFT', source: 'designs/plane.html', screen: 'B1-S11' },
   'L.leap-rows-label': { text: 'LEAP', cls: 'DRAFT', source: '', screen: 'B1-S11', lane: true },
   // "open beside" refused in the LEAP box (D5 K-101), each its hint beside the box: no row chosen and none answered; no
@@ -1079,8 +1078,9 @@ export const STRINGS = {
   'L.mirror.board': { text: '⟨board⟩: ⟨n⟩ accounts.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.account': { text: 'account ⟨account⟩: ⟨documents⟩ documents, ⟨links⟩ links⟨empty⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.at-least': { text: 'at least ⟨n⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.document': { text: 'document ⟨document⟩, ⟨label⟩, ⟨state⟩⟨extent⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.draft': { text: 'a draft', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  // a document's item: ⟨kind⟩ its corner's first slot's words — a refused document's corner's own words in their place —
+  // then its address, its first line, and its corner's state after that slot
+  'L.mirror.document': { text: '⟨kind⟩ document ⟨document⟩, ⟨label⟩, ⟨state⟩⟨extent⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.positions': { text: ', ⟨n⟩ positions', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.span': { text: 'span at position ⟨p⟩ of ⟨extent⟩ in ⟨document⟩⟨same⟩: "⟨text⟩".', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.span.bare': { text: 'span at position ⟨p⟩ in ⟨document⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
@@ -1104,8 +1104,8 @@ export const STRINGS = {
   // ⟨far⟩ the far end's label (LK's `farLabel`), the words its tail, its card and its list rows carry
   'L.mirror.link': { text: 'link ⟨link⟩, type ⟨type⟩, ⟨direction⟩ ⟨far⟩⟨floating⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.untyped': { text: 'untyped', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  // a document the board will say nothing of, as its state (T-LAYER's `stateWords`, T-ARTICLE's corner)
-  'L.far.unregistered': { text: 'nothing this board will say about this address', cls: 'DRAFT', source: '', screen: 'the ARIA mirror: a document\'s item; the one line; the corner', lane: true },
+  // a document the board will say nothing of, as its state: its corner's own words (T-ARTICLE's), which its mirror item leads with
+  'L.far.unregistered': { text: 'nothing this board will say about this address', cls: 'DRAFT', source: '', screen: 'the ARIA mirror: a document\'s item; the corner', lane: true },
   // a link's far end the board will say nothing of, in one state (LK's `emptyAt`): in the reader's own account under a
   // complete index listing no document at the address, "no document here yet" — its whole form saying nothing has been made
   // there, then whether the account's next new document goes there — else "no document known here", its whole form that
@@ -1231,6 +1231,9 @@ export const STRINGS = {
   'L.corner.draft': { text: '◌', cls: 'DRAFT', source: '', screen: 'the corner, compact', lane: true },
   // a corner at its document's head (FP-26): the items its rows cannot hold, folded into one count that opens them whole
   'L.corner.more': { text: '⟨n⟩ more', cls: 'DRAFT', source: '', screen: 'the corner, at its document\'s head', lane: true },
+  // an edition's state keyed by venue (P7): on a notebook ⟨venue⟩ its clause (F.published.notebook), then ⟨state⟩ the state's
+  // own words, as the corner set them after its kind
+  'L.corner.venue': { text: '⟨venue⟩ · ⟨state⟩', cls: 'DRAFT', source: '', screen: 'the corner: an edition\'s state on a notebook', lane: true },
   // the one line compact (FP-26): the mark an address wider than a row folds the levels between its board and its deepest
   // into, and what it is named by
   'L.fold': { text: '⋮', cls: 'DRAFT', source: '', screen: 'the one line, compact', lane: true },
@@ -1241,10 +1244,10 @@ export const STRINGS = {
   'L.slot.named': { text: '⟨role⟩: ⟨shows⟩', cls: 'DRAFT', source: '', screen: 'the byline; the one line', lane: true },
   'L.slot.device-label': { text: 'device label', cls: 'DRAFT', source: '', screen: 'the byline; the one line', lane: true },
   'L.slot.fingerprint': { text: 'fingerprint', cls: 'DRAFT', source: '', screen: 'the byline', lane: true },
-  'L.slot.reading': { text: 'being read', cls: 'DRAFT', source: '', screen: 'the byline', lane: true },
+  'L.slot.reading': { text: 'being read', cls: 'DRAFT', source: '', screen: 'the byline; the corner\'s kind slot', lane: true },
   'L.slot.by-reference': { text: 'by reference', cls: 'DRAFT', source: '', screen: 'the byline', lane: true },
   'L.slot.unlabelled': { text: 'no label', cls: 'DRAFT', source: '', screen: 'the byline; the one line', lane: true },
-  'L.slot.unread': { text: 'not read', cls: 'DRAFT', source: '', screen: 'the byline', lane: true },
+  'L.slot.unread': { text: 'not read', cls: 'DRAFT', source: '', screen: 'the byline; the corner\'s kind slot', lane: true },
   'L.slot.store-unread': { text: 'key store not read', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.slot.key-untold': { text: 'key not named', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   // the formatting forms (B3-S13): `3.23.4`'s name, beside the strip's names of the rest (`formName`), and the heading

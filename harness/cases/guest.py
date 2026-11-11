@@ -29,10 +29,11 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     listing no HOME level; Mod+Shift+H from a document returning there;
 (d) the drafts: none in the index, every place one the owner's index lists,
     each account's count the places listed; no label or mark drawing a draft
-    — at its box, held in a mark, its first line, the draft mark — at WHOLE
+    — at its box, held in a mark, its first line — at WHOLE
     BOARD, HOME, the region at mid and the extents; a LEAP to a draft of the
     claimant's refused `withheld`, no text delivered, nothing mounted, no
-    corner or chip, no label naming a draft's first line or the draft mark —
+    corner or chip, no label naming a draft's first line, the mirror's item
+    led by the withheld box's words —
     every draft of the claimant's on this board lies past the sound depth,
     its box the account's residue cell, where the continuation's one mark
     stands; and a LEAP to a withheld document with a box of its own (the
@@ -466,7 +467,6 @@ def run(ctx):
     r.check(ctx.js('window.__skep.model.session()') is not None and len(secret.encode('utf8')) == WINDOW[1] and bool(drafts),
             'the owner\'s page reads the window run\'s 240 bytes and lists the claimant\'s drafts — what the guest must never meet',
             {'run_bytes': len(secret.encode('utf8')), 'drafts': len(drafts)})
-    draft_word = t(ctx, 'F.label.draft')
     # the device's key store, which picks the guest's arm: read through the page's port, decided here
     store = ctx.key_store()
     arm_id = store['guest_arm']
@@ -552,17 +552,17 @@ def run(ctx):
     guest_index('the guest\'s', places)
 
     def naming_a_draft(labels):
-        """the label lines that name a draft: the draft mark, or a stretch of a draft's first line no edition's holds"""
+        """the label lines that name a draft: a stretch of a draft's first line no edition's holds"""
         named = []
         for l in labels:
             for x in l['lines']:
                 p = plain(x['text'])
-                if (' · ' + draft_word) in x['text'] or (len(p) >= NAMES and any(p in d for d in draft_lines) and not any(p in e for e in edition_lines)):
+                if len(p) >= NAMES and any(p in d for d in draft_lines) and not any(p in e for e in edition_lines):
                     named.append({'kind': l['kind'], 'place': l['place'], 'text': x['text']})
         return named
 
     def draws_no_draft(name, covered=()):
-        """no label at a draft's box, no mark holding a draft, no label line naming a draft's first line or the draft mark —
+        """no label at a draft's box, no mark holding a draft, no label line naming a draft's first line —
         save a draft the page holds covered (issue #177): one the session read, withheld from the reader now, its place kept
         as the withheld box a guest meets, existence and owner, its label the cover's words"""
         labels, marks = ctx.js('window.__skep.labels()'), ctx.js('window.__skep.residues()')
@@ -570,7 +570,7 @@ def run(ctx):
         at = [l['place'] for l in labels if l['kind'] == 'doc' and l['place'] in hidden]
         held = [{'mark': m['key'], 'newest': m['newest'], 'drafts': [a for a in m['members'] if a in hidden][:4]} for m in marks if m['newest'] in hidden or any(a in hidden for a in m['members'])]
         named = naming_a_draft(labels)
-        r.check(not at and not held and not named, f'(d) {name}: no label or mark draws a draft — none at a draft\'s box, no mark holding one, no line naming a draft\'s first line or the draft mark',
+        r.check(not at and not held and not named, f'(d) {name}: no label or mark draws a draft — none at a draft\'s box, no mark holding one, no line naming a draft\'s first line',
                 {'at_draft': at[:4], 'marks': held[:4], 'named': named[:4]})
         return {'labels': len(labels), 'marks': len(marks)}
 
@@ -828,11 +828,11 @@ def run(ctx):
     published = t(ctx, 'F.published')
     named_withheld = t(ctx, 'F.corner.withheld', {'owner': OWNER})
     draft_item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
-    r.check(draft_item.startswith('document %s,' % draft) and named_withheld in draft_item and published not in draft_item,
-            '(d) at that landing the mirror\'s current item names the draft as its withheld box does — "%s" — and never published (B1-S2)' % named_withheld, draft_item)
+    r.check(draft_item.startswith('%s document %s,' % (named_withheld, draft)) and published not in draft_item,
+            '(d) at that landing the mirror\'s current item names the draft as its withheld box does, those words leading where no kind can be read — "%s" — and never published (B1-S2; issue #423)' % named_withheld, draft_item)
     labels = ctx.js('window.__skep.labels()')
     named = naming_a_draft(labels)
-    r.check(not named, '(d) at that landing no label names a draft\'s first line or the draft mark', named[:4])
+    r.check(not named, '(d) at that landing no label names a draft\'s first line', named[:4])
     r.figures['shots'].append(ctx.shot('guest/draft-landing.png'))
     r.figures['draft'] = {'addr': draft, 'residue_cell': shown_at['residue'], 'marks': [{k: m[k] for k in ('key', 'n', 'newest', 'lines')} for m in ctx.js('window.__skep.residues()')]}
     # a withheld document with a box of its own: its withheld box at the landing, existence and owner and never bytes
@@ -848,8 +848,8 @@ def run(ctx):
     named_at = ctx.js('window.__skep.line().address')
     r.check(named_at['text'].split(' › ')[1:3] == [SECOND_ACCOUNT, WITHHELD], '(d) the one line names the landing: board › its account › the withheld document — a landing the index does not list stands on its own node (rule 12, #97)', named_at)
     withheld_item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
-    r.check(withheld_item.startswith('document %s,' % WITHHELD) and want[1] in withheld_item and published not in withheld_item,
-            '(d) the mirror\'s current item names the withheld document as its box does — "%s" — and never published (B1-S2)' % want[1], withheld_item)
+    r.check(withheld_item.startswith('%s document %s,' % (want[1], WITHHELD)) and published not in withheld_item,
+            '(d) the mirror\'s current item names the withheld document as its box does, those words leading where no kind can be read — "%s" — and never published (B1-S2; issue #423)' % want[1], withheld_item)
     r.figures['shots'].append(ctx.shot('guest/withheld-box.png'))
     r.figures['withheld_box'] = {'addr': WITHHELD, 'labels': at_box, 'mirror_item': withheld_item, 'draft_mirror_item': draft_item}
     # "who wrote this?" asked of the withheld document: the board refuses the read's document consult `withheld`, and the

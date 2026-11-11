@@ -1869,11 +1869,12 @@ def scene_whole_holds(ctx, r):
                   named: (b.getAttribute('aria-labelledby') || '').split(' ').map((id) => { const e = document.getElementById(id); return e ? e.textContent : null; })}; })()''')
         at_open = ctx.js(SCENE_SCROLLS)
         shows = ((ctx.js('window.__skep.scene.panes()') or {}).get('b') or {}).get('shows')
+        kind = ctx.js('window.__skep.kind(%s).words' % json.dumps(b))
         r.check(bool(v) and v['level'] == {'a': near['pos'], 'b': None} and bool(v['pairs']) and at_open['b'] == 0,
                 f'{a}\'s passage at {near["pos"]} beside {b}, which a far end of it names whole: pane A at the passage, pane B at its document\'s start, the bands its `compare` added once the scene showed moving neither (issue #59)',
                 {'level': v and v['level'], 'bands': v and len(v['pairs']), 'scroll': at_open})
-        r.check(opened['focus'] == 'sceneB' and opened['current'] == 'location' and opened['named'] == [shows, whole],
-                f'{a} beside {b}: pane B takes the focus, named by its address and the words saying the whole document is the link\'s end, and is the current location (issue #59)', dict(opened, shows=shows, want=whole))
+        r.check(opened['focus'] == 'sceneB' and opened['current'] == 'location' and opened['named'] == [kind, shows, whole],
+                f'{a} beside {b}: pane B takes the focus, named by its kind, its address and the words saying the whole document is the link\'s end, and is the current location (issues #59, #423)', dict(opened, kind=kind, shows=shows, want=whole))
         s = ctx.js('window.__skep.scene.stop()') or {}
         seen = figures[b] = {'level': v and v['level'], 'bands': v and len(v['pairs']), 'shared': s.get('shared'), 'stop': s.get('shown')}
         if not s.get('shared'):

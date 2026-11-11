@@ -136,10 +136,14 @@
 // the refusal, and offering "try again" where a retry may tell, which reads
 // again and lands from the answer with no trail move (`againCarried`,
 // `againVersion`). The walk's element takes the line, or the dead end's or
-// the withheld document's words, as its description, and every item holding
-// another run that run's label (`described`), so the mirror says all four; a
-// face told by the landing's description is never said by the status region
-// too.
+// the withheld document's words, as its description — led, where the landing
+// crossed into its document from another box (`Landing.crossed`: a follow's
+// near end's, a carried passage's source's, else the box the walk stood in as
+// the act was made, `actFrom`), by that document's kind in its corner's first
+// slot's words, the whole of it where the outline alone says the rest — and
+// every item holding another run that run's label (`described`), so the
+// mirror says all four; a face told by the landing's description is never
+// said by the status region too.
 // The step (FP-21): where the passage stands in several runs, Mod+G and
 // Mod+Shift+G (N-KEYS), the line's "next piece" and "previous piece" and a
 // press on an outlined run (APP-INPUT) take the landing to the next run in
@@ -510,6 +514,7 @@ import { esc } from '../util.js';
  * @property {{a: string, held: import('../scene/scene.js').Held} | null} beside the line's offer to read the passage side by side with where it came from, where that text holds it whole: `a` that document, and the passage held there by its positions as the landing read them and by its bytes, which the scene places in that text as it reads it (SC's `Held.ids`); the scene opens it beside the version the box landed in shows as the act is made (`landingAct`)
  * @property {number | null} version the version offer at a published landing — the line's, or the dead end's face's where a followed passage floats: the latest member holding the passage whole, once its reads find one; null until then, or where none does
  * @property {ISpan[] | null} [removed] the passage by identity where every byte of it the text lacks was taken by a removal the page holds its own record of (T-LAYER's `removedOf`): the line, or the face, then says the person removed it, and its act puts it back (`putBack`); absent or null for every other landing
+ * @property {boolean} [crossed] the act that made it departed from another box than the one it landed in — a follow's near end's, a carried passage's source's, else the box the walk stood in as the act was made (`actFrom`) — so its description says the document's kind first (`described`); kept across a step and a re-check; absent or false for a landing in the box it departed from
  */
 
 /**
@@ -574,6 +579,8 @@ const pins = new Map();
 const newer = new Map();
 /** @type {Surfaces | null} the surfaces standing at the place the reader stands at as the latest act was made (`nextAct`): what that act's departure keeps (`leaveHere`) */
 let surfacesLeft = null;
+/** @type {string | null} the box the walk stood in as the latest act was made (`nextAct`): what a landing that names no box it departed from tells a crossing by (`Landing.crossed`); null where it stood in no document */
+let actFrom = null;
 /** @type {Owed | null} what the latest return owes the entry it reached (see the head) */
 let owed = null;
 /** @type {Promise<void>} the walk's latest move to a landing (`focusOn`): a surface a return reopens shows once it has landed, so the walk moves no focus it takes */
@@ -919,7 +926,7 @@ export function recheck() {
   } else {
     const pos = prior ? prior.pos : a.pos;
     arrival = null; versionOffer = null;
-    landed = { addr, pos, said: null, pieces: null, current: 0, floating: true, withheld: false, beside: null, version: null };
+    landed = { addr, pos, said: null, pieces: null, current: 0, floating: true, withheld: false, beside: null, version: null, crossed: !!prior && !!prior.crossed };
     if (HOST.hasCurrent()) FOCUS.say(FACES.floatingWords(addr).text);
     else FACES.floating(addr, siteAt(addr, pos), null, false);
   }
@@ -1040,7 +1047,8 @@ let made = 0;
 /**
  * The next act, made: the surfaces standing at the place taken as its
  * departure keeps them (`surfacesNow`) — a card a return still reopens among
- * them — then a card or scene still reading ended, what stands
+ * them — and the box the walk stands in (`actFrom`), then a card or scene
+ * still reading ended, what stands
  * staying for the act to dismiss (O-HOST's opening), a jump reaching given
  * back and a jump in the air abandoned, never landed (FP-25), and the act
  * counted. Every navigation act begins with
@@ -1055,6 +1063,8 @@ let made = 0;
  */
 function nextAct(ends = true) {
   surfacesLeft = surfacesNow();
+  const f = WALK.current();
+  actFrom = f && (f.kind === 'document' || f.kind === 'block' || f.kind === 'link') ? boxOf(f.addr) : null;
   if (ends || (reach && reach.entry && reach.entry.scene)) HOST.endOpening();
   giveUp();
   if (air) endAir(air.act, false);
@@ -1232,22 +1242,27 @@ export const offersBack = () => !!landed && !!landed.removed && !landed.floating
 
 /**
  * What the landing says, for the mirror's descriptions of the items it
- * stands on (N-WALK's `described`; FP-21): its line's words — the label of
- * the run it stands at, where
- * the passage stands in several — or the dead end's where the text holds none
- * of the passage, or a withheld document's own words whole where a follow
- * landed at one (O-FACES' `withheldText`), and every run's own label; null
- * where the text holds all of it in one piece — the outline alone says that —
- * and where nothing landed so.
+ * stands on (N-WALK's `described`; FP-21): first, where it crossed into its
+ * document from another (`Landing.crossed`), that document's kind in its
+ * corner's first slot's words (T-LAYER's `kindSaid`) — none at a document
+ * withheld from the reader, whose own words say what it is; then its line's
+ * words — the label of the run it stands at, where the passage stands in
+ * several — or the dead end's where the text holds none of the passage, or a
+ * withheld document's own words whole where a follow landed at one
+ * (O-FACES' `withheldText`), and every run's own label; '' for the line where
+ * the text holds all of it in one piece — the outline alone says that. Null
+ * where it says neither, and where nothing landed so.
  * @returns {Described | null}
  */
 export function described() {
   if (!landed) return null;
   const words = landingLine() ?? (landed.floating ? (landed.removed ? t('L.removed.all') : FACES.floatingWords(landed.addr).text) : landed.withheld ? FACES.withheldText(landed.addr) : null);
-  if (!words) return null;
+  const d = landed.crossed && !landed.withheld && REC.has(landed.addr) ? REC.doc(landed.addr) : null;
+  const kind = d && !d.refused ? LAYER.kindSaid(d) : null;
+  if (!words && !kind) return null;
   const p = landed.pieces;
   const runs = p ? p.runs.map((r, i) => ({ pos: r.pos, width: r.width, words: HELD.labelOf(p, i) })) : [];
-  return { addr: landed.addr, pos: landed.pos, words, runs };
+  return { addr: landed.addr, pos: landed.pos, words: words ?? '', kind, runs };
 }
 
 /**
@@ -2034,7 +2049,7 @@ function sayCarried(act, c, carried, d, placed, entry, link, again = (byKey) => 
   const offers = !!said && said.state !== 'unknown';
   const source = offers && c.addr !== addr ? (carried.length ? wholeAt(c.addr, carried, c.width) : { pos: c.pos, width: c.width }) : null;
   const pieces = placed.pieces;
-  landed = { addr, pos, said, pieces, current: pieces ? pieces.order[0] : 0, floating: placed.none, withheld: false, beside: source ? { a: c.addr, held: { posA: source.pos, widthA: source.width, ids: carried } } : null, version: null };
+  landed = { addr, pos, said, pieces, current: pieces ? pieces.order[0] : 0, floating: placed.none, withheld: false, beside: source ? { a: c.addr, held: { posA: source.pos, widthA: source.width, ids: carried } } : null, version: null, crossed: boxOf(c.addr) !== boxOf(addr) };
   retry = said && said.again ? again : null;
   versionOffer = null;
   const at = placed.at;
@@ -2152,7 +2167,7 @@ async function landWithheld(act, s, entry, byKey, first) {
   pinTo(far);
   arrival = null;
   lit = [s.link.addr];
-  landed = { addr: far, pos: headOf(REC.doc(far)), said: null, pieces: null, current: 0, floating: false, withheld: true, beside: null, version: null };
+  landed = { addr: far, pos: headOf(REC.doc(far)), said: null, pieces: null, current: 0, floating: false, withheld: true, beside: null, version: null, crossed: boxOf(s.near) !== boxOf(far) };
   retry = null; versionOffer = null;
   if (takenAt === act) { showFound(notice); return; }
   const flight = goOn(act, first, at, byKey, 620);
@@ -2186,7 +2201,7 @@ function sayFollowed(act, s, entry, placed, pos) {
   const floating = !!placed.runs && !placed.runs.length;
   const offers = !!said && said.state !== 'unknown' && !!passage;
   const source = offers && passage && s.near !== far ? wholeAt(s.near, [passage], passage.width) : null;
-  landed = { addr: far, pos, said, pieces, current: pieces ? pieces.order[0] : 0, floating, withheld: false, beside: source && passage ? { a: s.near, held: { posA: source.pos, widthA: source.width, ids: [passage] } } : null, version: null };
+  landed = { addr: far, pos, said, pieces, current: pieces ? pieces.order[0] : 0, floating, withheld: false, beside: source && passage ? { a: s.near, held: { posA: source.pos, widthA: source.width, ids: [passage] } } : null, version: null, crossed: boxOf(s.near) !== boxOf(far) };
   retry = said && said.again ? async (byKey) => {
     const at = made;
     const proj = await PUMP.projectEnd(l.addr, s.farSlot, far);
@@ -2332,7 +2347,9 @@ function namedRuns(addr, runs, passage) {
  * What the door's landing says of the passage it names (see `leapTo`): as a
  * follow's — its runs' labels where they are two or more, the landing at
  * piece 1, and what the text holds of it where that is part of it or all of
- * it in pieces — offering nothing.
+ * it in pieces, the document's kind before them where it crossed into it from
+ * the box the walk stood in as the act was made (`actFrom`) — offering
+ * nothing; none where the text holds all of it in one piece.
  * @param {string} addr
  * @param {number} pos where the landing stands
  * @param {{held: Held | null, pieces: Pieces | null}} named
@@ -2340,7 +2357,7 @@ function namedRuns(addr, runs, passage) {
 function sayNamed(addr, pos, named) {
   const said = named.held ? HELD.saidOf(named.held, 'followed', addr, showsWithheld(REC.doc(addr))) : null;
   if (!said && !named.pieces) return;
-  landed = { addr, pos, said, pieces: named.pieces, current: named.pieces ? named.pieces.order[0] : 0, floating: false, withheld: false, beside: null, version: null };
+  landed = { addr, pos, said, pieces: named.pieces, current: named.pieces ? named.pieces.order[0] : 0, floating: false, withheld: false, beside: null, version: null, crossed: actFrom !== boxOf(addr) };
 }
 
 /**
@@ -3490,12 +3507,12 @@ function walkOf(e, at) {
  */
 function markReturn(at, notice) {
   const g = at.again, f = at.found;
-  if (g) { arrival = g.arrival; landed = g.landed; CAM.markDirty(); if (g.told) return g.told; }
+  if (g) { arrival = g.arrival; landed = g.landed ? { ...g.landed, crossed: actFrom !== boxOf(g.landed.addr) } : null; CAM.markDirty(); if (g.told) return g.told; }
   if (landed || notice) return null;
   const m = arrivalMark(), outlined = (/** @type {string} */ addr) => !!m && boxOf(m.addr) === boxOf(addr);
   if (f && f.holds != null && f.holds !== 'all' && !outlined(f.addr)) {
     if (f.runs) arrival = withBytes({ addr: f.addr, pos: f.to, runs: f.runs, link: null }, f.ids);
-    landed = { addr: f.addr, pos: f.to, said: f.said, pieces: f.pieces, current: f.pieces ? f.pieces.order[0] : 0, floating: f.holds === 'none', withheld: false, beside: null, version: null, removed: f.removed };
+    landed = { addr: f.addr, pos: f.to, said: f.said, pieces: f.pieces, current: f.pieces ? f.pieces.order[0] : 0, floating: f.holds === 'none', withheld: false, beside: null, version: null, removed: f.removed, crossed: actFrom !== boxOf(f.addr) };
     words = true;
     CAM.markDirty();
     return { addr: f.addr, to: f.to, ids: f.ids, holds: f.holds, offers: f.holds !== 'unknown' && !f.removed, removed: f.removed };
@@ -3503,7 +3520,7 @@ function markReturn(at, notice) {
   const x = at.gone;
   if (!x || outlined(x.addr)) return null;
   const to = f && f.addr === x.addr ? f.to : headOf(textOf(x.addr));
-  landed = { addr: x.addr, pos: to, said: null, pieces: null, current: 0, floating: true, withheld: false, beside: null, version: null };
+  landed = { addr: x.addr, pos: to, said: null, pieces: null, current: 0, floating: true, withheld: false, beside: null, version: null, crossed: actFrom !== boxOf(x.addr) };
   words = true;
   CAM.markDirty();
   return { addr: x.addr, to, ids: x.ids, holds: 'none', offers: true };
@@ -3835,7 +3852,7 @@ function heldPart(at, s, word) {
   if (!said) return;
   FOCUS.say(HELD.lineOf(said));
   if (landed) return;
-  landed = { addr: span.addr, pos: span.pos, said, pieces: null, current: 0, floating: false, withheld: false, beside: null, version: null };
+  landed = { addr: span.addr, pos: span.pos, said, pieces: null, current: 0, floating: false, withheld: false, beside: null, version: null, crossed: actFrom !== boxOf(span.addr) };
   CAM.markDirty();
   void offerVersion(made, span.addr, holdingWhole(span.addr, span.pos, s.ids));
 }
@@ -3854,7 +3871,7 @@ function heldNone(s) {
   const addr = shownIn(s.addr);
   if (HOST.standingAs('face:floating')) return;
   const mine = !landed;
-  if (mine) { landed = { addr, pos: s.pos, said: null, pieces: null, current: 0, floating: true, withheld: false, beside: null, version: null }; CAM.markDirty(); }
+  if (mine) { landed = { addr, pos: s.pos, said: null, pieces: null, current: 0, floating: true, withheld: false, beside: null, version: null, crossed: actFrom !== boxOf(addr) }; CAM.markDirty(); }
   FACES.floating(addr, siteAt(addr, s.pos), null, false, true);
   if (mine) void offerVersion(made, addr, holdingWhole(addr, s.pos, s.ids));
 }

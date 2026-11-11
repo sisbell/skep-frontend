@@ -245,11 +245,15 @@
 // while covered — and hands the focus back through N-FOCUS's `close`; the
 // opener is read as the scene shows, after the chrome it leaves is ended
 // (`from`).
-// Each pane is a named region (SC9), named by its own document's address,
-// the head of the article it holds (`namePane`) — pane B, where the far end
-// names its document whole, by that address and ST's `L.scene.whole-end`
-// after it, `aria-current="location"` on it, the end being the document and
-// no passage of it — and ↓ and ↑ in it move by
+// Each pane is a named region (SC9), named as the ARIA mirror names a
+// document's item: by its corner's first item — its document's kind, else a
+// refused document's own words (`paneLead`) — then its own document's
+// address, the head of the article it holds (`namePane`) — pane B, where the
+// far end names its document whole, by those and ST's `L.scene.whole-end`
+// after them, `aria-current="location"` on it, the end being the document and
+// no passage of it — its kind said once in the status region where its
+// corner's slot fills while the focus stands in the pane (`sayKind`; FP-36);
+// and ↓ and ↑ in it move by
 // block — the next block's top brought to the pane's top (K-60) — PageDown
 // and PageUp by most of a pane, Home and End to its ends (`move`).
 // Where the far end names pane B's document whole and the `compare` finds the
@@ -296,8 +300,9 @@
 // where its pane's words are read (`whereIn`), so a copy from a pane names
 // its words as one from the plane's box names the same words (FP-27); the
 // scene keeps no DOM text of its own. Each pane carries its own document's
-// corner (ux-T2; T-LAYER's `sceneCorner` and `sceneHead` make its items): the
-// pane's one Tab stop after the pane itself in either form, a group named by
+// corner (ux-T2; T-LAYER's `sceneCorner` and `sceneHead` make its items), its
+// first slot its document's kind by the one test (T-LAYER's `kindOf`; FP-33):
+// the pane's one Tab stop after the pane itself in either form, a group named by
 // its own words (D5 K-57), and its Enter, or a click on the act, takes its
 // act — a press on the act leaving the selection standing in the pane, the
 // passage the act carries. The scene fits both panes once (`fitOf`; FP-12,
@@ -374,7 +379,7 @@ import * as HOST from '../overlays/host.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { drawChord } from '../nav/keys.js';
-import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, carriesC33, sourceStatementHTML } from '../text/article.js';
+import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, carriesC33, sourceStatementHTML, cornerLead, kindWord } from '../text/article.js';
 import { inkOf, strokeOf, strokeIn, cutAt, pointOn } from '../beams/beams.js';
 import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingOf } from '../beams/held.js';
 import { SAMENESS, HOLD, LABEL_MIN_PX, cornerWidth } from '../plane/register.js';
@@ -567,6 +572,7 @@ import { esc, byteOffsets } from '../util.js';
  * @property {AccountFacts | undefined} facts the owner's byline facts its article's byline was made with (`ownerFacts`), undefined where they were not read: what owner facts taken anew are checked against (`dropped`)
  * @property {boolean} open the reader's act opened its corner whole where it stands compact or at its document's head (`openWhole`; FP-26), until the act again closes it
  * @property {number} rows its corner's rows at its document's head as last written (`cornerForm`); 0 beside its column
+ * @property {import('../text/article.js').Kind} heard its corner's kind slot as the scene last read it (`markKept`): what the slot filling under the focus is told against
  */
 
 /**
@@ -754,27 +760,33 @@ const kindAt = (/** @type {string} */ addr, /** @type {Doc} */ d) => (memberOf(a
 /** the plane the scene stands over out of the page's order while it stands (true), and back as it ends (false) — each region by its owner (D5 §4 rule 5) */
 function coverPlane(/** @type {boolean} */ on) { WALK.cover(on); LAYER.cover(on); }
 
+/** the id of the bar's hidden words a pane's name leads with: its corner's first item (`namePane`, `paneLead`) */
+const leadId = (/** @type {'a' | 'b'} */ side) => (side === 'a' ? 'sceneA' : 'sceneB') + '-kind';
+
 /**
- * A pane named as a region by its own document's address — the head of the
- * article it holds (SC9; the focus record's D5) — and, where it is the whole
- * document a link's far end names, by that address and the bar's hidden
- * words saying so after it (`WHOLE_ID`), `aria-current="location"` on it;
+ * A pane named as a region the way the ARIA mirror names a document's item:
+ * by the bar's hidden words for its corner's first item — its document's kind,
+ * else a refused document's own words (`paneLead`) — then its own document's
+ * address, the head of the article it holds (SC9; the focus record's D5); and,
+ * where it is the whole document a link's far end names, by the bar's hidden
+ * words saying so after them (`WHOLE_ID`), `aria-current="location"` on it;
  * neither on any other pane, whatever the scene it stood in before.
  * @param {HTMLElement} pane
  * @param {string} id the id the head's address takes, for the reference
+ * @param {string} lead the id of the bar's hidden words for its corner's first item (`leadId`)
  * @param {boolean} [whole] the pane is the whole document a link's far end names
  */
-function namePane(pane, id, whole = false) {
+function namePane(pane, id, lead, whole = false) {
   pane.setAttribute('role', 'region');
   const addr = /** @type {HTMLElement | null} */ (pane.querySelector('.hd .addr'));
-  if (addr) { addr.id = id; pane.setAttribute('aria-labelledby', whole ? `${id} ${WHOLE_ID}` : id); }
+  if (addr) { addr.id = id; pane.setAttribute('aria-labelledby', [lead, id, ...(whole ? [WHOLE_ID] : [])].join(' ')); }
   if (whole) pane.setAttribute('aria-current', 'location'); else pane.removeAttribute('aria-current');
 }
 
 /** both panes named (`namePane`), pane B as the whole document where the scene's far end names it so */
 function namePanes(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} */ S) {
-  namePane(E.paneA, 'sceneA-name');
-  namePane(E.paneB, 'sceneB-name', S.whole);
+  namePane(E.paneA, 'sceneA-name', leadId('a'));
+  namePane(E.paneB, 'sceneB-name', leadId('b'), S.whole);
 }
 
 /**
@@ -1359,29 +1371,44 @@ function paneAt(side, src, r) {
   return {
     side, doc: src, src, names, shows: kind === 'bare' ? src : names, kind, k, n: kind === 'draft' ? null : r.n, read: null, lacks: null,
     d: { ...r.d }, view: LAYER.sceneView(r.d), corner: '', placed: new Map(), place: null, el: null, serial: 0, sets: 0, kept: null, lift: null, signs: null, facts: undefined,
-    open: false, rows: 0,
+    open: false, rows: 0, heard: LAYER.kindOf(r.d),
   };
 }
 
 /**
+ * What a pane's corner is made from now (see the head): its record, named as
+ * the address it shows, and its view with the corner's state the scene holds
+ * — the chain's count as the pane knows it, neither the latest nor the count
+ * while the board lags (`lags`), the act it offers and what it says the
+ * version it reads lacks, a draft's kept word as the model holds it with its
+ * statement where T-LAYER holds it open (B3-S2) — a derived record's slot
+ * empty — and its document's kind by the one test (T-LAYER's `kindOf`).
+ * @param {Pane} P
+ * @returns {{d: Doc, view: ArticleView}}
+ */
+function paneCorner(P) {
+  const d = P.shows === P.d.addr ? P.d : { ...P.d, addr: P.shows };
+  return { d, view: { ...P.view, members: P.n, read: P.read, lacks: P.lacks, lags: lags(), kept: P.d.derived ? null : WRITE.keptOf(P.names), keptOpen: !P.d.derived && LAYER.statementOpen(P.names), kind: LAYER.kindOf(P.d) } };
+}
+
+/** a pane's corner's first item in words (T-ARTICLE's `cornerLead`): its document's kind, else a refused document's own words — what its region's name leads with (`namePane`) */
+const paneLead = (/** @type {Pane} */ P) => { const c = paneCorner(P); return cornerLead(c.d, c.view); };
+
+/**
  * A pane's corner's items in the form the scene's fit stands them in (see
- * the head; FP-26), and its rows at its document's head: T-LAYER's, naming
- * the version it shows, the chain's count as the pane knows it — neither the
- * latest nor the count while the board lags (`lags`) — the act it offers and
- * what it says the version it reads lacks, a draft's kept word as the model
- * holds it with its statement where T-LAYER holds it open (B3-S2) — a derived
- * record's slot empty — and its kept clause where it stands kept
- * (`paneKept`): beside its column, whole, or compact — every item whole where
- * the reader's act opened it (`Pane.open`) — the clause its last item
- * (`sceneCorner`); at its document's head, the clause first on its first row
- * and a form the act opened beneath its rows (`sceneHead`).
+ * the head; FP-26), and its rows at its document's head: T-LAYER's, made from
+ * what the pane holds (`paneCorner`) — its kind first, naming the version it
+ * shows — and its kept clause where it stands kept (`paneKept`): beside its
+ * column, whole, or compact — every item whole where the reader's act opened
+ * it (`Pane.open`) — the clause its last item (`sceneCorner`); at its
+ * document's head, the clause first on its first row and a form the act
+ * opened beneath its rows (`sceneHead`).
  * @param {Pane} P
  * @param {PaneFit} F
  * @returns {{html: string, rows: number}}
  */
 function cornerForm(P, F) {
-  const d = P.shows === P.d.addr ? P.d : { ...P.d, addr: P.shows };
-  const view = { ...P.view, members: P.n, read: P.read, lacks: P.lacks, lags: lags(), kept: P.d.derived ? null : WRITE.keptOf(P.names), keptOpen: !P.d.derived && LAYER.statementOpen(P.names) };
+  const { d, view } = paneCorner(P);
   if (F.corner === 'head') return LAYER.sceneHead(d, view, { px: F.px, kept: paneKept(P), open: P.open });
   return { html: LAYER.sceneCorner(d, view, F.corner === 'compact' && !P.open) + keptHTML(paneKept(P)), rows: 0 };
 }
@@ -1413,13 +1440,15 @@ function paneKept(P) { return LAYER.keptWords(P.d, P.d, paneHeld(P)); }
 
 /**
  * Each pane's corner marked in place (see the head): its items written again
- * where they would read other than as last written (`cornerForm`) — its
- * kept clause changed (`paneKept`), a draft's kept word or its statement
- * moved — or the board's lag began or ended since (`lags`), the element kept
- * so a focus on it stays, the heads' band set again where their rows changed
- * (`setBand`), and its origins' statements placed again where what the
- * edition claims held say changed since they were placed, or its article
- * was set since (T-LAYER's `keptRunsKey`; `placeStatements`). The
+ * where they would read other than as last written (`cornerForm`) — its kind
+ * told, its kept clause changed (`paneKept`), a draft's kept word or its
+ * statement moved — or the board's lag began or ended since (`lags`), the
+ * element kept so a focus on it stays, the bar's words its name leads with
+ * written again with them (`nameBar`), its kind said once where its slot
+ * fills under the focus (`sayKind`), the heads' band set again where their
+ * rows changed (`setBand`), and its origins' statements placed again where
+ * what the edition claims held say changed since they were placed, or its
+ * article was set since (T-LAYER's `keptRunsKey`; `placeStatements`). The
  * app's loop runs it on each dirty frame while the scene stands; the one line
  * speaks for the panes (`keptPanes`).
  */
@@ -1430,7 +1459,8 @@ export function markKept() {
   for (const side of SIDES) {
     const P = S[side], items = cornerForm(P, S.fit);
     const c = /** @type {HTMLElement | null} */ (paneEl(E, side).querySelector(':scope > .corner'));
-    if (c && (items.html !== P.corner || c.dataset.lags !== lagging)) writeCorner(E, P, items);
+    if (c && (items.html !== P.corner || c.dataset.lags !== lagging)) { writeCorner(E, P, items); nameBar(E, P); }
+    sayKind(E, P);
   }
   if (SIDES.some((side) => S[side].el && S[side].signs !== signs)) placeStatements(E, S);
   rebanded(E, S);
@@ -1540,10 +1570,27 @@ function writeCorner(E, P, items = null) {
   P.corner = made.html; P.rows = made.rows;
 }
 
-/** the bar's name for a pane, written again: the address it shows */
+/** the bar's name for a pane, written again: the address it shows, and the hidden words its region's name leads with (`paneLead`) */
 function nameBar(/** @type {NonNullable<typeof els>} */ E, /** @type {Pane} */ P) {
-  const b = E.bar.querySelector(`[data-name="${P.side}"]`);
+  const b = E.bar.querySelector(`[data-name="${P.side}"]`), lead = E.bar.querySelector('#' + leadId(P.side)), words = paneLead(P);
   if (b) b.textContent = P.shows;
+  if (lead && lead.textContent !== words) lead.textContent = words;
+}
+
+/**
+ * A pane's kind, said once in the status region where its corner's slot
+ * fills while the platform's focus stands in the pane (see the head; FP-36):
+ * the slot's words as it says them once no longer being read (T-LAYER's
+ * `kindOf`; T-ARTICLE's `kindWord`). Each call reads the slot again
+ * (`Pane.heard`).
+ * @param {NonNullable<typeof els>} E
+ * @param {Pane} P
+ */
+function sayKind(E, P) {
+  const k = LAYER.kindOf(P.d), was = P.heard;
+  P.heard = k;
+  const at = typeof document !== 'undefined' ? document.activeElement : null;
+  if (was === 'reading' && k !== 'reading' && !!at && paneEl(E, P.side).contains(at)) FOCUS.say(kindWord(k).text);
 }
 
 /** the byline facts the model holds now of the owner of the record a pane is set from (M-REC's `accountKey`, `ownerAccount`): what its article's byline is made with */
@@ -1707,9 +1754,10 @@ function sayFace(E, face) {
 /**
  * The scene stood over the plane (`open`, `reopen`): the plane under it out
  * of the page's order; the bar naming each pane by the address it shows, and
- * the refusal the panes' `compare` met — and, where pane B is the whole
- * document a link's far end names, the hidden words pane B's name ends with
- * (`namePane`); both panes fitted once (`fitOf`), each pane's article
+ * the refusal the panes' `compare` met — and the hidden words each pane's name
+ * leads with (`paneLead`), and, where pane B is the whole document a link's
+ * far end names, the hidden words pane B's name ends with (`namePane`); both
+ * panes fitted once (`fitOf`), each pane's article
  * T-LAYER's mount at the fit's measure, its corner in the fit's form on the
  * pane's outer side — pane A's before the article, pane B's after — or at its
  * document's head, and the fit set on the panes (`applyFit`).
@@ -1729,6 +1777,7 @@ function stand(E, S, face) {
   if (face) E.bar.dataset.face = face; else delete E.bar.dataset.face;
   E.bar.innerHTML = `<b class="id" data-name="a">${esc(S.a.shows)}</b> │ <b class="id" data-name="b">${esc(S.b.shows)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
     (face ? ` <span class="face-text">${esc(faceWords(face))}</span>` : '') +
+    SIDES.map((side) => `<span id="${leadId(side)}" hidden>${esc(paneLead(S[side]))}</span>`).join('') +
     (S.whole ? `<span id="${WHOLE_ID}" data-string="L.scene.whole-end" hidden>${esc(t('L.scene.whole-end'))}</span>` : '') +
     ` <button data-relevel="1">${esc(t('F.scene.relevel'))} <kbd>${esc(drawChord('Mod+R'))}</kbd></button><button class="x" data-x="1">× ${esc(t('F.scene.dismiss'))}</button>`;
   for (const side of SIDES) {

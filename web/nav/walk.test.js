@@ -9,8 +9,9 @@
 // of it names, made from the run's placeholder once its clause is read, and
 // every item a transcluded draft's run touches in a published document
 // naming that origin's one description, C-33's words —
-// each block that holds no text by its kind, a withheld or untold document by
-// its state and a link's far end as its tail does, what its text holds of
+// each block that holds no text by its kind, a document led by its corner's
+// first item — its kind, being read where nothing told it, a withheld box's
+// words where no kind can be read — and a link's far end as its tail does, what its text holds of
 // its passage said whole — described, where the
 // board will say nothing of it, by its one state's whole form — its descriptions and
 // Back's light written at the rebuild and marked again in place, and its
@@ -38,8 +39,10 @@
 // change of class keeps the walk on the span its document kept, a draft's
 // run there named as the withheld run it is now; a withheld run's ends stand a level
 // below its item, counted and marked as the symbols are; a document's item
-// voicing its corner's state whole, the version its box shows and its
-// chain's count, marked in place as the chain is counted again; a kept
+// voicing its corner's state whole, its kind leading, the version its box
+// shows and its chain's count, marked in place as the chain is counted again;
+// the kind of the document the walk stands in said once in the status region
+// where it fills under the focus; a kept
 // document's item carrying the clause its corner or the one line shows, and
 // the board's while it lags, each marked in place as it appears and as it
 // lifts; and
@@ -48,7 +51,7 @@
 // mirror follow the text shown — a typed line a stop, a deleted one none, a
 // stop holding its place by its bytes, nothing moved at an ack, the mirror
 // reading the typed words and saying a hold from the held lines alone
-// (FP-8, FP-20, FP-21, FP-22, FP-23, FP-24, FP-29, FP-33, FP-35).
+// (FP-8, FP-20, FP-21, FP-22, FP-23, FP-24, FP-29, FP-33, FP-34, FP-35, FP-36).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -68,6 +71,7 @@ import { STRINGS, t, tHTML, markCount, lastRead } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
 import * as WALK from './walk.js';
+import * as FOCUS from './focus.js';
 import * as LK from '../links/links.js';
 import { farShort } from '../beams/held.js';
 
@@ -125,6 +129,8 @@ function partly() {
 }
 /** the walk's element: its kind, its place, its position */
 const walkAt = () => { const f = WALK.current(); return f && [f.kind, f.addr, f.pos]; };
+/** an edition's state on a notebook as its corner sets it after its kind: its venue's clause, then the state's own words (T-ARTICLE's `L.corner.venue`) */
+const venued = (/** @type {string} */ id, /** @type {Record<string, number>} */ vals = {}) => t('L.corner.venue', { venue: t('F.published.notebook'), state: t(id, vals) });
 
 /** a walk move run to its end: the flight it starts stepped to its last frame */
 async function run(/** @type {Promise<unknown>} */ move) {
@@ -425,18 +431,18 @@ test('the mirror announces every block that holds no text by its kind, in the wo
   }
 });
 
-test('the mirror names a document no read or listing has told the state of by no state at all, and one the board said nothing about in a far end\'s words for it — never "published": the item a jump\'s walk stands on before its read answers, and after it learns the board says nothing (FP-25; issue #137)', () => {
+test('the mirror names a document no read or listing has told the kind of by its kind\'s slot being read, leading, and no state; one the board said nothing about led by a far end\'s words for it — never "published": the item a jump\'s walk stands on before its read answers, and after it learns the board says nothing; its metadata read, led by its kind (FP-25, FP-34; issue #137; issue #423\'s design decision: "the slot\'s word leads the item")', () => {
   // an address in an account the index lists nothing for, never read
   const U = '1.0.7.0.4';
   const unread = WALK.nameOf({ kind: 'document', addr: U, pos: null, link: null }, 0, 1);
-  assert.equal(unread, t('L.mirror.document', { document: U, label: '', state: '', extent: '' }) + ' ' + t('L.mirror.item', { i: 1, n: 1 }), 'nothing told of it: no state');
-  assert.ok(!unread.includes(t('F.published')) && !unread.includes(t('L.mirror.draft')), `never "published", nor "a draft": ${unread}`);
+  assert.equal(unread, t('L.mirror.document', { kind: t('L.slot.reading'), document: U, label: '', state: '', extent: '' }) + ' ' + t('L.mirror.item', { i: 1, n: 1 }), 'nothing told of it: its kind being read, no state');
+  assert.ok(!unread.includes(t('F.published')) && !unread.includes(t('F.kind.draft')), `never "published", nor "draft": ${unread}`);
   REC.takeRefused(U, 'unregistered');
   const gone = WALK.nameOf({ kind: 'document', addr: U, pos: null, link: null }, 0, 1);
-  assert.ok(gone.includes(t('L.far.unregistered')) && !gone.includes(t('F.published')), `the board said nothing about it: in a far end's words for it: ${gone}`);
+  assert.ok(gone.startsWith(`${t('L.far.unregistered')} document ${U},`) && !gone.includes(t('F.published')), `the board said nothing about it: led by a far end's words for it: ${gone}`);
   REC.invalidate(U);
   REC.takeMetadata(U, { doc: U, published: false, owner: '1.0.7', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
-  assert.ok(WALK.nameOf({ kind: 'document', addr: U, pos: null, link: null }, 0, 1).includes(t('L.mirror.draft')), 'its metadata read: a draft');
+  assert.ok(WALK.nameOf({ kind: 'document', addr: U, pos: null, link: null }, 0, 1).startsWith(`${t('F.kind.draft')} document ${U},`), 'its metadata read: led by its kind, "draft"');
   REC.invalidate(U);
 });
 
@@ -448,7 +454,7 @@ test('the mirror names a document a read answered `withheld` by its withheld box
   const box = t('F.corner.withheld', { owner });
   assert.equal(LAYER.withheldBox(REC.doc(X)), box, 'the box names the seat that owns the document, never its sub-account');
   const item = WALK.nameOf({ kind: 'document', addr: X, pos: null, link: null }, 0, 1);
-  assert.ok(item.includes(box), `the item says what the box says: ${item}`);
+  assert.ok(item.startsWith(`${box} document ${X},`), `the item says what the box says, leading where no kind can be read: ${item}`);
   assert.ok(!item.includes(t('F.published')), `and never that the document is published: ${item}`);
 });
 
@@ -751,6 +757,57 @@ test('the item a landing stands on takes its line as its description — aria-de
     said = { addr: D, pos: 13, words: 'its passage is not in version 2', runs: [] };
     await WALK.focusTo(D, null);
     assert.deepEqual(described(), [['document', null]], 'the walk on the document whole: the document\'s item described');
+  } finally {
+    globalThis.document = platform;
+    WALK.readers({});
+  }
+});
+
+// placed with the test above: it attaches a mirror of its own
+test('a landing that crossed into its document from another says that document\'s kind first in the item\'s one announcement — a hidden description of its own, named before the line\'s, written at the rebuild and marked again in place — and its kind alone where the line says nothing; never on the document\'s own item, whose name leads with it (issue #423\'s design decision: "a landing into another document says that document\'s kind first in its one announcement")', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  /** @type {Array<{attrs: Record<string, string>, dataset: {i?: string}, getAttribute: (k: string) => string | null, setAttribute: (k: string, v: string) => void, removeAttribute: (k: string) => void}>} */
+  let items = [];
+  /** @type {Map<string, {textContent: string}>} the hidden descriptions the last rebuild wrote, by id */
+  let hidden = new Map();
+  let rebuilds = 0;
+  const mirror = {
+    tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} },
+    get innerHTML() { return ''; },
+    set innerHTML(/** @type {string} */ html) {
+      rebuilds++;
+      items = [...html.matchAll(/<li\b[^>]*>/g)].map((m) => {
+        /** @type {Record<string, string>} */
+        const attrs = Object.fromEntries([...m[0].matchAll(/ ([\w-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
+        return { attrs, dataset: { i: attrs['data-i'] }, getAttribute: (k) => attrs[k] ?? null, setAttribute: (k, v) => { attrs[k] = v; }, removeAttribute: (k) => { delete attrs[k]; } };
+      });
+      hidden = new Map([...html.matchAll(/<div id="([\w-]+)" hidden>([^<]*)<\/div>/g)].map((m) => [m[1], { textContent: m[2] }]));
+    },
+    querySelectorAll: (/** @type {string} */ sel) => (sel === 'li[role="treeitem"]' ? items : []),
+    querySelector: (/** @type {string} */ sel) => hidden.get(sel.slice(1)) || null,
+  };
+  /** each item described: its kind and place, and the words of every description it names, in order */
+  const described = () => items.filter((i) => i.attrs['aria-describedby']).map((i) => { const n = WALK.siblingsNow()[Number(i.attrs['data-i'])]; return [n.kind, n.pos, i.attrs['aria-describedby'].split(' ').filter((id) => !id.startsWith('walk-origin-')).map((id) => hidden.get(id)?.textContent)]; }).filter(([, , w]) => w.length);
+  const line = 'only part of the text you were reading is in version 3', kind = t('F.kind.draft');
+  /** @type {import('./walk.js').Described | null} what the landing says, as N-GO answers it */
+  let said = { addr: D, pos: 13, words: line, kind, runs: [] };
+  try {
+    WALK.attach(/** @type {any} */ (mirror));
+    WALK.readers({ described: () => said });
+    await WALK.focusTo(D, 13);
+    assert.deepEqual(described(), [['block', 11, [kind, line]]], 'the rebuild: the span holding the landing\'s position, its kind first, then the line');
+    const was = rebuilds;
+    said = { ...said, words: '' };
+    WALK.markDescribed();
+    assert.deepEqual(described(), [['block', 11, [kind]]], 'the line saying nothing: its kind alone, marked in place');
+    said = { ...said, words: line, kind: null };
+    WALK.markDescribed();
+    assert.deepEqual(described(), [['block', 11, [line]]], 'a landing in the box it left: the line alone');
+    assert.equal(rebuilds, was, 'every mark made in place, nothing rebuilt');
+    said = { addr: D, pos: 13, words: line, kind, runs: [] };
+    await WALK.focusTo(D, null);
+    assert.deepEqual(described(), [['document', null, [line]]], 'the walk on the document whole: its item described by the line alone, its name leading with its kind');
   } finally {
     globalThis.document = platform;
     WALK.readers({});
@@ -1333,7 +1390,7 @@ test('the walk takes each box as the version it shows (issues #154, #23): an acc
     const kids = await WALK.childrenOf({ kind: 'account', addr: '1.0.1', pos: null, link: null });
     assert.deepEqual(kids.map((n) => n.addr).filter((a) => [D, D2, E].includes(a)), [D2, E], 'the account lists the version D\'s box shows, in D\'s place, never D');
     const named = WALK.nameOf(kids[0], 0, kids.length);
-    assert.ok(named.startsWith(t('L.mirror.document', { document: D2, label: '"Tumbler."', state: t('F.corner.pinned', { published: t('F.published.notebook'), k: 2 }), extent: t('L.mirror.positions', { n: TEXT2.length }) })), 'the mirror names the version by its own first line, as its box\'s label names it, and its state as its corner states it: ' + named);
+    assert.ok(named.startsWith(t('L.mirror.document', { kind: t('F.published'), document: D2, label: '"Tumbler."', state: venued('F.corner.pinned', { k: 2 }), extent: t('L.mirror.positions', { n: TEXT2.length }) })), 'the mirror names the version by its kind, its own first line, as its box\'s label names it, and its state as its corner states it: ' + named);
     await WALK.focusTo(D, 12);
     assert.deepEqual([walkAt(), WALK.siblingsNow().map((n) => n.pos)], [['block', D2, 11], [1, 11]], 'a landing at D stands on the version\'s span, its siblings the version\'s');
     await WALK.focusTo(E, 3);
@@ -1533,7 +1590,7 @@ test('a kept document\'s mirror item carries the clause its corner or the one li
     WALK.markKept();
     const at = WALK.siblingsNow().findIndex((n) => n.addr === D), named = WALK.mirrorItem(at) || '';
     assert.ok(item().includes(esc(clause)) && named.includes(clause + ' ' + t('L.mirror.item', { i: at + 1, n: WALK.siblingsNow().length })), `its clause a sentence after its words, before its place in the level: ${named}`);
-    assert.ok(named.startsWith(t('L.mirror.document', { document: D, label: '"Tumbler."', state: t('F.corner.latest', { published: t('F.published.notebook') }), extent: t('L.mirror.positions', { n: 30 }) })), named);
+    assert.ok(named.startsWith(t('L.mirror.document', { kind: t('F.published'), document: D, label: '"Tumbler."', state: venued('F.corner.latest'), extent: t('L.mirror.positions', { n: 30 }) })), named);
     assert.equal(rebuilt(), was, 'written in place, nothing rebuilt');
     text();
     for (let i = 0; i < 50 && PUMP.kept(D); i++) await new Promise((r) => setImmediate(r));
@@ -1543,7 +1600,7 @@ test('a kept document\'s mirror item carries the clause its corner or the one li
   } finally { text(); globalThis.document = platform; }
 });
 
-test('a document\'s mirror item voices its corner\'s state whole — at the bare address, an older pin, a pin on the newest version, a document with no versions — the version its box shows and the count of its chain among it, and is written again in place as a newer version\'s arrival counts the chain again, nothing rebuilt (issue #239\'s design decision: "The ARIA mirror\'s item for a document voices the corner\'s state, whole")', async () => {
+test('a document\'s mirror item voices its corner\'s state whole, its kind leading — at the bare address, an older pin, a pin on the newest version, a document with no versions — the version its box shows and the count of its chain among it, and is written again in place as a newer version\'s arrival counts the chain again, nothing rebuilt (issue #239\'s design decision: "The ARIA mirror\'s item for a document voices the corner\'s state, whole")', async () => {
   const D1 = D + '.1', D2 = D + '.2', N = '1.0.1.0.9', TEXT2 = 'Tumbler.\n\nThe second version.', unasked = fake.unanswered.length;
   Object.assign(script, reads(D2, [{ content: TEXT2 }], TEXT2.length, [{ i_start: D2 + '.0.1.1', width: String(TEXT2.length) }]));
   await PUMP.loadWhole(D2);
@@ -1551,25 +1608,24 @@ test('a document\'s mirror item voices its corner\'s state whole — at the bare
   REC.takeMetadata(D1, { doc: D, published: true, owner: '1.0.1', birth: D1, birthExtent: 30, placed: null, baseExtent: null, source: null, asOf: 1 });
   REC.takeMetadata(N, { doc: N, published: true, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
   REC.takeMembers(D, 2);
-  const published = t('F.published.notebook');
-  /** the corner's state at version `k` of a chain `n` members long, its words whole */
-  const pinned = (/** @type {number} */ k, /** @type {number} */ n) => [t('F.corner.pinned', { published, k }), t('F.version-of', { k, n })].join(', ');
-  /** a document's item as the mirror names it, its state the words given */
+  /** the corner's state after its kind at version `k` of a chain `n` members long, its words whole */
+  const pinned = (/** @type {number} */ k, /** @type {number} */ n) => [venued('F.corner.pinned', { k }), t('F.version-of', { k, n })].join(', ');
+  /** a document's item as the mirror names it, led by its kind, its state the words given */
   const itemSays = (/** @type {string} */ addr, /** @type {string} */ state) => {
     const d = REC.doc(addr);
-    return t('L.mirror.document', { document: addr, label: LAYER.mirrorLabel(d).map((r) => r.text).join(''), state, extent: d.extent != null ? t('L.mirror.positions', { n: d.extent }) : '' });
+    return t('L.mirror.document', { kind: t('F.published'), document: addr, label: LAYER.mirrorLabel(d).map((r) => r.text).join(''), state, extent: d.extent != null ? t('L.mirror.positions', { n: d.extent }) : '' });
   };
-  /** @type {Array<[string, string, string]>} each version state, the version its box shows, and its corner's state's words */
+  /** @type {Array<[string, string, string]>} each version state, the version its box shows, and its corner's state's words after its kind */
   const states = [
-    ['the bare address', D, [t('F.corner.latest', { published }), t('F.version-of', { k: 2, n: 2 })].join(', ')],
+    ['the bare address', D, [venued('F.corner.latest'), t('F.version-of', { k: 2, n: 2 })].join(', ')],
     ['an older pin', D1, pinned(1, 2)],
     ['a pin on the newest version', D2, pinned(2, 2)],
-    ['a document with no versions', N, t('F.corner.no-versions', { published })],
+    ['a document with no versions', N, venued('F.corner.no-versions')],
   ];
   for (const [what, addr, state] of states) {
     const named = WALK.nameOf({ kind: 'document', addr, pos: null, link: null }, 0, 1);
-    assert.ok(named.startsWith(itemSays(addr, state)), `${what}: its corner's state whole — ${named}`);
-    assert.ok(!named.includes(t('F.published') + ',') && !named.includes(t('F.published') + '.'), `${what}: never the bare "published" — ${named}`);
+    assert.ok(named.startsWith(itemSays(addr, state)), `${what}: led by its kind, then its corner's state whole — ${named}`);
+    assert.ok(!named.includes(t('F.published') + ',') && !named.includes(t('F.published') + '.'), `${what}: its kind once, leading, never a state of its own — ${named}`);
   }
   const platform = globalThis.document;
   globalThis.document = /** @type {any} */ ({ activeElement: null });
@@ -1863,6 +1919,43 @@ test('a transcluded origin carrying C-33\'s words has one description in the mir
     REC.takeMetadata(T2_ORIGIN, meta(true));
     assert.equal(WALK.originWords({ kind: 'block', addr: T2, pos: 22, link: null }), null, 'the draft read as published: no C-33, no description');
   } finally {
+    globalThis.document = platform;
+  }
+});
+
+// placed last: it attaches a mirror and a status region of its own
+test('the kind of the document the walk stands in is said once in the status region where its corner\'s slot fills while the platform\'s focus is in it — its metadata read with the focus on the walk\'s item — and nothing is said where the focus stands elsewhere, nor by a move of the walk (issue #423\'s design decision: "If it fills while the focus is in that document, the status region says so once"; FP-36)', async () => {
+  const platform = globalThis.document;
+  /** @type {string[]} what the status region was told, in order */
+  const said = [];
+  FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, get textContent() { return said[said.length - 1] ?? ''; }, set textContent(/** @type {string} */ v) { said.push(v); } }) });
+  const page = { activeElement: /** @type {unknown} */ (null) }, item = { id: 'the walk\'s item' };
+  globalThis.document = /** @type {any} */ (page);
+  WALK.attach(/** @type {any} */ ({ innerHTML: '', tabIndex: 0, contains: (/** @type {unknown} */ x) => x === item, setAttribute() {}, classList: { toggle() {} }, querySelectorAll: () => [] }));
+  // two documents of an account the index lists nothing for, never read: their kinds being read
+  const U = '1.0.7.0.6', V = '1.0.7.0.8';
+  const meta = (/** @type {string} */ doc, /** @type {boolean} */ published) => ({ doc, published, owner: '1.0.7', birth: published ? doc + '.1' : null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  try {
+    await WALK.focusTo(U, null);
+    page.activeElement = item;
+    WALK.markKept();
+    assert.deepEqual([LAYER.kindOf(REC.doc(U)), said], ['reading', []], 'its kind being read: nothing said');
+    REC.takeMetadata(U, meta(U, false));
+    WALK.markKept();
+    WALK.markKept();
+    assert.deepEqual(said, [t('F.kind.draft')], 'its slot filled under the focus: "draft", said once');
+    await WALK.focusTo(V, null);
+    page.activeElement = null;
+    WALK.markKept();
+    REC.takeMetadata(V, meta(V, true));
+    WALK.markKept();
+    assert.deepEqual(said, [t('F.kind.draft')], 'filled while the focus stands elsewhere: nothing said');
+    await WALK.focusTo(U, null);
+    page.activeElement = item;
+    WALK.markKept();
+    assert.deepEqual(said, [t('F.kind.draft')], 'a move of the walk onto a document whose kind is told: nothing said — its item\'s name leads with it');
+  } finally {
+    REC.invalidate(U); REC.invalidate(V);
     globalThis.document = platform;
   }
 });

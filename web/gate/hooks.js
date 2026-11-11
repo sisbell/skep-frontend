@@ -31,7 +31,9 @@
 // below the one line (`heldLabel`), the signs standing in the columns'
 // edges — a withheld origin's statement among them — as the frame placed
 // them (`edgeSigns`), its first line and the lead its label
-// sets (`firstLine`), the size an address is set at in a label (`address`),
+// sets (`firstLine`), its kind as its corner's first slot states it by the one
+// test (`kind`) — what a check with no person present reads a document's kind
+// by, never a label — the size an address is set at in a label (`address`),
 // the places the line names (`named`) and
 // where a reading view frames a column (`frameOf`); the continuations' marks
 // (`residues`), the mid connections with their counts and stubs
@@ -817,8 +819,10 @@ export function install(deps) {
     edgeSigns: () => LAYER.signsStanding(),
     /** the places the one line names (L-LINE's `named`; FP-26): its board, its account and its document by its box */
     named: () => LINE.named(),
-    /** a document's first line as every surface naming it reads it (T-LAYER's `firstOf`, by T-ARTICLE's one rule), the client's words in its place bracketed, and the lead its label sets before its address (T-LAYER's `firstLine`): its first line with a draft's mark; '' where none is known */
+    /** a document's first line as every surface naming it reads it (T-LAYER's `firstOf`, by T-ARTICLE's one rule), the client's words in its place bracketed, and the lead its label sets before its address (T-LAYER's `firstLine`): its first line, which carries no kind; '' where none is known */
     firstLine: (/** @type {string} */ addr) => ({ first: LAYER.firstOf(REC.doc(addr)).map((r) => r.text).join(''), lead: LAYER.firstLine(REC.doc(addr)) }),
+    /** a document's kind as its corner's first slot states it (T-LAYER's `kindOf`, by the one test; FP-33, FP-34): its state — draft, published, being read or not read — and the slot's words */
+    kind: (/** @type {string} */ addr) => ({ kind: LAYER.kindOf(REC.doc(addr)), words: LAYER.kindSaid(REC.doc(addr)) }),
     /** P-REG's address size and weight, at which the harness measures an address's dots apart (FP-18) */
     address: () => ({ ...ADDRESS }),
     /** where a reading view of a document at a position centres, framing the column with its corner and its edge, and the document's em there — on its lines as rendered, set first where they are not (T-LAYER's `frameOf`) */
