@@ -44,7 +44,17 @@
 // Mod+R and F5 are taken and nothing reloaded (K-94), and the platform's own
 // chords — copy, paste, cut, select all, print, close, quit, minimize, hide,
 // preferences — are never taken save where a site's line answers a paste or a
-// cut (K-92, K-93). No key is dispatched while an input method's composition
+// cut (K-93), and save Mod+C outside a field where the platform holds no
+// selection with extent (K-92; `copyAsDrawn`): there the selection the page
+// draws is placed under the copy again, which then runs as the platform's;
+// with nothing selected, the copy is prevented at its keydown, the clipboard
+// left as it is, and the line is its hint at the focus, said in the status
+// region — whole at the first such copy in the page's session, its first
+// clause after — ending with the act that selects there: Enter's where Enter
+// selects the walk's span (`enterSelects`), Shift+↓'s at any other span at
+// its reading scale, none anywhere else (`selectsHere`). A copy event T-LAYER
+// takes nothing from — the Edit menu's, the context menu's — is answered the
+// same way (APP's). No key is dispatched while an input method's composition
 // is open (the IME guard).
 // THE CARET (D5 K-51, K-70, K-71, K-72, K-76, K-77; D6 BM-1, BM-52, BM-54,
 // BM-70, BM-75): in text the person may edit (T-LAYER's `editable`) Enter at
@@ -186,8 +196,8 @@
 // WHOLE BOARD do through N-GO; the paging keys and the zoom chords stay the
 // camera's. State (FP-10), beside the held keys: whether Mod+S has been
 // answered whole this session (`saveAnswered`).
-// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-14, FP-20, FP-21, FP-25, FP-35,
-// FP-36, FP-39, FP-40.
+// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-14, FP-20, FP-21, FP-24, FP-25,
+// FP-27, FP-35, FP-36, FP-39, FP-40.
 
 import * as GO from './go.js';
 import * as WALK from './walk.js';
@@ -210,6 +220,7 @@ import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import { keptWord, keptStatement } from '../text/article.js';
 import { accountOf, documentOf } from '../model/address.js';
+import { t } from '../strings.js';
 
 /** @typedef {import('../overlays/selection.js').InertSlot} InertSlot */
 /** @typedef {import('../overlays/selection.js').LiveSlot} LiveSlot */
@@ -312,6 +323,7 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-63', chord: 'Esc', act: 'esc', surface: 'scene' },
   { id: 'K-64', chord: 'Mod+=', act: 'scene.swallowZoomIn', surface: 'scene' },
   { id: 'K-92', chord: 'Mod+C', act: 'platform.copy', surface: 'platform' },
+  { id: 'K-92', chord: 'Mod+C', act: 'copy.nothing', surface: 'plane' },
   { id: 'K-92', chord: 'Mod+P', act: 'platform.print', surface: 'platform' },
   { id: 'K-94', chord: 'Mod+R', act: 'nothing', surface: 'platform' },
 ]));
@@ -506,7 +518,9 @@ export async function dispatch(e, ctx) {
   if (mod && !e.shiftKey && (chord === 'Mod+V' || chord === 'Mod+X') && bareDraftSpan(ctx)) { HINT.show(chord === 'Mod+V' ? 'B3.caret.enter.paste' : 'B3.caret.cut', null, hinted(e, ctx)); return true; }
   // a paste at the walk's span of an edition of the person's own or of another's document (K-72, K-93): its document's line, its hint, nothing placed
   if (mod && !e.shiftKey && chord === 'Mod+V' && siteSays(e, ctx)) return true;
-  // the platform's own, never taken (K-92, K-93)
+  // a copy outside a field where the platform holds no selection (K-92): the page's line, its default prevented, or the selection it draws placed under the copy
+  if (mod && !e.shiftKey && !e.altKey && chord === 'Mod+C' && copyAsDrawn(e, ctx)) return true;
+  // the rest of the platform's own, never taken (K-92, K-93)
   if (mod && !e.shiftKey && ['C', 'V', 'X', 'A', 'P', 'W', 'Q', 'M', 'H', ','].includes(chord.slice(4))) return false;
   if (ctx.where === 'field') {
     if (chord === 'Esc') { esc(); return true; }
@@ -883,13 +897,62 @@ function sceneKey(e, chord, ctx) {
  * What a hint a key raises is told of the key (O-HINT's `show`): whether it
  * is an auto-repeat, and the element it was pressed at where the walk's
  * focus is not it — a control, a corner, the line, a reading scene's pane.
- * @param {KeyboardEvent} e
+ * @param {{repeat?: boolean, target: EventTarget | null}} e the key, or a copy event
  * @param {Ctx} ctx
+ * @param {EventTarget | null} [target] the element it was pressed at: the event's target where none is given
  * @returns {{repeat: boolean, at: Element | null}}
  */
-function hinted(e, ctx) {
-  const at = /** @type {Element | null} */ (ctx.where === 'plane' || ctx.where === 'caret' ? null : e.target);
+function hinted(e, ctx, target = e.target) {
+  const at = /** @type {Element | null} */ (ctx.where === 'plane' || ctx.where === 'caret' ? null : target);
   return { repeat: !!e.repeat, at: at && typeof at.getBoundingClientRect === 'function' ? at : null };
+}
+
+/**
+ * A copy outside a field where the platform holds no selection with extent
+ * (see the head; D5 K-92; FP-24, FP-27): the selection the page draws placed
+ * under the copy again (T-LAYER's `placeSelection`), which then runs as the
+ * platform's; with nothing selected, the platform's copy prevented, the
+ * clipboard left as it is, and the line its hint at the focus, said in the
+ * status region, ending with the act that selects there (`selectsHere`).
+ * @param {{preventDefault(): void, repeat?: boolean, target: EventTarget | null}} e Mod+C's keydown, or a copy event T-LAYER took nothing from
+ * @param {Ctx} ctx where the focus is
+ * @param {EventTarget | null} [at] the element the focus is on: the event's target where none is given
+ * @returns {boolean} whether the page answered the copy; false where it runs as the platform's
+ */
+export function copyAsDrawn(e, ctx, at = e.target) {
+  if (ctx.where === 'field' || LAYER.platformSelects()) return false;
+  const drawn = SEL.selected();
+  if (drawn) { LAYER.placeSelection(drawn); return false; }
+  e.preventDefault();
+  HINT.show('L.copy.nothing', { selects: selectsHere(ctx) }, hinted(e, ctx, at));
+  return true;
+}
+
+/**
+ * The words the copy line ends with (D5 K-92): Enter's act where Enter selects
+ * the walk's span (`enterSelects`), Shift+↓'s at any other span at its reading
+ * scale, none where the focus is anywhere else — a document, an account, the
+ * board, a link's symbol, a mark, a corner, the one line, an overlay's control,
+ * the scene, a live caret.
+ * @param {Ctx} ctx
+ * @returns {string}
+ */
+function selectsHere(ctx) {
+  const f = WALK.current(), c = LAYER.caret();
+  if (ctx.where !== 'plane' || SCENE.isOpen() || (c && c.live) || !f || f.kind !== 'block' || f.pos == null || !LAYER.atReadingScale(f.addr)) return '';
+  return t(enterSelects(f) ? 'L.copy.nothing.enter' : 'L.copy.nothing.shift');
+}
+
+/**
+ * Does Enter at the walk's element select it (K-7, D8; `activateFocus`): a
+ * span that is no withheld run, in text the person may not edit.
+ * @param {import('./walk.js').Node} f
+ * @returns {boolean}
+ */
+function enterSelects(f) {
+  if (f.kind !== 'block' || f.pos == null) return false;
+  const b = LAYER.blockByPos(f.addr, f.pos);
+  return !(b && b.kind === 'withheld') && !LAYER.editable(f.addr);
 }
 
 /** a printable key no field takes: swallowed, the K-9 line its hint at the focus until the next act, ending with where the person was writing where `writing` names it (foundations §2.7; `writingElsewhere`) */
@@ -984,7 +1047,8 @@ export function esc(landed = false, pointer = false) {
  * a LEAP to the edition its claim names made at the run, else on its head; in
  * text the person may edit the span takes the caret — placed at its start,
  * or the kept one standing in it returned — the selection cleared (K-70;
- * BM-52; T-LAYER's `caretToSpan`); any other span is selected whole (D8), a
+ * BM-52; T-LAYER's `caretToSpan`); any other span is selected whole (D8;
+ * `enterSelects`), a
  * link's symbol opens its card, which takes the focus as a key opened it
  * (K-55). → at a document below its reading scale takes this act too (K-3;
  * see the head).
@@ -1000,8 +1064,8 @@ async function activateFocus(byKey) {
   if (f.kind === 'block' && f.pos != null) {
     const b = LAYER.blockByPos(f.addr, f.pos);
     if (b && b.kind === 'withheld') FACES.withheldRun(f.addr, b, (home, byKey) => GO.leapTo(home, { how: 'leap', byKey, site: { span: { addr: f.addr, pos: b.pos, width: b.width } } }), byKey);
-    else if (LAYER.editable(f.addr)) { SEL.clear(); LAYER.caretToSpan(f.addr, f.pos); }
-    else SEL.select(f.addr, f.pos);
+    else if (enterSelects(f)) SEL.select(f.addr, f.pos);
+    else { SEL.clear(); LAYER.caretToSpan(f.addr, f.pos); }
     return;
   }
   if (f.kind === 'link' && f.link) ANATOMY.open(f.link, null, byKey);

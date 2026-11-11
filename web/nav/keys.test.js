@@ -23,7 +23,13 @@
 // by nothing; Mod+S writes nothing, answered
 // at the corner and in the status region with the kept state's statement
 // whole at the first press in a session and the corner's own word after it,
-// the statement whole on the word's act; → and ← at a corner move the focus
+// the statement whole on the word's act; Mod+C with nothing selected outside
+// a field is taken at its keydown, the clipboard left as it is and its line
+// the hint at the focus, whole at the first such copy in the session and
+// "nothing selected" after, naming Enter where Enter selects, Shift+↓ at a
+// span of the draft the person may edit and no act at a document or a live
+// caret, while a selection the page draws, a field and a selection the
+// platform holds leave the copy the platform's; → and ← at a corner move the focus
 // along its acts — the read it offers, a head's count of the items it folds —
 // and back; a printable key but Space at the corner of a draft the person may
 // edit is answered there by the line naming the way back to its text, ending
@@ -457,6 +463,44 @@ test('Mod+S writes nothing and is answered at the corner and in the status regio
   assert.equal(await KEYS.dispatch({ ...keyOf('Enter'), target }, { where: 'corner', byKey: true }), true);
   assert.ok(!LAYER.statementOpen(D), 'the act again closes it');
   assert.deepEqual([WRITE.edits(D), caret()], [[], null], 'the chord writes nothing and places no caret');
+}));
+
+test('Mod+C with nothing selected outside a field is taken at its keydown, its default prevented and the clipboard left as it is, its line the hint at the focus and said in the status region — whole at the first copy in the page\'s session, its first clause, "nothing selected", at every later one — ending with Enter\'s act at a span Enter selects, Shift+↓\'s at a span of the draft the person may edit, nothing at a document or at a live caret; an auto-repeat says nothing; a selection the page draws, a field and a selection the platform holds leave the copy the platform\'s (D5 K-92; FP-24, FP-27)', () => onPlane(async ({ said }) => {
+  /** Mod+C dispatched where `ctx` says: whether the page took it, and whether it prevented the platform's copy itself, before any wait */
+  const copy = async (/** @type {any} */ ctx = PLANE, /** @type {object} */ mods = {}) => {
+    let prevented = false;
+    const took = await KEYS.dispatch({ ...keyOf('c', { ...MOD, ...mods }), preventDefault() { prevented = true; } }, ctx);
+    await tick();
+    return { took, prevented };
+  };
+  /** the line, ending with the act a string names; with none, FP-27's words alone */
+  const line = (/** @type {string | null} */ tail) => t('L.copy.nothing', { selects: tail ? t(tail) : '' });
+  const enter = line('L.copy.nothing.enter'), shift = line('L.copy.nothing.shift'), bare = line(null), clause = 'nothing selected';
+  assert.ok(KEYS.TABLE.some((r) => r.id === 'K-92' && r.chord === 'Mod+C' && r.act === 'copy.nothing' && r.surface === 'plane'), 'the table binds the copy\'s answer at the plane, K-92\'s');
+  await focusOn(O, 1);
+  assert.deepEqual(await copy(), { took: true, prevented: true }, 'at another\'s span: taken, its default prevented');
+  assert.deepEqual([HINT.standing(), said.at(-1)], [{ id: 'L.copy.nothing', words: enter, whole: enter, open: true, writing: null }, enter], 'whole at the first copy in the session, ending with Enter\'s act, which selects there; said in the status region');
+  await focusOn(D, 14);
+  assert.deepEqual(await copy(), { took: true, prevented: true });
+  assert.deepEqual([HINT.standing(), said.at(-1)], [{ id: 'L.copy.nothing', words: clause, whole: shift, open: false, writing: null }, clause], 'at a span of the draft the person may edit: its first clause, the line whole ending with Shift+↓\'s act');
+  await WALK.focusTo(O, null, true, true, null, true);
+  assert.deepEqual(await copy(), { took: true, prevented: true });
+  assert.deepEqual([HINT.standing()?.whole, HINT.standing()?.words, said.at(-1)], [bare, clause, clause], 'at a document whole: FP-27\'s words alone, said again');
+  await focusOn(D, 1);
+  assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+  assert.deepEqual(caret(), [D, 1, true], 'the caret live at D\'s first span');
+  assert.deepEqual(await copy(), { took: true, prevented: true });
+  assert.deepEqual([HINT.standing()?.whole, caret(), WRITE.edits(D)], [bare, [D, 1, true], []], 'at a live caret: FP-27\'s words alone, nothing typed, the caret where it stood');
+  const n = said.length;
+  assert.deepEqual(await copy(PLANE, { repeat: true }), { took: true, prevented: true }, 'an auto-repeat: taken, its default prevented');
+  assert.equal(said.length, n, 'and answered by nothing: its press was answered');
+  SEL.select(O, 1, 4);
+  assert.deepEqual(await copy(), { took: false, prevented: false }, 'a selection the page draws: the copy the platform\'s, over it');
+  assert.deepEqual(await copy({ where: 'field', byKey: true }), { took: false, prevented: false }, 'in a field: the field\'s own copy');
+  SEL.clear();
+  const plain = globalThis.window.getSelection;
+  globalThis.window.getSelection = () => /** @type {any} */ ({ rangeCount: 1, isCollapsed: false });
+  try { assert.deepEqual(await copy(), { took: false, prevented: false }, 'a selection the platform holds with extent, anywhere: the copy the platform\'s'); } finally { globalThis.window.getSelection = plain; }
 }));
 
 test('at a corner offering acts, → moves the focus along them in order — the offered read, then a head\'s count of the items it folds — and ← back along them to the corner, each a key the page takes; → at the last act, ← at the corner, and either at a corner offering none are the platform\'s (D5 K-57, in K-22\'s form)', () => onPlane(async () => {

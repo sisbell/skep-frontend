@@ -27,8 +27,10 @@
 // is pinned or is marked whole, and every hint the page raises marked;
 // the entries no design document carries are listed; and every accessible name the page
 // sets is read from ST — none stands in the markup, and none is written as a
-// literal in a module; and the words of a draft holding unsent typing are
-// the decision's DRAFT strings.
+// literal in a module; the words of a draft holding unsent typing are
+// the decision's DRAFT strings; and a copy with nothing selected is said in
+// the keys-and-clicks decision's words, its act's tail apart and its compact
+// form "nothing selected".
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -782,6 +784,22 @@ test('a one-line hint\'s compact form is its notice\'s first clause, the text be
   assert.throws(() => hintOf('T.none'), /no string T\.none/);
 });
 
+test('a copy with nothing selected is said in the keys-and-clicks decision\'s words — the line, ending with Enter\'s act, Shift+↓\'s or none — each a DRAFT naming the decision and its screen, none the lane\'s own, its compact form its first clause "nothing selected" whichever act ends it (D5 K-92; FP-27)', () => {
+  const D = 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md';
+  for (const id of ['L.copy.nothing', 'L.copy.nothing.enter', 'L.copy.nothing.shift']) {
+    const { cls, source, screen, lane } = STRINGS[id];
+    assert.deepEqual([cls, source, !!screen, lane], ['DRAFT', D, true, undefined], id);
+  }
+  /** @type {Array<[string, string]>} each act's tail, and the line it ends */
+  const LINES = [
+    [t('L.copy.nothing.enter'), 'nothing selected — the clipboard is unchanged; Enter selects this passage'],
+    [t('L.copy.nothing.shift'), 'nothing selected — the clipboard is unchanged; Shift+↓ selects this passage'],
+    ['', 'nothing selected — the clipboard is unchanged'],
+  ];
+  for (const [selects, whole] of LINES) assert.deepEqual(hintOf('L.copy.nothing', { selects }), { whole, clause: 'nothing selected' }, whole);
+  assert.equal(STRINGS['L.copy.nothing'].hint, 'clause', 'a hint whose first clause stands for it once it was shown whole');
+});
+
 test('the words of a draft holding unsent typing are the decision\'s DRAFT strings, each naming the decision and its screen, none the lane\'s own; the put-back\'s are B3-S7\'s', () => {
   const D = 'ux/questions/2026-11-09-unsent-typing-which-text.decision.md';
   /** @type {Array<[string, string]>} */
@@ -814,7 +832,7 @@ test('every hint the page raises is marked in the table whether it compacts — 
     for (const m of src.matchAll(/(?:HINT\.show|acts\.hint)\(([^,]+),/g)) for (const id of m[1].matchAll(/'([A-Z][\w-]*(?:\.[^']+)?)'/g)) raised.add(id[1]);
     for (const m of src.matchAll(/INERT_REASON = [^;]*?\(\{([^}]*)\}\)/g)) for (const id of m[1].matchAll(/'([A-Z][\w-]*(?:\.[^']+)?)'/g)) raised.add(id[1]);
   }
-  for (const id of ['F.swallow', 'F.swallow.space', 'B3.caret.enter', 'B3.caret.enter.paste', 'B3.caret.cut', 'B3.caret.back', 'D5.select-first', 'B3.row.follow.inert', 'L.find.off', 'L.no-notebook-yet', 'L.seam.annotate', 'L.seam.quote', 'L.seam.link-to', 'C-45', 'B3.row.others-document', 'L.leap.beside.choose', 'L.leap.beside.reading', 'L.leap.beside.other']) {
+  for (const id of ['F.swallow', 'F.swallow.space', 'B3.caret.enter', 'B3.caret.enter.paste', 'B3.caret.cut', 'B3.caret.back', 'D5.select-first', 'B3.row.follow.inert', 'L.find.off', 'L.no-notebook-yet', 'L.seam.annotate', 'L.seam.quote', 'L.seam.link-to', 'C-45', 'B3.row.others-document', 'L.leap.beside.choose', 'L.leap.beside.reading', 'L.leap.beside.other', 'L.copy.nothing']) {
     assert.ok(raised.has(id), `${id}: raised as a hint`);
   }
   assert.deepEqual([...raised].filter((id) => !STRINGS[id] || !STRINGS[id].hint), [], 'every one marked');

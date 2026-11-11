@@ -367,7 +367,10 @@
 // so the copy is of what the person chose (`placeAgain`). Nor does a range
 // take a caret: while a field the reader types in holds the focus no range is
 // placed, the page's span owed until a frame finds the field let it go
-// (FP-20; N-FOCUS's `isField`).
+// (FP-20; N-FOCUS's `isField`). Whether the platform holds a selection with
+// extent anywhere in the page — an article's, a pane's, an overlay's text —
+// is read here (`platformSelects`): what a copy takes, and what a press ends
+// (FP-24).
 // The reading scene's panes borrow the mount (`sceneArticle`; FP-12; the
 // structure record §3.4 (vii)): each pane's article is made here,
 // T-ARTICLE's scene-mode variant laid out by the pane's own style — one
@@ -2972,6 +2975,16 @@ function runsBackward(/** @type {Selection} */ s) {
 export function selectionBackward() {
   const s = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
   return !!s && s.rangeCount > 0 && !s.isCollapsed && runsBackward(s);
+}
+
+/**
+ * Does the platform hold a selection with extent anywhere in the page (see
+ * the head) — over an article's text, a reading scene's pane's, an overlay's —
+ * rather than none or a caret alone?
+ */
+export function platformSelects() {
+  const s = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+  return !!s && s.rangeCount > 0 && !s.isCollapsed;
 }
 
 /**

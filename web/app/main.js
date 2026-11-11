@@ -120,12 +120,15 @@
 // act, and every one but an auto-repeat a hint's (O-HINT's `act`) — Enter
 // and Space at the hint its button's own, ending nothing, and every other
 // key there made as at the plane's stop. The pointer → APP-INPUT; the copy
-// event → T-LAYER's `onCopy`; the
+// event → T-LAYER's `onCopy`, and one it takes nothing from → N-KEYS'
+// `copyAsDrawn`, read where the focus is (`whereIs`), then `onCopy` again
+// over the selection that placed under it (FP-24, FP-27); the
 // events `moment` → a walk's moment (O-FACES'), `held` → logged, not acted
 // on; the failure reporter (a line in the page, posted nowhere). No write is
 // composed or sent anywhere in this page.
 // Rules: FP-1, FP-2, FP-4, FP-5, FP-8, FP-9, FP-10, FP-11, FP-14, FP-15,
-// FP-20, FP-22, FP-23, FP-25, FP-26, FP-28, FP-29, FP-34, FP-35, FP-36.
+// FP-20, FP-22, FP-23, FP-24, FP-25, FP-26, FP-27, FP-28, FP-29, FP-34,
+// FP-35, FP-36.
 
 import * as PORT from '../bridge/port.js';
 import * as DEV from '../bridge/dev.js';
@@ -337,7 +340,14 @@ async function boot() {
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords() });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
   window.addEventListener('resize', () => { resize(); LINE.fit(); }); resize();
-  document.addEventListener('copy', (e) => { const b = REC.board(); LAYER.onCopy(e, b ? b.origin : ''); });
+  document.addEventListener('copy', (e) => {
+    const b = REC.board(), origin = b ? b.origin : '';
+    if (LAYER.onCopy(e, origin)) return;
+    const w = whereIs(document.activeElement);
+    if (KEYS.copyAsDrawn(e, { where: w === 'hint' ? 'plane' : w, byKey: false }, document.activeElement)) return;
+    // the selection the page draws, placed under the copy again, copied as the platform now holds it
+    LAYER.onCopy(e, origin);
+  });
   window.addEventListener('keydown', async (e) => {
     // a chord the LEAP box closed on acts as anywhere (M-1): read at the focus the close returned, not at the box
     const target = /** @type {HTMLElement | null} */ (e.target);

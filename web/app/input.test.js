@@ -34,6 +34,10 @@
 // the caret's own draft's things but its text and its corner leaves the caret
 // live with the walk on its span; an empty click is the pointer's Esc, one
 // step of its order a click, the live caret's its last and no arrival ended;
+// a press that finds the platform holding a selection and leaves it none —
+// a click on a column's blank room or on the ground on the plane, a drag
+// ending with nothing selected — ends the page's selection too, its card with
+// it, while one the platform's selection stands through keeps it;
 // and a focus landing in a corner the
 // view does not show whole pans the camera by the least that brings it in below
 // the one line, never while a flight runs. On the DOM under `web/test/`, the
@@ -968,6 +972,8 @@ test('a click on a continuation\'s mark acts by the target it falls on: its newe
  * @property {(target: unknown, at: {x: number, y: number}) => void} press a press and its click on the text layer at a world point, on the element `target` stands in for, the platform's selection standing nowhere
  * @property {(target: unknown, at: {x: number, y: number}) => void} cornerAt a click on the corner layer at a world point, on the element `target` stands in for
  * @property {(at: {x: number, y: number}) => void} planeAt a press and its release on the plane, unmoved, at a world point
+ * @property {(target: unknown, at: {x: number, y: number}, stays: boolean, to?: {x: number, y: number}) => void} pressOver a press on the text layer at a world point, the platform holding a selection with extent as it begins — through its release where `stays`, else gone by it — released at `to`, the click following where the pointer moved none
+ * @property {(at: {x: number, y: number}, stays: boolean) => void} planeOver a press and its release on the plane, unmoved, at a world point, the platform holding a selection with extent as it begins — through its release where `stays`, else gone by it
  */
 
 /**
@@ -975,7 +981,8 @@ test('a click on a continuation\'s mark acts by the target it falls on: its newe
  * the same text, the camera at D's reading scale, the plane's, the text layer's, the corners' and the window's listeners
  * attached; the body clicks a block's part with the platform's selection collapsed at its start, as a click leaves it
  * (`clickAt`), or presses and clicks on stand-ins of the page's elements at a world point (`press`, `cornerAt`,
- * `planeAt`), and every caret, selection and card is let go after it.
+ * `planeAt`), the platform holding a selection with extent as a press begins where the body asks (`pressOver`,
+ * `planeOver`), and every caret, selection and card is let go after it.
  * @param {(p: Drafts) => void | Promise<void>} body
  */
 async function onDrafts(body) {
@@ -1035,7 +1042,27 @@ async function onDrafts(body) {
       const p = { ...screen(at), ctrlKey: false, metaKey: false, pointerId: 1 };
       plane.get('pointerdown')?.(p); plane.get('pointerup')?.(p); win.get('pointerup')?.(p);
     };
-    await body({ D, O, clickAt, onCorner, press, cornerAt, planeAt });
+    /** a selection of the platform's with extent over text no mounted article holds, as a drag elsewhere leaves one */
+    const range = (() => {
+      const node = { nodeType: 1, parentElement: null, closest: () => null };
+      return { rangeCount: 1, isCollapsed: false, anchorNode: node, focusNode: node, getRangeAt: () => ({ collapsed: false, startContainer: node, endContainer: node, commonAncestorContainer: node }), removeAllRanges() {} };
+    })();
+    const pressOver = (/** @type {unknown} */ target, /** @type {{x: number, y: number}} */ at, /** @type {boolean} */ stays, to = at) => {
+      const p = screen(at), q = screen(to);
+      selection = range;
+      layer.get('pointerdown')?.({ ...p, target, ctrlKey: false, metaKey: false, pointerId: 1 });
+      selection = stays ? range : null;
+      win.get('pointerup')?.({ ...q, target });
+      click({ ...q, target, stopPropagation() {} });
+    };
+    const planeOver = (/** @type {{x: number, y: number}} */ at, /** @type {boolean} */ stays) => {
+      const p = { ...screen(at), ctrlKey: false, metaKey: false, pointerId: 1 };
+      selection = range;
+      plane.get('pointerdown')?.(p);
+      selection = stays ? range : null;
+      plane.get('pointerup')?.(p); win.get('pointerup')?.(p);
+    };
+    await body({ D, O, clickAt, onCorner, press, cornerAt, planeAt, pressOver, planeOver });
   } finally {
     HOST.dismiss(); SEL.clear(); LAYER.clear();
     REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
@@ -1235,6 +1262,30 @@ test('an empty click is the pointer\'s Esc, one step of its order a click: with 
     assert.deepEqual([GO.arrivalMark()?.addr, LAYER.caret()?.live], [D, false], 'the third: the arrival standing, nothing else to close');
     CAM.set(view);
   } finally { GO.endArrival(); TRAIL._reset(); }
+}));
+
+test('a press that finds the platform holding a selection and leaves it none ends the page\'s selection too, its card with it — a click on a column\'s blank room, a drag over it that ends with nothing selected, a click on the document\'s ground on the plane — and where the platform\'s selection stands through the press, the page\'s stands (FP-24; foundations §2.1)', () => onDrafts(async ({ O, pressOver, planeOver }) => {
+  noneDrawn();
+  const second = REC.doc(O).blocks[1], near = LAYER.centreOf(O, second.pos), art = { dataset: { addr: O } };
+  /** a column's blank room in O's article: no block, no mark, no sign */
+  const room = { dataset: {}, isConnected: false, closest: (/** @type {string} */ sel) => (sel === 'article' ? art : null) };
+  /** O's first block selected as the page selects it, its card standing */
+  const selected = () => { SEL.select(O, 1); assert.equal(HOST.currentState()?.id, 'selection', 'the selection\'s card stands'); return SEL.selected(); };
+  /** what stands after a press: the page's selection and the card */
+  const after = () => [SEL.selected(), HOST.currentState()?.id ?? null];
+  const block = selected();
+  pressOver(room, near, false);
+  assert.deepEqual(after(), [null, null], 'a click on a column\'s blank room, the platform\'s selection gone by its release: the page\'s selection ended, its card with it');
+  selected();
+  pressOver(room, near, false, { x: near.x + 40 / CAM.cam.scale, y: near.y });
+  assert.deepEqual(after(), [null, null], 'a drag over the blank room that ends with nothing selected: the same');
+  selected();
+  planeOver(groundOf(O, second.pos), false);
+  assert.deepEqual(after(), [null, null], 'a click on O\'s ground on the plane: the same');
+  selected();
+  pressOver(room, near, true);
+  assert.deepEqual(after(), [block, 'selection'], 'a click whose press leaves the platform\'s selection standing: the page\'s stands, its card with it');
+  await closeAll();
 }));
 
 test('a focus landing in a corner the view does not show whole moves the camera by the least pan that brings the whole corner into the view below the one line; one the view shows whole, or one landing while a flight runs, moves nothing (FP-20)', () => {

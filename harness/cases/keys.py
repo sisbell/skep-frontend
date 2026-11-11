@@ -244,8 +244,18 @@ page's load, the board's after them by their addresses, the widths the span's
 (issue #432's design decision). With the caret live in the own draft and its line
 wheeled above the visible view, a selection put in the first edition keeps the
 caret, its mark hollow, and leaves the camera where the wheel left it, the walk
-on the edition's span (issue #496's design decision). Every other step leaves the
-page as it found it."""
+on the edition's span (issue #496's design decision). Mod+C with nothing selected
+is taken at its keydown, its default prevented and its line the hint at the focus,
+said in the status region — ending with Enter's act at a span of the first edition,
+Shift+↓'s at a span of the own draft, none at the draft whole, its first clause after
+the session's first — and a copy event the page takes nothing from is answered the
+same, nothing set on its clipboard; with a drag's selection standing Mod+C is the
+platform's and a copy carries the selection's own bytes, and where the page draws
+Enter's selection over no range of the platform's, Mod+C places the range under it
+again and the copy carries its bytes; and a click on a column's blank room after a
+drag's selection ends the page's selection with the platform's, no outlines and no
+card standing (the keys-and-clicks decision, part 5; D5 K-92). Every other step leaves the page as it
+found it."""
 import json
 import re
 
@@ -3005,6 +3015,166 @@ def tabbed_to_hint(ctx, r):
     r.check(gone['hint'] is None and gone['item'], 'the next act takes the hint down, the focus it held handed to the walk\'s item', gone)
 
 
+# a copy event dispatched at the document, as the Edit menu's or the context menu's copy reaches the page, its own clipboard
+# beside it: whether its default was prevented, the flavors set on that clipboard, and its plain text
+SYNTHETIC_COPY = '''(() => { const dt = new DataTransfer(), e = new ClipboardEvent('copy', {clipboardData: dt, bubbles: true, cancelable: true});
+  document.dispatchEvent(e); return {prevented: e.defaultPrevented, types: [...dt.types], plain: dt.getData('text/plain')}; })()'''
+
+
+def mod_c(ctx):
+    """Mod+C pressed at the focus, as the platform delivers it: whether its keydown's default was prevented once the page's
+    listener returned, the hint standing after it, the status region's words, the page's selection and the platform's"""
+    prevented_probe(ctx)
+    chord(ctx, 'c', mods=('Meta',))
+    return {'keydown': ctx.js('window.__gateKeydown'), 'hint': ctx.js('window.__skep.hint()'), 'live': ctx.js('document.getElementById("live").textContent'),
+            'sel': ctx.js('window.__skep.selection()'), 'platform': ctx.js('window.__skep.platformSelection()')}
+
+
+def blank_room(ctx, addr):
+    """a point of the blank room below a paragraph of a document's article on the plane — the margin its blank lines set
+    (T-ARTICLE's `--blank`), above the block after it in the same part — shown below the one line and inside the viewport,
+    the part's run itself under the pointer there; None where the view shows none"""
+    return ctx.js('''((a) => { const art = document.querySelector(`#domlayer article.dtext[data-addr="${a}"]`); if (!art) return null;
+      const p = window.__skep.view.viewport(), top = document.getElementById('line').getBoundingClientRect().bottom, c = art.getBoundingClientRect();
+      for (const sp of art.querySelectorAll('.run > .sp[style*="--blank"]')) {
+        const next = sp.nextElementSibling; if (!next) continue;
+        const q = sp.getBoundingClientRect(), n = next.getBoundingClientRect(), x = q.left + Math.min(40, q.width / 2), y = (q.bottom + n.top) / 2;
+        if (n.top - q.bottom < 4 || y < top + 4 || y > p.VH - 4 || x < 4 || x > p.VW - 4 || y < c.top || y > c.bottom) continue;
+        const e = document.elementFromPoint(x, y);
+        if (e && e.matches('.run') && art.contains(e)) return {x, y, after: Number(sp.dataset.pos)};
+      }
+      return null; })(%s)''' % json.dumps(addr))
+
+
+def copy_nothing(ctx, r):
+    """A COPY WITH NOTHING SELECTED, AND ONE SELECTION (the keys-and-clicks decision, part 5; D5 K-92; FP-24, FP-27):
+    (a) the walk on a span of the first edition, nothing selected: Mod+C's keydown prevented, the hint the copy's line
+        ending with Enter's act — whole where the session shows it whole — said in the status region;
+    (c) Mod+C again there: its first clause, "nothing selected";
+    (b) a span of the own draft holding no caret: the line ending with Shift+↓'s act; its document, reached by ←, the line
+        alone;
+    (g) a copy event the page takes nothing from, nothing selected: its default prevented, nothing set on its clipboard,
+        the line raised;
+    (e) a drag's selection standing: Mod+C left to the platform, no line raised, and a copy event carrying the
+        selection's own bytes;
+    (f) Enter's selection, the platform's range taken away by script and the outlines standing: Mod+C left to the platform,
+        its range placed under the page's selection again, and a copy event carrying its own bytes;
+    (d) a drag's selection, then a click on a column's blank room below a paragraph: no selection, no outlines and no card,
+        the platform's range collapsed with it; Mod+C then the line.
+    Its figures"""
+    figures = {}
+    whole = lambda tail: strings(ctx, 'L.copy.nothing', {'selects': strings(ctx, tail) if tail else ''})
+    clause = 'nothing selected'
+    # (a), (c): the first edition's span, nothing selected anywhere, the walk's item holding the focus
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); })()')
+    ctx.js(FOCUS_ITEM)
+    ctx.frames(2)
+    walk, enter = ctx.js(WALK_AT), whole('L.copy.nothing.enter')
+    a = mod_c(ctx)
+    h = a['hint'] or {}
+    words = enter if h.get('open') else clause
+    r.check(bool(walk) and walk['kind'] == 'block' and walk['addr'] == DOC and a['sel'] is None and a['platform']['collapsed']
+            and bool(a['keydown']) and a['keydown']['prevented'] and h.get('id') == 'L.copy.nothing' and h.get('whole') == enter and h.get('words') == words and a['live'] == words,
+            '(a) Mod+C at a span of the first edition, nothing selected: its keydown\'s default prevented, the clipboard left as it is, and its line the hint at the focus, ending with Enter\'s act — Enter selects there — whole where the session shows it whole, and said in the status region (D5 K-92; FP-27)',
+            dict(a, walk=walk, want=enter))
+    c = mod_c(ctx)
+    h = c['hint'] or {}
+    r.check(bool(c['keydown']) and c['keydown']['prevented'] and h.get('id') == 'L.copy.nothing' and h.get('words') == clause and not h.get('open') and h.get('whole') == enter and c['live'] == clause,
+            '(c) Mod+C again there: its first clause, "nothing selected", the line whole kept as its description, said again', c)
+    figures['a'] = {'hint': a['hint'], 'live': a['live']}
+    # (b): a span of the own draft holding no caret, then its document
+    draft = WINDOW[2]
+    ctx.leap(draft, None)
+    paras = [x for x in ctx.js('window.__skep.model.doc(%s)' % json.dumps(draft))['blocks'] if x['kind'] == 'para' and x['text'].strip()]
+    r.check(bool(paras), '(b) the own draft holds a paragraph to stand the walk on', None)
+    if paras:
+        ctx.leap(draft, paras[0]['pos'])
+        ctx.js(FOCUS_ITEM)
+        ctx.frames(2)
+        walk, caret, shift = ctx.js(WALK_AT), ctx.js('window.__skep.caret()'), whole('L.copy.nothing.shift')
+        b = mod_c(ctx)
+        h = b['hint'] or {}
+        r.check(bool(walk) and walk['kind'] == 'block' and walk['addr'] == draft and not (caret and caret.get('live'))
+                and bool(b['keydown']) and b['keydown']['prevented'] and h.get('id') == 'L.copy.nothing' and h.get('whole') == shift and h.get('words') == clause,
+                '(b) Mod+C at a span of the own draft holding no caret: the line ending with Shift+↓\'s act — Enter places a caret there — its first clause shown',
+                dict(b, walk=walk, caret=caret, want=shift))
+        chord(ctx, 'ArrowLeft')
+        walk = ctx.js(WALK_AT)
+        b2 = mod_c(ctx)
+        h = b2['hint'] or {}
+        r.check(bool(walk) and walk['kind'] == 'document' and bool(b2['keydown']) and b2['keydown']['prevented'] and h.get('whole') == whole(None) and h.get('words') == clause,
+                '(b) Mod+C at the draft whole, reached by ←: the line alone, naming no act', dict(b2, walk=walk))
+        # (g): a copy event the page takes nothing from, nothing selected
+        g = ctx.js(SYNTHETIC_COPY)
+        ctx.frames(2)
+        h = ctx.js('window.__skep.hint()') or {}
+        r.check(g['prevented'] and g['types'] == [] and h.get('id') == 'L.copy.nothing' and h.get('whole') == whole(None),
+                '(g) a copy event with nothing selected — the Edit menu\'s, the context menu\'s: its default prevented, nothing set on its clipboard, and the line raised at the focus (D5 K-92; FP-27)',
+                {'copy': g, 'hint': h})
+        figures['g'] = g
+    # (e): a drag's selection standing: the copy the platform's, its own bytes
+    ctx.leap(DOC, WINDOW[0])
+    ph, seen = phrase_at(ctx, DOC)
+    r.check(ph is not None, '(e) a phrase of the first edition is shown at the landing, for a drag', seen)
+    if ph:
+        ctx.drv.drag(*ph['start'], *ph['end'])
+        ctx.frames(3)
+        sel = ctx.js('window.__skep.selection()')
+        e = mod_c(ctx)
+        copied = ctx.js(SYNTHETIC_COPY)
+        mine = own(ctx, e['platform']['span'])
+        r.check(bool(sel) and bool(e['keydown']) and not e['keydown']['prevented'] and e['hint'] is None and e['sel'] == sel and copied['prevented'] and bool(mine) and copied['plain'] == mine,
+                '(e) Mod+C with a drag\'s selection standing: its keydown left to the platform, no line raised, and a copy carrying the selection\'s own bytes (K-92 stands)',
+                {'mod_c': e, 'copy': copied, 'own': mine, 'sel': sel})
+        chord(ctx, 'Escape')
+        chord(ctx, 'Escape')
+    # (f): Enter's selection, the platform's range taken away, the outlines standing: the range placed under the copy again
+    ph, seen = phrase_at(ctx, DOC)
+    if ph:
+        ctx.leap(DOC, ph['block']['pos'])
+        ctx.js(FOCUS_ITEM)
+        chord(ctx, 'Enter')
+        placed = ctx.js('window.__skep.platformSelection()')
+        sel = ctx.js('window.__skep.selection()')
+        ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); })()')
+        ctx.frames(2)
+        drawn, gone = marks(ctx, 'sel'), ctx.js('window.__skep.platformSelection()')
+        f = mod_c(ctx)
+        copied = ctx.js(SYNTHETIC_COPY)
+        mine = own(ctx, placed['span'])
+        r.check(bool(sel) and drawn == [sel['pos']] and gone['collapsed'] and bool(f['keydown']) and not f['keydown']['prevented'] and f['hint'] is None
+                and not f['platform']['collapsed'] and f['platform']['span'] == placed['span'] and f['sel'] == sel and copied['prevented'] and bool(mine) and copied['plain'] == mine,
+                '(f) Enter\'s selection drawn over no range of the platform\'s: Mod+C places the range under it again and leaves the copy to the platform, no line raised, and the copy carries its own bytes (FP-24)',
+                {'sel': sel, 'drawn': drawn, 'gone': gone, 'mod_c': f, 'copy': copied, 'own': mine, 'placed': placed})
+        figures['f'] = {'placed': placed['span'], 'after': f['platform']}
+        chord(ctx, 'Escape')
+        chord(ctx, 'Escape')
+    # (d): a press that ends the platform's selection ends the page's: a column's blank room
+    ctx.leap(DOC, WINDOW[0])
+    ph, seen = phrase_at(ctx, DOC)
+    room = blank_room(ctx, DOC)
+    r.check(ph is not None and room is not None, '(d) a phrase of the first edition and the blank room below one of its paragraphs are shown at the landing', {'phrase': seen, 'room': room})
+    after_room = None
+    if ph and room:
+        ctx.drv.drag(*ph['start'], *ph['end'])
+        ctx.frames(3)
+        sel = ctx.js('window.__skep.selection()')
+        ctx.drv.mouse(room['x'], room['y'])
+        ctx.settle()
+        ctx.frames(2)
+        after_room = dict(ctx.js(NOW), marked=marks(ctx, 'sel'), overlay=ctx.js('window.__skep.overlay().id'))
+        r.check(bool(sel) and after_room['sel'] is None and after_room['marked'] == [] and after_room['overlay'] is None and after_room['platform']['collapsed'],
+                '(d) a click on a column\'s blank room after a drag\'s selection: the platform\'s selection ended with the press, and the page\'s with it — no outlines and no card (FP-24; foundations §2.1)',
+                dict(after_room, before=sel, room=room))
+        d = mod_c(ctx)
+        h = d['hint'] or {}
+        r.check(bool(d['keydown']) and d['keydown']['prevented'] and h.get('id') == 'L.copy.nothing' and h.get('words') == clause,
+                '(d) Mod+C then: nothing selected, as the page draws it, and the line says so', d)
+    figures['d'] = {'room': room, 'after_room': after_room}
+    r.figures['copy_nothing'] = figures
+
+
 def run(ctx):
     r = Result()
     ctx.leap(DOC, WINDOW[0])
@@ -3823,15 +3993,12 @@ def run(ctx):
     selection_held_elsewhere(ctx, r)
     # ---- the focus and keyboard rules the one-owner lane added (FP-20) --------------------------------------------
     focus_rules(ctx, r)
-    # ---- the platform's own are never taken (K-92): Mod+C leaves everything -----------------------------
-    s0 = state(ctx)
-    chord(ctx, 'c', mods=('Meta',))
-    s1 = state(ctx)
-    r.check(same_view(s0, s1) and s1['overlay'] == s0['overlay'] and not s1['leap'], 'Mod+C is the platform\'s: nothing happens on the plane')
+    # ---- a copy with nothing selected, and one selection: what looks selected is what is copied (K-92) -------------
+    copy_nothing(ctx, r)
     # ---- Back to an edition's bare address after a newer version arrived: the version read (issue #298) -----------
     r.figures['back_after_publish'] = back_after_publish(ctx, r)
     # ---- the page's own find (issue #222's design decision) ------------------------------------------------------
     r.figures['find'] = find_holds(ctx, r)
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K at the whole board', 'Mod+Shift+O, Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter at the whole board', 'Enter', 'Mod+Shift+Enter in the LEAP box as opened and on a typed address, Esc closing the scene', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+K, Mod+Shift+A and Mod+Shift+C at the walk\'s block', 'a press on the "link to…" slot', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+K in the scene', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival']
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K at the whole board', 'Mod+Shift+O, Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter at the whole board', 'Enter', 'Mod+Shift+Enter in the LEAP box as opened and on a typed address, Esc closing the scene', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+K, Mod+Shift+A and Mod+Shift+C at the walk\'s block', 'a press on the "link to…" slot', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+K in the scene', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C with nothing selected, with a selection standing and with one drawn over no range of the platform\'s', 'a copy event with nothing selected and with a selection', 'a click on a column\'s blank room after a drag', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

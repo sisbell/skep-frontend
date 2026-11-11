@@ -3,8 +3,9 @@
 // Engine-bound. Input never draws (FP-9): a handler changes view state, or
 // asks for a read, and marks the frame dirty. State: the press held for the
 // text under it (`held`), whether the drag it began is carrying the
-// platform's selection to the pointer (`carrying`), and the wheel series'
-// clock (`wheelAt`, `seriesFrom`).
+// platform's selection to the pointer (`carrying`), whether the press found
+// the platform holding a selection with extent (`rangeAtPress`), and the
+// wheel series' clock (`wheelAt`, `seriesFrom`).
 // The press rule (foundations §2.4): a pointer's drag never pans. At the
 // readable threshold and above it selects the text it crosses — the
 // platform's selection on the mounted layer — and that selection is the
@@ -31,6 +32,18 @@
 // press, chrome standing over it, or the text standing with none of it under
 // the press drops it — released there unmoved, a click on the document's
 // ground (below).
+// One selection (FP-24; foundations §2.1): a press on the text layer or the
+// plane that found the platform holding a selection with extent, and left it
+// none, ends the page's selection too, its outlines and its row with it —
+// a click on a document's ground (a column's blank room, a gutter, a margin),
+// on a link's symbol or the stretch it marks, on the ⟡, on a byline's cut
+// label, on a withheld run's key or gap, on a tail, on an outlined run, on a
+// continuation's mark's list, a press the frame held whose text it found no
+// point in, and a drag that ends with nothing selected (`oneSelection`), each
+// before its act opens what it opens. An act that makes a selection decides
+// it itself; a departure leaves its place with the selection kept in its
+// entry (N-GO's); an empty click takes its one step of Esc's order (N-KEYS'
+// `esc`); a press on a corner or an overlay is none of these.
 // Keys follow the person's last pointer act (FP-36, FP-20, FP-40). A click in
 // text the person may edit places the caret there (below), and a drag, a
 // double- or triple-click or a Shift+click there whose selection lies wholly
@@ -203,6 +216,21 @@ import { documentOf } from '../model/address.js';
 let held = null;
 /** the drag a held press began goes on: the platform's selection carried to the pointer as it moves, until the release */
 let carrying = false;
+/** the platform held a selection with extent as the current press began, read before the press's own default moves it (`oneSelection`) */
+let rangeAtPress = false;
+
+/**
+ * One selection (see the head): where the current press found the platform
+ * holding a selection with extent and the platform holds none now, the page's
+ * selection ended too (O-SELECTION's `clear`), its card with it — read once
+ * a press, and made before the act opens a card, so the act's own opening is
+ * not ended with the selection's card.
+ */
+function oneSelection() {
+  const found = rangeAtPress;
+  rangeAtPress = false;
+  if (found && SEL.selected() && !LAYER.platformSelects()) SEL.clear();
+}
 /** the pause that ends a wheel series, in ms: the re-take's own pause (unmeasured) */
 export const SERIES_MS = 220;
 /** when the last wheel event came, and when the series it belongs to began, by its event's clock (the platform's, as `performance.now()` reads it) */
@@ -234,6 +262,7 @@ export function attach(els) {
   };
   els.plane.addEventListener('pointerdown', (e) => {
     held = null;
+    rangeAtPress = LAYER.platformSelects();
     if (KEYS.MAC ? e.metaKey : e.ctrlKey) { cameraDrag(e); return; }
     // at the readable em a press on a document's column is the text's: held until the frame has set the text under it
     const addr = textAt(e.clientX, e.clientY);
@@ -250,7 +279,7 @@ export function attach(els) {
     const d = drag; drag = null; els.plane.classList.remove('dragging');
     if (!d) return;
     if (d.cameraKey && d.moved > 4) { WALK.retakeFromView(); return; }
-    if (d.moved <= 4) clickPlane(e.clientX, e.clientY);
+    if (d.moved <= 4) clickPlane(e.clientX, e.clientY); else oneSelection();
   });
   els.plane.addEventListener('pointerleave', () => aim(els.plane, NaN, NaN));
   // the text layer's drag, T-LAYER's press: the platform selects while it stands; its selection becomes the page's as the
@@ -260,6 +289,7 @@ export function attach(els) {
   let lastDown = { x: 0, y: 0 };
   els.layer.addEventListener('pointerdown', (e) => {
     held = null;
+    rangeAtPress = LAYER.platformSelects();
     // the camera key held: the drag is the camera's wherever the pointer is (K-10, M-8) — no press on the text, no selection, no focus moved
     if (KEYS.MAC ? e.metaKey : e.ctrlKey) { e.preventDefault(); cameraDrag(e); return; }
     lastDown = { x: e.clientX, y: e.clientY }; LAYER.press(true);
@@ -413,9 +443,10 @@ function clickText(target, at, gesture = false) {
   if (sym) {
     took = true;
     const se = /** @type {HTMLElement} */ (sym);
-    if (se.dataset.reveal) { followPointer(doc, at); LINKS.show(se.dataset.reveal); return true; }
-    if (se.dataset.link) { const s = endAt(se, se.dataset.link, se.dataset.end || ''); followPointer(s ? s.near : doc, s ? s.pos : at); if (s) ANATOMY.open(s, se, false); return true; }
+    if (se.dataset.reveal) { oneSelection(); followPointer(doc, at); LINKS.show(se.dataset.reveal); return true; }
+    if (se.dataset.link) { oneSelection(); const s = endAt(se, se.dataset.link, se.dataset.end || ''); followPointer(s ? s.near : doc, s ? s.pos : at); if (s) ANATOMY.open(s, se, false); return true; }
     if (se.dataset.links) {
+      oneSelection();
       // a withheld run's symbol: the ends it stands for, as LK draws them now
       const keys = (se.dataset.ends || '').split(' ');
       const ends = se.dataset.links.split(' ').flatMap((l, i) => { const s = endAt(se, l, keys[i] || ''); return s ? [s] : []; });
@@ -430,16 +461,16 @@ function clickText(target, at, gesture = false) {
   if (offer) { const [a, b] = (/** @type {HTMLElement} */ (offer).dataset.scene || '').split('|'); if (a && b) void GO.toScene(a, b); return true; }
   // a byline's cut label opens whole on its act, and closes on it again (FP-34)
   const label = target.closest('.slot[data-cut]');
-  if (label) { if (doc) { followPointer(doc, at); LAYER.openLabel(doc); } return true; }
+  if (label) { if (doc) { oneSelection(); followPointer(doc, at); LAYER.openLabel(doc); } return true; }
   // a withheld run's key opens its whole wording's card, as Enter at the run does (D5 K-7)
   const key = target.closest('.wh-key');
   if (key) {
     const holder = /** @type {HTMLElement | null} */ (key.closest('[data-withheld]')), run = holder ? runOf(holder) : null;
-    if (run) { followPointer(run.addr, run.pos); openRun(run); }
+    if (run) { oneSelection(); followPointer(run.addr, run.pos); openRun(run); }
     return true;
   }
   const wh = target.closest('[data-withheld]');
-  if (wh) { const w = /** @type {HTMLElement} */ (wh), run = runOf(w); followPointer(doc, run ? run.pos : at); FACES.c39(w.dataset.owner || '', REC.reader(), run ? { el: w, span: run } : w); return true; }
+  if (wh) { oneSelection(); const w = /** @type {HTMLElement} */ (wh), run = runOf(w); followPointer(doc, run ? run.pos : at); FACES.c39(w.dataset.owner || '', REC.reader(), run ? { el: w, span: run } : w); return true; }
   // the platform selected text under the click — a double- or triple-click's word or line, a Shift+click's extension: the
   // selection IS that span (R11), taken as the press's release takes it — in text the person may edit the caret at its moving
   // end (FP-40), in any other the walk on the span that end is in (K-70); no block, stretch or caret act
@@ -459,11 +490,11 @@ function clickText(target, at, gesture = false) {
   }
   // text that takes no caret: the walk on the span clicked (K-70) — a marked stretch's, which opens its end's card (K-7), or a block's, selected whole (R11) — a caret in another document left kept first
   const marked = target.closest('.lip');
-  if (marked) { took = true; const m = /** @type {HTMLElement} */ (marked); const s = endAt(m, (m.dataset.links || '').split(' ')[0], (m.dataset.ends || '').split(' ')[0]); if (s) { leftCaret(s.near); walkOn(s.near, s.pos); ANATOMY.open(s, m, false); return true; } }
+  if (marked) { took = true; const m = /** @type {HTMLElement} */ (marked); const s = endAt(m, (m.dataset.links || '').split(' ')[0], (m.dataset.ends || '').split(' ')[0]); if (s) { oneSelection(); leftCaret(s.near); walkOn(s.near, s.pos); ANATOMY.open(s, m, false); return true; } }
   const sp = target.closest('.sp');
   if (sp) { const s = /** @type {HTMLElement} */ (sp), addr = s.dataset.addr || '', pos = Number(s.dataset.pos); leftCaret(addr); SEL.select(addr, pos); walkOn(addr, pos); return true; }
   // none of them: the article's ground — a column's blank room
-  if (!took && doc) followPointer(doc, at);
+  if (!took && doc) { oneSelection(); followPointer(doc, at); }
   return took;
 }
 
@@ -628,7 +659,7 @@ export function afterFrame() {
     const standing = LAYER.isMounted(h.addr);
     if (standing || (el && el.id !== 'plane')) held = null;
     // its text standing with none of it under the press and no chrome over it: a release without moving is on its ground
-    if (standing && (!el || el.id === 'plane') && h.released && h.moved <= 4) { acted(); followPointer(h.addr, at); }
+    if (standing && (!el || el.id === 'plane') && h.released && h.moved <= 4) { acted(); oneSelection(); followPointer(h.addr, at); }
     return;
   }
   held = null;
@@ -636,7 +667,7 @@ export function afterFrame() {
   const anchored = h.shift && anchorShift(h.addr, h.x, h.y);
   if (!anchored && h.released && h.moved <= 4) { LAYER.caretAt(h.x, h.y); clickText(el, at); return; }
   LAYER.press(true);
-  if (!anchored && !LAYER.caretAt(h.x, h.y)) { LAYER.press(false); return; }
+  if (!anchored && !LAYER.caretAt(h.x, h.y)) { LAYER.press(false); oneSelection(); return; }
   LAYER.extendTo(h.at.x, h.at.y);
   if (h.released) { LAYER.press(false); takeSelection(true, anchored || h.moved > 4); return; }
   carrying = true;
@@ -664,7 +695,7 @@ export function afterFrame() {
  */
 function takeSelection(dragged, anew = false) {
   const span = LAYER.spanOfSelection();
-  if (!span) return;
+  if (!span) { if (dragged && anew) oneSelection(); return; }
   const part = LAYER.movingPart(), holds = sameSpan(span, SEL.selected()) || sameSpan(span, LAYER.placedSpan());
   if (dragged && part && part.whole && LAYER.editable(part.span.addr)) {
     const end = part.backward ? part.span.pos : part.span.pos + part.span.width, c = LAYER.caret();
@@ -688,6 +719,7 @@ function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   const world = worldOf(px, py), site = { world };
   const tail = RENDER.tailAtScreen(px, py);
   if (tail) {
+    oneSelection();
     // a tail from a passage's line, or from a document's box — never a mark's, which is no document's
     if (tail.form === 'line' && tail.pos != null) followPointer(tail.at, tail.pos);
     else if (documentOf(tail.at)) followPointer(tail.at, world);
@@ -696,14 +728,15 @@ function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   }
   // an outlined run stands only where its document is drawn whole, never inside a continuation's mark
   const piece = RENDER.arrivalAtScreen(px, py);
-  if (piece && !LAYER.atReadingScale(piece.addr) && GO.stepTo(piece.run, false)) return;
+  if (piece && !LAYER.atReadingScale(piece.addr) && GO.stepTo(piece.run, false)) { oneSelection(); return; }
   const lod = lodOf(CAM.cam.scale);
   const residue = RENDER.residueAtScreen(px, py);
-  if (residue) { if (residue.target === 'newest') GO.leapTo(GO.shownIn(residue.newest), { how: 'click', site }); else void MARKLIST.open(residue.key, false); return; }
+  if (residue) { if (residue.target === 'newest') GO.leapTo(GO.shownIn(residue.newest), { how: 'click', site }); else { oneSelection(); void MARKLIST.open(residue.key, false); } return; }
   const doc = RENDER.docAtScreen(px, py);
   if (doc) {
     if (!LAYER.atReadingScale(doc)) { GO.leapTo(doc, { how: 'click', site }); return; }
     // at reading scale a press on its text is held for the text (`afterFrame`); one in a gutter or a margin is on its ground
+    oneSelection();
     followPointer(doc, world);
     return;
   }
