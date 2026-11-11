@@ -9,7 +9,8 @@
 // themselves, headed by the key: a withheld origin's keeping the pointer
 // alone of the clause and the kept clause, a transcluded origin's its
 // gesture to its source and C-33's words where its holder says its run
-// carries them; the one list of an article's runs; an item
+// carries them; the one list of an article's runs, and the one rule for the
+// run a passage lies in whole; an item
 // not rendered — one of a kind the page does not know among them, as a
 // delivery hands it — a gap of its positions, its words in it or in the
 // edge; every address the article sets in the identifier's face, a record's
@@ -53,7 +54,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, cornerHTML, cornerItems, cornerLead, cornerWords, keptHTML, keptStatement, statementHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, runHolding, cornerHTML, cornerItems, cornerLead, cornerWords, keptHTML, keptStatement, statementHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
@@ -436,6 +437,28 @@ test('the runs of other documents\' material an article states are one list: eac
   const runs = originRunsOf({ blocks, origins: [{ pos: 7, width: 5, doc: X }, { pos: 12, width: 20, doc: W }, { pos: 32, width: 3, doc: X }] });
   assert.deepEqual(runs, [{ pos: 7, width: 5, origin: X, withheld: false }, { pos: 12, width: 20, origin: W, withheld: true }, { pos: 32, width: 3, origin: X, withheld: false }]);
   assert.deepEqual([textIn(blocks, { pos: 7, width: 5 }), textIn(blocks, { pos: 11, width: 25 }), textIn(blocks, { pos: 12, width: 20 })], [{ from: 7, to: 11 }, { from: 32, to: 36 }, null], 'its own characters: a newline, a withheld run apart, none in a gap');
+});
+
+test('the transcluded run a passage lies in whole is one rule: the passage\'s material — a typed line\'s newlines after its characters apart, an item\'s positions its own — held from its first byte to its last by one run the reader reads, the stretch it holds answered; none where the passage holds no material, reaches the document\'s own words or a second run, or lies in a withheld run (D5 K-51)', () => {
+  const X = '1.0.1.0.1003', Y = '1.0.2.0.7';
+  // "Second line here." X's, the newline after it the document's own; "third" and "fourth" X's, parted by the document's own newline
+  const blocks = typedBlocks('First line.\n\nSecond line here.\nthird\nfourth');
+  assert.deepEqual(blocks.map((b) => [b.pos, b.width, b.text]), [[1, 13, 'First line.'], [14, 18, 'Second line here.'], [32, 6, 'third'], [38, 6, 'fourth']]);
+  const d = { blocks, origins: [{ pos: 14, width: 17, doc: X }, { pos: 32, width: 5, doc: X }, { pos: 38, width: 6, doc: X }] };
+  assert.deepEqual(runHolding(d, { pos: 14, width: 18 }), { origin: X, pos: 14, width: 17 }, 'the line whole, its own newline left out of its material');
+  assert.deepEqual(runHolding(d, { pos: 21, width: 4 }), { origin: X, pos: 21, width: 4 }, 'a stretch inside the run');
+  assert.deepEqual(runHolding(d, { pos: 12, width: 6 }), { origin: X, pos: 14, width: 4 }, 'the newlines before it its material holds none of');
+  assert.equal(runHolding(d, { pos: 10, width: 8 }), null, 'reaching the document\'s own words');
+  assert.equal(runHolding(d, { pos: 32, width: 12 }), null, 'reaching the second of two runs of X the document\'s own newline parts');
+  assert.deepEqual(runHolding({ blocks, origins: [{ pos: 14, width: 17, doc: X }, { pos: 32, width: 12, doc: X }] }, { pos: 32, width: 12 }), { origin: X, pos: 32, width: 12 }, 'X\'s own newline between them: one run, held');
+  assert.equal(runHolding({ blocks, origins: [{ pos: 14, width: 7, doc: X }, { pos: 21, width: 10, doc: Y }] }, { pos: 18, width: 6 }), null, 'reaching a run of another origin');
+  assert.equal(runHolding(d, { pos: 31, width: 1 }), null, 'a newline alone: no material');
+  assert.equal(runHolding(d, { pos: 1, width: 13 }), null, 'the document\'s own line');
+  const content = (/** @type {number} */ pos, /** @type {string} */ text) => /** @type {import('../model/frames.js').Run} */ ({ pos, width: byteLength(text), kind: 'content', text, ref: null, origin: null });
+  const items = deriveBlocks([content(1, 'Before.\n'), { pos: 9, width: 1, kind: 'atom', text: '{}', ref: null, origin: null }, content(10, ' after')]);
+  assert.deepEqual(runHolding({ blocks: items, origins: [{ pos: 9, width: 7, doc: X }] }, { pos: 9, width: 3 }), { origin: X, pos: 9, width: 3 }, 'an item inside the run, its position its material');
+  const gap = [{ pos: 1, width: 13, kind: /** @type {const} */ ('para'), text: 'First line.', origin: null }, { pos: 14, width: 17, kind: /** @type {const} */ ('withheld'), text: '', origin: X }];
+  assert.deepEqual([runHolding({ blocks: gap, origins: [{ pos: 14, width: 17, doc: X }] }, { pos: 14, width: 17 }), runHolding({ blocks: gap, origins: [] }, { pos: 20, width: 3 })], [null, null], 'a run withheld from the reader, whatever the image places over it');
 });
 
 test('a transcluded origin\'s statement in its column\'s edge is headed by its key — the origin\'s mark and its address, the run\'s gesture to its source, a control carrying the source on the plane, a line in a pane — then C-33\'s words where its holder says its run carries them; a run\'s key alone is the same key; the scene-offer stays at a windowing document (issue #304; foundations §2.1)', () => {

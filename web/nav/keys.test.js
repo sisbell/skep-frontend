@@ -122,7 +122,12 @@
 // and under a hold; an act that sends a name for characters takes effect at
 // the burst's ack, and under a hold stands inert with the row rule's reason;
 // and a link made on typed words is answered at them once the board has
-// minted them.
+// minted them. Follow at a passage no link is drawn at whose material one
+// transcluded run holds whole — a selection, the walk's span, the slot
+// pressed, a selection at a live caret — goes to the run's source carrying
+// it, while a link drawn there is followed, a passage reaching the
+// document's own words keeps the no-link reason, and a bare caret in the run
+// keeps the caret's line.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
@@ -1150,6 +1155,158 @@ async function landed(/** @type {Promise<unknown> | null} */ act = null) {
 
 /** the walk's element: its kind, its place, its position */
 const walkAt = () => { const f = WALK.current(); return f && [f.kind, f.addr, f.pos]; };
+
+/** the draft whose bytes a document's second line quotes (`onQuote`), its text, and where that line stands in it */
+const X = '1.0.1.0.1003', SOURCE = 'A source.\n\nSecond line here.', AT_X = 12;
+
+/**
+ * The test run on `onPlane`'s page with a document's second line, "Second line here." at 14 to 30, made X's bytes from
+ * its position 12 on, the newline at 31 its own: its metadata and its links held, the walk landed on that line by a LEAP
+ * that reads nothing, the trail holding that LEAP's entry alone; the fake port answering X's whole read, the `compare` of
+ * each passage `carried` names — its first position in the document, its width, and the width X holds at its
+ * counterpart — and `more`; the platform's element class stood for, as a reading face's anchor reads it. The arrival,
+ * the port, the trail and the stand-in let go after it.
+ * @param {string} addr D or O
+ * @param {Array<[number, number, number]>} carried
+ * @param {(p: {said: string[], fake: ReturnType<typeof FAKE.create>}) => Promise<void>} body
+ * @param {Record<string, unknown>} [more]
+ */
+const onQuote = (addr, carried, body, more = {}) => onPlane(async ({ said }) => {
+  const element = globalThis.HTMLElement;
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  HOST.attach(/** @type {any} */ (hostEl));
+  REC.takeImage(addr, 1, [{ iStart: addr + '.0.1.1', width: 13 }, { iStart: `${X}.0.1.${AT_X}`, width: 17 }, { iStart: addr + '.0.1.31', width: 1 }]);
+  REC.takeMetadata(addr, { doc: addr, published: false, owner: addr === D ? '1.0.1' : '1.0.2', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(addr, []);
+  const n = byteLength(SOURCE), op = (/** @type {object} */ frame) => FAKE.keyOf('op', { frame });
+  const fake = FAKE.create({
+    [op(F.retrieveDocVSpanSet(X))]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + n }] } },
+    [op(F.docMetadata(X))]: { result: { as_of: 1, resp: 'doc_metadata', doc: X, published: false, owner: '1.0.1', birth: null, birth_extent: null, placed: null, base_extent: null, source: null } },
+    [op(F.retrieveV(X, 1, n))]: { result: { as_of: 1, resp: 'delivery', items: [{ content: SOURCE }] } },
+    [op(F.image(X, 1, n))]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: X + '.0.1.1', width: String(n) }] } },
+    [op(F.findLinksV(X, 1, n))]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+    ...Object.fromEntries(carried.map(([pos, width, held]) => [op(F.compare([{ doc: addr, spans: [{ ordinal: pos, positions: width }] }], [{ doc: X, spans: [{ ordinal: 1, positions: n }] }])),
+      { result: { as_of: 1, resp: 'compare', pairs: [{ d1: addr, d2: X, u1: { ordinal: String(pos), subspace: '1' }, u2: { ordinal: String(pos - 14 + AT_X), subspace: '1' }, width: String(held) }] } }])),
+    ...more,
+  });
+  PORT.boot(fake);
+  TRAIL._reset();
+  try {
+    await landed(GO.leapTo(addr, { pos: 14 }));
+    assert.deepEqual([walkAt(), TRAIL.length(), LAYER.atReadingScale(addr)], [['block', addr, 14], 1, true], 'the walk on the quoted line, at its reading scale');
+    await body({ said, fake });
+  } finally { GO.endArrival(); PORT.boot(null); TRAIL._reset(); globalThis.HTMLElement = element; }
+});
+
+/** what a follow left: the trail's length, where it stands, the step its first entry departed by, the arrival and the links lit */
+const afterFollow = () => [TRAIL.length(), TRAIL.current()?.addr, TRAIL.all()[0]?.step, GO.arrivalMark(), GO.litLinks()];
+/** a passage of X's by identity, from its position in X */
+const ofX = (/** @type {number} */ ordinal, /** @type {number} */ width) => [{ prefix: X + '.0.1', ordinal, width }];
+
+test('Mod+Enter with a selection one transcluded run holds whole, no link drawn there, goes to the run\'s source carrying the selection: one trail entry at the source, the step its departing entry records the carry, the arrival marked at the selection\'s counterpart there, no link lit and no reason said (D5 K-51; foundations §2.3)', () => onQuote(O, [[21, 4, 4]], async ({ said, fake }) => {
+  SEL.select(O, 21, 4);
+  assert.equal(LK.shownAt(O, { pos: 21, width: 4 }).length, 0, 'no link drawn at "line"');
+  const n = said.length;
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
+  await landed();
+  assert.deepEqual(afterFollow(), [2, X, { kind: 'carry', from: O, to: X, spans: ofX(19, 4) }, { addr: X, pos: 19, runs: [{ pos: 19, width: 4 }], link: null }, []],
+    'one entry at X, the carry recorded, "line" outlined at its counterpart there, no link lit');
+  assert.deepEqual([walkAt(), said.slice(n).filter((w) => w === t('B3.row.no-link') || w === t('L.new.no-link'))], [['block', X, AT_X], []], 'the walk on X\'s line, no reason said');
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('the acts card at a selection one transcluded run holds whole, no link drawn there, shows follow live naming the run\'s source and read side by side inert with the no-link reason; the follow slot pressed goes to the source as Mod+Enter does (D5 K-51, K-52; P47)', () => onQuote(O, [[21, 4, 4]], async ({ said, fake }) => {
+  SEL.select(O, 21, 4);
+  const follow = /** @type {string} */ (slotIn('follow').button), scene = /** @type {string} */ (slotIn('scene').button), noLink = t('B3.row.no-link');
+  assert.ok(follow.includes(`<span class="id">${X}</span>`) && !follow.includes('class="inert"') && !follow.includes('title='), `follow live, naming the source — ${follow}`);
+  assert.ok(scene.includes('class="inert"') && scene.includes(`title="${esc(noLink)}"`) && !scene.includes(X), `read side by side inert, the no-link reason its title — ${scene}`);
+  const n = said.length;
+  let marked = false;
+  /** @type {any} */ (HOST.currentState()?.acts?.follow)(/** @type {any} */ ({ setAttribute: () => { marked = true; }, closest: () => null }), false);
+  await landed();
+  assert.deepEqual([marked, ...afterFollow()], [false, 2, X, { kind: 'carry', from: O, to: X, spans: ofX(19, 4) }, { addr: X, pos: 19, runs: [{ pos: 19, width: 4 }], link: null }, []],
+    'the slot not marked inert; one entry at X, the carry recorded, "line" outlined there');
+  assert.ok(!said.slice(n).includes(noLink), 'no reason said');
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('Mod+Enter at the walk\'s span, nothing selected, a typed line one transcluded run holds but for the document\'s own newline after it, goes to the run\'s source carrying the line\'s characters, its landing\'s line naming them as the text being read where the source holds part of them; at that line selected whole, the same passage, named as what the reader selected (D5 K-51; FP-21)', () => onQuote(O, [[14, 17, 10]], async ({ said, fake }) => {
+  // X holds the line's first ten characters at its counterpart, "Second lin"
+  assert.deepEqual(SEL.selected(), null, 'nothing selected');
+  const n = said.length;
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
+  await landed();
+  assert.deepEqual(afterFollow(), [2, X, { kind: 'carry', from: O, to: X, spans: ofX(AT_X, 17) }, { addr: X, pos: AT_X, runs: [{ pos: AT_X, width: 10 }], link: null }, []],
+    'one entry at X, the line\'s seventeen characters carried — never its newline — and the ten X holds outlined');
+  assert.ok((GO.landingLine() || '').includes(t('L.held.reading')) && !said.slice(n).includes(t('B3.row.no-link')), `the landing's line names the text being read: ${GO.landingLine()}`);
+  await landed(GO.back());
+  assert.deepEqual(walkAt(), ['block', O, 14], 'Back on the quoted line');
+  SEL.select(O, 14);
+  assert.deepEqual(SEL.selected(), { addr: O, pos: 14, width: 18 }, 'the line selected whole, its newline with it');
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
+  await landed();
+  assert.deepEqual([TRAIL.current()?.addr, TRAIL.all()[0]?.step, GO.arrivalMark()?.runs], [X, { kind: 'carry', from: O, to: X, spans: ofX(AT_X, 17) }, [{ pos: AT_X, width: 10 }]], 'the same seventeen characters carried');
+  assert.ok((GO.landingLine() || '').includes(t('L.held.selected')), `the landing's line names what the reader selected: ${GO.landingLine()}`);
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('follow at a transcluded run goes to its source only where no link is drawn there and the run holds the passage whole: a selection reaching past the run into the document\'s own words keeps the no-link reason, the trail as it was; a link drawn at the run is followed, its step a follow and its link lit, the slot naming its far document (D5 K-51; FP-34)', () => onQuote(O, [], async ({ said, fake }) => {
+  const L = D + '.0.2.9';
+  // "e.\n\nSeco": the end of O's own first line and the start of the run
+  SEL.select(O, 10, 8);
+  let n = said.length;
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
+  await tick();
+  assert.deepEqual([slotIn('follow').reason, said.slice(n), TRAIL.length(), GO.inAir()], [`<div class="note reason" data-string="B3.row.no-link">${esc(t('B3.row.no-link'))}</div>`, [t('B3.row.no-link')], 1, false],
+    'reaching the document\'s own words: the no-link reason at the slot and in the status region, nothing followed');
+  HOST.dismiss(); SEL.clear();
+  // a link of the person's from "line" — the source's own bytes there — to D's first span, homed in D, whose metadata and links are held
+  REC.takeLinks(O, [L]);
+  REC.takeLink({ addr: L, from: [endOf(X, 19, 4)], to: [endOf(D, 1, 5)], type: '1.1.0.1.0.1.0.3.13' });
+  REC.takeMetadata(D, { doc: D, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(D, [L]);
+  assert.equal(LK.shownAt(O, { pos: 21, width: 4 }).length, 1, 'the link drawn at "line" in O, through its image');
+  SEL.select(O, 21, 4);
+  assert.ok(/** @type {string} */ (slotIn('follow').button).includes(`<span class="id">${D}</span>`), 'the follow slot names the link\'s far document');
+  n = said.length;
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
+  assert.deepEqual([TRAIL.length(), TRAIL.current()?.addr, TRAIL.all()[0]?.step?.kind], [2, D, 'follow'], 'the link followed at the act, never the run\'s source');
+  await landed();
+  assert.deepEqual([GO.litLinks(), said.slice(n).includes(t('B3.row.no-link'))], [[L], false], 'its link lit, no reason said');
+  assert.deepEqual(fake.unanswered, []);
+}, { [FAKE.keyOf('op', { frame: F.project(D + '.0.2.9', 2, D) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.5' }] } } }));
+
+test('follow at a run withheld from the reader keeps the no-link reason, whatever the image places over it: nothing followed (D5 K-51; FP-34)', () => onQuote(O, [], async ({ said, fake }) => {
+  // O read again: its second line's seventeen positions a run of X withheld from the reader, X's bytes in the image there
+  REC.invalidate(O);
+  REC.takeSpanSet(O, [{ subspace: 1, ordinal: 1, positions: N }]);
+  REC.takeDelivery(O, [{ pos: 1, width: 13, kind: 'content', text: 'First line.\n\n', ref: null, origin: null }, { pos: 14, width: 17, kind: 'withheld', text: '', ref: null, origin: X }, { pos: 31, width: 1, kind: 'content', text: '\n', ref: null, origin: null }]);
+  REC.takeImage(O, 1, [{ iStart: O + '.0.1.1', width: 13 }, { iStart: `${X}.0.1.${AT_X}`, width: 17 }, { iStart: O + '.0.1.31', width: 1 }]);
+  assert.deepEqual([REC.blockAt(O, 14)?.kind, REC.doc(O).origins], ['withheld', [{ pos: 14, width: 17, doc: X }]], 'the withheld run, X\'s bytes placed over it');
+  SEL.select(O, 14, 17);
+  const n = said.length;
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
+  await tick();
+  assert.deepEqual([slotIn('follow').reason, said.slice(n), TRAIL.length(), GO.inAir()], [`<div class="note reason" data-string="B3.row.no-link">${esc(t('B3.row.no-link'))}</div>`, [t('B3.row.no-link')], 1, false],
+    'the no-link reason at the slot and in the status region, nothing followed');
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('a bare live caret in a transcluded run of a draft the person may edit keeps the caret\'s follow line — Mod+Enter follows nothing there, the caret where it stood — while a selection drawn in the caret\'s text inside the run goes to the run\'s source carrying it (D5 K-51; B3-S13)', () => onQuote(D, [[21, 4, 4]], async ({ said, fake }) => {
+  assert.equal(await KEYS.dispatch(keyOf('Enter'), PLANE), true);
+  assert.deepEqual(caret(), [D, 14, true], 'the caret live at the quoted line\'s start');
+  let n = said.length;
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
+  await tick();
+  assert.deepEqual([said.slice(n), HINT.standing()?.id, TRAIL.length(), GO.inAir(), caret()], [[t('B3.row.follow.inert')], 'B3.row.follow.inert', 1, false, [D, 14, true]], 'the caret\'s follow line, nothing followed, the caret live where it stood');
+  SEL.select(D, 21, 4);
+  n = said.length;
+  assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
+  await landed();
+  assert.deepEqual(afterFollow(), [2, X, { kind: 'carry', from: D, to: X, spans: ofX(19, 4) }, { addr: X, pos: 19, runs: [{ pos: 19, width: 4 }], link: null }, []], 'the selection carried to X');
+  assert.deepEqual([caret(), said.slice(n).includes(t('B3.row.follow.inert'))], [[D, 14, false], false], 'the caret kept where it stood, no caret line said');
+  assert.deepEqual(fake.unanswered, []);
+}));
 
 test('a key pressed at a corner\'s act while a jump is in the air is held, its default prevented so the platform activates nothing, and dropped at the landing: Enter, Space and a printable key at the corner of a draft the person may edit each make nothing there — no statement, no hint, no overlay (D5 K-57; FP-25, FP-20)', () => onPlane(async ({ said }) => {
   const fake = FAKE.create({});

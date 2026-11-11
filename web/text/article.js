@@ -94,7 +94,11 @@
 // where its holder says the run carries them (T-LAYER's `carriesC33`), which
 // the ARIA mirror's description of the origin says too (N-WALK). Every other
 // run of the origin in view stands its key alone there (`edgeKeyHTML`), no gap
-// holding it. An item this client cannot show is a gap of its positions too,
+// holding it. The run a passage lies in whole is read by one rule
+// (`runHolding`): the passage's material, a typed line's newlines after its
+// characters apart, held from its first byte to its last by one run the
+// reader reads; follow at the passage goes to that run's source (O-SELECTION;
+// D5 K-51). An item this client cannot show is a gap of its positions too,
 // its words in it where the gap holds them, else in its column's edge
 // (`unshownHTML`; FP-26). The placeholder is one record (`placeholderOf`),
 // which the statement, the ARIA mirror's item at the run and its origin's
@@ -956,16 +960,47 @@ export function originRunsOf(d) {
  */
 export function textIn(blocks, s) {
   const end = s.pos + s.width;
-  let lo = 0, hi = blocks.length;
-  while (lo < hi) { const m = (lo + hi) >> 1; if (blocks[m].pos + blocks[m].width <= s.pos) lo = m + 1; else hi = m; }
   let from = Infinity, to = -Infinity;
-  for (let i = lo; i < blocks.length && blocks[i].pos < end; i++) {
+  for (let i = firstPast(blocks, s.pos); i < blocks.length && blocks[i].pos < end; i++) {
     const b = blocks[i];
     if (b.kind !== 'para') continue;
     const t0 = Math.max(s.pos, b.pos), t1 = Math.min(end, b.pos + byteLength(b.text));
     if (t0 < t1) { from = Math.min(from, t0); to = t1; }
   }
   return from < to ? { from, to } : null;
+}
+
+/** the index of the first of a text's blocks, in position order, that ends past a position: where a walk over the blocks a span touches begins */
+function firstPast(/** @type {Block[]} */ blocks, /** @type {number} */ pos) {
+  let lo = 0, hi = blocks.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (blocks[m].pos + blocks[m].width <= pos) lo = m + 1; else hi = m; }
+  return lo;
+}
+
+/**
+ * The transcluded run a passage lies in whole, and the stretch of it the
+ * passage holds (D5 K-51; foundations §2.3): the passage's material — its
+ * positions, the newlines a typed line's block holds after its characters
+ * apart, an item's positions its own — from its first byte to its last,
+ * where one run the reader reads holds all of it (`originRunsOf`); null where
+ * the passage holds no material, reaches the document's own words or a
+ * second run, or lies in a run withheld from the reader. Follow at a passage
+ * no link is drawn at goes to that run's source (O-SELECTION).
+ * @param {Pick<Doc, 'blocks' | 'origins'>} d the text the passage is a span of
+ * @param {{pos: number, width: number}} s the passage
+ * @returns {{origin: string, pos: number, width: number} | null} the run's origin, and the passage's stretch of its material
+ */
+export function runHolding(d, s) {
+  const end = s.pos + s.width;
+  let from = Infinity, to = -Infinity;
+  for (let i = firstPast(d.blocks, s.pos); i < d.blocks.length && d.blocks[i].pos < end; i++) {
+    const b = d.blocks[i], top = b.kind === 'para' ? b.pos + byteLength(b.text) : b.pos + b.width;
+    const t0 = Math.max(s.pos, b.pos), t1 = Math.min(end, top);
+    if (t0 < t1) { from = Math.min(from, t0); to = t1; }
+  }
+  if (!(from < to)) return null;
+  const run = originRunsOf(d).find((r) => r.pos <= from && to <= r.pos + r.width);
+  return run && !run.withheld ? { origin: run.origin, pos: from, width: to - from } : null;
 }
 
 /**

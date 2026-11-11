@@ -3288,6 +3288,36 @@ def copy_nothing(ctx, r):
     r.figures['copy_nothing'] = figures
 
 
+def follow_to_source(ctx, r):
+    """FOLLOW AT A TRANSCLUDED RUN NO LINK IS DRAWN AT (issue #571; D5 K-51; foundations §2.3): Mod+Enter at a stretch of the
+    first edition's window run its run holds whole, no link drawn at it, selected, goes to the run's source, the draft,
+    carrying the selection — one trail entry there, the step its departing entry records the carry, the arrival outlined
+    there with no link lit — and the no-link reason is said nowhere; the board only read"""
+    ctx.leap(DOC, WINDOW[0])
+    at = ctx.js('''(async (doc, lo, hi, origin) => { const LK = await import("./links/links.js"), A = await import("./text/article.js"), d = window.__skep.model.doc(doc);
+      for (let p = lo; p + 40 <= hi; p += 10) { const h = A.runHolding(d, {pos: p, width: 40});
+        if (h && h.origin === origin && h.pos === p && h.width === 40 && !LK.shownAt(doc, {pos: p, width: 40}).length) return p; }
+      return null; })(%s, %d, %d, %s)''' % (json.dumps(DOC), WINDOW[0], WINDOW[0] + WINDOW[1], json.dumps(WINDOW[2])))
+    r.check(at is not None, 'a stretch of forty positions of the window run its run holds whole, no link drawn at it (what the next check stands on)', at)
+    if at is None:
+        return
+    no_link = strings(ctx, 'B3.row.no-link')
+    ctx.js('window.__skep.select(%s, %d, 40)' % (json.dumps(DOC), at))
+    ctx.frames(2)
+    t0 = trail(ctx)
+    chord(ctx, 'Enter', mods=('Meta',))
+    ctx.settle()
+    ctx.frames(2)
+    t1, mark, live = trail(ctx), ctx.js('window.__skep.go.arrival()'), ctx.js('document.getElementById("live").textContent')
+    here = t1['entries'][t1['cursor']] if t1['cursor'] >= 0 else {}
+    step = (t1['entries'][t1['cursor'] - 1] if t1['cursor'] > 0 else {}).get('step') or {}
+    r.check(t1['cursor'] == t0['cursor'] + 1 and len(t1['entries']) == t1['cursor'] + 1 and here.get('addr') == WINDOW[2]
+            and (step.get('kind'), step.get('from'), step.get('to')) == ('carry', DOC, WINDOW[2]) and bool(step.get('spans'))
+            and bool(mark) and mark['addr'] == WINDOW[2] and mark['link'] is None and bool(mark['runs']) and no_link not in live,
+            'Mod+Enter at a stretch of the window run no link is drawn at, selected, goes to the run\'s source carrying it: one trail entry at the draft, the step its departing entry records the carry, the arrival outlined there with no link lit, the no-link reason said nowhere (D5 K-51; issue #571)',
+            {'at': at, 'cursor': [t0['cursor'], t1['cursor']], 'entries': len(t1['entries']), 'here': here.get('addr'), 'step': {k: step.get(k) for k in ('kind', 'from', 'to')}, 'mark': mark, 'live': live})
+
+
 def run(ctx):
     r = Result()
     ctx.leap(DOC, WINDOW[0])
@@ -3932,15 +3962,17 @@ def run(ctx):
                 {'pressed': pressed, 'chord': chorded})
     chord(ctx, 'Escape')
     chord(ctx, 'Escape')
-    # follow and read side by side at a paragraph of the first edition no link is drawn at (issue #324; FP-34): each chord, with
-    # no selection standing, draws the acts card at the walk's block whole and gives the no-link reason — the slot inert with
-    # that reason its title, marked as a press leaves it, the card's reason line its words, said through the status region —
-    # nothing selected, no scene, the trail as it was, no hint to select a passage first; then the follow slot pressed with the
-    # pointer at a selection there
-    bare = ctx.js('''(async (doc) => { const LK = await import("./links/links.js");
-      const b = window.__skep.model.doc(doc).blocks.find((x) => x.kind === "para" && x.width > 1 && LK.shownAt(doc, {pos: x.pos, width: x.width}).length === 0);
+    # follow and read side by side at a paragraph of the first edition's own words no link is drawn at (issue #324; FP-34):
+    # each chord, with no selection standing, draws the acts card at the walk's block whole and gives the no-link reason — the
+    # slot inert with that reason its title, marked as a press leaves it, the card's reason line its words, said through the
+    # status region — nothing selected, no scene, the trail as it was, no hint to select a passage first; then the follow slot
+    # pressed with the pointer at a selection there. A paragraph a transcluded run touches is passed over: follow there may
+    # go to the run's source (D5 K-51)
+    bare = ctx.js('''(async (doc) => { const LK = await import("./links/links.js"), d = window.__skep.model.doc(doc);
+      const b = d.blocks.find((x) => x.kind === "para" && x.width > 1 && LK.shownAt(doc, {pos: x.pos, width: x.width}).length === 0
+        && !d.origins.some((o) => o.pos < x.pos + x.width && x.pos < o.pos + o.width));
       return b ? {pos: b.pos, width: b.width} : null; })(%s)''' % json.dumps(DOC))
-    r.check(bare is not None, 'a paragraph of the first edition draws no link (what the next checks stand on)', bare)
+    r.check(bare is not None, 'a paragraph of the first edition\'s own words draws no link (what the next checks stand on)', bare)
     if bare is not None:
         no_link = strings(ctx, 'B3.row.no-link')
         at_bare = '%s · %s' % (DOC, strings(ctx, 'F.position', {'p': bare['pos']}))
@@ -3976,6 +4008,7 @@ def run(ctx):
                     {'pressed': pressed, 'chord': was})
         chord(ctx, 'Escape')
         chord(ctx, 'Escape')
+    follow_to_source(ctx, r)
     # ---- the drag: the selection IS the text it crosses (R11; foundations §2.4) ----------------------------
     ctx.leap(DOC, WINDOW[0])
     ph, seen = phrase_at(ctx, DOC)

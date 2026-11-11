@@ -52,18 +52,23 @@
 // made it. The acts take the span exactly: "who wrote this?" and "who uses
 // this?" ask over its bytes (O-PROV's; a span of the text shown, the board
 // asked only about bytes it holds); "follow" and "read side by side" count only
-// the links drawn at the span (LK's `shownAt`), inert where none, kept
-// focusable as an inert slot is and giving their reason as one does (P47;
-// `reasonAt`) — over a span wholly of bytes the page made, that nothing links
-// to new words (`NEW_WORDS`); over any other, that no link is drawn there
-// (`NO_LINK`) — asking which only at two or
+// the links drawn at the span (LK's `shownAt`), asking which only at two or
 // more and naming the far document at one, the scene opened as a step on the
 // trail from the link's end chosen (N-GO's `toScene`) on what the page shows
 // of the span's document (T-LAYER's `paneSource`), beside the document LK
 // names for it (`besideAt`) — where its far end names its
 // document whole, that whole document, nothing of it set level with the
-// selection (SC's `Held.wholeB`; FP-30) — every
-// address the card and the list set in the identifier's face (P-REG's FACE). The slots, in this
+// selection (SC's `Held.wholeB`; FP-30). Where none is drawn, follow over a
+// span whose material one transcluded run the reader reads holds whole goes
+// to that run's source (D5 K-51; T-ARTICLE's `runHolding`): a LEAP carrying
+// the span's stretch of the run (N-GO's carry; foundations §2.3), named as
+// what the reader selected where it is the selection, made at the span, the
+// slot naming the source (`toSource`); else each is inert, kept focusable as
+// an inert slot is and giving its reason as one does (P47; `reasonAt`) — over
+// a span wholly of bytes the page made, that nothing links to new words
+// (`NEW_WORDS`); over any other, that no link is drawn there (`NO_LINK`).
+// Every address the card and the list set in the identifier's face (P-REG's
+// FACE). The slots, in this
 // order and never moved: annotate · quote · who wrote this? · who uses this?
 // · see the links · follow · read side by side · link to… — each showing its
 // chord (D5-F8). Annotate, quote and "link to…" send a name for characters to
@@ -87,8 +92,8 @@
 // rule 6), "see the links" the document the walk stands in, at its own stop
 // or a link's in it (K-49) — and anywhere else it acts on nothing and tells
 // its caller so (`act`), the caller giving the slot's reason where the focus
-// is (D5 §1.6). Follow or read side by side made at a span no link is drawn
-// at — pressed, or by its chord — gives its reason as an inert slot does: at
+// is (D5 §1.6). Follow or read side by side made at a span where it is inert
+// — pressed, or by its chord — gives its reason as an inert slot does: at
 // the slot, in the card drawn at the span, and through the one status region
 // (FP-34). The
 // selection is the one the screen draws, and nothing else
@@ -132,6 +137,7 @@ import * as LINKS from './links-card.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { extended, sameSpan, spanOfBlock } from '../text/span.js';
+import { runHolding } from '../text/article.js';
 import { boundaries, wordStop } from '../model/derive.js';
 import { t, typeName } from '../strings.js';
 import { esc, byteLength } from '../util.js';
@@ -504,13 +510,13 @@ const SLOTS = /** @type {const} */ ([
 
 /** @typedef {'annotate' | 'quote' | 'linkto'} InertSlot a slot inert with its reason (`INERT_REASON`) */
 /** @typedef {'wrote' | 'uses' | 'links' | 'follow' | 'scene'} LiveSlot a slot that acts (`act`) */
-/** @typedef {'follow' | 'scene'} FarSlot a slot that goes by a link's far end: inert over a span no link is drawn at, its reason `NEW_WORDS` where the span is wholly of words the page made, else `NO_LINK` */
+/** @typedef {'follow' | 'scene'} FarSlot a slot that goes by a link's far end: inert over a span no link is drawn at — follow save where one transcluded run holds the span whole, whose source it goes to (`toSource`) — its reason `NEW_WORDS` where the span is wholly of words the page made, else `NO_LINK` */
 
 /** the reasons the slots no lane has built yet give, by slot: what each gives where nothing stops it */
 const INERT_REASON = /** @type {Record<InertSlot, string>} */ ({ annotate: 'L.seam.annotate', quote: 'L.seam.quote', linkto: 'L.seam.link-to' });
 /** why follow and read side by side do nothing over a span wholly of words the page made that no link is drawn at: nothing can reach a byte the board has not minted, and once it has, the links made on it since are drawn */
 const NEW_WORDS = 'L.new.no-link';
-/** why follow and read side by side do nothing over any other span no link is drawn at */
+/** why follow and read side by side do nothing over any other span no link is drawn at — follow where no transcluded run holds it whole (`sourceOf`) */
 const NO_LINK = 'B3.row.no-link';
 
 /** @typedef {{id: string, text: string}} Reason a slot's reason: its string, and its words as the slot gives them */
@@ -537,8 +543,10 @@ function heldReason(addr) {
  * The reason a slot gives over a span; null where the slot acts. A slot that
  * sends a name for characters (`InertSlot`): under a hold the row rule's
  * (`heldReason`), else its own. Follow and read side by side (`FarSlot`)
- * where no link is drawn at the span (LK's `shownAt`): `NEW_WORDS` over a
- * span wholly of words the page made (T-LAYER's `madeHere`), else `NO_LINK`.
+ * where no link is drawn at the span (LK's `shownAt`) — follow none where
+ * one transcluded run holds the span whole (`sourceOf`), whose source it goes
+ * to: `NEW_WORDS` over a span wholly of words the page made (T-LAYER's
+ * `madeHere`), else `NO_LINK`.
  * @param {string} slot
  * @param {Span} span
  * @param {number} [links] the links drawn at the span, where the caller has counted them
@@ -548,9 +556,13 @@ function reasonAt(slot, span, links) {
   if (slot in INERT_REASON) { const id = INERT_REASON[/** @type {InertSlot} */ (slot)]; return heldReason(span.addr) || { id, text: t(id) }; }
   if (slot !== 'follow' && slot !== 'scene') return null;
   if (links ?? LK.shownAt(span.addr, span).length) return null;
+  if (slot === 'follow' && sourceOf(span)) return null;
   const id = LAYER.madeHere(span.addr, span.pos, span.width) ? NEW_WORDS : NO_LINK;
   return { id, text: t(id) };
 }
+
+/** the transcluded run a span of the text shown lies in whole (T-ARTICLE's `runHolding`), read over the text the page shows of its document (T-LAYER's `shownOf`); null where none does, or the model holds no record of the document */
+const sourceOf = (/** @type {Span} */ span) => (REC.has(span.addr) ? runHolding(LAYER.shownOf(span.addr), span) : null);
 
 /** an inert slot's reason said through the status region, at every press (rule 14): said again where the region holds those words already — the reason a press gave a moment ago, here or at another passage */
 const sayReason = (/** @type {Reason} */ reason) => FOCUS.say(reason.text, false, true);
@@ -579,7 +591,9 @@ function inertAct(el, reason) {
  * inert, its reason in the card's reason line. A slot that gives a reason
  * over the span (`reasonAt`) keeps its place, inert and focusable, the
  * reason its title — follow and read side by side where no link is drawn
- * there; a slot that sends a name for characters takes effect through `send`.
+ * there, follow save where a transcluded run holds the span whole, its
+ * button then naming the run's source (`sourceOf`); a slot that sends a name
+ * for characters takes effect through `send`.
  * @param {string | null} [focus] that control's key (O-HOST's `keyOf`)
  * @param {InertSlot | FarSlot | null} [told] the inert slot whose reason the card gives
  * @param {Span | null} [at] the span a slot's act was made over (`actedOn`); none draws the card at the selection
@@ -589,12 +603,13 @@ export function render(focus = null, told = null, at = null) {
   if (!span) return;
   const { addr, pos } = span, atSelection = sameSpan(span, sel);
   const drawn = LK.shownAt(addr, span);
-  const n = drawn.length;
-  // the far end the follow and the scene name: its address, in the identifier's face, or the count of several
+  const n = drawn.length, source = n ? null : sourceOf(span);
+  // the far end the follow and the scene name: its address, in the identifier's face, or the count of several; follow's, where no link is drawn, the source of the run holding the span
   const farLabel = n === 1 && drawn[0].far ? ` <span class="id">${esc(drawn[0].far)}</span>` : n > 1 ? ` ${n}` : '';
+  const named = (/** @type {string} */ id) => (id === 'follow' && source ? ` <span class="id">${esc(source.origin)}</span>` : id === 'follow' || id === 'scene' ? farLabel : '');
   const buttons = SLOTS.map(([id, strId, chord]) => {
     const reason = reasonAt(id, span, n);
-    const label = esc(t(strId)) + ((id === 'follow' || id === 'scene') ? farLabel : '');
+    const label = esc(t(strId)) + named(id);
     return `<button data-run="${id}" class="${reason ? 'inert' : ''}" ${reason ? `title="${esc(reason.text)}"` : ''}${id === told ? ' data-inert="1"' : ''}>${label}${chord ? ` <kbd>${esc(drawChord(chord))}</kbd>` : ''}</button>`;
   }).join('');
   const said = told ? reasonAt(told, span, n) : null;
@@ -635,7 +650,9 @@ function actedOn() {
  * links" asks for the links at the document the walk stands in, at its own
  * stop or a link's in it (K-49). "who wrote this?" and "who uses this?" name
  * their span as the selection's bytes only where it is the selection. Follow
- * and read side by side at a span no link is drawn at give their reason
+ * at a span no link is drawn at whose material one transcluded run holds
+ * whole goes to that run's source (`toSource`); read side by side at any span
+ * no link is drawn at, and follow at any other, give their reason
  * (`reasonAt`): the card drawn at the span, the slot marked and the reason in
  * its line, said through the status region; at one link they follow it or
  * open its scene, and at several they ask which. The
@@ -659,12 +676,28 @@ export function act(which, byKey = false, at = null) {
   if (which === 'wrote') { PROV.wrote(addr, pos, width, byKey, sameSpan(span, sel)); return true; }
   if (which === 'uses') { PROV.uses(addr, pos, width, byKey, sameSpan(span, sel)); return true; }
   if (which === 'links') { LINKS.show(addr, byKey); return true; }
-  const drawn = LK.shownAt(addr, span), reason = reasonAt(which, span, drawn.length);
+  const drawn = LK.shownAt(addr, span), reason = reasonAt(which, span, drawn.length), [one] = drawn;
   if (reason) { render(null, which, span); sayReason(reason); }
   else if (drawn.length > 1) which_(drawn, which, span, byKey);
-  else if (which === 'follow') GO.follow(drawn[0], byKey);
-  else sceneFrom(drawn[0], span);
+  else if (!one) toSource(span, byKey);
+  else if (which === 'follow') GO.follow(one, byKey);
+  else sceneFrom(one, span);
   return true;
+}
+
+/**
+ * Follow at a span no link is drawn at whose material one transcluded run
+ * holds whole (see the head; D5 K-51): a LEAP to the run's source carrying
+ * the span's stretch of the run (N-GO's carry; foundations §2.3), named as
+ * what the reader selected where the span is the selection, else as the text
+ * they were reading, made at the span, where the face of a failure known at
+ * the act stands. Nothing where no such run holds it (`sourceOf`).
+ * @param {Span} span
+ * @param {boolean} byKey a key made the act
+ */
+function toSource(span, byKey) {
+  const held = sourceOf(span);
+  if (held) void GO.leapTo(held.origin, { how: 'leap', byKey, carry: { addr: span.addr, pos: held.pos, width: held.width, selected: sameSpan(span, sel) }, site: { span } });
 }
 
 /**
