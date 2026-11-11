@@ -193,7 +193,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    and no kept white space reaching a sign. Every element's line box is the article's one unitless line height (P-LAY's
    LINE_H, set on the article by T-LAYER) of its own size — the chrome inside a line (a symbol) is set at a line height
    of 1, so it never deepens its line; a symbol's box is its count of advances wide whatever face sets its ⟡ — a
-   transcluded run's hairlines take no room at all, and every block is a plain block, so the
+   transcluded run's hairlines, and its ground on the empty lines between its characters, drawn out of the flow below the
+   typed line they follow (below a part's last block too, where T-LAYER leaves it named), take no room at all, and every
+   block is a plain block, so the
    margins about one that sets no line (the newlines before a run's first typed line) collapse into one, as P-LAY
    collapses an empty row's: the lines P-LAY lays the bars out on (foundations §2.4: the handoff moves no line). THE
    EDGE: a typed line's others' count and an item's words where its gap holds them not stand in their column's edge,
@@ -242,11 +244,14 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .lip.depth2 { text-decoration-style:double; }
 .dtext .lip.depth3 { text-decoration-thickness:2px; }
 /* sameness: boundaries and a ground texture, never a tint, and no word in the line — the run's key in its column's edge
-   the one gesture to its source (below). A run's ground under each of its stretches on every line it crosses, a hairline
-   at its two ends alone — inside the stretch that opens it and the one that closes it, drawn as an inset shadow on that
-   end's fragment, so it takes no room and moves no word (FP-31); a mark's, a symbol's or a typed line's cut is no change of
-   origin */
+   the one gesture to its source (below). A run's ground under each of its stretches on every line it crosses, and on each
+   empty line its own newlines type between its characters — one advance at that line's start, drawn out of the flow below
+   the typed line the empty lines follow, which names the run (`data-blank-origin`), as deep as they are, so it sets no
+   line and takes no press — and a hairline at its two ends alone — inside the stretch that opens it and the one that
+   closes it, drawn as an inset shadow on that end's fragment, so it takes no room and moves no word (FP-31); a mark's, a
+   symbol's or a typed line's cut is no change of origin */
 .dtext .same { background:var(--same-texture); }
+.dtext .sp[data-blank-origin]::after { content:''; position:absolute; left:0; top:100%; width:calc(var(--char-w) * 1em); height:calc(var(--blank) * var(--line-box)); background:var(--same-texture); pointer-events:none; }
 .dtext .same.opens { box-shadow:inset var(--border-same) 0 0 var(--same-boundary); }
 .dtext .same.closes { box-shadow:inset calc(-1 * var(--border-same)) 0 0 var(--same-boundary); }
 .dtext .same.opens.closes { box-shadow:inset var(--border-same) 0 0 var(--same-boundary), inset calc(-1 * var(--border-same)) 0 0 var(--same-boundary); }

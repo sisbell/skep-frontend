@@ -18,8 +18,10 @@
 // it is decided from is out; links marked at their spans in the one mark
 // they merge into; the selection's and the focus's marks by the one rule; a
 // transcluded run one run across the typed lines its own newlines break, its
-// ground on every stretch, a hairline at each of its two ends and no word of
-// it in a line; each symbol at its span, after its last word, titled with
+// ground on every stretch and on each empty line between its characters,
+// named on the typed line that line follows and setting no line, a hairline
+// at each of its two ends and no word of it in a line; each symbol at its
+// span, after its last word, titled with
 // what its far end holds; each mark carrying the ends it draws; a typed
 // line's others' count in the column's edge, setting no line; a document's
 // state said once, at
@@ -405,6 +407,26 @@ test('a newline of the document\'s own between two runs of one origin ends the f
   assert.deepEqual(sameIn(articleHTML(parted, view(), '1.0.1')), [['same opens closes', X, 'beta'], ['same opens closes', X, 'gamma']], 'the document\'s own newline between them: two runs, each opening and closing');
   const meeting = doc({ blocks: typedBlocks('alpha beta gamma'), origins: [{ pos: 1, width: 6, doc: X }, { pos: 7, width: 4, doc: Y }] });
   assert.deepEqual(sameIn(articleHTML(meeting, view(), '1.0.1')), [['same opens closes', X, 'alpha '], ['same opens closes', Y, 'beta']], 'X closing where Y opens');
+});
+
+/** each typed line's block of an article as `[its first position, the run its empty lines' ground names]`, in the text's order */
+const blankNamed = (/** @type {string} */ html) => [...html.matchAll(/<p class="sp blk-para[^"]*" data-addr="[^"]*" data-pos="(\d+)" data-width="\d+"(?: style="--blank:\d+")?(?: data-blank-origin="([^"]*)")?>/g)].map((m) => [Number(m[1]), m[2] ?? null]);
+
+test('a transcluded run\'s ground stands on the empty lines its own newlines type between its characters: the typed line they follow names the run — a line of characters, or the newlines after an item — on the plane and in a pane; never where the run\'s characters stand on one side of them alone, nor where the block follows positions not held and the run begins at its next character; and no line moves for it (issue #549)', () => {
+  const X = '1.0.1.0.1003', Y = '1.0.2.0.7';
+  // "beta⏎⏎gamma" is X's and "epsilon" Y's: the empty line after "alpha beta" lies between X's characters, the one after "gamma delta" between X's last and Y's first
+  const d = doc({ blocks: typedBlocks('alpha beta\n\ngamma delta\n\nepsilon'), origins: [{ pos: 7, width: 11, doc: X }, { pos: 26, width: 7, doc: Y }] });
+  for (const scene of [false, true]) assert.deepEqual(blankNamed(articleHTML(d, view({ scene }), '1.0.1')), [[1, X], [13, null], [26, null]], `${scene ? 'in a pane' : 'on the plane'}: the empty line inside X named on the line it follows; the one after X and before Y named by neither`);
+  const ending = doc({ blocks: d.blocks, origins: [{ pos: 7, width: 6, doc: X }] }), opening = doc({ blocks: d.blocks, origins: [{ pos: 12, width: 6, doc: X }] });
+  assert.deepEqual([blankNamed(articleHTML(ending, view(), '1.0.1'))[0], blankNamed(articleHTML(opening, view(), '1.0.1'))[0]], [[1, null], [1, null]], 'X ending in the empty line, and X opening in it: its characters on one side of it alone, so no ground there');
+  const content = (/** @type {number} */ pos, /** @type {string} */ text) => /** @type {import('../model/frames.js').Run} */ ({ pos, width: byteLength(text), kind: 'content', text, ref: null, origin: null });
+  const item = [content(1, 'a\n'), { pos: 3, width: 1, kind: /** @type {const} */ ('atom'), text: '{}', ref: null, origin: null }, content(4, '\n\nb')];
+  assert.deepEqual(blankNamed(articleHTML(doc({ runs: item, blocks: deriveBlocks(item), origins: [{ pos: 1, width: 6, doc: X }] }), view(), '1.0.1')), [[1, null], [4, X], [6, null]], 'the newlines after an item inside X: the empty line past the one ending the item\'s line names X');
+  // "a" at 1, positions 2–9 not held, then "⏎b": the newline at 10 an empty line, X holding "b" alone
+  const apart = [content(1, 'a'), content(10, '\nb')];
+  assert.deepEqual(blankNamed(articleHTML(doc({ runs: apart, blocks: deriveBlocks(apart), origins: [{ pos: 11, width: 1, doc: X }] }), view(), '1.0.1')), [[1, null], [10, null], [11, null]], 'the empty line is the block\'s last position, before X begins: named by none');
+  const lines = (/** @type {import('../model/records.js').Doc} */ x) => layoutOf(articlePlan(x, view(), '1.0.1')).lines.filter((l) => l.kind !== 'chrome');
+  assert.deepEqual(lines(d), lines({ ...d, origins: [] }), 'the same lines as the text with no run, the scene-offers after them apart: the ground sets none');
 });
 
 test('the runs of other documents\' material an article states are one list: each withheld run by its block and each transcluded run touching no withheld run, in the text\'s order; the stretch the typed lines\' characters hold of a span, its newlines and items apart', () => {

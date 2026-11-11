@@ -34,10 +34,12 @@
 // transcluded run — one origin's stretch unbroken in the text, one run across
 // the typed lines its own newlines break, a newline of the document's own
 // ending it (M-REC's `transcludedRuns`) — its ground under each of its
-// stretches on every line, and a hairline of no width at each of its two
-// ends, on its first stretch holding text and its last, however marks,
-// symbols and typed lines cut it, and no word of it in a line (`runEndsOf`;
-// foundations §2.1; FP-31);
+// stretches on every line and on each empty line its own newlines type
+// between its characters, one advance at that line's start, named on the
+// typed line the empty lines follow and setting no line (`blankIn`), a
+// hairline of no width at each of its two ends, on its first stretch holding
+// text and its last, however marks, symbols and typed lines cut it, and no
+// word of it in a line (`runEndsOf`; foundations §2.1; FP-31);
 // a typed line's others' count in its column's edge, level with the block's
 // first line and never inside the text, so it sets no line (`edgeStyle`;
 // A-254; FP-26); and the symbols the reveal asked for, each at its span
@@ -151,12 +153,13 @@
 // record's words and keys, the line a reference or an empty document takes,
 // the gap of a withheld run and of an item not rendered, its width, the
 // scene-offers, and none of the signs a column's edge holds nor a run's
-// hairlines, which set no line — each row carrying where a column
-// may break at it and each piece whether its characters are the document's
-// own, so P-LAY folds the lines into the columns of the document's room and
-// names the position each line starts at (FP-12), and lays them out as the
-// bars the canvas draws below reading scale, so the hand-off swaps bars for
-// text and no line moves (FP-8; law 8; S1 Q7). The HTML and the plan are
+// hairlines or its ground on an empty line, which set no line — each row
+// carrying where a column may break at it and each piece whether its
+// characters are the document's own, so P-LAY folds the lines into the
+// columns of the document's room and names the position each line starts
+// at (FP-12), and lays them out as the bars the canvas draws below reading
+// scale, so the hand-off swaps bars for text and no line moves (FP-8; law 8;
+// S1 Q7). The HTML and the plan are
 // made from one walk of the document (`walk`), so the two can never decide a
 // block differently; every size and room the plan carries is P-LAY's shared
 // measurement, which the CSS reads too. A typed line is set as its bytes are
@@ -479,6 +482,7 @@ export const symbolLit = (links, lit) => links.length > 0 && links.every((l) => 
  * @property {'withheld' | 'record' | 'ref' | 'unshown' | 'para'} kind a withheld run; a record the record rule renders; a reference; an item this client cannot show (`itemOf`); a typed line
  * @property {boolean} opens a typed line's: it opens a typed line — it holds a character and begins the document or follows a newline — and so stands on the indent; false where it continues the line an item or positions not held began, and on every other block
  * @property {number} blank a typed line's: the empty lines typed after it, each a body line box below it (`blankOf`); 0 on every other block
+ * @property {string | null} blankIn a typed line's: the origin of the transcluded run between whose characters its empty lines lie, whose ground stands on them (`blankIn`); null where none does, and on every other block
  * @property {Seg[]} segs a typed line's stretches, the symbols standing in it among them
  * @property {Shown[]} ends a withheld run's: the ends drawn at it (LK's `Shown.run`), in the order LK drew them, which the one symbol at the start of its gap stands for
  * @property {{n: number, social: boolean}} count the others' count at a typed line; none at any other block, a withheld run's standing on the screen-sized layer (T-LAYER)
@@ -1489,6 +1493,26 @@ function runEndsOf(d) {
 }
 
 /**
+ * The run whose ground stands on a typed line's empty lines (`Part.blankIn`):
+ * the transcluded run whose characters, where its hairlines read them
+ * (`runEndsOf`), stand both before the empty lines' newlines — the block's
+ * last `blank` positions, whether or not the block holds a character
+ * (`blankOf`) — and after them, so those newlines lie inside its one
+ * unbroken stretch; null where no run's do, and where the block types no
+ * empty line.
+ * @param {Block} b a typed line's block
+ * @param {number} blank the empty lines typed after it (`blankOf`)
+ * @param {Map<Origin, {from: number, to: number}>} ends where each run's hairlines stand (`runEndsOf`)
+ * @returns {string | null} the run's origin
+ */
+function blankIn(b, blank, ends) {
+  if (!blank) return null;
+  const end = b.pos + b.width, first = end - blank;
+  for (const [o, at] of ends) if (at.from < first && at.to > end) return o.doc;
+  return null;
+}
+
+/**
  * The stretches of one block's text: cut at the edges of every stretch the
  * owner's and the person's links (LK's set) stand in, at the edges of the
  * transcluded runs, and where the symbols standing in the block stand
@@ -1567,7 +1591,9 @@ function headOf(d, v, owner) {
  * crosses; an end LK draws at a withheld run (`Shown.run`) stands in that
  * run's gap at every stage, the gap having no text to mark (FP-30). A
  * transcluded run is one run across every typed line it crosses: its
- * hairlines stand where `runEndsOf` reads them over the whole document.
+ * hairlines stand where `runEndsOf` reads them over the whole document, and
+ * its ground on each typed line's empty lines that lie between its
+ * characters (`blankIn`).
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} ownerAccount the owner by `effective_owner`, or the document's account
@@ -1596,7 +1622,7 @@ function walk(d, v, ownerAccount) {
   /** @type {Part[]} */
   const parts = d.blocks.map((b, i) => {
     /** @type {Part} */
-    const p = { b, kind: 'para', opens: false, blank: 0, segs: [], ends: [], count: none, rec: null };
+    const p = { b, kind: 'para', opens: false, blank: 0, blankIn: null, segs: [], ends: [], count: none, rec: null };
     if (b.kind === 'withheld') { p.kind = 'withheld'; p.ends = v.marks.filter((s) => !!s.run && s.run.pos === b.pos); }
     else if (b.kind === 'ref') p.kind = 'ref';
     else if (itemOf(b) === 'unshown') p.kind = 'unshown';
@@ -1604,6 +1630,7 @@ function walk(d, v, ownerAccount) {
     else {
       p.opens = opensLine(b, d.blocks[i - 1]);
       p.blank = blankOf(b, d.blocks[i - 1]);
+      p.blankIn = blankIn(b, p.blank, ends);
       p.segs = segmentsOf(b, d, v, ends, standing.get(b.pos) || []);
       p.count = v.countAt(b);
     }
@@ -1706,8 +1733,9 @@ function segHTML(s, v) {
  * key by its first position, and a click on the plane selects whole) — a
  * typed line a `p` in the body's type, on the indent where it opens a typed
  * line (`indent`), the empty lines typed after it its room below it
- * (`--blank`, in body line boxes); its corner stands beside it
- * (`cornerHTML`).
+ * (`--blank`, in body line boxes) and the run whose ground stands on them
+ * named on it (`data-blank-origin`, `blankIn`), which the style draws; its
+ * corner stands beside it (`cornerHTML`).
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} ownerAccount the owner by `effective_owner`, or the document's account
@@ -1733,7 +1761,7 @@ export function articleHTML(d, v, ownerAccount) {
     if (p.kind === 'record') { run += `<span class="${cls.join(' ')}" ${at}>${recordHTML(b, d, v)}</span>`; continue; }
     if (p.kind === 'ref') { run += `<span class="${cls.join(' ')} ref" ${at}>⟡</span>`; continue; }
     if (p.kind === 'unshown') { run += unshownHTML(b, v, cls.join(' '), at); continue; }
-    run += `<p class="${cls.join(' ')}" ${at}${p.blank ? ` style="--blank:${p.blank}"` : ''}>${countHTML(p.count, 1)}${p.segs.map((s) => segHTML(s, v)).join('')}</p>`;
+    run += `<p class="${cls.join(' ')}" ${at}${p.blank ? ` style="--blank:${p.blank}"` : ''}${p.blankIn ? ` data-blank-origin="${esc(p.blankIn)}"` : ''}>${countHTML(p.count, 1)}${p.segs.map((s) => segHTML(s, v)).join('')}</p>`;
   }
   if (w.empty) run += `<p class="sp empty" data-addr="${esc(d.addr)}" data-pos="1" data-width="0">${esc(t('B1.empty_subspace'))}</p>`;
   for (const o of w.offers) run += `<span class="offer" data-scene="${esc(d.addr)}|${esc(o)}" role="button" tabindex="-1">${htmlIn('B1.scene-offer', { D: o }, { D: 'ident' })}</span>`;

@@ -22,6 +22,7 @@
 // narrower measure (FP-26, FP-31); the
 // fold (FP-12) — every document at MEASURE_CPL characters a line, every line
 // in a column inside its room, columns COLUMN_LINES deep with the keeps held,
+// a column's last line read where an empty line after it pushes the next out,
 // columns left to right then row by row, the standard size then steps each at
 // least doubling the capacity, the outline one edge, the estimate never more
 // columns than the text, the head's band reserved above the first row inside
@@ -35,7 +36,7 @@ import assert from 'node:assert/strict';
 import * as LAY from './layout.js';
 import {
   layoutOf, heightOf, wrap, breakBetween, cssMeasures, lineBox, columnsOf, fold, estimate, estimatedSpan, slot, outline, outlineRects, boundsOf, firstRow, padded,
-  bars, placeOf, posAt, columnAt, pageTarget, windowIn, holdOf, leadOf, standardFs, stepAt, stepFor, gapOf, edgeOf, fitFor, columnW, advanceOf, setAdvance, inFirstRow,
+  bars, placeOf, posAt, columnAt, pageTarget, windowIn, holdOf, leadOf, standardFs, stepAt, stepFor, gapOf, edgeOf, fitFor, columnW, advanceOf, setAdvance, inFirstRow, endsColumn,
   MEASURE, BORDER, LINE_H, LAY_FS, CHAR_W, MEASURE_CPL, COLUMN_LINES, COLUMN_H, COLUMN_W, GUTTER, EDGE, EDGE_GAP, STANDARD_GRID, STANDARD_FS, ADVANCE_WEIGHTS, HEAD_CPL,
 } from './layout.js';
 import { DOC_W, DOC_H } from './projection.js';
@@ -237,6 +238,17 @@ test('every line of a long article stands in a column inside the room, none cut:
   for (const c of f.columns.slice(0, -1)) assert.ok(close(c.h, COLUMN_H * f.fs), 'every column but the last its full depth');
   for (const c of f.columns.slice(1)) assert.ok(close(f.lines[c.first].top, c.top), 'each column starts at its first line\'s top: the margin above it dropped');
   for (const [ci, cb] of bars(f).entries()) for (const b of cb) assert.ok(b.y >= f.columns[ci].y - 1e-6 && b.y + b.h <= f.columns[ci].y + f.columns[ci].h + 1e-6, 'no bar past its column');
+});
+
+test('a line ends its column where the line after it stands at the next column\'s head: an empty line typed after it that pushes the next line out of the column ends the column at it, the empty line standing in neither; typed with no empty line, the next line follows it in the column (issue #549)', () => {
+  const filler = Array.from({ length: COLUMN_LINES - 2 }, (_, i) => para(1 + i * 20, 'x'.repeat(10)));
+  const folded = (/** @type {number} */ blank) => fold(layoutOf([...filler, para(9000, 'last', blank), para(9100, 'next')], MEASURE_CPL).lines, ROOM);
+  const pushed = folded(1), kept = folded(0), i = COLUMN_LINES - 2;
+  assert.equal(pushed.lines[i].pos, 9000, 'the line after the filler');
+  assert.deepEqual(pushed.columns.map((c) => c.n), [COLUMN_LINES - 1, 1], 'its empty line pushes the next line to the next column');
+  assert.deepEqual([endsColumn(pushed, i - 1), endsColumn(pushed, i), endsColumn(pushed, i + 1)], [false, true, true], 'a later line in its column after the filler\'s last; it ends the first column; the next, the document\'s last, ends the second');
+  assert.deepEqual(kept.columns.map((c) => c.n), [COLUMN_LINES], 'with no empty line, both in the first column');
+  assert.deepEqual([endsColumn(kept, i), endsColumn(kept, i + 1)], [false, true], 'the next line follows it in its column');
 });
 
 test('a bar stands from where its line\'s ink begins to where it ends: a typed line\'s first line from past its indent and its leading white space, its next lines from the column\'s left; a line of white space alone, and an empty line typed after a typed line, none', () => {

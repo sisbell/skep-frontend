@@ -48,7 +48,10 @@
 // part none of whose lines is in view goes; no standing part is rebuilt to
 // take a line. The head, a record, a withheld face, a reference, an item not
 // rendered and a scene-offer stand whole, cut only where the fold's columns
-// cut them; a typed line is cut at any of its lines. The lines that hold
+// cut them; a typed line is cut at any of its lines, and a run's ground on
+// the empty lines typed after it stands with the part holding its last line
+// alone, and only where its column goes on past that line (`partEl`), for
+// only there do those lines stand. The lines that hold
 // the selection or the focus stay for as long as they hold them, out of view
 // and below 5.5 as well (`heldParts`): those the platform's selection meets
 // — a press's, even collapsed, the drag being made — the one the platform's
@@ -495,7 +498,7 @@ import * as FOCUS from '../nav/focus.js';
 import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor, reanchored, measure, fit, landingPx, panBy, panInto, flying } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
-import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, inFirstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W } from '../plane/layout.js';
+import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, inFirstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, endsColumn, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX } from '../plane/labels.js';
 import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, kindWord, keptHTML, statementHTML, keptWord, keptStatement, blockMarks, symbolLit, editionClause, copyText, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
@@ -2309,9 +2312,12 @@ function gapsIn(rec, w) {
  * naming the character it starts at (`data-char`) and giving up a run's
  * opening where text stands before the cut in the run's stretch, a unit cut at
  * its end leaving out the first element no text of which stands before the
- * cut, so a run's opening stands with its chrome — placed at its first line's
- * top in its column; null where the template holds no such unit or a cut
- * fails.
+ * cut, so a run's opening stands with its chrome, its last block giving up a
+ * run's ground on the empty lines typed after it (T-ARTICLE's
+ * `data-blank-origin`) where the part stops short of the block's last line or
+ * that line ends its column (P-LAY's `endsColumn`), those lines standing in
+ * neither place — placed at its first line's top in its column; null where
+ * the template holds no such unit or a cut fails.
  * @param {Mounted} rec
  * @param {{column: number, first: number, end: number}} g
  * @returns {HTMLElement | null}
@@ -2344,6 +2350,10 @@ function partEl(rec, g) {
   const run = box.querySelector(':scope > .run');
   if (head && run && run.firstElementChild) opened(/** @type {HTMLElement} */ (run.firstElementChild), head, u.text);
   if (tail && run && run.lastElementChild) closed(/** @type {HTMLElement} */ (run.lastElementChild), tail);
+  // the last block's empty lines stand below its last line inside its column alone: no ground for them where the part
+  // stops short of that line or that line ends the column
+  const last = run ? run.lastElementChild : null;
+  if (last && (tail || endsColumn(f, g.end - 1))) last.removeAttribute('data-blank-origin');
   box.style.left = c.x * rec.lay + 'px';
   box.style.top = (c.y + (f.lines[g.first].top - c.top) * f.fs) * rec.lay + 'px';
   return box;

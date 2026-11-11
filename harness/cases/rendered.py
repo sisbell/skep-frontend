@@ -11,7 +11,11 @@ names: `doc_metadata` over each account's document numbers — its oracle for
 `places`); the window run the guest meets WITHHELD shows the oracle its box
 and width (240), never its text, and shows the entitled reader (the signed
 session) the run whole across its typed lines with its origin stated in
-its column's edge, C-33's words there and none in its lines; a draft of the claimant's,
+its column's edge, C-33's words there and none in its lines, and its ground
+on the empty lines its own newlines type between its characters — below the
+typed line they follow, where its part holds that line's last line and the
+column goes on past it, kept there as the reader scrolls and the lines after
+stand in parts of their own; a draft of the claimant's,
 read, shows C-28's chip at its corner, and the region at mid holds it — a
 box of its own, or, deep in its account's continuations, inside the
 continuation drawn as one mark; at HOME the account's first continuation is
@@ -198,6 +202,138 @@ def mark_acts(ctx, r, mark, band, newest):
     return {'cursor': shapes, 'list': listed, 'esc': after_esc, 'enter': by_key, 'ringed': ringed, 'click': landed}
 
 
+def empty_lines(blocks):
+    """each typed line with empty lines typed after it, as T-ARTICLE counts them (`blankOf`), read here apart from the page:
+    the block, the first of those lines' newlines and one past the last — its last positions: every newline after its
+    characters but the one ending its own line; at a block of no text, every newline but the one ending the line of an
+    item standing right before it"""
+    out = []
+    for i, b in enumerate(blocks):
+        if b['kind'] != 'para':
+            continue
+        n = b['width'] - len(b['text'].encode('utf8'))
+        prev = blocks[i - 1] if i else None
+        after_item = prev is not None and prev['kind'] != 'para' and prev['pos'] + prev['width'] == b['pos']
+        blank = max(0, n - 1) if b['text'] else max(0, n - (1 if after_item else 0))
+        if blank:
+            end = b['pos'] + b['width']
+            out.append((b, end - blank, end))
+    return out
+
+
+def text_in(blocks, run):
+    """the stretch the typed lines' characters hold of a run (T-ARTICLE's `textIn`): from the first position a typed line's
+    characters hold of it to one past the last; None where none do"""
+    lo = hi = None
+    for b in blocks:
+        if b['kind'] != 'para':
+            continue
+        t0, t1 = max(run['pos'], b['pos']), min(run['pos'] + run['width'], b['pos'] + len(b['text'].encode('utf8')))
+        if t0 < t1:
+            lo = t0 if lo is None else min(lo, t0)
+            hi = t1 if hi is None else max(hi, t1)
+    return (lo, hi) if lo is not None else None
+
+
+def blank_runs(doc):
+    """the run whose ground stands on each typed line's empty lines, by the line's block: the transcluded run whose
+    characters stand both before those lines and after them (issue #549), read from the model's blocks and origins"""
+    out = {}
+    for o in doc.get('origins') or []:
+        at = text_in(doc['blocks'], o)
+        for b, first, end in empty_lines(doc['blocks']) if at else []:
+            if at[0] < first and at[1] > end:
+                out[b['pos']] = o['doc']
+    return out
+
+
+# each block part standing of a document's typed lines on the plane, as a person meets it: its block, the run its empty lines'
+# ground names (T-ARTICLE's `data-blank-origin`), whether it holds its block's last character, whether it is its part's last
+# block with that part's last line its column's last (the fold's columns read in their order), the part it stands in, its own
+# height, line box and advance, and the ground the style draws after it — none where it draws none
+PIECES = '''((a) => { const S = window.__skep, blocks = new Map(S.model.doc(a).blocks.map((b) => [b.pos, b]));
+  let n = 0; const ends = S.fold(a).columns.map((c) => (n += c.n));
+  return [...document.querySelectorAll(`#domlayer .sp[data-addr="${a}"]`)].flatMap((el) => {
+    const b = blocks.get(Number(el.dataset.pos)); if (!b || b.kind !== 'para') return [];
+    const c = el.cloneNode(true); c.querySelectorAll('.others,.sym').forEach((x) => x.remove());
+    const col = el.closest('.col'), own = getComputedStyle(el), g = getComputedStyle(el, '::after');
+    return [{pos: b.pos, origin: el.dataset.blankOrigin || null, last: Number(el.dataset.char || 0) + c.textContent.length >= b.text.length,
+      foot: !!col && !el.nextElementSibling && Number(col.dataset.end) === ends[Number(col.dataset.column)], part: col ? Number(col.dataset.first) : -1,
+      blank: Number(own.getPropertyValue('--blank') || 0), lineBox: parseFloat(own.lineHeight), height: parseFloat(own.height),
+      advance: parseFloat(own.fontSize) * Number(own.getPropertyValue('--char-w')),
+      ground: g.content === 'none' ? null : {colour: g.backgroundColor, top: parseFloat(g.top), left: parseFloat(g.left), w: parseFloat(g.width), h: parseFloat(g.height), events: g.pointerEvents}}]; }); })(%s)'''
+
+
+def ground_off(pieces, runs, texture):
+    """the block parts whose empty lines' ground disagrees with the rule (issue #549): named by the run between whose
+    characters those lines lie (`blank_runs`) where the part holds its block's last character and its column goes on past
+    it, else by none; drawn where named — one advance wide at the line's start right below the block, as deep as its empty
+    lines, in the ground the run's own stretches stand on, taking no press — and else not drawn"""
+    off = []
+    for p in pieces:
+        want = runs.get(p['pos']) if p['last'] and not p['foot'] else None
+        g = p['ground']
+        drawn = g is not None and squash(g['colour']) == squash(texture) and abs(g['w'] - p['advance']) < 0.5 and abs(g['h'] - p['blank'] * p['lineBox']) < 0.5 \
+            and abs(g['top'] - p['height']) < 0.5 and abs(g['left']) < 0.5 and g['events'] == 'none'
+        if p['origin'] != want or not (drawn if want else g is None):
+            off.append(dict(p, want=want))
+    return off
+
+
+def blank_ground(ctx, r, runs, texture):
+    """THE EMPTY LINES' GROUND ACROSS PARTS (issue #549), the camera moved as a reader scrolls: a typed line of the window run
+    whose empty lines lie between the run's characters, of two lines or more, its last line and the next line in one column;
+    every part of the first edition taken down, then the world the frame mounts in ended at the block's first line — its part
+    cut inside the block, the piece standing there no ground below it — then at its last line — a part of its own taking the
+    rest, ground below it — then at the next line, which stands in a third part, the ground kept below the block; at each
+    step every block part's ground by the rule (`ground_off`); its figures"""
+    vp, scale = ctx.js('window.__skep.view.viewport()'), ctx.camera()['scale']
+    # from the camera to the bottom of the world the frame mounts in: half the view and T-LAYER's 40 px about it
+    reach = (vp['VH'] / 2 + 40) / scale
+    cols = ctx.js('window.__skep.fold(%s).columns' % json.dumps(DOC))
+    column = lambda p: next((i for i, c in enumerate(cols) if c['x'] <= p['x'] <= c['x'] + c['w'] and c['y'] <= p['y'] <= c['y'] + c['h']), -1)
+    centre = lambda pos: ctx.js('window.__skep.centreOf(%s, %d)' % (json.dumps(DOC), pos))
+    blocks = {b['pos']: b for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC))}
+    pick = None
+    for pos in sorted(p for p, o in runs.items() if o == WINDOW[2]):
+        b = blocks[pos]
+        if (blocks.get(pos + b['width']) or {}).get('kind') != 'para':
+            continue
+        first, last, nxt = centre(pos), centre(pos + len(b['text'].encode('utf8')) - 1), centre(pos + b['width'])
+        if last['y'] > first['y'] + 1e-6 and column(first) == column(last) == column(nxt) >= 0:
+            pick = (b, first, last, nxt)
+            break
+    r.check(pick is not None, 'the window run holds a typed line of two lines or more whose empty lines lie between the run\'s characters, a typed line after them in its column — a fact of the seeded board', sorted(runs.items()))
+    if pick is None:
+        return None
+    b, first, last, nxt = pick
+    box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
+    ctx.set_view(box['x'] - 2 * vp['VW'] / scale, first['y'], scale)
+    gone = ctx.js('window.__skep.mountedLines(%s)' % json.dumps(DOC))
+    steps = {}
+    for step, at in (('cut', first), ('end', last), ('next', nxt)):
+        ctx.set_view(first['x'], at['y'] - reach, scale)
+        steps[step] = ctx.js(PIECES % json.dumps(DOC))
+    mine = {k: [p for p in v if p['pos'] == b['pos']] for k, v in steps.items()}
+    cut = [p for p in mine['cut'] if not p['last']]
+    end = [p for p in mine['end'] if p['last']]
+    after = [p for p in steps['next'] if p['pos'] == b['pos'] + b['width']]
+    kept = [p for p in mine['next'] if p['last']]
+    r.check(not gone and len(cut) == len(mine['cut']) >= 1 and not any(p['origin'] or p['ground'] for p in cut),
+            'the world the frame mounts in ending at the block\'s first line: its part cut inside the block, the piece standing there holding no ground below it, the block\'s empty lines standing past its last line', {'taken_down': gone, 'pieces': mine['cut']})
+    r.check(len(end) == 1 and end[0]['part'] not in {p['part'] for p in cut} and end[0]['origin'] == WINDOW[2] and end[0]['ground'] is not None and any(p['part'] in {q['part'] for q in cut} for p in mine['end'] if not p['last']),
+            'ending at its last line: a part of its own taking the rest of the block, its ground below it naming the window\'s origin, the cut piece beside it still holding none', {'pieces': mine['end']})
+    r.check(len(after) >= 1 and len(kept) == 1 and all(p['part'] != kept[0]['part'] for p in after) and kept[0]['origin'] == WINDOW[2] and kept[0]['ground'] is not None,
+            'ending at the next line: that line standing in a part of its own, the block\'s ground kept below it, between the two parts', {'block': mine['next'], 'next': after})
+    off = {k: ground_off(v, runs, texture) for k, v in steps.items()}
+    r.check(not any(off.values()), 'at every step, every block part\'s ground by the rule: named and drawn where it holds its block\'s last line and its column goes on past it, else none', off)
+    feet = [p for v in steps.values() for p in v if p['pos'] in runs and p['last'] and p['foot']]
+    if not feet:
+        r.note('the empty lines\' ground at a column\'s foot (issue #549): no typed line whose empty lines lie inside a run ends a column of the seeded fold in the views this case stands, so that path is unmeasured here — the pure suite holds the column\'s end (P-LAY\'s `endsColumn`)')
+    ctx.leap(DOC, WINDOW[0])
+    return {'block': b['pos'], 'lines': [first['y'], last['y'], nxt['y']], 'pieces': {k: len(v) for k, v in mine.items()}, 'feet': len(feet)}
+
+
 def census(ctx, account, cap, stop_after=200):
     """the guest's census of an account: doc_metadata over its document numbers until a long run of unregistered"""
     out = {}
@@ -288,6 +424,19 @@ def run(ctx):
       closes: document.querySelectorAll(`#domlayer .sp[data-addr="${a}"] .same.closes[data-origin="${o}"]`).length,
       same: document.querySelectorAll(`#domlayer .sp[data-addr="${a}"] .same[data-origin="${o}"]`).length}))(%s, %s)''' % (json.dumps(DOC), json.dumps(WINDOW[2])))
     r.check(ends['opens'] == 1 and ends['closes'] <= 1 and ends['same'] >= 2, 'the window run stands as one run: its ground on its stretches across the typed lines it crosses, one opening where it begins — the landing\'s — and one closing at most among the parts standing', ends)
+    # the run's ground on the empty lines its own newlines type between its characters (issue #549): which lines those are,
+    # read from the model's blocks and origins apart from the page's walk, then every block part standing at the landing held
+    # to the rule, its ground the one the run's own stretches stand on
+    blank = blank_runs(doc)
+    r.check(any(o == WINDOW[2] for o in blank.values()), 'the window run holds an empty line its own newlines type between its characters — a fact of the seeded board', {'lines': sorted(blank.items()), 'origins': origins[:6]})
+    texture = ctx.js('(() => { const e = document.querySelector(%s); return e ? getComputedStyle(e).backgroundColor : null; })()' % json.dumps('#domlayer .sp[data-addr="%s"] .same[data-origin="%s"]' % (DOC, WINDOW[2])))
+    pieces = ctx.js(PIECES % json.dumps(DOC))
+    off = ground_off(pieces, blank, texture or '')
+    named = [p['pos'] for p in pieces if p['origin']]
+    r.check(texture is not None and any(blank.get(pos) == WINDOW[2] for pos in named) and not off,
+            'the window run\'s ground stands on the empty lines its own newlines type between its characters: named on the typed line they follow where its part holds that line\'s last line and the column goes on past it, one advance wide at the line\'s start and as deep as those lines, in the ground its stretches stand on, taking no press — and below no other line',
+            {'named': named, 'off': off[:6], 'texture': texture})
+    r.figures['blank_ground'] = {'lines': sorted(blank.items()), 'named': named, 'pieces': len(pieces)}
     window_block = next((b for b in doc['blocks'] if b['pos'] <= WINDOW[0] < b['pos'] + b['width']), None)
     r.check(window_block is not None, 'a block holds the window\'s first position')
     # what the DOM holds against what the page shows: every block inside the article's clip, and C-33's words inside the
@@ -318,6 +467,7 @@ def run(ctx):
     r.figures['first_edition'] = {'extent': doc['extent'], 'blocks': len(doc['blocks']), 'elements': len(elements), 'links_drawn': len(shown), 'links_named': len(doc['links']), 'mirror': size}
     # the owner's links in place (B1-S1): each drawn link's span lies in the oracle's text and its mark is the person's hue
     r.check(len(shown) >= 1 and all(s['linker'] == 'you' for s in shown), 'the owner\'s citations are drawn in the person\'s hue (the owner is the person)', [s['linker'] for s in shown][:5])
+    r.figures['blank_ground']['parts'] = blank_ground(ctx, r, blank, texture or '')
     # ---- S3: the far scale — counts against the census fold --------------------
     places = ctx.js('window.__skep.model.places()')
     counts = ctx.js('window.__skep.model.counts()')

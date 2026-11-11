@@ -32,12 +32,13 @@
 // MEASURE_CPL characters wherever the view holds them (the fit below) — and
 // one line height, in equal columns of COLUMN_LINES
 // body line boxes (`columnsOf`) — a column filled to its depth from its first
-// line's top, the margin above a column's head dropped; no line of a typed
-// line alone at a column's head or foot (one of three lines or fewer moves
-// whole); the head, a record, a withheld run, a reference, an item not
-// rendered and the chrome never split; a kept unit deeper than a column
-// broken at a line anyway, so no text is dropped. The columns stand inside
-// the document's room (P-PROJ's box) left
+// line's top, the margin above a column's head dropped, so the empty lines
+// typed after a column's last line stand in no column (`endsColumn`); no
+// line of a typed line alone at a column's head or foot (one of three lines
+// or fewer moves whole); the head, a record, a withheld run, a reference, an
+// item not rendered and the chrome never split; a kept unit deeper than a
+// column broken at a line anyway, so no text is dropped. The columns stand
+// inside the document's room (P-PROJ's box) left
 // to right, then row by row (`fold`), each followed by its edge and a gutter
 // apart: the edge (FP-26) is the room right of a column's text, EDGE em
 // wide, where the column's signs stand
@@ -947,6 +948,9 @@ export function bars(f) {
 
 /** the column of a fold that holds a line, by its index; -1 where none does */
 export const columnOfLine = (/** @type {Fold} */ f, /** @type {number} */ i) => f.columns.findIndex((c) => i >= c.first && i < c.first + c.n);
+
+/** is a line, by its index, the last its column holds: the room below it — the empty lines typed after it — stands in no column, the margin above the next column's head dropped (`columnsOf`) */
+export const endsColumn = (/** @type {Fold} */ f, /** @type {number} */ i) => f.columns.some((c) => c.n > 0 && i === c.first + c.n - 1);
 
 /**
  * Where a position stands in a fold, in world units relative to the room: in
