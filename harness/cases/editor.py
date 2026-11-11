@@ -37,7 +37,8 @@ issue #471). A drag across two words of the own draft leaves the caret live
 at its release, the selection standing, and a key then puts its character in
 the words' place, one edit (`drag_typed`, B3-S1's `drag-typed` row); every
 other pointer route to a selection there — a drag backward, a double-click on
-a word, a Shift+click from the live caret, from the kept caret and from
+a word with the page's frames running between its presses, a Shift+click
+from the live caret, from the kept caret and from
 nothing — leaves the caret live at the selection's moving end, Esc ending the
 selection before it keeps the caret (`drag_routes`; FP-40; D5 K-70, K-72,
 K-77). Shift with the arrows at a live caret moves it and runs the
@@ -711,8 +712,9 @@ def let_go(ctx, doc):
 def drag_routes(ctx, doc, para):
     """EVERY POINTER ROUTE TO A SELECTION IN THE OWN DRAFT LEAVES THE CARET AT ITS MOVING END (FP-40; D5 K-70, K-72, K-77): in
     `para`, landed at, its first three words on one line (`word_points`), each gesture made as a person makes it — a drag
-    backward from the second word's end to the first's start; Esc, then Esc again; a double-click on the third word, then
-    `q`; a click at the first word's start, then a Shift+click at the second's end; Esc twice, then a Shift+click at the
+    backward from the second word's end to the first's start; Esc, then Esc again; a double-click on the third word, the
+    page's frames running between its presses as they run between a person's, then `q`; a click at the first word's
+    start, then a Shift+click at the second's end; Esc twice, then a Shift+click at the
     third's end; and, nothing standing, a Shift+click at the second's start — after each the caret, the page's selection and
     the platform's own; and whether all of it held: the backward drag's caret live at the selection's start, the platform's
     selection running backward; Esc ending the selection with the caret live, the second keeping it; the double-click's
@@ -742,7 +744,7 @@ def drag_routes(ctx, doc, para):
         ok &= bool(s['caret']) and not s['caret']['live']
         w = fresh() or w
         word = {'addr': doc, 'pos': w[2]['pos'], 'width': w[2]['end'] - w[2]['pos']}
-        ctx.drv.click(*w[2]['mid_at'], count=2); ctx.frames(3)
+        ctx.drv.click(*w[2]['mid_at'], count=2, between=lambda: ctx.frames(2)); ctx.frames(3)
         s = steps['double'] = ctx.js(AT_CARET)
         ok &= s['sel'] == word and live(s['caret'], w[2]['end']) and not s['platform']['collapsed'] and s['platform']['span'] == word
         ctx.drv.key('q'); ctx.frames(2)

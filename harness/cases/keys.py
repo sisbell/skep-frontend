@@ -167,7 +167,9 @@ highlight on them. Below the readable threshold of 8 a
 press is keyed on legibility, never on whether text is mounted (§2.4): at em
 6 a click on the first edition's mounted text teleports to it as a click at
 the same point on its bars does, and a drag along that text selects nothing
-and pans nothing, while at em 9 a click on its text selects the block whole;
+and pans nothing, while at em 9 a click on its text selects the block whole,
+and a double-click on a word there, the page's frames running between its
+presses, selects the word, the page's selection and the platform's both;
 and a drag begun on legible text keeps its article through a zoom below the
 threshold with the button down, the release taking the whole phrase and the
 frame after it taking the pointer from the article. At em 9 a press that
@@ -831,6 +833,34 @@ def plain_char(ctx, addr):
       return null; })()''' % json.dumps('#domlayer article.dtext[data-addr="%s"]' % addr))
 
 
+def word_at(ctx, addr):
+    """a word of a paragraph the plane SHOWS of a document's mounted article at the view as it stands — five ASCII letters
+    or more with a space either side, on one line inside the article's clip and the viewport and below the one line, the
+    paragraph's own element under the pointer at its middle, no mark or chrome around it: its block, the word, its first
+    and last positions [p0, p1) read from the model's block text, and the point at its middle; None where the view shows
+    no such word"""
+    vp = ctx.js('window.__skep.view.viewport()')
+    line_bottom = ctx.js('document.getElementById("line").getBoundingClientRect().bottom')
+    shown = {v['pos'] for v in ctx.js('window.__skep.visible(%s)' % json.dumps('#domlayer .sp[data-addr="%s"]' % addr)) if v['inClip'] and v['inView']}
+    bare = '''((x, y, a) => { const e = document.elementFromPoint(x, y), art = e && e.closest("#domlayer article.dtext");
+      return !!art && art.dataset.addr === a && e.matches(".run > .sp"); })(%r, %r, %s)'''
+    for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(addr)):
+        if b['kind'] != 'para' or b['pos'] not in shown or b['text'].startswith('#'):
+            continue
+        for m in re.finditer(r'(?<= )[A-Za-z]{5,}(?= )', b['text']):
+            p0, p1 = b['pos'] + len(b['text'][:m.start()].encode('utf8')), b['pos'] + len(b['text'][:m.end()].encode('utf8'))
+            rects = [q for q in ctx.js('window.__skep.spanRects(%s, %d, %d)' % (json.dumps(addr), p0, p1 - p0)) or [] if q['w'] > 0 and q['h'] > 0]
+            if len(rects) != 1:
+                continue
+            q = rects[0]
+            if not (line_bottom + 2 <= q['y'] and q['y'] + q['h'] <= vp['VH'] and 0 <= q['x'] and q['x'] + q['w'] <= vp['VW']):
+                continue
+            at = (q['x'] + q['w'] / 2, q['y'] + q['h'] / 2)
+            if ctx.js(bare % (at[0], at[1], json.dumps(addr))):
+                return {'block': b, 'word': m.group(0), 'p0': p0, 'p1': p1, 'at': at}
+    return None
+
+
 def paging_holds(ctx, r):
     """THE PAGING KEY AT READING SCALE (issue #15's design decision: "at reading scale the paging keys continue at the
     next column's top"; K-6): the longest edition the claimant's index lists LEAPt to — its head in view — and the view
@@ -884,7 +914,10 @@ def below_reading(ctx, r):
     edition's mounted article teleports to the document: one trail entry pushed, its own, the focus on it, the landing at
     reading scale (the reading size, em 17), nothing selected; a click at the same point on its bars, zoomed to em 6
     from below so nothing mounts, does the same; and a drag along that line of the mounted text selects nothing and moves
-    neither the camera nor the trail. At em 9 a click on such a character selects its block whole and pushes no entry. And
+    neither the camera nor the trail. At em 9 a click on such a character selects its block whole and pushes no entry; and
+    a double-click on a word of a paragraph shown there, the page's frames running between its presses — its first press
+    such a click — selects the word, the page's selection and the platform's both its bytes, the walk on its block and
+    neither the camera nor the trail moving. And
     a drag begun on legible text keeps the article it is anchored in through a zoom below the threshold with the button
     down — the release takes the whole phrase — and the frame after the press takes the pointer from the article there.
     The selection is cleared after each, and the step ends at the landing"""
@@ -971,6 +1004,30 @@ def below_reading(ctx, r):
                 'at em 9 a click on a paragraph\'s plain character belongs to the text: it selects the block whole, and neither the camera nor the trail moves',
                 {'sel': after['sel'], 'block': block and (block['pos'], block['width']), 'cam': [before['cam'], after['cam']], 'cursor': [before['trail']['cursor'], after['trail']['cursor']]})
         figures['legible'] = {'sel': after['sel'], 'pointer': before['pointer']}
+        chord(ctx, 'Escape')
+        chord(ctx, 'Escape')
+    # at em 9 still, a double-click on a word, the page's frames running between its presses as they run between a person's:
+    # its first press a click on the paragraph, which selects the block whole, and the word the double-click's all the same
+    wd, before = word_at(ctx, DOC), seen()
+    r.check(wd is not None and before['sel'] is None, 'at em 9 a word of a paragraph of the first edition stands bare under the pointer, nothing selected, for a double-click',
+            {'word': wd and {k: wd[k] for k in ('word', 'p0', 'p1', 'at')}, 'sel': before['sel']})
+    if wd:
+        ctx.drv.click(*wd['at'], count=2, between=lambda: ctx.frames(2))
+        ctx.settle()
+        ctx.frames(2)
+        after, walk = seen(), ctx.js(WALK_AT)
+        sel, plat = after['sel'], after['platform']
+        word = {'addr': DOC, 'pos': wd['p0'], 'width': wd['p1'] - wd['p0']}
+        # the platform's double-click takes the space after the word where its settings ask it to
+        spaced = dict(word, width=word['width'] + 1)
+        r.check(sel in (word, spaced) and not plat['collapsed'] and plat['span'] == sel,
+                'a double-click on a word of the first edition at em 9 — its first press a click, which selects the paragraph whole — selects the word: the page\'s selection the word\'s bytes, the platform\'s the same (R11; D5 K-70)',
+                {'word': wd['word'], 'want': word, 'sel': sel, 'platform': plat, 'block': (wd['block']['pos'], wd['block']['width'])})
+        r.check(same_view(before, after) and after['trail']['cursor'] == before['trail']['cursor'] and len(after['trail']['entries']) == len(before['trail']['entries'])
+                and walk == {'kind': 'block', 'addr': DOC, 'pos': wd['block']['pos']},
+                'the double-click moves neither the camera nor the trail, and stands the walk on the word\'s block',
+                {'cam': [before['cam'], after['cam']], 'cursor': [before['trail']['cursor'], after['trail']['cursor']], 'walk': walk, 'block': wd['block']['pos']})
+        figures['double_click'] = {'word': wd['word'], 'at': wd['at'], 'sel': sel, 'platform': plat['span']}
         chord(ctx, 'Escape')
         chord(ctx, 'Escape')
     # (e) a drag begun on legible text, the view zoomed below the threshold with the button down: the article keeps the
@@ -3999,6 +4056,6 @@ def run(ctx):
     r.figures['back_after_publish'] = back_after_publish(ctx, r)
     # ---- the page's own find (issue #222's design decision) ------------------------------------------------------
     r.figures['find'] = find_holds(ctx, r)
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K at the whole board', 'Mod+Shift+O, Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter at the whole board', 'Enter', 'Mod+Shift+Enter in the LEAP box as opened and on a typed address, Esc closing the scene', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+K, Mod+Shift+A and Mod+Shift+C at the walk\'s block', 'a press on the "link to…" slot', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+K in the scene', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C with nothing selected, with a selection standing and with one drawn over no range of the platform\'s', 'a copy event with nothing selected and with a selection', 'a click on a column\'s blank room after a drag', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival']
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K at the whole board', 'Mod+Shift+O, Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter at the whole board', 'Enter', 'Mod+Shift+Enter in the LEAP box as opened and on a typed address, Esc closing the scene', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+K, Mod+Shift+A and Mod+Shift+C at the walk\'s block', 'a press on the "link to…" slot', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click, a double-click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+K in the scene', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C with nothing selected, with a selection standing and with one drawn over no range of the platform\'s', 'a copy event with nothing selected and with a selection', 'a click on a column\'s blank room after a drag', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

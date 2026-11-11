@@ -4,8 +4,10 @@
 // asks for a read, and marks the frame dirty. State: the press held for the
 // text under it (`held`), whether the drag it began is carrying the
 // platform's selection to the pointer (`carrying`), whether the press found
-// the platform holding a selection with extent (`rangeAtPress`), and the
-// wheel series' clock (`wheelAt`, `seriesFrom`).
+// the platform holding a selection with extent (`rangeAtPress`), the span a
+// click on a block placed the platform's range over, until the next press
+// lets it go (`clickPlaced`), and the wheel series' clock (`wheelAt`,
+// `seriesFrom`).
 // The press rule (foundations §2.4): a pointer's drag never pans. At the
 // readable threshold and above it selects the text it crosses — the
 // platform's selection on the mounted layer — and that selection is the
@@ -141,7 +143,11 @@
 // under it — the word, the line, the extension — which the press's release
 // takes as the page's (`takeSelection`), the caret at its moving end in text
 // the person may edit, and which reaches no block, stretch or caret act; a
-// click on a block selects it whole (R11); and each of these three in text
+// click on a block selects it whole (R11) — where the second press of a
+// double-click there finds the range that click placed still the platform's
+// selection, it collapses that range at the point pressed before the platform
+// acts on the press, so the platform selects the word pressed, which the
+// press's release takes (`clickPlaced`); and each of these three in text
 // the person may not edit — the stretch's, the word's or the extension's, the
 // block's — moves the walk's focus to the span clicked, for the second the
 // span the selection's moving end is in, the ring out, a live caret left kept
@@ -218,6 +224,8 @@ let held = null;
 let carrying = false;
 /** the platform held a selection with extent as the current press began, read before the press's own default moves it (`oneSelection`) */
 let rangeAtPress = false;
+/** @type {import('../text/span.js').Span | null} the span a click on a block placed the platform's range over (`clickText`), as that range reads back: the next press lets it go, one on the text layer once it has read it, and the second press of a double-click collapses that range at the point pressed (see the head); null where no such click came last */
+let clickPlaced = null;
 
 /**
  * One selection (see the head): where the current press found the platform
@@ -262,6 +270,7 @@ export function attach(els) {
   };
   els.plane.addEventListener('pointerdown', (e) => {
     held = null;
+    clickPlaced = null;
     rangeAtPress = LAYER.platformSelects();
     if (KEYS.MAC ? e.metaKey : e.ctrlKey) { cameraDrag(e); return; }
     // at the readable em a press on a document's column is the text's: held until the frame has set the text under it
@@ -295,6 +304,14 @@ export function attach(els) {
     lastDown = { x: e.clientX, y: e.clientY }; LAYER.press(true);
     // a Shift+click on a draft the person may edit extends from what stands there, set before the platform extends (see the head)
     if (e.shiftKey) { const t = /** @type {HTMLElement | null} */ (e.target), art = t && t.closest ? /** @type {HTMLElement | null} */ (t.closest('article')) : null; anchorShift(art ? art.dataset.addr || '' : '', e.clientX, e.clientY); }
+  });
+  // the press's mouse event, after its pointer event and before the platform acts on it, its click count read from it
+  // (`detail`): the second press of a double-click that finds the range a click on a block placed still standing collapses
+  // it at the point pressed, so the platform selects the word pressed (see the head)
+  els.layer.addEventListener('mousedown', (e) => {
+    const placed = clickPlaced;
+    clickPlaced = null;
+    if (e.button === 0 && e.detail === 2 && placed && sameSpan(LAYER.spanOfSelection(), placed)) LAYER.caretAt(e.clientX, e.clientY);
   });
   // a press on a withheld run's placeholder starts no selection: its click is its act's (see the head)
   els.layer.addEventListener('selectstart', (e) => { if (inPlaceholder(/** @type {Node | null} */ (e.target))) e.preventDefault(); });
@@ -427,7 +444,8 @@ function endAt(mark, link, key) {
  * triple-click or a Shift+click, whose word, line or extension the press's
  * release took (`takeSelection`), or any the page has not taken; in text the
  * person may edit, the caret at the character clicked (K-70); a marked
- * stretch; a block, selected whole; else its document's ground. Each act on a
+ * stretch; a block, selected whole, the range that places kept for the press
+ * after it (`clickPlaced`); else its document's ground. Each act on a
  * document's sign, mark or ground is the act the next key follows
  * (`followPointer`), the scene-offer's a departure. The text layer's own
  * clicks and a held press's release both act through it.
@@ -492,7 +510,7 @@ function clickText(target, at, gesture = false) {
   const marked = target.closest('.lip');
   if (marked) { took = true; const m = /** @type {HTMLElement} */ (marked); const s = endAt(m, (m.dataset.links || '').split(' ')[0], (m.dataset.ends || '').split(' ')[0]); if (s) { oneSelection(); leftCaret(s.near); walkOn(s.near, s.pos); ANATOMY.open(s, m, false); return true; } }
   const sp = target.closest('.sp');
-  if (sp) { const s = /** @type {HTMLElement} */ (sp), addr = s.dataset.addr || '', pos = Number(s.dataset.pos); leftCaret(addr); SEL.select(addr, pos); walkOn(addr, pos); return true; }
+  if (sp) { const s = /** @type {HTMLElement} */ (sp), addr = s.dataset.addr || '', pos = Number(s.dataset.pos); leftCaret(addr); SEL.select(addr, pos); clickPlaced = LAYER.spanOfSelection(); walkOn(addr, pos); return true; }
   // none of them: the article's ground — a column's blank room
   if (!took && doc) { oneSelection(); followPointer(doc, at); }
   return took;

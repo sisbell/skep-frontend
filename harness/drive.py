@@ -260,12 +260,15 @@ class Driver:
             self.call('Input.dispatchMouseEvent', {'type': 'mousePressed', 'x': x, 'y': y, 'button': 'left', 'clickCount': 1})
             self.call('Input.dispatchMouseEvent', {'type': 'mouseReleased', 'x': x, 'y': y, 'button': 'left', 'clickCount': 1})
 
-    def click(self, x, y, count=1, mods=()):
+    def click(self, x, y, count=1, mods=(), between=None):
         """a click at a point, its modifiers held throughout: `count` presses and releases one after another, each carrying
-        the count it makes — a double-click's second, a triple-click's third"""
+        the count it makes — a double-click's second, a triple-click's third — and `between`, where given, called after each
+        release before the next press, as the page's frames run between a person's presses"""
         m = sum(self.MODS[k] for k in mods)
         self.call('Input.dispatchMouseEvent', {'type': 'mouseMoved', 'x': x, 'y': y, 'modifiers': m})
         for n in range(1, count + 1):
+            if n > 1 and between:
+                between()
             self.call('Input.dispatchMouseEvent', {'type': 'mousePressed', 'x': x, 'y': y, 'button': 'left', 'buttons': 1, 'clickCount': n, 'modifiers': m})
             self.call('Input.dispatchMouseEvent', {'type': 'mouseReleased', 'x': x, 'y': y, 'button': 'left', 'buttons': 0, 'clickCount': n, 'modifiers': m})
 

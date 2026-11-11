@@ -4818,10 +4818,10 @@ function caretPoint(/** @type {number} */ x, /** @type {number} */ y) {
 }
 
 /**
- * A press the canvas took at reading scale, once the text under it stands
- * (APP-INPUT; see the head): the platform's selection collapsed at the point
- * under it, the drag's anchor, as a press on the text sets it; false where no
- * text of the layer stands there.
+ * The platform's selection collapsed at the boundary point of the layer's
+ * text under a screen point, as a press on that text collapses it (see the
+ * head): the anchor a drag from there extends from (`extendTo`); false where
+ * no text of the layer stands there, the selection left as it stood.
  * @param {number} x
  * @param {number} y
  */

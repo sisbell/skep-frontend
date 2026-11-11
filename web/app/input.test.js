@@ -46,7 +46,10 @@
 // selection's anchor or nothing — in a draft the person may edit, and a Shift
 // press the canvas holds until the text stands, each leave the caret live at
 // the selection's moving end, the selection standing, so a key replaces it
-// and Esc ends it before it keeps the caret; and a drag reaching past one
+// and Esc ends it before it keeps the caret; a double-click in text the person
+// may not edit, whose first press selects the paragraph whole and whose
+// second the platform makes a word only where no range stands, leaves the word
+// selected, the platform's own; and a drag reaching past one
 // document places no caret, leaving the caret by the document its moving end
 // lies in (FP-12, FP-20, FP-21, FP-24, FP-25, FP-30, FP-34, FP-35, FP-36,
 // FP-40).
@@ -1334,7 +1337,7 @@ test('a focus landing in a corner the view does not show whole moves the camera 
  * @property {(addr: string, pos: number) => {node: any, offset: number}} at the boundary point before a position of a mounted article's text — after its last character at the text's end — where the platform's selection names it
  * @property {(from: {addr: string, pos: number}, to: {addr: string, pos: number}) => void} drag a drag pressed at one point and released at another, the platform's selection carried from the first to the second
  * @property {(addr: string, pos: number) => void} click a click at a point, the platform's selection collapsed there as its press sets it
- * @property {(addr: string, pos: number, word: {pos: number, width: number}) => void} doubleClick a double-click at a point: its first press a click, its second the platform's word selected
+ * @property {(addr: string, pos: number, word: {pos: number, width: number}) => void} doubleClick a double-click at a point: its first press a click, its second the platform's word selected where no range stands as it is pressed — a range standing there left as it stands, as the platform's own double-click leaves one
  * @property {(addr: string, pos: number) => void} shiftClick a Shift+click at a point: the platform's selection extended from its anchor to it
  * @property {() => any} platform the platform's selection, as the page's DOM holds it
  * @property {ReturnType<typeof page>} dom the page's DOM
@@ -1396,19 +1399,21 @@ async function onGestures(body) {
     dom.document.pointAt = (x) => points[x / 10 - 1] || null;
     const screen = (/** @type {{node: any, offset: number}} */ p) => { points.push(p); return points.length * 10; };
     const under = (/** @type {{node: any}} */ p) => (p.node.nodeType === 3 ? p.node.parentElement : p.node);
-    const event = (/** @type {any} */ target, /** @type {number} */ x, /** @type {object} */ more = {}) => ({ target, clientX: x, clientY: 0, metaKey: false, ctrlKey: false, shiftKey: false, pointerId: 1, detail: 1, preventDefault() {}, stopPropagation() {}, ...more });
-    /** a press and its release at one screen point, then its click, the platform's part made between the press and the release */
+    const event = (/** @type {any} */ target, /** @type {number} */ x, /** @type {object} */ more = {}) => ({ target, clientX: x, clientY: 0, metaKey: false, ctrlKey: false, shiftKey: false, pointerId: 1, button: 0, detail: 1, preventDefault() {}, stopPropagation() {}, ...more });
+    /** a press and its release at one screen point, then its click: its pointer event and its mouse event, then the platform's part, made before the release */
     const press = (/** @type {{node: any, offset: number}} */ p, /** @type {() => void} */ platform, /** @type {object} */ more = {}) => {
       const x = screen(p), target = under(p);
       layer.fire('pointerdown', event(target, x, more));
+      layer.fire('mousedown', event(target, x, more));
       platform();
       dom.fire('window', 'pointerup', event(target, x, more));
       layer.fire('click', event(target, x, more));
       dom.fire('document', 'selectionchange', {});
     };
     const drag = (/** @type {{addr: string, pos: number}} */ from, /** @type {{addr: string, pos: number}} */ to) => {
-      const p = at(from.addr, from.pos), q = at(to.addr, to.pos), target = under(p);
-      layer.fire('pointerdown', event(target, screen(p)));
+      const p = at(from.addr, from.pos), q = at(to.addr, to.pos), target = under(p), x0 = screen(p);
+      layer.fire('pointerdown', event(target, x0));
+      layer.fire('mousedown', event(target, x0));
       sel.set(p.node, p.offset, q.node, q.offset);
       const x = screen(q);
       dom.fire('window', 'pointerup', event(under(q), x));
@@ -1419,7 +1424,7 @@ async function onGestures(body) {
     const doubleClick = (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {{pos: number, width: number}} */ word) => {
       click(addr, pos);
       const p = at(addr, pos), w0 = at(addr, word.pos), w1 = at(addr, word.pos + word.width);
-      press(p, () => sel.set(w0.node, w0.offset, w1.node, w1.offset), { detail: 2 });
+      press(p, () => { if (sel.isCollapsed) sel.set(w0.node, w0.offset, w1.node, w1.offset); }, { detail: 2 });
     };
     const shiftClick = (/** @type {string} */ addr, /** @type {number} */ pos) => { const p = at(addr, pos); press(p, () => sel.extend(p.node, p.offset), { shiftKey: true }); };
     const platform = () => { const s = LAYER.movingPart(); return { collapsed: sel.isCollapsed, span: s ? s.span : null, backward: s ? s.backward : null }; };
@@ -1499,7 +1504,7 @@ test('a Shift+click in a draft the person may edit extends what stands there to 
   assert.deepEqual([caretNow(), SEL.selected(), platform().collapsed], [[D, 9, true], null, true], 'from nothing: a click, the caret at the point clicked, nothing selected');
 }));
 
-test('a double-click on a word of a draft the person may edit places the caret at its first press and leaves it live at the word\'s end, the word selected — never its paragraph — so a key replaces the word alone; in another\'s text the double-click\'s word stands selected, the walk on its span, a live caret elsewhere kept (issue #568\'s design decision; FP-40; D5 K-70)', () => onGestures(async ({ D, O, click, doubleClick, platform }) => {
+test('a double-click on a word of a draft the person may edit places the caret at its first press and leaves it live at the word\'s end, the word selected — never its paragraph — so a key replaces the word alone; in another\'s text, where its first press selects the paragraph whole, the double-click\'s word stands selected all the same — the platform\'s selection the word — the walk on its span, a live caret elsewhere kept (issue #568\'s design decision; FP-40; D5 K-70)', () => onGestures(async ({ D, O, click, doubleClick, platform }) => {
   const word = { pos: 9, width: 5 };
   doubleClick(D, 11, word);
   await tick();
@@ -1512,7 +1517,8 @@ test('a double-click on a word of a draft the person may edit places the caret a
   await tick();
   doubleClick(O, 11, word);
   await tick();
-  assert.deepEqual([SEL.selected(), caretNow(), walkAt()], [{ addr: O, ...word }, [D, 2, false], ['block', O, 1]], 'in another\'s text: its word selected, the walk on its span, the caret in D kept');
+  assert.deepEqual([SEL.selected(), platform(), caretNow(), walkAt()], [{ addr: O, ...word }, { collapsed: false, span: { addr: O, ...word }, backward: false }, [D, 2, false], ['block', O, 1]],
+    'in another\'s text: "words" selected — never the paragraph its first press selected whole — the platform\'s as it drew it, the walk on its span, the caret in D kept');
 }));
 
 test('a drag reaching from one document into another places no caret, and leaves the caret by the document its moving end lies in, whichever article the range starts in: released in another document, a live caret is kept and the walk stands on the span the release is in, a printable key answered by that site\'s line; released in the caret\'s own draft, from a document before it or after it, the caret stays live with the walk on its span, and a printable key types at it, the selection replaced nowhere; with no caret, none placed (issue #568\'s design decision; FP-40; D5 K-72)', () => onGestures(async ({ D, E, O, click, drag }) => {
