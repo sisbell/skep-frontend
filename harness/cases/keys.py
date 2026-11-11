@@ -109,7 +109,12 @@ first edition's citation of the ghost each time — faced at the
 followed link's own bytes, the face taking the place of the list or card it
 was pressed on (foundations §3.1, F-G3), the link joining no visited set,
 for its camera never left, while a follow that leaves — a citation of the
-far edition — joins it (D-3; FP-25); Enter on the anatomy card's follow
+far edition — joins it (D-3; FP-25); that card's "read side by side" at
+the same far end, inert with its reason its title and, pressed with the
+pointer and by Enter, giving the far end's whole form beneath the card's acts
+and through the status region — part for part the words its follow is faced
+with — the card standing, no scene opened and the trail as it was (issue
+#324; FP-34, FP-33); Enter on the anatomy card's follow
 landing in the far edition and Mod+[ reopening the card at the place the
 follow was made, its follow holding the focus again (issue #264; FP-36);
 Mod+Shift+O with no selection standing selecting the
@@ -121,7 +126,13 @@ selection's card giving its inert slot's reason — the slot marked inert with
 its chord drawn, the card's reason line and the status region its words —
 the card taking no focus and no box opening, and the "link to…" slot pressed
 with the pointer leaving the card as its chord does (D5 K-45, K-46, K-100;
-P47); the selection's one continuous gesture (R11) — a pointer drag over a
+P47); Mod+Enter and Mod+Shift+Enter at a paragraph no link is drawn at, with
+no selection standing, each drawing the acts card at the walk's block and
+giving the no-link reason — the slot inert with that reason its title, marked,
+the card's reason line and the status region its words — nothing selected,
+followed or opened, and the follow slot pressed with the pointer leaving the
+card as its chord does (D5 K-51, K-52; issue #324; FP-34); the selection's one
+continuous gesture (R11) — a pointer drag over a
 phrase of a shown paragraph selects that phrase's byte span, never its block:
 the acts ask the wire over those bytes, the copy names them as FP-27 names a copy —
 the first edition read at its plain address, the member its text is by the
@@ -1366,6 +1377,19 @@ TOLD = '''((slot) => { const o = document.getElementById('overlay'), b = o.query
           reason: l && !l.hidden ? {string: l.dataset.string || null, words: l.textContent} : null,
           marked: [...o.querySelectorAll('[data-run][data-inert]')].map((e) => e.dataset.run), live: document.getElementById('live').textContent,
           leap: window.__skep.leap.isOpen(), in_overlay: !!a && !!a.closest && !!a.closest('#overlay')}; })(%s)'''
+
+
+# the anatomy card's "read side by side" as it stands (O-ANATOMY's): the overlay standing, the act's inert class, its title and
+# its pressed mark, where it stands and whether the pointer finds it there, the reason's lines — each its string and its words —
+# and whether every one stands beneath the card's acts, the status region's words, and the control of the overlay the
+# platform's focus stands on
+BESIDE = '''(() => { const o = document.getElementById('overlay'), b = o.querySelector('[data-run="beside"]'), q = b ? b.getBoundingClientRect() : null, a = document.activeElement;
+  const acts = o.querySelector('.acts'), lines = [...o.querySelectorAll('.note.reason')];
+  return {id: window.__skep.overlay().id, inert: !!b && b.classList.contains('inert'), title: b ? b.getAttribute('title') : null, told: b ? b.getAttribute('data-inert') : null,
+          at: q ? {x: q.left + q.width / 2, y: q.top + q.height / 2} : null, hit: !!q && b.contains(document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2)),
+          reason: lines.map((e) => ({string: e.dataset.string || null, words: e.textContent})),
+          beneath: !!acts && lines.every((e) => !!(acts.compareDocumentPosition(e) & Node.DOCUMENT_POSITION_FOLLOWING)),
+          live: document.getElementById('live').textContent, focus: a && a.closest && a.closest('#overlay') ? (a.dataset.run || null) : null}; })()'''
 
 
 def far_words(ctx, doc, link):
@@ -3448,6 +3472,30 @@ def run(ctx):
         ctx.leap(DOC, link['pos'])
         ctx.js('window.__skep.cards.anatomy(%s, %s)' % (json.dumps(DOC), json.dumps(link['link'])))
         ctx.frames(2)
+        # the card's "read side by side" at that far end, before its follow (issue #324; FP-34): inert, its reason its title;
+        # pressed with the pointer, then by Enter, the card stands with the act marked and the reason's lines beneath its acts,
+        # said through the status region — no scene, no trail entry, the focus kept on the act Enter was pressed on
+        card, t0 = 'anatomy:' + link['link'], trail(ctx)
+        offered = ctx.js(BESIDE)
+        r.check(offered['id'] == card and offered['inert'] and bool(offered['title']) and offered['told'] is None and offered['reason'] == [] and offered['hit'],
+                'the anatomy card\'s "read side by side" at a far end the board says nothing of stands inert under the pointer, its reason its title, none given until it is pressed (issue #324)', offered)
+        given = []
+        if offered['at'] and offered['hit']:
+            ctx.drv.mouse(offered['at']['x'], offered['at']['y'])
+            ctx.frames(2)
+            clicked, s, t1 = ctx.js(BESIDE), state(ctx), trail(ctx)
+            given, said = clicked['reason'], ' '.join(x['words'] for x in clicked['reason'])
+            r.check(clicked['id'] == card and clicked['inert'] and clicked['told'] == '1' and bool(given) and clicked['beneath'] and said == offered['title'] and clicked['live'] == said
+                    and not s['scene'] and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']),
+                    'pressed with the pointer it opens nothing and says why: the card stands under its id, the act marked, the reason\'s lines beneath its acts — the words of its title — and said through the status region; no scene, the trail as it was (issue #324; FP-34)',
+                    {'card': clicked, 'scene': s['scene'], 'cursor': [t0['cursor'], t1['cursor']], 'entries': [len(t0['entries']), len(t1['entries'])]})
+            focused = ctx.js('(() => { const b = document.querySelector(\'#overlay [data-run="beside"]\'); if (b) b.focus(); return !!b && document.activeElement === b; })()')
+            chord(ctx, 'Enter')
+            keyed, s, t2 = ctx.js(BESIDE), state(ctx), trail(ctx)
+            r.check(focused and keyed['id'] == card and keyed['told'] == '1' and keyed['reason'] == given and keyed['beneath'] and keyed['live'] == said and keyed['focus'] == 'beside'
+                    and not s['scene'] and t2['cursor'] == t0['cursor'] and len(t2['entries']) == len(t0['entries']),
+                    'Enter on it answers as the pointer does, the focus kept on the act: the same lines, the same words in the status region, no scene, the trail as it was (issue #324; FP-20)',
+                    {'focused': focused, 'card': keyed, 'scene': s['scene'], 'cursor': [t0['cursor'], t2['cursor']]})
         button = ctx.js('(() => { const b = document.querySelector(\'#overlay [data-run="follow"]\'); if (!b) return null; const q = b.getBoundingClientRect(); return {x: q.left + q.width / 2, y: q.top + q.height / 2}; })()')
         r.check(button is not None and ctx.js('window.__skep.overlay().id') == 'anatomy:' + link['link'], 'the link\'s anatomy card offers its follow', ctx.js('window.__skep.overlay().id'))
         if button is not None:
@@ -3456,6 +3504,11 @@ def run(ctx):
             placed = placed_at(ctx, DOC, link['pos'], link['width'])
             r.check(ctx.js('window.__skep.overlay().id') == 'face:doc_not_registered' and stands_at(placed),
                     'the anatomy card\'s follow, pressed, answers the dead-reference face at the link\'s own bytes, beneath their first line, in the card\'s place', {'id': ctx.js('window.__skep.overlay().id'), 'placed': placed})
+            # the reason the card gave is the far end's one state, part for part the words its follow's face says (FP-33; FP-21)
+            faced = ctx.js('[...document.querySelectorAll("#overlay .face-text, #overlay .note")].map((e) => ({string: e.dataset.string || null, words: e.textContent}))')
+            r.check(bool(given) and faced == given,
+                    'the reason the card\'s "read side by side" gave is the far end\'s whole form, part for part the words the card\'s follow is faced with — never another cause\'s (issue #324; issue #224\'s design decision; FP-33)',
+                    {'given': given, 'faced': faced})
         chord(ctx, 'Escape')
         r.check(state(ctx)['overlay'] is None, 'Esc dismisses the face')
     # a follow that leaves joins LK's visited set as its camera leaves (D-3; FP-25): BEAMED's citation of the far edition — the
@@ -3556,6 +3609,50 @@ def run(ctx):
                 {'pressed': pressed, 'chord': chorded})
     chord(ctx, 'Escape')
     chord(ctx, 'Escape')
+    # follow and read side by side at a paragraph of the first edition no link is drawn at (issue #324; FP-34): each chord, with
+    # no selection standing, draws the acts card at the walk's block whole and gives the no-link reason — the slot inert with
+    # that reason its title, marked as a press leaves it, the card's reason line its words, said through the status region —
+    # nothing selected, no scene, the trail as it was, no hint to select a passage first; then the follow slot pressed with the
+    # pointer at a selection there
+    bare = ctx.js('''(async (doc) => { const LK = await import("./links/links.js");
+      const b = window.__skep.model.doc(doc).blocks.find((x) => x.kind === "para" && x.width > 1 && LK.shownAt(doc, {pos: x.pos, width: x.width}).length === 0);
+      return b ? {pos: b.pos, width: b.width} : null; })(%s)''' % json.dumps(DOC))
+    r.check(bare is not None, 'a paragraph of the first edition draws no link (what the next checks stand on)', bare)
+    if bare is not None:
+        no_link = strings(ctx, 'B3.row.no-link')
+        at_bare = '%s · %s' % (DOC, strings(ctx, 'F.position', {'p': bare['pos']}))
+        slot_as = '(() => { const b = document.querySelector(\'#overlay [data-run="%s"]\'); return b ? {inert: b.classList.contains("inert"), title: b.getAttribute("title")} : null; })()'
+        chorded = {}
+        for key, mods, slot, name, row in (('Enter', ('Meta',), 'follow', 'Mod+Enter', 'K-51'), ('Enter', ('Meta', 'Shift'), 'scene', 'Mod+Shift+Enter', 'K-52')):
+            ctx.leap(DOC, bare['pos'])
+            t0 = trail(ctx)
+            chord(ctx, key, mods=mods)
+            got, s, t1, drawn_as = ctx.js(TOLD % json.dumps(slot)), state(ctx), trail(ctx), ctx.js(slot_as % slot)
+            label = ctx.js('(() => { const l = document.querySelector("#overlay .selection-card .label"); return l ? l.textContent : null; })()')
+            want = {'id': 'selection', 'inert': '1', 'kbd': drawn_chord(ctx, name), 'reason': {'string': 'B3.row.no-link', 'words': no_link}, 'marked': [slot], 'live': no_link, 'leap': False, 'in_overlay': False}
+            r.check(got == want and drawn_as == {'inert': True, 'title': no_link} and s['sel'] is None and not s['scene'] and label == at_bare and (s['hint'] or {}).get('id') != 'D5.select-first'
+                    and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']),
+                    '%s at a paragraph no link is drawn at, nothing selected, draws the acts card at the walk\'s block whole and gives the no-link reason — the slot inert, that reason its title, marked with its chord drawn, the card\'s reason line its words, said through the status region — selecting nothing, opening no scene, the trail as it was, and never the hint to select a passage first (D5 %s; P47; issue #324; FP-34)' % (name, row),
+                    {'got': got, 'want': want, 'slot': drawn_as, 'sel': s['sel'], 'scene': s['scene'], 'hint': s['hint'], 'label': label, 'at': at_bare, 'cursor': [t0['cursor'], t1['cursor']]})
+            chorded[slot] = got
+            chord(ctx, 'Escape')
+            chord(ctx, 'Escape')
+        ctx.leap(DOC, bare['pos'])
+        ctx.js('window.__skep.select(%s, %d)' % (json.dumps(DOC), bare['pos']))
+        ctx.frames(2)
+        at = ctx.js('''(() => { const b = document.querySelector('#overlay [data-run="follow"]'); if (!b) return null; const q = b.getBoundingClientRect();
+          return {x: q.left + q.width / 2, y: q.top + q.height / 2, inert: b.getAttribute('data-inert'), title: b.getAttribute('title'), hit: b.contains(document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2))}; })()''')
+        r.check(bool(at) and at['inert'] is None and at['title'] == no_link and at['hit'], 'the selection\'s card at that paragraph, selected, shows the follow slot under the pointer, the no-link reason its title, no reason given yet', at)
+        if at and at['hit']:
+            ctx.drv.mouse(at['x'], at['y'])
+            ctx.frames(2)
+            pressed, was = ctx.js(TOLD % json.dumps('follow')), chorded.get('follow') or {}
+            marks = ('id', 'inert', 'kbd', 'reason', 'marked', 'live', 'leap')
+            r.check(pressed['reason'] is not None and all(pressed[k] == was.get(k) for k in marks) and not state(ctx)['scene'],
+                    'the follow slot pressed with the pointer there leaves the card as its chord does: the slot marked inert, the card\'s reason line and the status region its words, nothing followed (issue #324; P47)',
+                    {'pressed': pressed, 'chord': was})
+        chord(ctx, 'Escape')
+        chord(ctx, 'Escape')
     # ---- the drag: the selection IS the text it crosses (R11; foundations §2.4) ----------------------------
     ctx.leap(DOC, WINDOW[0])
     ph, seen = phrase_at(ctx, DOC)

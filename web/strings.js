@@ -871,7 +871,7 @@ export const STRINGS = {
   'B3.keyless': { text: 'writing needs your key — this session reads your notebook and keeps nothing you type', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13, B3-S9: every caret and writing act in the bare session (D6 BM-58)' },
   'B3.stopped.act': { text: '⟨the act\'s object⟩ is not held on this device as typing is, and your notebook ⟨has stopped | has halted its writes⟩ — ⟨start | restart⟩ it here, then ⟨the act⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: an act the store cannot hold under a stopped notebook (D6 BM-59)' },
   'B3.row.follow.inert': { text: 'select the passage to follow its link or its source', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: follow\'s line at a bare caret, Mod+Enter with no selection standing (D5 K-51)', hint: 'clause' },
-  'B3.row.no-link': { text: 'no link is drawn at this passage — to read another document beside this one, open it beside from the address line', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: read side by side at a passage with no link' },
+  'B3.row.no-link': { text: 'no link is drawn at this passage — to read another document beside this one, open it beside from the address line', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: follow and read side by side at a passage with no link drawn' },
   'B3.row.others-document': { text: 'this is ⟨owner⟩\'s document\u00a0— to write about a passage here, select it, then annotate it, or link to it from a document of yours', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a key typed, a paste or the undo chord at another\'s document', hint: 'clause' },
   'B3.notes.label': { text: 'Notes on ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13, B3-S6: the notes document\'s label' },
   'B3.notes.kept': { text: 'a note — kept in Notes on ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the composer\'s head at annotate' },
@@ -1110,11 +1110,12 @@ export const STRINGS = {
   // complete index listing no document at the address, "no document here yet" — its whole form saying nothing has been made
   // there, then whether the account's next new document goes there — else "no document known here", its whole form that
   // short form, then the fifth cell's words (B1.doc_not_registered); the short form names the far end on every label and
-  // row and in its mirror item's name, and the whole form is the follow's face and the item's description
+  // row and in its mirror item's name, and the whole form is the follow's face, the item's description and the reason its
+  // card's "read side by side" gives
   'L.far.empty': { text: 'no document here yet', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its tail, a merged tail, B1-S5, the "which" list, the ARIA mirror', lane: true },
-  'L.far.empty.whole': { text: 'no document here yet — nothing has been made at ⟨address⟩ in your account', cls: 'DRAFT', source: '', screen: 'a link\'s far end: the follow\'s face, the ARIA mirror\'s description', lane: true },
-  'L.far.empty.next': { text: 'the next new document made in your account goes here, and this link will lead to it', cls: 'DRAFT', source: '', screen: 'a link\'s far end: the follow\'s face, the ARIA mirror\'s description', lane: true },
-  'L.far.empty.order': { text: 'your account\'s new documents take its addresses in order', cls: 'DRAFT', source: '', screen: 'a link\'s far end: the follow\'s face, the ARIA mirror\'s description', lane: true },
+  'L.far.empty.whole': { text: 'no document here yet — nothing has been made at ⟨address⟩ in your account', cls: 'DRAFT', source: '', screen: 'a link\'s far end: the follow\'s face, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
+  'L.far.empty.next': { text: 'the next new document made in your account goes here, and this link will lead to it', cls: 'DRAFT', source: '', screen: 'a link\'s far end: the follow\'s face, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
+  'L.far.empty.order': { text: 'your account\'s new documents take its addresses in order', cls: 'DRAFT', source: '', screen: 'a link\'s far end: the follow\'s face, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
   'L.far.unknown': { text: 'no document known here', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its tail, a merged tail, B1-S5, the "which" list, the follow\'s face, the ARIA mirror', lane: true },
   // a link whose far end's text holds none of its passage, part of it or all of it in pieces, or the board would not tell:
   // those words whole (BM-HELD's `farSays` — F.floating's, or its line), whose start its symbol and its stub say

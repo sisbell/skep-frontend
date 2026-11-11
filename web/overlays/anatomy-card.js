@@ -56,13 +56,24 @@
 // the link's end, made at the link's own bytes (N-GO's `toScene`), beside the
 // document LK names for it (`besideAt`) — where the far end names its
 // document whole, that whole document, nothing of it set level with the near
-// passage (SC's `Held.wholeB`; FP-30). The link's
+// passage (SC's `Held.wholeB`; FP-30). Where the scene has no far document to
+// open, "read side by side" keeps its place, inert and focusable, its reason
+// its title (`besideInert`; FP-34): where the board will say nothing of the
+// far end's document, the far end's whole form in its one state (LK's
+// `farEmpty`; FP-21); where the end names none, "no such link or slot".
+// Pressed, by a click or by Enter, it reads nothing and opens nothing: the
+// card is shown again under its id, the act marked and the reason's parts
+// beneath its acts — none where the far end's own words on the card are the
+// reason's — and the reason is said through the status region, at every
+// press, said again where the region holds those words already. The link's
 // mark comes from LK's `markOf`, so the card and the symbol agree.
 // The card takes the focus on its first act — follow, the line standing
 // before it — where a key opened it (Enter at the link's element, K-55; a
 // links-card row's Enter) and never where a click did (D5 §4 rule 4; the
 // focus record's rule 16); the line's act rebuilds it, a focus held on the
-// line going to its first control (rule 11). It opens on its reads, the
+// line going to its first control (rule 11), and an inert act pressed
+// rebuilds it with the focus kept on that act, each rebuild keeping what the
+// other set. It opens on its reads, the
 // ends' words and the lineage (O-HOST's `opening`), the opening begun in the
 // act that asks for the card: where an act was made on the chrome while they
 // read, nothing shows. A tail pressed (P-RENDER's) opens on its reads too
@@ -87,10 +98,11 @@ import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import * as GO from '../nav/go.js';
+import * as FOCUS from '../nav/focus.js';
 import * as F from '../model/frames.js';
 import * as LAYER from '../text/layer.js';
 import { lineOf, farHolds, floatingOf } from '../beams/held.js';
-import { t, typeName, facedHTML, dated } from '../strings.js';
+import { t, typeName, facedHTML, addressedHTML, dated } from '../strings.js';
 import { esc, fill } from '../util.js';
 import { inFace, runsOf } from '../plane/labels.js';
 import { accountOf, isUnder } from '../model/address.js';
@@ -316,6 +328,26 @@ function cardReads(s) {
   ]);
 }
 
+/** @typedef {{id: string, text: string}} Part a part of a reason: its string, and its words */
+
+/**
+ * Why "read side by side" opens no scene from a drawn link's end (see the
+ * head), its parts in order; null where it opens one. Where the end names no
+ * far document, "no such link or slot"; where the board will say nothing of
+ * the far end's document, the far end's whole form in its one state, as the
+ * page holds that answer now (LK's `farEmpty`).
+ * @param {Shown} s
+ * @returns {Part[] | null}
+ */
+function besideInert(s) {
+  if (!s.far) return [{ id: 'B1.invalid', text: t('B1.invalid') }];
+  const empty = LK.farEmpty(s);
+  return empty ? empty.whole : null;
+}
+
+/** a reason's words, its parts in order: an inert act's title, and what the status region says of it */
+const reasonWords = (/** @type {Part[]} */ parts) => parts.map((p) => p.text).join(' ');
+
 /**
  * Open the card for a drawn link: its near end the document it is drawn at
  * (`s.near`), where LK places it there, its far end the other, where its
@@ -338,15 +370,21 @@ export function open(s, anchorEl, byKey = false) {
  * lineage's claims named against this link's owner and the reader
  * (`supersessionRows`), and the line's act made from the same reads, the
  * card shown again under its id with the claims behind the line in its place;
- * the card naming what it is about (`EndAbout`).
+ * "read side by side" inert with its reason its title where it opens no
+ * scene (`besideInert`), and, pressed so, the card shown again under its id
+ * with the act marked, the reason's parts beneath the acts where the far end
+ * names a document, and the reason said through the status region — each of
+ * the two acts' redraws keeping what the other set; the card naming what it
+ * is about (`EndAbout`).
  * @param {Shown} s
  * @param {Read} read
  * @param {HTMLElement | null} anchorEl
  * @param {boolean} byKey
  * @param {boolean} [others] the line's act made: the claims behind it listed in its place
  * @param {string | null} [focus] a reopened card's control the focus was left on (O-HOST's `keyOf`): it takes the focus there
+ * @param {boolean} [told] "read side by side" was pressed inert: its reason given at the card
  */
-function showCard(s, read, anchorEl, byKey, others = false, focus = null) {
+function showCard(s, read, anchorEl, byKey, others = false, focus = null, told = false) {
   const [nearText, farEnd, lineage] = read;
   const l = s.link;
   const near = s.near, nearPos = s.pos, nearWidth = s.width;
@@ -358,7 +396,9 @@ function showCard(s, read, anchorEl, byKey, others = false, focus = null) {
   const homePlace = REC.place(l.home);
   const homeDoc = REC.doc(l.home);
   const homePublished = homeDoc.meta ? homeDoc.meta.published : homePlace ? homePlace.kind === 'edition' : true;
-  const dead = far && REC.doc(far).refused === 'unregistered';
+  const inert = besideInert(s);
+  /** the reason given at the act pressed: its parts beneath the acts, save where the far end's own words on the card are the reason's */
+  const given = told && inert && far ? inert.map((p) => `<div class="note reason" data-string="${esc(p.id)}">${addressedHTML(p.text)}</div>`).join('') : '';
   const farQuote = far ? farText ?? (LK.farFaced(s).map((r) => (r.face === 'client' ? r.text : inFace(r.face, r.text))).join('') || '…') : t('B1.invalid');
   const held = far ? farHolds(s) : null;
   const farHeld = held ? `<div class="note" data-string="L.held.${held.state}">${esc(lineOf(held))}</div>` : '';
@@ -378,15 +418,21 @@ function showCard(s, read, anchorEl, byKey, others = false, focus = null) {
     `<div class="kv"><b>${esc(t('F.card.owner'))}</b> ${l.owner ? `<span class="code id">${esc(l.owner)}</span>` : '—'}</div>` +
     `<div class="kv made"><b>${esc(t('L.card.made'))}</b> ${esc(dated(l.age))}</div>` +
     supersessionRows(lineage, who, others) +
-    `<div class="acts"><button data-run="follow">${esc(t('B1.follow'))} → ${far ? `<span class="id">${esc(far)}</span>` : ''}</button><button data-run="beside" ${dead || !far ? 'class="inert"' : ''}>${esc(t('B1.side-by-side'))}</button></div>`;
+    `<div class="acts"><button data-run="follow">${esc(t('B1.follow'))} → ${far ? `<span class="id">${esc(far)}</span>` : ''}</button>` +
+    `<button data-run="beside"${inert ? ` class="inert" title="${esc(reasonWords(inert))}"` : ''}${told && inert ? ' data-inert="1"' : ''}>${esc(t('B1.side-by-side'))}</button></div>${given}`;
   /** @type {EndAbout} */
   const about = { kind: 'anatomy', near, link: l.addr, key: s.key, pos: nearPos, width: nearWidth, ids: LAYER.shownIdentity(near, nearPos, nearWidth), others };
   HOST.show({
     kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl, span: bytes } : { span: bytes }, html, takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : '[data-run="follow"]', about,
     acts: {
       follow: (_el, byKey) => GO.follow(s, byKey),
-      beside: () => { if (far && !dead) void GO.toScene(LAYER.paneSource(near), LK.besideAt(s), { posA: nearPos, widthA: nearWidth, posB: farRuns && farRuns.length ? farRuns[0].pos : null, wholeB: s.farWhole }, { from: { shown: s }, site: { span: bytes } }); },
-      claims: () => showCard(s, read, anchorEl, false, true),
+      beside: () => {
+        const why = besideInert(s);
+        if (!why) { void GO.toScene(LAYER.paneSource(near), LK.besideAt(s), { posA: nearPos, widthA: nearWidth, posB: farRuns && farRuns.length ? farRuns[0].pos : null, wholeB: s.farWhole }, { from: { shown: s }, site: { span: bytes } }); return; }
+        showCard(s, read, anchorEl, false, others, null, true);
+        FOCUS.say(reasonWords(why), false, true);
+      },
+      claims: () => showCard(s, read, anchorEl, false, true, null, told),
     },
   });
 }

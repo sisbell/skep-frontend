@@ -14,8 +14,14 @@
 // beneath its far end's words the line its landing says where that end's
 // text holds only part of its passage (FP-21); an end drawn at a withheld
 // run says it is withheld and whose, with no read of its bytes, the run's one
-// symbol listing its several ends; and a far end naming its document whole
-// described by that document's label alone (FP-30).
+// symbol listing its several ends; a far end naming its document whole
+// described by that document's label alone (FP-30); and "read side by side"
+// where the scene has no far document to open — the board saying nothing of
+// the far end's document, or the end naming none — inert with its reason its
+// title, and pressed, by Enter or a click, giving it at the card and through
+// the status region at every press, the far end's whole form in its one state
+// in the reader's own account and out of it, nothing read and nothing opened
+// (FP-34, FP-21).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as ANATOMY from './anatomy-card.js';
@@ -27,6 +33,7 @@ import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as LK from '../links/links.js';
 import * as LAYER from '../text/layer.js';
+import * as FOCUS from '../nav/focus.js';
 import { resolveSpan } from '../model/address.js';
 import { t } from '../strings.js';
 
@@ -425,4 +432,122 @@ test('a far end naming its document whole is described by that document\'s label
     HOST.dismiss();
   } finally { LK._reset(); }
   assert.deepEqual(fake.unanswered, []);
+});
+
+// ---- "read side by side" where the scene has no far document to open ----------------------------------------------------
+
+/** the status region's stand-in, attached: every write it is given, in order — the empty one a reason said again makes before its words among them */
+function heard() {
+  /** @type {string[]} */
+  const said = [];
+  let words = '';
+  FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { words = v; said.push(v); }, get textContent() { return words; } }) });
+  return said;
+}
+
+/** a frame let pass: words the status region is given again land in it */
+const frame = () => new Promise((r) => setTimeout(r, 0));
+
+/** the card's "read side by side" as it stands: inert or live, its title's words, and whether it is marked as pressed inert */
+const besideAs = (/** @type {ReturnType<typeof cardPage>} */ p) => { const b = p.kid('beside'); return { inert: b.classes.includes('inert'), title: 'title' in b.attrs ? text(b.attrs.title) : null, told: b.attrs['data-inert'] === '1' }; };
+
+/** the reason's lines the card stands: each one's string and its words, and whether every one stands beneath the card's acts */
+const reasons = (/** @type {string} */ html) => ({ lines: [...html.matchAll(/<div class="note reason" data-string="([^"]*)">(.*?)<\/div>/g)].map((m) => [m[1], text(m[2])]), beneath: html.indexOf('class="note reason"') > html.indexOf('class="acts"') });
+
+/**
+ * The first edition's citation of a document whole from its own bytes at 11, held by the model with the claims a card of
+ * it reads answered — `stray` a claim of it another account made, where one is given: the link as LK draws it there now,
+ * and the fake port answering.
+ * @param {string} link
+ * @param {string} far the document cited whole
+ * @param {Claim[]} [stray]
+ */
+function citing(link, far, stray = []) {
+  const D = '1.0.1.0.3', TEXT = 'Tumbler.\n\nThe first field.';
+  REC.takeDelivery(D, [{ pos: 1, width: TEXT.length, kind: 'content', text: TEXT, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: TEXT.length }]);
+  REC.takeLinks(D, [link]);
+  REC.takeLink({ addr: link, from: [resolveSpan({ start: D + '.0.1.11', width: '0.0.0.0.0.0.0.5' })], to: [resolveSpan({ start: far, width: '0.0.0.0.1' })], type: '1.1.0.1.0.1.0.3.13', age: UNDATED });
+  const fake = FAKE.create({
+    [FAKE.keyOf('op', { frame: F.inClaims(link, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: stray } },
+    [FAKE.keyOf('op', { frame: F.outClaims(link, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
+  });
+  PORT.boot(fake);
+  return { fake, drawn: () => /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === link)) };
+}
+
+test('"read side by side" at a far end the board will say nothing of stands inert, focusable, the far end\'s whole form its title; pressed, by Enter or by a click, it reads nothing and opens nothing: the card stands under its id with the act marked, the whole form\'s parts beneath its acts and said through the status region, the focus kept on the act where it held it and taken nowhere where it did not; the answer learned after the card opened is read at the press; the reason and the claims listed each stand through the other\'s act (issue #324; FP-34, FP-21)', async () => {
+  const p = cardPage(), said = heard();
+  HOST.attach(/** @type {any} */ (p.host));
+  const GHOST = '1.0.1.0.151', GONE = '1.0.1.0.3.0.2.41';
+  const { fake, drawn } = citing(GONE, GHOST, [{ active: true, claim: '1.0.2.0.5.0.2.1', home: '1.0.2.0.5', new: '1.0.2.0.5.0.2.2', old: GONE }]);
+  const act = (/** @type {string} */ run, /** @type {boolean} */ byKey) => /** @type {any} */ (HOST.currentState()?.acts?.[run])(p.kid(run), byKey);
+  await ANATOMY.open(drawn(), null, true);
+  assert.deepEqual([HOST.currentState()?.id, besideAs(p), reasons(p.host.innerHTML).lines], ['anatomy:' + GONE, { inert: false, title: null, told: false }, []], 'nothing answered of its far document: the act live, no reason');
+  // the board's answer of the far document, learned while the card stands
+  REC.takeRefused(GHOST, 'unregistered');
+  const whole = LK.emptyAt(GHOST).whole, words = whole.map((x) => x.text).join(' '), asked = fake.asked.length;
+  assert.deepEqual(whole.map((x) => x.id), ['L.far.unknown', 'B1.doc_not_registered'], 'read by a guest: "no document known here", then the fifth cell\'s words');
+  p.kid('beside').focus();
+  act('beside', true);
+  assert.deepEqual([HOST.currentState()?.id, besideAs(p)], ['anatomy:' + GONE, { inert: true, title: words, told: true }], 'Enter on it: the card stands under its id, the act inert and marked, the reason its title');
+  assert.deepEqual(reasons(p.host.innerHTML), { lines: whole.map((x) => [x.id, x.text]), beneath: true }, 'the whole form\'s parts beneath the card\'s acts, in order');
+  assert.ok(p.host.innerHTML.includes(`<div class="note reason" data-string="B1.doc_not_registered"><span class="id">${GHOST}</span> — `), `its address in the identifier's face: ${p.host.innerHTML}`);
+  assert.deepEqual([said.splice(0), p.at(), fake.asked.length], [[words], 'beside', asked], 'said once through the status region, the focus kept on the act, nothing read');
+  act('claims', false);
+  assert.deepEqual([besideAs(p).told, reasons(p.host.innerHTML).lines.length, listed(p.host.innerHTML).length, p.at()], [true, 2, 1, 'beside'], 'the line\'s act made: the claims listed, the reason given standing, the focus still on the act');
+  p.kid('beside').blur();
+  act('beside', false);
+  assert.deepEqual([besideAs(p), reasons(p.host.innerHTML).lines.length, listed(p.host.innerHTML).length], [{ inert: true, title: words, told: true }, 2, 1], 'a click on it: the reason given again, the claims still listed');
+  await frame();
+  assert.deepEqual([said.splice(0), p.at(), fake.asked.length, HOST.currentState()?.id], [['', words], 'the body', asked, 'anatomy:' + GONE],
+    'said again though the status region held those words — emptied, then given them anew — the focus the click left elsewhere taken nowhere, nothing read, the card standing');
+  HOST.dismiss();
+  await ANATOMY.open(drawn(), null);
+  assert.deepEqual([besideAs(p), reasons(p.host.innerHTML).lines], [{ inert: true, title: words, told: false }, []], 'opened anew: inert with its reason its title from its first frame, no reason given until it is pressed');
+  assert.ok(text(p.host.innerHTML).includes(`[${LK.emptyAt(GHOST).short}]`), 'beneath the far end\'s words, which name the same state by its short form');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('"read side by side" at an end naming no far document stands inert with "no such link or slot" its title — the words the card sets as that end\'s — and, pressed, marks the act and says them through the status region, no second line added beneath the acts (issue #324; FP-34)', async () => {
+  const p = cardPage(), said = heard();
+  HOST.attach(/** @type {any} */ (p.host));
+  const LONE = '1.0.1.0.3.0.2.42', words = t('B1.invalid');
+  const { fake, drawn } = citing(LONE, '1.0.1.0.152');
+  await ANATOMY.open({ ...drawn(), far: '' }, null, true);
+  assert.deepEqual([HOST.currentState()?.id, besideAs(p)], ['anatomy:' + LONE, { inert: true, title: words, told: false }], 'inert from its first frame, its reason its title');
+  assert.ok(p.host.innerHTML.includes(`<div class="quoted">${words}</div>`), `the far end's words on the card are the reason's: ${p.host.innerHTML}`);
+  const asked = fake.asked.length;
+  p.kid('beside').focus();
+  for (const byKey of [true, false]) {
+    /** @type {any} */ (HOST.currentState()?.acts?.beside)(p.kid('beside'), byKey);
+    assert.deepEqual([HOST.currentState()?.id, besideAs(p), reasons(p.host.innerHTML).lines], ['anatomy:' + LONE, { inert: true, title: words, told: true }, []], `${byKey ? 'Enter' : 'a click'}: the card stands, the act marked, no line added`);
+    await frame();
+    assert.deepEqual([said.splice(0), p.at(), fake.asked.length], [byKey ? [words] : ['', words], 'beside', asked], `${byKey ? 'Enter: said through the status region' : 'a click after it: said again, the region emptied first'}, the focus kept on the act, nothing read`);
+  }
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+// placed last: it leaves the model as a fresh page's, the session and the index it sets gone with it
+test('in exactly the account the reader acts as, under a complete index, the reason "read side by side" gives at a far end the board will say nothing of is "no document here yet", that nothing has been made there and where the account\'s next document goes — the state the far end\'s words on the card name — never the fifth cell\'s words (issue #324; FP-21, FP-33)', async () => {
+  const p = cardPage(), said = heard();
+  HOST.attach(/** @type {any} */ (p.host));
+  const NEXT = '1.0.1.0.4', UNMADE = '1.0.1.0.3.0.2.43';
+  try {
+    REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+    REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: '1.0.1.0.3', kind: 'edition', label: null, standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+    const { fake, drawn } = citing(UNMADE, NEXT);
+    REC.takeRefused(NEXT, 'unregistered');
+    const whole = [{ id: 'L.far.empty.whole', text: t('L.far.empty.whole', { address: NEXT }) }, { id: 'L.far.empty.next', text: t('L.far.empty.next') }], words = whole.map((x) => x.text).join(' ');
+    await ANATOMY.open(drawn(), null);
+    assert.deepEqual(besideAs(p), { inert: true, title: words, told: false }, 'inert, its title the far end\'s whole form in the reader\'s own account');
+    assert.ok(text(p.host.innerHTML).includes(`[${t('L.far.empty')}]`), 'the far end\'s words on the card: its short form');
+    /** @type {any} */ (HOST.currentState()?.acts?.beside)(p.kid('beside'), false);
+    assert.deepEqual([reasons(p.host.innerHTML), said.splice(0)], [{ lines: whole.map((x) => [x.id, x.text]), beneath: true }, [words]], 'pressed: that whole form beneath the acts and said');
+    assert.ok(!text(p.host.innerHTML).includes('nothing this board will say') && !p.host.innerHTML.includes('B1.doc_not_registered'), `the card says the one state alone, never that nothing is asserted of an address in the reader's own account: ${text(p.host.innerHTML)}`);
+    HOST.dismiss();
+    assert.deepEqual(fake.unanswered, []);
+  } finally { REC._reset(); }
 });

@@ -87,7 +87,11 @@
 // typed text the slots' chords act on the span the text shown holds: the
 // board asked by its base's positions and the card standing at that span, and
 // over a span wholly of new words follow and read side by side give their
-// reason at the slot and its chord (FP-30). On macOS Option with ← or → is a
+// reason at the slot and its chord (FP-30); at any other passage no link is
+// drawn at — an edition's, another's, a draft's own words — they give the
+// no-link reason the same way, at a selection and at the walk's span alike,
+// said again at each press though the status region holds it already, and
+// where a link is drawn neither is inert (FP-34). On macOS Option with ← or → is a
 // word step wherever the page makes the step — at a live caret, at the kept
 // caret's span and at the walk's span in text the person may not edit, the
 // step extending a selection stopping at its anchor — and no other key means
@@ -1461,13 +1465,88 @@ test('over a span wholly of words typed here follow and read side by side keep t
     const s = slotIn(slot);
     assert.ok(/** @type {string} */ (s.button).includes('data-inert="1"'), `${slot}: the slot marked as a press leaves it`);
     assert.equal(s.reason, `<div class="note reason" data-string="L.new.no-link">${esc(reason)}</div>`, `${slot}: the card's reason line says it`);
-    assert.deepEqual([SEL.selected(), HOST.currentState()?.anchor, TRAIL.all().length, said.slice(n)], [typed, { span: typed }, trail, [reason]], `${slot}: the card at the selection, the selection standing, nothing followed or opened, said once`);
+    await tick();
+    assert.deepEqual([SEL.selected(), HOST.currentState()?.anchor, TRAIL.all().length, said.slice(n)], [typed, { span: typed }, trail, [reason]], `${slot}: the card at the selection, the selection standing, nothing followed or opened, said once at the press`);
   }
   // a press on the card's button, as a click or Enter makes it, says the same at the slot
   const n = said.length;
   let marked = false;
   /** @type {any} */ (HOST.currentState()?.acts?.follow)(/** @type {any} */ ({ setAttribute: () => { marked = true; }, closest: () => null }), false);
+  await tick();
   assert.deepEqual([marked, said.slice(n), TRAIL.all().length], [true, [reason], trail], 'the button marks itself and says the reason, following nothing');
+}));
+
+test('at a passage no link is drawn at — in an edition of the session\'s account, in another\'s document, in a draft over typed words beside its own — follow and read side by side keep their places, inert but focusable, the no-link reason on the button; by their chords, at a selection and at the walk\'s span with nothing selected, and pressed, they give it at the slot, in the card\'s reason line and through the status region, nothing selected, followed or opened; a span wholly of typed words keeps "nothing links to new words", and where links are drawn neither slot is inert (issue #324; D5 K-51, K-52; P47; FP-34)', () => onPlane(async ({ said }) => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  listed([[E, 'edition']]);
+  const reason = t('B3.row.no-link'), line = `<div class="note reason" data-string="B3.row.no-link">${esc(reason)}</div>`, trail = TRAIL.all().length;
+  /** @type {Array<[string, object, 'follow' | 'scene']>} each slot's chord: its key, its modifiers, its slot */
+  const CHORDS = [['Enter', MOD, 'follow'], ['Enter', { ...MOD, shiftKey: true }, 'scene']];
+  /** the two slots as the card standing draws them: each inert and focusable, `why` its title */
+  const bothInert = (/** @type {string} */ why, /** @type {string} */ what) => {
+    for (const slot of ['follow', 'scene']) {
+      const b = /** @type {string} */ (slotIn(slot).button);
+      assert.ok(b.includes('class="inert"') && !b.includes('disabled') && b.includes(`title="${esc(why)}"`), `${what}, ${slot}: inert, focusable, its reason on the button — ${b}`);
+    }
+  };
+  for (const [addr, what] of [[E, 'an edition of the session\'s account'], [O, 'another\'s document']]) {
+    const at = { addr, pos: 3, width: 4 }, block = spanOfBlock(addr, /** @type {any} */ (REC.blockAt(addr, 1)));
+    await focusOn(addr, 1);
+    SEL.select(at.addr, at.pos, at.width);
+    bothInert(reason, what);
+    assert.equal(slotIn('follow').reason, null, `${what}: the card's reason line empty until an act is made`);
+    for (const [key, mods, slot] of CHORDS) {
+      const n = said.length;
+      assert.equal(await KEYS.dispatch(keyOf(key, mods), PLANE), true, `${what}, ${slot}'s chord: taken`);
+      const s = slotIn(slot);
+      assert.ok(/** @type {string} */ (s.button).includes('data-inert="1"'), `${what}, ${slot}: the slot marked as a press leaves it`);
+      assert.equal(s.reason, line, `${what}, ${slot}: the card's reason line says it`);
+      // follow's chord finds the selection's words in the status region; read side by side's finds the reason follow's gave
+      assert.deepEqual(said.slice(n), slot === 'follow' ? [reason] : [], `${what}, ${slot}: said at once where the region held other words; where it holds the reason already, the region emptied to be given it again`);
+      await tick();
+      assert.deepEqual([SEL.selected(), HOST.currentState()?.anchor, holds(), TRAIL.all().length, said.slice(n)], [at, { span: at }, null, trail, [reason]], `${what}, ${slot}: the card at the selection, the selection standing, nothing followed or opened, said once at the press`);
+    }
+    // a press on each button, as a click or Enter makes it, says the same at the slot
+    for (const slot of /** @type {const} */ (['follow', 'scene'])) {
+      const n = said.length;
+      let marked = false;
+      /** @type {any} */ (HOST.currentState()?.acts?.[slot])(/** @type {any} */ ({ setAttribute: () => { marked = true; }, closest: () => null }), false);
+      await tick();
+      assert.deepEqual([marked, said.slice(n), TRAIL.all().length, overlay()], [true, [reason], trail, 'selection'], `${what}, ${slot} pressed: the button marks itself and says the reason again, nothing followed or opened`);
+    }
+    // nothing selected: each chord draws the card at the walk's span whole, which the card holds
+    SEL.clear();
+    for (const [key, mods, slot] of CHORDS) {
+      hostEl.innerHTML = '';
+      await focusOn(addr, 1);
+      const n = said.length;
+      assert.equal(await KEYS.dispatch(keyOf(key, mods), PLANE), true, `${what}, ${slot}'s chord with nothing selected: taken`);
+      await tick();
+      assert.deepEqual([SEL.selected(), holds(), slotIn(slot).reason, said.slice(n), HINT.standing(), TRAIL.all().length], [null, block, line, [reason], null, trail],
+        `${what}, ${slot}: the card at the walk's span whole, nothing selected, its reason given there and said — never the hint to select a passage first`);
+      HOST.dismiss();
+    }
+  }
+  // a draft holding typed words: a span wholly of them keeps its own reason; one reaching the draft's own words beside them says no link is drawn
+  WRITE.addEdit(D, { pos: 1, width: 0, text: 'ab' });
+  await focusOn(D, 1);
+  SEL.select(D, 1, 2);
+  bothInert(t('L.new.no-link'), 'a span wholly of typed words');
+  SEL.select(D, 2, 4);
+  bothInert(reason, 'typed words beside the draft\'s own');
+  SEL.clear();
+  WRITE.clearEdits(D);
+  // links drawn at the draft's first span: there neither slot is inert; at its second, where none is drawn, both are
+  const { first } = twoLinks();
+  await focusOn(D, 1);
+  SEL.select(first.addr, first.pos, first.width);
+  for (const slot of ['follow', 'scene']) {
+    const b = /** @type {string} */ (slotIn(slot).button);
+    assert.ok(!b.includes('class="inert"') && !b.includes('title=') && b.includes(' 2 <kbd>'), `${slot} where two links are drawn: live, its count on it, no reason — ${b}`);
+  }
+  SEL.select(D, 14, 6);
+  bothInert(reason, 'the draft\'s second span, beside one where links are drawn');
+  HOST.dismiss();
 }));
 
 test('over a span of typed words beside the draft\'s own, follow acts as ever where a link\'s end stands on its board bytes, and the slots name none on the typed words alone (D5 K-51)', () => onPlane(async () => {

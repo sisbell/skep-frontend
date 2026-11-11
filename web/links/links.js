@@ -89,8 +89,9 @@
 //     exactly the account the reader acts as where the index, run unbroken
 //     from the board's first position, lists no document at the address,
 //     else "no document known here" — whose whole form, its short form
-//     first, O-FACES' face at a follow of it says and N-WALK's item for it
-//     is described by; withheld, with its owner by the one owner rule (the
+//     first, O-FACES' face at a follow of it says, N-WALK's item for it is
+//     described by and O-ANATOMY's inert "read side by side" gives as its
+//     reason; withheld, with its owner by the one owner rule (the
 //     reader `owner`) — each of these the client's words in its first line's
 //     place, bracketed (ST's `bracketed`); its first line by the one rule a
 //     box's label reads (the reader `first`, T-ARTICLE's `firstLineOf`) where
@@ -251,7 +252,7 @@ import { t, facedHTML, bracketed, withheldLine } from '../strings.js';
 /**
  * @typedef {Object} Empty — a far end the board will say nothing of, in its one state (`emptyAt`; see the head)
  * @property {string} short what names it on every label and row and in its mirror item's name: the first words of `whole`
- * @property {Array<{id: string, text: string}>} whole its whole form, its parts in order, the first beginning with `short`: what a follow's face says and its mirror item is described by
+ * @property {Array<{id: string, text: string}>} whole its whole form, its parts in order, the first beginning with `short`: what a follow's face says, its mirror item is described by and its card's inert "read side by side" gives as its reason
  */
 /**
  * @typedef {Object} Tail — the links a place sends to documents the plane draws nowhere: drawn as one short tail at the place, never pointed at their far ends
