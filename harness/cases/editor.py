@@ -2,12 +2,20 @@
 frontend prep survey's state table) driven against the harness's own
 provider on 8744 and shot at the desktop width and at NARROW_PX.
 
-The owner's prelude runs two providers over the owner's board: the owner's
-on 8742, which every case reads and none arms, and the harness's on 8744,
-which this case alone arms and fires through the dev provider's script seam
-(`Context.arm`, `Context.fire`), by the harness's own requests. The page is
-opened on it (`Context.open_editor_page`: `port=8744` and that provider's
-secret), its session signed as the dev board's principal as the owner's is.
+The owner's prelude runs two providers over the test board, the gate's own:
+the one on 8742, which every case reads and none arms or writes through,
+and the harness's on 8744, which this case alone arms and fires through the
+dev provider's script seam (`Context.arm`, `Context.fire`), by the harness's
+own requests, and alone writes through. The page is opened on it
+(`Context.open_editor_page`: `port=8744` and that provider's secret), its
+session signed as the test board's principal. Its first page boots without
+D6's machine, as every page the gate opens does: what it types in the
+seeded draft stays page-local. Its last page asks for the machine
+(`machine=1`) and writes — only to a draft the case mints for itself there
+(`MINE`): its typing is composed, sent and kept by the real board, and its
+held, refused, handed-over, moved, halted, full and second-window rows are
+driven by arming that provider's `op`, `held` and `resolve` answers and
+firing its events, each word checked against `strings.js` (`machine_rows`).
 
 STATES is the table: each row a screen, a state, how the page is brought to
 it — a hook, keys, an arm of a call's next answer, an event fired by hand —
@@ -77,11 +85,13 @@ bytes — 6.27 MB at the owner's seed — which a LEAP reads whole and a scene
 pane cannot show, so it is not the one driven.
 
 The case's own write check runs over the harness's provider's log, where
-`wire.py` (which reads the owner's) sees nothing of this: every dial a read
-route (`wire.READ_PATHS`), every `op` frame the pages sent a read
-(`READ_OPS`), every call a reading row (`wire.READ_ROWS`) or a
-`publication.*`/`merge.*` call logged `canned`, and the owner's board's
-`/health.log_position` equal before and after the case. The owner's page is
+`wire.py` (which reads the gate's) sees nothing of this: every dial a route
+the read path dials too (`wire.READ_PATHS`), every call a reading row
+(`wire.READ_ROWS`), or a `publication.*`, `merge.*` or `resolve` call logged
+`canned`, and every `op` frame the pages sent that is no read (`READ_OPS`)
+the mint of the case's own draft or a write naming that draft — no write
+frame names a seeded document. The test board's `/health.log_position`
+before and after is a figure. The signed page on the gate's provider is
 opened again at the end, for the cases' order and the driver's close
 count."""
 import copy
@@ -142,17 +152,21 @@ STATES = [
     dict(screen='B3-S2', state='not-kept', walk='W-08', step=7, drawn=True,
          how="`write.setKept(own, {word: 'not kept', reason})`, the reason the refused run's own-bug words (D6 BM-10)",
          claim='the corner shows "not kept" in its slot (B3.not-kept); Mod+S would answer with the reason'),
-    dict(screen='B3-S2', state='held-bars', walk='W-08', step=7, drawn=False,
-         how="arm `held` with rows before the page's `held(session)`; fire `held` holding (D6 BM-29)", claim='',
-         why='the machine (U4): nothing calls `held(session)`, and the `held` event is logged, not acted on; the bar mark (U6)'),
-    dict(screen='B3-S2', state='refused-run', walk='W-08', step=7, drawn=False,
-         how='a `held` row with `refusal: out_of_bounds`; fire `held` refused (D6 BM-10)', claim='',
-         why='the machine (U4); the underline mark (U6)'),
-    dict(screen='B3-S2', state='hand-over', walk='W-08', step=7, drawn=False,
-         how='a `held` row with `refusal: answers_lost` (D6 BM-26)', claim='', why='the machine (U4)'),
-    dict(screen='B3-S2', state='moved-face', walk='W-08', step=7, drawn=False,
-         how='`held` rows held moved with `arrangement_moved`; fire `held` moved with its hands (D6 BM-13)', claim='',
-         why='the machine (U4)'),
+    dict(screen='B3-S1', state='kept-on-board', walk='W-08', step=2, drawn=True,
+         how="the machine handed in (`machine=1`): keys typed at a caret in the case's own minted draft, committed at their punctuation (D6 BM-1, BM-2, BM-6)",
+         claim='the typed words reach the test board as one composed `insert`, acked, and the corner reads "kept" (B3.kept); the read that follows holds them and the page\'s edits are gone, the text shown the same'),
+    dict(screen='B3-S2', state='held-bars', walk='W-08', step=7, drawn=True,
+         how="arm `op` to answer `held` and `held` to list the line; type; fire `daemon` unreachable (D6 BM-8, BM-29, BM-78)",
+         claim='the corner reads "not yet kept" (B3.not-yet-kept), its reason on the word\'s own act — "not yet kept — held on this device and sent when your notebook answers" (B3.kept.held) — the daemon segment in its held form (B3.daemon.held.notebook), the held words standing in the text; the held bar is not drawn'),
+    dict(screen='B3-S2', state='refused-run', walk='W-08', step=7, drawn=True,
+         how='a `held` answer and a `held` row carrying `refusal: out_of_bounds` (D6 BM-10)',
+         claim='the corner reads "not kept"; its act opens the face under the head "not kept" (B3.not-kept): the own-bug words, then "send again" (inert), "copy these words out", "discard this change", the discard\'s statement in two lines below the acts (B3.refused.discard)'),
+    dict(screen='B3-S2', state='hand-over', walk='W-08', step=7, drawn=True,
+         how='a `held` row carrying the shell\'s `answers_lost`; `resolve` armed `landing_unread` (D6 BM-26, BM-27)',
+         claim='the face names the board and the time elapsed (B3.answers_lost), its discard\'s statement its own (B3.answers_lost.discard); the read unanswered, "did not answer — nothing was discarded" (B3.answers_lost.unanswered) and the face stands'),
+    dict(screen='B3-S2', state='moved-face', walk='W-08', step=7, drawn=True,
+         how='a `held` row held moved with `arrangement_moved` and its hands (D6 BM-13, BM-16, BM-17, BM-18)',
+         claim='the corner reads "not yet kept"; the face says the document changed (B3.moved) and names the hand in its slot (B3.hand.device), with "see the held text", "send again" inert (B3.moved.send-again.inert) and the discard, its statement ending on its exit (B3.moved.discard)'),
     dict(screen='B3-S2', state='moved-scene', walk='W-08', step=7, drawn=True,
          how='`scene.openHeld(own, [an insert row])`: the current text beside the held version re-derived (D6 BM-14; #411)',
          claim="a scene stands with the own draft in pane A and the derived record in pane B, derived, no compare asked; both panes' "
@@ -169,15 +183,15 @@ STATES = [
     dict(screen='B3-S2', state='death-retired', walk='W-08', step=7, drawn=True,
          how="fire `session-died` {session, reason: {arm: 'retired', …}} (D6 BM-24)",
          claim="the line's death arm, C-137's words with sign in, each in view, and the own draft covered as a guest meets it"),
-    dict(screen='B3-S2', state='halted-store', walk='W-08', step=7, drawn=False,
-         how='arm `held` with the refusal `store_halted` (D6 BM-30)', claim='',
-         why='the machine (U4): nothing calls `held(session)`'),
-    dict(screen='B3-S2', state='second-window', walk='W-08', step=7, drawn=False,
-         how="`another_window` at a write's `op` (D6 BM-60)", claim='',
-         why='not armable without a composed write (U3); told at the open is skep #827'),
-    dict(screen='B3-S2', state='held-full', walk='W-08', step=7, drawn=False,
-         how='`held_full`, `unwritable`, the page-kept island — each an `op` answer to a burst (D6 BM-19 … BM-21)', claim='',
-         why='not armable without a composed write (U3, U4)'),
+    dict(screen='B3-S2', state='halted-store', walk='W-08', step=7, drawn=True,
+         how='arm `held` with the refusal `store_halted`, its `why` damaged; fire `held` (D6 BM-30)',
+         claim='the one line reads the halt\'s damaged form, what becomes of the words it holds and its cause (B3.store_halted.damaged, .unsent, .damaged.cause) with "show the file" (B3.show-file); a key at the caret adds no edit and is answered by the halt\'s caret line (B3.store_halted.caret)'),
+    dict(screen='B3-S2', state='second-window', walk='W-08', step=7, drawn=True,
+         how="fire `another-window` {board, another_window: true} (D6 BM-60)",
+         claim='the one line reads "this window reads only and keeps nothing you type — …" (B3.another_window) with "copy this address" (B3.copy-address); a key at the caret adds no edit and is answered by that line'),
+    dict(screen='B3-S2', state='held-full', walk='W-08', step=7, drawn=True,
+         how='arm `op` with the refusal `held_full`; type; then fire `held` kept as the store drains (D6 BM-19, BM-20)',
+         claim='the one line reads the bound\'s line (B3.held_full.line); the refused change waits under the head "not kept" with its statement (B3.held_full.refused), "send again" inert; a key at the caret is answered by the bound\'s caret line (B3.held_full.caret); as the store drains the page sends the waiting change itself'),
     # B3-S3 … B3-S13
     dict(screen='B3-S3', state='undo-lines', walk='W-08', step=5, drawn=False,
          how="Mod+Z's lines and the constant sentence (D6 BM-37, BM-42)", claim='', why='the stack (U5) and the keys (U7)'),
@@ -214,8 +228,9 @@ STATES = [
     dict(screen='B3-S13', state='corner-way-back', walk='W-08', step=4, drawn=True,
          how="Tab from the walk's span of the own draft to its corner, then a printable key at the corner (K-72; D6 BM-52)",
          claim='the hint beside the own draft\'s corner reads "your text is back with Shift+Tab" (B3.caret.back), inside the window below the one line and said in the status region, no caret placed and nothing typed'),
-    dict(screen='B3-S13', state='row-inert', walk='W-08', step=4, drawn=False,
-         how="the selection's row inert while a line is held, one reason (D6 BM-62)", claim='', why='the machine (U4) and its reasons'),
+    dict(screen='B3-S13', state='row-inert', walk='W-08', step=4, drawn=True,
+         how="a selection in the draft while a line of it is held (D6 BM-62)",
+         claim='the slots that send — annotate, quote, "link to…" — stand inert with the row rule\'s one reason where a resend follows (B3.row.held.resend), while "who wrote this?" stays live'),
 ]
 
 # the own draft's corner, by the element T-LAYER names it in
@@ -926,12 +941,382 @@ def corner_back(ctx, doc):
     return {'ok': ok, 'corner': {k: first[k] for k in ('ok', 'focus', 'hint')}, 'focus': at, 'hint': got, 'want': want, 'caret': caret, 'edits': edits}
 
 
+# what the case's own draft holds as it is minted, written through the page's port: two paragraphs, so a selection has a span to stand on
+SEED_TEXT = 'The editor case writes here.\n\nA second paragraph stands below it.\n'
+# the ordinals the armed `held` answers name their lines by: far above any the test board's store holds
+ARMED_K = 9000
+
+# the overlay standing, as its markup says it (O-FACES' face of unkept words): its name, its head, its words by their strings, a
+# moved document's hands, its acts in order — each its string and the reason it is inert by — and the discard's statement: its
+# string, its parts, whether its last is the exit, and whether it stands directly below the acts
+FACE_SHOWN = '''(() => { const o = document.getElementById("overlay"), S = window.__skep.overlay();
+  if (!o || !S || !S.kind) return null;
+  const st = o.querySelector(".said .statement"), acts = o.querySelector(".acts");
+  return {id: S.id || null, head: (o.querySelector(".face-head") || {dataset: {}}).dataset.string || null,
+          lines: [...o.querySelectorAll(".face-text")].map((e) => ({id: e.dataset.string, text: e.textContent})),
+          hands: [...o.querySelectorAll(".hands .hand")].map((e) => ({id: e.dataset.string, text: e.textContent})),
+          acts: [...o.querySelectorAll(".acts button")].map((b) => ({run: b.dataset.run, id: b.dataset.string, text: b.textContent, inert: b.dataset.inert || null})),
+          said: st ? {id: st.dataset.string, text: st.textContent, parts: st.querySelectorAll(".part").length, exit: !!st.querySelector(".part.exit:last-child"),
+                      below: !!acts && acts.nextElementSibling === st.parentElement} : null}; })()'''
+
+
+def write_state(ctx, addr):
+    """what D6's machine holds of a draft, as the gate's hook reads it (`write.state`)"""
+    return ctx.js('window.__skep.write.state(%s)' % json.dumps(addr))
+
+
+def port_op(ctx, sid, frame):
+    """one `op` through the open page's own port, under its session: the harness's act, made by no module of the page"""
+    return ctx.js('(async () => { const P = await import("./bridge/port.js"); return await P.op({session: %s, frame: %s}); })()' % (json.dumps(sid), json.dumps(frame)))
+
+
+def last_write(ctx, ops_allowed):
+    """the open page's last `op` call whose frame is no read: its op, the document it names and its answer; None where it
+    sent none"""
+    out = None
+    for c in ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "op").map((c) => ({frame: c.frame, answer: c.answer}))') or []:
+        try:
+            f = json.loads(c['frame'])
+        except (TypeError, ValueError):
+            continue
+        if isinstance(f, dict) and f.get('op') and f.get('op') not in ops_allowed and 'frame' not in f:
+            out = {'op': f['op'], 'doc': f.get('doc'), 'values': f.get('values'), 'answer': c.get('answer')}
+    return out
+
+
+def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
+    """THE MACHINE's ROWS (D6 BM-1 … BM-30, BM-58 … BM-62): the page opened on the harness's provider WITH the machine
+    (`machine=1`); a draft minted for this run on the test board through the page's port, two paragraphs written into
+    it, and the caret placed in it; typing kept by the real board (`kept-on-board`); then each state the board has not
+    kept the words in, reached by arming the provider's `op`, `held` and `resolve` answers and firing its events, each
+    checked against `strings.js` and shot at both widths, and each put back to "kept" before the next. An arm of `op`
+    is made only while the page is settled, so the next `op` is the burst's own frame; that it was is read from the
+    page's own record of the call."""
+    boot = ctx.open_editor_page('all', machine=True)
+    session, board = ctx.js('window.__skep.model.session()'), ctx.js('window.__skep.model.board()')
+    r.check(bool(boot) and boot.get('machine') is True and bool(session) and session.get('writes') is True,
+            "the page opened on the harness's provider with `machine=1` boots with D6's machine handed in, under a session that writes", {'machine': boot and boot.get('machine'), 'writes': session and session.get('writes')})
+    if not session or not board or not (boot and boot.get('machine')):
+        for state in ('kept-on-board', 'held-bars', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full'):
+            red(state, 'the machine\'s page did not open')
+        return
+    sid, account, board_id = session['session'], session['account'], board['board']
+    board_name = ctx.js('(async () => (await import("./strings.js")).t("L.mirror.board.name", {node: "1", origin: window.__skep.model.board().origin}))()')
+    # the case's own draft: minted through the page's port, then its two paragraphs written into it
+    minted = port_op(ctx, sid, {'op': 'create_new_document', 'account': account})
+    mine = ((minted or {}).get('result') or {}).get('addr')
+    r.check(bool(mine), "the case mints a draft of its own on the test board, through the page's port", minted)
+    if not mine:
+        return
+    sent['minted'].append(mine)
+    figures['minted'] = mine
+    # the mint's own feed row lists the draft in the page's index before anything is written into it or flown to
+    listed = wait_for(ctx, 'window.__skep.model.places().some((p) => p.doc === %s)' % json.dumps(mine), 10)
+    seeded = port_op(ctx, sid, {'op': 'insert', 'doc': mine, 'at': {'ordinal': '1', 'subspace': '1'}, 'values': [SEED_TEXT], 'as_of': minted['result'].get('at')})
+    r.check(listed and 'result' in (seeded or {}), "the page's index lists it as the feed brings its mint, and its two paragraphs are written into it, through the page's port", {'listed': listed, 'seeded': seeded})
+    time.sleep(1.0)
+    ctx.settle(15)
+    corner = '#corners [data-corner="%s"]' % mine
+    state = lambda: write_state(ctx, mine)
+    # each width frames the draft as a landing does, its corner in view: beside its column, or at its head where the window is narrow
+    recentre = lambda: ctx.leap(mine, 1)
+
+    def quiet():
+        """the page with no read out: what the next `op` is, is the next burst's frame"""
+        ctx.settle(15); ctx.frames(3); ctx.settle(15)
+
+    def caret_end(text):
+        """the caret placed live at the end of the draft's first line, which reads `text`"""
+        pos = len(text.encode('utf8')) + 1
+        ctx.js('(async () => (await import("./text/layer.js")).placeCaret(%s, %d))()' % (json.dumps(mine), pos)); ctx.frames(2)
+        return pos
+
+    def press(text):
+        for ch in text:
+            ctx.drv.key(ch)
+        ctx.frames(2)
+
+    def corner_word():
+        return ctx.js('((sel) => { const w = document.querySelector(sel + " .kept-word"); return w ? {word: w.textContent, id: w.dataset.string || null} : null; })(%s)' % json.dumps(corner))
+
+    def first_line():
+        return (ctx.js('(async () => { const L = await import("./text/layer.js"), R = await import("./model/records.js"), d = L.shownOf(%s); return d.from < 0 ? "" : R.textOf(d.runs, d.from, d.to); })()' % json.dumps(mine)) or '').split('\n')[0]
+
+    def show_face():
+        ctx.js('window.__skep.write.showFace(%s)' % json.dumps(mine)); ctx.frames(2)
+        return ctx.js(FACE_SHOWN)
+
+    def held_row(k, cause, **more):
+        return dict({'held': k, 'doc': mine, 'base': 0, 'frame': {'op': 'insert', 'doc': mine, 'at': {'ordinal': '1', 'subspace': '1'}, 'values': ['held'], 'as_of': 0, 'id': 'armed.%d' % k},
+                     'cause': cause, 'sent': False, 'time': k}, **more)
+
+    counter = {'k': ARMED_K}
+
+    def hold_typed(text, cause, lines=None, **more):
+        """`text` typed at the caret with the page's next `op` armed to answer `held` under `cause` and its next
+        `held(session)` armed to list that line (`more` on its row, or `lines` whole): the burst the keys make is held
+        by the shell as far as the page can tell. Answers the line's ordinal, and whether the armed `op` answered the
+        burst's own frame"""
+        quiet()
+        counter['k'] += 1
+        k = counter['k']
+        seq = ctx.editor_seq()
+        ctx.arm('op', answer={'resp': 'held', 'held': k, 'cause': cause})
+        ctx.arm('held', answer=lines(k) if lines else [held_row(k, cause, **more)])
+        press(text)
+        took = wait_for(ctx, '(window.__skep.write.state(%s).held || []).some((x) => x.held === %d)' % (json.dumps(mine), k), 10)
+        w = last_write(ctx, ops_allowed)
+        ok = took and bool(w) and w['op'] == 'insert' and w['doc'] == mine and '"held"' in (w.get('answer') or '') and ctx.consumed('op', seq) and ctx.consumed('held', seq)
+        return k, ok, {'took': took, 'last_write': w and {k2: w[k2] for k2 in ('op', 'doc', 'values')}}
+
+    def drop_all(k, answer=None):
+        """the held line dropped as the person's discard drops it, `resolve` armed to answer `answer` and the lines read
+        after it armed to list none: the page's words of it leave, and the draft reads "kept" again"""
+        ctx.arm('resolve', answer=answer if answer is not None else {})
+        ctx.arm('held', answer=[])
+        out = ctx.js('(async () => (await import("./write/machine.js")).drop(%s, %d))()' % (json.dumps(mine), k))
+        ctx.js('(async () => (await import("./overlays/host.js")).dismiss())()')
+        back = wait_for(ctx, 'window.__skep.write.state(%s).kept && window.__skep.write.state(%s).kept.word === "kept"' % (json.dumps(mine), json.dumps(mine)), 10)
+        quiet()
+        return out, back
+
+    # ---- B3-S1: typing kept by the real board ---------------------------------------------------------------------------
+    ctx.leap(mine, 1)
+    ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(mine)); ctx.settle(); ctx.frames(2)
+    quiet()
+    line0 = first_line()
+    stands = wait_for(ctx, '(window.__skep.mountedAddrs() || []).includes(%s) && !!document.querySelector(%s)' % (json.dumps(mine), json.dumps(corner)), 10)
+    r.check(stands and line0 == SEED_TEXT.split('\n')[0], "the case's own draft stands at reading scale, its article mounted and its corner beside it, its first line as written",
+            {'stands': stands, 'line': line0, 'focus': ctx.js('window.__skep.view.focus()')})
+    if not stands:
+        for st in ('kept-on-board', 'held-bars', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full'):
+            red(st, 'the case\'s own draft did not mount')
+        return
+    caret_end(line0)
+    press(' Kept.')
+    landed = wait_for(ctx, '(() => { const s = window.__skep.write.state(%s); return !!s.kept && s.kept.word === "kept" && window.__skep.write.edits(%s).length === 0; })()' % (json.dumps(mine), json.dumps(mine)), 15)
+    quiet()
+    w0 = last_write(ctx, ops_allowed)
+    on_board = port_op(ctx, sid, {'op': 'retrieve_v', 'specs': [{'doc': mine, 'span': {'start': '1.1', 'width': '0.%d' % (len(line0.encode('utf8')) + 6)}}]})
+    board_text = ''.join(i.get('content', '') for i in (((on_board or {}).get('result') or {}).get('items') or []))
+
+    def kept_check(w):
+        got, st = corner_word(), state()
+        ok = (landed and bool(w0) and w0['op'] == 'insert' and w0['doc'] == mine and w0.get('values') == [' Kept.'] and '"ack_addr"' in (w0.get('answer') or '')
+              and board_text == line0 + ' Kept.' and first_line() == line0 + ' Kept.' and bool(got) and got['id'] == 'B3.kept' and got['word'] == t(ctx, 'B3.kept')
+              and st['held'] == [] and st['islands'] == [] and isinstance(st['typed'], int) and len(shown(ctx, corner + ' .kept-word')) == 1)
+        return ok, {'landed': landed, 'write': w0 and {k: w0[k] for k in ('op', 'doc', 'values')}, 'board': board_text, 'shown': first_line(), 'corner': got, 'state': st}
+    shoot('kept-on-board', kept_check, recentre)
+    line1 = first_line()
+
+    # ---- B3-S2: a line held while the notebook is not answering (BM-8, BM-78); the row's sending slots inert (BM-62) -------------
+    caret_end(line1)
+    k, armed, how = hold_typed(' Held.', 'unreachable')
+    r.check(armed, "the armed `op` answered the burst's own frame `held`, and the armed `held(session)` listed its line", how)
+    ctx.fire('daemon', {'board': board_id, 'state': 'unreachable'})
+    wait_for(ctx, 'window.__skep.model.daemon() === "unreachable"')
+
+    def held_check(w):
+        ctx.js('(async () => (await import("./text/layer.js")).openStatement(%s, true, "word"))()' % json.dumps(mine)); ctx.frames(2)
+        got, st = corner_word(), state()
+        said = ctx.js('((sel) => { const e = document.querySelector(sel + " .kept-statement"); return e ? {id: e.dataset.string, text: e.textContent} : null; })(%s)' % json.dumps(corner))
+        seg = line_segment(ctx, 'B3.daemon.held.notebook')
+        ok = (bool(got) and got['id'] == 'B3.not-yet-kept' and got['word'] == t(ctx, 'B3.not-yet-kept') and st['kept']['cause']['token'] == 'unreachable'
+              and [x['held'] for x in st['held']] == [k] and said == {'id': 'B3.kept.held', 'text': t(ctx, 'B3.kept.held')} and seg == t(ctx, 'B3.daemon.held.notebook')
+              and first_line() == line1 + ' Held.' and len(shown(ctx, corner + ' .kept-word')) == 1)
+        return ok, {'corner': got, 'kept': st['kept'], 'held': st['held'], 'statement': said, 'segment': seg, 'shown': first_line()}
+    shoot('held-bars', held_check, recentre)
+    ctx.js('(async () => (await import("./text/layer.js")).openStatement(%s, false))()' % json.dumps(mine))
+    label = ctx.js('(async () => (await import("./text/layer.js")).boxName(%s).name)()' % json.dumps(mine))
+
+    def inert_check(w):
+        ctx.js('window.__skep.select(%s, 1, 6)' % json.dumps(mine)); ctx.frames(2)
+        slots = ctx.js('Object.fromEntries(["annotate", "quote", "linkto", "wrote"].map((s) => { const b = document.querySelector("#overlay [data-run=\\"" + s + "\\"]"); return [s, b ? {inert: b.classList.contains("inert"), why: b.getAttribute("title")} : null]; }))')
+        want = t(ctx, 'B3.row.held.resend', {'label': label})
+        ok = all(slots.get(s) == {'inert': True, 'why': want} for s in ('annotate', 'quote', 'linkto')) and bool(slots.get('wrote')) and slots['wrote']['inert'] is False
+        return ok, {'slots': slots, 'want': want}
+    shoot('row-inert', inert_check, recentre)
+    ctx.js('window.__skep.esc()'); ctx.js('window.__skep.esc()'); ctx.frames(2)
+    ctx.fire('daemon', {'board': board_id, 'state': 'running'})
+    wait_for(ctx, 'window.__skep.model.daemon() === "running"')
+    out, back = drop_all(k)
+    r.check(bool(out) and out.get('dropped') and back and first_line() == line1, 'the held line discarded: one `resolve(drop)`, its words gone from the text shown, the corner "kept" again', {'out': out, 'back': back, 'shown': first_line()})
+
+    # ---- B3-S2: the refused run (BM-10) ---------------------------------------------------------------------------------------
+    refusal = lambda name, **site: {'kind': 'refused', 'name': name, 'status': 200, 'code': name, 'detail': None, 'op': 'insert', 'site': site, 'body': None}
+    caret_end(line1)
+    k, armed, how = hold_typed(' Refused.', 'out_of_bounds', sent=True, refusal=refusal('out_of_bounds'))
+    r.check(armed, 'the refused run is armed: the `held` answer and its row carrying the board\'s `out_of_bounds`', how)
+
+    def refused_check(w):
+        f, got, st = show_face(), corner_word(), state()
+        ok = (bool(got) and got['id'] == 'B3.not-kept' and bool(f) and f['head'] == 'B3.not-kept' and [x['id'] for x in f['lines']] == ['B3.own-bug'] and f['lines'][0]['text'] == t(ctx, 'B3.own-bug')
+              and [(a['run'], a['id'], a['inert']) for a in f['acts']] == [('send', 'B3.send-again', 'B3.own-bug.send-again'), ('copy', 'B3.copy-words-out', None), ('discard', 'B3.discard', None)]
+              and [a['text'] for a in f['acts']] == [t(ctx, 'B3.send-again'), t(ctx, 'B3.copy-words-out'), t(ctx, 'B3.discard')]
+              and f['said'] == {'id': 'B3.refused.discard', 'text': t(ctx, 'B3.refused.discard'), 'parts': 2, 'exit': False, 'below': True} and st['kept']['cause']['token'] == 'out_of_bounds'
+              and len(shown(ctx, '#overlay .said .statement')) == 1)
+        return ok, {'corner': got, 'face': f, 'kept': st['kept']}
+    shoot('refused-run', refused_check, recentre)
+    ctx.js('window.__skep.select(%s, 1, 6)' % json.dumps(mine)); ctx.frames(2)
+    why = ctx.js('(document.querySelector("#overlay [data-run=annotate]") || {getAttribute: () => null}).getAttribute("title")')
+    r.check(why == t(ctx, 'B3.row.held.resolve', {'label': label}), 'while a refused run stands the sending slots give the reason keyed on the person\'s act: "resolve them where they are marked, then take this" (B3.row.held.resolve)', why)
+    ctx.js('window.__skep.esc()'); ctx.js('window.__skep.esc()'); ctx.frames(2)
+    out, back = drop_all(k)
+    r.check(bool(out) and out.get('dropped') and back and first_line() == line1, 'the refused run discarded: its words leave the text shown', {'out': out, 'shown': first_line()})
+
+    # ---- B3-S2: the shell's hand-over (BM-26, BM-27) ----------------------------------------------------------------------------
+    lost = {'kind': 'shell', 'name': 'answers_lost', 'last': 'unreachable', 'elapsed_ms': 125000}
+    caret_end(line1)
+    k, armed, how = hold_typed(' Lost.', 'answers_lost', sent=True, refusal=lost)
+    r.check(armed, 'the hand-over is armed: the row carrying the shell\'s `answers_lost`', how)
+    minutes = ctx.js('new Intl.NumberFormat(undefined, {style: "unit", unit: "minute", unitDisplay: "long"}).format(2)')
+
+    def handed_check(w):
+        f = show_face()
+        ok = (bool(f) and f['head'] == 'B3.not-kept' and [x['id'] for x in f['lines']] == ['B3.answers_lost'] and f['lines'][0]['text'] == t(ctx, 'B3.answers_lost', {'board': board_name, 'time': minutes})
+              and [(a['run'], a['inert']) for a in f['acts']] == [('send', None), ('copy', None), ('discard', None)]
+              and f['said'] == {'id': 'B3.answers_lost.discard', 'text': t(ctx, 'B3.answers_lost.discard', {'board': board_name}), 'parts': 2, 'exit': False, 'below': True})
+        return ok, {'face': f, 'want_line': t(ctx, 'B3.answers_lost', {'board': board_name, 'time': minutes})}
+    shoot('hand-over', handed_check, recentre)
+    show_face()
+    ctx.arm('resolve', refusal={'kind': 'shell', 'name': 'landing_unread', 'held': k, 'why': 'unanswered'})
+    ctx.arm('held', answer=[held_row(k, 'answers_lost', sent=True, refusal=lost)])
+    ctx.js('document.querySelector("#overlay [data-run=discard]").click()')
+    said = wait_for(ctx, '!!document.querySelector(%s)' % json.dumps('#line [data-string="B3.answers_lost.unanswered"]'), 10)
+    stands = ctx.js(FACE_SHOWN)
+    r.check(said and line_segment(ctx, 'B3.answers_lost.unanswered') == t(ctx, 'B3.answers_lost.unanswered', {'board': board_name}) and bool(stands) and (stands.get('id') or '').startswith('face:unkept:handed') and first_line() == line1 + ' Lost.',
+            'the hand-over\'s discard, the read for its landing unanswered: the one line says "⟨board⟩ did not answer — nothing was discarded", and the face, its act and the words stand',
+            {'said': said, 'line': line_segment(ctx, 'B3.answers_lost.unanswered'), 'face': stands and stands.get('id'), 'shown': first_line()})
+    out, back = drop_all(k)
+    r.check(bool(out) and out.get('dropped') and back and first_line() == line1, 'the hand-over discarded, the read finding no landing: its words leave', {'out': out, 'shown': first_line()})
+
+    # ---- B3-S2: the moved document (BM-13, BM-16, BM-17, BM-18) -----------------------------------------------------------------
+    hands = [{'key': 'other', 'fingerprint': 'aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899', 'label': 'desk'}]
+    caret_end(line1)
+    k, armed, how = hold_typed(' Moved.', 'moved', sent=True, refusal=refusal('arrangement_moved', as_of=1, current=2), sendable=False, hands=hands)
+    r.check(armed, 'the moved document is armed: the row held `moved` with the board\'s `arrangement_moved` and its hands', how)
+
+    def moved_check(w):
+        f, got, st = show_face(), corner_word(), state()
+        ok = (bool(got) and got['id'] == 'B3.not-yet-kept' and st['kept']['cause']['token'] == 'moved' and bool(f) and f['head'] is None and [x['id'] for x in f['lines']] == ['B3.moved']
+              and f['lines'][0]['text'] == t(ctx, 'B3.moved') and f['hands'] == [{'id': 'B3.hand.device', 'text': t(ctx, 'B3.hand.device', {'device label': 'desk'})}]
+              and [(a['run'], a['id'], a['inert']) for a in f['acts']] == [('held', 'B3.moved.see-held', None), ('send', 'B3.send-again', 'B3.moved.send-again.inert'), ('discard', 'B3.discard', None)]
+              and f['said'] == {'id': 'B3.moved.discard', 'text': t(ctx, 'B3.moved.discard'), 'parts': 3, 'exit': True, 'below': True})
+        return ok, {'corner': got, 'kept': st['kept'], 'face': f}
+    shoot('moved-face', moved_check, recentre)
+    ctx.js('(async () => (await import("./overlays/host.js")).dismiss())()'); ctx.frames(2)
+    # the first key after the verdict (BM-18): typed, held behind, and followed by the verdict's line
+    quiet()
+    seq = ctx.editor_seq()
+    ctx.arm('op', answer={'resp': 'held', 'held': k + 500, 'cause': 'behind'})
+    moved_row = held_row(k, 'moved', sent=True, refusal=refusal('arrangement_moved', as_of=1, current=2), sendable=False, hands=hands)
+    ctx.arm('held', answer=[moved_row, held_row(k + 500, 'moved')])
+    caret_end(line1 + ' Moved.')
+    ctx.drv.key('x'); ctx.frames(2)
+    told = hint(ctx)
+    press('.')
+    behind = wait_for(ctx, 'window.__skep.write.state(%s).held.length === 2' % json.dumps(mine), 10)
+    r.check(bool(told['hint']) and told['hint']['id'] == 'B3.moved.first-key' and told['hint']['words'] == t(ctx, 'B3.moved.first-key') and behind and ctx.consumed('op', seq),
+            'the first key typed after the moved verdict is typed, held behind the moved line, and followed at the focus by "this document changed while your text was held — what you type now is held with it and placed by hand" (B3.moved.first-key)',
+            {'hint': told['hint'], 'behind': behind})
+    ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
+    show_face()
+    ctx.arm('resolve', answer={'may_have_landed': [k]})
+    ctx.arm('held', answer=[])
+    ctx.js('document.querySelector("#overlay [data-run=discard]").click()')
+    warned = wait_for(ctx, '!!document.querySelector(%s)' % json.dumps('#line [data-string="B3.discarded.may-have-landed"]'), 10)
+    wait_for(ctx, 'window.__skep.write.state(%s).kept.word === "kept"' % json.dumps(mine), 10)
+    r.check(warned and line_segment(ctx, 'B3.discarded.may-have-landed') == t(ctx, 'B3.discarded.may-have-landed') and state()['held'] == [] and first_line() == line1,
+            'the moved document\'s discard, from its first moved line, takes every later line with it — the held words gone from the text shown — and, the answer naming a line that may have landed, the one line says "discarded here — it may already be on the board"',
+            {'warned': warned, 'line': line_segment(ctx, 'B3.discarded.may-have-landed'), 'held': state()['held'], 'shown': first_line()})
+    ctx.js('(async () => (await import("./overlays/host.js")).dismiss())()')
+    ctx.drv.key('Escape'); ctx.frames(2)
+    quiet()
+
+    # ---- B3-S2: the halted store (BM-30) ---------------------------------------------------------------------------------------
+    edits0 = ctx.js('window.__skep.write.edits(%s).length' % json.dumps(mine))
+    ctx.arm('held', refusal={'kind': 'shell', 'name': 'store_halted', 'why': 'damaged'})
+    ctx.fire('held', {'board': board_id, 'session': sid, 'doc': mine, 'held': 0, 'state': 'kept'})
+    halted = wait_for(ctx, '(window.__skep.write.state(%s).unwritable || {}).why === "store_halted"' % json.dumps(mine), 10)
+    caret_end(line1)
+
+    def halted_check(w):
+        want = '%s %s %s' % (t(ctx, 'B3.store_halted.damaged'), t(ctx, 'B3.store_halted.unsent'), t(ctx, 'B3.store_halted.damaged.cause'))
+        seg = line_segment(ctx, 'B3.store_halted.damaged')
+        act = ctx.js('(() => { const b = document.querySelector("#line [data-act=showfile]"); return b ? b.textContent : null; })()')
+        ctx.drv.key('q'); ctx.frames(2)
+        told = hint(ctx)
+        n = ctx.js('window.__skep.write.edits(%s).length' % json.dumps(mine))
+        ok = (halted and seg == want and act == t(ctx, 'B3.show-file') and len(shown(ctx, '#line [data-act=showfile]')) == 1 and n == edits0
+              and bool(told['hint']) and told['hint']['id'] == 'B3.store_halted.caret' and first_line() == line1)
+        return ok, {'halted': halted, 'segment': seg, 'want': want, 'act': act, 'hint': told['hint'], 'edits': n}
+    shoot('halted-store', halted_check, recentre)
+    ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
+    ctx.arm('held', answer=[])
+    ctx.fire('held', {'board': board_id, 'session': sid, 'doc': mine, 'held': 0, 'state': 'kept'})
+    lifted = wait_for(ctx, 'window.__skep.write.state(%s).unwritable === null' % json.dumps(mine), 10)
+    r.check(lifted, 'the held lines read again, answered: the halt\'s reason lifts', state().get('unwritable'))
+
+    # ---- B3-S2: a second window (BM-60) -----------------------------------------------------------------------------------------
+    ctx.fire('another-window', {'board': board_id, 'another_window': True})
+    second = wait_for(ctx, '(window.__skep.write.state(%s).unwritable || {}).why === "another_window"' % json.dumps(mine), 10)
+    caret_end(line1)
+
+    def window_check(w):
+        seg = line_segment(ctx, 'B3.another_window')
+        act = ctx.js('(() => { const b = document.querySelector("#line [data-act=copyaddr]"); return b ? b.textContent : null; })()')
+        ctx.drv.key('q'); ctx.frames(2)
+        told = hint(ctx)
+        n = ctx.js('window.__skep.write.edits(%s).length' % json.dumps(mine))
+        ok = (second and seg == t(ctx, 'B3.another_window') and act == t(ctx, 'B3.copy-address') and n == edits0 and bool(told['hint']) and told['hint']['id'] == 'B3.another_window' and first_line() == line1)
+        return ok, {'second': second, 'segment': seg, 'act': act, 'hint': told['hint'], 'edits': n}
+    shoot('second-window', window_check, recentre)
+    ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
+    ctx.fire('another-window', {'board': board_id, 'another_window': False})
+    r.check(wait_for(ctx, 'window.__skep.write.state(%s).unwritable === null' % json.dumps(mine), 10), 'the event\'s other edge lifts the second window\'s reason', state().get('unwritable'))
+
+    # ---- B3-S2: the held store's bound (BM-19, BM-20) ---------------------------------------------------------------------------
+    quiet()
+    caret_end(line1)
+    seq = ctx.editor_seq()
+    ctx.arm('op', refusal='held_full')
+    press(' Full.')
+    full = wait_for(ctx, '(window.__skep.write.state(%s).unwritable || {}).why === "held_full"' % json.dumps(mine), 10)
+    r.check(full and ctx.consumed('op', seq), 'the armed `op` refused the burst\'s own frame `held_full`', {'full': full, 'state': state()})
+
+    def full_check(w):
+        f, st = show_face(), state()
+        seg = line_segment(ctx, 'B3.held_full.line')
+        ctx.js('(async () => (await import("./overlays/host.js")).dismiss())()'); ctx.frames(1)
+        ctx.drv.key('q'); ctx.frames(2)
+        told = hint(ctx)
+        ok = (full and seg == t(ctx, 'B3.held_full.line', {'board': board_name}) and bool(f) and f['head'] == 'B3.not-kept' and [x['id'] for x in f['lines']] == ['B3.held_full.refused']
+              and [(a['run'], a['inert']) for a in f['acts']] == [('send', 'B3.held_full.refused'), ('copy', None), ('discard', None)] and st['kept']['cause']['token'] == 'held_full'
+              and [i['name'] for i in st['islands']] == ['held_full'] and bool(told['hint']) and told['hint']['id'] == 'B3.held_full.caret' and first_line() == line1 + ' Full.')
+        return ok, {'segment': seg, 'face': f, 'kept': st['kept'], 'islands': st['islands'], 'hint': told['hint'], 'shown': first_line()}
+    shoot('held-full', full_check, recentre)
+    ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
+    # the store drains: a `held` event saying a line kept, the lines read again; the page sends the waiting change itself
+    quiet()
+    ctx.arm('held', answer=[])
+    ctx.fire('held', {'board': board_id, 'session': sid, 'doc': mine, 'held': 0, 'state': 'kept'})
+    drained = wait_for(ctx, '(() => { const s = window.__skep.write.state(%s); return s.unwritable === null && s.islands.length === 0 && !!s.kept && s.kept.word === "kept" && window.__skep.write.edits(%s).length === 0; })()' % (json.dumps(mine), json.dumps(mine)), 15)
+    quiet()
+    w1 = last_write(ctx, ops_allowed)
+    r.check(drained and bool(w1) and w1['op'] == 'insert' and w1['doc'] == mine and w1.get('values') == [' Full.'] and '"ack_addr"' in (w1.get('answer') or '') and first_line() == line1 + ' Full.',
+            'as the store drains the page sends the waiting change itself, in its turn: its insert reaches the test board and is acked, the island and the bound\'s reason lift, and the corner reads "kept"',
+            {'drained': drained, 'write': w1 and {k2: w1[k2] for k2 in ('op', 'doc', 'values')}, 'state': state(), 'shown': first_line()})
+    ctx.drv.key('Escape'); ctx.frames(2)
+
+
 def run(ctx):
     r = Result()
     rows = {s['state']: dict(s, outcome=('pending' if s['drawn'] else 'not drawn')) for s in STATES}
     figures = {'own_draft': OWN, 'narrow_px': NARROW_PX, 'staging_draft': STAGING, 'states': list(rows.values())}
     ops_allowed = read_ops()
-    sent = {'calls': [], 'ops': set()}
+    # what the editor pages sent the harness's provider: every call by name, every `op` frame's op, and each write frame — its op
+    # and the document it names — with the drafts the case minted for itself
+    sent = {'calls': [], 'ops': set(), 'writes': [], 'minted': []}
 
     def out():
         for row in rows.values():
@@ -977,11 +1362,19 @@ def run(ctx):
         return not expected
 
     def leave_page():
-        """what the open page sent the harness's provider, kept for the write check before the page is left"""
+        """what the open page sent the harness's provider, kept for the write check before the page is left: each call's
+        name, each `op` frame's op, and each write frame with the document it names"""
         for c in page_calls(ctx):
             sent['calls'].append(c['name'])
             if c['name'] == 'op' and c['op']:
                 sent['ops'].add(c['op'])
+        for raw in ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "op").map((c) => c.frame)') or []:
+            try:
+                f = json.loads(raw)
+            except (TypeError, ValueError):
+                continue
+            if isinstance(f, dict) and f.get('op') and f.get('op') not in ops_allowed and 'frame' not in f:
+                sent['writes'].append([f['op'], f.get('doc') or f.get('account')])
 
     # ---- (a) the harness's provider answers; its secret is in the environment ---------------------------------------
     if not ctx.editor_provider or not ctx.editor_secret:
@@ -1288,7 +1681,16 @@ def run(ctx):
         shoot('writes-halted', halted_check)
         leave_page()
 
-    # ---- (l) the sweep, the owner's page again, the write check over the harness's provider's log ---------------------------------
+    # ---- (m) the machine's page: the case's own draft, minted on the test board; its typing kept by the real board; then the
+    # held, refused, handed-over, moved, halted, second-window and full states, each armed on the harness's provider -------------
+    try:
+        machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures)
+    except Exception as e:  # a state that throws leaves its rows red; the sweep and the write check still run
+        import traceback
+        r.check(False, 'the machine\'s rows ran to their end', {'error': str(e), 'trace': traceback.format_exc()[-1500:]})
+    leave_page()
+
+    # ---- (l) the sweep, the signed page again, the write check over the harness's provider's log ---------------------------------
     cleared = ctx.clear_arms()
     r.check(not cleared, 'every arm the case made was served to the page; the sweep had none to serve', cleared)
     figures['arms'] = [{'call': a['call'], 'seq': a['seq']} for a in ctx.armed]
@@ -1299,14 +1701,18 @@ def run(ctx):
     dials = Counter((e.get('method'), e.get('path')) for e in log if e['kind'] == 'dial')
     calls = Counter((e.get('call'), e.get('outcome')) for e in log if e['kind'] == 'call')
     bad_dials = sorted(f'{m} {p}' for (m, p) in dials if (m, p) not in READ_PATHS)
-    bad_calls = sorted(f'{c} ({o})' for (c, o) in calls if not (c in READ_ROWS or c == SEAM or ((str(c).startswith('publication.') or str(c).startswith('merge.')) and o == 'canned')))
-    bad_ops = sorted(o for o in sent['ops'] if o not in ops_allowed)
-    bad_page_calls = sorted({c for c in sent['calls'] if not (c in READ_ROWS or c.startswith('publication.') or c.startswith('merge.'))})
+    canned_only = lambda c: str(c).startswith('publication.') or str(c).startswith('merge.') or c == 'resolve'
+    bad_calls = sorted(f'{c} ({o})' for (c, o) in calls if not (c in READ_ROWS or c == SEAM or (canned_only(c) and o == 'canned')))
+    bad_page_calls = sorted({c for c in sent['calls'] if not (c in READ_ROWS or canned_only(c))})
     canned_calls = sorted(f'{c}' for (c, o) in calls if o == 'canned')
+    # a write frame is the mint of the case's own draft, or names that draft: no seeded document is ever written
+    minted = set(sent['minted'])
+    bad_writes = [w for w in sent['writes'] if not (w[0] == 'create_new_document' or w[1] in minted)]
     r.check(not bad_dials, "every dial the harness's provider made for the editor pages names a route the read path dials (READ_PATHS)", {'bad': bad_dials, 'dials': {f'{m} {p}': n for (m, p), n in dials.items()}})
-    r.check(not bad_calls, "every call in the harness's provider's log is a reading row, or a publication or merge call it answered canned — a canned answer composes no write (the owner's ruling on #327)", {'bad': bad_calls, 'calls': {f'{c} ({o})': n for (c, o), n in calls.items()}})
-    r.check(not bad_ops and not bad_page_calls, 'every `op` frame the editor pages sent names a read (READ_OPS), and every call a reading row or a publication call', {'bad_ops': bad_ops, 'bad_calls': bad_page_calls})
-    r.check(health1.get('log_position') == health0.get('log_position'), "the owner's board's /health.log_position is equal before and after the editor case", {'before': health0.get('log_position'), 'after': health1.get('log_position')})
+    r.check(not bad_calls, "every call in the harness's provider's log is a reading row, or a publication, merge or `resolve` call it answered canned — a canned answer composes no write (the owner's ruling on #327)", {'bad': bad_calls, 'calls': {f'{c} ({o})': n for (c, o), n in calls.items()}})
+    r.check(not bad_page_calls, 'every call the editor pages made is a reading row, or a publication, merge or `resolve` call', {'bad_calls': bad_page_calls})
+    r.check(not bad_writes and bool(minted), "every write frame the editor pages sent is the mint of the case's own draft or names that draft: no seeded document is written", {'bad': bad_writes[:8], 'writes': len(sent['writes']), 'minted': sorted(minted)})
     figures['write_check'] = {'dials': {f'{m} {p}': n for (m, p), n in dials.items()}, 'calls': {f'{c} ({o})': n for (c, o), n in calls.items()}, 'canned': canned_calls,
+                              'writes': dict(Counter(w[0] for w in sent['writes'])), 'minted': sorted(minted),
                               'log_position_before': health0.get('log_position'), 'log_position_after': health1.get('log_position'), 'seam_logged_as_call': any(c == SEAM for (c, _) in calls)}
     return out()

@@ -350,7 +350,8 @@ export function attach(els) {
     if (clickText(/** @type {HTMLElement} */ (e.target), worldOf(e.clientX, e.clientY), e.detail > 1 || e.shiftKey)) e.stopPropagation();
   });
   // the corners: a click on the read it offers takes that read; one on the version statement takes the corner's act; one on a
-  // draft's kept word opens its statement or closes it; one on a compact corner's glyph, or on a head's count of the items it
+  // draft's kept word opens the face of the words the board has not kept where its state has one (O-FACES' `unkept`; D5 K-57),
+  // else opens its statement or closes it; one on a compact corner's glyph, or on a head's count of the items it
   // folds, opens it whole, and one on the corner opened — the words its glyph opened among it — closes it again (FP-26); each
   // the pointer's, or the one the platform makes from Enter or Space at the act (D5 K-57). A pointer's — every one but the
   // offered read — on another document's corner, and one on a held label, is the act the next key follows (see the head)
@@ -367,7 +368,7 @@ export function attach(els) {
     if (holder && !byKey && !target.closest('[data-read]') && leftCaret(addr)) walkOn(addr, nearestStop(addr, at));
     if (holder && target.closest('[data-read]')) { e.stopPropagation(); VERSIONS.readFromCorner(holder, SEL.selected(), byKey); }
     else if (holder && target.closest('.version')) { e.stopPropagation(); VERSIONS.fromCorner(holder, SEL.selected(), byKey); }
-    else if (holder && target.closest('.kept-word[data-kept]')) { e.stopPropagation(); LAYER.openStatement(addr); }
+    else if (holder && target.closest('.kept-word[data-kept]')) { e.stopPropagation(); if (!FACES.unkept(addr, /** @type {HTMLElement} */ (target.closest('.kept-word')), byKey)) LAYER.openStatement(addr); }
     else if (holder && (target.closest('.glyph, [data-more], [data-whole]') || LAYER.cornerAt(addr)?.opened)) { e.stopPropagation(); LAYER.openCorner(addr); }
     const label = /** @type {HTMLElement | null} */ (holder ? null : target.closest('[data-held]'));
     if (label && label.dataset.held) followPointer(label.dataset.held, at);

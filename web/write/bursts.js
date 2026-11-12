@@ -17,16 +17,22 @@
 // is given as `as_of`, an `id` of the page's own (`frameId`) and, beside it,
 // its anchors: the I-addresses of the units on either side of the span it
 // edits, read from the image, null at the document's edge, and for a
-// `delete` the I-runs of the span between. The order within a group keeps
-// every anchor a byte the board holds. An insert names the page's ordinals
-// its bytes carry (`Composed.pages`), which the board's `ack_addr` mints.
-// Where a frame's span or an anchor is a byte the page made that the board
-// has not minted, or one the record's image does not name, no frame of the
-// burst is answered and the answer says which (`Waits`).
+// `delete` the I-runs of the span between. A unit the page made that the
+// board has not minted is named by a piece (`AnchorPiece`): the `id` of the
+// insert that carried it — one the shell holds, or one sent and not acked —
+// and the byte's offset in it, as the caller answers it (`Asked.piece`;
+// D6 BM-8); a `delete` whose span holds such a byte carries no span. An
+// insert names the page's ordinals its bytes carry (`Composed.pages`), which
+// the board's `ack_addr` mints. The edits of a refusal the page keeps
+// (M-REC's `Edit.island`; D6 BM-19) are left out: the frames are those of the
+// text the board is to hold, the rest of the edits placed again by identity
+// (M-DERIVE's `placedAgain`). Where an anchor is a byte the page made that no
+// piece names, or the record's image does not name a byte the burst touches,
+// no frame of the burst is answered and the answer says which (`Waits`).
 // Rules: FP-1, FP-2, FP-10, FP-11, FP-14, FP-16 (this module's test pins
 // every frame to the wire document's examples), FP-38.
 
-import { applyEdits } from '../model/derive.js';
+import { applyEdits, placedAgain } from '../model/derive.js';
 import { isPage, textOf } from '../model/records.js';
 import { documentOf } from '../model/address.js';
 
@@ -35,6 +41,7 @@ import { documentOf } from '../model/address.js';
 /** @typedef {import('../model/records.js').ISpan} ISpan */
 /** @typedef {import('../model/records.js').ImageRun} ImageRun */
 /** @typedef {import('../bridge/shapes').Anchors} Anchors */
+/** @typedef {import('../bridge/shapes').AnchorPiece} AnchorPiece */
 
 /** @typedef {{ordinal: string, subspace: string}} VPos — a content V-position as the wire spells it */
 
@@ -75,8 +82,8 @@ import { documentOf } from '../model/address.js';
  */
 
 /**
- * @typedef {'unminted' | 'unread'} Waits — why a burst composes to no frame: `unminted` a span it removes, or a unit an anchor
- * names, is a byte the page made that the board has not minted; `unread` the record at hand does not hold the text the
+ * @typedef {'unminted' | 'unread'} Waits — why a burst composes to no frame: `unminted` a unit an anchor names is a byte the
+ * page made that the board has not minted and no piece names; `unread` the record at hand does not hold the text the
  * edits were made in, or its image does not name a byte the burst removes, places by identity or anchors on
  */
 
@@ -89,6 +96,7 @@ import { documentOf } from '../model/address.js';
  * @property {(page: number, width: number) => ISpan[]} ids the identity of bytes the page made, in order (M-REC's `pageIds`): a byte the board minted by its permanent address, any other in the page's space of the draft
  * @property {string} load the page's load (M-REC's `PAGE_LOAD`), which every frame's `id` carries
  * @property {number} seq the number the burst's first frame takes in its `id`, each frame after it the next
+ * @property {(page: number) => (AnchorPiece | null)} [piece] the piece naming a byte the page made that the board has not minted, by the page's ordinal for it: the `id` of the insert that carried it and its offset there; null, and where left out, for a byte no insert the shell holds or the page sent carries
  */
 
 /** the lead every frame `id` of the page's opens with: never the prefix the shell's resends take, `shell:` */
@@ -144,34 +152,32 @@ function joined(/** @type {ImageRun[]} */ runs) {
 }
 
 /**
- * A span of a text by the board's identity: its image's runs, joined; a
- * `Wait` where the image names not every byte of it, or names one in the
- * page's own space.
+ * The unit at a position of a text as an anchor names it: its I-address, or,
+ * where the page made it and the board has not minted it, the piece naming
+ * it; null at the document's edge — before its first position, or past its
+ * last. A `Wait` where the page made it and no piece names it, or the record
+ * does not name it.
  * @param {Doc} d
  * @param {number} pos
- * @param {number} width
- * @returns {ImageRun[]}
+ * @param {Asked['piece']} piece
+ * @returns {string | AnchorPiece | null}
  */
-function minted(d, pos, width) {
-  const runs = over(d.image, pos, width);
+function unit(d, pos, piece) {
+  if (pos < 1 || (d.extent != null && pos > d.extent)) return null;
+  const runs = over(d.image, pos, 1);
   if (!runs) throw new Wait('unread');
-  if (runs.some((r) => isPage(r.prefix))) throw new Wait('unminted');
-  return joined(runs);
+  const [r] = runs;
+  if (!isPage(r.prefix)) return `${r.prefix}.${r.ordinal}`;
+  const p = piece ? piece(r.ordinal) : null;
+  if (!p) throw new Wait('unminted');
+  return p;
 }
 
-/**
- * The unit at a position of a text as an anchor names it: its I-address;
- * null at the document's edge — before its first position, or past its last.
- * A `Wait` where the page made it and the board has not minted it, or the
- * record does not name it.
- * @param {Doc} d
- * @param {number} pos
- * @returns {string | null}
- */
-function unit(d, pos) {
-  if (pos < 1 || (d.extent != null && pos > d.extent)) return null;
-  const [r] = minted(d, pos, 1);
-  return `${r.prefix}.${r.ordinal}`;
+/** a span of a text by the board's identity, where the board holds every byte of it; null where it holds a byte the page made that the board has not minted; a `Wait` where the image names not every byte of it */
+function spanOf(/** @type {Doc} */ d, /** @type {number} */ pos, /** @type {number} */ width) {
+  const runs = over(d.image, pos, width);
+  if (!runs) throw new Wait('unread');
+  return runs.some((r) => isPage(r.prefix)) ? null : joined(runs).map((r) => ({ start: `${r.prefix}.${r.ordinal}`, width: String(r.width) }));
 }
 
 /**
@@ -230,8 +236,12 @@ function places(before, after) {
  * @returns {{frames: Composed[]} | {waits: Waits}}
  */
 export function compose(a) {
-  const { doc, edits, asOf, ids } = a, addr = doc.addr;
-  const b = applyEdits(doc, edits.slice(0, a.from), ids), c = applyEdits(doc, edits, ids);
+  const { doc, asOf, ids, piece } = a, addr = doc.addr;
+  // the edits the board is to hold: every island's left out, the rest placed again by identity
+  const island = a.edits.some((e) => e.island != null);
+  const edits = island ? placedAgain(doc, doc, a.edits, (e) => e.island == null, ids).edits : a.edits;
+  const from = island ? a.edits.slice(0, a.from).filter((e) => e.island == null).length : a.from;
+  const b = applyEdits(doc, edits.slice(0, from), ids), c = applyEdits(doc, edits, ids);
   if (b.stopped || c.stopped) return { waits: 'unread' };
   const before = b.doc, after = c.doc;
   /** @type {Composed[]} */
@@ -240,10 +250,10 @@ export function compose(a) {
   const id = () => frameId(a.load, n++);
   try {
     for (const pl of places(before, after)) {
-      const left = unit(before, pl.lost - 1), right = unit(before, pl.lost + pl.lostWidth);
+      const left = unit(before, pl.lost - 1, piece), right = unit(before, pl.lost + pl.lostWidth, piece);
       if (pl.lostWidth > 0) {
-        const span = minted(before, pl.lost, pl.lostWidth).map((r) => ({ start: `${r.prefix}.${r.ordinal}`, width: String(r.width) }));
-        frames.push({ frame: { op: 'delete', doc: addr, p: vpos(pl.at), width: String(pl.lostWidth), as_of: asOf, id: id() }, anchors: { before: left, after: right, span }, pages: [] });
+        const span = spanOf(before, pl.lost, pl.lostWidth);
+        frames.push({ frame: { op: 'delete', doc: addr, p: vpos(pl.at), width: String(pl.lostWidth), as_of: asOf, id: id() }, anchors: span ? { before: left, after: right, span } : { before: left, after: right }, pages: [] });
       }
       if (pl.gained < 1) continue;
       // what the place gained, cut where its bytes pass between the page's own and the board's
@@ -259,7 +269,7 @@ export function compose(a) {
       const iAt = (/** @type {ImageRun} */ r, /** @type {number} */ off) => `${r.prefix}.${r.ordinal + off}`;
       // the stretches the board holds first, in the text's order, each after the one before it; then the page's own between them
       let placed = 0;
-      /** @type {string | null} */
+      /** @type {string | AnchorPiece | null} */
       let prev = left;
       for (const ch of chunks) {
         if (ch.made) continue;

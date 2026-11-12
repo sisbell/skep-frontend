@@ -536,18 +536,31 @@ const NO_LINK = 'B3.row.no-link';
 /** an inert slot's own reason, by its string's id: the words the slot gives as it is activated where no hold stands (P47) */
 export const reasonOf = (/** @type {InertSlot} */ slot) => INERT_REASON[slot];
 
+/** the string each reason a board's drafts cannot be written for answers a slot that sends by (W-WRITE's `Unwritable`; B3-S13; P72): that surface's own line */
+const SURFACE_REASON = /** @type {Record<import('../write/write.js').Unwritable['why'], (detail: string | null | undefined) => string>} */ ({
+  keyless: () => 'B3.keyless', another_window: () => 'B3.another_window', held_full: () => 'B3.held_full.line', death: () => 'B3.death.caret',
+  store_halted: (detail) => (detail === 'damaged' ? 'B3.store_halted.damaged' : 'B3.store_halted.newer'),
+});
+
 /**
- * The row rule's reason while a document holds a line the board has not kept
- * (foundations §3.1; P47), keyed on what ends the state: where a held line
- * stands refused, an act of the person's comes first; else a resend follows.
- * Read from the held lines alone (W-WRITE's `heldOf`); null where none is held.
+ * The reason a slot that sends gives while its document's words cannot go to
+ * the board (foundations §3.1; P47, P72; D6 BM-62): where the board's drafts
+ * cannot be written at all, that surface's own line, first (W-WRITE's
+ * `unwritable`); else the row rule's, keyed on what ends the state — where a
+ * held line awaits the person's act or stands moved, or the page keeps a
+ * refusal of the draft, an act of the person's comes first; else a resend
+ * follows. Read from W-WRITE's record alone; null where the draft holds no
+ * such word and its board can be written.
  * @param {string} addr
  * @returns {Reason | null}
  */
 function heldReason(addr) {
-  const rows = WRITE.heldOf(addr);
-  if (!rows.length) return null;
-  const id = rows.some((r) => r.refusal) ? 'B3.row.held.resolve' : 'B3.row.held.resend';
+  const block = WRITE.unwritable(addr), b = REC.board();
+  if (block) { const id = SURFACE_REASON[block.why](block.detail); return { id, text: t(id, { board: b ? t('L.mirror.board.name', { node: '1', origin: b.origin }) : '' }) }; }
+  const rows = WRITE.heldOf(addr), islands = WRITE.islandsOf(addr);
+  if (!rows.length && !islands.length) return null;
+  const acts = islands.length > 0 || rows.some((r) => r.cause === 'moved' || (!!r.refusal && !['head_unreadable', 'session_died'].includes(r.refusal.name)));
+  const id = acts ? 'B3.row.held.resolve' : 'B3.row.held.resend';
   return { id, text: t(id, { label: LAYER.boxName(addr).name }) };
 }
 

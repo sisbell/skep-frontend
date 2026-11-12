@@ -202,7 +202,7 @@
 // FP-26, FP-30, FP-31, FP-33, FP-34.
 
 import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint } from '../util.js';
-import { t, tHTML, plural, bracketed, withheldLine } from '../strings.js';
+import { t, tHTML, plural, bracketed, withheldLine, endingOf } from '../strings.js';
 import { textOf, recordValue } from '../model/records.js';
 import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType, isAddress } from '../model/address.js';
 import { touches, posOfChar, charOfPos } from './span.js';
@@ -250,6 +250,7 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {boolean} [lags] the board lags past a second (M-PUMP's `boardKept`; FP-23): the corner names neither the latest version nor the chain's count; absent, false
  * @property {KeptState | null} [kept] a draft's kept state (W-WRITE's `keptOf`): the word its corner's slot shows; absent or null, no state is set and the slot stands empty
  * @property {boolean} [keptOpen] the kept word's statement stands open in the corner, on its act (T-LAYER's `openStatement`, SC's); absent, closed
+ * @property {KeptSaid} [keptSaid] what the kept word's statement is said by, beside its state (T-LAYER's `keptSaid`): the board's silence, the venue, the board's name and what opened it; absent, the save chord's on the notebook, the board answering
  * @property {boolean} [opened] the corner, compact in its room, stands opened whole on the reader's act (FP-26): the item its compact form draws as a glyph stands in its words as the act that compacts it again, and the glyph, where it stands, says it is expanded; absent, false
  * @property {boolean} [acts] false: the corner's items stand as their words, no act among them — the form a corner at its document's head opens beneath its rows, which hold its acts (T-LAYER's `headOf`, `sceneHead`); absent, true
  * @property {number} [cpl] the measure the article's column is set at, in characters of its face (P-CAM's measure in force on the plane, the full measure in a pane): what a withheld run's gap holds is read at it (`gapHolds`); absent, the full measure
@@ -1183,19 +1184,56 @@ const KEPT_WORDS = /** @type {Record<KeptState['word'], string>} */ ({ kept: 'B3
 export const keptWord = (k) => ({ id: KEPT_WORDS[k.word], text: t(KEPT_WORDS[k.word]) });
 
 /**
- * A kept state's statement (D5 K-74; B3-S1, B3-S2): what the kept word's act
- * opens whole and the save chord answers with — at "kept" the save chord's
- * line, "nothing to save — everything here is kept"; at "not yet kept" and
- * "not kept" "nothing to save —" before the word, the reason standing after
- * the word on this act where the state carries one, joined as a kept clause
- * joins its reason.
+ * @typedef {Object} KeptSaid — what a kept state's statement is said by, beside the state (`keptStatement`)
+ * @property {boolean} [silent] the board is not answering, by the shell's own verdict (M-REC's `daemon`), never by a request's failure
+ * @property {boolean} [notebook] the venue is the person's own notebook; so where left out
+ * @property {string} [board] the board's name, as the status region names it
+ * @property {'save' | 'word'} [how] what opened the statement: the save chord, whose answer it is, or the kept word's own act; the save chord where left out
+ */
+
+/** the string a kept state's cause is said in on the word's act, by the cause's token (D6 BM-8, BM-10, BM-19, BM-20); a cause the board's own line says, and one the table holds no words for, has none */
+const KEPT_CAUSES = /** @type {Record<string, string>} */ ({
+  durability: 'B3.durability', out_of_bounds: 'B3.own-bug', empty_content: 'B3.own-bug', not_content_subspace: 'B3.own-bug', island: 'B3.island', held_full: 'B3.held_full.refused',
+});
+
+/**
+ * The reason a kept state carries, in words (B3-S2; D6 BM-8, BM-23): the
+ * words it was set with; else its cause's — a session's ending by the entry
+ * of its arm (ST's `endingOf`; FP-32), any other by its own string
+ * (`KEPT_CAUSES`); null where it carries none, or none the table words.
  * @param {KeptState} k
+ * @returns {string | null}
+ */
+function keptReason(k) {
+  if (k.reason) return k.reason;
+  if (!k.cause) return null;
+  const id = k.cause.token === 'session_died' || k.cause.token === 'death' ? endingOf(k.cause.arm) : KEPT_CAUSES[k.cause.token];
+  return id ? t(id) : null;
+}
+
+/**
+ * A kept state's statement (D5 K-57, K-74; B3-S1, B3-S2): what the kept
+ * word's act opens whole and the save chord answers with — at "kept" the
+ * save chord's line, "nothing to save — everything here is kept"; at "not
+ * yet kept" while the board is not answering, the one statement the table
+ * holds for that silence, by the venue and by what opened it — the save
+ * chord's answer, or the word's own statement — never assembled from a word
+ * and a reason; at any other "not yet kept", and at "not kept", "nothing to
+ * save —" before the word, the reason standing after the word on this act
+ * where the state carries one (`keptReason`), joined as a kept clause joins
+ * its reason.
+ * @param {KeptState} k
+ * @param {KeptSaid} [said]
  * @returns {{id: string, text: string}}
  */
-export function keptStatement(k) {
+export function keptStatement(k, said = {}) {
   if (k.word === 'kept') return { id: 'B3.save.kept', text: t('B3.save.kept') };
-  const w = keptWord(k);
-  const words = k.reason ? t('L.kept.failed', { clause: w.text, reason: k.reason }) : w.text;
+  if (k.word === 'not yet kept' && said.silent) {
+    const own = said.notebook !== false, id = said.how === 'word' ? (own ? 'B3.kept.held' : 'B3.kept.held.board') : own ? 'B3.save.held' : 'B3.save.held.board';
+    return { id, text: t(id, { board: said.board ?? '' }) };
+  }
+  const w = keptWord(k), reason = keptReason(k);
+  const words = reason ? t('L.kept.failed', { clause: w.text, reason }) : w.text;
   return { id: 'B3.save.before', text: `${t('B3.save.before')} ${words}` };
 }
 
@@ -1211,10 +1249,11 @@ const keptSlotEm = (measure) => Math.max(...Object.values(KEPT_WORDS).map((id) =
  * A kept state's statement as the corner opens it whole (`keptStatement`): a
  * line of its own, its words wrapped and never cut.
  * @param {KeptState} k
+ * @param {KeptSaid} [said] what it is said by, beside the state
  * @returns {string}
  */
-export function statementHTML(k) {
-  const st = keptStatement(k);
+export function statementHTML(k, said) {
+  const st = keptStatement(k, said);
   return `<span class="kept-statement" data-string="${esc(st.id)}">${esc(st.text)}</span>`;
 }
 
@@ -1246,7 +1285,7 @@ function keptLineHTML(v, statement = true) {
   const slot = !k ? `<span class="kept-word pending" aria-hidden="true" style="width:${em}em"></span>`
     : v.acts === false ? `<span class="kept-word"${own}>${esc(t(KEPT_WORDS[k.word]))}</span>`
       : actHTML('kept-word', ` data-kept="${esc(k.word)}"${own} aria-expanded="${!!v.keptOpen}"`, esc(t(KEPT_WORDS[k.word])));
-  return `<span class="kept-line">${slot}</span>` + (k && v.keptOpen && statement ? statementHTML(k) : '');
+  return `<span class="kept-line">${slot}</span>` + (k && v.keptOpen && statement ? statementHTML(k, v.keptSaid) : '');
 }
 
 /**

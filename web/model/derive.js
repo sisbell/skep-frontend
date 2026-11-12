@@ -8,11 +8,14 @@
 // derived from and what was applied — and never writes into M-REC's
 // documents, composes nothing for the bridge and sends nothing (FP-14).
 // `applyHeld` switches on the VALUE of each row's frame's `op` — insert,
-// delete, copy, reinstate, rearrange — and applies it at the positions the
-// frame names, in the text as it stands after the rows before it; the
-// runs, the blocks and the V→I image move together, so a passage keeps its
-// identity through an edit above it and inserted bytes stand placed by no
-// identity. A row it cannot apply exactly stops the apply at that row: a
+// delete, copy, reinstate, rearrange — and applies it in the text as it
+// stands after the rows before it: where the row's anchors name bytes that
+// text places, beside them (`anchored`), else at the positions the frame
+// names; the runs, the blocks and the V→I image move together, so a passage
+// keeps its identity through an edit above it, and inserted bytes stand
+// placed by the identity the caller names them by (`Named`), their source
+// with it, or, where it names none, by no identity. A row it cannot apply
+// exactly stops the apply at that row: a
 // position outside the text held, a span not whole in the runs, a copy or a
 // reinstate whose material no record at hand holds, a rearrange whose cuts
 // are not three or four in order, a frame of another kind — the answer names
@@ -30,6 +33,11 @@
 // already (`Edit.based`) is applied to nothing: it stands for the put-back
 // that names it, which places what it took as the edit keeps it
 // (`Edit.took`), bytes the record's text holds nowhere and no source names.
+// A record `applyHeld` derived with its inserts named is applied over as any
+// record is, its sources standing. `placedAgain` places a draft's edits again
+// in another text — or in the same, some of them left out — by the identity
+// of the bytes each touches and of those either side, and says which it
+// could not place exactly.
 // `sourceRuns` splits a span of that text into
 // what the delivered text holds and what the edits made — the one reading of
 // a span the board is asked about, so no question reaches the board by a
@@ -40,7 +48,7 @@
 // encodings).
 // Rules: FP-1, FP-2, FP-6, FP-7, FP-14.
 
-import { deriveBlocks, placedIn, pageSpace, transcludedRuns } from './records.js';
+import { deriveBlocks, placedIn, identityIn, pageSpace, transcludedRuns } from './records.js';
 import { parseVSpan, documentOf, accountOf } from './address.js';
 import { byteLength, byteOffsets, sliceBytes } from '../util.js';
 
@@ -281,18 +289,29 @@ function material(span, t, origin) {
   return null;
 }
 
+/** @typedef {(held: number, width: number) => ISpan[]} Named — the identity a caller names a held line's inserted bytes by (`applyHeld`): for the line of ordinal `held`, its `width` bytes in order — the page's own names for them (W-WRITE's), in the page's space of the draft */
+
 /**
  * One frame applied to a text (see the head), by the value of its `op`.
  * @param {Text} t
  * @param {Record<string, unknown>} frame
  * @param {Sources} sources
+ * @param {((width: number) => ISpan[]) | null} [named] the identity of an insert's bytes, in order, where the caller names them; they are then sourced as bytes the page made
  * @returns {Text}
  */
-function applyFrame(t, frame, sources) {
+function applyFrame(t, frame, sources, named = null) {
   switch (frame.op) {
     case 'insert': {
-      const runs = valueRuns(frame.values);
-      return placeAt(t, position(frame.at), runs, []);
+      const runs = valueRuns(frame.values), width = runs.reduce((n, r) => n + r.width, 0);
+      /** @type {ImageRun[]} */
+      const ids = [], src = [];
+      let at = 1;
+      for (const x of named && width ? named(width) : []) {
+        ids.push({ pos: at, width: x.width, prefix: x.prefix, ordinal: x.ordinal });
+        if (x.prefix === pageSpaceOf(frame)) src.push({ pos: at, width: x.width, prefix: PAGE, ordinal: x.ordinal });
+        at += x.width;
+      }
+      return placeAt(t, position(frame.at), runs, ids, src);
     }
     case 'delete':
       return removeAt(t, position(frame.p), nat(frame.width));
@@ -404,20 +423,61 @@ const textOfDoc = (/** @type {Doc} */ doc) => /** @type {Text} */ ({ runs: doc.r
  * the record answered holds the rows before it, and `stopped` names it and
  * why. The record handed in is never changed.
  * @param {Doc} doc the document's record, its runs in position order
- * @param {HeldLine[]} rows the held lines, in `k` order
+ * @param {readonly HeldLine[]} rows the held lines, in `k` order
  * @param {Sources} [sources] the records at hand a copy or a reinstate may take its material from; none where left out
+ * @param {Named | null} [named] the identity each line's inserted bytes are named by; where one is handed in the record answered names every byte's source (`Derivation.source`), so the page's edits apply over it (`applyEdits`); none, and no source, where left out
  * @returns {Applied}
  */
-export function applyHeld(doc, rows, sources = () => null) {
-  let t = textOfDoc(doc);
+export function applyHeld(doc, rows, sources = () => null, named = null) {
+  let t = named ? /** @type {Text} */ ({ ...textOfDoc(doc), source: baseSource(doc) }) : textOfDoc(doc);
   /** @type {number[]} */
   const applied = [];
   /** @type {Applied['stopped']} */
   let stopped = null;
   for (const row of rows) {
-    try { t = applyFrame(t, row.frame, sources); applied.push(row.held); } catch (e) { if (e instanceof Stop) { stopped = { row, why: e.why }; break; } throw e; }
+    try { t = applyFrame(t, anchored(t, row), sources, named ? (width) => named(row.held, width) : null); applied.push(row.held); } catch (e) { if (e instanceof Stop) { stopped = { row, why: e.why }; break; } throw e; }
   }
-  return { doc: recordOver(doc, t, { from: doc.addr, rows: applied, edits: 0, at: null }), applied: applied.length, stopped };
+  return { doc: recordOver(doc, named ? { ...t, image: joined(t.image) } : t, { from: doc.addr, rows: applied, edits: 0, at: null, ...(named ? { source: joined(t.source) } : {}) }), applied: applied.length, stopped };
+}
+
+/** the page's space of the draft a frame names (M-REC's `pageSpace`): the space a held insert's bytes are sourced as the page's own in; '' where the frame names no draft */
+const pageSpaceOf = (/** @type {Record<string, unknown>} */ frame) => (typeof frame.doc === 'string' ? pageSpace(frame.doc) : '');
+
+/** every position a delivered text may hold as its own source (`Text.source`), the ones the page holds no run of among them: its extent, its window and its image's reach */
+function baseSource(/** @type {Doc} */ doc) {
+  const reach = Math.max(doc.to, doc.extent != null ? doc.extent + 1 : 0, doc.imageFor ? doc.imageFor[1] : 0, 1);
+  return /** @type {ImageRun[]} */ (reach > 1 ? [{ pos: 1, width: reach - 1, prefix: BASE, ordinal: 1 }] : []);
+}
+
+/** where the one byte an anchor's edge names by its address stands in a text; null where the edge names none so, or the text places it nowhere, or twice */
+function edgeAt(/** @type {Text} */ t, /** @type {unknown} */ edge) {
+  if (typeof edge !== 'string' || edge.lastIndexOf('.') < 1) return null;
+  const at = placedIn(t.image, [{ ...iPlace(edge), width: 1 }]);
+  return at.length === 1 && at[0].width === 1 ? at[0].pos : null;
+}
+
+/**
+ * A held line's frame as it is applied to a text (see the head): where its
+ * anchors name bytes the text places, the frame at those bytes — a placement
+ * after the unit before it, else before the unit after it; a delete at its
+ * span where the text holds it whole in one stretch, else between its two
+ * units — and the frame as it stands where they name none the text places.
+ * @param {Text} t
+ * @param {HeldLine} row
+ * @returns {Record<string, unknown>}
+ */
+function anchored(t, row) {
+  const f = row.frame, a = row.anchors;
+  if (!a) return f;
+  const before = edgeAt(t, a.before), after = edgeAt(t, a.after);
+  const at = (/** @type {number} */ pos) => ({ ordinal: String(pos), subspace: '1' });
+  if (f.op === 'insert' || f.op === 'copy' || f.op === 'reinstate') return before != null ? { ...f, at: at(before + 1) } : after != null ? { ...f, at: at(after) } : f;
+  if (f.op !== 'delete') return f;
+  const spans = (a.span || []).map((r) => ({ ...iPlace(r.start), width: Number(r.width) }));
+  const stands = spans.length && spans.every((x) => Number.isSafeInteger(x.width) && x.width > 0) ? placedIn(t.image, spans) : [];
+  const width = spans.reduce((n, x) => n + x.width, 0);
+  if (stands.length === 1 && stands[0].width === width) return { ...f, p: at(stands[0].pos), width: String(width) };
+  return before != null ? { ...f, p: at(before + 1) } : f;
 }
 
 /**
@@ -439,22 +499,51 @@ export function applyHeld(doc, rows, sources = () => null) {
  * @returns {{doc: Doc, applied: number, stopped: {index: number, why: Why} | null, removed: Array<ISpan[] | null>, took: Array<import('./records.js').Took | null>}} `removed` what each edit applied took out of the text, by its index, as bytes by identity in the text's order — none of them where the image named none; null for an edit that removed nothing; `took` the same bytes as the runs removed and their identity, each at its position from 1: what a put-back of them places
  */
 export function applyEdits(doc, edits, ids = (page, width) => [{ prefix: pageSpace(doc.addr), ordinal: page, width }]) {
-  // every position the delivered text may hold is its own source, the ones the page holds no run of among them: its extent, its window and its image's reach
-  const reach = Math.max(doc.to, doc.extent != null ? doc.extent + 1 : 0, doc.imageFor ? doc.imageFor[1] : 0, 1);
-  let t = /** @type {Text} */ ({ ...textOfDoc(doc), source: reach > 1 ? [{ pos: 1, width: reach - 1, prefix: BASE, ordinal: 1 }] : [] });
+  const c = chainOver(doc, ids);
   let applied = 0;
   /** @type {{index: number, why: Why} | null} */
   let stopped = null;
-  /** @type {Array<{runs: Run[], ids: ImageRun[], src: ImageRun[]} | null>} what each edit removed, by its index: what a put-back places again */
-  const removed = [];
   for (const [i, e] of edits.entries()) {
-    try {
+    try { c.apply(e); applied++; } catch (x) { if (x instanceof Stop) { stopped = { index: i, why: x.why }; break; } throw x; }
+  }
+  const t = c.text(), removed = c.removed;
+  return {
+    doc: recordOver(doc, { ...t, image: joined(t.image) }, { from: doc.addr, rows: doc.derived ? doc.derived.rows : [], edits: applied, at: null, source: joined(t.source) }), applied, stopped,
+    removed: removed.map((r) => (r ? r.ids.map((x) => ({ prefix: x.prefix, ordinal: x.ordinal, width: x.width })) : null)),
+    took: removed.map((r) => (r ? { runs: r.runs.map(copyRun), ids: r.ids.map((x) => ({ ...x })) } : null)),
+  };
+}
+
+/**
+ * @typedef {Object} Chain — a text a draft's edits are applied to one at a time (`chainOver`)
+ * @property {() => Text} text the text as it stands after the edits applied so far
+ * @property {Array<{runs: Run[], ids: ImageRun[], src: ImageRun[]} | null>} removed what each edit applied removed, by its index among them: what a put-back places again
+ * @property {(e: Edit) => void} apply one edit applied (see `applyEdits`), the next index taken; a `Stop` where it cannot be, its index taken all the same
+ */
+
+/**
+ * A record's text as a chain of edits is applied to it (`applyEdits`,
+ * `placedAgain`): every byte of it named by its source — as the record's own
+ * derivation names it, where `applyHeld` derived it with its inserts named,
+ * else a position of the text itself.
+ * @param {Doc} doc
+ * @param {(page: number, width: number) => ISpan[]} ids
+ * @returns {Chain}
+ */
+function chainOver(doc, ids) {
+  let t = /** @type {Text} */ ({ ...textOfDoc(doc), source: doc.derived && doc.derived.source ? doc.derived.source.map((r) => ({ ...r })) : baseSource(doc) });
+  /** @type {Chain['removed']} */
+  const removed = [];
+  return {
+    text: () => t,
+    removed,
+    apply(e) {
+      const i = removed.length;
       removed[i] = null;
       if (e.based) {
         // what it took, each byte the page made named as the caller names it now: by the address the board minted it at since
         if (e.took) removed[i] = { runs: e.took.runs.map(copyRun), ids: e.took.ids.flatMap((r) => (r.prefix === pageSpace(doc.addr) ? renamed(r, ids(r.ordinal, r.width)) : [{ ...r }])), src: [] };
-        applied++;
-        continue;
+        return;
       }
       if (e.width > 0) {
         const s = stretchOf(t.runs, t.image, e.pos, e.width);
@@ -474,14 +563,83 @@ export function applyEdits(doc, edits, ids = (page, width) => [{ prefix: pageSpa
         if (e.page != null) for (const x of ids(e.page, width)) { named.push({ pos: at, width: x.width, prefix: x.prefix, ordinal: x.ordinal }); at += x.width; }
         t = placeAt(t, e.pos, [{ pos: 1, width, kind: 'content', text: e.text, ref: null, origin: null }], named, [{ pos: 1, width, prefix: PAGE, ordinal: e.page ?? 0 }]);
       }
-      applied++;
-    } catch (x) { if (x instanceof Stop) { stopped = { index: i, why: x.why }; break; } throw x; }
-  }
-  return {
-    doc: recordOver(doc, { ...t, image: joined(t.image) }, { from: doc.addr, rows: [], edits: applied, at: null, source: joined(t.source) }), applied, stopped,
-    removed: removed.map((r) => (r ? r.ids.map((x) => ({ prefix: x.prefix, ordinal: x.ordinal, width: x.width })) : null)),
-    took: removed.map((r) => (r ? { runs: r.runs.map(copyRun), ids: r.ids.map((x) => ({ ...x })) } : null)),
+    },
   };
+}
+
+/**
+ * @typedef {Object} PlacedAgain — what `placedAgain` answers
+ * @property {Edit[]} edits the edits kept, in order, each at its place in the text they are placed in
+ * @property {Map<number, number>} index where each edit kept stands among them, by its index among the edits handed in
+ * @property {number[]} adrift the edits among them not placed exactly, by their index there: a byte either side of one, or a byte it removed, stands nowhere in that text, or the two sides no longer meet
+ */
+
+/**
+ * A draft's edits placed again (see the head; D6 BM-56; FP-38): each edit
+ * `keep` keeps, in order, set in the text of `now` as it stands after the
+ * edits placed before it, by the identity of the bytes it touches and of
+ * those either side as the text of `was` named them where it was made —
+ * what it removed taken out wherever those bytes stand, a stretch at a time;
+ * what it placed set where they stood, else after the byte that stood before
+ * it, else before the one after it, else at the text's edge it stood at, else
+ * at its own position held inside the text. An edit is placed EXACTLY where
+ * the bytes it removed stand whole in one stretch and the bytes either side
+ * of it stand either side of it still; the rest are named (`adrift`). A
+ * put-back of bytes an edit left out removed is left out with it: those bytes
+ * stand where they stood. An edit the record's text holds the change of
+ * (`Edit.based`) is kept as it is. Neither record is changed.
+ * @param {Doc} was the record the edits were made over
+ * @param {Doc} now the record they are placed in: the same, where some are only left out
+ * @param {readonly Edit[]} edits
+ * @param {(e: Edit, i: number) => boolean} [keep] the edits kept; all where left out
+ * @param {(page: number, width: number) => ISpan[]} [ids] the identity of bytes the page made (see `applyEdits`)
+ * @param {(e: Edit, i: number) => Edit} [as] each edit kept as it is kept: one answered `based` is kept as answered, placed nowhere
+ * @returns {PlacedAgain}
+ */
+export function placedAgain(was, now, edits, keep = () => true, ids = (page, width) => [{ prefix: pageSpace(was.addr), ordinal: page, width }], as = (e) => e) {
+  const a = chainOver(was, ids), b = chainOver(now, ids);
+  /** @type {Edit[]} */
+  const out = [];
+  /** @type {Map<number, number>} */
+  const index = new Map();
+  /** @type {number[]} */
+  const adrift = [];
+  /** the old chain still stands: an edit of it stopped, the edits after it keep their own positions */
+  let read = true;
+  const put = (/** @type {Edit} */ e) => { try { b.apply(e); } catch (x) { if (!(x instanceof Stop)) throw x; } out.push(e); };
+  for (const [i, e] of edits.entries()) {
+    const ta = a.text();
+    // the document's own edges, never a window's: its first position, and one past its last as the edits so far left it
+    const by = !read || e.based ? null : {
+      before: e.pos > 1 ? identityIn(ta.image, e.pos - 1, 1) : [], after: identityIn(ta.image, e.pos + e.width, 1), span: e.width > 0 ? identityIn(ta.image, e.pos, e.width) : [],
+      first: e.pos <= 1, last: was.extent != null && e.pos + e.width > was.extent + ta.delta,
+    };
+    if (read) try { a.apply(e); } catch (x) { if (!(x instanceof Stop)) throw x; read = false; }
+    if (!keep(e, i) || (e.back && !index.has(e.back.of))) continue;
+    const k = as(e, i);
+    const back = k.back ? { ...k.back, of: /** @type {number} */ (index.get(k.back.of)) } : k.back;
+    if (!by || k.based) { index.set(i, out.length); put({ ...k, back }); continue; }
+    const tb = b.text(), eb = extentOf(tb.runs);
+    /** the first position of the text placed in, and one past its last */
+    const start = 1, close = now.extent != null ? now.extent + tb.delta + 1 : eb ? eb.to : 1;
+    const one = (/** @type {ISpan[]} */ x) => { const at = x.length ? placedIn(tb.image, x) : []; return at.length === 1 && at[0].width === 1 ? at[0].pos : null; };
+    const before = one(by.before), after = one(by.after);
+    const stands = by.span.length ? placedIn(tb.image, by.span) : [];
+    const whole = e.width > 0 && stands.length === 1 && stands[0].width === e.width;
+    // where it stands: at what it removed, else after the byte before it, else before the one after it, else at the edge it stood at
+    const end = whole ? stands[0].pos + e.width : stands.length ? stands[stands.length - 1].pos + stands[stands.length - 1].width : null;
+    const pos = stands.length ? stands[0].pos : before != null ? before + 1 : after != null ? after : by.first ? start : by.last ? close : null;
+    const left = by.first ? (stands.length ? stands[0].pos : pos) === start : before != null && before + 1 === (stands.length ? stands[0].pos : pos);
+    const right = by.last ? (end ?? pos) === close : after != null && after === (end ?? pos);
+    const exact = pos != null && (e.width > 0 ? whole : true) && left && right;
+    const at = pos ?? (eb ? Math.min(Math.max(e.pos, eb.from), eb.to) : 1);
+    // what it removed, the stretches after the first taken out first, so each stands where it is named
+    for (const st of stands.slice(1).reverse()) put({ ...k, pos: st.pos, width: st.width, text: '', page: null, back: null });
+    index.set(i, out.length);
+    if (!exact) adrift.push(out.length);
+    put({ ...k, pos: at, width: stands.length ? stands[0].width : 0, back });
+  }
+  return { edits: out, index, adrift };
 }
 
 /** a run of bytes the page made, placed as it stands, named by the identity given for them, in order */

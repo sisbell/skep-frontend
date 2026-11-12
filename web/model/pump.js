@@ -652,7 +652,7 @@ export function start(opts) {
   onCounted = opts.onCounted || (() => {});
   onOpen = opts.onOpen || (() => {});
   finding = opts.finding || (() => null);
-  standing = new Set(); halved.clear();
+  standing = new Set(); halved.clear(); typingRows.clear(); ownDocs.clear();
   classes++; again.clear(); claimsOut.clear(); unkeepAll(); unkeep(keptBoard, BOARD); lifts.clear(); boardFound = null;
   rowsHeld = null; caught = null; gap = null; faces.clear(); ownAt.clear();
   started = true;
@@ -732,19 +732,23 @@ export function takeRow(u) {
  * in.
  * A draft the page holds dialed words of that the board has not acked
  * (M-REC's `writing`) is kept as it stands and not read: its acks read it
- * (`wrote`). A document the row touches at a position the window's own write
- * was acked at (`ownAt`) is read again as that act's feedback.
+ * (`wrote`). A draft whose burst stands open, typed and not dialed (M-REC's
+ * `typing`), is kept as it stands too, its read again owed to the burst's
+ * commit (`readOwed`). A document the row touches at a position the window's
+ * own write was acked at (`ownAt`) is read again as that act's feedback.
  * @param {FeedUpdate} u
  * @param {number} at the page's clock at the row or drop that left behind what it names: its arrival, or the stream's drop for a row a catch-up read (`drain`)
  * @param {boolean} [raiseFeed] false where M-PUMP's drafts read applies a drafts entry (D6): `draftsAt` is raised, not `feedAt`
  */
 function applyRow(u, at, raiseFeed = true) {
   if (u.op === 'publish') for (const named of Array.isArray(u.docs) ? u.docs : []) if (isTrunkMember(named)) arrive(named, u.position);
-  const shown = shownNow(), keep = new Set([...keptNow(shown), ...REC.writingDocs()]);
+  const shown = shownNow(), keep = new Set([...keptNow(shown), ...REC.writingDocs(), ...REC.typingDocs()]);
   const touched = REC.applyFeedUpdate(u, keep, new Set(shown.map((a) => REC.ownerAccount(REC.doc(a)))), raiseFeed);
   for (const m of whileOut) m.rows.push(u);
   for (const addr of touched) {
     if (REC.writing(addr)) continue;
+    // a draft being typed in is not read again (FP-23): the row waits for its burst's commit, save the window's own, its act's feedback
+    if (REC.typing(addr) && !ownAck(addr, u.position)) { if (!typingRows.has(addr)) typingRows.set(addr, at); continue; }
     if (keep.has(addr)) readAgain(addr, at, null, ownAck(addr, u.position)); else forget(addr);
   }
   onDrop({ row: u, addrs: touched, at });
@@ -766,17 +770,22 @@ const originsShown = () => new Set(shownNow().flatMap((a) => REC.withheldOrigins
 
 /**
  * What a feed row keeps as held, reading it again (`readAgain`): the
- * documents the view shows (`shownNow`), and the homes of the edition claims
+ * documents the view shows (`shownNow`), the homes of the edition claims
  * held on the origins their withheld runs name, whose publication and owner
- * decide the clause there (PUB-5.99; T-ARTICLE's `editionClause`).
+ * decide the clause there (PUB-5.99; T-ARTICLE's `editionClause`), and each
+ * draft the window's own writes were told of while the page holds its text
+ * (`ownDocs`; FP-23, FP-38).
  * @param {string[]} [shown] the documents the view shows, where the caller has read them
  * @returns {string[]}
  */
 function keptNow(shown = shownNow()) {
   const origins = new Set(shown.flatMap((a) => REC.withheldOrigins(a)));
   const homes = [...origins].flatMap((o) => { const c = REC.editionClaimsOf(o); return Array.isArray(c) ? c.map((x) => homeOf(x) || x) : []; });
-  return [...new Set([...shown, ...homes])];
+  return [...new Set([...shown, ...homes, ...[...ownDocs].filter((a) => REC.has(a) && REC.doc(a).from >= 0)])];
 }
+
+/** @type {Set<string>} the drafts the window's own writes were told of (`wrote`): each kept as the view's while the page holds its text, wherever the plane places it, so the reads its acks ask set it and no row drops what the person is writing in */
+const ownDocs = new Set();
 
 /**
  * The documents windowing these origins told that the clause on each may be
@@ -909,17 +918,45 @@ const ownAck = (/** @type {string} */ addr, /** @type {number} */ position) => (
  * act's feedback; and, once the page holds no dialed word of the document the
  * board has not acked (M-REC's `writing`), what the page holds of it read
  * again as a row naming it would read it — held as it stands and set in one
- * step where the view keeps it (`readAgain`), as feedback; else dropped, to be
- * read when it is shown. Nothing is read before the pump starts.
+ * step where the view keeps it (`readAgain`), as feedback, a draft the page
+ * holds the text of kept from now on wherever the plane places it
+ * (`ownDocs`); else dropped, to be read when it is shown. Nothing is read
+ * before the pump starts.
  * @param {string} addr
  * @param {readonly number[]} ats the positions the board acked the writes at
  */
 export function wrote(addr, ats) {
   if (ats.length) ownAt.set(addr, [...(ownAt.get(addr) || []), ...ats].slice(-OWN_KEPT));
+  ownDocs.add(addr);
   if (!started || REC.writing(addr)) return;
   if (keptNow().includes(addr)) readAgain(addr, Date.now(), null, true);
   else { REC.invalidate(addr); forget(addr); }
   dirty();
+}
+
+/** @type {Map<string, number>} the drafts a row named while their burst stood open, typed and not dialed (M-REC's `typing`), each with the page's clock at the first such row: read again at the burst's commit (`readOwed`) */
+const typingRows = new Map();
+
+/** does a draft owe a read again a row asked for while it was being typed in (`readOwed`)? */
+export const owesRead = (/** @type {string} */ addr) => typingRows.has(addr);
+
+/**
+ * The read again a draft owes a row that named it while its burst stood open
+ * (see `applyRow`; D6 BM-56; FP-23), made now, as the burst is committed:
+ * what the page holds of it read again and set in one step (`readAgain`),
+ * settled once that read lands — at most DROP_ATTEMPTS of them, so a run of
+ * rows never holds the burst. At once where it owes none, or the pump has not
+ * started.
+ * @param {string} addr
+ * @returns {Promise<void>}
+ */
+export async function readOwed(addr) {
+  const since = typingRows.get(addr);
+  if (since == null) return;
+  typingRows.delete(addr);
+  if (!started) return;
+  readAgain(addr, since);
+  await readAgainFirst(addr);
 }
 
 /**
@@ -1351,7 +1388,7 @@ function classChanged(stood) {
   const at = Date.now();
   classes++;
   if (armed != null) { clearTimeout(armed); armed = null; }
-  asked.clear(); retryAt.clear(); unreached.clear();
+  asked.clear(); retryAt.clear(); unreached.clear(); typingRows.clear(); ownDocs.clear();
   again.clear(); claimsOut.clear(); unkeepAll(); for (const wake of [...waking]) wake();
   for (const m of whileOut) { m.rows = []; m.state = false; }
   if (rowsHeld) for (const h of rowsHeld) h.taken = false;

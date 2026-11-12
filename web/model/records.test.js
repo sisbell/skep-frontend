@@ -1058,3 +1058,56 @@ test('those watching a change of the page\'s class are told once it is taken —
   assert.deepEqual(told, [[-1, 1], [-1, 1], [-1, 1]], 'told three times, each once the draft\'s text had gone, the mint standing');
 });
 
+/** @type {Set<string>} the drafts the test's keeper says hold words the board has not kept (`keptAtEnding`): a registration made once, read as each test sets it */
+const UNKEPT = new Set();
+REC.keptAtEnding((addr) => UNKEPT.has(addr));
+/** @type {string[]} the documents whose text was told about to go or be set again (`beforeText`), in order */
+const LEAVING = [];
+REC.beforeText((addr) => { LEAVING.push(addr); });
+
+test('#448: a change of the page\'s class that ends the session leaves a draft holding words the board has not kept as it was read — its text, its extent, its image, its row and its kind, neither covered nor owed its read — and covers every other draft as before; a change that ends no session keeps none', () => {
+  const D = '1.0.1.0.2', E = '1.0.1.0.5';
+  const read = (/** @type {string} */ addr) => { REC.takeSpanSet(addr, [{ subspace: 1, ordinal: 1, positions: 3 }]); REC.takeDelivery(addr, [{ pos: 1, width: 3, kind: 'content', text: 'abc', ref: null, origin: null }], 7, { from: 1, runs: [{ iStart: addr + '.0.1.1', width: 3 }] }); };
+  const set = () => {
+    REC._reset();
+    REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true, fingerprint: null });
+    REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: 'abc', standing: 'yours_to_read' }, { doc: E, kind: 'draft', label: 'abc', standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
+    read(D); read(E);
+  };
+  UNKEPT.clear(); UNKEPT.add(D);
+  try {
+    set();
+    REC.sessionDied({ arm: 'retired' }, [D, E]);
+    const d = REC.doc(D), e = REC.doc(E);
+    assert.deepEqual([d.refused, REC.covered(D), REC.owed(D), d.from, d.to, d.extent, REC.textBetween(D, 1, 4), d.image.length, d.kind, d.label, REC.place(D)?.kind], [null, false, false, 1, 4, 3, 'abc', 1, 'draft', 'abc', 'draft'],
+      'the draft holding unkept words: not covered, not owed, its delivered text, extent and image standing, its row and its kind with it');
+    assert.deepEqual([e.refused, REC.covered(E), REC.owed(E), e.from, e.extent, REC.place(E)], ['withheld', true, true, -1, null, undefined], 'the draft holding none: covered at once, its delivered state gone, as before');
+    assert.ok(REC.known().includes(D) && REC.known().includes(E), 'both a box still');
+    REC.takeIndex(/** @type {any} */ ({ docs: [], counts: [], state: { arm: 'complete' } }));
+    assert.deepEqual([REC.doc(D).kind, REC.doc(D).label], ['draft', 'abc'], 'the index read again at the new class lists it no more: its kind and its label stand all the same');
+    set();
+    REC.sessionRegained({ session: 's-2', principal: 2, account: '1.0.2', writes: true, fingerprint: null }, [D]);
+    assert.deepEqual([REC.doc(D).from, REC.owed(D)], [-1, true], 'a change that ends no session — regained as another principal — keeps no draft: today\'s rule');
+  } finally { UNKEPT.clear(); }
+});
+
+test('those watching a document\'s text are told as it is about to be set again or let go, the record still as it stood — a delivery, a setting again, a drop — and only of a record that holds text; and a draft whose burst stands open is marked so, and unmarked, each a change', () => {
+  const D = '1.0.1.0.2';
+  LEAVING.length = 0;
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 3 }]);
+  REC.takeDelivery(D, [{ pos: 1, width: 3, kind: 'content', text: 'abc', ref: null, origin: null }], 7);
+  assert.deepEqual(LEAVING, [], 'a first delivery: the record held no text, nothing told');
+  /** what the record held as each watcher was told */
+  const held = [];
+  REC.beforeText((addr) => { if (addr === D) held.push(REC.textBetween(D, 1, 20)); });
+  REC.setAgain(D, { text: { runs: [{ pos: 1, width: 4, kind: 'content', text: 'abcd', ref: null, origin: null }], asOf: 9 } });
+  REC.invalidate(D);
+  REC.invalidate(D);
+  assert.deepEqual([LEAVING, held], [[D, D], ['abc', 'abcd']], 'told before the setting again and before the drop, the record as it stood each time; a record holding no text, nothing');
+  const rev = REC.rev();
+  REC.setTyping(D, true); REC.setTyping(D, true);
+  assert.deepEqual([REC.typing(D), REC.typingDocs(), REC.rev() - rev], [true, [D], 1], 'a draft being typed in: marked once');
+  REC.setTyping(D, false);
+  assert.deepEqual([REC.typing(D), REC.typingDocs()], [false, []]);
+});
+

@@ -40,6 +40,9 @@ import * as PORT from '../bridge/port.js';
 import * as REC from '../model/records.js';
 import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
+import * as WRITE from '../write/write.js';
+import * as MACHINE from '../write/machine.js';
+import * as STATEMENT from './statement.js';
 import * as LAYER from '../text/layer.js';
 import * as FOCUS from '../nav/focus.js';
 import * as KEYS from '../nav/keys.js';
@@ -351,7 +354,7 @@ test('a withheld run\'s card reads the claims on its origin before it shows, whe
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('each of the editor\'s refusal names maps to its entry\'s words — the three own-bug tokens to the one own-bug entry, the halt to one of two forms by its `why`, a token the refusal does not carry filled from the caller and else left as the design writes it — with no act; an unlisted name keeps the generic refusal line (issue #410; B3; D6)', () => {
+test('each of the editor\'s refusal names maps to its entry\'s words — the three own-bug tokens to the one own-bug entry, the halt to one of two forms by its `why`, a token the refusal does not carry filled from the caller and else left as the design writes it — a face saying words were lost under its head "not kept" with the act that copies them out, every other with no act; an unlisted name keeps the generic refusal line (issues #410, #533; B3; D6)', () => {
   const board = (/** @type {string} */ name, /** @type {object} */ [more] = [{}]) => /** @type {Refusal} */ ({ kind: 'refused', name, status: 200, code: name, detail: null, op: 'insert', site: {}, body: null, ...more });
   const shell = (/** @type {string} */ name, /** @type {object} */ [more] = [{}]) => /** @type {Refusal} */ ({ kind: 'shell', name, ...more });
   /** @type {Array<[Refusal, string, Record<string, string>?]>} each refusal, the id its face shows, and the values its words take */
@@ -371,10 +374,17 @@ test('each of the editor\'s refusal names maps to its entry\'s words — the thr
     [board('bad_target'), 'B3.bad_target'], [board('original_not_resident'), 'B3.original_not_resident'],
     [board('published_target'), 'C-45', { D: '1.0.2.0.9' }],
   ];
+  /** the names whose face says words were lost (#533): the own-bug entry, the held store's bound, the hand-over's */
+  const LOSS = ['out_of_bounds', 'empty_content', 'not_content_subspace', 'held_full', 'answers_lost'];
   for (const [r, id, values] of cases) {
-    const face = FACES.wordsFor(r, { addr: '1.0.2.0.9', board: 'board 1', time: '2 minutes', floor: '12 March 2026' });
-    assert.deepEqual([face.id, face.text, face.acts], [id, t(id, values || {}), []], `${r.name}: its entry's words, filled from the caller, and no act`);
+    let copied = 0;
+    const face = FACES.wordsFor(r, { addr: '1.0.2.0.9', board: 'board 1', time: '2 minutes', floor: '12 March 2026', copy: () => { copied++; } });
+    assert.deepEqual([face.id, face.text], [id, t(id, values || {})], `${r.name}: its entry's words, filled from the caller`);
     assert.ok(!face.text.includes('⟨'), `${r.name}: no token left unfilled where the caller fills them: ${face.text}`);
+    if (!LOSS.includes(r.name)) { assert.deepEqual([face.acts, face.head], [[], undefined], `${r.name}: no head and no act`); continue; }
+    assert.deepEqual([face.head, face.acts.map((a) => a.label)], [{ id: 'B3.not-kept', text: t('B3.not-kept') }, [t('B3.copy-words-out')]], `${r.name}: a loss face — its head "not kept", and the act that copies the unkept words out, each from the strings table (#533)`);
+    /** @type {() => void} */ (face.acts[0].run)();
+    assert.equal(copied, 1, `${r.name}: the act copies as its caller hands it in`);
   }
   const bare = FACES.wordsFor(shell('answers_lost', [{ last: 'unreachable', elapsed_ms: 120480 }]));
   assert.equal(bare.text, STRINGS['B3.answers_lost'].text, 'a token the refusal does not carry and no caller fills stands as the design writes it');
@@ -1000,3 +1010,144 @@ test('where the page URL\'s `port` names no port, why no board is held is the po
     REC.setBoard(was.board); REC.setSession(was.session);
   }
 });
+
+// ---- the faces of words the board has not kept (B3-S2; D6 BM-10 … BM-27; the statement decision §8 case 5) ----------------
+
+/** a draft of the session's account, read: the document the unkept faces stand at */
+const UD = '1.0.1.0.77';
+/** a held line of the draft as `held(session)` lists it, decoded */
+const unkeptRow = (/** @type {number} */ held, /** @type {Record<string, any>} */ more = {}) => /** @type {import('../model/frames.js').HeldLine[]} */ (F.decodeHeldRows([{ held, doc: UD, base: 7, frame: { op: 'insert', doc: UD, at: { ordinal: '1', subspace: '1' }, values: ['held words'], as_of: 7, id: 'p.' + held }, cause: 'unreachable', sent: false, time: held, ...more }]))[0];
+/** the board's verdict on a refused run, as the shell hands it up */
+const verdict = (/** @type {string} */ name) => ({ kind: 'refused', name, status: 200, code: name, detail: null, op: 'insert', site: name === 'arrangement_moved' ? { as_of: 7, current: 9 } : {}, body: null });
+/** the draft read, the page signed in as its account, nothing held */
+function unkeptDraft() {
+  MACHINE._reset(); WRITE._reset(); HOST.dismiss();
+  REC.setBoard({ board: 'b-1', name: '', origin: 'http://127.0.0.1:8644' });
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true, fingerprint: null }));
+  REC.takeSpanSet(UD, [{ subspace: 1, ordinal: 1, positions: 3 }]);
+  REC.takeDelivery(UD, [{ pos: 1, width: 3, kind: 'content', text: 'abc', ref: null, origin: null }], 7, { from: 1, runs: [{ iStart: UD + '.0.1.1', width: 3 }] });
+}
+/** the face standing as its markup says it: its head, its words by string, its acts in order — each its string, whether it is inert and by which reason — and the statement below the acts */
+function unkeptShown() {
+  const h = hostEl.innerHTML;
+  return {
+    id: HOST.currentState()?.id ?? null,
+    head: (h.match(/<div class="face-head" data-string="([^"]*)">/) || [])[1] ?? null,
+    lines: [...h.matchAll(/<div class="face-text" data-string="([^"]*)">/g)].map((m) => m[1]),
+    acts: [...h.matchAll(/<button data-run="([^"]*)" data-string="([^"]*)"((?: class="inert" aria-disabled="true" data-inert="[^"]*")?)/g)].map((m) => [m[1], m[2], (m[3].match(/data-inert="([^"]*)"/) || [])[1] ?? null]),
+    said: (h.match(/<div class="said" data-below="acts"[^>]*><p class="statement" data-string="([^"]*)"/) || [])[1] ?? null,
+    below: /<div class="acts">(?:<button[^>]*>[^<]*<\/button>)+<\/div><div class="said" data-below="acts"/.test(h),
+  };
+}
+
+test('BM-10, #533: a refused run\'s face stands under the head "not kept" and offers, in this order, "send again", "copy these words out", then "discard this change" — the discard last, never first — its statement whole below the acts, in sense lines, and its act described by it; in the own-bug class "send again" is inert with its reason, said at every press', () => {
+  unkeptDraft();
+  assert.equal(FACES.unkeptFace(UD), null, 'nothing held: no face');
+  WRITE.setHeld(UD, [unkeptRow(1, { cause: 'bad_run', sent: true, refusal: verdict('bad_run') })]);
+  assert.equal(FACES.unkept(UD, null), true);
+  const shown = unkeptShown();
+  assert.deepEqual([shown.id, shown.head, shown.acts, shown.said, shown.below], [`face:unkept:refused:${UD}`, 'B3.not-kept', [['send', 'B3.send-again', null], ['copy', 'B3.copy-words-out', null], ['discard', 'B3.discard', null]], 'B3.refused.discard', true],
+    'the head, the three acts in their order — the reversible one first, the discard last — and the statement on the face directly below them');
+  assert.ok(hostEl.innerHTML.includes(STATEMENT.below('B3.refused.discard')), 'the statement as the one drawing draws it: its two parts, each a line');
+  assert.ok(hostEl.innerHTML.includes(`aria-description="${esc(t('B3.refused.discard'))}"`), 'the discard described by its statement whole, the join of the parts');
+  const face = /** @type {NonNullable<ReturnType<typeof FACES.unkeptFace>>} */ (FACES.unkeptFace(UD));
+  assert.deepEqual([face.acts[0].inert, face.acts.at(-1)?.key], [null, 'discard']);
+  WRITE.setHeld(UD, [unkeptRow(1, { cause: 'out_of_bounds', sent: true, refusal: verdict('out_of_bounds') })]);
+  FACES.unkept(UD, null);
+  const own = unkeptShown();
+  assert.deepEqual([own.id, own.head, own.lines, own.acts], [`face:unkept:own-bug:${UD}`, 'B3.not-kept', ['B3.own-bug'], [['send', 'B3.send-again', 'B3.own-bug.send-again'], ['copy', 'B3.copy-words-out', null], ['discard', 'B3.discard', null]]],
+    'a fault of this client\'s own: its words, "send again" inert in its slot with its reason');
+  live.textContent = '';
+  /** @type {any} */ (HOST.currentState()).acts.send();
+  assert.equal(live.textContent, t('B3.own-bug.send-again'), 'pressed, the inert act says why');
+});
+
+test('BM-13, BM-17, BM-29: the moved face names the hands its rows carry, each in its slot\'s words — a labelled key, an unsigned write, a lost hand, "not read yet", "can\'t be known" — a line with no verdict of its own taking the hands of the line ahead; where they are named again the slot the design owes words for stands, empty; its acts "see the held text", "send again" — inert unless the shell says it would pass — then the discard, its statement ending on its exit', () => {
+  unkeptDraft();
+  const moved = (/** @type {Record<string, any>} */ more) => unkeptRow(1, { cause: 'moved', sent: true, refusal: verdict('arrangement_moved'), ...more });
+  WRITE.setHeld(UD, [moved({ sendable: false, hands: [{ key: 'other', fingerprint: 'aabbccddeeff0011', label: 'desk' }, { key: 'bare' }, { key: 'lost' }] }), unkeptRow(2, { cause: 'moved' })]);
+  FACES.unkept(UD, null);
+  const face = /** @type {NonNullable<ReturnType<typeof FACES.unkeptFace>>} */ (FACES.unkeptFace(UD)), shown = unkeptShown();
+  assert.deepEqual([face.kind, face.head, face.hands, face.again], ['moved', null, [{ id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': 'desk' }) }, { id: 'B3.hand.unsigned', text: t('B3.hand.unsigned') }, { id: 'B3.hand.lost', text: t('B3.hand.lost') }], false],
+    'no head — the corner reads "not yet kept" — and each hand once, in its slot\'s words');
+  assert.deepEqual([shown.lines, shown.acts, shown.said], [['B3.moved'], [['held', 'B3.moved.see-held', null], ['send', 'B3.send-again', 'B3.moved.send-again.inert'], ['discard', 'B3.discard', null]], 'B3.moved.discard'], '"see the held text" before the discard; "send again" in its own slot, inert with its reason');
+  assert.ok(hostEl.innerHTML.includes('class="part exit"'), 'the discard\'s statement ends on what to do instead, after its half line');
+  assert.ok(!hostEl.innerHTML.includes('data-slot="again"'), 'no slot for a send made again where none was');
+  WRITE.setHeld(UD, [moved({ sendable: true, hands: [{ key: 'unread' }] })]);
+  assert.deepEqual([FACES.unkeptFace(UD)?.hands, FACES.unkeptFace(UD)?.acts[1].inert], [[{ id: 'B3.hand.unread', text: t('B3.hand.unread') }], null], 'the hands not read yet; "send again" live where the shell says the shift would pass');
+  WRITE.setHeld(UD, [moved({ hands: [{ key: 'unknowable' }] })]);
+  assert.deepEqual(FACES.unkeptFace(UD)?.hands, [{ id: 'B3.hand.unknowable', text: t('B3.hand.unknowable') }], 'the hands no read can name: their own slot, never "not read yet"');
+  WRITE.setHeld(UD, [moved({}), unkeptRow(2, { cause: 'moved', hands: [{ key: 'own', fingerprint: 'aabbccddeeff0011', label: 'laptop' }] })]);
+  assert.deepEqual(FACES.unkeptFace(UD)?.hands, [{ id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': 'laptop' }) }], 'the first moved line naming none: the hands the rows carry');
+  WRITE.setHeld(UD, [moved({ sendable: false, hands: [{ key: 'own', fingerprint: 'aabbccddeeff0011', label: 'laptop' }], again: true })]);
+  FACES.unkept(UD, null);
+  assert.deepEqual([FACES.unkeptFace(UD)?.again, /<div class="hands" data-again="1"><span class="again" data-slot="again"><\/span>/.test(hostEl.innerHTML), FACES.unkeptFace(UD)?.hands?.length], [true, true, 1], 'refused again with no new row: the hands named again, the slot for the words that say so standing, empty');
+});
+
+test('BM-19 … BM-27: each other face of unkept words by its state — the hand-over naming the board and the time, its discard\'s statement its own; an island and the held store\'s first refusal, "send again" inert; the device\'s refusal by its class, its one act the whole text\'s copy; the head-unreadable hold\'s discard; the death\'s arm, its second form where the board\'s held lines are not read, and under the keyless session its first with the discard live and no statement', () => {
+  unkeptDraft();
+  const board = t('L.mirror.board.name', { node: '1', origin: 'http://127.0.0.1:8644' });
+  const kind = () => { const f = FACES.unkeptFace(UD); return f ? [f.kind, f.head?.id ?? null, f.lines.map((l) => l.id), f.acts.map((a) => [a.id, a.inert?.id ?? null]), f.said?.id ?? null] : null; };
+  WRITE.setHeld(UD, [unkeptRow(1, { cause: 'answers_lost', sent: true, refusal: { kind: 'shell', name: 'answers_lost', last: 'unreachable', elapsed_ms: 120480 } })]);
+  assert.deepEqual(kind(), ['handed', 'B3.not-kept', ['B3.answers_lost'], [['B3.send-again', null], ['B3.copy-words-out', null], ['B3.discard', null]], 'B3.answers_lost.discard']);
+  assert.ok(FACES.unkeptFace(UD)?.lines[0].text.startsWith(`${board} has not answered this change for 2 `), 'the hand-over names the board and the time elapsed');
+  WRITE.setHeld(UD, []);
+  WRITE.addEdit(UD, { pos: 4, width: 0, text: 'd' }); WRITE.markSent(UD, 1);
+  WRITE.markIsland(UD, 1, { kind: 'shell', name: 'frame_too_large' });
+  assert.deepEqual(kind(), ['island', 'B3.not-kept', ['B3.island'], [['B3.send-again', 'B3.own-bug.send-again'], ['B3.copy-words-out', null], ['B3.discard', null]], 'B3.refused.discard'], 'a refusal the page keeps: its statement without an opening of its own, under the head');
+  WRITE.discardIsland(UD, 1);
+  WRITE.addEdit(UD, { pos: 4, width: 0, text: 'e' }); WRITE.markSent(UD, 2);
+  WRITE.markIsland(UD, 2, { kind: 'shell', name: 'held_full' });
+  WRITE.setUnwritable('b-1', { why: 'held_full' });
+  assert.deepEqual(kind(), ['full', 'B3.not-kept', ['B3.held_full.refused'], [['B3.send-again', 'B3.held_full.refused'], ['B3.copy-words-out', null], ['B3.discard', null]], 'B3.refused.discard'], 'at the held store\'s bound: "send again" inert while the bound stands, the face\'s own clause its reason');
+  WRITE.setUnwritable('b-1', null);
+  assert.equal(FACES.unkeptFace(UD)?.acts[0].inert, null, 'live once the bound lifts');
+  WRITE.discardIsland(UD, 2);
+  for (const [cls, lines] of /** @type {Array<[string, string[]]>} */ ([['full', ['B3.unwritable', 'B3.unwritable.full']], ['read_only', ['B3.unwritable', 'B3.unwritable.read_only']], ['other', ['B3.unwritable']]])) {
+    WRITE.setHeld(UD, [unkeptRow(1, { unwritable: 'No space left on device (os error 28)', unwritable_class: cls })]);
+    assert.deepEqual(kind(), ['device', 'B3.not-kept', lines, [['B3.death.copy', null]], null], `the device's refusal, class \`${cls}\`: its line, and "copy the text out" its one act`);
+  }
+  WRITE.setHeld(UD, [unkeptRow(1, { cause: 'head_unreadable', refusal: { kind: 'shell', name: 'head_unreadable' } })]);
+  assert.deepEqual(kind(), ['head', null, [], [['B3.head_unreadable.discard', null]], 'B3.head_unreadable.discard.said.typed'], 'the head-unreadable hold: its discard at the corner, the statement naming the typed words held');
+  WRITE.setHeld(UD, [unkeptRow(1)]);
+  assert.equal(kind(), null, 'a line merely held: no face — the kept word\'s own statement says it');
+  WRITE.setUnwritable('b-1', { why: 'death', detail: 'retired' });
+  REC.setSession(null);
+  assert.deepEqual(kind(), ['death', 'B3.not-kept', ['B3.death.corner.unshown'], [['B3.death.copy', null]], null], 'the death\'s arm that cannot re-open: its second form, "copy the text out" its one act');
+  WRITE.setUnwritable('b-1', { why: 'keyless' });
+  REC.setSession(/** @type {any} */ ({ session: 's-2', principal: 1, account: '1.0.1', writes: false, fingerprint: null }));
+  assert.deepEqual(kind(), ['death', 'B3.not-kept', ['B3.death.corner.stays'], [['B3.death.copy', null], ['B3.discard', null]], null], 'under the keyless session reading this board\'s held lines: its first form, the copy, then the discard live — and no statement, the table holding none for it');
+  WRITE.setUnwritable('b-1', null);
+});
+
+test('BM-16, BM-27: what a discard did is said after it, each a line of its own and never joined — the line that may have landed; the read unanswered, nothing discarded, the face and its act standing — and each press sends one `resolve` through the machine', async () => {
+  unkeptDraft();
+  /** @type {unknown} */
+  let answer = { result: { may_have_landed: [1] } };
+  /** @type {unknown[]} */
+  let rows = [{ held: 1, doc: UD, base: 7, frame: { op: 'insert', doc: UD, at: { ordinal: '1', subspace: '1' }, values: ['m'], as_of: 7, id: 'p.1' }, cause: 'moved', sent: true, time: 1, refusal: verdict('arrangement_moved'), sendable: false }];
+  /** @type {string[]} */
+  const asked = [], lines = [];
+  PORT.boot(/** @type {any} */ ({ ...FAKE.create(new Proxy({}, { get: (_t, k) => { asked.push(String(k).split(':')[0]); return String(k).startsWith('held:') ? { result: rows } : String(k).startsWith('resolve:') ? answer : undefined; } })) }));
+  FACES.readers({ line: (text, id) => { lines.push(id); } });
+  const flush = async () => { for (let i = 0; i < 6; i++) await new Promise((r) => setImmediate(r)); };
+  try {
+    MACHINE.handIn();
+    await flush();
+    assert.equal(FACES.unkept(UD, null), true);
+    rows = [];
+    /** @type {any} */ (HOST.currentState()).acts.discard();
+    await flush();
+    assert.deepEqual([asked.filter((k) => k === 'resolve').length, lines, HOST.currentState()], [1, ['B3.discarded.may-have-landed'], null], 'a dropped line that may have landed: its one line said, the face gone with what it stood at');
+    lines.length = 0;
+    rows = [{ held: 2, doc: UD, base: 7, frame: { op: 'insert', doc: UD, at: { ordinal: '1', subspace: '1' }, values: ['h'], as_of: 7, id: 'p.2' }, cause: 'answers_lost', sent: true, time: 2, refusal: { kind: 'shell', name: 'answers_lost', last: 'unreachable', elapsed_ms: 130000 } }];
+    REC.setSession(/** @type {any} */ ({ session: 's-9', principal: 1, account: '1.0.1', writes: true, fingerprint: null }));
+    await flush();
+    FACES.unkept(UD, null);
+    answer = { refused: { kind: 'shell', name: 'landing_unread', held: 2, why: 'unanswered' } };
+    /** @type {any} */ (HOST.currentState()).acts.discard();
+    await flush();
+    assert.deepEqual([lines, HOST.currentState()?.id], [['B3.answers_lost.unanswered'], `face:unkept:handed:${UD}`], 'the read unanswered: "did not answer — nothing was discarded", the face and its act standing');
+  } finally { MACHINE._reset(); WRITE._reset(); PORT.boot(null); HOST.dismiss(); FACES.readers({ line: (text) => FOCUS.say(text) }); }
+});
+

@@ -13,9 +13,11 @@ writes".
     write frame rides `POST /op` as a read does, so no route tells one;
     every `op` frame the page sent from its boot names a read of READ_OPS
     and every call a row that reads (`READ_ROWS`), so no write and no key
-    ceremony crossed to the owner's provider; and the daemon's
-    `/health.log_position` is unchanged from the run's start (the
-    daemon-side oracle, which the driver reads again at the run's end);
+    ceremony crossed to the gate's provider, and the page booted without
+    the machine — the frame rule the runner holds every case's pages on
+    that provider to (`cases.run`); the test board's
+    `/health.log_position` is recorded beside it as information, since
+    the editor case writes there;
 (iii) the figures: the cold open's calls and bytes (`places` among them) and
     a LEAP's — re-measured over the provider (its round trip, not the
     shell's);
@@ -32,38 +34,25 @@ writes".
     default provider; at `port=abc` none leaves its origin, the ledger counts
     no fetch and no stream, the bridge client made no call, the list answered
     the port's own `bad_port`, and the one line says the port must be a
-    number; then the owner's page opened again for the cases after this one."""
+    number; then the signed page opened again for the cases after this one."""
 import json
 import os
-import re
 import subprocess
 import tempfile
 import time
 import urllib.parse
 from collections import Counter
 
-from . import DOC, FAR_LEAP, ROOT, WINDOW, Result
+from . import DOC, FAR_LEAP, READ_ROWS, ROOT, WINDOW, Result, read_ops
 
 # the daemon's routes the read path dials; a write frame rides `POST /op` as a read frame does, so a route never tells the
-# two apart: the `op` frames are held to READ_OPS, and the board to its log position
+# two apart: the `op` frames are held to READ_OPS
 READ_PATHS = {('POST', '/op'), ('POST', '/op-at'), ('GET', '/health'), ('GET', '/events'), ('GET', '/changes'),
               ('GET', '/chain'), ('GET', '/challenge'), ('POST', '/session'), ('POST', '/session/close')}
-# the bridge's rows the page may call of the owner's provider: those that read, and the session's open and close. Every
-# other row is refused: a row that writes or composes a write (the publication, merge and history families, `upload`,
-# `restore`, `resolve`), since no gate run sends the owner's provider a write; a key ceremony or an answer to one of its
-# moments (`answer`, `cancel`), since a ceremony writes the owner's key store where no board check sees it; and
-# `held.show`, which opens the shell's own window
-READ_ROWS = ('boards', 'session', 'close', 'fingerprint', 'health', 'probe', 'op', 'fetch', 'search', 'places', 'held', 'changes')
 # the secret a page opened at another port carries: a stand-in, so the run's own is sent to its provider alone
 STAND_IN = 'not-the-run-secret'
 # a port nothing of the run listens on: the one item 21 probes
 CLOSED_PORT = 8749
-
-
-def read_ops():
-    src = open(os.path.join(ROOT, 'web', 'model', 'frames.js'), encoding='utf8').read()
-    m = re.search(r'READ_OPS\s*=\s*Object\.freeze\(\[(.*?)\]\)', src, re.S)
-    return set(re.findall(r"'([a-z_]+)'", m.group(1))) if m else set()
 
 
 def ledger(ctx):
@@ -179,20 +168,20 @@ def run(ctx):
     r.check(len(leap_calls) > 0, 'the LEAP read the far document', len(leap_calls))
     far = ctx.js('window.__skep.model.doc(%s)' % json.dumps(FAR_LEAP))
     r.check(far['from'] == 1 and far['to'] == (far['extent'] or 0) + 1, 'the LEAP\'s landing holds the whole far document', {'from': far['from'], 'to': far['to'], 'extent': far['extent']})
-    # ---- (ii) nothing written to the owner's board or provider, the run so far ---
+    # ---- (ii) nothing written through the gate's provider, the run so far ---
     all_rows = [e for e in log2 if e['seq'] > ctx.seq0]
     dial_paths = Counter((e.get('method'), e.get('path')) for e in all_rows if e['kind'] == 'dial')
-    r.check(set(dial_paths) <= READ_PATHS, 'every dial of the run so far names a route the read path dials (a write frame rides POST /op as a read does: the frames and the log position tell one)', {f'{m} {p}': n for (m, p), n in dial_paths.items()})
+    r.check(set(dial_paths) <= READ_PATHS, 'every dial of the run so far names a route the read path dials (a write frame rides POST /op as a read does: the frames tell one)', {f'{m} {p}': n for (m, p), n in dial_paths.items()})
     bad_ops = sorted(set(c['op'] for c in cl2 if c['name'] == 'op' and c['op'] not in ops_allowed))
-    r.check(not bad_ops, 'every `op` frame the page sent the owner\'s provider from its boot names a read (READ_OPS): no write crossed as it booted, moved the camera and leapt (FP-7)', bad_ops)
-    r.check(all(c['name'] in READ_ROWS for c in cl2), 'every call the page made of the owner\'s provider from its boot is a row that reads, or the session\'s own (READ_ROWS): no write, no key ceremony', sorted(set(c['name'] for c in cl2)))
+    r.check(not bad_ops, 'every `op` frame the page sent the gate\'s provider from its boot names a read (READ_OPS): no write crossed as it booted, moved the camera and leapt (FP-7)', bad_ops)
+    r.check(all(c['name'] in READ_ROWS for c in cl2), 'every call the page made of the gate\'s provider from its boot is a row that reads, or the session\'s own (READ_ROWS): no write, no key ceremony', sorted(set(c['name'] for c in cl2)))
+    r.check(ctx.js('window.__skep.boot.machine') is False, 'the page the gate opens boots without the machine: what it types stays page-local', ctx.js('window.__skep.boot.machine'))
     health1 = ctx.health()
-    r.check(health1.get('log_position') == health0.get('log_position'), '/health.log_position unchanged across the run so far', {'start': health0.get('log_position'), 'now': health1.get('log_position')})
     r.figures['log_position'] = {'start': health0.get('log_position'), 'after_wire': health1.get('log_position')}
     r.figures['dials_whole_run'] = {f'{m} {p}': n for (m, p), n in dial_paths.items()}
     r.figures['refusals_met'] = ctx.js('window.__skep.pump.refusals()')
     r.figures['provider_log_fields'] = sorted({k for e in all_rows for k in e.keys()})
-    r.note('the provider\'s dial entries carry method, path, bytes and ms — not the op kind; the write check over frames is the page\'s own `op` field, the write check over the board is /health.log_position')
+    r.note('the provider\'s dial entries carry method, path, bytes and ms — not the op kind; the write check is over the frames, the page\'s own `op` field; the test board\'s /health.log_position is a figure, not a check — the editor case writes there')
     # ---- (iv) FP-15: the recorded calls replayed over the fake port -----------
     # the page reads the first edition whole too (a LEAP), so both documents' whole reads are on record
     ctx.leap(DOC, WINDOW[0])
@@ -312,6 +301,6 @@ def run(ctx):
             {'fetch': led3.get('fetch'), 'eventsource': led3.get('eventsource'), 'calls': cl4})
     r.check(((refused or {}).get('boardsRefused') or {}).get('name') == 'bad_port', '(vi) at `port=abc` the board list answered the port\'s own refusal, `bad_port`', (refused or {}).get('boardsRefused'))
     r.check(said['line'] == said['words'] and not said['no_adapter'], '(vi) at `port=abc` the one line says the port must be a number from 1 to 65535, and nothing on the page says there is no shell and no provider', said)
-    # the owner's page again, for the cases after this one
+    # the signed page again, for the cases after this one
     ctx.open_page('all')
     return r.out()

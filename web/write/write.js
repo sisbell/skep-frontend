@@ -13,23 +13,51 @@
 // removed (`Edit.back`), that earlier edit keeping what it took from then on
 // (`Edit.took`); which of them a burst carried out and where the board acked
 // it (`unsent`, `markSent`, `markAcked`; `Edit.sent`, `Edit.at`), set by the
-// machine alone; its kept state as its corner reads it — the word and the
-// reason standing on the word's act (`keptOf`, `setKept`; B3-S2) — set by its
-// owner alone and never by a read; and what D6's machine holds of it, set by
-// the machine alone as the kept state is: the held lines `held(session)`
-// lists for it (`setHeld`, `heldOf`) — the one record any sign that words are
-// not on the board reads — and whether a burst of it is open or awaits its
-// ack (`setFlight`, `inFlight`), which an act that names characters to the
-// board asks the machine to commit (`commit`) and waits out (`landed`). The
-// machine is told of each act's edits as they are added (`Machine.typed`),
-// and of the page hidden, unloading or changing its class (`leaving`). With
-// no machine handed in nothing is in flight and nothing is sent.
+// machine alone; its kept state as its corner reads it — the word, and why
+// the board has not kept its words, which the word's own act says (`keptOf`,
+// `setKept`; B3-S2; D6 BM-8) — set by its owner alone and never by a read; and
+// what D6's machine holds of it, set by the machine alone as the kept state
+// is: the held lines `held(session)` lists for it (`setHeld`, `heldOf`) — the
+// one record any sign that words are not on the board reads — and whether a
+// burst of it is open or awaits its ack (`setFlight`, `inFlight`), which an
+// act that names characters to the board asks the machine to commit
+// (`commit`) and waits out (`landed`). The machine is told of each act's
+// edits as they are added (`Machine.typed`), and of the page hidden,
+// unloading or changing its class (`leaving`). With no machine handed in
+// nothing is in flight and nothing is sent.
+// THE HELD LINES THIS WINDOW DID NOT SEND (`setReopened`; D6 BM-29): an
+// earlier launch's, another window's. They are applied over the draft's
+// record before its edits, in the order listed (`baseOf`; M-DERIVE's
+// `applyHeld`), each insert's bytes named by the page's own ordinals
+// (`heldNames`, `nameOf`), so the text shown holds them where they were
+// typed and every surface holds them by identity; a line the apply stops at
+// is held apart with every line after it (`unapplied`). One that lands is
+// applied until a read answered at or past its landing sets the text
+// (`landReopened`); one the person drops leaves at once (`dropReopened`).
+// A REFUSAL THE PAGE KEEPS (`markIsland`; D6 BM-19): the edits of the burst
+// refused are an island — kept in the list and in the text shown, never
+// composed (`boardEdits`) — and an edit made inside one is of it
+// (`addEdits`); the discard is the page's own (`discardIsland`), and a change
+// waiting on the held store's bound is sent again by unmarking it
+// (`reopenIsland`; BM-20).
+// WHY A BOARD's DRAFTS CANNOT BE WRITTEN NOW (`setUnwritable`, `unwritable`;
+// D6 BM-20, BM-24, BM-30, BM-58, BM-60), per board, set by the machine
+// alone: while one stands no edit is added (`addEdits`).
 // The rebase (FP-23, FP-38): as a read sets a draft's text (M-REC's
-// `onText`), in that step, the edits the text now holds — the leading edits
-// a burst carried out that the board acked at or before the position the
-// read was answered at — leave the list, so the text the page shows is the
-// same before and after; one a put-back still standing names stays, applied
-// to nothing (`Edit.based`), and each put-back's index is counted again.
+// `onText`), in that step, the held lines it holds and the edits it holds —
+// the leading edits a burst carried out that the board acked at or before the
+// position the read was answered at — leave, so the text the page shows is
+// the same before and after; one a put-back still standing names stays,
+// applied to nothing (`Edit.based`), and each put-back's index is counted
+// again. Where the text set differs under the edits that stay — another
+// writer's change (D6 BM-56) — each is placed again in it by the identity of
+// the bytes it touches and of those either side, read from the record as it
+// stood before the set (M-REC's `beforeText`; M-DERIVE's `placedAgain`); an
+// unsent one the new text does not place exactly leaves the draft's burst to
+// be composed as it was typed (`staleOf`; BM-57). A byte of an edit that
+// leaves which no ack minted is minted from the read where the text shown is
+// unchanged. Edits are left out of the list the same way — a discard's, a
+// drop's (`dropEdits`) — the rest placed again by identity.
 // Beside them, one draft: the one whose edits were added last in the page's
 // session (`lastWritten`), which a key swallowed elsewhere names (N-KEYS').
 // The identity of a byte the page made — the page's space of the draft, and
@@ -41,23 +69,56 @@
 // change of the page's class (FP-29) tells the machine as it begins (M-REC's
 // `beforeClass`), while the session that typed still stands and the draft's
 // record with it, so what is unsent goes out under that session; once it is
-// taken (M-REC's `onClass`) every draft's kept state and held lines are let
-// go, the draft last written forgotten and every flight ended, those waiting
-// on it told. The edits stand: the words the class it left typed are kept.
+// taken (M-REC's `onClass`) the draft last written is forgotten and every
+// flight ended, those waiting on it told, and every draft's kept state and
+// held lines are let go — save a draft holding words the board has not kept
+// (`unkept`), which a change ending the session leaves whole: the model is
+// told which (M-REC's `keptAtEnding`). The edits stand: the words the class
+// it left typed are kept.
 // Rules: FP-1, FP-2, FP-10, FP-11, FP-14, FP-23, FP-29, FP-34, FP-38.
 
 import * as REC from '../model/records.js';
-import { applyEdits } from '../model/derive.js';
+import { applyEdits, applyHeld, placedAgain, PAGE } from '../model/derive.js';
 import { byteLength } from '../util.js';
 
 /** @typedef {import('../model/records.js').Edit} Edit */
+/** @typedef {import('../model/records.js').Doc} Doc */
+/** @typedef {import('../model/records.js').ISpan} ISpan */
 /** @typedef {import('../model/frames.js').HeldLine} HeldLine */
 
 /**
  * @typedef {Object} KeptState — a draft's kept state as its corner reads it (B3-S2; D6's machine sets it)
  * @property {'kept' | 'not yet kept' | 'not kept'} word
- * @property {string | null} reason the reason standing on the word's act, in its statement; null where the state carries none
+ * @property {string | null} reason the reason standing on the word's act, in words; null where the state carries none, or carries its cause
+ * @property {Cause} [cause] why the board has not kept the draft's words, as D6's machine read it: what the word's own act says, each drawing module in its words; absent where the state carries none
  */
+
+/**
+ * @typedef {Object} Cause — why the board has not kept a draft's words (D6 BM-8, BM-10, BM-19 … BM-24), as the shell and the page's own record say it
+ * @property {string} token the hold's token (`unreachable`, `stopped`, `halted`, `poisoned`, `durability`, `head_unreadable`, `session_died`, `moved`), the refusal's name, or the page's own: `island` a refusal the page keeps, `death` a session ended with no re-open
+ * @property {string | null} [arm] the death's arm, where the token is `session_died` or `death` and the shell named one
+ */
+
+/**
+ * @typedef {Object} Unwritable — why a board's drafts cannot be written now (D6 BM-20, BM-24, BM-30, BM-58, BM-60)
+ * @property {'keyless' | 'another_window' | 'store_halted' | 'held_full' | 'death'} why `keyless` the session may not write; `another_window` another shell holds the board's held store; `store_halted` the held file halts the board; `held_full` the held store's bound is met; `death` the session ended and no re-open follows
+ * @property {string | null} [detail] `store_halted`'s `why` as the shell says it; the death's arm
+ */
+
+/**
+ * @typedef {Object} Island — a refusal the page keeps (D6 BM-19): the run of edits a burst carried that the board never took
+ * @property {number} id the burst refused, by the machine's count of the draft's bursts: what its edits are marked with (`Edit.island`)
+ * @property {string} name the refusal's name
+ * @property {string} kind the refusal's kind
+ */
+
+/**
+ * @typedef {Object} Reopened — a held line this window did not send (`setReopened`)
+ * @property {HeldLine} row
+ * @property {number | null} at the position the board took it at, once it landed — 0 where it landed at a position no one told; null while it is held
+ */
+
+/** @typedef {{doc: Doc, edits: readonly Edit[], from: number}} Stale — a draft's burst as it was typed, where the text set under it does not place it (D6 BM-57): the record it was typed over, the edits as they stood, and the first of them unsent */
 
 /** @typedef {'hidden' | 'unload' | 'class'} Leaving — how the page leaves what it holds unsent: `hidden` the page hidden, its calls still answered; `unload` the page going, no answer read; `class` the class the page reads at changed */
 
@@ -68,7 +129,17 @@ import { byteLength } from '../util.js';
  * @property {(how: Leaving) => void} leaving every draft's unsent words committed as the page leaves them (`leaving`)
  */
 
-/** @typedef {{list: Edit[], rev: number, next: number, steps: number}} Edits — a draft's page-local edits in the order made, with a count of every change to them (`editRev`), the next ordinal the page names a byte it makes by, and the steps made */
+/**
+ * @typedef {Object} Edits — what is held of a draft's words
+ * @property {Edit[]} list its page-local edits, in the order made
+ * @property {number} rev a count of every change to them and to the lines applied before them (`editRev`)
+ * @property {number} next the next ordinal the page names a byte it makes by
+ * @property {number} steps the steps made
+ * @property {Reopened[]} lines the held lines this window did not send, in the order listed (`setReopened`)
+ * @property {Map<number, {page: number, width: number}>} names the page's ordinals for each held line's inserted bytes, by the line's ordinal (`heldNames`)
+ * @property {Map<number, Island>} islands the refusals the page keeps, by the burst refused (`markIsland`)
+ * @property {{key: string, doc: Doc, stopped: HeldLine[]} | null} base the record the edits apply over, as last made (`baseOf`)
+ */
 
 /** @type {Map<string, KeptState>} each draft's kept state, by address (`setKept`) */
 const kept = new Map();
@@ -78,6 +149,14 @@ const drafts = new Map();
 const held = new Map();
 /** @type {Map<string, Array<() => void>>} the drafts a burst of which is open or awaits its ack (`setFlight`), each with those waiting for it to land (`landed`) */
 const flights = new Map();
+/** @type {Map<string, Unwritable>} why each board's drafts cannot be written now, by the board (`setUnwritable`) */
+const blocks = new Map();
+/** @type {Map<string, {base: Doc, list: Edit[]}>} each draft's record and edits as they stood when its text was about to go (`leavingText`), until the read that sets it again (`rebase`) */
+const snaps = new Map();
+/** @type {Map<string, Stale>} each draft whose unsent burst the text set under it does not place (`staleOf`) */
+const stales = new Map();
+/** @type {Set<string>} the drafts a moved verdict stands on that no key has been typed in since (`setMoved`, `takeMovedKey`) */
+const movedUntold = new Set();
 /** @type {Machine | null} D6's machine, where one was handed in (`machine`) */
 let handed = null;
 /** @type {string | null} the draft whose edits were added last in the page's session (`addEdits`); null before any, and after a change of the page's class */
@@ -93,15 +172,38 @@ export const rev = () => revision;
 REC.beforeClass(() => leaving('class'));
 REC.onClass(classChanged);
 REC.onText(rebase);
+REC.beforeText(leavingText);
+REC.keptAtEnding((addr) => unkept(addr));
 
-/** a change of the page's class taken (see the head): every draft's kept state and held lines dropped, the draft last written forgotten, and every flight ended, those waiting told. The edits stand */
-function classChanged() {
-  kept.clear();
-  held.clear();
+/**
+ * A change of the page's class taken (see the head): the draft last written
+ * forgotten, every flight ended, those waiting told, and every draft's kept
+ * state and held lines dropped — save, where the change ends the session, a
+ * draft holding words the board has not kept (`unkept`) whose record the
+ * model left as read, which stands whole with them. The edits stand.
+ * @param {boolean} ended the change ends the session
+ */
+function classChanged(ended) {
+  const stays = (/** @type {string} */ addr) => ended && unkept(addr) && REC.has(addr) && REC.doc(addr).from >= 0;
+  for (const addr of [...kept.keys()]) if (!stays(addr)) kept.delete(addr);
+  for (const addr of [...held.keys()]) if (!stays(addr)) held.delete(addr);
+  for (const [addr, x] of drafts) if (!stays(addr) && x.lines.length) { x.lines = []; x.base = null; x.rev++; }
   last = null;
   for (const addr of [...flights.keys()]) endFlight(addr);
   bump();
 }
+
+/**
+ * Does a draft hold words the board has not kept (see the head; D6 BM-24):
+ * a line `held(session)` lists for it, or, where a machine stands to send
+ * them (`machine`), an edit no ack names — one open, one a burst carried
+ * out, a line of this window's the shell holds, an island's. With no machine
+ * handed in an edit is the page's alone, and no word of it was ever the
+ * board's to keep.
+ * @param {string} addr
+ * @returns {boolean}
+ */
+export const unkept = (addr) => heldOf(addr).length > 0 || (!!handed && edits(addr).some((e) => e.at == null && !e.based));
 
 // ---- the kept state ------------------------------------------------------------
 
@@ -121,7 +223,7 @@ export const keptOf = (addr) => kept.get(addr) ?? null;
  * @param {KeptState | null} s
  */
 export function setKept(addr, s) {
-  if (s) kept.set(addr, { word: s.word, reason: s.reason ?? null }); else kept.delete(addr);
+  if (s) kept.set(addr, s.cause ? { word: s.word, reason: s.reason ?? null, cause: { token: s.cause.token, arm: s.cause.arm ?? null } } : { word: s.word, reason: s.reason ?? null }); else kept.delete(addr);
   bump();
 }
 
@@ -140,9 +242,11 @@ export const editRev = (/** @type {string} */ addr) => (drafts.get(addr)?.rev ??
 /** a draft's edits with their counts, made where the draft holds none yet */
 function editsOf(/** @type {string} */ addr) {
   let x = drafts.get(addr);
-  if (!x) { x = { list: [], rev: 0, next: 1, steps: 0 }; drafts.set(addr, x); }
+  if (!x) { x = { list: [], rev: 0, next: 1, steps: 0, lines: [], names: new Map(), islands: new Map(), base: null }; drafts.set(addr, x); }
   return x;
 }
+/** the identity of bytes the page made in a draft, as the model names them now (M-REC's `pageIds`) */
+const idsOf = (/** @type {string} */ addr) => (/** @type {number} */ page, /** @type {number} */ width) => REC.pageIds(addr, page, width);
 /**
  * One page-local edit added to a draft's (`edits`), a step of its own: its
  * positions in the text as it stands after the edits before it, the bytes it
@@ -162,7 +266,7 @@ export function addEdit(addr, e) { addEdits(addr, [e]); }
  * @param {readonly Edit[]} list
  */
 export function addEdits(addr, list) {
-  if (!list.length) return;
+  if (!list.length || unwritable(addr)) return;
   const x = editsOf(addr), step = ++x.steps;
   const made = list.map((e) => {
     const width = e.back ? 0 : byteLength(e.text), page = width ? x.next : null;
@@ -170,7 +274,7 @@ export function addEdits(addr, list) {
     return /** @type {Edit} */ ({ pos: e.pos, width: e.width, text: e.back ? '' : e.text, page, back: e.back ? { ...e.back } : null, step });
   });
   keepTaken(addr, x, made);
-  x.list = [...x.list, ...made];
+  for (const e of made) x.list = [...x.list, ...folded(addr, x, e)];
   x.rev++;
   last = addr;
   bump();
@@ -180,8 +284,64 @@ export function addEdits(addr, list) {
 function keepTaken(/** @type {string} */ addr, /** @type {Edits} */ x, /** @type {Edit[]} */ made) {
   const named = made.flatMap((e) => (e.back ? [e.back.of] : [])).filter((of) => x.list[of] && !x.list[of].took);
   if (!named.length || !REC.has(addr)) return;
-  const took = applyEdits(REC.doc(addr), x.list, (page, width) => REC.pageIds(addr, page, width)).took;
+  const took = applyEdits(baseOf(addr), x.list, idsOf(addr)).took;
   x.list = x.list.map((e, i) => (named.includes(i) && took[i] ? { ...e, took: took[i] } : e));
+}
+
+/**
+ * An edit about to be added to a draft holding an island, as it is added
+ * (see the head; D6 BM-19): where it places its text strictly inside an
+ * island's words, or removes bytes of one, it is of that island, marked as
+ * the island's burst carried it, and never sent — a removal that crosses an
+ * island's edge cut there, the part outside an edit of its own, taken out
+ * first where it lies after. Any other edit as it is.
+ * @param {string} addr
+ * @param {Edits} x
+ * @param {Edit} e
+ * @returns {Edit[]} the edits to add, in order
+ */
+function folded(addr, x, e) {
+  if (!x.islands.size || !REC.has(addr)) return [e];
+  const made = islandStretches(addr, x);
+  const end = e.pos + e.width;
+  if (!e.width) { const hit = made.find((m) => e.pos > m.pos && e.pos < m.pos + m.width); return [hit ? { ...e, island: hit.id, sent: hit.id } : e]; }
+  const hits = made.filter((m) => m.pos < end && e.pos < m.pos + m.width);
+  if (!hits.length) return [e];
+  // the removal cut at each island's edges, from its end to its start, so each part stands where it is named as it is taken out
+  /** @type {Array<{pos: number, width: number, island: number | null}>} */
+  const parts = [];
+  let at = e.pos;
+  for (const m of hits) {
+    const lo = Math.max(at, m.pos), hi = Math.min(end, m.pos + m.width);
+    if (lo > at) parts.push({ pos: at, width: lo - at, island: null });
+    parts.push({ pos: lo, width: hi - lo, island: m.id });
+    at = hi;
+  }
+  if (at < end) parts.push({ pos: at, width: end - at, island: null });
+  const first = parts[0];
+  /** @type {Edit[]} */
+  const out = parts.slice(1).reverse().map((q) => ({ pos: q.pos, width: q.width, text: '', page: null, back: null, step: e.step, ...(q.island != null ? { island: q.island, sent: q.island } : {}) }));
+  out.push({ ...e, pos: first.pos, width: first.width, ...(first.island != null && !e.text && !e.back ? { island: first.island, sent: first.island } : {}) });
+  return out;
+}
+
+/** where each island's words stand in the text a draft shows: each stretch of bytes an island's edits made, with its island, in the text's order */
+function islandStretches(/** @type {string} */ addr, /** @type {Edits} */ x) {
+  /** @type {Array<{page: number, width: number, id: number}>} */
+  const pages = x.list.flatMap((e) => (e.island != null && e.page != null && e.text ? [{ page: e.page, width: byteLength(e.text), id: e.island }] : []));
+  const source = applyEdits(baseOf(addr), x.list, idsOf(addr)).doc.derived?.source ?? [];
+  /** @type {Array<{pos: number, width: number, id: number}>} */
+  const out = [];
+  for (const r of source) {
+    if (r.prefix !== PAGE) continue;
+    for (const p of pages) {
+      const lo = Math.max(r.ordinal, p.page), hi = Math.min(r.ordinal + r.width, p.page + p.width);
+      if (lo >= hi) continue;
+      const pos = r.pos + (lo - r.ordinal), prev = out[out.length - 1];
+      if (prev && prev.id === p.id && prev.pos + prev.width === pos) prev.width += hi - lo; else out.push({ pos, width: hi - lo, id: p.id });
+    }
+  }
+  return out.sort((a, b) => a.pos - b.pos);
 }
 /** the draft last written in the page's session: the one whose edits were added last (`addEdits`); null before any edit, and after a change of the page's class */
 export const lastWritten = () => last;
@@ -189,7 +349,45 @@ export const lastWritten = () => last;
 export function clearEdits(/** @type {string} */ addr) {
   const x = drafts.get(addr);
   if (!x || !x.list.length) return;
-  x.list = []; x.rev++;
+  x.list = []; x.islands.clear(); x.rev++;
+  stales.delete(addr);
+  bump();
+}
+
+/**
+ * Edits left out of a draft's list (see the head): each edit `which` names
+ * goes, a put-back of bytes one of them removed with it, and the rest are
+ * placed again by the identity of the bytes each touches and of those either
+ * side (M-DERIVE's `placedAgain`), so the words they made stand where they
+ * stood. An island none of whose edits stays is forgotten. Nothing where the
+ * model holds no record of the draft, or `which` names none.
+ * @param {string} addr
+ * @param {(e: Edit, i: number) => boolean} which
+ * @returns {number} how many edits left
+ */
+export function dropEdits(addr, which) {
+  const x = drafts.get(addr);
+  if (!x || !x.list.some(which) || !REC.has(addr)) return 0;
+  const base = baseOf(addr), was = x.list.length;
+  x.list = placedAgain(base, base, x.list, (e, i) => !which(e, i), idsOf(addr)).edits;
+  for (const id of [...x.islands.keys()]) if (!x.list.some((e) => e.island === id)) x.islands.delete(id);
+  x.rev++;
+  bump();
+  return was - x.list.length;
+}
+
+/**
+ * Edits a burst carried out made unsent again (`Edit.sent`): the bursts the
+ * shell dropped behind a line the person discarded, which the page composes
+ * afresh (D6 BM-10). Set by D6's machine.
+ * @param {string} addr
+ * @param {(e: Edit) => boolean} which
+ */
+export function unsend(addr, which) {
+  const x = drafts.get(addr);
+  if (!x) return;
+  x.list = x.list.map((e) => (e.sent != null && e.at == null && which(e) ? { ...e, sent: null } : e));
+  x.rev++;
   bump();
 }
 
@@ -231,42 +429,352 @@ export function markAcked(addr, burst, at) {
   if (!x) return;
   x.list = x.list.map((e) => (e.sent === burst ? { ...e, at } : e));
 }
-/** does a draft hold an edit a burst carried out that no ack names (`markSent`, `markAcked`): a burst out, a line held, a run refused? */
-export const unacked = (/** @type {string} */ addr) => edits(addr).some((e) => e.sent != null && e.at == null);
+/** does a draft hold an edit a burst carried out that no ack names (`markSent`, `markAcked`) — a burst out, a line held, a run the board refused — an island's apart, which no burst carries again? */
+export const unacked = (/** @type {string} */ addr) => edits(addr).some((e) => e.sent != null && e.at == null && e.island == null);
+
+// ---- the islands ----------------------------------------------------------------
 
 /**
- * A draft's edits rebased as a read sets its text (see the head; M-REC's
- * `onText`): the leading edits acked at or before the position the read was
- * answered at leave the list, the text holding their change — save one a
- * put-back that stays names, which stays as the record of what it took and
- * changes nothing (`Edit.based`) — and every put-back that stays names its
- * edit by its place in the list as it now stands. Nothing where the read
- * said no position, or the first edit is not so acked.
+ * The edits a burst carried out marked an island (see the head; D6 BM-19):
+ * a refusal the page keeps. Set by D6's machine as the burst's refusal is
+ * answered.
+ * @param {string} addr
+ * @param {number} burst the machine's count of the draft's bursts
+ * @param {{kind: string, name: string}} refusal
+ */
+export function markIsland(addr, burst, refusal) {
+  const x = drafts.get(addr);
+  if (!x || !x.list.some((e) => e.sent === burst)) return;
+  x.list = x.list.map((e) => (e.sent === burst ? { ...e, island: burst } : e));
+  x.islands.set(burst, { id: burst, name: refusal.name, kind: refusal.kind });
+  x.rev++;
+  bump();
+}
+/** the refusals the page keeps of a draft (`markIsland`), in the order refused; none where it keeps none */
+export const islandsOf = (/** @type {string} */ addr) => [...(drafts.get(addr)?.islands.values() ?? [])];
+/**
+ * The words some of a draft's edits made (D6 BM-10, BM-19; C-321): the bytes
+ * those edits made that stand in the text shown, in the text's order; where
+ * they made none, the words they removed. '' where the model holds no record
+ * of the draft.
+ * @param {string} addr
+ * @param {(e: Edit) => boolean} which
+ * @returns {string}
+ */
+function wordsMade(addr, which) {
+  const x = drafts.get(addr);
+  if (!x || !REC.has(addr)) return '';
+  const out = applyEdits(baseOf(addr), x.list, idsOf(addr));
+  const pages = x.list.flatMap((e) => (which(e) && e.page != null && e.text ? [{ page: e.page, width: byteLength(e.text) }] : []));
+  /** @type {string[]} */
+  const made = [];
+  for (const r of out.doc.derived?.source ?? []) {
+    if (r.prefix !== PAGE) continue;
+    for (const q of pages) {
+      const lo = Math.max(r.ordinal, q.page), hi = Math.min(r.ordinal + r.width, q.page + q.width);
+      if (lo < hi) made.push(REC.textOf(out.doc.runs, r.pos + (lo - r.ordinal), r.pos + (hi - r.ordinal)));
+    }
+  }
+  if (made.length) return made.join('');
+  return x.list.flatMap((e, i) => (which(e) && e.width > 0 && out.took[i] ? [REC.textOf(/** @type {import('../model/frames.js').Run[]} */ (out.took[i]?.runs), 1, e.width + 1)] : [])).join('');
+}
+/** an island's words (`wordsMade`): what "copy these words out" copies at its face */
+export const islandWords = (/** @type {string} */ addr, /** @type {number} */ id) => wordsMade(addr, (e) => e.island === id);
+/** the words a burst of a draft carried (`wordsMade`), by the machine's count of its bursts: what "copy these words out" copies at a refused run's face */
+export const burstWords = (/** @type {string} */ addr, /** @type {number} */ burst) => wordsMade(addr, (e) => e.sent === burst && e.island == null);
+/**
+ * An island discarded (see the head; D6 BM-19): its edits leave the list —
+ * the words it made leave the text shown, the words it removed return — and
+ * nothing is sent.
+ * @param {string} addr
+ * @param {number} id
+ */
+export function discardIsland(addr, id) { dropEdits(addr, (e) => e.island === id); }
+/**
+ * An island's edits made an open burst again (see the head; D6 BM-20): the
+ * marks of the island and of the burst that carried them taken off, the
+ * island forgotten. Set by D6's machine as it sends a waiting change itself.
+ * @param {string} addr
+ * @param {number} id
+ */
+export function reopenIsland(addr, id) {
+  const x = drafts.get(addr);
+  if (!x || !x.islands.has(id)) return;
+  x.list = x.list.map((e) => { if (e.island !== id) return e; const { island, ...rest } = e; void island; return { ...rest, sent: null }; });
+  x.islands.delete(id);
+  x.rev++;
+  bump();
+}
+/**
+ * A draft's edits as the board is to hold them (see the head; D6 BM-19):
+ * every island left out, the rest placed again by identity (M-DERIVE's
+ * `placedAgain`) — positions past an island's words less their width, past a
+ * removal of one counted back in — and the first of them no burst has
+ * carried out. The list itself where the draft keeps no island.
+ * @param {string} addr
+ * @returns {{edits: readonly Edit[], from: number}}
+ */
+export function boardEdits(addr) {
+  const x = drafts.get(addr), list = x ? x.list : [];
+  const out = x && x.islands.size && REC.has(addr) ? placedAgain(baseOf(addr), baseOf(addr), list, (e) => e.island == null, idsOf(addr)).edits : list;
+  const i = out.findIndex((e) => e.sent == null);
+  return { edits: out, from: i < 0 ? out.length : i };
+}
+
+// ---- the held lines this window did not send ------------------------------------
+
+/**
+ * The record a draft's edits apply over (see the head; D6 BM-29): the
+ * model's, with the held lines this window did not send applied in the order
+ * listed (M-DERIVE's `applyHeld`), each insert's bytes named by the page's
+ * ordinals; the model's own where the draft holds no such line. Made again
+ * where the model's record or the lines moved.
+ * @param {string} addr
+ * @returns {Doc}
+ */
+export function baseOf(addr) {
+  const d = REC.doc(addr), x = drafts.get(addr);
+  if (!x || !x.lines.length) return d;
+  const key = `${d.rev}:${d.from}:${d.to}:${x.lines.map((l) => l.row.held).join(',')}:${REC.mintsOf(addr)}`;
+  if (!x.base || x.base.key !== key) {
+    const rows = x.lines.map((l) => l.row), out = applyHeld(d, rows, (a) => (REC.has(a) ? REC.doc(a) : null), heldNames(addr));
+    x.base = { key, doc: out.doc, stopped: out.stopped ? rows.slice(out.applied) : [] };
+  }
+  return x.base.doc;
+}
+/** the held lines of a draft this window did not send that its text does not hold (`baseOf`): the one the apply stopped at, and every line after it; none where all apply */
+export function unapplied(/** @type {string} */ addr) {
+  const x = drafts.get(addr);
+  if (!x || !x.lines.length || !REC.has(addr)) return [];
+  baseOf(addr);
+  return x.base ? x.base.stopped : [];
+}
+/**
+ * The page's names for a draft's held lines' inserted bytes (see the head;
+ * M-DERIVE's `Named`): for the line of an ordinal, its bytes in order, by
+ * the page's ordinals of the draft — drawn the first time the line is named
+ * and kept — as the model names them now, an address where the board minted
+ * them (M-REC's `pageIds`).
+ * @param {string} addr
+ * @returns {import('../model/derive.js').Named}
+ */
+export function heldNames(addr) {
+  return (held, width) => { const n = nameOf(addr, held, width); return n ? REC.pageIds(addr, n.page, n.width) : []; };
+}
+/**
+ * The page's ordinals for a held line's inserted bytes (`heldNames`): drawn
+ * where `width` is given and the line holds none yet; null where it holds
+ * none and none is drawn.
+ * @param {string} addr
+ * @param {number} held the line's ordinal
+ * @param {number} [width] how many bytes the line inserts
+ * @returns {{page: number, width: number} | null}
+ */
+export function nameOf(addr, held, width) {
+  const x = width ? editsOf(addr) : drafts.get(addr);
+  if (!x) return null;
+  let n = x.names.get(held);
+  if (!n && width) { n = { page: x.next, width }; x.next += width; x.names.set(held, n); }
+  return n && (!width || n.width === width) ? n : null;
+}
+/** the held lines of a draft this window did not send, as they stand (`setReopened`), those landed and not yet read among them */
+export const reopened = (/** @type {string} */ addr) => (drafts.get(addr)?.lines ?? []).map((l) => ({ row: l.row, at: l.at }));
+/**
+ * The held lines of a draft this window did not send, set (see the head; D6
+ * BM-29) from `held(session)`'s rows for it: each kept by its ordinal as it
+ * stood, each new one taken, in the rows' order; one standing that the rows
+ * no longer list has left the store kept, and is applied until the next read
+ * sets the text. Set by D6's machine.
+ * @param {string} addr
+ * @param {readonly HeldLine[]} rows
+ */
+export function setReopened(addr, rows) {
+  const x = rows.length ? editsOf(addr) : drafts.get(addr);
+  if (!x) return;
+  const was = x.lines, listed = new Set(rows.map((r) => r.held));
+  const gone = was.filter((l) => !listed.has(l.row.held)).map((l) => ({ row: l.row, at: l.at ?? 0 }));
+  const next = [...gone, ...rows.map((r) => ({ row: { ...r }, at: null }))];
+  if (next.length === was.length && next.every((l, i) => l.row.held === was[i].row.held && l.at === was[i].at)) return;
+  x.lines = next.sort((a, b) => a.row.held - b.row.held); x.base = null; x.rev++;
+  bump();
+}
+/** a held line of a draft this window did not send, landed (`setReopened`): applied until a read answered at or past `at` sets the text; 0 where no position was told */
+export function landReopened(/** @type {string} */ addr, /** @type {number} */ held, /** @type {number} */ at) {
+  const x = drafts.get(addr), l = x ? x.lines.find((q) => q.row.held === held) : undefined;
+  if (!x || !l) return;
+  l.at = at; x.rev++;
+  bump();
+}
+/** held lines of a draft this window did not send, dropped by the person (`setReopened`): their words leave the text shown at once */
+export function dropReopened(/** @type {string} */ addr, /** @type {readonly number[]} */ helds) {
+  const x = drafts.get(addr);
+  if (!x || !x.lines.some((l) => helds.includes(l.row.held))) return;
+  x.lines = x.lines.filter((l) => !helds.includes(l.row.held)); x.base = null; x.rev++;
+  bump();
+}
+
+// ---- why a board's drafts cannot be written now ---------------------------------
+
+/**
+ * Why a draft cannot be written now (see the head): the reason standing for
+ * its board — the page's board, which every draft it shows is on; null where
+ * none stands.
+ * @param {string} addr
+ * @returns {Unwritable | null}
+ */
+export function unwritable(addr) {
+  void addr;
+  const b = REC.board();
+  return (b && blocks.get(b.board)) || null;
+}
+/**
+ * Why a board's drafts cannot be written now, set, or lifted with null
+ * (`unwritable`): set by D6's machine alone, and by the gate's hook.
+ * @param {string} board
+ * @param {Unwritable | null} why
+ */
+export function setUnwritable(board, why) {
+  const was = blocks.get(board);
+  if ((!why && !was) || (why && was && why.why === was.why && (why.detail ?? null) === (was.detail ?? null))) return;
+  if (why) blocks.set(board, { why: why.why, detail: why.detail ?? null }); else blocks.delete(board);
+  bump();
+}
+
+// ---- the moved verdict's first key ----------------------------------------------
+
+/** a moved verdict stands on a draft, or stands no more (D6 BM-18): set by D6's machine as the verdict arrives and as it lifts */
+export function setMoved(/** @type {string} */ addr, /** @type {boolean} */ on) { if (on) movedUntold.add(addr); else movedUntold.delete(addr); }
+/** the first key typed in a draft since a moved verdict came to stand on it (D6 BM-18): true once per verdict, as the key is typed */
+export function takeMovedKey(/** @type {string} */ addr) { return movedUntold.delete(addr); }
+
+/** a draft's burst as it was typed, where the text set under it does not place it (see the head; D6 BM-57); null where every unsent edit stands placed */
+export const staleOf = (/** @type {string} */ addr) => stales.get(addr) ?? null;
+/** a draft's burst as it was typed, let go (`staleOf`): composed and dialed, or its edits gone */
+export function clearStale(/** @type {string} */ addr) { stales.delete(addr); }
+
+/** does a text hold, at the same positions, every position another held — a read that widened it, or set it again unchanged, moved nothing under what stood? True where the other held none */
+const holdsAsStood = (/** @type {Doc} */ now, /** @type {Doc} */ was) => was.from < 0 || (now.from >= 0 && now.from <= was.from && now.to >= was.to && REC.textOf(now.runs, was.from, was.to) === REC.textOf(was.runs, was.from, was.to));
+
+/**
+ * A draft's text is about to be set again or let go (M-REC's `beforeText`):
+ * the record its edits apply over and the edits, as they stand, are kept
+ * until the read that sets it again (`rebase`) — the first such, where the
+ * text goes and comes back.
+ * @param {string} addr
+ */
+function leavingText(addr) {
+  const x = drafts.get(addr);
+  if (!x || (!x.list.length && !x.lines.length) || snaps.has(addr)) return;
+  const base = baseOf(addr);
+  snaps.set(addr, { base: base.derived ? base : { ...base }, list: x.list });
+  x.base = null;
+}
+
+/**
+ * A draft's words rebased as a read sets its text (see the head; M-REC's
+ * `onText`): the held lines this window did not send that landed at or
+ * before the position the read was answered at leave, and the leading edits
+ * acked at or before it — save one a put-back that stays names, which stays
+ * as the record of what it took and changes nothing (`Edit.based`) — and
+ * every put-back that stays names its edit by its place in the list as it
+ * now stands. Where the text shown then holds otherwise what the text shown
+ * before the set held, the edits that stay are placed again in the new text
+ * by identity (`carried`). Where it does not, each byte of an edit that left which no
+ * ack minted is minted from the read (`mintFromRead`). Nothing leaves where
+ * the read said no position.
  * @param {string} addr
  * @param {number | null} asOf the position the read was answered at
  */
 function rebase(addr, asOf) {
-  const x = drafts.get(addr);
-  if (!x || !x.list.length || asOf == null) return;
+  const x = drafts.get(addr), was = snaps.get(addr);
+  snaps.delete(addr);
+  if (!x || (!x.list.length && !x.lines.length)) return;
   const list = x.list;
   let n = 0;
-  while (n < list.length) { const at = list[n].at; if (at == null || at > asOf) break; n++; }
-  if (!n) return;
+  if (asOf != null) while (n < list.length) { const at = list[n].at; if (at == null || at > asOf) break; n++; }
+  const landed = asOf == null ? [] : x.lines.filter((l) => l.at != null && l.at <= asOf);
+  if (landed.length) { x.lines = x.lines.filter((l) => !landed.includes(l)); x.base = null; }
   /** @type {boolean[]} the held edits a put-back that stays names */
   const named = list.map(() => false);
   for (let i = list.length - 1; i >= n; i--) { const b = list[i].back; if (b) named[b.of] = true; }
+  const stays = (/** @type {number} */ i) => i >= n || named[i];
+  /** an edit as it stays: one the read holds, kept for its put-back, applied to nothing */
+  const as = (/** @type {Edit} */ e, /** @type {number} */ i) => (i < n ? { ...e, based: true, back: null } : e);
   /** @type {Map<number, number>} where each edit that stays stands in the list as rebased */
   const index = new Map();
   /** @type {Edit[]} */
   const out = [];
   for (const [i, e] of list.entries()) {
-    if (i < n && !named[i]) continue;
+    if (!stays(i)) continue;
     index.set(i, out.length);
-    out.push(i < n ? { ...e, based: true, back: null } : e);
+    out.push(as(e, i));
   }
-  x.list = out.map((e) => (e.back ? { ...e, back: { ...e.back, of: index.get(e.back.of) ?? e.back.of } } : e));
+  const kept = out.map((e) => (e.back ? { ...e, back: { ...e.back, of: index.get(e.back.of) ?? e.back.of } } : e));
+  if (!n && !landed.length && !was) return;
+  const ids = idsOf(addr);
+  // the text shown before the set and after it: the same where the read holds only what left
+  const before = was ? applyEdits(was.base, was.list, ids) : null, base = baseOf(addr);
+  const same = !before || holdsAsStood(applyEdits(base, kept, ids).doc, before.doc);
+  if (same) {
+    x.list = kept;
+    if (before && was) mintFromRead(addr, was.list.filter((_e, i) => !stays(i)), landed, before.doc, asOf);
+  } else if (was) carried(addr, x, was, stays, as);
   x.rev++;
   bump();
+}
+
+/**
+ * A draft's edits placed again in a text another writer changed (see the
+ * head; D6 BM-56, BM-57): each edit that stays set in the record as read, by
+ * the identity of the bytes it touches and of those either side as the
+ * record it was made over named them (M-DERIVE's `placedAgain`). Where one
+ * no burst has carried out is not placed exactly, the burst is kept as it
+ * was typed (`staleOf`), the record it was typed over with it.
+ * @param {string} addr
+ * @param {Edits} x
+ * @param {{base: Doc, list: Edit[]}} was the record and the edits as they stood before the set
+ * @param {(i: number) => boolean} stays
+ * @param {(e: Edit, i: number) => Edit} as
+ */
+function carried(addr, x, was, stays, as) {
+  const ids = idsOf(addr);
+  const out = placedAgain(was.base, baseOf(addr), was.list, (_e, i) => stays(i), ids, as);
+  x.list = out.edits;
+  const from = was.list.findIndex((e) => e.sent == null);
+  if (from >= 0 && out.adrift.some((i) => out.edits[i].sent == null)) stales.set(addr, { doc: was.base, edits: was.list, from });
+}
+
+/**
+ * Bytes the page made that a read holds and no ack minted, minted from the
+ * read (see the head; D6 BM-29's landing with no address): for each edit
+ * that left the list, and each held line this window did not send that left,
+ * the bytes it made stand in the text shown where they stood before the set
+ * — the text shown being unchanged — and the record as read names them
+ * there. Nothing where it names none, or the page's own name still.
+ * @param {string} addr
+ * @param {Edit[]} left the edits that left
+ * @param {Reopened[]} landed the held lines that left
+ * @param {Doc} before the text shown before the set
+ * @param {number | null} asOf the position the read was answered at
+ */
+function mintFromRead(addr, left, landed, before, asOf) {
+  if (asOf == null) return;
+  const x = drafts.get(addr), now = REC.doc(addr), space = REC.pageSpace(addr);
+  /** @type {Array<{page: number, width: number}>} */
+  const runs = left.flatMap((e) => (e.page != null && e.text ? [{ page: e.page, width: byteLength(e.text) }] : []));
+  for (const l of landed) { const n = x ? x.names.get(l.row.held) : undefined; if (n) runs.push(n); }
+  for (const r of runs) {
+    for (const id of REC.pageIds(addr, r.page, r.width)) {
+      if (id.prefix !== space) continue;
+      for (const at of REC.placedIn(before.image, [id])) {
+        // the page's ordinal standing at the stretch's first position, read back through the text shown before the set
+        const first = REC.identityIn(before.image, at.pos, 1)[0];
+        const named = REC.identityIn(now.image, at.pos, at.width);
+        if (!first || named.length !== 1 || REC.isPage(named[0].prefix)) continue;
+        REC.mint(addr, first.ordinal, at.width, `${named[0].prefix}.${named[0].ordinal}`, asOf);
+      }
+    }
+  }
 }
 
 // ---- what D6's machine holds of a draft -----------------------------------------
@@ -289,6 +797,8 @@ export function setHeld(addr, rows) {
   if (rows.length) held.set(addr, rows.map((r) => ({ ...r }))); else held.delete(addr);
   bump();
 }
+/** every draft holding a line `held(session)` listed (`setHeld`) */
+export const heldDocs = () => [...held.keys()];
 
 /** D6's machine handed in, or taken out with null (see the head): what `commit` and `leaving` ask, and what `addEdits` tells */
 export function machine(/** @type {Machine | null} */ m) { handed = m; }
@@ -336,5 +846,5 @@ export function landed(addr) {
 
 /** reset everything held here (tests): the drafts' ordinals start again, and no machine stands */
 export function _reset() {
-  kept.clear(); drafts.clear(); held.clear(); flights.clear(); handed = null; last = null; revision = 0;
+  kept.clear(); drafts.clear(); held.clear(); flights.clear(); blocks.clear(); snaps.clear(); stales.clear(); movedUntold.clear(); handed = null; last = null; revision = 0;
 }

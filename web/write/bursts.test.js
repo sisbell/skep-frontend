@@ -2,8 +2,12 @@
 // §Arrangement spells — an `insert`, a `delete`, a `reinstate` — each with
 // its typed state, its `id` and the anchors read from the record's image;
 // the frames make the net change of the burst's edits, in an order whose
-// positions hold; and a burst touching a byte the board has not minted, or
-// one the record does not name, composes to none and says why.
+// positions hold; a burst beside held, unminted words names them by a piece
+// of the insert that carried them, a removal of such words carrying no span;
+// a refusal the page keeps is left out of what later bursts are composed
+// against; an insertion inside a link's span splits it, the span's own bytes
+// its anchors; and a burst anchored on a byte no piece names, or one the
+// record does not name, composes to none and says why.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as BURSTS from './bursts.js';
@@ -225,3 +229,71 @@ test('a burst the record at hand cannot place composes to no frame: its image na
   REC.invalidate(D);
   assert.deepEqual(compose(D), { waits: 'unread' }, 'the record\'s text dropped: nothing to compose against');
 });
+
+// ---- beside held, unminted words; islands; the mark split (D6 BM-2, BM-8, BM-19) ---------------------------------------
+
+/** a burst composed with the pieces a caller names the page's unminted bytes by: each page ordinal `piece` knows, by the `id` of the insert that carried it and its offset there */
+const composeWith = (/** @type {string} */ addr, /** @type {number} */ from, /** @type {Record<number, {burst: string, offset: number}>} */ pieces, seq = 9) =>
+  BURSTS.compose({ doc: REC.doc(addr), edits: WRITE.edits(addr), from, asOf: 7, ids: (page, width) => REC.pageIds(addr, page, width), load: LOAD, seq, piece: (page) => pieces[page] || null });
+
+test('BM-8: a burst beside held, unminted words names its neighbour by a piece — the insert that carried the byte, by its `id`, and the byte\'s offset in it — never the document\'s edge and never another byte: typing on at the same place, a burst between two held lines, and a removal of a held word, which carries its two edges and no span', () => {
+  read(D, 'abcdef');
+  WRITE.addEdit(D, { pos: 4, width: 0, text: 'XY' });   // held: the insert `h-1`, pages 1 and 2
+  WRITE.markSent(D, 1);
+  WRITE.addEdit(D, { pos: 9, width: 0, text: 'Z' });    // held: the insert `h-2`, page 3, at the document's end
+  WRITE.markSent(D, 2);
+  const pieces = { 1: { burst: 'h-1', offset: 0 }, 2: { burst: 'h-1', offset: 1 }, 3: { burst: 'h-2', offset: 0 } };
+  WRITE.addEdit(D, { pos: 6, width: 0, text: 'more' });
+  const on = framesOf(composeWith(D, 2, pieces));
+  assert.deepEqual(on.map((f) => [f.frame.op, /** @type {any} */ (f.frame).at, f.anchors]), [['insert', { ordinal: '6', subspace: '1' }, { before: { burst: 'h-1', offset: 1 }, after: own(D, 4) }]],
+    'typing on after the held words: its neighbour before the last byte of the held insert, by its piece; after, the board\'s own byte');
+  WRITE.markSent(D, 3);
+  WRITE.addEdit(D, { pos: 5, width: 0, text: '-' });
+  const between = framesOf(composeWith(D, 3, pieces));
+  assert.deepEqual(between[0].anchors, { before: { burst: 'h-1', offset: 0 }, after: { burst: 'h-1', offset: 1 } }, 'typed inside the held word: both edges pieces of it');
+  WRITE.markSent(D, 4);
+  WRITE.addEdit(D, { pos: 15, width: 0, text: '!' });   // "abcX-YmoredefZ|", page 9
+  assert.deepEqual(framesOf(composeWith(D, 4, pieces))[0].anchors, { before: { burst: 'h-2', offset: 0 }, after: null }, 'typed after the second held line, at the document\'s end: the held byte before it, the edge after');
+  WRITE.markSent(D, 5);
+  WRITE.addEdit(D, { pos: 14, width: 1, text: '' });   // the held "Z" taken out, between the board's "f" and the held "!"
+  const gone = framesOf(composeWith(D, 5, { ...pieces, 9: { burst: 'h-5', offset: 0 } }));
+  assert.deepEqual(gone.map((f) => [f.frame.op, /** @type {any} */ (f.frame).p, /** @type {any} */ (f.frame).width, f.anchors]), [['delete', { ordinal: '14', subspace: '1' }, '1', { before: own(D, 6), after: { burst: 'h-5', offset: 0 } }]],
+    'a held word removed: a delete of its positions, its edges named — the held byte after it by its piece — and no span, the board holding no address for its bytes');
+  WRITE.addEdit(D, { pos: 5, width: 0, text: '?' });
+  assert.deepEqual(BURSTS.compose({ doc: REC.doc(D), edits: WRITE.edits(D), from: 6, asOf: 7, ids: (page, width) => REC.pageIds(D, page, width), load: LOAD, seq: 20 }), { waits: 'unminted' }, 'with no piece to name the unminted neighbour by, the burst composes to none');
+});
+
+test('BM-19: a refusal the page keeps is left out of what later bursts are composed against — a burst typed past an island\'s words takes positions less their width and never anchors on them, one past an island that removed words counts them back in — and the frames make the board\'s text the text shown without the islands', () => {
+  read(D, 'abcdef');
+  WRITE.addEdit(D, { pos: 3, width: 0, text: 'XYZ' });     // an island: three bytes the board never took
+  WRITE.markSent(D, 1);
+  WRITE.markIsland(D, 1, { kind: 'shell', name: 'frame_too_large' });
+  WRITE.addEdit(D, { pos: 8, width: 0, text: '+' });        // after "e", past the island
+  const past = framesOf(compose(D, WRITE.unsent(D)));
+  assert.deepEqual(past.map((f) => [f.frame.op, /** @type {any} */ (f.frame).at, /** @type {any} */ (f.frame).values, f.anchors]), [['insert', { ordinal: '5', subspace: '1' }, ['+'], { before: own(D, 4), after: own(D, 5) }]],
+    'past the island: at its board position, the island\'s width taken off, its anchors the board\'s bytes');
+  WRITE.addEdit(D, { pos: 6, width: 0, text: '*' });        // right after the island's last byte
+  assert.deepEqual(framesOf(compose(D, 2)).map((f) => [/** @type {any} */ (f.frame).at, f.anchors]), [[{ ordinal: '3', subspace: '1' }, { before: own(D, 2), after: own(D, 3) }]],
+    'beside the island: placed between the board\'s bytes either side of it, never on the island\'s own');
+  assert.equal(made(D, framesOf(compose(D, 1))), 'ab*cd+ef', 'the frames make the text shown less the island');
+  assert.equal(typed(D), 'abXYZ*cd+ef', 'while the text shown keeps the island\'s words');
+  read(E, 'abcdef');
+  WRITE.addEdit(E, { pos: 2, width: 3, text: '' });         // an island that removed "bcd": the board never took the delete
+  WRITE.markSent(E, 1);
+  WRITE.markIsland(E, 1, { kind: 'shell', name: 'malformed_args' });
+  WRITE.addEdit(E, { pos: 3, width: 0, text: '+' });        // after "e" in the text shown, "ae|f"
+  assert.deepEqual(framesOf(compose(E, 1)).map((f) => [/** @type {any} */ (f.frame).at, f.anchors]), [[{ ordinal: '6', subspace: '1' }, { before: own(E, 5), after: own(E, 6) }]], 'past a removal island: the words it removed counted back in');
+  assert.equal(WRITE.boardEdits(E).edits.length, 1, 'the board\'s edits: the island left out');
+});
+
+test('BM-2: an insertion inside a link\'s span splits the mark there — one insert, its anchors the span\'s own bytes either side, the span\'s bytes untouched — so the span stands in the text shown in two stretches, the typed words between them', () => {
+  read(D, 'abcdefgh');
+  /** the link's end: the bytes of "cdef", by identity */
+  const span = [{ prefix: D + '.0.1', ordinal: 3, width: 4 }];
+  WRITE.addEdit(D, { pos: 5, width: 0, text: 'NEW' });
+  const frames = framesOf(compose(D));
+  assert.deepEqual(frames.map((f) => [f.frame.op, f.anchors]), [['insert', { before: own(D, 4), after: own(D, 5) }]], 'one insert between two bytes of the span: nothing removed, nothing put back, no byte of the span renamed');
+  const shown = applyEdits(REC.doc(D), WRITE.edits(D), (page, width) => REC.pageIds(D, page, width)).doc;
+  assert.deepEqual(REC.placedIn(shown.image, span), [{ pos: 3, width: 2 }, { pos: 8, width: 2 }], 'the mark split at the insertion: two stretches, the new words between them and outside both');
+});
+

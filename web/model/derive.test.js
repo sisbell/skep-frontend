@@ -15,8 +15,8 @@
 // FP-7, FP-14).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyHeld, applyEdits, sourceRuns, fromBase, recordAt, boundaries, wordStop } from './derive.js';
-import { deriveBlocks, textOf, identityIn, placedIn, pageSpace, transcludedRuns } from './records.js';
+import { applyHeld, applyEdits, placedAgain, sourceRuns, fromBase, recordAt, boundaries, wordStop } from './derive.js';
+import { deriveBlocks, textOf, identityIn, identityParts, placedIn, pageSpace, transcludedRuns, PAGE_LOAD } from './records.js';
 import { vSpan } from './address.js';
 import { byteLength } from '../util.js';
 
@@ -254,3 +254,57 @@ test('a word step extending a selection stops at its anchor rather than crossing
   assert.equal(wordStop(runs, 3, -1, 3), 1);
   assert.equal(wordStop(runs, 3, 1), 6, 'no anchor: the word\'s end');
 });
+
+/** a draft's record as a read delivers it: its text and its image, its own bytes in order */
+function draftOf(/** @type {string} */ addr, /** @type {string} */ text) {
+  const n = byteLength(text), runs = /** @type {import('./frames.js').Run[]} */ ([{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+  return /** @type {import('./records.js').Doc} */ ({ addr, account: '1.0.1', kind: 'draft', label: null, standing: null, system: false, extent: n, linkPositions: 0, meta: null, runs, from: 1, to: n + 1, readAt: 7, blocks: deriveBlocks(runs),
+    image: [{ pos: 1, width: n, prefix: addr + '.0.1', ordinal: 1 }], origins: [], imageFor: [1, n + 1], links: new Set(), linksRead: true, members: null, ended: false, whole: n, rev: 1, refused: null });
+}
+/** a held line as `held(session)` lists it */
+const heldRow = (/** @type {number} */ held, /** @type {string} */ doc, /** @type {Record<string, unknown>} */ frame, /** @type {any} */ anchors = null) => /** @type {import('./frames.js').HeldLine} */ ({ held, doc, base: 7, frame: /** @type {any} */ (frame), anchors, cause: 'behind', sent: false, time: 0, refusal: null, sendable: null, hands: null, again: null, unwritable: null, unwritableClass: null });
+const wholeText = (/** @type {import('./records.js').Doc} */ d) => textOf(d.runs, d.from, d.to);
+
+test('#554: a held line\'s inserted bytes, named by the page as it applies them, stand in the record by that name, their source the page\'s — so a copy across them names them by the page\'s own name under its load, words to any other reader, and never as a gap that says the text was not read; the page\'s edits then apply over the record, its sources standing', () => {
+  const D = '1.0.1.0.2', d = draftOf(D, 'abcdef');
+  const rows = [heldRow(4, D, { op: 'insert', doc: D, at: { ordinal: '4', subspace: '1' }, values: ['XY'], as_of: 7 }), heldRow(5, D, { op: 'delete', doc: D, p: { ordinal: '1', subspace: '1' }, width: '1', as_of: 7 })];
+  /** the page's names: the line of ordinal 4 holds its ordinals from 11 */
+  const named = (/** @type {number} */ held, /** @type {number} */ width) => (held === 4 ? [{ prefix: pageSpace(D), ordinal: 11, width }] : []);
+  const bare = applyHeld(d, rows), out = applyHeld(d, rows, () => null, named);
+  assert.deepEqual([wholeText(out.doc), out.applied, out.stopped], ['bcXYdef', 2, null]);
+  assert.deepEqual(identityParts(bare.doc.image, 1, 7), [{ prefix: D + '.0.1', ordinal: 2, width: 2 }, { gap: 'unread', width: 2 }, { prefix: D + '.0.1', ordinal: 4, width: 3 }], 'unnamed, as a caller that names none leaves them: the held bytes a gap');
+  assert.deepEqual(identityParts(out.doc.image, 1, 7), [{ prefix: D + '.0.1', ordinal: 2, width: 2 }, { prefix: pageSpace(D), ordinal: 11, width: 2, load: PAGE_LOAD }, { prefix: D + '.0.1', ordinal: 4, width: 3 }],
+    'named: the held words by the page\'s own name and its load, each board byte by its address, no gap among them');
+  assert.deepEqual(sourceRuns(out.doc, 1, 7), [{ pos: 1, width: 2, base: 2, page: null }, { pos: 3, width: 2, base: null, page: 11 }, { pos: 5, width: 3, base: 4, page: null }], 'each byte by where it came from: the board\'s text at its own position there, the held words the page\'s');
+  const typed = applyEdits(out.doc, [{ pos: 5, width: 0, text: '!', page: 20 }]);
+  assert.deepEqual([wholeText(typed.doc), sourceRuns(typed.doc, 3, 4), typed.doc.derived?.rows], ['bcXY!def', [{ pos: 3, width: 2, base: null, page: 11 }, { pos: 5, width: 1, base: null, page: 20 }, { pos: 6, width: 1, base: 4, page: null }], [4, 5]],
+    'the page\'s edits applied over it: the held words\' source and the board\'s positions standing, the lines applied named still');
+});
+
+test('a held line is applied where its anchors name bytes the text places — after the unit before it, a delete at its span — and at its frame\'s own positions where they name none', () => {
+  const D = '1.0.1.0.2', d = draftOf(D, 'abcdef');
+  const at = (/** @type {number} */ n) => ({ ordinal: String(n), subspace: '1' });
+  // the frame's positions are those of an older text, two positions short: the anchors place it
+  const ins = heldRow(1, D, { op: 'insert', doc: D, at: at(2), values: ['X'], as_of: 5 }, { before: D + '.0.1.4', after: D + '.0.1.5', span: null });
+  assert.equal(wholeText(applyHeld(d, [ins]).doc), 'abcdXef', 'an insert: after the unit its anchor names before it');
+  const del = heldRow(2, D, { op: 'delete', doc: D, p: at(1), width: '2', as_of: 5 }, { before: D + '.0.1.2', after: D + '.0.1.5', span: [{ start: D + '.0.1.3', width: '2' }] });
+  assert.equal(wholeText(applyHeld(d, [del]).doc), 'abef', 'a delete: at its span, where the text holds it whole');
+  assert.equal(wholeText(applyHeld(d, [heldRow(3, D, { op: 'insert', doc: D, at: at(2), values: ['X'], as_of: 5 }, { before: { burst: 'b', offset: 0 }, after: null, span: null })]).doc), 'aXbcdef', 'anchors that name no byte the text places: the frame\'s own position');
+});
+
+test('BM-56: a draft\'s edits are placed again in another text by the identity of the bytes each touches and of those either side — an insert after the byte it followed, a removal at the bytes it took wherever they stand — exactly where those bytes still meet, and named adrift where they do not; some left out, the rest stand where their words stood', () => {
+  const D = '1.0.1.0.2', was = draftOf(D, 'abcdef');
+  /** the text another writer changed: "NEW " put before it, in its own bytes */
+  const now = { ...draftOf(D, 'NEW abcdef'), image: [{ pos: 1, width: 4, prefix: D + '.0.1', ordinal: 50 }, { pos: 5, width: 6, prefix: D + '.0.1', ordinal: 1 }] };
+  const edits = /** @type {import('./records.js').Edit[]} */ ([{ pos: 4, width: 0, text: 'X', page: 1 }, { pos: 5, width: 2, text: '', page: null }, { pos: 5, width: 0, text: 'Y', page: 2 }]);
+  assert.equal(wholeText(applyEdits(was, edits).doc), 'abcXYf');
+  const out = placedAgain(was, now, edits);
+  assert.deepEqual([out.edits.map((e) => [e.pos, e.width, e.text]), out.adrift, wholeText(applyEdits(now, out.edits).doc)], [[[8, 0, 'X'], [9, 2, ''], [9, 0, 'Y']], [], 'NEW abcXYf'], 'each placed four positions on, by its bytes: exact, the words where they were typed');
+  /** the other writer took "cd" out: the byte the insert followed is gone, and half of what the removal took */
+  const cut = { ...draftOf(D, 'abef'), image: [{ pos: 1, width: 2, prefix: D + '.0.1', ordinal: 1 }, { pos: 3, width: 2, prefix: D + '.0.1', ordinal: 5 }] };
+  const lost = placedAgain(was, cut, edits);
+  assert.deepEqual([lost.adrift.length > 0, wholeText(applyEdits(cut, lost.edits).doc)], [true, 'abXYf'], 'where the bytes either side no longer meet, or a byte it took is gone: placed at what stands, and named adrift');
+  const left = placedAgain(was, was, edits, (_e, i) => i !== 0);
+  assert.deepEqual([left.edits.map((e) => [e.pos, e.width, e.text]), [...left.index], wholeText(applyEdits(was, left.edits).doc)], [[[4, 2, ''], [4, 0, 'Y']], [[1, 0], [2, 1]], 'abcYf'], 'the first edit left out: the rest placed in the same text without its words, each named by its place among them');
+});
+

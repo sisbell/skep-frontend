@@ -217,6 +217,7 @@ import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import * as LAYER from '../text/layer.js';
 import * as PORT from '../bridge/port.js';
+import * as WRITE from '../write/write.js';
 import { deathWords, noBoardWords } from '../overlays/faces.js';
 import { drawChord } from '../nav/keys.js';
 import { cam, viewForCell } from '../plane/camera.js';
@@ -338,6 +339,8 @@ export function attach(e, a) {
     else if (which === 'acting') { actingOpen = true; render(true); }
     else if (which === 'unclaimed') { if (acts.hint) acts.hint('L.no-notebook-yet', /** @type {HTMLElement} */ (b)); }
     else if (which === 'again') { if (acts.again) acts.again(); }
+    else if (which === 'showfile') showFile();
+    else if (which === 'copyaddr') copyAddress();
     else if (which && which.startsWith(WALK_ACT) && acts.walk) acts.walk(which.slice(WALK_ACT.length), byKey);
     ev.stopPropagation();
   });
@@ -1112,21 +1115,52 @@ const DAEMON_FORM = /** @type {Record<import('../model/records.js').DaemonState,
   running: '', stopped: 'F.daemon.notebook.stopped', unreachable: 'F.daemon.unreachable', halted: 'F.daemon.notebook.halted', head_unreadable: 'B3.head_unreadable',
 });
 
+/** the page's board as the status region names it; '' where none is held */
+const boardName = () => { const b = REC.board(); return b ? t('L.mirror.board.name', { node: '1', origin: b.origin }) : ''; };
+
 /**
  * The daemon's segment, by the string it reads (`id`): silent while the board
- * runs. The halted form where `/health` says the board's writes are halted,
- * whatever the shell last said; else the form of the state the shell last
- * said (`DAEMON_FORM`) — the head-unreadable hold's own line naming the board
- * as the status region names it (D6 BM-22) — and the halted form for a state
- * that has none.
+ * runs. Where the board's drafts cannot be written for a reason of the held
+ * store's (W-WRITE's `unwritable`), that state's one line, first: at the
+ * store's bound its line (D6 BM-20); at the held file's halt its form, then
+ * what becomes of the words it holds, a damaged file's cause last, with the
+ * act "show the file" (BM-30); in a second window its line with the act
+ * "copy this address" (BM-60). Else the halted form where `/health` says the
+ * board's writes are halted, whatever the shell last said; else the form of
+ * the state the shell last said (`DAEMON_FORM`) — a board not answering, at
+ * one the session writes to, in its held form, by the venue (BM-78); the
+ * head-unreadable hold's own line naming the board as the status region
+ * names it (BM-22) — and the halted form for a state that has none.
  */
 function daemonSegment() {
-  const d = REC.daemon(), h = REC.health(), b = REC.board();
-  const form = d == null ? '' : Object.hasOwn(DAEMON_FORM, d) ? DAEMON_FORM[d] : 'F.daemon.notebook.halted';
+  const d = REC.daemon(), h = REC.health(), s = REC.session(), why = REC.board() ? WRITE.unwritable('') : null;
+  const seg = (/** @type {string} */ id, /** @type {string} */ words, act = '') => ({ id, html: `<span class="warn" data-string="${id}">${esc(words)}</span>${act}`, halted: false, words: '' });
+  if (why && why.why === 'held_full') return seg('B3.held_full.line', t('B3.held_full.line', { board: boardName() }));
+  if (why && why.why === 'store_halted') {
+    const damaged = why.detail === 'damaged', id = damaged ? 'B3.store_halted.damaged' : 'B3.store_halted.newer';
+    return seg(id, `${t(id)} ${t('B3.store_halted.unsent')}${damaged ? ` ${t('B3.store_halted.damaged.cause')}` : ''}`, ` <button data-act="showfile" data-string="B3.show-file">${esc(t('B3.show-file'))}</button>`);
+  }
+  if (why && why.why === 'another_window') return seg('B3.another_window', t('B3.another_window'), ` <button data-act="copyaddr" data-string="B3.copy-address">${esc(t('B3.copy-address'))}</button>`);
+  const said = d == null ? '' : Object.hasOwn(DAEMON_FORM, d) ? DAEMON_FORM[d] : 'F.daemon.notebook.halted';
+  const form = said === 'F.daemon.unreachable' && s && s.writes ? (LAYER.onNotebook() ? 'B3.daemon.held.notebook' : 'B3.daemon.held') : said;
   const halted = !!(h && h.writes && h.writes.halted) || form === 'F.daemon.notebook.halted';
   const id = halted ? 'F.daemon.notebook.halted' : form;
-  const words = id === 'B3.head_unreadable' ? t(id, { board: b ? t('L.mirror.board.name', { node: '1', origin: b.origin }) : '' }) : id ? t(id) : '';
+  const words = id === 'B3.head_unreadable' ? t(id, { board: boardName() }) : id ? t(id) : '';
   return { id, html: id ? `<span class="warn" data-string="${id}">${esc(words)}</span>` : '', halted, words: halted ? words : '' };
+}
+
+/** "show the file" at the halted store's line (D6 BM-30): the shell asked to reveal the held file (`held.show`), which names no path to the page; nothing where no session stands */
+function showFile() {
+  const s = REC.session();
+  if (s) void PORT.heldShow({ session: s.session });
+}
+
+/** "copy this address" in a second window (D6 BM-60): the address this window stands at put on the clipboard, for the other window's address line, and said */
+function copyAddress() {
+  const addr = currentAddress(), c = typeof navigator !== 'undefined' ? navigator.clipboard : null;
+  if (!addr) return;
+  if (c && c.writeText) void c.writeText(addr).catch(() => {});
+  FOCUS.say(t('B3.death.copied'));
 }
 
 /** the mode line: the flag-on transition at the first render after the pair changes (C-31), said through the status region */

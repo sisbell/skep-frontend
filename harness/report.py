@@ -4,7 +4,8 @@ machine): the tables per class and the figures, written to
 `results/report.md` and printed. Grown from spikes/s3/report.py and
 s11/report.py. Reads `results/*.json` as `drive.py` wrote them. The verdict
 is GREEN, and the exit status 0, only where every case passed, the page
-threw nothing and the driver found the owner's board unchanged."""
+threw nothing; the test board's log position before and after is reported
+as information."""
 import glob
 import json
 import os
@@ -67,7 +68,7 @@ def main():
     L.append('\nEvery figure below is this machine\'s under headless Chrome; none is a commodity claim.\n')
     L.append('## The board\n')
     h0, h1 = env.get('health_start') or {}, env.get('health_end') or {}
-    # the driver's verdict on the board (`drive.py`'s `board_change`), the one its exit took; results holding none read as unread
+    # what the run did to the test board (`drive.py`'s `board_change`), as information: the editor case writes there; results holding none read as unread
     change = env.get('board_change') or 'unread'
     L.append(table([
         ['log_position at start', h0.get('log_position')], ['log_position at end', h1.get('log_position')],
@@ -188,17 +189,17 @@ def main():
                 L.append(head + f"  \n  not drawn: {s['why']}")
         L.append('')
         wr = ed.get('write_check') or {}
-        L.append('The editor case\'s own write check over the harness\'s provider\'s log: dials `%s`; calls `%s`; canned `%s`; the owner\'s log_position %s → %s.\n' % (
-            json.dumps(wr.get('dials')), json.dumps(wr.get('calls')), json.dumps(wr.get('canned')), wr.get('log_position_before'), wr.get('log_position_after')))
+        L.append('The editor case\'s own write check over the harness\'s provider\'s log: dials `%s`; calls `%s`; canned `%s`; the write frames its pages sent `%s`, every one naming a draft the case minted (`%s`); the test board\'s log_position %s → %s.\n' % (
+            json.dumps(wr.get('dials')), json.dumps(wr.get('calls')), json.dumps(wr.get('canned')), json.dumps(wr.get('writes')), json.dumps(wr.get('minted')), wr.get('log_position_before'), wr.get('log_position_after')))
     notes = [(n, x) for n, c in cases.items() for x in (c.get('notes') or [])]
     if notes:
         L.append('\n## Notes the cases left\n')
         for n, x in notes:
             L.append(f'- **{n}**: {x}')
     L.append('\n## Verdict\n')
-    allpass = all(c['pass'] for c in cases.values()) and not (env.get('exceptions') or []) and change == 'unchanged'
+    allpass = all(c['pass'] for c in cases.values()) and not (env.get('exceptions') or [])
     n_expected = sum(len(c.get('expected') or []) for c in cases.values())
-    L.append(f"{'GREEN' if allpass else 'RED'} — {sum(1 for c in cases.values() if c['pass'])} of {len(cases)} cases pass; expected failures {n_expected} (marked checks waiting on a page issue, listed above); page exceptions {len(env.get('exceptions') or [])}; log_position {change if change == 'unchanged' else change.upper()}.\n")
+    L.append(f"{'GREEN' if allpass else 'RED'} — {sum(1 for c in cases.values() if c['pass'])} of {len(cases)} cases pass; expected failures {n_expected} (marked checks waiting on a page issue, listed above); page exceptions {len(env.get('exceptions') or [])}; the test board's log_position {change} (information).\n")
     text = '\n'.join(L)
     with open(os.path.join(RESULTS, 'report.md'), 'w') as fh:
         fh.write(text)

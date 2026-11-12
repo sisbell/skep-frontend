@@ -681,6 +681,15 @@ export function install(deps) {
       machine: (/** @type {boolean} */ on) => { if (on) MACHINE.handIn(); else MACHINE.takeOut(); CAM.markDirty(); },
       /** a draft's page-local edits as the caret made them (W-WRITE's `edits`; K-72): each its position, the width it replaced and its text, with the burst that carried it out and where it was acked — page state alone */
       edits: (/** @type {string} */ addr) => WRITE.edits(addr).map((e) => ({ ...e })),
+      /** what D6's machine holds of a draft, as W-WRITE keeps it (B3-S2; D6 BM-8 … BM-30): its kept state — the word and its cause — the held lines `held(session)` listed for it, each its ordinal, its cause and its verdict's name, the held lines this window did not send applied over its text, the refusals the page keeps of it, whether a burst of it is open or out, why its board's drafts cannot be written, and the typed state its own acks raised */
+      state: (/** @type {string} */ addr) => ({
+        kept: WRITE.keptOf(addr), held: WRITE.heldOf(addr).map((r) => ({ held: r.held, cause: r.cause, refusal: r.refusal ? r.refusal.name : null, sendable: r.sendable, hands: r.hands, again: r.again, unwritable: r.unwritable, unwritableClass: r.unwritableClass })),
+        reopened: WRITE.reopened(addr).map((l) => ({ held: l.row.held, at: l.at })), unapplied: WRITE.unapplied(addr).map((r) => r.held), islands: WRITE.islandsOf(addr), inFlight: WRITE.inFlight(addr), unwritable: WRITE.unwritable(addr), typed: MACHINE.typedOf(addr),
+      }),
+      /** the face of a draft's unkept words as O-FACES reads it now (`unkeptFace`): its kind, its head, its words and its hands by their strings, whether its hands are named again, its acts in order — each its label's string and the reason it is inert by — and its discard's statement; null where the draft has none */
+      face: (/** @type {string} */ addr) => { const f = FACES.unkeptFace(addr); return f ? { kind: f.kind, head: f.head ? f.head.id : null, lines: f.lines.map((l) => ({ id: l.id, text: l.text })), hands: f.hands ? f.hands.map((h) => ({ id: h.id, text: h.text })) : null, again: f.again, acts: f.acts.map((a) => ({ key: a.key, id: a.id, label: a.label, inert: a.inert ? a.inert.id : null, said: a.said })), said: f.said ? f.said.id : null } : null; },
+      /** the face of a draft's unkept words shown at its corner's kept word, as that word's act shows it (O-FACES' `unkept`): whether one shows */
+      showFace: (/** @type {string} */ addr) => { const out = FACES.unkept(addr, /** @type {HTMLElement | null} */ (document.querySelector(`#corners [data-corner="${addr}"] .kept-word`))); CAM.markDirty(); return out; },
     },
     /** the page's own caret as it stands (T-LAYER's `caret`; D5 K-70, K-77): its document, its position in the text shown and whether the keys reach it — false where Esc left it kept; null where none stands */
     caret: () => LAYER.caret(),
@@ -787,9 +796,9 @@ export function install(deps) {
     scene: {
       /** the scene opened on two documents as a step on the trail, the second the one opened beside, the first on what the page shows of it (T-LAYER's `paneSource`) as an act opening it from a span opens it, with the passage its opener holds (N-GO's `toScene`; SC's `Held`), and its own end, a Back from its entry (N-GO's `closeScene`) */
       open: (/** @type {string} */ a, /** @type {string} */ b, /** @type {import('../scene/scene.js').Held} */ held = {}) => GO.toScene(LAYER.paneSource(a), b, held), close: () => GO.closeScene(), isOpen: () => SCENE.isOpen(), pair: () => SCENE.pair(),
-      /** the scene opened apart from the trail on a document and, in its second pane, the record the page derives from it with held lines applied in the order given (M-DERIVE's `applyHeld`; B3-S2, D6 BM-14): page state alone, nothing read for the derived pane; whether the scene shows, how many rows applied and why the apply stopped, where it did */
+      /** the scene opened apart from the trail on a document and, in its second pane, the record the page derives from it with held lines applied in the order given (M-DERIVE's `applyHeld`; B3-S2, D6 BM-14), each line's inserted bytes named by the page's own ordinals (W-WRITE's `heldNames`), so a copy across them names them so: page state alone, nothing read for the derived pane; whether the scene shows, how many rows applied and why the apply stopped, where it did */
       openHeld: async (/** @type {string} */ a, /** @type {import('../model/frames.js').HeldLine[]} */ rows) => {
-        const out = DERIVE.applyHeld(REC.doc(a), rows, (addr) => (REC.has(addr) ? REC.doc(addr) : null));
+        const out = DERIVE.applyHeld(REC.doc(a), rows, (addr) => (REC.has(addr) ? REC.doc(addr) : null), WRITE.heldNames(a));
         const opened = await SCENE.open(a, out.doc, {}, {});
         return { shown: opened.shown, applied: out.applied, stopped: out.stopped ? out.stopped.why : null };
       },

@@ -94,7 +94,14 @@
 // selection alone: where none is drawn there it selects
 // nothing, follows nothing and leaves the caret where it stands, the caret's
 // follow line its hint (`followAtCaret`; B3-S13); every other key acts as on
-// the plane. At a span of such a draft where no caret stands a printable key
+// the plane. Where the caret's draft cannot be written now (W-WRITE's
+// `unwritable`; D6 BM-20, BM-24, BM-30, BM-58, BM-60) a key that would put
+// text in or take it out, a paste and a cut add no edit: the key is answered
+// at the caret by the reason's own line, its hint, said in the status region
+// (`unwritableSays`), while the arrows still move the caret and a selection
+// is still made and copied. The first key typed in a draft after a moved
+// verdict came to stand on it is followed by that verdict's line, once
+// (`movedSays`; BM-18). At a span of such a draft where no caret stands a printable key
 // but Space is answered by the draft's own line, "Enter places a caret here"
 // (K-72, K-9), and a paste or a cut there by that line in their own words,
 // each its hint, nothing placed and nothing removed (K-93); at the span a
@@ -113,8 +120,9 @@
 // the first press in a session, and the corner's own word after it, the
 // statement whole on the word's act (`saveChord`, `saveAnswer`; P41;
 // T-LAYER's `openStatement`), said in the status region (FP-36) — under a
-// hold the board's silence caused in the silence's own line; elsewhere the
-// chord is taken and does nothing.
+// hold while the board is not answering the one statement the table holds
+// for that silence (T-LAYER's `keptSaid`); elsewhere the chord is taken and
+// does nothing.
 // Esc closes the innermost thing, in one order (`esc`; §4 rule 7; D7): the
 // box, a card or scene still reading, the notice standing below the overlay
 // (FP-36; O-HOST's), the overlay, a jump reaching, the find — its current
@@ -544,6 +552,8 @@ export async function dispatch(e, ctx) {
   const mod = MAC ? e.metaKey : e.ctrlKey;
   ctx = whereNow(ctx);
   if (!keepsPanel(e, chord, ctx)) WALK.hidePanel();
+  // a paste or a cut at a live caret in a draft that cannot be written now (D6 BM-58 … BM-60): the reason's own line, nothing placed and nothing removed
+  if (mod && !e.shiftKey && (chord === 'Mod+V' || chord === 'Mod+X') && ctx.where === 'caret') { const c = LAYER.caret(); if (c && unwritableSays(c.addr, e, ctx)) return true; }
   // a paste or a cut at a span of a draft the person may edit holding no caret (K-93, K-72): the draft's line in their own words, its hint, nothing placed and nothing removed
   if (mod && !e.shiftKey && (chord === 'Mod+V' || chord === 'Mod+X') && bareDraftSpan(ctx)) { HINT.show(chord === 'Mod+V' ? 'B3.caret.enter.paste' : 'B3.caret.cut', null, hinted(e, ctx)); return true; }
   // a paste at the walk's span of an edition of the person's own or of another's document (K-72, K-93): its document's line, its hint, nothing placed
@@ -688,15 +698,52 @@ function caretKey(e, chord) {
   const moves = { '←': arrowStep(e), '→': arrowStep(e), '↑': 'up', '↓': 'down', Home: 'home', End: 'end' };
   /** the key's change made at the caret, the walk following it */
   const at = (/** @type {() => boolean} */ change) => async () => { e.preventDefault(); change(); await WALK.followCaret(); return true; };
+  /** a key that puts text in or takes it out: answered by the reason's line where the caret's draft cannot be written, else made, the moved verdict's line after its first */
+  const edit = (/** @type {() => boolean} */ change) => async () => {
+    e.preventDefault();
+    const c = LAYER.caret();
+    if (c && unwritableSays(c.addr, e)) return true;
+    change();
+    await WALK.followCaret();
+    if (c) movedSays(c.addr, e);
+    return true;
+  };
   if (chord in moves) return at(() => stepCaret(moves[chord]));
   const shifted = chord.startsWith('Shift+') ? chord.slice(6) : '';
   if (shifted in moves) return at(() => SEL.extendFromCaret(moves[shifted]));
-  if (chord === 'Backspace') return at(() => editAtCaret('', -1));
-  if (chord === 'Delete') return at(() => editAtCaret('', 1));
-  if (chord === 'Enter' || chord === 'Shift+Enter') return at(() => editAtCaret('\n'));
-  if (chord === 'Tab') return at(() => editAtCaret('\t'));
-  if (printable(e)) return at(() => editAtCaret(e.key));
+  if (chord === 'Backspace') return edit(() => editAtCaret('', -1));
+  if (chord === 'Delete') return edit(() => editAtCaret('', 1));
+  if (chord === 'Enter' || chord === 'Shift+Enter') return edit(() => editAtCaret('\n'));
+  if (chord === 'Tab') return edit(() => editAtCaret('\t'));
+  if (printable(e)) return edit(() => editAtCaret(e.key));
   return null;
+}
+
+/** the line each reason a board's drafts cannot be written for is answered by at a caret (W-WRITE's `Unwritable`; B3-S2, B3-S13) */
+const CARET_LINE = /** @type {Record<import('../write/write.js').Unwritable['why'], string>} */ ({
+  keyless: 'B3.keyless', another_window: 'B3.another_window', store_halted: 'B3.store_halted.caret', held_full: 'B3.held_full.caret', death: 'B3.death.caret',
+});
+
+/**
+ * A key that would write in a draft that cannot be written now, answered
+ * (see the head; W-WRITE's `unwritable`): the reason's own line, its hint at
+ * the focus the key was pressed at, said in the status region; nothing where
+ * the draft can be written.
+ * @param {string} addr the draft
+ * @param {KeyboardEvent} e
+ * @param {Ctx} [ctx]
+ * @returns {boolean} whether a line answered the key
+ */
+function unwritableSays(addr, e, ctx = { where: 'plane', byKey: true }) {
+  const why = WRITE.unwritable(addr), b = REC.board();
+  if (!why) return false;
+  HINT.show(CARET_LINE[why.why], { board: b ? t('L.mirror.board.name', { node: '1', origin: b.origin }) : '' }, hinted(e, ctx));
+  return true;
+}
+
+/** the first key typed in a draft since a moved verdict came to stand on it, followed by the verdict's line at the focus, once per verdict (D6 BM-18; W-WRITE's `takeMovedKey`) */
+function movedSays(/** @type {string} */ addr, /** @type {KeyboardEvent} */ e) {
+  if (WRITE.takeMovedKey(addr)) HINT.show('B3.moved.first-key', null, hinted(e, { where: 'plane', byKey: true }));
 }
 
 /**
@@ -757,7 +804,12 @@ function editAtCaret(text, erase) {
  * @returns {Promise<void>}
  */
 async function typeAt(e, ctx) {
-  if (e.key !== ' ' && keptSpan(ctx)) { e.preventDefault(); LAYER.returnCaret(); editAtCaret(e.key); await WALK.followCaret(); return; }
+  // a draft the session's ending left standing with its unkept words (D6 BM-24): no caret is placed in it, and a key at it is answered by the ending's caret line
+  const site = walkSite(), ended = site ? WRITE.unwritable(site) : null;
+  if (e.key !== ' ' && site && ended && ended.why === 'death' && WRITE.unkept(site) && unwritableSays(site, e, ctx)) return;
+  const kept = e.key !== ' ' ? keptSpan(ctx) : null;
+  if (kept && unwritableSays(kept.addr, e, ctx)) { e.preventDefault(); return; }
+  if (kept) { e.preventDefault(); LAYER.returnCaret(); editAtCaret(e.key); await WALK.followCaret(); movedSays(kept.addr, e); return; }
   const writing = writingElsewhere(walkSite());
   if (e.key !== ' ' && bareDraftSpan(ctx)) { HINT.show('B3.caret.enter', null, { ...hinted(e, ctx), writing }); return; }
   if (e.key !== ' ' && siteSays(e, ctx, writing)) return;
@@ -836,11 +888,11 @@ function saveChord() {
 /**
  * The save chord's answer (K-74; BM-3): where the draft has a kept state
  * (W-WRITE's `keptOf`), the state's statement is opened whole at its corner at
- * the first press in a session (T-LAYER's `openStatement`); after it the
- * corner's own word answers, the statement whole on the word's act (P41).
- * Either answer is said in the status region (FP-36), the statement under a
- * hold the board's silence caused in that silence's line (`heldStatement`).
- * Nothing where no such state stands.
+ * the first press in a session, as the chord's answer (T-LAYER's
+ * `openStatement`); after it the corner's own word answers, the statement
+ * whole on the word's act (P41). Either answer is said in the status region
+ * (FP-36), the statement as T-LAYER says it by the board's silence and the
+ * venue (`keptSaid`; BM-78). Nothing where no such state stands.
  * @param {string} addr
  */
 function saveAnswer(addr) {
@@ -848,23 +900,8 @@ function saveAnswer(addr) {
   if (!k) return;
   if (saveAnswered) { FOCUS.say(keptWord(k).text); return; }
   saveAnswered = true;
-  LAYER.openStatement(addr, true);
-  FOCUS.say(heldStatement(k) || keptStatement(k).text);
-}
-
-/**
- * The save chord's statement while a burst is held and the board is not
- * answering (K-74; BM-78; M-REC's `daemon`): the notebook's line where the
- * venue is the person's own notebook (T-LAYER's `onNotebook`), else the
- * board's, naming it as the status region names it. Null under any other
- * state, which the kept state's own statement answers.
- * @param {import('../write/write.js').KeptState} k
- * @returns {string | null}
- */
-function heldStatement(k) {
-  const b = REC.board();
-  if (k.word !== 'not yet kept' || REC.daemon() !== 'unreachable' || !b) return null;
-  return LAYER.onNotebook() ? t('B3.save.held') : t('B3.save.held.board', { board: t('L.mirror.board.name', { node: '1', origin: b.origin }) });
+  LAYER.openStatement(addr, true, 'save');
+  FOCUS.say(keptStatement(k, LAYER.keptSaid(addr, 'save')).text);
 }
 
 /**

@@ -37,7 +37,13 @@
 // (`decodeHeldRows`) — an anchor's edge an I-address, an `AnchorPiece` naming
 // words the board has not minted, or the document's edge — the `held` event
 // with the hands that moved a document and the lines it names kept
-// (`decodeHeldEvent`), the shell's `held_lines` refusal of a whole-draft
+// (`decodeHeldEvent`) — a row and the event each carrying the hands of the
+// move the document stands on, the one hand `unread` or `unknowable` among
+// them, and whether they are named again (`again`) — `resolve`'s answer, the
+// line kept or the dropped lines that may have landed (`decodeResolved`), the
+// shell's `landing_unread` refusal of a drop (`decodeLandingUnread`), the
+// `another-window` event (`decodeAnotherWindow`), the shell's `held_lines`
+// refusal of a whole-draft
 // write — the draft holding the lines, an address, and their count, one or
 // more (`decodeHeldLinesRefusal`) — `history.restore`'s `Restored`,
 // `history.past`'s `Past`, `publication.standing`'s `PublicationStanding`,
@@ -60,6 +66,7 @@ import { byteLength } from '../util.js';
 /** @typedef {import('../bridge/shapes').HeldAnswer} HeldAnswer */
 /** @typedef {import('../bridge/shapes').HeldEvent} HeldEvent */
 /** @typedef {import('../bridge/shapes').HandKey} HandKey */
+/** @typedef {import('../bridge/shapes').LandingUnreadRefusal} LandingUnreadShape */
 /** @typedef {import('../bridge/shapes').AnchorPiece} AnchorPiece */
 /** @typedef {import('../bridge/shapes').BaseStanding} BaseStanding */
 /** @typedef {import('../bridge/shapes').AckVia} AckVia */
@@ -630,6 +637,8 @@ export function decodeHeld(/** @type {unknown} */ answer) {
  * @property {number} time
  * @property {Refusal | null} refusal the verdict for a refused run — the board's, the shell's `answers_lost`, `arrangement_moved` at a line held moved, `head_unreadable`, `session_died`; null while the line waits on no act
  * @property {boolean | null} sendable on a moved document's first moved line, what `resolve(send)` would do now: true where it would shift the line into the text as it stands, false where it would hold it moved again; null where the row carries none — the shell does not know, or the line is no such line
+ * @property {HeldHand[] | null} hands on a moved line, the hands whose rows moved its document, for the verdict the document stands on now, each once — the one hand `unread` where no read named them yet, `unknowable` where none can; null where the row carries none
+ * @property {true | null} again beside `hands`, where the board refused the burst again with no row since the person's `send`: the hands are those the face that `send` acknowledged named; null where the row carries none
  * @property {string | null} unwritable why the line stands on no file, the device having refused its copy; null where a file holds it
  * @property {NonNullable<HeldAnswer['unwritable_class']> | null} unwritableClass the class the page keys its act by, beside `unwritable`; null with it
  */
@@ -653,6 +662,14 @@ function anchorsOf(v) {
   return { before: opt(a.before, edgeOf), after: opt(a.after, edgeOf), span: opt(a.span, (s) => array(s).map((x) => { const r = object(x); return { start: string(r.start), width: string(r.width) }; })) };
 }
 
+/** @type {Record<HandKey, null>} the hands a moved document's rows name (`HandKey`) */
+const HAND_KEYS = { own: null, other: null, bare: null, lost: null, unread: null, unknowable: null };
+
+/** @param {unknown} v @returns {HeldHand[]} the hands a row or an event names (`Hand[]`), each as declared; else malformed */
+const handsOf = (v) => array(v).map((h) => { const x = object(h); return { key: oneOf(x.key, HAND_KEYS), fingerprint: opt(x.fingerprint, string), label: opt(x.label, string) }; });
+/** @param {unknown} v @returns {true} the literal `true` a member present carries (`again`); else malformed */
+const yes = (v) => (v === true ? true : fail());
+
 /**
  * `held(session)` → the held lines in resend order; null where the answer is
  * no list, or a row lacks a member the declarations give it.
@@ -668,7 +685,8 @@ export function decodeHeldRows(answer) {
       const line = {
         held: number(r.held), doc: string(r.doc), base: number(r.base), frame: /** @type {{op: string} & Record<string, unknown>} */ (frame),
         anchors: opt(r.anchors, anchorsOf), cause: string(r.cause), sent: boolean(r.sent), time: number(r.time), refusal: opt(r.refusal, refusalOf),
-        sendable: opt(r.sendable, boolean), unwritable: opt(r.unwritable, string), unwritableClass: opt(r.unwritable_class, (v) => oneOf(v, UNWRITABLE_CLASSES)),
+        sendable: opt(r.sendable, boolean), hands: opt(r.hands, handsOf), again: opt(r.again, yes),
+        unwritable: opt(r.unwritable, string), unwritableClass: opt(r.unwritable_class, (v) => oneOf(v, UNWRITABLE_CLASSES)),
       };
       return line;
     });
@@ -677,13 +695,12 @@ export function decodeHeldRows(answer) {
 
 /** @type {Record<HeldEvent['state'], null>} the states a document's held state moves through (`HeldEvent.state`) */
 const HELD_STATES = { holding: null, sending: null, kept: null, refused: null, moved: null };
-/** @type {Record<HandKey, null>} the hands a moved document's rows name (`HandKey`) */
-const HAND_KEYS = { own: null, other: null, bare: null, lost: null, unread: null };
 
 /**
  * @typedef {Object} HeldHand — one hand whose row moved a held document (`Hand`)
  * @property {HandKey} key `own` this store's key, `other` another's, `bare` an unsigned hand under local trust, `lost` a row
- * whose testimony the board lost, `unread` the hands not read yet (D6 BM-78)
+ * whose testimony the board lost, `unread` the hands not read yet (D6 BM-78), `unknowable` the hands no read can name, the
+ * board having reclaimed the history that held them (D6 BM-13)
  * @property {string | null} fingerprint the key's, for `own` and `other`; null for the rest
  * @property {string | null} label the label the shell's key store holds for the key; null where it holds none
  */
@@ -697,6 +714,7 @@ const HAND_KEYS = { own: null, other: null, bare: null, lost: null, unread: null
  * @property {HeldEvent['state']} state
  * @property {string | null} cause the hold's token while holding, the refusal's while refused; null where the event carries none
  * @property {HeldHand[]} hands with the `moved` state, each hand once; empty where the event carries none
+ * @property {true | null} again beside `hands`, where the board refused the burst again with no row since the person's `send` (D6 BM-17); null where the event carries none
  * @property {boolean | null} sendable with the `moved` state, as the document's first moved line's row carries it (`HeldLine.sendable`); null where the event carries none
  * @property {string | null} unwritable why a line of the document stands on no file; null where none does
  * @property {NonNullable<HeldAnswer['unwritable_class']> | null} unwritableClass the class beside `unwritable`; null with it
@@ -716,10 +734,52 @@ export function decodeHeldEvent(/** @type {unknown} */ data) {
   return decode(data, (a) => /** @type {HeldState} */ ({
     board: string(a.board), session: string(a.session), doc: string(a.doc), held: number(a.held), state: oneOf(a.state, HELD_STATES),
     cause: opt(a.cause, string),
-    hands: opt(a.hands, (hs) => array(hs).map((h) => { const x = object(h); return { key: oneOf(x.key, HAND_KEYS), fingerprint: opt(x.fingerprint, string), label: opt(x.label, string) }; })) || [],
+    hands: opt(a.hands, handsOf) || [], again: opt(a.again, yes),
     sendable: opt(a.sendable, boolean), unwritable: opt(a.unwritable, string), unwritableClass: opt(a.unwritable_class, (v) => oneOf(v, UNWRITABLE_CLASSES)),
     landed: opt(a.landed, (ls) => array(ls).map((l) => { const x = object(l); return { held: number(x.held), burst: opt(x.burst, string), at: opt(x.at, number), addr: opt(x.addr, string) }; })) || [],
   }));
+}
+
+/**
+ * @typedef {Object} Resolved — `resolve`'s answer (`Bridge['resolve']`): what the person's act on a held line did
+ * @property {true | null} kept a drop's read found the line landed: it is kept, nothing dropped; null where the answer carries none
+ * @property {number[] | null} mayHaveLanded the ordinals of the lines a drop took that may have landed, in `k` order; null where the answer names none
+ */
+
+/** `resolve`'s answer → whether the line was kept and the dropped lines that may have landed; null where a member is not as declared */
+export function decodeResolved(/** @type {unknown} */ answer) {
+  return decode(answer, (a) => /** @type {Resolved} */ ({ kept: opt(a.kept, yes), mayHaveLanded: opt(a.may_have_landed, (v) => array(v).map(number)) }));
+}
+
+/** @type {Record<LandingUnreadShape['why'], null>} why a drop's read for a line's landing could not tell (`LandingUnreadRefusal.why`) */
+const LANDING_WHYS = { unanswered: null, unread: null, undecided: null, stopped: null, poisoned: null, halted: null };
+
+/**
+ * @typedef {Object} LandingUnread — the shell's `landing_unread` refusal of a drop (`LandingUnreadRefusal`): the read for the line's landing could not tell, nothing dropped (D6 BM-27)
+ * @property {number} held the line
+ * @property {LandingUnreadShape['why']} why
+ */
+
+/**
+ * The shell's `landing_unread` refusal → the line and why its landing could
+ * not be read; null for a refusal of any other kind or name, or one whose
+ * `why` is none the declarations give.
+ * @param {unknown} refusal an outcome's `refused`, as the port hands it up
+ * @returns {LandingUnread | null}
+ */
+export function decodeLandingUnread(refusal) {
+  return decode(refusal, (r) => (r.kind === 'shell' && r.name === 'landing_unread' ? /** @type {LandingUnread} */ ({ held: number(r.held), why: oneOf(r.why, LANDING_WHYS) }) : fail()));
+}
+
+/**
+ * @typedef {Object} AnotherWindow — the `another-window` event (`AnotherWindowEvent`): another shell's hold on the board's held store, at an edge of that state (D6 BM-60)
+ * @property {string} board
+ * @property {boolean} anotherWindow true where another shell holds the store, every write at the board refused; false where this shell took it
+ */
+
+/** the `another-window` event → the board and whether another shell holds its held store; null where a member is not as declared */
+export function decodeAnotherWindow(/** @type {unknown} */ data) {
+  return decode(data, (a) => /** @type {AnotherWindow} */ ({ board: string(a.board), anotherWindow: boolean(a.another_window) }));
 }
 
 /**

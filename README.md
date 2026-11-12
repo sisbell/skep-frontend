@@ -22,12 +22,14 @@ the beams, navigation (LEAP, the trail, the walk, the chords), the one
 line acting as the signed-in person, the read overlays, and the reading
 scene. `harness/` drives the page in headless Chrome and asserts text,
 keys, layout, the wire, frames and the accessible rendering; `results/`
-and `shots/` hold what its last run wrote. Writes, the key ceremonies,
-annotation and the installed shell come in later lanes. The gate never
-changes the owner's board: a test that needs a write's answer takes it
-from the fake port under `web/test/`, or in a harness case from the
-harness's own provider (step 6 below), never from the board or the
-owner's provider.
+and `shots/` hold what its last run wrote. What is typed in a draft is
+sent to the board by `web/write/`, as bursts, and what the board has not
+kept is held, shown and settled there. The key ceremonies, annotation
+and the installed shell come in later lanes. The gate runs on a board of
+its own, THE TEST BOARD, and never reaches the owner's: its `editor`
+case alone writes, through the page, and a test that needs a faulted
+answer takes it from the fake port under `web/test/`, or in that case
+from the harness's own provider (step 6 below).
 
 ## Where the design lives
 
@@ -39,9 +41,14 @@ document there (`docs/wire.md`) is what this client is built against.
 
 ## Running
 
-The board, the claim, the seed and the provider are the owner's prelude:
-started once at a terminal, left running, and never started, stopped,
-claimed, seeded or written to by the gate. Everything is loopback.
+Two boards stand, apart. THE TEST BOARD, on 8644, is the gate's: every
+case reads it through the provider on 8742, and the `editor` case alone
+writes to it — through the page, by the harness's provider on 8744.
+THE OWNER'S BOARD, on 8642, is the owner's own, read and written by hand
+through the viewer (below); the gate never reaches it. The boards, their
+claims and seeds and the providers are the owner's prelude: started once
+at a terminal, left running, and never started, stopped, claimed or
+seeded by the gate. Everything is loopback.
 
 1. Build skepd and skep-cli's two binaries at the pin, in a checkout of
    skep (never its working tree while a lane runs there):
@@ -49,9 +56,11 @@ claimed, seeded or written to by the gate. Everything is loopback.
        cargo build --release -p skepd
        cargo build --release -p skep-cli --bin skep --bin skep-dev
 
-2. Start a throwaway board on loopback, by the local record's recipe:
+2. Start the test board on loopback, by the local record's recipe
+   (`--create` begins a board where none stands, the first time alone):
 
-       skepd --data-dir ./board --port 8642 --origin http://127.0.0.1:8642
+       skepd --data-dir ./board-gate --create --port 8644 \
+         --origin http://127.0.0.1:8644
 
    The board is unclaimed until you claim it; never forward the port
    before the claim.
@@ -60,14 +69,14 @@ claimed, seeded or written to by the gate. Everything is loopback.
    the board outlives the gate):
 
        skep keygen --dir ./store
-       skep claim --board http://127.0.0.1:8642 --dir ./store
+       skep claim --board http://127.0.0.1:8644 --dir ./store
 
 4. Seed it from a git checkout of prose at a pinned commit (idempotent:
    a second run adds nothing). The verb's flags at the pin: `--board`,
    `--dir`, `--repo`, `--pin`, `--from`, `--documents`, `--versions`,
    `--drafts`, `--principal`, `--key`:
 
-       skep-dev seed --board http://127.0.0.1:8642 --dir ./store \
+       skep-dev seed --board http://127.0.0.1:8644 --dir ./store \
          --repo <the design repo's checkout> --pin <its commit> \
          --documents 1000 --versions 20 --drafts 10
 
@@ -76,18 +85,24 @@ claimed, seeded or written to by the gate. Everything is loopback.
    keep it in the environment (it is never written to this tree):
 
        export SKEP_PROVIDER_SECRET=<any long text of A-Z a-z 0-9 - . _ ~>
-       skep-dev serve --board http://127.0.0.1:8642 \
+       skep-dev serve --board http://127.0.0.1:8644 \
          --page-origin http://127.0.0.1:8731 --session signed --dir ./store \
          --principal 1 --secret "$SKEP_PROVIDER_SECRET"
 
    `--listen 8742` is the default; closing its stdin is the clean stop.
+   Every gate case reads the test board through this provider, and no
+   page sends a write through it.
 
 6. Start the harness's own provider over the same board, on 8744, for the
-   gate's `editor` case alone: it arms that provider's script seam with
-   canned answers and fires events by hand to reach the editor's states,
-   and never the owner's on 8742. It needs a store of its own, made once,
-   mode 0700, holding copies of the dev store's `keys/` and `bindings` and
-   nothing else (a provider holds its store's search index while it runs):
+   gate's `editor` case alone. That case's page boots with the write
+   layer's machine (`machine=1`, below): it makes drafts of its own on
+   the test board and types in them, so its words are sent, acked and
+   kept by a real board; and it arms this provider's script seam with
+   canned answers and fires events by hand to reach the states a fault
+   makes. Nothing else is ever armed, and never the provider on 8742.
+   It needs a store of its own, made once, mode 0700, holding copies of
+   the dev store's `keys/` and `bindings` and nothing else (a provider
+   holds its store's search index while it runs):
 
        mkdir -m 0700 ./store-gate
        cp -Rp ./store/keys ./store/bindings ./store-gate/
@@ -96,7 +111,7 @@ claimed, seeded or written to by the gate. Everything is loopback.
    (never written to this tree):
 
        export SKEP_EDITOR_SECRET=<any long text of A-Z a-z 0-9 - . _ ~>
-       skep-dev serve --board http://127.0.0.1:8642 \
+       skep-dev serve --board http://127.0.0.1:8644 \
          --page-origin http://127.0.0.1:8731 --listen 8744 \
          --session signed --dir ./store-gate \
          --principal 1 --secret "$SKEP_EDITOR_SECRET"
@@ -116,10 +131,13 @@ claimed, seeded or written to by the gate. Everything is loopback.
        harness/run.sh
 
    It writes `results/*.json`, `results/report.md` and `shots/**`, and
-   exits non-zero on any failed case, and where the board's log
-   position at the run's end is not the one it read at the start. Both
-   secrets must be in the environment. `npm run check` and `npm test`
-   run the checker and the pure tests alone.
+   exits non-zero on any failed case. Its `wire` case holds every page
+   but the `editor` case's to reads: each `op` frame a page sends through
+   8742 is a read, and a write frame from any other case fails the gate.
+   The test board's log position is read before and after and reported
+   as a figure, since the `editor` case writes there. Both secrets must
+   be in the environment. `npm run check` and `npm test` run the checker
+   and the pure tests alone.
 
 To look at the page yourself, serve it and open it with the secret:
 
@@ -127,17 +145,26 @@ To look at the page yourself, serve it and open it with the secret:
     open "http://127.0.0.1:8731/?provider=$SKEP_PROVIDER_SECRET"
 
 `harness/run.sh safari` opens that URL in Safari and asserts nothing —
-the owner's pass. Adding `&gate=all` to the URL loads the gate's hooks
-(`window.__skep`) and the write ledger; without it the page ships no
-instrumentation. `&gate=guest` loads them too and opens the page as a
-guest: it asks no session, so it reads the board at guest class — the
-page the gate's `guest` case and the W-01 walk drive.
+the owner's pass. A page opened so sends what is typed in a draft to the
+board it reads. Adding `&gate=all` to the URL loads the gate's hooks
+(`window.__skep`) and the write ledger, and boots the page without the
+write layer's machine, so what is typed stays in the page; `&machine=1`
+beside it boots the machine as well — the `editor` case's page. Without
+`gate` the page ships no instrumentation. `&gate=guest` loads the hooks
+too and opens the page as a guest: it asks no session, so it reads the
+board at guest class — the page the gate's `guest` case and the W-01
+walk drive.
 
 ### Looking at the page while the gate runs
 
-The gate takes port 8731 for each run, and the provider on 8742 admits
-that one page origin alone. To read the page while a gate runs, give it
-a page origin and a provider of its own:
+The gate takes port 8731 for each run, and the providers on 8742 and
+8744 admit that one page origin alone, over the test board. The viewer
+is the owner's own page: a page origin and a provider of its own, over
+THE OWNER'S BOARD on 8642 — a second board, begun, claimed and seeded as
+the test board is (steps 2–4, with a data directory of its own and
+`--port 8642 --origin http://127.0.0.1:8642`). What the owner types
+there reaches that board, and the gate never reads, writes or measures
+it:
 
 1. A second checkout, outside this tree:
 
@@ -175,6 +202,7 @@ a page origin and a provider of its own:
 `port` names a port on 127.0.0.1, never a host; without it the page
 dials 8742. A value that is not a number from 1 to 65535 dials nothing:
 the page boots, and its one line says the port must be a number. The
-gate serves its page on 8731 and reads the board through 8742 alone; its
-`wire` case sets `port` only to check the key, at a port nothing listens
-on and with a stand-in for the secret.
+gate serves its page on 8731 and reads the test board through 8742; its
+`editor` case sets `port` to 8744, and its `wire` case sets it only to
+check the key, at a port nothing listens on and with a stand-in for the
+secret.

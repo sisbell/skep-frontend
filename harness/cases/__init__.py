@@ -12,12 +12,17 @@ its figures; `drive.py` writes it to `results/<name>.json`. A check that
 holds the page to what a named page issue still breaks is marked with that
 issue: it is counted under `expected` while it fails, and it FAILS the case
 the day it passes, so the mark comes off with the fix and never outlives it.
-Two providers stand beside the gate, both the owner's prelude's: the
-owner's on 8742, which every case reads and none arms, and the harness's
-on 8744, which the `editor` case alone arms (`Context.arm`) and fires
-(`Context.fire`) through the dev provider's script seam, by the harness's
-own request and never the page's. The harness is not the product (FP-5):
-nothing in `web/` imports any of this."""
+The gate runs on a board of its own, the test board, and two providers
+stand over it, all three the owner's prelude's: the one on 8742, which every
+case reads and none arms or writes through, and the harness's on 8744, which
+the `editor` case alone arms (`Context.arm`) and fires (`Context.fire`)
+through the dev provider's script seam, by the harness's own request and
+never the page's, and alone writes through, by the page. A page the harness
+opens boots without D6's machine, its typing page-local, unless its URL
+asks for it (`open_page`'s `machine`), and every page a case opens on the
+gate's provider is held to reads, frame by frame: one that sends a write
+fails its case (`run`). The harness is not the product
+(FP-5): nothing in `web/` imports any of this."""
 import hashlib
 import importlib
 import json
@@ -35,7 +40,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 DESIGN = os.environ.get('SKEP_DESIGN_REPO', os.path.normpath(os.path.join(ROOT, '..', 'skep-ux-design')))
 PAGE_ORIGIN = 'http://127.0.0.1:8731'
 
-# the seed's fixed points (the owner's board, read in the run condition)
+# the seed's fixed points (the test board, seeded as the owner's is)
 DOC = '1.0.1.0.3'            # the first edition: its window of the draft 1.0.1.0.1003 is withheld from a guest
 WINDOW = (1467, 240, '1.0.1.0.1003')
 GHOST = '1.0.1.0.1049578'    # cited by the first edition, never minted: `doc_not_registered`
@@ -334,6 +339,20 @@ def placeholder_sweep(ctx):
 # states last, the one case that opens a page on the harness's provider
 ALL = ['static', 'shapes', 'wire', 'rendered', 'text', 'layout', 'a11y', 'keys', 'frames', 'walks', 'shots', 'guest', 'editor']
 
+# the bridge's rows a page may call of the gate's provider: those that read, and the session's open and close. Every
+# other row is refused: a row that writes or composes a write (the publication, merge and history families, `upload`,
+# `restore`, `resolve`), since no case sends the gate's provider a write — the editor's writes go through the harness's
+# own; a key ceremony or an answer to one of its moments (`answer`, `cancel`), since a ceremony writes the device's key
+# store where no board check sees it; and `held.show`, which opens the shell's own window
+READ_ROWS = ('boards', 'session', 'close', 'fingerprint', 'health', 'probe', 'op', 'fetch', 'search', 'places', 'held', 'changes')
+
+
+def read_ops():
+    """the wire's reads, as M-FRAMES lists them (`READ_OPS`): every other `op` a frame names is a write"""
+    src = open(os.path.join(ROOT, 'web', 'model', 'frames.js'), encoding='utf8').read()
+    m = re.search(r'READ_OPS\s*=\s*Object\.freeze\(\[(.*?)\]\)', src, re.S)
+    return set(re.findall(r"'([a-z_]+)'", m.group(1))) if m else set()
+
 # the page issues the marked checks wait on; each mark comes off the day its check passes
 # issue #9's boundary note
 XFAIL_BEAM_LABELS = ("page: each bundle's label is set at its first beam's end, so stubs bound for different documents that land near "
@@ -378,7 +397,7 @@ class Result:
 
 
 class Context:
-    """what every case gets: the driver, the page's URL, the owner's provider and the board, the harness's own provider
+    """what every case gets: the driver, the page's URL, the gate's provider and the test board, the harness's own provider
     and its secret, the folders, and a few verbs"""
 
     def __init__(self, drv, provider, board, secret, results, shots, env, page, editor_provider=None, editor_secret=''):
@@ -386,6 +405,9 @@ class Context:
         self.results, self.shots, self.env, self.page = results, shots, env, page
         self.editor_provider, self.editor_secret = editor_provider, editor_secret
         self.armed = []  # every call the run armed on the harness's provider, with the log seq it was armed after (`arm`)
+        # the reads guard (`unread_sent`): whether the page now open is held to reads, how many of its calls are judged
+        # already, and what the pages of the case now running sent that is no read
+        self.held_to_reads, self.judged, self.unread = True, 0, []
         self.shared = {}
         self._design_cache = {}
         try:
@@ -396,18 +418,46 @@ class Context:
             env['provider_log_error'] = str(e)
 
     # ---- the page -----------------------------------------------------------
-    def open_page(self, gate, **keys):
-        """the page opened afresh at the run's URL with `gate` its `?gate=` value — `all` the owner's signed page,
-        `guest` the page at guest class, which asks no session — and each of `keys` its query key's value in place of
-        the run URL's own (`provider`, `port`), settled on its own signal; the page it replaces closes its session at
-        `pagehide`. What the new page booted with is returned"""
+    def open_page(self, gate, machine=False, **keys):
+        """the page opened afresh at the run's URL with `gate` its `?gate=` value — `all` the signed page, `guest` the
+        page at guest class, which asks no session — and each of `keys` its query key's value in place of the run URL's
+        own (`provider`, `port`), settled on its own signal; the page it replaces closes its session at `pagehide`. A
+        page opened with `gate` boots WITHOUT D6's machine: its typing stays page-local and it sends no write. `machine`
+        asks for it by the page's second query key, `machine=1` (APP's `WRITES`): the page then composes and sends what
+        is typed, through the provider it was opened on — the `editor` case alone asks, on the harness's own provider.
+        What the new page booted with is returned"""
         url = urllib.parse.urlsplit(self.page)
         given = dict(keys, gate=gate)
-        query = [(k, v) for k, v in urllib.parse.parse_qsl(url.query, keep_blank_values=True) if k not in given] + list(given.items())
+        if machine:
+            given['machine'] = '1'
+        query = [(k, v) for k, v in urllib.parse.parse_qsl(url.query, keep_blank_values=True) if k not in given and k != 'machine'] + list(given.items())
+        self.unread_sent()
         self.drv.navigate(urllib.parse.urlunsplit(url._replace(query=urllib.parse.urlencode(query))))
+        self.held_to_reads, self.judged = True, 0
         self.drv.settle(40)
         self.drv.pump_events(0.5)
         return self.js('window.__skep.boot')
+
+    def unread_sent(self):
+        """Judge what the page now open has sent since it was last judged, and answer what the case's pages sent that is
+        no read: an `op` frame naming an op outside M-FRAMES's READ_OPS, as `op <its op>`, or a call of a row outside
+        READ_ROWS, by its name.
+
+        Called as a page is left (`open_page`) and as a case ends (`run`), so every frame a page sends is judged once,
+        under the case that sent it. A page on the harness's own provider is not judged here: the `editor` case holds
+        its own to the drafts it minted. A page that holds no hooks answers nothing more."""
+        if self.held_to_reads:
+            try:
+                sent = self.js('(() => { const c = window.__skep && window.__skep.bridge ? window.__skep.bridge.calls() : null; if (!c) return null; '
+                               'const ops = new Set(%s), rows = new Set(%s); '
+                               'return { n: c.length, bad: c.slice(%d).filter((x) => x.name === "op" ? !ops.has(x.op) : !rows.has(x.name)).map((x) => x.name === "op" ? "op " + x.op : x.name) }; })()'
+                               % (json.dumps(sorted(read_ops())), json.dumps(list(READ_ROWS)), self.judged))
+            except Exception:  # a page that cannot answer has no log to judge
+                sent = None
+            if sent:
+                self.unread += sent['bad']
+                self.judged = sent['n']
+        return self.unread
 
     def js(self, expr, timeout=120):
         return self.drv.eval(expr, timeout=timeout)
@@ -622,7 +672,7 @@ class Context:
     # ---- the harness's own provider (the editor case's; the dev provider's script seam) ----
     def provider_call(self, name, args, provider=None, secret=None):
         """the harness's own `POST <provider>/bridge/<name>` with the secret — a request of the harness's, never the
-        page's `fetch`, so no ledger and no call log of the page counts it; the owner's provider where none is named.
+        page's `fetch`, so no ledger and no call log of the page counts it; the gate's provider where none is named.
         Answers the JSON body, or `{'HTTP': status, 'body': text}` where the provider refused the request itself"""
         provider, secret = provider or self.provider, secret if secret is not None else self.secret
         req = urllib.request.Request(f'{provider}/bridge/{name}', data=json.dumps(args).encode(), method='POST',
@@ -690,12 +740,15 @@ class Context:
                 cleared.append(a['call'])
         return cleared
 
-    def open_editor_page(self, gate='all'):
+    def open_editor_page(self, gate='all', machine=False):
         """the page opened afresh at the run's URL on the harness's own provider: `provider=` its secret and `port=` its
-        port (the bridge client's port key), settled as `open_page` settles. What the new page booted with is returned"""
+        port (the bridge client's port key), with D6's machine where `machine` asks for it (`open_page`), settled as
+        `open_page` settles. What the new page booted with is returned"""
         if not self.editor_provider or not self.editor_secret:
             raise RuntimeError('the editor page needs --editor-provider and SKEP_EDITOR_SECRET')
-        return self.open_page(gate, provider=self.editor_secret, port=str(self.editor_port))
+        boot = self.open_page(gate, machine=machine, provider=self.editor_secret, port=str(self.editor_port))
+        self.held_to_reads = False
+        return boot
 
     # ---- the design repository, read-only, by `git show` ------------------
     def design(self, path):
@@ -709,5 +762,21 @@ class Context:
 
 
 def run(name, ctx):
+    """Run one case and hold its pages to reads.
+
+    Every page a case opens on the gate's provider is judged frame by frame (`Context.unread_sent`): an `op` frame that
+    names no read, or a call of a row that is no read row, fails the case that sent it — one check more in its result.
+    The `editor` case's pages on the harness's own provider are that case's to judge."""
     mod = importlib.import_module('cases.' + name)
-    return mod.run(ctx)
+    ctx.unread = []
+    try:
+        res = mod.run(ctx)
+    finally:
+        unread = sorted(set(ctx.unread_sent()))
+        if unread:
+            ctx.env.setdefault('unread_sent', {})[name] = unread
+    res['checks'] = res.get('checks', 0) + 1
+    if unread:
+        res['pass'] = False
+        res.setdefault('failures', []).append({'what': 'every `op` frame this case\'s pages sent the gate\'s provider names a read (READ_OPS), and every call a row that reads (READ_ROWS)', 'detail': unread})
+    return res

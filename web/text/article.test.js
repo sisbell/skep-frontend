@@ -55,6 +55,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, sourcesIn, cornerHTML, cornerItems, cornerLead, cornerWords, keptHTML, keptStatement, statementHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
+import { keptStatement as keptSaying } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
@@ -1220,3 +1221,20 @@ test('a document\'s first line is one rule: withheld, its box\'s words bracketed
   assert.deepEqual(theirs.filter((r) => r.face === 'ident').map((r) => r.text), ['1.0.2'], 'another\'s home record: the owner it names in the identifier\'s face');
   assert.equal(CLIENT_CLOSE, ']', 'what closes the client\'s words: the bracket a cut keeps');
 });
+
+test('#532, #529: at a hold while the board is not answering the kept statement is the one string the table holds for that silence — the save chord\'s answer on the notebook and at a board, the kept word\'s own statement in both forms — never assembled from a word and a reason; a hold of any other cause, and "not kept", read "nothing to save —" before the word, the cause\'s words after it where the table words it', () => {
+  const held = /** @type {import('../write/write.js').KeptState} */ ({ word: 'not yet kept', reason: null, cause: { token: 'unreachable', arm: null } });
+  assert.deepEqual(keptSaying(held, { silent: true }), { id: 'B3.save.held', text: t('B3.save.held') }, 'nothing to save, the notebook not answering: the single statement, from the strings table');
+  assert.equal(keptSaying(held, { silent: true }).text, 'nothing to save — held on this device and sent when your notebook answers');
+  assert.ok(!keptSaying(held, { silent: true }).text.includes(t('B3.not-yet-kept')), 'the corner\'s word not repeated, no word joined to a reason');
+  assert.deepEqual(keptSaying(held, { silent: true, notebook: false, board: 'board 1' }), { id: 'B3.save.held.board', text: t('B3.save.held.board', { board: 'board 1' }) }, 'at a board that cannot be reached: its form, the board named');
+  assert.deepEqual(keptSaying(held, { silent: true, how: 'word' }), { id: 'B3.kept.held', text: t('B3.kept.held') }, 'on the kept word\'s own act: its own statement');
+  assert.deepEqual(keptSaying(held, { silent: true, how: 'word', notebook: false, board: 'board 1' }), { id: 'B3.kept.held.board', text: t('B3.kept.held.board', { board: 'board 1' }) });
+  assert.deepEqual(keptSaying(held, { silent: false }), { id: 'B3.save.before', text: `${t('B3.save.before')} ${t('B3.not-yet-kept')}` }, 'the board answering: the bare statement, no reason the table does not word');
+  assert.equal(keptSaying({ word: 'not yet kept', reason: null, cause: { token: 'session_died', arm: 'mode' } }).text, `${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-yet-kept'), reason: t('C-137.mode') })}`, 'the death\'s hold: its own cause, the ending\'s entry by its arm — never the board\'s silence');
+  assert.equal(keptSaying({ word: 'not yet kept', reason: null, cause: { token: 'session_died', arm: 'restart' } }, { silent: false }).text, `${t('B3.save.before')} ${t('B3.not-yet-kept')}`, 'an arm the table holds no entry for: the word alone');
+  assert.equal(keptSaying({ word: 'not kept', reason: null, cause: { token: 'island', arm: null } }).text, `${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-kept'), reason: t('B3.island') })}`, '"not kept" by a refusal the page keeps: its words after the word');
+  assert.equal(keptSaying({ word: 'not kept', reason: 'said so', cause: { token: 'island', arm: null } }).text, `${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-kept'), reason: 'said so' })}`, 'a reason set in words stands first');
+  assert.deepEqual(keptSaying({ word: 'kept', reason: null }, { silent: true }), { id: 'B3.save.kept', text: t('B3.save.kept') }, '"kept" is "kept", whatever the board');
+});
+

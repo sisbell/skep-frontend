@@ -54,9 +54,12 @@
 // holds dialed words of a draft the board has not acked (`setWriting`,
 // `writing`, `written`), set by W-MACHINE: each change of it counts the
 // draft dropped, so no read of the draft out across it is taken, and M-PUMP
-// neither sets nor drops the draft's text while it stands. Those watching a
-// document's text (`onText`) are told, in the step a read sets it, the
-// position the read was answered at. A passage written out of the page is named part
+// neither sets nor drops the draft's text while it stands; and whether a
+// draft's burst stands open, typed and not dialed (`setTyping`, `typing`), set
+// by W-MACHINE, while which M-PUMP makes no read of the draft again. Those
+// watching a document's text are told as it is about to be set again or let
+// go, the record still as it stood (`beforeText`), and, in the step a read
+// sets it, the position the read was answered at (`onText`). A passage written out of the page is named part
 // by part, every position it holds in the text's order (`identityParts`): a
 // byte the board holds by its permanent address — one the page made by the
 // address the board minted it at, read through the mints at the call — one
@@ -124,7 +127,10 @@
 // read at the new class (`owed`), whatever the view stood on: covered at once
 // (`covered`) where the change ends the session and the class it left could
 // read it — drawn and named as the withheld box a guest meets — else waiting
-// to be read, drawn and named as a box no read has answered for. Those
+// to be read, drawn and named as a box no read has answered for. A draft
+// holding words the board has not kept, as those asked say (`keptAtEnding`),
+// is neither dropped nor covered by a change that ends the session: its
+// record stands as read, and its row with it. Those
 // watching for a change of class (`beforeClass`) are told as it begins, the
 // session it leaves still standing; those watching one (`onClass`) once it is
 // taken. A read
@@ -291,6 +297,7 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {number | null} [at] the position the board acked that burst at (W-WRITE's `markAcked`): the board's text holds the edit's change from there on; absent or null while no ack names it
  * @property {boolean} [based] the record's text holds the edit's change (W-WRITE's rebase): it changes nothing of the text, and stands only for the put-back that names it (`Edit.back`), which places what it took (`took`)
  * @property {Took | null} [took] what the edit removed, kept from the moment a put-back names it (W-WRITE's `addEdits`): what that put-back places once the edit is `based`
+ * @property {number} [island] the refusal the page keeps that the edit is of (W-WRITE's `markIsland`; D6 BM-19), by the burst refused: it stands in the text shown and is never composed; absent on every other edit
  */
 
 /**
@@ -476,6 +483,8 @@ const state = {
   mints: new Map(),
   /** @type {Map<string, Array<() => void>>} the drafts the page holds dialed words of that the board has not acked (`setWriting`), each with those waiting for that to end (`written`) */
   writing: new Map(),
+  /** @type {Set<string>} the drafts whose burst stands open, typed and not dialed (`setTyping`) */
+  typing: new Set(),
   rev: 0,
   /** @type {Array<() => void>} */
   watchers: [],
@@ -488,10 +497,10 @@ export function watch(/** @type {() => void} */ fn) { state.watchers.push(fn); }
 /** the model's revision counter */
 export const rev = () => state.rev;
 
-/** @type {Array<() => void>} those told of each change of the page's class (`onClass`): a registration, which no reset clears */
+/** @type {Array<(ended: boolean) => void>} those told of each change of the page's class (`onClass`): a registration, which no reset clears */
 const classWatchers = [];
-/** be told of each change of the page's class once it is taken (`dropClass`): what holds page state beside the model lets go of what that class wrote */
-export function onClass(/** @type {() => void} */ fn) { classWatchers.push(fn); }
+/** be told of each change of the page's class once it is taken (`dropClass`), and whether it ends the session: what holds page state beside the model lets go of what that class wrote */
+export function onClass(/** @type {(ended: boolean) => void} */ fn) { classWatchers.push(fn); }
 
 /** @type {Array<() => void>} those told of each change of the page's class before anything goes (`beforeClass`): a registration, which no reset clears */
 const leavingWatchers = [];
@@ -510,6 +519,32 @@ const textWatchers = [];
 export function onText(fn) { textWatchers.push(fn); }
 /** a read set a document's text: those watching told (`onText`) */
 function textSet(/** @type {string} */ addr, /** @type {number | null} */ asOf) { for (const w of textWatchers) w(addr, asOf); }
+
+/** @type {Array<(addr: string) => void>} those told as a document's text is about to be set again or let go (`beforeText`): a registration, which no reset clears */
+const leavingText = [];
+/**
+ * Be told as a document's text is about to be set again or let go
+ * (`takeDelivery`, `setAgain`, `invalidate`, a change of the page's class),
+ * the record still as it stood: what holds edits over the text reads where
+ * each stands by its bytes' identity, to place it again in the text that
+ * comes. Told only of a record that holds text.
+ * @param {(addr: string) => void} fn
+ */
+export function beforeText(fn) { leavingText.push(fn); }
+/** a document's text is about to go or be set again: those watching told (`beforeText`), where the record holds text */
+function textLeaving(/** @type {Doc | undefined} */ d) { if (d && d.from >= 0) for (const w of leavingText) w(d.addr); }
+
+/** @type {Array<(addr: string) => boolean>} those asked which drafts hold words the board has not kept (`keptAtEnding`): a registration, which no reset clears */
+const keepers = [];
+/**
+ * Be asked, at a change of the page's class that ends the session, whether a
+ * draft holds words the board has not kept (`dropClass`): one that does is
+ * neither dropped nor covered while the window stands.
+ * @param {(addr: string) => boolean} fn
+ */
+export function keptAtEnding(fn) { keepers.push(fn); }
+/** does a draft hold words the board has not kept, as those asked say (`keptAtEnding`)? */
+const unkept = (/** @type {string} */ addr) => keepers.some((k) => k(addr));
 
 // ---- the board, the session, health, the daemon ------------------------------
 
@@ -589,18 +624,21 @@ function dropClass(stood, ended) {
   const homed = (/** @type {string} */ link) => published(homeOf(link) || link);
   /** @type {Set<string>} */
   const kept = new Set(stood.filter((a) => { const d = state.docs.get(a); return !!d && !d.refused && (d.from >= 0 || !!d.meta || d.extent != null) && published(a); }));
-  for (const [doc, p] of [...state.index]) if (p.kind !== 'edition') state.index.delete(doc);
+  /** @type {Set<string>} the drafts holding words the board has not kept, which a change that ends the session leaves as read (`keptAtEnding`) */
+  const held = new Set(ended ? [...state.docs.values()].filter((d) => !d.refused && d.from >= 0 && !published(d.addr) && unkept(d.addr)).map((d) => d.addr) : []);
+  for (const [doc, p] of [...state.index]) if (p.kind !== 'edition' && !held.has(doc)) state.index.delete(doc);
   state.counts.clear(); state.indexState = null;
   for (const d of state.docs.values()) {
+    if (held.has(d.addr)) continue;
     if (kept.has(d.addr)) {
       keepPublished(d, published);
       for (const a of [...d.links]) if (!homed(a)) d.links.delete(a);
       d.rev++;
-    } else drop(d);
+    } else { textLeaving(d); drop(d); }
     if (!state.index.has(d.addr)) unlist(d);
   }
   for (const addr of new Set([...boxes, ...state.readBefore])) {
-    if (kept.has(addr) || published(addr)) continue;
+    if (kept.has(addr) || held.has(addr) || published(addr)) continue;
     const d = doc(addr);
     if (ended && state.readBefore.has(addr)) d.refused = 'withheld';
     state.owed.add(addr); d.rev++;
@@ -613,7 +651,7 @@ function dropClass(stood, ended) {
   state.memberAges.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.owners.clear(); state.keySets.clear();
   dropKeyCauses();
   state.feed = state.feed.filter((r) => r.cls !== 'drafts');
-  for (const w of classWatchers) w();
+  for (const w of classWatchers) w(ended);
 }
 
 /**
@@ -850,7 +888,7 @@ export function takeIndex(answer, meanwhile = { rows: [], state: false }) {
   for (const p of answer.docs) putPlace(p);
   for (const c of answer.counts) state.counts.set(c.account, c.documents);
   for (const u of meanwhile.rows) listRow(u);
-  for (const addr of listed) { const d = state.docs.get(addr); if (d && !state.index.has(addr)) unlist(d); }
+  for (const addr of listed) { const d = state.docs.get(addr); if (d && !state.index.has(addr) && !(d.from >= 0 && unkept(addr))) unlist(d); }
   if (!meanwhile.state) state.indexState = answer.state;
   bump();
 }
@@ -1025,6 +1063,7 @@ export function takeRefused(/** @type {string} */ addr, /** @type {'unregistered
  */
 export function takeDelivery(addr, runs, asOf = null, image = null) {
   const d = doc(addr);
+  if (runs.length) textLeaving(d);
   deliverInto(d, runs, asOf);
   if (image) imageInto(d, image.from, image.runs);
   d.rev++;
@@ -1518,7 +1557,7 @@ export function invalidate(/** @type {string} */ addr) {
   const failed = [...state.failedReads].filter((a) => homeOf(a) === addr);
   for (const a of failed) state.failedReads.delete(a);
   if (d || failed.length) reclause(claiming((c) => homeOf(c) === addr));
-  if (d) drop(d);
+  if (d) { textLeaving(d); drop(d); }
   if (d || projected || failed.length) bump();
 }
 
@@ -2054,6 +2093,24 @@ export function written(addr) {
   return waiting ? new Promise((done) => { waiting.push(done); }) : Promise.resolve();
 }
 
+/**
+ * Whether a draft's burst stands open — typed, and not dialed (see the head;
+ * D6 BM-56; FP-23): set by W-MACHINE as the burst opens and cleared as it is
+ * committed. While it stands M-PUMP makes no read of the draft again: a row
+ * naming it waits for the commit.
+ * @param {string} addr
+ * @param {boolean} on
+ */
+export function setTyping(addr, on) {
+  if (on === state.typing.has(addr)) return;
+  if (on) state.typing.add(addr); else state.typing.delete(addr);
+  bump();
+}
+/** does a draft's burst stand open, typed and not dialed (`setTyping`)? */
+export const typing = (/** @type {string} */ addr) => state.typing.has(addr);
+/** every draft whose burst stands open, typed and not dialed (`setTyping`) */
+export const typingDocs = () => [...state.typing];
+
 // ---- the page's own bytes -------------------------------------------------------
 
 /** the space a draft's page-made bytes are named in until the board mints them (see the head): no address of the board's, read as lying under the draft */
@@ -2309,6 +2366,7 @@ export function takeRefresh(keep) {
 export function setAgain(addr, fresh) {
   const d = doc(addr), before = shownBy(d);
   counted(addr);
+  if (fresh.refused || fresh.text) textLeaving(d);
   if (fresh.refused) { drop(d); d.refused = fresh.refused; state.failedReads.delete(addr); state.owed.delete(addr); }
   else {
     if (fresh.spans) { spanSetInto(d, fresh.spans); d.extentAt = fresh.spansAt ?? null; }
@@ -2353,7 +2411,7 @@ export function _reset() {
   state.owners.clear(); state.keySets.clear(); state.accountKeys.clear(); state.keyDrops = 0; state.feed = []; state.feedAt = null; state.draftsAt = null; state.rev = 0;
   state.minted.clear(); state.mints.clear();
   for (const waiting of state.writing.values()) for (const w of waiting) w();
-  state.writing.clear();
+  state.writing.clear(); state.typing.clear();
 }
 
 /** a deep, serializable picture of the model for the gate and the fake-port test */

@@ -9,15 +9,17 @@ spikes/s11/cdp.py's two verbs, Python and the `websocket` module alone).
 Launches headless Chrome with a throwaway profile under the system temp dir,
 navigates to the gate URL, settles on the page's own signal, and runs the
 cases (one module per fence class under cases/), each writing
-results/<class>.json. The owner's board's `/health.log_position` is read
-before the first case and after the last (`board_change`): the run exits
-non-zero where the two readings differ or either holds none, whatever its
-cases said, as it does on a failed case or an exception in the page. Two
-providers: the owner's (`--provider`), whose secret is SKEP_PROVIDER_SECRET
-and which no case arms, and the harness's own (`--editor-provider`, 8744),
-whose secret is SKEP_EDITOR_SECRET and whose script seam the `editor` case
-alone arms and fires, by the harness's own requests; neither secret is
-written anywhere.
+results/<class>.json. The test board's `/health.log_position` is read
+before the first case and after the last and recorded (`board_change`), as
+information: the editor case writes there, through the page, so a position
+that moved fails nothing — what holds the other cases to reads is the wire
+case's own check of every frame. The run exits non-zero on a failed case or
+an exception in the page. Two providers, both over the test board: the
+gate's (`--provider`), whose secret is SKEP_PROVIDER_SECRET and which no case
+arms or writes through, and the harness's own (`--editor-provider`), whose
+secret is SKEP_EDITOR_SECRET and whose script seam the `editor` case alone
+arms and fires, by the harness's own requests; neither secret is written
+anywhere.
 Every browser claim the structure record left
 unverified (§10 items 16–21) is settled by what these runs observe and
 recorded in results/browser.json. A case may hold the page's next `op` call
@@ -351,11 +353,11 @@ def daemon_health(board):
 
 
 def board_change(start, end):
-    """What a run did to the owner's board, by its `/health` read before the first case and after the last.
+    """What a run did to the test board, by its `/health` read before the first case and after the last.
 
     `unchanged` where both readings hold the same log position, `moved` where they hold two that differ, and `unread` where
-    either holds none, since a run whose position cannot be compared cannot show it left the board as it found it; a run
-    passes at `unchanged` alone."""
+    either holds none. Recorded as information: the editor case writes to the test board through the page, so no reading
+    fails a run."""
     p0, p1 = start.get('log_position'), end.get('log_position')
     if not isinstance(p0, int) or not isinstance(p1, int):
         return 'unread'
@@ -366,7 +368,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--page', required=True)
     ap.add_argument('--provider', default='http://127.0.0.1:8742')
-    ap.add_argument('--board', default='http://127.0.0.1:8642')
+    ap.add_argument('--board', default='http://127.0.0.1:8644', help='the test board, which both providers dial')
     ap.add_argument('--editor-provider', default='http://127.0.0.1:8744', help="the harness's own provider, the editor case's; its secret is SKEP_EDITOR_SECRET")
     ap.add_argument('--cases', default='all')
     ap.add_argument('--results', default=os.path.join(ROOT, 'results'))
@@ -419,7 +421,7 @@ def main():
         env['console'] = drv.console[-50:]
         env['exceptions'] = drv.exceptions
         # the close at unload (S-37 (a); the record §10 item 20): leave the page, then count the `close` calls in the provider's log —
-        # one for each owner's page the run left, the cases that open another page (`walks`, `guest`) among them; a guest's closes none
+        # one for each signed page the run left, the cases that open another page (`walks`, `guest`) among them; a guest's closes none
         try:
             drv.navigate('about:blank')
             time.sleep(1.0)
@@ -443,8 +445,8 @@ def main():
     print('exceptions in the page:', len(drv.exceptions), flush=True)
     for e in drv.exceptions[:10]:
         print('  ', (e.get('desc') or e.get('text') or '')[:300])
-    print(f"the owner's board: log position {health0.get('log_position')} at the start, {env['health_end'].get('log_position')} at the end — {env['board_change']}", flush=True)
-    sys.exit(1 if failed or drv.exceptions or env['board_change'] != 'unchanged' else 0)
+    print(f"the test board: log position {health0.get('log_position')} at the start, {env['health_end'].get('log_position')} at the end — {env['board_change']} (information: the editor case writes there)", flush=True)
+    sys.exit(1 if failed or drv.exceptions else 0)
 
 
 if __name__ == '__main__':

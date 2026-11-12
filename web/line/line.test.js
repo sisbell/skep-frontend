@@ -941,7 +941,7 @@ test('the layout holds until the window changes, the reader acts, or the acting-
   } finally { REC.setDaemon(daemon); REC.setHealth(health, mode); REC.setSession(was); clicked(); }
 });
 
-test('the daemon\'s segment reads the form of the state the shell says of the board — none while it runs, its stopped and unreachable forms, the halted form at a halt the shell says or `/health` reads, the head-unreadable hold\'s own line naming the board — and the halted form for a state it holds no form for (D6 BM-22)', () => {
+test('the daemon\'s segment reads the form of the state the shell says of the board — none while it runs, its stopped form, a board not answering in its held form where the session writes there and "board unreachable" where it only reads, the halted form at a halt the shell says or `/health` reads, the head-unreadable hold\'s own line naming the board — and the halted form for a state it holds no form for (D6 BM-22)', () => {
   const daemon = REC.daemon(), reason = REC.daemonReason(), health = REC.health(), mode = REC.mode(), b = /** @type {{origin: string}} */ (REC.board());
   const { host } = clicked();
   /** the daemon's segment as rendered: the string it reads and its words; null where the line holds none */
@@ -953,7 +953,11 @@ test('the daemon\'s segment reads the form of the state the shell says of the bo
     REC.setDaemon('stopped');
     assert.deepEqual(form(), ['F.daemon.notebook.stopped', t('F.daemon.notebook.stopped')]);
     REC.setDaemon('unreachable');
-    assert.deepEqual(form(), ['F.daemon.unreachable', t('F.daemon.unreachable')]);
+    assert.deepEqual(form(), ['B3.daemon.held.notebook', t('B3.daemon.held.notebook')], 'not answering, at the notebook the session writes to: its held form, saying what becomes of what is not yet kept (D6 BM-78)');
+    const was = /** @type {import('../bridge/shapes').SessionOpened} */ (REC.session());
+    REC.setSession({ ...was, writes: false });
+    assert.deepEqual(form(), ['F.daemon.unreachable', t('F.daemon.unreachable')], 'at a board only read: "board unreachable" as it stands');
+    REC.setSession(was);
     REC.setDaemon('halted');
     assert.deepEqual(form(), ['F.daemon.notebook.halted', t('F.daemon.notebook.halted')], 'the shell says the writes halted: the halted form, `/health` saying nothing of it');
     REC.setDaemon('head_unreadable', 'the head record is cut short');

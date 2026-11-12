@@ -157,7 +157,7 @@ import { cornerHTML } from '../text/article.js';
 import { spanOfBlock } from '../text/span.js';
 import { docBox } from '../plane/projection.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
-import { t, tHTML } from '../strings.js';
+import { t, tHTML, hintOf } from '../strings.js';
 import { esc, fill, byteLength } from '../util.js';
 
 // the table alone (the dispatch binds DOM modules the Node runner has no DOM for)
@@ -2002,7 +2002,8 @@ function later() {
 function writing(answer) {
   /** @type {Array<Record<string, any>>} */
   const dialed = [];
-  const script = new Proxy({}, { get: (_t, key) => { const k = String(key); if (k.startsWith('held:')) return { result: [] }; if (!k.startsWith('op:')) return undefined; const frame = JSON.parse(k.slice(3)); if (frame.frame || F.READ_OPS.includes(frame.op)) return undefined; dialed.push(frame); return answer(frame); } });
+  shellHeld = [];
+  const script = new Proxy({}, { get: (_t, key) => { const k = String(key); if (k.startsWith('held:')) return { result: shellHeld }; if (!k.startsWith('op:')) return undefined; const frame = JSON.parse(k.slice(3)); if (frame.frame || F.READ_OPS.includes(frame.op)) return undefined; dialed.push(frame); return answer(frame); } });
   const fake = FAKE.create(script);
   PORT.boot(fake);
   REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
@@ -2010,6 +2011,10 @@ function writing(answer) {
   MACHINE.handIn();
   return { fake, dialed };
 }
+/** @type {unknown[]} what `held(session)` lists over the fake port `writing` boots: the lines the shell holds, which a test sets as its board answers `held` */
+let shellHeld = [];
+/** every call a fake port was asked but the machine's own reads of the held lines, which it makes as the session opens and as a hold is answered */
+const askedOf = (/** @type {{asked: string[]}} */ fake) => fake.asked.filter((k) => !k.startsWith('held:'));
 /** the board's ack of an insert: the first address it minted, in D's own space, and the position */
 const minted = (/** @type {number} */ ordinal, /** @type {number} */ at) => ({ result: { addr: `${D}.0.1.${ordinal}`, at, resp: 'ack_addr' } });
 
@@ -2049,9 +2054,10 @@ test('Mod+S commits the open burst and answers once it lands, from the word the 
     REC.setDaemon('unreachable');
     const m = said.length;
     await press('s', MOD);
+    shellHeld = [{ held: 1, doc: D, base: 7, frame: { op: 'insert', doc: D }, cause: 'unreachable', sent: false, time: 1 }];
     next.give({ result: { resp: 'held', held: 1, cause: 'unreachable' } });
     await KEYS.saved();
-    assert.deepEqual([said.slice(m), WRITE.keptOf(D)], [[t('B3.save.held')], { word: 'not yet kept', reason: null }], 'held while the notebook does not answer: its line, the word "not yet kept"');
+    assert.deepEqual([said.slice(m), WRITE.keptOf(D)], [[t('B3.save.held')], { word: 'not yet kept', reason: null, cause: { token: 'unreachable', arm: null } }], 'held while the notebook does not answer: its line, the word "not yet kept" with its cause');
     REC.setDaemon('running');
     KEYS._reset();
     await press('s', MOD);
@@ -2070,10 +2076,10 @@ test('"link to…" with a burst open commits it and acts only at its ack — not
     // a line of its own typed between the draft's two lines, the caret left in it
     await type('Typed line\n\n');
     await press('ArrowUp');
-    assert.deepEqual([WRITE.inFlight(D), dialed, fake.asked], [true, [], []], 'the burst open, nothing dialed');
+    assert.deepEqual([WRITE.inFlight(D), dialed, askedOf(fake)], [true, [], []], 'the burst open, nothing dialed');
     await press('O', SHIFT);
     await tick();
-    assert.deepEqual([HOST.currentState()?.id, answers(), dialed, fake.asked, WRITE.inFlight(D)], ['provenance:wrote', [['L.new.wrote', t('L.new.wrote')]], [], [], true], 'who wrote this?: answered at once, the burst still open, nothing dialed and nothing read for it');
+    assert.deepEqual([HOST.currentState()?.id, answers(), dialed, askedOf(fake), WRITE.inFlight(D)], ['provenance:wrote', [['L.new.wrote', t('L.new.wrote')]], [], [], true], 'who wrote this?: answered at once, the burst still open, nothing dialed and nothing read for it');
     HOST.dismiss();
     const n = said.length, walked = walkAt();
     await press('k', MOD);
@@ -2424,3 +2430,45 @@ test('every key the dispatch makes but a walk key or K-8 at the plane hides the 
     HOST.dismiss();
   }
 }));
+
+test('at a caret in a draft that cannot be written now a key that would put text in or take it out, a paste and a cut add no edit, and each is answered by that reason\'s own line, said at the caret — a session that may not write, another window, the held file\'s halt, the held store\'s bound — while the arrows still move the caret; the reason lifted, the keys type again; and the first key typed after a moved verdict is followed by its line, once (D6 BM-18, BM-20, BM-30, BM-58, BM-60)', () => onPlane(async ({ said }) => {
+  KEYS._reset();
+  const b = /** @type {{board: string, origin: string}} */ (REC.board()), board = t('L.mirror.board.name', { node: '1', origin: b.origin });
+  try {
+    await focusOn(D, 1);
+    await press('Enter');
+    await type('a');
+    const edits = WRITE.edits(D).length;
+    for (const [why, line] of /** @type {Array<[import('../write/write.js').Unwritable['why'], string]>} */ ([['keyless', 'B3.keyless'], ['another_window', 'B3.another_window'], ['store_halted', 'B3.store_halted.caret'], ['held_full', 'B3.held_full.caret']])) {
+      WRITE.setUnwritable(b.board, { why });
+      for (const key of ['x', 'Backspace', 'Delete', 'Enter', 'Tab']) {
+        const n = said.length, c = LAYER.caret();
+        await press(key);
+        const h = hintOf(line, { board });
+        assert.deepEqual([WRITE.edits(D).length, LAYER.caret(), HINT.standing()?.id], [edits, c, line], `${why}, ${key}: no edit, the caret where it stood, the reason's line its answer`);
+        if (key === 'x') assert.equal(said.slice(n).at(-1), h.whole, `${why}: said, whole at its first press`);
+      }
+      for (const chord of ['v', 'x']) {
+        const n = said.length;
+        assert.equal(await KEYS.dispatch(keyOf(chord, MOD), { where: 'plane', byKey: true }), true, `${why}: the paste and the cut are taken`);
+        assert.deepEqual([WRITE.edits(D).length, HINT.standing()?.id], [edits, line], `${why}, Mod+${chord}: nothing placed or removed, its line the answer`);
+        void n;
+      }
+      const at = LAYER.caret()?.pos;
+      await press('ArrowLeft');
+      assert.equal(LAYER.caret()?.pos, /** @type {number} */ (at) - 1, `${why}: an arrow still moves the caret`);
+      await press('ArrowRight');
+      WRITE.setUnwritable(b.board, null);
+    }
+    await type('b');
+    assert.equal(WRITE.edits(D).length, edits + 1, 'the reason lifted: a key types again');
+    WRITE.setMoved(D, true);
+    const n = said.length;
+    await type('c');
+    assert.deepEqual([said.slice(n).at(-1), HINT.standing()?.id, WRITE.edits(D).length], [hintOf('B3.moved.first-key').whole, 'B3.moved.first-key', edits + 2], 'the first key after the moved verdict: typed, and followed by its line');
+    HINT.act();
+    await type('d');
+    assert.equal(HINT.standing(), null, 'once per verdict: the next key raises none');
+  } finally { WRITE.setUnwritable(b.board, null); WRITE.setMoved(D, false); LAYER.dropCaret(); WRITE.clearEdits(D); KEYS._reset(); }
+}));
+

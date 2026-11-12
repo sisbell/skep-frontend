@@ -59,14 +59,25 @@ is a test that fails without its fix (FP-17); every figure is this
 machine's (FP-18). A check marked with the page issue it waits on
 counts as expected while it fails and fails the gate the day it passes,
 so the mark comes off with the fix. What the gate writes (`results/`,
-`shots/`) is read locally and never committed. The board on 8642 and the provider on
-8742 are the owner's: never start, stop, claim, seed or write to them,
-and read `/health.log_position` before and after a run — it must not
-move. The owner's prelude also runs the harness's provider on 8744 over
-that board, with a store of its own; the `editor` case alone arms and
-fires it, and nothing else is ever armed. A test that needs a write's
-answer takes it from the fake port under `web/test/` or, in a harness
-case, from the harness's provider on 8744, never from them.
+`shots/`) is read locally and never committed.
+
+The gate runs on THE TEST BOARD on 8644, through the provider on 8742
+and the harness's provider on 8744, which has a store of its own. All
+three are the owner's prelude: never start, stop, claim or seed them.
+The `editor` case alone writes, through the page: its page boots with
+the write layer's machine, makes drafts of its own on the test board
+and types in them, and it alone arms and fires 8744; nothing else is
+ever armed. Every other page the gate opens boots without the machine
+and is held to reads frame by frame — each `op` frame it sends through
+8742 names a read and each call is a read row (`harness/cases/wire.py`,
+and the runner after every case) — so a write frame from any case but
+the editor's fails the gate. A test that needs a faulted answer takes it
+from the fake port under `web/test/` or, in the editor case, from the
+arms on 8744.
+
+The owner's board on 8642 and the viewer (its provider on 8743, its
+page on 8732) are the owner's, written by hand at any time: the gate
+and every run never read, write or measure them.
 
 ## Issues
 

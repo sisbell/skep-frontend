@@ -16,7 +16,12 @@
 // never from the reader's clock, in one form of a date on every surface; when
 // the page's copy of what it keeps standing was left behind is said by
 // `lastRead`, from the page's own clock — the hour and the minute, the day
-// first where it was not today — and never as an age; a one-line hint's
+// first where it was not today — and never as an age; a statement said
+// before a permanent act is an ordered list of parts, each its text, its
+// case key and whether it is the exit (`StringEntry.parts`, `said`), the
+// string a caller reads their join, and `statementParts` gives the parts
+// whose case holds, their tokens filled; a session's ending is one entry by
+// its arm (`endingOf`); a one-line hint's
 // notice is marked whether it compacts (`StringEntry.hint`), and `hintOf`
 // gives it whole and in its compact form, its first clause — its template's
 // text before its first em dash a space or a no-break space sets off, cut
@@ -51,7 +56,30 @@ import { commonsType, isAddress } from './model/address.js';
  * @property {string} [screen] the screen that needed it (DRAFT)
  * @property {boolean} [lane] true where no design document carries the string
  * @property {'clause' | 'whole'} [hint] a one-line hint's notice (`hintOf`): `clause` where its first clause, read alone, says why the key did nothing or what works instead, so it stands for the notice once the notice was shown whole; `whole` where it does not, the notice whole at every press
+ * @property {Part[]} [parts] a statement said before a permanent act, as its sense lines (`said`): its parts in order; `text` is their join
  */
+
+/**
+ * @typedef {Object} Part — one part of a statement said before a permanent act: one clause, set on a line of its own
+ * @property {string} text the part's words, with their ⟨tokens⟩, broken from the statement between two words
+ * @property {string} key the case the part is said in: `always` where it is said in every case
+ * @property {boolean} [exit] the part names what the person can do instead: it stands last, after a half line
+ */
+
+/** the case key of a part said in every case (`Part.key`) */
+export const ALWAYS = 'always';
+
+/**
+ * A statement said before a permanent act, as an entry (`StringEntry.parts`):
+ * its parts in order, and its text their join, a space between two.
+ * @param {Array<[text: string, more?: {key?: string, exit?: boolean}]>} parts each part's words, with its case key where it is not said in every case and whether it is the exit
+ * @param {Omit<StringEntry, 'text' | 'parts'>} rest the entry's class, source and screen
+ * @returns {StringEntry}
+ */
+function said(parts, rest) {
+  const list = parts.map(([text, more = {}]) => /** @type {Part} */ ({ text, key: more.key ?? ALWAYS, ...(more.exit ? { exit: true } : {}) }));
+  return { text: list.map((q) => q.text).join(' '), parts: list, ...rest };
+}
 
 /** @type {Record<string, StringEntry>} */
 export const STRINGS = {
@@ -268,6 +296,8 @@ export const STRINGS = {
   'B3.save.before': { text: 'nothing to save —', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: Mod+S, before the corner\'s other two words (D6 BM-3)' },
   'B3.save.held': { text: 'nothing to save\u00a0— held on this device and sent when your notebook answers', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: Mod+S at the corner while a burst is held and the notebook is not answering (D6 BM-3)' },
   'B3.save.held.board': { text: 'nothing to save — not yet kept — held on this device and sent when ⟨board⟩ can be reached', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: Mod+S at the corner while a burst is held for a board that cannot be reached (D6 BM-3)' },
+  'B3.kept.held': { text: 'not yet kept — held on this device and sent when your notebook answers', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the kept word\'s own statement, on its act, while a burst is held and the notebook is not answering (D6 BM-8, BM-78; D5 K-57)' },
+  'B3.kept.held.board': { text: 'not yet kept — held on this device and sent when ⟨board⟩ can be reached', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the kept word\'s own statement, on its act, while a burst is held for a board that cannot be reached (D6 BM-8, BM-78; D5 K-57)' },
   'B3.start-document': { text: 'start a new document with this as its first line', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the LEAP box\'s creation row' },
   'B3.last-wrote': { text: 'you last wrote in ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the launch (D6 BM-53)' },
   'B3.last-published': { text: 'you last published ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the launch landing at an edition of the person\'s own (D6 BM-53)' },
@@ -299,31 +329,33 @@ export const STRINGS = {
   'B3.moved': { text: 'the document changed while this text was held — it is not placed; put it where it goes, or discard it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face at the corner (D6 BM-13)' },
   'B3.moved.compact': { text: 'changed while this text was held\u00a0— not placed · by ⟨hand⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, compact, whole on its act (D6 BM-13)' },
   'B3.moved.see-held': { text: 'see the held text', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face\'s act that opens the moved scene (D6 BM-13, BM-14)' },
-  'B3.moved.first-key': { text: 'this document changed while your text was held\u00a0— what you type now is held with it and placed by hand', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the line at the focus at the first key typed after the moved verdict (D6 BM-18)' },
+  'B3.moved.first-key': { text: 'this document changed while your text was held\u00a0— what you type now is held with it and placed by hand', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the line at the focus at the first key typed after the moved verdict (D6 BM-18)', hint: 'whole' },
   'B3.hand.device': { text: '— by ⟨device label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, a hand of this store\'s or a labelled key\'s (D6 BM-13); B3-S11 P4' },
   'B3.hand.unsigned': { text: '— by an unsigned write', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, a bare hand (D6 BM-13); B3-S11 P4' },
   'B3.hand.lost': { text: '— its hand not recorded', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, a hand the board lost (D6 BM-13); B3-S11 P4' },
   'B3.hand.unread': { text: '— its hand not read yet', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, its hands not read yet (D6 BM-78)' },
+  'B3.hand.unknowable': { text: '— its hand can\'t be known', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, its hands no read can name, the board having reclaimed the history that held them (D6 BM-13; the moved-document decision, answer 3) — the UI wording seat\'s to refine, its copy id owed' },
   'B3.send-again': { text: 'send again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the refused run\'s face, the moved face (D6 BM-10, BM-17, BM-26)' },
   'B3.discard': { text: 'discard this change', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the refused run\'s face (D6 BM-10, BM-27)' },
-  'B3.refused.discard': { text: 'these words were never kept on the board — discarding removes them from this device for good', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the refused run\'s face, before its discard (D6 BM-10)' },
+  'B3.refused.discard': said([['these words were never kept on the board —'], ['discarding removes them from this device for good']], { cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the refused run\'s face, before its discard (D6 BM-10)' }),
   'B3.own-bug': { text: 'a fault in this client, not a change to your text — nothing was written; your words are held here', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the refused run\'s face in the own-bug class (D6 BM-10)' },
   'B3.own-bug.send-again': { text: 'sending this again meets the same fault — copy your words out first, then discard this change', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the own-bug face\'s inert "send again" (D6 BM-10)' },
   'B3.answers_lost': { text: '⟨board⟩ has not answered this change for ⟨time⟩\u00a0— it may have reached ⟨board⟩: send again checks, and sends it only if it did not', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the shell\'s hand-over at the run (D6 BM-26)' },
-  'B3.answers_lost.discard': { text: 'this first checks whether ⟨board⟩ took these words — if it did, they stay, kept; if not, discarding removes them from this device for good', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the hand-over\'s discard (D6 BM-27)' },
+  'B3.answers_lost.discard': said([['this first checks whether ⟨board⟩ took these words —'], ['if it did, they stay, kept; if not, discarding removes them from this device for good']], { cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the hand-over\'s discard (D6 BM-27)' }),
   'B3.answers_lost.unanswered': { text: '⟨board⟩ did not answer — nothing was discarded', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the hand-over\'s discard, the read unanswered (D6 BM-27)' },
   'B3.place-at-caret': { text: 'place at the caret', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved scene (D6 BM-15); B3-S11: a gap\'s act (D6 BM-39)' },
   'B3.place-at-caret.inert': { text: 'put the caret where these words go in your current text, then take this', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved scene, "place at the caret" with no caret (D6 BM-15)' },
   'B3.place-at-caret.after': { text: 'place at the caret\u00a0— after “⟨words⟩”', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the merge scene, the CORNER gap\'s act naming where the words will go (D6 BM-39)' },
   'B3.held-version.inert': { text: 'your held text is not on the board — place it in your current text first; there it can be quoted, linked and annotated', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved scene, the held version\'s selection row (D6 BM-14)' },
-  'B3.moved.discard': { text: 'these words were never kept on the board — discarding removes them from this device for good; place what you want to keep first', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved document\'s discard (D6 BM-16)' },
+  'B3.moved.discard': said([['these words were never kept on the board —'], ['discarding removes them from this device for good;'], ['place what you want to keep first', { exit: true }]], { cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved document\'s discard (D6 BM-16)' }),
   'B3.moved.send-again.inert': { text: 'place these words where they go, or discard them\u00a0— it can be sent as it stands only if ⟨label⟩ changes back, by an undo where that change was made', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved document\'s inert "send again" (D6 BM-17)' },
+  'B3.discarded.may-have-landed': { text: 'discarded here — it may already be on the board', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the one line after a discard that took a line whose landing could not be decided (D6 BM-16; the moved-document decision, answer 6) — the UI wording seat\'s to refine, its copy id owed' },
   'B3.held.none': { text: 'nothing is held for ⟨label⟩ now\u00a0— Esc closes this', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the one line as the moved scene\'s last held line is kept or discarded, the scene staying (D6 BM-16)' },
   'B3.island': { text: 'a fault in this client, not a change to your text: nothing was written or held — closing this window loses it; keep the window open, or copy these words out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: a refusal the page keeps, the run an island, under the face\'s head (D6 BM-19)' },
   'B3.copy-words-out': { text: 'copy these words out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the copy slot at a face standing at one run — the refused run\'s, the island\'s, `held_full`\'s first refusal (D6 BM-10, BM-19, BM-20)' },
   'B3.held_full.refused': { text: 'the text held for your notebook is at its limit; this change waits\u00a0— send again once what is held is sent', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: `held_full`\'s first refused burst, under the face\'s head (D6 BM-20)' },
   'B3.held_full.line': { text: 'writing on ⟨board⟩ is paused on this device — what is held stays on this device and is sent as ⟨board⟩ returns; writing goes on then — the text held for ⟨board⟩ is at its limit', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the one line at the held store\'s bound (D6 BM-20)' },
-  'B3.held_full.caret': { text: 'writing on ⟨board⟩ is paused on this device — nothing you type here is kept until what is held is sent; when writing goes on is named at the top, beside ⟨board⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: every caret at the held store\'s bound (D6 BM-20)' },
+  'B3.held_full.caret': { text: 'writing on ⟨board⟩ is paused on this device — nothing you type here is kept until what is held is sent; when writing goes on is named at the top, beside ⟨board⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: every caret at the held store\'s bound (D6 BM-20)', hint: 'clause' },
   'B3.unwritable': { text: 'this device could not keep it: ⟨cause⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the device\'s refusal of a held line, under the face\'s head (D6 BM-21)' },
   'B3.unwritable.full': { text: '— closing this window loses it; this device\'s disk is full\u00a0— what you have typed is held on this device as soon as there is room; copy the text out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the device\'s refusal at a full disk, the act keyed by cause (D6 BM-21)' },
   'B3.unwritable.read_only': { text: '— closing this window loses it; copy the text out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the device\'s refusal at a read-only volume, the act keyed by cause (D6 BM-21)' },
@@ -331,24 +363,26 @@ export const STRINGS = {
   'B3.head_unreadable.discard': { text: 'discard what is held', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the corner\'s act at the head-unreadable hold' },
   'B3.head_unreadable.discard.compact': { text: 'discard', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the corner\'s act at the head-unreadable hold, compact' },
   'B3.head_unreadable.discard.name': { text: 'discard what is held for ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the corner\'s act at the head-unreadable hold, its accessible name' },
-  'B3.head_unreadable.discard.said.typed': { text: 'if discarded, what is held here is never sent, and the words you typed in it are removed from this device for good; if left held, it is sent once ⟨board⟩ can take it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the discard\'s statement at the head-unreadable hold, typed words among what is held' },
-  'B3.head_unreadable.discard.said': { text: 'if discarded, what is held here is never sent; if left held, it is sent once ⟨board⟩ can take it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the discard\'s statement at the head-unreadable hold, no typed words held' },
+  'B3.head_unreadable.discard.said.typed': said([['if discarded, what is held here is never sent, and the words you typed in it are removed from this device for good;'], ['if left held, it is sent once ⟨board⟩ can take it']], { cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the discard\'s statement at the head-unreadable hold, typed words among what is held' }),
+  'B3.head_unreadable.discard.said': said([['if discarded, what is held here is never sent;'], ['if left held, it is sent once ⟨board⟩ can take it']], { cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the discard\'s statement at the head-unreadable hold, no typed words held' }),
   'B3.head_unreadable.discard.said.compact': { text: 'if discarded, what is held here is never sent and its words are removed for good', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the discard\'s statement at the head-unreadable hold, compact' },
   'B3.store_halted.newer': { text: 'writing is stopped on this device — open the held text with the newer version of this app that wrote it, or move the file aside', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the one line at the halted store, a file a newer app wrote (D6 BM-30)' },
   'B3.store_halted.damaged': { text: 'writing is stopped on this device — move the file aside', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the one line at the halted store, a damaged file (D6 BM-30)' },
   'B3.store_halted.unsent': { text: '— the words it holds go with it, unsent', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the halted store\'s line, after its form (D6 BM-30)' },
   'B3.store_halted.damaged.cause': { text: '— the held text is damaged and cannot be read', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the halted store\'s damaged form, its cause last (D6 BM-30)' },
-  'B3.store_halted.caret': { text: 'writing on ⟨board⟩ is stopped on this device — this app cannot read the text held for it, so nothing you type here is kept; what to do is named at the top, beside ⟨board⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: every caret at the halted store (D6 BM-30)' },
+  'B3.store_halted.caret': { text: 'writing on ⟨board⟩ is stopped on this device — this app cannot read the text held for it, so nothing you type here is kept; what to do is named at the top, beside ⟨board⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: every caret at the halted store (D6 BM-30)', hint: 'clause' },
   'B3.show-file': { text: 'show the file', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the halted store\'s act (D6 BM-30)' },
-  'B3.another_window': { text: 'this window reads only and keeps nothing you type — copy this address, then go to it in the other window of this app, or, once that is closed, quit this one, open the app again and go to it there — it opened while that window held this notebook', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the one line in a second window (D6 BM-60)' },
+  'B3.another_window': { text: 'this window reads only and keeps nothing you type — copy this address, then go to it in the other window of this app, or, once that is closed, quit this one, open the app again and go to it there — it opened while that window held this notebook', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the one line in a second window (D6 BM-60)', hint: 'clause' },
   'B3.copy-address': { text: 'copy this address', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the second window\'s act (D6 BM-60)' },
   'B3.daemon.fate': { text: ', and what you wrote since it stopped is held on this device and sent when it starts', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the daemon segment\'s own-board stopped form, its fate clause (D6 BM-9)' },
+  'B3.daemon.held': { text: 'board unreachable\u00a0— anything not yet kept is held on this device and sent when it can be reached', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the daemon segment\'s held form at a board the session writes to that is not answering (D6 BM-78)' },
+  'B3.daemon.held.notebook': { text: 'your notebook is not answering\u00a0— anything not yet kept is held on this device and sent when it answers; if it stays so, stop it and start it again here', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the daemon segment\'s held form on the person\'s own notebook, not answering (D6 BM-78)' },
   'B3.durability': { text: 'your notebook could not keep that yet\u00a0— trying again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: `durability`\'s face on a third refusal, on the notebook' },
   'B3.durability.store.notebook': { text: 'your notebook\'s store is not keeping writes\u00a0— free space on this device, then restart your notebook here', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the daemon segment at a third `durability` refusal on one burst, on the person\'s own notebook (D6 BM-8)' },
   'B3.durability.store': { text: '⟨board⟩\'s store is not keeping writes\u00a0— its disk needs attention', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the daemon segment at a third `durability` refusal on one burst, at a board another operates (D6 BM-8)' },
   'B3.death.corner.stays': { text: 'held on this device, never sent\u00a0— it stays here when this window closes; copy the text out to use it\u00a0— this device’s key no longer writes on ⟨board⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the corner where the death\'s arm cannot re-open, where the shell answers the board\'s held lines under the keyless session (D6 BM-24)' },
   'B3.death.corner.unshown': { text: 'held on this device, never sent\u00a0— this version of the app cannot show it once this window closes; copy the text out to use it\u00a0— this device’s key no longer writes on ⟨board⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the corner where the death\'s arm cannot re-open, on every other board (D6 BM-24)' },
-  'B3.death.caret': { text: 'writing on ⟨board⟩ has ended on this device — this device\'s key no longer writes there, so nothing you type here is kept; copy the text out to use it; what happened is named at the top, beside ⟨board⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: every caret where the death\'s arm cannot re-open (D6 BM-24)' },
+  'B3.death.caret': { text: 'writing on ⟨board⟩ has ended on this device — this device\'s key no longer writes there, so nothing you type here is kept; copy the text out to use it; what happened is named at the top, beside ⟨board⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: every caret where the death\'s arm cannot re-open (D6 BM-24)', hint: 'clause' },
   'B3.death.copy': { text: 'copy the text out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the death face\'s one act' },
   'B3.death.copied': { text: 'copied', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the status region once the death face\'s act copies the text' },
   'B3.death.ending.shown': { text: '— the words held on this device that were never sent are shown there too', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: FP-32\'s entry for the death, its clause where the shell answers the held lines under the keyless session' },
@@ -868,7 +902,7 @@ export const STRINGS = {
   // notebook stands, with the claim's end's way back
   'B3.row.held.resend': { text: '⟨label⟩ holds words the board has not kept — this can be taken once it has; its corner says why', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the row inert where a resend follows (D6 BM-62)' },
   'B3.row.held.resolve': { text: '⟨label⟩ holds words the board has not kept — resolve them where they are marked, then take this', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the row inert where an act of the person\'s comes first (D6 BM-62)' },
-  'B3.keyless': { text: 'writing needs your key — this session reads your notebook and keeps nothing you type', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13, B3-S9: every caret and writing act in the bare session (D6 BM-58)' },
+  'B3.keyless': { text: 'writing needs your key — this session reads your notebook and keeps nothing you type', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13, B3-S9: every caret and writing act in the bare session (D6 BM-58)', hint: 'clause' },
   'B3.stopped.act': { text: '⟨the act\'s object⟩ is not held on this device as typing is, and your notebook ⟨has stopped | has halted its writes⟩ — ⟨start | restart⟩ it here, then ⟨the act⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: an act the store cannot hold under a stopped notebook (D6 BM-59)' },
   'B3.row.follow.inert': { text: 'select the passage to follow its link or its source', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: follow\'s line at a bare caret, Mod+Enter with no selection standing (D5 K-51)', hint: 'clause' },
   'B3.row.no-link': { text: 'no link is drawn at this passage — to read another document beside this one, open it beside from the address line', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: follow and read side by side at a passage with no link drawn' },
@@ -1287,6 +1321,31 @@ export function t(id, values) {
 
 /** what parts a notice's first clause from the rest of it (`hintOf`): an em dash a space or a no-break space sets off */
 const CLAUSE_SEP = /[ \u00a0]— /;
+
+/**
+ * A statement's parts as they are said (see the head): each part whose case
+ * holds, in the statement's order, its tokens filled, with whether it is the
+ * exit. An entry that is no such statement answers its one string, one part.
+ * @param {string} id
+ * @param {Record<string, string | number>} [values]
+ * @param {(key: string) => boolean} [holds] whether a part's case holds; every case where left out
+ * @returns {Array<{text: string, exit: boolean}>}
+ */
+export function statementParts(id, values, holds = () => true) {
+  const e = STRINGS[id];
+  if (!e) throw new Error('no such string: ' + id);
+  if (!e.parts) return [{ text: t(id, values), exit: false }];
+  return e.parts.filter((q) => q.key === ALWAYS || holds(q.key)).map((q) => ({ text: values ? fill(q.text, values) : q.text, exit: !!q.exit }));
+}
+
+/**
+ * The entry a session's ending is said by, by its arm (FP-32): the page's
+ * own sign-out, the flip to a board that requires a signed session, a key
+ * retired; null for an arm this table holds no entry for.
+ * @param {string | null | undefined} arm
+ * @returns {string | null}
+ */
+export const endingOf = (arm) => (arm === 'closed' ? 'C-137.signed-out' : arm === 'mode' ? 'C-137.mode' : arm === 'retired' ? 'C-137.self' : null);
 
 /**
  * A one-line hint's notice whole and in its compact form (FP-26): its first

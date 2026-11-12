@@ -854,3 +854,59 @@ test('every accessible name the page sets is read from ST: the markup carries no
   }
   assert.deepEqual(bad, []);
 });
+
+test('each statement said before a discard on this device is its sense lines — its parts in order, their join with every case true the string as it stood byte for byte, no break inside a word, the moved document\'s alone ending on its exit — and `statementParts` fills each part\'s tokens (the statement decision §1, §8 case 5, §9)', async () => {
+  const { statementParts, ALWAYS } = await import('./strings.js');
+  /** @type {Record<string, [stood: string, parts: number, exit: number | null]>} each statement as it stood before it was broken into parts, how many parts it holds, and which is its exit */
+  const STOOD = {
+    'B3.refused.discard': ['these words were never kept on the board — discarding removes them from this device for good', 2, null],
+    'B3.moved.discard': ['these words were never kept on the board — discarding removes them from this device for good; place what you want to keep first', 3, 2],
+    'B3.answers_lost.discard': ['this first checks whether ⟨board⟩ took these words — if it did, they stay, kept; if not, discarding removes them from this device for good', 2, null],
+    'B3.head_unreadable.discard.said': ['if discarded, what is held here is never sent; if left held, it is sent once ⟨board⟩ can take it', 2, null],
+    'B3.head_unreadable.discard.said.typed': ['if discarded, what is held here is never sent, and the words you typed in it are removed from this device for good; if left held, it is sent once ⟨board⟩ can take it', 2, null],
+  };
+  /** @type {Record<string, string[]>} the mark each statement is broken after, break by break: its spaced em dash, its semicolon */
+  const BREAKS = { 'B3.refused.discard': ['—'], 'B3.moved.discard': ['—', ';'], 'B3.answers_lost.discard': ['—'], 'B3.head_unreadable.discard.said': [';'], 'B3.head_unreadable.discard.said.typed': [';'] };
+  for (const [id, [stood, n, exit]] of Object.entries(STOOD)) {
+    const e = STRINGS[id], parts = e.parts || [];
+    assert.equal(e.text, stood, `${id}: the string a caller reads is the string as it stood`);
+    assert.equal(parts.map((q) => q.text).join(' '), stood, `${id}: the join of its parts, every case true, byte for byte`);
+    assert.equal(parts.length, n, `${id}: its parts`);
+    assert.deepEqual(parts.map((q, i) => (q.exit ? i : null)).filter((i) => i != null), exit == null ? [] : [exit], `${id}: its exit, last where it has one`);
+    assert.ok(parts.every((q) => q.key === ALWAYS), `${id}: each part said in every case`);
+    // no break falls inside a word: each part begins and ends on a character that is no space, and a space stands between two in the string
+    let at = 0;
+    for (const q of parts) {
+      assert.ok(q.text.length > 0 && !/^\s|\s$/.test(q.text), `${id}: a part opens and closes on a word`);
+      assert.equal(stood.slice(at, at + q.text.length), q.text, `${id}: the part stands in the string where it was broken`);
+      at += q.text.length;
+      if (at < stood.length) { assert.equal(stood[at], ' ', `${id}: the break falls at a space, between two words`); at += 1; }
+    }
+    assert.equal(at, stood.length);
+    assert.equal(t(id, { board: 'your notebook' }), statementParts(id, { board: 'your notebook' }).map((q) => q.text).join(' '), `${id}: \`t\` is the join of the parts as said`);
+    assert.deepEqual(parts.slice(0, -1).map((q) => q.text.slice(-1)), BREAKS[id], `${id}: each break at its own mark, the part before it closing on it`);
+  }
+  assert.deepEqual(statementParts('B3.answers_lost.discard', { board: 'your notebook' }), [{ text: 'this first checks whether your notebook took these words —', exit: false }, { text: 'if it did, they stay, kept; if not, discarding removes them from this device for good', exit: false }], 'each part\'s tokens filled');
+  assert.deepEqual(statementParts('B3.moved.discard').map((q) => q.exit), [false, false, true]);
+  assert.equal(STRINGS['B3.head_unreadable.discard.said.compact'].parts, undefined, 'the compact form no ruling names stands as it stood, one string');
+  assert.deepEqual(statementParts('B3.kept'), [{ text: 'kept', exit: false }], 'an entry that is no statement: its one string');
+});
+
+test('the held words\' lines stand in the table as B3 drafts them — the kept word\'s own statement at a board\'s silence in both forms, the daemon segment\'s held form in both, the moved face\'s final hand slot and the line after a discard that may have landed — each DRAFT with its screen (#529; the moved-document decision)', () => {
+  /** @type {Record<string, string>} */
+  const WORDS = {
+    'B3.kept.held': 'not yet kept — held on this device and sent when your notebook answers',
+    'B3.kept.held.board': 'not yet kept — held on this device and sent when ⟨board⟩ can be reached',
+    'B3.daemon.held': 'board unreachable — anything not yet kept is held on this device and sent when it can be reached',
+    'B3.daemon.held.notebook': 'your notebook is not answering — anything not yet kept is held on this device and sent when it answers; if it stays so, stop it and start it again here',
+    'B3.hand.unknowable': '— its hand can\'t be known',
+    'B3.discarded.may-have-landed': 'discarded here — it may already be on the board',
+  };
+  for (const [id, words] of Object.entries(WORDS)) {
+    assert.equal(STRINGS[id]?.text, words, id);
+    assert.deepEqual([STRINGS[id].cls, STRINGS[id].source, !!STRINGS[id].screen], ['DRAFT', 'designs/B3-editor.md', true], `${id}: DRAFT, from B3, with its screen`);
+  }
+  assert.equal(t('B3.save.held'), 'nothing to save — held on this device and sent when your notebook answers', 'Mod+S\'s answer carrying it, on the notebook: the corner\'s word not repeated');
+  assert.equal(t('B3.save.held.board', { board: 'board 1' }), 'nothing to save — not yet kept — held on this device and sent when board 1 can be reached', 'and at a board\'s silence, the word kept for the venue');
+});
+

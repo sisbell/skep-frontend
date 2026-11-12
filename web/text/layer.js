@@ -836,8 +836,8 @@ let caret_ = null;
  */
 /** @type {CaretOwed | null} what the frame owes the caret once its part stands (`placeCaretMark`); null where nothing is owed */
 let caretOwed = null;
-/** @type {Set<string>} the drafts whose kept word's statement stands open in their corner (`openStatement`) */
-const openStatements = new Set();
+/** @type {Map<string, 'save' | 'word'>} the drafts whose kept word's statement stands open in their corner, each with what opened it — the save chord, or the word's own act (`openStatement`) */
+const openStatements = new Map();
 /** @type {Map<string, {key: string, doc: Doc, removed: Array<ISpan[] | null>}>} the record derived from each draft's delivered runs and its page-local edits, with what each edit removed, by document, as last made (`shownDoc`) */
 const shownCache = new Map();
 /** the box an address stands in: its document's, which every version of it shares */
@@ -993,8 +993,9 @@ export function refaced() { widths.clear(); measured.clear(); folds.clear(); mar
 
 /**
  * The record the page shows of a document (see the head): the model's, or,
- * where the draft holds page-local edits, the record M-DERIVE derives from its
- * delivered runs with them applied (`applyEdits`), every byte the page made
+ * where the draft holds page-local edits or held lines this window did not
+ * send, the record M-DERIVE derives from its delivered runs with them applied
+ * (`applyEdits` over W-WRITE's `baseOf`), every byte the page made
  * named as the model names it (M-REC's `pageIds`) — made again where the
  * model's record, the edits or what the board minted of them moved, the same
  * object while none has, so what was made from it is read against one record.
@@ -1008,13 +1009,13 @@ function shownDoc(d) {
   return c ? c.doc : d;
 }
 
-/** the record derived from a draft's delivered runs and its page-local edits with what each edit removed (`shownDoc`, `removedBy`), as last made; null where the draft holds no edit */
+/** the record derived from a draft's delivered runs — the held lines this window did not send applied over them (W-WRITE's `baseOf`; D6 BM-29) — and its page-local edits, with what each edit removed (`shownDoc`, `removedBy`), as last made; null where the draft holds no edit and no such line */
 function derivedOf(/** @type {Doc} */ d) {
-  const edits = WRITE.edits(d.addr);
-  if (!edits.length) { shownCache.delete(d.addr); return null; }
+  const edits = WRITE.edits(d.addr), base = WRITE.baseOf(d.addr);
+  if (!edits.length && base === d) { shownCache.delete(d.addr); return null; }
   const key = `${d.rev}:${d.from}:${d.to}:${WRITE.editRev(d.addr)}`, c = shownCache.get(d.addr);
   if (c && c.key === key) return c;
-  const out = applyEdits(d, edits, (page, width) => REC.pageIds(d.addr, page, width));
+  const out = applyEdits(base, edits, (page, width) => REC.pageIds(d.addr, page, width));
   const made = { key, doc: out.doc, removed: out.removed };
   shownCache.set(d.addr, made);
   return made;
@@ -1344,7 +1345,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
     read: scene ? null : read.newer(d.addr),
     scene,
     clauseOf, keyOf: REC.accountKey,
-    keptOpen: openStatements.has(d.addr),
+    keptOpen: openStatements.has(d.addr), keptSaid: keptSaid(d.addr),
     cpl: scene ? MEASURE_CPL : measure(),
     measure: widthOf,
   };
@@ -1405,8 +1406,23 @@ function cornerFacts(d) {
   return { members: chainOf(d.addr), lags: lags(), notebook: onNotebook(), localTrust: !!(h && h.auth && h.auth.local_trust), kept: WRITE.keptOf(d.addr), originOwner, kind: kindOf(d) };
 }
 
-/** is the venue the person's own notebook — what every corner states its state by (`cornerFacts`), and what the save chord's answer at a hold is keyed on (N-KEYS')? */
+/** is the venue the person's own notebook — what every corner states its state by (`cornerFacts`), and what the kept word's statement at a board's silence is keyed on (`keptSaid`)? */
 export const onNotebook = () => true;
+
+/**
+ * What a draft's kept word's statement is said by, beside its state
+ * (T-ARTICLE's `KeptSaid`; D5 K-57, K-74; D6 BM-78): whether the board is not
+ * answering, by the shell's own verdict (M-REC's `daemon`); the venue; the
+ * board's name as the status region names it; and what opened the statement
+ * — as it stands open (`openStatement`), else as the caller asks it.
+ * @param {string} addr
+ * @param {'save' | 'word'} [how] what opens it, where it does not stand open
+ * @returns {import('./article.js').KeptSaid}
+ */
+export function keptSaid(addr, how) {
+  const b = REC.board();
+  return { silent: REC.daemon() === 'unreachable', notebook: onNotebook(), board: b ? t('L.mirror.board.name', { node: '1', origin: b.origin }) : '', how: openStatements.get(addr) ?? how ?? 'save' };
+}
 
 // ---- the fold ---------------------------------------------------------------------------------------------------
 
@@ -2917,7 +2933,7 @@ export function boardKeptIn() {
 const lags = () => PUMP.boardKept() !== null;
 
 /** what a document's corner's items are made from beside its record and the links (`Mounted.corner`): its kind (`kindOf`) — which an index row or a failed read tells with no move of its record — the board's lag, its box's chain (`chainOf`), the newer version it offers to read (the reader `newer`), the draft's kept state and whether its statement stands open — the items made again where it moved */
-const cornerKey = (/** @type {string} */ addr) => JSON.stringify([kindOf(REC.doc(addr)), lags(), chainOf(addr), read.newer(addr), WRITE.keptOf(addr), openStatements.has(addr)]);
+const cornerKey = (/** @type {string} */ addr) => JSON.stringify([kindOf(REC.doc(addr)), lags(), chainOf(addr), read.newer(addr), WRITE.keptOf(addr), openStatements.get(addr) ?? null, REC.daemon() === 'unreachable']);
 /**
  * A document's corner's items made over its view (`Mounted.corner`), keyed by what they were made from (`cornerKey`):
  * whole, compact, and opened whole on its act where its room holds its compact form alone; compact one by one for a
@@ -3961,7 +3977,7 @@ function headOf(c, rec, column, open) {
         : items[s.k].html;
     rows[s.row] += `<span class="hslot${s.rows > 1 ? ' wraps' : ''}" style="left:${s.x}px;width:${s.w}px;height:${s.rows * pitch}px;line-height:${s.rows > 1 ? '' : pitch + 'px'}">${html}</span>`;
   }
-  const kept = WRITE.keptOf(addr), formHTML = open ? openedHTML(rec.corner.words, items, L) : kept && openStatements.has(addr) ? statementHTML(kept) : '';
+  const kept = WRITE.keptOf(addr), formHTML = open ? openedHTML(rec.corner.words, items, L) : kept && openStatements.has(addr) ? statementHTML(kept, keptSaid(addr)) : '';
   const html = rows.map((r, i) => (r ? hrowHTML(i, `height:${pitch}px;background:${ground}`, r) : '')).join('')
     + (formHTML ? openedFormHTML(`width:${width}px;background:${ground}`, formHTML) : '');
   if (c.html !== html) { FOCUS.keep(c.el, cornerAct, () => { c.el.innerHTML = html; setStops(c.el, c.mine, true); }); c.html = html; }
@@ -4877,7 +4893,7 @@ export function sceneHead(d, view, as) {
         : items[s.k].html;
     rows[s.row] += `<span class="hslot${s.rows > 1 ? ' wraps' : ''}" style="left:${s.x}px;width:${s.w}px;height:${s.rows * pitch}px;line-height:${s.rows > 1 ? '' : pitch + 'px'}">${html}</span>`;
   }
-  const form = as.open ? openedHTML(cornerItems(d, { ...view, acts: false }).map((i) => i.html), items, L) : view.kept && view.keptOpen ? statementHTML(view.kept) : '';
+  const form = as.open ? openedHTML(cornerItems(d, { ...view, acts: false }).map((i) => i.html), items, L) : view.kept && view.keptOpen ? statementHTML(view.kept, view.keptSaid) : '';
   const html = rows.map((r, i) => hrowHTML(i, `top:${i * pitch}px;height:${pitch}px`, r)).join('')
     + (form ? openedFormHTML(`top:${L.rows * pitch}px;width:${width}px`, form) : '');
   return { html, rows: L.rows };
@@ -5405,16 +5421,18 @@ function placeCaretMark() {
 /**
  * A draft's kept word's statement opened in its corner on the word's act, or
  * closed again on the act (K-57, K-74; FP-26): `on` sets it, left out
- * toggles; the corner's items are made again from it (`placeCorners`), and a
- * pane's corner reads it too (SC). Nothing where the draft's kept state is
- * not set: there is no statement to open.
+ * toggles; opened, it is the word's own statement, or the save chord's
+ * answer where the chord opens it (`how`); the corner's items are made again
+ * from it (`placeCorners`), and a pane's corner reads it too (SC). Nothing
+ * where the draft's kept state is not set: there is no statement to open.
  * @param {string} addr
  * @param {boolean} [on]
+ * @param {'save' | 'word'} [how] what opens it: the word's own act where left out
  * @returns {boolean} whether the statement stands open now
  */
-export function openStatement(addr, on = !openStatements.has(addr)) {
+export function openStatement(addr, on = !openStatements.has(addr), how = 'word') {
   if (!WRITE.keptOf(addr)) on = false;
-  if (on) openStatements.add(addr); else openStatements.delete(addr);
+  if (on) openStatements.set(addr, how); else openStatements.delete(addr);
   markDirty();
   return on;
 }

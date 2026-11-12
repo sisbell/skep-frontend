@@ -128,10 +128,13 @@
 // event → T-LAYER's `onCopy`, and one it takes nothing from → N-KEYS'
 // `copyAsDrawn`, read where the focus is (`whereIs`), then `onCopy` again
 // over the selection that placed under it (FP-24, FP-27); the
-// events `moment` → a walk's moment (O-FACES'), `held` → logged; the
-// failure reporter (a line in the page, posted nowhere). The boot hands no
-// machine in to W-WRITE: typing stays page-local, and no write is composed
-// or sent.
+// events `moment` → a walk's moment (O-FACES'), `held` → logged for the
+// gate beside W-MACHINE's own taking of it; the failure reporter (a line in
+// the page, posted nowhere). The boot hands D6's machine in to W-WRITE
+// (W-MACHINE's `handIn`), before the board is opened, so the session it
+// opens has its held lines read and typing is composed and sent — save on a
+// page the gate opens (`?gate=`), which boots without it and types
+// page-locally unless its URL asks for it by `?machine=`.
 // Rules: FP-1, FP-2, FP-4, FP-5, FP-8, FP-9, FP-10, FP-11, FP-14, FP-15,
 // FP-20, FP-22, FP-23, FP-24, FP-25, FP-26, FP-27, FP-28, FP-29, FP-34,
 // FP-35, FP-36.
@@ -141,6 +144,7 @@ import * as DEV from '../bridge/dev.js';
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
 import * as WRITE from '../write/write.js';
+import * as MACHINE from '../write/machine.js';
 import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
 import * as LAYER from '../text/layer.js';
@@ -176,6 +180,8 @@ const PROVIDER = SECRET ? DEV.providerAt(P.get('port')) : null;
 const GATE = P.get('gate');
 /** the gate's guest: the page boots at guest class, asking no session */
 const GUEST = GATE === 'guest';
+/** D6's machine is handed in at boot (see the head): on every page but one the gate opens, and on one of those whose URL asks for it */
+const WRITES = !GATE || P.has('machine');
 
 /** the frame buffer the gate reads */
 /** @type {Frame[]} */
@@ -379,8 +385,10 @@ async function boot() {
   PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived, onDrop: dropped, stands: () => TRAIL.all().flatMap((e) => [e.addr, ...(GO.scenePair(e) || [])]), readings: TRAIL.readings, onCounted: TRAIL.countedAt, onOpen: () => { void launch(); }, finding: FIND.searched });
   PORT.on('moment', (d) => FACES.moment(/** @type {import('../bridge/shapes').MomentEvent} */ (d)));
   const heldSeen = /** @type {unknown[]} */ ([]);
-  PORT.on('held', (d) => { heldSeen.push(d); console.log('held event', d); });
-  bootInfo.adapter = PORT.adapterName(); bootInfo.gate = !!GATE; bootInfo.heldSeen = heldSeen;
+  PORT.on('held', (d) => { heldSeen.push(d); });
+  FACES.readers({ line: (text, id) => LINE.transient(text, id) });
+  if (WRITES) MACHINE.handIn();
+  bootInfo.adapter = PORT.adapterName(); bootInfo.gate = !!GATE; bootInfo.heldSeen = heldSeen; bootInfo.machine = WRITES;
 
   const t0 = performance.now();
   // the board, and for the board held its key store, the session (none for the gate's guest), its health, its daemon and its index
