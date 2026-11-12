@@ -34,10 +34,13 @@
 // The editor's answers and events decoded (the shell's shapes, `./shapes`):
 // a write's `ack` and `ack_addr` (A-62, A-63), the `held` answer to a burst
 // the shell holds (`decodeHeld`), the held lines `held(session)` lists
-// (`decodeHeldRows`), the `held` event with the hands that moved a document
+// (`decodeHeldRows`) — an anchor's edge an I-address, an `AnchorPiece` naming
+// words the board has not minted, or the document's edge — the `held` event
+// with the hands that moved a document and the lines it names kept
 // (`decodeHeldEvent`), the shell's `held_lines` refusal of a whole-draft
 // write — the draft holding the lines, an address, and their count, one or
 // more (`decodeHeldLinesRefusal`) — `history.restore`'s `Restored`,
+// `history.past`'s `Past`, `publication.standing`'s `PublicationStanding`,
 // `held.show`'s `{shown}`, the merge family's `MergeReport`, `MergeLanded`,
 // `Undone` and `Withdrawn`, and the publication family's panel, its
 // `{count, price}` and `confirm`'s three outcomes — the acknowledgment, the
@@ -57,6 +60,7 @@ import { byteLength } from '../util.js';
 /** @typedef {import('../bridge/shapes').HeldAnswer} HeldAnswer */
 /** @typedef {import('../bridge/shapes').HeldEvent} HeldEvent */
 /** @typedef {import('../bridge/shapes').HandKey} HandKey */
+/** @typedef {import('../bridge/shapes').AnchorPiece} AnchorPiece */
 /** @typedef {import('../bridge/shapes').BaseStanding} BaseStanding */
 /** @typedef {import('../bridge/shapes').AckVia} AckVia */
 /** @typedef {import('../bridge/shapes').Placement} Placement */
@@ -609,8 +613,8 @@ export function decodeHeld(/** @type {unknown} */ answer) {
 
 /**
  * @typedef {Object} HeldAnchors — the identities a held burst is placed by (`Anchors`)
- * @property {string | null} before the I-address of the unit before the span the burst edits; null at the document's edge
- * @property {string | null} after the I-address of the unit after it; null at the document's edge
+ * @property {string | AnchorPiece | null} before the unit before the span the burst edits: its I-address, or, where the board has not minted it, the piece naming it — a position into the words of an insert the session sent, by that insert's `id`; null at the document's edge
+ * @property {string | AnchorPiece | null} after the unit after it, as `before` names one; null at the document's edge
  * @property {Array<{start: string, width: string}> | null} span a delete's or a rearrange's I-runs between the two, in V order; null where the burst carries none
  */
 
@@ -625,12 +629,28 @@ export function decodeHeld(/** @type {unknown} */ answer) {
  * @property {boolean} sent whether a dial of the line was attempted since the last read, so it may have landed
  * @property {number} time
  * @property {Refusal | null} refusal the verdict for a refused run — the board's, the shell's `answers_lost`, `arrangement_moved` at a line held moved, `head_unreadable`, `session_died`; null while the line waits on no act
+ * @property {boolean | null} sendable on a moved document's first moved line, what `resolve(send)` would do now: true where it would shift the line into the text as it stands, false where it would hold it moved again; null where the row carries none — the shell does not know, or the line is no such line
+ * @property {string | null} unwritable why the line stands on no file, the device having refused its copy; null where a file holds it
+ * @property {NonNullable<HeldAnswer['unwritable_class']> | null} unwritableClass the class the page keys its act by, beside `unwritable`; null with it
  */
+
+/**
+ * An anchor's edge (`Anchors.before`, `Anchors.after`): an I-address, or a
+ * piece naming words the board has not minted — the `id` of the insert that
+ * carries them and a position into its words, counted from 0; else malformed.
+ * @param {unknown} v
+ * @returns {string | AnchorPiece}
+ */
+function edgeOf(v) {
+  if (typeof v === 'string') return v;
+  const p = object(v);
+  return { burst: string(p.burst), offset: number(p.offset) };
+}
 
 /** @param {unknown} v @returns {HeldAnchors} */
 function anchorsOf(v) {
   const a = object(v);
-  return { before: opt(a.before, string), after: opt(a.after, string), span: opt(a.span, (s) => array(s).map((x) => { const r = object(x); return { start: string(r.start), width: string(r.width) }; })) };
+  return { before: opt(a.before, edgeOf), after: opt(a.after, edgeOf), span: opt(a.span, (s) => array(s).map((x) => { const r = object(x); return { start: string(r.start), width: string(r.width) }; })) };
 }
 
 /**
@@ -648,6 +668,7 @@ export function decodeHeldRows(answer) {
       const line = {
         held: number(r.held), doc: string(r.doc), base: number(r.base), frame: /** @type {{op: string} & Record<string, unknown>} */ (frame),
         anchors: opt(r.anchors, anchorsOf), cause: string(r.cause), sent: boolean(r.sent), time: number(r.time), refusal: opt(r.refusal, refusalOf),
+        sendable: opt(r.sendable, boolean), unwritable: opt(r.unwritable, string), unwritableClass: opt(r.unwritable_class, (v) => oneOf(v, UNWRITABLE_CLASSES)),
       };
       return line;
     });
@@ -676,14 +697,28 @@ const HAND_KEYS = { own: null, other: null, bare: null, lost: null, unread: null
  * @property {HeldEvent['state']} state
  * @property {string | null} cause the hold's token while holding, the refusal's while refused; null where the event carries none
  * @property {HeldHand[]} hands with the `moved` state, each hand once; empty where the event carries none
+ * @property {boolean | null} sendable with the `moved` state, as the document's first moved line's row carries it (`HeldLine.sendable`); null where the event carries none
+ * @property {string | null} unwritable why a line of the document stands on no file; null where none does
+ * @property {NonNullable<HeldAnswer['unwritable_class']> | null} unwritableClass the class beside `unwritable`; null with it
+ * @property {LandedLine[]} landed the lines the event says kept after their `op` answered `held`, each once; empty where it names none
  */
 
-/** the `held` event → the document's state, its cause and the hands that moved it; null where a member is not as declared */
+/**
+ * @typedef {Object} LandedLine — one held line that left the store kept, as the `held` event names it (`LandedLine`)
+ * @property {number} held the line's ordinal, the one the `op` call's `held` answer named
+ * @property {string | null} burst the `id` the page sent on the line's frame; null where it sent none
+ * @property {number | null} at the position the board took the line at; null where the read found it under a reclaimed history
+ * @property {string | null} addr the first I-address an insert's ack minted; null for the other kinds, and for a landing the resend's read found
+ */
+
+/** the `held` event → the document's state, its cause, the hands that moved it and the lines it names kept; null where a member is not as declared */
 export function decodeHeldEvent(/** @type {unknown} */ data) {
   return decode(data, (a) => /** @type {HeldState} */ ({
     board: string(a.board), session: string(a.session), doc: string(a.doc), held: number(a.held), state: oneOf(a.state, HELD_STATES),
     cause: opt(a.cause, string),
     hands: opt(a.hands, (hs) => array(hs).map((h) => { const x = object(h); return { key: oneOf(x.key, HAND_KEYS), fingerprint: opt(x.fingerprint, string), label: opt(x.label, string) }; })) || [],
+    sendable: opt(a.sendable, boolean), unwritable: opt(a.unwritable, string), unwritableClass: opt(a.unwritable_class, (v) => oneOf(v, UNWRITABLE_CLASSES)),
+    landed: opt(a.landed, (ls) => array(ls).map((l) => { const x = object(l); return { held: number(x.held), burst: opt(x.burst, string), at: opt(x.at, number), addr: opt(x.addr, string) }; })) || [],
   }));
 }
 
@@ -721,6 +756,46 @@ export function decodeHeldLinesRefusal(refusal) {
 /** `history.restore` → the state restored and the way back; null where a member is not as declared */
 export function decodeRestored(/** @type {unknown} */ answer) {
   return decode(answer, (a) => /** @type {Restored} */ ({ draft: string(a.draft), at: number(a.at), position: number(a.position), asOf: number(a.as_of), marker: markerOf(a.marker) }));
+}
+
+/**
+ * @typedef {Object} IRun — one run of an arrangement by identity (the shell's `Run`): `width` positions of the document
+ * `origin`'s content I-space from the ordinal `iStart`
+ * @property {string} origin
+ * @property {number} iStart
+ * @property {number} width
+ */
+
+/** @param {unknown} v @returns {IRun[]} */
+const iRunsOf = (v) => array(v).map((r) => { const x = object(r); return { origin: string(x.origin), iStart: number(x.i_start), width: number(x.width) }; });
+
+/**
+ * @typedef {Object} Past — `history.past`'s answer: a draft's past state read, nothing written (B3-S7)
+ * @property {string} draft
+ * @property {number} at the position read
+ * @property {number} asOf the position the reads were made at
+ * @property {IRun[]} state the draft's runs as read at `at`, in V order: what the state draws
+ * @property {IRun[]} sent the same positions in the same order, words published since as the published words they became: what a restore made now would send
+ * @property {number} covered the positions of `state` a correspondence record covers
+ * @property {MergeMarker | null} marker the draft's merge marker as it stands; null where it carries none
+ */
+
+/** `history.past` → the past state's runs as drawn and as a restore would send them; null where a member is not as declared */
+export function decodePast(/** @type {unknown} */ answer) {
+  return decode(answer, (a) => /** @type {Past} */ ({ draft: string(a.draft), at: number(a.at), asOf: number(a.as_of), state: iRunsOf(a.state), sent: iRunsOf(a.sent), covered: number(a.covered), marker: markerOf(a.marker) }));
+}
+
+/**
+ * @typedef {Object} PublicationStanding — `publication.standing`'s answer: where a draft stands against its document, read with no panel composed
+ * @property {string} base the base the board records for the draft in the document's chain
+ * @property {BaseStanding} standing that base typed against the document's head
+ * @property {string | null} head the trunk's newest member where the base stands behind it; null elsewhere
+ * @property {string[]} leftBehind the drafts of the family the draft's publication leaves behind
+ */
+
+/** `publication.standing` → the draft's base, its standing and what its publication leaves behind; null where a member is not as declared */
+export function decodePublicationStanding(/** @type {unknown} */ answer) {
+  return decode(answer, (a) => /** @type {PublicationStanding} */ ({ base: string(a.base), standing: oneOf(a.standing, STANDINGS), head: opt(a.head, string), leftBehind: strings(a.left_behind) }));
 }
 
 /** `held.show` → whether the held file was shown; null for any other answer */
@@ -1063,6 +1138,7 @@ function placedOf(v) {
   if (v === 'absent') return 'absent';
   const p = object(v);
   if (p.whole != null) return { whole: { ordinal: number(object(p.whole).ordinal) } };
+  if (p.places != null) return { places: array(p.places).map(number) };
   return { split: array(p.split).map((t) => { const x = array(t); if (x.length !== 3) fail(); return /** @type {[number, number, number]} */ ([number(x[0]), number(x[1]), number(x[2])]); }) };
 }
 

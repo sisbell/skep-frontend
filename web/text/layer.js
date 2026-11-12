@@ -458,11 +458,13 @@
 // stands in the caret's text, its bytes are replaced by the key's text, none
 // for Backspace and Delete (`caretReplace`) — each an edit handed to W-WRITE
 // and shown through the derived record, nothing composed and nothing sent
-// (FP-14). Leaving the text — Esc to the walk at
-// the caret's span, a move of the walk, a zoom past its reading scale, a
-// pointer's act on another document or a selection put there (D5 M-2, K-77;
-// N-KEYS', N-WALK's, APP-INPUT's, O-SELECTION's) — keeps the caret at its
-// position (`leaveCaret`), which Enter, a printable key or Shift with ← or → at its
+// here (FP-14). Leaving the text — Esc to the walk at
+// the caret's span, a move of the walk, a teleport's landing, a zoom past its
+// reading scale, a pointer's act on another document or a selection put there
+// (D5 M-2, K-77; N-KEYS', N-WALK's, APP-INPUT's, O-SELECTION's) — keeps the
+// caret at its position (`leaveCaret`) and, save where the camera alone left
+// it, asks W-WRITE to commit the draft's open burst (`Leave`; D5 K-73; D6
+// BM-4, BM-5), which Enter, a printable key or Shift with ← or → at its
 // span returns (`returnCaret`; N-KEYS') — its span the one the walk stands
 // on at its position, by T-SPAN's rule: in white space alone the span before
 // it, or the first where none stands before it (`caretSpan`, `caretInSpan`;
@@ -1163,8 +1165,8 @@ export function heldIn(addr, pos, width) {
   if (!holding(addr) || !REC.has(addr)) return false;
   if (unminted(addr, pos, width)) return true;
   const image = shownOf(addr).image, end = pos + width;
-  /** where the byte a held line names stands in the text shown, by its permanent address; -1 where the text places it nowhere */
-  const at = (/** @type {string | null} */ i) => { const cut = i ? i.lastIndexOf('.') : -1; const [s] = i && cut > 0 ? REC.placedIn(image, [{ prefix: i.slice(0, cut), ordinal: Number(i.slice(cut + 1)), width: 1 }]) : []; return s ? s.pos : -1; };
+  /** where the byte a held line names stands in the text shown, by its permanent address; -1 where the text places it nowhere, or the line names it by a piece of words the board has not minted (M-FRAMES's `HeldAnchors`) */
+  const at = (/** @type {string | import('../bridge/shapes').AnchorPiece | null} */ i) => { if (typeof i !== 'string') return -1; const cut = i.lastIndexOf('.'); const [s] = cut > 0 ? REC.placedIn(image, [{ prefix: i.slice(0, cut), ordinal: Number(i.slice(cut + 1)), width: 1 }]) : []; return s ? s.pos : -1; };
   return WRITE.heldOf(addr).some((row) => {
     if (row.frame.op !== 'delete' || !row.anchors) return false;
     const before = at(row.anchors.before), after = at(row.anchors.after);
@@ -1303,8 +1305,8 @@ export function removedOf(addr, ids) {
  * (see the head; B3-S7's "put back in the current text"): each stretch of
  * them placed again at its own removal point by its identity (M-REC's
  * `Edit.back`), the last in the text first so no placing moves another's
- * point, all of them one step (W-WRITE's `addEdits`). Nothing is composed or
- * sent (FP-14). Nothing where the page's record holds no removal of them.
+ * point, all of them one step handed to W-WRITE (`addEdits`; FP-9). Nothing
+ * where the page's record holds no removal of them.
  * @param {string} addr
  * @param {ISpan[]} ids the bytes, by identity
  * @returns {Array<{pos: number, width: number}>} where they stand in the text shown once put back, in its order
@@ -1400,8 +1402,11 @@ export function chainOf(addr) {
  */
 function cornerFacts(d) {
   const h = REC.health();
-  return { members: chainOf(d.addr), lags: lags(), notebook: true, localTrust: !!(h && h.auth && h.auth.local_trust), kept: WRITE.keptOf(d.addr), originOwner, kind: kindOf(d) };
+  return { members: chainOf(d.addr), lags: lags(), notebook: onNotebook(), localTrust: !!(h && h.auth && h.auth.local_trust), kept: WRITE.keptOf(d.addr), originOwner, kind: kindOf(d) };
 }
+
+/** is the venue the person's own notebook — what every corner states its state by (`cornerFacts`), and what the save chord's answer at a hold is keyed on (N-KEYS')? */
+export const onNotebook = () => true;
 
 // ---- the fold ---------------------------------------------------------------------------------------------------
 
@@ -5120,18 +5125,29 @@ export function caretSpan() {
 }
 
 /**
+ * @typedef {'esc' | 'walk' | 'teleport' | 'pointer' | 'camera'} Leave — how the text is left (D5 K-73, K-77; D6 BM-4, BM-5):
+ * `esc` Esc at the caret, or the empty click that is the pointer's; `walk` a move of the walk off the caret; `teleport` a
+ * landing — a LEAP's, Back's, Forward's, a trail jump's, a follow's; `pointer` a pointer's act on another document, or a
+ * selection put there; `camera` a move of the camera alone — a zoom past the text's reading scale, or the re-take after one.
+ * Each commits the draft's open burst but `camera`, which commits nothing: that burst commits at its own pause
+ */
+
+/**
  * The text left (K-77; BM-4; D5 M-2): the caret kept where it stood, the keys
- * no longer reaching it. Esc, a move of the walk and a zoom past its reading
- * scale leave the frame owing it its mark brought into view and the
- * platform's selection collapsed there (`placeCaretMark`); a pointer's act on
- * another document, or a selection put there (APP-INPUT's, O-SELECTION's),
- * leaves it owing nothing, the view and the platform's selection standing on
- * what the act was made on (FP-37).
+ * no longer reaching it, and the draft's open burst committed first where the
+ * person left it (`Leave`; W-WRITE's `commit`). Esc, a move of the walk and a
+ * zoom past its reading scale leave the frame owing it its mark brought into
+ * view and the platform's selection collapsed there (`placeCaretMark`); a
+ * pointer's act on another document, or a selection put there (APP-INPUT's,
+ * O-SELECTION's), leaves it owing nothing, the view and the platform's
+ * selection standing on what the act was made on (FP-37).
+ * @param {Leave} how how the text is left
  * @param {boolean} [owing] the frame owes the kept caret its mark in view and the selection collapsed at it; false where the act's target lies elsewhere
  * @returns {{addr: string, pos: number, block: number | null} | null} the span it stands in, for the walk; null where no live caret stood
  */
-export function leaveCaret(owing = true) {
+export function leaveCaret(how, owing = true) {
   if (!caret_ || !caret_.live) return null;
+  if (how !== 'camera') WRITE.commit(caret_.addr);
   setCaret({ ...caret_, live: false }, owing ? 'collapse' : null);
   return caretSpan();
 }

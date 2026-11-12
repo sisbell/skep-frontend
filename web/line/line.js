@@ -121,9 +121,10 @@
 // stop, named and titled by its whole form's words, its press opening that
 // form in its place until the next act (`untilAct`); the glyph is hidden from
 // the accessibility tree. The daemon's segment
-// (`daemonSegment`): silent while the board runs; its stopped, unreachable
-// and halted-writes forms where it does not, their words whole (FP-26;
-// foundations §3.1). A jump's face out of view
+// (`daemonSegment`): silent while the board runs; its stopped, unreachable,
+// halted-writes and head-unreadable forms where it does not, a state with no
+// form of its own read as halted, their words whole (FP-26; foundations
+// §3.1; D6 BM-22). A jump's face out of view
 // (FP-25): the words of a jump's face whose document stands out of the
 // visible view, in a segment of their own while the plane hides the face
 // (O-HOST's `aside`, read through the reader the app hands in), said already
@@ -1106,12 +1107,26 @@ export function actingSegment() {
   return guestSegment(b.origin, lost && lost.refused ? lost.as || '' : null, refused, { state: refused && refused.name === 'no_key' ? 3 : 1, alarm: !!(lost && lost.refused), compact: true });
 }
 
-/** the daemon's segment, by the string it reads (`id`): silent while the board runs */
+/** the string each state the shell says of the board reads in the daemon's segment (M-REC's `DaemonState`): none while it runs */
+const DAEMON_FORM = /** @type {Record<import('../model/records.js').DaemonState, string>} */ ({
+  running: '', stopped: 'F.daemon.notebook.stopped', unreachable: 'F.daemon.unreachable', halted: 'F.daemon.notebook.halted', head_unreadable: 'B3.head_unreadable',
+});
+
+/**
+ * The daemon's segment, by the string it reads (`id`): silent while the board
+ * runs. The halted form where `/health` says the board's writes are halted,
+ * whatever the shell last said; else the form of the state the shell last
+ * said (`DAEMON_FORM`) — the head-unreadable hold's own line naming the board
+ * as the status region names it (D6 BM-22) — and the halted form for a state
+ * that has none.
+ */
 function daemonSegment() {
-  const d = REC.daemon(), h = REC.health();
-  const halted = !!(h && h.writes && h.writes.halted);
-  const id = halted ? 'F.daemon.notebook.halted' : d === 'stopped' ? 'F.daemon.notebook.stopped' : d === 'unreachable' ? 'F.daemon.unreachable' : '';
-  return { id, html: id ? `<span class="warn" data-string="${id}">${esc(t(id))}</span>` : '', halted, words: halted ? t(id) : '' };
+  const d = REC.daemon(), h = REC.health(), b = REC.board();
+  const form = d == null ? '' : Object.hasOwn(DAEMON_FORM, d) ? DAEMON_FORM[d] : 'F.daemon.notebook.halted';
+  const halted = !!(h && h.writes && h.writes.halted) || form === 'F.daemon.notebook.halted';
+  const id = halted ? 'F.daemon.notebook.halted' : form;
+  const words = id === 'B3.head_unreadable' ? t(id, { board: b ? t('L.mirror.board.name', { node: '1', origin: b.origin }) : '' }) : id ? t(id) : '';
+  return { id, html: id ? `<span class="warn" data-string="${id}">${esc(words)}</span>` : '', halted, words: halted ? words : '' };
 }
 
 /** the mode line: the flag-on transition at the first render after the pair changes (C-31), said through the status region */

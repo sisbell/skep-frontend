@@ -146,6 +146,7 @@ import * as F from '../model/frames.js';
 import * as LK from '../links/links.js';
 import * as REC from '../model/records.js';
 import * as WRITE from '../write/write.js';
+import * as MACHINE from '../write/machine.js';
 import * as LAYER from '../text/layer.js';
 import * as SEL from '../overlays/selection.js';
 import * as HOST from '../overlays/host.js';
@@ -1910,7 +1911,7 @@ test('a read answers at once whatever the board holds of the words: who wrote th
   PORT.boot(fake);
   /** @type {string[]} */
   const committed = [];
-  WRITE.machine({ commit: (addr) => committed.push(addr) });
+  WRITE.machine({ commit: (addr) => committed.push(addr), typed() {}, leaving() {} });
   try {
     await focusOn(D, 1);
     await press('Enter');
@@ -1940,7 +1941,7 @@ test('an act that sends a name for characters takes effect only once the board h
   const SHIFT = { ...MOD, shiftKey: true };
   /** @type {string[]} */
   const committed = [];
-  WRITE.machine({ commit: (addr) => committed.push(addr) });
+  WRITE.machine({ commit: (addr) => committed.push(addr), typed() {}, leaving() {} });
   try {
     await focusOn(D, 14);
     await press('Enter');
@@ -1980,6 +1981,110 @@ test('an act that sends a name for characters takes effect only once the board h
     await SEL.sent();
     assert.equal(slotIn('linkto').reason, `<div class="note reason" data-string="B3.row.held.resolve">${esc(t('B3.row.held.resolve', { label: LAYER.boxName(D).name }))}</div>`, 'a refused run held: resolve it first');
   } finally { WRITE.machine(null); WRITE.setHeld(D, []); WRITE.setFlight(D, false); HOST.dismiss(); }
+}));
+
+/** an answer a test gives later: the promise the fake port waits on, and what settles it */
+function later() {
+  /** @type {(out: unknown) => void} */
+  let give = () => {};
+  const out = new Promise((r) => { give = r; });
+  return { out, give };
+}
+
+/**
+ * The page over a fake port whose every write frame is answered by `answer`,
+ * D's text read at position 7, the session one that writes and D6's machine
+ * handed in: typing is composed and dialed. The frames dialed are kept, in
+ * order.
+ * @param {(frame: Record<string, any>) => unknown} answer what the board answers a write frame: an outcome, or a promise of one
+ * @returns {{fake: ReturnType<typeof FAKE.create>, dialed: Array<Record<string, any>>}}
+ */
+function writing(answer) {
+  /** @type {Array<Record<string, any>>} */
+  const dialed = [];
+  const script = new Proxy({}, { get: (_t, key) => { const k = String(key); if (k.startsWith('held:')) return { result: [] }; if (!k.startsWith('op:')) return undefined; const frame = JSON.parse(k.slice(3)); if (frame.frame || F.READ_OPS.includes(frame.op)) return undefined; dialed.push(frame); return answer(frame); } });
+  const fake = FAKE.create(script);
+  PORT.boot(fake);
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  REC.takeDelivery(D, [{ pos: 1, width: N, kind: 'content', text: TEXT, ref: null, origin: null }], 7);
+  MACHINE.handIn();
+  return { fake, dialed };
+}
+/** the board's ack of an insert: the first address it minted, in D's own space, and the position */
+const minted = (/** @type {number} */ ordinal, /** @type {number} */ at) => ({ result: { addr: `${D}.0.1.${ordinal}`, at, resp: 'ack_addr' } });
+
+test('Mod+S commits the open burst and answers once it lands, from the word the corner then reads — at once where no burst is open — and a key taken before the ack drops the answer, the corner\'s word standing; under a hold while the board is not answering the answer is the silence\'s own line (D5 K-74; D6 BM-3, BM-78)', () => onPlane(async ({ said }) => {
+  KEYS._reset();
+  let next = later();
+  const { dialed } = writing(() => next.out);
+  try {
+    await focusOn(D, 1);
+    await press('Enter');
+    await type('ab');
+    assert.deepEqual([WRITE.inFlight(D), dialed], [true, []], 'typed: the burst open, nothing dialed');
+    const before = said.length;
+    await press('s', MOD);
+    assert.deepEqual([dialed.map((f) => [f.op, f.values]), said.length, LAYER.statementOpen(D), WRITE.keptOf(D)], [[['insert', ['ab']]], before, false, null], 'Mod+S: the open burst committed at once; no answer while its ack is out, and no word between');
+    await tick();
+    assert.equal(said.length, before, 'the ack late: still nothing said');
+    next.give(minted(100, 20));
+    await KEYS.saved();
+    assert.deepEqual([said.slice(before), LAYER.statementOpen(D), WRITE.keptOf(D)], [[t('B3.save.kept')], true, { word: 'kept', reason: null }], 'the ack: the answer, from the word the corner then reads, its statement whole at the first press');
+    await press('s', MOD);
+    assert.deepEqual([said.slice(before + 1), dialed.length], [[t('B3.kept')], 1], 'no burst open: answered at once, the corner\'s own word, nothing dialed');
+    // a key taken before the ack drops the answer
+    next = later();
+    await type('c');
+    const n = said.length;
+    await press('s', MOD);
+    await press('ArrowLeft');
+    next.give(minted(102, 21));
+    await KEYS.saved();
+    await tick();
+    assert.deepEqual([dialed.length, said.slice(n), WRITE.keptOf(D)?.word, WRITE.inFlight(D)], [2, [], 'kept', false], 'a key before the ack: the burst kept all the same, the answer dropped, the corner\'s word standing');
+    // under a hold the board's silence caused: the silence's own line, whole at the first press of a session
+    KEYS._reset();
+    next = later();
+    await type('d');
+    REC.setDaemon('unreachable');
+    const m = said.length;
+    await press('s', MOD);
+    next.give({ result: { resp: 'held', held: 1, cause: 'unreachable' } });
+    await KEYS.saved();
+    assert.deepEqual([said.slice(m), WRITE.keptOf(D)], [[t('B3.save.held')], { word: 'not yet kept', reason: null }], 'held while the notebook does not answer: its line, the word "not yet kept"');
+    REC.setDaemon('running');
+    KEYS._reset();
+    await press('s', MOD);
+    assert.equal(said.at(-1), `${t('B3.save.before')} ${t('B3.not-yet-kept')}`, 'held, the board answering: the bare statement');
+  } finally { MACHINE._reset(); PORT.boot(null); REC.setDaemon('running'); KEYS._reset(); }
+}));
+
+test('"link to…" with a burst open commits it and acts only at its ack — nothing shown, said or moved meanwhile — while who wrote this? with a burst open answers at once, the burst neither committed nor waited on (D5 K-73; D6 BM-61)', () => onPlane(async ({ said }) => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  const SHIFT = { ...MOD, shiftKey: true };
+  const ack = later();
+  const { fake, dialed } = writing(() => ack.out);
+  try {
+    await focusOn(D, 14);
+    await press('Enter');
+    // a line of its own typed between the draft's two lines, the caret left in it
+    await type('Typed line\n\n');
+    await press('ArrowUp');
+    assert.deepEqual([WRITE.inFlight(D), dialed, fake.asked], [true, [], []], 'the burst open, nothing dialed');
+    await press('O', SHIFT);
+    await tick();
+    assert.deepEqual([HOST.currentState()?.id, answers(), dialed, fake.asked, WRITE.inFlight(D)], ['provenance:wrote', [['L.new.wrote', t('L.new.wrote')]], [], [], true], 'who wrote this?: answered at once, the burst still open, nothing dialed and nothing read for it');
+    HOST.dismiss();
+    const n = said.length, walked = walkAt();
+    await press('k', MOD);
+    await tick();
+    assert.deepEqual([dialed.map((f) => [f.op, f.values]), HOST.currentState(), said.slice(n), walkAt()], [[['insert', ['Typed line\n\n']]], null, [], walked], '"link to…": the open burst committed, and nothing shown, nothing said, no focus moved while its ack is out');
+    ack.give(minted(N + 100, 20));
+    await SEL.sent();
+    assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor, slotIn('linkto').reason, WRITE.inFlight(D), WRITE.keptOf(D)?.word], ['selection', { span: { addr: D, pos: 14, width: 12 } }, `<div class="note reason" data-string="L.seam.link-to">${esc(t('L.seam.link-to'))}</div>`, false, 'kept'],
+      'at the ack: the act takes effect, its slot\'s surface at the typed line');
+    assert.deepEqual(/** @type {any} */ (HOST.currentState()?.about).at.ids, [{ prefix: D + '.0.1', ordinal: N + 100, width: 12 }], 'the line\'s bytes named by the addresses the ack minted');
+  } finally { MACHINE._reset(); PORT.boot(null); HOST.dismiss(); }
 }));
 
 test('over a span wholly of words typed here follow and read side by side keep their places, inert but focusable, their reason on the button; pressed, or by their chords, they give it at the card and through the status region, nothing followed and nothing opened (D5 K-51, K-52; P47)', () => onPlane(async ({ said }) => {

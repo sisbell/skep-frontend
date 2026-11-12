@@ -7,9 +7,12 @@
 // copy's entry tags the page's unminted bytes with (`model.load`), what a
 // feed row naming a document out of view does to the model alone
 // (`model.invalidate`), a row taken as the feed hands one (`model.feed`);
-// the words being written (W-WRITE's) — a draft's kept state set as the
-// machine will set it (`write.setKept`) and a draft's page-local edits
-// (`write.edits`); the page's own caret as it stands (`caret`); the mounted
+// the words being written (W-WRITE's) — a draft's kept state, its held lines
+// and its flight set as the machine sets them (`write.setKept`,
+// `write.setHeld`, `write.setFlight`), bytes the page made minted as an ack
+// mints them (`write.mint`), the machine handed in or taken out
+// (`write.machine`), and a draft's page-local edits (`write.edits`); the
+// page's own caret as it stands (`caret`); the mounted
 // articles' text and what stands of each by line (`mountedLines`); the
 // mirror's items; the camera, the focus and its owner's state — the walk's
 // panel among it (`focus`) — the focus ring the canvas drew (`view.ring`),
@@ -87,6 +90,7 @@
 
 import * as REC from '../model/records.js';
 import * as WRITE from '../write/write.js';
+import * as MACHINE from '../write/machine.js';
 import * as LAYER from '../text/layer.js';
 import * as WALK from '../nav/walk.js';
 import * as CAM from '../plane/camera.js';
@@ -114,6 +118,7 @@ import * as KEYS from '../nav/keys.js';
 import * as FOCUS from '../nav/focus.js';
 import * as SCENE from '../scene/scene.js';
 import * as DERIVE from '../model/derive.js';
+import * as F from '../model/frames.js';
 import { docBox, accountCell, boardCell, boardLabelCell, DOC_W, depthOfDoc } from '../plane/projection.js';
 import { STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, EDGE, EDGE_GAP, LINE_H, boundsOf, outlineRects, firstRow, edgeOf, leadOf, padded } from '../plane/layout.js';
 import { lodOf, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME } from '../plane/lod.js';
@@ -664,9 +669,17 @@ export function install(deps) {
       feed: (/** @type {import('../bridge/shapes').FeedUpdate} */ update) => { PUMP.takeRow(update); CAM.markDirty(); },
     },
     write: {
-      /** a draft's kept state set as D6's machine will set it (W-WRITE's `setKept`; B3-S2), or cleared with null: its corner's slot shows the word on the next frame — page state alone, nothing written */
+      /** a draft's kept state set as D6's machine sets it (W-WRITE's `setKept`; B3-S2), or cleared with null: its corner's slot shows the word on the next frame — page state alone, nothing written */
       setKept: (/** @type {string} */ addr, /** @type {import('../write/write.js').KeptState | null} */ s) => { WRITE.setKept(addr, s); CAM.markDirty(); },
-      /** a draft's page-local edits as the caret made them (W-WRITE's `edits`; K-72): each its position, the width it replaced and its text — page state alone, never sent */
+      /** a draft's held lines set as D6's machine sets them from `held(session)` (W-WRITE's `setHeld`; M-FRAMES's `decodeHeldRows`), or cleared with none: false where the rows are no list of held lines — page state alone, nothing written */
+      setHeld: (/** @type {string} */ addr, /** @type {unknown} */ rows) => { const lines = F.decodeHeldRows(rows); if (lines) { WRITE.setHeld(addr, lines); CAM.markDirty(); } return !!lines; },
+      /** a draft's flight set as D6's machine sets it (W-WRITE's `setFlight`): a burst of it open or out, or landed, those waiting told — page state alone, nothing written */
+      setFlight: (/** @type {string} */ addr, /** @type {boolean} */ on) => { WRITE.setFlight(addr, on); CAM.markDirty(); },
+      /** bytes the page made in a draft minted as an insert's ack mints them (M-REC's `mint`): `width` of them from the page's ordinal `page` at the permanent addresses from `start`, acked at `at` — page state alone, nothing written */
+      mint: (/** @type {string} */ addr, /** @type {number} */ page, /** @type {number} */ width, /** @type {string} */ start, /** @type {number} */ at) => { REC.mint(addr, page, width, start, at); CAM.markDirty(); },
+      /** D6's machine handed in to W-WRITE (W-MACHINE's `handIn`), or taken out: handed in, typing is composed and sent through the port the page booted over — the harness hands it in only on a page over its own provider or a fake port */
+      machine: (/** @type {boolean} */ on) => { if (on) MACHINE.handIn(); else MACHINE.takeOut(); CAM.markDirty(); },
+      /** a draft's page-local edits as the caret made them (W-WRITE's `edits`; K-72): each its position, the width it replaced and its text, with the burst that carried it out and where it was acked — page state alone */
       edits: (/** @type {string} */ addr) => WRITE.edits(addr).map((e) => ({ ...e })),
     },
     /** the page's own caret as it stands (T-LAYER's `caret`; D5 K-70, K-77): its document, its position in the text shown and whether the keys reach it — false where Esc left it kept; null where none stands */

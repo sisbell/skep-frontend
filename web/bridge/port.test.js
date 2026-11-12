@@ -1,13 +1,16 @@
 // B-PORT's test over the fake port (FP-15): the port's calls are the rows of
-// the generated `Bridge`, in its order, the `merge` family's four,
-// `history.restore` and `held.show` among them beside the rows it held
-// before; the `publication`, `merge` and `history` families and `held.show`
-// go out under their dotted names and `changes` under its own, each answer
-// handed up as it came and a lost session's refusal told to the session
-// watchers; a `publication` event and an `another-window` event each reach
-// their own subscribers and every-event ones; and with no adapter beneath it
-// every call answers the port's own refusal — `bad_port` where the page URL's
-// `port` names no port, else `no_adapter` — which the port reads back.
+// the generated `Bridge`, in its order, the `merge` family's four, the `node`
+// family's three, `publication.standing`, `history.past`, `history.restore`
+// and `held.show` among them beside the rows it held before; the `node`,
+// `publication`, `merge` and `history` families and `held.show` go out under
+// their dotted names and `changes` under its own, each answer handed up as it
+// came and a lost session's refusal told to the session watchers; a
+// `publication` event and an `another-window` event each reach their own
+// subscribers and every-event ones; an `op` handed in at the page's unload
+// goes to the adapter as given, told to no session watcher; and with no
+// adapter beneath it every call answers the port's own refusal — `bad_port`
+// where the page URL's `port` names no port, else `no_adapter` — which the
+// port reads back.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -35,8 +38,17 @@ const HELD = [
 ];
 /** the `merge` family's rows, in the generated `Bridge`'s order */
 const MERGE = ['merge.compose', 'merge.land', 'merge.undo', 'merge.withdraw'];
-/** the rows the editor's groundwork added (issue #410), each after the row it follows in the generated `Bridge`'s order */
-const ADDED = /** @type {const} */ ([['history.restore', 'merge.withdraw'], ['held.show', 'held']]);
+/**
+ * The rows added since, each after the row it follows in the generated
+ * `Bridge`'s order, in the order they are placed: the editor's groundwork's
+ * two (issue #410); then the notebook's three after `probe`,
+ * `publication.standing` after `publication.cancel`, and `history.past`
+ * after `merge.withdraw`, so before `history.restore`.
+ */
+const ADDED = /** @type {const} */ ([
+  ['history.restore', 'merge.withdraw'], ['held.show', 'held'],
+  ['node.start', 'probe'], ['node.stop', 'node.start'], ['node.restart', 'node.stop'], ['publication.standing', 'publication.cancel'], ['history.past', 'merge.withdraw'],
+]);
 
 /** the calls as the port holds them now: the rows it held, the `merge` family after `publication.cancel`, and each added row after the row it follows */
 function expectedCalls() {
@@ -88,15 +100,59 @@ test('a publication row refused as from a session the shell does not hold is tol
   assert.ok('refused' in out && out.refused === refusal);
 });
 
-test('CALLS holds the merge family\'s four rows after the publication family\'s, `history.restore` after them and `held.show` after `held`, and beside them exactly the twenty-eight it held (issues #395, #410)', () => {
+test('CALLS holds the merge family\'s four rows after the publication family\'s, `history.restore` after them and `held.show` after `held`, the notebook\'s three after `probe`, `publication.standing` after `publication.cancel` and `history.past` before `history.restore`, and beside them exactly the twenty-eight it held (issues #395, #410)', () => {
   assert.equal(HELD.length, 28);
-  assert.equal(PORT.CALLS.length, 34, 'thirty-two before the editor\'s groundwork, and its two');
-  assert.deepEqual(PORT.CALLS, expectedCalls(), 'the rows it held, none dropped, the four after `publication.cancel`, `history.restore` after `merge.withdraw` and `held.show` after `held`, in the Bridge\'s order');
+  assert.equal(PORT.CALLS.length, 39, 'thirty-two before the editor\'s groundwork, its two, and the five the shell added since');
+  assert.deepEqual(PORT.CALLS, expectedCalls(), 'the rows it held, none dropped, the four after `publication.cancel`, and each added row after the row it follows, in the Bridge\'s order');
+  assert.deepEqual(PORT.CALLS.slice(PORT.CALLS.indexOf('probe'), PORT.CALLS.indexOf('op') + 1), ['probe', 'node.start', 'node.stop', 'node.restart', 'op'], 'the notebook\'s three between `probe` and `op`');
+  assert.deepEqual(Object.keys(PORT.node), ['start', 'stop', 'restart'], 'the node family\'s three rows');
+  assert.ok(Object.isFrozen(PORT.node), 'frozen as the other families are');
+  assert.deepEqual(Object.keys(PORT.publication), ['open', 'count', 'confirm', 'cancel', 'standing'], 'the publication family\'s five, the standing\'s read last');
   assert.deepEqual(Object.keys(PORT.merge), ['compose', 'land', 'undo', 'withdraw']);
   assert.ok(Object.isFrozen(PORT.merge), 'frozen as `publication` is');
-  assert.deepEqual(Object.keys(PORT.history), ['restore'], 'the history family\'s one row');
+  assert.deepEqual(Object.keys(PORT.history), ['past', 'restore'], 'the history family\'s two rows, the read before the write');
   assert.ok(Object.isFrozen(PORT.history), 'frozen as the other families are');
   assert.equal(typeof PORT.heldShow, 'function', '`held.show` beside the `held` call');
+});
+
+test('the node family, publication.standing and history.past go out under their dotted names, each answer handed up as it came', async () => {
+  const standing = { session: 's-1', draft: DRAFT, doc: '1.0.1.0.1' }, past = { session: 's-1', draft: DRAFT, at: 9 };
+  const probe = { result: { daemon: 'running', dialed: 'http://127.0.0.1:8642', signed: null } };
+  const stopped = { result: { daemon: 'stopped', dialed: null, signed: null } };
+  const refused = { refused: { kind: 'shell', name: 'no_own_node', call: 'node.restart' } };
+  const stands = { result: { base: '1.0.1.0.1.1', standing: 'behind', head: '1.0.1.0.1.2', left_behind: [] } };
+  const state = { result: { draft: DRAFT, at: 9, as_of: 16, state: [{ origin: DRAFT, i_start: 1, width: 5 }], sent: [{ origin: DRAFT, i_start: 1, width: 5 }], covered: 0, marker: null } };
+  const fake = FAKE.create({
+    [FAKE.keyOf('node.start', {})]: probe,
+    [FAKE.keyOf('node.stop', {})]: stopped,
+    [FAKE.keyOf('node.restart', {})]: refused,
+    [FAKE.keyOf('publication.standing', standing)]: stands,
+    [FAKE.keyOf('history.past', past)]: state,
+  });
+  PORT.boot(fake);
+  assert.equal(await PORT.node.start(), probe);
+  assert.equal(await PORT.node.stop({}), stopped);
+  assert.equal(await PORT.node.restart(), refused, 'a shell that runs no node refuses it, the refusal handed up as it came');
+  assert.equal(await PORT.publication.standing(standing), stands);
+  assert.equal(await PORT.history.past(past), state);
+  assert.deepEqual(fake.calls().map((c) => c.name), ['node.start', 'node.stop', 'node.restart', 'publication.standing', 'history.past'], 'each sent under its dotted name');
+  assert.deepEqual(fake.unanswered, [], 'each went out with the arguments it was given');
+});
+
+test('an `op` handed in as the page unloads goes to the adapter as given, before the unload\'s close and told to no session watcher; with no adapter nothing is posted (D6 BM-28)', () => {
+  const fake = FAKE.create({});
+  PORT.boot(fake);
+  /** @type {import('./port.js').SessionNotice[]} */
+  const told = [];
+  PORT.onSession((n) => told.push(n));
+  const args = { session: 's-1', frame: { as_of: 7, at: { ordinal: '1', subspace: '1' }, doc: DRAFT, op: 'insert', values: ['a'] }, anchors: { before: null, after: null } };
+  PORT.opAtUnload(args);
+  PORT.closeAtUnload('s-1');
+  assert.deepEqual(fake.unloaded, [{ op: args }, { close: 's-1' }], 'the op as handed in, then the close');
+  assert.deepEqual([told, fake.asked], [[], []], 'no call crossed the port for it, and no watcher was told');
+  PORT.boot(null);
+  PORT.opAtUnload(args);
+  assert.equal(fake.unloaded.length, 2, 'no adapter beneath the port: nothing posted');
 });
 
 test('history.restore and held.show go out under their dotted names, each answer handed up as it came (issue #410)', async () => {

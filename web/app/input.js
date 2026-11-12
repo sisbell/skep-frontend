@@ -614,7 +614,7 @@ function walkOn(addr, pos) { void WALK.focusTo(addr, pos, true, null, true); }
 function leftCaret(addr) {
   const c = LAYER.caret();
   if (!c || c.addr === addr) return false;
-  LAYER.leaveCaret(false);
+  LAYER.leaveCaret('pointer', false);
   return true;
 }
 

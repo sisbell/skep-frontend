@@ -25,8 +25,10 @@
 // `reopened` at the next `open`, never at its first. The platform reopens
 // the stream by itself, and the reopened stream starts at the shell's head,
 // not where the dropped one stopped: M-PUMP reads what it missed.
-// `close(session)` at `pagehide` rides a `keepalive` fetch, best-effort, the
-// browser's.
+// At `pagehide` two posts ride a `keepalive` fetch each, best-effort, the
+// browser's: an `op` the page hands it (`opAtUnload`), then `close(session)`
+// (`closeAtUnload`), sent in the order they are handed in; neither answer is
+// read.
 // State: the provider's origin and the secret, the stream, whether it has
 // stood open and whether a drop stands told, and its own call log (name,
 // bytes, ms, outcome), which the gate holds equal to `GET /bridge/log`'s
@@ -165,6 +167,14 @@ export function create({ provider = DEFAULT_PROVIDER, secret, record = false }) 
     subscribe(fn) { subscribers.push(fn); openStream(); },
     onStream(fn) { streamWatchers.push(fn); },
     calls: () => log.slice(),
+    opAtUnload(args) {
+      const body = JSON.stringify(args ?? {});
+      try {
+        fetch(`${provider}/bridge/op`, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', 'Skep-Provider': secret }, body }).catch(() => {});
+        const fr = /** @type {{frame?: {op?: string}}} */ (args || {}).frame;
+        log.push({ name: 'op', bytesIn: body.length, bytesOut: 0, ms: 0, outcome: 'result', at: performance.now(), op: fr && fr.op ? fr.op : '?', frame: JSON.stringify(fr ?? null) });
+      } catch { /* the browser's */ }
+    },
     closeAtUnload(session) {
       try {
         fetch(`${provider}/bridge/close`, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', 'Skep-Provider': secret }, body: JSON.stringify({ session }) }).catch(() => {});

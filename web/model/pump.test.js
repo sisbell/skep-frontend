@@ -666,6 +666,24 @@ test('the board\'s health and its daemon, each read while a mode or a daemon eve
   assert.deepEqual(fake.unanswered, []);
 });
 
+test('the `daemon` event\'s and the boot probe\'s `halted` and `head_unreadable` reach the model as states of their own, the reason one carries kept with it and gone with the next state (D6 BM-22)', async () => {
+  const s = { [FAKE.keyOf('probe', {})]: { result: { daemon: 'head_unreadable', reason: 'the head record is cut short', dialed: null, signed: null } } };
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  await PUMP.readProbe();
+  assert.deepEqual([REC.daemon(), REC.daemonReason()], ['head_unreadable', 'the head record is cut short'], 'the boot probe\'s state its own, with why');
+  fake.fire('daemon', { board: 'b-1', state: 'halted' });
+  assert.deepEqual([REC.daemon(), REC.daemonReason()], ['halted', null], 'the event\'s halted its own state; the reason went with the state it came with');
+  fake.fire('daemon', { board: 'b-1', state: 'head_unreadable', reason: 'no head record is served' });
+  assert.deepEqual([REC.daemon(), REC.daemonReason()], ['head_unreadable', 'no head record is served'], 'the event\'s head_unreadable, its reason kept');
+  fake.fire('daemon', { board: 'b-2', state: 'stopped' });
+  assert.equal(REC.daemon(), 'head_unreadable', 'another board\'s event is not the page\'s');
+  fake.fire('daemon', { board: 'b-1', state: 'running' });
+  assert.deepEqual([REC.daemon(), REC.daemonReason()], ['running', null]);
+});
+
 test('a read refused session_ended while the shell derives the end asks for the session again; the event re-opening it settles that, the page going on under the re-opened session, and the call\'s later answer is stale — taken nowhere, the session it opened closed (issue #175)', async () => {
   const frame = F.docMetadata(D);
   const s = { ...script, ...opened('s-10'), [FAKE.keyOf('close', { session: 's-10' })]: { result: {} } };
@@ -1083,6 +1101,25 @@ test('a view\'s read the board did not answer is held, never taken as answered, 
   PUMP.pump();
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual([span.asks(), REC.doc(D).extent], [2, 30], 'asked again at once as the daemon is announced back, and answered');
+});
+
+test('a view\'s read the board did not answer is asked again at once where the daemon is announced halted, or its head record unreadable: the board answers reads in either state', async (t) => {
+  for (const state of ['halted', 'head_unreadable']) {
+    t.mock.method(performance, 'now', () => 1000);
+    const { fake, span } = homeAsking(UNREACHABLE, script[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })]);
+    PUMP.pump();
+    await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual([span.asks(), REC.doc(D).extent], [1, null], `${state}: asked; the board did not answer`);
+    fake.fire('daemon', { board: 'b-1', state: 'unreachable' });
+    PUMP.pump();
+    await new Promise((r) => setTimeout(r, 0));
+    assert.equal(span.asks(), 1, `${state}: held while the board is out`);
+    fake.fire('daemon', { board: 'b-1', state });
+    PUMP.pump();
+    await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual([span.asks(), REC.doc(D).extent, REC.daemon()], [2, 30, state], `${state}: asked again at once as the board answers again, and answered`);
+    REC._reset();
+  }
 });
 
 test('a view\'s read the board did not answer is asked again past UNREACHED_MS where no running comes — the shell announces no outage its stream rides out — its refusal recorded once, and not missing while held', async (t) => {
@@ -2735,6 +2772,75 @@ test('a shown document a feed row named stands kept once its read again has been
   await settle();
   watching = false;
   assert.deepEqual([REC.textBetween(D, 1, 31), PUMP.kept(D), lagged, PUMP.keptRevision()], [AFTER, null, false, rev + 2], 'set: kept no more, in no step that holds its new text');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the window\'s own write acked on a shown document reads it again as that act\'s feedback — held as it stands with no kept clause however long its read is out, set in one step with no word of how — and a feed row at the ack\'s position is read the same way; a row at any other position is news (FP-23)', async () => {
+  const s = { ...script, ...ONE_MEMBER };
+  const text = inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), deliveredAt(AFTER, 20), deliveredAt(AFTER, 20), deliveredAt(AFTER, 21));
+  /** @type {Array<number | null>} the position each setting of D's text was answered at, as M-REC tells it */
+  const set = [];
+  REC.onText((addr, asOf) => { if (addr === D) set.push(asOf); });
+  const fake = readingD(s);
+  await settle();
+  const first = set.length;
+  const release = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  PUMP.wrote(D, [20]);
+  await untilAsked(fake, F.retrieveV(D, 1, 30));
+  fake.fire('feed', writing(20, [D]));
+  await pastTheSecond();
+  assert.deepEqual([REC.textBetween(D, 1, 31), PUMP.kept(D), PUMP.keptAll().docs, PUMP.keptSoon().size], [BEFORE, null, [], 0], 'its read out past the second, the ack\'s own row among it: held as it stands, and no clause says it is as last read');
+  release();
+  await settle();
+  assert.deepEqual([REC.textBetween(D, 1, 31), PUMP.liftOf('doc', D), set.slice(first).at(-1)], [AFTER, null, 20], 'set from a read answered at the ack, in one step, and no word of how it was set');
+  const again = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  const asked = timesAsked(fake, F.retrieveV(D, 1, 30));
+  fake.fire('feed', writing(21, [D]));
+  await pastTheSecond();
+  assert.deepEqual([timesAsked(fake, F.retrieveV(D, 1, 30)) > asked, PUMP.keptAll().docs], [true, [D]], 'a row at another position, another writer\'s: read again as news, kept once its second has passed');
+  again();
+  await settle();
+  assert.deepEqual([PUMP.kept(D), PUMP.liftOf('doc', D)?.outcome], [null, 'unchanged']);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a draft the page holds dialed words of that the board has not acked has its text neither set nor dropped: the view asks nothing of it, a row naming it keeps it as it stands, reads nothing and stands no clause, and a read again of it out as the words were dialed sets nothing; once the acks are told it is read again and set (FP-23)', async () => {
+  const THIRD = 'Tumbler.\n\nThe first field, 3rd';
+  const s = { ...script, ...ONE_MEMBER };
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), deliveredAt(AFTER, 20), deliveredAt(AFTER, 21), deliveredAt(THIRD, 22));
+  const fake = readingD(s);
+  REC.setWriting(D, true);
+  PUMP.pump();
+  await settle();
+  assert.deepEqual([fake.asked.filter((k) => k.startsWith('op:')), REC.doc(D).extent], [[], null], 'in view with words of it out: the view asks nothing of it');
+  REC.setWriting(D, false);
+  await settle();
+  const asked = timesAsked(fake, F.retrieveV(D, 1, 30));
+  assert.equal(REC.textBetween(D, 1, 31), BEFORE, 'none out: read as any document in view');
+  REC.setWriting(D, true);
+  fake.fire('feed', writing(20, [D]));
+  PUMP.pump();
+  await settle();
+  await pastTheSecond();
+  assert.deepEqual([REC.textBetween(D, 1, 31), REC.doc(D).from, timesAsked(fake, F.retrieveV(D, 1, 30)), PUMP.kept(D), PUMP.settled()], [BEFORE, 1, asked, null, true],
+    'a row naming it, and the view\'s own needs, while words of it are out: its text standing as it stood, nothing read, no clause standing, nothing owed');
+  REC.setWriting(D, false);
+  PUMP.wrote(D, [20]);
+  await settle();
+  assert.deepEqual([REC.textBetween(D, 1, 31), REC.doc(D).readAt, PUMP.kept(D)], [AFTER, 20, null], 'the acks told: read again and set');
+  // a read again out as the next burst is dialed: what it lands sets nothing, and it is made again once the acks are told
+  const release = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  fake.fire('feed', writing(21, [D]));
+  await untilAsked(fake, F.retrieveV(D, 1, 30));
+  REC.setWriting(D, true);
+  release();
+  await settle();
+  assert.deepEqual([REC.textBetween(D, 1, 31), REC.doc(D).readAt, PUMP.settled()], [AFTER, 20, true], 'the read landed while words of it were out: nothing of it set, its read again waiting on the acks and owed nothing meanwhile');
+  REC.setWriting(D, false);
+  PUMP.wrote(D, [22]);
+  await new Promise((r) => setTimeout(r, 0));
+  await settle();
+  assert.deepEqual([REC.textBetween(D, 1, 31), REC.doc(D).readAt], [THIRD, 22], 'the acks told: read again from the board as it then stands, and set');
   assert.deepEqual(fake.unanswered, []);
 });
 

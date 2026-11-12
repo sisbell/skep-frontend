@@ -10,7 +10,9 @@
 // (`hold`): every call of that key waits for its answer until the test
 // releases it, so a test can make acts while a read is in flight and answer
 // it when it chooses; and it keeps the key of every call as it is made
-// (`asked`) and of every call the script did not answer (`unanswered`).
+// (`asked`) and of every call the script did not answer (`unanswered`), and
+// what the page posts as it unloads, in the order posted (`unloaded`): each
+// `op`'s argument object and each `close`'s session.
 
 /** @typedef {import('../bridge/port.js').Adapter} Adapter */
 /** @typedef {import('../bridge/port.js').StreamNotice} StreamNotice */
@@ -32,7 +34,7 @@ export function keyOf(/** @type {string} */ name, /** @type {unknown} */ args) {
 
 /**
  * @param {Record<string, unknown>} script keyed by `keyOf`
- * @returns {Adapter & {fire: (name: EventName, data: unknown) => void, drop: () => void, reopen: () => void, hold: (name: string, args: unknown) => () => void, unanswered: string[], asked: string[]}}
+ * @returns {Adapter & {fire: (name: EventName, data: unknown) => void, drop: () => void, reopen: () => void, hold: (name: string, args: unknown) => () => void, unanswered: string[], asked: string[], unloaded: Array<{op: unknown} | {close: string}>}}
  */
 export function create(script) {
   /** @type {Array<(name: EventName, data: unknown) => void>} */
@@ -47,6 +49,8 @@ export function create(script) {
   const asked = [];
   /** @type {Map<string, Promise<void>>} the keys held, each until its release */
   const holds = new Map();
+  /** @type {Array<{op: unknown} | {close: string}>} what the page posted as it unloaded, in the order posted */
+  const unloaded = [];
   return {
     name: 'dev',
     async call(name, args) {
@@ -63,7 +67,8 @@ export function create(script) {
     subscribe(fn) { subs.push(fn); },
     onStream(fn) { streams.push(fn); },
     calls: () => log.slice(),
-    closeAtUnload() {},
+    opAtUnload(args) { unloaded.push({ op: args }); },
+    closeAtUnload(session) { unloaded.push({ close: session }); },
     streamState: () => 'open',
     fire(name, data) { for (const fn of subs) fn(name, data); },
     drop() { for (const fn of streams) fn('dropped'); },
@@ -78,5 +83,6 @@ export function create(script) {
     },
     unanswered,
     asked,
+    unloaded,
   };
 }

@@ -1,12 +1,13 @@
 // B-PORT — the page's one interface to the shell (the structure record §3.2;
 // client.md §4b.1's calls and §4b.2's events; FP-14, FP-15). Layer 0,
 // engine-bound only through its adapter. Every row of the generated `Bridge`
-// as a function: the calls (`CALLS`), the `publication` family's four, the
-// `merge` family's four and the `history` family's one among them, each
-// family on one object (`publication`, `merge`, `history`) and each row sent
-// under its dotted name, the `held.show` row beside the `held` call as
-// `heldShow`, and the two answers to a moment (`answer`, `cancel`); every
-// event (`EVENTS`) as a subscription; and
+// as a function: the calls (`CALLS`), the `node` family's three, the
+// `publication` family's five, the `merge` family's four and the `history`
+// family's two among them, each family on one object (`node`, `publication`,
+// `merge`, `history`) and each row sent under its dotted name, the
+// `held.show` row beside the `held` call as `heldShow`, and the two answers
+// to a moment (`answer`, `cancel`); every event (`EVENTS`) as a
+// subscription; and
 // the adapter beneath, handed to `boot` (S-14 (b)). State: the event
 // subscribers, the session watchers and, while no adapter stands beneath it,
 // why none does (`noAdapter`) — no copy of any record. The port composes no
@@ -24,9 +25,11 @@
 // The event stream's own notices (`StreamNotice`) — its drop, and its reopen
 // after one, which the adapter alone can see — are told to the stream
 // watchers, the port's own shape and no event of the declarations.
-// The write calls, the `publication`, `merge` and `history` families,
-// `held.show` and the ceremonial rows are declared here and called by no
-// screen.
+// The `node`, `publication`, `merge` and `history` families, `held.show` and
+// the ceremonial rows are declared here and called by no screen; a write
+// frame goes through `op` from W-MACHINE alone, and at the page's unload by
+// the adapter's keepalive `op` (`opAtUnload`), dialed before the unload's
+// `close(session)` (`closeAtUnload`).
 // Types: the generated declarations in `./shapes.d.ts` (S-16 (a); FP-16),
 // which the checker holds the port's rows and its events to.
 
@@ -46,6 +49,7 @@
  * @property {(fn: (name: EventName, data: unknown) => void) => void} subscribe every event, by name
  * @property {(fn: (n: StreamNotice) => void) => void} onStream the event stream's own notices: its drop, and its reopen after one
  * @property {() => Array<{name: string, bytesIn: number, bytesOut: number, ms: number, outcome: string, at: number}>} calls the adapter's own call log
+ * @property {(args: unknown) => void} opAtUnload a best-effort `op` as the page unloads: posted to outlive it, its answer read by no one
  * @property {(session: string) => void} closeAtUnload a best-effort `close(session)` as the page hides
  * @property {() => string} streamState the event stream's state
  */
@@ -206,6 +210,15 @@ export const accept = (args) => call('accept', args);
 export const health = (args) => call('health', args);
 /** @type {Bridge['probe']} */
 export const probe = (args = {}) => call('probe', args);
+/** the `node` family — this machine's notebook started, stopped and restarted — each row sent under its dotted name */
+export const node = Object.freeze({
+  /** @type {Bridge['node.start']} */
+  start: (args = {}) => call('node.start', args),
+  /** @type {Bridge['node.stop']} */
+  stop: (args = {}) => call('node.stop', args),
+  /** @type {Bridge['node.restart']} */
+  restart: (args = {}) => call('node.restart', args),
+});
 /** @type {Bridge['op']} */
 export const op = (args) => call('op', args);
 /** the `publication` family, each row sent under its dotted name */
@@ -218,6 +231,8 @@ export const publication = Object.freeze({
   confirm: (args) => call('publication.confirm', args),
   /** @type {Bridge['publication.cancel']} */
   cancel: (args) => call('publication.cancel', args),
+  /** @type {Bridge['publication.standing']} */
+  standing: (args) => call('publication.standing', args),
 });
 /** the `merge` family, each row sent under its dotted name */
 export const merge = Object.freeze({
@@ -230,8 +245,10 @@ export const merge = Object.freeze({
   /** @type {Bridge['merge.withdraw']} */
   withdraw: (args) => call('merge.withdraw', args),
 });
-/** the `history` family, its one row sent under its dotted name */
+/** the `history` family, each row sent under its dotted name */
 export const history = Object.freeze({
+  /** @type {Bridge['history.past']} */
+  past: (args) => call('history.past', args),
   /** @type {Bridge['history.restore']} */
   restore: (args) => call('history.restore', args),
 });
@@ -264,9 +281,10 @@ export const cancel = (args) => call('cancel', args);
  * @type {Bridge}
  */
 const ROWS = {
-  boards, session, close, keygen, fingerprint, claim, enroll, bind, recover, rotate, retire, handoff, accept, health, probe, op,
-  'publication.open': publication.open, 'publication.count': publication.count, 'publication.confirm': publication.confirm, 'publication.cancel': publication.cancel,
-  'merge.compose': merge.compose, 'merge.land': merge.land, 'merge.undo': merge.undo, 'merge.withdraw': merge.withdraw, 'history.restore': history.restore,
+  boards, session, close, keygen, fingerprint, claim, enroll, bind, recover, rotate, retire, handoff, accept, health, probe,
+  'node.start': node.start, 'node.stop': node.stop, 'node.restart': node.restart, op,
+  'publication.open': publication.open, 'publication.count': publication.count, 'publication.confirm': publication.confirm, 'publication.cancel': publication.cancel, 'publication.standing': publication.standing,
+  'merge.compose': merge.compose, 'merge.land': merge.land, 'merge.undo': merge.undo, 'merge.withdraw': merge.withdraw, 'history.past': history.past, 'history.restore': history.restore,
   upload, fetch, restore, search, places, held, 'held.show': heldShow, resolve, changes, answer, cancel,
 };
 /** the call names, in the generated `Bridge`'s order; the two answers to a moment, `answer` and `cancel`, stand apart */
@@ -274,6 +292,14 @@ export const CALLS = Object.freeze(/** @type {CallName[]} */ (Object.keys(ROWS).
 
 /** the adapter's own call log (the gate holds it equal to `GET /bridge/log`'s calls and to the ledger's fetch count) */
 export const callLog = () => (adapter ? adapter.calls() : []);
+/**
+ * A best-effort `op` as the page unloads (D6 BM-28): the row's argument
+ * object handed to the adapter to post so it outlives the page, before the
+ * unload's `close(session)` (`closeAtUnload`). Its answer reaches no one, and
+ * no session notice is told of it. Nothing where no adapter stands.
+ * @param {Parameters<Bridge['op']>[0]} args
+ */
+export function opAtUnload(args) { if (adapter) adapter.opAtUnload(args); }
 /** a best-effort `close(session)` at `pagehide` (S-37 (a)) */
 export function closeAtUnload(/** @type {string} */ s) { if (adapter) adapter.closeAtUnload(s); }
 /** the event stream's state */

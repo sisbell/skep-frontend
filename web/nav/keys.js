@@ -78,7 +78,7 @@
 // (O-SELECTION's `extendFromCaret`; D5 §1.6); Backspace and Delete take a
 // character out, Enter and Shift+Enter put a new line in, Tab a tab
 // character, a printable key its character — each a change of the text
-// shown alone, nothing composed and nothing sent (T-LAYER; FP-14) — and the
+// shown alone, an edit handed to W-WRITE (T-LAYER; FP-9, FP-14) — and the
 // walk then stands on the block of the text shown the caret is in (N-WALK's
 // `followCaret`; B3-S13), so the slot chords act on that block. A selection the screen
 // draws in the caret's own text, reaching into no other document's text
@@ -104,13 +104,17 @@
 // (`extendAtKept`; K-70, K-77), the walk following the caret. Every hint stands
 // beside the focus the key was pressed at — the walk's element, or the
 // control or the pane the key found the focus on — and an auto-repeat is the
-// press it repeats (O-HINT's `show`). Mod+S writes nothing (K-74): where the
-// draft the caret stands in — else the walk's document — has a kept state, it
-// is answered at the corner with the state's statement whole at the first
-// press in a session and with the corner's own word after it, the statement
-// whole on the word's act (`saveChord`; P41; T-LAYER's `openStatement`), the
-// answer said in the status region (FP-36); elsewhere it is taken and does
-// nothing.
+// press it repeats (O-HINT's `show`). Mod+S writes nothing itself (K-74; D6
+// BM-3): it asks W-WRITE to commit the open burst of the draft the caret
+// stands in — else the walk's document — waits for it to land, and answers
+// from the kept state then, at once where no burst of the draft is open or
+// awaits its ack; a key taken before the answer drops it. Where the draft has
+// a kept state, the answer is the state's statement at the corner, whole at
+// the first press in a session, and the corner's own word after it, the
+// statement whole on the word's act (`saveChord`, `saveAnswer`; P41;
+// T-LAYER's `openStatement`), said in the status region (FP-36) — under a
+// hold the board's silence caused in the silence's own line; elsewhere the
+// chord is taken and does nothing.
 // Esc closes the innermost thing, in one order (`esc`; §4 rule 7; D7): the
 // box, a card or scene still reading, the notice standing below the overlay
 // (FP-36; O-HOST's), the overlay, a jump reaching, the find — its current
@@ -200,7 +204,8 @@
 // with O-FACES' no-board face, as HOME and
 // WHOLE BOARD do through N-GO; the paging keys and the zoom chords stay the
 // camera's. State (FP-10), beside the held keys: whether Mod+S has been
-// answered whole this session (`saveAnswered`).
+// answered whole this session (`saveAnswered`), how many keys the dispatch
+// has taken (`keysTaken`), and the save chord's latest answer (`saving`).
 // Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-14, FP-20, FP-21, FP-24, FP-25,
 // FP-27, FP-35, FP-36, FP-39, FP-40.
 
@@ -405,6 +410,16 @@ let making = false;
 
 /** Mod+S has been answered whole this session: after it the corner's own word answers (K-74; P41) */
 let saveAnswered = false;
+/** how many keys the dispatch has taken, a modifier going down apart (`dispatch`): the save chord's answer is given only where none followed its press */
+let keysTaken = 0;
+/** @type {Promise<void>} the save chord's latest answer, settled once it is given or dropped (`saveChord`) */
+let saving = Promise.resolve();
+/** the save chord's latest answer, settled once it is given or dropped (`saveChord`): what the gate and the tests wait on */
+export const saved = () => saving;
+/** the keys that are a modifier going down: none of them a key typed */
+const MODIFIER_KEYS = ['Shift', 'Meta', 'Control', 'Alt', 'AltGraph', 'CapsLock'];
+/** reset what the save chord holds (tests): Mod+S not yet answered whole, no key taken, no answer owed */
+export function _reset() { saveAnswered = false; keysTaken = 0; saving = Promise.resolve(); }
 
 /** the keys held for a landing, and the one whose act is being made there (the gate's settle signal) */
 export const holding = () => held.length + (making ? 1 : 0);
@@ -428,8 +443,8 @@ function whereNow(ctx) {
   if (ctx.where !== 'plane' || SCENE.isOpen()) return ctx;
   const c = LAYER.caret(), f = WALK.current();
   if (!c || !c.live) return ctx;
-  if (f && f.addr !== c.addr) { LAYER.leaveCaret(); return ctx; }
-  if (!LAYER.editable(c.addr)) { WALK.holdCaret(); return ctx; }
+  if (f && f.addr !== c.addr) { LAYER.leaveCaret('walk'); return ctx; }
+  if (!LAYER.editable(c.addr)) { WALK.holdCaret('camera'); return ctx; }
   return { ...ctx, where: 'caret' };
 }
 
@@ -524,6 +539,7 @@ function siteSays(e, ctx, writing = null) {
  */
 export async function dispatch(e, ctx) {
   if (e.isComposing || e.key === 'Process' || e.keyCode === 229) return false;
+  if (!MODIFIER_KEYS.includes(e.key)) keysTaken++;
   const chord = chordOf(e);
   const mod = MAC ? e.metaKey : e.ctrlKey;
   ctx = whereNow(ctx);
@@ -798,24 +814,57 @@ async function extendAtKept(e, dir) {
 }
 
 /**
- * Mod+S answered (see the head; K-74; BM-3): the chord writes nothing. Where
- * the draft the caret stands in — else the walk's document — has a kept state
- * (W-WRITE's `keptOf`), the state's statement is opened whole at its corner at
- * the first press in a session (T-LAYER's `openStatement`); after it the
- * corner's own word answers, the statement whole on the word's act (P41).
- * Either answer is said in the status region (FP-36). Nothing where no such
- * state stands, or the scene covers the plane.
+ * Mod+S (see the head; K-74; BM-3): the chord writes nothing itself. The
+ * open burst of the draft the caret stands in — else the walk's document — is
+ * committed first (W-WRITE's `commit`), and the answer given once it lands
+ * (`landed`), from the kept state it leaves (`saveAnswer`): at once where no
+ * burst of the draft is open or awaits its ack (`inFlight`), and not at all
+ * where a key was taken before it (`keysTaken`). Nothing where the scene
+ * covers the plane, or the chord is made at no document.
  */
 function saveChord() {
   if (SCENE.isOpen()) return;
   const c = LAYER.caret(), f = WALK.current();
   const addr = c ? c.addr : f && (f.kind === 'document' || f.kind === 'block' || f.kind === 'link') ? f.addr : null;
-  const k = addr ? WRITE.keptOf(addr) : null;
-  if (!addr || !k) return;
+  if (!addr) return;
+  if (!WRITE.inFlight(addr)) { saveAnswer(addr); return; }
+  const pressed = keysTaken;
+  WRITE.commit(addr);
+  saving = WRITE.landed(addr).then(() => { if (keysTaken === pressed) saveAnswer(addr); });
+}
+
+/**
+ * The save chord's answer (K-74; BM-3): where the draft has a kept state
+ * (W-WRITE's `keptOf`), the state's statement is opened whole at its corner at
+ * the first press in a session (T-LAYER's `openStatement`); after it the
+ * corner's own word answers, the statement whole on the word's act (P41).
+ * Either answer is said in the status region (FP-36), the statement under a
+ * hold the board's silence caused in that silence's line (`heldStatement`).
+ * Nothing where no such state stands.
+ * @param {string} addr
+ */
+function saveAnswer(addr) {
+  const k = WRITE.keptOf(addr);
+  if (!k) return;
   if (saveAnswered) { FOCUS.say(keptWord(k).text); return; }
   saveAnswered = true;
   LAYER.openStatement(addr, true);
-  FOCUS.say(keptStatement(k).text);
+  FOCUS.say(heldStatement(k) || keptStatement(k).text);
+}
+
+/**
+ * The save chord's statement while a burst is held and the board is not
+ * answering (K-74; BM-78; M-REC's `daemon`): the notebook's line where the
+ * venue is the person's own notebook (T-LAYER's `onNotebook`), else the
+ * board's, naming it as the status region names it. Null under any other
+ * state, which the kept state's own statement answers.
+ * @param {import('../write/write.js').KeptState} k
+ * @returns {string | null}
+ */
+function heldStatement(k) {
+  const b = REC.board();
+  if (k.word !== 'not yet kept' || REC.daemon() !== 'unreachable' || !b) return null;
+  return LAYER.onNotebook() ? t('B3.save.held') : t('B3.save.held.board', { board: t('L.mirror.board.name', { node: '1', origin: b.origin }) });
 }
 
 /**

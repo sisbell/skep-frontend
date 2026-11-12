@@ -6,7 +6,8 @@
 // its principal and account, whether a write may go out under it — the death
 // that ended it, the refusal `session()` met, and the account the page is
 // reconnecting as or could not (`reconnect`); health and the derived mode;
-// the daemon's state; the device's key store as `fingerprint` answered it,
+// the daemon's state, one of the five the shell says, with the reason it
+// carries (`setDaemon`, `daemonReason`); the device's key store as `fingerprint` answered it,
 // or that it was not read (`keyPresent`, `device`; FP-34); the client index
 // built from `places` — the documents per account with their labels, kinds
 // and standing, the counts per account, the index's state and floor — each
@@ -48,7 +49,14 @@
 // the model which of the page's bytes took the addresses from it (`mint`),
 // each mint counted and the count never falling (`mintsOf`), the byte named
 // by that address from then on wherever bytes are named or placed
-// (`pageIds`, `placedIn`). A passage written out of the page is named part
+// (`pageIds`, `placedIn`); a change of the page's class keeps what was minted,
+// for it names the page's own bytes, which W-WRITE keeps. Whether the page
+// holds dialed words of a draft the board has not acked (`setWriting`,
+// `writing`, `written`), set by W-MACHINE: each change of it counts the
+// draft dropped, so no read of the draft out across it is taken, and M-PUMP
+// neither sets nor drops the draft's text while it stands. Those watching a
+// document's text (`onText`) are told, in the step a read sets it, the
+// position the read was answered at. A passage written out of the page is named part
 // by part, every position it holds in the text's order (`identityParts`): a
 // byte the board holds by its permanent address — one the page made by the
 // address the board minted it at, read through the mints at the call — one
@@ -117,7 +125,9 @@
 // (`covered`) where the change ends the session and the class it left could
 // read it — drawn and named as the withheld box a guest meets — else waiting
 // to be read, drawn and named as a box no read has answered for. Those
-// watching a change of class (`onClass`) are told once it is taken. A read
+// watching for a change of class (`beforeClass`) are told as it begins, the
+// session it leaves still standing; those watching one (`onClass`) once it is
+// taken. A read
 // refusing it `withheld` covers it or confirms its cover, one that answers
 // lifts it, and only such an answer settles what a box is owed: a drop keeps
 // it owed. Every document the model knows exists — listed, answered for, or
@@ -150,6 +160,7 @@ import { byteOffsets, sliceBytes } from '../util.js';
 /** @typedef {import('../bridge/shapes').FingerprintRow} FingerprintRow */
 /** @typedef {import('../bridge/shapes').BoardRow} BoardRow */
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
+/** @typedef {import('../bridge/shapes').DaemonEvent['state']} DaemonState — a board's state as the shell says it: one of the five `daemon(board, state)` names */
 
 /**
  * @typedef {'none' | {refused: {kind: string, name: string}}} NoBoard — why the page holds no board (FP-35), as `boards()`
@@ -243,6 +254,7 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {number} from the first delivered position, or -1
  * @property {number} to one past the last delivered position
  * @property {number | null} readAt the position the delivery taken last was answered at (its `as_of`) — a widening read asks the whole window again, so it is the text's; null where no delivery said, or none is held
+ * @property {number | null} [extentAt] the position the extent was read at, where its read said (`takeSpanSet`, `setAgain`): for a document of no content, which no delivery is read for, the position its empty text stands as read at; absent or null where no read said, or its delivered state was dropped
  * @property {Block[]} blocks
  * @property {ImageRun[]} image the V→I image as read, in position order: the permanent address of every position it covers
  * @property {Origin[]} origins the image's runs whose origin is another document — the transcluded runs
@@ -263,18 +275,28 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {number[]} rows the held lines applied, by ordinal, in the order applied
  * @property {number} edits the page-local edits applied
  * @property {number | null} at the board position a past state was read at; null for the held version and the typed text
- * @property {ImageRun[]} [source] for the typed text, every byte of the record by where it came from, in position order (M-DERIVE's `applyEdits`): `prefix` 'base' and `ordinal` its position in the delivered text, or `prefix` 'page' and `ordinal` the page's own for a byte an edit made (`Edit.page`)
+ * @property {ImageRun[]} [source] for the typed text, every byte of the record by where it came from, in position order (M-DERIVE's `applyEdits`): `prefix` 'base' and `ordinal` its position in the delivered text, or `prefix` 'page' and `ordinal` the page's own for a byte an edit made (`Edit.page`); none for a byte a put-back placed from an edit the record's text holds the change of (`Edit.based`)
  */
 
 /**
  * @typedef {Object} Edit — one page-local edit of a draft's shown text (K-72): `width` positions at `pos` replaced by `text` — an insert where
- * `width` is 0, a removal where `text` is '' — in the text as it stood after the edits before it; held by W-WRITE, never a frame, never sent
+ * `width` is 0, a removal where `text` is '' — in the text as it stood after the edits before it; held by W-WRITE, never a frame: W-BURSTS composes the frames a burst of them is sent as
  * @property {number} pos
  * @property {number} width
  * @property {string} text
  * @property {number | null} [page] the page's ordinal for the first byte of `text`, its bytes taking the ordinals from it on (W-WRITE's `addEdit` sets it): the page's own identity of the bytes it made; absent or null where the edit makes none
  * @property {Back | null} [back] bytes an earlier edit removed, put back at `pos` as they were — their identity with them — where the edit is a put-back; `text` is then ''
  * @property {number} [step] the act the edit was made by (W-WRITE's `addEdits`): the edits of one act share it
+ * @property {number | null} [sent] the burst that carried the edit out, by W-MACHINE's count of the draft's bursts (W-WRITE's `markSent`); absent or null while no burst has
+ * @property {number | null} [at] the position the board acked that burst at (W-WRITE's `markAcked`): the board's text holds the edit's change from there on; absent or null while no ack names it
+ * @property {boolean} [based] the record's text holds the edit's change (W-WRITE's rebase): it changes nothing of the text, and stands only for the put-back that names it (`Edit.back`), which places what it took (`took`)
+ * @property {Took | null} [took] what the edit removed, kept from the moment a put-back names it (W-WRITE's `addEdits`): what that put-back places once the edit is `based`
+ */
+
+/**
+ * @typedef {Object} Took — the bytes an edit removed, as a put-back places them again (`Edit.took`)
+ * @property {Run[]} runs the runs removed, each at its position from 1
+ * @property {ImageRun[]} ids their identity, each run at its position from 1; none for a stretch the image named none of
  */
 
 /**
@@ -396,8 +418,10 @@ const state = {
   mode: null,
   /** @type {Array<{label: string | null, fingerprint: string, principals: number[]}> | null} the key store's keys as `fingerprint` answers them, each with the principals its bindings name at this board's origin (`takeKeyStore`); null where the store was not read */
   keys: null,
-  /** @type {'running' | 'stopped' | 'unreachable' | null} */
+  /** @type {DaemonState | null} the board's state as the shell last said it (`setDaemon`); null before it said any */
   daemon: null,
+  /** @type {string | null} why, where the state the shell last said carries a reason (`setDaemon`): `head_unreadable`'s; null with every other */
+  daemonReason: null,
   /** @type {boolean} */
   daemonChanged: false,
   /** @type {Map<string, Place>} */
@@ -450,6 +474,8 @@ const state = {
   minted: new Map(),
   /** @type {Map<string, number>} how many times the board has minted bytes the page made, by draft (`mintsOf`): a change of class keeps it */
   mints: new Map(),
+  /** @type {Map<string, Array<() => void>>} the drafts the page holds dialed words of that the board has not acked (`setWriting`), each with those waiting for that to end (`written`) */
+  writing: new Map(),
   rev: 0,
   /** @type {Array<() => void>} */
   watchers: [],
@@ -466,6 +492,24 @@ export const rev = () => state.rev;
 const classWatchers = [];
 /** be told of each change of the page's class once it is taken (`dropClass`): what holds page state beside the model lets go of what that class wrote */
 export function onClass(/** @type {() => void} */ fn) { classWatchers.push(fn); }
+
+/** @type {Array<() => void>} those told of each change of the page's class before anything goes (`beforeClass`): a registration, which no reset clears */
+const leavingWatchers = [];
+/** be told of each change of the page's class as it begins (`dropClass`), before anything the class it leaves read or wrote goes, and while its session still stands: what holds words of that class unsent sends them under it */
+export function beforeClass(/** @type {() => void} */ fn) { leavingWatchers.push(fn); }
+
+/** @type {Array<(addr: string, asOf: number | null) => void>} those told as a read sets a document's text (`onText`): a registration, which no reset clears */
+const textWatchers = [];
+/**
+ * Be told as a read sets a document's text (`takeDelivery`, `setAgain`), in
+ * the step that sets it and before any reader is told of the change: the
+ * document, and the position the read was answered at — null where it said
+ * none. What holds edits over the text lets go of those the text now holds.
+ * @param {(addr: string, asOf: number | null) => void} fn
+ */
+export function onText(fn) { textWatchers.push(fn); }
+/** a read set a document's text: those watching told (`onText`) */
+function textSet(/** @type {string} */ addr, /** @type {number | null} */ asOf) { for (const w of textWatchers) w(addr, asOf); }
 
 // ---- the board, the session, health, the daemon ------------------------------
 
@@ -518,10 +562,10 @@ export const sessionRefused = () => state.sessionRefused;
  * published and their place in every raw set; every other projection; the
  * members' ages, the edition claims and the failed reads of them, the owners
  * and key sets, the byline causes (`dropKeyCauses`), the feed's drafts rows
- * and a bare row's mark, whose refresh the reads at the new class make whole,
- * and what the board minted of the bytes the page made (`mint`), its count
- * standing (`mintsOf`). Those watching a change of class are told last
- * (`onClass`).
+ * and a bare row's mark, whose refresh the reads at the new class make whole.
+ * What the board minted of the bytes the page made stands (`mint`). Those
+ * watching for the change are told first, before anything goes
+ * (`beforeClass`), and those watching it last, once it is taken (`onClass`).
  * Every box the model knew (`known`) and every document the class it left
  * could read that does not stand and is not read as published is a box owed
  * its read at the new class (`owed`): covered at once where the change ends
@@ -535,6 +579,7 @@ export const sessionRefused = () => state.sessionRefused;
  * @param {boolean} ended the change ends the session — a death, or a lost session not regained — never one regained as another principal
  */
 function dropClass(stood, ended) {
+  for (const w of leavingWatchers) w();
   const published = publishedAt();
   state.classDrops++;
   state.bare = false;
@@ -568,7 +613,6 @@ function dropClass(stood, ended) {
   state.memberAges.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.owners.clear(); state.keySets.clear();
   dropKeyCauses();
   state.feed = state.feed.filter((r) => r.cls !== 'drafts');
-  state.minted.clear();
   for (const w of classWatchers) w();
 }
 
@@ -719,9 +763,18 @@ export function setMode(ev) {
   if (h && h.auth) { h.auth.claimant = ev.claimant; h.auth.local_trust = ev.local_trust; }
   bump();
 }
-/** @param {'running' | 'stopped' | 'unreachable'} s */
-export function setDaemon(s) { state.daemonChanged = state.daemon !== null && state.daemon !== s; state.daemon = s; bump(); }
+/**
+ * The board's state as the shell says it — a `daemon` event's, or the boot
+ * probe's — the most severe that holds: `stopped`, `unreachable`, `halted`,
+ * `head_unreadable`, else `running`; kept with the reason it carries, which
+ * goes with the state it came with.
+ * @param {DaemonState} s
+ * @param {string | null} [reason] why, where the state carries one
+ */
+export function setDaemon(s, reason = null) { state.daemonChanged = state.daemon !== null && state.daemon !== s; state.daemon = s; state.daemonReason = reason ?? null; bump(); }
 export const daemon = () => state.daemon;
+/** why the board stands in the state the shell last said, where that state carried a reason (`setDaemon`); null where it carried none */
+export const daemonReason = () => state.daemonReason;
 /**
  * The key store as `fingerprint` answers it, read for this board: each key's
  * label and fingerprint, and the principals its bindings name at this
@@ -912,10 +965,19 @@ export const owed = (/** @type {string} */ addr) => state.owed.has(addr);
 /** every document covered now (`covered`), in address order */
 export const coveredDocs = () => [...state.docs.keys()].filter(covered).sort(cmpAddr);
 
-/** the span set: the content extent (subspace 1) and the link positions (subspace 2) — an answer at the page's class, so a refusal of the document held before it, a cover among them, is lifted */
-export function takeSpanSet(/** @type {string} */ addr, /** @type {Array<{subspace: number, ordinal: number, positions: number}>} */ set) {
+/**
+ * The span set: the content extent (subspace 1) and the link positions
+ * (subspace 2) — an answer at the page's class, so a refusal of the document
+ * held before it, a cover among them, is lifted — with the position the
+ * answer was read at, where it says (`Doc.extentAt`).
+ * @param {string} addr
+ * @param {Array<{subspace: number, ordinal: number, positions: number}>} set
+ * @param {number | null} [asOf] the answer's `as_of`
+ */
+export function takeSpanSet(addr, set, asOf = null) {
   const d = doc(addr);
   spanSetInto(d, set);
+  d.extentAt = asOf;
   d.refused = null; state.owed.delete(addr);
   d.rev++; bump();
 }
@@ -965,7 +1027,9 @@ export function takeDelivery(addr, runs, asOf = null, image = null) {
   const d = doc(addr);
   deliverInto(d, runs, asOf);
   if (image) imageInto(d, image.from, image.runs);
-  d.rev++; bump();
+  d.rev++;
+  if (runs.length) textSet(addr, asOf);
+  bump();
 }
 
 /** a delivery merged into a record's runs (`takeDelivery`, `setAgain`): nothing where it carries no run */
@@ -1477,7 +1541,7 @@ const counted = (/** @type {string} */ addr) => { state.drops.set(addr, (state.d
 
 /** a document's delivered state dropped — everything its reads brought, a cover among it; the record stands, its runs and blocks given new empty ones as a delivery gives new ones, and a box owed its read at the page's class stays owed (`owed`), for only a read's answer settles that */
 function drop(/** @type {Doc} */ d) {
-  noText(d); d.extent = null; d.whole = null; d.linkPositions = null; d.meta = null; d.image = []; d.origins = []; d.imageFor = null;
+  noText(d); d.extent = null; d.extentAt = null; d.whole = null; d.linkPositions = null; d.meta = null; d.image = []; d.origins = []; d.imageFor = null;
   d.links.clear(); d.linksRead = false; d.members = null; d.ended = false; d.refused = null; d.rev++;
 }
 
@@ -1955,6 +2019,41 @@ export function feedTime() {
   return null;
 }
 
+// ---- the words the page has dialed ----------------------------------------------
+
+/**
+ * Whether the page holds dialed words of a draft the board has not acked
+ * (see the head): a burst of it out, a line of it the shell holds, a run the
+ * board refused. Set by W-MACHINE as the first such burst goes out, and
+ * cleared as the last such word is acked. Each change of it counts the draft
+ * dropped (`dropsOf`), so a read of it out across the change is not taken;
+ * clearing it tells those waiting (`written`).
+ * @param {string} addr
+ * @param {boolean} on
+ */
+export function setWriting(addr, on) {
+  const waiting = state.writing.get(addr);
+  if (on === !!waiting) return;
+  counted(addr);
+  if (on) { state.writing.set(addr, []); return; }
+  state.writing.delete(addr);
+  for (const w of waiting || []) w();
+}
+/** does the page hold dialed words of a draft the board has not acked (`setWriting`)? */
+export const writing = (/** @type {string} */ addr) => state.writing.has(addr);
+/** every draft the page holds dialed words of that the board has not acked (`setWriting`) */
+export const writingDocs = () => [...state.writing.keys()];
+/**
+ * Settled once the page holds no dialed word of a draft the board has not
+ * acked (`setWriting`): at once where it holds none.
+ * @param {string} addr
+ * @returns {Promise<void>}
+ */
+export function written(addr) {
+  const waiting = state.writing.get(addr);
+  return waiting ? new Promise((done) => { waiting.push(done); }) : Promise.resolve();
+}
+
 // ---- the page's own bytes -------------------------------------------------------
 
 /** the space a draft's page-made bytes are named in until the board mints them (see the head): no address of the board's, read as lying under the draft */
@@ -1996,7 +2095,7 @@ export function mint(addr, page, width, start, at) {
 }
 /** the bytes the page made in a draft that the board minted, in the page's order (`mint`); none where it minted none */
 export const mintedOf = (/** @type {string} */ addr) => state.minted.get(addr) ?? [];
-/** how many times the board has minted bytes the page made in a draft (`mint`): a count no change of class lowers, which W-WRITE's `editRev` reads */
+/** how many times the board has minted bytes the page made in a draft (`mint`): a count that never falls, which W-WRITE's `editRev` reads */
 export const mintsOf = (/** @type {string} */ addr) => state.mints.get(addr) ?? 0;
 
 /**
@@ -2048,6 +2147,7 @@ function spelled(r) {
  * @property {'withheld' | 'unregistered'} [refused] a read of the document refused as one withheld from the reader, or one
  * the board will say nothing of: what it held goes with it
  * @property {Array<{subspace: number, ordinal: number, positions: number}>} [spans] its span set
+ * @property {number | null} [spansAt] the position its span set was read at, where the answer said
  * @property {DocMeta} [meta]
  * @property {{runs: Run[], asOf: number | null}} [text] its text over the window it held, as the delivery placed it
  * @property {ImageRead} [image] its V→I image over that window
@@ -2211,7 +2311,7 @@ export function setAgain(addr, fresh) {
   counted(addr);
   if (fresh.refused) { drop(d); d.refused = fresh.refused; state.failedReads.delete(addr); state.owed.delete(addr); }
   else {
-    if (fresh.spans) spanSetInto(d, fresh.spans);
+    if (fresh.spans) { spanSetInto(d, fresh.spans); d.extentAt = fresh.spansAt ?? null; }
     if (fresh.meta) metaInto(d, fresh.meta);
     if (fresh.text) { noText(d); deliverInto(d, fresh.text.runs, fresh.text.asOf); }
     if (fresh.image || fresh.text) { d.image = []; d.origins = []; d.imageFor = null; }
@@ -2225,6 +2325,7 @@ export function setAgain(addr, fresh) {
   for (const v of fresh.values ?? []) takeLink(v);
   for (const p of fresh.projections ?? []) takeProjection(p.link, p.slot, p.addr, p.runs);
   if (fresh.byline) takeAccountKey(fresh.byline.account, fresh.byline.facts);
+  if (fresh.text && !fresh.refused) textSet(addr, fresh.text.asOf);
   bump();
   return shownBy(d) === before ? 'unchanged' : 'changed';
 }
@@ -2247,10 +2348,12 @@ export function shownBy(d) {
 /** reset everything (tests) */
 export function _reset() {
   state.board = null; state.noBoard = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.reconnect = null; state.health = null; state.mode = null;
-  state.keys = null; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.bare = false; state.docs.clear(); state.memberAges.clear();
+  state.keys = null; state.daemon = null; state.daemonReason = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.bare = false; state.docs.clear(); state.memberAges.clear();
   state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.owed.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.claimDrops.clear(); state.claimsRefreshed = 0;
   state.owners.clear(); state.keySets.clear(); state.accountKeys.clear(); state.keyDrops = 0; state.feed = []; state.feedAt = null; state.draftsAt = null; state.rev = 0;
   state.minted.clear(); state.mints.clear();
+  for (const waiting of state.writing.values()) for (const w of waiting) w();
+  state.writing.clear();
 }
 
 /** a deep, serializable picture of the model for the gate and the fake-port test */

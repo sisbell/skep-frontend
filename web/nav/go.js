@@ -712,10 +712,12 @@ function pinTo(addr) {
  * entry's place re-taken where the box it names shows another version as it
  * is left — a newer version's arrival pinned it on the member being read
  * (`arrived`; N-TRAIL's `retakePlace`). Every navigation act departs through
- * it.
+ * it, and each commits the open burst of every draft first (W-WRITE's
+ * `commit`; D5 K-73; D6 BM-4).
  * @returns {Departure}
  */
 function departure() {
+  for (const addr of WRITE.flying()) WRITE.commit(addr);
   const e = TRAIL.current();
   if (e && kindOf(e.addr) === 'document' && shownIn(e.addr) !== e.addr) TRAIL.retakePlace(shownIn(e.addr));
   return leavingNow();
@@ -1321,8 +1323,8 @@ export function landingAct(which, byKey = false) {
  * "put back in the current text" (B3-S7's words; FP-21): the act of a landing
  * whose passage the person's own removal took, whole or in part
  * (`Landing.removed`) — the removed bytes placed again at their own points by
- * their identity, one step of the draft's edits (T-LAYER's `putBack`), nothing
- * composed or sent (FP-14). The landing that said they were missing is put
+ * their identity, one step of the draft's edits (T-LAYER's `putBack`), handed
+ * to W-WRITE (FP-9). The landing that said they were missing is put
  * out with its face, the words standing again; nothing where no such landing
  * stands.
  */

@@ -4739,3 +4739,24 @@ test('where no board is held the launch names no place — no trail entry, the w
     REC.setBoard(was.board); REC.setSession(was.session);
   }
 });
+
+test('a teleport commits the open burst of every draft as it departs — a LEAP, and Back across it — before the camera leaves; with no burst open it asks nothing (D5 K-73; D6 BM-4)', async () => {
+  const DRAFT = '1.0.1.0.1013';
+  /** @type {string[]} */
+  const committed = [];
+  WRITE.machine({ commit: (addr) => committed.push(addr), typed() {}, leaving() {} });
+  try {
+    await run(GO.leapTo(D));
+    assert.deepEqual(committed, [], 'no burst open: nothing asked');
+    WRITE.setFlight(DRAFT, true);
+    const leap = GO.leapTo(FAR);
+    assert.deepEqual(committed, [DRAFT], 'a LEAP: the open burst asked committed at the act, before its landing');
+    await run(leap);
+    GO.back(true);
+    assert.deepEqual(committed, [DRAFT, DRAFT], 'Back: committed again while the burst stands open');
+    await run(Promise.resolve());
+    WRITE.setFlight(DRAFT, false);
+    await run(GO.leapTo(D));
+    assert.equal(committed.length, 2, 'the burst landed: the next teleport asks nothing');
+  } finally { WRITE.machine(null); WRITE.setFlight(DRAFT, false); }
+});

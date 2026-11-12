@@ -20,7 +20,9 @@
 // is taken with it — FP-34), the session by M-PUMP's acquire (S-37 (a);
 // FP-28: the boot's own call, made again where a restart loses the session;
 // the session kept as the shell opened it, its reference and never a token;
-// `close(session)` at `pagehide`), its health, its daemon and the model's
+// at `visibilitychange` to hidden W-WRITE told the page is hidden, and at
+// `pagehide` that it is unloading, then `close(session)` — D6 BM-28), its
+// health, its daemon and the model's
 // index (`places` at the page's class); where the list held no board, none
 // is launched at or named (FP-35). The type, beside them: the shipped faces
 // (P-REG's SHIPPED) loaded before the first layout, one that fails leaving
@@ -126,9 +128,10 @@
 // event → T-LAYER's `onCopy`, and one it takes nothing from → N-KEYS'
 // `copyAsDrawn`, read where the focus is (`whereIs`), then `onCopy` again
 // over the selection that placed under it (FP-24, FP-27); the
-// events `moment` → a walk's moment (O-FACES'), `held` → logged, not acted
-// on; the failure reporter (a line in the page, posted nowhere). No write is
-// composed or sent anywhere in this page.
+// events `moment` → a walk's moment (O-FACES'), `held` → logged; the
+// failure reporter (a line in the page, posted nowhere). The boot hands no
+// machine in to W-WRITE: typing stays page-local, and no write is composed
+// or sent.
 // Rules: FP-1, FP-2, FP-4, FP-5, FP-8, FP-9, FP-10, FP-11, FP-14, FP-15,
 // FP-20, FP-22, FP-23, FP-24, FP-25, FP-26, FP-27, FP-28, FP-29, FP-34,
 // FP-35, FP-36.
@@ -376,7 +379,7 @@ async function boot() {
   PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived, onDrop: dropped, stands: () => TRAIL.all().flatMap((e) => [e.addr, ...(GO.scenePair(e) || [])]), readings: TRAIL.readings, onCounted: TRAIL.countedAt, onOpen: () => { void launch(); }, finding: FIND.searched });
   PORT.on('moment', (d) => FACES.moment(/** @type {import('../bridge/shapes').MomentEvent} */ (d)));
   const heldSeen = /** @type {unknown[]} */ ([]);
-  PORT.on('held', (d) => { heldSeen.push(d); console.log('held event (not acted on — the editor\'s lane\'s)', d); });
+  PORT.on('held', (d) => { heldSeen.push(d); console.log('held event', d); });
   bootInfo.adapter = PORT.adapterName(); bootInfo.gate = !!GATE; bootInfo.heldSeen = heldSeen;
 
   const t0 = performance.now();
@@ -385,7 +388,9 @@ async function boot() {
   if (!REC.board()) bootInfo.boardsRefused = 'refused' in opened.boards ? opened.boards.refused : 'none';
   if (opened.places && 'result' in opened.places) { bootInfo.placesBytes = JSON.stringify(opened.places.result).length; bootInfo.placesDocs = opened.places.result.docs.length; }
   else if (opened.places) bootInfo.placesRefused = opened.places.refused;
-  window.addEventListener('pagehide', () => { const x = REC.session(); if (x) PORT.closeAtUnload(x.session); });
+  // hidden, every open burst is committed while its answer can still be taken; going, what is undialed is posted to outlive the page, then the close
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') WRITE.leaving('hidden'); });
+  window.addEventListener('pagehide', () => { WRITE.leaving('unload'); const x = REC.session(); if (x) PORT.closeAtUnload(x.session); });
   bootInfo.coldOpenMs = Math.round(performance.now() - t0);
   bootInfo.coldOpenCalls = PORT.callLog().map((c) => c.name);
   bootInfo.coldOpenBytes = PORT.callLog().reduce((a, c) => a + c.bytesIn + c.bytesOut, 0);

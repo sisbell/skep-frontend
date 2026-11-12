@@ -4,9 +4,10 @@
 // name with its data parsed, and the stream's drop is told once and its
 // reopen at the next open, never at its first; the page URL's `port` names
 // the loopback provider at a port of digits alone from 1 to 65535, the
-// default where the URL carries none and no provider for any other value; and
-// a client made at that origin sends its calls, its stream and its close at
-// unload there alone.
+// default where the URL carries none and no provider for any other value; a
+// client made at that origin sends its calls, its stream and its close at
+// unload there alone; and an `op` handed in at unload is posted to outlive
+// the page, before the close, its frame kept in the call log.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import * as DEV from './dev.js';
@@ -39,8 +40,14 @@ const engineSource = engines.EventSource;
 engines.EventSource = RecordingSource;
 /** @type {string[]} the URL of every fetch the clients make, each answered with an empty list */
 const fetched = [];
+/** @type {Array<{url: string, keepalive: boolean, body: string, secret: string | undefined}>} every fetch the clients make, as it was posted */
+const posted = [];
 const engineFetch = engines.fetch;
-engines.fetch = async (/** @type {string} */ url) => { fetched.push(String(url)); return { status: 200, text: async () => '{"result":[]}' }; };
+engines.fetch = async (/** @type {string} */ url, /** @type {{keepalive?: boolean, body?: string, headers?: Record<string, string>}} */ init = {}) => {
+  fetched.push(String(url));
+  posted.push({ url: String(url), keepalive: !!init.keepalive, body: String(init.body ?? ''), secret: init.headers?.['Skep-Provider'] });
+  return { status: 200, text: async () => '{"result":[]}' };
+};
 after(() => { engines.EventSource = engineSource; engines.fetch = engineFetch; });
 
 /** a client over a fresh stand-in stream, every event and every stream notice it tells recorded */
@@ -115,4 +122,17 @@ test('a client made at the provider the page URL names sends its calls, its even
     dev.closeAtUnload('s-1');
     assert.deepEqual([...fetched, stream.url], [`${origin}/bridge/boards`, `${origin}/bridge/close`, `${origin}/bridge/events?provider=test-secret`], `port ${port}: every call, the close and the stream at ${origin}`);
   }
+});
+
+test('an `op` handed in as the page unloads is posted to the provider with `keepalive`, its argument object the body, before the unload\'s close; the call log keeps it as an `op` with its frame, its answer read by no one (D6 BM-28)', () => {
+  posted.length = 0;
+  const dev = DEV.create({ provider: 'http://127.0.0.1:8743', secret: 'test-secret' });
+  const args = { session: 's-1', frame: { as_of: 7, at: { ordinal: '1', subspace: '1' }, doc: '1.0.1.0.1013', id: 'page:9f.1', op: 'insert', values: ['a'] }, anchors: { before: null, after: null } };
+  dev.opAtUnload(args);
+  dev.closeAtUnload('s-1');
+  assert.deepEqual(posted, [
+    { url: 'http://127.0.0.1:8743/bridge/op', keepalive: true, body: JSON.stringify(args), secret: 'test-secret' },
+    { url: 'http://127.0.0.1:8743/bridge/close', keepalive: true, body: JSON.stringify({ session: 's-1' }), secret: 'test-secret' },
+  ], 'the op first, then the close, each to outlive the page');
+  assert.deepEqual(dev.calls().map((c) => [c.name, /** @type {{op?: string}} */ (c).op, /** @type {{frame?: string}} */ (c).frame]), [['op', 'insert', JSON.stringify(args.frame)], ['close', undefined, undefined]], 'the log keeps the op by its kind and its frame, as it keeps a call\'s');
 });

@@ -338,7 +338,7 @@ function leaveFor(span, how) {
   const c = LAYER.caret(), part = how.platform ? LAYER.movingPart() : null;
   const at = part ? part.span : span, start = part ? part.backward : how.moves === 'start';
   if (!c || !c.live || c.addr === at.addr) return;
-  LAYER.leaveCaret(false);
+  LAYER.leaveCaret('pointer', false);
   void WALK.focusTo(at.addr, movingByte(at, start), false, null, true);
 }
 

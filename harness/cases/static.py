@@ -11,9 +11,12 @@ tree (T4; M5, M10).
     by the card alone (`follow` by N-GO, S-32 (a); the gate's door excepted);
 (iii) the layers in FP-11's order — the bridge, the model, `web/write/`, the
     drawing modules, the app — no module imports one above its own;
-    `web/write/` imports the bridge, the model and `util.js` alone; and no
-    module outside it, the gate's hooks and the tests apart, calls a bridge row
-    that writes or composes a write (`WRITE_ROWS`);
+    `web/write/` imports the bridge, the model, `util.js` and its own modules
+    alone; no module outside it, the gate's hooks and the tests apart, calls a
+    bridge row that writes or composes a write (`WRITE_ROWS`), a family's read
+    rows left to any module; and every `op: '<name>'` literal naming a wire
+    write — the list M-FRAMES's test holds READ_OPS clear of — stands in a
+    module under `web/write/`, the gate's hooks and the tests apart;
 (iv) `index.html` loads one module script and nothing outside `web/` (FP-5);
 (v) the shipped faces (issue #16): every `@font-face` in `style.css` loads a
     WOFF2 file under `web/fonts/` that is there — Charter in its four styles
@@ -41,12 +44,17 @@ LAYER = [
     (4, 'the app', ['app/']),
     (9, 'the gate and the tests', ['gate/', 'test/']),
 ]
-# what `web/write/` may import: the bridge, the model and the leaf `util.js` alone
-WRITE_IMPORTS = ['bridge/', 'model/', 'util.js']
-# B-PORT's exports for the bridge's rows that write or compose a write — the publication, merge and history families,
-# `upload`, `restore`, `resolve` (WIRE's READ_ROWS refuses each of the owner's provider): no module outside `web/write/` calls one
-WRITE_ROWS = ['publication', 'merge', 'history', 'upload', 'restore', 'resolve']
+# what `web/write/` may import: the bridge, the model, the leaf `util.js`, and a module of its own
+WRITE_IMPORTS = ['bridge/', 'model/', 'util.js', 'write/']
+# B-PORT's exports for the bridge's rows that write or compose a write, each by its name on the port — a family's row as
+# `family.row`, a family every row of which is one by the family alone: the publication family's panel and its three acts on
+# it, the merge family, `history.restore`, `upload`, `restore`, `resolve` (WIRE's READ_ROWS refuses each of the owner's
+# provider). No module outside `web/write/` calls one; a family's read — `publication.standing`, `history.past` — is no row here
+WRITE_ROWS = ['publication.open', 'publication.count', 'publication.confirm', 'publication.cancel', 'merge', 'history.restore', 'upload', 'restore', 'resolve']
 PORT = 'bridge/port.js'
+# the wire's writes, read from the list M-FRAMES's test holds READ_OPS clear of: a literal naming one composes a write frame
+WIRE_WRITES = re.compile(r'const WRITES = \[([^\]]*)\]')
+OP_LITERAL = re.compile(r"""\bop:\s*'(\w+)'""")
 DRAWERS = ['beams/beams.js', 'text/layer.js', 'plane/render.js', 'scene/scene.js', 'overlays/anatomy-card.js']
 SETTERS = ['reveal', 'hide', 'setOthers', 'lens', 'clearLens']
 # the rules: the bullet each heads in PATTERNS.md, a citation of one, and the range AGENTS.md states
@@ -90,18 +98,33 @@ def target_of(f, imp):
 
 
 def write_calls(f, src):
-    """each call a module makes of a bridge row that writes (`WRITE_ROWS`): through the port's namespace, or a row it imports by
-    name"""
+    """each call a module makes of a bridge row that writes (`WRITE_ROWS`): through the port's namespace, a row it imports by
+    name, or a row of a family it imports by name"""
     out = []
+    rows = '|'.join(re.escape(row) for row in WRITE_ROWS)
     for names, imp in re.findall(r"""^\s*import\s+([^'"]*?)\s+from\s+['"]([^'"]+)['"]""", src, re.M):
         if not imp.startswith('.') or target_of(f, imp) != PORT:
             continue
         spaces = re.findall(r'\*\s+as\s+(\w+)', names)
         named = [n.split(' as ')[0].strip() for n in re.findall(r'\{([^}]*)\}', names)[0].split(',')] if '{' in names else []
         out += [f'{f}: imports `{n}`' for n in named if n in WRITE_ROWS]
+        for family in sorted({row.split('.')[0] for row in WRITE_ROWS if '.' in row} & set(named)):
+            members = '|'.join(re.escape(row.split('.', 1)[1]) for row in WRITE_ROWS if row.startswith(family + '.'))
+            out += [f'{f}:{src.count(chr(10), 0, m.start()) + 1}: {m.group(0)}' for m in re.finditer(r'\b' + family + r'\.(' + members + r')\b', src)]
         for ns in spaces:
-            out += [f'{f}:{src.count(chr(10), 0, m.start()) + 1}: {m.group(0)}' for m in re.finditer(r'\b' + ns + r'\.(' + '|'.join(WRITE_ROWS) + r')\b', src)]
+            out += [f'{f}:{src.count(chr(10), 0, m.start()) + 1}: {m.group(0)}' for m in re.finditer(r'\b' + ns + r'\.(' + rows + r')\b', src)]
     return out
+
+
+def wire_writes(sources):
+    """the wire's write ops, as the list M-FRAMES's test holds names them"""
+    m = WIRE_WRITES.search(sources.get('model/frames.test.js', ''))
+    return re.findall(r"'(\w+)'", m.group(1)) if m else []
+
+
+def write_literals(f, src, writes):
+    """each `op: '<name>'` literal of a module that names a wire write"""
+    return [f'{f}:{src.count(chr(10), 0, m.start()) + 1}: {m.group(0)}' for m in OP_LITERAL.finditer(src) if m.group(1) in writes]
 
 
 def rule_heads(patterns):
@@ -163,13 +186,16 @@ def run(ctx):
     sel_card_uses = set(re.findall(r'LINKS\.(\w+)', sel))
     r.check(sel_card_uses <= {'show'}, 'the selection asks the card to show and reads nothing of it', sorted(sel_card_uses))
     # (iii) the layers, what `web/write/` imports, and who calls a row that writes
-    upward, beyond, writes = [], [], []
+    upward, beyond, writes, literals = [], [], [], []
+    wire = wire_writes(sources)
     for f, src in sources.items():
         if not f.endswith('.js') or f.endswith('.test.js'):
             continue
         lf = layer_of(f)
         if lf is None or lf == 9:
             continue
+        if not f.startswith('write/'):
+            literals += write_literals(f, src, wire)
         for imp in imports_of(src):
             if not imp.startswith('.'):
                 upward.append(f'{f}: bare import {imp}')
@@ -185,9 +211,12 @@ def run(ctx):
         if not f.startswith('write/') and not f.startswith('bridge/'):
             writes += write_calls(f, src)
     r.check(not upward, "no module imports one above its layer in FP-11's order, `write/` between the model and the drawing modules (issue #434)", upward)
-    r.check(not beyond, 'web/write/ imports the bridge, the model and util.js alone (issue #434)', beyond)
+    r.check(not beyond, 'web/write/ imports the bridge, the model, util.js and its own modules alone (issue #434)', beyond)
     r.check(not writes, 'no module outside web/write/ calls a bridge row that writes (FP-14; issue #434)', writes)
+    r.check(len(wire) >= 5 and 'insert' in wire, "the wire's writes are read from the list M-FRAMES's test holds", wire)
+    r.check(not literals, "no module outside web/write/ holds an `op: '<name>'` literal naming a wire write (FP-11)", literals)
     r.figures['write_rows'] = WRITE_ROWS
+    r.figures['wire_writes'] = wire
     # (iv) the page loads one module script and nothing outside web/
     html = sources.get('index.html', '')
     scripts = re.findall(r'<script[^>]*src="([^"]+)"', html)

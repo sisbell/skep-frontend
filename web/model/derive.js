@@ -26,7 +26,11 @@
 // (`Derivation.source`) by where it came from, a position of the delivered
 // text or the page's ordinal for it. An edit that puts back what an earlier
 // edit removed (`Edit.back`) places those same bytes again, their identity
-// and their source with them. `sourceRuns` splits a span of that text into
+// and their source with them. An edit whose change the record's text holds
+// already (`Edit.based`) is applied to nothing: it stands for the put-back
+// that names it, which places what it took as the edit keeps it
+// (`Edit.took`), bytes the record's text holds nowhere and no source names.
+// `sourceRuns` splits a span of that text into
 // what the delivered text holds and what the edits made — the one reading of
 // a span the board is asked about, so no question reaches the board by a
 // position of the typed text — and `fromBase` finds a stretch of the
@@ -423,13 +427,16 @@ export function applyHeld(doc, rows, sources = () => null) {
  * named by `ids` from its `page` ordinal on, or, for a put-back (`Edit.back`),
  * the bytes an earlier edit removed placed again at `pos` as they were, their
  * identity and their source with them — the same kernel the held lines ride.
- * An edit outside the text held, or a put-back of bytes no earlier edit
- * removed, stops the apply as a row does, named by its index among the edits.
- * The record handed in is never changed.
+ * An edit the record's text holds the change of already (`Edit.based`)
+ * changes nothing, and what it took is what it keeps (`Edit.took`), placed
+ * by the put-back that names it with no source. An edit outside the text
+ * held, or a put-back of bytes no earlier edit removed, stops the apply as a
+ * row does, named by its index among the edits. The record handed in is
+ * never changed.
  * @param {Doc} doc
  * @param {readonly Edit[]} edits
  * @param {(page: number, width: number) => ISpan[]} [ids] the identity of `width` bytes the page made from its ordinal `page` on, in order (M-REC's `pageIds`); the page's own space of the document where left out
- * @returns {{doc: Doc, applied: number, stopped: {index: number, why: Why} | null, removed: Array<ISpan[] | null>}} `removed` what each edit applied took out of the text, by its index, as bytes by identity in the text's order — none of them where the image named none; null for an edit that removed nothing
+ * @returns {{doc: Doc, applied: number, stopped: {index: number, why: Why} | null, removed: Array<ISpan[] | null>, took: Array<import('./records.js').Took | null>}} `removed` what each edit applied took out of the text, by its index, as bytes by identity in the text's order — none of them where the image named none; null for an edit that removed nothing; `took` the same bytes as the runs removed and their identity, each at its position from 1: what a put-back of them places
  */
 export function applyEdits(doc, edits, ids = (page, width) => [{ prefix: pageSpace(doc.addr), ordinal: page, width }]) {
   // every position the delivered text may hold is its own source, the ones the page holds no run of among them: its extent, its window and its image's reach
@@ -443,6 +450,12 @@ export function applyEdits(doc, edits, ids = (page, width) => [{ prefix: pageSpa
   for (const [i, e] of edits.entries()) {
     try {
       removed[i] = null;
+      if (e.based) {
+        // what it took, each byte the page made named as the caller names it now: by the address the board minted it at since
+        if (e.took) removed[i] = { runs: e.took.runs.map(copyRun), ids: e.took.ids.flatMap((r) => (r.prefix === pageSpace(doc.addr) ? renamed(r, ids(r.ordinal, r.width)) : [{ ...r }])), src: [] };
+        applied++;
+        continue;
+      }
       if (e.width > 0) {
         const s = stretchOf(t.runs, t.image, e.pos, e.width);
         if (!s) throw new Stop('outside');
@@ -464,7 +477,20 @@ export function applyEdits(doc, edits, ids = (page, width) => [{ prefix: pageSpa
       applied++;
     } catch (x) { if (x instanceof Stop) { stopped = { index: i, why: x.why }; break; } throw x; }
   }
-  return { doc: recordOver(doc, { ...t, image: joined(t.image) }, { from: doc.addr, rows: [], edits: applied, at: null, source: joined(t.source) }), applied, stopped, removed: removed.map((r) => (r ? r.ids.map((x) => ({ prefix: x.prefix, ordinal: x.ordinal, width: x.width })) : null)) };
+  return {
+    doc: recordOver(doc, { ...t, image: joined(t.image) }, { from: doc.addr, rows: [], edits: applied, at: null, source: joined(t.source) }), applied, stopped,
+    removed: removed.map((r) => (r ? r.ids.map((x) => ({ prefix: x.prefix, ordinal: x.ordinal, width: x.width })) : null)),
+    took: removed.map((r) => (r ? { runs: r.runs.map(copyRun), ids: r.ids.map((x) => ({ ...x })) } : null)),
+  };
+}
+
+/** a run of bytes the page made, placed as it stands, named by the identity given for them, in order */
+function renamed(/** @type {ImageRun} */ r, /** @type {ISpan[]} */ ids) {
+  /** @type {ImageRun[]} */
+  const out = [];
+  let at = r.pos;
+  for (const x of ids) { out.push({ pos: at, width: x.width, prefix: x.prefix, ordinal: x.ordinal }); at += x.width; }
+  return out;
 }
 
 /** an image's runs, or a source's, joined where each continues the one before it in the text and in what it names */

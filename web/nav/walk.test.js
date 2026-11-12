@@ -2070,3 +2070,33 @@ test('the walk\'s panel shows after a walk key\'s move while the plane holds the
     globalThis.document = platform;
   }
 });
+
+test('Esc at a live caret, and a walk key at one, ask the draft\'s open burst committed as the text is left; a zoom past its reading scale leaves the caret kept and commits nothing — that burst commits at its own pause (D5 K-73, K-77; D6 BM-4, BM-5)', async () => {
+  const W = '1.0.1.0.44', text = 'First line.\n\nSecond line here.\n', n = byteLength(text);
+  REC.takeSpanSet(W, [{ subspace: 1, ordinal: 1, positions: n }]);
+  REC.takeMetadata(W, /** @type {any} */ (F.decodeDocMetadata({ as_of: 1, resp: 'doc_metadata', doc: W, published: false, owner: '1.0.1' })));
+  REC.takeDelivery(W, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }], 1, { from: 1, runs: [{ iStart: W + '.0.1.1', width: n }] });
+  const f = LAYER.foldOf(REC.doc(W)), box = docBox(W), c = f.columns[0];
+  const reading = { x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2, scale: 12 / f.fs };
+  CAM.set(reading);
+  /** @type {string[]} */
+  const committed = [];
+  WRITE.machine({ commit: (addr) => committed.push(addr), typed() {}, leaving() {} });
+  try {
+    assert.equal(LAYER.editable(W), true, 'a draft of the session\'s account at its reading scale');
+    await WALK.focusTo(W, 1, true, null, true);
+    LAYER.placeCaret(W, 1);
+    WRITE.setFlight(W, true);
+    assert.equal(WALK.leaveText(), true);
+    assert.deepEqual([committed, LAYER.caret()?.live], [[W], false], 'Esc: the open burst asked committed, the caret kept');
+    LAYER.returnCaret();
+    CAM.set({ ...reading, scale: reading.scale / 6 });
+    assert.equal(LAYER.editable(W), false, 'past its reading scale');
+    await WALK.retakeFromView();
+    assert.deepEqual([committed, LAYER.caret()?.live, WRITE.inFlight(W)], [[W], false, true], 'a zoom-out: the caret kept, nothing committed, the burst still open');
+    CAM.set(reading);
+    LAYER.returnCaret();
+    await run(WALK.key('down'));
+    assert.deepEqual([committed, LAYER.caret()?.live], [[W, W], false], 'a walk key off the caret: committed as the text is left');
+  } finally { WRITE.machine(null); WRITE.setFlight(W, false); LAYER.dropCaret(); REC.invalidate(W); }
+});

@@ -25,7 +25,8 @@
 // how each was last set by its reads — whether that changed what it shows,
 // with the stamp it stood from — which `liftOf` answers (`lifts`), and what
 // the reads making the lagging board whole found so far (`boardFound`);
-// the refresh armed or out, and the changes of class taken; how the board was
+// the refresh armed or out, and the changes of class taken; the positions of
+// the window's own acked writes, by document (`ownAt`); how the board was
 // opened; and the readers the app hands in at `start` — the version each box
 // shows (N-GO's `shownIn`), who is told of a member's arrival (N-GO's
 // `arrived`) and of each drop (SC's `dropped`), the places the view's state
@@ -96,9 +97,9 @@
 // session the shell does not hold, reaches the model. A read the board did
 // not answer (`unreachable`; `unanswered`, the one test of it) teaches
 // nothing: a view's read so refused is held (`unreached`), not missing, its
-// refusal recorded once for the outage, and asked again at the daemon's
-// `running` or after UNREACHED_MS; a read again so refused waits out the
-// pause (`afterPause`), which ends at the daemon's `running`, past
+// refusal recorded once for the outage, and asked again as the board answers
+// again (`answering`) or after UNREACHED_MS; a read again so refused waits out the
+// pause (`afterPause`), which ends as the board answers again (`answering`), past
 // UNREACHED_MS or at a change of class, whichever comes first, and which any
 // reader whose own read the board did not answer may wait out too. A read a
 // drop overtook teaches nothing either: the board's answers and the feed's
@@ -170,7 +171,14 @@
 // view shows is read again (`readFresh`) and set in one step (M-REC's
 // `setAgain`), or, where the board left a part of its reads unanswered, read
 // again as a row naming it is until its reads set it whole (`readAgain`); the
-// rest dropped (M-REC's `takeRefresh`); every reader is told. An `index`
+// rest dropped (M-REC's `takeRefresh`); every reader is told. The window's
+// own writes (`wrote`; FP-23): a draft the page holds dialed words of that
+// the board has not acked (M-REC's `writing`) has its text neither set nor
+// dropped — the view asks nothing of it, a row naming it keeps it as it
+// stands, and a read again of it waits — until W-MACHINE tells the acks
+// (`wrote`), which read it again as a row naming it would, as that act's
+// feedback: held as it stands with no kept clause, and set with no word of
+// how; a row at one of those acks' positions is read the same way. An `index`
 // state is taken where it is the face the page reads, a signed-in page's
 // named by its own session (`ofFace`); one naming another session while the
 // call of an acquire for a lost session is out is kept (`faces`), the one
@@ -317,7 +325,7 @@ const FETCH_EM = 5;
 const MEMBER_PROBE_CAP = 8;
 /** a retry-class refusal (`scan_busy`, `history_busy`) is reissued after this pause */
 const RETRY_MS = 120;
-/** a view's read the board did not answer is held this long, then asked again where no `running` came first — the interval `skep-shell`'s `PROBE_CADENCE` asks a board's `/health` again at (unmeasured here) */
+/** a view's read the board did not answer is held this long, then asked again, where the board did not answer again first (`answering`) — the interval `skep-shell`'s `PROBE_CADENCE` asks a board's `/health` again at (unmeasured here) */
 export const UNREACHED_MS = 2000;
 /** a class scan read whole is asked at most this many times while the board answers `scan_busy` */
 const SCAN_ATTEMPTS = 6;
@@ -342,7 +350,7 @@ const accountsOut = new Map();
 const asked = new Set();
 /** @type {Map<string, number>} keys refused retry-class, with the time they may be asked again */
 const retryAt = new Map();
-/** @type {Map<string, number>} keys the board did not answer, HELD, with the time they may be asked again — at once where the daemon is announced `running` */
+/** @type {Map<string, number>} keys the board did not answer, HELD, with the time they may be asked again — at once where the daemon is announced answering again (`answering`) */
 const unreached = new Map();
 let scansInFlight = 0;
 /** @type {Array<{frame: string, refusal: Refusal, addr: string}>} the refusals met, for the faces and the gate */
@@ -428,12 +436,12 @@ const again = new Map();
 const claimsOut = new Map();
 /** the searches out for the origins whose edition claims a feed row changed (`searchClaims`): the view counts each missing */
 let searching = 0;
-/** @type {Set<() => void>} the pauses out (`afterPause`), each woken at the daemon's `running`, past UNREACHED_MS or at a change of the page's class */
+/** @type {Set<() => void>} the pauses out (`afterPause`), each woken as the board answers again (`answering`), past UNREACHED_MS or at a change of the page's class */
 const waking = new Set();
 
 /**
  * The pause a read the board did not answer waits out before it is made
- * again (see the head): settled at the daemon's `running`, once UNREACHED_MS
+ * again (see the head): settled as the board answers again (`answering`), once UNREACHED_MS
  * has passed, or at a change of the page's class, whichever comes first.
  * `woken` runs as it settles, before anything awaiting any pause woken with
  * it resumes.
@@ -468,6 +476,10 @@ const keptBoard = new Map();
 const BOARD = '1';
 /** the changes of what `kept`, `claimsKept` and `boardKept` answer, counted: the app's loop reads them (`keptRevision`), so every surface shows a change in one frame */
 let keptRev = 0;
+/** @type {Map<string, number[]>} the positions the board acked the window's own writes at, by document, the newest OWN_KEPT of each (`wrote`): a feed row at one is that act's feedback */
+const ownAt = new Map();
+/** how many of a document's own ack positions are kept (`ownAt`) */
+const OWN_KEPT = 64;
 /** @typedef {import('./records.js').Outcome} Outcome */
 /** @typedef {'doc' | 'claims' | 'board'} KeptKind what a place held as it stands is: a document, an origin's edition claims, the board */
 /** @type {Map<Map<string, Kept>, KeptKind>} what each holder holds */
@@ -640,7 +652,7 @@ export function start(opts) {
   finding = opts.finding || (() => null);
   standing = new Set(); halved.clear();
   classes++; again.clear(); claimsOut.clear(); unkeepAll(); unkeep(keptBoard, BOARD); lifts.clear(); boardFound = null;
-  rowsHeld = null; caught = null; gap = null; faces.clear();
+  rowsHeld = null; caught = null; gap = null; faces.clear(); ownAt.clear();
   started = true;
   if (subscribed) return;
   subscribed = true;
@@ -653,8 +665,8 @@ export function start(opts) {
   });
   onBoard('mode', (ev) => { REC.setMode(ev); for (const m of whileOut) m.mode = ev; dirty(); });
   onBoard('daemon', (ev) => {
-    REC.setDaemon(ev.state); for (const m of whileOut) m.daemon = true;
-    if (ev.state === 'running') { unreached.clear(); for (const wake of [...waking]) wake(); if (attempt && !attempt.made) void make(attempt); }
+    REC.setDaemon(ev.state, ev.reason ?? null); for (const m of whileOut) m.daemon = true;
+    if (answering(ev.state)) { unreached.clear(); for (const wake of [...waking]) wake(); if (attempt && !attempt.made) void make(attempt); }
     dirty();
   });
   PORT.on('session-died', (d) => { const ev = /** @type {SessionDiedEvent | null} */ (d); if (ev) takeEnd(ev.session, ev.reason); dirty(); });
@@ -716,16 +728,23 @@ export function takeRow(u) {
  * the board marked, the board lagging from `at` where it lags from no earlier
  * row or drop (`standLag`), the refresh armed again (`arm`), the run not yet
  * in.
+ * A draft the page holds dialed words of that the board has not acked
+ * (M-REC's `writing`) is kept as it stands and not read: its acks read it
+ * (`wrote`). A document the row touches at a position the window's own write
+ * was acked at (`ownAt`) is read again as that act's feedback.
  * @param {FeedUpdate} u
  * @param {number} at the page's clock at the row or drop that left behind what it names: its arrival, or the stream's drop for a row a catch-up read (`drain`)
  * @param {boolean} [raiseFeed] false where M-PUMP's drafts read applies a drafts entry (D6): `draftsAt` is raised, not `feedAt`
  */
 function applyRow(u, at, raiseFeed = true) {
   if (u.op === 'publish') for (const named of Array.isArray(u.docs) ? u.docs : []) if (isTrunkMember(named)) arrive(named, u.position);
-  const shown = shownNow(), keep = new Set(keptNow(shown));
+  const shown = shownNow(), keep = new Set([...keptNow(shown), ...REC.writingDocs()]);
   const touched = REC.applyFeedUpdate(u, keep, new Set(shown.map((a) => REC.ownerAccount(REC.doc(a)))), raiseFeed);
   for (const m of whileOut) m.rows.push(u);
-  for (const addr of touched) { if (keep.has(addr)) readAgain(addr, at); else forget(addr); }
+  for (const addr of touched) {
+    if (REC.writing(addr)) continue;
+    if (keep.has(addr)) readAgain(addr, at, null, ownAck(addr, u.position)); else forget(addr);
+  }
   onDrop({ row: u, addrs: touched, at });
   decidedAnew(REC.originsClaimedIn(touched.filter((a) => !keep.has(a))), at);
   if (touched.length) void searchClaims(u, at);
@@ -787,7 +806,7 @@ function decidedAnew(origins, at) {
  * view, to be read when it is shown (`dropUnshown`). Where the board did not
  * answer one of the reads, nothing is set — the document is set from its
  * reads' answers alone, all of them — and the reads are made again once
- * UNREACHED_MS has passed or at the daemon's `running` where the view still
+ * UNREACHED_MS has passed or as the board answers again (`answering`) where the view still
  * keeps it, else it is dropped so; one a refresh's read left unset, the board
  * not answering a part of it, waits out that pause before its first read. A
  * change of the page's class ends them, the reads at the new class making the
@@ -799,18 +818,26 @@ function decidedAnew(origins, at) {
  * waiting, its readers are told again (`onDrop`, its `row` null), for one that
  * read it meanwhile read what stood; its owner's byline facts set with it that
  * say other than those held are told after (`bylineTaken`).
+ * Read as the feedback of the window's own write (`feedback`; FP-23), it is
+ * not held as kept — no clause says it is as last read, and no word says how
+ * it was set — unless a row that is news names it meanwhile. While the page
+ * holds dialed words of it the board has not acked (M-REC's `writing`), no
+ * read of it goes out — its reads wait for the acks, as they wait out a pause
+ * (`Again.paused`) — and one out as the words were dialed lands across a drop
+ * and sets nothing.
  * @param {string} addr
  * @param {number} since the page's clock at the row or drop that left it behind (`Kept.since`): a row's, a refresh's run's, the change of class
  * @param {Refusal | null} [met] the refusal a read of it already met that left it unset — a refresh's, the board not answering a part of it — so its reads wait out the pause first
+ * @param {boolean} [feedback] the read is the window's own write's feedback, said nowhere as news
  */
-function readAgain(addr, since, met = null) {
-  if (again.has(addr)) return;
+function readAgain(addr, since, met = null, feedback = false) {
+  if (again.has(addr)) { if (!feedback) standKept(keptDocs, addr, since); return; }
   /** @type {() => void} */
   let land = () => {};
   /** @type {Again} */
   const a = { more: false, paused: false, landed: new Promise((/** @type {(v: void) => void} */ r) => { land = r; }) };
   again.set(addr, a);
-  standKept(keptDocs, addr, since);
+  if (!feedback) standKept(keptDocs, addr, since);
   const cls = classes, ended = () => classes !== cls;
   /** the board kept one of its reads waiting (`Again.paused`), so a whole read of it in the pause read what stood (`readAgainFirst`) */
   let waited = false;
@@ -826,6 +853,12 @@ function readAgain(addr, since, met = null) {
           if (ended()) return;
           if (!keptNow().includes(addr)) { dropUnshown(addr, since); return; }
           unheard = null;
+        }
+        if (REC.writing(addr)) {
+          a.paused = true;
+          await REC.written(addr);
+          a.paused = false;
+          if (ended()) return;
         }
         a.more = false;
         const gone = watchDrops(addr), causes = REC.keyDrops();
@@ -864,6 +897,28 @@ function readAgain(addr, since, met = null) {
 
 /** a document read again (`readAgain`) that the view does not keep now, its reads ended unset: dropped as a row drops a document out of view, its answers forgotten, so the view reads it when it is shown — and, where it is the home of an edition claim, the documents windowing the origins it claims told (`decidedAnew`), from the row or drop that left it behind */
 const dropUnshown = (/** @type {string} */ addr, /** @type {number} */ since) => { REC.invalidate(addr); forget(addr); decidedAnew(REC.originsClaimedIn([addr]), since); };
+
+/** was the window's own write on a document acked at a position (`wrote`)? */
+const ownAck = (/** @type {string} */ addr, /** @type {number} */ position) => (ownAt.get(addr) || []).includes(position);
+
+/**
+ * The window's own writes on a document acked (see the head; W-MACHINE's;
+ * FP-23): the positions kept (`ownAt`), so a feed row at one is read as that
+ * act's feedback; and, once the page holds no dialed word of the document the
+ * board has not acked (M-REC's `writing`), what the page holds of it read
+ * again as a row naming it would read it — held as it stands and set in one
+ * step where the view keeps it (`readAgain`), as feedback; else dropped, to be
+ * read when it is shown. Nothing is read before the pump starts.
+ * @param {string} addr
+ * @param {readonly number[]} ats the positions the board acked the writes at
+ */
+export function wrote(addr, ats) {
+  if (ats.length) ownAt.set(addr, [...(ownAt.get(addr) || []), ...ats].slice(-OWN_KEPT));
+  if (!started || REC.writing(addr)) return;
+  if (keptNow().includes(addr)) readAgain(addr, Date.now(), null, true);
+  else { REC.invalidate(addr); forget(addr); }
+  dirty();
+}
 
 /**
  * A whole read waits for the reads again of a document the view keeps
@@ -991,7 +1046,7 @@ export function acquireSession() { return attempt ? attempt.settled : begin(null
 
 /**
  * One attempt begun: its call made at once where the board
- * answers as far as the page knows, else at the board's `running`; for a
+ * answers as far as the page knows, else as the board answers again (`answering`); for a
  * session lost, every feed row held from now until its catch-up lands
  * (`rowsHeld`) — those held for an attempt it takes the place of kept — and
  * the line made to read that the page is reconnecting where its call is
@@ -1014,8 +1069,11 @@ function begin(lost) {
   return settled;
 }
 
+/** is a state the shell says of a board (M-REC's `DaemonState`) one the board answers reads in: every state but `stopped` and `unreachable` — a board halted, or whose head record will not read, reads on */
+const answering = (/** @type {import('./records.js').DaemonState} */ state) => state !== 'stopped' && state !== 'unreachable';
+
 /** does the page's board answer, as far as the page knows: no `daemon` event, nor the boot's probe, says it stopped or unreachable? */
-const answers = () => { const d = REC.daemon(); return d !== 'stopped' && d !== 'unreachable'; };
+const answers = () => { const d = REC.daemon(); return d == null || answering(d); };
 
 /**
  * An attempt's one call, `session(board)`, and its answer taken: at boot,
@@ -1345,7 +1403,7 @@ function reread() {
   for (const { addr } of order) {
     if (!pending(addr)) { standing.delete(addr); continue; }
     const d = REC.doc(addr);
-    if (need('s:' + addr, F.retrieveDocVSpanSet(addr), (a) => REC.takeSpanSet(addr, F.decodeSpanSet(a)), addr, (r) => refuseDoc(d, r))) missing++;
+    if (need('s:' + addr, F.retrieveDocVSpanSet(addr), (a) => REC.takeSpanSet(addr, F.decodeSpanSet(a), F.asOf(a)), addr, (r) => refuseDoc(d, r))) missing++;
   }
   return missing;
 }
@@ -1537,7 +1595,7 @@ export function readHealth(board) {
  * @returns {Promise<{result: Probe} | {refused: Refusal}>}
  */
 export function readProbe() {
-  return overtaken(() => PORT.probe({}), (out, m) => { if ('result' in out && !m.daemon) REC.setDaemon(out.result.daemon); });
+  return overtaken(() => PORT.probe({}), (out, m) => { if ('result' in out && !m.daemon) REC.setDaemon(out.result.daemon, out.result.reason ?? null); });
 }
 
 /**
@@ -1800,7 +1858,7 @@ function hold(key) {
  * answered once; a retry-class refusal (`scan_busy`, `history_busy`) reissued
  * after a pause;
  * a read the board did not answer held (`hold`) and asked again past its
- * pause or at the daemon's `running`, its refusal recorded and told to
+ * pause or as the board answers again (`answering`), its refusal recorded and told to
  * `onRefused` once for the outage; any other refusal recorded, told to
  * `onRefused`, and not asked again until invalidated.
  * A read that lands after its document was dropped (`watchDrops`), or a
@@ -2013,13 +2071,15 @@ export function pump() {
     // a document read again: nothing asked of it until its reads set it (`readAgain`)
     const out = again.get(d.addr);
     if (out) { if (!out.paused) missing++; continue; }
+    // a draft the page holds dialed words of that the board has not acked: nothing asked of it until they are (`wrote`)
+    if (REC.writing(d.addr)) continue;
     if (d.refused && !REC.owed(d.addr)) continue;
     const box = docBox(d.addr);
     const docPx = box.w * cam.scale;
     /** the version its box shows, read for its text and what it is placed through; else the box's document, read for what its box draws of it alone */
     const drawn = shown(d.addr) === d.addr;
     if (d.extent == null) {
-      if (need('s:' + d.addr, F.retrieveDocVSpanSet(d.addr), (a) => REC.takeSpanSet(d.addr, F.decodeSpanSet(a)), d.addr, (r) => refuseDoc(d, r))) missing++;
+      if (need('s:' + d.addr, F.retrieveDocVSpanSet(d.addr), (a) => REC.takeSpanSet(d.addr, F.decodeSpanSet(a), F.asOf(a)), d.addr, (r) => refuseDoc(d, r))) missing++;
       continue;
     }
     if (!d.meta && docPx > 40) {
@@ -2230,7 +2290,7 @@ function linkRefused(link, r) { if (nameOf(r) !== 'withheld') REC.takeFailedRead
  * end, or the members read before the cap or a refusal the board gave — is
  * not probed again until invalidated; a probe that met a member the board did
  * not answer is held as a view's read is (`hold`), and probed again past its
- * pause or at the daemon's `running`; one its trunk was dropped under is left
+ * pause or as the board answers again (`answering`); one its trunk was dropped under is left
  * unasked, as a view's read is (`need`), and probed again as the view next
  * needs it.
  * @param {Doc} d
@@ -2414,7 +2474,7 @@ async function restOf(addr, dropped, part) {
     const out = await read(F.retrieveDocVSpanSet(addr));
     if (dropped()) return 'dropped';
     if ('refused' in out) { refusals.push({ frame: 'retrieve_doc_v_span_set', refusal: out.refused, addr }); refuseDoc(d, out.refused); dirty(); return { refused: out.refused }; }
-    REC.takeSpanSet(addr, F.decodeSpanSet(out.answer));
+    REC.takeSpanSet(addr, F.decodeSpanSet(out.answer), F.asOf(out.answer));
   }
   for (const [from, to] of textLacked(REC.doc(addr))) {
     const out = await textParts(addr, from, to - from, { image: true, part: (runs, asOf, image) => { if (dropped()) return; REC.takeDelivery(addr, runs, asOf, image); part(); dirty(); }, stop: dropped });
@@ -2464,7 +2524,7 @@ async function readWhole(addr, dropped) {
     const out = await read(F.retrieveDocVSpanSet(addr));
     if (dropped()) return 'dropped';
     if ('refused' in out) { refusals.push({ frame: 'retrieve_doc_v_span_set', refusal: out.refused, addr }); refuseDoc(d, out.refused); dirty(); return { doc: null, refused: out.refused }; }
-    REC.takeSpanSet(addr, F.decodeSpanSet(out.answer));
+    REC.takeSpanSet(addr, F.decodeSpanSet(out.answer), F.asOf(out.answer));
   }
   if (!d.meta) {
     const out = await read(F.docMetadata(addr));
@@ -2821,7 +2881,7 @@ async function readFresh(addr, chains, facts) {
   if (d.extent != null || d.refused || REC.owed(addr)) {
     const a = await ask(F.retrieveDocVSpanSet(addr), true);
     if (f.refused) return { fresh: f, unheard };
-    if (a) f.spans = F.decodeSpanSet(a);
+    if (a) { f.spans = F.decodeSpanSet(a); f.spansAt = F.asOf(a); }
   }
   if (d.meta) {
     const a = await ask(F.docMetadata(addr), true);
@@ -3037,8 +3097,8 @@ async function searchClaims(u, at) {
  * origin told after (`decidedAnew`). A change of them taken while the read is
  * out queues one more read (`Again.more`), the read out setting nothing (its
  * count moved: M-REC's `setClaims` refuses it); one the board did not answer
- * sets nothing, and is made again once UNREACHED_MS has passed or at the
- * daemon's `running` where the view still shows a document windowing the
+ * sets nothing, and is made again once UNREACHED_MS has passed or as the
+ * board answers again (`answering`) where the view still shows a document windowing the
  * origin, else the claims are dropped as a change of an origin out of view
  * drops them; a change of the page's class ends it, the reads at the new
  * class making the page whole. While it is out the claims stand held as they
@@ -3142,7 +3202,7 @@ function needAccount(account) {
  * `keyDrops`), else nothing is taken and the read answers so — the view asks
  * again as it next needs them, an act begins it again (SC's `readPane`); the
  * board not answering held for UNREACHED_MS (`hold`), asked again past it or
- * at the daemon's `running`, and taken only where the page holds nothing else
+ * as the board answers again (`answering`), and taken only where the page holds nothing else
  * of them: facts held stand through such a read, a cause owed its read again
  * still (FP-23). Facts taken that say other than those held are told
  * (`bylineTaken`).

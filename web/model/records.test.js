@@ -976,7 +976,7 @@ test('a session is a reference, never a token; the death signal drops it', () =>
   assert.equal(REC.deathReason()?.arm, 'closed');
 });
 
-test('a byte the page made keeps the page\'s own identity until the board mints it, and is named by its I-address after: an ordinal of the draft\'s own in the page\'s space of it, told the first address an insert\'s ack named, the byte one byte under both its names wherever bytes are placed, each mint counted and the count standing through a change of class (wire.md §The response envelope)', () => {
+test('a byte the page made keeps the page\'s own identity until the board mints it, and is named by its I-address after: an ordinal of the draft\'s own in the page\'s space of it, told the first address an insert\'s ack named, the byte one byte under both its names wherever bytes are placed, each mint counted, and what was minted standing through a change of class (wire.md §The response envelope)', () => {
   const D = '1.0.1.0.2', text = 'First line.\n', n = byteLength(text), own = REC.pageSpace(D);
   REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
   REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
@@ -1000,7 +1000,8 @@ test('a byte the page made keeps the page\'s own identity until the board mints 
   assert.deepEqual([REC.placedIn(after.image, held), REC.placedIn(before.image, REC.identityIn(after.image, 2, 3)), REC.firstPlacedIn(after.image, held)], [[{ pos: 2, width: 3 }], [{ pos: 2, width: 3 }], 2], 'what held them by the page\'s identity finds them still, and the address finds them in a text made before the ack: one byte under both names');
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.sessionDied({ arm: 'closed' });
-  assert.deepEqual([REC.mintedOf(D), REC.mintsOf(D)], [[], 1], 'a change of class drops what was minted, the count standing');
+  assert.deepEqual([REC.mintedOf(D).map((m) => [m.page, m.width, m.prefix, m.ordinal]), REC.mintsOf(D), REC.pageIds(D, 2, 3)], [[[1, 4, D + '.0.1', 40]], 1, [{ prefix: D + '.0.1', ordinal: 41, width: 3 }]],
+    'a change of class keeps what was minted: the bytes the page made keep the addresses the board gave them, and the count stands');
 });
 
 /** an image's run at its positions (M-REC's `ImageRun`) */
@@ -1037,22 +1038,23 @@ test('the page\'s load is an id drawn once as the page loads: another load of th
   assert.notEqual(again.PAGE_LOAD, REC.PAGE_LOAD, 'another load\'s id');
 });
 
-test('those watching a change of the page\'s class are told once it is taken — at a death, at a lost session and at one regained as another principal, never at one regained as the same — everything the class wrote gone before they are (FP-29)', () => {
+test('those watching a change of the page\'s class are told once it is taken — at a death, at a lost session and at one regained as another principal, never at one regained as the same — what the class it left read of a draft gone before they are, and what the board minted of the page\'s own bytes standing (FP-29)', () => {
   const D = '1.0.1.0.2';
-  /** @type {number[]} how many minted runs of the draft each telling found */
+  /** @type {Array<[number, number]>} what each telling found of the draft: the first position of its text held, and how many minted runs */
   const told = [];
-  REC.onClass(() => told.push(REC.mintedOf(D).length));
-  const mint = () => REC.mint(D, 1, 1, D + '.0.1.40', 9);
+  REC.onClass(() => told.push([REC.doc(D).from, REC.mintedOf(D).length]));
+  /** the draft read and a byte the page made in it minted, as the class about to change holds them */
+  const hold = () => { REC.takeDelivery(D, [{ pos: 1, width: 3, kind: 'content', text: 'abc', ref: null, origin: null }], 9); REC.mint(D, 1, 1, D + '.0.1.40', 9); };
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  hold();
   REC.sessionRegained({ session: 's-2', principal: 1, account: '1.0.1' });
-  assert.deepEqual(told, [], 'the same principal: no change of class');
-  mint();
+  assert.deepEqual([told, REC.doc(D).from], [[], 1], 'the same principal: no change of class, the draft\'s text standing');
   REC.sessionRegained({ session: 's-3', principal: 2, account: '1.0.2' });
-  mint();
+  hold();
   REC.sessionLost({ kind: 'shell', name: 'session_ended' });
   REC.setSession({ session: 's-4', principal: 1, account: '1.0.1' });
-  mint();
+  hold();
   REC.sessionDied({ arm: 'closed' });
-  assert.deepEqual(told, [0, 0, 0], 'told three times, each once what was minted had gone');
+  assert.deepEqual(told, [[-1, 1], [-1, 1], [-1, 1]], 'told three times, each once the draft\'s text had gone, the mint standing');
 });
 

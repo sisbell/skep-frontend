@@ -9,8 +9,11 @@
 // place, and each of the editor's answers and events, and the shell's
 // `held_lines` refusal, decodes from the wire's or the declarations' own
 // example, its absent members null and a malformed form the decoder's null —
-// every literal the fetched declarations give a union the decoders check
-// taken, and no member the declarations lack read.
+// a held line's anchor edge that is a piece of unminted words, the lines a
+// `held` event names kept, a placement at several whole places, a past
+// state and a draft's standing among them — every literal the fetched
+// declarations give a union the decoders check taken, and no member the
+// declarations lack read.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -206,13 +209,23 @@ const SHAPES = {
   row_refused: { held: 2, doc: '1.0.1.0.1013', base: 40, frame: { op: 'delete', doc: '1.0.1.0.1013', p: { ordinal: '3', subspace: '1' }, width: '2', as_of: 41 }, anchors: { before: '1.0.1.0.1013.0.1.2', after: '1.0.1.0.1013.0.1.5', span: [{ start: '1.0.1.0.1013.0.1.3', width: '2' }] }, cause: 'out_of_bounds', sent: true, time: 1786838400060, refusal: { kind: 'refused', name: 'out_of_bounds', status: 200, code: 'out_of_bounds', detail: null, op: 'delete', site: {}, body: null } },
   row_moved: { held: 3, doc: '1.0.1.0.1013', base: 40, frame: { op: 'rearrange', doc: '1.0.1.0.1013', as_of: 41 }, cause: 'moved', sent: true, time: 1786838400070, refusal: { kind: 'refused', name: 'arrangement_moved', status: 200, code: 'arrangement_moved', detail: null, op: 'rearrange', site: { as_of: 41, current: 44 }, body: null } },
   row_lost: { held: 5, doc: '1.0.1.0.1013', base: 40, frame: { op: 'insert', doc: '1.0.1.0.1013', as_of: 44 }, anchors: { before: null, after: null }, cause: 'answers_lost', sent: true, time: 1786838400080, refusal: { kind: 'shell', name: 'answers_lost', last: 'unreachable', elapsed_ms: 120480 } },
+  // a line whose `before` names words the board has not minted: a position into the words of the insert sent with that `id` (skep #969)
+  row_piece: { held: 6, doc: '1.0.1.0.1013', base: 40, frame: { op: 'insert', doc: '1.0.1.0.1013', at: { ordinal: '15', subspace: '1' }, values: [' so'], as_of: 40, id: 'page:9f.2' }, anchors: { before: { burst: 'page:9f.1', offset: 2 }, after: '1.0.1.0.1013.0.1.12' }, cause: 'behind', sent: false, time: 1786838400090 },
+  // a moved document's first moved line, with what `resolve(send)` would do now; and a line the device could not copy
+  row_sendable: { held: 7, doc: '1.0.1.0.1013', base: 40, frame: { op: 'insert', doc: '1.0.1.0.1013', as_of: 41 }, anchors: { before: null, after: null }, cause: 'moved', sent: true, time: 1786838400095, sendable: true },
+  row_unwritable: { held: 8, doc: '1.0.1.0.1013', base: 40, frame: { op: 'insert', doc: '1.0.1.0.1013', as_of: 41 }, cause: 'unreachable', sent: false, time: 1786838400099, unwritable: 'No space left on device (os error 28)', unwritable_class: 'full' },
   event_holding: { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 1, state: 'holding', cause: 'unreachable' },
+  // a line kept after its `op` answered `held`: its ordinal, the `id` the page sent, the position the board took it at and the address its insert minted (skep #968)
+  event_landed: { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 0, state: 'kept', landed: [{ held: 3, burst: 'page:9f.1', at: 44, addr: '1.0.1.0.1013.0.1.31' }, { held: 4 }] },
+  event_sendable: { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 2, state: 'moved', cause: 'arrangement_moved', hands: [{ key: 'own', fingerprint: 'fp-1' }], sendable: false, unwritable: 'Read-only file system (os error 30)', unwritable_class: 'read_only' },
   event_moved: { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 2, state: 'moved', cause: 'arrangement_moved', hands: [{ key: 'own', fingerprint: 'fp-1', label: 'laptop' }, { key: 'other', fingerprint: 'fp-2' }, { key: 'bare' }, { key: 'lost' }] },
   event_unread: { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 1, state: 'moved', cause: 'arrangement_moved', hands: [{ key: 'unread' }] },
   event_kept: { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 0, state: 'kept' },
   held_lines: { kind: 'shell', name: 'held_lines', doc: '1.0.1.0.1013', held: 2 },
   restored: { draft: '1.0.1.0.1013', at: 9, position: 17, as_of: 16, marker: null },
   restored_marked: { draft: '1.0.1.0.1013', at: 9, position: 17, as_of: 16, marker: { sides: ['1.0.1.0.1.1.1'], head: '1.0.1.0.1.2', head_copied: '6', at: 14 } },
+  past: { draft: '1.0.1.0.1013', at: 9, as_of: 16, state: [{ origin: '1.0.1.0.1013', i_start: 1, width: 5 }, { origin: '1.0.1.0.1014', i_start: 40, width: 8 }], sent: [{ origin: '1.0.1.0.1013', i_start: 1, width: 5 }, { origin: '1.0.1.0.7', i_start: 1, width: 8 }], covered: 8, marker: null },
+  standing: { base: '1.0.1.0.1.1', standing: 'behind', head: '1.0.1.0.1.2', left_behind: ['1.0.1.0.1014'] },
   undone: { draft: '1.0.1.0.1013', position: 17, record: null, restored: { base: '1.0.1.0.1.1', extent: 5 } },
   undone_bare: { draft: '1.0.1.0.1013', position: 18, record: '1.0.1.0.1.0.2.9', restored: null },
   withdrawn: { draft: '1.0.1.0.1013', position: 18, record: null },
@@ -256,22 +269,42 @@ test('the `held` answer decodes as the declarations give it — the ordinal, the
 test('`held(session)`\'s rows decode in their order — each line\'s frame as composed, its anchors and the refusal that stands on it narrowed, each null where the row carries none; an empty list is no line, and a list that is no list, or a row lacking a declared member, is null', () => {
   const rows = F.decodeHeldRows([SHAPES.row_holding, SHAPES.row_refused, SHAPES.row_moved, SHAPES.row_lost]);
   assert.ok(rows && rows.length === 4);
-  assert.deepEqual(rows[0], { held: 1, doc: '1.0.1.0.1013', base: 40, frame: SHAPES.row_holding.frame, anchors: { before: '1.0.1.0.1013.0.1.11', after: '1.0.1.0.1013.0.1.12', span: null }, cause: 'unreachable', sent: false, time: 1786838400052, refusal: null }, 'a line held while the board is away: its anchors without a span, no refusal');
+  assert.deepEqual(rows[0], { held: 1, doc: '1.0.1.0.1013', base: 40, frame: SHAPES.row_holding.frame, anchors: { before: '1.0.1.0.1013.0.1.11', after: '1.0.1.0.1013.0.1.12', span: null }, cause: 'unreachable', sent: false, time: 1786838400052, refusal: null, sendable: null, unwritable: null, unwritableClass: null }, 'a line held while the board is away: its anchors without a span, no refusal, and nothing said of a send or of the device');
   assert.deepEqual([rows[1].cause, rows[1].sent, rows[1].anchors?.span, rows[1].refusal], ['out_of_bounds', true, [{ start: '1.0.1.0.1013.0.1.3', width: '2' }], SHAPES.row_refused.refusal], 'a refused run: the delete\'s span, the board\'s verdict as the shell hands it up');
   assert.deepEqual([rows[2].cause, rows[2].anchors, /** @type {{site?: {as_of?: number, current?: number}}} */ (rows[2].refusal)?.site], ['moved', null, { as_of: 41, current: 44 }], 'a line held moved: no anchors, the two states on the board\'s refusal');
   assert.deepEqual([rows[3].cause, rows[3].anchors, rows[3].refusal], ['answers_lost', { before: null, after: null, span: null }, SHAPES.row_lost.refusal], 'the hand-over: anchors at the document\'s edges, the shell\'s refusal with its last failure and the time elapsed');
   assert.deepEqual(F.decodeHeldRows([]), [], 'nothing held');
+  const more = F.decodeHeldRows([SHAPES.row_piece, SHAPES.row_sendable, SHAPES.row_unwritable]);
+  assert.ok(more && more.length === 3, 'a row whose edge is a piece decodes, and the rows beside it with it');
+  assert.deepEqual([more[0].anchors, more[0].frame.id], [{ before: { burst: 'page:9f.1', offset: 2 }, after: '1.0.1.0.1013.0.1.12', span: null }, 'page:9f.2'], 'an edge naming words the board has not minted: the insert that carries them by its `id`, and the position into its words');
+  assert.deepEqual([more[1].sendable, more[1].unwritable, more[1].unwritableClass], [true, null, null], 'a moved document\'s first moved line: what a send would do now');
+  assert.equal(F.decodeHeldRows([{ ...SHAPES.row_sendable, sendable: false }])?.[0].sendable, false, 'a send that would hold it moved again: false, never the absent member\'s null');
+  assert.deepEqual([more[2].sendable, more[2].unwritable, more[2].unwritableClass], [null, 'No space left on device (os error 28)', 'full'], 'a line on no file: why, and the class the page keys its act by');
+  for (const cls of ['full', 'read_only', 'other']) assert.equal(F.decodeHeldRows([{ ...SHAPES.row_unwritable, unwritable_class: cls }])?.[0].unwritableClass, cls);
+  for (const bad of [[{ ...SHAPES.row_unwritable, unwritable_class: 'disk' }], [{ ...SHAPES.row_unwritable, unwritable: 28 }], [{ ...SHAPES.row_sendable, sendable: 'yes' }], [{ ...SHAPES.row_piece, anchors: { before: { burst: 'page:9f.1' }, after: null } }], [{ ...SHAPES.row_piece, anchors: { before: { burst: 7, offset: 2 }, after: null } }], [{ ...SHAPES.row_piece, anchors: { before: null, after: ['page:9f.1', 2] } }]]) {
+    assert.equal(F.decodeHeldRows(bad), null, JSON.stringify(bad));
+  }
   for (const bad of [null, {}, 'held', [null], [{ ...SHAPES.row_holding, frame: 'insert' }], [{ ...SHAPES.row_holding, frame: {} }], [{ ...SHAPES.row_holding, held: '1' }], [{ ...SHAPES.row_holding, sent: 'yes' }], [{ ...SHAPES.row_holding, refusal: 'out_of_bounds' }], [{ ...SHAPES.row_holding, refusal: { name: 'x' } }], [{ ...SHAPES.row_holding, anchors: { before: 3 } }], [SHAPES.row_holding, { held: 2 }]]) {
     assert.equal(F.decodeHeldRows(bad), null, JSON.stringify(bad));
   }
 });
 
 test('the `held` event decodes as the declarations give it — the document\'s state among the five, its cause and the hands that moved it, each hand\'s key among the five with its fingerprint and label where it carries them; a state or a hand\'s key outside its set, or a missing member, is null', () => {
-  assert.deepEqual(F.decodeHeldEvent(SHAPES.event_holding), { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 1, state: 'holding', cause: 'unreachable', hands: [] });
+  /** what an event carrying none of them reads for its send, its device and the lines it names kept */
+  const NONE = { sendable: null, unwritable: null, unwritableClass: null, landed: [] };
+  assert.deepEqual(F.decodeHeldEvent(SHAPES.event_holding), { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 1, state: 'holding', cause: 'unreachable', hands: [], ...NONE });
   assert.deepEqual(F.decodeHeldEvent(SHAPES.event_moved)?.hands, [{ key: 'own', fingerprint: 'fp-1', label: 'laptop' }, { key: 'other', fingerprint: 'fp-2', label: null }, { key: 'bare', fingerprint: null, label: null }, { key: 'lost', fingerprint: null, label: null }], 'each hand once, the four forms a read names');
-  assert.deepEqual(F.decodeHeldEvent(SHAPES.event_unread), { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 1, state: 'moved', cause: 'arrangement_moved', hands: [{ key: 'unread', fingerprint: null, label: null }] },
+  assert.deepEqual(F.decodeHeldEvent(SHAPES.event_unread), { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 1, state: 'moved', cause: 'arrangement_moved', hands: [{ key: 'unread', fingerprint: null, label: null }], ...NONE },
     'a real moved verdict whose hands the board gave no answer to: the one hand, not read yet, the event kept whole');
-  assert.deepEqual(F.decodeHeldEvent(SHAPES.event_kept), { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 0, state: 'kept', cause: null, hands: [] }, 'kept: no cause, no hands');
+  assert.deepEqual(F.decodeHeldEvent(SHAPES.event_kept), { board: 'b-1', session: 's-1', doc: '1.0.1.0.1013', held: 0, state: 'kept', cause: null, hands: [], ...NONE }, 'kept: no cause, no hands, no line named');
+  assert.deepEqual(F.decodeHeldEvent(SHAPES.event_landed)?.landed, [{ held: 3, burst: 'page:9f.1', at: 44, addr: '1.0.1.0.1013.0.1.31' }, { held: 4, burst: null, at: null, addr: null }],
+    'the lines the event says kept: an insert\'s by its ordinal, the `id` the page sent, the position the board took it at and the address it minted; one the read found under a reclaimed history by its ordinal alone');
+  const moved = F.decodeHeldEvent(SHAPES.event_sendable);
+  assert.deepEqual([moved?.sendable, moved?.unwritable, moved?.unwritableClass, moved?.landed], [false, 'Read-only file system (os error 30)', 'read_only', []], 'a moved document a send would hold moved again, a line of it on no file: each as the event carries it');
+  for (const cls of ['full', 'read_only', 'other']) assert.equal(F.decodeHeldEvent({ ...SHAPES.event_sendable, unwritable_class: cls })?.unwritableClass, cls);
+  for (const bad of [{ ...SHAPES.event_sendable, unwritable_class: 'disk' }, { ...SHAPES.event_sendable, sendable: 1 }, { ...SHAPES.event_landed, landed: [{ burst: 'page:9f.1' }] }, { ...SHAPES.event_landed, landed: [{ held: 3, at: '44' }] }, { ...SHAPES.event_landed, landed: { held: 3 } }]) {
+    assert.equal(F.decodeHeldEvent(bad), null, JSON.stringify(bad));
+  }
   for (const bad of [null, {}, { ...SHAPES.event_holding, state: 'late' }, { ...SHAPES.event_holding, held: '1' }, { ...SHAPES.event_moved, hands: [{ key: 'agent' }] }, { ...SHAPES.event_moved, hands: [{ fingerprint: 'fp-1' }] }, { ...SHAPES.event_moved, hands: 'own' }, { ...SHAPES.event_holding, doc: null }]) {
     assert.equal(F.decodeHeldEvent(bad), null, JSON.stringify(bad));
   }
@@ -294,6 +327,20 @@ test('`history.restore`\'s `Restored` decodes — the state restored, the write\
   assert.equal(F.decodeShown({ shown: true }), true);
   assert.equal(F.decodeShown({ shown: false }), false);
   for (const bad of [null, {}, { shown: 'yes' }, { shown: 1 }, true]) assert.equal(F.decodeShown(bad), null, JSON.stringify(bad));
+});
+
+test('`history.past`\'s `Past` decodes — the state\'s runs as drawn and as a restore made now would send them, how many a record covers and the marker as it stands — and `publication.standing`\'s `PublicationStanding` the base, its standing, the head it stands behind and what its publication leaves behind; a malformed form of either is null', () => {
+  assert.deepEqual(F.decodePast(SHAPES.past), {
+    draft: '1.0.1.0.1013', at: 9, asOf: 16,
+    state: [{ origin: '1.0.1.0.1013', iStart: 1, width: 5 }, { origin: '1.0.1.0.1014', iStart: 40, width: 8 }],
+    sent: [{ origin: '1.0.1.0.1013', iStart: 1, width: 5 }, { origin: '1.0.1.0.7', iStart: 1, width: 8 }],
+    covered: 8, marker: null,
+  });
+  assert.deepEqual(F.decodePast({ ...SHAPES.past, marker: SHAPES.restored_marked.marker })?.marker, { sides: ['1.0.1.0.1.1.1'], head: '1.0.1.0.1.2', headCopied: 6, at: 14 }, 'the marker as it stands');
+  for (const bad of [null, {}, { ...SHAPES.past, as_of: undefined }, { ...SHAPES.past, state: [{ origin: '1.0.1.0.1013', i_start: '1', width: 5 }] }, { ...SHAPES.past, sent: 'none' }, { ...SHAPES.past, covered: '8' }]) assert.equal(F.decodePast(bad), null, JSON.stringify(bad));
+  assert.deepEqual(F.decodePublicationStanding(SHAPES.standing), { base: '1.0.1.0.1.1', standing: 'behind', head: '1.0.1.0.1.2', leftBehind: ['1.0.1.0.1014'] });
+  assert.deepEqual(F.decodePublicationStanding({ base: '1.0.1.0.1', standing: 'first', left_behind: [] }), { base: '1.0.1.0.1', standing: 'first', head: null, leftBehind: [] }, 'no head named where the base does not stand behind one');
+  for (const bad of [null, {}, { ...SHAPES.standing, standing: 'ahead' }, { ...SHAPES.standing, base: 1 }, { ...SHAPES.standing, left_behind: '1.0.1.0.1014' }, { ...SHAPES.standing, head: 2 }]) assert.equal(F.decodePublicationStanding(bad), null, JSON.stringify(bad));
 });
 
 test('`merge.undo`\'s `Undone` and `merge.withdraw`\'s `Withdrawn` decode — the draft, the commit, the record where one stood and the base restored where the draft records one, each null where absent; a malformed form is null', () => {
@@ -358,6 +405,8 @@ test('`publication.confirm`\'s three outcomes decode — the acknowledgment\'s m
   for (const bad of [null, {}, SHAPES.restated, { ...SHAPES.acknowledged, via: 'memo' }, { ...SHAPES.acknowledged, at: '12' }]) assert.equal(F.decodeAcknowledged(bad), null, JSON.stringify(bad));
   assert.deepEqual(F.decodeRestated(SHAPES.restated), { outcome: 'restated', left: ['1.0.1.0.1013.0.2.1'], superseded: [], came: [], removalsUndone: [], removalsCame: [], selection: [{ run: 1, placement: { whole: { ordinal: 4 } } }, { run: 2, placement: { split: [[1, 2, 3]] } }, { run: 3, placement: 'absent' }], race: { at: 44, key: 'bare', signed: false }, standing: 'superseded_first' });
   assert.deepEqual([F.decodeRestated({ ...SHAPES.restated, race: undefined, standing: undefined })?.race, F.decodeRestated({ ...SHAPES.restated, race: undefined, standing: undefined })?.standing], [null, null], 'no race, the standing unmoved');
+  assert.deepEqual(F.decodeRestated({ ...SHAPES.restated, selection: [{ run: 4, placement: { places: [3, 9] } }] })?.selection, [{ run: 4, placement: { places: [3, 9] } }], 'a run standing whole at more than one place: each place it is carried at');
+  assert.equal(F.decodeRestated({ ...SHAPES.restated, selection: [{ run: 4, placement: { places: ['3'] } }] }), null, 'a place that is no number: malformed');
   for (const bad of [null, {}, SHAPES.acknowledged, { ...SHAPES.restated, selection: [{ run: 1, placement: 'gone' }] }, { ...SHAPES.restated, selection: [{ run: 1, placement: { split: [[1, 2]] } }] }, { ...SHAPES.restated, race: { at: 44 } }, { ...SHAPES.restated, left: '1.0.1.0.1013.0.2.1' }]) assert.equal(F.decodeRestated(bad), null, JSON.stringify(bad));
   assert.deepEqual(F.decodePublicationRefused(SHAPES.refused), { outcome: 'refused', arm: 'over_cap', data: { over: [{ term: 'links', by: 2 }] } });
   assert.deepEqual(F.decodePublicationRefused({ outcome: 'refused', arm: 'twin', member: '1.0.1.0.1.2', missing: { copy: 1 } })?.data, { member: '1.0.1.0.1.2', missing: { copy: 1 } }, 'the arm\'s own members, as the arm carries them');
@@ -384,8 +433,10 @@ test('every literal the fetched declarations give a union a decoder checks decod
     ['HandKey', aliasOf('HandKey'), (key) => F.decodeHeldEvent({ ...SHAPES.event_moved, hands: [{ key }] })?.hands, (key) => [{ key, fingerprint: null, label: null }]],
     ['HeldEvent.state', memberOf('HeldEvent', 'state'), (state) => F.decodeHeldEvent({ ...SHAPES.event_holding, state })?.state, (x) => x],
     ['HeldAnswer.unwritable_class', memberOf('HeldAnswer', 'unwritable_class'), (c) => F.decodeHeld({ ...SHAPES.held_unwritable, unwritable_class: c })?.unwritableClass, (x) => x],
+    ['HeldRow.unwritable_class', memberOf('HeldRow', 'unwritable_class'), (c) => F.decodeHeldRows([{ ...SHAPES.row_unwritable, unwritable_class: c }])?.[0].unwritableClass, (x) => x],
+    ['HeldEvent.unwritable_class', memberOf('HeldEvent', 'unwritable_class'), (c) => F.decodeHeldEvent({ ...SHAPES.event_sendable, unwritable_class: c })?.unwritableClass, (x) => x],
     ['AckVia', aliasOf('AckVia'), (via) => [F.decodeAcknowledged({ ...SHAPES.acknowledged, via })?.via, F.decodeMergeLanded({ ...SHAPES.landed, via })?.via], (x) => [x, x]],
-    ['BaseStanding', aliasOf('BaseStanding'), (standing) => [F.decodePublicationPanel({ ...SHAPES.panel, standing })?.standing, F.decodeRestated({ ...SHAPES.restated, standing })?.standing], (x) => [x, x]],
+    ['BaseStanding', aliasOf('BaseStanding'), (standing) => [F.decodePublicationPanel({ ...SHAPES.panel, standing })?.standing, F.decodeRestated({ ...SHAPES.restated, standing })?.standing, F.decodePublicationStanding({ ...SHAPES.standing, standing })?.standing], (x) => [x, x, x]],
     ['GapKind', aliasOf('GapKind'), (kind) => F.decodeMergeReport({ ...SHAPES.report_reopened, gaps: [{ ...SHAPES.report_reopened.gaps[0], kind }] })?.gaps[0].kind, (x) => x],
     ['GapPlacement', aliasOf('GapPlacement'), (placed) => F.decodeMergeReport({ ...SHAPES.report_reopened, gaps: [{ ...SHAPES.report_reopened.gaps[0], placed }] })?.gaps[0].placed, (x) => x],
     ['Term', aliasOf('Term'), (term) => F.decodeCount({ count: SHAPES.panel.count, price: { ...SHAPES.panel.price, over: [{ term, by: 1 }] } })?.price.over, (term) => [{ term, by: 1 }]],

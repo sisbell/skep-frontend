@@ -941,6 +941,31 @@ test('the layout holds until the window changes, the reader acts, or the acting-
   } finally { REC.setDaemon(daemon); REC.setHealth(health, mode); REC.setSession(was); clicked(); }
 });
 
+test('the daemon\'s segment reads the form of the state the shell says of the board — none while it runs, its stopped and unreachable forms, the halted form at a halt the shell says or `/health` reads, the head-unreadable hold\'s own line naming the board — and the halted form for a state it holds no form for (D6 BM-22)', () => {
+  const daemon = REC.daemon(), reason = REC.daemonReason(), health = REC.health(), mode = REC.mode(), b = /** @type {{origin: string}} */ (REC.board());
+  const { host } = clicked();
+  /** the daemon's segment as rendered: the string it reads and its words; null where the line holds none */
+  const form = () => { LINE.act(); LINE.render(); const m = /<span class="seg daemon"><span class="warn" data-string="([^"]+)">(.*?)<\/span><\/span>/.exec(host.innerHTML); return m ? [m[1], plain(m[2])] : null; };
+  try {
+    REC.setHealth({ ...health, writes: { halted: false } }, mode);
+    REC.setDaemon('running');
+    assert.equal(form(), null, 'running: silent');
+    REC.setDaemon('stopped');
+    assert.deepEqual(form(), ['F.daemon.notebook.stopped', t('F.daemon.notebook.stopped')]);
+    REC.setDaemon('unreachable');
+    assert.deepEqual(form(), ['F.daemon.unreachable', t('F.daemon.unreachable')]);
+    REC.setDaemon('halted');
+    assert.deepEqual(form(), ['F.daemon.notebook.halted', t('F.daemon.notebook.halted')], 'the shell says the writes halted: the halted form, `/health` saying nothing of it');
+    REC.setDaemon('head_unreadable', 'the head record is cut short');
+    assert.deepEqual(form(), ['B3.head_unreadable', t('B3.head_unreadable', { board: t('L.mirror.board.name', { node: '1', origin: b.origin }) })], 'the head-unreadable hold: its own line, the board named as the status region names it');
+    REC.setHealth({ ...health, writes: { halted: true } }, mode);
+    assert.deepEqual(form(), ['F.daemon.notebook.halted', t('F.daemon.notebook.halted')], '`/health` reads the writes halted: the halted form, whatever the shell last said');
+    REC.setHealth({ ...health, writes: { halted: false } }, mode);
+    REC.setDaemon(/** @type {any} */ ('quiesced'));
+    assert.deepEqual(form(), ['F.daemon.notebook.halted', t('F.daemon.notebook.halted')], 'a state the line holds no form for: the halted form');
+  } finally { REC.setDaemon(/** @type {any} */ (daemon), reason); REC.setHealth(health, mode); clicked(); }
+});
+
 test('a part arriving between settings stands in its place in the line\'s order — a walk\'s folded moment right after the acting-as segment, in that segment\'s row, ahead of the daemon\'s row — where that row\'s room holds it, no row moved (issue #310\'s design decision: "A statement that arrives with no room opens beneath the line")', async () => {
   const daemon = REC.daemon();
   /** @type {Array<{key: string, words: string}>} what O-FACES' `folded` answers */

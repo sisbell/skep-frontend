@@ -1172,7 +1172,7 @@ test('a click on a block of a draft the person may edit places the caret at the 
 test('a key\'s click at a corner\'s act — the one the platform makes from Enter or Space at its button, naming no point — makes the act and moves no walk: on another document\'s corner, a caret kept in a draft of the person\'s, the kept word\'s opens its statement and again closes it, the walk on the draft\'s span and the caret kept as they stood; a pointer\'s click on the same act stands the walk on that document (D5 K-57, K-74; FP-20, FP-40)', () => onDrafts(async ({ D, O, onCorner }) => {
   await WALK.focusTo(D, 1, true, null, true);
   LAYER.placeCaret(D, 1);
-  LAYER.leaveCaret();
+  LAYER.leaveCaret('esc');
   WRITE.setKept(O, { word: 'kept', reason: null });
   const holder = { dataset: { corner: O } };
   const word = /** @type {any} */ ({ closest: (/** @type {string} */ sel) => (sel === '[data-corner]' ? holder : sel === '.kept-word[data-kept]' ? word : null) });

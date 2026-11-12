@@ -1292,7 +1292,7 @@ function childUnder(node, view) {
  * @returns {Promise<boolean>}
  */
 export async function key(k) {
-  LAYER.leaveCaret();
+  LAYER.leaveCaret('walk');
   if (!focus) { await enter(); return true; }
   if (k === 'down' || k === 'up' || k === 'first' || k === 'last') {
     const ni = k === 'down' ? Math.min(siblings.length - 1, idx + 1) : k === 'up' ? Math.max(0, idx - 1) : k === 'first' ? 0 : siblings.length - 1;
@@ -1317,7 +1317,7 @@ export async function key(k) {
 
 /** the plane takes focus with nothing focused yet: the board, a live caret left kept (see the head) */
 export async function enter() {
-  LAYER.leaveCaret();
+  LAYER.leaveCaret('walk');
   const move = ++moves;
   const kids = await childrenOf(null);
   if (move !== moves) return;
@@ -1340,7 +1340,7 @@ async function activate(i) {
   if (!siblings[i]) return;
   caretHeld = false;
   hidePanel();
-  LAYER.leaveCaret();
+  LAYER.leaveCaret('walk');
   if (i !== idx) {
     const move = ++moves;
     setFocus(siblings, i);
@@ -1389,7 +1389,7 @@ async function activate(i) {
 export async function focusTo(addr, pos, take = true, end = null, asHeld = false) {
   caretHeld = false;
   hidePanel();
-  LAYER.leaveCaret();
+  LAYER.leaveCaret('teleport');
   await standOn(addr, pos, take, end, asHeld, 'aim');
 }
 
@@ -1420,7 +1420,7 @@ export async function returnFocusTo(addr, pos, take = true, end = null) {
 export async function restAt(addr) {
   caretHeld = false;
   hidePanel();
-  LAYER.leaveCaret();
+  LAYER.leaveCaret('teleport');
   await standOn(addr, null, true, null, false, 'rest');
 }
 
@@ -1500,7 +1500,7 @@ async function standOn(addr, pos, take, end, asHeld, aims) {
  * @returns {Promise<void>}
  */
 async function restand(addr, pos, take = true, end = null, asHeld = false) {
-  LAYER.leaveCaret();
+  LAYER.leaveCaret('camera');
   await standOn(addr, pos, take, end, asHeld, 'carry');
 }
 
@@ -1521,11 +1521,13 @@ export function standAgain(addr, pos) { return restand(addr, pos, false); }
  * stood (T-LAYER's `leaveCaret`), its span holding the walk from now — a
  * camera move past the caret's reading scale, read by the re-take
  * (`retakeFromView`) or by the key that meets it first (N-KEYS' `whereNow`),
- * and Esc (`leaveText`).
+ * and Esc (`leaveText`). Esc commits the draft's open burst as it leaves; the
+ * camera's move commits nothing (T-LAYER's `Leave`; D6 BM-4, BM-5).
+ * @param {'esc' | 'camera'} how what left the caret: Esc, or a move of the camera alone
  * @returns {{addr: string, pos: number, block: number | null} | null} the span the caret stands in, in the text shown (T-LAYER's `caretSpan`); null where no live caret stood, nothing then held
  */
-export function holdCaret() {
-  const left = LAYER.leaveCaret();
+export function holdCaret(how) {
+  const left = LAYER.leaveCaret(how);
   if (left) caretHeld = true;
   return left;
 }
@@ -1539,7 +1541,7 @@ export function holdCaret() {
  * @returns {boolean} a live caret stood
  */
 export function leaveText() {
-  const left = holdCaret();
+  const left = holdCaret('esc');
   if (left) { hidePanel(); void standOn(left.addr, left.pos, true, null, true, 'aim'); }
   return !!left;
 }
@@ -1735,7 +1737,7 @@ function retake(addr, pos, byKey, asHeld = false) {
  */
 export async function retakeFromView(byKey = false) {
   if (liveCaret()) return;
-  holdCaret();
+  holdCaret('camera');
   const held = heldSpan();
   if (held) {
     const n = held.node;
