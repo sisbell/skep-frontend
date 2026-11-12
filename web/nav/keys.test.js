@@ -132,7 +132,15 @@
 // origin and carrying them where they stand, though the document holds the
 // same bytes again elsewhere, the list standing again on a return; a run withheld from the
 // reader is a target too, named "withheld · ⟨owner⟩" and reached at its own
-// withheld words; and a bare caret in a run keeps the caret's line.
+// withheld words; and a bare caret in a run keeps the caret's line. Undo and
+// redo (D5 K-75; D6 BM-31 … BM-34, BM-42, BM-45): Mod+Z and Mod+Shift+Z on
+// every platform and Ctrl+Y elsewhere than macOS, where the trail's list is
+// Ctrl+H (K-41); the newest run taken back at the press, the caret where it
+// began, what it did said and never drawn; and each press with nothing to
+// take back answered by its line — the empty stack's, the no-caret line
+// naming where the person was last writing, an edition's and another's
+// document's — each ending on the constant sentence while it stands whole;
+// a step whose line awaits the person's act answered at its face.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
@@ -1911,7 +1919,7 @@ test('a read answers at once whatever the board holds of the words: who wrote th
   PORT.boot(fake);
   /** @type {string[]} */
   const committed = [];
-  WRITE.machine({ commit: (addr) => committed.push(addr), typed() {}, leaving() {} });
+  WRITE.machine({ commit: (addr) => committed.push(addr), typed() {}, ended() {}, leaving() {} });
   try {
     await focusOn(D, 1);
     await press('Enter');
@@ -1941,7 +1949,7 @@ test('an act that sends a name for characters takes effect only once the board h
   const SHIFT = { ...MOD, shiftKey: true };
   /** @type {string[]} */
   const committed = [];
-  WRITE.machine({ commit: (addr) => committed.push(addr), typed() {}, leaving() {} });
+  WRITE.machine({ commit: (addr) => committed.push(addr), typed() {}, ended() {}, leaving() {} });
   try {
     await focusOn(D, 14);
     await press('Enter');
@@ -2472,3 +2480,178 @@ test('at a caret in a draft that cannot be written now a key that would put text
   } finally { WRITE.setUnwritable(b.board, null); WRITE.setMoved(D, false); LAYER.dropCaret(); WRITE.clearEdits(D); KEYS._reset(); }
 }));
 
+test('K-75\'s rows and K-41\'s: Mod+Z undoes and Mod+Shift+Z redoes on every platform; elsewhere than macOS Ctrl+Y redoes too and the trail\'s list is Ctrl+H, drawn so; on macOS ⌘Y stays the trail\'s and ⌘H the platform\'s (D5 K-41, K-75)', () => onPlane(async () => {
+  assert.deepEqual(rows.filter((r) => r.id === 'K-75').map((r) => [r.chord, r.act]), [['Mod+Z', 'undo'], ['Mod+Shift+Z', 'redo'], ['Mod+Y', 'redo']], 'K-75\'s three chords');
+  assert.deepEqual(rows.filter((r) => r.id === 'K-41').map((r) => [r.chord, r.act]), [['Mod+Y', 'trail.list'], ['Mod+H', 'trail.list']], 'K-41\'s chord by platform');
+  const mac = KEYS.MAC;
+  globalThis.document = /** @type {any} */ ({ activeElement: null, body: null, getElementById: () => null });
+  HOST.attach(/** @type {any} */ (hostEl));
+  /** a chord dispatched as the platform read delivers it: whether the page took it, and the overlay it left standing */
+  const chord = async (/** @type {string} */ key, shift = false) => { HOST.dismiss(); const took = await KEYS.dispatch(keyOf(key, { ...(KEYS.MAC ? { metaKey: true } : { ctrlKey: true }), shiftKey: shift }), PLANE); return [took, HOST.currentState()?.id ?? null]; };
+  try {
+    KEYS._platform(true);
+    assert.deepEqual([KEYS.undoAct('Mod+Z'), KEYS.undoAct('Mod+Shift+Z'), KEYS.undoAct('Mod+Y'), KEYS.trailChord(), KEYS.drawChord(KEYS.trailChord())], ['undo', 'redo', null, 'Mod+Y', '⌘Y'], 'macOS: ⌘Y is the trail\'s, never redo');
+    assert.deepEqual([await chord('y'), await chord('h'), await chord('z'), await chord('z', true)], [[true, 'trail-list'], [false, null], [true, null], [true, null]], 'macOS: ⌘Y opens the trail\'s list, ⌘H stays the platform\'s, ⌘Z and ⇧⌘Z are taken');
+    KEYS._platform(false);
+    assert.deepEqual([KEYS.undoAct('Mod+Z'), KEYS.undoAct('Mod+Shift+Z'), KEYS.undoAct('Mod+Y'), KEYS.trailChord(), KEYS.drawChord(KEYS.trailChord())], ['undo', 'redo', 'redo', 'Mod+H', 'Ctrl+H'], 'elsewhere: Ctrl+Y redoes, and the trail\'s list is Ctrl+H');
+    assert.deepEqual([await chord('y'), await chord('h'), await chord('z'), await chord('z', true)], [[true, null], [true, 'trail-list'], [true, null], [true, null]], 'elsewhere: Ctrl+Y is taken as the redo and opens no list, Ctrl+H opens the trail\'s list');
+  } finally { KEYS._platform(mac); HOST.dismiss(); }
+}));
+
+test('K-75 at a draft: Mod+Z takes the newest run of typing back whole — the words it placed out of the text, the words its Backspace took back in, the caret live where the run began and the selection ended — and says what it did in the status region, drawing nothing; the redo puts the run back and says so; a pause, and a key over a selection, are no edge and an edge of the run', () => onPlane(async ({ said }) => {
+  const SHIFT = { ...MOD, shiftKey: true };
+  const fake = FAKE.create({});
+  PORT.boot(fake);
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  MACHINE.handIn();
+  try {
+    await focusOn(D, 1);
+    await press('Enter');
+    await press('ArrowRight', {}, 5);
+    await press('Backspace', {}, 2);
+    await type('XYZ');
+    assert.deepEqual([shown().slice(0, 12), caret(), WRITE.undoOf(D).map((x) => [x.kind, x.open, x.acts.length])], ['FirXYZ line.', [D, 7, true], [['typing', true, 5]]], 'two Backspaces and three keys at one caret: one run, open');
+    const n = said.length;
+    await press('z', MOD);
+    assert.deepEqual([shown(), caret(), SEL.selected(), HINT.standing(), HOST.currentState()], [TEXT, [D, 6, true], null, null, null], 'the run taken back whole: the text as before it, the caret where the run began, nothing drawn');
+    assert.deepEqual(said.slice(n), [`${t('B3.undo.said.taken-out', { 'first words': 'XYZ' })} ${t('B3.undo.said.put-back', { 'first words': 'st' })}`], 'said once: what was taken out, then what was put back');
+    const m = said.length;
+    await press('z', SHIFT);
+    assert.deepEqual([shown().slice(0, 12), caret(), said.slice(m)], ['FirXYZ line.', [D, 7, true], [`${t('B3.undo.said.put-back', { 'first words': 'XYZ' })} ${t('B3.undo.said.taken-out', { 'first words': 'st' })}`]], 'the redo puts the run back as it was, the caret after its words, and says so');
+    // a key over a selection begins a run: the arrows end the one before, the selection's replacement is the next
+    await press('ArrowRight', { shiftKey: true }, 2);
+    await press('Q');
+    assert.deepEqual([shown().slice(0, 11), WRITE.undoOf(D).map((x) => [x.open, x.acts.length])], ['FirXYZQine.', [[false, 5], [true, 1]]], 'the key over the selection began a run of its own');
+    await press('z', MOD);
+    assert.deepEqual([shown().slice(0, 12), WRITE.undoOf(D).length, WRITE.redoOf(D).length], ['FirXYZ line.', 1, 1], 'one press takes the character out and puts the selection\'s words back');
+  } finally { MACHINE.takeOut(); PORT.boot(null); LAYER.dropCaret(); WRITE.clearEdits(D); KEYS._reset(); }
+}));
+
+test('K-75 with nothing to take back is answered by its line and never does nothing: an empty stack, "nothing to undo in this draft this session…", whole at its first press and its first clause after; no draft\'s caret, the no-caret line naming where the person was last writing; at an edition of the person\'s own C-45, and at another\'s document its line — each ending on the constant sentence while it stands whole; a draft that cannot be written, its reason\'s line; a redo with nothing to put back says nothing (D6 BM-42, BM-58)', () => onPlane(async ({ said }) => {
+  const SHIFT = { ...MOD, shiftKey: true };
+  const fake = FAKE.create({});
+  PORT.boot(fake);
+  MACHINE.handIn();
+  const constant = t('B3.undo.constant');
+  try {
+    await focusOn(D, 1);
+    await press('Enter');
+    // a session that may not write: the draft cannot be written, and the chord is answered by that reason's line
+    await press('z', MOD);
+    assert.deepEqual([HINT.standing()?.id, said.at(-1)], ['B3.keyless', t('B3.keyless')], 'a draft that cannot be written: the reason\'s own line, nothing composed');
+    REC.setSession(/** @type {any} */ ({ session: 's-2', principal: 1, account: '1.0.1', writes: true }));
+    await tick();
+    HINT._reset();
+    // an empty stack, at a live caret
+    await press('z', MOD);
+    const empty = hintOf('B3.undo.empty');
+    assert.deepEqual([HINT.standing(), said.at(-1), shown()], [{ id: 'B3.undo.empty', words: empty.whole, whole: empty.whole, open: true, writing: null, ending: constant }, `${empty.whole} ${constant}`, TEXT], 'the empty stack: its line whole at the first press, ending on the constant sentence, nothing changed');
+    await press('z', MOD);
+    assert.deepEqual([HINT.standing(), said.at(-1)], [{ id: 'B3.undo.empty', words: empty.clause, whole: empty.whole, open: false, writing: null }, empty.clause], 'a later press: its first clause, the constant sentence no longer beside it');
+    const n = said.length;
+    await press('z', SHIFT);
+    assert.deepEqual([said.length, shown()], [n, TEXT], 'a redo with nothing to put back is taken and says nothing');
+    // the caret kept in D, last written there, D in view at its reading scale; the walk on another's document: the chord acts in D
+    await type('k');
+    await press('Escape');
+    await tick();
+    await focusOn(O, 1);
+    let m = said.length;
+    await press('z', MOD);
+    assert.deepEqual([shown(), said.slice(m), caret()], [TEXT, [t('B3.undo.said.taken-out', { 'first words': 'k' })], [D, 1, true]], 'the draft whose caret the person last held, in view at its reading scale, is the chord\'s — wherever the walk stands');
+    // that draft below its reading scale: nothing is its target, and the no-caret line names where the person was last writing
+    await type('k');
+    await press('Escape');
+    await tick();
+    const cam = { ...CAM.cam };
+    CAM.set({ x: cam.x, y: cam.y, scale: cam.scale / 40 });
+    HINT._reset();
+    await press('z', MOD);
+    const none = hintOf('B3.undo.none'), writing = t('B3.undo.last-writing', { label: LAYER.boxName(D).name });
+    assert.deepEqual([LAYER.editable(D), HINT.standing(), said.at(-1), shown().slice(0, 2)], [false, { id: 'B3.undo.none', words: none.whole, whole: none.whole, open: true, writing, ending: constant }, `${none.whole} ${writing} ${constant}`, 'kF'],
+      'no draft\'s caret in reach: "undo works in the text of a draft you are writing…", then where the person was last writing, then the constant sentence — and nothing taken back');
+    await press('z', MOD);
+    assert.deepEqual([HINT.standing()?.words, HINT.standing()?.writing, HINT.standing()?.ending, said.at(-1)], [none.clause, writing, undefined, `${none.clause} ${writing}`], 'a later press: its first clause and where the person was writing, the constant sentence gone with the whole form');
+    // another's document at its reading scale, the draft out of view: that document's line
+    const fo = LAYER.foldOf(REC.doc(O)), bo = docBox(O), co = fo.columns[0];
+    CAM.set({ x: bo.x + co.x + co.w / 2, y: bo.y + co.y + co.h / 2, scale: 12 / fo.fs });
+    await focusOn(O, 1);
+    HINT._reset();
+    await press('z', MOD);
+    const theirs = hintOf('B3.row.others-document', { owner: '1.0.2' });
+    assert.deepEqual([LAYER.inView(D), HINT.standing()], [false, { id: 'B3.row.others-document', words: theirs.whole, whole: theirs.whole, open: true, writing, ending: constant }], 'at another\'s document: its own line, never C-45, ending the same way');
+    // an edition of the person's own: C-45, whole at every press, the constant sentence after it
+    LAYER.dropCaret();
+    listed([[E, 'edition']]);
+    const fe = LAYER.foldOf(REC.doc(E)), be = docBox(E), ce = fe.columns[0];
+    CAM.set({ x: be.x + ce.x + ce.w / 2, y: be.y + ce.y + ce.h / 2, scale: 12 / fe.fs });
+    await focusOn(E, 14);
+    const c45 = t('C-45', { D: E });
+    for (const press_ of [1, 2]) {
+      m = said.length;
+      await press('z', MOD);
+      await tick();
+      assert.deepEqual([HINT.standing(), said.slice(m)], [{ id: 'C-45', words: c45, whole: c45, open: true, writing: null, ending: constant }, [`${c45} ${constant}`]], `press ${press_} at an edition of the person's own: C-45 naming it, whole, the constant sentence after it`);
+    }
+    assert.deepEqual([fake.asked.filter((k) => k.startsWith('op:') || k.startsWith('resolve:')), WRITE.edits(D).length], [[], 1], 'no press of these composed or sent anything');
+  } finally { MACHINE.takeOut(); PORT.boot(null); LAYER.dropCaret(); WRITE.clearEdits(D); KEYS._reset(); }
+}));
+
+test('K-75 at a run whose line awaits the person\'s act — a refused run — is answered at its face: the face shown, no act of it taken, the focus where it stood, nothing composed and nothing dropped; the redo chord there is taken and changes nothing (D6 BM-45)', () => onPlane(async () => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  /** @type {unknown[]} */
+  let rows = [];
+  /** @type {string[]} */
+  const calls = [];
+  const fake = FAKE.create(new Proxy({}, { get: (_t, key) => (String(key).startsWith('op:') ? { result: { resp: 'held', held: 1, cause: 'out_of_bounds' } } : String(key).startsWith('held:') ? { result: rows } : undefined) }));
+  const call = fake.call;
+  fake.call = (name, args) => { calls.push(name); return call(name, args); };
+  PORT.boot(fake);
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  // D as a read at position 7 delivers it: the state its burst is typed at
+  REC.takeDelivery(D, [{ pos: 1, width: N, kind: 'content', text: TEXT, ref: null, origin: null }], 7, { from: 1, runs: [{ iStart: D + '.0.1.1', width: N }] });
+  MACHINE.handIn();
+  try {
+    await focusOn(D, 1);
+    await press('Enter');
+    rows = [{ held: 1, doc: D, base: 5, frame: { op: 'insert', doc: D, at: { ordinal: '1', subspace: '1' }, values: ['x.'] }, cause: 'out_of_bounds', sent: true, time: 1, refusal: { kind: 'refused', name: 'out_of_bounds', status: 200, code: 'out_of_bounds', detail: null, op: 'insert', site: {}, body: null } }];
+    await type('x.');
+    for (let i = 0; i < 6; i++) await tick();
+    assert.deepEqual([WRITE.keptOf(D)?.word, HOST.currentState()], ['not kept', null], 'a refused run stands, its face not opened');
+    const n = calls.length, edits = WRITE.edits(D).length;
+    await press('z', MOD);
+    assert.deepEqual([HOST.currentState()?.id, shown().slice(0, 3), WRITE.edits(D).length, WRITE.undoOf(D).length, calls.slice(n), caret()], [`face:unkept:own-bug:${D}`, 'x.F', edits, 1, [], [D, 3, true]],
+      'the press answered at the face: its words and its acts shown, the run\'s words standing, the step on the stack, nothing sent — no `resolve`, no `op` — and the caret where it stood');
+    await press('z', { ...MOD, shiftKey: true });
+    assert.deepEqual([shown().slice(0, 3), calls.slice(n)], ['x.F', []], 'the redo chord: taken, nothing to put back, nothing sent');
+  } finally { MACHINE.takeOut(); PORT.boot(null); HOST.dismiss(); LAYER.dropCaret(); WRITE.clearEdits(D); WRITE.setHeld(D, []); KEYS._reset(); }
+}));
+
+test('a run of typing ends at every move of the caret by an act other than typing — an arrow, Home, End, a click placing it, a selection extended from it, Esc — and at no key that types: a letter, Space, Enter, Tab, Backspace and Delete at one caret are one step (D6 BM-31; D5 K-75)', () => onPlane(async () => {
+  PORT.boot(FAKE.create({}));
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  MACHINE.handIn();
+  /** the draft's steps, each whether its run is open and how many acts it holds */
+  const steps = () => WRITE.undoOf(D).map((x) => [x.open, x.acts.length]);
+  try {
+    await focusOn(D, 1);
+    await press('Enter');
+    await type('ab');
+    await press(' '); await press('Enter'); await press('Tab'); await press('Backspace'); await press('Delete');
+    assert.deepEqual(steps(), [[true, 7]], 'every key that types at the one caret joins the run');
+    /** @type {Array<[string, () => Promise<unknown>]>} */
+    const ends = [
+      ['an arrow', () => press('ArrowLeft')], ['Home', () => press('Home')], ['End', () => press('End')],
+      ['a click placing the caret', async () => { LAYER.placeCaret(D, 2); }],
+      ['a selection extended from it', () => press('ArrowRight', { shiftKey: true })],
+      ['Esc', async () => { SEL.clear(); await press('Escape'); await tick(); }],
+    ];
+    for (const [what, act] of ends) {
+      const n = steps().length;
+      await act();
+      assert.deepEqual(steps().map((x) => x[0]), steps().map(() => false), `${what}: the run ended`);
+      await press('q');
+      assert.deepEqual([steps().length, steps().at(-1)], [n + 1, [true, 1]], `${what}: the next key begins a step of its own`);
+    }
+  } finally { MACHINE.takeOut(); PORT.boot(null); LAYER.dropCaret(); WRITE.clearEdits(D); KEYS._reset(); }
+}));

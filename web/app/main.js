@@ -157,6 +157,7 @@ import * as SEL from '../overlays/selection.js';
 import * as TRAILLIST from '../overlays/trail-list.js';
 import * as LANDING from '../overlays/landing.js';
 import * as HINT from '../overlays/hint.js';
+import * as DELETION from '../overlays/deletion.js';
 import * as LINE from '../line/line.js';
 import * as LEAP from '../nav/leap.js';
 import * as FIND from '../nav/find.js';
@@ -258,6 +259,7 @@ function loop(/** @type {number} */ now) {
     HOST.place();
     FIND.place();
     LANDING.render();
+    DELETION.render();
     HINT.render();
     if (SCENE.isOpen()) { SCENE.draw(); SCENE.markKept(); }
     // the one line in the frame what is kept moved, so a kept clause appears and lifts there with the corners and the mirror
@@ -294,7 +296,7 @@ function reading() {
  * @param {import('../model/pump.js').Dropped} x
  */
 function dropped(x) {
-  if (!x.addrs) { HOST.classChanged(); FACES.classChanged(); LEAP.classChanged(); FIND.classChanged(); GO.classChanged(); LINE.classChanged(x.at); HINT.classChanged(); }
+  if (!x.addrs) { HOST.classChanged(); FACES.classChanged(); LEAP.classChanged(); FIND.classChanged(); GO.classChanged(); LINE.classChanged(x.at); HINT.classChanged(); DELETION.classChanged(); }
   SCENE.dropped(x);
   void WALK.dropped(x);
 }
@@ -345,6 +347,7 @@ async function boot() {
   WALK.attach(el('mirror'));
   LANDING.attach(el('landing'), { handOff: () => WALK.focusItem(), pieces: el('pieces') });
   HINT.attach(el('hint'), { handOff: () => WALK.focusItem() });
+  DELETION.attach(el('removed'));
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')), stop: /** @type {HTMLButtonElement} */ (el('scenestop')), strokes: el('scenestrokes') },
     { end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, at, told) => FACES.floating(far, at, null, told), held: FACES.held } });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress(), reading);

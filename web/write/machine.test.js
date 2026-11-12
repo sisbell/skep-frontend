@@ -18,7 +18,15 @@
 // rebase, the window's own feed row, the page hidden and changing class, and
 // the page unloading: one close of its session carrying what is undialed
 // behind the frames whose answers are not in, a byte beside a word out named
-// by its piece.
+// by its piece. Undo and redo (BM-31 … BM-34, BM-45, BM-46, BM-73, BM-81,
+// BM-11, BM-12): a step is a run of typing, whatever bursts carried it; an
+// undo drops what no burst carried, sends the inverse of what one did — after
+// the ack where it is out — drops the run's held lines by one `resolve`, owes
+// the drop where the landing cannot be read, is answered at a face where the
+// person's act comes first, is declined where its source is withheld, and
+// goes inside the one close; a redo reinstates kept bytes and re-types
+// unminted ones under their own ordinals; and an inverse is never composed as
+// it was typed.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -121,6 +129,18 @@ function later() {
   const out = new Promise((r) => { give = r; });
   return { out, give };
 }
+
+/** keys typed at a caret standing at `pos` of a draft: each character one edit, made as a key typing at the caret (W-WRITE's `Typed`) */
+function type(/** @type {string} */ addr, /** @type {number} */ pos, /** @type {string} */ text) {
+  let p = pos;
+  for (const ch of [...text]) { WRITE.addEdit(addr, { pos: p, width: 0, text: ch }, { at: p }); p += byteLength(ch); }
+}
+/** Backspace at a caret standing at `pos` of a draft: the byte before it taken out, a key typing at the caret */
+const backspace = (/** @type {string} */ addr, /** @type {number} */ pos) => WRITE.addEdit(addr, { pos: pos - 1, width: 1, text: '' }, { at: pos });
+/** a draft's stacks as they stand: each step's kind, whether its run is open, and how many acts it holds */
+const stacks = (/** @type {string} */ addr) => ({ undo: WRITE.undoOf(addr).map((x) => [x.kind, x.open, x.acts.length]), redo: WRITE.redoOf(addr).map((x) => [x.kind, x.open, x.acts.length]) });
+/** a board's refusal of a frame, by its name */
+const refusal = (/** @type {string} */ name, /** @type {Record<string, unknown>} */ site = {}) => ({ kind: 'refused', name, status: 200, code: name, detail: null, op: 'insert', site, body: null });
 
 beforeEach(() => { MACHINE._reset(); REC._reset(); WRITE._reset(); });
 
@@ -830,6 +850,475 @@ test('BM-25, BM-29: a line the shell kept while the event stream stood dropped, 
 });
 
 // the last test of the file: it starts the pump, which reads for every test after it
+// ---- undo and redo (D6 BM-31 … BM-34, BM-45, BM-46, BM-81, BM-11, BM-12) -------------------------------------------------------
+
+test('BM-31: a step is a run of typing — a pause, punctuation, a commit, an ack and the save chord\'s commit end none; the caret\'s move by another act (a click, an arrow, Esc, a selection: W-WRITE\'s `endRun`) ends it, and so does an act that is a step of its own; a write no person made is no step', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame, n) => (frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)));
+  read(D, 'abc');
+  type(D, 4, 'de');
+  assert.deepEqual(stacks(D), { undo: [['typing', true, 2]], redo: [] }, 'two keys at one caret: one step, its run open');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush();
+  assert.deepEqual([ops.length, WRITE.keptOf(D)?.word], [1, 'kept'], 'the pause committed the burst and its ack landed');
+  type(D, 6, 'f.');
+  await flush();
+  WRITE.commit(D);
+  type(D, 8, 'g');
+  assert.deepEqual([ops.length, stacks(D).undo], [2, [['typing', true, 5]]], 'a pause, a commit, an ack, punctuation and the save chord\'s commit: the same run still, one step of five keys across three bursts');
+  WRITE.endRun(D);
+  assert.deepEqual(stacks(D).undo, [['typing', false, 5]], 'the caret moved by another act: the run ended');
+  type(D, 9, 'h');
+  assert.deepEqual(stacks(D).undo, [['typing', false, 5], ['typing', true, 1]], 'the next key begins a new step');
+  WRITE.addEdits(D, [{ pos: 1, width: 1, text: '' }]);
+  type(D, 9, 'i');
+  assert.deepEqual(stacks(D).undo, [['typing', false, 5], ['typing', false, 1], ['put-back', false, 1], ['typing', true, 1]], 'an act that is a step of its own ends the run before it and is no part of the one after');
+  // another hand's write, as a read delivers it: a byte set before the draft's first — no step of anyone's stack
+  const before = stacks(D);
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 4 }]);
+  REC.takeDelivery(D, [{ pos: 1, width: 4, kind: 'content', text: 'Zabc', ref: null, origin: null }], 40, { from: 1, runs: [{ iStart: own(D, 900), width: 1 }, { iStart: own(D, 1), width: 3 }] });
+  assert.deepEqual([stacks(D), shown(D).startsWith('Z')], [before, true], 'a write no person made at this page changes the text and adds no step');
+});
+
+test('BM-1, BM-2: an undo of a run no burst has carried drops it on the page — its edits leave the draft\'s, nothing is sent, no deletion face is raised and the text is as before the run; the redo brings the words back under their own page identity, unsent, sent at the next commit; and a new step empties the redo stack', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame, n) => MINTED(own(D, 100 * n), 19 + n));
+  read(D, 'abc');
+  type(D, 4, 'xyz');
+  const pages = WRITE.edits(D).map((e) => e.page);
+  assert.deepEqual([MACHINE.undo(D), shown(D), WRITE.edits(D), stacks(D), WRITE.removalsOf(D)], [{ how: 'done', at: 4, out: 'xyz', back: '' }, 'abc', [], { undo: [], redo: [['typing', false, 3]] }, []],
+    'the run taken back whole at the press: its edits gone from the draft\'s, the caret where it began, the step on the redo stack, no removal faced');
+  t.mock.timers.tick(MACHINE.PAUSE_MS * 3);
+  await flush();
+  assert.deepEqual([ops, WRITE.inFlight(D)], [[], false], 'nothing sent, at the press or at any pause after it, and no burst open');
+  assert.deepEqual(MACHINE.undo(D), { how: 'empty', at: null, out: '', back: '' }, 'the stack empty: the press answers so');
+  assert.deepEqual([MACHINE.redo(D), shown(D), WRITE.edits(D).map((e) => [e.page, e.text, e.sent ?? null]), stacks(D)], [{ how: 'done', at: 7, out: '', back: 'xyz' }, 'abcxyz', [[pages[0], 'xyz', null]], { undo: [['typing', false, 3]], redo: [] }],
+    'the redo: the words back under the ordinals they had, unsent, the caret after them, the step on the undo stack closed');
+  assert.deepEqual(ops, [], 'the redo is no commit point');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  assert.deepEqual(ops.map((o) => [o.frame.op, o.frame.values]), [['insert', ['xyz']]], 'and they are sent at the next commit like any typing');
+  await flush();
+  assert.equal(REC.pageIds(D, /** @type {number} */ (pages[0]), 3)[0].prefix, `${D}.0.1`, 'their ack minting the same bytes');
+  MACHINE.undo(D);
+  assert.equal(stacks(D).redo.length, 1);
+  type(D, 4, 'q');
+  assert.deepEqual(stacks(D), { undo: [['typing', true, 1]], redo: [] }, 'a new step empties the redo stack');
+});
+
+test('BM-80, BM-32, BM-34: a key over a selection begins a run; an undo of a run split across an acked burst and the open burst drops the open part on the page and sends one `delete` of the acked bytes and one `reinstate` of what the run removed, by identity — one step; the redo reinstates the words\' own bytes and inserts none', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame, n) => (frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)));
+  read(D, 'abcdef');
+  type(D, 7, 'g');
+  WRITE.endRun(D);
+  WRITE.addEdit(D, { pos: 3, width: 2, text: 'X' }, { at: 5 });
+  type(D, 4, 'Y');
+  assert.deepEqual(stacks(D).undo, [['typing', false, 1], ['typing', true, 2]], 'the key over the selection began a run, which the next key joined');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([ops.map((o) => o.frame.op), shown(D)], [['delete', 'insert', 'insert'], 'abXYefg'], 'the burst acked: the selection\'s delete and the two keys\' insert, then the earlier run\'s');
+  type(D, 5, 'Z');
+  const sent = ops.length;
+  assert.deepEqual([MACHINE.undo(D), shown(D), stacks(D)], [{ how: 'done', at: 5, out: 'XYZ', back: 'cd' }, 'abcdefg', { undo: [['typing', false, 1]], redo: [['typing', false, 3]] }],
+    'one press takes the whole run back: the unsent key dropped, the acked words out, the selection\'s words back, the caret where the run began');
+  assert.equal(ops.length, sent, 'the chord is no commit point');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual(ops.slice(sent).map((o) => [o.frame, o.anchors]), [
+    [{ op: 'delete', doc: D, p: at(3), width: '2', as_of: 22, id: id(4) }, { before: own(D, 2), after: own(D, 5), span: [{ start: own(D, 200), width: '2' }] }],
+    [{ op: 'reinstate', doc: D, at: at(3), runs: [{ i_start: own(D, 3), origin: D, width: '2' }], as_of: 23, id: id(5) }, { before: own(D, 2), after: own(D, 5) }],
+  ], 'one `delete` of the bytes the board minted for the run, one `reinstate` of the bytes it removed, by their own I-runs: no `insert`, and nothing of the key no burst carried');
+  const before = ops.length;
+  assert.deepEqual([MACHINE.redo(D), shown(D)], [{ how: 'done', at: 6, out: 'cd', back: 'XYZ' }, 'abXYZefg'], 'the redo puts the run back exactly as it was, the key no burst had carried with it, the caret after its words');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush(); await flush();
+  assert.deepEqual(ops.slice(before).map((o) => [o.frame.op, o.frame.runs ?? o.frame.values ?? o.frame.width]), [['delete', '2'], ['reinstate', [{ i_start: own(D, 200), origin: D, width: '2' }]], ['insert', ['Z']]],
+    'the redo: what the run removed removed again; the words the board holds back by a `reinstate` of their own bytes, never an insert of new ones; and the key never minted sent as the typing it is');
+});
+
+test('BM-32: what an undo takes back is the run\'s net change — a word typed and backspaced inside the run is nothing to take back, a run of Backspace over kept text is put back as one stretch, and a step with nothing left to take back leaves the stack unsaid', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame, n) => (frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)));
+  read(D, 'abcdef');
+  type(D, 7, 'gh');
+  WRITE.endRun(D);
+  // a run: two Backspaces over kept text, a word typed, one of its letters backspaced
+  backspace(D, 5); backspace(D, 4);
+  type(D, 3, 'XY');
+  backspace(D, 5);
+  assert.deepEqual([shown(D), WRITE.undoOf(D)[1].took.map((x) => REC.textOf(x.took.runs, 1, 3))], ['abXefgh', ['cd']], 'the two Backspaces are one stretch the step removed; the letter it typed and took out is none of it');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  const sent = ops.length;
+  assert.deepEqual([MACHINE.undo(D), shown(D)], [{ how: 'done', at: 5, out: 'X', back: 'cd' }, 'abcdefgh'], 'the net change taken back: the letter that stands out, the two bytes back in their order, the caret where the run began');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual(ops.slice(sent).map((o) => [o.frame.op, o.frame.width ?? o.frame.runs]), [['delete', '1'], ['reinstate', [{ i_start: own(D, 3), origin: D, width: '2' }]]], 'one `delete` of the one letter the board holds, one `reinstate` of the stretch');
+  // a run that nets to nothing
+  WRITE.endRun(D);
+  type(D, 9, 'q'); backspace(D, 10);
+  assert.deepEqual([stacks(D).undo.length, MACHINE.undo(D).out, shown(D), stacks(D).undo], [2, 'gh', 'abcdef', []], 'a step with nothing left to take back leaves the stack unsaid: the press goes on to the step before it');
+});
+
+test('BM-42: where the page holds a long draft in part and none of the text a kept step stands in, an undo changes nothing — the step never taken for one with nothing left, the stack as it stood — and answers where the step began, so its place is read first; held again, the step is taken back', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame, n) => MINTED(own(D, 100 * n), 19 + n));
+  /** a stretch of the draft as a read delivers it — the draft twenty-two positions long — each run of it by its first address */
+  const window = (/** @type {number} */ pos, /** @type {string} */ text, /** @type {Array<[number, number]>} */ stretches, asOf = 30) => {
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 22 }]);
+    REC.takeDelivery(D, [{ pos, width: byteLength(text), kind: 'content', text, ref: null, origin: null }], asOf, { from: pos, runs: stretches.map(([first, width]) => ({ iStart: own(D, first), width })) });
+  };
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 20 }]);
+  REC.takeDelivery(D, [{ pos: 1, width: 6, kind: 'content', text: 'abcdef', ref: null, origin: null }], 7, { from: 1, runs: [{ iStart: own(D, 1), width: 6 }] });
+  type(D, 3, 'XY');
+  WRITE.endRun(D);
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  window(1, 'abXYcdef', [[1, 2], [100, 2], [3, 4]]);
+  assert.deepEqual([ops.length, WRITE.edits(D), stacks(D).undo], [1, [], [['typing', false, 2]]], 'a run typed in the stretch held, kept, and read back: no edit of it on the page');
+  // the view moves on: the text the run stands in leaves the model, another stretch of the draft held
+  REC.invalidate(D);
+  window(14, 'lmnopq', [[12, 6]]);
+  assert.deepEqual([MACHINE.undo(D), stacks(D), WRITE.edits(D)], [{ how: 'away', at: 3, out: '', back: '' }, { undo: [['typing', false, 2]], redo: [] }, []],
+    'none of the step\'s text is held: nothing changed, the step still on the stack — never taken for one with nothing left — and the answer says where it began');
+  window(1, 'abXYcdef', [[1, 2], [100, 2], [3, 4]]);
+  assert.deepEqual([MACHINE.undo(D).how, shown(D).slice(0, 6), stacks(D)], ['done', 'abcdef', { undo: [], redo: [['typing', false, 2]] }], 'its text held again: the step taken back');
+});
+
+test('BM-34: an undo of a run whose burst is in flight takes it back on the page at once and sends its inverse only after the ack, which mints the bytes the `delete` names; a refusal answered after the press is dropped with the words, no island kept and no face raised (BM-45)', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const first = later(), third = later();
+  const { ops } = boot((frame, n) => (n === 1 ? first.out : n === 3 ? third.out : frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)));
+  read(D, 'abc');
+  type(D, 4, 'xy');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush();
+  assert.equal(ops.length, 1, 'the burst out, its answer not in');
+  assert.deepEqual([MACHINE.undo(D), shown(D), WRITE.removalsOf(D).map((r) => r.words)], [{ how: 'done', at: 4, out: 'xy', back: '' }, 'abc', ['xy']], 'taken back at the press, and the deletion face decided there: a dial carried the words');
+  t.mock.timers.tick(MACHINE.PAUSE_MS * 3);
+  await flush();
+  assert.equal(ops.length, 1, 'nothing more dialed while the answer is out, however many pauses pass');
+  first.give(MINTED(own(D, 50), 20));
+  await flush(); await flush();
+  assert.deepEqual(ops.slice(1).map((o) => [o.frame, o.anchors]), [[{ op: 'delete', doc: D, p: at(4), width: '2', as_of: 20, id: id(2) }, { before: own(D, 3), after: null, span: [{ start: own(D, 50), width: '2' }] }]],
+    'acked: the inverse goes, a `delete` of the bytes the ack minted');
+  await flush();
+  assert.deepEqual([shown(D), WRITE.keptOf(D)?.word, WRITE.removalsOf(D).length], ['abc', 'kept', 1], 'and the removal is faced once: not again as its `delete` is composed');
+  // a refusal answered after the press
+  WRITE.endRun(D);
+  type(D, 4, 'q');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush();
+  MACHINE.undo(D);
+  third.give(REFUSED);
+  await flush(); await flush();
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush();
+  assert.deepEqual([shown(D), WRITE.islandsOf(D), WRITE.keptOf(D)?.word, WRITE.edits(D).filter((e) => e.at == null), ops.length], ['abc', [], 'kept', [], 3],
+    'the refusal dropped with the words the person had taken back: no island, the corner "kept", nothing left to send and nothing sent');
+});
+
+test('BM-81: an undo of a run whose lines the shell holds sends ONE `resolve(drop)`, of the run\'s oldest held line, then reads the held lines again — an earlier run\'s line never dropped, no inverse composed for words the board never had; a line marked `sent` that the read finds landed is kept and its inverse sent; and where the read cannot run the drop stays owed, the corner "not yet kept" by the line\'s cause, tried again at the next read of the held lines', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  let rows = [];
+  /** @type {unknown} */
+  let answer = { result: {} };
+  const { fake, ops, names, resolves } = boot((frame, n) => (n <= 3 ? HELD(n, n === 1 ? 'unreachable' : 'behind') : frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)), () => rows, () => answer);
+  read(D, 'abc');
+  type(D, 4, 'x.');
+  rows = [ROW(1, D, ops[0].frame, { sent: true })];
+  await flush();
+  WRITE.endRun(D);
+  type(D, 6, 'y.');
+  rows = [rows[0], ROW(2, D, ops[1].frame, { cause: 'behind' })];
+  await flush();
+  type(D, 8, 'z.');
+  rows = [rows[0], rows[1], ROW(3, D, ops[2].frame, { cause: 'behind' })];
+  await flush();
+  assert.deepEqual([shown(D), WRITE.heldOf(D).map((r) => r.held), stacks(D).undo], ['abcx.y.z.', [1, 2, 3], [['typing', false, 2], ['typing', true, 4]]], 'an earlier run with one held line, then a run of two bursts, each held behind it');
+  let at0 = names.length;
+  rows = [rows[0]];
+  assert.deepEqual([MACHINE.undo(D), shown(D)], [{ how: 'done', at: 6, out: 'y.z.', back: '' }, 'abcx.'], 'the run taken back whole on the page at the press');
+  await flush(); await flush();
+  assert.deepEqual([resolves, names.slice(at0), WRITE.heldOf(D).map((r) => r.held), shown(D), ops.length, WRITE.keptOf(D)], [[{ session: 's-1', held: 2, act: 'drop' }], ['resolve', 'held'], [1], 'abcx.', 3, YET('unreachable')],
+    'ONE `resolve(drop)`, of the run\'s oldest held line, then the lines read again: the earlier run\'s line stands, and no inverse was composed');
+  t.mock.timers.tick(MACHINE.PAUSE_MS * 2);
+  await flush();
+  assert.deepEqual([ops.length, WRITE.removalsOf(D)], [3, []], 'nothing sent after it, and no deletion face: no dial of those lines left this device');
+  // the earlier run: its line marked `sent`, the shell's read finding it landed — kept, it leaves the shell's list
+  answer = { result: { kept: true } };
+  at0 = names.length;
+  rows = [];
+  assert.deepEqual([MACHINE.undo(D).out, shown(D), WRITE.removalsOf(D).map((r) => r.words)], ['x.', 'abc', ['x.']], 'the earlier run taken back: its line was dialed, so the removal is faced at the press');
+  await flush(); await flush();
+  assert.deepEqual([resolves.slice(1), WRITE.edits(D).filter((e) => e.sent === 1).map((e) => e.at != null), ops.length], [[{ session: 's-1', held: 1, act: 'drop' }], [true, true], 3],
+    'the read found the line landed: one `resolve(drop)`, nothing dropped — the line kept, its burst acked — and asked no second time');
+  // the next read holds the words the landing placed, at the addresses the board minted them at: the inverse then names them
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 5 }]);
+  REC.takeDelivery(D, [{ pos: 1, width: 5, kind: 'content', text: 'abcx.', ref: null, origin: null }], 30, { from: 1, runs: [{ iStart: own(D, 1), width: 3 }, { iStart: own(D, 70), width: 2 }] });
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual(ops.slice(3).map((o) => [o.frame.op, o.anchors]), [['delete', { before: own(D, 3), after: null, span: [{ start: own(D, 70), width: '2' }] }]],
+    'and its inverse is sent as a kept part\'s is: a `delete` of the bytes the board holds');
+  await flush();
+  assert.deepEqual([shown(D), WRITE.keptOf(D)?.word], ['abc', 'kept']);
+});
+
+test('BM-32, BM-33: once a read holds a run\'s change, its edits gone from the page\'s, the undo still takes back what the run placed and puts back what it removed, by the step\'s own record of their identity — a `delete` and a `reinstate` — and the redo after the next read reinstates the run\'s words by their own bytes, never an insert of new ones', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame, n) => (frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)));
+  /** the draft as a read delivers it: its text, and the address of each stretch of it */
+  const deliver = (/** @type {string} */ text, /** @type {number} */ asOf, /** @type {Array<[number, number]>} */ stretches) => {
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
+    REC.takeDelivery(D, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }], asOf, { from: 1, runs: stretches.map(([first, width]) => ({ iStart: own(D, first), width })) });
+  };
+  deliver('abcdef', 7, [[1, 6]]);
+  WRITE.addEdit(D, { pos: 3, width: 2, text: 'X' }, { at: 5 });
+  type(D, 4, 'Y');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  deliver('abXYef', 21, [[1, 2], [200, 2], [5, 2]]);
+  assert.deepEqual([WRITE.edits(D), shown(D)], [[], 'abXYef'], 'the read holds the run: no edit of it is left on the page');
+  assert.deepEqual([MACHINE.undo(D), shown(D)], [{ how: 'done', at: 5, out: 'XY', back: 'cd' }, 'abcdef'], 'undone from the step\'s own record: its words out, the bytes it removed back');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual(ops.slice(2).map((o) => [o.frame.op, o.frame.runs ?? o.anchors.span]), [['delete', [{ start: own(D, 200), width: '2' }]], ['reinstate', [{ i_start: own(D, 3), origin: D, width: '2' }]]],
+    'a `delete` of the bytes the board minted and a `reinstate` of the bytes the run removed, by their own I-runs');
+  deliver('abcdef', 23, [[1, 6]]);
+  assert.deepEqual(WRITE.edits(D).filter((e) => !e.based), [], 'and that inverse read back too');
+  assert.deepEqual([MACHINE.redo(D), shown(D)], [{ how: 'done', at: 5, out: 'cd', back: 'XY' }, 'abXYef'], 'the redo, with no edit of the run or of its undo on the page');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual(ops.slice(4).map((o) => [o.frame.op, o.frame.runs ?? o.anchors.span]), [['delete', [{ start: own(D, 3), width: '2' }]], ['reinstate', [{ i_start: own(D, 200), origin: D, width: '2' }]]],
+    'what the run removed removed again, and its words back by a `reinstate` of the bytes the board minted for them: no `insert`');
+});
+
+test('BM-81: a held line marked `sent` while the board is not answering — the drop refused `landing_unread` — leaves the run taken back on the page, the drop owed: nothing is composed of it, the corner keeps "not yet kept" by the line\'s cause, the drop is asked again at the line\'s next `held` event, and the page\'s close leaves its inverse out', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  let rows = [];
+  /** @type {unknown} */
+  let answer = { refused: { kind: 'shell', name: 'landing_unread', held: 1, why: 'unanswered' } };
+  const { fake, ops, resolves } = boot(() => HELD(1, 'unreachable'), () => rows, () => answer);
+  read(D, 'abc');
+  type(D, 4, 'x.');
+  rows = [ROW(1, D, ops[0].frame, { sent: true })];
+  await flush();
+  assert.deepEqual([MACHINE.undo(D).out, shown(D)], ['x.', 'abc'], 'taken back on the page at the press, whatever the shell answers');
+  await flush(); await flush();
+  assert.deepEqual([resolves.length, WRITE.heldOf(D).map((r) => r.held), WRITE.keptOf(D), shown(D)], [1, [1], YET('unreachable'), 'abc'], 'the drop refused: the line stands held, the corner "not yet kept" by its cause, the text as the person left it');
+  type(D, 4, 'q');
+  t.mock.timers.tick(MACHINE.PAUSE_MS * 3);
+  await flush();
+  assert.deepEqual([ops.length, resolves.length, WRITE.inFlight(D)], [1, 1, false], 'while the drop is owed nothing of the draft is dialed — no inverse held behind words the board never had — and the drop is not asked again unbidden; those waiting on the burst are told');
+  assert.equal(WRITE.leaving('unload'), true);
+  assert.deepEqual(fake.unloaded.map((u) => (u.close.frames || []).map((f) => [/** @type {any} */ (f.frame).op, /** @type {any} */ (f.frame).values, f.anchors])), [[['insert', ['q'], { before: own(D, 3), after: { burst: id(1), offset: 0 } }]]],
+    'the close carries the key typed since, placed beside the held words, and nothing of the inverse: the line stays in the shell\'s store');
+  MACHINE._reset(); REC._reset(); WRITE._reset();
+});
+
+test('BM-81: a drop owed is asked again at the line\'s next `held` event, and settles as any: dropped, the words\' edits leave and the corner reads "kept"', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  let rows = [];
+  /** @type {unknown} */
+  let answer = { refused: { kind: 'shell', name: 'landing_unread', held: 1, why: 'unanswered' } };
+  const { fake, ops, resolves } = boot(() => HELD(1, 'unreachable'), () => rows, () => answer);
+  read(D, 'abc');
+  type(D, 4, 'x.');
+  rows = [ROW(1, D, ops[0].frame, { sent: true })];
+  await flush();
+  MACHINE.undo(D);
+  await flush(); await flush();
+  assert.deepEqual(resolves.map((r) => [r.held, r.act]), [[1, 'drop']]);
+  answer = { result: {} };
+  fake.fire('held', EVENT(D, 'holding', 1, { cause: 'unreachable' }));
+  rows = [];
+  await flush(); await flush(); await flush();
+  assert.deepEqual([resolves.map((r) => [r.held, r.act]), WRITE.heldOf(D), shown(D), WRITE.keptOf(D)?.word, WRITE.edits(D).filter((e) => e.at == null), ops.length], [[[1, 'drop'], [1, 'drop']], [], 'abc', 'kept', [], 1],
+    'the line\'s next `held` event asks the drop again; dropped, the line and the words\' edits are gone, the corner "kept", nothing sent');
+});
+
+test('BM-45: an undo at a run whose line awaits an act of the person\'s — a refused run, the hand-over, a refusal the page keeps, a moved document — composes nothing and is answered at the face; discarded there, the step has nothing left and leaves the stack', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  let rows = [];
+  const { ops, resolves } = boot((frame, n) => (n === 1 ? HELD(1, 'out_of_bounds') : n === 2 ? REFUSED : n === 3 ? HELD(3, 'moved') : n === 4 ? HELD(4, 'answers_lost') : MINTED(own(frame.doc, 100 * n), 19 + n)), () => rows);
+  const untouched = (/** @type {string} */ addr, /** @type {string} */ text) => { const edits = WRITE.edits(addr).length, n = ops.length, r = resolves.length; const out = MACHINE.undo(addr); return [out, shown(addr), WRITE.edits(addr).length === edits, ops.length === n, resolves.length === r, stacks(addr).undo.length]; };
+  const FACE = { how: 'face', at: null, out: '', back: '' };
+  read(D, 'abc');
+  type(D, 4, 'x.');
+  rows = [ROW(1, D, ops[0].frame, { cause: 'out_of_bounds', sent: true, refusal: refusal('out_of_bounds') })];
+  await flush();
+  assert.deepEqual(untouched(D, 'abcx.'), [FACE, 'abcx.', true, true, true, 1], 'a refused run: nothing composed, nothing dropped, the words and the step standing — the press answered at the face');
+  read(E, 'abc');
+  type(E, 4, 'y.');
+  await flush();
+  assert.deepEqual([WRITE.islandsOf(E).length, untouched(E, 'abcy.')], [1, [FACE, 'abcy.', true, true, true, 1]], 'a refusal the page keeps: the same');
+  const F2 = '1.0.1.0.7', G = '1.0.1.0.9';
+  read(F2, 'abc');
+  type(F2, 4, 'm.');
+  rows = [rows[0], ROW(3, F2, ops[2].frame, { cause: 'moved', sent: true, refusal: { ...refusal('arrangement_moved'), site: { as_of: 7, current: 9 } }, sendable: false })];
+  await flush();
+  assert.deepEqual(untouched(F2, 'abcm.'), [FACE, 'abcm.', true, true, true, 1], 'a moved document: the same');
+  read(G, 'abc');
+  type(G, 4, 'h.');
+  rows = [...rows, ROW(4, G, ops[3].frame, { cause: 'answers_lost', sent: true, refusal: { kind: 'shell', name: 'answers_lost', last: 'unreachable', elapsed_ms: 120480 } })];
+  await flush();
+  assert.deepEqual(untouched(G, 'abch.'), [FACE, 'abch.', true, true, true, 1], 'the hand-over: the same');
+  // the discard is the face's act: taken there, the step has nothing left to take back
+  rows = rows.slice(1);
+  assert.equal((await MACHINE.drop(D, 1)).dropped, true);
+  assert.deepEqual([shown(D), MACHINE.undo(D), stacks(D)], ['abc', { how: 'empty', at: null, out: '', back: '' }, { undo: [], redo: [] }], 'discarded at its face, the run is gone: the next press finds nothing of it, and the step leaves the stack unsaid');
+});
+
+test('BM-45: a held answer that arrives after the press, for a burst of an undone run, is dropped as the undo\'s own act — one `resolve(drop)` — and no face is raised, whatever verdict its line carries; the burst held behind it is composed afresh by the page', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  let rows = [];
+  const first = later();
+  // the shell's list holds the line until the drop takes it
+  const { ops, resolves } = boot((frame, n) => (n === 1 ? first.out : MINTED(own(D, 100 * n), 19 + n)), () => rows, () => { rows = []; return { result: {} }; });
+  read(D, 'abc');
+  type(D, 4, 'x.');
+  await flush();
+  assert.deepEqual([MACHINE.undo(D).out, shown(D)], ['x.', 'abc'], 'undone while its burst is out');
+  type(D, 1, 'q');
+  rows = [ROW(1, D, ops[0].frame, { cause: 'out_of_bounds', sent: true, refusal: refusal('out_of_bounds') })];
+  first.give(HELD(1, 'out_of_bounds'));
+  await flush(); await flush(); await flush();
+  assert.deepEqual([resolves, WRITE.heldOf(D), shown(D), WRITE.islandsOf(D)], [[{ session: 's-1', held: 1, act: 'drop' }], [], 'qabc', []], 'held — a refused run — after the press: dropped by the page itself, its words gone, no island');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([ops.slice(1).map((o) => [o.frame.op, o.frame.values, o.frame.at]), WRITE.keptOf(D)?.word], [[['insert', ['q'], at(1)]], 'kept'], 'what was typed since is composed afresh and sent, nothing of the undone run with it; the corner "kept", never "not kept"');
+});
+
+test('BM-46: an undo of an earlier, kept step while the document\'s lines are held still composes its inverse, which the shell holds behind them — a hold never makes the chord inert', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  let rows = [];
+  const { ops, resolves } = boot((frame, n) => (n === 1 ? MINTED(own(D, 50), 20) : HELD(n, n === 2 ? 'unreachable' : 'behind')), () => rows);
+  read(D, 'abc');
+  type(D, 4, 'x.');
+  await flush();
+  assert.equal(WRITE.keptOf(D)?.word, 'kept', 'a kept step');
+  WRITE.endRun(D);
+  type(D, 1, 'y.');
+  rows = [ROW(2, D, ops[1].frame)];
+  await flush();
+  assert.deepEqual([shown(D), WRITE.heldOf(D).map((r) => r.held)], ['y.abcx.', [2]], 'then a run whose line is held');
+  // the held run is discarded at its line by the undo; then the earlier, kept one
+  rows = [];
+  MACHINE.undo(D);
+  await flush(); await flush();
+  type(D, 1, 'z.');
+  rows = [ROW(3, D, ops[2].frame)];
+  await flush();
+  WRITE.endRun(D);
+  const stack = WRITE.undoOf(D);
+  WRITE.setStacks(D, [stack[0]], []);
+  assert.deepEqual([MACHINE.undo(D).out, shown(D)], ['x.', 'z.abc'], 'the earlier, kept step undone while a line is held');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  rows = [rows[0], ROW(4, D, ops[3] ? ops[3].frame : {}, { cause: 'behind' })];
+  await flush(); await flush();
+  assert.deepEqual([ops.slice(3).map((o) => [o.frame.op, o.anchors]), resolves.map((r) => r.held), WRITE.heldOf(D).map((r) => r.held)], [[['delete', { before: own(D, 3), after: null, span: [{ start: own(D, 50), width: '2' }] }]], [2], [3, 4]],
+    'its inverse composed and dialed, held behind the line that stands: no line cancelled for it');
+});
+
+test('BM-11, BM-12: an undo\'s `reinstate` the board refuses `withheld` is declined — its held line dropped by the page, no refused run standing; the words gone from the text again, nothing written of them; those watching told the origin; and the step leaves the stack at this first reach, no redo meeting it', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  let rows = [];
+  /** @type {Array<[string, string]>} */
+  const told = [];
+  WRITE.onDeclined((addr, origin) => { told.push([addr, origin]); });
+  const O = '1.0.2.0.5';
+  // the shell's list holds a line until a drop takes it
+  const { ops, resolves } = boot((frame, n) => (frame.op === 'reinstate' ? (n === 3 ? { refused: refusal('withheld', { addr: O }) } : HELD(9, 'withheld')) : frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)), () => rows, () => { rows = []; return { result: {} }; });
+  read(D, 'abcdef');
+  type(D, 7, 'g');
+  WRITE.endRun(D);
+  backspace(D, 5); backspace(D, 4);
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([ops.map((o) => o.frame.op), shown(D)], [['delete', 'insert'], 'abefg'], 'a removal of kept text, kept');
+  assert.deepEqual([MACHINE.undo(D), shown(D)], [{ how: 'done', at: 5, out: '', back: 'cd' }, 'abcdefg'], 'the undo puts the words back at the press');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([ops.slice(2).map((o) => o.frame.op), shown(D), WRITE.islandsOf(D), WRITE.keptOf(D)?.word, told.slice(-1), stacks(D)], [['reinstate'], 'abefg', [], 'kept', [[D, O]], { undo: [['typing', false, 1]], redo: [] }],
+    'refused `withheld`: the words gone again, no island and no refused run, the corner "kept", the origin told, and the step off both stacks — the next press goes on to the one before');
+  assert.deepEqual(MACHINE.redo(D), { how: 'empty', at: null, out: '', back: '' }, 'no redo meets it');
+  // held `withheld`: the page drops the line itself
+  const E2 = '1.0.1.0.11';
+  read(E2, 'abcdef');
+  backspace(E2, 5);
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  MACHINE.undo(E2);
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  rows = [ROW(9, E2, { op: 'reinstate', doc: E2 }, { cause: 'withheld', sent: true, refusal: refusal('withheld', { addr: O }) })];
+  await flush(); await flush(); await flush(); await flush();
+  assert.deepEqual([resolves, WRITE.heldOf(E2), shown(E2), told.slice(-1), WRITE.keptOf(E2)?.word, stacks(E2)], [[{ session: 's-1', held: 9, act: 'drop' }], [], 'abcef', [[E2, O]], 'kept', { undo: [], redo: [] }],
+    'held `withheld`: one `resolve(drop)` of the line, nothing held behind it, the words gone again, the origin told, the step off the stack');
+});
+
+test('BM-73: an undo pending at the page\'s close goes inside the one close — its `frames` after the burst out\'s, a `delete` of that burst\'s words its follower, each piece naming the insert it follows; a `reinstate` beside those words names them by a piece and follows nothing', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { fake, ops } = boot((frame, n) => (n >= 3 ? later().out : frame.op === 'insert' ? MINTED(own(frame.doc, 100 * n), 19 + n) : ACK(19 + n)));
+  read(D, 'abcdef');
+  type(D, 4, 'x');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush();
+  WRITE.endRun(D);
+  // a run: a key over the selection "ef", then one more key — its burst's delete acked, its insert out
+  WRITE.addEdit(D, { pos: 6, width: 2, text: 'X' }, { at: 8 });
+  type(D, 7, 'Y');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([ops.map((o) => o.frame.op), shown(D)], [['insert', 'delete', 'insert'], 'abcxdXY'], 'the run\'s delete acked, its insert out, the answer not in');
+  assert.deepEqual([MACHINE.undo(D).out, shown(D)], ['XY', 'abcxdef'], 'undone in that interval');
+  assert.equal(WRITE.leaving('unload'), true);
+  assert.deepEqual(fake.unloaded, [{ close: { session: 's-1', after: [id(3)], frames: [
+    { frame: { op: 'delete', doc: D, p: at(6), width: '2', as_of: 21, id: id(4) }, anchors: { before: own(D, 4), after: null, span: [{ burst: id(3), offset: 0, width: 2 }] }, after: id(3) },
+    { frame: { op: 'reinstate', doc: D, at: at(6), runs: [{ i_start: own(D, 5), origin: D, width: '2' }], as_of: 21, id: id(5) }, anchors: { before: own(D, 4), after: null } },
+  ] } }], 'one close: behind the insert whose answer is not in, the `delete` of its words as its follower — its span a piece of that insert — then the `reinstate` of what the run removed');
+  assert.equal(ops.length, 3, 'nothing dialed the ordinary way as the page goes');
+});
+
+test('BM-73: at the close a `reinstate` set beside words of the burst out names them by the piece of the insert that carried them; a `delete` whose words two unanswered inserts carried is no follower of either and goes without a span', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { fake, ops } = boot((frame, n) => (n >= 2 ? later().out : ACK(19 + n)));
+  read(D, 'abc');
+  type(D, 4, 'p');
+  WRITE.endRun(D);
+  // a second run in the same burst: Backspace over the kept byte before the first run's word
+  backspace(D, 4);
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([ops.map((o) => o.frame.op), shown(D)], [['delete', 'insert'], 'abp'], 'one burst: the delete acked, the insert out');
+  assert.deepEqual([MACHINE.undo(D), shown(D)], [{ how: 'done', at: 4, out: '', back: 'c' }, 'abcp'], 'the newer run undone: the byte back beside the word whose insert is out');
+  assert.equal(WRITE.leaving('unload'), true);
+  assert.deepEqual(fake.unloaded.map((u) => [u.close.after, u.close.frames]), [[[id(2)], [{ frame: { op: 'reinstate', doc: D, at: at(3), runs: [{ i_start: own(D, 3), origin: D, width: '1' }], as_of: 20, id: id(3) }, anchors: { before: own(D, 2), after: { burst: id(2), offset: 0 } } }]]],
+    'the `reinstate` names the word beside it by the piece of the insert out, and carries no `after`: the row admits none on it');
+  MACHINE._reset(); REC._reset(); WRITE._reset();
+  // two inserts of one burst, the first out and the second undialed; then a removal across both and the byte between
+  const b = boot(() => later().out);
+  read(E, 'abc');
+  type(E, 1, 'x');
+  WRITE.endRun(E);
+  type(E, 4, 'y');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush();
+  assert.deepEqual([b.ops.map((o) => o.frame.id), shown(E)], [[id(1)], 'xabycd'.replace('d', '')], 'a burst of two inserts, the first out');
+  WRITE.endRun(E);
+  WRITE.addEdit(E, { pos: 1, width: 4, text: '' }, { at: 5 });
+  assert.equal(WRITE.leaving('unload'), true);
+  const carried = b.fake.unloaded[0].close.frames || [];
+  assert.deepEqual(carried.map((f) => [/** @type {any} */ (f.frame).op, f.anchors, f.after ?? null]), [['insert', { before: own(E, 2), after: own(E, 3) }, null], ['delete', { before: null, after: own(E, 3) }, null]],
+    'a `delete` over words of two unanswered inserts follows neither: it goes as it did, without a span, and names no `after` the row would refuse');
+});
+
 test('the window\'s own feed row is not news: the ack tells the model its position and the draft is read again as that act\'s feedback — the edits the read holds dropped as it sets the text, the text shown the same, no clause saying it is as last read and no word of how it was set — while another writer\'s row is news', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   // the board the fake port stands in for: the draft's text and the address of each of its bytes, moved by each insert it acks
@@ -969,3 +1458,53 @@ test('a draft the window writes in is kept as the view\'s wherever the plane pla
   assert.deepEqual([REC.doc(G).from, REC.textBetween(G, 1, 6)], [1, 'abcd.'], 'its own row, the camera still away: nothing of it dropped');
 });
 
+test('BM-32, BM-34: an undo\'s inverse is composed against the text shown, by identity, and never as it was typed — where a line of the undone run leaves the shell\'s list with no landing and the next read holds none of its words, the inverse takes nothing back, and the keys typed after it are sent as they stand', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  // the board the fake port stands in for: the draft's text and the address of each of its bytes, moved by each delete it acks
+  let text = 'abc\n\nsecond line', position = 7, hold = true;
+  let ordinals = [...text].map((_c, i) => i + 1);
+  /** @type {unknown[]} */
+  let rows = [];
+  const { fake, ops } = boot((frame) => {
+    switch (frame.op) {
+      case 'insert': if (hold) { hold = false; return HELD(1); } return MINTED(own(D, 500), ++position + 12);
+      case 'delete': {
+        const p = Number(frame.p.ordinal), w = Number(frame.width);
+        text = text.slice(0, p - 1) + text.slice(p - 1 + w);
+        ordinals = [...ordinals.slice(0, p - 1), ...ordinals.slice(p - 1 + w)];
+        return ACK(++position + 12);
+      }
+      case 'retrieve_doc_v_span_set': return { result: { as_of: position + 12, resp: 'span_set', set: [{ start: '1.1', width: '0.' + text.length }] } };
+      case 'doc_metadata': return frame.doc === D ? { result: { as_of: position + 12, resp: 'doc_metadata', doc: D, published: false, owner: '1.0.1' } } : { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } };
+      case 'retrieve_v': return { result: { as_of: position + 12, resp: 'delivery', items: [{ content: text }] } };
+      case 'image': return { result: { as_of: position + 12, resp: 'runs', runs: ordinals.map((o) => ({ i_start: own(D, o), width: '1' })) } };
+      case 'find_links_v': return { result: { as_of: position + 12, resp: 'addrs', addrs: [] } };
+      default: return undefined;
+    }
+  }, () => rows, () => ({ refused: { kind: 'shell', name: 'landing_unread', held: 1, why: 'unanswered' } }));
+  PUMP.start({ onDirty: () => {} });
+  REC.takeAccountKey('1.0.1', { label: 'dev-notebook', fingerprint: 'e4272902a11439e5' });
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: null, standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  const box = docBox(D), e = estimate(3, box), c = e.columns[0];
+  CAM.setViewport(1440, 900); CAM.reach(e.fs); CAM.set(CAM.viewAt({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2 }, e.fs));
+  const settle = async () => { for (let i = 0; i < 40 && !PUMP.settled(); i++) await flush(); };
+  const writes = () => ops.filter((o) => ['insert', 'delete', 'reinstate'].includes(o.frame.op)).map((o) => [o.frame.op, o.frame.p ?? o.frame.at, o.frame.width ?? o.frame.values]);
+  await settle();
+  WRITE.addEdit(D, { pos: 4, width: 0, text: ' Unread.' }, { at: 4 });
+  rows = [ROW(1, D, { op: 'insert', doc: D }, { sent: true })];
+  await flush(); await settle();
+  assert.deepEqual([shown(D), WRITE.keptOf(D)], ['abc Unread.\n\nsecond line', YET('unreachable')], 'a run whose line the shell holds, marked `sent`');
+  MACHINE.undo(D);
+  await flush(); await flush(); await settle();
+  assert.equal(shown(D), 'abc\n\nsecond line', 'undone: the drop owed');
+  // the line leaves the list with no landing told — another hand dropped it — and the draft is read again: its words are nowhere
+  rows = [];
+  fake.fire('held', EVENT(D, 'holding', 1, { cause: 'unreachable' }));
+  await flush(); await flush(); await settle();
+  WRITE.endRun(D);
+  WRITE.addEdit(D, { pos: 3, width: 1, text: '' }, { at: 4 });
+  t.mock.timers.tick(MACHINE.PAUSE_MS * 2);
+  await flush(); await settle();
+  assert.deepEqual([writes().slice(1), text, shown(D)], [[['delete', at(3), '1']], 'ab\n\nsecond line', 'ab\n\nsecond line'],
+    'the inverse takes nothing back, its words on no board: the one `delete` sent is the key typed since, and no byte the board kept is lost');
+});

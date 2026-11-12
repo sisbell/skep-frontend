@@ -1,5 +1,6 @@
-// W-MACHINE — the page's half of D6's burst machine: the open burst and the
-// held words (D6 BM-1 … BM-30, BM-56 … BM-62, BM-78; D5 K-73). In W-WRITE's
+// W-MACHINE — the page's half of D6's burst machine: the open burst, the
+// held words, and undo and redo (D6 BM-1 … BM-34, BM-45, BM-46, BM-51,
+// BM-56 … BM-62, BM-73, BM-78, BM-81; D5 K-73, K-75). In W-WRITE's
 // layer (FP-11): it draws nothing, and imports the bridge, the model, W-WRITE
 // and W-BURSTS alone. It is the one module that sends a write through B-PORT
 // (FP-11, FP-14) — `op`'s write frames, the unload's `close` that carries the
@@ -17,7 +18,11 @@
 // change of the page's class left words of it unsent. Beside them the count
 // the frames' ids are drawn from, the session last seen, the session whose
 // close the page's unload posted, and why the board's drafts cannot be
-// written now, by each cause (`blocks`).
+// written now, by each cause (`blocks`); the count the steps' ids are drawn
+// from, and the draft whose newest step is a run of typing still open; and,
+// per draft, the bursts an undo took back whose answer is not in or whose
+// line the shell holds, those a redo put back meanwhile, the acts an undo's
+// inverse was added as, and whether a drop of an undo's is out or owed.
 // OPEN (BM-1): the first edit after the last commit opens the draft's burst
 // (W-WRITE's `setFlight`), and the model is told the draft is being typed in
 // (M-REC's `setTyping`); nothing is dialed. THE COMMIT (BM-2, BM-3, BM-4):
@@ -88,12 +93,48 @@
 // is unsent under the session that typed it and marks what could not go as
 // sent and never acked, so no edit is ever dialed under another principal's
 // session.
+// THE STACKS (BM-31): each act of a draft's edits is recorded as it is told
+// (`record`): a key typing at the caret joins the run of typing open at the
+// draft, or begins one; any other act is a step of its own. A run ends where
+// W-WRITE says the caret moved by another act (`ended`) and at every step of
+// its own, an undo and a redo among them — never at a pause, punctuation, a
+// commit, an ack, a hold or the save chord. A step holds what it placed and
+// what it removed by the bytes' identity, so no burst's boundary decides what
+// an undo takes; the stacks are W-WRITE's, set here alone.
+// UNDO (`undo`; BM-1, BM-2, BM-32, BM-34, BM-45, BM-46, BM-81): the newest
+// step taken back at the press, its net change, part by part. What no burst
+// carried leaves the draft's edits. What a dial carried is taken back by
+// edits the open burst composes as any — a removal of what it placed, a
+// put-back of what it removed (W-WRITE's `restore`) — sent at that burst's
+// commit, which waits for the burst out as every commit does; the chord is no
+// commit point. A burst of the step unanswered at the press is the undo's:
+// acked, its inverse goes; refused, its words leave with it and no island is
+// kept (`forget`); held, its line is dropped by ONE `resolve(drop)` of the
+// step's oldest held line, the lines read again (`settleUndone`) — kept by the
+// shell's landing read, its inverse is sent; refused as unread, the drop is
+// owed, the draft's commits held back, and it is asked again at the next read
+// of the held lines that is not its own. A step whose line awaits an act of
+// the person's is answered at its face and composes nothing. An undo's
+// `reinstate` refused `withheld` is declined (`declined`; BM-11, BM-12): its
+// line dropped, its put-back gone, the step off the stack, those watching
+// told. An inverse is composed where the text shown places it, never as it
+// was typed. REDO (`redo`; BM-33): the step put back as it was — bytes the
+// board holds by a put-back of their own, bytes no board minted as the page's
+// own again under the ordinals they had. THE DELETION FACE's RECORD (BM-34,
+// BM-51): a removal is told to W-WRITE as a burst's `delete` is composed, and
+// at an undo, at its press, for the words a dial carried (`removed`). AT THE
+// CLOSE (BM-73) the open burst is composed with a `delete` of the burst
+// out's words as that burst's follower, and an inverse whose drop is owed is
+// left out (`composed`, `settled`).
 // Rules: FP-1, FP-2, FP-9, FP-10, FP-11, FP-14, FP-23, FP-28, FP-29, FP-38.
 
 import * as PORT from '../bridge/port.js';
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
 import * as F from '../model/frames.js';
+import { applyEdits, madeBy, placedAgain, stretchIn } from '../model/derive.js';
+import { documentOf } from '../model/address.js';
+import { sliceBytes } from '../util.js';
 import * as WRITE from './write.js';
 import * as BURSTS from './bursts.js';
 
@@ -104,6 +145,14 @@ import * as BURSTS from './bursts.js';
 /** @typedef {import('../model/frames.js').HeldLine} HeldLine */
 /** @typedef {import('../model/frames.js').HeldState} HeldState */
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
+/** @typedef {import('../model/records.js').Edit} Edit */
+/** @typedef {import('../model/records.js').ISpan} ISpan */
+/** @typedef {import('../model/records.js').ImageRun} ImageRun */
+/** @typedef {import('../model/records.js').Took} Took */
+/** @typedef {import('../model/records.js').Doc} Doc */
+/** @typedef {import('./write.js').Step} Step */
+/** @typedef {import('./write.js').Taken} Taken */
+/** @typedef {import('./write.js').Typed} Typed */
 
 /** the pause after the last edit that commits the open burst (D6 BM-2), in ms */
 export const PAUSE_MS = 500;
@@ -129,12 +178,17 @@ export const PAUSE_MS = 500;
  * @property {boolean} due a commit was asked while a burst was out, or while the draft was read again for one: the next burst goes as that ends
  * @property {boolean} reading the draft is being read again before its burst is composed (BM-56)
  * @property {number | null} typed the typed state as the draft's own acks raised it; null before any
- * @property {Map<number, {left: number, at: number}>} open each burst not yet acked whole: how many of its frames no ack names, and the latest position one was acked at
+ * @property {Map<number, {left: number, at: number, n: number}>} open each burst not yet acked whole: how many of its frames no ack names, the latest position one was acked at, and how many frames it went out as
  * @property {Map<number, {k: number, pages: Composed['pages'], id: string, since: number}>} lines the held lines this window's frames became, by the shell's ordinal: the burst each is of, the page's ordinals its insert carries, the `id` its frame carried, and how many reads of the held lines had gone out as it was answered
  * @property {string | null} cause the cause the shell last answered a hold of it by (`held`'s `cause`); null before any
  * @property {HeldState | null} told what the `held` event last told of it, until the lines are read again; null where they were
  * @property {string | null} verdict the moved verdict standing on it, by the line and the two states it names; null where none stands
  * @property {boolean} left a change of the page's class left words of it unsent: nothing more of it is dialed
+ * @property {Map<number, number>} undone the bursts of it an undo took back whose answer is not in or whose line the shell holds, each with the step it carried (`undo`): an answer of one that is no ack, and a line of one, is dropped as the undo's own act
+ * @property {Set<number>} redone those of them a redo put back while a drop of the undo's was out: dropped, their words are unsent again
+ * @property {Map<number, number>} inverse the acts an undo's inverse was added as (M-REC's `Edit.step`), each with the step undone
+ * @property {boolean} dropping a `resolve(drop)` of an undo's is out
+ * @property {boolean} unread the undo's last drop was refused: it is owed, and tried again at the next read of the held lines that is not its own
  */
 
 /** @typedef {{dropped: boolean, kept: boolean, mayHaveLanded: number[], unread: import('../model/frames.js').LandingUnread['why'] | null, refused: string | null}} Dropped — what a drop did (`drop`): the lines dropped, or the line found landed and kept; the dropped lines that may have landed; why the read for its landing could not tell, nothing dropped; the name of any other refusal */
@@ -156,8 +210,13 @@ let reads = 0;
 /** why the board's drafts cannot be written now, by each cause (`blocked`): the session ended with no re-open, and its arm; the session may not write; another shell holds the held store; the held file halts, and why; the held store's bound is met, and how many lines it held then */
 const blocks = { death: /** @type {string | null | false} */ (false), keyless: false, window: false, halted: /** @type {string | null | false} */ (false), full: /** @type {number | false} */ (false) };
 
+/** how many steps the machine has made (`record`): the next step's `id` is drawn from it */
+let steps = 0;
+/** @type {string | null} the draft whose newest step is a run of typing no act has ended (`record`, `ended`): one caret types at a time */
+let running = null;
+
 /** what W-WRITE is handed (`handIn`) */
-const MACHINE = Object.freeze({ typed, commit, leaving });
+const MACHINE = Object.freeze({ typed, ended, commit, leaving });
 
 /**
  * The machine handed in to W-WRITE (see the head), listening from then on
@@ -186,6 +245,7 @@ export function takeOut() {
   drafts.clear();
   seen = null;
   closedAtUnload = null;
+  running = null;
   const b = REC.board();
   blocks.death = false; blocks.keyless = false; blocks.window = false; blocks.halted = false; blocks.full = false;
   if (b) WRITE.setUnwritable(b.board, null);
@@ -204,7 +264,7 @@ const open = (/** @type {string} */ addr) => WRITE.unsent(addr) < WRITE.edits(ad
 function draftOf(/** @type {string} */ addr) {
   let d = drafts.get(addr);
   const s = REC.session();
-  if (!d && s) { d = { addr, session: s.session, principal: s.principal, timer: null, bursts: 0, out: null, due: false, reading: false, typed: null, open: new Map(), lines: new Map(), cause: null, told: null, verdict: null, left: false }; drafts.set(addr, d); }
+  if (!d && s) { d = { addr, session: s.session, principal: s.principal, timer: null, bursts: 0, out: null, due: false, reading: false, typed: null, open: new Map(), lines: new Map(), cause: null, told: null, verdict: null, left: false, undone: new Map(), redone: new Set(), inverse: new Map(), dropping: false, unread: false }; drafts.set(addr, d); }
   return d ?? null;
 }
 
@@ -284,9 +344,12 @@ function arm(/** @type {Draft} */ d) {
  * a session that may not write, at a draft a change of class left words of
  * unsent, at one another principal's session typed words of that the board
  * has not acked, or where the act's edits are an island's alone.
+ * The act is recorded first as a step of the draft's undo stack (`record`).
  * @param {string} addr
+ * @param {Typed | null} [how] the act is a key typing at the caret (W-WRITE's `Typed`); null for an act that is a step of its own
  */
-function typed(addr) {
+function typed(addr, how = null) {
+  record(addr, how);
   const s = REC.session();
   if (!s || !s.writes) return;
   const d = draftOf(addr);
@@ -337,15 +400,30 @@ const pieceOf = (d) => (page) => {
  * its edits apply over, its edits and its typed state — or, where the text
  * set under it does not place it, as it was typed (W-WRITE's `staleOf`;
  * BM-57): the frames, or why none.
+ * An undo's inverse the text set does not place is never composed as it was
+ * typed: it is composed where the text shown places it, by identity, and
+ * takes back nothing where that text holds none of its words (BM-32, BM-34).
+ * At the page's close (`closing`) a delete of words of the burst out is
+ * composed as that burst's follower (W-BURSTS's `Asked.follows`), and an
+ * undo's inverse of words whose held line it has not settled is left out
+ * (`settled`).
  * @param {Draft} d
+ * @param {boolean} [closing] the burst is composed for the page's close (`unload`)
  * @returns {{frames: Composed[], asOf: number} | {waits: import('./bursts.js').Waits}}
  */
-function composed(d) {
-  const addr = d.addr, stale = WRITE.staleOf(addr);
+function composed(d, closing = false) {
+  const addr = d.addr, typedAs = WRITE.staleOf(addr);
+  // an undo's inverse is composed against the text shown, by identity, and never as it was typed: one the text set no longer places has nothing left on the board to take back
+  if (typedAs && typedAs.edits.slice(typedAs.from).some((e) => e.step != null && d.inverse.has(e.step))) { WRITE.clearStale(addr); tidy(addr); }
+  const stale = WRITE.staleOf(addr);
   if (!REC.has(addr)) return { waits: 'unread' };
   const doc = stale ? stale.doc : WRITE.baseOf(addr), asOf = typedState(d, doc);
   if (asOf == null) return { waits: 'unread' };
-  const out = BURSTS.compose({ doc, edits: stale ? stale.edits : WRITE.edits(addr), from: stale ? stale.from : WRITE.unsent(addr), asOf, ids: (page, width) => REC.pageIds(addr, page, width), load: REC.PAGE_LOAD, seq: seq + 1, piece: pieceOf(d) });
+  const owed = closing && !stale && holdsBack(d) ? settled(d, doc) : null;
+  const edits = owed ? owed.edits : stale ? stale.edits : WRITE.edits(addr), from = owed ? owed.from : stale ? stale.from : WRITE.unsent(addr);
+  /** a delete may follow a frame of the burst out: the one awaiting its answer, or one the close carries before it */
+  const follows = (/** @type {string} */ burst) => !!d.out && d.out.frames.some((f) => f.frame.id === burst);
+  const out = BURSTS.compose({ doc, edits, from, asOf, ids: (page, width) => REC.pageIds(addr, page, width), load: REC.PAGE_LOAD, seq: seq + 1, piece: pieceOf(d), ...(closing ? { follows } : {}) });
   if ('waits' in out) return out;
   WRITE.clearStale(addr);
   return { frames: out.frames, asOf };
@@ -371,6 +449,8 @@ function commit(addr, last = false) {
   if (!d) return;
   if (d.timer) { clearTimeout(d.timer); d.timer = null; }
   if (d.out || d.reading) { if (last) leave(d); else d.due = true; return; }
+  // an undo's drop of a held line is out, or owed: nothing of the draft is dialed until it settles, and those waiting are told
+  if (!last && holdsBack(d)) { d.due = true; REC.setTyping(addr, false); settle(d); return; }
   d.due = false;
   if (!open(addr)) { REC.setTyping(addr, false); settle(d); return; }
   if (d.left || (!last && !current(d))) { if (last) leave(d); REC.setTyping(addr, false); settle(d); return; }
@@ -384,18 +464,22 @@ function commit(addr, last = false) {
   const out = composed(d);
   if ('waits' in out) {
     if (last) leave(d);
-    else if (out.waits === 'unread') { arm(d); return; }
+    // an undo's inverse of words whose address the next read names waits for that read, as a burst the record cannot place does
+    else if (out.waits === 'unread' || WRITE.edits(addr).some((e) => e.sent == null && e.step != null && d.inverse.has(e.step))) { arm(d); return; }
     REC.setTyping(addr, false);
     settle(d);
     return;
   }
+  // an undo's inverse of words the board kept at no address told waits for the read that names them, as a burst the record cannot place waits
+  if (!last && awaitsNames(d, out.frames)) { arm(d); return; }
   REC.setTyping(addr, false);
   const k = ++d.bursts;
   WRITE.markSent(addr, k);
   if (!out.frames.length) { WRITE.markAcked(addr, k, out.asOf); settle(d); return; }
   seq += out.frames.length;
   REC.setWriting(addr, true);
-  d.open.set(k, { left: out.frames.length, at: out.asOf });
+  for (const f of out.frames) if (f.lost) removed(addr, f.lost);
+  d.open.set(k, { left: out.frames.length, at: out.asOf, n: out.frames.length });
   d.out = { k, frames: out.frames, next: 0, acks: [], held: false, refusal: null };
   dial(d, d.out);
 }
@@ -436,6 +520,7 @@ function frameAcked(/** @type {Draft} */ d, /** @type {number} */ k, /** @type {
   b.left--; b.at = Math.max(b.at, at);
   if (b.left > 0) return;
   d.open.delete(k);
+  d.undone.delete(k); d.redone.delete(k);
   WRITE.markAcked(d.addr, k, b.at);
 }
 
@@ -455,10 +540,12 @@ function acked(d, ats) {
 /**
  * A frame's answer (see the head): an ack raises the typed state and mints
  * an insert's bytes; the shell's `held` answer keeps the line by its ordinal
- * and the hold's cause; anything else is a refusal the page keeps. The
- * frames after it are dialed in order whatever it was; the burst is finished
- * at the last. Nothing where the machine let the draft go meanwhile
- * (`takeOut`).
+ * and the hold's cause; anything else is a refusal the page keeps — save an
+ * undo's `reinstate` refused `withheld`, which is declined (`declined`), and
+ * a refusal of a burst an undo took back, whose words leave with it and
+ * which no island keeps (`forget`). The frames after it are dialed in order
+ * whatever it was; the burst is finished at the last. Nothing where the
+ * machine let the draft go meanwhile (`takeOut`).
  * @param {Draft} d
  * @param {Out} o
  * @param {Composed} f
@@ -473,10 +560,16 @@ function answered(d, o, f, out) {
     if ('addr' in ack) mint(d.addr, f.pages, ack.addr, ack.at);
     o.acks.push(ack.at);
     frameAcked(d, o.k, ack.at);
-  } else if (held) { d.lines.set(held.held, { k: o.k, pages: f.pages, id: f.frame.id, since: reads }); d.cause = held.cause; o.held = true; } else o.refusal = o.refusal || ('refused' in out ? out.refused : { kind: 'shell', name: 'malformed_answer' });
+  } else if (held) { d.lines.set(held.held, { k: o.k, pages: f.pages, id: f.frame.id, since: reads }); d.cause = held.cause; o.held = true; } else {
+    const r = 'refused' in out ? out.refused : /** @type {Refusal} */ ({ kind: 'shell', name: 'malformed_answer' });
+    // an undo's `reinstate` the board refuses `withheld` is declined (BM-11): no refused run stands of it
+    if (f.frame.op === 'reinstate' && r.name === 'withheld' && inverseOf(d, o.k) != null) declined(d, o.k, 1, r); else o.refusal = o.refusal || r;
+  }
   o.next++;
   if (o.next < o.frames.length) { dial(d, o); return; }
   d.out = null;
+  // an answer after the press for a burst an undo took back (BM-45): a refusal is dropped with the words, no island and no face
+  if (o.refusal && d.undone.has(o.k)) { forget(d, o.k); o.refusal = null; }
   if (o.refusal) refused(d, o.k, o.refusal);
   acked(d, o.acks);
   if (o.held) void readHeld(d.session).then(() => after(d, true)); else after(d, !!o.refusal);
@@ -517,11 +610,15 @@ const isMoved = (/** @type {HeldLine} */ r) => r.cause === 'moved' || (!!r.refus
  * head; `setLines`): left as they stand where the read is refused or no
  * list — its `store_halted` refusal the board's reason (BM-30) — and where
  * the session is no longer the page's.
+ * A read that is not an undo's own (`own`) lets each drop an undo owes be
+ * tried again as its lines are set (`settleUndone`).
  * @param {string} session
+ * @param {boolean} [own] the read follows an undo's own drop
  * @returns {Promise<HeldLine[] | null>} the lines, or null where none were set
  */
-async function readHeld(session) {
+async function readHeld(session, own = false) {
   const issued = ++reads;
+  if (!own) for (const d of drafts.values()) d.unread = false;
   const out = await PORT.held({ session });
   const s = REC.session();
   if (!handed || !s || s.session !== session) return null;
@@ -562,7 +659,8 @@ function setLines(rows, issued) {
     d.told = null;
     const first = list.find(isMoved);
     const lines = first && !first.hands && told && told.hands.length ? list.map((r) => (r === first ? { ...r, hands: told.hands, again: told.again } : r)) : list;
-    WRITE.setHeld(addr, lines);
+    // a line of a burst an undo took back is the undo's to drop: it reads as a line held, whatever verdict it carries, and no face answers it (BM-45, BM-81)
+    WRITE.setHeld(addr, lines.map((r) => { const l = d.lines.get(r.held); return l && d.undone.has(l.k) && r.refusal ? { ...r, refusal: null } : r; }));
     WRITE.setReopened(addr, lines.filter((r) => !d.lines.has(r.held)));
     if (!lines.length && !d.lines.size && !WRITE.reopened(addr).length && !told && !WRITE.keptOf(addr)) continue;
     /** @type {number[]} */
@@ -574,6 +672,7 @@ function setLines(rows, issued) {
     if (lines.length) REC.setWriting(addr, true);
     acked(d, ats);
     if (!d.out && !d.reading) say(d);
+    void settleUndone(d);
   }
 }
 
@@ -827,6 +926,578 @@ export function sendIsland(addr, id) {
   commit(addr);
 }
 
+// ---- undo and redo ----------------------------------------------------------------
+
+/**
+ * @typedef {Object} Undone — what an undo or a redo did at its press (`undo`, `redo`)
+ * @property {'done' | 'empty' | 'face' | 'away'} how `done` a step taken back, or put back; `empty` the stack holds no step; `face` the step's line awaits an act of the person's at its face, and nothing was composed (BM-45); `away` the page holds none of the text the step stands in — a long draft held in part — and nothing was changed: its place is to be read first (BM-42)
+ * @property {number | null} at where the caret stands after it, a position of the text shown — at `away`, where the step began, as it was then; null where nothing was done
+ * @property {string} out the words it took out of the text; '' where it took none
+ * @property {string} back the words it put back; '' where it put none back
+ */
+
+/** the identity of bytes the page made in a draft, as the model names them now (M-REC's `pageIds`) */
+const idsOf = (/** @type {string} */ addr) => (/** @type {number} */ page, /** @type {number} */ width) => REC.pageIds(addr, page, width);
+/** the text the page shows of a draft: the record its edits apply over with them applied */
+const shownOf = (/** @type {string} */ addr) => applyEdits(WRITE.baseOf(addr), WRITE.edits(addr), idsOf(addr)).doc;
+/** how many bytes a set of identity names */
+const widthOf = (/** @type {readonly {width: number}[]} */ ids) => ids.reduce((n, x) => n + x.width, 0);
+/** how many bytes a stretch a put-back places holds */
+const tookWidth = (/** @type {Took} */ t) => widthOf(t.runs);
+/** the words of a stretch a put-back places */
+const wordsOf_ = (/** @type {Took} */ t) => REC.textOf(t.runs, 1, 1 + tookWidth(t));
+/** how many of some bytes an image places */
+const standing = (/** @type {ImageRun[]} */ image, /** @type {readonly ISpan[]} */ ids) => (ids.length ? widthOf(REC.placedIn(image, [...ids])) : 0);
+/** where the one byte some identity names stands in an image; null where it names none, or the image places it nowhere or at two places */
+const one = (/** @type {ImageRun[]} */ image, /** @type {readonly ISpan[]} */ id) => { const at = id.length ? REC.placedIn(image, [...id]) : []; return at.length === 1 && at[0].width === 1 ? at[0].pos : null; };
+/** bytes by identity as an image of their own, each run at its position from 1 */
+const imageOf = (/** @type {readonly ISpan[]} */ ids) => { let at = 1; return ids.map((x) => { const r = { pos: at, width: x.width, prefix: x.prefix, ordinal: x.ordinal }; at += x.width; return r; }); };
+/** do two identities name the same one byte? */
+const sameByte = (/** @type {readonly ISpan[]} */ a, /** @type {readonly ISpan[]} */ b) => a.length === 1 && b.length === 1 && a[0].width === 1 && b[0].width === 1 && REC.placedIn(imageOf(a), [...b]).length === 1;
+/** a stretch a put-back places cut to `width` of its bytes from its `from`-th, counted from 0; null where it does not hold them */
+const cutTook = (/** @type {Took} */ t, /** @type {number} */ from, /** @type {number} */ width) => stretchIn(/** @type {Doc} */ (/** @type {unknown} */ ({ runs: t.runs, image: t.ids })), from + 1, width);
+/** two stretches a put-back places, one after the other, as one */
+const joinTook = (/** @type {Took} */ a, /** @type {Took} */ b) => { const w = tookWidth(a); return { runs: [...a.runs, ...b.runs.map((r) => ({ ...r, pos: r.pos + w }))], ids: [...a.ids, ...b.ids.map((r) => ({ ...r, pos: r.pos + w }))] }; };
+
+/**
+ * What an edit removed that its step had not placed itself (BM-32: the
+ * run's net change), each stretch with the byte either side of it: the
+ * bytes the step placed (`own`) left out, the stretches around them each a
+ * removal of its own.
+ * @param {import('../model/derive.js').Made} m what the edit did
+ * @param {readonly ISpan[]} own the bytes its step placed before it
+ * @returns {Taken[]}
+ */
+function takenOf(m, own) {
+  const took = /** @type {Took} */ (m.took), width = tookWidth(took);
+  /** @type {Taken[]} */
+  const out = [];
+  let at = 1;
+  /** the stretch [lo, hi) of what it removed, by its own positions from 1 */
+  const part = (/** @type {number} */ lo, /** @type {number} */ hi) => {
+    const cut = hi > lo ? cutTook(took, lo - 1, hi - lo) : null;
+    if (cut) out.push({ took: cut, before: lo > 1 ? REC.identityIn(took.ids, lo - 1, 1) : m.before, after: hi <= width ? REC.identityIn(took.ids, hi, 1) : m.after });
+  };
+  for (const s of own.length ? REC.placedIn(took.ids, [...own]) : []) { part(at, s.pos); at = s.pos + s.width; }
+  part(at, width + 1);
+  return out;
+}
+
+/**
+ * A removal added to those a step holds: joined to the last where it stood
+ * right before what that one took — Backspace after Backspace — or right
+ * after it — Delete after Delete — so a run of erasing is one stretch, put
+ * back whole.
+ * @param {readonly Taken[]} list
+ * @param {Taken} t
+ * @returns {Taken[]}
+ */
+function withTaken(list, t) {
+  const last = list[list.length - 1], w = tookWidth(t.took);
+  if (last && sameByte(last.before, REC.identityIn(t.took.ids, w, 1))) return [...list.slice(0, -1), { took: joinTook(t.took, last.took), before: t.before, after: last.after }];
+  if (last && sameByte(last.after, REC.identityIn(t.took.ids, 1, 1))) return [...list.slice(0, -1), { took: joinTook(last.took, t.took), before: last.before, after: t.after }];
+  return [...list, t];
+}
+
+/**
+ * The newest act of a draft's edits recorded as a step of its undo stack
+ * (see the head; BM-31): a key typing at the caret joins the run of typing
+ * open at the draft, or begins one; any other act is a step of its own, and
+ * ends the run. The step holds what the act placed and what it removed that
+ * the step had not placed, by identity, and a run where its caret stood as it
+ * began. A new step empties the redo stack. Nothing where the model holds no
+ * record of the draft.
+ * @param {string} addr
+ * @param {Typed | null} how the act is a key typing at the caret; null for an act that is a step of its own
+ */
+function record(addr, how) {
+  if (!REC.has(addr)) return;
+  const list = WRITE.edits(addr), act = WRITE.lastAct(addr), from = list.findIndex((e) => e.step === act);
+  if (from < 0) return;
+  if (running && running !== addr) ended(running);
+  const base = WRITE.baseOf(addr), ids = idsOf(addr);
+  const undone = WRITE.undoOf(addr), top = undone[undone.length - 1];
+  const joins = !!how && !!top && top.open;
+  /** where the caret stood before the act, by the byte either side of it */
+  const began = () => {
+    if (!how) return { before: [], after: [], pos: 0 };
+    const was = applyEdits(base, list.slice(0, from), ids).doc;
+    return { before: how.at > 1 ? REC.identityIn(was.image, how.at - 1, 1) : [], after: REC.identityIn(was.image, how.at, 1), pos: how.at };
+  };
+  /** @type {Step} */
+  const step = joins ? { ...top, acts: [...top.acts, act], placed: [...top.placed], took: [...top.took] }
+    : { id: ++steps, kind: how ? 'typing' : 'put-back', open: !!how, acts: [act], placed: [], took: [], began: began(), stood: null, removal: null };
+  for (const m of madeBy(base, list, from, ids)) {
+    if (m.took) for (const t of takenOf(m, step.placed)) step.took = withTaken(step.took, t);
+    step.placed.push(...m.placed);
+  }
+  running = step.open ? addr : null;
+  WRITE.setStacks(addr, joins ? [...undone.slice(0, -1), step] : [...undone.map((x) => (x.open ? { ...x, open: false } : x)), step], []);
+}
+
+/**
+ * The run of typing open at a draft ended (W-WRITE's `endRun`; BM-31): the
+ * next key that types begins a new step. Every draft's, where none is named.
+ * @param {string | null} [addr]
+ */
+function ended(addr = null) {
+  const at = running;
+  if (!at || (addr && addr !== at)) return;
+  running = null;
+  const stack = WRITE.undoOf(at);
+  if (stack.some((x) => x.open)) WRITE.setStacks(at, stack.map((x) => (x.open ? { ...x, open: false } : x)), WRITE.redoOf(at));
+}
+
+/** does the page hold a draft's text whole: its image names every position of its extent */
+const holdsWhole = (/** @type {string} */ addr) => { const b = WRITE.baseOf(addr); return b.extent != null && (b.extent === 0 || REC.identityIn(b.image, 1, b.extent).length > 0); };
+
+/** does a text place anything of a step — a byte it placed or removed, or one that stood beside its changes or its caret: whether the page holds the text the step stands in, where it holds a draft in part */
+const inReach = (/** @type {ImageRun[]} */ image, /** @type {Step} */ step) => standing(image, step.placed) > 0 || one(image, step.began.before) != null || one(image, step.began.after) != null
+  || step.took.some((t) => standing(image, t.took.ids) > 0 || one(image, t.before) != null || one(image, t.after) != null)
+  || (step.stood ?? []).some((t) => one(image, t.before) != null || one(image, t.after) != null);
+
+/** has a step nothing left to take back: none of what it placed stands in a text, and all it removed does */
+const spent = (/** @type {ImageRun[]} */ image, /** @type {Step} */ step) => !standing(image, step.placed) && step.took.every((t) => standing(image, t.took.ids) >= widthOf(t.took.ids));
+
+/**
+ * Bytes taken out of the text a draft shows, wherever they stand (BM-34):
+ * one removal for each stretch of them, the last in the text first, added as
+ * one act (W-WRITE's `restore`).
+ * @param {string} addr
+ * @param {readonly ISpan[]} ids the bytes, by identity
+ * @returns {number} the act; 0 where none of them stands
+ */
+function takenOut(addr, ids) {
+  const at = ids.length ? REC.placedIn(shownOf(addr).image, [...ids]) : [];
+  return WRITE.restore(addr, [...at].reverse().map((s) => ({ pos: s.pos, width: s.width, text: '' })));
+}
+
+/**
+ * The edits that place a stretch of bytes again at a position of the text a
+ * draft shows (BM-32, BM-33), run by run of their identity: by a put-back
+ * naming the last of the draft's edits that removed them, where one stands;
+ * else, for bytes the board minted, by a put-back naming a removal added
+ * with them, kept only for it; else — bytes the page made that no board
+ * minted — as the page's own words again, under the ordinals they had.
+ * @param {string} addr
+ * @param {Took} took the bytes: their runs and their identity
+ * @param {number} pos where the first of them goes
+ * @returns {Edit[]} in order, as W-WRITE's `restore` takes them
+ */
+function placing(addr, took, pos) {
+  const list = WRITE.edits(addr), made = madeBy(WRITE.baseOf(addr), list, 0, idsOf(addr));
+  /** what an edit of the list removed, as a put-back naming it places it */
+  const removedBy = (/** @type {number} */ i) => (list[i].based ? list[i].took ?? null : made[i].took);
+  /** @type {Edit[]} */
+  const out = [];
+  let at = pos, off = 0, n = list.length;
+  for (const q of took.ids.flatMap((r) => (REC.isPage(r.prefix) ? REC.pageIds(addr, r.ordinal, r.width) : [{ prefix: r.prefix, ordinal: r.ordinal, width: r.width }]))) {
+    /** @type {{of: number, from: number} | null} */
+    let found = null;
+    for (let i = list.length - 1; i >= 0 && !found; i--) {
+      const was = removedBy(i), where = was ? REC.placedIn(was.ids, [q]) : [];
+      if (where.length === 1 && where[0].width === q.width) found = { of: i, from: where[0].pos - 1 };
+    }
+    const cut = cutTook(took, off, q.width);
+    if (found) { out.push({ pos: at, width: 0, text: '', back: { of: found.of, from: found.from, width: q.width } }); n++; }
+    else if (!REC.isPage(q.prefix) && cut) { out.push({ pos: at, width: 0, text: '', based: true, took: cut }, { pos: at, width: 0, text: '', back: { of: n, from: 0, width: q.width } }); n += 2; }
+    else if (cut) { out.push({ pos: at, width: 0, text: sliceBytes(wordsOf_(took), off, off + q.width), page: q.ordinal }); n++; }
+    at += q.width; off += q.width;
+  }
+  return out;
+}
+
+/**
+ * A stretch of bytes put back in the text a draft shows, where that text
+ * does not hold them (BM-32, BM-33): each missing stretch of it placed after
+ * the byte that stood before it, else before the one that stood after it,
+ * else at `fallback`, the last first so each lands beside one already back
+ * (`placing`).
+ * @param {string} addr
+ * @param {Taken} t the bytes, and the byte either side of them
+ * @param {number} fallback a position of the text shown, where neither side stands
+ * @returns {number[]} the acts they were added as
+ */
+function putBack(addr, t, fallback) {
+  const width = tookWidth(t.took);
+  /** @type {number[]} */
+  const acts = [];
+  for (const m of [...missingIn(shownOf(addr).image, t.took)].reverse()) {
+    const cut = cutTook(t.took, m.from, m.width);
+    if (!cut) continue;
+    const doc = shownOf(addr);
+    const before = m.from > 0 ? REC.identityIn(t.took.ids, m.from, 1) : t.before, after = m.from + m.width < width ? REC.identityIn(t.took.ids, m.from + m.width + 1, 1) : t.after;
+    const b = one(doc.image, before), a = b == null ? one(doc.image, after) : null;
+    const pos = b != null ? b + 1 : a != null ? a : doc.from < 0 ? 1 : Math.max(doc.from, Math.min(fallback, doc.to));
+    const act = WRITE.restore(addr, placing(addr, cut, pos));
+    if (act) acts.push(act);
+  }
+  return acts;
+}
+
+/**
+ * The stretches of some bytes an image does not place, by the bytes' own
+ * order: each from its first byte, counted from 0, neighbours joined; none
+ * where it places them all. A stretch the bytes' own identity names none of
+ * is no stretch of them.
+ * @param {ImageRun[]} image
+ * @param {Took} took the bytes: their runs and their identity
+ * @returns {Array<{from: number, width: number}>}
+ */
+function missingIn(image, took) {
+  // the stretches of them the image places, by their own positions from 1
+  const held = took.ids.flatMap((q) => REC.placedIn(image, [q]).flatMap((s) => REC.placedIn([q], REC.identityIn(image, s.pos, s.width)))).sort((a, b) => a.pos - b.pos);
+  /** @type {Array<{from: number, width: number}>} */
+  const out = [];
+  for (const q of took.ids) {
+    let lo = q.pos;
+    const gap = (/** @type {number} */ hi) => { if (hi > lo) { const last = out[out.length - 1]; if (last && last.from + last.width === lo - 1) last.width += hi - lo; else out.push({ from: lo - 1, width: hi - lo }); } };
+    for (const s of held) { if (s.pos + s.width <= q.pos || s.pos >= q.pos + q.width) continue; gap(Math.max(q.pos, s.pos)); lo = Math.min(q.pos + q.width, s.pos + s.width); }
+    gap(q.pos + q.width);
+  }
+  return out;
+}
+
+/** the words of some bytes an image does not place (`missingIn`), in the bytes' own order: what a put-back of them returns to the text */
+const missingWords = (/** @type {ImageRun[]} */ image, /** @type {Took} */ took) => missingIn(image, took).map((m) => sliceBytes(wordsOf_(took), m.from, m.from + m.width)).join('');
+
+/** where a run's caret stood as it began, in a text: after the byte that stood before it, else before the one after it, else at the position it had, held inside the text */
+function caretIn(/** @type {Doc} */ doc, /** @type {Step['began']} */ began) {
+  const b = one(doc.image, began.before);
+  if (b != null) return b + 1;
+  const a = one(doc.image, began.after);
+  return a != null ? a : doc.from < 0 ? 1 : Math.max(doc.from, Math.min(began.pos || doc.from, doc.to));
+}
+
+/** the stretches of one list of them that another does not cover */
+function less(/** @type {Array<{pos: number, width: number}>} */ from, /** @type {Array<{pos: number, width: number}>} */ cover) {
+  /** @type {Array<{pos: number, width: number}>} */
+  const out = [];
+  for (const s of from) {
+    let lo = s.pos;
+    for (const c of cover) { if (c.pos + c.width <= lo || c.pos >= s.pos + s.width) continue; if (c.pos > lo) out.push({ pos: lo, width: c.pos - lo }); lo = Math.max(lo, c.pos + c.width); }
+    if (lo < s.pos + s.width) out.push({ pos: lo, width: s.pos + s.width - lo });
+  }
+  return out;
+}
+
+/**
+ * A removal of kept text the deletion face stands at (W-WRITE's
+ * `addRemoval`; BM-34, BM-51): added where none standing holds its bytes
+ * already — an undo's, decided at its press, is not added again as its
+ * `delete` is composed.
+ * @param {string} addr
+ * @param {{words: string, ids: ISpan[], before: ISpan[], after: ISpan[]}} r
+ * @returns {number | null} the removal's id; null where one standing holds its bytes, or it holds none
+ */
+function removed(addr, r) {
+  if (!r.ids.length || WRITE.removalsOf(addr).some((x) => standing(imageOf(x.ids), r.ids) >= widthOf(r.ids))) return null;
+  return WRITE.addRemoval(addr, r).id;
+}
+
+/** the removals a draft's deletion face stands at whose words the text shown holds again, let go (W-WRITE's `dropRemovals`) */
+function sweep(/** @type {string} */ addr) {
+  if (!WRITE.removalsOf(addr).length || !REC.has(addr)) return;
+  const image = shownOf(addr).image;
+  WRITE.dropRemovals(addr, (r) => standing(image, r.ids) >= widthOf(r.ids));
+}
+
+/** the edits an undo's or a redo's dropping left changing nothing, let go */
+const tidy = (/** @type {string} */ addr) => { WRITE.dropEdits(addr, (e) => !e.based && e.sent == null && e.width === 0 && !e.text && !e.back); };
+
+/**
+ * A draft's open burst as an undo or a redo leaves it: open, its pause begun
+ * again — the chord is no commit point (BM-2; D5 K-73) — or, where nothing
+ * of it is unsent, ended, its word said.
+ * @param {Draft | null} d
+ */
+function reopened(d) {
+  if (!d || drafts.get(d.addr) !== d) return;
+  if (open(d.addr) && !d.left && current(d) && !WRITE.unwritable(d.addr)) { WRITE.setFlight(d.addr, true); REC.setTyping(d.addr, true); arm(d); return; }
+  if (d.timer) { clearTimeout(d.timer); d.timer = null; }
+  if (!d.out && !d.reading) { REC.setTyping(d.addr, false); settle(d); }
+}
+
+/**
+ * The undo chord at a draft (D5 K-75; BM-1, BM-2, BM-31, BM-32, BM-34, BM-45,
+ * BM-46, BM-81): the newest step taken back whole, at once — the words it
+ * placed leave the text shown, the words it removed come back, its net
+ * change alone — part by part by where each part stands. What no burst
+ * carried leaves the draft's edits and nothing is sent of it. What a dial
+ * has carried — acked, out, or a line held — is taken back by edits the open
+ * burst then composes as any (W-BURSTS's `compose`): a removal of what it
+ * placed, a put-back of what it removed, sent at the burst's own commit,
+ * once the burst out is answered. A burst of the step whose answer is not
+ * in, or whose line the shell holds, is the undo's from then (`settleUndone`,
+ * `answered`). A step whose line awaits an act of the person's at its face —
+ * a refused run, the hand-over, a refusal the page keeps, a moved document —
+ * composes nothing and is answered so. A step with nothing left to take
+ * back leaves the stack unsaid, and the press goes on to the one before.
+ * Where the page holds a draft in part and none of the text the step stands
+ * in, nothing is changed and the answer says where the step began.
+ * The words the step placed that a dial carried are a removal the deletion
+ * face stands at, decided here (BM-34).
+ * @param {string} addr the draft
+ * @returns {Undone}
+ */
+export function undo(addr) {
+  /** @type {Undone} */
+  const none = { how: 'empty', at: null, out: '', back: '' };
+  if (!handed || !REC.has(addr)) return none;
+  ended();
+  const stack = [...WRITE.undoOf(addr)], redone = [...WRITE.redoOf(addr)], doc = shownOf(addr), whole = holdsWhole(addr);
+  while (stack.length && (whole || inReach(doc.image, stack[stack.length - 1])) && spent(doc.image, stack[stack.length - 1])) stack.pop();
+  const step = stack[stack.length - 1];
+  if (!step) { WRITE.setStacks(addr, stack, redone); return none; }
+  if (!whole && !inReach(doc.image, step)) { WRITE.setStacks(addr, stack, redone); return { ...none, how: 'away', at: step.began.pos || null }; }
+  const d = draftOf(addr), list = WRITE.edits(addr), rows = WRITE.heldOf(addr);
+  const mine = (/** @type {Edit} */ e) => e.step != null && !e.based && step.acts.includes(e.step);
+  /** the held lines of a burst, by their rows */
+  const linesOf = (/** @type {number} */ k) => (d ? [...d.lines].filter(([, l]) => l.k === k).map(([h]) => rows.find((r) => r.held === h) ?? null) : []);
+  /** the bursts of the step no ack names */
+  const unacked = [...new Set(list.flatMap((e) => (mine(e) && e.sent != null && e.at == null && e.island == null ? [e.sent] : [])))];
+  if (list.some((e) => mine(e) && e.island != null) || unacked.some((k) => linesOf(k).some((r) => !!r && (awaitsAct(r) || isMoved(r))))) { WRITE.setStacks(addr, stack, redone); return { ...none, how: 'face' }; }
+  // what the step placed that stands, as it stands, and the part of it no dial has carried
+  const made = madeBy(WRITE.baseOf(addr), list, 0, idsOf(addr));
+  const undialed = (/** @type {Edit} */ e) => e.sent == null || (e.at == null && !(d && d.out && d.out.k === e.sent) && linesOf(e.sent).length > 0 && linesOf(e.sent).every((r) => !r || !r.sent));
+  const quiet = list.flatMap((e, i) => (mine(e) && undialed(e) ? made[i].placed : []));
+  const stands = REC.placedIn(doc.image, step.placed);
+  /** @type {Taken[]} */
+  const stood = stands.flatMap((s) => { const took = stretchIn(doc, s.pos, s.width); return took ? [{ took, before: s.pos > 1 ? REC.identityIn(doc.image, s.pos - 1, 1) : [], after: REC.identityIn(doc.image, s.pos + s.width, 1) }] : []; });
+  const carried = less(stands, quiet.length ? REC.placedIn(doc.image, quiet) : []);
+  const at0 = carried.length ? stands.findIndex((s) => carried[0].pos >= s.pos && carried[0].pos < s.pos + s.width) : -1;
+  const face = at0 < 0 ? null : { words: carried.map((s) => REC.textOf(doc.runs, s.pos, s.pos + s.width)).join(''), ids: carried.flatMap((s) => REC.identityIn(doc.image, s.pos, s.width)), before: stood[at0] ? stood[at0].before : [], after: stood[at0] ? stood[at0].after : [] };
+  // the words that come back: what the step removed that the text does not hold
+  const back = step.took.map((x) => missingWords(doc.image, x.took)).join('');
+  // never sent: dropped on the page
+  if (list.some((e) => mine(e) && e.sent == null)) WRITE.dropEdits(addr, (e) => mine(e) && e.sent == null);
+  // what a dial has carried: its inverse, composed as any edit is
+  const acts = [takenOut(addr, step.placed)];
+  for (const t of [...step.took].reverse()) acts.push(...putBack(addr, t, step.began.pos));
+  tidy(addr);
+  const removal = face ? removed(addr, face) : null;
+  sweep(addr);
+  stack.pop();
+  WRITE.setStacks(addr, stack, [...redone, { ...step, open: false, stood, removal }]);
+  if (d) {
+    for (const a of acts) if (a) d.inverse.set(a, step.id);
+    for (const k of unacked) d.undone.set(k, step.id);
+    // the rows of the step's lines read as lines held from now, whatever verdict comes
+    if (unacked.length) WRITE.setHeld(addr, rows.map((r) => { const l = d.lines.get(r.held); return l && d.undone.has(l.k) && r.refusal ? { ...r, refusal: null } : r; }));
+  }
+  reopened(d);
+  if (d) void settleUndone(d);
+  return { how: 'done', at: step.kind === 'typing' ? caretIn(shownOf(addr), step.began) : stood.length ? Math.min(stands[0].pos, Math.max(1, shownOf(addr).to)) : null, out: stood.map((x) => wordsOf_(x.took)).join(''), back };
+}
+
+/**
+ * The redo chord at a draft (D5 K-75; BM-33): the step undone last put back
+ * as it was — what it removed removed again, and the words it placed placed
+ * again where they stood: words the board holds by a put-back of their own
+ * bytes, never new ones; words no board minted as the page's own again,
+ * under the ordinals they had, unsent and sent at the next commit. A burst of
+ * the step an undo held as its own is the draft's again. The step returns to
+ * the undo stack closed: typing after it begins a new run.
+ * @param {string} addr the draft
+ * @returns {Undone}
+ */
+export function redo(addr) {
+  /** @type {Undone} */
+  const none = { how: 'empty', at: null, out: '', back: '' };
+  if (!handed || !REC.has(addr)) return none;
+  ended();
+  const redone = [...WRITE.redoOf(addr)], step = redone.pop();
+  if (!step) return none;
+  if (!holdsWhole(addr) && !inReach(shownOf(addr).image, step)) return { ...none, how: 'away', at: step.began.pos || null };
+  const d = draftOf(addr);
+  let out = '';
+  for (const t of step.took) {
+    const doc = shownOf(addr);
+    out += REC.placedIn(doc.image, t.took.ids).map((s) => REC.textOf(doc.runs, s.pos, s.pos + s.width)).join('');
+    takenOut(addr, t.took.ids);
+  }
+  const before = shownOf(addr).image, back = (step.stood ?? []).map((x) => missingWords(before, x.took)).join('');
+  for (const s of step.stood ?? []) putBack(addr, s, step.began.pos);
+  tidy(addr);
+  if (step.removal != null) WRITE.dropRemovals(addr, (r) => r.id === step.removal);
+  sweep(addr);
+  WRITE.setStacks(addr, [...WRITE.undoOf(addr), { ...step, open: false, stood: null, removal: null }], redone);
+  if (d) {
+    // the bursts the undo held as its own are the draft's again: one whose drop is out is unsent again where it is dropped
+    let freed = false;
+    for (const [k, id] of [...d.undone]) if (id === step.id) { if (d.dropping) d.redone.add(k); else { d.undone.delete(k); freed = true; } }
+    if (freed && current(d)) void readHeld(d.session);
+  }
+  reopened(d);
+  const now = shownOf(addr), placed = REC.placedIn(now.image, step.placed), last = placed[placed.length - 1];
+  return { how: 'done', at: last ? last.pos + last.width : caretIn(now, step.began), out, back };
+}
+
+/** the step an undo's inverse a burst carries is of (`Draft.inverse`); null where the burst carries none */
+function inverseOf(/** @type {Draft} */ d, /** @type {number} */ k) {
+  if (!d.inverse.size) return null;
+  for (const e of WRITE.edits(d.addr)) if (e.sent === k && e.step != null && d.inverse.has(e.step)) return d.inverse.get(e.step) ?? null;
+  return null;
+}
+
+/**
+ * Does an undo's inverse wait for a read to name words it takes back (BM-81):
+ * the burst carries an edit of an undo's, and a `delete` of it takes out
+ * bytes the page made that no address names and no insert the shell holds
+ * or the page sent carries — a line the shell kept with no address told
+ * (`landed`). The `delete` composed once a read names them carries their
+ * I-runs, which the shell shifts it by.
+ * @param {Draft} d
+ * @param {Composed[]} frames the burst as composed
+ * @returns {boolean}
+ */
+function awaitsNames(d, frames) {
+  if (!d.inverse.size || !WRITE.edits(d.addr).some((e) => e.sent == null && e.step != null && d.inverse.has(e.step))) return false;
+  const piece = pieceOf(d);
+  return frames.some((f) => !!f.lost && f.lost.ids.some((x) => REC.isPage(x.prefix) && Array.from({ length: x.width }, (_, i) => x.ordinal + i).some((page) => !piece(page))));
+}
+
+/** does an undo hold a draft's commits back: a drop of its own is out, or a line of a burst it took back stands, its drop owed (BM-81) */
+const holdsBack = (/** @type {Draft} */ d) => d.dropping || (d.undone.size > 0 && [...d.lines.values()].some((l) => d.undone.has(l.k)));
+
+/**
+ * A draft's edits as the page's close composes them while an undo's drop is
+ * owed (see the head; BM-81): the edits that take back words of a burst the
+ * undo holds, whose line stands, left out — the line stays in the shell's
+ * store, and no inverse is held behind words the board never had — and the
+ * rest placed again by identity (M-DERIVE's `placedAgain`).
+ * @param {Draft} d
+ * @param {Doc} doc the record the edits apply over
+ * @returns {{edits: readonly Edit[], from: number}}
+ */
+function settled(d, doc) {
+  const list = WRITE.edits(d.addr), ids = idsOf(d.addr), made = madeBy(doc, list, 0, ids);
+  const held = new Set([...d.lines.values()].filter((l) => d.undone.has(l.k)).map((l) => l.k));
+  const theirs = (/** @type {Edit} */ e) => e.sent != null && held.has(e.sent);
+  const placed = list.flatMap((e, i) => (theirs(e) ? made[i].placed : []));
+  const inverse = (/** @type {Edit} */ e, /** @type {number} */ i) => e.sent == null && ((!!made[i].took && standing(made[i].took.ids, placed) >= tookWidth(made[i].took)) || (!!e.back && !!list[e.back.of] && theirs(list[e.back.of])));
+  const edits = placedAgain(doc, doc, list, (e, i) => !inverse(e, i), ids).edits, from = edits.findIndex((e) => e.sent == null);
+  return { edits, from: from < 0 ? edits.length : from };
+}
+
+/**
+ * A burst an undo took back that the board refused (BM-45): its words leave
+ * the draft's edits — the edits that took them back healing by identity —
+ * and no island keeps it, so no face is raised for words the person has
+ * already taken back.
+ * @param {Draft} d
+ * @param {number} k the burst
+ */
+function forget(d, k) {
+  d.open.delete(k);
+  d.undone.delete(k);
+  if (d.redone.delete(k)) WRITE.unsend(d.addr, (e) => e.sent === k); else WRITE.dropEdits(d.addr, (e) => e.sent === k);
+  tidy(d.addr);
+}
+
+/**
+ * An undo's `reinstate` the board will not take, its source withheld from
+ * the person now (BM-11, BM-12): the put-backs its burst carried leave the
+ * draft's edits, the words gone from the text shown again; the frames that
+ * carried them count as answered; the step leaves the stack at this first
+ * reach, no redo meeting it; and those watching are told the origin (W-WRITE's
+ * `decline`).
+ * @param {Draft} d
+ * @param {number} k the burst that carried the put-back
+ * @param {number} frames how many of its frames were declined
+ * @param {unknown} refusal the refusal, where one was answered: its site names the origin
+ */
+function declined(d, k, frames, refusal) {
+  const addr = d.addr, list = WRITE.edits(addr), step = inverseOf(d, k);
+  const backs = list.flatMap((e, i) => (e.sent === k && e.back && e.step != null && d.inverse.has(e.step) ? [i] : []));
+  // the origin the words came from: the refusal's site, else the document their bytes are of
+  const site = refusal && typeof refusal === 'object' ? /** @type {{site?: {addr?: unknown}, body?: {site?: {addr?: unknown}}}} */ (refusal) : null;
+  const named = site && site.body && site.body.site && typeof site.body.site.addr === 'string' ? site.body.site.addr : site && site.site && typeof site.site.addr === 'string' ? site.site.addr : null;
+  const made = named ? null : madeBy(WRITE.baseOf(addr), list, 0, idsOf(addr));
+  const first = made && backs.length ? made[backs[0]].placed[0] : null;
+  const origin = named || (first && !REC.isPage(first.prefix) ? documentOf(first.prefix) : null) || addr;
+  const carriers = new Set(backs.map((i) => /** @type {NonNullable<Edit['back']>} */ (list[i].back).of).filter((i) => list[i] && list[i].based));
+  WRITE.dropEdits(addr, (e, i) => backs.includes(i) || carriers.has(i));
+  const b = d.open.get(k);
+  if (b) { b.left -= frames; if (b.left <= 0) { d.open.delete(k); WRITE.markAcked(addr, k, b.at); } }
+  if (step != null) WRITE.setStacks(addr, WRITE.undoOf(addr), WRITE.redoOf(addr).filter((x) => x.id !== step));
+  sweep(addr);
+  WRITE.decline(addr, origin);
+}
+
+/**
+ * The held lines an undo holds as its own dropped (BM-45, BM-81, BM-11): the
+ * lines of a burst it took back, and a line of its inverse the board holds
+ * `withheld`. ONE `resolve` with `drop`, of the oldest of them — the shell
+ * drops it and every later line of its document — then the lines read again.
+ * Dropped, each burst that lost a line: one the undo took back leaves the
+ * draft's edits, the edits that took it back healing by identity — its words
+ * unsent again where a redo put them back meanwhile; a withheld inverse is
+ * declined (`declined`); any other is unsent, composed afresh by the page.
+ * Kept — the shell's read found the line landed — nothing is dropped: the
+ * line is landed there, its bytes named by the next read, its inverse then
+ * sent as a kept part's is, and the drop goes on to the next line. Refused — the read for
+ * its landing could not run — nothing is dropped and the drop stays owed
+ * (`Draft.unread`): the draft's commits are held back, its word "not yet
+ * kept" by the line's cause, and the drop is tried again at the next read of
+ * the held lines that is not its own. Nothing while one is out, or where the
+ * page's session is not the draft's or may not write.
+ * @param {Draft} d
+ * @returns {Promise<void>}
+ */
+async function settleUndone(d) {
+  const addr = d.addr, s = REC.session();
+  if (!handed || d.dropping || d.unread || drafts.get(addr) !== d || !s || s.session !== d.session || !s.writes) return;
+  const rows = WRITE.heldOf(addr);
+  /** is a line a withheld inverse's: its row says so, and its burst carries an undo's put-back */
+  const withheld = (/** @type {number} */ h, /** @type {number} */ k) => { const r = rows.find((x) => x.held === h); return !!r && (r.cause === 'withheld' || (!!r.refusal && r.refusal.name === 'withheld')) && inverseOf(d, k) != null; };
+  const mine = [...d.lines].filter(([h, l]) => d.undone.has(l.k) || withheld(h, l.k)).map(([h]) => h).sort((a, b) => a - b);
+  if (!mine.length) return;
+  const held = mine[0], row = rows.find((r) => r.held === held) ?? null;
+  d.dropping = true;
+  const out = await PORT.resolve({ session: s.session, held, act: 'drop' });
+  if (!handed || drafts.get(addr) !== d) return;
+  if ('refused' in out) {
+    await readHeld(s.session, true);
+    d.dropping = false; d.unread = true;
+    resume(d);
+    return;
+  }
+  const res = F.decodeResolved(out.result);
+  if (!(res && res.kept)) {
+    const gone = [...d.lines.keys()].filter((h) => h >= held);
+    WRITE.dropReopened(addr, rows.filter((r) => r.held >= held).map((r) => r.held));
+    /** @type {Map<number, number>} each burst that lost a line, with how many */
+    const lost = new Map();
+    for (const h of gone) { const l = d.lines.get(h); if (l) lost.set(l.k, (lost.get(l.k) ?? 0) + 1); }
+    const declining = new Map([...lost].filter(([k]) => !d.undone.has(k) && gone.some((h) => { const l = d.lines.get(h); return !!l && l.k === k && withheld(h, k); })));
+    for (const h of gone) d.lines.delete(h);
+    for (const [k, n] of lost) {
+      if (d.undone.has(k)) forget(d, k);
+      else if (declining.has(k)) declined(d, k, n, row && row.refusal);
+      else { d.open.delete(k); WRITE.unsend(addr, (e) => e.sent === k); }
+    }
+    sweep(addr);
+  } else {
+    // the shell's read found the line landed: it is kept, at a position and an address the next read names
+    /** @type {number[]} */
+    const ats = [];
+    landed(d, { held, burst: null, at: null, addr: null }, ats);
+  }
+  await readHeld(s.session, true);
+  d.dropping = false;
+  if (drafts.get(addr) !== d) return;
+  acked(d, []);
+  resume(d);
+  void settleUndone(d);
+}
+
+/** a draft's open burst committed as an undo's drop settles, where one is open and may go; else its word said and its flight ended */
+function resume(/** @type {Draft} */ d) {
+  if (d.out || d.reading) return;
+  if (open(d.addr) && !d.left && current(d) && !WRITE.unwritable(d.addr)) { WRITE.setFlight(d.addr, true); REC.setTyping(d.addr, true); commit(d.addr); } else settle(d);
+}
+
 // ---- leaving ----------------------------------------------------------------------
 
 /**
@@ -841,9 +1512,10 @@ export function sendIsland(addr, id) {
 function leaving(how) {
   if (how === 'unload') return unload();
   for (const d of [...drafts.values()]) {
-    if (how === 'class') commit(d.addr, true);
+    if (how === 'class') { commit(d.addr, true); d.undone.clear(); d.redone.clear(); d.inverse.clear(); }
     else if (open(d.addr)) commit(d.addr);
   }
+  if (how === 'class') running = null;
   return false;
 }
 
@@ -873,14 +1545,14 @@ function unload() {
   const frames = [];
   for (const d of drafts.values()) {
     if (d.session !== s.session) continue;
-    const carry = (/** @type {Composed} */ f) => { frames.push({ frame: typedAt(d, f), anchors: f.anchors }); };
+    const carry = (/** @type {Composed} */ f) => { frames.push({ frame: typedAt(d, f), anchors: f.anchors, ...(f.after ? { after: f.after } : {}) }); };
     if (d.out && d.out.next < d.out.frames.length) {
       after.push(d.out.frames[d.out.next].frame.id);
       for (const f of d.out.frames.slice(d.out.next + 1)) carry(f);
       d.out.next = d.out.frames.length;
     }
     if (!open(d.addr) || d.left) continue;
-    const out = composed(d);
+    const out = composed(d, true);
     if ('waits' in out) continue;
     WRITE.markSent(d.addr, ++d.bursts);
     seq += out.frames.length;
@@ -890,5 +1562,5 @@ function unload() {
   return true;
 }
 
-/** reset the machine (tests): taken out, every draft and the frames' count forgotten */
-export function _reset() { takeOut(); seq = 0; reads = 0; }
+/** reset the machine (tests): taken out, every draft and the frames' and the steps' counts forgotten */
+export function _reset() { takeOut(); seq = 0; reads = 0; steps = 0; }

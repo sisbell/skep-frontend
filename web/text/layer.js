@@ -457,8 +457,12 @@
 // (`caretType`, `caretErase`), or, where a selection whole in the text shown
 // stands in the caret's text, its bytes are replaced by the key's text, none
 // for Backspace and Delete (`caretReplace`) — each an edit handed to W-WRITE
-// and shown through the derived record, nothing composed and nothing sent
-// here (FP-14). Leaving the text — Esc to the walk at
+// as a key typing at the caret, where the caret stood told with it
+// (W-WRITE's `Typed`), and shown through the derived record, nothing composed
+// and nothing sent here (FP-14). Every other move of the caret — a click, an
+// arrow, Home or End, a selection made from it, a return, a leaving, its
+// going — ends the run of typing open at its draft (`setCaret`; W-WRITE's
+// `endRun`; D6 BM-31). Leaving the text — Esc to the walk at
 // the caret's span, a move of the walk, a teleport's landing, a zoom past its
 // reading scale, a pointer's act on another document or a selection put there
 // (D5 M-2, K-77; N-KEYS', N-WALK's, APP-INPUT's, O-SELECTION's) — keeps the
@@ -1075,7 +1079,18 @@ export function paneSource(addr) {
  * @returns {string}
  */
 export function firstWords(addr, pos, width) {
-  const words = REC.textOf(shownOf(addr).runs, pos, pos + width).trim().replace(/\s+/g, ' ');
+  return firstWordsOf(REC.textOf(shownOf(addr).runs, pos, pos + width));
+}
+
+/**
+ * The first words of some words (`firstWords`), NAME_WORDS at the most, cut
+ * on a word: what an undo or a redo is said by (N-KEYS'); '' where they hold
+ * none.
+ * @param {string} text
+ * @returns {string}
+ */
+export function firstWordsOf(text) {
+  const words = text.trim().replace(/\s+/g, ' ');
   const fits = (/** @type {string} */ s) => wordsIn(s) <= NAME_WORDS;
   return !words || fits(words) ? words : cutWords(words, fits) || '';
 }
@@ -3575,7 +3590,7 @@ export function frame(focused = () => false) {
   if (span && !pressed && (fresh.includes(span.addr) || (owed && sameSpan(owed, span)))) placeAgain(span);
   if (owed && !sameSpan(owed, span)) owed = null;
   // a live caret the walk's focus has left for another document's span is left to the walk, kept where it stood (K-77; D5 §4 rule 8)
-  if (caret_ && caret_.live) { const f = read.focus(); if (f && f.addr !== caret_.addr) caret_ = { ...caret_, live: false }; }
+  if (caret_ && caret_.live) { const f = read.focus(); if (f && f.addr !== caret_.addr) { WRITE.endRun(caret_.addr); caret_ = { ...caret_, live: false }; } }
   placeCaretMark();
   if (clearing && !pressed) keepClear();
   if (engine && !pressed) measureInView(v);
@@ -5051,11 +5066,17 @@ export const caretOwes = () => caretOwed;
 /**
  * The caret set: placed, moved or kept — the frame brings its mark into view
  * once its part stands and collapses the platform's selection there, save
- * where `owed` keeps that selection, or owes it nothing (null).
+ * where `owed` keeps that selection, or owes it nothing (null). A move of it
+ * by an act other than typing ends the run of typing open at its draft
+ * (W-WRITE's `endRun`; D6 BM-31).
  * @param {Caret | null} c
  * @param {CaretOwed | null} [owed]
+ * @param {boolean} [typing] a key typing at the caret moved it
  */
-function setCaret(c, owed = 'collapse') { caret_ = c; caretOwed = c ? owed : null; markDirty(); }
+function setCaret(c, owed = 'collapse', typing = false) {
+  if (!typing && caret_) WRITE.endRun(caret_.addr);
+  caret_ = c; caretOwed = c ? owed : null; markDirty();
+}
 
 /** a position of a draft's shown text clamped to the text it holds: its first position to one past its last; 1 where it holds none */
 function clampPos(/** @type {Doc} */ d, /** @type {number} */ pos) { return d.from < 0 ? 1 : Math.max(d.from, Math.min(pos, d.to)); }
@@ -5189,20 +5210,22 @@ export function dropCaret() { if (caret_) setCaret(null); }
 /**
  * Text typed at a live caret (K-72, K-76; BM-1, BM-54): one page-local edit
  * added to the draft — the text at the caret's position, nothing removed —
- * and the caret moved past it. False where no live caret stands.
+ * as a key typing at the caret (W-WRITE's `Typed`), and the caret moved past
+ * it. False where no live caret stands.
  * @param {string} text
  */
 export function caretType(text) {
   if (!caret_ || !caret_.live || !text) return false;
-  WRITE.addEdit(caret_.addr, { pos: caret_.pos, width: 0, text });
-  setCaret({ ...caret_, pos: caret_.pos + byteLength(text) });
+  WRITE.addEdit(caret_.addr, { pos: caret_.pos, width: 0, text }, { at: caret_.pos });
+  setCaret({ ...caret_, pos: caret_.pos + byteLength(text) }, 'collapse', true);
   return true;
 }
 
 /**
  * A selection of the caret's draft replaced by the text a key puts in at the
- * caret (K-70, K-72, K-76; BM-70, BM-75): one edit removing its bytes and
- * placing the text — none for Backspace and Delete — the caret after it.
+ * caret (K-70, K-72, K-76; BM-70, BM-75, BM-80): one edit removing its bytes
+ * and placing the text — none for Backspace and Delete — as a key typing at
+ * the caret (W-WRITE's `Typed`), the caret after it.
  * False where no live caret stands, the span is another document's, or it is
  * not whole in the text shown (`shownOf`): M-DERIVE applies no edit past one
  * outside that text (`applyEdits`).
@@ -5213,15 +5236,16 @@ export function caretReplace(span, text) {
   if (!caret_ || !caret_.live || span.addr !== caret_.addr) return false;
   const d = shownOf(caret_.addr);
   if (d.from < 0 || span.width < 1 || span.pos < d.from || span.pos + span.width > d.to) return false;
-  WRITE.addEdit(caret_.addr, { pos: span.pos, width: span.width, text });
-  setCaret({ ...caret_, pos: span.pos + byteLength(text) });
+  WRITE.addEdit(caret_.addr, { pos: span.pos, width: span.width, text }, { at: caret_.pos });
+  setCaret({ ...caret_, pos: span.pos + byteLength(text) }, 'collapse', true);
   return true;
 }
 
 /**
  * Backspace (dir −1) or Delete (dir 1) at a live caret (K-72): the character
  * before or after it taken out of the text shown — an item whole — as one
- * page-local edit, the caret at the removal. False where none stands there.
+ * page-local edit, a key typing at the caret (W-WRITE's `Typed`), the caret
+ * at the removal. False where none stands there.
  * @param {-1 | 1} dir
  */
 export function caretErase(dir) {
@@ -5229,8 +5253,8 @@ export function caretErase(dir) {
   const d = shownOf(caret_.addr), b = boundaries(d.runs, caret_.pos);
   const from = dir < 0 ? b.before : caret_.pos, to = dir < 0 ? caret_.pos : b.after;
   if (from == null || to == null || to <= from) return false;
-  WRITE.addEdit(caret_.addr, { pos: from, width: to - from, text: '' });
-  setCaret({ ...caret_, pos: from });
+  WRITE.addEdit(caret_.addr, { pos: from, width: to - from, text: '' }, { at: caret_.pos });
+  setCaret({ ...caret_, pos: from }, 'collapse', true);
   return true;
 }
 
@@ -5445,6 +5469,7 @@ export function clear() {
   hold = null; framedTop = NaN;
   owed = null;
   clearing = null;
+  if (caret_) WRITE.endRun(caret_.addr);
   caret_ = null; caretOwed = null;
   openStatements.clear();
   shownCache.clear();

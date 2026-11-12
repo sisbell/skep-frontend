@@ -37,7 +37,10 @@
 // record is, its sources standing. `placedAgain` places a draft's edits again
 // in another text — or in the same, some of them left out — by the identity
 // of the bytes each touches and of those either side, and says which it
-// could not place exactly.
+// could not place exactly. `madeBy` reads what each edit did as it was
+// applied — what it removed, what it placed, and the byte either side of its
+// change — by identity, deriving no record, and `stretchIn` a stretch of a
+// record as a put-back places it.
 // `sourceRuns` splits a span of that text into
 // what the delivered text holds and what the edits made — the one reading of
 // a span the board is asked about, so no question reaches the board by a
@@ -241,6 +244,17 @@ function stretchOf(runs, image, pos, width) {
   const ids = cutImage(cutImage(image, pos), end).filter((r) => r.pos >= pos && r.pos + r.width <= end).map((r) => ({ ...r, pos: r.pos - pos + 1 }));
   return { runs: cut, ids };
 }
+
+/**
+ * A stretch of a record's text as a put-back places it (M-REC's `Took`): its
+ * runs and their identity, each at its position from 1; null where the record
+ * does not hold the stretch whole.
+ * @param {Doc} doc
+ * @param {number} pos
+ * @param {number} width
+ * @returns {import('./records.js').Took | null}
+ */
+export const stretchIn = (doc, pos, width) => (width > 0 ? stretchOf(doc.runs, doc.image, pos, width) : null);
 
 /**
  * An insert's values as runs (wire.md §Content values): a string a content
@@ -512,6 +526,47 @@ export function applyEdits(doc, edits, ids = (page, width) => [{ prefix: pageSpa
     removed: removed.map((r) => (r ? r.ids.map((x) => ({ prefix: x.prefix, ordinal: x.ordinal, width: x.width })) : null)),
     took: removed.map((r) => (r ? { runs: r.runs.map(copyRun), ids: r.ids.map((x) => ({ ...x })) } : null)),
   };
+}
+
+/**
+ * @typedef {Object} Made — what one edit did as it was applied, by the bytes' identity (`madeBy`)
+ * @property {import('./records.js').Took | null} took what it removed — its runs and their identity, each at its position from 1; null where it removed nothing
+ * @property {ISpan[]} placed the bytes it placed, in the text's order: those it made as `ids` names them, a put-back's as they were; none where it placed none
+ * @property {ISpan[]} before the byte that stood just before what it changed; none at the text's first position, or where the image names none there
+ * @property {ISpan[]} after the byte that stood just after it; none at the text's end, or where the image names none there
+ */
+
+/**
+ * What each of a draft's edits from `from` on did as it was applied (see the
+ * head), by identity: the edits applied in order by `applyEdits`' kernel,
+ * and each of them read in the text as it stood right after it — what it
+ * removed, what it placed, and the byte either side of its change. An edit
+ * the apply stops at, and every edit after it, did nothing. The record handed
+ * in is never changed, and no record is derived.
+ * @param {Doc} doc
+ * @param {readonly Edit[]} edits
+ * @param {number} from the first edit answered for, an index into `edits`
+ * @param {(page: number, width: number) => ISpan[]} [ids] the identity of bytes the page made (see `applyEdits`)
+ * @returns {Made[]} one for each edit from `from` on, in order
+ */
+export function madeBy(doc, edits, from, ids = (page, width) => [{ prefix: pageSpace(doc.addr), ordinal: page, width }]) {
+  const c = chainOver(doc, ids);
+  /** @type {Made[]} */
+  const out = [];
+  let read = true;
+  for (const [i, e] of edits.entries()) {
+    if (read) try { c.apply(e); } catch (x) { if (!(x instanceof Stop)) throw x; read = false; }
+    if (i < from) continue;
+    if (!read) { out.push({ took: null, placed: [], before: [], after: [] }); continue; }
+    const t = c.text(), was = c.removed[i], grew = e.based ? 0 : e.back ? e.back.width : byteLength(e.text);
+    out.push({
+      took: was && !e.based ? { runs: was.runs.map(copyRun), ids: was.ids.map((x) => ({ ...x })) } : null,
+      placed: grew ? identityIn(t.image, e.pos, grew) : [],
+      before: e.pos > 1 ? identityIn(t.image, e.pos - 1, 1) : [],
+      after: identityIn(t.image, e.pos + grew, 1),
+    });
+  }
+  return out;
 }
 
 /**

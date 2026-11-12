@@ -11,6 +11,9 @@
 // with where they were writing (N-KEYS'; `Writing`): "— you were last writing
 // in ⟨label⟩" after the notice, whole or compact alike, its label the act
 // back to that draft's kept caret, said with the notice in the status region.
+// A line may end on a sentence of its own (`show`'s `ending`; B3-S3's constant
+// sentence): after the notice and where the person was writing, while the
+// notice stands whole, and never beside its compact form.
 // Raised (`show`) by the press it answers — N-KEYS' swallow, the caret's
 // lines, an inert slot's reason, "select a passage first", the caret's
 // follow line; N-FIND's chord off any document; the one line's inert act,
@@ -42,8 +45,9 @@
 // line's acts do (`besideBox`). Then it moves below the standing overlay, the
 // notice below it and a landing's line where it would meet them, and is held
 // inside the visible view; it moves nothing, standing in no text, line or
-// label. Where the reading scene stands over the plane it was raised on, it
-// is covered (N-FOCUS's `cover`).
+// label; a deletion face standing whole where it would meet it sets it below
+// that face too (O-DELETION's `rects`). Where the reading scene stands over
+// the plane it was raised on, it is covered (N-FOCUS's `cover`).
 // Its element (`#hint`; FP-13): the notice's native button, in the page's
 // order after the notice below the overlay (D5 §4 rule 5), named by the words
 // it shows and described by the whole notice, the notice's string on it, and
@@ -66,6 +70,7 @@ import * as FOCUS from '../nav/focus.js';
 import * as WALK from '../nav/walk.js';
 import * as HOST from './host.js';
 import * as LANDING from './landing.js';
+import * as DELETION from './deletion.js';
 import * as SCENE from '../scene/scene.js';
 import * as LINE from '../line/line.js';
 import * as LAYER from '../text/layer.js';
@@ -99,6 +104,7 @@ const WRITING = 'B3.undo.last-writing';
  * @property {string} clause its compact form: the notice whole where it has none (ST's `hintOf`)
  * @property {boolean} open it shows the notice whole
  * @property {Writing | null} writing where the person was writing, which its line ends with; null where it ends with the notice
+ * @property {{id: string, text: string} | null} ending the sentence its line ends on while its notice stands whole, by its string; null where it ends on none
  * @property {Site} site
  * @property {boolean} plane the press was made on the plane: the reading scene covers it
  */
@@ -157,8 +163,12 @@ export function attach(e, r = {}) {
 const wordsOf = (/** @type {Hint} */ h) => (h.open ? h.whole : h.clause);
 /** the words its line ends with where the person was writing elsewhere (`Writing`); '' where it ends with the notice */
 const endOf = (/** @type {Hint} */ h) => (h.writing ? t(WRITING, { label: h.writing.label }) : '');
-/** the words the status region says of it: the notice's, and the ending after them */
-const saidOf = (/** @type {Hint} */ h) => [wordsOf(h), endOf(h)].filter(Boolean).join(' ');
+/** does its notice stand whole: opened, or with no compact form to fold to */
+const wholeOf = (/** @type {Hint} */ h) => h.open || h.whole === h.clause;
+/** the sentence its line ends on, while its notice stands whole; '' where it ends on none, and beside its compact form */
+const lastOf = (/** @type {Hint} */ h) => (h.ending && wholeOf(h) ? h.ending.text : '');
+/** the words the status region says of it: the notice's, where the person was writing after them, and the sentence the line ends on */
+const saidOf = (/** @type {Hint} */ h) => [wordsOf(h), endOf(h), lastOf(h)].filter(Boolean).join(' ');
 
 /**
  * The focus a press was made at (see the head): the element handed in; else
@@ -185,13 +195,13 @@ function siteOf(at) {
  * Throws for a string the table marks no hint (ST's `hintOf`).
  * @param {string} id
  * @param {Record<string, string | number> | null} [values]
- * @param {{repeat?: boolean, at?: Element | null, writing?: Writing | null}} [o] `repeat` the key's auto-repeat; `at` the element the press was made at, where the walk's focus is not it; `writing` where the person was writing, which the line ends with
+ * @param {{repeat?: boolean, at?: Element | null, writing?: Writing | null, ending?: string | null}} [o] `repeat` the key's auto-repeat; `at` the element the press was made at, where the walk's focus is not it; `writing` where the person was writing, which the line ends with; `ending` the string of the sentence the line ends on while its notice stands whole
  */
 export function show(id, values = null, o = {}) {
   if (o.repeat) return;
   const h = hintOf(id, values ?? undefined), open = !seen.has(id);
   seen.add(id);
-  hint = { id, whole: h.whole, clause: h.clause, open, writing: o.writing ?? null, site: siteOf(o.at ?? null), plane: !SCENE.isOpen() };
+  hint = { id, whole: h.whole, clause: h.clause, open, writing: o.writing ?? null, ending: o.ending ? { id: o.ending, text: t(o.ending) } : null, site: siteOf(o.at ?? null), plane: !SCENE.isOpen() };
   presses++;
   FOCUS.say(saidOf(hint), false, true);
   markDirty();
@@ -236,12 +246,13 @@ export function classChanged() {
   act();
 }
 
-/** the hint's markup: its button, named by the words it shows, described by the notice whole — open or folded where it has a compact form — and after it the ending where the person was writing, its label a button of its own */
+/** the hint's markup: its button, named by the words it shows, described by the notice whole — open or folded where it has a compact form — after it the ending where the person was writing, its label a button of its own, and, while the notice stands whole, the sentence the line ends on */
 function markup(/** @type {Hint} */ h) {
-  const folds = h.whole !== h.clause ? ` aria-expanded="${h.open}"` : '';
+  const folds = h.whole !== h.clause ? ` aria-expanded="${h.open}"` : '', last = lastOf(h);
   return `<button type="button" data-hint="${esc(h.id)}" data-string="${esc(h.id)}" aria-describedby="hint-whole"${folds}>${addressedHTML(wordsOf(h))}</button>`
     + (h.writing ? ` ${endingHTML(h.writing)}` : '')
-    + `<span id="hint-whole" hidden>${esc(h.whole)}</span>`;
+    + (h.ending && last ? ` <span class="ending" data-string="${esc(h.ending.id)}">${addressedHTML(last)}</span>` : '')
+    + `<span id="hint-whole" hidden>${esc([h.whole, h.ending ? h.ending.text : ''].filter(Boolean).join(' '))}</span>`;
 }
 
 /** the ending where the person was writing (`Writing`): the line's words, its label a button */
@@ -259,14 +270,14 @@ function endingHTML(/** @type {Writing} */ w) {
  */
 export function render() {
   if (!el) return;
-  const host = el, h = hint, key = h ? JSON.stringify([h.id, h.whole, wordsOf(h), endOf(h)]) : '';
+  const host = el, h = hint, key = h ? JSON.stringify([h.id, h.whole, wordsOf(h), endOf(h), lastOf(h)]) : '';
   if (key !== written) {
     const at = typeof document !== 'undefined' ? document.activeElement : null;
     const held = !!at && at !== host && host.contains(at);
     FOCUS.keep(host, (x) => x.getAttribute('data-hint') ?? (x.getAttribute('data-writing') ? WRITING : null), () => {
       host.innerHTML = h ? markup(h) : '';
       host.classList.toggle('on', !!h);
-      host.classList.toggle('writing', !!h && !!h.writing);
+      host.classList.toggle('writing', !!h && (!!h.writing || !!lastOf(h)));
     });
     written = key;
     if (held && !host.contains(document.activeElement)) handOff();
@@ -329,7 +340,7 @@ function place(h) {
     if (!anchor) { placed = null; return; }
     ({ x, y } = besideBox(anchor, size, seen));
   }
-  const chrome = [...HOST.elements().map((o) => o.getBoundingClientRect()).map((q) => ({ x: q.left, y: q.top, w: q.width, h: q.height })), ...[LANDING.shown()].flatMap((l) => (l && !l.covered ? [l.rect] : []))];
+  const chrome = [...HOST.elements().map((o) => o.getBoundingClientRect()).map((q) => ({ x: q.left, y: q.top, w: q.width, h: q.height })), ...[LANDING.shown()].flatMap((l) => (l && !l.covered ? [l.rect] : [])), ...DELETION.rects()];
   for (const o of chrome) if (x < o.x + o.w && o.x < x + size.w && y < o.y + o.h && o.y < y + size.h) y = o.y + o.h + GAP;
   if (by === 'beside') x = Math.min(seen.x + seen.w - size.w - INSET, x);
   x = Math.max(seen.x + INSET, x);
@@ -358,14 +369,15 @@ function boxOf(/** @type {Site} */ s, /** @type {Rect} */ seen) {
 
 /**
  * The hint standing, read-only (N-KEYS' tests read it): its notice's string,
- * the words it shows, the notice whole, whether it shows it whole, and the
+ * the words it shows, the notice whole, whether it shows it whole, the
  * words its line ends with where the person was writing elsewhere, else
- * null; null where none stands.
- * @returns {{id: string, words: string, whole: string, open: boolean, writing: string | null} | null}
+ * null, and, where its line ends on a sentence shown now, that sentence;
+ * null where none stands.
+ * @returns {{id: string, words: string, whole: string, open: boolean, writing: string | null, ending?: string} | null}
  */
 export function standing() {
   const h = hint;
-  return h ? { id: h.id, words: wordsOf(h), whole: h.whole, open: h.open || h.whole === h.clause, writing: h.writing ? endOf(h) : null } : null;
+  return h ? { id: h.id, words: wordsOf(h), whole: h.whole, open: wholeOf(h), writing: h.writing ? endOf(h) : null, ...(lastOf(h) ? { ending: lastOf(h) } : {}) } : null;
 }
 
 /**

@@ -6,8 +6,12 @@
 // of the insert that carried them, a removal of such words carrying no span;
 // a refusal the page keeps is left out of what later bursts are composed
 // against; an insertion inside a link's span splits it, the span's own bytes
-// its anchors; and a burst anchored on a byte no piece names, or one the
-// record does not name, composes to none and says why.
+// its anchors; a burst anchored on a byte no piece names, or one the
+// record does not name, composes to none and says why; an undo's inverse —
+// a removal of what its run placed and a put-back of what it removed — is a
+// `delete` then a `reinstate` by identity; each `delete` says what it takes
+// out of the text; and at the page's close a `delete` of words one unanswered
+// insert carried is that insert's follower, its span a piece of it.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as BURSTS from './bursts.js';
@@ -297,3 +301,54 @@ test('BM-2: an insertion inside a link\'s span splits the mark there — one ins
   assert.deepEqual(REC.placedIn(shown.image, span), [{ pos: 3, width: 2 }, { pos: 8, width: 2 }], 'the mark split at the insertion: two stretches, the new words between them and outside both');
 });
 
+test('BM-32, BM-34: an undo\'s inverse composes as any burst does — a removal of the words its run placed and a put-back of the bytes it removed are one `delete` of the placed bytes then one `reinstate` of the removed ones by their own I-runs, never an `insert`; and the `delete` says what it takes out: the words, their bytes and the byte either side', () => {
+  read(D, 'abcdef');
+  // a run the board holds: a key over "cd", then one more key — acked, its bytes minted
+  WRITE.addEdit(D, { pos: 3, width: 2, text: 'X' });
+  WRITE.addEdit(D, { pos: 4, width: 0, text: 'Y' });
+  WRITE.markSent(D, 1);
+  WRITE.markAcked(D, 1, 9);
+  REC.mint(D, 1, 2, own(D, 40), 9);
+  // its inverse, as W-MACHINE's undo adds it: the placed bytes removed, the removed ones put back by naming the edit that took them
+  const act = WRITE.restore(D, [{ pos: 3, width: 2, text: '' }]);
+  WRITE.restore(D, [{ pos: 3, width: 0, text: '', back: { of: 0, from: 0, width: 2 } }]);
+  assert.ok(act > 0);
+  const frames = framesOf(compose(D, 2));
+  assert.deepEqual(frames.map((f) => [f.frame, f.anchors]), [
+    [{ op: 'delete', doc: D, p: { ordinal: '3', subspace: '1' }, width: '2', as_of: 7, id: 'page:9f.1' }, { before: own(D, 2), after: own(D, 5), span: [{ start: own(D, 40), width: '2' }] }],
+    [{ op: 'reinstate', doc: D, at: { ordinal: '3', subspace: '1' }, runs: [{ i_start: own(D, 3), origin: D, width: '2' }], as_of: 7, id: 'page:9f.2' }, { before: own(D, 2), after: own(D, 5) }],
+  ], 'one `delete` of the bytes the board minted, one `reinstate` of the bytes the run removed');
+  assert.deepEqual(frames[0].lost, { words: 'XY', ids: [{ prefix: `${D}.0.1`, ordinal: 40, width: 2 }], before: [{ prefix: `${D}.0.1`, ordinal: 2, width: 1 }], after: [{ prefix: `${D}.0.1`, ordinal: 5, width: 1 }] },
+    'the `delete` says what it takes out of the text, by identity');
+  assert.equal(frames[1].lost, undefined, 'a `reinstate` takes nothing out');
+  assert.equal(typed(D), 'abcdef', 'the text as it stood before the run');
+});
+
+test('BM-73: at the page\'s close a `delete` of words one unanswered insert carried is composed as that insert\'s follower — its span a piece of the insert beside the I-runs of the rest, the frame naming the insert it follows — and only there: where no insert may be followed, where its pieces name two inserts, or where one names an insert it may not follow, the `delete` carries no span and follows nothing', () => {
+  /** the piece naming a byte the page made: the insert `page:9f.7` carried its first two, `page:9f.8` the two after them */
+  const piece = (/** @type {number} */ page) => (page >= 1 && page <= 2 ? { burst: 'page:9f.7', offset: page - 1 } : page >= 3 && page <= 4 ? { burst: 'page:9f.8', offset: page - 3 } : null);
+  const asked = (/** @type {string} */ addr, /** @type {Partial<BURSTS.Asked>} */ more) => BURSTS.compose({ doc: REC.doc(addr), edits: WRITE.edits(addr), from: WRITE.unsent(addr), asOf: 7, ids: (page, width) => REC.pageIds(addr, page, width), load: LOAD, seq: 1, piece, ...more });
+  read(D, 'abcdef');
+  WRITE.addEdit(D, { pos: 4, width: 0, text: 'xy' });
+  WRITE.markSent(D, 1);
+  // the insert that carried "xy" is out, unanswered; then a removal of the kept byte before the words and of the words themselves
+  WRITE.restore(D, [{ pos: 3, width: 3, text: '' }]);
+  assert.deepEqual(framesOf(asked(D, { follows: (id) => id === 'page:9f.7' })).map((f) => [f.frame.op, f.anchors, f.after]), [['delete', { before: own(D, 2), after: own(D, 4), span: [{ start: own(D, 3), width: '1' }, { burst: 'page:9f.7', offset: 0, width: 2 }] }, 'page:9f.7']],
+    'a follower: the kept byte by its I-run, the words by a piece of the insert that carried them, and the insert it follows named');
+  assert.deepEqual(framesOf(asked(D, {})).map((f) => [f.anchors, f.after]), [[{ before: own(D, 2), after: own(D, 4) }, undefined]], 'composed for no close: no span and no follower, as any removal of unminted words');
+  assert.deepEqual(framesOf(asked(D, { follows: () => false })).map((f) => [f.anchors, f.after]), [[{ before: own(D, 2), after: own(D, 4) }, undefined]], 'an insert it may not follow — a line the shell holds: no follower');
+  // words of two unanswered inserts, side by side
+  read(E, 'abcdef');
+  WRITE.addEdit(E, { pos: 4, width: 0, text: 'xy' });
+  WRITE.markSent(E, 1);
+  WRITE.addEdit(E, { pos: 6, width: 0, text: 'pq' });
+  WRITE.markSent(E, 2);
+  WRITE.restore(E, [{ pos: 4, width: 4, text: '' }]);
+  assert.deepEqual(framesOf(asked(E, { follows: () => true })).map((f) => [f.frame.op, f.frame.width, f.anchors, f.after]), [['delete', '4', { before: own(E, 3), after: own(E, 4) }, undefined]],
+    'a `delete` over words of two unanswered inserts is the follower of neither: no span, no `after`');
+  // one of them alone is the follower of its own insert, the byte beside it named by its piece
+  WRITE.dropEdits(E, (e) => e.sent == null);
+  WRITE.restore(E, [{ pos: 6, width: 2, text: '' }]);
+  assert.deepEqual(framesOf(asked(E, { follows: () => true })).map((f) => [f.anchors, f.after]), [[{ before: { burst: 'page:9f.7', offset: 1 }, after: own(E, 4) }, undefined]],
+    'and a `delete` whose edge is a word of another unanswered insert follows neither: every piece of a follower names the insert it follows');
+});

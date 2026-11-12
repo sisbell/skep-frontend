@@ -140,7 +140,8 @@
 // (APP-INPUT's). Mod+L alone opens the LEAP box (K-30),
 // whose Mod+Shift+Enter is its own "open beside" and never reaches the
 // dispatch (K-101; N-LEAP's `beside`),
-// Mod+Y the trail's list (K-41), Mod+= and Mod+- zoom the camera by 1.25
+// the trail's list by its platform's history chord — Mod+Y on macOS, Ctrl+H
+// elsewhere (K-41; `trailChord`) — Mod+= and Mod+- zoom the camera by 1.25
 // about the view's centre and re-take the focus (K-11), Mod+Shift+P shows the
 // one line's strip (K-23), and the selection's slot chords (K-45 … K-52,
 // K-100) and K-8's select-by-span act from the plane and from a standing
@@ -211,11 +212,33 @@
 // (K-45 … K-52, K-100), the strip (K-23) and find's chords (K-91) each answer
 // with O-FACES' no-board face, as HOME and
 // WHOLE BOARD do through N-GO; the paging keys and the zoom chords stay the
-// camera's. State (FP-10), beside the held keys: whether Mod+S has been
+// camera's.
+// UNDO AND REDO (D5 K-75; D6 BM-31 … BM-34, BM-42, BM-45; `undoChord`): Mod+Z
+// undoes, Mod+Shift+Z redoes, and Ctrl+Y redoes too elsewhere than macOS
+// (`undoAct`), from the plane, the scene, a corner, the line and every
+// control but a field, whose own they stay. The chord acts on the draft whose
+// text holds the caret, else the draft whose caret the person last held while
+// that draft stands in view at its reading scale, never on a document a
+// camera move put the walk in (`undoTarget`): W-MACHINE takes the newest step
+// back, or puts the step undone last back, at once; the caret then stands
+// where the step began, live, the walk on its span and its mark brought into
+// view; and what it did is said in the status region alone, never drawn —
+// "taken out — …" then "put back — …" by the first words of each. Where the
+// step's line awaits an act of the person's at its face, the press shows that
+// face and takes none of its acts. Where the draft cannot be written the
+// reason's line answers it (`unwritableSays`). On an empty stack the undo is
+// answered by the empty stack's line; with no such draft, by the document's
+// line where the walk stands on an edition of the person's own or on
+// another's document (`siteSays`), else by the no-caret line, ending with
+// where the person was last writing; each of the three ending on B3-S3's
+// constant sentence while it stands whole, and each its hint at the focus. An
+// undo the board declines — its source withheld — is said in the one line,
+// ending with what the chord again undoes (`declined`; D6 BM-11, BM-12).
+// State (FP-10), beside the held keys: whether Mod+S has been
 // answered whole this session (`saveAnswered`), how many keys the dispatch
 // has taken (`keysTaken`), and the save chord's latest answer (`saving`).
-// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-14, FP-20, FP-21, FP-24, FP-25,
-// FP-27, FP-35, FP-36, FP-39, FP-40.
+// Rules: FP-1, FP-2, FP-9, FP-10, FP-11, FP-13, FP-14, FP-20, FP-21, FP-24,
+// FP-25, FP-27, FP-35, FP-36, FP-38, FP-39, FP-40, FP-41.
 
 import * as GO from './go.js';
 import * as WALK from './walk.js';
@@ -224,6 +247,7 @@ import * as FIND from './find.js';
 import * as FOCUS from './focus.js';
 import * as REC from '../model/records.js';
 import * as WRITE from '../write/write.js';
+import * as MACHINE from '../write/machine.js';
 import * as HOST from '../overlays/host.js';
 import * as FACES from '../overlays/faces.js';
 import * as SEL from '../overlays/selection.js';
@@ -233,6 +257,7 @@ import * as TRAILLIST from '../overlays/trail-list.js';
 import * as MARKLIST from '../overlays/mark-list.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as HINT from '../overlays/hint.js';
+import * as DELETION from '../overlays/deletion.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import { keptWord, keptStatement } from '../text/article.js';
@@ -245,7 +270,9 @@ import { t } from '../strings.js';
 /** @typedef {import('../text/layer.js').ArrowStep} ArrowStep */
 
 /** the platform's primary command modifier: ⌘ on macOS, Ctrl elsewhere (D5 §0) */
-export const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '');
+export let MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '');
+/** the platform read as macOS, or as any other (tests): what `MAC` answers from then */
+export function _platform(/** @type {boolean} */ mac) { MAC = mac; }
 
 /**
  * @typedef {Object} Row — one row of D5's key table
@@ -255,7 +282,7 @@ export const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(na
  * @property {'plane' | 'line' | 'box' | 'trail' | 'selection' | 'cards' | 'corner' | 'scene' | 'caret' | 'platform'} surface `caret` a key at a live caret in text the person may edit
  */
 
-/** the table: every chord the page binds, by D5's row — K-9's swallow, K-72's printable keys at a caret, at a draft's span and at its corner, K-10's quasimode and K-12's pinch are APP-INPUT's and the dispatch's own; `Alt+` is Option on macOS, the only platform the page takes it on (`arrowStep`) */
+/** the table: every chord the page binds, by D5's row — K-9's swallow, K-72's printable keys at a caret, at a draft's span and at its corner, K-10's quasimode and K-12's pinch are APP-INPUT's and the dispatch's own; `Alt+` is Option on macOS, the only platform the page takes it on (`arrowStep`); K-41's Mod+Y is macOS's and its Mod+H every other platform's, where Mod+Y is K-75's redo (`trailChord`, `undoAct`) */
 export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-1', chord: '↓', act: 'walk.down', surface: 'plane' },
   { id: 'K-2', chord: '↑', act: 'walk.up', surface: 'plane' },
@@ -280,6 +307,7 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-101', chord: 'Mod+Shift+Enter', act: 'leap.beside', surface: 'box' },
   { id: 'K-40', chord: 'Mod+1…9', act: 'trail.jump', surface: 'trail' },
   { id: 'K-41', chord: 'Mod+Y', act: 'trail.list', surface: 'trail' },
+  { id: 'K-41', chord: 'Mod+H', act: 'trail.list', surface: 'trail' },
   { id: 'K-45', chord: 'Mod+Shift+A', act: 'selection.annotate', surface: 'selection' },
   { id: 'K-46', chord: 'Mod+Shift+C', act: 'selection.quote', surface: 'selection' },
   { id: 'K-47', chord: 'Mod+Shift+O', act: 'selection.wrote', surface: 'selection' },
@@ -321,6 +349,9 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-72', chord: 'Backspace', act: 'caret.erase', surface: 'caret' },
   { id: 'K-72', chord: 'Delete', act: 'caret.erase', surface: 'caret' },
   { id: 'K-74', chord: 'Mod+S', act: 'save.answer', surface: 'plane' },
+  { id: 'K-75', chord: 'Mod+Z', act: 'undo', surface: 'plane' },
+  { id: 'K-75', chord: 'Mod+Shift+Z', act: 'redo', surface: 'plane' },
+  { id: 'K-75', chord: 'Mod+Y', act: 'redo', surface: 'plane' },
   { id: 'K-76', chord: 'Tab', act: 'caret.tab', surface: 'caret' },
   { id: 'K-76', chord: 'Enter', act: 'caret.newline', surface: 'caret' },
   { id: 'K-76', chord: 'Shift+Enter', act: 'caret.newline', surface: 'caret' },
@@ -359,6 +390,11 @@ const MODIFIERS = new Set(['Shift', 'Meta', 'Control', 'Alt', 'AltGraph']);
 const keepsPanel = (/** @type {KeyboardEvent} */ e, /** @type {string} */ chord, /** @type {Ctx} */ ctx) => MODIFIERS.has(e.key) || (ctx.where === 'plane' && (WALK_KEYS.has(chord) || chord === 'Shift+↓' || chord === 'Shift+↑'));
 /** a find chord's move (K-91): 1 the next, -1 the previous — Mod+G and Mod+Shift+G, and F3 and Shift+F3 elsewhere than macOS — 0 for any other chord */
 const findDir = (/** @type {string} */ chord) => (chord === 'Mod+G' || (!MAC && chord === 'F3') ? 1 : chord === 'Mod+Shift+G' || (!MAC && chord === 'Shift+F3') ? -1 : 0);
+
+/** the trail's list's chord (K-41), the platform's history chord: Mod+Y on macOS; Ctrl+H elsewhere, where Ctrl+Y redoes (K-75) */
+export const trailChord = () => (MAC ? 'Mod+Y' : 'Mod+H');
+/** the act an undo chord makes (K-75): Mod+Z undoes; Mod+Shift+Z redoes, and Ctrl+Y too elsewhere than macOS; null for any other chord */
+export const undoAct = (/** @type {string} */ chord) => (chord === 'Mod+Z' ? 'undo' : chord === 'Mod+Shift+Z' || (!MAC && chord === 'Mod+Y') ? 'redo' : null);
 
 /** the chord a KeyboardEvent spells, in D5's notation — `Mod+Shift+L`, `↓`, `Enter`, or the printable key itself; Option on macOS spells nothing (D5 §0), so a key means what it means without it, the word step reading Option itself (`arrowStep`) */
 export function chordOf(/** @type {KeyboardEvent} */ e) {
@@ -514,19 +550,20 @@ function readOnlySpan(ctx) {
  * @param {KeyboardEvent} e
  * @param {Ctx} ctx
  * @param {import('../overlays/hint.js').Writing | null} [writing] where the person was writing, which a printable key's line ends with (`writingElsewhere`); null for a paste
+ * @param {string | null} [ending] the string of the sentence the line ends on while it stands whole (O-HINT's `show`): the undo chord's (`undoNone`)
  * @returns {boolean} whether a line answered the key
  */
-function siteSays(e, ctx, writing = null) {
+function siteSays(e, ctx, writing = null, ending = null) {
   const s = readOnlySpan(ctx), account = REC.session()?.account, doc = s && documentOf(s.addr);
   if (!s || !account || !doc) return false;
   if (accountOf(doc) === account) {
     if (LAYER.isDraft(s.addr) !== false) return false;
-    HINT.show('C-45', { D: doc }, { ...hinted(e, ctx), writing });
+    HINT.show('C-45', { D: doc }, { ...hinted(e, ctx), writing, ending });
     return true;
   }
   const owner = REC.ownerAccount(REC.doc(REC.has(doc) ? doc : s.addr));
   if (!owner || owner === account) return false;
-  HINT.show('B3.row.others-document', { owner }, { ...hinted(e, ctx), writing });
+  HINT.show('B3.row.others-document', { owner }, { ...hinted(e, ctx), writing, ending });
   return true;
 }
 
@@ -560,8 +597,8 @@ export async function dispatch(e, ctx) {
   if (mod && !e.shiftKey && chord === 'Mod+V' && siteSays(e, ctx)) return true;
   // a copy outside a field where the platform holds no selection (K-92): the page's line, its default prevented, or the selection it draws placed under the copy
   if (mod && !e.shiftKey && !e.altKey && chord === 'Mod+C' && copyAsDrawn(e, ctx)) return true;
-  // the rest of the platform's own, never taken (K-92, K-93)
-  if (mod && !e.shiftKey && ['C', 'V', 'X', 'A', 'P', 'W', 'Q', 'M', 'H', ','].includes(chord.slice(4))) return false;
+  // the rest of the platform's own, never taken (K-92, K-93): Mod+H among them on macOS alone, the trail's list elsewhere (K-41)
+  if (mod && !e.shiftKey && ['C', 'V', 'X', 'A', 'P', 'W', 'Q', 'M', 'H', ','].includes(chord.slice(4)) && chord !== trailChord()) return false;
   if (ctx.where === 'field') {
     if (chord === 'Esc') { esc(); return true; }
     // find's chords, which no field takes as its own: the find opened beside the field, which keeps the caret (FP-20), or stepped
@@ -596,9 +633,12 @@ function route(e, chord, ctx) {
   if (chord === 'Esc') return () => { esc(!!ctx.landed); return true; };
   // the LEAP box
   if (chord === 'Mod+L') return () => { LEAP.open(); return true; };
-  // the trail's list (K-41)
-  if (chord === 'Mod+Y') return () => { TRAILLIST.open(byKey); return true; };
+  // the trail's list (K-41), by the platform's history chord
+  if (chord === trailChord()) return () => { TRAILLIST.open(byKey); return true; };
   if (chord === 'Mod+S') return () => { saveChord(); return true; }; // K-74: the chord writes nothing; the corner's kept state answers it
+  // undo and redo (K-75): from the plane, the scene and every control but a field
+  const undoes = undoAct(chord);
+  if (undoes) return async () => { e.preventDefault(); await undoChord(e, ctx, undoes === 'redo'); return true; };
   // find (K-91): live from the plane, the scene, the line, a corner and every control on them alike, the browser's own find never run
   const fd = findDir(chord);
   if ((chord === 'Mod+F' || fd) && REC.board()) return findAct(e, fd, ctx);
@@ -903,6 +943,105 @@ function saveAnswer(addr) {
   LAYER.openStatement(addr, true, 'save');
   FOCUS.say(keptStatement(k, LAYER.keptSaid(addr, 'save')).text);
 }
+
+/** the sentence each of the undo chord's lines ends on while it stands whole (B3-S3; D6 BM-42) */
+const UNDO_CONSTANT = 'B3.undo.constant';
+
+/**
+ * The draft the undo chord acts on (see the head; D5 K-75): the one whose
+ * text holds the caret; where none does, the draft whose caret the person
+ * last held this session — the kept caret's — while it stands in view at its
+ * reading scale (T-LAYER's `editable`, `inView`). Null where neither stands,
+ * and while the scene covers the plane.
+ * @returns {string | null}
+ */
+function undoTarget() {
+  if (SCENE.isOpen()) return null;
+  const c = LAYER.caret();
+  return c && LAYER.editable(c.addr) && (c.live || LAYER.inView(c.addr)) ? c.addr : null;
+}
+
+/**
+ * Mod+Z, and the redo chords (see the head; D5 K-75; D6 BM-31 … BM-34,
+ * BM-42, BM-45): the newest step of the target draft's stack taken back, or
+ * the step undone last put back (W-MACHINE's `undo`, `redo`) — the caret then
+ * live where the step began, the selection ended, the walk on the caret's
+ * span and its mark brought into view by the frame, and what the step did
+ * said in the status region alone (`undoSaid`). A step whose line awaits an
+ * act of the person's at its face shows that face, no act of it taken, the
+ * focus where it stood. A draft that cannot be written now is answered by its
+ * reason's line; an empty undo stack by its own; no target by `undoNone`. A
+ * redo with nothing to put back is taken and says nothing. A step standing
+ * in text the page does not hold — a long draft held in part — is reached
+ * first by a LEAP to where it began (N-GO's `leapTo`), then taken; where its
+ * text is still not held nothing is changed.
+ * @param {KeyboardEvent} e
+ * @param {Ctx} ctx
+ * @param {boolean} redo
+ * @returns {Promise<void>}
+ */
+async function undoChord(e, ctx, redo) {
+  const addr = undoTarget();
+  if (!addr) { if (!redo) undoNone(e, ctx); return; }
+  if (unwritableSays(addr, e, ctx)) return;
+  let out = redo ? MACHINE.redo(addr) : MACHINE.undo(addr);
+  // the step stands in text the page does not hold of a long draft: its place read first, by a LEAP to where it began, then the press made
+  if (out.how === 'away' && out.at != null) { await GO.leapTo(addr, { pos: out.at, how: 'key', byKey: ctx.byKey }); out = redo ? MACHINE.redo(addr) : MACHINE.undo(addr); }
+  if (out.how === 'away') return;
+  if (out.how === 'face') { const corner = LAYER.cornerOf(addr); FACES.unkept(addr, corner ? /** @type {HTMLElement | null} */ (corner.querySelector('.kept-word')) : null, false); return; }
+  if (out.how === 'empty') { if (!redo) HINT.show('B3.undo.empty', null, { ...hinted(e, ctx), ending: UNDO_CONSTANT }); return; }
+  if (SEL.selected()) SEL.clear();
+  if (out.at != null) { LAYER.placeCaret(addr, out.at); await WALK.followCaret(); }
+  undoSaid(addr, out, redo);
+}
+
+/**
+ * What an undo or a redo did, said in the status region and never drawn
+ * (B3-S3; D6 BM-32, BM-33): "taken out — …" by the first words it took out,
+ * then "put back — …" by the first words it returned — a redo's the other way
+ * about, the words it puts back first — and after them the deletion face
+ * the press raised whole, where it raised one (O-DELETION's `take`).
+ * @param {string} addr the draft
+ * @param {import('../write/machine.js').Undone} out
+ * @param {boolean} redo
+ */
+function undoSaid(addr, out, redo) {
+  const taken = out.out ? t('B3.undo.said.taken-out', { 'first words': LAYER.firstWordsOf(out.out) }) : '';
+  const put = out.back ? t('B3.undo.said.put-back', { 'first words': LAYER.firstWordsOf(out.back) }) : '';
+  const said = [...(redo ? [put, taken] : [taken, put]), DELETION.take(addr)].filter(Boolean).join(' ');
+  if (said) FOCUS.say(said, false, true);
+}
+
+/**
+ * The undo chord where no draft is its target (see the head; B3-S3; D6
+ * BM-42): at the walk's span of an edition of the person's own, or of
+ * another's document, that document's line (`siteSays`); anywhere else the
+ * no-caret line, ending with where the person was last writing where a kept
+ * caret stands in the draft last written this session (`writingElsewhere`).
+ * Each ends on the constant sentence while it stands whole, and is the hint
+ * at the focus.
+ * @param {KeyboardEvent} e
+ * @param {Ctx} ctx
+ */
+function undoNone(e, ctx) {
+  const writing = writingElsewhere(null);
+  if (siteSays(e, ctx, writing, UNDO_CONSTANT)) return;
+  HINT.show('B3.undo.none', null, { ...hinted(e, ctx), writing, ending: UNDO_CONSTANT });
+}
+
+/**
+ * An undo the board declined (W-WRITE's `onDeclined`; B3-S3; D6 BM-11,
+ * BM-12): the source of the passage withheld from the person now — said in
+ * the one line, naming the origin, and ending with what the undo chord again
+ * undoes.
+ * @param {string} addr the draft
+ * @param {string} origin the document the words came from
+ */
+function declined(addr, origin) {
+  void addr;
+  LINE.transient(`${t('B3.undo.withheld', { origin })} ${t('B3.undo.again', { 'undo chord': drawChord('Mod+Z') })}`, 'B3.undo.withheld');
+}
+WRITE.onDeclined(declined);
 
 /**
  * A key a jump in the air finds is held for its landing (see the head; FP-25):

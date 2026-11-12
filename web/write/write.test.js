@@ -9,7 +9,11 @@
 // back; and the draft last written — every change counted
 // for the loop. A change of the page's class lets go of the kept states, the
 // held lines and the draft last written, ends every flight and tells its
-// waiters, and keeps the edits and what the board minted of them.
+// waiters, and keeps the edits and what the board minted of them. The stacks
+// — a draft's undo and redo stacks set by the machine alone, an act telling
+// it how it was made and a run's end told too, the edits an undo or a redo
+// makes added as given, and the removals the deletion face stands at — are
+// held here and gone at a change of class.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as WRITE from './write.js';
@@ -181,4 +185,71 @@ test('the draft last written in the page\'s session is the one whose edits were 
   assert.equal(WRITE.lastWritten(), E, 'its edits let go, it is still the draft last written');
   classChanges();
   assert.equal(WRITE.lastWritten(), null, 'a change of class forgets it');
+});
+
+test('a draft\'s undo and redo stacks are held here and set by the machine alone: an act\'s edits tell the machine how they were made — a key typing at the caret and where it stood, or a step of its own — a run\'s end is told it too, and with no machine handed in no one is told; a change of the page\'s class lets the stacks go (D6 BM-31)', () => {
+  const D = '1.0.1.0.2';
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 3 }]);
+  REC.takeDelivery(D, [{ pos: 1, width: 3, kind: 'content', text: 'abc', ref: null, origin: null }]);
+  assert.deepEqual([WRITE.undoOf(D), WRITE.redoOf(D)], [[], []], 'none made');
+  WRITE.addEdit(D, { pos: 4, width: 0, text: 'x' }, { at: 4 });
+  WRITE.endRun(D);
+  assert.deepEqual([WRITE.undoOf(D), WRITE.lastAct(D)], [[], 1], 'no machine handed in: the act is counted, no step is made and no one is told of the run\'s end');
+  /** @type {unknown[]} */
+  const told = [];
+  WRITE.machine({ commit() {}, typed: (addr, how) => told.push(['typed', addr, how]), ended: (addr) => told.push(['ended', addr]), leaving: () => false });
+  WRITE.addEdit(D, { pos: 5, width: 0, text: 'y' }, { at: 5 });
+  WRITE.addEdits(D, [{ pos: 1, width: 1, text: '' }]);
+  WRITE.endRun(D);
+  WRITE.endRun();
+  assert.deepEqual(told, [['typed', D, { at: 5 }], ['typed', D, null], ['ended', D], ['ended', null]], 'a key typing at the caret tells where the caret stood; any other act tells none; a run\'s end is told, every draft\'s where none is named');
+  /** @type {import('./write.js').Step} */
+  const step = { id: 1, kind: 'typing', open: true, acts: [2], placed: [{ prefix: REC.pageSpace(D), ordinal: 2, width: 1 }], took: [], began: { before: [], after: [], pos: 5 }, stood: null, removal: null };
+  const rev = WRITE.rev();
+  WRITE.setStacks(D, [step], []);
+  assert.deepEqual([WRITE.undoOf(D), WRITE.redoOf(D), WRITE.rev() > rev], [[step], [], true], 'set as the machine sets them, counted for the loop');
+  WRITE.setStacks(D, [], [{ ...step, open: false }]);
+  assert.deepEqual([WRITE.undoOf(D), WRITE.redoOf(D).map((x) => x.open)], [[], [false]]);
+  classChanges();
+  assert.deepEqual([WRITE.undoOf(D), WRITE.redoOf(D), WRITE.edits(D).length], [[], [], 3], 'a change of class lets the stacks go; the edits stand');
+});
+
+test('the edits an undo or a redo makes are added as given, one act, the machine not told: an insert naming bytes the page made before takes their own ordinals, any other the page\'s next; a removal kept only for the put-back that names it changes nothing and gives the put-back its bytes (D6 BM-32, BM-33)', () => {
+  const D = '1.0.1.0.2', own = (/** @type {number} */ n) => `${D}.0.1.${n}`;
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 3 }]);
+  REC.takeDelivery(D, [{ pos: 1, width: 3, kind: 'content', text: 'abc', ref: null, origin: null }], 7, { from: 1, runs: [{ iStart: own(1), width: 3 }] });
+  /** @type {string[]} */
+  const told = [];
+  WRITE.machine({ commit() {}, typed: (addr) => told.push(addr), ended() {}, leaving: () => false });
+  WRITE.addEdit(D, { pos: 4, width: 0, text: 'xy' });
+  WRITE.dropEdits(D, () => true);
+  told.length = 0;
+  assert.equal(WRITE.restore(D, []), 0, 'nothing added: no act');
+  const act = WRITE.restore(D, [{ pos: 4, width: 0, text: 'xy', page: 1 }, { pos: 6, width: 0, text: 'z' }]);
+  assert.deepEqual([act, WRITE.edits(D).map((e) => [e.text, e.page, e.step]), told], [2, [['xy', 1, 2], ['z', 3, 2]], []], 'one act: the bytes that come back under the ordinals they had, a new byte under the page\'s next — and the machine is not told of its own act');
+  // a removal the record's text holds the change of, kept only for the put-back that names it
+  const took = { runs: [{ pos: 1, width: 2, kind: /** @type {const} */ ('content'), text: 'QR', ref: null, origin: null }], ids: [{ pos: 1, width: 2, prefix: `${D}.0.1`, ordinal: 90 }] };
+  const n = WRITE.edits(D).length;
+  WRITE.restore(D, [{ pos: 1, width: 0, text: '', based: true, took }, { pos: 1, width: 0, text: '', back: { of: n, from: 0, width: 2 } }]);
+  const shown = applyEdits(REC.doc(D), WRITE.edits(D), (page, width) => REC.pageIds(D, page, width)).doc;
+  assert.deepEqual([REC.textOf(shown.runs, shown.from, shown.to), REC.identityIn(shown.image, 1, 2), WRITE.edits(D)[n].based, WRITE.unsent(D)], ['QRabcxyz', [{ prefix: `${D}.0.1`, ordinal: 90, width: 2 }], true, 0],
+    'the bytes it kept stand where the put-back places them, by their own identity; the removal itself changes nothing and is no burst\'s to carry');
+});
+
+test('the removals the deletion face stands at are held per draft, numbered by the draft\'s count of them in the page\'s session, let go by the one who names them and at a change of the page\'s class; and those watching are told of an undo the board declined (D6 BM-34, BM-51, BM-11)', () => {
+  const D = '1.0.1.0.2', E = '1.0.1.0.3', at = (/** @type {number} */ n) => [{ prefix: `${D}.0.1`, ordinal: n, width: 1 }];
+  assert.deepEqual([WRITE.removalsOf(D), WRITE.removalDocs()], [[], []]);
+  const first = WRITE.addRemoval(D, { before: at(1), after: at(4), words: 'bc', ids: [{ prefix: `${D}.0.1`, ordinal: 2, width: 2 }] });
+  const second = WRITE.addRemoval(D, { before: at(5), after: [], words: 'f', ids: at(6) });
+  WRITE.addRemoval(E, { before: [], after: [], words: 'x', ids: [{ prefix: `${E}.0.1`, ordinal: 1, width: 1 }] });
+  assert.deepEqual([first.id, second.id, WRITE.removalsOf(D).map((r) => r.words), WRITE.removalsOf(E).map((r) => r.id), WRITE.removalDocs()], [1, 2, ['bc', 'f'], [1], [D, E]], 'each draft its own, the first its 1');
+  WRITE.dropRemovals(D, (r) => r.id === 1);
+  assert.deepEqual([WRITE.removalsOf(D).map((r) => r.id), WRITE.addRemoval(D, { before: [], after: [], words: 'q', ids: at(9) }).id], [[2], 3], 'one let go; the count never falls, so a later removal is never the draft\'s first again');
+  /** @type {Array<[string, string]>} */
+  const told = [];
+  WRITE.onDeclined((addr, origin) => { told.push([addr, origin]); });
+  WRITE.decline(D, '1.0.2.0.5');
+  assert.deepEqual(told, [[D, '1.0.2.0.5']], 'an undo the board declined is told to those watching, with the origin');
+  classChanges();
+  assert.deepEqual([WRITE.removalsOf(D), WRITE.removalDocs()], [[], []], 'a change of class lets them go');
 });

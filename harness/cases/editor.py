@@ -16,6 +16,13 @@ seeded draft stays page-local. Its last page asks for the machine
 held, refused, handed-over, moved, halted, full and second-window rows are
 driven by arming that provider's `op`, `held` and `resolve` answers and
 firing its events, each word checked against `strings.js` (`machine_rows`).
+Undo, redo and the deletion face are driven there too (`undo_rows`): Mod+Z on
+an empty stack, its line and the constant sentence (`undo-lines`); a removal
+of kept words, the deletion face at its commit (`deletion-face`); the undo
+and redo of a removal and of a run of typing as `delete` and `reinstate` on
+the test board; and, armed, an undone run's held line dropped, a drop owed
+where the landing cannot be read, an undo declined `withheld`, and an undo at
+a refused run answered at its face.
 
 STATES is the table: each row a screen, a state, how the page is brought to
 it — a hook, keys, an arm of a call's next answer, an event fired by hand —
@@ -193,12 +200,14 @@ STATES = [
          how='arm `op` with the refusal `held_full`; type; then fire `held` kept as the store drains (D6 BM-19, BM-20)',
          claim='the one line reads the bound\'s line (B3.held_full.line); the refused change waits under the head "not kept" with its statement (B3.held_full.refused), "send again" inert; a key at the caret is answered by the bound\'s caret line (B3.held_full.caret); as the store drains the page sends the waiting change itself'),
     # B3-S3 … B3-S13
-    dict(screen='B3-S3', state='undo-lines', walk='W-08', step=5, drawn=False,
-         how="Mod+Z's lines and the constant sentence (D6 BM-37, BM-42)", claim='', why='the stack (U5) and the keys (U7)'),
-    dict(screen='B3-S4', state='deletion-face', walk='W-08', step=8, drawn=False,
-         how='the deletion face before the act (C-49; D6 BM-51)', claim='', why='the composer (U3): no `delete` is composed'),
+    dict(screen='B3-S3', state='undo-lines', walk='W-08', step=5, drawn=True,
+         how="Mod+Z in the case's own draft before anything is typed in it — an empty stack (K-75; D6 BM-42) — then the hint's own act",
+         claim='the hint beside the focus reads "nothing to undo in this draft this session — its past states hold what came before" (B3.undo.empty), whole at its first press in the session and ending on the constant sentence, "a link you made public stays until you retract it at its card" (B3.undo.constant), inside the window below the one line and said in the status region; a later press shows its first clause alone, and its act opens it whole again; nothing is sent'),
+    dict(screen='B3-S4', state='deletion-face', walk='W-08', step=8, drawn=True,
+         how="Backspace over kept words at the caret in the case's own draft; the burst's commit composes the `delete` (D6 BM-51)",
+         claim='the deletion face stands whole at the removal point, in the margin beside its line or over the lines beneath it — "still here — for as long as this board retains it; …" (C-49), then "you alone can still reach what you remove" (B3.deletion.private) — its mark named "removed here" (B3.removed-here), inside the window, taking no focus and no key: the caret stands live where it stood; the `delete` reaches the test board and is acked'),
     dict(screen='B3-S5', state='paste-quote', walk='W-08', step=4, drawn=False,
-         how="the paste's reader half and the quote's pick", claim='', why='the composer (U3); the pick overlay'),
+         how="the paste's reader half and the quote's pick", claim='', why="no paste is made at a caret — Mod+V there stays the platform's (K-93) — and the pick overlay is unbuilt: #578's paste quote form"),
     dict(screen='B3-S6', state='picker', walk='W-08', step=4, drawn=False,
          how='the type picker over two held passages', claim='', why="the picker module; a pane's selection (#29, #94)"),
     dict(screen='B3-S7', state='past-states', walk='W-08', step=8, drawn=False,
@@ -283,6 +292,11 @@ def hint(ctx):
       return {hint: h && {id: h.id, words: h.words, by: h.placed && h.placed.by}, box: h && {x: q.left, y: q.top, w: q.width, h: q.height},
               seen: !!h && q.width > 0 && q.height > 0 && q.left >= -0.5 && q.right <= window.innerWidth + 0.5 && q.top >= top - 0.5 && q.bottom <= window.innerHeight + 0.5,
               line: !!document.querySelector("#line .seg.transient")}; })()''')
+
+
+def hint_whole(ctx, sid, whole=True, values=None):
+    """a hint's notice whole, or its compact form (`strings.js`'s `hintOf`), its tokens filled"""
+    return ctx.js('(async () => { const h = (await import("./strings.js")).hintOf(%s, %s); return %s ? h.whole : h.clause; })()' % (json.dumps(sid), json.dumps(values or {}), 'true' if whole else 'false'))
 
 
 def live(ctx):
@@ -997,7 +1011,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     r.check(bool(boot) and boot.get('machine') is True and bool(session) and session.get('writes') is True,
             "the page opened on the harness's provider with `machine=1` boots with D6's machine handed in, under a session that writes", {'machine': boot and boot.get('machine'), 'writes': session and session.get('writes')})
     if not session or not board or not (boot and boot.get('machine')):
-        for state in ('kept-on-board', 'held-bars', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full'):
+        for state in ('undo-lines', 'kept-on-board', 'held-bars', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face'):
             red(state, 'the machine\'s page did not open')
         return
     sid, account, board_id = session['session'], session['account'], board['board']
@@ -1089,9 +1103,33 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     r.check(stands and line0 == SEED_TEXT.split('\n')[0], "the case's own draft stands at reading scale, its article mounted and its corner beside it, its first line as written",
             {'stands': stands, 'line': line0, 'focus': ctx.js('window.__skep.view.focus()')})
     if not stands:
-        for st in ('kept-on-board', 'held-bars', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full'):
+        for st in ('undo-lines', 'kept-on-board', 'held-bars', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face'):
             red(st, 'the case\'s own draft did not mount')
         return
+    # ---- B3-S3: Mod+Z on an empty stack, before anything is typed in the draft (K-75; BM-42) ----------------------------------
+    caret_end(line0)
+    writes0 = len(ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "op" || c.name === "resolve")'))
+    empty, empty_clause, constant = hint_whole(ctx, 'B3.undo.empty'), hint_whole(ctx, 'B3.undo.empty', False), t(ctx, 'B3.undo.constant')
+
+    def empty_check(w):
+        ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()'); ctx.frames(1)
+        ctx.drv.key('z', mods=('Meta',)); ctx.frames(3)
+        first, said = dict(hint(ctx), full=ctx.js('window.__skep.hint()')), live(ctx)
+        f = first['full'] or {}
+        if w == WIDE[0]:
+            ok = f.get('id') == 'B3.undo.empty' and f.get('open') and f.get('words') == empty and f.get('ending') == constant and said == empty + ' ' + constant and first['seen']
+        else:
+            # a later press in the session: its first clause alone; its own act opens it whole again
+            ok = f.get('id') == 'B3.undo.empty' and not f.get('open') and f.get('words') == empty_clause and f.get('ending') is None and said == empty_clause and first['seen']
+            ctx.js('document.querySelector("#hint button[data-hint]").click()'); ctx.frames(3)
+            f = ctx.js('window.__skep.hint()') or {}
+            ok = ok and f.get('open') and f.get('words') == empty and f.get('ending') == constant and hint(ctx)['seen']
+        drawn = ctx.js('(() => { const e = document.querySelector("#hint .ending"); return e ? {id: e.dataset.string, text: e.textContent} : null; })()')
+        writes = len(ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "op" || c.name === "resolve")'))
+        ok = ok and drawn == {'id': 'B3.undo.constant', 'text': constant} and writes == writes0 and first_line() == line0 and state()['islands'] == [] and ctx.js('window.__skep.write.stacks(%s)' % json.dumps(mine)) == {'undo': [], 'redo': []}
+        return ok, {'first': first, 'said': said, 'opened': f, 'ending': drawn, 'want': [empty, empty_clause, constant], 'writes': [writes0, writes]}
+    shoot('undo-lines', empty_check, recentre)
+    ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
     caret_end(line0)
     press(' Kept.')
     landed = wait_for(ctx, '(() => { const s = window.__skep.write.state(%s); return !!s.kept && s.kept.word === "kept" && window.__skep.write.edits(%s).length === 0; })()' % (json.dumps(mine), json.dumps(mine)), 15)
@@ -1306,6 +1344,217 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     r.check(drained and bool(w1) and w1['op'] == 'insert' and w1['doc'] == mine and w1.get('values') == [' Full.'] and '"ack_addr"' in (w1.get('answer') or '') and first_line() == line1 + ' Full.',
             'as the store drains the page sends the waiting change itself, in its turn: its insert reaches the test board and is acked, the island and the bound\'s reason lift, and the corner reads "kept"',
             {'drained': drained, 'write': w1 and {k2: w1[k2] for k2 in ('op', 'doc', 'values')}, 'state': state(), 'shown': first_line()})
+    ctx.drv.key('Escape'); ctx.frames(2)
+    undo_rows(ctx, r, shoot, red, ops_allowed, dict(mine=mine, sid=sid, board_id=board_id, corner=corner, state=state, recentre=recentre, quiet=quiet, caret_end=caret_end, press=press,
+                                                    corner_word=corner_word, first_line=first_line, hold_typed=hold_typed, held_row=held_row, drop_all=drop_all, refusal=refusal))
+
+
+def undo_rows(ctx, r, shoot, red, ops_allowed, m):
+    """UNDO, REDO AND THE DELETION FACE (D6 BM-31 … BM-34, BM-45, BM-51, BM-81, BM-11), on the machine's page, the case's
+    own draft holding kept words. Against the test board: Backspace over kept words commits a `delete`, and the deletion
+    face stands whole at the removal point (`deletion-face`, shot at both widths); Mod+Z puts the words back by a
+    `reinstate`, the mark gone; Mod+Shift+Z removes them again, its mark compact, the mark's act opening the face; a run of
+    typing kept, undone, is a `delete` on the board and a compact mark, and its redo a `reinstate`, never an insert. By
+    arming the harness's provider: an undone run whose line the shell holds is dropped by one `resolve(drop)`; a line
+    marked `sent` whose landing cannot be read leaves the drop owed — the text taken back, the corner "not yet kept" — and
+    is dropped at the line's next `held` event; an undo's `reinstate` refused `withheld` is declined in the one line; and
+    an undo at a refused run shows its face and drops nothing. Each word is checked against `strings.js`."""
+    mine, sid, board_id, corner = m['mine'], m['sid'], m['board_id'], m['corner']
+    state, recentre, quiet, caret_end, press = m['state'], m['recentre'], m['quiet'], m['caret_end'], m['press']
+    corner_word, first_line, hold_typed, held_row, drop_all, refusal = m['corner_word'], m['first_line'], m['hold_typed'], m['held_row'], m['drop_all'], m['refusal']
+    removed = lambda: ctx.js('window.__skep.removed()') or []
+    stacks = lambda: ctx.js('window.__skep.write.stacks(%s)' % json.dumps(mine))
+    said_of = lambda sid_, words: t(ctx, sid_, {'first words': words})
+
+    def board_line():
+        """the draft's first line as the test board holds it, read through the page's port"""
+        got = port_op(ctx, sid, {'op': 'retrieve_v', 'specs': [{'doc': mine, 'span': {'start': '1.1', 'width': '0.400'}}]})
+        return ''.join(i.get('content', '') for i in (((got or {}).get('result') or {}).get('items') or [])).split('\n')[0]
+
+    def kept(max_s=15):
+        """the draft kept on the board again: the corner "kept", every edit read back"""
+        ok = wait_for(ctx, '(() => { const s = window.__skep.write.state(%s); return !!s.kept && s.kept.word === "kept" && !s.inFlight && window.__skep.write.edits(%s).filter((e) => e.at == null).length === 0; })()' % (json.dumps(mine), json.dumps(mine)), max_s)
+        quiet()
+        return ok
+
+    def chord(shift=False):
+        ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
+        ctx.drv.key('z', mods=('Meta', 'Shift') if shift else ('Meta',)); ctx.frames(3)
+
+    # ---- B3-S4: the deletion face at a removal of kept text (BM-51) ----------------------------------------------------------
+    quiet()
+    line = first_line()
+    gone = line.split(' ')[-1]
+    kept_line = line[:-(len(gone) + 1)]
+    caret_end(line)
+    faces0 = removed()
+    for _ in range(len(gone) + 1):
+        ctx.drv.key('Backspace')
+    ctx.frames(2)
+    at_keys = removed()
+    faced = wait_for(ctx, '(window.__skep.removed() || []).length === 1', 10)
+    landed = kept()
+    w = last_write(ctx, ops_allowed)
+    r.check(faces0 == [] and at_keys == [] and faced and landed and bool(w) and w['op'] == 'delete' and w['doc'] == mine and '"ack"' in (w.get('answer') or '') and first_line() == kept_line and board_line() == kept_line,
+            'Backspace over kept words: no face at the keys — the removal still inside its open burst — and one as the burst\'s commit composes its `delete`, which reaches the test board and is acked, the board\'s text and the text shown the same',
+            {'before': faces0, 'at_keys': at_keys, 'faced': faced, 'landed': landed, 'write': w and {k: w[k] for k in ('op', 'doc')}, 'shown': first_line(), 'board': board_line(), 'want': kept_line})
+
+    def face_check(wd):
+        got, caret, top = removed(), ctx.js('window.__skep.caret()'), ctx.js('document.getElementById("line").getBoundingClientRect().bottom')
+        f = got[0] if got else {}
+        parts = ctx.js('[...document.querySelectorAll("#removed .face .part")].map((e) => ({id: e.dataset.string, text: e.textContent}))')
+        mark = ctx.js('(() => { const b = document.querySelector("#removed button.mark"); return b ? {title: b.getAttribute("title"), name: b.getAttribute("aria-label"), expanded: b.getAttribute("aria-expanded"), focused: document.activeElement === b} : null; })()')
+        box = f.get('face') or {}
+        inside = bool(box) and box['x'] >= -0.5 and box['x'] + box['w'] <= wd + 0.5 and box['y'] >= top - 0.5 and box['y'] + box['h'] <= 900 + 0.5
+        ok = (len(got) == 1 and f.get('addr') == mine and f.get('whole') is True and f.get('words') == ' ' + gone and f.get('by') in ('beside', 'beneath') and inside
+              and parts == [{'id': 'C-49', 'text': t(ctx, 'C-49')}, {'id': 'B3.deletion.private', 'text': t(ctx, 'B3.deletion.private')}]
+              and mark == {'title': t(ctx, 'B3.removed-here'), 'name': t(ctx, 'B3.removed-here'), 'expanded': 'true', 'focused': False}
+              and len(shown(ctx, '#removed .face')) == 1 and len(shown(ctx, '#removed button.mark')) == 1
+              and not ctx.js('document.getElementById("removed").contains(document.activeElement)') and bool(caret) and caret.get('addr') == mine and first_line() == kept_line)
+        return ok, {'removed': got, 'parts': parts, 'mark': mark, 'inside': inside, 'caret': caret, 'shown': first_line()}
+    shoot('deletion-face', face_check, recentre)
+
+    # ---- B3-S3: the undo of that removal, by `reinstate`; its redo; and the mark with them (BM-32, BM-33) --------------------------
+    chord()
+    back = kept()
+    w = last_write(ctx, ops_allowed)
+    r.check(back and first_line() == line and board_line() == line and bool(w) and w['op'] == 'reinstate' and w['doc'] == mine and '"ack"' in (w.get('answer') or '') and removed() == []
+            and stacks()['redo'] and len(stacks()['redo']) == 1 and corner_word() == {'word': t(ctx, 'B3.kept'), 'id': 'B3.kept'},
+            'Mod+Z puts the removed words back: the text shown and the test board\'s the same again, by one `reinstate` acked — never an insert — the removal\'s mark gone with it, the step on the redo stack, the corner "kept"',
+            {'kept': back, 'shown': first_line(), 'board': board_line(), 'write': w and {k: w[k] for k in ('op', 'doc')}, 'removed': removed(), 'stacks': stacks()})
+    chord(shift=True)
+    again = kept()
+    w = last_write(ctx, ops_allowed)
+    marks = removed()
+    r.check(again and first_line() == kept_line and board_line() == kept_line and bool(w) and w['op'] == 'delete' and len(marks) == 1 and marks[0]['whole'] is False and marks[0]['face'] is None,
+            'Mod+Shift+Z removes them again — one `delete` acked — and this removal\'s face is a compact mark: the draft\'s first removal in the session is past',
+            {'kept': again, 'shown': first_line(), 'board': board_line(), 'write': w and {k: w[k] for k in ('op', 'doc')}, 'removed': marks})
+    ctx.js('document.querySelector("#removed button.mark").click()'); ctx.frames(3)
+    opened = removed()
+    r.check(len(opened) == 1 and opened[0]['whole'] is True and [p['id'] for p in opened[0]['parts']] == ['C-49', 'B3.deletion.private'] and live(ctx) == '%s %s' % (t(ctx, 'C-49'), t(ctx, 'B3.deletion.private')),
+            'the compact mark\'s act opens the face whole, its words said in the status region', {'removed': opened, 'live': live(ctx)})
+    chord()
+    back = kept()
+    r.check(back and first_line() == line and board_line() == line and removed() == [], 'Mod+Z again: the words back on the page and on the board, no mark standing', {'shown': first_line(), 'board': board_line(), 'removed': removed()})
+
+    # ---- B3-S3: a run of typing, kept, undone and redone against the test board (BM-34, BM-33) -----------------------------------
+    caret_end(line)
+    press(' Undone.')
+    typed = kept()
+    r.check(typed and first_line() == line + ' Undone.' and stacks()['undo'][-1]['kind'] == 'typing', 'a run of typing kept by the test board (what the next checks stand on)', {'shown': first_line(), 'stacks': stacks()})
+    chord()
+    told, taken = live(ctx), kept()
+    w = last_write(ctx, ops_allowed)
+    marks = removed()
+    r.check(taken and told.startswith(said_of('B3.undo.said.taken-out', 'Undone.')) and first_line() == line and board_line() == line and bool(w) and w['op'] == 'delete' and '"ack"' in (w.get('answer') or '')
+            and len(marks) == 1 and marks[0]['words'] == ' Undone.' and marks[0]['whole'] is False and ctx.js('window.__skep.caret()') == {'addr': mine, 'pos': len(line.encode('utf8')) + 1, 'live': True},
+            'Mod+Z takes the run back whole: the status region says "taken out — “Undone.”", the caret stands live where the run began, one `delete` of the placed words reaches the test board, and the removal — words a dial carried — is a compact mark decided at the press',
+            {'said': told, 'shown': first_line(), 'board': board_line(), 'write': w and {k: w[k] for k in ('op', 'doc')}, 'removed': marks, 'caret': ctx.js('window.__skep.caret()')})
+    chord(shift=True)
+    told, redone = live(ctx), kept()
+    w = last_write(ctx, ops_allowed)
+    r.check(redone and told.startswith(said_of('B3.undo.said.put-back', 'Undone.')) and first_line() == line + ' Undone.' and board_line() == line + ' Undone.' and bool(w) and w['op'] == 'reinstate' and removed() == [],
+            'Mod+Shift+Z puts the run back: "put back — “Undone.”" said, the words on the board again by a `reinstate` of their own bytes — never an insert of new ones — the mark gone',
+            {'said': told, 'shown': first_line(), 'board': board_line(), 'write': w and {k: w[k] for k in ('op', 'doc', 'values')}, 'removed': removed()})
+    chord()
+    r.check(kept() and first_line() == line and board_line() == line, 'and Mod+Z takes it back out again, the board following', {'shown': first_line(), 'board': board_line()})
+    ctx.js('(async () => { (await import("./overlays/host.js")).dismiss(); })()')
+
+    # ---- B3-S3: the no-caret line, naming where the person was last writing (BM-42) ----------------------------------------------
+    ctx.drv.key('Escape'); ctx.frames(2)
+    scale = ctx.camera()
+    ctx.view_doc_em(mine, 2)
+    label = ctx.js('(async () => (await import("./text/layer.js")).boxName(%s).name)()' % json.dumps(mine))
+    ctx.js('(async () => { (await import("./overlays/hint.js"))._reset(); })()')
+    ctx.drv.key('z', mods=('Meta',)); ctx.frames(3)
+    h = ctx.js('window.__skep.hint()') or {}
+    none, writing, constant = hint_whole(ctx, 'B3.undo.none'), t(ctx, 'B3.undo.last-writing', {'label': label}), t(ctx, 'B3.undo.constant')
+    r.check(h.get('id') == 'B3.undo.none' and h.get('words') == none and fold(h.get('writing')) == fold(writing) and h.get('ending') == constant and fold(live(ctx)) == fold('%s %s %s' % (none, writing, constant)) and first_line() == line,
+            'with the draft below its reading scale Mod+Z changes nothing and says so: "undo works in the text of a draft you are writing — there is nothing here to undo", "— you were last writing in ⟨label⟩", then the constant sentence',
+            {'hint': h, 'live': live(ctx), 'want': [none, writing, constant]})
+    ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
+    ctx.set_view(scale['x'], scale['y'], scale['scale'])
+    recentre()
+
+    # ---- B3-S3: an undone run whose line the shell holds: one `resolve(drop)` (BM-81) ---------------------------------------------
+    caret_end(line)
+    k, armed, how = hold_typed(' Held.', 'unreachable')
+    r.check(armed, "the held run is armed: the burst's own frame answered `held`, its line listed, never dialed", how)
+    seq = ctx.editor_seq()
+    ctx.arm('resolve', answer={})
+    ctx.arm('held', answer=[])
+    marks0, writes0 = len(removed()), last_write(ctx, ops_allowed)
+    resolves0 = ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "resolve").length')
+    chord()
+    dropped = wait_for(ctx, '(() => { const s = window.__skep.write.state(%s); return s.held.length === 0 && !!s.kept && s.kept.word === "kept"; })()' % json.dumps(mine), 10)
+    quiet()
+    resolves = ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "resolve").length') - resolves0
+    r.check(dropped and resolves == 1 and first_line() == line and ctx.consumed('resolve', seq) and ctx.consumed('held', seq) and last_write(ctx, ops_allowed) == writes0 and len(removed()) == marks0,
+            'Mod+Z at a run whose line the shell holds takes it back on the page at once and sends ONE `resolve(drop)`, then reads the held lines again: the corner "kept", no inverse composed, and no deletion face — no dial of that line left this device',
+            {'dropped': dropped, 'resolves': resolves, 'shown': first_line(), 'state': state(), 'removed': removed()})
+
+    # ---- B3-S3: a held line marked `sent` while the board is not answering — `landing_unread`: the drop owed (BM-81) ---------------
+    caret_end(line)
+    k, armed, how = hold_typed(' Unread.', 'unreachable', sent=True)
+    r.check(armed, 'the `sent` held line is armed', how)
+    seq = ctx.editor_seq()
+    ctx.arm('resolve', refusal={'kind': 'shell', 'name': 'landing_unread', 'held': k, 'why': 'unanswered'})
+    ctx.arm('held', answer=[held_row(k, 'unreachable', sent=True)])
+    chord()
+    refused_drop = wait_for(ctx, '%s' % ('window.__skep.bridge.calls().filter((c) => c.name === "resolve").length > 0'), 10) and ctx.consumed('resolve', seq)
+    ctx.frames(3); quiet()
+    st, got = state(), corner_word()
+    r.check(refused_drop and first_line() == line and [x['held'] for x in st['held']] == [k] and st['held'][0]['refusal'] is None and bool(got) and got['id'] == 'B3.not-yet-kept' and st['kept']['cause']['token'] == 'unreachable'
+            and ctx.js('window.__skep.overlay().id') is None,
+            'the drop refused `landing_unread`: the run stays taken back on the page, the line stands held and the drop owed, the corner keeps "not yet kept" by the line\'s cause, and no face is drawn',
+            {'refused': refused_drop, 'shown': first_line(), 'state': st, 'corner': got, 'overlay': ctx.js('window.__skep.overlay().id')})
+    # the line's next `held` event: the shell's list holds the line still as the event's read is answered, and the drop then takes it
+    seq = ctx.editor_seq()
+    ctx.arm('resolve', answer={})
+    ctx.arm('held', answer=[held_row(k, 'unreachable', sent=True)])
+    ctx.fire('held', {'board': board_id, 'session': sid, 'doc': mine, 'held': 1, 'state': 'holding', 'cause': 'unreachable'})
+    settled = wait_for(ctx, '(() => { const s = window.__skep.write.state(%s); return s.held.length === 0 && !!s.kept && s.kept.word === "kept"; })()' % json.dumps(mine), 10)
+    quiet()
+    r.check(settled and ctx.consumed('resolve', seq) and ctx.consumed('held', seq) and first_line() == line and board_line() == line,
+            "the line's next `held` event asks the drop again; dropped, the corner reads \"kept\" and the text stands as the person left it, the board's the same", {'settled': settled, 'state': state(), 'shown': first_line(), 'board': board_line()})
+
+    # ---- B3-S3: an undo's `reinstate` refused `withheld`: declined, said in the one line (BM-11, BM-12) -----------------------------
+    line = first_line()
+    last = line.split(' ')[-1]
+    short = line[:-(len(last) + 1)]
+    caret_end(line)
+    for _ in range(len(last) + 1):
+        ctx.drv.key('Backspace')
+    cut = kept()
+    r.check(cut and first_line() == short and board_line() == short, 'a removal of kept words, kept (what the next check stands on)', {'shown': first_line(), 'board': board_line()})
+    seq = ctx.editor_seq()
+    ctx.arm('op', refusal={'kind': 'refused', 'name': 'withheld', 'status': 200, 'code': 'withheld', 'detail': None, 'op': 'reinstate', 'site': {'addr': mine}, 'body': None})
+    chord()
+    said = wait_for(ctx, '!!document.querySelector(%s)' % json.dumps('#line [data-string="B3.undo.withheld"]'), 10)
+    quiet()
+    want = '%s %s' % (t(ctx, 'B3.undo.withheld', {'origin': mine}), t(ctx, 'B3.undo.again', {'undo chord': '⌘Z'}))
+    st = state()
+    r.check(said and fold(line_segment(ctx, 'B3.undo.withheld')) == fold(want) and ctx.consumed('op', seq) and first_line() == short and st['islands'] == [] and st['held'] == [] and st['kept']['word'] == 'kept'
+            and stacks()['redo'] == [] and ctx.js('window.__skep.overlay().id') is None,
+            'an undo\'s `reinstate` the board refuses `withheld` is declined: the one line says "the source of this passage is withheld from you now — ⟨origin⟩; …", ending "— ⌘Z again undoes what you did before it"; the words are gone from the text again, no refused run stands, the corner reads "kept", and the step is off the stack',
+            {'said': said, 'line': line_segment(ctx, 'B3.undo.withheld'), 'want': want, 'shown': first_line(), 'state': st, 'stacks': stacks()})
+    ctx.drv.key('Escape'); ctx.frames(2)
+
+    # ---- B3-S3: an undo at a refused run is answered at its face (BM-45) -----------------------------------------------------------
+    line = first_line()
+    caret_end(line)
+    k, armed, how = hold_typed(' Refused.', 'out_of_bounds', sent=True, refusal=refusal('out_of_bounds'))
+    r.check(armed, 'the refused run is armed', how)
+    calls0 = ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "resolve" || c.name === "op").length')
+    chord()
+    f = ctx.js(FACE_SHOWN)
+    r.check(bool(f) and (f.get('id') or '') == 'face:unkept:own-bug:%s' % mine and [a['run'] for a in f['acts']] == ['send', 'copy', 'discard'] and first_line() == line + ' Refused.' and [x['held'] for x in state()['held']] == [k]
+            and ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "resolve" || c.name === "op").length') == calls0
+            and not ctx.js('document.getElementById("overlay").contains(document.activeElement)'),
+            'Mod+Z at a refused run composes nothing and drops nothing: the press is answered at the run\'s face — its acts shown, none taken, the focus where it stood — the words standing',
+            {'face': f, 'shown': first_line(), 'held': state()['held']})
+    out, back = drop_all(k)
+    r.check(bool(out) and out.get('dropped') and back and first_line() == line, 'discarded at its face, the run\'s words leave', {'out': out, 'shown': first_line()})
     ctx.drv.key('Escape'); ctx.frames(2)
 
 

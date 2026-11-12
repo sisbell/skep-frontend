@@ -26,6 +26,23 @@
 // unloading or changing its class (`leaving`) — unloading, it posts the
 // page's close itself, carrying what it had not dialed, and says so. With no
 // machine handed in nothing is in flight and nothing is sent.
+// THE STACKS (`undoOf`, `redoOf`, `setStacks`; D6 BM-31): one undo stack and
+// one redo stack per draft, for the page's session, set by the machine alone
+// and gone at a change of the page's class. A step (`Step`) is a run of
+// typing, or an act that is a step of its own, held by the bytes' identity
+// and never by a burst: what it placed, what it removed that it had not
+// placed with the byte either side of each removal, and where its caret
+// stood as it began. An act says whether it is a key typing at the caret and
+// where that caret stood (`Typed`), which the machine is told with it; a move
+// of the caret by any other act ends the run (`endRun`), which the machine is
+// told too. What an undo or a redo makes of a draft's edits the machine adds
+// as they are (`restore`) — an insert naming bytes the page made before by
+// their own ordinals, a removal kept only for the put-back that names it —
+// and W-WRITE tells it of none of them. Beside the stacks, each removal of
+// kept text a `delete` of the draft carried, or an undo decided at its press
+// (`removalsOf`, `addRemoval`; D6 BM-34, BM-51): what the deletion face is
+// drawn from; and those watching are told of an undo the board declined
+// (`onDeclined`, `decline`; D6 BM-11).
 // THE HELD LINES THIS WINDOW DID NOT SEND (`setReopened`; D6 BM-29): an
 // earlier launch's, another window's. They are applied over the draft's
 // record before its edits, in the order listed (`baseOf`; M-DERIVE's
@@ -124,10 +141,46 @@ import { byteLength } from '../util.js';
 /** @typedef {'hidden' | 'unload' | 'class'} Leaving — how the page leaves what it holds unsent: `hidden` the page hidden, its calls still answered; `unload` the page going, no answer read; `class` the class the page reads at changed */
 
 /**
+ * @typedef {Object} Typed — how an act's edits were made (`addEdits`): a key typing at the caret
+ * @property {number} at where the caret stood before the key, a position of the text shown then
+ */
+
+/**
  * @typedef {Object} Machine — what D6's machine hands in (`machine`)
- * @property {(addr: string) => void} typed an act's edits were added to a draft (`addEdits`)
+ * @property {(addr: string, how: Typed | null) => void} typed an act's edits were added to a draft (`addEdits`): a key typing at the caret, or, with null, an act that is a step of its own
+ * @property {(addr: string | null) => void} ended the run of typing open at a draft ended — at every draft, with null (`endRun`)
  * @property {(addr: string) => void} commit the open burst of a draft committed now
  * @property {(how: Leaving) => boolean} leaving every draft's unsent words committed as the page leaves them (`leaving`): whether it posted the page's close, which it does at `unload` alone
+ */
+
+/**
+ * @typedef {Object} Taken — a stretch of bytes a step put out of the text, as a put-back places it again: what a step removed that it had not
+ * placed, which its undo puts back (D6 BM-32); what it placed, as it stood when the step was undone, which its redo puts back (D6 BM-33)
+ * @property {import('../model/records.js').Took} took the bytes — their runs and their identity, each at its position from 1
+ * @property {ISpan[]} before the byte that stood just before them as they left the text, by identity; none at the text's first position
+ * @property {ISpan[]} after the byte that stood just after them; none at the text's end
+ */
+
+/**
+ * @typedef {Object} Step — one step of a draft's undo stack (D6 BM-31): a run of typing, or an act that is a step of its own
+ * @property {number} id the step, by the draft's count of them
+ * @property {'typing' | 'put-back'} kind a run of typing — every key that types at one caret; or a put-back of words the person removed
+ * @property {boolean} open a run of typing no act has ended: the next key that types at the caret joins it
+ * @property {number[]} acts the acts it holds, by the count the edits each made carry (`Edit.step`), in the order made
+ * @property {ISpan[]} placed the bytes it placed, by identity, in the order placed: a byte the page made by the page's own name of it, which M-REC reads as the address the board minted it at
+ * @property {Taken[]} took what it removed that it had not placed, in the order removed
+ * @property {{before: ISpan[], after: ISpan[], pos: number}} began where the caret stood as it began: the byte either side of it, by identity, and its position in the text shown then
+ * @property {Taken[] | null} stood on the redo stack, the words it placed as they stood when it was undone, in the text's order; null on the undo stack
+ * @property {number | null} removal on the redo stack, the removal the deletion face stands at for the words its undo took out (`Removal.id`); null where it stands at none, and on the undo stack
+ */
+
+/**
+ * @typedef {Object} Removal — a removal of kept text the deletion face stands at (D6 BM-34, BM-51)
+ * @property {number} id by the draft's count of them
+ * @property {ISpan[]} before the byte just before the removal point, by identity; none at the text's first position
+ * @property {ISpan[]} after the byte just after it; none at the text's end
+ * @property {string} words the words removed
+ * @property {ISpan[]} ids the bytes removed, by identity
  */
 
 /**
@@ -140,6 +193,10 @@ import { byteLength } from '../util.js';
  * @property {Map<number, {page: number, width: number}>} names the page's ordinals for each held line's inserted bytes, by the line's ordinal (`heldNames`)
  * @property {Map<number, Island>} islands the refusals the page keeps, by the burst refused (`markIsland`)
  * @property {{key: string, doc: Doc, stopped: HeldLine[]} | null} base the record the edits apply over, as last made (`baseOf`)
+ * @property {Step[]} undo the undo stack, its newest step last (`setStacks`)
+ * @property {Step[]} redo the redo stack, the step undone last its last
+ * @property {Removal[]} removals the removals of kept text the deletion face stands at, in the order made (`addRemoval`)
+ * @property {number} faced how many such removals the draft has had in the page's session
  */
 
 /** @type {Map<string, KeptState>} each draft's kept state, by address (`setKept`) */
@@ -181,7 +238,8 @@ REC.keptAtEnding((addr) => unkept(addr));
  * forgotten, every flight ended, those waiting told, and every draft's kept
  * state and held lines dropped — save, where the change ends the session, a
  * draft holding words the board has not kept (`unkept`) whose record the
- * model left as read, which stands whole with them. The edits stand.
+ * model left as read, which stands whole with them. The edits stand; every
+ * draft's stacks and the removals its deletion face stands at go.
  * @param {boolean} ended the change ends the session
  */
 function classChanged(ended) {
@@ -189,6 +247,7 @@ function classChanged(ended) {
   for (const addr of [...kept.keys()]) if (!stays(addr)) kept.delete(addr);
   for (const addr of [...held.keys()]) if (!stays(addr)) held.delete(addr);
   for (const [addr, x] of drafts) if (!stays(addr) && x.lines.length) { x.lines = []; x.base = null; x.rev++; }
+  for (const x of drafts.values()) { x.undo = []; x.redo = []; x.removals = []; x.faced = 0; }
   last = null;
   for (const addr of [...flights.keys()]) endFlight(addr);
   bump();
@@ -243,30 +302,35 @@ export const editRev = (/** @type {string} */ addr) => (drafts.get(addr)?.rev ??
 /** a draft's edits with their counts, made where the draft holds none yet */
 function editsOf(/** @type {string} */ addr) {
   let x = drafts.get(addr);
-  if (!x) { x = { list: [], rev: 0, next: 1, steps: 0, lines: [], names: new Map(), islands: new Map(), base: null }; drafts.set(addr, x); }
+  if (!x) { x = { list: [], rev: 0, next: 1, steps: 0, lines: [], names: new Map(), islands: new Map(), base: null, undo: [], redo: [], removals: [], faced: 0 }; drafts.set(addr, x); }
   return x;
 }
 /** the identity of bytes the page made in a draft, as the model names them now (M-REC's `pageIds`) */
 const idsOf = (/** @type {string} */ addr) => (/** @type {number} */ page, /** @type {number} */ width) => REC.pageIds(addr, page, width);
 /**
- * One page-local edit added to a draft's (`edits`), a step of its own: its
+ * One page-local edit added to a draft's (`edits`), an act of its own: its
  * positions in the text as it stands after the edits before it, the bytes it
  * makes named by the page's next ordinals (`Edit.page`). The model's own
  * record stands as the board served it; the machine handed in is told
  * (`Machine.typed`).
  * @param {string} addr
  * @param {Edit} e
+ * @param {Typed | null} [how] the edit is a key typing at the caret (`addEdits`)
  */
-export function addEdit(addr, e) { addEdits(addr, [e]); }
+export function addEdit(addr, e, how = null) { addEdits(addr, [e], how); }
 /**
- * The edits of one act added to a draft's (`edits`), in order, as one step
+ * The edits of one act added to a draft's (`edits`), in order, as one act
  * (`Edit.step`): each as `addEdit` adds it. An edit a put-back among them
  * names keeps what it took from now on (`Edit.took`), read from the text as
- * it stands before the act. Nothing where the act made none.
+ * it stands before the act. The machine handed in is told of the act and how
+ * it was made (`how`): a key typing at the caret, which joins the caret's run
+ * of typing or begins one; any other act, a step of its own. Nothing where
+ * the act made none.
  * @param {string} addr
  * @param {readonly Edit[]} list
+ * @param {Typed | null} [how] the act is a key typing at the caret, and where that caret stood; left out for an act that is a step of its own
  */
-export function addEdits(addr, list) {
+export function addEdits(addr, list, how = null) {
   if (!list.length || unwritable(addr)) return;
   const x = editsOf(addr), step = ++x.steps;
   const made = list.map((e) => {
@@ -279,7 +343,110 @@ export function addEdits(addr, list) {
   x.rev++;
   last = addr;
   bump();
-  if (handed) handed.typed(addr);
+  if (handed) handed.typed(addr, how);
+}
+
+/**
+ * Edits added to a draft's as an undo or a redo makes them (see the head; D6
+ * BM-32 … BM-34), in order, as one act: each as given — an insert naming its
+ * bytes by the page's ordinals it gives (`Edit.page`), so bytes the page made
+ * before come back as themselves, else by the page's next; a removal kept
+ * `based` with what it took, standing only for the put-back that names it; a
+ * put-back naming its edit by its place in the list. An edit made inside an
+ * island is of it, as at any act (`addEdits`). The machine is not told: the
+ * act is its own. Nothing where the list is empty.
+ * @param {string} addr
+ * @param {readonly Edit[]} list
+ * @returns {number} the act, by the count its edits carry (`Edit.step`); 0 where none was added
+ */
+export function restore(addr, list) {
+  if (!list.length) return 0;
+  const x = editsOf(addr), step = ++x.steps;
+  const made = list.map((e) => {
+    const width = e.back || e.based ? 0 : byteLength(e.text), page = !width ? null : e.page ?? x.next;
+    if (width && e.page == null) x.next += width;
+    return /** @type {Edit} */ ({ pos: e.pos, width: e.width, text: e.back ? '' : e.text, page, back: e.back ? { ...e.back } : null, step, ...(e.based ? { based: true, took: e.took ?? null, sent: e.sent ?? 0, at: e.at ?? 0 } : {}) });
+  });
+  keepTaken(addr, x, made);
+  for (const e of made) x.list = [...x.list, ...(e.based ? [e] : folded(addr, x, e))];
+  x.rev++;
+  bump();
+  return step;
+}
+
+/** how many acts a draft's edits have been made by (`Edit.step`): the newest act's count; 0 where none was made */
+export const lastAct = (/** @type {string} */ addr) => drafts.get(addr)?.steps ?? 0;
+
+/**
+ * The run of typing open at a draft ended (see the head; D6 BM-31): what a
+ * move of the caret by an act other than typing tells — a click, an arrow,
+ * Home or End, a walk move, Esc, a zoom-out that ends the editing focus, a
+ * selection, a teleport — and every draft's, where none is named. The
+ * machine handed in closes it; nothing where none is.
+ * @param {string | null} [addr]
+ */
+export function endRun(addr = null) { if (handed) handed.ended(addr); }
+
+// ---- the stacks -----------------------------------------------------------------
+
+/** a draft's undo stack (see the head), its newest step last; none where no step was made */
+export const undoOf = (/** @type {string} */ addr) => /** @type {readonly Step[]} */ (drafts.get(addr)?.undo ?? []);
+/** a draft's redo stack (see the head), the step undone last its last; none where none was undone */
+export const redoOf = (/** @type {string} */ addr) => /** @type {readonly Step[]} */ (drafts.get(addr)?.redo ?? []);
+/**
+ * A draft's stacks set (see the head): by D6's machine alone, as a step is
+ * made, joined, ended, undone or put back.
+ * @param {string} addr
+ * @param {readonly Step[]} undo
+ * @param {readonly Step[]} redo
+ */
+export function setStacks(addr, undo, redo) {
+  const x = undo.length || redo.length ? editsOf(addr) : drafts.get(addr);
+  if (!x) return;
+  x.undo = [...undo]; x.redo = [...redo];
+  bump();
+}
+
+// ---- an undo the board declined --------------------------------------------------
+
+/** @type {Array<(addr: string, origin: string) => void>} those told of each undo the board declined (`onDeclined`): a registration, which no reset clears */
+const declineWatchers = [];
+/**
+ * Be told of each undo the board declined (D6 BM-11): its `reinstate` refused
+ * as `withheld`, the source of the passage no longer the person's to read —
+ * the draft, and the origin the words came from. What says the line.
+ * @param {(addr: string, origin: string) => void} fn
+ */
+export function onDeclined(fn) { declineWatchers.push(fn); }
+/** an undo the board declined (`onDeclined`), told to those watching: by D6's machine alone */
+export function decline(/** @type {string} */ addr, /** @type {string} */ origin) { for (const w of declineWatchers) w(addr, origin); }
+
+// ---- the removals the deletion face stands at -----------------------------------
+
+/** the removals of kept text a draft's deletion face stands at (see the head), in the order made; none where none was */
+export const removalsOf = (/** @type {string} */ addr) => /** @type {readonly Removal[]} */ (drafts.get(addr)?.removals ?? []);
+/** every draft whose deletion face stands at a removal (`removalsOf`) */
+export const removalDocs = () => [...drafts].filter(([, x]) => x.removals.length > 0).map(([addr]) => addr);
+/**
+ * A removal of kept text added to those a draft's deletion face stands at
+ * (see the head; D6 BM-34, BM-51), numbered by the draft's count of them
+ * since the page's class last changed, the first 1. Set by D6's machine.
+ * @param {string} addr
+ * @param {{before: ISpan[], after: ISpan[], words: string, ids: ISpan[]}} r where it was made, by the byte either side, the words removed and their bytes
+ * @returns {Removal}
+ */
+export function addRemoval(addr, r) {
+  const x = editsOf(addr), made = { id: ++x.faced, before: r.before, after: r.after, words: r.words, ids: r.ids };
+  x.removals = [...x.removals, made];
+  bump();
+  return made;
+}
+/** removals of a draft's let go (`removalsOf`): those `which` names, their marks with them — the words back in the text */
+export function dropRemovals(/** @type {string} */ addr, /** @type {(r: Removal) => boolean} */ which) {
+  const x = drafts.get(addr);
+  if (!x || !x.removals.some(which)) return;
+  x.removals = x.removals.filter((r) => !which(r));
+  bump();
 }
 /** each edit of a draft a put-back about to be added names keeps what it took (`Edit.took`), where it keeps none yet and the model holds the text it took it from */
 function keepTaken(/** @type {string} */ addr, /** @type {Edits} */ x, /** @type {Edit[]} */ made) {
@@ -801,7 +968,7 @@ export function setHeld(addr, rows) {
 /** every draft holding a line `held(session)` listed (`setHeld`) */
 export const heldDocs = () => [...held.keys()];
 
-/** D6's machine handed in, or taken out with null (see the head): what `commit` and `leaving` ask, and what `addEdits` tells */
+/** D6's machine handed in, or taken out with null (see the head): what `commit` and `leaving` ask, and what `addEdits` and `endRun` tell */
 export function machine(/** @type {Machine | null} */ m) { handed = m; }
 /** is a burst of a draft open, or awaiting its ack (`setFlight`)? */
 export const inFlight = (/** @type {string} */ addr) => flights.has(addr);

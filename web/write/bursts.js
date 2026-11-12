@@ -21,7 +21,13 @@
 // board has not minted is named by a piece (`AnchorPiece`): the `id` of the
 // insert that carried it — one the shell holds, or one sent and not acked —
 // and the byte's offset in it, as the caller answers it (`Asked.piece`;
-// D6 BM-8); a `delete` whose span holds such a byte carries no span. An
+// D6 BM-8); a `delete` whose span holds such a byte carries no span — save at
+// the page's close (`Asked.follows`), where a delete whose unminted bytes are
+// all one insert's, one it may follow, is that insert's FOLLOWER: its span
+// names them by a piece beside the I-runs of the rest, and the frame names
+// the insert it follows (`Composed.after`; D6 BM-34, BM-73). A `delete` says
+// what it takes out of the text — the words, their bytes, the byte either
+// side (`Composed.lost`) — which the deletion face is keyed to (D6 BM-51). An
 // insert names the page's ordinals its bytes carry (`Composed.pages`), which
 // the board's `ack_addr` mints. The edits of a refusal the page keeps
 // (M-REC's `Edit.island`; D6 BM-19) are left out: the frames are those of the
@@ -41,6 +47,8 @@ import { documentOf } from '../model/address.js';
 /** @typedef {import('../model/records.js').ISpan} ISpan */
 /** @typedef {import('../model/records.js').ImageRun} ImageRun */
 /** @typedef {import('../bridge/shapes').Anchors} Anchors */
+/** @typedef {import('../bridge/shapes').FollowerAnchors} FollowerAnchors */
+/** @typedef {import('../bridge/shapes').BurstPiece} BurstPiece */
 /** @typedef {import('../bridge/shapes').AnchorPiece} AnchorPiece */
 
 /** @typedef {{ordinal: string, subspace: string}} VPos — a content V-position as the wire spells it */
@@ -77,8 +85,18 @@ import { documentOf } from '../model/address.js';
 /**
  * @typedef {Object} Composed — one frame of a burst, with what rides beside it on the `op` row
  * @property {Frame} frame
- * @property {Anchors} anchors the identities the frame's edit is placed by
+ * @property {Anchors | FollowerAnchors} anchors the identities the frame's edit is placed by: a follower delete's in the follower's form
  * @property {Array<{page: number, width: number}>} pages for an insert, each run of the page's ordinals its values carry, in order (M-REC's `Edit.page`): what its `ack_addr` mints; none for any other frame
+ * @property {Lost} [lost] for a delete, what it takes out of the text: what the deletion face is keyed to (D6 BM-51)
+ * @property {string} [after] for a delete composed as a follower (`Asked.follows`), the `id` of the insert it follows: the one every piece of its anchors names
+ */
+
+/**
+ * @typedef {Object} Lost — what a `delete` takes out of the text (`Composed.lost`)
+ * @property {string} words the words removed
+ * @property {ISpan[]} ids the bytes removed, by identity
+ * @property {ISpan[]} before the byte just before them, by identity; none at the document's edge
+ * @property {ISpan[]} after the byte just after them; none at the document's edge
  */
 
 /**
@@ -97,6 +115,7 @@ import { documentOf } from '../model/address.js';
  * @property {string} load the page's load (M-REC's `PAGE_LOAD`), which every frame's `id` carries
  * @property {number} seq the number the burst's first frame takes in its `id`, each frame after it the next
  * @property {(page: number) => (AnchorPiece | null)} [piece] the piece naming a byte the page made that the board has not minted, by the page's ordinal for it: the `id` of the insert that carried it and its offset there; null, and where left out, for a byte no insert the shell holds or the page sent carries
+ * @property {(burst: string) => boolean} [follows] the inserts a delete may follow, by `id` (the `op` row's `after`): given at the page's close, where a delete of words the board has not minted is handed to the shell with the insert that carried them
  */
 
 /** the lead every frame `id` of the page's opens with: never the prefix the shell's resends take, `shell:` */
@@ -180,6 +199,57 @@ function spanOf(/** @type {Doc} */ d, /** @type {number} */ pos, /** @type {numb
   return runs.some((r) => isPage(r.prefix)) ? null : joined(runs).map((r) => ({ start: `${r.prefix}.${r.ordinal}`, width: String(r.width) }));
 }
 
+/** a span of a text by identity, as its image names it; none where the image names not every byte of it, or the span lies past the text's edge */
+function named(/** @type {Doc} */ d, /** @type {number} */ pos, /** @type {number} */ width) {
+  const runs = pos < 1 ? null : over(d.image, pos, width);
+  return runs ? runs.map((r) => ({ prefix: r.prefix, ordinal: r.ordinal, width: r.width })) : [];
+}
+
+/**
+ * A delete's span as a follower's anchors spell it (`FollowerAnchors`; skep
+ * #984), where the span holds bytes the page made that the board has not
+ * minted: each stretch the board holds by its I-run, each stretch of unminted
+ * bytes by a piece of the insert that carried them — and the `id` of that
+ * insert, which the delete follows. Null where a byte of the span has no
+ * piece, where the pieces — the span's, and the two anchors' where they are
+ * pieces — name more than one insert, or name one the delete may not follow.
+ * @param {Doc} d the text before the burst
+ * @param {number} pos
+ * @param {number} width
+ * @param {string | AnchorPiece | null} left the anchor before the span
+ * @param {string | AnchorPiece | null} right the anchor after it
+ * @param {Asked['piece']} piece
+ * @param {(burst: string) => boolean} follows
+ * @returns {{span: NonNullable<FollowerAnchors['span']>, after: string} | null}
+ */
+function followed(d, pos, width, left, right, piece, follows) {
+  const runs = over(d.image, pos, width);
+  if (!runs || !piece) return null;
+  /** @type {NonNullable<FollowerAnchors['span']>} */
+  const span = [];
+  /** @type {Set<string>} */
+  const bursts = new Set();
+  for (const e of [left, right]) if (e && typeof e === 'object') bursts.add(e.burst);
+  for (const r of runs) {
+    if (!isPage(r.prefix)) {
+      const last = span[span.length - 1], start = `${r.prefix}.${r.ordinal}`;
+      const at = last && 'start' in last ? last.start.lastIndexOf('.') : -1;
+      // an I-run that continues the one before it is one run with it
+      if (last && 'start' in last && last.start.slice(0, at) === r.prefix && Number(last.start.slice(at + 1)) + Number(last.width) === r.ordinal) last.width = String(Number(last.width) + r.width);
+      else span.push({ start, width: String(r.width) });
+      continue;
+    }
+    for (let i = 0; i < r.width; i++) {
+      const p = piece(r.ordinal + i), last = span[span.length - 1];
+      if (!p) return null;
+      bursts.add(p.burst);
+      if (last && 'burst' in last && last.burst === p.burst && last.offset + last.width === p.offset) last.width++; else span.push({ burst: p.burst, offset: p.offset, width: 1 });
+    }
+  }
+  const [after] = [...bursts];
+  return bursts.size === 1 && follows(after) ? { span, after } : null;
+}
+
 /**
  * @typedef {Object} Place — one place the text before a burst and the text after it differ at, between two bytes both hold
  * @property {number} lost the first position, in the text before, of the bytes the place lost
@@ -252,16 +322,21 @@ export function compose(a) {
     for (const pl of places(before, after)) {
       const left = unit(before, pl.lost - 1, piece), right = unit(before, pl.lost + pl.lostWidth, piece);
       if (pl.lostWidth > 0) {
-        const span = spanOf(before, pl.lost, pl.lostWidth);
-        frames.push({ frame: { op: 'delete', doc: addr, p: vpos(pl.at), width: String(pl.lostWidth), as_of: asOf, id: id() }, anchors: span ? { before: left, after: right, span } : { before: left, after: right }, pages: [] });
+        const span = spanOf(before, pl.lost, pl.lostWidth), follower = span || !a.follows ? null : followed(before, pl.lost, pl.lostWidth, left, right, piece, a.follows);
+        const lost = { words: textOf(before.runs, pl.lost, pl.lost + pl.lostWidth), ids: named(before, pl.lost, pl.lostWidth), before: named(before, pl.lost - 1, 1), after: named(before, pl.lost + pl.lostWidth, 1) };
+        frames.push({
+          frame: { op: 'delete', doc: addr, p: vpos(pl.at), width: String(pl.lostWidth), as_of: asOf, id: id() },
+          anchors: span ? { before: left, after: right, span } : follower ? { before: left, after: right, span: follower.span } : { before: left, after: right }, pages: [], lost,
+          ...(follower ? { after: follower.after } : {}),
+        });
       }
       if (pl.gained < 1) continue;
       // what the place gained, cut where its bytes pass between the page's own and the board's
-      const named = over(after.image, pl.at, pl.gained);
-      if (!named) throw new Wait('unread');
+      const gained = over(after.image, pl.at, pl.gained);
+      if (!gained) throw new Wait('unread');
       /** @type {Array<{made: boolean, at: number, runs: ImageRun[]}>} */
       const chunks = [];
-      for (const r of named) {
+      for (const r of gained) {
         const made = isPage(r.prefix), last = chunks[chunks.length - 1];
         if (last && last.made === made) last.runs.push(r); else chunks.push({ made, at: r.pos, runs: [r] });
       }

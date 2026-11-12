@@ -2081,7 +2081,7 @@ test('Esc at a live caret, and a walk key at one, ask the draft\'s open burst co
   CAM.set(reading);
   /** @type {string[]} */
   const committed = [];
-  WRITE.machine({ commit: (addr) => committed.push(addr), typed() {}, leaving() {} });
+  WRITE.machine({ commit: (addr) => committed.push(addr), typed() {}, ended() {}, leaving() {} });
   try {
     assert.equal(LAYER.editable(W), true, 'a draft of the session\'s account at its reading scale');
     await WALK.focusTo(W, 1, true, null, true);

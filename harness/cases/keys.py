@@ -276,9 +276,18 @@ Enter's selection over no range of the platform's, Mod+C places the range under 
 again and the copy carries its bytes; and a click on a column's blank room after a
 drag's selection ends the page's selection with the platform's, no outlines and no
 card standing (the keys-and-clicks decision, part 5; D5 K-92). Every other step leaves the page as it
-found it."""
+found it.
+
+Mod+Z with nothing to take back is answered by its line — C-45 at an edition
+of the session's account, B3-S13's line at another account's document, the
+no-caret line anywhere else — each ending on the constant sentence where it
+stands whole; and the trail's list is its platform's history chord, Mod+Y on
+macOS and Ctrl+H elsewhere, where Ctrl+Y is the redo (`undo_chords`; D5 K-41,
+K-75; D6 BM-42).
+"""
 import json
 import re
+import time
 
 from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, account_of, item_words, key_fingerprint, trunk_of
 from .layout import DRIFT_TOL_PX, box_of, click_on, inside, lacking_of, level_holds, line_of, passage_at, scene_level, ties_hold
@@ -3165,6 +3174,105 @@ def blank_room(ctx, addr):
       return null; })(%s)''' % json.dumps(addr))
 
 
+def undo_chords(ctx, r):
+    """UNDO AND REDO's CHORDS, AND THE TRAIL'S (D5 K-41, K-75; D6 BM-42): the table holds K-75's three chords and K-41's two;
+    Mod+Z with nothing to take back is answered by its line and never does nothing — at a span of an edition of the session's
+    account C-45, at another account's document B3-S13's line, each whole and ending on the constant sentence, said in the
+    status region; with no draft's caret anywhere, the no-caret line, whole at its first press and its first clause at the
+    next, the constant sentence beside the whole form alone; Mod+Shift+Z there is taken and says nothing. The page read as
+    another platform than macOS (`_platform`, the page's own seam): Ctrl+H opens the trail's list, the line's act drawn so,
+    and Ctrl+Y opens none — it is the redo; read as macOS again, Mod+Y opens the list. Nothing is written: the page booted
+    without the machine. Its figures"""
+    figures = {}
+    table = ctx.js('(async () => (await import("./nav/keys.js")).TABLE.filter((x) => x.id === "K-75" || x.id === "K-41").map((x) => [x.id, x.chord, x.act]))()')
+    r.check(table == [['K-41', 'Mod+Y', 'trail.list'], ['K-41', 'Mod+H', 'trail.list'], ['K-75', 'Mod+Z', 'undo'], ['K-75', 'Mod+Shift+Z', 'redo'], ['K-75', 'Mod+Y', 'redo']],
+            "the key table holds K-75's three chords — Mod+Z, Mod+Shift+Z, and Mod+Y, the redo elsewhere than macOS — and K-41's two, Mod+Y on macOS and Mod+H elsewhere (D5 K-41, K-75)", table)
+    constant = strings(ctx, 'B3.undo.constant')
+    drop_caret = '(async () => { (await import("./text/layer.js")).dropCaret(); (await import("./overlays/hint.js")).act(); })()'
+    calls = lambda: len(ctx.js('window.__skep.bridge.calls()'))
+    # (a) an edition of the session's account: C-45, whole, the constant sentence after it
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js(drop_caret)
+    ctx.js(FOCUS_ITEM)
+    ctx.frames(2)
+    before, n0 = state(ctx), calls()
+    chord(ctx, 'z', mods=('Meta',))
+    ctx.frames(2)
+    after, c45 = state(ctx), strings(ctx, 'C-45', {'D': DOC})
+    hint = after['hint'] or {}
+    r.check(bool(before['focus']) and before['focus']['kind'] == 'block' and before['focus']['addr'] == DOC and hint.get('id') == 'C-45' and hint.get('words') == c45 and hint.get('ending') == constant
+            and ctx.js('(document.getElementById("live") || {}).textContent || ""') == c45 + ' ' + constant and same_view(before, after) and after['focus'] == before['focus'] and calls() == n0,
+            "Mod+Z at a span of an edition of the session's account is answered by C-45 naming the document, whole, ending on \"a link you made public stays until you retract it at its card\", said in the status region — nothing moved, nothing asked of the board (D5 K-75; D6 BM-42)",
+            {'hint': hint, 'want': c45, 'constant': constant, 'focus': [before['focus'], after['focus']]})
+    figures['edition'] = hint
+    # (b) another account's document: its own line, ending the same way
+    doc, pos = REGISTRY
+    ctx.leap(doc, pos)
+    ctx.js(drop_caret)
+    ctx.js(FOCUS_ITEM)
+    ctx.frames(2)
+    owner = account_of(doc)
+    whole, clause = hint_words(ctx, 'B3.row.others-document', {'owner': owner}), hint_words(ctx, 'B3.row.others-document', {'owner': owner}, whole=False)
+    chord(ctx, 'z', mods=('Meta',))
+    ctx.frames(2)
+    hint = state(ctx)['hint'] or {}
+    words = whole if hint.get('open') else clause
+    r.check(hint.get('id') == 'B3.row.others-document' and hint.get('whole') == whole and hint.get('words') == words and hint.get('ending') == (constant if hint.get('open') else None),
+            "Mod+Z at another account's document is answered by B3-S13's line naming its owner — never C-45 — ending on the constant sentence where it stands whole (D5 K-75; D6 BM-42)",
+            {'hint': hint, 'whole': whole, 'clause': clause})
+    # (c) no draft's caret, off any document's span: the no-caret line, whole then compact
+    ctx.js('window.__skep.go.wholeBoard()')
+    ctx.settle(); ctx.frames(3)
+    ctx.js(drop_caret)
+    ctx.js('(async () => { (await import("./overlays/hint.js"))._reset(); })()')
+    ctx.js(FOCUS_ITEM)
+    none, none_clause = hint_words(ctx, 'B3.undo.none'), hint_words(ctx, 'B3.undo.none', whole=False)
+    chord(ctx, 'z', mods=('Meta',))
+    ctx.frames(2)
+    first, said1 = ctx.js('window.__skep.hint()') or {}, ctx.js('(document.getElementById("live") || {}).textContent || ""')
+    chord(ctx, 'z', mods=('Meta',))
+    ctx.frames(2)
+    second, said2 = ctx.js('window.__skep.hint()') or {}, ctx.js('(document.getElementById("live") || {}).textContent || ""')
+    r.check(first.get('id') == 'B3.undo.none' and first.get('words') == none and first.get('open') and first.get('ending') == constant and first.get('writing') is None and said1 == none + ' ' + constant
+            and second.get('id') == 'B3.undo.none' and second.get('words') == none_clause and not second.get('open') and second.get('ending') is None and said2 == none_clause and none_clause != none,
+            'Mod+Z with no draft\'s caret is answered by "undo works in the text of a draft you are writing — there is nothing here to undo", whole at its first press and ending on the constant sentence, its first clause alone at the next — the press never does nothing (D6 BM-42)',
+            {'first': first, 'second': second, 'said': [said1, said2]})
+    n1 = calls()
+    chord(ctx, 'z', mods=('Meta', 'Shift'))
+    ctx.frames(2)
+    third = ctx.js('window.__skep.hint()')
+    r.check(calls() == n1 and (third is None or third.get('id') == 'B3.undo.none'), 'Mod+Shift+Z with nothing to put back is taken and asks nothing of the board', {'hint': third})
+    figures['none'] = {'first': first, 'second': second}
+    ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
+    # (d) K-41 by platform: the page read as another platform than macOS, then as macOS again
+    mac = ctx.js('(async () => (await import("./nav/keys.js")).MAC)()')
+    title = '(() => { const b = document.querySelector("#line [data-act=trail]"); return b ? b.getAttribute("title") : null; })()'
+    try:
+        ctx.js('(async () => { (await import("./nav/keys.js"))._platform(false); })()')
+        time.sleep(0.4); ctx.frames(3)
+        drawn = ctx.js(title)
+        chord(ctx, 'y', mods=('Ctrl',))
+        ctx.frames(2)
+        redo = state(ctx)['overlay']
+        chord(ctx, 'h', mods=('Ctrl',))
+        ctx.frames(2)
+        listed = ctx.js('window.__skep.overlay().id')
+        chord(ctx, 'Escape')
+        r.check(drawn == 'Ctrl+H' and redo is None and listed == 'trail-list',
+                "read as another platform than macOS: the trail's list is Ctrl+H — the one line's act drawn so, the chord opening the list — and Ctrl+Y opens no list: it is the redo (D5 K-41, K-75)",
+                {'title': drawn, 'after_ctrl_y': redo, 'after_ctrl_h': listed})
+    finally:
+        ctx.js('(async () => { (await import("./nav/keys.js"))._platform(%s); })()' % ('true' if mac else 'false'))
+        time.sleep(0.4); ctx.frames(3)
+    chord(ctx, 'y', mods=('Meta',))
+    ctx.frames(2)
+    listed, drawn = ctx.js('window.__skep.overlay().id'), ctx.js(title)
+    chord(ctx, 'Escape')
+    r.check((not mac) or (listed == 'trail-list' and drawn == '⌘Y'), "on macOS ⌘Y stays the trail's: the chord opens its list, and the one line's act is drawn ⌘Y (D5 K-41)", {'overlay': listed, 'title': drawn, 'mac': mac})
+    figures['trail_chord'] = {'mac': mac, 'title': drawn}
+    return figures
+
+
 def copy_nothing(ctx, r):
     """A COPY WITH NOTHING SELECTED, AND ONE SELECTION (the keys-and-clicks decision, part 5; D5 K-92; FP-24, FP-27):
     (a) the walk on a span of the first edition, nothing selected: Mod+C's keydown prevented, the hint the copy's line
@@ -4239,6 +4347,8 @@ def run(ctx):
     focus_rules(ctx, r)
     # ---- a copy with nothing selected, and one selection: what looks selected is what is copied (K-92) -------------
     copy_nothing(ctx, r)
+    # ---- undo and redo's chords, the lines with nothing to take back, and the trail's chord by platform (K-41, K-75) -
+    r.figures['undo_chords'] = undo_chords(ctx, r)
     # ---- Back to an edition's bare address after a newer version arrived: the version read (issue #298) -----------
     r.figures['back_after_publish'] = back_after_publish(ctx, r)
     # ---- the page's own find (issue #222's design decision) ------------------------------------------------------

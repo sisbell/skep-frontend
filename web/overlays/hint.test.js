@@ -7,7 +7,9 @@
 // shows and described by the notice whole, its act opening and folding it
 // and ending nothing; a line handed where the person was writing ends with
 // it, whole and compact alike, its label's act taking the hint down and
-// making the act handed in; the next act takes it down, handing a focus its button
+// making the act handed in; a line that ends on a sentence of its own shows
+// and says it after both while its notice stands whole, and never beside the
+// compact form; the next act takes it down, handing a focus its button
 // held to the walk's element; and it stands beside the element its press was
 // made at — at its right, else its left, else below, below first where the
 // element stands above the view, else inside it at its foot — under the
@@ -171,6 +173,28 @@ test('a line that ends with where the person was writing shows that ending after
   HINT.show('F.swallow', SWALLOW);
   HINT.render();
   assert.deepEqual([HINT.standing()?.writing, el.classList.contains('writing'), el.innerHTML.includes('data-writing')], [null, false, false], 'a line handed no ending ends with its notice');
+});
+
+test('a line that ends on a sentence of its own — the undo chord\'s constant sentence — shows it after the notice and after where the person was writing, and says the three together, while the notice stands whole; beside the compact form it is neither shown nor said, and the notice\'s act brings it back with the whole (B3-S3; D6 BM-42)', () => {
+  const writing = { label: 'Notes 1.0.1.0.2', act: () => {} };
+  const end = t('B3.undo.last-writing', { label: writing.label }), last = t('B3.undo.constant'), whole = t('B3.undo.none'), clause = 'undo works in the text of a draft you are writing';
+  HINT.show('B3.undo.none', null, { writing, ending: 'B3.undo.constant' });
+  HINT.render();
+  assert.deepEqual([HINT.standing(), said.at(-1)], [{ id: 'B3.undo.none', words: whole, whole, open: true, writing: end, ending: last }, `${whole} ${end} ${last}`], 'whole at its first press: the notice, where the person was writing, then the sentence the line ends on');
+  assert.equal(el.innerHTML, `<button type="button" data-hint="B3.undo.none" data-string="B3.undo.none" aria-describedby="hint-whole" aria-expanded="true">${addressedHTML(whole)}</button> `
+    + `<span class="writing" data-string="B3.undo.last-writing">— you were last writing in <button type="button" data-writing="1">${addressedHTML(writing.label)}</button></span>`
+    + ` <span class="ending" data-string="B3.undo.constant">${last}</span><span id="hint-whole" hidden>${whole} ${last}</span>`);
+  HINT.act();
+  HINT.show('B3.undo.none', null, { writing, ending: 'B3.undo.constant' });
+  HINT.render();
+  assert.deepEqual([HINT.standing(), said.at(-1), el.innerHTML.includes('class="ending"')], [{ id: 'B3.undo.none', words: clause, whole, open: false, writing: end }, `${clause} ${end}`, false], 'a later press: its first clause and where the person was writing — the sentence neither shown nor said');
+  HINT.toggle();
+  HINT.render();
+  assert.deepEqual([HINT.standing()?.ending, said.at(-1), el.innerHTML.includes('class="ending"')], [last, `${whole} ${end} ${last}`, true], 'the notice\'s act opens it whole, the sentence with it');
+  HINT.act();
+  HINT.show('C-45', { D: '1.0.1.0.3' }, { ending: 'B3.undo.constant' });
+  HINT.show('C-45', { D: '1.0.1.0.3' }, { ending: 'B3.undo.constant' });
+  assert.deepEqual([HINT.standing()?.open, HINT.standing()?.ending], [true, last], 'a notice with no compact form stands whole at every press, the sentence after it each time');
 });
 
 test('the next act takes the hint down, its element emptied on the next frame; a focus its button held is handed to the walk\'s element', () => {

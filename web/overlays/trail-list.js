@@ -1,12 +1,13 @@
 // O-TRAIL-LIST — the trail's list (the structure record §3.2; foundations
 // §2.2; B1-S12). Layer 2. ENGINE-BOUND. State: none. A transient overlay
 // conjured beside Back and Forward and gone with its end like every other —
-// never a toggle (K-41 Mod+Y); it stands beneath Back, which the host finds
+// never a toggle (K-41, the platform's history chord: Mod+Y on macOS, Ctrl+H
+// elsewhere); it stands beneath Back, which the host finds
 // again by its id as the one line is rebuilt (O-HOST's anchor); every entry
 // numbered newest-first, the same numbers as the pips and the chords Mod+1 …
 // Mod+9; Enter or a click jumps (a cursor move, never a push), the ring drawn
-// at the landing where a key made the jump. Opened by a key — Mod+Y, Enter on
-// the line's act — it takes the focus on its newest row, the first (K-41; the
+// at the landing where a key made the jump. Opened by a key — K-41's chord,
+// Enter on the line's act — it takes the focus on its newest row, the first (K-41; the
 // focus record's rule 13); opened by a click on the line's act it takes none
 // (rule 16). Each row's words are read from the model as the list is made
 // (N-GO's `wordsHTML`; FP-29), never kept in an entry: its address — at a

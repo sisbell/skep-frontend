@@ -4788,7 +4788,7 @@ test('a teleport commits the open burst of every draft as it departs — a LEAP,
   const DRAFT = '1.0.1.0.1013';
   /** @type {string[]} */
   const committed = [];
-  WRITE.machine({ commit: (addr) => committed.push(addr), typed() {}, leaving() {} });
+  WRITE.machine({ commit: (addr) => committed.push(addr), typed() {}, ended() {}, leaving() {} });
   try {
     await run(GO.leapTo(D));
     assert.deepEqual(committed, [], 'no burst open: nothing asked');

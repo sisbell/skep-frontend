@@ -11,7 +11,10 @@
 // and its flight set as the machine sets them (`write.setKept`,
 // `write.setHeld`, `write.setFlight`), bytes the page made minted as an ack
 // mints them (`write.mint`), the machine handed in or taken out
-// (`write.machine`), and a draft's page-local edits (`write.edits`); the
+// (`write.machine`), a draft's page-local edits (`write.edits`), and its
+// undo and redo stacks, each step by its kind and the words it placed and
+// removed (`write.stacks`); the removals the deletion face stands at as they
+// were last set (`removed`); the
 // page's own caret as it stands (`caret`); the mounted
 // articles' text and what stands of each by line (`mountedLines`); the
 // mirror's items; the camera, the focus and its owner's state — the walk's
@@ -114,6 +117,7 @@ import * as VERSIONS from '../overlays/versions.js';
 import * as TRAILLIST from '../overlays/trail-list.js';
 import * as LANDING from '../overlays/landing.js';
 import * as HINT from '../overlays/hint.js';
+import * as DELETION from '../overlays/deletion.js';
 import * as KEYS from '../nav/keys.js';
 import * as FOCUS from '../nav/focus.js';
 import * as SCENE from '../scene/scene.js';
@@ -688,6 +692,8 @@ export function install(deps) {
       }),
       /** the face of a draft's unkept words as O-FACES reads it now (`unkeptFace`): its kind, its head, its words and its hands by their strings, whether its hands are named again, its acts in order — each its label's string and the reason it is inert by — and its discard's statement; null where the draft has none */
       face: (/** @type {string} */ addr) => { const f = FACES.unkeptFace(addr); return f ? { kind: f.kind, head: f.head ? f.head.id : null, lines: f.lines.map((l) => ({ id: l.id, text: l.text })), hands: f.hands ? f.hands.map((h) => ({ id: h.id, text: h.text })) : null, again: f.again, acts: f.acts.map((a) => ({ key: a.key, id: a.id, label: a.label, inert: a.inert ? a.inert.id : null, said: a.said })), said: f.said ? f.said.id : null } : null; },
+      /** a draft's undo and redo stacks as W-WRITE holds them (D6 BM-31), the newest step last: each step its kind, whether it is a run of typing no act has ended, how many bytes it placed, and the words it removed — page state alone */
+      stacks: (/** @type {string} */ addr) => { const of = (/** @type {readonly import('../write/write.js').Step[]} */ list) => list.map((x) => ({ id: x.id, kind: x.kind, open: x.open, placed: x.placed.reduce((n, q) => n + q.width, 0), took: x.took.map((q) => REC.textOf(q.took.runs, 1, 1 + q.took.runs.reduce((n, r) => n + r.width, 0))) })); return { undo: of(WRITE.undoOf(addr)), redo: of(WRITE.redoOf(addr)) }; },
       /** the face of a draft's unkept words shown at its corner's kept word, as that word's act shows it (O-FACES' `unkept`): whether one shows */
       showFace: (/** @type {string} */ addr) => { const out = FACES.unkept(addr, /** @type {HTMLElement | null} */ (document.querySelector(`#corners [data-corner="${addr}"] .kept-word`))); CAM.markDirty(); return out; },
     },
@@ -734,6 +740,8 @@ export function install(deps) {
     line: () => ({ text: LINE.text(), state: LINE.state(), address: LINE.addressDisplay(), layout: LINE.held() }),
     /** the hint answering a refused press as it stands (O-HINT's): its notice's string, the words it shows and the notice whole, whether it shows the notice whole, the presses its element was drawn for, whether the scene covers it, and where it was set beside what; null where none stands */
     hint: () => HINT.shown(),
+    /** the removals of kept text the deletion face stands at, as they were last set (O-DELETION's `shown`): each its draft, whether its face stands whole and how — beside its line or over the lines beneath — its mark's box, its face's, the words removed and the strings its face shows */
+    removed: () => DELETION.shown(),
     /** the overlay standing — its id, its kind, its text — and the notice standing below it (O-HOST's; FP-36): its id and its text, null where none stands there */
     overlay: () => { const n = HOST.notice(); return { id: HOST.currentState() ? HOST.currentState()?.id : null, kind: HOST.currentKind(), text: HOST.text(), notice: n ? { id: n.id ?? null, text: HOST.noticeText() } : null }; },
     /** a walk's moment raised as the shell's `moment` event raises one (O-FACES' `moment`; FP-36), and the folded moments the one line's walks' segments are, each its walk and its words (`folded`) */

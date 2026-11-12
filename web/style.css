@@ -393,6 +393,16 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    box, the overlay and the LEAP box — save while the LEAP box stands, when it is the box's own refused press's, beside the
    box and over it where it finds no room outside it; opaque, as all chrome over the plane is, its border the warning hue
    its words take; one button, its words wrapping inside the room it is given (FP-26, FP-31) */
+/* the deletion face (O-DELETION's; B3-S4): each removal's mark in the margin at its line's edge — the removed hue, a struck dash, never the caret's upright form — and the face it opens beside it, or over the lines beneath where the margin holds no room; it moves no text */
+#removed { position:fixed; left:0; top:0; z-index:24; display:none; pointer-events:none; }
+#removed.on { display:block; }
+#removed .removal { position:fixed; left:0; top:0; pointer-events:none; }
+#removed .mark { position:absolute; left:0; top:0; width:12px; height:12px; margin:0; padding:0; pointer-events:auto; background:none; border:none; border-radius:2px; cursor:pointer; }
+#removed .mark::before { content:""; position:absolute; left:1px; right:1px; top:5px; height:2px; background:var(--bad); border-radius:1px; }
+#removed .mark::after { content:""; position:absolute; inset:-6px; }
+#removed .mark:hover { background:#2a1c1e; }
+#removed .face { position:absolute; left:16px; top:0; width:max-content; max-width:280px; pointer-events:auto; padding:4px 8px; font-size:11px; line-height:1.45; color:var(--ink); background:#1b1f25; border:1px solid var(--bad); border-radius:4px; box-shadow:0 2px 10px rgba(0,0,0,.4); }
+#removed .face .part + .part { margin-top:3px; color:var(--dim); }
 #hint { position:fixed; left:0; top:0; z-index:27; display:none; max-width:360px; }
 #leap.on ~ #hint { z-index:32; }
 #hint.on { display:block; }

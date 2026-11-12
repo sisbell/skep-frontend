@@ -219,7 +219,7 @@ import * as LAYER from '../text/layer.js';
 import * as PORT from '../bridge/port.js';
 import * as WRITE from '../write/write.js';
 import { deathWords, noBoardWords } from '../overlays/faces.js';
-import { drawChord } from '../nav/keys.js';
+import { drawChord, trailChord } from '../nav/keys.js';
 import { cam, viewForCell } from '../plane/camera.js';
 import { lodOf } from '../plane/lod.js';
 import { boardCell, accountAt, docBox, G, LEAF, DEPTH_SOUND } from '../plane/projection.js';
@@ -869,7 +869,7 @@ function walkParts() {
  * @param {boolean} signIn
  */
 function actsHTML(signIn) {
-  return `<span class="acts"><button id="line-back" data-act="back" ${TRAIL.canBack() ? '' : 'disabled'}>${esc(t('F.back'))}</button><button data-act="forward" ${TRAIL.canForward() ? '' : 'disabled'}${forwardSays ? ` title="${esc(t('L.scene.closed'))}" aria-label="${esc(t('L.scene.closed'))}"` : ''}>${esc(t('F.forward'))}</button><button data-act="trail" title="${esc(drawChord('Mod+Y'))}">${esc(t('F.trail-list'))}</button>${signIn ? SIGN_IN : ''}</span>`;
+  return `<span class="acts"><button id="line-back" data-act="back" ${TRAIL.canBack() ? '' : 'disabled'}>${esc(t('F.back'))}</button><button data-act="forward" ${TRAIL.canForward() ? '' : 'disabled'}${forwardSays ? ` title="${esc(t('L.scene.closed'))}" aria-label="${esc(t('L.scene.closed'))}"` : ''}>${esc(t('F.forward'))}</button><button data-act="trail" title="${esc(drawChord(trailChord()))}">${esc(t('F.trail-list'))}</button>${signIn ? SIGN_IN : ''}</span>`;
 }
 
 /** the account a session's words name, set in the identifier's face (P-REG's FACE; ST's `tHTML`) */
