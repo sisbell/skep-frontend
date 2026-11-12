@@ -303,6 +303,8 @@ test('a click on a link\'s symbol, or on a stretch it marks, opens the card of t
       // its lineage: no claims either way
       [FAKE.keyOf('op', { frame: F.inClaims(L, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
       [FAKE.keyOf('op', { frame: F.outClaims(L, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
+      // its home's metadata: an edition's
+      [FAKE.keyOf('op', { frame: F.docMetadata(D) })]: { result: { as_of: 1, resp: 'doc_metadata', doc: D, published: true, owner: '1.0.1', birth: D + '.1', birth_extent: null, placed: null, base_extent: null, source: null } },
     });
     PORT.boot(fake);
     REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
@@ -369,10 +371,14 @@ test('a click on the one symbol a withheld run\'s ends merge into opens its one 
     // a document of the reader's: its first paragraph, then eight of another account's draft's bytes withheld, two of the reader's citations on them
     const D = '1.0.1.0.24', O = '1.0.2.0.19', FAR = '1.0.1.0.132', CITE = '1.1.0.1.0.1.0.3.13', text = 'Tumbler.\n\n', n = byteLength(text);
     const [A, B] = [D + '.0.2.1', D + '.0.2.2'];
-    const fake = FAKE.create(Object.fromEntries([A, B].flatMap((l) => [
-      [FAKE.keyOf('op', { frame: F.inClaims(l, 'audit') }), { result: { as_of: 1, resp: 'claims', claims: [] } }],
-      [FAKE.keyOf('op', { frame: F.outClaims(l, 'audit') }), { result: { as_of: 1, resp: 'claims', claims: [] } }],
-    ])));
+    const fake = FAKE.create({
+      ...Object.fromEntries([A, B].flatMap((l) => [
+        [FAKE.keyOf('op', { frame: F.inClaims(l, 'audit') }), { result: { as_of: 1, resp: 'claims', claims: [] } }],
+        [FAKE.keyOf('op', { frame: F.outClaims(l, 'audit') }), { result: { as_of: 1, resp: 'claims', claims: [] } }],
+      ])),
+      // the citations' home's metadata: an edition's
+      [FAKE.keyOf('op', { frame: F.docMetadata(D) })]: { result: { as_of: 1, resp: 'doc_metadata', doc: D, published: true, owner: '1.0.1', birth: D + '.1', birth_extent: null, placed: null, base_extent: null, source: null } },
+    });
     PORT.boot(fake);
     REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n + 8 }]);
     REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width: 8, kind: 'withheld', text: '', ref: null, origin: O }]);

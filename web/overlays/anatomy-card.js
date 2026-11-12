@@ -27,8 +27,8 @@
 // the document's own the reading face's, the client's words the interface
 // face's, every address — an end's document, the link, its owner, a
 // claimant, a far end a row names (LK's `farLabelHTML`) — the identifier's.
-// Then its anatomy — type (R5's form), from, to, home (published →
-// the link is public; a draft → hidden with its home), owner (never a name
+// Then its anatomy — type (R5's form), from, to, home (what the page reads
+// of it, below), owner (never a name
 // alone), then its lineage (A-56, A-57, A-82), read under the audit view
 // (M-PUMP's `lineage`), so a retracted claim stands, marked retracted,
 // wherever it falls. The lineage is the claims with authority
@@ -52,6 +52,15 @@
 // date of the commit that minted it, from the age `read_link` answered with
 // the link (ST's `dated`), "not recorded" where the board holds no reading of
 // it, and never a log position.
+// The home row says what the page reads of the link's home (`homeState`): a
+// refusal of it first, in its own words and with no kind — withheld, the
+// withheld box's words; nothing the board will say of it, the words for that
+// (FP-33, FP-34) — else its kind by the one test (T-LAYER's `isDraft`;
+// FP-39), published → the link is public, a draft → hidden with its home;
+// else "not read". Where nothing the page holds tells it, the home's
+// metadata is read with the card's other reads (M-PUMP's `readMetadata`),
+// asked again where a drop overtook it, at most DROP_ATTEMPTS times, so the
+// row stands with its words from the card's first frame.
 // Its acts follow either end and open the scene, a step on the trail from
 // the link's end, made at the link's own bytes (N-GO's `toScene`), beside the
 // document LK names for it (`besideAt`) — where the far end names its
@@ -73,8 +82,8 @@
 // focus record's rule 16); the line's act rebuilds it, a focus held on the
 // line going to its first control (rule 11), and an inert act pressed
 // rebuilds it with the focus kept on that act, each rebuild keeping what the
-// other set. It opens on its reads, the
-// ends' words and the lineage (O-HOST's `opening`), the opening begun in the
+// other set. It opens on its reads, the ends' words, the home's state and the
+// lineage (O-HOST's `opening`), the opening begun in the
 // act that asks for the card: where an act was made on the chrome while they
 // read, nothing shows. A tail pressed (P-RENDER's) opens on its reads too
 // (`fromTail`): its documents read whole first — at mid scale the page holds
@@ -91,7 +100,7 @@
 // reads made again: the card at the end LK draws now at that document, as the
 // version its box shows reads it (N-GO's `shownIn`), the claims listed where
 // they stood so; nothing where LK draws no end the surface named.
-// Rules: FP-1, FP-2, FP-13, FP-20, FP-21, FP-30, FP-33, FP-34, FP-36.
+// Rules: FP-1, FP-2, FP-13, FP-20, FP-21, FP-30, FP-33, FP-34, FP-36, FP-39.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -137,7 +146,8 @@ import { accountOf, isUnder } from '../model/address.js';
  */
 
 /** @typedef {EndAbout | TailAbout | EndsAbout} About what the card and its lists are about (O-HOST's `about`) */
-/** @typedef {[string | null, {runs: Array<{pos: number, width: number}> | null, words: string | null}, Lineage]} Read what the card is made from: the near end's words, where the far end's passage stands and its words — each stretch of words marked with its face (P-LABEL's `inFace`) — the link's lineage */
+/** @typedef {'published' | 'draft' | 'unread' | 'withheld' | 'unregistered'} HomeState what the home row says of a link's home (`homeState`): its kind, that it was not read, or what a refusal of it held */
+/** @typedef {[string | null, {runs: Array<{pos: number, width: number}> | null, words: string | null}, Lineage, HomeState]} Read what the card is made from: the near end's words, where the far end's passage stands and its words — each stretch of words marked with its face (P-LABEL's `inFace`) — the link's lineage, its home's state */
 
 /**
  * @typedef {Object} Who — the accounts the lineage's claims are named against
@@ -145,8 +155,8 @@ import { accountOf, isUnder } from '../model/address.js';
  * @property {string | null} reader the reader's account, named "you" wherever it is a claimant; null for a guest
  */
 
-/** a passage in withheld text in words (see the head): "withheld · ⟨owner⟩", the owner of the run's origin by the one owner rule its placeholder names — the client's words, the owner marked the identifier's (P-LABEL's `inFace`) */
-const withheldWords = (/** @type {string | null} */ origin) => t('F.corner.withheld', { owner: origin ? inFace('ident', LAYER.originOwner(origin)) : '' });
+/** a document withheld from the reader in words (see the head) — a withheld run's origin, a link's home: "withheld · ⟨owner⟩", its owner by the one owner rule a withheld run's placeholder names — the client's words, the owner marked the identifier's (P-LABEL's `inFace`) */
+const withheldWords = (/** @type {string | null} */ addr) => t('F.corner.withheld', { owner: addr ? inFace('ident', LAYER.originOwner(addr)) : '' });
 
 /** the first words of a passage of the model's text, a far end's, the document's own marked the reading face's (P-LABEL's `inFace`): from the model where delivered, else one read, each stretch it answers withheld in a withheld run's words (see the head) */
 async function fragment(/** @type {string} */ addr, /** @type {number | null} */ pos, /** @type {number} */ width) {
@@ -166,8 +176,43 @@ function nearWords(/** @type {Shown} */ s) {
   return held ? inFace('reading', held) : fragment(s.near, s.pos, s.width);
 }
 
-/** an end's words as the card sets them, each stretch in the face its marks name (P-LABEL's `runsOf`; ST's `facedHTML`): the document's own the reading face's, the client's words with each address in them the identifier's */
+/** words as the card sets them — an end's, its home's state — each stretch in the face its marks name (P-LABEL's `runsOf`; ST's `facedHTML`): the document's own the reading face's, the client's words with each address in them the identifier's */
 const quoteHTML = (/** @type {string} */ words) => facedHTML(runsOf(words, 'client'));
+
+/** each state of a link's home (`HomeState`), by the string its row says it in */
+const HOME_WORDS = /** @type {const} */ ({ published: 'F.card.public', draft: 'F.card.hidden', unread: 'L.slot.unread', withheld: 'F.corner.withheld', unregistered: 'L.far.unregistered' });
+
+/**
+ * What the home row says of a link's home (see the head): a refusal of it the
+ * page holds — withheld from the reader, or nothing the board will say of it
+ * — first, so no kind is stated of it (FP-33); else its kind by the one test
+ * (T-LAYER's `isDraft`; FP-39); else that it was not read. Asked by the
+ * home's address, it makes no record.
+ * @param {string} home
+ * @returns {HomeState}
+ */
+function homeState(home) {
+  const refused = REC.has(home) ? REC.doc(home).refused : null;
+  if (refused) return refused;
+  const draft = LAYER.isDraft(home);
+  return draft === true ? 'draft' : draft === false ? 'published' : 'unread';
+}
+
+/**
+ * The home's state for the card's reads (see the head): where nothing the
+ * page holds tells it, its metadata read (M-PUMP's `readMetadata`) — asked
+ * again where a drop overtook the read, at most DROP_ATTEMPTS times — then
+ * its state as the page holds it (`homeState`).
+ * @param {string} home
+ * @returns {Promise<HomeState>}
+ */
+async function homeRead(home) {
+  for (let i = 0; i < PUMP.DROP_ATTEMPTS && homeState(home) === 'unread'; i++) if (await PUMP.readMetadata(home)) break;
+  return homeState(home);
+}
+
+/** the home row's words for its state (`HomeState`), marked with their faces (P-LABEL's `inFace`): a withheld home's the withheld box's (`withheldWords`) */
+const homeWords = (/** @type {string} */ home, /** @type {HomeState} */ state) => (state === 'withheld' ? withheldWords(home) : t(HOME_WORDS[state]));
 
 /** the account that made a supersession claim: the account of its home, the document the claim resides in, whose owner alone may deposit it there (wire.md §Links (writes)) — the home as given where its address names no account */
 const claimantOf = (/** @type {Claim} */ c) => accountOf(c.home) || c.home;
@@ -316,7 +361,8 @@ async function farPassage(s, runs) {
 /**
  * The card's reads: the near end's words — a withheld run's, with no read,
  * where LK draws the end at one (see the head) — where the far end's passage
- * stands now (`farPlace`) and its words, the link's lineage.
+ * stands now (`farPlace`) and its words, the link's lineage, and its home's
+ * state (`homeRead`).
  * @param {Shown} s
  * @returns {Promise<Read>}
  */
@@ -325,6 +371,7 @@ function cardReads(s) {
     s.run ? withheldWords(s.run.origin) : nearWords(s),
     s.far ? farPlace(s).then(async (runs) => ({ runs, words: await farPassage(s, runs) })) : Promise.resolve({ runs: null, words: null }),
     PUMP.lineage(s.link.addr),
+    homeRead(s.link.home),
   ]);
 }
 
@@ -366,7 +413,8 @@ export function open(s, anchorEl, byKey = false) {
  * words where its passage's words are placed, else its far end's words as its
  * tail and its mirror item carry them (LK's `farWords`), else "…" — and
  * beneath them, where its text holds only part of its passage, all of it in
- * pieces, or no answer told, BM-HELD's line (`farHolds`); the
+ * pieces, or no answer told, BM-HELD's line (`farHolds`); the home row its
+ * home's state in its words (`homeWords`), the same in every redraw; the
  * lineage's claims named against this link's owner and the reader
  * (`supersessionRows`), and the line's act made from the same reads, the
  * card shown again under its id with the claims behind the line in its place;
@@ -385,7 +433,7 @@ export function open(s, anchorEl, byKey = false) {
  * @param {boolean} [told] "read side by side" was pressed inert: its reason given at the card
  */
 function showCard(s, read, anchorEl, byKey, others = false, focus = null, told = false) {
-  const [nearText, farEnd, lineage] = read;
+  const [nearText, farEnd, lineage, home] = read;
   const l = s.link;
   const near = s.near, nearPos = s.pos, nearWidth = s.width;
   const far = s.far;
@@ -393,9 +441,6 @@ function showCard(s, read, anchorEl, byKey, others = false, focus = null, told =
   const bytes = { addr: near, pos: nearPos, width: nearWidth };
   const farText = farEnd.words, farRuns = farEnd.runs;
   const mark = LK.markOf(l, near);
-  const homePlace = REC.place(l.home);
-  const homeDoc = REC.doc(l.home);
-  const homePublished = homeDoc.meta ? homeDoc.meta.published : homePlace ? homePlace.kind === 'edition' : true;
   const inert = besideInert(s);
   /** the reason given at the act pressed: its parts beneath the acts, save where the far end's own words on the card are the reason's */
   const given = told && inert && far ? inert.map((p) => `<div class="note reason" data-string="${esc(p.id)}">${addressedHTML(p.text)}</div>`).join('') : '';
@@ -414,7 +459,7 @@ function showCard(s, read, anchorEl, byKey, others = false, focus = null, told =
     `<div class="kv"><b>${esc(t('F.card.type'))}</b> <span data-string="R5.undocumented">${esc(typeName(l.type))}</span></div>` +
     `<div class="kv"><b>${esc(t('F.card.from'))}</b> <span class="code id">${esc(fromDoc)}</span></div>` +
     `<div class="kv"><b>${esc(t('F.card.to'))}</b> <span class="code id">${esc(toDoc)}</span></div>` +
-    `<div class="kv"><b>${esc(t('F.card.home'))}</b> <span class="code id">${esc(l.home)}</span> — ${esc(homePublished ? t('F.card.public') : t('F.card.hidden'))}</div>` +
+    `<div class="kv"><b>${esc(t('F.card.home'))}</b> <span class="code id">${esc(l.home)}</span> — <span data-string="${HOME_WORDS[home]}">${quoteHTML(homeWords(l.home, home))}</span></div>` +
     `<div class="kv"><b>${esc(t('F.card.owner'))}</b> ${l.owner ? `<span class="code id">${esc(l.owner)}</span>` : '—'}</div>` +
     `<div class="kv made"><b>${esc(t('L.card.made'))}</b> ${esc(dated(l.age))}</div>` +
     supersessionRows(lineage, who, others) +

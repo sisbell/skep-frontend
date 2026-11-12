@@ -7,7 +7,8 @@
 // members' ages kept as its probe reads them — and what
 // a read the board did not answer, a drop that overtook a read, a size
 // refusal or a `scan_busy` does to each, and when the pause such a read
-// waits out ends; the acquire, a session's end and the
+// waits out ends; an act's read of a document's metadata, asked where the
+// page holds neither it nor a refusal of it; the acquire, a session's end and the
 // page's own death — what it kept read again and set in one step, every other
 // draft it could read covered at once where the change ends the session and
 // else left waiting, read at once where the view stood on it and else as the
@@ -1993,6 +1994,34 @@ test('an act\'s reads of the edition claims hold a refusal as the view holds the
   await PUMP.readClaims(HIDDEN_ORIGIN);
   assert.deepEqual([hidden.asks(), REC.editionClaimsOf(HIDDEN_ORIGIN), PUMP.claimsToRead(HIDDEN_ORIGIN)], [1, 'withheld', false], 'refused as withheld from the reader: an answer, asked once');
   forgetClaims();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('an act\'s read of a document\'s metadata asks it where the page holds neither it nor a refusal of the document and takes what it answers — a refusal that says nothing of the document held failed and asked again by the next act, one withheld from the reader held of the document and never asked again — and takes nothing, no record made, where a drop overtook it, answering so', async () => {
+  const [DRAFT, FLAKY, HIDDEN, OVERTAKEN] = ['1.0.1.0.41', '1.0.1.0.42', '1.0.1.0.43', '1.0.1.0.44'];
+  /** a draft's metadata as the board answers it */
+  const draftMeta = (/** @type {string} */ doc) => ({ result: { as_of: 1, resp: 'doc_metadata', doc, published: false, owner: '1.0.1', birth: null, birth_extent: null, placed: null, base_extent: null, source: null } });
+  /** @type {Record<string, unknown>} */
+  const s = { ...script, [FAKE.keyOf('op', { frame: F.docMetadata(DRAFT) })]: draftMeta(DRAFT), [FAKE.keyOf('op', { frame: F.docMetadata(OVERTAKEN) })]: draftMeta(OVERTAKEN) };
+  const flaky = inTurn(s, F.docMetadata(FLAKY), BUSY, draftMeta(FLAKY));
+  const hidden = inTurn(s, F.docMetadata(HIDDEN), WITHHELD_READ);
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  const asks = (/** @type {string} */ doc) => fake.asked.filter((k) => k === FAKE.keyOf('op', { frame: F.docMetadata(doc) })).length;
+  assert.deepEqual([await PUMP.readMetadata(DRAFT), asks(DRAFT), REC.doc(DRAFT).meta?.published, REC.doc(DRAFT).kind], [true, 1, false, 'draft'], 'held of nothing: asked, its answer taken');
+  assert.deepEqual([await PUMP.readMetadata(DRAFT), asks(DRAFT)], [true, 1], 'held: nothing asked');
+  assert.deepEqual([await PUMP.readMetadata(FLAKY), flaky.asks(), REC.readFailed(FLAKY), REC.doc(FLAKY).meta], [true, 1, true, null], 'refused for a reason that says nothing of the document: held failed');
+  assert.deepEqual([await PUMP.readMetadata(FLAKY), flaky.asks(), REC.readFailed(FLAKY), REC.doc(FLAKY).meta?.published], [true, 2, false, false], 'the next act asks the failed read again, its answer taken');
+  assert.deepEqual([await PUMP.readMetadata(HIDDEN), await PUMP.readMetadata(HIDDEN), hidden.asks(), REC.doc(HIDDEN).refused, REC.readFailed(HIDDEN)], [true, true, 1, 'withheld', false], 'refused as withheld from the reader: held of the document, an answer, asked once');
+  const release = fake.hold('op', { frame: F.docMetadata(OVERTAKEN) });
+  const out = PUMP.readMetadata(OVERTAKEN);
+  await untilAsked(fake, F.docMetadata(OVERTAKEN));
+  REC.invalidate(OVERTAKEN);
+  release();
+  assert.deepEqual([await out, REC.has(OVERTAKEN)], [false, false], 'a row dropped it while the read was out: nothing taken, no record made, and the read answers that it took nothing');
+  assert.deepEqual([await PUMP.readMetadata(OVERTAKEN), asks(OVERTAKEN), REC.doc(OVERTAKEN).meta?.published], [true, 2, false], 'asked again, its answer taken');
   assert.deepEqual(fake.unanswered, []);
 });
 

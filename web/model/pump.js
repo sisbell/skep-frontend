@@ -83,7 +83,9 @@
 // its image and the two taken into the model in one step as they land
 // (`readRest`; FP-6, FP-27);
 // the reads a face stating a withheld origin needs before it shows
-// (`claimsToRead`, `readClaims`); where a link's end projects (`projectEnd`,
+// (`claimsToRead`, `readClaims`); a document's metadata where the page holds
+// neither it nor a refusal of it — a claim's home's, the home of a link a
+// card states (`readMetadata`); where a link's end projects (`projectEnd`,
 // `projectedIn`); a member's extent (`extentOf`) and its age (`ageOf`),
 // which every `doc_metadata` answered of a member keeps; a link's lineage
 // (`lineage`: `in_claims` and `out_claims` under the audit view; A-56,
@@ -2571,12 +2573,13 @@ async function readWhole(addr, dropped) {
  * row's change made, if one is out, has landed (`claimsAgainFirst`): each one
  * the page holds no answer to, a failed one asked again — the lookup of the
  * edition claims on it, taken where no change of them overtook it
- * (`watchClaims`); then the metadata of each listed claim's home, at once,
- * and the link of each claim whose home may be published (`claimNeeds`), at
- * once, each taken where its home was not dropped under it (`watchDrops`). A
- * refusal is held as the view holds it: the lookup's by whether it was
- * withheld (`lookupRefused`), a home's of the home (`metaRefused`), a link's
- * as failed (`linkRefused`) — the board not answering, as failed.
+ * (`watchClaims`); then the metadata of each listed claim's home, at once
+ * (`readMetadata`), and the link of each claim whose home may be published
+ * (`claimNeeds`), at once, each taken where its home was not dropped under it
+ * (`watchDrops`). A refusal is held as the view holds it: the lookup's by
+ * whether it was withheld (`lookupRefused`), a home's of the home
+ * (`metaRefused`), a link's as failed (`linkRefused`) — the board not
+ * answering, as failed.
  * @param {string} origin
  */
 export async function readClaims(origin) {
@@ -2591,13 +2594,7 @@ export async function readClaims(origin) {
   const listed = REC.editionClaimsOf(origin);
   const claims = Array.isArray(listed) ? listed : [];
   const homes = [...new Set(claims.filter((c) => claimNeeds(c).meta).map((c) => claimNeeds(c).home))];
-  await Promise.all(homes.map(async (home) => {
-    const dropped = watchDrops(home);
-    const out = await read(F.docMetadata(home));
-    if (dropped()) return;
-    if ('refused' in out) metaRefused(REC.doc(home), out.refused);
-    else { const m = F.decodeDocMetadata(out.answer); if (m) REC.takeMetadata(home, m); }
-  }));
+  await Promise.all(homes.map(readMetadata));
   await Promise.all(claims.filter((c) => claimNeeds(c).link).map(async (c) => {
     const dropped = watchDrops(claimNeeds(c).home);
     const out = await read(F.readLink(c));
@@ -2605,6 +2602,29 @@ export async function readClaims(origin) {
     if ('refused' in out) linkRefused(c, out.refused);
     else { const v = F.decodeLinkValue(c, out.answer); if (v) REC.takeLink(v); }
   }));
+}
+
+/**
+ * A document's metadata read for an act (`doc_metadata`) — a listed edition
+ * claim's home (`readClaims`), the home of a link a card states — where the
+ * page holds neither it nor a refusal of the document, a failed read of it
+ * asked again: the answer taken (M-REC's `takeMetadata`), a refusal held as
+ * the view holds it (`metaRefused`), and nothing taken — no record made —
+ * where the document was dropped while the read was out (`watchDrops`).
+ * Asked where the page holds its metadata or a refusal of it, it reads
+ * nothing.
+ * @param {string} addr
+ * @returns {Promise<boolean>} whether what it read was taken — an answer, a refusal or a failure held; false where a drop overtook the read, so a caller waiting on its answer asks again
+ */
+export async function readMetadata(addr) {
+  const d = REC.has(addr) ? REC.doc(addr) : null;
+  if (d && (d.meta || d.refused)) return true;
+  const dropped = watchDrops(addr);
+  const out = await read(F.docMetadata(addr));
+  if (dropped()) return false;
+  if ('refused' in out) metaRefused(REC.doc(addr), out.refused);
+  else { const m = F.decodeDocMetadata(out.answer); if (m) REC.takeMetadata(addr, m); }
+  return true;
 }
 
 // ---- the refresh -----------------------------------------------------------------

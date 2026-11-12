@@ -163,7 +163,7 @@ export const STRINGS = {
   'F.corner.latest': { text: 'the latest version — this address, and a link to it, moves to each new one', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
   'F.corner.pinned': { text: 'version ⟨k⟩ — this address, and a link to it, stays on this text forever', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
   'F.corner.no-versions': { text: 'no versions yet — its first is made when you publish new text for it', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
-  'F.corner.withheld': { text: 'withheld · ⟨owner⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
+  'F.corner.withheld': { text: 'withheld · ⟨owner⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner; B1-S5: an end in withheld text, the home row' },
   'F.published.notebook': { text: 'readable by anyone who can reach this notebook: anything on this machine, and nothing beyond it', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner: an edition\'s state on a notebook' },
   'F.published': { text: 'published', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner\'s kind slot; the ARIA mirror: a document\'s item; a reading scene\'s pane\'s name; a landing\'s description; the versions list' },
   'F.version-of': { text: 'version ⟨k⟩ of ⟨n⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
@@ -1110,7 +1110,8 @@ export const STRINGS = {
   'L.mirror.link': { text: 'link ⟨link⟩, type ⟨type⟩, ⟨direction⟩ ⟨far⟩⟨floating⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.untyped': { text: 'untyped', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // a document the board will say nothing of, as its state: its corner's own words (T-ARTICLE's), which its mirror item leads with
-  'L.far.unregistered': { text: 'nothing this board will say about this address', cls: 'DRAFT', source: '', screen: 'the ARIA mirror: a document\'s item; the corner', lane: true },
+  // and the anatomy card's home row states of a link's home
+  'L.far.unregistered': { text: 'nothing this board will say about this address', cls: 'DRAFT', source: '', screen: 'the ARIA mirror: a document\'s item; the corner; B1-S5: the home row', lane: true },
   // a link's far end the board will say nothing of, in one state (LK's `emptyAt`): in the reader's own account under a
   // complete index listing no document at the address, "no document here yet" — its whole form saying nothing has been made
   // there, then whether the account's next new document goes there — else "no document known here", its whole form that
@@ -1253,7 +1254,7 @@ export const STRINGS = {
   'L.slot.reading': { text: 'being read', cls: 'DRAFT', source: '', screen: 'the byline; the corner\'s kind slot', lane: true },
   'L.slot.by-reference': { text: 'by reference', cls: 'DRAFT', source: '', screen: 'the byline', lane: true },
   'L.slot.unlabelled': { text: 'no label', cls: 'DRAFT', source: '', screen: 'the byline; the one line', lane: true },
-  'L.slot.unread': { text: 'not read', cls: 'DRAFT', source: '', screen: 'the byline; the corner\'s kind slot', lane: true },
+  'L.slot.unread': { text: 'not read', cls: 'DRAFT', source: '', screen: 'the byline; the corner\'s kind slot; B1-S5: the home row', lane: true },
   'L.slot.store-unread': { text: 'key store not read', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.slot.key-untold': { text: 'key not named', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   // the formatting forms (B3-S13): `3.23.4`'s name, beside the strip's names of the rest (`formName`), and the heading

@@ -15,13 +15,17 @@
 // text holds only part of its passage (FP-21); an end drawn at a withheld
 // run says it is withheld and whose, with no read of its bytes, the run's one
 // symbol listing its several ends; a far end naming its document whole
-// described by that document's label alone (FP-30); and "read side by side"
+// described by that document's label alone (FP-30); "read side by side"
 // where the scene has no far document to open — the board saying nothing of
 // the far end's document, or the end naming none — inert with its reason its
 // title, and pressed, by Enter or a click, giving it at the card and through
 // the status region at every press, the far end's whole form in its one state
 // in the reader's own account and out of it, nothing read and nothing opened
-// (FP-34, FP-21).
+// (FP-34, FP-21); and the home row in every frame the card shows: the home's
+// kind by the one test, its metadata read with the card's other reads where
+// nothing the page holds tells it — asked again across a drop, "not read"
+// where the read failed — and a refusal of it in its own words with no kind,
+// never "published" by default (FP-39, FP-33, FP-34).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as ANATOMY from './anatomy-card.js';
@@ -34,7 +38,7 @@ import * as FAKE from '../test/fake-port.js';
 import * as LK from '../links/links.js';
 import * as LAYER from '../text/layer.js';
 import * as FOCUS from '../nav/focus.js';
-import { resolveSpan } from '../model/address.js';
+import { accountOf, resolveSpan } from '../model/address.js';
 import { t } from '../strings.js';
 
 const { supersessionRows, hasAuthority } = ANATOMY;
@@ -47,6 +51,11 @@ const OWNED = { owner: '1.0.1', reader: null };
 /** the age of a link the board keeps no reading of (M-FRAMES's `Age`) */
 const UNDATED = { at: null, time: null, from: null };
 
+/** the board's answer to `doc_metadata` of a document its account owns: an edition's where `published`, else a draft's */
+const metadata = (/** @type {string} */ doc, /** @type {boolean} */ published) => ({ result: { as_of: 1, resp: 'doc_metadata', doc, published, owner: accountOf(doc), birth: published ? doc + '.1' : null, birth_extent: null, placed: null, base_extent: null, source: null } });
+/** a script answering `doc_metadata` of a link's home (`metadata`) */
+const homeMeta = (/** @type {string} */ home, /** @type {boolean} */ published) => ({ [FAKE.keyOf('op', { frame: F.docMetadata(home) })]: metadata(home, published) });
+
 /** a claim naming the card's link on both sides, homed in 1.0.1's document, unless told otherwise @param {Partial<Claim>} c @returns {Claim} */
 const claim = (c) => ({ claim: '1.0.1.0.3.0.2.9', home: '1.0.1.0.3', old: L, new: L, active: true, ...c });
 
@@ -55,6 +64,13 @@ const text = (/** @type {string} */ html) => html.replace(/<[^>]*>/g, '').replac
 
 /** the rows as a person reads them: each one's label and the words of its value */
 const rows = (/** @type {string} */ html) => [...html.matchAll(/<div class="kv[^"]*"><b>(.*?)<\/b>(.*?)<\/div>/g)].map((m) => ({ label: text(m[1]), value: text(m[2]).trim() }));
+
+/** the home row as a person reads it — the home's address, then what the row says of the home — and the string its words are set from; nulls where no home row stands */
+const homeRow = (/** @type {string} */ html) => {
+  const row = rows(html).find((r) => r.label === t('F.card.home'));
+  const id = (html.match(new RegExp(`<b>${t('F.card.home')}</b> <span class="code id">[^<]*</span> — <span data-string="([^"]*)">`)) || [])[1];
+  return { value: row ? row.value : null, id: id ?? null };
+};
 
 /** the line the claims without authority stand behind, as a person reads it; null where none stands */
 const line = (/** @type {string} */ html) => { const m = html.match(/<button data-run="claims"[^>]*>(.*?)<\/button>/); return m ? text(m[1]) : null; };
@@ -176,9 +192,10 @@ test('the line\'s act made, the claims behind it stand in its place as assertion
  * host writes into it as the elements it opens, each by its tag, attributes
  * and classes, and answers a selector — tags, `.class`, `[attr]`,
  * `[attr="value"]` and `:not([attr])` parts, a list of them by commas — with
- * the elements matching it in the order written; an element's `focus()`
- * lands the platform's focus on it, and markup written over the element
- * holding it drops the focus to the body, as the platform's would.
+ * the elements matching it in the order written, and keeps every markup
+ * written into it, in order; an element's `focus()` lands the platform's
+ * focus on it, and markup written over the element holding it drops the
+ * focus to the body, as the platform's would.
  */
 function cardPage() {
   const body = { id: 'the body' };
@@ -188,6 +205,8 @@ function cardPage() {
   /** @type {Kid[]} */
   let kids = [];
   let html = '';
+  /** @type {string[]} every markup written into the host, in order */
+  const written = [];
   const matches = (/** @type {Kid} */ e, /** @type {string} */ sel) => {
     let s = sel.trim(), ok = true;
     s = s.replace(/:not\(\[([\w-]+)\]\)/g, (_, a) => { if (a in e.attrs) ok = false; return ''; });
@@ -205,6 +224,7 @@ function cardPage() {
     get innerHTML() { return html; },
     set innerHTML(/** @type {string} */ v) {
       html = v;
+      written.push(v);
       const old = kids;
       kids = [...v.matchAll(/<([a-z]+)\b([^>]*)>/g)].map((m) => {
         const attrs = Object.fromEntries([...m[2].matchAll(/([\w-]+)(?:="([^"]*)")?/g)].map((a) => [a[1], a[2] ?? '']));
@@ -229,6 +249,8 @@ function cardPage() {
     kid: (/** @type {string} */ run) => /** @type {Kid} */ (kids.find((e) => e.dataset.run === run)),
     /** the control the platform's focus stands on, by its name; 'the body' where it stands on nothing */
     at: () => (doc.activeElement === body ? 'the body' : nameOf(/** @type {Kid} */ (doc.activeElement))),
+    /** every markup written into the host, in order */
+    written: () => written.slice(),
   };
 }
 
@@ -243,6 +265,7 @@ test('the card: a key opens it on follow, the line standing before follow; the l
   REC.takeLink({ addr: L, from: [resolveSpan({ start: D + '.0.1.11', width: '0.0.0.0.0.0.0.5' })], to: [resolveSpan({ start: FAR, width: '0.0.0.0.1' })], type: '1.1.0.1.0.1.0.3.13', age: UNDATED });
   const stranger = { active: true, claim: '1.0.2.0.5.0.2.1', home: '1.0.2.0.5', new: '1.0.2.0.5.0.2.2', old: L };
   const fake = FAKE.create({
+    ...homeMeta(D, true),
     [FAKE.keyOf('op', { frame: F.inClaims(L, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [stranger] } },
     [FAKE.keyOf('op', { frame: F.outClaims(L, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
   });
@@ -274,6 +297,7 @@ test('at an end in a draft holding typed text the card quotes the words its byte
   REC.takeLinks(D, [L2]);
   REC.takeLink({ addr: L2, from: [resolveSpan({ start: D + '.0.1.11', width: '0.0.0.0.0.0.0.5' })], to: [resolveSpan({ start: FAR, width: '0.0.0.0.1' })], type: '1.1.0.1.0.1.0.3.13', age: UNDATED });
   const fake = FAKE.create({
+    ...homeMeta(D, false),
     [FAKE.keyOf('op', { frame: F.inClaims(L2, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
     [FAKE.keyOf('op', { frame: F.outClaims(L2, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
   });
@@ -288,6 +312,7 @@ test('at an end in a draft holding typed text the card quotes the words its byte
     assert.deepEqual(c?.anchor, { span: { addr: D, pos: 13, width: 5 } }, 'the card stands at the end as the text shown holds it');
     assert.deepEqual(/** @type {any} */ (c?.about).ids, [{ prefix: D + '.0.1', ordinal: 11, width: 5 }], 'left by the bytes it stands on');
     assert.ok(text(p.host.innerHTML).includes('The f'), `the near end's words are its bytes' own: ${text(p.host.innerHTML)}`);
+    assert.deepEqual(homeRow(p.host.innerHTML), { value: `${D} — ${t('F.card.hidden')}`, id: 'F.card.hidden' }, 'homed in the draft it is drawn at, which its metadata answers a draft: the link hidden with it');
     HOST.dismiss();
     assert.deepEqual(fake.unanswered, []);
   } finally { WRITE.clearEdits(D); LK.readers({}); }
@@ -315,10 +340,10 @@ test('the card says when its link was made: "made" and the day of the commit tha
     assert.ok(v, `${l} decodes`);
     REC.takeLink(v);
   }
-  const fake = FAKE.create(Object.fromEntries(made.flatMap(([l]) => [
+  const fake = FAKE.create({ ...homeMeta(D, true), ...Object.fromEntries(made.flatMap(([l]) => [
     [FAKE.keyOf('op', { frame: F.inClaims(l, 'audit') }), { result: { as_of: 12, resp: 'claims', claims: [] } }],
     [FAKE.keyOf('op', { frame: F.outClaims(l, 'audit') }), { result: { as_of: 12, resp: 'claims', claims: [] } }],
-  ])));
+  ])) });
   PORT.boot(fake);
   const labels = [t('F.card.type'), t('F.card.from'), t('F.card.to'), t('F.card.home'), t('F.card.owner'), t('L.card.made'), t('F.card.superseded-by'), t('F.card.supersedes')];
   for (const [l, age, day] of made) {
@@ -347,6 +372,7 @@ test('the card says beneath its far end\'s words what that end\'s text holds of 
   REC.takeLink({ addr: CUT, from: [resolveSpan({ start: D + '.0.1.1', width: '0.0.0.0.0.0.0.3' })], to: [resolveSpan({ start: FAR + '.0.1.3', width: '0.0.0.0.0.0.0.22' })], type: '1.1.0.1.0.1.0.3.13', age: UNDATED });
   REC.takeProjection(CUT, 2, FAR, [{ pos: 3, width: 4 }, { pos: 20, width: 5 }]);
   const fake = FAKE.create({
+    ...homeMeta(D, true),
     [FAKE.keyOf('op', { frame: F.inClaims(CUT, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
     [FAKE.keyOf('op', { frame: F.outClaims(CUT, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
   });
@@ -374,10 +400,10 @@ test('an end LK draws at a withheld run: its card says the end is withheld and w
   const [A, B] = [D + '.0.2.1', D + '.0.2.2'];
   REC.takeLinks(D, [A, B]);
   for (const [l, at] of /** @type {Array<[string, number]>} */ ([[A, 2], [B, 6]])) REC.takeLink({ addr: l, from: [resolveSpan({ start: `${O}.0.1.${at}`, width: '0.0.0.0.0.0.0.2' })], to: [resolveSpan({ start: FAR, width: '0.0.0.0.1' })], type: CITE, age: UNDATED });
-  const fake = FAKE.create(Object.fromEntries([A, B].flatMap((l) => [
+  const fake = FAKE.create({ ...homeMeta(D, true), ...Object.fromEntries([A, B].flatMap((l) => [
     [FAKE.keyOf('op', { frame: F.inClaims(l, 'audit') }), { result: { as_of: 1, resp: 'claims', claims: [] } }],
     [FAKE.keyOf('op', { frame: F.outClaims(l, 'audit') }), { result: { as_of: 1, resp: 'claims', claims: [] } }],
-  ])));
+  ])) });
   PORT.boot(fake);
   const end = (/** @type {string} */ l) => /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === l));
   assert.deepEqual([end(A).pos, end(A).width, end(A).run?.origin], [n + 1, 8, O], 'drawn at the run\'s start, the run\'s whole extent');
@@ -416,6 +442,7 @@ test('a far end naming its document whole is described by that document\'s label
   REC.takeLinks(D, [CITES]);
   REC.takeLink({ addr: CITES, from: [resolveSpan({ start: D + '.0.1.11', width: '0.0.0.0.0.0.0.5' })], to: [resolveSpan({ start: FAR, width: '0.0.0.0.1' })], type: '1.1.0.1.0.1.0.3.13', age: UNDATED });
   const fake = FAKE.create({
+    ...homeMeta(D, true),
     [FAKE.keyOf('op', { frame: F.inClaims(CITES, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
     [FAKE.keyOf('op', { frame: F.outClaims(CITES, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
   });
@@ -456,8 +483,8 @@ const reasons = (/** @type {string} */ html) => ({ lines: [...html.matchAll(/<di
 
 /**
  * The first edition's citation of a document whole from its own bytes at 11, held by the model with the claims a card of
- * it reads answered — `stray` a claim of it another account made, where one is given: the link as LK draws it there now,
- * and the fake port answering.
+ * it reads answered — `stray` a claim of it another account made, where one is given — and its home's metadata an
+ * edition's: the link as LK draws it there now, and the fake port answering.
  * @param {string} link
  * @param {string} far the document cited whole
  * @param {Claim[]} [stray]
@@ -469,6 +496,7 @@ function citing(link, far, stray = []) {
   REC.takeLinks(D, [link]);
   REC.takeLink({ addr: link, from: [resolveSpan({ start: D + '.0.1.11', width: '0.0.0.0.0.0.0.5' })], to: [resolveSpan({ start: far, width: '0.0.0.0.1' })], type: '1.1.0.1.0.1.0.3.13', age: UNDATED });
   const fake = FAKE.create({
+    ...homeMeta(D, true),
     [FAKE.keyOf('op', { frame: F.inClaims(link, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: stray } },
     [FAKE.keyOf('op', { frame: F.outClaims(link, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
   });
@@ -528,6 +556,92 @@ test('"read side by side" at an end naming no far document stands inert with "no
   }
   HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
+});
+
+// ---- the home row ------------------------------------------------------------------------------------------------------
+
+/** a frame the fake port answers with each outcome in turn, the last again past them: how many times it was asked */
+function inTurn(/** @type {Record<string, unknown>} */ s, /** @type {object} */ frame, /** @type {unknown[]} */ ...outcomes) {
+  let n = 0;
+  Object.defineProperty(s, FAKE.keyOf('op', { frame }), { enumerable: true, configurable: true, get: () => outcomes[Math.min(n++, outcomes.length - 1)] });
+  return { asks: () => n };
+}
+
+test('the home row says what the page reads of the link\'s home in every frame the card shows — its kind by the one test, the home\'s metadata read with the card\'s other reads where nothing the page holds tells it and asked again across a drop, "not read" where that read failed and the next card asking it again, a version member by its trunk\'s listing with no read and no record made, a draft by the kind the page keeps of it once a row dropped its metadata, a refusal of it held in its own words with no kind — and never "published" by default (FP-39, FP-33, FP-34)', async () => {
+  const p = cardPage();
+  HOST.attach(/** @type {any} */ (p.host));
+  // a document of 1.0.1's citing 1.0.1.0.127 whole from its own bytes at 11, once from each home
+  const D = '1.0.1.0.60', FAR = '1.0.1.0.127', TEXT = 'Tumbler.\n\nThe first field.';
+  // a draft the page holds nothing of; another, its first read refused for a reason that says nothing of it; one a drop overtakes
+  // the read of; an edition the index lists, its second member the home; a draft read, then dropped by a row naming it; a
+  // draft withheld from the reader; an address the board will say nothing of
+  const [UNTOLD, FAILS, OVERTAKEN, EDITION, DROPPED, HIDDEN, NOWHERE] = ['1.0.1.0.61', '1.0.1.0.62', '1.0.1.0.63', '1.0.1.0.64', '1.0.1.0.65', '1.0.1.0.66', '1.0.1.0.67'];
+  const MEMBER = EDITION + '.2', homes = [UNTOLD, FAILS, OVERTAKEN, MEMBER, DROPPED, HIDDEN, NOWHERE];
+  const linkIn = (/** @type {string} */ home) => home + '.0.2.1';
+  REC.takeDelivery(D, [{ pos: 1, width: TEXT.length, kind: 'content', text: TEXT, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: TEXT.length }]);
+  REC.takeLinks(D, homes.map(linkIn));
+  for (const h of homes) REC.takeLink({ addr: linkIn(h), from: [resolveSpan({ start: D + '.0.1.11', width: '0.0.0.0.0.0.0.5' })], to: [resolveSpan({ start: FAR, width: '0.0.0.0.1' })], type: '1.1.0.1.0.1.0.3.13', age: UNDATED });
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: EDITION, kind: 'edition', label: null, standing: 'public' }], counts: [], state: { arm: 'at_the_floor', floor: 1 } }));
+  REC.takeMetadata(DROPPED, /** @type {import('../model/frames.js').DocMeta} */ (F.decodeDocMetadata(metadata(DROPPED, false).result)));
+  REC.invalidate(DROPPED);
+  REC.takeRefused(HIDDEN, 'withheld');
+  REC.takeRefused(NOWHERE, 'unregistered');
+  /** @type {Record<string, unknown>} */
+  const s = {
+    ...homeMeta(UNTOLD, false), ...homeMeta(OVERTAKEN, false),
+    ...Object.fromEntries(homes.flatMap((h) => [
+      [FAKE.keyOf('op', { frame: F.inClaims(linkIn(h), 'audit') }), { result: { as_of: 1, resp: 'claims', claims: [] } }],
+      [FAKE.keyOf('op', { frame: F.outClaims(linkIn(h), 'audit') }), { result: { as_of: 1, resp: 'claims', claims: [] } }],
+    ])),
+  };
+  const fails = inTurn(s, F.docMetadata(FAILS), { refused: { kind: 'refused', name: 'busy', code: 'busy' } }, metadata(FAILS, false));
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  /** how many times the card asked a document's metadata */
+  const asked = (/** @type {string} */ doc) => fake.asked.filter((k) => k === FAKE.keyOf('op', { frame: F.docMetadata(doc) })).length;
+  const drawn = (/** @type {string} */ home) => /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === linkIn(home)));
+  /** the card opened on the link homed in `home`, and its home row in every frame it was shown in */
+  const card = async (/** @type {string} */ home) => {
+    const from = p.written().length;
+    await ANATOMY.open(drawn(home), null);
+    const frames = p.written().slice(from).filter((h) => h.includes('class="kv"')).map(homeRow);
+    HOST.dismiss();
+    return frames;
+  };
+  /** the home row of a link homed in `home` saying `id`'s words, its address first */
+  const says = (/** @type {string} */ home, /** @type {string} */ id, /** @type {string} */ words = t(id)) => ({ value: `${home} — ${words}`, id });
+  const KINDS = [t('F.card.public'), t('F.card.hidden')];
+  try {
+    assert.ok(homes.every(drawn), 'each citation drawn at the document');
+    assert.deepEqual([await card(UNTOLD), asked(UNTOLD)], [[says(UNTOLD, 'F.card.hidden')], 1], 'a draft the page held nothing of: its metadata read with the card\'s reads, the row a draft\'s from the first frame');
+    assert.deepEqual([await card(UNTOLD), asked(UNTOLD)], [[says(UNTOLD, 'F.card.hidden')], 1], 'opened again: the kind the read answered, read once');
+    assert.deepEqual([await card(FAILS), fails.asks(), REC.readFailed(FAILS)], [[says(FAILS, 'L.slot.unread')], 1, true], 'the read refused for a reason that says nothing of the home: "not read", the read held failed');
+    assert.deepEqual([await card(FAILS), fails.asks(), REC.readFailed(FAILS)], [[says(FAILS, 'F.card.hidden')], 2, false], 'the next card asks the failed read again, and says what it answers');
+    // the overtaken home's read held until a row drops the home while it is out
+    const release = fake.hold('op', { frame: F.docMetadata(OVERTAKEN) });
+    const from = p.written().length;
+    const opened = ANATOMY.open(drawn(OVERTAKEN), null);
+    for (let i = 0; i < 50 && !asked(OVERTAKEN); i++) await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual([asked(OVERTAKEN), HOST.currentState()?.id], [1, undefined], 'nothing shown while the home\'s read is out');
+    REC.invalidate(OVERTAKEN);
+    release();
+    await opened;
+    assert.deepEqual([p.written().slice(from).filter((h) => h.includes('class="kv"')).map(homeRow), asked(OVERTAKEN)], [[says(OVERTAKEN, 'F.card.hidden')], 2], 'the read a drop overtook asked again, the card shown once with what the second answers');
+    HOST.dismiss();
+    assert.deepEqual([await card(MEMBER), asked(MEMBER), asked(EDITION), REC.has(MEMBER)], [[says(MEMBER, 'F.card.public')], 0, 0, false], 'a version member\'s home: its trunk\'s listing an edition, nothing read and no record made of the member');
+    assert.deepEqual([await card(DROPPED), asked(DROPPED)], [[says(DROPPED, 'F.card.hidden')], 0], 'a draft whose metadata a row dropped: the kind the page keeps of it, nothing read');
+    const hidden = await card(HIDDEN);
+    assert.deepEqual([hidden, asked(HIDDEN)], [[says(HIDDEN, 'F.corner.withheld', t('F.corner.withheld', { owner: '1.0.1' }))], 0], 'a home withheld from the reader: the withheld box\'s words, nothing read');
+    assert.deepEqual([await card(NOWHERE), asked(NOWHERE)], [[says(NOWHERE, 'L.far.unregistered')], 0], 'a home the board will say nothing of: the words for that, nothing read');
+    for (const [home, frames] of /** @type {Array<[string, ReturnType<typeof homeRow>[]]>} */ ([[HIDDEN, hidden], [NOWHERE, await card(NOWHERE)]])) {
+      assert.ok(frames.every((f) => !KINDS.some((k) => f.value?.includes(k))), `${home}: refused, no kind stated of it`);
+    }
+    await ANATOMY.open(drawn(HIDDEN), null);
+    assert.ok(p.host.innerHTML.includes(`<span data-string="F.corner.withheld">withheld · <span class="id">1.0.1</span></span>`), `the withheld home's owner in the identifier's face: ${p.host.innerHTML}`);
+    HOST.dismiss();
+    assert.deepEqual(fake.unanswered, []);
+  } finally { REC.takeIndex(/** @type {any} */ ({ docs: [], counts: [], state: null })); }
 });
 
 // placed last: it leaves the model as a fresh page's, the session and the index it sets gone with it
