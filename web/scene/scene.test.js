@@ -96,7 +96,12 @@
 // and closes, in a corner opened whole too, the dispatch leaving Enter and
 // Space to the button and taking an auto-repeat, ← and → walking the line
 // with the scene standing, and a return to the corner landing on its stop
-// (FP-20, FP-26).
+// (FP-20, FP-26); and a pane's kind read by the one test where the board
+// does not answer its metadata — a listed edition so read at its bare
+// address, its chain probed, its copy named as the plane's box names the same
+// words and its versions read in its place, and an edition read again so
+// still pinned at once by a newer member's arrival (FP-22, FP-23, FP-27,
+// FP-39).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -2475,4 +2480,72 @@ test('"who wrote this?" over a span shown after typing opens its side-by-side on
     assert.deepEqual([SCENE.isOpen(), SCENE.panes()?.a.derived, SCENE.panes()?.b.src, SCENE.pairs()?.level.a], [true, true, B, 16], 'its pane A the draft as shown, level at the shown position');
     assert.deepEqual(TRAIL.all()[TRAIL.cursorIndex() - 1].step, { kind: 'scene', near: A, link: null, key: null, spans: [{ prefix: A + '.0.1', ordinal: 14, width: 3 }] }, 'the step records the passage by the bytes of the base, never a position of the text shown');
   } finally { SCENE.close(); WRITE.clearEdits(A); delete script[asked]; }
+}));
+
+// ---- a pane's kind, by the one test ----------------------------------------------------------------------------------
+
+/** a listed edition of two members, read at its bare address, and its first member */
+const LE = '1.0.1.0.81', LE1 = LE + '.1', LE2 = LE + '.2';
+const LE_TEXT = 'A listed edition.\n\nIts second version holds this.', LE1_TEXT = 'A listed edition.\n\nIts first version held this.';
+/** the edition's first paragraph and its separator, which both its members hold */
+const LE_HEAD = 'A listed edition.\n\n'.length;
+/** the board's index as it lists the two first editions, and each address given beside them as an edition */
+const editionsListed = (/** @type {string[]} */ more) => REC.takeIndex(/** @type {any} */ ({
+  docs: [{ doc: A, kind: 'edition', label: 'a', standing: 'public' }, { doc: B, kind: 'edition', label: 'b', standing: 'public' }, ...more.map((doc) => ({ doc, kind: 'edition', label: doc, standing: 'public' }))],
+  counts: [{ account: '1.0.1', documents: 2 + more.length }], state: { arm: 'complete' },
+}));
+
+test('a pane on a listed edition whose own metadata the board does not answer is read as the edition the one test says it is (FP-39): at its bare address, its chain probed from its first member and its acts naming the member its text is; its corner "published" and "the latest version", stating no chain its metadata does not name; a copy from it named as the plane\'s box names the same words, at the plain address and naming no member; and its corner\'s act reading another version in its place (FP-22, FP-27)', () => onPage(async (p) => {
+  const unanswered = fake.unanswered.length;
+  Object.assign(script, reads(LE, LE_TEXT, { members: 2 }), reads(LE1, LE1_TEXT), compared(LE, LE_TEXT, B, B_TEXT), compared(LE2, LE_TEXT, LE1, LE1_TEXT, [[1, 1, LE_HEAD]]), compared(LE1, LE1_TEXT, B, B_TEXT),
+    { [FAKE.keyOf('op', { frame: F.docMetadata(LE) })]: UNREACHABLE });
+  editionsListed([LE]);
+  try {
+    const from = fake.asked.length, probed = [LE1, LE2, LE + '.3'].map((m) => FAKE.keyOf('op', { frame: F.docMetadata(m) }));
+    await SCENE.open(LE, B);
+    assert.equal(REC.doc(LE).meta, null, 'its metadata not read');
+    assert.deepEqual(paneState('a'), { kind: 'bare', src: LE, names: LE2, shows: LE, k: 2, n: 2, read: null, lacks: null }, 'an edition read at its bare address, its acts naming the member its text is');
+    assert.deepEqual(fake.asked.slice(from).filter((k) => probed.includes(k)), probed, 'its chain probed from its first member to its end');
+    const corner = p.paneA.innerHTML;
+    assert.ok(corner.includes('data-kind="published"') && corner.includes(esc(t('F.corner.latest'))) && !corner.includes(esc(t('F.version-of', { k: 2, n: 2 }))), `its corner "published", "the latest version", no chain stated: ${corner}`);
+    const board = 'origin-1', span = { pos: 1, width: 5 };
+    const pane = LAYER.namedIn(shownIn(p.paneA, 'a'), { addr: /** @type {string} */ (SCENE.pair()?.a), ...span }, board);
+    assert.deepEqual(pane, { board, doc: LE, member: null, plain: true, pos: null, width: null, ids: REC.identityOf(LE, span.pos, span.width) }, 'a copy from it read at the plain address, naming no member its corner does not name');
+    assert.deepEqual(pane, LAYER.namedIn(LAYER.sceneArticle(REC.doc(LE)), { addr: LE, ...span }, board), 'named as the plane\'s box names the same words');
+    SCENE.readIn('a', 1, { pos: 1, width: 5 });
+    await landed();
+    assert.deepEqual(paneState('a'), { kind: 'pinned', src: LE1, names: LE1, shows: LE1, k: 1, n: 2, read: 2, lacks: null }, 'its corner\'s act: version 1 read in its place, version 2 one act away');
+    assert.equal(GO.shownIn(LE), LE, 'the plane\'s box untouched');
+    assert.deepEqual(fake.unanswered.slice(unanswered), []);
+  } finally { editionsListed([]); }
+}));
+
+test('a row naming an edition a pane reads at its bare address, read again while the board does not answer its metadata, leaves the pane the edition the one test says it is, never a draft — its chain probed again from its first member — so a newer member\'s arrival pins it at once to the member its text is, said once, and reads nothing at the bare address (FP-23, FP-39)', () => onPage(async (p) => {
+  const LF = '1.0.1.0.82', LF1 = LF + '.1', LF2 = LF + '.2', LF_TEXT = 'An unlisted edition.\n\nIts second version holds this.';
+  const meta = FAKE.keyOf('op', { frame: F.docMetadata(LF) }), unanswered = fake.unanswered.length;
+  Object.assign(script, reads(LF, LF_TEXT, { members: 2 }), reads(LF2, LF_TEXT), compared(LF, LF_TEXT, B, B_TEXT), compared(LF2, LF_TEXT, B, B_TEXT), {
+    [FAKE.keyOf('op', { frame: F.docMetadata(LF1) })]: metadata(LF1, true, LF_TEXT.length),
+    // the edition claims a publish row may deposit, read at the member it names
+    [FAKE.keyOf('op', { frame: F.editionLinksIn(LF + '.3') })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+  });
+  await SCENE.open(LF, B);
+  const bare = { kind: 'bare', src: LF, names: LF2, shows: LF, k: 2, n: 2, read: null, lacks: null };
+  assert.deepEqual(paneState('a'), bare, 'opened on its metadata: an edition read at its bare address');
+  standOnNothing();
+  try {
+    script[meta] = UNREACHABLE;
+    const from = fake.asked.length;
+    fake.fire('feed', row(95, 'make_link', [LF], 'published'));
+    await landed();
+    assert.deepEqual([REC.doc(LF).meta, paneState('a')], [null, bare], 'read again, its metadata not answered: the edition it was');
+    assert.ok(fake.asked.slice(from).includes(FAKE.keyOf('op', { frame: F.docMetadata(LF1) })), 'its chain probed again from its first member');
+    const told = p.said.length, at = fake.asked.length;
+    fake.fire('feed', row(96, 'publish', [LF + '.3'], 'published'));
+    assert.deepEqual(paneState('a'), { kind: 'pinned', src: LF2, names: LF2, shows: LF2, k: 2, n: 3, read: 3, lacks: null }, 'a newer member\'s arrival: pinned at once to the member its text is, offering the newest');
+    assert.deepEqual(p.said.slice(told), [t('F.arrival.pane', { k: 2 })], 'the arrival said once');
+    await landed();
+    const asked = fake.asked.slice(at);
+    assert.ok(asked.includes(FAKE.keyOf('op', { frame: F.retrieveV(LF2, 1, LF_TEXT.length) })) && !asked.includes(FAKE.keyOf('op', { frame: F.retrieveV(LF, 1, LF_TEXT.length) })), 'the member read whole, nothing at the bare address');
+    assert.deepEqual(fake.unanswered.slice(unanswered), []);
+  } finally { CAM._reset(); }
 }));

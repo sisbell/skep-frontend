@@ -97,8 +97,10 @@
 // owner facts M-PUMP takes anew reach each pane on a document the owner holds
 // (M-PUMP's `bylineTaken`) once no setting reads, so a setting out lands as
 // asked, and read it again in its place where its byline was made with other
-// facts (`dropped`) — the plane and the pane stating one byline. A draft —
-// any text no publication fixes — is read again whole and
+// facts (`dropped`) — the plane and the pane stating one byline. A pane's
+// kind is read by the one test (T-LAYER's `isDraft`; FP-39), as the plane
+// reads the same document's (`kindAt`). A draft — any text no publication
+// fixes, and any whose kind that test cannot tell — is read again whole and
 // set in its place, the first span in view holding still and the platform's
 // selection put back on the same words. An edition read at its bare address
 // keeps the version it opened on: its acts name the member its text is
@@ -193,21 +195,22 @@
 // clipped end and a stroke's button, which only the panes' `compare` draws,
 // by its kind and what it stood for, named as FP-27 names a copy (`Named`):
 // the board and the document read, the bytes by identity, and the member
-// and its positions where the text is published, never a draft's — the
-// stop's passage of pane B and the one its act last went to (`sharedStop`),
-// a stroke's runs' facing bytes and each change's bytes on each side
-// (`strokeStop`) — with where it stood; and a stroke's list standing, by its
-// stroke's key, with whether the focus stood in it (`Listed`; FP-36). A
-// cursor move back onto the entry reopens it so (`reopen`): each pane's
-// record read again — an edition read at its bare address whose chain went
-// past the member its text was, pinned to that member (FP-23) — the two ends
-// set level, each pane whose text holds its place's bytes brought back to
-// them, any other left where the re-level set it, its selection put back on
-// the same bytes, the focus on the stop it stood on and the pair named in
-// the status region; the stroke's list shown again over the stroke bearing
-// its key once the strokes are measured, its rows read from the panes' texts
-// then, the focus on its first row where it stood in the list — the gone
-// line said where no stroke bears the key (`relisted`).
+// and its positions where the pane's corner names that member (`whereIn`),
+// never a draft's — the stop's passage of pane B and the one its act last
+// went to (`sharedStop`), a stroke's runs' facing bytes and each change's
+// bytes on each side (`strokeStop`) — with where it stood; and a stroke's
+// list standing, by its stroke's key, with whether the focus stood in it
+// (`Listed`; FP-36). A cursor move back onto the entry reopens it so
+// (`reopen`): each pane's record read again — an edition read at its bare
+// address whose chain went past the member its text was, pinned to that
+// member (FP-23) — the two ends set level, each pane whose text holds its
+// place's bytes brought back to them, any other left where the re-level set
+// it, its selection put back on the same bytes, the focus on the stop it
+// stood on and the pair named in the status region; the stroke's list shown
+// again over the stroke bearing its key once the strokes are measured, its
+// rows read from the panes' texts then, the focus on its first row where it
+// stood in the list — the gone line said where no stroke bears the key
+// (`relisted`).
 // A stop only the panes' `compare` draws, the reader left from, stands with
 // the landing as the scene reopens and takes the focus, other keys acting
 // from it (`returning`; FP-20): drawn, never hidden, where what it stood for
@@ -372,7 +375,8 @@
 // stroke; a returned stop's passage named by its first 48 characters at
 // most, cut on a word.
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-12, FP-13, FP-20, FP-21, FP-22, FP-23,
-// FP-24, FP-25, FP-26, FP-27, FP-29, FP-30, FP-31, FP-33, FP-34, FP-36.
+// FP-24, FP-25, FP-26, FP-27, FP-29, FP-30, FP-31, FP-33, FP-34, FP-36,
+// FP-39.
 
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
@@ -384,7 +388,7 @@ import * as HOST from '../overlays/host.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { drawChord } from '../nav/keys.js';
-import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML, cornerLead, kindWord } from '../text/article.js';
+import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML, cornerLead, kindWord, statedChain } from '../text/article.js';
 import { inkOf, strokeOf, strokeIn, cutAt, pointOn } from '../beams/beams.js';
 import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingOf } from '../beams/held.js';
 import { SAMENESS, HOLD, LABEL_MIN_PX, cornerWidth } from '../plane/register.js';
@@ -558,7 +562,7 @@ import { esc, byteOffsets } from '../util.js';
  * @property {string} src the record its text was made from: `doc`, or the member a newer version's arrival pinned it to, or its corner's act read
  * @property {string} names the address its acts name and its positions are measured against (T-LAYER's `Made.addr`): `src`, save at an edition read at its bare address with its chain known — the member its text is
  * @property {string} shows the address its head and the bar name: `names`, save at an edition at its bare address, which names its bare address until a newer version's arrival pins it
- * @property {'draft' | 'bare' | 'pinned'} kind how a row reaching it keeps it fresh (see the head): a draft — text no publication fixes — read again in place; an edition at its bare address, which a newer member's arrival pins; a version, which only counts the chain again
+ * @property {'draft' | 'bare' | 'pinned'} kind how a row reaching it keeps it fresh (see the head): a draft — text no publication fixes, or whose kind the one test cannot tell (`kindAt`) — read again in place; an edition at its bare address, which a newer member's arrival pins; a version, which only counts the chain again
  * @property {number | null} k the member its text is, where an edition or a version with its chain known; null where none is known
  * @property {number | null} n the chain's members as the pane knows them: probed as it opens, raised by a row naming a newer member
  * @property {number | null} read the version its corner's act reads in its place: the newest arrived, or the one the act left; null where it offers none
@@ -757,9 +761,9 @@ const oneBox = (/** @type {string} */ a, /** @type {string} */ b) => boxOf(a) ==
 const paneEl = (/** @type {NonNullable<typeof els>} */ E, /** @type {'a' | 'b'} */ side) => (side === 'a' ? E.paneA : E.paneB);
 /** the other side */
 const otherSide = (/** @type {'a' | 'b'} */ side) => (side === 'a' ? 'b' : 'a');
-/** is a record a published edition's, as its metadata says? */
-const published = (/** @type {Doc} */ d) => !!d.meta && d.meta.published;
-/** how a row keeps a pane on a record fresh (see the head): a version, at a member's address; an edition at its bare address; else a draft */
+/** is a record a published edition's, by the one test its kind is read by (T-LAYER's `isDraft`; FP-39) — not where that test cannot tell? */
+const published = (/** @type {Doc} */ d) => LAYER.isDraft(d) === false;
+/** how a row keeps a pane on a record fresh (see the head): a version, at a member's address; an edition at its bare address (`published`); else a draft, a record whose kind the one test cannot tell among them */
 const kindAt = (/** @type {string} */ addr, /** @type {Doc} */ d) => (memberOf(addr) != null ? 'pinned' : published(d) ? 'bare' : 'draft');
 
 /** the plane the scene stands over out of the page's order while it stands (true), and back as it ends (false) — each region by its owner (D5 §4 rule 5) */
@@ -2023,16 +2027,20 @@ const bytesIn = (/** @type {ISpan[]} */ ids) => ids.reduce((n, s) => n + s.width
 
 /**
  * Where a pane's words are read, as FP-27 names a copy of them (T-LAYER's
- * `Where`): the address the pane shows; the member its text is, where that
- * text is a published member — a version, or an edition at its bare address
- * whose member is known — never a draft's; and whether it is read at the
- * plain address. Its article is made with it (`swap`), so a copy from the
- * pane (T-LAYER's `namedIn`) and a stop it records (`named`) name alike where
- * a passage was read.
+ * `Where`): the address the pane shows; the member its text is, where its
+ * corner names that member — a version's own, or the head of the chain an
+ * edition at its bare address states (T-ARTICLE's `statedChain`), as a box's
+ * copy names the head its corner states — never a draft's; and whether it is
+ * read at the plain address. Its article is made with it (`swap`), so a copy
+ * from the pane (T-LAYER's `namedIn`) and a stop it records (`named`) name
+ * alike where a passage was read, and as the plane's box names the same words.
  * @param {Pane} P
  * @returns {Where}
  */
-const whereIn = (P) => ({ doc: P.shows, member: P.kind !== 'draft' && memberOf(P.names) != null ? P.names : null, plain: P.kind === 'bare' });
+const whereIn = (P) => {
+  const stated = P.kind === 'pinned' || (P.kind === 'bare' && statedChain(P.d, P.n) != null);
+  return { doc: P.shows, member: stated && memberOf(P.names) != null ? P.names : null, plain: P.kind === 'bare' };
+};
 
 /**
  * A passage of a pane's text named as FP-27 names a copy (`Named`; see the
