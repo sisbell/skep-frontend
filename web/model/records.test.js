@@ -31,8 +31,9 @@
 // named by after, each mint counted through a change of class; a passage
 // written out of the page named part by part — the board's bytes, the page's
 // unminted ones under the page's load, a gap where no run places it —
-// spelled through the mints at the call; and those watching a change of class
-// told once it is taken.
+// spelled through the mints at the call; those watching a document's text
+// told before it is set again or let go, a refresh's drop among them; and
+// those watching a change of class told once it is taken.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from './records.js';
@@ -1091,7 +1092,7 @@ test('#448: a change of the page\'s class that ends the session leaves a draft h
   } finally { UNKEPT.clear(); }
 });
 
-test('those watching a document\'s text are told as it is about to be set again or let go, the record still as it stood — a delivery, a setting again, a drop — and only of a record that holds text; and a draft whose burst stands open is marked so, and unmarked, each a change', () => {
+test('those watching a document\'s text are told as it is about to be set again or let go, the record still as it stood — a delivery, a setting again, a drop, a refresh\'s drop — and only of a record that holds text; and a draft whose burst stands open is marked so, and unmarked, each a change', () => {
   const D = '1.0.1.0.2';
   LEAVING.length = 0;
   REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 3 }]);
@@ -1104,6 +1105,10 @@ test('those watching a document\'s text are told as it is about to be set again 
   REC.invalidate(D);
   REC.invalidate(D);
   assert.deepEqual([LEAVING, held], [[D, D], ['abc', 'abcd']], 'told before the setting again and before the drop, the record as it stood each time; a record holding no text, nothing');
+  REC.takeDelivery(D, [{ pos: 1, width: 5, kind: 'content', text: 'abcde', ref: null, origin: null }], 9);
+  REC.takeRefresh(new Set());
+  REC.takeRefresh(new Set());
+  assert.deepEqual([LEAVING, held, REC.doc(D).from], [[D, D, D], ['abc', 'abcd', 'abcde'], -1], 'a refresh\'s drop of a document it does not keep: told before the text goes, the record as it stood; a record holding no text, nothing');
   const rev = REC.rev();
   REC.setTyping(D, true); REC.setTyping(D, true);
   assert.deepEqual([REC.typing(D), REC.typingDocs(), REC.rev() - rev], [true, [D], 1], 'a draft being typed in: marked once');

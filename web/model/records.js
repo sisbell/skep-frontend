@@ -103,8 +103,8 @@
 // (`projectionsInto`). A bare row, its `docs` null and naming no link, drops
 // nothing and marks its board (`bare`; FP-23); M-PUMP's one refresh after
 // the run takes the mark (`unmarkBare`), hands an advanced edition's text to
-// the member it is (`takeAsMember`), drops what no shown document reads
-// through (`takeRefresh`) and sets each shown document again in one step
+// the member it is (`takeAsMember`), drops what no document it keeps reads
+// through (`takeRefresh`) and sets each it reads again in one step
 // (`setAgain`), each standing as held until its reads land. A setting again
 // says whether it changed what the record shows a reader (`Outcome`,
 // `shownBy`): its text, its extent, its links, its chain's count, its
@@ -524,7 +524,8 @@ function textSet(/** @type {string} */ addr, /** @type {number | null} */ asOf) 
 const leavingText = [];
 /**
  * Be told as a document's text is about to be set again or let go
- * (`takeDelivery`, `setAgain`, `invalidate`, a change of the page's class),
+ * (`takeDelivery`, `setAgain`, `invalidate`, `takeRefresh`, a change of the
+ * page's class),
  * the record still as it stood: what holds edits over the text reads where
  * each stands by its bytes' identity, to place it again in the text that
  * comes. Told only of a record that holds text.
@@ -2292,22 +2293,22 @@ export function projectionsInto(addr) {
 
 /**
  * A refresh's drop (FP-23): what a feed row naming each document held would
- * drop, but for the documents `keep` names — those shown,
- * and the members an advanced edition's text was handed to — and what their
+ * drop, but for the documents `keep` names — those M-PUMP keeps as held, and
+ * the members an advanced edition's text was handed to — and what their
  * drawing reads through: every other record's delivered state, each counted
- * dropped (`dropsOf`) — a box owed its read at the page's class staying owed
- * (`owed`) — the homes of the edition claims on a kept document's
- * withheld runs' origins kept, whose metadata decides the clause there
- * (T-ARTICLE's `editionClause`); every link value no kept document lists and no
- * kept claim is; where the slots of every other link project; the edition
- * claims on every other origin, the drop counted for every origin
- * (`claimDropsOf`), so no lookup out from before it is taken; a failed read
- * of anything not kept; every byline cause but a kept document's owner's
- * (`dropKeyCauses`), the drop counted (`keyDrops`), a kept one owed its read
- * again only where a row left it so (`causeOwed`). The index, its counts and
- * its state, the feed's rows, the owners and the key sets, which no row
- * drops, stand. M-PUMP reads again what each shown document holds and sets it
- * again (`setAgain`).
+ * dropped (`dropsOf`), those watching its text told first (`beforeText`) — a
+ * box owed its read at the page's class staying owed (`owed`) — the homes of
+ * the edition claims on a kept document's withheld runs' origins kept, whose
+ * metadata decides the clause there (T-ARTICLE's `editionClause`); every link
+ * value no kept document lists and no kept claim is; where the slots of every
+ * other link project; the edition claims on every other origin, the drop
+ * counted for every origin (`claimDropsOf`), so no lookup out from before it
+ * is taken; a failed read of anything not kept; every byline cause but a kept
+ * document's owner's (`dropKeyCauses`), the drop counted (`keyDrops`), a kept
+ * one owed its read again only where a row left it so (`causeOwed`). The
+ * index, its counts and its state, the feed's rows, the owners and the key
+ * sets, which no row drops, stand. M-PUMP reads again what the documents it
+ * keeps hold and sets each again (`setAgain`).
  * @param {Set<string>} keep
  * @returns {string[]} the documents dropped
  */
@@ -2323,7 +2324,7 @@ export function takeRefresh(keep) {
   const dropped = [];
   for (const d of state.docs.values()) {
     if (keep.has(d.addr) || homes.has(d.addr)) continue;
-    counted(d.addr); drop(d); dropped.push(d.addr);
+    counted(d.addr); textLeaving(d); drop(d); dropped.push(d.addr);
   }
   for (const a of [...state.links.keys()]) if (!named.has(a)) state.links.delete(a);
   for (const [addr, m] of [...state.projections]) {

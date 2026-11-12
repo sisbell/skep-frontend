@@ -48,18 +48,19 @@
 // window (BM-60), a session that may not write (BM-58), the held file's halt
 // (BM-30) — that reason stands for the board (W-WRITE's `setUnwritable`).
 // THE HELD LINES (BM-25, BM-29, BM-78): `held(session)` is read at every
-// session the page comes to hold on its board (`sessionMoved`) and at every
-// `held` event of that session, and each draft's lines set in resend order
-// (W-WRITE's `setHeld`): those this window did not send applied over its text
-// (W-WRITE's `setReopened`), a line gone from the list landed. A line the
-// event names kept (`landed`) is a frame acked at its position, its insert's
-// bytes minted from its address; one with no position, or no address, leaves
-// its edits to the next read, which mints them (W-WRITE's rebase). The kept
-// word and its cause follow the lines (`say`): "not kept" where a line awaits
-// the person's act, an island stands, the device refused a line, or the
-// session ended; "not yet kept" while a line is held, moved among them; else
-// "kept". The read's `store_halted` refusal stands for the board; any other
-// leaves the lines as they stood.
+// session the page comes to hold on its board (`sessionMoved`), at every
+// `held` event of that session, and as the event stream stands open again
+// after a drop, the events it missed never sent (`streamReopened`); each
+// draft's lines are set in resend order (W-WRITE's `setHeld`): those this
+// window did not send applied over its text (W-WRITE's `setReopened`), a line
+// gone from the list landed. A line the event names kept (`landed`) is a frame
+// acked at its position, its insert's bytes minted from its address; one with
+// no position, or no address, leaves its edits to the next read, which mints
+// them (W-WRITE's rebase). The kept word and its cause follow the lines
+// (`say`): "not kept" where a line awaits the person's act, an island stands,
+// the device refused a line, or the session ended; "not yet kept" while a line
+// is held, moved among them; else "kept". The read's `store_halted` refusal
+// stands for the board; any other leaves the lines as they stood.
 // THE PERSON's ACTS (BM-10, BM-16, BM-17, BM-27): `drop` and `send` each
 // send one `resolve` and read the lines again; a drop takes the line and
 // every later line of its document, their edits leaving the text shown — the
@@ -160,9 +161,9 @@ const MACHINE = Object.freeze({ typed, commit, leaving });
 
 /**
  * The machine handed in to W-WRITE (see the head), listening from then on
- * for the `held` and `another-window` events and for the session the page
- * holds: typing is composed, sent, acked and rebased, and the held lines are
- * read.
+ * for the `held` and `another-window` events, for the event stream's reopen
+ * and for the session the page holds: typing is composed, sent, acked and
+ * rebased, and the held lines are read.
  */
 export function handIn() {
   handed = true;
@@ -171,6 +172,7 @@ export function handIn() {
     listening = true;
     PORT.on('held', (data) => { if (handed) onHeld(data); });
     PORT.on('another-window', (data) => { if (handed) onWindow(data); });
+    PORT.onStream((n) => { if (handed && n === 'reopened') streamReopened(); });
     REC.watch(() => { if (handed) sessionMoved(); });
   }
   sessionMoved();
@@ -245,6 +247,18 @@ function sessionMoved() {
   blocked();
   for (const d of drafts.values()) if (d.principal === s.principal && !d.out) d.session = s.session;
   void readHeld(s.session);
+}
+
+/**
+ * The event stream open again after a drop (B-PORT's `onStream`; BM-25,
+ * BM-29): the held lines of the page's session read (`readHeld`), so a line
+ * of this window's that a `held` event the dropped stream never carried said
+ * kept lands by its absence from the list (`setLines`). Nothing where no
+ * session stands.
+ */
+function streamReopened() {
+  const s = REC.session();
+  if (s) void readHeld(s.session);
 }
 
 /** the `another-window` event (BM-60): the edge of another shell's hold on the board's held store, the reason set or lifted */

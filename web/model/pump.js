@@ -169,18 +169,22 @@
 // position, has its chain counted once, every chain told to the trail with
 // the member a text read at each position was (`mintedBy`), so each entry
 // re-takes its own, then each held edition whose chain advanced past the
-// member its text is (`memberShown`) taking that member's arrival; what the
-// view shows is read again (`readFresh`) and set in one step (M-REC's
-// `setAgain`), or, where the board left a part of its reads unanswered, read
-// again as a row naming it is until its reads set it whole (`readAgain`); the
-// rest dropped (M-REC's `takeRefresh`); every reader is told. The window's
-// own writes (`wrote`; FP-23): a draft the page holds dialed words of that
-// the board has not acked (M-REC's `writing`) has its text neither set nor
-// dropped — the view asks nothing of it, a row naming it keeps it as it
-// stands, and a read again of it waits — until W-MACHINE tells the acks
-// (`wrote`), which read it again as a row naming it would, as that act's
-// feedback: held as it stands with no kept clause, and set with no word of
-// how; a row at one of those acks' positions is read the same way. An `index`
+// member its text is (`memberShown`) taking that member's arrival; what a
+// row naming it would keep stands as held — what the view shows, each draft
+// the window writes in, each draft being typed in or holding dialed words —
+// the rest dropped (M-REC's `takeRefresh`); each that stands is read again
+// (`readFresh`) and set in one step (M-REC's `setAgain`), or, where the board
+// left a part of its reads unanswered, read again as a row naming it is until
+// its reads set it whole (`readAgain`), save a draft that waits on the
+// window's writing (`waitsOnWriting`), whose read waits as a row's does;
+// every reader is told. The window's own writes (`wrote`; FP-23): a draft the
+// page holds dialed words of that the board has not acked (M-REC's
+// `writing`) has its text neither set nor dropped — the view asks nothing of
+// it, a row naming it and a refresh keep it as it stands, and a read again of
+// it waits — until W-MACHINE tells the acks (`wrote`), which read it again
+// as a row naming it would, as that act's feedback: held as it stands with no
+// kept clause, and set with no word of how; a row at one of those acks'
+// positions is read the same way. An `index`
 // state is taken where it is the face the page reads, a signed-in page's
 // named by its own session (`ofFace`); one naming another session while the
 // call of an acquire for a lost session is out is kept (`faces`), the one
@@ -621,7 +625,7 @@ function lagEnds() {
 /**
  * @typedef {Object} Dropped — what one of the board's events dropped of what the page held, told after the drop, so a reader of it reads fresh: a feed row's addresses, a refresh's, what a change of the page's class left — its session's death among them (`classChanged`) — or the documents whose byline owner facts taken anew decide (`bylineTaken`)
  * @property {FeedUpdate | null} row the feed row, its `op` among it — `null` where the journal could not name it (wire.md §The change feed); null for a refresh, a change of class, a clause decided anew and owner facts taken anew
- * @property {string[] | null} addrs the addresses the row touched, each once — the documents it names, the trunk of a member among them, the home of the link it names with the home's trunk (M-REC's `applyFeedUpdate`), every one dropped but those the view keeps, which are read again (`readAgain`) — or those a refresh dropped or set again; or, its `row` null, the documents windowing an origin whose clause may be decided anew — its edition claims set again or dropped, a claim's home dropped by a row or read again — or a document its read again set after the board kept that read waiting, which a reader read in the wait as it stood, or the held documents an owner whose facts were taken anew owns (`byline`); null for a change of class, which reaches every record: each one M-REC kept read again, every other dropped, a box among them owed its read
+ * @property {string[] | null} addrs the addresses the row touched, each once — the documents it names, the trunk of a member among them, the home of the link it names with the home's trunk (M-REC's `applyFeedUpdate`), every one dropped but those the view keeps, which are read again (`readAgain`) — or those a refresh dropped or kept as held, each read again but one that waits on the window's writing (`waitsOnWriting`); or, its `row` null, the documents windowing an origin whose clause may be decided anew — its edition claims set again or dropped, a claim's home dropped by a row or read again — or a document its read again set after the board kept that read waiting, which a reader read in the wait as it stood, or the held documents an owner whose facts were taken anew owns (`byline`); null for a change of class, which reaches every record: each one M-REC kept read again, every other dropped, a box among them owed its read
  * @property {Map<string, Chain>} [chains] a refresh's alone (`refresh`): the chain of each edition it counted, by its trunk — what a reading scene's pane at a bare address is pinned by
  * @property {string} [byline] owner facts taken anew alone (`bylineTaken`): the account whose facts say other than those held before, which decide the bylines of the documents it names; nothing of those documents dropped
  * @property {number} at the page's clock at the row or drop that left behind what it names: a row's arrival, the stream's drop for a row its catch-up read, the first bare row of a refresh's run, the change of class, the read or the row that brought owner facts — what a reader keeping what it shows as it stands says ⟨when⟩ of (`Kept.since`)
@@ -746,10 +750,10 @@ function applyRow(u, at, raiseFeed = true) {
   const touched = REC.applyFeedUpdate(u, keep, new Set(shown.map((a) => REC.ownerAccount(REC.doc(a)))), raiseFeed);
   for (const m of whileOut) m.rows.push(u);
   for (const addr of touched) {
-    if (REC.writing(addr)) continue;
-    // a draft being typed in is not read again (FP-23): the row waits for its burst's commit, save the window's own, its act's feedback
-    if (REC.typing(addr) && !ownAck(addr, u.position)) { if (!typingRows.has(addr)) typingRows.set(addr, at); continue; }
-    if (keep.has(addr)) readAgain(addr, at, null, ownAck(addr, u.position)); else forget(addr);
+    // a draft holding dialed words the board has not acked is not read again, nor one being typed in, save at the window's own ack: that act's feedback (FP-23)
+    const own = ownAck(addr, u.position);
+    if (REC.writing(addr) || (!own && waitsOnWriting(addr, at))) continue;
+    if (keep.has(addr)) readAgain(addr, at, null, own); else forget(addr);
   }
   onDrop({ row: u, addrs: touched, at });
   decidedAnew(REC.originsClaimedIn(touched.filter((a) => !keep.has(a))), at);
@@ -781,11 +785,14 @@ const originsShown = () => new Set(shownNow().flatMap((a) => REC.withheldOrigins
 function keptNow(shown = shownNow()) {
   const origins = new Set(shown.flatMap((a) => REC.withheldOrigins(a)));
   const homes = [...origins].flatMap((o) => { const c = REC.editionClaimsOf(o); return Array.isArray(c) ? c.map((x) => homeOf(x) || x) : []; });
-  return [...new Set([...shown, ...homes, ...[...ownDocs].filter((a) => REC.has(a) && REC.doc(a).from >= 0)])];
+  return [...new Set([...shown, ...homes, ...ownHeld()])];
 }
 
-/** @type {Set<string>} the drafts the window's own writes were told of (`wrote`): each kept as the view's while the page holds its text, wherever the plane places it, so the reads its acks ask set it and no row drops what the person is writing in */
+/** @type {Set<string>} the drafts the window's own writes were told of (`wrote`): each kept as the view's while the page holds its text, wherever the plane places it, so the reads its acks ask set it and neither a row nor a refresh drops what the person is writing in */
 const ownDocs = new Set();
+
+/** the drafts the window's own writes were told of whose text the page holds (`ownDocs`): what a row or a refresh keeps of them */
+const ownHeld = () => [...ownDocs].filter((a) => REC.has(a) && REC.doc(a).from >= 0);
 
 /**
  * The documents windowing these origins told that the clause on each may be
@@ -934,15 +941,35 @@ export function wrote(addr, ats) {
   dirty();
 }
 
-/** @type {Map<string, number>} the drafts a row named while their burst stood open, typed and not dialed (M-REC's `typing`), each with the page's clock at the first such row: read again at the burst's commit (`readOwed`) */
+/** @type {Map<string, number>} the drafts a row named, or a refresh kept, while their burst stood open, typed and not dialed (M-REC's `typing`), each with the page's clock at the first row or drop that left it behind: read again at the burst's commit (`readOwed`) */
 const typingRows = new Map();
 
-/** does a draft owe a read again a row asked for while it was being typed in (`readOwed`)? */
+/** does a draft owe a read again a row or a refresh asked for while it was being typed in (`readOwed`)? */
 export const owesRead = (/** @type {string} */ addr) => typingRows.has(addr);
 
 /**
- * The read again a draft owes a row that named it while its burst stood open
- * (see `applyRow`; D6 BM-56; FP-23), made now, as the burst is committed:
+ * Does a draft wait on the window's writing before it is read again (FP-23;
+ * D6 BM-56) — a row's read again of it (`applyRow`) and a refresh's
+ * (`refresh`) alike: where the page holds dialed words of it the board has
+ * not acked (M-REC's `writing`), its acks' read reads it (`wrote`); where its
+ * burst stands open (M-REC's `typing`), its read again is owed to the burst's
+ * commit (`readOwed`) from `since`, or from the row or drop it was owed from
+ * first.
+ * @param {string} addr
+ * @param {number} since the page's clock at the row or drop that left it behind (`Kept.since`)
+ * @returns {boolean}
+ */
+function waitsOnWriting(addr, since) {
+  if (REC.writing(addr)) return true;
+  if (!REC.typing(addr)) return false;
+  if (!typingRows.has(addr)) typingRows.set(addr, since);
+  return true;
+}
+
+/**
+ * The read again a draft owes a row that named it, or a refresh that kept
+ * it, while its burst stood open (`waitsOnWriting`; D6 BM-56; FP-23), made
+ * now, as the burst is committed:
  * what the page holds of it read again and set in one step (`readAgain`),
  * settled once that read lands — at most DROP_ATTEMPTS of them, so a run of
  * rows never holds the burst. At once where it owes none, or the pump has not
@@ -2685,17 +2712,22 @@ export async function readMetadata(addr) {
  * which keeps the text — the box holding the view's centre last, so the
  * passage being read there is held across its move (T-LAYER's `holdAcross`) —
  * one whose member cannot be told, or whose box the app did not pin, left as
- * it stands; (2) what the view shows (`shownNow`), with
- * the pins taken, kept with the members a text was handed to and the editions
- * left as they stand, and everything else dropped (M-REC's `takeRefresh`), the
- * view's answers for each forgotten, and the edition claims held on the
- * origins the shown documents window read again as a change of them is
- * (`claimsAgain`); (3) each shown document read again
- * (`readFresh`) — one being read again already (`readAgain`) by those reads,
- * once more — at most MAX_INFLIGHT at once, and set in one step as its
- * reads land (M-REC's `setAgain`) — none a drop overtook (`watchDrops`), which
- * the view reads again, and its owner's byline cause left out where a drop of
- * the causes overtook it (M-REC's `keyDrops`) — its answers forgotten so the
+ * it stands; (2) what a row naming it would keep — what the view shows
+ * (`shownNow`), with the pins taken, each draft the window writes in
+ * (`ownHeld`) and each draft being typed in or holding dialed words (M-REC's
+ * `typing`, `writing`) — kept with the members a text was handed to and the
+ * editions left as they stand, and everything else dropped (M-REC's
+ * `takeRefresh`), the view's answers for each forgotten, and the edition
+ * claims held on the origins the shown documents window read again as a
+ * change of them is (`claimsAgain`); (3) each of what a row would keep read
+ * again (`readFresh`) — one being read again already (`readAgain`) by those
+ * reads, once more; one that waits on the window's writing (`waitsOnWriting`)
+ * read as a row's read of it is, as that ends — at most MAX_INFLIGHT at once,
+ * and set in one step as its reads land (M-REC's `setAgain`) — none where
+ * that writing begins while its reads are out, nor one a drop overtook
+ * (`watchDrops`), which the view reads again, and its owner's byline cause
+ * left out where a drop of the causes overtook it (M-REC's `keyDrops`) — its
+ * answers forgotten so the
  * view asks again what it holds none of, each standing held as it is while
  * its reads are out (`Kept`), from the drop or the row that left the board
  * behind; one the board left a part of unheard sets nothing and is read
@@ -2758,7 +2790,9 @@ export async function refresh() {
       if (shown(doc) === member) handed.add(member); else left.add(doc);
     }
     const showing = shownNow().filter((a) => !left.has(a));
-    const dropped = REC.takeRefresh(new Set([...showing, ...handed, ...left]));
+    // what a row naming it would keep: what the view shows, each draft the window writes in, each that waits on the window's writing
+    const kept = [...new Set([...showing, ...ownHeld(), ...REC.typingDocs(), ...REC.writingDocs()])];
+    const dropped = REC.takeRefresh(new Set([...kept, ...handed, ...left]));
     for (const a of dropped) forget(a);
     // the edition claims held on the origins the shown documents window, read again as a change of them is
     for (const o of new Set(showing.flatMap((a) => REC.withheldOrigins(a)))) if (REC.editionClaimsOf(o) !== undefined) claimsAgain(o, since);
@@ -2766,15 +2800,16 @@ export async function refresh() {
     const facts = new Map();
     /** what the refresh changed of what is shown: an edition advanced, or a shown document set again otherwise than it stood — what the lagging board's reads found (`lagFound`) */
     let changed = advanced.length > 0;
-    // a document being read again is read once more by its own reads, the run's changes among them
-    const reads = showing.filter((a) => { const x = again.get(a); if (x) x.more = true; return !x; });
+    // a draft that waits on the window's writing is read as that ends; a document being read again is read once more by its own reads, the run's changes among them
+    const reads = kept.filter((a) => { if (waitsOnWriting(a, since)) return false; const x = again.get(a); if (x) x.more = true; return !x; });
     await bounded(reads, async (addr) => {
       if (out()) return;
       const gone = watchDrops(addr), causes = REC.keyDrops();
       standKept(keptDocs, addr, since);
       const r = await readFresh(addr, chains, facts);
       if (out()) return;
-      if (gone()) { if (!again.has(addr)) unkeep(keptDocs, addr); return; }
+      // a drop overtook the read, or the window's writing began in it meanwhile: nothing set
+      if (gone() || waitsOnWriting(addr, since)) { if (!again.has(addr)) unkeep(keptDocs, addr); return; }
       // a part the board did not answer: nothing set, the document read again until its reads set it whole
       if (r.unheard) { readAgain(addr, since, r.unheard); return; }
       const stood = unkeep(keptDocs, addr);
@@ -2786,7 +2821,7 @@ export async function refresh() {
     });
     if (out()) return;
     lagFound(changed ? 'changed' : 'unchanged');
-    onDrop({ row: null, addrs: [...dropped, ...showing], chains, at: since });
+    onDrop({ row: null, addrs: [...dropped, ...kept], chains, at: since });
   } finally {
     refreshing = false;
     if (uncounted && !out()) { REC.markBare(); lagMet(uncounted); }

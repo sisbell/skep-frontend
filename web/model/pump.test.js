@@ -30,8 +30,10 @@
 // its bare address, or one a trail entry the reader has left read there —
 // counted once and told to the trail before any arrival, each entry
 // re-taking the member its own text was, a shown document whose reads there
-// the board answers in part read again as a row naming it is, and a change of
-// class ending its reads where they stand; a row naming a document the view
+// the board answers in part read again as a row naming it is, a draft being
+// typed in, holding dialed words or written in by the window kept at any
+// scale and read only once it waits on no writing, and a change of class
+// ending its reads where they stand; a row naming a document the view
 // shows, which keeps it as held until its reads again set it in one step,
 // rows meanwhile queueing one more read, kept from the row's arrival — each
 // setting recorded changed or unchanged with the stamp it stood from, none
@@ -3253,6 +3255,82 @@ test('a change of the page\'s class while a refresh reads what the view shows en
   await refreshed;
   await pastTheSecond();
   assert.deepEqual([extentAsks(fake, last), PUMP.keptAll().docs], [0, []], 'the seventh never read, and no document kept');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+// ---- the refresh and the window's writing --------------------------------------------------------------------------
+
+/** D's text as the reads after AFTER answer it, thirty bytes each */
+const [THIRD_TEXT, FOURTH_TEXT, FIFTH_TEXT] = ['Tumbler.\n\nThe first field, 3rd', 'Tumbler.\n\nThe first field, 4th', 'Tumbler.\n\nThe first field, 5th'];
+
+test('a refresh reads nothing of a shown draft being typed in and sets nothing of it — its read again owed to the burst\'s commit, which reads it and sets it — nor sets one that begins being typed in while the refresh\'s read of it is out; one holding dialed words it neither reads nor sets, its acks\' read setting it (FP-23, FP-38; D6 BM-56)', async () => {
+  const s = { ...script, ...ONE_MEMBER };
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), deliveredAt(AFTER, 9), deliveredAt(THIRD_TEXT, 12), deliveredAt(FOURTH_TEXT, 14), deliveredAt(FIFTH_TEXT, 16));
+  const fake = readingD(s);
+  await settle();
+  const texts = () => timesAsked(fake, F.retrieveV(D, 1, 30)), runs = REC.doc(D).runs;
+  assert.deepEqual([texts(), REC.textBetween(D, 1, 31)], [1, BEFORE], 'D read at its reading em');
+  REC.setTyping(D, true);
+  fake.fire('feed', naming(20, null));
+  await PUMP.refresh();
+  await settle();
+  assert.deepEqual([texts(), REC.doc(D).runs === runs, PUMP.owesRead(D)], [1, true, true], 'its burst open: its text neither read nor set, its read again owed to the burst\'s commit');
+  REC.setTyping(D, false);
+  await PUMP.readOwed(D);
+  assert.deepEqual([texts(), REC.textBetween(D, 1, 31), PUMP.owesRead(D)], [2, AFTER, false], 'at the commit: read again and set');
+  const release = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  fake.fire('feed', naming(21, null));
+  const refreshed = PUMP.refresh();
+  await until(() => texts() === 3, 'the refresh\'s read of D out');
+  REC.setTyping(D, true);
+  release();
+  await refreshed;
+  assert.deepEqual([REC.textBetween(D, 1, 31), PUMP.owesRead(D), PUMP.kept(D)], [AFTER, true, null], 'a burst opened while the read was out: what it read set nothing, its read again owed to the commit');
+  REC.setTyping(D, false);
+  await PUMP.readOwed(D);
+  assert.deepEqual([texts(), REC.textBetween(D, 1, 31)], [4, FOURTH_TEXT], 'at the commit: read again and set');
+  REC.setWriting(D, true);
+  fake.fire('feed', naming(22, null));
+  await PUMP.refresh();
+  await settle();
+  assert.deepEqual([texts(), REC.textBetween(D, 1, 31)], [4, FOURTH_TEXT], 'dialed words of it out: neither read nor set');
+  REC.setWriting(D, false);
+  PUMP.wrote(D, [16]);
+  await settle();
+  assert.deepEqual([texts(), REC.textBetween(D, 1, 31)], [5, FIFTH_TEXT], 'its acks told: read again and set');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a refresh at far scale drops nothing of a draft being typed in, holding dialed words or written in by the window — its text standing as it stood where it reads none of it — and reads again and sets the one the window wrote in that waits on no writing (FP-23, FP-38; D6 BM-56)', async () => {
+  const s = { ...script, ...ONE_MEMBER };
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), deliveredAt(AFTER, 9), deliveredAt(THIRD_TEXT, 12), deliveredAt(FOURTH_TEXT, 14));
+  const fake = readingD(s);
+  await settle();
+  farOver('1.0.1');
+  const texts = () => timesAsked(fake, F.retrieveV(D, 1, 30)), runs = REC.doc(D).runs;
+  assert.equal(lodOf(CAM.cam.scale).name, 'far', 'the view at far scale, where it shows no document');
+  REC.setTyping(D, true);
+  fake.fire('feed', naming(20, null));
+  await PUMP.refresh();
+  await settle();
+  assert.deepEqual([REC.doc(D).runs === runs, REC.doc(D).from, texts(), PUMP.owesRead(D)], [true, 1, 1, true], 'its burst open: its text kept as it stood, nothing read, its read again owed to the commit');
+  REC.setTyping(D, false);
+  await PUMP.readOwed(D);
+  assert.deepEqual([texts(), REC.textBetween(D, 1, 31)], [2, AFTER], 'at the commit: read again and set, out of view');
+  REC.setWriting(D, true);
+  const held = REC.doc(D).runs;
+  fake.fire('feed', naming(21, null));
+  await PUMP.refresh();
+  await settle();
+  assert.deepEqual([REC.doc(D).runs === held, texts()], [true, 2], 'dialed words of it out: its text kept as it stood, nothing read');
+  REC.setWriting(D, false);
+  PUMP.wrote(D, []);
+  await until(() => REC.textBetween(D, 1, 31) === THIRD_TEXT, 'its acks told: read again and set');
+  assert.equal(texts(), 3);
+  fake.fire('feed', naming(22, null));
+  await PUMP.refresh();
+  await settle();
+  assert.deepEqual([texts(), REC.doc(D).from, REC.textBetween(D, 1, 31)], [4, 1, FOURTH_TEXT], 'a draft the window wrote in, waiting on no writing: kept, read again and set in one step');
   assert.deepEqual(fake.unanswered, []);
 });
 

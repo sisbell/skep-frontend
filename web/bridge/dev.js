@@ -24,7 +24,8 @@
 // stream the platform closes for good a drop with no reopen — and
 // `reopened` at the next `open`, never at its first. The platform reopens
 // the stream by itself, and the reopened stream starts at the shell's head,
-// not where the dropped one stopped: M-PUMP reads what it missed.
+// not where the dropped one stopped: M-PUMP reads the rows it missed, and
+// W-MACHINE the held lines.
 // At `pagehide` the page's `close` rides one `keepalive` fetch, best-effort,
 // the browser's (`closeAtUnload`): its argument object the body, its answer
 // unread. The browser refuses a keepalive body past KEEPALIVE_BYTES, sending

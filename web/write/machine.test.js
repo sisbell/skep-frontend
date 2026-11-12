@@ -2,23 +2,23 @@
 // row of D6's table. The open burst — an edit opens it and dials nothing
 // (BM-1); the pause and punctuation commit it as composed frames (BM-2); an
 // ack mints and says "kept" (BM-6); a late ack changes nothing (BM-7). The
-// held words — `held(session)` read at the open and at a regain and each
-// draft's lines set (BM-29); the shell's `held` answer and each state of the
-// `held` event saying the word with its cause and reading the lines again
-// (BM-8, BM-25); a held line from an earlier launch applied over the text in
-// order and never twice, one that cannot apply held apart; a landing minting,
-// and one with no position re-read in one step; each face act one `resolve`
-// and a re-read (BM-10, BM-16, BM-17, BM-27); a foreign row waiting for the
-// commit and the edits carried through it (BM-56, BM-57); each read-only-whole
-// reason set and lifted and the draining store sending the waiting change
-// (BM-20, BM-30, BM-58, BM-60); each page-kept refusal an island, composed
-// past and discarded on the page (BM-19); the device's refusal (BM-21); a
-// burst beside held, unminted words naming them by a piece; and a session's
-// ending keeping a draft that holds unkept words. Then the rebase, the
-// window's own feed row, the page hidden and changing class, and the page
-// unloading: one close of its session carrying what is undialed behind the
-// frames whose answers are not in, a byte beside a word out named by its
-// piece.
+// held words — `held(session)` read at the open, at a regain and as the event
+// stream reopens, and each draft's lines set (BM-29); the shell's `held`
+// answer and each state of the `held` event saying the word with its cause and
+// reading the lines again (BM-8, BM-25); a held line from an earlier launch
+// applied over the text in order and never twice, one that cannot apply held
+// apart; a landing minting, and one with no position re-read in one step; each
+// face act one `resolve` and a re-read (BM-10, BM-16, BM-17, BM-27); a foreign
+// row waiting for the commit and the edits carried through it (BM-56, BM-57);
+// each read-only-whole reason set and lifted and the draining store sending
+// the waiting change (BM-20, BM-30, BM-58, BM-60); each page-kept refusal an
+// island, composed past and discarded on the page (BM-19); the device's
+// refusal (BM-21); a burst beside held, unminted words naming them by a piece;
+// and a session's ending keeping a draft that holds unkept words. Then the
+// rebase, the window's own feed row, the page hidden and changing class, and
+// the page unloading: one close of its session carrying what is undialed
+// behind the frames whose answers are not in, a byte beside a word out named
+// by its piece.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -798,6 +798,35 @@ test('#448: a session\'s ending keeps a draft holding words the board has not ke
   assert.deepEqual([REC.covered(E), REC.doc(E).refused, REC.doc(E).from, WRITE.keptOf(E), WRITE.heldOf(E)], [true, 'withheld', -1, null, []], 'the draft holding none: covered as a guest meets it, as today');
   WRITE.addEdit(D, { pos: 1, width: 0, text: 'x' });
   assert.equal(shown(D), 'abcd.', 'read-only: a key adds nothing');
+});
+
+test('BM-25, BM-29: a line the shell kept while the event stream stood dropped, its `held` event never carried, is read as kept once the stream reopens — the held lines read again, the line gone from them landed, the word "kept" and the model told the draft holds no dialed word the board has not acked; with the machine out, or no session standing, a reopen reads nothing', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  let rows = [];
+  const { fake, ops, names } = boot(() => HELD(1), () => rows);
+  read(D, 'abc');
+  WRITE.addEdit(D, { pos: 4, width: 0, text: 'd.' });
+  rows = [ROW(1, D, ops[0].frame)];
+  await flush();
+  assert.deepEqual([WRITE.keptOf(D), WRITE.heldOf(D).map((r) => r.held), REC.writing(D)], [YET('unreachable'), [1], true], 'held: "not yet kept", the model told the draft holds dialed words the board has not acked');
+  const before = names.length;
+  fake.drop();
+  rows = [];
+  await flush();
+  assert.deepEqual([names.slice(before), WRITE.keptOf(D)?.word], [[], 'not yet kept'], 'the stream dropped, the line kept meanwhile: nothing read, nothing said');
+  fake.reopen();
+  await flush();
+  assert.deepEqual([names.slice(before), WRITE.heldOf(D), WRITE.keptOf(D), REC.writing(D), WRITE.inFlight(D)], [['held'], [], { word: 'kept', reason: null }, false, false], 'reopened: the held lines read again, the line gone from them landed and the word "kept"');
+  const seen = names.length;
+  MACHINE.takeOut();
+  fake.drop(); fake.reopen();
+  MACHINE.handIn();
+  const opened = names.length;
+  REC.setSession(null);
+  fake.drop(); fake.reopen();
+  await flush();
+  assert.deepEqual([names.slice(seen, opened), names.slice(opened)], [['held'], []], 'the machine out: the reopen reads nothing, the hand-in its own read; no session standing: nothing read');
 });
 
 // the last test of the file: it starts the pump, which reads for every test after it
