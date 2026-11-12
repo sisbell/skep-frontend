@@ -21,7 +21,8 @@
 // FP-28: the boot's own call, made again where a restart loses the session;
 // the session kept as the shell opened it, its reference and never a token;
 // at `visibilitychange` to hidden W-WRITE told the page is hidden, and at
-// `pagehide` that it is unloading, then `close(session)` — D6 BM-28), its
+// `pagehide` that it is unloading, then `close(session)` posted to outlive
+// the page where W-MACHINE posted none — D6 BM-28), its
 // health, its daemon and the model's
 // index (`places` at the page's class); where the list held no board, none
 // is launched at or named (FP-35). The type, beside them: the shipped faces
@@ -396,9 +397,9 @@ async function boot() {
   if (!REC.board()) bootInfo.boardsRefused = 'refused' in opened.boards ? opened.boards.refused : 'none';
   if (opened.places && 'result' in opened.places) { bootInfo.placesBytes = JSON.stringify(opened.places.result).length; bootInfo.placesDocs = opened.places.result.docs.length; }
   else if (opened.places) bootInfo.placesRefused = opened.places.refused;
-  // hidden, every open burst is committed while its answer can still be taken; going, what is undialed is posted to outlive the page, then the close
+  // hidden, every open burst is committed while its answer can still be taken; going, the page's one close is posted to outlive the page — the machine's, carrying what it had not dialed, else the bare close
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') WRITE.leaving('hidden'); });
-  window.addEventListener('pagehide', () => { WRITE.leaving('unload'); const x = REC.session(); if (x) PORT.closeAtUnload(x.session); });
+  window.addEventListener('pagehide', () => { if (WRITE.leaving('unload')) return; const x = REC.session(); if (x) PORT.closeAtUnload({ session: x.session }); });
   bootInfo.coldOpenMs = Math.round(performance.now() - t0);
   bootInfo.coldOpenCalls = PORT.callLog().map((c) => c.name);
   bootInfo.coldOpenBytes = PORT.callLog().reduce((a, c) => a + c.bytesIn + c.bytesOut, 0);

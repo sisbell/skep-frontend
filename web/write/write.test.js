@@ -5,7 +5,8 @@
 // bytes; which of them a burst carried out and where it was acked, and the
 // rebase that drops what a read holds; what D6's machine holds of a draft,
 // its held lines and its flight, the machine told of each act's edits and of
-// the page leaving them; and the draft last written — every change counted
+// the page leaving them, its word of whether it posted the page's close handed
+// back; and the draft last written — every change counted
 // for the loop. A change of the page's class lets go of the kept states, the
 // held lines and the draft last written, ends every flight and tells its
 // waiters, and keeps the edits and what the board minted of them.
@@ -110,8 +111,8 @@ test('what D6\'s machine holds of a draft is set by the machine alone: its held 
   /** @type {string[]} what the machine handed in was told, in order */
   const told = [];
   WRITE.commit(D);
-  WRITE.leaving('hidden');
-  WRITE.machine({ commit: (addr) => asked.push(addr), typed: (addr) => told.push('typed ' + addr), leaving: (how) => told.push('leaving ' + how + (REC.session() ? ' under ' + REC.session()?.session : '')) });
+  assert.deepEqual([WRITE.leaving('hidden'), WRITE.leaving('unload')], [false, false], 'no machine: no close posted, the page\'s close its caller\'s');
+  WRITE.machine({ commit: (addr) => asked.push(addr), typed: (addr) => told.push('typed ' + addr), leaving: (how) => { told.push('leaving ' + how + (REC.session() ? ' under ' + REC.session()?.session : '')); return how === 'unload'; } });
   WRITE.commit(D);
   assert.deepEqual([asked, told], [[], []], 'no burst in flight: nothing to commit; no machine stood as the page was hidden: no one told');
   WRITE.setFlight(D, true);
@@ -126,8 +127,7 @@ test('what D6\'s machine holds of a draft is set by the machine alone: its held 
   WRITE.addEdits(D, [{ pos: 1, width: 0, text: 'a' }, { pos: 2, width: 0, text: 'b' }]);
   WRITE.addEdits(D, []);
   assert.deepEqual(told, ['typed ' + D], 'the machine told once of an act\'s edits as they are added, and of no act that made none');
-  WRITE.leaving('hidden');
-  WRITE.leaving('unload');
+  assert.deepEqual([WRITE.leaving('hidden'), WRITE.leaving('unload')], [false, true], 'the machine\'s word handed back: whether it posted the page\'s close');
   assert.deepEqual(told.slice(1), ['leaving hidden', 'leaving unload'], 'and of the page hidden and unloading');
   WRITE.setHeld(D, rows);
   WRITE.setFlight(D, true);

@@ -6,8 +6,10 @@
 // the loopback provider at a port of digits alone from 1 to 65535, the
 // default where the URL carries none and no provider for any other value; a
 // client made at that origin sends its calls, its stream and its close at
-// unload there alone; and an `op` handed in at unload is posted to outlive
-// the page, before the close, its frame kept in the call log.
+// unload there alone; and the page's close at unload is one post that
+// outlives the page, its argument object the body, one past the browser's
+// keepalive budget carrying its `after` whole and the longest prefix of its
+// frames that fits.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import * as DEV from './dev.js';
@@ -119,20 +121,31 @@ test('a client made at the provider the page URL names sends its calls, its even
     dev.subscribe(() => {});
     const stream = RecordingSource.opened[RecordingSource.opened.length - 1];
     assert.deepEqual(await dev.call('boards', {}), { result: [] }, `port ${port}: the answer handed up as it came`);
-    dev.closeAtUnload('s-1');
+    dev.closeAtUnload({ session: 's-1' });
     assert.deepEqual([...fetched, stream.url], [`${origin}/bridge/boards`, `${origin}/bridge/close`, `${origin}/bridge/events?provider=test-secret`], `port ${port}: every call, the close and the stream at ${origin}`);
   }
 });
 
-test('an `op` handed in as the page unloads is posted to the provider with `keepalive`, its argument object the body, before the unload\'s close; the call log keeps it as an `op` with its frame, its answer read by no one (D6 BM-28)', () => {
+/** a frame the page carries in its close, inserting `words` under the `n`-th id of its load */
+const carried = (/** @type {number} */ n, /** @type {string} */ words) => ({ frame: { as_of: 7, at: { ordinal: '1', subspace: '1' }, doc: '1.0.1.0.1013', id: `page:9f.${n}`, op: 'insert', values: [words] }, anchors: { before: null, after: null } });
+
+test('the page\'s close at unload is one post to the provider with `keepalive`, its argument object the body — the frames it carries and the bursts they wait for in it — the secret in its header; the call log keeps it as a close, its answer read by no one (D6 BM-28)', () => {
   posted.length = 0;
   const dev = DEV.create({ provider: 'http://127.0.0.1:8743', secret: 'test-secret' });
-  const args = { session: 's-1', frame: { as_of: 7, at: { ordinal: '1', subspace: '1' }, doc: '1.0.1.0.1013', id: 'page:9f.1', op: 'insert', values: ['a'] }, anchors: { before: null, after: null } };
-  dev.opAtUnload(args);
-  dev.closeAtUnload('s-1');
-  assert.deepEqual(posted, [
-    { url: 'http://127.0.0.1:8743/bridge/op', keepalive: true, body: JSON.stringify(args), secret: 'test-secret' },
-    { url: 'http://127.0.0.1:8743/bridge/close', keepalive: true, body: JSON.stringify({ session: 's-1' }), secret: 'test-secret' },
-  ], 'the op first, then the close, each to outlive the page');
-  assert.deepEqual(dev.calls().map((c) => [c.name, /** @type {{op?: string}} */ (c).op, /** @type {{frame?: string}} */ (c).frame]), [['op', 'insert', JSON.stringify(args.frame)], ['close', undefined, undefined]], 'the log keeps the op by its kind and its frame, as it keeps a call\'s');
+  const args = { session: 's-1', after: ['page:9f.1'], frames: [carried(2, 'a'), carried(3, 'b')] };
+  dev.closeAtUnload(args);
+  assert.deepEqual(posted, [{ url: 'http://127.0.0.1:8743/bridge/close', keepalive: true, body: JSON.stringify(args), secret: 'test-secret' }], 'one post, to outlive the page');
+  assert.deepEqual(dev.calls().map((c) => [c.name, c.bytesIn]), [['close', JSON.stringify(args).length]], 'the log keeps it as a close, by the body posted');
+  assert.equal('opAtUnload' in dev, false, 'no `op` of its own at unload: a write frame rides the close');
+});
+
+test('a close past the browser\'s keepalive budget, weighed in UTF-8 bytes, is posted with its `after` whole and the longest prefix of its frames that fits — no frame after one cut — and bare where its first frame alone passes the budget; every body posted within it', () => {
+  posted.length = 0;
+  const dev = DEV.create({ provider: 'http://127.0.0.1:8743', secret: 'test-secret' });
+  // two bytes a character in UTF-8, one code unit in the string: a body under the budget by its length and past it by its weight
+  const large = carried(3, 'é'.repeat(DEV.KEEPALIVE_BYTES / 2));
+  dev.closeAtUnload({ session: 's-1', after: ['page:9f.1'], frames: [carried(2, 'a'), large, carried(4, 'b')] });
+  dev.closeAtUnload({ session: 's-2', frames: [large, carried(5, 'c')] });
+  assert.deepEqual(posted.map((p) => JSON.parse(p.body)), [{ session: 's-1', after: ['page:9f.1'], frames: [carried(2, 'a')] }, { session: 's-2' }], 'the frames up to the one past the budget, in order; none where the first passes it');
+  assert.deepEqual(posted.map((p) => [p.url, p.keepalive, new TextEncoder().encode(p.body).length <= DEV.KEEPALIVE_BYTES]), [['http://127.0.0.1:8743/bridge/close', true, true], ['http://127.0.0.1:8743/bridge/close', true, true]], 'each close posted once, within the budget');
 });

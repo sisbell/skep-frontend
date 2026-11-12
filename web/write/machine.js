@@ -2,7 +2,8 @@
 // held words (D6 BM-1 … BM-30, BM-56 … BM-62, BM-78; D5 K-73). In W-WRITE's
 // layer (FP-11): it draws nothing, and imports the bridge, the model, W-WRITE
 // and W-BURSTS alone. It is the one module that sends a write through B-PORT
-// (FP-11, FP-14) — `op`'s write frames and `resolve` — and it is handed in to
+// (FP-11, FP-14) — `op`'s write frames, the unload's `close` that carries the
+// frames the page had not dialed, and `resolve` — and it is handed in to
 // W-WRITE (`handIn`), which tells it of each act's edits and asks its
 // commits; with none handed in the page sends nothing.
 // State (FP-10), per draft that was typed in or holds a line (`Draft`): the
@@ -14,8 +15,9 @@
 // frame carried; the cause the shell last answered a hold by, what the `held`
 // event last told of it, the moved verdict standing on it; and whether a
 // change of the page's class left words of it unsent. Beside them the count
-// the frames' ids are drawn from, the session last seen, and why the board's
-// drafts cannot be written now, by each cause (`blocks`).
+// the frames' ids are drawn from, the session last seen, the session whose
+// close the page's unload posted, and why the board's drafts cannot be
+// written now, by each cause (`blocks`).
 // OPEN (BM-1): the first edit after the last commit opens the draft's burst
 // (W-WRITE's `setFlight`), and the model is told the draft is being typed in
 // (M-REC's `setTyping`); nothing is dialed. THE COMMIT (BM-2, BM-3, BM-4):
@@ -73,11 +75,18 @@
 // W-WRITE's rebase drops what the read holds. Once the last frame is acked
 // and no edit is open the flight ends. A burst the record cannot place yet is
 // tried again each pause.
-// LEAVING (BM-28; FP-29): the page hidden commits every open burst; the page
-// unloading posts what is undialed by the port's keepalive `op`, in order,
-// its answers unread; a change of the page's class dials what is unsent
-// under the session that typed it and marks what could not go as sent and
-// never acked, so no edit is ever dialed under another principal's session.
+// LEAVING (BM-28; FP-29): the page hidden commits every open burst. The page
+// unloading posts the one close of the page's session by the port's
+// keepalive post (`unload`): its `frames` every frame of that session's
+// drafts the page had not dialed, in order — each burst out's frames after
+// the one awaiting its answer, then the open burst's, a byte beside a word
+// of the burst out named by the piece of the insert that carried it — and
+// its `after` each frame dialed whose answer is not in, which the shell
+// waits for before it sends the first; its answer is unread, and no second
+// close of that session is posted. A change of the page's class dials what
+// is unsent under the session that typed it and marks what could not go as
+// sent and never acked, so no edit is ever dialed under another principal's
+// session.
 // Rules: FP-1, FP-2, FP-9, FP-10, FP-11, FP-14, FP-23, FP-28, FP-29, FP-38.
 
 import * as PORT from '../bridge/port.js';
@@ -88,6 +97,7 @@ import * as WRITE from './write.js';
 import * as BURSTS from './bursts.js';
 
 /** @typedef {import('./bursts.js').Composed} Composed */
+/** @typedef {import('../bridge/shapes').CloseFrame} CloseFrame */
 /** @typedef {import('./write.js').Leaving} Leaving */
 /** @typedef {import('./write.js').Cause} Cause */
 /** @typedef {import('../model/frames.js').HeldLine} HeldLine */
@@ -138,6 +148,8 @@ let handed = false;
 let listening = false;
 /** @type {string | null} the session the page held as the machine last looked (`sessionMoved`) */
 let seen = null;
+/** @type {string | null} the session whose close the page's unload posted (`unload`): its close goes once */
+let closedAtUnload = null;
 /** how many reads of the held lines have gone out (`readHeld`): a line answered `held` after a read went out is not in that read's list */
 let reads = 0;
 /** why the board's drafts cannot be written now, by each cause (`blocked`): the session ended with no re-open, and its arm; the session may not write; another shell holds the held store; the held file halts, and why; the held store's bound is met, and how many lines it held then */
@@ -171,6 +183,7 @@ export function takeOut() {
   for (const d of drafts.values()) { if (d.timer) clearTimeout(d.timer); REC.setTyping(d.addr, false); }
   drafts.clear();
   seen = null;
+  closedAtUnload = null;
   const b = REC.board();
   blocks.death = false; blocks.keyless = false; blocks.window = false; blocks.halted = false; blocks.full = false;
   if (b) WRITE.setUnwritable(b.board, null);
@@ -285,14 +298,16 @@ function typedState(/** @type {Draft} */ d, /** @type {import('../model/records.
 /**
  * The piece naming a byte of a draft the page made that the board has not
  * minted (W-BURSTS's `Asked.piece`; BM-8): the insert that carried it — a
- * line of this window's the shell holds, or a held line this window did not
- * send — by the `id` its frame carried, and the byte's offset among its
- * words; null where no such insert carries it.
+ * line of this window's the shell holds; an insert of the burst out, whose
+ * answer the unload's close waits for or which it carries first (`unload`);
+ * or a held line this window did not send — by the `id` its frame carried,
+ * and the byte's offset among its words; null where no such insert carries
+ * it.
  * @param {Draft} d
  * @returns {(page: number) => (import('../bridge/shapes').AnchorPiece | null)}
  */
 const pieceOf = (d) => (page) => {
-  for (const l of d.lines.values()) {
+  for (const l of [...d.lines.values(), ...(d.out ? d.out.frames.map((f) => ({ id: f.frame.id, pages: f.pages })) : [])]) {
     let before = 0;
     for (const p of l.pages) { if (page >= p.page && page < p.page + p.width) return { burst: l.id, offset: before + (page - p.page) }; before += p.width; }
   }
@@ -805,35 +820,60 @@ export function sendIsland(addr, id) {
  * `leaving`; BM-28): hidden, each open burst committed as a pause commits
  * it; at a change of the page's class, each dialed under the session that
  * typed it, what cannot go marked sent and never acked (`commit`); unloading,
- * what is undialed posted by the port's keepalive `op` (`unload`).
+ * what is undialed carried by the page's close (`unload`).
  * @param {Leaving} how
+ * @returns {boolean} whether the page's close stands posted: at `unload` alone
  */
 function leaving(how) {
+  if (how === 'unload') return unload();
   for (const d of [...drafts.values()]) {
-    if (how === 'unload') unload(d);
-    else if (how === 'class') commit(d.addr, true);
+    if (how === 'class') commit(d.addr, true);
     else if (open(d.addr)) commit(d.addr);
   }
+  return false;
 }
 
 /**
- * A draft's undialed words posted as the page unloads (BM-28): the frames of
- * the burst out that were not dialed, then the open burst's where it
- * composes, each by the port's keepalive `op` in order, typed at the state
- * the acks raised; no answer is read. A burst that composes to none is not
- * sent.
- * @param {Draft} d
+ * The page's close posted as the page unloads (see the head; BM-28): one
+ * `close` of the page's session by the port's keepalive post
+ * (`closeAtUnload`), its `frames` every frame of that session's drafts the
+ * page had not dialed, draft by draft in order — the frames of the burst out
+ * after the one awaiting its answer, then the open burst's where it
+ * composes — each typed at the state the acks raised, and its `after` the
+ * `id` of each frame dialed whose answer is not in; no answer is read. Every
+ * pause ends. A draft whose bursts go out under another session carries
+ * nothing, and an open burst that composes to no frame is not sent. Nothing
+ * where no session stands; a session whose close is posted is closed no
+ * second time.
+ * @returns {boolean} whether the close of the page's session stands posted
  */
-function unload(d) {
-  if (d.timer) { clearTimeout(d.timer); d.timer = null; }
-  const post = (/** @type {Composed} */ f) => PORT.opAtUnload({ session: d.session, frame: typedAt(d, f), anchors: f.anchors });
-  if (d.out) { for (const f of d.out.frames.slice(d.out.next + 1)) post(f); d.out.next = d.out.frames.length; }
-  if (!open(d.addr) || d.left || !current(d)) return;
-  const out = composed(d);
-  if ('waits' in out) return;
-  WRITE.markSent(d.addr, ++d.bursts);
-  seq += out.frames.length;
-  for (const f of out.frames) post(f);
+function unload() {
+  for (const d of drafts.values()) if (d.timer) { clearTimeout(d.timer); d.timer = null; }
+  const s = REC.session();
+  if (!s) return false;
+  if (closedAtUnload === s.session) return true;
+  closedAtUnload = s.session;
+  /** @type {string[]} */
+  const after = [];
+  /** @type {CloseFrame[]} */
+  const frames = [];
+  for (const d of drafts.values()) {
+    if (d.session !== s.session) continue;
+    const carry = (/** @type {Composed} */ f) => { frames.push({ frame: typedAt(d, f), anchors: f.anchors }); };
+    if (d.out && d.out.next < d.out.frames.length) {
+      after.push(d.out.frames[d.out.next].frame.id);
+      for (const f of d.out.frames.slice(d.out.next + 1)) carry(f);
+      d.out.next = d.out.frames.length;
+    }
+    if (!open(d.addr) || d.left) continue;
+    const out = composed(d);
+    if ('waits' in out) continue;
+    WRITE.markSent(d.addr, ++d.bursts);
+    seq += out.frames.length;
+    for (const f of out.frames) carry(f);
+  }
+  PORT.closeAtUnload({ session: s.session, ...(after.length ? { after } : {}), ...(frames.length ? { frames } : {}) });
+  return true;
 }
 
 /** reset the machine (tests): taken out, every draft and the frames' count forgotten */

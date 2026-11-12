@@ -6,8 +6,9 @@
 // their dotted names and `changes` under its own, each answer handed up as it
 // came and a lost session's refusal told to the session watchers; a
 // `publication` event and an `another-window` event each reach their own
-// subscribers and every-event ones; an `op` handed in at the page's unload
-// goes to the adapter as given, told to no session watcher; and with no
+// subscribers and every-event ones; a close handed in at the page's unload,
+// the frames it carries with it, goes to the adapter as given, told to no
+// session watcher, and the port posts no `op` of its own there; and with no
 // adapter beneath it every call answers the port's own refusal — `bad_port`
 // where the page URL's `port` names no port, else `no_adapter` — which the
 // port reads back.
@@ -139,20 +140,20 @@ test('the node family, publication.standing and history.past go out under their 
   assert.deepEqual(fake.unanswered, [], 'each went out with the arguments it was given');
 });
 
-test('an `op` handed in as the page unloads goes to the adapter as given, before the unload\'s close and told to no session watcher; with no adapter nothing is posted (D6 BM-28)', () => {
+test('a close handed in as the page unloads goes to the adapter as given, the frames it carries and the bursts they wait for with it, and is told to no session watcher; the port posts no `op` of its own at unload; with no adapter nothing is posted (D6 BM-28)', () => {
   const fake = FAKE.create({});
   PORT.boot(fake);
   /** @type {import('./port.js').SessionNotice[]} */
   const told = [];
   PORT.onSession((n) => told.push(n));
-  const args = { session: 's-1', frame: { as_of: 7, at: { ordinal: '1', subspace: '1' }, doc: DRAFT, op: 'insert', values: ['a'] }, anchors: { before: null, after: null } };
-  PORT.opAtUnload(args);
-  PORT.closeAtUnload('s-1');
-  assert.deepEqual(fake.unloaded, [{ op: args }, { close: 's-1' }], 'the op as handed in, then the close');
+  const args = { session: 's-1', after: ['page:9f.1'], frames: [{ frame: { as_of: 7, at: { ordinal: '1', subspace: '1' }, doc: DRAFT, id: 'page:9f.2', op: 'insert', values: ['a'] }, anchors: { before: null, after: null } }] };
+  PORT.closeAtUnload(args);
+  assert.deepEqual(fake.unloaded, [{ close: args }], 'the close as handed in');
   assert.deepEqual([told, fake.asked], [[], []], 'no call crossed the port for it, and no watcher was told');
+  assert.equal('opAtUnload' in PORT, false, 'no `op` at unload: a write frame rides the close');
   PORT.boot(null);
-  PORT.opAtUnload(args);
-  assert.equal(fake.unloaded.length, 2, 'no adapter beneath the port: nothing posted');
+  PORT.closeAtUnload(args);
+  assert.equal(fake.unloaded.length, 1, 'no adapter beneath the port: nothing posted');
 });
 
 test('history.restore and held.show go out under their dotted names, each answer handed up as it came (issue #410)', async () => {

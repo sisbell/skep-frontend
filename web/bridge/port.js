@@ -27,9 +27,9 @@
 // watchers, the port's own shape and no event of the declarations.
 // The `node`, `publication`, `merge` and `history` families, `held.show` and
 // the ceremonial rows are declared here and called by no screen; a write
-// frame goes through `op` from W-MACHINE alone, and at the page's unload by
-// the adapter's keepalive `op` (`opAtUnload`), dialed before the unload's
-// `close(session)` (`closeAtUnload`).
+// frame goes from W-MACHINE alone: through `op`, and at the page's unload in
+// the one `close` the adapter posts to outlive the page (`closeAtUnload`),
+// which carries every frame the page had not dialed.
 // Types: the generated declarations in `./shapes.d.ts` (S-16 (a); FP-16),
 // which the checker holds the port's rows and its events to.
 
@@ -41,6 +41,7 @@
  * @typedef {import('./shapes').Outcome<T>} Outcome
  */
 /** @typedef {Exclude<keyof Bridge, 'answer' | 'cancel'>} CallName — a call's name: every row of `Bridge` but the two answers to a moment */
+/** @typedef {Parameters<Bridge['close']>[0]} CloseArgs — the `close` row's argument object: the session, and the bursts its frames wait for and the frames it carries */
 
 /**
  * @typedef {Object} Adapter — what an adapter beneath the port provides
@@ -49,8 +50,7 @@
  * @property {(fn: (name: EventName, data: unknown) => void) => void} subscribe every event, by name
  * @property {(fn: (n: StreamNotice) => void) => void} onStream the event stream's own notices: its drop, and its reopen after one
  * @property {() => Array<{name: string, bytesIn: number, bytesOut: number, ms: number, outcome: string, at: number}>} calls the adapter's own call log
- * @property {(args: unknown) => void} opAtUnload a best-effort `op` as the page unloads: posted to outlive it, its answer read by no one
- * @property {(session: string) => void} closeAtUnload a best-effort `close(session)` as the page hides
+ * @property {(args: CloseArgs) => void} closeAtUnload a best-effort `close` as the page unloads: its argument object posted in one request to outlive the page, its answer read by no one
  * @property {() => string} streamState the event stream's state
  */
 
@@ -293,15 +293,15 @@ export const CALLS = Object.freeze(/** @type {CallName[]} */ (Object.keys(ROWS).
 /** the adapter's own call log (the gate holds it equal to `GET /bridge/log`'s calls and to the ledger's fetch count) */
 export const callLog = () => (adapter ? adapter.calls() : []);
 /**
- * A best-effort `op` as the page unloads (D6 BM-28): the row's argument
- * object handed to the adapter to post so it outlives the page, before the
- * unload's `close(session)` (`closeAtUnload`). Its answer reaches no one, and
- * no session notice is told of it. Nothing where no adapter stands.
- * @param {Parameters<Bridge['op']>[0]} args
+ * A best-effort `close` at `pagehide` (S-37 (a); D6 BM-28): the row's
+ * argument object handed to the adapter as given, to post in one request
+ * that outlives the page — the session, and where W-MACHINE carries them the
+ * frames the page had not dialed and the bursts they wait for. Its answer
+ * reaches no one, and no session notice is told of it. Nothing where no
+ * adapter stands.
+ * @param {CloseArgs} args
  */
-export function opAtUnload(args) { if (adapter) adapter.opAtUnload(args); }
-/** a best-effort `close(session)` at `pagehide` (S-37 (a)) */
-export function closeAtUnload(/** @type {string} */ s) { if (adapter) adapter.closeAtUnload(s); }
+export function closeAtUnload(args) { if (adapter) adapter.closeAtUnload(args); }
 /** the event stream's state */
 export const streamState = () => (adapter ? adapter.streamState() : 'none');
 

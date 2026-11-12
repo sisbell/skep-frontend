@@ -15,7 +15,10 @@
 // past and discarded on the page (BM-19); the device's refusal (BM-21); a
 // burst beside held, unminted words naming them by a piece; and a session's
 // ending keeping a draft that holds unkept words. Then the rebase, the
-// window's own feed row, and the page hidden, unloading and changing class.
+// window's own feed row, the page hidden and changing class, and the page
+// unloading: one close of its session carrying what is undialed behind the
+// frames whose answers are not in, a byte beside a word out named by its
+// piece.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -447,14 +450,14 @@ test('the rebase keeps an edit a put-back still standing names, applied to nothi
   assert.deepEqual([WRITE.edits(D), shown(D)], [[], before], 'the put-back acked and read: both gone, the text shown the same');
 });
 
-test('the page hidden commits every open burst as a pause would, its answer taken; the page unloading posts what is undialed by the keepalive `op`, in order, before the close', async (t) => {
+test('the page hidden commits every open burst as a pause would, its answer taken; the page unloading posts one close of the page\'s session to outlive it — its `frames` every frame not dialed, draft by draft in order, its `after` each dialed frame whose answer is not in — and posts it once', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const first = later();
   const { fake, ops } = boot((frame, n) => (n === 2 ? first.out : MINTED(own(frame.doc, 40 + n), 19 + n)));
   read(D, 'abc');
   read(E, 'abcdef');
   WRITE.addEdit(D, { pos: 4, width: 0, text: 'd' });
-  WRITE.leaving('hidden');
+  assert.equal(WRITE.leaving('hidden'), false, 'hidden: no close posted');
   assert.deepEqual(ops.map((o) => o.frame.values), [['d']], 'hidden: the open burst dialed at once, no pause');
   await flush();
   assert.deepEqual([WRITE.keptOf(D), WRITE.inFlight(D)], [{ word: 'kept', reason: null }, false], 'and its ack taken while the page lives');
@@ -463,16 +466,48 @@ test('the page hidden commits every open burst as a pause would, its answer take
   await flush();
   assert.deepEqual(ops.slice(1).map((o) => o.frame.op), ['delete'], 'a burst of two frames out, its delete unanswered');
   WRITE.addEdit(D, { pos: 1, width: 0, text: 'x' });
-  WRITE.leaving('unload');
-  PORT.closeAtUnload('s-1');
-  assert.deepEqual(fake.unloaded, [
-    { op: { session: 's-1', frame: { op: 'insert', doc: D, at: at(1), values: ['x'], as_of: 20, id: id(4) }, anchors: { before: null, after: own(D, 1) } } },
-    { op: { session: 's-1', frame: { op: 'insert', doc: E, at: at(3), values: ['XY'], as_of: 7, id: id(3) }, anchors: { before: own(E, 2), after: own(E, 5) } } },
-    { close: 's-1' },
-  ], 'the open burst of the one draft and the undialed frame of the other\'s burst out, each by the keepalive `op`, before the close');
+  assert.equal(WRITE.leaving('unload'), true, 'unloading: the machine posted the page\'s close');
+  assert.deepEqual(fake.unloaded, [{ close: { session: 's-1', after: [id(2)], frames: [
+    { frame: { op: 'insert', doc: D, at: at(1), values: ['x'], as_of: 20, id: id(4) }, anchors: { before: null, after: own(D, 1) } },
+    { frame: { op: 'insert', doc: E, at: at(3), values: ['XY'], as_of: 7, id: id(3) }, anchors: { before: own(E, 2), after: own(E, 5) } },
+  ] } }], 'one close: the open burst of the one draft and the undialed frame of the other\'s burst out, in order, behind the delete whose answer is not in');
   assert.equal(ops.length, 2, 'nothing dialed the ordinary way as the page goes');
-  WRITE.leaving('unload');
-  assert.equal(fake.unloaded.length, 3, 'posted once: a second unload finds nothing undialed');
+  assert.deepEqual([WRITE.leaving('unload'), fake.unloaded.length], [true, 1], 'posted once: a second unload posts no second close of the session');
+});
+
+test('at the unload a byte typed beside a word of the burst out, whose answer is not in, is named by the piece of the insert that carried it, and the close carries it behind that burst', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { fake, ops } = boot(() => later().out);
+  read(D, 'abc');
+  WRITE.addEdit(D, { pos: 4, width: 0, text: 'd' });
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush();
+  assert.deepEqual(ops.map((o) => o.frame.id), [id(1)], 'the burst out, its answer not in');
+  WRITE.addEdit(D, { pos: 5, width: 0, text: 'e' });
+  assert.equal(WRITE.leaving('unload'), true);
+  assert.deepEqual(fake.unloaded, [{ close: { session: 's-1', after: [id(1)], frames: [
+    { frame: { op: 'insert', doc: D, at: at(5), values: ['e'], as_of: 7, id: id(2) }, anchors: { before: { burst: id(1), offset: 0 }, after: null } },
+  ] } }], 'the word typed after the unanswered one: its neighbour named by the piece of the insert out, never left unsent');
+  assert.equal(ops.length, 1, 'nothing dialed the ordinary way as the page goes');
+});
+
+test('the unload\'s close is the bare close of the session the page holds where nothing of it is undialed: a burst gone out under a session the page no longer holds rides in it neither as a frame nor in its `after`; with no session standing nothing is posted, and with the machine taken out W-WRITE says it posted none', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { fake, ops } = boot(() => later().out);
+  read(D, 'abcdef');
+  WRITE.addEdit(D, { pos: 3, width: 2, text: 'XY' });
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush();
+  assert.deepEqual(ops.map((o) => [o.session, o.frame.op]), [['s-1', 'delete']], 'a burst of two frames out under s-1, its delete unanswered');
+  REC.setSession(/** @type {any} */ ({ ...S, session: 's-2' }));
+  await flush();
+  assert.equal(WRITE.leaving('unload'), true);
+  assert.deepEqual(fake.unloaded, [{ close: { session: 's-2' } }], 'the close of the page\'s session alone: what s-1 typed is not carried under s-2');
+  REC.setSession(null);
+  assert.deepEqual([WRITE.leaving('unload'), fake.unloaded.length], [false, 1], 'no session standing: nothing posted, and the machine says so');
+  REC.setSession(/** @type {any} */ ({ ...S, session: 's-3' }));
+  MACHINE.takeOut();
+  assert.deepEqual([WRITE.leaving('unload'), fake.unloaded.length], [false, 1], 'no machine: none posted, the page\'s close its caller\'s');
 });
 
 test('a change of the page\'s class dials what is unsent under the session that typed it, before that session goes, and keeps the words: the edits stand, their minted bytes with them, and an unsent word the dial could not carry survives, never sent under another session', async (t) => {

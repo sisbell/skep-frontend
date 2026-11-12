@@ -25,10 +25,13 @@
 // `reopened` at the next `open`, never at its first. The platform reopens
 // the stream by itself, and the reopened stream starts at the shell's head,
 // not where the dropped one stopped: M-PUMP reads what it missed.
-// At `pagehide` two posts ride a `keepalive` fetch each, best-effort, the
-// browser's: an `op` the page hands it (`opAtUnload`), then `close(session)`
-// (`closeAtUnload`), sent in the order they are handed in; neither answer is
-// read.
+// At `pagehide` the page's `close` rides one `keepalive` fetch, best-effort,
+// the browser's (`closeAtUnload`): its argument object the body, its answer
+// unread. The browser refuses a keepalive body past KEEPALIVE_BYTES, sending
+// nothing of it, so a close past that budget is posted with its `after`
+// whole and the longest prefix of its `frames` that fits (`unloadBody`): the
+// frames cut are ones the budget leaves no room for in any request that
+// outlives the page.
 // State: the provider's origin and the secret, the stream, whether it has
 // stood open and whether a drop stands told, and its own call log (name,
 // bytes, ms, outcome), which the gate holds equal to `GET /bridge/log`'s
@@ -36,6 +39,7 @@
 // Rules: FP-1, FP-2, FP-4, FP-14, FP-15, FP-16.
 
 /** @typedef {import('./port.js').Adapter} Adapter */
+/** @typedef {import('./port.js').CloseArgs} CloseArgs */
 /** @typedef {import('./port.js').StreamNotice} StreamNotice */
 /** @typedef {import('./shapes').EventName} EventName */
 /** @typedef {import('./shapes').Refusal} Refusal */
@@ -63,6 +67,31 @@ export function providerAt(port) {
   if (!/^[0-9]+$/.test(port)) return null;
   const n = Number(port);
   return n >= 1 && n <= 65535 ? `${LOOPBACK}:${n}` : null;
+}
+
+/** the most a body posted to outlive the page may weigh, in UTF-8 bytes: the Fetch standard's keepalive budget, shared by every such request the page has in flight */
+export const KEEPALIVE_BYTES = 64 * 1024;
+
+/** a body's weight as the browser posts it, in UTF-8 bytes */
+const weight = (/** @type {string} */ body) => new TextEncoder().encode(body).length;
+
+/**
+ * The body of the close posted as the page unloads (see the head): its
+ * argument object as JSON where that fits within KEEPALIVE_BYTES; else the
+ * session and its `after` whole with the longest prefix of its `frames` that
+ * fits, `frames` left out where none does.
+ * @param {CloseArgs} args
+ * @returns {string}
+ */
+function unloadBody(args) {
+  const whole = JSON.stringify(args);
+  const { frames, ...rest } = args;
+  if (!frames || weight(whole) <= KEEPALIVE_BYTES) return whole;
+  for (let k = frames.length - 1; k > 0; k--) {
+    const body = JSON.stringify({ ...rest, frames: frames.slice(0, k) });
+    if (weight(body) <= KEEPALIVE_BYTES) return body;
+  }
+  return JSON.stringify(rest);
 }
 
 /**
@@ -167,18 +196,11 @@ export function create({ provider = DEFAULT_PROVIDER, secret, record = false }) 
     subscribe(fn) { subscribers.push(fn); openStream(); },
     onStream(fn) { streamWatchers.push(fn); },
     calls: () => log.slice(),
-    opAtUnload(args) {
-      const body = JSON.stringify(args ?? {});
+    closeAtUnload(args) {
+      const body = unloadBody(args);
       try {
-        fetch(`${provider}/bridge/op`, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', 'Skep-Provider': secret }, body }).catch(() => {});
-        const fr = /** @type {{frame?: {op?: string}}} */ (args || {}).frame;
-        log.push({ name: 'op', bytesIn: body.length, bytesOut: 0, ms: 0, outcome: 'result', at: performance.now(), op: fr && fr.op ? fr.op : '?', frame: JSON.stringify(fr ?? null) });
-      } catch { /* the browser's */ }
-    },
-    closeAtUnload(session) {
-      try {
-        fetch(`${provider}/bridge/close`, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', 'Skep-Provider': secret }, body: JSON.stringify({ session }) }).catch(() => {});
-        log.push({ name: 'close', bytesIn: JSON.stringify({ session }).length, bytesOut: 0, ms: 0, outcome: 'result', at: performance.now() });
+        fetch(`${provider}/bridge/close`, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', 'Skep-Provider': secret }, body }).catch(() => {});
+        log.push({ name: 'close', bytesIn: body.length, bytesOut: 0, ms: 0, outcome: 'result', at: performance.now() });
       } catch { /* the browser's */ }
     },
     streamState() {

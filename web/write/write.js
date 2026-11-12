@@ -23,8 +23,9 @@
 // act that names characters to the board asks the machine to commit
 // (`commit`) and waits out (`landed`). The machine is told of each act's
 // edits as they are added (`Machine.typed`), and of the page hidden,
-// unloading or changing its class (`leaving`). With no machine handed in
-// nothing is in flight and nothing is sent.
+// unloading or changing its class (`leaving`) — unloading, it posts the
+// page's close itself, carrying what it had not dialed, and says so. With no
+// machine handed in nothing is in flight and nothing is sent.
 // THE HELD LINES THIS WINDOW DID NOT SEND (`setReopened`; D6 BM-29): an
 // earlier launch's, another window's. They are applied over the draft's
 // record before its edits, in the order listed (`baseOf`; M-DERIVE's
@@ -126,7 +127,7 @@ import { byteLength } from '../util.js';
  * @typedef {Object} Machine — what D6's machine hands in (`machine`)
  * @property {(addr: string) => void} typed an act's edits were added to a draft (`addEdits`)
  * @property {(addr: string) => void} commit the open burst of a draft committed now
- * @property {(how: Leaving) => void} leaving every draft's unsent words committed as the page leaves them (`leaving`)
+ * @property {(how: Leaving) => boolean} leaving every draft's unsent words committed as the page leaves them (`leaving`): whether it posted the page's close, which it does at `unload` alone
  */
 
 /**
@@ -830,8 +831,9 @@ export function commit(/** @type {string} */ addr) { if (handed && flights.has(a
  * head; D6 BM-28), where a machine stands to commit them: the page hidden,
  * the page unloading, or the class it reads at changed.
  * @param {Leaving} how
+ * @returns {boolean} whether the machine posted the page's close, carrying the words it had not dialed — at `unload` alone; false where it posted none, no machine standing or no session, the page's close then the caller's to post where a session stands
  */
-export function leaving(how) { if (handed) handed.leaving(how); }
+export function leaving(how) { return handed ? handed.leaving(how) : false; }
 /**
  * A draft's flight landed (see the head): settled once no burst of it is
  * open or awaits its ack — at once where none is — whether its ack landed or
