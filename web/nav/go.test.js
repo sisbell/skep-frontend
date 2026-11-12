@@ -3,9 +3,12 @@
 // view, Back, Forward and a trail jump — marks, lights, says and pushes, and
 // where its camera, its walk, its focus ring and its faces go, at any board
 // speed and in whatever order the reads answer: the arrival's two marks and
-// their life, the four states and the runs' labels, the kind of the document
-// a landing crossed into said first in its description and none where it
-// landed in the box it left or at a withheld document, the step and its light,
+// their life, the four states and the runs' labels, the version offered where
+// the one test reads the box landed in published — an edition the index does
+// not list, its metadata dropped, among them — and none where it cannot tell,
+// the kind of the document a landing crossed into said first in its
+// description and none where it landed in the box it left or at a withheld
+// document, the step and its light,
 // the order of acts, the jump in the air and the keys it holds, its flight
 // landing on its passage where its document is set again or folded again in
 // the air, a jump reaching, failures known at the act and learned in the air,
@@ -49,7 +52,7 @@
 // and a list re-checked against the version their box shows then, and a
 // draft holding typed words — the walk, the trail and a landing in the
 // model's text, the layout asked in the text shown (FP-8,
-// FP-20, FP-21, FP-22, FP-25, FP-29, FP-35, FP-36). The overlay host stands on stand-in elements — the
+// FP-20, FP-21, FP-22, FP-25, FP-29, FP-35, FP-36, FP-39). The overlay host stands on stand-in elements — the
 // overlay's and the notice's below it — the platform's document a stand-in
 // beside them, so a face a landing shows is read back from what the host
 // wrote. In a draft holding typed words every landing, return, card and
@@ -467,6 +470,47 @@ test('a landing at a published document whose chain the board did not end offers
   takeSplit();
   await followUnended(SPLIT);
   assert.deepEqual([GO.landing()?.current, GO.landing()?.version, GO.landingOffers().version, REC.doc(FAR).members], [0, null, false, null], 'its third not answered: no version offered, though its first holds the passage whole; no count recorded');
+  await run(GO.leapTo(FAR));
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a landing at an edition the index does not list, its metadata dropped by a bare row and unanswered since, offers the version as the one test reads it — published, by the kind its record took from that metadata, as its corner says — and offers none, reading no member, where that test cannot tell (FP-39)', async () => {
+  takeSplit();
+  const meta = FAKE.keyOf('op', { frame: F.docMetadata(FAR) }), answered = script[meta];
+  /** the index as the boot takes it, FAR listed or not */
+  const index = (/** @type {boolean} */ far) => REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, ...(far ? [{ doc: FAR, kind: 'edition', label: 'far', standing: 'public' }] : [])], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
+  const offered = () => [GO.landing()?.said?.state, GO.landing()?.version, GO.landingOffers().version];
+  try {
+    await run(GO.leapTo(D));
+    await PUMP.loadWhole(FAR);
+    assert.equal(REC.doc(FAR).meta?.published, true, 'FAR read whole, its metadata published');
+    index(false);
+    // a bare row naming a link homed in FAR drops what the page held of it, metadata and all, and lists nothing
+    REC.applyFeedUpdate(/** @type {any} */ ({ position: 9000, op: null, docs: null, link: FAR + '.0.2.99', class: 'published' }));
+    /** @type {any} */ (script)[meta] = { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } };
+    memberUnread();
+    await run(GO.follow(drawn(SPLIT)));
+    assert.deepEqual([REC.place(FAR), REC.doc(FAR).meta, REC.doc(FAR).kind, LAYER.isDraft(FAR), LAYER.kindOf(REC.doc(FAR))], [undefined, null, 'edition', false, 'published'],
+      'FAR listed by nothing and its metadata unread since the follow read it again, its record\'s kind an edition: the one test reads it published, as its corner says');
+    for (let i = 0; i < 50 && GO.landing()?.version == null; i++) await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual(offered(), ['part', 1, true], 'its first member holding the passage whole: offered');
+    // listed again, dropped, then listed by nothing with no metadata held: nothing tells FAR's kind
+    index(true); REC.invalidate(FAR); index(false);
+    memberUnread();
+    await run(GO.leapTo(D));
+    const from = fake.asked.length;
+    await run(GO.follow(drawn(SPLIT)));
+    for (let i = 0; i < 50; i++) await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual([REC.doc(FAR).kind, LAYER.isDraft(FAR)], ['unknown', null], 'the one test cannot tell');
+    assert.deepEqual(offered(), ['part', null, false], 'no version offered');
+    assert.ok(!fake.asked.slice(from).includes(FAKE.keyOf('op', { frame: F.docMetadata(FAR1) })), 'and no member read: its chain never probed');
+  } finally {
+    /** @type {any} */ (script)[meta] = answered;
+    index(true);
+    GO.endArrival();
+    REC.invalidate(FAR);
+    await PUMP.loadWhole(FAR);
+  }
   await run(GO.leapTo(FAR));
   assert.deepEqual(fake.unanswered, []);
 });

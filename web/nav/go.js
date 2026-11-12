@@ -131,11 +131,12 @@
 // label of the run the landing stands at, the line offering the scene with
 // where the passage came from where that text holds it whole — the passage
 // held there by its bytes, beside the version the box shows as it is asked
-// (`landingAct`) — and, at a published landing, the latest member holding it
-// whole once its reads find one (`offerVersion`), a version move; none, the
-// dead end's face — a followed passage's offering that version move in the
-// line's place; couldn't tell — a read refused by a name that says nothing
-// of the document, or a text the page could not read — the landing unmarked
+// (`landingAct`) — and, at a landing whose box the one test reads published
+// (T-LAYER's `isDraft`; FP-39), the latest member holding it whole once its
+// reads find one (`offerVersion`), a version move; none, the dead end's face
+// — a followed passage's offering that version move in the line's place;
+// couldn't tell — a read refused by a name that says nothing of the
+// document, or a text the page could not read — the landing unmarked
 // at the place as asked, its line saying it could not tell and why, keyed on
 // the refusal, and offering "try again" where a retry may tell, which reads
 // again and lands from the answer with no trail move (`againCarried`,
@@ -441,7 +442,7 @@
 // cursor move's 500, a step's and a find's move's 420; a second leg
 // SECOND_LEG_MS (unmeasured).
 // Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-20, FP-21, FP-22, FP-25,
-// FP-29, FP-35, FP-36.
+// FP-29, FP-35, FP-36, FP-39.
 
 import * as CAM from '../plane/camera.js';
 import * as TRAIL from './trail.js';
@@ -1975,7 +1976,9 @@ function heldWhole(c, carried) {
 
 /**
  * The version offer at a published landing (FP-21) — its line's, or, where a
- * followed passage floats, the dead end's face's: the landing's document's
+ * followed passage floats, the dead end's face's — sought only where the one
+ * test reads the box landed in published (T-LAYER's `isDraft`; FP-39), and
+ * nothing read where it reads a draft or cannot tell: that box's document's
  * members, newest first — its chain read to its end (M-PUMP's `probeChain`)
  * — each asked what its text holds of the passage (`holds`), never the text
  * landed in — its own member, or at the bare address its latest — the first
@@ -1990,8 +1993,8 @@ function heldWhole(c, carried) {
  * @param {(member: string) => Promise<((byKey: boolean) => void) | null>} holds the version move to a member whose text holds all of the passage in one piece; null where it does not
  */
 async function offerVersion(act, addr, holds) {
-  const trunk = documentOf(addr) || addr, d = REC.doc(trunk), place = REC.place(trunk);
-  if (!(d.meta ? d.meta.published : !!place && place.kind === 'edition')) return;
+  const trunk = boxOf(addr);
+  if (LAYER.isDraft(trunk) !== false) return;
   const chain = await PUMP.probeChain(trunk, () => act === made);
   if (!chain || !chain.ended) return;
   const n = chain.n;
