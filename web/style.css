@@ -20,6 +20,7 @@
 @font-face { font-family:"Atkinson Hyperlegible Mono"; font-style:normal; font-weight:200 800; font-display:block; src:url(fonts/atkinson-hyperlegible-mono.woff2) format('woff2'); }
 :root { --bg:#0e1013; --ink:#e8e6e1; --dim:#8b8f96; --line:#2a2f36; --box:#1b1f25; --accent:#7fb2ff; --warn:#ffb454; --ok:#7ddc9a; --bad:#ff6b6b;
         --hue-you:#7fb2ff; --hue-owner:#a3d977; --hue-others:#9aa5b4; --same-boundary:#7ddc9a; --same-texture:rgba(125,220,154,0.07); --visited-alpha:0.45;
+        --margin-held:#cfd6df; --margin-refused:#ffb454; --margin-removal:#ff6b6b;
         --face-reading:Charter, serif; --face-client:system-ui, sans-serif; --face-ident:"Atkinson Hyperlegible Mono", monospace; }
 * { box-sizing: border-box; }
 html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); overflow:hidden; }
@@ -374,6 +375,16 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 :is(#corners, .pane) .edge-sign .src-key { display:block; color:var(--same-boundary); }
 :is(#corners, .pane) .edge-sign .id { white-space:nowrap; }
 #corners .edge-sign .wh-mark, #corners .edge-sign .wh-key, #corners .edge-sign .clause[data-home], #corners .edge-sign .src-key { cursor:pointer; text-decoration:underline dotted; }
+/* the word at the first held mark in view, in the held mark's hue (B3-S2) */
+#corners .edge-sign .held-word { display:block; color:var(--margin-held); }
+
+/* THE MARGIN's MARKS (B3-S2; P-REG's MARGIN; FP-31): beside words the board has not kept, in the room between a column's
+   text and its edge's signs, placed by T-LAYER on the corner layer by translate alone at the size it sets — the held mark
+   a solid bar along its lines, its zero-length form a filled square; the refused mark a bracket along them open toward the
+   text, the stroke T-LAYER sets on its three other sides — drawn and never announced, taking no press */
+#corners .margin-mark { position:absolute; top:0; left:0; box-sizing:border-box; pointer-events:none; will-change:transform; }
+#corners .margin-mark[data-kind="held"] { background:var(--margin-held); }
+#corners .margin-mark[data-kind="refused"] { border-style:solid; border-color:var(--margin-refused); border-left-width:0; }
 
 /* A LANDING'S LINE (issue #153's design decision): at the text's edge beside the landing (O-LAND places it), over the
    beams and the corners, under the reading scene, the LEAP box and the overlay; opaque, as all chrome over the plane is,
@@ -398,7 +409,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #removed.on { display:block; }
 #removed .removal { position:fixed; left:0; top:0; pointer-events:none; }
 #removed .mark { position:absolute; left:0; top:0; width:12px; height:12px; margin:0; padding:0; pointer-events:auto; background:none; border:none; border-radius:2px; cursor:pointer; }
-#removed .mark::before { content:""; position:absolute; left:1px; right:1px; top:5px; height:2px; background:var(--bad); border-radius:1px; }
+#removed .mark::before { content:""; position:absolute; left:1px; right:1px; top:5px; height:2px; background:var(--margin-removal); border-radius:1px; }
 #removed .mark::after { content:""; position:absolute; inset:-6px; }
 #removed .mark:hover { background:#2a1c1e; }
 #removed .face { position:absolute; left:16px; top:0; width:max-content; max-width:280px; pointer-events:auto; padding:4px 8px; font-size:11px; line-height:1.45; color:var(--ink); background:#1b1f25; border:1px solid var(--bad); border-radius:4px; box-shadow:0 2px 10px rgba(0,0,0,.4); }

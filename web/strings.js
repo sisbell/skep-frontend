@@ -292,6 +292,7 @@ export const STRINGS = {
   'B3.kept': { text: 'kept', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1, B3-S2: the corner (D6 BM-1, BM-6)' },
   'B3.not-yet-kept': { text: 'not yet kept', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the corner (D6 BM-8)' },
   'B3.not-kept': { text: 'not kept', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the corner; the head of the refused run\'s face and of the loss faces (D6 BM-10)' },
+  'B3.held': { text: 'held', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2 AT REOPEN: the word at the top of the first held mark in view, once per view (D6 BM-29)' },
   'B3.save.kept': { text: 'nothing to save — everything here is kept', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: Mod+S at the corner (D6 BM-3)' },
   'B3.save.before': { text: 'nothing to save —', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: Mod+S, before the corner\'s other two words (D6 BM-3)' },
   'B3.save.held': { text: 'nothing to save\u00a0— held on this device and sent when your notebook answers', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: Mod+S at the corner while a burst is held and the notebook is not answering (D6 BM-3)' },

@@ -16,6 +16,16 @@ seeded draft stays page-local. Its last page asks for the machine
 held, refused, handed-over, moved, halted, full and second-window rows are
 driven by arming that provider's `op`, `held` and `resolve` answers and
 firing its events, each word checked against `strings.js` (`machine_rows`).
+The words the board has not kept carry the margin's marks where the design
+draws them (B3-S2; the editor design's J5, the layout page's round-2 close
+D8), read from the gate's `margin` hook: a line merely held carries none
+(`held-in-session`); a refused run, a hand-over and a change the held
+store's bound refused carry the refused mark beside their words; a moved
+document's carry the held bar; and after the machine's rows the page is
+opened again over an armed `held(session)` list, the line it names applied
+over the draft's text with the held bar from its first line to its last and
+"held" once in the edge beside it, lifted as a `held` event lands the line
+(`held-bars`, `reopen_rows`).
 Undo, redo and the deletion face are driven there too (`undo_rows`): Mod+Z on
 an empty stack, its line and the constant sentence (`undo-lines`); a removal
 of kept words, the deletion face at its commit (`deletion-face`); the undo
@@ -162,18 +172,21 @@ STATES = [
     dict(screen='B3-S1', state='kept-on-board', walk='W-08', step=2, drawn=True,
          how="the machine handed in (`machine=1`): keys typed at a caret in the case's own minted draft, committed at their punctuation (D6 BM-1, BM-2, BM-6)",
          claim='the typed words reach the test board as one composed `insert`, acked, and the corner reads "kept" (B3.kept); the read that follows holds them and the page\'s edits are gone, the text shown the same'),
+    dict(screen='B3-S2', state='held-in-session', walk='W-08', step=7, drawn=True,
+         how="arm `op` to answer `held` and `held` to list the line; type; fire `daemon` unreachable (D6 BM-8, BM-78)",
+         claim='the corner reads "not yet kept" (B3.not-yet-kept), its reason on the word\'s own act — "not yet kept — held on this device and sent when your notebook answers" (B3.kept.held) — the daemon segment in its held form (B3.daemon.held.notebook), the held words standing in the text with no margin mark beside them: a line merely held is unmarked (J5)'),
     dict(screen='B3-S2', state='held-bars', walk='W-08', step=7, drawn=True,
-         how="arm `op` to answer `held` and `held` to list the line; type; fire `daemon` unreachable (D6 BM-8, BM-29, BM-78)",
-         claim='the corner reads "not yet kept" (B3.not-yet-kept), its reason on the word\'s own act — "not yet kept — held on this device and sent when your notebook answers" (B3.kept.held) — the daemon segment in its held form (B3.daemon.held.notebook), the held words standing in the text; the held bar is not drawn'),
+         how="arm `held` to list an insert line of the case's own draft, then open the machine's page again: the line applied at the open (D6 BM-29); fire `held` naming it landed (BM-25)",
+         claim='the held words stand before the draft\'s first line with one held bar beside them from their first line to their last and "held" (B3.held) once in the edge at its top; the `held` event landing the line lifts the bar and the word'),
     dict(screen='B3-S2', state='refused-run', walk='W-08', step=7, drawn=True,
          how='a `held` answer and a `held` row carrying `refusal: out_of_bounds` (D6 BM-10)',
-         claim='the corner reads "not kept"; its act opens the face under the head "not kept" (B3.not-kept): the own-bug words, then "send again" (inert), "copy these words out", "discard this change", the discard\'s statement in two lines below the acts (B3.refused.discard)'),
+         claim='the corner reads "not kept"; the run\'s words carry the refused mark at their column\'s edge; the corner\'s act opens the face under the head "not kept" (B3.not-kept): the own-bug words, then "send again" (inert), "copy these words out", "discard this change", the discard\'s statement in two lines below the acts (B3.refused.discard)'),
     dict(screen='B3-S2', state='hand-over', walk='W-08', step=7, drawn=True,
          how='a `held` row carrying the shell\'s `answers_lost`; `resolve` armed `landing_unread` (D6 BM-26, BM-27)',
-         claim='the face names the board and the time elapsed (B3.answers_lost), its discard\'s statement its own (B3.answers_lost.discard); the read unanswered, "did not answer — nothing was discarded" (B3.answers_lost.unanswered) and the face stands'),
+         claim='the run\'s words carry the refused mark; the face names the board and the time elapsed (B3.answers_lost), its discard\'s statement its own (B3.answers_lost.discard); the read unanswered, "did not answer — nothing was discarded" (B3.answers_lost.unanswered) and the face stands'),
     dict(screen='B3-S2', state='moved-face', walk='W-08', step=7, drawn=True,
          how='a `held` row held moved with `arrangement_moved` and its hands (D6 BM-13, BM-16, BM-17, BM-18)',
-         claim='the corner reads "not yet kept"; the face says the document changed (B3.moved) and names the hand in its slot (B3.hand.device), with "see the held text", "send again" inert (B3.moved.send-again.inert) and the discard, its statement ending on its exit (B3.moved.discard)'),
+         claim='the corner reads "not yet kept"; the held words carry the held bar while the face asks about them (D8); the face says the document changed (B3.moved) and names the hand in its slot (B3.hand.device), with "see the held text", "send again" inert (B3.moved.send-again.inert) and the discard, its statement ending on its exit (B3.moved.discard)'),
     dict(screen='B3-S2', state='moved-scene', walk='W-08', step=7, drawn=True,
          how='`scene.openHeld(own, [an insert row])`: the current text beside the held version re-derived (D6 BM-14; #411)',
          claim="a scene stands with the own draft in pane A and the derived record in pane B, derived, no compare asked; both panes' "
@@ -198,7 +211,7 @@ STATES = [
          claim='the one line reads "this window reads only and keeps nothing you type — …" (B3.another_window) with "copy this address" (B3.copy-address); a key at the caret adds no edit and is answered by that line'),
     dict(screen='B3-S2', state='held-full', walk='W-08', step=7, drawn=True,
          how='arm `op` with the refusal `held_full`; type; then fire `held` kept as the store drains (D6 BM-19, BM-20)',
-         claim='the one line reads the bound\'s line (B3.held_full.line); the refused change waits under the head "not kept" with its statement (B3.held_full.refused), "send again" inert; a key at the caret is answered by the bound\'s caret line (B3.held_full.caret); as the store drains the page sends the waiting change itself'),
+         claim='the one line reads the bound\'s line (B3.held_full.line); the refused change carries the refused mark and waits under the head "not kept" with its statement (B3.held_full.refused), "send again" inert; a key at the caret is answered by the bound\'s caret line (B3.held_full.caret); as the store drains the page sends the waiting change itself'),
     # B3-S3 … B3-S13
     dict(screen='B3-S3', state='undo-lines', walk='W-08', step=5, drawn=True,
          how="Mod+Z in the case's own draft before anything is typed in it — an empty stack (K-75; D6 BM-42) — then the hint's own act",
@@ -979,6 +992,25 @@ def write_state(ctx, addr):
     return ctx.js('window.__skep.write.state(%s)' % json.dumps(addr))
 
 
+# the margin's marks beside some words of a document's text shown, as the last frame placed them (the gate's `margin`): every
+# mark standing for the document, the words' glyph boxes' top, foot and right edge, and the marks of a kind standing beside
+# them — spanning their lines from the top of the first to the foot of the last, at the right of their column's text — with
+# the word "held" standing in the document's edges
+MARGIN_BESIDE = '''((doc, pos, width, kind) => {
+  const words = (window.__skep.spanRects(doc, pos, width) || []).filter((q) => q.w > 0 && q.h > 0), marks = window.__skep.margin().filter((m) => m.addr === doc);
+  const top = Math.min(...words.map((q) => q.y)), foot = Math.max(...words.map((q) => q.y + q.h)), right = Math.max(...words.map((q) => q.x + q.w));
+  const by = marks.filter((m) => m.kind === kind && !m.point && m.placed.y <= top + 1 && m.placed.y + m.placed.h >= foot - 1 && m.placed.x >= right - 1);
+  return {words: words.length, top, foot, right, marks: marks.map((m) => ({kind: m.kind, point: m.point, column: m.column, first: m.first, end: m.end, placed: m.placed})), beside: by.length,
+          held: window.__skep.edgeSigns().filter((s) => s.kind === "held" && s.addr === doc).map((s) => ({text: s.text, column: s.column, placed: s.placed}))};
+})(%s, %d, %d, %s)'''
+
+
+def margin_beside(ctx, doc, pos, width, kind):
+    """the margin's marks of a document and those of `kind` standing beside the words at [pos, pos + width) of its text shown
+    (`MARGIN_BESIDE`)"""
+    return ctx.js(MARGIN_BESIDE % (json.dumps(doc), pos, width, json.dumps(kind)))
+
+
 def port_op(ctx, sid, frame):
     """one `op` through the open page's own port, under its session: the harness's act, made by no module of the page"""
     return ctx.js('(async () => { const P = await import("./bridge/port.js"); return await P.op({session: %s, frame: %s}); })()' % (json.dumps(sid), json.dumps(frame)))
@@ -1011,7 +1043,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     r.check(bool(boot) and boot.get('machine') is True and bool(session) and session.get('writes') is True,
             "the page opened on the harness's provider with `machine=1` boots with D6's machine handed in, under a session that writes", {'machine': boot and boot.get('machine'), 'writes': session and session.get('writes')})
     if not session or not board or not (boot and boot.get('machine')):
-        for state in ('undo-lines', 'kept-on-board', 'held-bars', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face'):
+        for state in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars'):
             red(state, 'the machine\'s page did not open')
         return
     sid, account, board_id = session['session'], session['account'], board['board']
@@ -1060,6 +1092,12 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
         ctx.js('window.__skep.write.showFace(%s)' % json.dumps(mine)); ctx.frames(2)
         return ctx.js(FACE_SHOWN)
 
+    def refused_mark(words):
+        """the refused mark beside `words`, typed at the end of the draft's first line (B3-S2 THE REFUSED RUN): one refused mark
+        standing beside them, no other mark and no word "held"; as a check's part, (ok, detail)"""
+        m = margin_beside(ctx, mine, len(line1.encode('utf8')) + 1, len(words.encode('utf8')), 'refused')
+        return (m['words'] > 0 and m['beside'] == 1 and [x['kind'] for x in m['marks']] == ['refused'] and m['held'] == [], m)
+
     def held_row(k, cause, **more):
         return dict({'held': k, 'doc': mine, 'base': 0, 'frame': {'op': 'insert', 'doc': mine, 'at': {'ordinal': '1', 'subspace': '1'}, 'values': ['held'], 'as_of': 0, 'id': 'armed.%d' % k},
                      'cause': cause, 'sent': False, 'time': k}, **more)
@@ -1103,7 +1141,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     r.check(stands and line0 == SEED_TEXT.split('\n')[0], "the case's own draft stands at reading scale, its article mounted and its corner beside it, its first line as written",
             {'stands': stands, 'line': line0, 'focus': ctx.js('window.__skep.view.focus()')})
     if not stands:
-        for st in ('undo-lines', 'kept-on-board', 'held-bars', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face'):
+        for st in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars'):
             red(st, 'the case\'s own draft did not mount')
         return
     # ---- B3-S3: Mod+Z on an empty stack, before anything is typed in the draft (K-75; BM-42) ----------------------------------
@@ -1162,8 +1200,10 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
         ok = (bool(got) and got['id'] == 'B3.not-yet-kept' and got['word'] == t(ctx, 'B3.not-yet-kept') and st['kept']['cause']['token'] == 'unreachable'
               and [x['held'] for x in st['held']] == [k] and said == {'id': 'B3.kept.held', 'text': t(ctx, 'B3.kept.held')} and seg == t(ctx, 'B3.daemon.held.notebook')
               and first_line() == line1 + ' Held.' and len(shown(ctx, corner + ' .kept-word')) == 1)
-        return ok, {'corner': got, 'kept': st['kept'], 'held': st['held'], 'statement': said, 'segment': seg, 'shown': first_line()}
-    shoot('held-bars', held_check, recentre)
+        m = margin_beside(ctx, mine, len(line1.encode('utf8')) + 1, len(' Held.'), 'held')
+        return {'the corner and the line': (ok, {'corner': got, 'kept': st['kept'], 'held': st['held'], 'statement': said, 'segment': seg, 'shown': first_line()}),
+                'no margin mark (J5)': (m['words'] > 0 and m['marks'] == [] and m['held'] == [], m)}
+    shoot('held-in-session', held_check, recentre)
     ctx.js('(async () => (await import("./text/layer.js")).openStatement(%s, false))()' % json.dumps(mine))
     label = ctx.js('(async () => (await import("./text/layer.js")).boxName(%s).name)()' % json.dumps(mine))
 
@@ -1193,7 +1233,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
               and [a['text'] for a in f['acts']] == [t(ctx, 'B3.send-again'), t(ctx, 'B3.copy-words-out'), t(ctx, 'B3.discard')]
               and f['said'] == {'id': 'B3.refused.discard', 'text': t(ctx, 'B3.refused.discard'), 'parts': 2, 'exit': False, 'below': True} and st['kept']['cause']['token'] == 'out_of_bounds'
               and len(shown(ctx, '#overlay .said .statement')) == 1)
-        return ok, {'corner': got, 'face': f, 'kept': st['kept']}
+        return {'the corner and the face': (ok, {'corner': got, 'face': f, 'kept': st['kept']}), 'the refused mark': refused_mark(' Refused.')}
     shoot('refused-run', refused_check, recentre)
     ctx.js('window.__skep.select(%s, 1, 6)' % json.dumps(mine)); ctx.frames(2)
     why = ctx.js('(document.querySelector("#overlay [data-run=annotate]") || {getAttribute: () => null}).getAttribute("title")')
@@ -1214,7 +1254,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
         ok = (bool(f) and f['head'] == 'B3.not-kept' and [x['id'] for x in f['lines']] == ['B3.answers_lost'] and f['lines'][0]['text'] == t(ctx, 'B3.answers_lost', {'board': board_name, 'time': minutes})
               and [(a['run'], a['inert']) for a in f['acts']] == [('send', None), ('copy', None), ('discard', None)]
               and f['said'] == {'id': 'B3.answers_lost.discard', 'text': t(ctx, 'B3.answers_lost.discard', {'board': board_name}), 'parts': 2, 'exit': False, 'below': True})
-        return ok, {'face': f, 'want_line': t(ctx, 'B3.answers_lost', {'board': board_name, 'time': minutes})}
+        return {'the face': (ok, {'face': f, 'want_line': t(ctx, 'B3.answers_lost', {'board': board_name, 'time': minutes})}), 'the refused mark': refused_mark(' Lost.')}
     shoot('hand-over', handed_check, recentre)
     show_face()
     ctx.arm('resolve', refusal={'kind': 'shell', 'name': 'landing_unread', 'held': k, 'why': 'unanswered'})
@@ -1240,7 +1280,9 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
               and f['lines'][0]['text'] == t(ctx, 'B3.moved') and f['hands'] == [{'id': 'B3.hand.device', 'text': t(ctx, 'B3.hand.device', {'device label': 'desk'})}]
               and [(a['run'], a['id'], a['inert']) for a in f['acts']] == [('held', 'B3.moved.see-held', None), ('send', 'B3.send-again', 'B3.moved.send-again.inert'), ('discard', 'B3.discard', None)]
               and f['said'] == {'id': 'B3.moved.discard', 'text': t(ctx, 'B3.moved.discard'), 'parts': 3, 'exit': True, 'below': True})
-        return ok, {'corner': got, 'kept': st['kept'], 'face': f}
+        m = margin_beside(ctx, mine, len(line1.encode('utf8')) + 1, len(' Moved.'), 'held')
+        return {'the corner and the face': (ok, {'corner': got, 'kept': st['kept'], 'face': f}),
+                'the held bar (D8)': (m['words'] > 0 and m['beside'] == 1 and [x['kind'] for x in m['marks']] == ['held'] and len(m['held']) == 1 and m['held'][0]['text'] == t(ctx, 'B3.held'), m)}
     shoot('moved-face', moved_check, recentre)
     ctx.js('(async () => (await import("./overlays/host.js")).dismiss())()'); ctx.frames(2)
     # the first key after the verdict (BM-18): typed, held behind, and followed by the verdict's line
@@ -1331,7 +1373,8 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
         ok = (full and seg == t(ctx, 'B3.held_full.line', {'board': board_name}) and bool(f) and f['head'] == 'B3.not-kept' and [x['id'] for x in f['lines']] == ['B3.held_full.refused']
               and [(a['run'], a['inert']) for a in f['acts']] == [('send', 'B3.held_full.refused'), ('copy', None), ('discard', None)] and st['kept']['cause']['token'] == 'held_full'
               and [i['name'] for i in st['islands']] == ['held_full'] and bool(told['hint']) and told['hint']['id'] == 'B3.held_full.caret' and first_line() == line1 + ' Full.')
-        return ok, {'segment': seg, 'face': f, 'kept': st['kept'], 'islands': st['islands'], 'hint': told['hint'], 'shown': first_line()}
+        return {'the line, the face and the caret': (ok, {'segment': seg, 'face': f, 'kept': st['kept'], 'islands': st['islands'], 'hint': told['hint'], 'shown': first_line()}),
+                'the refused mark': refused_mark(' Full.')}
     shoot('held-full', full_check, recentre)
     ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
     # the store drains: a `held` event saying a line kept, the lines read again; the page sends the waiting change itself
@@ -1347,6 +1390,55 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     ctx.drv.key('Escape'); ctx.frames(2)
     undo_rows(ctx, r, shoot, red, ops_allowed, dict(mine=mine, sid=sid, board_id=board_id, corner=corner, state=state, recentre=recentre, quiet=quiet, caret_end=caret_end, press=press,
                                                     corner_word=corner_word, first_line=first_line, hold_typed=hold_typed, held_row=held_row, drop_all=drop_all, refusal=refusal))
+
+
+# the words the reopen row's armed line types before the case's own draft's first line: a paragraph of their own
+REOPENED = 'Held on this device before the page opened again, these words wait for the board to keep them.\n\n'
+
+
+def reopen_rows(ctx, r, shoot, red, mine):
+    """THE HELD BARS AT REOPEN (B3-S2 AT REOPEN; D6 BM-29, BM-25): `held(session)` armed to list one insert line of the
+    case's own draft `mine` that no window of this run sent, and the machine's page opened again over it — the line applied
+    before the draft's first line, one held bar beside its words from their first line to their last and "held" once in
+    the edge at the bar's top, at both widths (`held-bars`); then `held` armed to list none and a `held` event fired naming
+    the line landed, the bar and the word lifted. Nothing is written: the line is the arm's, its landing the event's."""
+    k = ARMED_K + 900
+    row = {'held': k, 'doc': mine, 'base': 0, 'frame': {'op': 'insert', 'doc': mine, 'at': {'ordinal': '1', 'subspace': '1'}, 'values': [REOPENED], 'as_of': 0, 'id': 'armed.%d' % k},
+           'cause': 'unreachable', 'sent': False, 'time': k}
+    seq = ctx.editor_seq()
+    ctx.arm('held', answer=[row])
+    ctx.open_editor_page('all', machine=True)
+    session, board = ctx.js('window.__skep.model.session()'), ctx.js('window.__skep.model.board()')
+    applied = wait_for(ctx, '(window.__skep.write.state(%s).reopened || []).some((l) => l.held === %d && l.at === null)' % (json.dumps(mine), k), 15)
+    r.check(bool(session) and bool(board) and applied and ctx.consumed('held', seq),
+            "the machine's page opened again over the armed `held(session)` list: the line it names held and applied over the case's own draft (D6 BM-29)",
+            {'applied': applied, 'consumed': ctx.consumed('held', seq), 'state': write_state(ctx, mine)})
+    if not (session and board and applied):
+        red('held-bars', 'the page opened again did not apply the armed line')
+        return
+    recentre = lambda: ctx.leap(mine, 1)
+    recentre()
+    ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(mine)); ctx.settle(); ctx.frames(2)
+    n = len(REOPENED.rstrip('\n').encode('utf8'))
+
+    def bar_check(w):
+        got = margin_beside(ctx, mine, 1, n, 'held')
+        text = ctx.js('(async () => { const L = await import("./text/layer.js"), R = await import("./model/records.js"), d = L.shownOf(%s); return d.from < 0 ? "" : R.textOf(d.runs, d.from, d.from + %d); })()' % (json.dumps(mine), n))
+        bars = [x for x in got['marks'] if x['kind'] == 'held' and not x['point']]
+        word = got['held'][0] if len(got['held']) == 1 else None
+        ok = (text == REOPENED[:n] and got['words'] > 0 and got['beside'] == 1 and len(got['marks']) == 1 and len(bars) == 1
+              and bool(word) and word['text'] == t(ctx, 'B3.held') and word['column'] == bars[0]['column'] and abs(word['placed']['y'] - bars[0]['placed']['y']) <= 1)
+        return ok, dict(got, text=text)
+    shoot('held-bars', bar_check, recentre)
+    seq = ctx.editor_seq()
+    ctx.arm('held', answer=[])
+    ctx.fire('held', {'board': board['board'], 'session': session['session'], 'doc': mine, 'held': 0, 'state': 'kept', 'landed': [{'held': k, 'burst': 'armed.%d' % k, 'at': None, 'addr': None}]})
+    landed = wait_for(ctx, '(window.__skep.write.state(%s).reopened || []).some((l) => l.held === %d && l.at !== null)' % (json.dumps(mine), k), 10)
+    ctx.settle(); ctx.frames(3)
+    after = margin_beside(ctx, mine, 1, n, 'held')
+    r.check(landed and ctx.consumed('held', seq) and after['marks'] == [] and after['held'] == [],
+            'B3-S2 · held-bars: the `held` event naming the line landed lifts its held bar and the word "held" (D6 BM-25), its words standing until a read sets the text',
+            {'landed': landed, 'consumed': ctx.consumed('held', seq), 'after': after, 'state': write_state(ctx, mine)})
 
 
 def undo_rows(ctx, r, shoot, red, ops_allowed, m):
@@ -1938,6 +2030,15 @@ def run(ctx):
         import traceback
         r.check(False, 'the machine\'s rows ran to their end', {'error': str(e), 'trace': traceback.format_exc()[-1500:]})
     leave_page()
+
+    # ---- (n) B3-S2: the held bars at reopen — the machine's page opened again over an armed `held(session)` list ------------------
+    if figures.get('minted') and rows['held-bars']['outcome'] == 'pending':
+        try:
+            reopen_rows(ctx, r, shoot, red, figures['minted'])
+        except Exception as e:
+            import traceback
+            r.check(False, 'the reopen\'s rows ran to their end', {'error': str(e), 'trace': traceback.format_exc()[-1500:]})
+        leave_page()
 
     # ---- (l) the sweep, the signed page again, the write check over the harness's provider's log ---------------------------------
     cleared = ctx.clear_arms()

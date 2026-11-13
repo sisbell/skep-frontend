@@ -155,11 +155,12 @@
 // silent.
 // THE WORDS THE BOARD HAS NOT KEPT (B3-S2; D6 BM-10, BM-13, BM-16 … BM-27):
 // the face of a draft holding them, read from W-WRITE's record of its held
-// lines, its islands and its board's reason (`unkeptFace`) and opened by the
-// kept word's act at its corner (`unkept`): a refused run's — "send again"
-// first, inert with its reason in the own-bug class, "copy these words out",
-// then "discard this change"; the shell's hand-over's, naming the board and
-// the time elapsed; the moved document's, naming the hands its rows carry,
+// lines, its islands and its board's reason (`unkeptFace`), each state by
+// W-MACHINE's one test of it (`awaitsAct`, `isMoved`, `deathFaced`), and
+// opened by the kept word's act at its corner (`unkept`): a refused run's —
+// "send again" first, inert with its reason in the own-bug class, "copy these
+// words out", then "discard this change"; the shell's hand-over's, naming the
+// board and the time elapsed; the moved document's, naming the hands its rows carry,
 // each in its slot — the slot the design owes words for, where they are
 // named again, standing empty — with "see the held text", "send again" inert
 // unless the shell says it would pass, and the discard; an island's and the
@@ -1231,10 +1232,6 @@ export function readers(/** @type {Partial<typeof hand>} */ r) { Object.assign(h
 /** the page's board as the status region names it; '' where none is held */
 const boardName = () => { const b = REC.board(); return b ? t('L.mirror.board.name', { node: '1', origin: b.origin }) : ''; };
 
-/** does a held line await the person's act — a run the board refused, or one the shell handed over: a verdict that is not a move's, an unreadable head's or a death's (D6 BM-10, BM-26) */
-const awaitsAct = (/** @type {import('../model/frames.js').HeldLine} */ r) => !!r.refusal && !['arrangement_moved', 'head_unreadable', 'session_died'].includes(r.refusal.name);
-/** is a held line held moved (D6 BM-13)? */
-const isMoved = (/** @type {import('../model/frames.js').HeldLine} */ r) => r.cause === 'moved' || (!!r.refusal && r.refusal.name === 'arrangement_moved');
 /** the refusals of a fault of this client's own, whose resend meets the same fault (B3-S2's own-bug class) */
 const OWN_BUG = ['out_of_bounds', 'empty_content', 'not_content_subspace'];
 
@@ -1291,14 +1288,14 @@ export function unkeptFace(addr) {
   };
   // the session ended and no re-open follows; or the keyless session stands over this board's held lines after it
   const keyless = !!s && !s.writes && rows.length > 0;
-  if ((!s && WRITE.unkept(addr)) || (block && block.why === 'death') || keyless) {
+  if (MACHINE.deathFaced(addr)) {
     const arm = block && block.why === 'death' ? block.detail : null, stays = keyless;
     const lines = keyless || arm === 'retired' || arm === 'blocked' ? [say(stays ? 'B3.death.corner.stays' : 'B3.death.corner.unshown', { board })] : [];
     if (!keyless) return face('death', { lines, acts: [copyAll()] });
     const held = rows[0].held;
     return discardFace('death', { lines, acts: [copyAll()] }, NEVER_KEPT, () => dropped(addr, held));
   }
-  const refused = rows.find(awaitsAct);
+  const refused = rows.find(MACHINE.awaitsAct);
   if (refused && refused.refusal) {
     const r = refused.refusal, words = () => MACHINE.wordsOf(addr, refused.held), drop = () => dropped(addr, refused.held);
     const again = (/** @type {UnkeptAct['inert']} */ inert = null) => act('send', 'B3.send-again', () => sentAgain(addr, refused.held), inert);
@@ -1321,9 +1318,9 @@ export function unkeptFace(addr) {
     const cls = device.unwritableClass === 'full' ? [say('B3.unwritable.full')] : device.unwritableClass === 'read_only' ? [say('B3.unwritable.read_only')] : [];
     return face('device', { lines: [say('B3.unwritable', { cause: device.unwritable || '' }), ...cls], acts: [copyAll()] });
   }
-  const moved = rows.find(isMoved);
+  const moved = rows.find(MACHINE.isMoved);
   if (moved) {
-    const named = rows.find((r) => isMoved(r) && r.hands && r.hands.length), hands = named && named.hands ? named.hands.map(handWords) : [say('B3.hand.unread')];
+    const named = rows.find((r) => MACHINE.isMoved(r) && r.hands && r.hands.length), hands = named && named.hands ? named.hands.map(handWords) : [say('B3.hand.unread')];
     return discardFace('moved', {
       head: null, lines: [say('B3.moved')], hands, again: !!(named && named.again),
       acts: [act('held', 'B3.moved.see-held', () => seeHeld(addr)), act('send', 'B3.send-again', () => sentAgain(addr, moved.held), moved.sendable === true ? null : say('B3.moved.send-again.inert', { label }))],

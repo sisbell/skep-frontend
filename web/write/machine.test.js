@@ -26,7 +26,11 @@
 // person's act comes first, is declined where its source is withheld, and
 // goes inside the one close; a redo reinstates kept bytes and re-types
 // unminted ones under their own ordinals; and an inverse is never composed as
-// it was typed.
+// it was typed. What the margin marks (J5, D8): nothing at a line merely held;
+// a run refused or handed over, and a refusal kept, refused over its own
+// bytes; a moved document's lines, a line the device refused, and under the
+// death every word the board has not kept, held; and a line another window
+// sent held until it lands.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -1317,6 +1321,131 @@ test('BM-73: at the close a `reinstate` set beside words of the burst out names 
   const carried = b.fake.unloaded[0].close.frames || [];
   assert.deepEqual(carried.map((f) => [/** @type {any} */ (f.frame).op, f.anchors, f.after ?? null]), [['insert', { before: own(E, 2), after: own(E, 3) }, null], ['delete', { before: null, after: own(E, 3) }, null]],
     'a `delete` over words of two unanswered inserts follows neither: it goes as it did, without a span, and names no `after` the row would refuse');
+});
+
+/** what the margin marks of a draft (`marksOf`): each mark's kind, the words of the text shown it stands beside, and the positions there its removal points stand at */
+function marked(/** @type {string} */ addr) {
+  const d = applyEdits(WRITE.baseOf(addr), WRITE.edits(addr), (page, width) => REC.pageIds(addr, page, width)).doc;
+  const point = (/** @type {{before: import('../model/records.js').ISpan[], after: import('../model/records.js').ISpan[]}} */ p) => {
+    const b = p.before.length ? REC.placedIn(d.image, p.before) : [], a = p.after.length ? REC.placedIn(d.image, p.after) : [];
+    return b.length ? b[b.length - 1].pos + b[b.length - 1].width : a.length ? a[0].pos : null;
+  };
+  return MACHINE.marksOf(addr).map((m) => [m.kind, REC.placedIn(d.image, m.ids).map((s) => REC.textOf(d.runs, s.pos, s.pos + s.width)).join(''), m.points.map(point)]);
+}
+
+test('J5: a line merely held marks nothing — the burst the shell holds while the board is not answering, and the words typed behind it', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  let rows = [];
+  const { ops } = boot((frame, n) => HELD(n, n === 1 ? 'unreachable' : 'behind'), () => rows);
+  read(D, 'abc');
+  type(D, 4, 'x.');
+  rows = [ROW(1, D, ops[0].frame)];
+  await flush();
+  type(D, 1, 'y.');
+  rows = [rows[0], ROW(2, D, ops[1].frame, { cause: 'behind' })];
+  await flush();
+  assert.deepEqual([WRITE.keptOf(D), WRITE.heldOf(D).map((r) => r.held), marked(D)], [YET('unreachable'), [1, 2], []], 'two lines held, "not yet kept": no mark');
+});
+
+test('BM-10, BM-26: a run the board refused, and one the shell handed over, are refused over their own bytes alone — the lines held behind them unmarked; a removal the board refused at the point it removed', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  let rows = [];
+  const { ops } = boot((frame, n) => HELD(n, n === 1 ? 'out_of_bounds' : 'behind'), () => rows);
+  read(D, 'abc');
+  type(D, 4, 'x.');
+  rows = [ROW(1, D, ops[0].frame, { cause: 'out_of_bounds', sent: true, refusal: refusal('out_of_bounds') })];
+  await flush();
+  type(D, 1, 'y.');
+  rows = [rows[0], ROW(2, D, ops[1].frame, { cause: 'behind' })];
+  await flush();
+  assert.deepEqual([WRITE.keptOf(D)?.word, marked(D)], ['not kept', [['refused', 'x.', []]]], 'the refused run its own bytes, the words behind it bare');
+  rows = [{ .../** @type {any} */ (rows[0]), cause: 'answers_lost', refusal: { kind: 'shell', name: 'answers_lost', last: 'unreachable', elapsed_ms: 125000 } }, rows[1]];
+  REC.setSession(/** @type {any} */ ({ ...S, session: 's-2' }));
+  await flush();
+  assert.deepEqual(marked(D), [['refused', 'x.', []]], 'handed over: refused the same');
+  read(E, 'abcdef');
+  backspace(E, 4);
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  rows = [...rows, ROW(3, E, ops[2].frame, { cause: 'out_of_bounds', sent: true, refusal: refusal('out_of_bounds') })];
+  await flush();
+  assert.deepEqual([ops[2].frame.op, marked(E)], ['delete', [['refused', '', [3]]]], 'a refused removal: no bytes, its point where the removed byte stood');
+});
+
+test('D8, BM-13: while a moved document\'s verdict stands, every held line of it is held — the moved line\'s words and those held behind it', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  let rows = [];
+  const { ops } = boot((frame, n) => HELD(n, n === 1 ? 'moved' : 'behind'), () => rows);
+  read(D, 'abc');
+  type(D, 4, 'm.');
+  rows = [ROW(1, D, ops[0].frame, { cause: 'moved', sent: true, refusal: { ...refusal('arrangement_moved'), site: { as_of: 7, current: 9 } }, sendable: false })];
+  await flush();
+  type(D, 1, 'n.');
+  rows = [rows[0], ROW(2, D, ops[1].frame, { cause: 'behind' })];
+  await flush();
+  assert.deepEqual([WRITE.keptOf(D), marked(D)], [YET('moved'), [['held', 'm.', []], ['held', 'n.', []]]], 'held moved: both lines held');
+});
+
+test('BM-19, BM-21: a refusal the page keeps is refused over its own bytes; a line the device refused to keep is held while its face stands, and bare once the retry keeps it', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  let rows = [];
+  const { fake, ops } = boot((frame, n) => (frame.doc === E ? REFUSED : { result: { resp: 'held', held: n, cause: 'unreachable', unwritable: 'refused by the device', unwritable_class: 'full' } }), () => rows);
+  read(D, 'abc');
+  read(E, 'abc');
+  type(E, 4, 'i.');
+  await flush();
+  assert.deepEqual([WRITE.islandsOf(E).length, marked(E)], [1, [['refused', 'i.', []]]], 'an island: refused');
+  type(D, 4, 'd.');
+  rows = [ROW(2, D, ops[1].frame, { unwritable: 'refused by the device', unwritable_class: 'full' })];
+  fake.fire('held', EVENT(D, 'holding', 1, { cause: 'unreachable', unwritable: 'refused by the device', unwritable_class: 'full' }));
+  await flush();
+  assert.deepEqual([WRITE.keptOf(D), marked(D)], [NOT('unwritable'), [['held', 'd.', []]]], 'the device\'s refusal: held');
+  rows = [ROW(2, D, ops[1].frame)];
+  fake.fire('held', EVENT(D, 'holding', 1, { cause: 'unreachable' }));
+  await flush();
+  assert.deepEqual([WRITE.keptOf(D), marked(D)], [YET('unreachable'), []], 'the retry kept it: held, and bare');
+});
+
+test('BM-29: a held line this window did not send is held from the reopen until it lands — an insert beside its words, a removal at its point, a piece of an earlier insert read through that insert\'s own words — and one awaiting the person\'s act is refused', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  let rows = [
+    ROW(1, D, { op: 'insert', doc: D, at: at(4), values: [' held'], as_of: 7, id: 'page:old.1' }, { anchors: { before: own(D, 3), after: own(D, 4) } }),
+    ROW(2, D, { op: 'delete', doc: D, p: at(10), width: '3', as_of: 7, id: 'page:old.2' }, { cause: 'behind', anchors: { before: { burst: 'page:old.1', offset: 4 }, after: own(D, 7), span: [{ start: own(D, 4), width: '3' }] } }),
+  ];
+  read(D, 'abcdefghi');
+  const { fake } = boot(() => ACK(20), () => rows);
+  await flush();
+  assert.deepEqual([shown(D), marked(D)], ['abc heldghi', [['held', ' held', []], ['held', '', [9]]]], 'at the reopen: the insert beside its words, the removal at its point, after the insert\'s fifth byte');
+  rows = [rows[1]];
+  fake.fire('held', EVENT(D, 'sending', 1, { landed: [{ held: 1, burst: 'page:old.1', at: 30, addr: null }] }));
+  await flush();
+  assert.deepEqual([shown(D), WRITE.reopened(D).map((l) => [l.row.held, l.at]), marked(D)], ['abc heldghi', [[1, 30], [2, null]], [['held', '', [9]]]], 'the insert landed: its mark lifts, its words standing until a read; the removal\'s point read by the byte after it');
+  rows = [ROW(3, D, { op: 'insert', doc: D, at: at(1), values: ['z'], as_of: 7, id: 'page:old.3' }, { cause: 'out_of_bounds', sent: true, refusal: refusal('out_of_bounds') })];
+  REC.setSession(/** @type {any} */ ({ ...S, session: 's-2' }));
+  await flush();
+  assert.deepEqual(marked(D), [['refused', 'z', []]], 'a line of another window\'s the board refused: refused');
+});
+
+test('D8, BM-24: under the death every word of a draft the board has not kept is held — its held lines\' and the words no listed line carries; a draft holding none marks nothing', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  let rows = [];
+  const { ops } = boot((frame, n) => HELD(n), () => rows);
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: 'abc', standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  read(D, 'abc');
+  type(D, 4, 'd.');
+  rows = [ROW(1, D, ops[0].frame)];
+  await flush();
+  type(D, 1, 'q');
+  assert.deepEqual([MACHINE.deathFaced(D), marked(D)], [false, []], 'before the ending: one line held, a word open — nothing marked');
+  REC.sessionDied({ arm: 'retired', fingerprint: 'fp-1', own: false }, [D]);
+  await flush();
+  assert.deepEqual([MACHINE.deathFaced(D), shown(D), marked(D)], [true, 'qabcd.', [['held', 'd.', []], ['held', 'q', []]]], 'after it: the held line\'s words and the word no listed line carries, held');
+  assert.deepEqual(MACHINE.marksOf(E), [], 'a draft the page holds no record of: none');
 });
 
 test('the window\'s own feed row is not news: the ack tells the model its position and the draft is read again as that act\'s feedback — the edits the read holds dropped as it sets the text, the text shown the same, no clause saying it is as last read and no word of how it was set — while another writer\'s row is news', async (t) => {

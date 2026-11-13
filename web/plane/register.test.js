@@ -5,13 +5,14 @@
 // stands at; the corner narrower compact than whole, holding a kept word
 // whole; a history strip's window holding one member, its edges in the gaps
 // beside it and inside the strip's inset; the three faces each their job's,
-// the shipped two waited on in every style the style declares; the CSS
-// variables carry the same values.
+// the shipped two waited on in every style the style declares; the margin's
+// marks three shapes in three hues, inside the room before a column's edge
+// signs; the CSS variables carry the same values.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HUE, VISITED_ALPHA, KIND_FORM, EDGE, LABEL_MIN_PX, ADDRESS, TAIL, CORNER, FACE, SHIPPED, WINDOW, STRIP, cornerWidth, cssVariables } from './register.js';
+import { HUE, VISITED_ALPHA, KIND_FORM, EDGE, LABEL_MIN_PX, ADDRESS, TAIL, CORNER, FACE, SHIPPED, WINDOW, STRIP, MARGIN, cornerWidth, cssVariables } from './register.js';
 import { LOD_TXT_LO, UNMOUNT_EM } from './lod.js';
-import { GUTTER } from './layout.js';
+import { GUTTER, EDGE_GAP } from './layout.js';
 
 test('the linker\'s palette has three distinct hues: you, the owner, everyone else', () => {
   assert.equal(new Set([HUE.you, HUE.owner, HUE.others]).size, 3);
@@ -40,6 +41,15 @@ test('the CSS variables carry the register\'s values', () => {
   assert.deepEqual([v['--corner-px'], v['--corner-w'], v['--corner-compact-w'], v['--corner-pad']], [CORNER.px + 'px', CORNER.whole + 'em', CORNER.compact + 'em', CORNER.pad + 'px'], 'the corner\'s sizes, which the style sets it by');
   assert.deepEqual([v['--face-reading'], v['--face-client'], v['--face-ident']], [FACE.reading, FACE.client, FACE.ident], 'the three faces\' stacks');
   assert.deepEqual([v['--window-fill'], v['--window-ink'], v['--window-edge']], [WINDOW.fill, WINDOW.ink, WINDOW.edge + 'px'], 'the window mark, which the one line\'s strip draws by and a box\'s history strip shares (issue #241)');
+  assert.deepEqual([v['--margin-held'], v['--margin-refused'], v['--margin-removal']], [MARGIN.held.hue, MARGIN.refused.hue, MARGIN.removal.hue], 'the margin\'s marks\' hues, which the style draws them in');
+});
+test('the margin\'s marks are three shapes, no two alike and none the caret\'s upright hairline, each in a hue of its own; held and refused stand inside the room between a column\'s text and its edge\'s signs (the layout page\'s round-2 close, Q6; B3-S2)', () => {
+  const marks = [MARGIN.held, MARGIN.refused, MARGIN.removal];
+  assert.equal(new Set(marks.map((m) => m.shape)).size, 3, 'three shapes');
+  assert.ok(marks.every((m) => m.shape !== 'upright'), 'none the caret\'s upright form');
+  assert.equal(new Set(marks.map((m) => m.hue)).size, 3, 'three hues');
+  assert.ok(MARGIN.inset > 0 && MARGIN.inset + Math.max(MARGIN.width, MARGIN.point) <= EDGE_GAP, `the widest mark ends at ${MARGIN.inset + Math.max(MARGIN.width, MARGIN.point)} em, short of the signs at ${EDGE_GAP} em`);
+  assert.ok(MARGIN.stroke > 0 && MARGIN.stroke * 2 < MARGIN.width, 'the bracket\'s stroke leaves it open');
 });
 test('a history strip\'s window holds one member: its edges stand in the gaps either side of it, never on a neighbour\'s tick, and its top below the outline\'s top, the head\'s apex at it (issue #241)', () => {
   assert.ok(STRIP.pitch - STRIP.tick >= WINDOW.edge && WINDOW.edge > 0, `an edge of ${WINDOW.edge} px in a gap of ${STRIP.pitch - STRIP.tick} px`);

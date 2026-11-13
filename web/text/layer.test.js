@@ -42,7 +42,12 @@
 // its ground and its hairlines alone (FP-31); C-33's words standing by the
 // one test of each document's kind, asked by a record or an address — an
 // origin's its metadata's word whatever the index lists it as, a version's
-// its box's listing where its metadata is unread (FP-39); C-67's clause from the model; what an article was
+// its box's listing where its metadata is unread (FP-39); the margin's marks
+// beside words the board has not kept — a line another window sent held by one
+// bar from its first line to its last until it lands, its removal's zero-length
+// form on its line, "held" once per view at the first, a line awaiting the
+// person's act refused, a line merely held bare, and a stroke leaving past
+// them; C-67's clause from the model; what an article was
 // made from; a copy named where
 // its words were read — a box's at its version, the head its corner names at
 // a plain address, and a pane's alike — by every position's identity part by
@@ -76,12 +81,13 @@ import * as LAYER from './layer.js';
 import * as FOCUS from '../nav/focus.js';
 import * as CAM from '../plane/camera.js';
 import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, columnOfLine, setAdvance, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER, EDGE, EDGE_GAP, CHAR_W, LINE_H } from '../plane/layout.js';
-import { CORNER, ADDRESS, COL, HOLD, cornerWidth } from '../plane/register.js';
+import { CORNER, ADDRESS, COL, HOLD, MARGIN, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, lineHeight, runsOf } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME } from '../plane/lod.js';
 import { CLAUSE_READING, articleHTML } from './article.js';
 import { farSays } from '../beams/held.js';
+import { pastSigns } from '../beams/beams.js';
 import { t, tHTML, lastRead } from '../strings.js';
 import { esc } from '../util.js';
 
@@ -1274,6 +1280,99 @@ test('at a box showing a version whose metadata is unread, its box listed an edi
   assert.deepEqual([LAYER.isMounted(D2), statementsOf(X).map((s) => [s.addr, s.pos, s.text])], [true, [[D2, a + 1, `${t('L.origin-mark')} ${X}${t('C-33')}`]]], 'its origin stated beside its run: its key, then C-33\'s words');
   const copied = copyOf(D2);
   assert.deepEqual(copied && [copied.doc, copied.member, copied.plain], [D2, D2, false], 'a copy from it names the version itself, read at no plain address');
+}));
+
+
+// ---- the margin's marks beside words the board has not kept (B3-S2) -------------------------------------------------------
+
+/** the margin's paragraphs: a first line, a second paragraph a held insert lands before, and a last paragraph a held removal takes a word of */
+const M1 = 'Tumbler.\n\n', M2 = 'A second paragraph standing below the first.\n\n', M3 = 'The last paragraph.';
+/** the words a held insert of another window's types before the second paragraph: long enough to wrap onto a second line at the full measure */
+const HELD_WORDS = 'Words held on another device, typed while the board was away and long enough to wrap onto a second line here.\n\n';
+/** a held line as `held(session)` lists it, decoded: its ordinal, its frame, and what else the row carries */
+const heldRow = (/** @type {number} */ held, /** @type {Record<string, unknown>} */ frame, /** @type {Record<string, unknown>} */ more = {}) => /** @type {import('../model/frames.js').HeldLine} */ ((F.decodeHeldRows([{ held, doc: D, base: 7, frame: { doc: D, as_of: 7, ...frame }, cause: 'unreachable', sent: false, time: held, ...more }]) || [])[0]);
+/**
+ * The test run on the edges' signs' page (`onSigns`), D a draft of the session's account — the session one that writes —
+ * delivered as the margin's three paragraphs, every byte named through its image, the camera at em 12 over its first
+ * column; `body` handed the three paragraphs' first positions and a frame that answers the margin's marks standing
+ * @param {(at: {p2: number, p3: number, marks: () => ReturnType<typeof LAYER.marksStanding>}) => void} body
+ */
+function onMargin(body) {
+  onSigns(() => {
+    REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+    const [n1, n2, n3] = [M1, M2, M3].map((x) => new TextEncoder().encode(x).length), n = n1 + n2 + n3;
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
+    REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text: M1 + M2 + M3, ref: null, origin: null }]);
+    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n }]);
+    const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), c = f.columns[0];
+    CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 4, scale: 12 / f.fs });
+    body({ p2: n1 + 1, p3: n1 + n2 + 1, marks: () => { LAYER.frame(); return LAYER.marksStanding(); } });
+  });
+}
+/** where a bar of the margin stands beside the lines holding a stretch of the text shown, as the fold sets them: past their column's text by its inset at em 12, from the first line's top to the last line's foot */
+function barBeside(/** @type {number} */ pos, /** @type {number} */ width) {
+  const lines = LAYER.foldBoxes(D, pos, width), a = lines[0].rect, z = lines[lines.length - 1].rect;
+  return { lines: lines.map((l) => l.line), placed: { x: Math.round(a.x + a.w + MARGIN.inset * 12), y: Math.round(a.y), w: Math.round(MARGIN.width * 12), h: Math.round(z.y + z.h - a.y) } };
+}
+
+test('the margin marks a held line another window sent from the reopen until it lands — one held bar from the line\'s first line to its last, beside its column\'s text and short of its edge\'s signs, the word "held" once per view at its top in that edge; a held removal its zero-length form on the line holding its point — and once it lands, its bar lifts in the next frame and the word moves to the held mark left (B3-S2 AT REOPEN; D6 BM-25, BM-29)', () => onMargin(({ p2, p3, marks }) => {
+  const insert = heldRow(1, { op: 'insert', at: { ordinal: String(p2), subspace: '1' }, values: [HELD_WORDS], id: 'page:old.1' }, { anchors: { before: `${D}.0.1.${p2 - 1}`, after: `${D}.0.1.${p2}` } });
+  const removal = heldRow(2, { op: 'delete', p: { ordinal: '1', subspace: '1' }, width: '5', id: 'page:old.2' }, { cause: 'behind', anchors: { before: `${D}.0.1.${p3 + 3}`, after: `${D}.0.1.${p3 + 9}`, span: [{ start: `${D}.0.1.${p3 + 4}`, width: '5' }] } });
+  WRITE.setHeld(D, [insert, removal]); WRITE.setReopened(D, [insert, removal]);
+  const shown = LAYER.shownOf(D), w = new TextEncoder().encode(HELD_WORDS).length;
+  assert.equal(REC.textOf(shown.runs, p2, p2 + w + 4), HELD_WORDS + 'A se', 'the held insert applied before the second paragraph, the held removal taken out');
+  const bar = barBeside(p2, w), point = LAYER.foldBoxes(D, p3 + w + 4, 1)[0];
+  assert.ok(bar.lines.length >= 2, `the held words take ${bar.lines.length} lines`);
+  const at = marks();
+  assert.deepEqual(at.map((m) => [m.kind, m.point, m.first, m.end]), [['held', false, bar.lines[0], bar.lines[bar.lines.length - 1] + 1], ['held', true, point.line, point.line + 1]], 'one bar along the held words\' lines, the removal\'s zero-length form on its line');
+  assert.deepEqual(at[0].placed, bar.placed, 'the bar beside the column\'s text, from the first line\'s top to the last line\'s foot');
+  const side = Math.round(MARGIN.point * 12);
+  assert.deepEqual(at[1].placed, { x: bar.placed.x, y: Math.round(point.rect.y + (point.rect.h - MARGIN.point * 12) / 2), w: side, h: side }, 'the zero-length form a square, level with its line');
+  assert.ok(MARGIN.inset * 12 + Math.max(MARGIN.width, MARGIN.point) * 12 <= EDGE_GAP * 12, 'short of the edge\'s signs');
+  const held = LAYER.signsStanding().filter((s) => s.kind === 'held');
+  assert.deepEqual(held.map((s) => [s.text, s.column, s.placed]), [[t('B3.held'), at[0].column, placedBeside(p2, bar.placed.y)]], '"held" once, in the bar\'s column\'s edge at its top, as the one hold stands a sign there');
+  WRITE.landReopened(D, 1, 30);
+  const after = marks();
+  assert.deepEqual(after.map((m) => [m.kind, m.point, m.first]), [['held', true, point.line]], 'landed: its bar lifts in the next frame, the removal still held');
+  assert.deepEqual(LAYER.signsStanding().filter((s) => s.kind === 'held').map((s) => s.placed), [placedBeside(p3 + w + 4, after[0].placed.y)], 'the word at the held mark left, held inside its column\'s foot');
+}));
+
+test('the margin marks a line awaiting the person\'s act refused, along its run\'s lines where a held bar would stand, no word beside it; a line merely held marks nothing (B3-S2 THE REFUSED RUN; the editor design\'s J5)', () => onMargin(({ p2, marks }) => {
+  const line = heldRow(3, { op: 'insert', at: { ordinal: String(p2), subspace: '1' }, values: [HELD_WORDS], id: 'page:old.3' }, { anchors: { before: `${D}.0.1.${p2 - 1}`, after: `${D}.0.1.${p2}` } });
+  WRITE.setHeld(D, [line]);
+  assert.deepEqual([marks(), LAYER.signsStanding().filter((s) => s.kind === 'held')], [[], []], 'held, and not reopened: no mark and no word');
+  const refused = { ...line, sent: true, cause: 'out_of_bounds', refusal: /** @type {any} */ ({ kind: 'refused', name: 'out_of_bounds', status: 200, code: 'out_of_bounds', detail: null, op: 'insert', site: {}, body: null }) };
+  WRITE.setHeld(D, [refused]); WRITE.setReopened(D, [refused]);
+  const at = marks(), bar = barBeside(p2, new TextEncoder().encode(HELD_WORDS).length);
+  assert.deepEqual(at.map((m) => [m.kind, m.point, m.first, m.end, m.placed]), [['refused', false, bar.lines[0], bar.lines[bar.lines.length - 1] + 1, bar.placed]], 'refused: the bracket along the run\'s lines, where the held bar would stand');
+  assert.deepEqual(LAYER.signsStanding().filter((s) => s.kind === 'held'), [], 'no word beside it');
+}));
+
+test('the margin\'s marks: a line a refused mark stands on bears no held one, a kind\'s lines that follow one another in a column are one bar, and a point on its kind\'s bar adds nothing while one on a bare line stands as its kind\'s zero-length form (`marginOf`)', () => {
+  const [n1, n2, n3] = [M1, M2, M3].map((x) => new TextEncoder().encode(x).length);
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n1 + n2 + n3 }]);
+  REC.takeDelivery(D, [{ pos: 1, width: n1 + n2 + n3, kind: 'content', text: M1 + M2 + M3, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n1 + n2 + n3 }]);
+  const d = REC.doc(D), f = LAYER.foldOf(d), made = { addr: D, blocks: d.blocks, runs: d.runs, image: d.image };
+  const ids = (/** @type {number} */ pos, /** @type {number} */ width) => REC.identityIn(d.image, pos, width), at = (/** @type {number} */ pos) => /** @type {number} */ (placeOf(f, pos).line);
+  const p2 = n1 + 1, p3 = n1 + n2 + 1, gap = (/** @type {number} */ pos) => ({ before: ids(pos - 1, 1), after: ids(pos, 1) });
+  assert.ok(at(1) + 1 === at(p2) && at(p2) + 1 === at(p3), 'three paragraphs on three lines that follow one another');
+  const segs = LAYER.marginOf(f, made, [
+    { kind: 'held', ids: ids(1, n1 + n2), points: [gap(p2 + 3), gap(p3 + 4), gap(5)] },
+    { kind: 'refused', ids: ids(2, 3), points: [] },
+  ]);
+  assert.deepEqual(segs.map((x) => [x.kind, x.first, x.end, x.point]), [['refused', at(1), at(1) + 1, false], ['held', at(p2), at(p2) + 1, false], ['held', at(p3), at(p3) + 1, true]],
+    'the first line refused alone, the second held, the third the held point: the points on the refused line and on the held bar add nothing');
+  assert.deepEqual(LAYER.marginOf(f, made, [{ kind: 'held', ids: ids(1, n1 + n2 + 3), points: [] }]).map((x) => [x.first, x.end]), [[at(1), at(p3) + 1]], 'held across all three lines: one bar');
+});
+
+test('a stroke or a removal\'s mark leaving a line beside a margin\'s mark starts past it: the mark is among the signs its block\'s line stands beside (`signRects`), and `pastSigns` steps past it', () => onMargin(({ p2, marks }) => {
+  const line = heldRow(1, { op: 'insert', at: { ordinal: String(p2), subspace: '1' }, values: [HELD_WORDS], id: 'page:old.1' }, { anchors: { before: `${D}.0.1.${p2 - 1}`, after: `${D}.0.1.${p2}` } });
+  WRITE.setHeld(D, [line]); WRITE.setReopened(D, [line]);
+  const [bar] = marks(), [first] = LAYER.foldBoxes(D, p2, 1);
+  assert.ok(LAYER.signRects(D, p2).some((r) => r.x === bar.placed.x && r.y === bar.placed.y && r.h === bar.placed.h), 'the bar among the block\'s signs');
+  const from = pastSigns({ line: first.rect, block: first.rect, signs: LAYER.signRects(D, p2) });
+  assert.ok(from >= bar.placed.x + bar.placed.w, `a stroke leaves from ${from}, past the bar's right edge ${bar.placed.x + bar.placed.w}`);
 }));
 
 // ---- C-67's clause, from what the model holds ---------------------------------------------------------------------------

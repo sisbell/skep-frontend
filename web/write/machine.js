@@ -126,6 +126,17 @@
 // CLOSE (BM-73) the open burst is composed with a `delete` of the burst
 // out's words as that burst's follower, and an inverse whose drop is owed is
 // left out (`composed`, `settled`).
+// THE HELD LINES' STATES, one test each: a line awaiting the person's act
+// (`awaitsAct`), one held moved (`isMoved`), and the death's face standing
+// over a draft (`deathFaced`; BM-24). WHAT THE MARGIN MARKS (`marksOf`;
+// B3-S2; BM-10, BM-19, BM-26, BM-29; the editor design's J5, the layout
+// page's round-2 close D8): the refused mark at each line awaiting the
+// person's act and at each refusal the page keeps; the held mark at each line
+// this window did not send while it is held, and, while a face asks the
+// person about held words — a moved document's, the device's refusal of a
+// line, the death's — at those words; a line merely held marks nothing. Each
+// line this window sent is marked over its burst's own bytes, each it did not
+// over its frame's.
 // Rules: FP-1, FP-2, FP-9, FP-10, FP-11, FP-14, FP-23, FP-28, FP-29, FP-38.
 
 import * as PORT from '../bridge/port.js';
@@ -601,9 +612,22 @@ const heldCount = () => WRITE.heldDocs().reduce((n, a) => n + WRITE.heldOf(a).le
 // ---- the held lines ---------------------------------------------------------------
 
 /** does a held line await the person's act — a run the board refused, or one the shell handed over (BM-10, BM-26): a verdict that is not a move's, an unreadable head's or a death's */
-const awaitsAct = (/** @type {HeldLine} */ r) => !!r.refusal && !['arrangement_moved', 'head_unreadable', 'session_died'].includes(r.refusal.name);
+export const awaitsAct = (/** @type {HeldLine} */ r) => !!r.refusal && !['arrangement_moved', 'head_unreadable', 'session_died'].includes(r.refusal.name);
 /** is a held line held moved (BM-13)? */
-const isMoved = (/** @type {HeldLine} */ r) => r.cause === 'moved' || (!!r.refusal && r.refusal.name === 'arrangement_moved');
+export const isMoved = (/** @type {HeldLine} */ r) => r.cause === 'moved' || (!!r.refusal && r.refusal.name === 'arrangement_moved');
+
+/**
+ * Does the death's face stand over a draft (see the head; BM-24): the
+ * session ended with no re-open while the draft holds words the board has not
+ * kept (W-WRITE's `unkept`), the death stands as its board's reason, or a
+ * session that may not write stands over its held lines.
+ * @param {string} addr
+ * @returns {boolean}
+ */
+export function deathFaced(addr) {
+  const s = REC.session(), block = WRITE.unwritable(addr);
+  return (!s && WRITE.unkept(addr)) || (!!block && block.why === 'death') || (!!s && !s.writes && WRITE.heldOf(addr).length > 0);
+}
 
 /**
  * The held lines read (`held(session)`) and set, draft by draft (see the
@@ -924,6 +948,131 @@ export function sendIsland(addr, id) {
   WRITE.setFlight(addr, true);
   REC.setTyping(addr, true);
   commit(addr);
+}
+
+// ---- what the margin marks --------------------------------------------------------
+
+/**
+ * @typedef {Object} Mark — words of a draft the board has not kept that the margin marks (`marksOf`)
+ * @property {'held' | 'refused'} kind `refused` where an act of the person's comes first; `held` where words are held at a reopen, or a face asks the person about held words
+ * @property {ISpan[]} ids the bytes it stands beside, by identity, as the text the page shows names them
+ * @property {Array<{before: ISpan[], after: ISpan[]}>} points where it removed bytes and placed none, each by the byte either side of the removal point
+ */
+
+/**
+ * What the margin marks of a draft (see the head; B3-S2): a mark for each
+ * held line it marks, in the lines' order — one for a burst of this window's
+ * however many lines it became — then one for each refusal the page keeps,
+ * then, under the death, one for the words no listed line or refusal carries
+ * that the board has not acked. A line awaiting the person's act
+ * (`awaitsAct`) and a refusal kept are refused; a line this window did not
+ * send while it is
+ * held (W-WRITE's `reopened`), every held line of a moved document or under
+ * the death (`deathFaced`), and each line the device refused (BM-21) are
+ * held; any other line is unmarked (J5). This window's line stands beside its
+ * burst's bytes and the points where its edits removed bytes and placed none
+ * (M-DERIVE's `madeBy`); another's beside its frame's — an insert's by the
+ * page's names for them (W-WRITE's `nameOf`), a reinstate's by its runs, a
+ * removal at the point its anchors name (`edgeIds`). None where nothing is
+ * marked, or the model holds no record of the draft.
+ * @param {string} addr
+ * @returns {Mark[]}
+ */
+export function marksOf(addr) {
+  if (!REC.has(addr)) return [];
+  const rows = WRITE.heldOf(addr), islands = WRITE.islandsOf(addr), death = deathFaced(addr);
+  if (!rows.length && !islands.length && !death) return [];
+  const d = drafts.get(addr), list = WRITE.edits(addr);
+  const still = new Set(WRITE.reopened(addr).filter((l) => l.at == null).map((l) => l.row.held));
+  const asks = death || rows.some(isMoved);
+  /** @type {(r: HeldLine) => Mark['kind'] | null} */
+  const kindOf = (r) => (awaitsAct(r) ? 'refused' : still.has(r.held) || asks || r.unwritable != null ? 'held' : null);
+  /** @type {import('../model/derive.js').Made[] | null} */
+  let made = null;
+  /** a mark over what the edits `which` names did as each was applied: the bytes it placed, else the point where it removed some */
+  const ofEdits = (/** @type {Mark['kind']} */ kind, /** @type {(e: Edit) => boolean} */ which) => {
+    if (!made) made = madeBy(WRITE.baseOf(addr), list, 0, idsOf(addr));
+    /** @type {Mark} */
+    const m = { kind, ids: [], points: [] };
+    list.forEach((e, i) => {
+      const x = made ? made[i] : null;
+      if (!x || !which(e)) return;
+      if (x.placed.length) m.ids.push(...x.placed); else if (x.took) m.points.push({ before: x.before, after: x.after });
+    });
+    return m.ids.length || m.points.length ? m : null;
+  };
+  /** @type {Mark[]} */
+  const out = [];
+  /** @type {Map<number, Mark['kind']>} this window's bursts a line of which is marked, each by its line's kind: refused where any of its lines is */
+  const bursts = new Map();
+  /** @type {Array<{kind: Mark['kind'], row: HeldLine | null, k: number | null}>} */
+  const marked = [];
+  for (const r of rows) {
+    const kind = kindOf(r), l = d ? d.lines.get(r.held) : undefined;
+    if (!kind) continue;
+    if (!l) { marked.push({ kind, row: r, k: null }); continue; }
+    if (!bursts.has(l.k)) marked.push({ kind, row: null, k: l.k });
+    if (bursts.get(l.k) !== 'refused') bursts.set(l.k, kind);
+  }
+  for (const x of marked) {
+    const m = x.k != null ? ofEdits(/** @type {Mark['kind']} */ (bursts.get(x.k)), (e) => e.sent === x.k && e.island == null) : x.row ? frameMark(addr, x.kind, x.row, rows, d) : null;
+    if (m) out.push(m);
+  }
+  for (const i of islands) { const m = ofEdits('refused', (e) => e.island === i.id); if (m) out.push(m); }
+  if (death) { const m = ofEdits('held', (e) => e.at == null && !e.based && e.island == null && !(e.sent != null && bursts.has(e.sent))); if (m) out.push(m); }
+  return out;
+}
+
+/**
+ * The mark of a held line this window did not send (`marksOf`), over what its
+ * frame does: an insert beside the bytes the page names it by (W-WRITE's
+ * `nameOf`), a reinstate beside the bytes its runs name, a removal at the
+ * point its anchors name (`edgeIds`); null where none of it can be named.
+ * @param {string} addr
+ * @param {Mark['kind']} kind
+ * @param {HeldLine} r
+ * @param {readonly HeldLine[]} rows the draft's held lines, an anchor's piece read among them
+ * @param {Draft | undefined} d what the machine holds of the draft
+ * @returns {Mark | null}
+ */
+function frameMark(addr, kind, r, rows, d) {
+  const f = r.frame;
+  if (f.op === 'insert') { const n = WRITE.nameOf(addr, r.held); return n ? { kind, ids: REC.pageIds(addr, n.page, n.width), points: [] } : null; }
+  if (f.op === 'reinstate' && Array.isArray(f.runs)) {
+    const ids = f.runs.flatMap((x) => { const w = Number(x && x.width); return x && typeof x.i_start === 'string' && w > 0 ? named(x.i_start, w) : []; });
+    return ids.length ? { kind, ids, points: [] } : null;
+  }
+  if (f.op === 'delete' && r.anchors) {
+    const before = edgeIds(addr, r.anchors.before, rows, d), after = edgeIds(addr, r.anchors.after, rows, d);
+    return before.length || after.length ? { kind, ids: [], points: [{ before, after }] } : null;
+  }
+  return null;
+}
+
+/** the bytes from a permanent address, by identity; none where it names no ordinal */
+const named = (/** @type {string} */ start, /** @type {number} */ width) => { const s = REC.iSpanOf({ iStart: start, width }); return s.prefix && Number.isSafeInteger(s.ordinal) && s.ordinal > 0 ? [s] : []; };
+
+/**
+ * The byte an anchor's edge names (M-FRAMES's `HeldAnchors`), by identity as
+ * the text shown names it: an I-address; a piece of an insert's words — by
+ * the page's name for that byte, the insert a held line's (W-WRITE's
+ * `nameOf`) or a burst of this window's (`Draft.lines`); none where the page
+ * names no such byte.
+ * @param {string} addr
+ * @param {string | import('../model/frames.js').AnchorPiece | null} edge
+ * @param {readonly HeldLine[]} rows
+ * @param {Draft | undefined} d
+ * @returns {ISpan[]}
+ */
+function edgeIds(addr, edge, rows, d) {
+  if (typeof edge === 'string') return named(edge, 1);
+  if (!edge) return [];
+  const row = rows.find((r) => r.frame.op === 'insert' && r.frame.id === edge.burst), n = row ? WRITE.nameOf(addr, row.held) : null;
+  if (n) return edge.offset < n.width ? REC.pageIds(addr, n.page + edge.offset, 1) : [];
+  const l = d ? [...d.lines.values()].find((x) => x.id === edge.burst) : undefined;
+  let at = edge.offset;
+  for (const p of l ? l.pages : []) { if (at < p.width) return REC.pageIds(addr, p.page + at, 1); at -= p.width; }
+  return [];
 }
 
 // ---- undo and redo ----------------------------------------------------------------

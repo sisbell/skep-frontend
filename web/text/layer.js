@@ -6,7 +6,8 @@
 // of it standing, its marks and whether it takes the pointer — the corners
 // beside the articles and the labels held over them, the signs standing in
 // the columns' edges and the run each origin's statement stands beside
-// (`signed`, `anchors`), which corners and cut
+// (`signed`, `anchors`), the margin's marks standing and the first held mark
+// in view (`margins`, `heldFirst`), which corners and cut
 // labels a reader's act opened whole, each document's fold and its lines as
 // the platform set them, the passage being read while its document is set
 // again (`hold`), what each reading scene's pane's article was made from and
@@ -336,6 +337,20 @@
 // acts (APP-INPUT): the whole wording's card (O-FACES's `withheldRun`), the
 // LEAP to the claim's home, and a transcluded run's key the gesture to its
 // source carrying the run (foundations §2.3).
+// The margin's marks (B3-S2; P-REG's `MARGIN`; FP-31, FP-37): beside the
+// words a draft holds that the board has not kept, as W-MACHINE reads which
+// it marks and of what kind (`marksOf`), in each mounted document at reading
+// scale (`placeMargin`) — each mark's bytes found by their identity in the
+// text the article was made from (FP-38), the lines holding them in each
+// column one bar, held or refused, a line a refused mark stands on bearing no
+// held one, and a removal that left no bytes its kind's zero-length form on
+// the line holding its point (`marginOf`) — on the corner layer in the room
+// between the column's text and its edge's signs, so no sign moves; a bar's
+// top clipped below the one line, a label held over its document and what
+// its head covers there. The word "held" stands once per view, at the top of
+// the first held mark in view, as a sign of its column's edge (`placeSigns`),
+// every other mark bare. Drawn and never announced, taking no press; a
+// stroke or a mark leaving a line starts past them (`signRects`).
 // The press rule's text half (foundations §2.4): an article takes the
 // pointer at reading scale alone — its em at the readable threshold and
 // above, the `legible` class the style gives its columns' pointer
@@ -499,13 +514,14 @@
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
 import * as WRITE from '../write/write.js';
+import * as MACHINE from '../write/machine.js';
 import * as LK from '../links/links.js';
 import * as FOCUS from '../nav/focus.js';
 import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor, reanchored, measure, fit, landingPx, panBy, panInto, flying } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, inFirstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, endsColumn, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W } from '../plane/layout.js';
-import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, cornerWidth } from '../plane/register.js';
+import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, MARGIN, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX } from '../plane/labels.js';
 import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, kindWord, keptHTML, statementHTML, keptWord, keptStatement, blockMarks, symbolLit, editionClause, copyText, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
 import { farShort, whyOf } from '../beams/held.js';
@@ -643,10 +659,10 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
 /**
  * @typedef {Object} EdgeSign — a sign standing in a column's edge on the corner layer (`placeSigns`): its element, kept across frames
  * @property {HTMLElement} el
- * @property {'statement' | 'key' | 'count'} kind an origin's statement; a run's key, no gap holding it; a withheld run's others' count
+ * @property {'statement' | 'key' | 'count' | 'held'} kind an origin's statement; a run's key, no gap holding it; a withheld run's others' count; the word at the first held mark in view
  * @property {string} addr the document whose article it stands beside
- * @property {number} pos the run it stands for, by its first position
- * @property {string} origin the run's origin
+ * @property {number} pos the run it stands for, by its first position; the held mark's first position
+ * @property {string} origin the run's origin; '' for the held mark's word
  * @property {string} html its words, as last written
  * @property {string} style its size, its width and its place across, as last written
  * @property {number} column the column whose edge it stands in
@@ -656,6 +672,26 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @property {number} h its height as laid out (px)
  * @property {boolean} stale its words or its size changed since it was measured
  * @property {boolean} live the frame placing the signs stands it
+ */
+
+/**
+ * @typedef {Object} MarginSegment — a mark the margin stands beside an article's lines (`marginOf`)
+ * @property {'held' | 'refused'} kind
+ * @property {number} column the column whose edge it stands in, an index into the fold's columns
+ * @property {number} first its first line, an index into the fold's lines
+ * @property {number} end one past its last line
+ * @property {boolean} point it stands at removal points alone: its kind's zero-length form, on the line holding them
+ * @property {number} pos the first position of the text it stands beside, or its point's
+ */
+
+/**
+ * @typedef {Object} MarginMark — a mark of the margin standing on the corner layer (`placeMargin`): its element, kept across frames
+ * @property {HTMLElement} el
+ * @property {string} addr the document whose article it stands beside
+ * @property {MarginSegment} seg
+ * @property {string} style its place and its size, as last written
+ * @property {Rect | null} rect where it stands on screen as last placed; null where the frame hides it
+ * @property {boolean} live the frame placing the marks stands it
  */
 
 /**
@@ -788,8 +824,12 @@ const mounted = new Map();
 const panes = new WeakMap();
 /** @type {Map<string, Corner>} the corners on the plane, by document */
 const corners = new Map();
-/** @type {Map<string, EdgeSign>} the signs standing in the columns' edges (`placeSigns`), by key: a statement's `⟨document⟩ ⟨origin⟩`, a run's sign's `⟨document⟩ ⟨position⟩ ⟨kind⟩` */
+/** @type {Map<string, EdgeSign>} the signs standing in the columns' edges (`placeSigns`), by key: a statement's `⟨document⟩ ⟨origin⟩`, a run's sign's `⟨document⟩ ⟨position⟩ ⟨kind⟩`, the held mark's word `⟨document⟩ held` */
 const signed = new Map();
+/** @type {Map<string, MarginMark>} the margin's marks standing (`placeMargin`), by `⟨document⟩ ⟨kind⟩ ⟨column⟩ ⟨first line⟩ ⟨form⟩` */
+const margins = new Map();
+/** @type {{rec: Mounted, column: number, y: number, pos: number} | null} the first held mark in view as the frame placed it (`placeMargin`): where the word "held" stands once per view (`placeSigns`); null where none stands */
+let heldFirst = null;
 /** @type {Map<string, Map<string, string>>} the run each origin's statement stands beside, by document and then by origin: the run's identity (`RunAt.id`), kept while a line of that run is in view (`placeSigns`; T-ARTICLE's `edgeSignsFor`) */
 const anchors = new Map();
 /** @type {Set<string>} the documents whose corner a reader's act opened whole (`openCorner`), until it is closed or leaves */
@@ -3782,7 +3822,9 @@ function placeCorners(focused) {
   // the heads' forms opened beneath them, read together, then each head placed: the edges' signs stand below what a head covers
   const formed = heads.map(({ c }) => { const o = /** @type {HTMLElement | null} */ (c.el.querySelector(':scope > .opened')); return o ? o.offsetHeight : 0; });
   heads.forEach(({ c, rec, head }, k) => placeHead(c, rec, head, formed[k]));
-  // the edges' signs, which a corner beside the column after them stands below
+  // the margin's marks below what a head covers, then the edges' signs — the word at the first held mark among them — which a
+  // corner beside the column after them stands below
+  placeMargin();
   placeSigns();
   if (shown.length) {
     for (const { c } of shown) if (c.stale) { const k = /** @type {HTMLElement | null} */ (c.el.querySelector('.kept')); c.w = c.el.offsetWidth; c.h = c.el.offsetHeight - (k ? k.offsetHeight : 0); c.stale = false; }
@@ -3814,8 +3856,8 @@ function placeCorners(focused) {
 
 /** the room between two signs stacked in one column's edge, px */
 const SIGN_GAP = 2;
-/** the order signs standing for one run stack in: its origin's statement, its key, its others' count */
-const SIGN_ORDER = Object.freeze({ statement: 0, key: 1, count: 2 });
+/** the order signs stack in at one line: the runs' signs by their runs' order, each run's its origin's statement, its key, its others' count; the held mark's word after them all */
+const SIGN_ORDER = Object.freeze({ statement: 0, key: 1, count: 2, held: 3 });
 
 /**
  * The edges' signs placed for the frame (see the head; FP-31): in each
@@ -3828,7 +3870,9 @@ const SIGN_ORDER = Object.freeze({ statement: 0, key: 1, count: 2 });
  * C-33's words read as the frame stands (`carriesC33`, over `originKind`); a
  * key no gap holds; a withheld run's others' count (LK's
  * `countAt`) — each in the edge of the column holding its run's first line in
- * view, at a share of the text's size never below P-REG's LABEL_MIN_PX, the
+ * view — and the word "held" once per view, at the top of the first held mark
+ * in view (`heldFirst`; B3-S2) — at a share of the text's size never below
+ * P-REG's LABEL_MIN_PX, the
  * edge's width wide; the signs of one column's edge stacked by the one hold
  * (P-LABEL's `holdStack`) — at their lines, below the hold, below a label
  * held over the document or what its head covers in that column, off the
@@ -3839,7 +3883,7 @@ const SIGN_ORDER = Object.freeze({ statement: 0, key: 1, count: 2 });
 function placeSigns() {
   if (!cornerLayer) return;
   const seen = visibleView(read.top()), hold = seen.y + HOLD.gap, scale = cam.scale;
-  /** @type {Array<{key: string, kind: EdgeSign['kind'], rec: Mounted, run: RunAt, column: number, line: number, html: string}>} the signs the frame stands */
+  /** @type {Array<{key: string, kind: EdgeSign['kind'], rec: Mounted, column: number, line: number, html: string, pos: number, width: number, origin: string}>} the signs the frame stands, each with the run it stands for */
   const want = [];
   /** @type {Map<string, Map<string, string>>} the run each statement stands beside this frame, by document */
   const beside = new Map();
@@ -3869,8 +3913,12 @@ function placeSigns() {
       const html = sign.kind === 'statement'
         ? (x.r.b ? edgeStatementHTML(placeholderOf(x.r.b, REC.reader(), originOwner, clauseOf), claimsKeptIn(origin), false) : sourceStatementHTML(origin, carriesC33(rec.d, originKind(origin)), false))
         : sign.kind === 'key' ? edgeKeyHTML(run, false) : edgeCountHTML(sign.run.count);
-      if (html) want.push({ key: sign.kind === 'statement' ? `${addr} ${origin}` : `${addr} ${run.pos} ${sign.kind}`, kind: sign.kind, rec, run: x.r, column: x.column, line: x.y, html });
+      if (html) want.push({ key: sign.kind === 'statement' ? `${addr} ${origin}` : `${addr} ${run.pos} ${sign.kind}`, kind: sign.kind, rec, column: x.column, line: x.y, html, pos: run.pos, width: run.width, origin });
     }
+  }
+  if (heldFirst) {
+    const h = heldFirst;
+    want.push({ key: `${h.rec.d.addr} held`, kind: 'held', rec: h.rec, column: h.column, line: h.y, html: `<span class="held-word" data-string="B3.held">${esc(t('B3.held'))}</span>`, pos: h.pos, width: 0, origin: '' });
   }
   anchors.clear();
   for (const [k, v] of beside) anchors.set(k, v);
@@ -3882,8 +3930,8 @@ function placeSigns() {
     const s = signed.get(w.key) || makeSign(/** @type {HTMLElement} */ (cornerLayer), w.key, w.kind), style = `${px}|${lh}|${width}`;
     if (s.html !== w.html) { s.el.innerHTML = w.html; s.html = w.html; s.stale = true; }
     if (s.style !== style) { Object.assign(s.el.style, { fontSize: px + 'px', lineHeight: lh + 'px', width: width + 'px' }); s.style = style; s.stale = true; }
-    Object.assign(s.el.dataset, { addr: w.rec.d.addr, pos: String(w.run.run.pos), width: String(w.run.run.width), origin: w.run.run.origin });
-    Object.assign(s, { addr: w.rec.d.addr, pos: w.run.run.pos, origin: w.run.run.origin, column: w.column, x: Math.round(sx(box.x + c.x + c.w) + EDGE_GAP * em), w: width, live: true });
+    Object.assign(s.el.dataset, { addr: w.rec.d.addr, pos: String(w.pos), width: String(w.width), origin: w.origin });
+    Object.assign(s, { addr: w.rec.d.addr, pos: w.pos, origin: w.origin, column: w.column, x: Math.round(sx(box.x + c.x + c.w) + EDGE_GAP * em), w: width, live: true });
     const k = `${w.rec.d.addr} ${w.column}`;
     (edges.get(k) || edges.set(k, []).get(k) || []).push({ s, w });
   }
@@ -3892,7 +3940,7 @@ function placeSigns() {
   for (const s of signed.values()) if (s.stale) { s.h = s.el.offsetHeight; s.stale = false; }
   for (const group of edges.values()) {
     const rec = group[0].w.rec, f = rec.fold, box = docBox(rec.d.addr), ci = group[0].s.column, c = f.columns[ci], q = padded(f, c);
-    group.sort((a, b) => a.w.line - b.w.line || a.w.run.run.pos - b.w.run.run.pos || SIGN_ORDER[a.s.kind] - SIGN_ORDER[b.s.kind]);
+    group.sort((a, b) => a.w.line - b.w.line || Number(a.s.kind === 'held') - Number(b.s.kind === 'held') || a.w.pos - b.w.pos || SIGN_ORDER[a.s.kind] - SIGN_ORDER[b.s.kind]);
     const band = heldBand(rec, seen, hold), head = corners.get(rec.d.addr);
     const top = Math.max(hold, band ? band.y + band.lh : -Infinity, head && head.head && head.column === ci ? head.bottom : -Infinity);
     const ys = holdStack(group.map((x) => ({ y: x.w.line, h: x.s.h })), sy(box.y + c.y), top, sy(box.y + q.y + q.h), SIGN_GAP, signsIn(rec, ci));
@@ -3935,6 +3983,189 @@ export function signsStanding() {
   return [...signed.values()].map((s) => {
     const r = s.el.getBoundingClientRect();
     return { kind: s.kind, addr: s.addr, pos: s.pos, origin: s.origin, column: s.column, text: s.el.textContent || '', placed: { x: s.x, y: s.y, w: s.w, h: s.h }, rect: { x: r.left, y: r.top, w: r.width, h: r.height } };
+  });
+}
+
+// ---- the margin's marks -----------------------------------------------------------
+
+/**
+ * The lines of a fold holding a stretch of its text (`foldBoxes`,
+ * `marginOf`): each line naming a position — its positions from its first own
+ * character to the next line's of its block, else to its block's end — that
+ * the stretch meets, by its index and its column, with the stretch's first
+ * position on it.
+ * @param {Fold} f
+ * @param {Block[]} blocks the blocks its text was made from
+ * @param {number} pos the stretch's first position
+ * @param {number} width its positions
+ * @returns {Array<{line: number, column: number, from: number}>}
+ */
+function linesHolding(f, blocks, pos, width) {
+  const end = pos + Math.max(1, width);
+  /** @type {Array<{line: number, column: number, from: number}>} */
+  const out = [];
+  f.columns.forEach((c, ci) => {
+    for (let i = c.first; i < c.first + c.n; i++) {
+      const l = f.lines[i];
+      if (l.at == null) continue;
+      let next = Infinity;
+      for (let k = i + 1; k < f.lines.length && f.lines[k].pos === l.pos; k++) { const a = f.lines[k].at; if (a != null && a > l.at) { next = a; break; } }
+      const b = next === Infinity ? blocks.find((x) => x.pos === l.pos) : null;
+      const to = next === Infinity ? (b ? b.pos + b.width : l.at + 1) : next;
+      if (l.at < end && pos < to) out.push({ line: i, column: ci, from: Math.max(pos, l.at) });
+    }
+  });
+  return out;
+}
+
+/**
+ * Where a removal point stands in a text, by its image (`marginOf`): just
+ * after the byte before it, else just before the byte after it; the text's
+ * first position where it names neither, nothing standing either side of it;
+ * null where the image places neither byte it names.
+ * @param {ImageRun[]} image
+ * @param {{before: ISpan[], after: ISpan[]}} p
+ * @returns {number | null}
+ */
+function removalAt(image, p) {
+  const b = p.before.length ? REC.placedIn(image, p.before) : [];
+  if (b.length) { const l = b[b.length - 1]; return l.pos + l.width; }
+  const a = p.after.length ? REC.placedIn(image, p.after) : [];
+  if (a.length) return a[0].pos;
+  return p.before.length || p.after.length ? null : 1;
+}
+
+/**
+ * The marks the margin stands beside an article's lines (see the head; P-REG's
+ * `MARGIN`; B3-S2): each mark's bytes found in the text the article was made
+ * from by their identity (M-REC's `placedIn`), the lines of its fold holding
+ * them (`linesHolding`), each removal point on the line holding it
+ * (`removalAt`); a line any refused mark stands on bearing no held one; each
+ * kind's lines that follow one another in a column one bar, and the points on
+ * a line its kind's bar does not stand on that kind's zero-length form, one a
+ * line. A position the fold sets no line for marks nothing.
+ * @param {Fold} f
+ * @param {Made} made what the article was made from
+ * @param {import('../write/machine.js').Mark[]} marks
+ * @returns {MarginSegment[]} in the order of their first lines
+ */
+export function marginOf(f, made, marks) {
+  /** @type {Record<MarginSegment['kind'], Map<number, number>>} each kind's lines, each with the first position marked on it */
+  const lines = { held: new Map(), refused: new Map() }, points = { held: new Map(), refused: new Map() };
+  const take = (/** @type {Map<number, number>} */ m, /** @type {number} */ i, /** @type {number} */ pos) => { m.set(i, Math.min(m.get(i) ?? Infinity, pos)); };
+  const end = made.blocks.reduce((n, b) => Math.max(n, b.pos + b.width), 0);
+  for (const mk of marks) {
+    for (const s of mk.ids.length ? REC.placedIn(made.image, mk.ids) : []) for (const x of linesHolding(f, made.blocks, s.pos, s.width)) take(lines[mk.kind], x.line, x.from);
+    for (const p of mk.points) {
+      const at = end > 1 ? removalAt(made.image, p) : null, i = at == null ? null : placeIn(f, Math.max(1, Math.min(at, end - 1))).line;
+      if (at != null && i != null) take(points[mk.kind], i, at);
+    }
+  }
+  for (const i of [...lines.refused.keys(), ...points.refused.keys()]) { lines.held.delete(i); points.held.delete(i); }
+  /** @type {MarginSegment[]} */
+  const out = [];
+  for (const kind of /** @type {const} */ (['held', 'refused'])) {
+    const ls = [...lines[kind].keys()].sort((a, b) => a - b);
+    for (let k = 0; k < ls.length;) {
+      const column = columnOfLine(f, ls[k]);
+      let j = k + 1;
+      while (j < ls.length && ls[j] === ls[j - 1] + 1 && columnOfLine(f, ls[j]) === column) j++;
+      out.push({ kind, column, first: ls[k], end: ls[j - 1] + 1, point: false, pos: Math.min(...ls.slice(k, j).map((i) => /** @type {number} */ (lines[kind].get(i)))) });
+      k = j;
+    }
+    for (const [i, pos] of points[kind]) if (!lines[kind].has(i)) out.push({ kind, column: columnOfLine(f, i), first: i, end: i + 1, point: true, pos });
+  }
+  return out.filter((s) => s.column >= 0).sort((a, b) => a.first - b.first);
+}
+
+/**
+ * The margin's marks placed for the frame (see the head; P-REG's `MARGIN`;
+ * B3-S2): in each mounted document at reading scale, the marks W-MACHINE reads
+ * of the words it holds the board has not kept (`marksOf`), set beside its
+ * fold's lines (`marginOf`) — each in the room between its column's text and
+ * its edge's signs, scaled to the gap a corner beside the next column keeps
+ * where that is the narrower, a bar's top clipped below the one line, a label
+ * held over its document and what its head covers in that column, a
+ * zero-length form standing only below them — and the first held mark in
+ * view kept for the word "held" (`heldFirst`), the documents taken by their
+ * boxes' order on screen and each one's marks by its lines'. An element is
+ * written only where its place or its size changed, placed by translate
+ * alone; the rest are removed.
+ */
+function placeMargin() {
+  heldFirst = null;
+  if (!cornerLayer) return;
+  const into = cornerLayer, seen = visibleView(read.top()), scale = cam.scale;
+  const recs = [...mounted.values()].filter((rec) => rec.banded && readsAt(rec.fs))
+    .sort((a, b) => { const p = docBox(a.d.addr), q = docBox(b.d.addr); return p.y - q.y || p.x - q.x; });
+  for (const rec of recs) {
+    const marks = MACHINE.marksOf(rec.d.addr);
+    if (!marks.length) continue;
+    const f = rec.fold, addr = rec.d.addr, box = docBox(addr), em = f.fs * scale, k = Math.min(1, CORNER.gap / (EDGE_GAP * em));
+    const inset = MARGIN.inset * em * k, w = Math.max(2, MARGIN.width * em * k), side = Math.max(2, MARGIN.point * em * k), stroke = Math.max(1, MARGIN.stroke * em * k);
+    const band = heldBand(rec, seen, seen.y + HOLD.gap), head = corners.get(addr);
+    for (const seg of marginOf(f, rec.made, marks)) {
+      const c = f.columns[seg.column], x = Math.round(sx(box.x + c.x + c.w) + inset);
+      const top = (/** @type {number} */ i) => sy(box.y + c.y + (f.lines[i].top - c.top) * f.fs);
+      const y0 = top(seg.first), y1 = top(seg.end - 1) + f.lines[seg.end - 1].h * f.fs * scale;
+      const clip = Math.max(seen.y, band ? band.y + band.lh : -Infinity, head && head.head && head.column === seg.column ? head.bottom : -Infinity);
+      const from = Math.max(y0, clip);
+      /** @type {Rect} */
+      const r = seg.point ? { x, y: Math.round((y0 + y1 - side) / 2), w: Math.round(side), h: Math.round(side) } : { x, y: Math.round(from), w: Math.round(w), h: Math.round(y1 - from) };
+      const hidden = r.h < 1 || r.y < clip - 0.5 || r.y >= seen.y + seen.h;
+      const key = `${addr} ${seg.kind} ${seg.column} ${seg.first} ${seg.point ? 'point' : 'bar'}`;
+      const m = margins.get(key) || makeMark(into, key, addr, seg);
+      Object.assign(m, { seg, live: true, rect: hidden ? null : r });
+      const style = hidden ? 'hidden' : `${r.x}|${r.y}|${r.w}|${r.h}|${stroke}`;
+      if (m.style !== style) {
+        if (hidden) m.el.style.display = 'none';
+        else Object.assign(m.el.style, { display: '', transform: `translate(${r.x}px, ${r.y}px)`, width: r.w + 'px', height: r.h + 'px', borderWidth: seg.kind === 'refused' ? `${stroke}px ${stroke}px ${stroke}px 0` : '' });
+        m.style = style;
+      }
+      if (!hidden && seg.kind === 'held' && !heldFirst) heldFirst = { rec, column: seg.column, y: r.y, pos: seg.pos };
+    }
+  }
+  for (const [key, m] of [...margins]) { if (!m.live) { m.el.remove(); margins.delete(key); } else m.live = false; }
+}
+
+/**
+ * A mark's element in the corner layer (`placeMargin`): its kind and its form
+ * the style reads, drawn and never announced, taking no press.
+ * @param {HTMLElement} into the corner layer
+ * @param {string} key
+ * @param {string} addr
+ * @param {MarginSegment} seg
+ * @returns {MarginMark}
+ */
+function makeMark(into, key, addr, seg) {
+  const el = document.createElement('div');
+  el.className = 'margin-mark';
+  el.dataset.kind = seg.kind;
+  el.dataset.form = seg.point ? 'point' : 'bar';
+  el.setAttribute('aria-hidden', 'true');
+  into.appendChild(el);
+  /** @type {MarginMark} */
+  const m = { el, addr, seg, style: '', rect: null, live: false };
+  margins.set(key, m);
+  return m;
+}
+
+/** the margin's marks standing beside a block of a mounted article, on screen as the last frame placed them (`signRects`) */
+const marginBeside = (/** @type {Mounted} */ rec, /** @type {number} */ pos) => [...margins.values()]
+  .flatMap((m) => (m.addr === rec.d.addr && m.rect && rec.fold.lines.slice(m.seg.first, m.seg.end).some((l) => l.pos === pos) ? [{ ...m.rect }] : []));
+
+/**
+ * The margin's marks standing as the last frame placed them (the gate's): each
+ * its kind, its document, its column, its lines, its form — a bar, or the
+ * zero-length form at a point — the first position it stands beside, where
+ * the frame placed it, and its rect on screen as the platform lays it out.
+ * @returns {Array<{kind: MarginSegment['kind'], addr: string, column: number, first: number, end: number, point: boolean, pos: number, placed: Rect, rect: Rect}>}
+ */
+export function marksStanding() {
+  return [...margins.values()].flatMap((m) => {
+    if (!m.rect) return [];
+    const r = m.el.getBoundingClientRect();
+    return [{ kind: m.seg.kind, addr: m.addr, column: m.seg.column, first: m.seg.first, end: m.seg.end, point: m.seg.point, pos: m.seg.pos, placed: { ...m.rect }, rect: { x: r.left, y: r.top, w: r.width, h: r.height } }];
   });
 }
 
@@ -4380,10 +4611,12 @@ export function spanRects(addr, pos, width = null) {
 /**
  * The client rects of the signs its column's edge holds beside a block of a
  * mounted article (FP-26) — a typed line's others' count where the part
- * holding the block's first line stands, and the signs standing for a
- * withheld run on the corner layer, its origin's statement among them, as the
- * last frame placed them (`placeSigns`): what a beam or a tail leaving the
- * block's line starts past (BM's `leaveAt`); none where none stands.
+ * holding the block's first line stands, the signs standing for a withheld
+ * run on the corner layer, its origin's statement among them, and the
+ * margin's marks beside the block's lines, as the last frame placed them
+ * (`placeSigns`, `placeMargin`): what a beam, a tail or a removal's mark
+ * leaving the block's line starts past (BM's `leaveAt`); none where none
+ * stands.
  * @param {string} addr
  * @param {number} pos the block's first position
  * @returns {Array<{x: number, y: number, w: number, h: number}>}
@@ -4391,7 +4624,7 @@ export function spanRects(addr, pos, width = null) {
 export function signRects(addr, pos) {
   const rec = mounted.get(addr); if (!rec) return [];
   const own = [...rec.el.querySelectorAll(`[data-pos="${pos}"] > .edge`)].map((e) => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
-  return [...own, ...[...signed.values()].filter((s) => s.addr === addr && s.pos === pos).map((s) => ({ x: s.x, y: s.y, w: s.w, h: s.h }))];
+  return [...own, ...[...signed.values()].filter((s) => s.addr === addr && s.pos === pos).map((s) => ({ x: s.x, y: s.y, w: s.w, h: s.h })), ...marginBeside(rec, pos)];
 }
 
 /**
@@ -4960,22 +5193,11 @@ export function holdsText(addr, x, y) {
 export function foldBoxes(addr, pos, width) {
   const rec = mounted.get(addr), d = REC.doc(addr);
   if (!rec && d.from < 0) return [];
-  const f = rec ? rec.fold : foldOf(d), blocks = rec ? rec.made.blocks : shownDoc(d).blocks, box = docBox(addr), end = pos + Math.max(1, width);
-  /** @type {Array<{line: number, column: number, rect: Rect}>} */
-  const out = [];
-  f.columns.forEach((c, ci) => {
-    for (let i = c.first; i < c.first + c.n; i++) {
-      const l = f.lines[i];
-      if (l.at == null) continue;
-      // the positions a line holds: from its first own character to the next line's of its block, else to its block's end
-      let next = Infinity;
-      for (let k = i + 1; k < f.lines.length && f.lines[k].pos === l.pos; k++) { const a = f.lines[k].at; if (a != null && a > l.at) { next = a; break; } }
-      const b = next === Infinity ? blocks.find((x) => x.pos === l.pos) : null;
-      const to = next === Infinity ? (b ? b.pos + b.width : l.at + 1) : next;
-      if (l.at < end && pos < to) out.push({ line: i, column: ci, rect: { x: sx(box.x + c.x), y: sy(box.y + c.y + (l.top - c.top) * f.fs), w: c.w * cam.scale, h: l.h * f.fs * cam.scale } });
-    }
+  const f = rec ? rec.fold : foldOf(d), blocks = rec ? rec.made.blocks : shownDoc(d).blocks, box = docBox(addr);
+  return linesHolding(f, blocks, pos, width).map(({ line: i, column: ci }) => {
+    const c = f.columns[ci], l = f.lines[i];
+    return { line: i, column: ci, rect: { x: sx(box.x + c.x), y: sy(box.y + c.y + (l.top - c.top) * f.fs), w: c.w * cam.scale, h: l.h * f.fs * cam.scale } };
   });
-  return out;
 }
 
 /**
@@ -5463,7 +5685,7 @@ export function openStatement(addr, on = !openStatements.has(addr), how = 'word'
 /** does a draft's kept word's statement stand open in its corner (`openStatement`)? */
 export const statementOpen = (/** @type {string} */ addr) => openStatements.has(addr);
 
-/** unmount everything and take the corners, the held labels, the edges' signs, the caret and the open statements down (a board change), the line's bottom it framed below and the runs the statements stood beside forgotten; a corner that held the focus hands it to the walk */
+/** unmount everything and take the corners, the held labels, the edges' signs, the margin's marks, the caret and the open statements down (a board change), the line's bottom it framed below and the runs the statements stood beside forgotten; a corner that held the focus hands it to the walk */
 export function clear() {
   for (const a of [...mounted.keys()]) unmount(a);
   hold = null; framedTop = NaN;
@@ -5479,6 +5701,9 @@ export function clear() {
   helds.clear();
   for (const x of signed.values()) x.el.remove();
   signed.clear();
+  for (const m of margins.values()) m.el.remove();
+  margins.clear();
+  heldFirst = null;
   anchors.clear();
   openWhole.clear();
   openLabels.clear();

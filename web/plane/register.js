@@ -25,7 +25,9 @@
 // position strip and a box's history strip hold what the reader holds in
 // (FP-22, FP-26); the history strip its members' ticks — their size, their
 // pitch, their inset below the outline's top — and the window's reach above
-// and below them, the head's triangle standing in it. The type takes
+// and below them, the head's triangle standing in it; the margin's marks
+// beside words the board has not kept their shapes, their hues and their sizes
+// in the room before a column's edge (`MARGIN`). The type takes
 // three faces, each one job (`FACE`): a document's own words wherever the
 // page shows them, the client's words, and an address or a fingerprint; the
 // two shipped faces' styles are the ones APP waits on before the first
@@ -90,7 +92,30 @@ export const KIND_FORM = Object.freeze({ link: [], 'draft-to-edition': [2, 4], s
 export const EDGE = Object.freeze({ edition: 1.4, draft: 0.8, withheld: 0.8, landmark: 1.8 });
 
 /** the stacking order, ground up */
-export const STACK = Object.freeze(['sameness', 'own', 'grade', 'refused', 'arrival', 'selection']);
+export const STACK = Object.freeze(['sameness', 'own', 'grade', 'arrival', 'selection']);
+
+/**
+ * The margin's marks (foundations §2.1's register; B3-S2, B3-S4; the layout
+ * page's round-2 close, Q6): beside words a draft holds that the board has
+ * not kept, in the room between its column's text and the signs its edge
+ * holds (P-LAY's EDGE_GAP), each mark a shape no other takes and none the
+ * caret's upright hairline — the held mark a solid `bar` along its run's
+ * lines, its zero-length form a filled square; the refused mark a `bracket`
+ * along them, open toward the text, its zero-length form the bracket a
+ * square tall; the removal's a struck `dash` — each in its own hue, the
+ * refused in the hue its face is drawn in. In the body's em: `inset` past the
+ * text, `width` across, the bracket's `stroke`, a zero-length form's `point`
+ * square. The split's mark stands at its link's own mark, never in the
+ * margin. The style reads the hues (`cssVariables`); T-LAYER places the held
+ * and refused marks by the sizes (register.test.js holds them inside the
+ * room).
+ */
+export const MARGIN = Object.freeze({
+  held: Object.freeze({ shape: 'bar', hue: '#cfd6df' }),
+  refused: Object.freeze({ shape: 'bracket', hue: '#ffb454' }),
+  removal: Object.freeze({ shape: 'dash', hue: '#ff6b6b' }),
+  inset: 0.1, width: 0.25, stroke: 0.08, point: 0.3,
+});
 
 /**
  * The edge stub (foundations §2.5; S1 Q3): a stroke cut at the visible
@@ -217,6 +242,7 @@ export function cssVariables() {
     '--col-bg': COL.bg, '--col-doc': COL.doc, '--col-text': COL.text, '--col-title': COL.title, '--col-dim': COL.greek, '--col-land': COL.land, '--col-focus': COL.focus,
     '--corner-px': CORNER.px + 'px', '--corner-w': CORNER.whole + 'em', '--corner-compact-w': CORNER.compact + 'em', '--corner-pad': CORNER.pad + 'px',
     '--window-fill': WINDOW.fill, '--window-ink': WINDOW.ink, '--window-edge': WINDOW.edge + 'px',
+    '--margin-held': MARGIN.held.hue, '--margin-refused': MARGIN.refused.hue, '--margin-removal': MARGIN.removal.hue,
     '--face-reading': FACE.reading, '--face-client': FACE.client, '--face-ident': FACE.ident,
   };
 }
