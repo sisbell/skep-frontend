@@ -98,7 +98,8 @@ export const LINE_BOX = 1.2;
 export const STRONGER = 0.5;
 /** the whole words a first line's cut keeps at the least, else the first line is left out — the whole of a shorter one set where it fits (see the head) */
 export const LEAD_WORDS = 2;
-const ELLIPSIS = '…';
+/** the mark a cut leaves after the words it keeps (`cutWords`) */
+export const ELLIPSIS = '…';
 
 /** the marks opening a stretch of a part's words set in a face of its own, and the one closing it (see the head): private-use characters, which no label's words hold */
 const OPEN = Object.freeze({ reading: '\uE002', ident: '\uE001' });

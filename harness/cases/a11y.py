@@ -80,12 +80,18 @@ and the count of its chain (issue #239's design decision); an item that
 holds no text announced by its kind
 (issue #161's design decision) — the claimant's key record named "a record",
 the words a copy's stand-in names it by, then the words and keys the plane
-shows of it, never its raw value. Never a screen reader's voice — the
-seat's."""
+shows of it, never its raw value; and every accessible name, description
+and status message rendered for the ear by S22's table (issue #626) — the
+mirror's items named by their `aria-label`, its hidden descriptions and the
+overlay dialog's name its words as heard, and the one line's acts, its
+address segment, the overlay's dismiss, the selection card's slots and the
+scene bar's acts named in the AX tree with none of the table's glyphs, each
+chord's key exposed, the line's separators hidden. Never a screen reader's
+voice — the seat's."""
 import json
 import re
 
-from . import DOC, FAR_LEAP, HOME, NO_MATCH, VERSIONED, WINDOW, Result, item_words
+from . import DOC, FAR_LEAP, HOME, NO_MATCH, RUNS_IN, VERSIONED, WINDOW, Result, heard, item_words
 
 # how far apart the first lines of a landing's two runs stand, in body line boxes — the article's line height 1.45 of
 # its size, the case's own — so the label beside the second never stacks with the line beside the first (O-LAND's
@@ -117,7 +123,7 @@ def run(ctx):
     blank = [b for b in doc['blocks'] if b['kind'] == 'para' and (b['text'] or '').strip() == '']
     loose = [s for s in shown if not s.get('run')]
     r.check(size == len(elements) + len(loose), 'the mirror\'s set is the document\'s elements (no blank block) and its drawn links, a withheld run\'s apart (rule 20; issue #202)', {'size': size, 'elements': len(elements), 'blank_blocks': len(blank), 'links': len(loose), 'at_runs': len(shown) - len(loose)})
-    items = ctx.js('''[...document.querySelectorAll('#mirror [role=treeitem]')].map(li => ({id: li.id, level: li.getAttribute('aria-level'), pos: li.getAttribute('aria-posinset'), size: li.getAttribute('aria-setsize'), sel: li.getAttribute('aria-selected'), tab: li.getAttribute('tabindex'), text: li.textContent}))''')
+    items = ctx.js('''[...document.querySelectorAll('#mirror [role=treeitem]')].map(li => ({id: li.id, level: li.getAttribute('aria-level'), pos: li.getAttribute('aria-posinset'), size: li.getAttribute('aria-setsize'), sel: li.getAttribute('aria-selected'), tab: li.getAttribute('tabindex'), text: li.textContent, name: li.getAttribute('aria-label')}))''')
     r.check(len(items) >= 1, 'the mirror renders treeitems', len(items))
     r.check(all(int(i['size']) == size for i in items), 'every item\'s aria-setsize is the set\'s size', {i['pos']: i['size'] for i in items if int(i['size']) != size})
     r.check(all(i['level'] == '4' for i in items), 'the items at span grain are level 4 (board › account › document › span)', sorted({i['level'] for i in items}))
@@ -127,20 +133,20 @@ def run(ctx):
     bad = []
     for i in items:
         want = ctx.js('window.__skep.mirror.item(%d)' % (int(i['pos']) - 1))
-        if i['text'] != want:
-            bad.append({'pos': i['pos'], 'dom': i['text'][:80], 'model': (want or '')[:80]})
-    r.check(not bad, 'each DOM item\'s name equals the model\'s item name (one accessible rendering)', bad)
+        if i['name'] != want:
+            bad.append({'pos': i['pos'], 'dom': (i['name'] or '')[:80], 'model': (want or '')[:80]})
+    r.check(not bad, 'each DOM item\'s name — its aria-label — equals the model\'s item name (one accessible rendering)', bad)
     roles = ctx.js('({mirror: document.getElementById("mirror").getAttribute("role"), label: document.getElementById("mirror").getAttribute("aria-label"), live: document.getElementById("live").getAttribute("aria-live"), live_role: document.getElementById("live").getAttribute("role"), overlay_live: document.getElementById("overlay").getAttribute("aria-live"), hidden_layer: document.getElementById("domlayer").getAttribute("aria-hidden"), plane: document.getElementById("plane").getAttribute("aria-hidden"), beams: document.getElementById("beams").getAttribute("aria-hidden")})')
     r.check(roles['mirror'] == 'tree' and roles['live'] == 'polite' and roles['hidden_layer'] == 'true', 'the mirror is a tree, the live region polite, the visual text layer hidden from AT', roles)
     # D4: ONE standing status region (#live as role=status) the controller alone writes; the overlay carries no live region of its own (the a11y seat's subtraction, #13's condition met); every canvas is hidden from AT
     r.check(roles['live_role'] == 'status' and roles['overlay_live'] is None and roles['plane'] == 'true' and roles['beams'] == 'true',
             'D4: #live is the one status region (role=status); the overlay has no aria-live of its own; the canvases are hidden from AT', roles)
     # the regions' names: the markup carries none; each owner sets its region's from strings.js as it attaches
-    named = ctx.js('''(async () => { const {t} = await import("./strings.js");
+    named = ctx.js('''(async () => { const {t, heard} = await import("./strings.js");
       const want = [["#line", t("L.the-line")], ["#leapq", t("L.leap-label")], ["#leaphits", t("L.leap-rows-label")], ["#scene", t("L.scene-label")],
-                    ["#mirror", t("L.mirror-label")], ["#mirror ul[role=group]", t("L.mirror-level", {n: 4})]];
+                    ["#mirror", t("L.mirror-label")], ["#mirror ul[role=group]", t("L.mirror-level", {n: 4})]].map(([sel, words]) => [sel, heard(words)]);
       return want.map(([sel, name]) => { const e = document.querySelector(sel); return {sel, want: name, got: e ? e.getAttribute("aria-label") : null}; }); })()''')
-    r.check(bool(named) and all(n['got'] == n['want'] for n in named), 'every region is named by its entry in strings.js — the one line, the LEAP box\'s input and rows, the scene, the mirror and its group at span grain (level 4)', [n for n in named if n['got'] != n['want']])
+    r.check(bool(named) and all(n['got'] == n['want'] for n in named), 'every region is named by its entry in strings.js, rendered for the ear — the one line, the LEAP box\'s input and rows, the scene, the mirror and its group at span grain (level 4) (style S22)', [n for n in named if n['got'] != n['want']])
     r.figures['names'] = {n['sel']: n['got'] for n in named}
     # a keyboard act announces the focus. The status region is watched across the key alone: what an earlier act said there —
     # the LEAP's reading face, heard as a face is (issue #136) — stands in it, and is no word of the key's
@@ -153,7 +159,7 @@ def run(ctx):
     idx2 = ctx.js('window.__skep.mirror.index()')
     live = ctx.js('document.getElementById("live").textContent')
     want = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())')
-    item_name = ctx.js('(() => { const e = document.activeElement; return e && e.id === "walk-" + window.__skep.mirror.index() ? e.textContent : null; })()')
+    item_name = ctx.js('(() => { const e = document.activeElement; return e && e.id === "walk-" + window.__skep.mirror.index() ? e.getAttribute("aria-label") : null; })()')
     r.check(idx2 == min(size - 1, idx + 1), 'ArrowDown moves the focus to the next sibling', {'before': idx, 'after': idx2})
     # D4 / rule 12: a walk key moves the focus onto the item, whose name IS its announcement; no live region repeats it
     r.check(item_name == want and writes == 0, 'a walk key moves the focus onto the item, whose name is its announcement; the status region is not written (D4, rule 12)', {'item': (item_name or '')[:90], 'want': (want or '')[:90], 'writes': writes, 'live': (live or '')[:90]})
@@ -175,7 +181,7 @@ def run(ctx):
         treeitems = [n for n in nodes if (n.get('role') or {}).get('value') == 'treeitem']
         fold = lambda s: re.sub(r'\s+', ' ', s or '').strip()  # an accessible name folds whitespace
         ax_names = [fold((n.get('name') or {}).get('value', '')) for n in treeitems]
-        dom_names = [fold(i['text']) for i in items]
+        dom_names = [fold(i['name']) for i in items]
         trees = [n for n in nodes if (n.get('role') or {}).get('value') == 'tree']
         r.figures['ax_tree'] = {'answered': True, 'nodes': len(nodes), 'treeitems': len(treeitems), 'trees': len(trees), 'ignored_nodes': sum(1 for n in nodes if n.get('ignored'))}
         r.check(len(treeitems) == len(items), 'the AX tree holds one treeitem per rendered mirror item', {'ax': len(treeitems), 'dom': len(items)})
@@ -892,13 +898,66 @@ def run(ctx):
     ctx.frames(1)
     press('L', mods=('Meta', 'Shift'))
     ctx.frames(2)
-    links = ctx.js('''(() => { const o = document.getElementById('overlay'), e = document.activeElement;
-      const by = o.getAttribute('aria-labelledby'), named = by ? document.getElementById(by) : null;
+    links = ctx.js('''(async () => { const {heard} = await import("./strings.js"); %s
+      const o = document.getElementById('overlay'), e = document.activeElement, cap = o.querySelector('.label');
       return {id: window.__skep.overlay().id, first_run: o.contains(e) ? (e.dataset.run || (e.dataset.x ? 'x' : e.tagName.toLowerCase())) : null,
-              labelledby: by, name: named ? (named.textContent || '').trim() : null, label: o.getAttribute('aria-label')}; })()''')
+              labelledby: o.getAttribute('aria-labelledby'), caption: cap ? (cap.textContent || '').trim() : null, label: o.getAttribute('aria-label'), heard: cap ? heard(runsIn(cap)) : null}; })()''' % RUNS_IN)
     r.check((links['id'] or '').startswith('links:') and links['first_run'] and links['first_run'] != 'x', 'rule 13: Mod+Shift+L opens the links card with the focus on its first act, never the × (#99)', links)
-    r.check(bool(links['labelledby']) and bool(links['name']), 'D5: the overlay dialog is named by its own caption (aria-labelledby a non-empty element), #87, #112', links)
-    ctx.esc()  # the links card; the chord selected nothing behind it
+    r.check(bool(links['caption']) and bool(links['label']) and links['label'] == links['heard'] and links['labelledby'] is None,
+            'D5: the overlay dialog is named by its own caption\'s words, rendered for the ear — its aria-label S22\'s reading of them, never the drawn glyphs (#87, #112, #626)', links)
+    # ---- every name of the issue's surfaces reaches a reader through S22's table (issue #626; style S22; patterns K1, K3): the
+    # one line's acts and its address segment, the overlay's dismiss, the selection card's slots and the scene bar's acts —
+    # as the AX tree names each, none holds a glyph the table speaks or drops, save in the address segment's document words;
+    # each act a chord drives exposes its key (aria-keyshortcuts); and the one line's separators stand for nothing there
+    table_glyphs = '⌘⇧⌥⌃↩←→↑↓≥–≡·—│(…“”‘"‹›×◆▸⟡◦'
+
+    def named_as(sels):
+        """each element a selector names, as the AX tree names it — its name, whether the tree ignores it — with its
+        `aria-keyshortcuts`; None where CDP does not answer the tree"""
+        ax = ctx.drv.ax_tree()
+        if 'error' in ax:
+            return None
+        by_dom = {n['backendDOMNodeId']: n for n in ax.get('nodes', []) if 'backendDOMNodeId' in n}
+        out = {}
+        for sel in sels:
+            n = by_dom.get(backend(sel)) or {}
+            out[sel] = {'name': (n.get('name') or {}).get('value'), 'ignored': bool(n.get('ignored')),
+                        'keys': ctx.js('(() => { const e = document.querySelector(%s); return e ? e.getAttribute("aria-keyshortcuts") : null; })()' % json.dumps(sel))}
+        return out
+
+    first = ctx.js('window.__skep.firstLine(%s).first' % json.dumps(DOC)) or ''
+    dismissing = named_as(['#overlay button.x', '#line [data-act=back]', '#line [data-act=forward]', '#line .seg.address'])
+    seps = ctx.js('[...document.querySelectorAll("#line .sep")].map((e) => e.getAttribute("aria-hidden"))')
+    ctx.esc()  # the links card
+    ctx.js('window.__skep.select(%s, %d)' % (json.dumps(DOC), WINDOW[0]))
+    ctx.frames(2)
+    slots = ctx.js('[...document.querySelectorAll("#overlay .selection-card [data-run]")].map((b) => "#overlay .selection-card [data-run=" + b.dataset.run + "]")') or []
+    slotted = named_as(slots)
+    ctx.esc()
+    ctx.js('window.__skep.scene.open(%s, %s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2]), json.dumps({'posA': WINDOW[0], 'widthA': WINDOW[1]})))
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.scene.isOpen() || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
+    ctx.frames(2)
+    barred = named_as(['#scenebar [data-relevel]', '#scenebar [data-x]']) if ctx.js('window.__skep.scene.isOpen()') else {}
+    ctx.js('window.__skep.scene.close()')
+    ctx.settle()
+    ctx.frames(2)
+    if dismissing is None or slotted is None or barred is None:
+        r.note('the names of the issue\'s surfaces: Accessibility.getFullAXTree did not answer')
+    else:
+        everything = dict(dismissing, **slotted, **barred)
+        raw = {sel: n['name'] for sel, n in everything.items()
+               if n['ignored'] or not n['name'] or any(g in (n['name'].replace(first, '') if sel == '#line .seg.address' else n['name']) for g in table_glyphs)}
+        words = ctx.js('''(async () => { const {t, heard} = await import("./strings.js"); const K = await import("./nav/keys.js");
+          return {dismiss: heard(t("L.dismiss")), back: heard(t("F.back")), forward: heard(t("F.forward")), relevel: heard(t("F.scene.relevel")), dismissScene: heard(t("F.scene.dismiss")),
+                  esc: K.keyShortcut("Esc"), r: K.keyShortcut("Mod+R"), l: K.keyShortcut("Mod+L")}; })()''')
+        want = {'#overlay button.x': (words['dismiss'], words['esc']), '#line [data-act=back]': (words['back'], None), '#line [data-act=forward]': (words['forward'], None),
+                '#scenebar [data-relevel]': (words['relevel'], words['r']), '#scenebar [data-x]': (words['dismissScene'], words['esc'])}
+        off = {sel: [everything.get(sel), w] for sel, w in want.items() if not everything.get(sel) or (everything[sel]['name'], everything[sel]['keys']) != w}
+        r.check(len(slots) >= 8 and bool(barred) and not raw and not off and everything['#line .seg.address']['keys'] == words['l'] and bool(seps) and all(h == 'true' for h in seps),
+                'every name of the issue\'s surfaces — Back, Forward, the address segment, the overlay\'s dismiss, the selection card\'s slots, the scene bar\'s re-level and dismiss — holds no glyph S22\'s table speaks or drops (the address segment\'s document words apart), each act a chord drives exposes its key, and the one line\'s separators are hidden (issue #626)',
+                {'raw': raw, 'off': off, 'slots': len(slots), 'scene': bool(barred), 'separators': seps, 'address': everything.get('#line .seg.address')})
+        r.figures['heard_names'] = {sel: n['name'] for sel, n in everything.items()}
+    ctx.leap(DOC, WINDOW[0])
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
     ctx.frames(1)
     # ---- rule 18 / D2 / D5 §4 rule 5: the open LEAP box is the line's stop; Tab from its input visits each row's "open
@@ -966,19 +1025,20 @@ def run(ctx):
     def described():
         """the item the platform's focus stands on, the element its `aria-describedby` names and that element's words, every
         item described, and what the landing says — an origin's description, which every item of a run of it names (issue
-        #304), set apart"""
-        return ctx.js('''(() => { const e = document.activeElement, sib = window.__skep.mirror.siblings();
+        #304), set apart — with those words as the hidden elements say them, rendered for the ear (`heard`)"""
+        return ctx.js('''(async () => { const {heard} = await import("./strings.js"); const e = document.activeElement, sib = window.__skep.mirror.siblings();
           const own = (el) => (el && el.getAttribute ? el.getAttribute('aria-describedby') || '' : '').split(' ').filter((id) => id && !id.startsWith('walk-origin-'));
           const ids = own(e), by = ids.join(' ') || null, ds = ids.map((id) => document.getElementById(id));
           const items = [...document.querySelectorAll('#mirror li[role="treeitem"][aria-describedby]')].filter((li) => own(li).length).map((li) => ({...sib[Number(li.dataset.i)]}));
           return {focused: e && e.closest && e.closest('#mirror') ? {...sib[Number(e.dataset.i)]} : null, by, words: ds.map((x) => (x ? x.textContent : null)),
-                  hidden: ds.length > 0 && ds.every((x) => !!x && x.hidden), items: items.map((i) => [i.kind, i.pos]), said: window.__skep.go.described(), line: window.__skep.landingLine()}; })()''')
+                  hidden: ds.length > 0 && ds.every((x) => !!x && x.hidden), items: items.map((i) => [i.kind, i.pos]), said: window.__skep.go.described(), line: window.__skep.landingLine(),
+                  heard: ((s) => (s ? [heard(s.kind), heard(s.words)] : null))(window.__skep.go.described())}; })()''')
     d = described()
     f = d['focused']
     kind = ctx.js('window.__skep.kind(%s)' % json.dumps(WINDOW[2]))
     r.check(bool(f) and f['addr'] == WINDOW[2] and bool(d['said']) and d['by'] == 'walk-landing-kind walk-landing' and d['hidden'] and d['said']['kind'] == kind['words']
-            and d['words'] == [d['said']['kind'], d['said']['words']] and bool(d['line']) and d['line']['words'] == d['said']['words'] and len(d['items']) == 1,
-            'a landing the draft holds part of, carried there from the first edition: the focus on its item, described by the draft\'s kind, "%s", then the line\'s words — the one item described (issues #153, #423)' % kind['words'], d)
+            and d['words'] == d['heard'] and bool(d['line']) and d['line']['words'] == d['said']['words'] and len(d['items']) == 1,
+            'a landing the draft holds part of, carried there from the first edition: the focus on its item, described by the draft\'s kind, "%s", then the line\'s words, each rendered for the ear — the one item described (issues #153, #423, #626)' % kind['words'], d)
     # ---- a document's kind is a state said once, at its corner (issue #423's design decision: "every corner's first slot is
     # the kind"; "a label names a document and carries no kind"; "the slot's word leads the item"): the draft landed in shows
     # its kind as its corner's first item, in its slot; no label in view carries a kind; ← to its document's item, led by it
@@ -1004,7 +1064,7 @@ def run(ctx):
       const el = document.getElementById(id);
       return {run: items.filter((i) => holds(i.n)).map((i) => [i.n.pos, i.by.includes(id)]), others: items.filter((i) => !holds(i.n) && i.by.includes(id)).map((i) => i.n.pos),
               words: el ? el.textContent : null, hidden: !!el && el.hidden, count: document.querySelectorAll('#' + id).length}; })(%s, %d, %d, %s)''' % (json.dumps(DOC), WINDOW[0], WINDOW[0] + WINDOW[1], json.dumps('walk-origin-' + ''.join(c if c.isdigit() else '-' for c in WINDOW[2]))))
-    c33 = ctx.js('window.__skep.strings.pinned().find((s) => s.id === "C-33").text')
+    c33 = heard(ctx, ctx.js('window.__skep.strings.pinned().find((s) => s.id === "C-33").text'))
     r.check(bool(origin['run']) and all(named for _, named in origin['run']) and not origin['others'] and origin['words'] == c33 and origin['hidden'] and origin['count'] == 1,
             'the window run\'s origin has one hidden description in the mirror, C-33\'s words, which every item of the run names and no other item does (issue #304)', origin)
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
@@ -1030,20 +1090,21 @@ def run(ctx):
         def pieces():
             """the item the focus stands on, and each item described with the words of every description it names, an
             origin's description set apart"""
-            return ctx.js('''(() => { const e = document.activeElement, sib = window.__skep.mirror.siblings();
+            return ctx.js('''(async () => { const {heard} = await import("./strings.js"); const e = document.activeElement, sib = window.__skep.mirror.siblings();
               const own = (li) => li.getAttribute('aria-describedby').split(' ').filter((id) => id && !id.startsWith('walk-origin-'));
               const items = [...document.querySelectorAll('#mirror li[role="treeitem"][aria-describedby]')].filter((li) => own(li).length).map((li) => ({pos: sib[Number(li.dataset.i)].pos,
                 words: own(li).map((id) => (document.getElementById(id) || {}).textContent)}));
-              return {focused: e && e.closest && e.closest('#mirror') ? sib[Number(e.dataset.i)].pos : null, items, line: (window.__skep.landingLine() || {}).words}; })()''')
-        label = ctx.js('import("./strings.js").then(({t}) => [t("L.piece", {k: 1, n: 2}), t("L.piece", {k: 2, n: 2})])')
+              const line = (window.__skep.landingLine() || {}).words;
+              return {focused: e && e.closest && e.closest('#mirror') ? sib[Number(e.dataset.i)].pos : null, items, line, heard: line ? heard(line) : line}; })()''')
+        label = ctx.js('import("./strings.js").then(({t, heard}) => [heard(t("L.piece", {k: 1, n: 2})), heard(t("L.piece", {k: 2, n: 2}))])')
         p = pieces()
-        r.check(p['focused'] == runs[0]['pos'] and sorted(p['items'], key=lambda i: i['pos']) == [{'pos': runs[0]['pos'], 'words': [p['line']]}, {'pos': runs[1]['pos'], 'words': [label[1]]}],
+        r.check(p['focused'] == runs[0]['pos'] and sorted(p['items'], key=lambda i: i['pos']) == [{'pos': runs[0]['pos'], 'words': [p['heard']]}, {'pos': runs[1]['pos'], 'words': [label[1]]}],
                 'a landing in two runs: the focus on piece 1\'s item, described by the line\'s words, and piece 2\'s item by its own label, "%s" (issue #158)' % label[1], dict(p, runs=runs))
         ctx.drv.key('g', mods=('Meta',))
         ctx.settle()
         ctx.frames(3)
         q = pieces()
-        r.check(q['focused'] == runs[1]['pos'] and sorted(q['items'], key=lambda i: i['pos']) == [{'pos': runs[0]['pos'], 'words': [label[0]]}, {'pos': runs[1]['pos'], 'words': [q['line']]}] and q['line'] != p['line'],
+        r.check(q['focused'] == runs[1]['pos'] and sorted(q['items'], key=lambda i: i['pos']) == [{'pos': runs[0]['pos'], 'words': [label[0]]}, {'pos': runs[1]['pos'], 'words': [q['heard']]}] and q['line'] != p['line'],
                 'Mod+G: the focus on piece 2\'s item, the line\'s words its description now, piece 1\'s item its own label (issue #158)', q)
         r.figures['pieces_described'] = {'landing': p, 'stepped': q}
         ctx.leap(DOC, WINDOW[0])
@@ -1089,12 +1150,13 @@ def run(ctx):
     words = item_words(ctx)
     rec = ctx.js('''((a) => { const e = document.querySelector(`#domlayer article.dtext[data-addr="${a}"] .sp.blk-atom`), q = (s) => { const x = e && e.querySelector(s); return x ? x.textContent : null; };
       const i = window.__skep.mirror.index(), li = document.getElementById('walk-' + i), f = window.__skep.view.focus();
-      return {words: q('.rec-words'), keys: q('.derived'), item: window.__skep.mirror.item(i), dom: li ? li.textContent : null, focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}}; })(%s)''' % json.dumps(HOME))
+      return {words: q('.rec-words'), keys: q('.derived'), item: window.__skep.mirror.item(i), dom: li ? li.getAttribute('aria-label') : null, focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}}; })(%s)''' % json.dumps(HOME))
     item = rec['item'] or ''
-    r.check(rec['focus'] == {'kind': 'block', 'addr': HOME, 'pos': 1} and item.startswith(capital(words['record']) + ' at position 1 ') and bool(rec['words']) and rec['words'] in item
-            and bool(rec['keys']) and rec['keys'] in item and rec['dom'] == item,
+    spoken = {k: heard(ctx, rec[k]) if rec[k] else rec[k] for k in ('words', 'keys')}
+    r.check(rec['focus'] == {'kind': 'block', 'addr': HOME, 'pos': 1} and item.startswith(capital(words['record']) + ' at position 1 ') and bool(spoken['words']) and spoken['words'] in item
+            and bool(spoken['keys']) and spoken['keys'] in item and rec['dom'] == item,
             'the mirror\'s item at the claimant\'s key record names its kind, "%s" — the words a copy\'s stand-in names it by — then what the plane shows of it, its words and its keys, and the DOM item says the same (issue #161; R94)' % words['record'],
-            dict(rec, item=item[:300]))
+            dict(rec, item=item[:300], spoken=spoken))
     r.check(bool(item) and not re.search(r'[{}]|skep-enroll|[0-9a-f]{64}', item), 'the record\'s item reads no raw value aloud: no JSON, no key\'s hex', item[:300])
     r.figures['record_item'] = item[:300]
     # leave the page as the case found it: the landing, the focus on no element

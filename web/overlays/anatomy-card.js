@@ -75,8 +75,11 @@
 // card is shown again under its id, the act marked and the reason's parts
 // beneath its acts — none where the far end's own words on the card are the
 // reason's — and the reason is said through the status region, at every
-// press, said again where the region holds those words already. The link's
-// mark comes from LK's `markOf`, so the card and the symbol agree.
+// press, said again where the region holds those words already. The follow
+// act is named by its words and the far document it goes to, the way it runs
+// said "to" (`F.card.to`) and never by the arrow drawn in it, rendered for the
+// ear (ST's `heard`; style S22). The link's mark comes from LK's `markOf`, so
+// the card and the symbol agree.
 // The card takes the focus on its first act — follow, the line standing
 // before it — where a key opened it (Enter at the link's element, K-55; a
 // links-card row's Enter) and never where a click did (D5 §4 rule 4; the
@@ -90,8 +93,10 @@
 // (`fromTail`): its documents read whole first — at mid scale the page holds
 // none of their text — so each link stands at its own bytes as LK draws it
 // there; one link's card opens as its symbol's would, and several are
-// listed, each row naming its link by its type and its far end (LK's
-// `farLabel`) and opening that link's card; the one symbol a withheld run's
+// listed, each row drawing its link's type and its far end (LK's
+// `farLabelHTML`), named by them and the way its link runs in words (LK's
+// `endRuns`), rendered for the ear (ST's `heard`; patterns K1), and opening
+// that link's card; the one symbol a withheld run's
 // ends merge into, pressed, lists them so at the symbol (`fromSymbol`; P44).
 // The card and its lists leave and return with their place (FP-36): each
 // shows naming what it is about (O-HOST's `about`) — the link's end, in the
@@ -112,7 +117,7 @@ import * as FOCUS from '../nav/focus.js';
 import * as F from '../model/frames.js';
 import * as LAYER from '../text/layer.js';
 import { lineOf, farHolds, floatingOf } from '../beams/held.js';
-import { t, typeName, facedHTML, addressedHTML, dated, fields } from '../strings.js';
+import { t, typeName, facedHTML, addressedHTML, dated, fields, heard } from '../strings.js';
 import { esc, fill } from '../util.js';
 import { inFace, runsOf } from '../plane/labels.js';
 import { accountOf, isUnder } from '../model/address.js';
@@ -465,7 +470,7 @@ function showCard(s, read, anchorEl, byKey, others = false, focus = null, told =
     `<div class="kv"><b>${esc(t('F.card.owner'))}</b> ${l.owner ? `<span class="code id">${esc(l.owner)}</span>` : '—'}</div>` +
     `<div class="kv made"><b>${esc(t('L.card.made'))}</b> ${esc(dated(l.age))}</div>` +
     supersessionRows(lineage, who, others) +
-    `<div class="acts"><button data-run="follow">${esc(t('B1.follow'))} → ${far ? `<span class="id">${esc(far)}</span>` : ''}</button>` +
+    `<div class="acts"><button data-run="follow" aria-label="${esc(heard(far ? `${t('B1.follow')} ${t('F.card.to')} ${far}` : t('B1.follow')))}">${esc(t('B1.follow'))} → ${far ? `<span class="id">${esc(far)}</span>` : ''}</button>` +
     `<button data-run="beside"${inert ? ` class="inert" title="${esc(reasonWords(inert))}"` : ''}${told && inert ? ' data-inert="1"' : ''}>${esc(t('B1.side-by-side'))}</button></div>${given}`;
   /** @type {EndAbout} */
   const about = { kind: 'anatomy', near, link: l.addr, key: s.key, pos: nearPos, width: nearWidth, ids: LAYER.shownIdentity(near, nearPos, nearWidth), others };
@@ -575,9 +580,10 @@ export function fromSymbol(ends, el, byKey = false) {
 /**
  * Ends listed — a tail's (`fromTail`), at the tail; a withheld run's symbol's
  * (`fromSymbol`), at the symbol: each row its link's type and its far end
- * named in the words its tail carries (LK's `farLabel`), in its mark, opening
- * that link's card as a links-card row does; the list naming what it is
- * about.
+ * drawn in the words its tail carries (LK's `farLabelHTML`), in its mark,
+ * named by them and the way its link runs in words (LK's `endRuns`) rendered
+ * for the ear (ST's `heard`), opening that link's card as a links-card row
+ * does; the list naming what it is about.
  * @param {Shown[]} ends
  * @param {import('./host.js').Anchor} anchor where the list stands
  * @param {string} id
@@ -588,7 +594,7 @@ export function fromSymbol(ends, el, byKey = false) {
 function listEnds(ends, anchor, id, byKey, about, focus = null) {
   const near = [...new Set(ends.map((s) => s.near))].map((a) => `<span class="id">${esc(a)}</span>`).join(', ');
   const html = `<span class="label">${esc(t('B1.see-links'))} · ${near}</span><ul class="rows">${ends.map((s, i) =>
-    `<li><button data-run="t${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.end === 'from' ? '→' : '←')} ${LK.farLabelHTML(s)}</button></li>`).join('')}</ul>`;
+    `<li><button data-run="t${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}" aria-label="${esc(heard(LK.endRuns(s)))}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.end === 'from' ? '→' : '←')} ${LK.farLabelHTML(s)}</button></li>`).join('')}</ul>`;
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
   ends.forEach((s, i) => { acts['t' + i] = (_el, byKey) => open(s, null, byKey); });

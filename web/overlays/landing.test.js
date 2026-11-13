@@ -5,7 +5,8 @@
 // focus its act held goes to the walk's element, and a landing that says
 // nothing stands no line; a landing in several runs makes the line the label
 // of the run it stands at with the step's acts first, a press on one stepping
-// and the line taking the label of the run stepped to (FP-21); and the labels
+// and the line taking the label of the run stepped to (FP-21), each act named
+// by its words alone, the step's chord its key; and the labels
 // that would stack in one column's edge are one group, whose room is the
 // most any of its labels takes.
 import { test, before } from 'node:test';
@@ -21,7 +22,7 @@ import * as TRAIL from '../nav/trail.js';
 import * as GO from '../nav/go.js';
 import * as HOST from './host.js';
 import * as LANDING from './landing.js';
-import { drawChord } from '../nav/keys.js';
+import { drawChord, keyShortcut } from '../nav/keys.js';
 import { t, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
 
@@ -157,6 +158,18 @@ test('a landing in several runs: its line the label of the run it stands at, its
   await run(GO.home());
   LANDING.render();
   assert.equal(el.classList.contains('on'), false, 'gone with the arrival at the next landing');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a landing\'s acts are named by their words alone — the step\'s chords drawn in them, never in their names, and exposed as their keys (style S22; patterns K1, K3; issue #626)', async () => {
+  await run(GO.leapTo(D));
+  await run(GO.leapTo(FAR, { how: 'leap', carry: TWO }));
+  LANDING.render();
+  assert.deepEqual(['next', 'previous', 'beside'].map((a) => [el.act(a)?.getAttribute('aria-label'), el.act(a)?.getAttribute('aria-keyshortcuts')]),
+    [[t('L.piece.next'), keyShortcut('Mod+G')], [t('L.piece.previous'), keyShortcut('Mod+Shift+G')], [t('B1.side-by-side'), null]], 'each named by its words, the step\'s chord its key');
+  assert.ok(el.innerHTML.includes(`>${esc(t('L.piece.next'))}<kbd>${esc(drawChord('Mod+G'))}</kbd></button>`), `its chord still drawn: ${el.innerHTML}`);
+  await run(GO.home());
+  LANDING.render();
   assert.deepEqual(fake.unanswered, []);
 });
 

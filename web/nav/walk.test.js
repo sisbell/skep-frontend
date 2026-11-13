@@ -11,7 +11,9 @@
 // node among the listed siblings; the mirror is one Tab stop, named from ST
 // with each level's group, every item sentences — its own words, a capital
 // set and a period after them, no comma left beside a missing part, then its
-// place in the level — an account holding nothing saying so in a sentence of
+// place in the level — named, and described, by those words heard by S22's
+// table, the words drawn unchanged, a span's words kept as written and a
+// lower bound "at least" — an account holding nothing saying so in a sentence of
 // its own, a withheld run's item its own part — its kind,
 // length and origin — naming its origin's one description, which every run
 // of it names, made from the run's placeholder once its clause is read, its
@@ -80,7 +82,7 @@ import { accountCell, boardCell, boardLabelCell, docBox, clearLeftOf, continuati
 import { lodOf, residueDepth, markScale, LOD_TXT_LO } from '../plane/lod.js';
 import { placeOf, STANDARD_FS, EDGE } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
-import { STRINGS, t, tHTML, markCount, lastRead, sentence, sentences, opening, asSentence, ended, list } from '../strings.js';
+import { STRINGS, t, tHTML, markCount, lastRead, sentence, sentences, opening, asSentence, ended, list, heard } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
 import * as WALK from './walk.js';
@@ -439,11 +441,31 @@ test('the mirror announces every block that holds no text by its kind, in the wo
   ];
   for (const [pos, kind, shown] of want) {
     const item = WALK.nameOf({ kind: 'block', addr: H, pos, link: null }, 0, 4);
-    assert.equal(item, sentences(sentence('L.mirror.no-text', { kind, p: pos, extent: 7, document: H, same: '', shown }, ['kind']), 'Item 1 of 4.'), `the item at ${pos}: its kind, where it stands, what the plane shows, a sentence`);
+    assert.equal(item, heard(sentences(sentence('L.mirror.no-text', { kind, p: pos, extent: 7, document: H, same: '', shown }, ['kind']), 'Item 1 of 4.')), `the item at ${pos}: its kind, where it stands, what the plane shows, a sentence, heard`);
     assert.ok(item.startsWith(kind.charAt(0).toUpperCase() + kind.slice(1) + ' at position '), `the item at ${pos} opens on its kind, its capital set: ${item}`);
     assert.ok(!/[{}]|skep-enroll|skep-retire|abab|cdcd|efef|deadbeef/.test(item), `the item at ${pos} reads no raw value aloud: ${item}`);
     const b = /** @type {import('../model/records.js').Block} */ (d.blocks.find((x) => x.pos === pos));
     assert.ok(copyText(made, { addr: H, pos, width: b.width }, (a) => a).startsWith('[' + kind), `a copy's stand-in at ${pos} names the kind the mirror announces, "${kind}"`);
+  }
+});
+
+// placed with the tests around it: it attaches a mirror of its own
+test('an account\'s counts that are a lower bound are drawn in the mirror\'s item as "≥ ⟨n⟩", the one string for a lower bound, and named "at least ⟨n⟩" — the glyph never handed to a screen reader (style S17, S22; issue #626)', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} } };
+  REC.setIndexState({ arm: 'at_the_floor', floor: 9 });
+  try {
+    WALK.attach(/** @type {any} */ (mirror));
+    await WALK.focusTo('1.0.1', null);
+    const i = WALK.mirrorIndex(), m = new RegExp(`<li([^>]*)id="walk-${i}"([^>]*)>(.*?)</li>`).exec(mirror.innerHTML);
+    const drawn = m ? m[3].replace(/<[^>]*>/g, '').replace(/&amp;/g, '&') : '', name = m ? (/ aria-label="([^"]*)"/.exec(m[1] + m[2]) || [])[1] : '';
+    const n = REC.countOf('1.0.1').documents;
+    assert.ok(!REC.countOf('1.0.1').exact && drawn.includes(`${t('L.lower-bound', { n })} documents`), `drawn as the lower bound the strings table writes: ${drawn}`);
+    assert.ok(name === WALK.mirrorItem(i) && name.includes(`at least ${n} documents`) && !name.includes('≥'), `named "at least": ${name}`);
+  } finally {
+    REC.setIndexState({ arm: 'complete' });
+    globalThis.document = platform;
   }
 });
 
@@ -470,7 +492,7 @@ test('the mirror names a document a read answered `withheld` by its withheld box
   const box = t('F.corner.withheld', { owner });
   assert.equal(LAYER.withheldBox(REC.doc(X)), box, 'the box names the seat that owns the document, never its sub-account');
   const item = WALK.nameOf({ kind: 'document', addr: X, pos: null, link: null }, 0, 1);
-  assert.ok(item.startsWith(`${box.charAt(0).toUpperCase() + box.slice(1)} document ${X}`), `the item says what the box says, leading where no kind can be read: ${item}`);
+  assert.ok(item.startsWith(heard(`${box.charAt(0).toUpperCase() + box.slice(1)} document ${X}`)), `the item says what the box says, leading where no kind can be read, heard: ${item}`);
   assert.ok(!item.includes(t('F.published')), `and never that the document is published: ${item}`);
 });
 
@@ -498,17 +520,23 @@ test('the plane is one Tab stop: the current item while it stands, the tree out 
   }
 });
 
-test('the mirror\'s item shows what it says, each address in the identifier\'s face and a span\'s words in the reading face — its words its accessible name, unchanged (issue #16)', async () => {
+test('the mirror\'s item shows what it says, each address in the identifier\'s face and a span\'s words in the reading face, and is named by those words heard — the quotation marks silent, the span\'s words kept as written, its own end mark said once (issue #16; issue #626)', async () => {
   const platform = globalThis.document;
   globalThis.document = /** @type {any} */ ({ activeElement: null });
   const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} } };
   WALK.attach(/** @type {any} */ (mirror));
   try {
     await WALK.focusTo(D, 15);
-    const i = WALK.mirrorIndex(), li = (new RegExp(`<li[^>]*id="walk-${i}"[^>]*>(.*?)</li>`).exec(mirror.innerHTML) || [])[1] || '';
+    const i = WALK.mirrorIndex(), m = new RegExp(`<li([^>]*)id="walk-${i}"([^>]*)>(.*?)</li>`).exec(mirror.innerHTML), li = m ? m[3] : '';
+    const name = m ? (/ aria-label="([^"]*)"/.exec(m[1] + m[2]) || [])[1] : null;
     const b = /** @type {import('../model/records.js').Block} */ (REC.doc(D).blocks.find((x) => x.pos === WALK.current()?.pos));
+    const unescape = (/** @type {string} */ x) => x.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
     assert.ok(li.includes(`<span class="id">${D}</span>`) && li.includes(`<span class="reading">${esc(b.text)}</span>`), `the document's address the identifier's, the span's words the reading face's: ${li}`);
-    assert.equal(li.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&'), WALK.mirrorItem(i), 'its words the item\'s accessible name');
+    const place = t('L.mirror.item', { i: i + 1, n: WALK.mirrorSize() });
+    assert.equal(unescape(li.replace(/<[^>]*>/g, '')), sentences(sentence('L.mirror.span', { p: b.pos, extent: 30, document: D, same: '', text: b.text }), place), 'its words drawn as the strings table words them, its quotation marks among them');
+    assert.equal(b.text, 'The first field.', 'the span\'s words end with their own period');
+    assert.deepEqual([name && unescape(name), WALK.mirrorItem(i)], [`Span at position ${b.pos} of 30 in ${D}: ${b.text} ${place}`, `Span at position ${b.pos} of 30 in ${D}: ${b.text} ${place}`],
+      'its accessible name those words heard: the quotation marks silent, the span\'s words kept as written, their own period said once');
   } finally {
     globalThis.document = platform;
   }
@@ -657,10 +685,10 @@ test('the mirror\'s item at a link names its far end as its tail and its card do
   const item = () => { const s = LK.shown(D).find((x) => x.link.addr === L); return s ? WALK.nameOf({ kind: 'link', addr: D, pos: s.pos, link: s }, 0, 1) : ''; };
   assert.equal(item(), `Link ${L}, type 1.1.0.1.0.1.0.3.13, ${t('F.card.to')} ${GHOST}. Item 1 of 1.`, 'nothing answered: the address alone');
   REC.takeProjection(L, 2, GHOST, 'unregistered');
-  assert.ok(item().includes(`${t('F.card.to')} ${GHOST} · ${t('L.client-words', { words: t('L.far.empty') })}`), `the board saying nothing of an address of the reader's own account the complete index lists nothing at, the client's words bracketed: ${item()}`);
+  assert.ok(item().includes(heard(`${t('F.card.to')} ${GHOST} · ${t('L.client-words', { words: t('L.far.empty') })}`)), `the board saying nothing of an address of the reader's own account the complete index lists nothing at, the client's words bracketed, heard: ${item()}`);
   REC.takeLink({ addr: L, from: [span(D, 12, 3)], to: [span(THEIRS, 1, 4)], type: '1.1.0.1.0.1.0.3.13' });
   REC.takeProjection(L, 2, THEIRS, 'unregistered');
-  assert.ok(item().includes(`${t('F.card.to')} ${THEIRS} · ${t('L.client-words', { words: t('L.far.unknown') })}`), `another account's: ${item()}`);
+  assert.ok(item().includes(heard(`${t('F.card.to')} ${THEIRS} · ${t('L.client-words', { words: t('L.far.unknown') })}`)), `another account's: ${item()}`);
   REC.invalidate(THEIRS); REC.invalidate(GHOST);
 });
 
@@ -866,14 +894,14 @@ test('where the landing\'s passage stands in several runs every other span holdi
     await WALK.focusTo(D, 13);
     // the span at 27 a withheld run: described by its origin's one description too, after the landing's words
     const origin = /** @type {{words: string}} */ (WALK.originWords({ kind: 'block', addr: D, pos: 27, link: null })).words;
-    assert.deepEqual(described(), [[11, ['piece 1 of 2 · all of the passage']], [27, ['piece 2 of 2', origin]]], 'the landing\'s item its line, the other run\'s span its label');
+    assert.deepEqual(described(), [[11, [heard('piece 1 of 2 · all of the passage')]], [27, ['piece 2 of 2', heard(origin)]]], 'the landing\'s item its line, the other run\'s span its label, each heard');
     const was = rebuilds;
     said = { ...said, pos: 28, words: 'piece 2 of 2 · all of the passage' };
     WALK.markDescribed();
-    assert.deepEqual(described(), [[11, ['piece 1 of 2']], [27, ['piece 2 of 2 · all of the passage', origin]]], 'a step: the landing\'s description moved to the run stepped to, the one left its own label');
+    assert.deepEqual(described(), [[11, ['piece 1 of 2']], [27, [heard('piece 2 of 2 · all of the passage'), heard(origin)]]], 'a step: the landing\'s description moved to the run stepped to, the one left its own label');
     said = null;
     WALK.markDescribed();
-    assert.deepEqual(described(), [[27, [origin]]], 'the arrival ended: the landing describes nothing, the withheld run its origin still');
+    assert.deepEqual(described(), [[27, [heard(origin)]]], 'the arrival ended: the landing describes nothing, the withheld run its origin still');
     assert.equal(rebuilds, was, 'every mark made in place, nothing rebuilt');
   } finally {
     globalThis.document = platform;
@@ -905,7 +933,7 @@ test('two runs of one withheld origin in a document name one description, writte
     WALK.attach(/** @type {any} */ (mirror));
     await WALK.focusTo(R2, 11);
     const words = /** @type {{origin: string, words: string}} */ (WALK.originWords({ kind: 'block', addr: R2, pos: 11, link: null }));
-    const ids = hidden.filter(([, w]) => w === esc(words.words)).map(([id]) => id);
+    const ids = hidden.filter(([, w]) => w === esc(heard(words.words))).map(([id]) => id);
     assert.equal(ids.length, 1, `one description of ${R2_ORIGIN}: ${JSON.stringify(hidden)}`);
     const at = (/** @type {number} */ pos) => items.find((i) => i.attrs['data-pos'] === String(pos));
     for (const pos of runs) {
@@ -956,7 +984,7 @@ test('a link\'s item whose far end the board will say nothing of is named by the
     return by ? by.split(' ').map((id) => hidden.get(id)?.textContent) : [];
   };
   /** what a follow of the far end is faced with, as the hidden description holds it */
-  const wholeOf = () => esc(LK.emptyAt(GHOST).whole.map((p) => p.text).join(' '));
+  const wholeOf = () => esc(heard(LK.emptyAt(GHOST).whole.map((p) => p.text).join(' ')));
   try {
     WALK.attach(/** @type {any} */ (mirror));
     await WALK.focusTo(D, 15, true, { link: L, key: end().key });
@@ -964,13 +992,13 @@ test('a link\'s item whose far end the board will say nothing of is named by the
     REC.takeProjection(L, 2, GHOST, 'unregistered');
     await WALK.focusTo(D, 15, true, { link: L, key: end().key });
     const name = WALK.mirrorItem(WALK.mirrorIndex()) || '';
-    assert.ok(name.includes(`${GHOST} · ${t('L.client-words', { words: t('L.far.empty') })}`), `its name the short form: ${name}`);
-    assert.deepEqual(describedAs(), [wholeOf()], 'its description the whole form');
+    assert.ok(name.includes(heard(`${GHOST} · ${t('L.client-words', { words: t('L.far.empty') })}`)), `its name the short form, heard: ${name}`);
+    assert.deepEqual(describedAs(), [wholeOf()], 'its description the whole form, heard');
     assert.ok(wholeOf().startsWith(esc(t('L.far.empty'))) && wholeOf().includes(esc(t('L.far.empty.order'))), wholeOf());
     const was = rebuilds;
     REC.setIndexState({ arm: 'at_the_floor', floor: 9 });
     WALK.markDescribed();
-    assert.deepEqual(describedAs(), [esc(LK.emptyAt(GHOST).whole.map((p) => p.text).join(' '))], 'the index from a floor: the description marked in place, the weaker state\'s');
+    assert.deepEqual(describedAs(), [esc(heard(LK.emptyAt(GHOST).whole.map((p) => p.text).join(' ')))], 'the index from a floor: the description marked in place, the weaker state\'s, heard');
     assert.ok(describedAs()[0]?.startsWith(esc(t('L.far.unknown'))), `${describedAs()}`);
     assert.equal(rebuilds, was, 'marked in place, nothing rebuilt');
   } finally {
@@ -1406,7 +1434,7 @@ test('the walk takes each box as the version it shows (issues #154, #23): an acc
     const kids = await WALK.childrenOf({ kind: 'account', addr: '1.0.1', pos: null, link: null });
     assert.deepEqual(kids.map((n) => n.addr).filter((a) => [D, D2, E].includes(a)), [D2, E], 'the account lists the version D\'s box shows, in D\'s place, never D');
     const named = WALK.nameOf(kids[0], 0, kids.length);
-    assert.ok(named.startsWith(ended(list(`Published document ${D2}`, '"Tumbler."', venued('F.corner.pinned', { k: 2 }), t('L.mirror.positions', { n: TEXT2.length })))), 'the mirror names the version by its kind, its own first line, as its box\'s label names it, and its state as its corner states it: ' + named);
+    assert.ok(named.startsWith(heard(ended(list(`Published document ${D2}`, '"Tumbler."', venued('F.corner.pinned', { k: 2 }), t('L.mirror.positions', { n: TEXT2.length }))))), 'the mirror names the version by its kind, its own first line, as its box\'s label names it, and its state as its corner states it, heard: ' + named);
     await WALK.focusTo(D, 12);
     assert.deepEqual([walkAt(), WALK.siblingsNow().map((n) => n.pos)], [['block', D2, 11], [1, 11]], 'a landing at D stands on the version\'s span, its siblings the version\'s');
     await WALK.focusTo(E, 3);
@@ -1548,7 +1576,7 @@ test('the count, the article\'s symbols and the mirror name the same ends, two l
   }
 });
 
-/** @typedef {{attrs: Record<string, string>, dataset: Record<string, string>, innerHTML: string}} Item */
+/** @typedef {{attrs: Record<string, string>, dataset: Record<string, string>, innerHTML: string, getAttribute: (k: string) => string | null, setAttribute: (k: string, v: string) => void}} Item */
 
 /**
  * A mirror that records what the walk writes in it: the items its last rebuild wrote, each an element whose words are
@@ -1566,14 +1594,16 @@ function recordingMirror() {
       items = [...html.matchAll(/<li\b([^>]*)>(.*?)<\/li>/g)].map((m) => {
         /** @type {Record<string, string>} */
         const attrs = Object.fromEntries([...m[1].matchAll(/ ([\w-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
-        return { attrs, dataset: { i: attrs['data-i'], kept: attrs['data-kept'], state: attrs['data-state'] }, innerHTML: m[2] };
+        return { attrs, dataset: { i: attrs['data-i'], kept: attrs['data-kept'], state: attrs['data-state'] }, innerHTML: m[2], getAttribute: (k) => attrs[k] ?? null, setAttribute: (k, v) => { attrs[k] = v; } };
       });
     },
     querySelectorAll: (/** @type {string} */ sel) => (sel === 'li[role="treeitem"]' ? items : []),
   };
   /** the words the item for `addr` holds as the mirror holds them */
   const item = (/** @type {string} */ addr) => items.find((i) => i.attrs['data-addr'] === addr)?.innerHTML ?? '';
-  return { mirror, item, rebuilds: () => rebuilds };
+  /** the accessible name the item for `addr` carries, as the mirror holds it: its `aria-label`, unescaped where the rebuild wrote it */
+  const name = (/** @type {string} */ addr) => (items.find((i) => i.attrs['data-addr'] === addr)?.attrs['aria-label'] ?? '').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+  return { mirror, item, name, rebuilds: () => rebuilds };
 }
 
 test('a kept document\'s mirror item carries the clause its corner or the one line shows — an edition\'s "links as last read" at the page\'s clock as the row that left it behind came — as a sentence of its own after its words, and the item is written again in place as it lifts, nothing rebuilt (issues #345, #367)', async (ctx) => {
@@ -1581,7 +1611,7 @@ test('a kept document\'s mirror item carries the clause its corner or the one li
   await PUMP.loadWhole(D);
   const platform = globalThis.document;
   globalThis.document = /** @type {any} */ ({ activeElement: null });
-  const { mirror, item: itemOf, rebuilds: rebuilt } = recordingMirror();
+  const { mirror, item: itemOf, name: nameIn, rebuilds: rebuilt } = recordingMirror();
   /** D's item's words as the mirror holds them */
   const item = () => itemOf(D);
   /** D's text read again, held until the test answers it */
@@ -1606,12 +1636,13 @@ test('a kept document\'s mirror item carries the clause its corner or the one li
     WALK.markKept();
     const at = WALK.siblingsNow().findIndex((n) => n.addr === D), named = WALK.mirrorItem(at) || '';
     assert.ok(item().includes(esc(clause)) && named.includes(clause + ' ' + t('L.mirror.item', { i: at + 1, n: WALK.siblingsNow().length })), `its clause a sentence after its words, before its place in the level: ${named}`);
-    assert.ok(named.startsWith(ended(list(`Published document ${D}`, '"Tumbler."', venued('F.corner.latest'), t('L.mirror.positions', { n: 30 })))), named);
+    assert.ok(named.startsWith(heard(ended(list(`Published document ${D}`, '"Tumbler."', venued('F.corner.latest'), t('L.mirror.positions', { n: 30 }))))), named);
+    assert.equal(nameIn(D), named, 'its accessible name written again in place with its words, heard');
     assert.equal(rebuilt(), was, 'written in place, nothing rebuilt');
     text();
     for (let i = 0; i < 50 && PUMP.kept(D); i++) await new Promise((r) => setImmediate(r));
     WALK.markKept();
-    assert.ok(!item().includes(esc(clause)) && rebuilt() === was, 'set: the clause gone from the item in place');
+    assert.ok(!item().includes(esc(clause)) && !nameIn(D).includes(clause) && rebuilt() === was, 'set: the clause gone from the item and its name in place');
     assert.deepEqual(fake.unanswered.slice(unasked), []);
   } finally { text(); globalThis.document = platform; }
 });
@@ -1640,12 +1671,12 @@ test('a document\'s mirror item voices its corner\'s state whole, its kind leadi
   ];
   for (const [what, addr, state] of states) {
     const named = WALK.nameOf({ kind: 'document', addr, pos: null, link: null }, 0, 1);
-    assert.ok(named.startsWith(itemSays(addr, state)), `${what}: led by its kind, then its corner's state whole — ${named}`);
+    assert.ok(named.startsWith(heard(itemSays(addr, state))), `${what}: led by its kind, then its corner's state whole, heard — ${named}`);
     assert.ok(!named.includes(t('F.published') + ',') && !named.includes(t('F.published') + '.'), `${what}: its kind once, leading, never a state of its own — ${named}`);
   }
   const platform = globalThis.document;
   globalThis.document = /** @type {any} */ ({ activeElement: null });
-  const { mirror, item, rebuilds } = recordingMirror();
+  const { mirror, item, name: nameIn, rebuilds } = recordingMirror();
   // D's box pinned on its second member, the walk on it at mid
   WALK.readers({ shown: (a) => (a === D || a === D2 ? D2 : a) });
   try {
@@ -1658,6 +1689,7 @@ test('a document\'s mirror item voices its corner\'s state whole, its kind leadi
     REC.takeMembers(D, 3);
     WALK.markKept();
     assert.ok(item(D2).includes(esc(pinned(2, 3))) && !item(D2).includes(esc(pinned(2, 2))), `a newer version arrived, the chain counted again: version 2 of 3 — ${item(D2)}`);
+    assert.ok(nameIn(D2).includes(heard(pinned(2, 3))), `its accessible name written again in place, heard — ${nameIn(D2)}`);
     assert.equal(rebuilds(), was, 'written in place, nothing rebuilt');
     WALK.markKept();
     assert.equal(rebuilds(), was, 'nothing moved: nothing written');
@@ -1707,7 +1739,7 @@ test('while the board lags past a second its mirror item carries the clause the 
  */
 function laidOutMirror(/** @type {number} */ clientHeight) {
   const ROW_PX = 20, GROWN_ROWS = 3, TOP = 500;
-  /** @typedef {{attrs: Record<string, string>, dataset: Record<string, string>, rows: number, innerHTML: string, getBoundingClientRect: () => {top: number, height: number}}} Laid */
+  /** @typedef {{attrs: Record<string, string>, dataset: Record<string, string>, rows: number, innerHTML: string, getBoundingClientRect: () => {top: number, height: number}, getAttribute: (k: string) => string | null, setAttribute: (k: string, v: string) => void}} Laid */
   /** @type {Laid[]} */
   let items = [];
   const mirror = {
@@ -1725,6 +1757,7 @@ function laidOutMirror(/** @type {number} */ clientHeight) {
     /** @type {Laid} */
     const it = {
       attrs, dataset: { i: attrs['data-i'], kept: attrs['data-kept'], state: attrs['data-state'] }, rows: 1,
+      getAttribute: (k) => attrs[k] ?? null, setAttribute: (k, v) => { attrs[k] = v; },
       get innerHTML() { return html; },
       set innerHTML(/** @type {string} */ w) { html = w; it.rows = GROWN_ROWS; },
       getBoundingClientRect: () => {
@@ -1795,8 +1828,8 @@ test('the page\'s own death takes the mirror down at once where the view stood o
     assert.ok(!mirror.innerHTML.includes('The first field.'), `at once: no item quotes what the dead session read: ${mirror.innerHTML}`);
     assert.deepEqual(walkAt(), ['document', D, null], 'the walk on its document whole');
     const box = opening('F.corner.withheld', { owner: '1.0.1' }), at = WALK.siblingsNow().findIndex((n) => n.addr === DRAFT), item = at < 0 ? '' : WALK.mirrorItem(at) || '';
-    assert.ok(item.includes(box) && !item.includes('the draft') && mirror.innerHTML.includes(`data-addr="${E}"`),
-      `the mirror lists the draft the dead session could read as its cover — in its withheld box's words, none of its first line — and the edition still: ${item}`);
+    assert.ok(item.includes(heard(box)) && !item.includes('the draft') && mirror.innerHTML.includes(`data-addr="${E}"`),
+      `the mirror lists the draft the dead session could read as its cover — in its withheld box's words, heard, none of its first line — and the edition still: ${item}`);
     release();
     await taken;
     assert.deepEqual(walkAt(), ['block', D, 11], 'its document read at the guest\'s class: the walk on the span holding the position it stood at');
@@ -1828,7 +1861,7 @@ test('the walk on a draft the session read stays on it once the guest\'s read an
     await WALK.dropped({ row: null, addrs: null, at: Date.now() });
     const box = opening('F.corner.withheld', { owner: '1.0.1' });
     assert.deepEqual([walkAt(), REC.covered(DR)], [['document', DR, null], true], 'the walk on the covered draft, whole: never on nothing');
-    assert.ok(!mirror.innerHTML.includes('The draft') && (WALK.mirrorItem(WALK.mirrorIndex()) || '').includes(box), `named in its withheld box's words, none of its text: ${WALK.mirrorItem(WALK.mirrorIndex())}`);
+    assert.ok(!mirror.innerHTML.includes('The draft') && (WALK.mirrorItem(WALK.mirrorIndex()) || '').includes(heard(box)), `named in its withheld box's words, heard, none of its text: ${WALK.mirrorItem(WALK.mirrorIndex())}`);
     const kids = await WALK.childrenOf({ kind: 'account', addr: '1.0.1', pos: null, link: null });
     assert.ok(kids.some((n) => n.addr === DR), 'the account\'s level lists the covered draft, as the plane draws its box');
   } finally {
@@ -1879,9 +1912,9 @@ test('where no board is held the walk\'s root names none: it says why, in the wo
     REC.takeBoards({ result: [] });
     await WALK.focusTo('1', null);
     const item = t('L.mirror.item', { i: 1, n: 1 });
-    assert.equal(WALK.mirrorItem(0), sentences(sentence('F.unclaimed'), item), 'the list empty: the root says why, a sentence, never "board 1"');
+    assert.equal(WALK.mirrorItem(0), heard(sentences(sentence('F.unclaimed'), item)), 'the list empty: the root says why, a sentence, never "board 1"');
     why = { id: 'L.boards-unread', text: t('L.boards-unread') };
-    assert.equal(WALK.mirrorItem(0), sentences(sentence('L.boards-unread'), item), 'the list refused: its words, a sentence');
+    assert.equal(WALK.mirrorItem(0), heard(sentences(sentence('L.boards-unread'), item)), 'the list refused: its words, a sentence, heard');
     // the view's centre over a cell of 1.0.1's the index lists nothing in: the grid would find the account there
     const cell = docBox('1.0.1.0.30'), centre = { x: cell.x + cell.w / 2, y: cell.y + cell.h / 2 };
     /** @type {Array<[string, number]>} */

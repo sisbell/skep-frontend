@@ -53,9 +53,16 @@
 // item in every Format menu titled by its name with its first letter
 // capitalised, the table holding no title of its own (`formTitle`); and the
 // place a line keeps for a form's chord filled by its chord where one is
-// bound, else by its act, named by the form's name (`formAgain`); `pinned`
-// lists the pinned entries for the gate's text case, which locates each at
-// its source.
+// bound, else by its act, named by the form's name (`formAgain`); every
+// accessible name, description and status message the page sets is its
+// words rendered for the ear by S22's table (`heard`; style S22): the
+// table's words its entries, a chord by its keys' words in drawn order, a
+// joiner a comma's pause, a glyph beside words nothing — the client's words
+// alone, a stretch in the reading face or the identifier's kept as written —
+// an entry's words given as those stretches by `tRuns`, `openingRuns`,
+// `sentenceRuns`, `asSentenceRuns` and `endedRuns`, joined by `joinRuns`, and words already
+// heard handed on untouched (`asHeard`); `pinned` lists the pinned entries
+// for the gate's text case, which locates each at its source.
 // Rules: FP-1, FP-2, FP-13, FP-32, FP-34.
 
 import { fill, esc, dayOf, timeOf } from './util.js';
@@ -996,6 +1003,30 @@ export const STRINGS = {
   'B3.no-notebook.back.act': { text: 'back to ⟨label⟩\u00a0— ⟨the act⟩ these words', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the claim\'s end\'s act back, after an act' },
   'B3.no-notebook.back.capture': { text: 'back to ⟨label⟩\u00a0— capture your thought', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the claim\'s end\'s act back, after capture\'s line' },
 
+  // ---- DRAFT: ux/voice/style.md (S22's table, its "heard" column) -------------
+  // the words the table speaks a glyph or a key by, each under its row's number (`heard`): a lower bound, a range, the source
+  // mark, a link's symbol and others' links standing alone; the arrows; the modifiers and the named keys of a chord
+  'S22.M14': { text: 'at least', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: ≥' },
+  'S22.J5': { text: 'to', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: – between two numbers, … between two keys' },
+  'S22.M11': { text: 'the same words as in', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: ≡ before a source\'s address' },
+  'S22.M12': { text: 'link', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: ⟡ standing alone' },
+  'S22.M13': { text: 'others\' links', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: ◦ standing alone' },
+  'S22.A1.left': { text: 'Left Arrow', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: ←' },
+  'S22.A1.right': { text: 'Right Arrow', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: →' },
+  'S22.A1.up': { text: 'Up Arrow', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: ↑' },
+  'S22.A1.down': { text: 'Down Arrow', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: ↓' },
+  'S22.K1': { text: 'Command', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: ⌘ in a chord' },
+  'S22.K2': { text: 'Control', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: Ctrl, and ⌃, in a chord' },
+  'S22.K3': { text: 'Shift', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: ⇧, and Shift, in a chord' },
+  'S22.K4': { text: 'Option', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: ⌥ in a chord' },
+  'S22.K4.alt': { text: 'Alt', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: Alt in a chord' },
+  'S22.K6': { text: 'Return', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: ↩' },
+  'S22.K8': { text: 'Escape', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: Esc' },
+  'S22.K10': { text: 'Page Down', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: PageDown' },
+  'S22.K10.up': { text: 'Page Up', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: PageUp' },
+  'S22.K15': { text: 'Plus', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: = and + as a chord\'s key' },
+  'S22.K15.minus': { text: 'Minus', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'every accessible name, description and status message: - as a chord\'s key' },
+
   // ---- DRAFT: strings no design document carries (`lane: true`) -------------
   'L.no-adapter': { text: 'no shell and no provider — this page reaches nothing', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   // the page URL's `port` names no port, so the page dials nothing (S-36 (b))
@@ -1025,7 +1056,7 @@ export const STRINGS = {
   'L.seam.quote': { text: 'quote — comes with the annotation lane; nothing is written here', cls: 'DRAFT', source: '', screen: 'the selection; a hint at the focus', lane: true, hint: 'whole' },
   'L.seam.link-to': { text: 'link to… — comes with the editor\'s lane; nothing is written here', cls: 'DRAFT', source: '', screen: 'the selection; a hint at the focus', lane: true, hint: 'whole' },
   'L.arriving': { text: 'arriving', cls: 'DRAFT', source: '', screen: 'B1-S2, B1-S3', lane: true },
-  'L.lower-bound': { text: '≥ ⟨n⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
+  'L.lower-bound': { text: '≥ ⟨n⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3; a continuation\'s mark; the ARIA mirror: an account\'s counts' },
   'L.whole-board': { text: 'WHOLE BOARD', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
   'L.board-label': { text: 'board ⟨node⟩ · ⟨origin⟩ · ⟨venue⟩ · claimed by ⟨claimant⟩', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S3' },
   // the board's statement while the shell's index reports changes it could not place (FP-23): a change a row naming no
@@ -1141,7 +1172,6 @@ export const STRINGS = {
   'L.mirror.board.name': { text: 'board ⟨node⟩, ⟨origin⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror; the status region', lane: true },
   'L.mirror.board': { text: '⟨board⟩: ⟨n⟩ accounts.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.account': { text: 'account ⟨account⟩: ⟨documents⟩ documents, ⟨links⟩ links.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.at-least': { text: 'at least ⟨n⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // a document's item: ⟨kind⟩ its corner's first slot's words — a refused document's corner's own words in their place —
   // then its address; the page lists its first line, its corner's state after that slot and its positions after it, each
   // where it has one
@@ -1258,8 +1288,9 @@ export const STRINGS = {
   'L.kept.more': { text: '⟨n⟩ more', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
   'L.kept.run': { text: 'the withheld text from ⟨origin⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
   'L.time.day-time': { text: '⟨day⟩, ⟨time⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; B1-S2: a document\'s label; the ARIA mirror; B1-S7; B1-S9: a pane\'s corner', lane: true },
-  // the shown chords' words (D5-F8; the focus record's rule 19): the dismiss's title, the version marker's
-  'L.dismiss': { text: 'dismiss (⟨chord⟩)', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
+  // the shown chords' words (D5-F8; the focus record's rule 19): the dismiss's words — its name, and its title before the key
+  // the page draws after them (style S7) — and the version marker's title
+  'L.dismiss': { text: 'dismiss', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
   'L.version': { text: 'version ⟨k⟩', cls: 'DRAFT', source: '', screen: 'the one line; the versions list; the corner, while the board lags', lane: true },
   // the overlay dialog's name where no caption stands in it (the focus record's D5): one per kind
   'L.dialog.card': { text: 'a card', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
@@ -1625,6 +1656,206 @@ export const addressedHTML = (text) => text.split(/(\d+(?:\.\d+)+)/).map((x, i, 
  * @returns {string}
  */
 export const facedHTML = (runs) => runs.map((r) => (r.face === 'ident' ? `<span class="id">${esc(r.text)}</span>` : r.face === 'reading' ? `<span class="reading">${esc(r.text)}</span>` : addressedHTML(r.text))).join('');
+
+/** @typedef {{text: string, face: import('./plane/register.js').Face}} Run a stretch of words in its face (P-REG's FACE): the client's, a document's or the person's own (`reading`), or an address (`ident`) */
+/** @typedef {string | Run[]} Words words for the ear (`heard`): a string wholly the page's own, or stretches in their faces */
+
+/** a stretch's words, its stretches joined */
+export const runsText = (/** @type {Run[]} */ runs) => runs.map((r) => r.text).join('');
+
+/** words as stretches: a string the client's, one stretch where it holds any words */
+export const asRuns = (/** @type {Words} */ w) => (typeof w === 'string' ? (w ? [{ text: w, face: /** @type {const} */ ('client') }] : []) : w);
+
+/**
+ * Words joined as `sentences`, `fields` and `list` join strings, as stretches:
+ * each part that holds no words dropped, `sep` the client's between two.
+ * @param {string} sep
+ * @param {Words[]} parts
+ * @returns {Run[]}
+ */
+export function joinRuns(sep, parts) {
+  const held = parts.map(asRuns).filter((r) => runsText(r));
+  return held.flatMap((r, i) => (i ? [{ text: sep, face: /** @type {const} */ ('client') }, ...r] : r));
+}
+
+/**
+ * A template as stretches, its tokens filled as `tRuns` fills them.
+ * @param {string} template
+ * @param {Record<string, Value>} values
+ * @param {Record<string, import('./plane/register.js').Face>} faces
+ * @returns {Run[]}
+ */
+function fillRuns(template, values, faces) {
+  /** @type {Run[]} */
+  const out = [];
+  const push = (/** @type {string} */ text, /** @type {import('./plane/register.js').Face} */ face) => { if (text) out.push({ text, face }); };
+  let at = 0;
+  for (const m of template.matchAll(/⟨([^⟩]+)⟩/g)) {
+    const k = m[1];
+    if (!(k in values)) continue;
+    push(template.slice(at, m.index), 'client');
+    const v = values[k];
+    if (Array.isArray(v)) out.push(...v); else push(String(v), faces[k] || 'client');
+    at = /** @type {number} */ (m.index) + m[0].length;
+  }
+  push(template.slice(at), 'client');
+  return out;
+}
+
+/**
+ * An entry's words as stretches in their faces, read the same as `t`'s: the
+ * template's own words the client's; each ⟨token⟩ filled with its value —
+ * stretches spliced in as they stand, any other value in the face `faces`
+ * names for its token, else the client's; a token given no value left as the
+ * template writes it. What a line holding the person's words, a document's
+ * name or its words is handed to `heard` as.
+ * @param {string} id
+ * @param {Record<string, Value>} [values]
+ * @param {Record<string, import('./plane/register.js').Face>} [faces] the face each token's value stands in, by token
+ * @returns {Run[]}
+ */
+export function tRuns(id, values = {}, faces = {}) { return fillRuns(t(id), values, faces); }
+
+/**
+ * `opening` as stretches, its tokens filled as `tRuns` fills them.
+ * @param {string} id
+ * @param {Record<string, Value>} values
+ * @param {Record<string, import('./plane/register.js').Face>} [faces]
+ * @param {string[]} [own] the tokens whose values are the page's own words
+ * @returns {Run[]}
+ */
+export function openingRuns(id, values, faces = {}, own = []) {
+  const c = capitalised(id, values, own);
+  return fillRuns(c.text, c.values, faces);
+}
+
+/** stretches ended as the sentence they read (`ended`): the period after them, the client's, where their words carry no end mark */
+export const endedRuns = (/** @type {Run[]} */ runs) => { const words = runsText(runs); return !words || ENDED.test(words) ? runs : [...runs, { text: STOP, face: /** @type {const} */ ('client') }]; };
+
+/**
+ * `sentence` as stretches, its tokens filled as `tRuns` fills them: the same
+ * words, its end mark decided on them (`endedRuns`).
+ * @param {string} id
+ * @param {Record<string, Value>} values
+ * @param {Record<string, import('./plane/register.js').Face>} [faces]
+ * @param {string[]} [own] the tokens whose values are the page's own words
+ * @returns {Run[]}
+ */
+export const sentenceRuns = (id, values, faces = {}, own = []) => endedRuns(openingRuns(id, values, faces, own));
+
+/**
+ * An entry filled elsewhere as a sentence of its own, as stretches
+ * (`asSentence`): its stretches where it carries them — the person's own
+ * words or a document's among them, kept as written in what is spoken —
+ * else its words the client's; the first stretch's first letter a capital
+ * where its template opens with its own words, or with a token whose value is
+ * the page's own words (`own`); an end mark after it (`endedRuns`). Throws as
+ * `asSentence` does.
+ * @param {{id: string, text: string, runs?: Run[]}} e
+ * @param {boolean} [own] the token its template opens with holds the page's own words
+ * @returns {Run[]}
+ */
+export function asSentenceRuns(e, own = false) {
+  const entry = STRINGS[e.id];
+  if (!entry) throw new Error('no string ' + e.id);
+  if (entry.parts) throw new Error('a statement keeps its own join: ' + e.id);
+  const runs = e.runs || asRuns(e.text);
+  return endedRuns(entry.text.startsWith('⟨') && !own ? runs : /** @type {Run[]} */ (upperValue(runs)));
+}
+
+/** a stretch S22's table leaves alone, while the table is applied around it (`heard`): its number between two private-use characters, never a glyph, a key or a word the table reads */
+const KEEP_OPEN = '', KEEP_SHUT = '', KEEP_BASE = 0xE100;
+/** a pause the table speaks a joiner as, while the table is applied (`heard`): a comma's, once the line is set */
+const PAUSE = '';
+/** a key a chord or a line draws, as its entry names it (S22's A1, K6, K8, K10) */
+const KEY_WORDS = /** @type {Record<string, string>} */ ({ '←': 'S22.A1.left', '→': 'S22.A1.right', '↑': 'S22.A1.up', '↓': 'S22.A1.down', '↩': 'S22.K6', Esc: 'S22.K8', PageDown: 'S22.K10', PageUp: 'S22.K10.up' });
+/** a sign as a chord's key, as its entry names it (S22's K15) */
+const SIGN_WORDS = /** @type {Record<string, string>} */ ({ '=': 'S22.K15', '+': 'S22.K15', '-': 'S22.K15.minus', '−': 'S22.K15.minus' });
+/** a chord's modifier, as macOS draws it and as other platforms do, by its entry (S22's K1 … K5) */
+const MODIFIER_WORDS = /** @type {Record<string, string>} */ ({ '⌃': 'S22.K2', '⌥': 'S22.K4', '⇧': 'S22.K3', '⌘': 'S22.K1', Ctrl: 'S22.K2', Alt: 'S22.K4.alt', Shift: 'S22.K3' });
+/** a key a chord ends with: a named key, an arrow, Return, a function key, a letter, a digit or a sign */
+const KEY = '(?:Esc|Enter|Tab|Space|Home|End|PageDown|PageUp|Backspace|Delete|F\\d{1,2}|[←→↑↓↩]|[A-Za-z0-9]|[=+\\-−\\[\\]])';
+/** a chord as macOS draws it, its modifier glyphs then its key with nothing between — "⇧⌘O", "⌘↩" — and a run of keys, "⌘1…9" (S22's K16, E4) */
+const MAC_CHORD = new RegExp(`([⌃⌥⇧⌘]+)(${KEY})(?:…(${KEY}))?`, 'gu');
+/** a chord as other platforms draw it, its modifiers joined to its key by "+" — "Ctrl+Shift+O", "Shift+↓" (S22's J6, K16) */
+const CHORD = new RegExp(`(?<![A-Za-z])((?:(?:Ctrl|Alt|Shift)\\+)+)(${KEY})(?:…(${KEY}))?`, 'gu');
+/** the glyphs S22's table speaks as a comma's pause: J1's middle dot, J2's em dash, J3's bar, J7's opening parenthesis */
+const PAUSED = /[·—│(]/gu;
+/** the glyphs S22's table does not speak: J7's closing parenthesis, J8's brackets, Q1's and Q2's opening marks, Q4's straight double quote, E1 … E3's ellipsis, M1's and M2's steps, and the marks K1 keeps out of a name beside words — M3's ×, M4's ◆, M10's ▸, M12's ⟡, M13's ◦ */
+const SILENT = /[)\[\]“”‘"…‹›×◆▸⟡◦]/gu;
+
+/** a chord's words, each part's in drawn order with a space between (S22's K16): a modifier by its entry, a named key by its, a sign by its, any other key as drawn */
+function chordWords(/** @type {string[]} */ mods, /** @type {string} */ key, /** @type {string | undefined} */ last) {
+  const word = (/** @type {string} */ k) => (KEY_WORDS[k] ? t(KEY_WORDS[k]) : SIGN_WORDS[k] ? t(SIGN_WORDS[k]) : k);
+  return [...mods.map((m) => t(MODIFIER_WORDS[m])), word(key), ...(last ? [t('S22.J5'), word(last)] : [])].join(' ');
+}
+
+/**
+ * Words rendered for the ear by S22's table, its "heard" column (style S22):
+ * every accessible name, description and status message passes it. The
+ * client's stretches — a string is one — are spoken as the table says: a
+ * chord by its parts' words in drawn order ("⇧⌘O" "Shift Command O",
+ * "Ctrl+L" "Control L", "⌘1…9" "Command 1 to 9"); an arrow, Return, Esc,
+ * PageDown and PageUp by their words; "≥" "at least", "–" "to", "≡" "the
+ * same words as in"; "·", "—", "│", "(" and a "›" between two words a comma's
+ * pause, one at the most between two words and none at either end or beside
+ * the sentence's own punctuation; ")", brackets, quotation marks but the
+ * apostrophe, the ellipsis, "‹", any other "›", and "×", "◆", "▸", "⟡", "◦"
+ * beside words not at all, "⟡" and "◦" standing alone by their words; a
+ * no-break space a space, a run of spaces one, and an end mark or a pause
+ * after words that end with their own punctuation, the quotation marks
+ * between gone, said once. A
+ * stretch in the reading face — the person's own words, a document's name or
+ * its words — and one in the identifier's — an address — are kept exactly;
+ * an address in the client's words holds no character the table reads, and
+ * stands as drawn.
+ * @param {Words} words
+ * @returns {string}
+ */
+export function heard(words) {
+  const runs = typeof words === 'string' ? [{ text: words, face: /** @type {const} */ ('client') }] : words;
+  /** @type {string[]} */
+  const kept = [];
+  /** words set aside from the passes after: a stretch the table leaves alone, a chord's words */
+  const keep = (/** @type {string} */ text) => `${KEEP_OPEN}${String.fromCharCode(KEEP_BASE + kept.push(text) - 1)}${KEEP_SHUT}`;
+  const joined = runs.map((r) => (r.face === 'client' ? r.text : keep(r.text))).join('');
+  const alone = joined.trim();
+  if (alone === '⟡') return t('S22.M12');
+  if (alone === '◦') return t('S22.M13');
+  const s = joined
+    .replace(MAC_CHORD, (_, mods, key, last) => keep(chordWords([...mods], key, last)))
+    .replace(CHORD, (_, mods, key, last) => keep(chordWords(mods.split('+').filter(Boolean), key, last)))
+    .replace(/[←→↑↓↩]|\bEsc\b|\bPageDown\b|\bPageUp\b/gu, (k) => t(KEY_WORDS[k]))
+    .replace(/≥\s*/gu, `${t('S22.M14')} `)
+    .replace(/\s*–\s*/gu, ` ${t('S22.J5')} `)
+    .replace(/≡\s*/gu, `${t('S22.M11')} `)
+    .replace(/(?<=\S)\s+›\s+(?=\S)/gu, PAUSE)
+    .replace(PAUSED, PAUSE)
+    .replace(SILENT, '')
+    .replace(/\s+/gu, ' ')
+    .replace(new RegExp(` ?${PAUSE}(?: ?${PAUSE})* ?`, 'gu'), PAUSE)
+    .replace(new RegExp(`^ ?${PAUSE}|${PAUSE} ?$`, 'gu'), '')
+    .replace(new RegExp(`${PAUSE}(?=[,;:.?!])`, 'gu'), '')
+    .replace(new RegExp(`([,;:.?!])${PAUSE}`, 'gu'), '$1 ')
+    .replace(new RegExp(PAUSE, 'gu'), ', ')
+    .replace(/([.?!])[.,]+/gu, '$1')
+    .trim();
+  // an end mark or a pause the line sets after words that end with their own punctuation, the quotation marks between them
+  // gone, is not said twice: a period dropped, a pause a space
+  return s.replace(new RegExp(`${KEEP_OPEN}([\\uE100-\\uEFFF])${KEEP_SHUT}(\\.|, )?`, 'gu'), (_, c, after = '') => {
+    const k = kept[c.charCodeAt(0) - KEEP_BASE];
+    return k + (/[.?!…,;:]$/u.test(k) ? (after === ', ' ? ' ' : '') : after);
+  });
+}
+
+/**
+ * Words already rendered for the ear — a name read back from the control it
+ * names — handed on as one stretch the table leaves alone, so `heard` speaks
+ * them as they stand and never applies the table to them twice.
+ * @param {string} text
+ * @returns {Run[]}
+ */
+export const asHeard = (text) => /** @type {Run[]} */ ([{ text, face: 'reading' }]);
 
 /** the brackets around the client's words in a document's first line's place (`L.client-words`): what opens them, and what closes them */
 const [CLIENT_OPEN, CLIENT_SHUT] = STRINGS['L.client-words'].text.split('⟨words⟩');

@@ -450,7 +450,7 @@ import json
 import math
 import re
 
-from . import BEAMED, DOC, FAR_LEAP, GHOST, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, Result, account_of
+from . import BEAMED, DOC, FAR_LEAP, GHOST, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, Result, account_of, heard
 
 LEVELS_EM = [9, 12, 18, 30]
 # the room about the viewport the text layer stands a document's lines in (issue #122: a document stands by line) — the
@@ -3385,6 +3385,11 @@ def line_rows_hold(ctx, r):
     wide = ctx.js(LINE_ACTING_JS) or {}
     whole = wide.get('text') if wide.get('form') == 0 and wide.get('tag') == 'span' else None
     r.check(bool(whole), 'the window the case opens in: the acting-as segment whole, no act (issue #445)', wide)
+    # its whole form for the ear (style S22): its words rendered by S22's table, the device label — the person's own words —
+    # kept as written (L-LINE's `actingHTML`)
+    label = ctx.js("(() => { const s = document.querySelector('#line .seg.acting .slot[data-slot=label]:not([data-string])'); return s ? s.textContent : null; })()")
+    cut = (whole or '').split(label, 1) if label and label in (whole or '') else None
+    spoken = heard(ctx, [{'text': cut[0], 'face': 'client'}, {'text': label, 'face': 'reading'}, {'text': cut[1], 'face': 'client'}] if cut else (whole or ''))
     halted = ctx.js('(async () => (await import("./strings.js")).t("F.daemon.notebook.halted"))()')
     was = ctx.resize(LINE_ROWS_PX[0], 900)
     try:
@@ -3403,13 +3408,13 @@ def line_rows_hold(ctx, r):
                     {'layout': lay, 'missing': missing, 'cut': v['cut'], 'fields': {k: x and {'inside': x['inside'], 'text': x['text'][:40]} for k, x in f.items()}, 'line': v['line']})
             r.check(not v['past'], f'a {w} px window: every segment of the one line inside the window (issues #310, #445)', {'past': v['past'], 'vw': v['vw']})
             act, ax = ctx.js(LINE_ACTING_JS), acting_ax(ctx)
-            named = bool(act) and bool(whole) and act['tag'] == 'button' and act['act'] == 'acting' and act['label'] == whole and act['text'] != whole and act['inside'] and act['over'] <= 1
+            named = bool(act) and bool(whole) and act['tag'] == 'button' and act['act'] == 'acting' and act['label'] == spoken and act['text'] != whole and act['inside'] and act['over'] <= 1
             hidden = bool(act) and all(g['hidden'] and not g['text'].strip() for g in act['glyphs'])
             if ax is None:
                 r.note(f'a {w} px window: Accessibility.getFullAXTree did not answer; the acting-as segment\'s act read from the DOM alone')
-            r.check(named and hidden and (ax is None or (ax['role'] == 'button' and ax['name'] == whole and not ax['glyph_shown'])),
-                    f'a {w} px window: the acting-as segment compact — "{(act or {}).get("text", "")}" — its act a button the AX tree names by the words it shows whole, its key\'s glyph hidden and standing for nothing there (issue #445: "Assistive technology reads the whole form, never the glyph")',
-                    {'act': act, 'ax': ax, 'whole': whole})
+            r.check(named and hidden and (ax is None or (ax['role'] == 'button' and ax['name'] == spoken and not ax['glyph_shown'])),
+                    f'a {w} px window: the acting-as segment compact — "{(act or {}).get("text", "")}" — its act a button the AX tree names by the words it shows whole, rendered for the ear, its key\'s glyph hidden and standing for nothing there (issue #445: "Assistive technology reads the whole form, never the glyph"; style S22)',
+                    {'act': act, 'ax': ax, 'whole': whole, 'heard': spoken})
             ctx.js("(() => { const b = document.querySelector('#line [data-act=acting]'); if (b) b.focus({preventScroll: true}); })()")
             ctx.drv.key('Enter')
             ctx.frames(2)
@@ -4135,8 +4140,9 @@ def kept_holds(ctx, r):
     # the item's sentence for the clause (ST's `asSentence`; style S1, S2)
     clause = ctx.js('window.__gateKept.ST.asSentence(%s)' % json.dumps({'id': 'L.kept.links', 'text': words})) if words else None
     name = ctx.js('window.__gateKept.LAYER.boxName(%s).name' % json.dumps(DOC))
-    appear = ctx.js('window.__gateKept.ST.t("L.kept.said", %s)' % json.dumps({'name': name, 'clause': words or ''}))
-    lifted = ctx.js('window.__gateKept.ST.t("L.kept.unchanged", %s)' % json.dumps({'name': name}))
+    # what the status region says of it, rendered for the ear, its name's own words kept as written (L-LINE's `keptSaid`; style S22)
+    appear = ctx.js('((a, clause) => { const K = window.__gateKept; return K.ST.heard(K.ST.tRuns("L.kept.said", {name: K.LAYER.boxName(a).runs, clause})); })(%s, %s)' % (json.dumps(DOC), json.dumps(words or '')))
+    lifted = ctx.js('((a) => { const K = window.__gateKept; return K.ST.heard(K.ST.tRuns("L.kept.unchanged", {name: K.LAYER.boxName(a).runs})); })(%s)' % json.dumps(DOC))
     r.check(named['answered'] and h['kept'] and (h['named'] or {}).get('doc') == DOC and bool(words) and bool(h['seg']) and h['seg']['text'] == words and h['seg']['id'] == 'L.kept.links' and h['seg']['beside']
             and bool(h['corner']) and h['corner']['kept'] is None,
             'the line naming the first edition, its read again out past a second: "links as last read ⟨when⟩" in a segment of its own right after the address segment, its corner carrying none (issue #345)',

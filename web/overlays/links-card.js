@@ -9,9 +9,11 @@
 // word set between them and the switch's `aria-checked`, both the state LK
 // holds (R60; WAI-ARIA's switch, whose label does not change with its state)
 // — the lenses by owner, type and endorsement (R9; D-2 per document for the
-// session), the links, each row naming its far end as its tail and its
+// session), the links, each row drawing its far end as its tail and its
 // mirror item do, its address in the identifier's face (LK's
-// `farLabelHTML`; an owner lens's too), and opening its link's anatomy card at the
+// `farLabelHTML`; an owner lens's too), named by its type, the way its link
+// runs in words and its far end (LK's `endRuns`), rendered for the ear (ST's
+// `heard`; patterns K1), and opening its link's anatomy card at the
 // link's own bytes, "show more" (the windowed list, the end marked, no page
 // ever expires — A-287), the blind-spot clause (R4's cross-board disclosure,
 // E3 (a)). The card's dismissal returns the chain to hidden; an act's card
@@ -32,7 +34,7 @@ import * as HOST from './host.js';
 import * as ANATOMY from './anatomy-card.js';
 import * as LK from '../links/links.js';
 import * as LAYER from '../text/layer.js';
-import { t, typeName } from '../strings.js';
+import { t, typeName, heard } from '../strings.js';
 import { esc } from '../util.js';
 import { docBox } from '../plane/projection.js';
 import { markDirty } from '../plane/camera.js';
@@ -126,7 +128,7 @@ export function render(byKey = false, focus = null) {
       `<span class="lens-label">${esc(t('F.lens.endorsement'))}</span><button data-run="endorsed" aria-pressed="${r.lens.endorsed}">${esc(t('F.lens.endorsed'))}</button>` +
       `${r.lens.owners || r.lens.types || r.lens.endorsed ? `<button data-run="clear">×</button>` : ''}` +
     `</div>` +
-    `<ul class="rows">${listed.map((s, i) => `<li><button data-run="row:${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.end === 'from' ? '→' : '←')} ${LK.farLabelHTML(s) || '—'}</button></li>`).join('')}</ul>` +
+    `<ul class="rows">${listed.map((s, i) => `<li><button data-run="row:${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}" aria-label="${esc(heard(LK.endRuns(s)))}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.end === 'from' ? '→' : '←')} ${LK.farLabelHTML(s) || '—'}</button></li>`).join('')}</ul>` +
     (more ? `<button data-run="more">${esc(t('B1.show-more'))}</button>` : shown.length ? `<span class="end">·</span>` : '') +
     `<div class="clause" data-string="F.card-clause">${esc(t('F.card-clause'))}</div>`;
   /** @type {Record<string, import('./host.js').Act>} */

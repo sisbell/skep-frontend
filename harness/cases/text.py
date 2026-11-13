@@ -257,17 +257,18 @@ def run(ctx):
     r.figures['face'] = face['text'][:300]
     # ---- a printable key's line, its hint at the focus: C-45 at an edition of the session's account, the K-9 line below its
     # reading scale (D5 K-72; issue #468's design decision) ---------------------------------------------------------------
-    hinted = '''(async (id, values) => { const {hintSentences} = await import("./strings.js"), {drawChord} = await import("./nav/keys.js"), h = window.__skep.hint(), b = document.querySelector('#hint button');
+    hinted = '''(async (id, values) => { const {hintSentences, heard} = await import("./strings.js"), {drawChord} = await import("./nav/keys.js"), h = window.__skep.hint(), b = document.querySelector('#hint button');
       const d = b && document.getElementById(b.getAttribute('aria-describedby')), said = hintSentences(id, id === 'F.swallow' ? {'LEAP chord': drawChord('Mod+L')} : values);
-      return {hint: h, shown: b ? b.textContent : null, described: d ? d.textContent : null, line: window.__skep.line().text, whole: said.whole, clause: said.clause}; })(%s, %s)'''
+      return {hint: h, shown: b ? b.textContent : null, named: b ? b.getAttribute('aria-label') : null, described: d ? d.textContent : null, line: window.__skep.line().text, whole: said.whole, clause: said.clause,
+              heard: {whole: heard(said.whole), shown: b ? heard(b.textContent) : null}}; })(%s, %s)'''
     ctx.leap(DOC, WINDOW[0])
     ctx.drv.key('t')
     ctx.frames(2)
     edition = ctx.js(hinted % (json.dumps('C-45'), json.dumps({'D': DOC})))
     hint = edition['hint'] or {}
-    r.check(hint.get('id') == 'C-45' and edition['shown'] == edition['whole'] and edition['described'] == edition['whole'] and edition['whole'].startswith(DOC + ' is published')
+    r.check(hint.get('id') == 'C-45' and edition['shown'] == edition['whole'] and edition['described'] == edition['heard']['whole'] and edition['whole'].startswith(DOC + ' is published')
             and 'advances by versions' not in edition['line'],
-            'a printable key at an edition of the session\'s account raises C-45 naming the document as its hint — whole at every press, described by the notice whole — the one line holding none of it (D5 K-72)',
+            'a printable key at an edition of the session\'s account raises C-45 naming the document as its hint — whole at every press, described by the notice whole, rendered for the ear — the one line holding none of it (D5 K-72; style S22)',
             edition)
     zooms = 0
     while zooms < 8 and (ctx.js('window.__skep.view.focus()') or {}).get('kind') != 'document':
@@ -279,9 +280,10 @@ def run(ctx):
     ctx.frames(2)
     swallow = dict(ctx.js(hinted % (json.dumps('F.swallow'), json.dumps({}))), zooms=zooms, focus=ctx.js('window.__skep.view.focus()'))
     hint = swallow['hint'] or {}
-    r.check(hint.get('id') == 'F.swallow' and swallow['shown'] in (swallow['whole'], swallow['clause']) and swallow['described'] == swallow['whole'] and '⌘L' in swallow['whole']
+    r.check(hint.get('id') == 'F.swallow' and swallow['shown'] in (swallow['whole'], swallow['clause']) and swallow['described'] == swallow['heard']['whole'] and '⌘L' in swallow['whole']
+            and swallow['named'] == swallow['heard']['shown'] and '⌘' not in (swallow['named'] or '') + (swallow['described'] or '')
             and 'typing goes nowhere' not in swallow['line'].lower() and (swallow['focus'] or {}).get('addr') == DOC,
-            'below the edition\'s reading scale, the walk on it whole, a printable key raises the K-9 line as its hint — whole at its first press in the session, its first clause after, each a sentence — described by the notice whole with the LEAP chord drawn for the platform, the one line holding none of it',
+            'below the edition\'s reading scale, the walk on it whole, a printable key raises the K-9 line as its hint — whole at its first press in the session, its first clause after, each a sentence — the LEAP chord drawn for the platform, the hint named by its words and described by the notice whole, each rendered for the ear with the chord by its words, the one line holding none of it (style S22; issue #626)',
             swallow)
     # the next act takes the hint down, and the landing is made again, so nothing after this stands beside it or below it
     ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()'); ctx.frames(2)

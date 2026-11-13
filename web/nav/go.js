@@ -428,8 +428,10 @@
 // BOARD push their act's name, the strings table's, a reading scene's entry
 // is named by its act's and its two documents' addresses (`scenePair`), and
 // every other entry's words are read from the model as they are shown
-// (`wordsOf`, and as markup in their faces, `wordsHTML`: the words its box's
-// first line says, nothing while nothing has answered). A change of the
+// (`wordsOf`, and as markup in their faces, `wordsHTML`, and as stretches in
+// them, `wordsRuns`, which a name naming the entry is rendered for the ear
+// from: the words its box's first line says, kept as written, nothing while
+// nothing has answered). A change of the
 // page's class (`classChanged`) puts the arrival out, nothing the dead class
 // measured surviving, and drops what the entries kept (N-TRAIL's); a cursor
 // move reaching an entry whose document is covered (M-REC's `covered`) lands
@@ -1738,6 +1740,19 @@ export function wordsHTML(e) {
   if (e.label != null) return esc(e.label);
   if (e.scene) return esc(t('B1.side-by-side'));
   return kindOf(e.addr) === 'document' && REC.has(e.addr) ? LAYER.firstLineHTML(REC.doc(e.addr)) : '';
+}
+
+/**
+ * An entry's words as stretches in their faces (`wordsHTML`): what a name or
+ * a message naming the entry is rendered for the ear from (ST's `heard`), a
+ * document's first line kept as written.
+ * @param {Entry} e
+ * @returns {import('../strings.js').Run[]}
+ */
+export function wordsRuns(e) {
+  if (e.label != null) return [{ text: e.label, face: 'client' }];
+  if (e.scene) return [{ text: t('B1.side-by-side'), face: 'client' }];
+  return kindOf(e.addr) === 'document' && REC.has(e.addr) ? LAYER.firstOf(REC.doc(e.addr)) : [];
 }
 
 /**

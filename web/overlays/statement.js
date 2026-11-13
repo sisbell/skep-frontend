@@ -4,14 +4,16 @@
 // and the words that markup is spoken as. A statement is ST's ordered parts
 // (`statementParts`), each drawn on a line of its own: one paragraph, each
 // part a line inside it and a space between two, so the characters drawn
-// are the characters spoken and their join is the statement's string
-// (`spoken`); a part wider than the measure wraps on a hanging indent of
-// HANG_EM, so a wrap never reads as a new part; the exit part — what the
-// person can do instead — stands last after HALF_LINE; the measure is the
-// face's width and never more than MEASURE_CH characters of the face it is
-// set in, at its size; figures are tabular. Nothing else is drawn in or
-// around it — no box, rule, ground, bullet, icon, hue, weight, italic or
-// capitals — and the paragraph carries no list, group or heading semantics.
+// are the statement's string, their join (`spoken`) — the words an act it
+// stands before is described by, which the caller renders for the ear as it
+// sets that description (ST's `heard`; style S22); a part wider than the
+// measure wraps on a hanging indent of HANG_EM, so a wrap never reads as a
+// new part; the exit part — what the person can do instead — stands last
+// after HALF_LINE; the measure is the face's width and never more than
+// MEASURE_CH characters of the face it is set in, at its size; figures are
+// tabular. Nothing else is drawn in or around it — no box, rule, ground,
+// bullet, icon, hue, weight, italic or capitals — and the paragraph carries
+// no list, group or heading semantics.
 // A SHORT PRIVATE ACT's statement (§8 case 5; `below`) sits on its face
 // directly below the face's acts, from the face's left edge, drawn whole
 // every time; its act is the row's last and never the act focused first —
@@ -51,8 +53,9 @@ export function statementHTML(id, values, holds) {
 
 /**
  * A statement as it is spoken (see the head): the parts whose case holds
- * joined, a space between two — the string its act is described by, and the
- * characters `statementHTML` draws.
+ * joined, a space between two — the string its act is described by, rendered
+ * for the ear where that description is set, and the characters
+ * `statementHTML` draws.
  * @param {string} id
  * @param {Record<string, string | number>} [values]
  * @param {(key: string) => boolean} [holds]

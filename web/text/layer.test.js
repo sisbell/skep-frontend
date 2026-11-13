@@ -60,7 +60,8 @@
 // place; a face arriving after the first layout setting every standing
 // article again, the passage held; a box's label and first line in their
 // faces; the name the status region gives a document — its first line as the
-// mirror says it, six words at the most, then its address; a kept document's one clause — a draft's text, else its links, an
+// mirror says it, six words at the most, then its address, its stretches in
+// their faces so what is spoken keeps the document's words as written; a kept document's one clause — a draft's text, else its links, an
 // edition's links alone, at the row or drop that left it behind, the failed
 // read's words after it — its label carrying it after its address, none where
 // the one line names it, and its account counting it; and the plane's corner made again as the board's lag
@@ -69,7 +70,8 @@
 // arrival offers comes, rises and goes, a focus on it kept; and a moved
 // draft's corner carrying its face beneath the kept word in the frame its
 // line is set and dropping it in the frame the line goes, made again as its
-// hands are named, its words said as it comes and changes, its acts keyed
+// hands are named, its words said as it comes and changes — a device's
+// label in them the person's own, spoken as written — its acts keyed
 // on it, compact at its document's head with the band holding its row and
 // whole beneath the rows on its act or a press answered at it (FP-8, FP-12, FP-20, FP-22, FP-23,
 // FP-26, FP-27, FP-30, FP-31, FP-33, FP-34, FP-36, FP-37, FP-39).
@@ -90,11 +92,11 @@ import { CORNER, ADDRESS, COL, HOLD, MARGIN, cornerWidth } from '../plane/regist
 import { holdTop, holdStack, lineHeight, runsOf } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME } from '../plane/lod.js';
-import { CLAUSE_READING, articleHTML, faceWords } from './article.js';
+import { CLAUSE_READING, articleHTML, faceRuns } from './article.js';
 import * as FACES from '../overlays/faces.js';
 import { farSays } from '../beams/held.js';
 import { pastSigns } from '../beams/beams.js';
-import { t, tHTML, lastRead, sentence, sentences } from '../strings.js';
+import { t, tHTML, tRuns, lastRead, sentence, sentences, heard } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {import('../plane/layout.js').Fold} Fold */
@@ -1702,9 +1704,15 @@ test('the status region names a document as the mirror\'s item finds it: its fir
   text(P, 'The second version holds this.\n');
   try {
     LAYER.readers({ shown: (a) => (a === D ? P : a) });
-    assert.deepEqual(LAYER.boxName(D), { addr: P, name: `"The second version holds this." ${P}` }, 'a box pinned on a version: that version\'s first line and address');
+    const pinned = LAYER.boxName(D);
+    assert.deepEqual({ addr: pinned.addr, name: pinned.name }, { addr: P, name: `"The second version holds this." ${P}` }, 'a box pinned on a version: that version\'s first line and address');
   } finally { LAYER.readers({}); }
-  assert.deepEqual(LAYER.boxName(D), { addr: D, name: `"Tumbler." ${D}` }, 'at its plain address: its own');
+  const own = LAYER.boxName(D);
+  assert.deepEqual({ addr: own.addr, name: own.name }, { addr: D, name: `"Tumbler." ${D}` }, 'at its plain address: its own');
+  assert.deepEqual(own.runs, [{ text: '"', face: 'client' }, { text: 'Tumbler.', face: 'reading' }, { text: '"', face: 'client' }, { text: ' ', face: 'client' }, { text: D, face: 'ident' }],
+    'its name as stretches in their faces: the document\'s words the reading face\'s, the quotation marks the client\'s, the address the identifier\'s — what is spoken keeps as written');
+  text(W, 'Field notes — draft.\n');
+  assert.equal(heard(LAYER.boxName(W).runs), `Field notes — draft. ${W}`, 'heard: the quotation marks silent, the document\'s own dash kept');
 });
 
 test('where the platform sets no words — the node tests — the article\'s measure counts every character one advance of the reading face, whatever its face, as the plan does (issue #16)', () => {
@@ -2060,7 +2068,7 @@ test('a reading scene\'s pane\'s view is at the pane\'s measure, and its corner 
   const view = { ...LAYER.sceneView(d, 1), members: 3, read: 2 }, px = 17, pitch = LINE_H * px, width = (1 * CHAR_W + EDGE) * px;
   assert.equal(view.cpl, 1, 'the pane\'s measure');
   const latest = venued('F.corner.latest');
-  assert.ok(LAYER.sceneCorner(d, view, true).includes('class="st glyph"') && LAYER.sceneCorner(d, view, true).includes(`aria-label="${esc(latest)}"`) && !LAYER.sceneCorner(d, view).includes('glyph'), 'beside its column, compact: the state a glyph named by its words; whole: its words');
+  assert.ok(LAYER.sceneCorner(d, view, true).includes('class="st glyph"') && LAYER.sceneCorner(d, view, true).includes(`aria-label="${esc(heard(latest))}"`) && !LAYER.sceneCorner(d, view).includes('glyph'), 'beside its column, compact: the state a glyph named by its words, heard; whole: its words');
   assert.ok([LAYER.sceneCorner(d, view), LAYER.sceneCorner(d, view, true)].every((c) => c.startsWith(`<span class="kind" data-kind="published" data-string="F.published"`)), 'its kind first, in either form');
   /** a head's rows: each its index, its top and its height, and its markup */
   const rowsOf = (/** @type {string} */ html) => [...html.matchAll(/<div class="hrow" data-row="(\d+)"( role="toolbar")? style="top:([\d.]+)px;height:([\d.]+)px">(.*?)<\/div>/g)].map((m) => ({ k: Number(m[1]), bar: !!m[2], top: Number(m[3]), h: Number(m[4]), html: m[5] }));
@@ -2207,16 +2215,17 @@ test('a standing corner\'s kept word is said once in the status region where it 
 }));
 
 /**
- * A moved document's face as O-FACES hands it to the corner (`cornerFace`): its hand one device's, by `label`, its
- * compact form naming it; `unread`, the hands not read yet and no compact wording
+ * A moved document's face as O-FACES hands it to the corner (`cornerFace`): its hand one device's, by `label` — the
+ * person's own words, carried in the reading face too — its compact form naming it; `unread`, the hands not read yet
+ * and no compact wording
  * @param {string | null} label
  * @returns {import('./article.js').CornerFace}
  */
 const movedFace = (label) => ({
   line: { id: 'B3.moved', text: t('B3.moved') },
-  hands: [label ? { id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': label }) } : { id: 'B3.hand.unread', text: t('B3.hand.unread') }],
+  hands: [label ? { id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': label }), runs: tRuns('B3.hand.device', { 'device label': [{ text: label, face: 'reading' }] }) } : { id: 'B3.hand.unread', text: t('B3.hand.unread') }],
   again: false,
-  compact: label ? { id: 'B3.moved.compact', text: t('B3.moved.compact', { hand: label }) } : null,
+  compact: label ? { id: 'B3.moved.compact', text: t('B3.moved.compact', { hand: label }), runs: tRuns('B3.moved.compact', { hand: [{ text: label, face: 'reading' }] }) } : null,
   acts: [
     { key: 'held', id: 'B3.moved.see-held', label: t('B3.moved.see-held'), inert: null, said: null },
     { key: 'send', id: 'B3.send-again', label: t('B3.send-again'), inert: { id: 'B3.moved.send-again.inert', text: t('B3.moved.send-again.inert', { label: 'd' }) }, said: null },
@@ -2239,12 +2248,13 @@ test('a moved draft\'s corner on the plane carries its face beneath the kept wor
   const html = String(el.innerHTML), at = (/** @type {string} */ s) => html.indexOf(s);
   assert.ok(at('class="kept-line"') >= 0 && at('class="kept-line"') < at('<span class="face">') && at('<span class="face">') < at('class="chip'), `the face whole, beneath the kept word and before the chip — ${html}`);
   assert.ok(html.includes('data-face="held"') && html.includes('data-face="send"') && html.includes('data-face="discard"'), 'its acts in its whole form');
-  assert.deepEqual(said.slice(before), [faceWords(face.v)], 'its words said once as it comes');
+  assert.deepEqual(said.slice(before), [heard(faceRuns(face.v))], 'its words said once as it comes, as a screen reader hears them');
   LAYER.frame();
   assert.equal(said.length, before + 1, 'not again while it stands');
-  face.v = movedFace('kitchen');
+  face.v = movedFace('kitchen — 2 (old)');
   LAYER.frame();
-  assert.deepEqual(said.slice(before + 1), [faceWords(face.v)], 'its words changed under the reader: said again');
+  assert.deepEqual(said.slice(before + 1), [heard(faceRuns(face.v))], 'its words changed under the reader: said again');
+  assert.ok(said[before + 1].endsWith(' By kitchen — 2 (old).') && !said[before + 1].includes('held —'), `the device's label the person's words, said as written, the face's own dash a pause: ${said[before + 1]}`);
   face.v = null;
   LAYER.frame();
   assert.ok(!String(el.innerHTML).includes('class="face') && said.length === before + 2, 'the moved line gone: the face gone in that frame, nothing said');
@@ -2290,7 +2300,7 @@ test('at its document\'s head the face stands compact in the rows — its compac
   LAYER.frame();
   const n = said.length;
   assert.deepEqual([FACES.answerAtFace(D), LAYER.cornerAt(D)?.opened], [true, true], 'a press answered at the face: the corner opened whole');
-  assert.deepEqual(said.slice(n), [faceWords(/** @type {any} */ (FACES.cornerFace(D)))], 'its words said');
+  assert.deepEqual(said.slice(n), [heard(faceRuns(/** @type {any} */ (FACES.cornerFace(D))))], 'its words said, as a screen reader hears them');
   assert.deepEqual([FACES.answerAtFace(D), LAYER.cornerAt(D)?.opened], [true, true], 'pressed again: it stays opened');
 }));
 

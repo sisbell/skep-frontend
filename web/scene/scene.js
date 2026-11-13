@@ -360,8 +360,14 @@
 // the address it shows, in the identifier's face (P-REG's FACE), so no head's
 // row names it. The scene's acts are its bar's
 // buttons — re-level (K-62, its chord drawn for the platform, rule 19) and
-// the dismissal, the scene's own end — each pressed by a click anywhere on
-// it, by Enter or by Space, a pane's corner's act, and a stroke's.
+// the dismissal, the scene's own end — each named by its words alone and
+// exposing its key (`aria-keyshortcuts`; patterns K1, K3), pressed by a
+// click anywhere on it, by Enter or by Space, a pane's corner's act, and a
+// stroke's. Every name, description and message the scene sets or says is
+// rendered for the ear by S22's table (ST's `heard`): a returned stop's name
+// read back off its button said as it stands (ST's `asHeard`), a pane's
+// documents' words kept as written, and the pair the status region names
+// parted by a pause.
 // A change of the panes' size, or a face that arrives once they are set
 // (`refaced`), fits them again (`refit`): where the measure, the corners'
 // form or the em moves, both panes are set again in one step at it, their
@@ -396,7 +402,7 @@ import * as LK from '../links/links.js';
 import * as HOST from '../overlays/host.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
-import { drawChord } from '../nav/keys.js';
+import { drawChord, keyShortcut } from '../nav/keys.js';
 import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML, cornerLead, kindWord, statedChain } from '../text/article.js';
 import { inkOf, strokeOf, strokeIn, cutAt, pointOn } from '../beams/beams.js';
 import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingLineOf } from '../beams/held.js';
@@ -405,7 +411,7 @@ import { LINE_H, MEASURE, MEASURE_CPL, CHAR_W, EDGE, EDGE_GAP, fitFor } from '..
 import { holdStack, LINE_BOX } from '../plane/labels.js';
 import { markDirty, READING_PX } from '../plane/camera.js';
 import { documentOf, homeOf, memberOf, versionAddress, isTrunkMember } from '../model/address.js';
-import { t, tHTML, sentence, sentences } from '../strings.js';
+import { t, tHTML, tRuns, joinRuns, runsText, heard, asHeard, sentence, sentences } from '../strings.js';
 import { esc, byteOffsets } from '../util.js';
 
 /** @typedef {import('../model/frames.js').ComparePair} ComparePair */
@@ -821,7 +827,7 @@ export function attach(e, acts = {}) {
   els = e;
   if (acts.end) ending = acts.end;
   if (acts.faces) faces = acts.faces;
-  e.root.setAttribute('aria-label', t('L.scene-label'));
+  e.root.setAttribute('aria-label', heard(t('L.scene-label')));
   e.stop.addEventListener('click', (ev) => stopAct(FOCUS.byKey(ev)));
   e.strokes.addEventListener('click', (ev) => {
     const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (ev.target).closest('[data-stroke]'));
@@ -1552,6 +1558,7 @@ export function markKept() {
  * @typedef {Object} PaneKept — a pane standing kept, as the one line speaks for it (see the head; FP-36)
  * @property {string} addr the address it names (`Pane.shows`)
  * @property {string} name its name as the mirror finds it (T-LAYER's `placeName`)
+ * @property {import('../strings.js').Run[]} named that name as stretches in their faces (T-LAYER's `placeRuns`), its document's words kept as written in what is said
  * @property {import('../text/layer.js').KeptClause | null} clause its clause past its second (`paneKept`); null while the setting asked of it is within its second
  * @property {number} since the page's clock at the row or drop that left it behind: its clause's stamp, else its setting's
  * @property {boolean} focus the pane holds the platform's focus
@@ -1572,7 +1579,8 @@ export function keptPanes() {
     const soon = !clause && !!P.kept && performance.now() - P.kept.since < PUMP.KEPT_MS;
     if (!clause && !soon) return [];
     const since = held && clause ? held.since : /** @type {NonNullable<Pane['kept']>} */ (P.kept).at;
-    return [{ addr: P.shows, name: LAYER.placeName(P.d, P.shows), clause, since, focus: !!at && paneEl(E, side).contains(at) }];
+    const named = LAYER.placeRuns(P.d, P.shows);
+    return [{ addr: P.shows, name: runsText(named), named, clause, since, focus: !!at && paneEl(E, side).contains(at) }];
   });
 }
 
@@ -1651,9 +1659,9 @@ function writeCorner(E, P, items = null) {
   P.corner = made.html; P.rows = made.rows;
 }
 
-/** the bar's name for a pane, written again: the address it shows, and the hidden words its region's name leads with (`paneLead`) */
+/** the bar's name for a pane, written again: the address it shows, and the hidden words its region's name leads with (`paneLead`), rendered for the ear (ST's `heard`) */
 function nameBar(/** @type {NonNullable<typeof els>} */ E, /** @type {Pane} */ P) {
-  const b = E.bar.querySelector(`[data-name="${P.side}"]`), lead = E.bar.querySelector('#' + leadId(P.side)), words = paneLead(P);
+  const b = E.bar.querySelector(`[data-name="${P.side}"]`), lead = E.bar.querySelector('#' + leadId(P.side)), words = heard(paneLead(P));
   if (b) b.textContent = P.shows;
   if (lead && lead.textContent !== words) lead.textContent = words;
 }
@@ -1861,9 +1869,10 @@ function stand(E, S, face) {
   if (face) E.bar.dataset.face = face; else delete E.bar.dataset.face;
   E.bar.innerHTML = `<b class="id" data-name="a">${esc(S.a.shows)}</b> │ <b class="id" data-name="b">${esc(S.b.shows)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
     (face ? ` <span class="face-text">${esc(faceWords(face))}</span>` : '') +
-    SIDES.map((side) => `<span id="${leadId(side)}" hidden>${esc(paneLead(S[side]))}</span>`).join('') +
-    (S.whole ? `<span id="${WHOLE_ID}" data-string="L.scene.whole-end" hidden>${esc(t('L.scene.whole-end'))}</span>` : '') +
-    ` <button data-relevel="1">${esc(t('F.scene.relevel'))} <kbd>${esc(drawChord('Mod+R'))}</kbd></button><button class="x" data-x="1">× ${esc(t('F.scene.dismiss'))}</button>`;
+    SIDES.map((side) => `<span id="${leadId(side)}" hidden>${esc(heard(paneLead(S[side])))}</span>`).join('') +
+    (S.whole ? `<span id="${WHOLE_ID}" data-string="L.scene.whole-end" hidden>${esc(heard(t('L.scene.whole-end')))}</span>` : '') +
+    ` <button data-relevel="1" aria-label="${esc(heard(t('F.scene.relevel')))}" aria-keyshortcuts="${esc(keyShortcut('Mod+R'))}">${esc(t('F.scene.relevel'))} <kbd>${esc(drawChord('Mod+R'))}</kbd></button>` +
+    `<button class="x" data-x="1" aria-label="${esc(heard(t('F.scene.dismiss')))}" aria-keyshortcuts="${esc(keyShortcut('Esc'))}">× ${esc(t('F.scene.dismiss'))}</button>`;
   for (const side of SIDES) {
     const P = S[side], pane = paneEl(E, side);
     pane.innerHTML = cornerMarkup(P, S.fit);
@@ -2202,17 +2211,27 @@ function returning(E, S, stop) {
   return R;
 }
 
-/** a passage's opening words where a pane's text holds it, read by T-ARTICLE's item rule (`copyText`) and cut on a word; null where the text holds none of it */
-function wordsAt(/** @type {Pane} */ P, /** @type {ISpan[]} */ ids) {
+/**
+ * A passage's opening words where a pane's text holds it, read by T-ARTICLE's
+ * item rule (`copyText`) and cut on a word, as stretches: its words the
+ * reading face's, the cut's ellipsis the client's; null where the text holds
+ * none of it.
+ * @param {Pane} P
+ * @param {ISpan[]} ids
+ * @returns {import('../strings.js').Run[] | null}
+ */
+function wordsAt(P, ids) {
   const made = P.el ? LAYER.madeOf(P.el) : null, at = made ? REC.placedIn(made.image, ids)[0] : undefined;
   if (!made || !at) return null;
   const text = copyText(made, { addr: made.addr, pos: at.pos, width: Math.min(at.width, 160) }, LAYER.originOwner).replace(/\s+/g, ' ').trim();
-  if (text.length <= 48) return text;
+  /** @type {import('../strings.js').Run[]} */
+  const words = [{ text, face: 'reading' }];
+  if (text.length <= 48) return words;
   const cut = text.slice(0, 48), space = cut.lastIndexOf(' ');
-  return (space > 16 ? cut.slice(0, space) : cut) + '…';
+  return [{ text: space > 16 ? cut.slice(0, space) : cut, face: 'reading' }, { text: '…', face: 'client' }];
 }
 
-/** a returned stroke's changes in words (`changeWords`), each side's characters where the pane's text holds its bytes, a side holding none "nothing"; null where a pane's text holds no longer the bytes of a side that held some */
+/** a returned stroke's changes in words, as stretches (`changeRuns`), each side's characters where the pane's text holds its bytes, a side holding none "nothing"; null where a pane's text holds no longer the bytes of a side that held some */
 function changesAt(/** @type {Scene} */ S, /** @type {StrokeStop} */ stop) {
   const [A, B] = sidesOf(S);
   /** where a change's side stands in its pane's text: none, where it held no byte */
@@ -2223,7 +2242,7 @@ function changesAt(/** @type {Scene} */ S, /** @type {StrokeStop} */ stop) {
   };
   const changes = stop.changes.map((c) => ({ a: side(S.a, c.a), b: side(S.b, c.b) }));
   if (changes.some((c) => !c.a || !c.b)) return null;
-  return changes.map((c) => changeWords(/** @type {Change} */ (c), A, B, LAYER.originOwner)).join(' · ');
+  return joinRuns(' · ', changes.map((c) => changeRuns(/** @type {Change} */ (c), A, B, LAYER.originOwner)));
 }
 
 /** what the answer said of a returned stop in FP-21's words, as sentences: the dead end's where the text holds none of it, else the line's (BM-HELD's `floatingLineOf`, `lineOf`) */
@@ -2237,7 +2256,8 @@ const saidWords = (/** @type {Scene} */ S, /** @type {Answered} */ a) => (a.hold
  * panes' texts hold them — its count an empty box of its own width; all of it
  * holding, the name and the count of the stop it is then; else its kind's
  * words and the answer's, each a sentence (ST's `sentence`, `sentences`;
- * FP-21), no count.
+ * FP-21), no count. The name is rendered for the ear (ST's `heard`), the
+ * document's words in it kept as written.
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  * @param {Returned} R
@@ -2246,19 +2266,18 @@ function nameReturned(E, S, R) {
   const a = R.answer, D = S.b.shows, stop = R.stop;
   if (stop.kind === 'shared') {
     const text = a ? null : wordsAt(S.b, stop.at.ids);
-    /** @type {[string, Record<string, string | number>]} its name's string, and the values its tokens take, where one string names it */
+    /** @type {[string, Record<string, string | number | import('../strings.js').Run[]>]} its name's string, and the values its tokens take, where one string names it */
     const name = !a ? (text ? ['L.scene.shared.returned', { D, text }] : ['L.scene.shared.returned.away', { D }]) : [a.count > 1 ? 'L.scene.shared' : 'L.scene.shared.1', { D, n: a.count }];
-    if (a && a.holds !== 'all') R.el.setAttribute('aria-label', sentences(sentence('L.scene.shared.1', { D }), saidWords(S, a)));
-    else R.el.setAttribute('aria-label', t(...name));
+    if (a && a.holds !== 'all') R.el.setAttribute('aria-label', heard(sentences(sentence('L.scene.shared.1', { D }), saidWords(S, a))));
+    else R.el.setAttribute('aria-label', heard(tRuns(...name)));
     if (!a) R.el.innerHTML = READING;
     else R.el.textContent = a.holds !== 'none' && a.holds !== 'unknown' && a.count > 1 ? String(a.count) : '';
     return;
   }
   const changes = a ? null : changesAt(S, stop), [A, B] = sidesOf(S), s = a && a.holds === 'all' ? strokeFor(S, R) : null;
-  /** @type {[string, Record<string, string | number>]} its name's string, and the values its tokens take, where one string names it */
-  const name = s ? ['L.scene.stroke.name', strokeWords(s, A, B, LAYER.originOwner)] : changes != null ? ['L.scene.stroke.returned', { changes }] : ['L.scene.stroke.returned.away', {}];
-  if (a && !s) R.el.setAttribute('aria-label', sentences(sentence('L.scene.stroke.kind'), saidWords(S, a)));
-  else R.el.setAttribute('aria-label', t(...name));
+  const name = s ? strokeRuns(s, A, B, LAYER.originOwner) : changes != null ? tRuns('L.scene.stroke.returned', { changes }) : tRuns('L.scene.stroke.returned.away');
+  if (a && !s) R.el.setAttribute('aria-label', heard(sentences(sentence('L.scene.stroke.kind'), saidWords(S, a))));
+  else R.el.setAttribute('aria-label', heard(name));
   R.el.innerHTML = !a ? READING : s && s.changes.length > 1 ? `<span class="n">${s.changes.length}</span>` : '';
 }
 
@@ -2486,7 +2505,7 @@ function answer(S, cmp, told = false) {
   if (acts && waiting) madeAct(S, R, waiting.byKey);
   if (a.holds === 'all') {
     S.told = true;
-    if (!told) FOCUS.say(R.el.getAttribute('aria-label') || '');
+    if (!told) FOCUS.say(asHeard(R.el.getAttribute('aria-label') || ''));
     if (acts && S.returned === R) S.returned = null;
   } else if (!(acts && R.stop.kind === 'stroke')) showSaid(S, R, moved, told);
   markDirty();
@@ -3782,6 +3801,22 @@ export function changeWords(c, A, B, ownerOf, html = false) {
   return tHTML('L.scene.change', vals, wrap);
 }
 
+/**
+ * A change's words as stretches in their faces (`changeWords`): each pane's
+ * characters there the reading face's, kept as written in what is spoken
+ * (ST's `heard`), the rest the client's.
+ * @param {Change} c
+ * @param {Side} A pane A
+ * @param {Side} B pane B
+ * @param {(doc: string) => string} ownerOf
+ * @returns {import('../strings.js').Run[]}
+ */
+export function changeRuns(c, A, B, ownerOf) {
+  const chars = (/** @type {Side} */ P, /** @type {{from: number, to: number}} */ r) => (P.made && r.to > r.from ? copyText(P.made, { addr: P.made.addr, pos: r.from, width: r.to - r.from }, ownerOf) : '');
+  const side = (/** @type {string} */ text) => (text ? tRuns('L.scene.change.text', { text }, { text: 'reading' }) : t('L.scene.change.none'));
+  return tRuns('L.scene.change', { a: A.shows, one: side(chars(A, c.a)), b: B.shows, other: side(chars(B, c.b)) });
+}
+
 /** what a stroke stands for, counted (see the head) */
 const countOf = (/** @type {Stroke} */ s) => t(s.changes.length > 1 ? 'L.scene.stroke' : 'L.scene.stroke.1', { n: s.changes.length });
 
@@ -3796,6 +3831,18 @@ const countOf = (/** @type {Stroke} */ s) => t(s.changes.length > 1 ? 'L.scene.s
  * @returns {{count: string, changes: string}}
  */
 export const strokeWords = (s, A, B, ownerOf) => ({ count: countOf(s), changes: s.changes.map((c) => changeWords(c, A, B, ownerOf)).join(' · ') });
+
+/**
+ * A stroke's name as stretches in their faces (`strokeWords`; `changeRuns`):
+ * what it stands for counted, then each change, the characters kept as
+ * written in what is spoken.
+ * @param {Stroke} s
+ * @param {Side} A pane A
+ * @param {Side} B pane B
+ * @param {(doc: string) => string} ownerOf
+ * @returns {import('../strings.js').Run[]}
+ */
+export const strokeRuns = (s, A, B, ownerOf) => tRuns('L.scene.stroke.name', { count: countOf(s), changes: joinRuns(' · ', s.changes.map((c) => changeRuns(c, A, B, ownerOf))) });
 
 /**
  * The strokes' buttons placed at the panes' scrolls now (see the head): one
@@ -3839,8 +3886,8 @@ function placeStrokes(E, S) {
     const mine = !!R && btn === R.el;
     placed = placed || mine;
     if (!mine || (R && R.answer && R.answer.holds === 'all')) {
-      const words = strokeWords(s, A, B, LAYER.originOwner);
-      if (btn.getAttribute('aria-label') !== t('L.scene.stroke.name', words)) btn.setAttribute('aria-label', t('L.scene.stroke.name', words));
+      const name = strokeRuns(s, A, B, LAYER.originOwner);
+      if (btn.getAttribute('aria-label') !== heard(name)) btn.setAttribute('aria-label', heard(name));
       const n = s.changes.length > 1 ? String(s.changes.length) : '';
       if (btn.textContent !== n) btn.innerHTML = n ? `<span class="n">${esc(n)}</span>` : '';
     }
@@ -3991,7 +4038,7 @@ function placeStop(E, S) {
   }
   const n = S.shared.length, id = n > 1 ? 'L.scene.shared' : 'L.scene.shared.1', vals = { D: S.b.shows, n };
   const root = E.root.getBoundingClientRect(), r = pane.getBoundingClientRect(), top = r.top + pane.clientTop;
-  stop.setAttribute('aria-label', t(id, vals));
+  stop.setAttribute('aria-label', heard(t(id, vals)));
   stop.textContent = n > 1 ? String(n) : '';
   stop.style.left = r.left - root.left - E.root.clientLeft + 'px';
   stop.style.top = (to.above ? top : top + pane.clientHeight) - root.top - E.root.clientTop + 'px';

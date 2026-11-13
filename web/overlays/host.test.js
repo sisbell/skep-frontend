@@ -12,7 +12,8 @@
 // an element redrawn from state found again by its id; every overlay held
 // below the one line's bottom edge however many rows the line takes (FP-26);
 // a face said through the status region save a told one, and a face that
-// answers an act named by the act's caption and described by its words; a
+// answers an act named by the act's caption and described by its words, each
+// rendered for the ear by S22's table; a
 // jump's face hidden exactly while its document is out of the visible view,
 // the one line carrying its words (FP-25); a face shown while the standing
 // overlay's field holds the caret taking nothing's place (FP-20); a change
@@ -48,7 +49,7 @@ import * as FOCUS from '../nav/focus.js';
 import * as LINE from '../line/line.js';
 import * as CAM from '../plane/camera.js';
 import { docBox } from '../plane/projection.js';
-import { t } from '../strings.js';
+import { t, heard } from '../strings.js';
 
 /** the host's stand-in element: what the host writes into it is what a person meets */
 const hostEl = { className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {}, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }), contains: () => false };
@@ -83,7 +84,7 @@ test('a face is said through the one status region, save one whose words the lan
   HOST.dismiss();
 });
 
-test('a face that answers an act is named by the act\'s caption and described by its words, each part in its order, and said through the status region caption first; a face with no caption is named by its words and described by nothing (issue #179\'s design decision: "Announce each face as the act\'s answer, tied to the act in markup")', () => {
+test('a face that answers an act is named by the act\'s caption and described by its words, each part in its order, each rendered for the ear, and said through the status region caption first; a face with no caption is named by its words and described by nothing (issue #179\'s design decision: "Announce each face as the act\'s answer, tied to the act in markup"; style S22)', () => {
   /** @type {Record<string, string>} the dialog's attributes as the host set them */
   const attrs = {};
   /** @type {Array<{classes: string[], textContent: string, id: string}>} the parts of the markup the host wrote, each by its classes and its text, its id the host's to set */
@@ -104,12 +105,13 @@ test('a face that answers an act is named by the act\'s caption and described by
     const caption = `${t('B1.who-wrote')} · 1.0.1.0.3 · ${t('F.position', { p: 11 })}`, words = t('B1.too_much_coverage');
     FACES.showRefusal(null, /** @type {any} */ ({ kind: 'refused', name: 'too_much_coverage', code: 'too_much_coverage', detail: null, op: 'show_origin', body: null }), '1.0.1.0.3', { caption });
     const label = parts.find((p) => p.classes.includes('label')), text = parts.find((p) => p.classes.includes('face-text'));
-    assert.deepEqual([attrs['aria-labelledby'], label?.id, attrs['aria-describedby'], text?.id], ['overlay-name', 'overlay-name', 'overlay-said-0', 'overlay-said-0'], 'named by the act\'s caption, described by its words');
-    assert.equal(said[said.length - 1], `${caption} ${words}`, 'said as the act\'s answer: its caption, then its words');
+    assert.deepEqual([attrs['aria-label'], label?.id, attrs['aria-description'], text?.id], [heard(caption), 'overlay-name', heard(words), 'overlay-said-0'], 'named by the act\'s caption, described by its words, each rendered for the ear');
+    assert.equal(heard(caption), 'who wrote this? 1.0.1.0.3, position 11', 'the caption\'s middle dots a pause');
+    assert.equal(said[said.length - 1], heard(`${caption} ${words}`), 'said as the act\'s answer: its caption, then its words');
     FACES.invalidFollow(null);
-    assert.deepEqual([attrs['aria-labelledby'], parts.find((p) => p.classes.includes('face-text'))?.id, attrs['aria-describedby'], said[said.length - 1]], ['overlay-name', 'overlay-name', undefined, t('B1.invalid')], 'no caption: named by its words, described by nothing, said as its words');
+    assert.deepEqual([attrs['aria-label'], parts.find((p) => p.classes.includes('face-text'))?.id, attrs['aria-description'], said[said.length - 1]], [heard(t('B1.invalid')), 'overlay-name', undefined, t('B1.invalid')], 'no caption: named by its words, described by nothing, said as its words');
     HOST.dismiss();
-    assert.deepEqual([attrs['aria-labelledby'], attrs['aria-describedby']], [undefined, undefined], 'taken down: neither stands');
+    assert.deepEqual([attrs['aria-label'], attrs['aria-description']], [undefined, undefined], 'taken down: neither stands');
   } finally {
     HOST.dismiss();
     HOST.attach(/** @type {any} */ (hostEl));
@@ -214,7 +216,7 @@ test('a walk\'s moment the shell raises while an opening reads takes nothing\'s 
   const o = HOST.opening(() => r.read, card('provenance:wrote'));
   FACES.moment({ id: 'm-182', kind: 'yes_no', data: { text: 'was the device stolen?' }, walk: 'w-182', board: null, answerable: true });
   assert.deepEqual([HOST.pending(), standing(), FACES.folded().find((f) => f.key.startsWith('w-182|'))?.words], [true, null, t('L.walk.waits', { walk: 'w-182', step: 'was the device stolen?' })], 'the opening still reading, nothing shown, the walk\'s segment standing');
-  assert.equal(said[said.length - 1], t('L.walk.waits', { walk: 'w-182', step: 'was the device stolen?' }), 'the segment said through the status region');
+  assert.equal(said[said.length - 1], heard(t('L.walk.waits', { walk: 'w-182', step: 'was the device stolen?' })), 'the segment said through the status region');
   r.answer('its origin');
   await o;
   assert.equal(standing(), 'provenance:wrote', 'the card asked shows its answer');
@@ -294,7 +296,7 @@ test('a face shown while the standing overlay\'s field holds the caret takes not
     FACES.reading('1.0.1.0.3', null);
     FACES.floating('1.0.1.0.127', null, null, true);
     assert.deepEqual([standing(), globalThis.document.activeElement], ['moment:m-171', /** @type {any} */ (field)], 'the moment stands, its field holding the focus');
-    assert.deepEqual(said, [t('L.reading', { address: '1.0.1.0.3' }), t('F.floating', { D: '1.0.1.0.127' })], 'each face said, the one its landing would tell too: no focus moves to tell it');
+    assert.deepEqual(said, [heard(t('L.reading', { address: '1.0.1.0.3' })), t('F.floating', { D: '1.0.1.0.127' })], 'each face said, the one its landing would tell too: no focus moves to tell it');
     globalThis.document.activeElement = /** @type {any} */ ({ id: 'the answer button' });
     assert.equal(HOST.typing(), false, 'the focus on the moment\'s button: no caret held');
     FACES.invalidFollow(null);
@@ -678,7 +680,7 @@ test('a version move\'s reading face is a notice: it stands below the card the r
   });
 });
 
-test('the notice below stands under the overlay\'s box at its left, the two clamped into the viewport together, named by its own words under its own ids; hidden while its document is out of the visible view, the one line carrying its words (FP-25, FP-36)', async () => {
+test('the notice below stands under the overlay\'s box at its left, the two clamped into the viewport together, named by its own words; hidden while its document is out of the visible view, the one line carrying its words (FP-25, FP-36)', async () => {
   const D = '1.0.1.0.3', b = docBox(D), scale = Math.min(600 / b.w, 600 / b.h);
   CAM.setViewport(1440, 900);
   CAM.set({ x: b.x + b.w / 2, y: b.y + b.h / 2, scale });
@@ -687,7 +689,7 @@ test('the notice below stands under the overlay\'s box at its left, the two clam
     HOST.show({ kind: 'card', id: 'a card', anchor: { screen: { x: 100, y: 200 } }, html: '<span class="label">a card</span>', acts: {} });
     aNotice('face:floating', 'its passage is not here', { span: { addr: D, pos: 1 }, sign: D });
     assert.deepEqual([at(main), at(under), under.style.visibility], [{ x: 100, y: 200 }, { x: 100, y: 326 }, ''], 'the card at its anchor, the notice under its box, at its left');
-    assert.deepEqual([under.attrs['aria-labelledby'], main.attrs['aria-labelledby']], ['notice-name', undefined], 'the notice named by its own words, under its own id');
+    assert.deepEqual([under.attrs['aria-label'], main.attrs['aria-label']], ['its passage is not here', 'a card'], 'the notice named by its own words, the card by its own');
     HOST.show({ kind: 'card', id: 'a card', anchor: { screen: { x: 1400, y: 850 } }, html: '<span class="label">a card</span>', acts: {} });
     assert.deepEqual([at(main), at(under)], [{ x: 1134, y: 708 }, { x: 1134, y: 834 }], 'near the viewport\'s corner the two held inside it together');
     assert.equal(HOST.aside(), null, 'its document in view: nothing aside');

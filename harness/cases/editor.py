@@ -117,7 +117,7 @@ import re
 import time
 from collections import Counter
 
-from . import DOC, Result, WINDOW
+from . import DOC, Result, WINDOW, heard
 from .wire import READ_PATHS, READ_ROWS, read_ops
 
 # the own draft: the seed's windowed draft W of principal 1 (`WINDOW[2]`), text the person may edit (issue #411)
@@ -186,7 +186,7 @@ STATES = [
          claim='the run\'s words carry the refused mark; the face names the board and the time elapsed (B3.answers_lost), its discard\'s statement its own (B3.answers_lost.discard); the read unanswered, "did not answer — nothing was discarded" (B3.answers_lost.unanswered) and the face stands'),
     dict(screen='B3-S2', state='moved-face', walk='W-08', step=7, drawn=True,
          how='a `held` row held moved with `arrangement_moved` and its hands (D6 BM-13, BM-16, BM-17, BM-18)',
-         claim='the corner reads "not yet kept" and carries the face beneath it, before the chip, no overlay showing it, the corner reaching into no other document\'s box and clipped by nothing — compact where the corner stands at its head, "changed while this text was held — not placed · by desk" (B3.moved.compact) standing inside its row, whole on its act — the face saying the document changed (B3.moved) and naming the hand in its slot (B3.hand.device), each a sentence, with "see the held text", "send again" inert (B3.moved.send-again.inert) and the discard, its statement ending on its exit (B3.moved.discard); the kept word\'s act opens its statement; the held words carry the held bar while the face asks about them (D8)'),
+         claim='the corner reads "not yet kept" and carries the face beneath it, before the chip, no overlay showing it, the corner reaching into no other document\'s box and clipped by nothing — compact where the corner stands at its head, "changed while this text was held — not placed · by desk" (B3.moved.compact) standing inside its row, named and described as a screen reader hears them, the device\'s label as written (style S22), whole on its act — the face saying the document changed (B3.moved) and naming the hand in its slot (B3.hand.device), each a sentence, with "see the held text", "send again" inert (B3.moved.send-again.inert) and the discard, its statement ending on its exit (B3.moved.discard); the kept word\'s act opens its statement; the held words carry the held bar while the face asks about them (D8)'),
     dict(screen='B3-S2', state='moved-scene', walk='W-08', step=7, drawn=True,
          how='`scene.openHeld(own, [an insert row])`: the current text beside the held version re-derived (D6 BM-14; #411)',
          claim="a scene stands with the own draft in pane A and the derived record in pane B, derived, no compare asked; both panes' "
@@ -950,7 +950,7 @@ def corner_key(ctx, doc):
     caret, edits = ctx.js('window.__skep.caret()'), ctx.js('window.__skep.write.edits(%s).length' % json.dumps(doc))
     beside = bool(anchor and box) and all(abs(anchor[k] - box[k]) <= 1 for k in ('x', 'y', 'w', 'h'))
     ok = (at['corner'] == doc and got['hint'] == {'id': 'B3.caret.back', 'words': want, 'by': 'beside'} and got['seen'] and beside and not got['line']
-          and said == want and caret is None and edits == 0)
+          and said == heard(ctx, want) and caret is None and edits == 0)
     return {'ok': ok, 'focus': at, 'hint': got, 'want': want, 'anchor': anchor, 'stop': box, 'status_region': said, 'caret': caret, 'edits': edits,
             'ops_after': [c['op'] for c in page_calls(ctx)[n:] if c['name'] == 'op']}
 
@@ -1006,7 +1006,7 @@ CORNER_FACE = '''((sel) => { const c = document.querySelector(sel);
   const inside = (e) => { const a = e.getBoundingClientRect(), b = e.parentElement.getBoundingClientRect(); return a.top >= b.top - 1 && a.bottom <= b.bottom + 1 && a.right <= b.right + 1; };
   const st = f && f.querySelector(".said .statement"), acts = f && f.querySelector(".face-acts");
   return {order: after(w, x) && after(x, ch),
-          compact: k ? {id: k.dataset.string || null, text: k.textContent, whole: k.getAttribute("aria-description"), opens: k.hasAttribute("data-whole"), expanded: k.getAttribute("aria-expanded"), fits: inside(k)} : null,
+          compact: k ? {id: k.dataset.string || null, text: k.textContent, name: k.getAttribute("aria-label"), whole: k.getAttribute("aria-description"), opens: k.hasAttribute("data-whole"), expanded: k.getAttribute("aria-expanded"), fits: inside(k)} : null,
           whole: f ? {lines: [...f.querySelectorAll(".face-text")].map((e) => ({id: e.dataset.string, text: e.textContent})),
                       hands: [...f.querySelectorAll(".hands .hand")].map((e) => ({id: e.dataset.string, text: e.textContent})),
                       acts: [...f.querySelectorAll(".face-acts button")].map((b) => ({run: b.dataset.face, id: b.dataset.string, text: b.textContent, inert: b.dataset.inert || null})),
@@ -1197,10 +1197,10 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
         first, said = dict(hint(ctx), full=ctx.js('window.__skep.hint()')), live(ctx)
         f = first['full'] or {}
         if w == WIDE[0]:
-            ok = f.get('id') == 'B3.undo.empty' and f.get('open') and f.get('words') == empty and f.get('ending') == constant and said == empty + ' ' + constant and first['seen']
+            ok = f.get('id') == 'B3.undo.empty' and f.get('open') and f.get('words') == empty and f.get('ending') == constant and said == heard(ctx, empty + ' ' + constant) and first['seen']
         else:
             # a later press in the session: its first clause alone; its own act opens it whole again
-            ok = f.get('id') == 'B3.undo.empty' and not f.get('open') and f.get('words') == empty_clause and f.get('ending') is None and said == empty_clause and first['seen']
+            ok = f.get('id') == 'B3.undo.empty' and not f.get('open') and f.get('words') == empty_clause and f.get('ending') is None and said == heard(ctx, empty_clause) and first['seen']
             ctx.js('document.querySelector("#hint button[data-hint]").click()'); ctx.frames(3)
             f = ctx.js('window.__skep.hint()') or {}
             ok = ok and f.get('open') and f.get('words') == empty and f.get('ending') == constant and hint(ctx)['seen']
@@ -1323,9 +1323,13 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
         room = {'into': [x for x in ov.get('corners_into', []) if x['addr'] == mine], 'clipped': [x for x in ov.get('corners_clipped', []) if x['addr'] == mine]}
         overlay = show_face()
         compact = at.get('compact')
-        line, hand = sentence(ctx, 'B3.moved'), sentence(ctx, 'B3.hand.device', {'device label': 'desk'})
-        compact_ok = (w == WIDE[0] and compact is None) or (bool(compact) and compact['id'] == 'B3.moved.compact' and compact['text'] == t(ctx, 'B3.moved.compact', {'hand': 'desk'})
-                                                             and compact['opens'] and compact['expanded'] == 'false' and compact['whole'] == line + ' ' + hand and compact['fits'] is True)
+        line, hand, short = sentence(ctx, 'B3.moved'), sentence(ctx, 'B3.hand.device', {'device label': 'desk'}), t(ctx, 'B3.moved.compact', {'hand': 'desk'})
+        # the compact act's name and its description as a screen reader hears them (style S22): the face's own dash and middle
+        # dot pauses, the device's label the person's own words kept as written (T-ARTICLE's `faceRuns`)
+        with_label = lambda words, before: (lambda by, end: [{'text': before + by, 'face': 'client'}, {'text': 'desk', 'face': 'reading'}, {'text': end, 'face': 'client'}])(*words.split('desk', 1))
+        named, whole = heard(ctx, with_label(short, '')), heard(ctx, with_label(hand, line + ' '))
+        compact_ok = (w == WIDE[0] and compact is None) or (bool(compact) and compact['id'] == 'B3.moved.compact' and compact['text'] == short and compact['name'] == named
+                                                             and compact['opens'] and compact['expanded'] == 'false' and compact['whole'] == whole and compact['fits'] is True)
         if compact and not at.get('whole'):
             open_corner(True)
         f = corner_face().get('whole')
@@ -1340,7 +1344,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
         word_ok = said == 'B3.save.before' and ctx.js(FACE_SHOWN) is None
         ctx.js('(async () => (await import("./text/layer.js")).openStatement(%s, false))()' % json.dumps(mine)); ctx.frames(2)
         m = margin_beside(ctx, mine, len(line1.encode('utf8')) + 1, len(' Moved.'), 'held')
-        return {'the corner and the face': (ok, {'corner': got, 'kept': st['kept'], 'shown': at, 'face': f, 'overlay': overlay}),
+        return {'the corner and the face': (ok, {'corner': got, 'kept': st['kept'], 'shown': at, 'face': f, 'overlay': overlay, 'heard': {'name': named, 'whole': whole}}),
                 'the corner in its own room': (not room['into'] and not room['clipped'], room),
                 'the kept word\'s act (K-57)': (word_ok, {'statement': said}),
                 'the held bar (D8)': (m['words'] > 0 and m['beside'] == 1 and [x['kind'] for x in m['marks']] == ['held'] and len(m['held']) == 1 and m['held'][0]['text'] == t(ctx, 'B3.held'), m)}
@@ -1518,7 +1522,10 @@ def undo_rows(ctx, r, shoot, red, ops_allowed, m):
     corner_word, first_line, hold_typed, held_row, drop_all, refusal = m['corner_word'], m['first_line'], m['hold_typed'], m['held_row'], m['drop_all'], m['refusal']
     removed = lambda: ctx.js('window.__skep.removed()') or []
     stacks = lambda: ctx.js('window.__skep.write.stacks(%s)' % json.dumps(mine))
-    said_of = lambda sid_, words: t(ctx, sid_, {'first words': words})
+    def said_of(sid_, words):
+        """what an undo or a redo says of a run, rendered for the ear, the person's words kept as written (N-KEYS' `undoSaid`)"""
+        head, _, tail = t(ctx, sid_).partition('⟨first words⟩')
+        return heard(ctx, [{'text': head, 'face': 'client'}, {'text': words, 'face': 'reading'}, {'text': tail, 'face': 'client'}])
 
     def board_line():
         """the draft's first line as the test board holds it, read through the page's port"""
@@ -1585,8 +1592,8 @@ def undo_rows(ctx, r, shoot, red, ops_allowed, m):
             {'kept': again, 'shown': first_line(), 'board': board_line(), 'write': w and {k: w[k] for k in ('op', 'doc')}, 'removed': marks})
     ctx.js('document.querySelector("#removed button.mark").click()'); ctx.frames(3)
     opened = removed()
-    r.check(len(opened) == 1 and opened[0]['whole'] is True and [p['id'] for p in opened[0]['parts']] == ['C-49', 'B3.deletion.private'] and live(ctx) == '%s %s' % (t(ctx, 'C-49'), t(ctx, 'B3.deletion.private')),
-            'the compact mark\'s act opens the face whole, its words said in the status region', {'removed': opened, 'live': live(ctx)})
+    r.check(len(opened) == 1 and opened[0]['whole'] is True and [p['id'] for p in opened[0]['parts']] == ['C-49', 'B3.deletion.private'] and live(ctx) == heard(ctx, '%s %s' % (t(ctx, 'C-49'), t(ctx, 'B3.deletion.private'))),
+            'the compact mark\'s act opens the face whole, its words said in the status region, rendered for the ear (style S22)', {'removed': opened, 'live': live(ctx)})
     chord()
     back = kept()
     r.check(back and first_line() == line and board_line() == line and removed() == [], 'Mod+Z again: the words back on the page and on the board, no mark standing', {'shown': first_line(), 'board': board_line(), 'removed': removed()})
@@ -1619,13 +1626,15 @@ def undo_rows(ctx, r, shoot, red, ops_allowed, m):
     scale = ctx.camera()
     ctx.view_doc_em(mine, 2)
     label = ctx.js('(async () => (await import("./text/layer.js")).boxName(%s).name)()' % json.dumps(mine))
+    named_runs = ctx.js('(async () => { const S = await import("./strings.js"), L = await import("./text/layer.js"); return S.sentenceRuns("B3.undo.last-writing", {label: L.boxName(%s).runs}); })()' % json.dumps(mine))
     ctx.js('(async () => { (await import("./overlays/hint.js"))._reset(); })()')
     ctx.drv.key('z', mods=('Meta',)); ctx.frames(3)
     h = ctx.js('window.__skep.hint()') or {}
     none, writing, constant = hint_whole(ctx, 'B3.undo.none'), sentence(ctx, 'B3.undo.last-writing', {'label': label}), sentence(ctx, 'B3.undo.constant')
-    r.check(h.get('id') == 'B3.undo.none' and h.get('words') == none and fold(h.get('writing')) == fold(writing) and h.get('ending') == constant and fold(live(ctx)) == fold('%s %s %s' % (none, writing, constant)) and first_line() == line,
+    spoken = heard(ctx, [{'text': none + ' ', 'face': 'client'}, *named_runs, {'text': ' ' + constant, 'face': 'client'}])
+    r.check(h.get('id') == 'B3.undo.none' and h.get('words') == none and fold(h.get('writing')) == fold(writing) and h.get('ending') == constant and fold(live(ctx)) == fold(spoken) and first_line() == line,
             'with the draft below its reading scale Mod+Z changes nothing and says so, each a sentence: "Undo works in the text of a draft you are writing — there is nothing here to undo.", "You were last writing in ⟨label⟩.", then the constant sentence',
-            {'hint': h, 'live': live(ctx), 'want': [none, writing, constant]})
+            {'hint': h, 'live': live(ctx), 'want': [none, writing, constant], 'heard': spoken})
     ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
     ctx.set_view(scale['x'], scale['y'], scale['scale'])
     recentre()
@@ -1955,7 +1964,7 @@ def run(ctx):
     def swallow_check(w):
         want, got = hint_whole(ctx, 'B3.caret.enter'), hint(ctx)
         ok = (got['hint'] == {'id': 'B3.caret.enter', 'words': want, 'by': 'edge'} and got['seen'] and not got['line'] and ctx.js('window.__skep.caret()') is None
-              and said_at_key == want)
+              and said_at_key == heard(ctx, want))
         return ok, {'got': got, 'want': want, 'status_region': said_at_key}
     shoot('swallow-draft', swallow_check)
     # the person's next act takes the hint down (O-HINT's `act`); none of what follows is an act of theirs

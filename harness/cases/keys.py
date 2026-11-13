@@ -293,7 +293,7 @@ import json
 import re
 import time
 
-from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, account_of, item_words, key_fingerprint, trunk_of
+from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, account_of, heard, item_words, key_fingerprint, trunk_of
 from .layout import DRIFT_TOL_PX, box_of, click_on, inside, lacking_of, level_holds, line_of, passage_at, scene_level, ties_hold
 
 # the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
@@ -1488,11 +1488,13 @@ def hint_words(ctx, sid, values=None, whole=True):
 def told_by_hint(ctx, sid):
     """a slot's reason as its hint gives it, by the reason's string (P47; N-KEYS' `inertSaid`, `selectFirst`; O-HINT's): the
     words the hint's button shows — none where no hint of that string stands — and the words its notice shows by the compact
-    rule, whole where the hint stands open (`hint_words`), beside the status region's words and the one line's segment
-    carrying that string, which no hint stands in"""
+    rule, whole where the hint stands open (`hint_words`), and those words as the status region says them, rendered for the
+    ear (`heard`; style S22), beside the status region's words and the one line's segment carrying that string, which no
+    hint stands in"""
     got = ctx.js('''((sid) => { const h = window.__skep.hint(), s = document.querySelector(`#line [data-string="${sid}"]`);
       return {hint: h && h.id === sid ? h.words : null, open: !!h && h.open, line: s ? s.textContent : null, live: document.getElementById('live').textContent}; })(%s)''' % json.dumps(sid))
-    return dict(got, words=hint_words(ctx, sid, whole=got['open']))
+    words = hint_words(ctx, sid, whole=got['open'])
+    return dict(got, words=words, heard=heard(ctx, words))
 
 
 # the selection's card as it gives an inert slot's reason (P47; O-SELECTION's `inertAct`, `inertChord`): the overlay standing,
@@ -1883,13 +1885,13 @@ HELD = '''(() => { const s = window.getSelection(), S = window.__skep, none = !s
 
 
 def line_says(ctx, words, wait=True):
-    """what the one line says of a reading scene's close: the words in a segment of their own, or as forward ›'s
-    accessible name and title, its own words unchanged — read once the line's next render has said them where `wait` is
-    asked, two seconds at most, else at once"""
-    return ctx.js('''((w, wait) => new Promise((res) => { const t0 = performance.now();
+    """what the one line says of a reading scene's close: the words in a segment of their own, or as forward ›'s title
+    and, rendered for the ear (`heard`; style S22), its accessible name, its own words unchanged — read once the line's
+    next render has said them where `wait` is asked, two seconds at most, else at once"""
+    return ctx.js('''((w, wait) => import("./strings.js").then(({heard}) => new Promise((res) => { const t0 = performance.now();
       const read = () => { const l = document.getElementById('line'), seg = l.querySelector('.seg.transient[data-string="L.scene.closed"]'), f = l.querySelector('[data-act="forward"]');
-        return {segment: !!seg && seg.textContent === w, label: !!f && f.getAttribute('aria-label') === w && f.getAttribute('title') === w, forward: f ? f.textContent : null}; };
-      const tick = () => { const s = read(), any = s.segment || s.label; if (any || !wait || performance.now() - t0 > 2000) res({...s, any}); else setTimeout(tick, 50); }; tick(); }))(%s, %s)''' % (json.dumps(words), json.dumps(wait)))
+        return {segment: !!seg && seg.textContent === w, label: !!f && f.getAttribute('aria-label') === heard(w) && f.getAttribute('title') === w, forward: f ? f.textContent : null}; };
+      const tick = () => { const s = read(), any = s.segment || s.label; if (any || !wait || performance.now() - t0 > 2000) res({...s, any}); else setTimeout(tick, 50); }; tick(); })))(%s, %s)''' % (json.dumps(words), json.dumps(wait)))
 
 
 def scene_trail(ctx, r):
@@ -2131,12 +2133,13 @@ def collapsed_document(ctx, r):
     second span, the walk left standing on the document, → again enters that span — the child under the view's centre,
     never its first (K-3) — and pushes nothing. The step ends at the first edition's landing"""
     def seen():
-        """the walk, the line, the trail, the camera and the current item as the page stands — the line given time to
-        redraw (the loop redraws it every 120 ms), so the acting segment's place is read off what the line shows now"""
+        """the walk, the line, the trail, the camera and the current item as the page stands — its accessible name, which
+        the AX tree names its treeitem by — the line given time to redraw (the loop redraws it every 120 ms), so the acting
+        segment's place is read off what the line shows now"""
         ctx.js('new Promise((r) => setTimeout(r, 300))')
         return ctx.js('''(() => { const S = window.__skep, f = S.view.focus(), i = document.getElementById("walk-" + S.mirror.index()), a = document.querySelector("#line .seg.acting");
           return {focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}, lod: S.view.lod().name, address: S.line().address, trail: S.trail(), cam: S.view.camera(),
-                  item: i ? i.textContent : null, expanded: i ? i.getAttribute("aria-expanded") : null, on_item: !!i && document.activeElement === i,
+                  item: i ? i.getAttribute("aria-label") : null, expanded: i ? i.getAttribute("aria-expanded") : null, on_item: !!i && document.activeElement === i,
                   acting: a ? a.getBoundingClientRect().left : null, shown: document.querySelector("#line .address").textContent, index: S.mirror.index()}; })()''')
     em = lambda s: s['cam']['scale'] / ctx.js('window.__skep.scaleFor(%s, "em", 1)' % json.dumps(FAR_LEAP))
     ctx.leap(FAR_LEAP)
@@ -2537,7 +2540,7 @@ def focus_rules(ctx, r):
     before = covered(ctx)
     chord(ctx, 'k', mods=('Meta',))
     after, said = covered(ctx), told_by_hint(ctx, 'L.seam.link-to')
-    r.check(still(before, after) and not ctx.js('window.__skep.leap.isOpen()') and said['hint'] == said['words'] and said['live'] == said['words'] and said['line'] is None,
+    r.check(still(before, after) and not ctx.js('window.__skep.leap.isOpen()') and said['hint'] == said['words'] and said['live'] == said['heard'] and said['line'] is None,
             'Mod+K in the scene opens no LEAP box over it: its hint gives "link to…"\'s reason, said through the status region, the one line holding none of it, and nothing the scene covers moves (D5 K-100, M-4; P47)',
             dict(said, at=before['at'], moved=[k for k in ('cam', 'focus', 'trail', 'sel', 'overlay') if after[k] != before[k]], scene=after['scene']))
     chord(ctx, 'Escape')
@@ -2638,9 +2641,9 @@ def held_version(ctx, r):
                 ctx.js('document.getElementById("live").textContent = ""')
                 chord(ctx, key, mods=mods)
                 said = told_by_hint(ctx, sid)
-                presses[name] = {'hint': said['hint'], 'live': said['live'], 'words': said['words'], 'overlay': ctx.js('window.__skep.overlay().id'), 'scene': ctx.js('window.__skep.scene.isOpen()')}
+                presses[name] = {'hint': said['hint'], 'live': said['live'], 'words': said['words'], 'heard': said['heard'], 'overlay': ctx.js('window.__skep.overlay().id'), 'scene': ctx.js('window.__skep.scene.isOpen()')}
             figures[what] = {'selected': selected, 'reason': reason, 'presses': presses}
-            r.check(selected and reason == sid and all(p['hint'] == p['words'] and p['live'] == p['words'] and p['overlay'] is None and p['scene'] for p in presses.values()),
+            r.check(selected and reason == sid and all(p['hint'] == p['words'] and p['live'] == p['heard'] and p['overlay'] is None and p['scene'] for p in presses.values()),
                     '%s in pane B, the focus there: Mod+K, Mod+Shift+A and Mod+Shift+C, then a printable key, each give "%s" as its hint, said through the status region at the press, no overlay opening and the scene standing (issue #599; D6 BM-14; FP-41)' % (what, strings(ctx, sid)),
                     figures[what])
         # (d) Space keeps K-9's own line
@@ -2648,7 +2651,7 @@ def held_version(ctx, r):
         chord(ctx, ' ', code='Space')
         space = told_by_hint(ctx, 'F.swallow.space')
         line = hint_words(ctx, 'F.swallow.space', {'paging key': 'PageDown'}, whole=space['open'])
-        r.check(space['hint'] == line and (space['live'] or '').startswith(line), '(d) Space at a selection in the held version keeps K-9\'s own line (D5 K-9)', dict(space, want=line))
+        r.check(space['hint'] == line and (space['live'] or '').startswith(heard(ctx, line)), '(d) Space at a selection in the held version keeps K-9\'s own line, said as heard (D5 K-9; style S22)', dict(space, want=line))
         r.figures['held_version'] = figures
     finally:
         ctx.js('window.__skep.scene.close(); window.getSelection().removeAllRanges()')
@@ -3189,7 +3192,7 @@ def leap_beside(ctx, r, in_view):
     beside = placed.get('by') == 'beside' and all(abs(anchor.get(k, -1e9) - b[k]) <= 1 for k in ('x', 'y', 'w', 'h'))
     apart = bool(rect) and (rect['x'] >= b['x'] + b['w'] or rect['x'] + rect['w'] <= b['x'] or rect['y'] >= b['y'] + b['h'] or rect['y'] + rect['h'] <= b['y'])
     r.check(s['leap'] and box['focused'] and box['value'] == in_view and not s['scene'] and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries'])
-            and said['hint'] == said['words'] and said['live'] == said['words'] and said['line'] is None and beside and apart,
+            and said['hint'] == said['words'] and said['live'] == said['heard'] and said['line'] is None and beside and apart,
             'Mod+Shift+Enter on the LEAP box as opened, no row chosen, opens nothing: the box stands with its text and its focus, and the hint beside the box, clear of it, says it needs a place, said through the status region — the trail and the scene as they were (issue #332; D5 K-101; issue #468)',
             dict(said, box=box, scene=s['scene'], cursor=[t0['cursor'], t1['cursor']]))
     ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
@@ -3235,9 +3238,10 @@ def tabbed_to_hint(ctx, r):
       return {hint: h, expanded: b && b.getAttribute('aria-expanded'), described: d ? d.textContent : null, live: document.getElementById('live').textContent,
               focused: !!b && document.activeElement === b}; })()''')
     h = opened['hint'] or {}
-    r.check(h.get('open') and h.get('words') == h.get('whole') and opened['described'] == h.get('whole') and opened['live'] == h.get('whole') and opened['focused']
+    spoken = heard(ctx, h.get('whole') or '')
+    r.check(h.get('open') and h.get('words') == h.get('whole') and opened['described'] == spoken and opened['live'] == spoken and opened['focused']
             and opened['expanded'] == 'true',
-            'Enter at the hint opens its notice whole — its description the notice whole all the while — said through the status region, the focus kept on it',
+            'Enter at the hint opens its notice whole — its description the notice whole all the while, rendered for the ear — said through the status region, the focus kept on it (style S22)',
             opened)
     chord(ctx, 'Escape')
     gone = ctx.js('({hint: window.__skep.hint(), item: !!document.activeElement && document.activeElement.id === "walk-" + window.__skep.mirror.index()})')
@@ -3302,7 +3306,7 @@ def undo_chords(ctx, r):
     after, c45 = state(ctx), hint_words(ctx, 'C-45', {'D': DOC})
     hint = after['hint'] or {}
     r.check(bool(before['focus']) and before['focus']['kind'] == 'block' and before['focus']['addr'] == DOC and hint.get('id') == 'C-45' and hint.get('words') == c45 and hint.get('ending') == constant
-            and ctx.js('(document.getElementById("live") || {}).textContent || ""') == c45 + ' ' + constant and same_view(before, after) and after['focus'] == before['focus'] and calls() == n0,
+            and ctx.js('(document.getElementById("live") || {}).textContent || ""') == heard(ctx, c45 + ' ' + constant) and same_view(before, after) and after['focus'] == before['focus'] and calls() == n0,
             "Mod+Z at a span of an edition of the session's account is answered by C-45 naming the document, whole, ending on \"A link you made public stays until you retract it at its card.\", a sentence of its own, said in the status region — nothing moved, nothing asked of the board (D5 K-75; D6 BM-42)",
             {'hint': hint, 'want': c45, 'constant': constant, 'focus': [before['focus'], after['focus']]})
     figures['edition'] = hint
@@ -3334,8 +3338,8 @@ def undo_chords(ctx, r):
     chord(ctx, 'z', mods=('Meta',))
     ctx.frames(2)
     second, said2 = ctx.js('window.__skep.hint()') or {}, ctx.js('(document.getElementById("live") || {}).textContent || ""')
-    r.check(first.get('id') == 'B3.undo.none' and first.get('words') == none and first.get('open') and first.get('ending') == constant and first.get('writing') is None and said1 == none + ' ' + constant
-            and second.get('id') == 'B3.undo.none' and second.get('words') == none_clause and not second.get('open') and second.get('ending') is None and said2 == none_clause and none_clause != none,
+    r.check(first.get('id') == 'B3.undo.none' and first.get('words') == none and first.get('open') and first.get('ending') == constant and first.get('writing') is None and said1 == heard(ctx, none + ' ' + constant)
+            and second.get('id') == 'B3.undo.none' and second.get('words') == none_clause and not second.get('open') and second.get('ending') is None and said2 == heard(ctx, none_clause) and none_clause != none,
             'Mod+Z with no draft\'s caret is answered by "Undo works in the text of a draft you are writing — there is nothing here to undo.", whole at its first press and ending on the constant sentence, its first clause alone at the next, each a sentence — the press never does nothing (D6 BM-42)',
             {'first': first, 'second': second, 'said': [said1, said2]})
     n1 = calls()
@@ -3405,13 +3409,13 @@ def copy_nothing(ctx, r):
     words, said = (whole, whole + ' ' + enter) if h.get('open') else (clause, clause)
     opened = hint_opened(ctx)
     r.check(bool(walk) and walk['kind'] == 'block' and walk['addr'] == DOC and a['sel'] is None and a['platform']['collapsed']
-            and bool(a['keydown']) and a['keydown']['prevented'] and h.get('id') == 'L.copy.nothing' and h.get('whole') == whole and h.get('words') == words and a['live'] == said
+            and bool(a['keydown']) and a['keydown']['prevented'] and h.get('id') == 'L.copy.nothing' and h.get('whole') == whole and h.get('words') == words and a['live'] == heard(ctx, said)
             and opened.get('ending') == enter,
             '(a) Mod+C at a span of the first edition, nothing selected: its keydown\'s default prevented, the clipboard left as it is, and its line the hint at the focus — whole where the session shows it whole — said in the status region, and, standing whole, ending on Enter\'s act, a sentence of its own: Enter selects there (D5 K-92; FP-27; style S2)',
             dict(a, walk=walk, opened=opened, want=[whole, enter]))
     c = mod_c(ctx)
     h = c['hint'] or {}
-    r.check(bool(c['keydown']) and c['keydown']['prevented'] and h.get('id') == 'L.copy.nothing' and h.get('words') == clause and not h.get('open') and h.get('whole') == whole and c['live'] == clause,
+    r.check(bool(c['keydown']) and c['keydown']['prevented'] and h.get('id') == 'L.copy.nothing' and h.get('words') == clause and not h.get('open') and h.get('whole') == whole and c['live'] == heard(ctx, clause),
             '(c) Mod+C again there: its first clause, "Nothing selected.", the line whole kept as its description, said again', c)
     figures['a'] = {'hint': a['hint'], 'live': a['live']}
     # (b): a span of the own draft holding no caret, then its document
@@ -3537,7 +3541,7 @@ def follow_to_source(ctx, r):
     step = (t1['entries'][t1['cursor'] - 1] if t1['cursor'] > 0 else {}).get('step') or {}
     r.check(t1['cursor'] == t0['cursor'] + 1 and len(t1['entries']) == t1['cursor'] + 1 and here.get('addr') == WINDOW[2]
             and (step.get('kind'), step.get('from'), step.get('to')) == ('carry', DOC, WINDOW[2]) and bool(step.get('spans'))
-            and bool(mark) and mark['addr'] == WINDOW[2] and mark['link'] is None and bool(mark['runs']) and no_link not in live,
+            and bool(mark) and mark['addr'] == WINDOW[2] and mark['link'] is None and bool(mark['runs']) and heard(ctx, no_link) not in live,
             'Mod+Enter at a stretch of the window run no link is drawn at, selected, goes to the run\'s source carrying it: one trail entry at the draft, the step its departing entry records the carry, the arrival outlined there with no link lit, the no-link reason said nowhere (D5 K-51; issue #571)',
             {'at': at, 'cursor': [t0['cursor'], t1['cursor']], 'entries': len(t1['entries']), 'here': here.get('addr'), 'step': {k: step.get(k) for k in ('kind', 'from', 'to')}, 'mark': mark, 'live': live})
     # a block of the first edition holding the document's own words and a share of the window run, the walk on it and nothing
@@ -3688,7 +3692,7 @@ def run(ctx):
     chord(ctx, 'k', mods=('Meta',))
     s, t1, said = state(ctx), trail(ctx), told_by_hint(ctx, 'L.seam.link-to')
     r.check(not s['leap'] and s['overlay'] is None and s['sel'] is None and same_view(before, s) and s['focus'] == before['focus']
-            and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']) and said['hint'] == said['words'] and said['live'] == said['words'] and said['line'] is None,
+            and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']) and said['hint'] == said['words'] and said['live'] == said['heard'] and said['line'] is None,
             'Mod+K at the whole board opens no LEAP box: "link to…" finds no span in focus, so its hint gives its slot\'s reason, said through the status region — the camera, the walk, the trail and the selection as they were, no overlay (D5 K-30, K-100; P47)',
             dict(said, leap=s['leap'], overlay=s['overlay'], sel=s['sel'], cam_same=same_view(before, s), focus=[before['focus'], s['focus']], cursor=[t0['cursor'], t1['cursor']]))
     # every other slot's chord at the whole board finds nothing it acts on — no span, no link, no document for "see the links" —
@@ -3699,7 +3703,7 @@ def run(ctx):
         chord(ctx, key, mods=mods)
         s, t1, said = state(ctx), trail(ctx), told_by_hint(ctx, 'D5.select-first')
         r.check(s['overlay'] is None and s['sel'] is None and not s['scene'] and not s['leap'] and same_view(before, s) and s['focus'] == before['focus']
-                and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']) and said['hint'] == said['words'] and said['live'] == said['words'] and said['line'] is None,
+                and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']) and said['hint'] == said['words'] and said['live'] == said['heard'] and said['line'] is None,
                 '%s at the whole board finds nothing it acts on, so its hint says "select a passage first", said through the status region — the camera, the walk, the trail and the selection as they were, no overlay and no scene (D5 %s, §1.6; P47)' % (name, row),
                 dict(said, overlay=s['overlay'], sel=s['sel'], scene=s['scene'], cam_same=same_view(before, s), focus=[before['focus'], s['focus']], cursor=[t0['cursor'], t1['cursor']]))
     chord(ctx, 'l', mods=('Meta',))
@@ -4104,14 +4108,14 @@ def run(ctx):
             ctx.frames(2)
             clicked, s, t1 = ctx.js(BESIDE), state(ctx), trail(ctx)
             given, said = clicked['reason'], ' '.join(x['words'] for x in clicked['reason'])
-            r.check(clicked['id'] == card and clicked['inert'] and clicked['told'] == '1' and bool(given) and clicked['beneath'] and said == offered['title'] and clicked['live'] == said
+            r.check(clicked['id'] == card and clicked['inert'] and clicked['told'] == '1' and bool(given) and clicked['beneath'] and said == offered['title'] and clicked['live'] == heard(ctx, said)
                     and not s['scene'] and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']),
                     'pressed with the pointer it opens nothing and says why: the card stands under its id, the act marked, the reason\'s lines beneath its acts — the words of its title — and said through the status region; no scene, the trail as it was (issue #324; FP-34)',
                     {'card': clicked, 'scene': s['scene'], 'cursor': [t0['cursor'], t1['cursor']], 'entries': [len(t0['entries']), len(t1['entries'])]})
             focused = ctx.js('(() => { const b = document.querySelector(\'#overlay [data-run="beside"]\'); if (b) b.focus(); return !!b && document.activeElement === b; })()')
             chord(ctx, 'Enter')
             keyed, s, t2 = ctx.js(BESIDE), state(ctx), trail(ctx)
-            r.check(focused and keyed['id'] == card and keyed['told'] == '1' and keyed['reason'] == given and keyed['beneath'] and keyed['live'] == said and keyed['focus'] == 'beside'
+            r.check(focused and keyed['id'] == card and keyed['told'] == '1' and keyed['reason'] == given and keyed['beneath'] and keyed['live'] == heard(ctx, said) and keyed['focus'] == 'beside'
                     and not s['scene'] and t2['cursor'] == t0['cursor'] and len(t2['entries']) == len(t0['entries']),
                     'Enter on it answers as the pointer does, the focus kept on the act: the same lines, the same words in the status region, no scene, the trail as it was (issue #324; FP-20)',
                     {'focused': focused, 'card': keyed, 'scene': s['scene'], 'cursor': [t0['cursor'], t2['cursor']]})
@@ -4205,7 +4209,7 @@ def run(ctx):
         chord(ctx, key, mods=mods)
         got, s, words = ctx.js(TOLD % json.dumps(slot)), state(ctx), strings(ctx, sid)
         label = ctx.js('(() => { const l = document.querySelector("#overlay .selection-card .label"); return l ? l.textContent : null; })()')
-        want = {'id': 'selection', 'inert': '1', 'kbd': drawn_chord(ctx, name), 'reason': {'string': sid, 'words': words}, 'marked': [slot], 'live': words, 'leap': False, 'in_overlay': False}
+        want = {'id': 'selection', 'inert': '1', 'kbd': drawn_chord(ctx, name), 'reason': {'string': sid, 'words': words}, 'marked': [slot], 'live': heard(ctx, words), 'leap': False, 'in_overlay': False}
         r.check(got == want and s['sel'] is None and label == at_block,
                 '%s with no selection standing draws the acts card at the walk\'s block whole, selecting nothing, and the card gives its slot\'s reason — the slot marked inert with its chord drawn, the card\'s reason line its words, said through the status region — the card taking no focus and no LEAP box opening (D5 %s; P47; issue #471)' % (name, row),
                 {'got': got, 'want': want, 'sel': s['sel'], 'label': label, 'at': at_block})
@@ -4250,7 +4254,7 @@ def run(ctx):
             chord(ctx, key, mods=mods)
             got, s, t1, drawn_as = ctx.js(TOLD % json.dumps(slot)), state(ctx), trail(ctx), ctx.js(slot_as % slot)
             label = ctx.js('(() => { const l = document.querySelector("#overlay .selection-card .label"); return l ? l.textContent : null; })()')
-            want = {'id': 'selection', 'inert': '1', 'kbd': drawn_chord(ctx, name), 'reason': {'string': 'B3.row.no-link', 'words': no_link}, 'marked': [slot], 'live': no_link, 'leap': False, 'in_overlay': False}
+            want = {'id': 'selection', 'inert': '1', 'kbd': drawn_chord(ctx, name), 'reason': {'string': 'B3.row.no-link', 'words': no_link}, 'marked': [slot], 'live': heard(ctx, no_link), 'leap': False, 'in_overlay': False}
             r.check(got == want and drawn_as == {'inert': True, 'title': no_link} and s['sel'] is None and not s['scene'] and label == at_bare and (s['hint'] or {}).get('id') != 'D5.select-first'
                     and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']),
                     '%s at a paragraph no link is drawn at, nothing selected, draws the acts card at the walk\'s block whole and gives the no-link reason — the slot inert, that reason its title, marked with its chord drawn, the card\'s reason line its words, said through the status region — selecting nothing, opening no scene, the trail as it was, and never the hint to select a passage first (D5 %s; P47; issue #324; FP-34)' % (name, row),

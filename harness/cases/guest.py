@@ -164,7 +164,7 @@ import re
 import time
 from collections import Counter
 
-from . import CLAUSE_READING, DOC, FAR_LEAP, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, WITHHELD, Result, item_words, unit_span
+from . import CLAUSE_READING, DOC, FAR_LEAP, RUNS_IN, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, WITHHELD, Result, heard, item_words, unit_span
 from .keys import copied, member_of, placed_at, placed_at_box, placed_under, rebuilt_away, scene_set, stands_at
 from .layout import LINE_ACTING_JS, LINE_PARTS_JS, LINE_ROWS_PX
 
@@ -618,9 +618,10 @@ def run(ctx):
             r.check(not v['past'], f'(b) a {w} px window: every segment of the guest\'s line inside the window (issues #310, #445)', {'past': v['past'], 'vw': v['vw']})
             if w == LINE_ROWS_PX[-1]:
                 act = ctx.js(LINE_ACTING_JS)
-                r.check(bool(act) and act['tag'] == 'button' and act['act'] == 'acting' and act['text'] == t(ctx, 'L.guest-line.short') and act['label'] == whole and act['inside'],
-                        f'(b) a {w} px window: the guest line compact — the board\'s origin and its venue given way, "{t(ctx, "L.guest-line.short")}" — one act labelled by the guest line as the wide window shows it (issue #445: "A board you only read: its class word")',
-                        {'act': act, 'whole': whole})
+                spoken = heard(ctx, whole or '')
+                r.check(bool(act) and act['tag'] == 'button' and act['act'] == 'acting' and act['text'] == t(ctx, 'L.guest-line.short') and act['label'] == spoken and act['inside'],
+                        f'(b) a {w} px window: the guest line compact — the board\'s origin and its venue given way, "{t(ctx, "L.guest-line.short")}" — one act labelled by the guest line as the wide window shows it, rendered for the ear (issue #445: "A board you only read: its class word"; style S22)',
+                        {'act': act, 'whole': whole, 'heard': spoken})
             rows[w] = lay
     finally:
         ctx.resize(*was)
@@ -683,8 +684,8 @@ def run(ctx):
     origin_words = ctx.js('''(async (owner, arm, armId, clause, clauseId) => { const S = await import("./strings.js");
       return S.sentences(S.sentence("L.mirror.withheld.origin", {owner}), S.asSentence({id: armId, text: arm}), clause ? S.asSentence({id: clauseId, text: clause}) : ""); })(%s, %s, %s, %s, %s)'''
                           % (json.dumps(g.get('owner') or ''), json.dumps(arm), json.dumps(arm_id), json.dumps(clause), json.dumps(clause_id)))
-    r.check(item.startswith(words) and arm not in item and origin_words in described,
-            '(e) the mirror\'s current item at the landing is the run\'s own part, a sentence — its kind in the words a copy\'s stand-in names it by (issue #161), its document, its width, its origin — and names its origin\'s one description, sentences: its owner, the arm, and the clause where the claims decide one (R56; R94; issue #288; style S1, S2)',
+    r.check(item.startswith(heard(ctx, words)) and arm not in item and heard(ctx, origin_words) in described,
+            '(e) the mirror\'s current item at the landing is the run\'s own part, a sentence — its kind in the words a copy\'s stand-in names it by (issue #161), its document, its width, its origin — and names its origin\'s one description, sentences: its owner, the arm, and the clause where the claims decide one, each rendered for the ear (R56; R94; issue #288; style S1, S2, S22)',
             {'item': item, 'described': described, 'origin_words': origin_words})
     ctx.view_doc_em(DOC, 14)
     ctx.view_at(DOC, WINDOW[0])
@@ -870,7 +871,7 @@ def run(ctx):
     published = t(ctx, 'F.published')
     named_withheld = t(ctx, 'F.corner.withheld', {'owner': OWNER})
     draft_item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
-    r.check(leads(draft_item, named_withheld, draft) and published not in draft_item,
+    r.check(leads(draft_item, heard(ctx, named_withheld), draft) and published not in draft_item,
             '(d) at that landing the mirror\'s current item names the draft as its withheld box does, those words leading where no kind can be read — "%s" — and never published (B1-S2; issue #423)' % named_withheld, draft_item)
     labels = ctx.js('window.__skep.labels()')
     named = naming_a_draft(labels)
@@ -890,7 +891,7 @@ def run(ctx):
     named_at = ctx.js('window.__skep.line().address')
     r.check(named_at['text'].split(' › ')[1:3] == [SECOND_ACCOUNT, WITHHELD], '(d) the one line names the landing: board › its account › the withheld document — a landing the index does not list stands on its own node (rule 12, #97)', named_at)
     withheld_item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
-    r.check(leads(withheld_item, want[1], WITHHELD) and published not in withheld_item,
+    r.check(leads(withheld_item, heard(ctx, want[1]), WITHHELD) and published not in withheld_item,
             '(d) the mirror\'s current item names the withheld document as its box does, those words leading where no kind can be read — "%s" — and never published (B1-S2; issue #423)' % want[1], withheld_item)
     r.figures['shots'].append(ctx.shot('guest/withheld-box.png'))
     r.figures['withheld_box'] = {'addr': WITHHELD, 'labels': at_box, 'mirror_item': withheld_item, 'draft_mirror_item': draft_item}
@@ -901,13 +902,15 @@ def run(ctx):
     # C-67's clause beneath the arm in the words a run of it carries, as the edition claims on it decide it — the pointer
     # its act where they decide one, nothing where they decide none (issue #179's design decision; issue #186's: "One fact,
     # one placement")
-    FACE = '''(() => { const o = document.getElementById('overlay'), w = o.querySelector('.face-text'), a = o.querySelector('.arm'), c = o.querySelector('.clause'), l = o.querySelector('.label'), e = document.activeElement;
+    FACE = '''(async () => { const {heard} = await import("./strings.js"); %s
+      const o = document.getElementById('overlay'), w = o.querySelector('.face-text'), a = o.querySelector('.arm'), c = o.querySelector('.clause'), l = o.querySelector('.label'), e = document.activeElement;
       return {id: window.__skep.overlay().id, words: w ? w.textContent : null, words_id: w ? w.dataset.string : null, open: w ? w.getAttribute('aria-expanded') : null,
               arm: a ? a.textContent : null, arm_id: a ? a.dataset.string : null, clause: c ? c.textContent : null, clause_id: c ? c.dataset.string : null,
               caption: l ? l.textContent : null, caption_id: l ? l.id : null, words_el: w ? w.id : null,
               address: !!o.querySelector('.face-addr'), named_by: o.getAttribute('aria-labelledby'), described_by: o.getAttribute('aria-describedby'),
+              label: o.getAttribute('aria-label'), description: o.getAttribute('aria-description'), caption_heard: l ? heard(runsIn(l)) : null, words_heard: w ? heard(runsIn(w)) : null,
               live: document.getElementById('live').textContent, text: o.textContent, acts: [...o.querySelectorAll('[data-run]')].map((b) => b.dataset.run),
-              focus: e && e !== o && o.contains(e) ? (e.dataset.run || e.tagName.toLowerCase()) : null}; })()'''
+              focus: e && e !== o && o.contains(e) ? (e.dataset.run || e.tagName.toLowerCase()) : null}; })()''' % RUNS_IN
     ctx.js('window.__skep.cards.wrote(%s, 1)' % json.dumps(WITHHELD)); ctx.settle(); ctx.frames(2)
     face = ctx.js(FACE)
     guests_arm = t(ctx, arm_id, {'owner': SECOND_ACCOUNT})
@@ -919,9 +922,9 @@ def run(ctx):
             and not face['address'] and '⟨' not in face['text'] and face['acts'] == acts and own_clause_id != CLAUSE_READING and face['clause_id'] == own_clause_id and face['clause'] == own_clause,
             '(d) "who wrote this?" asked of the withheld document faces it as its box names it — "%s" — whole, the guest\'s arm for this device\'s key store beneath, %s for %s, then C-67\'s clause as the edition claims on it decide it, in the words a run of it carries, no address before it at its own place, no token unfilled, and no act but its head\'s and the pointer where the claims decide one (A-170; issues #179, #186)' % (want[1], arm_id, SECOND_ACCOUNT),
             {'face': face, 'guests_arm': guests_arm[:80], 'key_here': store['key_here'], 'clause': own_clause_id, 'decided_from': own_decided})
-    r.check(face['caption'] == caption and face['named_by'] == face['caption_id'] and bool(face['words_el']) and face['words_el'] in (face['described_by'] or '').split()
-            and face['live'].startswith(caption + ' ' + want[1]),
-            '(d) the face is the act\'s answer: named by the card\'s caption "%s", described by its words, said through the status region caption first (issue #179: "Announce each face as the act\'s answer, tied to the act in markup")' % caption, face)
+    r.check(face['caption'] == caption and face['label'] == face['caption_heard'] and bool(face['words_heard']) and (face['description'] or '').startswith(face['words_heard'])
+            and face['named_by'] is None and face['described_by'] is None and face['live'].startswith(heard(ctx, caption + ' ' + want[1])),
+            '(d) the face is the act\'s answer: named by the card\'s caption "%s", described by its words, said through the status region caption first, each rendered for the ear (issue #179: "Announce each face as the act\'s answer, tied to the act in markup"; style S22)' % caption, face)
     r.figures['shots'].append(ctx.shot('guest/withheld-face.png'))
     r.figures['withheld_face'] = face
     ctx.esc()
@@ -1017,7 +1020,7 @@ def run(ctx):
     cover_words = t(ctx, 'F.corner.withheld', {'owner': OWNER})
     # what the change covered: every document the session's index listed that it could read and the guest may not
     said = t(ctx, 'L.covered', {'ending': t(ctx, 'C-137.signed-out'), 'documents': ', '.join(covered[:5]) + (' ' + t(ctx, 'F.others-count', {'n': len(covered) - 5}) if len(covered) > 5 else '')})
-    told = wait_for(ctx, 'document.getElementById("live").textContent === %s' % json.dumps(said), 5)
+    told = wait_for(ctx, 'document.getElementById("live").textContent === %s' % json.dumps(heard(ctx, said)), 5)
     extents_read = [f['doc'] for f in (json.loads(c['frame']) for c in ctx.js('window.__skep.bridge.calls()')[n0:] if c.get('frame')) if f.get('op') == 'retrieve_doc_v_span_set']
     drafts_read = sorted({d for d in extents_read if d in drafts}, key=num)
     r.check(set(drafts) <= set(covered) and drafts_read == [WINDOW[2]] and told,

@@ -15,13 +15,16 @@
 // found its text was among them (N-TRAIL's `arrivedAt`, `countedAt`) — in the
 // identifier's face, a document's first line in the reading face; a reading
 // scene's entry names both its documents, in its panes' order, as the
-// scene's bar names them (N-GO's `scenePair`).
+// scene's bar names them (N-GO's `scenePair`). Each row is named by its
+// number, where it stands and its words, rendered for the ear by S22's table
+// (ST's `heard`): the bar between a scene's two documents a pause, a
+// document's first line kept as written.
 // Rules: FP-1, FP-2, FP-13, FP-20, FP-29.
 
 import * as HOST from './host.js';
 import * as TRAIL from '../nav/trail.js';
 import * as GO from '../nav/go.js';
-import { t } from '../strings.js';
+import { t, facedHTML, joinRuns, heard } from '../strings.js';
 import { esc } from '../util.js';
 
 /**
@@ -30,15 +33,22 @@ import { esc } from '../util.js';
  */
 export function open(byKey = false) {
   const rows = TRAIL.numbered();
-  /** where an entry stands: a reading scene's two documents, else its address and the position landed on */
-  const where = (/** @type {import('../nav/trail.js').Entry} */ e) => {
+  /**
+   * Where an entry stands, as stretches in their faces: a reading scene's two
+   * documents, a bar between them, else its address and the position landed on.
+   * @param {import('../nav/trail.js').Entry} e
+   * @returns {import('../strings.js').Run[]}
+   */
+  const where = (e) => {
     const pair = GO.scenePair(e);
-    if (pair) return pair.map((a) => `<span class="id">${esc(a)}</span>`).join(' │ ');
-    return `<span class="id">${esc(e.addr)}</span>${e.pos != null ? ` · ${esc(t('F.position', { p: e.pos }))}` : ''}`;
+    if (pair) return [{ text: pair[0], face: 'ident' }, { text: ' │ ', face: 'client' }, { text: pair[1], face: 'ident' }];
+    return [{ text: e.addr, face: 'ident' }, ...(e.pos != null ? [{ text: ` · ${t('F.position', { p: e.pos })}`, face: /** @type {const} */ ('client') }] : [])];
   };
+  /** a row's name as stretches: its number where it has a chord, where its entry stands and its words — rendered for the ear (ST's `heard`), a scene's two documents a pause apart, a document's first line kept as written */
+  const named = (/** @type {typeof rows[number]} */ r) => joinRuns(' ', [r.n <= 9 ? String(r.n) : '', where(r.entry), GO.wordsRuns(r.entry)]);
   const html = `<span class="label">${esc(t('F.trail-list'))}</span>` +
     (rows.length
-      ? `<ul class="rows">${rows.map((r) => `<li><button data-run="j${r.n}" aria-current="${r.current}"><span class="k">${r.n <= 9 ? r.n : '·'}</span> ${where(r.entry)} <span class="dim">${GO.wordsHTML(r.entry)}</span></button></li>`).join('')}</ul>`
+      ? `<ul class="rows">${rows.map((r) => `<li><button data-run="j${r.n}" aria-current="${r.current}" aria-label="${esc(heard(named(r)))}"><span class="k">${r.n <= 9 ? r.n : '·'}</span> ${facedHTML(where(r.entry))} <span class="dim">${GO.wordsHTML(r.entry)}</span></button></li>`).join('')}</ul>`
       : `<div class="dim">—</div>`);
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};

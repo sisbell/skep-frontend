@@ -32,7 +32,9 @@
 // platform's do: the scene's focus —
 // the plane covered while it stands, uncovered before the focus returns to
 // the opener, the first opener kept across a scene opened over another, a
-// focus moved out of the scene left alone (FP-20); the scene a step on the
+// focus moved out of the scene left alone (FP-20); the bar's acts named by
+// their words alone, their keys exposed, and every name the scene sets and
+// every word it says heard by S22's table; the scene a step on the
 // trail through N-GO — its opening one entry at the act, its own close a
 // Back lighting the passage it was opened from, the scene recorded as left
 // and reopened so by Forward and by Back after a teleport out, the focus on
@@ -133,7 +135,7 @@ import * as GO from '../nav/go.js';
 import * as TRAIL from '../nav/trail.js';
 import * as CAM from '../plane/camera.js';
 import { accountCell } from '../plane/projection.js';
-import { t, tHTML, lastRead, addressedHTML, sentence, sentences, hintSentences } from '../strings.js';
+import { t, tHTML, lastRead, addressedHTML, sentence, sentences, hintSentences, heard } from '../strings.js';
 import { esc } from '../util.js';
 import * as LK from '../links/links.js';
 import { inkOf } from '../beams/beams.js';
@@ -814,6 +816,16 @@ test('the scene opened from the walk\'s item covers the plane while it stands; i
   assert.deepEqual(fake.unanswered, []);
 }));
 
+test('the bar\'s acts are named by their words alone, their glyph and their chord drawn beside them — re-level by its words, its chord its key; the dismissal by its words, Esc its key — and the scene named by its label as a screen reader hears it (style S22; patterns K1, K3; issue #626)', () => onPage(async (p) => {
+  await SCENE.open(A, B);
+  const html = p.bar.innerHTML;
+  assert.ok(html.includes(`<button data-relevel="1" aria-label="${esc(t('F.scene.relevel'))}" aria-keyshortcuts="${esc(KEYS.keyShortcut('Mod+R'))}">${esc(t('F.scene.relevel'))} <kbd>${esc(KEYS.drawChord('Mod+R'))}</kbd></button>`), `re-level: named by its words, its chord drawn and its key exposed — ${html}`);
+  assert.ok(html.includes(`<button class="x" data-x="1" aria-label="${esc(t('F.scene.dismiss'))}" aria-keyshortcuts="Escape">× ${esc(t('F.scene.dismiss'))}</button>`), `the dismissal: named by its words, its glyph drawn, Esc its key — ${html}`);
+  const names = [...html.matchAll(/aria-label="([^"]*)"/g)].map((m) => m[1]);
+  assert.ok(names.length === 2 && names.every((n) => !/[×⌘⇧⌃⌥↩]/.test(n)), `no glyph and no chord in either name: ${names}`);
+  assert.equal(KEYS.keyShortcut('Mod+R'), KEYS.MAC ? 'Meta+R' : 'Control+R', 'Mod the platform\'s command modifier');
+}));
+
 test('the end puts the plane back before it returns the focus: a corner the scene was opened from has it back', () => onPage(async (p) => {
   p.corner.focus();
   await SCENE.open(A, B);
@@ -919,7 +931,8 @@ test('leaving a scene\'s entry by a teleport records the scene, and Back onto th
   const told = p.said.length;
   const back = GO.back(); await flown(); await back;
   assert.deepEqual([SCENE.isOpen(), trailNow().cursor, p.at()], [true, 2, 'pane A\'s corner'], 'Back reopens it, the focus on the stop it stood on (FP-20)');
-  assert.ok(p.said.slice(told).includes(`${t('L.scene-label')} · ${A} │ ${B}`), `the status region names the reopened pair: ${JSON.stringify(p.said.slice(told))}`);
+  assert.ok(p.said.slice(told).includes(heard(`${t('L.scene-label')} · ${A} │ ${B}`)), `the status region names the reopened pair, as a screen reader hears it: ${JSON.stringify(p.said.slice(told))}`);
+  assert.ok(p.said.slice(told).includes(`${t('L.scene-label')}, ${A}, ${B}`), 'the bar between the pair a pause, as the middle dot before it');
   assert.deepEqual([GO.shownIn(A), GO.shownIn(B)], [A, B], 'no box\'s version changed (FP-22)');
   assert.deepEqual(fake.unanswered, []);
 }));
@@ -1226,7 +1239,7 @@ test('a copy from a pane names its words where the scene read them, as FP-27 nam
 test('a row naming a newer member pins an edition read at its bare address at once — its head, the bar and its corner naming the member its text is, "version 2 of 3", its corner offering version 3, the arrival said once — then sets it again from that member; the corner\'s act reads version 3 in the pane\'s place, the passage the version lacks said so, the plane\'s box untouched, and version 2 one act away (issue #160)', () => onPage(async (p) => {
   await SCENE.open(ED, DR);
   assert.deepEqual(paneState('a'), { kind: 'bare', src: ED, names: ED2, shows: ED, k: 2, n: 2, read: null, lacks: null });
-  const told = p.said.length, arrived = t('F.arrival.pane', { k: 2 });
+  const told = p.said.length, arrived = heard(t('F.arrival.pane', { k: 2 }));
   Object.assign(script, reads(ED2, ED_TEXT), compared(ED2, ED_TEXT, DR, DR_V2));
   fake.fire('feed', row(11, 'publish', [ED3], 'published'));
   // at once, from the row, no read awaited
@@ -1397,7 +1410,7 @@ test('a refresh after a row naming nothing reaches every pane: an edition read a
   await PUMP.refresh();
   assert.deepEqual(paneState('a'), { kind: 'pinned', src: RE2, names: RE2, shows: RE2, k: 2, n: 3, read: 3, lacks: null }, 'at once as the refresh tells the panes: pinned to the member its text is, offering the newest');
   assert.ok(p.cornerA.innerHTML.includes(esc(t('F.version-of', { k: 2, n: 3 }))), `its corner reads version 2 of 3: ${p.cornerA.innerHTML}`);
-  assert.deepEqual(p.said.slice(told), [t('F.arrival.pane', { k: 2 })], 'the arrival said once');
+  assert.deepEqual(p.said.slice(told), [heard(t('F.arrival.pane', { k: 2 }))], 'the arrival said once');
   await landed();
   const asked = fake.asked.slice(from);
   assert.ok(!asked.includes(FAKE.keyOf('op', { frame: F.retrieveV(RE, 1, RE_TEXT.length) })), 'nothing read at the bare address');
@@ -1460,7 +1473,7 @@ test('a pane set while the plane\'s read again of its document waits on the boar
     const name = LAYER.placeName(REC.doc(DQ), DQ), told = p.said.length;
     assert.deepEqual(SCENE.keptPanes().map((x) => [x.addr, x.name, x.clause?.text, x.since]), [[DQ, name, clause, at]], 'pane B reported kept: its address, its name, its clause and its stamp');
     LINE.render();
-    assert.deepEqual(p.said.slice(told), [t('L.kept.said', { name, clause })], 'said once as it appears, the pane and the box one place');
+    assert.deepEqual(p.said.slice(told), [heard(t('L.kept.said', { name, clause }))], 'said once as it appears, the pane and the box one place, as a screen reader hears it');
     out = false;
     fake.fire('daemon', { board: 'b-1', state: 'running' });
     for (let i = 0; i < 100 && PUMP.kept(DQ); i++) await new Promise((r) => setTimeout(r, 0));
@@ -1472,7 +1485,7 @@ test('a pane set while the plane\'s read again of its document waits on the boar
     assert.ok(!p.cornerB.innerHTML.includes('class="kept"'), 'the clause lifted with the setting');
     assert.deepEqual([SCENE.keptPanes(), SCENE.paneLift(DQ), PUMP.liftOf('doc', DQ)], [[], { since: at, outcome: 'changed' }, { since: at, outcome: 'changed' }], 'the pane and the box each set, its text changed');
     LINE.render();
-    assert.deepEqual(p.said.slice(told + 1), [t('L.kept.changed', { name })], 'said once: current, changed');
+    assert.deepEqual(p.said.slice(told + 1), [heard(t('L.kept.changed', { name }))], 'said once: current, changed');
   } finally { CAM._reset(); }
 }));
 
@@ -1899,9 +1912,9 @@ test('a stop drawn only by the panes\' `compare` that the reader left from stand
       const release = fake.hold('op', { frame: BOTH });
       await SCENE.reopen(leftFrom(stop));
       const r = SCENE.returned(), shared = stop.kind === 'shared';
-      const name = shared ? t('L.scene.shared.returned', { D: B, text: 'Its pas' }) : null;
+      const name = shared ? heard(t('L.scene.shared.returned', { D: B, text: 'Its pas' })) : null;
       assert.deepEqual([p.at(), r?.kind, r?.shown, r?.reading, r?.answer, r?.waiting], [elOf(stop), stop.kind, true, true, null, false], `${stop.kind}: shown with the landing, the focus on it, its count being read, nothing answered`);
-      assert.ok(shared ? r?.name === name : !!r?.name && r.name.startsWith(t('L.scene.stroke.returned', { changes: '' })), `${stop.kind}: named for its kind and what it stood for: ${r?.name}`);
+      assert.ok(shared ? r?.name === name : !!r?.name && r.name.startsWith(heard(t('L.scene.stroke.returned', { changes: '' }))), `${stop.kind}: named for its kind and what it stood for, as a screen reader hears it: ${r?.name}`);
       assert.equal(SCENE.asLeft()?.stop, stop, `${stop.kind}: recorded again as left by what it stood for`);
       Object.assign(script, compareAs(ANSWERS[stop.kind].all));
       release();
@@ -2048,7 +2061,7 @@ test('the scene as the reader leaves it keeps a stroke\'s list standing, by its 
     Object.assign(script, compareAs([]));
     const told = p.said.length;
     await SCENE.reopen({ a: A, b: B, held: NEAR, left: /** @type {import('./scene.js').Left} */ (left) });
-    assert.deepEqual([SCENE.isOpen(), HOST.currentState(), p.said.slice(told).includes(t('L.scene.stroke.gone'))], [true, null, true], 'reopened: no stroke bears its key, so no list stands, and its gone line is said');
+    assert.deepEqual([SCENE.isOpen(), HOST.currentState(), p.said.slice(told).includes(heard(t('L.scene.stroke.gone')))], [true, null, true], 'reopened: no stroke bears its key, so no list stands, and its gone line is said');
     SCENE.close();
   } finally { Object.assign(script, { [FAKE.keyOf('op', { frame: BOTH })]: was }); }
 }));
@@ -2420,9 +2433,9 @@ test('at a selection in the moved scene\'s held version, while the focus stands 
     assert.equal(SCENE.heldVersionReason(), why, `"${words}": the reason its selection keys`);
     for (const [key, m] of SENDING) {
       HINT.act();
-      assert.deepEqual(await press(key, m), { took: true, hint: why, said: [hintSentences(why).whole] }, `"${words}", ${m.shift ? 'Mod+Shift+' : 'Mod+'}${key.toUpperCase()}: that reason its hint, a sentence, said`);
+      assert.deepEqual(await press(key, m), { took: true, hint: why, said: [heard(hintSentences(why).whole)] }, `"${words}", ${m.shift ? 'Mod+Shift+' : 'Mod+'}${key.toUpperCase()}: that reason its hint, a sentence, said`);
     }
-    assert.deepEqual(await press('q'), { took: true, hint: why, said: [hintSentences(why).whole] }, `"${words}", a printable key: the same reason, said again at the press`);
+    assert.deepEqual(await press('q'), { took: true, hint: why, said: [heard(hintSentences(why).whole)] }, `"${words}", a printable key: the same reason, said again at the press`);
     const space = await press(' ');
     assert.deepEqual([space.took, space.hint, space.said.length], [true, 'F.swallow.space', 1], `"${words}", Space: K-9's own line`);
   }
@@ -2692,7 +2705,7 @@ test('a row naming an edition a pane reads at its bare address, read again while
     const told = p.said.length, at = fake.asked.length;
     fake.fire('feed', row(96, 'publish', [LF + '.3'], 'published'));
     assert.deepEqual(paneState('a'), { kind: 'pinned', src: LF2, names: LF2, shows: LF2, k: 2, n: 3, read: 3, lacks: null }, 'a newer member\'s arrival: pinned at once to the member its text is, offering the newest');
-    assert.deepEqual(p.said.slice(told), [t('F.arrival.pane', { k: 2 })], 'the arrival said once');
+    assert.deepEqual(p.said.slice(told), [heard(t('F.arrival.pane', { k: 2 }))], 'the arrival said once');
     await landed();
     const asked = fake.asked.slice(at);
     assert.ok(asked.includes(FAKE.keyOf('op', { frame: F.retrieveV(LF2, 1, LF_TEXT.length) })) && !asked.includes(FAKE.keyOf('op', { frame: F.retrieveV(LF, 1, LF_TEXT.length) })), 'the member read whole, nothing at the bare address');

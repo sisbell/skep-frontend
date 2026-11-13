@@ -103,9 +103,11 @@
 // expanded while it lists rows, controlling the rows' grid; each row a row of
 // two cells — its go, the address, the title and the words the row names,
 // and its "open beside", empty where it offers none — the selected row
-// `aria-selected`, and each act named by its words and its row's address.
-// The box names the input by ST's `L.leap-label` and the grid by
-// `L.leap-rows-label` as it attaches. The platform's focus stays in the
+// `aria-selected`, and each act named by its words and its row's address;
+// each go named by its cells' words, a title as written and a landmark's
+// glyph out of the name (patterns K1). The box names the input by ST's
+// `L.leap-label` and the grid by `L.leap-rows-label` as it attaches, every
+// name rendered for the ear by S22's table (ST's `heard`; style S22). The platform's focus stays in the
 // input until Tab moves it to an act; its active descendant names the
 // selected row's go once ↓ or ↑ has carried the choice into the rows, and
 // never on the box as opened or as typed, so what
@@ -126,7 +128,7 @@ import * as SEL from '../overlays/selection.js';
 import * as LAYER from '../text/layer.js';
 import { MAC } from './keys.js';
 import { matches } from './match.js';
-import { t } from '../strings.js';
+import { t, heard, joinRuns } from '../strings.js';
 import { esc } from '../util.js';
 import { markDirty } from '../plane/camera.js';
 import { documentOf, homeOf, kindOf } from '../model/address.js';
@@ -194,8 +196,8 @@ function acted(/** @type {KeyboardEvent} */ ev) {
  */
 export function attach(e, cur, reading = () => null) {
   els = e; currentAddress = cur; inView = reading;
-  e.input.setAttribute('aria-label', t('L.leap-label'));
-  e.rows.setAttribute('aria-label', t('L.leap-rows-label'));
+  e.input.setAttribute('aria-label', heard(t('L.leap-label')));
+  e.rows.setAttribute('aria-label', heard(t('L.leap-rows-label')));
   e.input.addEventListener('input', () => { HINT.act(); asOpened = false; compute(e.input.value); render(); });
   e.input.addEventListener('keydown', (ev) => {
     acted(ev);
@@ -376,6 +378,25 @@ function cellsOf(r) {
 }
 
 /**
+ * A row's go as its name says it (`cellsOf`), as stretches in their faces —
+ * its address, its title, its sub-line and, at a landmark, the landmark's
+ * word — rendered for the ear where it is set (ST's `heard`): a document's
+ * words kept as written, the landmark's glyph kept out (patterns K1).
+ * @param {Row} r
+ * @returns {import('../strings.js').Run[]}
+ */
+function cellRuns(r) {
+  const id = (/** @type {string} */ a) => /** @type {import('../strings.js').Run[]} */ (a ? [{ text: a, face: 'ident' }] : []);
+  const title = r.kind === 'address' || (r.addr && r.title === r.addr) ? id(r.title)
+    : r.kind === 'label' || r.kind === 'landmark' ? [{ text: r.title, face: /** @type {const} */ ('reading') }]
+    : r.kind === 'trail' && r.addr && r.title.endsWith(r.addr) ? [{ text: r.title.slice(0, -r.addr.length), face: /** @type {const} */ ('client') }, ...id(r.addr)]
+    : [{ text: r.title, face: /** @type {const} */ ('client') }];
+  const entry = r.kind === 'trail' && r.n != null ? TRAIL.numbered().find((x) => x.n === r.n) : undefined;
+  const sub = entry ? GO.wordsRuns(entry.entry) : r.addr && r.sub.startsWith(r.addr) ? [...id(r.addr), { text: r.sub.slice(r.addr.length), face: /** @type {const} */ ('client') }] : [{ text: r.sub, face: /** @type {const} */ ('client') }];
+  return joinRuns(' ', [id(r.addr), title, sub, r.kind === 'landmark' ? t('F.landmark') : '']);
+}
+
+/**
  * The place a row's "open beside" opens beside the document in view (see the
  * head): the document the row's address names — a version as itself, a place
  * in a document that document (M-ADDR's `homeOf`) — where it is another
@@ -393,8 +414,9 @@ function besideOf(r, at) {
 
 /**
  * A row as markup (see the head): a row of the grid, selected where it is the
- * row chosen; its go, holding its three cells (`cellsOf`), its address named
- * for its act; then its "open beside", holding the act where the row offers
+ * row chosen; its go, holding its three cells (`cellsOf`), named by them
+ * rendered for the ear (`cellRuns`), its address named for its act; then its
+ * "open beside", holding the act where the row offers
  * one beside the document in view (`besideOf`) — its key the row's (`keyOf`),
  * its name its words and the row's address.
  * @param {Row} r
@@ -405,7 +427,7 @@ function rowHTML(r, i, at) {
   const [addr, title, sub] = cellsOf(r);
   const act = at && besideOf(r, at) ? `<button type="button" id="${besideId(i)}" data-beside="${i}" data-key="${esc(keyOf(r))}" aria-labelledby="${besideId(i)} ${addrId(i)}">${esc(t('F.open-beside'))}</button>` : '';
   return `<div class="hit${i === sel ? ' sel' : ''}" id="${rowId(i)}" data-i="${i}" role="row" aria-selected="${i === sel}">`
-    + `<div class="go" id="${goId(i)}" role="gridcell"><span class="a" id="${addrId(i)}">${addr}</span><span>${title}</span><span class="a">${sub}${r.kind === 'landmark' ? ' ' + esc(t('F.landmark')) : ''}</span></div>`
+    + `<div class="go" id="${goId(i)}" role="gridcell" aria-label="${esc(heard(cellRuns(r)))}"><span class="a" id="${addrId(i)}">${addr}</span><span>${title}</span><span class="a">${sub}${r.kind === 'landmark' ? ' ' + esc(t('F.landmark')) : ''}</span></div>`
     + `<div class="beside" role="gridcell">${act}</div></div>`;
 }
 

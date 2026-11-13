@@ -25,9 +25,12 @@
 // template at its first em dash a space or a no-break space sets off, before
 // its tokens are filled, the whole notice where it has none,
 // is pinned or is marked whole, and every hint the page raises marked;
-// the entries no design document carries are listed; and every accessible name the page
-// sets is read from ST — none stands in the markup, and none is written as a
-// literal in a module; the words of a draft holding unsent typing are
+// the entries no design document carries are listed; every glyph, joiner and
+// key spoken by S22's table, its words the table's entries, the person's
+// words, a document's and an address kept exactly, and one string for a
+// lower bound; and every accessible name and description the page sets
+// passes the table — none stands in the markup, and none is set but as
+// `heard(…)`; the words of a draft holding unsent typing are
 // the decision's DRAFT strings; and a copy with nothing selected is said in
 // the keys-and-clicks decision's words, its act's tail apart and its compact
 // form "nothing selected".
@@ -35,7 +38,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { sep } from 'node:path';
-import { STRINGS, t, tHTML, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, markCount, typeName, formName, formsNamed, formsAt, formAct, formTakeOff, formTitle, formAgain, hintOf, hintSentences, sentence, sentenceHTML, opening, openingHTML, asSentence, ended, endedHTML, sentences, fields, list } from './strings.js';
+import { STRINGS, t, tHTML, tRuns, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, markCount, typeName, formName, formsNamed, formsAt, formAct, formTakeOff, formTitle, formAgain, hintOf, hintSentences, sentence, sentenceHTML, sentenceRuns, asSentenceRuns, opening, openingHTML, asSentence, ended, endedHTML, sentences, fields, list, heard, asHeard, joinRuns, runsText } from './strings.js';
 
 /** a commons type as a link stores it, by its path under the registry document's subspace 3 */
 const commons = (/** @type {string} */ path) => '1.1.0.1.0.1.0.' + path;
@@ -669,6 +672,94 @@ test('a line composed as markup reads the same words, its tokens filled as `tHTM
   assert.deepEqual([endedHTML('see 1.0.1.0.3', 'see <span class="id">1.0.1.0.3</span>'), endedHTML('done.', 'done.')], ['see <span class="id">1.0.1.0.3</span>.', 'done.'], 'the end mark after the markup, decided on its words: an address\'s span holds none');
 });
 
+test('S22\'s table speaks each glyph, joiner and key as its "heard" column says: "·", "—", "│", "(" and a "›" between two words a comma\'s pause, never doubled, never at an end and never beside the sentence\'s own punctuation; ")", brackets, quotation marks, the ellipsis, "‹" and a "›" beside one word not at all; "≥" "at least", "–" "to", "≡" "the same words as in"; the arrows, Return, Esc and the paging keys by their words; a chord by its parts\' words in drawn order; "⟡" and "◦" alone by their words (style S22; issue #626)', () => {
+  /** @type {Array<[string, string]>} each line as drawn, and as heard */
+  const ROWS = [
+    ['≥ 3 so far · no match in 1.0.1.0.3', 'at least 3 so far, no match in 1.0.1.0.3'],
+    ['dismiss (Esc)', 'dismiss, Escape'],
+    ['Ctrl+L', 'Control L'],
+    ['Ctrl+Shift+O', 'Control Shift O'],
+    ['⌘⇧O', 'Command Shift O'],
+    ['⌘↩', 'Command Return'],
+    ['⌘⇧↩', 'Command Shift Return'],
+    ['⌥⇧←', 'Option Shift Left Arrow'],
+    ['⌘1…9', 'Command 1 to 9'],
+    ['Ctrl+1…9', 'Control 1 to 9'],
+    ['⌘=', 'Command Plus'],
+    ['⌘-', 'Command Minus'],
+    ['Shift+↓ selects this passage', 'Shift Down Arrow selects this passage'],
+    ['choose a row with ↓, ↑, ← or →', 'choose a row with Down Arrow, Up Arrow, Left Arrow or Right Arrow'],
+    ['Esc, then Tab, leaves the text', 'Escape, then Tab, leaves the text'],
+    ['Space does not page here — PageDown does', 'Space does not page here, Page Down does'],
+    ['2–4', '2 to 4'],
+    ['‹ back', 'back'],
+    ['forward ›', 'forward'],
+    ['later ›', 'later'],
+    ['1 › 1.0.1 › 1.0.1.0.3 › position 15', '1, 1.0.1, 1.0.1.0.3, position 15'],
+    ['withheld · 1.0.2 (1.0.2) · 240 positions · origin 1.0.1.0.1003', 'withheld, 1.0.2, 1.0.2, 240 positions, origin 1.0.1.0.1003'],
+    ['1.0.1.0.3 │ 1.0.1.0.4', '1.0.1.0.3, 1.0.1.0.4'],
+    ['[withheld · 1.0.1]', 'withheld, 1.0.1'],
+    ['link to…', 'link to'],
+    ['reading 1.0.1.0.3…', 'reading 1.0.1.0.3'],
+    ['typing goes nowhere here — to go somewhere, the address line: ⌘L', 'typing goes nowhere here, to go somewhere, the address line: Command L'],
+    ['nothing to save — not yet kept — held here', 'nothing to save, not yet kept, held here'],
+    ['— a pause at the start, and one at the end ·', 'a pause at the start, and one at the end'],
+    ['before a stop — .', 'before a stop.'],
+    ['≡ 1.0.1.0.77', 'the same words as in 1.0.1.0.77'],
+    ['⟡ link of type 3.13 · 1.0.1', 'link of type 3.13, 1.0.1'],
+    ['× dismiss the scene', 'dismiss the scene'],
+    ['landmark ◆', 'landmark'],
+    ['1.0.1.0.1003 ▸', '1.0.1.0.1003'],
+    ['⟡', t('S22.M12')],
+    ['◦', t('S22.M13')],
+    ['others\' links: off · 3', 'others\' links: off, 3'],
+    ['this device’s key', 'this device’s key'],
+    ['heading 2', 'heading 2'],
+    ['span at 3: "Tumbler.".', 'span at 3: Tumbler.'],
+  ];
+  for (const [drawn, said] of ROWS) assert.equal(heard(drawn), said, drawn);
+  assert.equal(heard(heard('nothing to save — not yet kept')), heard('nothing to save — not yet kept'), 'the page\'s own words heard once are heard the same again');
+});
+
+test('heard keeps exactly a stretch in the reading face — the person\'s own words, a document\'s name or its words — and one in the identifier\'s — an address — whatever glyphs they hold, the table applied around them; an entry\'s words as stretches read the same as `t`\'s; words already heard said as they stand (style S22; issue #626)', () => {
+  const quoted = 'the river — rose (at) dawn · “now” […]';
+  const runs = tRuns('B3.undo.said.taken-out', { 'first words': quoted }, { 'first words': 'reading' });
+  assert.equal(runsText(runs), t('B3.undo.said.taken-out', { 'first words': quoted }), 'the stretches read the words `t` gives');
+  assert.equal(heard(runs), `taken out, ${quoted}`, 'the person\'s words kept exactly, the template\'s dash a pause and its quotation marks not spoken');
+  assert.equal(heard(quoted), 'the river, rose, at dawn, now', 'the same characters as the page\'s own words pass the table');
+  assert.equal(heard([{ text: 'see ', face: 'client' }, { text: '1.0.1.0.3', face: 'ident' }, { text: ' · position 2', face: 'client' }]), 'see 1.0.1.0.3, position 2', 'an address kept, the joiner after it a pause');
+  assert.equal(heard(tRuns('L.kept.said', { name: [{ text: '"', face: 'client' }, { text: 'Field — notes.', face: 'reading' }, { text: '" ', face: 'client' }, { text: '1.0.1.0.5', face: 'ident' }], clause: 'as last read 09:05' })),
+    'Field — notes. 1.0.1.0.5 as last read 09:05', 'a document\'s name kept as written, its quotation marks not spoken');
+  assert.equal(heard(sentenceRuns('L.mirror.span', { p: 3, extent: 30, document: '1.0.1.0.3', same: '', text: 'Tumbler (a story).' }, { document: 'ident', text: 'reading' })), 'Span at position 3 of 30 in 1.0.1.0.3: Tumbler (a story).', 'a span\'s words kept, the end mark the sentence sets after them said once');
+  assert.equal(heard(joinRuns(' · ', ['first', [], '', [{ text: 'a — b', face: 'reading' }]])), 'first, a — b', 'stretches joined, an empty part dropped');
+  assert.equal(heard(asHeard('Field — notes, as last read')), 'Field — notes, as last read', 'a name already heard is said as it stands');
+});
+
+test('an entry filled elsewhere as a sentence of its own, as stretches: its stretches where it carries them, else its words the client\'s, its capital and its end mark as `asSentence` sets them, the person\'s words kept exactly by `heard` (style S1, S22; issue #626)', () => {
+  const label = 'desk — home (2)', hand = { id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': label }), runs: tRuns('B3.hand.device', { 'device label': [{ text: label, face: 'reading' }] }) };
+  assert.equal(runsText(asSentenceRuns(hand)), asSentence(hand), 'the words `asSentence` gives');
+  assert.deepEqual(asSentenceRuns(hand), [{ text: 'By ', face: 'client' }, { text: label, face: 'reading' }, { text: '.', face: 'client' }], 'its template\'s own first word a capital, the label as written, the end mark after it');
+  assert.equal(heard(asSentenceRuns(hand)), `By ${label}.`, 'the label kept as written');
+  assert.deepEqual(asSentenceRuns({ id: 'B3.moved', text: t('B3.moved') }), [{ text: asSentence({ id: 'B3.moved', text: t('B3.moved') }).slice(0, -1), face: 'client' }, { text: '.', face: 'client' }], 'no stretches: its words the client\'s, capital and end mark set');
+  const quotes = { id: 'C-67.quoting', text: t('C-67.quoting', { claimant: 'field notes' }) };
+  assert.equal(runsText(asSentenceRuns(quotes)), asSentence(quotes), 'a template opening with a value keeps its case');
+  assert.throws(() => asSentenceRuns({ id: 'B3.refused.discard', text: t('B3.refused.discard') }), /a statement keeps its own join/);
+});
+
+test('the table\'s words are the strings table\'s entries, each DRAFT from style.md\'s table, its screen naming the glyph or key it speaks; one string holds a lower bound, "at least" heard from "≥" (style S22, S17; issue #626)', () => {
+  const words = Object.entries(STRINGS).filter(([id]) => id.startsWith('S22.'));
+  assert.deepEqual(words.map(([id, e]) => [id, e.text]), [
+    ['S22.M14', 'at least'], ['S22.J5', 'to'], ['S22.M11', 'the same words as in'], ['S22.M12', 'link'], ['S22.M13', 'others\' links'],
+    ['S22.A1.left', 'Left Arrow'], ['S22.A1.right', 'Right Arrow'], ['S22.A1.up', 'Up Arrow'], ['S22.A1.down', 'Down Arrow'],
+    ['S22.K1', 'Command'], ['S22.K2', 'Control'], ['S22.K3', 'Shift'], ['S22.K4', 'Option'], ['S22.K4.alt', 'Alt'],
+    ['S22.K6', 'Return'], ['S22.K8', 'Escape'], ['S22.K10', 'Page Down'], ['S22.K10.up', 'Page Up'], ['S22.K15', 'Plus'], ['S22.K15.minus', 'Minus'],
+  ], 'the heard column\'s words, each under its row');
+  for (const [id, e] of words) assert.deepEqual([e.cls, e.source, !!e.screen, e.lane], ['DRAFT', 'ux/voice/style.md', true, undefined], id);
+  assert.ok(!('L.mirror.at-least' in STRINGS), 'no second string for a lower bound');
+  assert.deepEqual([t('L.lower-bound', { n: 3 }), heard(t('L.lower-bound', { n: 3 }))], ['≥ 3', 'at least 3'], 'drawn "≥ 3", heard "at least 3"');
+  assert.equal(heard(markCount(12, false)), 'at least 12 newer documents');
+});
+
 test('a hint\'s notice as sentences is cut where `hintOf` cuts it, before its tokens are filled, each form a sentence — a template opening with a value keeping its case (style S1)', () => {
   assert.deepEqual(hintSentences('F.swallow', { 'LEAP chord': 'x — y' }), { whole: 'Typing goes nowhere here — to go somewhere, the address line: x — y.', clause: 'Typing goes nowhere here.' });
   assert.deepEqual(hintSentences('C-45', { D: '1.0.1.0.3' }), { whole: t('C-45', { D: '1.0.1.0.3' }), clause: t('C-45', { D: '1.0.1.0.3' }) }, 'a pinned notice, opening with an address and ending with its own period, as it stands');
@@ -906,19 +997,19 @@ test('every hint the page raises is marked in the table whether it compacts — 
   assert.deepEqual([...raised].filter((id) => !STRINGS[id] || !STRINGS[id].hint), [], 'every one marked');
 });
 
-test('every accessible name the page sets is read from ST: the markup carries none, and a module sets one only as t(…), or as ST\'s sentences composed (`sentences(…)`)', () => {
+test('every accessible name and description the page sets passes S22\'s table: the markup carries none, and a module sets each only as `heard(…)` of its words (style S22; issue #626)', () => {
   assert.ok(modules.includes('nav/walk.js') && modules.includes('app/main.js'), 'the page\'s modules are read');
   /** @type {string[]} */
   const bad = [];
   const html = readFileSync(new URL('index.html', WEB), 'utf8');
-  for (const m of html.matchAll(/aria-label\s*=\s*(["'])(.*?)\1/g)) bad.push(`index.html: aria-label="${m[2]}"`);
+  for (const m of html.matchAll(/aria-(?:label|description)\s*=\s*(["'])(.*?)\1/g)) bad.push(`index.html: ${m[0]}`);
   for (const f of modules) {
     const src = readFileSync(new URL(f, WEB), 'utf8');
-    // in a module's markup, the attribute's value is ST's word, escaped
-    for (const m of src.matchAll(/aria-label\s*=\s*["'](?!\$\{esc\(t\()([^"'\n]{0,40})/g)) bad.push(`${f}: aria-label="${m[1]}`);
-    // set by script, the value is ST's word
-    for (const m of src.matchAll(/setAttribute\(\s*["']aria-label["']\s*,(?!\s*(?:t|sentences)\()\s*([^\n]{0,40})/g)) bad.push(`${f}: setAttribute('aria-label', ${m[1]}`);
-    for (const m of src.matchAll(/\.ariaLabel\s*=(?!=)(?!\s*t\()\s*([^\n]{0,40})/g)) bad.push(`${f}: .ariaLabel = ${m[1]}`);
+    // in a module's markup, the attribute's value is its words rendered for the ear, escaped
+    for (const m of src.matchAll(/aria-(label|description)\s*=\s*["'](?!\$\{esc\(heard\()([^"'\n]{0,40})/g)) bad.push(`${f}: aria-${m[1]}="${m[2]}`);
+    // set by script, the value is its words rendered for the ear
+    for (const m of src.matchAll(/setAttribute\(\s*["']aria-(label|description)["']\s*,(?!\s*heard\()\s*([^\n]{0,40})/g)) bad.push(`${f}: setAttribute('aria-${m[1]}', ${m[2]}`);
+    for (const m of src.matchAll(/\.aria(Label|Description)\s*=(?!=)(?!\s*heard\()\s*([^\n]{0,40})/g)) bad.push(`${f}: .aria${m[1]} = ${m[2]}`);
   }
   assert.deepEqual(bad, []);
 });

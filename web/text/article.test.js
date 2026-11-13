@@ -56,19 +56,21 @@
 // one symbol with its count, the plan unmoved; a symbol lit where every link
 // it stands for is lit; and the byline's slots, never a placeholder, each box
 // its face's width, cut on a word's end by its width as set and whole on
-// their act; and the first-line rule, the client's words in a first line's
+// their act; every name and description a corner or a byline sets heard by
+// S22's table, a label the person's words and a draft's name kept as
+// written; and the first-line rule, the client's words in a first line's
 // place bracketed (FP-12, FP-21, FP-22, FP-23, FP-24, FP-26, FP-30, FP-31,
 // FP-33, FP-34, FP-38).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, sourcesIn, cornerHTML, cornerItems, cornerLead, cornerWords, keptHTML, keptStatement, statementHTML, faceWords, faceRow, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, sourcesIn, cornerHTML, cornerItems, cornerLead, cornerWords, keptHTML, keptStatement, statementHTML, faceWords, faceRuns, faceRow, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
 import { below, spoken } from '../overlays/statement.js';
 import { keptStatement as keptSaying } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
-import { t, tHTML, bracketed, CLIENT_CLOSE, sentence, sentences, asSentence, fields } from '../strings.js';
+import { t, tHTML, tRuns, bracketed, CLIENT_CLOSE, sentence, sentences, asSentence, fields, heard } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { accountOf, homeOf, resolveSpan } from '../model/address.js';
 import { deriveBlocks, textOf } from '../model/records.js';
@@ -502,7 +504,7 @@ test('the corner: its kind first, then version k of n, then R20\'s teaching keye
   const pinned = cornerHTML(doc({ addr: '1.0.1.0.3.1', members: null }), view({ members: 3 }));
   assert.ok(pinned.startsWith(kindSlot('published') + of(1, 3) + `<span class="st">${esc(venued('F.corner.pinned', { k: 1 }))}</span>`), `at a pin: "version 1 of 3", then its own version's state — ${pinned}`);
   const compact = cornerHTML(doc(), view(), true);
-  assert.ok(compact.startsWith(kindSlot('published') + of(2, 2) + `<button type="button" class="st glyph" data-whole aria-expanded="false" aria-label="${esc(venued('F.corner.latest'))}" tabindex="-1">${esc(t('L.corner.bare'))}</button>`), `compact: the count where it stands whole, then the state's marker named by its words, the act that opens the corner whole — ${compact}`);
+  assert.ok(compact.startsWith(kindSlot('published') + of(2, 2) + `<button type="button" class="st glyph" data-whole aria-expanded="false" aria-label="${esc(heard(venued('F.corner.latest')))}" tabindex="-1">${esc(t('L.corner.bare'))}</button>`), `compact: the count where it stands whole, then the state's marker named by its words heard, the act that opens the corner whole — ${compact}`);
   const draft = cornerHTML(doc({ kind: 'draft', meta: null }), draftView({ localTrust: true }));
   assert.ok(draft.startsWith(kindSlot('draft')), `"draft" in its slot, where an edition's says "published": ${draft}`);
   assert.ok(draft.includes(t('C-28.flag-on')) && !draft.includes(t('C-28') + '<'), 'flag-on never renders "Readable by you alone"');
@@ -579,9 +581,9 @@ test('the moved scene\'s held version\'s corner names what it is in the place of
 /** a moved document's face as O-FACES hands it to the corner: one device's hand, "send again" inert, the discard last, its statement ending on its exit */
 const MOVED = /** @type {import('./article.js').CornerFace} */ ({
   line: { id: 'B3.moved', text: t('B3.moved') },
-  hands: [{ id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': 'desk' }) }],
+  hands: [{ id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': 'desk' }), runs: tRuns('B3.hand.device', { 'device label': [{ text: 'desk', face: 'reading' }] }) }],
   again: false,
-  compact: { id: 'B3.moved.compact', text: t('B3.moved.compact', { hand: 'desk' }) },
+  compact: { id: 'B3.moved.compact', text: t('B3.moved.compact', { hand: 'desk' }), runs: tRuns('B3.moved.compact', { hand: [{ text: 'desk', face: 'reading' }] }) },
   acts: [
     { key: 'held', id: 'B3.moved.see-held', label: t('B3.moved.see-held'), inert: null, said: null },
     { key: 'send', id: 'B3.send-again', label: t('B3.send-again'), inert: { id: 'B3.moved.send-again.inert', text: t('B3.moved.send-again.inert', { label: 'Tumbler.' }) }, said: null },
@@ -595,8 +597,8 @@ const movedWhole = (/** @type {import('./article.js').CornerFace} */ f = MOVED) 
   + `<span class="hands"${f.again ? ' data-again="1"' : ''}>${f.again ? '<span class="again" data-slot="again"></span>' : ''}${f.hands.map((h) => `<span class="hand" data-string="${h.id}">${esc(asSentence(h))}</span>`).join(' ')}</span>`
   + '<span class="face-acts">'
   + `<button type="button" class="face-act" data-face="held" data-string="B3.moved.see-held" tabindex="-1">${esc(t('B3.moved.see-held'))}</button>`
-  + `<button type="button" class="face-act inert" data-face="send" data-string="B3.send-again" aria-disabled="true" data-inert="B3.moved.send-again.inert" title="${esc(t('B3.moved.send-again.inert', { label: 'Tumbler.' }))}" tabindex="-1">${esc(t('B3.send-again'))}</button>`
-  + `<button type="button" class="face-act" data-face="discard" data-string="B3.discard" aria-description="${esc(spoken('B3.moved.discard'))}" tabindex="-1">${esc(t('B3.discard'))}</button>`
+  + `<button type="button" class="face-act inert" data-face="send" data-string="B3.send-again" aria-disabled="true" data-inert="B3.moved.send-again.inert" title="${esc(t('B3.moved.send-again.inert', { label: 'Tumbler.' }))}" aria-description="${esc(heard(t('B3.moved.send-again.inert', { label: 'Tumbler.' })))}" tabindex="-1">${esc(t('B3.send-again'))}</button>`
+  + `<button type="button" class="face-act" data-face="discard" data-string="B3.discard" aria-description="${esc(heard(spoken('B3.moved.discard')))}" tabindex="-1">${esc(t('B3.discard'))}</button>`
   + `</span>${below('B3.moved.discard')}</span>`;
 
 test('a moved draft\'s corner carries its face beneath the kept word it explains and before the chip — whole, its sentence, its hand in its slot, "see the held text", "send again" inert and titled by its reason, the discard described by its statement, that statement whole below the acts ending on its exit; compact, its compact form naming its hand, an act opening the corner whole, described by its words whole; opened whole on that act, whole again; and its acts standing in the words a head opens beneath its rows (issue #598; B3-S2; foundations §3.1; P48; FP-26)', () => {
@@ -608,7 +610,7 @@ test('a moved draft\'s corner carries its face beneath the kept word it explains
   assert.ok(whole.includes('class="part exit"'), 'the discard\'s statement ends on what to do instead, after its half line');
   assert.ok(!whole.includes('data-slot="again"'), 'no slot for a send made again where none was');
   const compact = cornerHTML(draft, draftView({ kept, face: MOVED }), true);
-  const act = `<button type="button" class="face compact" data-face="whole" data-whole data-string="B3.moved.compact" aria-expanded="false" aria-description="${esc(faceWords(MOVED))}" tabindex="-1">${esc(t('B3.moved.compact', { hand: 'desk' }))}</button>`;
+  const act = `<button type="button" class="face compact" data-face="whole" data-whole data-string="B3.moved.compact" aria-expanded="false" aria-label="${esc('changed while this text was held, not placed, by desk')}" aria-description="${esc(heard(faceWords(MOVED)))}" tabindex="-1">${esc(t('B3.moved.compact', { hand: 'desk' }))}</button>`;
   assert.ok(compact.includes(keptLine + act + '<button type="button" class="chip glyph"'), `compact: its compact form between the kept word and the chip's glyph, an act opening the corner whole — ${compact}`);
   assert.ok(!compact.includes('class="face-act'), 'compact: its acts one act away');
   assert.equal(faceWords(MOVED), 'The document changed while this text was held — it is not placed; put it where it goes, or discard it. By desk.', 'its words whole: its sentence, then its hand a sentence of its own');
@@ -620,10 +622,35 @@ test('a moved draft\'s corner carries its face beneath the kept word it explains
   assert.ok(cornerHTML(draft, draftView({ kept, face: again })).includes(movedWhole(again)), 'its hands named again: the slot owed its words standing, empty');
 });
 
+test('a corner\'s act is described as a screen reader hears it: an inert act\'s reason heard by S22\'s table, the draft\'s name in it kept as written where the reason carries it as stretches, its title drawn as written (style S22; issue #626)', () => {
+  const draft = doc({ kind: 'draft', meta: null }), kept = /** @type {const} */ ({ word: 'not yet kept', reason: null });
+  /** the draft as the status region names its box: its first line, holding a dash of its own, quoted, then its address */
+  const name = /** @type {import('../strings.js').Run[]} */ ([{ text: '"', face: 'client' }, { text: 'Field notes — draft', face: 'reading' }, { text: '" ', face: 'client' }, { text: '1.0.1.0.3', face: 'ident' }]);
+  const label = '"Field notes — draft" 1.0.1.0.3', id = 'B3.moved.send-again.inert';
+  const inert = { id, text: t(id, { label }), runs: tRuns(id, { label: name }) };
+  const f = { ...MOVED, acts: MOVED.acts.map((a) => (a.key === 'send' ? { ...a, inert } : a)) };
+  const html = cornerHTML(draft, draftView({ kept, face: f }));
+  const send = (/<button type="button" class="face-act inert" data-face="send"[^>]*>/.exec(html) || [''])[0];
+  assert.ok(send.includes(`title="${esc(t(id, { label }))}"`), `its title drawn as written: ${send}`);
+  assert.ok(send.includes(`aria-description="${esc('place these words where they go, or discard them, it can be sent as it stands only if Field notes — draft 1.0.1.0.3 changes back, by an undo where that change was made')}"`),
+    `described as heard: the reason's own dash a pause, the draft's name and its dash kept, its quotation marks silent — ${send}`);
+});
+
+test('a moved face\'s compact act is named by the words it draws and described by its words whole, each as a screen reader hears them: the face\'s own dash and middle dot pauses, a device\'s label the person\'s own words kept as written, its dash and its brackets too (style S22; issue #626)', () => {
+  const draft = doc({ kind: 'draft', meta: null }), kept = /** @type {const} */ ({ word: 'not yet kept', reason: null }), label = 'desk — home (2)';
+  const hand = [{ text: label, face: /** @type {const} */ ('reading') }];
+  const f = { ...MOVED, hands: [{ id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': label }), runs: tRuns('B3.hand.device', { 'device label': hand }) }], compact: { id: 'B3.moved.compact', text: t('B3.moved.compact', { hand: label }), runs: tRuns('B3.moved.compact', { hand }) } };
+  const act = (/<button type="button" class="face compact"[^>]*>/.exec(cornerHTML(draft, draftView({ kept, face: f }), true)) || [''])[0];
+  assert.ok(act.includes(`aria-label="${esc(`changed while this text was held, not placed, by ${label}`)}"`), `named as heard, the label as written: ${act}`);
+  assert.ok(act.includes(`aria-description="${esc(`The document changed while this text was held, it is not placed; put it where it goes, or discard it. By ${label}.`)}"`), `described by its words whole as heard, the label as written: ${act}`);
+  assert.equal(heard(faceRuns(f)), `The document changed while this text was held, it is not placed; put it where it goes, or discard it. By ${label}.`, 'the face\'s words whole as stretches (`faceRuns`), the label in the reading face');
+  assert.equal(faceWords(f), sentences(sentence('B3.moved'), sentence('B3.hand.device', { 'device label': label })), 'drawn, its words as written');
+});
+
 test('a moved face whose hands are not one device\'s has no compact wording: where the corner stands compact its words stand whole as the act, its sentence and its hands, described by nothing more (issue #598; FP-26)', () => {
   const draft = doc({ kind: 'draft', meta: null }), f = { ...MOVED, compact: null, hands: [{ id: 'B3.hand.unread', text: t('B3.hand.unread') }] };
   const c = cornerHTML(draft, draftView({ kept: { word: 'not yet kept', reason: null }, face: f }), true);
-  assert.ok(c.includes(`<button type="button" class="face compact" data-face="whole" data-whole data-string="B3.moved" aria-expanded="false" tabindex="-1">${esc(sentences(sentence('B3.moved'), sentence('B3.hand.unread')))}</button>`), `its words whole as the act, each a sentence — ${c}`);
+  assert.ok(c.includes(`<button type="button" class="face compact" data-face="whole" data-whole data-string="B3.moved" aria-expanded="false" aria-label="${esc(heard(sentences(sentence('B3.moved'), sentence('B3.hand.unread'))))}" tabindex="-1">${esc(sentences(sentence('B3.moved'), sentence('B3.hand.unread')))}</button>`), `its words whole as the act, named by them as heard, each a sentence — ${c}`);
   assert.equal(cornerItems(draft, draftView({ face: f }), true).find((i) => i.cls === 'face')?.words, faceWords(f), 'its words the face\'s whole');
 });
 
@@ -747,17 +774,18 @@ test('the others\' count stands in its column\'s edge — the block\'s first chi
 test('the corner compact: a usual state its glyph, named whole by its words, the act that opens the corner whole, saying whether it stands opened — opened, its words the act that compacts it again — a number and an exception keeping theirs; words alone where the view asks no act (FP-26; issue #151)', () => {
   const latest = cornerHTML(doc(), view(), true), pinned = cornerHTML(doc({ addr: '1.0.1.0.3.1' }), view({ members: 3 }), true);
   const words = (/** @type {string} */ html) => (/<button type="button" class="st glyph" data-whole aria-expanded="false" aria-label="([^"]*)" tabindex="-1">([^<]*)<\/button>/.exec(html) || []).slice(1);
-  assert.deepEqual(words(latest), [esc(venued('F.corner.latest')), esc(t('L.corner.bare'))], 'the bare address: its version marker unlit, named by its state\'s words');
-  assert.deepEqual(words(pinned), [esc(venued('F.corner.pinned', { k: 1 })), esc(t('L.corner.pinned'))], 'a pinned version: its marker lit');
+  assert.deepEqual(words(latest), [esc(heard(venued('F.corner.latest'))), esc(t('L.corner.bare'))], 'the bare address: its version marker unlit, named by its state\'s words as a screen reader hears them');
+  assert.deepEqual(words(pinned), [esc(heard(venued('F.corner.pinned', { k: 1 }))), esc(t('L.corner.pinned'))], 'a pinned version: its marker lit');
+  assert.ok(!words(latest)[0].includes('·') && !words(latest)[0].includes('—'), `no joiner glyph handed to a screen reader: ${words(latest)[0]}`);
   assert.ok(latest.includes(`<button type="button" class="version" data-members="2" tabindex="-1">${esc(t('F.version-of', { k: 2, n: 2 }))}</button>`) && pinned.includes(esc(t('F.version-of', { k: 1, n: 3 }))), '"version ⟨k⟩ of ⟨n⟩" keeps its words');
   assert.ok(latest.startsWith(kindSlot('published')) && pinned.startsWith(kindSlot('published')), 'the kind keeps its words');
   const draft = cornerHTML(doc({ kind: 'draft', meta: null }), draftView(), true);
   assert.ok(draft.includes(`<button type="button" class="chip glyph" data-chip="1" data-whole aria-expanded="false" aria-label="${esc(t('C-28.flag-on'))}" tabindex="-1">${esc(t('L.corner.draft'))}</button>`), `a draft's chip its glyph, named by C-28's words: ${draft}`);
   const opened = cornerHTML(doc(), view({ opened: true }), true), whole = cornerHTML(doc(), view({ opened: true }));
-  assert.ok(opened.includes(`aria-label="${esc(venued('F.corner.latest'))}"`) && opened.includes('aria-expanded="true"'), `opened whole on its act, the glyph says the corner stands opened — ${opened}`);
+  assert.ok(opened.includes(`aria-label="${esc(heard(venued('F.corner.latest')))}"`) && opened.includes('aria-expanded="true"'), `opened whole on its act, the glyph says the corner stands opened — ${opened}`);
   assert.ok(whole.includes(`<button type="button" class="st" data-whole aria-expanded="true" tabindex="-1">${esc(venued('F.corner.latest'))}</button>`), `the corner opened whole: its state's words the act that compacts it again — ${whole}`);
   const plain = cornerHTML(doc(), view({ acts: false }), true);
-  assert.ok(plain.includes(`<span class="st glyph" role="img" aria-label="${esc(venued('F.corner.latest'))}">${esc(t('L.corner.bare'))}</span>`) && !plain.includes('<button'), `where the view asks no act: the glyph named by its words, no act — ${plain}`);
+  assert.ok(plain.includes(`<span class="st glyph" role="img" aria-label="${esc(heard(venued('F.corner.latest')))}">${esc(t('L.corner.bare'))}</span>`) && !plain.includes('<button'), `where the view asks no act: the glyph named by its words, no act — ${plain}`);
   const counted = cornerHTML(doc(), view({ wholeLinks: 4 }), true), withheld = cornerHTML(doc({ refused: 'withheld' }), view(), true);
   assert.ok(counted.includes(esc(t('F.whole-links', { n: 4 }))) && withheld.includes(tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' })) && !withheld.includes('glyph'), 'the whole-document count and a withheld document\'s state keep their words, its owner in the identifier\'s face');
   assert.ok(!cornerHTML(doc(), view()).includes('glyph'), 'whole: no glyph');
@@ -989,7 +1017,7 @@ const slotsIn = (/** @type {string} */ html) => {
   return { owner: box[1] + box[2], cls: box[3], em: Number(box[4]), slots };
 };
 /** a slot's accessible name, in the strings table's words */
-const named = (/** @type {'label' | 'fingerprint'} */ role, /** @type {string} */ shows) => esc(t('L.slot.named', { role: t(role === 'label' ? 'L.slot.device-label' : 'L.slot.fingerprint'), shows }));
+const named = (/** @type {'label' | 'fingerprint'} */ role, /** @type {string} */ shows, kept = true) => esc(heard(tRuns('L.slot.named', { role: t(role === 'label' ? 'L.slot.device-label' : 'L.slot.fingerprint'), shows }, kept ? { shows: role === 'label' ? 'reading' : 'ident' } : {})));
 /** the byline row of an article's plan: its pieces' text */
 const bylineRow = (/** @type {import('../model/records.js').Doc} */ d, /** @type {import('./article.js').ArticleView} */ v) => JSON.stringify(articlePlan(d, v, d.account || '').filter((r) => r.kind === 'head')[1]);
 /** the device label's box and the fingerprint cue's, in em, as the view's measure sets their faces: LABEL_CH figures, and the cue's own characters */
@@ -1041,9 +1069,9 @@ test('a byline never shows a placeholder: while its facts are read its boxes sta
     const once = !!facts && 'cause' in facts;
     assert.equal(by.cls, once ? 'slots once' : 'slots', `${state}: one cause said once`);
     const told = facts === undefined ? t('L.slot.reading') : shows[0];
-    assert.equal(by.slots[0].name, named('label', told), `${state}: the label's slot named by its role and what it shows`);
-    if (facts === undefined) assert.deepEqual(by.slots.map((s) => [s.cls, s.name]), [['slot pending', named('label', t('L.slot.reading'))], ['slot pending', named('fingerprint', t('L.slot.reading'))]], 'being read: empty boxes, named so');
-    if (once) assert.equal(by.slots[1].name, named('fingerprint', shows[0]), `${state}: the empty slot beside the cause named by it too`);
+    assert.equal(by.slots[0].name, named('label', told, !cause && facts !== undefined), `${state}: the label's slot named by its role and what it shows, heard — a label the person's words kept as written, a cause the client's`);
+    if (facts === undefined) assert.deepEqual(by.slots.map((s) => [s.cls, s.name]), [['slot pending', named('label', t('L.slot.reading'), false)], ['slot pending', named('fingerprint', t('L.slot.reading'), false)]], 'being read: empty boxes, named so');
+    if (once) assert.equal(by.slots[1].name, named('fingerprint', shows[0], false), `${state}: the empty slot beside the cause named by it too`);
     rows.add(bylineRow(d, v));
   }
   assert.equal(rows.size, 1, 'the plan\'s byline line the same in every state: what the slots show moves nothing beside them');

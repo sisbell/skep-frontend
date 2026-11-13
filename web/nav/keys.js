@@ -239,6 +239,11 @@
 // constant sentence while it stands whole, and each its hint at the focus. An
 // undo the board declines — its source withheld — is said in the one line,
 // ending with what the chord again undoes (`declined`; D6 BM-11, BM-12).
+// What an undo or a redo says names the person's words as they stand, kept
+// as written when they are rendered for the ear (ST's `heard`; style S22).
+// A chord is drawn for this platform (`drawChord`) and exposed by the
+// control it acts through as its keys (`keyShortcut`; patterns K3), its
+// spoken words S22's for the drawn chord.
 // State (FP-10), beside the held keys: whether Mod+S has been
 // answered whole this session (`saveAnswered`), how many keys the dispatch
 // has taken (`keysTaken`), and the save chord's latest answer (`saving`).
@@ -267,7 +272,7 @@ import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import { keptWord, keptStatement } from '../text/article.js';
 import { accountOf, documentOf } from '../model/address.js';
-import { t, sentence, sentences } from '../strings.js';
+import { t, tRuns, joinRuns, sentence, sentences } from '../strings.js';
 
 /** @typedef {import('../overlays/selection.js').InertSlot} InertSlot */
 /** @typedef {import('../overlays/selection.js').LiveSlot} LiveSlot */
@@ -433,6 +438,18 @@ function arrowStep(/** @type {KeyboardEvent} */ e) {
 
 /** how a chord is drawn for this platform (D5 §0) */
 export const drawChord = (/** @type {string} */ chord) => (MAC ? chord.replace('Mod+', '⌘').replace('Shift+', '⇧').replace('Enter', '↩') : chord.replace('Mod', 'Ctrl'));
+
+/** a key in D5's notation as `aria-keyshortcuts` names it (UI Events' key values) */
+const SHORTCUT_KEYS = /** @type {Record<string, string>} */ ({ Esc: 'Escape', '↓': 'ArrowDown', '↑': 'ArrowUp', '←': 'ArrowLeft', '→': 'ArrowRight' });
+
+/**
+ * A chord as the control it acts through exposes it (`aria-keyshortcuts`;
+ * style S21, patterns K3): its parts in D5's order joined by "+", Mod the
+ * platform's — Meta on macOS, Control elsewhere — and each key by its UI
+ * Events name.
+ * @param {string} chord in D5's notation
+ */
+export const keyShortcut = (chord) => chord.split('+').map((p) => (p === 'Mod' ? (MAC ? 'Meta' : 'Control') : SHORTCUT_KEYS[p] || p)).join('+');
 
 /**
  * @typedef {Object} Ctx — where the focus is, and whether a key made the act
@@ -882,8 +899,9 @@ function walkSite() {
 function writingElsewhere(site) {
   const w = WRITE.lastWritten(), c = LAYER.caret();
   if (!w || !c || c.live || c.addr !== w || site === w) return null;
+  const name = LAYER.boxName(w);
   return {
-    label: LAYER.boxName(w).name,
+    label: name.name, named: name.runs,
     act: (byKey) => { const at = LAYER.caretSpan(); void GO.leapTo(w, { pos: at && at.addr === w ? at.pos : null, how: byKey ? 'key' : 'click', byKey }); },
   };
 }
@@ -1007,16 +1025,19 @@ async function undoChord(e, ctx, redo) {
  * (B3-S3; D6 BM-32, BM-33): "taken out — …" by the first words it took out,
  * then "put back — …" by the first words it returned — a redo's the other way
  * about, the words it puts back first — and after them the deletion face
- * the press raised whole, where it raised one (O-DELETION's `take`).
+ * the press raised whole, where it raised one (O-DELETION's `take`); the
+ * person's words kept as they stand (ST's `heard`).
  * @param {string} addr the draft
  * @param {import('../write/machine.js').Undone} out
  * @param {boolean} redo
  */
 function undoSaid(addr, out, redo) {
-  const taken = out.out ? t('B3.undo.said.taken-out', { 'first words': LAYER.firstWordsOf(out.out) }) : '';
-  const put = out.back ? t('B3.undo.said.put-back', { 'first words': LAYER.firstWordsOf(out.back) }) : '';
-  const said = [...(redo ? [put, taken] : [taken, put]), DELETION.take(addr)].filter(Boolean).join(' ');
-  if (said) FOCUS.say(said, false, true);
+  /** a run's first words in what an undo or a redo says of it, the person's own as they stand */
+  const words = (/** @type {string} */ id, /** @type {string} */ first) => tRuns(id, { 'first words': first }, { 'first words': 'reading' });
+  const taken = out.out ? words('B3.undo.said.taken-out', LAYER.firstWordsOf(out.out)) : [];
+  const put = out.back ? words('B3.undo.said.put-back', LAYER.firstWordsOf(out.back)) : [];
+  const said = joinRuns(' ', [...(redo ? [put, taken] : [taken, put]), DELETION.take(addr)]);
+  if (said.length) FOCUS.say(said, false, true);
 }
 
 /**

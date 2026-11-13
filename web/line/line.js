@@ -220,13 +220,13 @@ import * as LAYER from '../text/layer.js';
 import * as PORT from '../bridge/port.js';
 import * as WRITE from '../write/write.js';
 import { deathWords, noBoardWords } from '../overlays/faces.js';
-import { drawChord, trailChord } from '../nav/keys.js';
+import { drawChord, trailChord, keyShortcut } from '../nav/keys.js';
 import { cam, viewForCell } from '../plane/camera.js';
 import { lodOf } from '../plane/lod.js';
 import { boardCell, accountAt, docBox, G, LEAF, DEPTH_SOUND } from '../plane/projection.js';
 import { memberOf, boardOf, accountOf, documentOf } from '../model/address.js';
 import { inFace, runsOf, runWidth, cutWords, LEAD_WORDS } from '../plane/labels.js';
-import { t, tHTML, addressedHTML, facedHTML, lastRead, sentence, sentences, CLIENT_CLOSE } from '../strings.js';
+import { t, tHTML, tRuns, addressedHTML, facedHTML, lastRead, sentence, sentences, heard, joinRuns, asRuns, runsText, CLIENT_CLOSE } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @type {HTMLElement | null} */
@@ -280,6 +280,7 @@ let published = NaN;
  * @typedef {Object} KeptPlace — a place the status region speaks for while it stands kept (`keptSaid`)
  * @property {string} key the address it names — a box's the version it shows, a pane's its own — the board's own `1`, an origin's withheld text its words
  * @property {string} name what the status region calls it, as the mirror finds it
+ * @property {import('../strings.js').Run[]} named that name as stretches in their faces: a document's own words in it kept as written in what is said
  * @property {string} clause its clause (T-LAYER's `KeptClause`)
  * @property {string} reason the failed read's words its clause ends with; '' where none
  * @property {number} since its cause: the page's clock at the row or drop that left it behind
@@ -325,7 +326,7 @@ let acts = null;
  */
 export function attach(e, a) {
   el = e; acts = a; layout = null; measure = null; measuredAt.clear();
-  el.setAttribute('aria-label', t('L.the-line'));
+  el.setAttribute('aria-label', heard(t('L.the-line')));
   el.addEventListener('click', (ev) => {
     // an act's element — a button, or the board's field the fold leaves beside its mark, the address segment's act's
     const b = /** @type {HTMLElement} */ (ev.target).closest('[data-act]'); if (!b || !acts) return;
@@ -379,8 +380,8 @@ export function step(dir) {
   return true;
 }
 
-/** a transient segment until the person's next act, said through the one status region */
-export function transient(/** @type {string} */ text, id = 'transient') { transientSeg = { html: addressedHTML(text), id }; FOCUS.say(text); render(true); }
+/** a transient segment until the person's next act, said through the one status region: words, or stretches in their faces — what is said keeping a document's words as written (ST's `heard`) — drawn as the client's words, each address in the identifier's face */
+export function transient(/** @type {import('../strings.js').Words} */ words, id = 'transient') { transientSeg = { html: addressedHTML(runsText(asRuns(words))), id }; FOCUS.say(words); render(true); }
 
 /**
  * What stands until the next act taken down — the transient segment,
@@ -401,8 +402,8 @@ export function act() { untilAct(); fit(); }
 /** a pan or a zoom by the pointer (see the head): what stands until the next act taken down as at one, the layout held */
 export function panned() { if (untilAct()) render(true); }
 
-/** the separator between two parts of a row */
-const SEP = '<span class="sep">│</span>';
+/** the separator between two parts of a row, hidden from the accessibility tree: each part says its own name (S22's J3) */
+const SEP = '<span class="sep" aria-hidden="true">│</span>';
 
 /**
  * The line's layout for its parts (see the head): the least of the steps 0
@@ -610,22 +611,22 @@ function keptPlaces(panes) {
   for (const addr of all.docs) {
     const box = documentOf(addr) || addr, k = LAYER.keptIn(box);
     if (!k) continue;
-    const { addr: key, name } = LAYER.boxName(box), at = docBox(box);
+    const { addr: key, name, runs } = LAYER.boxName(box), at = docBox(box);
     const near = /** @type {[number, number]} */ ([box === walked ? NEAR.walked : NEAR.box, Math.hypot(at.x + at.w / 2 - cam.x, at.y + at.h / 2 - cam.y)]);
-    out.set(key, { key, name, clause: k.text, reason: k.reason, since: k.since, holds: [['doc', key], ['doc', box]], pane: false, near });
+    out.set(key, { key, name, named: runs, clause: k.text, reason: k.reason, since: k.since, holds: [['doc', key], ['doc', box]], pane: false, near });
   }
   for (const p of panes) {
     if (!p.clause) continue;
     const near = /** @type {[number, number]} */ ([p.focus ? NEAR.focused : NEAR.pane, 0]), was = out.get(p.addr);
     if (was) { was.pane = true; if (near[0] < was.near[0]) was.near = near; continue; }
-    out.set(p.addr, { key: p.addr, name: p.name, clause: p.clause.text, reason: p.clause.reason, since: p.since, holds: [], pane: true, near });
+    out.set(p.addr, { key: p.addr, name: p.name, named: p.named, clause: p.clause.text, reason: p.clause.reason, since: p.since, holds: [], pane: true, near });
   }
   for (const origin of all.origins) {
     const k = LAYER.claimsKeptIn(origin), key = t('L.kept.run', { origin });
-    if (k) out.set(key, { key, name: key, clause: k.text, reason: k.reason, since: k.since, holds: [['claims', origin]], pane: false, near: [NEAR.run, 0] });
+    if (k) out.set(key, { key, name: key, named: asRuns(key), clause: k.text, reason: k.reason, since: k.since, holds: [['claims', origin]], pane: false, near: [NEAR.run, 0] });
   }
   const lag = all.board && b ? LAYER.boardKeptIn() : null;
-  if (lag && b) out.set('1', { key: '1', name: t('L.mirror.board.name', { node: '1', origin: b.origin }), clause: lag.text, reason: lag.reason, since: lag.since, holds: [['board', '1']], pane: false, near: [NEAR.board, 0] });
+  if (lag && b) { const name = t('L.mirror.board.name', { node: '1', origin: b.origin }); out.set('1', { key: '1', name, named: asRuns(name), clause: lag.text, reason: lag.reason, since: lag.since, holds: [['board', '1']], pane: false, near: [NEAR.board, 0] }); }
   return out;
 }
 
@@ -642,9 +643,9 @@ function liftSaid(h) {
   return set.some((l) => l && l.outcome === 'changed') ? 'changed' : set.length ? 'unchanged' : null;
 }
 
-/** a lift's words for a place: whether what it shows changed, or still as last read with the failure's words */
-function liftWords(/** @type {Said} */ said, /** @type {string} */ name, /** @type {string} */ reason) {
-  return said === 'still' ? t('L.kept.still', { name, reason }) : t(said === 'changed' ? 'L.kept.changed' : 'L.kept.unchanged', { name });
+/** a lift's words for a place, as stretches, its name as written: whether what it shows changed, or still as last read with the failure's words */
+function liftWords(/** @type {Said} */ said, /** @type {import('../strings.js').Words} */ name, /** @type {string} */ reason) {
+  return said === 'still' ? tRuns('L.kept.still', { name, reason }) : tRuns(said === 'changed' ? 'L.kept.changed' : 'L.kept.unchanged', { name });
 }
 
 /**
@@ -652,22 +653,23 @@ function liftWords(/** @type {Said} */ said, /** @type {string} */ name, /** @ty
  * focus named by what it says, each other outcome after it counted — then
  * the places whose clause appeared and still stands, one named with its
  * clause, several the nearest named, the rest counted, and the cause's
- * "as last read" for them all; '' where nothing is left to say.
+ * "as last read" for them all — as stretches, each name as written; none
+ * where nothing is left to say.
  * @param {number} since the cause's stamp
  * @param {Cause} c
  * @param {Map<string, KeptPlace>} now
- * @returns {string}
+ * @returns {import('../strings.js').Run[]}
  */
 function causeWords(since, c, now) {
   // each place once, by what it last said: one that left and came back within the cause counted once
   const lifts = [...new Map(c.lift.map((l) => [l.place.key, l])).values()].sort((x, y) => nearer(x.place, y.place));
   const lifted = new Set(lifts.map((l) => l.place.key));
   const appear = [...new Map(c.appear.map((p) => [p.key, p])).values()].filter((p) => !lifted.has(p.key) && now.get(p.key)?.since === since).sort(nearer);
-  /** @type {string[]} */
+  /** @type {import('../strings.js').Run[][]} */
   const parts = [];
   const [first, ...rest] = lifts;
   if (first) {
-    parts.push(liftWords(first.said, first.place.name, first.place.reason));
+    parts.push(liftWords(first.said, first.place.named, first.place.reason));
     /** @type {Map<string, {said: Said, reason: string, n: number}>} the rest by what they say, a failure by its words too */
     const counted = new Map();
     for (const l of rest) {
@@ -677,12 +679,12 @@ function causeWords(since, c, now) {
     for (const g of counted.values()) parts.push(liftWords(g.said, t('L.kept.more', { n: g.n }), g.reason));
   }
   const [named] = appear;
-  if (named && appear.length === 1) parts.push(t('L.kept.said', { name: named.name, clause: named.clause }));
+  if (named && appear.length === 1) parts.push(tRuns('L.kept.said', { name: named.named, clause: named.clause }));
   else if (named) {
     const clause = t('L.kept.text', { when: lastRead(since) });
-    parts.push(t('L.kept.said', { name: t('L.kept.and-more', { name: named.name, n: appear.length - 1 }), clause: named.reason ? t('L.kept.failed', { clause, reason: named.reason }) : clause }));
+    parts.push(tRuns('L.kept.said', { name: tRuns('L.kept.and-more', { name: named.named, n: appear.length - 1 }), clause: named.reason ? t('L.kept.failed', { clause, reason: named.reason }) : clause }));
   }
-  return parts.join('; ');
+  return joinRuns('; ', parts);
 }
 
 /**
@@ -735,15 +737,15 @@ function keptSaid() {
     else if (p.reason && p.reason !== h.reason) causeOf(p.since)?.lift.push({ place: p, said: 'still' });
   }
   keptHeard = now;
-  /** @type {string[]} */
+  /** @type {import('../strings.js').Run[][]} */
   const ready = [];
   for (const [since, c] of [...causes]) {
     if (!causeReady(since, c, now, soon, at)) continue;
     causes.delete(since);
     const words = causeWords(since, c, now);
-    if (words) ready.push(words);
+    if (words.length) ready.push(words);
   }
-  if (ready.length) FOCUS.say(ready.join('; '));
+  if (ready.length) FOCUS.say(joinRuns('; ', ready));
 }
 
 /**
@@ -866,11 +868,17 @@ function walkParts() {
 
 /**
  * The line's acts (see the head): Back, Forward, the trail's list, and
- * sign-in where it stands.
+ * sign-in where it stands — Back and Forward named by their words alone, the
+ * step drawn beside them kept out (patterns K1), Forward by a close's words
+ * while it says one; the trail's list exposing its chord as its key
+ * (`aria-keyshortcuts`), the chord its tooltip draws described for the ear.
  * @param {boolean} signIn
  */
 function actsHTML(signIn) {
-  return `<span class="acts"><button id="line-back" data-act="back" ${TRAIL.canBack() ? '' : 'disabled'}>${esc(t('F.back'))}</button><button data-act="forward" ${TRAIL.canForward() ? '' : 'disabled'}${forwardSays ? ` title="${esc(t('L.scene.closed'))}" aria-label="${esc(t('L.scene.closed'))}"` : ''}>${esc(t('F.forward'))}</button><button data-act="trail" title="${esc(drawChord(trailChord()))}">${esc(t('F.trail-list'))}</button>${signIn ? SIGN_IN : ''}</span>`;
+  const forward = forwardSays ? t('L.scene.closed') : t('F.forward'), trail = drawChord(trailChord());
+  return `<span class="acts"><button id="line-back" data-act="back" aria-label="${esc(heard(t('F.back')))}" ${TRAIL.canBack() ? '' : 'disabled'}>${esc(t('F.back'))}</button>`
+    + `<button data-act="forward" aria-label="${esc(heard(forward))}" ${TRAIL.canForward() ? '' : 'disabled'}${forwardSays ? ` title="${esc(forward)}"` : ''}>${esc(t('F.forward'))}</button>`
+    + `<button data-act="trail" title="${esc(trail)}" aria-description="${esc(heard(trail))}" aria-keyshortcuts="${esc(keyShortcut(trailChord()))}">${esc(t('F.trail-list'))}</button>${signIn ? SIGN_IN : ''}</span>`;
 }
 
 /** the account a session's words name, set in the identifier's face (P-REG's FACE; ST's `tHTML`) */
@@ -944,20 +952,22 @@ const wordsOf = (/** @type {Field[]} */ fields) => fields.map((f, i) => (i ? f.s
  * it is never an empty box — else why it names none, in that cause's words:
  * the key carries no label; the store was not read; the session does not
  * name its key among the several it may have been opened with. Named by its
- * role and what it shows.
+ * role and what it shows, rendered for the ear (ST's `heard`), a label the
+ * person's own words as written.
  * @param {import('../model/records.js').DeviceKey | import('../model/records.js').DeviceCause | null} dev
- * @returns {{shows: string, html: string}}
+ * @returns {{shows: string, own: boolean, html: string}} `own` it shows the key's label, the person's words
  */
 function deviceSlot(dev) {
   const cause = !dev || 'cause' in dev ? (dev && dev.cause === 'store-unread' ? 'L.slot.store-unread' : 'L.slot.key-untold') : dev.label ? '' : 'L.slot.unlabelled';
   const shows = cause ? t(cause) : dev && 'label' in dev && dev.label ? dev.label : '';
-  return { shows, html: `<span class="slot" data-slot="label"${cause ? ` data-string="${cause}"` : ''} role="img" aria-label="${esc(t('L.slot.named', { role: t('L.slot.device-label'), shows }))}">${esc(shows)}</span>` };
+  const named = tRuns('L.slot.named', { role: t('L.slot.device-label'), shows }, cause ? {} : { shows: 'reading' });
+  return { shows, own: !cause, html: `<span class="slot" data-slot="label"${cause ? ` data-string="${cause}"` : ''} role="img" aria-label="${esc(heard(named))}">${esc(shows)}</span>` };
 }
 
 /**
  * @typedef {Object} Acting — the acting-as segment (`actingSegment`)
  * @property {string[]} forms its forms' markup in the order the layout tries them (`formsOf`): its whole form first, its short form last; its whole form alone where it has no compact form
- * @property {{id: string, values: Record<string, string | number>} | null} name the string its whole form's words are and its tokens' values, the act's name where it has a compact form; null where it has none
+ * @property {{id: string, values: Record<string, string | number>, faces?: Record<string, import('../plane/register.js').Face>} | null} name the string its whole form's words are and its tokens' values — `faces` naming the token holding the person's own words, the device label, kept as written in what is spoken — the act's name where it has a compact form; null where it has none
  * @property {string} shape the strings its fields read: where they change, the layout is set again (`shapeOf`)
  * @property {number} state its state among foundations §3.3's seven; 0 for none of them — no adapter, no board held
  * @property {string} words its words, what the status region says where they are said
@@ -1022,7 +1032,7 @@ function signedSegment(s) {
   const values = { account: s.account || '', N: s.principal }, slot = deviceSlot(REC.device()), fields = signedFields(values, slot), forms = formsOf(fields);
   return {
     forms: forms.map((f, i) => (i && i === forms.length - 1 ? f : `<span data-string="F.acting-as">${f}</span>`)),
-    name: forms.length > 1 ? { id: 'F.acting-as', values: { ...values, 'device label': slot.shows } } : null,
+    name: forms.length > 1 ? { id: 'F.acting-as', values: { ...values, 'device label': slot.shows }, faces: slot.own ? { 'device label': 'reading' } : {} } : null,
     shape: 'F.acting-as', state: 2, words: wordsOf(fields), alarm: false, signIn: false,
   };
 }
@@ -1251,16 +1261,18 @@ function labelHTML(a, at) {
 }
 
 /**
- * The address segment's accessible name's words (see the head;
+ * The address segment's accessible name's stretches (see the head;
  * `L.address.name`): its fields in their order, the document's label after
- * its field whole, the position, then the version pinned, each after its own
- * separator, none where it is empty — a name, which carries no kind.
+ * its field whole, in its faces, the position, then the version pinned, each
+ * after its own separator, none where it is empty — a name, which carries no
+ * kind — rendered for the ear where it is set (ST's `heard`), the levels'
+ * "›" a pause and the label kept as written.
  * @param {AddressDisplay} a
- * @returns {Record<string, string>}
+ * @returns {import('../strings.js').Run[]}
  */
 function addressName(a) {
-  const label = a.label.map((r) => r.text).join('');
-  return { place: a.place, label: label ? ' ' + label : '', position: positionWords(a.pos), version: a.member ? ', ' + t('L.version', { k: a.member }) : '' };
+  const label = a.label.length ? [{ text: ' ', face: /** @type {const} */ ('client') }, ...a.label] : '';
+  return tRuns('L.address.name', { place: a.place, label, position: positionWords(a.pos), version: a.member ? ', ' + t('L.version', { k: a.member }) : '' });
 }
 
 /**
@@ -1276,7 +1288,7 @@ function addressName(a) {
 function slot(a, at) {
   const words = at < 1 ? `<b class="pos" style="width:${a.slot}ch">${esc(positionWords(a.pos))}</b>` : '';
   if (a.pos == null) return `<span class="slot">${words}${strip(a)}</span>`;
-  return `<button class="slot" data-act="strip" title="${esc(t('F.position', { p: a.pos }))}" aria-label="${esc(t('F.position', { p: a.pos }))}">${words}${strip(a)}</button>`;
+  return `<button class="slot" data-act="strip" title="${esc(t('F.position', { p: a.pos }))}" aria-label="${esc(heard(t('F.position', { p: a.pos })))}">${words}${strip(a)}</button>`;
 }
 
 /**
@@ -1322,8 +1334,8 @@ function strip(a) {
  */
 function addressPart(a, at) {
   const { levels, fold } = placeAt(a, at);
-  const head = fold ? `<b class="board" data-act="address" aria-hidden="true">${esc(levels[0])} › </b><button class="fold" data-act="fold" title="${esc(t('L.fold.name', { levels: levels[1] }))}" aria-label="${esc(t('L.fold.name', { levels: levels[1] }))}">${esc(t('L.fold'))}</button>` : '';
-  return `<span class="address-part" style="--words:${RESERVE[at]}">${head}<button class="seg address" data-act="address" title="${esc(drawChord('Mod+L'))}" aria-label="${esc(t('L.address.name', addressName(a)))}"><b>${esc(fold ? ` › ${levels[2]}` : a.place)}</b>${labelHTML(a, at)}</button>${slot(a, at)}<span class="marker${a.member ? ' lit' : ''}${a.doc ? '' : ' none'}" data-act="address" aria-hidden="true" title="${a.member ? esc(t('L.version', { k: a.member })) : ''}">${a.member ? '●' : '○'}</span></span>`;
+  const head = fold ? `<b class="board" data-act="address" aria-hidden="true">${esc(levels[0])} › </b><button class="fold" data-act="fold" title="${esc(t('L.fold.name', { levels: levels[1] }))}" aria-label="${esc(heard(t('L.fold.name', { levels: levels[1] })))}">${esc(t('L.fold'))}</button>` : '';
+  return `<span class="address-part" style="--words:${RESERVE[at]}">${head}<button class="seg address" data-act="address" title="${esc(drawChord('Mod+L'))}" aria-label="${esc(heard(addressName(a)))}" aria-description="${esc(heard(drawChord('Mod+L')))}" aria-keyshortcuts="${esc(keyShortcut('Mod+L'))}"><b>${esc(fold ? ` › ${levels[2]}` : a.place)}</b>${labelHTML(a, at)}</button>${slot(a, at)}<span class="marker${a.member ? ' lit' : ''}${a.doc ? '' : ' none'}" data-act="address" aria-hidden="true" title="${a.member ? esc(t('L.version', { k: a.member })) : ''}">${a.member ? '●' : '○'}</span></span>`;
 }
 
 /**
@@ -1344,8 +1356,9 @@ function shown() {
 /**
  * The acting-as segment in a form (see the head): its whole form as it
  * stands; any other — a compact one, or its whole one its act opened — its
- * act, a native button named and titled by its whole form's words; a form
- * past its last, its last.
+ * act, a native button titled by its whole form's words and named by them
+ * rendered for the ear (ST's `heard`), the device label kept as written; a
+ * form past its last, its last.
  * @param {Acting} a
  * @param {number} form the form the layout holds (`Acting.forms`)
  * @param {boolean} open its act opened its whole form
@@ -1353,7 +1366,7 @@ function shown() {
 function actingHTML(a, form, open) {
   const at = open ? 0 : Math.min(form, a.forms.length - 1);
   if (!a.name || (at === 0 && !open)) return `<span class="seg acting" data-state="${a.state}">${a.forms[0]}</span>`;
-  return `<button class="seg acting" data-act="acting" data-state="${a.state}" title="${esc(t(a.name.id, a.name.values))}" aria-label="${esc(t(a.name.id, a.name.values))}">${a.forms[at]}</button>`;
+  return `<button class="seg acting" data-act="acting" data-state="${a.state}" title="${esc(t(a.name.id, a.name.values))}" aria-label="${esc(heard(tRuns(a.name.id, a.name.values, a.name.faces)))}">${a.forms[at]}</button>`;
 }
 
 /**
@@ -1468,12 +1481,12 @@ export function render(force = false) {
   publish();
 }
 
-/** the strip's act (K-23): the ordinal and the passage's first words beneath, the version's own, until the next act */
+/** the strip's act (K-23): the ordinal and the passage's first words beneath, the version's own, until the next act — the words kept as written in what is said */
 export function stripAct() {
   const a = addressDisplay();
   if (!a.doc || a.pos == null) return;
   const words = REC.textBetween(a.doc, a.pos, a.pos + 60);
-  transient(`${t('F.position', { p: a.pos })} · ${words}`, 'strip');
+  transient([{ text: `${t('F.position', { p: a.pos })} · `, face: 'client' }, { text: words, face: 'reading' }], 'strip');
 }
 
 /** the line's text (the gate's text case) */

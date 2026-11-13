@@ -184,9 +184,13 @@
 // words, each address in the identifier's face and a document's words in the
 // reading face (`named`; P-REG's FACE); each item is sentences the page
 // composes (ST's `sentences`; style S1, S2) — its own, a part it lacks dropped
-// so no joiner stands beside it, then its place in its level; what a screen reader
-// hears is the focus moving onto the item (rule 12), and no live region
-// repeats it (D4). Every block that holds no text is announced by its kind,
+// so no joiner stands beside it, then its place in its level. The tree's
+// name, each level's, each item's — its `aria-label`, set wherever its words
+// are written — and each hidden description an item names are those words
+// rendered for the ear by S22's table (ST's `heard`), the words drawn
+// unchanged, a document's words and its first line kept as written; what a
+// screen reader hears is the focus moving onto the item (rule 12), and no
+// live region repeats it (D4). Every block that holds no text is announced by its kind,
 // the item rule's (T-ARTICLE's `itemOf`; FP-24), in the strings table's
 // words, then what the plane shows of it — a record's words and keys, an
 // unshown item's length — and never its raw value; a withheld run's item says
@@ -287,7 +291,7 @@ import { lodOf, residueDepth, markScale } from '../plane/lod.js';
 import { cmpAddr, accountOf, documentOf } from '../model/address.js';
 import { touches, isElement, elementIn } from '../text/span.js';
 import { esc, fill } from '../util.js';
-import { t, addressedHTML, facedHTML, markCount, sentence, sentenceHTML, opening, openingHTML, asSentence, ended, endedHTML, sentences, fields, list } from '../strings.js';
+import { t, tRuns, addressedHTML, facedHTML, markCount, sentence, sentenceHTML, sentenceRuns, opening, openingHTML, openingRuns, asSentence, ended, endedHTML, endedRuns, sentences, fields, list, joinRuns, asRuns, heard } from '../strings.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
@@ -382,7 +386,7 @@ const BOARD = /** @type {Node} */ ({ kind: 'board', addr: '1', pos: null, link: 
  */
 export function attach(mirror) {
   mirrorEl = mirror;
-  mirror.setAttribute('aria-label', t('L.mirror-label'));
+  mirror.setAttribute('aria-label', heard(t('L.mirror-label')));
   FOCUS.attach({ plane: mirror, home: stopEl });
   FOCUS.onChange(() => { if (panel && focusOutside()) panel = false; markPanel(); CAM.markDirty(); });
   if (typeof mirror.addEventListener === 'function') mirror.addEventListener('click', (e) => {
@@ -602,10 +606,15 @@ function elementAt(kids, addr, pos) {
 /** the ends LK draws at the withheld run a document's block at `pos` is, in the order it draws them; none for any other block */
 const runEnds = (/** @type {string} */ addr, /** @type {number} */ pos) => LK.shown(addr).filter((s) => !!s.run && s.run.pos === pos);
 
-/** the accessible name of a node (what the mirror's item says), from ST's entries (`named`) */
-export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type {number} */ total) { return named(n, i, total).text; }
+/** the accessible name of a node (what the mirror's item says), from ST's entries (`named`), rendered for the ear by S22's table (ST's `heard`), a document's words in it kept as written */
+export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type {number} */ total) { return heard(named(n, i, total).runs); }
 
-/** @typedef {{text: string, html: string}} Said words and their markup, which read the same words */
+/** @typedef {{text: string, html: string, runs: import('../strings.js').Run[]}} Said words, their markup, and the same words as stretches in their faces (ST's `heard` reads them), which read the same words */
+
+/** the classes `said`'s faces set a token in, as the faces its stretches stand in */
+const FACE_OF = /** @type {Record<string, import('../plane/register.js').Face>} */ ({ id: 'ident', reading: 'reading' });
+/** a token's classes as its stretches' faces (`FACE_OF`) */
+const facesOf = (/** @type {Record<string, string>} */ faces) => Object.fromEntries(Object.entries(faces).map(([k, c]) => [k, FACE_OF[c] || 'client']));
 
 /**
  * A string as a sentence of its own, its words and its markup (ST's
@@ -620,15 +629,15 @@ export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type
  * @param {string[]} [own]
  * @returns {Said}
  */
-const said = (id, values, faces = {}, own = []) => ({ text: sentence(id, values, own), html: sentenceHTML(id, values, faces, own) });
+const said = (id, values, faces = {}, own = []) => ({ text: sentence(id, values, own), html: sentenceHTML(id, values, faces, own), runs: sentenceRuns(id, values, facesOf(faces), own) });
 /** the client's words, as text and markup, each address in them the identifier's (ST's `addressedHTML`) */
-const plainly = (/** @type {string} */ words) => ({ text: words, html: addressedHTML(words) });
-/** words and their markup ended as a sentence (ST's `ended`, `endedHTML`) */
-const endSaid = (/** @type {Said} */ s) => ({ text: ended(s.text), html: endedHTML(s.text, s.html) });
+const plainly = (/** @type {string} */ words) => ({ text: words, html: addressedHTML(words), runs: asRuns(words) });
+/** words and their markup ended as a sentence (ST's `ended`, `endedHTML`, `endedRuns`) */
+const endSaid = (/** @type {Said} */ s) => ({ text: ended(s.text), html: endedHTML(s.text, s.html), runs: endedRuns(s.runs) });
 /** the parts of one sentence listed, its words and its markup alike (ST's `list`), each that holds no words dropped */
-const listSaid = (/** @type {Said[]} */ parts) => { const held = parts.filter((p) => p.text); return { text: list(...held.map((p) => p.text)), html: list(...held.map((p) => p.html)) }; };
+const listSaid = (/** @type {Said[]} */ parts) => { const held = parts.filter((p) => p.text); return { text: list(...held.map((p) => p.text)), html: list(...held.map((p) => p.html)), runs: joinRuns(', ', held.map((p) => p.runs)) }; };
 /** an item's sentences, its words and its markup alike (ST's `sentences`), each that holds no words dropped */
-const item = (/** @type {Said[]} */ ...parts) => { const held = parts.filter((p) => p.text); return { text: sentences(...held.map((p) => p.text)), html: sentences(...held.map((p) => p.html)) }; };
+const item = (/** @type {Said[]} */ ...parts) => { const held = parts.filter((p) => p.text); return { text: sentences(...held.map((p) => p.text)), html: sentences(...held.map((p) => p.html)), runs: joinRuns(' ', held.map((p) => p.runs)) }; };
 
 /**
  * What the mirror's item says of a node (`nameOf`), its words and its markup:
@@ -650,14 +659,14 @@ function named(n, i, total) {
     if (!b) { const why = read.noBoard(); return item(plainly(why ? asSentence(why) : ''), at); }
     // its name, the one the status region calls it by, opening the sentence, then its count
     const v = { node: n.addr, origin: b.origin }, count = REC.accounts().filter((a) => !a.system).length;
-    const name = { text: opening('L.mirror.board.name', v), html: openingHTML('L.mirror.board.name', v, { node: 'id' }) };
-    return item(endSaid({ text: t('L.mirror.board', { board: name.text, n: count }), html: fill(esc(t('L.mirror.board')), { board: name.html, n: String(count) }) }), plainly(keptSentence(n)), at);
+    const name = { text: opening('L.mirror.board.name', v), html: openingHTML('L.mirror.board.name', v, { node: 'id' }), runs: openingRuns('L.mirror.board.name', v, { node: 'ident' }) };
+    return item(endSaid({ text: t('L.mirror.board', { board: name.text, n: count }), html: fill(esc(t('L.mirror.board')), { board: name.html, n: String(count) }), runs: tRuns('L.mirror.board', { board: name.runs, n: count }) }), plainly(keptSentence(n)), at);
   }
   if (n.kind === 'account') {
     // its counts, then, where it holds none, that it holds nothing
     const c = REC.countOf(n.addr); const lk = LK.countAccount(n.addr);
-    const documents = c.exact ? String(c.documents) : t('L.mirror.at-least', { n: c.documents });
-    const links = lk.arriving ? t('L.mirror.at-least', { n: lk.n }) : String(lk.n);
+    const documents = c.exact ? String(c.documents) : t('L.lower-bound', { n: c.documents });
+    const links = lk.arriving ? t('L.lower-bound', { n: lk.n }) : String(lk.n);
     return item(said('L.mirror.account', { account: n.addr, documents, links }, { account: 'id' }), c.documents ? plainly('') : said('B1.empty_subspace', {}), at);
   }
   // a mark's stop: its count, the words the mark shows (ST's `markCount`)
@@ -668,8 +677,8 @@ function named(n, i, total) {
     // its corner states it after that item, whole, where a read told it (T-LAYER's `mirrorState`), and its positions
     const d = REC.doc(n.addr), label = LAYER.mirrorLabel(d), head = { kind: LAYER.mirrorLead(d), document: n.addr };
     const own = listSaid([
-      { text: opening('L.mirror.document', head, ['kind']), html: openingHTML('L.mirror.document', head, { document: 'id' }, ['kind']) },
-      { text: label.map((r) => r.text).join(''), html: facedHTML(label) },
+      { text: opening('L.mirror.document', head, ['kind']), html: openingHTML('L.mirror.document', head, { document: 'id' }, ['kind']), runs: openingRuns('L.mirror.document', head, { document: 'ident' }, ['kind']) },
+      { text: label.map((r) => r.text).join(''), html: facedHTML(label), runs: label },
       plainly(LAYER.mirrorState(d)),
       plainly(d.extent != null ? t('L.mirror.positions', { n: d.extent }) : ''),
     ]);
@@ -701,11 +710,18 @@ function named(n, i, total) {
   if (n.kind === 'link' && n.link) {
     // the link, then what its far end's text holds of its passage, where that is not all of it in one piece (BM-HELD's `farSays`)
     const l = n.link;
-    const own = said('L.mirror.link', { link: l.link.addr, type: l.link.type || t('L.mirror.untyped'), direction: l.end === 'from' ? t('F.card.to') : t('F.card.from'), far: LK.farLabel(l) }, { link: 'id' });
+    const v = { link: l.link.addr, type: l.link.type || t('L.mirror.untyped'), direction: l.end === 'from' ? t('F.card.to') : t('F.card.from') };
+    const own = { ...said('L.mirror.link', { ...v, far: LK.farLabel(l) }, { link: 'id' }), runs: sentenceRuns('L.mirror.link', { ...v, far: LK.farLabelRuns(l) }, { link: 'ident' }) };
     return item(own, plainly(farSays(l)), at);
   }
   return plainly('');
 }
+
+/** an item's markup and its accessible name (`named`): its words drawn, and its name — them rendered for the ear by S22's table (ST's `heard`), a document's words kept as written */
+const itemNamed = (/** @type {Node} */ n, /** @type {number} */ i, /** @type {number} */ total) => { const w = named(n, i, total); return { html: w.html, runs: w.runs }; };
+
+/** a description's words as the hidden element that holds it says them: rendered for the ear by S22's table (ST's `heard`), none where it holds none */
+const spoken = (/** @type {string} */ words) => (words ? heard(words) : '');
 
 /** a node's level in the tree: board › account › document | mark › span | link, a withheld run's links a level below the run (see the head) */
 const levelOf = (/** @type {Node} */ n) => (n.kind === 'board' ? 1 : n.kind === 'account' ? 2 : n.kind === 'document' || n.kind === 'mark' ? 3 : n.kind === 'link' && n.link && n.link.run ? 5 : 4);
@@ -817,8 +833,9 @@ function rewrite() {
     const i = Number(li.dataset.i), n = siblings[i];
     if (!n) continue;
     if (n.pos != null && li.dataset.pos !== String(n.pos)) li.dataset.pos = String(n.pos);
-    const html = named(n, i, total).html;
+    const { html, runs } = itemNamed(n, i, total);
     if (li.innerHTML !== html) li.innerHTML = html;
+    if (li.getAttribute('aria-label') !== heard(runs)) li.setAttribute('aria-label', heard(runs));
   }
 }
 
@@ -861,27 +878,27 @@ export function render() {
   const total = siblings.length, W = 24;
   const lo = Math.max(0, idx - W), hi = Math.min(total, idx + W);
   const lvl = total ? levelOf(siblings[0]) : 1;
-  let html = `<ul role="group" aria-label="${esc(t('L.mirror-level', { n: lvl }))}">`;
+  let html = `<ul role="group" aria-label="${esc(heard(t('L.mirror-level', { n: lvl })))}">`;
   const at = read.located(), said = read.described(), scale = CAM.destination().scale;
   let pieces = '';
   /** @type {Set<string>} the origins whose description is written */
   const origins = new Set();
   for (let i = lo; i < hi; i++) {
-    const n = siblings[i];
+    const n = siblings[i], w = itemNamed(n, i, total);
     const expanded = n.kind === 'document' ? ` aria-expanded="${!below(n.addr, scale)}"` : n.kind === 'block' && n.pos != null && runEnds(n.addr, n.pos).length ? ' aria-expanded="true"' : '';
     const popup = n.kind === 'mark' ? ' aria-haspopup="dialog"' : '';
     const located = isLocated(n, at) ? ' aria-current="location"' : '';
     const by = describedBy(n, i, said);
     const described = by ? ` aria-describedby="${by}"` : '';
     const state = n.kind === 'document' ? ` data-state="${esc(stateOf(n))}"` : '';
-    html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}"${expanded}${popup}${located}${described} data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''} data-kept="${esc(keptSentence(n))}"${state}>${named(n, i, total).html}</li>`;
-    if (holdsRuns(n, said)) pieces += `<div id="${pieceId(i)}" hidden>${esc(otherRuns(n, said))}</div>`;
+    html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}"${expanded}${popup}${located}${described} data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''} data-kept="${esc(keptSentence(n))}"${state} aria-label="${esc(heard(w.runs))}">${w.html}</li>`;
+    if (holdsRuns(n, said)) pieces += `<div id="${pieceId(i)}" hidden>${esc(spoken(otherRuns(n, said)))}</div>`;
     const far = farWhole(n);
-    if (far) pieces += `<div id="${farId(i)}" hidden>${esc(far)}</div>`;
+    if (far) pieces += `<div id="${farId(i)}" hidden>${esc(spoken(far))}</div>`;
     const o = originWords(n);
-    if (o && !origins.has(o.origin)) { origins.add(o.origin); pieces += `<div id="${originId(o.origin)}" hidden>${esc(o.words)}</div>`; }
+    if (o && !origins.has(o.origin)) { origins.add(o.origin); pieces += `<div id="${originId(o.origin)}" hidden>${esc(spoken(o.words))}</div>`; }
   }
-  html += `</ul><div id="${KIND}" hidden>${esc(said && said.kind ? said.kind : '')}</div><div id="${DESCRIPTION}" hidden>${esc(said ? said.words : '')}</div><div id="${HELD}" hidden>${esc(t('L.held.device'))}</div>${pieces}`;
+  html += `</ul><div id="${KIND}" hidden>${esc(spoken(said && said.kind ? said.kind : ''))}</div><div id="${DESCRIPTION}" hidden>${esc(spoken(said ? said.words : ''))}</div><div id="${HELD}" hidden>${esc(spoken(t('L.held.device')))}</div>${pieces}`;
   mirrorEl.innerHTML = html;
   mirrorEl.tabIndex = idx >= lo && idx < hi ? -1 : 0;
 }
@@ -959,7 +976,7 @@ const stateOf = (/** @type {Node} */ n) => { const d = REC.doc(n.addr); return `
 
 /** the document the walk stands in as last read, and its corner's slot as it stood then (`sayKind`); null where the walk stands in none */
 /** @type {{addr: string, kind: import('../text/article.js').Kind} | null} */
-let heard = null;
+let kindHeard = null;
 
 /** does the platform's focus stand in a document: on the walk's item, or in the document's corner (T-LAYER's `cornerOf`) */
 function focusIn(/** @type {string} */ addr) {
@@ -978,9 +995,9 @@ function focusIn(/** @type {string} */ addr) {
  */
 function sayKind() {
   const f = focus, addr = f && inDocument(f) ? f.addr : null;
-  if (!addr) { heard = null; return; }
-  const k = LAYER.kindOf(REC.doc(addr)), was = heard && heard.addr === addr ? heard.kind : null;
-  heard = { addr, kind: k };
+  if (!addr) { kindHeard = null; return; }
+  const k = LAYER.kindOf(REC.doc(addr)), was = kindHeard && kindHeard.addr === addr ? kindHeard.kind : null;
+  kindHeard = { addr, kind: k };
   if (was === 'reading' && k !== 'reading' && focusIn(addr)) FOCUS.say(kindWord(k).text);
 }
 
@@ -1013,7 +1030,9 @@ export function markKept() {
     if (li.dataset.kept === words && (state === null || li.dataset.state === state)) continue;
     li.dataset.kept = words;
     if (state !== null) li.dataset.state = state;
-    li.innerHTML = named(n, i, total).html;
+    const w = itemNamed(n, i, total);
+    li.innerHTML = w.html;
+    li.setAttribute('aria-label', heard(w.runs));
     wrote = true;
   }
   if (wrote && current && held) showInPanel(current);
@@ -1126,22 +1145,22 @@ function describedBy(n, i, at) {
  */
 export function markDescribed() {
   if (!mirrorEl || typeof mirrorEl.querySelectorAll !== 'function') return;
-  const said = read.described(), words = said ? said.words : '', kind = said && said.kind ? said.kind : '';
+  const said = read.described(), words = spoken(said ? said.words : ''), kind = spoken(said && said.kind ? said.kind : '');
   const q = (/** @type {string} */ id) => (mirrorEl && typeof mirrorEl.querySelector === 'function' ? mirrorEl.querySelector('#' + id) : null);
   const el = q(DESCRIPTION), kel = q(KIND);
   if (el && el.textContent !== words) el.textContent = words;
   if (kel && kel.textContent !== kind) kel.textContent = kind;
   for (const li of /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[role="treeitem"]')])) {
     const i = Number(li.dataset.i), n = siblings[i], piece = q(pieceId(i)), far = q(farId(i));
-    if (n && piece) { const w = otherRuns(n, said); if (piece.textContent !== w) piece.textContent = w; }
-    if (n && far) { const w = farWhole(n); if (far.textContent !== w) far.textContent = w; }
+    if (n && piece) { const w = spoken(otherRuns(n, said)); if (piece.textContent !== w) piece.textContent = w; }
+    if (n && far) { const w = spoken(farWhole(n)); if (far.textContent !== w) far.textContent = w; }
     // an origin's description: written where it came to stand since the rebuild — a withheld one's clause decided, C-33's kind read — its words set as they stand
     const o = n ? originWords(n) : null;
     let held = o ? q(originId(o.origin)) : null;
     if (o && !held && typeof mirrorEl.appendChild === 'function' && typeof document !== 'undefined') {
       const e = document.createElement('div'); e.id = originId(o.origin); e.hidden = true; mirrorEl.appendChild(e); held = e;
     }
-    if (o && held && held.textContent !== o.words) held.textContent = o.words;
+    if (o && held && held.textContent !== spoken(o.words)) held.textContent = spoken(o.words);
     const by = n ? describedBy(n, i, said) : null;
     const named = by ? by.split(' ').filter((x) => (x !== pieceId(i) || piece) && (x !== farId(i) || far) && (!o || x !== originId(o.origin) || held)).join(' ') || null : null;
     if (named && li.getAttribute('aria-describedby') !== named) li.setAttribute('aria-describedby', named);

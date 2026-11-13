@@ -9,7 +9,9 @@
 // rows standing in the box again from the model, at once and as the new
 // class's index answers, its text, its caret and its focus as they stood;
 // each row's cells set in their faces — an address the identifier's, a
-// document's words the reading face's; the rows' list stands at the row
+// document's words the reading face's — and its go named by them heard by
+// S22's table, those words kept as written and a landmark's glyph kept out;
+// the rows' list stands at the row
 // chosen, moved by the least that shows it, at its top where none is chosen,
 // and again where its room moves, the reader's own scroll otherwise standing;
 // Enter on a row naming an account or the board — a trail entry's among them
@@ -39,7 +41,7 @@ import * as F from '../model/frames.js';
 import * as CAM from '../plane/camera.js';
 import { MAC } from './keys.js';
 import { accountCell, boardCell } from '../plane/projection.js';
-import { t } from '../strings.js';
+import { t, heard } from '../strings.js';
 import { esc } from '../util.js';
 
 /** the platform's document: its focus — the body where it stands on nothing */
@@ -432,7 +434,7 @@ test('at reading scale each row naming another document offers "open beside" —
   assert.deepEqual(offering(), [FAR], 'the levels and the trail: FAR\'s entry alone, never the board, the account, the document in view or its own entry');
   const html = String(rows.innerHTML), i = rowAt('trail', FAR);
   assert.ok(html.includes(`<div class="beside" role="gridcell"><button type="button" id="leap-beside-${i}" data-beside="${i}" data-key="trail 2 ${FAR}" aria-labelledby="leap-beside-${i} leap-addr-${i}">${esc(t('F.open-beside'))}</button></div>`), `a native button in the row's second cell, named by its words and the row's address: ${html}`);
-  assert.ok(html.includes(`id="leap-row-${i}" data-i="${i}" role="row"`) && html.includes(`<div class="go" id="leap-go-${i}" role="gridcell">`), 'each row a row of the grid, its go its first cell');
+  assert.ok(html.includes(`id="leap-row-${i}" data-i="${i}" role="row"`) && html.includes(`<div class="go" id="leap-go-${i}" role="gridcell" aria-label="`), 'each row a row of the grid, its go its first cell, named');
   type('1.0.1.0.3.2');
   assert.deepEqual(offering(), [], 'another version of the document in view: none');
   type(FAR + '.0.1.5');
@@ -601,4 +603,17 @@ test('where no board is held the box opens empty and lists no board\'s level, it
     besideKey();
     assert.deepEqual([LEAP.isOpen(), HOST.currentState()?.id, TRAIL.all().length], [false, 'face:no-board', 0], 'Mod+Shift+Enter on a typed address: the face, and no scene opened');
   } finally { HOST.dismiss(); REC._reset(); }
+});
+
+// placed last: it lists an index no test above meets
+test('each row\'s go is named by its cells heard by S22\'s table, drawn as they stand: a document\'s first line kept as written, its own dash among them, and a landmark by its word, its glyph kept out of the name (patterns K1; style S22; issue #626)', () => {
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: '1.0.1.0.1', kind: 'edition', label: 'home — field notes', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  LEAP.open();
+  try {
+    const i = rowAt('landmark', '1.0.1.0.1'), html = String(rows.innerHTML);
+    const name = (new RegExp(`<div class="go" id="leap-go-${i}" role="gridcell" aria-label="([^"]*)">`).exec(html) || [])[1] || '';
+    assert.ok(i >= 0 && name.startsWith('1.0.1.0.1 ') && name.includes('home — field notes'), `named by its address, then the document's first line as written: ${name}`);
+    assert.ok(name.endsWith(` ${heard(t('F.landmark'))}`) && !name.includes('◆') && heard(t('F.landmark')) === 'landmark', `a landmark by its word, the glyph kept out: ${name}`);
+    assert.ok(html.includes(` ${esc(t('F.landmark'))}</span></div>`), 'drawn as it stands, its glyph beside its word');
+  } finally { LEAP.close(); }
 });

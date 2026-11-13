@@ -86,7 +86,7 @@ import { standardFs, placeOf, EDGE } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
 import { entitlementArm } from '../text/article.js';
 import { isElement } from '../text/span.js';
-import { STRINGS, t, tHTML, addressedHTML, sentence, opening, hintSentences } from '../strings.js';
+import { STRINGS, t, tHTML, addressedHTML, sentence, opening, hintSentences, heard } from '../strings.js';
 import { esc } from '../util.js';
 import * as TRAIL from './trail.js';
 import * as WALK from './walk.js';
@@ -3168,7 +3168,7 @@ test('Back to an edition read at its bare address shows the member read there on
     assert.deepEqual([TRAIL.current()?.addr, GO.shownIn(FAR), GO.newerAt(FAR)], [FAR, FAR, null], 'nothing published since: the bare address, unmarked');
     const left = CAM.view();
     await run(GO.leapTo(D));
-    const said = statusSaid(), told = () => said.filter((x) => x === t('F.arrival.pane', { k: 2 })).length;
+    const said = statusSaid(), told = () => said.filter((x) => x === heard(t('F.arrival.pane', { k: 2 }))).length;
     publishFar3();
     assert.deepEqual([TRAIL.all()[TRAIL.cursorIndex() - 1].addr, GO.shownIn(FAR), told()], [FAR2, FAR2, 0], 'version 3 arrived: the entry the reader left re-takes version 2, as the box does — FAR out of view, nothing said');
     await run(GO.back());
@@ -3176,7 +3176,7 @@ test('Back to an edition read at its bare address shows the member read there on
     assert.deepEqual([same(CAM.view(), left), GO.landing(), faceShown()], [true, null, null], 'the words read where they stood, nothing outlined and no face');
     assert.deepEqual([GO.newerAt(FAR2), told()], [3, 1], 'its corner offers version 3, the arrival said once there');
     TRAILLIST.open();
-    const row = (hostEl.innerHTML.match(/aria-current="true"><span class="k">[^<]*<\/span> (.*?)<\/button>/) || [])[1] || '';
+    const row = (hostEl.innerHTML.match(/aria-current="true"[^>]*><span class="k">[^<]*<\/span> (.*?)<\/button>/) || [])[1] || '';
     HOST.dismiss();
     assert.ok(row.startsWith(`<span class="id">${FAR2}</span> · ${esc(t('F.position', { p: FAR_HELD.pos }))}`), `the trail list's row for the entry names version 2: ${row}`);
   } finally {
@@ -3348,7 +3348,7 @@ async function landedAt(/** @type {string} */ addr) {
 
 test('a newer version\'s arrival at a box read at its bare address marks it: the box pinned on the member read, its corner offering the newest member named, said once in the status region with the box read at its reading scale, and a later arrival raising the offer, saying nothing; at the offer, the corner\'s one act, → and ← move nothing and Enter and Space are the platform\'s, whose activation of its button — or a pointer\'s click on it — moves the box to that member in place, a trail entry Back returns from, the offer standing again there, and Enter at the corner\'s container is the platform\'s, doing nothing; a version move elsewhere or a LEAP to the bare address ends the mark, and a box the reader pinned is never marked (issue #240; foundations §3.2; D5 K-57; FP-22, FP-23)', async () => {
   const doc = /** @type {any} */ (globalThis.document);
-  const said = statusSaid(), told = (/** @type {number} */ k) => said.filter((x) => x === t('F.arrival.pane', { k })).length;
+  const said = statusSaid(), told = (/** @type {number} */ k) => said.filter((x) => x === heard(t('F.arrival.pane', { k }))).length;
   try {
     await run(GO.leapTo(TRI, { pos: 1 }));
     assert.deepEqual([GO.shownIn(TRI), GO.newerAt(TRI), LAYER.inView(TRI), LAYER.atReadingScale(TRI)], [TRI, null, true, true], 'TRI read at its bare address, in view at its reading scale: unmarked');
@@ -3805,7 +3805,7 @@ test('Back to a draft where a landing in two pieces stands out of the view the r
   await run(GO.back());
   assert.ok(same(CAM.view(), left), 'Back at the view left');
   assert.deepEqual([walkAt(), GO.landingLine(), GO.arrivalMark()?.runs?.length], [['block', CUT, sixty.pos], line, 2], 'the walk where it stood, the landing standing again out of view');
-  assert.deepEqual(said.filter((x) => x === line), [line], 'the landing\'s line said once, the item the walk lands on not carrying it');
+  assert.deepEqual(said.filter((x) => x === heard(line)), [heard(line)], 'the landing\'s line said once, as a screen reader hears it, the item the walk lands on not carrying it');
   GO.endArrival();
   assert.deepEqual(fake.unanswered, []);
 });

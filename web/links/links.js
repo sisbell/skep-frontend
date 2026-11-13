@@ -99,7 +99,10 @@
 //     answered; its tail, its card, its mirror item and every list that
 //     names it carry those words, each stretch in its face (`farFaced`) — the
 //     address the identifier's, the document's words the reading face's, a
-//     list row's markup made so (`farLabelHTML`); a tail holding several
+//     list row's markup made so (`farLabelHTML`), and a name rendered for the
+//     ear from those stretches (`farLabelRuns`) — a list row's from its type,
+//     the way its link runs said "to" or "from" and them (`endRuns`), the
+//     arrow and the symbol drawn beside them kept out; a tail holding several
 //     links carries that short form after its count only where every one of
 //     its far ends stands in the same such state (`tailFaced`);
 //   - a link shows as a symbol at its span where the reveal has reached stage
@@ -161,14 +164,14 @@
 // drawing modules — BM, T-LAYER, P-RENDER, SC, the cards — draw what `shown`,
 // `shownAt`, `symbols`, `beams`, `countAt`, `connections`, `tails`, `tailed`,
 // `markOf`, `mergedMark`, `lit`, `floats`, `farPos`, `besideAt`, `farWords`, `farFaced`,
-// `farLabel`, `farLabelHTML`, `farEmpty`, `emptyAt`, `tailFaced`, `drawnIn` and `endKey` give them, and T-LAYER sets each document at the
+// `farLabel`, `farLabelHTML`, `farLabelRuns`, `endRuns`, `farEmpty`, `emptyAt`, `tailFaced`, `drawnIn` and `endKey` give them, and T-LAYER sets each document at the
 // size the fold of what `utmost` gives takes.
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-11, FP-21, FP-22, FP-30.
 
 import * as REC from '../model/records.js';
 import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
 import { commonsType, documentOf, accountOf, isUnder, fieldsOf } from '../model/address.js';
-import { t, facedHTML, bracketed, withheldLine } from '../strings.js';
+import { t, facedHTML, bracketed, withheldLine, typeName } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Link} Link */
 /** @typedef {import('../model/records.js').Doc} Doc */
@@ -720,10 +723,35 @@ export function farLabel(s) {
  * @returns {string}
  */
 export function farLabelHTML(s) {
-  if (!s.far) return '';
-  const words = farFaced(s);
-  return facedHTML([{ text: s.far, face: 'ident' }, ...(words.length ? [{ text: ' · ', face: /** @type {const} */ ('client') }, ...words] : [])]);
+  return facedHTML(farLabelRuns(s));
 }
+
+/**
+ * A drawn end's far end named as `farLabel` names it, as stretches in their
+ * faces: its address the identifier's, its words in the faces `farFaced`
+ * gives them — what a name or a message naming it is rendered for the ear
+ * from (ST's `heard`), the far document's own words kept as written; none
+ * where it names no document.
+ * @param {FarEnd} s
+ * @returns {import('../strings.js').Run[]}
+ */
+export function farLabelRuns(s) {
+  if (!s.far) return [];
+  const words = farFaced(s);
+  return [{ text: s.far, face: 'ident' }, ...(words.length ? [{ text: ' · ', face: /** @type {const} */ ('client') }, ...words] : [])];
+}
+
+/**
+ * A drawn end's row named as every list of ends names it — the anatomy
+ * card's, the links card's — as stretches in their faces: its type, the way
+ * its link runs from the near end in words, "to" or "from" (as the mirror's
+ * item says it), then its far end (`farLabelRuns`), which the name renders
+ * for the ear (ST's `heard`); the link's symbol and the arrow drawn beside
+ * them kept out (patterns K1).
+ * @param {Shown} s
+ * @returns {import('../strings.js').Run[]}
+ */
+export const endRuns = (s) => [{ text: `${typeName(s.link.type)} · ${t(s.end === 'from' ? 'F.card.to' : 'F.card.from')} `, face: /** @type {const} */ ('client') }, ...farLabelRuns(s)];
 
 /** the symbols: stage 2 and above — the shown set at its spans, in a record's text (`shown`) */
 export function symbols(/** @type {string} */ addr, /** @type {Doc | null} */ over = textOf(addr)) { return state(addr).stage >= 2 ? shown(addr, over) : []; }

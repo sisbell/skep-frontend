@@ -87,7 +87,9 @@
 // takes it whatever made it stand (K-80), its first control as it arrives and
 // its first words as it is unfolded (O-FACES'). The dismiss is a native
 // button placed after the content, reached by Tab and pressed by Enter or
-// Space (rule 14), its title drawn for the platform (rule 19). An overlay
+// Space (rule 14), its glyph drawn alone and named by its act's words, its key
+// Esc (`aria-keyshortcuts`), its title its words and its chord drawn for the
+// platform (rule 19). An overlay
 // rebuilt — by its own act (`show` with the same id), or by its owner
 // (`redraw`) — keeps the focus on the control bearing the same `data-run`
 // (rule 11); one replacing another whose control held the focus takes it on
@@ -108,18 +110,21 @@
 // moves to tell it, a notice standing below the overlay as it says so, and
 // the overlay stands with its text and its caret, as N-GO's departure leaves
 // it standing.
-// The dialog's name (D5): each overlay's own caption — its `.label`, a face's
-// own words — by `aria-labelledby`; a string per kind from ST where no
-// caption stands. A face that answers an act, captioned by the act's own
-// words (O-FACES' `caption`), is named by that caption and described by its
-// words (`aria-describedby`), so it is met as the act's answer; a card whose
-// words are its content (`described`) — a withheld run's whole wording — is
-// named by their head, as a face is, and described by what stands beneath it,
-// so the focus entering it meets them whole. A face a key or the system
-// raised is heard through the one status region without the focus moving (D4;
-// K-58), its caption before its words — save one whose words the landing that
-// met it says where the focus lands (`told`; N-WALK's description), which is
-// heard there once.
+// The dialog's name (D5): each overlay's own caption's words — its `.label`,
+// a face's own words — a string per kind from ST where no caption stands. A
+// face that answers an act, captioned by the act's own words (O-FACES'
+// `caption`), is named by that caption and described by its words, so it is
+// met as the act's answer; a card whose words are its content (`described`) —
+// a withheld run's whole wording — is named by their head, as a face is, and
+// described by what stands beneath it, so the focus entering it meets them
+// whole. Name and description are rendered for the ear by S22's table (ST's
+// `heard`), a document's or the person's words in them kept as written, and
+// set as `aria-label` and `aria-description`, the dialog's drawn text
+// holding only what it shows. A face a key or the system raised is heard
+// through the one status region without the focus moving (D4; K-58), its
+// caption before its words, the same words for the ear — save one whose
+// words the landing that met it says where the focus lands (`told`; N-WALK's
+// description), which is heard there once.
 // Each act is told whether a key ran it by the controller's one reading:
 // Enter on its control, taken here before the platform's click, or the click
 // the platform makes from a key (Space on a button), which carries no click
@@ -164,10 +169,10 @@
 import { sx, sy, viewport, markDirty } from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import * as FOCUS from '../nav/focus.js';
-import { drawChord } from '../nav/keys.js';
+import { drawChord, keyShortcut } from '../nav/keys.js';
 import * as LINE from '../line/line.js';
 import { docBox } from '../plane/projection.js';
-import { t } from '../strings.js';
+import { t, heard, joinRuns, runsText } from '../strings.js';
 import { esc } from '../util.js';
 
 /**
@@ -307,16 +312,27 @@ export const hasCurrent = () => current !== null;
 export function currentState() { return current; }
 export { currentState as current };
 
-/** the dismiss: a native button after the content, its chord drawn for the platform (rules 13, 14, 19) */
-const dismissButton = () => `<button class="x" data-x="1" title="${esc(t('L.dismiss', { chord: drawChord('Esc') }))}">×</button>`;
+/**
+ * The dismiss: a native button after the content (rules 13, 14), its glyph
+ * drawn alone, named by its act's words (patterns K1) and exposing Esc as its
+ * key (`aria-keyshortcuts`); its title its words with its chord drawn for the
+ * platform after them (rule 19; style S7), described for the ear (ST's
+ * `heard`).
+ */
+function dismissButton() {
+  const title = `${t('L.dismiss')} (${drawChord('Esc')})`;
+  return `<button class="x" data-x="1" title="${esc(title)}" aria-label="${esc(heard(t('L.dismiss')))}" aria-description="${esc(heard(title))}" aria-keyshortcuts="${esc(keyShortcut('Esc'))}">×</button>`;
+}
 
 /**
- * The dialog's name (D5): its own caption where one stands — the `.label`,
- * a face's words — else ST's string for its kind; a face named by the
- * caption of the act it answers is described by its words, each part of
- * them in their order (see the head). The ids it sets lead with the
- * element's own prefix, so the overlay's and the notice's below it never
- * meet.
+ * The dialog's name (D5): its own caption's words where one stands — the
+ * `.label`, a face's words — else ST's string for its kind; a face named by
+ * the caption of the act it answers is described by its words, each part of
+ * them in their order (see the head). Each is rendered for the ear by S22's
+ * table (ST's `heard`; `runsIn`), the name as `aria-label`, the description
+ * as `aria-description`, so the dialog's drawn text holds nothing it does not
+ * show. The caption and the parts carry ids that lead with the element's own
+ * prefix, so the overlay's and the notice's below it never meet.
  * @param {HTMLElement} host
  * @param {Overlay} o
  * @param {string} prefix `overlay`, or `notice` for the element below it
@@ -324,13 +340,41 @@ const dismissButton = () => `<button class="x" data-x="1" title="${esc(t('L.dism
 function name(host, o, prefix) {
   const label = /** @type {HTMLElement | null} */ (host.querySelector('.label'));
   const caption = label || (o.kind === 'face' || o.described ? /** @type {HTMLElement | null} */ (host.querySelector('.face-text')) : null);
-  if (caption) { caption.id = prefix + '-name'; host.setAttribute('aria-labelledby', prefix + '-name'); host.removeAttribute('aria-label'); }
-  else { host.removeAttribute('aria-labelledby'); host.setAttribute('aria-label', t('L.dialog.' + o.kind)); }
+  if (caption) caption.id = prefix + '-name';
+  host.removeAttribute('aria-labelledby');
+  host.setAttribute('aria-label', heard(caption ? runsIn(caption) : t('L.dialog.' + o.kind)));
   const said = label && o.kind === 'face' ? /** @type {HTMLElement[]} */ ([...host.querySelectorAll(SAID)]).filter((e) => e !== label)
     : o.described ? /** @type {HTMLElement[]} */ ([...host.querySelectorAll(BENEATH)]) : [];
   said.forEach((e, i) => { e.id = prefix + '-said-' + i; });
-  if (said.length) host.setAttribute('aria-describedby', said.map((e) => e.id).join(' '));
-  else host.removeAttribute('aria-describedby');
+  if (said.length) host.setAttribute('aria-description', heard(joinRuns(' ', said.map(runsIn))));
+  else host.removeAttribute('aria-description');
+}
+
+/**
+ * An element's words as stretches in their faces, which `heard` renders for
+ * the ear: a span set in the reading face, or holding a change's characters
+ * (`chars`), the reading face's — a document's or the person's words, kept as
+ * written; one set in the identifier's (`id`) the identifier's; every other
+ * word the client's. An element whose children cannot be walked gives its
+ * words the client's.
+ * @param {Element} e
+ * @returns {import('../strings.js').Run[]}
+ */
+function runsIn(e) {
+  const kids = /** @type {NodeListOf<ChildNode> | undefined} */ (e.childNodes);
+  if (!kids || typeof kids[Symbol.iterator] !== 'function') return [{ text: e.textContent || '', face: 'client' }];
+  /** @type {import('../strings.js').Run[]} */
+  const out = [];
+  for (const n of kids) {
+    if (n.nodeType === 3) out.push({ text: n.nodeValue || '', face: 'client' });
+    else if (n.nodeType === 1) {
+      const c = /** @type {Element} */ (n).classList;
+      if (c && (c.contains('reading') || c.contains('chars'))) out.push({ text: n.textContent || '', face: 'reading' });
+      else if (c && c.contains('id')) out.push({ text: n.textContent || '', face: 'ident' });
+      else out.push(...runsIn(/** @type {Element} */ (n)));
+    }
+  }
+  return out;
 }
 
 /** the control an overlay's focus goes to first: the one it names, else its first act in order — never the dismiss */
@@ -342,12 +386,12 @@ export function firstControl(/** @type {HTMLElement} */ host, /** @type {string 
 const BENEATH = '.arm, .clause, .kept';
 /** the parts of a face's words, in their order: the caption of the act it answers, the address it names, its text, its arm, its clause, its note */
 const SAID = '.label, .face-addr, .face-text, .arm, .clause, .note';
-/** a face's words, for the status region: its parts' (`SAID`), the caption of the act it answers first */
-const faceWords = (/** @type {ParentNode} */ host) => [...host.querySelectorAll(SAID)].map((e) => e.textContent || '').join(' ');
+/** a face's words, for the status region: its parts' (`SAID`), the caption of the act it answers first, as stretches in their faces (`runsIn`) */
+const faceWords = (/** @type {ParentNode} */ host) => joinRuns(' ', [...host.querySelectorAll(SAID)].map(runsIn));
 
-/** a face's words read from its markup, written into nothing the page shows: what the status region says of a face held back (see the head) */
+/** a face's words read from its markup, written into nothing the page shows, as stretches in their faces: what the status region says of a face held back (see the head) */
 function wordsOf(/** @type {string} */ html) {
-  if (typeof document.createElement !== 'function') return '';
+  if (typeof document.createElement !== 'function') return [];
   const scratch = document.createElement('template');
   scratch.innerHTML = html;
   return faceWords(scratch.content);
@@ -374,7 +418,7 @@ function writeInto(host, o, prefix, fresh) {
 
 /** one of the host's elements emptied: nothing standing in it, nothing naming it */
 function emptied(/** @type {HTMLElement} */ host) {
-  host.className = ''; host.innerHTML = ''; host.style.visibility = ''; host.removeAttribute('data-id'); host.removeAttribute('aria-labelledby'); host.removeAttribute('aria-label'); host.removeAttribute('aria-describedby');
+  host.className = ''; host.innerHTML = ''; host.style.visibility = ''; host.removeAttribute('data-id'); host.removeAttribute('aria-labelledby'); host.removeAttribute('aria-label'); host.removeAttribute('aria-describedby'); host.removeAttribute('aria-description');
 }
 
 /** is an overlay a jump's reading or reaching face (see the head)? */
@@ -411,7 +455,7 @@ export function show(o) {
   if (!o.notice) { made++; reading = 0; }
   if (!el) return;
   if (o.notice && opened(current)) { stack(o); return; }
-  if (o.kind === 'face' && typing()) { const words = wordsOf(o.html); if (words) FOCUS.say(words); return; }
+  if (o.kind === 'face' && typing()) { const words = wordsOf(o.html); if (words.length) FOCUS.say(words); return; }
   if (jumpFace(o)) takeDownStacked();
   const host = el;
   const from = document.activeElement; // where the act found the focus — read first, for the markup written below removes a control of this host that held it
@@ -448,7 +492,7 @@ export function show(o) {
  */
 function stack(o) {
   const say = !o.told || typing();
-  if (!stackEl) { const words = say ? wordsOf(o.html) : ''; if (words) FOCUS.say(words); return; }
+  if (!stackEl) { const words = say ? wordsOf(o.html) : []; if (words.length) FOCUS.say(words); return; }
   const host = stackEl;
   if (stacked) { const fresh = stacked.id !== o.id; stacked = o; FOCUS.keep(host, keyOf, () => writeInto(host, o, 'notice', fresh)); }
   else { stacked = o; writeInto(host, o, 'notice', true); FOCUS.open('notice', { el: host, byKey: false }); }
@@ -778,7 +822,7 @@ export function aside() {
   const host = away(current) ? el : away(stacked) ? stackEl : null;
   if (!host) return null;
   const words = /** @type {HTMLElement | null} */ (host.querySelector('.face-text'));
-  return { id: words ? words.dataset.string || '' : '', text: faceWords(host) };
+  return { id: words ? words.dataset.string || '' : '', text: runsText(faceWords(host)) };
 }
 
 /** the overlay's text (the gate's text case) */

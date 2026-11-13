@@ -36,10 +36,13 @@
 // once as its clause appears and once as its reads set it, changed or
 // unchanged, still as last read where a read fails, nothing where it is let
 // go unset, one message for documents a row names together and none for a
-// change of class's own cause; and the cover — no
+// change of class's own cause, each name as written; the cover — no
 // position at a refused document, the transient taken down and the class
-// change said once with what it covered (FP-13, FP-20, FP-21, FP-22, FP-23,
-// FP-25, FP-26, FP-28, FP-29, FP-33, FP-34, FP-35, FP-36).
+// change said once with what it covered; and every name and word said
+// rendered for the ear by S22's table — the acts named by their words alone,
+// the trail's chord its key, the bar between parts hidden, the address
+// segment's levels a pause (FP-13, FP-20, FP-21, FP-22, FP-23, FP-25, FP-26,
+// FP-28, FP-29, FP-33, FP-34, FP-35, FP-36; style S22).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -53,11 +56,12 @@ import * as LAYER from '../text/layer.js';
 import { docBox, accountCell, boardCell, depthOfDoc, DOC_W } from '../plane/projection.js';
 import { STANDARD_FS } from '../plane/layout.js';
 import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
-import { t, tHTML, addressedHTML, lastRead, sentence, sentences } from '../strings.js';
+import { t, tHTML, tRuns, addressedHTML, lastRead, sentence, sentences, heard } from '../strings.js';
 import { esc } from '../util.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import * as LINE from './line.js';
+import { drawChord, trailChord, keyShortcut } from '../nav/keys.js';
 
 const D = '1.0.1.0.3';
 /** the account's 49th document, its first continuation's first: its room a seventh of a depth-0 document's across */
@@ -201,7 +205,7 @@ test('a document below its own reading scale is named with its strip standing ba
   }
 });
 
-test('at reading scale the document\'s field is followed by its label — its box\'s lead, as its label on the plane sets it — whole where the room the segment\'s one width leaves past its fields holds it, else cut on a word, its fields never; and the segment is named by its fields in their order, the label whole after the document\'s field and the position, no kind among them (issue #23; issue #423\'s design decision: "Drop the state words from the one line\'s address name")', async () => {
+test('at reading scale the document\'s field is followed by its label — its box\'s lead, as its label on the plane sets it — whole where the room the segment\'s one width leaves past its fields holds it, else cut on a word, its fields never; and the segment is named by its fields in their order, the label whole after the document\'s field and the position, no kind among them, rendered for the ear — the levels\' "›" a pause, no glyph in the name, the label kept as written (issue #23; issue #423\'s design decision: "Drop the state words from the one line\'s address name"; style S22; issue #626)', async () => {
   const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
   LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
   await PUMP.loadWhole(LONG);
@@ -218,7 +222,8 @@ test('at reading scale the document\'s field is followed by its label — its bo
     assert.deepEqual(a.label, [{ text, face: 'reading' }], `${doc}: its label its first line, the reading face's`);
     assert.deepEqual([seg.place, seg.label, seg.pos], [a.place, shown, ` › ${t('F.position', { p: 15 })}`], `${doc}: its fields whole, its label ${shown === text ? 'whole' : 'cut on a word'} between them`);
     assert.ok(seg.labelHTML.includes('<span class="reading">'), `${doc}: the label in the reading face: ${seg.labelHTML}`);
-    assert.equal(seg.name, `${a.place} ${text} › ${t('F.position', { p: 15 })}`, `${doc}: named by its fields, its label whole and its position — a name, carrying no kind`);
+    assert.equal(seg.name, `${a.place.split(' › ').join(', ')} ${text} ${t('F.position', { p: 15 })}`, `${doc}: named by its fields, its label whole and its position — a name, carrying no kind, the levels a pause apart`);
+    assert.ok(!/[›‹·—│]/.test(seg.name.replace(text, '')), `${doc}: no glyph in its name: ${seg.name}`);
   }
 });
 
@@ -681,18 +686,18 @@ test('a reading scene\'s close is said after it until the next act (issue #50\'s
   FOCUS.attach({ live: /** @type {any} */ (live) });
   LINE.attach(/** @type {any} */ (el), { open() {}, back() {}, forward() { forwarded++; }, trailList() {}, signIn() {}, closed: () => closes });
   const words = t('L.scene.closed'), seg = `<span class="seg transient" data-string="L.scene.closed">${addressedHTML(words)}</span>`;
-  const forward = (/** @type {boolean} */ says) => `<button data-act="forward" disabled${says ? ` title="${esc(words)}" aria-label="${esc(words)}"` : ''}>${esc(t('F.forward'))}</button>`;
+  const forward = (/** @type {boolean} */ says) => `<button data-act="forward" aria-label="${esc(heard(says ? words : t('F.forward')))}" disabled${says ? ` title="${esc(words)}"` : ''}>${esc(t('F.forward'))}</button>`;
   LINE.render(true);
   assert.ok(!el.innerHTML.includes('L.scene.closed') && el.innerHTML.includes(forward(false)), 'no close: nothing said');
   live.textContent = '';
   closes = 1; LINE.render();
   assert.ok(el.innerHTML.includes(seg) && el.innerHTML.includes(forward(false)), `the first close of the session: whole, in a segment of its own: ${el.innerHTML}`);
-  assert.equal(live.textContent, words, 'said through the status region');
+  assert.equal(live.textContent, heard(words), 'said through the status region, its words rendered for the ear');
   LINE.act();
   assert.ok(!el.innerHTML.includes('L.scene.closed'), 'the next act takes it down');
   live.textContent = '';
   closes = 2; LINE.render();
-  assert.ok(el.innerHTML.includes(forward(true)) && !el.innerHTML.includes(seg), `the next close: forward ›'s label, its visible words unchanged: ${el.innerHTML}`);
+  assert.ok(el.innerHTML.includes(forward(true)) && !el.innerHTML.includes(seg), `the next close: forward ›'s label, its visible words unchanged, its name the close's words rendered for the ear: ${el.innerHTML}`);
   assert.equal(live.textContent, '', 'nothing said');
   on.click?.({ type: 'click', detail: 1, target: { closest: () => ({ dataset: { act: 'forward' } }) }, stopPropagation() {} });
   assert.deepEqual([el.innerHTML.includes(forward(false)), forwarded], [true, 1], 'a press on forward › is the next act: the label taken down, the act made');
@@ -702,6 +707,22 @@ test('a reading scene\'s close is said after it until the next act (issue #50\'s
   assert.ok(el.innerHTML.includes(forward(false)), 'a change of the page\'s class takes the label down');
   closes = 4; LINE.render();
   assert.ok(el.innerHTML.includes(seg) && el.innerHTML.includes(forward(false)), 'the first close of the new session: whole again');
+  LINE.act();
+});
+
+test('the line\'s acts are named by their words alone — Back "back", Forward "forward", no step glyph in either name, the glyphs drawn beside them as before — the trail\'s list exposes its chord as its key and describes it for the ear, and the bar between two parts is hidden from the accessibility tree, each part naming itself (style S22; patterns K1, K3; issue #626)', () => {
+  const el = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [], contains: () => false };
+  LINE.attach(/** @type {any} */ (el), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  LINE.fit({ room: 4000, measure: counted });
+  LINE.render(true);
+  const acts = (/<span class="acts">(.*?)<\/span>/.exec(el.innerHTML) || [])[1] || '';
+  /** each act's name and its drawn words */
+  const named = [...acts.matchAll(/<button([^>]*)>([^<]*)/g)].map((m) => [(/data-act="(\w+)"/.exec(m[1]) || [])[1], (/aria-label="([^"]*)"/.exec(m[1]) || [])[1] ?? null, m[2]]);
+  assert.deepEqual(named.filter(([act]) => act === 'back' || act === 'forward'), [['back', 'back', esc(t('F.back'))], ['forward', 'forward', esc(t('F.forward'))]], `named by their words, drawn as before: ${acts}`);
+  for (const [act, name] of named) assert.ok(!/[‹›]/.test(name || ''), `${act}: no step glyph in its name`);
+  const trail = trailChord();
+  assert.ok(acts.includes(`<button data-act="trail" title="${esc(drawChord(trail))}" aria-description="${esc(heard(drawChord(trail)))}" aria-keyshortcuts="${esc(keyShortcut(trail))}">`), `the trail's list: its chord its key, its tooltip described for the ear: ${acts}`);
+  assert.ok(el.innerHTML.includes('<span class="sep" aria-hidden="true">│</span>') && !el.innerHTML.includes('<span class="sep">'), 'the bar between parts hidden from the accessibility tree');
   LINE.act();
 });
 
@@ -811,7 +832,7 @@ const counted = (forms) => forms.map((f) => {
   return f.replace(/<[^>]*>/g, '').replace(/&[a-z0-9#]+;/g, 'x').length * 6 + (f.match(/<button/g) || []).length * 12;
 });
 /** the separator between two parts of a row */
-const SEP = '<span class="sep">│</span>';
+const SEP = '<span class="sep" aria-hidden="true">│</span>';
 /** a part's key, from its markup as the line renders it */
 const keyOf = (/** @type {string} */ html) => (html.startsWith('<span class="acts">') ? 'acts' : html.startsWith('<span class="address-part"') ? 'address' : (/class="seg (\w+)/.exec(html) || [])[1] || '?');
 /** markup's words as a person reads them: its tags taken out, its characters unescaped */
@@ -865,6 +886,7 @@ test('short of room the line gives way in steps, each keeping the ones before it
     for (const [who, rooms] of cases) {
       if (who === 'a guest') REC.setSession(null);
       const acting = LINE.actingSegment(), name = acting.name ? t(acting.name.id, acting.name.values) : '';
+      const spoken = acting.name ? heard(tRuns(acting.name.id, acting.name.values, acting.name.faces)) : '';
       const label = acting.name ? String(acting.name.values['device label'] ?? '') : '';
       /** each form's words, as the forms run: whole, then each turn given way, then short */
       const words = who === 'a guest'
@@ -883,7 +905,7 @@ test('short of room the line gives way in steps, each keeping the ones before it
         assert.equal(address.includes('class="pos"'), step < 1, `${where}: the position's words ${step < 1 ? 'stand' : 'gone'}`);
         assert.ok(/<button class="slot" data-act="strip"[^>]*><(b class="pos"[^>]*>[^<]*<\/b><)?span class="strip"><span class="strip-mark"/.test(address), `${where}: the strip whole and marked, the strip's act: ${address}`);
         const part = parts.find((p) => keyOf(p) === 'acting') || '';
-        assert.equal(part, form ? `<button class="seg acting" data-act="acting" data-state="${acting.state}" title="${esc(name)}" aria-label="${esc(name)}">${acting.forms[form]}</button>` : `<span class="seg acting" data-state="${acting.state}">${acting.forms[0]}</span>`,
+        assert.equal(part, form ? `<button class="seg acting" data-act="acting" data-state="${acting.state}" title="${esc(name)}" aria-label="${esc(spoken)}">${acting.forms[form]}</button>` : `<span class="seg acting" data-state="${acting.state}">${acting.forms[0]}</span>`,
           `${where}: the acting-as segment ${form ? 'compact, its act named by its whole form' : 'whole, no act'}`);
         assert.equal(plain(part), words[form], `${where}: its words in the form held`);
         const glyphs = part.match(/<svg[^>]*>/g) || [];
@@ -993,7 +1015,7 @@ test('the line composes as sentences the segments it builds from several strings
     const words = sentences(sentence('F.flip'), sentence('F.flip.run'));
     assert.equal(words, 'Local trust is now on — anything running on this machine can write as you here and read every draft you have written, with no key. For this run of the notebook: quitting the client ends it, and the next start runs without it.');
     assert.ok(host.innerHTML.includes(`<span class="seg transient" data-string="F.flip">${esc(words)}</span>`), `the mode line drawn as its two sentences: ${host.innerHTML}`);
-    assert.deepEqual(said.slice(n), [words], 'and said once through the status region in the same words');
+    assert.deepEqual(said.slice(n), [heard(words)], 'and said once through the status region in the same words, rendered for the ear');
   } finally { WRITE.setUnwritable(b.board, null); REC.setHealth(/** @type {any} */ (health), mode); LINE.act(); clicked(); }
 });
 
@@ -1021,7 +1043,8 @@ test('short of its whole form the acting-as segment is its act: a press — a po
   await WALK.focusTo(D, 15);
   try {
     const acting = LINE.actingSegment(), name = acting.name ? t(acting.name.id, acting.name.values) : '';
-    const act = (/** @type {number} */ form) => `<button class="seg acting" data-act="acting" data-state="2" title="${esc(name)}" aria-label="${esc(name)}">${acting.forms[form]}</button>`;
+    const spoken = acting.name ? heard(tRuns(acting.name.id, acting.name.values, acting.name.faces)) : '';
+    const act = (/** @type {number} */ form) => `<button class="seg acting" data-act="acting" data-state="2" title="${esc(name)}" aria-label="${esc(spoken)}">${acting.forms[form]}</button>`;
     /** the acting-as segment as the line renders it: in a row, or beneath the line */
     const seen = () => { const l = laidOut(host.innerHTML); return { row: l.rows.flat().find((p) => keyOf(p) === 'acting') || null, beneath: l.beneath.replace(/<\/div>$/, '') }; };
     LINE.fit({ room: 800, measure: counted });
@@ -1142,8 +1165,9 @@ test('a kept document the line names carries its clause in a segment of its own 
   over(D, 14 / STANDARD_FS);
   await WALK.focusTo(D, 15);
   LINE.render(true);
-  const from = said.length, name = LAYER.boxName(D).name;
+  const from = said.length, name = LAYER.boxName(D).name, named = LAYER.boxName(D).runs;
   assert.equal(name, `"Tumbler." ${D}`, 'its name: its first line as the mirror quotes it, then its address');
+  assert.equal(heard(named), `Tumbler. ${D}`, 'heard, its first line\'s words as written and its address, the quotation marks not spoken');
   const text = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
   const t0 = Date.now();
   fake.fire('feed', inserting(40, [D]));
@@ -1155,9 +1179,9 @@ test('a kept document the line names carries its clause in a segment of its own 
   assert.ok(since >= t0 && since <= t1, 'kept from the row\'s arrival');
   const clause = t('L.kept.links', { when: lastRead(since) });
   LINE.render();
-  const seg = `<span class="sep">│</span><span class="seg kept" data-string="L.kept.links">${esc(clause)}</span>`;
-  assert.ok(host.innerHTML.includes(`○</span></span>${seg}<span class="sep">│</span><span class="seg acting"`), `beside the address part, before the acting-as segment: ${host.innerHTML}`);
-  assert.deepEqual([said.slice(from), live.live], [[t('L.kept.said', { name, clause })], 'polite'], 'said politely as it appears');
+  const seg = `${SEP}<span class="seg kept" data-string="L.kept.links">${esc(clause)}</span>`;
+  assert.ok(host.innerHTML.includes(`○</span></span>${seg}${SEP}<span class="seg acting"`), `beside the address part, before the acting-as segment: ${host.innerHTML}`);
+  assert.deepEqual([said.slice(from), live.live], [[heard(tRuns('L.kept.said', { name: named, clause }))], 'polite'], 'said politely as it appears, its name as written');
   LINE.render(true);
   over(D, MID);
   LINE.render();
@@ -1166,7 +1190,7 @@ test('a kept document the line names carries its clause in a segment of its own 
   text();
   await turns(() => !!PUMP.kept(D));
   LINE.render();
-  assert.deepEqual([PUMP.kept(D), host.innerHTML.includes('seg kept'), said.slice(from + 1)], [null, false, [t('L.kept.unchanged', { name })]], 'set: the clause lifted, said once — current, unchanged');
+  assert.deepEqual([PUMP.kept(D), host.innerHTML.includes('seg kept'), said.slice(from + 1)], [null, false, [heard(tRuns('L.kept.unchanged', { name: named }))]], 'set: the clause lifted, said once — current, unchanged');
   assert.deepEqual(fake.unanswered.slice(unasked), []);
 });
 
@@ -1178,24 +1202,24 @@ test('a kept document whose read the board does not answer once its clause is sa
   over(D, 14 / STANDARD_FS);
   await WALK.focusTo(D, 15);
   LINE.render(true);
-  const from = said.length, name = LAYER.boxName(D).name;
+  const from = said.length, named = LAYER.boxName(D).runs;
   const text = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
   try {
     fake.fire('feed', inserting(41, [D]));
     ctx.mock.timers.tick(PUMP.KEPT_MS);
     LINE.render();
-    assert.deepEqual(said.slice(from), [t('L.kept.said', { name, clause: t('L.kept.links', { when: lastRead(/** @type {number} */ (PUMP.kept(D)?.since)) }) })], 'its clause said as it appears');
+    assert.deepEqual(said.slice(from), [heard(tRuns('L.kept.said', { name: named, clause: t('L.kept.links', { when: lastRead(/** @type {number} */ (PUMP.kept(D)?.since)) }) }))], 'its clause said as it appears');
     script[key] = UNREACHABLE;
     text();
     await turns(() => !PUMP.kept(D)?.met);
     LINE.render();
     LINE.render(true);
-    assert.deepEqual(said.slice(from + 1), [t('L.kept.still', { name, reason: t('F.daemon.unreachable') })], 'its text not answered: still as last read, with the failure\'s words, once');
+    assert.deepEqual(said.slice(from + 1), [heard(tRuns('L.kept.still', { name: named, reason: t('F.daemon.unreachable') }))], 'its text not answered: still as last read, with the failure\'s words, once');
     script[key] = answer;
     fake.fire('daemon', { board: 'b-1', state: 'running' });
     await turns(() => !!PUMP.kept(D));
     LINE.render();
-    assert.deepEqual([PUMP.kept(D), said.slice(from + 2)], [null, [t('L.kept.unchanged', { name })]], 'read again at running and set: current, unchanged');
+    assert.deepEqual([PUMP.kept(D), said.slice(from + 2)], [null, [heard(tRuns('L.kept.unchanged', { name: named }))]], 'read again at running and set: current, unchanged');
   } finally { script[key] = answer; }
   assert.deepEqual(fake.unanswered.slice(unasked), []);
 });
@@ -1214,13 +1238,13 @@ test('documents a row names together are said in one message as their clauses ap
   script[key] = { result: { as_of: 2, resp: 'delivery', items: [{ content: LONG_TEXT.replace('Item 1 of', 'Item A of') }] } };
   const holdD = fake.hold('op', { frame: F.retrieveV(D, 1, 30) }), holdL = fake.hold('op', { frame: textL });
   try {
-    const from = said.length, named = LAYER.boxName(D).name;
+    const from = said.length, named = LAYER.boxName(D).runs;
     fake.fire('feed', inserting(42, [D, LONG]));
     ctx.mock.timers.tick(PUMP.KEPT_MS);
     LINE.render();
     const since = /** @type {number} */ (PUMP.kept(D)?.since);
     assert.equal(PUMP.kept(LONG)?.since, since, 'one cause: both kept from the row');
-    assert.deepEqual(said.slice(from), [t('L.kept.said', { name: t('L.kept.and-more', { name: named, n: 1 }), clause: t('L.kept.text', { when: lastRead(since) }) })], 'one message as they appear: the walk\'s document named, the other counted');
+    assert.deepEqual(said.slice(from), [heard(tRuns('L.kept.said', { name: tRuns('L.kept.and-more', { name: named, n: 1 }), clause: t('L.kept.text', { when: lastRead(since) }) }))], 'one message as they appear: the walk\'s document named, the other counted');
     holdD();
     await turns(() => !!PUMP.kept(D));
     LINE.render();
@@ -1228,7 +1252,7 @@ test('documents a row names together are said in one message as their clauses ap
     holdL();
     await turns(() => !!PUMP.kept(LONG));
     LINE.render();
-    assert.deepEqual(said.slice(from + 1), [`${t('L.kept.unchanged', { name: named })}; ${t('L.kept.changed', { name: t('L.kept.more', { n: 1 }) })}`], 'one message as their reads set them: the walk\'s document current and unchanged, the other counted current and changed');
+    assert.deepEqual(said.slice(from + 1), [heard([...tRuns('L.kept.unchanged', { name: named }), { text: '; ', face: 'client' }, ...tRuns('L.kept.changed', { name: t('L.kept.more', { n: 1 }) })])], 'one message as their reads set them: the walk\'s document current and unchanged, the other counted current and changed');
   } finally { script[key] = answer; }
   assert.deepEqual(fake.unanswered.slice(unasked), []);
 });
@@ -1274,19 +1298,19 @@ test('while the board lags past a second the line carries its clause in the kept
   assert.ok(!host.innerHTML.includes('seg kept') && said.length === told, 'within the second: no clause, nothing said');
   ctx.mock.timers.tick(PUMP.KEPT_MS);
   const clause = t('L.kept.text', { when: lastRead(/** @type {number} */ (PUMP.boardKept()?.since)) });
-  const seg = `<span class="sep">│</span><span class="seg kept" data-string="L.kept.text">${esc(clause)}</span>`;
+  const seg = `${SEP}<span class="seg kept" data-string="L.kept.text">${esc(clause)}</span>`;
   /** @type {Array<[string, () => void]>} */
   const scales = [['nearer, a document not kept', () => over(D, 14 / STANDARD_FS)], ['mid, an account', () => over(D, MID)], ['far, the board', () => CAM.set(CAM.viewForCell(boardCell('1'), 0.92))]];
   for (const [where, at] of scales) {
     at();
     LINE.render();
-    assert.ok(host.innerHTML.includes(`○</span></span>${seg}<span class="sep">│</span><span class="seg acting"`), `${where}: the board's clause beside the address part — ${host.innerHTML}`);
+    assert.ok(host.innerHTML.includes(`○</span></span>${seg}${SEP}<span class="seg acting"`), `${where}: the board's clause beside the address part — ${host.innerHTML}`);
   }
-  assert.deepEqual([said.slice(told), live.live], [[t('L.kept.said', { name, clause })], 'polite'], 'said politely once as it appears, the board by its mirror item\'s name');
+  assert.deepEqual([said.slice(told), live.live], [[heard(t('L.kept.said', { name, clause }))], 'polite'], 'said politely once as it appears, the board by its mirror item\'s name');
   fake.reopen();
   await turns(() => !!PUMP.boardKept());
   LINE.render();
-  assert.deepEqual([PUMP.boardKept(), host.innerHTML.includes('seg kept'), said.slice(told + 1)], [null, false, [t('L.kept.unchanged', { name })]], 'the catch-up\'s rows taken, none read: the clause lifted, said once — current, unchanged');
+  assert.deepEqual([PUMP.boardKept(), host.innerHTML.includes('seg kept'), said.slice(told + 1)], [null, false, [heard(t('L.kept.unchanged', { name }))]], 'the catch-up\'s rows taken, none read: the clause lifted, said once — current, unchanged');
   assert.deepEqual(fake.unanswered.slice(unasked), []);
 });
 
@@ -1316,7 +1340,7 @@ test('a change of the page\'s class is said once, as the reads it asked answer: 
     for (let i = 0; i < 10 && PUMP.rereading(); i++) { PUMP.pump(); await flush(); }
     assert.deepEqual([PUMP.rereading(), REC.covered(DR)], [false, true], 'the places the view stood on read again: the draft withheld from the guest, covered');
     LINE.render();
-    assert.deepEqual([live.textContent, live.live], [t('L.covered', { ending: t('C-137.signed-out'), documents: DR }), 'assertive'], 'said once the reads answer: the ending, then what it covered');
+    assert.deepEqual([live.textContent, live.live], [heard(t('L.covered', { ending: t('C-137.signed-out'), documents: DR })), 'assertive'], 'said once the reads answer: the ending, then what it covered');
     live.textContent = '';
     LINE.render(true);
     assert.equal(live.textContent, '', 'said once');

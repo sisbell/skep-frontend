@@ -9,16 +9,17 @@
 // the focus as a key or a pointer opens it, as a rebuild, a replacement or a
 // face takes its place, and as it is dismissed, and a notice below it, which
 // takes none and closes first; and the status region, written once for
-// words it is told, asked again saying words it holds already by emptying it
-// and writing them on the next frame (FP-20, FP-36; the focus record's rules
-// 10–16).
+// words it is told, rendered for the ear by S22's table with the person's
+// words, a document's name and an address kept, asked again saying words it
+// holds already by emptying it and writing them on the next frame (FP-20,
+// FP-36; style S22; the focus record's rules 10–16).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { sep } from 'node:path';
 import * as FOCUS from './focus.js';
 import * as HOST from '../overlays/host.js';
-import { t } from '../strings.js';
+import { t, heard, asHeard } from '../strings.js';
 
 /**
  * A page of stand-ins: the platform's focus — the body where it stands on
@@ -380,6 +381,22 @@ test('the status region: words it is told written once, polite unless asked asse
   assert.deepEqual([writes, live], [['', 'board unreachable'], 'assertive'], 'a write before the next frame takes the waiting words\' place');
 });
 
+test('the status region says every word it is told rendered for the ear by S22\'s table — "·", "—" and "≥" by their words, a chord by its keys — and keeps the person\'s own words, a document\'s name and an address it is handed as stretches exactly; words already heard said as they stand (style S22; issue #626)', () => {
+  /** @type {string[]} each write of the region, in order */
+  const writes = [];
+  FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { writes.push(v); }, get textContent() { return writes[writes.length - 1] ?? ''; } }) });
+  FOCUS.say('≥ 3 so far · no match in 1.0.1.0.3 — try another word');
+  FOCUS.say('typing goes nowhere here — to go somewhere, the address line: ⌘L');
+  FOCUS.say([{ text: 'taken out — “', face: 'client' }, { text: 'the river — rose (at) dawn', face: 'reading' }, { text: '” in ', face: 'client' }, { text: '1.0.1.0.5', face: 'ident' }]);
+  FOCUS.say(asHeard('Field — notes, as last read'));
+  assert.deepEqual(writes, [
+    'at least 3 so far, no match in 1.0.1.0.3, try another word',
+    'typing goes nowhere here, to go somewhere, the address line: Command L',
+    'taken out, the river — rose (at) dawn in 1.0.1.0.5',
+    'Field — notes, as last read',
+  ]);
+});
+
 test('cover: a region chrome stands over is inert while it does', () => {
   const p = page();
   const tree = p.element('the tree');
@@ -443,7 +460,7 @@ function hostElement(p, name = 'the overlay') {
   return { host, kid: (/** @type {string} */ run) => kids.find((k) => k.dataset.run === run) || null, kids: () => kids };
 }
 
-test('the host: an overlay a key opened takes the focus on its first act, never the dismiss — a native button after the content — and the dialog is named by its own caption', () => {
+test('the host: an overlay a key opened takes the focus on its first act, never the dismiss — a native button after the content, its glyph drawn alone, named by its act\'s words with Esc its key — and the dialog is named by its own caption\'s words rendered for the ear (style S22; issue #626)', () => {
   const p = page();
   const h = hostElement(p);
   const item = p.element('the item');
@@ -454,9 +471,9 @@ test('the host: an overlay a key opened takes the focus on its first act, never 
   assert.equal(p.at(), 'the overlay: first', 'the first act');
   const x = h.kids().find((k) => k.dataset.x);
   assert.ok(x && x.tag === 'button' && h.kids().indexOf(x) === h.kids().length - 1, 'the dismiss is a native button, the last control in the order');
-  assert.equal(x && x.attrs.title, t('L.dismiss', { chord: 'Esc' }), 'its title is drawn from ST with the chord (Esc carries no modifier to draw)');
-  assert.equal(h.host.attrs['aria-labelledby'], 'overlay-name');
-  assert.equal(h.kid('first') && h.kids().find((k) => k.classes.includes('label'))?.id, 'overlay-name', 'the caption names the dialog');
+  assert.deepEqual(x && [x.text, x.attrs.title, x.attrs['aria-label'], x.attrs['aria-keyshortcuts'], x.attrs['aria-description']], ['×', `${t('L.dismiss')} (Esc)`, 'dismiss', 'Escape', 'dismiss, Escape'],
+    'drawn "×" alone, its title its words and its chord (Esc carries no modifier to draw); named "dismiss", no glyph in its name, its key Escape, its title described for the ear');
+  assert.deepEqual([h.host.attrs['aria-label'], h.host.attrs['aria-labelledby'], h.kids().find((k) => k.classes.includes('label'))?.id], ['the caption', undefined, 'overlay-name'], 'the caption\'s words name the dialog');
   HOST.dismiss();
   assert.equal(p.at(), 'the item', 'the dismissal returns the focus to the opener');
   // a list names its current row as the control the focus goes to first
@@ -464,13 +481,12 @@ test('the host: an overlay a key opened takes the focus on its first act, never 
   assert.equal(p.at(), 'the overlay: read2', 'the versions list lands on its current member');
   HOST.dismiss();
   // a face has no caption: named by its own words
-  HOST.show({ kind: 'face', id: 'face:x', anchor: null, html: '<div class="face-text">its words</div>' });
-  assert.equal(h.host.attrs['aria-labelledby'], 'overlay-name');
-  assert.equal(h.kids().find((k) => k.classes.includes('face-text'))?.id, 'overlay-name', 'a face is named by its words');
+  HOST.show({ kind: 'face', id: 'face:x', anchor: null, html: '<div class="face-text">its words — the rest · and more</div>' });
+  assert.deepEqual([h.host.attrs['aria-label'], h.kids().find((k) => k.classes.includes('face-text'))?.id], ['its words, the rest, and more', 'overlay-name'], 'a face is named by its words, rendered for the ear');
   assert.equal(p.at(), 'the item', 'a face takes no focus');
   HOST.dismiss();
   HOST.show({ kind: 'card', id: 'bare', anchor: null, html: '<button data-run="only">only</button>' });
-  assert.equal(h.host.attrs['aria-label'], t('L.dialog.card'), 'no caption: ST\'s string for the kind');
+  assert.equal(h.host.attrs['aria-label'], heard(t('L.dialog.card')), 'no caption: ST\'s string for the kind');
   HOST.dismiss();
 });
 

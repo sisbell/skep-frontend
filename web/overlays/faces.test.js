@@ -35,8 +35,10 @@
 // words, its hands and its acts, its compact form naming its one device's
 // hand, none under the death — its acts made by their keys there, "see the
 // held text" opening the moved scene on the held version, and a press
-// answered at it, its line and its hand said each a sentence; and the
-// device's refusal, each of its lines a sentence.
+// answered at it, its line and its hand said each a sentence; the
+// device's refusal, each of its lines a sentence; and every face's words,
+// name and description as S22's table hears them, a draft's name in an
+// inert act's reason and a device's label in a hand kept as written.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as FACES from './faces.js';
@@ -57,12 +59,15 @@ import * as TRAIL from '../nav/trail.js';
 import * as CAM from '../plane/camera.js';
 import * as LK from '../links/links.js';
 import { accountCell } from '../plane/projection.js';
-import { entitlementArm, faceWords } from '../text/article.js';
+import { entitlementArm, faceWords, faceRuns } from '../text/article.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
-import { STRINGS, t, addressedHTML, sentence, sentences } from '../strings.js';
+import { STRINGS, t, tRuns, addressedHTML, sentence, sentences, heard } from '../strings.js';
 import { esc, byteLength, fingerprintCue } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
+
+/** a device's hand as the moved face names it in its slot: its words, and the same as stretches, the device in its face — a label the person's own words, the reading face's */
+const deviceHand = (/** @type {string} */ label, /** @type {import('../plane/register.js').Face} */ face = 'reading') => ({ id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': label }), runs: tRuns('B3.hand.device', { 'device label': [{ text: label, face }] }) });
 
 // a draft in 1.0.2's sub-account 1.0.2.1, withheld from the reader: its owner the seat above the sub-account
 const X = '1.0.2.1.0.2', OWNER = '1.0.2';
@@ -148,7 +153,7 @@ function heldToTheFace(reader, what, form) {
   const lead = (caption ? `<span class="label">${esc(caption)}</span>` : '') + (away ? `<div class="face-addr code id">${X}</div>` : '') + '<button class="face-text"';
   assert.ok(f.html.startsWith(lead), `${what}, ${who}: ${caption ? 'named by the act\'s caption, ' : ''}${away ? 'the document\'s full address before its words, the face standing away from its place' : 'no address, the face standing at the document\'s own bytes'}: ${f.html}`);
   assert.deepEqual([f.open, f.arm], whole ? [true, [arm.id, arm.text]] : [false, null], `${what}, ${who}: ${whole ? 'whole — the entitlement arm for ' + OWNER + ' and this reader beneath them' : 'compact — the arm one act away'}`);
-  assert.equal(live.textContent, [...(caption ? [caption] : []), ...(away ? [X] : []), t('F.corner.withheld', { owner: OWNER }), ...(whole ? [arm.text] : [])].join(' '), `${what}, ${who}: said through the status region as it stands, the act's caption first`);
+  assert.equal(live.textContent, heard([...(caption ? [caption] : []), ...(away ? [X] : []), t('F.corner.withheld', { owner: OWNER }), ...(whole ? [arm.text] : [])].join(' ')), `${what}, ${who}: said through the status region as it stands, the act's caption first, as a screen reader hears it`);
   assert.ok(!f.html.includes('⟨'), `${what}, ${who}: no token left unfilled: ${f.html}`);
   assert.ok(!f.html.includes(C39), `${what}, ${who}: none of C-39's words — they are a link address's`);
   assert.deepEqual(f.acts, ['head'], `${what}, ${who}: no act but its head's, which opens the rest and folds it — no claim on it decides a pointer`);
@@ -179,7 +184,7 @@ test('the face of a `withheld` refusal is the document the board names in the re
   const f = faceShown();
   assert.ok(f && f.html.startsWith(`<span class="label">${esc(caption)}</span><div class="face-addr code id">${Y}</div>`), `the act's caption, then the document the board named — never ${X}, the face standing at ${X}'s own bytes: ${f && f.html}`);
   assert.deepEqual(f && f.words, ['F.corner.withheld', t('F.corner.withheld', { owner: '1.0.3' })], 'its words naming the owner of the document the board named');
-  assert.ok(live.textContent.startsWith(caption + ' ' + Y + ' '), `said as the act's answer, its caption first: ${live.textContent}`);
+  assert.ok(live.textContent.startsWith(heard(caption + ' ' + Y) + ' '), `said as the act's answer, its caption first: ${live.textContent}`);
   assert.equal(FACES.refusedDocument(refusal('show_origin'), X), X, 'a rejection naming no document: the one the act named');
   HOST.dismiss();
 });
@@ -219,7 +224,8 @@ test('a withheld run\'s whole wording is a card made from its placeholder\'s rec
         assert.ok(o?.html.endsWith(`<div class="arm" data-string="${arm.id}">${addressedHTML(arm.text)}</div>${clause}`), `${what}: the arm for ${OWNER} and this reader, each address it names in the identifier's face, then the clause the claims decide, and nothing after it: ${o?.html}`);
         assert.ok(!f?.html.includes('⟨') && !f?.html.includes(C39), `${what}: no token left unfilled, and none of C-39's words`);
         assert.deepEqual([o?.anchor, o?.about], [{ span: { addr: W, pos: run.pos, width: 240 } }, { kind: 'withheld', addr: W, pos: run.pos, width: 240, ids: LAYER.shownIdentity(W, run.pos, 240), origin: X }], `${what}: at the run's own positions, about the run by its bytes`);
-        assert.deepEqual([o?.described, hostEl.attrs['aria-describedby']?.split(' ').length], [true, clause ? 2 : 1], `${what}: described by the words beneath its head`);
+        const beneath = [arm.text, clause.includes('C-67.quoting') ? t('C-67.quoting', { claimant: OWNER }) : clause ? t('C-67.pointer') : ''].filter(Boolean).join(' ');
+        assert.deepEqual([o?.described, hostEl.attrs['aria-description']], [true, heard(beneath)], `${what}: described by the words beneath its head, as a screen reader hears them`);
         assert.deepEqual([!!o?.takeFocus, o?.first], [byKey, clause.includes('data-run') ? '[data-run="follow"]' : '.face-text'], `${what}: the focus, where a key opened it, on the pointer, else on its head`);
         assert.deepEqual(Object.keys(o?.acts || {}), clause.includes('data-run') ? ['follow'] : [], `${what}: the pointer its one act, and no act besides`);
         if (o && o.acts && o.acts.follow) { o.acts.follow(/** @type {any} */ ({}), true); assert.deepEqual(leaps, [[EDITION, true]], `${what}: its act the LEAP to the edition the claim names`); }
@@ -410,7 +416,8 @@ test('a jump reading says so in its own words, as a face is heard, and offers no
   const f = faceShown(), o = HOST.currentState();
   assert.deepEqual([f?.id, f?.words, f?.acts, o?.anchor, o?.takeFocus], ['reading:' + D, ['L.reading', t('L.reading', { address: D })], [], at, undefined], 'its words at the site it is shown at, no act, no focus taken');
   assert.ok(!f?.id.startsWith('face:'), 'never named as every other face is');
-  assert.equal(live.textContent, t('L.reading', { address: D }), 'heard through the one status region, as a face is');
+  assert.equal(live.textContent, heard(t('L.reading', { address: D })), 'heard through the one status region, as a face is');
+  assert.equal(live.textContent, `reading ${D}`, 'its ellipsis drawn, never said');
   FACES.endReading();
   assert.equal(HOST.currentState(), null, 'ended where it stands');
   FACES.reading(D, at);
@@ -426,7 +433,7 @@ test('a jump reaching says so in its own words at the act\'s site, heard as a fa
   FACES.reaching(D, at, () => { abandoned++; });
   const f = faceShown(), o = HOST.currentState();
   assert.deepEqual([f?.id, f?.words, f?.acts, o?.anchor, o?.takeFocus], ['reaching:' + D, ['L.reaching', t('L.reaching', { address: D })], [], at, undefined], 'its words at the act\'s site, no act, no focus taken');
-  assert.equal(live.textContent, t('L.reaching', { address: D }), 'heard through the one status region');
+  assert.equal(live.textContent, heard(t('L.reaching', { address: D })), 'heard through the one status region');
   FACES.unregistered(D, at);
   assert.deepEqual([HOST.currentState()?.id, abandoned], ['face:doc_not_registered', 0], 'a face shown in its place: the jump not abandoned');
   HOST.dismiss();
@@ -450,7 +457,7 @@ test('the fifth cell answering a follow says the far end\'s whole form in its on
       assert.deepEqual([f?.id, f?.words, f?.acts, HOST.currentState()?.anchor], ['face:doc_not_registered', [e.whole[0].id, e.whole[0].text], [], at], `${what}: the fifth cell at the follow's site, its words the whole form's first part, no act`);
       assert.ok(f && f.words && f.words[1].startsWith(e.short), `${what}: its first words the short form its label names it by: ${f && f.words}`);
       assert.deepEqual(notes(), e.whole.slice(1).map((p) => [p.id, p.text]), `${what}: each later part beneath them, in order`);
-      assert.equal(live.textContent, e.whole.map((p) => p.text).join(' '), `${what}: heard in that order`);
+      assert.equal(live.textContent, heard(e.whole.map((p) => p.text).join(' ')), `${what}: heard in that order`);
       HOST.dismiss();
     }
     FACES.unregistered(GONE, at);
@@ -617,7 +624,7 @@ test('every way the page ends an overlay folds a walk\'s moment into its segment
       end();
       assert.notEqual(HOST.currentState()?.id, 'moment:m-fold-' + i, `${what}: its face taken down`);
       assert.deepEqual(segment(walk), { key: walkKey(walk), words: t('L.walk.waits', { walk, step: words }) }, `${what}: folded into its segment — its walk, its step, "waits on you"`);
-      assert.equal(live.textContent, t('L.walk.waits', { walk, step: words }), `${what}: the segment said through the status region`);
+      assert.equal(live.textContent, heard(t('L.walk.waits', { walk, step: words })), `${what}: the segment said through the status region, as a screen reader hears it`);
       if (HOST.currentState()) HOST.dismiss();
       await landed();
     }
@@ -745,7 +752,7 @@ test('the walk\'s next moment opens as the last was left: folded, its segment up
     KEYS.esc();
     const at = CAM.view();
     FACES.moment(ask('m-next-2', 'next', 'which device is this?'));
-    assert.deepEqual([HOST.currentState(), segment('next')?.words, live.textContent], [null, t('L.walk.waits', { walk: 'next', step: 'which device is this?' }), t('L.walk.waits', { walk: 'next', step: 'which device is this?' })], 'folded, the segment the next moment\'s, said');
+    assert.deepEqual([HOST.currentState(), segment('next')?.words, live.textContent], [null, t('L.walk.waits', { walk: 'next', step: 'which device is this?' }), heard(t('L.walk.waits', { walk: 'next', step: 'which device is this?' }))], 'folded, the segment the next moment\'s, said as a screen reader hears it');
     assert.deepEqual([sameView(CAM.view(), at), CAM.flying()], [true, false], 'the camera unmoved');
     FACES.moment(ask('m-whole-1', 'whole', 'which devices are lost?'));
     page.kid('[data-run="answer"]').focus();
@@ -900,7 +907,7 @@ test('the withheld face at a covered document carries C-67\'s clause beneath the
     const pointer = `<div class="clause" data-string="C-67.pointer"><button data-run="follow" data-claim="${OWN}" data-home="${E}">${esc(t('C-67.pointer'))}</button></div>`;
     assert.deepEqual([f?.id, f?.words, f?.arm, f?.acts], ['face:withheld', ['F.corner.withheld', box], ['C-137.signed-out', ending], ['follow', 'a0']], 'the box\'s words, the ending\'s beneath them, the pointer and the sign-in its acts');
     assert.ok(o && o.html.includes(`<div class="arm" data-string="C-137.signed-out">${addressedHTML(ending)}</div>${pointer}<div class="acts"><button data-run="a0" class="">${esc(t('F.sign-in'))}</button></div>`), `the clause beneath the ending and above the sign-in, in its first frame: ${o && o.html}`);
-    assert.equal(live.textContent, [box, ending, t('C-67.pointer')].join(' '), 'said whole, the clause among it');
+    assert.equal(live.textContent, heard([box, ending, t('C-67.pointer')].join(' ')), 'said whole, the clause among it');
     o?.acts?.follow(/** @type {any} */ ({}), true);
     assert.deepEqual(leaps, [[E, true]], 'the pointer\'s act the LEAP to the edition its claim names');
     o?.acts?.a0(/** @type {any} */ ({}), false);
@@ -969,7 +976,7 @@ test('why no board is held is one entry — no shell and no provider, the list e
     live.textContent = '';
     HOST.currentState()?.acts?.a0(/** @type {any} */ ({}), false);
     await settle();
-    assert.deepEqual([fake.asked.filter((k) => k === BOARDS).length, faceShown()?.id, HOST.currentState()?.anchor, live.textContent], [1, 'face:no-board', at, t('L.boards-unread')], 'refused again: the list read once, the face shown again where it stood, and said');
+    assert.deepEqual([fake.asked.filter((k) => k === BOARDS).length, faceShown()?.id, HOST.currentState()?.anchor, live.textContent], [1, 'face:no-board', at, heard(t('L.boards-unread'))], 'refused again: the list read once, the face shown again where it stood, and said');
     Object.assign(script, {
       [BOARDS]: { result: [{ board: 'b-1', name: ORIGIN, origin: ORIGIN }] },
       [FAKE.keyOf('fingerprint', {})]: { result: [] },
@@ -1055,7 +1062,7 @@ test('BM-10, #533: a refused run\'s face stands under the head "not kept" and of
   assert.deepEqual([shown.id, shown.head, shown.acts, shown.said, shown.below], [`face:unkept:refused:${UD}`, 'B3.not-kept', [['send', 'B3.send-again', null], ['copy', 'B3.copy-words-out', null], ['discard', 'B3.discard', null]], 'B3.refused.discard', true],
     'the head, the three acts in their order — the reversible one first, the discard last — and the statement on the face directly below them');
   assert.ok(hostEl.innerHTML.includes(STATEMENT.below('B3.refused.discard')), 'the statement as the one drawing draws it: its two parts, each a line');
-  assert.ok(hostEl.innerHTML.includes(`aria-description="${esc(t('B3.refused.discard'))}"`), 'the discard described by its statement whole, the join of the parts');
+  assert.ok(hostEl.innerHTML.includes(`aria-description="${esc(heard(t('B3.refused.discard')))}"`), 'the discard described by its statement whole, the join of the parts, as a screen reader hears it');
   const face = /** @type {NonNullable<ReturnType<typeof FACES.unkeptFace>>} */ (FACES.unkeptFace(UD));
   assert.deepEqual([face.acts[0].inert, face.acts.at(-1)?.key], [null, 'discard']);
   WRITE.setHeld(UD, [unkeptRow(1, { cause: 'out_of_bounds', sent: true, refusal: verdict('out_of_bounds') })]);
@@ -1065,7 +1072,7 @@ test('BM-10, #533: a refused run\'s face stands under the head "not kept" and of
     'a fault of this client\'s own: its words, "send again" inert in its slot with its reason');
   live.textContent = '';
   /** @type {any} */ (HOST.currentState()).acts.send();
-  assert.equal(live.textContent, t('B3.own-bug.send-again'), 'pressed, the inert act says why');
+  assert.equal(live.textContent, heard(t('B3.own-bug.send-again')), 'pressed, the inert act says why, as a screen reader hears it');
 });
 
 test('BM-13, BM-17, BM-29: the moved face names the hands its rows carry, each in its slot\'s words — a labelled key, an unsigned write, a lost hand, "not read yet", "can\'t be known" — a line with no verdict of its own taking the hands of the line ahead; where they are named again the slot the design owes words for stands, empty; its acts "see the held text", "send again" — inert unless the shell says it would pass — then the discard, its statement ending on its exit; and it stands at the corner, never as an overlay (issue #598; B3-S2)', () => {
@@ -1073,7 +1080,7 @@ test('BM-13, BM-17, BM-29: the moved face names the hands its rows carry, each i
   const moved = (/** @type {Record<string, any>} */ more) => unkeptRow(1, { cause: 'moved', sent: true, refusal: verdict('arrangement_moved'), ...more });
   WRITE.setHeld(UD, [moved({ sendable: false, hands: [{ key: 'other', fingerprint: 'aabbccddeeff0011', label: 'desk' }, { key: 'bare' }, { key: 'lost' }] }), unkeptRow(2, { cause: 'moved' })]);
   const face = /** @type {NonNullable<ReturnType<typeof FACES.unkeptFace>>} */ (FACES.unkeptFace(UD));
-  const hands = [{ id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': 'desk' }) }, { id: 'B3.hand.unsigned', text: t('B3.hand.unsigned') }, { id: 'B3.hand.lost', text: t('B3.hand.lost') }];
+  const hands = [deviceHand('desk'), { id: 'B3.hand.unsigned', text: t('B3.hand.unsigned') }, { id: 'B3.hand.lost', text: t('B3.hand.lost') }];
   assert.deepEqual([face.kind, face.head, face.hands, face.again], ['moved', null, hands, false], 'no head — the corner reads "not yet kept" — and each hand once, in its slot\'s words');
   assert.deepEqual([face.lines.map((l) => l.id), face.acts.map((a) => [a.key, a.id, a.inert?.id ?? null]), face.said?.id], [['B3.moved'], [['held', 'B3.moved.see-held', null], ['send', 'B3.send-again', 'B3.moved.send-again.inert'], ['discard', 'B3.discard', null]], 'B3.moved.discard'],
     '"see the held text" before the discard; "send again" in its own slot, inert with its reason');
@@ -1088,7 +1095,7 @@ test('BM-13, BM-17, BM-29: the moved face names the hands its rows carry, each i
   WRITE.setHeld(UD, [moved({ hands: [{ key: 'unknowable' }] })]);
   assert.deepEqual(FACES.unkeptFace(UD)?.hands, [{ id: 'B3.hand.unknowable', text: t('B3.hand.unknowable') }], 'the hands no read can name: their own slot, never "not read yet"');
   WRITE.setHeld(UD, [moved({}), unkeptRow(2, { cause: 'moved', hands: [{ key: 'own', fingerprint: 'aabbccddeeff0011', label: 'laptop' }] })]);
-  assert.deepEqual(FACES.unkeptFace(UD)?.hands, [{ id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': 'laptop' }) }], 'the first moved line naming none: the hands the rows carry');
+  assert.deepEqual(FACES.unkeptFace(UD)?.hands, [deviceHand('laptop')], 'the first moved line naming none: the hands the rows carry');
   WRITE.setHeld(UD, [moved({ sendable: false, hands: [{ key: 'own', fingerprint: 'aabbccddeeff0011', label: 'laptop' }], again: true })]);
   assert.deepEqual([FACES.unkeptFace(UD)?.again, FACES.cornerFace(UD)?.again, FACES.unkeptFace(UD)?.hands?.length], [true, true, 1], 'refused again with no new row: the hands named again, at the corner too');
 });
@@ -1096,12 +1103,13 @@ test('BM-13, BM-17, BM-29: the moved face names the hands its rows carry, each i
 test('the moved face\'s compact form names its one device\'s hand — another\'s key by its label, this store\'s too, a key with no label by its fingerprint\'s cue, then by "no label" — and stands nowhere where its hands are not one device\'s: several, unsigned, lost, not read yet or unknowable (issue #598; C-358; B3-S2)', () => {
   unkeptDraft();
   const at = (/** @type {Array<Record<string, any>>} */ hands) => { WRITE.setHeld(UD, [unkeptRow(1, { cause: 'moved', sent: true, refusal: verdict('arrangement_moved'), hands })]); return FACES.cornerFace(UD)?.compact ?? null; };
-  const said = (/** @type {string} */ hand) => ({ id: 'B3.moved.compact', text: t('B3.moved.compact', { hand }) });
-  assert.deepEqual(at([{ key: 'other', fingerprint: 'aabbccddeeff0011', label: 'desk' }]), said('desk'), 'another\'s key, by its label');
-  assert.equal(said('desk').text, 'changed while this text was held — not placed · by desk', 'C-358\'s words, its hand filled');
-  assert.deepEqual(at([{ key: 'own', fingerprint: 'aabbccddeeff0011', label: 'laptop' }]), said('laptop'), 'this store\'s key, by its label');
-  assert.deepEqual(at([{ key: 'other', fingerprint: 'aabbccddeeff0011' }]), said(fingerprintCue('aabbccddeeff0011')), 'a key with no label: its fingerprint\'s cue');
-  assert.deepEqual(at([{ key: 'other' }]), said(t('L.slot.unlabelled')), 'neither label nor fingerprint: "no label"');
+  /** its compact form naming a hand: its words, and its stretches, the hand in its face */
+  const said = (/** @type {string} */ hand, /** @type {import('../plane/register.js').Face} */ face) => ({ id: 'B3.moved.compact', text: t('B3.moved.compact', { hand }), runs: tRuns('B3.moved.compact', { hand: [{ text: hand, face }] }) });
+  assert.deepEqual(at([{ key: 'other', fingerprint: 'aabbccddeeff0011', label: 'desk' }]), said('desk', 'reading'), 'another\'s key, by its label, the person\'s own words');
+  assert.equal(said('desk', 'reading').text, 'changed while this text was held — not placed · by desk', 'C-358\'s words, its hand filled');
+  assert.deepEqual(at([{ key: 'own', fingerprint: 'aabbccddeeff0011', label: 'laptop' }]), said('laptop', 'reading'), 'this store\'s key, by its label');
+  assert.deepEqual(at([{ key: 'other', fingerprint: 'aabbccddeeff0011' }]), said(fingerprintCue('aabbccddeeff0011'), 'ident'), 'a key with no label: its fingerprint\'s cue, the identifier\'s');
+  assert.deepEqual(at([{ key: 'other' }]), said(t('L.slot.unlabelled'), 'client'), 'neither label nor fingerprint: "no label", the client\'s words');
   for (const hands of [[{ key: 'other', label: 'desk' }, { key: 'own', label: 'laptop' }], [{ key: 'bare' }], [{ key: 'lost' }], [{ key: 'unread' }], [{ key: 'unknowable' }], []]) {
     assert.equal(at(hands), null, `${JSON.stringify(hands)}: no compact wording — its words stand whole in that form`);
   }
@@ -1128,7 +1136,8 @@ test('the face stands at the corner wherever a line of the draft is held moved a
 test('the face\'s acts are made by their keys at the corner: an inert one says its reason at every press, again where the region holds it already (FP-41); a key the face holds no act of, or a draft whose corner carries no face, answers false; a press answered at the face says its words whole, its acts untaken (issue #598; D6 BM-45)', async () => {
   unkeptDraft();
   WRITE.setHeld(UD, [unkeptRow(1, { cause: 'moved', sent: true, refusal: verdict('arrangement_moved'), sendable: false, hands: [{ key: 'other', fingerprint: 'aabbccddeeff0011', label: 'desk' }] })]);
-  const reason = t('B3.moved.send-again.inert', { label: LAYER.boxName(UD).name });
+  const reason = heard(tRuns('B3.moved.send-again.inert', { label: LAYER.boxName(UD).runs }));
+  assert.ok(reason.includes(` ${LAYER.boxName(UD).runs.find((r) => r.face === 'reading')?.text} ${UD} `) && !reason.includes('—'), `its reason as a screen reader hears it: its dash a pause, the draft's name kept as written — ${reason}`);
   live.textContent = '';
   assert.equal(FACES.faceAct(UD, 'send'), true);
   assert.equal(live.textContent, reason, 'pressed, "send again" says why it cannot act');
@@ -1138,11 +1147,24 @@ test('the face\'s acts are made by their keys at the corner: an inert one says i
   assert.deepEqual([FACES.faceAct(UD, 'copy'), FACES.faceAct('1.0.1.0.78', 'send')], [false, false], 'no act of that key; no face at that corner');
   live.textContent = '';
   const f = /** @type {NonNullable<ReturnType<typeof FACES.cornerFace>>} */ (FACES.cornerFace(UD));
-  assert.deepEqual([FACES.answerAtFace(UD), live.textContent, HOST.currentState(), WRITE.heldOf(UD).length], [true, faceWords(f), null, 1], 'a press answered at the face: its words whole said, no overlay, its line held still');
+  assert.deepEqual([FACES.answerAtFace(UD), live.textContent, HOST.currentState(), WRITE.heldOf(UD).length], [true, heard(faceWords(f)), null, 1], 'a press answered at the face: its words whole said, as a screen reader hears them, no overlay, its line held still');
   assert.equal(faceWords(f), sentences(sentence('B3.moved'), sentence('B3.hand.device', { 'device label': 'desk' })), 'its sentence, then its hand in its slot\'s words, a sentence of its own');
   assert.equal(faceWords(f), 'The document changed while this text was held — it is not placed; put it where it goes, or discard it. By desk.');
   WRITE.setHeld(UD, []);
   assert.equal(FACES.answerAtFace(UD), false, 'no face: nothing answered there');
+});
+
+test('a device\'s label in the moved face is the person\'s own words: the hand and the compact form carry it in the reading face, and a press answered at the face says it as written — its middle dot, its dash and its brackets kept — while the face\'s own dash is a pause (style S22; issue #626)', () => {
+  unkeptDraft();
+  const label = 'desk · home — (2)';
+  WRITE.setHeld(UD, [unkeptRow(1, { cause: 'moved', sent: true, refusal: verdict('arrangement_moved'), sendable: false, hands: [{ key: 'other', fingerprint: 'aabbccddeeff0011', label }] })]);
+  const f = /** @type {NonNullable<ReturnType<typeof FACES.cornerFace>>} */ (FACES.cornerFace(UD));
+  assert.deepEqual([f.hands, f.compact?.runs], [[deviceHand(label)], tRuns('B3.moved.compact', { hand: [{ text: label, face: 'reading' }] })], 'the hand and the compact form: the label in the reading face');
+  live.textContent = '';
+  assert.equal(FACES.answerAtFace(UD), true);
+  assert.equal(live.textContent, `The document changed while this text was held, it is not placed; put it where it goes, or discard it. By ${label}.`, `said as heard, the label as written: ${live.textContent}`);
+  assert.equal(live.textContent, heard(faceRuns(f)), 'the face\'s words whole as stretches (`faceRuns`), rendered for the ear');
+  WRITE.setHeld(UD, []);
 });
 
 test('BM-14: "see the held text" at the face standing at the corner opens the moved scene as a step on the trail — its entry the draft\'s, the draft in its first pane, in its second the held version the page shows, the scene asked as the moved scene, its held version marked so (SC\'s `Held.heldB`) (issue #599)', () => {
@@ -1207,7 +1229,7 @@ test('BM-24: under the keyless session over this board\'s held lines, the death 
       [`face:unkept:death:${UD}`, 'B3.not-kept', ['B3.death.corner.stays'], [['copy', 'B3.death.copy', null], ['discard', 'B3.discard', null]], 'B3.refused.discard', true],
       'the head, its first form, the copy then the discard, and the statement on the face directly below the acts');
     assert.ok(hostEl.innerHTML.includes(STATEMENT.below('B3.refused.discard')), 'the statement as the one drawing draws it: its two parts, each a line');
-    assert.ok(hostEl.innerHTML.includes(`aria-description="${esc(t('B3.refused.discard'))}"`), 'the discard described by its statement whole, the join of the parts');
+    assert.ok(hostEl.innerHTML.includes(`aria-description="${esc(heard(t('B3.refused.discard')))}"`), 'the discard described by its statement whole, the join of the parts, as a screen reader hears it');
   } finally { WRITE.setUnwritable('b-1', null); HOST.dismiss(); }
 });
 

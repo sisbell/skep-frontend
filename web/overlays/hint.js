@@ -55,9 +55,11 @@
 // the plane it was raised on, it is covered (N-FOCUS's `cover`).
 // Its element (`#hint`; FP-13): the notice's native button, in the page's
 // order after the notice below the overlay (D5 §4 rule 5), named by the words
-// it shows and described by the whole notice, the notice's string on it, and
-// where its line ends with where the person was writing, that ending after it
-// on the same line, its label a native button of its own; neither is a stop
+// it shows and described by the whole notice, each rendered for the ear by
+// S22's table (ST's `heard`), the notice's string on it, and where its line
+// ends with where the person was writing, that ending after it on the same
+// line, its label a native button of its own named by the draft's name as
+// written; what the status region says of it keeps that name too; neither is a stop
 // of the walk, takes the focus unasked or holds a key. The notice's act — a
 // click, or Enter or Space once Tab reached it — opens the notice whole and
 // folds it again where it has a compact form, saying what it shows; the
@@ -82,7 +84,7 @@ import * as LAYER from '../text/layer.js';
 import { focusBox } from '../plane/render.js';
 import { pageGeometry } from '../beams/beams.js';
 import { visibleView, markDirty } from '../plane/camera.js';
-import { hintSentences, addressedHTML, opening, sentence, sentences, endedHTML } from '../strings.js';
+import { hintSentences, addressedHTML, opening, sentence, sentences, endedHTML, sentenceRuns, joinRuns, heard } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect */
@@ -90,6 +92,7 @@ import { esc } from '../util.js';
 /**
  * @typedef {Object} Writing — where the person was writing, which a swallowed key's line ends with (see the head): handed in by the press
  * @property {string} label the draft's name, as the status region names a box (T-LAYER's `boxName`)
+ * @property {import('../strings.js').Run[]} [named] that name as stretches in their faces (T-LAYER's `boxName`), which what is spoken keeps as written; the label the client's words where none is handed in
  * @property {(byKey: boolean) => void} act the label's act: back to the draft's kept caret, a key's or the pointer's
  */
 
@@ -172,8 +175,10 @@ const endOf = (/** @type {Hint} */ h) => (h.writing ? sentence(WRITING, { label:
 const wholeOf = (/** @type {Hint} */ h) => h.open || h.whole === h.clause;
 /** the sentence its line ends on, while its notice stands whole; '' where it ends on none, and beside its compact form */
 const lastOf = (/** @type {Hint} */ h) => (h.ending && wholeOf(h) ? h.ending.text : '');
-/** the words the status region says of it: the notice's, where the person was writing after them, and the sentence the line ends on */
-const saidOf = (/** @type {Hint} */ h) => sentences(wordsOf(h), endOf(h), lastOf(h));
+/** the name where the person was writing, as stretches in their faces: what is spoken of the line's ending keeps it as written */
+const namedOf = (/** @type {Writing} */ w) => w.named || w.label;
+/** the words the status region says of it: the notice's, where the person was writing after them — its name as written — and the sentence the line ends on */
+const saidOf = (/** @type {Hint} */ h) => joinRuns(' ', [wordsOf(h), h.writing ? sentenceRuns(WRITING, { label: namedOf(h.writing) }) : '', lastOf(h)]);
 
 /**
  * The focus a press was made at (see the head): the element handed in; else
@@ -254,16 +259,16 @@ export function classChanged() {
 /** the hint's markup: its button, named by the words it shows, described by the notice whole — open or folded where it has a compact form — after it the ending where the person was writing, its label a button of its own, and, while the notice stands whole, the sentence the line ends on */
 function markup(/** @type {Hint} */ h) {
   const folds = h.whole !== h.clause ? ` aria-expanded="${h.open}"` : '', last = lastOf(h);
-  return `<button type="button" data-hint="${esc(h.id)}" data-string="${esc(h.id)}" aria-describedby="hint-whole"${folds}>${addressedHTML(wordsOf(h))}</button>`
+  return `<button type="button" data-hint="${esc(h.id)}" data-string="${esc(h.id)}" aria-label="${esc(heard(wordsOf(h)))}" aria-describedby="hint-whole"${folds}>${addressedHTML(wordsOf(h))}</button>`
     + (h.writing ? ` ${endingHTML(h.writing)}` : '')
     + (h.ending && last ? ` <span class="ending" data-string="${esc(h.ending.id)}">${addressedHTML(last)}</span>` : '')
-    + `<span id="hint-whole" hidden>${esc(sentences(h.whole, h.ending ? h.ending.text : ''))}</span>`;
+    + `<span id="hint-whole" hidden>${esc(heard(sentences(h.whole, h.ending ? h.ending.text : '')))}</span>`;
 }
 
-/** the ending where the person was writing (`Writing`): its sentence's words, its label a button, the end mark after the label */
+/** the ending where the person was writing (`Writing`): its sentence's words, its label a button named by the draft's name as written, the end mark after the label */
 function endingHTML(/** @type {Writing} */ w) {
   const [before, after = ''] = opening(WRITING).split('⟨label⟩');
-  return `<span class="writing" data-string="${WRITING}">${esc(before)}<button type="button" data-writing="1">${addressedHTML(w.label)}</button>${endedHTML(opening(WRITING, { label: w.label }), esc(after))}</span>`;
+  return `<span class="writing" data-string="${WRITING}">${esc(before)}<button type="button" data-writing="1" aria-label="${esc(heard(namedOf(w)))}">${addressedHTML(w.label)}</button>${endedHTML(opening(WRITING, { label: w.label }), esc(after))}</span>`;
 }
 
 /**

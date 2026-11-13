@@ -177,7 +177,9 @@
 // T-ARTICLE draws it), its compact form naming its hand where its hands are
 // one device's (C-358), its acts made by their keys there (`faceAct`), and a
 // press its line awaits answered at it — the corner opened whole where it
-// stands compact, its words said (`answerAtFace`; D6 BM-45). Each face's head
+// stands compact, its words said (`answerAtFace`; D6 BM-45), a device's label
+// in a hand the person's own words, spoken as written (T-ARTICLE's
+// `faceRuns`; style S22). Each face's head
 // is "not kept" where the corner reads so; every act that sends goes through
 // W-MACHINE, which alone sends
 // `resolve`; a discard's statement stands below the acts in sense lines
@@ -203,10 +205,10 @@ import * as LK from '../links/links.js';
 import * as WRITE from '../write/write.js';
 import * as MACHINE from '../write/machine.js';
 import { below, spoken } from './statement.js';
-import { entitlementArm, placeholderOf, faceWords, CLAUSE_READING } from '../text/article.js';
+import { entitlementArm, placeholderOf, faceRuns, CLAUSE_READING } from '../text/article.js';
 import { retries, lineOf } from '../beams/held.js';
 import { memberOf } from '../model/address.js';
-import { t, addressedHTML, endingOf, sentence } from '../strings.js';
+import { t, tRuns, addressedHTML, endingOf, sentence, heard } from '../strings.js';
 import { esc, fingerprintCue } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
@@ -1089,7 +1091,7 @@ function draw(w, how) {
  */
 function momentHTML(w) {
   const m = w.m, d = dataOf(m), caption = 'L.moment.' + m.kind;
-  const field = m.kind === 'label' || m.kind === 'ask' ? `<input type="text" data-answer="1" aria-label="${esc(t('L.answer'))}" value="${esc(w.typed)}">` : '';
+  const field = m.kind === 'label' || m.kind === 'ask' ? `<input type="text" data-answer="1" aria-label="${esc(heard(t('L.answer')))}" value="${esc(w.typed)}">` : '';
   const fallback = d.fallback != null ? `<div class="note" data-string="L.moment.default">${esc(t('L.moment.default', { default: d.fallback }))}</div>` : '';
   const note = w.note ? `<div class="note refused" data-string="${esc(w.note.id)}">${esc(w.note.text)}</div>` : '';
   const answers = m.kind === 'yes_no' ? `<button data-run="yes">${esc(t('L.moment.yes'))}</button><button data-run="no">${esc(t('L.moment.no'))}</button>`
@@ -1211,17 +1213,22 @@ export function folded() {
  * @property {string} key its name on the face (`data-run`)
  * @property {string} id its label's string
  * @property {string} label
- * @property {{id: string, text: string} | null} inert why it cannot act now, said at every press (FP-41); null where it acts
+ * @property {Reason | null} inert why it cannot act now, said at every press (FP-41); null where it acts
  * @property {string | null} said the statement said before it, as it is spoken (O-STATEMENT's `spoken`): its description; null where it has none
  * @property {(() => Promise<void> | void) | null} run what it does; null where it is inert
  */
+
+/** @typedef {{id: string, text: string, runs?: import('../strings.js').Run[]}} Reason why an act cannot act now: its string, its words, and, where they name a draft, the same as stretches in their faces (`naming`) */
+
+/** a reason's words as they are spoken: its stretches where it has them, a draft's name among them kept as written (ST's `heard`), else its words */
+const reasonWords = (/** @type {Reason} */ r) => r.runs || r.text;
 
 /**
  * @typedef {Object} UnkeptFace — the face of a draft holding words the board has not kept (see the head)
  * @property {'refused' | 'own-bug' | 'handed' | 'moved' | 'island' | 'full' | 'device' | 'head' | 'death'} kind
  * @property {{id: string, text: string} | null} head "not kept", where the corner reads so
  * @property {Array<{id: string, text: string}>} lines its words, each by its string
- * @property {Array<{id: string, text: string}> | null} hands a moved document's hands, each in its slot's words; null at every other face
+ * @property {Array<{id: string, text: string, runs?: import('../strings.js').Run[]}> | null} hands a moved document's hands, each in its slot's words — a device's as stretches too, its label the person's own words (`byDevice`); null at every other face
  * @property {boolean} again the hands are those the face named before: the slot the design owes words for stands, empty
  * @property {UnkeptAct[]} acts in their order, the discard last
  * @property {Statement | null} said the statement said before the discard, drawn below the acts; null where the face draws none
@@ -1232,9 +1239,9 @@ export function folded() {
 /** @type {Statement} the statement said before discarding words the board never kept (B3-S2) */
 const NEVER_KEPT = { id: 'B3.refused.discard', values: {} };
 
-/** @type {{line: (text: string, id: string) => void, copy: (text: string) => void}} what the app hands in: the one line's own way of saying a line (L-LINE's `transient`), and the platform's clipboard; said through the status region, and written through the platform's own, where none is */
+/** @type {{line: (words: import('../strings.js').Words, id: string) => void, copy: (text: string) => void}} what the app hands in: the one line's own way of saying a line (L-LINE's `transient`) — words, or stretches in their faces, a document's name among them kept as written when spoken — and the platform's clipboard; said through the status region, and written through the platform's own, where none is */
 const hand = {
-  line: (text) => FOCUS.say(text),
+  line: (words) => FOCUS.say(words),
   copy: (text) => { const c = typeof navigator !== 'undefined' ? navigator.clipboard : null; if (c && c.writeText) void c.writeText(text).catch(() => {}); },
 };
 /** what the app hands in to the faces of unkept words (see the head): how a line is said in the one line, and how words reach the clipboard */
@@ -1251,6 +1258,11 @@ const elapsed = (/** @type {number} */ ms) => new Intl.NumberFormat(undefined, {
 
 /** a string filled, by its id: a face's line, a hand's slot, an act's reason */
 const entry = (/** @type {string} */ id, /** @type {Record<string, string>} */ v = {}) => ({ id, text: t(id, v) });
+/** a string filled with a draft's name as the status region names its box (T-LAYER's `boxName`): its words, and the same as stretches in their faces, which what is spoken keeps the name of as written; the address alone where the model holds no record */
+const naming = (/** @type {string} */ id, /** @type {string} */ addr) => {
+  const name = REC.has(addr) ? LAYER.boxName(addr) : { name: addr, runs: [{ text: addr, face: /** @type {const} */ ('ident') }] };
+  return { id, text: t(id, { label: name.name }), runs: tRuns(id, { label: name.runs }) };
+};
 
 /** a string filled as a sentence of its own, by its id (ST's `sentence`): a line of a face whose lines the page composes */
 const sentenced = (/** @type {string} */ id, /** @type {Record<string, string>} */ v = {}) => ({ id, text: sentence(id, v) });
@@ -1278,23 +1290,36 @@ const unkeptAct = (key, id, run, inert = null) => ({ key, id, label: t(id), iner
  */
 const withDiscard = (face, said, run, id = 'B3.discard') => ({ ...face, acts: [...face.acts, { ...unkeptAct('discard', id, run), said: spoken(said.id, said.values) }], said });
 
-/** a device's hand by its name: its key's label, else its fingerprint's cue, else its slot's words for a key with no label */
-const deviceOf = (/** @type {import('../model/frames.js').HeldHand} */ h) => h.label || (h.fingerprint ? fingerprintCue(h.fingerprint) : t('L.slot.unlabelled'));
+/**
+ * A device's hand by its name, as a stretch in its face: its key's label the
+ * reading face's — the person's own words — else its fingerprint's cue the
+ * identifier's, else its slot's words for a key with no label the client's.
+ * @param {import('../model/frames.js').HeldHand} h
+ * @returns {import('../strings.js').Run}
+ */
+const deviceOf = (h) => (h.label ? { text: h.label, face: 'reading' } : h.fingerprint ? { text: fingerprintCue(h.fingerprint), face: 'ident' } : { text: t('L.slot.unlabelled'), face: 'client' });
+
+/** a string naming a device's hand by one of its tokens (`deviceOf`): its words, and the same as stretches, the hand in its face, which what is spoken of it keeps as written (ST's `heard`) */
+const byDevice = (/** @type {string} */ id, /** @type {string} */ token, /** @type {import('../model/frames.js').HeldHand} */ h) => {
+  const d = deviceOf(h);
+  return { ...entry(id, { [token]: d.text }), runs: tRuns(id, { [token]: [d] }) };
+};
 
 /**
  * A hand that moved a held document, in its slot's words (D6 BM-13, BM-29,
  * BM-78): this store's key or another's by its label — its fingerprint's cue
  * where it carries none — an unsigned write, a hand the board lost, the
- * hands not read yet, the hands no read can name.
+ * hands not read yet, the hands no read can name; a device's, its words as
+ * stretches too (`byDevice`).
  * @param {import('../model/frames.js').HeldHand} h
- * @returns {{id: string, text: string}}
+ * @returns {{id: string, text: string, runs?: import('../strings.js').Run[]}}
  */
 function handWords(h) {
   if (h.key === 'bare') return entry('B3.hand.unsigned');
   if (h.key === 'lost') return entry('B3.hand.lost');
   if (h.key === 'unread') return entry('B3.hand.unread');
   if (h.key === 'unknowable') return entry('B3.hand.unknowable');
-  return entry('B3.hand.device', { 'device label': deviceOf(h) });
+  return byDevice('B3.hand.device', 'device label', h);
 }
 
 /** the hands the first moved line naming any carries (D6 BM-13); null where none names them yet */
@@ -1317,10 +1342,10 @@ const namedHands = (/** @type {readonly import('../model/frames.js').HeldLine[]}
 function movedFace(addr, rows) {
   const moved = rows.find(MACHINE.isMoved);
   if (!moved) return null;
-  const named = namedHands(rows), label = REC.has(addr) ? LAYER.boxName(addr).name : addr;
+  const named = namedHands(rows);
   return withDiscard({
     kind: 'moved', head: null, lines: [entry('B3.moved')], hands: named ? named.hands.map(handWords) : [entry('B3.hand.unread')], again: !!(named && named.again), said: null,
-    acts: [unkeptAct('held', 'B3.moved.see-held', () => seeHeld(addr)), unkeptAct('send', 'B3.send-again', () => sentAgain(addr, moved.held), moved.sendable === true ? null : entry('B3.moved.send-again.inert', { label }))],
+    acts: [unkeptAct('held', 'B3.moved.see-held', () => seeHeld(addr)), unkeptAct('send', 'B3.send-again', () => sentAgain(addr, moved.held), moved.sendable === true ? null : naming('B3.moved.send-again.inert', addr))],
   }, { id: 'B3.moved.discard', values: {} }, () => dropped(addr, moved.held));
 }
 
@@ -1390,9 +1415,9 @@ export function unkeptFace(addr) {
   return null;
 }
 
-/** a face of unkept words as markup: its head, its words, its acts in order, an inert one marked and titled by its reason, and the discard's statement below them */
+/** a face of unkept words as markup: its head, its words, its acts in order, an inert one marked and titled by its reason, each described for the ear (ST's `heard`) by its statement or its reason, and the discard's statement below them */
 function unkeptHTML(/** @type {UnkeptFace} */ f) {
-  const acts = f.acts.map((a) => `<button data-run="${esc(a.key)}" data-string="${esc(a.id)}"${a.inert ? ` class="inert" aria-disabled="true" data-inert="${esc(a.inert.id)}" title="${esc(a.inert.text)}"` : ''}${a.said ? ` aria-description="${esc(a.said)}"` : ''}>${esc(a.label)}</button>`).join('');
+  const acts = f.acts.map((a) => `<button data-run="${esc(a.key)}" data-string="${esc(a.id)}"${a.inert ? ` class="inert" aria-disabled="true" data-inert="${esc(a.inert.id)}" title="${esc(a.inert.text)}"` : ''}${a.said || a.inert ? ` aria-description="${esc(heard(a.said || reasonWords(/** @type {Reason} */ (a.inert))))}"` : ''}>${esc(a.label)}</button>`).join('');
   return headHTML(f.head) + f.lines.map((l) => `<div class="face-text" data-string="${esc(l.id)}">${addressedHTML(l.text)}</div>`).join('')
     + (f.acts.length ? `<div class="acts">${acts}</div>` : '') + (f.said ? below(f.said.id, f.said.values) : '');
 }
@@ -1417,7 +1442,7 @@ export function unkept(addr, anchor = null, byKey = false) {
   unkeptAt = toAnchor(anchor);
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
-  for (const a of f.acts) acts[a.key] = () => { if (a.inert) FOCUS.say(a.inert.text, false, true); else if (a.run) void a.run(); };
+  for (const a of f.acts) acts[a.key] = () => { if (a.inert) FOCUS.say(reasonWords(a.inert), false, true); else if (a.run) void a.run(); };
   HOST.show({ kind: 'face', id: `face:unkept:${f.kind}:${addr}`, anchor: unkeptAt, html: unkeptHTML(f), acts, takeFocus: byKey });
   return true;
 }
@@ -1436,7 +1461,7 @@ export function cornerFace(addr) {
   if (!f) return null;
   const named = namedHands(rows), one = named && named.hands.length === 1 && (named.hands[0].key === 'own' || named.hands[0].key === 'other') ? named.hands[0] : null;
   return {
-    line: f.lines[0], hands: f.hands || [], again: f.again, compact: one ? entry('B3.moved.compact', { hand: deviceOf(one) }) : null,
+    line: f.lines[0], hands: f.hands || [], again: f.again, compact: one ? byDevice('B3.moved.compact', 'hand', one) : null,
     acts: f.acts.map((a) => ({ key: a.key, id: a.id, label: a.label, inert: a.inert, said: a.said })), said: f.said,
   };
 }
@@ -1453,15 +1478,16 @@ export function cornerFace(addr) {
 export function faceAct(addr, key) {
   const f = MACHINE.deathFaced(addr) ? null : movedFace(addr, WRITE.heldOf(addr)), a = f ? f.acts.find((x) => x.key === key) : undefined;
   if (!a) return false;
-  if (a.inert) FOCUS.say(a.inert.text, false, true); else if (a.run) void a.run();
+  if (a.inert) FOCUS.say(reasonWords(a.inert), false, true); else if (a.run) void a.run();
   return true;
 }
 
 /**
  * A press answered at the face standing at a draft's corner (D6 BM-45): the
  * corner opened whole where it stands compact (T-LAYER's `openCorner`), the
- * face's words said in the status region, none of its acts taken and the
- * focus where it stood. False where the corner carries no face.
+ * face's words said in the status region, a device's label kept as written
+ * (T-ARTICLE's `faceRuns`), none of its acts taken and the focus where it
+ * stood. False where the corner carries no face.
  * @param {string} addr the draft
  * @returns {boolean}
  */
@@ -1470,7 +1496,7 @@ export function answerAtFace(addr) {
   if (!f) return false;
   const at = LAYER.cornerAt(addr);
   if (at && at.compact && !at.opened) LAYER.openCorner(addr);
-  FOCUS.say(faceWords(f), false, true);
+  FOCUS.say(faceRuns(f), false, true);
   return true;
 }
 
@@ -1502,7 +1528,7 @@ async function dropped(addr, held) {
   if (out.unread) hand.line(t('B3.answers_lost.unanswered', { board: boardName() }), 'B3.answers_lost.unanswered');
   else if (!out.dropped && !out.kept && out.refused) FOCUS.say(t('L.refused', { name: out.refused }));
   if (out.dropped && out.mayHaveLanded.length) hand.line(t('B3.discarded.may-have-landed'), 'B3.discarded.may-have-landed');
-  if (out.dropped && !WRITE.heldOf(addr).length && SCENE.isOpen()) hand.line(t('B3.held.none', { label: REC.has(addr) ? LAYER.boxName(addr).name : addr }), 'B3.held.none');
+  if (out.dropped && !WRITE.heldOf(addr).length && SCENE.isOpen()) hand.line(naming('B3.held.none', addr).runs, 'B3.held.none');
   reshow(addr);
 }
 

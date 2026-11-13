@@ -17,12 +17,13 @@
 // the person alone its one clause, at a shared draft C-50 then the reach —
 // and, where a published document holds the words removed, the line naming
 // the edition of the draft. It never takes the focus and holds no key: its
-// mark is a native button, in the page's order after a landing's labels, and
-// moving the focus to it ends nothing. It moves no text: beside its line
+// mark is a native button, in the page's order after a landing's labels,
+// described by the face's words rendered for the ear (ST's `heard`), the
+// draft's name in them as written, and moving the focus to it ends nothing. It moves no text: beside its line
 // where the margin holds FACE_MIN_PX of room, else a layer over the lines
 // beneath its site. A whole face is said once in the status region as it
 // first stands (FP-36) — by the press that made it, where one asks first
-// (`take`), else as the frame draws it. A change of the page's class forgets
+// (`take`), else as the frame draws it — the draft's name in it as written. A change of the page's class forgets
 // what was open (`classChanged`).
 // Figures: MARK_PX 12, a face at most FACE_MAX_PX 280 and beside its line
 // only with FACE_MIN_PX 140 of room (unmeasured).
@@ -38,7 +39,7 @@ import * as LINE from '../line/line.js';
 import { pageGeometry, leaveAt } from '../beams/beams.js';
 import { visibleView, markDirty } from '../plane/camera.js';
 import { documentOf } from '../model/address.js';
-import { t, addressedHTML } from '../strings.js';
+import { t, tRuns, runsText, joinRuns, heard, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect */
@@ -48,6 +49,7 @@ import { esc } from '../util.js';
  * @typedef {Object} Part — one line of the face whole (`partsOf`)
  * @property {string} id its string
  * @property {string} text
+ * @property {import('../strings.js').Run[]} runs its words as stretches in their faces: what is spoken of it keeps the draft's name as written
  */
 
 /**
@@ -99,13 +101,19 @@ export function attach(e) {
  * audience by the venue — at a draft the person alone reads, its one clause;
  * at a shared draft C-50, then the reach — and, where a published document
  * holds the words removed, the line naming the edition of the draft.
- * @param {{shared: boolean, edition: string | null}} of `shared` the draft has readers beside the person; `edition` the draft's label where a published document holds the words removed, else null
+ * @param {{shared: boolean, edition: string | import('../strings.js').Run[] | null}} of `shared` the draft has readers beside the person; `edition` the draft's label where a published document holds the words removed — its name as stretches in their faces, or its words — else null
  * @returns {Part[]}
  */
 export function partsOf(of) {
-  const say = (/** @type {string} */ id, /** @type {Record<string, string>} */ v = {}) => ({ id, text: t(id, v) });
+  const say = (/** @type {string} */ id, /** @type {Record<string, string | import('../strings.js').Run[]>} */ v = {}) => {
+    const runs = tRuns(id, v);
+    return { id, text: runsText(runs), runs };
+  };
   return [say('C-49'), ...(of.shared ? [say('C-50'), say('B3.C-167')] : [say('B3.deletion.private')]), ...(of.edition ? [say('B3.deletion.edition', { label: of.edition })] : [])];
 }
+
+/** a face's parts said in the status region: their stretches, a space between two */
+const saidOf = (/** @type {Part[]} */ parts) => joinRuns(' ', parts.map((p) => p.runs));
 
 /** does a published document hold some of the bytes a removal took: a byte another document minted, one the page reads as published (T-LAYER's `isDraft`) */
 function editionHolds(/** @type {string} */ addr, /** @type {Removal} */ r) {
@@ -114,7 +122,7 @@ function editionHolds(/** @type {string} */ addr, /** @type {Removal} */ r) {
 }
 
 /** a removal's face whole (`partsOf`): a draft is read by the person alone as its corner says (T-ARTICLE's chip), no draft's readers being read */
-const faceOf = (/** @type {string} */ addr, /** @type {Removal} */ r) => partsOf({ shared: false, edition: editionHolds(addr, r) ? LAYER.boxName(addr).name : null });
+const faceOf = (/** @type {string} */ addr, /** @type {Removal} */ r) => partsOf({ shared: false, edition: editionHolds(addr, r) ? LAYER.boxName(addr).runs : null });
 
 /** the removals of each draft taken in (see the head): the first of a draft in the page's session stands whole, and a later one folds the face standing */
 function takeIn() {
@@ -131,16 +139,16 @@ function takeIn() {
 
 /**
  * The words a whole face not yet said is said by (see the head), taken: what
- * the press that made the removal says after its own line; '' where no face
- * of the draft is owed its saying.
+ * the press that made the removal says after its own line, as stretches in
+ * their faces; none where no face of the draft is owed its saying.
  * @param {string} addr
- * @returns {string}
+ * @returns {import('../strings.js').Run[]}
  */
 export function take(addr) {
   takeIn();
   const id = owed.get(addr), r = id == null ? undefined : WRITE.removalsOf(addr).find((x) => x.id === id);
   owed.delete(addr);
-  return r && open.get(addr) === r.id ? faceOf(addr, r).map((p) => p.text).join(' ') : '';
+  return r && open.get(addr) === r.id ? saidOf(faceOf(addr, r)) : [];
 }
 
 /**
@@ -156,7 +164,7 @@ export function act(addr, id) {
   const whole = open.get(addr) !== id;
   open.set(addr, whole ? id : null);
   owed.delete(addr);
-  FOCUS.say(whole ? faceOf(addr, r).map((p) => p.text).join(' ') : t('B3.removed-here'), false, true);
+  FOCUS.say(whole ? saidOf(faceOf(addr, r)) : t('B3.removed-here'), false, true);
   markDirty();
 }
 
@@ -185,12 +193,12 @@ function pointOf(/** @type {string} */ addr, /** @type {Removal} */ r) {
   return !r.before.length && !r.after.length && d.from >= 0 ? d.from : null;
 }
 
-/** the markup of one removal: its mark, named "removed here" and described by its face, and its face where it stands whole */
+/** the markup of one removal: its mark, named "removed here" and described by its face's words rendered for the ear (ST's `heard`), held in a hidden element of its own, and its face where it stands whole */
 function markup(/** @type {string} */ addr, /** @type {Removal} */ r, /** @type {boolean} */ whole) {
-  const key = `removal-${addr}-${r.id}`.replace(/[^\w-]/g, '_');
-  const face = whole ? `<div class="face" id="${key}">${faceOf(addr, r).map((p) => `<div class="part" data-string="${esc(p.id)}">${addressedHTML(p.text)}</div>`).join('')}</div>` : '';
+  const key = `removal-${addr}-${r.id}`.replace(/[^\w-]/g, '_'), parts = whole ? faceOf(addr, r) : [];
+  const face = whole ? `<div class="face" id="${key}">${parts.map((p) => `<div class="part" data-string="${esc(p.id)}">${addressedHTML(p.text)}</div>`).join('')}<span id="${key}-heard" hidden>${esc(heard(saidOf(parts)))}</span></div>` : '';
   return `<div class="removal${whole ? ' whole' : ''}" data-doc="${esc(addr)}" data-id="${r.id}">`
-    + `<button type="button" class="mark" data-removal="${r.id}" data-doc="${esc(addr)}" data-string="B3.removed-here" title="${esc(t('B3.removed-here'))}" aria-label="${esc(t('B3.removed-here'))}" aria-expanded="${whole}"${whole ? ` aria-describedby="${key}"` : ''}></button>${face}</div>`;
+    + `<button type="button" class="mark" data-removal="${r.id}" data-doc="${esc(addr)}" data-string="B3.removed-here" title="${esc(t('B3.removed-here'))}" aria-label="${esc(heard(t('B3.removed-here')))}" aria-expanded="${whole}"${whole ? ` aria-describedby="${key}-heard"` : ''}></button>${face}</div>`;
 }
 
 /**
@@ -220,7 +228,7 @@ export function render() {
     written = key;
   }
   place(stands);
-  for (const s of stands) if (s.whole && owed.get(s.addr) === s.r.id) { owed.delete(s.addr); FOCUS.say(faceOf(s.addr, s.r).map((p) => p.text).join(' ')); }
+  for (const s of stands) if (s.whole && owed.get(s.addr) === s.r.id) { owed.delete(s.addr); FOCUS.say(saidOf(faceOf(s.addr, s.r))); }
 }
 
 /**
@@ -263,7 +271,7 @@ export const rects = () => drawn.flatMap((x) => (x.face ? [x.face] : []));
 export function shown() {
   return drawn.map((x) => {
     const r = WRITE.removalsOf(x.addr).find((q) => q.id === x.id);
-    return { ...x, mark: { ...x.mark }, face: x.face ? { ...x.face } : null, words: r ? r.words : '', parts: x.whole && r ? faceOf(x.addr, r) : [] };
+    return { ...x, mark: { ...x.mark }, face: x.face ? { ...x.face } : null, words: r ? r.words : '', parts: x.whole && r ? faceOf(x.addr, r).map((p) => ({ id: p.id, text: p.text })) : [] };
   });
 }
 

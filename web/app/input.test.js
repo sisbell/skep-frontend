@@ -91,7 +91,7 @@ import { articleHTML, entitlementArm, edgeStatementHTML, placeholderOf, originRu
 import { resolveSpan, unitSpan } from '../model/address.js';
 import { accountCell, boardCell, docBox } from '../plane/projection.js';
 import { outlineRects } from '../plane/layout.js';
-import { t, tHTML, addressedHTML } from '../strings.js';
+import { t, tHTML, tRuns, addressedHTML, heard } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { spanOfBlock } from '../text/span.js';
 import { recorder } from '../test/canvas.js';
@@ -1217,7 +1217,8 @@ test('on a draft held moved, a key\'s click on the corner\'s kept word opens its
   clicked(word);
   assert.deepEqual([LAYER.statementOpen(D), HOST.currentState()], [true, null], 'the kept word\'s click opens its statement, and no overlay shows the face');
   const send = /** @type {any} */ ({ dataset: { face: 'send' }, closest: (/** @type {string} */ sel) => (sel === '[data-corner]' ? holder : sel === '[data-face]:not([data-whole])' ? send : null) });
-  const why = t('B3.moved.send-again.inert', { label: LAYER.boxName(D).name });
+  const why = heard(tRuns('B3.moved.send-again.inert', { label: LAYER.boxName(D).runs }));
+  assert.ok(!why.includes('—') && why.includes(` ${REC.doc(D).blocks[0].text} ${D} `), `the reason as a screen reader hears it: its dash a pause, the draft's first line and address kept as written — ${why}`);
   clicked(send);
   assert.deepEqual([words, LAYER.statementOpen(D), HOST.currentState()], [why, true, null], '"send again" at the face says why it cannot act, nothing else moved');
   words = '';

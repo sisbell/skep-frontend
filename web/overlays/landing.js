@@ -32,14 +32,17 @@
 // acts are native buttons, in the Tab ring after the focused document's
 // corner (D5 §4 rule 5): "next piece" and "previous piece", where the
 // passage stands in several runs, each showing its chord (Mod+G,
-// Mod+Shift+G: N-KEYS'), the step among them (N-GO's `step`; FP-21); "read
+// Mod+Shift+G: N-KEYS'), named by its words alone and exposing its chord as
+// its keys (`aria-keyshortcuts`; patterns K1, K3), the step among them (N-GO's
+// `step`; FP-21); "read
 // side by side" with where the passage came from, where that text holds it
 // whole; "read version ⟨k⟩, the last that holds it" at a published landing,
 // once the latest member holding it whole is found; "try again", where a
 // retry may tell; "put back in the current text", where the person's own
 // removal took the rest of the passage and the line says so — each N-GO's
 // (`landingAct`), told whether a key pressed it
-// by the controller's one reading. No edge marks; no refusing, no asking
+// by the controller's one reading, and every act named by its words rendered
+// for the ear (ST's `heard`; style S22). No edge marks; no refusing, no asking
 // first. A rebuild keeps the focus on the act bearing the same key (N-FOCUS's
 // `keep`), and a line gone while its act held the focus hands it to the
 // walk's element (`handOff`, the app's).
@@ -57,10 +60,10 @@ import * as LAYER from '../text/layer.js';
 import * as REC from '../model/records.js';
 import { leaveAt, pageGeometry } from '../beams/beams.js';
 import { mergedLabel } from '../beams/held.js';
-import { drawChord } from '../nav/keys.js';
+import { drawChord, keyShortcut } from '../nav/keys.js';
 import { sx, sy, visibleView } from '../plane/camera.js';
 import { docBox } from '../plane/projection.js';
-import { t, addressedHTML } from '../strings.js';
+import { t, addressedHTML, heard } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {import('../beams/held.js').Pieces} Pieces */
@@ -73,7 +76,7 @@ import { esc } from '../util.js';
  * @typedef {Object} LineState — what the line is written from
  * @property {string} id the string its words lead with: the line's state's, or the label's
  * @property {string} words
- * @property {Array<{act: Act, label: string, chord?: string}>} acts each with the chord drawn for this platform where it has one
+ * @property {Array<{act: Act, label: string, chord?: string, key?: string}>} acts each with the chord drawn for this platform where it has one, and that chord in D5's notation (`key`), which its button exposes as its key
  */
 
 /**
@@ -158,7 +161,7 @@ export function stateNow(group) {
   const offers = GO.landingOffers(), p = l.pieces;
   /** @type {LineState['acts']} */
   const acts = [];
-  if (p && offers.steps) acts.push({ act: 'next', label: t('L.piece.next'), chord: drawChord('Mod+G') }, { act: 'previous', label: t('L.piece.previous'), chord: drawChord('Mod+Shift+G') });
+  if (p && offers.steps) acts.push({ act: 'next', label: t('L.piece.next'), chord: drawChord('Mod+G'), key: 'Mod+G' }, { act: 'previous', label: t('L.piece.previous'), chord: drawChord('Mod+Shift+G'), key: 'Mod+Shift+G' });
   if (l.beside) acts.push({ act: 'beside', label: t('B1.side-by-side') });
   if (offers.version && l.version != null) acts.push({ act: 'version', label: t('F.floating.read', { k: l.version }) });
   if (offers.again) acts.push({ act: 'again', label: t('B1.try-again') });
@@ -169,10 +172,10 @@ export function stateNow(group) {
   return { id: 'L.held.' + /** @type {NonNullable<typeof l.said>} */ (l.said).state, words: line, acts };
 }
 
-/** the line's markup: its words, each address in them in the identifier's face (ST's `addressedHTML`), then its acts, each showing its chord where it has one */
+/** the line's markup: its words, each address in them in the identifier's face (ST's `addressedHTML`), then its acts, each showing its chord where it has one — named by its words alone, rendered for the ear (ST's `heard`), the chord its key (`aria-keyshortcuts`; patterns K3) */
 const markup = (/** @type {LineState} */ s) =>
   `<span class="words" data-string="${esc(s.id)}">${addressedHTML(s.words)}</span>` +
-  (s.acts.length ? `<span class="acts">${s.acts.map((a) => `<button data-act="${a.act}">${esc(a.label)}${a.chord ? `<kbd>${esc(a.chord)}</kbd>` : ''}</button>`).join('')}</span>` : '');
+  (s.acts.length ? `<span class="acts">${s.acts.map((a) => `<button data-act="${a.act}" aria-label="${esc(heard(a.label))}"${a.key ? ` aria-keyshortcuts="${esc(keyShortcut(a.key))}"` : ''}>${esc(a.label)}${a.chord ? `<kbd>${esc(a.chord)}</kbd>` : ''}</button>`).join('')}</span>` : '');
 
 /**
  * Where a run's label stands at the text's edge (see the head): past the

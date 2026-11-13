@@ -33,7 +33,8 @@
 // "Published" is said once, over the dates, at the list's head.
 // The open end says whether the board ended the chain there. Where the board
 // answered that no member follows the last read, the head's row carries the
-// latest version's mark — a shape, named in words for assistive technology —
+// latest version's mark — a shape, named for assistive technology in words
+// rendered for the ear (ST's `heard`; style S22) —
 // and the caption counts the chain, "version ⟨k⟩ of ⟨n⟩". Where it did not,
 // nothing the list draws claims to be the whole chain: no count in the
 // caption — the version a pinned box shows named alone, the bare address
@@ -87,7 +88,7 @@ import { whyOf, retries } from '../beams/held.js';
 import { visibleView } from '../plane/camera.js';
 import { docBox } from '../plane/projection.js';
 import { versionAddress, memberOf, documentOf } from '../model/address.js';
-import { t, addressedHTML, dated } from '../strings.js';
+import { t, addressedHTML, dated, heard } from '../strings.js';
 import { esc, dayOf } from '../util.js';
 
 /** @typedef {import('./host.js').Anchor} Anchor */
@@ -292,7 +293,7 @@ function captionOf(l) {
 function showList(l, anchor, pos, width, byKey, focus = null) {
   const { trunk, addr, held, chain, rows } = l;
   const cur = memberOf(addr), end = openEnd(l);
-  const latest = `<span class="latest" role="img" aria-label="${esc(t('L.versions.latest'))}" data-string="L.versions.latest-mark">${esc(t('L.versions.latest-mark'))}</span>`;
+  const latest = `<span class="latest" role="img" aria-label="${esc(heard(t('L.versions.latest')))}" data-string="L.versions.latest-mark">${esc(t('L.versions.latest-mark'))}</span>`;
   /** "published" once, over the dates, at the list's head */
   const head = rows.length ? `<li class="head"><span data-string="F.published">${esc(t('F.published'))}</span></li>` : '';
   const html = `<span class="label">${addressedHTML(captionOf(l))}</span>` +

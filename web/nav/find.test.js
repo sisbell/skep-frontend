@@ -13,7 +13,8 @@
 // the model's text and its outline in the text shown; a
 // miss names the document and the version searched and the withheld
 // text it did not search; a part the board will not give is said, with why;
-// each answer is said once; off any document the one line says where words
+// each answer is said once, heard by S22's table — its bound "at least", its
+// joiner a pause, a chord by its keys' words; off any document the one line says where words
 // are found; Mod+G steps the find where it stands, and opens it where nothing
 // steps; a move to another place ends it and a return reopens it as left; and
 // a change of the page's class drops what it measured, its text typed kept;
@@ -39,7 +40,7 @@ import * as KEYS from './keys.js';
 import * as GO from './go.js';
 import * as FOCUS from './focus.js';
 import * as FIND from './find.js';
-import { t, hintSentences } from '../strings.js';
+import { t, hintSentences, heard } from '../strings.js';
 import { whyOf } from '../beams/held.js';
 
 /** the platform's document: its focus — the body where it stands on nothing */
@@ -208,8 +209,9 @@ test('while a part is out the count is a bound — "≥ ⟨n⟩ so far" with the
   await settle();
   const s = FIND.stands();
   assert.deepEqual(s && [s.reading, s.count, s.clauses], [false, t('B2.find.count', { k: 1, n: 3 }), []]);
-  const answers = said.filter((w) => w.startsWith('≥') || /^\d+ of \d+/.test(w));
-  assert.deepEqual(answers, [[t('B2.find.so-far', { n: 2 }), t('B2.find.reading')].join(' · '), t('B2.find.count', { k: 1, n: 3 })], 'each answer said once, as its words changed');
+  const answers = said.filter((w) => w.startsWith('at least') || /^\d+ of \d+/.test(w));
+  assert.deepEqual(answers, [heard([t('B2.find.so-far', { n: 2 }), t('B2.find.reading')].join(' · ')), t('B2.find.count', { k: 1, n: 3 })], 'each answer said once, as its words changed');
+  assert.deepEqual([answers[0], said.some((w) => w.includes('≥') || w.includes('·'))], ['at least 2 so far, reading the rest of this document to search it', false], 'its bound "at least", its joiner a pause: no glyph handed to a screen reader');
 });
 
 test('each move takes the camera to the match at the reading size, outlined alone as the arrival with the walk on its span; the first pushes one trail entry and the moves after it share it, wrapping, so Back returns to where find opened (FP-21, FP-25)', async () => {
@@ -378,7 +380,7 @@ test('a part the board will not give: the find searches what it holds and says i
 test('off any document Mod+F opens nothing and the one line says where words are found; Mod+G opens the find where nothing steps, and steps it where it stands (K-91)', async () => {
   await WALK.focusTo('1.0.1', null);
   assert.equal(await KEYS.dispatch(keyOf('f', MOD), PLANE), true, 'taken: the browser\'s find never runs');
-  assert.deepEqual([FIND.isOpen(), said.at(-1)], [false, hintSentences('L.find.off', { 'find chord': KEYS.drawChord('Mod+F') }).whole], 'its hint, a sentence');
+  assert.deepEqual([FIND.isOpen(), said.at(-1)], [false, heard(hintSentences('L.find.off', { 'find chord': KEYS.drawChord('Mod+F') }).whole)], 'its hint, a sentence, as a screen reader hears it');
   await standAt(D);
   assert.equal(await KEYS.dispatch(keyOf('g', MOD), PLANE), true);
   assert.equal(FIND.isOpen(), true, 'no arrival in several runs: Mod+G opens the find');

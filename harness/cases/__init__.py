@@ -76,6 +76,24 @@ def item_words(ctx):
                   'withheld: t("L.item.withheld"), unshown: t("L.item.unshown")}; })()')
 
 
+def heard(ctx, words):
+    """words as the page renders them for the ear (`strings.js`'s `heard`; style S22): a string, wholly the page's own
+    words, or stretches `{text, face}`, a document's or the person's words and an address kept as written — what every
+    accessible name, description and status message the page sets says of them"""
+    return ctx.js('(async () => (await import("./strings.js")).heard(%s))()' % json.dumps(words))
+
+
+# an element's words as stretches in their faces, as the page hands a name it reads off its markup to `heard` (O-HOST's
+# `runsIn`): text in a `.reading` or `.chars` span the reading face's, in an `.id` span the identifier's, an `svg` none,
+# every other word the client's
+RUNS_IN = '''const runsIn = (e) => { const out = []; for (const n of e.childNodes) {
+  if (n.nodeType === 3) out.push({text: n.nodeValue, face: 'client'});
+  else if (n.nodeType === 1 && n.tagName.toLowerCase() !== 'svg') { const c = n.classList;
+    if (c.contains('reading') || c.contains('chars')) out.push({text: n.textContent, face: 'reading'});
+    else if (c.contains('id')) out.push({text: n.textContent, face: 'ident'}); else out.push(...runsIn(n)); } }
+  return out; };'''
+
+
 # is every glyph of an element inside the platform's selection: each of its text nodes, from its first character to its last,
 # within the selection's range — what a person sees drawn selected
 SELECTED_WHOLE = '''((sel) => { const e = document.querySelector(sel), s = window.getSelection();

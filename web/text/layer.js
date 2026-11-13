@@ -237,7 +237,8 @@
 // as its hands, their naming again or its acts' state move (`cornerKey`); a
 // reading scene's pane's corner carries none (`cornerFacts`). A standing
 // corner's kept word, and its face as one comes or changes, are said once in
-// the status region (`sayCorner`; FP-36). Its first slot states the document's kind, read by
+// the status region (`sayCorner`; FP-36), a device's label in the face spoken
+// as written (T-ARTICLE's `faceRuns`; style S22). Its first slot states the document's kind, read by
 // the one test (`isDraft`; FP-33) — its metadata's word, else the kind the
 // model knows of its record, else its box's listing — being read until one
 // answers and not read where its metadata's read failed (`kindOf`; FP-34),
@@ -273,9 +274,10 @@
 // its reading scale, and the held form over its article where no corner
 // stands (`placeHeld`); and the account's label at far scale counts its
 // documents standing so (`keptCountIn`). The status region names a document
-// as the mirror's item finds it (`placeName`, `boxName`): its label as the
-// item says it (`mirrorLabel`), NAME_WORDS of its words at the most, then
-// the address it names. The origin's edition claims standing held so carry
+// as the mirror's item finds it (`placeRuns`, `placeName`, `boxName`): its
+// label as the item says it (`mirrorLabel`), NAME_WORDS of its words at the
+// most, then the address it names, its own words in the reading face so that
+// what is said keeps them as written. The origin's edition claims standing held so carry
 // their clause in the origin's statement in the edge (`claimsKeptIn`;
 // `placeSigns`; FP-31). The board lagging past a second (M-PUMP's
 // `boardKept`) says so in one clause too (`boardKeptIn`), which the one
@@ -528,14 +530,14 @@ import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, inFirstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, endsColumn, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, MARGIN, cornerWidth } from '../plane/register.js';
-import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX } from '../plane/labels.js';
-import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, kindWord, keptHTML, statementHTML, keptWord, keptStatement, faceWords, blockMarks, symbolLit, editionClause, copyText, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
+import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX, ELLIPSIS } from '../plane/labels.js';
+import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, kindWord, keptHTML, statementHTML, keptWord, keptStatement, faceWords, faceRuns, blockMarks, symbolLit, editionClause, copyText, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
 import { farShort, whyOf } from '../beams/held.js';
 import { applyEdits, sourceRuns, fromBase, boundaries, wordStop } from '../model/derive.js';
 import { homeOf, documentOf, memberOf, versionAddress, accountOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, elementIn, CHROME } from './span.js';
 import { esc, byteLength } from '../util.js';
-import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
+import { t, facedHTML, lastRead, runsText, joinRuns, CLIENT_CLOSE } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -2826,34 +2828,44 @@ export const NAME_WORDS = 6;
 const wordsIn = (/** @type {string} */ s) => s.split(' ').filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
 
 /**
- * The name the status region gives a document (see the head): its label as
- * the mirror says it (`mirrorLabel`), NAME_WORDS of its words at the most —
- * cut on a word, the quote or the bracket it closes with kept after the cut's
- * ellipsis (P-LABEL's `cutWords`) — then the address it names; the address
- * alone where no first line is known.
+ * The name the status region gives a document, as stretches in their faces
+ * (see the head): its label as the mirror says it (`mirrorLabel`), NAME_WORDS
+ * of its words at the most — cut on a word, the quote or the bracket it closes
+ * with kept after the cut's ellipsis (P-LABEL's `cutWords`) — the document's
+ * own words the reading face's, the quotation marks, the ellipsis and the
+ * client's words in their place the client's; then the address it names, the
+ * identifier's; the address alone where no first line is known.
  * @param {Doc} d the record its first line is read from: the version a box shows, a pane's own
  * @param {string} addr the address it names
- * @returns {string}
+ * @returns {import('../strings.js').Run[]}
  */
-export function placeName(d, addr) {
-  const label = mirrorLabel(d), last = label[label.length - 1];
+export function placeRuns(d, addr) {
+  const label = mirrorLabel(d), last = label[label.length - 1], at = { text: addr, face: /** @type {const} */ ('ident') };
   const words = label.map((r) => r.text).join('').trim().replace(/\s+/g, ' ');
-  if (!words) return addr;
+  if (!words) return [at];
   const close = last.face === 'client' && (last.text === QUOTE.text || last.text === CLIENT_CLOSE) ? last.text : '';
   const fits = (/** @type {string} */ s) => wordsIn(s) <= NAME_WORDS;
-  const kept = fits(words) ? words : cutWords(words, fits, close);
-  return kept ? `${kept} ${addr}` : addr;
+  const whole = fits(words), kept = whole ? words : cutWords(words, fits, close);
+  if (!kept) return [at];
+  const space = { text: ' ', face: /** @type {const} */ ('client') };
+  if (label[0] !== QUOTE) return [{ text: kept, face: 'client' }, space, at];
+  // the document's own words between the quotation marks, the cut's ellipsis the page's
+  const inner = kept.slice(QUOTE.text.length, kept.length - QUOTE.text.length - (whole ? 0 : ELLIPSIS.length));
+  return [QUOTE, { text: inner, face: 'reading' }, ...(whole ? [] : [{ text: ELLIPSIS, face: /** @type {const} */ ('client') }]), QUOTE, space, at];
 }
 
+/** the words of the name the status region gives a document (`placeRuns`) */
+export const placeName = (/** @type {Doc} */ d, /** @type {string} */ addr) => runsText(placeRuns(d, addr));
+
 /**
- * A box as the status region names it (`placeName`): by the version it
+ * A box as the status region names it (`placeRuns`): by the version it
  * shows (the reader `shown`), the address that version's.
  * @param {string} addr the box, or the version it shows
- * @returns {{addr: string, name: string}} the address it names, and its name
+ * @returns {{addr: string, name: string, runs: import('../strings.js').Run[]}} the address it names, its name's words, and its name as stretches
  */
 export function boxName(addr) {
-  const shows = read.shown(boxOf(addr));
-  return { addr: shows, name: placeName(REC.doc(shows), shows) };
+  const shows = read.shown(boxOf(addr)), runs = placeRuns(REC.doc(shows), shows);
+  return { addr: shows, name: runsText(runs), runs };
 }
 
 /**
@@ -4295,19 +4307,20 @@ export function headClear(addr) { const c = corners.get(addr); return c && c.hea
  * A standing corner's kept word and the face beneath it said once in the
  * status region where either changed since the corner last stood (FP-36), in
  * one message: its new word, where one stands, then the face's words whole,
- * where a face came to stand or its words changed (`faceWords`); nothing for
- * the first frame it stands, nor for a state cleared or a face gone.
+ * where a face came to stand or its words changed (`faceWords`), a device's
+ * label in them spoken as written (`faceRuns`); nothing for the first frame
+ * it stands, nor for a state cleared or a face gone.
  * @param {Corner} c
  * @param {string} addr
  */
 function sayCorner(c, addr) {
   const k = WRITE.keptOf(addr), word = k ? k.word : null, f = read.face(addr), face = f ? faceWords(f) : null;
-  /** @type {string[]} */
+  /** @type {import('../strings.js').Words[]} */
   const said = [];
   if (word !== c.word && k && c.html) said.push(keptWord(k).text);
-  if (face !== c.face && face && c.html) said.push(face);
+  if (face !== c.face && face && f && c.html) said.push(faceRuns(f));
   c.word = word; c.face = face;
-  if (said.length) FOCUS.say(said.join(' '));
+  if (said.length) FOCUS.say(joinRuns(' ', said));
 }
 
 /**

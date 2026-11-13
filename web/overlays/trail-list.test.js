@@ -3,14 +3,17 @@
 // version's arrival found its text was among them; an entry a reading scene
 // was opened as both its documents, in its panes' order, as the reader last
 // left it, each address in the identifier's face, beside the act's name — and
-// holds no document's words of its own (FP-22, FP-29).
+// holds no document's words of its own; and each row is named by its number,
+// where it stands and its words as S22's table hears them, a document's first
+// line kept as written (FP-22, FP-29).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as TRAILLIST from './trail-list.js';
 import * as HOST from './host.js';
 import * as TRAIL from '../nav/trail.js';
+import * as REC from '../model/records.js';
 import { t } from '../strings.js';
-import { esc } from '../util.js';
+import { esc, byteLength } from '../util.js';
 
 /** the host's stand-in element: what the host writes into it is what a person meets */
 const hostEl = { className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {}, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }), contains: () => false };
@@ -52,4 +55,20 @@ test('a row names the version its entry keeps: an entry left at an edition\'s ba
   TRAILLIST.open();
   assert.deepEqual(rows()[1], row(E + '.2'), 'version 3 arrived: the member its text was, version 2');
   HOST.dismiss();
+});
+
+test('each row is named by its number, where its entry stands and its words as a screen reader hears them — the bar between a scene\'s two documents and the dot before a position a pause, a document\'s first line kept as written, its own dash among it — the row drawn as it stands (style S22; issue #626)', () => {
+  globalThis.document = /** @type {any} */ ({ activeElement: null, body: null, getElementById: () => null });
+  HOST.attach(/** @type {any} */ (hostEl));
+  TRAIL._reset();
+  const view = { x: 0, y: 0, scale: 1 }, D = '1.0.1.0.3', O = '1.0.1.0.1003', TEXT = 'Field notes — draft\n\nMore.';
+  REC.takeDelivery(D, [{ pos: 1, width: byteLength(TEXT), kind: 'content', text: TEXT, ref: null, origin: null }]);
+  try {
+    TRAIL.push({ addr: D, pos: 11, width: null, view, label: null, notice: null }, null);
+    TRAIL.push({ addr: O, pos: null, width: null, view, label: null, notice: null, scene: { a: D, b: O, held: {}, left: null } }, { view, reading: null, stood: null });
+    TRAILLIST.open();
+    const names = [...hostEl.innerHTML.matchAll(/<button data-run="j(\d+)"[^>]*aria-label="([^"]*)"/g)].map((m) => [Number(m[1]), m[2]]);
+    assert.deepEqual(names, [[1, `1 ${D}, ${O} ${t('B1.side-by-side')}`], [2, `2 ${D}, ${t('F.position', { p: 11 })} Field notes — draft`]], 'named as heard: the bar and the dot a pause, the first line\'s own dash kept');
+    assert.ok(hostEl.innerHTML.includes(`<span class="id">${D}</span> │ <span class="id">${O}</span>`) && hostEl.innerHTML.includes(`<span class="id">${D}</span> · ${esc(t('F.position', { p: 11 }))}`), 'drawn as it stands, the bar and the dot among it');
+  } finally { HOST.dismiss(); REC.invalidate(D); }
 });

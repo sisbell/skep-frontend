@@ -35,7 +35,10 @@
 // and the version searched; withheld text in the version said unsearched; a
 // part the board would not give said, searched only part of it and why
 // (BM-HELD's `whyOf`); an empty document, B1-S13's words. Each answer is said
-// in the status region once, as its words change (N-FOCUS's `say`).
+// in the status region once, as its words change (N-FOCUS's `say`), its
+// parts parted by pauses and a document's name in it kept as written as it
+// is rendered for the ear (ST's `heard`; style S22), and its field and its
+// box named the same way.
 // Its moves (FP-21, FP-25): the current match is the first at or after the
 // view's first line in the document as it opens; typing takes the first match
 // at or after the current one, else after that line, and next
@@ -80,7 +83,7 @@ import * as WALK from './walk.js';
 import * as FOCUS from './focus.js';
 import { MAC, drawChord } from './keys.js';
 import { documentOf, memberOf } from '../model/address.js';
-import { t, addressedHTML } from '../strings.js';
+import { t, tRuns, joinRuns, asRuns, runsText, addressedHTML, heard } from '../strings.js';
 import { byteLength } from '../util.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
@@ -130,8 +133,8 @@ const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
  */
 export function attach(e) {
   els = e;
-  e.box.setAttribute('aria-label', t('L.find-label'));
-  e.input.setAttribute('aria-label', t('L.find-label'));
+  e.box.setAttribute('aria-label', heard(t('L.find-label')));
+  e.input.setAttribute('aria-label', heard(t('L.find-label')));
   e.prev.textContent = t('L.find.previous'); e.next.textContent = t('L.find.next');
   e.input.addEventListener('input', () => typed());
   e.box.addEventListener('keydown', (ev) => {
@@ -165,7 +168,7 @@ export function stands() {
   const s = state;
   if (!s) return null;
   const a = answerOf(s);
-  return { box: s.box, addr: s.addr, scene: !!s.side, query: s.query, matches: s.matches.map((m) => ({ ...m })), current: s.current, reading: s.reading, refused: s.refused, entry: s.own ? TRAIL.all().indexOf(s.own) : -1, count: a.count, clauses: a.clauses, said: s.said };
+  return { box: s.box, addr: s.addr, scene: !!s.side, query: s.query, matches: s.matches.map((m) => ({ ...m })), current: s.current, reading: s.reading, refused: s.refused, entry: s.own ? TRAIL.all().indexOf(s.own) : -1, count: a.count, clauses: a.clauses.map((c) => runsText(asRuns(c))), said: s.said };
 }
 
 /**
@@ -496,22 +499,23 @@ export function classChanged() {
  * bound while a part is out, else the current one of all — and its clauses:
  * the parts line, an empty document's words, the miss naming the document
  * and the version searched, the withheld text unsearched, and the part it
- * could not search and why.
+ * could not search and why — the miss's document named as written, as
+ * stretches (`whereOf`).
  * @param {Find} s
- * @returns {{count: string, clauses: string[]}}
+ * @returns {{count: string, clauses: import('../strings.js').Words[]}}
  */
 function answerOf(s) {
   const p = s.side ? SCENE.paneRead(s.side) : null, d = p ? p.d : LAYER.shownOf(s.addr), n = s.matches.length;
   const lacks = !p && (d.extent == null || PUMP.textLacked(d).length > 0);
   const refused = s.refused || (d.refused === 'withheld' ? WITHHELD : null);
-  /** @type {string[]} */
+  /** @type {import('../strings.js').Words[]} */
   const clauses = [];
   if (s.reading) clauses.push(t('B2.find.reading'));
   if (d.extent === 0) clauses.push(t('B1.empty_subspace'));
   if (!s.query) return { count: '', clauses };
   const out = s.reading || (lacks && !refused);
   const count = out ? t('B2.find.so-far', { n }) : n ? t('B2.find.count', { k: s.current >= 0 ? s.current + 1 : 0, n }) : '';
-  if (!n && !out && d.extent !== 0) clauses.push(t('L.find.none', { where: whereOf(s) }));
+  if (!n && !out && d.extent !== 0) clauses.push(tRuns('L.find.none', { where: whereOf(s) }));
   if (d.runs.some((r) => r.kind === 'withheld')) clauses.push(t('L.find.withheld'));
   if (refused) clauses.push(t('L.find.part', { reason: t(HELD.whyOf(refused)) }));
   return { count, clauses };
@@ -520,22 +524,22 @@ function answerOf(s) {
 /** a whole document the board withholds from the reader, as a refusal: what its find says it searched only part of it by */
 const WITHHELD = { kind: 'refused', name: 'withheld' };
 
-/** the version a miss names (see the head): "version ⟨k⟩ of ⟨name⟩" at a member, else "⟨name⟩'s current text", the document named as the status region names it (T-LAYER's `placeName`) */
+/** the version a miss names (see the head): "version ⟨k⟩ of ⟨name⟩" at a member, else "⟨name⟩'s current text", the document named as the status region names it, as stretches, its words kept as written (T-LAYER's `placeRuns`) */
 function whereOf(/** @type {Find} */ s) {
-  const name = LAYER.placeName(REC.doc(s.addr), s.box), k = memberOf(s.addr);
-  return k != null ? t('L.find.member', { k, name }) : t('L.held.current', { D: name });
+  const name = LAYER.placeRuns(REC.doc(s.addr), s.box), k = memberOf(s.addr);
+  return k != null ? tRuns('L.find.member', { k, name }) : tRuns('L.held.current', { D: name });
 }
 
-/** rebuild the count and the note from the find's state, its answer said once in the status region as its words change (FP-13) */
+/** rebuild the count and the note from the find's state, its answer said once in the status region as its words change (FP-13), the miss's document named as written */
 function render() {
   const s = state;
   if (!els || !s) return;
   const a = answerOf(s);
   if (els.count.textContent !== a.count) els.count.textContent = a.count;
-  const note = a.clauses.map((c) => addressedHTML(c)).join(' · ');
+  const note = a.clauses.map((c) => addressedHTML(runsText(asRuns(c)))).join(' · ');
   if (els.note.innerHTML !== note) els.note.innerHTML = note;
-  const words = [a.count, ...a.clauses].filter(Boolean).join(' · ');
-  if (words && words !== s.said) { s.said = words; FOCUS.say(words); }
+  const said = joinRuns(' · ', [a.count, ...a.clauses]), words = runsText(said);
+  if (words && words !== s.said) { s.said = words; FOCUS.say(said); }
 }
 
 /**

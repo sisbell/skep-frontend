@@ -24,8 +24,9 @@
 // on its act, in its title and in its accessible name, and its fingerprint's
 // cue; an empty box while they are read; else the cause's words, said once
 // where one cause empties both slots; each slot named by its role and what it
-// shows; the plan's line the same whatever they show, so nothing beside them
-// moves. A block's
+// shows, rendered for the ear (ST's `heard`; style S22), a label and a
+// fingerprint kept as written; the plan's line the same whatever they show,
+// so nothing beside them moves. A block's
 // marks: the selection (a byte span: every block it touches is marked, the
 // platform's highlight showing the bytes themselves) and the focus (a
 // block), each by `blockMarks`, the one rule T-LAYER marks a standing
@@ -142,8 +143,9 @@
 // its acts in their order, the discard last and described by its statement,
 // and that statement whole below them (O-STATEMENT's `below`); compact, its
 // compact form — its sentence and its one device's hand (`B3.moved.compact`),
-// else its words whole — an act opening the corner whole (FP-26), its whole
-// words its description. Its acts stand in its whole form wherever it is
+// else its words whole — an act opening the corner whole (FP-26), named by
+// the words it draws, its whole words its description, a device's label in
+// them spoken as written (`faceRuns`). Its acts stand in its whole form wherever it is
 // drawn, for no row of a head holds them. Its
 // state's items are made by one rule (`stateItems`), which the ARIA mirror's
 // item voices whole too — its first item leading the item (`cornerLead`), the
@@ -152,7 +154,9 @@
 // mirror never part (R94). The corner's acts — the kept word, the face's
 // acts and its compact form, the version statement on the plane, the read it
 // offers, a compact form's glyph and, opened whole on it, the words that
-// compact it again — are native
+// compact it again — each glyph named, and each act described by its
+// statement or its reason, in words rendered for the ear (ST's `heard`), a
+// draft's name in a reason kept as written — are native
 // buttons the platform activates (`actHTML`; D5 K-57; FP-20), each out of the
 // Tab order as made, its holder standing the stops; a view asking no act sets
 // their words alone (`ArticleView.acts`). A draft's
@@ -218,7 +222,7 @@
 // FP-26, FP-30, FP-31, FP-33, FP-34.
 
 import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint } from '../util.js';
-import { t, tHTML, plural, bracketed, withheldLine, endingOf, addressedHTML, sentence, sentences, asSentence, fields } from '../strings.js';
+import { t, tHTML, tRuns, plural, bracketed, withheldLine, endingOf, addressedHTML, sentence, sentences, asSentence, asSentenceRuns, joinRuns, fields, heard } from '../strings.js';
 import { below } from '../overlays/statement.js';
 import { textOf, recordValue } from '../model/records.js';
 import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType, isAddress } from '../model/address.js';
@@ -380,14 +384,16 @@ export function bylineOf(owner, v) {
  * A byline as HTML (`bylineOf`): its owner, in the identifier's face, then its slots in a box of their own width, each a
  * box of its own — a pending one empty, a cut label carrying its whole, which its act shows over what is beside it (on
  * the plane: T-LAYER's `openLabel`), and its title, the cue in the identifier's face — each named by its role and what
- * it shows; the separator between them unseen where one cause empties both.
+ * it shows, rendered for the ear (ST's `heard`), a label the person's words and a fingerprint kept as written; the
+ * separator between them unseen where one cause empties both.
  * @param {Byline} by
  */
 function bylineHTML(by) {
   const slots = by.slots.map((s) => {
     const cut = s.state === 'value' && s.shows !== s.whole;
     const cls = ['slot', s.state === 'pending' ? 'pending' : '', cut ? 'cut' : '', s.role === 'fingerprint' && s.state === 'value' ? ID : ''].filter(Boolean).join(' ');
-    const attrs = `data-slot="${s.role}"${s.cause ? ` data-string="${s.cause}"` : ''}${cut ? ` data-cut="1" title="${esc(s.whole)}"` : ''} role="img" aria-label="${esc(t('L.slot.named', { role: t(s.role === 'label' ? 'L.slot.device-label' : 'L.slot.fingerprint'), shows: s.told }))}" style="width:${s.em}em"`;
+    const named = tRuns('L.slot.named', { role: t(s.role === 'label' ? 'L.slot.device-label' : 'L.slot.fingerprint'), shows: s.told }, s.cause ? {} : { shows: s.role === 'label' ? 'reading' : 'ident' });
+    const attrs = `data-slot="${s.role}"${s.cause ? ` data-string="${s.cause}"` : ''}${cut ? ` data-cut="1" title="${esc(s.whole)}"` : ''} role="img" aria-label="${esc(heard(named))}" style="width:${s.em}em"`;
     return `<span class="${cls}" ${attrs}>${esc(s.shows)}${cut ? `<span class="whole">${esc(s.whole)}</span>` : ''}</span>`;
   }).join(`<span class="slot-sep">${esc(BY_SEP)}</span>`);
   return `<span class="by"><span class="${ID}">${esc(by.owner)}</span>${esc(BY_SEP)}<span class="slots${by.once ? ' once' : ''}" style="width:${by.em}em">${slots}</span></span>`;
@@ -1313,16 +1319,16 @@ function keptLineHTML(v, statement = true) {
  * @property {string} key its name on the face (`data-face`), by which it is made (O-FACES' `faceAct`)
  * @property {string} id its label's string
  * @property {string} label its label
- * @property {{id: string, text: string} | null} inert why it cannot act now, said at every press (FP-41); null where it acts
+ * @property {{id: string, text: string, runs?: import('../strings.js').Run[]} | null} inert why it cannot act now, said at every press (FP-41), its words as stretches in their faces where they name a draft; null where it acts
  * @property {string | null} said the statement said before it as it is spoken (O-STATEMENT's `spoken`), which describes it; null where it has none
  */
 
 /**
  * @typedef {Object} CornerFace — a face standing at a draft's corner beneath the kept word it explains, never yielding (B3-S2; foundations §3.1; P48): a moved document's (O-FACES' `cornerFace`)
  * @property {{id: string, text: string}} line its sentence
- * @property {Array<{id: string, text: string}>} hands each hand that moved the document, in its slot's words
+ * @property {Array<{id: string, text: string, runs?: import('../strings.js').Run[]}>} hands each hand that moved the document, in its slot's words — where it names a device, the same as stretches in their faces, its label the person's own words
  * @property {boolean} again its hands are those it named before: the slot owed its words stands, empty (D6 BM-17)
- * @property {{id: string, text: string} | null} compact its compact form, its sentence and its one device's hand (`B3.moved.compact`; C-358); null where its hands are not one device's, its words standing whole in that form
+ * @property {{id: string, text: string, runs?: import('../strings.js').Run[]} | null} compact its compact form, its sentence and its one device's hand (`B3.moved.compact`; C-358), as stretches too, that hand in its face; null where its hands are not one device's, its words standing whole in that form
  * @property {FaceAct[]} acts its acts in their order, the discard last
  * @property {{id: string, values: Record<string, string>} | null} said the statement said before its discard, drawn below its acts (the statement decision §8 case 5); null where it has none
  */
@@ -1338,6 +1344,16 @@ function keptLineHTML(v, statement = true) {
 export const faceWords = (f) => sentences(asSentence(f.line), ...f.hands.map((h) => asSentence(h)));
 
 /**
+ * A corner's face's words whole as they are spoken (`faceWords`), as
+ * stretches in their faces (ST's `asSentenceRuns`, `joinRuns`): a device's
+ * label in a hand the person's own words, kept as written where the words are
+ * rendered for the ear (ST's `heard`; style S22).
+ * @param {CornerFace} f
+ * @returns {import('../strings.js').Run[]}
+ */
+export const faceRuns = (f) => joinRuns(' ', [asSentenceRuns(f.line), ...f.hands.map((h) => asSentenceRuns(h))]);
+
+/**
  * A corner's face's words as a row's fields (`CornerFace`; ST's `fields`;
  * style S2's byline): its sentence, then each hand in its slot's words — what
  * the ARIA mirror's item voices of it after the kept word (`cornerWords`).
@@ -1350,9 +1366,11 @@ export const faceRow = (f) => fields(f.line.text, ...f.hands.map((h) => h.text))
  * A corner's face as markup (see the head; B3-S2; P67): compact, its compact
  * form — else its words whole — an act opening the corner whole (T-LAYER's
  * `openCorner`; FP-26), keyed on the face (`data-face`), saying whether the
- * corner stands opened (`ArticleView.opened`) and described by its whole
- * words where its compact form says fewer, its words alone where the view
- * asks no act; whole, its sentence, its hands each in its slot, each a
+ * corner stands opened (`ArticleView.opened`), named by the words it draws
+ * and described by its whole words where its compact form says fewer, each
+ * rendered for the ear (ST's `heard`), a device's label kept as written
+ * (`faceRuns`); its words alone where the view asks no act; whole, its
+ * sentence, its hands each in its slot, each a
  * sentence of its own (`faceWords`) — the slot owed
  * its words standing empty where they are named again — and its acts in their
  * order, each a native button (`actHTML`) keyed on the face, an inert one
@@ -1366,14 +1384,17 @@ export const faceRow = (f) => fields(f.line.text, ...f.hands.map((h) => h.text))
  * @returns {string}
  */
 function faceHTML(f, v, compact) {
+  /** an act's description, rendered for the ear by S22's table (ST's `heard`): its statement as spoken where it has one, else an inert act's reason, which its title draws, a draft's name in it kept as written */
+  const describedBy = (/** @type {CornerFace['acts'][number]} */ a) => (a.said || a.inert ? ` aria-description="${esc(heard(a.said || (a.inert && (a.inert.runs || a.inert.text)) || ''))}"` : '');
   if (compact) {
     const form = f.compact || f.line, words = f.compact ? f.compact.text : faceWords(f);
-    const whole = f.compact ? ` aria-description="${esc(faceWords(f))}"` : '';
+    const named = ` aria-label="${esc(heard(f.compact ? f.compact.runs || f.compact.text : faceRuns(f)))}"`;
+    const whole = f.compact ? ` aria-description="${esc(heard(faceRuns(f)))}"` : '';
     return v.acts === false ? `<span class="face compact" data-string="${esc(form.id)}">${esc(words)}</span>`
-      : actHTML('face compact', ` data-face="whole" data-whole data-string="${esc(form.id)}" aria-expanded="${!!v.opened}"${whole}`, esc(words));
+      : actHTML('face compact', ` data-face="whole" data-whole data-string="${esc(form.id)}" aria-expanded="${!!v.opened}"${named}${whole}`, esc(words));
   }
   const hands = f.hands.length ? `<span class="hands"${f.again ? ' data-again="1"' : ''}>${f.again ? '<span class="again" data-slot="again"></span>' : ''}${f.hands.map((h) => `<span class="hand" data-string="${esc(h.id)}">${esc(asSentence(h))}</span>`).join(' ')}</span>` : '';
-  const acts = f.acts.map((a) => actHTML(`face-act${a.inert ? ' inert' : ''}`, ` data-face="${esc(a.key)}" data-string="${esc(a.id)}"${a.inert ? ` aria-disabled="true" data-inert="${esc(a.inert.id)}" title="${esc(a.inert.text)}"` : ''}${a.said ? ` aria-description="${esc(a.said)}"` : ''}`, esc(a.label))).join('');
+  const acts = f.acts.map((a) => actHTML(`face-act${a.inert ? ' inert' : ''}`, ` data-face="${esc(a.key)}" data-string="${esc(a.id)}"${a.inert ? ` aria-disabled="true" data-inert="${esc(a.inert.id)}" title="${esc(a.inert.text)}"` : ''}${describedBy(a)}`, esc(a.label))).join('');
   return `<span class="face"><span class="face-text" data-string="${esc(f.line.id)}">${addressedHTML(asSentence(f.line))}</span>${hands}<span class="face-acts">${acts}</span>${f.said ? below(f.said.id, f.said.values) : ''}</span>`;
 }
 
@@ -1413,7 +1434,7 @@ const kindSlotEm = (measure) => Math.max(...[KIND_WORDS.draft, KIND_WORDS.publis
  */
 function kindHTML(v) {
   const em = kindSlotEm(v.measure), w = kindWord(v.kind);
-  if (v.kind === 'reading') return `<span class="kind pending" data-kind="reading" role="img" aria-label="${esc(t(KIND_WORDS.reading))}" style="width:${em}em"></span>`;
+  if (v.kind === 'reading') return `<span class="kind pending" data-kind="reading" role="img" aria-label="${esc(heard(t(KIND_WORDS.reading)))}" style="width:${em}em"></span>`;
   return `<span class="kind" data-kind="${v.kind}" data-string="${w.id}" style="width:${em}em">${esc(w.text)}</span>`;
 }
 
@@ -1547,8 +1568,8 @@ function stateHTML(i, v, compact, statement = true) {
   const extra = i.cls === 'chip' ? ' data-chip="1"' : i.cls === 'held' ? ` data-string="${esc(i.id)}"` : i.members != null ? ` data-members="${i.members}"` : '';
   const words = Object.keys(i.faces).length ? htmlIn(i.id, i.vals, i.faces) : esc(t(i.id, i.vals)), acts = v.acts !== false;
   if (compact && i.glyph) {
-    return acts ? actHTML(`${i.cls} glyph`, `${extra} data-whole aria-expanded="${!!v.opened}" aria-label="${esc(t(i.id, i.vals))}"`, esc(t(i.glyph)))
-      : `<span class="${i.cls} glyph"${extra} role="img" aria-label="${esc(t(i.id, i.vals))}">${esc(t(i.glyph))}</span>`;
+    return acts ? actHTML(`${i.cls} glyph`, `${extra} data-whole aria-expanded="${!!v.opened}" aria-label="${esc(heard(tRuns(i.id, i.vals, i.faces)))}"`, esc(t(i.glyph)))
+      : `<span class="${i.cls} glyph"${extra} role="img" aria-label="${esc(heard(tRuns(i.id, i.vals, i.faces)))}">${esc(t(i.glyph))}</span>`;
   }
   if (acts && i.glyph && v.opened) return actHTML(i.cls, `${extra} data-whole aria-expanded="true"`, words);
   if (acts && i.cls === 'version' && !v.scene) return actHTML(i.cls, extra, words);

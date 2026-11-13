@@ -1,6 +1,7 @@
 // O-DELETION's test, on a stand-in of the status region and over the fake
 // port: the face's parts whole — C-49, then the audience by the venue, then
-// the edition's line where a published document holds the words — and never
+// the edition's line where a published document holds the words, heard by
+// S22's table with the draft's name kept as written — and never
 // a count of links the page did not read; the face whole at a draft's first
 // removal in the page's session and a compact mark at every later one, its
 // mark's act opening and folding it and saying what shows, a whole face said
@@ -16,7 +17,7 @@ import * as FAKE from '../test/fake-port.js';
 import * as REC from '../model/records.js';
 import * as WRITE from '../write/write.js';
 import * as MACHINE from '../write/machine.js';
-import { t } from '../strings.js';
+import { t, heard, runsText } from '../strings.js';
 import { byteLength } from '../util.js';
 
 const D = '1.0.1.0.2';
@@ -31,22 +32,34 @@ FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/*
 beforeEach(() => { MACHINE._reset(); REC._reset(); WRITE._reset(); DELETION._reset(); said.length = 0; words = ''; });
 
 test('the face whole is its parts in order: C-49; at a draft the person alone reads, the one clause that keys the audience on the venue; at a shared draft C-50 then the reach; and where a published document holds the words removed, the line naming the edition of the draft — never an orphan line, whose count the page reads nowhere (B3-S4)', () => {
-  assert.deepEqual(DELETION.partsOf({ shared: false, edition: null }), [{ id: 'C-49', text: t('C-49') }, { id: 'B3.deletion.private', text: t('B3.deletion.private') }], 'a private draft');
+  assert.deepEqual(DELETION.partsOf({ shared: false, edition: null }).map((p) => ({ id: p.id, text: p.text })), [{ id: 'C-49', text: t('C-49') }, { id: 'B3.deletion.private', text: t('B3.deletion.private') }], 'a private draft');
   assert.deepEqual(DELETION.partsOf({ shared: true, edition: null }).map((p) => p.id), ['C-49', 'C-50', 'B3.C-167'], 'a shared draft: the pinned audience, then the reach');
   assert.deepEqual(DELETION.partsOf({ shared: false, edition: 'Notes 1.0.1.0.2' }).map((p) => [p.id, p.text]).at(-1), ['B3.deletion.edition', t('B3.deletion.edition', { label: 'Notes 1.0.1.0.2' })], 'the edition\'s line last, naming the draft');
   for (const of of [{ shared: false, edition: null }, { shared: true, edition: 'x' }]) assert.equal(DELETION.partsOf(of).some((p) => p.id.startsWith('B3.deletion.links')), false, 'no count of links: the page made no read that answers one');
+});
+
+test('the face\'s words are spoken as S22\'s table hears them, the draft\'s name in the edition\'s line kept as written: each part\'s words its text, and as stretches the draft\'s name stands in its own face (style S22; issue #626)', () => {
+  /** a draft whose first line holds a dash of its own, named as the status region names a box */
+  const named = /** @type {import('../strings.js').Run[]} */ ([{ text: '"', face: 'client' }, { text: 'Field notes — draft', face: 'reading' }, { text: '" ', face: 'client' }, { text: D, face: 'ident' }]);
+  const parts = DELETION.partsOf({ shared: false, edition: named }), line = parts[parts.length - 1];
+  assert.equal(line.text, t('B3.deletion.edition', { label: `"Field notes — draft" ${D}` }), 'drawn as the strings table words it, the name as its label sets it');
+  assert.ok(line.runs.some((r) => r.face === 'reading' && r.text === 'Field notes — draft'), 'the name a stretch in the reading face');
+  assert.equal(heard(line.runs), `the edition of Field notes — draft ${D} holds these words, taken out, they leave its next version; undo keeps them here; to use them elsewhere, copy rather than cut`,
+    'heard: the line\'s own dash a pause, the name\'s dash and words kept, its quotation marks silent');
+  assert.equal(heard(parts[0].runs), 'still here, for as long as this board retains it; below the reclaim floor it resolves nowhere here, unless another document still windows it', 'C-49 heard: its dash a pause');
 });
 
 test('the face stands whole at a draft\'s first removal in the page\'s session and is a compact mark at every later one; a mark\'s act opens its face whole, folding the one that stood, and folds it again, saying what then shows; a whole face is said once; and a change of the page\'s class starts the session\'s count again (B3-S4; foundations §3.1; D5 K-59)', () => {
   const face = DELETION.partsOf({ shared: false, edition: null }).map((p) => p.text).join(' ');
   assert.deepEqual(DELETION.standing(D), [], 'none made');
   WRITE.addRemoval(D, { before: at(1), after: at(4), words: 'bc', ids: [{ prefix: `${D}.0.1`, ordinal: 2, width: 2 }] });
-  assert.deepEqual([DELETION.standing(D), DELETION.take(D), DELETION.take(D)], [[{ id: 1, whole: true }], face, ''], 'the first removal: its face whole, its words taken to be said once');
+  assert.deepEqual([DELETION.standing(D), runsText(DELETION.take(D)), DELETION.take(D)], [[{ id: 1, whole: true }], face, []], 'the first removal: its face whole, its words taken to be said once');
   WRITE.addRemoval(D, { before: at(5), after: [], words: 'f', ids: at(6) });
-  assert.deepEqual([DELETION.standing(D), DELETION.take(D)], [[{ id: 1, whole: false }, { id: 2, whole: false }], ''], 'the next: a compact mark, the face that stood folded, nothing said of it');
+  assert.deepEqual([DELETION.standing(D), DELETION.take(D)], [[{ id: 1, whole: false }, { id: 2, whole: false }], []], 'the next: a compact mark, the face that stood folded, nothing said of it');
   const n = said.length;
   DELETION.act(D, 2);
-  assert.deepEqual([DELETION.standing(D), said.slice(n)], [[{ id: 1, whole: false }, { id: 2, whole: true }], [face]], 'the mark\'s act: its face whole, said');
+  assert.deepEqual([DELETION.standing(D), said.slice(n)], [[{ id: 1, whole: false }, { id: 2, whole: true }], [heard(face)]], 'the mark\'s act: its face whole, said as a screen reader hears it');
+  assert.ok(!said.at(-1)?.includes('—'), `no dash handed to a screen reader: ${said.at(-1)}`);
   DELETION.act(D, 1);
   assert.deepEqual(DELETION.standing(D), [{ id: 1, whole: true }, { id: 2, whole: false }], 'another mark\'s act: one whole in a draft at a time');
   DELETION.act(D, 1);

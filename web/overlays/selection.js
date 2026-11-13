@@ -81,7 +81,12 @@
 // FACE). The slots, in this
 // order and never moved: annotate · quote · who wrote this? · who uses this?
 // · see the links · follow · read side by side · link to… — each showing its
-// chord (D5-F8). Annotate, quote and "link to…" send a name for characters to
+// chord (D5-F8), named by its words and its target's alone, exposing its
+// chord as its keys (`aria-keyshortcuts`), an inert slot described by its
+// reason — each rendered for the ear by S22's table (ST's `heard`; patterns
+// K1, K3), a draft's name in a reason kept as written; each row of the
+// "which" list named so by the words it draws, the link's symbol out of the
+// name. Annotate, quote and "link to…" send a name for characters to
 // the board, so each takes effect only once the board holds them (`send`;
 // foundations §3.1's row rule): while a burst of the draft is in flight the
 // act asks for its commit and waits for its ack, nothing shown and no focus
@@ -149,10 +154,10 @@ import * as FOCUS from '../nav/focus.js';
 import { extended, sameSpan, spanOfBlock } from '../text/span.js';
 import { sourcesIn } from '../text/article.js';
 import { boundaries, wordStop } from '../model/derive.js';
-import { t, tHTML, typeName, facedHTML, withheldLine } from '../strings.js';
+import { t, tHTML, tRuns, typeName, facedHTML, withheldLine, heard } from '../strings.js';
 import { esc, fill, byteLength } from '../util.js';
 import { markDirty } from '../plane/camera.js';
-import { drawChord } from '../nav/keys.js';
+import { drawChord, keyShortcut } from '../nav/keys.js';
 
 /** @typedef {import('../text/span.js').Span} Span */
 /** @typedef {import('../links/links.js').Shown} Shown */
@@ -531,7 +536,7 @@ const NEW_WORDS = 'L.new.no-link';
 /** why follow and read side by side do nothing over any other span their words lead nowhere from (`targetsAt`): no link drawn there, and for follow no run of another document's material */
 const NO_LINK = 'B3.row.no-link';
 
-/** @typedef {{id: string, text: string}} Reason a slot's reason: its string, and its words as the slot gives them */
+/** @typedef {{id: string, text: string, runs?: import('../strings.js').Run[]}} Reason a slot's reason: its string, its words as the slot gives them, and those words as stretches in their faces where they name a draft — its name kept as written in what is spoken */
 
 /** an inert slot's own reason, by its string's id: the words the slot gives as it is activated where no hold stands (P47) */
 export const reasonOf = (/** @type {InertSlot} */ slot) => INERT_REASON[slot];
@@ -560,8 +565,8 @@ function heldReason(addr) {
   const rows = WRITE.heldOf(addr), islands = WRITE.islandsOf(addr);
   if (!rows.length && !islands.length) return null;
   const acts = islands.length > 0 || rows.some((r) => r.cause === 'moved' || (!!r.refusal && !['head_unreadable', 'session_died'].includes(r.refusal.name)));
-  const id = acts ? 'B3.row.held.resolve' : 'B3.row.held.resend';
-  return { id, text: t(id, { label: LAYER.boxName(addr).name }) };
+  const id = acts ? 'B3.row.held.resolve' : 'B3.row.held.resend', name = LAYER.boxName(addr);
+  return { id, text: t(id, { label: name.name }), runs: tRuns(id, { label: name.runs }) };
 }
 
 /**
@@ -612,13 +617,21 @@ const countOf = (/** @type {Targets} */ tg) => tg.links.length + tg.sources.leng
  * What a slot going where the span's words lead names after its own words
  * (see the head): its one target — a link's far document, a source's origin,
  * a withheld source's "withheld · ⟨owner⟩", its owner by the one owner rule
- * (T-LAYER's `originOwner`) — each address in the identifier's face; the
- * count of several; nothing where it has none, or its one link names no far
- * document.
+ * (T-LAYER's `originOwner`); the count of several; nothing where it has
+ * none, or its one link names no far document.
  * @param {Targets} tg
- * @returns {string} markup, led by a space where it names anything
+ * @returns {string} words, led by a space where it names anything
  */
-function targetLabel(tg) {
+function targetWords(tg) {
+  const n = countOf(tg), [link] = tg.links, [src] = tg.sources;
+  if (n > 1) return ` ${n}`;
+  if (link) return link.far ? ` ${link.far}` : '';
+  if (!src) return '';
+  return ' ' + (src.withheld ? t('F.corner.withheld', { owner: LAYER.originOwner(src.origin) }) : src.origin);
+}
+
+/** `targetWords` as markup, each address in the identifier's face */
+function targetLabel(/** @type {Targets} */ tg) {
   const n = countOf(tg), [link] = tg.links, [src] = tg.sources;
   if (n > 1) return ` ${n}`;
   if (link) return link.far ? ` <span class="id">${esc(link.far)}</span>` : '';
@@ -627,7 +640,7 @@ function targetLabel(tg) {
 }
 
 /** an inert slot's reason said through the status region, at every press (rule 14): said again where the region holds those words already — the reason a press gave a moment ago, here or at another passage */
-const sayReason = (/** @type {Reason} */ reason) => FOCUS.say(reason.text, false, true);
+const sayReason = (/** @type {Reason} */ reason) => FOCUS.say(reason.runs || reason.text, false, true);
 
 /**
  * An inert slot activated (P47; rule 14): it keeps its place, marked inert,
@@ -670,9 +683,10 @@ export function render(focus = null, told = null, at = null) {
   /** the targets a slot counts: a far slot's, none for any other */
   const counted = (/** @type {string} */ id) => (id === 'follow' || id === 'scene' ? countOf(far[id]) : undefined);
   const buttons = SLOTS.map(([id, strId, chord]) => {
-    const reason = reasonAt(id, span, counted(id));
-    const label = esc(t(strId)) + (id === 'follow' || id === 'scene' ? targetLabel(far[id]) : '');
-    return `<button data-run="${id}" class="${reason ? 'inert' : ''}" ${reason ? `title="${esc(reason.text)}"` : ''}${id === told ? ' data-inert="1"' : ''}>${label}${chord ? ` <kbd>${esc(drawChord(chord))}</kbd>` : ''}</button>`;
+    const reason = reasonAt(id, span, counted(id)), target = id === 'follow' || id === 'scene' ? far[id] : null;
+    const label = esc(t(strId)) + (target ? targetLabel(target) : '');
+    const why = reason ? ` title="${esc(reason.text)}" aria-description="${esc(heard(reason.runs || reason.text))}"` : '';
+    return `<button data-run="${id}" class="${reason ? 'inert' : ''}" aria-label="${esc(heard(t(strId) + (target ? targetWords(target) : '')))}" aria-keyshortcuts="${esc(keyShortcut(chord))}"${why}${id === told ? ' data-inert="1"' : ''}>${label}${chord ? ` <kbd>${esc(drawChord(chord))}</kbd>` : ''}</button>`;
   }).join('');
   const said = told ? reasonAt(told, span, counted(told)) : null;
   const reasonLine = said ? `<div class="note reason" data-string="${esc(said.id)}">${esc(said.text)}</div>` : '<div class="note reason" hidden></div>';
@@ -857,8 +871,10 @@ function send(slot, span, el = null) {
  * @param {string | null} [focus] the reopened list's control's key
  */
 function which_(tg, what, span, byKey, focus = null) {
-  const links = tg.links.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · <span class="id">${esc(s.link.owner || '')}</span> · ${LK.farLabelHTML(s)}</button></li>`);
-  const sources = tg.sources.map((src, i) => `<li><button data-run="s${i}">${sourceRowHTML(span.addr, src)}</button></li>`);
+  /** a link's row's name as stretches: its type, its linker and its far document, the link's symbol kept out (patterns K1) */
+  const linkRuns = (/** @type {Shown} */ s) => /** @type {import('../strings.js').Run[]} */ ([{ text: `${typeName(s.link.type)} · `, face: 'client' }, { text: s.link.owner || '', face: 'ident' }, { text: ' · ', face: 'client' }, ...LK.farLabelRuns(s)]);
+  const links = tg.links.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}" aria-label="${esc(heard(linkRuns(s)))}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · <span class="id">${esc(s.link.owner || '')}</span> · ${LK.farLabelHTML(s)}</button></li>`);
+  const sources = tg.sources.map((src, i) => `<li><button data-run="s${i}" aria-label="${esc(heard(sourceRowRuns(span.addr, src)))}">${sourceRowHTML(span.addr, src)}</button></li>`);
   const html = `<span class="label">${esc(t(what === 'follow' ? 'B1.follow' : 'B1.side-by-side'))}</span><ul class="rows">${[...links, ...sources].join('')}</ul>`;
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
@@ -887,6 +903,20 @@ function sourceRowHTML(addr, src) {
   if (src.withheld) return facedHTML([{ text: src.origin, face: 'ident' }, { text: ' · ', face: 'client' }, ...withheldLine(LAYER.originOwner(src.origin))]);
   const [first] = src.parts, words = LAYER.firstWords(addr, first.pos, first.width) || t('F.position', { p: first.pos });
   return fill(esc(t('L.run.named')), { words: esc(words), answer: `${esc(t('L.origin-mark'))} <span class="id">${esc(src.origin)}</span>` });
+}
+
+/**
+ * A source's row's words as stretches in their faces (`sourceRowHTML`): the
+ * words of the span its runs hold the reading face's, kept as written in its
+ * name (ST's `heard`); its origin's address the identifier's.
+ * @param {string} addr the span's document
+ * @param {Source} src
+ * @returns {import('../strings.js').Run[]}
+ */
+function sourceRowRuns(addr, src) {
+  if (src.withheld) return [{ text: src.origin, face: 'ident' }, { text: ' · ', face: 'client' }, ...withheldLine(LAYER.originOwner(src.origin))];
+  const [first] = src.parts, words = LAYER.firstWords(addr, first.pos, first.width);
+  return tRuns('L.run.named', { words: words ? [{ text: words, face: 'reading' }] : t('F.position', { p: first.pos }), answer: [{ text: `${t('L.origin-mark')} `, face: 'client' }, { text: src.origin, face: 'ident' }] });
 }
 
 /**

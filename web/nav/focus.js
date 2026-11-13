@@ -1,6 +1,7 @@
 // N-FOCUS — the one owner of the platform's focus (FP-20; D5 §4; the focus
-// record's rules 10–22). Layer 2, a leaf: it imports nothing of the page and
-// keeps no DOM of its own, moving the focus of elements their owners hand it.
+// record's rules 10–22). Layer 2: it imports nothing of the page but ST's
+// table (`heard`), and keeps no DOM of its own, moving the focus of elements
+// their owners hand it.
 // State (FP-10): the last input's kind, the opener stack — which region took
 // the focus, from which element, and the region each waits on to take it
 // next — and the words the status region waits to say on the next frame
@@ -52,13 +53,18 @@
 // focus the platform moves into the plane after a key (Tab, Shift+Tab) is the
 // person's act, told to N-WALK (`entered`), and one it moves there after a
 // pointer tells nothing. The status region (D4): one standing `role="status"`
-// region this module alone writes (`say`), polite unless the caller asks
-// assertive, and words it holds already said again on the next frame where
-// the caller asks; a key-made landing is told by the focus move alone (rule
-// 12), never repeated here. N-WALK registers the plane's stop, the walk's
+// region this module alone writes (`say`), every word rendered for the ear by
+// S22's table, the person's own words, a document's name and an address kept
+// as they stand, polite unless the caller asks assertive, and words it holds
+// already said again on the next frame where the caller asks; a region's own
+// name, rendered for the ear where it was set, said as it stands; a key-made
+// landing is told by the focus move alone (rule 12), never repeated here.
+// N-WALK registers the plane's stop, the walk's
 // element and the walk's two readings of the ring, the app the status region
 // (`attach`).
 // Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-20, FP-36.
+
+import { heard, asHeard } from '../strings.js';
 
 /**
  * @typedef {Object} Entry — a region holding the focus, and where it took it from
@@ -192,7 +198,7 @@ export function land(el) {
  * and its first control focused where a key made the act, never otherwise.
  * Where a field the reader types in outside the region holds the caret, a
  * key's opening takes none of it (FP-20): the region stands without the
- * focus, said through the status region by its own name (FP-36), and every
+ * focus, said through the status region by its own name as it stands (FP-36), and every
  * region holding the field waits on it where it names a first control, so
  * the field's close gives the focus there (`close`). An opening no key made —
  * a face taking the region's place — is waited on by none.
@@ -211,7 +217,7 @@ export function open(region, o) {
   else if (at && isField(at) && !o.el.contains(at)) {
     if (o.first) for (const s of stack) { if (s.el.contains(at)) s.waiting = e; }
     const name = nameOf(o.el);
-    if (name) say(name);
+    if (name) say(asHeard(name));
   } else if (o.first) focusEl(o.first);
   changed();
 }
@@ -310,18 +316,20 @@ let saying = 0;
 
 /**
  * The status region (D4) written: one standing region this module alone
- * writes, polite unless the caller asks assertive. Nothing is said for a
- * camera move, and a landing is told by the focus move alone. Asked `again`,
- * words the region holds already are said again: the region emptied now and
- * written on the next frame, so the platform meets a change; any write before
- * that frame takes its place.
- * @param {string} text
+ * writes, the words rendered for the ear by S22's table (ST's `heard`), polite
+ * unless the caller asks assertive. Words that hold the person's own words, a
+ * document's name or its words are handed as stretches in their faces, which
+ * the table leaves alone. Nothing is said for a camera move, and a landing is
+ * told by the focus move alone. Asked `again`, words the region holds already
+ * are said again: the region emptied now and written on the next frame, so
+ * the platform meets a change; any write before that frame takes its place.
+ * @param {import('../strings.js').Words} words
  * @param {boolean} [assertive]
  * @param {boolean} [again] the words are said again where the region holds them already (O-HINT's every press)
  */
-export function say(text, assertive = false, again = false) {
+export function say(words, assertive = false, again = false) {
   if (!liveEl) return;
-  const live = liveEl;
+  const live = liveEl, text = heard(words);
   if (saying) { cancelFrame(saying); saying = 0; }
   live.setAttribute('aria-live', assertive ? 'assertive' : 'polite');
   if (again && live.textContent === text) {

@@ -45,7 +45,9 @@
 // their slot's reason at the acts card drawn at the selection, else at the
 // walk's focused span, which nothing selects, else where the focus is; every
 // other slot's chord, with nothing in focus that its slot acts on, gives
-// "select a passage first" where the focus is; a key moving the caret stands
+// "select a passage first" where the focus is; each slot named by its words
+// alone, its chord drawn in it and exposed as its key for the platform, and
+// every line the keys raise said as S22's table hears it; a key moving the caret stands
 // the walk on the caret's span, the live caret its mark and no ring drawn,
 // and a camera move leaves it there, so a slot chord at the
 // caret acts on that span; once Esc, a zoom past its reading scale or a key
@@ -168,11 +170,13 @@ import { cornerHTML, faceWords } from '../text/article.js';
 import { spanOfBlock } from '../text/span.js';
 import { docBox } from '../plane/projection.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
-import { t, tHTML, hintSentences, sentence, sentences } from '../strings.js';
+import { t, tHTML, hintSentences, sentence, sentences, heard } from '../strings.js';
 import { esc, fill, byteLength } from '../util.js';
 
 /** a hint's notice as the hint says it, whole, a sentence (ST's `hintSentences`) */
 const hinted = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ values = {}) => hintSentences(id, values).whole;
+/** a hint's notice whole as the status region says it: rendered for the ear by S22's table (ST's `heard`) */
+const spokenHint = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ values = {}) => heard(hinted(id, values));
 
 // the table alone (the dispatch binds DOM modules the Node runner has no DOM for)
 const src = await import('node:fs').then((fs) => fs.readFileSync(new URL('./keys.js', import.meta.url), 'utf8'));
@@ -321,11 +325,12 @@ test('at a span of a draft the person may edit holding no caret a printable key 
   assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
   assert.deepEqual([said.at(-1), caret(), WRITE.edits(D)], [hinted('B3.caret.enter'), null, []], 'the draft\'s own line; nothing typed, no caret');
   assert.equal(await KEYS.dispatch(keyOf('v', MOD), PLANE), true);
-  assert.equal(said.at(-1), hinted('B3.caret.enter.paste'), 'a paste: the line in its own words');
+  assert.equal(said.at(-1), spokenHint('B3.caret.enter.paste'), 'a paste: the line in its own words, as a screen reader hears them');
   assert.equal(await KEYS.dispatch(keyOf('x', MOD), PLANE), true);
   assert.equal(said.at(-1), hinted('B3.caret.cut'), 'a cut: the line in its own words');
   assert.equal(await KEYS.dispatch(keyOf(' '), PLANE), true);
-  assert.equal(said.at(-1), hinted('F.swallow.space', { 'paging key': 'PageDown' }), 'Space: K-9\'s own line, whole at its first press');
+  assert.equal(said.at(-1), spokenHint('F.swallow.space', { 'paging key': 'PageDown' }), 'Space: K-9\'s own line, whole at its first press, as a screen reader hears it');
+  assert.equal(said.at(-1), 'Space does not page here, Page Down does.', 'its dash a pause, the paging key by its words');
   assert.equal(await KEYS.dispatch(keyOf(' '), PLANE), true);
   assert.deepEqual([said.at(-1), HINT.standing()], ['Space does not page here.', { id: 'F.swallow.space', words: 'Space does not page here.', whole: hinted('F.swallow.space', { 'paging key': 'PageDown' }), open: false, writing: null }],
     'Space again: its first clause, the notice whole kept as its description');
@@ -342,7 +347,7 @@ test('at a span of a draft the person may edit holding no caret a printable key 
   await focusOn(O, 1);
   const theirs = hinted('B3.row.others-document', { owner: '1.0.2' }), clause = 'This is 1.0.2\'s document.';
   assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
-  assert.deepEqual([said.at(-1), HINT.standing()?.id, caret()], [theirs, 'B3.row.others-document', [D, 1, false]], 'at another\'s document its line naming its owner, whole at its first press; the walk\'s move away left the live caret kept');
+  assert.deepEqual([said.at(-1), HINT.standing()?.id, caret()], [heard(theirs), 'B3.row.others-document', [D, 1, false]], 'at another\'s document its line naming its owner, whole at its first press; the walk\'s move away left the live caret kept');
   assert.equal(await KEYS.dispatch(keyOf('w'), PLANE), true);
   assert.deepEqual([said.at(-1), HINT.standing()?.words, HINT.standing()?.open], [clause, clause, false], 'a later press: its first clause, said again');
   let n = said.length;
@@ -385,18 +390,18 @@ test('at the walk\'s span of an edition of the session\'s account, at its readin
   await focusOn(E, 14);
   const c45 = t('C-45', { D: E });
   assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
-  assert.deepEqual([said.at(-1), HINT.standing()], [c45, { id: 'C-45', words: c45, whole: c45, open: true, writing: null }], 'q: C-45 naming the document, whole');
+  assert.deepEqual([said.at(-1), HINT.standing()], [heard(c45), { id: 'C-45', words: c45, whole: c45, open: true, writing: null }], 'q: C-45 naming the document, whole, drawn as pinned and said as heard');
   let n = said.length;
   assert.equal(await KEYS.dispatch(keyOf('w'), PLANE), true);
   await tick();
-  assert.deepEqual([said.slice(n), HINT.standing()?.words], [[c45], c45], 'a later press: C-45 whole again, said again');
+  assert.deepEqual([said.slice(n), HINT.standing()?.words], [[heard(c45)], c45], 'a later press: C-45 whole again, said again');
   n = said.length;
   assert.equal(await KEYS.dispatch(keyOf('v', MOD), PLANE), true, 'a paste: taken');
   await tick();
-  assert.deepEqual([said.slice(n), HINT.standing()?.id], [[c45], 'C-45'], 'and answered by C-45');
+  assert.deepEqual([said.slice(n), HINT.standing()?.id], [[heard(c45)], 'C-45'], 'and answered by C-45');
   assert.equal(await KEYS.dispatch(keyOf('x', MOD), PLANE), false, 'a cut: the platform\'s own, never taken');
   assert.equal(await KEYS.dispatch(keyOf(' '), PLANE), true);
-  assert.deepEqual([said.at(-1), HINT.standing()?.id], [hinted('F.swallow.space', { 'paging key': 'PageDown' }), 'F.swallow.space'], 'Space: K-9\'s own line');
+  assert.deepEqual([said.at(-1), HINT.standing()?.id], [spokenHint('F.swallow.space', { 'paging key': 'PageDown' }), 'F.swallow.space'], 'Space: K-9\'s own line');
   assert.deepEqual([caret(), SEL.selected(), WRITE.edits(E)], [null, null, []], 'nothing placed: no caret, nothing selected, nothing edited');
 
   // no read has told E is published — the index lists it no more, and no metadata is read — then its metadata tells it
@@ -404,7 +409,7 @@ test('at the walk\'s span of an edition of the session\'s account, at its readin
   assert.equal(REC.doc(E).kind, 'unknown');
   await focusOn(E, 14);
   assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
-  assert.deepEqual([said.at(-1), HINT.standing()?.id], [hinted('F.swallow', { 'LEAP chord': KEYS.drawChord('Mod+L') }), 'F.swallow'], 'a document of the session\'s account no read has told is published: K-9\'s line, never C-45');
+  assert.deepEqual([said.at(-1), HINT.standing()?.id], [spokenHint('F.swallow', { 'LEAP chord': KEYS.drawChord('Mod+L') }), 'F.swallow'], 'a document of the session\'s account no read has told is published: K-9\'s line, never C-45');
   REC.takeMetadata(E, { doc: E, published: true, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
   assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
   assert.equal(HINT.standing()?.id, 'C-45', 'its metadata read as published: C-45');
@@ -481,7 +486,7 @@ test('Mod+S writes nothing and is answered at the corner and in the status regio
   WRITE.setKept(D, { word: 'kept', reason: null });
   assert.equal(await KEYS.dispatch(keyOf('s', MOD), PLANE), true);
   assert.ok(LAYER.statementOpen(D) && corner().includes(`<span class="kept-statement" data-string="B3.save.kept">${esc(sentence('B3.save.kept'))}</span>`), `the first press: the statement whole at the corner — ${corner()}`);
-  assert.equal(said.at(-1), 'Nothing to save — everything here is kept.', 'the first press: the statement said in the status region, a sentence');
+  assert.equal(said.at(-1), 'Nothing to save, everything here is kept.', 'the first press: the statement said in the status region, a sentence, its dash a pause');
   LAYER.openStatement(D, false);
   const reason = 'the board is not answering';
   WRITE.setKept(D, { word: 'not yet kept', reason });
@@ -523,7 +528,7 @@ test('Mod+C with nothing selected outside a field is taken at its keydown, its d
   assert.ok(KEYS.TABLE.some((r) => r.id === 'K-92' && r.chord === 'Mod+C' && r.act === 'copy.nothing' && r.surface === 'plane'), 'the table binds the copy\'s answer at the plane, K-92\'s');
   await focusOn(O, 1);
   assert.deepEqual(await copy(), { took: true, prevented: true }, 'at another\'s span: taken, its default prevented');
-  assert.deepEqual([HINT.standing(), said.at(-1)], [{ id: 'L.copy.nothing', words: whole, whole, open: true, writing: null, ending: enter }, sentences(whole, enter)], 'whole at the first copy in the session, ending on Enter\'s act, which selects there; said in the status region');
+  assert.deepEqual([HINT.standing(), said.at(-1)], [{ id: 'L.copy.nothing', words: whole, whole, open: true, writing: null, ending: enter }, sentences(heard(whole), enter)], 'whole at the first copy in the session, ending on Enter\'s act, which selects there; said in the status region');
   await focusOn(D, 14);
   assert.deepEqual(await copy(), { took: true, prevented: true });
   assert.deepEqual([HINT.standing(), said.at(-1)], [{ id: 'L.copy.nothing', words: clause, whole, open: false, writing: null }, clause], 'at a span of the draft the person may edit: its first clause alone');
@@ -617,7 +622,7 @@ test('Enter and Space — Shift+Space and Shift+Enter too — at a corner\'s act
   }
   await tick();
   assert.deepEqual([said.length, HINT.standing(), caret(), WRITE.edits(D)], [n, null, null, []], 'nothing said, no hint, no caret, nothing typed');
-  assert.deepEqual([await cornerPress(acts.kept, 'q'), HINT.standing()?.id, said.at(-1), WRITE.edits(D)], [{ took: true, prevented: false }, 'B3.caret.back', hinted('B3.caret.back'), []],
+  assert.deepEqual([await cornerPress(acts.kept, 'q'), HINT.standing()?.id, said.at(-1), WRITE.edits(D)], [{ took: true, prevented: false }, 'B3.caret.back', spokenHint('B3.caret.back'), []],
     'a printable key but Space at an act of the corner of a draft the person may edit: the way back to its text, as at the corner\'s element, nothing typed');
 }));
 
@@ -637,11 +642,12 @@ test('a printable key but Space at the corner of a draft the person may edit is 
   assert.deepEqual(caret(), [D, 1, true], 'the caret live at D\'s first span');
   let n = said.length;
   assert.equal(await atCorner(D, 'q'), true, 'q at D\'s corner: taken');
-  assert.deepEqual([HINT.standing(), said.slice(n), caret(), WRITE.edits(D)], [standing, [back], [D, 1, true], []], 'the way back to the text, whole, its hint at the corner and said; the caret live where it stood; nothing typed');
+  assert.deepEqual([HINT.standing(), said.slice(n), caret(), WRITE.edits(D)], [standing, [heard(back)], [D, 1, true], []], 'the way back to the text, whole, its hint at the corner and said; the caret live where it stood; nothing typed');
+  assert.equal(heard(back), 'Your text is back with Shift Tab.', 'its chord said by its keys\' words');
   n = said.length;
   assert.equal(await atCorner(D, 'Q', { shiftKey: true }), true);
   await tick();
-  assert.deepEqual([HINT.standing(), said.slice(n)], [standing, [back]], 'a later press, with Shift: whole again, said again');
+  assert.deepEqual([HINT.standing(), said.slice(n)], [standing, [heard(back)]], 'a later press, with Shift: whole again, said again');
   n = said.length;
   assert.equal(await atCorner(D, 'q', { repeat: true }), true, 'an auto-repeat: taken, typing nothing');
   await tick();
@@ -671,11 +677,11 @@ test('the line a printable key raises at the corner of a draft the person may ed
   await focusOn(D2, 1);
   assert.equal(await atCorner(D2, 'q'), true);
   const end = sentence('B3.undo.last-writing', { label: LAYER.boxName(D).name });
-  assert.deepEqual([HINT.standing()?.id, HINT.standing()?.writing, said.at(-1)], ['B3.caret.back', end, sentences(back, end)], 'at D2\'s corner: the way back, ending with where the person was writing, said together');
+  assert.deepEqual([HINT.standing()?.id, HINT.standing()?.writing, said.at(-1)], ['B3.caret.back', end, heard(sentences(back, end))], 'at D2\'s corner: the way back, ending with where the person was writing, said together');
   await focusOn(D, 1);
   assert.equal(await atCorner(D, 'q'), true);
   await tick();
-  assert.deepEqual([HINT.standing()?.id, HINT.standing()?.writing, said.at(-1)], ['B3.caret.back', null, back], 'at D\'s corner, the draft last written: the line ends with itself');
+  assert.deepEqual([HINT.standing()?.id, HINT.standing()?.writing, said.at(-1)], ['B3.caret.back', null, heard(back)], 'at D\'s corner, the draft last written: the line ends with itself');
   assert.deepEqual([caret(), WRITE.edits(D2)], [[D, 2, false], []], 'the caret kept where it stood, nothing typed in D2');
 }));
 
@@ -710,13 +716,13 @@ test('the inert slots\' chords — Mod+K "link to…", never the LEAP box, Mod+S
     assert.ok(!!s.button && s.button.includes('data-inert="1"') && s.button.includes(`<kbd>${esc(KEYS.drawChord(chord))}</kbd>`), `${chord}: its slot marked inert, its chord drawn — ${s.button}`);
     assert.equal(s.reason, `<div class="note reason" data-string="${reason}">${esc(t(reason))}</div>`, `${chord}: the card's reason line gives the slot's words`);
     assert.deepEqual(['annotate', 'quote', 'linkto'].filter((x) => (slotIn(x).button || '').includes('data-inert')), [slot], `${chord}: its slot alone marked`);
-    assert.deepEqual(said.slice(n), [t(reason)], `${chord}: said through the status region`);
+    assert.deepEqual(said.slice(n), [heard(t(reason))], `${chord}: said through the status region, as a screen reader hears it`);
   }
   await focusOn(O, 1);
   SEL.select(O, 3, 4);
   let n = said.length;
   assert.equal(await KEYS.dispatch(keyOf('k', MOD), PLANE), true);
-  assert.deepEqual([SEL.selected(), holds(), slotIn('linkto').reason !== null, said.slice(n)], [{ addr: O, pos: 3, width: 4 }, null, true, [t('L.seam.link-to')]], 'Mod+K at a selection standing: the card at it gives the reason, holding no span of its own, the walk\'s span never taken over it');
+  assert.deepEqual([SEL.selected(), holds(), slotIn('linkto').reason !== null, said.slice(n)], [{ addr: O, pos: 3, width: 4 }, null, true, [heard(t('L.seam.link-to'))]], 'Mod+K at a selection standing: the card at it gives the reason, holding no span of its own, the walk\'s span never taken over it');
   SEL.clear();
   hostEl.innerHTML = '';
   await WALK.focusTo(O, null, true, null, true);
@@ -724,7 +730,7 @@ test('the inert slots\' chords — Mod+K "link to…", never the LEAP box, Mod+S
   n = said.length;
   assert.equal(await KEYS.dispatch(keyOf('k', MOD), PLANE), true);
   await tick();
-  assert.deepEqual([SEL.selected(), hostEl.innerHTML, said.slice(n), HINT.standing()?.id], [null, '', [hinted('L.seam.link-to')], 'L.seam.link-to'],
+  assert.deepEqual([SEL.selected(), hostEl.innerHTML, said.slice(n), HINT.standing()?.id], [null, '', [spokenHint('L.seam.link-to')], 'L.seam.link-to'],
     'Mod+K off any span: nothing selected, no card, the reason its hint at the focus, a sentence, said');
 }));
 
@@ -1563,7 +1569,7 @@ test('a printable key swallowed outside the draft last written in the page\'s se
     await press('Enter');
     await focusOn(O, 1);
     await press('q');
-    assert.deepEqual([caret(), HINT.standing()?.id, HINT.standing()?.writing, said.at(-1)], [[D, 1, false], 'B3.row.others-document', null, theirs], 'nothing written yet: O\'s line ends with itself, the caret kept in D');
+    assert.deepEqual([caret(), HINT.standing()?.id, HINT.standing()?.writing, said.at(-1)], [[D, 1, false], 'B3.row.others-document', null, heard(theirs)], 'nothing written yet: O\'s line ends with itself, the caret kept in D');
     await focusOn(D, 1);
     await press('Enter');
     await press('a');
@@ -1571,7 +1577,7 @@ test('a printable key swallowed outside the draft last written in the page\'s se
     assert.deepEqual([caret(), WRITE.lastWritten()], [[D, 2, false], D], '"a" typed in D, the walk on O leaving the caret kept');
     const end = sentence('B3.undo.last-writing', { label: LAYER.boxName(D).name });
     await press('q');
-    assert.deepEqual([HINT.standing()?.id, HINT.standing()?.words, HINT.standing()?.writing, said.at(-1)], ['B3.row.others-document', clause, end, sentences(clause, end)], 'at O: its line, ending with where the person was writing, said together');
+    assert.deepEqual([HINT.standing()?.id, HINT.standing()?.words, HINT.standing()?.writing, said.at(-1)], ['B3.row.others-document', clause, end, heard(sentences(clause, end))], 'at O: its line, ending with where the person was writing, said together, the draft\'s name as written');
     await WALK.focusTo('1.0.2', null, true, null, true);
     await press('q');
     assert.deepEqual([HINT.standing()?.id, HINT.standing()?.writing], ['F.swallow', end], 'off any document: K-9\'s line, ending the same');
@@ -1767,7 +1773,7 @@ test('Shift with ← or → at the walk\'s span in text the person may not edit 
   /** Shift with an arrow at the walk's span, taken: the selection, the card standing and the walk's element after it */
   const shifted = async (/** @type {string} */ key) => { assert.equal(await KEYS.dispatch(keyOf(key, SHIFT), PLANE), true, `Shift+${key}: the page takes it`); return [SEL.selected(), overlay(), walkAt()]; };
   assert.deepEqual(await shifted('ArrowRight'), [{ addr: O, pos: 1, width: 1 }, 'selection', here], 'Shift+→: the first character of the span, its card shown, the walk where it stood');
-  assert.equal(said.at(-1), `${O} · ${t('F.position', { p: 1 })}`, 'the selection said through the status region');
+  assert.equal(said.at(-1), heard(`${O} · ${t('F.position', { p: 1 })}`), 'the selection said through the status region, as a screen reader hears it');
   assert.deepEqual(await shifted('ArrowRight'), [{ addr: O, pos: 1, width: 2 }, 'selection', here], 'Shift+→ again: its end a character on, its start standing');
   assert.deepEqual(await shifted('ArrowLeft'), [{ addr: O, pos: 1, width: 1 }, 'selection', here], 'Shift+←: its end back a character');
   assert.deepEqual(await shifted('ArrowLeft'), [null, null, here], 'Shift+← again: its end at its anchor, no selection standing and no card');
@@ -1990,7 +1996,7 @@ test('an act that sends a name for characters takes effect only once the board h
     await press('A', SHIFT);
     await SEL.sent();
     const resend = t('B3.row.held.resend', { label: LAYER.boxName(D).name });
-    assert.deepEqual([slotIn('annotate').reason, said.slice(m), committed.length], [`<div class="note reason" data-string="B3.row.held.resend">${esc(resend)}</div>`, [resend], 1], 'a line held: inert with the reason that names what ends the state, nothing committed for it');
+    assert.deepEqual([slotIn('annotate').reason, said.slice(m), committed.length], [`<div class="note reason" data-string="B3.row.held.resend">${esc(resend)}</div>`, [heard(resend)], 1], 'a line held: inert with the reason that names what ends the state, nothing committed for it');
     assert.ok(/** @type {string} */ (slotIn('annotate').button).includes(`title="${esc(resend)}"`) && !/** @type {string} */ (slotIn('wrote').button).includes('class="inert"'), 'the slot says why; who wrote this? stands live beside it');
     // a refused run: an act of the person's comes first
     WRITE.setHeld(D, heldRows({ kind: 'refused', name: 'out_of_bounds' }));
@@ -2051,7 +2057,7 @@ test('Mod+S commits the open burst and answers once it lands, from the word the 
     assert.equal(said.length, before, 'the ack late: still nothing said');
     next.give(minted(100, 20));
     await KEYS.saved();
-    assert.deepEqual([said.slice(before), LAYER.statementOpen(D), WRITE.keptOf(D)], [[sentence('B3.save.kept')], true, { word: 'kept', reason: null }], 'the ack: the answer, from the word the corner then reads, its statement whole at the first press');
+    assert.deepEqual([said.slice(before), LAYER.statementOpen(D), WRITE.keptOf(D)], [[heard(sentence('B3.save.kept'))], true, { word: 'kept', reason: null }], 'the ack: the answer, from the word the corner then reads, its statement whole at the first press');
     await press('s', MOD);
     assert.deepEqual([said.slice(before + 1), dialed.length], [[t('B3.kept')], 1], 'no burst open: answered at once, the corner\'s own word, nothing dialed');
     // a key taken before the ack drops the answer
@@ -2074,7 +2080,7 @@ test('Mod+S commits the open burst and answers once it lands, from the word the 
     shellHeld = [{ held: 1, doc: D, base: 7, frame: { op: 'insert', doc: D }, cause: 'unreachable', sent: false, time: 1 }];
     next.give({ result: { resp: 'held', held: 1, cause: 'unreachable' } });
     await KEYS.saved();
-    assert.deepEqual([said.slice(m), WRITE.keptOf(D)], [[sentence('B3.save.held')], { word: 'not yet kept', reason: null, cause: { token: 'unreachable', arm: null } }], 'held while the notebook does not answer: its line, the word "not yet kept" with its cause');
+    assert.deepEqual([said.slice(m), WRITE.keptOf(D)], [[heard(sentence('B3.save.held'))], { word: 'not yet kept', reason: null, cause: { token: 'unreachable', arm: null } }], 'held while the notebook does not answer: its line, the word "not yet kept" with its cause');
     REC.setDaemon('running');
     KEYS._reset();
     await press('s', MOD);
@@ -2164,9 +2170,9 @@ test('at a passage no link is drawn at — in an edition of the session\'s accou
       assert.ok(/** @type {string} */ (s.button).includes('data-inert="1"'), `${what}, ${slot}: the slot marked as a press leaves it`);
       assert.equal(s.reason, line, `${what}, ${slot}: the card's reason line says it`);
       // follow's chord finds the selection's words in the status region; read side by side's finds the reason follow's gave
-      assert.deepEqual(said.slice(n), slot === 'follow' ? [reason] : [], `${what}, ${slot}: said at once where the region held other words; where it holds the reason already, the region emptied to be given it again`);
+      assert.deepEqual(said.slice(n), slot === 'follow' ? [heard(reason)] : [], `${what}, ${slot}: said at once where the region held other words; where it holds the reason already, the region emptied to be given it again`);
       await tick();
-      assert.deepEqual([SEL.selected(), HOST.currentState()?.anchor, holds(), TRAIL.all().length, said.slice(n)], [at, { span: at }, null, trail, [reason]], `${what}, ${slot}: the card at the selection, the selection standing, nothing followed or opened, said once at the press`);
+      assert.deepEqual([SEL.selected(), HOST.currentState()?.anchor, holds(), TRAIL.all().length, said.slice(n)], [at, { span: at }, null, trail, [heard(reason)]], `${what}, ${slot}: the card at the selection, the selection standing, nothing followed or opened, said once at the press`);
     }
     // a press on each button, as a click or Enter makes it, says the same at the slot
     for (const slot of /** @type {const} */ (['follow', 'scene'])) {
@@ -2174,7 +2180,7 @@ test('at a passage no link is drawn at — in an edition of the session\'s accou
       let marked = false;
       /** @type {any} */ (HOST.currentState()?.acts?.[slot])(/** @type {any} */ ({ setAttribute: () => { marked = true; }, closest: () => null }), false);
       await tick();
-      assert.deepEqual([marked, said.slice(n), TRAIL.all().length, overlay()], [true, [reason], trail, 'selection'], `${what}, ${slot} pressed: the button marks itself and says the reason again, nothing followed or opened`);
+      assert.deepEqual([marked, said.slice(n), TRAIL.all().length, overlay()], [true, [heard(reason)], trail, 'selection'], `${what}, ${slot} pressed: the button marks itself and says the reason again, nothing followed or opened`);
     }
     // nothing selected: each chord draws the card at the walk's span whole, which the card holds
     SEL.clear();
@@ -2184,7 +2190,7 @@ test('at a passage no link is drawn at — in an edition of the session\'s accou
       const n = said.length;
       assert.equal(await KEYS.dispatch(keyOf(key, mods), PLANE), true, `${what}, ${slot}'s chord with nothing selected: taken`);
       await tick();
-      assert.deepEqual([SEL.selected(), holds(), slotIn(slot).reason, said.slice(n), HINT.standing(), TRAIL.all().length], [null, block, line, [reason], null, trail],
+      assert.deepEqual([SEL.selected(), holds(), slotIn(slot).reason, said.slice(n), HINT.standing(), TRAIL.all().length], [null, block, line, [heard(reason)], null, trail],
         `${what}, ${slot}: the card at the walk's span whole, nothing selected, its reason given there and said — never the hint to select a passage first`);
       HOST.dismiss();
     }
@@ -2463,7 +2469,7 @@ test('at a caret in a draft that cannot be written now a key that would put text
         await press(key);
         const h = hintSentences(line, { board });
         assert.deepEqual([WRITE.edits(D).length, LAYER.caret(), HINT.standing()?.id], [edits, c, line], `${why}, ${key}: no edit, the caret where it stood, the reason's line its answer`);
-        if (key === 'x') assert.equal(said.slice(n).at(-1), h.whole, `${why}: said, whole at its first press`);
+        if (key === 'x') assert.equal(said.slice(n).at(-1), heard(h.whole), `${why}: said, whole at its first press`);
       }
       for (const chord of ['v', 'x']) {
         const n = said.length;
@@ -2482,11 +2488,32 @@ test('at a caret in a draft that cannot be written now a key that would put text
     WRITE.setMoved(D, true);
     const n = said.length;
     await type('c');
-    assert.deepEqual([said.slice(n).at(-1), HINT.standing()?.id, WRITE.edits(D).length], [hinted('B3.moved.first-key'), 'B3.moved.first-key', edits + 2], 'the first key after the moved verdict: typed, and followed by its line');
+    assert.deepEqual([said.slice(n).at(-1), HINT.standing()?.id, WRITE.edits(D).length], [spokenHint('B3.moved.first-key'), 'B3.moved.first-key', edits + 2], 'the first key after the moved verdict: typed, and followed by its line');
     HINT.act();
     await type('d');
     assert.equal(HINT.standing(), null, 'once per verdict: the next key raises none');
   } finally { WRITE.setUnwritable(b.board, null); WRITE.setMoved(D, false); LAYER.dropCaret(); WRITE.clearEdits(D); KEYS._reset(); }
+}));
+
+test('the selection\'s slots are named by their words alone — each chord drawn in its slot, never in its name, an ellipsis never said — and expose their chord as their key: Meta on macOS, Control elsewhere (style S22; patterns K1, K3; D5-F8; issue #626)', () => onPlane(async () => {
+  const mac = KEYS.MAC;
+  HOST.attach(/** @type {any} */ (hostEl));
+  /** @type {Array<[string, string, string]>} each slot, its chord, and its name */
+  const SLOTS = [['annotate', 'Mod+Shift+A', t('D5.annotate')], ['quote', 'Mod+Shift+C', t('D5.quote')], ['wrote', 'Mod+Shift+O', t('B1.who-wrote')], ['uses', 'Mod+Shift+R', t('B1.who-uses')],
+    ['links', 'Mod+Shift+L', t('B1.see-links')], ['follow', 'Mod+Enter', t('B1.follow')], ['scene', 'Mod+Shift+Enter', t('B1.side-by-side')], ['linkto', 'Mod+K', 'link to']];
+  try {
+    for (const platform of [true, false]) {
+      KEYS._platform(platform);
+      await focusOn(O, 1);
+      SEL.select(O, 3, 4);
+      for (const [slot, chord, name] of SLOTS) {
+        const b = /** @type {string} */ (slotIn(slot).button), where = `${platform ? 'macOS' : 'elsewhere'}, ${slot}`;
+        assert.ok(b.includes(` aria-label="${esc(name)}"`) && b.includes(`<kbd>${esc(KEYS.drawChord(chord))}</kbd>`), `${where}: named by its words alone, its chord drawn — ${b}`);
+        assert.ok(b.includes(` aria-keyshortcuts="${chord.replace('Mod', platform ? 'Meta' : 'Control')}"`), `${where}: its chord its key — ${b}`);
+      }
+      SEL.clear();
+    }
+  } finally { KEYS._platform(mac); HOST.dismiss(); }
 }));
 
 test('K-75\'s rows and K-41\'s: Mod+Z undoes and Mod+Shift+Z redoes on every platform; elsewhere than macOS Ctrl+Y redoes too and the trail\'s list is Ctrl+H, drawn so; on macOS ⌘Y stays the trail\'s and ⌘H the platform\'s (D5 K-41, K-75)', () => onPlane(async () => {
@@ -2523,10 +2550,10 @@ test('K-75 at a draft: Mod+Z takes the newest run of typing back whole — the w
     const n = said.length;
     await press('z', MOD);
     assert.deepEqual([shown(), caret(), SEL.selected(), HINT.standing(), HOST.currentState()], [TEXT, [D, 6, true], null, null, null], 'the run taken back whole: the text as before it, the caret where the run began, nothing drawn');
-    assert.deepEqual(said.slice(n), [`${t('B3.undo.said.taken-out', { 'first words': 'XYZ' })} ${t('B3.undo.said.put-back', { 'first words': 'st' })}`], 'said once: what was taken out, then what was put back');
+    assert.deepEqual(said.slice(n), [heard(`${t('B3.undo.said.taken-out', { 'first words': 'XYZ' })} ${t('B3.undo.said.put-back', { 'first words': 'st' })}`)], 'said once: what was taken out, then what was put back');
     const m = said.length;
     await press('z', SHIFT);
-    assert.deepEqual([shown().slice(0, 12), caret(), said.slice(m)], ['FirXYZ line.', [D, 7, true], [`${t('B3.undo.said.put-back', { 'first words': 'XYZ' })} ${t('B3.undo.said.taken-out', { 'first words': 'st' })}`]], 'the redo puts the run back as it was, the caret after its words, and says so');
+    assert.deepEqual([shown().slice(0, 12), caret(), said.slice(m)], ['FirXYZ line.', [D, 7, true], [heard(`${t('B3.undo.said.put-back', { 'first words': 'XYZ' })} ${t('B3.undo.said.taken-out', { 'first words': 'st' })}`)]], 'the redo puts the run back as it was, the caret after its words, and says so');
     // a key over a selection begins a run: the arrows end the one before, the selection's replacement is the next
     await press('ArrowRight', { shiftKey: true }, 2);
     await press('Q');
@@ -2547,14 +2574,14 @@ test('K-75 with nothing to take back is answered by its line and never does noth
     await press('Enter');
     // a session that may not write: the draft cannot be written, and the chord is answered by that reason's line
     await press('z', MOD);
-    assert.deepEqual([HINT.standing()?.id, said.at(-1)], ['B3.keyless', hinted('B3.keyless')], 'a draft that cannot be written: the reason\'s own line, nothing composed');
+    assert.deepEqual([HINT.standing()?.id, said.at(-1)], ['B3.keyless', spokenHint('B3.keyless')], 'a draft that cannot be written: the reason\'s own line, nothing composed');
     REC.setSession(/** @type {any} */ ({ session: 's-2', principal: 1, account: '1.0.1', writes: true }));
     await tick();
     HINT._reset();
     // an empty stack, at a live caret
     await press('z', MOD);
     const empty = hintSentences('B3.undo.empty');
-    assert.deepEqual([HINT.standing(), said.at(-1), shown()], [{ id: 'B3.undo.empty', words: empty.whole, whole: empty.whole, open: true, writing: null, ending: constant }, `${empty.whole} ${constant}`, TEXT], 'the empty stack: its line whole at the first press, ending on the constant sentence, nothing changed');
+    assert.deepEqual([HINT.standing(), said.at(-1), shown()], [{ id: 'B3.undo.empty', words: empty.whole, whole: empty.whole, open: true, writing: null, ending: constant }, heard(`${empty.whole} ${constant}`), TEXT], 'the empty stack: its line whole at the first press, ending on the constant sentence, nothing changed');
     await press('z', MOD);
     assert.deepEqual([HINT.standing(), said.at(-1)], [{ id: 'B3.undo.empty', words: empty.clause, whole: empty.whole, open: false, writing: null }, empty.clause], 'a later press: its first clause, the constant sentence no longer beside it');
     const n = said.length;
@@ -2567,7 +2594,7 @@ test('K-75 with nothing to take back is answered by its line and never does noth
     await focusOn(O, 1);
     let m = said.length;
     await press('z', MOD);
-    assert.deepEqual([shown(), said.slice(m), caret()], [TEXT, [t('B3.undo.said.taken-out', { 'first words': 'k' })], [D, 1, true]], 'the draft whose caret the person last held, in view at its reading scale, is the chord\'s — wherever the walk stands');
+    assert.deepEqual([shown(), said.slice(m), caret()], [TEXT, [heard(t('B3.undo.said.taken-out', { 'first words': 'k' }))], [D, 1, true]], 'the draft whose caret the person last held, in view at its reading scale, is the chord\'s — wherever the walk stands');
     // that draft below its reading scale: nothing is its target, and the no-caret line names where the person was last writing
     await type('k');
     await press('Escape');
@@ -2577,10 +2604,10 @@ test('K-75 with nothing to take back is answered by its line and never does noth
     HINT._reset();
     await press('z', MOD);
     const none = hintSentences('B3.undo.none'), writing = sentence('B3.undo.last-writing', { label: LAYER.boxName(D).name });
-    assert.deepEqual([LAYER.editable(D), HINT.standing(), said.at(-1), shown().slice(0, 2)], [false, { id: 'B3.undo.none', words: none.whole, whole: none.whole, open: true, writing, ending: constant }, `${none.whole} ${writing} ${constant}`, 'kF'],
+    assert.deepEqual([LAYER.editable(D), HINT.standing(), said.at(-1), shown().slice(0, 2)], [false, { id: 'B3.undo.none', words: none.whole, whole: none.whole, open: true, writing, ending: constant }, heard(`${none.whole} ${writing} ${constant}`), 'kF'],
       'no draft\'s caret in reach: "undo works in the text of a draft you are writing…", then where the person was last writing, then the constant sentence — and nothing taken back');
     await press('z', MOD);
-    assert.deepEqual([HINT.standing()?.words, HINT.standing()?.writing, HINT.standing()?.ending, said.at(-1)], [none.clause, writing, undefined, `${none.clause} ${writing}`], 'a later press: its first clause and where the person was writing, the constant sentence gone with the whole form');
+    assert.deepEqual([HINT.standing()?.words, HINT.standing()?.writing, HINT.standing()?.ending, said.at(-1)], [none.clause, writing, undefined, heard(`${none.clause} ${writing}`)], 'a later press: its first clause and where the person was writing, the constant sentence gone with the whole form');
     // another's document at its reading scale, the draft out of view: that document's line
     const fo = LAYER.foldOf(REC.doc(O)), bo = docBox(O), co = fo.columns[0];
     CAM.set({ x: bo.x + co.x + co.w / 2, y: bo.y + co.y + co.h / 2, scale: 12 / fo.fs });
@@ -2600,7 +2627,7 @@ test('K-75 with nothing to take back is answered by its line and never does noth
       m = said.length;
       await press('z', MOD);
       await tick();
-      assert.deepEqual([HINT.standing(), said.slice(m)], [{ id: 'C-45', words: c45, whole: c45, open: true, writing: null, ending: constant }, [`${c45} ${constant}`]], `press ${press_} at an edition of the person's own: C-45 naming it, whole, the constant sentence after it`);
+      assert.deepEqual([HINT.standing(), said.slice(m)], [{ id: 'C-45', words: c45, whole: c45, open: true, writing: null, ending: constant }, [heard(`${c45} ${constant}`)]], `press ${press_} at an edition of the person's own: C-45 naming it, whole, the constant sentence after it`);
     }
     assert.deepEqual([fake.asked.filter((k) => k.startsWith('op:') || k.startsWith('resolve:')), WRITE.edits(D).length], [[], 1], 'no press of these composed or sent anything');
   } finally { MACHINE.takeOut(); PORT.boot(null); LAYER.dropCaret(); WRITE.clearEdits(D); KEYS._reset(); }
@@ -2609,8 +2636,9 @@ test('K-75 with nothing to take back is answered by its line and never does noth
 test('an undo the board declined is said in the one line as two sentences — the source of the passage withheld from the person now, naming the origin, then what the undo chord again undoes — said through the status region (B3-S3; D6 BM-11, BM-12; style S1, S2)', () => onPlane(async ({ said }) => {
   const n = said.length;
   WRITE.decline(D, '1.0.2.0.5');
-  assert.deepEqual(said.slice(n), [`The source of this passage is withheld from you now\u00a0— 1.0.2.0.5; the words cannot be put back as the same words. ${KEYS.drawChord('Mod+Z')} again undoes what you did before it.`],
-    'each a sentence, the second opening with the chord in its own case');
+  assert.deepEqual(said.slice(n), [heard(`The source of this passage is withheld from you now\u00a0— 1.0.2.0.5; the words cannot be put back as the same words. ${KEYS.drawChord('Mod+Z')} again undoes what you did before it.`)],
+    'each a sentence, the second opening with the chord in its own case, said as a screen reader hears it');
+  assert.ok(said.at(-1)?.endsWith(` ${KEYS.MAC ? 'Command Z' : 'Control Z'} again undoes what you did before it.`), `the chord by its keys' words: ${said.at(-1)}`);
 }));
 
 test('K-75 at a run whose line awaits the person\'s act — a refused run — is answered at its face: the face shown, no act of it taken, the focus where it stood, nothing composed and nothing dropped; the redo chord there is taken and changes nothing (D6 BM-45)', () => onPlane(async () => {
@@ -2667,7 +2695,7 @@ test('K-75 at a run the board held moved is answered at its face standing at the
     assert.deepEqual([WRITE.keptOf(D)?.word, face?.line.id, HOST.currentState()], ['not yet kept', 'B3.moved', null], 'a moved line stands, its face at the corner, no overlay');
     const n = calls.length, edits = WRITE.edits(D).length, m = said.length;
     await press('z', MOD);
-    assert.deepEqual([HOST.currentState(), said.slice(m), shown().slice(0, 3), WRITE.edits(D).length, WRITE.undoOf(D).length, calls.slice(n), caret()], [null, [faceWords(/** @type {any} */ (face))], 'x.F', edits, 1, [], [D, 3, true]],
+    assert.deepEqual([HOST.currentState(), said.slice(m), shown().slice(0, 3), WRITE.edits(D).length, WRITE.undoOf(D).length, calls.slice(n), caret()], [null, [heard(faceWords(/** @type {any} */ (face)))], 'x.F', edits, 1, [], [D, 3, true]],
       'the press answered at the face: no overlay, its words said, the run\'s words standing, the step on the stack, nothing sent — no `resolve`, no `op` — and the caret where it stood');
   } finally { MACHINE.takeOut(); PORT.boot(null); HOST.dismiss(); LAYER.dropCaret(); WRITE.clearEdits(D); WRITE.setHeld(D, []); KEYS._reset(); }
 }));
