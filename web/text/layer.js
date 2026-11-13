@@ -536,8 +536,8 @@ import { farShort, whyOf } from '../beams/held.js';
 import { applyEdits, sourceRuns, fromBase, boundaries, wordStop } from '../model/derive.js';
 import { homeOf, documentOf, memberOf, versionAddress, accountOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, elementIn, CHROME } from './span.js';
-import { esc, byteLength } from '../util.js';
-import { t, facedHTML, lastRead, runsText, joinRuns, CLIENT_CLOSE } from '../strings.js';
+import { esc, byteLength, numeral } from '../util.js';
+import { t, plural, facedHTML, lastRead, runsText, joinRuns, CLIENT_CLOSE } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -1613,7 +1613,7 @@ function linesAt(/** @type {string} */ words, /** @type {number} */ width) {
 }
 
 /** the width of the count the items a head's rows cannot hold fold into, "⟨n⟩ more" (`headLayout`) */
-const moreWidth = (/** @type {number} */ n) => cornerPx(t('L.corner.more', { n }));
+const moreWidth = (/** @type {number} */ n) => cornerPx(t('L.corner.more', { n: numeral(n) }));
 
 /** a kept clause's width where it follows its document's address on a head's first row: at the address's size, its words whole (`docLabel`) */
 const clauseWidth = (/** @type {{text: string}} */ k) => measureRun(k.text, ADDRESS.px, 'normal', 'client');
@@ -1681,7 +1681,7 @@ export function headLayout(items, name, clause, width, pitch) {
   };
   if (clause) place(-1, clause.w, clause.words, false);
   items.forEach((it, k) => place(k, it.w, it.words, it.yields));
-  if (folded) place(-2, moreWidth(folded), t('L.corner.more', { n: folded }), false);
+  if (folded) place(-2, moreWidth(folded), t('L.corner.more', { n: numeral(folded) }), false);
   // the first row's slots stand at its end, the name's room before them
   const end0 = Math.max(name, ...slots.filter((s) => s.row === 0).map((s) => s.x + s.w)), shift = Math.max(0, width - end0);
   for (const s of slots) if (s.row === 0) s.x += shift;
@@ -3066,7 +3066,7 @@ export function keptCountIn(account) {
 export function docLabel(d, fsPx) {
   const box = boxOf(d.addr), c = LK.countDoc(box), k = box === read.named() ? null : keptIn(d.addr);
   /** @type {import('../plane/labels.js').Part[]} */
-  const parts = d.refused !== 'withheld' && (c.n || c.arriving) ? [{ text: c.arriving ? `${c.n ? c.n + ' · ' : ''}${t('L.arriving')}` : c.n === 1 ? t('F.label.links.1') : t('F.label.links', { n: c.n }), px: ADDRESS.px, ink: COL.greek, fit: 'wrap' }] : [];
+  const parts = d.refused !== 'withheld' && (c.n || c.arriving) ? [{ text: c.arriving ? `${c.n ? numeral(c.n) + ' · ' : ''}${t('L.arriving')}` : plural(c.n, 'F.label.links.1', 'F.label.links'), px: ADDRESS.px, ink: COL.greek, fit: 'wrap' }] : [];
   return {
     lead: leadPart(d, fsPx), address: { text: shortAddr(d), whole: d.addr, px: ADDRESS.px, ink: COL.title, weight: ADDRESS.weight, fit: 'one', face: 'ident' },
     kept: k ? { text: k.text, px: ADDRESS.px, ink: COL.title, fit: 'wrap' } : null, parts, region: d.account,
@@ -4585,7 +4585,7 @@ export function setStops(el, mine, head, at = focusedNow()) {
 export const cornerStop = (el) => allIn(el, 'button').find((b) => b.getAttribute('tabindex') === '0') || el;
 
 /** a head's count of the items its rows fold, "⟨n⟩ more" (`headLayout`): the act that opens them whole beneath its rows, saying whether they stand opened (D5 K-57; FP-26) */
-const moreHTML = (/** @type {number} */ n, /** @type {boolean} */ open) => `<button type="button" class="more" data-more="${n}" aria-expanded="${open}" tabindex="-1">${esc(t('L.corner.more', { n }))}</button>`;
+const moreHTML = (/** @type {number} */ n, /** @type {boolean} */ open) => `<button type="button" class="more" data-more="${n}" aria-expanded="${open}" tabindex="-1">${esc(t('L.corner.more', { n: numeral(n) }))}</button>`;
 
 /** a head's row as markup: a row holding an act a line of acts of its own (`setStops`) */
 const hrowHTML = (/** @type {number} */ i, /** @type {string} */ style, /** @type {string} */ inner) => `<div class="hrow" data-row="${i}"${inner.includes('<button') ? ' role="toolbar"' : ''} style="${style}">${inner}</div>`;

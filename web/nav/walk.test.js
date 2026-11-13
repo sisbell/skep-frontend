@@ -13,8 +13,9 @@
 // set and a period after them, no comma left beside a missing part, then its
 // place in the level — named, and described, by those words heard by S22's
 // table, the words drawn unchanged, a span's words kept as written and a
-// lower bound "at least" — an account holding nothing saying so in a sentence of
-// its own, a withheld run's item its own part — its kind,
+// lower bound "at least" — every count a numeral parted by commas, its noun
+// agreeing, and a position as drawn; an account holding nothing saying so in
+// a sentence of its own, a withheld run's item its own part — its kind,
 // length and origin — naming its origin's one description, which every run
 // of it names, made from the run's placeholder once its clause is read, its
 // owner, its arm and its clause each a sentence, and
@@ -77,7 +78,7 @@ import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
-import { withheldBlockHTML, entitlementArm, articleHTML, copyText, CLAUSE_READING } from '../text/article.js';
+import { withheldBlockHTML, entitlementArm, articleHTML, copyText, itemLength, CLAUSE_READING } from '../text/article.js';
 import { accountCell, boardCell, boardLabelCell, docBox, clearLeftOf, continuationCell, DOC_W } from '../plane/projection.js';
 import { lodOf, residueDepth, markScale, LOD_TXT_LO } from '../plane/lod.js';
 import { placeOf, STANDARD_FS, EDGE } from '../plane/layout.js';
@@ -1434,7 +1435,7 @@ test('the walk takes each box as the version it shows (issues #154, #23): an acc
     const kids = await WALK.childrenOf({ kind: 'account', addr: '1.0.1', pos: null, link: null });
     assert.deepEqual(kids.map((n) => n.addr).filter((a) => [D, D2, E].includes(a)), [D2, E], 'the account lists the version D\'s box shows, in D\'s place, never D');
     const named = WALK.nameOf(kids[0], 0, kids.length);
-    assert.ok(named.startsWith(heard(ended(list(`Published document ${D2}`, '"Tumbler."', venued('F.corner.pinned', { k: 2 }), t('L.mirror.positions', { n: TEXT2.length }))))), 'the mirror names the version by its kind, its own first line, as its box\'s label names it, and its state as its corner states it, heard: ' + named);
+    assert.ok(named.startsWith(heard(ended(list(`Published document ${D2}`, '"Tumbler."', venued('F.corner.pinned', { k: 2 }), itemLength(TEXT2.length))))), 'the mirror names the version by its kind, its own first line, as its box\'s label names it, and its state as its corner states it, heard: ' + named);
     await WALK.focusTo(D, 12);
     assert.deepEqual([walkAt(), WALK.siblingsNow().map((n) => n.pos)], [['block', D2, 11], [1, 11]], 'a landing at D stands on the version\'s span, its siblings the version\'s');
     await WALK.focusTo(E, 3);
@@ -1636,7 +1637,7 @@ test('a kept document\'s mirror item carries the clause its corner or the one li
     WALK.markKept();
     const at = WALK.siblingsNow().findIndex((n) => n.addr === D), named = WALK.mirrorItem(at) || '';
     assert.ok(item().includes(esc(clause)) && named.includes(clause + ' ' + t('L.mirror.item', { i: at + 1, n: WALK.siblingsNow().length })), `its clause a sentence after its words, before its place in the level: ${named}`);
-    assert.ok(named.startsWith(heard(ended(list(`Published document ${D}`, '"Tumbler."', venued('F.corner.latest'), t('L.mirror.positions', { n: 30 }))))), named);
+    assert.ok(named.startsWith(heard(ended(list(`Published document ${D}`, '"Tumbler."', venued('F.corner.latest'), itemLength(30))))), named);
     assert.equal(nameIn(D), named, 'its accessible name written again in place with its words, heard');
     assert.equal(rebuilt(), was, 'written in place, nothing rebuilt');
     text();
@@ -1660,7 +1661,7 @@ test('a document\'s mirror item voices its corner\'s state whole, its kind leadi
   /** a document's item as the mirror names it, led by its kind, its state the words given */
   const itemSays = (/** @type {string} */ addr, /** @type {string} */ state) => {
     const d = REC.doc(addr);
-    return ended(list(`Published document ${addr}`, LAYER.mirrorLabel(d).map((r) => r.text).join(''), state, d.extent != null ? t('L.mirror.positions', { n: d.extent }) : ''));
+    return ended(list(`Published document ${addr}`, LAYER.mirrorLabel(d).map((r) => r.text).join(''), state, d.extent != null ? itemLength(d.extent) : ''));
   };
   /** @type {Array<[string, string, string]>} each version state, the version its box shows, and its corner's state's words after its kind */
   const states = [
@@ -1943,6 +1944,30 @@ test('an account\'s mirror item says its counts in a sentence and, where it hold
     const held = WALK.nameOf({ kind: 'account', addr: '1.0.1', pos: null, link: null }, 0, 2);
     assert.ok(held.startsWith('Account 1.0.1: ') && held.endsWith('. Item 1 of 2.') && !held.includes(t('B1.empty_subspace')) && !held.includes(' — '), `an account holding documents: its counts and its place alone — ${held}`);
   } finally { index([D, E]); }
+});
+
+test('the mirror\'s counts are numerals whose nouns agree with them — "1 account", "1 document, 1 link", a document of "12,345 positions" — and a span\'s position before its document\'s extent stands as drawn (style S17, S18)', () => {
+  const ONE = '1.0.12', OD = ONE + '.0.1', FAR = ONE + '.0.2', L = OD + '.0.2.1', BIG = '1.0.1.0.61';
+  const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: ONE, whole: false, subspace: 1, ordinal: ord, positions: w });
+  const board = () => WALK.nameOf({ kind: 'board', addr: '1', pos: null, link: null }, 0, 1);
+  const listing = (/** @type {Array<{doc: string, account: string}>} */ docs) => REC.takeIndex(/** @type {any} */ ({ docs: docs.map((x) => ({ doc: x.doc, kind: 'edition', label: x.doc, standing: 'public' })), counts: [...new Set(docs.map((x) => x.account))].map((account) => ({ account, documents: docs.filter((x) => x.account === account).length })), state: { arm: 'complete' } }));
+  try {
+    listing([{ doc: D, account: '1.0.1' }]);
+    assert.ok(board().includes(': 1 account. ') && !board().includes('accounts'), `one account: its singular — ${board()}`);
+    // 1.0.12's one document, holding one link from its own words to another of its documents
+    listing([{ doc: D, account: '1.0.1' }, { doc: OD, account: ONE }]);
+    REC.takeLinks(OD, [L]);
+    REC.takeLink({ addr: L, from: [span(OD, 1, 3)], to: [span(FAR, 1, 3)], type: '1.1.0.1.0.1.0.3.13' });
+    assert.ok(board().includes(': 2 accounts. '), `two: its plural — ${board()}`);
+    assert.equal(WALK.nameOf({ kind: 'account', addr: ONE, pos: null, link: null }, 1, 2), 'Account 1.0.12: 1 document, 1 link. Item 2 of 2.', 'one document and one link, each its singular');
+    // a document of 12,345 positions, its second paragraph opening past position 1,000
+    const text = 'a'.repeat(1300) + '\n\n' + 'b'.repeat(12345 - 1302);
+    REC.takeSpanSet(BIG, [{ subspace: 1, ordinal: 1, positions: 12345 }]);
+    REC.takeDelivery(BIG, [{ pos: 1, width: 12345, kind: 'content', text, ref: null, origin: null }]);
+    const doc = WALK.nameOf({ kind: 'document', addr: BIG, pos: null, link: null }, 0, 1), b = LAYER.shownOf(BIG).blocks.find((x) => x.text.startsWith('b'));
+    assert.ok(doc.includes(', 12,345 positions.'), `the document's extent a numeral, its thousands parted by a comma: ${doc.slice(0, 120)}`);
+    assert.ok(b && b.pos > 999 && WALK.nameOf({ kind: 'block', addr: BIG, pos: b.pos, link: null }, 0, 1).startsWith(`Span at position ${b.pos} of 12,345 in ${BIG}: `), 'its position as drawn, its extent a numeral');
+  } finally { REC.invalidate(BIG); index([D, E]); }
 });
 
 // placed last: it holds a document of the account the continuation's tests count, and attaches a mirror of its own

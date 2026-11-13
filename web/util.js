@@ -202,6 +202,18 @@ const TIME = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digi
  */
 export const timeOf = (ms) => TIME.format(new Date(ms));
 
+/** the page's one form of a count: a numeral, its thousands parted by commas, "12,345" */
+const COUNT = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 });
+
+/**
+ * A count as the page names it to a person (style S17): a numeral, its
+ * thousands parted by commas, the same in every browser. Never for an
+ * address, a port, a version number or a position, which stand as drawn.
+ * @param {number} n
+ * @returns {string}
+ */
+export const numeral = (n) => COUNT.format(n);
+
 /**
  * Replace ⟨tokens⟩ in a design string with values; a token left unfilled
  * stays as the design writes it.

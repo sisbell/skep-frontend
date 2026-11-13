@@ -15,7 +15,8 @@
 // answers an act named by the act's caption and described by its words, each
 // rendered for the ear by S22's table; a
 // jump's face hidden exactly while its document is out of the visible view,
-// the one line carrying its words (FP-25); a face shown while the standing
+// the one line carrying its words — never the running mark drawn after them —
+// and whether it is in flight (FP-25); a face shown while the standing
 // overlay's field holds the caret taking nothing's place (FP-20); a change
 // of the page's class dismissing the card standing and ending the opening, a
 // jump's reading face and a moment's standing through it (FP-29); what a
@@ -50,6 +51,7 @@ import * as LINE from '../line/line.js';
 import * as CAM from '../plane/camera.js';
 import { docBox } from '../plane/projection.js';
 import { t, heard } from '../strings.js';
+import { page } from '../test/dom.js';
 
 /** the host's stand-in element: what the host writes into it is what a person meets */
 const hostEl = { className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {}, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }), contains: () => false };
@@ -273,10 +275,13 @@ test('the LEAP box opened while an opening reads ends it, the card standing unde
   assert.equal(standing(), null, 'the next Esc dismisses the card');
 });
 
-/** the parts of a face's markup the host reads its words from — its words, its arm, its clause, its note — each as an element bearing its text */
+/** the document the platform's parse of markup is stood in by: the test DOM's */
+const parsed = page().document;
+/** the parts of a face's markup the host reads its words from — its words, its arm, its clause, its note — as the platform's parse finds them: elements with their children, their attributes and their data set */
 const faceParts = (/** @type {string} */ html, /** @type {string} */ sel) => {
-  const classes = sel.split(',').map((s) => s.trim().replace(/^\./, ''));
-  return [...html.matchAll(/<div class="([\w-]+)"(?: data-string="([^"]*)")?>((?:[^<]|<\/?span[^>]*>)*)<\/div>/g)].filter((m) => classes.includes(m[1])).map((m) => ({ id: '', dataset: { string: m[2] }, textContent: m[3].replace(/<[^>]*>/g, '') }));
+  const e = parsed.createElement('div');
+  e.innerHTML = html;
+  return e.querySelectorAll(sel);
 };
 
 test('a face shown while the standing overlay\'s field holds the caret takes nothing\'s place: the overlay stands with its caret, and the face\'s words — a told face\'s too — are said through the status region; with the caret elsewhere, the face takes its place (#171\'s rule 2)', () => {
@@ -387,10 +392,7 @@ test('a jump\'s face is hidden on the plane exactly while the document it stands
   const D = '1.0.1.0.3', b = docBox(D), scale = Math.min(600 / b.w, 600 / b.h);
   CAM.setViewport(1440, 900);
   /** the face's parts the host reads its words from, read from the markup it wrote: its words, its arm, its clause, its note */
-  const parts = (/** @type {string} */ sel) => {
-    const classes = sel.split(',').map((s) => s.trim().replace(/^\./, ''));
-    return [...hostEl.innerHTML.matchAll(/<div class="([\w-]+)"(?: data-string="([^"]*)")?>((?:[^<]|<\/?span[^>]*>)*)<\/div>/g)].filter((m) => classes.includes(m[1])).map((m) => ({ id: '', dataset: { string: m[2] }, textContent: m[3].replace(/<[^>]*>/g, '') }));
-  };
+  const parts = (/** @type {string} */ sel) => faceParts(hostEl.innerHTML, sel);
   const was = { one: hostEl.querySelector, all: hostEl.querySelectorAll, HTMLElement: globalThis.HTMLElement };
   Object.assign(hostEl, { querySelector: (/** @type {string} */ sel) => parts(sel)[0] || null, querySelectorAll: parts });
   globalThis.HTMLElement = /** @type {any} */ (class {});
@@ -400,7 +402,7 @@ test('a jump\'s face is hidden on the plane exactly while the document it stands
     assert.deepEqual([/** @type {any} */ (hostEl.style).visibility, HOST.aside()], ['', null], 'its document in view: shown on the plane, nothing aside');
     CAM.set({ x: b.x - 20 * b.w, y: b.y - 20 * b.h, scale });
     HOST.place();
-    assert.deepEqual([/** @type {any} */ (hostEl.style).visibility, HOST.aside()], ['hidden', { id: 'L.reading', text: t('L.reading', { address: D }) }], 'its document out of view: hidden, the line carrying its words');
+    assert.deepEqual([/** @type {any} */ (hostEl.style).visibility, HOST.aside()], ['hidden', { id: 'L.reading', text: t('L.reading', { address: D }), running: true }], 'its document out of view: hidden, the line carrying its words — never the running mark drawn after them, which is hidden from assistive technology — and that it is in flight');
     CAM.set({ x: b.x + b.w / 2, y: b.y + b.h / 2, scale });
     HOST.place();
     assert.deepEqual([/** @type {any} */ (hostEl.style).visibility, HOST.aside()], ['', null], 'back in view: shown again');
@@ -695,7 +697,7 @@ test('the notice below stands under the overlay\'s box at its left, the two clam
     assert.equal(HOST.aside(), null, 'its document in view: nothing aside');
     CAM.set({ x: b.x - 20 * b.w, y: b.y - 20 * b.h, scale });
     HOST.place();
-    assert.deepEqual([under.style.visibility, HOST.aside(), at(main)], ['hidden', { id: 'F.floating', text: 'its passage is not here' }, { x: 1134, y: 774 }], 'its document out of view: hidden, the line carrying its words, the card held in the viewport by its own height');
+    assert.deepEqual([under.style.visibility, HOST.aside(), at(main)], ['hidden', { id: 'F.floating', text: 'its passage is not here', running: false }, { x: 1134, y: 774 }], 'its document out of view: hidden, the line carrying its words, not in flight, the card held in the viewport by its own height');
   });
 });
 

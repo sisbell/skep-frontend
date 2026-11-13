@@ -77,6 +77,7 @@ import { COL } from '../plane/register.js';
 import { drawRun, runWidth, face, inFace, plain, runsOf, cutWords, apartTexts, LEAD_WORDS } from '../plane/labels.js';
 import { blockIn } from '../model/records.js';
 import { CLIENT_CLOSE } from '../strings.js';
+import { numeral } from '../util.js';
 import { farShort } from './held.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
@@ -502,7 +503,7 @@ function farOf(b) {
  */
 export function labelRuns(b, words = farOf(b).shown) {
   const says = b.members.map((m) => farShort(m.s));
-  const rest = (b.members.length > 1 ? ` · ${b.members.length}` : '') + (says[0] && says.every((w) => w === says[0]) ? ' · ' + says[0] : '');
+  const rest = (b.members.length > 1 ? ` · ${numeral(b.members.length)}` : '') + (says[0] && says.every((w) => w === says[0]) ? ' · ' + says[0] : '');
   /** @type {import('../plane/labels.js').Run[]} */
   const out = [{ text: b.far, face: 'ident' }];
   if (words) out.push({ text: ' · ', face: 'client' }, ...runsOf(words, 'client'));

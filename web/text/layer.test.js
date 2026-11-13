@@ -1739,24 +1739,24 @@ test('a link\'s symbol is titled with its far end\'s state in its short form, a 
   assert.equal(title, esc(`${CITE} · ${part}`), 'its title: its type, then the short form alone');
 });
 
-test('a kept document carries one clause by one rule: a draft holding its text "as last read", else "links as last read" — an edition\'s words never change, so its links\' alone, a pinned box\'s its document\'s — at the page\'s clock at the row or drop that left it behind, the failed read\'s words after it; none where it is not kept, a read refused it, or it holds neither (issues #345, #367)', () => {
+test('a kept document carries one clause by one rule: a draft holding its text "as last read", else "links as last read" — an edition\'s words never change, so its links\' alone, a pinned box\'s its document\'s — at the page\'s clock at the row or drop that left it behind — "at" its time, "on" its day first where that was not today — the failed read\'s words after it; none where it is not kept, a read refused it, or it holds neither (issues #345, #367; style S19)', () => {
   const at = new Date(2026, 2, 12, 9, 5).getTime(), now = new Date(2026, 2, 12, 12).getTime();
   const draft = { ...REC.doc('1.0.1.0.2'), kind: /** @type {const} */ ('draft'), from: 1, to: 5, linksRead: true };
   const kept = { met: null, since: at }, unreachable = { met: /** @type {any} */ ({ kind: 'unreachable', name: 'unreachable', text: '' }), since: at }, busy = { met: /** @type {any} */ ({ kind: 'refused', name: 'scan_busy' }), since: at };
   assert.deepEqual(LAYER.keptWords(draft, draft, kept, now), { id: 'L.kept.text', text: t('L.kept.text', { when: lastRead(at, now) }), reason: '', since: at }, 'a draft holding its text: as last read, at the row or drop that left it behind, the stamp it says');
-  assert.equal(LAYER.keptWords(draft, draft, kept, now)?.text, 'as last read 09:05');
-  assert.equal(LAYER.keptWords(draft, draft, { met: null, since: new Date(2026, 2, 12, 9, 7).getTime() }, now)?.text, 'as last read 09:07', 'the stamp the kept answer carries, whatever the text was read at');
-  assert.deepEqual([LAYER.keptWords(draft, draft, unreachable, now)?.text, LAYER.keptWords(draft, draft, unreachable, now)?.reason], [t('L.kept.failed', { clause: 'as last read 09:05', reason: t('F.daemon.unreachable') }), t('F.daemon.unreachable')], 'the board not answering: its words after the clause, and apart');
-  assert.equal(LAYER.keptWords(draft, draft, busy, now)?.text, t('L.kept.failed', { clause: 'as last read 09:05', reason: t('L.held.why.busy') }), 'a scan the board kept busy');
-  assert.deepEqual(LAYER.keptWords({ ...draft, from: -1 }, draft, kept, now), { id: 'L.kept.links', text: 'links as last read 09:05', reason: '', since: at }, 'a draft holding no text: its links');
+  assert.equal(LAYER.keptWords(draft, draft, kept, now)?.text, 'as last read at 09:05');
+  assert.equal(LAYER.keptWords(draft, draft, { met: null, since: new Date(2026, 2, 12, 9, 7).getTime() }, now)?.text, 'as last read at 09:07', 'the stamp the kept answer carries, whatever the text was read at');
+  assert.deepEqual([LAYER.keptWords(draft, draft, unreachable, now)?.text, LAYER.keptWords(draft, draft, unreachable, now)?.reason], [t('L.kept.failed', { clause: 'as last read at 09:05', reason: t('F.daemon.unreachable') }), t('F.daemon.unreachable')], 'the board not answering: its words after the clause, and apart');
+  assert.equal(LAYER.keptWords(draft, draft, busy, now)?.text, t('L.kept.failed', { clause: 'as last read at 09:05', reason: t('L.held.why.busy') }), 'a scan the board kept busy');
+  assert.deepEqual(LAYER.keptWords({ ...draft, from: -1 }, draft, kept, now), { id: 'L.kept.links', text: 'links as last read at 09:05', reason: '', since: at }, 'a draft holding no text: its links');
   const edition = { ...REC.doc(D), from: 1, to: 5, linksRead: true };
-  assert.deepEqual(LAYER.keptWords(edition, edition, kept, now), { id: 'L.kept.links', text: 'links as last read 09:05', reason: '', since: at }, 'an edition holding its text: its links alone');
+  assert.deepEqual(LAYER.keptWords(edition, edition, kept, now), { id: 'L.kept.links', text: 'links as last read at 09:05', reason: '', since: at }, 'an edition holding its text: its links alone');
   const member = { ...REC.doc(D + '.2'), kind: /** @type {const} */ ('edition'), from: 1, to: 5 };
-  assert.equal(LAYER.keptWords(member, edition, kept, now)?.text, 'links as last read 09:05', 'a pinned box: its document\'s links');
+  assert.equal(LAYER.keptWords(member, edition, kept, now)?.text, 'links as last read at 09:05', 'a pinned box: its document\'s links');
   assert.equal(LAYER.keptWords(draft, draft, null, now), null, 'not kept: none');
   assert.equal(LAYER.keptWords({ ...draft, refused: 'withheld' }, draft, kept, now), null, 'a read refused it: none');
   assert.equal(LAYER.keptWords({ ...edition, linksRead: false }, { ...edition, linksRead: false }, kept, now), null, 'an edition whose links are not read: none');
-  assert.equal(LAYER.keptWords(draft, draft, kept, new Date(2026, 2, 13, 8).getTime())?.text, 'as last read 12 March 2026, 09:05', 'left behind another day: the day first');
+  assert.equal(LAYER.keptWords(draft, draft, kept, new Date(2026, 2, 13, 8).getTime())?.text, 'as last read on 12 March 2026 at 09:05', 'left behind another day: the day first, "on" before it and "at" before the time (style S19)');
 });
 
 test('a withheld origin\'s held claims carry no clause while none stand kept, and its statement carries none (issue #345)', () => {

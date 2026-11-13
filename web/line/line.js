@@ -128,7 +128,9 @@
 // (FP-25): the words of a jump's face whose document stands out of the
 // visible view, in a segment of their own while the plane hides the face
 // (O-HOST's `aside`, read through the reader the app hands in), said already
-// through the status region as the face was shown. A walk's folded moment
+// through the status region as the face was shown — while the face reads or
+// reaches, the one running mark after them and the segment busy (ST's
+// `runningHTML`; foundations §2.1 (4b)). A walk's folded moment
 // (FP-36, FP-20; `walkParts`): after the acting-as segment, one segment
 // for each walk whose moment stands folded — its walk, its step and that it
 // waits on the reader (O-FACES' `folded`), said through the status region as
@@ -203,11 +205,13 @@
 // of the page's class is said once (FP-29), as the reads it asked answer
 // (M-PUMP's `rereading`), UNREACHED_MS at the most after it: the ending's
 // words, then the documents it covered (M-REC's `coveredDocs`), the first
-// COVERED_NAMED by address and the rest counted — never the ending alone
-// first. Every address the line sets stands in the identifier's face — the
-// address segment's, the account its session words name, one in the words
-// another module hands it (ST's `addressedHTML`) — and its other words in
-// the interface face (P-REG's FACE). The chip is no segment (ux-T2: the document's corner).
+// COVERED_NAMED by address and the rest counted, "and ⟨n⟩ more" — never the
+// ending alone first. Every count the line says is a numeral (U's
+// `numeral`). Every address the line sets stands in the identifier's face —
+// the address segment's, the account its session words name, one in the
+// words another module hands it (ST's `addressedHTML`) — and its other words
+// in the interface face (P-REG's FACE). The chip is no segment (ux-T2: the
+// document's corner).
 // Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-22, FP-23, FP-25, FP-26,
 // FP-28, FP-29, FP-32, FP-33, FP-34, FP-35, FP-36.
 
@@ -226,8 +230,8 @@ import { lodOf } from '../plane/lod.js';
 import { boardCell, accountAt, docBox, G, LEAF, DEPTH_SOUND } from '../plane/projection.js';
 import { memberOf, boardOf, accountOf, documentOf } from '../model/address.js';
 import { inFace, runsOf, runWidth, cutWords, LEAD_WORDS } from '../plane/labels.js';
-import { t, tHTML, tRuns, addressedHTML, facedHTML, lastRead, sentence, sentences, heard, joinRuns, asRuns, runsText, CLIENT_CLOSE } from '../strings.js';
-import { esc } from '../util.js';
+import { t, tHTML, tRuns, addressedHTML, facedHTML, lastRead, runningHTML, sentence, sentences, heard, joinRuns, asRuns, runsText, CLIENT_CLOSE } from '../strings.js';
+import { esc, numeral } from '../util.js';
 
 /** @type {HTMLElement | null} */
 let el = null;
@@ -304,7 +308,7 @@ const changes = new Set();
  * @property {(byKey: boolean) => void} trailList
  * @property {(el: HTMLElement) => void} signIn
  * @property {() => void} [again] the board list's "try again", where it was refused retry-class: the list read again (O-FACES' `tryBoardsAgain`)
- * @property {() => ({id: string, text: string} | null)} [aside] a jump's face standing out of the visible view: its string's id and its words (O-HOST's `aside`); null where none stands so
+ * @property {() => ({id: string, text: string, running: boolean} | null)} [aside] a jump's face standing out of the visible view: its string's id, its words and whether it is in flight (O-HOST's `aside`); null where none stands so
  * @property {() => (Pieces | null)} [pieces] the runs of an arrival in several, in the document landed in (N-GO's landing); null where none stands
  * @property {() => Array<{key: string, words: string}>} [walks] the walks' folded moments, each its walk and its segment's words (O-FACES' `folded`)
  * @property {(key: string, byKey: boolean) => void} [walk] a walk's segment's act: its moment unfolded (O-FACES' `unfold`)
@@ -576,14 +580,16 @@ export function classChanged(at = null) {
 /**
  * The change's one message (see the head): the ending's words, then the
  * documents the change covered, the first COVERED_NAMED by address and the
- * rest counted — the ending's alone where it covered none.
+ * rest counted, "and ⟨n⟩ more" (`L.kept.and-more`) — the ending's alone
+ * where it covered none.
  * @param {string} ending the acting-as segment's words for the ending
  * @returns {string}
  */
 function endingSaid(ending) {
   const docs = REC.coveredDocs();
   if (!docs.length) return ending;
-  const named = docs.slice(0, COVERED_NAMED).join(', ') + (docs.length > COVERED_NAMED ? ' ' + t('F.others-count', { n: docs.length - COVERED_NAMED }) : '');
+  const first = docs.slice(0, COVERED_NAMED).join(', ');
+  const named = docs.length > COVERED_NAMED ? t('L.kept.and-more', { name: first, n: numeral(docs.length - COVERED_NAMED) }) : first;
   return t('L.covered', { ending, documents: named });
 }
 
@@ -676,13 +682,13 @@ function causeWords(since, c, now) {
       const by = l.said === 'still' ? 'still ' + l.place.reason : l.said, g = counted.get(by);
       if (g) g.n++; else counted.set(by, { said: l.said, reason: l.place.reason, n: 1 });
     }
-    for (const g of counted.values()) parts.push(liftWords(g.said, t('L.kept.more', { n: g.n }), g.reason));
+    for (const g of counted.values()) parts.push(liftWords(g.said, t('L.kept.more', { n: numeral(g.n) }), g.reason));
   }
   const [named] = appear;
   if (named && appear.length === 1) parts.push(tRuns('L.kept.said', { name: named.named, clause: named.clause }));
   else if (named) {
     const clause = t('L.kept.text', { when: lastRead(since) });
-    parts.push(tRuns('L.kept.said', { name: tRuns('L.kept.and-more', { name: named.named, n: appear.length - 1 }), clause: named.reason ? t('L.kept.failed', { clause, reason: named.reason }) : clause }));
+    parts.push(tRuns('L.kept.said', { name: tRuns('L.kept.and-more', { name: named.named, n: numeral(appear.length - 1) }), clause: named.reason ? t('L.kept.failed', { clause, reason: named.reason }) : clause }));
   }
   return joinRuns('; ', parts);
 }
@@ -1343,7 +1349,7 @@ function addressPart(a, at) {
  * @property {AddressDisplay} a
  * @property {Acting} acting
  * @property {{id: string, html: string, halted: boolean, words: string}} daemon
- * @property {{id: string, text: string} | null} aside a jump's face standing out of the visible view (O-HOST's `aside`)
+ * @property {{id: string, text: string, running: boolean} | null} aside a jump's face standing out of the visible view (O-HOST's `aside`)
  * @property {import('../text/layer.js').KeptClause | null} kept the document named's clause, else the board's: the board heads every place the display names
  */
 
@@ -1390,7 +1396,7 @@ function partsOf(s, at, reserve = false, form = 0) {
   if (s.kept) parts.push({ key: 'kept', html: `<span class="seg kept" data-string="${esc(s.kept.id)}">${esc(s.kept.text)}</span>` });
   parts.push({ key: 'acting', html: actingHTML(s.acting, form, !reserve && actingOpen) }, ...walkParts());
   if (s.daemon.html) parts.push({ key: 'daemon', html: `<span class="seg daemon">${s.daemon.html}</span>` });
-  if (s.aside) parts.push({ key: 'aside', html: `<span class="seg aside" data-string="${esc(s.aside.id)}">${addressedHTML(s.aside.text)}</span>` });
+  if (s.aside) parts.push({ key: 'aside', html: `<span class="seg aside" data-string="${esc(s.aside.id)}"${s.aside.running ? ' aria-busy="true"' : ''}>${addressedHTML(s.aside.text)}${s.aside.running ? runningHTML() : ''}</span>` });
   if (transientSeg) parts.push({ key: 'transient', html: `<span class="seg transient" data-string="${esc(transientSeg.id)}">${transientSeg.html}</span>` });
   return parts;
 }

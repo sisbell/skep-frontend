@@ -1109,6 +1109,9 @@ test('each withheld run carries its own origin\'s key and its origin\'s owner, w
       assert.deepEqual([p.head, p.arm], [t('B1.withheld-run', { owner: r.owner, account: r.owner, width: r.width, origin: r.origin }), entitlementArm(reader, r.owner)], `${what}: its card's head and arm name ${r.owner}`);
     }
   }
+  /** the head of a run of one origin's, its width given */
+  const headOf = (/** @type {number} */ width) => placeholderOf(/** @type {import('../model/records.js').Block} */ ({ pos: 11, width, kind: 'withheld', text: '', origin: '1.0.2.0.2' }), SIGNED, (a) => accountOf(a) || '', () => null).head;
+  assert.deepEqual([headOf(1), headOf(12345)], ['withheld · 1.0.2 (1.0.2) · 1 position · origin 1.0.2.0.2', 'withheld · 1.0.2 (1.0.2) · 12,345 positions · origin 1.0.2.0.2'], 'its positions counted, its noun agreeing, a numeral parted by commas, its origin\'s address as drawn (style S17, S18)');
 });
 
 test('an item this client cannot show is a gap of its positions, each one advance: its row the gap\'s lines, its element as tall and its last line its remainder, its words in it where its full lines hold them, else in its column\'s edge level with its first line, its marks the block\'s (issue #16)', () => {
@@ -1123,7 +1126,7 @@ test('an item this client cannot show is a gap of its positions, each one advanc
   };
   assert.deepEqual(gap(1), { cls: 'sp blk-hex', lines: 1, last: 4, edge: true, words: esc(t('F.not-rendered', { width: 4 })) }, 'four positions: one line four advances long, its words in the edge');
   assert.deepEqual(gap(5), { cls: 'sp blk-hex sel', lines: 3, last: MEASURE_CPL, edge: false, words: esc(t('F.not-rendered', { width: 3 * MEASURE_CPL })) }, 'three full lines: its words in it; the selection touching it marks it');
-  assert.deepEqual(gap(205), { cls: 'sp blk-atom', lines: 1, last: 1, edge: true, words: esc(t('F.not-rendered', { width: 1 })) }, 'an atom of no record\'s value: one position, its words in the edge');
+  assert.deepEqual(gap(205), { cls: 'sp blk-atom', lines: 1, last: 1, edge: true, words: esc('not rendered by this client — 1 position') }, 'an atom of no record\'s value: one position, its noun its singular, its words in the edge (style S18)');
   assert.ok(new RegExp(`<span class="unshown edge" style="${esc('--edge-in')}`).test(html), 'the edge\'s words placed as every sign there is');
   const plan = articlePlan(d, view(), '1.0.1');
   assert.deepEqual(plan.filter((r) => r.pos != null).map((r) => [r.pos, r.kind, r.width]), [[1, 'gap', 4], [5, 'gap', 3 * MEASURE_CPL], [203, 'text', 0], [205, 'gap', 1]], 'each item\'s row its gap, carrying its width');

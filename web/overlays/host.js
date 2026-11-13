@@ -155,8 +155,9 @@
 // at (`sign`), and while that document's region is out of the visible view
 // (T-LAYER's `inView`) the face is hidden on the plane and the one line
 // carries its words in its place (`aside`, read through the reader the app
-// hands L-LINE); it is said through the status region as it is shown,
-// wherever it stands.
+// hands L-LINE), with the running mark while it reads or reaches; it is said
+// through the status region as it is shown, wherever it stands — its words,
+// never what is hidden from assistive technology (`runsIn`).
 // A change of the page's class (FP-23, FP-29): what the host wrote was made
 // from what the class the page left could read, so the change takes it down
 // at once (`classChanged`) — the opening still reading ended, its answer
@@ -354,9 +355,10 @@ function name(host, o, prefix) {
  * An element's words as stretches in their faces, which `heard` renders for
  * the ear: a span set in the reading face, or holding a change's characters
  * (`chars`), the reading face's — a document's or the person's words, kept as
- * written; one set in the identifier's (`id`) the identifier's; every other
- * word the client's. An element whose children cannot be walked gives its
- * words the client's.
+ * written; one set in the identifier's (`id`) the identifier's; one hidden
+ * from assistive technology (`aria-hidden`) — the running mark — none; every
+ * other word the client's. An element whose children cannot be walked gives
+ * its words the client's.
  * @param {Element} e
  * @returns {import('../strings.js').Run[]}
  */
@@ -367,7 +369,7 @@ function runsIn(e) {
   const out = [];
   for (const n of kids) {
     if (n.nodeType === 3) out.push({ text: n.nodeValue || '', face: 'client' });
-    else if (n.nodeType === 1) {
+    else if (n.nodeType === 1 && /** @type {Element} */ (n).getAttribute('aria-hidden') !== 'true') {
       const c = /** @type {Element} */ (n).classList;
       if (c && (c.contains('reading') || c.contains('chars'))) out.push({ text: n.textContent || '', face: 'reading' });
       else if (c && c.contains('id')) out.push({ text: n.textContent || '', face: 'ident' });
@@ -814,15 +816,17 @@ export function endOpening() {
 /**
  * A jump's face standing out of the visible view (see the head; FP-25) — in
  * the overlay's place, else a notice below it: the id of the string its words
- * are, and its words as the status region said them, which the one line
- * carries in its place; null where none stands so.
- * @returns {{id: string, text: string} | null}
+ * are, its words as the status region said them, which the one line carries
+ * in its place, and whether it is in flight — its words' element busy, a
+ * reading or a reaching — so the line draws the running mark after them;
+ * null where none stands so.
+ * @returns {{id: string, text: string, running: boolean} | null}
  */
 export function aside() {
   const host = away(current) ? el : away(stacked) ? stackEl : null;
   if (!host) return null;
   const words = /** @type {HTMLElement | null} */ (host.querySelector('.face-text'));
-  return { id: words ? words.dataset.string || '' : '', text: runsText(faceWords(host)) };
+  return { id: words ? words.dataset.string || '' : '', text: runsText(faceWords(host)), running: !!words && words.getAttribute('aria-busy') === 'true' };
 }
 
 /** the overlay's text (the gate's text case) */

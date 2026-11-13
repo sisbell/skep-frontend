@@ -1289,7 +1289,8 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     caret_end(line1)
     k, armed, how = hold_typed(' Lost.', 'answers_lost', sent=True, refusal=lost)
     r.check(armed, 'the hand-over is armed: the row carrying the shell\'s `answers_lost`', how)
-    minutes = ctx.js('new Intl.NumberFormat(undefined, {style: "unit", unit: "minute", unitDisplay: "long"}).format(2)')
+    # the time elapsed in the strings table's own words, never the browser's language's (style S20): 125 s is 2 minutes
+    minutes = t(ctx, 'L.duration.minutes', {'n': 2})
 
     def handed_check(w):
         f = show_face()

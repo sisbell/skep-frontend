@@ -1019,7 +1019,8 @@ def run(ctx):
     covered = ctx.js('%s.filter((d) => window.__skep.model.doc(d).refused === "withheld")' % json.dumps(sorted(owner_docs, key=num)))
     cover_words = t(ctx, 'F.corner.withheld', {'owner': OWNER})
     # what the change covered: every document the session's index listed that it could read and the guest may not
-    said = t(ctx, 'L.covered', {'ending': t(ctx, 'C-137.signed-out'), 'documents': ', '.join(covered[:5]) + (' ' + t(ctx, 'F.others-count', {'n': len(covered) - 5}) if len(covered) > 5 else '')})
+    first = ', '.join(covered[:5])
+    said = t(ctx, 'L.covered', {'ending': t(ctx, 'C-137.signed-out'), 'documents': t(ctx, 'L.kept.and-more', {'name': first, 'n': len(covered) - 5}) if len(covered) > 5 else first})
     told = wait_for(ctx, 'document.getElementById("live").textContent === %s' % json.dumps(heard(ctx, said)), 5)
     extents_read = [f['doc'] for f in (json.loads(c['frame']) for c in ctx.js('window.__skep.bridge.calls()')[n0:] if c.get('frame')) if f.get('op') == 'retrieve_doc_v_span_set']
     drafts_read = sorted({d for d in extents_read if d in drafts}, key=num)

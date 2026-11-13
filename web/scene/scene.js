@@ -411,8 +411,8 @@ import { LINE_H, MEASURE, MEASURE_CPL, CHAR_W, EDGE, EDGE_GAP, fitFor } from '..
 import { holdStack, LINE_BOX } from '../plane/labels.js';
 import { markDirty, READING_PX } from '../plane/camera.js';
 import { documentOf, homeOf, memberOf, versionAddress, isTrunkMember } from '../model/address.js';
-import { t, tHTML, tRuns, joinRuns, runsText, heard, asHeard, sentence, sentences } from '../strings.js';
-import { esc, byteOffsets } from '../util.js';
+import { t, tHTML, tRuns, plural, joinRuns, runsText, heard, asHeard, sentence, sentences } from '../strings.js';
+import { esc, byteOffsets, numeral } from '../util.js';
 
 /** @typedef {import('../model/frames.js').ComparePair} ComparePair */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -2267,18 +2267,18 @@ function nameReturned(E, S, R) {
   if (stop.kind === 'shared') {
     const text = a ? null : wordsAt(S.b, stop.at.ids);
     /** @type {[string, Record<string, string | number | import('../strings.js').Run[]>]} its name's string, and the values its tokens take, where one string names it */
-    const name = !a ? (text ? ['L.scene.shared.returned', { D, text }] : ['L.scene.shared.returned.away', { D }]) : [a.count > 1 ? 'L.scene.shared' : 'L.scene.shared.1', { D, n: a.count }];
+    const name = !a ? (text ? ['L.scene.shared.returned', { D, text }] : ['L.scene.shared.returned.away', { D }]) : [a.count > 1 ? 'L.scene.shared' : 'L.scene.shared.1', { D, n: numeral(a.count) }];
     if (a && a.holds !== 'all') R.el.setAttribute('aria-label', heard(sentences(sentence('L.scene.shared.1', { D }), saidWords(S, a))));
     else R.el.setAttribute('aria-label', heard(tRuns(...name)));
     if (!a) R.el.innerHTML = READING;
-    else R.el.textContent = a.holds !== 'none' && a.holds !== 'unknown' && a.count > 1 ? String(a.count) : '';
+    else R.el.textContent = a.holds !== 'none' && a.holds !== 'unknown' && a.count > 1 ? numeral(a.count) : '';
     return;
   }
   const changes = a ? null : changesAt(S, stop), [A, B] = sidesOf(S), s = a && a.holds === 'all' ? strokeFor(S, R) : null;
   const name = s ? strokeRuns(s, A, B, LAYER.originOwner) : changes != null ? tRuns('L.scene.stroke.returned', { changes }) : tRuns('L.scene.stroke.returned.away');
   if (a && !s) R.el.setAttribute('aria-label', heard(sentences(sentence('L.scene.stroke.kind'), saidWords(S, a))));
   else R.el.setAttribute('aria-label', heard(name));
-  R.el.innerHTML = !a ? READING : s && s.changes.length > 1 ? `<span class="n">${s.changes.length}</span>` : '';
+  R.el.innerHTML = !a ? READING : s && s.changes.length > 1 ? `<span class="n">${numeral(s.changes.length)}</span>` : '';
 }
 
 /**
@@ -3818,7 +3818,7 @@ export function changeRuns(c, A, B, ownerOf) {
 }
 
 /** what a stroke stands for, counted (see the head) */
-const countOf = (/** @type {Stroke} */ s) => t(s.changes.length > 1 ? 'L.scene.stroke' : 'L.scene.stroke.1', { n: s.changes.length });
+const countOf = (/** @type {Stroke} */ s) => plural(s.changes.length, 'L.scene.stroke.1', 'L.scene.stroke');
 
 /**
  * A stroke's name's words (see the head; `L.scene.stroke.name`): what it
@@ -3888,7 +3888,7 @@ function placeStrokes(E, S) {
     if (!mine || (R && R.answer && R.answer.holds === 'all')) {
       const name = strokeRuns(s, A, B, LAYER.originOwner);
       if (btn.getAttribute('aria-label') !== heard(name)) btn.setAttribute('aria-label', heard(name));
-      const n = s.changes.length > 1 ? String(s.changes.length) : '';
+      const n = s.changes.length > 1 ? numeral(s.changes.length) : '';
       if (btn.textContent !== n) btn.innerHTML = n ? `<span class="n">${esc(n)}</span>` : '';
     }
     btn.style.left = d.at.x - root.left - E.root.clientLeft + 'px';
@@ -4036,10 +4036,10 @@ function placeStop(E, S) {
     if (!stop.hidden) { stop.hidden = true; if (held) FOCUS.land(pane); }
     return;
   }
-  const n = S.shared.length, id = n > 1 ? 'L.scene.shared' : 'L.scene.shared.1', vals = { D: S.b.shows, n };
+  const n = S.shared.length, id = n > 1 ? 'L.scene.shared' : 'L.scene.shared.1', vals = { D: S.b.shows, n: numeral(n) };
   const root = E.root.getBoundingClientRect(), r = pane.getBoundingClientRect(), top = r.top + pane.clientTop;
   stop.setAttribute('aria-label', heard(t(id, vals)));
-  stop.textContent = n > 1 ? String(n) : '';
+  stop.textContent = n > 1 ? numeral(n) : '';
   stop.style.left = r.left - root.left - E.root.clientLeft + 'px';
   stop.style.top = (to.above ? top : top + pane.clientHeight) - root.top - E.root.clientTop + 'px';
   stop.style.transform = to.above ? 'translate(-100%, 0)' : 'translate(-100%, -100%)';

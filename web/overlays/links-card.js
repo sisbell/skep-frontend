@@ -34,7 +34,7 @@ import * as HOST from './host.js';
 import * as ANATOMY from './anatomy-card.js';
 import * as LK from '../links/links.js';
 import * as LAYER from '../text/layer.js';
-import { t, typeName, heard } from '../strings.js';
+import { t, typeName, heard, counted } from '../strings.js';
 import { esc } from '../util.js';
 import { docBox } from '../plane/projection.js';
 import { markDirty } from '../plane/camera.js';
@@ -81,8 +81,8 @@ export function show(addr, byKey = false) {
  * @returns {string}
  */
 export function othersSwitch(on, n) {
-  const id = n === 1 ? 'B1.others-toggle.1' : 'B1.others-toggle';
-  const [before, after] = t(id, { n }).split('⟨state⟩');
+  const { id, n: numbered } = counted(n, 'B1.others-toggle.1', 'B1.others-toggle');
+  const [before, after] = t(id, { n: numbered }).split('⟨state⟩');
   const name = before.replace(/[^\p{L}\p{N}]+$/u, ''), count = after.replace(/^[^\p{L}\p{N}]+/u, '');
   return `<button data-run="others" role="switch" aria-checked="${on}" aria-labelledby="links-others-name" aria-describedby="links-others-count" data-string="${id}">` +
     `<span id="links-others-name">${esc(name)}</span>${esc(before.slice(name.length))}${on ? 'on' : 'off'}${esc(after.slice(0, after.length - count.length))}<span id="links-others-count">${esc(count)}</span></button>`;

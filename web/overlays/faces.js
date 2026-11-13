@@ -98,9 +98,11 @@
 // stood for, where it holds only part, all of it in pieces, or no answer
 // told, in BM-HELD's line at the stop (`held`), "try again" where a retry may
 // tell (FP-21); a jump reading and a jump reaching (FP-25) — an act on such a
-// stop made while the read that draws it is out among the latter — their
-// overlays named `reading:⟨address⟩` and `reaching:⟨address⟩` and never
-// `face:…`, the prefix every other face carries; a version move's reading
+// stop made while the read that draws it is out among the latter — each its
+// words then the one running mark, their element busy while it stands
+// (`runningFaceHTML`; foundations §2.1 (4b)), their overlays named
+// `reading:⟨address⟩` and `reaching:⟨address⟩` and never `face:…`, the
+// prefix every other face carries; a version move's reading
 // face shown as a notice (O-HOST's), the move leaving no place (FP-36) — a
 // jump's anchored, as every face N-GO shows for a jump is, with the document
 // it stands at, out of the visible view of which the one line carries its
@@ -159,7 +161,8 @@
 // W-MACHINE's one test of it (`awaitsAct`, `isMoved`, `deathFaced`): a
 // refused run's — "send again" first, inert with its reason in the own-bug
 // class, "copy these words out", then "discard this change"; the shell's
-// hand-over's, naming the board and the time elapsed; the moved document's
+// hand-over's, naming the board and the time elapsed in whole minutes (ST's
+// `duration`); the moved document's
 // (`movedFace`), naming the hands its rows carry, each in its slot — its
 // words bare, a byline T-ARTICLE sets as a sentence in the face and as a field
 // in a row — the slot the design owes words for, where they are named again,
@@ -209,7 +212,7 @@ import { entitlementArm, placeholderOf, faceRuns, CLAUSE_READING } from '../text
 import { retries, lineOf } from '../beams/held.js';
 import { memberOf } from '../model/address.js';
 import { drawChord } from '../nav/keys.js';
-import { t, tRuns, addressedHTML, endingOf, sentence, heard } from '../strings.js';
+import { t, tRuns, addressedHTML, endingOf, sentence, heard, duration, runningHTML } from '../strings.js';
 import { esc, fingerprintCue } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
@@ -443,6 +446,17 @@ function faceHTML(/** @type {Face} */ face, extra = '') {
   return headHTML(face.head) + `<div class="face-text" data-string="${esc(face.id)}">${addressedHTML(face.text)}</div>` + (extra || '') +
     (face.acts.length ? `<div class="acts">${face.acts.map((a, i) => `<button data-run="a${i}" class="${a.inert ? 'inert' : ''}">${esc(a.label)}</button>`).join('')}</div>` : '');
 }
+
+/**
+ * A face in flight as markup — a jump reading, a jump reaching (FP-25): its
+ * words, each address in them in the identifier's face (ST's
+ * `addressedHTML`), then the one running mark (ST's `runningHTML`), their
+ * element busy while it stands; no act.
+ * @param {string} id the words' string
+ * @param {string} text the words
+ * @returns {string}
+ */
+const runningFaceHTML = (id, text) => `<div class="face-text" data-string="${esc(id)}" aria-busy="true">${addressedHTML(text)}${runningHTML()}</div>`;
 
 /** a face's head as markup: its words above the face's own, named by its string; nothing where the face has none */
 const headHTML = (/** @type {{id: string, text: string} | undefined | null} */ head) => (head ? `<div class="face-head" data-string="${esc(head.id)}">${esc(head.text)}</div>` : '');
@@ -712,7 +726,8 @@ const REACHING = 'reaching:';
  * A jump reading (FP-25): said as the camera leaves, at the place it left
  * for — the document the jump named,
  * its anchor's `sign`, out of the visible view of which the one line carries
- * its words — and heard through the one status region as every face is; gone
+ * its words — its words then the one running mark (`runningFaceHTML`), and
+ * heard through the one status region as every face is, its words alone; gone
  * with the next act, replaced by the face its read brings, or ended as the
  * read answers (`endReading`); shown again where a cursor move reaches its
  * entry while the read is out (N-GO). A version move's, which leaves no place
@@ -724,7 +739,7 @@ const REACHING = 'reaching:';
  * @param {boolean} [notice] it is a version move's: shown as O-HOST's notice
  */
 export function reading(addr, anchor = null, notice = false) {
-  HOST.show({ kind: 'face', id: READING + addr, anchor: toAnchor(anchor), notice, html: faceHTML({ id: 'L.reading', text: t('L.reading', { address: addr }), acts: [] }) });
+  HOST.show({ kind: 'face', id: READING + addr, anchor: toAnchor(anchor), notice, html: runningFaceHTML('L.reading', t('L.reading', { address: addr })) });
 }
 
 /**
@@ -732,8 +747,9 @@ export function reading(addr, anchor = null, notice = false) {
  * board the plane does not draw; the passage a reading scene's stop the
  * reader returned to stands for, pressed while the read that draws it is out
  * (SC's) — said at the act's
- * site in the place of what stands there, the camera still, and heard through
- * the one status region as every face is. Its dismissal — Esc's, the
+ * site in the place of what stands there, the camera still, its words then
+ * the one running mark (`runningFaceHTML`), and heard through the one status
+ * region as every face is, its words alone. Its dismissal — Esc's, the
  * innermost thing — abandons the jump (`abandon`); a replacement does not,
  * the jump reaching on under the overlay shown in its place. It offers no
  * act.
@@ -742,7 +758,7 @@ export function reading(addr, anchor = null, notice = false) {
  * @param {() => void} abandon the jump abandoned, its entry given back (N-GO)
  */
 export function reaching(addr, anchor, abandon) {
-  HOST.show({ kind: 'face', id: REACHING + addr, anchor: toAnchor(anchor), html: faceHTML({ id: 'L.reaching', text: t('L.reaching', { address: addr }), acts: [] }), onDismiss: (replaced) => { if (!replaced) abandon(); } });
+  HOST.show({ kind: 'face', id: REACHING + addr, anchor: toAnchor(anchor), html: runningFaceHTML('L.reaching', t('L.reaching', { address: addr })), onDismiss: (replaced) => { if (!replaced) abandon(); } });
 }
 
 /**
@@ -1254,9 +1270,6 @@ const boardName = () => { const b = REC.board(); return b ? t('L.mirror.board.na
 /** the refusals of a fault of this client's own, whose resend meets the same fault (B3-S2's own-bug class) */
 const OWN_BUG = ['out_of_bounds', 'empty_content', 'not_content_subspace'];
 
-/** a time elapsed, in the reader's own locale's words: whole minutes, one at the least */
-const elapsed = (/** @type {number} */ ms) => new Intl.NumberFormat(undefined, { style: 'unit', unit: 'minute', unitDisplay: 'long' }).format(Math.max(1, Math.round(ms / 60000)));
-
 /** a string filled, by its id: a face's line, a hand's slot, an act's reason */
 const entry = (/** @type {string} */ id, /** @type {Record<string, string>} */ v = {}) => ({ id, text: t(id, v) });
 /** a string filled with a draft's name as the status region names its box (T-LAYER's `boxName`), and with the values its other tokens take — a key drawn for this platform (N-KEYS' `drawChord`): its words, and the same as stretches in their faces, which what is spoken keeps the name of as written; the address alone where the model holds no record */
@@ -1389,7 +1402,7 @@ export function unkeptFace(addr) {
     const again = (/** @type {UnkeptAct['inert']} */ inert = null) => unkeptAct('send', 'B3.send-again', () => sentAgain(addr, refused.held), inert);
     if (r.name === 'answers_lost') {
       const ms = /** @type {{elapsed_ms?: unknown}} */ (r).elapsed_ms;
-      return discardFace('handed', { lines: [entry('B3.answers_lost', { board, time: typeof ms === 'number' ? elapsed(ms) : '' })], acts: [again(), copyRun(words)] }, { id: 'B3.answers_lost.discard', values: { board } }, drop);
+      return discardFace('handed', { lines: [entry('B3.answers_lost', { board, time: typeof ms === 'number' ? duration(ms) : '' })], acts: [again(), copyRun(words)] }, { id: 'B3.answers_lost.discard', values: { board } }, drop);
     }
     const own = OWN_BUG.includes(r.name);
     return discardFace(own ? 'own-bug' : 'refused', { lines: [own ? entry('B3.own-bug') : wordsFor(r, { addr })], acts: [again(own ? entry('B3.own-bug.send-again') : null), copyRun(words)] }, NEVER_KEPT, drop);

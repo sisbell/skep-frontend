@@ -9,7 +9,11 @@
 // reads in them the identifier's and nothing else; a time said in the one
 // form of a date, "not recorded" or "on or before" where the board's
 // testimony leaves it so; when the page last read what it keeps, by its own
-// clock, the hour and the minute, the day first where it was not today; what
+// clock, "at" the hour and the minute, "on" the day first where it was not
+// today, a day alone "on" it and a row's slot bare; a count a numeral, its
+// thousands parted by commas and its noun agreeing; a time elapsed whole
+// minutes in the table's English words; an act in flight typing no ellipsis,
+// the page drawing the one running mark after its words; what
 // the status region says of a kept place, by its name; no words said of a
 // passage held counting "places"; a
 // continuation's mark's count in what it counts; a formatting form named by
@@ -39,7 +43,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { sep } from 'node:path';
-import { STRINGS, t, tHTML, tRuns, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, markCount, typeName, formName, formsNamed, formsAt, formAct, formTakeOff, formTitle, formAgain, hintOf, hintSentences, sentence, sentenceHTML, sentenceRuns, asSentenceRuns, opening, openingHTML, asSentence, ended, endedHTML, sentences, fields, list, heard, asHeard, joinRuns, runsText } from './strings.js';
+import { STRINGS, t, tHTML, tRuns, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, onDay, duration, runningHTML, plural, counted, markCount, typeName, formName, formsNamed, formsAt, formAct, formTakeOff, formTitle, formAgain, hintOf, hintSentences, sentence, sentenceHTML, sentenceRuns, asSentenceRuns, opening, openingHTML, asSentence, ended, endedHTML, sentences, fields, list, heard, asHeard, joinRuns, runsText } from './strings.js';
 
 /** a commons type as a link stores it, by its path under the registry document's subspace 3 */
 const commons = (/** @type {string} */ path) => '1.1.0.1.0.1.0.' + path;
@@ -522,7 +526,6 @@ test('every line the editor\'s design added or re-said on 2026-11-09 stands as i
     ['B3.publish.origins.inert.counterpart', 'B3-S11 P2, P4', 'decide what of ⟨origin⟩ goes with this version: window its published words from version ⟨j⟩, or leave those words out'],
     ['B3.publish.enter', 'B3-S11 P4', 'Enter publishes nothing here\u00a0— Tab to the publish command to take it'],
     ['B3.publish.values', 'B3-S11 P4', 'as it will stand'],
-    ['B3.publish.running', 'B3-S11 P4', 'publishing…'],
     ['B3.publish.restated.lineage', 'B3-S11 P4, THE REFUSALS', '“⟨first words⟩” already carries your ⟨form | link⟩, published before\u00a0— this client offered it again by mistake; nothing was published, and here is what this version now publishes'],
     ['B3.publish.over-cap', 'B3-S11 P1', '⟨n⟩ passages is more than one publication can carry\u00a0— ⟨cap⟩ at most; the first ⟨cap⟩ end at “⟨words⟩”\u00a0— select up to there, and publish the rest with your next version'],
     ['B3.publish.over-cap.act', 'B3-S11 P1', 'select up to there'],
@@ -834,15 +837,18 @@ test('a time is said in one form of a date — the day, the month in words, the 
   assert.equal(dated({ at: null, time: null, from: null }), 'not recorded');
 });
 
-test('when the page last read what it keeps is said by its own clock: the hour and the minute where the read landed today, the day first in the one form of a date where it did not — never an age (issue #345\'s design decision)', () => {
+test('when the page last read what it keeps is said by its own clock in a sentence\'s form: "at" the hour and the minute where the read landed today, "on" the day first in the one form of a date where it did not — never an age; a day alone "on" it, and a row\'s fixed slot the date bare (issue #345\'s design decision; style S19)', () => {
   // in this machine's own time zone: five past nine on the 12th of March 2026, read then and at noon that day, and on the 13th
   const read = new Date(2026, 2, 12, 9, 5).getTime(), noon = new Date(2026, 2, 12, 12).getTime(), next = new Date(2026, 2, 13, 0, 1).getTime();
-  assert.equal(lastRead(read, noon), '09:05');
-  assert.equal(lastRead(read, read), '09:05', 'the read\'s own moment');
-  assert.equal(lastRead(read, next), t('L.time.day-time', { day: '12 March 2026', time: '09:05' }), 'a minute past midnight: the day first');
-  assert.equal(t('L.kept.text', { when: lastRead(read, noon) }), 'as last read 09:05');
-  assert.equal(t('L.kept.links', { when: lastRead(read, next) }), 'links as last read 12 March 2026, 09:05');
+  assert.equal(lastRead(read, noon), 'at 09:05');
+  assert.equal(lastRead(read, read), 'at 09:05', 'the read\'s own moment');
+  assert.equal(lastRead(read, next), 'on 12 March 2026 at 09:05', 'a minute past midnight: the day first');
+  assert.equal(t('L.kept.text', { when: lastRead(read, noon) }), 'as last read at 09:05');
+  assert.equal(t('L.kept.links', { when: lastRead(read, next) }), 'links as last read on 12 March 2026 at 09:05');
   assert.ok(!/ago|minutes?|hours?|days?/.test(lastRead(read, noon) + lastRead(read, next)), 'never a relative age');
+  assert.deepEqual([onDay(read), t('L.versions.as-of', { when: onDay(read) })], ['on 12 March 2026', 'as last read on 12 March 2026'], 'a day in a sentence: "on" before it');
+  assert.equal(dated({ at: 7, time: read, from: 'feed' }), '12 March 2026', 'a row\'s fixed slot: the date bare');
+  for (const id of ['L.time.at', 'L.time.on', 'L.time.day-time']) assert.deepEqual([STRINGS[id].cls, STRINGS[id].source, STRINGS[id].lane], ['DRAFT', 'ux/voice/style.md', undefined], `${id}: S19's form, from the style record`);
 });
 
 test('the status region says a kept place by its name: "⟨name⟩ as last read ⟨when⟩" as it appears, "current, unchanged" or "current, changed" as its reads set it, "still as last read" with the failure\'s words where a read fails — never a bare "now current" — several of one cause counted; the board named as its mirror item names it (issue #369\'s design decision)', () => {
@@ -866,8 +872,36 @@ test('no words a landing, a link\'s far end, a reading scene\'s returned stop or
   assert.ok(t('L.versions.pieces').endsWith(t('L.piece.all')), 'the arrival\'s "all of the passage"');
 });
 
-test('a continuation\'s mark\'s count says what it counts — "152 newer documents", one in its own words — and is a lower bound where the counts are (issue #42\'s design decision)', () => {
+test('a continuation\'s mark\'s count says what it counts — "152 newer documents", one in its own words — and is a lower bound where the counts are, a numeral parted by commas either way (issue #42\'s design decision; style S17)', () => {
   assert.deepEqual([markCount(152, true), markCount(1, true), markCount(152, false)], ['152 newer documents', '1 newer document', '≥ 152 newer documents']);
+  assert.deepEqual([markCount(12345, true), markCount(12345, false)], ['12,345 newer documents', '≥ 12,345 newer documents']);
+});
+
+test('a count chooses its own form: its noun agreeing with it by the singular form beside the plural — "1 link", "0 links", "2 links" — its numeral\'s thousands parted by commas, "12,345 links", the entry\'s other tokens filled as given, an address among them as drawn (style S17, S18)', () => {
+  assert.deepEqual([0, 1, 2, 12345].map((n) => plural(n, 'F.label.links.1', 'F.label.links')), ['0 links', '1 link', '2 links', '12,345 links']);
+  assert.deepEqual([counted(1, 'B1.withheld-run.1', 'B1.withheld-run'), counted(12345, 'B1.withheld-run.1', 'B1.withheld-run')], [{ id: 'B1.withheld-run.1', n: '1' }, { id: 'B1.withheld-run', n: '12,345' }], 'the entry and the numeral, for a site that fills the count under its own token');
+  assert.equal(plural(1, 'L.mirror.board.1', 'L.mirror.board', { board: 'board 1, http://127.0.0.1:8642' }), 'board 1, http://127.0.0.1:8642: 1 account.', 'its other tokens filled');
+  const w = counted(12345, 'B1.withheld-run.1', 'B1.withheld-run');
+  assert.equal(t(w.id, { owner: '1.0.2', account: '1.0.2', width: w.n, origin: '1.0.1.0.12345' }), 'withheld · 1.0.2 (1.0.2) · 12,345 positions · origin 1.0.1.0.12345', 'the count parted by commas, the origin\'s address never');
+  /** @type {Array<[string, string]>} each drawn count's singular form beside its plural one */
+  const pairs = [['F.label.documents.1', 'F.label.documents'], ['F.label.links.1', 'F.label.links'], ['F.count.links.1', 'F.count.links'], ['L.mirror.board.1', 'L.mirror.board'], ['L.item.positions.1', 'L.item.positions'], ['F.not-rendered.1', 'F.not-rendered'], ['B1.withheld-run.1', 'B1.withheld-run'], ['L.scene.stroke.1', 'L.scene.stroke'], ['L.duration.minutes.1', 'L.duration.minutes']];
+  for (const [one, many] of pairs) {
+    const token = /⟨(n|width)⟩/.exec(STRINGS[many].text)?.[1] || 'n', unagreed = t(many, { [token]: 1 });
+    assert.ok(STRINGS[one] && /(^|\s)1 \w/.test(t(one)) && t(one) !== unagreed, `${one}: beside ${many}, its count 1 and its noun singular — "${t(one)}", never "${unagreed}"`);
+  }
+  assert.equal(t('L.scene.stroke.1'), '1 change between two shared passages', 'a count read off the screen a numeral, 1 included (S17)');
+});
+
+test('a time elapsed is whole minutes, one at the least, a numeral and its English word from the strings table — "1 minute", "2 minutes" — never the browser\'s language (style S20)', () => {
+  assert.deepEqual([10, 60000, 89999, 90000, 125000, 60000 * 12345].map(duration), ['1 minute', '1 minute', '1 minute', '2 minutes', '2 minutes', '12,345 minutes']);
+  for (const id of ['L.duration.minutes', 'L.duration.minutes.1']) assert.deepEqual([STRINGS[id].cls, STRINGS[id].source], ['DRAFT', 'ux/voice/style.md'], id);
+});
+
+test('an act or a face in flight types no ellipsis: its words stand unchanged and the page draws the one running mark after them, hidden from assistive technology — the jump\'s reading and reaching, the publish command\'s running words (foundations §2.1 (4b); style S9)', () => {
+  for (const id of ['L.reading', 'L.reaching', 'B3.publish.running']) assert.ok(!STRINGS[id].text.includes('…'), `${id}: ${STRINGS[id].text}`);
+  assert.equal(t('B3.publish.running'), 'publishing');
+  assert.deepEqual([STRINGS['L.running'].text, STRINGS['L.running'].source], ['…', 'designs/foundations.md'], 'the mark, the one the design draws');
+  assert.equal(runningHTML(), '<span class="running" aria-hidden="true" data-string="L.running">…</span>', 'drawn hidden from assistive technology, which hears the state in words');
 });
 
 test('each formatting form has one name — the strip\'s, a heading\'s by its level, 3.23.4 "flag" from the table and never the board\'s registry — and a type the table lacks, or a heading at a level it lacks, the name its card gives it, so none stands blank (issue #442\'s design decision)', () => {

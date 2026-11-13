@@ -11,9 +11,10 @@
 // either shows (FP-33); a withheld run's whole wording a card made from its
 // placeholder's record, at the run's positions, about the run, described by
 // its words, taking the focus where a key opened it; "who wrote this?" and "who uses this?"
-// refused `withheld` showing that face; a jump reading and a jump reaching
-// (FP-25); the fifth cell a follow meets in its far end's words, its label's
-// first, and a typed address's in the board's alone (FP-21); the dead end's
+// refused `withheld` showing that face; a jump reading and a jump reaching,
+// each its words then the one running mark (FP-25); the fifth cell a follow
+// meets in its far end's words, its label's first, and a typed address's in
+// the board's alone (FP-21); the dead end's
 // face and the version offer it takes as it is found
 // (FP-21); a death's face saying its arm's words, "signed out" the page's own
 // close's alone (FP-28); the withheld face at a covered document while the
@@ -36,8 +37,10 @@
 // hand, none under the death — its acts made by their keys there, "see the
 // held text" opening the moved scene on the held version, and a press
 // answered at it, its line and its hand said each a sentence; the
-// device's refusal, each of its lines a sentence; and every face's words,
-// name and description as S22's table hears them, a draft's name in an
+// device's refusal, each of its lines a sentence; the hand-over's time
+// elapsed in whole minutes, English words in a German browser too; and
+// every face's words, name and description as S22's table hears them, a
+// draft's name in an
 // inert act's reason and a device's label in a hand kept as written.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
@@ -61,7 +64,7 @@ import * as LK from '../links/links.js';
 import { accountCell } from '../plane/projection.js';
 import { entitlementArm, faceWords, faceRuns } from '../text/article.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
-import { STRINGS, t, tRuns, addressedHTML, sentence, sentences, heard } from '../strings.js';
+import { STRINGS, t, tRuns, addressedHTML, sentence, sentences, heard, runningHTML } from '../strings.js';
 import { esc, byteLength, fingerprintCue } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
@@ -108,16 +111,18 @@ const hostEl = {
 /** the one status region's stand-in: what the host says through it */
 const live = { textContent: '', setAttribute() {} };
 
-/** the face standing, as a person meets it: its name, its words and their string, the arm beneath them and its string, the acts its controls offer by name, whether its words are open where they fold, and what the host wrote */
+/** the face standing, as a person meets it: its name, its words and their string — the running mark after them set apart — whether it is in flight, the arm beneath them and its string, the acts its controls offer by name, whether its words are open where they fold, and what the host wrote */
 function faceShown() {
   const o = HOST.currentState();
   if (!o) return null;
   const html = hostEl.innerHTML;
-  const words = /<(div|button) class="face-text" data-string="([^"]*)"[^>]*>((?:[^<]|<\/?span[^>]*>)*)<\/\1>/.exec(html), arm = /<div class="arm" data-string="([^"]*)">((?:[^<]|<\/?span[^>]*>)*)<\/div>/.exec(html);
+  const words = /<(div|button) class="face-text" data-string="([^"]*)"([^>]*)>((?:[^<]|<\/?span[^>]*>)*)<\/\1>/.exec(html), arm = /<div class="arm" data-string="([^"]*)">((?:[^<]|<\/?span[^>]*>)*)<\/div>/.exec(html);
   const open = /class="face-text"[^>]* aria-expanded="(true|false)"/.exec(html);
   /** an element's words as a person reads them: its markup's text, each address's span apart */
   const read = (/** @type {string} */ markup) => text(markup.replace(/<[^>]*>/g, ''));
-  return { id: o.id, words: words && [words[2], read(words[3])], arm: arm && [arm[1], read(arm[2])], acts: [...html.matchAll(/data-run="([^"]*)"/g)].map((m) => m[1]), open: open ? open[1] === 'true' : null, html };
+  /** in flight: the words' element busy, the one running mark drawn last inside it */
+  const running = !!words && words[3].includes(' aria-busy="true"') && words[4].endsWith(runningHTML());
+  return { id: o.id, words: words && [words[2], read(running ? words[4].slice(0, -runningHTML().length) : words[4])], running, arm: arm && [arm[1], read(arm[2])], acts: [...html.matchAll(/data-run="([^"]*)"/g)].map((m) => m[1]), open: open ? open[1] === 'true' : null, html };
 }
 
 /** C-39's words past its owner: what it says of a link address, which no document-level face says */
@@ -410,29 +415,31 @@ test('each of the editor\'s refusal names maps to its entry\'s words — the thr
   HOST.dismiss();
 });
 
-test('a jump reading says so in its own words, as a face is heard, and offers no act; it ends where it still stands, and an overlay shown since stands on (issue #136)', () => {
+test('a jump reading says so in its own words, the one running mark drawn after them and their element busy, as a face is heard, its words alone, and offers no act; it ends where it still stands, and an overlay shown since stands on (issue #136; foundations §2.1 (4b); style S9)', () => {
   const D = '1.0.1.0.3', at = { span: { addr: D, pos: 11, width: 5 } };
   FACES.reading(D, at);
   const f = faceShown(), o = HOST.currentState();
-  assert.deepEqual([f?.id, f?.words, f?.acts, o?.anchor, o?.takeFocus], ['reading:' + D, ['L.reading', t('L.reading', { address: D })], [], at, undefined], 'its words at the site it is shown at, no act, no focus taken');
+  assert.deepEqual([f?.id, f?.words, f?.running, f?.acts, o?.anchor, o?.takeFocus], ['reading:' + D, ['L.reading', t('L.reading', { address: D })], true, [], at, undefined], 'its words at the site it is shown at, the running mark after them, no act, no focus taken');
+  assert.ok(!t('L.reading', { address: D }).includes('…') && runningHTML().includes('aria-hidden="true"'), 'its words type no ellipsis: the mark is drawn, hidden from assistive technology');
   assert.ok(!f?.id.startsWith('face:'), 'never named as every other face is');
   assert.equal(live.textContent, heard(t('L.reading', { address: D })), 'heard through the one status region, as a face is');
-  assert.equal(live.textContent, `reading ${D}`, 'its ellipsis drawn, never said');
+  assert.equal(live.textContent, `reading ${D}`, 'its state said once in words, the mark never said');
   FACES.endReading();
   assert.equal(HOST.currentState(), null, 'ended where it stands');
   FACES.reading(D, at);
   FACES.unregistered(D, at);
   FACES.endReading();
-  assert.equal(HOST.currentState()?.id, 'face:doc_not_registered', 'the face its read brought, shown in its place, stands on');
+  assert.deepEqual([HOST.currentState()?.id, faceShown()?.running], ['face:doc_not_registered', false], 'the face its read brought, shown in its place, stands on, no longer in flight: no running mark');
   HOST.dismiss();
 });
 
-test('a jump reaching says so in its own words at the act\'s site, heard as a face is, offering no act; its dismissal abandons the jump, an overlay shown in its place does not (FP-25)', () => {
+test('a jump reaching says so in its own words at the act\'s site, the one running mark drawn after them, heard as a face is, offering no act; its dismissal abandons the jump, an overlay shown in its place does not (FP-25; foundations §2.1 (4b))', () => {
   const D = '1.0.1.0.3', at = { span: { addr: D, pos: 11, width: 5 }, sign: D };
   let abandoned = 0;
   FACES.reaching(D, at, () => { abandoned++; });
   const f = faceShown(), o = HOST.currentState();
-  assert.deepEqual([f?.id, f?.words, f?.acts, o?.anchor, o?.takeFocus], ['reaching:' + D, ['L.reaching', t('L.reaching', { address: D })], [], at, undefined], 'its words at the act\'s site, no act, no focus taken');
+  assert.deepEqual([f?.id, f?.words, f?.running, f?.acts, o?.anchor, o?.takeFocus], ['reaching:' + D, ['L.reaching', t('L.reaching', { address: D })], true, [], at, undefined], 'its words at the act\'s site, the running mark after them, no act, no focus taken');
+  assert.ok(!t('L.reaching', { address: D }).includes('…'), 'its words type no ellipsis: the mark is drawn (style S9)');
   assert.equal(live.textContent, heard(t('L.reaching', { address: D })), 'heard through the one status region');
   FACES.unregistered(D, at);
   assert.deepEqual([HOST.currentState()?.id, abandoned], ['face:doc_not_registered', 0], 'a face shown in its place: the jump not abandoned');
@@ -1182,9 +1189,17 @@ test('BM-19 … BM-27: each other face of unkept words by its state — the hand
   unkeptDraft();
   const board = t('L.mirror.board.name', { node: '1', origin: 'http://127.0.0.1:8644' });
   const kind = () => { const f = FACES.unkeptFace(UD); return f ? [f.kind, f.head?.id ?? null, f.lines.map((l) => l.id), f.acts.map((a) => [a.id, a.inert?.id ?? null]), f.said?.id ?? null] : null; };
-  WRITE.setHeld(UD, [unkeptRow(1, { cause: 'answers_lost', sent: true, refusal: { kind: 'shell', name: 'answers_lost', last: 'unreachable', elapsed_ms: 120480 } })]);
+  const lost = (/** @type {number} */ ms) => unkeptRow(1, { cause: 'answers_lost', sent: true, refusal: { kind: 'shell', name: 'answers_lost', last: 'unreachable', elapsed_ms: ms } });
+  WRITE.setHeld(UD, [lost(120480)]);
   assert.deepEqual(kind(), ['handed', 'B3.not-kept', ['B3.answers_lost'], [['B3.send-again', null], ['B3.copy-words-out', null], ['B3.discard', null]], 'B3.answers_lost.discard']);
-  assert.ok(FACES.unkeptFace(UD)?.lines[0].text.startsWith(`${board} has not answered this change for 2 `), 'the hand-over names the board and the time elapsed');
+  const Native = Intl.NumberFormat;
+  // a browser set to German: every number format asked for with no language of its own is German's
+  Intl.NumberFormat = /** @type {any} */ (function german(/** @type {any} */ locales, /** @type {any} */ options) { return new Native(locales ?? 'de', options); });
+  try {
+    assert.equal(FACES.unkeptFace(UD)?.lines[0].text, t('B3.answers_lost', { board, time: '2 minutes' }), 'the hand-over names the board and the time elapsed, whole minutes in the strings table\'s English words whatever the browser\'s language (style S20)');
+    WRITE.setHeld(UD, [lost(60000)]);
+    assert.equal(FACES.unkeptFace(UD)?.lines[0].text, t('B3.answers_lost', { board, time: '1 minute' }), 'one minute: its singular');
+  } finally { Intl.NumberFormat = Native; }
   WRITE.setHeld(UD, []);
   WRITE.addEdit(UD, { pos: 4, width: 0, text: 'd' }); WRITE.markSent(UD, 1);
   WRITE.markIsland(UD, 1, { kind: 'shell', name: 'frame_too_large' });

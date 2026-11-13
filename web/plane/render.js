@@ -80,7 +80,8 @@
 // instead. Every label is set by role (P-REG's FACE): a place's address and
 // a withheld box's owner in the identifier's face, in the title's ink and
 // never greyed, a document's own words in the reading face, every other
-// word and every count in the client's, its
+// word and every count in the client's — a count a numeral parted by commas,
+// its noun agreeing with it (ST's `plural`; U's `numeral`) — its
 // figures each in a cell as wide as the face's widest, so a count that
 // changes moves nothing beside it (P-LABEL's `drawRun`); each stretch is
 // measured in the face it is set in (`measure`, its widths dropped as a face
@@ -134,7 +135,8 @@ import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, inFace, run
 import { COL, EDGE, HUE, LABEL_MIN_PX, RING, TAIL, TARGET, ADDRESS, WINDOW, STRIP } from './register.js';
 import { documentOf, accountOf, memberOf, isTrunkMember } from '../model/address.js';
 import * as FOCUS from '../nav/focus.js';
-import { t, markCount } from '../strings.js';
+import { t, markCount, plural } from '../strings.js';
+import { numeral } from '../util.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('./projection.js').Cell} Cell */
@@ -277,7 +279,6 @@ function rrect(/** @type {CanvasRenderingContext2D} */ c, /** @type {number} */ 
   c.beginPath(); const rr = Math.max(0, Math.min(r, w / 2, h / 2));
   c.moveTo(x + rr, y); c.arcTo(x + w, y, x + w, y + h, rr); c.arcTo(x + w, y + h, x, y + h, rr); c.arcTo(x, y + h, x, y, rr); c.arcTo(x, y, x + w, y, rr); c.closePath();
 }
-const plural = (/** @type {number} */ n, /** @type {string} */ one, /** @type {string} */ many) => (n === 1 ? t(one) : t(many, { n }));
 
 /** @type {Map<string, number>} the widths the canvas measured, by face, weight, size and string */
 const widths = new Map();
@@ -378,11 +379,12 @@ function drawClusters(/** @type {number} */ alpha, /** @type {Pass} */ pass) {
     const ax = Math.min(15, W * 0.09), cpx = Math.min(12, W * 0.075), kept = LAYER.keptCountIn(a.account);
     pass.labels.push({ kind: 'cluster', place: a.account, within: { x: mark.x + 3, y: mark.y, w: mark.w - 6, h: cy - outer - mark.y }, x: cx, y: cy - outer - lineHeight(ax), align: 'center', alpha, plate: null,
       parts: [{ text: a.account, px: ax, ink: COL.title, fit: 'one', face: 'ident' }], hold: { rects: [mark], pad: 3, plate: COL.cluster } });
+    const docs = plural(count.documents, 'F.label.documents.1', 'F.label.documents');
     /** @type {Part[]} */
     const counts = [
-      { text: `${count.exact ? count.documents : t('L.lower-bound', { n: count.documents })} ${t('F.count.documents')}`, px: cpx, ink: COL.text, fit: 'wrap' },
-      ...(kept ? [{ text: t('L.kept.count', { n: kept }), px: cpx, ink: COL.title, fit: /** @type {const} */ ('wrap') }] : []),
-      { text: `${links.arriving ? t('L.arriving') + ' · ' : ''}${links.n} ${t('F.count.links')}`, px: cpx, ink: COL.text, fit: 'wrap' },
+      { text: count.exact ? docs : t('L.lower-bound', { n: docs }), px: cpx, ink: COL.text, fit: 'wrap' },
+      ...(kept ? [{ text: t('L.kept.count', { n: numeral(kept) }), px: cpx, ink: COL.title, fit: /** @type {const} */ ('wrap') }] : []),
+      { text: `${links.arriving ? t('L.arriving') + ' · ' : ''}${plural(links.n, 'F.count.links.1', 'F.count.links')}`, px: cpx, ink: COL.text, fit: 'wrap' },
     ];
     const land = REC.landmarks().filter((p) => p.account === a.account).length;
     if (land) counts.push({ text: '◆'.repeat(Math.min(4, land)), px: cpx, ink: COL.land, fit: 'one' });
@@ -532,7 +534,7 @@ function drawMark(m, pass, seen, ringed) {
   const label = (/** @type {import('./labels.js').LabelKind} */ kind, /** @type {Part[]} */ ps, /** @type {Rect} */ within, /** @type {number} */ y, /** @type {string | null} */ region) =>
     pass.labels.push({ kind, place: m.key, within, x: within.x, y, align: 'left', alpha: m.alpha, plate: null, parts: ps, region, hold });
   if (ringed) {
-    const d = REC.doc(GO.shownIn(ringed)), at = { i: m.members.indexOf(ringed) + 1, n: exact ? n : t('L.lower-bound', { n }) };
+    const d = REC.doc(GO.shownIn(ringed)), at = { i: numeral(m.members.indexOf(ringed) + 1), n: exact ? numeral(n) : t('L.lower-bound', { n: numeral(n) }) };
     label('member', [{ text: t('L.mark.member', { ...at, name: inFace('ident', LAYER.shortAddr(d)) }), whole: t('L.mark.member', { ...at, name: inFace('ident', d.addr) }), px: f, ink: COL.title, fit: 'wrap' }], rest, rest.y, m.account);
   }
   label('mark', [{ text: markCount(n, exact), px: f, ink: COL.title, fit: 'wrap' }], rest, rest.y, null);
@@ -724,7 +726,7 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
   // room the numeral's own line, which the pass holds clear, and its plate, the plane's ground the line passes behind
   const cpx = sizeOf(LABEL_MIN_PX), lh = lineHeight(LABEL_MIN_PX);
   for (const k of counted) {
-    const text = String(k.count), w = measure(text, cpx, 'normal');
+    const text = numeral(k.count), w = measure(text, cpx, 'normal');
     const at = onStroke(k.p, k.q, { w, h: lh }, pass.shapes, seen);
     const x0 = Math.max(at.x - w / 2, seen.x), y0 = Math.max(at.y - lh / 2, seen.y);
     const within = { x: x0, y: y0, w: Math.max(0, Math.min(at.x + w / 2, seen.x + seen.w) - x0), h: Math.max(0, Math.min(at.y + lh / 2, seen.y + seen.h) - y0) };
@@ -811,7 +813,7 @@ function tailsOf(docsDrawn, placeOf, alpha, pass, seen) {
   return laid.map(({ key, site, to, mark }) => {
     const one = site.ends.length === 1 ? site.ends[0] : null, words = LK.tailFaced(site.ends).map((r) => (r.face === 'client' ? r.text : inFace(r.face, r.text))).join('');
     /** @type {Part[]} */
-    const parts = [one ? { text: one.far, px: LABEL_MIN_PX, ink: COL.text, fit: 'one', face: 'ident' } : { text: String(site.ends.length), px: LABEL_MIN_PX, ink: COL.text, fit: 'one' }, { text: words, px: LABEL_MIN_PX, ink: COL.greek, fit: 'cut' }];
+    const parts = [one ? { text: one.far, px: LABEL_MIN_PX, ink: COL.text, fit: 'one', face: 'ident' } : { text: numeral(site.ends.length), px: LABEL_MIN_PX, ink: COL.text, fit: 'one' }, { text: words, px: LABEL_MIN_PX, ink: COL.greek, fit: 'cut' }];
     const x = to.x + TAIL.gap, y = site.from.y - lh / 2, h = (words ? 2 : 1) * lh;
     pass.labels.push({ kind: 'tail', place: key, within: { x, y, w: roomRight({ x, y }, h, pass.shapes, seen, key), h }, x, y, align: 'left', alpha, plate: COL.bg, parts, hold: null });
     return {

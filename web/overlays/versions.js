@@ -47,8 +47,9 @@
 // stands at the open end, in the list's own type: how far the probe read and
 // that the list is not known to be complete — "then the board stopped
 // answering" where the board did not answer, the line never claiming more
-// versions or none — dated "as last read ⟨when⟩" where it lists members the
-// feed named (the newest held row's commit time, M-REC's `feedTime`), and
+// versions or none — dated "as last read on ⟨date⟩" where it lists members
+// the feed named (the newest held row's commit time, M-REC's `feedTime`; ST's
+// `onDay`), and
 // offering "try again" where a retry may answer otherwise (BM-HELD's
 // `retries`). "Try again" is an opening of its own (O-HOST's `opening`): it
 // goes on from the members read, reads the rows the board did not answer or
@@ -88,8 +89,8 @@ import { whyOf, retries } from '../beams/held.js';
 import { visibleView } from '../plane/camera.js';
 import { docBox } from '../plane/projection.js';
 import { versionAddress, memberOf, documentOf } from '../model/address.js';
-import { t, addressedHTML, dated, heard } from '../strings.js';
-import { esc, dayOf } from '../util.js';
+import { t, addressedHTML, dated, onDay, heard } from '../strings.js';
+import { esc, numeral } from '../util.js';
 
 /** @typedef {import('./host.js').Anchor} Anchor */
 /** @typedef {import('../model/pump.js').Chain} Chain */
@@ -258,7 +259,7 @@ function openEnd(l) {
   const silent = !!c.met && c.met.kind === 'unreachable';
   const id = silent ? (c.n ? 'L.versions.cut' : 'L.versions.cut.none') : c.n ? 'L.versions.open' : 'L.versions.open.none';
   const named = REC.feedMember(l.trunk), when = REC.feedTime();
-  const asOf = named != null && named > c.n && when != null ? t('L.versions.as-of', { when: dayOf(when) }) : null;
+  const asOf = named != null && named > c.n && when != null ? t('L.versions.as-of', { when: onDay(when) }) : null;
   return { id, text: t(id, { k: c.n }), asOf, again: retries(c.met) };
 }
 
@@ -270,7 +271,7 @@ function openEnd(l) {
  */
 function captionOf(l) {
   const cur = memberOf(l.addr);
-  if (l.chain.ended && l.chain.n >= 1) return `${l.trunk} · ${t('F.version-of', { k: cur || l.chain.n, n: l.chain.n })}`;
+  if (l.chain.ended && l.chain.n >= 1) return `${l.trunk} · ${t('F.version-of', { k: cur || l.chain.n, n: numeral(l.chain.n) })}`;
   return cur != null ? `${l.trunk} · ${t('L.version', { k: cur })}` : l.trunk;
 }
 

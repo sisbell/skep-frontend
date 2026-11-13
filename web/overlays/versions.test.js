@@ -300,12 +300,12 @@ test('the version being read is listed where the probe stopped short of it: curr
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('the members a held feed row names past where the probe stopped are listed, each not read, and the line dates them by the newest row\'s commit time, in the form every date of the list takes (issue #184: "as last read ⟨when⟩"; issue #22)', async () => {
+test('the members a held feed row names past where the probe stopped are listed, each not read, and the line dates them by the newest row\'s commit time, in the form every date of the list takes, "on" before it in its sentence (issue #184: "as last read ⟨when⟩"; issue #22; style S19)', async () => {
   const WHEN = new Date(2026, 9, 22, 9, 4).getTime();
   REC.applyFeedUpdate(/** @type {any} */ ({ position: 12654, at: 12654, op: 'publish', docs: [X4], class: 'published', time: WHEN }));
   await VERSIONS.open(X, HELD.pos, null);
   assert.deepEqual([rows(), current(), caption(), marked()], [[[1, 'whole'], [2, 'whole'], [3, 'unread'], [4, 'unread']], [], X, []], 'every member up to the fourth the row names, the third between them among them');
-  assert.deepEqual(openEnd(), { id: 'L.versions.cut', words: t('L.versions.cut', { k: 2 }), asOf: t('L.versions.as-of', { when: '22 October 2026' }), again: true }, 'the day, the month in words and the year, as the rows\' dates: no time of day');
+  assert.deepEqual(openEnd(), { id: 'L.versions.cut', words: t('L.versions.cut', { k: 2 }), asOf: 'as last read on 22 October 2026', again: true }, 'the day, the month in words and the year, as the rows\' dates, "on" before it: no time of day');
   HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });

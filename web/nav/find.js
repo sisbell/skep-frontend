@@ -84,7 +84,7 @@ import * as FOCUS from './focus.js';
 import { MAC, drawChord } from './keys.js';
 import { documentOf, memberOf } from '../model/address.js';
 import { t, tRuns, joinRuns, asRuns, runsText, addressedHTML, heard } from '../strings.js';
-import { byteLength } from '../util.js';
+import { byteLength, numeral } from '../util.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/frames.js').Run} Run */
@@ -514,7 +514,7 @@ function answerOf(s) {
   if (d.extent === 0) clauses.push(t('B1.empty_subspace'));
   if (!s.query) return { count: '', clauses };
   const out = s.reading || (lacks && !refused);
-  const count = out ? t('B2.find.so-far', { n }) : n ? t('B2.find.count', { k: s.current >= 0 ? s.current + 1 : 0, n }) : '';
+  const count = out ? t('B2.find.so-far', { n: numeral(n) }) : n ? t('B2.find.count', { k: numeral(s.current >= 0 ? s.current + 1 : 0), n: numeral(n) }) : '';
   if (!n && !out && d.extent !== 0) clauses.push(tRuns('L.find.none', { where: whereOf(s) }));
   if (d.runs.some((r) => r.kind === 'withheld')) clauses.push(t('L.find.withheld'));
   if (refused) clauses.push(t('L.find.part', { reason: t(HELD.whyOf(refused)) }));

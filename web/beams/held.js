@@ -58,6 +58,7 @@ import { floats } from '../links/links.js';
 import { SIZE_REFUSALS } from '../model/frames.js';
 import { memberOf } from '../model/address.js';
 import { t, sentence, sentences, fields } from '../strings.js';
+import { numeral } from '../util.js';
 
 /** @typedef {import('../model/records.js').ISpan} ISpan */
 /** @typedef {import('../links/links.js').Shown} Shown */
@@ -276,7 +277,7 @@ export function labelOf(p, i, current = false) {
   if (!r) return '';
   /** @type {string[]} */
   const words = [];
-  if (r.piece != null) words.push(t('L.piece', { k: r.piece, n: p.of }));
+  if (r.piece != null) words.push(t('L.piece', { k: numeral(r.piece), n: numeral(p.of) }));
   if (r.repeat) words.push(t(r.repeat === 'again' ? 'L.piece.again' : 'L.piece.again-later'));
   if (current) words.push(...amountOf(p));
   return fields(...words);
@@ -289,7 +290,7 @@ function rangesOf(/** @type {number[]} */ ns) {
   for (let i = 0; i < ns.length; i++) {
     let j = i;
     while (j + 1 < ns.length && ns[j + 1] === ns[j] + 1) j++;
-    out.push(j > i ? `${ns[i]}–${ns[j]}` : String(ns[i]));
+    out.push(j > i ? `${numeral(ns[i])}–${numeral(ns[j])}` : numeral(ns[i]));
     i = j;
   }
   return out.join(', ');
@@ -312,8 +313,8 @@ export function mergedLabel(p, members, current = -1) {
   const nums = [...new Set(runs.flatMap((r) => (r.piece != null ? [r.piece] : [])))].sort((a, b) => a - b);
   /** @type {string[]} */
   const words = [];
-  if (nums.length > 1) words.push(t('L.pieces', { list: rangesOf(nums), n: p.of }));
-  else if (nums.length === 1) words.push(t('L.piece', { k: nums[0], n: p.of }));
+  if (nums.length > 1) words.push(t('L.pieces', { list: rangesOf(nums), n: numeral(p.of) }));
+  else if (nums.length === 1) words.push(t('L.piece', { k: numeral(nums[0]), n: numeral(p.of) }));
   if (runs.some((r) => r.repeat === 'again')) words.push(t('L.piece.again'));
   else if (runs.some((r) => r.repeat === 'again-later')) words.push(t('L.piece.again-later'));
   if (members.includes(current)) words.push(...amountOf(p));

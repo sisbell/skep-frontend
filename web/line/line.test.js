@@ -25,7 +25,8 @@
 // line's acts bearing its id, and where no board is held why in the guest line's place — with no
 // adapter beneath the port why none stands, a page URL's `port` naming no
 // port in its own words — and "go to an address" alone; a jump's face out of
-// view and a walk's folded moment as segments; the halted store's segment and
+// view — the running mark after its words while it is in flight — and a
+// walk's folded moment as segments; the halted store's segment and
 // the mode line built as sentences, drawn and said; a reading scene's close said
 // after it until the next act, whole once a session and as forward ›'s label
 // after; the places the line names; the strip's window over a typed draft
@@ -38,11 +39,12 @@
 // go unset, one message for documents a row names together and none for a
 // change of class's own cause, each name as written; the cover — no
 // position at a refused document, the transient taken down and the class
-// change said once with what it covered; and every name and word said
+// change said once with what it covered, past five documents "and ⟨n⟩ more";
+// and every name and word said
 // rendered for the ear by S22's table — the acts named by their words alone,
 // the trail's chord its key, the bar between parts hidden, the address
 // segment's levels a pause (FP-13, FP-20, FP-21, FP-22, FP-23, FP-25, FP-26,
-// FP-28, FP-29, FP-33, FP-34, FP-35, FP-36; style S22).
+// FP-28, FP-29, FP-33, FP-34, FP-35, FP-36; style S18, S22).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -56,7 +58,7 @@ import * as LAYER from '../text/layer.js';
 import { docBox, accountCell, boardCell, depthOfDoc, DOC_W } from '../plane/projection.js';
 import { STANDARD_FS } from '../plane/layout.js';
 import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
-import { t, tHTML, tRuns, addressedHTML, lastRead, sentence, sentences, heard } from '../strings.js';
+import { t, tHTML, tRuns, addressedHTML, lastRead, runningHTML, sentence, sentences, heard } from '../strings.js';
 import { esc } from '../util.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
@@ -634,16 +636,19 @@ test('the one line\'s device label never shows its template placeholder: where t
   }
 });
 
-test('a jump\'s face standing out of the visible view is carried by the line in a segment of its own — its string\'s id and its words — exactly while the reader the app hands in names one (FP-25: "in the one line when out of view")', () => {
-  /** @type {{id: string, text: string} | null} what O-HOST's `aside` answers */
+test('a jump\'s face standing out of the visible view is carried by the line in a segment of its own — its string\'s id and its words, the one running mark after them and the segment busy while the face is in flight — exactly while the reader the app hands in names one (FP-25: "in the one line when out of view"; foundations §2.1 (4b))', () => {
+  /** @type {{id: string, text: string, running: boolean} | null} what O-HOST's `aside` answers */
   let aside = null;
   const el = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [], contains: () => false };
   LINE.attach(/** @type {any} */ (el), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {}, aside: () => aside });
   LINE.render(true);
   assert.ok(!el.innerHTML.includes('seg aside'), 'none out of view: no segment');
-  aside = { id: 'L.reading', text: t('L.reading', { address: D }) };
+  aside = { id: 'L.reading', text: t('L.reading', { address: D }), running: true };
   LINE.render();
-  assert.ok(el.innerHTML.includes(`<span class="seg aside" data-string="L.reading">${addressedHTML(aside.text)}</span>`) && el.innerHTML.includes(`<span class="id">${D}</span>`), `the face's words in a segment of their own, the address in the identifier's face: ${el.innerHTML}`);
+  assert.ok(el.innerHTML.includes(`<span class="seg aside" data-string="L.reading" aria-busy="true">${addressedHTML(aside.text)}${runningHTML()}</span>`) && el.innerHTML.includes(`<span class="id">${D}</span>`), `the face's words in a segment of their own, the address in the identifier's face, the running mark after them: ${el.innerHTML}`);
+  aside = { id: 'F.floating', text: t('F.floating', { D }), running: false };
+  LINE.render();
+  assert.ok(el.innerHTML.includes(`<span class="seg aside" data-string="F.floating">${addressedHTML(aside.text)}</span>`), `a face no longer in flight: its words alone, the segment not busy: ${el.innerHTML}`);
   aside = null;
   LINE.render();
   assert.ok(!el.innerHTML.includes('seg aside'), 'back in view: the segment gone');
@@ -1352,4 +1357,26 @@ test('a change of the page\'s class is said once, as the reads it asked answer: 
     LINE.render();
     assert.deepEqual([PUMP.kept(D), live.textContent], [null, ''], 'set: nothing said of it either');
   } finally { text(); REC.setSession(was); }
+});
+
+// placed last: the page's own close leaves the drafts it covers covered
+test('a change of the page\'s class that covers more documents than it names says them once, the first five by address and the rest counted "and ⟨n⟩ more", a numeral — never "+⟨n⟩ others" (FP-29; style S18)', () => {
+  const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
+  FOCUS.attach({ live: /** @type {any} */ (live) });
+  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  const was = REC.session(), drafts = Array.from({ length: 7 }, (_, i) => `1.0.1.0.${80 + i}`);
+  try {
+    REC.setSession({ session: 's-628', principal: 1, account: '1.0.1' });
+    // seven drafts the session read, none of them in view: the page's own close covers each at once
+    for (const d of drafts) REC.takeSpanSet(d, [{ subspace: 1, ordinal: 1, positions: 12 }]);
+    REC.sessionDied({ arm: 'closed' });
+    const docs = REC.coveredDocs();
+    assert.ok(drafts.every((d) => docs.includes(d)) && docs.length > 5, `every draft read covered: ${docs}`);
+    live.textContent = '';
+    LINE.classChanged(Date.now());
+    LINE.render();
+    const rest = docs.length - 5;
+    assert.equal(live.textContent, heard(t('L.covered', { ending: t('C-137.signed-out'), documents: `${docs.slice(0, 5).join(', ')} and ${rest} more` })), 'the ending, the first five covered by address, then how many more');
+    assert.ok(!live.textContent.includes('+') && !live.textContent.includes('others'), live.textContent);
+  } finally { REC.setSession(was); }
 });

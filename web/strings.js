@@ -28,11 +28,20 @@
 // (`facedHTML`), or with every address M-ADDR reads in them in the
 // identifier's face (`addressedHTML`); the client's words standing in a
 // document's first line's place are bracketed (`bracketed`, `withheldLine`);
-// when a thing was made is said by `dated`, from the board's own testimony and
-// never from the reader's clock, in one form of a date on every surface; when
-// the page's copy of what it keeps standing was left behind is said by
-// `lastRead`, from the page's own clock — the hour and the minute, the day
-// first where it was not today — and never as an age; a statement said
+// a count is a numeral, its thousands parted by commas (U's `numeral`; style
+// S17), its noun agreeing with it by the singular form beside its plural one
+// (`counted`, `plural`; S18) — never an address, a port, a version number or
+// a position; a time elapsed is whole minutes in this table's English words
+// whatever the browser's language (`duration`; S20); when a thing was made is
+// said by `dated`, from the board's own testimony and never from the reader's
+// clock, in one form of a date on every surface, bare in a row's fixed slot;
+// in a sentence a time takes "at" and a date "on" (S19): when the page's copy
+// of what it keeps standing was left behind is said by `lastRead`, from the
+// page's own clock — "at" the hour and the minute, "on" the day first where it
+// was not today — and never as an age, a day alone by `onDay`; an act or a
+// face in flight draws the one running mark after its unchanged words, hidden
+// from assistive technology, its words' element busy while it runs
+// (`runningHTML`; foundations §2.1 (4b); S9); a statement said
 // before a permanent act is an ordered list of parts, each its text, its
 // case key and whether it is the exit (`StringEntry.parts`, `said`), the
 // string a caller reads their join, and `statementParts` gives the parts
@@ -68,7 +77,7 @@
 // for the gate's text case, which locates each at its source.
 // Rules: FP-1, FP-2, FP-13, FP-32, FP-34.
 
-import { fill, esc, dayOf, timeOf } from './util.js';
+import { fill, esc, dayOf, timeOf, numeral } from './util.js';
 import { commonsType, isAddress } from './model/address.js';
 
 /**
@@ -194,6 +203,7 @@ export const STRINGS = {
   'B1.side-by-side': { text: 'read side by side', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S9' },
   'B1.show-more': { text: 'show more', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S4; a continuation\'s mark\'s list' },
   'B1.withheld-run': { text: 'withheld · ⟨owner⟩ (⟨account⟩) · ⟨width⟩ positions · origin ⟨origin⟩', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S7' },
+  'B1.withheld-run.1': { text: 'withheld · ⟨owner⟩ (⟨account⟩) · 1 position · origin ⟨origin⟩', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S7: a run one position wide' },
   // a refracted link's anatomy (B1-S5), drawn too where the editor's publication shows the person's own links (B3-S11 P3, P5)
   'B1.counterpart': { text: 'on ⟨D⟩\'s earlier words — shown here at their counterpart in version ⟨k⟩', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S5: a refracted link\'s anatomy line; B3-S11 P5' },
   'B1.counterpart.withheld': { text: 'readers of ⟨S⟩ who cannot read this draft see this as withheld', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S5: a public refracted link\'s label; B3-S11 P3 (3), P5' },
@@ -238,8 +248,9 @@ export const STRINGS = {
   'F.leap.floor': { text: 'documents unchanged since ⟨floor⟩ are not found here', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S11' },
   'F.open-beside': { text: 'open beside', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S11' },
   'F.not-rendered': { text: 'not rendered by this client — ⟨width⟩ positions', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S1' },
-  'F.count.documents': { text: 'documents', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
-  'F.count.links': { text: 'links held here', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
+  'F.not-rendered.1': { text: 'not rendered by this client — 1 position', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S1: an item one position wide' },
+  'F.count.links': { text: '⟨n⟩ links held here', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
+  'F.count.links.1': { text: '1 link held here', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
   'F.count.withheld': { text: 'passages withheld from you', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
   'F.home-record.yours': { text: 'your home document — published here from birth, kept at this address; it holds your key record', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S1' },
   'F.home-record.other': { text: '⟨owner⟩\'s home document — it holds their key record', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S1' },
@@ -261,10 +272,10 @@ export const STRINGS = {
   'F.level.home': { text: 'HOME', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S11' },
   'F.landmark': { text: 'landmark ◆', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S11' },
   'F.position': { text: 'position ⟨p⟩', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S11' },
-  'F.label.documents': { text: '⟨n⟩ documents', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S2' },
-  'F.label.documents.1': { text: '1 document', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S2' },
-  'F.label.links': { text: '⟨n⟩ links', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S2' },
-  'F.label.links.1': { text: '1 link', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S2' },
+  'F.label.documents': { text: '⟨n⟩ documents', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S2; B1-S3; the ARIA mirror: an account\'s counts' },
+  'F.label.documents.1': { text: '1 document', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S2; B1-S3; the ARIA mirror: an account\'s counts' },
+  'F.label.links': { text: '⟨n⟩ links', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S2; the ARIA mirror: an account\'s counts, the links ending in a withheld run' },
+  'F.label.links.1': { text: '1 link', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S2; the ARIA mirror: an account\'s counts, the links ending in a withheld run' },
   'F.kind.draft': { text: 'draft', cls: 'DRAFT', source: 'designs/plane.js', screen: 'the corner\'s kind slot; the ARIA mirror: a document\'s item; a reading scene\'s pane\'s name; a landing\'s description' },
   'F.scene.sameness': { text: 'sameness — one identity appearing twice', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S9' },
   'F.scene.link': { text: 'a link — a different relation, drawn differently', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S9' },
@@ -753,7 +764,7 @@ export const STRINGS = {
   'B3.publish.origins.inert.counterpart': { text: 'decide what of ⟨origin⟩ goes with this version: window its published words from version ⟨j⟩, or leave those words out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2, P4: the act forward and the command inert until a part a record names is answered, their reason' },
   'B3.publish.enter': { text: '⟨act key⟩ publishes nothing here\u00a0— ⟨next key⟩ to the publish command to take it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P4: an Enter at the panel\'s statement (D5 K-98)' },
   'B3.publish.values': { text: 'as it will stand', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P4: the caption over every permanent value the act fixes' },
-  'B3.publish.running': { text: 'publishing…', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P4: the one-way command while its request is out' },
+  'B3.publish.running': { text: 'publishing', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P4: the one-way command while its request is out, the page\'s running mark after it (foundations §2.1 (4b))' },
   'B3.publish.other-words': { text: 'to publish other words, cancel and select them', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P1: the selection held' },
   'B3.publish.twin.ask': { text: 'a published document of yours already holds exactly this material — ⟨P⟩; is this the edition this publication minted, or a separate document of yours?', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P1: the twin\'s pre-check at the mint form' },
   'B3.publish.unchanged': { text: 'nothing has changed since version ⟨k⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P4: the command inert' },
@@ -1115,7 +1126,7 @@ export const STRINGS = {
   'L.scene.whole-end': { text: 'the whole document is this link\'s end', cls: 'DRAFT', source: '', screen: 'B1-S9: the far pane', lane: true },
   'L.scene.shared.1': { text: 'show where ⟨D⟩ holds the same material', cls: 'DRAFT', source: '', screen: 'B1-S9: the stop at a band\'s clipped end', lane: true },
   'L.scene.shared': { text: 'show the next of ⟨n⟩ passages where ⟨D⟩ holds the same material', cls: 'DRAFT', source: '', screen: 'B1-S9: the stop at a band\'s clipped end', lane: true },
-  'L.scene.stroke.1': { text: 'one change between two shared passages', cls: 'DRAFT', source: '', screen: 'B1-S9: a stroke between two bands', lane: true },
+  'L.scene.stroke.1': { text: '1 change between two shared passages', cls: 'DRAFT', source: '', screen: 'B1-S9: a stroke between two bands', lane: true },
   'L.scene.stroke': { text: '⟨n⟩ changes between two shared passages', cls: 'DRAFT', source: '', screen: 'B1-S9: a stroke between two bands', lane: true },
   'L.scene.stroke.name': { text: '⟨count⟩: ⟨changes⟩', cls: 'DRAFT', source: '', screen: 'B1-S9: a stroke between two bands', lane: true },
   'L.scene.change': { text: '⟨a⟩ has ⟨one⟩ where ⟨b⟩ has ⟨other⟩', cls: 'DRAFT', source: '', screen: 'B1-S9: a stroke between two bands', lane: true },
@@ -1170,16 +1181,17 @@ export const STRINGS = {
   'L.mirror-level': { text: 'level ⟨n⟩', cls: 'DRAFT', source: 'designs/plane.js', screen: 'the ARIA mirror' },
   // the mirror's item names (N-WALK's `nameOf`): what a screen reader hears at each element of the walk, each a sentence the
   // page composes — the board's item its name, the one the status region calls it by, then its count; an account's, its
-  // counts, then where it holds nothing, that it holds nothing, a sentence of its own
+  // counts — ⟨documents⟩ and ⟨links⟩ each a count with its noun (F.label.documents, F.label.links) — then where it holds
+  // nothing, that it holds nothing, a sentence of its own
   'L.mirror.item': { text: 'Item ⟨i⟩ of ⟨n⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.board.name': { text: 'board ⟨node⟩, ⟨origin⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror; the status region', lane: true },
   'L.mirror.board': { text: '⟨board⟩: ⟨n⟩ accounts.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.account': { text: 'account ⟨account⟩: ⟨documents⟩ documents, ⟨links⟩ links.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.board.1': { text: '⟨board⟩: 1 account.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.account': { text: 'account ⟨account⟩: ⟨documents⟩, ⟨links⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // a document's item: ⟨kind⟩ its corner's first slot's words — a refused document's corner's own words in their place —
-  // then its address; the page lists its first line, its corner's state after that slot and its positions after it, each
-  // where it has one
+  // then its address; the page lists its first line, its corner's state after that slot and its positions after it
+  // (L.item.positions), each where it has one
   'L.mirror.document': { text: '⟨kind⟩ document ⟨document⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.positions': { text: '⟨n⟩ positions', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // a span's item: where it stands, the material's origin the page sets after it (L.mirror.same), then its words
   'L.mirror.span': { text: 'span at position ⟨p⟩ of ⟨extent⟩ in ⟨document⟩⟨same⟩: "⟨text⟩".', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.span.bare': { text: 'span at position ⟨p⟩ in ⟨document⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
@@ -1218,9 +1230,12 @@ export const STRINGS = {
   'L.far.empty.order': { text: 'your account\'s new documents take its addresses in order', cls: 'DRAFT', source: '', screen: 'a link\'s far end: the follow\'s face, the face of "read side by side" opened from it, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
   'L.far.unknown': { text: 'no document known here', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its tail, a merged tail, B1-S5, the "which" list, the follow\'s face, the face of "read side by side" opened from it, the ARIA mirror', lane: true },
   // a jump reading, said where the camera is until its read answers; a jump reaching, said at the act's site while only a read
-  // can place its destination, the camera still (FP-25)
-  'L.reading': { text: 'reading ⟨address⟩…', cls: 'DRAFT', source: '', screen: 'a jump reading: where the camera is, else the one line', lane: true },
-  'L.reaching': { text: 'reaching ⟨address⟩…', cls: 'DRAFT', source: '', screen: 'a jump reaching: at the act\'s site, else the one line; B1-S9: a stop returned to, pressed while its count is read', lane: true },
+  // can place its destination, the camera still (FP-25) — each its words, the page drawing the one running mark after them
+  'L.reading': { text: 'reading ⟨address⟩', cls: 'DRAFT', source: '', screen: 'a jump reading: where the camera is, else the one line', lane: true },
+  'L.reaching': { text: 'reaching ⟨address⟩', cls: 'DRAFT', source: '', screen: 'a jump reaching: at the act\'s site, else the one line; B1-S9: a stop returned to, pressed while its count is read', lane: true },
+  // the one running mark: drawn by the page after the unchanged words of an act or face in flight, never typed into them
+  // (ST's `runningHTML`; style S9)
+  'L.running': { text: '…', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'a jump reading and a jump reaching: at the face and in the one line\'s segment carrying its words; every act in flight (§2.1 (4b))' },
   // a landing's line (FP-21): what of the passage carried or followed the text landed in holds, where it stands in one run
   // and that is not all of it, or where no answer told — the passage named by what it was to the reader, the text by
   // F.floating's two forms, the withheld text after it, a sentence of its own; the same words at a drawn link's far end
@@ -1267,18 +1282,18 @@ export const STRINGS = {
   'L.versions.open': { text: 'read to version ⟨k⟩ — this list is not known to be complete', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
   'L.versions.open.none': { text: 'no version could be read — this list is not known to be complete', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
   'L.versions.not-read': { text: 'not read', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
-  'L.versions.as-of': { text: 'as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
+  'L.versions.as-of': { text: 'as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the versions list: ⟨when⟩ the day, "on" before it (L.time.on)', lane: true },
   'L.versions.latest': { text: 'the latest version', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
   'L.versions.latest-mark': { text: '▲', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
   // a kept document's clause (FP-23, FP-33): what the view shows standing as held past a second while it is read again —
   // a draft's text, else the links drawn with it, or an origin's edition claims at a withheld run of it — said once beside
   // the document's name, and the board's while it lags, ⟨when⟩ the page's own clock at the row or drop that left the copy
-  // behind (`lastRead`), a failed read's words after it — a mirror item carrying it as a sentence of its own;
-  // how many of an account's documents stand so, on its label at far scale; and what the status region says of one
-  // cause (L-LINE's `keptSaid`), ⟨name⟩ each place by the name the mirror finds it by — a document's (T-LAYER's
-  // `placeName`), the board's (L.mirror.board.name), the withheld text of an origin in it: as its clause appears, the
-  // clause; as its reads set it, whether what it shows changed; where a read of it fails, still as last read with the
-  // failure's words; several of one cause the one nearest the focus named, the rest counted
+  // behind in a sentence's form (`lastRead`: L.time.at, L.time.day-time), a failed read's words after it — a mirror item
+  // carrying it as a sentence of its own; how many of an account's documents stand so, on its label at far scale; and
+  // what the status region says of one cause (L-LINE's `keptSaid`), ⟨name⟩ each place by the name the mirror finds it
+  // by — a document's (T-LAYER's `placeName`), the board's (L.mirror.board.name), the withheld text of an origin in it:
+  // as its clause appears, the clause; as its reads set it, whether what it shows changed; where a read of it fails,
+  // still as last read with the failure's words; several of one cause the one nearest the focus named, the rest counted
   'L.kept.text': { text: 'as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; B1-S2: a document\'s label; the ARIA mirror; B1-S3: the board\'s statements; B1-S9: a pane\'s corner; the status region', lane: true },
   'L.kept.links': { text: 'links as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; B1-S2: a document\'s label; the ARIA mirror; B1-S7: a column\'s edge, the run\'s face; B1-S9: a pane\'s corner', lane: true },
   'L.kept.failed': { text: '⟨clause⟩ — ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; B1-S2: a document\'s label; the ARIA mirror; B1-S7; B1-S9: a pane\'s corner', lane: true },
@@ -1287,10 +1302,16 @@ export const STRINGS = {
   'L.kept.unchanged': { text: '⟨name⟩ current, unchanged', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
   'L.kept.changed': { text: '⟨name⟩ current, changed', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
   'L.kept.still': { text: '⟨name⟩ still as last read — ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
-  'L.kept.and-more': { text: '⟨name⟩ and ⟨n⟩ more', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
+  'L.kept.and-more': { text: '⟨name⟩ and ⟨n⟩ more', cls: 'DRAFT', source: '', screen: 'the status region; a session\'s ending, the documents it covered past the first five', lane: true },
   'L.kept.more': { text: '⟨n⟩ more', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
   'L.kept.run': { text: 'the withheld text from ⟨origin⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
-  'L.time.day-time': { text: '⟨day⟩, ⟨time⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; B1-S2: a document\'s label; the ARIA mirror; B1-S7; B1-S9: a pane\'s corner', lane: true },
+  // a time and a date in a sentence (style S19), a row's fixed slot taking them bare: a time, a day, and both; and a time
+  // elapsed, whole minutes (S20)
+  'L.time.at': { text: 'at ⟨time⟩', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'the one line; the corner; B1-S2: a document\'s label; the ARIA mirror; B1-S3: the board\'s statements; B1-S7; B1-S9: a pane\'s corner; the status region' },
+  'L.time.on': { text: 'on ⟨date⟩', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'the versions list: its open end' },
+  'L.time.day-time': { text: 'on ⟨day⟩ at ⟨time⟩', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'the one line; the corner; B1-S2: a document\'s label; the ARIA mirror; B1-S3: the board\'s statements; B1-S7; B1-S9: a pane\'s corner; the status region' },
+  'L.duration.minutes': { text: '⟨n⟩ minutes', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'B3-S2: the hand-over\'s time elapsed (D6 BM-26)' },
+  'L.duration.minutes.1': { text: '1 minute', cls: 'DRAFT', source: 'ux/voice/style.md', screen: 'B3-S2: the hand-over\'s time elapsed (D6 BM-26)' },
   // the shown chords' words (D5-F8; the focus record's rule 19): the dismiss's words — its name, and its title before the key
   // the page draws after them (style S7) — and the version marker's title
   'L.dismiss': { text: 'dismiss', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
@@ -1301,13 +1322,14 @@ export const STRINGS = {
   'L.dialog.face': { text: 'a face', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
   'L.dialog.moment': { text: 'a moment', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
   // the items that hold no text, each kind (FP-24): one entry the ARIA mirror announces at the item (N-WALK's `nameOf`)
-  // and a copy's stand-in names it by in its place (T-ARTICLE's `copyText`), so the two never part; and an item's length
+  // and a copy's stand-in names it by in its place (T-ARTICLE's `copyText`), so the two never part; and an item's length,
+  // which a document's mirror item says its extent in too
   'L.item.record': { text: 'a record', cls: 'DRAFT', source: '', screen: 'the ARIA mirror; a copy\'s plain text', lane: true },
   'L.item.reference': { text: 'a reference', cls: 'DRAFT', source: '', screen: 'the ARIA mirror; a copy\'s plain text', lane: true },
   'L.item.withheld': { text: 'a withheld run', cls: 'DRAFT', source: '', screen: 'the ARIA mirror; a copy\'s plain text', lane: true },
   'L.item.unshown': { text: 'an item this client cannot show', cls: 'DRAFT', source: '', screen: 'the ARIA mirror; a copy\'s plain text', lane: true },
-  'L.item.positions': { text: '⟨n⟩ positions', cls: 'DRAFT', source: '', screen: 'the ARIA mirror; a copy\'s plain text', lane: true },
-  'L.item.positions.1': { text: '1 position', cls: 'DRAFT', source: '', screen: 'the ARIA mirror; a copy\'s plain text', lane: true },
+  'L.item.positions': { text: '⟨n⟩ positions', cls: 'DRAFT', source: '', screen: 'the ARIA mirror: an item, a document; a copy\'s plain text', lane: true },
+  'L.item.positions.1': { text: '1 position', cls: 'DRAFT', source: '', screen: 'the ARIA mirror: an item, a document; a copy\'s plain text', lane: true },
   // a copy's stand-in for an item, in square brackets in its place (FP-24): its kind; a withheld run's owner and length; an
   // item this client cannot show's length; a record's own plain contents — the key record's key labels and their fingerprints
   'L.copy.item': { text: '[⟨kind⟩]', cls: 'DRAFT', source: '', screen: 'a copy\'s plain text', lane: true },
@@ -2166,19 +2188,40 @@ export function formAgain(ty, chord, level) {
   return chord || formName(ty, level);
 }
 
-/** a count noun: `one` where n is 1, else `many` with ⟨n⟩ filled */
-export const plural = (/** @type {number} */ n, /** @type {string} */ one, /** @type {string} */ many) =>
-  n === 1 ? t(one) : t(many, { n });
+/**
+ * A count's entry and its numeral (style S17, S18): the entry `one`, its
+ * singular form, where n is 1, else `many`, its plural, and n as the page
+ * names a count (U's `numeral`) — what `plural` fills, for a site that names
+ * the entry its count fills under another token, or sets its words as markup
+ * or stretches.
+ * @param {number} n
+ * @param {string} one
+ * @param {string} many
+ * @returns {{id: string, n: string}}
+ */
+export const counted = (n, one, many) => ({ id: n === 1 ? one : many, n: numeral(n) });
+
+/**
+ * A count with its noun agreeing (style S17, S18): the entry `one` where n is
+ * 1, else `many` with ⟨n⟩ its numeral (`counted`); `values` fill the entry's
+ * other tokens.
+ * @param {number} n
+ * @param {string} one
+ * @param {string} many
+ * @param {Record<string, string | number>} [values]
+ * @returns {string}
+ */
+export const plural = (n, one, many, values = {}) => { const c = counted(n, one, many); return t(c.id, { ...values, n: c.n }); };
 
 /**
  * A continuation's mark's count in what it counts (`L.mark.count`): its
  * members, "≥ ⟨n⟩" where the counts are no more than a lower bound — the
  * same words on the plane, at the mark's stop in the ARIA mirror and as its
- * list's caption.
+ * list's caption — each count a numeral (`plural`).
  * @param {number} n
  * @param {boolean} exact the index's counts are exact
  */
-export const markCount = (n, exact) => (exact ? plural(n, 'L.mark.count.1', 'L.mark.count') : t('L.mark.count', { n: t('L.lower-bound', { n }) }));
+export const markCount = (n, exact) => (exact ? plural(n, 'L.mark.count.1', 'L.mark.count') : t('L.mark.count', { n: t('L.lower-bound', { n: numeral(n) }) }));
 
 /** the hour an hourly time record's testimony leaves open, in milliseconds: the commit fell within it, after the record's time */
 const HOUR_MS = 60 * 60 * 1000;
@@ -2202,14 +2245,46 @@ export function dated(age) {
 
 /**
  * When the page's copy of what it keeps standing was left behind (FP-23), by
- * the page's own clock: the hour and the minute of the row or drop that left
- * it behind (U's `timeOf`), the day first in the page's one form of a date
- * (U's `dayOf`) where that was not the day it is now — never an age.
+ * the page's own clock, in a sentence's form (style S19): "at" the hour and
+ * the minute of the row or drop that left it behind (U's `timeOf`;
+ * `L.time.at`), "on" the day in the page's one form of a date (U's `dayOf`)
+ * first where that was not the day it is now (`L.time.day-time`) — never an
+ * age.
  * @param {number} ms the page's clock at the row or drop that left the copy behind (M-PUMP's `Kept.since`)
  * @param {number} [now] the page's clock now
  * @returns {string}
  */
 export function lastRead(ms, now = Date.now()) {
   const day = dayOf(ms), time = timeOf(ms);
-  return day === dayOf(now) ? time : t('L.time.day-time', { day, time });
+  return day === dayOf(now) ? t('L.time.at', { time }) : t('L.time.day-time', { day, time });
 }
+
+/**
+ * A day in a sentence (style S19): "on" the day a moment fell on, in the
+ * page's one form of a date (U's `dayOf`; `L.time.on`). A row's fixed slot
+ * takes the date bare (`dated`).
+ * @param {number} ms unix milliseconds
+ * @returns {string}
+ */
+export const onDay = (ms) => t('L.time.on', { date: dayOf(ms) });
+
+/** a minute, in milliseconds */
+const MINUTE_MS = 60 * 1000;
+
+/**
+ * A time elapsed as the page names it to a person (style S20): whole
+ * minutes, one at the least, a numeral and its English word whatever the
+ * browser's language (`plural`; `L.duration.minutes`).
+ * @param {number} ms
+ * @returns {string}
+ */
+export const duration = (ms) => plural(Math.max(1, Math.round(ms / MINUTE_MS)), 'L.duration.minutes.1', 'L.duration.minutes');
+
+/**
+ * The one running mark as markup (foundations §2.1 (4b); style S9): drawn
+ * after the unchanged words of an act or face in flight, hidden from
+ * assistive technology, which hears the state once in words; the element
+ * holding the words and the mark carries `aria-busy` while it runs.
+ * @returns {string}
+ */
+export const runningHTML = () => `<span class="running" aria-hidden="true" data-string="L.running">${esc(t('L.running'))}</span>`;

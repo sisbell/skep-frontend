@@ -108,11 +108,11 @@ def drawn_keys(ctx, sid):
 
 
 # an element's words as stretches in their faces, as the page hands a name it reads off its markup to `heard` (O-HOST's
-# `runsIn`): text in a `.reading` or `.chars` span the reading face's, in an `.id` span the identifier's, an `svg` none,
-# every other word the client's
+# `runsIn`): text in a `.reading` or `.chars` span the reading face's, in an `.id` span the identifier's, an `svg` and an
+# element hidden from assistive technology (`aria-hidden`) none, every other word the client's
 RUNS_IN = '''const runsIn = (e) => { const out = []; for (const n of e.childNodes) {
   if (n.nodeType === 3) out.push({text: n.nodeValue, face: 'client'});
-  else if (n.nodeType === 1 && n.tagName.toLowerCase() !== 'svg') { const c = n.classList;
+  else if (n.nodeType === 1 && n.tagName.toLowerCase() !== 'svg' && n.getAttribute('aria-hidden') !== 'true') { const c = n.classList;
     if (c.contains('reading') || c.contains('chars')) out.push({text: n.textContent, face: 'reading'});
     else if (c.contains('id')) out.push({text: n.textContent, face: 'ident'}); else out.push(...runsIn(n)); } }
   return out; };'''

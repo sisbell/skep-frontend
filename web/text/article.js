@@ -103,7 +103,9 @@
 // follow's targets beside the links drawn there (O-SELECTION; D5 K-51).
 // An item this client cannot show is a gap of its positions too, its words
 // in it where the gap holds them, else in its column's edge (`unshownHTML`;
-// FP-26). The placeholder is one record (`placeholderOf`),
+// FP-26). Every count the article draws — positions, links, versions, a
+// symbol's ends — is a numeral parted by commas, its noun agreeing with it
+// (ST's `counted`, `plural`; U's `numeral`). The placeholder is one record (`placeholderOf`),
 // which the statement, the ARIA mirror's item at the run and its origin's
 // description (N-WALK) and the card (O-FACES's `withheldRun`) read too, so
 // the run a sighted reader sees and the one a screen reader hears never part
@@ -221,8 +223,8 @@
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-21, FP-22, FP-23, FP-24,
 // FP-26, FP-30, FP-31, FP-33, FP-34.
 
-import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint } from '../util.js';
-import { t, tHTML, tRuns, plural, bracketed, withheldLine, endingOf, addressedHTML, sentence, sentences, asSentence, asSentenceRuns, joinRuns, fields, heard } from '../strings.js';
+import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint, numeral } from '../util.js';
+import { t, tHTML, tRuns, plural, counted, bracketed, withheldLine, endingOf, addressedHTML, sentence, sentences, asSentence, asSentenceRuns, joinRuns, fields, heard } from '../strings.js';
 import { below } from '../overlays/statement.js';
 import { textOf, recordValue } from '../model/records.js';
 import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType, isAddress } from '../model/address.js';
@@ -464,7 +466,7 @@ function edgeStyle(k) {
  * @param {{n: number, social: boolean}} c
  * @param {number} k the block's size, in the body's em
  */
-const countHTML = (c, k) => (c.n > 0 ? `<span class="others edge" data-count="${c.n}" style="${edgeStyle(k)}">${esc(t('F.others-count', { n: c.n }))}</span>`
+const countHTML = (c, k) => (c.n > 0 ? `<span class="others edge" data-count="${c.n}" style="${edgeStyle(k)}">${esc(t('F.others-count', { n: numeral(c.n) }))}</span>`
   : c.social ? `<span class="others edge social" data-count="0" style="${edgeStyle(k)}">◦</span>` : '');
 
 /** the stretches of a drawn link's end that meet a block */
@@ -587,8 +589,11 @@ export function recordOf(b, d, reader) {
     const chain = rec.chain.slice(0, 12);
     return { type: 'skep-head', words: `skep-head position ${rec.position} · chain ${chain}…`, keys: '', position: rec.position, chain };
   }
-  return { type: null, words: t('F.not-rendered', { width: b.width }), keys: '', position: null, chain: '' };
+  return { type: null, words: notRendered(b.width), keys: '', position: null, chain: '' };
 }
+
+/** what an item this client cannot show says of itself: that it is not rendered, and its positions counted, the noun agreeing (ST's `counted`) */
+const notRendered = (/** @type {number} */ width) => { const c = counted(width, 'F.not-rendered.1', 'F.not-rendered'); return t(c.id, { width: c.n }); };
 
 /**
  * The record rule's HTML (`recordOf`), the other owner its genesis record
@@ -884,11 +889,11 @@ const unread = () => /** @type {Unread} */ ({ id: 'L.clause.unread', text: t('L.
  * @returns {Placeholder}
  */
 export function placeholderOf(b, reader, originOwner, clauseOf) {
-  const origin = b.origin || '', owner = origin ? originOwner(origin) : '';
+  const origin = b.origin || '', owner = origin ? originOwner(origin) : '', w = counted(b.width, 'B1.withheld-run.1', 'B1.withheld-run');
   return {
     origin,
     owner,
-    head: t('B1.withheld-run', { owner, account: owner, width: b.width, origin }),
+    head: t(w.id, { owner, account: owner, width: w.n, origin }),
     arm: entitlementArm(reader, owner),
     clause: origin ? clauseOf(origin) : null,
   };
@@ -1130,7 +1135,7 @@ const sourceKeyHTML = (origin, scene) => `<span class="src-key"${scene ? '' : ` 
 export const edgeKeyHTML = (run, scene) => (run.withheld ? `<span class="wh-key ${ID}"${control(scene)}>${esc(run.origin)}</span>` : sourceKeyHTML(run.origin, scene));
 
 /** a withheld run's others' count as a sign in its column's edge (`edgeSignsFor`): "+⟨n⟩ others", or the social types' one unnumbered mark */
-export const edgeCountHTML = (/** @type {{n: number, social: boolean}} */ c) => (c.n > 0 ? esc(t('F.others-count', { n: c.n })) : '◦');
+export const edgeCountHTML = (/** @type {{n: number, social: boolean}} */ c) => (c.n > 0 ? esc(t('F.others-count', { n: numeral(c.n) })) : '◦');
 
 /**
  * A transcluded origin's statement in its column's edge (see the head; FP-26,
@@ -1178,7 +1183,7 @@ export function edgeStatementHTML(p, kept, scene) {
  */
 function unshownHTML(b, v, cls, at) {
   const cpl = v.cpl ?? MEASURE_CPL, gap = gapOf(b.width, cpl), full = gap.filter((w) => w >= cpl).length;
-  const words = t('F.not-rendered', { width: b.width });
+  const words = notRendered(b.width);
   const inside = full > 0 && linesAt([{ text: words, face: 'client' }], cpl * CHAR_W, v.measure) <= full;
   const said = inside ? `<span class="unshown">${esc(words)}</span>` : `<span class="unshown edge" style="${edgeStyle(1)}">${esc(words)}</span>`;
   return `<span class="${cls} gap" ${at} style="height:${gap.length * LINE_H}em;--wh-last:${gap[gap.length - 1]}">${said}</span>`;
@@ -1507,7 +1512,7 @@ function stateItems(d, v) {
     const of = statedChain(d, n);
     /** @type {[StateItem, ...StateItem[]]} */
     const out = [kind];
-    if (of != null) out.push(v.lags ? item('version', 'L.version', { k: k || of }) : item('version', 'F.version-of', { k: k || of, n: of }, null, { members: of }));
+    if (of != null) out.push(v.lags ? item('version', 'L.version', { k: k || of }) : item('version', 'F.version-of', { k: k || of, n: numeral(of) }, null, { members: of }));
     if (st) out.push(st);
     return out;
   }
@@ -1645,7 +1650,7 @@ export function cornerItems(d, v, compact = false, statement = true) {
       words('read', s, v.acts === false ? `<span class="read">${esc(s)}</span>` : actHTML('read', ` data-read="${v.read}"`, esc(s)), true);
     }
   }
-  if (v.wholeLinks > 0) { const s = v.wholeLinks === 1 ? t('F.whole-links.1') : t('F.whole-links', { n: v.wholeLinks }); words('whole-links', s, `<span class="whole-links">${esc(s)}</span>`); }
+  if (v.wholeLinks > 0) { const s = plural(v.wholeLinks, 'F.whole-links.1', 'F.whole-links'); words('whole-links', s, `<span class="whole-links">${esc(s)}</span>`); }
   return out;
 }
 
@@ -1811,7 +1816,7 @@ function segmentsOf(b, d, v, ends, standing) {
  */
 function headOf(d, v, owner) {
   const touching = v.marks.length;
-  const presence = touching ? (touching === 1 ? t('B1.presence.1') : t('B1.presence', { n: touching })) : '';
+  const presence = touching ? plural(touching, 'B1.presence.1', 'B1.presence') : '';
   return { addr: d.addr, byline: bylineOf(owner, v), presence };
 }
 
@@ -1921,7 +1926,7 @@ const titleOf = (/** @type {Shown} */ s, /** @type {ArticleView} */ v) => { cons
  */
 function runSymHTML(ends, v) {
   const [first, ...rest] = ends;
-  const m = v.mergedMark([first.mark, ...rest.map((s) => s.mark)]), n = ends.length > 1 ? String(ends.length) : '';
+  const m = v.mergedMark([first.mark, ...rest.map((s) => s.mark)]), n = ends.length > 1 ? numeral(ends.length) : '';
   return `<span class="sym at-run ${m.linker === 'others' ? 'other' : ''} ${m.value < 1 ? 'visited' : ''}" data-links="${ends.map((s) => esc(s.link.addr)).join(' ')}" data-ends="${ends.map((s) => esc(s.key)).join(' ')}" style="--mark-hue:${m.hue};--mark-value:${m.value};--sym-chars:${1 + n.length}"${control(v.scene)} title="${esc(ends.map((s) => titleOf(s, v)).join('; '))}">⟡${n}</span>`;
 }
 
@@ -2042,7 +2047,7 @@ const symbol = (k) => {
  */
 const runSymbol = (k, n) => {
   const s = MEASURE.sym * k, edge = borderEm(BORDER.box) + MEASURE.symPad * s;
-  return { text: '⟡' + (n > 1 ? String(n) : ''), size: s, lead: edge, trail: edge + MEASURE.symGap * s, box: true, own: false };
+  return { text: '⟡' + (n > 1 ? numeral(n) : ''), size: s, lead: edge, trail: edge + MEASURE.symGap * s, box: true, own: false };
 };
 /** an inline-block's width in characters of the body's face, as P-LAY's `wrap` sets it */
 const boxWidth = (/** @type {Piece} */ p) => (p.lead + p.trail) / CHAR_W + [...p.text].length * p.size;

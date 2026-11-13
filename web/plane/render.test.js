@@ -11,7 +11,9 @@
 // only where the region is named — each line on its own plate, its address
 // in the title's ink (FP-26); a kept document's clause after its address on
 // its label below its reading scale, and its account's label counting it at
-// far scale, while it stands kept alone (FP-23); a continuation's mark two targets where it
+// far scale, while it stands kept alone (FP-23); an account's counts
+// numerals, their thousands parted by commas and their nouns agreeing, at far
+// scale and at mid (style S17, S18); a continuation's mark two targets where it
 // holds two — its newest member's label, as the version its box shows, in a
 // band at its foot, and the rest of the mark, its count in what it counts —
 // one where it is too small, and a member the walk's ring stands on ringed
@@ -179,7 +181,7 @@ test('below its reading scale a kept document\'s label carries its clause after 
       CAM.set(v);
       RENDER.draw();
       const doc = RENDER.stats.labels.find((l) => l.kind === 'doc' && l.place === D);
-      const counts = RENDER.stats.labels.find((l) => l.kind === 'cluster' && l.place === '1.0.1' && l.lines.some((x) => x.text.endsWith(t('F.count.documents'))));
+      const counts = RENDER.stats.labels.find((l) => l.kind === 'cluster' && l.place === '1.0.1' && l.lines.some((x) => x.text === t('F.label.documents.1')));
       return { doc: doc ? doc.lines : [], counts: counts ? counts.lines : [] };
     };
     const told = (/** @type {ReturnType<typeof frame>} */ at) => [at.doc.some((x) => x.text.includes('as last read')), at.counts.map((x) => x.text).join(' ').includes(t('L.kept.count', { n: 1 }))];
@@ -198,12 +200,31 @@ test('below its reading scale a kept document\'s label carries its clause after 
     assert.deepEqual([k.px, a.px, k.ink, k.runs.map((r) => r.face)], [ADDRESS.px, ADDRESS.px, COL.title, ['client']], 'at the address\'s size, in the title\'s ink, the client\'s words');
     const counted = frame(far);
     assert.equal(lodOf(CAM.cam.scale).name, 'far', 'at far scale');
-    assert.ok(counted.counts.map((x) => x.text).join(' ').startsWith(`1 ${t('F.count.documents')} ${t('L.kept.count', { n: 1 })}`), `its account's label counts it after its documents: ${JSON.stringify(counted.counts.map((x) => x.text))}`);
+    assert.ok(counted.counts.map((x) => x.text).join(' ').startsWith(`${t('F.label.documents.1')} ${t('L.kept.count', { n: 1 })}`), `its account's label counts it after its document, "1 document" its singular: ${JSON.stringify(counted.counts.map((x) => x.text))}`);
     assert.equal(counted.counts.filter((x) => x.ink === COL.title).map((x) => x.text).join(' '), t('L.kept.count', { n: 1 }), 'in the title\'s ink, the counts beside it in the text\'s');
     release();
     for (let i = 0; i < 50 && PUMP.kept(D); i++) await new Promise((r) => setImmediate(r));
     assert.deepEqual([PUMP.kept(D), ...told(frame(far)), ...told(frame(mid))], [null, false, false, false, false], 'its read again set it: neither');
   } finally { REC._reset(); WRITE._reset(); CAM.setViewport(1440, 900); PORT.boot(null); }
+});
+
+test('an account\'s counts on the plane are numerals, their thousands parted by commas and their nouns agreeing — its cluster\'s at far scale, its frame\'s label at mid (style S17, S18)', () => {
+  const { ctx: canvas } = recorder();
+  RENDER.attach(/** @type {any} */ ({ getContext: () => canvas }));
+  CAM.setViewport(1440, 900);
+  REC._reset(); WRITE._reset();
+  /** the lines the label pass set for the account at a view, of the kind given */
+  const lines = (/** @type {{x: number, y: number, scale: number}} */ v, /** @type {string} */ kind) => { CAM.set(v); RENDER.draw(); return RENDER.stats.labels.filter((l) => l.kind === kind && l.place === '1.0.1').flatMap((l) => l.lines.map((x) => x.text)); };
+  try {
+    REC.setBoard({ board: 'b-1', name: '', origin: 'http://127.0.0.1:8642' });
+    REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true });
+    REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: '1.0.1.0.1', kind: 'edition', label: 'Tumbler.', standing: 'public' }], counts: [{ account: '1.0.1', documents: 12345 }], state: { arm: 'complete' } }));
+    const cell = accountCell('1.0.1'), far = lines({ x: cell.x + cell.w / 2, y: cell.y + cell.h / 2, scale: 9.9 / DOC_W }, 'cluster');
+    assert.equal(lodOf(CAM.cam.scale).name, 'far');
+    assert.ok(far.join(' ').includes('12,345 documents'), `far: its documents counted with a comma, the words wrapping in its room: ${JSON.stringify(far)}`);
+    const mid = lines(CAM.viewForCell(cell, 0.85), 'frame');
+    assert.ok(mid.some((x) => x.includes(' · 12,345 documents · ')), `mid: its frame's label the same: ${JSON.stringify(mid)}`);
+  } finally { REC._reset(); WRITE._reset(); }
 });
 
 /** an account of sixty documents the index lists, each its first line "Notes on ⟨n⟩": at HOME the first 48 stand whole and the other twelve are its first continuation's one mark */

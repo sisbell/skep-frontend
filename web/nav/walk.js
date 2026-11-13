@@ -184,7 +184,9 @@
 // words, each address in the identifier's face and a document's words in the
 // reading face (`named`; P-REG's FACE); each item is sentences the page
 // composes (ST's `sentences`; style S1, S2) — its own, a part it lacks dropped
-// so no joiner stands beside it, then its place in its level. The tree's
+// so no joiner stands beside it, then its place in its level — every count in
+// it a numeral parted by commas, its noun agreeing with it (ST's `counted`,
+// `plural`; U's `numeral`), a position as drawn. The tree's
 // name, each level's, each item's — its `aria-label`, set wherever its words
 // are written — and each hidden description an item names are those words
 // rendered for the ear by S22's table (ST's `heard`), the words drawn
@@ -290,8 +292,8 @@ import { docBox, accountCell, boardCell, accountAt, clearLeftOf, continuationCel
 import { lodOf, residueDepth, markScale } from '../plane/lod.js';
 import { cmpAddr, accountOf, documentOf } from '../model/address.js';
 import { touches, isElement, elementIn } from '../text/span.js';
-import { esc, fill } from '../util.js';
-import { t, tRuns, addressedHTML, facedHTML, markCount, sentence, sentenceHTML, sentenceRuns, opening, openingHTML, openingRuns, asSentence, ended, endedHTML, endedRuns, sentences, fields, list, joinRuns, asRuns, heard } from '../strings.js';
+import { esc, fill, numeral } from '../util.js';
+import { t, tRuns, addressedHTML, facedHTML, markCount, counted, plural, sentence, sentenceHTML, sentenceRuns, opening, openingHTML, openingRuns, asSentence, ended, endedHTML, endedRuns, sentences, fields, list, joinRuns, asRuns, heard } from '../strings.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
@@ -630,6 +632,8 @@ const facesOf = (/** @type {Record<string, string>} */ faces) => Object.fromEntr
  * @returns {Said}
  */
 const said = (id, values, faces = {}, own = []) => ({ text: sentence(id, values, own), html: sentenceHTML(id, values, faces, own), runs: sentenceRuns(id, values, facesOf(faces), own) });
+/** a document's extent where a mirror item counts it after a position, "of ⟨extent⟩": its numeral (U's `numeral`), the position before it standing as drawn; "?" where it is not read */
+const extentOf = (/** @type {{extent: number | null}} */ d) => (d.extent != null ? numeral(d.extent) : '?');
 /** the client's words, as text and markup, each address in them the identifier's (ST's `addressedHTML`) */
 const plainly = (/** @type {string} */ words) => ({ text: words, html: addressedHTML(words), runs: asRuns(words) });
 /** words and their markup ended as a sentence (ST's `ended`, `endedHTML`, `endedRuns`) */
@@ -652,21 +656,23 @@ const item = (/** @type {Said[]} */ ...parts) => { const held = parts.filter((p)
  * @returns {Said}
  */
 function named(n, i, total) {
-  const at = plainly(t('L.mirror.item', { i: i + 1, n: total }));
+  const at = plainly(t('L.mirror.item', { i: numeral(i + 1), n: numeral(total) }));
   if (n.kind === 'board') {
     // where no board is held the root names none: it says why, as the one line does (FP-35)
     const b = REC.board();
     if (!b) { const why = read.noBoard(); return item(plainly(why ? asSentence(why) : ''), at); }
-    // its name, the one the status region calls it by, opening the sentence, then its count
-    const v = { node: n.addr, origin: b.origin }, count = REC.accounts().filter((a) => !a.system).length;
+    // its name, the one the status region calls it by, opening the sentence, then its count, its noun agreeing (ST's `counted`)
+    const v = { node: n.addr, origin: b.origin }, count = counted(REC.accounts().filter((a) => !a.system).length, 'L.mirror.board.1', 'L.mirror.board');
     const name = { text: opening('L.mirror.board.name', v), html: openingHTML('L.mirror.board.name', v, { node: 'id' }), runs: openingRuns('L.mirror.board.name', v, { node: 'ident' }) };
-    return item(endSaid({ text: t('L.mirror.board', { board: name.text, n: count }), html: fill(esc(t('L.mirror.board')), { board: name.html, n: String(count) }), runs: tRuns('L.mirror.board', { board: name.runs, n: count }) }), plainly(keptSentence(n)), at);
+    return item(endSaid({ text: t(count.id, { board: name.text, n: count.n }), html: fill(esc(t(count.id)), { board: name.html, n: count.n }), runs: tRuns(count.id, { board: name.runs, n: count.n }) }), plainly(keptSentence(n)), at);
   }
   if (n.kind === 'account') {
-    // its counts, then, where it holds none, that it holds nothing
+    // its counts, each with its noun agreeing (ST's `plural`) — a lower bound "≥" before it — then, where it holds none, that
+    // it holds nothing
     const c = REC.countOf(n.addr); const lk = LK.countAccount(n.addr);
-    const documents = c.exact ? String(c.documents) : t('L.lower-bound', { n: c.documents });
-    const links = lk.arriving ? t('L.lower-bound', { n: lk.n }) : String(lk.n);
+    const docs = plural(c.documents, 'F.label.documents.1', 'F.label.documents'), held = plural(lk.n, 'F.label.links.1', 'F.label.links');
+    const documents = c.exact ? docs : t('L.lower-bound', { n: docs });
+    const links = lk.arriving ? t('L.lower-bound', { n: held }) : held;
     return item(said('L.mirror.account', { account: n.addr, documents, links }, { account: 'id' }), c.documents ? plainly('') : said('B1.empty_subspace', {}), at);
   }
   // a mark's stop: its count, the words the mark shows (ST's `markCount`)
@@ -680,7 +686,7 @@ function named(n, i, total) {
       { text: opening('L.mirror.document', head, ['kind']), html: openingHTML('L.mirror.document', head, { document: 'id' }, ['kind']), runs: openingRuns('L.mirror.document', head, { document: 'ident' }, ['kind']) },
       { text: label.map((r) => r.text).join(''), html: facedHTML(label), runs: label },
       plainly(LAYER.mirrorState(d)),
-      plainly(d.extent != null ? t('L.mirror.positions', { n: d.extent }) : ''),
+      plainly(d.extent != null ? itemLength(d.extent) : ''),
     ]);
     return item(endSaid(own), plainly(keptSentence(n)), at);
   }
@@ -692,7 +698,7 @@ function named(n, i, total) {
       // the run's own part, which needs no read, then the links drawn at it; its origin's words its description, one for every run
       // of it (`originWords`)
       const ends = runEnds(n.addr, b.pos).length;
-      const links = ends ? said('L.mirror.run-links', { links: ends === 1 ? t('F.label.links.1') : t('F.label.links', { n: ends }) }) : plainly('');
+      const links = ends ? said('L.mirror.run-links', { links: plural(ends, 'F.label.links.1', 'F.label.links') }) : plainly('');
       return item(said('L.mirror.withheld', { kind: itemWords(kind), document: n.addr, length: itemLength(b.width), origin: b.origin || '' }, { document: 'id', origin: 'id' }, ['kind']), links, at);
     }
     // the material's origin, set after where the item stands, a space the page draws before it
@@ -703,9 +709,9 @@ function named(n, i, total) {
       // length — never its raw value
       const rec = kind === 'record' ? recordOf(b, d, REC.reader()) : null;
       const shown = rec ? fields(rec.words, rec.keys) : kind === 'unshown' ? itemLength(b.width) : '';
-      return item(said('L.mirror.no-text', { kind: itemWords(kind), p: b.pos, extent: d.extent ?? '?', document: n.addr, same, shown: shown ? ': ' + shown : '' }, { document: 'id' }, ['kind']), at);
+      return item(said('L.mirror.no-text', { kind: itemWords(kind), p: b.pos, extent: extentOf(d), document: n.addr, same, shown: shown ? ': ' + shown : '' }, { document: 'id' }, ['kind']), at);
     }
-    return item(said('L.mirror.span', { p: b.pos, extent: d.extent ?? '?', document: n.addr, same, text: b.text }, { document: 'id', text: 'reading' }), at);
+    return item(said('L.mirror.span', { p: b.pos, extent: extentOf(d), document: n.addr, same, text: b.text }, { document: 'id', text: 'reading' }), at);
   }
   if (n.kind === 'link' && n.link) {
     // the link, then what its far end's text holds of its passage, where that is not all of it in one piece (BM-HELD's `farSays`)
