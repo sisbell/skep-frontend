@@ -25,7 +25,8 @@
 // line's acts bearing its id, and where no board is held why in the guest line's place — with no
 // adapter beneath the port why none stands, a page URL's `port` naming no
 // port in its own words — and "go to an address" alone; a jump's face out of
-// view and a walk's folded moment as segments; a reading scene's close said
+// view and a walk's folded moment as segments; the halted store's segment and
+// the mode line built as sentences, drawn and said; a reading scene's close said
 // after it until the next act, whole once a session and as forward ›'s label
 // after; the places the line names; the strip's window over a typed draft
 // in the model's text, a text held in part keeping the window its estimates name;
@@ -52,7 +53,7 @@ import * as LAYER from '../text/layer.js';
 import { docBox, accountCell, boardCell, depthOfDoc, DOC_W } from '../plane/projection.js';
 import { STANDARD_FS } from '../plane/layout.js';
 import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
-import { t, tHTML, addressedHTML, lastRead } from '../strings.js';
+import { t, tHTML, addressedHTML, lastRead, sentence, sentences } from '../strings.js';
 import { esc } from '../util.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
@@ -968,6 +969,32 @@ test('the daemon\'s segment reads the form of the state the shell says of the bo
     REC.setDaemon(/** @type {any} */ ('quiesced'));
     assert.deepEqual(form(), ['F.daemon.notebook.halted', t('F.daemon.notebook.halted')], 'a state the line holds no form for: the halted form');
   } finally { REC.setDaemon(/** @type {any} */ (daemon), reason); REC.setHealth(health, mode); clicked(); }
+});
+
+test('the line composes as sentences the segments it builds from several strings: the halted store\'s — its form, what becomes of the words the held file holds, and a damaged file\'s cause, each a sentence, its act beside them — and the mode line as local trust turns on — its words, then the run it lasts for, each a sentence — drawn and said once (D6 BM-30; foundations §3.1, the one line\'s state 6; style S1, S2)', () => {
+  const health = REC.health(), mode = REC.mode(), b = /** @type {{board: string}} */ (REC.board());
+  const { host, said } = speaking();
+  /** the daemon's segment as rendered: the string it reads, and its words, its act apart; null where the line holds none */
+  const daemon = () => { LINE.act(); LINE.render(); const m = /<span class="seg daemon"><span class="warn" data-string="([^"]+)">(.*?)<\/span>/.exec(host.innerHTML); return m ? [m[1], plain(m[2])] : null; };
+  /** the board's health with local trust as given */
+  const trusting = (/** @type {boolean} */ on) => /** @type {any} */ ({ ...(health || {}), auth: { claimant: '1.0.1', local_trust: on }, writes: { halted: false } });
+  try {
+    WRITE.setUnwritable(b.board, { why: 'store_halted', detail: 'newer' });
+    assert.deepEqual(daemon(), ['B3.store_halted.newer', 'Writing is stopped on this device — open the held text with the newer version of this app that wrote it, or move the file aside. The words it holds go with it, unsent.'], 'a file a newer app wrote: its form, then what becomes of the words it holds, a sentence each');
+    assert.ok(host.innerHTML.includes(`<button data-act="showfile" data-string="B3.show-file">${esc(t('B3.show-file'))}</button>`), 'its act beside the words');
+    WRITE.setUnwritable(b.board, { why: 'store_halted', detail: 'damaged' });
+    assert.deepEqual(daemon(), ['B3.store_halted.damaged', 'Writing is stopped on this device — move the file aside. The words it holds go with it, unsent. The held text is damaged and cannot be read.'], 'a damaged file: its cause last, a sentence of its own');
+    WRITE.setUnwritable(b.board, null);
+    REC.setHealth(trusting(false), mode);
+    LINE.render(true);
+    const n = said.length;
+    REC.setHealth(trusting(true), mode);
+    LINE.render();
+    const words = sentences(sentence('F.flip'), sentence('F.flip.run'));
+    assert.equal(words, 'Local trust is now on — anything running on this machine can write as you here and read every draft you have written, with no key. For this run of the notebook: quitting the client ends it, and the next start runs without it.');
+    assert.ok(host.innerHTML.includes(`<span class="seg transient" data-string="F.flip">${esc(words)}</span>`), `the mode line drawn as its two sentences: ${host.innerHTML}`);
+    assert.deepEqual(said.slice(n), [words], 'and said once through the status region in the same words');
+  } finally { WRITE.setUnwritable(b.board, null); REC.setHealth(/** @type {any} */ (health), mode); LINE.act(); clicked(); }
 });
 
 test('a part arriving between settings stands in its place in the line\'s order — a walk\'s folded moment right after the acting-as segment, in that segment\'s row, ahead of the daemon\'s row — where that row\'s room holds it, no row moved (issue #310\'s design decision: "A statement that arrives with no room opens beneath the line")', async () => {

@@ -80,7 +80,8 @@
 // left from and returned to — standing with the landing and taking the focus,
 // its count being read, recorded again by what it stood for; answered all,
 // part, none, refused or with no text to read, the focus kept and its words
-// FP-21's; an act on it waiting for the answer, made, abandoned, or dropped
+// FP-21's, its kind and the line each a sentence; an act on it waiting for the
+// answer, made, abandoned, or dropped
 // once the reader moved on (FP-20, FP-25, FP-34); a stroke's list kept by
 // its stroke's key as the reader leaves the scene and carried back by its
 // reopening (FP-36); a passage the opener names by its bytes set level
@@ -132,7 +133,7 @@ import * as GO from '../nav/go.js';
 import * as TRAIL from '../nav/trail.js';
 import * as CAM from '../plane/camera.js';
 import { accountCell } from '../plane/projection.js';
-import { t, tHTML, lastRead, addressedHTML } from '../strings.js';
+import { t, tHTML, lastRead, addressedHTML, sentence, sentences, hintSentences } from '../strings.js';
 import { esc } from '../util.js';
 import * as LK from '../links/links.js';
 import { inkOf } from '../beams/beams.js';
@@ -1913,18 +1914,18 @@ test('a stop drawn only by the panes\' `compare` that the reader left from stand
 
 test('the panes\' `compare` answering a stop the reader returned to keeps the focus on it and fills it in: all of it holding, the stop it stands for now, said politely; part of it, none, or the board refusing — "try again" offered where a retry may tell — the stop stays and says so in FP-21\'s words, at its site', () => onPage(async (p) => {
   const was = script[FAKE.keyOf('op', { frame: BOTH })], unanswered = fake.unanswered.length;
-  /** each stop's kind's words */
-  const kinds = { shared: t('L.scene.shared.1', { D: B }), stroke: t('L.scene.stroke.kind') };
-  const part = t('L.held.part', { subject, where }), none = t('F.floating', { D: B }), busy = t('L.held.unknown', { subject, where, reason: t('L.held.why.busy') });
+  /** each stop's kind's words, a sentence */
+  const kinds = { shared: sentence('L.scene.shared.1', { D: B }), stroke: sentence('L.scene.stroke.kind') };
+  const part = sentence('L.held.part', { subject, where }), none = sentence('F.floating', { D: B }), busy = sentence('L.held.unknown', { subject, where, reason: t('L.held.why.busy') });
   try {
     for (const stop of [SHARED_STOP, STROKE_STOP]) {
       const kind = kinds[stop.kind];
       /** @type {Array<[string, Array<[number, number, number]> | null, string, string | null, string | null]>} each answer: what it holds, the name it leaves, the face it shows */
       const cases = [
         ['all', ANSWERS[stop.kind].all, 'all', null, null],
-        ['part', ANSWERS[stop.kind].part, 'part', t('L.scene.stop.said', { stop: kind, said: part }), 'face:held'],
-        ['none', ANSWERS[stop.kind].none, 'none', t('L.scene.stop.said', { stop: kind, said: none }), 'face:floating'],
-        ['refused', null, 'unknown', t('L.scene.stop.said', { stop: kind, said: busy }), 'face:held'],
+        ['part', ANSWERS[stop.kind].part, 'part', sentences(kind, part), 'face:held'],
+        ['none', ANSWERS[stop.kind].none, 'none', sentences(kind, none), 'face:floating'],
+        ['refused', null, 'unknown', sentences(kind, busy), 'face:held'],
       ];
       for (const [what, answer, holds, name, face] of cases) {
         p.item.focus();
@@ -1940,7 +1941,7 @@ test('the panes\' `compare` answering a stop the reader returned to keeps the fo
           assert.ok(stop.kind === 'shared' ? r?.name === t('L.scene.shared.1', { D: B }) : !!r?.name && r.name.startsWith(t('L.scene.stroke.1', { n: 1 }) + ': '), `${stop.kind}, all of it: the name of the stop it is now: ${r?.name}`);
           assert.deepEqual([p.said.slice(told), HOST.currentState()], [[r?.name], null], `${stop.kind}, all of it: said politely, no face`);
         } else {
-          assert.equal(r?.name, name, `${stop.kind}, ${what}: its kind's words and FP-21's`);
+          assert.equal(r?.name, name, `${stop.kind}, ${what}: its kind's words and FP-21's, a sentence each`);
           assert.equal(HOST.currentState()?.id, face, `${stop.kind}, ${what}: said at its site`);
           assert.deepEqual(Object.keys(HOST.currentState()?.acts || {}), what === 'refused' ? ['a0'] : [], `${stop.kind}, ${what}: "try again" offered where a retry may tell, else nothing`);
         }
@@ -1953,7 +1954,7 @@ test('the panes\' `compare` answering a stop the reader returned to keeps the fo
 
 test('a returned stroke whose texts hold its change in part, two changes standing about it, says so without counting them: its name, its words and its face the line alone (issue #242\'s design decision: "\'Places\' goes")', () => onPage(async (p) => {
   const was = script[FAKE.keyOf('op', { frame: BOTH })], unanswered = fake.unanswered.length;
-  const part = t('L.held.part', { subject, where });
+  const part = sentence('L.held.part', { subject, where });
   try {
     p.item.focus();
     const release = fake.hold('op', { frame: BOTH });
@@ -1964,7 +1965,7 @@ test('a returned stroke whose texts hold its change in part, two changes standin
     await answered();
     const r = SCENE.returned();
     assert.deepEqual([r?.answer?.holds, r?.answer?.count], ['part', 2], 'part of what it stood for, two changes standing about it');
-    assert.deepEqual([r?.name, r?.answer?.words, HOST.currentState()?.id], [t('L.scene.stop.said', { stop: t('L.scene.stroke.kind'), said: part }), part, 'face:held'], 'its kind\'s words, then the line alone');
+    assert.deepEqual([r?.name, r?.answer?.words, HOST.currentState()?.id], [sentences(sentence('L.scene.stroke.kind'), part), part, 'face:held'], 'its kind\'s words, then the line alone, a sentence each');
     assert.ok(![r?.name, HOST.currentState()?.html].some((w) => /places/.test(String(w))), 'nothing counts "places"');
     SCENE.close();
   } finally { Object.assign(script, { [FAKE.keyOf('op', { frame: BOTH })]: was }); }
@@ -1980,9 +1981,9 @@ test('a returned stop whose pane holds no text — withheld from the reader — 
     p.item.focus();
     await SCENE.reopen({ a: A, b: WH, held: { ...NEAR, wholeB: true }, left: { panes: { a: bareText(A), b: draft }, spots: null, stop } });
     await answered();
-    const r = SCENE.returned(), said = t('L.held.unknown', { subject, where: t('L.held.current', { D: WH }), reason: t('L.held.why.withheld') });
+    const r = SCENE.returned(), said = sentence('L.held.unknown', { subject, where: t('L.held.current', { D: WH }), reason: t('L.held.why.withheld') });
     assert.deepEqual([p.at(), r?.answer?.holds, r?.name, HOST.currentState()?.id, Object.keys(HOST.currentState()?.acts || {})],
-      ['the stop', 'unknown', t('L.scene.stop.said', { stop: t('L.scene.shared.1', { D: WH }), said }), 'face:held', []], 'couldn\'t tell, by the refusal its text met: no "try again", which tells nothing more');
+      ['the stop', 'unknown', sentences(sentence('L.scene.shared.1', { D: WH }), said), 'face:held', []], 'couldn\'t tell, by the refusal its text met: no "try again", which tells nothing more');
     SCENE.close();
     Object.assign(script, compareAs(ANSWERS.stroke.all));
     p.item.focus();
@@ -2419,9 +2420,9 @@ test('at a selection in the moved scene\'s held version, while the focus stands 
     assert.equal(SCENE.heldVersionReason(), why, `"${words}": the reason its selection keys`);
     for (const [key, m] of SENDING) {
       HINT.act();
-      assert.deepEqual(await press(key, m), { took: true, hint: why, said: [t(why)] }, `"${words}", ${m.shift ? 'Mod+Shift+' : 'Mod+'}${key.toUpperCase()}: that reason its hint, said`);
+      assert.deepEqual(await press(key, m), { took: true, hint: why, said: [hintSentences(why).whole] }, `"${words}", ${m.shift ? 'Mod+Shift+' : 'Mod+'}${key.toUpperCase()}: that reason its hint, a sentence, said`);
     }
-    assert.deepEqual(await press('q'), { took: true, hint: why, said: [t(why)] }, `"${words}", a printable key: the same reason, said again at the press`);
+    assert.deepEqual(await press('q'), { took: true, hint: why, said: [hintSentences(why).whole] }, `"${words}", a printable key: the same reason, said again at the press`);
     const space = await press(' ');
     assert.deepEqual([space.took, space.hint, space.said.length], [true, 'F.swallow.space', 1], `"${words}", Space: K-9's own line`);
   }

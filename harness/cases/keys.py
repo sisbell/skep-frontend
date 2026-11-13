@@ -1458,14 +1458,31 @@ def strings(ctx, sid, values=None):
     return ctx.js('(async () => (await import("./strings.js")).t(%s, %s))()' % (json.dumps(sid), json.dumps(values or {})))
 
 
+def sentence(ctx, sid, values=None):
+    """one of the page's strings as a sentence (`strings.js`'s `sentence`): its tokens filled, its capital set, its period after"""
+    return ctx.js('(async () => (await import("./strings.js")).sentence(%s, %s))()' % (json.dumps(sid), json.dumps(values or {})))
+
+
+def hint_opened(ctx):
+    """the hint standing, opened whole by its own act — a press on its button, as a person reads a notice its press showed
+    compact (O-HINT's `toggle`); the hint as it stands where it stands whole already, or none stands"""
+    h = ctx.js('window.__skep.hint()') or {}
+    if h and not h.get('open'):
+        ctx.js('(() => { const b = document.querySelector("#hint button[data-hint]"); if (b) b.click(); })()')
+        ctx.frames(1)
+        h = ctx.js('window.__skep.hint()') or {}
+    return h
+
+
 def drawn_chord(ctx, name):
     """a chord as the page draws it for this platform (N-KEYS' `drawChord`)"""
     return ctx.js('(async () => (await import("./nav/keys.js")).drawChord(%s))()' % json.dumps(name))
 
 
 def hint_words(ctx, sid, values=None, whole=True):
-    """the words a hint of a string shows (`strings.js`'s `hintOf`): its notice whole, else its compact form, its tokens filled"""
-    return ctx.js('(async () => { const h = (await import("./strings.js")).hintOf(%s, %s); return %s ? h.whole : h.clause; })()' % (json.dumps(sid), json.dumps(values or {}), 'true' if whole else 'false'))
+    """the words a hint of a string shows (`strings.js`'s `hintSentences`): its notice whole, else its compact form, each a
+    sentence, its tokens filled"""
+    return ctx.js('(async () => { const h = (await import("./strings.js")).hintSentences(%s, %s); return %s ? h.whole : h.clause; })()' % (json.dumps(sid), json.dumps(values or {}), 'true' if whole else 'false'))
 
 
 def told_by_hint(ctx, sid):
@@ -2865,7 +2882,7 @@ def swallowed(ctx, r, base, signs):
     got = hint_placed(ctx)
     after, hint, rect = signs_at(ctx), got['hint'] or {}, got['rect']
     beside = [ln for ln in signs['lines'] if abs(ln[1] - rect['y']) <= 0.5]
-    words = strings(ctx, 'C-45', {'D': DOC})
+    words = hint_words(ctx, 'C-45', {'D': DOC})
     r.check(hint.get('id') == 'C-45' and hint.get('words') == words and hint.get('open') and got['shown'],
             'a bare key at an edition of the session\'s account raises C-45 naming the document as its hint, whole at every press — never the K-9 line (D5 K-72)', {'hint': hint, 'want': words})
     r.check((hint.get('placed') or {}).get('by') == 'edge' and bool(beside) and all(rect['x'] >= ln[0] + ln[2] for ln in beside)
@@ -2893,8 +2910,8 @@ def swallowed_below(ctx, r):
     chord(ctx, 'k')
     got, after = hint_placed(ctx), state(ctx)
     hint = got['hint'] or {}
-    r.check(hint.get('id') == 'F.swallow' and hint.get('words') == 'typing goes nowhere here' and not hint.get('open') and got['shown'],
-            'below the edition\'s reading scale a bare key raises the K-9 line as its hint, its first clause at a later press: "typing goes nowhere here" — no document\'s line keys the site (D5 K-72)', hint)
+    r.check(hint.get('id') == 'F.swallow' and hint.get('words') == hint_words(ctx, 'F.swallow', whole=False) == 'Typing goes nowhere here.' and not hint.get('open') and got['shown'],
+            'below the edition\'s reading scale a bare key raises the K-9 line as its hint, its first clause at a later press, a sentence: "Typing goes nowhere here." — no document\'s line keys the site (D5 K-72; style S1)', hint)
     r.check((hint.get('placed') or {}).get('by') == 'beside' and got['rect']['y'] >= got['line_bottom'] and not got['in_line'],
             'the hint stands beside the walk\'s element, below the one line and outside it (FP-26)', {'rect': got['rect'], 'placed': hint.get('placed'), 'line_bottom': got['line_bottom']})
     r.check(same_view(before, after) and after['focus'] == before['focus'] and after['overlay'] is None and not after['leap'],
@@ -2923,8 +2940,8 @@ def others_line(ctx, r):
     chord(ctx, 'v', mods=('Meta',))
     after = state(ctx)
     pasted = after['hint'] or {}
-    r.check(pasted.get('id') == 'B3.row.others-document' and pasted.get('words') == clause == "this is %s's document" % owner and clause != whole and not pasted.get('open'),
-            'a paste there is answered by the same line, its first clause at the later press — "this is ⟨owner⟩\'s document", the line cut at its em dash (D5 K-72, K-93)', {'hint': pasted, 'want': clause, 'whole': whole})
+    r.check(pasted.get('id') == 'B3.row.others-document' and pasted.get('words') == clause == "This is %s's document." % owner and clause != whole and not pasted.get('open'),
+            'a paste there is answered by the same line, its first clause at the later press, a sentence — "This is ⟨owner⟩\'s document.", the line cut at its em dash (D5 K-72, K-93; style S1)', {'hint': pasted, 'want': clause, 'whole': whole})
     r.check(same_view(before, after) and after['focus'] == before['focus'] and after['overlay'] is None and not after['leap'] and after['sel'] is None
             and ctx.js('window.__skep.caret()') is None,
             'the key and the paste place nothing: no caret, nothing selected, the camera and the walk\'s element where they stood', {'before': before, 'after': after})
@@ -3271,7 +3288,7 @@ def undo_chords(ctx, r):
     table = ctx.js('(async () => (await import("./nav/keys.js")).TABLE.filter((x) => x.id === "K-75" || x.id === "K-41").map((x) => [x.id, x.chord, x.act]))()')
     r.check(table == [['K-41', 'Mod+Y', 'trail.list'], ['K-41', 'Mod+H', 'trail.list'], ['K-75', 'Mod+Z', 'undo'], ['K-75', 'Mod+Shift+Z', 'redo'], ['K-75', 'Mod+Y', 'redo']],
             "the key table holds K-75's three chords — Mod+Z, Mod+Shift+Z, and Mod+Y, the redo elsewhere than macOS — and K-41's two, Mod+Y on macOS and Mod+H elsewhere (D5 K-41, K-75)", table)
-    constant = strings(ctx, 'B3.undo.constant')
+    constant = sentence(ctx, 'B3.undo.constant')
     drop_caret = '(async () => { (await import("./text/layer.js")).dropCaret(); (await import("./overlays/hint.js")).act(); })()'
     calls = lambda: len(ctx.js('window.__skep.bridge.calls()'))
     # (a) an edition of the session's account: C-45, whole, the constant sentence after it
@@ -3282,11 +3299,11 @@ def undo_chords(ctx, r):
     before, n0 = state(ctx), calls()
     chord(ctx, 'z', mods=('Meta',))
     ctx.frames(2)
-    after, c45 = state(ctx), strings(ctx, 'C-45', {'D': DOC})
+    after, c45 = state(ctx), hint_words(ctx, 'C-45', {'D': DOC})
     hint = after['hint'] or {}
     r.check(bool(before['focus']) and before['focus']['kind'] == 'block' and before['focus']['addr'] == DOC and hint.get('id') == 'C-45' and hint.get('words') == c45 and hint.get('ending') == constant
             and ctx.js('(document.getElementById("live") || {}).textContent || ""') == c45 + ' ' + constant and same_view(before, after) and after['focus'] == before['focus'] and calls() == n0,
-            "Mod+Z at a span of an edition of the session's account is answered by C-45 naming the document, whole, ending on \"a link you made public stays until you retract it at its card\", said in the status region — nothing moved, nothing asked of the board (D5 K-75; D6 BM-42)",
+            "Mod+Z at a span of an edition of the session's account is answered by C-45 naming the document, whole, ending on \"A link you made public stays until you retract it at its card.\", a sentence of its own, said in the status region — nothing moved, nothing asked of the board (D5 K-75; D6 BM-42)",
             {'hint': hint, 'want': c45, 'constant': constant, 'focus': [before['focus'], after['focus']]})
     figures['edition'] = hint
     # (b) another account's document: its own line, ending the same way
@@ -3319,7 +3336,7 @@ def undo_chords(ctx, r):
     second, said2 = ctx.js('window.__skep.hint()') or {}, ctx.js('(document.getElementById("live") || {}).textContent || ""')
     r.check(first.get('id') == 'B3.undo.none' and first.get('words') == none and first.get('open') and first.get('ending') == constant and first.get('writing') is None and said1 == none + ' ' + constant
             and second.get('id') == 'B3.undo.none' and second.get('words') == none_clause and not second.get('open') and second.get('ending') is None and said2 == none_clause and none_clause != none,
-            'Mod+Z with no draft\'s caret is answered by "undo works in the text of a draft you are writing — there is nothing here to undo", whole at its first press and ending on the constant sentence, its first clause alone at the next — the press never does nothing (D6 BM-42)',
+            'Mod+Z with no draft\'s caret is answered by "Undo works in the text of a draft you are writing — there is nothing here to undo.", whole at its first press and ending on the constant sentence, its first clause alone at the next, each a sentence — the press never does nothing (D6 BM-42)',
             {'first': first, 'second': second, 'said': [said1, said2]})
     n1 = calls()
     chord(ctx, 'z', mods=('Meta', 'Shift'))
@@ -3360,10 +3377,11 @@ def undo_chords(ctx, r):
 def copy_nothing(ctx, r):
     """A COPY WITH NOTHING SELECTED, AND ONE SELECTION (the keys-and-clicks decision, part 5; D5 K-92; FP-24, FP-27):
     (a) the walk on a span of the first edition, nothing selected: Mod+C's keydown prevented, the hint the copy's line
-        ending with Enter's act — whole where the session shows it whole — said in the status region;
-    (c) Mod+C again there: its first clause, "nothing selected";
-    (b) a span of the own draft holding no caret: the line ending with Shift+↓'s act; its document, reached by ←, the line
-        alone;
+        — whole where the session shows it whole — said in the status region, and, opened whole, ending on Enter's act, a
+        sentence of its own;
+    (c) Mod+C again there: its first clause, "Nothing selected.";
+    (b) a span of the own draft holding no caret: the line, opened whole, ending on Shift+↓'s act; its document, reached by
+        ←, the line alone;
     (g) a copy event the page takes nothing from, nothing selected: its default prevented, nothing set on its clipboard,
         the line raised;
     (e) a drag's selection standing: Mod+C left to the platform, no line raised, and a copy event carrying the
@@ -3374,25 +3392,27 @@ def copy_nothing(ctx, r):
         the platform's range collapsed with it; Mod+C then the line.
     Its figures"""
     figures = {}
-    whole = lambda tail: strings(ctx, 'L.copy.nothing', {'selects': strings(ctx, tail) if tail else ''})
-    clause = 'nothing selected'
+    whole, clause = hint_words(ctx, 'L.copy.nothing'), hint_words(ctx, 'L.copy.nothing', whole=False)
+    enter, shift = sentence(ctx, 'L.copy.nothing.enter'), sentence(ctx, 'L.copy.nothing.shift')
     # (a), (c): the first edition's span, nothing selected anywhere, the walk's item holding the focus
     ctx.leap(DOC, WINDOW[0])
     ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); })()')
     ctx.js(FOCUS_ITEM)
     ctx.frames(2)
-    walk, enter = ctx.js(WALK_AT), whole('L.copy.nothing.enter')
+    walk = ctx.js(WALK_AT)
     a = mod_c(ctx)
     h = a['hint'] or {}
-    words = enter if h.get('open') else clause
+    words, said = (whole, whole + ' ' + enter) if h.get('open') else (clause, clause)
+    opened = hint_opened(ctx)
     r.check(bool(walk) and walk['kind'] == 'block' and walk['addr'] == DOC and a['sel'] is None and a['platform']['collapsed']
-            and bool(a['keydown']) and a['keydown']['prevented'] and h.get('id') == 'L.copy.nothing' and h.get('whole') == enter and h.get('words') == words and a['live'] == words,
-            '(a) Mod+C at a span of the first edition, nothing selected: its keydown\'s default prevented, the clipboard left as it is, and its line the hint at the focus, ending with Enter\'s act — Enter selects there — whole where the session shows it whole, and said in the status region (D5 K-92; FP-27)',
-            dict(a, walk=walk, want=enter))
+            and bool(a['keydown']) and a['keydown']['prevented'] and h.get('id') == 'L.copy.nothing' and h.get('whole') == whole and h.get('words') == words and a['live'] == said
+            and opened.get('ending') == enter,
+            '(a) Mod+C at a span of the first edition, nothing selected: its keydown\'s default prevented, the clipboard left as it is, and its line the hint at the focus — whole where the session shows it whole — said in the status region, and, standing whole, ending on Enter\'s act, a sentence of its own: Enter selects there (D5 K-92; FP-27; style S2)',
+            dict(a, walk=walk, opened=opened, want=[whole, enter]))
     c = mod_c(ctx)
     h = c['hint'] or {}
-    r.check(bool(c['keydown']) and c['keydown']['prevented'] and h.get('id') == 'L.copy.nothing' and h.get('words') == clause and not h.get('open') and h.get('whole') == enter and c['live'] == clause,
-            '(c) Mod+C again there: its first clause, "nothing selected", the line whole kept as its description, said again', c)
+    r.check(bool(c['keydown']) and c['keydown']['prevented'] and h.get('id') == 'L.copy.nothing' and h.get('words') == clause and not h.get('open') and h.get('whole') == whole and c['live'] == clause,
+            '(c) Mod+C again there: its first clause, "Nothing selected.", the line whole kept as its description, said again', c)
     figures['a'] = {'hint': a['hint'], 'live': a['live']}
     # (b): a span of the own draft holding no caret, then its document
     draft = WINDOW[2]
@@ -3403,24 +3423,26 @@ def copy_nothing(ctx, r):
         ctx.leap(draft, paras[0]['pos'])
         ctx.js(FOCUS_ITEM)
         ctx.frames(2)
-        walk, caret, shift = ctx.js(WALK_AT), ctx.js('window.__skep.caret()'), whole('L.copy.nothing.shift')
+        walk, caret = ctx.js(WALK_AT), ctx.js('window.__skep.caret()')
         b = mod_c(ctx)
         h = b['hint'] or {}
+        opened = hint_opened(ctx)
         r.check(bool(walk) and walk['kind'] == 'block' and walk['addr'] == draft and not (caret and caret.get('live'))
-                and bool(b['keydown']) and b['keydown']['prevented'] and h.get('id') == 'L.copy.nothing' and h.get('whole') == shift and h.get('words') == clause,
-                '(b) Mod+C at a span of the own draft holding no caret: the line ending with Shift+↓\'s act — Enter places a caret there — its first clause shown',
-                dict(b, walk=walk, caret=caret, want=shift))
+                and bool(b['keydown']) and b['keydown']['prevented'] and h.get('id') == 'L.copy.nothing' and h.get('whole') == whole and h.get('words') == clause and opened.get('ending') == shift,
+                '(b) Mod+C at a span of the own draft holding no caret: its first clause shown, the line opened whole ending on Shift+↓\'s act — Enter places a caret there',
+                dict(b, walk=walk, caret=caret, opened=opened, want=shift))
         chord(ctx, 'ArrowLeft')
         walk = ctx.js(WALK_AT)
         b2 = mod_c(ctx)
         h = b2['hint'] or {}
-        r.check(bool(walk) and walk['kind'] == 'document' and bool(b2['keydown']) and b2['keydown']['prevented'] and h.get('whole') == whole(None) and h.get('words') == clause,
-                '(b) Mod+C at the draft whole, reached by ←: the line alone, naming no act', dict(b2, walk=walk))
+        opened = hint_opened(ctx)
+        r.check(bool(walk) and walk['kind'] == 'document' and bool(b2['keydown']) and b2['keydown']['prevented'] and h.get('whole') == whole and h.get('words') == clause and opened.get('ending') is None,
+                '(b) Mod+C at the draft whole, reached by ←: the line alone, opened whole naming no act', dict(b2, walk=walk, opened=opened))
         # (g): a copy event the page takes nothing from, nothing selected
         g = ctx.js(SYNTHETIC_COPY)
         ctx.frames(2)
         h = ctx.js('window.__skep.hint()') or {}
-        r.check(g['prevented'] and g['types'] == [] and h.get('id') == 'L.copy.nothing' and h.get('whole') == whole(None),
+        r.check(g['prevented'] and g['types'] == [] and h.get('id') == 'L.copy.nothing' and h.get('whole') == whole,
                 '(g) a copy event with nothing selected — the Edit menu\'s, the context menu\'s: its default prevented, nothing set on its clipboard, and the line raised at the focus (D5 K-92; FP-27)',
                 {'copy': g, 'hint': h})
         figures['g'] = g
@@ -3583,7 +3605,7 @@ def run(ctx):
     r.check(hint.get('id') == 'F.swallow.space' and hint.get('words') == words, 'Space raises its own K-9 line as its hint (PageDown pages), whole at its first press in the session and its first clause after', {'hint': hint, 'want': words})
     chord(ctx, ' ', code='Space')
     hint = state(ctx)['hint'] or {}
-    r.check(hint.get('words') == 'Space does not page here' and not hint.get('open'), 'Space again: its first clause', hint)
+    r.check(hint.get('words') == 'Space does not page here.' and not hint.get('open'), 'Space again: its first clause, a sentence', hint)
     tabbed_to_hint(ctx, r)
     # ---- the IME guard: a composition key is never dispatched -----------------------------------
     ctx.drv.call('Input.dispatchKeyEvent', {'type': 'keyDown', 'key': 'Process', 'code': 'KeyT', 'windowsVirtualKeyCode': 229, 'text': 't', 'unmodifiedText': 't'})

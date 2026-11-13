@@ -257,10 +257,9 @@ def run(ctx):
     r.figures['face'] = face['text'][:300]
     # ---- a printable key's line, its hint at the focus: C-45 at an edition of the session's account, the K-9 line below its
     # reading scale (D5 K-72; issue #468's design decision) ---------------------------------------------------------------
-    hinted = '''(async (id, values) => { const {t} = await import("./strings.js"), {drawChord} = await import("./nav/keys.js"), h = window.__skep.hint(), b = document.querySelector('#hint button');
-      const d = b && document.getElementById(b.getAttribute('aria-describedby'));
-      return {hint: h, shown: b ? b.textContent : null, described: d ? d.textContent : null, line: window.__skep.line().text,
-              whole: t(id, id === 'F.swallow' ? {'LEAP chord': drawChord('Mod+L')} : values)}; })(%s, %s)'''
+    hinted = '''(async (id, values) => { const {hintSentences} = await import("./strings.js"), {drawChord} = await import("./nav/keys.js"), h = window.__skep.hint(), b = document.querySelector('#hint button');
+      const d = b && document.getElementById(b.getAttribute('aria-describedby')), said = hintSentences(id, id === 'F.swallow' ? {'LEAP chord': drawChord('Mod+L')} : values);
+      return {hint: h, shown: b ? b.textContent : null, described: d ? d.textContent : null, line: window.__skep.line().text, whole: said.whole, clause: said.clause}; })(%s, %s)'''
     ctx.leap(DOC, WINDOW[0])
     ctx.drv.key('t')
     ctx.frames(2)
@@ -280,9 +279,9 @@ def run(ctx):
     ctx.frames(2)
     swallow = dict(ctx.js(hinted % (json.dumps('F.swallow'), json.dumps({}))), zooms=zooms, focus=ctx.js('window.__skep.view.focus()'))
     hint = swallow['hint'] or {}
-    r.check(hint.get('id') == 'F.swallow' and swallow['shown'] in (swallow['whole'], 'typing goes nowhere here') and swallow['described'] == swallow['whole'] and '⌘L' in swallow['whole']
-            and 'typing goes nowhere' not in swallow['line'] and (swallow['focus'] or {}).get('addr') == DOC,
-            'below the edition\'s reading scale, the walk on it whole, a printable key raises the K-9 line as its hint — whole at its first press in the session, its first clause after — described by the notice whole with the LEAP chord drawn for the platform, the one line holding none of it',
+    r.check(hint.get('id') == 'F.swallow' and swallow['shown'] in (swallow['whole'], swallow['clause']) and swallow['described'] == swallow['whole'] and '⌘L' in swallow['whole']
+            and 'typing goes nowhere' not in swallow['line'].lower() and (swallow['focus'] or {}).get('addr') == DOC,
+            'below the edition\'s reading scale, the walk on it whole, a printable key raises the K-9 line as its hint — whole at its first press in the session, its first clause after, each a sentence — described by the notice whole with the LEAP chord drawn for the platform, the one line holding none of it',
             swallow)
     # the next act takes the hint down, and the landing is made again, so nothing after this stands beside it or below it
     ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()'); ctx.frames(2)
@@ -344,9 +343,9 @@ def run(ctx):
                 held = [c for c in claims if account(c['home']) == account(c['old'])]
                 stray += [c for c in claims if c not in held]
                 named_by = [None if account(c['home']) == owner else (words['you'] if account(c['home']) == reader else account(c['home'])) for c in held]
-                items = [c[named] + ('' if by is None else ' ' + words['by_owner'].replace('⟨claimant⟩', by)) + ('' if c['active'] else ' · ' + words['retracted']) for c, by in zip(held, named_by)]
+                items = [' · '.join(x for x in (c[named], None if by is None else words['by_owner'].replace('⟨claimant⟩', by), None if c['active'] else words['retracted']) if x) for c, by in zip(held, named_by)]
                 want = ('; ' if any(by is not None for by in named_by) else ', ').join(items) if held else words['none']
-                r.check(len(row) == 1 and norm(row[0]) == norm(want), 'the card\'s "%s" row reads the claims with authority %s answered: the %s link of each, its claimant after it where the owner row does not name it, a retracted one marked, "none" where it named none with authority' % (label, op, named), {'want': want, 'row': row, 'claims': claims})
+                r.check(len(row) == 1 and norm(row[0]) == norm(want), 'the card\'s "%s" row reads the claims with authority %s answered: the %s link of each, its claimant a field after it where the owner row does not name it, a retracted one marked so, "none" where it named none with authority' % (label, op, named), {'want': want, 'row': row, 'claims': claims})
             else:
                 r.check(not row, 'a lineage read that answered no claims document draws no "%s" row: nothing was learned of it' % label, {'outcome': outcome, 'row': row})
             lineage[op] = {'asks': len(reads), 'answer': answer, 'row': row}

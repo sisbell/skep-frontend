@@ -8,16 +8,21 @@
 // answered and the last its element was drawn for, the state its element was
 // last written from, and the place it was last set beside.
 // A key swallowed away from the draft the person last wrote in ends its line
-// with where they were writing (N-KEYS'; `Writing`): "— you were last writing
+// with where they were writing (N-KEYS'; `Writing`): "you were last writing
 // in ⟨label⟩" after the notice, whole or compact alike, its label the act
 // back to that draft's kept caret, said with the notice in the status region.
 // A line may end on a sentence of its own (`show`'s `ending`; B3-S3's constant
-// sentence): after the notice and where the person was writing, while the
-// notice stands whole, and never beside its compact form.
+// sentence, the copy line's act): after the notice and where the person was
+// writing, while the notice stands whole, and never beside its compact form.
+// The line is sentences, each its capital and its end mark (ST's
+// `hintSentences`, `sentence`, `sentences`; style S1, S2) — the notice whole
+// or compact, where the person was writing, the ending — so a notice reads in
+// one form however many of them stand; what the status region says is the
+// same line.
 // Raised (`show`) by the press it answers — N-KEYS' swallow, the caret's
 // lines, an inert slot's reason, "select a passage first", the caret's
 // follow line; N-FIND's chord off any document; the one line's inert act,
-// through the act the app hands the line — its notice ST's (`hintOf`): whole
+// through the act the app hands the line — its notice ST's (`hintSentences`): whole
 // at its first press in the page's session, its compact form, its first
 // clause, at every later press, and a notice marked whole whole at every
 // press. Every press it answers draws it again with a brief fade-in of its
@@ -77,7 +82,7 @@ import * as LAYER from '../text/layer.js';
 import { focusBox } from '../plane/render.js';
 import { pageGeometry } from '../beams/beams.js';
 import { visibleView, markDirty } from '../plane/camera.js';
-import { hintOf, addressedHTML, t } from '../strings.js';
+import { hintSentences, addressedHTML, opening, sentence, sentences, endedHTML } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect */
@@ -100,11 +105,11 @@ const WRITING = 'B3.undo.last-writing';
 /**
  * @typedef {Object} Hint — the hint standing (see the head)
  * @property {string} id its notice's string
- * @property {string} whole the notice whole
- * @property {string} clause its compact form: the notice whole where it has none (ST's `hintOf`)
+ * @property {string} whole the notice whole, a sentence (ST's `hintSentences`)
+ * @property {string} clause its compact form, a sentence: the notice whole where it has none
  * @property {boolean} open it shows the notice whole
  * @property {Writing | null} writing where the person was writing, which its line ends with; null where it ends with the notice
- * @property {{id: string, text: string} | null} ending the sentence its line ends on while its notice stands whole, by its string; null where it ends on none
+ * @property {{id: string, text: string} | null} ending the sentence its line ends on while its notice stands whole, by its string, its words a sentence (ST's `sentence`); null where it ends on none
  * @property {Site} site
  * @property {boolean} plane the press was made on the plane: the reading scene covers it
  */
@@ -162,13 +167,13 @@ export function attach(e, r = {}) {
 /** the words the hint's notice shows */
 const wordsOf = (/** @type {Hint} */ h) => (h.open ? h.whole : h.clause);
 /** the words its line ends with where the person was writing elsewhere (`Writing`); '' where it ends with the notice */
-const endOf = (/** @type {Hint} */ h) => (h.writing ? t(WRITING, { label: h.writing.label }) : '');
+const endOf = (/** @type {Hint} */ h) => (h.writing ? sentence(WRITING, { label: h.writing.label }) : '');
 /** does its notice stand whole: opened, or with no compact form to fold to */
 const wholeOf = (/** @type {Hint} */ h) => h.open || h.whole === h.clause;
 /** the sentence its line ends on, while its notice stands whole; '' where it ends on none, and beside its compact form */
 const lastOf = (/** @type {Hint} */ h) => (h.ending && wholeOf(h) ? h.ending.text : '');
 /** the words the status region says of it: the notice's, where the person was writing after them, and the sentence the line ends on */
-const saidOf = (/** @type {Hint} */ h) => [wordsOf(h), endOf(h), lastOf(h)].filter(Boolean).join(' ');
+const saidOf = (/** @type {Hint} */ h) => sentences(wordsOf(h), endOf(h), lastOf(h));
 
 /**
  * The focus a press was made at (see the head): the element handed in; else
@@ -192,16 +197,16 @@ function siteOf(at) {
  * session, compact at every later one, its line ending with where the person
  * was writing where the press hands that in — said in the status region,
  * and drawn on the next dirty frame (FP-9). An auto-repeat answers nothing.
- * Throws for a string the table marks no hint (ST's `hintOf`).
+ * Throws for a string the table marks no hint (ST's `hintSentences`).
  * @param {string} id
  * @param {Record<string, string | number> | null} [values]
  * @param {{repeat?: boolean, at?: Element | null, writing?: Writing | null, ending?: string | null}} [o] `repeat` the key's auto-repeat; `at` the element the press was made at, where the walk's focus is not it; `writing` where the person was writing, which the line ends with; `ending` the string of the sentence the line ends on while its notice stands whole
  */
 export function show(id, values = null, o = {}) {
   if (o.repeat) return;
-  const h = hintOf(id, values ?? undefined), open = !seen.has(id);
+  const h = hintSentences(id, values ?? undefined), open = !seen.has(id);
   seen.add(id);
-  hint = { id, whole: h.whole, clause: h.clause, open, writing: o.writing ?? null, ending: o.ending ? { id: o.ending, text: t(o.ending) } : null, site: siteOf(o.at ?? null), plane: !SCENE.isOpen() };
+  hint = { id, whole: h.whole, clause: h.clause, open, writing: o.writing ?? null, ending: o.ending ? { id: o.ending, text: sentence(o.ending) } : null, site: siteOf(o.at ?? null), plane: !SCENE.isOpen() };
   presses++;
   FOCUS.say(saidOf(hint), false, true);
   markDirty();
@@ -252,13 +257,13 @@ function markup(/** @type {Hint} */ h) {
   return `<button type="button" data-hint="${esc(h.id)}" data-string="${esc(h.id)}" aria-describedby="hint-whole"${folds}>${addressedHTML(wordsOf(h))}</button>`
     + (h.writing ? ` ${endingHTML(h.writing)}` : '')
     + (h.ending && last ? ` <span class="ending" data-string="${esc(h.ending.id)}">${addressedHTML(last)}</span>` : '')
-    + `<span id="hint-whole" hidden>${esc([h.whole, h.ending ? h.ending.text : ''].filter(Boolean).join(' '))}</span>`;
+    + `<span id="hint-whole" hidden>${esc(sentences(h.whole, h.ending ? h.ending.text : ''))}</span>`;
 }
 
-/** the ending where the person was writing (`Writing`): the line's words, its label a button */
+/** the ending where the person was writing (`Writing`): its sentence's words, its label a button, the end mark after the label */
 function endingHTML(/** @type {Writing} */ w) {
-  const [before, after] = t(WRITING).split('⟨label⟩');
-  return `<span class="writing" data-string="${WRITING}">${esc(before)}<button type="button" data-writing="1">${addressedHTML(w.label)}</button>${esc(after ?? '')}</span>`;
+  const [before, after = ''] = opening(WRITING).split('⟨label⟩');
+  return `<span class="writing" data-string="${WRITING}">${esc(before)}<button type="button" data-writing="1">${addressedHTML(w.label)}</button>${endedHTML(opening(WRITING, { label: w.label }), esc(after))}</span>`;
 }
 
 /**

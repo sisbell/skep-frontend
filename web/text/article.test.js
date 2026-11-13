@@ -38,10 +38,12 @@
 // the read an arrival offers as a control, a kept clause after them on a line
 // of its own, the moved scene's held version's line in the place of a draft's
 // kept word and chip, a moved document's face beneath its kept word and
-// before its chip, never yielding — whole with its hands, its acts and its
-// discard's statement below them, compact its compact form an act opening
-// the corner whole, its words whole where its hands are not one device's —
-// in the corner and the mirror's words alike, neither the latest version nor
+// before its chip, never yielding — whole with its hands, its line and each
+// hand a sentence, its acts and its discard's statement below them, compact
+// its compact form an act opening the corner whole, its words whole where its
+// hands are not one device's — in the corner and the mirror's words alike,
+// the mirror's a row of fields, a draft's kept statement in sentences at
+// every state, neither the latest version nor
 // the chain's count while the
 // board lags, its state one rule the words the ARIA mirror voices are made
 // by; the record rule; a typed line set as typed in the body's type, a
@@ -60,13 +62,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, sourcesIn, cornerHTML, cornerItems, cornerLead, cornerWords, keptHTML, keptStatement, statementHTML, faceWords, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, sourcesIn, cornerHTML, cornerItems, cornerLead, cornerWords, keptHTML, keptStatement, statementHTML, faceWords, faceRow, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
 import { below, spoken } from '../overlays/statement.js';
 import { keptStatement as keptSaying } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
-import { t, tHTML, bracketed, CLIENT_CLOSE } from '../strings.js';
+import { t, tHTML, bracketed, CLIENT_CLOSE, sentence, sentences, asSentence, fields } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { accountOf, homeOf, resolveSpan } from '../model/address.js';
 import { deriveBlocks, textOf } from '../model/records.js';
@@ -528,7 +530,7 @@ test('every corner\'s first slot is its document\'s kind, the one item it leads 
   }
 });
 
-test('a draft\'s corner carries its kept state in a slot of fixed width — the longest of the three words\' as the view measures them — the word and its string named on it, a disclosure button saying whether its statement stands open, its words alone where the view asks no act, an empty box of that width hidden from assistive technology while no state is set, before the chip in either form; the word\'s act opens the statement whole on a line of its own, the save chord\'s line at "kept" and "nothing to save —" before the word and its reason at the other two; the corner carries no "past states" act while the strings table holds no reason for an inert one; an edition\'s corner is unchanged (B3-S1, B3-S2; D5 K-57, K-74; FP-34)', () => {
+test('a draft\'s corner carries its kept state in a slot of fixed width — the longest of the three words\' as the view measures them — the word and its string named on it, a disclosure button saying whether its statement stands open, its words alone where the view asks no act, an empty box of that width hidden from assistive technology while no state is set, before the chip in either form; the word\'s act opens the statement whole on a line of its own, the save chord\'s line at "kept" and "Nothing to save." before the word and its reason at the other two, in sentences; the corner carries no "past states" act while the strings table holds no reason for an inert one; an edition\'s corner is unchanged (B3-S1, B3-S2; D5 K-57, K-74; FP-34)', () => {
   const draft = doc({ kind: 'draft', meta: null });
   /** @type {Array<[import('../write/write.js').KeptState['word'], string]>} */
   const WORDS = [['kept', 'B3.kept'], ['not yet kept', 'B3.not-yet-kept'], ['not kept', 'B3.not-kept']];
@@ -547,13 +549,13 @@ test('a draft\'s corner carries its kept state in a slot of fixed width — the 
     assert.ok(words.includes(`<span class="kept-line"><span class="kept-word" data-string="${id}" style="width:${em}em">${esc(t(id))}</span></span>`) && !words.includes('<button'), `${word}: its words alone where the view asks no act — ${words}`);
   }
   const kept = cornerHTML(draft, draftView({ kept: { word: 'kept', reason: null }, keptOpen: true }));
-  assert.ok(kept.includes(`</span><span class="kept-statement" data-string="B3.save.kept">${esc(t('B3.save.kept'))}</span><span class="chip"`) && kept.includes('aria-expanded="true"'), `kept: the save chord's line whole, on a line of its own after the word, the word saying its statement stands open — ${kept}`);
+  assert.ok(kept.includes(`</span><span class="kept-statement" data-string="B3.save.kept">${esc(sentence('B3.save.kept'))}</span><span class="chip"`) && kept.includes('aria-expanded="true"'), `kept: the save chord's line whole, on a line of its own after the word, the word saying its statement stands open — ${kept}`);
   const reason = 'the board is not answering';
   const held = cornerHTML(draft, draftView({ kept: { word: 'not yet kept', reason }, keptOpen: true }));
-  assert.ok(held.includes(`<span class="kept-statement" data-string="B3.save.before">${esc(`${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-yet-kept'), reason })}`)}</span>`), `not yet kept: "nothing to save —" before the word, the reason on the act — ${held}`);
+  assert.ok(held.includes(`<span class="kept-statement" data-string="B3.save.before">${esc('Nothing to save. Not yet kept — the board is not answering.')}</span>`), `not yet kept: "Nothing to save." before the word, the reason on the act — ${held}`);
   const refused = cornerHTML(draft, draftView({ kept: { word: 'not kept', reason: null }, keptOpen: true }));
-  assert.ok(refused.includes(`<span class="kept-statement" data-string="B3.save.before">${esc(`${t('B3.save.before')} ${t('B3.not-kept')}`)}</span>`), 'not kept with no reason: "nothing to save —" before the word alone');
-  assert.deepEqual([keptStatement({ word: 'kept', reason: 'ignored' }), keptStatement({ word: 'not kept', reason: 'r' })], [{ id: 'B3.save.kept', text: t('B3.save.kept') }, { id: 'B3.save.before', text: `${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-kept'), reason: 'r' })}` }], 'the statement by the word: at "kept" its own line whatever reason stands; at the others the word and the reason');
+  assert.ok(refused.includes(`<span class="kept-statement" data-string="B3.save.before">${esc(sentences(sentence('B3.save.before'), sentence('B3.not-kept')))}</span>`), 'not kept with no reason: "Nothing to save." before the word alone, each a sentence');
+  assert.deepEqual([keptStatement({ word: 'kept', reason: 'ignored' }), keptStatement({ word: 'not kept', reason: 'r' })], [{ id: 'B3.save.kept', text: sentence('B3.save.kept') }, { id: 'B3.save.before', text: 'Nothing to save. Not kept — r.' }], 'the statement by the word: at "kept" its own line whatever reason stands; at the others the word and the reason');
   for (const h of [empty, kept, held, refused]) assert.ok(!h.includes(t('B3.past-states')) && !h.includes('tabindex="0"') && (h.match(/<button /g) || []).length === (h === empty ? 0 : 1), 'no "past states" act: the strings table holds its words and no reason for an inert one; the kept word, where a state is set, the one act, out of the Tab order as made (K-57)');
   assert.ok(!cornerHTML(doc(), view({ kept: { word: 'kept', reason: null }, keptOpen: true })).includes('kept-'), 'an edition\'s corner carries no kept slot, whatever state is handed in');
 });
@@ -587,10 +589,10 @@ const MOVED = /** @type {import('./article.js').CornerFace} */ ({
   ],
   said: { id: 'B3.moved.discard', values: {} },
 });
-/** the moved face whole as the corner draws it: its sentence, its hands, its acts keyed on the face, and its discard's statement below them */
+/** the moved face whole as the corner draws it: its sentence, its hands each a sentence, its acts keyed on the face, and its discard's statement below them */
 const movedWhole = (/** @type {import('./article.js').CornerFace} */ f = MOVED) => '<span class="face">'
-  + `<span class="face-text" data-string="B3.moved">${esc(t('B3.moved'))}</span>`
-  + `<span class="hands"${f.again ? ' data-again="1"' : ''}>${f.again ? '<span class="again" data-slot="again"></span>' : ''}${f.hands.map((h) => `<span class="hand" data-string="${h.id}">${esc(h.text)}</span>`).join(' ')}</span>`
+  + `<span class="face-text" data-string="B3.moved">${esc(sentence('B3.moved'))}</span>`
+  + `<span class="hands"${f.again ? ' data-again="1"' : ''}>${f.again ? '<span class="again" data-slot="again"></span>' : ''}${f.hands.map((h) => `<span class="hand" data-string="${h.id}">${esc(asSentence(h))}</span>`).join(' ')}</span>`
   + '<span class="face-acts">'
   + `<button type="button" class="face-act" data-face="held" data-string="B3.moved.see-held" tabindex="-1">${esc(t('B3.moved.see-held'))}</button>`
   + `<button type="button" class="face-act inert" data-face="send" data-string="B3.send-again" aria-disabled="true" data-inert="B3.moved.send-again.inert" title="${esc(t('B3.moved.send-again.inert', { label: 'Tumbler.' }))}" tabindex="-1">${esc(t('B3.send-again'))}</button>`
@@ -609,7 +611,7 @@ test('a moved draft\'s corner carries its face beneath the kept word it explains
   const act = `<button type="button" class="face compact" data-face="whole" data-whole data-string="B3.moved.compact" aria-expanded="false" aria-description="${esc(faceWords(MOVED))}" tabindex="-1">${esc(t('B3.moved.compact', { hand: 'desk' }))}</button>`;
   assert.ok(compact.includes(keptLine + act + '<button type="button" class="chip glyph"'), `compact: its compact form between the kept word and the chip's glyph, an act opening the corner whole — ${compact}`);
   assert.ok(!compact.includes('class="face-act'), 'compact: its acts one act away');
-  assert.equal(faceWords(MOVED), `${t('B3.moved')} ${t('B3.hand.device', { 'device label': 'desk' })}`, 'its words whole: its sentence, then its hand');
+  assert.equal(faceWords(MOVED), 'The document changed while this text was held — it is not placed; put it where it goes, or discard it. By desk.', 'its words whole: its sentence, then its hand a sentence of its own');
   assert.ok(cornerHTML(draft, draftView({ kept, face: MOVED, opened: true })).includes(movedWhole()), 'opened whole on its act: the face whole, with its acts');
   assert.ok(cornerItems(draft, draftView({ kept, face: MOVED, opened: true }), true).find((i) => i.cls === 'face')?.html.includes('aria-expanded="true"'), 'a head\'s row, the corner opened: its compact form says it stands opened');
   const words = cornerItems(draft, draftView({ kept, face: MOVED, acts: false })).map((i) => i.html);
@@ -621,18 +623,19 @@ test('a moved draft\'s corner carries its face beneath the kept word it explains
 test('a moved face whose hands are not one device\'s has no compact wording: where the corner stands compact its words stand whole as the act, its sentence and its hands, described by nothing more (issue #598; FP-26)', () => {
   const draft = doc({ kind: 'draft', meta: null }), f = { ...MOVED, compact: null, hands: [{ id: 'B3.hand.unread', text: t('B3.hand.unread') }] };
   const c = cornerHTML(draft, draftView({ kept: { word: 'not yet kept', reason: null }, face: f }), true);
-  assert.ok(c.includes(`<button type="button" class="face compact" data-face="whole" data-whole data-string="B3.moved" aria-expanded="false" tabindex="-1">${esc(`${t('B3.moved')} ${t('B3.hand.unread')}`)}</button>`), `its words whole as the act — ${c}`);
+  assert.ok(c.includes(`<button type="button" class="face compact" data-face="whole" data-whole data-string="B3.moved" aria-expanded="false" tabindex="-1">${esc(sentences(sentence('B3.moved'), sentence('B3.hand.unread')))}</button>`), `its words whole as the act, each a sentence — ${c}`);
   assert.equal(cornerItems(draft, draftView({ face: f }), true).find((i) => i.cls === 'face')?.words, faceWords(f), 'its words the face\'s whole');
 });
 
-test('the moved face is one of the corner\'s items that never yield, its words and its width its form\'s — compact its compact form, whole its sentence and its hand — and the ARIA mirror voices it whole after the kept word and before the chip (issue #598; foundations §3.1; R94)', () => {
+test('the moved face is one of the corner\'s items that never yield, its words and its width its form\'s — compact its compact form, whole its sentence and its hand — and the ARIA mirror voices it whole after the kept word and before the chip, its hand a field of its row (issue #598; foundations §3.1; R94; style S2)', () => {
   const draft = doc({ kind: 'draft', meta: null }), v = draftView({ kept: { word: 'not yet kept', reason: null }, face: MOVED });
   const at = (/** @type {boolean} */ compact) => { const items = cornerItems(draft, v, compact); return [items.map((i) => i.cls), items.find((i) => i.cls === 'face')]; };
   const [order, compact] = at(true), [, whole] = at(false);
   assert.deepEqual(order, ['kind', 'kept', 'face', 'chip'], 'its kind, its kept word, the face, then its chip');
   assert.deepEqual(compact && [compact.words, compact.em, compact.yields], [t('B3.moved.compact', { hand: 'desk' }), advances(t('B3.moved.compact', { hand: 'desk' })), false], 'compact: its compact form, never yielding');
   assert.deepEqual(whole && [whole.words, whole.em, whole.yields], [faceWords(MOVED), advances(faceWords(MOVED)), false], 'whole: its words whole, never yielding');
-  assert.equal(cornerWords(draft, v), [t('B3.not-yet-kept'), faceWords(MOVED), t('C-28.flag-on')].join(', '), 'the mirror\'s words: the kept word, the face whole, the chip');
+  assert.equal(faceRow(MOVED), fields(t('B3.moved'), t('B3.hand.device', { 'device label': 'desk' })), 'the face as a row: its line, then its hand, a field');
+  assert.equal(cornerWords(draft, v), [t('B3.not-yet-kept'), faceRow(MOVED), t('C-28.flag-on')].join(', '), 'the mirror\'s words: the kept word, the face whole as a row, the chip');
   assert.equal(cornerWords(draft, draftView({ kept: { word: 'not yet kept', reason: null } })), [t('B3.not-yet-kept'), t('C-28.flag-on')].join(', '), 'no face: none voiced');
   assert.equal(cornerHTML(draft, draftView({ held: true, face: MOVED })), kindSlot('draft') + `<span class="held" data-string="B3.history.held">${esc(t('B3.history.held'))}</span>`, 'the moved scene\'s held version carries none');
 });
@@ -1308,19 +1311,19 @@ test('a document\'s first line is one rule: withheld, its box\'s words bracketed
   assert.equal(CLIENT_CLOSE, ']', 'what closes the client\'s words: the bracket a cut keeps');
 });
 
-test('#532, #529: at a hold while the board is not answering the kept statement is the one string the table holds for that silence — the save chord\'s answer on the notebook and at a board, the kept word\'s own statement in both forms — never assembled from a word and a reason; a hold of any other cause, and "not kept", read "nothing to save —" before the word, the cause\'s words after it where the table words it', () => {
+test('#532, #529: at a hold while the board is not answering the kept statement is the one string the table holds for that silence — the save chord\'s answer on the notebook and at a board, the kept word\'s own statement in both forms — never assembled from a word and a reason; a hold of any other cause, and "not kept", read "Nothing to save." before the word, the cause\'s words after it where the table words it', () => {
   const held = /** @type {import('../write/write.js').KeptState} */ ({ word: 'not yet kept', reason: null, cause: { token: 'unreachable', arm: null } });
-  assert.deepEqual(keptSaying(held, { silent: true }), { id: 'B3.save.held', text: t('B3.save.held') }, 'nothing to save, the notebook not answering: the single statement, from the strings table');
-  assert.equal(keptSaying(held, { silent: true }).text, 'nothing to save — held on this device and sent when your notebook answers');
+  assert.deepEqual(keptSaying(held, { silent: true }), { id: 'B3.save.held', text: sentence('B3.save.held') }, 'nothing to save, the notebook not answering: the single statement, from the strings table, a sentence');
+  assert.equal(keptSaying(held, { silent: true }).text, 'Nothing to save — held on this device and sent when your notebook answers.');
   assert.ok(!keptSaying(held, { silent: true }).text.includes(t('B3.not-yet-kept')), 'the corner\'s word not repeated, no word joined to a reason');
-  assert.deepEqual(keptSaying(held, { silent: true, notebook: false, board: 'board 1' }), { id: 'B3.save.held.board', text: t('B3.save.held.board', { board: 'board 1' }) }, 'at a board that cannot be reached: its form, the board named');
-  assert.deepEqual(keptSaying(held, { silent: true, how: 'word' }), { id: 'B3.kept.held', text: t('B3.kept.held') }, 'on the kept word\'s own act: its own statement');
-  assert.deepEqual(keptSaying(held, { silent: true, how: 'word', notebook: false, board: 'board 1' }), { id: 'B3.kept.held.board', text: t('B3.kept.held.board', { board: 'board 1' }) });
-  assert.deepEqual(keptSaying(held, { silent: false }), { id: 'B3.save.before', text: `${t('B3.save.before')} ${t('B3.not-yet-kept')}` }, 'the board answering: the bare statement, no reason the table does not word');
-  assert.equal(keptSaying({ word: 'not yet kept', reason: null, cause: { token: 'session_died', arm: 'mode' } }).text, `${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-yet-kept'), reason: t('C-137.mode') })}`, 'the death\'s hold: its own cause, the ending\'s entry by its arm — never the board\'s silence');
-  assert.equal(keptSaying({ word: 'not yet kept', reason: null, cause: { token: 'session_died', arm: 'restart' } }, { silent: false }).text, `${t('B3.save.before')} ${t('B3.not-yet-kept')}`, 'an arm the table holds no entry for: the word alone');
-  assert.equal(keptSaying({ word: 'not kept', reason: null, cause: { token: 'island', arm: null } }).text, `${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-kept'), reason: t('B3.island') })}`, '"not kept" by a refusal the page keeps: its words after the word');
-  assert.equal(keptSaying({ word: 'not kept', reason: 'said so', cause: { token: 'island', arm: null } }).text, `${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-kept'), reason: 'said so' })}`, 'a reason set in words stands first');
-  assert.deepEqual(keptSaying({ word: 'kept', reason: null }, { silent: true }), { id: 'B3.save.kept', text: t('B3.save.kept') }, '"kept" is "kept", whatever the board');
+  assert.deepEqual(keptSaying(held, { silent: true, notebook: false, board: 'board 1' }), { id: 'B3.save.held.board', text: sentence('B3.save.held.board', { board: 'board 1' }) }, 'at a board that cannot be reached: its form, the board named');
+  assert.deepEqual(keptSaying(held, { silent: true, how: 'word' }), { id: 'B3.kept.held', text: sentence('B3.kept.held') }, 'on the kept word\'s own act: its own statement');
+  assert.deepEqual(keptSaying(held, { silent: true, how: 'word', notebook: false, board: 'board 1' }), { id: 'B3.kept.held.board', text: sentence('B3.kept.held.board', { board: 'board 1' }) });
+  assert.deepEqual(keptSaying(held, { silent: false }), { id: 'B3.save.before', text: 'Nothing to save. Not yet kept.' }, 'the board answering: the bare statement, no reason the table does not word');
+  assert.equal(keptSaying({ word: 'not yet kept', reason: null, cause: { token: 'session_died', arm: 'mode' } }).text, sentences(sentence('B3.save.before'), sentence('L.kept.failed', { clause: t('B3.not-yet-kept'), reason: t('C-137.mode') }, ['clause'])), 'the death\'s hold: its own cause, the ending\'s entry by its arm — never the board\'s silence');
+  assert.equal(keptSaying({ word: 'not yet kept', reason: null, cause: { token: 'session_died', arm: 'restart' } }, { silent: false }).text, 'Nothing to save. Not yet kept.', 'an arm the table holds no entry for: the word alone');
+  assert.equal(keptSaying({ word: 'not kept', reason: null, cause: { token: 'island', arm: null } }).text, sentences(sentence('B3.save.before'), sentence('L.kept.failed', { clause: t('B3.not-kept'), reason: t('B3.island') }, ['clause'])), '"not kept" by a refusal the page keeps: its words after the word');
+  assert.equal(keptSaying({ word: 'not kept', reason: 'said so', cause: { token: 'island', arm: null } }).text, 'Nothing to save. Not kept — said so.', 'a reason set in words stands first');
+  assert.deepEqual(keptSaying({ word: 'kept', reason: null }, { silent: true }), { id: 'B3.save.kept', text: sentence('B3.save.kept') }, '"kept" is "kept", whatever the board');
 });
 

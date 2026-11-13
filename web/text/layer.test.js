@@ -94,7 +94,7 @@ import { CLAUSE_READING, articleHTML, faceWords } from './article.js';
 import * as FACES from '../overlays/faces.js';
 import { farSays } from '../beams/held.js';
 import { pastSigns } from '../beams/beams.js';
-import { t, tHTML, lastRead } from '../strings.js';
+import { t, tHTML, lastRead, sentence, sentences } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {import('../plane/layout.js').Fold} Fold */
@@ -1713,7 +1713,7 @@ test('where the platform sets no words — the node tests — the article\'s mea
   assert.equal(LAYER.viewFor(REC.doc(D)).measure, LAYER.widthOf, 'the article\'s view measures by it');
 });
 
-test('a link\'s symbol is titled with its far end\'s state in its short form, the start of what its mirror item and its card say whole: no clause for the withheld text its far document shows, and no count of the runs holding its passage (issue #242\'s design decision: "Stubs and symbols show the start of the card\'s and mirror\'s full phrase")', () => {
+test('a link\'s symbol is titled with its far end\'s state in its short form, a field heading what its mirror item and its card say whole as sentences: no clause for the withheld text its far document shows, and no count of the runs holding its passage (issue #242\'s design decision: "Stubs and symbols show the start of the card\'s and mirror\'s full phrase")', () => {
   // the person's citation from D's first three bytes of FAR's first five, which FAR's text holds two of at 1 and its fourth at 8, in two runs, before thirty positions withheld from the reader
   const L = D + '.0.2.1', P = FAR + '.0.1.';
   REC.takeDelivery(D, [{ pos: 1, width: EXTENT, kind: 'content', text: TEXT, ref: null, origin: null }]);
@@ -1726,7 +1726,7 @@ test('a link\'s symbol is titled with its far end\'s state in its short form, th
   LK.reveal(D, 2);
   const d = REC.doc(D), v = LAYER.viewFor(d), s = /** @type {import('../links/links.js').Shown} */ (v.symbols.find((x) => x.link.addr === L));
   const part = t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) });
-  assert.deepEqual([v.says(s), farSays(s)], [part, part + t('L.held.withheld')], 'the symbol\'s words the short form, its mirror item\'s the whole');
+  assert.deepEqual([v.says(s), farSays(s)], [part, sentences(sentence('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) }), sentence('L.held.withheld'))], 'the symbol\'s words the short form, a field; its mirror item\'s the whole, in sentences');
   const title = (articleHTML(d, v, '1.0.1').match(new RegExp(`<span class="sym [^"]*" data-link="${L}"[^>]* title="([^"]*)"`)) || [])[1];
   assert.equal(title, esc(`${CITE} · ${part}`), 'its title: its type, then the short form alone');
 });
@@ -2182,7 +2182,7 @@ test('below forty characters beside its column the corner stands at its document
   LAYER.openStatement(D, true);
   LAYER.frame();
   const opened = LAYER.cornerOf(D);
-  assert.ok(String(opened.innerHTML).includes(`<div class="opened"`) && String(opened.innerHTML).includes(esc(t('B3.save.kept'))), 'the statement opened beneath the rows');
+  assert.ok(String(opened.innerHTML).includes(`<div class="opened"`) && String(opened.innerHTML).includes(esc(sentence('B3.save.kept'))), 'the statement opened beneath the rows');
   assert.ok(/** @type {number} */ (LAYER.headClear(D)) > held.y + LINE_H * f.fs * CAM.cam.scale, 'what it covers runs to the form\'s foot');
   LAYER.openStatement(D, false);
 }));
@@ -2258,10 +2258,10 @@ test('the corner\'s items are made again as the face\'s own facts move with no o
   landAt(null);
   LAYER.frame();
   const el = /** @type {any} */ (LAYER.cornerOf(D)), rev = WRITE.rev();
-  assert.ok(String(el.innerHTML).includes(esc(t('B3.hand.unread'))), 'the hands not read yet');
+  assert.ok(String(el.innerHTML).includes(esc(sentence('B3.hand.unread'))), 'the hands not read yet, a sentence');
   face.v = movedFace('desk');
   LAYER.frame();
-  assert.ok(WRITE.rev() === rev && String(el.innerHTML).includes(esc(t('B3.hand.device', { 'device label': 'desk' }))) && !String(el.innerHTML).includes(esc(t('B3.hand.unread'))), 'named: "— by desk" in that frame');
+  assert.ok(WRITE.rev() === rev && String(el.innerHTML).includes(esc(sentence('B3.hand.device', { 'device label': 'desk' }))) && !String(el.innerHTML).includes(esc(sentence('B3.hand.unread'))), 'named: "By desk." in that frame');
 }));
 
 test('each of the face\'s acts bears its key on the face, its compact form\'s apart from a glyph\'s, so a rewrite puts a focus back on the act it stood on (issue #598; FP-20)', () => {

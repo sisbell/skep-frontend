@@ -28,7 +28,7 @@ import { docBox } from '../plane/projection.js';
 import { bundlesOf, beamOf, labelPlace, labelText, labelRuns, bundleLabels, pastSigns, inkOf, strokeOf, pointOn, strokeIn, pageGeometry, WORDS_CH } from './beams.js';
 import { edgeStub } from '../plane/camera.js';
 import { HUE, NEUTRAL_HUE, STUB } from '../plane/register.js';
-import { t } from '../strings.js';
+import { t, sentence, sentences } from '../strings.js';
 import { farSays } from './held.js';
 import { recorder } from '../test/canvas.js';
 
@@ -410,13 +410,15 @@ test('a bundle whose every beam\'s far text holds only part of its passage says 
   assert.equal(label(), H + ' · 2', 'the third party\'s whole: they part, and nothing is said');
 });
 
-test('a bundle\'s label says its far ends\' state in its short form, the start of what their mirror items and cards say whole: no clause for the withheld text its far document shows, and no count of the runs holding a passage (issue #242\'s design decision: "Stubs and symbols show the start of the card\'s and mirror\'s full phrase")', () => {
+test('a bundle\'s label says its far ends\' state in its short form, a field heading what their mirror items and cards say whole as sentences: no clause for the withheld text its far document shows, and no count of the runs holding a passage (issue #242\'s design decision: "Stubs and symbols show the start of the card\'s and mirror\'s full phrase")', () => {
   build([OWN, THIRD]);
   // H's twenty positions, then ten withheld from the reader; it holds the person's citation's first two bytes and its fourth, in two runs, and the third party's first of three
   REC.takeDelivery(H, [{ pos: 1, width: 20, kind: 'content', text: 'The far document xyz', ref: null, origin: null }, { pos: 21, width: 10, kind: 'withheld', text: '', ref: null, origin: '1.0.3.0.9' }]);
   REC.takeProjection(OWN, 2, H, [{ pos: 1, width: 2 }, { pos: 4, width: 1 }]); REC.takeProjection(THIRD, 2, H, [{ pos: 9, width: 1 }]);
   const b = bundlesOf(met([D]))[0], part = t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: H }) });
-  assert.deepEqual(b.members.map((m) => farSays(m.s)), [part + t('L.held.withheld'), part + t('L.held.withheld')], 'each one\'s whole form: part, the rest maybe under the withheld text');
+  const whole = sentences(sentence('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: H }) }), sentence('L.held.withheld'));
+  assert.deepEqual(b.members.map((m) => farSays(m.s)), [whole, whole], 'each one\'s whole form: part, then the rest maybe under the withheld text, a sentence each');
+  assert.ok(whole.startsWith(part.charAt(0).toUpperCase() + part.slice(1)), 'the label\'s short form heads it');
   const label = labelText(b);
   assert.ok(label.startsWith(H + ' · ') && label.endsWith(' · 2 · ' + part), `the short form after the count: ${label}`);
   assert.ok(!label.includes(t('L.held.withheld')) && !/places/.test(label), `no withheld clause and no count of runs: ${label}`);

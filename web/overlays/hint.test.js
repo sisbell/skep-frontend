@@ -1,13 +1,15 @@
 // O-HINT's test, on stand-ins of its element and of the status region: a
 // refused press's hint shows its notice whole at its first press in the
-// session and its first clause at every later one, a notice marked whole
-// whole at every press, each press said and drawn again with its fade-in, an
+// session and its first clause at every later one, each a sentence, a notice
+// marked whole whole at every press, each press said and drawn again with
+// its fade-in, an
 // auto-repeat answering nothing, and a change of the page's class showing
 // each notice whole again; its element is one button named by the words it
 // shows and described by the notice whole, its act opening and folding it
 // and ending nothing; a line handed where the person was writing ends with
-// it, whole and compact alike, its label's act taking the hint down and
-// making the act handed in; a line that ends on a sentence of its own shows
+// it as a sentence of its own, whole and compact alike, its label's act
+// taking the hint down and making the act handed in; a line that ends on a
+// sentence of its own shows
 // and says it after both while its notice stands whole, and never beside the
 // compact form; the next act takes it down, handing a focus its button
 // held to the walk's element; and it stands beside the element its press was
@@ -21,7 +23,7 @@ import * as HINT from './hint.js';
 import * as HOST from './host.js';
 import * as FOCUS from '../nav/focus.js';
 import * as CAM from '../plane/camera.js';
-import { t, addressedHTML } from '../strings.js';
+import { addressedHTML, hintSentences, sentence, sentences } from '../strings.js';
 
 /** @typedef {{tag: string, attrs: Record<string, string>, text: string, focus: () => void, blur: () => void, getAttribute: (k: string) => string | null}} Kid */
 
@@ -83,26 +85,28 @@ const atRect = (/** @type {number} */ x, /** @type {number} */ y, /** @type {num
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 const SWALLOW = { 'LEAP chord': '⌘L' };
+/** K-9's notice as the hint says it: whole, and its first clause, each a sentence */
+const SWALLOWED = hintSentences('F.swallow', SWALLOW);
 
 beforeEach(() => { HINT._reset(); HINT.render(); FOCUS._reset(); doc.activeElement = body; said.length = 0; words = ''; el.faded.length = 0; });
 
-test('a refused press\'s hint shows its notice whole at its first press in the session and its first clause at every later one, said at each; a notice marked whole stands whole at every press; a change of the page\'s class shows each notice whole again', async () => {
+test('a refused press\'s hint shows its notice whole at its first press in the session and its first clause at every later one, each a sentence, said at each; a notice marked whole stands whole at every press; a change of the page\'s class shows each notice whole again (style S1)', async () => {
   HINT.show('F.swallow', SWALLOW);
-  assert.deepEqual([HINT.standing(), said.at(-1)], [{ id: 'F.swallow', words: t('F.swallow', SWALLOW), whole: t('F.swallow', SWALLOW), open: true, writing: null }, t('F.swallow', SWALLOW)], 'the first press: whole, said');
+  assert.deepEqual([HINT.standing(), said.at(-1)], [{ id: 'F.swallow', words: SWALLOWED.whole, whole: SWALLOWED.whole, open: true, writing: null }, 'Typing goes nowhere here — to go somewhere, the address line: ⌘L.'], 'the first press: whole, a sentence, said');
   HINT.act();
   HINT.show('F.swallow', SWALLOW);
-  assert.deepEqual([HINT.standing()?.words, HINT.standing()?.open, said.at(-1)], ['typing goes nowhere here', false, 'typing goes nowhere here'], 'a later press: its first clause, said');
+  assert.deepEqual([HINT.standing()?.words, HINT.standing()?.open, said.at(-1)], ['Typing goes nowhere here.', false, 'Typing goes nowhere here.'], 'a later press: its first clause, a sentence, said');
   const n = said.length;
   HINT.show('F.swallow', SWALLOW);
   await tick();
-  assert.deepEqual(said.slice(n), ['typing goes nowhere here'], 'a press it answers standing: said again, though the region held those words');
+  assert.deepEqual(said.slice(n), ['Typing goes nowhere here.'], 'a press it answers standing: said again, though the region held those words');
   HINT.show('L.seam.link-to');
   HINT.show('L.seam.link-to');
-  assert.deepEqual([HINT.standing()?.words, HINT.standing()?.open], [t('L.seam.link-to'), true], 'a notice marked whole: whole at every press');
+  assert.deepEqual([HINT.standing()?.words, HINT.standing()?.open], [hintSentences('L.seam.link-to').whole, true], 'a notice marked whole: whole at every press');
   HINT.classChanged();
   assert.equal(HINT.standing(), null, 'a change of the page\'s class takes it down');
   HINT.show('F.swallow', SWALLOW);
-  assert.deepEqual([HINT.standing()?.words, HINT.standing()?.open], [t('F.swallow', SWALLOW), true], 'and its next press shows the notice whole again');
+  assert.deepEqual([HINT.standing()?.words, HINT.standing()?.open], [SWALLOWED.whole, true], 'and its next press shows the notice whole again');
 });
 
 test('a held key\'s auto-repeat is the press it repeats: answered by nothing — nothing said, nothing drawn again, the hint as it stood', async () => {
@@ -121,8 +125,8 @@ test('its element is one button, named by the words it shows and described by th
   HINT.act();
   HINT.show('F.swallow', SWALLOW);
   HINT.render();
-  const whole = t('F.swallow', SWALLOW);
-  assert.equal(el.innerHTML, `<button type="button" data-hint="F.swallow" data-string="F.swallow" aria-describedby="hint-whole" aria-expanded="false">typing goes nowhere here</button><span id="hint-whole" hidden>${whole}</span>`);
+  const whole = SWALLOWED.whole;
+  assert.equal(el.innerHTML, `<button type="button" data-hint="F.swallow" data-string="F.swallow" aria-describedby="hint-whole" aria-expanded="false">Typing goes nowhere here.</button><span id="hint-whole" hidden>${whole}</span>`);
   assert.ok(el.classList.contains('on'), 'shown');
   assert.equal(el.faded.length, 1, 'drawn with its fade-in');
   HINT.show('F.swallow', SWALLOW);
@@ -138,27 +142,28 @@ test('its element is one button, named by the words it shows and described by th
   HINT.toggle();
   HINT.render();
   await tick();
-  assert.deepEqual([el.button()?.getAttribute('aria-expanded'), el.button()?.text, said.at(-1)], ['false', 'typing goes nowhere here', 'typing goes nowhere here'], 'its act again folds it');
+  assert.deepEqual([el.button()?.getAttribute('aria-expanded'), el.button()?.text, said.at(-1)], ['false', 'Typing goes nowhere here.', 'Typing goes nowhere here.'], 'its act again folds it');
   HINT.act();
   HINT.show('L.seam.link-to');
   HINT.render();
   assert.equal(el.button()?.getAttribute('aria-expanded'), null, 'a notice with no compact form neither opens nor folds');
 });
 
-test('a line that ends with where the person was writing shows that ending after the notice, whole and compact alike — on one line, its label a button of its own — and says the two together; a click on the label, a key\'s or the pointer\'s, takes the hint down and makes the act handed in as it was made (issue #496\'s design decision)', () => {
+test('a line that ends with where the person was writing shows that ending after the notice as a sentence of its own, whole and compact alike — on one line, its label a button of its own — and says the two together; a click on the label, a key\'s or the pointer\'s, takes the hint down and makes the act handed in as it was made (issue #496\'s design decision)', () => {
   /** @type {boolean[]} each act the label made, whether a key made it */
   const acts = [];
   const writing = { label: 'Notes 1.0.1.0.2', act: (/** @type {boolean} */ byKey) => { acts.push(byKey); } };
-  const end = t('B3.undo.last-writing', { label: writing.label }), whole = t('F.swallow', SWALLOW);
+  const end = sentence('B3.undo.last-writing', { label: writing.label }), whole = SWALLOWED.whole;
+  assert.equal(end, 'You were last writing in Notes 1.0.1.0.2.', 'the ending a sentence: no dash joins it');
   HINT.show('F.swallow', SWALLOW, { writing });
   HINT.render();
-  assert.deepEqual([HINT.standing(), said.at(-1)], [{ id: 'F.swallow', words: whole, whole, open: true, writing: end }, `${whole} ${end}`], 'whole: the notice, then the ending, said together');
+  assert.deepEqual([HINT.standing(), said.at(-1)], [{ id: 'F.swallow', words: whole, whole, open: true, writing: end }, sentences(whole, end)], 'whole: the notice, then the ending, said together');
   assert.equal(el.innerHTML, `<button type="button" data-hint="F.swallow" data-string="F.swallow" aria-describedby="hint-whole" aria-expanded="true">${addressedHTML(whole)}</button> `
-    + `<span class="writing" data-string="B3.undo.last-writing">— you were last writing in <button type="button" data-writing="1">${addressedHTML(writing.label)}</button></span><span id="hint-whole" hidden>${whole}</span>`);
+    + `<span class="writing" data-string="B3.undo.last-writing">You were last writing in <button type="button" data-writing="1">${addressedHTML(writing.label)}</button>.</span><span id="hint-whole" hidden>${whole}</span>`);
   assert.ok(el.classList.contains('writing'), 'the notice and its ending drawn as one line');
   HINT.act();
   HINT.show('F.swallow', SWALLOW, { writing });
-  assert.deepEqual([HINT.standing()?.words, HINT.standing()?.writing, said.at(-1)], ['typing goes nowhere here', end, `typing goes nowhere here ${end}`], 'compact: its first clause, then the same ending');
+  assert.deepEqual([HINT.standing()?.words, HINT.standing()?.writing, said.at(-1)], ['Typing goes nowhere here.', end, `Typing goes nowhere here. ${end}`], 'compact: its first clause, then the same ending');
   /** a click on the label, as the platform delivers it: a key's carries no click count */
   const click = (/** @type {number} */ detail) => el.listeners.click({ type: 'click', detail, target: { closest: (/** @type {string} */ sel) => (sel === 'button[data-writing]' ? {} : null) } });
   click(0);
@@ -177,12 +182,13 @@ test('a line that ends with where the person was writing shows that ending after
 
 test('a line that ends on a sentence of its own — the undo chord\'s constant sentence — shows it after the notice and after where the person was writing, and says the three together, while the notice stands whole; beside the compact form it is neither shown nor said, and the notice\'s act brings it back with the whole (B3-S3; D6 BM-42)', () => {
   const writing = { label: 'Notes 1.0.1.0.2', act: () => {} };
-  const end = t('B3.undo.last-writing', { label: writing.label }), last = t('B3.undo.constant'), whole = t('B3.undo.none'), clause = 'undo works in the text of a draft you are writing';
+  const end = sentence('B3.undo.last-writing', { label: writing.label }), last = sentence('B3.undo.constant'), { whole, clause } = hintSentences('B3.undo.none');
+  assert.equal(clause, 'Undo works in the text of a draft you are writing.');
   HINT.show('B3.undo.none', null, { writing, ending: 'B3.undo.constant' });
   HINT.render();
   assert.deepEqual([HINT.standing(), said.at(-1)], [{ id: 'B3.undo.none', words: whole, whole, open: true, writing: end, ending: last }, `${whole} ${end} ${last}`], 'whole at its first press: the notice, where the person was writing, then the sentence the line ends on');
   assert.equal(el.innerHTML, `<button type="button" data-hint="B3.undo.none" data-string="B3.undo.none" aria-describedby="hint-whole" aria-expanded="true">${addressedHTML(whole)}</button> `
-    + `<span class="writing" data-string="B3.undo.last-writing">— you were last writing in <button type="button" data-writing="1">${addressedHTML(writing.label)}</button></span>`
+    + `<span class="writing" data-string="B3.undo.last-writing">You were last writing in <button type="button" data-writing="1">${addressedHTML(writing.label)}</button>.</span>`
     + ` <span class="ending" data-string="B3.undo.constant">${last}</span><span id="hint-whole" hidden>${whole} ${last}</span>`);
   HINT.act();
   HINT.show('B3.undo.none', null, { writing, ending: 'B3.undo.constant' });

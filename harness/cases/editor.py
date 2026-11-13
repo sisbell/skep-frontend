@@ -143,7 +143,7 @@ STATES = [
          claim='the corner shows "kept" in its fixed-width slot (B3.kept)'),
     dict(screen='B3-S1', state='save-answered', walk='W-08', step=2, drawn=True,
          how='Mod+S at the corner while the word is kept (K-74)',
-         claim='the statement opens whole on its own line: "nothing to save — everything here is kept" (B3.save.kept)'),
+         claim='the statement opens whole on its own line, a sentence: "Nothing to save — everything here is kept." (B3.save.kept)'),
     dict(screen='B3-S1', state='caret-placed', walk='W-08', step=2, drawn=True,
          how="Enter at the walk's focused span of the own draft (K-70)",
          claim="the page's own caret stands live at the span's start, its mark in the text"),
@@ -174,7 +174,7 @@ STATES = [
          claim='the typed words reach the test board as one composed `insert`, acked, and the corner reads "kept" (B3.kept); the read that follows holds them and the page\'s edits are gone, the text shown the same'),
     dict(screen='B3-S2', state='held-in-session', walk='W-08', step=7, drawn=True,
          how="arm `op` to answer `held` and `held` to list the line; type; fire `daemon` unreachable (D6 BM-8, BM-78)",
-         claim='the corner reads "not yet kept" (B3.not-yet-kept), its reason on the word\'s own act — "not yet kept — held on this device and sent when your notebook answers" (B3.kept.held) — the daemon segment in its held form (B3.daemon.held.notebook), the held words standing in the text with no margin mark beside them: a line merely held is unmarked (J5)'),
+         claim='the corner reads "not yet kept" (B3.not-yet-kept), its reason on the word\'s own act, a sentence — "Not yet kept — held on this device and sent when your notebook answers." (B3.kept.held) — the daemon segment in its held form (B3.daemon.held.notebook), the held words standing in the text with no margin mark beside them: a line merely held is unmarked (J5)'),
     dict(screen='B3-S2', state='held-bars', walk='W-08', step=7, drawn=True,
          how="arm `held` to list an insert line of the case's own draft, then open the machine's page again: the line applied at the open (D6 BM-29); fire `held` naming it landed (BM-25)",
          claim='the held words stand before the draft\'s first line with one held bar beside them from their first line to their last and "held" (B3.held) once in the edge at its top; the `held` event landing the line lifts the bar and the word'),
@@ -186,7 +186,7 @@ STATES = [
          claim='the run\'s words carry the refused mark; the face names the board and the time elapsed (B3.answers_lost), its discard\'s statement its own (B3.answers_lost.discard); the read unanswered, "did not answer — nothing was discarded" (B3.answers_lost.unanswered) and the face stands'),
     dict(screen='B3-S2', state='moved-face', walk='W-08', step=7, drawn=True,
          how='a `held` row held moved with `arrangement_moved` and its hands (D6 BM-13, BM-16, BM-17, BM-18)',
-         claim='the corner reads "not yet kept" and carries the face beneath it, before the chip, no overlay showing it, the corner reaching into no other document\'s box and clipped by nothing — compact where the corner stands at its head, "changed while this text was held — not placed · by desk" (B3.moved.compact) standing inside its row, whole on its act — the face saying the document changed (B3.moved) and naming the hand in its slot (B3.hand.device), with "see the held text", "send again" inert (B3.moved.send-again.inert) and the discard, its statement ending on its exit (B3.moved.discard); the kept word\'s act opens its statement; the held words carry the held bar while the face asks about them (D8)'),
+         claim='the corner reads "not yet kept" and carries the face beneath it, before the chip, no overlay showing it, the corner reaching into no other document\'s box and clipped by nothing — compact where the corner stands at its head, "changed while this text was held — not placed · by desk" (B3.moved.compact) standing inside its row, whole on its act — the face saying the document changed (B3.moved) and naming the hand in its slot (B3.hand.device), each a sentence, with "see the held text", "send again" inert (B3.moved.send-again.inert) and the discard, its statement ending on its exit (B3.moved.discard); the kept word\'s act opens its statement; the held words carry the held bar while the face asks about them (D8)'),
     dict(screen='B3-S2', state='moved-scene', walk='W-08', step=7, drawn=True,
          how='`scene.openHeld(own, [an insert row])`: the current text beside the held version re-derived (D6 BM-14; #411)',
          claim="a scene stands with the own draft in pane A and the derived record in pane B, derived, no compare asked; both panes' "
@@ -205,7 +205,7 @@ STATES = [
          claim="the line's death arm, C-137's words with sign in, each in view, and the own draft covered as a guest meets it"),
     dict(screen='B3-S2', state='halted-store', walk='W-08', step=7, drawn=True,
          how='arm `held` with the refusal `store_halted`, its `why` damaged; fire `held` (D6 BM-30)',
-         claim='the one line reads the halt\'s damaged form, what becomes of the words it holds and its cause (B3.store_halted.damaged, .unsent, .damaged.cause) with "show the file" (B3.show-file); a key at the caret adds no edit and is answered by the halt\'s caret line (B3.store_halted.caret)'),
+         claim='the one line reads the halt\'s damaged form, what becomes of the words it holds and its cause, each a sentence (B3.store_halted.damaged, .unsent, .damaged.cause), with "show the file" (B3.show-file); a key at the caret adds no edit and is answered by the halt\'s caret line (B3.store_halted.caret)'),
     dict(screen='B3-S2', state='second-window', walk='W-08', step=7, drawn=True,
          how="fire `another-window` {board, another_window: true} (D6 BM-60)",
          claim='the one line reads "this window reads only and keeps nothing you type — …" (B3.another_window) with "copy this address" (B3.copy-address); a key at the caret adds no edit and is answered by that line'),
@@ -215,7 +215,7 @@ STATES = [
     # B3-S3 … B3-S13
     dict(screen='B3-S3', state='undo-lines', walk='W-08', step=5, drawn=True,
          how="Mod+Z in the case's own draft before anything is typed in it — an empty stack (K-75; D6 BM-42) — then the hint's own act",
-         claim='the hint beside the focus reads "nothing to undo in this draft this session — its past states hold what came before" (B3.undo.empty), whole at its first press in the session and ending on the constant sentence, "a link you made public stays until you retract it at its card" (B3.undo.constant), inside the window below the one line and said in the status region; a later press shows its first clause alone, and its act opens it whole again; nothing is sent'),
+         claim='the hint beside the focus reads "Nothing to undo in this draft this session — its past states hold what came before." (B3.undo.empty), whole at its first press in the session and ending on the constant sentence, "A link you made public stays until you retract it at its card." (B3.undo.constant), inside the window below the one line and said in the status region; a later press shows its first clause alone, and its act opens it whole again; nothing is sent'),
     dict(screen='B3-S4', state='deletion-face', walk='W-08', step=8, drawn=True,
          how="Backspace over kept words at the caret in the case's own draft; the burst's commit composes the `delete` (D6 BM-51)",
          claim='the deletion face stands whole at the removal point, in the margin beside its line or over the lines beneath it — "still here — for as long as this board retains it; …" (C-49), then "you alone can still reach what you remove" (B3.deletion.private) — its mark named "removed here" (B3.removed-here), inside the window, taking no focus and no key: the caret stands live where it stood; the `delete` reaches the test board and is acked'),
@@ -308,8 +308,13 @@ def hint(ctx):
 
 
 def hint_whole(ctx, sid, whole=True, values=None):
-    """a hint's notice whole, or its compact form (`strings.js`'s `hintOf`), its tokens filled"""
-    return ctx.js('(async () => { const h = (await import("./strings.js")).hintOf(%s, %s); return %s ? h.whole : h.clause; })()' % (json.dumps(sid), json.dumps(values or {}), 'true' if whole else 'false'))
+    """a hint's notice whole, or its compact form (`strings.js`'s `hintSentences`), each a sentence, its tokens filled"""
+    return ctx.js('(async () => { const h = (await import("./strings.js")).hintSentences(%s, %s); return %s ? h.whole : h.clause; })()' % (json.dumps(sid), json.dumps(values or {}), 'true' if whole else 'false'))
+
+
+def sentence(ctx, sid, values=None):
+    """one of the page's strings as a sentence (`strings.js`'s `sentence`): its tokens filled, its capital set, its period after"""
+    return ctx.js('(async () => (await import("./strings.js")).sentence(%s, %s))()' % (json.dumps(sid), json.dumps(values or {})))
 
 
 def live(ctx):
@@ -940,7 +945,7 @@ def corner_key(ctx, doc):
     box = ctx.js('(() => { const e = document.activeElement; if (!e) return null; const q = e.getBoundingClientRect(); return {x: q.left, y: q.top, w: q.width, h: q.height}; })()')
     n = len(page_calls(ctx))
     ctx.drv.key('x'); ctx.frames(2)
-    got, said, want = hint(ctx), live(ctx), t(ctx, 'B3.caret.back')
+    got, said, want = hint(ctx), live(ctx), hint_whole(ctx, 'B3.caret.back')
     anchor = ctx.js('(() => { const h = window.__skep.hint(); return h && h.placed ? h.placed.anchor : null; })()')
     caret, edits = ctx.js('window.__skep.caret()'), ctx.js('window.__skep.write.edits(%s).length' % json.dumps(doc))
     beside = bool(anchor and box) and all(abs(anchor[k] - box[k]) <= 1 for k in ('x', 'y', 'w', 'h'))
@@ -960,7 +965,7 @@ def corner_back(ctx, doc):
     ctx.drv.key('Tab', mods=('Shift',)); ctx.settle(); ctx.frames(2)
     at = ctx.js(FOCUS_AT)
     ctx.drv.key('x'); ctx.frames(2)
-    got, want = hint(ctx), t(ctx, 'B3.caret.enter')
+    got, want = hint(ctx), hint_whole(ctx, 'B3.caret.enter')
     caret, edits = ctx.js('window.__skep.caret()'), ctx.js('window.__skep.write.edits(%s).length' % json.dumps(doc))
     walk = at['walk'] or {}
     ok = (first['ok'] and at['id'] == 'walk-%d' % at['idx'] and at['sel'] == 'true' and walk.get('kind') == 'block' and walk.get('addr') == doc
@@ -1184,7 +1189,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     # ---- B3-S3: Mod+Z on an empty stack, before anything is typed in the draft (K-75; BM-42) ----------------------------------
     caret_end(line0)
     writes0 = len(ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "op" || c.name === "resolve")'))
-    empty, empty_clause, constant = hint_whole(ctx, 'B3.undo.empty'), hint_whole(ctx, 'B3.undo.empty', False), t(ctx, 'B3.undo.constant')
+    empty, empty_clause, constant = hint_whole(ctx, 'B3.undo.empty'), hint_whole(ctx, 'B3.undo.empty', False), sentence(ctx, 'B3.undo.constant')
 
     def empty_check(w):
         ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()'); ctx.frames(1)
@@ -1235,7 +1240,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
         said = ctx.js('((sel) => { const e = document.querySelector(sel + " .kept-statement"); return e ? {id: e.dataset.string, text: e.textContent} : null; })(%s)' % json.dumps(corner))
         seg = line_segment(ctx, 'B3.daemon.held.notebook')
         ok = (bool(got) and got['id'] == 'B3.not-yet-kept' and got['word'] == t(ctx, 'B3.not-yet-kept') and st['kept']['cause']['token'] == 'unreachable'
-              and [x['held'] for x in st['held']] == [k] and said == {'id': 'B3.kept.held', 'text': t(ctx, 'B3.kept.held')} and seg == t(ctx, 'B3.daemon.held.notebook')
+              and [x['held'] for x in st['held']] == [k] and said == {'id': 'B3.kept.held', 'text': sentence(ctx, 'B3.kept.held')} and seg == t(ctx, 'B3.daemon.held.notebook')
               and first_line() == line1 + ' Held.' and len(shown(ctx, corner + ' .kept-word')) == 1)
         m = margin_beside(ctx, mine, len(line1.encode('utf8')) + 1, len(' Held.'), 'held')
         return {'the corner and the line': (ok, {'corner': got, 'kept': st['kept'], 'held': st['held'], 'statement': said, 'segment': seg, 'shown': first_line()}),
@@ -1318,14 +1323,14 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
         room = {'into': [x for x in ov.get('corners_into', []) if x['addr'] == mine], 'clipped': [x for x in ov.get('corners_clipped', []) if x['addr'] == mine]}
         overlay = show_face()
         compact = at.get('compact')
-        hand = t(ctx, 'B3.hand.device', {'device label': 'desk'})
+        line, hand = sentence(ctx, 'B3.moved'), sentence(ctx, 'B3.hand.device', {'device label': 'desk'})
         compact_ok = (w == WIDE[0] and compact is None) or (bool(compact) and compact['id'] == 'B3.moved.compact' and compact['text'] == t(ctx, 'B3.moved.compact', {'hand': 'desk'})
-                                                             and compact['opens'] and compact['expanded'] == 'false' and compact['whole'] == t(ctx, 'B3.moved') + ' ' + hand and compact['fits'] is True)
+                                                             and compact['opens'] and compact['expanded'] == 'false' and compact['whole'] == line + ' ' + hand and compact['fits'] is True)
         if compact and not at.get('whole'):
             open_corner(True)
         f = corner_face().get('whole')
         ok = (bool(got) and got['id'] == 'B3.not-yet-kept' and st['kept']['cause']['token'] == 'moved' and at.get('order') is True and overlay is None and compact_ok and bool(f)
-              and [x['id'] for x in f['lines']] == ['B3.moved'] and f['lines'][0]['text'] == t(ctx, 'B3.moved') and f['hands'] == [{'id': 'B3.hand.device', 'text': hand}]
+              and [x['id'] for x in f['lines']] == ['B3.moved'] and f['lines'][0]['text'] == line and f['hands'] == [{'id': 'B3.hand.device', 'text': hand}]
               and [(a['run'], a['id'], a['inert']) for a in f['acts']] == [('held', 'B3.moved.see-held', None), ('send', 'B3.send-again', 'B3.moved.send-again.inert'), ('discard', 'B3.discard', None)]
               and f['said'] == {'id': 'B3.moved.discard', 'text': t(ctx, 'B3.moved.discard'), 'parts': 3, 'exit': True, 'below': True})
         open_corner(False)
@@ -1351,7 +1356,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     told = hint(ctx)
     press('.')
     behind = wait_for(ctx, 'window.__skep.write.state(%s).held.length === 2' % json.dumps(mine), 10)
-    r.check(bool(told['hint']) and told['hint']['id'] == 'B3.moved.first-key' and told['hint']['words'] == t(ctx, 'B3.moved.first-key') and behind and ctx.consumed('op', seq),
+    r.check(bool(told['hint']) and told['hint']['id'] == 'B3.moved.first-key' and told['hint']['words'] == hint_whole(ctx, 'B3.moved.first-key') and behind and ctx.consumed('op', seq),
             'the first key typed after the moved verdict is typed, held behind the moved line, and followed at the focus by "this document changed while your text was held — what you type now is held with it and placed by hand" (B3.moved.first-key)',
             {'hint': told['hint'], 'behind': behind})
     ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
@@ -1378,7 +1383,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     caret_end(line1)
 
     def halted_check(w):
-        want = '%s %s %s' % (t(ctx, 'B3.store_halted.damaged'), t(ctx, 'B3.store_halted.unsent'), t(ctx, 'B3.store_halted.damaged.cause'))
+        want = '%s %s %s' % (sentence(ctx, 'B3.store_halted.damaged'), sentence(ctx, 'B3.store_halted.unsent'), sentence(ctx, 'B3.store_halted.damaged.cause'))
         seg = line_segment(ctx, 'B3.store_halted.damaged')
         act = ctx.js('(() => { const b = document.querySelector("#line [data-act=showfile]"); return b ? b.textContent : null; })()')
         ctx.drv.key('q'); ctx.frames(2)
@@ -1617,9 +1622,9 @@ def undo_rows(ctx, r, shoot, red, ops_allowed, m):
     ctx.js('(async () => { (await import("./overlays/hint.js"))._reset(); })()')
     ctx.drv.key('z', mods=('Meta',)); ctx.frames(3)
     h = ctx.js('window.__skep.hint()') or {}
-    none, writing, constant = hint_whole(ctx, 'B3.undo.none'), t(ctx, 'B3.undo.last-writing', {'label': label}), t(ctx, 'B3.undo.constant')
+    none, writing, constant = hint_whole(ctx, 'B3.undo.none'), sentence(ctx, 'B3.undo.last-writing', {'label': label}), sentence(ctx, 'B3.undo.constant')
     r.check(h.get('id') == 'B3.undo.none' and h.get('words') == none and fold(h.get('writing')) == fold(writing) and h.get('ending') == constant and fold(live(ctx)) == fold('%s %s %s' % (none, writing, constant)) and first_line() == line,
-            'with the draft below its reading scale Mod+Z changes nothing and says so: "undo works in the text of a draft you are writing — there is nothing here to undo", "— you were last writing in ⟨label⟩", then the constant sentence',
+            'with the draft below its reading scale Mod+Z changes nothing and says so, each a sentence: "Undo works in the text of a draft you are writing — there is nothing here to undo.", "You were last writing in ⟨label⟩.", then the constant sentence',
             {'hint': h, 'live': live(ctx), 'want': [none, writing, constant]})
     ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
     ctx.set_view(scale['x'], scale['y'], scale['scale'])
@@ -1681,11 +1686,11 @@ def undo_rows(ctx, r, shoot, red, ops_allowed, m):
     chord()
     said = wait_for(ctx, '!!document.querySelector(%s)' % json.dumps('#line [data-string="B3.undo.withheld"]'), 10)
     quiet()
-    want = '%s %s' % (t(ctx, 'B3.undo.withheld', {'origin': mine}), t(ctx, 'B3.undo.again', {'undo chord': '⌘Z'}))
+    want = '%s %s' % (sentence(ctx, 'B3.undo.withheld', {'origin': mine}), sentence(ctx, 'B3.undo.again', {'undo chord': '⌘Z'}))
     st = state()
     r.check(said and fold(line_segment(ctx, 'B3.undo.withheld')) == fold(want) and ctx.consumed('op', seq) and first_line() == short and st['islands'] == [] and st['held'] == [] and st['kept']['word'] == 'kept'
             and stacks()['redo'] == [] and ctx.js('window.__skep.overlay().id') is None,
-            'an undo\'s `reinstate` the board refuses `withheld` is declined: the one line says "the source of this passage is withheld from you now — ⟨origin⟩; …", ending "— ⌘Z again undoes what you did before it"; the words are gone from the text again, no refused run stands, the corner reads "kept", and the step is off the stack',
+            'an undo\'s `reinstate` the board refuses `withheld` is declined: the one line says "The source of this passage is withheld from you now — ⟨origin⟩; …", then "⌘Z again undoes what you did before it.", a sentence of its own; the words are gone from the text again, no refused run stands, the corner reads "kept", and the step is off the stack',
             {'said': said, 'line': line_segment(ctx, 'B3.undo.withheld'), 'want': want, 'shown': first_line(), 'state': st, 'stacks': stacks()})
     ctx.drv.key('Escape'); ctx.frames(2)
 
@@ -1832,7 +1837,7 @@ def run(ctx):
     ctx.drv.key('s', mods=('Meta',)); ctx.frames(2)
 
     def save_check(w):
-        got, want = corner_kept(ctx), t(ctx, 'B3.save.kept')
+        got, want = corner_kept(ctx), sentence(ctx, 'B3.save.kept')
         ok = bool(got) and got['statement'] == want and got['statement_id'] == 'B3.save.kept' and got['word'] == t(ctx, 'B3.kept') and len(shown(ctx, CORNER + ' .kept-statement')) == 1
         return ok, {'corner': got, 'want': want}
     shoot('save-answered', save_check)
@@ -1948,7 +1953,7 @@ def run(ctx):
     said_at_key = live(ctx)
 
     def swallow_check(w):
-        want, got = t(ctx, 'B3.caret.enter'), hint(ctx)
+        want, got = hint_whole(ctx, 'B3.caret.enter'), hint(ctx)
         ok = (got['hint'] == {'id': 'B3.caret.enter', 'words': want, 'by': 'edge'} and got['seen'] and not got['line'] and ctx.js('window.__skep.caret()') is None
               and said_at_key == want)
         return ok, {'got': got, 'want': want, 'status_region': said_at_key}

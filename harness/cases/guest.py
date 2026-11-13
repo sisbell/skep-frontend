@@ -231,6 +231,13 @@ def plain(text):
     return re.sub(r'^#+\s*', '', (text or '').strip()).rstrip('…').strip()
 
 
+def leads(item, words, doc):
+    """does a mirror item open on a document's withheld box's words, its sentence's capital set on them, then its address,
+    and then its next part or its end mark (`L.mirror.document`; style S1, S2)"""
+    lead = '%s document %s' % (words[:1].upper() + words[1:], doc)
+    return item.startswith(lead) and item[len(lead):len(lead) + 1] in (',', '.')
+
+
 def t(ctx, sid, values=None):
     """one of the page's strings (`strings.js`)"""
     return ctx.js('(async () => (await import("./strings.js")).t(%s, %s))()' % (json.dumps(sid), json.dumps(values or {})))
@@ -669,12 +676,15 @@ def run(ctx):
     item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
     described = ctx.js("""(() => { const li = document.getElementById('walk-' + window.__skep.mirror.index()); const ids = li ? (li.getAttribute('aria-describedby') || '').split(' ').filter(Boolean) : [];
       return ids.map((id) => { const e = document.getElementById(id); return e ? e.textContent : null; }); })()""") or []
-    after = t(ctx, 'L.mirror.clause', {'clause': clause}) if clause else ''
     kinds = item_words(ctx)
-    words = t(ctx, 'L.mirror.withheld', {'kind': kinds['withheld'], 'document': DOC, 'length': t(ctx, 'L.item.positions', {'n': WINDOW[1]}), 'origin': WINDOW[2]})
-    origin_words = t(ctx, 'L.mirror.withheld.origin', {'owner': g.get('owner') or '', 'arm': arm, 'clause': after})
+    words = ctx.js('(async (v) => (await import("./strings.js")).sentence("L.mirror.withheld", v, ["kind"]))(%s)'
+                   % json.dumps({'kind': kinds['withheld'], 'document': DOC, 'length': t(ctx, 'L.item.positions', {'n': WINDOW[1]}), 'origin': WINDOW[2]}))
+    # its origin's description, sentences the page composes: its owner, the arm, the clause where the claims decide one
+    origin_words = ctx.js('''(async (owner, arm, armId, clause, clauseId) => { const S = await import("./strings.js");
+      return S.sentences(S.sentence("L.mirror.withheld.origin", {owner}), S.asSentence({id: armId, text: arm}), clause ? S.asSentence({id: clauseId, text: clause}) : ""); })(%s, %s, %s, %s, %s)'''
+                          % (json.dumps(g.get('owner') or ''), json.dumps(arm), json.dumps(arm_id), json.dumps(clause), json.dumps(clause_id)))
     r.check(item.startswith(words) and arm not in item and origin_words in described,
-            '(e) the mirror\'s current item at the landing is the run\'s own part — its kind in the words a copy\'s stand-in names it by (issue #161), its document, its width, its origin — and names its origin\'s one description: its owner, the arm, and the clause where the claims decide one (R56; R94; issue #288)',
+            '(e) the mirror\'s current item at the landing is the run\'s own part, a sentence — its kind in the words a copy\'s stand-in names it by (issue #161), its document, its width, its origin — and names its origin\'s one description, sentences: its owner, the arm, and the clause where the claims decide one (R56; R94; issue #288; style S1, S2)',
             {'item': item, 'described': described, 'origin_words': origin_words})
     ctx.view_doc_em(DOC, 14)
     ctx.view_at(DOC, WINDOW[0])
@@ -860,7 +870,7 @@ def run(ctx):
     published = t(ctx, 'F.published')
     named_withheld = t(ctx, 'F.corner.withheld', {'owner': OWNER})
     draft_item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
-    r.check(draft_item.startswith('%s document %s,' % (named_withheld, draft)) and published not in draft_item,
+    r.check(leads(draft_item, named_withheld, draft) and published not in draft_item,
             '(d) at that landing the mirror\'s current item names the draft as its withheld box does, those words leading where no kind can be read — "%s" — and never published (B1-S2; issue #423)' % named_withheld, draft_item)
     labels = ctx.js('window.__skep.labels()')
     named = naming_a_draft(labels)
@@ -880,7 +890,7 @@ def run(ctx):
     named_at = ctx.js('window.__skep.line().address')
     r.check(named_at['text'].split(' › ')[1:3] == [SECOND_ACCOUNT, WITHHELD], '(d) the one line names the landing: board › its account › the withheld document — a landing the index does not list stands on its own node (rule 12, #97)', named_at)
     withheld_item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
-    r.check(withheld_item.startswith('%s document %s,' % (want[1], WITHHELD)) and published not in withheld_item,
+    r.check(leads(withheld_item, want[1], WITHHELD) and published not in withheld_item,
             '(d) the mirror\'s current item names the withheld document as its box does, those words leading where no kind can be read — "%s" — and never published (B1-S2; issue #423)' % want[1], withheld_item)
     r.figures['shots'].append(ctx.shot('guest/withheld-box.png'))
     r.figures['withheld_box'] = {'addr': WITHHELD, 'labels': at_box, 'mirror_item': withheld_item, 'draft_mirror_item': draft_item}

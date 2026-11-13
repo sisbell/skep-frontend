@@ -86,7 +86,7 @@ import { standardFs, placeOf, EDGE } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
 import { entitlementArm } from '../text/article.js';
 import { isElement } from '../text/span.js';
-import { STRINGS, t, tHTML, addressedHTML } from '../strings.js';
+import { STRINGS, t, tHTML, addressedHTML, sentence, opening, hintSentences } from '../strings.js';
 import { esc } from '../util.js';
 import * as TRAIL from './trail.js';
 import * as WALK from './walk.js';
@@ -688,7 +688,7 @@ test('a follow whose projection the board declines by a name that says nothing o
   assert.deepEqual([faceShown(), marks(), walkAt()], [null, [null, [DECLINED]], ['block', FAR, FAR_HEAD]], 'no face in the landing\'s place: landed at FAR\'s head, nothing outlined, the link lit');
   const e = TRAIL.current();
   assert.deepEqual(e && [e.addr, e.pos, e.width, e.notice], [FAR, FAR_HEAD, null, null], 'its entry settled at the head, no notice');
-  const words = t('L.held.unknown', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }), reason: t('B1.not_a_link') });
+  const words = sentence('L.held.unknown', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }), reason: t('B1.not_a_link') });
   assert.deepEqual([GO.landing()?.said?.state, GO.landing()?.said?.why, GO.landingLine()], ['unknown', 'B1.not_a_link', words], 'the line: it could not tell, by the projection\'s own `not_a_link`');
   assert.deepEqual(GO.landingOffers(), { steps: false, again: false, version: false }, 'no "try again": the board\'s verdict is permanent');
   assert.deepEqual(fake.unanswered, []);
@@ -921,8 +921,8 @@ test('a LEAP carrying a passage the text landed in holds only part of keeps its 
     await run(GO.leapTo(D));
     await run(GO.leapTo(FAR, { how: 'leap', carry: { ...PARTIAL, selected } }));
     assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: 25, runs: [{ pos: 25, width: 5 }], link: null }, 'the part FAR holds outlined, as before');
-    const words = t('L.held.part', { subject: t(selected ? 'L.held.selected' : 'L.held.reading'), where: t('L.held.current', { D: FAR }) });
-    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine()], ['part', words], `"only part of ${selected ? 'what you selected' : 'the text you were reading'} is in ⟨D⟩'s current text", no places counted`);
+    const words = sentence('L.held.part', { subject: t(selected ? 'L.held.selected' : 'L.held.reading'), where: t('L.held.current', { D: FAR }) });
+    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine()], ['part', words], `"Only part of ${selected ? 'what you selected' : 'the text you were reading'} is in ⟨D⟩'s current text.", no places counted`);
     assert.ok(!/missing|removed|deleted|compare/.test(words), `never "missing", "removed", "deleted" or "compare": ${words}`);
     assert.deepEqual(GO.landing()?.beside, { a: D, held: { posA: 1, widthA: 12, ids: [{ prefix: D + '.0.1', ordinal: 1, width: 12 }] } }, 'the first edition holds it whole: read side by side with it, the passage held there by its bytes');
     for (let i = 0; i < 50 && fake.asked.slice(-1)[0] !== FAKE.keyOf('op', { frame: carried(PARTIAL, FAR1, FAR_EXTENT) }); i++) await new Promise((r) => setTimeout(r, 0));
@@ -953,8 +953,8 @@ test('a LEAP carrying a passage whose compare the board does not answer lands at
     await run(GO.leapTo(D));
     await run(GO.leapTo(FAR, { how: 'leap', carry: UNANSWERED }));
     assert.deepEqual([GO.arrivalMark(), walkAt(), faceShown()], [null, ['document', FAR, null], null], 'unmarked, at the document as asked, no face');
-    const words = t('L.held.unknown', { subject: t('L.held.reading'), where: t('L.held.current', { D: FAR }), reason: t('F.daemon.unreachable') });
-    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine(), GO.landingOffers()], ['unknown', words, { steps: false, again: true, version: false }], '"couldn\'t tell whether ⟨D⟩\'s current text holds the text you were reading: board unreachable", and "try again"');
+    const words = sentence('L.held.unknown', { subject: t('L.held.reading'), where: t('L.held.current', { D: FAR }), reason: t('F.daemon.unreachable') });
+    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine(), GO.landingOffers()], ['unknown', words, { steps: false, again: true, version: false }], '"Couldn\'t tell whether ⟨D⟩\'s current text holds the text you were reading: board unreachable.", and "try again"');
     assert.deepEqual(GO.described(), { addr: FAR, pos: FAR_HEAD, words, kind: t('F.published'), runs: [] }, 'the line the description of the document landed on, FAR\'s kind before it');
     const entry = TRAIL.current(), n = TRAIL.length();
     outage = false;
@@ -1166,7 +1166,7 @@ test('a LEAP whose read learns the board says nothing about its address keeps it
   assert.ok(same(CAM.view(), went), 'the camera staying where it went');
   assert.deepEqual([walkAt(), GO.inAir()], [['document', GONE, null], false], 'the walk on the address\'s own node; the jump ended, never landed');
   const item = WALK.mirrorItem(WALK.mirrorIndex()) || '';
-  assert.ok(item.includes(t('L.far.unregistered')) && !item.includes(t('F.published')), `the mirror names what the read learned, never "published": ${item}`);
+  assert.ok(item.includes(opening('L.far.unregistered')) && !item.includes(t('F.published')), `the mirror names what the read learned, never "published": ${item}`);
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -1579,7 +1579,7 @@ test('a notice whose read answers after the reader left its entry moves nothing;
   assert.ok(same(CAM.view(), went), 'where the camera went');
   assert.deepEqual(walkAt(), ['document', GONE, null], 'the walk on the address the board says nothing about, with the camera — never on the link\'s bytes, out of view');
   const item = WALK.mirrorItem(WALK.mirrorIndex()) || '';
-  assert.ok(item.includes(t('L.far.unregistered')) && !item.includes(t('F.published')), `the mirror names it as the board answered it: ${item}`);
+  assert.ok(item.includes(opening('L.far.unregistered')) && !item.includes(t('F.published')), `the mirror names it as the board answered it: ${item}`);
   assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['face:doc_not_registered', there], 'its face shown again where the camera is');
   assert.deepEqual(marks(), [null, [DEAD]], 'the link it came from lit, nothing outlined');
   await run(GO.back());
@@ -1753,7 +1753,7 @@ test('at a link\'s stop of the walk, no selection standing, Mod+Enter follows th
   await onStop();
   const n = said.length, standing = HOST.currentState();
   assert.equal(await KEYS.dispatch(keyOf('O', { ...MOD, shiftKey: true }), PLANE), true);
-  assert.deepEqual([SEL.selected(), HOST.currentState(), said.slice(n)], [null, standing, [t('D5.select-first')]], 'Mod+Shift+O at the stop: no span in focus — nothing selected, no card, the slot\'s reason said');
+  assert.deepEqual([SEL.selected(), HOST.currentState(), said.slice(n)], [null, standing, [hintSentences('D5.select-first').whole]], 'Mod+Shift+O at the stop: no span in focus — nothing selected, no card, the slot\'s reason said');
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -1796,7 +1796,7 @@ test('a follow whose far text holds its passage in two runs whose bytes the boar
   await run(GO.leapTo(D));
   await run(GO.follow(drawn(UNNAMED_LINK)));
   assert.deepEqual(GO.arrivalMark(), { addr: UNNAMED, pos: 3, runs: [{ pos: 3, width: 4 }, { pos: 12, width: 5 }], link: UNNAMED_LINK }, 'both runs outlined, the landing at the first in the text');
-  const words = t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: UNNAMED }) });
+  const words = sentence('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: UNNAMED }) });
   assert.deepEqual([GO.landing()?.said?.state, GO.landing()?.pieces, GO.landingLine(), GO.landingOffers().steps], ['part', null, words, false], 'nine positions of twenty in two runs: part, no runs labelled and no step, the line counting no places');
   await run(GO.leapTo(D));
   assert.deepEqual(fake.unanswered, []);
@@ -3622,8 +3622,8 @@ test('Back to a draft whose line lost its first half while a paragraph was set b
   const to = k + at.pos;
   assert.ok(samePassage(under(CUT, CAM.view()), { ...was, pos: to }), `the line holding what stands of it where the line read stood, at its em: ${JSON.stringify([under(CUT, CAM.view()), was])}`);
   assert.deepEqual(GO.arrivalMark(), { addr: CUT, pos: to, runs: [{ pos: to, width: r.width - half }], link: null }, 'what stands of it outlined');
-  const words = t('L.held.part', { subject: t('L.held.reading'), where: t('L.held.current', { D: CUT }) });
-  assert.deepEqual([GO.landing()?.said?.state, GO.landingLine(), GO.landingOffers(), GO.described()?.words], ['part', words, { steps: false, again: false, version: false }, words], 'the line, its words the landing\'s description: "only part of the text you were reading is in ⟨D⟩\'s current text", no version at a draft');
+  const words = sentence('L.held.part', { subject: t('L.held.reading'), where: t('L.held.current', { D: CUT }) });
+  assert.deepEqual([GO.landing()?.said?.state, GO.landingLine(), GO.landingOffers(), GO.described()?.words], ['part', words, { steps: false, again: false, version: false }, words], 'the line, its words the landing\'s description: "Only part of the text you were reading is in ⟨D⟩\'s current text", no version at a draft');
   assert.deepEqual([walkAt(), faceShown()], [['block', CUT, to], null], 'the walk on it, no face');
   GO.endArrival();
   assert.deepEqual(fake.unanswered, []);
@@ -3676,8 +3676,8 @@ test('Back to a draft a feed row dropped while the board does not answer it land
     await run(GO.back());
     const n = TRAIL.length();
     assert.deepEqual([TRAIL.current()?.addr, same(CAM.view(), left), GO.arrivalMark()], [LAPSE, true, null], 'at the view left, nothing outlined');
-    const words = t('L.held.unknown', { subject: t('L.held.reading'), where: t('L.held.current', { D: LAPSE }), reason: t('F.daemon.unreachable') });
-    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine(), GO.landingOffers()], ['unknown', words, { steps: false, again: true, version: false }], '"couldn\'t tell whether ⟨D⟩\'s current text holds the text you were reading: board unreachable", and "try again"');
+    const words = sentence('L.held.unknown', { subject: t('L.held.reading'), where: t('L.held.current', { D: LAPSE }), reason: t('F.daemon.unreachable') });
+    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine(), GO.landingOffers()], ['unknown', words, { steps: false, again: true, version: false }], '"Couldn\'t tell whether ⟨D⟩\'s current text holds the text you were reading: board unreachable.", and "try again"');
     lapse = 'edited';
     GO.landingAct('again');
     const k = INSERTED.length;
@@ -4157,7 +4157,7 @@ test('Back to a place left with a selection standing puts it back over its bytes
     // the passage's last five bytes gone, as the reader left it in the text set again
     SEL.select(SETA, at + 12, width);
     const part = await away(() => setSeta(SETA_TEXT.slice(0, at + width - 6) + SETA_TEXT.slice(at + width - 1), [[1, at + width - 6], [at + width, n - at - width + 1]]));
-    const line = t('L.held.part', { subject: t('L.held.selected'), where: t('L.held.current', { D: SETA }) });
+    const line = sentence('L.held.part', { subject: t('L.held.selected'), where: t('L.held.current', { D: SETA }) });
     assert.deepEqual([part.sel, part.overlay, part.said.includes(line), GO.landingLine()], [{ addr: SETA, pos: at, width: width - 5 }, 'selection', true, t('L.piece', { k: 1, n: 2 }) + ' · ' + t('L.piece.part')],
       'in part: the selection on what stands, its card with it, its line said in the status region; beside the landing the line its view read, which the edit cut in two, the landing\'s own (issue #297)');
     GO.endArrival();
@@ -4545,10 +4545,10 @@ test('a failure a jump\'s read learns in the air rebuilds the mirror where the w
   await new Promise((r) => setTimeout(r, 0)); // the walk's levels read
   /** the mirror's item at GONE, as the last rebuild wrote it */
   const item = () => (new RegExp(`<li[^>]*data-addr="${GONE}"[^>]*>(.*?)</li>`).exec(mirror.innerHTML) || [])[1] || '';
-  assert.ok(item() && !item().includes(esc(t('F.published'))) && !item().includes(esc(t('L.far.unregistered'))), `the walk on the address as the camera leaves, its state untold: ${item()}`);
+  assert.ok(item() && !item().includes(esc(t('F.published'))) && !item().includes(esc(opening('L.far.unregistered'))), `the walk on the address as the camera leaves, its state untold: ${item()}`);
   release();
   await run(leap);
-  assert.ok(item().includes(esc(t('L.far.unregistered'))), `the read learned the board says nothing: the mirror rebuilt, naming it so: ${item()}`);
+  assert.ok(item().includes(esc(opening('L.far.unregistered'))), `the read learned the board says nothing: the mirror rebuilt, naming it so: ${item()}`);
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -4588,7 +4588,7 @@ test('an arrival whose document\'s text is set again is placed again by its pass
     setSeta(SETA_TEXT.slice(0, at + width - 6) + SETA_TEXT.slice(at + width - 1), [[1, at + width - 6], [at + width, n - at - width + 1]]);
     GO.recheck();
     assert.deepEqual(GO.arrivalMark()?.runs, [{ pos: at, width: width - 5 }], 'part: the outline on what stands');
-    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine()], ['part', t('L.held.part', { subject: t('L.held.reading'), where: t('L.held.current', { D: SETA }) })], 'and the line says only part of it is there');
+    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine()], ['part', sentence('L.held.part', { subject: t('L.held.reading'), where: t('L.held.current', { D: SETA }) })], 'and the line says only part of it is there, a sentence');
     // none of it: the text set again of bytes minted since
     setSeta('Other words.', [[n + 20, 12]]);
     GO.recheck();

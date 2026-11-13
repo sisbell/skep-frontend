@@ -3,7 +3,8 @@
 // read whole, owns the link it declares superseded; the rows draw the claims
 // with authority alone, in the answer's order, a retracted one marked, "none"
 // where a side answered none and no row where its read was refused, a
-// claimant the owner row does not name following its claim; every other
+// claimant the owner row does not name following its claim as a field of its
+// own; every other
 // claim behind one line whose act lists them as assertions naming their
 // claimant and what it is to the links. The card itself, against the fake
 // port on a stand-in of the host's element: a key opens it on follow, the
@@ -11,8 +12,9 @@
 // id; the day its link was made, as its read answered, between its owner and
 // its lineage — "not recorded" where the board holds no reading, "on or
 // before" where only an hour's anchor dates it across midnight (FP-34);
-// beneath its far end's words the line its landing says where that end's
-// text holds only part of its passage (FP-21); an end drawn at a withheld
+// beneath its far end's words the line its landing says, a sentence, where
+// that end's text holds only part of its passage (FP-21); an end drawn at a
+// withheld
 // run says it is withheld and whose, with no read of its bytes, the run's one
 // symbol listing its several ends; a far end naming its document whole
 // described by that document's label alone (FP-30); "read side by side"
@@ -39,7 +41,7 @@ import * as LK from '../links/links.js';
 import * as LAYER from '../text/layer.js';
 import * as FOCUS from '../nav/focus.js';
 import { accountOf, resolveSpan } from '../model/address.js';
-import { t } from '../strings.js';
+import { t, sentence, fields } from '../strings.js';
 
 const { supersessionRows, hasAuthority } = ANATOMY;
 
@@ -137,15 +139,15 @@ test('a claim another account made of this link stays off its "superseded by" ro
   assert.ok(!html.includes('1.0.2.0.5.0.2.2'), 'the claim behind it is nowhere on the card');
 });
 
-test('on a "supersedes" row this link is `new`: a claim stands where its claimant owns `old`, followed by its claimant where the owner row does not name it — "you" for the reader — the claims then parting at "; "', () => {
+test('on a "supersedes" row this link is `new`: a claim stands where its claimant owns `old`, followed by its claimant where the owner row does not name it, a field of its own — "you" for the reader — the claims then parting at "; "', () => {
   const X = '1.0.2.0.5.0.2.1';
   const lineage = { supersededBy: [], supersedes: [
     // 1.0.2 of its own link X: authority, its claimant named; 1.0.1 of 1.0.2's link X: none; 1.0.1 of its own link: authority, named by the owner row
     claim({ claim: '1.0.2.0.5.0.2.3', home: '1.0.2.0.5', old: X }), claim({ claim: '1.0.1.0.3.0.2.8', old: X }), claim({ old: '1.0.1.0.2.0.2.7' }),
   ] };
-  assert.deepEqual(rows(supersessionRows(lineage, OWNED))[1], { label: t('F.card.supersedes'), value: `${X} ${t('L.card.by-owner', { claimant: '1.0.2' })}; 1.0.1.0.2.0.2.7` });
+  assert.deepEqual(rows(supersessionRows(lineage, OWNED))[1], { label: t('F.card.supersedes'), value: `${fields(X, t('L.card.by-owner', { claimant: '1.0.2' }))}; 1.0.1.0.2.0.2.7` });
   assert.equal(line(supersessionRows(lineage, OWNED)), t('L.card.others'), '1.0.1\'s claim of 1.0.2\'s link behind the line');
-  assert.deepEqual(rows(supersessionRows(lineage, { owner: '1.0.1', reader: '1.0.2' }))[1].value, `${X} ${t('L.card.by-owner', { claimant: t('L.card.you') })}; 1.0.1.0.2.0.2.7`, 'the reader named "you"');
+  assert.deepEqual(rows(supersessionRows(lineage, { owner: '1.0.1', reader: '1.0.2' }))[1].value, `${fields(X, t('L.card.by-owner', { claimant: t('L.card.you') }))}; 1.0.1.0.2.0.2.7`, 'the reader named "you"');
   const unnamed = { supersededBy: null, supersedes: [claim({ old: '1.0.1.0.2.0.2.7' }), claim({ old: '1.0.1.0.2.0.2.8', active: false })] };
   assert.deepEqual(rows(supersessionRows(unnamed, OWNED)), [{ label: t('F.card.supersedes'), value: `1.0.1.0.2.0.2.7, 1.0.1.0.2.0.2.8 · ${t('F.card.retracted')}` }], 'no claimant named: the claims part at ", " as today');
 });
@@ -381,7 +383,7 @@ test('the card says beneath its far end\'s words what that end\'s text holds of 
   /** the line beneath the far end's words, as a person reads it; null where none stands */
   const said = () => { const m = p.host.innerHTML.match(/<div class="end far">.*?<div class="note" data-string="L\.held\.(\w+)">(.*?)<\/div>/); return m ? [m[1], text(m[2])] : null; };
   await ANATOMY.open(drawn(), null);
-  assert.deepEqual(said(), ['part', t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) })], 'nine of its twenty-two bytes, in two runs: part, the runs never counted');
+  assert.deepEqual(said(), ['part', sentence('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) })], 'nine of its twenty-two bytes, in two runs: part, a sentence, the runs never counted');
   HOST.dismiss();
   REC.takeProjection(CUT, 2, FAR, [{ pos: 3, width: 22 }]);
   await ANATOMY.open(drawn(), null);

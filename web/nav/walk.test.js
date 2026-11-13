@@ -9,9 +9,13 @@
 // act; a block of white space alone is no
 // element of the walk; a landing the index does not list stands on its own
 // node among the listed siblings; the mirror is one Tab stop, named from ST
-// with each level's group, a withheld run's item its own part — its kind,
+// with each level's group, every item sentences — its own words, a capital
+// set and a period after them, no comma left beside a missing part, then its
+// place in the level — an account holding nothing saying so in a sentence of
+// its own, a withheld run's item its own part — its kind,
 // length and origin — naming its origin's one description, which every run
-// of it names, made from the run's placeholder once its clause is read, and
+// of it names, made from the run's placeholder once its clause is read, its
+// owner, its arm and its clause each a sentence, and
 // every item a transcluded draft's run touches in a published document
 // naming that origin's one description, C-33's words, each document's kind
 // there read by the one test — an origin's its metadata's word whatever the
@@ -76,7 +80,7 @@ import { accountCell, boardCell, boardLabelCell, docBox, clearLeftOf, continuati
 import { lodOf, residueDepth, markScale, LOD_TXT_LO } from '../plane/lod.js';
 import { placeOf, STANDARD_FS, EDGE } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
-import { STRINGS, t, tHTML, markCount, lastRead } from '../strings.js';
+import { STRINGS, t, tHTML, markCount, lastRead, sentence, sentences, opening, asSentence, ended, list } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
 import * as WALK from './walk.js';
@@ -370,12 +374,12 @@ test('the mirror\'s item at a withheld run says the run\'s own part — its kind
     const home = /** @type {string} */ (homeOf(c));
     REC.takeMetadata(home, { doc: home, published: true, owner, birth: home + '.1', birthExtent: 20, placed: null, baseExtent: null, source: null, asOf: 1 });
   }
-  /** @type {Array<[string, () => void, string | null]>} each state of the origin's claims the page holds, and the words of the clause it decides — `CLAUSE_READING` while their reads are out */
+  /** @type {Array<[string, () => void, string | null]>} each state of the origin's claims the page holds, and the clause it decides, a sentence — `CLAUSE_READING` while their reads are out */
   const states = [
     ['no claim read', () => REC.claimsChanged(O, false), CLAUSE_READING],
     ['no claim on the origin', () => REC.takeEditionClaims(O, []), null],
-    ['the owner\'s edition over its own bytes', () => REC.takeEditionClaims(O, [QUOTES, OWN]), t('C-67.pointer')],
-    ['an edition quoting the draft alone', () => REC.takeEditionClaims(O, [QUOTES]), t('C-67.quoting', { claimant: owner })],
+    ['the owner\'s edition over its own bytes', () => REC.takeEditionClaims(O, [QUOTES, OWN]), sentence('C-67.pointer')],
+    ['an edition quoting the draft alone', () => REC.takeEditionClaims(O, [QUOTES]), sentence('C-67.quoting', { claimant: owner })],
   ];
   const signedIn = REC.session();
   // the device's key store as `fingerprint` answers it: a key bound at this board, or none
@@ -386,20 +390,19 @@ test('the mirror\'s item at a withheld run says the run\'s own part — its kind
     for (const [reader, keys, id] of readers) {
       REC.setSession(reader); REC.takeKeyStore(keys, ORIGIN);
       const who = reader ? reader.account : keys.length ? 'a guest with a key for this board' : 'a guest with no key';
-      const rule = entitlementArm({ account: reader ? reader.account : null, keyPresent: keys.length > 0 }, owner), arm = rule.text;
+      const rule = entitlementArm({ account: reader ? reader.account : null, keyPresent: keys.length > 0 }, owner), arm = asSentence(rule);
       assert.equal(rule.id, id, `${who}: the rule's arm is ${id}`);
       for (const [state, hold, clause] of states) {
         hold();
-        assert.equal(WALK.nameOf(node, 1, 2), t('L.mirror.withheld', { kind: t('L.item.withheld'), document: W, length: t('L.item.positions', { n: 240 }), origin: O }) + ' ' + t('L.mirror.item', { i: 2, n: 2 }),
-          `${who}, ${state}: the run's own part, in any state of its claims`);
+        assert.equal(WALK.nameOf(node, 1, 2), `A withheld run in ${W}: 240 positions, origin ${O}. Item 2 of 2.`, `${who}, ${state}: the run's own part, a sentence, in any state of its claims`);
         const html = withheldBlockHTML(run, LAYER.viewFor(d));
         if (clause === CLAUSE_READING) {
           assert.equal(WALK.originWords(node), null, `${who}, ${state}: no description before the reads it waits on answer`);
           assert.ok(html.includes(' data-holds="reading"') && !html.includes('wh-key'), `${who}, ${state}: the plane's gap its ground alone: ${html}`);
           continue;
         }
-        assert.deepEqual(WALK.originWords(node), { origin: O, words: t('L.mirror.withheld.origin', { owner, arm, clause: clause ? t('L.mirror.clause', { clause }) : '' }) },
-          `${who}, ${state}: its origin's description names ${owner}, the owner of the run's origin — never ${W}'s account, nor ${O}'s — the arm for that owner and this reader, and the clause the claims decide, a sentence of its own or nothing in its place`);
+        assert.deepEqual(WALK.originWords(node), { origin: O, words: sentences(`Owner ${owner}.`, arm, clause || '') },
+          `${who}, ${state}: its origin's description names ${owner}, the owner of the run's origin — never ${W}'s account, nor ${O}'s — then the arm for that owner and this reader, and the clause the claims decide, each a sentence of its own, or nothing in its place`);
         assert.ok(html.includes(` data-owner="${owner}"`) && html.includes(`data-key="${O}"`), `${who}, ${state}: the plane's gap carries the same owner, and the run's key: ${html}`);
       }
     }
@@ -427,16 +430,17 @@ test('the mirror announces every block that holds no text by its kind, in the wo
   const shows = (/** @type {string} */ cls) => ((new RegExp(`<span class="${cls}">((?:[^<]|<span class="id">[^<]*</span>)*)</span>`).exec(html) || [])[1] || '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&');
   const plane = [shows('rec-words'), shows('derived')];
   assert.ok(plane.every(Boolean), `the plane shows the record's words and keys: ${html}`);
-  /** @type {Array<[number, string, string]>} each block: its first position, its kind's words, what the plane shows after them */
+  /** @type {Array<[number, string, string]>} each block: its first position, its kind's words, what the plane shows after them, after the colon the page draws */
   const want = [
-    [1, t('L.item.record'), t('L.mirror.shows', { shown: plane.join(' · ') })],
+    [1, t('L.item.record'), ': ' + plane.join(' · ')],
     [2, t('L.item.reference'), ''],
-    [3, t('L.item.unshown'), t('L.mirror.shows', { shown: t('L.item.positions', { n: 4 }) })],
-    [7, t('L.item.unshown'), t('L.mirror.shows', { shown: t('L.item.positions.1') })],
+    [3, t('L.item.unshown'), ': ' + t('L.item.positions', { n: 4 })],
+    [7, t('L.item.unshown'), ': ' + t('L.item.positions.1')],
   ];
   for (const [pos, kind, shown] of want) {
     const item = WALK.nameOf({ kind: 'block', addr: H, pos, link: null }, 0, 4);
-    assert.equal(item, t('L.mirror.no-text', { kind, p: pos, extent: 7, document: H, same: '', shown }) + ' ' + t('L.mirror.item', { i: 1, n: 4 }), `the item at ${pos}: its kind, where it stands, what the plane shows`);
+    assert.equal(item, sentences(sentence('L.mirror.no-text', { kind, p: pos, extent: 7, document: H, same: '', shown }, ['kind']), 'Item 1 of 4.'), `the item at ${pos}: its kind, where it stands, what the plane shows, a sentence`);
+    assert.ok(item.startsWith(kind.charAt(0).toUpperCase() + kind.slice(1) + ' at position '), `the item at ${pos} opens on its kind, its capital set: ${item}`);
     assert.ok(!/[{}]|skep-enroll|skep-retire|abab|cdcd|efef|deadbeef/.test(item), `the item at ${pos} reads no raw value aloud: ${item}`);
     const b = /** @type {import('../model/records.js').Block} */ (d.blocks.find((x) => x.pos === pos));
     assert.ok(copyText(made, { addr: H, pos, width: b.width }, (a) => a).startsWith('[' + kind), `a copy's stand-in at ${pos} names the kind the mirror announces, "${kind}"`);
@@ -447,14 +451,14 @@ test('the mirror names a document no read or listing has told the kind of by its
   // an address in an account the index lists nothing for, never read
   const U = '1.0.7.0.4';
   const unread = WALK.nameOf({ kind: 'document', addr: U, pos: null, link: null }, 0, 1);
-  assert.equal(unread, t('L.mirror.document', { kind: t('L.slot.reading'), document: U, label: '', state: '', extent: '' }) + ' ' + t('L.mirror.item', { i: 1, n: 1 }), 'nothing told of it: its kind being read, no state');
+  assert.equal(unread, `Being read document ${U}. Item 1 of 1.`, 'nothing told of it: its kind being read, no state — and no comma where no part follows, the item\'s place a sentence of its own');
   assert.ok(!unread.includes(t('F.published')) && !unread.includes(t('F.kind.draft')), `never "published", nor "draft": ${unread}`);
   REC.takeRefused(U, 'unregistered');
   const gone = WALK.nameOf({ kind: 'document', addr: U, pos: null, link: null }, 0, 1);
-  assert.ok(gone.startsWith(`${t('L.far.unregistered')} document ${U},`) && !gone.includes(t('F.published')), `the board said nothing about it: led by a far end's words for it: ${gone}`);
+  assert.ok(gone.startsWith(opening('L.mirror.document', { kind: t('L.far.unregistered'), document: U }, ['kind'])) && gone.startsWith('Nothing this board will say') && !gone.includes(t('F.published')), `the board said nothing about it: led by a far end's words for it: ${gone}`);
   REC.invalidate(U);
   REC.takeMetadata(U, { doc: U, published: false, owner: '1.0.7', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
-  assert.ok(WALK.nameOf({ kind: 'document', addr: U, pos: null, link: null }, 0, 1).startsWith(`${t('F.kind.draft')} document ${U},`), 'its metadata read: led by its kind, "draft"');
+  assert.ok(WALK.nameOf({ kind: 'document', addr: U, pos: null, link: null }, 0, 1).startsWith(`Draft document ${U}`), 'its metadata read: led by its kind, "Draft"');
   REC.invalidate(U);
 });
 
@@ -466,7 +470,7 @@ test('the mirror names a document a read answered `withheld` by its withheld box
   const box = t('F.corner.withheld', { owner });
   assert.equal(LAYER.withheldBox(REC.doc(X)), box, 'the box names the seat that owns the document, never its sub-account');
   const item = WALK.nameOf({ kind: 'document', addr: X, pos: null, link: null }, 0, 1);
-  assert.ok(item.startsWith(`${box} document ${X},`), `the item says what the box says, leading where no kind can be read: ${item}`);
+  assert.ok(item.startsWith(`${box.charAt(0).toUpperCase() + box.slice(1)} document ${X}`), `the item says what the box says, leading where no kind can be read: ${item}`);
   assert.ok(!item.includes(t('F.published')), `and never that the document is published: ${item}`);
 });
 
@@ -612,7 +616,7 @@ test('the mirror\'s item at a link whose far end floats says "its passage is not
   REC.takeLinks(D, [L]);
   REC.takeLink({ addr: L, from: [span(D, 11, 3)], to: [span(FAR, 8, 4)], type: '1.1.0.1.0.1.0.3.13' });
   const item = () => { const s = LK.shown(D).find((x) => x.link.addr === L); return s ? WALK.nameOf({ kind: 'link', addr: D, pos: s.pos, link: s }, 0, 1) : ''; };
-  const floating = t('L.mirror.floating', { sentence: t('F.floating', { D: FAR }) });
+  const floating = sentence('F.floating', { D: FAR });
   REC.takeProjection(L, 2, FAR, []);
   assert.ok(item().includes(floating), item());
   // FAR's text as an edit left it: other bytes, then the passage's four from FAR's 20
@@ -620,7 +624,7 @@ test('the mirror\'s item at a link whose far end floats says "its passage is not
   try {
     REC.takeProjection(L, 2, FAR, [{ pos: 20, width: 2 }]);
     const part = t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) });
-    assert.ok(item().includes(t('L.mirror.floating', { sentence: part })), `two of its four bytes there: the line, as its symbol and its stub say it (issue #153): ${item()}`);
+    assert.ok(item().includes(sentence('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) })), `two of its four bytes there: the line, a sentence, as its symbol and its stub say it (issue #153): ${item()}`);
     REC.takeProjection(L, 2, FAR, [{ pos: 20, width: 4 }]);
     assert.ok(item() !== '' && !item().includes(t('F.floating', { D: FAR })) && !item().includes(part), item());
   } finally { REC.invalidate(FAR); }
@@ -639,8 +643,8 @@ test('the mirror\'s item at a link whose far end\'s text holds part of its passa
     const s = /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === L));
     const item = WALK.nameOf({ kind: 'link', addr: D, pos: s.pos, link: s }, 0, 1);
     const part = t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) });
-    assert.ok(item.includes(t('L.mirror.floating', { sentence: part + t('L.held.withheld') })), `the line whole, nothing between its two clauses: ${item}`);
-    assert.ok(farShort(s) === part && item.includes(t('L.mirror.floating', { sentence: farShort(s) })), `its words open on the symbol's and the stub's: ${item}`);
+    assert.ok(item.includes(sentences(sentence('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) }), sentence('L.held.withheld'))), `the line whole, each clause a sentence: ${item}`);
+    assert.ok(farShort(s) === part && item.includes(part.charAt(0).toUpperCase() + part.slice(1) + '.'), `its words open on the symbol's and the stub's: ${item}`);
     assert.ok(!/places/.test(item), `no count of the runs holding it: ${item}`);
   } finally { REC.invalidate(FAR); }
 });
@@ -651,7 +655,7 @@ test('the mirror\'s item at a link names its far end as its tail and its card do
   REC.takeLinks(D, [L]);
   REC.takeLink({ addr: L, from: [span(D, 12, 3)], to: [span(GHOST, 1, 4)], type: '1.1.0.1.0.1.0.3.13' });
   const item = () => { const s = LK.shown(D).find((x) => x.link.addr === L); return s ? WALK.nameOf({ kind: 'link', addr: D, pos: s.pos, link: s }, 0, 1) : ''; };
-  assert.equal(item(), t('L.mirror.link', { link: L, type: '1.1.0.1.0.1.0.3.13', direction: t('F.card.to'), far: GHOST, floating: '' }) + ' ' + t('L.mirror.item', { i: 1, n: 1 }), 'nothing answered: the address alone');
+  assert.equal(item(), `Link ${L}, type 1.1.0.1.0.1.0.3.13, ${t('F.card.to')} ${GHOST}. Item 1 of 1.`, 'nothing answered: the address alone');
   REC.takeProjection(L, 2, GHOST, 'unregistered');
   assert.ok(item().includes(`${t('F.card.to')} ${GHOST} · ${t('L.client-words', { words: t('L.far.empty') })}`), `the board saying nothing of an address of the reader's own account the complete index lists nothing at, the client's words bracketed: ${item()}`);
   REC.takeLink({ addr: L, from: [span(D, 12, 3)], to: [span(THEIRS, 1, 4)], type: '1.1.0.1.0.1.0.3.13' });
@@ -1100,7 +1104,7 @@ test('where the plane draws a continuation as one mark, the account\'s level hol
     const sibs = WALK.siblingsNow();
     assert.deepEqual([walkAt(), sibs.length, sibs.findIndex((n) => n.kind === 'mark')], [['mark', '1.0.1:1', null], 61, 48], 'the mark\'s stop, after the oldest 48, before its twelve');
     assert.deepEqual(sibs.slice(49).map((n) => [n.kind, n.addr]), Array.from({ length: 12 }, (_, i) => ['document', '1.0.1.0.' + (49 + i)]), 'its members after it, in record order');
-    assert.ok(WALK.nameOf(sibs[48], 48, sibs.length).startsWith(markCount(12, true) + ' '), `named by its count: ${WALK.nameOf(sibs[48], 48, sibs.length)}`);
+    assert.equal(WALK.nameOf(sibs[48], 48, sibs.length), `${markCount(12, true)}. Item 49 of 61.`, 'named by its count, a sentence, its place one after it');
     const asked = fake.asked.length, c = continuationCell('1.0.1', 1), toMark = { x: c.x + c.w / 2, y: c.y + c.h / 2, scale: markScale(1, CAM.cam.scale) };
     for (const step of [1, 2]) {
       await run(WALK.key('down'));
@@ -1402,7 +1406,7 @@ test('the walk takes each box as the version it shows (issues #154, #23): an acc
     const kids = await WALK.childrenOf({ kind: 'account', addr: '1.0.1', pos: null, link: null });
     assert.deepEqual(kids.map((n) => n.addr).filter((a) => [D, D2, E].includes(a)), [D2, E], 'the account lists the version D\'s box shows, in D\'s place, never D');
     const named = WALK.nameOf(kids[0], 0, kids.length);
-    assert.ok(named.startsWith(t('L.mirror.document', { kind: t('F.published'), document: D2, label: '"Tumbler."', state: venued('F.corner.pinned', { k: 2 }), extent: t('L.mirror.positions', { n: TEXT2.length }) })), 'the mirror names the version by its kind, its own first line, as its box\'s label names it, and its state as its corner states it: ' + named);
+    assert.ok(named.startsWith(ended(list(`Published document ${D2}`, '"Tumbler."', venued('F.corner.pinned', { k: 2 }), t('L.mirror.positions', { n: TEXT2.length })))), 'the mirror names the version by its kind, its own first line, as its box\'s label names it, and its state as its corner states it: ' + named);
     await WALK.focusTo(D, 12);
     assert.deepEqual([walkAt(), WALK.siblingsNow().map((n) => n.pos)], [['block', D2, 11], [1, 11]], 'a landing at D stands on the version\'s span, its siblings the version\'s');
     await WALK.focusTo(E, 3);
@@ -1597,12 +1601,12 @@ test('a kept document\'s mirror item carries the clause its corner or the one li
     ctx.mock.timers.tick(PUMP.KEPT_MS);
     const since = /** @type {number} */ (PUMP.kept(D)?.since);
     assert.ok(since >= t0 && since <= t1, 'kept from the row\'s arrival');
-    const clause = t('L.mirror.clause', { clause: t('L.kept.links', { when: lastRead(since) }) });
+    const clause = sentence('L.kept.links', { when: lastRead(since) });
     const was = rebuilt();
     WALK.markKept();
     const at = WALK.siblingsNow().findIndex((n) => n.addr === D), named = WALK.mirrorItem(at) || '';
     assert.ok(item().includes(esc(clause)) && named.includes(clause + ' ' + t('L.mirror.item', { i: at + 1, n: WALK.siblingsNow().length })), `its clause a sentence after its words, before its place in the level: ${named}`);
-    assert.ok(named.startsWith(t('L.mirror.document', { kind: t('F.published'), document: D, label: '"Tumbler."', state: venued('F.corner.latest'), extent: t('L.mirror.positions', { n: 30 }) })), named);
+    assert.ok(named.startsWith(ended(list(`Published document ${D}`, '"Tumbler."', venued('F.corner.latest'), t('L.mirror.positions', { n: 30 })))), named);
     assert.equal(rebuilt(), was, 'written in place, nothing rebuilt');
     text();
     for (let i = 0; i < 50 && PUMP.kept(D); i++) await new Promise((r) => setImmediate(r));
@@ -1625,7 +1629,7 @@ test('a document\'s mirror item voices its corner\'s state whole, its kind leadi
   /** a document's item as the mirror names it, led by its kind, its state the words given */
   const itemSays = (/** @type {string} */ addr, /** @type {string} */ state) => {
     const d = REC.doc(addr);
-    return t('L.mirror.document', { kind: t('F.published'), document: addr, label: LAYER.mirrorLabel(d).map((r) => r.text).join(''), state, extent: d.extent != null ? t('L.mirror.positions', { n: d.extent }) : '' });
+    return ended(list(`Published document ${addr}`, LAYER.mirrorLabel(d).map((r) => r.text).join(''), state, d.extent != null ? t('L.mirror.positions', { n: d.extent }) : ''));
   };
   /** @type {Array<[string, string, string]>} each version state, the version its box shows, and its corner's state's words after its kind */
   const states = [
@@ -1682,7 +1686,7 @@ test('while the board lags past a second its mirror item carries the clause the 
     WALK.markKept();
     assert.equal(item('1'), words, 'within the second: its words alone');
     ctx.mock.timers.tick(PUMP.KEPT_MS);
-    const clause = t('L.mirror.clause', { clause: t('L.kept.text', { when: lastRead(/** @type {number} */ (PUMP.boardKept()?.since)) }) });
+    const clause = ' ' + sentence('L.kept.text', { when: lastRead(/** @type {number} */ (PUMP.boardKept()?.since)) });
     const was = rebuilds();
     WALK.markKept();
     assert.equal(WALK.mirrorItem(0), WALK.nameOf({ kind: 'board', addr: '1', pos: null, link: null }, 0, 1));
@@ -1790,7 +1794,7 @@ test('the page\'s own death takes the mirror down at once where the view stood o
     for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
     assert.ok(!mirror.innerHTML.includes('The first field.'), `at once: no item quotes what the dead session read: ${mirror.innerHTML}`);
     assert.deepEqual(walkAt(), ['document', D, null], 'the walk on its document whole');
-    const box = t('F.corner.withheld', { owner: '1.0.1' }), at = WALK.siblingsNow().findIndex((n) => n.addr === DRAFT), item = at < 0 ? '' : WALK.mirrorItem(at) || '';
+    const box = opening('F.corner.withheld', { owner: '1.0.1' }), at = WALK.siblingsNow().findIndex((n) => n.addr === DRAFT), item = at < 0 ? '' : WALK.mirrorItem(at) || '';
     assert.ok(item.includes(box) && !item.includes('the draft') && mirror.innerHTML.includes(`data-addr="${E}"`),
       `the mirror lists the draft the dead session could read as its cover — in its withheld box's words, none of its first line — and the edition still: ${item}`);
     release();
@@ -1822,7 +1826,7 @@ test('the walk on a draft the session read stays on it once the guest\'s read an
     script[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(DR) })] = { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } };
     REC.sessionDied({ arm: 'closed' });
     await WALK.dropped({ row: null, addrs: null, at: Date.now() });
-    const box = t('F.corner.withheld', { owner: '1.0.1' });
+    const box = opening('F.corner.withheld', { owner: '1.0.1' });
     assert.deepEqual([walkAt(), REC.covered(DR)], [['document', DR, null], true], 'the walk on the covered draft, whole: never on nothing');
     assert.ok(!mirror.innerHTML.includes('The draft') && (WALK.mirrorItem(WALK.mirrorIndex()) || '').includes(box), `named in its withheld box's words, none of its text: ${WALK.mirrorItem(WALK.mirrorIndex())}`);
     const kids = await WALK.childrenOf({ kind: 'account', addr: '1.0.1', pos: null, link: null });
@@ -1854,7 +1858,7 @@ test('a change of the page\'s class keeps the walk on the span it stood on where
     for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
     assert.deepEqual(walkAt(), ['block', K, AT], 'at once: the walk on the span it stood on, never its document whole');
     assert.ok(!mirror.innerHTML.includes(RUN) && mirror.innerHTML.includes('Kept.'), `no item quotes the draft's bytes, the edition's own quoted still: ${mirror.innerHTML}`);
-    assert.ok((WALK.mirrorItem(WALK.mirrorIndex()) || '').startsWith(t('L.item.withheld')), `the walk's item names the withheld run it is now: ${WALK.mirrorItem(WALK.mirrorIndex())}`);
+    assert.ok((WALK.mirrorItem(WALK.mirrorIndex()) || '').startsWith(opening('L.item.withheld')), `the walk's item names the withheld run it is now: ${WALK.mirrorItem(WALK.mirrorIndex())}`);
     await taken;
     assert.deepEqual(walkAt(), ['block', K, AT], 'its document read at the new class: the walk on that span still');
     assert.deepEqual(fake.unanswered, []);
@@ -1875,9 +1879,9 @@ test('where no board is held the walk\'s root names none: it says why, in the wo
     REC.takeBoards({ result: [] });
     await WALK.focusTo('1', null);
     const item = t('L.mirror.item', { i: 1, n: 1 });
-    assert.equal(WALK.mirrorItem(0), `${t('F.unclaimed')} ${item}`, 'the list empty: the root says why, never "board 1"');
+    assert.equal(WALK.mirrorItem(0), sentences(sentence('F.unclaimed'), item), 'the list empty: the root says why, a sentence, never "board 1"');
     why = { id: 'L.boards-unread', text: t('L.boards-unread') };
-    assert.equal(WALK.mirrorItem(0), `${t('L.boards-unread')} ${item}`, 'the list refused: its words');
+    assert.equal(WALK.mirrorItem(0), sentences(sentence('L.boards-unread'), item), 'the list refused: its words, a sentence');
     // the view's centre over a cell of 1.0.1's the index lists nothing in: the grid would find the account there
     const cell = docBox('1.0.1.0.30'), centre = { x: cell.x + cell.w / 2, y: cell.y + cell.h / 2 };
     /** @type {Array<[string, number]>} */
@@ -1896,6 +1900,16 @@ test('where no board is held the walk\'s root names none: it says why, in the wo
     WALK.readers({});
     REC.setBoard(was.board); REC.setSession(was.session);
   }
+});
+
+test('an account\'s mirror item says its counts in a sentence and, where it holds no document, that nothing is here yet in a sentence of its own, its place in the level one after them — no dash joining them (style S1, S2)', () => {
+  REC.takeIndex(/** @type {any} */ ({ docs: [D, E].map((doc) => ({ doc, kind: 'edition', label: doc, standing: 'public' })), counts: [{ account: '1.0.1', documents: 2 }, { account: '1.0.8', documents: 0 }], state: { arm: 'complete' } }));
+  try {
+    const empty = WALK.nameOf({ kind: 'account', addr: '1.0.8', pos: null, link: null }, 1, 2);
+    assert.equal(empty, `Account 1.0.8: 0 documents, 0 links. ${sentence('B1.empty_subspace')} Item 2 of 2.`, 'its counts, then "Nothing here yet.", then its place');
+    const held = WALK.nameOf({ kind: 'account', addr: '1.0.1', pos: null, link: null }, 0, 2);
+    assert.ok(held.startsWith('Account 1.0.1: ') && held.endsWith('. Item 1 of 2.') && !held.includes(t('B1.empty_subspace')) && !held.includes(' — '), `an account holding documents: its counts and its place alone — ${held}`);
+  } finally { index([D, E]); }
 });
 
 // placed last: it holds a document of the account the continuation's tests count, and attaches a mirror of its own

@@ -1,14 +1,15 @@
 // BM-HELD's test: the four states a text holds a passage in, read by
 // position and by the identity of each run's bytes, a passage named by spans
 // of several I-spaces one passage, in its pieces and in its stretches; the
-// line's words by subject — what a
-// returned stop stood for among them — and by the text's address, no line
-// counting the runs that hold it, its short form its start;
-// why a line could not tell, keyed on the refusal's name and kind, never its
-// token, a lost session the text that could not be read (FP-28), and "try
-// again" only where a retry can change the answer; a drawn link's far end's
-// state before departure, read through the version its far box shows
-// (FP-22), its short form heading its whole; and the runs' labels — stretches cut where their bytes break the
+// line's words by subject — what a returned stop stood for among them — and
+// by the text's address, each a sentence and the withheld text's clause one
+// of its own, no line counting the runs that hold it, its short form a field
+// heading its first sentence; why a line could not tell, keyed on the
+// refusal's name and kind, never its token, a lost session the text that
+// could not be read (FP-28), and "try again" only where a retry can change
+// the answer; a drawn link's far end's state before departure, read through
+// the version its far box shows (FP-22), its short form heading its whole;
+// and the runs' labels, fields — stretches cut where their bytes break the
 // passage's order, pieces numbered in the passage's order, repeats, the
 // amount and the order at the landing's run, merged labels and the wrapping
 // step (FP-21).
@@ -17,7 +18,10 @@ import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import { heldOf, piecesOf, stretchesOf, piecesIn, labelOf, mergedLabel, stepFrom, lineOf, shortLineOf, saidOf, unknownOf, whyOf, retries, whereOf, farHolds, farSays, farShort } from './held.js';
-import { t } from '../strings.js';
+import { t, sentence, sentences } from '../strings.js';
+
+/** a field heading a sentence: its first letter a capital (style S1) */
+const heading = (/** @type {string} */ words) => words.charAt(0).toUpperCase() + words.slice(1);
 
 const D = '1.0.1.0.3', OTHER_HOME = '1.0.2.0.5', CITE = '1.1.0.1.0.1.0.3.13';
 const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: doc.split('.').slice(0, 3).join('.'), whole: false, subspace: 1, ordinal: ord, positions: w });
@@ -61,17 +65,17 @@ test('a passage named by spans of two I-spaces is one passage, each span after t
 
 test('the line names what a stop the reader returned to stood for', () => {
   const said = /** @type {import('./held.js').Said} */ (saidOf({ holds: 'part' }, 'stop', '1.0.1.0.4'));
-  assert.equal(lineOf(said), t('L.held.part', { subject: t('L.held.stop'), where: t('L.held.current', { D: '1.0.1.0.4' }) }));
+  assert.equal(lineOf(said), sentence('L.held.part', { subject: t('L.held.stop'), where: t('L.held.current', { D: '1.0.1.0.4' }) }));
 });
 
-test('the line in the decision\'s words: a part, the text a member\'s version or a bare address\'s current text, pieces, the withheld text\'s clause on a part alone; never "missing", "removed", "deleted" or "compare"', () => {
+test('the line in the decision\'s words, each a sentence: a part, the text a member\'s version or a bare address\'s current text, pieces, the withheld text\'s clause a sentence of its own on a part alone; never "missing", "removed", "deleted" or "compare" (style S1, S2)', () => {
   const at = '1.0.1.0.43.3';
   const part = /** @type {import('./held.js').Said} */ (saidOf({ holds: 'part' }, 'selected', at));
-  assert.equal(lineOf(part), 'only part of what you selected is in version 3', 'a part, no count of the runs holding it after it');
-  assert.equal(lineOf({ ...part, subject: 'reading' }), 'only part of the text you were reading is in version 3');
+  assert.equal(lineOf(part), 'Only part of what you selected is in version 3.', 'a part, no count of the runs holding it after it');
+  assert.equal(lineOf({ ...part, subject: 'reading' }), 'Only part of the text you were reading is in version 3.');
   assert.equal(whereOf('1.0.1.0.43'), t('L.held.current', { D: '1.0.1.0.43' }), 'a bare address: its current text');
-  assert.equal(lineOf(/** @type {import('./held.js').Said} */ (saidOf({ holds: 'pieces' }, 'followed', '1.0.1.0.43', true))), t('L.held.pieces', { subject: t('L.held.followed'), where: t('L.held.current', { D: '1.0.1.0.43' }) }), 'pieces: all of it — no withheld clause, for nothing is left to be under it');
-  assert.equal(lineOf(/** @type {import('./held.js').Said} */ (saidOf({ holds: 'part' }, 'selected', at, true))), t('L.held.part', { subject: t('L.held.selected'), where: t('L.held.member', { k: 3 }) }) + t('L.held.withheld'), 'a part where the text shows withheld text: the rest may be under it');
+  assert.equal(lineOf(/** @type {import('./held.js').Said} */ (saidOf({ holds: 'pieces' }, 'followed', '1.0.1.0.43', true))), sentence('L.held.pieces', { subject: t('L.held.followed'), where: t('L.held.current', { D: '1.0.1.0.43' }) }), 'pieces: all of it — no withheld clause, for nothing is left to be under it');
+  assert.equal(lineOf(/** @type {import('./held.js').Said} */ (saidOf({ holds: 'part' }, 'selected', at, true))), 'Only part of what you selected is in version 3. The rest may be under the withheld text here.', 'a part where the text shows withheld text: the rest may be under it, a sentence of its own');
   assert.deepEqual([saidOf({ holds: 'all' }, 'selected', at), saidOf({ holds: 'none' }, 'selected', at)], [null, null], 'all says nothing beyond the outline, none nothing beyond the dead end\'s face');
   const lines = [part, { ...part, state: /** @type {const} */ ('pieces') }, unknownOf(null, 'reading', at), unknownOf({ kind: 'refused', name: 'too_many_pairs' }, 'followed', at)].map(lineOf);
   assert.ok(lines.every((l) => !/missing|removed|deleted|compare|too_many|not_a_link/.test(l)), lines.join(' | '));
@@ -96,7 +100,7 @@ test('couldn\'t tell says why, keyed on the refusal\'s name and kind, never its 
   for (const [r, why, again] of rows) assert.deepEqual([whyOf(r), retries(r)], [why, again], r ? r.name : 'none met');
   const s = unknownOf({ kind: 'unreachable', name: 'unreachable' }, 'reading', '1.0.1.0.127');
   assert.deepEqual([s.state, s.again], ['unknown', true]);
-  assert.equal(lineOf(s), t('L.held.unknown', { subject: t('L.held.reading'), where: t('L.held.current', { D: '1.0.1.0.127' }), reason: t('F.daemon.unreachable') }));
+  assert.equal(lineOf(s), sentence('L.held.unknown', { subject: t('L.held.reading'), where: t('L.held.current', { D: '1.0.1.0.127' }), reason: t('F.daemon.unreachable') }));
 });
 
 test('a drawn link\'s far end says before departure what its text holds of its passage, by the rule its landing reads (issue #153): all of it in one piece, nothing; part, or all of it in pieces, the line — its bytes read through the far document\'s held image, and where that image covers them not, a projection of fewer positions than the passage still part, nothing more; refused by a name that says nothing of the document, couldn\'t tell by that name, save a refusal for its size; floating, the dead end\'s words', () => {
@@ -110,11 +114,11 @@ test('a drawn link\'s far end says before departure what its text holds of its p
   REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 5 }]);
   assert.deepEqual([farHolds(at()), farSays(at())], [null, ''], 'all of it in one piece: nothing said, the beam alone');
   REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 2 }]);
-  assert.equal(farSays(at()), t('L.held.part', { subject, where }), 'its first two bytes alone: part');
+  assert.equal(farSays(at()), sentence('L.held.part', { subject, where }), 'its first two bytes alone: part');
   // an edit set its last three bytes at 10 and its first two at 20, other bytes about them
   REC.takeImage(OTHER_HOME, 1, [{ iStart: P + '100', width: 9 }, { iStart: P + '3', width: 3 }, { iStart: P + '200', width: 7 }, { iStart: P + '1', width: 2 }, { iStart: P + '300', width: 19 }]);
   REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 10, width: 3 }, { pos: 20, width: 2 }]);
-  assert.deepEqual([farHolds(at())?.state, farSays(at())], ['pieces', t('L.held.pieces', { subject, where })], 'all of it, in two runs: never counted');
+  assert.deepEqual([farHolds(at())?.state, farSays(at())], ['pieces', sentence('L.held.pieces', { subject, where })], 'all of it, in two runs: never counted');
   // its first two bytes twice, the rest nowhere: as many positions as the passage, never all of it
   REC.takeImage(OTHER_HOME, 1, [{ iStart: P + '1', width: 2 }, { iStart: P + '1', width: 2 }, { iStart: P + '200', width: 36 }]);
   REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 4 }]);
@@ -122,19 +126,19 @@ test('a drawn link\'s far end says before departure what its text holds of its p
   // the image dropped with the text: the projection's widths alone
   REC.invalidate(OTHER_HOME);
   REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 2 }, { pos: 20, width: 2 }]);
-  assert.equal(farSays(at()), t('L.held.part', { subject, where }), 'no image: four positions of five, in two runs, prove part');
+  assert.equal(farSays(at()), sentence('L.held.part', { subject, where }), 'no image: four positions of five, in two runs, prove part');
   REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 5 }]);
   assert.equal(farSays(at()), '', 'no image, as many positions as the passage: nothing more said, never a guess');
   REC.takeProjection(L, 1, OTHER_HOME, { refused: 'not_a_link' });
-  assert.equal(farSays(at()), t('L.held.unknown', { subject, where, reason: t('B1.not_a_link') }), 'refused by a name that says nothing of the document: couldn\'t tell, by that name');
+  assert.equal(farSays(at()), sentence('L.held.unknown', { subject, where, reason: t('B1.not_a_link') }), 'refused by a name that says nothing of the document: couldn\'t tell, by that name');
   REC.takeProjection(L, 1, OTHER_HOME, { refused: 'image_too_large' });
   assert.equal(farSays(at()), '', 'refused for its size: nothing, for the follow asks it in parts');
   REC.takeProjection(L, 1, OTHER_HOME, []);
-  assert.equal(farSays(at()), t('F.floating', { D: OTHER_HOME }), 'floating: the dead end\'s words');
+  assert.equal(farSays(at()), sentence('F.floating', { D: OTHER_HOME }), 'floating: the dead end\'s words');
   // OTHER_HOME's text showing a withheld run: the rest of a part may be under it
   REC.takeDelivery(OTHER_HOME, [{ pos: 1, width: 10, kind: 'content', text: 'abcde\n\nfg\n', ref: null, origin: null }, { pos: 11, width: 30, kind: 'withheld', text: '', ref: null, origin: '1.0.2.0.6' }]);
   REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 2 }]);
-  assert.equal(farSays(at()), t('L.held.part', { subject, where }) + t('L.held.withheld'), 'its text shows withheld text: the rest may be under it');
+  assert.equal(farSays(at()), sentences(sentence('L.held.part', { subject, where }), sentence('L.held.withheld')), 'its text shows withheld text: the rest may be under it');
 });
 
 test('a drawn link\'s far end says what the version its far box shows holds of its passage (issue #154): read through that version\'s projection and image, the line naming the version — "version ⟨k⟩" — and the dead end\'s words there in the version\'s own: "its passage is not in version ⟨k⟩"', () => {
@@ -146,9 +150,9 @@ test('a drawn link\'s far end says what the version its far box shows holds of i
   try {
     REC.takeImage(V2, 1, [{ iStart: P + '1', width: 2 }, { iStart: OTHER_HOME + '.2.0.1.1', width: 38 }]);
     REC.takeProjection(L, 1, V2, [{ pos: 1, width: 2 }]);
-    assert.equal(farSays(at()), t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.member', { k: 2 }) }), 'its first two bytes in the version: "only part of its passage is in version 2"');
+    assert.equal(farSays(at()), sentence('L.held.part', { subject: t('L.held.followed'), where: t('L.held.member', { k: 2 }) }), 'its first two bytes in the version: "Only part of its passage is in version 2."');
     REC.takeProjection(L, 1, V2, []);
-    assert.equal(farSays(at()), t('F.floating.member', { k: 2 }), 'none of it in the version: "its passage is not in version 2"');
+    assert.equal(farSays(at()), sentence('F.floating.member', { k: 2 }), 'none of it in the version: "Its passage is not in version 2."');
   } finally { LK.readers({}); }
 });
 
@@ -183,7 +187,7 @@ test('an arrival\'s runs labelled: pieces of different material numbered in the 
   // the passage's first three and its last three positions alone, in its order, the text showing withheld text
   const part = /** @type {import('./held.js').Pieces} */ (piecesIn([{ pos: 2, width: 3, at: 0 }, { pos: 30, width: 3, at: 7 }], 10, true));
   assert.deepEqual([part.whole, part.reordered, part.withheld], [false, false, true]);
-  assert.equal(labelOf(part, 0, true), piece(1) + ' · ' + t('L.piece.part') + t('L.held.withheld'), '"only part of the passage", the rest maybe under the withheld text');
+  assert.equal(labelOf(part, 0, true), [piece(1), t('L.piece.part'), t('L.held.withheld')].join(' · '), '"only part of the passage", the rest maybe under the withheld text: a field each');
   assert.ok([p, part].flatMap((x) => x.runs.map((_, i) => labelOf(x, i, true))).every((w) => !/places/.test(w)), 'no label counts "places"');
 });
 
@@ -207,19 +211,22 @@ test('labels that would stack merge into the pieces they hold — consecutive nu
   assert.deepEqual([stepFrom(again, 1, 1), stepFrom(again, 0, 1), stepFrom(again, 2, 1)], [0, 2, 1], 'piece 1, then piece 2 where the text first holds it, then its repeat, then round');
 });
 
-test('the line\'s short form is its start: the whole the short, then on a part where the text shows withheld text that the rest may be under it; couldn\'t tell keeps its reason in both (FP-21)', () => {
+test('the line\'s short form heads it: the whole the short as a sentence, then on a part where the text shows withheld text that the rest may be under it, a sentence of its own; couldn\'t tell keeps its reason in both (FP-21; style S1)', () => {
   const at = '1.0.1.0.43.3';
-  /** @type {Array<[string, import('./held.js').Said, string, string]>} each line: its state, its short form and its whole */
+  /** @type {Array<[string, import('./held.js').Said, string, Record<string, string>, boolean]>} each line: its state, its short form's string and its tokens, and whether the withheld text's clause follows */
   const lines = [
-    ['a part', /** @type {import('./held.js').Said} */ (saidOf({ holds: 'part' }, 'selected', at)), t('L.held.part', { subject: t('L.held.selected'), where: t('L.held.member', { k: 3 }) }), ''],
-    ['a part, withheld text shown', /** @type {import('./held.js').Said} */ (saidOf({ holds: 'part' }, 'reading', at, true)), t('L.held.part', { subject: t('L.held.reading'), where: t('L.held.member', { k: 3 }) }), t('L.held.withheld')],
-    ['pieces, withheld text shown', /** @type {import('./held.js').Said} */ (saidOf({ holds: 'pieces' }, 'followed', at, true)), t('L.held.pieces', { subject: t('L.held.followed'), where: t('L.held.member', { k: 3 }) }), ''],
-    ['couldn\'t tell', unknownOf({ kind: 'refused', name: 'scan_busy' }, 'stop', at), t('L.held.unknown', { subject: t('L.held.stop'), where: t('L.held.member', { k: 3 }), reason: t('L.held.why.busy') }), ''],
+    ['a part', /** @type {import('./held.js').Said} */ (saidOf({ holds: 'part' }, 'selected', at)), 'L.held.part', { subject: t('L.held.selected'), where: t('L.held.member', { k: 3 }) }, false],
+    ['a part, withheld text shown', /** @type {import('./held.js').Said} */ (saidOf({ holds: 'part' }, 'reading', at, true)), 'L.held.part', { subject: t('L.held.reading'), where: t('L.held.member', { k: 3 }) }, true],
+    ['pieces, withheld text shown', /** @type {import('./held.js').Said} */ (saidOf({ holds: 'pieces' }, 'followed', at, true)), 'L.held.pieces', { subject: t('L.held.followed'), where: t('L.held.member', { k: 3 }) }, false],
+    ['couldn\'t tell', unknownOf({ kind: 'refused', name: 'scan_busy' }, 'stop', at), 'L.held.unknown', { subject: t('L.held.stop'), where: t('L.held.member', { k: 3 }), reason: t('L.held.why.busy') }, false],
   ];
-  for (const [state, s, short, after] of lines) assert.deepEqual([shortLineOf(s), lineOf(s)], [short, short + after], state);
+  for (const [state, s, id, values, withheld] of lines) {
+    assert.deepEqual([shortLineOf(s), lineOf(s)], [t(id, values), sentences(sentence(id, values), withheld ? sentence('L.held.withheld') : '')], state);
+    assert.ok(lineOf(s).startsWith(heading(shortLineOf(s))), `${state}: the short form heads the whole`);
+  }
 });
 
-test('a drawn link\'s far end says its state in two forms — its stub\'s label and its symbol\'s title the short, its mirror item and its card the whole — the short the whole\'s start, neither counting the runs that hold it: a part where its text shows withheld text, the clause after it in the whole alone; all of it in pieces, and couldn\'t tell with its reason, one form; floating, the dead end\'s words in both; all of it in one piece, nothing in either (issue #242\'s design decision: "Stubs and symbols show the start of the card\'s and mirror\'s full phrase")', () => {
+test('a drawn link\'s far end says its state in two forms — its stub\'s label and its symbol\'s title the short, a field, its mirror item and its card the whole, sentences — the short heading the whole\'s first sentence, neither counting the runs that hold it: a part where its text shows withheld text, the clause a sentence after it in the whole alone; all of it in pieces, and couldn\'t tell with its reason, the same words in both; floating, the dead end\'s words in both; all of it in one piece, nothing in either (issue #242\'s design decision: "Stubs and symbols show the start of the card\'s and mirror\'s full phrase")', () => {
   buildFar();
   LK.setOthers(D, true);
   const L = OTHER_HOME + '.0.2.1', P = OTHER_HOME + '.0.1.';
@@ -228,19 +235,21 @@ test('a drawn link\'s far end says its state in two forms — its stub\'s label 
   // OTHER_HOME's text: ten positions, then thirty withheld from the reader
   REC.takeDelivery(OTHER_HOME, [{ pos: 1, width: 10, kind: 'content', text: 'abcde\n\nfg\n', ref: null, origin: null }, { pos: 11, width: 30, kind: 'withheld', text: '', ref: null, origin: '1.0.2.0.6' }]);
   const part = t('L.held.part', { subject, where }), pieces = t('L.held.pieces', { subject, where }), unknown = t('L.held.unknown', { subject, where, reason: t('B1.not_a_link') }), floating = t('F.floating', { D: OTHER_HOME });
+  /** the short form as the whole says it: a sentence, the withheld text's clause one after it where `withheld` */
+  const said = (/** @type {string} */ short, withheld = false) => sentences(heading(short) + '.', withheld ? sentence('L.held.withheld') : '');
   /** @type {Array<[string, () => void, string, string]>} each state: how its text holds the passage, its short form and its whole */
   const states = [
     // the passage's first two bytes at 1 and its fourth at 8
-    ['part, in two runs', () => { REC.takeImage(OTHER_HOME, 1, [{ iStart: P + '1', width: 2 }, { iStart: P + '100', width: 5 }, { iStart: P + '4', width: 1 }, { iStart: P + '200', width: 32 }]); REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 2 }, { pos: 8, width: 1 }]); }, part, part + t('L.held.withheld')],
+    ['part, in two runs', () => { REC.takeImage(OTHER_HOME, 1, [{ iStart: P + '1', width: 2 }, { iStart: P + '100', width: 5 }, { iStart: P + '4', width: 1 }, { iStart: P + '200', width: 32 }]); REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 2 }, { pos: 8, width: 1 }]); }, part, said(part, true)],
     // its last three bytes at 1 and its first two at 4
-    ['all of it in pieces, in two runs', () => { REC.takeImage(OTHER_HOME, 1, [{ iStart: P + '3', width: 3 }, { iStart: P + '1', width: 2 }, { iStart: P + '200', width: 35 }]); REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 3 }, { pos: 4, width: 2 }]); }, pieces, pieces],
-    ['couldn\'t tell', () => REC.takeProjection(L, 1, OTHER_HOME, { refused: 'not_a_link' }), unknown, unknown],
-    ['floating', () => REC.takeProjection(L, 1, OTHER_HOME, []), floating, floating],
+    ['all of it in pieces, in two runs', () => { REC.takeImage(OTHER_HOME, 1, [{ iStart: P + '3', width: 3 }, { iStart: P + '1', width: 2 }, { iStart: P + '200', width: 35 }]); REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 3 }, { pos: 4, width: 2 }]); }, pieces, said(pieces)],
+    ['couldn\'t tell', () => REC.takeProjection(L, 1, OTHER_HOME, { refused: 'not_a_link' }), unknown, said(unknown)],
+    ['floating', () => REC.takeProjection(L, 1, OTHER_HOME, []), floating, said(floating)],
     ['all of it in one piece', () => { REC.takeImage(OTHER_HOME, 1, [{ iStart: P + '1', width: 40 }]); REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 5 }]); }, '', ''],
   ];
   for (const [state, hold, short, whole] of states) {
     hold();
     assert.deepEqual([farShort(at()), farSays(at())], [short, whole], state);
-    assert.ok(farSays(at()).startsWith(farShort(at())) && !/places/.test(farSays(at())), `${state}: the short form the whole's start, no count of the runs holding it`);
+    assert.ok(farSays(at()).startsWith(heading(farShort(at()))) && !/places/.test(farSays(at())), `${state}: the short form heading the whole's first sentence, no count of the runs holding it`);
   }
 });

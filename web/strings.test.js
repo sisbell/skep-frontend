@@ -35,7 +35,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { sep } from 'node:path';
-import { STRINGS, t, tHTML, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, markCount, typeName, formName, formsNamed, formsAt, formAct, formTakeOff, formTitle, formAgain, hintOf } from './strings.js';
+import { STRINGS, t, tHTML, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, markCount, typeName, formName, formsNamed, formsAt, formAct, formTakeOff, formTitle, formAgain, hintOf, hintSentences, sentence, sentenceHTML, opening, openingHTML, asSentence, ended, endedHTML, sentences, fields, list } from './strings.js';
 
 /** a commons type as a link stores it, by its path under the registry document's subspace 3 */
 const commons = (/** @type {string} */ path) => '1.1.0.1.0.1.0.' + path;
@@ -113,7 +113,7 @@ test('the editor\'s lines stand as its design words them, in its characters — 
     ['B3.notes.home', 'B3-S13', 'in Notes on ⟨draft⟩'],
     ['B3.format.again.off', 'B3-S13', '⟨chord⟩ again takes its mark off them'],
     ['B3.format.held', 'B3-S13', 'taken off with your next version\u00a0— then out of view at every version; a reader\'s “as published” switch still shows it where it stood'],
-    ['B3.format.kept.set.made', 'B3-S13', 'kept in Formatting of ⟨label⟩, made for it —'],
+    ['B3.format.kept.set.made', 'B3-S13', 'kept in Formatting of ⟨label⟩, made for it'],
     ['B3.format.slot', 'B3-S13', 'format…'],
     ['B3.format.strip.selection', 'B3-S13', 'format — the selection'],
     ['B3.format.strip.focus', 'B3-S13', 'format — “⟨first words⟩”'],
@@ -132,7 +132,7 @@ test('the editor\'s lines stand as its design words them, in its characters — 
     ['B3.format.cycle', 'B3-S13', '⟨level⟩ — let go to set it'],
     ['B3.format.style.on', 'B3-S13', '⟨form⟩ — what you type next; ⟨its chord or act⟩ again stops it'],
     ['B3.format.style.off', 'B3-S13', 'not ⟨form⟩ — what you type next'],
-    ['B3.format.style.inside', 'B3-S13', '; the ⟨form⟩ either side stays'],
+    ['B3.format.style.inside', 'B3-S13', 'the ⟨form⟩ either side stays'],
     ['B3.format.style.on.compact', 'B3-S13', '⟨form⟩ next'],
     ['B3.format.style.off.compact', 'B3-S13', 'not ⟨form⟩ next'],
     ['B3.format.style.unkept', 'B3-S13', '⟨board⟩ has not kept these words, so their ⟨form⟩ is not made — once it has, select them and apply ⟨form⟩ again'],
@@ -189,10 +189,10 @@ test('every line the editor\'s screens carry stands as B3 words it at the design
     ['B3.death.corner.unshown', 'B3-S2', 'held on this device, never sent\u00a0— this version of the app cannot show it once this window closes; copy the text out to use it\u00a0— this device’s key no longer writes on ⟨board⟩'],
     ['B3.death.copy', 'B3-S2', 'copy the text out'],
     ['B3.death.copied', 'B3-S2', 'copied'],
-    ['B3.death.ending.shown', 'B3-S2', '— the words held on this device that were never sent are shown there too'],
-    ['B3.death.ending.unshown', 'B3-S2', '— the words held on this device that were never sent stay there; this version of the app shows them only in the drafts still open in this window, and not after it closes'],
+    ['B3.death.ending.shown', 'B3-S2', 'the words held on this device that were never sent are shown there too'],
+    ['B3.death.ending.unshown', 'B3-S2', 'the words held on this device that were never sent stay there; this version of the app shows them only in the drafts still open in this window, and not after it closes'],
     ['B3.death.mark', 'B3-S2', 'words held on this device, never sent'],
-    ['B3.hand.unread', 'B3-S2', '— its hand not read yet'],
+    ['B3.hand.unread', 'B3-S2', 'its hand not read yet'],
     ['B3.undo.taken-back.cut', 'B3-S3', 'taken back from ⟨label⟩'],
     ['B3.paste.other-board', 'B3-S5', 'this passage is on ⟨board⟩\u00a0— a paste from another board is not offered in this version; to write about it, annotate it where it stands, or capture your own words here and link them to it'],
     ['B3.quote.other-board.inert', 'B3-S5', 'quoting from another board is not offered in this version — when it comes it places the same material here, never a copy; to write about this passage, annotate it — ⟨annotate chord⟩ — or write in your own words in a document of yours — ⟨capture chord⟩ captures them from here — and tie your note to it with link to…'],
@@ -210,7 +210,7 @@ test('every line the editor\'s screens carry stands as B3 words it at the design
     ['B3.link.far.draft', 'B3-S6', 'once you publish those words as new, it stays on the draft\'s earlier words and readers meet it as withheld'],
     ['B3.link.type.private', 'B3-S6', 'typed by a private document of yours — readers see its address as their type, never what it says'],
     ['B3.link.lineage', 'B3-S6, B3-S12', 'the link it replaces stays public and active, marked superseded by this one for good — retracting this one does not undo that'],
-    ['B3.link.private-arms', 'B3-S6', '— to keep a note on these words private, annotate them, or link from your draft of it'],
+    ['B3.link.private-arms', 'B3-S6', 'to keep a note on these words private, annotate them, or link from your draft of it'],
     ['B3.link.corner.yours', 'B3-S6', 'yours, on words not in this version'],
     ['B3.history.row.version', 'B3-S7', 'version ⟨k⟩ of ⟨E⟩'],
     ['B3.history.row.merged', 'B3-S7', 'merged ⟨alternative⟩ with version ⟨k⟩'],
@@ -218,7 +218,7 @@ test('every line the editor\'s screens carry stands as B3 words it at the design
     ['B3.history.row.withdrawn', 'B3-S7', 'the words kept, superseding nothing'],
     ['B3.history.row.withdrawn.draft', 'B3-S7', 'the words kept, as an ordinary draft'],
     ['B3.history.row.restored', 'B3-S7', 'set to how it stood ⟨time⟩'],
-    ['B3.capture.own-piece', 'B3-S9', '· a piece of its own: type its first line in the address line'],
+    ['B3.capture.own-piece', 'B3-S9', 'a piece of its own: type its first line in the address line'],
     ['B3.capture.record-stays', 'B3-S9', 'the captures record stays — it is a record of its own, not text'],
     ['B3.family.home-draft', 'B3-S10', 'your draft of your home document'],
     ['B3.key-record-stays', 'B3-S10', 'your key record stays — it is a record of its own, not text'],
@@ -240,41 +240,41 @@ test('every line the editor\'s screens carry stands as B3 words it at the design
     ['B3.publish.stayed-private', 'B3-S11 P2 (iii)', '⟨n⟩ of your links and notes on these words stayed private when version\u00a0⟨k⟩ was published; they stay private with this version\u00a0— open their sets to publish any of them with this version'],
     ['B3.publish.provenance', 'B3-S11 P2 (iv)', 'what you typed here reads as written by you at this publication, and so do words you quoted as a copy — their colophon, published with them, says whose they were; what you windowed answers its origin'],
     ['B3.publish.count', 'B3-S11 P2 (vii)', 'this is one permanent public write — version ⟨k⟩ of ⟨E⟩ with ⟨l⟩ link(s) published with it, with ⟨n⟩ mark(s) of formatting published with it, with ⟨r⟩ mark(s) you took off retracted and with ⟨e⟩ mark(s) you edited published over their words as they now stand, each earlier form retracted, public the moment it commits; your draft then shows the published words'],
-    ['B3.publish.count.claim', 'B3-S11 P2 (vii)', 'version ⟨k⟩ of ⟨E⟩, with its claim naming ⟨D⟩, with ⟨l⟩ link(s) published with it,'],
-    ['B3.publish.count.supersede', 'B3-S11 P2 (vii)', 'version\u00a0⟨k+1⟩ of ⟨D⟩, with its claim that ⟨alternative⟩ is superseded by it, with ⟨l⟩ link(s) published with it,'],
+    ['B3.publish.count.claim', 'B3-S11 P2 (vii)', 'version ⟨k⟩ of ⟨E⟩, with its claim naming ⟨D⟩, with ⟨l⟩ link(s) published with it'],
+    ['B3.publish.count.supersede', 'B3-S11 P2 (vii)', 'version\u00a0⟨k+1⟩ of ⟨D⟩, with its claim that ⟨alternative⟩ is superseded by it, with ⟨l⟩ link(s) published with it'],
     ['B3.publish.claim-line', 'B3-S11 P2 (vii)', 'its claim tells every reader of ⟨E⟩ that it was published from ⟨D⟩ — they see that draft\'s address and whose it is, never what it says'],
     ['B3.publish.edition.new', 'B3-S1, B3-S11', 'a new document'],
     ['B3.publish.edition.minted', 'B3-S11 P2 (vii)', 'the new document'],
     ['B3.publish.formatting-line', 'B3-S11 P3 (1)', 'the formatting of these words (⟨m⟩ marks) is published with them\u00a0— and where an earlier version holds the same words, it shows there too; retracting one takes it out of today’s view at every version, one link at a time; a reader’s "as published" switch still shows it at the versions published while it stood, beside its retraction'],
     ['B3.publish.formatting.retracted', 'B3-S11 P3 (1)', '⟨r⟩ marks you took off these words are retracted with this version\u00a0— out of today’s view at every version that shows them, and from your other documents that hold these words; a reader’s "as published" switch still shows each at the versions published while it stood'],
     ['B3.publish.formatting.edited', 'B3-S11 P3 (1)', '⟨e⟩ marks you edited are published over their words as they now stand, each earlier form retracted'],
-    ['B3.publish.formatting.widened', 'B3-S11 P3 (1)', '; where one now also marks words an earlier version holds without it, it shows there too'],
-    ['B3.publish.formatting.set-ends', 'B3-S11 P3 (1)', '; your formatting of these words in ⟨label⟩ ends with them'],
-    ['B3.publish.formatting.set-came', 'B3-S11 P3 (1)', '; ⟨f⟩ of these came from Formatting of ⟨label⟩\u00a0— their edited forms are this draft’s now'],
+    ['B3.publish.formatting.widened', 'B3-S11 P3 (1)', 'where one now also marks words an earlier version holds without it, it shows there too'],
+    ['B3.publish.formatting.set-ends', 'B3-S11 P3 (1)', 'your formatting of these words in ⟨label⟩ ends with them'],
+    ['B3.publish.formatting.set-came', 'B3-S11 P3 (1)', '⟨f⟩ of these came from Formatting of ⟨label⟩\u00a0— their edited forms are this draft’s now'],
     ['B3.publish.formatting.run-on', 'B3-S11 P3 (1)', '⟨n⟩ of these marks run on past the last word you publish — each is published up to it, the rest staying in your draft'],
     ['B3.publish.formatting.part', 'B3-S11 P3 (1)', '⟨n⟩ of these marks are published without the part you took off'],
     ['B3.publish.caveat.marks', 'B3-S11 P3 (1)', 'these marks may be this machine\'s writes, not yours — this board admits that write whenever local trust is on, and this surface cannot read whether it was.'],
     ['B3.publish.row.switch', 'B3-S11 P3 (2)', 'publish these ⟨n⟩ links with the text — into ⟨destination⟩'],
     ['B3.publish.row.switch.formatting', 'B3-S11 P3 (2)', 'publish this formatting with the text\u00a0— into ⟨destination⟩'],
-    ['B3.publish.row.formatting-ends', 'B3-S11 P3 (2)', '— your formatting of these words in ⟨label⟩ stays while its copy stands, and ends with it'],
+    ['B3.publish.row.formatting-ends', 'B3-S11 P3 (2)', 'your formatting of these words in ⟨label⟩ stays while its copy stands, and ends with it'],
     ['B3.publish.row.line', 'B3-S11 P3 (2)', 'public and permanent, like the text — each a fresh public link to every reader, its tie to your private original a record only ⟨set⟩\'s readers can read — anyone can tell that a private original stands behind each, never where; ⟨p⟩ of them point into ⟨private documents, each with its owner⟩, which stay private — readers see that a passage there is linked, and can read how long it is and where in that document it was written, not what it says, and, where one points at a link there rather than a passage, that a link there exists, and how many that document holds at least; ⟨d⟩ of them point at words of this draft you are not publishing — readers see that a passage of this draft is linked there, how long it is and where in your drafting it was written, not what it says — and once you publish those words as new, each stays on the draft\'s earlier words and readers meet it as withheld, its original offered again with those words and, switched on, published then whole beside this copy; ⟨c⟩ of these run on past the last word you publish — each is published up to it, the rest staying private with your draft, and is offered again when you publish the rest and, switched on, published then whole beside this part; to publish one whole, widen what you publish to its words; ⟨t⟩ of them are typed by a private document of yours — readers see its address as their type, never what it says; a public copy of each is published into ⟨destination⟩ — your originals stay in ⟨set⟩, each marked as published by its copy, and are not offered again — save ⟨c⟩\'s and ⟨d⟩\'s, as above'],
     ['B3.publish.row.notes', 'B3-S11 P3 (2)', '⟨a⟩ of them link these words to your notes, whose words stay private — readers see that each links to a note of yours, and can read how long the note is and where in ⟨set⟩ it was written, not what it says'],
     ['B3.publish.row.reoffered', 'B3-S11 P3 (2)', '⟨n⟩ of these were published before — their first copies stay, and readers meet each as withheld; retract each at its card, at its mark in this draft: after publishing, a reader\'s "as published" switch still shows each at this version, beside its retraction; to keep them from this version too, cancel and retract them first; or leave this off and move each first copy\'s end publicly at its card; left off, this document offers none again while these words stay in its versions\u00a0— to publish one later, make the link again'],
     ['B3.publish.row.reoffered.part', 'B3-S11 P3 (2)', '⟨n⟩ of these were published before, in part — their first copies stay, and readers meet both over the words each covers; retract each at its card, at its mark in this draft: after publishing, a reader\'s "as published" switch still shows each at this version, beside its retraction; to keep them from this version too, cancel and retract them first; or leave this off and move each first copy\'s end publicly at its card; left off, this document offers none again while these words stay in its versions\u00a0— to publish one later, make the link again'],
     ['B3.publish.row.reoffered.notes', 'B3-S11 P3 (2)', 'annotate these words again'],
     ['B3.publish.row.reoffered.both', 'B3-S11 P3 (2)', 'make the link again, or annotate these words again for a note'],
-    ['B3.publish.row.move-end', 'B3-S11 P3 (2)', '— or leave this off and move the first copy\'s end publicly at its card'],
+    ['B3.publish.row.move-end', 'B3-S11 P3 (2)', 'or leave this off and move the first copy\'s end publicly at its card'],
     ['B3.publish.row.revises', 'B3-S11 P3 (2)', '⟨u⟩ of these revise links already published — to publish the revision, revise the published copy at its page, or, where you took that copy back, make the link again'],
     ['B3.publish.destination', 'B3-S11 P3 (2)', '⟨E⟩ (this document — version ⟨k⟩, the one being published)'],
     ['B3.publish.destination.first', 'B3-S11 P3 (2)', '(version 1, the one being published)'],
     ['B3.publish.destination.line', 'B3-S11 P3 (2)', 'in ⟨E⟩ these links are published with version ⟨k⟩ and live under its address; by default they show at every version that holds their words, an earlier one included — a reader\'s "as published" switch shows each version its own; retracting one takes it out of today\'s view at every version, one link at a time; a reader\'s "as published" switch still shows it at the versions published while it stood, beside its retraction'],
     ['B3.publish.destination.other', 'B3-S11 P3 (2)', 'another published document of yours'],
     ['B3.publish.destination.other.line', 'B3-S11 P3 (2)', 'shown at every version read with it, an earlier one included — retracting one takes it out of today\'s view at every version, one link at a time; a reader\'s "as published" switch still shows it at the versions published while it stood, beside its retraction — the link and its retraction staying on the record'],
-    ['B3.publish.destination.read-with', 'B3-S11 P3 (2)', '— and ⟨E⟩ is then read with all of ⟨S⟩: every reader of ⟨E⟩, at every version of it, sees ⟨S⟩\'s links on its words by default, its later links there too, until you retract "read ⟨E⟩ with ⟨S⟩" at ⟨E⟩\'s links card; where you retracted one before, this writes it again'],
+    ['B3.publish.destination.read-with', 'B3-S11 P3 (2)', 'and ⟨E⟩ is then read with all of ⟨S⟩: every reader of ⟨E⟩, at every version of it, sees ⟨S⟩\'s links on its words by default, its later links there too, until you retract "read ⟨E⟩ with ⟨S⟩" at ⟨E⟩\'s links card; where you retracted one before, this writes it again'],
     ['B3.publish.row.off', 'B3-S11 P3 (2)', 'stays private — these links stay on this draft\'s earlier words; you read them on the published text through this publication\'s record, as does every reader of both ⟨set⟩ and this draft who switches ⟨set⟩ on'],
     ['B3.publish.no-one-else', 'B3-S11 P3', 'no one else does'],
-    ['B3.publish.row.off.again', 'B3-S11 P3 (2)', '— and your next version offers them again'],
-    ['B3.publish.row.off.others', 'B3-S11 P3 (2)', '— and your next version offers the others again'],
+    ['B3.publish.row.off.again', 'B3-S11 P3 (2)', 'and your next version offers them again'],
+    ['B3.publish.row.off.others', 'B3-S11 P3 (2)', 'and your next version offers the others again'],
     ['B3.publish.row.readers', 'B3-S11 P3 (2)', 'moves privately — read by you and ⟨reviewer⟩'],
     ['B3.publish.row.on-published', 'B3-S11 P3 (2)', '⟨w⟩ of these were made on words already published — they stay on those words and show there for you — and, switched on, for every reader of ⟨set⟩: ⟨its reader chip⟩'],
     ['B3.publish.row.compact', 'B3-S11 P3 (2)', '⟨set label⟩ · private · ⟨n⟩ links that stayed private when version\u00a0⟨k⟩ was published'],
@@ -293,8 +293,8 @@ test('every line the editor\'s screens carry stands as B3 words it at the design
     ['B3.publish.command.selected.alone', 'B3-S11 P4', 'publish the ⟨n⟩ passages you selected as version ⟨k⟩ of ⟨D⟩ — it holds them alone, nothing else of version ⟨k−1⟩; it can never be made private again'],
     ['B3.publish.command.beside', 'B3-S11 P4', 'publish all of this draft beside version ⟨k+1⟩ of ⟨D⟩, as version ⟨k.1⟩ — ⟨D⟩\'s own address keeps showing version ⟨k+1⟩; it can never be made private again'],
     ['B3.publish.origins.inert', 'B3-S11 P4', 'decide what of ⟨origin⟩ goes with this version: publish ⟨origin⟩ first, leave those words out, or keep them private — readers see a placeholder naming whose they are, how long they are and where in ⟨origin⟩ they were written'],
-    ['B3.publish.merge-kept', 'B3-S11 P5', '· this merge’s record kept in "merges"'],
-    ['B3.publish.merge-kept.first', 'B3-S11 P5', '· this merge’s record kept in "merges", made now to keep a private record of each merge you publish'],
+    ['B3.publish.merge-kept', 'B3-S11 P5', 'this merge’s record kept in "merges"'],
+    ['B3.publish.merge-kept.first', 'B3-S11 P5', 'this merge’s record kept in "merges", made now to keep a private record of each merge you publish'],
     ['B3.publish.placeholder-mark', 'B3-S11 P5', 'in version ⟨k⟩ as a placeholder — withheld for its readers'],
     ['B3.publish.published-as', 'B3-S11 P5, B3-S12', 'published as ⟨copy⟩ in ⟨destination⟩'],
     ['B3.publish.published-as.version', 'B3-S11 P5, B3-S12', 'published as ⟨copy⟩ in ⟨destination⟩ with version ⟨j⟩'],
@@ -305,9 +305,9 @@ test('every line the editor\'s screens carry stands as B3 words it at the design
     ['B3.merge.line.head', 'B3-S11', 'its next version supersedes ⟨alternative⟩'],
     ['B3.merge.undo.inherited', 'B3-S11', 'nothing to undo: this draft inherited the merge when it was staged; discard it or edit it'],
     ['B3.merge.no-claim.draft', 'B3-S11 P2 (vi)', 'this draft\'s merge ends with it; to merge ⟨label⟩ with version ⟨k+1⟩, cancel and re-apply to the head'],
-    ['B3.merge.behind.ending', 'B3-S11 P4', '— ⟨alternative⟩ is not marked superseded; it can never be made private again'],
+    ['B3.merge.behind.ending', 'B3-S11 P4', '⟨alternative⟩ is not marked superseded; it can never be made private again'],
     ['B3.merge.statement', 'B3-S11 P2', 'this publishes all of this draft as version\u00a0⟨k+1⟩ of ⟨D⟩\u00a0— ⟨alternative⟩ stays readable at its own address and is marked superseded by it for good; to publish these words with no such mark, cancel and take "keep the words, supersede nothing" at this draft’s corner first'],
-    ['B3.merge.places', 'B3-S11 P2', '⟨n⟩ places stand as the merge placed them:'],
+    ['B3.merge.places', 'B3-S11 P2', '⟨n⟩ places stand as the merge placed them'],
     ['B3.merge.placed.order', 'B3-S11 P2', 'version ⟨k⟩\'s first'],
     ['B3.merge.placed.after', 'B3-S11 P2', 'after "⟨words⟩"'],
     ['B3.merge.placed.both', 'B3-S11 P2', 'both, version ⟨k⟩\'s first'],
@@ -318,18 +318,18 @@ test('every line the editor\'s screens carry stands as B3 words it at the design
     ['B3.card.retract.reader', 'B3-S12', 'the "as published" switch of whoever reads ⟨set label⟩'],
     ['B3.card.retract.public', 'B3-S12', 'and this retraction is public, like the link'],
     ['B3.card.retract.copy', 'B3-S12', 'your private original stays where it is and still shows for you\u00a0— it is not offered at your next version, save at a version that brings in words of it this copy does not reach; to publish it again otherwise, make the link again'],
-    ['B3.card.retract.copy.again', 'B3-S12', '; to publish it again, make the link again'],
-    ['B3.card.retract.copy.other', 'B3-S12', '; its other copy, in ⟨destination⟩, covers its words, and every reader still meets it'],
-    ['B3.card.retract.rest', 'B3-S12', '— its part on words ⟨label⟩ has not yet published stays there'],
-    ['B3.card.retract.set', 'B3-S12', '— your formatting of these words in ⟨label⟩ ends with it'],
-    ['B3.card.retract.set.rest', 'B3-S12', '— your formatting of these words in ⟨label⟩ ends with it; on words you never published, it stays'],
+    ['B3.card.retract.copy.again', 'B3-S12', 'to publish it again, make the link again'],
+    ['B3.card.retract.copy.other', 'B3-S12', 'its other copy, in ⟨destination⟩, covers its words, and every reader still meets it'],
+    ['B3.card.retract.rest', 'B3-S12', 'its part on words ⟨label⟩ has not yet published stays there'],
+    ['B3.card.retract.set', 'B3-S12', 'your formatting of these words in ⟨label⟩ ends with it'],
+    ['B3.card.retract.set.rest', 'B3-S12', 'your formatting of these words in ⟨label⟩ ends with it; on words you never published, it stays'],
     ['B3.card.retract.note-copy', 'B3-S12', 'to publish the note again otherwise, annotate these words again — your next version offers that new note, its words private as this one\'s are, and you see both until you retract the original'],
     ['B3.card.retract.note-original', 'B3-S12', 'your published copy stays in ⟨destination⟩ and every reader still meets it — to take it back, retract it at its own card'],
     ['B3.card.retract.note-original.two', 'B3-S12', 'your published copies stay, in ⟨destination⟩ with version ⟨j⟩ and in ⟨destination⟩ with version ⟨j′⟩, and every reader still meets both — to take one back, retract it at its own card'],
-    ['B3.card.retract.note', 'B3-S12', '— your note stays in ⟨label⟩ as words of its own, tied to no passage once this goes'],
+    ['B3.card.retract.note', 'B3-S12', 'your note stays in ⟨label⟩ as words of its own, tied to no passage once this goes'],
     ['B3.card.move.readers', 'B3-S12', '⟨readers⟩ read ⟨destination⟩ and will see that ⟨source⟩ holds this link, and what it says'],
     ['B3.card.move.public', 'B3-S12', 'a copy goes into ⟨set⟩ — the original stays public in ⟨its set⟩, and every reader still meets it, until you retract it'],
-    ['B3.card.move.public.superseded', 'B3-S12', '— and from now on marked superseded by the copy, for good, whatever you retract later'],
+    ['B3.card.move.public.superseded', 'B3-S12', 'and from now on marked superseded by the copy, for good, whatever you retract later'],
     ['B3.card.link-to.inert.beside', 'B3-S12', 'hold the other passage too — open the document it is in beside this one from the address line, select it there, then open this card again at its symbol'],
     ['B3.card.link-to.peek', 'B3-S12', 'then peek at the passage\'s links and open this card again at its symbol'],
     ['B3.card.in-error.confirm', 'B3-S12', 'this files a public claim that ⟨E⟩ was published in error — the claim names the whole document, not this version — permanent, never withdrawn, and supersedable — and only ⟨claimant⟩ can supersede it, so if you lose every key nothing lifts it, ever. It reveals nothing back: ⟨E⟩ stays readable. For a wrong passage in a document that is otherwise right, publish its next version without the passage — it leaves what every reader meets and stays readable at this version, forever'],
@@ -354,7 +354,7 @@ test('every line the editor\'s screens carry stands as B3 words it at the design
     ['B3.format.taken-off', 'B3-S13', 'taken off with version\u00a0⟨k⟩\u00a0— out of today’s view at every version, and on the record for good: a reader’s "as published" switch still shows it at the versions published while it stood; putting it back makes a new mark, published with your next version'],
     ['B3.format.kept.set', 'B3-S13', 'kept in Formatting of ⟨label⟩\u00a0— only you see it'],
     ['B3.format.kept.set.compact', 'B3-S13', 'kept in Formatting of ⟨label⟩'],
-    ['B3.format.kept.set.made', 'B3-S13', 'kept in Formatting of ⟨label⟩, made for it\u00a0—'],
+    ['B3.format.kept.set.made', 'B3-S13', 'kept in Formatting of ⟨label⟩, made for it'],
     ['B3.format.in.set', 'B3-S13', 'in Formatting of ⟨label⟩ (private)'],
     ['B3.format.taken-off.set', 'B3-S13', 'taken off in Formatting of ⟨E⟩'],
     ['B3.publish.cap.links', 'B3-S11 P3', '⟨n⟩ links is more than one version can publish at once\u00a0— switch some sets off, or publish the rest with your next version, which lists them as having stayed private at this one'],
@@ -417,7 +417,7 @@ test('every line the editor\'s design added or re-said on 2026-11-09 stands as i
     ['B3.copy-words-out', 'B3-S2', 'copy these words out'],
     ['B3.held_full.refused', 'B3-S2', 'the text held for your notebook is at its limit; this change waits\u00a0— send again once what is held is sent'],
     ['B3.unwritable', 'B3-S2', 'this device could not keep it: ⟨cause⟩'],
-    ['B3.unwritable.full', 'B3-S2', '— closing this window loses it; this device\'s disk is full\u00a0— what you have typed is held on this device as soon as there is room; copy the text out'],
+    ['B3.unwritable.full', 'B3-S2', 'closing this window loses it; this device\'s disk is full\u00a0— what you have typed is held on this device as soon as there is room; copy the text out'],
     ['B3.durability', 'B3-S2', 'your notebook could not keep that yet\u00a0— trying again'],
     ['B3.durability.store.notebook', 'B3-S2', 'your notebook\'s store is not keeping writes\u00a0— free space on this device, then restart your notebook here'],
     ['B3.durability.store', 'B3-S2', '⟨board⟩\'s store is not keeping writes\u00a0— its disk needs attention'],
@@ -448,7 +448,7 @@ test('every line the editor\'s design added or re-said on 2026-11-09 stands as i
     ['B3.link.corner.yours.row', 'B3-S6', '⟨first words | form | type⟩\u00a0— in version ⟨k⟩'],
     ['B3.history.not-last', 'B3-S7', 'one of ⟨n⟩ changes that minute, not the last'],
     ['B3.history.as-of', 'B3-S7', 'as it stood ⟨time⟩'],
-    ['B3.history.nothing-to-set', 'B3-S7', '— nothing to set'],
+    ['B3.history.nothing-to-set', 'B3-S7', 'nothing to set'],
     ['B3.history.read-only', 'B3-S7', 'a past state is read, never edited\u00a0— to bring its words into the current text, put a removed passage back, or quote it'],
     ['B3.history.held', 'B3-S2, B3-S7', 'what you typed while it was held\u00a0— not on the board'],
     ['B3.history.links.arriving', 'B3-S7', 'links\u00a0— arriving'],
@@ -483,17 +483,17 @@ test('every line the editor\'s design added or re-said on 2026-11-09 stands as i
     ['B3.publish.copies', 'B3-S11 P2 (i)', '⟨c⟩ quoted copies\u00a0— their colophons'],
     ['B3.publish.copies.1', 'B3-S11 P2 (i)', '1 quoted copy\u00a0— its colophon'],
     ['B3.publish.leave-out', 'B3-S11 P2 (i)', 'leave these words out'],
-    ['B3.publish.placeholder.fills', 'B3-S11 P2 (i)', '— version ⟨k⟩ shows a placeholder here; windowing them fills it in this version'],
-    ['B3.publish.placeholder.fills.side', 'B3-S11 P2 (i), the merge scene', '— version ⟨k.m⟩ shows a placeholder here; windowing them fills it in this version'],
-    ['B3.publish.placeholder.fills.both', 'B3-S11 P2 (i), the merge scene', '— versions ⟨k⟩ and ⟨k.m⟩ show a placeholder here; windowing them fills it in this version'],
-    ['B3.publish.answered.counterpart', 'B3-S11 P2 (i)', '— your ⟨m⟩ marks on these words are published with them, and your ⟨l⟩ links on them are offered next'],
-    ['B3.publish.answered.private', 'B3-S11 P2 (i)', '— your formatting on these words stays in your draft until a version shows them'],
+    ['B3.publish.placeholder.fills', 'B3-S11 P2 (i)', 'version ⟨k⟩ shows a placeholder here; windowing them fills it in this version'],
+    ['B3.publish.placeholder.fills.side', 'B3-S11 P2 (i), the merge scene', 'version ⟨k.m⟩ shows a placeholder here; windowing them fills it in this version'],
+    ['B3.publish.placeholder.fills.both', 'B3-S11 P2 (i), the merge scene', 'versions ⟨k⟩ and ⟨k.m⟩ show a placeholder here; windowing them fills it in this version'],
+    ['B3.publish.answered.counterpart', 'B3-S11 P2 (i)', 'your ⟨m⟩ marks on these words are published with them, and your ⟨l⟩ links on them are offered next'],
+    ['B3.publish.answered.private', 'B3-S11 P2 (i)', 'your formatting on these words stays in your draft until a version shows them'],
     ['B3.publish.left-out', 'B3-S11 P2, P4, the merge scene', 'except the ⟨n⟩ passages you left out'],
     ['B3.publish.left-out.1', 'B3-S11 P2, P4, the merge scene', 'except the passage you left out'],
     ['B3.publish.history.private', 'B3-S11 P2 (iii)', 'this draft\'s past states stay private\u00a0— the version carries these words as they stand, not how they came to be'],
     ['B3.publish.divergence', 'B3-S11 P2 (v)', 'from now on the published version and this draft are two documents\u00a0— what you change here reaches readers when you publish again'],
     ['B3.publish.recurrence', 'B3-S11 P2 (vi)', 'this adds version ⟨k+1⟩ after version ⟨k⟩\u00a0— readers meet it at ⟨E⟩\'s address; earlier versions stay readable at theirs'],
-    ['B3.publish.caveat.past-states', 'B3-S11 P2 (vii)', '— this draft\'s past states name the key behind each change'],
+    ['B3.publish.caveat.past-states', 'B3-S11 P2 (vii)', 'this draft\'s past states name the key behind each change'],
     ['B3.publish.formatting.folded', 'B3-S11 P3 (1)', 'formatting · ⟨n⟩ marks · ⟨r⟩ taken off, ⟨e⟩ edited, ⟨c⟩ cut'],
     ['B3.publish.row.switch.1', 'B3-S11 P3 (2)', 'publish this link with the text — into ⟨destination⟩'],
     ['B3.publish.switch.off', 'B3-S11 P3 (2)', 'off'],
@@ -628,6 +628,52 @@ test('the pinned lines the editor draws stand PINNED under the copy inventory\'s
 
 test('a token left unfilled stays as the design writes it', () => {
   assert.equal(t('F.version-of', { k: 2 }), 'version 2 of ⟨n⟩');
+});
+
+test('no entry opens or ends with the joiner that attaches it to another — whitespace, an em dash, a semicolon, a middle dot, a comma or a colon — save a pinned entry, whose bytes are its authority\'s until the copy inventory re-says them (style S2)', () => {
+  const JOINER = /^[\s—;·,:]|[\s—;·,:]$/u;
+  const joined = Object.entries(STRINGS).filter(([, e]) => JOINER.test(e.text) || (e.parts || []).some((q) => /^[\s—;·,:]/u.test(q.text)));
+  assert.deepEqual(joined.filter(([, e]) => e.cls !== 'PINNED').map(([id]) => id), [], 'no draft entry carries a joiner');
+  assert.deepEqual(joined.map(([id]) => id), ['C-50'], 'the one pinned entry ending with one, its comma ux/copy.md\'s');
+});
+
+test('a line the page composes: each entry a sentence — its own first letter a capital, a period after it unless its words end with one, a question mark, an exclamation or an ellipsis, a closing quotation mark or bracket allowed after it — a value opening it keeping its case unless it is named the page\'s own words; sentences joined by a space, fields by a middle dot, one sentence\'s parts by a comma, each empty part dropped (style S1, S2)', () => {
+  assert.equal(sentence('B3.undo.again', { 'undo chord': '⌘Z' }), '⌘Z again undoes what you did before it.', 'a value opening it — a chord — keeps its case');
+  assert.equal(sentence('L.card.claims.supersedes', { claimant: 'field notes', link: '1.0.1.0.2.0.2.7' }), 'field notes claims this supersedes 1.0.1.0.2.0.2.7.', 'a name opening it keeps its own case');
+  assert.equal(sentence('B3.undo.withheld', { origin: '1.0.4.0.2' }), 'The source of this passage is withheld from you now\u00a0— 1.0.4.0.2; the words cannot be put back as the same words.', 'its own first letter a capital, a period after its last word');
+  assert.equal(sentence('B3.format.cycle', { level: 'heading\u00a02' }), 'heading\u00a02 — let go to set it.', 'a value opening it, not named the page\'s own, keeps its case');
+  assert.equal(sentence('B3.format.cycle', { level: 'heading\u00a02' }, ['level']), 'Heading\u00a02 — let go to set it.', 'a value named the page\'s own words takes the capital');
+  assert.equal(opening('L.mirror.document', { kind: 'published', document: '1.0.1.0.3' }, ['kind']), 'Published document 1.0.1.0.3', 'an opening: its capital, no end mark');
+  for (const [words, as] of [['as it stood.', 'as it stood.'], ['who wrote this?', 'who wrote this?'], ['publishing…', 'publishing…'], ['"Tumbler."', '"Tumbler."'], ['the words “dawn.”', 'the words “dawn.”'], ['(os error 28)', '(os error 28).'], ['1.0.1.0.3', '1.0.1.0.3.'], ['', '']]) {
+    assert.equal(ended(words), as, `${words}: ended`);
+  }
+  assert.equal(sentence('L.mirror.item', { i: 1, n: 3 }), 'Item 1 of 3.', 'words ending with a period keep the one');
+  assert.equal(sentences('First.', '', null, undefined, 'Second.'), 'First. Second.', 'sentences: empty parts dropped, a space between two');
+  assert.equal(fields('only part of the passage', '', 'in another order'), 'only part of the passage · in another order', 'fields: a middle dot, no capital, no end mark');
+  assert.equal(list('Published document 1.0.1.0.3', '', '30 positions'), 'Published document 1.0.1.0.3, 30 positions', 'one sentence\'s parts: a comma');
+  assert.deepEqual([sentences(), fields(), list()], ['', '', ''], 'nothing to join: no words, no joiner');
+  assert.equal(asSentence({ id: 'L.kept.links', text: t('L.kept.links', { when: '09:05' }) }), 'Links as last read 09:05.', 'an entry filled elsewhere: its own first letter a capital');
+  assert.equal(asSentence({ id: 'C-67.quoting', text: t('C-67.quoting', { claimant: 'field notes' }) }), 'field notes quotes this draft; nothing published carries its bytes.', 'a value opening it keeps its case');
+  assert.equal(asSentence({ id: 'L.kept.failed', text: t('L.kept.failed', { clause: 'not kept', reason: 'refused' }) }, true), 'Not kept — refused.', 'a value named the page\'s own words takes the capital');
+  assert.throws(() => sentence('B3.refused.discard'), /a statement keeps its own join/, 'a statement before a permanent act is never composed so');
+  assert.throws(() => sentence('T.none'), /no string T\.none/);
+});
+
+test('a line composed as markup reads the same words, its tokens filled as `tHTML` fills them, the capital and the end mark the words take (style S1, S2)', () => {
+  const values = { kind: 'a withheld run', document: '1.0.2.0.5', length: '240 positions', origin: '1.0.1.1.0.2' };
+  const html = sentenceHTML('L.mirror.withheld', values, { document: 'id', origin: 'id' }, ['kind']);
+  assert.equal(html, 'A withheld run in <span class="id">1.0.2.0.5</span>: 240 positions, origin <span class="id">1.0.1.1.0.2</span>.');
+  assert.equal(html.replace(/<[^>]*>/g, ''), sentence('L.mirror.withheld', values, ['kind']), 'the words `sentence` gives');
+  assert.equal(openingHTML('L.mirror.board.name', { node: '1', origin: 'http://127.0.0.1:8642' }, { node: 'id' }), 'Board <span class="id">1</span>, http://127.0.0.1:8642');
+  assert.equal(sentenceHTML('L.mirror.document', { kind: [{ text: 'draft', face: 'client' }], document: '1.0.1.0.3' }, { document: 'id' }, ['kind']), 'Draft document <span class="id">1.0.1.0.3</span>.', 'stretches: the first stretch takes the capital');
+  assert.deepEqual([endedHTML('see 1.0.1.0.3', 'see <span class="id">1.0.1.0.3</span>'), endedHTML('done.', 'done.')], ['see <span class="id">1.0.1.0.3</span>.', 'done.'], 'the end mark after the markup, decided on its words: an address\'s span holds none');
+});
+
+test('a hint\'s notice as sentences is cut where `hintOf` cuts it, before its tokens are filled, each form a sentence — a template opening with a value keeping its case (style S1)', () => {
+  assert.deepEqual(hintSentences('F.swallow', { 'LEAP chord': 'x — y' }), { whole: 'Typing goes nowhere here — to go somewhere, the address line: x — y.', clause: 'Typing goes nowhere here.' });
+  assert.deepEqual(hintSentences('C-45', { D: '1.0.1.0.3' }), { whole: t('C-45', { D: '1.0.1.0.3' }), clause: t('C-45', { D: '1.0.1.0.3' }) }, 'a pinned notice, opening with an address and ending with its own period, as it stands');
+  assert.deepEqual(hintSentences('L.seam.link-to'), { whole: 'Link to… — comes with the editor\'s lane; nothing is written here.', clause: 'Link to… — comes with the editor\'s lane; nothing is written here.' }, 'a notice marked whole, whole in both');
+  assert.throws(() => hintSentences('F.published'), /no hint F\.published/);
 });
 
 test('a string as markup reads the same words, every value escaped, a value asked for set in a span of its class, and every address in the rest in the identifier\'s face (issue #16)', () => {
@@ -810,19 +856,15 @@ test('a one-line hint\'s compact form is its notice\'s first clause, the text be
   assert.throws(() => hintOf('T.none'), /no string T\.none/);
 });
 
-test('a copy with nothing selected is said in the keys-and-clicks decision\'s words — the line, ending with Enter\'s act, Shift+↓\'s or none — each a DRAFT naming the decision and its screen, none the lane\'s own, its compact form its first clause "nothing selected" whichever act ends it (D5 K-92; FP-27)', () => {
+test('a copy with nothing selected is said in the keys-and-clicks decision\'s words — the line, then Enter\'s act, Shift+↓\'s or none, a sentence of its own — each a DRAFT naming the decision and its screen, none the lane\'s own, its compact form its first clause "Nothing selected." whichever act ends it (D5 K-92; FP-27; style S2)', () => {
   const D = 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md';
   for (const id of ['L.copy.nothing', 'L.copy.nothing.enter', 'L.copy.nothing.shift']) {
     const { cls, source, screen, lane } = STRINGS[id];
     assert.deepEqual([cls, source, !!screen, lane], ['DRAFT', D, true, undefined], id);
   }
-  /** @type {Array<[string, string]>} each act's tail, and the line it ends */
-  const LINES = [
-    [t('L.copy.nothing.enter'), 'nothing selected — the clipboard is unchanged; Enter selects this passage'],
-    [t('L.copy.nothing.shift'), 'nothing selected — the clipboard is unchanged; Shift+↓ selects this passage'],
-    ['', 'nothing selected — the clipboard is unchanged'],
-  ];
-  for (const [selects, whole] of LINES) assert.deepEqual(hintOf('L.copy.nothing', { selects }), { whole, clause: 'nothing selected' }, whole);
+  assert.deepEqual(hintSentences('L.copy.nothing'), { whole: 'Nothing selected — the clipboard is unchanged.', clause: 'Nothing selected.' }, 'the line, a sentence, its first clause one too');
+  assert.deepEqual(['L.copy.nothing.enter', 'L.copy.nothing.shift'].map((id) => sentence(id)), ['Enter selects this passage.', 'Shift+↓ selects this passage.'], 'each act a sentence of its own, which the hint ends on while it stands whole (O-HINT\'s `ending`)');
+  assert.ok(!t('L.copy.nothing').includes('⟨'), 'the line carries no token for the act: no joiner a missing act would leave behind');
   assert.equal(STRINGS['L.copy.nothing'].hint, 'clause', 'a hint whose first clause stands for it once it was shown whole');
 });
 
@@ -864,7 +906,7 @@ test('every hint the page raises is marked in the table whether it compacts — 
   assert.deepEqual([...raised].filter((id) => !STRINGS[id] || !STRINGS[id].hint), [], 'every one marked');
 });
 
-test('every accessible name the page sets is read from ST: the markup carries none, and a module sets one only as t(…)', () => {
+test('every accessible name the page sets is read from ST: the markup carries none, and a module sets one only as t(…), or as ST\'s sentences composed (`sentences(…)`)', () => {
   assert.ok(modules.includes('nav/walk.js') && modules.includes('app/main.js'), 'the page\'s modules are read');
   /** @type {string[]} */
   const bad = [];
@@ -875,7 +917,7 @@ test('every accessible name the page sets is read from ST: the markup carries no
     // in a module's markup, the attribute's value is ST's word, escaped
     for (const m of src.matchAll(/aria-label\s*=\s*["'](?!\$\{esc\(t\()([^"'\n]{0,40})/g)) bad.push(`${f}: aria-label="${m[1]}`);
     // set by script, the value is ST's word
-    for (const m of src.matchAll(/setAttribute\(\s*["']aria-label["']\s*,(?!\s*t\()\s*([^\n]{0,40})/g)) bad.push(`${f}: setAttribute('aria-label', ${m[1]}`);
+    for (const m of src.matchAll(/setAttribute\(\s*["']aria-label["']\s*,(?!\s*(?:t|sentences)\()\s*([^\n]{0,40})/g)) bad.push(`${f}: setAttribute('aria-label', ${m[1]}`);
     for (const m of src.matchAll(/\.ariaLabel\s*=(?!=)(?!\s*t\()\s*([^\n]{0,40})/g)) bad.push(`${f}: .ariaLabel = ${m[1]}`);
   }
   assert.deepEqual(bad, []);
@@ -925,7 +967,7 @@ test('the held words\' lines stand in the table as B3 drafts them — the kept w
     'B3.kept.held.board': 'not yet kept — held on this device and sent when ⟨board⟩ can be reached',
     'B3.daemon.held': 'board unreachable — anything not yet kept is held on this device and sent when it can be reached',
     'B3.daemon.held.notebook': 'your notebook is not answering — anything not yet kept is held on this device and sent when it answers; if it stays so, stop it and start it again here',
-    'B3.hand.unknowable': '— its hand can\'t be known',
+    'B3.hand.unknowable': 'its hand can\'t be known',
     'B3.discarded.may-have-landed': 'discarded here — it may already be on the board',
   };
   for (const [id, words] of Object.entries(WORDS)) {

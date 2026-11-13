@@ -182,7 +182,9 @@
 // attaches by ST's `L.mirror-label`, each level's group by `L.mirror-level`
 // and each item by ST's `L.mirror.*` entries (`nameOf`), shown in the same
 // words, each address in the identifier's face and a document's words in the
-// reading face (`named`; P-REG's FACE); what a screen reader
+// reading face (`named`; P-REG's FACE); each item is sentences the page
+// composes (ST's `sentences`; style S1, S2) — its own, a part it lacks dropped
+// so no joiner stands beside it, then its place in its level; what a screen reader
 // hears is the focus moving onto the item (rule 12), and no live region
 // repeats it (D4). Every block that holds no text is announced by its kind,
 // the item rule's (T-ARTICLE's `itemOf`; FP-24), in the strings table's
@@ -192,8 +194,8 @@
 // length and its origin — and names by `aria-describedby` its origin's one
 // description, a hidden element every run of that origin the mirror holds
 // names (`originWords`), made from the record the plane's statement and the
-// run's card are (T-ARTICLE's `placeholderOf`: the owner of its origin, the
-// entitlement arm for this reader, C-67's clause where the origin's edition
+// run's card are, each part a sentence (T-ARTICLE's `placeholderOf`: the owner
+// of its origin, the entitlement arm for this reader, C-67's clause where the origin's edition
 // claims decide one and nothing in its place where they do not — R56, B1-S7,
 // PUB-5.124 — and the clause the origin's statement shows while its claims
 // stand held), written once every read the clause waits on has answered and
@@ -207,7 +209,8 @@
 // told it (FP-25, FP-34), "not read" where none can — or, for one a read
 // answered `withheld`, its withheld box's words (B1-S2), its first line
 // standing for none, and for one the board said nothing about the words for
-// that (`L.far.unregistered`); then by its address, then the first line its
+// that (`L.far.unregistered`); then by its address, then, listed after it
+// where it has them, the first line its
 // box's label sets as the mirror says it (T-LAYER's `mirrorLabel`, the one the
 // status region names it by), the version's own — its words quoted, the
 // client's words in their place bracketed — then its state (T-LAYER's
@@ -225,9 +228,9 @@
 // (`sayKind`; FP-36); a mark's stop by its count,
 // the words the mark shows (ST's `markCount`), its item saying a list opens
 // on it (`aria-haspopup`); a link's item names its far end as its tail does
-// (LK's `farLabel`), and says BM-HELD's line where the
-// far end floats or its text holds part of its passage (`farSays`;
-// foundations §2.3); where the board will say nothing of its far end's
+// (LK's `farLabel`), and says BM-HELD's line, its sentences after the
+// link's, where the far end floats or its text holds part of its passage
+// (`farSays`; foundations §2.3); where the board will say nothing of its far end's
 // document, the item is described by the far end's whole form in its one
 // state (LK's `farEmpty`; FP-21), the words a follow of it is faced with, a
 // hidden description of its own written at the rebuild and marked again in
@@ -284,7 +287,7 @@ import { lodOf, residueDepth, markScale } from '../plane/lod.js';
 import { cmpAddr, accountOf, documentOf } from '../model/address.js';
 import { touches, isElement, elementIn } from '../text/span.js';
 import { esc, fill } from '../util.js';
-import { t, tHTML, addressedHTML, markCount } from '../strings.js';
+import { t, addressedHTML, facedHTML, markCount, sentence, sentenceHTML, opening, openingHTML, asSentence, ended, endedHTML, sentences, fields, list } from '../strings.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
@@ -602,74 +605,104 @@ const runEnds = (/** @type {string} */ addr, /** @type {number} */ pos) => LK.sh
 /** the accessible name of a node (what the mirror's item says), from ST's entries (`named`) */
 export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type {number} */ total) { return named(n, i, total).text; }
 
-/** a string's words and its markup, each token `faces` names set in its class — an address the identifier's (`id`), a document's words the reading face's (`reading`) — and every address in the other values the identifier's (ST's `tHTML`) */
-const said = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ values, /** @type {Record<string, string>} */ faces = {}) => ({ text: t(id, values), html: tHTML(id, values, faces) });
+/** @typedef {{text: string, html: string}} Said words and their markup, which read the same words */
+
+/**
+ * A string as a sentence of its own, its words and its markup (ST's
+ * `sentence`, `sentenceHTML`): each token `faces` names set in its class — an
+ * address the identifier's (`id`), a document's words the reading face's
+ * (`reading`) — every address in the other values the identifier's, and the
+ * capital on the value of a token it opens with that `own` names, the page's
+ * own words.
+ * @param {string} id
+ * @param {Record<string, string | number>} values
+ * @param {Record<string, string>} [faces]
+ * @param {string[]} [own]
+ * @returns {Said}
+ */
+const said = (id, values, faces = {}, own = []) => ({ text: sentence(id, values, own), html: sentenceHTML(id, values, faces, own) });
 /** the client's words, as text and markup, each address in them the identifier's (ST's `addressedHTML`) */
 const plainly = (/** @type {string} */ words) => ({ text: words, html: addressedHTML(words) });
+/** words and their markup ended as a sentence (ST's `ended`, `endedHTML`) */
+const endSaid = (/** @type {Said} */ s) => ({ text: ended(s.text), html: endedHTML(s.text, s.html) });
+/** the parts of one sentence listed, its words and its markup alike (ST's `list`), each that holds no words dropped */
+const listSaid = (/** @type {Said[]} */ parts) => { const held = parts.filter((p) => p.text); return { text: list(...held.map((p) => p.text)), html: list(...held.map((p) => p.html)) }; };
+/** an item's sentences, its words and its markup alike (ST's `sentences`), each that holds no words dropped */
+const item = (/** @type {Said[]} */ ...parts) => { const held = parts.filter((p) => p.text); return { text: sentences(...held.map((p) => p.text)), html: sentences(...held.map((p) => p.html)) }; };
 
 /**
  * What the mirror's item says of a node (`nameOf`), its words and its markup:
- * the markup the same words, each address in the identifier's face and a
- * document's words in the reading face (P-REG's FACE), so what is shown and
- * what is announced never part.
+ * sentences the page composes (ST's `sentences`; style S1, S2), its own first,
+ * each part it lacks dropped, its place in its level last; the markup the same
+ * words, each address in the identifier's face and a document's words in the
+ * reading face (P-REG's FACE), so what is shown and what is announced never
+ * part.
  * @param {Node} n
  * @param {number} i
  * @param {number} total
- * @returns {{text: string, html: string}}
+ * @returns {Said}
  */
 function named(n, i, total) {
-  const at = plainly(' ' + t('L.mirror.item', { i: i + 1, n: total }));
-  const then = (/** @type {{text: string, html: string}} */ x, /** @type {{text: string, html: string}} */ y = at) => ({ text: x.text + y.text, html: x.html + y.html });
+  const at = plainly(t('L.mirror.item', { i: i + 1, n: total }));
   if (n.kind === 'board') {
     // where no board is held the root names none: it says why, as the one line does (FP-35)
     const b = REC.board();
-    if (!b) { const why = read.noBoard(); return why ? then(plainly(why.text)) : plainly(at.text.trim()); }
-    // its name, the one the status region calls it by, then its count
-    const name = said('L.mirror.board.name', { node: n.addr, origin: b.origin }, { node: 'id' }), count = REC.accounts().filter((a) => !a.system).length;
-    return then(then({ text: t('L.mirror.board', { board: name.text, n: count }), html: fill(esc(t('L.mirror.board')), { board: name.html, n: String(count) }) }, plainly(keptSentence(n))));
+    if (!b) { const why = read.noBoard(); return item(plainly(why ? asSentence(why) : ''), at); }
+    // its name, the one the status region calls it by, opening the sentence, then its count
+    const v = { node: n.addr, origin: b.origin }, count = REC.accounts().filter((a) => !a.system).length;
+    const name = { text: opening('L.mirror.board.name', v), html: openingHTML('L.mirror.board.name', v, { node: 'id' }) };
+    return item(endSaid({ text: t('L.mirror.board', { board: name.text, n: count }), html: fill(esc(t('L.mirror.board')), { board: name.html, n: String(count) }) }), plainly(keptSentence(n)), at);
   }
   if (n.kind === 'account') {
+    // its counts, then, where it holds none, that it holds nothing
     const c = REC.countOf(n.addr); const lk = LK.countAccount(n.addr);
     const documents = c.exact ? String(c.documents) : t('L.mirror.at-least', { n: c.documents });
     const links = lk.arriving ? t('L.mirror.at-least', { n: lk.n }) : String(lk.n);
-    return then(said('L.mirror.account', { account: n.addr, documents, links, empty: c.documents ? '' : ' — ' + t('B1.empty_subspace') }, { account: 'id' }));
+    return item(said('L.mirror.account', { account: n.addr, documents, links }, { account: 'id' }), c.documents ? plainly('') : said('B1.empty_subspace', {}), at);
   }
   // a mark's stop: its count, the words the mark shows (ST's `markCount`)
-  if (n.kind === 'mark') return then(plainly(markCount(membersOf(n.addr).length, REC.countsExact())));
+  if (n.kind === 'mark') return item(plainly(ended(markCount(membersOf(n.addr).length, REC.countsExact()))), at);
   if (n.kind === 'document') {
-    // led by its corner's first item — its kind, else a refused document's own words (T-LAYER's `mirrorLead`) — a version named
-    // by its own first line, as its box's label names it (T-LAYER's `mirrorLabel`; FP-22), then its state as its corner states
-    // it after that item, whole, where a read told it (T-LAYER's `mirrorState`)
-    const d = REC.doc(n.addr), label = LAYER.mirrorLabel(d);
-    const values = { kind: LAYER.mirrorLead(d), document: n.addr, state: LAYER.mirrorState(d), extent: d.extent != null ? t('L.mirror.positions', { n: d.extent }) : '' };
-    return then(then({ text: t('L.mirror.document', { ...values, label: label.map((r) => r.text).join('') }), html: tHTML('L.mirror.document', { ...values, label }, { document: 'id' }) }, plainly(keptSentence(n))));
+    // led by its corner's first item — its kind, else a refused document's own words (T-LAYER's `mirrorLead`) — then its address;
+    // listed after them, a version's own first line, as its box's label names it (T-LAYER's `mirrorLabel`; FP-22), its state as
+    // its corner states it after that item, whole, where a read told it (T-LAYER's `mirrorState`), and its positions
+    const d = REC.doc(n.addr), label = LAYER.mirrorLabel(d), head = { kind: LAYER.mirrorLead(d), document: n.addr };
+    const own = listSaid([
+      { text: opening('L.mirror.document', head, ['kind']), html: openingHTML('L.mirror.document', head, { document: 'id' }, ['kind']) },
+      { text: label.map((r) => r.text).join(''), html: facedHTML(label) },
+      plainly(LAYER.mirrorState(d)),
+      plainly(d.extent != null ? t('L.mirror.positions', { n: d.extent }) : ''),
+    ]);
+    return item(endSaid(own), plainly(keptSentence(n)), at);
   }
   if (n.kind === 'block') {
     const d = LAYER.shownOf(n.addr); const b = d.blocks.find((x) => x.pos === n.pos);
-    if (!b) return then(said('L.mirror.span.bare', { p: n.pos ?? '', document: n.addr }, { document: 'id' }));
+    if (!b) return item(said('L.mirror.span.bare', { p: n.pos ?? '', document: n.addr }, { document: 'id' }), at);
     const kind = itemOf(b);
     if (kind === 'withheld') {
-      // the run's own part, which needs no read; its origin's words its description, one for every run of it (`originWords`)
+      // the run's own part, which needs no read, then the links drawn at it; its origin's words its description, one for every run
+      // of it (`originWords`)
       const ends = runEnds(n.addr, b.pos).length;
-      const links = ends ? t('L.mirror.run-links', { links: ends === 1 ? t('F.label.links.1') : t('F.label.links', { n: ends }) }) : '';
-      return then(then(said('L.mirror.withheld', { kind: itemWords(kind), document: n.addr, length: itemLength(b.width), origin: b.origin || '' }, { document: 'id', origin: 'id' }), plainly(links)));
+      const links = ends ? said('L.mirror.run-links', { links: ends === 1 ? t('F.label.links.1') : t('F.label.links', { n: ends }) }) : plainly('');
+      return item(said('L.mirror.withheld', { kind: itemWords(kind), document: n.addr, length: itemLength(b.width), origin: b.origin || '' }, { document: 'id', origin: 'id' }, ['kind']), links, at);
     }
+    // the material's origin, set after where the item stands, a space the page draws before it
     const org = d.origins.find((o) => o.pos < b.pos + b.width && b.pos < o.pos + o.width);
-    const same = org ? t('L.mirror.same', { origin: org.doc }) : '';
+    const same = org ? ' ' + t('L.mirror.same', { origin: org.doc }) : '';
     if (kind) {
-      // what the plane shows of the item after its kind: a record's words and keys, an unshown item's length — never its raw value
+      // what the plane shows of the item after its kind, after a colon the page draws: a record's words and keys, an unshown item's
+      // length — never its raw value
       const rec = kind === 'record' ? recordOf(b, d, REC.reader()) : null;
-      const shown = rec ? [rec.words, rec.keys].filter(Boolean).join(' · ') : kind === 'unshown' ? itemLength(b.width) : '';
-      return then(said('L.mirror.no-text', { kind: itemWords(kind), p: b.pos, extent: d.extent ?? '?', document: n.addr, same, shown: shown ? t('L.mirror.shows', { shown }) : '' }, { document: 'id' }));
+      const shown = rec ? fields(rec.words, rec.keys) : kind === 'unshown' ? itemLength(b.width) : '';
+      return item(said('L.mirror.no-text', { kind: itemWords(kind), p: b.pos, extent: d.extent ?? '?', document: n.addr, same, shown: shown ? ': ' + shown : '' }, { document: 'id' }, ['kind']), at);
     }
-    return then(said('L.mirror.span', { p: b.pos, extent: d.extent ?? '?', document: n.addr, same, text: b.text }, { document: 'id', text: 'reading' }));
+    return item(said('L.mirror.span', { p: b.pos, extent: d.extent ?? '?', document: n.addr, same, text: b.text }, { document: 'id', text: 'reading' }), at);
   }
   if (n.kind === 'link' && n.link) {
-    const l = n.link, says = farSays(l);
-    return then(said('L.mirror.link', {
-      link: l.link.addr, type: l.link.type || t('L.mirror.untyped'), direction: l.end === 'from' ? t('F.card.to') : t('F.card.from'), far: LK.farLabel(l),
-      floating: says ? t('L.mirror.floating', { sentence: says }) : '',
-    }, { link: 'id' }));
+    // the link, then what its far end's text holds of its passage, where that is not all of it in one piece (BM-HELD's `farSays`)
+    const l = n.link;
+    const own = said('L.mirror.link', { link: l.link.addr, type: l.link.type || t('L.mirror.untyped'), direction: l.end === 'from' ? t('F.card.to') : t('F.card.from'), far: LK.farLabel(l) }, { link: 'id' });
+    return item(own, plainly(farSays(l)), at);
   }
   return plainly('');
 }
@@ -885,8 +918,8 @@ export function markExpanded() {
  * @returns {string}
  */
 function keptSentence(n) {
-  if (n.kind === 'document') { const k = LAYER.keptIn(n.addr); return k ? t('L.mirror.clause', { clause: k.text }) : ''; }
-  if (n.kind === 'board') { const k = LAYER.boardKeptIn(); return k ? t('L.mirror.clause', { clause: k.text }) : ''; }
+  if (n.kind === 'document') { const k = LAYER.keptIn(n.addr); return k ? asSentence(k) : ''; }
+  if (n.kind === 'board') { const k = LAYER.boardKeptIn(); return k ? asSentence(k) : ''; }
   return '';
 }
 
@@ -918,7 +951,7 @@ export function originWords(n) {
   const w = placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf);
   if (w.clause === CLAUSE_READING) return null;
   const k = LAYER.claimsKeptIn(b.origin);
-  return { origin: b.origin, words: t('L.mirror.withheld.origin', { owner: w.owner, arm: w.arm.text, clause: w.clause ? t('L.mirror.clause', { clause: w.clause.text }) : '' }) + (k ? t('L.mirror.clause', { clause: k.text }) : '') };
+  return { origin: b.origin, words: sentences(sentence('L.mirror.withheld.origin', { owner: w.owner }), asSentence(w.arm), w.clause ? asSentence(w.clause) : '', k ? asSentence(k) : '') };
 }
 
 /** a document's kind and state as its item voices them (T-LAYER's `mirrorLead`, `mirrorState`): the version its node names, as its corner states them, a line each */

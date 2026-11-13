@@ -38,11 +38,11 @@
 // else the platform's (`cornerKey`), Space wherever else it is swallowed, and every other key at
 // every other site, K-9's line (`swallow`).
 // Each of those lines a printable key raises — the corner's and the scene's
-// swallow among them — ends with where the person was writing, "— you were
-// last writing in ⟨label⟩", where the key was pressed outside the draft last
-// written in the page's session and that draft's caret stands kept: its label
-// one act back to the kept caret (`writingElsewhere`; W-WRITE's
-// `lastWritten`).
+// swallow among them — ends with where the person was writing, "you were
+// last writing in ⟨label⟩", a sentence after the line's (O-HINT's), where the
+// key was pressed outside the draft last written in the page's session and
+// that draft's caret stands kept: its label one act back to the kept caret
+// (`writingElsewhere`; W-WRITE's `lastWritten`).
 // Mod+R and F5 are taken and nothing reloaded (K-94), and the platform's own
 // chords — copy, paste, cut, select all, print, close, quit, minimize, hide,
 // preferences — are never taken save where a site's line answers a paste or a
@@ -52,9 +52,10 @@
 // with nothing selected, the copy is prevented at its keydown, the clipboard
 // left as it is, and the line is its hint at the focus, said in the status
 // region — whole at the first such copy in the page's session, its first
-// clause after — ending with the act that selects there: Enter's where Enter
-// selects the walk's span (`enterSelects`), Shift+↓'s at any other span at
-// its reading scale, none anywhere else (`selectsHere`). A copy event T-LAYER
+// clause after — the act that selects there the sentence it ends on while it
+// stands whole: Enter's where Enter selects the walk's span (`enterSelects`),
+// Shift+↓'s at any other span at its reading scale, none anywhere else
+// (`selectsHere`). A copy event T-LAYER
 // takes nothing from — the Edit menu's, the context menu's — is answered the
 // same way (APP's). No key is dispatched while an input method's composition
 // is open (the IME guard).
@@ -266,7 +267,7 @@ import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import { keptWord, keptStatement } from '../text/article.js';
 import { accountOf, documentOf } from '../model/address.js';
-import { t } from '../strings.js';
+import { t, sentence, sentences } from '../strings.js';
 
 /** @typedef {import('../overlays/selection.js').InertSlot} InertSlot */
 /** @typedef {import('../overlays/selection.js').LiveSlot} LiveSlot */
@@ -1038,14 +1039,14 @@ function undoNone(e, ctx) {
 /**
  * An undo the board declined (W-WRITE's `onDeclined`; B3-S3; D6 BM-11,
  * BM-12): the source of the passage withheld from the person now — said in
- * the one line, naming the origin, and ending with what the undo chord again
- * undoes.
+ * the one line, naming the origin — then what the undo chord again undoes,
+ * each a sentence (ST's `sentence`, `sentences`).
  * @param {string} addr the draft
  * @param {string} origin the document the words came from
  */
 function declined(addr, origin) {
   void addr;
-  LINE.transient(`${t('B3.undo.withheld', { origin })} ${t('B3.undo.again', { 'undo chord': drawChord('Mod+Z') })}`, 'B3.undo.withheld');
+  LINE.transient(sentences(sentence('B3.undo.withheld', { origin }), sentence('B3.undo.again', { 'undo chord': drawChord('Mod+Z') })), 'B3.undo.withheld');
 }
 WRITE.onDeclined(declined);
 
@@ -1164,7 +1165,8 @@ function hinted(e, ctx, target = e.target) {
  * under the copy again (T-LAYER's `placeSelection`), which then runs as the
  * platform's; with nothing selected, the platform's copy prevented, the
  * clipboard left as it is, and the line its hint at the focus, said in the
- * status region, ending with the act that selects there (`selectsHere`).
+ * status region, the act that selects there the sentence it ends on while it
+ * stands whole (`selectsHere`; O-HINT's `ending`).
  * @param {{preventDefault(): void, repeat?: boolean, target: EventTarget | null}} e Mod+C's keydown, or a copy event T-LAYER took nothing from
  * @param {Ctx} ctx where the focus is
  * @param {EventTarget | null} [at] the element the focus is on: the event's target where none is given
@@ -1175,23 +1177,23 @@ export function copyAsDrawn(e, ctx, at = e.target) {
   const drawn = SEL.selected();
   if (drawn) { LAYER.placeSelection(drawn); return false; }
   e.preventDefault();
-  HINT.show('L.copy.nothing', { selects: selectsHere(ctx) }, hinted(e, ctx, at));
+  HINT.show('L.copy.nothing', null, { ...hinted(e, ctx, at), ending: selectsHere(ctx) });
   return true;
 }
 
 /**
- * The words the copy line ends with (D5 K-92): Enter's act where Enter selects
- * the walk's span (`enterSelects`), Shift+↓'s at any other span at its reading
- * scale, none where the focus is anywhere else — a document, an account, the
- * board, a link's symbol, a mark, a corner, the one line, an overlay's control,
- * the scene, a live caret.
+ * The string of the sentence the copy line ends on (D5 K-92): Enter's act
+ * where Enter selects the walk's span (`enterSelects`), Shift+↓'s at any
+ * other span at its reading scale; null where the focus is anywhere else — a
+ * document, an account, the board, a link's symbol, a mark, a corner, the one
+ * line, an overlay's control, the scene, a live caret.
  * @param {Ctx} ctx
- * @returns {string}
+ * @returns {string | null}
  */
 function selectsHere(ctx) {
   const f = WALK.current(), c = LAYER.caret();
-  if (ctx.where !== 'plane' || SCENE.isOpen() || (c && c.live) || !f || f.kind !== 'block' || f.pos == null || !LAYER.atReadingScale(f.addr)) return '';
-  return t(enterSelects(f) ? 'L.copy.nothing.enter' : 'L.copy.nothing.shift');
+  if (ctx.where !== 'plane' || SCENE.isOpen() || (c && c.live) || !f || f.kind !== 'block' || f.pos == null || !LAYER.atReadingScale(f.addr)) return null;
+  return enterSelects(f) ? 'L.copy.nothing.enter' : 'L.copy.nothing.shift';
 }
 
 /**

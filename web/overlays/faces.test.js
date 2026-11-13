@@ -35,7 +35,8 @@
 // words, its hands and its acts, its compact form naming its one device's
 // hand, none under the death — its acts made by their keys there, "see the
 // held text" opening the moved scene on the held version, and a press
-// answered at it.
+// answered at it, its line and its hand said each a sentence; and the
+// device's refusal, each of its lines a sentence.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as FACES from './faces.js';
@@ -58,7 +59,7 @@ import * as LK from '../links/links.js';
 import { accountCell } from '../plane/projection.js';
 import { entitlementArm, faceWords } from '../text/article.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
-import { STRINGS, t, addressedHTML } from '../strings.js';
+import { STRINGS, t, addressedHTML, sentence, sentences } from '../strings.js';
 import { esc, byteLength, fingerprintCue } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
@@ -1138,7 +1139,8 @@ test('the face\'s acts are made by their keys at the corner: an inert one says i
   live.textContent = '';
   const f = /** @type {NonNullable<ReturnType<typeof FACES.cornerFace>>} */ (FACES.cornerFace(UD));
   assert.deepEqual([FACES.answerAtFace(UD), live.textContent, HOST.currentState(), WRITE.heldOf(UD).length], [true, faceWords(f), null, 1], 'a press answered at the face: its words whole said, no overlay, its line held still');
-  assert.equal(faceWords(f), `${t('B3.moved')} ${t('B3.hand.device', { 'device label': 'desk' })}`, 'its sentence, then its hand in its slot\'s words');
+  assert.equal(faceWords(f), sentences(sentence('B3.moved'), sentence('B3.hand.device', { 'device label': 'desk' })), 'its sentence, then its hand in its slot\'s words, a sentence of its own');
+  assert.equal(faceWords(f), 'The document changed while this text was held — it is not placed; put it where it goes, or discard it. By desk.');
   WRITE.setHeld(UD, []);
   assert.equal(FACES.answerAtFace(UD), false, 'no face: nothing answered there');
 });
@@ -1176,7 +1178,10 @@ test('BM-19 … BM-27: each other face of unkept words by its state — the hand
   for (const [cls, lines] of /** @type {Array<[string, string[]]>} */ ([['full', ['B3.unwritable', 'B3.unwritable.full']], ['read_only', ['B3.unwritable', 'B3.unwritable.read_only']], ['other', ['B3.unwritable']]])) {
     WRITE.setHeld(UD, [unkeptRow(1, { unwritable: 'No space left on device (os error 28)', unwritable_class: cls })]);
     assert.deepEqual(kind(), ['device', 'B3.not-kept', lines, [['B3.death.copy', null]], null], `the device's refusal, class \`${cls}\`: its line, and "copy the text out" its one act`);
+    assert.deepEqual(FACES.unkeptFace(UD)?.lines.map((l) => l.text), [sentence('B3.unwritable', { cause: 'No space left on device (os error 28)' }), ...lines.slice(1).map((id) => sentence(id))],
+      `the device's refusal, class \`${cls}\`: each line a sentence, no dash joining the class's line to the cause's`);
   }
+  assert.equal(sentence('B3.unwritable', { cause: 'No space left on device (os error 28)' }), 'This device could not keep it: No space left on device (os error 28).', 'the cause keeps its case');
   WRITE.setHeld(UD, [unkeptRow(1, { cause: 'head_unreadable', refusal: { kind: 'shell', name: 'head_unreadable' } })]);
   assert.deepEqual(kind(), ['head', null, [], [['B3.head_unreadable.discard', null]], 'B3.head_unreadable.discard.said.typed'], 'the head-unreadable hold: its discard at the corner, the statement naming the typed words held');
   WRITE.setHeld(UD, [unkeptRow(1)]);

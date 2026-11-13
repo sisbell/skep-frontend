@@ -41,7 +41,8 @@
 // claim whose home the reader may read. "superseded by" names the `new` of
 // each such claim whose `old` is this link, "supersedes" the `old` of each
 // such claim whose `new` is it, and a claimant the owner row does not name
-// follows its claim; a side that answered no such claim reads B1-S5's
+// follows its claim, a field after it (ST's `fields`), as its retraction
+// does; a side that answered no such claim reads B1-S5's
 // "none", and a side whose read was refused draws no row, for nothing was
 // learned of it. Every other claim stands behind one line after the rows, no
 // number in it, whose act opens them in its place, each an assertion naming
@@ -111,7 +112,7 @@ import * as FOCUS from '../nav/focus.js';
 import * as F from '../model/frames.js';
 import * as LAYER from '../text/layer.js';
 import { lineOf, farHolds, floatingOf } from '../beams/held.js';
-import { t, typeName, facedHTML, addressedHTML, dated } from '../strings.js';
+import { t, typeName, facedHTML, addressedHTML, dated, fields } from '../strings.js';
 import { esc, fill } from '../util.js';
 import { inFace, runsOf } from '../plane/labels.js';
 import { accountOf, isUnder } from '../model/address.js';
@@ -240,8 +241,9 @@ export function hasAuthority(c) { return claimantOf(c) === accountOf(c.old); }
  * authority (`hasAuthority`): "superseded by" the
  * `new` of each claim whose `old` is the link, "supersedes" the `old` of each
  * claim whose `new` is it, in the answer's order, each followed by its
- * claimant where the owner row does not name it ("— by its owner,
- * ⟨claimant⟩") and by "retracted" where it was retracted; the claims of a row
+ * claimant where the owner row does not name it ("by its owner,
+ * ⟨claimant⟩") and by "retracted" where it was retracted, each a field after
+ * it (ST's `fields`); the claims of a row
  * part at ", ", or at "; " where a claimant is named among them, for the
  * naming holds a comma; a side that answered no claim with authority reads
  * "none", and a side whose read was refused draws no row. Neither row holds
@@ -276,7 +278,7 @@ function lineageRow(side, who) {
   const byWhom = held.map((c) => (claimantOf(c) === who.owner ? null : claimantOf(c)));
   const items = held.map((c, i) => {
     const by = byWhom[i];
-    return `<span class="code id">${esc(side.named(c))}</span>${by == null ? '' : ` <span data-string="L.card.by-owner">${words('L.card.by-owner', { claimant: claimantHTML(by, who) })}</span>`}${retracted(c)}`;
+    return fields(`<span class="code id">${esc(side.named(c))}</span>`, by == null ? '' : `<span data-string="L.card.by-owner">${words('L.card.by-owner', { claimant: claimantHTML(by, who) })}</span>`, retracted(c));
   });
   const value = items.length ? items.join(byWhom.some((by) => by != null) ? '; ' : ', ') : `<span data-string="F.card.none">${esc(t('F.card.none'))}</span>`;
   return `<div class="kv lineage"><b>${esc(t(side.row))}</b> ${value}</div>`;
@@ -304,7 +306,7 @@ function othersList(stray, who) {
     if (owner && isUnder(by, owner)) relations.push('L.card.above');
     else if (owner && isUnder(owner, by)) relations.push('L.card.under');
     const id = by === who.reader ? side.says + '.you' : side.says;
-    return `<li data-string="${id}">${words(id, { claimant: claimantHTML(by, who, relations), link: `<span class="code id">${esc(side.named(c))}</span>` })}${retracted(c)}</li>`;
+    return `<li data-string="${id}">${fields(words(id, { claimant: claimantHTML(by, who, relations), link: `<span class="code id">${esc(side.named(c))}</span>` }), retracted(c))}</li>`;
   }).join('')}</ul>`;
 }
 
@@ -321,8 +323,8 @@ function claimantHTML(account, who, relations = []) {
   return relations.length ? `${name} (${relations.map((id) => esc(t(id))).join(', ')})` : name;
 }
 
-/** a retracted claim's mark, after it: the audit view answers it, `active` false (A-82) */
-const retracted = (/** @type {Claim} */ c) => (c.active ? '' : ` · <span data-string="F.card.retracted">${esc(t('F.card.retracted'))}</span>`);
+/** a retracted claim's mark, a field after it: the audit view answers it, `active` false (A-82); '' where it stands */
+const retracted = (/** @type {Claim} */ c) => (c.active ? '' : `<span data-string="F.card.retracted">${esc(t('F.card.retracted'))}</span>`);
 
 /** a string's words, escaped, its ⟨tokens⟩ filled with the markup given */
 const words = (/** @type {string} */ id, /** @type {Record<string, string>} */ html) => fill(esc(t(id)), html);

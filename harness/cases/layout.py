@@ -1621,7 +1621,11 @@ def stop_returns(ctx, r, name, sel, kind, cuts, made):
     seen = {}
     D = ctx.js('window.__skep.scene.panes().b.shows')
     tr = lambda sid, vals: ctx.js('(async () => (await import("./strings.js")).t(%s, %s))()' % (json.dumps(sid), json.dumps(vals)))
-    kind_words = tr('L.scene.shared.1', {'D': D}) if kind == 'shared' else tr('L.scene.stroke.kind', {})
+    kind_id, kind_vals = ('L.scene.shared.1', {'D': D}) if kind == 'shared' else ('L.scene.stroke.kind', {})
+    kind_words = tr(kind_id, kind_vals)
+    # a name the answer completes: the stop's kind and what the answer told, each a sentence (style S1, S2)
+    told_as = lambda said: ctx.js('(async (id, v, said) => { const S = await import("./strings.js"); return S.sentences(S.sentence(id, v), said); })(%s, %s, %s)'
+                                  % (json.dumps(kind_id), json.dumps(kind_vals), json.dumps(said)))
     focus = 'document.querySelector(%s).focus()' % json.dumps(sel)
     ctx.js(focus)
     ctx.frames(1)
@@ -1652,8 +1656,10 @@ def stop_returns(ctx, r, name, sel, kind, cuts, made):
                     f'{name}, the reader moved on first: the answer moves nothing — the focus where Tab put it, no face, the mirror as the return left it', {'tabbed': tabbed, 'now': now, 'overlay': o, 'returned': after})
         else:
             want = {'whole': ('all',), 'part': ('part', 'pieces'), 'none': ('none',), 'refused': ('unknown',)}[outcome]
-            words = tr('L.scene.stop.said', {'stop': kind_words, 'said': a.get('words') or ''}) if outcome != 'whole' else None
-            face_ok = o is None if outcome == 'whole' else (o == ('face:floating' if outcome == 'none' else 'face:held') and (a.get('words') or '') in face['text'] and face['acts'] == (1 if outcome == 'refused' else 0))
+            words = told_as(a.get('words') or '') if outcome != 'whole' else None
+            # at its site the face of what the answer told: the dead end's own words, else the line's
+            site = ctx.js('(async (d) => (await import("./beams/held.js")).floatingOf(d))(%s)' % json.dumps(D)) if outcome == 'none' else (a.get('words') or '')
+            face_ok = o is None if outcome == 'whole' else (o == ('face:floating' if outcome == 'none' else 'face:held') and bool(site) and site in face['text'] and face['acts'] == (1 if outcome == 'refused' else 0))
             r.check(released and bool(after) and a.get('holds') in want and now['at'] == before['at'] and held and not after['reading'] and (outcome == 'whole' or after['name'] == words) and face_ok,
                     f'{name}, answered {outcome}: the focus kept on the stop, the mirror as the return left it, its count no longer read'
                     + ('' if outcome == 'whole' else ' — it stays, saying so in FP-21\'s words in its name and at its site' + (', "try again" offered' if outcome == 'refused' else '')),
@@ -2626,7 +2632,7 @@ def part_holds(ctx, r):
     """THE LINE's checks (issue #153's design decision: "Mark what's held and say the rest in a line"): a passage straddling
     the window run's start — the first edition's PART_LEAD positions before it and as many of the run's — carried into the
     draft the run windows, which holds the run's half of it alone: the arrival outlined on that half, its words the run's;
-    the landing's state part, the line that stands led by "only part of the text you were reading is in ⟨D⟩'s current
+    the landing's state part, the line that stands led by "Only part of the text you were reading is in ⟨D⟩'s current
     text", offering to read it side by side with the first edition, which holds it whole, and no version — the draft has
     none; standing at the text's edge beside the landing — past the right edge of the outline's first line, its top that
     line's — inside the visible view below the one line, meeting no line of the outline and not the overlay; the next act
@@ -2637,10 +2643,10 @@ def part_holds(ctx, r):
     wait_for(ctx, lit_at(WINDOW[2]))
     held = arrival_holds(ctx, r, 'a passage the draft holds part of (issue #153)', (DOC, WINDOW[0], WINDOW[0] + PART_LEAD))
     land, line = ctx.js('window.__skep.go.landing()'), ctx.js('window.__skep.landingLine()')
-    words = ctx.js('import("./strings.js").then(({t}) => t("L.held.part", {subject: t("L.held.reading"), where: t("L.held.current", {D: %s})}))' % json.dumps(WINDOW[2]))
+    words = ctx.js('import("./strings.js").then(({t, opening}) => opening("L.held.part", {subject: t("L.held.reading"), where: t("L.held.current", {D: %s})}))' % json.dumps(WINDOW[2]))
     said = (land or {}).get('said') or {}
     r.check(said.get('state') == 'part' and bool(line) and bool(words) and line['words'].startswith(words) and not line['covered'] and line['acts'] == ['beside'],
-            'the landing says only part of the passage carried is in the draft, in a line that stands, offering it side by side with the first edition (issue #153)',
+            'the landing says only part of the passage carried is in the draft, in a line that stands — its sentences opening "Only part of the text you were reading is in ⟨D⟩\'s current text" — offering it side by side with the first edition (issue #153; style S1)',
             {'said': said, 'line': line, 'want': words})
     top = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
     vp = ctx.js('window.__skep.view.viewport()')
@@ -4126,7 +4132,8 @@ def kept_holds(ctx, r):
 
     named = kept_round()
     h, words = named['held'], named['held']['words']
-    clause = ' %s.' % words if words else None
+    # the item's sentence for the clause (ST's `asSentence`; style S1, S2)
+    clause = ctx.js('window.__gateKept.ST.asSentence(%s)' % json.dumps({'id': 'L.kept.links', 'text': words})) if words else None
     name = ctx.js('window.__gateKept.LAYER.boxName(%s).name' % json.dumps(DOC))
     appear = ctx.js('window.__gateKept.ST.t("L.kept.said", %s)' % json.dumps({'name': name, 'clause': words or ''}))
     lifted = ctx.js('window.__gateKept.ST.t("L.kept.unchanged", %s)' % json.dumps({'name': name}))
@@ -4136,8 +4143,8 @@ def kept_holds(ctx, r):
             {'named': h['named'], 'seg': h['seg'], 'words': words, 'corner': h['corner'] and h['corner']['kept']})
     r.check(h['since'] is not None and named['fed'][0] <= h['since'] <= named['fed'][1],
             'its ⟨when⟩ the page\'s clock as the row came, never as a read landed (issue #367)', {'since': h['since'], 'fed': named['fed']})
-    r.check(bool(h['mirror']) and h['mirror']['kept'] == clause and clause in h['mirror']['text'],
-            'its mirror item carries the same words, a sentence of its own after its words (FP-33)', {'mirror': h['mirror'], 'clause': clause})
+    r.check(bool(h['mirror']) and bool(clause) and h['mirror']['kept'] == clause and ('. %s ' % clause) in h['mirror']['text'],
+            'its mirror item carries the same words, a sentence of its own after its words (FP-33; style S1, S2)', {'mirror': h['mirror'], 'clause': clause})
     nl = named['lift'] or {}
     r.check(bool(named['lift']) and not nl['seg'] and not nl['corner'] and nl['mirror'] == '' and not nl['kept'],
             'the read answered: in the frame the model\'s text is set, no clause stands in the line, the corner or the mirror item', named['lift'])

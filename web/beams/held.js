@@ -26,25 +26,30 @@
 // the landing stands at adds how much of the passage the runs hold — all of
 // it, or only part and, where the text shows withheld text, that the rest
 // may be under it — and that the text holds the pieces out of the passage's
-// order where it does (`labelOf`); labels that would stack merge into one
-// naming the pieces they hold (`mergedLabel`). A step takes the runs in the
-// passage's order, each repeat after the first of its material, wrapping
-// (`stepFrom`); the landing stands at the first (`Pieces.order`).
+// order where it does (`labelOf`); a label's parts are fields (ST's
+// `fields`); labels that would stack merge into one naming the pieces they
+// hold (`mergedLabel`). A step takes the runs in the passage's order, each
+// repeat after the first of its material, wrapping (`stepFrom`); the landing
+// stands at the first (`Pieces.order`).
 // The line (`lineOf`), for part, pieces and couldn't tell, names the passage
 // by what it was to the reader — the selection, the text they were reading,
 // a followed link's passage, what a reading scene's stop the reader returned
 // to stood for — and the text by F.floating's two forms, a
 // member or a bare address's current text (`whereOf`); where the landing
 // shows withheld text, a part's line says after its short form — the line's
-// start (`shortLineOf`) — that the rest may be under it. A landing in one run
-// says its line (N-GO's `landing`); a landing in several says its runs'
-// labels in its place, the label of the run it stands at its line. Every
-// surface that knows the state before departure says it by this one rule (FP-21): a
-// versions row (O-VERSIONS, through N-GO's `heldIn`), and a drawn link's far
-// end (`farHolds`), read from the end LK draws and what M-REC holds of its
-// far document — its projection, and the bytes of each run it names through
-// that document's held image — its card and its mirror item saying the line
-// whole (`farSays`), its stub and its symbol its short form (`farShort`).
+// start (`shortLineOf`) — that the rest may be under it. The line is
+// sentences, each its capital and its end mark (ST's `sentences`; style S1,
+// S2), wherever it is said; its short form is a field's words, no capital and
+// no end mark, standing in a row. A landing in one run says its line (N-GO's
+// `landing`); a landing in several says its runs' labels in its place, the
+// label of the run it stands at its line. Every surface that knows the state
+// before departure says it by this one rule (FP-21): a versions row
+// (O-VERSIONS, through N-GO's `heldIn`), and a drawn link's far end
+// (`farHolds`), read from the end LK draws and what M-REC holds of its far
+// document — its projection, and the bytes of each run it names through that
+// document's held image — its card and its mirror item saying the line whole
+// (`farSays`), the dead end's words a sentence there too (`floatingLineOf`),
+// its stub and its symbol its short form (`farShort`).
 // Rules: FP-1, FP-2, FP-21, FP-22.
 
 import * as REC from '../model/records.js';
@@ -52,7 +57,7 @@ import { lostSession } from '../bridge/port.js';
 import { floats } from '../links/links.js';
 import { SIZE_REFUSALS } from '../model/frames.js';
 import { memberOf } from '../model/address.js';
-import { t } from '../strings.js';
+import { t, sentence, sentences, fields } from '../strings.js';
 
 /** @typedef {import('../model/records.js').ISpan} ISpan */
 /** @typedef {import('../links/links.js').Shown} Shown */
@@ -249,10 +254,9 @@ export function piecesIn(stretches, width, withheld = false) {
   return { runs: labelled, of: kinds.length, order, whole, reordered: firsts.some((n, i) => i > 0 && n < firsts[i - 1]), withheld: !whole && withheld };
 }
 
-/** what the run the landing stands at adds (see the head): how much of the passage the runs hold, and whether the text holds the pieces out of the passage's order */
+/** what the run the landing stands at adds (see the head), each a field: how much of the passage the runs hold, where only part that the rest may be under the withheld text the text shows, and whether the text holds the pieces out of the passage's order; '' for each that does not hold */
 function amountOf(/** @type {Pieces} */ p) {
-  const amount = p.whole ? t('L.piece.all') : t('L.piece.part') + (p.withheld ? t('L.held.withheld') : '');
-  return p.reordered ? [amount, t('L.piece.order')] : [amount];
+  return [p.whole ? t('L.piece.all') : t('L.piece.part'), p.withheld ? t('L.held.withheld') : '', p.reordered ? t('L.piece.order') : ''];
 }
 
 /**
@@ -260,7 +264,8 @@ function amountOf(/** @type {Pieces} */ p) {
  * where the runs hold two materials or more; "again" where a run before it
  * holds its material, "again later" where it is the first of such runs; and,
  * at the run the landing stands at, how much of the passage the runs hold and
- * "in another order" where the text holds the pieces out of the passage's.
+ * "in another order" where the text holds the pieces out of the passage's —
+ * each a field (ST's `fields`).
  * @param {Pieces} p
  * @param {number} i the run, an index into `p.runs`
  * @param {boolean} [current] the landing stands at it
@@ -274,7 +279,7 @@ export function labelOf(p, i, current = false) {
   if (r.piece != null) words.push(t('L.piece', { k: r.piece, n: p.of }));
   if (r.repeat) words.push(t(r.repeat === 'again' ? 'L.piece.again' : 'L.piece.again-later'));
   if (current) words.push(...amountOf(p));
-  return words.join(' · ');
+  return fields(...words);
 }
 
 /** numbers in order as their ranges — consecutive ones `a–b` — joined: "1–3, 5" */
@@ -312,7 +317,7 @@ export function mergedLabel(p, members, current = -1) {
   if (runs.some((r) => r.repeat === 'again')) words.push(t('L.piece.again'));
   else if (runs.some((r) => r.repeat === 'again-later')) words.push(t('L.piece.again-later'));
   if (members.includes(current)) words.push(...amountOf(p));
-  return words.join(' · ');
+  return fields(...words);
 }
 
 /**
@@ -397,28 +402,35 @@ export function unknownOf(r, subject, addr) {
 }
 
 /**
- * The line's short form (see the head), the start of its words (`lineOf`): a
+ * The string the line's short form says (`shortLineOf`), and its values: a
  * part, "only part of ⟨subject⟩ is in ⟨where⟩"; pieces, "all of ⟨subject⟩ is
  * in ⟨where⟩"; couldn't tell, "couldn't tell whether ⟨where⟩ holds
  * ⟨subject⟩: ⟨reason⟩".
  * @param {Said} s
- * @returns {string}
+ * @returns {[string, Record<string, string>]}
  */
-export function shortLineOf(s) {
+function shortOf(s) {
   const subject = t(SUBJECTS[s.subject]), where = whereOf(s.addr);
-  if (s.state === 'unknown') return t('L.held.unknown', { subject, where, reason: t(s.why || 'L.held.why.other') });
-  return t(s.state === 'pieces' ? 'L.held.pieces' : 'L.held.part', { subject, where });
+  if (s.state === 'unknown') return ['L.held.unknown', { subject, where, reason: t(s.why || 'L.held.why.other') }];
+  return [s.state === 'pieces' ? 'L.held.pieces' : 'L.held.part', { subject, where }];
 }
 
 /**
- * The line's words (see the head): its short form (`shortLineOf`), then, for
- * a part where the text shows withheld text, that the rest may be under it.
+ * The line's short form (see the head), the start of its words (`lineOf`): a
+ * field's words, no capital and no end mark (`shortOf`).
  * @param {Said} s
  * @returns {string}
  */
-export function lineOf(s) {
-  return shortLineOf(s) + (s.withheld ? t('L.held.withheld') : '');
-}
+export const shortLineOf = (s) => t(...shortOf(s));
+
+/**
+ * The line's words (see the head): its short form (`shortOf`) a sentence,
+ * then, for a part where the text shows withheld text, that the rest may be
+ * under it, a sentence of its own (ST's `sentence`, `sentences`).
+ * @param {Said} s
+ * @returns {string}
+ */
+export const lineOf = (s) => sentences(sentence(...shortOf(s)), s.withheld ? sentence('L.held.withheld') : '');
 
 /**
  * What a drawn link's far end's text holds of its passage, before departure
@@ -457,37 +469,54 @@ export function farHolds(s) {
  * @param {string} addr the text's document: a plain address, or a version member
  * @returns {string}
  */
-export const floatingOf = (addr) => { const k = memberOf(addr); return k != null ? t('F.floating.member', { k }) : t('F.floating', { D: addr }); };
+export const floatingOf = (addr) => t(...deadEndOf(addr));
 
 /**
- * A drawn link's far end's state in words, before departure, the line in the
- * form given (see the head): the dead end's words where it floats in the
- * version its far box shows (LK's `floats`, `floatingOf`), the line where
- * that text holds part of it, all of it in pieces, or nothing told
- * (`farHolds`); '' where it holds all of it in one piece or nothing is known.
- * @param {Shown} s
- * @param {(said: Said) => string} form the line's whole words (`lineOf`), or its short form (`shortLineOf`)
+ * The dead end's words as a sentence (`floatingOf`; ST's `sentence`): what a
+ * surface that says the line says where the text holds none of the passage —
+ * a drawn link's far end's mirror item, a reading scene's stop returned to.
+ * @param {string} addr the text's document: a plain address, or a version member
  * @returns {string}
  */
-function farIn(s, form) {
-  if (floats(s)) return floatingOf(s.farAt || s.far);
+export const floatingLineOf = (addr) => sentence(...deadEndOf(addr));
+
+/** the string the dead end's words are said in, and its values (`floatingOf`): a version member's own, else a plain address's */
+function deadEndOf(/** @type {string} */ addr) {
+  const k = memberOf(addr);
+  return /** @type {[string, Record<string, string | number>]} */ (k != null ? ['F.floating.member', { k }] : ['F.floating', { D: addr }]);
+}
+
+/**
+ * A drawn link's far end's state in words, before departure, in the form
+ * given (see the head): the dead end's words where it floats in the version
+ * its far box shows (LK's `floats`), the line where that text holds part of
+ * it, all of it in pieces, or nothing told (`farHolds`); '' where it holds
+ * all of it in one piece or nothing is known.
+ * @param {Shown} s
+ * @param {(addr: string) => string} dead the dead end's words (`floatingOf`, `floatingLineOf`)
+ * @param {(said: Said) => string} line the line's words (`shortLineOf`, `lineOf`)
+ * @returns {string}
+ */
+function farIn(s, dead, line) {
+  if (floats(s)) return dead(s.farAt || s.far);
   const said = farHolds(s);
-  return said ? form(said) : '';
+  return said ? line(said) : '';
 }
 
 /**
  * A drawn link's far end's state in words whole, before departure — what its
- * mirror item and its card say (`farIn`, the line whole).
+ * mirror item and its card say: sentences (`floatingLineOf`, `lineOf`).
  * @param {Shown} s
  * @returns {string}
  */
-export const farSays = (s) => farIn(s, lineOf);
+export const farSays = (s) => farIn(s, floatingLineOf, lineOf);
 
 /**
  * A drawn link's far end's state in words short, before departure — what its
- * stub's label and its symbol's title say (`farIn`, the line's short form):
- * the start of what `farSays` says.
+ * stub's label and its symbol's title say, a field's words (`floatingOf`,
+ * `shortLineOf`): the start of what `farSays` says, but for the capital its
+ * sentence takes.
  * @param {Shown} s
  * @returns {string}
  */
-export const farShort = (s) => farIn(s, shortLineOf);
+export const farShort = (s) => farIn(s, floatingOf, shortLineOf);

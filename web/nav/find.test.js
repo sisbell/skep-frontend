@@ -39,7 +39,7 @@ import * as KEYS from './keys.js';
 import * as GO from './go.js';
 import * as FOCUS from './focus.js';
 import * as FIND from './find.js';
-import { t } from '../strings.js';
+import { t, hintSentences } from '../strings.js';
 import { whyOf } from '../beams/held.js';
 
 /** the platform's document: its focus — the body where it stands on nothing */
@@ -378,7 +378,7 @@ test('a part the board will not give: the find searches what it holds and says i
 test('off any document Mod+F opens nothing and the one line says where words are found; Mod+G opens the find where nothing steps, and steps it where it stands (K-91)', async () => {
   await WALK.focusTo('1.0.1', null);
   assert.equal(await KEYS.dispatch(keyOf('f', MOD), PLANE), true, 'taken: the browser\'s find never runs');
-  assert.deepEqual([FIND.isOpen(), said.at(-1)], [false, t('L.find.off', { 'find chord': KEYS.drawChord('Mod+F') })]);
+  assert.deepEqual([FIND.isOpen(), said.at(-1)], [false, hintSentences('L.find.off', { 'find chord': KEYS.drawChord('Mod+F') }).whole], 'its hint, a sentence');
   await standAt(D);
   assert.equal(await KEYS.dispatch(keyOf('g', MOD), PLANE), true);
   assert.equal(FIND.isOpen(), true, 'no arrival in several runs: Mod+G opens the find');

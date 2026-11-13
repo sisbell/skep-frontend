@@ -93,6 +93,11 @@ from . import DOC, FAR_LEAP, HOME, NO_MATCH, VERSIONED, WINDOW, Result, item_wor
 RUNS_APART_LINES, LINE_RATIO = 4, 1.45
 
 
+def capital(words):
+    """words opening a sentence: their first letter a capital, the rest as they stand (style S1)"""
+    return words[:1].upper() + words[1:]
+
+
 def run(ctx):
     r = Result()
     # rule 21: at launch the platform's focus rests on the walk's element, the ring out — observed on a fresh page (reads alone)
@@ -155,10 +160,10 @@ def run(ctx):
     ctx.drv.key('ArrowUp')
     ctx.settle()
     # the names: a span's name carries its position, its document and its text; a link's its type and far end; an item that
-    # holds no text its kind in the strings table's words (issue #161)
+    # holds no text its kind in the strings table's words (issue #161) — each opening a sentence, its capital on its kind
     names = [ctx.js('window.__skep.mirror.item(%d)' % i) for i in range(size)]
-    kinds = tuple(['span at position ', 'link '] + [w + ' ' for w in item_words(ctx).values()])
-    r.check(all(n.startswith(kinds) for n in names), 'every name opens with its kind', [n[:40] for n in names if not n.startswith(kinds)])
+    kinds = tuple(capital(w) for w in ['span at position ', 'link '] + [w + ' ' for w in item_words(ctx).values()])
+    r.check(all(n.startswith(kinds) for n in names), 'every name opens with its kind, its sentence\'s capital on it (style S1)', [n[:40] for n in names if not n.startswith(kinds)])
     r.figures['mirror'] = {'size': size, 'rendered_items': len(items), 'sample': names[:2]}
     # the AX tree
     ax = ctx.drv.ax_tree()
@@ -986,8 +991,8 @@ def run(ctx):
     item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
     word = kind['words']
     r.check(kind['kind'] == 'draft' and bool(drafted['first']) and drafted['first']['cls'].split()[0] == 'kind' and drafted['first']['text'] == word
-            and not any((' · ' + word) in x for x in drafted['labels']) and not drafted['lead'].endswith(' · ' + word) and item.startswith('%s document %s,' % (word, WINDOW[2])),
-            'the draft landed in: "%s" its corner\'s first item, in its slot; no label carrying a kind; ← to its item, which leads with it (issue #423)' % word, dict(drafted, kind=kind, item=item[:160]))
+            and not any((' · ' + word) in x for x in drafted['labels']) and not drafted['lead'].endswith(' · ' + word) and item.startswith('%s document %s,' % (capital(word), WINDOW[2])),
+            'the draft landed in: "%s" its corner\'s first item, in its slot; no label carrying a kind; ← to its item, which leads with it, its sentence\'s capital on it (issue #423; style S1)' % word, dict(drafted, kind=kind, item=item[:160]))
     ctx.leap(DOC, WINDOW[0])
     gone = described()
     r.check(not gone['items'] and gone['said'] is None, 'the next landing takes the description down with the line', gone)
@@ -1061,9 +1066,10 @@ def run(ctx):
       .filter((i) => i.text.includes(' document ' + a + ',') || i.text.includes(' document ' + a + '.')))(%s)''' % json.dumps(VERSIONED))
     label = ctx.js('window.__skep.firstLine(%s).first' % json.dumps(member))
     published = ctx.js('window.__skep.kind(%s).words' % json.dumps(member))
-    r.check(len(listed) == 1 and listed[0]['current'] and listed[0]['text'].startswith('%s document %s, %s,' % (published, member, '"%s"' % label if label else '')),
+    lead = ', '.join(x for x in ('%s document %s' % (capital(published), member), '"%s"' % label if label else None) if x)
+    r.check(len(listed) == 1 and listed[0]['current'] and listed[0]['text'].startswith(lead + ','),
             'at mid over a box pinned to version 1 the mirror lists the box once, its current item, named by its kind, the version\'s address and that version\'s own first line, as its box\'s label names it (issues #154, #23, #423)',
-            {'listed': [dict(i, text=i['text'][:120]) for i in listed], 'zooms': zooms, 'label': label, 'kind': published})
+            {'listed': [dict(i, text=i['text'][:120]) for i in listed], 'zooms': zooms, 'label': label, 'kind': published, 'want': lead})
     # its state as its corner states it, whole (issue #239's design decision: "The ARIA mirror's item for a document voices
     # the corner's state, whole"): the version it shows and the count of its chain, which the board ended, read first, then
     # its venue's clause and R20's teaching (foundations §3.1; C-346) — never the bare "published"
@@ -1085,7 +1091,7 @@ def run(ctx):
       const i = window.__skep.mirror.index(), li = document.getElementById('walk-' + i), f = window.__skep.view.focus();
       return {words: q('.rec-words'), keys: q('.derived'), item: window.__skep.mirror.item(i), dom: li ? li.textContent : null, focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}}; })(%s)''' % json.dumps(HOME))
     item = rec['item'] or ''
-    r.check(rec['focus'] == {'kind': 'block', 'addr': HOME, 'pos': 1} and item.startswith(words['record'] + ' at position 1 ') and bool(rec['words']) and rec['words'] in item
+    r.check(rec['focus'] == {'kind': 'block', 'addr': HOME, 'pos': 1} and item.startswith(capital(words['record']) + ' at position 1 ') and bool(rec['words']) and rec['words'] in item
             and bool(rec['keys']) and rec['keys'] in item and rec['dom'] == item,
             'the mirror\'s item at the claimant\'s key record names its kind, "%s" — the words a copy\'s stand-in names it by — then what the plane shows of it, its words and its keys, and the DOM item says the same (issue #161; R94)' % words['record'],
             dict(rec, item=item[:300]))

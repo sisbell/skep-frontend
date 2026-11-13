@@ -160,12 +160,15 @@
 // refused run's — "send again" first, inert with its reason in the own-bug
 // class, "copy these words out", then "discard this change"; the shell's
 // hand-over's, naming the board and the time elapsed; the moved document's
-// (`movedFace`), naming the hands its rows carry, each in its slot — the slot
-// the design owes words for, where they are named again, standing empty —
+// (`movedFace`), naming the hands its rows carry, each in its slot — its
+// words bare, a byline T-ARTICLE sets as a sentence in the face and as a field
+// in a row — the slot the design owes words for, where they are named again,
+// standing empty —
 // with "see the held text", "send again" inert unless the shell says it would
 // pass, and the discard; an island's and the held store's first refusal's,
-// their discard the page's own; the device's refusal, by its class, its act
-// the whole text's copy; the head-unreadable hold's discard; and the death's
+// their discard the page's own; the device's refusal, by its class, its
+// lines each a sentence (ST's `sentence`), its act the whole text's copy; the
+// head-unreadable hold's discard; and the death's
 // arm in its two forms, by whether this board's held lines are read under the
 // session that stands, the keyless session's discard live. Each but the moved
 // document's opens on the kept word's act at its corner (`unkept`); the moved
@@ -203,7 +206,7 @@ import { below, spoken } from './statement.js';
 import { entitlementArm, placeholderOf, faceWords, CLAUSE_READING } from '../text/article.js';
 import { retries, lineOf } from '../beams/held.js';
 import { memberOf } from '../model/address.js';
-import { t, addressedHTML, endingOf } from '../strings.js';
+import { t, addressedHTML, endingOf, sentence } from '../strings.js';
 import { esc, fingerprintCue } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
@@ -1249,6 +1252,9 @@ const elapsed = (/** @type {number} */ ms) => new Intl.NumberFormat(undefined, {
 /** a string filled, by its id: a face's line, a hand's slot, an act's reason */
 const entry = (/** @type {string} */ id, /** @type {Record<string, string>} */ v = {}) => ({ id, text: t(id, v) });
 
+/** a string filled as a sentence of its own, by its id (ST's `sentence`): a line of a face whose lines the page composes */
+const sentenced = (/** @type {string} */ id, /** @type {Record<string, string>} */ v = {}) => ({ id, text: sentence(id, v) });
+
 /**
  * An act of a face of unkept words (`UnkeptAct`), its label its string's
  * words: no run where it is inert.
@@ -1371,8 +1377,8 @@ export function unkeptFace(addr) {
   }
   const device = rows.find((r) => r.unwritable != null);
   if (device) {
-    const cls = device.unwritableClass === 'full' ? [entry('B3.unwritable.full')] : device.unwritableClass === 'read_only' ? [entry('B3.unwritable.read_only')] : [];
-    return face('device', { lines: [entry('B3.unwritable', { cause: device.unwritable || '' }), ...cls], acts: [copyAll()] });
+    const cls = device.unwritableClass === 'full' ? [sentenced('B3.unwritable.full')] : device.unwritableClass === 'read_only' ? [sentenced('B3.unwritable.read_only')] : [];
+    return face('device', { lines: [sentenced('B3.unwritable', { cause: device.unwritable || '' }), ...cls], acts: [copyAll()] });
   }
   const moved = movedFace(addr, rows);
   if (moved) return moved;

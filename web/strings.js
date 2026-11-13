@@ -4,7 +4,20 @@
 // by its `ux/copy.md` id (`C-n`) or by the requirement that pins it — or
 // DRAFT, a string a design document drafted, its source and the screen named,
 // or one no design document carries (`lane: true`), which `lacking` lists.
-// The page invents no wording. `t` fills an entry's ⟨tokens⟩ (U's `fill`),
+// The page invents no wording. An entry holds words only, never the joiner
+// that attaches it to another (style S2): a line the page builds of several
+// entries is composed here, every empty part dropped so no joiner stands
+// beside a missing one — as sentences (`sentence`, `asSentence`, `sentences`),
+// each its capital and its end mark by S1, the capital its template's own
+// first letter, or the first letter of a token it opens with whose value is
+// the page's own words, never a name's, an address's, a chord's or a person's
+// or a document's words, and the end mark a period where the words carry
+// none (`ended`); as one sentence's list (`opening`, `list`); as a row's
+// fields or a compact line's segments (`fields`); each in markup too, setting
+// the same words (`openingHTML`, `sentenceHTML`, `endedHTML`); a hint's
+// notice as sentences, cut as `hintOf` cuts it (`hintSentences`). A
+// statement before a permanent act keeps its own join and is never composed
+// so. `t` fills an entry's ⟨tokens⟩ (U's `fill`),
 // and `tHTML` fills them as markup, each value escaped, those it is asked
 // to wrap set in an element of their own class — a document's words in the
 // reading face's — and every address in the rest in the identifier's face;
@@ -195,8 +208,8 @@ export const STRINGS = {
   'F.published.notebook': { text: 'readable by anyone who can reach this notebook: anything on this machine, and nothing beyond it', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner: an edition\'s state on a notebook' },
   'F.published': { text: 'published', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner\'s kind slot; the ARIA mirror: a document\'s item; a reading scene\'s pane\'s name; a landing\'s description; the versions list' },
   'F.version-of': { text: 'version ⟨k⟩ of ⟨n⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
-  'F.alternatives': { text: '· ⟨m⟩ alternatives', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
-  'F.alternatives.1': { text: '· 1 alternative', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
+  'F.alternatives': { text: '⟨m⟩ alternatives', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
+  'F.alternatives.1': { text: '1 alternative', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
   'F.whole-links': { text: '⟨n⟩ links to this document as a whole', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
   'F.whole-links.1': { text: '1 link to this document as a whole', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
   'F.arrival': { text: 'you are reading version ⟨k⟩ — a newer version has arrived — read version ⟨n⟩ · show what changed', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
@@ -225,7 +238,7 @@ export const STRINGS = {
   'F.unclaimed': { text: 'no board on this machine is yours until you claim one', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line; the ARIA mirror; an act that needs a board' },
   'F.keyless-limit': { text: 'this version of the client offers neither act — enrolling this device and importing a paper come with the key ceremonies', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line, state 3' },
   'F.flip': { text: 'local trust is now on — anything running on this machine can write as you here and read every draft you have written, with no key', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line, state 6' },
-  'F.flip.run': { text: '— for this run of the notebook: quitting the client ends it, and the next start runs without it', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line, state 6' },
+  'F.flip.run': { text: 'for this run of the notebook: quitting the client ends it, and the next start runs without it', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line, state 6' },
   'F.reindex': { text: 're-index now', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line, state 7' },
   'F.annotate.inert': { text: 'annotating works on your own documents and web pages in this version — to write about this passage, quote it as a copy into your notes', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the selection' },
   'F.sign-in': { text: 'sign in', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line' },
@@ -294,7 +307,7 @@ export const STRINGS = {
   'B3.not-kept': { text: 'not kept', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the corner; the head of the refused run\'s face and of the loss faces (D6 BM-10)' },
   'B3.held': { text: 'held', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2 AT REOPEN: the word at the top of the first held mark in view, once per view (D6 BM-29)' },
   'B3.save.kept': { text: 'nothing to save — everything here is kept', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: Mod+S at the corner (D6 BM-3)' },
-  'B3.save.before': { text: 'nothing to save —', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: Mod+S, before the corner\'s other two words (D6 BM-3)' },
+  'B3.save.before': { text: 'nothing to save', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: Mod+S, before the corner\'s other two words (D6 BM-3)' },
   'B3.save.held': { text: 'nothing to save\u00a0— held on this device and sent when your notebook answers', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: Mod+S at the corner while a burst is held and the notebook is not answering (D6 BM-3)' },
   'B3.save.held.board': { text: 'nothing to save — not yet kept — held on this device and sent when ⟨board⟩ can be reached', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: Mod+S at the corner while a burst is held for a board that cannot be reached (D6 BM-3)' },
   'B3.kept.held': { text: 'not yet kept — held on this device and sent when your notebook answers', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the kept word\'s own statement, on its act, while a burst is held and the notebook is not answering (D6 BM-8, BM-78; D5 K-57)' },
@@ -331,11 +344,11 @@ export const STRINGS = {
   'B3.moved.compact': { text: 'changed while this text was held\u00a0— not placed · by ⟨hand⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, compact, whole on its act (D6 BM-13)' },
   'B3.moved.see-held': { text: 'see the held text', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face\'s act that opens the moved scene (D6 BM-13, BM-14)' },
   'B3.moved.first-key': { text: 'this document changed while your text was held\u00a0— what you type now is held with it and placed by hand', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the line at the focus at the first key typed after the moved verdict (D6 BM-18)', hint: 'whole' },
-  'B3.hand.device': { text: '— by ⟨device label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, a hand of this store\'s or a labelled key\'s (D6 BM-13); B3-S11 P4' },
-  'B3.hand.unsigned': { text: '— by an unsigned write', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, a bare hand (D6 BM-13); B3-S11 P4' },
-  'B3.hand.lost': { text: '— its hand not recorded', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, a hand the board lost (D6 BM-13); B3-S11 P4' },
-  'B3.hand.unread': { text: '— its hand not read yet', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, its hands not read yet (D6 BM-78)' },
-  'B3.hand.unknowable': { text: '— its hand can\'t be known', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, its hands no read can name, the board having reclaimed the history that held them (D6 BM-13; the moved-document decision, answer 3) — the UI wording seat\'s to refine, its copy id owed' },
+  'B3.hand.device': { text: 'by ⟨device label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, a hand of this store\'s or a labelled key\'s (D6 BM-13); B3-S11 P4' },
+  'B3.hand.unsigned': { text: 'by an unsigned write', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, a bare hand (D6 BM-13); B3-S11 P4' },
+  'B3.hand.lost': { text: 'its hand not recorded', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, a hand the board lost (D6 BM-13); B3-S11 P4' },
+  'B3.hand.unread': { text: 'its hand not read yet', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, its hands not read yet (D6 BM-78)' },
+  'B3.hand.unknowable': { text: 'its hand can\'t be known', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved face, its hands no read can name, the board having reclaimed the history that held them (D6 BM-13; the moved-document decision, answer 3) — the UI wording seat\'s to refine, its copy id owed' },
   'B3.send-again': { text: 'send again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the refused run\'s face, the moved face (D6 BM-10, BM-17, BM-26)' },
   'B3.discard': { text: 'discard this change', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the refused run\'s face (D6 BM-10, BM-27)' },
   'B3.refused.discard': said([['these words were never kept on the board —'], ['discarding removes them from this device for good']], { cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the refused run\'s face, before its discard (D6 BM-10)' }),
@@ -367,8 +380,8 @@ export const STRINGS = {
   'B3.held_full.line': { text: 'writing on ⟨board⟩ is paused on this device — what is held stays on this device and is sent as ⟨board⟩ returns; writing goes on then — the text held for ⟨board⟩ is at its limit', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the one line at the held store\'s bound (D6 BM-20)' },
   'B3.held_full.caret': { text: 'writing on ⟨board⟩ is paused on this device — nothing you type here is kept until what is held is sent; when writing goes on is named at the top, beside ⟨board⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: every caret at the held store\'s bound (D6 BM-20)', hint: 'clause' },
   'B3.unwritable': { text: 'this device could not keep it: ⟨cause⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the device\'s refusal of a held line, under the face\'s head (D6 BM-21)' },
-  'B3.unwritable.full': { text: '— closing this window loses it; this device\'s disk is full\u00a0— what you have typed is held on this device as soon as there is room; copy the text out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the device\'s refusal at a full disk, the act keyed by cause (D6 BM-21)' },
-  'B3.unwritable.read_only': { text: '— closing this window loses it; copy the text out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the device\'s refusal at a read-only volume, the act keyed by cause (D6 BM-21)' },
+  'B3.unwritable.full': { text: 'closing this window loses it; this device\'s disk is full\u00a0— what you have typed is held on this device as soon as there is room; copy the text out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the device\'s refusal at a full disk, the act keyed by cause (D6 BM-21)' },
+  'B3.unwritable.read_only': { text: 'closing this window loses it; copy the text out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the device\'s refusal at a read-only volume, the act keyed by cause (D6 BM-21)' },
   'B3.head_unreadable': { text: '⟨board⟩ cannot serve the record your writes are signed against, so nothing is sent; what you write is held on this device and sent once it can', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the one line at the head-unreadable hold (D6 BM-22)' },
   'B3.head_unreadable.discard': { text: 'discard what is held', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the corner\'s act at the head-unreadable hold' },
   'B3.head_unreadable.discard.compact': { text: 'discard', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the corner\'s act at the head-unreadable hold, compact' },
@@ -378,13 +391,13 @@ export const STRINGS = {
   'B3.head_unreadable.discard.said.compact': { text: 'if discarded, what is held here is never sent and its words are removed for good', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the discard\'s statement at the head-unreadable hold, compact' },
   'B3.store_halted.newer': { text: 'writing is stopped on this device — open the held text with the newer version of this app that wrote it, or move the file aside', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the one line at the halted store, a file a newer app wrote (D6 BM-30)' },
   'B3.store_halted.damaged': { text: 'writing is stopped on this device — move the file aside', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the one line at the halted store, a damaged file (D6 BM-30)' },
-  'B3.store_halted.unsent': { text: '— the words it holds go with it, unsent', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the halted store\'s line, after its form (D6 BM-30)' },
-  'B3.store_halted.damaged.cause': { text: '— the held text is damaged and cannot be read', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the halted store\'s damaged form, its cause last (D6 BM-30)' },
+  'B3.store_halted.unsent': { text: 'the words it holds go with it, unsent', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the halted store\'s line, after its form (D6 BM-30)' },
+  'B3.store_halted.damaged.cause': { text: 'the held text is damaged and cannot be read', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the halted store\'s damaged form, its cause last (D6 BM-30)' },
   'B3.store_halted.caret': { text: 'writing on ⟨board⟩ is stopped on this device — this app cannot read the text held for it, so nothing you type here is kept; what to do is named at the top, beside ⟨board⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: every caret at the halted store (D6 BM-30)', hint: 'clause' },
   'B3.show-file': { text: 'show the file', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the halted store\'s act (D6 BM-30)' },
   'B3.another_window': { text: 'this window reads only and keeps nothing you type — copy this address, then go to it in the other window of this app, or, once that is closed, quit this one, open the app again and go to it there — it opened while that window held this notebook', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the one line in a second window (D6 BM-60)', hint: 'clause' },
   'B3.copy-address': { text: 'copy this address', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the second window\'s act (D6 BM-60)' },
-  'B3.daemon.fate': { text: ', and what you wrote since it stopped is held on this device and sent when it starts', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the daemon segment\'s own-board stopped form, its fate clause (D6 BM-9)' },
+  'B3.daemon.fate': { text: 'and what you wrote since it stopped is held on this device and sent when it starts', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the daemon segment\'s own-board stopped form, its fate clause (D6 BM-9)' },
   'B3.daemon.held': { text: 'board unreachable\u00a0— anything not yet kept is held on this device and sent when it can be reached', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the daemon segment\'s held form at a board the session writes to that is not answering (D6 BM-78)' },
   'B3.daemon.held.notebook': { text: 'your notebook is not answering\u00a0— anything not yet kept is held on this device and sent when it answers; if it stays so, stop it and start it again here', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the daemon segment\'s held form on the person\'s own notebook, not answering (D6 BM-78)' },
   'B3.durability': { text: 'your notebook could not keep that yet\u00a0— trying again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: `durability`\'s face on a third refusal, on the notebook' },
@@ -395,26 +408,26 @@ export const STRINGS = {
   'B3.death.caret': { text: 'writing on ⟨board⟩ has ended on this device — this device\'s key no longer writes there, so nothing you type here is kept; copy the text out to use it; what happened is named at the top, beside ⟨board⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: every caret where the death\'s arm cannot re-open (D6 BM-24)', hint: 'clause' },
   'B3.death.copy': { text: 'copy the text out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the death face\'s one act' },
   'B3.death.copied': { text: 'copied', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the status region once the death face\'s act copies the text' },
-  'B3.death.ending.shown': { text: '— the words held on this device that were never sent are shown there too', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: FP-32\'s entry for the death, its clause where the shell answers the held lines under the keyless session' },
-  'B3.death.ending.unshown': { text: '— the words held on this device that were never sent stay there; this version of the app shows them only in the drafts still open in this window, and not after it closes', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: FP-32\'s entry for the death, its clause on every other board' },
+  'B3.death.ending.shown': { text: 'the words held on this device that were never sent are shown there too', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: FP-32\'s entry for the death, its clause where the shell answers the held lines under the keyless session' },
+  'B3.death.ending.unshown': { text: 'the words held on this device that were never sent stay there; this version of the app shows them only in the drafts still open in this window, and not after it closes', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: FP-32\'s entry for the death, its clause on every other board' },
   'B3.death.mark': { text: 'words held on this device, never sent', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the keyless session\'s unnumbered mark beside its acting-as state where the held file holds lines for the board' },
   'B3.death.retired': { text: 'this device\'s key was retired from ⟨account⟩ by ⟨device label⟩\u00a0— reading goes on; writing needs a key you hold', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the acting-as segment\'s death arm at a key another hand retired, the one line\'s reason (D6 BM-24)' },
   'B3.past-states': { text: 'past states', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2, B3-S7: the corner\'s second act' },
   // B3-S3: undo and redo — the lines at the focus, each ending on the constant sentence; the passed step's ending; the
   // take-back line and its first clause alone; the way to "published in error" out of view; what an undo or a redo did,
   // spoken
-  'B3.undo.again': { text: '— ⟨undo chord⟩ again undoes what you did before it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: a step leaving the stack at its first reach (D6 BM-12, BM-37, BM-41)' },
+  'B3.undo.again': { text: '⟨undo chord⟩ again undoes what you did before it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: a step leaving the stack at its first reach (D6 BM-12, BM-37, BM-41)' },
   'B3.undo.public-link': { text: 'undo takes back your text, formatting and private links alone — the link you published since stands; retract it at its card', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: undo past a public link (D6 BM-42)' },
   'B3.undo.place': { text: 'the document you made since stands', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: undo past a place made (D6 BM-42)' },
   'B3.undo.published': { text: 'undo takes back your text, formatting and private links alone — these words stay public in version ⟨k⟩ of ⟨E⟩; your next version from this draft leaves them out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: undo of words a shot published since (D6 BM-42)' },
   'B3.undo.published.beside': { text: 'undo takes back your text, formatting and private links alone — these words stay public in version ⟨k⟩ of ⟨E⟩, and this draft publishes beside version ⟨k+1⟩; to take them off what ⟨E⟩\'s readers meet, remove them in ⟨label⟩ and publish that', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: undo of words a shot published since, the draft behind the head (D6 BM-42)' },
   'B3.undo.redo-link': { text: 'links made on this link stay on it; redo makes a new one they do not reach', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: the redo of a link write (D6 BM-40)' },
   'B3.undo.base-published': { text: '⟨label⟩ was published as version ⟨k⟩ since; its past states keep the text as it stood before', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: an undo re-sending a base the draft\'s shot has passed (D6 BM-37)' },
-  'B3.undo.base-published.merge': { text: '— to merge ⟨alternative⟩ with it, re-apply ⟨alternative⟩ to the head', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: a withdrawal\'s undo past the draft\'s shot (D6 BM-37)' },
+  'B3.undo.base-published.merge': { text: 'to merge ⟨alternative⟩ with it, re-apply ⟨alternative⟩ to the head', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: a withdrawal\'s undo past the draft\'s shot (D6 BM-37)' },
   'B3.undo.taken-back': { text: 'taken back from ⟨label⟩ — ⟨redo chord⟩ puts it back', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: an overlay\'s told write taken back (D6 BM-43)' },
   'B3.undo.taken-back.cut': { text: 'taken back from ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: the take-back line cut to its first clause from a second press on (D6 BM-43)' },
   'B3.undo.none': { text: 'undo works in the text of a draft you are writing — there is nothing here to undo', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: the undo chord with no caret (D6 BM-42)', hint: 'clause' },
-  'B3.undo.last-writing': { text: '— you were last writing in ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: the undo chord with no caret, a draft held (D6 BM-42); B3-S13: the end of a swallowed key\'s line outside the draft last written in this session, its label the act back to that draft\'s kept caret (D5 K-9, K-72)' },
+  'B3.undo.last-writing': { text: 'you were last writing in ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: the undo chord with no caret, a draft held (D6 BM-42); B3-S13: the end of a swallowed key\'s line outside the draft last written in this session, its label the act back to that draft\'s kept caret (D5 K-9, K-72)' },
   'B3.undo.constant': { text: 'a link you made public stays until you retract it at its card', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3, B3-S13: the constant sentence every undo line ends on (D6 BM-42)' },
   'B3.undo.empty': { text: 'nothing to undo in this draft this session — its past states hold what came before', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: the undo chord on an empty stack (D6 BM-42)', hint: 'clause' },
   'B3.undo.publishing': { text: 'publishing has no undo — to take a passage off what readers meet, publish the next version without it; to record the whole document as published in error, take "published in error" at its corner', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S3: the undo chord at an edition, beneath C-45 (D6 BM-42)' },
@@ -482,7 +495,7 @@ export const STRINGS = {
   'B3.link.far.draft': { text: 'once you publish those words as new, it stays on the draft\'s earlier words and readers meet it as withheld', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S6: the far-end clause where that document is a draft whose words a later publication publishes as new' },
   'B3.link.type.private': { text: 'typed by a private document of yours — readers see its address as their type, never what it says', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S6: the set line\'s type clause, the type a private document of the person\'s' },
   'B3.link.lineage': { text: 'the link it replaces stays public and active, marked superseded by this one for good — retracting this one does not undo that', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S6, B3-S12: the set line\'s lineage clause where the link supersedes a public link of the person\'s' },
-  'B3.link.private-arms': { text: '— to keep a note on these words private, annotate them, or link from your draft of it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S6: the private arms\' clause beside the guard at the person\'s own published page' },
+  'B3.link.private-arms': { text: 'to keep a note on these words private, annotate them, or link from your draft of it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S6: the private arms\' clause beside the guard at the person\'s own published page' },
   'B3.link.corner.yours': { text: 'yours, on words not in this version', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S6: the corner\'s item for the person\'s own ends on words the version in view does not hold' },
   'B3.link.corner.yours.row': { text: '⟨first words | form | type⟩\u00a0— in version ⟨k⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S6: a row of that item, naming the latest version that holds its words' },
   // B3-S7: the history read — the two faces, the list's rows and their marks, the pane's corner and the one line's as-of,
@@ -507,7 +520,7 @@ export const STRINGS = {
   'B3.history.put-back': { text: 'put back in the current text', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S7: a removed passage\'s act in a past state (D6 BM-49)' },
   'B3.history.put-back.caret': { text: 'put back at the caret', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S7: a removed passage\'s act, the place gone from the current text' },
   'B3.history.make-current': { text: 'make this state current', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S7: the past state\'s corner (D6 BM-38)' },
-  'B3.history.nothing-to-set': { text: '— nothing to set', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S7: the restore\'s datum, inert at the state the draft stands in now (D6 BM-38)' },
+  'B3.history.nothing-to-set': { text: 'nothing to set', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S7: the restore\'s datum, inert at the state the draft stands in now (D6 BM-38)' },
   'B3.history.made-current': { text: 'the current text set to this state — what came after stays in its history', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S7: "make this state current", before the act (D6 BM-38)' },
   'B3.history.restored': { text: '⟨label⟩ set to how it stood ⟨time⟩ — undo puts it back', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S7: the one line after a restore (D6 BM-38)' },
   'B3.history.restored.supersedes': { text: '⟨label⟩ set to how it stood ⟨time⟩ — its next version still supersedes ⟨alternative⟩; undo puts it back', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S7: the one line after a restore at a draft carrying a merge (D6 BM-38)' },
@@ -525,7 +538,7 @@ export const STRINGS = {
   'B3.history.kind.edits': { text: 'edits', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S7: a row\'s kind, several in one minute' },
   'B3.history.reading': { text: 'reading', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S7: the in-flight mark at a row and the pane\'s corner' },
   'B3.history.stop': { text: 'stop', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S7: the in-flight mark\'s act' },
-  'B3.history.caveat': { text: '— this draft\'s past states name the key behind each change, or say \'unsigned\', or \'not recorded\' where this board lost it, as far back as this board keeps them', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S7: the keyless-hand caveat\'s clause, the gesture\'s third site' },
+  'B3.history.caveat': { text: 'this draft\'s past states name the key behind each change, or say \'unsigned\', or \'not recorded\' where this board lost it, as far back as this board keeps them', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S7: the keyless-hand caveat\'s clause, the gesture\'s third site' },
   'B3.history.read-beside-published': { text: 'read it beside what is published now', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S7, B3-S11: the daughter\'s act' },
   'B3.history.read-last': { text: 'read the last state that holds it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S7: a dead end at a draft, the gesture\'s fourth site' },
   'B3.history.read-version': { text: 'read it in version ⟨k⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S7: a dead end at a draft whose passage a version holds' },
@@ -545,14 +558,14 @@ export const STRINGS = {
   'B3.capture.label': { text: 'captures', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S9: the default document\'s label' },
   'B3.capture.no-board': { text: 'a thought is kept in a notebook of your own — no board on this machine is yours until you claim one', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S9: the chord where no board is held' },
   'B3.capture.stopped': { text: 'a first thought makes the document your thoughts are kept in, and your notebook ⟨has stopped | has halted its writes⟩ — ⟨start | restart⟩ it here, then capture', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S9: a first capture under a stopped notebook (D6 BM-59)' },
-  'B3.capture.own-piece': { text: '· a piece of its own: type its first line in the address line', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S9: the composer\'s head, its second clause (D6 BM-68)' },
+  'B3.capture.own-piece': { text: 'a piece of its own: type its first line in the address line', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S9: the composer\'s head, its second clause (D6 BM-68)' },
   'B3.capture.record-stays': { text: 'the captures record stays — it is a record of its own, not text', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S9: the deletion face at a removal across the captures record\'s run' },
   // B3-S10: the staged draft — the base's standing, the publish slot's forms, the family's names and relation labels, the
   // daughter's lines and its face — its head, its route clause, its two rows and its third way — the key record's removal
   // line, a held document's publish slot reason and its disclosure
   'B3.standing.behind': { text: 'written on version ⟨k⟩ of ⟨E⟩\u00a0— version ⟨k+1⟩ is the head, published since from your draft from ⟨time⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S10: the corner\'s standing line, the base behind the head' },
   'B3.standing.superseded-by': { text: 'superseded by ⟨D′⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S10, B3-S11: the corner at a daughter a claim supersedes' },
-  'B3.standing.merged-into': { text: '— merged into version ⟨j⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S10: the daughter line\'s clause where a claim of the person\'s names it merged' },
+  'B3.standing.merged-into': { text: 'merged into version ⟨j⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S10: the daughter line\'s clause where a claim of the person\'s names it merged' },
   'B3.standing.merged': { text: '⟨alternative⟩ is merged into version ⟨j⟩ — to bring more of its words in, paste them into ⟨label⟩ and publish that', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the daughter\'s face once merged' },
   'B3.standing.daughter': { text: 'version ⟨k+1⟩ was published from your draft from ⟨time⟩; yours stands beside it as version ⟨k.1⟩\u00a0— readers of ⟨E⟩ meet version ⟨k+1⟩; to bring these words into its next version, re-apply to the head merges them with the head\'s text for you to check before anything is published, or paste them into your draft of it and publish that', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S10, B3-S11: the daughter\'s face where a shot from a draft behind the head lands as a daughter' },
   'B3.standing.daughter.paste': { text: 'to bring these words into its next version, paste them into your draft of it and publish that', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S10: the daughter face\'s route clause at the bare-base daughter, where "re-apply to the head" is inert' },
@@ -590,7 +603,7 @@ export const STRINGS = {
   'B3.family.alternative-from': { text: 'an alternative from ⟨time⟩ of ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S10: an alternative\'s relation label at mid, in the box\'s rows and in the trail' },
   'B3.family.start-alternative': { text: 'start an alternative of this draft from here', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S10: the alternative act' },
   'B3.family.edition-of': { text: 'the edition of ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S10, B3-S4: an edition named by its draft' },
-  'B3.family.one-beside': { text: '· 1 version beside this one', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S10: the edition\'s corner where a daughter stands' },
+  'B3.family.one-beside': { text: '1 version beside this one', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S10: the edition\'s corner where a daughter stands' },
   'B3.family.home-draft': { text: 'your draft of your home document', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S10: the home\'s staging draft\'s label, by its role, whether or not the home holds a member' },
   'B3.family.draft-of-it': { text: 'your draft of it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S10, B3-S11: the person\'s staging draft of an edition named by its role after the first mention' },
   'B3.key-record-stays': { text: 'your key record stays — it is a record of its own, not text', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S10: the deletion face at a removal across the key record\'s run' },
@@ -646,11 +659,11 @@ export const STRINGS = {
   'B3.publish.leave-private.line': { text: 'readers of version ⟨k⟩ meet a placeholder here — they see that a private passage of ⟨origin⟩ stands here, whose it is, how long it is and where in ⟨origin⟩ it was written, never what it says; version ⟨k⟩ keeps it so for good, and only a later version fills it, once those words of ⟨origin⟩ are published', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (i): the third answer\'s line before the act' },
   'B3.publish.history': { text: 'every later version of this page is public history from the moment it commits, for as long as this board retains it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (ii): public-forever forward history' },
   'B3.publish.leave-out': { text: 'leave these words out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (i): the second answer at a part a record names, beside the counterpart\'s act' },
-  'B3.publish.placeholder.fills': { text: '— version ⟨k⟩ shows a placeholder here; windowing them fills it in this version', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (i): the row\'s continuation at a part a record names where the head showed a placeholder' },
-  'B3.publish.placeholder.fills.side': { text: '— version ⟨k.m⟩ shows a placeholder here; windowing them fills it in this version', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (i), the merge scene: the continuation where the daughter showed the placeholder' },
-  'B3.publish.placeholder.fills.both': { text: '— versions ⟨k⟩ and ⟨k.m⟩ show a placeholder here; windowing them fills it in this version', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (i), the merge scene: the continuation where the head and the daughter both showed the placeholder' },
-  'B3.publish.answered.counterpart': { text: '— your ⟨m⟩ marks on these words are published with them, and your ⟨l⟩ links on them are offered next', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (i): the answered row\'s clause once the counterpart is taken, each half drawn only above zero' },
-  'B3.publish.answered.private': { text: '— your formatting on these words stays in your draft until a version shows them', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (i): the answered row\'s clause once "leave it private" is taken where marks of the person\'s lie on these words' },
+  'B3.publish.placeholder.fills': { text: 'version ⟨k⟩ shows a placeholder here; windowing them fills it in this version', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (i): the row\'s continuation at a part a record names where the head showed a placeholder' },
+  'B3.publish.placeholder.fills.side': { text: 'version ⟨k.m⟩ shows a placeholder here; windowing them fills it in this version', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (i), the merge scene: the continuation where the daughter showed the placeholder' },
+  'B3.publish.placeholder.fills.both': { text: 'versions ⟨k⟩ and ⟨k.m⟩ show a placeholder here; windowing them fills it in this version', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (i), the merge scene: the continuation where the head and the daughter both showed the placeholder' },
+  'B3.publish.answered.counterpart': { text: 'your ⟨m⟩ marks on these words are published with them, and your ⟨l⟩ links on them are offered next', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (i): the answered row\'s clause once the counterpart is taken, each half drawn only above zero' },
+  'B3.publish.answered.private': { text: 'your formatting on these words stays in your draft until a version shows them', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (i): the answered row\'s clause once "leave it private" is taken where marks of the person\'s lie on these words' },
   'B3.publish.left-out': { text: 'except the ⟨n⟩ passages you left out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2, P4, the merge scene: the clause after "all of this draft" in every whole-draft statement and command where a part was answered "leave these words out"' },
   'B3.publish.left-out.1': { text: 'except the passage you left out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2, P4, the merge scene: that clause at one' },
   'B3.publish.forever': { text: 'what this publishes can never be made private again — afterwards the one remedy is a public "published in error" claim on the whole document, which leaves it readable', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (ii): the one post-act remedy, said before the act' },
@@ -658,11 +671,11 @@ export const STRINGS = {
   'B3.publish.stayed-private': { text: '⟨n⟩ of your links and notes on these words stayed private when version\u00a0⟨k⟩ was published; they stay private with this version\u00a0— open their sets to publish any of them with this version', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (iii): the own-links line where P3 does not stand' },
   'B3.publish.provenance': { text: 'what you typed here reads as written by you at this publication, and so do words you quoted as a copy — their colophon, published with them, says whose they were; what you windowed answers its origin', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (iv): the provenance partition' },
   'B3.publish.count': { text: 'this is one permanent public write — version ⟨k⟩ of ⟨E⟩ with ⟨l⟩ link(s) published with it, with ⟨n⟩ mark(s) of formatting published with it, with ⟨r⟩ mark(s) you took off retracted and with ⟨e⟩ mark(s) you edited published over their words as they now stand, each earlier form retracted, public the moment it commits; your draft then shows the published words', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (vii): the count, C-53\'s one write as PUB-3.8 reads it, each term dropped with its joiner at zero' },
-  'B3.publish.count.claim': { text: 'version ⟨k⟩ of ⟨E⟩, with its claim naming ⟨D⟩, with ⟨l⟩ link(s) published with it,', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (vii): the count\'s version clause where the request carries its edition claim' },
-  'B3.publish.count.supersede': { text: 'version\u00a0⟨k+1⟩ of ⟨D⟩, with its claim that ⟨alternative⟩ is superseded by it, with ⟨l⟩ link(s) published with it,', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (vii): the count\'s version clause at a daughter merge' },
+  'B3.publish.count.claim': { text: 'version ⟨k⟩ of ⟨E⟩, with its claim naming ⟨D⟩, with ⟨l⟩ link(s) published with it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (vii): the count\'s version clause where the request carries its edition claim' },
+  'B3.publish.count.supersede': { text: 'version\u00a0⟨k+1⟩ of ⟨D⟩, with its claim that ⟨alternative⟩ is superseded by it, with ⟨l⟩ link(s) published with it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (vii): the count\'s version clause at a daughter merge' },
   'B3.publish.divergence': { text: 'from now on the published version and this draft are two documents\u00a0— what you change here reaches readers when you publish again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (v): the divergence' },
   'B3.publish.recurrence': { text: 'this adds version ⟨k+1⟩ after version ⟨k⟩\u00a0— readers meet it at ⟨E⟩\'s address; earlier versions stay readable at theirs', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (vi): the recurrence' },
-  'B3.publish.caveat.past-states': { text: '— this draft\'s past states name the key behind each change', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (vii): the keyless-hand caveat\'s clause, "past states" its act opening the read that tells' },
+  'B3.publish.caveat.past-states': { text: 'this draft\'s past states name the key behind each change', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (vii): the keyless-hand caveat\'s clause, "past states" its act opening the read that tells' },
   'B3.publish.claim-line': { text: 'its claim tells every reader of ⟨E⟩ that it was published from ⟨D⟩ — they see that draft\'s address and whose it is, never what it says', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (vii): the claim\'s line beside the count, whole every time' },
   'B3.publish.edition.new': { text: 'a new document', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1, B3-S11: the edition named before its first publication stands, as P4\'s command names it' },
   'B3.publish.edition.minted': { text: 'the new document', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (vii): ⟨E⟩ in the claim\'s line where the shot mints it' },
@@ -670,9 +683,9 @@ export const STRINGS = {
   'B3.publish.formatting.folded': { text: 'formatting · ⟨n⟩ marks · ⟨r⟩ taken off, ⟨e⟩ edited, ⟨c⟩ cut', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (1): the formatting line folded where it holds more than its marks sentence, each count drawn only above zero, the sentences whole on its disclosure' },
   'B3.publish.formatting.retracted': { text: '⟨r⟩ marks you took off these words are retracted with this version\u00a0— out of today’s view at every version that shows them, and from your other documents that hold these words; a reader’s "as published" switch still shows each at the versions published while it stood', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (1): the formatting line\'s held removals, nothing at zero' },
   'B3.publish.formatting.edited': { text: '⟨e⟩ marks you edited are published over their words as they now stand, each earlier form retracted', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (1): the formatting line\'s re-made marks, nothing at zero' },
-  'B3.publish.formatting.widened': { text: '; where one now also marks words an earlier version holds without it, it shows there too', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (1): the re-made marks\' clause where one now also marks words an earlier version holds without it' },
-  'B3.publish.formatting.set-ends': { text: '; your formatting of these words in ⟨label⟩ ends with them', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (1): the held removals\' clause at a mark published from the person\'s formatting set' },
-  'B3.publish.formatting.set-came': { text: '; ⟨f⟩ of these came from Formatting of ⟨label⟩\u00a0— their edited forms are this draft’s now', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (1): the re-made marks\' clause at marks published from the person\'s formatting set' },
+  'B3.publish.formatting.widened': { text: 'where one now also marks words an earlier version holds without it, it shows there too', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (1): the re-made marks\' clause where one now also marks words an earlier version holds without it' },
+  'B3.publish.formatting.set-ends': { text: 'your formatting of these words in ⟨label⟩ ends with them', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (1): the held removals\' clause at a mark published from the person\'s formatting set' },
+  'B3.publish.formatting.set-came': { text: '⟨f⟩ of these came from Formatting of ⟨label⟩\u00a0— their edited forms are this draft’s now', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (1): the re-made marks\' clause at marks published from the person\'s formatting set' },
   'B3.publish.formatting.run-on': { text: '⟨n⟩ of these marks run on past the last word you publish — each is published up to it, the rest staying in your draft', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (1): marks a selection\'s cut runs past' },
   'B3.publish.formatting.part': { text: '⟨n⟩ of these marks are published without the part you took off', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (1): re-made marks whose part-copy a held removal names' },
   'B3.publish.caveat.marks': { text: 'these marks may be this machine\'s writes, not yours — this board admits that write whenever local trust is on, and this surface cannot read whether it was.', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (1): C-100\'s caveat beside the formatting line, saying "marks"' },
@@ -681,14 +694,14 @@ export const STRINGS = {
   'B3.publish.row.switch.formatting': { text: 'publish this formatting with the text\u00a0— into ⟨destination⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the switch at the person\'s formatting set' },
   'B3.publish.switch.off': { text: 'off', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the state word beside a private row\'s switch, off' },
   'B3.publish.switch.on': { text: 'on\u00a0— publishes with the text', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the state word beside a private row\'s switch, on' },
-  'B3.publish.row.formatting-ends': { text: '— your formatting of these words in ⟨label⟩ stays while its copy stands, and ends with it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the formatting set\'s row line, its last clause' },
+  'B3.publish.row.formatting-ends': { text: 'your formatting of these words in ⟨label⟩ stays while its copy stands, and ends with it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the formatting set\'s row line, its last clause' },
   'B3.publish.row.line': { text: 'public and permanent, like the text — each a fresh public link to every reader, its tie to your private original a record only ⟨set⟩\'s readers can read — anyone can tell that a private original stands behind each, never where; ⟨p⟩ of them point into ⟨private documents, each with its owner⟩, which stay private — readers see that a passage there is linked, and can read how long it is and where in that document it was written, not what it says, and, where one points at a link there rather than a passage, that a link there exists, and how many that document holds at least; ⟨d⟩ of them point at words of this draft you are not publishing — readers see that a passage of this draft is linked there, how long it is and where in your drafting it was written, not what it says — and once you publish those words as new, each stays on the draft\'s earlier words and readers meet it as withheld, its original offered again with those words and, switched on, published then whole beside this copy; ⟨c⟩ of these run on past the last word you publish — each is published up to it, the rest staying private with your draft, and is offered again when you publish the rest and, switched on, published then whole beside this part; to publish one whole, widen what you publish to its words; ⟨t⟩ of them are typed by a private document of yours — readers see its address as their type, never what it says; a public copy of each is published into ⟨destination⟩ — your originals stay in ⟨set⟩, each marked as published by its copy, and are not offered again — save ⟨c⟩\'s and ⟨d⟩\'s, as above', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): a private set\'s row line, each counted clause only above zero' },
   'B3.publish.row.notes': { text: '⟨a⟩ of them link these words to your notes, whose words stay private — readers see that each links to a note of yours, and can read how long the note is and where in ⟨set⟩ it was written, not what it says', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the row line\'s clause, in ⟨p⟩\'s place, at links to the person\'s own notes' },
   'B3.publish.row.reoffered': { text: '⟨n⟩ of these were published before — their first copies stay, and readers meet each as withheld; retract each at its card, at its mark in this draft: after publishing, a reader\'s "as published" switch still shows each at this version, beside its retraction; to keep them from this version too, cancel and retract them first; or leave this off and move each first copy\'s end publicly at its card; left off, this document offers none again while these words stay in its versions\u00a0— to publish one later, make the link again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the counted clause at re-offered ⟨d⟩ originals' },
   'B3.publish.row.reoffered.part': { text: '⟨n⟩ of these were published before, in part — their first copies stay, and readers meet both over the words each covers; retract each at its card, at its mark in this draft: after publishing, a reader\'s "as published" switch still shows each at this version, beside its retraction; to keep them from this version too, cancel and retract them first; or leave this off and move each first copy\'s end publicly at its card; left off, this document offers none again while these words stay in its versions\u00a0— to publish one later, make the link again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the counted clause at re-offered ⟨c⟩ originals' },
   'B3.publish.row.reoffered.notes': { text: 'annotate these words again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the re-offered clause\'s last words where the originals it counts are notes' },
   'B3.publish.row.reoffered.both': { text: 'make the link again, or annotate these words again for a note', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the re-offered clause\'s last words where it counts notes and links both' },
-  'B3.publish.row.move-end': { text: '— or leave this off and move the first copy\'s end publicly at its card', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the re-offered clause\'s route at one first copy' },
+  'B3.publish.row.move-end': { text: 'or leave this off and move the first copy\'s end publicly at its card', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the re-offered clause\'s route at one first copy' },
   'B3.publish.row.revises': { text: '⟨u⟩ of these revise links already published — to publish the revision, revise the published copy at its page, or, where you took that copy back, make the link again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the row\'s line where its links revise links already published' },
   'B3.publish.row.revises.folded': { text: '⟨u⟩ revise links already published', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): that line folded to its count at a later version, its sentence whole on the disclosure' },
   'B3.publish.destination': { text: '⟨E⟩ (this document — version ⟨k⟩, the one being published)', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the destination, pre-selected' },
@@ -696,14 +709,14 @@ export const STRINGS = {
   'B3.publish.destination.line': { text: 'in ⟨E⟩ these links are published with version ⟨k⟩ and live under its address; by default they show at every version that holds their words, an earlier one included — a reader\'s "as published" switch shows each version its own; retracting one takes it out of today\'s view at every version, one link at a time; a reader\'s "as published" switch still shows it at the versions published while it stood, beside its retraction', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the destination\'s line' },
   'B3.publish.destination.other': { text: 'another published document of yours', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the destination one pick away' },
   'B3.publish.destination.other.line': { text: 'shown at every version read with it, an earlier one included — retracting one takes it out of today\'s view at every version, one link at a time; a reader\'s "as published" switch still shows it at the versions published while it stood, beside its retraction — the link and its retraction staying on the record', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the other destination\'s line' },
-  'B3.publish.destination.read-with': { text: '— and ⟨E⟩ is then read with all of ⟨S⟩: every reader of ⟨E⟩, at every version of it, sees ⟨S⟩\'s links on its words by default, its later links there too, until you retract "read ⟨E⟩ with ⟨S⟩" at ⟨E⟩\'s links card; where you retracted one before, this writes it again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the destination line\'s clause where ⟨E⟩ is not read with ⟨S⟩ now' },
+  'B3.publish.destination.read-with': { text: 'and ⟨E⟩ is then read with all of ⟨S⟩: every reader of ⟨E⟩, at every version of it, sees ⟨S⟩\'s links on its words by default, its later links there too, until you retract "read ⟨E⟩ with ⟨S⟩" at ⟨E⟩\'s links card; where you retracted one before, this writes it again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the destination line\'s clause where ⟨E⟩ is not read with ⟨S⟩ now' },
   'B3.publish.row.off': { text: 'stays private — these links stay on this draft\'s earlier words; you read them on the published text through this publication\'s record, as does every reader of both ⟨set⟩ and this draft who switches ⟨set⟩ on', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the row\'s line switched off, compact after its first showing' },
   'B3.publish.row.off.counterpart': { text: 'stays private\u00a0— these links stay on ⟨origin⟩’s earlier words; you read them on the published words through ⟨E.j⟩’s publication, as does every reader of both ⟨set⟩ and ⟨origin⟩ who switches ⟨set⟩ on', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): a private set\'s row switched off, its links on a counterpart window\'s words' },
   'B3.publish.row.off.placeholder': { text: 'stays private\u00a0— these links stay on ⟨origin⟩’s words, which this version shows as a placeholder; you see them there, as does every reader of both ⟨set⟩ and ⟨origin⟩ who switches ⟨set⟩ on', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): a private set\'s row switched off, its links on words the version keeps behind a placeholder' },
   'B3.publish.row.private': { text: 'private · ⟨n⟩ links · its readers see that your note is linked', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the notes row\'s one line while off, the whole line opening as its switch turns on' },
   'B3.publish.no-one-else': { text: 'no one else does', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3: a reader clause\'s place where the set has no reader besides the person' },
-  'B3.publish.row.off.again': { text: '— and your next version offers them again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the switched-off line\'s first showing in a session at a whole row' },
-  'B3.publish.row.off.others': { text: '— and your next version offers the others again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the switched-off line\'s first showing where the row also holds re-offered originals or revisions' },
+  'B3.publish.row.off.again': { text: 'and your next version offers them again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the switched-off line\'s first showing in a session at a whole row' },
+  'B3.publish.row.off.others': { text: 'and your next version offers the others again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the switched-off line\'s first showing where the row also holds re-offered originals or revisions' },
   'B3.publish.row.readers': { text: 'moves privately — read by you and ⟨reviewer⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the row\'s reader line where the set\'s readers of this draft are more than the person' },
   'B3.publish.row.on-published': { text: '⟨w⟩ of these were made on words already published — they stay on those words and show there for you — and, switched on, for every reader of ⟨set⟩: ⟨its reader chip⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): the row\'s line for links made on words already published' },
   'B3.publish.row.on-published.folded': { text: '⟨w⟩ made on words already published', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P3 (2): that line folded to its count at a later version, its sentence whole on the disclosure' },
@@ -755,12 +768,12 @@ export const STRINGS = {
   'B3.publish.busy.notebook': { text: 'your notebook is busy\u00a0— nothing was published; publish again in a moment', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: `budget_race` at the act, on the person\'s own notebook' },
   'B3.publish.may-stand': { text: 'this publication may already stand\u00a0— look at your published documents before you publish it again; if it does not, cancel and publish again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the lost acknowledgment\'s halt at the mint form' },
   'B3.publish.beside-line': { text: 'this version stands beside version ⟨k+1⟩ as version ⟨k.1⟩ — readers of ⟨E⟩ meet version ⟨k+1⟩, not this', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2: the reveal at a base behind the head' },
-  'B3.publish.beside-line.act': { text: '— to bring these words into what ⟨E⟩\'s readers meet, cancel and re-apply to the head', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2: the reveal at a base behind the head, its act' },
+  'B3.publish.beside-line.act': { text: 'to bring these words into what ⟨E⟩\'s readers meet, cancel and re-apply to the head', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2: the reveal at a base behind the head, its act' },
   'B3.publish.earlier-version': { text: '⟨labels⟩ were written on an earlier version than this — what you publish from them next stands beside this one', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2: the family drafts left behind' },
   'B3.publish.behind': { text: 'this publishes all of this draft as version ⟨k+1⟩ of ⟨D⟩ — ⟨label⟩ stays as it is, written on an earlier version than this', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P4: the merge draft\'s command, a family draft behind' },
   'B3.publish.behind.left-out': { text: 'this publishes all of this draft except the ⟨n⟩ passages you left out, as version ⟨k+1⟩ of ⟨D⟩\u00a0— ⟨label⟩ stays as it is, written on an earlier version than this', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the merge scene\'s draft side, P2\'s statement where a part was answered "leave these words out"' },
-  'B3.publish.merge-kept': { text: '· this merge’s record kept in "merges"', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P5: the transient segment after the member\'s address at a merge\'s end' },
-  'B3.publish.merge-kept.first': { text: '· this merge’s record kept in "merges", made now to keep a private record of each merge you publish', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P5: the transient segment at the person\'s first merge, which mints the journal' },
+  'B3.publish.merge-kept': { text: 'this merge’s record kept in "merges"', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P5: the transient segment after the member\'s address at a merge\'s end' },
+  'B3.publish.merge-kept.first': { text: 'this merge’s record kept in "merges", made now to keep a private record of each merge you publish', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P5: the transient segment at the person\'s first merge, which mints the journal' },
   'B3.publish.placeholder-mark': { text: 'in version ⟨k⟩ as a placeholder — withheld for its readers', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P5: the master\'s mark on a run the third answer left windowing a private origin' },
   'B3.publish.published-as': { text: 'published as ⟨copy⟩ in ⟨destination⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P5, B3-S12: the original\'s line in the "which" list and at the card' },
   'B3.publish.published-as.version': { text: 'published as ⟨copy⟩ in ⟨destination⟩ with version ⟨j⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P5, B3-S12: the original\'s line where key (iii)\'s save has published it twice, once per copy' },
@@ -771,7 +784,7 @@ export const STRINGS = {
   'B3.publish.read-again': { text: 'read them again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P5: the act on the line where the refraction\'s read fails, re-issuing the read' },
   'B3.merge.composing': { text: 'composing the merge — nothing you type goes in until it opens', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the merge slot running from the press (D6 BM-65)' },
   'B3.merge.moved': { text: '⟨into⟩ changed as the merge was composed — nothing was merged', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the landing refused `arrangement_moved` (D6 BM-66)' },
-  'B3.merge.side-moved': { text: '⟨label⟩ changed after this merge was set out — to merge what it holds now,', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: a side that has moved, before the act (D6 BM-66)' },
+  'B3.merge.side-moved': { text: '⟨label⟩ changed after this merge was set out — to merge what it holds now', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: a side that has moved, before the act (D6 BM-66)' },
   'B3.merge.undone': { text: 'nothing is published — the merge is undone: ⟨into⟩ is as it was before it, and ⟨alternative⟩ stands', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the landing\'s undo (D6 BM-35)' },
   'B3.merge.undone.new': { text: 'nothing is published — the merge is undone: ⟨into⟩ keeps version ⟨k⟩\'s text and stays; your unpublished changes are in ⟨label⟩, and ⟨alternative⟩ stands', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the landing\'s undo at a new draft (D6 BM-35)' },
   'B3.merge.landed': { text: 'nothing is published\u00a0— ⟨into⟩ keeps the merged words; undo takes them out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the merge scene\'s leave line, at the draft side too' },
@@ -808,12 +821,12 @@ export const STRINGS = {
   'B3.merge.line.set-out': { text: 'a merge of ⟨label⟩ is set out here', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the merge line at a draft-side merge' },
   'B3.merge.line.supersedes': { text: 'supersedes ⟨alternative⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the merged member\'s corner, among the claims about the whole document, for every reader of the version' },
   'B3.merge.open-here': { text: 'this merge is open here — its places are listed beside the text', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the re-apply act\'s reason, inert while the scene stands over the marked draft' },
-  'B3.merge.set-out-on': { text: 'this merge was set out on version ⟨k⟩ — to merge ⟨alternative⟩ with version ⟨k+1⟩,', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the merge line where the head has moved since, before its act' },
+  'B3.merge.set-out-on': { text: 'this merge was set out on version ⟨k⟩ — to merge ⟨alternative⟩ with version ⟨k+1⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the merge line where the head has moved since, before its act' },
   'B3.merge.head-published': { text: 'version ⟨k+1⟩ of ⟨D⟩ was published since this merge was set out — to merge ⟨alternative⟩ with it, re-apply to the head', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the landing refused `head_moved`' },
   'B3.merge.whole': { text: 'a merge is published whole — all of this draft, not the passages you selected', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P1: a selection at a marked draft' },
   'B3.merge.whole.cancel': { text: 'a merge is published whole — to change a place, cancel; the merge stays open, its places marked', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2: the reveal at a marked draft' },
   'B3.merge.no-claim': { text: 'it carries no claim — ⟨alternative⟩ is not marked superseded, and this draft\'s merge ends with it; to merge ⟨alternative⟩ with version ⟨k+1⟩, cancel and re-apply to the head', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P4: the command at a marked draft behind the head' },
-  'B3.merge.gained': { text: '— what ⟨label⟩ gained since this merge was set out stays in it, out of this version', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2: the reveal at a draft-side merge whose side moved' },
+  'B3.merge.gained': { text: 'what ⟨label⟩ gained since this merge was set out stays in it, out of this version', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2: the reveal at a draft-side merge whose side moved' },
   'B3.merge.before-1': { text: 'this draft was begun before version 1, so what it changed cannot yet be told from what version 1 added — to bring its words in, paste them into ⟨label⟩ and publish that', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the merge\'s act at a draft begun before version 1' },
   'B3.merge.before-1.version': { text: 'this version was begun before version 1, so what it changed cannot yet be told from what version 1 added — to bring its words in, paste them into ⟨label⟩ and publish that', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the merge\'s act at version 1.1' },
   'B3.merge.gap.order': { text: 'words were added here on both sides — version ⟨k⟩\'s first, then ⟨alternative⟩\'s; keep this order or swap them', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: a gap of the order kind' },
@@ -846,10 +859,10 @@ export const STRINGS = {
   'B3.merge.slot.draft': { text: 'publish all of it as the next version', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the corner\'s publish slot at a draft side carrying this merge' },
   'B3.merge.undo.inherited': { text: 'nothing to undo: this draft inherited the merge when it was staged; discard it or edit it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the undo at a draft that inherited its merge when it was staged' },
   'B3.merge.no-claim.draft': { text: 'this draft\'s merge ends with it; to merge ⟨label⟩ with version ⟨k+1⟩, cancel and re-apply to the head', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2 (vi): the clause at a behind draft carrying a draft-side merge' },
-  'B3.merge.behind.ending': { text: '— ⟨alternative⟩ is not marked superseded; it can never be made private again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P4: the behind form\'s ending at a marked draft' },
+  'B3.merge.behind.ending': { text: '⟨alternative⟩ is not marked superseded; it can never be made private again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P4: the behind form\'s ending at a marked draft' },
   'B3.merge.statement': { text: 'this publishes all of this draft as version\u00a0⟨k+1⟩ of ⟨D⟩\u00a0— ⟨alternative⟩ stays readable at its own address and is marked superseded by it for good; to publish these words with no such mark, cancel and take "keep the words, supersede nothing" at this draft’s corner first', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2: the merge\'s statement before the act, whole every time' },
   'B3.merge.statement.left-out': { text: 'this publishes all of this draft except the ⟨n⟩ passages you left out, as version ⟨k+1⟩ of ⟨D⟩\u00a0— ⟨alternative⟩ stays readable at its own address and is marked superseded by it for good; to publish these words with no such mark, cancel and take “keep the words, supersede nothing” at this draft’s corner first', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2: the merge\'s statement where a part was answered "leave these words out"' },
-  'B3.merge.places': { text: '⟨n⟩ places stand as the merge placed them:', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2: the head of the places left at their defaults' },
+  'B3.merge.places': { text: '⟨n⟩ places stand as the merge placed them', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2: the head of the places left at their defaults' },
   'B3.merge.placed.order': { text: 'version ⟨k⟩\'s first', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2: an ORDER place, as placed' },
   'B3.merge.placed.after': { text: 'after "⟨words⟩"', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2: a CORNER or CUT place, as placed' },
   'B3.merge.placed.both': { text: 'both, version ⟨k⟩\'s first', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2: a COLLISION place, as placed' },
@@ -889,18 +902,18 @@ export const STRINGS = {
   'B3.card.retract.public': { text: 'and this retraction is public, like the link', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the retract line\'s clause at a link homed in a published document of the person\'s' },
   'B3.card.retract.copy.lead': { text: 'this retraction is public, like the link\u00a0— your private original stays and still shows for you', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the retract line\'s lead at an accept\'s copy, whole every time' },
   'B3.card.retract.copy': { text: 'your private original stays where it is and still shows for you\u00a0— it is not offered at your next version, save at a version that brings in words of it this copy does not reach; to publish it again otherwise, make the link again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the retract line at an accept\'s copy whose original key (iii)\'s save may offer again' },
-  'B3.card.retract.copy.again': { text: '; to publish it again, make the link again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the accept\'s copy\'s tail where no save clause is drawn' },
-  'B3.card.retract.copy.other': { text: '; its other copy, in ⟨destination⟩, covers its words, and every reader still meets it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the accept\'s copy\'s tail where a second copy of its original stands' },
-  'B3.card.retract.rest': { text: '— its part on words ⟨label⟩ has not yet published stays there', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the retract line at a copy of the formatting types whose original has a rest' },
-  'B3.card.retract.set': { text: '— your formatting of these words in ⟨label⟩ ends with it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the retract line at a copy published from the person\'s formatting set' },
-  'B3.card.retract.set.rest': { text: '— your formatting of these words in ⟨label⟩ ends with it; on words you never published, it stays', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the retract line at a copy published from the person\'s formatting set where a rest stands' },
+  'B3.card.retract.copy.again': { text: 'to publish it again, make the link again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the accept\'s copy\'s tail where no save clause is drawn' },
+  'B3.card.retract.copy.other': { text: 'its other copy, in ⟨destination⟩, covers its words, and every reader still meets it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the accept\'s copy\'s tail where a second copy of its original stands' },
+  'B3.card.retract.rest': { text: 'its part on words ⟨label⟩ has not yet published stays there', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the retract line at a copy of the formatting types whose original has a rest' },
+  'B3.card.retract.set': { text: 'your formatting of these words in ⟨label⟩ ends with it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the retract line at a copy published from the person\'s formatting set' },
+  'B3.card.retract.set.rest': { text: 'your formatting of these words in ⟨label⟩ ends with it; on words you never published, it stays', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the retract line at a copy published from the person\'s formatting set where a rest stands' },
   'B3.card.retract.note-copy': { text: 'to publish the note again otherwise, annotate these words again — your next version offers that new note, its words private as this one\'s are, and you see both until you retract the original', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the retract line\'s last clause at the copy of a note' },
   'B3.card.retract.note-original': { text: 'your published copy stays in ⟨destination⟩ and every reader still meets it — to take it back, retract it at its own card', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the retract line at a note\'s private original while its copy stands' },
   'B3.card.retract.note-original.two': { text: 'your published copies stay, in ⟨destination⟩ with version ⟨j⟩ and in ⟨destination⟩ with version ⟨j′⟩, and every reader still meets both — to take one back, retract it at its own card', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the retract line at a note\'s private original published twice' },
-  'B3.card.retract.note': { text: '— your note stays in ⟨label⟩ as words of its own, tied to no passage once this goes', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the retract line\'s clause at an annotation link' },
+  'B3.card.retract.note': { text: 'your note stays in ⟨label⟩ as words of its own, tied to no passage once this goes', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the retract line\'s clause at an annotation link' },
   'B3.card.move.readers': { text: '⟨readers⟩ read ⟨destination⟩ and will see that ⟨source⟩ holds this link, and what it says', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the move\'s line between two private sets shared with different readers' },
   'B3.card.move.public': { text: 'a copy goes into ⟨set⟩ — the original stays public in ⟨its set⟩, and every reader still meets it, until you retract it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the move\'s line at a public original' },
-  'B3.card.move.public.superseded': { text: '— and from now on marked superseded by the copy, for good, whatever you retract later', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the move\'s clause where ⟨set⟩ is published' },
+  'B3.card.move.public.superseded': { text: 'and from now on marked superseded by the copy, for good, whatever you retract later', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the move\'s clause where ⟨set⟩ is published' },
   'B3.card.link-to.inert.beside': { text: 'hold the other passage too — open the document it is in beside this one from the address line, select it there, then open this card again at its symbol', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: "link to…" from the card with one passage held, no scene standing' },
   'B3.card.link-to.peek': { text: 'then peek at the passage\'s links and open this card again at its symbol', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the reason\'s last clause at a link the view draws only in a peek' },
   'B3.card.in-error.confirm': { text: 'this files a public claim that ⟨E⟩ was published in error — the claim names the whole document, not this version — permanent, never withdrawn, and supersedable — and only ⟨claimant⟩ can supersede it, so if you lose every key nothing lifts it, ever. It reveals nothing back: ⟨E⟩ stays readable. For a wrong passage in a document that is otherwise right, publish its next version without the passage — it leaves what every reader meets and stays readable at this version, forever', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: C-58\'s confirmation, its FACE rendering' },
@@ -930,7 +943,7 @@ export const STRINGS = {
   'B3.format.unseen': { text: 'readers of ⟨E⟩ do not see it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a mark in the person\'s formatting set, beside it in the smallest type at the first such mark in a session' },
   'B3.format.kept.set': { text: 'kept in Formatting of ⟨label⟩\u00a0— only you see it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the format strip\'s head at text the person may read and not write; the one line as a formatting act at an edition\'s words lands in the person\'s formatting set' },
   'B3.format.kept.set.compact': { text: 'kept in Formatting of ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the one line after a formatting act lands in the person\'s formatting set, after the first in a session' },
-  'B3.format.kept.set.made': { text: 'kept in Formatting of ⟨label⟩, made for it\u00a0—', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the one line where the formatting act mints the person\'s formatting set, before its tail' },
+  'B3.format.kept.set.made': { text: 'kept in Formatting of ⟨label⟩, made for it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the one line where the formatting act mints the person\'s formatting set, before its tail' },
   'B3.format.in.set': { text: 'in Formatting of ⟨label⟩ (private)', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a mark\'s set at its card' },
   'B3.format.taken-off.set': { text: 'taken off in Formatting of ⟨E⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the one line after a mark is taken off in the person\'s formatting set' },
   'B3.format.set.label': { text: 'Formatting of ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the person\'s formatting set\'s label' },
@@ -967,7 +980,7 @@ export const STRINGS = {
   'B3.format.cycle': { text: '⟨level⟩ — let go to set it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the held cycle\'s level at the focus, whole at the first use in a session' },
   'B3.format.style.on': { text: '⟨form⟩ — what you type next; ⟨its chord or act⟩ again stops it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the typing style\'s line at the focus' },
   'B3.format.style.off': { text: 'not ⟨form⟩ — what you type next', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the typing style\'s line at the focus, a form left off' },
-  'B3.format.style.inside': { text: '; the ⟨form⟩ either side stays', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the typing style\'s line inside a mark, its added clause' },
+  'B3.format.style.inside': { text: 'the ⟨form⟩ either side stays', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the typing style\'s line inside a mark, its added clause' },
   'B3.format.style.on.compact': { text: '⟨form⟩ next', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the typing style\'s line, compact' },
   'B3.format.style.off.compact': { text: 'not ⟨form⟩ next', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the typing style\'s line, a form left off, compact' },
   'B3.format.style.unkept': { text: '⟨board⟩ has not kept these words, so their ⟨form⟩ is not made — once it has, select them and apply ⟨form⟩ again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the focus where a hold answers in place of the ack a typing style\'s mark waits on' },
@@ -1000,11 +1013,12 @@ export const STRINGS = {
   'L.held.device': { text: 'held on this device', cls: 'DRAFT', source: 'ux/questions/2026-11-09-unsent-typing-which-text.decision.md', screen: 'B3-S2: the ARIA mirror\'s description of an item holding words the board has not minted, or a held removal, while the draft holds a line the board has not kept' },
   'L.removed.part': { text: 'only part of the passage — you removed the rest', cls: 'DRAFT', source: 'ux/questions/2026-11-09-unsent-typing-which-text.decision.md', screen: 'a return\'s landing line (FP-21) where the person\'s own removal took every byte the draft no longer holds' },
   'L.removed.all': { text: 'you removed this passage', cls: 'DRAFT', source: 'ux/questions/2026-11-09-unsent-typing-which-text.decision.md', screen: 'the dead end\'s face at a return to a passage the person\'s own removal took whole (foundations §2.3)' },
-  // a copy outside a field with nothing selected (D5 K-92; FP-27): the line, ⟨selects⟩ the act that selects at the walk's
-  // span — Enter's where Enter selects it, Shift+↓'s at any other span at its reading scale — '' anywhere else
-  'L.copy.nothing': { text: 'nothing selected — the clipboard is unchanged⟨selects⟩', cls: 'DRAFT', source: 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md', screen: 'a hint at the focus and the status region: Mod+C, or a copy, with nothing selected outside a field (D5 K-92)', hint: 'clause' },
-  'L.copy.nothing.enter': { text: '; Enter selects this passage', cls: 'DRAFT', source: 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md', screen: 'the copy line\'s end where Enter selects the walk\'s span (D5 K-92, K-7)' },
-  'L.copy.nothing.shift': { text: '; Shift+↓ selects this passage', cls: 'DRAFT', source: 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md', screen: 'the copy line\'s end at any other span at its reading scale (D5 K-92, K-8)' },
+  // a copy outside a field with nothing selected (D5 K-92; FP-27): the line, then, a sentence of its own while the line
+  // stands whole, the act that selects at the walk's span — Enter's where Enter selects it, Shift+↓'s at any other span at
+  // its reading scale — and none anywhere else
+  'L.copy.nothing': { text: 'nothing selected — the clipboard is unchanged', cls: 'DRAFT', source: 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md', screen: 'a hint at the focus and the status region: Mod+C, or a copy, with nothing selected outside a field (D5 K-92)', hint: 'clause' },
+  'L.copy.nothing.enter': { text: 'Enter selects this passage', cls: 'DRAFT', source: 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md', screen: 'the copy line\'s end where Enter selects the walk\'s span (D5 K-92, K-7)' },
+  'L.copy.nothing.shift': { text: 'Shift+↓ selects this passage', cls: 'DRAFT', source: 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md', screen: 'the copy line\'s end at any other span at its reading scale (D5 K-92, K-8)' },
   'L.run.not-yet': { text: 'cannot yet be answered', cls: 'DRAFT', source: '', screen: 'B1-S10: a stretch of the selection whose question the board could not answer as of the text the page read', lane: true },
   'L.run.named': { text: '“⟨words⟩” — ⟨answer⟩', cls: 'DRAFT', source: '', screen: 'B1-S10: one stretch of a selection whose stretches answer differently, named by its first words; the "which" list: a source\'s row, the words of the selection its runs hold and its origin', lane: true },
   'L.seam.annotate': { text: 'annotate — comes with the annotation lane; nothing is written here', cls: 'DRAFT', source: '', screen: 'the selection; a hint at the focus', lane: true, hint: 'whole' },
@@ -1076,13 +1090,13 @@ export const STRINGS = {
   'L.scene.stroke.gone': { text: 'no longer drawn here — the text was set again', cls: 'DRAFT', source: '', screen: 'B1-S9: a stroke\'s list', lane: true },
   // a stop drawn only by the panes' `compare` that the reader left from, returned to (SC's): it stands with the landing,
   // named for its kind and what it stood for, what only that read gives — its count — being read until it answers; then,
-  // where what it stood for holds only in part, nowhere, or no answer told, its kind's words before the line's (FP-21)
+  // where what it stood for holds only in part, nowhere, or no answer told, its kind's words and the line's, each a sentence
+  // (FP-21)
   'L.scene.shared.returned': { text: 'show where ⟨D⟩ holds the same material, “⟨text⟩” — how many passages hold it is being read', cls: 'DRAFT', source: '', screen: 'B1-S9: a stop the reader left from, returned to', lane: true },
   'L.scene.shared.returned.away': { text: 'show where ⟨D⟩ held the same material — how many passages hold it is being read', cls: 'DRAFT', source: '', screen: 'B1-S9: a stop the reader left from, returned to', lane: true },
   'L.scene.stroke.kind': { text: 'a change between two shared passages', cls: 'DRAFT', source: '', screen: 'B1-S9: a stop the reader left from, returned to', lane: true },
   'L.scene.stroke.returned': { text: 'a change between two shared passages — how many it stands for is being read: ⟨changes⟩', cls: 'DRAFT', source: '', screen: 'B1-S9: a stop the reader left from, returned to', lane: true },
   'L.scene.stroke.returned.away': { text: 'a change between two shared passages the texts no longer hold where it stood — how many it stands for is being read', cls: 'DRAFT', source: '', screen: 'B1-S9: a stop the reader left from, returned to', lane: true },
-  'L.scene.stop.said': { text: '⟨stop⟩ — ⟨said⟩', cls: 'DRAFT', source: '', screen: 'B1-S9: a stop the reader left from, returned to', lane: true },
   'L.at-position': { text: 'at position ⟨p⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
   // a continuation's mark (`markCount`): its count in what it counts — the words of the target that opens its list, its stop's
   // in the ARIA mirror and its list's caption; and the name and place of the member the walk's ring stands on, on the mark
@@ -1092,7 +1106,7 @@ export const STRINGS = {
   // the anatomy card's lineage by its claims' authority: a claimant the owner row does not name, after its claim on a
   // row; the line the claims without authority stand behind; each of them listed as an assertion — its `.you` form
   // where the reader is the claimant, the verb agreeing — with what the claimant is to the links
-  'L.card.by-owner': { text: '— by its owner, ⟨claimant⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
+  'L.card.by-owner': { text: 'by its owner, ⟨claimant⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
   'L.card.you': { text: 'you', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
   'L.card.others': { text: 'other accounts\' claims — show them', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
   'L.card.claims.superseded-by': { text: '⟨claimant⟩ claims this is superseded by ⟨link⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
@@ -1120,38 +1134,41 @@ export const STRINGS = {
   'L.scene-label': { text: 'the reading scene: two places side by side', cls: 'DRAFT', source: 'designs/plane.html', screen: 'B1-S9' },
   'L.mirror-label': { text: 'the board in record order', cls: 'DRAFT', source: 'designs/plane.html', screen: 'the ARIA mirror' },
   'L.mirror-level': { text: 'level ⟨n⟩', cls: 'DRAFT', source: 'designs/plane.js', screen: 'the ARIA mirror' },
-  // the mirror's item names (N-WALK's `nameOf`): what a screen reader hears at each element of the walk — the board's
-  // item its name, the one the status region calls it by, then its count
+  // the mirror's item names (N-WALK's `nameOf`): what a screen reader hears at each element of the walk, each a sentence the
+  // page composes — the board's item its name, the one the status region calls it by, then its count; an account's, its
+  // counts, then where it holds nothing, that it holds nothing, a sentence of its own
   'L.mirror.item': { text: 'Item ⟨i⟩ of ⟨n⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.board.name': { text: 'board ⟨node⟩, ⟨origin⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror; the status region', lane: true },
   'L.mirror.board': { text: '⟨board⟩: ⟨n⟩ accounts.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.account': { text: 'account ⟨account⟩: ⟨documents⟩ documents, ⟨links⟩ links⟨empty⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.account': { text: 'account ⟨account⟩: ⟨documents⟩ documents, ⟨links⟩ links.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.at-least': { text: 'at least ⟨n⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // a document's item: ⟨kind⟩ its corner's first slot's words — a refused document's corner's own words in their place —
-  // then its address, its first line, and its corner's state after that slot
-  'L.mirror.document': { text: '⟨kind⟩ document ⟨document⟩, ⟨label⟩, ⟨state⟩⟨extent⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.positions': { text: ', ⟨n⟩ positions', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  // then its address; the page lists its first line, its corner's state after that slot and its positions after it, each
+  // where it has one
+  'L.mirror.document': { text: '⟨kind⟩ document ⟨document⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.positions': { text: '⟨n⟩ positions', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  // a span's item: where it stands, the material's origin the page sets after it (L.mirror.same), then its words
   'L.mirror.span': { text: 'span at position ⟨p⟩ of ⟨extent⟩ in ⟨document⟩⟨same⟩: "⟨text⟩".', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.span.bare': { text: 'span at position ⟨p⟩ in ⟨document⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.same': { text: ' (the same material as ⟨origin⟩)', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.same': { text: '(the same material as ⟨origin⟩)', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // a withheld run's item, its own part: ⟨kind⟩ its kind (L.item.withheld) and ⟨length⟩ its positions (L.item.positions), as a
   // copy's stand-in names them, and its origin; and its origin's description, one for every run of it (R94): the owner of its
-  // origin, the entitlement arm, C-67's clause where the claims decide one
+  // origin, then, each a sentence the page composes after it, the entitlement arm and C-67's clause where the claims decide one
   'L.mirror.withheld': { text: '⟨kind⟩ in ⟨document⟩: ⟨length⟩, origin ⟨origin⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.withheld.origin': { text: 'owner ⟨owner⟩. ⟨arm⟩.⟨clause⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror: a withheld origin\'s description', lane: true },
-  // a block that holds no text, a withheld run apart (FP-24): its kind (L.item.*), where it stands, then what the plane shows of
-  // it — a record's words and keys, the length of an item this client cannot show — never its raw value
+  'L.mirror.withheld.origin': { text: 'owner ⟨owner⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror: a withheld origin\'s description', lane: true },
+  // a block that holds no text, a withheld run apart (FP-24): its kind (L.item.*), where it stands, the material's origin the
+  // page sets after it (L.mirror.same), then what the plane shows of it after a colon the page draws — a record's words and
+  // keys, the length of an item this client cannot show — never its raw value
   'L.mirror.no-text': { text: '⟨kind⟩ at position ⟨p⟩ of ⟨extent⟩ in ⟨document⟩⟨same⟩⟨shown⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.shows': { text: ': ⟨shown⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  // C-67's clause after a withheld origin's arm, where its edition claims decide one (PUB-5.124), and a kept clause after an
-  // item's words or an origin's description (L.kept.*); the empty place says nothing
-  'L.mirror.clause': { text: ' ⟨clause⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  // after a withheld run's own part, the links drawn at the run, its item's children (FP-30): ⟨links⟩ their count (F.label.links)
-  'L.mirror.run-links': { text: ' ⟨links⟩ ending in it.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  // after a withheld run's own part, a sentence of its own, the links drawn at the run, its item's children (FP-30): ⟨links⟩
+  // their count (F.label.links)
+  'L.mirror.run-links': { text: '⟨links⟩ ending in it.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // C-67's place where a read of the edition claims failed (FP-33): a blank there would read as no claim
   'L.clause.unread': { text: 'edition claims not read', cls: 'DRAFT', source: '', screen: 'B1-S7; the document-level withheld face; the ARIA mirror', lane: true },
-  // ⟨far⟩ the far end's label (LK's `farLabel`), the words its tail, its card and its list rows carry
-  'L.mirror.link': { text: 'link ⟨link⟩, type ⟨type⟩, ⟨direction⟩ ⟨far⟩⟨floating⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  // ⟨far⟩ the far end's label (LK's `farLabel`), the words its tail, its card and its list rows carry; where the far end's
+  // text holds none of its passage, part of it or all of it in pieces, or the board would not tell, those words whole
+  // (BM-HELD's `farSays`), whose start its symbol and its stub say (`farShort`), a sentence of their own after it
+  'L.mirror.link': { text: 'link ⟨link⟩, type ⟨type⟩, ⟨direction⟩ ⟨far⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.untyped': { text: 'untyped', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // a document the board will say nothing of, as its state: its corner's own words (T-ARTICLE's), which its mirror item leads with
   // and the anatomy card's home row states of a link's home
@@ -1167,22 +1184,18 @@ export const STRINGS = {
   'L.far.empty.next': { text: 'the next new document made in your account goes here, and this link will lead to it', cls: 'DRAFT', source: '', screen: 'a link\'s far end: the follow\'s face, the face of "read side by side" opened from it, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
   'L.far.empty.order': { text: 'your account\'s new documents take its addresses in order', cls: 'DRAFT', source: '', screen: 'a link\'s far end: the follow\'s face, the face of "read side by side" opened from it, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
   'L.far.unknown': { text: 'no document known here', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its tail, a merged tail, B1-S5, the "which" list, the follow\'s face, the face of "read side by side" opened from it, the ARIA mirror', lane: true },
-  // a link whose far end's text holds none of its passage, part of it or all of it in pieces, or the board would not tell:
-  // those words whole (BM-HELD's `farSays` — F.floating's, or its line), whose start its symbol and its stub say
-  // (`farShort`)
-  'L.mirror.floating': { text: ' — ⟨sentence⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // a jump reading, said where the camera is until its read answers; a jump reaching, said at the act's site while only a read
   // can place its destination, the camera still (FP-25)
   'L.reading': { text: 'reading ⟨address⟩…', cls: 'DRAFT', source: '', screen: 'a jump reading: where the camera is, else the one line', lane: true },
   'L.reaching': { text: 'reaching ⟨address⟩…', cls: 'DRAFT', source: '', screen: 'a jump reaching: at the act\'s site, else the one line; B1-S9: a stop returned to, pressed while its count is read', lane: true },
   // a landing's line (FP-21): what of the passage carried or followed the text landed in holds, where it stands in one run
   // and that is not all of it, or where no answer told — the passage named by what it was to the reader, the text by
-  // F.floating's two forms, the withheld text after it; the same words at a drawn link's far end before departure, whole
-  // on its card and its mirror item, its stub and its symbol saying them short of the withheld text (BM-HELD's `lineOf`,
-  // `shortLineOf`)
+  // F.floating's two forms, the withheld text after it, a sentence of its own; the same words at a drawn link's far end
+  // before departure, whole on its card and its mirror item, its stub and its symbol saying them short of the withheld
+  // text (BM-HELD's `lineOf`, `shortLineOf`)
   'L.held.part': { text: 'only part of ⟨subject⟩ is in ⟨where⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
   'L.held.pieces': { text: 'all of ⟨subject⟩ is in ⟨where⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
-  'L.held.withheld': { text: '; the rest may be under the withheld text here', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
+  'L.held.withheld': { text: 'the rest may be under the withheld text here', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
   'L.held.unknown': { text: 'couldn\'t tell whether ⟨where⟩ holds ⟨subject⟩: ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
   'L.held.selected': { text: 'what you selected', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
   'L.held.reading': { text: 'the text you were reading', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
@@ -1227,7 +1240,7 @@ export const STRINGS = {
   // a kept document's clause (FP-23, FP-33): what the view shows standing as held past a second while it is read again —
   // a draft's text, else the links drawn with it, or an origin's edition claims at a withheld run of it — said once beside
   // the document's name, and the board's while it lags, ⟨when⟩ the page's own clock at the row or drop that left the copy
-  // behind (`lastRead`), a failed read's words after it — a mirror item carrying it as its own sentence (L.mirror.clause);
+  // behind (`lastRead`), a failed read's words after it — a mirror item carrying it as a sentence of its own;
   // how many of an account's documents stand so, on its label at far scale; and what the status region says of one
   // cause (L-LINE's `keptSaid`), ⟨name⟩ each place by the name the mirror finds it by — a document's (T-LAYER's
   // `placeName`), the board's (L.mirror.board.name), the withheld text of an origin in it: as its clause appears, the
@@ -1391,9 +1404,204 @@ export function hintOf(id, values) {
  * @returns {string}
  */
 export function tHTML(id, values, wrap = {}) {
+  return fillHTML(t(id), values, wrap);
+}
+
+/** @typedef {string | number | Array<{text: string, face: import('./plane/register.js').Face}>} Value a token's value: words, a number, or stretches each in its face */
+
+/**
+ * A template as markup, its tokens filled as `tHTML` fills them.
+ * @param {string} template
+ * @param {Record<string, Value>} values
+ * @param {Record<string, string>} wrap
+ * @returns {string}
+ */
+function fillHTML(template, values, wrap) {
   const html = /** @type {Record<string, string>} */ ({});
   for (const [k, v] of Object.entries(values)) html[k] = Array.isArray(v) ? facedHTML(v) : wrap[k] ? `<span class="${wrap[k]}">${esc(v)}</span>` : addressedHTML(String(v));
-  return fill(esc(t(id)), html);
+  return fill(esc(template), html);
+}
+
+/** a value's words, its stretches joined */
+const wordsOfValue = (/** @type {Value} */ v) => (Array.isArray(v) ? v.map((r) => r.text).join('') : v);
+
+/** what joins the fields of a row or the segments of a compact line (`fields`) */
+const FIELD = ' · ';
+/** the end mark a sentence takes where its words carry none (`ended`) */
+const STOP = '.';
+/** words that already end as a sentence: an end mark, a closing quotation mark or bracket allowed after it */
+const ENDED = /[.?!…]["”’'»)\]]*$/u;
+
+/** words with their first character as a capital: a letter's upper case, any other character as it stands */
+const upper = (/** @type {string} */ s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * A value as the first words of a sentence (`capitalised`): words with their
+ * first letter a capital, stretches with their first stretch's, a number as
+ * it stands.
+ * @param {Value} v
+ * @returns {Value}
+ */
+function upperValue(v) {
+  if (typeof v === 'string') return upper(v);
+  if (Array.isArray(v) && v.length) return [{ ...v[0], text: upper(v[0].text) }, ...v.slice(1)];
+  return v;
+}
+
+/**
+ * An entry's template and values with a sentence's capital set (S1): the
+ * template's own first letter; where the template opens with a token, that
+ * token's value's first letter where `own` names the token — a value that is
+ * the page's own words — and no letter where it does not, so a name, an
+ * address, a chord or a person's or a document's words keeps its case.
+ * Throws for an id the table lacks, and for a statement before a permanent
+ * act, whose parts keep their own join (`said`).
+ * @param {string} id
+ * @param {Record<string, Value>} values
+ * @param {string[]} own the tokens whose values are the page's own words
+ * @returns {{text: string, values: Record<string, Value>}}
+ */
+function capitalised(id, values, own) {
+  const e = STRINGS[id];
+  if (!e) throw new Error('no string ' + id);
+  if (e.parts) throw new Error('a statement keeps its own join: ' + id);
+  const lead = /^⟨([^⟩]+)⟩/.exec(e.text);
+  if (!lead) return { text: upper(e.text), values };
+  const k = lead[1];
+  return own.includes(k) && k in values ? { text: e.text, values: { ...values, [k]: upperValue(values[k]) } } : { text: e.text, values };
+}
+
+/**
+ * Words ended as a sentence (S1): a period after them where they carry no end
+ * mark of their own; words that end with one, and no words, as they stand.
+ * @param {string} words
+ * @returns {string}
+ */
+export const ended = (words) => (!words || ENDED.test(words) ? words : words + STOP);
+
+/**
+ * Markup ended as the sentence it reads (`ended`): the period after it where
+ * its words carry no end mark.
+ * @param {string} words the words the markup reads
+ * @param {string} html
+ * @returns {string}
+ */
+export const endedHTML = (words, html) => (!words || ENDED.test(words) ? html : html + STOP);
+
+/**
+ * An entry's words filled, as the first words of a sentence the page composes
+ * (S1, S2; `capitalised`): its own first letter a capital, or the first letter
+ * of the value of a token it opens with that `own` names; no end mark, for
+ * words may follow in the sentence (`list`).
+ * @param {string} id
+ * @param {Record<string, string | number>} [values]
+ * @param {string[]} [own] the tokens whose values are the page's own words
+ * @returns {string}
+ */
+export function opening(id, values = {}, own = []) {
+  const c = capitalised(id, values, own);
+  return fill(c.text, /** @type {Record<string, string | number>} */ (c.values));
+}
+
+/**
+ * An entry's words filled as a sentence of their own (S1, S2): its capital as
+ * `opening` sets it, and an end mark after it (`ended`).
+ * @param {string} id
+ * @param {Record<string, string | number>} [values]
+ * @param {string[]} [own] the tokens whose values are the page's own words
+ * @returns {string}
+ */
+export const sentence = (id, values = {}, own = []) => ended(opening(id, values, own));
+
+/**
+ * `opening` as markup, its tokens filled as `tHTML` fills them.
+ * @param {string} id
+ * @param {Record<string, Value>} values
+ * @param {Record<string, string>} [wrap] the class each token's value stands in, by token
+ * @param {string[]} [own] the tokens whose values are the page's own words
+ * @returns {string}
+ */
+export function openingHTML(id, values, wrap = {}, own = []) {
+  const c = capitalised(id, values, own);
+  return fillHTML(c.text, c.values, wrap);
+}
+
+/**
+ * `sentence` as markup, its tokens filled as `tHTML` fills them: the same
+ * words, its end mark decided on them (`endedHTML`).
+ * @param {string} id
+ * @param {Record<string, Value>} values
+ * @param {Record<string, string>} [wrap] the class each token's value stands in, by token
+ * @param {string[]} [own] the tokens whose values are the page's own words
+ * @returns {string}
+ */
+export function sentenceHTML(id, values, wrap = {}, own = []) {
+  const words = opening(id, Object.fromEntries(Object.entries(values).map(([k, v]) => [k, wordsOfValue(v)])), own);
+  return endedHTML(words, openingHTML(id, values, wrap, own));
+}
+
+/**
+ * An entry filled elsewhere, as a sentence of its own (S1, S2): its first
+ * letter a capital where its template opens with its own words, or with a
+ * token whose value is the page's own words (`own`), and an end mark after it
+ * (`ended`). For words whose values are gone: a kept clause, an entitlement
+ * arm, an edition claim's clause. Throws for an id the table lacks, and for a
+ * statement before a permanent act.
+ * @param {{id: string, text: string}} e
+ * @param {boolean} [own] the token its template opens with holds the page's own words
+ * @returns {string}
+ */
+export function asSentence(e, own = false) {
+  const entry = STRINGS[e.id];
+  if (!entry) throw new Error('no string ' + e.id);
+  if (entry.parts) throw new Error('a statement keeps its own join: ' + e.id);
+  return ended(entry.text.startsWith('⟨') && !own ? e.text : upper(e.text));
+}
+
+/**
+ * The parts of a line that hold words, each that is empty dropped, so no
+ * joiner stands beside a missing part.
+ * @param {Array<string | null | undefined>} parts
+ * @returns {string[]}
+ */
+const holding = (parts) => /** @type {string[]} */ (parts.filter((p) => !!p));
+
+/**
+ * A line of sentences the page composes (S2): its sentences, each made
+ * already (`sentence`, `asSentence`), joined by a space, an empty one dropped.
+ * @param {...(string | null | undefined)} parts
+ * @returns {string}
+ */
+export const sentences = (...parts) => holding(parts).join(' ');
+
+/**
+ * A row's fields or a compact line's segments the page composes (S2, S8):
+ * joined by a middle dot, an empty one dropped, no capital and no end mark set.
+ * @param {...(string | null | undefined)} parts
+ * @returns {string}
+ */
+export const fields = (...parts) => holding(parts).join(FIELD);
+
+/**
+ * The parts of one sentence the page lists (S2): joined by a comma, an empty
+ * one dropped; the sentence's capital is its first part's (`opening`), its
+ * end mark the caller's (`ended`).
+ * @param {...(string | null | undefined)} parts
+ * @returns {string}
+ */
+export const list = (...parts) => holding(parts).join(', ');
+
+/**
+ * A one-line hint's notice whole and in its compact form (`hintOf`), each a
+ * sentence of its own (`asSentence`): cut where `hintOf` cuts it, before its
+ * tokens are filled, so no value moves the cut. Throws as `hintOf` does.
+ * @param {string} id
+ * @param {Record<string, string | number>} [values]
+ * @returns {{whole: string, clause: string}}
+ */
+export function hintSentences(id, values) {
+  const h = hintOf(id, values);
+  return { whole: asSentence({ id, text: h.whole }), clause: asSentence({ id, text: h.clause }) };
 }
 
 /**

@@ -399,13 +399,13 @@ import * as FOCUS from '../nav/focus.js';
 import { drawChord } from '../nav/keys.js';
 import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML, cornerLead, kindWord, statedChain } from '../text/article.js';
 import { inkOf, strokeOf, strokeIn, cutAt, pointOn } from '../beams/beams.js';
-import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingOf } from '../beams/held.js';
+import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingLineOf } from '../beams/held.js';
 import { SAMENESS, HOLD, LABEL_MIN_PX, cornerWidth } from '../plane/register.js';
 import { LINE_H, MEASURE, MEASURE_CPL, CHAR_W, EDGE, EDGE_GAP, fitFor } from '../plane/layout.js';
 import { holdStack, LINE_BOX } from '../plane/labels.js';
 import { markDirty, READING_PX } from '../plane/camera.js';
 import { documentOf, homeOf, memberOf, versionAddress, isTrunkMember } from '../model/address.js';
-import { t, tHTML } from '../strings.js';
+import { t, tHTML, sentence, sentences } from '../strings.js';
 import { esc, byteOffsets } from '../util.js';
 
 /** @typedef {import('../model/frames.js').ComparePair} ComparePair */
@@ -2226,8 +2226,8 @@ function changesAt(/** @type {Scene} */ S, /** @type {StrokeStop} */ stop) {
   return changes.map((c) => changeWords(/** @type {Change} */ (c), A, B, LAYER.originOwner)).join(' · ');
 }
 
-/** what the answer said of a returned stop in FP-21's words: the dead end's where the text holds none of it, else the line's */
-const saidWords = (/** @type {Scene} */ S, /** @type {Answered} */ a) => (a.holds === 'none' ? floatingOf(S.b.shows) : a.said ? lineOf(a.said) : '');
+/** what the answer said of a returned stop in FP-21's words, as sentences: the dead end's where the text holds none of it, else the line's (BM-HELD's `floatingLineOf`, `lineOf`) */
+const saidWords = (/** @type {Scene} */ S, /** @type {Answered} */ a) => (a.holds === 'none' ? floatingLineOf(S.b.shows) : a.said ? lineOf(a.said) : '');
 
 /**
  * A returned stop's name and count drawn from what it stood for and what the
@@ -2236,30 +2236,29 @@ const saidWords = (/** @type {Scene} */ S, /** @type {Answered} */ a) => (a.hold
  * words where pane B's text holds it, a stroke its changes in words where the
  * panes' texts hold them — its count an empty box of its own width; all of it
  * holding, the name and the count of the stop it is then; else its kind's
- * words and the answer's (FP-21), no count.
+ * words and the answer's, each a sentence (ST's `sentence`, `sentences`;
+ * FP-21), no count.
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  * @param {Returned} R
  */
 function nameReturned(E, S, R) {
   const a = R.answer, D = S.b.shows, stop = R.stop;
-  /** @type {[string, Record<string, string | number>]} its name's string, and the values its tokens take */
-  let name;
   if (stop.kind === 'shared') {
     const text = a ? null : wordsAt(S.b, stop.at.ids);
-    name = !a ? (text ? ['L.scene.shared.returned', { D, text }] : ['L.scene.shared.returned.away', { D }])
-      : a.holds === 'all' ? [a.count > 1 ? 'L.scene.shared' : 'L.scene.shared.1', { D, n: a.count }]
-        : ['L.scene.stop.said', { stop: t('L.scene.shared.1', { D }), said: saidWords(S, a) }];
-    R.el.setAttribute('aria-label', t(name[0], name[1]));
+    /** @type {[string, Record<string, string | number>]} its name's string, and the values its tokens take, where one string names it */
+    const name = !a ? (text ? ['L.scene.shared.returned', { D, text }] : ['L.scene.shared.returned.away', { D }]) : [a.count > 1 ? 'L.scene.shared' : 'L.scene.shared.1', { D, n: a.count }];
+    if (a && a.holds !== 'all') R.el.setAttribute('aria-label', sentences(sentence('L.scene.shared.1', { D }), saidWords(S, a)));
+    else R.el.setAttribute('aria-label', t(...name));
     if (!a) R.el.innerHTML = READING;
     else R.el.textContent = a.holds !== 'none' && a.holds !== 'unknown' && a.count > 1 ? String(a.count) : '';
     return;
   }
   const changes = a ? null : changesAt(S, stop), [A, B] = sidesOf(S), s = a && a.holds === 'all' ? strokeFor(S, R) : null;
-  name = !a ? (changes != null ? ['L.scene.stroke.returned', { changes }] : ['L.scene.stroke.returned.away', {}])
-    : s ? ['L.scene.stroke.name', strokeWords(s, A, B, LAYER.originOwner)]
-      : ['L.scene.stop.said', { stop: t('L.scene.stroke.kind'), said: saidWords(S, a) }];
-  R.el.setAttribute('aria-label', t(name[0], name[1]));
+  /** @type {[string, Record<string, string | number>]} its name's string, and the values its tokens take, where one string names it */
+  const name = s ? ['L.scene.stroke.name', strokeWords(s, A, B, LAYER.originOwner)] : changes != null ? ['L.scene.stroke.returned', { changes }] : ['L.scene.stroke.returned.away', {}];
+  if (a && !s) R.el.setAttribute('aria-label', sentences(sentence('L.scene.stroke.kind'), saidWords(S, a)));
+  else R.el.setAttribute('aria-label', t(...name));
   R.el.innerHTML = !a ? READING : s && s.changes.length > 1 ? `<span class="n">${s.changes.length}</span>` : '';
 }
 

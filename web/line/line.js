@@ -134,7 +134,8 @@
 // waits on the reader (O-FACES' `folded`), said through the status region as
 // it folds — its act, inside the line's one stop, unfolding it (O-FACES'
 // `unfold`). The transient
-// segments (the strip's readout; the mode line C-31 where the pair flipped)
+// segments (the strip's readout; the mode line C-31 where the pair flipped,
+// its flip and its run each a sentence)
 // stand until the next act (`act`) — a press of one of the line's own acts
 // among them, which is the next act of a hint standing too (the act the app
 // hands in) — or a change of the page's class, which takes one quoting what
@@ -225,7 +226,7 @@ import { lodOf } from '../plane/lod.js';
 import { boardCell, accountAt, docBox, G, LEAF, DEPTH_SOUND } from '../plane/projection.js';
 import { memberOf, boardOf, accountOf, documentOf } from '../model/address.js';
 import { inFace, runsOf, runWidth, cutWords, LEAD_WORDS } from '../plane/labels.js';
-import { t, tHTML, addressedHTML, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
+import { t, tHTML, addressedHTML, facedHTML, lastRead, sentence, sentences, CLIENT_CLOSE } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @type {HTMLElement | null} */
@@ -1123,7 +1124,8 @@ const boardName = () => { const b = REC.board(); return b ? t('L.mirror.board.na
  * runs. Where the board's drafts cannot be written for a reason of the held
  * store's (W-WRITE's `unwritable`), that state's one line, first: at the
  * store's bound its line (D6 BM-20); at the held file's halt its form, then
- * what becomes of the words it holds, a damaged file's cause last, with the
+ * what becomes of the words it holds, a damaged file's cause last, each a
+ * sentence (ST's `sentence`, `sentences`), with the
  * act "show the file" (BM-30); in a second window its line with the act
  * "copy this address" (BM-60). Else the halted form where `/health` says the
  * board's writes are halted, whatever the shell last said; else the form of
@@ -1138,7 +1140,7 @@ function daemonSegment() {
   if (why && why.why === 'held_full') return seg('B3.held_full.line', t('B3.held_full.line', { board: boardName() }));
   if (why && why.why === 'store_halted') {
     const damaged = why.detail === 'damaged', id = damaged ? 'B3.store_halted.damaged' : 'B3.store_halted.newer';
-    return seg(id, `${t(id)} ${t('B3.store_halted.unsent')}${damaged ? ` ${t('B3.store_halted.damaged.cause')}` : ''}`, ` <button data-act="showfile" data-string="B3.show-file">${esc(t('B3.show-file'))}</button>`);
+    return seg(id, sentences(sentence(id), sentence('B3.store_halted.unsent'), damaged ? sentence('B3.store_halted.damaged.cause') : ''), ` <button data-act="showfile" data-string="B3.show-file">${esc(t('B3.show-file'))}</button>`);
   }
   if (why && why.why === 'another_window') return seg('B3.another_window', t('B3.another_window'), ` <button data-act="copyaddr" data-string="B3.copy-address">${esc(t('B3.copy-address'))}</button>`);
   const said = d == null ? '' : Object.hasOwn(DAEMON_FORM, d) ? DAEMON_FORM[d] : 'F.daemon.notebook.halted';
@@ -1163,12 +1165,16 @@ function copyAddress() {
   FOCUS.say(t('B3.death.copied'));
 }
 
-/** the mode line: the flag-on transition at the first render after the pair changes (C-31), said through the status region */
+/** the mode line: the flag-on transition at the first render after the pair changes (C-31), the flip and its run each a sentence (ST's `sentence`, `sentences`), said through the status region */
 function modeLine() {
   const h = REC.health();
   const trust = h && h.auth ? !!h.auth.local_trust : null;
   const mode = REC.mode();
-  if (lastTrust !== null && trust !== null && trust !== lastTrust && trust) { transientSeg = { html: esc(t('F.flip')) + ' ' + esc(t('F.flip.run')), id: 'F.flip' }; FOCUS.say(t('F.flip') + ' ' + t('F.flip.run')); }
+  if (lastTrust !== null && trust !== null && trust !== lastTrust && trust) {
+    const words = sentences(sentence('F.flip'), sentence('F.flip.run'));
+    transientSeg = { html: esc(words), id: 'F.flip' };
+    FOCUS.say(words);
+  }
   lastTrust = trust; lastMode = mode;
 }
 

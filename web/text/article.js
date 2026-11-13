@@ -137,7 +137,8 @@
 // word, the face, the chip, the held version's line and the whole-document
 // count never yield (`cornerItems`; foundations §3.1). The face
 // (`faceHTML`; B3-S2; P48; P67): whole, its sentence, its hands each in its
-// slot — the slot owed its words standing empty where they are named again —
+// slot, each a sentence of its own (`faceWords`; style S2's byline) — the
+// slot owed its words standing empty where they are named again —
 // its acts in their order, the discard last and described by its statement,
 // and that statement whole below them (O-STATEMENT's `below`); compact, its
 // compact form — its sentence and its one device's hand (`B3.moved.compact`),
@@ -146,8 +147,9 @@
 // drawn, for no row of a head holds them. Its
 // state's items are made by one rule (`stateItems`), which the ARIA mirror's
 // item voices whole too — its first item leading the item (`cornerLead`), the
-// rest after the document's first line (`cornerWords`) — so the corner and
-// the mirror never part (R94). The corner's acts — the kept word, the face's
+// rest after the document's first line (`cornerWords`), the face's sentence
+// and its hands there fields of a row (`faceRow`) — so the corner and the
+// mirror never part (R94). The corner's acts — the kept word, the face's
 // acts and its compact form, the version statement on the plane, the read it
 // offers, a compact form's glyph and, opened whole on it, the words that
 // compact it again — are native
@@ -159,8 +161,9 @@
 // forms, an empty box while no state is set (FP-34), the word's own act
 // opening its statement whole on a line of its own below it — beneath a
 // head's rows, where its holder sets it there (`statementHTML`) —
-// (`keptStatement`; P41): at "kept" the save chord's answer, at the other
-// two "nothing to save —" before the word and the reason on the act; the
+// (`keptStatement`; P41), in sentences at every state (ST's `sentence`,
+// `sentences`): at "kept" the save chord's answer, at the other two
+// "nothing to save" before the word and the reason on the act; the
 // statement is Mod+S's answer too (N-KEYS). The corner carries no
 // second act for the past states: the strings table holds no reason for an
 // inert one, and the page invents no wording. They stand outside the
@@ -215,7 +218,7 @@
 // FP-26, FP-30, FP-31, FP-33, FP-34.
 
 import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint } from '../util.js';
-import { t, tHTML, plural, bracketed, withheldLine, endingOf, addressedHTML } from '../strings.js';
+import { t, tHTML, plural, bracketed, withheldLine, endingOf, addressedHTML, sentence, sentences, asSentence, fields } from '../strings.js';
 import { below } from '../overlays/statement.js';
 import { textOf, recordValue } from '../model/records.js';
 import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType, isAddress } from '../model/address.js';
@@ -1228,14 +1231,15 @@ function keptReason(k) {
 }
 
 /**
- * A kept state's statement (D5 K-57, K-74; B3-S1, B3-S2): what the kept
+ * A kept state's statement (D5 K-57, K-74; B3-S1, B3-S2), in sentences
+ * whichever state it says (ST's `sentence`, `sentences`): what the kept
  * word's act opens whole and the save chord answers with — at "kept" the
  * save chord's line, "nothing to save — everything here is kept"; at "not
  * yet kept" while the board is not answering, the one statement the table
  * holds for that silence, by the venue and by what opened it — the save
  * chord's answer, or the word's own statement — never assembled from a word
  * and a reason; at any other "not yet kept", and at "not kept", "nothing to
- * save —" before the word, the reason standing after the word on this act
+ * save", then the word, the reason standing after the word on this act
  * where the state carries one (`keptReason`), joined as a kept clause joins
  * its reason.
  * @param {KeptState} k
@@ -1243,14 +1247,14 @@ function keptReason(k) {
  * @returns {{id: string, text: string}}
  */
 export function keptStatement(k, said = {}) {
-  if (k.word === 'kept') return { id: 'B3.save.kept', text: t('B3.save.kept') };
+  if (k.word === 'kept') return { id: 'B3.save.kept', text: sentence('B3.save.kept') };
   if (k.word === 'not yet kept' && said.silent) {
     const own = said.notebook !== false, id = said.how === 'word' ? (own ? 'B3.kept.held' : 'B3.kept.held.board') : own ? 'B3.save.held' : 'B3.save.held.board';
-    return { id, text: t(id, { board: said.board ?? '' }) };
+    return { id, text: sentence(id, { board: said.board ?? '' }) };
   }
   const w = keptWord(k), reason = keptReason(k);
-  const words = reason ? t('L.kept.failed', { clause: w.text, reason }) : w.text;
-  return { id: 'B3.save.before', text: `${t('B3.save.before')} ${words}` };
+  const kept = reason ? sentence('L.kept.failed', { clause: w.text, reason }, ['clause']) : asSentence(w);
+  return { id: 'B3.save.before', text: sentences(sentence('B3.save.before'), kept) };
 }
 
 /**
@@ -1325,13 +1329,22 @@ function keptLineHTML(v, statement = true) {
 
 /**
  * A corner's face's words as a person reads them whole (`CornerFace`): its
- * sentence, then each hand in its slot's words — what the ARIA mirror's item
- * voices of it after the kept word (`cornerWords`), and what describes its
- * compact form.
+ * sentence, then each hand in its slot's words, each a sentence of its own
+ * (ST's `asSentence`, `sentences`; style S2's byline) — what describes its
+ * compact form and what is said of it.
  * @param {CornerFace} f
  * @returns {string}
  */
-export const faceWords = (f) => [f.line.text, ...f.hands.map((h) => h.text)].join(' ');
+export const faceWords = (f) => sentences(asSentence(f.line), ...f.hands.map((h) => asSentence(h)));
+
+/**
+ * A corner's face's words as a row's fields (`CornerFace`; ST's `fields`;
+ * style S2's byline): its sentence, then each hand in its slot's words — what
+ * the ARIA mirror's item voices of it after the kept word (`cornerWords`).
+ * @param {CornerFace} f
+ * @returns {string}
+ */
+export const faceRow = (f) => fields(f.line.text, ...f.hands.map((h) => h.text));
 
 /**
  * A corner's face as markup (see the head; B3-S2; P67): compact, its compact
@@ -1339,7 +1352,8 @@ export const faceWords = (f) => [f.line.text, ...f.hands.map((h) => h.text)].joi
  * `openCorner`; FP-26), keyed on the face (`data-face`), saying whether the
  * corner stands opened (`ArticleView.opened`) and described by its whole
  * words where its compact form says fewer, its words alone where the view
- * asks no act; whole, its sentence, its hands each in its slot — the slot owed
+ * asks no act; whole, its sentence, its hands each in its slot, each a
+ * sentence of its own (`faceWords`) — the slot owed
  * its words standing empty where they are named again — and its acts in their
  * order, each a native button (`actHTML`) keyed on the face, an inert one
  * marked so and titled by its reason, the discard described by its statement,
@@ -1358,9 +1372,9 @@ function faceHTML(f, v, compact) {
     return v.acts === false ? `<span class="face compact" data-string="${esc(form.id)}">${esc(words)}</span>`
       : actHTML('face compact', ` data-face="whole" data-whole data-string="${esc(form.id)}" aria-expanded="${!!v.opened}"${whole}`, esc(words));
   }
-  const hands = f.hands.length ? `<span class="hands"${f.again ? ' data-again="1"' : ''}>${f.again ? '<span class="again" data-slot="again"></span>' : ''}${f.hands.map((h) => `<span class="hand" data-string="${esc(h.id)}">${esc(h.text)}</span>`).join(' ')}</span>` : '';
+  const hands = f.hands.length ? `<span class="hands"${f.again ? ' data-again="1"' : ''}>${f.again ? '<span class="again" data-slot="again"></span>' : ''}${f.hands.map((h) => `<span class="hand" data-string="${esc(h.id)}">${esc(asSentence(h))}</span>`).join(' ')}</span>` : '';
   const acts = f.acts.map((a) => actHTML(`face-act${a.inert ? ' inert' : ''}`, ` data-face="${esc(a.key)}" data-string="${esc(a.id)}"${a.inert ? ` aria-disabled="true" data-inert="${esc(a.inert.id)}" title="${esc(a.inert.text)}"` : ''}${a.said ? ` aria-description="${esc(a.said)}"` : ''}`, esc(a.label))).join('');
-  return `<span class="face"><span class="face-text" data-string="${esc(f.line.id)}">${addressedHTML(f.line.text)}</span>${hands}<span class="face-acts">${acts}</span>${f.said ? below(f.said.id, f.said.values) : ''}</span>`;
+  return `<span class="face"><span class="face-text" data-string="${esc(f.line.id)}">${addressedHTML(asSentence(f.line))}</span>${hands}<span class="face-acts">${acts}</span>${f.said ? below(f.said.id, f.said.values) : ''}</span>`;
 }
 
 /**
@@ -1498,14 +1512,14 @@ export const cornerLead = (d, v) => { const [i] = stateItems(d, v); return t(i.i
 /**
  * A document's state as its corner states it after its first item, whole
  * (`stateItems`): each item's words — a draft's kept word where a state is
- * set, the face beneath it in its words whole (`faceWords`) — joined as the
+ * set, the face beneath it in its words as a row (`faceRow`) — joined as the
  * ARIA mirror's item voices them after the document's first line (R94); ''
  * where the corner states none past its first item.
  * @param {Doc} d
  * @param {CornerFacts} v
  * @returns {string}
  */
-export const cornerWords = (d, v) => stateItems(d, v).slice(1).filter((i) => i.id).map((i) => (i.face ? faceWords(i.face) : t(i.id, i.vals))).join(', ');
+export const cornerWords = (d, v) => stateItems(d, v).slice(1).filter((i) => i.id).map((i) => (i.face ? faceRow(i.face) : t(i.id, i.vals))).join(', ');
 
 /**
  * A corner's state item as markup (`stateItems`): the kind its slot
