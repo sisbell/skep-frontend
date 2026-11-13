@@ -25,8 +25,9 @@
 // template at its first em dash a space or a no-break space sets off, before
 // its tokens are filled, the whole notice where it has none,
 // is pinned or is marked whole, and every hint the page raises marked;
-// the entries no design document carries are listed; every glyph, joiner and
-// key spoken by S22's table, its words the table's entries, the person's
+// the entries no design document carries are listed; no entry types a key
+// into its words, each key a line names a token its site fills; every glyph,
+// joiner and key spoken by S22's table, its words the table's entries, the person's
 // words, a document's and an address kept exactly, and one string for a
 // lower bound; and every accessible name and description the page sets
 // passes the table — none stands in the markup, and none is set but as
@@ -44,6 +45,13 @@ import { STRINGS, t, tHTML, tRuns, addressedHTML, facedHTML, pinned, lacking, is
 const commons = (/** @type {string} */ path) => '1.1.0.1.0.1.0.' + path;
 const BOLD = commons('3.23.2'), ITALIC = commons('3.23.1'), CODE = commons('3.23.3'), STRIKE = commons('3.23.5'), SUB = commons('3.23.6'), SUP = commons('3.23.7');
 const PARAGRAPH = commons('3.21'), HEADING = commons('3.20'), FLAG = commons('3.23.4'), UNKNOWN = commons('3.23.8');
+
+/** each key a line names, by its token, as the design that drafts the line types it (style S21: the page fills it with the key drawn for the person's platform) */
+const TYPED_KEYS = Object.freeze({ 'act key': 'Enter', 'next key': 'Tab', 'tab key': 'Tab', 'leave key': 'Esc', 'close key': 'Esc', 'walk key': '↓', 'row key': '↓', 'space key': 'Space', 'back chord': 'Shift+Tab', 'select chord': 'Shift+↓' });
+/** an entry's words with each key it names typed as its design types it, every other token standing: a keyed line's words around its keys are its design's own */
+const asTyped = (/** @type {string} */ id) => t(id, TYPED_KEYS);
+/** the selection's chords as D5 types them into its row's words (D5 §1.6), by their tokens */
+const D5_SLOT_CHORDS = Object.freeze({ 'annotate chord': '⌘⇧A', 'quote chord': '⌘⇧C', 'wrote chord': '⌘⇧O', 'uses chord': '⌘⇧R', 'links chord': '⌘⇧L', 'follow chord': '⌘↩', 'scene chord': '⌘⇧↩', 'link-to chord': '⌘K' });
 
 test('every entry is classed and sourced', () => {
   for (const [id, e] of Object.entries(STRINGS)) {
@@ -148,13 +156,14 @@ test('the editor\'s lines stand as its design words them, in its characters — 
   for (const [id, screen, text] of LINES) {
     const e = STRINGS[id];
     assert.ok(e, id + ' entered');
-    assert.deepEqual({ text: e.text, cls: e.cls, source: e.source, screen: e.screen?.split(':')[0] }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen }, id);
+    assert.deepEqual({ text: asTyped(id), cls: e.cls, source: e.source, screen: e.screen?.split(':')[0] }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen }, id);
   }
   assert.equal(t('B3.format.cycle', { level: formName(HEADING, 2) }), 'heading\u00a02 — let go to set it', 'the held cycle\'s line in B3\'s example\'s words, its level one block\'s heading named');
   assert.equal(t('B3.format.underline', { italic: formName(ITALIC), bold: formName(BOLD) }), 'there is no underline here\u00a0— to emphasise words, italic or bold', 'Mod+U\'s answer as B3 words it, its forms named by their one names');
   assert.deepEqual([formName(HEADING, 2), formName(PARAGRAPH)].map((form) => t('B3.format.said', { form, 'first words': 'Tumbler' })), ['heading\u00a02 — “Tumbler”', 'paragraph — “Tumbler”'],
     'a level\'s spoken outcome is the outcome\'s one line with its block\'s form named, as B3 words its "heading ⟨n⟩" and "paragraph" forms');
-  assert.equal(t('D5.slots'), 'annotate ⌘⇧A · quote ⌘⇧C · who wrote this? ⌘⇧O · who uses this? ⌘⇧R · see the links ⌘⇧L · follow ⌘↩ · read side by side ⌘⇧↩ · link to… ⌘K · format…');
+  assert.equal(t('D5.slots', D5_SLOT_CHORDS), 'annotate ⌘⇧A · quote ⌘⇧C · who wrote this? ⌘⇧O · who uses this? ⌘⇧R · see the links ⌘⇧L · follow ⌘↩ · read side by side ⌘⇧↩ · link to… ⌘K · format…',
+    'the selection\'s row in D5\'s words, each chord a token its site fills');
   for (const id of ['B3.deletion.links', 'B3.deletion.links.past', 'B3.deletion.links.unread']) {
     assert.ok(!/[\u00a0’]/.test(STRINGS[id].text), `${id}: B3 sets it in plain characters, and the table keeps them`);
   }
@@ -366,7 +375,7 @@ test('every line the editor\'s screens carry stands as B3 words it at the design
   for (const [id, screen, text] of LINES) {
     const e = STRINGS[id];
     assert.ok(e, id + ' entered');
-    assert.deepEqual({ text: e.text, cls: e.cls, source: e.source, screen: e.screen?.split(':')[0] }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen }, id);
+    assert.deepEqual({ text: asTyped(id), cls: e.cls, source: e.source, screen: e.screen?.split(':')[0] }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen }, id);
   }
   /** @type {Array<[string, string]>} the refraction's three B1 drafts, drawn at the editor's publication too */
   const B1_LINES = [
@@ -565,7 +574,7 @@ test('every line the editor\'s design added or re-said on 2026-11-09 stands as i
   for (const [id, screen, text] of LINES) {
     const e = STRINGS[id];
     assert.ok(e, id + ' entered');
-    assert.deepEqual({ text: e.text, cls: e.cls, source: e.source, screen: e.screen?.split(':')[0] }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen }, id);
+    assert.deepEqual({ text: asTyped(id), cls: e.cls, source: e.source, screen: e.screen?.split(':')[0] }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen }, id);
   }
   assert.deepEqual({ text: STRINGS['F.durability']?.text, cls: STRINGS['F.durability']?.cls, source: STRINGS['F.durability']?.source }, { text: '⟨board⟩ could not keep that yet — trying again', cls: 'DRAFT', source: 'designs/foundations.md' }, 'the durability face off the notebook, as foundations words it');
   assert.match(STRINGS['F.durability'].screen ?? '', /^B3-S2:/, 'drawn at the editor\'s screen');
@@ -601,7 +610,7 @@ test('the moved scene\'s held version\'s lines stand as B3 re-said them on 2026-
   for (const [id, text] of LINES) {
     const e = STRINGS[id];
     assert.ok(e, id + ' entered');
-    assert.deepEqual({ text: e.text, cls: e.cls, source: e.source, screen: e.screen?.split(':')[0], lane: e.lane }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2', lane: undefined }, id);
+    assert.deepEqual({ text: asTyped(id), cls: e.cls, source: e.source, screen: e.screen?.split(':')[0], lane: e.lane }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2', lane: undefined }, id);
   }
   for (const id of ['B3.held-version.not-current', 'B3.held-version.in-current']) {
     const h = hintOf(id);
@@ -679,9 +688,12 @@ test('S22\'s table speaks each glyph, joiner and key as its "heard" column says:
     ['dismiss (Esc)', 'dismiss, Escape'],
     ['Ctrl+L', 'Control L'],
     ['Ctrl+Shift+O', 'Control Shift O'],
-    ['⌘⇧O', 'Command Shift O'],
+    ['⇧⌘O', 'Shift Command O'],
     ['⌘↩', 'Command Return'],
-    ['⌘⇧↩', 'Command Shift Return'],
+    ['⇧⌘↩', 'Shift Command Return'],
+    ['⇧Tab', 'Shift Tab'],
+    ['⇧↓ selects this passage', 'Shift Down Arrow selects this passage'],
+    ['Return places a caret here', 'Return places a caret here'],
     ['⌥⇧←', 'Option Shift Left Arrow'],
     ['⌘1…9', 'Command 1 to 9'],
     ['Ctrl+1…9', 'Control 1 to 9'],
@@ -758,6 +770,34 @@ test('the table\'s words are the strings table\'s entries, each DRAFT from style
   assert.ok(!('L.mirror.at-least' in STRINGS), 'no second string for a lower bound');
   assert.deepEqual([t('L.lower-bound', { n: 3 }), heard(t('L.lower-bound', { n: 3 }))], ['≥ 3', 'at least 3'], 'drawn "≥ 3", heard "at least 3"');
   assert.equal(heard(markCount(12, false)), 'at least 12 newer documents');
+});
+
+test('no entry types a key or a chord into its words: each key a line names is a ⟨token⟩ its site fills with the key drawn for the person\'s platform, so no key\'s name, arrow, modifier glyph or modifier joined by "+" stands outside a token in any entry but the table\'s own spoken words for the keys (style S21, S22; issue #627)', () => {
+  const KEYED = /\b(?:Enter|Return|Esc|Escape|Tab|Space|Home|End|PageDown|PageUp|Page Down|Page Up|Backspace|Delete|Command|Control|Option|Ctrl|Alt|Shift)\b|[←→↑↓⌃⌥⇧⌘↩]|\b(?:Mod|Shift|Ctrl|Alt)\+/u;
+  const outside = (/** @type {string} */ x) => x.replace(/⟨[^⟩]*⟩/g, '');
+  const typed = Object.entries(STRINGS).filter(([id, e]) => !id.startsWith('S22.') && [e.text, ...(e.parts || []).map((q) => q.text)].some((x) => KEYED.test(outside(x)))).map(([id]) => id);
+  assert.deepEqual(typed, [], 'no key typed outside a token');
+  /** @type {Record<string, string[]>} each line naming keys, and its tokens in order: each key's named for what it does there */
+  const KEYED_LINES = {
+    'F.swallow.space': ['space key', 'paging key'],
+    'D5.slots': ['annotate chord', 'quote chord', 'wrote chord', 'uses chord', 'links chord', 'follow chord', 'scene chord', 'link-to chord'],
+    'B3.caret.enter': ['act key'],
+    'B3.caret.enter.paste': ['act key'],
+    'B3.caret.back': ['back chord'],
+    'B3.caret.mark': ['walk key', 'act key'],
+    'B3.tab.exit': ['tab key', 'leave key', 'next key'],
+    'B3.held.none': ['label', 'close key'],
+    'B3.link.enter': ['home', 'act key', 'next key'],
+    'B3.publish.held-since': ['time', 'act key'],
+    'B3.publish.enter': ['act key', 'next key'],
+    'B3.card.in-error.enter': ['act key', 'next key'],
+    'B3.format.carry': ['act key'],
+    'L.copy.nothing.enter': ['act key'],
+    'L.copy.nothing.shift': ['select chord'],
+    'L.leap.beside.choose': ['row key'],
+  };
+  for (const [id, tokens] of Object.entries(KEYED_LINES)) assert.deepEqual([...STRINGS[id].text.matchAll(/⟨([^⟩]+)⟩/g)].map((m) => m[1]), tokens, id);
+  assert.equal(asTyped('L.leap.beside.choose'), 'open beside needs a place — choose a row with ↓, or type an address or a first line', 'a lane string\'s words around its key');
 });
 
 test('a hint\'s notice as sentences is cut where `hintOf` cuts it, before its tokens are filled, each form a sentence — a template opening with a value keeping its case (style S1)', () => {
@@ -910,7 +950,7 @@ test('a line that would name a form\'s chord names, where none is bound, the act
   assert.equal(t('B3.format.again.off', { chord: formAgain(SUB, null) }), 'subscript again takes its mark off them');
   assert.equal(t('B3.format.carried', { E: 'Tumbler', chord: formAgain(STRIKE, null) }), 'Tumbler is published — formatting is made here, in your draft: strikethrough again marks these words');
   assert.equal(t('B3.format.again', { chord: formAgain(BOLD, '⌘B') }), '⌘B again marks these words', 'a chord bound is named');
-  assert.equal(formAgain(STRIKE, '⌘⇧X'), '⌘⇧X', 'a chord bound later replaces the act\'s name');
+  assert.equal(formAgain(STRIKE, '⇧⌘X'), '⇧⌘X', 'a chord bound later replaces the act\'s name');
   assert.deepEqual([formAgain(SUP, ''), formAgain(HEADING, null, 2), formAgain(UNKNOWN, null)], ['superscript', 'heading 2', typeName(UNKNOWN)], 'never blank: a heading by its level, a type the table lacks by its card\'s name');
 });
 
@@ -925,8 +965,8 @@ test('no entry spells a formatting form\'s name save the form\'s own — the hea
 
 test('a one-line hint\'s compact form is its notice\'s first clause, the text before its template\'s first em dash a space or a no-break space sets off, cut before its tokens are filled so no value moves it; the whole notice where the template has none, where it is pinned and where it is marked whole; a string the table lacks, or marks no hint, throws (issue #468\'s design decision)', () => {
   assert.deepEqual(hintOf('F.swallow', { 'LEAP chord': '⌘L' }), { whole: 'typing goes nowhere here — to go somewhere, the address line: ⌘L', clause: 'typing goes nowhere here' });
-  assert.deepEqual(hintOf('F.swallow.space', { 'paging key': 'PageDown' }), { whole: 'Space does not page here — PageDown does', clause: 'Space does not page here' });
-  assert.deepEqual(hintOf('B3.caret.enter.paste'), { whole: 'Enter places a caret here — then paste', clause: 'Enter places a caret here' });
+  assert.deepEqual(hintOf('F.swallow.space', { 'space key': 'Space', 'paging key': 'Page Down' }), { whole: 'Space does not page here — Page Down does', clause: 'Space does not page here' });
+  assert.deepEqual(hintOf('B3.caret.enter.paste', { 'act key': 'Return' }), { whole: 'Return places a caret here — then paste', clause: 'Return places a caret here' }, 'a key opening the notice: its first clause cut before it is filled');
   assert.equal(hintOf('L.find.off', { 'find chord': '⌘F' }).clause, 'words are found in a document');
   assert.equal(hintOf('F.swallow', { 'LEAP chord': 'x — y' }).clause, 'typing goes nowhere here', 'a value holding the separator moves no cut');
   assert.deepEqual(hintOf('B3.row.others-document', { owner: '1.0.2' }),
@@ -954,7 +994,9 @@ test('a copy with nothing selected is said in the keys-and-clicks decision\'s wo
     assert.deepEqual([cls, source, !!screen, lane], ['DRAFT', D, true, undefined], id);
   }
   assert.deepEqual(hintSentences('L.copy.nothing'), { whole: 'Nothing selected — the clipboard is unchanged.', clause: 'Nothing selected.' }, 'the line, a sentence, its first clause one too');
-  assert.deepEqual(['L.copy.nothing.enter', 'L.copy.nothing.shift'].map((id) => sentence(id)), ['Enter selects this passage.', 'Shift+↓ selects this passage.'], 'each act a sentence of its own, which the hint ends on while it stands whole (O-HINT\'s `ending`)');
+  assert.deepEqual([sentence('L.copy.nothing.enter', { 'act key': 'Return' }), sentence('L.copy.nothing.shift', { 'select chord': '⇧↓' })], ['Return selects this passage.', '⇧↓ selects this passage.'],
+    'each act a sentence of its own, which the hint ends on while it stands whole (O-HINT\'s `ending`), its key a token the press fills as macOS draws it, the token\'s case kept');
+  assert.deepEqual(['L.copy.nothing.enter', 'L.copy.nothing.shift'].map(asTyped), ['Enter selects this passage', 'Shift+↓ selects this passage'], 'the decision\'s words around each key');
   assert.ok(!t('L.copy.nothing').includes('⟨'), 'the line carries no token for the act: no joiner a missing act would leave behind');
   assert.equal(STRINGS['L.copy.nothing'].hint, 'clause', 'a hint whose first clause stands for it once it was shown whole');
 });

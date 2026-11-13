@@ -293,7 +293,7 @@ import json
 import re
 import time
 
-from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, account_of, heard, item_words, key_fingerprint, trunk_of
+from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, account_of, drawn_keys, heard, item_words, key_fingerprint, trunk_of
 from .layout import DRIFT_TOL_PX, box_of, click_on, inside, lacking_of, level_holds, line_of, passage_at, scene_level, ties_hold
 
 # the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
@@ -1488,12 +1488,12 @@ def hint_words(ctx, sid, values=None, whole=True):
 def told_by_hint(ctx, sid):
     """a slot's reason as its hint gives it, by the reason's string (P47; N-KEYS' `inertSaid`, `selectFirst`; O-HINT's): the
     words the hint's button shows — none where no hint of that string stands — and the words its notice shows by the compact
-    rule, whole where the hint stands open (`hint_words`), and those words as the status region says them, rendered for the
-    ear (`heard`; style S22), beside the status region's words and the one line's segment carrying that string, which no
-    hint stands in"""
+    rule, whole where the hint stands open (`hint_words`), each key it names drawn for this platform (`drawn_keys`), and those
+    words as the status region says them, rendered for the ear (`heard`; style S22), beside the status region's words and
+    the one line's segment carrying that string, which no hint stands in"""
     got = ctx.js('''((sid) => { const h = window.__skep.hint(), s = document.querySelector(`#line [data-string="${sid}"]`);
       return {hint: h && h.id === sid ? h.words : null, open: !!h && h.open, line: s ? s.textContent : null, live: document.getElementById('live').textContent}; })(%s)''' % json.dumps(sid))
-    words = hint_words(ctx, sid, whole=got['open'])
+    words = hint_words(ctx, sid, drawn_keys(ctx, sid), whole=got['open'])
     return dict(got, words=words, heard=heard(ctx, words))
 
 
@@ -2650,7 +2650,7 @@ def held_version(ctx, r):
         ctx.js('document.getElementById("live").textContent = ""')
         chord(ctx, ' ', code='Space')
         space = told_by_hint(ctx, 'F.swallow.space')
-        line = hint_words(ctx, 'F.swallow.space', {'paging key': 'PageDown'}, whole=space['open'])
+        line = hint_words(ctx, 'F.swallow.space', drawn_keys(ctx, 'F.swallow.space'), whole=space['open'])
         r.check(space['hint'] == line and (space['live'] or '').startswith(heard(ctx, line)), '(d) Space at a selection in the held version keeps K-9\'s own line, said as heard (D5 K-9; style S22)', dict(space, want=line))
         r.figures['held_version'] = figures
     finally:
@@ -3397,7 +3397,7 @@ def copy_nothing(ctx, r):
     Its figures"""
     figures = {}
     whole, clause = hint_words(ctx, 'L.copy.nothing'), hint_words(ctx, 'L.copy.nothing', whole=False)
-    enter, shift = sentence(ctx, 'L.copy.nothing.enter'), sentence(ctx, 'L.copy.nothing.shift')
+    enter, shift = sentence(ctx, 'L.copy.nothing.enter', drawn_keys(ctx, 'L.copy.nothing.enter')), sentence(ctx, 'L.copy.nothing.shift', drawn_keys(ctx, 'L.copy.nothing.shift'))
     # (a), (c): the first edition's span, nothing selected anywhere, the walk's item holding the focus
     ctx.leap(DOC, WINDOW[0])
     ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); })()')
@@ -3605,8 +3605,8 @@ def run(ctx):
     # the Space key: its own line, its hint
     chord(ctx, ' ', code='Space')
     hint = state(ctx)['hint'] or {}
-    words = hint_words(ctx, 'F.swallow.space', {'paging key': 'PageDown'}, whole=bool(hint.get('open')))
-    r.check(hint.get('id') == 'F.swallow.space' and hint.get('words') == words, 'Space raises its own K-9 line as its hint (PageDown pages), whole at its first press in the session and its first clause after', {'hint': hint, 'want': words})
+    words = hint_words(ctx, 'F.swallow.space', drawn_keys(ctx, 'F.swallow.space'), whole=bool(hint.get('open')))
+    r.check(hint.get('id') == 'F.swallow.space' and hint.get('words') == words, 'Space raises its own K-9 line as its hint (Page Down pages, its keys drawn for this platform), whole at its first press in the session and its first clause after', {'hint': hint, 'want': words})
     chord(ctx, ' ', code='Space')
     hint = state(ctx)['hint'] or {}
     r.check(hint.get('words') == 'Space does not page here.' and not hint.get('open'), 'Space again: its first clause, a sentence', hint)

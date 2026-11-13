@@ -208,6 +208,7 @@ import { below, spoken } from './statement.js';
 import { entitlementArm, placeholderOf, faceRuns, CLAUSE_READING } from '../text/article.js';
 import { retries, lineOf } from '../beams/held.js';
 import { memberOf } from '../model/address.js';
+import { drawChord } from '../nav/keys.js';
 import { t, tRuns, addressedHTML, endingOf, sentence, heard } from '../strings.js';
 import { esc, fingerprintCue } from '../util.js';
 
@@ -1258,10 +1259,10 @@ const elapsed = (/** @type {number} */ ms) => new Intl.NumberFormat(undefined, {
 
 /** a string filled, by its id: a face's line, a hand's slot, an act's reason */
 const entry = (/** @type {string} */ id, /** @type {Record<string, string>} */ v = {}) => ({ id, text: t(id, v) });
-/** a string filled with a draft's name as the status region names its box (T-LAYER's `boxName`): its words, and the same as stretches in their faces, which what is spoken keeps the name of as written; the address alone where the model holds no record */
-const naming = (/** @type {string} */ id, /** @type {string} */ addr) => {
+/** a string filled with a draft's name as the status region names its box (T-LAYER's `boxName`), and with the values its other tokens take — a key drawn for this platform (N-KEYS' `drawChord`): its words, and the same as stretches in their faces, which what is spoken keeps the name of as written; the address alone where the model holds no record */
+const naming = (/** @type {string} */ id, /** @type {string} */ addr, /** @type {Record<string, string>} */ values = {}) => {
   const name = REC.has(addr) ? LAYER.boxName(addr) : { name: addr, runs: [{ text: addr, face: /** @type {const} */ ('ident') }] };
-  return { id, text: t(id, { label: name.name }), runs: tRuns(id, { label: name.runs }) };
+  return { id, text: t(id, { ...values, label: name.name }), runs: tRuns(id, { ...values, label: name.runs }) };
 };
 
 /** a string filled as a sentence of its own, by its id (ST's `sentence`): a line of a face whose lines the page composes */
@@ -1519,7 +1520,8 @@ async function sentAgain(/** @type {string} */ addr, /** @type {number} */ held)
  * it did said after it: nothing dropped where the read for the line's
  * landing went unanswered, the face and its act standing; where a dropped
  * line may have landed, that line; where nothing is held for the draft now
- * and its scene stands, the scene's end line — two lines, never joined.
+ * and its scene stands, the scene's end line, its closing key drawn for this
+ * platform — two lines, never joined.
  * @param {string} addr
  * @param {number} held
  */
@@ -1528,7 +1530,7 @@ async function dropped(addr, held) {
   if (out.unread) hand.line(t('B3.answers_lost.unanswered', { board: boardName() }), 'B3.answers_lost.unanswered');
   else if (!out.dropped && !out.kept && out.refused) FOCUS.say(t('L.refused', { name: out.refused }));
   if (out.dropped && out.mayHaveLanded.length) hand.line(t('B3.discarded.may-have-landed'), 'B3.discarded.may-have-landed');
-  if (out.dropped && !WRITE.heldOf(addr).length && SCENE.isOpen()) hand.line(naming('B3.held.none', addr).runs, 'B3.held.none');
+  if (out.dropped && !WRITE.heldOf(addr).length && SCENE.isOpen()) hand.line(naming('B3.held.none', addr, { 'close key': drawChord('Esc') }).runs, 'B3.held.none');
   reshow(addr);
 }
 

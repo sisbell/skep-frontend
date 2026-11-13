@@ -13,7 +13,8 @@
 // draft's name kept as written; a line that ends on a
 // sentence of its own shows
 // and says it after both while its notice stands whole, and never beside the
-// compact form; the next act takes it down, handing a focus its button
+// compact form, its tokens filled by the values the press hands with it; the
+// next act takes it down, handing a focus its button
 // held to the walk's element; and it stands beside the element its press was
 // made at — at its right, else its left, else below, below first where the
 // element stands above the view, else inside it at its foot — under the
@@ -119,7 +120,7 @@ test('a held key\'s auto-repeat is the press it repeats: answered by nothing —
   HINT.render();
   const n = said.length, faded = el.faded.length, before = HINT.standing();
   HINT.show('F.swallow', SWALLOW, { repeat: true });
-  HINT.show('F.swallow.space', { 'paging key': 'PageDown' }, { repeat: true });
+  HINT.show('F.swallow.space', { 'space key': 'Space', 'paging key': 'Page Down' }, { repeat: true });
   await tick();
   HINT.render();
   assert.deepEqual([said.length, el.faded.length, HINT.standing()], [n, faded, before]);
@@ -202,7 +203,7 @@ test('a line that ends on a sentence of its own — the undo chord\'s constant s
   const writing = { label: 'Notes 1.0.1.0.2', act: () => {} };
   const end = sentence('B3.undo.last-writing', { label: writing.label }), last = sentence('B3.undo.constant'), { whole, clause } = hintSentences('B3.undo.none');
   assert.equal(clause, 'Undo works in the text of a draft you are writing.');
-  HINT.show('B3.undo.none', null, { writing, ending: 'B3.undo.constant' });
+  HINT.show('B3.undo.none', null, { writing, ending: { id: 'B3.undo.constant' } });
   HINT.render();
   const heardWhole = 'Undo works in the text of a draft you are writing, there is nothing here to undo.';
   assert.equal(heard(whole), heardWhole, 'its dash a pause as a screen reader hears it');
@@ -211,16 +212,24 @@ test('a line that ends on a sentence of its own — the undo chord\'s constant s
     + `<span class="writing" data-string="B3.undo.last-writing">You were last writing in <button type="button" data-writing="1" aria-label="${writing.label}">${addressedHTML(writing.label)}</button>.</span>`
     + ` <span class="ending" data-string="B3.undo.constant">${last}</span><span id="hint-whole" hidden>${heardWhole} ${last}</span>`);
   HINT.act();
-  HINT.show('B3.undo.none', null, { writing, ending: 'B3.undo.constant' });
+  HINT.show('B3.undo.none', null, { writing, ending: { id: 'B3.undo.constant' } });
   HINT.render();
   assert.deepEqual([HINT.standing(), said.at(-1), el.innerHTML.includes('class="ending"')], [{ id: 'B3.undo.none', words: clause, whole, open: false, writing: end }, `${clause} ${end}`, false], 'a later press: its first clause and where the person was writing — the sentence neither shown nor said');
   HINT.toggle();
   HINT.render();
   assert.deepEqual([HINT.standing()?.ending, said.at(-1), el.innerHTML.includes('class="ending"')], [last, `${heardWhole} ${end} ${last}`, true], 'the notice\'s act opens it whole, the sentence with it');
   HINT.act();
-  HINT.show('C-45', { D: '1.0.1.0.3' }, { ending: 'B3.undo.constant' });
-  HINT.show('C-45', { D: '1.0.1.0.3' }, { ending: 'B3.undo.constant' });
+  HINT.show('C-45', { D: '1.0.1.0.3' }, { ending: { id: 'B3.undo.constant' } });
+  HINT.show('C-45', { D: '1.0.1.0.3' }, { ending: { id: 'B3.undo.constant' } });
   assert.deepEqual([HINT.standing()?.open, HINT.standing()?.ending], [true, last], 'a notice with no compact form stands whole at every press, the sentence after it each time');
+});
+
+test('a line\'s ending carries the values its tokens are filled with — the copy line\'s act its key as the press drew it — shown and said filled, never a token (style S21)', () => {
+  const ending = { id: 'L.copy.nothing.enter', values: { 'act key': 'Return' } }, whole = hintSentences('L.copy.nothing').whole;
+  HINT.show('L.copy.nothing', null, { ending });
+  HINT.render();
+  assert.deepEqual([HINT.standing()?.ending, said.at(-1)], ['Return selects this passage.', `${heard(whole)} Return selects this passage.`], 'the act\'s key filled, a sentence, said after the notice');
+  assert.ok(el.innerHTML.includes('<span class="ending" data-string="L.copy.nothing.enter">Return selects this passage.</span>') && !el.innerHTML.includes('⟨'), `drawn filled: ${el.innerHTML}`);
 });
 
 test('the next act takes the hint down, its element emptied on the next frame; a focus its button held is handed to the walk\'s element', () => {

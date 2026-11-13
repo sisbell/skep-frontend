@@ -4,7 +4,10 @@
 // by its `ux/copy.md` id (`C-n`) or by the requirement that pins it — or
 // DRAFT, a string a design document drafted, its source and the screen named,
 // or one no design document carries (`lane: true`), which `lacking` lists.
-// The page invents no wording. An entry holds words only, never the joiner
+// The page invents no wording. An entry names a key only by a ⟨token⟩, never
+// typed into its words, which its site fills with the key drawn for the
+// person's platform (N-KEYS' `drawChord`; style S21) — the table's own spoken
+// words for the keys (S22's) apart. An entry holds words only, never the joiner
 // that attaches it to another (style S2): a line the page builds of several
 // entries is composed here, every empty part dropped so no joiner stands
 // beside a missing one — as sentences (`sentence`, `asSentence`, `sentences`),
@@ -228,7 +231,7 @@ export const STRINGS = {
   'F.floating.read': { text: 'read version ⟨k⟩, the last that holds it', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S6' },
   'F.floating.member': { text: 'its passage is not in version ⟨k⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S6; B1-S9: a stop returned to; a return by the trail' },
   'F.swallow': { text: 'typing goes nowhere here — to go somewhere, the address line: ⟨LEAP chord⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the plane (K-9)', hint: 'clause' },
-  'F.swallow.space': { text: 'Space does not page here — ⟨paging key⟩ does', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the plane (K-9)', hint: 'clause' },
+  'F.swallow.space': { text: '⟨space key⟩ does not page here — ⟨paging key⟩ does', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the plane (K-9)', hint: 'clause' },
   'F.board-residue': { text: 'not counted here: drafts you may not read, links homed on other boards — counted from ⟨floor⟩; documents unchanged since then are not shown', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
   'F.card-clause': { text: 'links homed on other boards are not counted here', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S4' },
   'F.leap.none': { text: 'nothing you can read on this board goes by that name or holds those words', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S11' },
@@ -294,7 +297,7 @@ export const STRINGS = {
   'F.index.state': { text: 'index: ⟨arm⟩', cls: 'DRAFT', source: '', screen: 'B1-S11', lane: true },
 
   // ---- DRAFT: designs/D5-keys.md --------------------------------------------
-  'D5.slots': { text: 'annotate ⌘⇧A · quote ⌘⇧C · who wrote this? ⌘⇧O · who uses this? ⌘⇧R · see the links ⌘⇧L · follow ⌘↩ · read side by side ⌘⇧↩ · link to… ⌘K · format…', cls: 'DRAFT', source: 'designs/D5-keys.md', screen: 'the selection' },
+  'D5.slots': { text: 'annotate ⟨annotate chord⟩ · quote ⟨quote chord⟩ · who wrote this? ⟨wrote chord⟩ · who uses this? ⟨uses chord⟩ · see the links ⟨links chord⟩ · follow ⟨follow chord⟩ · read side by side ⟨scene chord⟩ · link to… ⟨link-to chord⟩ · format…', cls: 'DRAFT', source: 'designs/D5-keys.md', screen: 'the selection' },
   'D5.select-first': { text: 'select a passage first', cls: 'DRAFT', source: 'designs/D5-keys.md', screen: 'the selection; a hint at the focus', hint: 'clause' },
   'D5.annotate': { text: 'annotate', cls: 'DRAFT', source: 'designs/D5-keys.md', screen: 'the selection' },
   'D5.quote': { text: 'quote', cls: 'DRAFT', source: 'designs/D5-keys.md', screen: 'the selection' },
@@ -323,12 +326,12 @@ export const STRINGS = {
   'B3.last-wrote': { text: 'you last wrote in ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the launch (D6 BM-53)' },
   'B3.last-published': { text: 'you last published ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the launch landing at an edition of the person\'s own (D6 BM-53)' },
   'B3.kept-in': { text: 'kept in ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the launch\'s recent rows; B3-S5: a quote\'s line; B3-S9: the composer\'s end' },
-  'B3.caret.enter': { text: 'Enter places a caret here', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1, B3-S13: a printable key at a span of the draft with no caret (D6 BM-52)', hint: 'clause' },
-  'B3.caret.enter.paste': { text: 'Enter places a caret here — then paste', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a paste at a span of the draft with no caret', hint: 'clause' },
+  'B3.caret.enter': { text: '⟨act key⟩ places a caret here', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1, B3-S13: a printable key at a span of the draft with no caret (D6 BM-52)', hint: 'clause' },
+  'B3.caret.enter.paste': { text: '⟨act key⟩ places a caret here — then paste', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a paste at a span of the draft with no caret', hint: 'clause' },
   'B3.caret.cut': { text: 'select the passage to cut it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a cut at a span of the draft with no caret', hint: 'clause' },
-  'B3.caret.back': { text: 'your text is back with Shift+Tab', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a printable key at a control of the corner (D6 BM-52)', hint: 'clause' },
-  'B3.caret.mark': { text: 'a mark — ↓ moves to the words beside it, and Enter there places a caret', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a printable key at a mark of the draft', hint: 'whole' },
-  'B3.tab.exit': { text: 'Tab types a tab here\u00a0— Esc, then Tab, leaves the text', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the line at the focus at the first Tab typed in a session at an editing caret (D5 K-76; D6 BM-54)' },
+  'B3.caret.back': { text: 'your text is back with ⟨back chord⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a printable key at a control of the corner (D6 BM-52)', hint: 'clause' },
+  'B3.caret.mark': { text: 'a mark — ⟨walk key⟩ moves to the words beside it, and ⟨act key⟩ there places a caret', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a printable key at a mark of the draft', hint: 'whole' },
+  'B3.tab.exit': { text: '⟨tab key⟩ types a tab here\u00a0— ⟨leave key⟩, then ⟨next key⟩, leaves the text', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the line at the focus at the first Tab typed in a session at an editing caret (D5 K-76; D6 BM-54)' },
   'B3.mint.stays': { text: 'it stays — you can remove its words, never the document', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the mint\'s clause beside the creation copy, whole at the session\'s first mint; B3-S10: the staging and alternative acts\' mint' },
   'B3.slot.capture.inert': { text: 'a thought here goes public from a document of yours — quote it into a document of yours, then publish that — publishing asks what of it goes public', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the corner\'s publish slot inert at capture\'s default document, its reason' },
   'B3.slot.notes.inert': { text: 'this version publishes no notes document whole — to publish a note\'s words, quote them into a document of yours, then publish that — publishing asks what of it goes public', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S1: the corner\'s publish slot inert at a notes document, its reason' },
@@ -380,7 +383,7 @@ export const STRINGS = {
   'B3.moved.discard': said([['these words were never kept on the board —'], ['discarding removes them from this device for good;'], ['place what you want to keep first', { exit: true }]], { cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved document\'s discard (D6 BM-16)' }),
   'B3.moved.send-again.inert': { text: 'place these words where they go, or discard them\u00a0— it can be sent as it stands only if ⟨label⟩ changes back, by an undo where that change was made', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the moved document\'s inert "send again" (D6 BM-17)' },
   'B3.discarded.may-have-landed': { text: 'discarded here — it may already be on the board', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the one line after a discard that took a line whose landing could not be decided (D6 BM-16; the moved-document decision, answer 6) — the UI wording seat\'s to refine, its copy id owed' },
-  'B3.held.none': { text: 'nothing is held for ⟨label⟩ now\u00a0— Esc closes this', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the one line as the moved scene\'s last held line is kept or discarded, the scene staying (D6 BM-16)' },
+  'B3.held.none': { text: 'nothing is held for ⟨label⟩ now\u00a0— ⟨close key⟩ closes this', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the one line as the moved scene\'s last held line is kept or discarded, the scene staying (D6 BM-16)' },
   'B3.island': { text: 'a fault in this client, not a change to your text: nothing was written or held — closing this window loses it; keep the window open, or copy these words out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: a refusal the page keeps, the run an island, under the face\'s head (D6 BM-19)' },
   'B3.copy-words-out': { text: 'copy these words out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: the copy slot at a face standing at one run — the refused run\'s, the island\'s, `held_full`\'s first refusal (D6 BM-10, BM-19, BM-20)' },
   'B3.held_full.refused': { text: 'the text held for your notebook is at its limit; this change waits\u00a0— send again once what is held is sent', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2: `held_full`\'s first refused burst, under the face\'s head (D6 BM-20)' },
@@ -485,7 +488,7 @@ export const STRINGS = {
   'B3.slot_too_large': { text: 'this selection is too large to link in one act — split it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S6: `slot_too_large`' },
   'B3.link.own-type': { text: '⟨label⟩ — a type of your own; what it says is its meaning', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S6: the own-type row\'s face where it stands chosen' },
   'B3.link.own-type.row': { text: 'a type of your own — one of your documents, or a passage of yours by its address', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S6: the picker\'s own-type row' },
-  'B3.link.enter': { text: 'linked privately\u00a0— kept in ⟨home⟩; Enter makes nothing public here\u00a0— Tab to make the link publicly', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S6: Enter on the picker\'s forward line where the pick draws the public command, before the act (D5 K-97, K-98)' },
+  'B3.link.enter': { text: 'linked privately\u00a0— kept in ⟨home⟩; ⟨act key⟩ makes nothing public here\u00a0— ⟨next key⟩ to make the link publicly', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S6: Enter on the picker\'s forward line where the pick draws the public command, before the act (D5 K-97, K-98)' },
   'B3.link.make': { text: 'make the link', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S6: the picker\'s forward line at a private home (D5 K-97)' },
   'B3.link.publicly': { text: 'make the link publicly', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S6: the picker\'s one-way command, and its forward line wherever that line\'s act makes a public link (D5 K-97, K-98)' },
   'B3.link.hold-other': { text: 'hold the other passage too\u00a0— open a document beside this one and select it there; for a note of yours, open its "in Notes on …" first, select the note there, then open this draft beside it and select this passage again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S6: the slot\'s reason with one passage held' },
@@ -636,7 +639,7 @@ export const STRINGS = {
   // scene's segment, lines, marks, gaps with their headings and acts, places, commands and faces, and the merge journal's
   // label
   'B3.publish.step': { text: 'publishing ⟨label⟩ · ⟨i⟩ of 4', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11: the one line\'s step segment while a publish panel stands' },
-  'B3.publish.held-since': { text: 'held since ⟨time⟩\u00a0— Enter continues it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P1: a held publication re-opened at the slot' },
+  'B3.publish.held-since': { text: 'held since ⟨time⟩\u00a0— ⟨act key⟩ continues it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P1: a held publication re-opened at the slot' },
   'B3.publish.selection.all': { text: 'all of ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P1: what to publish, by select-all or where no selection stands' },
   'B3.publish.selection.passages': { text: '⟨n⟩ passages of ⟨label⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P1: what to publish, a selection of passages' },
   'B3.publish.next-public': { text: 'next: what goes public', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P1: the command' },
@@ -748,7 +751,7 @@ export const STRINGS = {
   'B3.publish.command.beside': { text: 'publish all of this draft beside version ⟨k+1⟩ of ⟨D⟩, as version ⟨k.1⟩ — ⟨D⟩\'s own address keeps showing version ⟨k+1⟩; it can never be made private again', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P4: the one-way command at a draft of the family behind the head' },
   'B3.publish.origins.inert': { text: 'decide what of ⟨origin⟩ goes with this version: publish ⟨origin⟩ first, leave those words out, or keep them private — readers see a placeholder naming whose they are, how long they are and where in ⟨origin⟩ they were written', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P4: the command inert until each origin has its answer, its reason' },
   'B3.publish.origins.inert.counterpart': { text: 'decide what of ⟨origin⟩ goes with this version: window its published words from version ⟨j⟩, or leave those words out', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P2, P4: the act forward and the command inert until a part a record names is answered, their reason' },
-  'B3.publish.enter': { text: 'Enter publishes nothing here\u00a0— Tab to the publish command to take it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P4: an Enter at the panel\'s statement (D5 K-98)' },
+  'B3.publish.enter': { text: '⟨act key⟩ publishes nothing here\u00a0— ⟨next key⟩ to the publish command to take it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P4: an Enter at the panel\'s statement (D5 K-98)' },
   'B3.publish.values': { text: 'as it will stand', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P4: the caption over every permanent value the act fixes' },
   'B3.publish.running': { text: 'publishing…', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P4: the one-way command while its request is out' },
   'B3.publish.other-words': { text: 'to publish other words, cancel and select them', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S11 P1: the selection held' },
@@ -924,7 +927,7 @@ export const STRINGS = {
   'B3.card.link-to.inert.beside': { text: 'hold the other passage too — open the document it is in beside this one from the address line, select it there, then open this card again at its symbol', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: "link to…" from the card with one passage held, no scene standing' },
   'B3.card.link-to.peek': { text: 'then peek at the passage\'s links and open this card again at its symbol', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: the reason\'s last clause at a link the view draws only in a peek' },
   'B3.card.in-error.confirm': { text: 'this files a public claim that ⟨E⟩ was published in error — the claim names the whole document, not this version — permanent, never withdrawn, and supersedable — and only ⟨claimant⟩ can supersede it, so if you lose every key nothing lifts it, ever. It reveals nothing back: ⟨E⟩ stays readable. For a wrong passage in a document that is otherwise right, publish its next version without the passage — it leaves what every reader meets and stays readable at this version, forever', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: C-58\'s confirmation, its FACE rendering' },
-  'B3.card.in-error.enter': { text: 'Enter files nothing here\u00a0— Tab to “published in error” to take it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: an Enter at the remedy face\'s statement (D5 K-98)' },
+  'B3.card.in-error.enter': { text: '⟨act key⟩ files nothing here\u00a0— ⟨next key⟩ to “published in error” to take it', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S12: an Enter at the remedy face\'s statement (D5 K-98)' },
   // B3-S13: the selection's acts at a draft — the row's one reason, the surface-wide reasons, the swallow's forms, the note
   // composer's act, the formatting chords and C-45's act at the person's own edition, the format strip, the typing style and
   // the spoken outcomes; the person's formatting set — its label, its told lines, its card, the menus' hand line and show
@@ -942,7 +945,7 @@ export const STRINGS = {
   'B3.notes.keep': { text: 'keep the note', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the annotate composer\'s act at its end' },
   'B3.notes.home': { text: 'in Notes on ⟨draft⟩', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the note\'s card, naming its home' },
   'B3.format.carried': { text: '⟨E⟩ is published — formatting is made here, in your draft: ⟨chord⟩ again marks these words', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: a formatting chord at a carried selection\'s landing' },
-  'B3.format.carry': { text: 'format these words in your draft\u00a0— Enter takes you there', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: C-45\'s act at the person\'s own edition where their staging draft holds the words, a formatting chord answered in place' },
+  'B3.format.carry': { text: 'format these words in your draft\u00a0— ⟨act key⟩ takes you there', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: C-45\'s act at the person\'s own edition where their staging draft holds the words, a formatting chord answered in place' },
   'B3.format.again': { text: '⟨chord⟩ again marks these words', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the landing line\'s formatting clause' },
   'B3.format.again.off': { text: '⟨chord⟩ again takes its mark off them', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the landing line\'s formatting clause where the words already carry the chord\'s mark' },
   'B3.format.held': { text: 'taken off with your next version\u00a0— then out of view at every version; a reader\'s “as published” switch still shows it where it stood', cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S13: the chord\'s face where a removal is held' },
@@ -1048,8 +1051,8 @@ export const STRINGS = {
   // stands whole, the act that selects at the walk's span — Enter's where Enter selects it, Shift+↓'s at any other span at
   // its reading scale — and none anywhere else
   'L.copy.nothing': { text: 'nothing selected — the clipboard is unchanged', cls: 'DRAFT', source: 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md', screen: 'a hint at the focus and the status region: Mod+C, or a copy, with nothing selected outside a field (D5 K-92)', hint: 'clause' },
-  'L.copy.nothing.enter': { text: 'Enter selects this passage', cls: 'DRAFT', source: 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md', screen: 'the copy line\'s end where Enter selects the walk\'s span (D5 K-92, K-7)' },
-  'L.copy.nothing.shift': { text: 'Shift+↓ selects this passage', cls: 'DRAFT', source: 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md', screen: 'the copy line\'s end at any other span at its reading scale (D5 K-92, K-8)' },
+  'L.copy.nothing.enter': { text: '⟨act key⟩ selects this passage', cls: 'DRAFT', source: 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md', screen: 'the copy line\'s end where Enter selects the walk\'s span (D5 K-92, K-7)' },
+  'L.copy.nothing.shift': { text: '⟨select chord⟩ selects this passage', cls: 'DRAFT', source: 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md', screen: 'the copy line\'s end at any other span at its reading scale (D5 K-92, K-8)' },
   'L.run.not-yet': { text: 'cannot yet be answered', cls: 'DRAFT', source: '', screen: 'B1-S10: a stretch of the selection whose question the board could not answer as of the text the page read', lane: true },
   'L.run.named': { text: '“⟨words⟩” — ⟨answer⟩', cls: 'DRAFT', source: '', screen: 'B1-S10: one stretch of a selection whose stretches answer differently, named by its first words; the "which" list: a source\'s row, the words of the selection its runs hold and its origin', lane: true },
   'L.seam.annotate': { text: 'annotate — comes with the annotation lane; nothing is written here', cls: 'DRAFT', source: '', screen: 'the selection; a hint at the focus', lane: true, hint: 'whole' },
@@ -1159,7 +1162,7 @@ export const STRINGS = {
   'L.leap-rows-label': { text: 'LEAP', cls: 'DRAFT', source: '', screen: 'B1-S11', lane: true },
   // "open beside" refused in the LEAP box (D5 K-101), each its hint beside the box: no row chosen and none answered; no
   // document read at its reading scale; a row naming no document but the one read, or none at all
-  'L.leap.beside.choose': { text: 'open beside needs a place — choose a row with ↓, or type an address or a first line', cls: 'DRAFT', source: '', screen: 'B1-S11: Mod+Shift+Enter in the LEAP box with no row chosen or none answered', lane: true, hint: 'clause' },
+  'L.leap.beside.choose': { text: 'open beside needs a place — choose a row with ⟨row key⟩, or type an address or a first line', cls: 'DRAFT', source: '', screen: 'B1-S11: Mod+Shift+Enter in the LEAP box with no row chosen or none answered', lane: true, hint: 'clause' },
   'L.leap.beside.reading': { text: 'open beside needs a document you are reading — go into one first', cls: 'DRAFT', source: '', screen: 'B1-S11: Mod+Shift+Enter in the LEAP box with no document at its reading scale', lane: true, hint: 'clause' },
   'L.leap.beside.other': { text: 'this row names no other document — open beside opens another document beside the one you are reading', cls: 'DRAFT', source: '', screen: 'B1-S11: Mod+Shift+Enter in the LEAP box at a row naming no other document', lane: true, hint: 'clause' },
   'L.scene-label': { text: 'the reading scene: two places side by side', cls: 'DRAFT', source: 'designs/plane.html', screen: 'B1-S9' },

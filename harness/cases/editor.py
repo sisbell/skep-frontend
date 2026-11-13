@@ -117,7 +117,7 @@ import re
 import time
 from collections import Counter
 
-from . import DOC, Result, WINDOW, heard
+from . import DOC, Result, WINDOW, drawn_keys, heard
 from .wire import READ_PATHS, READ_ROWS, read_ops
 
 # the own draft: the seed's windowed draft W of principal 1 (`WINDOW[2]`), text the person may edit (issue #411)
@@ -246,10 +246,10 @@ STATES = [
          how='retract and edit at the anatomy card (K-98)', claim='', why="the owner's acts on the card (S12 #122) and the composer (U3)"),
     dict(screen='B3-S13', state='swallow-draft', walk='W-08', step=4, drawn=True,
          how="a printable key at a span of the own draft with no caret (K-72; D6 BM-52)",
-         claim='the hint beside the focused line reads "Enter places a caret here" (B3.caret.enter), inside the window below the one line'),
+         claim='the hint beside the focused line reads the draft\'s own line, the key that places a caret drawn for this platform (B3.caret.enter), inside the window below the one line'),
     dict(screen='B3-S13', state='corner-way-back', walk='W-08', step=4, drawn=True,
          how="Tab from the walk's span of the own draft to its corner, then a printable key at the corner (K-72; D6 BM-52)",
-         claim='the hint beside the own draft\'s corner reads "your text is back with Shift+Tab" (B3.caret.back), inside the window below the one line and said in the status region, no caret placed and nothing typed'),
+         claim='the hint beside the own draft\'s corner reads the way back to its text, its chord drawn for this platform (B3.caret.back), inside the window below the one line and said in the status region, no caret placed and nothing typed'),
     dict(screen='B3-S13', state='row-inert', walk='W-08', step=4, drawn=True,
          how="a selection in the draft while a line of it is held (D6 BM-62)",
          claim='the slots that send — annotate, quote, "link to…" — stand inert with the row rule\'s one reason where a resend follows (B3.row.held.resend), while "who wrote this?" stays live'),
@@ -945,7 +945,7 @@ def corner_key(ctx, doc):
     box = ctx.js('(() => { const e = document.activeElement; if (!e) return null; const q = e.getBoundingClientRect(); return {x: q.left, y: q.top, w: q.width, h: q.height}; })()')
     n = len(page_calls(ctx))
     ctx.drv.key('x'); ctx.frames(2)
-    got, said, want = hint(ctx), live(ctx), hint_whole(ctx, 'B3.caret.back')
+    got, said, want = hint(ctx), live(ctx), hint_whole(ctx, 'B3.caret.back', values=drawn_keys(ctx, 'B3.caret.back'))
     anchor = ctx.js('(() => { const h = window.__skep.hint(); return h && h.placed ? h.placed.anchor : null; })()')
     caret, edits = ctx.js('window.__skep.caret()'), ctx.js('window.__skep.write.edits(%s).length' % json.dumps(doc))
     beside = bool(anchor and box) and all(abs(anchor[k] - box[k]) <= 1 for k in ('x', 'y', 'w', 'h'))
@@ -956,16 +956,16 @@ def corner_key(ctx, doc):
 
 
 def corner_back(ctx, doc):
-    """THE WAY BACK THE CORNER's LINE NAMES (B3-S13: "your text is back with Shift+Tab"): `doc`'s corner reached and a key
+    """THE WAY BACK THE CORNER's LINE NAMES (B3-S13: B3.caret.back, its chord Shift+Tab): `doc`'s corner reached and a key
     pressed there as `corner_key` does, then Shift+Tab, then `x`; the corner's state, where Shift+Tab put the focus, the
     hint and whether it held: the corner's state held, the focus back on the mirror's current item with the walk on a span
-    of `doc`, and `x` there answered at the text's edge by the draft's own line, "Enter places a caret here"
-    (B3.caret.enter), no caret placed and nothing typed"""
+    of `doc`, and `x` there answered at the text's edge by the draft's own line naming the key that places a caret, drawn
+    for this platform (B3.caret.enter), no caret placed and nothing typed"""
     first = corner_key(ctx, doc)
     ctx.drv.key('Tab', mods=('Shift',)); ctx.settle(); ctx.frames(2)
     at = ctx.js(FOCUS_AT)
     ctx.drv.key('x'); ctx.frames(2)
-    got, want = hint(ctx), hint_whole(ctx, 'B3.caret.enter')
+    got, want = hint(ctx), hint_whole(ctx, 'B3.caret.enter', values=drawn_keys(ctx, 'B3.caret.enter'))
     caret, edits = ctx.js('window.__skep.caret()'), ctx.js('window.__skep.write.edits(%s).length' % json.dumps(doc))
     walk = at['walk'] or {}
     ok = (first['ok'] and at['id'] == 'walk-%d' % at['idx'] and at['sel'] == 'true' and walk.get('kind') == 'block' and walk.get('addr') == doc
@@ -1962,7 +1962,7 @@ def run(ctx):
     said_at_key = live(ctx)
 
     def swallow_check(w):
-        want, got = hint_whole(ctx, 'B3.caret.enter'), hint(ctx)
+        want, got = hint_whole(ctx, 'B3.caret.enter', values=drawn_keys(ctx, 'B3.caret.enter')), hint(ctx)
         ok = (got['hint'] == {'id': 'B3.caret.enter', 'words': want, 'by': 'edge'} and got['seen'] and not got['line'] and ctx.js('window.__skep.caret()') is None
               and said_at_key == heard(ctx, want))
         return ok, {'got': got, 'want': want, 'status_region': said_at_key}

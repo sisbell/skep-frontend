@@ -502,6 +502,7 @@ test('where Mod+Shift+Enter finds no row whose act opens, nothing opens: the box
   const said = () => HINT.standing()?.id ?? null;
   besideKey();
   assert.deepEqual([stands(), said()], [[true, D, true, 1], 'L.leap.beside.choose'], 'the box as opened, no row chosen: nothing opens, the box standing; the hint says it needs a place');
+  assert.equal(HINT.standing()?.whole, 'Open beside needs a place — choose a row with ↓, or type an address or a first line.', 'its key drawn for this platform, never a token (style S21)');
   key('a');
   assert.equal(said(), null, 'the box\'s next key takes the hint down');
   type('nothing lists this');

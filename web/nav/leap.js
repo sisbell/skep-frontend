@@ -126,7 +126,7 @@ import * as FACES from '../overlays/faces.js';
 import * as HINT from '../overlays/hint.js';
 import * as SEL from '../overlays/selection.js';
 import * as LAYER from '../text/layer.js';
-import { MAC } from './keys.js';
+import { MAC, drawChord } from './keys.js';
 import { matches } from './match.js';
 import { t, heard, joinRuns } from '../strings.js';
 import { esc } from '../util.js';
@@ -531,7 +531,8 @@ export async function go(i, byKey = false) {
  * "Open beside" (K-101; see the head): the reading scene on the document in
  * view and the place row i names, the box closed first, the selection
  * standing in the document in view held and the step it is opened from; else,
- * nothing opening, the hint saying why beside the box, its text, its caret
+ * nothing opening, the hint saying why beside the box, the key that chooses a
+ * row drawn for this platform (N-KEYS' `drawChord`), the box's text, its caret
  * and its focus standing. Where no board is held, the box closes onto the
  * no-board face (FP-35).
  * @param {number} i the row it acts on: the row chosen, else −1
@@ -542,7 +543,7 @@ export function beside(i, o = {}) {
   if (!REC.board()) { close(); FACES.noBoard(null); return; }
   const r = rows[i], at = inView(), to = r && at ? besideOf(r, at) : null;
   if (!to || !at) {
-    HINT.show(refused = !r ? 'L.leap.beside.choose' : !at ? 'L.leap.beside.reading' : 'L.leap.beside.other', null, { at: els.box, repeat: o.repeat });
+    HINT.show(refused = !r ? 'L.leap.beside.choose' : !at ? 'L.leap.beside.reading' : 'L.leap.beside.other', { 'row key': drawChord('↓') }, { at: els.box, repeat: o.repeat });
     return;
   }
   close();

@@ -108,12 +108,15 @@
 // in the place of the kept word and the chip, and at a selection in it, the
 // focus there, the acts that send and a printable key giving the one reason
 // the selection keys against the current text, Space keeping K-9's line
-// (D6 BM-14; FP-41).
+// (D6 BM-14; FP-41), and its last held line discarded, the scene staying,
+// the one line naming the key that closes it as the platform draws it (D6
+// BM-16; style S21).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
 import * as REC from '../model/records.js';
 import * as WRITE from '../write/write.js';
+import * as MACHINE from '../write/machine.js';
 import * as PUMP from '../model/pump.js';
 import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
@@ -135,7 +138,7 @@ import * as GO from '../nav/go.js';
 import * as TRAIL from '../nav/trail.js';
 import * as CAM from '../plane/camera.js';
 import { accountCell } from '../plane/projection.js';
-import { t, tHTML, lastRead, addressedHTML, sentence, sentences, hintSentences, heard } from '../strings.js';
+import { t, tHTML, lastRead, addressedHTML, sentence, sentences, hintSentences, heard, runsText, asRuns } from '../strings.js';
 import { esc } from '../util.js';
 import * as LK from '../links/links.js';
 import { inkOf } from '../beams/beams.js';
@@ -2453,6 +2456,37 @@ test('at a selection in the moved scene\'s held version, while the focus stands 
   selectWords(dom, plain, 'Held words');
   assert.deepEqual([SCENE.heldVersionReason(), (await press('k', { mod: true })).hint], [null, 'L.seam.link-to'], 'a scene not the moved scene: the slot\'s own reason');
   assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+test('the moved scene\'s last held line discarded, the scene staying, its end line names the key that closes the scene as the platform draws it — "Esc", never a token — after the draft\'s name (D6 BM-16; style S21; issue #627)', () => onPage(async () => {
+  const unasked = fake.unanswered.length, session = { session: 's-1', principal: 1, account: '1.0.1' };
+  /** @type {unknown[]} the lines the shell holds for the session, as `held(session)` lists them */
+  let rows = [{ ...MOVED_ROW[0], base: 1, frame: { ...MOVED_ROW[0].frame, as_of: 1, id: 'p.1' }, refusal: { kind: 'refused', name: 'arrangement_moved', status: 200, code: 'arrangement_moved', detail: null, op: 'insert', site: { as_of: 1, current: 3 }, body: null }, sendable: false }];
+  const heldKey = FAKE.keyOf('held', { session: 's-1' }), dropKey = FAKE.keyOf('resolve', { session: 's-1', held: 1, act: 'drop' });
+  Object.defineProperty(script, heldKey, { configurable: true, enumerable: true, get: () => ({ result: rows }) });
+  Object.assign(script, { [dropKey]: { result: {} } });
+  /** @type {Array<[string, string]>} each line said in the one line: its string, and its words as drawn */
+  const lines = [];
+  const flush = async () => { for (let i = 0; i < 8; i++) await new Promise((r) => setImmediate(r)); };
+  try {
+    await PUMP.loadWhole(G);
+    REC.setSession(/** @type {any} */ ({ ...session, writes: true }));
+    MACHINE.handIn();
+    await flush();
+    assert.equal(FACES.cornerFace(G)?.line.id, 'B3.moved', 'the moved face stands at the draft\'s corner');
+    await SCENE.open(G, heldVersionOfG(), { heldB: true });
+    assert.equal(SCENE.isOpen(), true, 'the moved scene stands');
+    FACES.readers({ line: (words, id) => { lines.push([id, runsText(asRuns(words))]); } });
+    rows = [];
+    assert.equal(FACES.faceAct(G, 'discard'), true, 'the face\'s discard taken');
+    await flush();
+    const none = lines.find(([id]) => id === 'B3.held.none');
+    assert.deepEqual(none, ['B3.held.none', `nothing is held for ${LAYER.boxName(G).name} now\u00a0— Esc closes this`], `its end line, its key drawn: ${JSON.stringify(lines)}`);
+    assert.deepEqual(fake.unanswered.slice(unasked), []);
+  } finally {
+    MACHINE._reset(); FACES.readers({ line: (words) => FOCUS.say(words) }); REC.setSession(session);
+    delete script[heldKey]; delete script[dropKey];
+  }
 }));
 
 test('each pane is named by its corner\'s first item, then its address: the bar\'s hidden words its kind — "draft" at a draft, "published" at an edition — and its corner opening with that kind in its slot (issue #423\'s design decision: "A scene pane has no item, so its region is named the same way"; FP-33)', () => onPage(async (p) => {

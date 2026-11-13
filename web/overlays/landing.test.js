@@ -4,7 +4,8 @@
 // act is N-GO's, the next landing takes the line down with the outline and a
 // focus its act held goes to the walk's element, and a landing that says
 // nothing stands no line; a landing in several runs makes the line the label
-// of the run it stands at with the step's acts first, a press on one stepping
+// of the run it stands at with the step's acts first, each chord drawn as the
+// platform's menus draw it, a press on one stepping
 // and the line taking the label of the run stepped to (FP-21), each act named
 // by its words alone, the step's chord its key; and the labels
 // that would stack in one column's edge are one group, whose room is the
@@ -22,7 +23,7 @@ import * as TRAIL from '../nav/trail.js';
 import * as GO from '../nav/go.js';
 import * as HOST from './host.js';
 import * as LANDING from './landing.js';
-import { drawChord, keyShortcut } from '../nav/keys.js';
+import { MAC, _platform, drawChord, keyShortcut } from '../nav/keys.js';
 import { t, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
 
@@ -140,7 +141,7 @@ test('a landing that holds all of the passage in one piece stands no line: the o
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a landing in several runs: its line the label of the run it stands at, its acts the step\'s — each showing its chord — before its offers; a press on "next piece" steps, the line taking the label of the run stepped to (issue #158)', async () => {
+test('a landing in several runs: its line the label of the run it stands at, its acts the step\'s — each showing its chord as the platform\'s menus draw it — before its offers; a press on "next piece" steps, the line taking the label of the run stepped to (issues #158, #627)', async () => {
   await run(GO.leapTo(D));
   await run(GO.leapTo(FAR, { how: 'leap', carry: TWO }));
   LANDING.render();
@@ -150,6 +151,13 @@ test('a landing in several runs: its line the label of the run it stands at, its
     'the line "piece 1 of 2 · all of the passage · in another order", the step first, its chords drawn, then the first edition beside it');
   assert.deepEqual(el.acts(), ['next', 'previous', 'beside'], 'a native button for each act');
   assert.ok(el.innerHTML.includes(`<kbd>${esc(drawChord('Mod+G'))}</kbd>`), 'the step\'s chord shown on it');
+  const mac = MAC;
+  try {
+    for (const [platform, chords] of /** @type {Array<[boolean, string[]]>} */ ([[true, ['⌘G', '⇧⌘G']], [false, ['Ctrl+G', 'Ctrl+Shift+G']]])) {
+      _platform(platform);
+      assert.deepEqual(LANDING.stateNow()?.acts.flatMap((a) => (a.chord ? [a.chord] : [])), chords, `${platform ? 'macOS' : 'elsewhere'}: the step's chords as the platform's menus draw them (style S21, K16)`);
+    }
+  } finally { _platform(mac); }
   GO.landingAct('next');
   for (let i = 0; i < 60; i++) { await new Promise((r) => setTimeout(r, 0)); if (CAM.flying()) CAM.step(Infinity); }
   LANDING.render();

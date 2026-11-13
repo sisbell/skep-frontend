@@ -32,9 +32,9 @@
 // edition of the session's account C-45 naming the document, at a document of
 // another account B3-S13's line naming its owner; at the corner of a draft the
 // person may edit, every key but Space answered by B3-S13's line naming the
-// way back to the draft's text, "your text is back with Shift+Tab", nothing
-// placed (`cornerSays`; D5 K-72; D6 BM-52), and at any other corner of the
-// plane every key the platform's; Space at a corner the act's it stands on,
+// way back to the draft's text by its chord, Shift+Tab (`B3.caret.back`),
+// nothing placed (`cornerSays`; D5 K-72; D6 BM-52), and at any other corner
+// of the plane every key the platform's; Space at a corner the act's it stands on,
 // else the platform's (`cornerKey`), Space wherever else it is swallowed, and every other key at
 // every other site, K-9's line (`swallow`).
 // Each of those lines a printable key raises — the corner's and the scene's
@@ -54,8 +54,8 @@
 // region — whole at the first such copy in the page's session, its first
 // clause after — the act that selects there the sentence it ends on while it
 // stands whole: Enter's where Enter selects the walk's span (`enterSelects`),
-// Shift+↓'s at any other span at its reading scale, none anywhere else
-// (`selectsHere`). A copy event T-LAYER
+// Shift+↓'s at any other span at its reading scale, none anywhere else, its
+// key drawn for this platform (`selectsHere`). A copy event T-LAYER
 // takes nothing from — the Edit menu's, the context menu's — is answered the
 // same way (APP's). No key is dispatched while an input method's composition
 // is open (the IME guard).
@@ -103,9 +103,10 @@
 // is still made and copied. The first key typed in a draft after a moved
 // verdict came to stand on it is followed by that verdict's line, once
 // (`movedSays`; BM-18). At a span of such a draft where no caret stands a printable key
-// but Space is answered by the draft's own line, "Enter places a caret here"
-// (K-72, K-9), and a paste or a cut there by that line in their own words,
-// each its hint, nothing placed and nothing removed (K-93); at the span a
+// but Space is answered by the draft's own line, naming Enter as the key that
+// places a caret there (`B3.caret.enter`; K-72, K-9), and a paste or a cut
+// there by that line in their own words, each its hint, nothing placed and
+// nothing removed (K-93); at the span a
 // kept caret stands in (`keptSpan`), a printable key returns it and types at
 // it as at a live caret (`typeAt`), and Shift with ← or → returns it and
 // extends a selection from it as at a live caret, never from the span's edge
@@ -241,9 +242,10 @@
 // ending with what the chord again undoes (`declined`; D6 BM-11, BM-12).
 // What an undo or a redo says names the person's words as they stand, kept
 // as written when they are rendered for the ear (ST's `heard`; style S22).
-// A chord is drawn for this platform (`drawChord`) and exposed by the
-// control it acts through as its keys (`keyShortcut`; patterns K3), its
-// spoken words S22's for the drawn chord.
+// A chord is drawn as this platform's menus draw it (`drawChord`; style S21,
+// K16) — every key a hint's line names a token of its string filled so — and
+// exposed by the control it acts through as its keys (`keyShortcut`; patterns
+// K3), its spoken words S22's for the drawn chord.
 // State (FP-10), beside the held keys: whether Mod+S has been
 // answered whole this session (`saveAnswered`), how many keys the dispatch
 // has taken (`keysTaken`), and the save chord's latest answer (`saving`).
@@ -436,8 +438,34 @@ function arrowStep(/** @type {KeyboardEvent} */ e) {
   return /** @type {ArrowStep} */ (MAC && e.altKey ? (left ? 'wordLeft' : 'wordRight') : left ? 'left' : 'right');
 }
 
-/** how a chord is drawn for this platform (D5 §0) */
-export const drawChord = (/** @type {string} */ chord) => (MAC ? chord.replace('Mod+', '⌘').replace('Shift+', '⇧').replace('Enter', '↩') : chord.replace('Mod', 'Ctrl'));
+/** a chord in D5's notation (D5 §0): the modifiers it holds, each followed by "+", then its key */
+const CHORD_PARTS = /^((?:(?:Mod|Ctrl|Alt|Shift)\+)*)(.+)$/;
+/** each modifier as macOS draws it, in the order its menus draw them (style K16): Control, Option, Shift, Command */
+const MAC_MODIFIERS = /** @type {const} */ ([['Ctrl', '⌃'], ['Alt', '⌥'], ['Shift', '⇧'], ['Mod', '⌘']]);
+/** a named key drawn as its words on every platform (style K10) */
+const NAMED_KEYS = /** @type {Record<string, string>} */ ({ PageDown: 'Page Down', PageUp: 'Page Up' });
+
+/**
+ * How one chord, in D5's notation, is drawn for this platform (style S21,
+ * K16): on macOS its modifier glyphs in the order ⌃ ⌥ ⇧ ⌘, each drawn once
+ * wherever it stands in the chord, then its key with nothing between — Enter
+ * "↩" in a chord and "Return" alone; elsewhere "Ctrl" (D5's Mod or Ctrl),
+ * "Alt" and "Shift", then its key, joined by "+", Enter "Enter". Page Down
+ * and Page Up are their words on both (K10); every other key — Esc, Tab,
+ * Space, Home, End, an arrow, a letter, a digit, a sign — as D5 writes it. A
+ * line naming two chords draws each by its own call.
+ * @param {string} chord one chord in D5's notation: `Mod+Shift+O`, `Shift+↓`, `Enter`
+ * @returns {string}
+ */
+export function drawChord(chord) {
+  const m = CHORD_PARTS.exec(chord), held = new Set(m ? m[1].split('+').filter(Boolean) : []), key = m ? m[2] : chord;
+  if (MAC) {
+    const glyphs = MAC_MODIFIERS.filter(([k]) => held.has(k)).map(([, g]) => g).join('');
+    return glyphs + (key === 'Enter' ? (glyphs ? '↩' : 'Return') : NAMED_KEYS[key] ?? key);
+  }
+  const words = [held.has('Mod') || held.has('Ctrl') ? 'Ctrl' : '', held.has('Alt') ? 'Alt' : '', held.has('Shift') ? 'Shift' : ''].filter(Boolean);
+  return [...words, NAMED_KEYS[key] ?? key].join('+');
+}
 
 /** a key in D5's notation as `aria-keyshortcuts` names it (UI Events' key values) */
 const SHORTCUT_KEYS = /** @type {Record<string, string>} */ ({ Esc: 'Escape', '↓': 'ArrowDown', '↑': 'ArrowUp', '←': 'ArrowLeft', '→': 'ArrowRight' });
@@ -572,7 +600,7 @@ function readOnlySpan(ctx) {
  * @param {KeyboardEvent} e
  * @param {Ctx} ctx
  * @param {import('../overlays/hint.js').Writing | null} [writing] where the person was writing, which a printable key's line ends with (`writingElsewhere`); null for a paste
- * @param {string | null} [ending] the string of the sentence the line ends on while it stands whole (O-HINT's `show`): the undo chord's (`undoNone`)
+ * @param {import('../overlays/hint.js').Ending | null} [ending] the sentence the line ends on while it stands whole (O-HINT's `show`): the undo chord's (`undoNone`)
  * @returns {boolean} whether a line answered the key
  */
 function siteSays(e, ctx, writing = null, ending = null) {
@@ -614,7 +642,7 @@ export async function dispatch(e, ctx) {
   // a paste or a cut at a live caret in a draft that cannot be written now (D6 BM-58 … BM-60): the reason's own line, nothing placed and nothing removed
   if (mod && !e.shiftKey && (chord === 'Mod+V' || chord === 'Mod+X') && ctx.where === 'caret') { const c = LAYER.caret(); if (c && unwritableSays(c.addr, e, ctx)) return true; }
   // a paste or a cut at a span of a draft the person may edit holding no caret (K-93, K-72): the draft's line in their own words, its hint, nothing placed and nothing removed
-  if (mod && !e.shiftKey && (chord === 'Mod+V' || chord === 'Mod+X') && bareDraftSpan(ctx)) { HINT.show(chord === 'Mod+V' ? 'B3.caret.enter.paste' : 'B3.caret.cut', null, hinted(e, ctx)); return true; }
+  if (mod && !e.shiftKey && (chord === 'Mod+V' || chord === 'Mod+X') && bareDraftSpan(ctx)) { HINT.show(chord === 'Mod+V' ? 'B3.caret.enter.paste' : 'B3.caret.cut', actKey(), hinted(e, ctx)); return true; }
   // a paste at the walk's span of an edition of the person's own or of another's document (K-72, K-93): its document's line, its hint, nothing placed
   if (mod && !e.shiftKey && chord === 'Mod+V' && siteSays(e, ctx)) return true;
   // a copy outside a field where the platform holds no selection (K-92): the page's line, its default prevented, or the selection it draws placed under the copy
@@ -857,7 +885,8 @@ function editAtCaret(text, erase) {
  * text (K-70; BM-52; `editAtCaret`), the walk then standing on the span the
  * caret is in (N-WALK's `followCaret`), the platform's default prevented
  * before it waits; at a span holding no caret (`bareDraftSpan`), the draft's
- * own line, "Enter places a caret here", its hint (K-72; K-9); at the walk's
+ * own line naming the key that places a caret there, Enter drawn for this
+ * platform (`B3.caret.enter`), its hint (K-72; K-9); at the walk's
  * span of an edition of the session's account or of another's document,
  * every key but Space, its document's line (`siteSays`; K-72); anywhere
  * else, and for Space, swallowed with the K-9 line (`swallow`).
@@ -873,7 +902,7 @@ async function typeAt(e, ctx) {
   if (kept && unwritableSays(kept.addr, e, ctx)) { e.preventDefault(); return; }
   if (kept) { e.preventDefault(); LAYER.returnCaret(); editAtCaret(e.key); await WALK.followCaret(); movedSays(kept.addr, e); return; }
   const writing = writingElsewhere(walkSite());
-  if (e.key !== ' ' && bareDraftSpan(ctx)) { HINT.show('B3.caret.enter', null, { ...hinted(e, ctx), writing }); return; }
+  if (e.key !== ' ' && bareDraftSpan(ctx)) { HINT.show('B3.caret.enter', actKey(), { ...hinted(e, ctx), writing }); return; }
   if (e.key !== ' ' && siteSays(e, ctx, writing)) return;
   swallow(e, ctx, writing);
 }
@@ -968,7 +997,7 @@ function saveAnswer(addr) {
 }
 
 /** the sentence each of the undo chord's lines ends on while it stands whole (B3-S3; D6 BM-42) */
-const UNDO_CONSTANT = 'B3.undo.constant';
+const UNDO_CONSTANT = /** @type {import('../overlays/hint.js').Ending} */ (Object.freeze({ id: 'B3.undo.constant' }));
 
 /**
  * The draft the undo chord acts on (see the head; D5 K-75): the one whose
@@ -1180,6 +1209,9 @@ function hinted(e, ctx, target = e.target) {
   return { repeat: !!e.repeat, at: at && typeof at.getBoundingClientRect === 'function' ? at : null };
 }
 
+/** the token a line naming Enter as the key that acts at the walk's span — places a caret, selects — is filled with: Enter drawn for this platform (`B3.caret.enter`, `L.copy.nothing.enter`) */
+const actKey = () => ({ 'act key': drawChord('Enter') });
+
 /**
  * A copy outside a field where the platform holds no selection with extent
  * (see the head; D5 K-92; FP-24, FP-27): the selection the page draws placed
@@ -1203,18 +1235,18 @@ export function copyAsDrawn(e, ctx, at = e.target) {
 }
 
 /**
- * The string of the sentence the copy line ends on (D5 K-92): Enter's act
- * where Enter selects the walk's span (`enterSelects`), Shift+↓'s at any
- * other span at its reading scale; null where the focus is anywhere else — a
- * document, an account, the board, a link's symbol, a mark, a corner, the one
- * line, an overlay's control, the scene, a live caret.
+ * The sentence the copy line ends on (D5 K-92), its key drawn for this
+ * platform: Enter's act where Enter selects the walk's span (`enterSelects`),
+ * Shift+↓'s at any other span at its reading scale; null where the focus is
+ * anywhere else — a document, an account, the board, a link's symbol, a mark,
+ * a corner, the one line, an overlay's control, the scene, a live caret.
  * @param {Ctx} ctx
- * @returns {string | null}
+ * @returns {import('../overlays/hint.js').Ending | null}
  */
 function selectsHere(ctx) {
   const f = WALK.current(), c = LAYER.caret();
   if (ctx.where !== 'plane' || SCENE.isOpen() || (c && c.live) || !f || f.kind !== 'block' || f.pos == null || !LAYER.atReadingScale(f.addr)) return null;
-  return enterSelects(f) ? 'L.copy.nothing.enter' : 'L.copy.nothing.shift';
+  return enterSelects(f) ? { id: 'L.copy.nothing.enter', values: actKey() } : { id: 'L.copy.nothing.shift', values: { 'select chord': drawChord('Shift+↓') } };
 }
 
 /**
@@ -1231,7 +1263,7 @@ function enterSelects(f) {
 
 /** a printable key no field takes: swallowed, the K-9 line its hint at the focus until the next act, ending with where the person was writing where `writing` names it (foundations §2.7; `writingElsewhere`) */
 function swallow(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx, /** @type {import('../overlays/hint.js').Writing | null} */ writing = null) {
-  if (e.key === ' ') HINT.show('F.swallow.space', { 'paging key': 'PageDown' }, { ...hinted(e, ctx), writing });
+  if (e.key === ' ') HINT.show('F.swallow.space', { 'space key': drawChord('Space'), 'paging key': drawChord('PageDown') }, { ...hinted(e, ctx), writing });
   else HINT.show('F.swallow', { 'LEAP chord': drawChord('Mod+L') }, { ...hinted(e, ctx), writing });
 }
 
@@ -1276,16 +1308,16 @@ function cornerKey(e, chord, ctx, pane = false) {
 /**
  * A printable key but Space at a control of the corner of a draft the person
  * may edit (see the head; B3-S13; D5 K-72; D6 BM-52): its line naming the way
- * back to the draft's text, "your text is back with Shift+Tab", its hint at
- * the control until the next act, ending with where the person was writing
- * where they last wrote in another draft (`writingElsewhere`); nothing placed,
- * and a caret standing where it stood.
+ * back to the draft's text by its chord, Shift+Tab drawn for this platform
+ * (`B3.caret.back`), its hint at the control until the next act, ending with
+ * where the person was writing where they last wrote in another draft
+ * (`writingElsewhere`); nothing placed, and a caret standing where it stood.
  * @param {KeyboardEvent} e
  * @param {Ctx} ctx
  * @param {string} addr the corner's document
  */
 function cornerSays(e, ctx, addr) {
-  HINT.show('B3.caret.back', null, { ...hinted(e, ctx), writing: writingElsewhere(addr) });
+  HINT.show('B3.caret.back', { 'back chord': drawChord('Shift+Tab') }, { ...hinted(e, ctx), writing: writingElsewhere(addr) });
 }
 
 /** an inert slot's chord where no acts card gives its reason — no span in focus, or the scene over the plane with no selection in the held version (`heldSaid`): the slot's reason its hint at the focus until the next act (P47) */

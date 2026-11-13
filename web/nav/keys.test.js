@@ -145,7 +145,12 @@
 // document's — each ending on the constant sentence while it stands whole;
 // a step whose line awaits the person's act answered at its face, a moved
 // run's at its face standing at the corner, its words said; and an undo the
-// board declined said in the one line as two sentences.
+// board declined said in the one line as two sentences. A chord is drawn as
+// the platform's menus draw it — on macOS its modifier glyphs in the order
+// ⌃ ⌥ ⇧ ⌘ before its key and "Return" alone, elsewhere its modifiers' words
+// joined by "+" — in the selection's slots and in every key a hint's line
+// names, the draft's own line, K-9's Space line, the corner's way back and
+// the copy line's acts among them (style S21, K16).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
@@ -173,10 +178,19 @@ import { resolveSpan, unitSpan } from '../model/address.js';
 import { t, tHTML, hintSentences, sentence, sentences, heard } from '../strings.js';
 import { esc, fill, byteLength } from '../util.js';
 
-/** a hint's notice as the hint says it, whole, a sentence (ST's `hintSentences`) */
-const hinted = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ values = {}) => hintSentences(id, values).whole;
+/** the keys a line's tokens are filled with, by its string, each drawn for this platform as the page draws it (N-KEYS' `drawChord`); none for a line naming no key */
+const keysOf = (/** @type {string} */ id) => /** @type {Record<string, Record<string, string>>} */ ({
+  'B3.caret.enter': { 'act key': KEYS.drawChord('Enter') },
+  'B3.caret.enter.paste': { 'act key': KEYS.drawChord('Enter') },
+  'L.copy.nothing.enter': { 'act key': KEYS.drawChord('Enter') },
+  'L.copy.nothing.shift': { 'select chord': KEYS.drawChord('Shift+↓') },
+  'F.swallow.space': { 'space key': KEYS.drawChord('Space'), 'paging key': KEYS.drawChord('PageDown') },
+  'B3.caret.back': { 'back chord': KEYS.drawChord('Shift+Tab') },
+})[id] ?? {};
+/** a hint's notice as the hint says it, whole, a sentence (ST's `hintSentences`), its keys drawn for this platform where none are given */
+const hinted = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ values = keysOf(id)) => hintSentences(id, values).whole;
 /** a hint's notice whole as the status region says it: rendered for the ear by S22's table (ST's `heard`) */
-const spokenHint = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ values = {}) => heard(hinted(id, values));
+const spokenHint = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ values = keysOf(id)) => heard(hinted(id, values));
 
 // the table alone (the dispatch binds DOM modules the Node runner has no DOM for)
 const src = await import('node:fs').then((fs) => fs.readFileSync(new URL('./keys.js', import.meta.url), 'utf8'));
@@ -329,10 +343,10 @@ test('at a span of a draft the person may edit holding no caret a printable key 
   assert.equal(await KEYS.dispatch(keyOf('x', MOD), PLANE), true);
   assert.equal(said.at(-1), hinted('B3.caret.cut'), 'a cut: the line in its own words');
   assert.equal(await KEYS.dispatch(keyOf(' '), PLANE), true);
-  assert.equal(said.at(-1), spokenHint('F.swallow.space', { 'paging key': 'PageDown' }), 'Space: K-9\'s own line, whole at its first press, as a screen reader hears it');
+  assert.equal(said.at(-1), spokenHint('F.swallow.space'), 'Space: K-9\'s own line, whole at its first press, as a screen reader hears it');
   assert.equal(said.at(-1), 'Space does not page here, Page Down does.', 'its dash a pause, the paging key by its words');
   assert.equal(await KEYS.dispatch(keyOf(' '), PLANE), true);
-  assert.deepEqual([said.at(-1), HINT.standing()], ['Space does not page here.', { id: 'F.swallow.space', words: 'Space does not page here.', whole: hinted('F.swallow.space', { 'paging key': 'PageDown' }), open: false, writing: null }],
+  assert.deepEqual([said.at(-1), HINT.standing()], ['Space does not page here.', { id: 'F.swallow.space', words: 'Space does not page here.', whole: hinted('F.swallow.space'), open: false, writing: null }],
     'Space again: its first clause, the notice whole kept as its description');
   assert.deepEqual([WRITE.edits(D), shown()], [[], TEXT], 'nothing placed and nothing removed');
   await KEYS.dispatch(keyOf('Enter'), PLANE);
@@ -401,7 +415,7 @@ test('at the walk\'s span of an edition of the session\'s account, at its readin
   assert.deepEqual([said.slice(n), HINT.standing()?.id], [[heard(c45)], 'C-45'], 'and answered by C-45');
   assert.equal(await KEYS.dispatch(keyOf('x', MOD), PLANE), false, 'a cut: the platform\'s own, never taken');
   assert.equal(await KEYS.dispatch(keyOf(' '), PLANE), true);
-  assert.deepEqual([said.at(-1), HINT.standing()?.id], [spokenHint('F.swallow.space', { 'paging key': 'PageDown' }), 'F.swallow.space'], 'Space: K-9\'s own line');
+  assert.deepEqual([said.at(-1), HINT.standing()?.id], [spokenHint('F.swallow.space'), 'F.swallow.space'], 'Space: K-9\'s own line');
   assert.deepEqual([caret(), SEL.selected(), WRITE.edits(E)], [null, null, []], 'nothing placed: no caret, nothing selected, nothing edited');
 
   // no read has told E is published — the index lists it no more, and no metadata is read — then its metadata tells it
@@ -521,8 +535,9 @@ test('Mod+C with nothing selected outside a field is taken at its keydown, its d
     return { took, prevented };
   };
   const { whole, clause } = hintSentences('L.copy.nothing');
-  const enter = sentence('L.copy.nothing.enter'), shift = sentence('L.copy.nothing.shift');
-  assert.deepEqual([whole, clause, enter, shift], ['Nothing selected — the clipboard is unchanged.', 'Nothing selected.', 'Enter selects this passage.', 'Shift+↓ selects this passage.']);
+  const enter = sentence('L.copy.nothing.enter', keysOf('L.copy.nothing.enter')), shift = sentence('L.copy.nothing.shift', keysOf('L.copy.nothing.shift'));
+  assert.deepEqual([whole, clause, enter, shift], ['Nothing selected — the clipboard is unchanged.', 'Nothing selected.', ...(KEYS.MAC ? ['Return selects this passage.', '⇧↓ selects this passage.'] : ['Enter selects this passage.', 'Shift+↓ selects this passage.'])],
+    'each act\'s key as this platform draws it');
   /** the hint opened whole by its act: the act its line ends on, or none */
   const opened = () => { HINT.toggle(); const h = HINT.standing(); HINT.toggle(); return h && h.ending; };
   assert.ok(KEYS.TABLE.some((r) => r.id === 'K-92' && r.chord === 'Mod+C' && r.act === 'copy.nothing' && r.surface === 'plane'), 'the table binds the copy\'s answer at the plane, K-92\'s');
@@ -2495,25 +2510,84 @@ test('at a caret in a draft that cannot be written now a key that would put text
   } finally { WRITE.setUnwritable(b.board, null); WRITE.setMoved(D, false); LAYER.dropCaret(); WRITE.clearEdits(D); KEYS._reset(); }
 }));
 
-test('the selection\'s slots are named by their words alone — each chord drawn in its slot, never in its name, an ellipsis never said — and expose their chord as their key: Meta on macOS, Control elsewhere (style S22; patterns K1, K3; D5-F8; issue #626)', () => onPlane(async () => {
+test('the selection\'s slots are named by their words alone — each chord drawn in its slot as the platform\'s menus draw it, never in its name, an ellipsis never said — and expose their chord as their key: Meta on macOS, Control elsewhere (style S21, S22; patterns K1, K3; D5-F8; issues #626, #627)', () => onPlane(async () => {
   const mac = KEYS.MAC;
   HOST.attach(/** @type {any} */ (hostEl));
-  /** @type {Array<[string, string, string]>} each slot, its chord, and its name */
-  const SLOTS = [['annotate', 'Mod+Shift+A', t('D5.annotate')], ['quote', 'Mod+Shift+C', t('D5.quote')], ['wrote', 'Mod+Shift+O', t('B1.who-wrote')], ['uses', 'Mod+Shift+R', t('B1.who-uses')],
-    ['links', 'Mod+Shift+L', t('B1.see-links')], ['follow', 'Mod+Enter', t('B1.follow')], ['scene', 'Mod+Shift+Enter', t('B1.side-by-side')], ['linkto', 'Mod+K', 'link to']];
+  /** @type {Array<[string, string, string, string, string]>} each slot, its chord, its name, and its chord as drawn on macOS and elsewhere */
+  const SLOTS = [['annotate', 'Mod+Shift+A', t('D5.annotate'), '⇧⌘A', 'Ctrl+Shift+A'], ['quote', 'Mod+Shift+C', t('D5.quote'), '⇧⌘C', 'Ctrl+Shift+C'], ['wrote', 'Mod+Shift+O', t('B1.who-wrote'), '⇧⌘O', 'Ctrl+Shift+O'],
+    ['uses', 'Mod+Shift+R', t('B1.who-uses'), '⇧⌘R', 'Ctrl+Shift+R'], ['links', 'Mod+Shift+L', t('B1.see-links'), '⇧⌘L', 'Ctrl+Shift+L'], ['follow', 'Mod+Enter', t('B1.follow'), '⌘↩', 'Ctrl+Enter'],
+    ['scene', 'Mod+Shift+Enter', t('B1.side-by-side'), '⇧⌘↩', 'Ctrl+Shift+Enter'], ['linkto', 'Mod+K', 'link to', '⌘K', 'Ctrl+K']];
   try {
     for (const platform of [true, false]) {
       KEYS._platform(platform);
       await focusOn(O, 1);
       SEL.select(O, 3, 4);
-      for (const [slot, chord, name] of SLOTS) {
+      for (const [slot, chord, name, onMac, elsewhere] of SLOTS) {
         const b = /** @type {string} */ (slotIn(slot).button), where = `${platform ? 'macOS' : 'elsewhere'}, ${slot}`;
-        assert.ok(b.includes(` aria-label="${esc(name)}"`) && b.includes(`<kbd>${esc(KEYS.drawChord(chord))}</kbd>`), `${where}: named by its words alone, its chord drawn — ${b}`);
+        assert.ok(b.includes(` aria-label="${esc(name)}"`) && b.includes(`<kbd>${esc(platform ? onMac : elsewhere)}</kbd>`), `${where}: named by its words alone, its chord drawn as the platform's menus draw it — ${b}`);
         assert.ok(b.includes(` aria-keyshortcuts="${chord.replace('Mod', platform ? 'Meta' : 'Control')}"`), `${where}: its chord its key — ${b}`);
       }
       SEL.clear();
     }
   } finally { KEYS._platform(mac); HOST.dismiss(); }
+}));
+
+test('a chord is drawn as the platform\'s menus draw it: on macOS its modifier glyphs in the order ⌃ ⌥ ⇧ ⌘ — Alt as ⌥, each read wherever it stands in the chord — then its key, nothing between, Enter "↩" in a chord and "Return" alone; elsewhere "Ctrl", "Alt" and "Shift" joined to the key by "+", Enter "Enter"; Page Down and Page Up their words on both, every other key as D5 writes it (style S21, K10, K16; issue #627)', () => {
+  const mac = KEYS.MAC;
+  /** @type {Array<[string, string, string]>} each chord in D5's notation, as drawn on macOS, and as drawn elsewhere */
+  const CHORDS = [
+    ['Mod+Shift+O', '⇧⌘O', 'Ctrl+Shift+O'],
+    ['Shift+Mod+O', '⇧⌘O', 'Ctrl+Shift+O'],
+    ['Alt+Shift+←', '⌥⇧←', 'Alt+Shift+←'],
+    ['Alt+↓', '⌥↓', 'Alt+↓'],
+    ['Enter', 'Return', 'Enter'],
+    ['Mod+Enter', '⌘↩', 'Ctrl+Enter'],
+    ['Mod+Shift+Enter', '⇧⌘↩', 'Ctrl+Shift+Enter'],
+    ['Shift+↓', '⇧↓', 'Shift+↓'],
+    ['Shift+Tab', '⇧Tab', 'Shift+Tab'],
+    ['PageDown', 'Page Down', 'Page Down'],
+    ['PageUp', 'Page Up', 'Page Up'],
+    ['Esc', 'Esc', 'Esc'],
+    ['Space', 'Space', 'Space'],
+    ['↓', '↓', '↓'],
+    ['Mod+L', '⌘L', 'Ctrl+L'],
+    ['Mod+Shift+G', '⇧⌘G', 'Ctrl+Shift+G'],
+    ['Mod+=', '⌘=', 'Ctrl+='],
+    ['Mod+1…9', '⌘1…9', 'Ctrl+1…9'],
+  ];
+  try {
+    for (const platform of [true, false]) {
+      KEYS._platform(platform);
+      for (const [chord, onMac, elsewhere] of CHORDS) assert.equal(KEYS.drawChord(chord), platform ? onMac : elsewhere, `${platform ? 'macOS' : 'elsewhere'}: ${chord}`);
+    }
+  } finally { KEYS._platform(mac); }
+});
+
+test('each key a hint\'s line names is drawn as the platform draws it — the draft\'s own line "Return places a caret here." on macOS and "Enter …" elsewhere, K-9\'s Space line "Page Down" on both, the corner\'s way back "⇧Tab" and "Shift+Tab", the copy line\'s acts "Return …" and "⇧↓ …" on macOS, "Enter …" and "Shift+↓ …" elsewhere — never a token and never D5\'s notation (style S21; issue #627)', () => onPlane(async () => {
+  const mac = KEYS.MAC;
+  /** the hint opened whole by its act: the act its line ends on, or none */
+  const opened = () => { HINT.toggle(); const h = HINT.standing(); HINT.toggle(); return h && h.ending; };
+  try {
+    for (const platform of [true, false]) {
+      KEYS._platform(platform);
+      HINT._reset();
+      const mod = platform ? { metaKey: true } : { ctrlKey: true }, where = platform ? 'macOS' : 'elsewhere';
+      await focusOn(D, 14);
+      assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
+      assert.equal(HINT.standing()?.whole, platform ? 'Return places a caret here.' : 'Enter places a caret here.', `${where}: the draft's own line`);
+      assert.equal(await KEYS.dispatch(keyOf(' '), PLANE), true);
+      assert.equal(HINT.standing()?.whole, 'Space does not page here — Page Down does.', `${where}: K-9's Space line`);
+      assert.equal(await atCorner(D, 'q'), true);
+      assert.equal(HINT.standing()?.whole, platform ? 'Your text is back with ⇧Tab.' : 'Your text is back with Shift+Tab.', `${where}: the corner's way back to the text`);
+      await focusOn(O, 1);
+      assert.equal(await KEYS.dispatch(keyOf('c', mod), PLANE), true);
+      assert.equal(HINT.standing()?.ending, platform ? 'Return selects this passage.' : 'Enter selects this passage.', `${where}: the copy line whole, ending on Enter's act`);
+      await focusOn(D, 14);
+      assert.equal(await KEYS.dispatch(keyOf('c', mod), PLANE), true);
+      assert.equal(opened(), platform ? '⇧↓ selects this passage.' : 'Shift+↓ selects this passage.', `${where}: the copy line opened whole at the draft's span, ending on Shift+↓'s act`);
+      HINT.act();
+    }
+  } finally { KEYS._platform(mac); }
 }));
 
 test('K-75\'s rows and K-41\'s: Mod+Z undoes and Mod+Shift+Z redoes on every platform; elsewhere than macOS Ctrl+Y redoes too and the trail\'s list is Ctrl+H, drawn so; on macOS ⌘Y stays the trail\'s and ⌘H the platform\'s (D5 K-41, K-75)', () => onPlane(async () => {

@@ -83,6 +83,30 @@ def heard(ctx, words):
     return ctx.js('(async () => (await import("./strings.js")).heard(%s))()' % json.dumps(words))
 
 
+# each line naming keys, by its string, and the key each of its tokens names, in D5's notation: what its site fills the token
+# with, drawn for this platform (N-KEYS' `drawChord`; style S21)
+KEYED = {
+    'F.swallow.space': {'space key': 'Space', 'paging key': 'PageDown'},
+    'B3.caret.enter': {'act key': 'Enter'},
+    'B3.caret.enter.paste': {'act key': 'Enter'},
+    'B3.caret.back': {'back chord': 'Shift+Tab'},
+    'B3.held.none': {'close key': 'Esc'},
+    'L.copy.nothing.enter': {'act key': 'Enter'},
+    'L.copy.nothing.shift': {'select chord': 'Shift+↓'},
+    'L.leap.beside.choose': {'row key': '↓'},
+}
+
+
+def drawn_keys(ctx, sid):
+    """the values a line's key tokens are filled with, each key drawn for this platform by the page's own chord drawing
+    (`KEYED`; N-KEYS' `drawChord`); none for a line naming no key"""
+    keys = KEYED.get(sid)
+    if not keys:
+        return {}
+    return ctx.js('(async (keys) => { const {drawChord} = await import("./nav/keys.js"); '
+                  'return Object.fromEntries(Object.entries(keys).map(([k, c]) => [k, drawChord(c)])); })(%s)' % json.dumps(keys))
+
+
 # an element's words as stretches in their faces, as the page hands a name it reads off its markup to `heard` (O-HOST's
 # `runsIn`): text in a `.reading` or `.chars` span the reading face's, in an `.id` span the identifier's, an `svg` none,
 # every other word the client's

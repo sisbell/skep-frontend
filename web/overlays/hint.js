@@ -12,8 +12,9 @@
 // in ⟨label⟩" after the notice, whole or compact alike, its label the act
 // back to that draft's kept caret, said with the notice in the status region.
 // A line may end on a sentence of its own (`show`'s `ending`; B3-S3's constant
-// sentence, the copy line's act): after the notice and where the person was
-// writing, while the notice stands whole, and never beside its compact form.
+// sentence, the copy line's act, its key filled by the press): after the
+// notice and where the person was writing, while the notice stands whole, and
+// never beside its compact form.
 // The line is sentences, each its capital and its end mark (ST's
 // `hintSentences`, `sentence`, `sentences`; style S1, S2) — the notice whole
 // or compact, where the person was writing, the ending — so a notice reads in
@@ -100,6 +101,12 @@ import { esc } from '../util.js';
 const WRITING = 'B3.undo.last-writing';
 
 /**
+ * @typedef {Object} Ending — the sentence a line ends on while its notice stands whole (see the head): handed in by the press
+ * @property {string} id its string
+ * @property {Record<string, string | number>} [values] what its tokens are filled with: a key drawn for this platform (N-KEYS' `drawChord`)
+ */
+
+/**
  * @typedef {Object} Site — the focus a press was made at, which the hint stands beside while it stands
  * @property {{addr: string, pos: number, first: number} | null} text the walk's span at its reading scale: the position its line is read at, and the span's first, positions of the text the page shows of it
  * @property {Element | null} el the element the press was made at, where the walk's focus is not it
@@ -112,7 +119,7 @@ const WRITING = 'B3.undo.last-writing';
  * @property {string} clause its compact form, a sentence: the notice whole where it has none
  * @property {boolean} open it shows the notice whole
  * @property {Writing | null} writing where the person was writing, which its line ends with; null where it ends with the notice
- * @property {{id: string, text: string} | null} ending the sentence its line ends on while its notice stands whole, by its string, its words a sentence (ST's `sentence`); null where it ends on none
+ * @property {{id: string, text: string} | null} ending the sentence its line ends on while its notice stands whole, by its string, its words a sentence, its tokens filled (ST's `sentence`); null where it ends on none
  * @property {Site} site
  * @property {boolean} plane the press was made on the plane: the reading scene covers it
  */
@@ -205,13 +212,13 @@ function siteOf(at) {
  * Throws for a string the table marks no hint (ST's `hintSentences`).
  * @param {string} id
  * @param {Record<string, string | number> | null} [values]
- * @param {{repeat?: boolean, at?: Element | null, writing?: Writing | null, ending?: string | null}} [o] `repeat` the key's auto-repeat; `at` the element the press was made at, where the walk's focus is not it; `writing` where the person was writing, which the line ends with; `ending` the string of the sentence the line ends on while its notice stands whole
+ * @param {{repeat?: boolean, at?: Element | null, writing?: Writing | null, ending?: Ending | null}} [o] `repeat` the key's auto-repeat; `at` the element the press was made at, where the walk's focus is not it; `writing` where the person was writing, which the line ends with; `ending` the sentence the line ends on while its notice stands whole
  */
 export function show(id, values = null, o = {}) {
   if (o.repeat) return;
   const h = hintSentences(id, values ?? undefined), open = !seen.has(id);
   seen.add(id);
-  hint = { id, whole: h.whole, clause: h.clause, open, writing: o.writing ?? null, ending: o.ending ? { id: o.ending, text: sentence(o.ending) } : null, site: siteOf(o.at ?? null), plane: !SCENE.isOpen() };
+  hint = { id, whole: h.whole, clause: h.clause, open, writing: o.writing ?? null, ending: o.ending ? { id: o.ending.id, text: sentence(o.ending.id, o.ending.values) } : null, site: siteOf(o.at ?? null), plane: !SCENE.isOpen() };
   presses++;
   FOCUS.say(saidOf(hint), false, true);
   markDirty();
