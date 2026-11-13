@@ -36,7 +36,8 @@
 // their widths and whether they yield to a head's narrow row, outside the
 // article, a pane's with its read act and its lacking line, the plane's with
 // the read an arrival offers as a control, a kept clause after them on a line
-// of its own, neither the latest version nor the chain's count while the
+// of its own, the moved scene's held version's line in the place of a draft's
+// kept word and chip, neither the latest version nor the chain's count while the
 // board lags, its state one rule the words the ARIA mirror voices are made
 // by; the record rule; a typed line set as typed in the body's type, a
 // heading's marks its own characters, on its indent where it opens a typed
@@ -549,6 +550,22 @@ test('a draft\'s corner carries its kept state in a slot of fixed width — the 
   assert.deepEqual([keptStatement({ word: 'kept', reason: 'ignored' }), keptStatement({ word: 'not kept', reason: 'r' })], [{ id: 'B3.save.kept', text: t('B3.save.kept') }, { id: 'B3.save.before', text: `${t('B3.save.before')} ${t('L.kept.failed', { clause: t('B3.not-kept'), reason: 'r' })}` }], 'the statement by the word: at "kept" its own line whatever reason stands; at the others the word and the reason');
   for (const h of [empty, kept, held, refused]) assert.ok(!h.includes(t('B3.past-states')) && !h.includes('tabindex="0"') && (h.match(/<button /g) || []).length === (h === empty ? 0 : 1), 'no "past states" act: the strings table holds its words and no reason for an inert one; the kept word, where a state is set, the one act, out of the Tab order as made (K-57)');
   assert.ok(!cornerHTML(doc(), view({ kept: { word: 'kept', reason: null }, keptOpen: true })).includes('kept-'), 'an edition\'s corner carries no kept slot, whatever state is handed in');
+});
+
+test('the moved scene\'s held version\'s corner names what it is in the place of both the kept word and the chip — "what you typed while it was held — not on the board", carrying its string, its words whole in either form and never an act, after its kind — whatever kept state is handed in; a draft\'s corner the view does not mark so keeps its kept slot and its chip (issue #599; B3-S2; D6 BM-14; FP-26)', () => {
+  const draft = doc({ kind: 'draft', meta: null }), kind = kindSlot('draft');
+  const line = `<span class="held" data-string="B3.history.held">${esc(t('B3.history.held'))}</span>`;
+  for (const compact of [false, true]) {
+    for (const kept of [null, { word: /** @type {const} */ ('not yet kept'), reason: null }]) {
+      const c = cornerHTML(draft, draftView({ held: true, kept, keptOpen: true }), compact);
+      assert.equal(c, kind + line, `${compact ? 'compact' : 'whole'}, ${kept ? 'a kept state handed in' : 'none'}: the kind, then the held version's line alone — no kept word, no statement, no chip`);
+    }
+  }
+  assert.equal(cornerHTML(draft, draftView({ held: true, acts: false })), kind + line, 'its words alone where the view asks no act');
+  const items = cornerItems(draft, draftView({ held: true }), true);
+  assert.deepEqual(items.map((i) => [i.cls, i.words, i.em, i.yields]), [['kind', t('F.kind.draft'), KIND_EM, false], ['held', t('B3.history.held'), advances(t('B3.history.held')), false]], 'its items: the kind, then the line, its width its words\', neither yielding');
+  const plain = cornerHTML(draft, draftView());
+  assert.ok(plain.includes('kept-word pending') && plain.includes('class="chip"') && !plain.includes('B3.history.held'), `a draft not marked so: its kept slot and its chip — ${plain}`);
 });
 
 test('the corner\'s items one by one, in their one order: each its markup — the corner\'s, joined — its words and its width as the view measures them, the kind and a kept word their slots\'; the offered read alone yields, the kind, its version statement, the state, the kept word, the chip and the whole-document count never do; a draft\'s statement left out of its slot where its holder opens it beneath a head (issue #436; foundations §3.1; FP-26)', () => {

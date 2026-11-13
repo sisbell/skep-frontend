@@ -7,7 +7,8 @@
 // the board refuses among several, or a past state it could not read, says it
 // cannot yet be answered; the card stands at the span shown; new words are the
 // page's whether the board has minted them or not — who wrote them the page's
-// own answer, held on this device under a hold; what else uses them asked of
+// own answer, held on this device under a hold, typed while the draft was
+// held and not placed at a moved document; what else uses them asked of
 // the board by their identity once minted, the page's words for none standing
 // across the ack (FP-21, FP-36).
 import { test } from 'node:test';
@@ -195,6 +196,26 @@ test('new words are the page\'s whether minted or not: who wrote them is the pag
   assert.deepEqual(fake.asked, [key(F.retrieveDocVSpanSet(D)), key(F.image(D, 1, N + 3)), key(F.opAt(21, users(3, 3)))], 'who uses them: the board asked by their identity — its image carries their address to position 3 as of its read, and the question is asked there, as of that read');
   assert.deepEqual([lines(), hostEl.innerHTML.includes('B1.C-72')], [[['L.new.uses', t('L.new.uses')]], false], 'nothing else uses them: the page\'s own words for none, as before the ack, no blind-spot clause');
   assert.deepEqual(fake.unanswered, []);
+}));
+
+test('at a moved document the person\'s held new words are answered in the moved face\'s word, the draft named by its label — what was typed while it was held, not placed — with no read; held for a cause a resend ends they are new in this draft, held on this device; held nowhere, from this device; who uses them is no other document throughout (issue #599; D6 BM-14; the burst machine\'s three cases, part 2)', () => onCard({}, [{ pos: 1, width: 0, text: 'abc' }], async (fake) => {
+  /** D's one held line, held for a cause */
+  const heldFor = (/** @type {string} */ cause, /** @type {Record<string, unknown>} */ more = {}) => /** @type {import('../model/frames.js').HeldLine[]} */ (F.decodeHeldRows([{ held: 1, doc: D, base: 5, frame: { op: 'insert', at: { ordinal: '1', subspace: '1' }, values: ['abc'] }, cause, sent: true, time: 1, ...more }]));
+  const moved = t('B3.held-version.new', { label: LAYER.boxName(D).name });
+  for (const [what, rows] of /** @type {Array<[string, import('../model/frames.js').HeldLine[]]>} */ ([['a line held moved', heldFor('moved')], ['a line the board refused as moved', heldFor('refused', { refusal: { kind: 'refused', name: 'arrangement_moved', status: 200, code: 'arrangement_moved', detail: null, op: 'insert', site: {}, body: null } })]])) {
+    WRITE.setHeld(D, rows);
+    await PROV.wrote(D, 1, 3);
+    assert.deepEqual(lines(), [['B3.held-version.new', moved]], `${what}: what was typed while the draft was held, not placed, the draft named by its label`);
+    await PROV.uses(D, 1, 3);
+    assert.deepEqual(lines(), [['L.new.uses', t('L.new.uses')]], `${what}: no other document uses them`);
+  }
+  WRITE.setHeld(D, heldFor('unreachable', { sent: false }));
+  await PROV.wrote(D, 1, 3);
+  assert.deepEqual(lines(), [['L.new.wrote.held', t('L.new.wrote.held')]], 'held for a cause a resend ends: new in this draft, held on this device');
+  WRITE.setHeld(D, []);
+  await PROV.wrote(D, 1, 3);
+  assert.deepEqual(lines(), [['L.new.wrote', t('L.new.wrote')]], 'held nowhere: new in this draft, from this device');
+  assert.deepEqual(fake.asked, [], 'no read');
 }));
 
 test('minted words another document has taken up since are answered by the board: the documents using them named, the blind spots stated', () => onCard({

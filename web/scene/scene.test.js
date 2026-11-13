@@ -101,7 +101,11 @@
 // address, its chain probed, its copy named as the plane's box names the same
 // words and its versions read in its place, and an edition read again so
 // still pinned at once by a newer member's arrival (FP-22, FP-23, FP-27,
-// FP-39).
+// FP-39); and the moved scene's held version — its corner naming what it is
+// in the place of the kept word and the chip, and at a selection in it, the
+// focus there, the acts that send and a printable key giving the one reason
+// the selection keys against the current text, Space keeping K-9's line
+// (D6 BM-14; FP-41).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -119,7 +123,8 @@ import * as FOCUS from '../nav/focus.js';
 import * as KEYS from '../nav/keys.js';
 import * as SCENE from './scene.js';
 import * as LINE from '../line/line.js';
-import { levels, merged, counterpart, counterparts, nearest, linesBetween, carriedTo, wholeEdges, drawEdge, stopFor, banded, drawBand, drawStroke, changeWords, strokeWords, sharedHeld, junctionsOf, strokeHeld, sameBytes, coverIn } from './scene.js';
+import { levels, merged, counterpart, counterparts, nearest, linesBetween, carriedTo, wholeEdges, drawEdge, stopFor, banded, drawBand, drawStroke, changeWords, strokeWords, sharedHeld, junctionsOf, strokeHeld, sameBytes, coverIn, heldVersionReasonOf } from './scene.js';
+import { page as domPage } from '../test/dom.js';
 import { byteLength } from '../util.js';
 import { applyHeld } from '../model/derive.js';
 import { deriveBlocks } from '../model/records.js';
@@ -2290,6 +2295,150 @@ test('a pane opened from a record the page derived — the kept text with a held
   assert.deepEqual([SCENE.isOpen(), SCENE.panes()?.b.derived, SCENE.panes()?.b.blocks.map((b) => b.text).join('|')], [true, true, 'The kept text.|Held words. Its passage stands here.'], 'reopened as left: the derived text again');
   assert.ok(fake.asked.slice(again).every((k) => !k.includes(H) && !k.includes('"compare"')), 'reading nothing for it');
   assert.deepEqual(fake.unanswered, []);
+}));
+
+// ---- the moved scene's held version (D6 BM-14; B3-S2) -----------------------------------------------------------------
+
+/** a draft the moved scene opens on, read from the board, and its text: a line held while it moved inserts "Held words. " before its second paragraph */
+const G = '1.0.1.0.91', G_TEXT = 'The kept text.\n\nIts passage stands here.';
+Object.assign(script, reads(G, G_TEXT, { published: false }), compared(G, G_TEXT, G, G_TEXT, [[1, 1, G_TEXT.length]]));
+/** G's one line held moved: "Held words. " before its second paragraph, at 17 */
+const MOVED_ROW = [{ held: 1, doc: G, base: 5, frame: { op: 'insert', doc: G, at: { ordinal: '17', subspace: '1' }, values: ['Held words. '] }, cause: 'moved', sent: true, time: 1 }];
+/** the held version of G as the moved scene's gate door derives it (M-DERIVE's `applyHeld`): G's record with its held line applied, the line's bytes named by the page's own ordinals */
+const heldVersionOfG = () => applyHeld(REC.doc(G), /** @type {import('../model/frames.js').HeldLine[]} */ (F.decodeHeldRows(MOVED_ROW)), () => null, WRITE.heldNames(G)).doc;
+/** an image run: `width` positions from `pos`, the bytes of the I-space `prefix` from its `ordinal` */
+const imageRun = (/** @type {number} */ pos, /** @type {number} */ width, /** @type {string} */ prefix, /** @type {number} */ ordinal) => ({ pos, width, prefix, ordinal });
+
+test('the reason the acts that send give at a selection in the held version is keyed on the selection: that its words are not in the current text where any byte of it the current text\'s image does not place — held new words named by the page, held words named nowhere, base words the current text has lost, a selection holding those and shared ones alike — else that they are in the current text too (issue #599; D6 BM-14)', () => {
+  const own = G + '.0.1', page = 'page:' + G;
+  const current = [imageRun(1, 40, own, 1)];
+  const held = [imageRun(1, 16, own, 1), imageRun(17, 12, page, 1), imageRun(29, 24, own, 17)];
+  assert.equal(heldVersionReasonOf(current, held, { pos: 17, width: 10 }), 'B3.held-version.not-current', 'the held new words: named by the page, which no image of the board\'s places');
+  assert.equal(heldVersionReasonOf(current, held, { pos: 33, width: 7 }), 'B3.held-version.in-current', '"passage": the current text holds it too');
+  assert.equal(heldVersionReasonOf(current, held, { pos: 1, width: 14 }), 'B3.held-version.in-current', 'the first line: held too');
+  assert.equal(heldVersionReasonOf(current, held, { pos: 22, width: 10 }), 'B3.held-version.not-current', '"words. Its": the held words with shared ones');
+  assert.equal(heldVersionReasonOf(current, [imageRun(1, 16, own, 1), imageRun(29, 24, own, 17)], { pos: 17, width: 10 }), 'B3.held-version.not-current', 'held words no image names: the current text places nothing there');
+  const lost = [imageRun(1, 19, own, 1), imageRun(20, 15, own, 26)];
+  assert.equal(heldVersionReasonOf(lost, held, { pos: 30, width: 6 }), 'B3.held-version.not-current', 'base words another hand took out of the current text');
+  assert.equal(heldVersionReasonOf(lost, held, { pos: 39, width: 5 }), 'B3.held-version.in-current', 'base words it still holds, though elsewhere');
+});
+
+test('the moved scene\'s held version\'s corner names what it is in the place of the kept word and the chip — "what you typed while it was held — not on the board" — beside its kind, the pane marked the held version; its trail\'s entry keeps it so as Back and Forward reopen it; a pane set from a record not derived, at a change of the page\'s class, is the held version no more (issue #599; B3-S2; D6 BM-14)', () => onPage(async (p) => {
+  const unanswered = fake.unanswered.length;
+  await PUMP.loadWhole(G);
+  const line = `<span class="held" data-string="B3.history.held">${esc(t('B3.history.held'))}</span>`;
+  await SCENE.open(G, heldVersionOfG(), { heldB: true });
+  assert.deepEqual([SCENE.isOpen(), SCENE.panes()?.a.held, SCENE.panes()?.b.held, SCENE.panes()?.b.derived], [true, false, true, true], 'pane B the held version, pane A the current text');
+  assert.ok(p.paneB.innerHTML.includes(`data-corner="${G}"`) && p.paneB.innerHTML.includes(line) && !p.paneB.innerHTML.includes('kept-word') && !p.paneB.innerHTML.includes('data-chip'), `pane B's corner: its kind, then the line in place of the kept word and the chip — ${p.paneB.innerHTML}`);
+  assert.ok(p.paneA.innerHTML.includes('kept-word pending') && p.paneA.innerHTML.includes('data-chip="1"') && !p.paneA.innerHTML.includes('B3.history.held'), 'pane A, the current text: a draft\'s kept slot and chip');
+  const left = SCENE.asLeft();
+  SCENE.close();
+  await SCENE.reopen({ a: G, b: G, held: { heldB: true }, left: /** @type {import('./scene.js').Left} */ (left) });
+  assert.deepEqual([SCENE.isOpen(), SCENE.panes()?.b.held, p.paneB.innerHTML.includes(line)], [true, true, true], 'reopened from its entry: the held version, its corner the line again');
+  SCENE.close();
+  await SCENE.open(G, heldVersionOfG());
+  assert.deepEqual([SCENE.panes()?.b.held, p.paneB.innerHTML.includes('kept-word pending'), p.paneB.innerHTML.includes('B3.history.held')], [false, true, false], 'a derived pane the opener does not ask as the moved scene: the kept slot, never the line');
+  SCENE.close();
+  await SCENE.open(G, heldVersionOfG(), { heldB: true });
+  SCENE.dropped({ row: null, addrs: null, at: Date.now() });
+  assert.deepEqual([SCENE.panes()?.b.derived, SCENE.panes()?.b.held], [false, false], 'set from the model\'s record at a change of the page\'s class: the held version no more');
+  assert.ok(!p.cornerB.innerHTML.includes('B3.history.held') && p.cornerB.innerHTML.includes('data-chip="1"'), `its corner a draft's again: ${p.cornerB.innerHTML}`);
+  await landed();
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+/**
+ * The test run on `onPage`'s page with the articles the scene makes elements of the small DOM under `web/test/`, in its
+ * document's tree — its selection, its ranges and its tree walkers the platform's — so a selection stands in a pane's
+ * text as a drag leaves it and T-LAYER's mapping reads it as it reads the platform's; the globals that stood put back
+ * after it
+ * @param {(p: ReturnType<typeof page>, dom: ReturnType<typeof domPage>) => Promise<void>} body
+ */
+async function onPageWithText(body) {
+  const dom = domPage(), g = /** @type {any} */ (globalThis), stood = { window: g.window, Node: g.Node, NodeFilter: g.NodeFilter };
+  g.window = { getSelection: () => dom.document.selection, addEventListener() {} };
+  g.Node = { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_NODE: 9, DOCUMENT_FRAGMENT_NODE: 11 };
+  g.NodeFilter = { SHOW_ALL: 0xffffffff, SHOW_ELEMENT: 1, SHOW_TEXT: 4 };
+  try {
+    await onPage(async (p) => {
+      const doc = /** @type {any} */ (p.doc), make = doc.createElement;
+      doc.createElement = (/** @type {string} */ tag) => (tag === 'article' ? dom.document.body.appendChild(dom.document.createElement(tag)) : make(tag));
+      doc.createRange = () => dom.document.createRange();
+      doc.createTreeWalker = (/** @type {any} */ root, /** @type {number} */ show) => dom.document.createTreeWalker(root, show);
+      try { await body(p, dom); } finally { dom.document.selection.removeAllRanges(); }
+    });
+  } finally { Object.assign(g, stood); }
+}
+
+/**
+ * The platform's selection set over the first stretch of an article's text — its body's, never its head's — that reads
+ * `words`, as a drag over them leaves it
+ * @param {ReturnType<typeof domPage>} dom
+ * @param {any} article
+ * @param {string} words
+ */
+function selectWords(dom, article, words) {
+  /** @type {any[]} */
+  const nodes = [];
+  const w = dom.document.createTreeWalker(article.querySelector('.run'), 4);
+  for (let n = w.nextNode(); n; n = w.nextNode()) nodes.push(n);
+  const at = nodes.map((n) => n.data).join('').indexOf(words);
+  assert.ok(at >= 0, `the article reads "${words}"`);
+  /** the text node and offset a character of the body's text stands at */
+  const point = (/** @type {number} */ i, /** @type {boolean} */ end) => {
+    let k = i;
+    for (const n of nodes) { if (k < n.data.length || (end && k === n.data.length)) return [n, k]; k -= n.data.length; }
+    return [nodes[nodes.length - 1], nodes[nodes.length - 1].data.length];
+  };
+  const [sn, so] = point(at, false), [en, eo] = point(at + words.length, true);
+  dom.document.selection.set(sn, so, en, eo);
+}
+
+test('at a selection in the moved scene\'s held version, while the focus stands in it, the acts that send — Mod+K, Mod+Shift+A, Mod+Shift+C — and a printable key give the one reason the selection keys, its hint at the pane and said at every press: over the held new words, or over those and words both texts hold, that its words are not in the current text; over words the current text holds too, that they are; Space keeps K-9\'s line; with no selection there, the focus in pane A, or the scene not the moved scene, the slot\'s own reason and K-9\'s line stand (issue #599; D6 BM-14; B3-S2; FP-41)', () => onPageWithText(async (p, dom) => {
+  const unanswered = fake.unanswered.length;
+  await PUMP.loadWhole(G);
+  await SCENE.open(G, heldVersionOfG(), { heldB: true });
+  const article = shownIn(p.paneB, 'b');
+  /** a key at the pane the focus stands in, as the platform delivers it, and what the status region said once its words land — an emptying, which a say again makes first, not counted */
+  const press = async (/** @type {string} */ key, /** @type {{mod?: boolean, shift?: boolean}} */ m = {}) => {
+    const n = p.said.length;
+    const took = await KEYS.dispatch(/** @type {any} */ ({ type: 'keydown', key, keyCode: 0, isComposing: false, repeat: false, metaKey: !!m.mod && KEYS.MAC, ctrlKey: !!m.mod && !KEYS.MAC, shiftKey: !!m.shift, altKey: false, preventDefault() {}, target: p.at() === 'pane A' ? p.paneA : p.paneB }), { where: 'scene', byKey: true });
+    await new Promise((r) => setTimeout(r, 0));
+    return { took, hint: HINT.standing()?.id ?? null, said: p.said.slice(n).filter(Boolean) };
+  };
+  /** each sending act's chord, as `press` takes it */
+  const SENDING = /** @type {Array<[string, {mod: boolean, shift?: boolean}]>} */ ([['k', { mod: true }], ['A', { mod: true, shift: true }], ['C', { mod: true, shift: true }]]);
+  const NOT = 'B3.held-version.not-current', IN = 'B3.held-version.in-current';
+  p.paneB.focus();
+  assert.equal(p.at(), 'pane B');
+  /** @type {Array<[string, {pos: number, width: number}, string]>} each selection, the span T-LAYER reads it as, and the reason it keys */
+  const CASES = [['Held words', { pos: 17, width: 10 }, NOT], ['passage', { pos: 33, width: 7 }, IN], ['words. Its', { pos: 22, width: 10 }, NOT]];
+  for (const [words, span, why] of CASES) {
+    selectWords(dom, article, words);
+    assert.deepEqual(LAYER.selectionIn(article)?.span, { addr: G, ...span }, `"${words}": the selection read where it stands in the held version`);
+    assert.equal(SCENE.heldVersionReason(), why, `"${words}": the reason its selection keys`);
+    for (const [key, m] of SENDING) {
+      HINT.act();
+      assert.deepEqual(await press(key, m), { took: true, hint: why, said: [t(why)] }, `"${words}", ${m.shift ? 'Mod+Shift+' : 'Mod+'}${key.toUpperCase()}: that reason its hint, said`);
+    }
+    assert.deepEqual(await press('q'), { took: true, hint: why, said: [t(why)] }, `"${words}", a printable key: the same reason, said again at the press`);
+    const space = await press(' ');
+    assert.deepEqual([space.took, space.hint, space.said.length], [true, 'F.swallow.space', 1], `"${words}", Space: K-9's own line`);
+  }
+  assert.deepEqual([HOST.currentState(), SCENE.isOpen()], [null, true], 'no overlay opened, the scene standing');
+  dom.document.selection.removeAllRanges();
+  HINT.act();
+  assert.deepEqual([SCENE.heldVersionReason(), (await press('k', { mod: true })).hint, (await press('q')).hint], [null, 'L.seam.link-to', 'F.swallow'], 'no selection in the held version: the slot\'s own reason, and K-9\'s line');
+  selectWords(dom, article, 'Held words');
+  p.paneA.focus();
+  assert.deepEqual([p.at(), SCENE.heldVersionReason(), (await press('k', { mod: true })).hint], ['pane A', null, 'L.seam.link-to'], 'the focus in pane A: the slot\'s own reason');
+  SCENE.close();
+  await SCENE.open(G, heldVersionOfG());
+  const plain = shownIn(p.paneB, 'b');
+  p.paneB.focus();
+  selectWords(dom, plain, 'Held words');
+  assert.deepEqual([SCENE.heldVersionReason(), (await press('k', { mod: true })).hint], [null, 'L.seam.link-to'], 'a scene not the moved scene: the slot\'s own reason');
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
 }));
 
 test('each pane is named by its corner\'s first item, then its address: the bar\'s hidden words its kind — "draft" at a draft, "published" at an edition — and its corner opening with that kind in its slot (issue #423\'s design decision: "A scene pane has no item, so its region is named the same way"; FP-33)', () => onPage(async (p) => {

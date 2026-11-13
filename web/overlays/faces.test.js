@@ -29,8 +29,9 @@
 // what still works, a page URL whose `port` names no port saying so in the
 // entry, the face and every call's answer (FP-35); and the editor's refusal
 // names each mapped to their entry's words with no act, a name no document
-// drafts words for kept on the generic refusal line; and the face of a
-// passage the person's own removal took, its act the put-back.
+// drafts words for kept on the generic refusal line; the face of a
+// passage the person's own removal took, its act the put-back; and the moved
+// face's "see the held text" opening the moved scene on the held version.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as FACES from './faces.js';
@@ -1082,6 +1083,18 @@ test('BM-13, BM-17, BM-29: the moved face names the hands its rows carry, each i
   WRITE.setHeld(UD, [moved({ sendable: false, hands: [{ key: 'own', fingerprint: 'aabbccddeeff0011', label: 'laptop' }], again: true })]);
   FACES.unkept(UD, null);
   assert.deepEqual([FACES.unkeptFace(UD)?.again, /<div class="hands" data-again="1"><span class="again" data-slot="again"><\/span>/.test(hostEl.innerHTML), FACES.unkeptFace(UD)?.hands?.length], [true, true, 1], 'refused again with no new row: the hands named again, the slot for the words that say so standing, empty');
+});
+
+test('BM-14: "see the held text" at the moved face takes the face down and opens the moved scene as a step on the trail — its entry the draft\'s, the draft in its first pane, in its second the held version the page shows, the scene asked as the moved scene, its held version marked so (SC\'s `Held.heldB`) (issue #599)', () => {
+  unkeptDraft();
+  WRITE.setHeld(UD, [unkeptRow(1, { cause: 'moved', sent: true, refusal: verdict('arrangement_moved') })]);
+  WRITE.addEdit(UD, { pos: 4, width: 0, text: 'd' });
+  assert.equal(FACES.unkept(UD, null), true);
+  const was = TRAIL.length();
+  /** @type {any} */ (HOST.currentState()).acts.held();
+  const e = TRAIL.current(), b = /** @type {any} */ (e?.scene?.b);
+  assert.deepEqual([HOST.currentState(), TRAIL.length(), e?.addr, e?.scene?.a, e?.scene?.held], [null, was + 1, UD, UD, { heldB: true }], 'the face down, one entry at the act: the draft\'s, the scene asked as the moved scene');
+  assert.deepEqual([b?.addr, !!b?.derived, REC.textOf(b?.runs ?? [], b?.from ?? 0, b?.to ?? 0)], [UD, true, 'abcd'], 'its second pane the held version: the record the page shows of the draft');
 });
 
 test('BM-19 … BM-27: each other face of unkept words by its state — the hand-over naming the board and the time, its discard\'s statement its own; an island and the held store\'s first refusal, "send again" inert; the device\'s refusal by its class, its one act the whole text\'s copy; the head-unreadable hold\'s discard; the death\'s arm, its second form where the board\'s held lines are not read, and under the keyless session its first with the discard live, its statement the refused run\'s', () => {

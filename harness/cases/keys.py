@@ -281,9 +281,13 @@ found it.
 Mod+Z with nothing to take back is answered by its line — C-45 at an edition
 of the session's account, B3-S13's line at another account's document, the
 no-caret line anywhere else — each ending on the constant sentence where it
-stands whole; and the trail's list is its platform's history chord, Mod+Y on
+stands whole; the trail's list is its platform's history chord, Mod+Y on
 macOS and Ctrl+H elsewhere, where Ctrl+Y is the redo (`undo_chords`; D5 K-41,
-K-75; D6 BM-42).
+K-75; D6 BM-42); and the moved scene's held version names what it is at its
+corner in the place of the kept word and the chip, and at a selection in it
+the acts that send and a printable key give the one reason the selection
+keys — that its words are not in the current text, or are there too — Space
+keeping K-9's line (`held_version`; D6 BM-14; B3-S2).
 """
 import json
 import re
@@ -2555,6 +2559,86 @@ def focus_rules(ctx, r):
     ctx.leap(DOC, WINDOW[0])
 
 
+# the words a line held moved inserts in the moved scene's check (`held_version`): none of the board's
+HELD_WORDS = 'Held words here. '
+# the platform's selection set over the first stretch of a reading scene's pane's body text that reads the words given, the
+# focus put on the pane first: whether the focus stands on the pane and the selection over them there (formatted with the
+# pane's id and the words, as JSON)
+SELECT_IN_PANE = '''((id, words) => { const pane = document.getElementById(id), run = pane && pane.querySelector('article.dtext .run'); if (!run) return false;
+  const w = document.createTreeWalker(run, NodeFilter.SHOW_TEXT), nodes = []; for (let n = w.nextNode(); n; n = w.nextNode()) nodes.push(n);
+  const at = nodes.map((n) => n.data).join('').indexOf(words); if (at < 0) return false;
+  const point = (i, end) => { let k = i; for (const n of nodes) { if (k < n.data.length || (end && k === n.data.length)) return [n, k]; k -= n.data.length; } return null; };
+  const s = point(at, false), e = point(at + words.length, true); if (!s || !e) return false;
+  pane.focus({preventScroll: true}); window.getSelection().setBaseAndExtent(s[0], s[1], e[0], e[1]);
+  return document.activeElement === pane && window.getSelection().toString() === words; })(%s, %s)'''
+
+
+def held_version(ctx, r):
+    """THE MOVED SCENE'S HELD VERSION (D6 BM-14; B3-S2; issue #599): the scene opened through the gate's door as the moved
+    scene on the draft the first edition windows, read whole, a line held moved inserting words of its own before its first
+    paragraph of its own words — page state alone, nothing read for the held version:
+    (a) pane B, the held version, its corner naming what it is in the place of the kept word and the chip — "what you typed
+        while it was held — not on the board" — pane A, the current text, a draft's kept slot and chip;
+    (b) the platform's selection over the held words in pane B, the focus there: Mod+K, Mod+Shift+A and Mod+Shift+C, then a
+        printable key, each give "these words are not in your current text — …" as its hint, said through the status region
+        at the press — the region emptied before each — no overlay opening and the scene standing;
+    (c) over words of the draft's own, which the current text holds too: the same keys give "these words are in your current
+        text too — …";
+    (d) Space there keeps K-9's own line.
+    The scene ended and the selection cleared after"""
+    W = WINDOW[2]
+    ctx.leap(DOC, WINDOW[0])
+    chord(ctx, 'Escape')
+    chord(ctx, 'Escape')
+    loaded = ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(W))
+    blocks = ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(W)) or []
+    para = next((b for b in blocks if b['kind'] == 'para' and re.match(r'^[A-Za-z][ -~]{11}', b['text'] or '')), None)
+    r.check(bool(loaded) and para is not None, 'the draft the first edition windows read whole, a paragraph of its own words standing in it', {'loaded': loaded, 'blocks': [(b['pos'], (b['text'] or '')[:20]) for b in blocks[:6]]})
+    if para is None:
+        return
+    shared = para['text'][:12]
+    row = {'held': 1, 'doc': W, 'base': 0, 'frame': {'op': 'insert', 'doc': W, 'at': {'ordinal': str(para['pos']), 'subspace': '1'}, 'values': [HELD_WORDS]},
+           'anchors': None, 'cause': 'moved', 'sent': True, 'time': 0, 'refusal': None}
+    opened = ctx.js('window.__skep.scene.openHeld(%s, %s)' % (json.dumps(W), json.dumps([row])))
+    ctx.settle()
+    ctx.frames(2)
+    try:
+        # (a) the held version's corner
+        got = ctx.js('''(() => { const of = (id) => { const c = document.querySelector('#' + id + ' > .corner'); if (!c) return null; const h = c.querySelector('[data-string="B3.history.held"]');
+          return {held: h ? h.textContent : null, kept: !!c.querySelector('.kept-word'), chip: !!c.querySelector('[data-chip]')}; };
+          const P = window.__skep.scene.panes() || {}; return {a: of('sceneA'), b: of('sceneB'), held: [P.a && P.a.held, P.b && P.b.held], derived: P.b && P.b.derived}; })()''')
+        want = strings(ctx, 'B3.history.held')
+        r.check(bool(opened) and opened['shown'] and opened['applied'] == 1 and got['held'] == [False, True] and got['derived'] is True
+                and got['b'] == {'held': want, 'kept': False, 'chip': False} and got['a'] == {'held': None, 'kept': True, 'chip': True},
+                '(a) the moved scene opens, pane B the held version: its corner names it "%s" in the place of the kept word and the chip; pane A, the current text, a draft\'s kept slot and chip (issue #599; B3-S2; D6 BM-14)' % want, dict(got, opened=opened))
+        figures = {}
+        for words, sid, what in ((HELD_WORDS[:10], 'B3.held-version.not-current', '(b) over the held words'), (shared, 'B3.held-version.in-current', '(c) over "%s", words the current text holds too' % shared)):
+            selected = ctx.js(SELECT_IN_PANE % (json.dumps('sceneB'), json.dumps(words)))
+            ctx.frames(1)
+            reason = ctx.js('window.__skep.scene.heldReason()')
+            presses = {}
+            for key, mods, name in (('k', ('Meta',), 'Mod+K'), ('A', ('Meta', 'Shift'), 'Mod+Shift+A'), ('C', ('Meta', 'Shift'), 'Mod+Shift+C'), ('x', (), 'x')):
+                ctx.js('document.getElementById("live").textContent = ""')
+                chord(ctx, key, mods=mods)
+                said = told_by_hint(ctx, sid)
+                presses[name] = {'hint': said['hint'], 'live': said['live'], 'words': said['words'], 'overlay': ctx.js('window.__skep.overlay().id'), 'scene': ctx.js('window.__skep.scene.isOpen()')}
+            figures[what] = {'selected': selected, 'reason': reason, 'presses': presses}
+            r.check(selected and reason == sid and all(p['hint'] == p['words'] and p['live'] == p['words'] and p['overlay'] is None and p['scene'] for p in presses.values()),
+                    '%s in pane B, the focus there: Mod+K, Mod+Shift+A and Mod+Shift+C, then a printable key, each give "%s" as its hint, said through the status region at the press, no overlay opening and the scene standing (issue #599; D6 BM-14; FP-41)' % (what, strings(ctx, sid)),
+                    figures[what])
+        # (d) Space keeps K-9's own line
+        ctx.js('document.getElementById("live").textContent = ""')
+        chord(ctx, ' ', code='Space')
+        space = told_by_hint(ctx, 'F.swallow.space')
+        line = hint_words(ctx, 'F.swallow.space', {'paging key': 'PageDown'}, whole=space['open'])
+        r.check(space['hint'] == line and (space['live'] or '').startswith(line), '(d) Space at a selection in the held version keeps K-9\'s own line (D5 K-9)', dict(space, want=line))
+        r.figures['held_version'] = figures
+    finally:
+        ctx.js('window.__skep.scene.close(); window.getSelection().removeAllRanges()')
+        ctx.frames(2)
+        ctx.leap(DOC, WINDOW[0])
+
+
 def box_through_landing(ctx, r):
     """#171's rule 2 (FP-20): a landing never closes the LEAP box the reader is typing in — the box stands with its text, its
     caret and its focus, and Esc then closes it onto the landing, the walk's element; the box as opened, nothing typed in it,
@@ -4353,6 +4437,8 @@ def run(ctx):
     r.figures['back_after_publish'] = back_after_publish(ctx, r)
     # ---- the page's own find (issue #222's design decision) ------------------------------------------------------
     r.figures['find'] = find_holds(ctx, r)
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K at the whole board', 'Mod+Shift+O, Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter at the whole board', 'Enter', 'Mod+Shift+Enter in the LEAP box as opened and on a typed address, Esc closing the scene', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+K, Mod+Shift+A and Mod+Shift+C at the walk\'s block', 'a press on the "link to…" slot', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click, a double-click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+K in the scene', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C with nothing selected, with a selection standing and with one drawn over no range of the platform\'s', 'a copy event with nothing selected and with a selection', 'a click on a column\'s blank room after a drag', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival']
+    # ---- the moved scene's held version: its corner, and the reason its selection gives the acts that send (issue #599) -
+    held_version(ctx, r)
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K at the whole board', 'Mod+Shift+O, Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter at the whole board', 'Enter', 'Mod+Shift+Enter in the LEAP box as opened and on a typed address, Esc closing the scene', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+K, Mod+Shift+A and Mod+Shift+C at the walk\'s block', 'a press on the "link to…" slot', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click, a double-click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+K in the scene', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C with nothing selected, with a selection standing and with one drawn over no range of the platform\'s', 'a copy event with nothing selected and with a selection', 'a click on a column\'s blank room after a drag', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival', 'Mod+K, Mod+Shift+A, Mod+Shift+C, a printable key and Space at a selection in the moved scene\'s held version']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

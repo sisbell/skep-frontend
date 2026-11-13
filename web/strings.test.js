@@ -583,6 +583,32 @@ test('no line the editor\'s design retired on 2026-11-08 or 2026-11-09 stands in
   assert.deepEqual(Object.entries(STRINGS).flatMap(([id, e]) => RETIRED.filter((w) => plain(e.text + "'").includes(w)).map((w) => `${id}: ${w}`)), [], 'no entry keeps a retired line\'s words');
 });
 
+test('the moved scene\'s held version\'s lines stand as B3 re-said them on 2026-11-11, in its characters — the acts that send\'s two reasons, each a hint whole at every press, the held new words\' head and the five mirror items — each DRAFT with B3 its source and its screen; the one line they replace is retired, and no entry keeps its words (issue #599; the burst machine\'s three cases, part 2)', () => {
+  /** @type {Array<[string, string]>} each line's id and its words */
+  const LINES = [
+    ['B3.held-version.not-current', 'these words are not in your current text — place them there first; there they can be quoted, linked and annotated'],
+    ['B3.held-version.in-current', 'these words are in your current text too — select them there to quote, link or annotate'],
+    ['B3.held-version.new', 'what you typed while ⟨label⟩ was held — not placed'],
+    ['B3.held-version.mirror.held', 'what you typed while it was held — not placed'],
+    ['B3.held-version.mirror.banded', 'also in your current text'],
+    ['B3.held-version.mirror.neither', 'not in your current text'],
+    ['B3.held-version.mirror.taken-out', 'your held text takes this out'],
+    ['B3.held-version.mirror.not-held', 'not in your held text'],
+  ];
+  for (const [id, text] of LINES) {
+    const e = STRINGS[id];
+    assert.ok(e, id + ' entered');
+    assert.deepEqual({ text: e.text, cls: e.cls, source: e.source, screen: e.screen?.split(':')[0], lane: e.lane }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2', lane: undefined }, id);
+  }
+  for (const id of ['B3.held-version.not-current', 'B3.held-version.in-current']) {
+    const h = hintOf(id);
+    assert.deepEqual([STRINGS[id].hint, h.clause], ['whole', h.whole], `${id}: a hint, whole at every press — its first clause alone names no act that works`);
+  }
+  assert.equal(t('B3.held-version.new', { label: '"Tumbler." 1.0.1.0.2' }), 'what you typed while "Tumbler." 1.0.1.0.2 was held — not placed');
+  assert.ok(!('B3.held-version.inert' in STRINGS), 'the one reason as it stood, retired');
+  assert.deepEqual(Object.entries(STRINGS).filter(([, e]) => e.text.replace(/ /g, ' ').includes('your held text is not on the board')).map(([id]) => id), [], 'no entry keeps its words');
+});
+
 test('the pinned lines the editor draws stand PINNED under the copy inventory\'s ids, verbatim — the notebook\'s publish copy, the public-permanent gate\'s face, the remedy\'s label, the arrangement\'s and the link enumeration\'s caveats in their flag-off and flag-on forms — and R83\'s notebook mark under requirements.md (issue #440)', () => {
   /** @type {Array<[string, string, string]>} each line's id, its source and its words */
   const PINS = [

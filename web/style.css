@@ -329,6 +329,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .corner .kept-word.pending { background:rgba(139,143,150,.12); border-radius:2px; }
 .corner button.kept-word { text-decoration:underline dotted; }
 .corner .kept-statement { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
+/* the moved scene's held version's line in the kept word's and the chip's place (B3-S2): on a line of its own, its words
+   whole in either form, wrapped and never cut */
+.corner .held { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
 .corner .whole-links { display:block; margin-top:.3em; }
 /* the read a corner offers where a newer version's arrival pinned its box, or a pane's corner offers in its place (D5
    K-57): a line of its own after the version statement, its click cue its act's, none on its words a head's opened form

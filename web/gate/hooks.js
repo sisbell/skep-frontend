@@ -68,9 +68,11 @@
 // and mirror checks; the reading scene — opened as a step on the trail, its
 // first pane on what the page shows of its document, with the passage its
 // opener holds, and closed by its own end, a Back
-// (`scene.open`, `scene.close`), opened apart from the trail on a document
-// beside the record the page derives from it with held lines applied
-// (`scene.openHeld`; M-DERIVE's `applyHeld`), its pairs, a passage's line in a pane
+// (`scene.open`, `scene.close`), opened apart from the trail as the moved
+// scene on a document beside the record the page derives from it with held
+// lines applied (`scene.openHeld`; M-DERIVE's `applyHeld`), the reason its
+// held version's selection gives the acts that send (`scene.heldReason`), its
+// pairs, a passage's line in a pane
 // (`scene.at`), its bands beside their runs' lines and its lines beside their
 // passages' lines, and their panes' facing edges (`scene.ties`), the facing
 // edges a whole document's ends meet (`scene.edges`), the stop at a band's
@@ -805,12 +807,14 @@ export function install(deps) {
     scene: {
       /** the scene opened on two documents as a step on the trail, the second the one opened beside, the first on what the page shows of it (T-LAYER's `paneSource`) as an act opening it from a span opens it, with the passage its opener holds (N-GO's `toScene`; SC's `Held`), and its own end, a Back from its entry (N-GO's `closeScene`) */
       open: (/** @type {string} */ a, /** @type {string} */ b, /** @type {import('../scene/scene.js').Held} */ held = {}) => GO.toScene(LAYER.paneSource(a), b, held), close: () => GO.closeScene(), isOpen: () => SCENE.isOpen(), pair: () => SCENE.pair(),
-      /** the scene opened apart from the trail on a document and, in its second pane, the record the page derives from it with held lines applied in the order given (M-DERIVE's `applyHeld`; B3-S2, D6 BM-14), each line's inserted bytes named by the page's own ordinals (W-WRITE's `heldNames`), so a copy across them names them so: page state alone, nothing read for the derived pane; whether the scene shows, how many rows applied and why the apply stopped, where it did */
+      /** the scene opened apart from the trail as the moved scene (SC's `Held.heldB`) on a document and, in its second pane, the held version: the record the page derives from it with held lines applied in the order given (M-DERIVE's `applyHeld`; B3-S2, D6 BM-14), each line's inserted bytes named by the page's own ordinals (W-WRITE's `heldNames`), so a copy across them names them so: page state alone, nothing read for the derived pane; whether the scene shows, how many rows applied and why the apply stopped, where it did */
       openHeld: async (/** @type {string} */ a, /** @type {import('../model/frames.js').HeldLine[]} */ rows) => {
         const out = DERIVE.applyHeld(REC.doc(a), rows, (addr) => (REC.has(addr) ? REC.doc(addr) : null), WRITE.heldNames(a));
-        const opened = await SCENE.open(a, out.doc, {}, {});
+        const opened = await SCENE.open(a, out.doc, { heldB: true }, {});
         return { shown: opened.shown, applied: out.applied, stopped: out.stopped ? out.stopped.why : null };
       },
+      /** the reason the acts that send — and a printable key — give at the selection standing in the moved scene's held version while the focus stands in it, by its string (SC's `heldVersionReason`; D6 BM-14); null where no such selection stands */
+      heldReason: () => SCENE.heldVersionReason(),
       /** its runs of shared identity, contiguous pairs merged, and the two ends it set level */
       pairs: () => SCENE.pairs(),
       at: sceneAt, ties: sceneTies,

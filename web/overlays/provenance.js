@@ -18,9 +18,11 @@
 // their permanent address, carried to a position through the draft's image
 // read then and asked as of that read (`byIdentity`). The page answers for
 // its own words itself, at once and with no read: who wrote them, whether
-// minted or not — held on this device where the draft holds a line the board
-// has not kept and they are not minted (`wroteNew`) — and, while the board has
-// not minted them, that no other document uses them. No answer waits for a
+// minted or not — where they are not minted, typed while the draft was held,
+// not placed, where a line of it stands held moved (D6 BM-14), else held on
+// this device where it holds a line the board has not kept (`wroteNew`) —
+// and, while the board has not minted them, that no other document uses
+// them. No answer waits for a
 // burst, and none stands inert under a hold. One answer
 // covers the whole span where its runs agree, else each run is named by its
 // first words (`stated`); a refused run among several, or a past state the
@@ -54,6 +56,7 @@ import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
 import * as WRITE from '../write/write.js';
+import * as MACHINE from '../write/machine.js';
 import * as F from '../model/frames.js';
 import * as GO from '../nav/go.js';
 import * as FACES from './faces.js';
@@ -240,11 +243,24 @@ const asking = (addr, runs, frameOf, minted) => async (stands) => {
   return { runs: out };
 };
 
-/** who wrote a run of new words, in the page's own words (see the head): held on this device where the draft holds a line the board has not kept and the board has not minted them, else from this device */
-const wroteNew = (/** @type {string} */ addr, /** @type {SpanRun} */ run) => (!run.minted && LAYER.holding(addr) ? 'L.new.wrote.held' : 'L.new.wrote');
+/**
+ * Who wrote a run of new words, in the page's own words (see the head): where
+ * the board has not minted them and a line of the draft stands held moved
+ * (W-MACHINE's `isMoved`), the moved face's word — typed while the draft was
+ * held, not placed (D6 BM-14; B3-S2); where it has not and the draft holds
+ * any other line the board has not kept, held on this device; else from this
+ * device. Its string's id, and the values its tokens are filled with.
+ * @param {string} addr
+ * @param {SpanRun} run
+ * @returns {{id: string, values: Record<string, string>}}
+ */
+function wroteNew(addr, run) {
+  if (!run.minted && WRITE.heldOf(addr).some(MACHINE.isMoved)) return { id: 'B3.held-version.new', values: { label: LAYER.boxName(addr).name } };
+  return { id: !run.minted && LAYER.holding(addr) ? 'L.new.wrote.held' : 'L.new.wrote', values: {} };
+}
 
-/** a line of the page's own words, with no act */
-const plainly = (/** @type {string} */ id) => /** @type {Line} */ ({ id, html: esc(t(id)), inline: '', below: '' });
+/** a line of the page's own words, with no act: its string's, each token filled with the client's words (ST's `tHTML`) */
+const plainly = (/** @type {string} */ id, /** @type {Record<string, string>} */ values = {}) => /** @type {Line} */ ({ id, html: tHTML(id, values), inline: '', below: '' });
 
 /**
  * What a card states of its runs (see the head): where all of them answer
@@ -334,7 +350,8 @@ function wroteOver(addr, sp, selected, how) {
     /** @type {Record<string, import('./host.js').Act>} */
     const acts = {};
     const lines = (/** @type {RunAnswer} */ a, /** @type {Reach} */ reach, /** @type {string} */ key) => {
-      if (a.is !== 'board') return [plainly(a.is === 'new' ? wroteNew(addr, a.run) : 'L.run.not-yet')];
+      if (a.is === 'new') { const w = wroteNew(addr, a.run); return [plainly(w.id, w.values)]; }
+      if (a.is !== 'board') return [plainly('L.run.not-yet')];
       return F.decodeAddrs(a.answer).map((o, i) => {
         const owner = REC.doc(o).meta ? REC.doc(o).meta?.owner : accountOf(o);
         const same = o !== addr, id = same ? 'B1.wrote' : 'B1.wrote.here', src = `src${key}${i}`, beside = `beside${key}${i}`;
@@ -347,7 +364,7 @@ function wroteOver(addr, sp, selected, how) {
         return /** @type {Line} */ ({ id, html: tHTML(id, named, ids), inline: same ? ` <button class="id" data-run="${src}">${esc(o)}</button><button data-run="${beside}">${esc(t('B1.side-by-side'))}</button>` : '', below: '' });
       });
     };
-    const html = `<span class="label">${addressedHTML(caption)}</span>` + stated(addr, out.runs, sp, selected, (a) => (a.is === 'board' ? addressesKey(F.decodeAddrs(a.answer)) : a.is === 'new' ? wroteNew(addr, a.run) : a.is), lines);
+    const html = `<span class="label">${addressedHTML(caption)}</span>` + stated(addr, out.runs, sp, selected, (a) => (a.is === 'board' ? addressesKey(F.decodeAddrs(a.answer)) : a.is === 'new' ? wroteNew(addr, a.run).id : a.is), lines);
     HOST.show({ kind: 'card', id: 'provenance:wrote', anchor, html, acts, ...shownAs(aboutOf('wrote', addr, sp, selected), how) });
   }, how.left);
 }

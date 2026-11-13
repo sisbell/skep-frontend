@@ -287,9 +287,18 @@
 // stand where their bytes stand in its own image, and none on bytes the page
 // made (`placedInto`; LK's `shown`) — no row of the board's sets it again (its
 // text is the page's, not the board's), its corner offers no version and its
-// kept slot
-// stands empty; a change of the page's class sets it again from the model's
-// record of its document, as every pane (FP-29). A pane of a draft carries
+// kept slot stands empty, save the held version's (below); a change of the
+// page's class sets it again from the model's record of its document, as
+// every pane (FP-29). Opened as the moved scene
+// (`Held.heldB`; D6 BM-14), pane B is the held version (`Pane.heldVersion`),
+// the record the page derived of the draft in pane A with its held lines
+// applied: its corner names what it is in the place of the kept word and the
+// chip (T-ARTICLE's `held`; B3-S2), and at a selection in its text while the
+// focus stands in it the acts that send — and a printable key — give the one
+// reason that selection keys (`heldVersionReason`): that its words are not in
+// the current text, where any byte of it pane A's image does not place, else
+// that they are in the current text too; set from a record not derived, it
+// is the held version no more. A pane of a draft carries
 // the draft's kept word in its corner (T-ARTICLE's draft arm; B3-S2), the
 // statement open or closed as T-LAYER holds it (`openStatement`), its items
 // written again as the word or the statement moves (`markKept`), and the
@@ -432,6 +441,7 @@ import { esc, byteOffsets } from '../util.js';
  * @property {ISpan[]} [ids] the passage held by its bytes' identity, for an opener that holds it past the read it was measured on (N-GO's landing): the scene places them in pane A's text as it reads it, in the place of `posA` and `widthA` wherever that text holds any of them (`placedHeld`)
  * @property {number | null} [posB] the position in the second document the opener names — where a link's far end stands in its text now (LK's `farPos`) — where it names one
  * @property {boolean} [wholeB] the far end of the link the scene is opened from names the second document whole: nothing of it is set level with the passage held, and pane B opens at its start (see the head)
+ * @property {boolean} [heldB] the scene is the moved scene (D6 BM-14): the second document is the held version, a record the page derived of the first with its held lines applied (`Pane.heldVersion`; see the head)
  */
 
 /**
@@ -582,6 +592,7 @@ import { esc, byteOffsets } from '../util.js';
  * @property {boolean} open the reader's act opened its corner whole where it stands compact or at its document's head (`openWhole`; FP-26), until the act again closes it
  * @property {number} rows its corner's rows at its document's head as last written (`cornerForm`); 0 beside its column
  * @property {import('../text/article.js').Kind} heard its corner's kind slot as the scene last read it (`markKept`): what the slot filling under the focus is told against
+ * @property {boolean} heldVersion it shows the moved scene's held version (`Held.heldB`; D6 BM-14): the derived record it was opened on, which its corner names so and at a selection in which the acts that send give their reason (`heldVersionReason`); false on every other pane, and once the pane is set from a record not derived
  */
 
 /**
@@ -909,17 +920,64 @@ export function paneRead(side = null) {
   const r = typeof pane.getBoundingClientRect === 'function' ? pane.getBoundingClientRect() : null;
   return { side: s, names: P.names, d: P.d, first: firstInView(pane), rect: r ? { x: r.left, y: r.top, w: r.width, h: r.height } : null };
 }
+
+/** @typedef {'B3.held-version.not-current' | 'B3.held-version.in-current'} HeldReason the one reason the acts that send give at a selection in the moved scene's held version, by its string (`heldVersionReasonOf`) */
+
+/**
+ * Which reason the acts that send — and a printable key — give at a
+ * selection in the moved scene's held version (D6 BM-14; B3-S2): the first
+ * where the selection holds any byte the current text does not hold — the
+ * person's held new words always among them, which no image of the board's
+ * names — else the second. A byte of the selection the current text holds is
+ * one the current text's image places in the held version's text at its
+ * position (M-REC's `placedIn`, a byte the page made counted under both its
+ * names).
+ * @param {import('../model/records.js').ImageRun[]} current the image the current text's article was made from
+ * @param {import('../model/records.js').ImageRun[]} held the image the held version's article was made from
+ * @param {{pos: number, width: number}} span the selection, in the held version's positions
+ * @returns {HeldReason}
+ */
+export function heldVersionReasonOf(current, held, span) {
+  const end = span.pos + Math.max(1, span.width);
+  let at = span.pos;
+  for (const s of REC.placedIn(held, current.map((r) => ({ prefix: r.prefix, ordinal: r.ordinal, width: r.width })))) {
+    if (s.pos > at) break;
+    at = Math.max(at, s.pos + s.width);
+    if (at >= end) break;
+  }
+  return at >= end ? 'B3.held-version.in-current' : 'B3.held-version.not-current';
+}
+
+/**
+ * The reason the acts that send — and a printable key — give at the
+ * selection standing in the moved scene's held version (see the head; D6
+ * BM-14): where pane B shows the held version (`Pane.heldVersion`), the
+ * platform's focus stands in it and its selection stands in its text, the
+ * reason that selection keys (`heldVersionReasonOf`) over the images the two
+ * panes' articles were made from; null anywhere else.
+ * @returns {HeldReason | null}
+ */
+export function heldVersionReason() {
+  const S = scene, E = els;
+  if (!S || !E || !S.b.heldVersion || !S.a.el || !S.b.el) return null;
+  const at = typeof document !== 'undefined' ? document.activeElement : null;
+  if (!at || !E.paneB.contains(at)) return null;
+  const sel = LAYER.selectionIn(S.b.el), a = LAYER.madeOf(S.a.el), b = LAYER.madeOf(S.b.el);
+  return sel && a && b ? heldVersionReasonOf(a.image, b.image, sel.span) : null;
+}
+
 /**
  * Each pane as it stands, read-only (the gate reads it): the address it was
  * opened on, the record its text was made from, the address its acts name and
  * the one it shows, its kind, its version and the chain's count, its corner's
  * act and what its corner says it lacks, whether its record is one the page
- * derived, and the blocks its article was made from.
+ * derived, whether it shows the moved scene's held version, and the blocks
+ * its article was made from.
  */
 export function panes() {
   const S = scene;
   if (!S) return null;
-  const of = (/** @type {Pane} */ P) => ({ doc: P.doc, src: P.src, names: P.names, shows: P.shows, kind: P.kind, k: P.k, n: P.n, read: P.read, lacks: P.lacks, derived: !!P.d.derived, blocks: P.d.blocks.map((b) => ({ pos: b.pos, width: b.width, kind: b.kind, text: b.text })) });
+  const of = (/** @type {Pane} */ P) => ({ doc: P.doc, src: P.src, names: P.names, shows: P.shows, kind: P.kind, k: P.k, n: P.n, read: P.read, lacks: P.lacks, derived: !!P.d.derived, held: P.heldVersion, blocks: P.d.blocks.map((b) => ({ pos: b.pos, width: b.width, kind: b.kind, text: b.text })) });
   return { a: of(S.a), b: of(S.b) };
 }
 
@@ -1391,7 +1449,7 @@ function paneAt(side, src, r) {
   return {
     side, doc: src, src, names, shows: kind === 'bare' ? src : names, kind, k, n: kind === 'draft' ? null : r.n, read: null, lacks: null,
     d: { ...r.d }, view: LAYER.sceneView(r.d), corner: '', placed: new Map(), place: null, el: null, serial: 0, sets: 0, kept: null, lift: null, signs: null, facts: undefined,
-    open: false, rows: 0, heard: LAYER.kindOf(r.d),
+    open: false, rows: 0, heard: LAYER.kindOf(r.d), heldVersion: false,
   };
 }
 
@@ -1402,13 +1460,15 @@ function paneAt(side, src, r) {
  * while the board lags (`lags`), the act it offers and what it says the
  * version it reads lacks, a draft's kept word as the model holds it with its
  * statement where T-LAYER holds it open (B3-S2) — a derived record's slot
- * empty — and its document's kind by the one test (T-LAYER's `kindOf`).
+ * empty, the held version's line in its place and the chip's
+ * (`Pane.heldVersion`; D6 BM-14) — and its document's kind by the one test
+ * (T-LAYER's `kindOf`).
  * @param {Pane} P
  * @returns {{d: Doc, view: ArticleView}}
  */
 function paneCorner(P) {
   const d = P.shows === P.d.addr ? P.d : { ...P.d, addr: P.shows };
-  return { d, view: { ...P.view, members: P.n, read: P.read, lacks: P.lacks, lags: lags(), kept: P.d.derived ? null : WRITE.keptOf(P.names), keptOpen: !P.d.derived && LAYER.statementOpen(P.names), kind: LAYER.kindOf(P.d) } };
+  return { d, view: { ...P.view, members: P.n, read: P.read, lacks: P.lacks, lags: lags(), kept: P.d.derived ? null : WRITE.keptOf(P.names), keptOpen: !P.d.derived && LAYER.statementOpen(P.names), held: P.heldVersion, kind: LAYER.kindOf(P.d) } };
 }
 
 /** a pane's corner's first item in words (T-ARTICLE's `cornerLead`): its document's kind, else a refused document's own words — what its region's name leads with (`namePane`) */
@@ -1694,7 +1754,9 @@ const textOf = (/** @type {Source} */ x, /** @type {Doc} */ d) => ({ src: addrOf
  * sets from the runs and the passage held as pane A's text holds it
  * (`placedHeld`), whether the far end names pane B's document whole, the
  * near passage's positions, and the stop at its first passage, none measured
- * yet; the full measure, the corners whole, until it stands (`stand`).
+ * yet; the full measure, the corners whole, until it stands (`stand`). Pane B
+ * is the held version where the opener asks the moved scene and its record is
+ * one the page derived (`Held.heldB`).
  * @param {Pane} pa
  * @param {Pane} pb
  * @param {ComparePair[]} pairs
@@ -1703,6 +1765,7 @@ const textOf = (/** @type {Source} */ x, /** @type {Doc} */ d) => ({ src: addrOf
  */
 function sceneOf(pa, pb, pairs, held) {
   const h = placedHeld(pa, held);
+  pb.heldVersion = !!held.heldB && !!pb.d.derived;
   return {
     a: pa, b: pb, pairs, level: levels(pairs, h), whole: !!h.wholeB, widthA: Math.max(1, h.widthA ?? 1),
     bands: [], lines: [], strokes: [], listing: null, relist: null, shared: [], next: 0, at: null, told: false, stepped: null, returned: null,
@@ -3111,7 +3174,8 @@ function measure() {
  * class that sets it again. A pane set again at a new fit alone (`refit`)
  * keeps its text, its lines broken anew: its place is its first line in view
  * (`firstLineIn`), no `compare` read against it is outdated by it, and a
- * place kept for such a read stays kept.
+ * place kept for such a read stays kept. A pane set from a record not derived
+ * is the held version no more (`Pane.heldVersion`).
  * @param {Scene} S
  * @param {Array<{side: 'a' | 'b', next: Next, down?: boolean, same?: boolean}>} sets `down` the pane taken down to its cover at a change of the page's class; `same` the pane set again at a new fit, its text the one it shows
  * @param {ComparePair[] | null} pairs the runs of shared identity between the panes now; null where they stand as they were
@@ -3135,7 +3199,7 @@ function setPanes(S, sets, pairs) {
   });
   for (const { side, next, same } of carried) {
     const P = S[side], view = { ...(next.view ?? LAYER.sceneView(next.d)), cpl: S.fit.cpl };
-    Object.assign(P, { d: { ...next.d }, view, kind: next.kind, src: next.src, names: next.names, shows: next.shows, k: next.k, n: next.n, read: next.read, lacks: next.lacks });
+    Object.assign(P, { d: { ...next.d }, view, kind: next.kind, src: next.src, names: next.names, shows: next.shows, k: next.k, n: next.n, read: next.read, lacks: next.lacks, heldVersion: P.heldVersion && !!next.d.derived });
     if (!same) P.sets++;
     swap(E, P);
     writeCorner(E, P);

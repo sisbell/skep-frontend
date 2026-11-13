@@ -152,7 +152,9 @@
 // slot's reason (P47): at the
 // slot of the acts card drawn at the span in focus — the selection, else the
 // walk's focused span, nothing selected (O-SELECTION's `inertChord`) — else,
-// and over the scene, as its hint (`inertSaid`).
+// and over the scene, as its hint (`inertSaid`); at a selection in the moved
+// scene's held version, the reason that selection keys answers them and a
+// printable key but Space alike, as its hint (`heldSaid`; D6 BM-14).
 // Every other slot's chord (K-47 … K-52) makes its slot's act on what is in
 // focus (O-SELECTION's `act`) — save Mod+Enter at a live caret (above) — and
 // where nothing in focus is what the slot acts on gives the slot's reason,
@@ -1082,19 +1084,24 @@ async function replay() {
  * is, Mod+R re-levels (K-62), Mod+= is swallowed (K-64), Mod+- closes the
  * scene (K-63) — a Back from its entry (N-GO's `closeScene`) — and
  * Mod+Shift+P shows the one line's strip (K-23); the
- * selection's slot chords, which have nothing to act on in the scene, are
- * taken, so the browser's own meanings never run (Mod+Shift+R would reload),
- * as F5 is (K-94) — an inert slot's chord giving its slot's reason as its
- * hint (`inertSaid`), every other doing nothing. On the one line or a
- * standing overlay every other key is that control's own. At a pane's corner
- * its keys are a corner's (`cornerKey`): Enter and Space its act's, as the
- * platform activates it, else the platform's, and ← and → along the line of its acts where it
- * holds any, Space never swallowed there. Elsewhere ← closes the scene so
- * (K-63); a pane's own keys moved that pane before the dispatch (SC's `key`,
- * K-60), and → and Enter elsewhere in a pane, and Shift with the
- * arrows, are the platform's; on the scene's acts every other key is the
- * button's own — Enter and Space press it; a printable key anywhere else is
- * swallowed, the K-9 line its hint.
+ * selection's slot chords are taken, so the browser's own meanings never run
+ * (Mod+Shift+R would reload), as F5 is (K-94): at a selection standing in the
+ * moved scene's held version while the focus stands in it, an inert slot's
+ * chord gives the reason that selection keys as its hint (`heldSaid`; SC's
+ * `heldVersionReason`; D6 BM-14); anywhere else in the scene, which holds
+ * nothing for the slots to act on, an inert slot's chord gives its slot's
+ * reason as its hint (`inertSaid`); every other slot's chord does nothing. On
+ * the one line or a standing overlay every other key is that control's own.
+ * At a pane's corner its keys are a corner's (`cornerKey`): Enter and Space
+ * its act's, as the platform activates it, else the platform's, and ← and →
+ * along the line of its acts where it holds any, Space never swallowed there.
+ * Elsewhere ← closes the scene so (K-63); a pane's own keys moved that pane
+ * before the dispatch (SC's `key`, K-60), and → and Enter elsewhere in a
+ * pane, and Shift with the arrows, are the platform's; on the scene's acts
+ * every other key is the button's own — Enter and Space press it; a printable
+ * key anywhere else is swallowed — at a selection in the held version, every
+ * one but Space answered by that selection's reason, as the slots that send
+ * are (`heldSaid`), else the K-9 line its hint.
  * @param {KeyboardEvent} e
  * @param {string} chord
  * @param {Ctx} ctx
@@ -1105,15 +1112,32 @@ function sceneKey(e, chord, ctx) {
   if (chord === 'Mod+=') return () => true; // swallowed: nothing is nearer than the scene's reading scale
   if (chord === 'Mod+-') return () => { GO.closeScene(ctx.byKey); return true; };
   const inert = INERT_CHORDS.get(chord);
-  if (inert) return () => { inertSaid(inert, e, ctx); return true; };
+  if (inert) return () => { if (!heldSaid(e, ctx)) inertSaid(inert, e, ctx); return true; };
   if (SLOT_CHORDS.has(chord) || e.key === 'F5') return () => true;
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
   if (ctx.where === 'overlay' || ctx.where === 'line') return null; // the overlay's or the line's own keys
   if (ctx.where === 'scene') { const act = cornerKey(e, chord, ctx, true); if (act !== undefined) return act; }
   if (chord === '←') return () => { GO.closeScene(ctx.byKey); return true; };
   if (ctx.where === 'scene-acts') return null; // the button's own keys
-  if (printable(e)) return () => { swallow(e, ctx, writingElsewhere(ctx.where === 'scene' ? SCENE.paneRead()?.names ?? null : null)); return true; };
+  if (printable(e)) return () => { if (e.key === ' ' || !heldSaid(e, ctx)) swallow(e, ctx, writingElsewhere(ctx.where === 'scene' ? SCENE.paneRead()?.names ?? null : null)); return true; };
   return null;
+}
+
+/**
+ * A key at a selection standing in the moved scene's held version while the
+ * focus stands in it — a chord of a slot that sends, a printable key but
+ * Space (`sceneKey`; D6 BM-14; B3-S2): the reason that selection keys, its
+ * hint at the pane until the next act, said in the status region at every
+ * press (SC's `heldVersionReason`; FP-41); false, nothing raised, where no
+ * such selection stands.
+ * @param {KeyboardEvent} e
+ * @param {Ctx} ctx
+ * @returns {boolean}
+ */
+function heldSaid(e, ctx) {
+  const why = SCENE.heldVersionReason();
+  if (why) HINT.show(why, null, hinted(e, ctx));
+  return !!why;
 }
 
 /**
@@ -1237,7 +1261,7 @@ function cornerSays(e, ctx, addr) {
   HINT.show('B3.caret.back', null, { ...hinted(e, ctx), writing: writingElsewhere(addr) });
 }
 
-/** an inert slot's chord where no acts card gives its reason — no span in focus, or the scene over the plane: the slot's reason its hint at the focus until the next act (P47) */
+/** an inert slot's chord where no acts card gives its reason — no span in focus, or the scene over the plane with no selection in the held version (`heldSaid`): the slot's reason its hint at the focus until the next act (P47) */
 function inertSaid(/** @type {InertSlot} */ slot, /** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
   HINT.show(SEL.reasonOf(slot), null, hinted(e, ctx));
 }

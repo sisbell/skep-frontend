@@ -1400,16 +1400,17 @@ async function dropped(addr, held) {
 
 /**
  * "see the held text" at a moved document's face (D6 BM-14): the reading
- * scene opened as a step the person chose — the current text in its first
- * pane, read from the board, and in its second the held version, the record
- * the page shows of the draft with its held words applied (T-LAYER's
- * `paneSource`). Nothing where the page shows no such record.
+ * scene opened as a step the person chose, the moved scene (SC's
+ * `Held.heldB`) — the current text in its first pane, read from the board,
+ * and in its second the held version, the record the page shows of the draft
+ * with its held words applied (T-LAYER's `paneSource`). Nothing where the
+ * page shows no such record.
  * @param {string} addr
  */
 function seeHeld(addr) {
   const heldVersion = LAYER.paneSource(addr);
   if (typeof heldVersion === 'string') return;
   HOST.dismiss();
-  void GO.toScene(addr, /** @type {any} */ (heldVersion), {});
+  void GO.toScene(addr, /** @type {any} */ (heldVersion), { heldB: true });
 }
 
