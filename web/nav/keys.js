@@ -227,7 +227,9 @@
 // view; and what it did is said in the status region alone, never drawn —
 // "taken out — …" then "put back — …" by the first words of each. Where the
 // step's line awaits an act of the person's at its face, the press shows that
-// face and takes none of its acts. Where the draft cannot be written the
+// face — a moved document's standing at its corner, opened whole there where
+// it stands compact and its words said — and takes none of its acts. Where
+// the draft cannot be written the
 // reason's line answers it (`unwritableSays`). On an empty stack the undo is
 // answered by the empty stack's line; with no such draft, by the document's
 // line where the walk stands on an edition of the person's own or on
@@ -971,7 +973,9 @@ function undoTarget() {
  * span and its mark brought into view by the frame, and what the step did
  * said in the status region alone (`undoSaid`). A step whose line awaits an
  * act of the person's at its face shows that face, no act of it taken, the
- * focus where it stood. A draft that cannot be written now is answered by its
+ * focus where it stood — a moved document's standing at its corner, opened
+ * whole there where it stands compact and its words said (O-FACES'
+ * `answerAtFace`). A draft that cannot be written now is answered by its
  * reason's line; an empty undo stack by its own; no target by `undoNone`. A
  * redo with nothing to put back is taken and says nothing. A step standing
  * in text the page does not hold — a long draft held in part — is reached
@@ -990,7 +994,7 @@ async function undoChord(e, ctx, redo) {
   // the step stands in text the page does not hold of a long draft: its place read first, by a LEAP to where it began, then the press made
   if (out.how === 'away' && out.at != null) { await GO.leapTo(addr, { pos: out.at, how: 'key', byKey: ctx.byKey }); out = redo ? MACHINE.redo(addr) : MACHINE.undo(addr); }
   if (out.how === 'away') return;
-  if (out.how === 'face') { const corner = LAYER.cornerOf(addr); FACES.unkept(addr, corner ? /** @type {HTMLElement | null} */ (corner.querySelector('.kept-word')) : null, false); return; }
+  if (out.how === 'face') { const corner = LAYER.cornerOf(addr); if (!FACES.unkept(addr, corner ? /** @type {HTMLElement | null} */ (corner.querySelector('.kept-word')) : null, false)) FACES.answerAtFace(addr); return; }
   if (out.how === 'empty') { if (!redo) HINT.show('B3.undo.empty', null, { ...hinted(e, ctx), ending: UNDO_CONSTANT }); return; }
   if (SEL.selected()) SEL.clear();
   if (out.at != null) { LAYER.placeCaret(addr, out.at); await WALK.followCaret(); }

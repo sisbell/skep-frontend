@@ -229,9 +229,15 @@
 // passage being read (FP-8). No act leaves the caret under the one line or
 // what a head covers (`headClear`, `placeCaretMark`), nor the end of the
 // page's selection a press, K-8 or the platform's own keys moved under what a
-// head covers (`keepClear`; FP-37). A standing
-// corner's kept word is said once in the status region where it changes
-// (`sayKept`; FP-36). Its first slot states the document's kind, read by
+// head covers (`keepClear`; FP-37). Beneath a draft's kept word its corner
+// carries the face standing there — a moved document's (the reader `face`;
+// B3-S2; T-ARTICLE draws it) — never yielding: whole beside its column where
+// the corner stands whole, compact where it stands compact or at its
+// document's head, its acts keyed on it (`cornerAct`), its items made again
+// as its hands, their naming again or its acts' state move (`cornerKey`); a
+// reading scene's pane's corner carries none (`cornerFacts`). A standing
+// corner's kept word, and its face as one comes or changes, are said once in
+// the status region (`sayCorner`; FP-36). Its first slot states the document's kind, read by
 // the one test (`isDraft`; FP-33) — its metadata's word, else the kind the
 // model knows of its record, else its box's listing — being read until one
 // answers and not read where its metadata's read failed (`kindOf`; FP-34),
@@ -523,7 +529,7 @@ import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, inFirstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, endsColumn, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, MARGIN, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX } from '../plane/labels.js';
-import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, kindWord, keptHTML, statementHTML, keptWord, keptStatement, blockMarks, symbolLit, editionClause, copyText, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
+import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, kindWord, keptHTML, statementHTML, keptWord, keptStatement, faceWords, blockMarks, symbolLit, editionClause, copyText, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
 import { farShort, whyOf } from '../beams/held.js';
 import { applyEdits, sourceRuns, fromBase, boundaries, wordStop } from '../model/derive.js';
 import { homeOf, documentOf, memberOf, versionAddress, accountOf } from '../model/address.js';
@@ -535,6 +541,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
 /** @typedef {import('../model/records.js').Block} Block */
 /** @typedef {import('../model/frames.js').Run} Run */
 /** @typedef {import('./article.js').ArticleView} ArticleView */
+/** @typedef {import('./article.js').CornerFace} CornerFace */
 /** @typedef {import('./article.js').RunInView} RunInView */
 /** @typedef {import('./article.js').OriginRun} OriginRun */
 /** @typedef {import('./span.js').Span} Span */
@@ -712,6 +719,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @property {boolean} head it stands at its document's head (`placeHead`): its first row held, its rows across the column being read
  * @property {number} bottom the bottom of what it covers on screen as last placed (px): its first row's, or a form opened beneath it — what no act leaves a target under (`headClear`)
  * @property {string | null} word the kept word its kept slot showed as last placed: a word that changes is spoken (FP-36); null where none stood
+ * @property {string | null} face the words of the face standing at it as last placed (`faceWords`): a face that comes or changes is spoken (FP-36); null where none stood
  */
 
 /**
@@ -805,6 +813,7 @@ import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
  * @property {(addr: string, pos: number, ids: ISpan[]) => void} vanished told where the text a document is set again as holds none of the passage being read (`keepPlace`): the document, the position whose line keeps the passage's place, and the passage by identity (N-GO's `vanished`; FP-21)
  * @property {(addr: string) => number} atop how far a surface standing at a document's corner's place pushes the corner's items down, in px, by the document's box: an in-document find's box (N-FIND's `atop`); 0 where none stands
  * @property {(addr: string) => (number | null)} newer the newer version a document's corner on the plane offers to read in its place, where a newer version's arrival pinned its box on the version it stands for (N-GO's `newerAt`); null where it offers none
+ * @property {(addr: string) => (CornerFace | null)} face the face standing at a draft's corner on the plane beneath its kept word (O-FACES' `cornerFace`; B3-S2): a moved document's; null where none stands
  */
 
 /** the corner's distance from the text column, and from the edge of the room it stands in (px): P-REG's */
@@ -886,8 +895,8 @@ const openStatements = new Map();
 const shownCache = new Map();
 /** the box an address stands in: its document's, which every version of it shares */
 const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
-/** the readers until the app hands its owners' in: no selection and no focus, the line at the viewport's top, nowhere navigated, every box showing its plain address, no document and no account named, no corner offering a newer version */
-const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: boxOf, named: () => null, region: () => false, vanished: () => {}, atop: () => 0, newer: () => null });
+/** the readers until the app hands its owners' in: no selection and no focus, the line at the viewport's top, nowhere navigated, every box showing its plain address, no document and no account named, no corner offering a newer version or carrying a face */
+const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: boxOf, named: () => null, region: () => false, vanished: () => {}, atop: () => 0, newer: () => null, face: () => null });
 /** @type {Readers} */
 let read = noReaders();
 /** is a version the one its box shows (see the head)? */
@@ -1382,7 +1391,9 @@ export function putBack(addr, ids) {
  * facts the model's for its owner's account (M-REC's `accountKey`), never
  * this device's key; every fit it judges measured as the platform sets the
  * words (`widthOf`); on the plane, the newer version its corner offers to
- * read (the reader `newer`), a reading scene's pane handing its own in. The
+ * read (the reader `newer`), a reading scene's pane handing its own in, and
+ * the face standing at its corner (`cornerFacts`), a pane's corner carrying
+ * none. The
  * links are placed by their bytes in the record handed in (LK's `shown`,
  * `symbols`, `countAt`), so a derived record draws them on the bytes its image
  * holds — a byte the page made among them once the board has minted it — and
@@ -1396,7 +1407,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
     marks: LK.shown(d.addr, d), mergedMark: LK.mergedMark, symbols: LK.symbols(d.addr, d), says: farShort, countAt: (b) => LK.countAt(d.addr, b, d),
     wholeLinks: LK.wholeLinks(d.addr).length,
     reader: REC.reader(),
-    ...cornerFacts(d),
+    ...cornerFacts(d, scene),
     read: scene ? null : read.newer(d.addr),
     scene,
     clauseOf, keyOf: REC.accountKey,
@@ -1450,15 +1461,17 @@ export function chainOf(addr) {
 /**
  * What a document's corner states its state from (T-ARTICLE's `CornerFacts`):
  * its box's chain (`chainOf`), the board's lag (`lags`), the venue, the local
- * trust flag, a draft's kept state, the one owner rule and its kind by the
- * one test (`kindOf`) — the corner's view's own (`viewFor`), read without the
+ * trust flag, a draft's kept state, the face standing beneath its kept word on
+ * the plane (the reader `face`), the one owner rule and its kind by the one
+ * test (`kindOf`) — the corner's view's own (`viewFor`), read without the
  * links the rest of the view reads.
  * @param {Doc} d
+ * @param {boolean} [scene] a reading scene's pane's corner: it carries no face
  * @returns {import('./article.js').CornerFacts}
  */
-function cornerFacts(d) {
+function cornerFacts(d, scene = false) {
   const h = REC.health();
-  return { members: chainOf(d.addr), lags: lags(), notebook: onNotebook(), localTrust: !!(h && h.auth && h.auth.local_trust), kept: WRITE.keptOf(d.addr), originOwner, kind: kindOf(d) };
+  return { members: chainOf(d.addr), lags: lags(), notebook: onNotebook(), localTrust: !!(h && h.auth && h.auth.local_trust), kept: WRITE.keptOf(d.addr), face: scene ? null : read.face(d.addr), originOwner, kind: kindOf(d) };
 }
 
 /** is the venue the person's own notebook — what every corner states its state by (`cornerFacts`), and what the kept word's statement at a board's silence is keyed on (`keptSaid`)? */
@@ -1606,8 +1619,8 @@ const clauseWidth = (/** @type {{text: string}} */ k) => measureRun(k.text, ADDR
 /** the least room a document's name keeps on its head's first row: its address whole at its one size, so whether its region is named moves no row (`docLabel`) */
 const nameWidth = (/** @type {Doc} */ d) => measureRun(d.addr, ADDRESS.px, ADDRESS.weight, 'ident');
 
-/** a corner's items as a head's rows read them (`headLayout`): each one's width at the interface's size, its words, and whether it yields */
-const headItems = (/** @type {import('./article.js').CornerItem[]} */ items) => items.map((i) => ({ w: i.em * CORNER.px, yields: i.yields, words: i.words }));
+/** a corner's items as a head's rows read them (`headLayout`): each one's width at the interface's size — a face's its words measured there (`cornerPx`), for they wrap where a row cannot hold them — its words, and whether it yields */
+const headItems = (/** @type {import('./article.js').CornerItem[]} */ items) => items.map((i) => ({ w: i.cls === 'face' ? cornerPx(i.words) : i.em * CORNER.px, yields: i.yields, words: i.words }));
 
 /**
  * The depth a document's head takes above its first row, in the body's em
@@ -2987,8 +3000,8 @@ export function boardKeptIn() {
 /** does the board lag past a second (M-PUMP's `boardKept`): every corner names neither the latest version nor the chain's count (`ArticleView.lags`) */
 const lags = () => PUMP.boardKept() !== null;
 
-/** what a document's corner's items are made from beside its record and the links (`Mounted.corner`): its kind (`kindOf`) — which an index row or a failed read tells with no move of its record — the board's lag, its box's chain (`chainOf`), the newer version it offers to read (the reader `newer`), the draft's kept state and whether its statement stands open — the items made again where it moved */
-const cornerKey = (/** @type {string} */ addr) => JSON.stringify([kindOf(REC.doc(addr)), lags(), chainOf(addr), read.newer(addr), WRITE.keptOf(addr), openStatements.get(addr) ?? null, REC.daemon() === 'unreachable']);
+/** what a document's corner's items are made from beside its record and the links (`Mounted.corner`): its kind (`kindOf`) — which an index row or a failed read tells with no move of its record — the board's lag, its box's chain (`chainOf`), the newer version it offers to read (the reader `newer`), the draft's kept state, whether its statement stands open and the face standing beneath it (the reader `face`) — its hands, whether they are named again and whether its acts act among it — the items made again where it moved */
+const cornerKey = (/** @type {string} */ addr) => JSON.stringify([kindOf(REC.doc(addr)), lags(), chainOf(addr), read.newer(addr), WRITE.keptOf(addr), openStatements.get(addr) ?? null, REC.daemon() === 'unreachable', read.face(addr)]);
 /**
  * A document's corner's items made over its view (`Mounted.corner`), keyed by what they were made from (`cornerKey`):
  * whole, compact, and opened whole on its act where its room holds its compact form alone; compact one by one for a
@@ -3757,8 +3770,9 @@ function signsIn(/** @type {Mounted} */ rec, /** @type {number} */ ci) {
  * where what they are made from moved since they were made (`cornerKey`):
  * the board's lag begun or ended (`lags`), its box's chain counted again as
  * a newer version arrives (`chainOf`; FP-23), the newer version it offers
- * (the reader `newer`), a draft's kept state, its kept word said once in the
- * status region where it changes (`sayKept`; FP-36) — and a kept document's
+ * (the reader `newer`), a draft's kept state, the face beneath its kept word
+ * (the reader `face`), its kept word and its face said once in the status
+ * region where they change (`sayCorner`; FP-36) — and a kept document's
  * clause its last item where the one line does not name it (`keptIn`,
  * `keptHTML`), the corner placed by its items' height alone — the rest are
  * removed. Where its fold reserves its head's band (`Fold.band`), it stands
@@ -3788,12 +3802,12 @@ function placeCorners(focused) {
   const heads = [];
   const centre = viewCentre();
   for (const rec of mounted.values()) {
-    // the board's lag begun or ended, its box's chain counted again, a newer version offered or no longer, a draft's kept state set, its statement opened or closed: the corner's items made again over the view as it stands
+    // the board's lag begun or ended, its box's chain counted again, a newer version offered or no longer, a draft's kept state set, its statement opened or closed, its face come, changed or gone: the corner's items made again over the view as it stands
     if (rec.corner.key !== cornerKey(rec.d.addr)) rec.corner = cornerOfView(rec.d, viewFor(rec.d));
     if (!rec.corner.whole || !readsAt(rec.fs)) continue;
     const addr = rec.d.addr, box = docBox(addr), open = openWhole.has(addr);
     const c = corners.get(addr) || makeCorner(cornerLayer, addr), p = { x: centre.x - box.x, y: centre.y - box.y };
-    sayKept(c, addr);
+    sayCorner(c, addr);
     if (rec.fold.band > 0) {
       if (!c.head) { c.head = true; c.compact = true; c.html = ''; c.cap = Infinity; c.el.style.maxWidth = ''; c.el.classList.remove('compact'); c.el.classList.add('head'); }
       heads.push({ c, rec, head: headOf(c, rec, columnAt(rec.fold, p.x, p.y), open) });
@@ -4278,17 +4292,22 @@ function placeHead(c, rec, head, formH) {
 export function headClear(addr) { const c = corners.get(addr); return c && c.head ? c.bottom : null; }
 
 /**
- * A standing corner's kept word said once in the status region where it
- * changed since the corner last stood (FP-36): its new word, where one stands;
- * nothing for the first frame it stands, nor for a state cleared.
+ * A standing corner's kept word and the face beneath it said once in the
+ * status region where either changed since the corner last stood (FP-36), in
+ * one message: its new word, where one stands, then the face's words whole,
+ * where a face came to stand or its words changed (`faceWords`); nothing for
+ * the first frame it stands, nor for a state cleared or a face gone.
  * @param {Corner} c
  * @param {string} addr
  */
-function sayKept(c, addr) {
-  const k = WRITE.keptOf(addr), word = k ? k.word : null;
-  if (word === c.word) return;
-  c.word = word;
-  if (k && c.html) FOCUS.say(keptWord(k).text);
+function sayCorner(c, addr) {
+  const k = WRITE.keptOf(addr), word = k ? k.word : null, f = read.face(addr), face = f ? faceWords(f) : null;
+  /** @type {string[]} */
+  const said = [];
+  if (word !== c.word && k && c.html) said.push(keptWord(k).text);
+  if (face !== c.face && face && c.html) said.push(face);
+  c.word = word; c.face = face;
+  if (said.length) FOCUS.say(said.join(' '));
 }
 
 /**
@@ -4482,16 +4501,17 @@ function makeCorner(into, addr) {
   el.setAttribute('aria-hidden', 'true');
   into.appendChild(el);
   /** @type {Corner} */
-  const c = { el, html: '', compact: false, column: 0, cap: Infinity, w: 0, h: 0, x: 0, y: 0, top: 0, stale: true, mine: false, blockedAt: -1, head: false, bottom: 0, word: null };
+  const c = { el, html: '', compact: false, column: 0, cap: Infinity, w: 0, h: 0, x: 0, y: 0, top: 0, stale: true, mine: false, blockedAt: -1, head: false, bottom: 0, word: null, face: null };
   corners.set(addr, c);
   return c;
 }
 
 /**
  * The key a corner's act bears (see the head), which a rewrite of its items
- * puts a focus back on (N-FOCUS's `keep`): the offered read's, a head's count
- * of the items it folds, the kept word's, the act that opens the corner whole
- * or compacts it again, the version statement's; none for the corner's
+ * puts a focus back on (N-FOCUS's `keep`): each of the face's acts by its key
+ * on the face, its compact form's among them; the offered read's, a head's
+ * count of the items it folds, the kept word's, the act that opens the corner
+ * whole or compacts it again, the version statement's; none for the corner's
  * element itself, which a rewrite never replaces. A reading scene's pane keys
  * its corner's acts by it too.
  * @param {Element} el
@@ -4499,6 +4519,7 @@ function makeCorner(into, addr) {
  */
 export function cornerAct(el) {
   const e = /** @type {HTMLElement} */ (el), d = e.dataset || /** @type {DOMStringMap} */ ({});
+  if (d.face) return 'face:' + d.face;
   if (d.read) return 'read';
   if (d.more) return 'more';
   if (d.kept) return 'kept';
@@ -4559,8 +4580,9 @@ const hrowHTML = (/** @type {number} */ i, /** @type {string} */ style, /** @typ
 /**
  * The form a head opens beneath its rows, every item whole (`openCorner`):
  * each item its rows hold an act of in its words alone, each its rows fold
- * its act, so no act stands twice.
- * @param {string[]} words the items whole, their words alone (`ArticleView.acts`)
+ * its act, so no act stands twice — the face whole with its acts, which its
+ * row's compact form does not hold (T-ARTICLE's `faceHTML`).
+ * @param {string[]} words the items whole, their words alone save the face's acts (`ArticleView.acts`)
  * @param {import('./article.js').CornerItem[]} items the items as its rows set them
  * @param {HeadLayout} L where its rows set them
  */

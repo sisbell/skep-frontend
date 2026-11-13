@@ -37,7 +37,12 @@
 // article, a pane's with its read act and its lacking line, the plane's with
 // the read an arrival offers as a control, a kept clause after them on a line
 // of its own, the moved scene's held version's line in the place of a draft's
-// kept word and chip, neither the latest version nor the chain's count while the
+// kept word and chip, a moved document's face beneath its kept word and
+// before its chip, never yielding — whole with its hands, its acts and its
+// discard's statement below them, compact its compact form an act opening
+// the corner whole, its words whole where its hands are not one device's —
+// in the corner and the mirror's words alike, neither the latest version nor
+// the chain's count while the
 // board lags, its state one rule the words the ARIA mirror voices are made
 // by; the record rule; a typed line set as typed in the body's type, a
 // heading's marks its own characters, on its indent where it opens a typed
@@ -55,7 +60,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, sourcesIn, cornerHTML, cornerItems, cornerLead, cornerWords, keptHTML, keptStatement, statementHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, sourcesIn, cornerHTML, cornerItems, cornerLead, cornerWords, keptHTML, keptStatement, statementHTML, faceWords, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
+import { below, spoken } from '../overlays/statement.js';
 import { keptStatement as keptSaying } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
@@ -566,6 +572,69 @@ test('the moved scene\'s held version\'s corner names what it is in the place of
   assert.deepEqual(items.map((i) => [i.cls, i.words, i.em, i.yields]), [['kind', t('F.kind.draft'), KIND_EM, false], ['held', t('B3.history.held'), advances(t('B3.history.held')), false]], 'its items: the kind, then the line, its width its words\', neither yielding');
   const plain = cornerHTML(draft, draftView());
   assert.ok(plain.includes('kept-word pending') && plain.includes('class="chip"') && !plain.includes('B3.history.held'), `a draft not marked so: its kept slot and its chip — ${plain}`);
+});
+
+/** a moved document's face as O-FACES hands it to the corner: one device's hand, "send again" inert, the discard last, its statement ending on its exit */
+const MOVED = /** @type {import('./article.js').CornerFace} */ ({
+  line: { id: 'B3.moved', text: t('B3.moved') },
+  hands: [{ id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': 'desk' }) }],
+  again: false,
+  compact: { id: 'B3.moved.compact', text: t('B3.moved.compact', { hand: 'desk' }) },
+  acts: [
+    { key: 'held', id: 'B3.moved.see-held', label: t('B3.moved.see-held'), inert: null, said: null },
+    { key: 'send', id: 'B3.send-again', label: t('B3.send-again'), inert: { id: 'B3.moved.send-again.inert', text: t('B3.moved.send-again.inert', { label: 'Tumbler.' }) }, said: null },
+    { key: 'discard', id: 'B3.discard', label: t('B3.discard'), inert: null, said: spoken('B3.moved.discard') },
+  ],
+  said: { id: 'B3.moved.discard', values: {} },
+});
+/** the moved face whole as the corner draws it: its sentence, its hands, its acts keyed on the face, and its discard's statement below them */
+const movedWhole = (/** @type {import('./article.js').CornerFace} */ f = MOVED) => '<span class="face">'
+  + `<span class="face-text" data-string="B3.moved">${esc(t('B3.moved'))}</span>`
+  + `<span class="hands"${f.again ? ' data-again="1"' : ''}>${f.again ? '<span class="again" data-slot="again"></span>' : ''}${f.hands.map((h) => `<span class="hand" data-string="${h.id}">${esc(h.text)}</span>`).join(' ')}</span>`
+  + '<span class="face-acts">'
+  + `<button type="button" class="face-act" data-face="held" data-string="B3.moved.see-held" tabindex="-1">${esc(t('B3.moved.see-held'))}</button>`
+  + `<button type="button" class="face-act inert" data-face="send" data-string="B3.send-again" aria-disabled="true" data-inert="B3.moved.send-again.inert" title="${esc(t('B3.moved.send-again.inert', { label: 'Tumbler.' }))}" tabindex="-1">${esc(t('B3.send-again'))}</button>`
+  + `<button type="button" class="face-act" data-face="discard" data-string="B3.discard" aria-description="${esc(spoken('B3.moved.discard'))}" tabindex="-1">${esc(t('B3.discard'))}</button>`
+  + `</span>${below('B3.moved.discard')}</span>`;
+
+test('a moved draft\'s corner carries its face beneath the kept word it explains and before the chip — whole, its sentence, its hand in its slot, "see the held text", "send again" inert and titled by its reason, the discard described by its statement, that statement whole below the acts ending on its exit; compact, its compact form naming its hand, an act opening the corner whole, described by its words whole; opened whole on that act, whole again; and its acts standing in the words a head opens beneath its rows (issue #598; B3-S2; foundations §3.1; P48; FP-26)', () => {
+  const draft = doc({ kind: 'draft', meta: null }), kept = /** @type {const} */ ({ word: 'not yet kept', reason: null });
+  const keptLine = cornerHTML(draft, draftView({ kept })).split('<span class="chip"')[0].slice(kindSlot('draft').length);
+  const chip = `<span class="chip" data-chip="1">${esc(t('C-28.flag-on'))}</span>`;
+  const whole = cornerHTML(draft, draftView({ kept, face: MOVED }));
+  assert.equal(whole, kindSlot('draft') + keptLine + movedWhole() + chip, `its kind, its kept word, its face whole, then its chip — ${whole}`);
+  assert.ok(whole.includes('class="part exit"'), 'the discard\'s statement ends on what to do instead, after its half line');
+  assert.ok(!whole.includes('data-slot="again"'), 'no slot for a send made again where none was');
+  const compact = cornerHTML(draft, draftView({ kept, face: MOVED }), true);
+  const act = `<button type="button" class="face compact" data-face="whole" data-whole data-string="B3.moved.compact" aria-expanded="false" aria-description="${esc(faceWords(MOVED))}" tabindex="-1">${esc(t('B3.moved.compact', { hand: 'desk' }))}</button>`;
+  assert.ok(compact.includes(keptLine + act + '<button type="button" class="chip glyph"'), `compact: its compact form between the kept word and the chip's glyph, an act opening the corner whole — ${compact}`);
+  assert.ok(!compact.includes('class="face-act'), 'compact: its acts one act away');
+  assert.equal(faceWords(MOVED), `${t('B3.moved')} ${t('B3.hand.device', { 'device label': 'desk' })}`, 'its words whole: its sentence, then its hand');
+  assert.ok(cornerHTML(draft, draftView({ kept, face: MOVED, opened: true })).includes(movedWhole()), 'opened whole on its act: the face whole, with its acts');
+  assert.ok(cornerItems(draft, draftView({ kept, face: MOVED, opened: true }), true).find((i) => i.cls === 'face')?.html.includes('aria-expanded="true"'), 'a head\'s row, the corner opened: its compact form says it stands opened');
+  const words = cornerItems(draft, draftView({ kept, face: MOVED, acts: false })).map((i) => i.html);
+  assert.ok(words.includes(movedWhole()), 'the words a head opens beneath its rows: the face whole with its acts, which no row holds');
+  const again = { ...MOVED, again: true };
+  assert.ok(cornerHTML(draft, draftView({ kept, face: again })).includes(movedWhole(again)), 'its hands named again: the slot owed its words standing, empty');
+});
+
+test('a moved face whose hands are not one device\'s has no compact wording: where the corner stands compact its words stand whole as the act, its sentence and its hands, described by nothing more (issue #598; FP-26)', () => {
+  const draft = doc({ kind: 'draft', meta: null }), f = { ...MOVED, compact: null, hands: [{ id: 'B3.hand.unread', text: t('B3.hand.unread') }] };
+  const c = cornerHTML(draft, draftView({ kept: { word: 'not yet kept', reason: null }, face: f }), true);
+  assert.ok(c.includes(`<button type="button" class="face compact" data-face="whole" data-whole data-string="B3.moved" aria-expanded="false" tabindex="-1">${esc(`${t('B3.moved')} ${t('B3.hand.unread')}`)}</button>`), `its words whole as the act — ${c}`);
+  assert.equal(cornerItems(draft, draftView({ face: f }), true).find((i) => i.cls === 'face')?.words, faceWords(f), 'its words the face\'s whole');
+});
+
+test('the moved face is one of the corner\'s items that never yield, its words and its width its form\'s — compact its compact form, whole its sentence and its hand — and the ARIA mirror voices it whole after the kept word and before the chip (issue #598; foundations §3.1; R94)', () => {
+  const draft = doc({ kind: 'draft', meta: null }), v = draftView({ kept: { word: 'not yet kept', reason: null }, face: MOVED });
+  const at = (/** @type {boolean} */ compact) => { const items = cornerItems(draft, v, compact); return [items.map((i) => i.cls), items.find((i) => i.cls === 'face')]; };
+  const [order, compact] = at(true), [, whole] = at(false);
+  assert.deepEqual(order, ['kind', 'kept', 'face', 'chip'], 'its kind, its kept word, the face, then its chip');
+  assert.deepEqual(compact && [compact.words, compact.em, compact.yields], [t('B3.moved.compact', { hand: 'desk' }), advances(t('B3.moved.compact', { hand: 'desk' })), false], 'compact: its compact form, never yielding');
+  assert.deepEqual(whole && [whole.words, whole.em, whole.yields], [faceWords(MOVED), advances(faceWords(MOVED)), false], 'whole: its words whole, never yielding');
+  assert.equal(cornerWords(draft, v), [t('B3.not-yet-kept'), faceWords(MOVED), t('C-28.flag-on')].join(', '), 'the mirror\'s words: the kept word, the face whole, the chip');
+  assert.equal(cornerWords(draft, draftView({ kept: { word: 'not yet kept', reason: null } })), [t('B3.not-yet-kept'), t('C-28.flag-on')].join(', '), 'no face: none voiced');
+  assert.equal(cornerHTML(draft, draftView({ held: true, face: MOVED })), kindSlot('draft') + `<span class="held" data-string="B3.history.held">${esc(t('B3.history.held'))}</span>`, 'the moved scene\'s held version carries none');
 });
 
 test('the corner\'s items one by one, in their one order: each its markup — the corner\'s, joined — its words and its width as the view measures them, the kind and a kept word their slots\'; the offered read alone yields, the kind, its version statement, the state, the kept word, the chip and the whole-document count never do; a draft\'s statement left out of its slot where its holder opens it beneath a head (issue #436; foundations §3.1; FP-26)', () => {

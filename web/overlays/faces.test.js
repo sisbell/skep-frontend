@@ -31,7 +31,11 @@
 // names each mapped to their entry's words with no act, a name no document
 // drafts words for kept on the generic refusal line; the face of a
 // passage the person's own removal took, its act the put-back; and the moved
-// face's "see the held text" opening the moved scene on the held version.
+// document's face standing at its corner and never as an overlay — its
+// words, its hands and its acts, its compact form naming its one device's
+// hand, none under the death — its acts made by their keys there, "see the
+// held text" opening the moved scene on the held version, and a press
+// answered at it.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as FACES from './faces.js';
@@ -52,10 +56,10 @@ import * as TRAIL from '../nav/trail.js';
 import * as CAM from '../plane/camera.js';
 import * as LK from '../links/links.js';
 import { accountCell } from '../plane/projection.js';
-import { entitlementArm } from '../text/article.js';
+import { entitlementArm, faceWords } from '../text/article.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
 import { STRINGS, t, addressedHTML } from '../strings.js';
-import { esc, byteLength } from '../util.js';
+import { esc, byteLength, fingerprintCue } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
 
@@ -1063,17 +1067,21 @@ test('BM-10, #533: a refused run\'s face stands under the head "not kept" and of
   assert.equal(live.textContent, t('B3.own-bug.send-again'), 'pressed, the inert act says why');
 });
 
-test('BM-13, BM-17, BM-29: the moved face names the hands its rows carry, each in its slot\'s words — a labelled key, an unsigned write, a lost hand, "not read yet", "can\'t be known" — a line with no verdict of its own taking the hands of the line ahead; where they are named again the slot the design owes words for stands, empty; its acts "see the held text", "send again" — inert unless the shell says it would pass — then the discard, its statement ending on its exit', () => {
+test('BM-13, BM-17, BM-29: the moved face names the hands its rows carry, each in its slot\'s words — a labelled key, an unsigned write, a lost hand, "not read yet", "can\'t be known" — a line with no verdict of its own taking the hands of the line ahead; where they are named again the slot the design owes words for stands, empty; its acts "see the held text", "send again" — inert unless the shell says it would pass — then the discard, its statement ending on its exit; and it stands at the corner, never as an overlay (issue #598; B3-S2)', () => {
   unkeptDraft();
   const moved = (/** @type {Record<string, any>} */ more) => unkeptRow(1, { cause: 'moved', sent: true, refusal: verdict('arrangement_moved'), ...more });
   WRITE.setHeld(UD, [moved({ sendable: false, hands: [{ key: 'other', fingerprint: 'aabbccddeeff0011', label: 'desk' }, { key: 'bare' }, { key: 'lost' }] }), unkeptRow(2, { cause: 'moved' })]);
-  FACES.unkept(UD, null);
-  const face = /** @type {NonNullable<ReturnType<typeof FACES.unkeptFace>>} */ (FACES.unkeptFace(UD)), shown = unkeptShown();
-  assert.deepEqual([face.kind, face.head, face.hands, face.again], ['moved', null, [{ id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': 'desk' }) }, { id: 'B3.hand.unsigned', text: t('B3.hand.unsigned') }, { id: 'B3.hand.lost', text: t('B3.hand.lost') }], false],
-    'no head — the corner reads "not yet kept" — and each hand once, in its slot\'s words');
-  assert.deepEqual([shown.lines, shown.acts, shown.said], [['B3.moved'], [['held', 'B3.moved.see-held', null], ['send', 'B3.send-again', 'B3.moved.send-again.inert'], ['discard', 'B3.discard', null]], 'B3.moved.discard'], '"see the held text" before the discard; "send again" in its own slot, inert with its reason');
-  assert.ok(hostEl.innerHTML.includes('class="part exit"'), 'the discard\'s statement ends on what to do instead, after its half line');
-  assert.ok(!hostEl.innerHTML.includes('data-slot="again"'), 'no slot for a send made again where none was');
+  const face = /** @type {NonNullable<ReturnType<typeof FACES.unkeptFace>>} */ (FACES.unkeptFace(UD));
+  const hands = [{ id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': 'desk' }) }, { id: 'B3.hand.unsigned', text: t('B3.hand.unsigned') }, { id: 'B3.hand.lost', text: t('B3.hand.lost') }];
+  assert.deepEqual([face.kind, face.head, face.hands, face.again], ['moved', null, hands, false], 'no head — the corner reads "not yet kept" — and each hand once, in its slot\'s words');
+  assert.deepEqual([face.lines.map((l) => l.id), face.acts.map((a) => [a.key, a.id, a.inert?.id ?? null]), face.said?.id], [['B3.moved'], [['held', 'B3.moved.see-held', null], ['send', 'B3.send-again', 'B3.moved.send-again.inert'], ['discard', 'B3.discard', null]], 'B3.moved.discard'],
+    '"see the held text" before the discard; "send again" in its own slot, inert with its reason');
+  assert.deepEqual([FACES.unkept(UD, null), HOST.currentState()], [false, null], 'the kept word\'s act shows no overlay: the face stands at the corner');
+  const corner = /** @type {NonNullable<ReturnType<typeof FACES.cornerFace>>} */ (FACES.cornerFace(UD));
+  assert.deepEqual({ ...corner, acts: corner.acts.map((a) => [a.key, a.id, a.label, a.inert?.id ?? null, a.said]) }, {
+    line: { id: 'B3.moved', text: t('B3.moved') }, hands, again: false, compact: null, said: { id: 'B3.moved.discard', values: {} },
+    acts: [['held', 'B3.moved.see-held', t('B3.moved.see-held'), null, null], ['send', 'B3.send-again', t('B3.send-again'), 'B3.moved.send-again.inert', null], ['discard', 'B3.discard', t('B3.discard'), null, STATEMENT.spoken('B3.moved.discard')]],
+  }, 'the face at the corner: its sentence, its hands, its acts — the discard described by its statement — and no compact form, its hands three and not one device\'s');
   WRITE.setHeld(UD, [moved({ sendable: true, hands: [{ key: 'unread' }] })]);
   assert.deepEqual([FACES.unkeptFace(UD)?.hands, FACES.unkeptFace(UD)?.acts[1].inert], [[{ id: 'B3.hand.unread', text: t('B3.hand.unread') }], null], 'the hands not read yet; "send again" live where the shell says the shift would pass');
   WRITE.setHeld(UD, [moved({ hands: [{ key: 'unknowable' }] })]);
@@ -1081,19 +1089,68 @@ test('BM-13, BM-17, BM-29: the moved face names the hands its rows carry, each i
   WRITE.setHeld(UD, [moved({}), unkeptRow(2, { cause: 'moved', hands: [{ key: 'own', fingerprint: 'aabbccddeeff0011', label: 'laptop' }] })]);
   assert.deepEqual(FACES.unkeptFace(UD)?.hands, [{ id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': 'laptop' }) }], 'the first moved line naming none: the hands the rows carry');
   WRITE.setHeld(UD, [moved({ sendable: false, hands: [{ key: 'own', fingerprint: 'aabbccddeeff0011', label: 'laptop' }], again: true })]);
-  FACES.unkept(UD, null);
-  assert.deepEqual([FACES.unkeptFace(UD)?.again, /<div class="hands" data-again="1"><span class="again" data-slot="again"><\/span>/.test(hostEl.innerHTML), FACES.unkeptFace(UD)?.hands?.length], [true, true, 1], 'refused again with no new row: the hands named again, the slot for the words that say so standing, empty');
+  assert.deepEqual([FACES.unkeptFace(UD)?.again, FACES.cornerFace(UD)?.again, FACES.unkeptFace(UD)?.hands?.length], [true, true, 1], 'refused again with no new row: the hands named again, at the corner too');
 });
 
-test('BM-14: "see the held text" at the moved face takes the face down and opens the moved scene as a step on the trail — its entry the draft\'s, the draft in its first pane, in its second the held version the page shows, the scene asked as the moved scene, its held version marked so (SC\'s `Held.heldB`) (issue #599)', () => {
+test('the moved face\'s compact form names its one device\'s hand — another\'s key by its label, this store\'s too, a key with no label by its fingerprint\'s cue, then by "no label" — and stands nowhere where its hands are not one device\'s: several, unsigned, lost, not read yet or unknowable (issue #598; C-358; B3-S2)', () => {
+  unkeptDraft();
+  const at = (/** @type {Array<Record<string, any>>} */ hands) => { WRITE.setHeld(UD, [unkeptRow(1, { cause: 'moved', sent: true, refusal: verdict('arrangement_moved'), hands })]); return FACES.cornerFace(UD)?.compact ?? null; };
+  const said = (/** @type {string} */ hand) => ({ id: 'B3.moved.compact', text: t('B3.moved.compact', { hand }) });
+  assert.deepEqual(at([{ key: 'other', fingerprint: 'aabbccddeeff0011', label: 'desk' }]), said('desk'), 'another\'s key, by its label');
+  assert.equal(said('desk').text, 'changed while this text was held — not placed · by desk', 'C-358\'s words, its hand filled');
+  assert.deepEqual(at([{ key: 'own', fingerprint: 'aabbccddeeff0011', label: 'laptop' }]), said('laptop'), 'this store\'s key, by its label');
+  assert.deepEqual(at([{ key: 'other', fingerprint: 'aabbccddeeff0011' }]), said(fingerprintCue('aabbccddeeff0011')), 'a key with no label: its fingerprint\'s cue');
+  assert.deepEqual(at([{ key: 'other' }]), said(t('L.slot.unlabelled')), 'neither label nor fingerprint: "no label"');
+  for (const hands of [[{ key: 'other', label: 'desk' }, { key: 'own', label: 'laptop' }], [{ key: 'bare' }], [{ key: 'lost' }], [{ key: 'unread' }], [{ key: 'unknowable' }], []]) {
+    assert.equal(at(hands), null, `${JSON.stringify(hands)}: no compact wording — its words stand whole in that form`);
+  }
+});
+
+test('the face stands at the corner wherever a line of the draft is held moved and the death\'s face does not: none with no moved line, none under the death; beside a run awaiting the person\'s act, the moved face stands at the corner while the kept word\'s act opens the refused run\'s (issue #598; B3-S2; D6 BM-24)', () => {
+  unkeptDraft();
+  assert.equal(FACES.cornerFace(UD), null, 'nothing held');
+  WRITE.setHeld(UD, [unkeptRow(1)]);
+  assert.equal(FACES.cornerFace(UD), null, 'a line merely held');
+  const moved = unkeptRow(2, { cause: 'moved', sent: true, refusal: verdict('arrangement_moved') });
+  WRITE.setHeld(UD, [unkeptRow(1, { cause: 'out_of_bounds', sent: true, refusal: verdict('out_of_bounds') }), moved]);
+  assert.deepEqual([FACES.unkeptFace(UD)?.kind, FACES.cornerFace(UD)?.line.id], ['own-bug', 'B3.moved'], 'a refused run beside the moved line: the overlay\'s face the refused run\'s, the corner\'s the moved one');
+  assert.equal(FACES.unkept(UD, null), true, 'the kept word\'s act opens the refused run\'s face');
+  HOST.dismiss();
+  WRITE.setHeld(UD, [moved]);
+  WRITE.setUnwritable('b-1', { why: 'keyless' });
+  REC.setSession(/** @type {any} */ ({ session: 's-2', principal: 1, account: '1.0.1', writes: false, fingerprint: null }));
+  try {
+    assert.deepEqual([MACHINE.deathFaced(UD), FACES.unkeptFace(UD)?.kind, FACES.cornerFace(UD), FACES.faceAct(UD, 'discard')], [true, 'death', null, false], 'under the death: its face the overlay\'s, the corner carrying none and no act made there');
+  } finally { WRITE.setUnwritable('b-1', null); }
+});
+
+test('the face\'s acts are made by their keys at the corner: an inert one says its reason at every press, again where the region holds it already (FP-41); a key the face holds no act of, or a draft whose corner carries no face, answers false; a press answered at the face says its words whole, its acts untaken (issue #598; D6 BM-45)', async () => {
+  unkeptDraft();
+  WRITE.setHeld(UD, [unkeptRow(1, { cause: 'moved', sent: true, refusal: verdict('arrangement_moved'), sendable: false, hands: [{ key: 'other', fingerprint: 'aabbccddeeff0011', label: 'desk' }] })]);
+  const reason = t('B3.moved.send-again.inert', { label: LAYER.boxName(UD).name });
+  live.textContent = '';
+  assert.equal(FACES.faceAct(UD, 'send'), true);
+  assert.equal(live.textContent, reason, 'pressed, "send again" says why it cannot act');
+  assert.equal(FACES.faceAct(UD, 'send'), true);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(live.textContent, reason, 'pressed again: said again');
+  assert.deepEqual([FACES.faceAct(UD, 'copy'), FACES.faceAct('1.0.1.0.78', 'send')], [false, false], 'no act of that key; no face at that corner');
+  live.textContent = '';
+  const f = /** @type {NonNullable<ReturnType<typeof FACES.cornerFace>>} */ (FACES.cornerFace(UD));
+  assert.deepEqual([FACES.answerAtFace(UD), live.textContent, HOST.currentState(), WRITE.heldOf(UD).length], [true, faceWords(f), null, 1], 'a press answered at the face: its words whole said, no overlay, its line held still');
+  assert.equal(faceWords(f), `${t('B3.moved')} ${t('B3.hand.device', { 'device label': 'desk' })}`, 'its sentence, then its hand in its slot\'s words');
+  WRITE.setHeld(UD, []);
+  assert.equal(FACES.answerAtFace(UD), false, 'no face: nothing answered there');
+});
+
+test('BM-14: "see the held text" at the face standing at the corner opens the moved scene as a step on the trail — its entry the draft\'s, the draft in its first pane, in its second the held version the page shows, the scene asked as the moved scene, its held version marked so (SC\'s `Held.heldB`) (issue #599)', () => {
   unkeptDraft();
   WRITE.setHeld(UD, [unkeptRow(1, { cause: 'moved', sent: true, refusal: verdict('arrangement_moved') })]);
   WRITE.addEdit(UD, { pos: 4, width: 0, text: 'd' });
-  assert.equal(FACES.unkept(UD, null), true);
   const was = TRAIL.length();
-  /** @type {any} */ (HOST.currentState()).acts.held();
+  assert.equal(FACES.faceAct(UD, 'held'), true);
   const e = TRAIL.current(), b = /** @type {any} */ (e?.scene?.b);
-  assert.deepEqual([HOST.currentState(), TRAIL.length(), e?.addr, e?.scene?.a, e?.scene?.held], [null, was + 1, UD, UD, { heldB: true }], 'the face down, one entry at the act: the draft\'s, the scene asked as the moved scene');
+  assert.deepEqual([HOST.currentState(), TRAIL.length(), e?.addr, e?.scene?.a, e?.scene?.held], [null, was + 1, UD, UD, { heldB: true }], 'no overlay, one entry at the act: the draft\'s, the scene asked as the moved scene');
   assert.deepEqual([b?.addr, !!b?.derived, REC.textOf(b?.runs ?? [], b?.from ?? 0, b?.to ?? 0)], [UD, true, 'abcd'], 'its second pane the held version: the record the page shows of the draft');
 });
 
@@ -1163,11 +1220,11 @@ test('BM-16, BM-27: what a discard did is said after it, each a line of its own 
   try {
     MACHINE.handIn();
     await flush();
-    assert.equal(FACES.unkept(UD, null), true);
+    assert.equal(FACES.cornerFace(UD)?.line.id, 'B3.moved', 'the moved face stands at the corner');
     rows = [];
-    /** @type {any} */ (HOST.currentState()).acts.discard();
+    assert.equal(FACES.faceAct(UD, 'discard'), true);
     await flush();
-    assert.deepEqual([asked.filter((k) => k === 'resolve').length, lines, HOST.currentState()], [1, ['B3.discarded.may-have-landed'], null], 'a dropped line that may have landed: its one line said, the face gone with what it stood at');
+    assert.deepEqual([asked.filter((k) => k === 'resolve').length, lines, FACES.cornerFace(UD), HOST.currentState()], [1, ['B3.discarded.may-have-landed'], null, null], 'a dropped line that may have landed: its one line said, the face gone with what it stood at');
     lines.length = 0;
     rows = [{ held: 2, doc: UD, base: 7, frame: { op: 'insert', doc: UD, at: { ordinal: '1', subspace: '1' }, values: ['h'], as_of: 7, id: 'p.2' }, cause: 'answers_lost', sent: true, time: 2, refusal: { kind: 'shell', name: 'answers_lost', last: 'unreachable', elapsed_ms: 130000 } }];
     REC.setSession(/** @type {any} */ ({ session: 's-9', principal: 1, account: '1.0.1', writes: true, fingerprint: null }));

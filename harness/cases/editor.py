@@ -186,7 +186,7 @@ STATES = [
          claim='the run\'s words carry the refused mark; the face names the board and the time elapsed (B3.answers_lost), its discard\'s statement its own (B3.answers_lost.discard); the read unanswered, "did not answer — nothing was discarded" (B3.answers_lost.unanswered) and the face stands'),
     dict(screen='B3-S2', state='moved-face', walk='W-08', step=7, drawn=True,
          how='a `held` row held moved with `arrangement_moved` and its hands (D6 BM-13, BM-16, BM-17, BM-18)',
-         claim='the corner reads "not yet kept"; the held words carry the held bar while the face asks about them (D8); the face says the document changed (B3.moved) and names the hand in its slot (B3.hand.device), with "see the held text", "send again" inert (B3.moved.send-again.inert) and the discard, its statement ending on its exit (B3.moved.discard)'),
+         claim='the corner reads "not yet kept" and carries the face beneath it, before the chip, no overlay showing it, the corner reaching into no other document\'s box and clipped by nothing — compact where the corner stands at its head, "changed while this text was held — not placed · by desk" (B3.moved.compact) standing inside its row, whole on its act — the face saying the document changed (B3.moved) and naming the hand in its slot (B3.hand.device), with "see the held text", "send again" inert (B3.moved.send-again.inert) and the discard, its statement ending on its exit (B3.moved.discard); the kept word\'s act opens its statement; the held words carry the held bar while the face asks about them (D8)'),
     dict(screen='B3-S2', state='moved-scene', walk='W-08', step=7, drawn=True,
          how='`scene.openHeld(own, [an insert row])`: the current text beside the held version re-derived (D6 BM-14; #411)',
          claim="a scene stands with the own draft in pane A and the derived record in pane B, derived, no compare asked; both panes' "
@@ -987,6 +987,28 @@ FACE_SHOWN = '''(() => { const o = document.getElementById("overlay"), S = windo
                       below: !!acts && acts.nextElementSibling === st.parentElement} : null}; })()'''
 
 
+# the face standing at a draft's corner, as its markup says it (T-ARTICLE's face of a moved document): whether it stands
+# beneath the kept word and before the chip; its compact form — its string, its words, the words that describe it, whether
+# it opens the corner whole, whether it says the corner stands opened, and whether it stands inside the box it is set in —
+# a head's slot, or the corner — as the platform lays it out; and its whole form — its words and its hands by their
+# strings, its acts in order, each its key, its string, its text and the reason it is inert by, and the discard's
+# statement: its string, its parts, whether its last is the exit, and whether it stands directly below the acts; null where
+# no corner stands
+CORNER_FACE = '''((sel) => { const c = document.querySelector(sel);
+  if (!c) return null;
+  const k = c.querySelector(".face.compact"), f = c.querySelector(".face:not(.compact)"), w = c.querySelector(".kept-word"), ch = c.querySelector(".chip"), x = k || f;
+  const after = (a, b) => !!a && !!b && !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+  const inside = (e) => { const a = e.getBoundingClientRect(), b = e.parentElement.getBoundingClientRect(); return a.top >= b.top - 1 && a.bottom <= b.bottom + 1 && a.right <= b.right + 1; };
+  const st = f && f.querySelector(".said .statement"), acts = f && f.querySelector(".face-acts");
+  return {order: after(w, x) && after(x, ch),
+          compact: k ? {id: k.dataset.string || null, text: k.textContent, whole: k.getAttribute("aria-description"), opens: k.hasAttribute("data-whole"), expanded: k.getAttribute("aria-expanded"), fits: inside(k)} : null,
+          whole: f ? {lines: [...f.querySelectorAll(".face-text")].map((e) => ({id: e.dataset.string, text: e.textContent})),
+                      hands: [...f.querySelectorAll(".hands .hand")].map((e) => ({id: e.dataset.string, text: e.textContent})),
+                      acts: [...f.querySelectorAll(".face-acts button")].map((b) => ({run: b.dataset.face, id: b.dataset.string, text: b.textContent, inert: b.dataset.inert || null})),
+                      said: st ? {id: st.dataset.string, text: st.textContent, parts: st.querySelectorAll(".part").length, exit: !!st.querySelector(".part.exit:last-child"),
+                                  below: !!acts && acts.nextElementSibling === st.parentElement} : null} : null}; })(%s)'''
+
+
 def write_state(ctx, addr):
     """what D6's machine holds of a draft, as the gate's hook reads it (`write.state`)"""
     return ctx.js('window.__skep.write.state(%s)' % json.dumps(addr))
@@ -1091,6 +1113,21 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     def show_face():
         ctx.js('window.__skep.write.showFace(%s)' % json.dumps(mine)); ctx.frames(2)
         return ctx.js(FACE_SHOWN)
+
+    def corner_face():
+        return ctx.js(CORNER_FACE % json.dumps(corner)) or {}
+
+    def open_corner(on):
+        """the draft's corner opened whole on the reader's act, or closed again, where it stands otherwise (T-LAYER's `openCorner`)"""
+        ctx.js('(async () => { const L = await import("./text/layer.js"), c = L.cornerAt(%s); if (c && c.opened !== %s) L.openCorner(%s); })()' % (json.dumps(mine), 'true' if on else 'false', json.dumps(mine)))
+        ctx.frames(3)
+
+    def face_act(run):
+        """the act `run` of the face standing at the draft's corner clicked, the corner opened whole first where its face
+        stands compact: whether the act stood there to click"""
+        if not corner_face().get('whole'):
+            open_corner(True)
+        return ctx.js('((sel) => { const b = document.querySelector(sel); if (b) b.click(); return !!b; })(%s)' % json.dumps(corner + ' .face:not(.compact) [data-face="%s"]' % run))
 
     def refused_mark(words):
         """the refused mark beside `words`, typed at the end of the draft's first line (B3-S2 THE REFUSED RUN): one refused mark
@@ -1275,16 +1312,34 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     r.check(armed, 'the moved document is armed: the row held `moved` with the board\'s `arrangement_moved` and its hands', how)
 
     def moved_check(w):
-        f, got, st = show_face(), corner_word(), state()
-        ok = (bool(got) and got['id'] == 'B3.not-yet-kept' and st['kept']['cause']['token'] == 'moved' and bool(f) and f['head'] is None and [x['id'] for x in f['lines']] == ['B3.moved']
-              and f['lines'][0]['text'] == t(ctx, 'B3.moved') and f['hands'] == [{'id': 'B3.hand.device', 'text': t(ctx, 'B3.hand.device', {'device label': 'desk'})}]
+        got, st, at = corner_word(), state(), corner_face()
+        # the corner, taller by the face, reaches into no other document's box and nothing clips it (the gate's `overlapCheck`)
+        ov = ctx.js('window.__skep.overlapCheck()') or {}
+        room = {'into': [x for x in ov.get('corners_into', []) if x['addr'] == mine], 'clipped': [x for x in ov.get('corners_clipped', []) if x['addr'] == mine]}
+        overlay = show_face()
+        compact = at.get('compact')
+        hand = t(ctx, 'B3.hand.device', {'device label': 'desk'})
+        compact_ok = (w == WIDE[0] and compact is None) or (bool(compact) and compact['id'] == 'B3.moved.compact' and compact['text'] == t(ctx, 'B3.moved.compact', {'hand': 'desk'})
+                                                             and compact['opens'] and compact['expanded'] == 'false' and compact['whole'] == t(ctx, 'B3.moved') + ' ' + hand and compact['fits'] is True)
+        if compact and not at.get('whole'):
+            open_corner(True)
+        f = corner_face().get('whole')
+        ok = (bool(got) and got['id'] == 'B3.not-yet-kept' and st['kept']['cause']['token'] == 'moved' and at.get('order') is True and overlay is None and compact_ok and bool(f)
+              and [x['id'] for x in f['lines']] == ['B3.moved'] and f['lines'][0]['text'] == t(ctx, 'B3.moved') and f['hands'] == [{'id': 'B3.hand.device', 'text': hand}]
               and [(a['run'], a['id'], a['inert']) for a in f['acts']] == [('held', 'B3.moved.see-held', None), ('send', 'B3.send-again', 'B3.moved.send-again.inert'), ('discard', 'B3.discard', None)]
               and f['said'] == {'id': 'B3.moved.discard', 'text': t(ctx, 'B3.moved.discard'), 'parts': 3, 'exit': True, 'below': True})
+        open_corner(False)
+        # the kept word's act opens its statement, the face standing at the corner and no overlay shown (D5 K-57)
+        ctx.js('((sel) => { const w = document.querySelector(sel + " .kept-word"); if (w) w.click(); })(%s)' % json.dumps(corner)); ctx.frames(3)
+        said = ctx.js('((sel) => { const e = document.querySelector(sel + " .kept-statement"); return e ? e.dataset.string : null; })(%s)' % json.dumps(corner))
+        word_ok = said == 'B3.save.before' and ctx.js(FACE_SHOWN) is None
+        ctx.js('(async () => (await import("./text/layer.js")).openStatement(%s, false))()' % json.dumps(mine)); ctx.frames(2)
         m = margin_beside(ctx, mine, len(line1.encode('utf8')) + 1, len(' Moved.'), 'held')
-        return {'the corner and the face': (ok, {'corner': got, 'kept': st['kept'], 'face': f}),
+        return {'the corner and the face': (ok, {'corner': got, 'kept': st['kept'], 'shown': at, 'face': f, 'overlay': overlay}),
+                'the corner in its own room': (not room['into'] and not room['clipped'], room),
+                'the kept word\'s act (K-57)': (word_ok, {'statement': said}),
                 'the held bar (D8)': (m['words'] > 0 and m['beside'] == 1 and [x['kind'] for x in m['marks']] == ['held'] and len(m['held']) == 1 and m['held'][0]['text'] == t(ctx, 'B3.held'), m)}
     shoot('moved-face', moved_check, recentre)
-    ctx.js('(async () => (await import("./overlays/host.js")).dismiss())()'); ctx.frames(2)
     # the first key after the verdict (BM-18): typed, held behind, and followed by the verdict's line
     quiet()
     seq = ctx.editor_seq()
@@ -1300,16 +1355,18 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
             'the first key typed after the moved verdict is typed, held behind the moved line, and followed at the focus by "this document changed while your text was held — what you type now is held with it and placed by hand" (B3.moved.first-key)',
             {'hint': told['hint'], 'behind': behind})
     ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
-    show_face()
     ctx.arm('resolve', answer={'may_have_landed': [k]})
     ctx.arm('held', answer=[])
-    ctx.js('document.querySelector("#overlay [data-run=discard]").click()')
+    clicked = face_act('discard')
     warned = wait_for(ctx, '!!document.querySelector(%s)' % json.dumps('#line [data-string="B3.discarded.may-have-landed"]'), 10)
     wait_for(ctx, 'window.__skep.write.state(%s).kept.word === "kept"' % json.dumps(mine), 10)
-    r.check(warned and line_segment(ctx, 'B3.discarded.may-have-landed') == t(ctx, 'B3.discarded.may-have-landed') and state()['held'] == [] and first_line() == line1,
-            'the moved document\'s discard, from its first moved line, takes every later line with it — the held words gone from the text shown — and, the answer naming a line that may have landed, the one line says "discarded here — it may already be on the board"',
-            {'warned': warned, 'line': line_segment(ctx, 'B3.discarded.may-have-landed'), 'held': state()['held'], 'shown': first_line()})
-    ctx.js('(async () => (await import("./overlays/host.js")).dismiss())()')
+    ctx.frames(2)
+    gone = corner_face()
+    r.check(clicked and warned and line_segment(ctx, 'B3.discarded.may-have-landed') == t(ctx, 'B3.discarded.may-have-landed') and state()['held'] == [] and first_line() == line1
+            and gone.get('compact') is None and gone.get('whole') is None,
+            'the moved document\'s discard at its corner\'s face, from its first moved line, takes every later line with it — the held words gone from the text shown, the face gone from the corner — and, the answer naming a line that may have landed, the one line says "discarded here — it may already be on the board"',
+            {'clicked': clicked, 'warned': warned, 'line': line_segment(ctx, 'B3.discarded.may-have-landed'), 'held': state()['held'], 'shown': first_line(), 'corner': gone})
+    open_corner(False)
     ctx.drv.key('Escape'); ctx.frames(2)
     quiet()
 

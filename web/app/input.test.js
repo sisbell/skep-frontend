@@ -12,7 +12,9 @@
 // click on the read a corner offers is the version move to it, one on its
 // version statement opens its versions list, taking the focus where a key
 // made the click and Esc giving it back to the statement, and a key's click
-// at a corner's act moves no walk; a
+// at a corner's act moves no walk; on a draft held moved, the kept word's
+// click opens its statement, no overlay showing its face, and one on the
+// face's act at the corner makes it; a
 // press at the readable em on text not yet standing is held for it and
 // becomes the text's click; a press or a click falls on every box the plane
 // draws, one the index does not list among them; an empty click ends a card's
@@ -1199,6 +1201,29 @@ test('a key\'s click at a corner\'s act — the one the platform makes from Ente
   await tick();
   assert.deepEqual([LAYER.statementOpen(O), WALK.current()?.addr, WALK.current()?.pos, LAYER.caret()], [true, O, 1, { addr: D, pos: 1, live: false }], 'the pointer\'s click opens it too, and stands the walk on O\'s stop nearest the point, the caret kept');
   WRITE.setKept(O, null);
+}));
+
+test('on a draft held moved, a key\'s click on the corner\'s kept word opens its statement and shows no overlay — the face stands at the corner beneath it — and a click on one of the face\'s acts makes that act: "send again", inert, says why at every press (issue #598; B3-S2; D5 K-57; FP-41)', () => onDrafts(async ({ D, onCorner }) => {
+  let words = '';
+  FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { words = v; }, get textContent() { return words; } }) });
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  WRITE.setHeld(D, /** @type {any} */ (F.decodeHeldRows([{ held: 1, doc: D, base: 7, frame: { op: 'insert', doc: D, at: { ordinal: '1', subspace: '1' }, values: ['held'], as_of: 7, id: 'p.1' }, cause: 'moved', sent: true, time: 1, sendable: false,
+    refusal: { kind: 'refused', name: 'arrangement_moved', status: 200, code: 'arrangement_moved', detail: null, op: 'insert', site: { as_of: 7, current: 9 }, body: null } }])));
+  WRITE.setKept(D, { word: 'not yet kept', reason: null, cause: { token: 'moved', arm: null } });
+  const holder = { dataset: { corner: D } };
+  /** a key's click on a stand-in of one of the corner's elements */
+  const clicked = (/** @type {any} */ el) => onCorner({ type: 'click', detail: 0, clientX: 0, clientY: 0, target: el, stopPropagation() {} });
+  const word = /** @type {any} */ ({ closest: (/** @type {string} */ sel) => (sel === '[data-corner]' ? holder : sel === '.kept-word[data-kept]' ? word : null) });
+  clicked(word);
+  assert.deepEqual([LAYER.statementOpen(D), HOST.currentState()], [true, null], 'the kept word\'s click opens its statement, and no overlay shows the face');
+  const send = /** @type {any} */ ({ dataset: { face: 'send' }, closest: (/** @type {string} */ sel) => (sel === '[data-corner]' ? holder : sel === '[data-face]:not([data-whole])' ? send : null) });
+  const why = t('B3.moved.send-again.inert', { label: LAYER.boxName(D).name });
+  clicked(send);
+  assert.deepEqual([words, LAYER.statementOpen(D), HOST.currentState()], [why, true, null], '"send again" at the face says why it cannot act, nothing else moved');
+  words = '';
+  clicked(send);
+  assert.equal(words, why, 'pressed again: said again');
+  WRITE.setHeld(D, []); WRITE.setKept(D, null); LAYER.openStatement(D, false);
 }));
 
 test('a click placing the caret in a draft the person may edit stands the walk on the span it is placed in, the live caret its mark and no ring drawn, so a slot chord pressed there acts on that span: with the walk on the draft\'s first span, Mod+K at the caret a click placed in its second draws the acts card at the second whole, selecting nothing (B3-S13; D5 K-70, K-100)', () => onDrafts(async ({ D, clickAt }) => {

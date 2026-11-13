@@ -122,9 +122,11 @@
 // both forms; after it, an edition's version statement, "version ⟨k⟩ of
 // ⟨n⟩" — at a pinned version its own number of the count its box's document
 // holds (FP-22) — and then its state, R20's teaching with its venue's clause
-// before it on a notebook (P7; C-346), a draft's kept state and its chip
-// (C-28; ux-T2) — at the moved scene's held version, its line in the place of
-// both (the view's `held`; B3-S2; D6 BM-14) — the whole-document link count,
+// before it on a notebook (P7; C-346), a draft's kept state, beneath its kept
+// word the face standing at its corner — a moved document's (the view's
+// `face`; B3-S2; D6 BM-13) — and its chip (C-28; ux-T2) — at the moved
+// scene's held version, its line in the place of the kept word and the chip
+// (the view's `held`; B3-S2; D6 BM-14) — the whole-document link count,
 // its act reading another version in its place — in a reading scene's pane,
 // and on the plane where a newer version's arrival pinned its box
 // (foundations §3.2; D5 K-57) — and in a pane the line saying the version it
@@ -132,14 +134,23 @@
 // each with its words, its width as the view measures them and whether it may
 // fold into the corner's count where a head's row cannot hold it — the
 // offered read alone; the kind, its version statement, the state, the kept
-// word, the chip, the held version's line and the whole-document count never
-// yield (`cornerItems`; foundations §3.1). Its
+// word, the face, the chip, the held version's line and the whole-document
+// count never yield (`cornerItems`; foundations §3.1). The face
+// (`faceHTML`; B3-S2; P48; P67): whole, its sentence, its hands each in its
+// slot — the slot owed its words standing empty where they are named again —
+// its acts in their order, the discard last and described by its statement,
+// and that statement whole below them (O-STATEMENT's `below`); compact, its
+// compact form — its sentence and its one device's hand (`B3.moved.compact`),
+// else its words whole — an act opening the corner whole (FP-26), its whole
+// words its description. Its acts stand in its whole form wherever it is
+// drawn, for no row of a head holds them. Its
 // state's items are made by one rule (`stateItems`), which the ARIA mirror's
 // item voices whole too — its first item leading the item (`cornerLead`), the
 // rest after the document's first line (`cornerWords`) — so the corner and
-// the mirror never part (R94). The corner's acts — the kept word, the
-// version statement on the plane, the read it offers, a compact form's glyph
-// and, opened whole on it, the words that compact it again — are native
+// the mirror never part (R94). The corner's acts — the kept word, the face's
+// acts and its compact form, the version statement on the plane, the read it
+// offers, a compact form's glyph and, opened whole on it, the words that
+// compact it again — are native
 // buttons the platform activates (`actHTML`; D5 K-57; FP-20), each out of the
 // Tab order as made, its holder standing the stops; a view asking no act sets
 // their words alone (`ArticleView.acts`). A draft's
@@ -204,7 +215,8 @@
 // FP-26, FP-30, FP-31, FP-33, FP-34.
 
 import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint } from '../util.js';
-import { t, tHTML, plural, bracketed, withheldLine, endingOf } from '../strings.js';
+import { t, tHTML, plural, bracketed, withheldLine, endingOf, addressedHTML } from '../strings.js';
+import { below } from '../overlays/statement.js';
 import { textOf, recordValue } from '../model/records.js';
 import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType, isAddress } from '../model/address.js';
 import { touches, posOfChar, charOfPos } from './span.js';
@@ -253,9 +265,10 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {KeptState | null} [kept] a draft's kept state (W-WRITE's `keptOf`): the word its corner's slot shows; absent or null, no state is set and the slot stands empty
  * @property {boolean} [keptOpen] the kept word's statement stands open in the corner, on its act (T-LAYER's `openStatement`, SC's); absent, closed
  * @property {boolean} [held] the corner is the moved scene's held version's (SC; B3-S2; D6 BM-14): no document, with no chip, its line standing in the place of a draft's kept word and its chip; absent, false
+ * @property {CornerFace | null} [face] the face standing at a draft's corner beneath its kept word (T-LAYER's reader `face`; B3-S2): a moved document's; absent or null, none
  * @property {KeptSaid} [keptSaid] what the kept word's statement is said by, beside its state (T-LAYER's `keptSaid`): the board's silence, the venue, the board's name and what opened it; absent, the save chord's on the notebook, the board answering
  * @property {boolean} [opened] the corner, compact in its room, stands opened whole on the reader's act (FP-26): the item its compact form draws as a glyph stands in its words as the act that compacts it again, and the glyph, where it stands, says it is expanded; absent, false
- * @property {boolean} [acts] false: the corner's items stand as their words, no act among them — the form a corner at its document's head opens beneath its rows, which hold its acts (T-LAYER's `headOf`, `sceneHead`); absent, true
+ * @property {boolean} [acts] false: the corner's items stand as their words, no act among them, save a face's own acts, which no row holds — the form a corner at its document's head opens beneath its rows, which hold its acts (T-LAYER's `headOf`, `sceneHead`); absent, true
  * @property {number} [cpl] the measure the article's column is set at, in characters of its face (P-CAM's measure in force on the plane, the full measure in a pane): what a withheld run's gap holds is read at it (`gapHolds`); absent, the full measure
  * @property {Measure} measure a string's width in a face as the platform sets it (T-LAYER's `widthOf`): every fit the article judges — what a gap holds, a label's cut, a slot's box — reads it
  */
@@ -1292,6 +1305,65 @@ function keptLineHTML(v, statement = true) {
 }
 
 /**
+ * @typedef {Object} FaceAct — one act of a face standing at a corner (`CornerFace`)
+ * @property {string} key its name on the face (`data-face`), by which it is made (O-FACES' `faceAct`)
+ * @property {string} id its label's string
+ * @property {string} label its label
+ * @property {{id: string, text: string} | null} inert why it cannot act now, said at every press (FP-41); null where it acts
+ * @property {string | null} said the statement said before it as it is spoken (O-STATEMENT's `spoken`), which describes it; null where it has none
+ */
+
+/**
+ * @typedef {Object} CornerFace — a face standing at a draft's corner beneath the kept word it explains, never yielding (B3-S2; foundations §3.1; P48): a moved document's (O-FACES' `cornerFace`)
+ * @property {{id: string, text: string}} line its sentence
+ * @property {Array<{id: string, text: string}>} hands each hand that moved the document, in its slot's words
+ * @property {boolean} again its hands are those it named before: the slot owed its words stands, empty (D6 BM-17)
+ * @property {{id: string, text: string} | null} compact its compact form, its sentence and its one device's hand (`B3.moved.compact`; C-358); null where its hands are not one device's, its words standing whole in that form
+ * @property {FaceAct[]} acts its acts in their order, the discard last
+ * @property {{id: string, values: Record<string, string>} | null} said the statement said before its discard, drawn below its acts (the statement decision §8 case 5); null where it has none
+ */
+
+/**
+ * A corner's face's words as a person reads them whole (`CornerFace`): its
+ * sentence, then each hand in its slot's words — what the ARIA mirror's item
+ * voices of it after the kept word (`cornerWords`), and what describes its
+ * compact form.
+ * @param {CornerFace} f
+ * @returns {string}
+ */
+export const faceWords = (f) => [f.line.text, ...f.hands.map((h) => h.text)].join(' ');
+
+/**
+ * A corner's face as markup (see the head; B3-S2; P67): compact, its compact
+ * form — else its words whole — an act opening the corner whole (T-LAYER's
+ * `openCorner`; FP-26), keyed on the face (`data-face`), saying whether the
+ * corner stands opened (`ArticleView.opened`) and described by its whole
+ * words where its compact form says fewer, its words alone where the view
+ * asks no act; whole, its sentence, its hands each in its slot — the slot owed
+ * its words standing empty where they are named again — and its acts in their
+ * order, each a native button (`actHTML`) keyed on the face, an inert one
+ * marked so and titled by its reason, the discard described by its statement,
+ * that statement whole below the acts (O-STATEMENT's `below`). Its acts stand
+ * in its whole form whether or not the view asks acts (`ArticleView.acts`),
+ * for no row of a head holds them.
+ * @param {CornerFace} f
+ * @param {ArticleView} v
+ * @param {boolean} compact
+ * @returns {string}
+ */
+function faceHTML(f, v, compact) {
+  if (compact) {
+    const form = f.compact || f.line, words = f.compact ? f.compact.text : faceWords(f);
+    const whole = f.compact ? ` aria-description="${esc(faceWords(f))}"` : '';
+    return v.acts === false ? `<span class="face compact" data-string="${esc(form.id)}">${esc(words)}</span>`
+      : actHTML('face compact', ` data-face="whole" data-whole data-string="${esc(form.id)}" aria-expanded="${!!v.opened}"${whole}`, esc(words));
+  }
+  const hands = f.hands.length ? `<span class="hands"${f.again ? ' data-again="1"' : ''}>${f.again ? '<span class="again" data-slot="again"></span>' : ''}${f.hands.map((h) => `<span class="hand" data-string="${esc(h.id)}">${esc(h.text)}</span>`).join(' ')}</span>` : '';
+  const acts = f.acts.map((a) => actHTML(`face-act${a.inert ? ' inert' : ''}`, ` data-face="${esc(a.key)}" data-string="${esc(a.id)}"${a.inert ? ` aria-disabled="true" data-inert="${esc(a.inert.id)}" title="${esc(a.inert.text)}"` : ''}${a.said ? ` aria-description="${esc(a.said)}"` : ''}`, esc(a.label))).join('');
+  return `<span class="face"><span class="face-text" data-string="${esc(f.line.id)}">${addressedHTML(f.line.text)}</span>${hands}<span class="face-acts">${acts}</span>${f.said ? below(f.said.id, f.said.values) : ''}</span>`;
+}
+
+/**
  * @typedef {'draft' | 'published' | 'reading' | 'unread'} Kind — a document's kind as its corner's first slot states it (see the head; FP-34): a draft, or published; being read, while no read has told it; not read, where its metadata's read failed and nothing else tells it — T-LAYER's one test decides it (`kindOf`; FP-33)
  */
 
@@ -1343,17 +1415,18 @@ function kindHTML(v) {
 export const statedChain = (d, n) => (n != null && n >= 1 && d.meta && d.meta.birth ? n : null);
 
 /**
- * @typedef {Pick<ArticleView, 'members' | 'lags' | 'notebook' | 'localTrust' | 'kept' | 'held' | 'originOwner' | 'kind'>} CornerFacts — what a corner's state is made from (`stateItems`): its box's chain, the board's lag, the venue, the local trust flag, a draft's kept state, whether it is the moved scene's held version's, the one owner rule and the document's kind
+ * @typedef {Pick<ArticleView, 'members' | 'lags' | 'notebook' | 'localTrust' | 'kept' | 'held' | 'face' | 'originOwner' | 'kind'>} CornerFacts — what a corner's state is made from (`stateItems`): its box's chain, the board's lag, the venue, the local trust flag, a draft's kept state, whether it is the moved scene's held version's, the face standing at it, the one owner rule and the document's kind
  */
 
 /**
  * @typedef {Object} StateItem — one item of a corner's state (`stateItems`): a string filled, in the class it stands in
- * @property {'kind' | 'version' | 'st' | 'kept' | 'chip' | 'held'} cls the item: the document's kind, its version statement, its state, a draft's kept word, a draft's chip, the held version's line
+ * @property {'kind' | 'version' | 'st' | 'kept' | 'face' | 'chip' | 'held'} cls the item: the document's kind, its version statement, its state, a draft's kept word, the face standing beneath it, a draft's chip, the held version's line
  * @property {string} id its string's id — the kind's `L.slot.reading` while it is being read, its slot an empty box; '' for a draft's kept word while no state is set, its slot an empty box
  * @property {Record<string, string | number>} vals the values its string is filled with
  * @property {Record<string, Face>} faces the faces of the tokens it sets in the identifier's: an owner it names
  * @property {string | null} glyph the glyph its compact form draws, named by its words — a usual state's (FP-26); null where its words stand in either form
  * @property {number | null} members the chain's count the version statement is of, which its act carries; null on every other item, and on the statement while the board lags
+ * @property {CornerFace} [face] the face a `face` item draws (`faceHTML`)
  */
 
 /**
@@ -1368,9 +1441,11 @@ export const statedChain = (d, n) => (n != null && n >= 1 && d.meta && d.meta.bi
  * clause before it on a notebook (P7): "no versions yet" where its chain
  * holds no member, its own version at a pinned one, "the latest version" at
  * the bare address, the venue's clause alone while the board lags (FP-23); a
- * draft, its kept word (B3-S2) then its chip (C-28) — the moved scene's held
- * version, which is no document and has no chip, its line in the place of
- * both (`ArticleView.held`; B3-S2; D6 BM-14); being read or not read, its slot
+ * draft, its kept word (B3-S2), beneath it the face standing at its corner
+ * where one stands (`ArticleView.face`; B3-S2; foundations §3.1), then its
+ * chip (C-28) — the moved scene's held version, which is no document and has
+ * no chip, its line in the place of the kept word and the chip
+ * (`ArticleView.held`; B3-S2; D6 BM-14); being read or not read, its slot
  * alone. The one rule the corner draws its state by (`cornerHTML`)
  * and the ARIA mirror's item voices it by (`cornerLead`, `cornerWords`; R94).
  * @param {Doc} d
@@ -1402,7 +1477,10 @@ function stateItems(d, v) {
     return out;
   }
   if (v.kind === 'draft' && v.held) return [kind, item('held', 'B3.history.held', {})];
-  if (v.kind === 'draft') return [kind, item('kept', v.kept ? KEPT_WORDS[v.kept.word] : '', {}), item('chip', v.localTrust ? 'C-28.flag-on' : 'C-28', {}, 'L.corner.draft')];
+  if (v.kind === 'draft') {
+    const face = v.face ? [item('face', v.face.line.id, {}, null, { face: v.face })] : [];
+    return [kind, item('kept', v.kept ? KEPT_WORDS[v.kept.word] : '', {}), ...face, item('chip', v.localTrust ? 'C-28.flag-on' : 'C-28', {}, 'L.corner.draft')];
+  }
   return [kind];
 }
 
@@ -1420,18 +1498,20 @@ export const cornerLead = (d, v) => { const [i] = stateItems(d, v); return t(i.i
 /**
  * A document's state as its corner states it after its first item, whole
  * (`stateItems`): each item's words — a draft's kept word where a state is
- * set — joined as the ARIA mirror's item voices them after the document's
- * first line (R94); '' where the corner states none past its first item.
+ * set, the face beneath it in its words whole (`faceWords`) — joined as the
+ * ARIA mirror's item voices them after the document's first line (R94); ''
+ * where the corner states none past its first item.
  * @param {Doc} d
  * @param {CornerFacts} v
  * @returns {string}
  */
-export const cornerWords = (d, v) => stateItems(d, v).slice(1).filter((i) => i.id).map((i) => t(i.id, i.vals)).join(', ');
+export const cornerWords = (d, v) => stateItems(d, v).slice(1).filter((i) => i.id).map((i) => (i.face ? faceWords(i.face) : t(i.id, i.vals))).join(', ');
 
 /**
  * A corner's state item as markup (`stateItems`): the kind its slot
  * (`kindHTML`), its words in either form; a draft's kept word its kept line
- * (`keptLineHTML`), its statement after it where `statement` asks; a usual
+ * (`keptLineHTML`), its statement after it where `statement` asks; the face
+ * standing beneath it in the form asked (`faceHTML`); a usual
  * state, compact, its glyph named by its words, which assistive technology
  * reads, the act that opens the corner whole (FP-26), and, the corner opened
  * whole on it, its words the act that compacts it again, each saying whether
@@ -1449,6 +1529,7 @@ export const cornerWords = (d, v) => stateItems(d, v).slice(1).filter((i) => i.i
 function stateHTML(i, v, compact, statement = true) {
   if (i.cls === 'kind') return kindHTML(v);
   if (i.cls === 'kept') return keptLineHTML(v, statement);
+  if (i.face) return faceHTML(i.face, v, compact);
   const extra = i.cls === 'chip' ? ' data-chip="1"' : i.cls === 'held' ? ` data-string="${esc(i.id)}"` : i.members != null ? ` data-members="${i.members}"` : '';
   const words = Object.keys(i.faces).length ? htmlIn(i.id, i.vals, i.faces) : esc(t(i.id, i.vals)), acts = v.acts !== false;
   if (compact && i.glyph) {
@@ -1495,12 +1576,14 @@ function filledEm(id, vals, faces, measure) {
  * act (`ArticleView.acts`); the whole-document link count (rule (i)). Compact (FP-26): an
  * edition's state its version marker — unlit at the bare address, lit at a
  * pinned version (foundations §3.1) — and a draft's chip a glyph, each named
- * by its whole words, the act that opens the corner whole (`stateHTML`); the kind in its slot, "version ⟨k⟩ of ⟨n⟩", the
- * whole-document count, the kept word in its slot, the held version's line
- * and the state of a document a read refused keep their words. Each with its
- * words and its width (`CornerItem`): the kind, its version statement, the
- * state, a draft's kept word, its chip, the held version's line and the
- * whole-document count never yield; the offered read does.
+ * by its whole words, the act that opens the corner whole (`stateHTML`); the
+ * face its compact form (`faceHTML`); the kind in its slot, "version ⟨k⟩ of
+ * ⟨n⟩", the whole-document count, the kept word in its slot, the held
+ * version's line and the state of a document a read refused keep their words.
+ * Each with its words and its width (`CornerItem`): the kind, its version
+ * statement, the state, a draft's kept word, the face, its chip, the held
+ * version's line and the whole-document count never yield; the offered read
+ * does.
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {boolean} [compact] the compact form
@@ -1510,6 +1593,10 @@ function filledEm(id, vals, faces, measure) {
 export function cornerItems(d, v, compact = false, statement = true) {
   /** @type {CornerItem[]} */
   const out = stateItems(d, v).map((i) => {
+    if (i.face) {
+      const said = compact && i.face.compact ? i.face.compact.text : faceWords(i.face);
+      return { cls: i.cls, html: faceHTML(i.face, v, compact), words: said, em: v.measure(said, 'client'), yields: false };
+    }
     const words = i.cls === 'kind' ? (v.kind === 'reading' ? '' : t(i.id)) : i.cls === 'kept' ? (i.id ? t(i.id) : '') : t(i.id, i.vals), glyph = compact && i.glyph ? t(i.glyph) : null;
     const em = i.cls === 'kind' ? kindSlotEm(v.measure) : i.cls === 'kept' ? keptSlotEm(v.measure) : glyph != null ? v.measure(glyph, 'client') : filledEm(i.id, i.vals, i.faces, v.measure) + (i.cls === 'chip' ? 0.8 : 0);
     return { cls: i.cls, html: stateHTML(i, v, compact, statement), words, em, yields: false };

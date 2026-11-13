@@ -66,7 +66,12 @@
 // the one line names it, and its account counting it; and the plane's corner made again as the board's lag
 // begins and ends, as its box's chain is counted again, naming no count
 // the board did not end the chain at, and as the read a newer version's
-// arrival offers comes, rises and goes, a focus on it kept (FP-8, FP-12, FP-20, FP-22, FP-23,
+// arrival offers comes, rises and goes, a focus on it kept; and a moved
+// draft's corner carrying its face beneath the kept word in the frame its
+// line is set and dropping it in the frame the line goes, made again as its
+// hands are named, its words said as it comes and changes, its acts keyed
+// on it, compact at its document's head with the band holding its row and
+// whole beneath the rows on its act or a press answered at it (FP-8, FP-12, FP-20, FP-22, FP-23,
 // FP-26, FP-27, FP-30, FP-31, FP-33, FP-34, FP-36, FP-37, FP-39).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -85,7 +90,8 @@ import { CORNER, ADDRESS, COL, HOLD, MARGIN, cornerWidth } from '../plane/regist
 import { holdTop, holdStack, lineHeight, runsOf } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME } from '../plane/lod.js';
-import { CLAUSE_READING, articleHTML } from './article.js';
+import { CLAUSE_READING, articleHTML, faceWords } from './article.js';
+import * as FACES from '../overlays/faces.js';
 import { farSays } from '../beams/held.js';
 import { pastSigns } from '../beams/beams.js';
 import { t, tHTML, lastRead } from '../strings.js';
@@ -2198,6 +2204,94 @@ test('a standing corner\'s kept word is said once in the status region where it 
     LAYER.frame();
     assert.deepEqual(said.slice(before), [t('B3.not-yet-kept')], `${vw} px: a state cleared says nothing`);
   }
+}));
+
+/**
+ * A moved document's face as O-FACES hands it to the corner (`cornerFace`): its hand one device's, by `label`, its
+ * compact form naming it; `unread`, the hands not read yet and no compact wording
+ * @param {string | null} label
+ * @returns {import('./article.js').CornerFace}
+ */
+const movedFace = (label) => ({
+  line: { id: 'B3.moved', text: t('B3.moved') },
+  hands: [label ? { id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': label }) } : { id: 'B3.hand.unread', text: t('B3.hand.unread') }],
+  again: false,
+  compact: label ? { id: 'B3.moved.compact', text: t('B3.moved.compact', { hand: label }) } : null,
+  acts: [
+    { key: 'held', id: 'B3.moved.see-held', label: t('B3.moved.see-held'), inert: null, said: null },
+    { key: 'send', id: 'B3.send-again', label: t('B3.send-again'), inert: { id: 'B3.moved.send-again.inert', text: t('B3.moved.send-again.inert', { label: 'd' }) }, said: null },
+    { key: 'discard', id: 'B3.discard', label: t('B3.discard'), inert: null, said: null },
+  ],
+  said: { id: 'B3.moved.discard', values: {} },
+});
+
+test('a moved draft\'s corner on the plane carries its face beneath the kept word and before the chip in the frame its moved line is set, whole beside its column where the corner stands whole, and drops it in the frame the line goes; its words said once as it comes and again as they change, never at the frame the corner first stands (issue #598; B3-S2; FP-36)', () => onHead(({ said }) => {
+  /** @type {{v: import('./article.js').CornerFace | null}} */
+  const face = { v: null };
+  LAYER.readers({ top: () => LINE_PX, face: (a) => (a === D ? face.v : null) });
+  WRITE.setKept(D, { word: 'not yet kept', reason: null });
+  landAt(null);
+  LAYER.frame();
+  const el = /** @type {any} */ (LAYER.cornerOf(D)), before = said.length;
+  assert.ok(el && LAYER.cornerAt(D)?.compact === false && !String(el.innerHTML).includes('class="face'), 'the corner whole beside its column, no face');
+  face.v = movedFace('desk');
+  LAYER.frame();
+  const html = String(el.innerHTML), at = (/** @type {string} */ s) => html.indexOf(s);
+  assert.ok(at('class="kept-line"') >= 0 && at('class="kept-line"') < at('<span class="face">') && at('<span class="face">') < at('class="chip'), `the face whole, beneath the kept word and before the chip — ${html}`);
+  assert.ok(html.includes('data-face="held"') && html.includes('data-face="send"') && html.includes('data-face="discard"'), 'its acts in its whole form');
+  assert.deepEqual(said.slice(before), [faceWords(face.v)], 'its words said once as it comes');
+  LAYER.frame();
+  assert.equal(said.length, before + 1, 'not again while it stands');
+  face.v = movedFace('kitchen');
+  LAYER.frame();
+  assert.deepEqual(said.slice(before + 1), [faceWords(face.v)], 'its words changed under the reader: said again');
+  face.v = null;
+  LAYER.frame();
+  assert.ok(!String(el.innerHTML).includes('class="face') && said.length === before + 2, 'the moved line gone: the face gone in that frame, nothing said');
+}));
+
+test('the corner\'s items are made again as the face\'s own facts move with no other move of the draft\'s — its hands named after the verdict — the kept state standing as it was (issue #598; D6 BM-78)', () => onHead(() => {
+  /** @type {{v: import('./article.js').CornerFace | null}} */
+  const face = { v: movedFace(null) };
+  LAYER.readers({ top: () => LINE_PX, face: (a) => (a === D ? face.v : null) });
+  WRITE.setKept(D, { word: 'not yet kept', reason: null });
+  landAt(null);
+  LAYER.frame();
+  const el = /** @type {any} */ (LAYER.cornerOf(D)), rev = WRITE.rev();
+  assert.ok(String(el.innerHTML).includes(esc(t('B3.hand.unread'))), 'the hands not read yet');
+  face.v = movedFace('desk');
+  LAYER.frame();
+  assert.ok(WRITE.rev() === rev && String(el.innerHTML).includes(esc(t('B3.hand.device', { 'device label': 'desk' }))) && !String(el.innerHTML).includes(esc(t('B3.hand.unread'))), 'named: "— by desk" in that frame');
+}));
+
+test('each of the face\'s acts bears its key on the face, its compact form\'s apart from a glyph\'s, so a rewrite puts a focus back on the act it stood on (issue #598; FP-20)', () => {
+  const el = (/** @type {Record<string, string>} */ dataset) => /** @type {any} */ ({ dataset, classList: { contains: () => false } });
+  assert.deepEqual([LAYER.cornerAct(el({ face: 'discard' })), LAYER.cornerAct(el({ face: 'held' })), LAYER.cornerAct(el({ face: 'whole', whole: '' })), LAYER.cornerAct(el({ whole: '' }))], ['face:discard', 'face:held', 'face:whole', 'whole']);
+});
+
+test('at its document\'s head the face stands compact in the rows — its compact form an act naming its hand — the band its fold reserves holding its row; its act opens the corner whole, the face whole beneath the rows with its acts, and a press answered at it opens it so too, its words said (issue #598; B3-S2; FP-26; D6 BM-45)', () => onHead(({ said }) => {
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  LAYER.readers({ top: () => LINE_PX, face: FACES.cornerFace });
+  CAM.setViewport(390, 900);
+  landAt(null);
+  LAYER.frame();
+  const bare = LAYER.foldOf(REC.doc(D)).band;
+  WRITE.setHeld(D, /** @type {any} */ (F.decodeHeldRows([{ held: 1, doc: D, base: 7, frame: { op: 'insert', doc: D, at: { ordinal: '1', subspace: '1' }, values: ['held'], as_of: 7, id: 'p.1' }, cause: 'moved', sent: true, time: 1, refusal: { kind: 'refused', name: 'arrangement_moved', status: 200, code: 'arrangement_moved', detail: null, op: 'insert', site: { as_of: 7, current: 9 }, body: null }, sendable: false, hands: [{ key: 'other', fingerprint: 'ab'.repeat(32), label: 'desk' }] }])));
+  WRITE.setKept(D, { word: 'not yet kept', reason: null, cause: { token: 'moved', arm: null } });
+  LAYER.frame();
+  const el = /** @type {any} */ (LAYER.cornerOf(D)), rows = () => String(el.innerHTML).split('<div class="opened"')[0];
+  assert.ok(LAYER.cornerAt(D)?.head && LAYER.foldOf(REC.doc(D)).band > bare, `the corner at its head, its band deeper for the face's row: ${bare} → ${LAYER.foldOf(REC.doc(D)).band}`);
+  assert.ok(rows().includes(`data-face="whole" data-whole data-string="B3.moved.compact" aria-expanded="false"`) && rows().includes(esc(t('B3.moved.compact', { hand: 'desk' }))) && !rows().includes('data-face="discard"'), `in the rows its compact form, its acts one act away — ${rows()}`);
+  LAYER.openCorner(D);
+  LAYER.frame();
+  const opened = String(el.innerHTML).split('<div class="opened"')[1] || '';
+  assert.ok(opened.includes('<span class="face">') && opened.includes('data-face="discard"') && opened.includes('data-face="held"') && rows().includes('aria-expanded="true"'), `opened: the face whole beneath the rows, with its acts — ${opened}`);
+  LAYER.openCorner(D);
+  LAYER.frame();
+  const n = said.length;
+  assert.deepEqual([FACES.answerAtFace(D), LAYER.cornerAt(D)?.opened], [true, true], 'a press answered at the face: the corner opened whole');
+  assert.deepEqual(said.slice(n), [faceWords(/** @type {any} */ (FACES.cornerFace(D)))], 'its words said');
+  assert.deepEqual([FACES.answerAtFace(D), LAYER.cornerAt(D)?.opened], [true, true], 'pressed again: it stays opened');
 }));
 
 test('a change of the head\'s rows changes the band its fold reserves, and the article set again re-anchors the camera on the passage being read: its line at its height and its size (issue #436; FP-8)', () => onLayer(() => {

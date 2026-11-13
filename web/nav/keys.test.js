@@ -140,7 +140,8 @@
 // take back answered by its line — the empty stack's, the no-caret line
 // naming where the person was last writing, an edition's and another's
 // document's — each ending on the constant sentence while it stands whole;
-// a step whose line awaits the person's act answered at its face.
+// a step whose line awaits the person's act answered at its face, a moved
+// run's at its face standing at the corner, its words said.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
@@ -161,7 +162,7 @@ import * as HOST from '../overlays/host.js';
 import * as HINT from '../overlays/hint.js';
 import * as FACES from '../overlays/faces.js';
 import * as CAM from '../plane/camera.js';
-import { cornerHTML } from '../text/article.js';
+import { cornerHTML, faceWords } from '../text/article.js';
 import { spanOfBlock } from '../text/span.js';
 import { docBox } from '../plane/projection.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
@@ -2624,6 +2625,35 @@ test('K-75 at a run whose line awaits the person\'s act — a refused run — is
       'the press answered at the face: its words and its acts shown, the run\'s words standing, the step on the stack, nothing sent — no `resolve`, no `op` — and the caret where it stood');
     await press('z', { ...MOD, shiftKey: true });
     assert.deepEqual([shown().slice(0, 3), calls.slice(n)], ['x.F', []], 'the redo chord: taken, nothing to put back, nothing sent');
+  } finally { MACHINE.takeOut(); PORT.boot(null); HOST.dismiss(); LAYER.dropCaret(); WRITE.clearEdits(D); WRITE.setHeld(D, []); KEYS._reset(); }
+}));
+
+test('K-75 at a run the board held moved is answered at its face standing at the corner: no overlay shown, the face\'s words said, none of its acts taken, nothing composed and nothing dropped, the caret where it stood (issue #598; D6 BM-45)', () => onPlane(async ({ said }) => {
+  HOST.attach(/** @type {any} */ (hostEl));
+  /** @type {unknown[]} */
+  let rows = [];
+  /** @type {string[]} */
+  const calls = [];
+  const fake = FAKE.create(new Proxy({}, { get: (_t, key) => (String(key).startsWith('op:') ? { result: { resp: 'held', held: 1, cause: 'moved' } } : String(key).startsWith('held:') ? { result: rows } : undefined) }));
+  const call = fake.call;
+  fake.call = (name, args) => { calls.push(name); return call(name, args); };
+  PORT.boot(fake);
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  REC.takeDelivery(D, [{ pos: 1, width: N, kind: 'content', text: TEXT, ref: null, origin: null }], 7, { from: 1, runs: [{ iStart: D + '.0.1.1', width: N }] });
+  MACHINE.handIn();
+  try {
+    await focusOn(D, 1);
+    await press('Enter');
+    rows = [{ held: 1, doc: D, base: 5, frame: { op: 'insert', doc: D, at: { ordinal: '1', subspace: '1' }, values: ['x.'] }, cause: 'moved', sent: true, time: 1, sendable: false, hands: [{ key: 'other', fingerprint: 'ab'.repeat(32), label: 'desk' }],
+      refusal: { kind: 'refused', name: 'arrangement_moved', status: 200, code: 'arrangement_moved', detail: null, op: 'insert', site: { as_of: 7, current: 9 }, body: null } }];
+    await type('x.');
+    for (let i = 0; i < 6; i++) await tick();
+    const face = FACES.cornerFace(D);
+    assert.deepEqual([WRITE.keptOf(D)?.word, face?.line.id, HOST.currentState()], ['not yet kept', 'B3.moved', null], 'a moved line stands, its face at the corner, no overlay');
+    const n = calls.length, edits = WRITE.edits(D).length, m = said.length;
+    await press('z', MOD);
+    assert.deepEqual([HOST.currentState(), said.slice(m), shown().slice(0, 3), WRITE.edits(D).length, WRITE.undoOf(D).length, calls.slice(n), caret()], [null, [faceWords(/** @type {any} */ (face))], 'x.F', edits, 1, [], [D, 3, true]],
+      'the press answered at the face: no overlay, its words said, the run\'s words standing, the step on the stack, nothing sent — no `resolve`, no `op` — and the caret where it stood');
   } finally { MACHINE.takeOut(); PORT.boot(null); HOST.dismiss(); LAYER.dropCaret(); WRITE.clearEdits(D); WRITE.setHeld(D, []); KEYS._reset(); }
 }));
 

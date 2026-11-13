@@ -156,20 +156,27 @@
 // THE WORDS THE BOARD HAS NOT KEPT (B3-S2; D6 BM-10, BM-13, BM-16 … BM-27):
 // the face of a draft holding them, read from W-WRITE's record of its held
 // lines, its islands and its board's reason (`unkeptFace`), each state by
-// W-MACHINE's one test of it (`awaitsAct`, `isMoved`, `deathFaced`), and
-// opened by the kept word's act at its corner (`unkept`): a refused run's —
-// "send again" first, inert with its reason in the own-bug class, "copy these
-// words out", then "discard this change"; the shell's hand-over's, naming the
-// board and the time elapsed; the moved document's, naming the hands its rows carry,
-// each in its slot — the slot the design owes words for, where they are
-// named again, standing empty — with "see the held text", "send again" inert
-// unless the shell says it would pass, and the discard; an island's and the
-// held store's first refusal's, their discard the page's own; the device's
-// refusal, by its class, its act the whole text's copy; the head-unreadable
-// hold's discard; and the death's arm in its two forms, by whether this
-// board's held lines are read under the session that stands, the keyless
-// session's discard live. Each face's head is "not kept" where the corner
-// reads so; every act that sends goes through W-MACHINE, which alone sends
+// W-MACHINE's one test of it (`awaitsAct`, `isMoved`, `deathFaced`): a
+// refused run's — "send again" first, inert with its reason in the own-bug
+// class, "copy these words out", then "discard this change"; the shell's
+// hand-over's, naming the board and the time elapsed; the moved document's
+// (`movedFace`), naming the hands its rows carry, each in its slot — the slot
+// the design owes words for, where they are named again, standing empty —
+// with "see the held text", "send again" inert unless the shell says it would
+// pass, and the discard; an island's and the held store's first refusal's,
+// their discard the page's own; the device's refusal, by its class, its act
+// the whole text's copy; the head-unreadable hold's discard; and the death's
+// arm in its two forms, by whether this board's held lines are read under the
+// session that stands, the keyless session's discard live. Each but the moved
+// document's opens on the kept word's act at its corner (`unkept`); the moved
+// document's stands at its corner beneath the kept word instead, wherever a
+// line of it is held moved and the death's face does not stand (`cornerFace`;
+// T-ARTICLE draws it), its compact form naming its hand where its hands are
+// one device's (C-358), its acts made by their keys there (`faceAct`), and a
+// press its line awaits answered at it — the corner opened whole where it
+// stands compact, its words said (`answerAtFace`; D6 BM-45). Each face's head
+// is "not kept" where the corner reads so; every act that sends goes through
+// W-MACHINE, which alone sends
 // `resolve`; a discard's statement stands below the acts in sense lines
 // (O-STATEMENT's `below`), its act the row's last and described by it; an
 // inert act says its reason at every press (FP-41); and what a discard did
@@ -193,7 +200,7 @@ import * as LK from '../links/links.js';
 import * as WRITE from '../write/write.js';
 import * as MACHINE from '../write/machine.js';
 import { below, spoken } from './statement.js';
-import { entitlementArm, placeholderOf, CLAUSE_READING } from '../text/article.js';
+import { entitlementArm, placeholderOf, faceWords, CLAUSE_READING } from '../text/article.js';
 import { retries, lineOf } from '../beams/held.js';
 import { memberOf } from '../model/address.js';
 import { t, addressedHTML, endingOf } from '../strings.js';
@@ -207,6 +214,7 @@ import { esc, fingerprintCue } from '../util.js';
 /** @typedef {import('./host.js').Anchor} Anchor */
 /** @typedef {import('../model/records.js').Reader} Reader */
 /** @typedef {import('../text/article.js').Decided} Decided */
+/** @typedef {import('../text/article.js').CornerFace} CornerFace */
 
 /**
  * @typedef {Object} Face
@@ -1238,6 +1246,35 @@ const OWN_BUG = ['out_of_bounds', 'empty_content', 'not_content_subspace'];
 /** a time elapsed, in the reader's own locale's words: whole minutes, one at the least */
 const elapsed = (/** @type {number} */ ms) => new Intl.NumberFormat(undefined, { style: 'unit', unit: 'minute', unitDisplay: 'long' }).format(Math.max(1, Math.round(ms / 60000)));
 
+/** a string filled, by its id: a face's line, a hand's slot, an act's reason */
+const entry = (/** @type {string} */ id, /** @type {Record<string, string>} */ v = {}) => ({ id, text: t(id, v) });
+
+/**
+ * An act of a face of unkept words (`UnkeptAct`), its label its string's
+ * words: no run where it is inert.
+ * @param {string} key
+ * @param {string} id
+ * @param {UnkeptAct['run']} run
+ * @param {UnkeptAct['inert']} [inert]
+ * @returns {UnkeptAct}
+ */
+const unkeptAct = (key, id, run, inert = null) => ({ key, id, label: t(id), inert, said: null, run: inert ? null : run });
+
+/**
+ * A face given a discard on this device as its last act (the statement
+ * decision §8 case 5): the discard the row's last, described by its statement
+ * as it is spoken, and that statement drawn below the acts.
+ * @param {UnkeptFace} face
+ * @param {Statement} said
+ * @param {NonNullable<UnkeptAct['run']>} run
+ * @param {string} [id] the discard's label's string
+ * @returns {UnkeptFace}
+ */
+const withDiscard = (face, said, run, id = 'B3.discard') => ({ ...face, acts: [...face.acts, { ...unkeptAct('discard', id, run), said: spoken(said.id, said.values) }], said });
+
+/** a device's hand by its name: its key's label, else its fingerprint's cue, else its slot's words for a key with no label */
+const deviceOf = (/** @type {import('../model/frames.js').HeldHand} */ h) => h.label || (h.fingerprint ? fingerprintCue(h.fingerprint) : t('L.slot.unlabelled'));
+
 /**
  * A hand that moved a held document, in its slot's words (D6 BM-13, BM-29,
  * BM-78): this store's key or another's by its label — its fingerprint's cue
@@ -1247,11 +1284,38 @@ const elapsed = (/** @type {number} */ ms) => new Intl.NumberFormat(undefined, {
  * @returns {{id: string, text: string}}
  */
 function handWords(h) {
-  if (h.key === 'bare') return { id: 'B3.hand.unsigned', text: t('B3.hand.unsigned') };
-  if (h.key === 'lost') return { id: 'B3.hand.lost', text: t('B3.hand.lost') };
-  if (h.key === 'unread') return { id: 'B3.hand.unread', text: t('B3.hand.unread') };
-  if (h.key === 'unknowable') return { id: 'B3.hand.unknowable', text: t('B3.hand.unknowable') };
-  return { id: 'B3.hand.device', text: t('B3.hand.device', { 'device label': h.label || (h.fingerprint ? fingerprintCue(h.fingerprint) : t('L.slot.unlabelled')) }) };
+  if (h.key === 'bare') return entry('B3.hand.unsigned');
+  if (h.key === 'lost') return entry('B3.hand.lost');
+  if (h.key === 'unread') return entry('B3.hand.unread');
+  if (h.key === 'unknowable') return entry('B3.hand.unknowable');
+  return entry('B3.hand.device', { 'device label': deviceOf(h) });
+}
+
+/** the hands the first moved line naming any carries (D6 BM-13); null where none names them yet */
+const namedHands = (/** @type {readonly import('../model/frames.js').HeldLine[]} */ rows) => {
+  const named = rows.find((r) => MACHINE.isMoved(r) && r.hands && r.hands.length);
+  return named && named.hands ? { hands: named.hands, again: !!named.again } : null;
+};
+
+/**
+ * A moved document's face (see the head; B3-S2; D6 BM-13 … BM-17): the
+ * document changed while its text was held — the hands its rows carry, each
+ * in its slot's words, "not read yet" where none names them — "see the held
+ * text", "send again", inert with its reason unless the shell says the shift
+ * would pass, then the discard of its first moved line, its statement ending
+ * on its exit. Null where no line of it is held moved.
+ * @param {string} addr the draft
+ * @param {readonly import('../model/frames.js').HeldLine[]} rows its held lines (W-WRITE's `heldOf`)
+ * @returns {UnkeptFace | null}
+ */
+function movedFace(addr, rows) {
+  const moved = rows.find(MACHINE.isMoved);
+  if (!moved) return null;
+  const named = namedHands(rows), label = REC.has(addr) ? LAYER.boxName(addr).name : addr;
+  return withDiscard({
+    kind: 'moved', head: null, lines: [entry('B3.moved')], hands: named ? named.hands.map(handWords) : [entry('B3.hand.unread')], again: !!(named && named.again), said: null,
+    acts: [unkeptAct('held', 'B3.moved.see-held', () => seeHeld(addr)), unkeptAct('send', 'B3.send-again', () => sentAgain(addr, moved.held), moved.sendable === true ? null : entry('B3.moved.send-again.inert', { label }))],
+  }, { id: 'B3.moved.discard', values: {} }, () => dropped(addr, moved.held));
 }
 
 /**
@@ -1263,34 +1327,26 @@ function handWords(h) {
  */
 export function unkeptFace(addr) {
   const rows = WRITE.heldOf(addr), islands = WRITE.islandsOf(addr), block = WRITE.unwritable(addr), s = REC.session();
-  const board = boardName(), label = REC.has(addr) ? LAYER.boxName(addr).name : addr;
-  const say = (/** @type {string} */ id, /** @type {Record<string, string>} */ v = {}) => ({ id, text: t(id, v) });
-  const head = say('B3.not-kept');
-  /** @returns {UnkeptAct} */
-  const act = (/** @type {string} */ key, /** @type {string} */ id, /** @type {UnkeptAct['run']} */ run, /** @type {UnkeptAct['inert']} */ inert = null) => ({ key, id, label: t(id), inert, said: null, run: inert ? null : run });
+  const board = boardName();
+  const head = entry('B3.not-kept');
   const copied = () => FOCUS.say(t('B3.death.copied'));
-  const copyRun = (/** @type {() => string} */ words) => act('copy', 'B3.copy-words-out', () => { hand.copy(words()); copied(); });
-  const copyAll = () => act('copy', 'B3.death.copy', () => { const d = LAYER.shownOf(addr); hand.copy(d.from < 0 ? '' : REC.textOf(d.runs, d.from, d.to)); copied(); });
+  const copyRun = (/** @type {() => string} */ words) => unkeptAct('copy', 'B3.copy-words-out', () => { hand.copy(words()); copied(); });
+  const copyAll = () => unkeptAct('copy', 'B3.death.copy', () => { const d = LAYER.shownOf(addr); hand.copy(d.from < 0 ? '' : REC.textOf(d.runs, d.from, d.to)); copied(); });
   /**
    * A face that offers no discard, and so draws no statement.
    * @returns {UnkeptFace}
    */
   const face = (/** @type {UnkeptFace['kind']} */ kind, /** @type {Omit<Partial<UnkeptFace>, 'said'>} */ f) => ({ kind, head, lines: [], hands: null, again: false, acts: [], ...f, said: null });
   /**
-   * A face whose last act is a discard on this device (the statement decision
-   * §8 case 5): the discard the row's last, described by its statement as it
-   * is spoken, and that statement drawn below the acts.
+   * A face whose last act is a discard on this device (`withDiscard`).
    * @returns {UnkeptFace}
    */
-  const discardFace = (/** @type {UnkeptFace['kind']} */ kind, /** @type {Omit<Partial<UnkeptFace>, 'said'>} */ f, /** @type {Statement} */ said, /** @type {NonNullable<UnkeptAct['run']>} */ run, id = 'B3.discard') => {
-    const plain = face(kind, f);
-    return { ...plain, acts: [...plain.acts, { ...act('discard', id, run), said: spoken(said.id, said.values) }], said };
-  };
+  const discardFace = (/** @type {UnkeptFace['kind']} */ kind, /** @type {Omit<Partial<UnkeptFace>, 'said'>} */ f, /** @type {Statement} */ said, /** @type {NonNullable<UnkeptAct['run']>} */ run, id = 'B3.discard') => withDiscard(face(kind, f), said, run, id);
   // the session ended and no re-open follows; or the keyless session stands over this board's held lines after it
   const keyless = !!s && !s.writes && rows.length > 0;
   if (MACHINE.deathFaced(addr)) {
     const arm = block && block.why === 'death' ? block.detail : null, stays = keyless;
-    const lines = keyless || arm === 'retired' || arm === 'blocked' ? [say(stays ? 'B3.death.corner.stays' : 'B3.death.corner.unshown', { board })] : [];
+    const lines = keyless || arm === 'retired' || arm === 'blocked' ? [entry(stays ? 'B3.death.corner.stays' : 'B3.death.corner.unshown', { board })] : [];
     if (!keyless) return face('death', { lines, acts: [copyAll()] });
     const held = rows[0].held;
     return discardFace('death', { lines, acts: [copyAll()] }, NEVER_KEPT, () => dropped(addr, held));
@@ -1298,34 +1354,28 @@ export function unkeptFace(addr) {
   const refused = rows.find(MACHINE.awaitsAct);
   if (refused && refused.refusal) {
     const r = refused.refusal, words = () => MACHINE.wordsOf(addr, refused.held), drop = () => dropped(addr, refused.held);
-    const again = (/** @type {UnkeptAct['inert']} */ inert = null) => act('send', 'B3.send-again', () => sentAgain(addr, refused.held), inert);
+    const again = (/** @type {UnkeptAct['inert']} */ inert = null) => unkeptAct('send', 'B3.send-again', () => sentAgain(addr, refused.held), inert);
     if (r.name === 'answers_lost') {
       const ms = /** @type {{elapsed_ms?: unknown}} */ (r).elapsed_ms;
-      return discardFace('handed', { lines: [say('B3.answers_lost', { board, time: typeof ms === 'number' ? elapsed(ms) : '' })], acts: [again(), copyRun(words)] }, { id: 'B3.answers_lost.discard', values: { board } }, drop);
+      return discardFace('handed', { lines: [entry('B3.answers_lost', { board, time: typeof ms === 'number' ? elapsed(ms) : '' })], acts: [again(), copyRun(words)] }, { id: 'B3.answers_lost.discard', values: { board } }, drop);
     }
     const own = OWN_BUG.includes(r.name);
-    return discardFace(own ? 'own-bug' : 'refused', { lines: [own ? say('B3.own-bug') : wordsFor(r, { addr })], acts: [again(own ? say('B3.own-bug.send-again') : null), copyRun(words)] }, NEVER_KEPT, drop);
+    return discardFace(own ? 'own-bug' : 'refused', { lines: [own ? entry('B3.own-bug') : wordsFor(r, { addr })], acts: [again(own ? entry('B3.own-bug.send-again') : null), copyRun(words)] }, NEVER_KEPT, drop);
   }
   const island = islands[0];
   if (island) {
     const full = island.name === 'held_full', words = () => WRITE.islandWords(addr, island.id);
     const stands = full && !!block && block.why === 'held_full';
-    const again = act('send', 'B3.send-again', () => { MACHINE.sendIsland(addr, island.id); reshow(addr); }, full ? (stands ? say('B3.held_full.refused') : null) : say('B3.own-bug.send-again'));
-    return discardFace(full ? 'full' : 'island', { lines: [say(full ? 'B3.held_full.refused' : 'B3.island')], acts: [again, copyRun(words)] }, NEVER_KEPT, () => { MACHINE.discardIsland(addr, island.id); reshow(addr); });
+    const again = unkeptAct('send', 'B3.send-again', () => { MACHINE.sendIsland(addr, island.id); reshow(addr); }, full ? (stands ? entry('B3.held_full.refused') : null) : entry('B3.own-bug.send-again'));
+    return discardFace(full ? 'full' : 'island', { lines: [entry(full ? 'B3.held_full.refused' : 'B3.island')], acts: [again, copyRun(words)] }, NEVER_KEPT, () => { MACHINE.discardIsland(addr, island.id); reshow(addr); });
   }
   const device = rows.find((r) => r.unwritable != null);
   if (device) {
-    const cls = device.unwritableClass === 'full' ? [say('B3.unwritable.full')] : device.unwritableClass === 'read_only' ? [say('B3.unwritable.read_only')] : [];
-    return face('device', { lines: [say('B3.unwritable', { cause: device.unwritable || '' }), ...cls], acts: [copyAll()] });
+    const cls = device.unwritableClass === 'full' ? [entry('B3.unwritable.full')] : device.unwritableClass === 'read_only' ? [entry('B3.unwritable.read_only')] : [];
+    return face('device', { lines: [entry('B3.unwritable', { cause: device.unwritable || '' }), ...cls], acts: [copyAll()] });
   }
-  const moved = rows.find(MACHINE.isMoved);
-  if (moved) {
-    const named = rows.find((r) => MACHINE.isMoved(r) && r.hands && r.hands.length), hands = named && named.hands ? named.hands.map(handWords) : [say('B3.hand.unread')];
-    return discardFace('moved', {
-      head: null, lines: [say('B3.moved')], hands, again: !!(named && named.again),
-      acts: [act('held', 'B3.moved.see-held', () => seeHeld(addr)), act('send', 'B3.send-again', () => sentAgain(addr, moved.held), moved.sendable === true ? null : say('B3.moved.send-again.inert', { label }))],
-    }, { id: 'B3.moved.discard', values: {} }, () => dropped(addr, moved.held));
-  }
+  const moved = movedFace(addr, rows);
+  if (moved) return moved;
   const unreadable = rows.find((r) => r.cause === 'head_unreadable');
   if (unreadable) {
     const typed = rows.some((r) => r.frame.op === 'insert');
@@ -1334,11 +1384,10 @@ export function unkeptFace(addr) {
   return null;
 }
 
-/** a face of unkept words as markup: its head, its words, a moved document's hands each in its slot — the slot owed its words standing empty where they are named again — its acts in order, an inert one marked and titled by its reason, and the discard's statement below them */
+/** a face of unkept words as markup: its head, its words, its acts in order, an inert one marked and titled by its reason, and the discard's statement below them */
 function unkeptHTML(/** @type {UnkeptFace} */ f) {
-  const hands = f.hands ? `<div class="hands"${f.again ? ' data-again="1"' : ''}>${f.again ? '<span class="again" data-slot="again"></span>' : ''}${f.hands.map((h) => `<span class="hand" data-string="${esc(h.id)}">${esc(h.text)}</span>`).join(' ')}</div>` : '';
   const acts = f.acts.map((a) => `<button data-run="${esc(a.key)}" data-string="${esc(a.id)}"${a.inert ? ` class="inert" aria-disabled="true" data-inert="${esc(a.inert.id)}" title="${esc(a.inert.text)}"` : ''}${a.said ? ` aria-description="${esc(a.said)}"` : ''}>${esc(a.label)}</button>`).join('');
-  return headHTML(f.head) + f.lines.map((l) => `<div class="face-text" data-string="${esc(l.id)}">${addressedHTML(l.text)}</div>`).join('') + hands
+  return headHTML(f.head) + f.lines.map((l) => `<div class="face-text" data-string="${esc(l.id)}">${addressedHTML(l.text)}</div>`).join('')
     + (f.acts.length ? `<div class="acts">${acts}</div>` : '') + (f.said ? below(f.said.id, f.said.values) : '');
 }
 
@@ -1349,7 +1398,8 @@ let unkeptAt = null;
  * The face of a draft's unkept words shown (see the head): at the kept
  * word's act, where its corner stands — the focus on its first act where a
  * key made the act, never on the discard, which is last. False, and nothing
- * shown, where the draft holds none a face answers.
+ * shown, where the draft holds none a face answers, or the face it answers is
+ * the moved document's, which stands at its corner (`cornerFace`).
  * @param {string} addr the draft
  * @param {Anchor | HTMLElement | {x: number, y: number} | null} [anchor] the act's site
  * @param {boolean} [byKey] a key made the act
@@ -1357,12 +1407,64 @@ let unkeptAt = null;
  */
 export function unkept(addr, anchor = null, byKey = false) {
   const f = unkeptFace(addr);
-  if (!f) return false;
+  if (!f || f.kind === 'moved') return false;
   unkeptAt = toAnchor(anchor);
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
   for (const a of f.acts) acts[a.key] = () => { if (a.inert) FOCUS.say(a.inert.text, false, true); else if (a.run) void a.run(); };
   HOST.show({ kind: 'face', id: `face:unkept:${f.kind}:${addr}`, anchor: unkeptAt, html: unkeptHTML(f), acts, takeFocus: byKey });
+  return true;
+}
+
+/**
+ * The face standing at a draft's corner beneath its kept word (see the head;
+ * B3-S2; foundations §3.1), as T-ARTICLE draws it: the moved document's
+ * (`movedFace`), wherever a line of it is held moved and the death's face does
+ * not stand (W-MACHINE's `deathFaced`), its compact form naming its hand where
+ * its hands are one device's (`B3.moved.compact`; C-358); null elsewhere.
+ * @param {string} addr the draft
+ * @returns {CornerFace | null}
+ */
+export function cornerFace(addr) {
+  const rows = WRITE.heldOf(addr), f = MACHINE.deathFaced(addr) ? null : movedFace(addr, rows);
+  if (!f) return null;
+  const named = namedHands(rows), one = named && named.hands.length === 1 && (named.hands[0].key === 'own' || named.hands[0].key === 'other') ? named.hands[0] : null;
+  return {
+    line: f.lines[0], hands: f.hands || [], again: f.again, compact: one ? entry('B3.moved.compact', { hand: deviceOf(one) }) : null,
+    acts: f.acts.map((a) => ({ key: a.key, id: a.id, label: a.label, inert: a.inert, said: a.said })), said: f.said,
+  };
+}
+
+/**
+ * An act of the face standing at a draft's corner, by its key (see the head;
+ * `cornerFace`): made as the faces' acts are — an inert act saying its reason
+ * at every press (FP-41), any other run. False where the corner carries no
+ * face, or the face no act of that key.
+ * @param {string} addr the draft
+ * @param {string} key the act's key on the face (T-ARTICLE's `FaceAct.key`)
+ * @returns {boolean} whether the face holds the act
+ */
+export function faceAct(addr, key) {
+  const f = MACHINE.deathFaced(addr) ? null : movedFace(addr, WRITE.heldOf(addr)), a = f ? f.acts.find((x) => x.key === key) : undefined;
+  if (!a) return false;
+  if (a.inert) FOCUS.say(a.inert.text, false, true); else if (a.run) void a.run();
+  return true;
+}
+
+/**
+ * A press answered at the face standing at a draft's corner (D6 BM-45): the
+ * corner opened whole where it stands compact (T-LAYER's `openCorner`), the
+ * face's words said in the status region, none of its acts taken and the
+ * focus where it stood. False where the corner carries no face.
+ * @param {string} addr the draft
+ * @returns {boolean}
+ */
+export function answerAtFace(addr) {
+  const f = cornerFace(addr);
+  if (!f) return false;
+  const at = LAYER.cornerAt(addr);
+  if (at && at.compact && !at.opened) LAYER.openCorner(addr);
+  FOCUS.say(faceWords(f), false, true);
   return true;
 }
 
@@ -1410,7 +1512,6 @@ async function dropped(addr, held) {
 function seeHeld(addr) {
   const heldVersion = LAYER.paneSource(addr);
   if (typeof heldVersion === 'string') return;
-  HOST.dismiss();
   void GO.toScene(addr, /** @type {any} */ (heldVersion), { heldB: true });
 }
 

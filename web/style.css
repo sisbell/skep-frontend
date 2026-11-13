@@ -329,6 +329,18 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .corner .kept-word.pending { background:rgba(139,143,150,.12); border-radius:2px; }
 .corner button.kept-word { text-decoration:underline dotted; }
 .corner .kept-statement { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
+/* THE FACE BENEATH THE KEPT WORD (B3-S2; P48; P67): a moved document's, never yielding — whole, its sentence and its hands
+   on lines of their own, its acts a line of slots, each its label's width and never broken inside, its click cue its act's,
+   an inert one dim, and the discard's statement below them; compact, its compact form wrapped and never cut — on one line
+   in a head's row its words fit, wrapped across the rows of one they do not — its act opening the corner whole */
+.corner .face { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
+.corner .face > .face-text, .corner .face > .hands, .corner .face > .face-acts { display:block; }
+.corner .face > .face-acts { margin-top:.3em; }
+.corner .face .face-act { display:inline-block; margin-right:.6em; white-space:nowrap; text-decoration:underline dotted; }
+:is(#corners, .pane) .corner.head .hslot:not(.wraps) > .face { white-space:nowrap; }
+.corner .face .face-act.inert { color:#8b8f96; text-decoration:none; }
+.corner .face > .said { margin-top:.3em; }
+.corner button.face.compact { text-align:left; text-decoration:underline dotted; }
 /* the moved scene's held version's line in the kept word's and the chip's place (B3-S2): on a line of its own, its words
    whole in either form, wrapped and never cut */
 .corner .held { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
