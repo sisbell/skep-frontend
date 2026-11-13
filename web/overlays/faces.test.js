@@ -1084,7 +1084,7 @@ test('BM-13, BM-17, BM-29: the moved face names the hands its rows carry, each i
   assert.deepEqual([FACES.unkeptFace(UD)?.again, /<div class="hands" data-again="1"><span class="again" data-slot="again"><\/span>/.test(hostEl.innerHTML), FACES.unkeptFace(UD)?.hands?.length], [true, true, 1], 'refused again with no new row: the hands named again, the slot for the words that say so standing, empty');
 });
 
-test('BM-19 … BM-27: each other face of unkept words by its state — the hand-over naming the board and the time, its discard\'s statement its own; an island and the held store\'s first refusal, "send again" inert; the device\'s refusal by its class, its one act the whole text\'s copy; the head-unreadable hold\'s discard; the death\'s arm, its second form where the board\'s held lines are not read, and under the keyless session its first with the discard live and no statement', () => {
+test('BM-19 … BM-27: each other face of unkept words by its state — the hand-over naming the board and the time, its discard\'s statement its own; an island and the held store\'s first refusal, "send again" inert; the device\'s refusal by its class, its one act the whole text\'s copy; the head-unreadable hold\'s discard; the death\'s arm, its second form where the board\'s held lines are not read, and under the keyless session its first with the discard live, its statement the refused run\'s', () => {
   unkeptDraft();
   const board = t('L.mirror.board.name', { node: '1', origin: 'http://127.0.0.1:8644' });
   const kind = () => { const f = FACES.unkeptFace(UD); return f ? [f.kind, f.head?.id ?? null, f.lines.map((l) => l.id), f.acts.map((a) => [a.id, a.inert?.id ?? null]), f.said?.id ?? null] : null; };
@@ -1116,8 +1116,24 @@ test('BM-19 … BM-27: each other face of unkept words by its state — the hand
   assert.deepEqual(kind(), ['death', 'B3.not-kept', ['B3.death.corner.unshown'], [['B3.death.copy', null]], null], 'the death\'s arm that cannot re-open: its second form, "copy the text out" its one act');
   WRITE.setUnwritable('b-1', { why: 'keyless' });
   REC.setSession(/** @type {any} */ ({ session: 's-2', principal: 1, account: '1.0.1', writes: false, fingerprint: null }));
-  assert.deepEqual(kind(), ['death', 'B3.not-kept', ['B3.death.corner.stays'], [['B3.death.copy', null], ['B3.discard', null]], null], 'under the keyless session reading this board\'s held lines: its first form, the copy, then the discard live — and no statement, the table holding none for it');
+  assert.deepEqual(kind(), ['death', 'B3.not-kept', ['B3.death.corner.stays'], [['B3.death.copy', null], ['B3.discard', null]], 'B3.refused.discard'], 'under the keyless session reading this board\'s held lines: its first form, the copy, then the discard live, its statement the refused run\'s');
   WRITE.setUnwritable('b-1', null);
+});
+
+test('BM-24: under the keyless session over this board\'s held lines, the death face offers "copy the text out" then "discard this change" — the discard last — with the refused run\'s statement whole below the acts, in sense lines, and the discard described by it (the statement decision §8 case 5; E5 part 2)', () => {
+  unkeptDraft();
+  WRITE.setHeld(UD, [unkeptRow(1)]);
+  WRITE.setUnwritable('b-1', { why: 'keyless' });
+  REC.setSession(/** @type {any} */ ({ session: 's-2', principal: 1, account: '1.0.1', writes: false, fingerprint: null }));
+  try {
+    assert.equal(FACES.unkept(UD, null), true);
+    const shown = unkeptShown();
+    assert.deepEqual([shown.id, shown.head, shown.lines, shown.acts, shown.said, shown.below],
+      [`face:unkept:death:${UD}`, 'B3.not-kept', ['B3.death.corner.stays'], [['copy', 'B3.death.copy', null], ['discard', 'B3.discard', null]], 'B3.refused.discard', true],
+      'the head, its first form, the copy then the discard, and the statement on the face directly below the acts');
+    assert.ok(hostEl.innerHTML.includes(STATEMENT.below('B3.refused.discard')), 'the statement as the one drawing draws it: its two parts, each a line');
+    assert.ok(hostEl.innerHTML.includes(`aria-description="${esc(t('B3.refused.discard'))}"`), 'the discard described by its statement whole, the join of the parts');
+  } finally { WRITE.setUnwritable('b-1', null); HOST.dismiss(); }
 });
 
 test('BM-16, BM-27: what a discard did is said after it, each a line of its own and never joined — the line that may have landed; the read unanswered, nothing discarded, the face and its act standing — and each press sends one `resolve` through the machine', async () => {
