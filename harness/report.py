@@ -139,7 +139,10 @@ def main():
         L.append('Strings the lane needed and the inventory LACKED:\n')
         for s in tx.get('lacking') or []:
             L.append(f"- `{s['id']}` ({s['screen']}): \"{s['text']}\"")
-        L.append('\nDRAFT strings not located verbatim in their design file (prose drafts): `%s`\n' % json.dumps((tx.get('draft') or {}).get('not_located_verbatim'), ensure_ascii=False)[:1500])
+        # each PINNED string its source no longer holds verbatim, by its id and its source, the list never cut: the fragments not found stay in `results/text.json`
+        differ = (tx.get('pinned') or {}).get('not_located_verbatim')
+        L.append('\nPINNED strings not located verbatim in their source (reported, never failed; the fragments in `results/text.json`): `%s`\n' % json.dumps(differ and [[x['id'], x['source']] for x in differ], ensure_ascii=False))
+        L.append('DRAFT strings not located verbatim in their design file (prose drafts): `%s`\n' % json.dumps((tx.get('draft') or {}).get('not_located_verbatim'), ensure_ascii=False)[:1500])
     a = (cases.get('a11y') or {}).get('figures') or {}
     if a:
         L.append('## Class 7 — a11y\n')

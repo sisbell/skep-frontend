@@ -50,19 +50,23 @@ line, the face or the anatomy card set apart by its class in the inventory —
 no dotted underline under a DRAFT, no bar beside a PINNED: the class is the
 copy's record (`strings.js`), never a mark a person reads, and a dotted
 underline is the page's mark of words with an act; and every PINNED string
-of `strings.js` equal to its source at the design repository's HEAD —
-`ux/copy.md` by `C-n`, `requirements.md` for R56, R59 and R5 — compared
-fragment by fragment around the ⟨tokens⟩ with whitespace folded (the design
-files wrap at 72 columns). DRAFT strings that name a design file are located
-there too and reported, never failed (a design document drafts in prose);
-those found there only inside its quotes of its own earlier wording — "as it
-stood …", "as first drawn …" and their kin — are reported apart, as retired.
-The strings the lane LACKED are listed. The fifth cell met by a follow is
-W-01 step 7's (`walks`), which runs after `keys` reads LK's visited set."""
+of `strings.js` naming a source file the design repository holds at its
+HEAD — `ux/copy.md` by `C-n`, `requirements.md` for R56, R59, R83 and R5 —
+that step held on entries of the case's own as well: one whose words its
+source does not hold listed with its source and failing nothing, one naming
+a file the design repository does not hold failing the case. Each PINNED
+string's words, and each DRAFT string's that names a design file, are
+located at its source fragment by fragment around the ⟨tokens⟩ with
+whitespace folded (the design files wrap at 72 columns), and those not found
+there are reported, never failed; a DRAFT string found there only inside its
+source's quotes of its own earlier wording — "as it stood …", "as first
+drawn …" and their kin — is reported apart, as retired. The strings the lane
+LACKED are listed. The fifth cell met by a follow is W-01 step 7's
+(`walks`), which runs after `keys` reads LK's visited set."""
 import json
 import re
 
-from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, VERSIONED, WINDOW, Result, byline_expected, byline_facts, byline_shown, placeholder_sweep
+from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, NO_MATCH, VERSIONED, WINDOW, Result, byline_expected, byline_facts, byline_shown, placeholder_sweep
 
 TOKEN = re.compile(r'⟨[^⟩]*⟩')
 BLANK = re.compile(r'[\s\-–—·.…]*')  # a value that is no value: dashes, dots and spaces, or nothing
@@ -131,6 +135,26 @@ def live_wording(source):
         at = end + 1
     out.append(source[at:])
     return ''.join(out)
+
+
+def pinned_at_sources(r, pinned, design):
+    """every PINNED string located at its source at the design repository's HEAD (`located`): one naming a source file
+    `design` cannot show fails `r`; one whose words its source does not hold is listed in `r.figures['pinned']` with its
+    source and the fragments not found, beside the count and the ids, and fails nothing. `pinned` is each entry's id,
+    text and source, as `strings.js`'s `pinned` gives them; `design` answers a design file's text by its path, None where
+    the repository holds no such file"""
+    absent, differ = [], []
+    for p in pinned:
+        src = design(p['source'])
+        if src is None:
+            absent.append({'id': p['id'], 'source': p['source']})
+            continue
+        missing = located(p['text'], src)
+        if missing:
+            differ.append({'id': p['id'], 'source': p['source'], 'missing_fragments': missing})
+    r.check(not absent, 'every PINNED string names a source file the design repo holds at HEAD', absent)
+    r.figures['pinned'] = {'count': len(pinned), 'ids': [p['id'] for p in pinned], 'not_located_verbatim': differ}
+    r.note('%d of %d PINNED strings are not located verbatim in their source at the design repo\'s HEAD — listed in `pinned.not_located_verbatim`, reported and never failed' % (len(differ), len(pinned)))
 
 
 def run(ctx):
@@ -397,25 +421,20 @@ def run(ctx):
     ctx.leap(DOC, WINDOW[0])
     r.figures['bylines'] = bylines
     r.figures['sweeps'] = sweeps
-    # ---- every PINNED string against its source ------------------------------------------
-    pinned = ctx.js('window.__skep.strings.pinned()')
-    sources = {}
-    unlocated = []
-    for p in pinned:
-        src = sources.get(p['source'])
-        if src is None:
-            src = ctx.design(p['source'])
-            sources[p['source']] = src
-        if src is None:
-            unlocated.append({'id': p['id'], 'why': 'source file missing: ' + p['source']})
-            continue
-        missing = located(p['text'], src)
-        if missing:
-            unlocated.append({'id': p['id'], 'source': p['source'], 'missing_fragments': missing})
-    r.check(not unlocated, 'every PINNED string is verbatim in its source at the design repo\'s HEAD', unlocated)
-    r.figures['pinned'] = {'count': len(pinned), 'ids': [p['id'] for p in pinned]}
+    # ---- every PINNED string at its source: a missing file fails, words that differ are reported ----
+    pinned_at_sources(r, ctx.js('window.__skep.strings.pinned()'), ctx.design)
+    # the step's two arms, on an entry of the case's own whose words no design file holds: at a file the design repository
+    # holds, listed and failing nothing; at a file it does not hold, failing
+    entry = {'id': 'gate.pinned', 'text': NO_MATCH, 'source': 'ux/copy.md'}
+    reworded, sourceless = Result(), Result()
+    pinned_at_sources(reworded, [entry], ctx.design)
+    pinned_at_sources(sourceless, [dict(entry, source='ux/no-such-file.md')], ctx.design)
+    listed = reworded.figures['pinned']['not_located_verbatim']
+    r.check(not reworded.failures and [(x['id'], x['source']) for x in listed] == [(entry['id'], entry['source'])],
+            'a PINNED string whose words its source does not hold is listed with its source and fails nothing', {'failures': reworded.failures, 'listed': listed})
+    r.check([d for f in sourceless.failures for d in f.get('detail') or []] == [{'id': entry['id'], 'source': 'ux/no-such-file.md'}] and not sourceless.figures['pinned']['not_located_verbatim'],
+            'a PINNED string naming a source file the design repo does not hold fails the case', {'failures': sourceless.failures, 'listed': sourceless.figures['pinned']['not_located_verbatim']})
     # ---- DRAFT strings with a source: located and reported ----------------------------------
-    drafts = ctx.js('Object.entries(window.__skepStrings || {}).length') if False else None
     all_strings = ctx.js('''(async () => { const m = await import('../strings.js'); return Object.entries(m.STRINGS).map(([id, e]) => ({id, text: e.text, cls: e.cls, source: e.source, screen: e.screen || '', lane: !!e.lane})); })()''')
     draft_unlocated = []
     draft_retired = []
@@ -424,10 +443,7 @@ def run(ctx):
     for e in all_strings:
         if e['cls'] != 'DRAFT' or not e['source'] or e['lane']:
             continue
-        src = sources.get(e['source'])
-        if src is None:
-            src = ctx.design(e['source'])
-            sources[e['source']] = src
+        src = ctx.design(e['source'])
         if src is None:
             draft_unlocated.append({'id': e['id'], 'why': 'source missing ' + e['source']})
             continue

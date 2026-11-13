@@ -41,8 +41,8 @@
 // capitalised, the table holding no title of its own (`formTitle`); and the
 // place a line keeps for a form's chord filled by its chord where one is
 // bound, else by its act, named by the form's name (`formAgain`); `pinned`
-// lists the pinned entries for the gate's text case, which holds each to its
-// source.
+// lists the pinned entries for the gate's text case, which locates each at
+// its source.
 // Rules: FP-1, FP-2, FP-13, FP-32, FP-34.
 
 import { fill, esc, dayOf, timeOf } from './util.js';
