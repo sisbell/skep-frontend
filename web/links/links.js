@@ -89,9 +89,9 @@
 //     exactly the account the reader acts as where the index, run unbroken
 //     from the board's first position, lists no document at the address,
 //     else "no document known here" — whose whole form, its short form
-//     first, O-FACES' face at a follow of it says, N-WALK's item for it is
-//     described by and O-ANATOMY's inert "read side by side" gives as its
-//     reason; withheld, with its owner by the one owner rule (the
+//     first as a sentence, O-FACES' face at a follow of it says, N-WALK's
+//     item for it is described by and O-ANATOMY's inert "read side by side"
+//     gives as its reason; withheld, with its owner by the one owner rule (the
 //     reader `owner`) — each of these the client's words in its first line's
 //     place, bracketed (ST's `bracketed`); its first line by the one rule a
 //     box's label reads (the reader `first`, T-ARTICLE's `firstLineOf`) where
@@ -100,9 +100,11 @@
 //     names it carry those words, each stretch in its face (`farFaced`) — the
 //     address the identifier's, the document's words the reading face's, a
 //     list row's markup made so (`farLabelHTML`), and a name rendered for the
-//     ear from those stretches (`farLabelRuns`) — a list row's from its type,
-//     the way its link runs said "to" or "from" and them (`endRuns`), the
-//     arrow and the symbol drawn beside them kept out; a tail holding several
+//     ear from those stretches (`farLabelRuns`) — a list row's the way its
+//     link runs said "to" or "from" (`wayOf`) and them, then its type, a
+//     field after them, the far end and its word dropped where the end names
+//     no document (`endRuns`), the symbol drawn beside them kept out of the
+//     name; a tail holding several
 //     links carries that short form after its count only where every one of
 //     its far ends stands in the same such state (`tailFaced`);
 //   - a link shows as a symbol at its span where the reveal has reached stage
@@ -164,14 +166,14 @@
 // drawing modules — BM, T-LAYER, P-RENDER, SC, the cards — draw what `shown`,
 // `shownAt`, `symbols`, `beams`, `countAt`, `connections`, `tails`, `tailed`,
 // `markOf`, `mergedMark`, `lit`, `floats`, `farPos`, `besideAt`, `farWords`, `farFaced`,
-// `farLabel`, `farLabelHTML`, `farLabelRuns`, `endRuns`, `farEmpty`, `emptyAt`, `tailFaced`, `drawnIn` and `endKey` give them, and T-LAYER sets each document at the
+// `farLabel`, `farLabelHTML`, `farLabelRuns`, `wayOf`, `endRuns`, `farEmpty`, `emptyAt`, `tailFaced`, `drawnIn` and `endKey` give them, and T-LAYER sets each document at the
 // size the fold of what `utmost` gives takes.
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-11, FP-21, FP-22, FP-30.
 
 import * as REC from '../model/records.js';
 import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
 import { commonsType, documentOf, accountOf, isUnder, fieldsOf } from '../model/address.js';
-import { t, facedHTML, bracketed, withheldLine, typeName } from '../strings.js';
+import { t, facedHTML, bracketed, withheldLine, typeName, sentence, joinRuns } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Link} Link */
 /** @typedef {import('../model/records.js').Doc} Doc */
@@ -619,7 +621,8 @@ export function farWords(s) { return farFaced(s).map((r) => r.text).join(''); }
  * mints — one past the greatest document number the index lists in the
  * account — else that the account's new documents take its addresses in
  * order; everywhere else "no document known here", its whole form that
- * short form, then the fifth cell's words (`B1.doc_not_registered`).
+ * short form as a sentence (ST's `sentence`), then the fifth cell's words
+ * (`B1.doc_not_registered`).
  * Decided by the address, the session and the index alone: a caller states
  * it only where the board answered the address with nothing (`farEmpty`).
  * @param {string} addr
@@ -632,7 +635,7 @@ export function emptyAt(addr) {
     const clause = addr === `${account}.0.${last + 1}` ? 'L.far.empty.next' : 'L.far.empty.order';
     return { short: t('L.far.empty'), whole: [{ id: 'L.far.empty.whole', text: t('L.far.empty.whole', { address: addr }) }, { id: clause, text: t(clause) }] };
   }
-  return { short: t('L.far.unknown'), whole: [{ id: 'L.far.unknown', text: t('L.far.unknown') }, { id: 'B1.doc_not_registered', text: t('B1.doc_not_registered', { address: addr }) }] };
+  return { short: t('L.far.unknown'), whole: [{ id: 'L.far.unknown', text: sentence('L.far.unknown') }, { id: 'B1.doc_not_registered', text: t('B1.doc_not_registered', { address: addr }) }] };
 }
 
 /** what the page holds of a far end's document: its record, where it holds one; the far end's projection into it, where the end names a passage; its index row */
@@ -741,17 +744,22 @@ export function farLabelRuns(s) {
   return [{ text: s.far, face: 'ident' }, ...(words.length ? [{ text: ' · ', face: /** @type {const} */ ('client') }, ...words] : [])];
 }
 
+/** the way a drawn end's link runs from its near end, in words: "to" or "from", as the mirror's item says it — what every list row of ends draws before its far end */
+export const wayOf = (/** @type {Shown} */ s) => t(s.end === 'from' ? 'F.card.to' : 'F.card.from');
+
+/** the way a drawn end's link runs (`wayOf`) and its far end (`farLabelRuns`), as stretches; none where the end names no document */
+const toward = (/** @type {Shown} */ s) => (s.far ? [{ text: `${wayOf(s)} `, face: /** @type {const} */ ('client') }, ...farLabelRuns(s)] : []);
+
 /**
  * A drawn end's row named as every list of ends names it — the anatomy
- * card's, the links card's — as stretches in their faces: its type, the way
- * its link runs from the near end in words, "to" or "from" (as the mirror's
- * item says it), then its far end (`farLabelRuns`), which the name renders
- * for the ear (ST's `heard`); the link's symbol and the arrow drawn beside
- * them kept out (patterns K1).
+ * card's, the links card's — as stretches in their faces: the way its link
+ * runs from the near end in words and its far end (`toward`), then its type,
+ * a field after them (ST's `joinRuns`), which the name renders for the ear
+ * (ST's `heard`); the link's symbol drawn beside them kept out (patterns K1).
  * @param {Shown} s
  * @returns {import('../strings.js').Run[]}
  */
-export const endRuns = (s) => [{ text: `${typeName(s.link.type)} · ${t(s.end === 'from' ? 'F.card.to' : 'F.card.from')} `, face: /** @type {const} */ ('client') }, ...farLabelRuns(s)];
+export const endRuns = (s) => joinRuns(' · ', [toward(s), typeName(s.link.type)]);
 
 /** the symbols: stage 2 and above — the shown set at its spans, in a record's text (`shown`) */
 export function symbols(/** @type {string} */ addr, /** @type {Doc | null} */ over = textOf(addr)) { return state(addr).stage >= 2 ? shown(addr, over) : []; }

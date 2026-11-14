@@ -123,7 +123,8 @@ test('a landing whose text holds only part of the passage stands its line — it
   assert.ok(words, 'the landing says part of it');
   const s = LANDING.stateNow();
   assert.deepEqual(s && [s.id, s.words, s.acts.map((a) => a.act)], ['L.held.part', words, ['beside']], 'its words, and the one act it offers: the first edition beside it');
-  assert.ok(el.classList.contains('on') && el.innerHTML.includes('data-string="L.held.part"') && el.innerHTML.includes(addressedHTML(words)) && el.innerHTML.includes(`<span class="id">${FAR}</span>`), `its words, the far document's address in the identifier's face: ${el.innerHTML}`);
+  assert.equal(words, 'Only part of what you selected is in the current text of far.', 'the far document named by the label the index lists for it');
+  assert.ok(el.classList.contains('on') && el.innerHTML.includes('data-string="L.held.part"') && el.innerHTML.includes(addressedHTML(words)) && !el.innerHTML.includes('F.floating.last'), `its words, set as the line's markup, no version line where no act reads one: ${el.innerHTML}`);
   assert.deepEqual(el.acts(), ['beside'], 'a native button for each act');
   // the act held the focus as the next landing came: the line gone, the focus handed to the walk's element
   /** @type {any} */ (el.act('beside')).focus();

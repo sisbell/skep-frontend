@@ -64,7 +64,7 @@ import * as LK from '../links/links.js';
 import { accountCell } from '../plane/projection.js';
 import { entitlementArm, faceWords, faceRuns } from '../text/article.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
-import { STRINGS, t, tRuns, addressedHTML, sentence, sentences, heard, runningHTML } from '../strings.js';
+import { STRINGS, t, tRuns, addressedHTML, sentence, sentences, heard, runningHTML, opening } from '../strings.js';
 import { esc, byteLength, fingerprintCue } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
@@ -449,6 +449,15 @@ test('a jump reaching says so in its own words at the act\'s site, the one runni
   assert.deepEqual([HOST.currentState(), abandoned], [null, 1], 'dismissed — Esc\'s innermost thing — it abandons the jump');
 });
 
+test('a refusal whose entry stands alone at its face is set as a sentence — no link at the address, the passage no longer where it was — and the fifth cell\'s words stand as written, a sentence of their own, the address filled (style S1, S2)', () => {
+  const board = (/** @type {string} */ name) => /** @type {Refusal} */ ({ kind: 'refused', name, status: 200, code: name, detail: null, op: 'project', site: {}, body: null });
+  assert.deepEqual(['not_a_link', 'range_not_present', 'doc_not_registered'].map((name) => FACES.wordsFor(board(name), { addr: '1.0.2.0.9' })), [
+    { id: 'B1.not_a_link', text: 'There\'s no link at this address, or none you can see.', acts: [] },
+    { id: 'B1.range_not_present', text: 'The text there has moved, so that passage is no longer where it was.', acts: [] },
+    { id: 'B1.doc_not_registered', text: 'This board says nothing about 1.0.2.0.9: not even whether a document is there, published, or withheld from you.', acts: [] },
+  ]);
+});
+
 test('the fifth cell answering a follow says the far end\'s whole form in its one state — its first words the short form its label names it by, each later part beneath them, heard in that order, no act — and at a typed address the board\'s words alone (issue #224\'s design decision: "The label is always the face\'s first words, shown and spoken")', () => {
   const at = { span: { addr: '1.0.1.0.3', pos: 11, width: 5 } }, GONE = '1.0.1.0.9', THEIRS = '1.0.2.0.99';
   readAs(READERS[0]);
@@ -462,7 +471,7 @@ test('the fifth cell answering a follow says the far end\'s whole form in its on
       FACES.unregistered(addr, at, { far: true });
       const f = faceShown();
       assert.deepEqual([f?.id, f?.words, f?.acts, HOST.currentState()?.anchor], ['face:doc_not_registered', [e.whole[0].id, e.whole[0].text], [], at], `${what}: the fifth cell at the follow's site, its words the whole form's first part, no act`);
-      assert.ok(f && f.words && f.words[1].startsWith(e.short), `${what}: its first words the short form its label names it by: ${f && f.words}`);
+      assert.ok(f && f.words && f.words[1].startsWith(opening(short)), `${what}: its first words the short form its label names it by, a sentence's capital first: ${f && f.words}`);
       assert.deepEqual(notes(), e.whole.slice(1).map((p) => [p.id, p.text]), `${what}: each later part beneath them, in order`);
       assert.equal(live.textContent, heard(e.whole.map((p) => p.text).join(' ')), `${what}: heard in that order`);
       HOST.dismiss();
@@ -489,8 +498,8 @@ test('the face of a passage the person\'s own removal took says so in the decisi
   assert.equal(HOST.currentState(), null, 'an act made since its read answered: nothing shown');
 });
 
-test('the dead end\'s face offers the version offer handed in — "read version ⟨k⟩, the last that holds it", its number filled and no token left, its act the version move — and no act where none is; drawn again in its place as the offer is found, still told by its landing, the act\'s words said once and the face\'s own not again; a face no longer standing at that document never drawn again (issue #57)', () => {
-  const FAR = '1.0.1.0.127', at = { span: { addr: FAR, pos: 1 }, sign: FAR }, words = t('F.floating', { D: FAR }), label = t('F.floating.read', { k: 3 });
+test('the dead end\'s face — its words a sentence — offers the version offer handed in: "Version ⟨k⟩ is the last that has it." above its act, "Read version ⟨k⟩", its number filled and no token left, its act the version move — and no act where none is; drawn again in its place as the offer is found, still told by its landing, the line naming the version said once and the face\'s own words not again; a face no longer standing at that document never drawn again (issue #57)', () => {
+  const FAR = '1.0.1.0.127', at = { span: { addr: FAR, pos: 1 }, sign: FAR }, words = 'The passage is no longer in the current text of 1.0.1.0.127.', label = 'Read version 3', last = 'Version 3 is the last that has it.';
   /** @type {boolean[]} the version moves the act asked for: whether a key made each */
   const moves = [];
   const offer = { k: 3, go: (/** @type {boolean} */ byKey) => { moves.push(byKey); } };
@@ -500,15 +509,15 @@ test('the dead end\'s face offers the version offer handed in — "read version 
   FACES.offered(FAR, offer);
   const f = faceShown(), o = HOST.currentState();
   assert.deepEqual([f?.id, f?.words, f?.acts, o?.anchor, o?.told], ['face:floating', ['F.floating', words], ['a0'], at, true], 'drawn again in its place with its act, still told by its landing');
-  assert.ok(f && f.html.includes(`<button data-run="a0" class="">${esc(label)}</button>`) && !f.html.includes('⟨'), `the act in its own words, its number filled, no token left: ${f && f.html}`);
-  assert.equal(live.textContent, label, 'the act\'s words said through the status region, the face\'s own not again');
+  assert.ok(f && f.html.includes(`<div class="note" data-string="F.floating.last">${esc(last)}</div><div class="acts"><button data-run="a0" class="">${esc(label)}</button>`) && !f.html.includes('⟨'), `the last version that has it above the act, the act in its own words, its number filled, no token left: ${f && f.html}`);
+  assert.equal(live.textContent, last, 'the line naming the version said through the status region, the face\'s own words not again');
   o?.acts?.a0(/** @type {any} */ ({}), true);
   assert.deepEqual(moves, [true], 'its act the version move handed in, told a key made it');
   FACES.offered('1.0.1.0.128', offer);
   assert.equal(HOST.currentState(), o, 'an offer for another document draws nothing over it');
   HOST.dismiss();
   FACES.floating(FAR, at, offer);
-  assert.ok(faceShown()?.html.includes(esc(label)), 'shown with an offer standing: the act in its first frame');
+  assert.ok(faceShown()?.html.includes(esc(label)) && faceShown()?.html.includes(esc(last)), 'shown with an offer standing: the act and its line in its first frame');
   HOST.dismiss();
   live.textContent = '';
   FACES.offered(FAR, offer);

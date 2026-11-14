@@ -409,6 +409,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #landing.on { display:block; }
 #landing.covered { display:none; }
 #landing .acts { display:block; margin-top:3px; }
+/* the last version that has the passage, on a line of its own above the act that reads it */
+#landing .last { display:block; margin-top:3px; }
 /* AN ARRIVAL'S RUNS' LABELS (issue #158's design decision): each at the text's edge beside its run's first line (O-LAND places
    them), in the arrival's hue, under the landing's line; their room the edge and the gutter beside it, wrapped there */
 #pieces { position:fixed; left:0; top:0; width:0; height:0; z-index:24; pointer-events:none; }
@@ -452,6 +454,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #overlay.face, #notice.face { border-color:var(--warn); }
 #overlay.moment { border-style:double; border-width:3px; }
 :is(#overlay, #notice) .label { display:block; font-size:9.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--dim); margin:0 0 4px; }
+/* a link card's caption — the links card's, the anatomy card's and its lists of ends' — set as its words are written,
+   never in capitals (style S10) */
+:is(#overlay, #notice) .label.cased { text-transform:none; }
 /* the dismiss: a native button placed after the content in the order (the ring's last stop in the overlay; rule 13), drawn at the top right corner, sized to be pressed */
 :is(#overlay, #notice) .x { position:absolute; top:3px; right:4px; margin:0; padding:0 5px; min-width:18px; min-height:18px; line-height:1; background:none; border:0; color:var(--dim); cursor:pointer; font-size:13px; }
 :is(#overlay, #notice) .x:hover { color:var(--ink); background:none; }

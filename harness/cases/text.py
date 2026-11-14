@@ -38,7 +38,7 @@ holds (a bare dash reads as B1-S5's "none"), the row after the owner's
 saying when the link was made — the day the board's own `read_link` dates it,
 in the page's one form of a date, and no "age" row (issue #22) — its two lineage rows
 among them — `in_claims` and `out_claims` asked for its link under the audit
-view, and "superseded by" and "supersedes" each reading the claims with
+view, and "Replaced by" and "Replaces" each reading the claims with
 authority its read answered, the authority recomputed here from the tumblers
 (issue #143's design decision: the account of the claim's home owns `old`):
 the addresses its claims name on that side, a claimant the owner row does
@@ -318,7 +318,8 @@ def run(ctx):
     ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(GHOST))
     ctx.settle()
     face = ctx.overlay_shown()
-    r.check(face['kind'] == 'face' and 'nothing this board will say about this address' in face['text'] and GHOST in face['text'], 'the dead-reference face carries B1\'s doc_not_registered words with the address', face['text'][:200])
+    fifth = ctx.js('import("./strings.js").then(({t}) => t("B1.doc_not_registered", {address: %s}))' % json.dumps(GHOST))
+    r.check(face['kind'] == 'face' and fifth in face['text'] and GHOST in face['text'], 'the dead-reference face carries B1\'s doc_not_registered words with the address', {'face': face['text'][:200], 'want': fifth})
     r.check('doc_not_registered' not in face['text'].lower() and face['acts'] == 0, 'the fifth cell\'s face is its words alone: no wire token above them, no act beneath (B1-S8; C-42)', face)
     marks = wording_marks(ctx, '#overlay')
     r.check('B1.doc_not_registered' in marks['shown'] and not marks['marked'], 'the face\'s words are set apart by no class of theirs in the inventory — no dotted underline, no bar at their left', marks)

@@ -58,7 +58,8 @@
 // `not_a_link`, C-39 at a link address inside a withheld document with the
 // entitlement arm the run's placeholder
 // carries beneath it (T-ARTICLE's one rule, by the reader),
-// `range_not_present`, the `invalid` follow, `scan_busy`,
+// `range_not_present` — each of these two its entry set as a sentence — the
+// `invalid` follow, `scan_busy`,
 // `endsets_too_large`, `too_many_blocks`, `too_many_pairs`,
 // `too_much_coverage`, the session's `no_key` (C-136 with this version's
 // limit), `unreachable`; the editor's refusal names (B3; D6), each its
@@ -89,9 +90,11 @@
 // `claimsKeptIn`; FP-23, FP-33), about the run, so it leaves and returns with
 // its place and stands through a version move (`withheldRun`, `reopenRun`;
 // FP-36); the dead end's face at the head a landing stands at (`floating`;
-// FP-21), its act, where N-GO hands one in, the version move its reads found
-// to the last member that holds the passage whole, the face standing drawn
-// again with it, no act on the chrome, as those reads answer (`offered`);
+// FP-21), its words a sentence naming the document by its label (BM-HELD's
+// `floatingSaid`), its act, where N-GO hands one in, the version move its
+// reads found to the last member that holds the passage whole, the line
+// naming that member above it, the face standing drawn again with them, no
+// act on the chrome, as those reads answer (`offered`);
 // the face of a passage the person's own removal took whole from a draft, at
 // the removal point, its one act the put-back N-GO hands in (`removed`);
 // what a text holds of what a reading scene's stop the reader returned to
@@ -209,8 +212,7 @@ import * as WRITE from '../write/write.js';
 import * as MACHINE from '../write/machine.js';
 import { below, spoken } from './statement.js';
 import { entitlementArm, placeholderOf, faceRuns, CLAUSE_READING } from '../text/article.js';
-import { retries, lineOf } from '../beams/held.js';
-import { memberOf } from '../model/address.js';
+import { retries, lineOf, floatingSaid } from '../beams/held.js';
 import { drawChord } from '../nav/keys.js';
 import { t, tRuns, addressedHTML, endingOf, sentence, heard, duration, runningHTML } from '../strings.js';
 import { esc, fingerprintCue } from '../util.js';
@@ -402,14 +404,16 @@ export function wordsFor(r, ctx = {}) {
   const name = r.name;
   const addr = ctx.addr || '';
   const f = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ v = {}) => /** @type {Face} */ ({ id, text: t(id, v), acts: /** @type {Face['acts']} */ ([]) });
+  /** a face whose entry stands alone as a line, set as a sentence (ST's `sentence`) */
+  const said = (/** @type {string} */ id) => /** @type {Face} */ ({ id, text: sentence(id), acts: /** @type {Face['acts']} */ ([]) });
   /** a face saying words were lost: its head "not kept", and the act that copies the unkept words out */
   const lost = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ v = {}) => /** @type {Face} */ ({ ...f(id, v), head: { id: 'B3.not-kept', text: t('B3.not-kept') }, acts: [{ label: t('B3.copy-words-out'), run: ctx.copy }] });
   /** the tokens an entry carries that its refusal does not, filled where the caller hands them in */
   const given = /** @type {Record<string, string>} */ (Object.fromEntries(Object.entries({ board: ctx.board, time: ctx.time, floor: ctx.floor }).filter(([, v]) => typeof v === 'string')));
   switch (name) {
     case 'doc_not_registered': return f('B1.doc_not_registered', { address: addr });
-    case 'not_a_link': return f('B1.not_a_link');
-    case 'range_not_present': return f('B1.range_not_present');
+    case 'not_a_link': return said('B1.not_a_link');
+    case 'range_not_present': return said('B1.range_not_present');
     case 'scan_busy': return f('B1.scan_busy');
     case 'endsets_too_large': return f('B1.endsets_too_large');
     case 'too_many_blocks': return f('B1.too_many_blocks');
@@ -787,24 +791,21 @@ export function endReading() {
   for (const o of [HOST.currentState(), HOST.notice()]) if (o && o.id && o.id.startsWith(READING)) HOST.complete(o.id);
 }
 
-/** the `invalid` follow: no such link or slot */
+/** the `invalid` follow: the link's other end is empty (`B1.invalid`) */
 export function invalidFollow(/** @type {Anchor | HTMLElement | {x: number, y: number} | null} */ anchor) {
   HOST.show({ kind: 'face', id: 'face:invalid', anchor: toAnchor(anchor), html: faceHTML({ id: 'B1.invalid', text: t('B1.invalid'), acts: [] }) });
 }
 
 /**
  * The dead end's words for a document whose text holds none of a passage
- * (foundations §2.3): "its passage is not in ⟨D⟩'s current text", and at a
- * pinned member in its own words, "its passage is not in version ⟨k⟩" — the
- * floating face's, and the landing's description where it lands there
- * (N-GO's `described`; FP-21).
+ * (foundations §2.3), as a sentence with its string — BM-HELD's one rule
+ * (`floatingSaid`): at a plain address the document named by its label, at a
+ * pinned member that member's own — the floating face's, and the landing's
+ * description where it lands there (N-GO's `described`; FP-21).
  * @param {string} far
  * @returns {{id: string, text: string}}
  */
-export function floatingWords(far) {
-  const k = memberOf(far);
-  return k != null ? { id: 'F.floating.member', text: t('F.floating.member', { k }) } : { id: 'F.floating', text: t('F.floating', { D: far }) };
-}
+export const floatingWords = (far) => floatingSaid(far);
 
 /**
  * @typedef {Object} Offer — a landing's version offer, as N-GO's reads found it (see the head; `floating`)
@@ -813,8 +814,9 @@ export function floatingWords(far) {
  */
 
 /**
- * The dead end's face as an overlay (`floating`): its words, and the version
- * offer's act in its own words, its member named, where an offer stands.
+ * The dead end's face as an overlay (`floating`): its words, and where an
+ * offer stands, the line naming the last member that has the passage
+ * (`F.floating.last`) above the offer's act, which reads that member.
  * @param {string} far
  * @param {Anchor | null} at
  * @param {Offer | null} offer
@@ -823,9 +825,10 @@ export function floatingWords(far) {
  * @returns {import('./host.js').Overlay}
  */
 function floatingFace(far, at, offer, told, notice) {
+  const last = offer ? `<div class="note" data-string="F.floating.last">${addressedHTML(t('F.floating.last', { k: offer.k }))}</div>` : '';
   return {
     kind: 'face', id: 'face:floating', anchor: at, told, notice, acts: offer ? { a0: (_el, byKey) => offer.go(byKey) } : {},
-    html: faceHTML({ ...floatingWords(far), acts: offer ? [{ label: t('F.floating.read', { k: offer.k }) }] : [] }),
+    html: faceHTML({ ...floatingWords(far), acts: offer ? [{ label: t('F.floating.read', { k: offer.k }) }] : [] }, last),
   };
 }
 
@@ -879,17 +882,18 @@ export function removed(addr, anchor, back, told = false, asked = null) {
 /**
  * The dead end's face standing at `far` — in the overlay's place, or below it
  * as a notice — takes the version offer its landing's reads found (see the
- * head): drawn again in its place with the offer's act, no act on the chrome
- * (O-HOST's `redraw`), its words not said again and the act's said through
- * the status region (FP-36). Nothing where that face no longer stands — one
- * the reader dismissed, or an act took the place of, stays gone.
+ * head): drawn again in its place with the offer's line and act, no act on
+ * the chrome (O-HOST's `redraw`), its words not said again and the offer's
+ * line said through the status region (FP-36). Nothing where that face no
+ * longer stands — one the reader dismissed, or an act took the place of,
+ * stays gone.
  * @param {string} far the document the face names
  * @param {Offer} offer
  */
 export function offered(far, offer) {
   const o = HOST.standingAs('face:floating');
   if (!o || !o.anchor || !o.anchor.span || o.anchor.span.addr !== far) return;
-  if (HOST.redraw(floatingFace(far, o.anchor, offer, !!o.told, !!o.notice))) FOCUS.say(t('F.floating.read', { k: offer.k }));
+  if (HOST.redraw(floatingFace(far, o.anchor, offer, !!o.told, !!o.notice))) FOCUS.say(t('F.floating.last', { k: offer.k }));
 }
 
 /** @typedef {{kind: 'withheld', addr: string, pos: number, width: number, ids: import('../model/records.js').ISpan[], origin: string}} About what a withheld run's card is about (O-HOST's `about`): the run, by its position in the text shown and its bytes' identity, and its origin */

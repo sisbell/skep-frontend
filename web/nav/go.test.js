@@ -88,12 +88,20 @@ import { entitlementArm } from '../text/article.js';
 import { isElement } from '../text/span.js';
 import { STRINGS, t, tHTML, addressedHTML, sentence, opening, hintSentences, heard } from '../strings.js';
 import { esc } from '../util.js';
+import { nameIn } from '../beams/held.js';
 import * as TRAIL from './trail.js';
 import * as WALK from './walk.js';
 import * as KEYS from './keys.js';
 import * as LEAP from './leap.js';
 import * as GO from './go.js';
 import * as FOCUS from './focus.js';
+
+/** the dead end's words at a document's bare address as its face and a landing's description set them: a sentence naming the document as a line names it (BM-HELD's `nameIn`) */
+const deadEnd = (/** @type {string} */ addr) => sentence('F.floating', { D: nameIn(addr) });
+/** the dead end's words at a version member, a sentence */
+const deadAt = (/** @type {number} */ k) => sentence('F.floating.member', { k });
+/** words as the first words of a sentence: their first letter a capital (style S1) */
+const opened = (/** @type {string} */ words) => words.charAt(0).toUpperCase() + words.slice(1);
 
 const D = '1.0.1.0.3', FAR = '1.0.1.0.127', CITE = '1.1.0.1.0.1.0.3.13';
 const NEAR_TEXT = 'Tumbler.\n\nThe first field.', FAR_TEXT = 'The far edition.\n\nIts cited passage stands here.';
@@ -454,6 +462,9 @@ test('a follow of a far end the far document\'s text holds in two runs apart out
   assert.equal(GO.landing()?.beside, null, 'no side-by-side offer: the first edition holds none of FAR\'s passage');
   for (let i = 0; i < 50 && GO.landing()?.version == null; i++) await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual([GO.landing()?.version, GO.landingOffers()], [1, { steps: true, again: false, version: true }], 'FAR published, its first member holding the passage whole: offered, the latest member doing so other than the text landed in; the step offered among the runs');
+  const line = LANDING.stateNow();
+  assert.deepEqual(line && [line.words, line.last, line.acts.map((a) => [a.act, a.label])], [words, 'Version 1 is the last that has it.', [['next', t('L.piece.next')], ['previous', t('L.piece.previous')], ['version', 'Read version 1']]],
+    'the line carries the last version that has the passage, above the act that reads it in its own words');
   const at = CAM.view();
   GO.landingAct('version');
   let flew = false;
@@ -610,7 +621,7 @@ test('Back to the place where Back\'s light outlined a withheld run, an edit set
   }
 });
 
-test('a follow of a far end the far document\'s text no longer holds lands at that document\'s head, faced there, the link lit and nothing outlined, the face offering no act while its reads seek the latest member holding the passage whole and, once they find it, "read version ⟨k⟩, the last that holds it", its number filled; Back returns to it, the face shown there again offering nothing — an offer that read is not restored — and nothing lit, the link lit again only where Back crosses the follow (issue #57)', async () => {
+test('a follow of a far end the far document\'s text no longer holds lands at that document\'s head, faced there, the link lit and nothing outlined, the face offering no act while its reads seek the latest member holding the passage whole and, once they find it, "Version ⟨k⟩ is the last that has it." above its act, "Read version ⟨k⟩", its number filled; Back returns to it, the face shown there again offering nothing — an offer that read is not restored — and nothing lit, the link lit again only where Back crosses the follow (issue #57)', async () => {
   takeFloat();
   memberUnread();
   await run(GO.leapTo(D));
@@ -626,7 +637,7 @@ test('a follow of a far end the far document\'s text no longer holds lands at th
   assert.ok(same(CAM.view(), GO.viewFor(FAR, FAR_HEAD)), 'the camera at the head\'s view');
   assert.deepEqual(walkAt(), ['block', FAR, FAR_HEAD], 'the walk on the head');
   const f = faceShown();
-  assert.ok(f && f.id === 'face:floating' && f.html.includes('data-string="F.floating"') && f.html.includes(addressedHTML(t('F.floating', { D: FAR }))), `the dead end's words: ${f && f.html}`);
+  assert.ok(f && f.id === 'face:floating' && f.html.includes('data-string="F.floating"') && f.html.includes(addressedHTML(deadEnd(FAR))), `the dead end's words: ${f && f.html}`);
   assert.deepEqual([f && f.acts, GO.landing()?.version], [false, null], 'no act while its reads seek the member: never a number it does not have');
   assert.deepEqual(HOST.currentState()?.anchor, { span: { addr: FAR, pos: FAR_HEAD }, sign: FAR }, 'standing at the head landed on, never at the act\'s site');
   seeking();
@@ -634,13 +645,13 @@ test('a follow of a far end the far document\'s text no longer holds lands at th
   const offered = faceShown();
   assert.deepEqual([GO.landing()?.version, GO.landingOffers().version, offered?.id, HOST.currentState()?.anchor, HOST.currentState()?.told], [1, true, 'face:floating', { span: { addr: FAR, pos: FAR_HEAD }, sign: FAR }, true],
     'FAR published, its first member holding the passage whole: offered, the face drawn again where it stood, still told by the landing');
-  assert.ok(offered && offered.html.includes(`<button data-run="a0" class="">${esc(t('F.floating.read', { k: 1 }))}</button>`) && !offered.html.includes('⟨'), `its act "read version 1, the last that holds it", its number filled and no token left: ${offered && offered.html}`);
+  assert.ok(offered && offered.html.includes(`<div class="note" data-string="F.floating.last">${esc(t('F.floating.last', { k: 1 }))}</div><div class="acts"><button data-run="a0" class="">${esc(t('F.floating.read', { k: 1 }))}</button>`) && !offered.html.includes('⟨'), `"Version 1 is the last that has it." above its act, "Read version 1", its number filled and no token left: ${offered && offered.html}`);
   await run(GO.leapTo(D));
   assert.equal(faceShown(), null, 'the next landing dismisses it');
   await run(GO.back());
   assert.deepEqual([walkAt(), marks()], [['block', FAR, FAR_HEAD], [null, []]], 'Back lands at the head, lighting nothing: the step it crossed, a LEAP, carried nothing — the notice\'s link not relit, nor any arrival (issue #152)');
   const again = faceShown();
-  assert.ok(again && again.id === 'face:floating' && again.html.includes(addressedHTML(t('F.floating', { D: FAR }))) && !again.acts, 'the dead end\'s face shown there again, offering nothing: an offer that read is not restored');
+  assert.ok(again && again.id === 'face:floating' && again.html.includes(addressedHTML(deadEnd(FAR))) && !again.acts && !again.html.includes('F.floating.last'), 'the dead end\'s face shown there again, offering nothing: an offer that read is not restored');
   assert.deepEqual(HOST.currentState()?.anchor, { span: { addr: FAR, pos: FAR_HEAD }, sign: FAR }, 'at the head');
   await run(GO.back());
   assert.deepEqual(marks(), [null, [FLOAT]], 'Back to the follow\'s departure lights the link there');
@@ -688,7 +699,7 @@ test('a follow whose projection the board declines by a name that says nothing o
   assert.deepEqual([faceShown(), marks(), walkAt()], [null, [null, [DECLINED]], ['block', FAR, FAR_HEAD]], 'no face in the landing\'s place: landed at FAR\'s head, nothing outlined, the link lit');
   const e = TRAIL.current();
   assert.deepEqual(e && [e.addr, e.pos, e.width, e.notice], [FAR, FAR_HEAD, null, null], 'its entry settled at the head, no notice');
-  const words = sentence('L.held.unknown', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }), reason: t('B1.not_a_link') });
+  const words = sentence('L.held.unknown', { subject: t('L.held.followed'), where: t('L.held.current', { D: nameIn(FAR) }), reason: t('B1.not_a_link') });
   assert.deepEqual([GO.landing()?.said?.state, GO.landing()?.said?.why, GO.landingLine()], ['unknown', 'B1.not_a_link', words], 'the line: it could not tell, by the projection\'s own `not_a_link`');
   assert.deepEqual(GO.landingOffers(), { steps: false, again: false, version: false }, 'no "try again": the board\'s verdict is permanent');
   assert.deepEqual(fake.unanswered, []);
@@ -745,7 +756,7 @@ test('the anatomy card reads the far end where its passage stands now — one an
   assert.notEqual(quoted(), esc(REC.textBetween(FAR, 8, 13)), 'never the text at its stored position');
   HOST.dismiss();
   await ANATOMY.open(drawn(FLOAT), null);
-  assert.equal(quoted(), addressedHTML(t('F.floating', { D: FAR })), 'floating: the dead end\'s words, said before anyone follows it, the address in the identifier\'s face');
+  assert.equal(quoted(), addressedHTML(deadEnd(FAR)), 'floating: the dead end\'s words, a sentence, said before anyone follows it, the document named as a line names it');
   HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });
@@ -911,7 +922,7 @@ test('a follow\'s LEAP to the source of the words it carries, a source whose tex
   assert.deepEqual([TRAIL.length(), CAM.flying(), GO.litLinks()], [n, false, []], 'no entry, no flight, nothing lit');
   assert.deepEqual(fake.asked.slice(from).filter((k) => !k.includes('"op":"find_links_ftt"')), [], 'nothing read of the source, no compare: only the edition claims its face\'s clause waits on');
   assert.deepEqual([o?.id, o?.anchor], ['face:withheld', site], 'its face at the words the follow was made at');
-  assert.ok(html.startsWith(`<span class="label">${esc(t('B1.follow') + ' · ' + WITHDRAWN)}</span><div class="face-addr code id">${WITHDRAWN}</div>`), `named by the follow's caption, the source's address before its words: ${html}`);
+  assert.ok(html.startsWith(`<span class="label">${esc(t('B1.follow.to', { far: WITHDRAWN }))}</span><div class="face-addr code id">${WITHDRAWN}</div>`), `named by the follow's caption, "Follow to" the source, its address before its words: ${html}`);
   HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });
@@ -921,8 +932,8 @@ test('a LEAP carrying a passage the text landed in holds only part of keeps its 
     await run(GO.leapTo(D));
     await run(GO.leapTo(FAR, { how: 'leap', carry: { ...PARTIAL, selected } }));
     assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: 25, runs: [{ pos: 25, width: 5 }], link: null }, 'the part FAR holds outlined, as before');
-    const words = sentence('L.held.part', { subject: t(selected ? 'L.held.selected' : 'L.held.reading'), where: t('L.held.current', { D: FAR }) });
-    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine()], ['part', words], `"Only part of ${selected ? 'what you selected' : 'the text you were reading'} is in ⟨D⟩'s current text.", no places counted`);
+    const words = sentence('L.held.part', { subject: t(selected ? 'L.held.selected' : 'L.held.reading'), where: t('L.held.current', { D: nameIn(FAR) }) });
+    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine()], ['part', words], `"Only part of ${selected ? 'what you selected' : 'the text you were reading'} is in the current text of ⟨D⟩.", no places counted`);
     assert.ok(!/missing|removed|deleted|compare/.test(words), `never "missing", "removed", "deleted" or "compare": ${words}`);
     assert.deepEqual(GO.landing()?.beside, { a: D, held: { posA: 1, widthA: 12, ids: [{ prefix: D + '.0.1', ordinal: 1, width: 12 }] } }, 'the first edition holds it whole: read side by side with it, the passage held there by its bytes');
     for (let i = 0; i < 50 && fake.asked.slice(-1)[0] !== FAKE.keyOf('op', { frame: carried(PARTIAL, FAR1, FAR_EXTENT) }); i++) await new Promise((r) => setTimeout(r, 0));
@@ -953,8 +964,8 @@ test('a LEAP carrying a passage whose compare the board does not answer lands at
     await run(GO.leapTo(D));
     await run(GO.leapTo(FAR, { how: 'leap', carry: UNANSWERED }));
     assert.deepEqual([GO.arrivalMark(), walkAt(), faceShown()], [null, ['document', FAR, null], null], 'unmarked, at the document as asked, no face');
-    const words = sentence('L.held.unknown', { subject: t('L.held.reading'), where: t('L.held.current', { D: FAR }), reason: t('F.daemon.unreachable') });
-    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine(), GO.landingOffers()], ['unknown', words, { steps: false, again: true, version: false }], '"Couldn\'t tell whether ⟨D⟩\'s current text holds the text you were reading: board unreachable.", and "try again"');
+    const words = sentence('L.held.unknown', { subject: t('L.held.reading'), where: t('L.held.current', { D: nameIn(FAR) }), reason: t('F.daemon.unreachable') });
+    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine(), GO.landingOffers()], ['unknown', words, { steps: false, again: true, version: false }], '"This app couldn\'t tell whether the current text of ⟨D⟩ has the text you were reading: board unreachable.", and "try again"');
     assert.deepEqual(GO.described(), { addr: FAR, pos: FAR_HEAD, words, kind: t('F.published'), runs: [] }, 'the line the description of the document landed on, FAR\'s kind before it');
     const entry = TRAIL.current(), n = TRAIL.length();
     outage = false;
@@ -977,19 +988,19 @@ test('a LEAP carrying a passage the text landed in holds none of lands at its fi
   assert.ok(same(CAM.view(), GO.viewFor(FAR, 1)), 'the camera at the document\'s head');
   assert.deepEqual(walkAt(), ['block', FAR, 1]);
   const f = faceShown();
-  assert.ok(f && f.id === 'face:floating' && f.html.includes('data-string="F.floating"') && f.html.includes(addressedHTML(t('F.floating', { D: FAR }))), `the dead end's words: ${f && f.html}`);
+  assert.ok(f && f.id === 'face:floating' && f.html.includes('data-string="F.floating"') && f.html.includes(addressedHTML(deadEnd(FAR))), `the dead end's words: ${f && f.html}`);
   assert.equal(f && f.acts, false, 'no act: the versions list holds no passage of another document');
-  assert.deepEqual([GO.landingLine(), GO.described()], [null, { addr: FAR, pos: 1, words: t('F.floating', { D: FAR }), kind: t('F.published'), runs: [] }], 'no line: the dead end\'s face says it, and its words are the description of the item landed on, FAR\'s kind before them (issue #153)');
+  assert.deepEqual([GO.landingLine(), GO.described()], [null, { addr: FAR, pos: 1, words: deadEnd(FAR), kind: t('F.published'), runs: [] }], 'no line: the dead end\'s face says it, and its words are the description of the item landed on, FAR\'s kind before them (issue #153)');
   assert.equal(HOST.currentState()?.told, true, 'its face told by that description, never repeated by the status region');
   await run(GO.leapTo(D));
   assert.equal(faceShown(), null, 'the next landing dismisses it');
   await run(GO.leapTo(FAR2, { how: 'leap', carry: UNSHARED }));
   const m = faceShown();
-  assert.ok(m && m.html.includes('data-string="F.floating.member"') && m.html.includes(esc(t('F.floating.member', { k: 2 }))), `at a member, in the member's own words: ${m && m.html}`);
-  assert.equal(GO.described()?.words, t('F.floating.member', { k: 2 }), 'the description in the member\'s own words');
+  assert.ok(m && m.html.includes('data-string="F.floating.member"') && m.html.includes(esc(deadAt(2))), `at a member, in the member's own words: ${m && m.html}`);
+  assert.equal(GO.described()?.words, deadAt(2), 'the description in the member\'s own words');
   await run(GO.leapTo(D));
   await run(GO.back());
-  assert.deepEqual([faceShown()?.id, HOST.currentState()?.told, GO.described(), walkAt()], ['face:floating', true, { addr: FAR2, pos: 1, words: t('F.floating.member', { k: 2 }), kind: t('F.published'), runs: [] }, ['block', FAR2, 1]],
+  assert.deepEqual([faceShown()?.id, HOST.currentState()?.told, GO.described(), walkAt()], ['face:floating', true, { addr: FAR2, pos: 1, words: deadAt(2), kind: t('F.published'), runs: [] }, ['block', FAR2, 1]],
     'Back onto its entry restores the landing as the reader left it: the face shown again, told by the description of the item the walk returns to, the head, never by the status region as well');
   assert.deepEqual(fake.unanswered, []);
 });
@@ -1518,7 +1529,7 @@ test('a follow whose far document\'s text the page holds and the board now withh
   const o = HOST.currentState(), html = hostEl.innerHTML, arm = entitlementArm({ account: '1.0.1', keyPresent: false }, '1.0.2');
   assert.deepEqual([TRAIL.length(), LK.visited(TURNED_LINK), GO.litLinks(), CAM.flying()], [n, false, [TURNED_LINK], false], 'no flight, no entry, the link not counted as followed and lit');
   assert.deepEqual([o?.id, o?.anchor], ['face:withheld', { span: { addr: D, pos: 5, width: 2 } }], 'its face at the link\'s own bytes, no sign hiding it');
-  assert.ok(html.startsWith(`<span class="label">${esc(t('B1.follow') + ' · ' + TURNED)}</span><div class="face-addr code id">${TURNED}</div>`), `named by the follow's caption, the far document's address before its words: ${html}`);
+  assert.ok(html.startsWith(`<span class="label">${esc(t('B1.follow.to', { far: TURNED }))}</span><div class="face-addr code id">${TURNED}</div>`), `named by the follow's caption, "Follow to" the far document, its address before its words: ${html}`);
   assert.ok(html.includes(`>${addressedHTML(t('F.corner.withheld', { owner: '1.0.2' }))}</button><div class="arm" data-string="${arm.id}">`), 'its own withheld words whole, the arm beneath');
   HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
@@ -1796,7 +1807,7 @@ test('a follow whose far text holds its passage in two runs whose bytes the boar
   await run(GO.leapTo(D));
   await run(GO.follow(drawn(UNNAMED_LINK)));
   assert.deepEqual(GO.arrivalMark(), { addr: UNNAMED, pos: 3, runs: [{ pos: 3, width: 4 }, { pos: 12, width: 5 }], link: UNNAMED_LINK }, 'both runs outlined, the landing at the first in the text');
-  const words = sentence('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: UNNAMED }) });
+  const words = sentence('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: nameIn(UNNAMED) }) });
   assert.deepEqual([GO.landing()?.said?.state, GO.landing()?.pieces, GO.landingLine(), GO.landingOffers().steps], ['part', null, words, false], 'nine positions of twenty in two runs: part, no runs labelled and no step, the line counting no places');
   await run(GO.leapTo(D));
   assert.deepEqual(fake.unanswered, []);
@@ -2070,7 +2081,7 @@ test('wherever a follow meets a far end the board will say nothing of — known 
     const words = labelled(link), whole = LK.emptyAt(far).whole.map((p) => p.text).join(' ');
     assert.equal(faceShown()?.id, 'face:doc_not_registered', `${what}: the fifth cell`);
     assert.ok(words && [t('L.far.empty'), t('L.far.unknown')].includes(words), `${what}: the far end's label names it by its state: ${words}`);
-    assert.ok(said().startsWith(words) && said() === whole, `${what}: the face opens with "${words}", then the rest of the state: ${said()}`);
+    assert.ok(said().startsWith(opened(words)) && said() === whole, `${what}: the face opens with "${words}", a sentence's capital first, then the rest of the state: ${said()}`);
     HOST.dismiss();
   }
   assert.equal(labelled(REACH_DEAD), t('L.far.unknown'), 'another board\'s address: no document known here');
@@ -2932,8 +2943,8 @@ test('a version move to a version that lacks the passage held keeps its line at 
   assert.deepEqual(e && [e.addr, e.pos, e.width, e.notice?.face], [FAR1, FAR_HELD.pos, null, 'floating'], 'its entry at the second paragraph, the first position the two share past the passage, the dead end\'s face its notice');
   assert.deepEqual([GO.shownIn(FAR), GO.arrivalMark(), walkAt()], [FAR1, null, ['block', FAR1, FAR_HELD.pos]], 'the box takes the member, nothing outlined, the walk at that shared passage');
   const f = faceShown();
-  assert.ok(f && f.id === 'face:floating' && f.html.includes(esc(t('F.floating.member', { k: 1 }))) && !f.acts, `the face: "its passage is not in version 1", no act: ${f && f.html}`);
-  assert.deepEqual(GO.described(), { addr: FAR1, pos: FAR_HELD.pos, words: t('F.floating.member', { k: 1 }), kind: null, runs: [] }, 'the description of the item landed on — no kind: a version move lands in the box it left');
+  assert.ok(f && f.id === 'face:floating' && f.html.includes(esc(deadAt(1))) && !f.acts, `the face: "The passage isn't in version 1.", no act: ${f && f.html}`);
+  assert.deepEqual(GO.described(), { addr: FAR1, pos: FAR_HELD.pos, words: deadAt(1), kind: null, runs: [] }, 'the description of the item landed on — no kind: a version move lands in the box it left');
   await run(GO.leapTo(FAR));
   assert.equal(await inPlace(GO.toVersion(FAR2, { carry: FAR_FIRST })), false);
   assert.deepEqual([TRAIL.current()?.pos, walkAt(), faceShown()?.id], [1, ['block', FAR2, 1], 'face:floating'], 'sharing nothing: the version\'s head takes the line, the face as before');
@@ -2985,7 +2996,7 @@ test('a version move keeps the selection standing (issue #266\'s design decision
     SEL.select(FAR, FAR_FIRST.pos, FAR_FIRST.width);
     await inPlace(GO.toVersion(FAR1));
     assert.deepEqual([GO.shownIn(FAR), SEL.selected(), HOST.currentState()?.id, HOST.notice()?.id], [FAR1, { ...FAR_FIRST }, 'selection', 'face:floating'], 'a passage the first member holds none of: the selection stays on the version it names, its card standing, the dead end\'s face below the card');
-    assert.ok(saidBelow(t('F.floating.member', { k: 1 })), `"its passage is not in version 1", said: ${HOST.notice()?.html}`);
+    assert.ok(saidBelow(deadAt(1)), `"The passage isn't in version 1.", said: ${HOST.notice()?.html}`);
     await run(GO.leapTo(FAR));
   } finally { SEL.clear(); HOST.dismiss(); ownBytes(); globalThis.window = platform.window; }
   assert.deepEqual(fake.unanswered, []);
@@ -3051,7 +3062,7 @@ test('a card stands through a version move however early it was opened (issue #2
     await PROV.wrote(FAR, 20, 5);
     await inPlace(GO.toVersion(FAR1)); await reopening();
     assert.deepEqual([GO.shownIn(FAR), HOST.currentState()?.id, about()?.addr, HOST.notice()?.id], [FAR1, 'provenance:wrote', FAR, 'face:floating'], 'a span the first member holds none of: the card stays on the version it names, the dead end\'s face below it');
-    assert.ok(saidBelow(t('F.floating.member', { k: 1 })), `"its passage is not in version 1", said: ${HOST.notice()?.html}`);
+    assert.ok(saidBelow(deadAt(1)), `"The passage isn't in version 1.", said: ${HOST.notice()?.html}`);
     await run(GO.leapTo(FAR));
   } finally { ownBytes(); }
   assert.deepEqual(fake.unanswered, []);
@@ -3598,7 +3609,7 @@ test('Back to a draft whose line the reader left an edit removed lands at the ne
   assert.ok(samePassage(under(CUT, CAM.view()), { ...was, pos: line }), `that line where the line read stood, at its em: ${JSON.stringify([under(CUT, CAM.view()), was])}`);
   assert.notEqual(under(CUT, CAM.view()).pos, at.pos, 'never the old position, which holds the next paragraph now');
   assert.deepEqual([TRAIL.length(), TRAIL.current()?.addr, walkAt(), WALK.landedAt()], [n, CUT, ['block', CUT, REC.doc(CUT).blocks[8].pos], to], 'no trail move; the walk on the paragraph holding it');
-  const f = faceShown(), words = t('F.floating', { D: CUT });
+  const f = faceShown(), words = deadEnd(CUT);
   assert.ok(f && f.id === 'face:floating' && f.html.includes(addressedHTML(words)), `the dead end's words, worded for any landing: ${f && f.html}`);
   assert.deepEqual([HOST.currentState()?.anchor, HOST.currentState()?.told], [{ span: { addr: CUT, pos: to }, sign: CUT }, true], 'at the landing, told by its description');
   assert.deepEqual([GO.landing()?.floating, GO.described(), GO.arrivalMark()], [true, { addr: CUT, pos: to, words, kind: t('F.kind.draft'), runs: [] }, null], 'the landing in the none state, nothing outlined, the draft\'s kind first — Back crossing into it from FAR');
@@ -3622,7 +3633,7 @@ test('Back to a draft whose line lost its first half while a paragraph was set b
   const to = k + at.pos;
   assert.ok(samePassage(under(CUT, CAM.view()), { ...was, pos: to }), `the line holding what stands of it where the line read stood, at its em: ${JSON.stringify([under(CUT, CAM.view()), was])}`);
   assert.deepEqual(GO.arrivalMark(), { addr: CUT, pos: to, runs: [{ pos: to, width: r.width - half }], link: null }, 'what stands of it outlined');
-  const words = sentence('L.held.part', { subject: t('L.held.reading'), where: t('L.held.current', { D: CUT }) });
+  const words = sentence('L.held.part', { subject: t('L.held.reading'), where: t('L.held.current', { D: nameIn(CUT) }) });
   assert.deepEqual([GO.landing()?.said?.state, GO.landingLine(), GO.landingOffers(), GO.described()?.words], ['part', words, { steps: false, again: false, version: false }, words], 'the line, its words the landing\'s description: "Only part of the text you were reading is in ⟨D⟩\'s current text", no version at a draft');
   assert.deepEqual([walkAt(), faceShown()], [['block', CUT, to], null], 'the walk on it, no face');
   GO.endArrival();
@@ -3676,8 +3687,8 @@ test('Back to a draft a feed row dropped while the board does not answer it land
     await run(GO.back());
     const n = TRAIL.length();
     assert.deepEqual([TRAIL.current()?.addr, same(CAM.view(), left), GO.arrivalMark()], [LAPSE, true, null], 'at the view left, nothing outlined');
-    const words = sentence('L.held.unknown', { subject: t('L.held.reading'), where: t('L.held.current', { D: LAPSE }), reason: t('F.daemon.unreachable') });
-    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine(), GO.landingOffers()], ['unknown', words, { steps: false, again: true, version: false }], '"Couldn\'t tell whether ⟨D⟩\'s current text holds the text you were reading: board unreachable.", and "try again"');
+    const words = sentence('L.held.unknown', { subject: t('L.held.reading'), where: t('L.held.current', { D: nameIn(LAPSE) }), reason: t('F.daemon.unreachable') });
+    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine(), GO.landingOffers()], ['unknown', words, { steps: false, again: true, version: false }], '"This app couldn\'t tell whether the current text of ⟨D⟩ has the text you were reading: board unreachable.", and "try again"');
     lapse = 'edited';
     GO.landingAct('again');
     const k = INSERTED.length;
@@ -3722,7 +3733,7 @@ test('Back to a draft whose paragraph the walk stood on an edit removed, the lin
   await run(GO.back());
   assert.ok(same(CAM.view(), left), 'the line read stands whole: the view as left');
   assert.deepEqual([walkAt(), TRAIL.length()], [['block', CUT, at.pos], n], 'the walk on the line read, never on the paragraph now at the old position; no trail move');
-  const f = faceShown(), words = t('F.floating', { D: CUT });
+  const f = faceShown(), words = deadEnd(CUT);
   assert.ok(f && f.id === 'face:floating' && f.html.includes(addressedHTML(words)), `the dead end's words: ${f && f.html}`);
   assert.deepEqual([HOST.currentState()?.anchor, HOST.currentState()?.told], [{ span: { addr: CUT, pos: at.pos }, sign: CUT }, true], 'at the walk\'s span, told by the landing\'s description');
   assert.deepEqual([GO.landing()?.floating, GO.described(), GO.arrivalMark()], [true, { addr: CUT, pos: at.pos, words, kind: t('F.kind.draft'), runs: [] }, null], 'the landing in the none state there, nothing outlined, the draft\'s kind first — Back crossing into it from FAR');
@@ -4157,7 +4168,7 @@ test('Back to a place left with a selection standing puts it back over its bytes
     // the passage's last five bytes gone, as the reader left it in the text set again
     SEL.select(SETA, at + 12, width);
     const part = await away(() => setSeta(SETA_TEXT.slice(0, at + width - 6) + SETA_TEXT.slice(at + width - 1), [[1, at + width - 6], [at + width, n - at - width + 1]]));
-    const line = sentence('L.held.part', { subject: t('L.held.selected'), where: t('L.held.current', { D: SETA }) });
+    const line = sentence('L.held.part', { subject: t('L.held.selected'), where: t('L.held.current', { D: nameIn(SETA) }) });
     assert.deepEqual([part.sel, part.overlay, part.said.includes(line), GO.landingLine()], [{ addr: SETA, pos: at, width: width - 5 }, 'selection', true, t('L.piece', { k: 1, n: 2 }) + ' · ' + t('L.piece.part')],
       'in part: the selection on what stands, its card with it, its line said in the status region; beside the landing the line its view read, which the edit cut in two, the landing\'s own (issue #297)');
     GO.endArrival();
@@ -4588,13 +4599,13 @@ test('an arrival whose document\'s text is set again is placed again by its pass
     setSeta(SETA_TEXT.slice(0, at + width - 6) + SETA_TEXT.slice(at + width - 1), [[1, at + width - 6], [at + width, n - at - width + 1]]);
     GO.recheck();
     assert.deepEqual(GO.arrivalMark()?.runs, [{ pos: at, width: width - 5 }], 'part: the outline on what stands');
-    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine()], ['part', sentence('L.held.part', { subject: t('L.held.reading'), where: t('L.held.current', { D: SETA }) })], 'and the line says only part of it is there, a sentence');
+    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine()], ['part', sentence('L.held.part', { subject: t('L.held.reading'), where: t('L.held.current', { D: nameIn(SETA) }) })], 'and the line says only part of it is there, a sentence');
     // none of it: the text set again of bytes minted since
     setSeta('Other words.', [[n + 20, 12]]);
     GO.recheck();
     const f = faceShown();
     assert.deepEqual([GO.arrivalMark(), GO.landing()?.floating, f?.id], [null, true, 'face:floating'], 'none: nothing outlined, the dead end\'s face');
-    assert.ok(f && f.html.includes(addressedHTML(t('F.floating', { D: SETA }))) && HOST.currentState()?.anchor?.span?.addr === SETA, `its words, at the landing's place: ${f && f.html}`);
+    assert.ok(f && f.html.includes(addressedHTML(deadEnd(SETA))) && HOST.currentState()?.anchor?.span?.addr === SETA, `its words, at the landing's place: ${f && f.html}`);
     GO.recheck();
     assert.equal(faceShown()?.id, 'face:floating', 'once for each setting of the text');
   } finally { GO.endArrival(); HOST.dismiss(); }
@@ -4645,7 +4656,7 @@ test('the passage being read gone from the text its document is set again as lan
     const view = CAM.view(), entries = TRAIL.all().length;
     GO.vanished(D, 11, [{ prefix: D + '.0.1', ordinal: 11, width: 5 }]);
     const f = faceShown();
-    assert.ok(f && f.id === 'face:floating' && f.html.includes(addressedHTML(t('F.floating', { D }))), `the dead end's face, naming the document set again: ${f && f.html}`);
+    assert.ok(f && f.id === 'face:floating' && f.html.includes(addressedHTML(deadEnd(D))), `the dead end's face, naming the document set again: ${f && f.html}`);
     assert.deepEqual([HOST.currentState()?.anchor, HOST.currentState()?.told], [{ span: { addr: D, pos: 11 }, sign: D }, false], 'at the line kept, said in the status region');
     assert.deepEqual([GO.arrivalMark(), GO.litLinks(), GO.landing()?.addr, GO.landing()?.floating], [null, [], D, true], 'the arrival at FAR put out; a landing in the none state at the document set again');
     assert.ok(same(CAM.view(), view) && TRAIL.all().length === entries, 'no camera move and no trail entry');
@@ -4653,7 +4664,7 @@ test('the passage being read gone from the text its document is set again as lan
     // a card of the reader's standing: it stands, the face's words said alone
     HOST.show({ kind: 'card', id: 'card:standing', html: '' });
     GO.vanished(D, 11, [{ prefix: D + '.0.1', ordinal: 11, width: 5 }]);
-    assert.deepEqual([HOST.currentState()?.id, said[said.length - 1]], ['card:standing', t('F.floating', { D })], 'the card stands; the words said in the status region');
+    assert.deepEqual([HOST.currentState()?.id, said[said.length - 1]], ['card:standing', deadEnd(D)], 'the card stands; the words said in the status region');
   } finally { HOST.dismiss(); GO.endArrival(); }
 });
 

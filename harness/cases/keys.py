@@ -1528,9 +1528,15 @@ FACE_UP = '''new Promise((res) => { const t0 = performance.now(); const tick = (
   return (o.id || '').startsWith('face:') || (o.notice && (o.notice.id || '').startsWith('face:')) || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50); }; tick(); })'''
 
 
+def opened(words):
+    """words as the first words of a sentence: their first letter a capital (style S1)"""
+    return words[:1].upper() + words[1:]
+
+
 def far_words(ctx, doc, link):
     """the words a link's far end's label names it by after its address (LK's `farLabel`), the brackets around the client's
-    words off (`L.client-words`): what a follow's face opens with (issue #224); '' where the label names the address alone"""
+    words off (`L.client-words`): what a follow's face opens with (issue #224), there a sentence's first words (`opened`);
+    '' where the label names the address alone"""
     return ctx.js('''(async (doc, link) => { const { STRINGS } = await import("./strings.js"); const [open, close] = STRINGS["L.client-words"].text.split("\\u27e8words\\u27e9");
       const label = window.__skep.links.farLabel(doc, link) || "", i = label.indexOf(" \\u00b7 "), w = i < 0 ? "" : label.slice(i + 3);
       return w.startsWith(open) && w.endsWith(close) ? w.slice(open.length, w.length - close.length) : w; })(%s, %s)''' % (json.dumps(doc), json.dumps(link)))
@@ -4039,8 +4045,8 @@ def run(ctx):
         r.check(ctx.js('window.__skep.overlay().id') == 'face:doc_not_registered' and stands_at(placed),
                 'the dead-reference face a follow from the selection met stands at the followed link\'s own bytes, beneath their first line', {'id': ctx.js('window.__skep.overlay().id'), 'placed': placed, 'link': {k: ghost[k] for k in ('link', 'pos', 'width')}})
         opens, said = far_words(ctx, DOC, ghost['link']), ctx.js('window.__skep.overlay().text') or ''
-        r.check(bool(opens) and said.startswith(opens),
-                'the dead-reference face a follow met opens with the words the far end\'s label names it by after its address, their brackets off (issue #224\'s design decision: "The label is always the face\'s first words, shown and spoken")',
+        r.check(bool(opens) and said.startswith(opened(opens)),
+                'the dead-reference face a follow met opens with the words the far end\'s label names it by after its address, their brackets off, a sentence\'s capital first (issue #224\'s design decision: "The label is always the face\'s first words, shown and spoken")',
                 {'label': ctx.js('window.__skep.links.farLabel(%s, %s)' % (json.dumps(DOC), json.dumps(ghost['link']))), 'opens': opens, 'face': said[:240]})
         r.check(not ctx.js('window.__skep.links.visited(%s)' % json.dumps(ghost['link'])),
                 'a follow whose far document the page knows says nothing never leaves, and its link joins no visited set (D-3; FP-25: "the jump counts as made … as a followed link, when the camera leaves")', ghost['link'])
@@ -4074,11 +4080,11 @@ def run(ctx):
             seen = {'overlay': o, 'opens': opens, 'scene': s['scene'], 'cursor': [b0['cursor'], b1['cursor']], 'entries': [len(b0['entries']), len(b1['entries'])], 'extent_asks': asked}
             if known:
                 placed = placed_at(ctx, DOC, linked['pos'], linked['width'])
-                r.check(o['id'] == 'face:doc_not_registered' and o.get('notice') is None and stands_at(placed) and bool(opens) and said.startswith(opens) and not s['scene'] and kept and asked == 0,
+                r.check(o['id'] == 'face:doc_not_registered' and o.get('notice') is None and stands_at(placed) and bool(opens) and said.startswith(opened(opens)) and not s['scene'] and kept and asked == 0,
                         '"read side by side" at the end of a link whose far document the page knows the board says nothing of never leaves: its face at once at the act\'s site in the place of what stands, opening with the words the far end\'s label names it by, as the follow\'s does — no scene, no entry, no read of the ghost asked (FP-21, FP-25)',
                         dict(seen, placed=placed))
             else:
-                r.check(o['id'] == stands and face.get('id') == 'face:doc_not_registered' and bool(opens) and said.startswith(opens) and not s['scene'] and kept and asked >= 1,
+                r.check(o['id'] == stands and face.get('id') == 'face:doc_not_registered' and bool(opens) and said.startswith(opened(opens)) and not s['scene'] and kept and asked >= 1,
                         '"read side by side" at that end, the ghost dropped from the model, reads it and is refused: faced below what stands in the far end\'s words, never the board\'s typed-address words, its entry given back (FP-21, FP-25)',
                         seen)
             for _ in range(4):

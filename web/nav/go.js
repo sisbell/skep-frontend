@@ -2382,7 +2382,7 @@ export async function leapTo(addr, opts = {}) {
   const fails = known(addr, unread || !!c, null, !!opts.source);
   if (fails) {
     if (link) lit = [link];
-    if (fails.face === 'withheld') showNotice({ ...fails, site: site && unsigned(site) }, false, `${t('B1.follow')} · ${addr}`);
+    if (fails.face === 'withheld') showNotice({ ...fails, site: site && unsigned(site) }, false, t('B1.follow.to', { far: addr }));
     else showNotice({ ...fails, site: signed(site) });
     return null;
   }
@@ -2750,7 +2750,7 @@ export async function follow(s, byKey = false) {
   const fails = known(far, true, { link: l.addr, slot: s.farSlot });
   if (fails) {
     lit = [l.addr];
-    if (fails.face === 'withheld') showNotice({ ...fails, site: unsigned(site) }, false, `${t('B1.follow')} · ${far}`);
+    if (fails.face === 'withheld') showNotice({ ...fails, site: unsigned(site) }, false, t('B1.follow.to', { far }));
     else showNotice({ ...fails, site });
     return;
   }

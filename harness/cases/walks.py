@@ -61,10 +61,16 @@ def card_state(ctx):
               stage: window.__skep.reveal(%s).stage, others: window.__skep.reveal(%s).others, beams: window.__skep.beams(), tails: window.__skep.tails().filter((t) => t.at === %s).length}; })()''' % (json.dumps(DOC), json.dumps(DOC), json.dumps(DOC)))
 
 
-def toggle_words(ctx, state):
-    """the words B1-S4 has the card's toggle read in a state — "others' links: ⟨state⟩ · ⟨n⟩ touch this document" — from the page's own strings"""
-    return ctx.js('''(async () => { const n = window.__skep.links.othersTouching(%s).length; const {t} = await import("./strings.js");
-      return t(n === 1 ? "B1.others-toggle.1" : "B1.others-toggle", {state: %s, n}); })()''' % (json.dumps(DOC), json.dumps(state)))
+def toggle_words(ctx, shown):
+    """the words B1-S4 has the card's toggle read in a state — "Others’ links: ⟨state⟩ · ⟨n⟩ touch this document", its
+    state "shown" or "hidden", its count's zero form where none touch the document — from the page's own strings"""
+    return ctx.js('''(async (shown) => { const n = window.__skep.links.othersTouching(%s).length; const {t} = await import("./strings.js");
+      return t(n === 0 ? "B1.others-toggle.0" : n === 1 ? "B1.others-toggle.1" : "B1.others-toggle", {state: t(shown ? "B1.others-toggle.shown" : "B1.others-toggle.hidden"), n}); })(%s)''' % (json.dumps(DOC), json.dumps(shown)))
+
+
+def caption(ctx):
+    """the standing overlay's caption as a person sees it: its words and the case the stylesheet sets them in"""
+    return ctx.js('''(() => { const l = document.querySelector('#overlay .label'); return l ? {text: l.textContent, transform: getComputedStyle(l).textTransform, cls: l.className} : null; })()''')
 
 
 def run(ctx):
@@ -114,11 +120,12 @@ def run(ctx):
         ctx.frames(2)
     step(ctx, r, 'W-01', 7, 'a reference into nothing', 'W-01 step 7 and the failure arms: "a reference from a public document into a draft is public and renders the placeholder"; R59\'s classes never conflated. Following the citation of a GHOST (cited, never minted): the dead-reference face says what the board will not say about that address, and nothing more.', 'ghost-face')
     face = ctx.overlay_shown()
-    r.check(face['kind'] == 'face' and 'nothing this board will say about this address' in face['text'] and GHOST in face['text'] and 'doc_not_registered' not in face['text'].lower() and face['acts'] == 0,
-            'W-01 step 7: the followed ghost is faced as the note says — B1-S8\'s words with the address and nothing more: no wire token, no act', face)
-    unknown = ctx.js('import("./strings.js").then(({t}) => t("L.far.unknown"))')
+    fifth = ctx.js('import("./strings.js").then(({t}) => t("B1.doc_not_registered", {address: %s}))' % json.dumps(GHOST))
+    r.check(face['kind'] == 'face' and fifth in face['text'] and 'doc_not_registered' not in face['text'].lower() and face['acts'] == 0,
+            'W-01 step 7: the followed ghost is faced as the note says — B1-S8\'s words with the address and nothing more: no wire token, no act', dict(face, want=fifth))
+    unknown = ctx.js('import("./strings.js").then(({opening}) => opening("L.far.unknown"))')
     r.check(face['text'].startswith(unknown),
-            'W-01 step 7: the guest\'s face opens with the far end\'s short form, "%s", the words its label names it by, before B1-S8\'s (issue #224\'s design decision: a guest acts as no account, so the weaker state)' % unknown, face['text'][:240])
+            'W-01 step 7: the guest\'s face opens with the far end\'s short form, "%s", the words its label names it by, a sentence\'s capital first, before B1-S8\'s (issue #224\'s design decision: a guest acts as no account, so the weaker state)' % unknown, face['text'][:240])
     ctx.esc()
     # ---- W-05 — Read & navigate the board, on the owner's page opened again --------------
     ctx.open_page('all')
@@ -150,11 +157,15 @@ def run(ctx):
     ctx.js('window.__skep.cards.links(%s)' % json.dumps(DOC))
     ctx.frames(2)
     s = card_state(ctx)
-    r.check(s['stage'] == 2 and s['offers_content'] and s['switch_checked'] == 'false', 'the card opened at stage 2: it offers the content and its switch reads off', s)
-    r.check(s['switch_text'] == toggle_words(ctx, 'off'), 'the switch\'s own words are the toggle\'s in its state, off (B1-S4)', {'switch': s['switch_text'], 'want': toggle_words(ctx, 'off')})
+    r.check(s['stage'] == 2 and s['offers_content'] and s['switch_checked'] == 'false', 'the card opened at stage 2: it offers where the links lead and its switch reads hidden', s)
+    r.check(s['switch_text'] == toggle_words(ctx, False), 'the switch\'s own words are the toggle\'s in its state, hidden (B1-S4)', {'switch': s['switch_text'], 'want': toggle_words(ctx, False)})
+    cap = caption(ctx)
+    want = ctx.js('import("./strings.js").then(({t}) => t("B1.links-on").split("⟨label⟩")[0])')
+    r.check(bool(cap) and cap['transform'] == 'none' and cap['text'].startswith(want) and DOC in cap['text'],
+            'the links card\'s caption names its document, "%s…" with its address, set as written — never in the overlays\' capitals (style S10)' % want, {'caption': cap, 'want': want})
     step(ctx, r, 'W-05', 3, 'ask to see the links: symbols', 'W-05 step 3: "the reveal chain hidden → symbol → content"; the card lists the owner\'s links, the lenses by owner, type and endorsement (R9), the others\' toggle OFF by default (R60). Stage 2: the symbols at their spans.', 'links-card-symbols')
-    # the person presses "— content": the chain moves to stage 3 and the card redraws itself from LK's state before the shot
-    press(ctx, r, 'stage3', 'the chain\'s next stage, content')
+    # the person presses "Show where the links lead": the chain moves to stage 3 and the card redraws itself from LK's state before the shot
+    press(ctx, r, 'stage3', 'the chain\'s next stage, where the links lead')
     ctx.frames(2)
     s = card_state(ctx)
     r.check(s['stage'] == 3 and s['offers_symbols'] and not s['offers_content'] and s['beams'] + s['tails'] >= 1, 'the press moved the chain to stage 3 and the card redrew: it now offers the symbols; each citation in view leaves the text by a beam, or by a tail where its far document is drawn nowhere', s)
@@ -163,19 +174,24 @@ def run(ctx):
     press(ctx, r, 'others', 'the others\' overlay toggle')
     s = card_state(ctx)
     r.check(s['others'] is True and s['switch_checked'] == 'true' and s['offers_symbols'], 'the press turned others\' links on and the card redrew: the switch reads aria-checked="true", LK agrees, the stage button still offers the symbols', s)
-    r.check(s['switch_text'] == toggle_words(ctx, 'on'), 'the switch\'s own words follow its state: on (B1-S4)', {'switch': s['switch_text'], 'want': toggle_words(ctx, 'on')})
+    r.check(s['switch_text'] == toggle_words(ctx, True), 'the switch\'s own words follow its state: shown (B1-S4)', {'switch': s['switch_text'], 'want': toggle_words(ctx, True)})
     others = ctx.js('window.__skep.links.othersTouching(%s)' % json.dumps(DOC))
     step(ctx, r, 'W-05', 3, 'others\' links on', 'W-05 step 3: "Others\' links are overlays, OFF by default, attributed in the linker\'s color when shown (R60)." The toggle on: on this board no other party\'s link touches the first edition (%d), so the article does not change — the second account\'s draft and its links are hidden with it (PUB-1.13).' % len(others), 'others-on')
     press(ctx, r, 'others', 'the others\' overlay toggle, off again')
     s = card_state(ctx)
-    r.check(s['others'] is False and s['switch_checked'] == 'false' and s['switch_text'] == toggle_words(ctx, 'off'), 'the second press turned others\' links off again; the switch agrees, in its state and in its words', s)
+    r.check(s['others'] is False and s['switch_checked'] == 'false' and s['switch_text'] == toggle_words(ctx, False), 'the second press hid others\' links again; the switch agrees, in its state and in its words', s)
     ctx.esc()
     if shown:
         ctx.js('window.__skep.cards.anatomy(%s, %s)' % (json.dumps(DOC), json.dumps(shown[0]['link'])))
         ctx.settle()
         ctx.frames(2)
-    step(ctx, r, 'W-05', 4, 'the anatomy card', 'W-05 step 4: "Inspect a link\'s full anatomy: type (registry documentation one gesture away), all endsets, owner, age (R5)." The type reads R5\'s form — "undocumented here": no commons registry document is seeded; the far end\'s words first; superseded by and supersedes read the link\'s lineage under the audit view — the claims made by the owner of the link each declares superseded, any other behind one line after the rows (issue #143) — B1-S5\'s "none" where no claim names it; no age row: the page holds no age for a link older than its feed, and an empty row would read as B1-S5\'s "none".', 'anatomy-card',
+    step(ctx, r, 'W-05', 4, 'the anatomy card', 'W-05 step 4: "Inspect a link\'s full anatomy: type (registry documentation one gesture away), all endsets, owner, age (R5)." The type reads R5\'s form — "undocumented here": no commons registry document is seeded; the far end\'s words first; "Replaced by" and "Replaces" read the link\'s lineage under the audit view — the claims made by the owner of the link each declares superseded, any other behind one line after the rows (issue #143) — B1-S5\'s "none" where no claim names it; no age row: the page holds no age for a link older than its feed, and an empty row would read as B1-S5\'s "none".', 'anatomy-card',
          claims=[('#overlay .kv.lineage', 'the supersession rows', None)])
+    if shown:
+        cap = caption(ctx)
+        want = ctx.js('import("./strings.js").then(({t}) => t("B1.card.link", {address: %s}))' % json.dumps(shown[0]['link']))
+        r.check(bool(cap) and cap['transform'] == 'none' and cap['text'].endswith(want),
+                'the anatomy card\'s caption is the link\'s symbol and "%s", set as written — never in the overlays\' capitals (style S10)' % want, {'caption': cap, 'want': want})
     ctx.esc()
     ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
     ctx.settle()

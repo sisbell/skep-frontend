@@ -36,8 +36,9 @@
 // its keys (`aria-keyshortcuts`; patterns K1, K3), the step among them (N-GO's
 // `step`; FP-21); "read
 // side by side" with where the passage came from, where that text holds it
-// whole; "read version ⟨k⟩, the last that holds it" at a published landing,
-// once the latest member holding it whole is found; "try again", where a
+// whole; at a published landing, once the latest member holding it whole is
+// found, the line naming that member on a line of its own (`F.floating.last`)
+// and the act reading it beneath; "try again", where a
 // retry may tell; "put back in the current text", where the person's own
 // removal took the rest of the passage and the line says so — each N-GO's
 // (`landingAct`), told whether a key pressed it
@@ -76,6 +77,7 @@ import { esc } from '../util.js';
  * @typedef {Object} LineState — what the line is written from
  * @property {string} id the string its words lead with: the line's state's, or the label's
  * @property {string} words
+ * @property {string} last the last member that holds the passage whole, as the line names it above the act reading it (`F.floating.last`); '' where no such act stands
  * @property {Array<{act: Act, label: string, chord?: string, key?: string}>} acts each with the chord drawn for this platform where it has one, and that chord in D5's notation (`key`), which its button exposes as its key
  */
 
@@ -135,6 +137,15 @@ export function attach(e, r = {}) {
   });
 }
 
+/** the member the landing's version act reads, once its reads found it (N-GO's `landingOffers`); null where no such act stands */
+function versionOffered() {
+  const l = GO.landing();
+  return l && GO.landingOffers().version && l.version != null ? l.version : null;
+}
+
+/** the line naming the last member that holds the passage whole (`F.floating.last`), above the act reading it; '' where none stands */
+const lastOf = (/** @type {number | null} */ k) => (k != null ? t('F.floating.last', { k }) : '');
+
 /** the string a run's label leads with: its piece's, its repeat's, else its amount's */
 function leadOf(/** @type {Pieces} */ p, /** @type {number[]} */ group, /** @type {number} */ current) {
   const runs = group.map((i) => p.runs[i]).filter(Boolean);
@@ -163,18 +174,21 @@ export function stateNow(group) {
   const acts = [];
   if (p && offers.steps) acts.push({ act: 'next', label: t('L.piece.next'), chord: drawChord('Mod+G'), key: 'Mod+G' }, { act: 'previous', label: t('L.piece.previous'), chord: drawChord('Mod+Shift+G'), key: 'Mod+Shift+G' });
   if (l.beside) acts.push({ act: 'beside', label: t('B1.side-by-side') });
-  if (offers.version && l.version != null) acts.push({ act: 'version', label: t('F.floating.read', { k: l.version }) });
+  const version = versionOffered();
+  if (version != null) acts.push({ act: 'version', label: t('F.floating.read', { k: version }) });
   if (offers.again) acts.push({ act: 'again', label: t('B1.try-again') });
   if (GO.offersBack()) acts.push({ act: 'back', label: t('B3.history.put-back') });
+  const last = lastOf(version);
   const members = p && group && group.includes(l.current) ? group : [l.current];
-  if (l.removed) return { id: 'L.removed.part', words: line, acts };
-  if (p) return { id: leadOf(p, members, l.current), words: mergedLabel(p, members, l.current), acts };
-  return { id: 'L.held.' + /** @type {NonNullable<typeof l.said>} */ (l.said).state, words: line, acts };
+  if (l.removed) return { id: 'L.removed.part', words: line, last, acts };
+  if (p) return { id: leadOf(p, members, l.current), words: mergedLabel(p, members, l.current), last, acts };
+  return { id: 'L.held.' + /** @type {NonNullable<typeof l.said>} */ (l.said).state, words: line, last, acts };
 }
 
-/** the line's markup: its words, each address in them in the identifier's face (ST's `addressedHTML`), then its acts, each showing its chord where it has one — named by its words alone, rendered for the ear (ST's `heard`), the chord its key (`aria-keyshortcuts`; patterns K3) */
+/** the line's markup: its words, each address in them in the identifier's face (ST's `addressedHTML`), the last member that holds the passage on a line of its own where an act reads it, then its acts, each showing its chord where it has one — named by its words alone, rendered for the ear (ST's `heard`), the chord its key (`aria-keyshortcuts`; patterns K3) */
 const markup = (/** @type {LineState} */ s) =>
   `<span class="words" data-string="${esc(s.id)}">${addressedHTML(s.words)}</span>` +
+  (s.last ? `<span class="last" data-string="F.floating.last">${esc(s.last)}</span>` : '') +
   (s.acts.length ? `<span class="acts">${s.acts.map((a) => `<button data-act="${a.act}" aria-label="${esc(heard(a.label))}"${a.key ? ` aria-keyshortcuts="${esc(keyShortcut(a.key))}"` : ''}>${esc(a.label)}${a.chord ? `<kbd>${esc(a.chord)}</kbd>` : ''}</button>`).join('')}</span>` : '');
 
 /**
@@ -231,8 +245,9 @@ export function stacks(anchors) {
 /**
  * The anchors of the landing's runs on screen now (see the head): each run's
  * label's place at the text's edge, and the height its label is held to
- * take — the line's own, its words and its acts at its widest, for the run
- * the landing stands at; none for a run that stands in no column laid out.
+ * take — the line's own, its words, the line naming the last member that
+ * holds the passage, and its acts at its widest, for the run the landing
+ * stands at; none for a run that stands in no column laid out.
  * @param {Pieces} p
  * @param {string} addr
  * @param {number} current
@@ -244,8 +259,8 @@ function anchorsOf(p, addr, current, seen) {
   return p.runs.flatMap((r, i) => {
     const e = edgeAt(g, addr, r.pos);
     if (!e) return [];
-    const words = mergedLabel(p, [i], current);
-    const h = i === current ? heightOf(words, Math.min(LINE_FACE.max, e.room), LINE_FACE) + LINE_FACE.acts : heightOf(words, e.room);
+    const words = mergedLabel(p, [i], current), last = i === current ? lastOf(versionOffered()) : '';
+    const h = i === current ? heightOf(words, Math.min(LINE_FACE.max, e.room), LINE_FACE) + (last ? heightOf(last, Math.min(LINE_FACE.max, e.room), LINE_FACE) : 0) + LINE_FACE.acts : heightOf(words, e.room);
     return [{ run: i, x: e.x, y: e.y, room: e.room, h }];
   });
 }

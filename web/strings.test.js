@@ -118,7 +118,10 @@ test('each entry re-worded to the voice system that a design source carries keep
     'B3.publish.venue', 'B3.publish.command.all', 'B3.publish.command.left-out', 'B3.publish.command.selected', 'B3.publish.command.selected.alone', 'B3.publish.command.beside',
     'B3.merge.withdraw', 'B3.merge.gap.corner.act', 'B3.merge.gap.keep.head', 'B3.merge.gap.keep.side', 'B3.merge.gap.moves.act', 'B3.merge.behind.ending',
     'B3.merge.command', 'B3.merge.command.left-out', 'B3.card.retype', 'B3.format.hand', 'B3.format.slot.others', 'B3.format.slot.others.focus',
-    'B3.no-notebook.back.act', 'B3.no-notebook.back.capture',
+    'B3.no-notebook.back.act', 'B3.no-notebook.back.capture', 'B1.see-links', 'F.lens.owner', 'F.lens.type', 'R5.undocumented',
+    'F.card-clause', 'B1.invalid', 'F.floating', 'F.floating.member', 'B1.not_a_link', 'F.card.type',
+    'F.card.home', 'F.card.owner', 'F.card.superseded-by', 'F.card.supersedes', 'B1.follow', 'B1.doc_not_registered',
+    'B1.range_not_present',
   ];
   /** each ruled string of the copy inventory the table lacked, written to the voice system */
   const ADDED = ['C-5', 'C-63', 'C-158', 'C-254.1', 'C-254.n', 'C-254.held'];
@@ -729,7 +732,7 @@ test('no entry opens or ends with the joiner that attaches it to another — whi
 
 test('a line the page composes: each entry a sentence — its own first letter a capital, a period after it unless its words end with one, a question mark, an exclamation or an ellipsis, a closing quotation mark or bracket allowed after it — a value opening it keeping its case unless it is named the page\'s own words; sentences joined by a space, fields by a middle dot, one sentence\'s parts by a comma, each empty part dropped (style S1, S2)', () => {
   assert.equal(sentence('B3.undo.again', { 'undo chord': '⌘Z' }), '⌘Z again undoes what you did before it.', 'a value opening it — a chord — keeps its case');
-  assert.equal(sentence('L.card.claims.supersedes', { claimant: 'field notes', link: '1.0.1.0.2.0.2.7' }), 'field notes claims this supersedes 1.0.1.0.2.0.2.7.', 'a name opening it keeps its own case');
+  assert.equal(sentence('L.card.claims.supersedes', { claimant: 'field notes', link: '1.0.1.0.2.0.2.7' }), 'field notes says this link replaces 1.0.1.0.2.0.2.7.', 'a name opening it keeps its own case');
   assert.equal(sentence('B3.undo.withheld', { origin: '1.0.4.0.2' }), 'The source of this passage is withheld from you now\u00a0— 1.0.4.0.2; the words cannot be put back as the same words.', 'its own first letter a capital, a period after its last word');
   assert.equal(sentence('B3.format.cycle', { level: 'heading\u00a02' }), 'heading\u00a02 — let go to set it.', 'a value opening it, not named the page\'s own, keeps its case');
   assert.equal(sentence('B3.format.cycle', { level: 'heading\u00a02' }, ['level']), 'Heading\u00a02 — let go to set it.', 'a value named the page\'s own words takes the capital');
@@ -986,7 +989,7 @@ test('each formatting form has one name — the strip\'s, a heading\'s by its le
   for (const [ty, level] of [[UNKNOWN], [HEADING, 7], [HEADING, 0], [HEADING]]) {
     assert.equal(formName(ty, level), typeName(ty), `${ty} at level ${level}: the card's name, never a placeholder`);
   }
-  assert.equal(formName(UNKNOWN), 'link of type 3.23.8 — undocumented here');
+  assert.equal(formName(UNKNOWN), 'link of type 3.23.8, undocumented here');
 });
 
 test('forms named together stand in the strip\'s order with a comma alone, "not" before each one off, each named once, and each other hand\'s forms after the document\'s own as a group led by the hand, semicolons between groups — the forms the sets draw and the forms at one place in the text alike, the mirror\'s naming its block\'s heading by its level (issue #442\'s design decision)', () => {
@@ -1045,7 +1048,7 @@ test('every Format menu titles a form by its one name with its first letter capi
     const name = formName(ty, level);
     assert.equal(formTitle(ty, level), name[0].toUpperCase() + name.slice(1), `${ty} at level ${level}: its one name, only its first letter changed`);
   }
-  assert.equal(formTitle(UNKNOWN), 'Link of type 3.23.8 — undocumented here');
+  assert.equal(formTitle(UNKNOWN), 'Link of type 3.23.8, undocumented here');
   assert.deepEqual(Object.entries(STRINGS).filter(([, e]) => /^(Bold|Italic|Code|Strikethrough|Subscript|Superscript|Paragraph|Headings?|Marked text)\b/.test(e.text)).map(([id]) => id), [], 'no entry holds a title: each is its form\'s name');
 });
 

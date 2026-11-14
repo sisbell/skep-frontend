@@ -1657,8 +1657,8 @@ def stop_returns(ctx, r, name, sel, kind, cuts, made):
         else:
             want = {'whole': ('all',), 'part': ('part', 'pieces'), 'none': ('none',), 'refused': ('unknown',)}[outcome]
             words = told_as(a.get('words') or '') if outcome != 'whole' else None
-            # at its site the face of what the answer told: the dead end's own words, else the line's
-            site = ctx.js('(async (d) => (await import("./beams/held.js")).floatingOf(d))(%s)' % json.dumps(D)) if outcome == 'none' else (a.get('words') or '')
+            # at its site the face of what the answer told: the dead end's own words as a sentence, else the line's
+            site = ctx.js('(async (d) => (await import("./beams/held.js")).floatingLineOf(d))(%s)' % json.dumps(D)) if outcome == 'none' else (a.get('words') or '')
             face_ok = o is None if outcome == 'whole' else (o == ('face:floating' if outcome == 'none' else 'face:held') and bool(site) and site in face['text'] and face['acts'] == (1 if outcome == 'refused' else 0))
             r.check(released and bool(after) and a.get('holds') in want and now['at'] == before['at'] and held and not after['reading'] and (outcome == 'whole' or after['name'] == words) and face_ok,
                     f'{name}, answered {outcome}: the focus kept on the stop, the mirror as the return left it, its count no longer read'
@@ -2616,11 +2616,11 @@ def carried_holds(ctx, r):
     ctx.js('window.__skep.go.leapTo(%s, null, %s)' % (json.dumps(WINDOW[2]), json.dumps({'carry': {'addr': DOC, 'pos': own['pos'], 'width': own['width']}})))
     ctx.settle()
     ctx.frames(2)
-    words = ctx.js('import("./strings.js").then(({t}) => t("F.floating", {D: %s}))' % json.dumps(WINDOW[2]))
+    words = ctx.js('Promise.all([import("./strings.js"), import("./beams/held.js")]).then(([{sentence}, {nameIn}]) => sentence("F.floating", {D: nameIn(%s)}))' % json.dumps(WINDOW[2]))
     face, entry = ctx.overlay_shown(), ctx.js('(() => { const t = window.__skep.trail(); return t.entries[t.cursor]; })()')
     first = ctx.js('window.__skep.model.doc(%s).blocks[0].pos' % json.dumps(WINDOW[2]))
     r.check(ctx.js('window.__skep.go.arrival()') is None and entry['addr'] == WINDOW[2] and entry['pos'] == first and ctx.js('window.__skep.overlay().id') == 'face:floating' and words in face['text'] and face['acts'] == 0,
-            'a carried passage the text landed in holds none of: the landing at its first block, unmarked, faced "its passage is not in ⟨D⟩\'s current text" with no act',
+            'a carried passage the text landed in holds none of: the landing at its first block, unmarked, faced "The passage is no longer in the current text of ⟨D⟩." with no act, the draft named as a line names it',
             {'arrival': ctx.js('window.__skep.go.arrival()'), 'entry': {k: entry[k] for k in ('addr', 'pos', 'width')}, 'first_block': first, 'face': face, 'want': words})
     seen['empty'] = {'carried': [own['pos'], own['width']], 'landing': entry['pos'], 'face': face['text'][:80]}
     ctx.esc()
@@ -2632,8 +2632,8 @@ def part_holds(ctx, r):
     """THE LINE's checks (issue #153's design decision: "Mark what's held and say the rest in a line"): a passage straddling
     the window run's start — the first edition's PART_LEAD positions before it and as many of the run's — carried into the
     draft the run windows, which holds the run's half of it alone: the arrival outlined on that half, its words the run's;
-    the landing's state part, the line that stands led by "Only part of the text you were reading is in ⟨D⟩'s current
-    text", offering to read it side by side with the first edition, which holds it whole, and no version — the draft has
+    the landing's state part, the line that stands led by "Only part of the text you were reading is in the current text
+    of ⟨D⟩", offering to read it side by side with the first edition, which holds it whole, and no version — the draft has
     none; standing at the text's edge beside the landing — past the right edge of the outline's first line, its top that
     line's — inside the visible view below the one line, meeting no line of the outline and not the overlay; the next act
     takes it down — the next landing; its figures"""
@@ -2643,10 +2643,10 @@ def part_holds(ctx, r):
     wait_for(ctx, lit_at(WINDOW[2]))
     held = arrival_holds(ctx, r, 'a passage the draft holds part of (issue #153)', (DOC, WINDOW[0], WINDOW[0] + PART_LEAD))
     land, line = ctx.js('window.__skep.go.landing()'), ctx.js('window.__skep.landingLine()')
-    words = ctx.js('import("./strings.js").then(({t, opening}) => opening("L.held.part", {subject: t("L.held.reading"), where: t("L.held.current", {D: %s})}))' % json.dumps(WINDOW[2]))
+    words = ctx.js('Promise.all([import("./strings.js"), import("./beams/held.js")]).then(([{t, opening}, {nameIn}]) => opening("L.held.part", {subject: t("L.held.reading"), where: t("L.held.current", {D: nameIn(%s)})}))' % json.dumps(WINDOW[2]))
     said = (land or {}).get('said') or {}
     r.check(said.get('state') == 'part' and bool(line) and bool(words) and line['words'].startswith(words) and not line['covered'] and line['acts'] == ['beside'],
-            'the landing says only part of the passage carried is in the draft, in a line that stands — its sentences opening "Only part of the text you were reading is in ⟨D⟩\'s current text" — offering it side by side with the first edition (issue #153; style S1)',
+            'the landing says only part of the passage carried is in the draft, in a line that stands — its sentences opening "Only part of the text you were reading is in the current text of ⟨D⟩" — offering it side by side with the first edition (issue #153; style S1)',
             {'said': said, 'line': line, 'want': words})
     top = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
     vp = ctx.js('window.__skep.view.viewport()')
@@ -3050,7 +3050,7 @@ def version_holds(ctx, r):
         ctx.settle()
         ctx.frames(3)
         face = ctx.js('(() => { const n = window.__skep.overlay().notice; return {id: n ? n.id : null, text: n ? n.text : "", acts: document.querySelectorAll("#notice [data-run]").length}; })()')
-        said = ctx.js('import("./strings.js").then(({t}) => t("F.floating.member", {k: 1}))')
+        said = ctx.js('import("./strings.js").then(({sentence}) => sentence("F.floating.member", {k: 1}))')
         landed, nowhere = box_of(ctx, VERSIONED), ctx.js('window.__skep.go.arrival()')
         stood = line_of(ctx, m1, gap['at'])
         entry = landed['trail']['entries'][landed['trail']['cursor']]

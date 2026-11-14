@@ -36,9 +36,10 @@
 // identifier's face (`addressedHTML`); the client's words standing in a
 // document's first line's place are bracketed (`bracketed`, `withheldLine`);
 // a count is a numeral, its thousands parted by commas (U's `numeral`; style
-// S17), its noun agreeing with it by the singular form beside its plural one
-// (`counted`, `plural`; S18) — never an address, a port, a version number or
-// a position; a time elapsed is whole minutes in this table's English words
+// S17), its noun agreeing with it by the singular form beside its plural one,
+// and zero in words where a site words it (`counted`, `plural`; S18) — never
+// an address, a port, a version number or a position; a time elapsed is
+// whole minutes in this table's English words
 // whatever the browser's language (`duration`; S20); when a thing was made is
 // said by `dated`, from the board's own testimony and never from the reader's
 // clock, in one form of a date on every surface, bare in a row's fixed slot;
@@ -209,19 +210,19 @@ export const STRINGS = {
   'R59.floor.org': { text: 'published here; this org, or the host that runs this board for it, is not serving these bytes', cls: 'PINNED', kind: 'K20', source: 'requirements.md', cid: 'C-62' },
   'R59.floor.notebook': { text: 'published here; this notebook\'s owner is not serving these bytes', cls: 'PINNED', kind: 'K20', source: 'requirements.md', cid: 'C-62' },
   'R83.notebook': { text: 'published — anyone who can reach this notebook reads this passage at ⟨E⟩', cls: 'PINNED', kind: 'K12', source: 'requirements.md' },
-  'R5.undocumented': { text: 'link of type ⟨T⟩ — undocumented here', cls: 'PINNED', kind: 'K25', source: 'requirements.md' },
+  'R5.undocumented': { text: 'link of type ⟨T⟩, undocumented here', cls: 'PINNED', kind: 'K25', source: 'requirements.md', was: 'link of type ⟨T⟩ — undocumented here' },
 
   // ---- DRAFT: designs/B1-reader.md (B1-F6's twenty, by number) ---------------
   'B1.scan_busy': { text: 'this directory is busy — reissuing', cls: 'DRAFT', kind: 'K7', source: 'designs/B1-reader.md', screen: 'B1-S4' },
   'B1.endsets_too_large': { text: 'too many link ends here to show at once — narrow the selection', cls: 'DRAFT', kind: 'K6', source: 'designs/B1-reader.md', screen: 'B1-S4' },
-  'B1.not_a_link': { text: 'no link at this address — or none you may see', cls: 'DRAFT', kind: 'K6', source: 'designs/B1-reader.md', screen: 'B1-S5' },
-  'B1.range_not_present': { text: 'that passage is no longer at this place — the text moved', cls: 'DRAFT', kind: 'K6', source: 'designs/B1-reader.md', screen: 'B1-S6' },
+  'B1.not_a_link': { text: 'there\'s no link at this address, or none you can see', cls: 'DRAFT', kind: 'K6', source: 'designs/B1-reader.md', screen: 'B1-S5', was: 'no link at this address — or none you may see' },
+  'B1.range_not_present': { text: 'the text there has moved, so that passage is no longer where it was', cls: 'DRAFT', kind: 'K6', source: 'designs/B1-reader.md', screen: 'B1-S6', was: 'that passage is no longer at this place — the text moved' },
   'B1.too_many_blocks': { text: 'compare in parts', cls: 'DRAFT', kind: 'K6', source: 'designs/B1-reader.md', screen: 'B1-S9' },
   'B1.too_many_pairs': { text: 'too much is shared to show at once — compare in parts', cls: 'DRAFT', kind: 'K6', source: 'designs/B1-reader.md', screen: 'B1-S9' },
   'B1.too_much_coverage': { text: 'ask over a smaller selection', cls: 'DRAFT', kind: 'K6', source: 'designs/B1-reader.md', screen: 'B1-S10' },
   'B1.empty_subspace': { text: 'nothing here yet', cls: 'DRAFT', kind: 'K31', source: 'designs/B1-reader.md', screen: 'B1-S13' },
-  'B1.doc_not_registered': { text: '⟨address⟩ — nothing this board will say about this address; whether a document exists, is published or is being withheld, nothing here asserts', cls: 'DRAFT', kind: 'K31', source: 'designs/B1-reader.md', screen: 'B1-S8' },
-  'B1.invalid': { text: 'no such link or slot', cls: 'DRAFT', kind: 'K6', source: 'designs/B1-reader.md', screen: 'B1-S6' },
+  'B1.doc_not_registered': { text: 'This board says nothing about ⟨address⟩: not even whether a document is there, published, or withheld from you.', cls: 'DRAFT', kind: 'K31', source: 'designs/B1-reader.md', screen: 'B1-S8', was: '⟨address⟩ — nothing this board will say about this address; whether a document exists, is published or is being withheld, nothing here asserts' },
+  'B1.invalid': { text: 'This link leads nowhere: its other end is empty.', cls: 'DRAFT', kind: 'K6', source: 'designs/B1-reader.md', screen: 'B1-S6', was: 'no such link or slot' },
   'B1.unreachable': { text: '⟨address⟩ — the node ⟨node⟩ is not answering; the address is real', cls: 'DRAFT', kind: 'K6', source: 'designs/B1-reader.md', screen: 'B1-S8' },
   'B1.try-again': { text: 'Try again', cls: 'DRAFT', kind: 'K1', source: 'designs/B1-reader.md', screen: 'B1-S8; B1-S9: a stop returned to', was: 'try again' },
   'B1.unregistered': { text: '⟨prefix⟩ — an unregistered prefix; unknown is a visible state', cls: 'DRAFT', kind: 'K31', source: 'designs/B1-reader.md', screen: 'B1-S8' },
@@ -229,6 +230,9 @@ export const STRINGS = {
   'B1.guest-line': { text: 'reading as a guest', cls: 'DRAFT', kind: 'K17', source: 'designs/B1-reader.md', screen: 'B1-S1' },
   'B1.others-toggle': { text: 'Others’ links: ⟨state⟩ · ⟨n⟩ touch this document', cls: 'DRAFT', kind: 'K3', source: 'designs/B1-reader.md', screen: 'B1-S4', was: 'others\' links: ⟨state⟩ · ⟨n⟩ touch this document' },
   'B1.others-toggle.1': { text: 'Others’ links: ⟨state⟩ · 1 touches this document', cls: 'DRAFT', kind: 'K3', source: 'designs/B1-reader.md', screen: 'B1-S4', was: 'others\' links: ⟨state⟩ · 1 touches this document' },
+  'B1.others-toggle.0': { text: 'Others’ links: ⟨state⟩ · none touch this document', cls: 'DRAFT', kind: 'K3', source: '', screen: 'B1-S4: no other\'s link touches the document', lane: true },
+  'B1.others-toggle.shown': { text: 'shown', cls: 'DRAFT', kind: 'K11', source: '', screen: 'B1-S4: the switch\'s state, others\' links shown', lane: true },
+  'B1.others-toggle.hidden': { text: 'hidden', cls: 'DRAFT', kind: 'K11', source: '', screen: 'B1-S4: the switch\'s state, others\' links hidden', lane: true },
   'B1.presence': { text: '⟨n⟩ links touch this document', cls: 'DRAFT', kind: 'K23', source: 'designs/B1-reader.md', screen: 'B1-S1' },
   'B1.presence.1': { text: '1 link touches this document', cls: 'DRAFT', kind: 'K23', source: 'designs/B1-reader.md', screen: 'B1-S1' },
   'B1.clamp': { text: 'the whole board is in view', cls: 'DRAFT', kind: 'K17', source: 'designs/B1-reader.md', screen: 'B1-S3' },
@@ -240,9 +244,14 @@ export const STRINGS = {
   'B1.leap-placeholder': { text: 'type an address', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S11' },
   'B1.who-wrote': { text: 'who wrote this?', cls: 'DRAFT', kind: 'K1', source: 'designs/B1-reader.md', screen: 'B1-S10' },
   'B1.who-uses': { text: 'who uses this?', cls: 'DRAFT', kind: 'K1', source: 'designs/B1-reader.md', screen: 'B1-S10' },
-  'B1.see-links': { text: 'see the links', cls: 'DRAFT', kind: 'K1', source: 'designs/B1-reader.md', screen: 'B1-S4' },
-  'B1.follow': { text: 'follow', cls: 'DRAFT', kind: 'K1', source: 'designs/B1-reader.md', screen: 'B1-S6' },
-  'B1.side-by-side': { text: 'read side by side', cls: 'DRAFT', kind: 'K1', source: 'designs/B1-reader.md', screen: 'B1-S9' },
+  'B1.see-links': { text: 'See the links', cls: 'DRAFT', kind: 'K1', source: 'designs/B1-reader.md', screen: 'B1-S4', was: 'see the links' },
+  'B1.links-on': { text: 'Links on ⟨label⟩ (⟨address⟩)', cls: 'DRAFT', kind: 'K24', source: '', screen: 'B1-S4: the card\'s caption; a tail\'s or a withheld run\'s list of ends, one for each document', lane: true },
+  'B1.links.show-where': { text: 'Show where the links lead', cls: 'DRAFT', kind: 'K1', source: '', screen: 'B1-S4: the stage act, the symbols shown', lane: true },
+  'B1.links.hide-where': { text: 'Hide where the links lead', cls: 'DRAFT', kind: 'K1', source: '', screen: 'B1-S4: the stage act, each link\'s way to its other end drawn', lane: true },
+  'B1.links.end': { text: 'No more links.', cls: 'DRAFT', kind: 'K31', source: '', screen: 'B1-S4: the list\'s end, no more to show', lane: true },
+  'B1.follow': { text: 'Follow', cls: 'DRAFT', kind: 'K1', source: 'designs/B1-reader.md', screen: 'B1-S6', was: 'follow' },
+  'B1.follow.to': { text: 'Follow to ⟨far⟩', cls: 'DRAFT', kind: 'K1', source: '', screen: 'B1-S5: the follow act, with its far end; a follow\'s face at a withheld far end, its caption', lane: true },
+  'B1.side-by-side': { text: 'Read side by side', cls: 'DRAFT', kind: 'K1', source: 'designs/B1-reader.md', screen: 'B1-S9' },
   'B1.show-more': { text: 'Show more', cls: 'DRAFT', kind: 'K1', source: 'designs/B1-reader.md', screen: 'B1-S4; a continuation\'s mark\'s list', was: 'show more' },
   'B1.withheld-run': { text: 'withheld · ⟨owner⟩ (⟨account⟩) · ⟨width⟩ positions · origin ⟨origin⟩', cls: 'DRAFT', kind: 'K20', source: 'designs/B1-reader.md', screen: 'B1-S7' },
   'B1.withheld-run.1': { text: 'withheld · ⟨owner⟩ (⟨account⟩) · 1 position · origin ⟨origin⟩', cls: 'DRAFT', kind: 'K20', source: 'designs/B1-reader.md', screen: 'B1-S7: a run one position wide', was: 'withheld · ⟨owner⟩ Acme (1.5.0.1) · 240 positions · origin 1.5.0.1.0.2' },
@@ -279,13 +288,14 @@ export const STRINGS = {
   // plane read at its reading scale, to the version it shows, and again by a return to a box it marked (FP-23): F.arrival's
   // first two clauses, its act the corner's "read version ⟨n⟩" (F.versions.read) and no "show what changed"
   'F.arrival.pane': { text: 'you are reading version ⟨k⟩ — a newer version has arrived', cls: 'DRAFT', kind: 'K22', source: 'designs/foundations.md', screen: 'B1-S9; the status region at the plane\'s corner' },
-  'F.floating': { text: 'its passage is not in ⟨D⟩\'s current text', cls: 'DRAFT', kind: 'K15', source: 'designs/foundations.md', screen: 'B1-S6, B1-S4; B1-S9: a stop returned to; a return by the trail' },
-  'F.floating.read': { text: 'Read version ⟨k⟩, the last that has it', cls: 'DRAFT', kind: 'K1', source: 'designs/foundations.md', screen: 'B1-S6', was: 'read version ⟨k⟩, the last that holds it' },
-  'F.floating.member': { text: 'its passage is not in version ⟨k⟩', cls: 'DRAFT', kind: 'K15', source: 'designs/foundations.md', screen: 'B1-S6; B1-S9: a stop returned to; a return by the trail' },
+  'F.floating': { text: 'the passage is no longer in the current text of ⟨D⟩', cls: 'DRAFT', kind: 'K15', source: 'designs/foundations.md', screen: 'B1-S6, B1-S4; B1-S9: a stop returned to; a return by the trail', was: 'its passage is not in ⟨D⟩\'s current text' },
+  'F.floating.read': { text: 'Read version ⟨k⟩', cls: 'DRAFT', kind: 'K1', source: 'designs/foundations.md', screen: 'B1-S6', was: 'read version ⟨k⟩, the last that holds it' },
+  'F.floating.last': { text: 'Version ⟨k⟩ is the last that has it.', cls: 'DRAFT', kind: 'K15', source: '', screen: 'B1-S6: the dead end\'s face, above its version act; a landing\'s line', lane: true },
+  'F.floating.member': { text: 'the passage isn\'t in version ⟨k⟩', cls: 'DRAFT', kind: 'K15', source: 'designs/foundations.md', screen: 'B1-S6; B1-S9: a stop returned to; a return by the trail', was: 'its passage is not in version ⟨k⟩' },
   'F.swallow': { text: 'typing goes nowhere here — to go somewhere, the address line: ⟨LEAP chord⟩', cls: 'DRAFT', kind: 'K18', source: 'designs/foundations.md', screen: 'the plane (K-9)', hint: 'clause' },
   'F.swallow.space': { text: '⟨space key⟩ does not page here — ⟨paging key⟩ does', cls: 'DRAFT', kind: 'K18', source: 'designs/foundations.md', screen: 'the plane (K-9)', hint: 'clause' },
   'F.board-residue': { text: 'not counted here: drafts you may not read, links homed on other boards — counted from ⟨floor⟩; documents unchanged since then are not shown', cls: 'DRAFT', kind: 'K16', source: 'designs/foundations.md', screen: 'B1-S3' },
-  'F.card-clause': { text: 'links homed on other boards are not counted here', cls: 'DRAFT', kind: 'K16', source: 'designs/foundations.md', screen: 'B1-S4' },
+  'F.card-clause': { text: 'Not counted here: links kept on other boards.', cls: 'DRAFT', kind: 'K16', source: 'designs/foundations.md', screen: 'B1-S4', was: 'links homed on other boards are not counted here' },
   'F.leap.none': { text: 'nothing you can read on this board goes by that name or holds those words', cls: 'DRAFT', kind: 'K31', source: 'designs/foundations.md', screen: 'B1-S11' },
   'F.leap.floor': { text: 'documents unchanged since ⟨floor⟩ are not found here', cls: 'DRAFT', kind: 'K16', source: 'designs/foundations.md', screen: 'B1-S11' },
   'F.open-beside': { text: 'Open beside', cls: 'DRAFT', kind: 'K1', source: 'designs/foundations.md', screen: 'B1-S11', was: 'open beside' },
@@ -323,21 +333,23 @@ export const STRINGS = {
   'F.scene.link': { text: 'a link — a different relation, drawn differently', cls: 'DRAFT', kind: 'K19', source: 'designs/plane.js', screen: 'B1-S9' },
   'F.scene.relevel': { text: 'Line the passages up again', cls: 'DRAFT', kind: 'K1', source: 'designs/foundations.md', screen: 'B1-S9', was: 're-level' },
   'F.scene.dismiss': { text: 'Close side by side', cls: 'DRAFT', kind: 'K1', source: 'designs/plane.js', screen: 'B1-S9', was: 'dismiss the scene' },
-  'F.lens.owner': { text: 'owner', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S4' },
-  'F.lens.type': { text: 'type', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S4' },
-  'F.lens.endorsement': { text: 'endorsement', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S4' },
+  'F.lens.owner': { text: 'Owner', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S4', was: 'owner' },
+  'F.lens.type': { text: 'Type', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S4', was: 'type' },
   'F.lens.endorsed': { text: 'Endorsed by the owner', cls: 'DRAFT', kind: 'K3', source: 'designs/B1-reader.md', screen: 'B1-S4', was: 'endorsed by the owner' },
-  'F.card.type': { text: 'type', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S5' },
+  'F.lens.clear': { text: 'Clear filters', cls: 'DRAFT', kind: 'K1', source: '', screen: 'B1-S4: a filter on', lane: true },
+  'F.card.type': { text: 'Type', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S5', was: 'type' },
+  'B1.card.link': { text: 'Link ⟨address⟩', cls: 'DRAFT', kind: 'K24', source: '', screen: 'B1-S5: the card\'s caption', lane: true },
   'F.card.from': { text: 'from', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S5' },
   'F.card.to': { text: 'to', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S5' },
-  'F.card.home': { text: 'home', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S5' },
-  'F.card.owner': { text: 'owner', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S5' },
-  'F.card.superseded-by': { text: 'superseded by', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S5' },
-  'F.card.supersedes': { text: 'supersedes', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S5' },
+  'F.card.home': { text: 'Kept in', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S5', was: 'home' },
+  'F.card.owner': { text: 'Owner', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S5', was: 'owner' },
+  'F.card.owner.unknown': { text: 'not known', cls: 'DRAFT', kind: 'K25', source: '', screen: 'B1-S5: the owner row, where the page holds no owner for the link', lane: true },
+  'F.card.superseded-by': { text: 'Replaced by', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S5', was: 'superseded by' },
+  'F.card.supersedes': { text: 'Replaces', cls: 'DRAFT', kind: 'K24', source: 'designs/B1-reader.md', screen: 'B1-S5', was: 'supersedes' },
   'F.card.none': { text: 'none', cls: 'DRAFT', kind: 'K25', source: 'designs/B1-reader.md', screen: 'B1-S5' },
   'F.card.retracted': { text: 'retracted', cls: 'DRAFT', kind: 'K25', source: 'designs/B1-reader.md', screen: 'B1-S5' },
-  'F.card.public': { text: 'published — so the link is public', cls: 'DRAFT', kind: 'K12', source: 'designs/B1-reader.md', screen: 'B1-S5' },
-  'F.card.hidden': { text: 'a draft — the link is hidden with its home', cls: 'DRAFT', kind: 'K12', source: 'designs/B1-reader.md', screen: 'B1-S5' },
+  'F.card.public': { text: 'published: anyone who can read this board can see this link', cls: 'DRAFT', kind: 'K12', source: 'designs/B1-reader.md', screen: 'B1-S5' },
+  'F.card.hidden': { text: 'a draft: only those who can read it can see this link', cls: 'DRAFT', kind: 'K12', source: 'designs/B1-reader.md', screen: 'B1-S5' },
   'F.versions.read': { text: 'Read version ⟨k⟩', cls: 'DRAFT', kind: 'K1', source: 'designs/foundations.md', screen: 'the versions list; the corner, its offered read', was: 'read version ⟨k⟩' },
   'F.versions.whole': { text: 'holds the passage whole', cls: 'DRAFT', kind: 'K25', source: 'designs/foundations.md', screen: 'the versions list' },
   'F.versions.part': { text: 'holds the passage in part', cls: 'DRAFT', kind: 'K25', source: 'designs/foundations.md', screen: 'the versions list' },
@@ -1196,20 +1208,21 @@ export const STRINGS = {
   'L.mark.member': { text: '⟨name⟩ · ⟨i⟩ of ⟨n⟩', cls: 'DRAFT', kind: 'K21', source: '', screen: 'a continuation\'s mark', lane: true },
   // the anatomy card's lineage by its claims' authority: a claimant the owner row does not name, after its claim on a
   // row; the line the claims without authority stand behind; each of them listed as an assertion — its `.you` form
-  // where the reader is the claimant, the verb agreeing — with what the claimant is to the links
-  'L.card.by-owner': { text: 'by its owner, ⟨claimant⟩', cls: 'DRAFT', kind: 'K26', source: '', screen: 'B1-S5', lane: true },
+  // where the reader is the claimant, the verb agreeing — with what the claimant is to the links, ⟨owner⟩ the owner of
+  // the link replaced
+  'L.card.by-owner': { text: 'by the replaced link\'s owner, ⟨claimant⟩', cls: 'DRAFT', kind: 'K26', source: '', screen: 'B1-S5', lane: true },
   'L.card.you': { text: 'you', cls: 'DRAFT', kind: 'K26', source: '', screen: 'B1-S5', lane: true },
   'L.card.others': { text: 'Show what other accounts say', cls: 'DRAFT', kind: 'K1', source: '', screen: 'B1-S5', lane: true },
-  'L.card.claims.superseded-by': { text: '⟨claimant⟩ claims this is superseded by ⟨link⟩', cls: 'DRAFT', kind: 'K26', source: '', screen: 'B1-S5', lane: true },
-  'L.card.claims.superseded-by.you': { text: '⟨claimant⟩ claim this is superseded by ⟨link⟩', cls: 'DRAFT', kind: 'K26', source: '', screen: 'B1-S5', lane: true },
-  'L.card.claims.supersedes': { text: '⟨claimant⟩ claims this supersedes ⟨link⟩', cls: 'DRAFT', kind: 'K26', source: '', screen: 'B1-S5', lane: true },
-  'L.card.claims.supersedes.you': { text: '⟨claimant⟩ claim this supersedes ⟨link⟩', cls: 'DRAFT', kind: 'K26', source: '', screen: 'B1-S5', lane: true },
+  'L.card.claims.superseded-by': { text: '⟨claimant⟩ says this link is replaced by ⟨link⟩', cls: 'DRAFT', kind: 'K26', source: '', screen: 'B1-S5', lane: true },
+  'L.card.claims.superseded-by.you': { text: '⟨claimant⟩ say this link is replaced by ⟨link⟩', cls: 'DRAFT', kind: 'K26', source: '', screen: 'B1-S5', lane: true },
+  'L.card.claims.supersedes': { text: '⟨claimant⟩ says this link replaces ⟨link⟩', cls: 'DRAFT', kind: 'K26', source: '', screen: 'B1-S5', lane: true },
+  'L.card.claims.supersedes.you': { text: '⟨claimant⟩ say this link replaces ⟨link⟩', cls: 'DRAFT', kind: 'K26', source: '', screen: 'B1-S5', lane: true },
   'L.card.this-owner': { text: 'this link\'s owner', cls: 'DRAFT', kind: 'K26', source: '', screen: 'B1-S5', lane: true },
-  'L.card.above': { text: 'an account above the superseded link\'s owner', cls: 'DRAFT', kind: 'K26', source: '', screen: 'B1-S5', lane: true },
-  'L.card.under': { text: 'an account under the superseded link\'s owner', cls: 'DRAFT', kind: 'K26', source: '', screen: 'B1-S5', lane: true },
+  'L.card.above': { text: 'the account ⟨owner⟩ belongs to', cls: 'DRAFT', kind: 'K26', source: '', screen: 'B1-S5', lane: true },
+  'L.card.under': { text: 'an account that belongs to ⟨owner⟩', cls: 'DRAFT', kind: 'K26', source: '', screen: 'B1-S5', lane: true },
   // when a thing was made, said as its date after the word for its event (`dated`): a link's; and where only an hourly
   // time record testifies to the time, the latest day it can have fallen on
-  'L.card.made': { text: 'made', cls: 'DRAFT', kind: 'K24', source: '', screen: 'B1-S5', lane: true },
+  'L.card.made': { text: 'Made', cls: 'DRAFT', kind: 'K24', source: '', screen: 'B1-S5', lane: true },
   'L.time.on-or-before': { text: 'on or before ⟨date⟩', cls: 'DRAFT', kind: 'K25', source: '', screen: 'B1-S5; the versions list', lane: true },
   'L.the-line': { text: 'the one line', cls: 'DRAFT', kind: 'K17', source: '', screen: 'the one line', lane: true },
   // the address segment's accessible name: its fields in their order, the document's label whole after its field, the
@@ -1263,17 +1276,18 @@ export const STRINGS = {
   'L.mirror.untyped': { text: 'untyped', cls: 'DRAFT', kind: 'K21', source: '', screen: 'the ARIA mirror', lane: true },
   // a document the board will say nothing of, as its state: its corner's own words (T-ARTICLE's), which its mirror item leads with
   // and the anatomy card's home row states of a link's home
-  'L.far.unregistered': { text: 'nothing this board will say about this address', cls: 'DRAFT', kind: 'K31', source: '', screen: 'the ARIA mirror: a document\'s item; the corner; B1-S5: the home row', lane: true },
+  'L.far.unregistered': { text: 'this board says nothing about this address', cls: 'DRAFT', kind: 'K31', source: '', screen: 'the ARIA mirror: a document\'s item; the corner; B1-S5: the home row', lane: true },
   // a link's far end the board will say nothing of, in one state (LK's `emptyAt`): in the reader's own account under a
   // complete index listing no document at the address, "no document here yet" — its whole form saying nothing has been made
-  // there, then whether the account's next new document goes there — else "no document known here", its whole form that
-  // short form, then the fifth cell's words (B1.doc_not_registered); the short form names the far end on every label and
-  // row and in its mirror item's name, and the whole form is the follow's face, the face of "read side by side" opened from
-  // the far end's link, the item's description and the reason its card's "read side by side" gives
+  // there, then whether the account's next new document goes there, each a sentence — else "no document known here", its
+  // whole form that short form set as a sentence, then the fifth cell's words (B1.doc_not_registered); the short form names
+  // the far end on every label and row and in its mirror item's name, and the whole form is the follow's face, the face of
+  // "read side by side" opened from the far end's link, the item's description and the reason its card's "read side by
+  // side" gives
   'L.far.empty': { text: 'no document here yet', cls: 'DRAFT', kind: 'K31', source: '', screen: 'a link\'s far end: its tail, a merged tail, B1-S5, the "which" list, the ARIA mirror', lane: true },
-  'L.far.empty.whole': { text: 'no document here yet — nothing has been made at ⟨address⟩ in your account', cls: 'DRAFT', kind: 'K31', source: '', screen: 'a link\'s far end: the follow\'s face, the face of "read side by side" opened from it, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
-  'L.far.empty.next': { text: 'the next new document made in your account goes here, and this link will lead to it', cls: 'DRAFT', kind: 'K31', source: '', screen: 'a link\'s far end: the follow\'s face, the face of "read side by side" opened from it, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
-  'L.far.empty.order': { text: 'your account\'s new documents take its addresses in order', cls: 'DRAFT', kind: 'K31', source: '', screen: 'a link\'s far end: the follow\'s face, the face of "read side by side" opened from it, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
+  'L.far.empty.whole': { text: 'No document here yet: nothing has been made at ⟨address⟩ in your account.', cls: 'DRAFT', kind: 'K31', source: '', screen: 'a link\'s far end: the follow\'s face, the face of "read side by side" opened from it, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
+  'L.far.empty.next': { text: 'The next new document made in your account goes here, and this link will lead to it.', cls: 'DRAFT', kind: 'K31', source: '', screen: 'a link\'s far end: the follow\'s face, the face of "read side by side" opened from it, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
+  'L.far.empty.order': { text: 'New documents in your account take its addresses in order.', cls: 'DRAFT', kind: 'K31', source: '', screen: 'a link\'s far end: the follow\'s face, the face of "read side by side" opened from it, the ARIA mirror\'s description, B1-S5\'s inert "read side by side"', lane: true },
   'L.far.unknown': { text: 'no document known here', cls: 'DRAFT', kind: 'K31', source: '', screen: 'a link\'s far end: its tail, a merged tail, B1-S5, the "which" list, the follow\'s face, the face of "read side by side" opened from it, the ARIA mirror', lane: true },
   // a jump reading, said where the camera is until its read answers; a jump reaching, said at the act's site while only a read
   // can place its destination, the camera still (FP-25) — each its words, the page drawing the one running mark after them
@@ -1289,14 +1303,14 @@ export const STRINGS = {
   // text (BM-HELD's `lineOf`, `shortLineOf`)
   'L.held.part': { text: 'only part of ⟨subject⟩ is in ⟨where⟩', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
   'L.held.pieces': { text: 'all of ⟨subject⟩ is in ⟨where⟩', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
-  'L.held.withheld': { text: 'the rest may be under the withheld text here', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a link\'s far end: B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
-  'L.held.unknown': { text: 'couldn\'t tell whether ⟨where⟩ holds ⟨subject⟩: ⟨reason⟩', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
+  'L.held.withheld': { text: 'the rest may be in text withheld from you', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a link\'s far end: B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
+  'L.held.unknown': { text: 'this app couldn\'t tell whether ⟨where⟩ has ⟨subject⟩: ⟨reason⟩', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
   'L.held.selected': { text: 'what you selected', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line', lane: true },
   'L.held.reading': { text: 'the text you were reading', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line', lane: true },
-  'L.held.followed': { text: 'its passage', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
+  'L.held.followed': { text: 'the passage this link leads to', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
   'L.held.stop': { text: 'what this stop stood for', cls: 'DRAFT', kind: 'K15', source: '', screen: 'B1-S9: a stop the reader left from, returned to', lane: true },
   'L.held.member': { text: 'version ⟨k⟩', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a link\'s far end; B1-S9: a stop returned to', lane: true },
-  'L.held.current': { text: '⟨D⟩\'s current text', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a link\'s far end; B1-S9: a stop returned to', lane: true },
+  'L.held.current': { text: 'the current text of ⟨D⟩', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a link\'s far end; B1-S9: a stop returned to', lane: true },
   // why no answer told (BM-HELD's `whyOf`), where no entry above already says it: never the refusal's token, never "compare"
   'L.held.why.busy': { text: 'the board was busy', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a versions row; B1-S9: a stop returned to', lane: true },
   'L.held.why.size': { text: 'it is too large to check, even in parts', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a versions row; B1-S9: a stop returned to', lane: true },
@@ -2236,17 +2250,19 @@ export function formAgain(ty, chord, level) {
 }
 
 /**
- * A count's entry and its numeral (style S17, S18): the entry `one`, its
- * singular form, where n is 1, else `many`, its plural, and n as the page
+ * A count's entry and its numeral (style S17, S18): the entry `none`, its
+ * zero form, where n is 0 and the site words zero; the entry `one`, its
+ * singular form, where n is 1; else `many`, its plural; and n as the page
  * names a count (U's `numeral`) — what `plural` fills, for a site that names
  * the entry its count fills under another token, or sets its words as markup
  * or stretches.
  * @param {number} n
  * @param {string} one
  * @param {string} many
+ * @param {string} [none] the entry that says zero in words, where the site has one
  * @returns {{id: string, n: string}}
  */
-export const counted = (n, one, many) => ({ id: n === 1 ? one : many, n: numeral(n) });
+export const counted = (n, one, many, none) => ({ id: n === 0 && none ? none : n === 1 ? one : many, n: numeral(n) });
 
 /**
  * A count with its noun agreeing (style S17, S18): the entry `one` where n is

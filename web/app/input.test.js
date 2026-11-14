@@ -91,7 +91,7 @@ import { articleHTML, entitlementArm, edgeStatementHTML, placeholderOf, originRu
 import { resolveSpan, unitSpan } from '../model/address.js';
 import { accountCell, boardCell, docBox } from '../plane/projection.js';
 import { outlineRects } from '../plane/layout.js';
-import { t, tHTML, tRuns, addressedHTML, heard } from '../strings.js';
+import { t, tHTML, tRuns, addressedHTML, heard, opening } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { spanOfBlock } from '../text/span.js';
 import { recorder } from '../test/canvas.js';
@@ -329,10 +329,10 @@ test('a click on a link\'s symbol, or on a stretch it marks, opens the card of t
     /** @type {Array<[string, string[]]>} */
     const marks = [['.sym', article.match(/<span class="sym [^"]*" data-link="[^"]*"[^>]*>/g) || []], ['.lip', article.match(/<span class="seg lip[^"]*"[^>]*>/g) || []]];
     const holder = { dataset: { addr: D } };
-    /** each end: its own bytes in D, and the card's two ends as it reads them — far first: which end, its document, its words */
+    /** each end: its own bytes in D, and the card's two ends as it reads them — far first: which end, named as a field with its capital, its document, its words */
     const ends = [
-      { bytes: { addr: D, pos: 1, width: 7 }, lines: [['far', t('F.card.to'), O, 'quoted'], ['near', t('F.card.from'), D, 'Tumbler']] },
-      { bytes: { addr: D, pos: 27, width: 6 }, lines: [['far', t('F.card.from'), D, 'Tumbler'], ['near', t('F.card.to'), D, 'quoted']] },
+      { bytes: { addr: D, pos: 1, width: 7 }, lines: [['far', opening('F.card.to'), O, 'quoted'], ['near', opening('F.card.from'), D, 'Tumbler']] },
+      { bytes: { addr: D, pos: 27, width: 6 }, lines: [['far', opening('F.card.from'), D, 'Tumbler'], ['near', opening('F.card.to'), D, 'quoted']] },
     ];
     for (const [cls, tags] of marks) {
       assert.equal(tags.length, ends.length, `${cls}: one for each end`);

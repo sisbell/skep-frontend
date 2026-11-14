@@ -25,7 +25,7 @@
 // text says "again", and the first of such stretches "again later"; the run
 // the landing stands at adds how much of the passage the runs hold — all of
 // it, or only part and, where the text shows withheld text, that the rest
-// may be under it — and that the text holds the pieces out of the passage's
+// may be in it — and that the text holds the pieces out of the passage's
 // order where it does (`labelOf`); a label's parts are fields (ST's
 // `fields`); labels that would stack merge into one naming the pieces they
 // hold (`mergedLabel`). A step takes the runs in the passage's order, each
@@ -37,7 +37,8 @@
 // to stood for — and the text by F.floating's two forms, a
 // member or a bare address's current text (`whereOf`); where the landing
 // shows withheld text, a part's line says after its short form — the line's
-// start (`shortLineOf`) — that the rest may be under it. The line is
+// start (`shortLineOf`) — that the rest may be in text withheld from the
+// reader. The line is
 // sentences, each its capital and its end mark (ST's `sentences`; style S1,
 // S2), wherever it is said; its short form is a field's words, no capital and
 // no end mark, standing in a row. A landing in one run says its line (N-GO's
@@ -49,14 +50,22 @@
 // document — its projection, and the bytes of each run it names through that
 // document's held image — its card and its mirror item saying the line whole
 // (`farSays`), the dead end's words a sentence there too (`floatingLineOf`),
-// its stub and its symbol its short form (`farShort`).
-// Rules: FP-1, FP-2, FP-21, FP-22.
+// its stub and its symbol its short form (`farShort`). A document a line
+// names at its bare address — the line's current text, the dead end's words —
+// is named by its label, the first line the board's index lists for it, cut
+// on a word with an ellipsis (`labelIn`; foundations §2.1's label cap), and
+// by its address where the index lists none (`nameIn`); every line naming a
+// document so reads it here.
+// Figures: a label inside a line holds LABEL_CH characters at the most,
+// its ellipsis among them.
+// Rules: FP-1, FP-2, FP-21, FP-22, FP-33.
 
 import * as REC from '../model/records.js';
 import { lostSession } from '../bridge/port.js';
 import { floats } from '../links/links.js';
 import { SIZE_REFUSALS } from '../model/frames.js';
 import { memberOf } from '../model/address.js';
+import { cutTo, LABEL_CH } from '../text/article.js';
 import { t, sentence, sentences, fields } from '../strings.js';
 import { numeral } from '../util.js';
 
@@ -255,7 +264,7 @@ export function piecesIn(stretches, width, withheld = false) {
   return { runs: labelled, of: kinds.length, order, whole, reordered: firsts.some((n, i) => i > 0 && n < firsts[i - 1]), withheld: !whole && withheld };
 }
 
-/** what the run the landing stands at adds (see the head), each a field: how much of the passage the runs hold, where only part that the rest may be under the withheld text the text shows, and whether the text holds the pieces out of the passage's order; '' for each that does not hold */
+/** what the run the landing stands at adds (see the head), each a field: how much of the passage the runs hold, where only part that the rest may be in the withheld text the text shows, and whether the text holds the pieces out of the passage's order; '' for each that does not hold */
 function amountOf(/** @type {Pieces} */ p) {
   return [p.whole ? t('L.piece.all') : t('L.piece.part'), p.withheld ? t('L.held.withheld') : '', p.reordered ? t('L.piece.order') : ''];
 }
@@ -369,8 +378,24 @@ export function whyOf(r) {
  */
 export const retries = (r) => !r || r.kind === 'unreachable' || lostSession(r) || BUSY.has(r.name);
 
-/** the text a line names (see the head): "version ⟨k⟩" at a member, "⟨D⟩'s current text" at a bare address */
-export const whereOf = (/** @type {string} */ addr) => { const k = memberOf(addr); return k != null ? t('L.held.member', { k }) : t('L.held.current', { D: addr }); };
+/**
+ * A document's label as a line sets it (see the head): the first line the
+ * board's index lists for it (M-REC's `place`), cut on a word to LABEL_CH
+ * characters, an ellipsis after the cut (T-ARTICLE's `cutTo`); null where the
+ * index lists no label for it.
+ * @param {string} addr a bare address
+ * @returns {string | null}
+ */
+export function labelIn(addr) {
+  const label = (REC.place(addr)?.label ?? '').trim();
+  return label ? cutTo(label, LABEL_CH, (s) => [...s].length) : null;
+}
+
+/** a document as a line names it (see the head): its label (`labelIn`), else its address */
+export const nameIn = (/** @type {string} */ addr) => labelIn(addr) ?? addr;
+
+/** the text a line names (see the head): a member's version (`L.held.member`), a bare address's current text (`L.held.current`), the document by its name (`nameIn`) */
+export const whereOf = (/** @type {string} */ addr) => { const k = memberOf(addr); return k != null ? t('L.held.member', { k }) : t('L.held.current', { D: nameIn(addr) }); };
 
 /** each subject's words */
 const SUBJECTS = { selected: 'L.held.selected', reading: 'L.held.reading', followed: 'L.held.followed', stop: 'L.held.stop' };
@@ -404,9 +429,8 @@ export function unknownOf(r, subject, addr) {
 
 /**
  * The string the line's short form says (`shortLineOf`), and its values: a
- * part, "only part of ⟨subject⟩ is in ⟨where⟩"; pieces, "all of ⟨subject⟩ is
- * in ⟨where⟩"; couldn't tell, "couldn't tell whether ⟨where⟩ holds
- * ⟨subject⟩: ⟨reason⟩".
+ * part's (`L.held.part`), pieces' (`L.held.pieces`), couldn't tell's with its
+ * reason (`L.held.unknown`), each naming the passage and the text it is in.
  * @param {Said} s
  * @returns {[string, Record<string, string>]}
  */
@@ -427,7 +451,7 @@ export const shortLineOf = (s) => t(...shortOf(s));
 /**
  * The line's words (see the head): its short form (`shortOf`) a sentence,
  * then, for a part where the text shows withheld text, that the rest may be
- * under it, a sentence of its own (ST's `sentence`, `sentences`).
+ * in it, a sentence of its own (ST's `sentence`, `sentences`).
  * @param {Said} s
  * @returns {string}
  */
@@ -464,9 +488,10 @@ export function farHolds(s) {
 
 /**
  * The dead end's words for a text that holds none of a passage (foundations
- * §2.3): "its passage is not in ⟨D⟩'s current text" at a plain address, and
- * "its passage is not in version ⟨k⟩" at a version member — the words of
- * O-FACES' floating face.
+ * §2.3), a field's words, no capital and no end mark: a plain address's
+ * (`F.floating`), its document by its name (`nameIn`), and a version
+ * member's own (`F.floating.member`) — what a stub's label and a symbol's
+ * title say.
  * @param {string} addr the text's document: a plain address, or a version member
  * @returns {string}
  */
@@ -475,16 +500,21 @@ export const floatingOf = (addr) => t(...deadEndOf(addr));
 /**
  * The dead end's words as a sentence (`floatingOf`; ST's `sentence`): what a
  * surface that says the line says where the text holds none of the passage —
- * a drawn link's far end's mirror item, a reading scene's stop returned to.
+ * a drawn link's far end's card and mirror item, a reading scene's stop
+ * returned to, O-FACES' floating face and a landing's description there
+ * (`floatingSaid`).
  * @param {string} addr the text's document: a plain address, or a version member
  * @returns {string}
  */
 export const floatingLineOf = (addr) => sentence(...deadEndOf(addr));
 
-/** the string the dead end's words are said in, and its values (`floatingOf`): a version member's own, else a plain address's */
+/** the dead end's words as a sentence (`floatingLineOf`), with the string they are said in */
+export const floatingSaid = (/** @type {string} */ addr) => ({ id: deadEndOf(addr)[0], text: floatingLineOf(addr) });
+
+/** the string the dead end's words are said in, and its values (`floatingOf`): a version member's own, else a plain address's, its document by its name (`nameIn`) */
 function deadEndOf(/** @type {string} */ addr) {
   const k = memberOf(addr);
-  return /** @type {[string, Record<string, string | number>]} */ (k != null ? ['F.floating.member', { k }] : ['F.floating', { D: addr }]);
+  return /** @type {[string, Record<string, string | number>]} */ (k != null ? ['F.floating.member', { k }] : ['F.floating', { D: nameIn(addr) }]);
 }
 
 /**

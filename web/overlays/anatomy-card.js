@@ -3,22 +3,28 @@
 // Conjured at a link's symbol (or at its marked span, the link's own bytes),
 // following it as the camera moves, and at the link's own bytes once the text
 // layer rebuilds or takes down the article the element it was conjured at
-// stood in (O-HOST's anchor): led by each end's passage in words, the far
-// end's first, so a click answers with what the link leads to — the near end
+// stood in (O-HOST's anchor): captioned by the link's symbol in its mark and
+// "Link ⟨address⟩" (`B1.card.link`), set as written; led by each end's
+// passage in words, the far end's first, each end named by the way it runs —
+// "To" or "From", a field's name with its capital (ST's `opening`) — and its
+// document's address, none where the far end names no document, so a click
+// answers with what the link leads to — the near end
 // the document the link is drawn at (LK's `near`), whichever of its ends lies
 // there, read where LK places it in that text now, and the far end the other,
 // read where `project` answers its passage sits in its document's current
 // text (LK's `farRuns`, asked in the card's own opening where no projection
 // is held), never at the position the link stores; a far end that floats
-// reads the dead end's words (foundations §2.3), one whose text holds only
-// part of its passage, all of it in pieces, or one the board would not tell
-// of, says so beneath its words in BM-HELD's line (BM-HELD's `farHolds`;
+// reads the dead end's words as a sentence (foundations §2.3), one whose text
+// holds only part of its passage, all of it in pieces, or one the board would
+// not tell of, says so beneath its words in BM-HELD's line (BM-HELD's `farHolds`;
 // FP-21), and one no passage's words place — a far end naming its document
 // whole among them, which no passage's words describe (FP-30) — reads the
 // words its tail and its mirror item carry, its document's first line by the
 // one rule where the page holds one (LK's `farFaced`), so the reader knows
-// what a follow will meet before making it. An end in withheld text (FP-30)
-// reads the withheld box's words, naming the owner of the run's origin by the one owner rule its
+// what a follow will meet before making it; an end no words are held for
+// reads "not read", bracketed as the client's words in its place. An end in
+// withheld text (FP-30) reads the withheld box's words, naming the owner of
+// the run's origin by the one owner rule its
 // placeholder names (T-LAYER's `originOwner`; R56; FP-33): a near end LK
 // draws at a withheld run (`Shown.run`) with no read, and any stretch a read
 // answers as withheld in those words, never its bytes (`fragment`); the far
@@ -27,39 +33,43 @@
 // the document's own the reading face's, the client's words the interface
 // face's, every address — an end's document, the link, its owner, a
 // claimant, a far end a row names (LK's `farLabelHTML`) — the identifier's.
-// Then its anatomy — type (R5's form), from, to, home (what the page reads
-// of it, below), owner (never a name
-// alone), then its lineage (A-56, A-57, A-82), read under the audit view
+// Then its anatomy — type (R5's form), where the link is kept (what the page
+// reads of it, below), owner (never a name alone; "not known" where the page
+// holds none), then its lineage (A-56, A-57, A-82), read under the audit view
 // (M-PUMP's `lineage`), so a retracted claim stands, marked retracted,
 // wherever it falls. The lineage is the claims with authority
 // (`hasAuthority`): a claim's claimant, the account of its home, owns the
 // link it declares superseded, the account of `old`'s own address — `old`'s
-// on both sides, for on a "supersedes" row this link is `new`, whose owner
+// on both sides, for on a "Replaces" row this link is `new`, whose owner
 // does not decide. A supersession claim homes wherever its author chose
 // (wire.md §Links (writes): a deposit needs its home's owner alone), so a
 // stranger can claim another's link superseded, and the reads answer every
-// claim whose home the reader may read. "superseded by" names the `new` of
-// each such claim whose `old` is this link, "supersedes" the `old` of each
+// claim whose home the reader may read. "Replaced by" names the `new` of
+// each such claim whose `old` is this link, "Replaces" the `old` of each
 // such claim whose `new` is it, and a claimant the owner row does not name
 // follows its claim, a field after it (ST's `fields`), as its retraction
 // does; a side that answered no such claim reads B1-S5's
 // "none", and a side whose read was refused draws no row, for nothing was
 // learned of it. Every other claim stands behind one line after the rows, no
 // number in it, whose act opens them in its place, each an assertion naming
-// its claimant — "you" for the reader — and, in words, what the claimant is
-// to the links: this link's owner, an account above or under the superseded
-// link's owner. Position and wording carry authority, never colour alone.
+// its claimant — "you" for the reader — and, in words between commas after
+// it, what the claimant is to the links: this link's owner; the account the
+// replaced link's owner belongs to, or an account that belongs to that owner,
+// the owner named. Position and wording carry authority, never colour alone.
 // Between the owner row and the lineage stands when the link was made: the
 // date of the commit that minted it, from the age `read_link` answered with
 // the link (ST's `dated`), "not recorded" where the board holds no reading of
 // it, and never a log position.
-// The home row says what the page reads of the link's home (`homeState`): a
+// The row naming the document the link is kept in, its home, gives its
+// address and then, a field after it (ST's `fields`), what the page reads of
+// the home (`homeState`): a
 // refusal of it first, in its own words and with no kind — withheld, the
 // withheld box's words; nothing the board will say of it, the words for that
 // (FP-33, FP-34) — else its kind by the one test (T-LAYER's `isDraft`;
-// FP-39), published → the link is public, a draft → hidden with its home;
-// else "not read". Where nothing the page holds tells it, the home's
-// metadata is read with the card's other reads (M-PUMP's `readMetadata`),
+// FP-39) with who can see the link, published → anyone who can read the
+// board, a draft → only those who can read it; else "not read". Where
+// nothing the page holds tells it, the home's metadata is read with the
+// card's other reads (M-PUMP's `readMetadata`),
 // asked again where a drop overtook it, at most DROP_ATTEMPTS times, so the
 // row stands with its words from the card's first frame.
 // Its acts follow either end and open the scene, a step on the trail from
@@ -70,16 +80,17 @@
 // open, "read side by side" keeps its place, inert and focusable, its reason
 // its title (`besideInert`; FP-34): where the board will say nothing of the
 // far end's document, the far end's whole form in its one state (LK's
-// `farEmpty`; FP-21); where the end names none, "no such link or slot".
+// `farEmpty`; FP-21); where the end names none, the empty end's words
+// (`B1.invalid`).
 // Pressed, by a click or by Enter, it reads nothing and opens nothing: the
 // card is shown again under its id, the act marked and the reason's parts
 // beneath its acts — none where the far end's own words on the card are the
 // reason's — and the reason is said through the status region, at every
 // press, said again where the region holds those words already. The follow
-// act is named by its words and the far document it goes to, the way it runs
-// said "to" (`F.card.to`) and never by the arrow drawn in it, rendered for the
-// ear (ST's `heard`; style S22). The link's mark comes from LK's `markOf`, so
-// the card and the symbol agree.
+// act reads "Follow to ⟨far⟩" (`B1.follow.to`), the far document it goes to
+// in the identifier's face — "Follow" alone where the end names none — named
+// by the same words rendered for the ear (ST's `heard`; style S22). The
+// link's mark comes from LK's `markOf`, so the card and the symbol agree.
 // The card takes the focus on its first act — follow, the line standing
 // before it — where a key opened it (Enter at the link's element, K-55; a
 // links-card row's Enter) and never where a click did (D5 §4 rule 4; the
@@ -93,10 +104,11 @@
 // (`fromTail`): its documents read whole first — at mid scale the page holds
 // none of their text — so each link stands at its own bytes as LK draws it
 // there; one link's card opens as its symbol's would, and several are
-// listed, each row drawing its link's type and its far end (LK's
-// `farLabelHTML`), named by them and the way its link runs in words (LK's
-// `endRuns`), rendered for the ear (ST's `heard`; patterns K1), and opening
-// that link's card; the one symbol a withheld run's
+// listed under a caption naming each document they stand in (`linksOnHTML`),
+// each row drawn as every list of ends draws it — the way its link runs in
+// words and its far end, then its type (`rowHTML`) — named by the same
+// (LK's `endRuns`), rendered for the ear (ST's `heard`; patterns K1), and
+// opening that link's card; the one symbol a withheld run's
 // ends merge into, pressed, lists them so at the symbol (`fromSymbol`; P44).
 // The card and its lists leave and return with their place (FP-36): each
 // shows naming what it is about (O-HOST's `about`) — the link's end, in the
@@ -116,8 +128,8 @@ import * as GO from '../nav/go.js';
 import * as FOCUS from '../nav/focus.js';
 import * as F from '../model/frames.js';
 import * as LAYER from '../text/layer.js';
-import { lineOf, farHolds, floatingOf } from '../beams/held.js';
-import { t, typeName, facedHTML, addressedHTML, dated, fields, heard } from '../strings.js';
+import { lineOf, farHolds, floatingLineOf, labelIn } from '../beams/held.js';
+import { t, tHTML, tRuns, typeName, facedHTML, addressedHTML, dated, fields, heard, opening, bracketed, runsText } from '../strings.js';
 import { esc, fill } from '../util.js';
 import { inFace, runsOf } from '../plane/labels.js';
 import { accountOf, isUnder } from '../model/address.js';
@@ -185,6 +197,35 @@ function nearWords(/** @type {Shown} */ s) {
 /** words as the card sets them — an end's, its home's state — each stretch in the face its marks name (P-LABEL's `runsOf`; ST's `facedHTML`): the document's own the reading face's, the client's words with each address in them the identifier's */
 const quoteHTML = (/** @type {string} */ words) => facedHTML(runsOf(words, 'client'));
 
+/**
+ * A drawn end's row as every list of ends draws it — this card's lists and
+ * O-LINKS' — as markup, the words its name says (LK's `endRuns`): the way its
+ * link runs (LK's `wayOf`) and its far end in the faces its label sets (LK's
+ * `farLabelHTML`), then its type, a field after them (ST's `fields`); the way
+ * and its far end dropped where the end names no document.
+ * @param {Shown} s
+ * @returns {string}
+ */
+export const rowHTML = (s) => fields(s.far ? `${esc(LK.wayOf(s))} ${LK.farLabelHTML(s)}` : '', esc(typeName(s.link.type)));
+
+/** an end's words where none are held (see the head): "not read", the client's words in a first line's place, bracketed (ST's `bracketed`) */
+const unreadWords = () => runsText(bracketed([{ text: t('L.slot.unread'), face: 'client' }]));
+
+/**
+ * The caption of a list of a document's links (`B1.links-on`), as markup: the
+ * document's label as a line sets it (BM-HELD's `labelIn`) in the reading
+ * face, then its address in the identifier's; where the index lists no label
+ * for it, the caption's words before the label, then the address in the
+ * label's place, no parentheses after it.
+ * @param {string} addr the document
+ * @returns {string}
+ */
+export function linksOnHTML(addr) {
+  const label = labelIn(addr), at = [{ text: addr, face: /** @type {const} */ ('ident') }];
+  if (label) return tHTML('B1.links-on', { label: [{ text: label, face: 'reading' }], address: at });
+  return esc(t('B1.links-on').split('⟨label⟩')[0]) + facedHTML(at);
+}
+
 /** each state of a link's home (`HomeState`), by the string its row says it in */
 const HOME_WORDS = /** @type {const} */ ({ published: 'F.card.public', draft: 'F.card.hidden', unread: 'L.slot.unread', withheld: 'F.corner.withheld', unregistered: 'L.far.unregistered' });
 
@@ -227,7 +268,7 @@ const claimantOf = (/** @type {Claim} */ c) => accountOf(c.home) || c.home;
  * Has a supersession claim authority? Its claimant (`claimantOf`) owns the
  * link it declares superseded: the account
  * of `old`'s own address. The test is `old`'s on both sides of the card —
- * on a "supersedes" row this link is `new`, and its owner does not decide.
+ * on a "Replaces" row this link is `new`, and its owner does not decide.
  * @param {Claim} c
  * @returns {boolean}
  */
@@ -243,11 +284,11 @@ export function hasAuthority(c) { return claimantOf(c) === accountOf(c.old); }
 
 /**
  * The lineage (B1-S5; A-56, A-57, A-82). The rows draw the claims with
- * authority (`hasAuthority`): "superseded by" the
- * `new` of each claim whose `old` is the link, "supersedes" the `old` of each
+ * authority (`hasAuthority`): "Replaced by" the
+ * `new` of each claim whose `old` is the link, "Replaces" the `old` of each
  * claim whose `new` is it, in the answer's order, each followed by its
- * claimant where the owner row does not name it ("by its owner,
- * ⟨claimant⟩") and by "retracted" where it was retracted, each a field after
+ * claimant where the owner row does not name it (`L.card.by-owner`) and by
+ * "retracted" where it was retracted, each a field after
  * it (ST's `fields`); the claims of a row
  * part at ", ", or at "; " where a claimant is named among them, for the
  * naming holds a comma; a side that answered no claim with authority reads
@@ -297,19 +338,22 @@ const othersLine = () => `<div class="claims"><button data-run="claims" data-str
  * side's first, each side's in the answer's order, each an assertion naming
  * its claimant — "you" for the reader, the verb agreeing — and, in words
  * after it, what the claimant is to the links, each that holds: this link's
- * owner; an account above or under the superseded link's owner (L10:
- * hierarchy is prefix), never that owner itself, whose claim has authority.
+ * owner; the account the replaced link's owner belongs to, or an account that
+ * belongs to that owner (L10: hierarchy is prefix), the owner named — never
+ * that owner itself, whose claim has authority.
  * @param {Array<{side: Side, c: Claim}>} stray
  * @param {Who} who
  */
 function othersList(stray, who) {
   return `<ul class="rows claims">${stray.map(({ side, c }) => {
     const by = claimantOf(c), owner = accountOf(c.old);
+    /** the replaced link's owner, as the card names accounts */
+    const named = { owner: `<span class="code id">${esc(owner || '')}</span>` };
     /** @type {string[]} */
     const relations = [];
-    if (by === who.owner) relations.push('L.card.this-owner');
-    if (owner && isUnder(by, owner)) relations.push('L.card.above');
-    else if (owner && isUnder(owner, by)) relations.push('L.card.under');
+    if (by === who.owner) relations.push(words('L.card.this-owner', {}));
+    if (owner && isUnder(by, owner)) relations.push(words('L.card.above', named));
+    else if (owner && isUnder(owner, by)) relations.push(words('L.card.under', named));
     const id = by === who.reader ? side.says + '.you' : side.says;
     return `<li data-string="${id}">${fields(words(id, { claimant: claimantHTML(by, who, relations), link: `<span class="code id">${esc(side.named(c))}</span>` }), retracted(c))}</li>`;
   }).join('')}</ul>`;
@@ -318,14 +362,14 @@ function othersList(stray, who) {
 /**
  * A claimant as the card names accounts — its account, or "you" for the
  * reader — and, where the list says them, what it is to the links, in words
- * after it.
+ * after it between commas, two joined by "and" (style S7).
  * @param {string} account
  * @param {Who} who
- * @param {string[]} [relations] the strings of what the claimant is to the links
+ * @param {string[]} [relations] what the claimant is to the links, each its words as markup
  */
 function claimantHTML(account, who, relations = []) {
   const name = account === who.reader ? esc(t('L.card.you')) : `<span class="code id">${esc(account)}</span>`;
-  return relations.length ? `${name} (${relations.map((id) => esc(t(id))).join(', ')})` : name;
+  return relations.length ? `${name}, ${relations.join(' and ')},` : name;
 }
 
 /** a retracted claim's mark, a field after it: the audit view answers it, `active` false (A-82); '' where it stands */
@@ -352,17 +396,17 @@ async function farPlace(s) {
 
 /**
  * The far end's passage in words, from the version its far box shows: a
- * passage's first words where it stands now, the dead end's words where it
- * floats (BM-HELD's `floatingOf`); null where nothing places it, and where the
- * link names its document whole, which no passage's words describe — the
- * card says its far end's words then (LK's `farFaced`).
+ * passage's first words where it stands now, the dead end's words as a
+ * sentence where it floats (BM-HELD's `floatingLineOf`); null where nothing
+ * places it, and where the link names its document whole, which no passage's
+ * words describe — the card says its far end's words then (LK's `farFaced`).
  * @param {Shown} s
  * @param {Array<{pos: number, width: number}> | null} runs where its passage stands now (`farPlace`)
  */
 async function farPassage(s, runs) {
   const at = s.farAt || s.far;
   if (s.farWhole || !runs) return null;
-  return runs.length ? fragment(at, runs[0].pos, runs[0].width) : floatingOf(at);
+  return runs.length ? fragment(at, runs[0].pos, runs[0].width) : floatingLineOf(at);
 }
 
 /**
@@ -387,9 +431,9 @@ function cardReads(s) {
 /**
  * Why "read side by side" opens no scene from a drawn link's end (see the
  * head), its parts in order; null where it opens one. Where the end names no
- * far document, "no such link or slot"; where the board will say nothing of
- * the far end's document, the far end's whole form in its one state, as the
- * page holds that answer now (LK's `farEmpty`).
+ * far document, the empty end's words (`B1.invalid`); where the board will say
+ * nothing of the far end's document, the far end's whole form in its one
+ * state, as the page holds that answer now (LK's `farEmpty`).
  * @param {Shown} s
  * @returns {Part[] | null}
  */
@@ -418,7 +462,7 @@ export function open(s, anchorEl, byKey = false) {
 /**
  * The card made from its reads and shown (`open`): the far end's passage in
  * words where its passage's words are placed, else its far end's words as its
- * tail and its mirror item carry them (LK's `farWords`), else "…" — and
+ * tail and its mirror item carry them (LK's `farWords`), else "[not read]" — and
  * beneath them, where its text holds only part of its passage, all of it in
  * pieces, or no answer told, BM-HELD's line (`farHolds`); the home row its
  * home's state in its words (`homeWords`), the same in every redraw; the
@@ -451,26 +495,24 @@ function showCard(s, read, anchorEl, byKey, others = false, focus = null, told =
   const inert = besideInert(s);
   /** the reason given at the act pressed: its parts beneath the acts, save where the far end's own words on the card are the reason's */
   const given = told && inert && far ? inert.map((p) => `<div class="note reason" data-string="${esc(p.id)}">${addressedHTML(p.text)}</div>`).join('') : '';
-  const farQuote = far ? farText ?? (LK.farFaced(s).map((r) => (r.face === 'client' ? r.text : inFace(r.face, r.text))).join('') || '…') : t('B1.invalid');
+  const farQuote = far ? farText ?? (LK.farFaced(s).map((r) => (r.face === 'client' ? r.text : inFace(r.face, r.text))).join('') || unreadWords()) : t('B1.invalid');
   const held = far ? farHolds(s) : null;
   const farHeld = held ? `<div class="note" data-string="L.held.${held.state}">${esc(lineOf(held))}</div>` : '';
-  const nearQuote = nearText ?? '…';
-  const fromDoc = l.from[0] ? l.from[0].doc || l.from[0].account || '' : '';
-  const toDoc = l.to[0] ? l.to[0].doc || l.to[0].account || '' : '';
+  const nearQuote = nearText ?? unreadWords();
   /** @type {Who} */
   const who = { owner: l.owner, reader: REC.reader().account };
+  /** the follow act's words, with the far document it goes to where the end names one */
+  const followTo = far ? tRuns('B1.follow.to', { far: [{ text: far, face: 'ident' }] }) : tRuns('B1.follow');
   const html =
-    `<span class="label" style="--mark-hue:${mark.hue}"><span class="sym-mark">⟡</span> <span class="id">${esc(l.addr)}</span></span>` +
-    `<div class="ends"><div class="end far"><span class="k">${esc(s.end === 'from' ? t('F.card.to') : t('F.card.from'))}</span> <span class="code id">${esc(far || '—')}</span><div class="quoted">${quoteHTML(farQuote)}</div>${farHeld}</div>` +
-    `<div class="end near"><span class="k">${esc(s.end === 'from' ? t('F.card.from') : t('F.card.to'))}</span> <span class="code id">${esc(near)}</span>${nearPos != null ? ` <span class="dim">${esc(t('L.at-position', { p: nearPos }))}</span>` : ''}<div class="quoted">${quoteHTML(nearQuote)}</div></div></div>` +
+    `<span class="label cased" style="--mark-hue:${mark.hue}"><span class="sym-mark">⟡</span> ${tHTML('B1.card.link', { address: [{ text: l.addr, face: 'ident' }] })}</span>` +
+    `<div class="ends"><div class="end far"><span class="k">${esc(opening(s.end === 'from' ? 'F.card.to' : 'F.card.from'))}</span>${far ? ` <span class="code id">${esc(far)}</span>` : ''}<div class="quoted">${quoteHTML(farQuote)}</div>${farHeld}</div>` +
+    `<div class="end near"><span class="k">${esc(opening(s.end === 'from' ? 'F.card.from' : 'F.card.to'))}</span> <span class="code id">${esc(near)}</span>${nearPos != null ? ` <span class="dim">${esc(t('L.at-position', { p: nearPos }))}</span>` : ''}<div class="quoted">${quoteHTML(nearQuote)}</div></div></div>` +
     `<div class="kv"><b>${esc(t('F.card.type'))}</b> <span data-string="R5.undocumented">${esc(typeName(l.type))}</span></div>` +
-    `<div class="kv"><b>${esc(t('F.card.from'))}</b> <span class="code id">${esc(fromDoc)}</span></div>` +
-    `<div class="kv"><b>${esc(t('F.card.to'))}</b> <span class="code id">${esc(toDoc)}</span></div>` +
-    `<div class="kv"><b>${esc(t('F.card.home'))}</b> <span class="code id">${esc(l.home)}</span> — <span data-string="${HOME_WORDS[home]}">${quoteHTML(homeWords(l.home, home))}</span></div>` +
-    `<div class="kv"><b>${esc(t('F.card.owner'))}</b> ${l.owner ? `<span class="code id">${esc(l.owner)}</span>` : '—'}</div>` +
+    `<div class="kv"><b>${esc(t('F.card.home'))}</b> ${fields(`<span class="code id">${esc(l.home)}</span>`, `<span data-string="${HOME_WORDS[home]}">${quoteHTML(homeWords(l.home, home))}</span>`)}</div>` +
+    `<div class="kv"><b>${esc(t('F.card.owner'))}</b> ${l.owner ? `<span class="code id">${esc(l.owner)}</span>` : `<span data-string="F.card.owner.unknown">${esc(t('F.card.owner.unknown'))}</span>`}</div>` +
     `<div class="kv made"><b>${esc(t('L.card.made'))}</b> ${esc(dated(l.age))}</div>` +
     supersessionRows(lineage, who, others) +
-    `<div class="acts"><button data-run="follow" aria-label="${esc(heard(far ? `${t('B1.follow')} ${t('F.card.to')} ${far}` : t('B1.follow')))}">${esc(t('B1.follow'))} → ${far ? `<span class="id">${esc(far)}</span>` : ''}</button>` +
+    `<div class="acts"><button data-run="follow" aria-label="${esc(heard(followTo))}">${facedHTML(followTo)}</button>` +
     `<button data-run="beside"${inert ? ` class="inert" title="${esc(reasonWords(inert))}"` : ''}${told && inert ? ' data-inert="1"' : ''}>${esc(t('B1.side-by-side'))}</button></div>${given}`;
   /** @type {EndAbout} */
   const about = { kind: 'anatomy', near, link: l.addr, key: s.key, pos: nearPos, width: nearWidth, ids: LAYER.shownIdentity(near, nearPos, nearWidth), others };
@@ -579,11 +621,12 @@ export function fromSymbol(ends, el, byKey = false) {
 
 /**
  * Ends listed — a tail's (`fromTail`), at the tail; a withheld run's symbol's
- * (`fromSymbol`), at the symbol: each row its link's type and its far end
- * drawn in the words its tail carries (LK's `farLabelHTML`), in its mark,
- * named by them and the way its link runs in words (LK's `endRuns`) rendered
- * for the ear (ST's `heard`), opening that link's card as a links-card row
- * does; the list naming what it is about.
+ * (`fromSymbol`), at the symbol — captioned by each document its ends stand
+ * in (`linksOnHTML`), fields of one caption: each row drawn as every list of
+ * ends draws it (`rowHTML`) — the way its link runs in words and its far end
+ * in the words its tail carries, then its type — in its mark, named by the
+ * same (LK's `endRuns`) rendered for the ear (ST's `heard`), opening that
+ * link's card as a links-card row does; the list naming what it is about.
  * @param {Shown[]} ends
  * @param {import('./host.js').Anchor} anchor where the list stands
  * @param {string} id
@@ -592,9 +635,9 @@ export function fromSymbol(ends, el, byKey = false) {
  * @param {string | null} [focus] a reopened list's control the focus was left on: it takes the focus there
  */
 function listEnds(ends, anchor, id, byKey, about, focus = null) {
-  const near = [...new Set(ends.map((s) => s.near))].map((a) => `<span class="id">${esc(a)}</span>`).join(', ');
-  const html = `<span class="label">${esc(t('B1.see-links'))} · ${near}</span><ul class="rows">${ends.map((s, i) =>
-    `<li><button data-run="t${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}" aria-label="${esc(heard(LK.endRuns(s)))}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.end === 'from' ? '→' : '←')} ${LK.farLabelHTML(s)}</button></li>`).join('')}</ul>`;
+  const near = fields(...[...new Set(ends.map((s) => s.near))].map(linksOnHTML));
+  const html = `<span class="label cased">${near}</span><ul class="rows">${ends.map((s, i) =>
+    `<li><button data-run="t${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}" aria-label="${esc(heard(LK.endRuns(s)))}"><span class="sym-mark">⟡</span> ${rowHTML(s)}</button></li>`).join('')}</ul>`;
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
   ends.forEach((s, i) => { acts['t' + i] = (_el, byKey) => open(s, null, byKey); });

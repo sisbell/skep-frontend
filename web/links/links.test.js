@@ -28,7 +28,7 @@ import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from './links.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
-import { t } from '../strings.js';
+import { t, sentence } from '../strings.js';
 import { firstLineOf } from '../text/article.js';
 import { applyEdits } from '../model/derive.js';
 
@@ -533,6 +533,9 @@ test('a far end is named by its address, then what the page holds of its documen
   assert.equal(LK.farWords(end(D + '.0.2.1')), '# The far edition', 'the words alone, which a tail\'s label sets beneath its address');
 });
 
+/** a far end's short form as the first words of a sentence: its first letter a capital (style S1) */
+const opened = (/** @type {string} */ words) => words.charAt(0).toUpperCase() + words.slice(1);
+
 /** a far end's one state as its parts' strings: its short form, and the ids of its whole form's parts in order */
 const stateOf = (/** @type {import('./links.js').Empty} */ e) => [e.short, e.whole.map((p) => p.id)];
 
@@ -545,10 +548,10 @@ test('an address the board will say nothing of stands, as a far end, in one stat
   assert.deepEqual(stateOf(LK.emptyAt('1.0.1.0.4.2')), [t('L.far.empty'), ['L.far.empty.whole', 'L.far.empty.order']], 'a version member of the next address is no document the chain mints');
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: '1.0.1.0.40', kind: 'draft', label: 'e', standing: 'private' }, { doc: OTHER_HOME, kind: 'edition', label: 'o', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }, { account: '1.0.2', documents: 1 }], state: { arm: 'complete' } }));
   assert.deepEqual([stateOf(LK.emptyAt('1.0.1.0.41'))[1][1], stateOf(LK.emptyAt('1.0.1.0.4'))[1][1]], ['L.far.empty.next', 'L.far.empty.order'], 'a draft listed at 1.0.1.0.40: the next is 1.0.1.0.41, and 1.0.1.0.4 an address in order before it');
-  assert.ok(next.whole[0].text.startsWith(next.short), 'the whole form begins with the short form');
+  assert.ok(next.whole[0].text.startsWith(opened(next.short)), 'the whole form begins with the short form, a sentence\'s capital first');
 });
 
-test('an address the board will say nothing of stands everywhere else in the weaker state — "no document known here", its whole form that short form, then the fifth cell\'s words unchanged — a sub-account, the same digits on another board, another account, a guest, an index not run unbroken from the board\'s first position, and an address the index lists (issue #224\'s design decision)', () => {
+test('an address the board will say nothing of stands everywhere else in the weaker state — "no document known here", its whole form that short form as a sentence, then the fifth cell\'s words unchanged — a sub-account, the same digits on another board, another account, a guest, an index not run unbroken from the board\'s first position, and an address the index lists (issue #224\'s design decision)', () => {
   /** @type {Array<[string, string, () => void]>} each case: what it is, the address, and the page as it stands then */
   const cases = [
     ['a sub-account under the reader\'s', '1.0.1.1.0.4', () => {}],
@@ -564,8 +567,8 @@ test('an address the board will say nothing of stands everywhere else in the wea
     build();
     set();
     const e = LK.emptyAt(addr);
-    assert.deepEqual([e.short, e.whole], [t('L.far.unknown'), [{ id: 'L.far.unknown', text: t('L.far.unknown') }, { id: 'B1.doc_not_registered', text: t('B1.doc_not_registered', { address: addr }) }]], what);
-    assert.ok(e.whole[0].text.startsWith(e.short), `${what}: the whole form begins with the short form`);
+    assert.deepEqual([e.short, e.whole], [t('L.far.unknown'), [{ id: 'L.far.unknown', text: sentence('L.far.unknown') }, { id: 'B1.doc_not_registered', text: t('B1.doc_not_registered', { address: addr }) }]], what);
+    assert.ok(e.whole[0].text.startsWith(opened(e.short)), `${what}: the whole form begins with the short form, a sentence's capital first`);
   }
 });
 

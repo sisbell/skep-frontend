@@ -478,7 +478,7 @@ test('the mirror names a document no read or listing has told the kind of by its
   assert.ok(!unread.includes(t('F.published')) && !unread.includes(t('F.kind.draft')), `never "published", nor "draft": ${unread}`);
   REC.takeRefused(U, 'unregistered');
   const gone = WALK.nameOf({ kind: 'document', addr: U, pos: null, link: null }, 0, 1);
-  assert.ok(gone.startsWith(opening('L.mirror.document', { kind: t('L.far.unregistered'), document: U }, ['kind'])) && gone.startsWith('Nothing this board will say') && !gone.includes(t('F.published')), `the board said nothing about it: led by a far end's words for it: ${gone}`);
+  assert.ok(gone.startsWith(opening('L.mirror.document', { kind: t('L.far.unregistered'), document: U }, ['kind'])) && gone.startsWith('This board says nothing about this address') && !gone.includes(t('F.published')), `the board said nothing about it: led by a far end's words for it: ${gone}`);
   REC.invalidate(U);
   REC.takeMetadata(U, { doc: U, published: false, owner: '1.0.7', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
   assert.ok(WALK.nameOf({ kind: 'document', addr: U, pos: null, link: null }, 0, 1).startsWith(`Draft document ${U}`), 'its metadata read: led by its kind, "Draft"');
@@ -995,12 +995,12 @@ test('a link\'s item whose far end the board will say nothing of is named by the
     const name = WALK.mirrorItem(WALK.mirrorIndex()) || '';
     assert.ok(name.includes(heard(`${GHOST} · ${t('L.client-words', { words: t('L.far.empty') })}`)), `its name the short form, heard: ${name}`);
     assert.deepEqual(describedAs(), [wholeOf()], 'its description the whole form, heard');
-    assert.ok(wholeOf().startsWith(esc(t('L.far.empty'))) && wholeOf().includes(esc(t('L.far.empty.order'))), wholeOf());
+    assert.ok(wholeOf().startsWith(esc(opening('L.far.empty'))) && wholeOf().includes(esc(t('L.far.empty.order'))), `the whole form opens with the short form, a sentence's capital first: ${wholeOf()}`);
     const was = rebuilds;
     REC.setIndexState({ arm: 'at_the_floor', floor: 9 });
     WALK.markDescribed();
     assert.deepEqual(describedAs(), [esc(heard(LK.emptyAt(GHOST).whole.map((p) => p.text).join(' ')))], 'the index from a floor: the description marked in place, the weaker state\'s, heard');
-    assert.ok(describedAs()[0]?.startsWith(esc(t('L.far.unknown'))), `${describedAs()}`);
+    assert.ok(describedAs()[0]?.startsWith(esc(opening('L.far.unknown'))), `the weaker state's short form, a sentence's capital first: ${describedAs()}`);
     assert.equal(rebuilds, was, 'marked in place, nothing rebuilt');
   } finally {
     REC.setIndexState({ arm: 'complete' });

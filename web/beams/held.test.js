@@ -2,7 +2,9 @@
 // position and by the identity of each run's bytes, a passage named by spans
 // of several I-spaces one passage, in its pieces and in its stretches; the
 // line's words by subject — what a returned stop stood for among them — and
-// by the text's address, each a sentence and the withheld text's clause one
+// by the text's address, a document at its bare address named by the label
+// the index lists for it, cut on a word, else by its address, the dead end's
+// words too, each a sentence and the withheld text's clause one
 // of its own, no line counting the runs that hold it, its short form a field
 // heading its first sentence; why a line could not tell, keyed on the
 // refusal's name and kind, never its token, a lost session the text that
@@ -17,7 +19,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
-import { heldOf, piecesOf, stretchesOf, piecesIn, labelOf, mergedLabel, stepFrom, lineOf, shortLineOf, saidOf, unknownOf, whyOf, retries, whereOf, farHolds, farSays, farShort } from './held.js';
+import { heldOf, piecesOf, stretchesOf, piecesIn, labelOf, mergedLabel, stepFrom, lineOf, shortLineOf, saidOf, unknownOf, whyOf, retries, whereOf, nameIn, floatingOf, floatingLineOf, floatingSaid, farHolds, farSays, farShort } from './held.js';
 import { t, sentence, sentences } from '../strings.js';
 
 /** a field heading a sentence: its first letter a capital (style S1) */
@@ -75,10 +77,24 @@ test('the line in the decision\'s words, each a sentence: a part, the text a mem
   assert.equal(lineOf({ ...part, subject: 'reading' }), 'Only part of the text you were reading is in version 3.');
   assert.equal(whereOf('1.0.1.0.43'), t('L.held.current', { D: '1.0.1.0.43' }), 'a bare address: its current text');
   assert.equal(lineOf(/** @type {import('./held.js').Said} */ (saidOf({ holds: 'pieces' }, 'followed', '1.0.1.0.43', true))), sentence('L.held.pieces', { subject: t('L.held.followed'), where: t('L.held.current', { D: '1.0.1.0.43' }) }), 'pieces: all of it — no withheld clause, for nothing is left to be under it');
-  assert.equal(lineOf(/** @type {import('./held.js').Said} */ (saidOf({ holds: 'part' }, 'selected', at, true))), 'Only part of what you selected is in version 3. The rest may be under the withheld text here.', 'a part where the text shows withheld text: the rest may be under it, a sentence of its own');
+  assert.equal(lineOf(/** @type {import('./held.js').Said} */ (saidOf({ holds: 'part' }, 'selected', at, true))), 'Only part of what you selected is in version 3. The rest may be in text withheld from you.', 'a part where the text shows withheld text: the rest may be in it, a sentence of its own');
   assert.deepEqual([saidOf({ holds: 'all' }, 'selected', at), saidOf({ holds: 'none' }, 'selected', at)], [null, null], 'all says nothing beyond the outline, none nothing beyond the dead end\'s face');
   const lines = [part, { ...part, state: /** @type {const} */ ('pieces') }, unknownOf(null, 'reading', at), unknownOf({ kind: 'refused', name: 'too_many_pairs' }, 'followed', at)].map(lineOf);
   assert.ok(lines.every((l) => !/missing|removed|deleted|compare|too_many|not_a_link/.test(l)), lines.join(' | '));
+});
+
+test('a line names a document at its bare address by its label — the first line the index lists for it, cut on a word with an ellipsis where it runs past the cap — and by its address where the index lists none: its current text, the dead end\'s words, as a field and as a sentence (foundations §2.1\'s label cap; style S16)', () => {
+  REC._reset();
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: '1.0.1.0.2', kind: 'edition', label: 'Reading log', standing: 'public' }, { doc: '1.0.1.0.5', kind: 'draft', label: 'Notes from the field trip to the northern coast', standing: 'private' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
+  assert.deepEqual(['1.0.1.0.2', '1.0.1.0.5', '1.0.1.0.9'].map(nameIn), ['Reading log', 'Notes from the field…', '1.0.1.0.9'], 'a label the cap holds, whole; a longer one cut on a word; none listed, the address');
+  assert.deepEqual(['1.0.1.0.2', '1.0.1.0.9'].map(whereOf), ['the current text of Reading log', 'the current text of 1.0.1.0.9'], 'its current text, by its label, else its address');
+  assert.deepEqual(['1.0.1.0.2', '1.0.1.0.9'].map(floatingLineOf), ['The passage is no longer in the current text of Reading log.', 'The passage is no longer in the current text of 1.0.1.0.9.'], 'the dead end\'s words, a sentence');
+  assert.deepEqual([floatingOf('1.0.1.0.2'), floatingOf('1.0.1.0.2.3')], ['the passage is no longer in the current text of Reading log', 'the passage isn\'t in version 3'], 'a field\'s words, a member\'s in its own');
+  assert.deepEqual(floatingSaid('1.0.1.0.2.3'), { id: 'F.floating.member', text: 'The passage isn\'t in version 3.' }, 'the face\'s words: a sentence with its string');
+  const part = /** @type {import('./held.js').Said} */ (saidOf({ holds: 'part' }, 'followed', '1.0.1.0.2'));
+  assert.equal(lineOf(part), 'Only part of the passage this link leads to is in the current text of Reading log.');
+  assert.equal(lineOf(unknownOf({ kind: 'refused', name: 'not_a_link' }, 'followed', '1.0.1.0.5')), 'This app couldn\'t tell whether the current text of Notes from the field… has the passage this link leads to: there\'s no link at this address, or none you can see.', 'the cut label inside the line, words after it');
+  REC._reset();
 });
 
 test('couldn\'t tell says why, keyed on the refusal\'s name and kind, never its token, and offers "try again" only where a retry can change the answer', () => {

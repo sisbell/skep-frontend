@@ -778,7 +778,7 @@ def run(ctx):
     ctx.js('window.__skep.cards.links(%s)' % json.dumps(DOC))
     ctx.frames(2)
     told = ctx.js('''(async () => { const n = window.__skep.links.othersTouching(%s).length; const {t} = await import("./strings.js");
-      const [before, after] = t(n === 1 ? "B1.others-toggle.1" : "B1.others-toggle", {n}).split("⟨state⟩"); return {before, after}; })()''' % json.dumps(DOC))
+      const [before, after] = t(n === 0 ? "B1.others-toggle.0" : n === 1 ? "B1.others-toggle.1" : "B1.others-toggle", {n}).split("⟨state⟩"); return {before, after}; })()''' % json.dumps(DOC))
     want = {'name': words(told['before']), 'description': words(told['after'])}
     off = switch()
     pressed = click(toggle)

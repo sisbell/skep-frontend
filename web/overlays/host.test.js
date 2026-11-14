@@ -301,7 +301,7 @@ test('a face shown while the standing overlay\'s field holds the caret takes not
     FACES.reading('1.0.1.0.3', null);
     FACES.floating('1.0.1.0.127', null, null, true);
     assert.deepEqual([standing(), globalThis.document.activeElement], ['moment:m-171', /** @type {any} */ (field)], 'the moment stands, its field holding the focus');
-    assert.deepEqual(said, [heard(t('L.reading', { address: '1.0.1.0.3' })), t('F.floating', { D: '1.0.1.0.127' })], 'each face said, the one its landing would tell too: no focus moves to tell it');
+    assert.deepEqual(said, [heard(t('L.reading', { address: '1.0.1.0.3' })), 'The passage is no longer in the current text of 1.0.1.0.127.'], 'each face said, the one its landing would tell too, a sentence: no focus moves to tell it');
     globalThis.document.activeElement = /** @type {any} */ ({ id: 'the answer button' });
     assert.equal(HOST.typing(), false, 'the focus on the moment\'s button: no caret held');
     FACES.invalidFollow(null);
