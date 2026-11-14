@@ -1,4 +1,7 @@
-// ST's test: every entry is PINNED with a source or DRAFT with a screen; the
+// ST's test: every entry is PINNED with a source or DRAFT with a screen, and
+// names a kind patterns.md builds — K1 … K32 each in its group, a shared
+// piece, or S22's words — a trace of its source's words standing only where
+// its own differ, on an entry a source carries, and a copy id only as `C-n`; the
 // pinned strings are verbatim, the pinned lines the editor draws among them
 // under their own ids; the editor's lines stand as its design words them, in
 // its characters, every line its screens carry entered — a line only
@@ -43,7 +46,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { sep } from 'node:path';
-import { STRINGS, t, tHTML, tRuns, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, onDay, duration, runningHTML, plural, counted, markCount, typeName, formName, formsNamed, formsAt, formAct, formTakeOff, formTitle, formAgain, hintOf, hintSentences, sentence, sentenceHTML, sentenceRuns, asSentenceRuns, opening, openingHTML, asSentence, ended, endedHTML, sentences, fields, list, heard, asHeard, joinRuns, runsText } from './strings.js';
+import { STRINGS, KINDS, t, tHTML, tRuns, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, onDay, duration, runningHTML, plural, counted, markCount, typeName, formName, formsNamed, formsAt, formAct, formTakeOff, formTitle, formAgain, hintOf, hintSentences, sentence, sentenceHTML, sentenceRuns, asSentenceRuns, opening, openingHTML, asSentence, ended, endedHTML, sentences, fields, list, heard, asHeard, joinRuns, runsText } from './strings.js';
 
 /** a commons type as a link stores it, by its path under the registry document's subspace 3 */
 const commons = (/** @type {string} */ path) => '1.1.0.1.0.1.0.' + path;
@@ -64,6 +67,39 @@ test('every entry is classed and sourced', () => {
     if (e.cls === 'DRAFT') assert.ok(e.screen, id + ' names its screen');
     if (e.lane) assert.equal(e.source, '', id + ' is the lane\'s and has no design source');
   }
+});
+
+test('the kinds are patterns.md\'s: K1 … K32 each in its group as its "Group n" heading numbers it, the twelve shared pieces, and S22\'s words', () => {
+  /** @type {Array<[group: string, first: number, last: number]>} each group's kinds, by their numbers */
+  const GROUPS = [['G1', 1, 3], ['G2', 4, 5], ['G3', 6, 10], ['G4', 11, 16], ['G5', 17, 17], ['G6', 18, 18], ['G7', 19, 19], ['G8', 20, 20], ['G9', 21, 22], ['G10', 23, 28], ['G11', 29, 29], ['G12', 30, 32]];
+  /** @type {Record<string, string>} */
+  const want = {};
+  for (const [group, first, last] of GROUPS) for (let n = first; n <= last; n++) want['K' + n] = group;
+  for (let n = 1; n <= 12; n++) want['SP' + n] = 'shared';
+  want.S22 = 'style';
+  assert.deepEqual({ ...KINDS }, want);
+  assert.ok(Object.isFrozen(KINDS), 'no module adds or moves a kind');
+});
+
+test('every entry names a kind KINDS holds', () => {
+  const unkinded = Object.entries(STRINGS).filter(([, e]) => !Object.hasOwn(KINDS, e.kind)).map(([id, e]) => [id, e.kind]);
+  assert.deepEqual(unkinded, []);
+});
+
+test('a trace stands only where an entry\'s words differ from it, on an entry a design source carries, never a lane string: words, not its own text', () => {
+  const traced = Object.entries(STRINGS).filter(([, e]) => e.was !== undefined);
+  assert.ok(traced.length > 0, 'the table carries traces');
+  for (const [id, e] of traced) {
+    assert.ok(typeof e.was === 'string' && e.was.trim() !== '', id + ' traces words');
+    assert.notEqual(e.was, e.text, id + '\'s trace is not its own text');
+    assert.ok(e.source && !e.lane, id + ' traces the words of a design source');
+  }
+});
+
+test('a copy id an entry carries has the form C-n', () => {
+  const cids = Object.entries(STRINGS).filter(([, e]) => e.cid !== undefined);
+  assert.ok(cids.length > 0, 'the table carries copy ids');
+  for (const [id, e] of cids) assert.match(/** @type {string} */ (e.cid), /^C-[1-9]\d*$/, id);
 });
 
 test('the pinned strings are verbatim and their count is what the inventory gives', () => {
@@ -636,7 +672,7 @@ test('the pinned lines the editor draws stand PINNED under the copy inventory\'s
     ['C-100', 'ux/copy.md', 'these links may be this machine\'s writes, not yours — this board admits that write whenever local trust is on, and this surface cannot read whether it was.'],
     ['R83.notebook', 'requirements.md', 'published — anyone who can reach this notebook reads this passage at ⟨E⟩'],
   ];
-  for (const [id, source, text] of PINS) assert.deepEqual(STRINGS[id], { text, cls: 'PINNED', source }, id);
+  for (const [id, source, text] of PINS) assert.deepEqual({ text: STRINGS[id].text, cls: STRINGS[id].cls, source: STRINGS[id].source }, { text, cls: 'PINNED', source }, id);
   assert.ok(t('C-97').startsWith(t('C-97.flag-on')) && t('C-100').startsWith(t('C-100.flag-on')), 'each flag-off form its flag-on form with its clause');
   assert.equal(t('B3.publish.caveat.marks'), t('C-100').replace('these links', 'these marks'), 'beside the formatting line C-100 says "marks", B3\'s rendering of its siting');
 });

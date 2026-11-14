@@ -143,6 +143,12 @@ def main():
         differ = (tx.get('pinned') or {}).get('not_located_verbatim')
         L.append('\nPINNED strings not located verbatim in their source (reported, never failed; the fragments in `results/text.json`): `%s`\n' % json.dumps(differ and [[x['id'], x['source']] for x in differ], ensure_ascii=False))
         L.append('DRAFT strings not located verbatim in their design file (prose drafts): `%s`\n' % json.dumps((tx.get('draft') or {}).get('not_located_verbatim'), ensure_ascii=False)[:1500])
+        # each ruled string of the copy inventory no entry carries, by its C-n and its title, the list never cut: it is read whole
+        cp = tx.get('copy') or {}
+        L.append('Ruled strings of `ux/copy.md` no entry carries by its id or its `cid` (reported, never failed): %s of %s headings, %s held\n' % (len(cp.get('lacking') or []), cp.get('count'), cp.get('held')))
+        for x in cp.get('lacking') or []:
+            L.append(f"- `{x['cid']}` — {x['title']}")
+        L.append('')
     a = (cases.get('a11y') or {}).get('figures') or {}
     if a:
         L.append('## Class 7 — a11y\n')

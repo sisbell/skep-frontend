@@ -57,11 +57,18 @@ source does not hold listed with its source and failing nothing, one naming
 a file the design repository does not hold failing the case. Each PINNED
 string's words, and each DRAFT string's that names a design file, are
 located at its source fragment by fragment around the ⟨tokens⟩ with
-whitespace folded (the design files wrap at 72 columns), and those not found
-there are reported, never failed; a DRAFT string found there only inside its
-source's quotes of its own earlier wording — "as it stood …", "as first
-drawn …" and their kin — is reported apart, as retired. The strings the lane
-LACKED are listed. The fifth cell met by a follow is W-01 step 7's
+whitespace folded (the design files wrap at 72 columns) — an entry that
+keeps its design's words as a trace (`was`) located by the trace in place
+of its words, the PINNED step and the DRAFT loop each held to it on entries
+of the case's own, a trace its source holds listed by neither and one it
+does not listed by each — and those not found there are reported, never
+failed, each naming which words were sought (`by`); a DRAFT string found
+there only inside its source's quotes of its own earlier wording — "as it
+stood …", "as first drawn …" and their kin — is reported apart, as retired.
+The strings the lane LACKED are listed, and so is every ruled string of
+`ux/copy.md`, by its `C-n` heading, that no entry carries by its id or its
+`cid` — reported, never failed, the check held on copy texts of the case's
+own. The fifth cell met by a follow is W-01 step 7's
 (`walks`), which runs after `keys` reads LK's visited set."""
 import json
 import re
@@ -137,24 +144,82 @@ def live_wording(source):
     return ''.join(out)
 
 
+def traced(e):
+    """the words an entry is located at its source by, and which they are: its trace, the words its design source holds
+    for it, where it carries one (`was`), else its own words (`text`)"""
+    return (e['was'], 'was') if e.get('was') else (e['text'], 'text')
+
+
 def pinned_at_sources(r, pinned, design):
-    """every PINNED string located at its source at the design repository's HEAD (`located`): one naming a source file
-    `design` cannot show fails `r`; one whose words its source does not hold is listed in `r.figures['pinned']` with its
-    source and the fragments not found, beside the count and the ids, and fails nothing. `pinned` is each entry's id,
-    text and source, as `strings.js`'s `pinned` gives them; `design` answers a design file's text by its path, None where
-    the repository holds no such file"""
+    """every PINNED string located at its source at the design repository's HEAD (`located`) by its trace where it
+    carries one, else by its words (`traced`): one naming a source file `design` cannot show fails `r`; one whose words
+    so read its source does not hold is listed in `r.figures['pinned']` with its source, which words they were (`by`) and
+    the fragments not found, beside the count and the ids, and fails nothing. `pinned` is each entry's id, text and source
+    and its trace where it carries one, as `strings.js`'s `pinned` gives them; `design` answers a design file's text by
+    its path, None where the repository holds no such file"""
     absent, differ = [], []
     for p in pinned:
         src = design(p['source'])
         if src is None:
             absent.append({'id': p['id'], 'source': p['source']})
             continue
-        missing = located(p['text'], src)
+        words, by = traced(p)
+        missing = located(words, src)
         if missing:
-            differ.append({'id': p['id'], 'source': p['source'], 'missing_fragments': missing})
+            differ.append({'id': p['id'], 'source': p['source'], 'by': by, 'missing_fragments': missing})
     r.check(not absent, 'every PINNED string names a source file the design repo holds at HEAD', absent)
     r.figures['pinned'] = {'count': len(pinned), 'ids': [p['id'] for p in pinned], 'not_located_verbatim': differ}
     r.note('%d of %d PINNED strings are not located verbatim in their source at the design repo\'s HEAD — listed in `pinned.not_located_verbatim`, reported and never failed' % (len(differ), len(pinned)))
+
+
+def drafts_at_sources(r, strings, design):
+    """every DRAFT string a design file carries — the lane's own apart — located at its source at the design
+    repository's HEAD by its trace where it carries one, else by its words (`traced`), and listed in `r.figures['draft']`
+    beside the count checked, never failed: one whose source `design` cannot show, with why; one whose words so read its
+    source does not hold, with which words they were (`by`) and the first fragments not found; one found there only inside
+    the source's quotes of its own earlier wording (`live_wording`), apart as retired. `strings` is each entry's id, text,
+    class, source, whether it is the lane's and its trace, as the case reads them from `strings.js`"""
+    unlocated, retired, checked, lives = [], [], 0, {}
+    for e in strings:
+        if e['cls'] != 'DRAFT' or not e['source'] or e['lane']:
+            continue
+        src = design(e['source'])
+        if src is None:
+            unlocated.append({'id': e['id'], 'why': 'source missing ' + e['source']})
+            continue
+        checked += 1
+        words, by = traced(e)
+        missing = located(words, src)
+        if missing:
+            unlocated.append({'id': e['id'], 'source': e['source'], 'by': by, 'missing_fragments': missing[:3]})
+            continue
+        if e['source'] not in lives:
+            lives[e['source']] = live_wording(src)
+        earlier = located(words, lives[e['source']])
+        if earlier:
+            retired.append({'id': e['id'], 'source': e['source'], 'by': by, 'earlier_fragments': earlier[:3]})
+    r.figures['draft'] = {'checked': checked, 'not_located_verbatim': unlocated, 'retired': retired}
+
+
+COPY_HEADING = re.compile(r'^### (C-\d+)(?!\d)[ \t]*(?:—[ \t]*)?(.*?)[ \t]*$', re.M)  # a ruled string's heading in `ux/copy.md`: its id, then its title
+HELD_CID = re.compile(r'(?:^|\.)(C-\d+)(?=\.|$)')  # a C-id an entry's id names, as a whole dotted segment of it
+
+
+def copy_at_entries(r, copy, strings):
+    """every ruled string of `ux/copy.md` — each `### C-n` heading of `copy`, its text at the design repository's HEAD —
+    against the entries: held where an entry's id names its C-n as a whole dotted segment (`C-28`, `C-28.n`, `B1.C-72`)
+    or the entry's `cid` names it; each one no entry holds listed in `r.figures['copy']` by its C-n and its title, beside
+    the count of headings and the number held, reported and never failed. `strings` is each entry's id and its `cid`,
+    as the case reads them from `strings.js`"""
+    held = set()
+    for e in strings:
+        held.update(HELD_CID.findall(e['id']))
+        if e.get('cid'):
+            held.add(e['cid'])
+    heads = COPY_HEADING.findall(copy or '')
+    lacking = [{'cid': cid, 'title': title} for cid, title in heads if cid not in held]
+    r.figures['copy'] = {'count': len(heads), 'held': len(heads) - len(lacking), 'lacking': lacking}
+    r.note('%d of %d ruled strings of `ux/copy.md` (its `C-n` headings) no entry of `strings.js` carries, by its id or its `cid` — listed in `copy.lacking`, reported and never failed' % (len(lacking), len(heads)))
 
 
 def run(ctx):
@@ -436,29 +501,48 @@ def run(ctx):
     r.check([d for f in sourceless.failures for d in f.get('detail') or []] == [{'id': entry['id'], 'source': 'ux/no-such-file.md'}] and not sourceless.figures['pinned']['not_located_verbatim'],
             'a PINNED string naming a source file the design repo does not hold fails the case', {'failures': sourceless.failures, 'listed': sourceless.figures['pinned']['not_located_verbatim']})
     # ---- DRAFT strings with a source: located and reported ----------------------------------
-    all_strings = ctx.js('''(async () => { const m = await import('../strings.js'); return Object.entries(m.STRINGS).map(([id, e]) => ({id, text: e.text, cls: e.cls, source: e.source, screen: e.screen || '', lane: !!e.lane})); })()''')
-    draft_unlocated = []
-    draft_retired = []
-    draft_checked = 0
-    lives = {}
-    for e in all_strings:
-        if e['cls'] != 'DRAFT' or not e['source'] or e['lane']:
-            continue
-        src = ctx.design(e['source'])
-        if src is None:
-            draft_unlocated.append({'id': e['id'], 'why': 'source missing ' + e['source']})
-            continue
-        draft_checked += 1
-        missing = located(e['text'], src)
-        if missing:
-            draft_unlocated.append({'id': e['id'], 'source': e['source'], 'missing_fragments': missing[:3]})
-            continue
-        if e['source'] not in lives:
-            lives[e['source']] = live_wording(src)
-        retired = located(e['text'], lives[e['source']])
-        if retired:
-            draft_retired.append({'id': e['id'], 'source': e['source'], 'earlier_fragments': retired[:3]})
-    r.figures['draft'] = {'checked': draft_checked, 'not_located_verbatim': draft_unlocated, 'retired': draft_retired}
+    all_strings = ctx.js('''(async () => { const m = await import('../strings.js'); return Object.entries(m.STRINGS).map(([id, e]) => ({id, text: e.text, cls: e.cls, source: e.source, screen: e.screen || '', lane: !!e.lane, was: e.was ?? null, cid: e.cid ?? null})); })()''')
+    drafts_at_sources(r, all_strings, ctx.design)
+    # ---- a trace: an entry located at its source by the design's words it keeps (`was`) in its own words' place, at the
+    # PINNED step and in the DRAFT loop alike — a trace its source holds listed by neither, its words though no file holds
+    # them; one it does not hold listed by each, by the trace. The words held: the first ruled string's title in the copy
+    # inventory, whatever its HEAD holds
+    first = COPY_HEADING.search(ctx.design('ux/copy.md') or '')
+    held_words = first.group(2) if first else ''
+
+    def pinned_listed(entry):
+        """the entry put through the PINNED step on a result of its own: what it lists, and what it fails"""
+        res = Result()
+        pinned_at_sources(res, [entry], ctx.design)
+        return res.figures['pinned']['not_located_verbatim'], res.failures
+
+    def draft_listed(entry):
+        """the entry, as a DRAFT string of the copy inventory's, put through the DRAFT loop on a result of its own: what it
+        lists — not located, or retired — and what it fails"""
+        res = Result()
+        drafts_at_sources(res, [dict(entry, cls='DRAFT', screen='the gate', lane=False)], ctx.design)
+        return res.figures['draft']['not_located_verbatim'] + res.figures['draft']['retired'], res.failures
+
+    kept = {'id': 'gate.traced', 'text': NO_MATCH, 'source': 'ux/copy.md', 'was': held_words}
+    unheld = dict(kept, was=NO_MATCH + ', traced')
+    for step, listing in (('the PINNED step', pinned_listed), ('the DRAFT loop', draft_listed)):
+        listed, failed = listing(kept)
+        r.check(bool(held_words) and not listed and not failed, '%s locates an entry by its trace: one whose words its source does not hold, carrying words its source does hold as its trace, is not listed' % step,
+                {'trace': held_words, 'listed': listed, 'failures': failed})
+        listed, failed = listing(unheld)
+        r.check(not failed and [(x['id'], x.get('by')) for x in listed] == [(unheld['id'], 'was')], '%s lists an entry whose trace its source does not hold, by its trace (`by`: was), and fails nothing' % step,
+                {'trace': unheld['was'], 'listed': listed, 'failures': failed})
+    # ---- the ruled strings no entry carries: each `C-n` heading of the copy inventory, held by an entry's id or its `cid`
+    copy_at_entries(r, ctx.design('ux/copy.md'), all_strings)
+    # the check's two ways an entry holds a heading, each on a copy text of two headings, the first held and the second
+    # held by none — not by an id naming its C-n only inside a longer segment
+    two = '### C-1 — held\n\nwords\n\n### C-2 — held by none\n'
+    by_id = [{'id': x, 'cid': None} for x in ('gate.C-1.part', 'gate.C-20', 'gate.XC-2', 'gate.C-2x')]
+    for how, entries in (('its id, as a whole dotted segment', by_id), ('its `cid`', [{'id': 'gate.copy', 'cid': 'C-1'}])):
+        res = Result()
+        copy_at_entries(res, two, entries)
+        r.check(not res.failures and res.figures['copy'] == {'count': 2, 'held': 1, 'lacking': [{'cid': 'C-2', 'title': 'held by none'}]},
+                'a ruled string an entry holds by %s is not listed, and the one no entry holds is, with its title' % how, {'entries': entries, 'copy': res.figures['copy']})
     r.figures['lacking'] = ctx.js('window.__skep.strings.lacking()')
     r.figures['counts'] = {'pinned': sum(1 for e in all_strings if e['cls'] == 'PINNED'), 'draft': sum(1 for e in all_strings if e['cls'] == 'DRAFT' and not e['lane']), 'lane': sum(1 for e in all_strings if e['lane'])}
     r.note('DRAFT strings a design document drafts in prose are located by fragment and reported, not failed — those found only inside the design\'s quotes of its earlier wording reported apart as retired; the lane\'s own placeholders (lane: true) are the strings the inventory LACKED')
