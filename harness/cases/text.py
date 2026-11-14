@@ -67,9 +67,10 @@ there only inside its source's quotes of its own earlier wording — "as it
 stood …", "as first drawn …" and their kin — is reported apart, as retired.
 The strings the lane LACKED are listed, and so is every ruled string of
 `ux/copy.md`, by its `C-n` heading, that no entry carries by its id or its
-`cid` — reported, never failed, the check held on copy texts of the case's
-own. The fifth cell met by a follow is W-01 step 7's
-(`walks`), which runs after `keys` reads LK's visited set."""
+`cid` — reported, never failed; a `cid` that names no heading the copy holds
+at its HEAD fails the case, a broken pointer as a missing source file is —
+each held on copy texts of the case's own. The fifth cell met by a follow is
+W-01 step 7's (`walks`), which runs after `keys` reads LK's visited set."""
 import json
 import re
 
@@ -209,14 +210,19 @@ def copy_at_entries(r, copy, strings):
     """every ruled string of `ux/copy.md` — each `### C-n` heading of `copy`, its text at the design repository's HEAD —
     against the entries: held where an entry's id names its C-n as a whole dotted segment (`C-28`, `C-28.n`, `B1.C-72`)
     or the entry's `cid` names it; each one no entry holds listed in `r.figures['copy']` by its C-n and its title, beside
-    the count of headings and the number held, reported and never failed. `strings` is each entry's id and its `cid`,
-    as the case reads them from `strings.js`"""
-    held = set()
+    the count of headings and the number held, reported and never failed. An entry whose `cid` names no heading of `copy`
+    fails `r`, a broken pointer, named by its id and its `cid`. `strings` is each entry's id and its `cid`, as the case
+    reads them from `strings.js`"""
+    heads = COPY_HEADING.findall(copy or '')
+    named = {cid for cid, _ in heads}
+    held, broken = set(), []
     for e in strings:
         held.update(HELD_CID.findall(e['id']))
         if e.get('cid'):
             held.add(e['cid'])
-    heads = COPY_HEADING.findall(copy or '')
+            if e['cid'] not in named:
+                broken.append({'id': e['id'], 'cid': e['cid']})
+    r.check(not broken, 'every `cid` names a ruled string `ux/copy.md` holds at the design repo\'s HEAD: one of its `### C-n` headings', broken)
     lacking = [{'cid': cid, 'title': title} for cid, title in heads if cid not in held]
     r.figures['copy'] = {'count': len(heads), 'held': len(heads) - len(lacking), 'lacking': lacking}
     r.note('%d of %d ruled strings of `ux/copy.md` (its `C-n` headings) no entry of `strings.js` carries, by its id or its `cid` — listed in `copy.lacking`, reported and never failed' % (len(lacking), len(heads)))
@@ -543,6 +549,14 @@ def run(ctx):
         copy_at_entries(res, two, entries)
         r.check(not res.failures and res.figures['copy'] == {'count': 2, 'held': 1, 'lacking': [{'cid': 'C-2', 'title': 'held by none'}]},
                 'a ruled string an entry holds by %s is not listed, and the one no entry holds is, with its title' % how, {'entries': entries, 'copy': res.figures['copy']})
+    # a `cid` is a pointer: on the same copy text, one naming a heading it holds fails nothing; one naming none fails the
+    # case, the entry named by its id and its `cid`, and holds no heading
+    pointed, broken = Result(), Result()
+    copy_at_entries(pointed, two, [{'id': 'gate.copy', 'cid': 'C-1'}])
+    copy_at_entries(broken, two, [{'id': 'gate.copy', 'cid': 'C-9999'}])
+    r.check(not pointed.failures and [d for f in broken.failures for d in f.get('detail') or []] == [{'id': 'gate.copy', 'cid': 'C-9999'}] and broken.figures['copy']['held'] == 0,
+            'a `cid` naming a heading the copy holds fails nothing; one naming no heading of the copy fails the case, a broken pointer',
+            {'pointed': pointed.failures, 'broken': broken.failures, 'copy': broken.figures['copy']})
     r.figures['lacking'] = ctx.js('window.__skep.strings.lacking()')
     r.figures['counts'] = {'pinned': sum(1 for e in all_strings if e['cls'] == 'PINNED'), 'draft': sum(1 for e in all_strings if e['cls'] == 'DRAFT' and not e['lane']), 'lane': sum(1 for e in all_strings if e['lane'])}
     r.note('DRAFT strings a design document drafts in prose are located by fragment and reported, not failed — those found only inside the design\'s quotes of its earlier wording reported apart as retired; the lane\'s own placeholders (lane: true) are the strings the inventory LACKED')
