@@ -46,7 +46,12 @@
 // Mod+R and F5 are taken and nothing reloaded (K-94), and the platform's own
 // chords — copy, paste, cut, select all, print, close, quit, minimize, hide,
 // preferences — are never taken save where a site's line answers a paste or a
-// cut (K-93), and save Mod+C outside a field where the platform holds no
+// cut (K-93), save select-all where the page selects a document whole
+// (`wholeAt`, `selectWhole`; K-93; B3-S8) — at the page's live caret in a
+// draft, at the span a kept caret stands in, the caret returned, and at the
+// walk's span of an edition, which takes no caret: the whole of the text
+// shown one selection with its acts' row at it, a caret live at its end and
+// the run of typing open there ended (D6 BM-31) — and save Mod+C outside a field where the platform holds no
 // selection with extent (K-92; `copyAsDrawn`): there the selection the page
 // draws is placed under the copy again, which then runs as the platform's;
 // with nothing selected, the copy is prevented at its keydown, the clipboard
@@ -586,6 +591,50 @@ function readOnlySpan(ctx) {
 }
 
 /**
+ * The document select-all selects whole (see the head; D5 K-93; B3-S8): the
+ * draft the page's live caret stands in; the draft whose kept caret stands
+ * in the walk's span, the caret then returned; the edition whose span the
+ * walk stands on, which takes no caret — the one test saying published of
+ * the version the walk stands in (T-LAYER's `isDraft`; FP-39). Null anywhere
+ * else — a span of a draft holding no caret, another's draft, a document
+ * below its reading scale, a field, a control, the scene — where select-all
+ * stays the platform's.
+ * @param {Ctx} ctx
+ * @returns {{addr: string, kept: boolean} | null} the document, and whether its kept caret is returned first
+ */
+function wholeAt(ctx) {
+  if (SCENE.isOpen()) return null;
+  const c = LAYER.caret();
+  if (ctx.where === 'caret') return c ? { addr: c.addr, kept: false } : null;
+  const kept = keptSpan(ctx);
+  if (kept) return { addr: kept.addr, kept: true };
+  const s = readOnlySpan(ctx);
+  return s && LAYER.isDraft(s.addr) === false ? { addr: s.addr, kept: false } : null;
+}
+
+/**
+ * Select-all made (`wholeAt`; D5 K-93; B3-S8): the whole of the text the page
+ * shows of the document one selection, its acts' row at it (O-SELECTION's
+ * `select`) — at a caret, the caret live at the selection's end with the
+ * platform's selection standing (T-LAYER's `placeCaret`), which ends the run
+ * of typing open there (D6 BM-31), and the walk following it; at an edition,
+ * the walk where it stood. A document holding no text selects nothing.
+ * @param {Ctx} ctx
+ */
+async function selectWhole(ctx) {
+  const at = wholeAt(ctx);
+  if (!at) return;
+  if (at.kept) LAYER.returnCaret();
+  const d = LAYER.shownOf(at.addr), c = LAYER.caret();
+  if (d.from < 0) return;
+  const end = Math.max(d.to, (d.extent ?? 0) + 1);
+  if (end <= 1) return;
+  if (c && c.live && c.addr === at.addr) LAYER.placeCaret(at.addr, end, true);
+  SEL.select(at.addr, 1, end - 1, 'end');
+  if (c && c.live && c.addr === at.addr) await WALK.followCaret();
+}
+
+/**
  * A printable key or a paste at the walk's span in text the person may not
  * edit (`readOnlySpan`) answered by its document's line, its hint at the
  * focus, nothing placed (see the head; D5 K-72, K-93; foundations §2.7): at
@@ -647,8 +696,8 @@ export async function dispatch(e, ctx) {
   if (mod && !e.shiftKey && chord === 'Mod+V' && siteSays(e, ctx)) return true;
   // a copy outside a field where the platform holds no selection (K-92): the page's line, its default prevented, or the selection it draws placed under the copy
   if (mod && !e.shiftKey && !e.altKey && chord === 'Mod+C' && copyAsDrawn(e, ctx)) return true;
-  // the rest of the platform's own, never taken (K-92, K-93): Mod+H among them on macOS alone, the trail's list elsewhere (K-41)
-  if (mod && !e.shiftKey && ['C', 'V', 'X', 'A', 'P', 'W', 'Q', 'M', 'H', ','].includes(chord.slice(4)) && chord !== trailChord()) return false;
+  // the rest of the platform's own, never taken (K-92, K-93): Mod+H among them on macOS alone, the trail's list elsewhere (K-41) — save select-all where the page selects a document whole (`wholeAt`)
+  if (mod && !e.shiftKey && ['C', 'V', 'X', 'A', 'P', 'W', 'Q', 'M', 'H', ','].includes(chord.slice(4)) && chord !== trailChord() && !(chord === 'Mod+A' && wholeAt(ctx))) return false;
   if (ctx.where === 'field') {
     if (chord === 'Esc') { esc(); return true; }
     // find's chords, which no field takes as its own: the find opened beside the field, which keeps the caret (FP-20), or stepped
@@ -694,6 +743,8 @@ function route(e, chord, ctx) {
   if ((chord === 'Mod+F' || fd) && REC.board()) return findAct(e, fd, ctx);
   // the scene covers the plane: its keys alone, nothing under it takes one
   if (SCENE.isOpen()) return sceneKey(e, chord, ctx);
+  // select-all (K-93; B3-S8): the document whole, where the page's caret or an edition's span is the site
+  if (chord === 'Mod+A' && wholeAt(ctx)) return async () => { e.preventDefault(); await selectWhole(ctx); return true; };
   // zoom (K-11)
   if (chord === 'Mod+=') return () => { zoomAboutFocus(1.25, byKey); return true; };
   if (chord === 'Mod+-') return () => { zoomAboutFocus(1 / 1.25, byKey); return true; };

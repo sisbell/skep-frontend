@@ -170,6 +170,44 @@ test('BM-1: an edit opens the draft\'s burst and dials nothing; with no machine 
   assert.deepEqual([WRITE.inFlight(E), ops], [false, []], 'no machine handed in: typing stays page-local');
 });
 
+test('B3-S1 THE START: the mint is one `create_new_document` into the acting account, born private, under the page\'s session, and the typed line is the minted draft\'s first burst — one `insert` at its first position, typed at the mint\'s position, sent at once and kept', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame) => (frame.op === 'create_new_document' ? MINTED(E, 30) : MINTED(own(E, 1), 31)));
+  const out = await MACHINE.start('A first line');
+  await flush();
+  assert.deepEqual(out, { addr: E, at: 30 }, 'the draft the board minted, and the position its mint was acked at');
+  assert.deepEqual(ops.map((o) => o.frame), [
+    { op: 'create_new_document', account: '1.0.1', published: false, id: id(1) },
+    { op: 'insert', doc: E, at: at(1), values: ['A first line'], as_of: 30, id: id(2) },
+  ], 'the mint, then the first line as one insert typed at the state the mint left');
+  assert.deepEqual([ops[0].session, ops[1].session, ops[1].anchors], ['s-1', 's-1', { before: null, after: null }], 'both under the page\'s session, the insert anchored at the empty document\'s two edges');
+  assert.deepEqual([REC.place(E)?.kind, REC.place(E)?.standing, REC.doc(E).extent, REC.doc(E).extentAt], ['draft', 'yours_to_read', 0, 30], 'the model lists the minted draft at the ack, holding no content as of the mint');
+  assert.deepEqual([WRITE.keptOf(E), WRITE.inFlight(E), shown(E), MACHINE.typedOf(E)], [{ word: 'kept', reason: null }, false, 'A first line', 31], 'the burst acked: the draft kept, the line shown, the typed state raised');
+  assert.deepEqual(stacks(E).undo, [['put-back', false, 1]], 'the first line is one step of the draft\'s undo stack, no run of typing a later key joins');
+});
+
+test('B3-S1 THE START: a mint the board refuses types nothing — no burst, no edit and no document; a session that may not write, a guest and a page with no machine dial nothing and are answered by the refusal\'s name; and a mint of no characters sends no burst', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame) => (frame.op === 'create_new_document' ? { refused: refusal('mint_home_public') } : ACK(31)));
+  const out = await MACHINE.start('A first line');
+  await flush();
+  assert.equal('refused' in out && out.refused.name, 'mint_home_public', 'the board\'s own refusal is handed up');
+  assert.deepEqual([ops.map((o) => o.frame.op), WRITE.flying(), REC.docs().length, REC.places().length], [['create_new_document'], [], 0, 0], 'the mint alone was dialed: no burst follows, and the model holds no document');
+  REC.setSession(/** @type {any} */ ({ ...S, writes: false }));
+  const keyless = await MACHINE.start('x');
+  REC.setSession(null);
+  const guest = await MACHINE.start('x');
+  REC.setSession(/** @type {any} */ (S));
+  MACHINE.takeOut();
+  const none = await MACHINE.start('x');
+  assert.deepEqual(['refused' in keyless && keyless.refused, 'refused' in guest && guest.refused, 'refused' in none && none.refused, ops.length],
+    [{ kind: 'shell', name: 'write_in_bare_session' }, { kind: 'shell', name: 'no_session' }, { kind: 'shell', name: 'no_session' }, 1], 'each answered by its name, nothing more dialed');
+  const again = boot((frame) => (frame.op === 'create_new_document' ? MINTED(E, 40) : ACK(41)));
+  const empty = await MACHINE.start('');
+  await flush();
+  assert.deepEqual([empty, again.ops.map((o) => o.frame.op), WRITE.edits(E).length], [{ addr: E, at: 40 }, ['create_new_document'], 0], 'no characters: the draft is minted and nothing is typed into it');
+});
+
 test('BM-2: the pause sends the open burst as its composed frames through `op`, under the session that typed, each with its anchors and typed at the typed state; punctuation sends at once; and a burst of two frames dials the second once the first is acked, typed at the state that ack raised', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const { ops } = boot((frame, n) => (frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)));

@@ -137,7 +137,10 @@
 // it folds — its act, inside the line's one stop, unfolding it (O-FACES'
 // `unfold`). The transient
 // segments (the strip's readout; the mode line C-31 where the pair flipped,
-// its flip and its run each a sentence)
+// its flip and its run each a sentence; a mint's address and what is said of
+// the document it made, and why the launch landed where it did — B3-S1 —
+// each handed in by its owner, the launch's with the stretches its act's
+// label is, a button whose press makes the act)
 // stand until the next act (`act`) — a press of one of the line's own acts
 // among them, which is the next act of a hint standing too (the act the app
 // hands in) — or a change of the page's class, which takes one quoting what
@@ -235,7 +238,7 @@ import { esc, numeral } from '../util.js';
 
 /** @type {HTMLElement | null} */
 let el = null;
-/** @type {{html: string, id: string} | null} */
+/** @type {{html: string, id: string, go: ((byKey: boolean) => void) | null} | null} the transient segment: its markup, its string, and the act its label's press makes, where it carries one */
 let transientSeg = null;
 let lastHTML = '';
 let lastMode = /** @type {string | null} */ (null);
@@ -336,6 +339,8 @@ export function attach(e, a) {
     const b = /** @type {HTMLElement} */ (ev.target).closest('[data-act]'); if (!b || !acts) return;
     const which = /** @type {HTMLElement} */ (b).dataset.act;
     const byKey = FOCUS.byKey(ev);
+    // the transient segment's own act, read before the press takes the segment down
+    const go = which === 'transient' && transientSeg ? transientSeg.go : null;
     // a press on one of the line's acts is the person's next act: what stood until it goes first
     act();
     if (acts.acted) acts.acted();
@@ -347,6 +352,7 @@ export function attach(e, a) {
     else if (which === 'again') { if (acts.again) acts.again(); }
     else if (which === 'showfile') showFile();
     else if (which === 'copyaddr') copyAddress();
+    else if (go) go(byKey);
     else if (which && which.startsWith(WALK_ACT) && acts.walk) acts.walk(which.slice(WALK_ACT.length), byKey);
     ev.stopPropagation();
   });
@@ -384,8 +390,27 @@ export function step(dir) {
   return true;
 }
 
-/** a transient segment until the person's next act, said through the one status region: words, or stretches in their faces — what is said keeping a document's words as written (ST's `heard`) — drawn as the client's words, each address in the identifier's face */
-export function transient(/** @type {import('../strings.js').Words} */ words, id = 'transient') { transientSeg = { html: addressedHTML(runsText(asRuns(words))), id }; FOCUS.say(words); render(true); }
+/**
+ * A transient segment until the person's next act, said through the one
+ * status region: words, or stretches in their faces — what is said keeping a
+ * document's words as written (ST's `heard`) — drawn as the client's words,
+ * each address in the identifier's face; or, where `o.faced` asks, each
+ * stretch in its own face (ST's `facedHTML`), and, where `o.act` names one,
+ * the stretches from `act.from` for `act.count` a button, the act's label,
+ * whose press makes the act.
+ * @param {import('../strings.js').Words} words
+ * @param {string} [id] the segment's string
+ * @param {{faced?: boolean, act?: {from: number, count: number, go: (byKey: boolean) => void} | null}} [o]
+ */
+export function transient(words, id = 'transient', o = {}) {
+  const runs = asRuns(words), a = o.act ?? null;
+  const html = !o.faced && !a ? addressedHTML(runsText(runs))
+    : !a ? facedHTML(runs)
+      : facedHTML(runs.slice(0, a.from)) + `<button class="seg-act" data-act="transient">${facedHTML(runs.slice(a.from, a.from + a.count))}</button>` + facedHTML(runs.slice(a.from + a.count));
+  transientSeg = { html, id, go: a ? a.go : null };
+  FOCUS.say(words);
+  render(true);
+}
 
 /**
  * What stands until the next act taken down — the transient segment,
@@ -554,7 +579,7 @@ function closedSaid() {
   if (closedWhole) { forwardSays = true; return; }
   closedWhole = true;
   const words = t('L.scene.closed');
-  transientSeg = { html: addressedHTML(words), id: 'L.scene.closed' };
+  transientSeg = { html: addressedHTML(words), id: 'L.scene.closed', go: null };
   FOCUS.say(words);
 }
 
@@ -1188,7 +1213,7 @@ function modeLine() {
   const mode = REC.mode();
   if (lastTrust !== null && trust !== null && trust !== lastTrust && trust) {
     const words = sentences(sentence('F.flip'), sentence('F.flip.run'));
-    transientSeg = { html: esc(words), id: 'F.flip' };
+    transientSeg = { html: esc(words), id: 'F.flip', go: null };
     FOCUS.say(words);
   }
   lastTrust = trust; lastMode = mode;

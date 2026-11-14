@@ -3794,6 +3794,44 @@ test('past the whole read\'s cap the view asks no image of positions it holds no
   assert.deepEqual(imagesAsked(fake), [], 'no image asked: every position held placed, and none asked of the positions between the windows');
 });
 
+test('the launch\'s reads: the newest row of this hand is asked of the account\'s feed alone, under the session, and only where a session that may write stands under an account with a key of the device\'s; where a write landed is one history read of the draft\'s image before it, asked again at the position the board names where the first lies inside a commit, a draft minted by the write before it holding nothing then, any other refusal telling nothing (B3-S1 THE LAUNCH; D6 BM-53)', async () => {
+  const W = '1.0.1.0.9', KEY = 'c'.repeat(64);
+  /** @type {any[]} */
+  const asked = [];
+  /** what the board answers the history read at a position */
+  const history = /** @type {Record<number, unknown>} */ ({
+    39: { refused: { kind: 'refused', name: 'not_a_position', body: { error: 'not_a_position', nearest: 37 } } },
+    37: { result: { resp: 'runs', as_of: 37, runs: [{ i_start: W + '.0.1.1', width: '4' }] } },
+    19: { refused: { kind: 'refused', name: 'doc_not_registered' } },
+    9: { refused: { kind: 'refused', name: 'history_reclaimed', body: { floor: 12 } } },
+  });
+  const fake = FAKE.create(new Proxy({}, { get: (_t, k) => {
+    const key = String(k);
+    if (key.startsWith('changes:')) { const a = JSON.parse(key.slice(8)); asked.push(a); return { result: { entries: [{ position: 3, at: 3, op: 'insert', docs: [W], class: 'drafts', key: KEY, time: 1 }], next: 3, head: 3 } }; }
+    if (key.startsWith('op:')) { const f = JSON.parse(key.slice(3)); if (f.at != null) { asked.push(f); return history[f.at]; } }
+    return undefined;
+  } }));
+  PORT.boot(fake);
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  const session = { session: 's-1', principal: 1, account: '1.0.1', writes: true, fingerprint: KEY };
+  for (const [what, s] of /** @type {Array<[string, any]>} */ ([['a guest', null], ['a session that may not write', { ...session, writes: false }], ['a session under no account', { ...session, account: null }], ['a session naming no key, the store unread', { ...session, fingerprint: null }]])) {
+    REC.setSession(s);
+    assert.deepEqual([await PUMP.newestOwn(), asked], [{ row: null, pages: 0, rows: 0, refused: null }, []], `${what}: nothing asked`);
+  }
+  REC.setSession(/** @type {any} */ (session));
+  assert.deepEqual(await PUMP.newestOwn(), { row: { position: 3, op: 'insert', docs: [W], cls: 'drafts' }, pages: 1, rows: 1, refused: null }, 'the row of this hand');
+  assert.deepEqual(asked, [{ session: 's-1', since: 0, under: '1.0.1' }], 'one page, from the feed\'s first position where the page holds no head, narrowed to the account');
+  asked.length = 0;
+  REC.takeSpanSet(W, [{ subspace: 1, ordinal: 1, positions: 6 }], 40);
+  REC.takeDelivery(W, [{ pos: 1, width: 6, kind: 'content', text: 'abcdef', ref: null, origin: null }], 40, { from: 1, runs: [{ iStart: W + '.0.1.1', width: 4 }, { iStart: W + '.0.1.9', width: 2 }] });
+  assert.deepEqual(await PUMP.landedOf(W, 40), { placed: [{ pos: 5, width: 2 }], left: null }, 'the write placed the two bytes the image before it does not hold');
+  assert.deepEqual(asked.map((f) => [f.at, f.frame.op, f.frame.d]), [[39, 'image', W], [37, 'image', W]], 'asked at the position before the write\'s, then at the one the board names');
+  assert.deepEqual(await PUMP.landedOf(W, 20), { placed: [{ pos: 1, width: 6 }], left: null }, 'the draft unregistered before the write: all it holds placed since');
+  assert.equal(await PUMP.landedOf(W, 10), null, 'the state before the write reclaimed: nothing told');
+  assert.equal(await PUMP.landedOf('1.0.1.0.10', 40), null, 'a document the page holds no text of: nothing asked, nothing told');
+  assert.equal(PUMP.inflightCount(), 0, 'no read left counted in flight');
+});
+
 test('replay: a recorded script from the provider builds the model; the snapshot printed for the gate', async () => {
   const file = process.env.SKEP_REPLAY;
   if (!file) return; // the harness sets it

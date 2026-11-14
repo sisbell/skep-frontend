@@ -2802,3 +2802,49 @@ test('a run of typing ends at every move of the caret by an act other than typin
     }
   } finally { MACHINE.takeOut(); PORT.boot(null); LAYER.dropCaret(); WRITE.clearEdits(D); KEYS._reset(); }
 }));
+
+// ---- select-all (D5 K-93; B3-S8) ------------------------------------------------------------------------------------
+
+test('Mod+A at the page\'s live caret in a draft selects the whole document — one selection, the caret live at its end — and ends the run of typing open there; at the span a kept caret stands in it returns the caret and selects the same; at a span of a draft holding no caret, in another\'s draft and in a field it stays the platform\'s (D5 K-93; B3-S8; D6 BM-31)', () => onPlane(async () => {
+  /** @type {Array<string | null>} the runs of typing W-WRITE was told ended, by draft */
+  const ended = [];
+  WRITE.machine({ commit() {}, typed() {}, ended(a) { ended.push(a); }, leaving: () => false });
+  try {
+    await focusOn(D, 1);
+    await KEYS.dispatch(keyOf('Enter'), PLANE);
+    await KEYS.dispatch(keyOf('q'), PLANE);
+    assert.deepEqual([caret(), SEL.selected()], [[D, 2, true], null], 'a key typed at the live caret: no selection');
+    const before = ended.length;
+    assert.equal(await KEYS.dispatch(keyOf('a', MOD), PLANE), true, 'Mod+A at the caret: taken');
+    await tick();
+    assert.deepEqual([SEL.selected(), caret(), shown()], [{ addr: D, pos: 1, width: N + 1 }, [D, N + 2, true], 'q' + TEXT], 'the whole of the text shown one selection, the caret live at its end, nothing typed');
+    assert.ok(ended.slice(before).includes(D), 'the run of typing open at the draft ended: the next key begins a new step');
+    assert.equal(await KEYS.dispatch(keyOf('a', { ...MOD, shiftKey: true }), PLANE), true, 'Mod+Shift+A is annotate\'s chord, never select-all');
+    SEL.clear();
+    await KEYS.dispatch(keyOf('Escape'), PLANE);
+    await tick();
+    assert.equal(caret()?.[2], false, 'Esc: the caret kept');
+    assert.equal(await KEYS.dispatch(keyOf('a', MOD), PLANE), true, 'Mod+A at the kept caret\'s span: taken');
+    await tick();
+    assert.deepEqual([SEL.selected(), caret()], [{ addr: D, pos: 1, width: N + 1 }, [D, N + 2, true]], 'the caret returned, the whole document selected');
+    SEL.clear(); LAYER.dropCaret();
+    await focusOn(D, 14);
+    assert.deepEqual([await KEYS.dispatch(keyOf('a', MOD), PLANE), SEL.selected(), caret()], [false, null, null], 'a span of the draft holding no caret: the platform\'s own, nothing selected');
+    await focusOn(O, 1);
+    assert.deepEqual([await KEYS.dispatch(keyOf('a', MOD), PLANE), SEL.selected()], [false, null], 'another\'s draft: the platform\'s own');
+    assert.equal(await KEYS.dispatch(keyOf('a', MOD), { where: 'field', byKey: true }), false, 'a field: its own select-all');
+  } finally { WRITE.machine(null); }
+}));
+
+test('Mod+A at the walk\'s span of an edition, which takes no caret, selects the whole edition and places no caret; where no read has told the document is published it stays the platform\'s (D5 K-93; B3-S8)', () => onPlane(async () => {
+  listed([[E, 'edition']]);
+  await focusOn(E, 14);
+  assert.equal(await KEYS.dispatch(keyOf('a', MOD), PLANE), true, 'Mod+A at an edition\'s span: taken');
+  await tick();
+  assert.deepEqual([SEL.selected(), caret(), WRITE.edits(E)], [{ addr: E, pos: 1, width: N }, null, []], 'the whole edition one selection; no caret, nothing edited');
+  assert.deepEqual([WALK.current()?.addr, WALK.current()?.pos], [E, 14], 'the walk where it stood');
+  SEL.clear();
+  listed([]);
+  await focusOn(E, 14);
+  assert.deepEqual([REC.doc(E).kind, await KEYS.dispatch(keyOf('a', MOD), PLANE), SEL.selected()], ['unknown', false, null], 'no read tells it published: the platform\'s own');
+}));

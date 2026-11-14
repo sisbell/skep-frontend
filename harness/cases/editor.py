@@ -26,6 +26,12 @@ opened again over an armed `held(session)` list, the line it names applied
 over the draft's text with the held bar from its first line to its last and
 "held" once in the edge beside it, lifted as a `held` event lands the line
 (`held-bars`, `reopen_rows`).
+Starting a document, select-all and the launch are driven there first (`start_rows`; B3-S1 THE START and THE LAUNCH,
+B3-S8): the LEAP box's creation row at its foot over a first line nothing matches (`start-row`); Tab and Enter there
+minting a draft and sending the line as its first burst, both kept by the test board, the one line saying the mint
+(`mint-row`); Mod+A at the caret in that draft selecting it whole (`select-all`); and the page opened again landing at
+the draft the case last wrote in, the run that write placed outlined, the caret live at its end and the one line saying
+why (`launch`) — the launch's reads a figure.
 Undo, redo and the deletion face are driven there too (`undo_rows`): Mod+Z on
 an empty stack, its line and the constant sentence (`undo-lines`); a removal
 of kept words, the deletion face at its commit (`deletion-face`); the undo
@@ -156,12 +162,15 @@ STATES = [
     dict(screen='B3-S1', state='drag-typed', walk='W-08', step=2, drawn=True,
          how='a drag across two words of the own draft, then a printable key (FP-40; K-70, K-72)',
          claim="the key's character stands in the dragged words' place — one edit — the caret live after it, its mark shown"),
-    dict(screen='B3-S1', state='mint-row', walk='W-08', step=2, drawn=False,
-         how="the LEAP box's creation row and the one line's segment at a mint (A-63)", claim='',
-         why='the composer (U3): no `create_new_document` is composed'),
-    dict(screen='B3-S1', state='launch', walk='W-08', step=7, drawn=False,
-         how="the launch at the account's newest own write (D6 BM-53)", claim='',
-         why="the launch's search for the newest own row (S1 #17)"),
+    dict(screen='B3-S1', state='start-row', walk='W-08', step=2, drawn=True,
+         how="Mod+L, then a first line typed into the LEAP box that no address or first line on the board matches (K-30, K-33)",
+         claim="the box's answer carries at its foot, beneath the no-match line (F.leap.none), the act \"Start a new document with this as its first line\" (B3.start-document), inside the window, the box holding the focus; one Tab from the input stands on the act, ahead of every row's \"open beside\""),
+    dict(screen='B3-S1', state='mint-row', walk='W-08', step=2, drawn=True,
+         how="Tab, then Enter at the creation row, the machine handed in (`machine=1`): the mint and the typed line's first burst on the test board (A-1, A-63)",
+         claim="one `create_new_document` into the acting account, born private, then the typed line as one `insert` in the draft it minted, each acked; the camera at the new draft at its reading scale, the trail's newest entry, the caret live at the end of the first line and the corner reading \"kept\" (B3.kept); the one line says the mint until the next act — the minted address, who can read it in its corner's chip's words (B3.mint.private; L.mint.private.flag-on where local trust is on) and, at the session's first mint, that a document stays (B3.mint.stays) — whole inside the window, beneath the line's rows where they leave it no room"),
+    dict(screen='B3-S1', state='launch', walk='W-08', step=7, drawn=True,
+         how="the machine's page opened again after the case's own write — a second paragraph typed at the caret of the draft it minted (D6 BM-53)",
+         claim="the page lands at the draft the case last wrote in, at its reading scale, as the trail's one entry: the run the write placed outlined as an arrival, the caret live at its end, and the one line saying why, \"you last wrote in ⟨label⟩\" (B3.last-wrote), the label the draft's first line, whole inside the window"),
     # B3-S2 — the kept state and the held text (W-08 step 7 and its failure arms)
     dict(screen='B3-S2', state='not-yet-kept', walk='W-08', step=7, drawn=True,
          how="`write.setKept(own, {word: 'not yet kept'})` (D6 BM-8)",
@@ -229,8 +238,9 @@ STATES = [
     dict(screen='B3-S7', state='past-state-pane', walk='W-08', step=8, drawn=False,
          how="a past state's record in the right pane (`recordAt` off an `/op-at` read)", claim='',
          why="the history read's acts (S7 #84, #88): no act reads a past state"),
-    dict(screen='B3-S8', state='select-all', walk='—', step=0, drawn=False,
-         how='Mod+A at a caret (K-93)', claim='', why="the whole-document span by the page's own act (S8 #94)"),
+    dict(screen='B3-S8', state='select-all', walk='—', step=0, drawn=True,
+         how="Mod+A at the live caret in the draft the case minted (K-93)",
+         claim="the whole document is one selection, the caret live at its end, the selection's acts' row standing at it inside the window; the platform's copy then takes the document whole as plain text"),
     dict(screen='B3-S9', state='composer', walk='W-08', step=1, drawn=False,
          how="Mod+N's composer; \"kept in ⟨captures⟩\" (D6 BM-68)", claim='', why='the composer module (S9 #97) and the keys (U7)'),
     dict(screen='B3-S10', state='base-standing', walk='W-08', step=4, drawn=False,
@@ -1055,6 +1065,218 @@ def last_write(ctx, ops_allowed):
         if isinstance(f, dict) and f.get('op') and f.get('op') not in ops_allowed and 'frame' not in f:
             out = {'op': f['op'], 'doc': f.get('doc'), 'values': f.get('values'), 'answer': c.get('answer')}
     return out
+
+
+LEAP_BOX = """(() => { const q = document.getElementById("leapq"), foot = document.getElementById("leapfoot"), act = foot.querySelector("[data-start]"), note = document.getElementById("leapnote"),
+  hits = document.getElementById("leaphits"), box = document.getElementById("leap"), line = document.getElementById("line").getBoundingClientRect();
+  const at = (e) => { const b = e.getBoundingClientRect(); return {top: b.top, bottom: b.bottom, left: b.left, right: b.right, w: b.width, h: b.height}; };
+  const a = document.activeElement, order = [...box.querySelectorAll("input, button")].map((e) => e.id || e.dataset.beside || e.tagName);
+  return {open: box.classList.contains("on"), value: q.value, act: act && {text: act.textContent, id: act.dataset.string, box: at(act)}, note: {text: note.textContent, ids: [...note.querySelectorAll("[data-string]")].map((e) => e.dataset.string), box: at(note)},
+          rows: hits.children.length, hits: at(hits), box: at(box), line_bottom: line.bottom, focus: a ? (a.id || a.tagName) : null, order, win: [window.innerWidth, window.innerHeight]}; })()"""
+
+LINE_TRANSIENT = """(() => { const seg = document.querySelector("#line .seg.transient"), line = document.getElementById("line"); if (!seg) return null;
+  const b = seg.getBoundingClientRect(), rows = [...line.querySelectorAll(".row")].map((x) => x.getBoundingClientRect());
+  return {text: seg.textContent, id: seg.dataset.string, beneath: !!seg.closest(".beneath"), alone: !seg.closest(".row") || seg.closest(".row").children.length === 1, box: {top: b.top, bottom: b.bottom, left: b.left, right: b.right},
+          rows_bottom: rows.length ? Math.max(...rows.filter((x, i) => !seg.closest(".row") || line.querySelectorAll(".row")[i] !== seg.closest(".row")).map((x) => x.bottom), 0) : 0, line_bottom: line.getBoundingClientRect().bottom, reading: [...seg.querySelectorAll(".reading")].map((e) => e.textContent),
+          act: !!seg.querySelector("button"), win: [window.innerWidth, window.innerHeight]}; })()"""
+
+
+def transient_seen(seg, narrow=False):
+    """is the one line's transient segment whole inside the window and, where it stands beneath the line's rows or on a row
+    of its own, clear of every other row (the layout page's round-2 close, §6: the beneath block clears the line's full
+    wrapped height); at the narrow width it stands so, never squeezed among the first row's parts"""
+    if not seg:
+        return False
+    b, (w, h) = seg['box'], seg['win']
+    inside = b['left'] >= -0.5 and b['right'] <= w + 0.5 and b['top'] >= -0.5 and b['bottom'] <= seg['line_bottom'] + 0.5 and b['bottom'] <= h + 0.5 and b['bottom'] > b['top']
+    apart = seg['beneath'] or seg['alone']
+    return inside and (not apart or b['top'] >= seg['rows_bottom'] - 0.5) and (apart or not narrow)
+
+
+def start_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures, leave_page):
+    """STARTING A DOCUMENT, SELECT-ALL AND THE LAUNCH (B3-S1 THE START and THE LAUNCH, B3-S8; D5 K-33, K-93; D6 BM-53), on the
+    harness's provider with the machine (`machine=1`), writing only to drafts the creation row mints here. `start-row`: the
+    LEAP box over a first line nothing matches, the creation row at its foot, one Tab from the input. `mint-row`: Tab and
+    Enter mint a draft and send the line as its first burst, both kept by the test board; the one line says the mint, whole
+    at this first mint and without the staying clause at a second. `select-all`: Mod+A at the caret in that draft selects
+    it whole. `launch`: the page opened again lands at the draft the case last wrote in, the run that write placed
+    outlined, the caret live at its end, the one line saying why. The figures: the launch's reads, their pages, rows and
+    milliseconds. `leave_page` keeps what a page sent before it is left, for the case's write check."""
+    states = ('start-row', 'mint-row', 'select-all', 'launch')
+    boot = ctx.open_editor_page('all', machine=True)
+    session = ctx.js('window.__skep.model.session()')
+    if not (boot and boot.get('machine') and session and session.get('writes')):
+        for st in states:
+            red(st, "the machine's page did not open")
+        return
+    account = session['account']
+    stamp = time.strftime('%H%M%S')
+    line1, line2, para = 'Slice one starts a document at %s' % stamp, 'A second document, started at %s' % stamp, 'Its second paragraph is the write the launch lands at.'
+
+    def box():
+        return ctx.js(LEAP_BOX)
+
+    def open_box(text):
+        """the LEAP box opened by its chord and `text` typed into it, key by key"""
+        ctx.js('window.__skep.leap.close()')
+        ctx.drv.key('l', mods=('Meta',)); ctx.frames(2)
+        for ch in text:
+            ctx.drv.key(ch)
+        ctx.frames(2)
+
+    def mints():
+        """each `create_new_document` the open page sent, with the address its answer minted"""
+        out = []
+        for c in ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "op" && c.op === "create_new_document").map((c) => ({frame: c.frame, answer: c.answer}))') or []:
+            try:
+                f, a = json.loads(c['frame']), json.loads(c['answer'] or 'null')
+            except (TypeError, ValueError):
+                continue
+            out.append({'frame': {k: v for k, v in f.items() if k != 'id'}, 'addr': ((a or {}).get('result') or {}).get('addr'), 'resp': ((a or {}).get('result') or {}).get('resp')})
+        return out
+
+    def first_line(addr):
+        return (ctx.js('(async () => { const L = await import("./text/layer.js"), R = await import("./model/records.js"), d = L.shownOf(%s); return d.from < 0 ? "" : R.textOf(d.runs, d.from, d.to); })()' % json.dumps(addr)) or '').split('\n')[0]
+
+    def board_text(addr):
+        """the draft's text as the model holds it of the board, with no edit of the page's applied"""
+        return ctx.js('(() => { const d = window.__skep.model.doc(%s); return d && d.from >= 0 ? window.__skep.model.text(%s, d.from, d.to) : null; })()' % (json.dumps(addr), json.dumps(addr)))
+
+    def kept(addr, max_s=15):
+        return wait_for(ctx, '(() => { const s = window.__skep.write.state(%s); return !!s.kept && s.kept.word === "kept" && !s.inFlight && window.__skep.write.edits(%s).length === 0; })()' % (json.dumps(addr), json.dumps(addr)), max_s)
+
+    def caret():
+        return ctx.js('(async () => (await import("./text/layer.js")).caret())()')
+
+    # ---- B3-S1 `start-row`: the box, its no-match line and the creation row at its foot -------------------------------
+    want_row, want_none = t(ctx, 'B3.start-document'), t(ctx, 'F.leap.none')
+
+    def start_check(w):
+        open_box(line1)
+        b = box()
+        ctx.drv.key('Tab'); ctx.frames(2)
+        tabbed = ctx.js('document.activeElement ? document.activeElement.id : null')
+        ctx.drv.key('Tab', mods=('Shift',)); ctx.frames(2)
+        back = ctx.js('document.activeElement ? document.activeElement.id : null')
+        ctx.drv.key('End'); ctx.frames(2)  # the caret at the typed line's end again: Shift+Tab into a field selects its text
+        a = (b.get('act') or {})
+        ab, win = a.get('box') or {}, b['win']
+        at_foot = bool(ab) and ab['top'] >= b['note']['box']['bottom'] - 0.5 and ab['top'] >= b['hits']['bottom'] - 0.5 and ab['bottom'] <= b['box']['bottom'] + 0.5
+        inside = bool(ab) and ab['left'] >= -0.5 and ab['right'] <= win[0] + 0.5 and ab['top'] >= b['line_bottom'] - 0.5 and ab['bottom'] <= win[1] + 0.5 and ab['w'] > 0
+        ok = (b['open'] and b['value'] == line1 and a.get('text') == want_row and a.get('id') == 'B3.start-document' and b['rows'] == 0 and want_none in b['note']['text'] and 'F.leap.none' in b['note']['ids']
+              and at_foot and inside and b['focus'] == 'leapq' and b['order'][:2] == ['leapq', 'leap-start'] and tabbed == 'leap-start' and back == 'leapq')
+        return ok, {'box': b, 'want': [want_row, want_none], 'tabbed': tabbed, 'back': back, 'at_foot': at_foot, 'inside': inside}
+    shoot('start-row', start_check)
+    writes0 = len(mints())
+    r.check(writes0 == 0, 'the creation row standing, its Tab and Shift+Tab mint nothing: no `create_new_document` sent', mints())
+
+    # ---- B3-S1 `mint-row`: Tab, Enter — the mint and its first burst on the test board; the one line's segment ----------
+    open_box(line1)
+    ctx.drv.key('Tab'); ctx.frames(1)
+    ctx.drv.key('Enter')
+    minted = wait_for(ctx, 'window.__skep.bridge.calls().some((c) => c.name === "op" && c.op === "create_new_document" && /ack_addr/.test(c.answer || ""))', 15)
+    made = mints()
+    mine = made[-1]['addr'] if minted and made else None
+    r.check(bool(mine) and made[-1]['frame'] == {'op': 'create_new_document', 'account': account, 'published': False} and made[-1]['resp'] == 'ack_addr',
+            "Enter on the creation row sends one `create_new_document` into the acting account, born private, and the test board answers the draft it minted", made)
+    if not mine:
+        for st in ('mint-row', 'select-all', 'launch'):
+            red(st, {'minted': made})
+        return
+    sent['minted'].append(mine)
+    figures['started'] = [mine]
+    is_kept = kept(mine)
+    ctx.settle(15); ctx.frames(3)
+    w0 = last_write(ctx, ops_allowed)
+    n1 = len(line1.encode('utf8'))
+    # the creation copy in the words the corner's chip says it in: the person alone, or with this machine where local trust is on
+    private = 'L.mint.private.flag-on' if ((ctx.js('window.__skep.model.health()') or {}).get('auth') or {}).get('local_trust') else 'B3.mint.private'
+    want_first = ctx.js('(async () => { const S = await import("./strings.js"); return S.fields(%s, S.t(%s), S.t("B3.mint.stays")); })()' % (json.dumps(mine), json.dumps(private)))
+    want_later = lambda addr: ctx.js('(async () => { const S = await import("./strings.js"); return S.fields(%s, S.t(%s)); })()' % (json.dumps(addr), json.dumps(private)))
+    corner = '#corners [data-corner="%s"]' % mine
+
+    def mint_check(w):
+        seg, c, trail = ctx.js(LINE_TRANSIENT), caret(), ctx.js('window.__skep.trail().entries.map((e) => e.addr)')
+        word = ctx.js('((sel) => { const x = document.querySelector(sel + " .kept-word"); return x ? {word: x.textContent, id: x.dataset.string || null} : null; })(%s)' % json.dumps(corner))
+        mounted, reading = mine in (ctx.js('window.__skep.mountedAddrs()') or []), ctx.js('(async () => (await import("./text/layer.js")).atReadingScale(%s))()' % json.dumps(mine))
+        ok = (is_kept and bool(w0) and w0['op'] == 'insert' and w0['doc'] == mine and w0['values'] == [line1] and 'ack' in (w0.get('answer') or '')
+              and first_line(mine) == line1 and board_text(mine) == line1 and c == {'addr': mine, 'pos': n1 + 1, 'live': True} and bool(trail) and trail[-1] == mine and mounted and reading
+              and word == {'word': 'kept', 'id': 'B3.kept'} and bool(seg) and seg['text'] == want_first and seg['id'] == 'B3.mint' and transient_seen(seg, w == NARROW_PX))
+        return ok, {'kept': is_kept, 'write': w0 and {k: w0[k] for k in ('op', 'doc', 'values')}, 'first_line': first_line(mine), 'board': board_text(mine), 'caret': c, 'trail': trail[-3:] if trail else trail,
+                    'mounted': mounted, 'reading': reading, 'corner': word, 'segment': seg, 'want': want_first}
+    shoot('mint-row', mint_check)
+
+    # a second mint in the session: the creation copy alone, the staying clause said once (P41)
+    open_box(line2)
+    ctx.drv.key('Tab'); ctx.frames(1)
+    ctx.drv.key('Enter')
+    again = wait_for(ctx, 'window.__skep.bridge.calls().filter((c) => c.name === "op" && c.op === "create_new_document" && /ack_addr/.test(c.answer || "")).length >= 2', 15)
+    made = mints()
+    second = made[-1]['addr'] if again and len(made) >= 2 else None
+    if second:
+        sent['minted'].append(second)
+        figures['started'].append(second)
+        kept2 = kept(second)
+        ctx.settle(15); ctx.frames(3)
+        seg = ctx.js(LINE_TRANSIENT)
+        r.check(kept2 and bool(seg) and seg['text'] == want_later(second) and seg['id'] == 'B3.mint' and first_line(second) == line2,
+                'a second mint in the session says its address and the creation copy alone: that a document stays is said whole at the first mint only (P41)', {'kept': kept2, 'segment': seg, 'want': want_later(second)})
+    else:
+        r.check(False, 'a second document is started from the box in the same session', made)
+
+    # ---- the case's own write, in the first draft: a second paragraph typed at the caret, kept by the board ----------------
+    ctx.leap(mine, 1)
+    ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(mine)); ctx.settle(); ctx.frames(2)
+    ctx.js('(async () => (await import("./text/layer.js")).placeCaret(%s, %d))()' % (json.dumps(mine), n1 + 1)); ctx.frames(2)
+    for key in ('Enter', 'Enter'):
+        ctx.drv.key(key)
+    for ch in para:
+        ctx.drv.key(ch)
+    ctx.frames(2)
+    wrote = kept(mine)
+    ctx.settle(15); ctx.frames(3)
+    whole = line1 + '\n\n' + para
+    n = len(whole.encode('utf8'))
+    r.check(wrote and board_text(mine) == whole and caret() == {'addr': mine, 'pos': n + 1, 'live': True},
+            "the case's own write: a second paragraph typed at the caret of the draft it minted, kept by the test board, the caret live at its end", {'kept': wrote, 'board': board_text(mine), 'caret': caret()})
+
+    # ---- B3-S8 `select-all`: Mod+A at the live caret selects the document whole ------------------------------------------
+    def select_check(w):
+        ctx.js('(async () => (await import("./overlays/selection.js")).clear())()')
+        ctx.js('(async () => (await import("./text/layer.js")).placeCaret(%s, %d))()' % (json.dumps(mine), n1 + 1)); ctx.frames(2)
+        ctx.drv.key('a', mods=('Meta',)); ctx.frames(3)
+        sel, c = ctx.js('window.__skep.selection()'), caret()
+        acts = shown(ctx, '#overlay button')
+        copy = ctx.js('window.__skep.copy()') or {}
+        data = copy.get('data') or {}
+        ok = (sel == {'addr': mine, 'pos': 1, 'width': n} and c == {'addr': mine, 'pos': n + 1, 'live': True} and len(acts) >= 3
+              and copy.get('span') == sel and data.get('text/plain') == whole and bool(data.get('application/x-skep-passage')))
+        return ok, {'selected': sel, 'caret': c, 'acts': len(acts), 'copy_span': copy.get('span'), 'plain': (data.get('text/plain') or '')[:120], 'flavor': bool(data.get('application/x-skep-passage'))}
+    shoot('select-all', select_check, recentre=lambda: ctx.leap(mine, 1))
+    ctx.js('(async () => (await import("./overlays/selection.js")).clear())()'); ctx.esc(); ctx.frames(2)
+
+    # ---- B3-S1 `launch`: the page opened again lands where the case last wrote --------------------------------------------
+    want_line = t(ctx, 'B3.last-wrote', {'label': line1})
+    p0 = len((line1).encode('utf8')) + 1  # the run the last burst placed: the two line breaks and the paragraph
+    reads = []
+
+    def launch_check(w):
+        leave_page()
+        ctx.open_editor_page('all', machine=True)
+        landed = wait_for(ctx, '(async () => !!(await import("./nav/go.js")).launched())()', 15)
+        ctx.settle(15); ctx.frames(3)
+        la = ctx.js('(async () => (await import("./nav/go.js")).launched())()')
+        seg, c, trail = ctx.js(LINE_TRANSIENT), caret(), ctx.js('window.__skep.trail().entries.map((e) => e.addr)')
+        mark = ctx.js('(async () => { const m = (await import("./nav/go.js")).arrivalMark(); return m && {addr: m.addr, runs: m.runs}; })()')
+        mounted, reading = mine in (ctx.js('window.__skep.mountedAddrs()') or []), ctx.js('(async () => (await import("./text/layer.js")).atReadingScale(%s))()' % json.dumps(mine))
+        calls = ctx.js('window.__skep.bridge.calls().filter((x) => x.name === "changes" || (x.name === "op" && /^\\{"at":/.test(x.frame || ""))).map((x) => ({name: x.name, op: x.op || null, ms: Math.round(x.ms), bytes: x.bytesOut, entries: x.name === "changes" ? (JSON.parse(x.answer || "{}").result || {entries: []}).entries.length : null}))')
+        reads.append({'width': w, 'calls': calls})
+        ok = (landed and bool(la) and la['how'] == 'wrote' and la['addr'] == mine and la['caret'] == n + 1 and c == {'addr': mine, 'pos': n + 1, 'live': True} and trail == [mine]
+              and bool(mark) and mark['addr'] == mine and mark['runs'] == [{'pos': p0, 'width': n + 1 - p0}] and mounted and reading
+              and bool(seg) and seg['text'] == want_line and seg['id'] == 'B3.last-wrote' and seg['reading'] == [line1] and not seg['act'] and transient_seen(seg, w == NARROW_PX))
+        return ok, {'launched': la, 'caret': c, 'trail': trail, 'arrival': mark, 'mounted': mounted, 'reading': reading, 'segment': seg, 'want': want_line, 'reads': calls}
+    shoot('launch', launch_check)
+    figures['launch_reads'] = reads
 
 
 def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
@@ -2093,6 +2315,14 @@ def run(ctx):
             return ok, {'consumed': consumed, 'segment': seg, 'want': want, 'writes': h and h.get('writes'), 'shown': len(vis)}
         shoot('writes-halted', halted_check)
         leave_page()
+
+    # ---- (s) B3-S1, B3-S8: starting a document from the box, select-all at its caret, and the launch after the case's own write ---
+    try:
+        start_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures, leave_page)
+    except Exception as e:  # a state that throws leaves its rows red; the rest of the case still runs
+        import traceback
+        r.check(False, 'the start\'s rows ran to their end', {'error': str(e), 'trace': traceback.format_exc()[-1500:]})
+    leave_page()
 
     # ---- (m) the machine's page: the case's own draft, minted on the test board; its typing kept by the real board; then the
     # held, refused, handed-over, moved, halted, second-window and full states, each armed on the harness's provider -------------

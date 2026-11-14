@@ -25,7 +25,13 @@
 // act closes the box first; and where no board is held the box lists no
 // board's level, says why, and Enter and Mod+Shift+Enter close it onto the
 // no-board face with no LEAP made (FP-20, FP-26, FP-29, FP-35, FP-38; D5
-// K-101).
+// K-101). The creation row (B3-S1 THE START; D5 K-33): it stands at the foot
+// over a query while an account acts, never at the box as opened, emptied or
+// holding an address, a share form or a URL; drawn off the parse before any
+// row arrives; its act the first control after the input, ahead of every
+// "open beside"; a Tab at the act held while the index's read is out and
+// made as the rows are computed over its answer; Enter minting through
+// W-MACHINE and saying the mint; and a refused mint answered at the box.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as LEAP from './leap.js';
@@ -39,9 +45,12 @@ import * as PORT from '../bridge/port.js';
 import * as FAKE from '../test/fake-port.js';
 import * as F from '../model/frames.js';
 import * as CAM from '../plane/camera.js';
+import * as PUMP from '../model/pump.js';
+import * as WRITE from '../write/write.js';
+import * as MACHINE from '../write/machine.js';
 import { MAC } from './keys.js';
 import { accountCell, boardCell } from '../plane/projection.js';
-import { t, heard } from '../strings.js';
+import { t, heard, fields } from '../strings.js';
 import { esc } from '../util.js';
 
 /** the platform's document: its focus — the body where it stands on nothing */
@@ -104,9 +113,32 @@ Object.defineProperty(rows, 'innerHTML', {
   set: (/** @type {string} */ html) => { rowsHTML = html; acts = [...html.matchAll(/<button [^>]*data-beside="(\d+)" data-key="([^"]*)"/g)].map((m) => actOf(Number(m[1]), m[2])); },
 });
 rows.contains = (x) => x === rows || acts.includes(/** @type {any} */ (x));
-box.contains = (x) => x === box || x === input || x === rows || x === note || acts.includes(/** @type {any} */ (x));
-/** the box's controls in the page's order — its input, then each row's act — as N-FOCUS's rebuild reads them */
-Object.assign(box, { querySelectorAll: () => [input, ...acts] });
+Object.assign(rows, { querySelector: (/** @type {string} */ sel) => (sel === '[data-beside]' ? acts[0] || null : null) });
+/** the box's foot, and the creation row's act as the foot was last drawn with it: a stand-in the platform's focus lands on; null where the foot holds none */
+const foot = element('the box\'s foot');
+/** @type {any} */
+let startAct = null;
+let footHTML = '';
+Object.defineProperty(foot, 'innerHTML', {
+  get: () => footHTML,
+  set: (/** @type {string} */ html) => {
+    footHTML = html;
+    const was = startAct;
+    startAct = /data-start/.test(html) ? {
+      id: 'the creation row\'s act', isConnected: true, words: (/>([^<]*)<\/button>/.exec(html) || [])[1] || '', string: (/data-string="([^"]*)"/.exec(html) || [])[1] || '',
+      getAttribute: (/** @type {string} */ k) => (k === 'data-key' ? 'start' : null),
+      focus() { globalThis.document.activeElement = /** @type {any} */ (startAct); },
+      blur() { if (globalThis.document.activeElement === startAct) globalThis.document.activeElement = /** @type {any} */ (body); },
+      closest: (/** @type {string} */ sel) => (sel === '[data-start]' ? startAct : null),
+    } : null;
+    if (was && globalThis.document.activeElement === was) globalThis.document.activeElement = /** @type {any} */ (body);
+  },
+});
+foot.contains = (x) => x === foot || (!!startAct && x === startAct);
+Object.assign(foot, { querySelector: (/** @type {string} */ sel) => (sel === '[data-start]' ? startAct : null) });
+box.contains = (x) => x === box || x === input || x === rows || x === note || foot.contains(x) || acts.includes(/** @type {any} */ (x));
+/** the box's controls in the page's order — its input, the creation row's act where it stands, then each row's act — as N-FOCUS's rebuild reads them */
+Object.assign(box, { querySelectorAll: () => [input, ...(startAct ? [startAct] : []), ...acts] });
 /** the rows' list as a test sets it, px: where its view begins, how tall each row and its view stand, how wide it is, and what a status region with words takes of its view */
 const list = { top: 100, row: 20, view: 100, width: 600, note: 20 };
 /** the list's rows, one per row drawn, each standing where the list's scroll leaves it */
@@ -124,7 +156,9 @@ let line = '1.0.1.0.3';
 /** @type {string | null} the document in view, as the app reads it — the one the line names at its reading scale — which the test moves as a landing or a zoom would */
 let view = null;
 let walk = item;
-LEAP.attach(/** @type {any} */ ({ box, input, rows, note }), () => line, () => view);
+/** @type {Array<[string, string]>} each mint the box said in the one line: its words and its string */
+const saidOf = [];
+LEAP.attach(/** @type {any} */ ({ box, input, rows, note, foot }), () => line, () => view, (words, id) => { saidOf.push([words, id]); });
 FOCUS.attach({ home: () => /** @type {any} */ (walk) });
 CAM.setViewport(1440, 900);
 
@@ -617,4 +651,177 @@ test('each row\'s go is named by its cells heard by S22\'s table, drawn as they 
     assert.ok(name.endsWith(` ${heard(t('F.landmark'))}`) && !name.includes('◆') && heard(t('F.landmark')) === 'landmark', `a landmark by its word, the glyph kept out: ${name}`);
     assert.ok(html.includes(` ${esc(t('F.landmark'))}</span></div>`), 'drawn as it stands, its glyph beside its word');
   } finally { LEAP.close(); }
+});
+
+// ---- the creation row (B3-S1 THE START; D5 K-33) --------------------------------------------
+
+/** the session the creation row acts under */
+const SIGNED = /** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true, fingerprint: null });
+/** a key the creation row's act is handed, as the platform hands it to the foot: whether its default was prevented */
+function keyAtStart(/** @type {string} */ k, /** @type {Record<string, boolean>} */ mods = {}) {
+  let prevented = false;
+  foot.fire('keydown', { key: k, keyCode: 0, isComposing: false, repeat: false, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, ...mods, target: startAct, stopPropagation() {}, preventDefault() { prevented = true; } });
+  return prevented;
+}
+/**
+ * The page booted over a fake port for a mint: every `op` answered by
+ * `answer`, `held(session)` listing none, `places` the listing given; the
+ * session signed and the machine handed in.
+ * @param {(frame: Record<string, any>) => unknown} answer
+ * @param {unknown} [places]
+ */
+function minting(answer, places = listing(3)) {
+  /** @type {Array<Record<string, any>>} */
+  const ops = [];
+  const fake = FAKE.create(new Proxy({}, { get: (_t, k) => (String(k).startsWith('op:') ? (() => { const f = JSON.parse(String(k).slice(3)); ops.push(f); return answer(f); })() : String(k).startsWith('held:') ? { result: [] } : String(k).startsWith('places:') ? { result: places } : undefined) }));
+  PORT.boot(fake);
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.setSession(SIGNED);
+  MACHINE.handIn();
+  return { fake, ops };
+}
+/** what a test of the creation row leaves is taken down: the machine, the model, the words held and the port */
+const unminted = () => { LEAP.close(); MACHINE._reset(); WRITE._reset(); REC._reset(); TRAIL._reset(); HINT._reset(); PORT.boot(null); saidOf.length = 0; };
+
+test('the creation row stands at the box\'s foot over a query while an account acts — beneath the rows and the no-match line alike, its words the table\'s — and never at the box as opened or emptied, over an address, a share form or a URL, for a guest, or where no board is held (B3-S1 THE START; foundations §2.3)', () => {
+  try {
+    REC.setSession(SIGNED);
+    REC.takeIndex(listing(3));
+    LEAP.open();
+    assert.deepEqual([startAct, foot.innerHTML], [null, ''], 'the box as opened holds the current address: no creation row');
+    type('notes');
+    assert.deepEqual([startAct && startAct.words, startAct && startAct.string, LEAP.currentRows().length], [t('B3.start-document'), 'B3.start-document', 3], 'a query that matches: the row at the foot, beneath its rows');
+    type('no label holds this');
+    assert.deepEqual([!!startAct, LEAP.currentRows().length, String(note.innerHTML).includes(esc(t('F.leap.none')))], [true, 0, true], 'a query that matches nothing: the row beneath the no-match line');
+    for (const text of ['', '   ', '1.0.1.0.3', 'skep://abc123', 'https://example.org/page']) { type(text); assert.equal(startAct, null, `no row over ${JSON.stringify(text)}`); }
+    assert.deepEqual([LEAP.isQuery('a first line'), LEAP.isQuery('1.0.1'), LEAP.isQuery(' ')], [true, false, false], 'a query is text that parses as none of them and holds a character');
+    type('a first line');
+    assert.ok(startAct, 'the row again as the text is a query again');
+    LEAP.close();
+    assert.equal(startAct, null, 'the box closed: no row');
+    REC.setSession(null);
+    LEAP.open(); type('a first line');
+    assert.equal(startAct, null, 'a guest: no account acts, no row');
+    LEAP.close();
+    REC.setSession(SIGNED);
+    REC._reset(); REC.setSession(SIGNED);
+    LEAP.open(); type('a first line');
+    assert.equal(startAct, null, 'no board held: no row');
+  } finally { unminted(); }
+});
+
+test('the creation row\'s act is the first control after the input, ahead of every row\'s "open beside", and is drawn off the parse alone: it stands before the index has answered, while the rows are still on their way (D5 K-33; foundations §2.3)', async () => {
+  const { fake } = minting(() => ({ refused: { kind: 'shell', name: 'unused' } }), listing(3));
+  const release = fake.hold('places', { board: 'b-1' });
+  try {
+    view = D;
+    const reading = PUMP.readIndex();
+    LEAP.open();
+    type('notes');
+    assert.deepEqual([!!startAct, LEAP.currentRows().length, PUMP.readingIndex()], [true, 0, true], 'the index\'s read out, no row listed yet: the creation row stands all the same');
+    release();
+    await reading;
+    LEAP.takeIndex();
+    assert.equal(LEAP.currentRows().length, 3, 'the rows computed again over the answer');
+    const order = /** @type {any} */ (box).querySelectorAll();
+    assert.deepEqual([order[0] === input, order[1] === startAct, order.slice(2).length, order.slice(2).every((/** @type {any} */ x) => acts.includes(x))], [true, true, 2, true], 'the input, then the creation row\'s act, then the "open beside" of each row naming another document than the one in view');
+  } finally { release(); unminted(); view = null; }
+});
+
+test('a Tab at the creation row\'s act is held while the answer to the text as typed waits on the index, and made once the rows are computed over it: to the answer\'s first "open beside", else out of the box to the walk\'s element; a held Tab the person moved away from is dropped, and one pressed once the answer stands is the platform\'s (foundations §2.3; D5 K-33)', async () => {
+  const { fake } = minting(() => ({ refused: { kind: 'shell', name: 'unused' } }), listing(3));
+  let release = fake.hold('places', { board: 'b-1' });
+  try {
+    view = D;
+    let reading = PUMP.readIndex();
+    LEAP.open(); type('notes');
+    startAct.focus();
+    assert.equal(keyAtStart('Tab'), true, 'the index\'s read out: the Tab is held, the platform\'s move prevented');
+    LEAP.takeIndex();
+    assert.equal(globalThis.document.activeElement, startAct, 'and nothing moves while the answer waits');
+    release(); await reading;
+    LEAP.takeIndex();
+    assert.deepEqual([globalThis.document.activeElement === acts[0], LEAP.isOpen(), LEAP.currentRows().length], [true, true, 3], 'the answer in: the focus on its first "open beside", the box standing');
+    startAct.focus();
+    assert.equal(keyAtStart('Tab'), false, 'the answer standing: a Tab is the platform\'s own, never held');
+    // an answer that draws no "open beside": out of the box, to the walk's element
+    LEAP.close();
+    REC.setIndexState(/** @type {any} */ (null));
+    release = fake.hold('places', { board: 'b-1' });
+    reading = PUMP.readIndex();
+    LEAP.open(); type('no label holds this');
+    startAct.focus();
+    assert.equal(keyAtStart('Tab'), true, 'held again');
+    release(); await reading;
+    LEAP.takeIndex();
+    assert.deepEqual([LEAP.isOpen(), globalThis.document.activeElement === item], [false, true], 'no row offers "open beside": the box closes and the focus is on the walk\'s element, the next stop');
+    // a held Tab the person moved away from
+    REC.setIndexState(/** @type {any} */ (null));
+    release = fake.hold('places', { board: 'b-1' });
+    reading = PUMP.readIndex();
+    LEAP.open(); type('notes');
+    startAct.focus();
+    keyAtStart('Tab');
+    assert.equal(acts.length, 2, 'the rows listed over the index as held offer their acts while its read is out');
+    acts[1].focus();
+    release(); await reading;
+    LEAP.takeIndex();
+    assert.deepEqual([globalThis.document.activeElement === acts[1], globalThis.document.activeElement === acts[0], LEAP.isOpen()], [true, false, true], 'the focus the person moved to a later row\'s act stays on that act: the held Tab is dropped');
+    startAct.focus();
+    REC.setIndexState(/** @type {any} */ (null));
+    release = fake.hold('places', { board: 'b-1' });
+    reading = PUMP.readIndex();
+    keyAtStart('Tab');
+    keyAtStart('Tab', { shiftKey: true });
+    release(); await reading;
+    LEAP.takeIndex();
+    assert.equal(globalThis.document.activeElement, startAct, 'Shift+Tab after it: the held Tab is dropped');
+  } finally { release(); unminted(); view = null; }
+});
+
+test('Enter on the creation row mints through W-MACHINE — one `create_new_document`, then the typed line as the draft\'s first burst — closes the box, teleports to the draft as a trail entry, and says the mint in the one line: its address, that it is readable by the person alone, and at the first mint of the session that a document stays; the box\'s own Enter mints nothing (B3-S1 THE START; D5 K-31, K-33)', async () => {
+  const MINTED = ['1.0.1.0.41', '1.0.1.0.42'];
+  let n = 0;
+  const { ops } = minting((f) => (f.op === 'create_new_document' ? { result: { resp: 'ack_addr', addr: MINTED[n++], at: 30 + n } } : f.op === 'insert' ? { result: { resp: 'ack_addr', addr: `${f.doc}.0.1.1`, at: 40 + n } } : { refused: { kind: 'refused', name: 'doc_not_registered' } }));
+  try {
+    LEAP.open(); type('  An annotation that loses its passage is not lost ');
+    key('Enter');
+    await settled();
+    assert.deepEqual([ops.filter((f) => f.op === 'create_new_document').length, LEAP.isOpen()], [0, true], 'Enter in the input goes nowhere over text that matches nothing, and mints nothing');
+    foot.fire('click', { target: startAct, detail: 0 });
+    await settled();
+    const writes = ops.filter((f) => f.op === 'create_new_document' || f.op === 'insert');
+    assert.deepEqual(writes.map((f) => [f.op, f.account ?? f.doc, f.published ?? f.values]), [['create_new_document', '1.0.1', false], ['insert', MINTED[0], ['An annotation that loses its passage is not lost']]], 'the mint into the acting account, private, then the typed line, trimmed, as the first burst');
+    assert.deepEqual([LEAP.isOpen(), TRAIL.current()?.addr], [false, MINTED[0]], 'the box closed, and the teleport\'s trail entry at the draft the board minted');
+    assert.deepEqual(saidOf, [[fields(MINTED[0], t('B3.mint.private'), t('B3.mint.stays')), 'B3.mint']], 'the first mint of the session: the address, the creation copy and that a document stays');
+    LEAP.open(); type('A second document');
+    foot.fire('click', { target: startAct, detail: 0 });
+    await settled();
+    assert.deepEqual(saidOf[1], [fields(MINTED[1], t('B3.mint.private')), 'B3.mint'], 'a later mint: the address and the creation copy alone');
+    REC.setHealth(/** @type {any} */ ({ auth: { claimant: '1.0.1', local_trust: true } }), /** @type {any} */ (null));
+    MINTED.push('1.0.1.0.43');
+    LEAP.open(); type('A third document');
+    foot.fire('click', { target: startAct, detail: 0 });
+    await settled();
+    assert.deepEqual(saidOf[2], [fields(MINTED[2], t('L.mint.private.flag-on')), 'B3.mint'], 'a notebook whose local trust is on: the creation copy in its corner\'s chip\'s words, the machine named beside the person');
+  } finally { unminted(); }
+});
+
+test('a mint the board refuses is answered at the box: nothing typed, no trail entry, the box standing with its text, its caret and its focus, and the hint beside it saying no document was started and why — a session that may not write by its own line (B3-S1 THE START; FP-41)', async () => {
+  const { ops } = minting(() => ({ refused: { kind: 'unreachable', name: 'unreachable', text: '' } }));
+  try {
+    LEAP.open(); type('A first line');
+    startAct.focus();
+    foot.fire('click', { target: startAct, detail: 0 });
+    await settled();
+    const why = t('L.start.refused', { why: t('F.daemon.unreachable') });
+    assert.deepEqual([ops.map((f) => f.op), LEAP.isOpen(), input.value, TRAIL.all().length, HINT.standing()?.id, HINT.standing()?.whole.toLowerCase().startsWith(why.toLowerCase()), saidOf.length],
+      [['create_new_document'], true, 'A first line', 0, 'L.start.refused', true, 0], 'the mint alone dialed; the box as it stood; the hint whole, naming why; nothing said of a mint');
+    REC.setSession({ ...SIGNED, writes: false });
+    foot.fire('click', { target: startAct, detail: 0 });
+    await settled();
+    assert.deepEqual([ops.length, HINT.standing()?.whole.includes(t('B3.keyless').split(' — ')[0].split(' — ')[0])], [1, true], 'a session that may not write: nothing dialed, answered by the keyless line');
+    key('Escape');
+    assert.deepEqual([LEAP.isOpen(), HINT.standing()], [false, null], 'the box\'s close takes the hint it raised down');
+  } finally { unminted(); }
 });

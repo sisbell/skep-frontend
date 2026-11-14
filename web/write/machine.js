@@ -3,7 +3,8 @@
 // BM-56 … BM-62, BM-73, BM-78, BM-81; D5 K-73, K-75). In W-WRITE's
 // layer (FP-11): it draws nothing, and imports the bridge, the model, W-WRITE
 // and W-BURSTS alone. It is the one module that sends a write through B-PORT
-// (FP-11, FP-14) — `op`'s write frames, the unload's `close` that carries the
+// (FP-11, FP-14) — `op`'s write frames, the mint of a document of the
+// person's own among them, the unload's `close` that carries the
 // frames the page had not dialed, and `resolve` — and it is handed in to
 // W-WRITE (`handIn`), which tells it of each act's edits and asks its
 // commits; with none handed in the page sends nothing.
@@ -23,6 +24,14 @@
 // per draft, the bursts an undo took back whose answer is not in or whose
 // line the shell holds, those a redo put back meanwhile, the acts an undo's
 // inverse was added as, and whether a drop of an undo's is out or owed.
+// THE MINT (`start`; B3-S1 THE START; D5 K-33): one `create_new_document`
+// into the acting account, born private, dialed under the page's session and
+// answered by the board alone — the shell holds no mint. Acked, the model is
+// told the draft it minted (M-REC's `takeMinted`) and the typed line is the
+// draft's first burst: one edit at its first position, a step of its own,
+// committed at once, so its ack, its hold and its refusal are the draft's as
+// any burst's are. Refused, nothing is added: no word is typed into a
+// document that does not exist, and the refusal is the caller's to answer.
 // OPEN (BM-1): the first edit after the last commit opens the draft's burst
 // (W-WRITE's `setFlight`), and the model is told the draft is being typed in
 // (M-REC's `setTyping`); nothing is dialed. THE COMMIT (BM-2, BM-3, BM-4):
@@ -221,6 +230,9 @@ let reads = 0;
 /** why the board's drafts cannot be written now, by each cause (`blocked`): the session ended with no re-open, and its arm; the session may not write; another shell holds the held store; the held file halts, and why; the held store's bound is met, and how many lines it held then */
 const blocks = { death: /** @type {string | null | false} */ (false), keyless: false, window: false, halted: /** @type {string | null | false} */ (false), full: /** @type {number | false} */ (false) };
 
+/** @type {Promise<unknown>} the read of the held lines made as the session the page holds last came to stand (`sessionMoved`), settled once its lines are set or left as they stood; settled where none was made */
+let listing = Promise.resolve();
+
 /** how many steps the machine has made (`record`): the next step's `id` is drawn from it */
 let steps = 0;
 /** @type {string | null} the draft whose newest step is a run of typing no act has ended (`record`, `ended`): one caret types at a time */
@@ -255,11 +267,37 @@ export function takeOut() {
   for (const d of drafts.values()) { if (d.timer) clearTimeout(d.timer); REC.setTyping(d.addr, false); }
   drafts.clear();
   seen = null;
+  listing = Promise.resolve();
   closedAtUnload = null;
   running = null;
   const b = REC.board();
   blocks.death = false; blocks.keyless = false; blocks.window = false; blocks.halted = false; blocks.full = false;
   if (b) WRITE.setUnwritable(b.board, null);
+}
+
+/** the refusal a write the page may not send is answered by: a shell kind under the name the shell refuses such a write by */
+const refusal = (/** @type {string} */ name) => /** @type {Refusal} */ ({ kind: 'shell', name });
+
+/**
+ * A document of the person's own started (see the head; B3-S1 THE START):
+ * the mint dialed, and, acked, the typed line sent as the minted draft's
+ * first burst. Nothing is dialed where no machine is handed in or no session
+ * stands under an account (`no_session`), nor under a session that may not
+ * write (`write_in_bare_session`): each is answered as the refusal the shell
+ * names it by. A line of no characters mints the draft and sends no burst.
+ * @param {string} line the typed first line
+ * @returns {Promise<{addr: string, at: number} | {refused: Refusal}>} the draft minted and the position its mint was acked at; or the refusal the mint met, nothing written
+ */
+export async function start(line) {
+  const s = REC.session();
+  if (!handed || !s || !s.account) return { refused: refusal('no_session') };
+  if (!s.writes) return { refused: refusal('write_in_bare_session') };
+  const out = await PORT.op({ session: s.session, frame: { op: 'create_new_document', account: s.account, published: false, id: BURSTS.frameId(REC.PAGE_LOAD, ++seq) } });
+  const ack = 'result' in out ? F.decodeAckAddr(out.result) : null;
+  if (!ack) return { refused: 'refused' in out ? out.refused : refusal('malformed_answer') };
+  REC.takeMinted(ack.addr, ack.at);
+  if (line && handed) { WRITE.addEdits(ack.addr, [{ pos: 1, width: 0, text: line }]); commit(ack.addr); }
+  return { addr: ack.addr, at: ack.at };
 }
 
 /** the typed state the machine holds of a draft: the position its own acks raised it to; null where no ack has (the gate's and the tests' reading) */
@@ -317,8 +355,18 @@ function sessionMoved() {
   blocks.death = false; blocks.keyless = !s.writes; blocks.window = !!s.another_window;
   blocked();
   for (const d of drafts.values()) if (d.principal === s.principal && !d.out) d.session = s.session;
-  void readHeld(s.session);
+  listing = readHeld(s.session);
 }
+
+/**
+ * The held lines of the session the page holds, read (see the head; BM-29):
+ * settled once the read made as that session came to stand has set each
+ * draft's lines (W-WRITE's `heldDocs`), or left them as they stood — at once
+ * where no session stands or no machine is handed in. What the launch waits
+ * on before it chooses its frame (N-GO's).
+ * @returns {Promise<void>}
+ */
+export const listed = () => listing.then(() => {});
 
 /**
  * The event stream open again after a drop (B-PORT's `onStream`; BM-25,

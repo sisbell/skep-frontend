@@ -245,6 +245,11 @@
 // far scale (`pump`), and none at far. A gap the stream stands open again
 // over ends at the change, the reads at the new class making the page whole;
 // one it has not reopened over stands.
+// The launch's reads (B3-S1 THE LAUNCH; FP-35): the newest write of this hand
+// under the acting account, read off the account's feed in windows from the
+// head back (`newestOwn`), and where that write landed in its document's
+// text, read off the document's image as it stood before the write
+// (`landedOf`) — each a read in flight while it is out.
 // Rules: FP-1, FP-2, FP-6, FP-9, FP-11, FP-21, FP-22, FP-23, FP-27, FP-28,
 // FP-29, FP-34, FP-35.
 
@@ -1276,6 +1281,118 @@ async function readChanges(ref, since, ended, cls = null) {
   }
 }
 
+/** the positions before the board's head the launch reads first for the newest own write (`newestOwn`), each window after it OWN_WIDEN times as many (unmeasured) */
+export const OWN_WINDOW = 512;
+/** how many times the positions of the window before it each of the launch's windows reads (`newestOwn`) */
+const OWN_WIDEN = 8;
+
+/**
+ * @typedef {Object} OwnWrite — the newest write of this hand under the acting account, as its feed row names it (`newestOwn`)
+ * @property {number} position the row's position on the board's feed
+ * @property {string | null} op the write's op; null where the row carries none
+ * @property {string[]} docs the documents the row names, in its order
+ * @property {'published' | 'drafts'} cls the class the row was answered at
+ */
+
+/**
+ * @typedef {Object} OwnRead — what the launch's read for the newest own write found (`newestOwn`)
+ * @property {OwnWrite | null} row the newest own row; null where none was found, or the read was refused
+ * @property {number} pages how many `changes` pages were read
+ * @property {number} rows how many rows they held
+ * @property {Refusal | null} refused the refusal a page met, the read ended there; null where every page answered
+ */
+
+/**
+ * The newest write of this hand under the acting account (B3-S1 THE LAUNCH;
+ * foundations §2.2): the last row of the board's feed, narrowed to the
+ * account (`changes(session, since, under)`), whose `key` is one of the
+ * device's own (M-REC's `ownKeys`) — a signed row, which carries no `key`,
+ * and a bare one are no testimony of this hand. No read answers it, so the
+ * feed is read in windows from the head back: the newest OWN_WINDOW
+ * positions first, forward, page after page, and, where they hold no own
+ * row, the window before them, OWN_WIDEN times as many, down to the feed's
+ * first position; from position 0 where the page holds no head (M-REC's
+ * `feedAt`). The newest own row of the first window that holds one is the
+ * newest of all. The reads count as reads in flight (`inflightCount`). None
+ * where no session that may write under an account stands, where the device
+ * holds no key, where no row is this hand's, or where a page is refused.
+ * @returns {Promise<OwnRead>}
+ */
+export async function newestOwn() {
+  const s = REC.session(), keys = REC.ownKeys();
+  /** @type {OwnRead} */
+  const none = { row: null, pages: 0, rows: 0, refused: null };
+  if (!s || !s.writes || !s.account || !keys.size) return none;
+  const account = s.account, head = REC.feedAt();
+  const key = 'own ' + account;
+  inflight.add(key);
+  try {
+    let pages = 0, rows = 0;
+    /** the window read last: it read `(since, until]` */
+    let until = Infinity;
+    for (let width = OWN_WINDOW; ; width *= OWN_WIDEN) {
+      const since = head == null ? 0 : Math.max(0, head - width);
+      /** @type {FeedUpdate[]} */
+      const taken = [];
+      for (let from = since; from < until;) {
+        const out = await atClass((x) => (x ? PORT.changes({ session: x.session, since: from, under: account }) : Promise.resolve({ refused: NOT_ANSWERED })));
+        if ('refused' in out) return { row: null, pages, rows, refused: out.refused };
+        pages++; rows += out.result.entries.length;
+        taken.push(...out.result.entries.filter((u) => u.position <= until));
+        if (out.result.next >= out.result.head || out.result.next <= from) break;
+        from = out.result.next;
+      }
+      for (let i = taken.length - 1; i >= 0; i--) {
+        const u = taken[i];
+        if (typeof u.key !== 'string' || !keys.has(u.key) || !Array.isArray(u.docs) || !u.docs.length) continue;
+        return { row: { position: u.position, op: u.op, docs: u.docs.slice(), cls: u.class }, pages, rows, refused: null };
+      }
+      if (since === 0) return { row: null, pages, rows, refused: null };
+      until = since;
+    }
+  } finally { inflight.delete(key); dirty(); }
+}
+
+/**
+ * Where a write landed in a document's text (B3-S1 THE LAUNCH; D6 BM-53):
+ * the document's V→I image as it stood before the write — one history read,
+ * `image` over the document's first WHOLE_CAP positions as of the position
+ * before the write's, asked again at the position the board names where that
+ * one lies inside a commit (wire.md §Reading history) — read against the
+ * image the model holds of it now (M-REC's `changedBetween`). The read counts
+ * as a read in flight. Null where the model holds no text of the document or
+ * its image names not every position of it, where the document is longer than
+ * one read takes, or where the board refuses the read: nothing is told.
+ * @param {string} doc the document the write's row names
+ * @param {number} position the row's position
+ * @returns {Promise<import('./records.js').Changed | null>}
+ */
+export async function landedOf(doc, position) {
+  const d = REC.has(doc) ? REC.doc(doc) : null;
+  if (!d || d.extent == null || d.extent > WHOLE_CAP || position < 1 || (d.extent > 0 && !REC.imageCovers(d))) return null;
+  const key = 'landed ' + doc;
+  inflight.add(key);
+  try {
+    let at = position - 1;
+    for (let asks = 0; asks < 2; asks++) {
+      const out = await read(F.opAt(at, F.image(doc, 1, WHOLE_CAP)));
+      if ('answer' in out) {
+        const runs = F.decodeRuns(out.answer);
+        if (!runs) return null;
+        let pos = 1;
+        const before = runs.map((r) => { const run = { pos, ...REC.iSpanOf(r) }; pos += r.width; return run; });
+        return REC.changedBetween(before, REC.doc(doc).image);
+      }
+      const nearest = /** @type {{body?: {nearest?: unknown}}} */ (out.refused).body?.nearest;
+      // a document minted by the write before this one stands nowhere before it: its text held nothing then
+      if (out.refused.name === 'doc_not_registered') return REC.changedBetween([], REC.doc(doc).image);
+      if (out.refused.name !== 'not_a_position' || typeof nearest !== 'number' || nearest >= at) return null;
+      at = nearest;
+    }
+    return null;
+  } finally { inflight.delete(key); dirty(); }
+}
+
 /**
  * No catch-up can be done of what the board wrote while the page could not
  * hear it (FP-23): the board marked as a row naming nothing marks it (M-REC's
@@ -1497,6 +1614,8 @@ function pending(addr) {
  * @returns {boolean}
  */
 export const rereading = () => indexing > 0 || [...standing].some(pending);
+/** is a read of the page's index out (`readIndex`): what is listed is about to be replaced */
+export const readingIndex = () => indexing > 0;
 
 /** the refusals the reads met */
 export const refusalsMet = () => refusals.slice();

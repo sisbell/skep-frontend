@@ -294,7 +294,28 @@
 // moment unfolded where the camera stands away from the view its walk showed
 // it over, which it flies back to, the walk re-taken there without the
 // platform's focus (`toView`). The launch frame is HOME, set without a flight
-// and pushed as the trail's first entry (W-01). Where no board is held
+// and pushed as the trail's first entry (W-01). On a page that writes, under
+// a session that may write, the launch goes on from it (`resume`;
+// foundations §2.2's frames, the first that holds; B3-S1 THE LAUNCH; D6
+// BM-29, BM-53): where the shell holds lines of the session (W-MACHINE's
+// `listed`), to the first held line's draft at that line's place, no caret
+// placed and nothing said; else to the place of the newest write of this hand
+// under the acting account (M-PUMP's `newestOwn`), read off its feed row —
+// the document the row names first, read whole, and in it where the write
+// landed (M-PUMP's `landedOf`): the run an arrangement write placed outlined
+// as an arrival with the caret live at its end, the position a removal left,
+// and the document's head for a write that set the whole arrangement, a
+// mint, a link write and any write whose place the board does not tell. An
+// edition takes no caret: the landing is in the draft its publication's row
+// names beside it, the caret at the end of that draft's first span and the
+// one line naming the edition as a LEAP to it; with no such draft, at the
+// edition's head. The landing takes the launch frame's place as the trail's
+// first entry (N-TRAIL's `giveBack`, `push`), flies as a LEAP does, and the
+// one line says why until the next act (`Launch.line`). HOME stands, and
+// nothing more is said, where no line is held and no row is this hand's, a
+// read is refused, the document cannot be read, or the launch frame no
+// longer stands as it was set — an act made, the camera moved, a field or a
+// surface taken up (FP-25). Where no board is held
 // (FP-35) the launch names no place — no entry is pushed — and a LEAP, HOME,
 // WHOLE BOARD and an account's region never leave: each act counted as it is
 // made, its answer O-FACES' no-board face at its site, no entry, no flight,
@@ -441,7 +462,8 @@
 // `coverRead`, `showCover`).
 // Figures: a click's flight 420 ms, every other LEAP's and a follow's 620,
 // HOME's and WHOLE BOARD's 700, an account's and a moment's view's 400, a
-// cursor move's 500, a step's and a find's move's 420; a second leg
+// cursor move's 500, a step's and a find's move's 420, a launch's landing
+// 620; a second leg
 // SECOND_LEG_MS (unmeasured).
 // Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-20, FP-21, FP-22, FP-25,
 // FP-29, FP-35, FP-36, FP-39.
@@ -452,6 +474,7 @@ import * as WALK from './walk.js';
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
 import * as WRITE from '../write/write.js';
+import * as MACHINE from '../write/machine.js';
 import * as HOST from '../overlays/host.js';
 import * as LK from '../links/links.js';
 import * as SCENE from '../scene/scene.js';
@@ -466,10 +489,10 @@ import * as PROV from '../overlays/provenance.js';
 import * as MARKLIST from '../overlays/mark-list.js';
 import * as FOCUS from './focus.js';
 import { accountCell, boardCell, continuationCell, continuationOf } from '../plane/projection.js';
-import { documentOf, memberOf, versionAddress, kindOf, isTrunkMember, boardOf } from '../model/address.js';
+import { documentOf, memberOf, versionAddress, kindOf, isTrunkMember, boardOf, accountOf } from '../model/address.js';
 import { sameSpan } from '../text/span.js';
 import { t } from '../strings.js';
-import { esc } from '../util.js';
+import { esc, byteLength } from '../util.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../model/records.js').Link} Link */
@@ -2888,6 +2911,32 @@ export async function home(byKey = false) {
   endAir(act, await leave(act, entry, { addr: h.addr, pos: null, view: h.view }, byKey, 700));
 }
 
+/** a launch's landing flies as a LEAP does, in ms (see the figures) */
+const LAUNCH_MS = 620;
+/** the ops of the arrangement writes the launch places a caret by: what each placed or removed is read off the board (M-PUMP's `landedOf`) */
+const PLACED_OPS = ['insert', 'delete', 'reinstate', 'copy', 'rearrange'];
+
+/**
+ * @typedef {Object} Launch — what the app hands the launch (`launch`)
+ * @property {boolean} [writes] the page writes: the launch goes on from HOME to the held lines, else to the newest own write (`resume`)
+ * @property {(words: import('../strings.js').Words, id: string, o?: {faced?: boolean, act?: {from: number, count: number, go: (byKey: boolean) => void} | null}) => void} [line] what says why the launch landed where it did, in the one line until the next act (L-LINE's transient segment)
+ */
+
+/**
+ * @typedef {Object} Launched — where the launch landed past HOME (`launched`)
+ * @property {'held' | 'wrote' | 'published'} how `held` at the first held line; `wrote` at the newest own write; `published` at an edition that write names, or in the draft its publication's row names
+ * @property {string} addr the document landed in
+ * @property {number | null} pos the position landed on
+ * @property {number | null} caret where the caret was placed live; null where none was
+ * @property {string | null} edition the edition the one line names, where the landing is `published`
+ * @property {number | null} position the feed position of the write landed at; null at a held line
+ */
+
+/** @type {Launched | null} where the launch landed past HOME; null where it stands HOME */
+let launchedAt = null;
+/** where the launch landed past HOME (the tests' and the gate's reading); null where the launch frame stands HOME */
+export const launched = () => launchedAt;
+
 /**
  * The launch frame — HOME (foundations §2.2) — set without a flight, and the
  * trail's first entry (W-01), so the
@@ -2897,14 +2946,126 @@ export async function home(byKey = false) {
  * rule 21), so the first Tab moves on from it and a
  * screen reader lands on the place the launch names. Where no board is held
  * it names none (see the head): no entry is pushed, and the walk's root,
- * saying why, takes the focus.
+ * saying why, takes the focus. On a page that writes the launch goes on from
+ * HOME, which stands while its reads are out (`resume`).
+ * @param {Launch} [o]
  */
-export async function launch() {
+export async function launch(o = {}) {
   const h = homeFrame();
+  launchedAt = null;
   CAM.set(h.view);
   if (REC.board()) here = TRAIL.push({ addr: h.addr, pos: null, width: null, view: h.view, label: t('F.level.home'), notice: null }, null);
   await WALK.restAt(h.addr);
   CAM.markDirty();
+  if (o.writes && here) void resume(here, h.view, o.line ?? (() => {}));
+}
+
+/**
+ * The launch gone on from HOME (see the head; foundations §2.2; B3-S1 THE
+ * LAUNCH): to the first held line where the session holds lines, else to the
+ * newest write of this hand — each landing only while the launch frame
+ * stands as it was set (`stands`).
+ * @param {Entry} home the launch frame's entry
+ * @param {View} view the launch frame's view
+ * @param {NonNullable<Launch['line']>} line
+ */
+async function resume(home, view, line) {
+  const act0 = made, s = REC.session();
+  if (!s || !s.writes || !s.account) return;
+  const account = s.account;
+  /** the launch frame stands as the launch set it (FP-25): no act made, the trail its one entry, the camera unmoved, no surface standing and no field taken up */
+  const stands = () => made === act0 && here === home && TRAIL.length() === 1 && TRAIL.current() === home && atView(view) && !HOST.hasCurrent()
+    && !(typeof document !== 'undefined' && FOCUS.isField(document.activeElement));
+  /** the document's first line in its faces between the words an entry sets either side of its ⟨label⟩, and where the label's stretches stand among them */
+  const naming = (/** @type {string} */ id, /** @type {string} */ addr) => {
+    const [lead, tail] = t(id).split('⟨label⟩'), label = LAYER.firstOf(REC.doc(shownIn(addr)));
+    const client = (/** @type {string | undefined} */ text) => (text ? [{ text, face: /** @type {const} */ ('client') }] : []);
+    return { words: /** @type {import('../strings.js').Run[]} */ ([...client(lead), ...label, ...client(tail)]), from: lead ? 1 : 0, count: label.length };
+  };
+  await MACHINE.listed();
+  if (!stands()) return;
+  // the held lines first (BM-29): the first held line's draft, at that line's place
+  const heldIn = WRITE.heldDocs()[0];
+  if (heldIn) {
+    const d = await readFor(heldIn);
+    if (!d || !stands()) return;
+    const f = WRITE.heldOf(heldIn)[0]?.frame, at = f ? /** @type {{ordinal?: unknown} | undefined} */ (f.at ?? f.p) : undefined;
+    const pos = inText(heldIn, Number(at && at.ordinal) || 1);
+    if (await landLaunch(home, heldIn, pos, pos, null)) launchedAt = { how: 'held', addr: heldIn, pos, caret: null, edition: null, position: null };
+    return;
+  }
+  const found = await PUMP.newestOwn();
+  if (!found.row || !stands()) return;
+  const row = found.row, named = boxOf(row.docs[0]);
+  if (LAYER.isDraft(named) === false) {
+    // an edition takes no caret: the draft its publication's row names beside it, else the edition itself
+    const draft = row.op === 'publish' ? row.docs.slice(1).map(boxOf).find((a) => a !== named && accountOf(a) === account && LAYER.isDraft(a) === true) ?? null : null;
+    const into = draft ?? named, d = await readFor(into);
+    if (!d || !stands()) return;
+    const shown = LAYER.shownOf(into), first = shown.blocks[0], head = headOf(d);
+    // the end of the draft's first span: past its last word, before the line break that ends it
+    const caret = draft && first ? first.pos + byteLength(REC.textOf(shown.runs, first.pos, first.pos + first.width).replace(/\n+$/, '')) : null;
+    if (!(await landLaunch(home, into, head, head, null))) return;
+    const placed = caret != null && LAYER.placeCaret(into, caret) ? caret : null;
+    if (placed != null) await WALK.followCaret();
+    launchedAt = { how: 'published', addr: into, pos: head, caret: placed, edition: named, position: row.position };
+    const id = draft ? 'B3.last-published.draft' : 'B3.last-published', said = naming(id, named);
+    line(said.words, id, { faced: true, act: draft ? { from: said.from, count: said.count, go: (byKey) => { void leapTo(named, { how: 'leap', byKey }); } } : null });
+    return;
+  }
+  const d = await readFor(named);
+  if (!d || !stands()) return;
+  const change = row.op && PLACED_OPS.includes(row.op) ? await PUMP.landedOf(named, row.position) : null;
+  if (!stands()) return;
+  const head = headOf(d), last = change && change.placed.length ? change.placed[change.placed.length - 1] : null;
+  /** where the caret goes: the end of the run the write placed, else the position a removal left, else the document's head */
+  const caret = last ? last.pos + last.width : change && change.left != null ? change.left : head;
+  const pos = inText(named, last ? Math.max(last.pos, caret - 1) : caret);
+  if (!(await landLaunch(home, named, pos, last ? last.pos : pos, change && change.placed.length ? change.placed : null))) return;
+  const placed = LAYER.placeCaret(named, caret) ? caret : null;
+  if (placed != null) await WALK.followCaret();
+  launchedAt = { how: 'wrote', addr: named, pos, caret: placed, edition: null, position: row.position };
+  line(naming('B3.last-wrote', named).words, 'B3.last-wrote', { faced: true });
+}
+
+/** a document the launch lands in, read whole where the page holds none of its text (M-PUMP's `wholeOf`): its record; null where the board will not read it to the reader — refused, withheld, or answering for it with nothing */
+async function readFor(/** @type {string} */ addr) {
+  const held = REC.has(addr) ? REC.doc(addr) : null;
+  const w = held && held.extent != null && (held.from >= 0 || held.extent === 0) ? { doc: held, refused: null } : await PUMP.wholeOf(addr);
+  return w.doc && !w.refused && !w.doc.refused ? w.doc : null;
+}
+
+/** a position of the text the page shows of a document held inside it: its first position to its last; 1 where it holds none */
+function inText(/** @type {string} */ addr, /** @type {number} */ pos) {
+  const d = LAYER.shownOf(addr);
+  return d.from < 0 ? 1 : Math.max(d.from, Math.min(pos, Math.max(d.from, d.to - 1)));
+}
+
+/**
+ * The launch's landing (see the head): the launch frame's entry given back
+ * and the landing's pushed in its place — the trail's first entry, never a
+ * second — the runs the write placed outlined as an arrival, and the camera
+ * flown to the view that reads the landing's position, the walk on its span.
+ * @param {Entry} home the launch frame's entry
+ * @param {string} addr the document landed in
+ * @param {number} pos the position the view reads and the walk stands on
+ * @param {number} at the first position of the run landed on: the entry's, and the arrival's
+ * @param {Run[] | null} runs the runs the write placed, in the text's order; null where it placed none
+ * @returns {Promise<boolean>} the flight landed, no act made since
+ */
+async function landLaunch(home, addr, pos, at, runs) {
+  const act = nextAct();
+  here = null;
+  if (!TRAIL.giveBack(home)) return false;
+  const to = toward(addr, pos);
+  const entry = TRAIL.push({ addr, pos: at, width: widthAt(runs, at), view: to.view, label: null, notice: null }, null);
+  dismissChrome(entry);
+  TRAIL.settle(entry, { ...seen(to.view, addr, pos), pos: at, width: widthAt(runs, at), notice: null });
+  pinTo(addr);
+  if (runs) arrival = withBytes({ addr, pos: at, runs, link: null }, []);
+  const ok = await leave(act, entry, to, false, LAUNCH_MS);
+  endAir(act, ok);
+  return ok && act === made;
 }
 
 /**

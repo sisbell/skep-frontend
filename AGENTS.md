@@ -65,9 +65,12 @@ The gate runs on THE TEST BOARD on 8644, through the provider on 8742
 and the harness's provider on 8744, which has a store of its own. All
 three are the owner's prelude: never start, stop, claim or seed them.
 The `editor` case alone writes, through the page: its page boots with
-the write layer's machine, makes drafts of its own on the test board
-and types in them, and it alone arms and fires 8744; nothing else is
-ever armed. Every other page the gate opens boots without the machine
+the write layer's machine, makes drafts of its own on the test board —
+by its port, and by the LEAP box's creation row — and types in them,
+and it alone arms and fires 8744; nothing else is ever armed. A page
+with the machine opens where its hand last wrote, so that case's pages
+land in the draft it wrote last. Every other page the gate opens boots
+without the machine, opens at HOME, starts no document from the box,
 and is held to reads frame by frame — each `op` frame it sends through
 8742 names a read and each call is a read row (`harness/cases/wire.py`,
 and the runner after every case) — so a write frame from any case but

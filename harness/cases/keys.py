@@ -288,6 +288,16 @@ corner in the place of the kept word and the chip, and at a selection in it
 the acts that send and a printable key give the one reason the selection
 keys — that its words are not in the current text, or are there too — Space
 keeping K-9's line (`held_version`; D6 BM-14; B3-S2).
+
+Mod+A at the walk's span of the first edition selects the whole edition and
+places no caret; at the live caret Enter placed in the own draft it selects
+the whole of the text shown, the caret live at its end; at a span of that draft
+holding no caret it stays the platform's. The LEAP box over a query carries
+the creation row at its foot, one Tab from the input and ahead of every
+"open beside"; a Tab at its act while the index's read is held at its answer
+moves nothing until the rows are computed over that answer; and Enter there,
+on this page, sends no write frame and is answered beside the box
+(`start_and_select_all`; D5 K-33, K-93; B3-S1, B3-S8).
 """
 import json
 import re
@@ -3592,6 +3602,128 @@ def follow_to_source(ctx, r):
                 {'targets': tg, 'share': share, 'cursor': [t0['cursor'], t1['cursor']], 'here': here.get('addr'), 'step': {k: step.get(k) for k in ('kind', 'from', 'to')}, 'spans': step.get('spans'), 'mark': mark})
 
 
+def start_and_select_all(ctx, r):
+    """SELECT-ALL AND THE CREATION ROW (D5 K-93, K-33; B3-S8; B3-S1 THE START; foundations §2.3), on the gate's page, which
+    boots without the machine and sends no write:
+    (a) Mod+A at the walk's span of the first edition, which takes no caret: the whole edition one selection, no caret
+        placed, the copy's span the same;
+    (b) Mod+A at the live caret Enter placed in the own draft: the whole of the text shown one selection, the caret live at
+        its end;
+    (c) Mod+A at a span of the own draft holding no caret: nothing selected, the platform's own;
+    (d) the LEAP box over a query the board's first lines match: the creation row at the box's foot, beneath its rows;
+        one Tab from the input stands on its act, and the next on the answer's first "open beside", the box standing;
+    (e) a Tab at the act while the answer waits on the index — the index's state unread and its read held at its answer
+        by the driver, as at the page's boot, the text typed meanwhile — moves nothing: the creation row stands before the
+        answer, one Tab from the input; the read answered, the focus stands on the answer's first "open beside";
+    (f) Enter at the act on this page: no write frame sent, the box standing with its text, and the hint beside it saying
+        no document was started.
+    Its figures"""
+    figures = {}
+    caret_of = lambda: ctx.js('window.__skep.caret()')
+    focus_id = lambda: ctx.js('(() => { const a = document.activeElement; return a ? {id: a.id || null, beside: a.dataset ? (a.dataset.beside ?? null) : null, start: !!(a.dataset && "start" in a.dataset)} : null; })()')
+    clear = lambda: ctx.js('(async () => { (await import("./overlays/selection.js")).clear(); (await import("./text/layer.js")).dropCaret(); const s = window.getSelection(); if (s) s.removeAllRanges(); })()')
+    # (a) the first edition's span: the whole edition
+    ctx.esc(); clear()
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js(FOCUS_ITEM); ctx.frames(2)
+    extent = ctx.js('window.__skep.model.doc(%s)' % json.dumps(DOC))['extent']
+    walk = ctx.js(WALK_AT)
+    chord(ctx, 'a', mods=('Meta',))
+    sel, copy = ctx.js('window.__skep.selection()'), ctx.js('window.__skep.copy()') or {}
+    r.check(bool(walk) and walk['kind'] == 'block' and walk['addr'] == DOC and sel == {'addr': DOC, 'pos': 1, 'width': extent} and caret_of() is None and copy.get('span') == sel and ctx.js(WALK_AT) == walk,
+            '(a) Mod+A at the walk\'s span of the first edition, which takes no caret, selects the whole edition — one selection, its positions 1 to its extent — placing no caret and moving no walk, and the copy takes that span (D5 K-93; B3-S8)',
+            {'walk': walk, 'selected': sel, 'extent': extent, 'caret': caret_of(), 'copy_span': copy.get('span')})
+    figures['edition'] = {'selected': sel}
+    ctx.esc(); clear()
+    # (b), (c): the own draft — at the live caret, then at a span holding no caret
+    draft = WINDOW[2]
+    ctx.leap(draft, None)
+    paras = [x for x in ctx.js('window.__skep.model.doc(%s)' % json.dumps(draft))['blocks'] if x['kind'] == 'para' and x['text'].strip()]
+    r.check(bool(paras), '(b) the own draft holds a paragraph to place a caret in', None)
+    if paras:
+        ctx.leap(draft, paras[0]['pos'])
+        ctx.js(FOCUS_ITEM); ctx.frames(2)
+        chord(ctx, 'Enter')
+        placed = caret_of()
+        end = ctx.js('(async () => { const d = (await import("./text/layer.js")).shownOf(%s); return Math.max(d.to, (d.extent ?? 0) + 1); })()' % json.dumps(draft))
+        chord(ctx, 'a', mods=('Meta',))
+        sel, c = ctx.js('window.__skep.selection()'), caret_of()
+        r.check(bool(placed) and placed.get('live') and sel == {'addr': draft, 'pos': 1, 'width': end - 1} and c == {'addr': draft, 'pos': end, 'live': True},
+                '(b) Mod+A at the live caret in the own draft selects the whole of the text shown — one selection — the caret live at its end (D5 K-93; B3-S8)', {'placed': placed, 'selected': sel, 'caret': c, 'end': end})
+        ctx.esc(); clear()
+        ctx.leap(draft, paras[0]['pos'])
+        ctx.js(FOCUS_ITEM); ctx.frames(2)
+        chord(ctx, 'a', mods=('Meta',))
+        sel, c = ctx.js('window.__skep.selection()'), caret_of()
+        r.check(sel is None and not (c and c.get('live')), '(c) Mod+A at a span of the own draft holding no caret selects nothing of the page\'s: it stays the platform\'s own (D5 K-93)', {'selected': sel, 'caret': c})
+        ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); })()')
+    ctx.esc(); clear()
+    # (d) the box over a query: the creation row, one Tab from the input, ahead of every "open beside"
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js(FOCUS_ITEM); ctx.frames(2)
+    writes0 = ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "op" && c.op === "create_new_document").length')
+    chord(ctx, 'l', mods=('Meta',))
+    ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+    ctx.drv.ime(QUERY)
+    ctx.frames(2)
+    box = ctx.js("""(() => { const act = document.querySelector('#leapfoot [data-start]'), hits = document.getElementById('leaphits').getBoundingClientRect(), b = act && act.getBoundingClientRect();
+      return {text: act ? act.textContent : null, id: act ? act.dataset.string : null, rows: window.__skep.leap.rows().length, beside: document.querySelectorAll('#leaphits [data-beside]').length,
+              below: !!b && b.top >= hits.bottom - 0.5, inside: !!b && b.bottom <= window.innerHeight + 0.5 && b.right <= window.innerWidth + 0.5, focused: document.activeElement.id}; })()""")
+    chord(ctx, 'Tab')
+    first = focus_id()
+    chord(ctx, 'Tab')
+    second, still = focus_id(), ctx.js('window.__skep.leap.isOpen()')
+    want = ctx.js('(async () => (await import("./strings.js")).t("B3.start-document"))()')
+    r.check(box['text'] == want and box['id'] == 'B3.start-document' and box['rows'] > 0 and box['beside'] > 0 and box['below'] and box['inside'] and box['focused'] == 'leapq'
+            and bool(first) and first['start'] and bool(second) and second['beside'] == '0' and still,
+            '(d) the LEAP box over a query the board\'s first lines match carries the creation row at its foot, beneath its rows; one Tab from the input stands on its act, the next on the answer\'s first "open beside", the box standing (D5 K-33; B3-S1; foundations §2.3)',
+            {'box': box, 'want': want, 'first_tab': first, 'second_tab': second, 'open': still})
+    figures['row'] = {'rows': box['rows'], 'beside': box['beside']}
+    # (e) the held Tab: the index's state unread and its read held at its answer, as at the page's boot, the text typed meanwhile
+    chord(ctx, 'Tab', mods=('Shift',))
+    chord(ctx, 'Tab', mods=('Shift',))
+    in_box = focus_id()
+    ctx.drv.held = {'match': lambda post: True, 'paused': None}
+    ctx.drv.call('Fetch.enable', {'patterns': [{'urlPattern': '*/bridge/places', 'requestStage': 'Response'}]})
+    try:
+        ctx.js('(async () => { (await import("./model/records.js")).setIndexState(null); void (await import("./model/pump.js")).readIndex(); return true; })()')
+        out = ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = async () => ((await import("./model/pump.js")).readingIndex() || performance.now() - t0 > 5000 ? res((await import("./model/pump.js")).readingIndex()) : setTimeout(tick, 30)); tick(); })')
+        ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+        ctx.drv.ime(QUERY)
+        time.sleep(0.3); ctx.frames(3)
+        ctx.drv.key('Tab', code=CODES.get('Tab'))  # no settle: the page is not settled while its index's read is out
+        ctx.frames(2)
+        at_act = focus_id()
+        ctx.drv.key('Tab', code=CODES.get('Tab'))
+        time.sleep(0.4); ctx.frames(3)
+        held = focus_id()
+        answered = ctx.drv.answer_op('whole')
+    finally:
+        ctx.drv.unhold()
+    moved = ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => { const a = document.activeElement; (a && a.dataset && a.dataset.beside != null) || performance.now() - t0 > 5000 ? res(true) : setTimeout(tick, 30); }; tick(); })')
+    after = focus_id()
+    r.check(bool(in_box) and in_box['id'] == 'leapq' and bool(at_act) and at_act['start'] and out and bool(held) and held['start'] and answered and bool(after) and after['beside'] == '0' and ctx.js('window.__skep.leap.isOpen()'),
+            '(e) a Tab at the creation row\'s act while the answer to the text as typed waits on the index — its read held at its answer — moves nothing, and is made once the rows are computed over the answer: the focus on its first "open beside", the box standing (foundations §2.3; D5 K-33)',
+            {'in_box': in_box, 'at_act': at_act, 'reading': out, 'while_held': held, 'answered': answered, 'after': after, 'moved': moved})
+    # (f) Enter at the act on a page that sends no write
+    chord(ctx, 'Tab', mods=('Shift',))
+    chord(ctx, 'Enter')
+    time.sleep(0.4); ctx.frames(3)
+    h = ctx.js('window.__skep.hint()') or {}
+    writes = ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "op" && c.op === "create_new_document").length')
+    state = ctx.js('({open: window.__skep.leap.isOpen(), value: document.getElementById("leapq").value})')
+    r.check(writes == writes0 == 0 and h.get('id') == 'L.start.refused' and state == {'open': True, 'value': QUERY},
+            '(f) Enter at the creation row on the gate\'s page, which holds no machine, sends no write frame: the box stands with its text and the hint beside it says no document was started (B3-S1; FP-11, FP-41)',
+            {'writes': [writes0, writes], 'hint': {k: h.get(k) for k in ('id', 'words')}, 'box': state})
+    ctx.esc(); ctx.esc(); clear()
+    ctx.frames(2)
+    return figures
+
+
+# a query the seeded board's first lines match in several documents: each row naming another document than the one in view offers "open beside"
+QUERY = 'ceremony'
+
+
 def run(ctx):
     r = Result()
     ctx.leap(DOC, WINDOW[0])
@@ -4471,6 +4603,8 @@ def run(ctx):
     r.figures['find'] = find_holds(ctx, r)
     # ---- the moved scene's held version: its corner, and the reason its selection gives the acts that send (issue #599) -
     held_version(ctx, r)
+    # ---- select-all at an edition and at a caret; the creation row's Tab order and its held Tab (K-93, K-33; B3-S8, B3-S1) -----
+    r.figures['start_and_select_all'] = start_and_select_all(ctx, r)
     r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K at the whole board', 'Mod+Shift+O, Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter at the whole board', 'Enter', 'Mod+Shift+Enter in the LEAP box as opened and on a typed address, Esc closing the scene', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+K, Mod+Shift+A and Mod+Shift+C at the walk\'s block', 'a press on the "link to…" slot', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click, a double-click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+K in the scene', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C with nothing selected, with a selection standing and with one drawn over no range of the platform\'s', 'a copy event with nothing selected and with a selection', 'a click on a column\'s blank room after a drag', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival', 'Mod+K, Mod+Shift+A, Mod+Shift+C, a printable key and Space at a selection in the moved scene\'s held version']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

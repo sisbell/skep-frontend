@@ -59,6 +59,14 @@
 // carry follows the text shown and holds its place by its bytes; a return
 // names the person's own removal and offers the put-back; and an arrival
 // ends at the first edit of its bytes.
+// The launch on a page that writes (B3-S1 THE LAUNCH; foundations §2.2; D6
+// BM-29, BM-53), over a canned `changes`: the newest row of this hand found
+// in the feed's newest window or the one before it, the landing in HOME's
+// place as the trail's one entry with the run the write placed outlined and
+// the caret live at its end; a removal's place; a whole arrangement's head;
+// an edition with a draft of its family and with none; no own row, a refused
+// read and a page that does not write leaving HOME; a held line winning; and
+// a launch frame the reader took over left alone.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -4814,4 +4822,172 @@ test('a teleport commits the open burst of every draft as it departs — a LEAP,
     await run(GO.leapTo(D));
     assert.equal(committed.length, 2, 'the burst landed: the next teleport asks nothing');
   } finally { WRITE.machine(null); WRITE.setFlight(DRAFT, false); }
+});
+
+// ---- the launch on a page that writes (B3-S1 THE LAUNCH) --------------------------------------
+// placed last: each takes the session, the key store and the trail for its own and puts the shared ones back
+
+/** the launch's draft and edition, and the key this device signs with */
+const LW = '1.0.1.0.61', LE = '1.0.1.0.62', KEY = 'a'.repeat(64), OTHER = 'b'.repeat(64);
+const LW_TEXT = 'First line of the draft.\n\nA second paragraph, the one written last.', LE_TEXT = 'A published first line.\n\nIts second paragraph.';
+/** the board's head as the launch's tests hold it: the page's place on the feed raised to it, past every row the tests above took */
+const feedHead = () => { REC.reachFeed(9100); return /** @type {number} */ (REC.feedAt()); };
+/** a feed row under the account, as `changes` answers one */
+const fed = (/** @type {number} */ position, /** @type {string | null} */ op, /** @type {string[]} */ docs, /** @type {string | null} */ key = KEY, cls = 'drafts') => ({ position, at: position, op, docs, class: cls, time: 1, key });
+/** a signed feed row under the account: its entry's signature in `attest`, and no `key` (wire.md §The change feed) */
+const signedRow = (/** @type {number} */ position, /** @type {string} */ op, /** @type {string[]} */ docs) => ({ position, at: position, op, docs, class: 'published', time: 1, attest: { alg: 'ed25519', sig: 'ff' } });
+/** a document's text held as a whole read delivers it, its bytes named run by run: each run its first ordinal in the document's own space and its width */
+function held(/** @type {string} */ addr, /** @type {string} */ text, /** @type {Array<[number, number]>} */ runs, published = false) {
+  REC.takeSpanSet(addr, [{ subspace: 1, ordinal: 1, positions: text.length }], 9000);
+  REC.takeDelivery(addr, [{ pos: 1, width: text.length, kind: 'content', text, ref: null, origin: null }], 9000, { from: 1, runs: runs.map(([ordinal, width]) => ({ iStart: `${addr}.0.1.${ordinal}`, width })) });
+  REC.takeMetadata(addr, /** @type {any} */ ({ doc: addr, published, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, base: null, baseCopied: null, merge: null, age: UNDATED, asOf: 9000 }));
+}
+/**
+ * The page launched as one that writes, over a canned feed: `rows` what
+ * `changes` holds under the account — or the refusal it answers — and
+ * `before` the image a history read of the draft answers. Answers what the
+ * launch read and said, and puts the shared session, key store and port back.
+ * @param {{rows: any[] | {refused: any}, before?: Array<[number, number]> | {refused: any}, writes?: boolean, meanwhile?: () => Promise<unknown>}} o
+ * @param {(got: {since: number[], history: any[], said: Array<{text: string, id: string, o: any}>}) => Promise<void> | void} check
+ */
+async function launched(o, check) {
+  const was = { session: REC.session(), call: fake.call };
+  /** @type {number[]} */
+  const since = [];
+  /** @type {any[]} */
+  const history = [];
+  /** @type {Array<{text: string, id: string, o: any}>} */
+  const said = [];
+  /** @type {(() => void) | null} */
+  let give = null;
+  fake.call = (name, args) => {
+    const a = /** @type {any} */ (args);
+    if (name === 'changes') {
+      since.push(a.since);
+      const head = REC.feedAt() ?? 0, rows = o.rows;
+      const out = Array.isArray(rows) ? { result: { entries: rows.filter((u) => u.position > a.since), next: head, head } } : rows;
+      return o.meanwhile && since.length === 1 ? new Promise((r) => { give = () => r(out); }) : Promise.resolve(out);
+    }
+    if (name === 'op' && a.frame && a.frame.at != null && a.frame.frame && a.frame.frame.op === 'image') {
+      history.push(a.frame);
+      const b = o.before;
+      return Promise.resolve(Array.isArray(b) ? { result: { resp: 'runs', as_of: a.frame.at, runs: b.map(([ordinal, width]) => ({ i_start: `${a.frame.frame.d}.0.1.${ordinal}`, width: String(width) })) } } : b ?? { refused: { kind: 'refused', name: 'history_reclaimed' } });
+    }
+    return was.call(name, args);
+  };
+  try {
+    HOST.dismiss(); LAYER.dropCaret(); SEL.clear();
+    REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true, fingerprint: KEY }));
+    REC.takeKeyStore([{ fingerprint: KEY, label: 'desk', bindings: [], unbound: false, payload: null }], '');
+    TRAIL._reset();
+    await GO.launch({ writes: o.writes ?? true, line: (words, id, x) => { said.push({ text: typeof words === 'string' ? words : words.map((r) => r.text).join(''), id, o: x }); } });
+    if (o.meanwhile) { await reopening(); await o.meanwhile(); if (give) /** @type {() => void} */ (give)(); }
+    await reopening();
+    await check({ since, history, said });
+  } finally {
+    fake.call = was.call;
+    LAYER.dropCaret(); HOST.dismiss(); WRITE._reset();
+    REC.takeKeyStore(null, '');
+    REC.setSession(/** @type {any} */ (was.session));
+    TRAIL._reset();
+    await GO.launch();
+  }
+}
+/** the trail as it stands: each entry's place, position and positions */
+const entries = () => TRAIL.all().map((e) => [e.addr, e.pos, e.width, e.label]);
+const HOME_ENTRY = ['1.0.1', null, null, t('F.level.home')];
+
+test('the launch lands at the place of the newest write of this hand: the row of the device\'s own key found in the feed\'s newest window, the draft it names in HOME\'s place as the trail\'s one entry, the run the write placed outlined as an arrival with the caret live at its end, and the one line saying why — a later row of another key, a bare row and a signed row are no testimony of this hand (B3-S1 THE LAUNCH; foundations §2.2; D6 BM-53)', async () => {
+  // the draft as it stands: its second paragraph's last 12 bytes the newest insert's, ordinals 61..72 placed before its last 10
+  held(LW, LW_TEXT, [[1, 46], [61, 12], [47, 10]]);
+  const head = feedHead();
+  const rows = [fed(head - 40, 'insert', [LW]), fed(head - 30, 'insert', [LW]), fed(head - 20, 'insert', [LE], OTHER), fed(head - 10, 'delete', [LW], 'bare'), signedRow(head - 5, 'publish', [LE + '.2', LW])];
+  await launched({ rows, before: [[1, 46], [47, 10]] }, ({ since, history, said }) => {
+    assert.deepEqual(since, [head - PUMP.OWN_WINDOW], 'one read: the feed\'s newest window, under the account');
+    assert.deepEqual(history.map((h) => [h.at, h.frame.d]), [[head - 31, LW]], 'the draft\'s image as it stood before the row of this hand, the newest of the two');
+    assert.deepEqual(GO.launched(), { how: 'wrote', addr: LW, pos: 58, caret: 59, edition: null, position: head - 30 }, 'landed where the write landed: its run\'s last line, the caret past its last byte');
+    assert.deepEqual(entries(), [[LW, 47, 12, null]], 'the landing took HOME\'s place: the trail\'s one entry, at the run the write placed');
+    assert.deepEqual([GO.arrivalMark()?.runs, LAYER.caret(), walkAt()], [[{ pos: 47, width: 12 }], { addr: LW, pos: 59, live: true }, ['block', LW, 27]], 'the run outlined as an arrival, the caret live at its end, the walk on its span');
+    assert.deepEqual(said.map((x) => [x.text, x.id, x.o.faced, x.o.act ?? null]), [[t('B3.last-wrote', { label: 'First line of the draft.' }), 'B3.last-wrote', true, null]], 'the one line says why, naming the draft by its first line');
+    assert.equal(same(CAM.view(), GO.viewFor(LW, 58)), true, 'the camera at the view that reads the landing, at its reading scale');
+  });
+});
+
+test('the launch reads the feed in windows from the head back: where the newest window holds no row of this hand it reads the one before it, past the rows it has read, down to the feed\'s first position — and where none is this hand\'s, or the read is refused, or the page does not write, HOME stands as the trail\'s one entry and nothing is said (B3-S1 THE LAUNCH; FP-35)', async () => {
+  held(LW, LW_TEXT, [[1, 68]]);
+  const head = feedHead();
+  await launched({ rows: [fed(40, 'insert', [LW]), fed(head - 3000, 'insert', [LE], OTHER), fed(head - 10, 'insert', [LE], OTHER)], before: [[1, 60]] }, ({ since, said }) => {
+    assert.deepEqual(since, [head - PUMP.OWN_WINDOW, head - PUMP.OWN_WINDOW * 8, 0], 'three windows, each reaching further back, the last from the feed\'s first position');
+    assert.deepEqual([GO.launched()?.addr, GO.launched()?.position, entries().length, said.length], [LW, 40, 1, 1], 'the one row of this hand, however old, is where the launch lands');
+  });
+  await launched({ rows: [fed(head - 10, 'insert', [LW], OTHER), fed(head - 5, 'insert', [LW], 'bare'), signedRow(head - 2, 'publish', [LE + '.2'])] }, ({ since, history, said }) => {
+    assert.deepEqual([since.length, history, GO.launched(), entries(), said, LAYER.caret()], [3, [], null, [HOME_ENTRY], [], null], 'no row of this hand: every window read, HOME standing, nothing said and no caret placed');
+  });
+  await launched({ rows: { refused: { kind: 'unreachable', name: 'unreachable', text: '' } } }, ({ since, said }) => {
+    assert.deepEqual([since.length, GO.launched(), entries(), said], [1, null, [HOME_ENTRY], []], 'the read refused: HOME standing, nothing said');
+  });
+  await launched({ rows: [fed(head - 10, 'insert', [LW])], writes: false }, ({ since, said }) => {
+    assert.deepEqual([since, GO.launched(), entries(), said], [[], null, [HOME_ENTRY], []], 'a page that does not write reads nothing and stands HOME');
+  });
+});
+
+test('the launch\'s caret by what the write did (D6 BM-53): after a removal, at the position it left, nothing outlined; after a write that set the whole arrangement, at the document\'s head, no history read made; and where the board will not read the state before the write, at the head', async () => {
+  held(LW, LW_TEXT, [[1, 26], [39, 42]]);
+  const head = feedHead();
+  await launched({ rows: [fed(head - 10, 'delete', [LW])], before: [[1, 80]] }, ({ history }) => {
+    assert.deepEqual([history.length, GO.launched(), GO.arrivalMark(), LAYER.caret()], [1, { how: 'wrote', addr: LW, pos: 27, caret: 27, edition: null, position: head - 10 }, null, { addr: LW, pos: 27, live: true }],
+      'the bytes 27..38 gone: the caret where they stood, after the byte before them, and no run outlined');
+    assert.deepEqual(entries(), [[LW, 27, null, null]], 'the trail\'s one entry at that position');
+  });
+  await launched({ rows: [fed(head - 10, 'set_arrangement', [LW])], before: [[1, 80]] }, ({ history }) => {
+    assert.deepEqual([history, GO.launched()?.caret, LAYER.caret()?.pos, GO.arrivalMark()], [[], 1, 1, null], 'a whole arrangement: the head, the board asked nothing of the state before');
+  });
+  await launched({ rows: [fed(head - 10, 'insert', [LW])], before: { refused: { kind: 'refused', name: 'history_reclaimed' } } }, ({ history }) => {
+    assert.deepEqual([history.length, GO.launched()?.caret, GO.arrivalMark()], [1, 1, null], 'the state before the write reclaimed: the head, nothing outlined');
+  });
+});
+
+test('the launch at an edition, which takes no caret (round 2\'s Q8; D6 BM-53): where its publication\'s row names a draft of the account beside it the landing is in that draft, the caret live at the end of its first span, the one line naming the edition as a LEAP to it; with no such draft, at the edition\'s head, no caret, the line naming it and offering no act', async () => {
+  held(LW, LW_TEXT, [[1, 68]]);
+  held(LE, LE_TEXT, [[1, 46]], true);
+  const head = feedHead();
+  await launched({ rows: [fed(head - 10, 'insert', [LW]), fed(head - 4, 'publish', [LE + '.2', LW])] }, async ({ history, said }) => {
+    assert.deepEqual([history, GO.launched(), LAYER.caret()], [[], { how: 'published', addr: LW, pos: 1, caret: 25, edition: LE, position: head - 4 }, { addr: LW, pos: 25, live: true }], 'in the draft the row names, the caret live at the end of its first span');
+    assert.deepEqual(entries(), [[LW, 1, null, null]], 'the draft the trail\'s one entry');
+    assert.deepEqual(said.map((x) => [x.text, x.id, x.o.act.from, x.o.act.count]), [[t('B3.last-published.draft', { label: 'A published first line.' }), 'B3.last-published.draft', 1, 1]], 'the line names the edition by its first line, that stretch its act\'s label');
+    await run(Promise.resolve(said[0].o.act.go(true)).then(() => reopening()));
+    assert.deepEqual(entries().map((e) => e[0]), [LW, LE], 'the label\'s act is a LEAP to the edition, a trail entry of its own');
+  });
+  await launched({ rows: [fed(head - 10, 'insert', [LW]), fed(head - 4, 'publish', [LE + '.2'])] }, ({ said }) => {
+    assert.deepEqual([GO.launched(), LAYER.caret(), entries()], [{ how: 'published', addr: LE, pos: 1, caret: null, edition: LE, position: head - 4 }, null, [[LE, 1, null, null]]], 'no draft of the family named: at the edition\'s head, no caret');
+    assert.deepEqual(said.map((x) => [x.text, x.id, x.o.act]), [[t('B3.last-published', { label: 'A published first line.' }), 'B3.last-published', null]], 'the line names the edition, and offers no act where the reader stands at it');
+  });
+});
+
+test('where the shell holds lines of the session the launch lands at the first held line\'s draft, at that line\'s place, before any read for the newest own write: no caret placed, nothing said (foundations §2.2\'s frames, the first that holds; D6 BM-29)', async () => {
+  held(LW, LW_TEXT, [[1, 68]]);
+  const head = feedHead();
+  WRITE.setHeld(LW, [/** @type {any} */ ({ held: 4, doc: LW, base: 9000, frame: { op: 'insert', doc: LW, at: { ordinal: '27', subspace: '1' }, values: ['held words'], as_of: 9000, id: 'x.1' }, cause: 'unreachable', sent: false, time: 4, anchors: null, refusal: null })]);
+  await launched({ rows: [fed(head - 10, 'insert', [LE])] }, ({ since, said }) => {
+    assert.deepEqual([since, GO.launched(), LAYER.caret(), said], [[], { how: 'held', addr: LW, pos: 27, caret: null, edition: null, position: null }, null, []], 'the held line\'s draft at the line\'s place; the feed not read; no caret, nothing said');
+    assert.deepEqual(entries(), [[LW, 27, null, null]], 'the held frame the trail\'s one entry');
+  });
+});
+
+test('the launch never flies the reader unbidden: where an act was made while its read was out — a teleport, the trail then holding two entries — where the reader moved the camera, and where a field holds the caret, the landing is dropped, the reader where they were (FP-25)', async () => {
+  held(LW, LW_TEXT, [[1, 46], [61, 12], [47, 10]]);
+  const head = feedHead();
+  await launched({ rows: [fed(head - 30, 'insert', [LW])], before: [[1, 46], [47, 10]], meanwhile: () => run(GO.leapTo(D, { how: 'leap' })) }, ({ said }) => {
+    assert.deepEqual([GO.launched(), entries().map((e) => e[0]), TRAIL.current()?.addr, LAYER.caret(), said], [null, ['1.0.1', D], D, null, []], 'HOME and the reader\'s LEAP stand; no landing, no caret, nothing said');
+  });
+  /** @type {{x: number, y: number, scale: number} | null} */
+  let panned = null;
+  await launched({ rows: [fed(head - 30, 'insert', [LW])], before: [[1, 46], [47, 10]], meanwhile: async () => { const v = CAM.view(); panned = { ...v, x: v.x + 40 }; CAM.set(panned); } }, ({ said }) => {
+    assert.deepEqual([GO.launched(), entries(), LAYER.caret(), said, same(CAM.view(), /** @type {any} */ (panned))], [null, [HOME_ENTRY], null, [], true], 'the camera the reader moved stays where they left it: HOME the trail\'s one entry, nothing said');
+  });
+  const field = { id: 'a field the reader types in', matches: (/** @type {string} */ sel) => sel.includes('input') };
+  await launched({ rows: [fed(head - 30, 'insert', [LW])], before: [[1, 46], [47, 10]], meanwhile: async () => { globalThis.document.activeElement = /** @type {any} */ (field); } }, ({ said }) => {
+    assert.deepEqual([GO.launched(), entries(), LAYER.caret(), said, globalThis.document.activeElement === /** @type {any} */ (field)], [null, [HOME_ENTRY], null, [], true], 'a field holding the caret keeps it: no landing takes the reader from what they are typing');
+  });
+  globalThis.document.activeElement = null;
 });

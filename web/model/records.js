@@ -8,12 +8,14 @@
 // reconnecting as or could not (`reconnect`); health and the derived mode;
 // the daemon's state, one of the five the shell says, with the reason it
 // carries (`setDaemon`, `daemonReason`); the device's key store as `fingerprint` answered it,
-// or that it was not read (`keyPresent`, `device`; FP-34); the client index
+// or that it was not read (`keyPresent`, `device`; FP-34), and the keys a
+// feed row's testimony is read as this hand's by (`ownKeys`); the client index
 // built from `places` — the documents per account with their labels, kinds
 // and standing, the counts per account, the index's state and floor — each
 // answer replacing it whole with the feed rows taken meanwhile laid over it
 // (`takeIndex`), and kept by the feed's rows, never by enumerating
-// documents; documents — their index row, extent, delivered
+// documents — a document the page's own write minted listed at its ack
+// (`takeMinted`); documents — their index row, extent, delivered
 // runs and the blocks derived from them, metadata, V→I image as read, each
 // image read replacing what the image held over its window alone
 // (`takeImage`), with the transcluded runs it shows (`transcludedRuns`) and
@@ -75,7 +77,10 @@
 // alone, any other once its held text places them. A passage carried is
 // named the same way, by the permanent addresses of its bytes read through
 // the held image (`identityOf`), and read back by a slot's rule
-// (`placedIdentity`).
+// (`placedIdentity`). What one write did to a text is read off two images
+// of it, the one before the write and the one after (`changedBetween`): the
+// stretches the later places that the earlier does not hold, and where the
+// bytes the earlier holds that the later does not stood.
 // Every drop is counted and the counts never fall (`dropsOf`, `claimDropsOf`,
 // `keyDrops`): the board's answers come by one channel and the feed's rows
 // by another, so a read can land after the row of a write it was read
@@ -866,6 +871,18 @@ export function device() {
  * @returns {Reader}
  */
 export const reader = () => ({ account: state.session ? state.session.account : null, keyPresent: keyPresent() });
+/**
+ * The keys a feed row's testimony is read as this hand's by (wire.md §The
+ * change feed, `key`): the fingerprint of each key the device's store holds,
+ * and the one the page's session was opened with. None where the store was
+ * not read and the session names no key — a guest's, a bare session's.
+ * @returns {Set<string>}
+ */
+export function ownKeys() {
+  const out = new Set((state.keys ?? []).map((k) => k.fingerprint));
+  if (state.session && state.session.fingerprint) out.add(state.session.fingerprint);
+  return out;
+}
 
 // ---- the index -----------------------------------------------------------------
 
@@ -1019,6 +1036,24 @@ export function takeSpanSet(addr, set, asOf = null) {
   d.extentAt = asOf;
   d.refused = null; state.owed.delete(addr);
   d.rev++; bump();
+}
+
+/**
+ * A document the page's own write minted (W-MACHINE's; B3-S1): listed as its
+ * mint's feed row lists it (`listRow`) — a draft of its account the session
+ * may read, counted where the index held none — and holding no content as of
+ * the position the mint was acked at (`takeSpanSet`), so the page may write
+ * in it before that row arrives.
+ * @param {string} addr the address the mint's `ack_addr` named
+ * @param {number} at the position the mint was acked at
+ */
+export function takeMinted(addr, at) {
+  if (!state.index.has(addr)) {
+    putPlace({ doc: addr, kind: 'draft', label: null, standing: 'yours_to_read' });
+    const acct = accountOf(addr);
+    if (acct) state.counts.set(acct, (state.counts.get(acct) || 0) + 1);
+  }
+  takeSpanSet(addr, [], at);
 }
 
 /** a span set into a record (`takeSpanSet`, `setAgain`) */
@@ -1371,6 +1406,51 @@ export function placedIn(image, spans) {
     if (last && s.pos <= last.pos + last.width) last.width = Math.max(last.width, s.pos + s.width - last.pos); else joined.push(s);
   }
   return joined;
+}
+
+/**
+ * @typedef {Object} Changed — what one write did to a text, read off the image before it and the image after (`changedBetween`)
+ * @property {Stretch[]} placed the stretches of the later text whose bytes the earlier does not hold, in the text's order: what the write placed
+ * @property {number | null} left where the bytes the earlier text holds that the later does not stood, as a position of the later text: after the byte that stood before the first of them, else before the one that stood after the last, else the text's first position; null where the later holds every byte the earlier does
+ */
+
+/**
+ * What one write did to a text (see the head): the image of the text before
+ * the write read against the image after it, by the bytes' identity — what
+ * the later places that the earlier does not hold, and where what the earlier
+ * holds that the later does not stood. A write that only moves bytes places
+ * none and leaves none.
+ * @param {ImageRun[]} before the image before the write, in position order
+ * @param {ImageRun[]} after the image after it, in position order
+ * @returns {Changed}
+ */
+export function changedBetween(before, after) {
+  const ids = (/** @type {ImageRun[]} */ image) => image.map((r) => ({ prefix: r.prefix, ordinal: r.ordinal, width: r.width }));
+  /** the stretches of an image whose bytes another does not hold, in the image's order, neighbours joined */
+  const lacking = (/** @type {ImageRun[]} */ image, /** @type {ImageRun[]} */ other) => {
+    const held = placedIn(image, ids(other));
+    /** @type {Stretch[]} */
+    const out = [];
+    const push = (/** @type {number} */ pos, /** @type {number} */ width) => { const last = out[out.length - 1]; if (last && last.pos + last.width === pos) last.width += width; else out.push({ pos, width }); };
+    for (const r of image) {
+      const end = r.pos + r.width;
+      let at = r.pos;
+      for (const h of held) {
+        if (h.pos + h.width <= at) continue;
+        if (h.pos >= end) break;
+        if (h.pos > at) push(at, h.pos - at);
+        at = Math.max(at, h.pos + h.width);
+      }
+      if (at < end) push(at, end - at);
+    }
+    return out;
+  };
+  const placed = lacking(after, before), gone = lacking(before, after);
+  if (!gone.length) return { placed, left: null };
+  const first = gone[0], last = gone[gone.length - 1];
+  const prev = first.pos > 1 ? placedIn(after, identityIn(before, first.pos - 1, 1)) : [];
+  const next = prev.length ? [] : placedIn(after, identityIn(before, last.pos + last.width, 1));
+  return { placed, left: prev.length ? prev[0].pos + 1 : next.length ? next[0].pos : 1 };
 }
 
 /**

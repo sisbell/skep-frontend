@@ -1116,3 +1116,29 @@ test('those watching a document\'s text are told as it is about to be set again 
   assert.deepEqual([REC.typing(D), REC.typingDocs()], [false, []]);
 });
 
+test('what one write did to a text is read off the image before it and the image after: the stretches it placed, and where the bytes it removed stood — after the byte before them, else before the one after, else the text\'s first position — a move alone placing and leaving nothing (B3-S1 THE LAUNCH; D6 BM-53)', () => {
+  /** an image of a document's own bytes: each run its first ordinal and its width, in the text's order */
+  const image = (/** @type {Array<[number, number]>} */ runs) => { let pos = 1; return runs.map(([ordinal, width]) => { const r = { pos, width, prefix: '1.0.1.0.9.0.1', ordinal }; pos += width; return r; }); };
+  assert.deepEqual(REC.changedBetween(image([[1, 28]]), image([[1, 4], [79, 10], [5, 24]])), { placed: [{ pos: 5, width: 10 }], left: null }, 'an insert: its run, and nothing left');
+  assert.deepEqual(REC.changedBetween(image([[1, 28], [67, 12], [29, 38]]), image([[1, 28], [67, 6], [29, 38]])), { placed: [], left: 35 }, 'a removal inside the text: the position after the byte that stood before it');
+  assert.deepEqual(REC.changedBetween(image([[1, 28]]), image([[5, 24]])), { placed: [], left: 1 }, 'a removal at the head: before the byte that stood after it');
+  assert.deepEqual(REC.changedBetween(image([[1, 28]]), []), { placed: [], left: 1 }, 'everything removed: the first position');
+  assert.deepEqual(REC.changedBetween(image([[1, 4], [5, 4]]), image([[5, 4], [1, 4]])), { placed: [], left: null }, 'a move alone: no byte placed, none gone');
+  assert.deepEqual(REC.changedBetween(image([[1, 10]]), image([[1, 3], [40, 2], [6, 5], [50, 4]])), { placed: [{ pos: 4, width: 2 }, { pos: 11, width: 4 }], left: 4 }, 'a replacement and an insert: each stretch placed in the text\'s order, and where the bytes replaced stood');
+  assert.deepEqual(REC.changedBetween([], image([[1, 7]])), { placed: [{ pos: 1, width: 7 }], left: null }, 'a text that held nothing before: all of it placed');
+});
+
+test('a document the page\'s own write minted is listed at its ack as its mint\'s feed row lists it — a draft the session may read, counted once however the row follows — holding no content as of the mint; and the keys a feed row is read as this hand\'s by are the device\'s store\'s and the session\'s (B3-S1)', () => {
+  const M = '1.0.1.0.77';
+  REC.takeMinted(M, 30);
+  assert.deepEqual([REC.place(M), REC.countOf('1.0.1').documents, REC.doc(M).extent, REC.doc(M).extentAt, REC.doc(M).kind], [{ doc: M, kind: 'draft', label: null, standing: 'yours_to_read', account: '1.0.1', system: false }, 1, 0, 30, 'draft'], 'listed, counted, and empty as of the mint');
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 30, at: 30, op: 'create_new_document', docs: [M], class: 'drafts', key: 'k' }));
+  REC.takeMinted(M, 30);
+  assert.equal(REC.countOf('1.0.1').documents, 1, 'the row and a second telling count nothing twice');
+  assert.deepEqual([...REC.ownKeys()], [], 'no store read and no session: no key is this hand\'s');
+  REC.setSession(/** @type {any} */ ({ session: 's', principal: 1, account: '1.0.1', writes: true, fingerprint: 'f-session' }));
+  REC.takeKeyStore([{ fingerprint: 'f-one', label: 'a', bindings: [], unbound: true, payload: null }, { fingerprint: 'f-session', label: 'b', bindings: [], unbound: false, payload: null }], '');
+  assert.deepEqual([...REC.ownKeys()].sort(), ['f-one', 'f-session'], 'each key of the device\'s store, the session\'s among them, once');
+  REC.takeKeyStore(null, '');
+  assert.deepEqual([...REC.ownKeys()], ['f-session'], 'the store unread: the key the session was opened with alone');
+});

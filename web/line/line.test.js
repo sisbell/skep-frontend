@@ -1380,3 +1380,27 @@ test('a change of the page\'s class that covers more documents than it names say
     assert.ok(!live.textContent.includes('+') && !live.textContent.includes('others'), live.textContent);
   } finally { REC.setSession(was); }
 });
+
+test('a transient segment handed in as stretches is drawn as the client\'s words, each address the identifier\'s; handed in with its faces, each stretch in its own; and one carrying an act draws the act\'s label as a button of its sentence, whose press makes the act and takes the segment down as the reader\'s next act (B3-S1: the mint\'s line and the launch\'s)', () => {
+  const on = { click: /** @type {((ev: any) => void) | null} */ (null) };
+  const host = { innerHTML: '', setAttribute() {}, addEventListener(/** @type {string} */ type, /** @type {(ev: any) => void} */ fn) { if (type === 'click') on.click = fn; }, querySelectorAll: () => [], contains: () => false };
+  const platform = { document: globalThis.document };
+  globalThis.document = /** @type {any} */ ({ activeElement: null, body: null });
+  FOCUS.attach({ live: /** @type {any} */ (live) });
+  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  const press = (/** @type {string} */ act) => on.click?.({ type: 'click', detail: 1, target: { closest: () => ({ dataset: { act } }) }, stopPropagation() {} });
+  try {
+    LINE.transient('1.0.1.0.5 · readable by you alone', 'B3.mint');
+    assert.ok(host.innerHTML.includes('<span class="seg transient" data-string="B3.mint"><span class="id">1.0.1.0.5</span> · readable by you alone</span>'), `a mint's line: the address in the identifier's face: ${host.innerHTML}`);
+    LINE.transient([{ text: 'you last wrote in ', face: 'client' }, { text: 'A first <line>', face: 'reading' }], 'B3.last-wrote', { faced: true });
+    assert.ok(host.innerHTML.includes('<span class="seg transient" data-string="B3.last-wrote">you last wrote in <span class="reading">A first &lt;line&gt;</span></span>'), `the launch's line: the document's words in the reading face, escaped: ${host.innerHTML}`);
+    /** @type {boolean[]} */
+    const went = [];
+    LINE.transient([{ text: 'you last published ', face: 'client' }, { text: 'An edition', face: 'reading' }, { text: ' — this is your draft of it', face: 'client' }], 'B3.last-published.draft', { faced: true, act: { from: 1, count: 1, go: (byKey) => { went.push(byKey); } } });
+    assert.ok(host.innerHTML.includes('data-string="B3.last-published.draft">you last published <button class="seg-act" data-act="transient"><span class="reading">An edition</span></button> — this is your draft of it</span>'), `the label alone is the act, a button inside its sentence: ${host.innerHTML}`);
+    press('transient');
+    assert.deepEqual([went.length, host.innerHTML.includes('seg transient')], [1, false], 'its press makes the act once, and is the next act: the segment is taken down');
+    press('transient');
+    assert.equal(went.length, 1, 'a press where no segment stands makes nothing');
+  } finally { LINE.act(); globalThis.document = platform.document; }
+});

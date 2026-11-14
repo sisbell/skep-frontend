@@ -7,9 +7,12 @@
 // index a change of class dropped, the list's room as the row chosen was
 // last brought into view, the document in view the rows' acts were last
 // drawn for (`drawnFor`), the hint a refused "open beside" raised
-// (`refused`), and two readers the app hands in, the line's: the current
-// address, and the document in view. A control that rebuilds itself from
-// its state (FP-13).
+// (`refused`), whether the creation row stands as drawn, whether a Tab
+// pressed at its act waits, whether a mint is out and how many the row has
+// made in the page's session, and what the app hands in: two readers, the
+// line's — the current address, and the document in view — and what says a
+// mint in the one line. A control that rebuilds itself from its state
+// (FP-13).
 // Opened (`open`), the box holds the current address, selected, and lists
 // beneath it the address's levels, the landmarks and the trail's entries
 // (N-MATCH's `levels`), no row chosen, until a key is typed: Enter on the box
@@ -53,6 +56,31 @@
 // (`takeReading`), a focus standing on one kept on the act bearing the same
 // key, else given to the input (N-FOCUS's `keep`). Where no board is held
 // the act closes the box onto O-FACES' no-board face, as Enter does.
+// THE CREATION ROW (B3-S1 THE START; foundations §2.3; D5 K-33): while an
+// account acts on a board the page holds, typed text that parses as no
+// address, share form or URL — a query (`isQuery`) — carries at the box's
+// foot, beneath its rows and its no-match line alike, the act that starts a
+// document of the person's own with that text as its first line. It is drawn
+// off the parse alone, so it stands before any row does, and never at the
+// box as opened or emptied. Its act is the input's first Tab stop, ahead of
+// every row's "open beside": it follows the input in the page's order and
+// stands last in the box by the style's. A Tab pressed at the act while the
+// answer to the text as typed waits on the index — its read out and the rows
+// computed before it answered (`awaited`) — is held, and made once the rows
+// are computed over the answer (`takeIndex`): to the answer's first "open
+// beside", else out of the box to the walk's element, the next stop in the
+// page's order; a held Tab the person moved away from is dropped. Enter or a
+// click on the act mints (`start`): W-MACHINE sends the mint and the typed
+// line as the minted draft's first burst; the box closes, and once that
+// burst is answered N-GO teleports to the draft at its reading scale — a
+// trail entry — the caret live at the end of the first line and the walk on
+// its span; the one line then says the mint until the next act — the
+// address, who can read the draft, in the words its corner's chip says it
+// in — the person alone, or with this machine where the notebook's local
+// trust is on — and, at the first mint the row makes in the page's session,
+// that a document stays. A mint
+// the board or the shell refuses types nothing: the box stands with its
+// text, its caret and its focus, and the hint says why beside the box.
 // The box is the one line's stop, opened (the focus record's rule 18; D5 §4
 // rule 4): its input takes the focus however it was opened, and its close
 // hands the focus back through N-FOCUS (K-34; FP-20) — to the element it
@@ -115,9 +143,13 @@
 // copies and typing replaces (D5 K-30; §4 rule 4). The answer and the
 // index's state are the box's own status region (D4), written only when its
 // words change, so an arrow or a further keystroke repeats nothing.
-// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20, FP-26, FP-29, FP-35, FP-36, FP-38.
+// Rules: FP-1, FP-2, FP-9, FP-10, FP-11, FP-13, FP-20, FP-26, FP-29, FP-33, FP-35, FP-36, FP-38, FP-41.
 
 import * as REC from '../model/records.js';
+import * as PUMP from '../model/pump.js';
+import * as WRITE from '../write/write.js';
+import * as MACHINE from '../write/machine.js';
+import * as WALK from './walk.js';
 import * as TRAIL from './trail.js';
 import * as GO from './go.js';
 import * as FOCUS from './focus.js';
@@ -127,15 +159,17 @@ import * as HINT from '../overlays/hint.js';
 import * as SEL from '../overlays/selection.js';
 import * as LAYER from '../text/layer.js';
 import { MAC, drawChord } from './keys.js';
-import { matches } from './match.js';
-import { t, heard, joinRuns } from '../strings.js';
-import { esc } from '../util.js';
+import { matches, isShareForm, isUrl } from './match.js';
+import { t, heard, joinRuns, fields } from '../strings.js';
+import { esc, byteLength } from '../util.js';
 import { markDirty } from '../plane/camera.js';
-import { documentOf, homeOf, kindOf } from '../model/address.js';
+import { documentOf, homeOf, kindOf, parseAddress } from '../model/address.js';
 
 /** @typedef {import('./match.js').Row} Row */
 
-/** @type {{box: HTMLElement, input: HTMLInputElement, rows: HTMLElement, note: HTMLElement} | null} */
+/** @typedef {{box: HTMLElement, input: HTMLInputElement, rows: HTMLElement, note: HTMLElement, foot?: HTMLElement | null}} Parts the box's elements: its input, its status region, its rows' list, and its foot, where the creation row stands — none where the page gives it none */
+
+/** @type {Parts | null} */
 let els = null;
 let openState = false;
 /** @type {Row[]} */
@@ -158,6 +192,16 @@ let listRoom = '';
 let drawnFor = '';
 /** the string of the hint the last refused "open beside" raised, which the box's close takes down while it stands; '' where none was */
 let refused = '';
+/** the creation row stands, as last drawn (`startStands`) */
+let startShown = false;
+/** a Tab pressed at the creation row's act waits for the answer to the text as typed (`awaited`): made as the rows are computed over it (`releaseTab`) */
+let tabHeld = false;
+/** a mint the creation row asked is out (`start`): a second press asks none */
+let starting = false;
+/** the documents the creation row has minted in the page's session: the first one's line says that a document stays */
+let mints = 0;
+/** @type {(words: string, id: string) => void} what says a mint in the one line until the next act (the app's: L-LINE's transient segment) */
+let said = () => {};
 /** @type {() => string | null} the current address's reader (the line's) */
 let currentAddress = () => null;
 /** @type {() => string | null} the document in view's reader (the app's): the document the line names at its reading scale, as the version its box shows; null where none is */
@@ -189,13 +233,51 @@ function acted(/** @type {KeyboardEvent} */ ev) {
 }
 
 /**
- * Attach the box's elements and the app's readers (see the head).
- * @param {{box: HTMLElement, input: HTMLInputElement, rows: HTMLElement, note: HTMLElement}} e
+ * Is typed text a query (foundations §2.3): text that parses as no address,
+ * share form or URL, and holds a character — what label matching takes, and
+ * what the creation row stands on.
+ * @param {string} text
+ */
+export function isQuery(text) {
+  const q = text.trim();
+  return !!q && !parseAddress(q) && !isShareForm(q) && !isUrl(q);
+}
+
+/** does the creation row stand (see the head): the box open over a query, an account acting on a board the page holds, and a foot to stand at */
+const startStands = () => !!els && !!els.foot && openState && !asOpened && isQuery(els.input.value) && !!REC.board() && !!REC.session()?.account;
+
+/** does the answer to the text as typed wait on the index (see the head): its read is out, and the rows standing were computed before it answered — over none, or over one a change of the page's class dropped */
+const awaited = () => PUMP.readingIndex() && (stale || REC.indexState() == null);
+
+/** the creation row's act as it stands in the foot; null where none stands */
+const startEl = () => (els && els.foot ? /** @type {HTMLElement | null} */ (els.foot.querySelector('[data-start]')) : null);
+
+/**
+ * Attach the box's elements and what the app hands in (see the head).
+ * @param {Parts} e
  * @param {() => string | null} cur the current address's reader
  * @param {() => string | null} [reading] the document in view's reader; none in view where left out
+ * @param {(words: string, id: string) => void} [line] what says a mint in the one line until the next act; nothing said where left out
  */
-export function attach(e, cur, reading = () => null) {
-  els = e; currentAddress = cur; inView = reading;
+export function attach(e, cur, reading = () => null, line = () => {}) {
+  els = e; currentAddress = cur; inView = reading; said = line;
+  startShown = false; tabHeld = false; starting = false; mints = 0;
+  if (e.foot) {
+    const foot = e.foot;
+    // Enter and Space at the act are the button's own, made as its click; a Tab there is held while the answer waits; every other key ends a held Tab, and a chord acts as anywhere, the box closed first (M-1)
+    foot.addEventListener('keydown', (ev) => {
+      acted(ev);
+      const plain = !ev.shiftKey && !ev.metaKey && !ev.ctrlKey && !ev.altKey;
+      if (ev.key === 'Tab' && plain && awaited()) { ev.preventDefault(); ev.stopPropagation(); tabHeld = true; return; }
+      if (ev.key !== 'Shift') tabHeld = false;
+      if (MAC ? ev.metaKey : ev.ctrlKey) close();
+    });
+    foot.addEventListener('click', (ev) => {
+      if (!(/** @type {HTMLElement} */ (ev.target)).closest('[data-start]')) return;
+      HINT.act();
+      void start(FOCUS.byKey(ev));
+    });
+  }
   e.input.setAttribute('aria-label', heard(t('L.leap-label')));
   e.rows.setAttribute('aria-label', heard(t('L.leap-rows-label')));
   e.input.addEventListener('input', () => { HINT.act(); asOpened = false; compute(e.input.value); render(); });
@@ -251,7 +333,11 @@ function ctx() {
   };
 }
 /** the rows for the text; typed text selects its first match, and nothing typed chooses no row (foundations §2.3) */
-function compute(/** @type {string} */ text) { rows = matches(text, ctx()); sel = text.trim() ? 0 : -1; inRows = false; }
+function compute(/** @type {string} */ text) {
+  rows = matches(text, ctx()); sel = text.trim() ? 0 : -1; inRows = false;
+  // rows computed while the index's first answer is on its way are computed again as it lands (`takeIndex`)
+  if (PUMP.readingIndex() && REC.indexState() == null) stale = true;
+}
 
 /** ↓ / ↑ (K-32): the choice moves one row and into the rows; nothing goes */
 function choose(/** @type {1 | -1} */ step) {
@@ -352,9 +438,24 @@ export function classChanged() {
  * nothing.
  */
 export function takeIndex() {
-  if (!stale || (openState && REC.indexState() == null)) return;
-  stale = false;
-  relist();
+  if (stale && !(openState && REC.indexState() == null)) { stale = false; relist(); }
+  releaseTab();
+}
+
+/**
+ * A Tab held at the creation row's act made (see the head), once the answer
+ * to the text as typed waits on the index no longer: the focus to the
+ * answer's first "open beside", else out of the box to the walk's element.
+ * Dropped where the person moved the focus off the act meanwhile, or the box
+ * closed.
+ */
+function releaseTab() {
+  if (!tabHeld || awaited()) return;
+  tabHeld = false;
+  const act = startEl();
+  if (!els || !openState || !act || document.activeElement !== act) return;
+  const first = /** @type {HTMLElement | null} */ (els.rows.querySelector('[data-beside]'));
+  if (first) FOCUS.land(first); else close(true);
 }
 
 /**
@@ -432,14 +533,66 @@ function rowHTML(r, i, at) {
 }
 
 /** close the box: the hint its refused "open beside" raised taken down where it stands, and the focus back through the focus's owner — to the surface a key made at a landing opened beside it, where that stands, else to the opener where no landing passed over the box, else to the walk's element; one that left the box already stays where it went */
-export function close() {
+export function close(toWalk = false) {
   if (!els || !openState) return;
-  openState = false; inRows = false; els.box.classList.remove('on');
+  openState = false; inRows = false; tabHeld = false; els.box.classList.remove('on');
   comboState();
+  drawStart();
   if (refused && HINT.standing()?.id === refused) HINT.act();
   refused = '';
-  FOCUS.close('box');
+  FOCUS.close('box', { toWalk });
   markDirty();
+}
+
+/**
+ * The creation row drawn where it stands and taken down where it does not
+ * (see the head; `startStands`) — only as that changes, so its act stands
+ * through every keystroke of a query; a focus standing on an act taken down
+ * goes to the input (N-FOCUS's `keep`).
+ */
+function drawStart() {
+  if (!els || !els.foot) return;
+  const stands = startStands();
+  if (stands === startShown) return;
+  startShown = stands;
+  const foot = els.foot, html = stands ? `<button type="button" id="leap-start" data-start data-key="start" data-string="B3.start-document">${esc(t('B3.start-document'))}</button>` : '';
+  const focused = document.activeElement;
+  if (focused && focused !== els.input && foot.contains(focused)) FOCUS.keep(els.box, (x) => x.getAttribute('data-key'), () => { foot.innerHTML = html; });
+  else foot.innerHTML = html;
+}
+
+/**
+ * The creation row's act (see the head; B3-S1 THE START; D5 K-33): a
+ * document of the person's own minted with the box's text as its first line
+ * (W-MACHINE's `start`), the box closed, and — once the first line's burst is
+ * answered — the teleport to it, the caret live at the end of that line with
+ * the walk on its span, and the mint said in the one line: the minted
+ * address, who can read it as its corner's chip says — the person alone, or
+ * with this machine where local trust is on — and, at the first mint the row
+ * makes in the page's session, that a document stays. Refused, the
+ * box stands as it is and the hint says why beside it. Nothing while a mint
+ * is out, or where the text is no query; where no board is held, the box
+ * closes onto the no-board face (FP-35).
+ * @param {boolean} [byKey] a key made the act
+ */
+export async function start(byKey = false) {
+  if (!els || starting) return;
+  const line = els.input.value.trim();
+  if (!isQuery(line)) return;
+  if (!REC.board()) { close(); FACES.noBoard(null); return; }
+  starting = true;
+  const out = await MACHINE.start(line);
+  starting = false;
+  if ('refused' in out) {
+    if (els && openState) HINT.show(refused = 'L.start.refused', { why: FACES.wordsFor(out.refused).text }, { at: els.box });
+    return;
+  }
+  const first = mints++ === 0;
+  close();
+  await WRITE.landed(out.addr);
+  const landed = await GO.leapTo(out.addr, { how: 'leap', byKey });
+  if (landed && LAYER.placeCaret(out.addr, byteLength(line) + 1)) await WALK.followCaret();
+  said(fields(out.addr, t(REC.health()?.auth?.local_trust ? 'L.mint.private.flag-on' : 'B3.mint.private'), first ? t('B3.mint.stays') : ''), 'B3.mint');
 }
 
 /**
@@ -497,6 +650,7 @@ export function render() {
   const stateLine = st && st.arm !== 'complete' ? `<span data-string="F.index.state">${esc(t('F.index.state', { arm: st.arm }))}</span>${floor != null ? ` · <span data-string="F.leap.floor">${esc(t('F.leap.floor', { floor }))}</span>` : ''}${st.arm === 'building' || st.arm === 'widening' ? ` · <span data-string="F.leap.arriving">${esc(t('F.leap.arriving'))}</span>` : ''}` : '';
   const note = [answer, stateLine].filter(Boolean).join(' · ');
   if (note !== noteHTML) { noteHTML = note; els.note.innerHTML = note; }
+  drawStart();
   reveal();
 }
 

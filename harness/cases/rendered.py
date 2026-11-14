@@ -180,7 +180,9 @@ def mark_acts(ctx, r, mark, band, newest):
     ctx.drv.key('ArrowDown'); ctx.settle(); ctx.frames(2)
     now = next((m for m in ctx.js('window.__skep.residues()') if m['key'] == mark['key']), None)
     ring, walk = ctx.js('window.__skep.view.ring()'), ctx.js('window.__skep.view.focus()')
-    of = str(mark['n']) if mark['exact'] else ctx.js('(async () => (await import("./strings.js")).t("L.lower-bound", %s))()' % json.dumps({'n': mark['n']}))
+    # the mark's count as the page draws every count: a numeral, its thousands parted by commas (the page's `numeral`; issue #628)
+    count = ctx.js('(async () => (await import("./util.js")).numeral(%d))()' % mark['n'])
+    of = count if mark['exact'] else ctx.js('(async () => (await import("./strings.js")).t("L.lower-bound", %s))()' % json.dumps({'n': count}))
     names = [ctx.js('(async () => (await import("./strings.js")).t("L.mark.member", %s))()' % json.dumps({'name': name, 'i': 1, 'n': of})) for name in (first[len(mark['account']):], first)]
     on_mark = bool(now and ring) and all(abs(ring[k] - now['rect'][k]) <= 1 for k in ('x', 'y', 'w', 'h'))
     ringed = {'walk': walk and [walk['kind'], walk['addr']], 'ring': ring, 'mark': now and now['rect'], 'lines': now and now['lines'], 'want': names}

@@ -87,6 +87,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #line .marker.lit { color:var(--accent); }
 #line .marker.none { visibility:hidden; }
 #line .transient { color:var(--warn); }
+/* a transient segment's act (the launch's label, a LEAP — B3-S1): a word of its sentence, underlined, never a boxed button mid-sentence */
+#line .transient .seg-act { margin:0; padding:0; border:0; background:none; color:inherit; font-size:inherit; text-decoration:underline; white-space:normal; text-align:left; }
 /* a jump's face whose document stands out of view, carried by the line in the face's own colour (FP-25) */
 #line .aside { color:#ffe2b8; }
 #line button { padding:0 5px; }
@@ -117,6 +119,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    button drawn as the segment it is; the key's presence is a drawn key in the text's colour, a gap after it where words
    follow */
 #line .row > .seg.acting, #line .row > .seg.daemon { flex:0 1 auto; min-width:0; white-space:normal; }
+/* a transient segment set in a row — on a row of its own where the window's change set the layout while it stood — takes
+   the row's room at the most and breaks inside it, between its words and inside an address longer than the row (FP-26) */
+#line .row > .seg.transient { flex:0 1 auto; min-width:0; white-space:normal; overflow-wrap:anywhere; }
 #line .seg.acting .field { display:inline-block; max-width:100%; }
 #line button.seg.acting { background:none; border:0; border-radius:0; padding:0; margin:0; color:inherit; font:inherit; line-height:inherit; text-align:left; white-space:normal; cursor:pointer; }
 #line .key { display:inline-block; width:1.15em; height:.72em; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; margin-right:.3em; }
@@ -133,6 +138,11 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #leapnote { flex:none; margin-top:6px; color:var(--dim); font-size:11px; }
 /* the status region with no words sets no gap of its own, the rows' margin alone standing under the input; it stays rendered, so words written to it are announced */
 #leapnote:empty { margin-top:0; }
+/* the creation row (B3-S1): the box's last part, beneath its rows and its no-match line alike, though it follows the input
+   in the page's order — its act the input's first Tab stop; it never gives way to a short window, the rows' list does */
+#leapfoot { order:1; flex:none; margin-top:6px; }
+#leapfoot:empty { display:none; }
+#leapfoot button { margin:0; max-width:100%; white-space:normal; text-align:left; }
 /* the rows share four columns, so every row's title starts at one x: the address, as wide as the widest (up to 40% of
    the box); the title, the room the others leave; the address or label the row names, as wide as the widest (up to 30%
    of the box) — a cell longer than its column (a document's first line, a typed URL) wraps inside it, an address in it

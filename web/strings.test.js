@@ -1223,3 +1223,27 @@ test('the held words\' lines stand in the table as B3 drafts them — the kept w
   assert.equal(t('B3.save.held.board', { board: 'board 1' }), 'nothing to save — not yet kept — held on this device and sent when board 1 can be reached', 'and at a board\'s silence, the word kept for the venue');
 });
 
+test('the lines the start, the mint, the launch and select-all draw: each a design document drafts stands DRAFT naming its screen, each one re-worded keeps the words its source holds as its trace, the two no design carries are the lane\'s own, and the mint\'s line says who can read the draft in its corner\'s chip\'s words (B3-S1; FP-33)', () => {
+  /** @type {Array<[string, string]>} each line re-worded for these screens, with the words its source holds */
+  const REWORDED = [
+    ['B3.start-document', 'start a new document with this as its first line'],
+    ['B3.mint.stays', 'it stays — you can remove its words, never the document'],
+    ['B3.last-published.draft', 'you last published ⟨label⟩'],
+    ['F.leap.none', 'nothing you can read on this board goes by that name or holds those words'],
+  ];
+  for (const [id, was] of REWORDED) {
+    assert.equal(STRINGS[id].was, was, `${id} keeps its source's words as its trace`);
+    assert.notEqual(STRINGS[id].text, was, `${id} is re-worded`);
+    assert.ok(STRINGS[id].source && !STRINGS[id].lane && STRINGS[id].cls === 'DRAFT', `${id}: DRAFT, its source named`);
+  }
+  for (const [id, words] of [['B3.mint.private', 'readable by you alone'], ['B3.last-wrote', 'you last wrote in ⟨label⟩'], ['B3.last-published', 'you last published ⟨label⟩']]) {
+    assert.deepEqual([STRINGS[id].text, STRINGS[id].was, STRINGS[id].source], [words, undefined, 'designs/B3-editor.md'], `${id} stands as B3 drafts it`);
+    assert.match(STRINGS[id].screen ?? '', /B3-S1/, `${id} names its screen`);
+  }
+  for (const id of ['L.start.refused', 'L.mint.private.flag-on']) assert.ok(STRINGS[id].lane && STRINGS[id].source === '' && /B3-S1/.test(STRINGS[id].screen ?? ''), `${id}: the lane's own, its screen named`);
+  assert.equal(STRINGS['L.start.refused'].hint, 'whole', 'a refused mint\'s line stands whole at every press: its reason is its point');
+  /** a chip's words as a line's field says them: no capital, no end mark */
+  const field = (/** @type {string} */ id) => { const w = t(id).replace(/\.$/, ''); return w.charAt(0).toLowerCase() + w.slice(1); };
+  assert.deepEqual([t('B3.mint.private'), t('L.mint.private.flag-on')], [field('C-28'), field('C-28.flag-on')], 'the creation copy reads as the chip beside the draft reads, in both of its forms');
+  assert.ok(!/it stays/.test(t('B3.mint.stays')) && /never delete the document/.test(t('B3.mint.stays')), 'that a document stays is said as what the person can and cannot do');
+});

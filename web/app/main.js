@@ -35,7 +35,10 @@
 // again, and T-LAYER, P-RENDER, the scene and the one line's layout set
 // again from it (`refaced`). Then the launch (`launch`): the launch
 // frame HOME, the trail's first entry (foundations §2.2; W-01; N-GO's
-// `launch`), or with no board the walk's root, saying why, and no entry, and
+// `launch`) — which on a page that writes goes on from it to the held
+// lines, else to the newest write of its hand, saying why through the one
+// line's transient segment, handed in (B3-S1; `WRITES`) — or with no board
+// the walk's root, saying why, and no entry, and
 // the one line's first layout (L-LINE's `fit`), set again at every change of
 // the window's size; a
 // board the list read again finds launches the same way (M-PUMP's `onOpen`).
@@ -52,7 +55,9 @@
 // `newerAt`, FP-23); N-LEAP's (the current address, L-LINE's
 // `currentAddress`, and the document in view — the document the line's
 // `addressDisplay` names at its reading scale, as the version its box shows,
-// N-GO's `shownIn`, FP-22 — beside which a row opens its place, `reading`);
+// N-GO's `shownIn`, FP-22 — beside which a row opens its place, `reading`
+// — its foot, where the creation row stands, and the one line's transient
+// segment, which says a mint);
 // LK's (the links lit, P-RENDER's `drawsDoc`, T-LAYER's
 // owner rule, `shownIn`, and a far document's first line, T-LAYER's
 // `firstOfFar` by T-ARTICLE's one rule); N-WALK's (Back's light, what a landing says,
@@ -329,7 +334,7 @@ function whereIs(/** @type {EventTarget | null} */ target) {
 async function launch() {
   let deepest = 0; for (const p of REC.places()) if (!p.system) deepest = Math.max(deepest, depthOfDoc(p.doc));
   CAM.setDeepest(deepest); bootInfo.deepestDepth = deepest;
-  await GO.launch();
+  await GO.launch({ writes: WRITES, line: (words, id, o) => LINE.transient(words, id, o) });
   LINE.fit();
 }
 
@@ -350,7 +355,7 @@ async function boot() {
   DELETION.attach(el('removed'));
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')), stop: /** @type {HTMLButtonElement} */ (el('scenestop')), strokes: el('scenestrokes') },
     { end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, at, told) => FACES.floating(far, at, null, told), held: FACES.held } });
-  LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress(), reading);
+  LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote'), foot: el('leapfoot') }, () => LINE.currentAddress(), reading, (words, id) => LINE.transient(words, id));
   FIND.attach({ box: el('find'), input: /** @type {HTMLInputElement} */ (el('findq')), count: el('findcount'), prev: /** @type {HTMLButtonElement} */ (el('findprev')), next: /** @type {HTMLButtonElement} */ (el('findnext')), note: el('findnote') });
   LINE.attach(el('line'), { open: (byKey, at) => LEAP.open(at), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed(), panes: SCENE.keptPanes, paneLift: SCENE.paneLift, hint: (id, at) => HINT.show(id, null, { at }), acted: () => HINT.act() });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a), vanished: GO.vanished, atop: FIND.atop, newer: GO.newerAt, face: FACES.cornerFace });

@@ -146,9 +146,13 @@ To look at the page yourself, serve it and open it with the secret:
 
 `harness/run.sh safari` opens that URL in Safari and asserts nothing —
 the owner's pass. A page opened so sends what is typed in a draft to the
-board it reads. Adding `&gate=all` to the URL loads the gate's hooks
+board it reads, starts a document from the LEAP box's last row, and
+opens where the person last wrote: under a session that may write it
+goes on from HOME to the draft of its newest own write, the caret live
+there. Adding `&gate=all` to the URL loads the gate's hooks
 (`window.__skep`) and the write ledger, and boots the page without the
-write layer's machine, so what is typed stays in the page; `&machine=1`
+write layer's machine, so what is typed stays in the page, the box
+starts no document and the page opens at HOME; `&machine=1`
 beside it boots the machine as well — the `editor` case's page. Without
 `gate` the page ships no instrumentation. `&gate=guest` loads the hooks
 too and opens the page as a guest: it asks no session, so it reads the
