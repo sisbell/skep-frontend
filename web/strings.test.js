@@ -1,10 +1,12 @@
 // ST's test: every entry is PINNED with a source or DRAFT with a screen, and
 // names a kind patterns.md builds — K1 … K32 each in its group, a shared
 // piece, or S22's words — a trace of its source's words standing only where
-// its own differ, on an entry a source carries, and a copy id only as `C-n`; the
-// pinned strings are verbatim, the pinned lines the editor draws among them
-// under their own ids; the editor's lines stand as its design words them, in
-// its characters, every line its screens carry entered — a line only
+// its own differ, on an entry a source carries, each entry re-worded to the
+// voice system and each ruled string added keeping one, and a copy id only as
+// `C-n`; the pinned strings are their authority's words, the pinned lines the
+// editor draws among them under their own ids; the editor's lines are held to
+// its design's words, in its characters — an entry by its trace where it
+// carries one, else by its own words — every line its screens carry entered — a line only
 // foundations carries entered from there — and none it retired left standing,
 // nor its words in any entry; a token filled leaves the rest, as words
 // or as markup reading the same words, a value asked for set in its class;
@@ -47,6 +49,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { sep } from 'node:path';
 import { STRINGS, KINDS, t, tHTML, tRuns, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, onDay, duration, runningHTML, plural, counted, markCount, typeName, formName, formsNamed, formsAt, formAct, formTakeOff, formTitle, formAgain, hintOf, hintSentences, sentence, sentenceHTML, sentenceRuns, asSentenceRuns, opening, openingHTML, asSentence, ended, endedHTML, sentences, fields, list, heard, asHeard, joinRuns, runsText } from './strings.js';
+import { fill } from './util.js';
 
 /** a commons type as a link stores it, by its path under the registry document's subspace 3 */
 const commons = (/** @type {string} */ path) => '1.1.0.1.0.1.0.' + path;
@@ -57,6 +60,10 @@ const PARAGRAPH = commons('3.21'), HEADING = commons('3.20'), FLAG = commons('3.
 const TYPED_KEYS = Object.freeze({ 'act key': 'Enter', 'next key': 'Tab', 'tab key': 'Tab', 'leave key': 'Esc', 'close key': 'Esc', 'walk key': '↓', 'row key': '↓', 'space key': 'Space', 'back chord': 'Shift+Tab', 'select chord': 'Shift+↓' });
 /** an entry's words with each key it names typed as its design types it, every other token standing: a keyed line's words around its keys are its design's own */
 const asTyped = (/** @type {string} */ id) => t(id, TYPED_KEYS);
+/** the words an entry keeps of its design: its trace where it carries one, else its own words (`StringEntry.was`) */
+const designed = (/** @type {string} */ id) => STRINGS[id].was ?? STRINGS[id].text;
+/** an entry's design words (`designed`) with each key it names typed as its design types it (`asTyped`) */
+const asDesigned = (/** @type {string} */ id) => fill(designed(id), TYPED_KEYS);
 /** the selection's chords as D5 types them into its row's words (D5 §1.6), by their tokens */
 const D5_SLOT_CHORDS = Object.freeze({ 'annotate chord': '⌘⇧A', 'quote chord': '⌘⇧C', 'wrote chord': '⌘⇧O', 'uses chord': '⌘⇧R', 'links chord': '⌘⇧L', 'follow chord': '⌘↩', 'scene chord': '⌘⇧↩', 'link-to chord': '⌘K' });
 
@@ -96,6 +103,34 @@ test('a trace stands only where an entry\'s words differ from it, on an entry a 
   }
 });
 
+test('each entry re-worded to the voice system that a design source carries keeps the words its source holds as its trace, and so does each ruled string the copy inventory pins that the table added; the gate\'s text case locates each trace at its source (`was`)', () => {
+  /** each entry re-worded to the voice system's patterns, names and mechanics whose source carries it */
+  const REWORDED = [
+    'C-50', 'B1.try-again', 'B1.others-toggle', 'B1.others-toggle.1', 'B1.show-more', 'F.published.notebook',
+    'F.floating.read', 'F.open-beside', 'F.reindex', 'F.sign-in', 'F.back', 'F.forward',
+    'F.trail-list', 'F.scene.relevel', 'F.scene.dismiss', 'F.lens.endorsed', 'F.versions.read', 'D5.annotate',
+    'D5.quote', 'D5.link-to', 'B3.moved.see-held', 'B3.send-again', 'B3.discard', 'B3.place-at-caret',
+    'B3.place-at-caret.after', 'B3.copy-words-out', 'B3.head_unreadable.discard', 'B3.head_unreadable.discard.name', 'B3.show-file', 'B3.copy-address',
+    'B3.death.copy', 'B3.past-states', 'B3.quote.published.act', 'B3.quote.transclusion', 'B3.history.earlier-change', 'B3.history.next-change',
+    'B3.history.put-back', 'B3.history.put-back.caret', 'B3.history.make-current', 'B3.history.read-beside-published', 'B3.history.read-last', 'B3.publish.next.claim',
+    'B3.continue', 'B3.family.other-drafts', 'B3.family.alternatives', 'B3.reapply', 'B3.read-beside', 'B3.publish.back.kept',
+    'B3.publish.leave-private', 'B3.publish.row.switch', 'B3.publish.row.switch.1', 'B3.publish.row.switch.formatting', 'B3.publish.no-one-else', 'B3.publish.row.readers',
+    'B3.publish.venue', 'B3.publish.command.all', 'B3.publish.command.left-out', 'B3.publish.command.selected', 'B3.publish.command.selected.alone', 'B3.publish.command.beside',
+    'B3.merge.withdraw', 'B3.merge.gap.corner.act', 'B3.merge.gap.keep.head', 'B3.merge.gap.keep.side', 'B3.merge.gap.moves.act', 'B3.merge.behind.ending',
+    'B3.merge.command', 'B3.merge.command.left-out', 'B3.card.retype', 'B3.format.hand', 'B3.format.slot.others', 'B3.format.slot.others.focus',
+    'B3.no-notebook.back.act', 'B3.no-notebook.back.capture',
+  ];
+  /** each ruled string of the copy inventory the table lacked, written to the voice system */
+  const ADDED = ['C-5', 'C-63', 'C-158', 'C-254.1', 'C-254.n', 'C-254.held'];
+  assert.equal(new Set([...REWORDED, ...ADDED]).size, REWORDED.length + ADDED.length, 'each entry once');
+  for (const id of [...REWORDED, ...ADDED]) {
+    const e = STRINGS[id];
+    assert.ok(e && e.source && !e.lane, `${id}: a design source carries it`);
+    assert.ok(typeof e.was === 'string' && e.was.trim() !== '' && e.was !== e.text, `${id}: its trace stands, and differs from its words`);
+  }
+  for (const id of ADDED) assert.equal(STRINGS[id].source, 'ux/copy.md', `${id}: the copy inventory's`);
+});
+
 test('a copy id an entry carries has the form C-n', () => {
   const cids = Object.entries(STRINGS).filter(([, e]) => e.cid !== undefined);
   assert.ok(cids.length > 0, 'the table carries copy ids');
@@ -107,13 +142,16 @@ test('the pinned strings are verbatim and their count is what the inventory give
   assert.equal(t('C-39', { owner: 'Acme' }), "an address inside Acme's withheld document; whether a link occupies it is withheld with it");
   assert.equal(t('C-67.pointer'), 'a published edition may exist — follow the edition claim');
   assert.ok(isPinned('C-136') && !isPinned('B1.invalid'));
-  assert.equal(pinned().length, 47, 'the thirty-six the reader\'s lanes pinned, the deletion face\'s three (issue #410), and the publication\'s eight (issue #440)');
+  assert.equal(pinned().length, 50, 'the thirty-six the reader\'s lanes pinned, the deletion face\'s three (issue #410), the publication\'s eight (issue #440), and the who-can-read clause\'s three, C-5, C-63 and C-158');
+  for (const [id, words] of [['C-5', 'hidden from readers, not from the host'], ['C-63', 'and its operator,'], ['C-158', 'what this daemon serves is its operator\'s']]) {
+    assert.deepEqual([STRINGS[id]?.cls, STRINGS[id]?.kind, STRINGS[id]?.source, designed(id)], ['PINNED', 'SP1', 'ux/copy.md', words], `${id}: the copy inventory's pinned words, by its trace`);
+  }
 });
 
 test('the deletion face\'s pinned lines are verbatim from the copy inventory — the edition arm, the draft arm and the draft face\'s audience phrase — and the removal\'s reach statement, which the inventory PROPOSES and pins no words for, is B3\'s DRAFT (issue #410)', () => {
   assert.equal(t('C-48'), 'still here — public history: the version you removed it from remains readable, forever');
   assert.equal(t('C-49'), 'still here — for as long as this board retains it; below the reclaim floor it resolves nowhere here, unless another document still windows it');
-  assert.equal(t('C-50'), "visible to this draft's readers,");
+  assert.equal(designed('C-50'), "visible to this draft's readers,", 'the audience phrase as the copy inventory pins it, by its trace');
   assert.ok(isPinned('C-48') && isPinned('C-49') && isPinned('C-50'));
   assert.ok(!('C-167' in STRINGS) && STRINGS['B3.C-167'].cls === 'DRAFT' && STRINGS['B3.C-167'].source === 'designs/B3-editor.md', 'C-167 carries no pinned string: entered as B3 renders it, under the screen\'s prefix as B1.C-72 is');
 });
@@ -148,7 +186,7 @@ test('every line of the editor\'s is PINNED from the copy inventory or DRAFT fro
 });
 
 test('the editor\'s lines stand as its design words them, in its characters — B3-S2\'s discard of what the head-unreadable hold keeps, B3-S4\'s orphan line at one link, B3-S11\'s draft side\'s one line and the leave line it shares, B3-S13\'s formatting lines — and the selection\'s chords as D5 words them (issue #438)', () => {
-  /** @type {Array<[string, string, string]>} each line's id, the screen its entry's `screen` opens on, and its words */
+  /** @type {Array<[string, string, string]>} each line's id, the screen its entry's `screen` opens on, and its design's words — held to the entry's trace where it carries one, else to its own words (`asDesigned`) */
   const LINES = [
     ['B3.head_unreadable.discard', 'B3-S2', 'discard what is held'],
     ['B3.head_unreadable.discard.compact', 'B3-S2', 'discard'],
@@ -196,7 +234,7 @@ test('the editor\'s lines stand as its design words them, in its characters — 
   for (const [id, screen, text] of LINES) {
     const e = STRINGS[id];
     assert.ok(e, id + ' entered');
-    assert.deepEqual({ text: asTyped(id), cls: e.cls, source: e.source, screen: e.screen?.split(':')[0] }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen }, id);
+    assert.deepEqual({ text: asDesigned(id), cls: e.cls, source: e.source, screen: e.screen?.split(':')[0] }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen }, id);
   }
   assert.equal(t('B3.format.cycle', { level: formName(HEADING, 2) }), 'heading\u00a02 — let go to set it', 'the held cycle\'s line in B3\'s example\'s words, its level one block\'s heading named');
   assert.equal(t('B3.format.underline', { italic: formName(ITALIC), bold: formName(BOLD) }), 'there is no underline here\u00a0— to emphasise words, italic or bold', 'Mod+U\'s answer as B3 words it, its forms named by their one names');
@@ -210,17 +248,18 @@ test('the editor\'s lines stand as its design words them, in its characters — 
 });
 
 test('the five lines the editor\'s screens draw that the table lacked stand as B3 words them — the mint\'s clause, the draft side\'s slot, the merge journal\'s label, the re-apply act\'s outcome at the marked draft and its datum while the scene stands — each apart from the longer line that shares its words (issue #440)', () => {
-  assert.equal(t('B3.mint.stays'), 'it stays — you can remove its words, never the document');
-  assert.equal(t('B3.merge.slot.draft'), 'publish all of it as the next version');
-  assert.equal(t('B3.merge.records'), 'merges');
-  assert.equal(t('B3.reapply.reopen'), 'open as you left it');
-  assert.equal(t('B3.reapply.open-here'), 'open here');
+  // each held to its design's words: the entry's trace where it carries one, else its own words (`designed`)
+  assert.equal(designed('B3.mint.stays'), 'it stays — you can remove its words, never the document');
+  assert.equal(designed('B3.merge.slot.draft'), 'publish all of it as the next version');
+  assert.equal(designed('B3.merge.records'), 'merges');
+  assert.equal(designed('B3.reapply.reopen'), 'open as you left it');
+  assert.equal(designed('B3.reapply.open-here'), 'open here');
   assert.notEqual(t('B3.reapply.reopen'), t('B3.reapply.open', { label: 'Tumbler' }), 'the marked draft\'s own outcome names no draft; the daughter\'s names the one it re-opens');
   assert.match(STRINGS['B3.merge.open-here'].screen, /reason/, 'the act\'s reason while the scene stands, beside the datum "open here"');
 });
 
 test('every line the editor\'s screens carry stands as B3 words it at the design\'s head, in its characters — the entry form\'s no-break space before an em dash where B3 sets one, its curly marks where it sets them — PINNED nowhere, DRAFT with B3 its source and its screen named (issue #440)', () => {
-  /** @type {Array<[string, string, string]>} each line's id, the screen its entry's `screen` opens on, and its words */
+  /** @type {Array<[string, string, string]>} each line's id, the screen its entry's `screen` opens on, and its design's words — held to the entry's trace where it carries one, else to its own words (`asDesigned`) */
   const LINES = [
     ['B3.mint.stays', 'B3-S1', 'it stays — you can remove its words, never the document'],
     ['B3.merge.slot.draft', 'B3-S11', 'publish all of it as the next version'],
@@ -415,21 +454,21 @@ test('every line the editor\'s screens carry stands as B3 words it at the design
   for (const [id, screen, text] of LINES) {
     const e = STRINGS[id];
     assert.ok(e, id + ' entered');
-    assert.deepEqual({ text: asTyped(id), cls: e.cls, source: e.source, screen: e.screen?.split(':')[0] }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen }, id);
+    assert.deepEqual({ text: asDesigned(id), cls: e.cls, source: e.source, screen: e.screen?.split(':')[0] }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen }, id);
   }
-  /** @type {Array<[string, string]>} the refraction's three B1 drafts, drawn at the editor's publication too */
+  /** @type {Array<[string, string]>} the refraction's three B1 drafts, drawn at the editor's publication too, each held to its design's words (`designed`) */
   const B1_LINES = [
     ['B1.counterpart', 'on ⟨D⟩\'s earlier words — shown here at their counterpart in version ⟨k⟩'],
     ['B1.counterpart.withheld', 'readers of ⟨S⟩ who cannot read this draft see this as withheld'],
     ['B1.counterpart.unread', 'your notes from the draft are not shown here — reading them failed'],
   ];
   for (const [id, text] of B1_LINES) {
-    assert.deepEqual({ text: STRINGS[id]?.text, cls: STRINGS[id]?.cls, source: STRINGS[id]?.source }, { text, cls: 'DRAFT', source: 'designs/B1-reader.md' }, id);
+    assert.deepEqual({ text: designed(id), cls: STRINGS[id]?.cls, source: STRINGS[id]?.source }, { text, cls: 'DRAFT', source: 'designs/B1-reader.md' }, id);
     assert.match(STRINGS[id].screen ?? '', /^B1-S5\b.*B3-S11/, id + ' names the reader\'s card and the editor\'s publication');
   }
-  assert.equal(t('B3.publish.command.all', { k: 2, D: 'Tumbler' }), 'publish all of this draft as version 2 of Tumbler — it can never be made private again', 'the whole-draft command in general, its first version at the home its instance');
+  assert.equal(t('B3.publish.command.all', { k: 2, D: 'Tumbler' }), 'publish all of this draft as version 2 of Tumbler\u00a0— readable by anyone who can read this board, for good', 'the whole-draft command in general, its first version at the home its instance');
   assert.equal(t('B3.format.stands', { hand: 'Acme', form: formName(BOLD) }), 'Acme’s bold stands\u00a0— to read without it, switch off Acme’s formatting for this session', 'B3\'s example, its form filled by its one name');
-  assert.equal(t('B3.format.hand', { form: formName(ITALIC), owner: 'Acme' }), 'italic\u00a0— Acme’s');
+  assert.equal(t('B3.format.hand', { form: formName(ITALIC), owner: 'Acme' }), 'italic, Acme’s', 'the form, then whose');
 });
 
 test('no line B3 has retired or re-said stands in the table — the merge journal\'s doc-1 lines and the visit gate\'s head (E2; S8-6), the drawn original\'s face, mark and undo line (E3), the death\'s corner as it stood (E5), the formatting set\'s lines under the notes document\'s name — and the entries that kept their words name the site B3 draws them at (issue #440)', () => {
@@ -449,7 +488,7 @@ test('no line B3 has retired or re-said stands in the table — the merge journa
 });
 
 test('every line the editor\'s design added or re-said on 2026-11-09 stands as it words it, in its characters — the copy ledger\'s sections P, Q and R and the entries they re-said, each where B3 draws it, the no-break space before an em dash where B3 sets one; the durability face off the notebook from foundations, the one file that carries it; and each form named by its one name, never spelled (issue #517)', () => {
-  /** @type {Array<[string, string, string]>} each line's id, the screen its entry's `screen` opens on, and its words */
+  /** @type {Array<[string, string, string]>} each line's id, the screen its entry's `screen` opens on, and its design's words — held to the entry's trace where it carries one, else to its own words (`asDesigned`) */
   const LINES = [
     ['B3.save.held', 'B3-S1', 'nothing to save\u00a0— held on this device and sent when your notebook answers'],
     ['B3.save.held.board', 'B3-S1', 'nothing to save — not yet kept — held on this device and sent when ⟨board⟩ can be reached'],
@@ -613,9 +652,9 @@ test('every line the editor\'s design added or re-said on 2026-11-09 stands as i
   for (const [id, screen, text] of LINES) {
     const e = STRINGS[id];
     assert.ok(e, id + ' entered');
-    assert.deepEqual({ text: asTyped(id), cls: e.cls, source: e.source, screen: e.screen?.split(':')[0] }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen }, id);
+    assert.deepEqual({ text: asDesigned(id), cls: e.cls, source: e.source, screen: e.screen?.split(':')[0] }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen }, id);
   }
-  assert.deepEqual({ text: STRINGS['F.durability']?.text, cls: STRINGS['F.durability']?.cls, source: STRINGS['F.durability']?.source }, { text: '⟨board⟩ could not keep that yet — trying again', cls: 'DRAFT', source: 'designs/foundations.md' }, 'the durability face off the notebook, as foundations words it');
+  assert.deepEqual({ text: designed('F.durability'), cls: STRINGS['F.durability']?.cls, source: STRINGS['F.durability']?.source }, { text: '⟨board⟩ could not keep that yet — trying again', cls: 'DRAFT', source: 'designs/foundations.md' }, 'the durability face off the notebook, as foundations words it');
   assert.match(STRINGS['F.durability'].screen ?? '', /^B3-S2:/, 'drawn at the editor\'s screen');
   assert.equal(t('B3.format.outranked', { hand: 'Acme', form: formName(HEADING, 2) }), 'Acme\'s heading\u00a02\u00a0— drawn under yours', 'B3\'s outranked mark, its form one block\'s heading by its one name');
   assert.equal(t('B3.publish.restated.lineage', { 'first words': 'Tumbler', 'form | link': formName(BOLD) }), '“Tumbler” already carries your bold, published before\u00a0— this client offered it again by mistake; nothing was published, and here is what this version now publishes', 'the lineage re-statement, its form by its one name');
@@ -635,7 +674,7 @@ test('no line the editor\'s design retired on 2026-11-08 or 2026-11-09 stands in
 });
 
 test('the moved scene\'s held version\'s lines stand as B3 re-said them on 2026-11-11, in its characters — the acts that send\'s two reasons, each a hint whole at every press, the held new words\' head and the five mirror items — each DRAFT with B3 its source and its screen; the one line they replace is retired, and no entry keeps its words (issue #599; the burst machine\'s three cases, part 2)', () => {
-  /** @type {Array<[string, string]>} each line's id and its words */
+  /** @type {Array<[string, string]>} each line's id and its design's words — held to the entry's trace where it carries one, else to its own words (`asDesigned`) */
   const LINES = [
     ['B3.held-version.not-current', 'these words are not in your current text — place them there first; there they can be quoted, linked and annotated'],
     ['B3.held-version.in-current', 'these words are in your current text too — select them there to quote, link or annotate'],
@@ -649,7 +688,7 @@ test('the moved scene\'s held version\'s lines stand as B3 re-said them on 2026-
   for (const [id, text] of LINES) {
     const e = STRINGS[id];
     assert.ok(e, id + ' entered');
-    assert.deepEqual({ text: asTyped(id), cls: e.cls, source: e.source, screen: e.screen?.split(':')[0], lane: e.lane }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2', lane: undefined }, id);
+    assert.deepEqual({ text: asDesigned(id), cls: e.cls, source: e.source, screen: e.screen?.split(':')[0], lane: e.lane }, { text, cls: 'DRAFT', source: 'designs/B3-editor.md', screen: 'B3-S2', lane: undefined }, id);
   }
   for (const id of ['B3.held-version.not-current', 'B3.held-version.in-current']) {
     const h = hintOf(id);
@@ -661,7 +700,7 @@ test('the moved scene\'s held version\'s lines stand as B3 re-said them on 2026-
 });
 
 test('the pinned lines the editor draws stand PINNED under the copy inventory\'s ids, verbatim — the notebook\'s publish copy, the public-permanent gate\'s face, the remedy\'s label, the arrangement\'s and the link enumeration\'s caveats in their flag-off and flag-on forms — and R83\'s notebook mark under requirements.md (issue #440)', () => {
-  /** @type {Array<[string, string, string]>} each line's id, its source and its words */
+  /** @type {Array<[string, string, string]>} each line's id, its source and its authority's words — held to the entry's trace where it carries one, else to its own words (`designed`) */
   const PINS = [
     ['C-32', 'ux/copy.md', 'readable by anyone who can reach this notebook — local while it stays unbound; this notebook itself is never part of the public docuverse.'],
     ['C-47', 'ux/copy.md', 'this changes what the world can read, and that needs your key — open a session with your key on this board, then repeat the act'],
@@ -672,7 +711,7 @@ test('the pinned lines the editor draws stand PINNED under the copy inventory\'s
     ['C-100', 'ux/copy.md', 'these links may be this machine\'s writes, not yours — this board admits that write whenever local trust is on, and this surface cannot read whether it was.'],
     ['R83.notebook', 'requirements.md', 'published — anyone who can reach this notebook reads this passage at ⟨E⟩'],
   ];
-  for (const [id, source, text] of PINS) assert.deepEqual({ text: STRINGS[id].text, cls: STRINGS[id].cls, source: STRINGS[id].source }, { text, cls: 'PINNED', source }, id);
+  for (const [id, source, text] of PINS) assert.deepEqual({ text: designed(id), cls: STRINGS[id].cls, source: STRINGS[id].source }, { text, cls: 'PINNED', source }, id);
   assert.ok(t('C-97').startsWith(t('C-97.flag-on')) && t('C-100').startsWith(t('C-100.flag-on')), 'each flag-off form its flag-on form with its clause');
   assert.equal(t('B3.publish.caveat.marks'), t('C-100').replace('these links', 'these marks'), 'beside the formatting line C-100 says "marks", B3\'s rendering of its siting');
 });
@@ -940,8 +979,8 @@ test('an act or a face in flight types no ellipsis: its words stand unchanged an
   assert.equal(runningHTML(), '<span class="running" aria-hidden="true" data-string="L.running">…</span>', 'drawn hidden from assistive technology, which hears the state in words');
 });
 
-test('each formatting form has one name — the strip\'s, a heading\'s by its level, 3.23.4 "flag" from the table and never the board\'s registry — and a type the table lacks, or a heading at a level it lacks, the name its card gives it, so none stands blank (issue #442\'s design decision)', () => {
-  assert.deepEqual([BOLD, ITALIC, CODE, STRIKE, SUB, SUP, PARAGRAPH, FLAG].map((ty) => formName(ty)), ['bold', 'italic', 'code', 'strikethrough', 'subscript', 'superscript', 'paragraph', 'flag']);
+test('each formatting form has one name — the strip\'s, a heading\'s by its level, 3.23.4 "marked text" from the table and never the board\'s registry — and a type the table lacks, or a heading at a level it lacks, the name its card gives it, so none stands blank (issue #442\'s design decision)', () => {
+  assert.deepEqual([BOLD, ITALIC, CODE, STRIKE, SUB, SUP, PARAGRAPH, FLAG].map((ty) => formName(ty)), ['bold', 'italic', 'code', 'strikethrough', 'subscript', 'superscript', 'paragraph', 'marked text']);
   assert.deepEqual([1, 2, 6].map((n) => formName(HEADING, n)), ['heading\u00a01', 'heading\u00a02', 'heading\u00a06']);
   assert.equal(formName(FLAG), t('L.format.flag'));
   for (const [ty, level] of [[UNKNOWN], [HEADING, 7], [HEADING, 0], [HEADING]]) {
@@ -952,19 +991,19 @@ test('each formatting form has one name — the strip\'s, a heading\'s by its le
 
 test('forms named together stand in the strip\'s order with a comma alone, "not" before each one off, each named once, and each other hand\'s forms after the document\'s own as a group led by the hand, semicolons between groups — the forms the sets draw and the forms at one place in the text alike, the mirror\'s naming its block\'s heading by its level (issue #442\'s design decision)', () => {
   for (const named of [formsNamed, formsAt]) {
-    assert.equal(named([{ ty: ITALIC }, { ty: FLAG }, { ty: BOLD }, { ty: CODE }]), 'bold, italic, code, flag', `${named.name}: the strip's order, whatever the order given`);
+    assert.equal(named([{ ty: ITALIC }, { ty: FLAG }, { ty: BOLD }, { ty: CODE }]), 'bold, italic, code, marked text', `${named.name}: the strip's order, whatever the order given`);
     assert.equal(named([{ ty: SUP }, { ty: STRIKE }, { ty: PARAGRAPH }, { ty: SUB }, { ty: CODE }]), 'code, strikethrough, subscript, superscript, paragraph', `${named.name}: the paragraph after the superscript`);
-    assert.equal(named([{ ty: UNKNOWN }, { ty: FLAG }, { ty: BOLD }]), `bold, flag, ${typeName(UNKNOWN)}`, `${named.name}: what the table lacks after every form it names`);
+    assert.equal(named([{ ty: UNKNOWN }, { ty: FLAG }, { ty: BOLD }]), `bold, marked text, ${typeName(UNKNOWN)}`, `${named.name}: what the table lacks after every form it names`);
     assert.equal(named([{ ty: ITALIC, off: true }, { ty: CODE, off: true }, { ty: BOLD }]), 'bold, not italic, not code', `${named.name}: no qualifier across a comma — "not" before each form that is off`);
     assert.equal(named([{ ty: BOLD }, { ty: ITALIC, off: true }], [{ hand: t('L.format.yours'), forms: [{ ty: SUB }, { ty: CODE }] }]), 'bold, not italic; yours: code, subscript', named.name);
     assert.equal(named([{ ty: BOLD }], [{ hand: '1.0.2', forms: [] }, { hand: t('L.format.yours'), forms: [{ ty: ITALIC }] }]), 'bold; yours: italic', `${named.name}: a hand's group holding no form dropped`);
     assert.equal(named([{ ty: BOLD }, { ty: BOLD }, { ty: CODE }]), 'bold, code', `${named.name}: each form named once`);
     assert.equal(named([]), '', named.name);
   }
-  assert.equal(formsAt([{ ty: ITALIC }, { ty: FLAG }, { ty: BOLD }, { ty: HEADING, level: 2 }]), 'bold, italic, heading\u00a02, flag', 'one place\'s heading by its level, where the strip\'s heading group stands');
+  assert.equal(formsAt([{ ty: ITALIC }, { ty: FLAG }, { ty: BOLD }, { ty: HEADING, level: 2 }]), 'bold, italic, heading\u00a02, marked text', 'one place\'s heading by its level, where the strip\'s heading group stands');
   assert.equal(formsAt([{ ty: SUP }, { ty: STRIKE }, { ty: HEADING, level: 3 }, { ty: HEADING, level: 1 }, { ty: PARAGRAPH }, { ty: SUB }, { ty: CODE }]),
     'code, strikethrough, subscript, superscript, paragraph, heading\u00a01, heading\u00a03', 'headings by their levels, after the paragraph');
-  assert.equal(formsAt([{ ty: UNKNOWN }, { ty: FLAG }, { ty: BOLD }, { ty: HEADING, level: 9 }]), `bold, flag, ${typeName(UNKNOWN)}, ${typeName(HEADING)}`, 'a heading at a level the table lacks by its card\'s name, after every form it names, in the order given');
+  assert.equal(formsAt([{ ty: UNKNOWN }, { ty: FLAG }, { ty: BOLD }, { ty: HEADING, level: 9 }]), `bold, marked text, ${typeName(UNKNOWN)}, ${typeName(HEADING)}`, 'a heading at a level the table lacks by its card\'s name, after every form it names, in the order given');
   assert.equal(formsAt([], [{ hand: t('L.format.yours'), forms: [{ ty: HEADING, level: 2 }] }]), 'yours: heading\u00a02', 'the mirror\'s: the hand leads its group');
   assert.equal(formsAt([{ ty: BOLD }, { ty: HEADING, level: 2 }, { ty: HEADING, level: 2 }]), 'bold, heading\u00a02', 'each form named once');
 });
@@ -972,12 +1011,12 @@ test('forms named together stand in the strip\'s order with a comma alone, "not"
 test('a list of the forms the sets draw names the heading form once, "headings", whatever levels its blocks take — one, all six, a level the table lacks or none — after the paragraph, never merged with it, and never by a level; one block\'s heading keeps "heading ⟨n⟩", its number held to its word by a no-break space (issue #462\'s design decision)', () => {
   const EVERY = [FLAG, SUP, SUB, STRIKE, CODE, ITALIC, BOLD, PARAGRAPH].map((ty) => ({ ty }));
   for (const levels of [[1], [2], [6, 5, 4, 3, 2, 1], [9], [0], [undefined], [2, 9]]) {
-    assert.equal(formsNamed([...levels.map((level) => ({ ty: HEADING, level })), ...EVERY]), 'bold, italic, code, strikethrough, subscript, superscript, paragraph, headings, flag', `levels ${levels.join(', ')}: the heading form once, by its form`);
+    assert.equal(formsNamed([...levels.map((level) => ({ ty: HEADING, level })), ...EVERY]), 'bold, italic, code, strikethrough, subscript, superscript, paragraph, headings, marked text', `levels ${levels.join(', ')}: the heading form once, by its form`);
   }
   assert.equal(formsNamed([{ ty: HEADING, level: 2 }]), t('L.format.headings'), 'one level drawn names the form, never the level');
   assert.equal(formsNamed([{ ty: SUP }, { ty: STRIKE }, { ty: HEADING, level: 3 }, { ty: HEADING, level: 1 }, { ty: PARAGRAPH }, { ty: SUB }, { ty: CODE }]),
     'code, strikethrough, subscript, superscript, paragraph, headings', 'the paragraph keeps its own name, before the headings');
-  assert.equal(formsNamed([{ ty: UNKNOWN }, { ty: FLAG }, { ty: BOLD }, { ty: HEADING, level: 9 }]), `bold, headings, flag, ${typeName(UNKNOWN)}`, 'a level the table lacks names the heading form; a type the table lacks keeps its card\'s name, after every form it names');
+  assert.equal(formsNamed([{ ty: UNKNOWN }, { ty: FLAG }, { ty: BOLD }, { ty: HEADING, level: 9 }]), `bold, headings, marked text, ${typeName(UNKNOWN)}`, 'a level the table lacks names the heading form; a type the table lacks keeps its card\'s name, after every form it names');
   assert.equal(formsNamed([{ ty: BOLD }], [{ hand: t('L.format.yours'), forms: [{ ty: HEADING, level: 2 }, { ty: HEADING, level: 1 }] }]), 'bold; yours: headings', 'another hand\'s group alike');
   assert.equal(formsNamed([{ ty: BOLD }, { ty: HEADING, level: 2 }, { ty: HEADING, level: 2 }]), 'bold, headings', 'named once');
   const { text, cls, source, screen, lane } = STRINGS['L.format.headings'];
@@ -987,27 +1026,27 @@ test('a list of the forms the sets draw names the heading form once, "headings",
   assert.deepEqual({ text: STRINGS['B3.format.heading'].text, source: STRINGS['B3.format.heading'].source, screen: STRINGS['B3.format.heading'].screen?.split(':')[0] }, { text: 'heading\u00a0⟨n⟩', source: 'designs/B3-editor.md', screen: 'B3-S13' });
 });
 
-test('a form\'s act and its take-off are one pattern each around the label of the set they write into, a heading\'s "a heading" and "the heading" — every form taking the take-off, every form this editor makes the act, and a flag, a paragraph and a type the table lacks none (issue #442\'s design decision)', () => {
+test('a form\'s act and its take-off are one pattern each around the label of the set they write into, a heading\'s "a heading" and "the heading" — every form taking the take-off, every form this editor makes the act, and marked text, a paragraph and a type the table lacks none (issue #442\'s design decision)', () => {
   const SET = 'Tumbler';
   assert.deepEqual([BOLD, ITALIC, CODE, STRIKE, SUB, SUP, HEADING].map((ty) => formAct(ty, SET)),
     ['make it bold in Tumbler', 'make it italic in Tumbler', 'make it code in Tumbler', 'make it strikethrough in Tumbler', 'make it subscript in Tumbler', 'make it superscript in Tumbler', 'make it a heading in Tumbler']);
-  assert.deepEqual([FLAG, PARAGRAPH, UNKNOWN].map((ty) => formAct(ty, SET)), [null, null, null], 'a flag made by no act of this editor; a paragraph a heading taken off');
+  assert.deepEqual([FLAG, PARAGRAPH, UNKNOWN].map((ty) => formAct(ty, SET)), [null, null, null], 'marked text made by no act of this editor; a paragraph a heading taken off');
   assert.deepEqual([BOLD, ITALIC, CODE, STRIKE, SUB, SUP, PARAGRAPH, HEADING, FLAG].map((ty) => formTakeOff(ty, SET)),
     ['take the bold off in Tumbler', 'take the italic off in Tumbler', 'take the code off in Tumbler', 'take the strikethrough off in Tumbler', 'take the subscript off in Tumbler', 'take the superscript off in Tumbler',
-      'take the paragraph off in Tumbler', 'take the heading off in Tumbler', 'take the flag off in Tumbler']);
+      'take the paragraph off in Tumbler', 'take the heading off in Tumbler', 'take the marked text off in Tumbler']);
   assert.equal(formTakeOff(UNKNOWN, SET), t('L.format.take-off', { name: typeName(UNKNOWN), set: SET }), 'a type the table lacks named as its card names it');
   for (const id of ['B3.format.bold.notes', 'B3.format.heading.notes', 'B3.format.bold.off', 'B3.format.heading.off']) assert.ok(!(id in STRINGS), `${id}: one pattern for every form, never a line of one form's own`);
 });
 
 test('every Format menu titles a form by its one name with its first letter capitalised — "Strikethrough", "Subscript", "Superscript" — a heading by its level, and a type the table lacks, or a heading at a level it lacks, by its card\'s name so, the table entering no title of its own (issue #463\'s design decision)', () => {
-  assert.deepEqual([BOLD, ITALIC, CODE, STRIKE, SUB, SUP, PARAGRAPH, FLAG].map((ty) => formTitle(ty)), ['Bold', 'Italic', 'Code', 'Strikethrough', 'Subscript', 'Superscript', 'Paragraph', 'Flag']);
+  assert.deepEqual([BOLD, ITALIC, CODE, STRIKE, SUB, SUP, PARAGRAPH, FLAG].map((ty) => formTitle(ty)), ['Bold', 'Italic', 'Code', 'Strikethrough', 'Subscript', 'Superscript', 'Paragraph', 'Marked text']);
   assert.deepEqual([1, 2, 3].map((n) => formTitle(HEADING, n)), ['Heading 1', 'Heading 2', 'Heading 3']);
   for (const [ty, level] of [[STRIKE], [SUB], [SUP], [HEADING, 2], [HEADING, 7], [HEADING], [UNKNOWN]]) {
     const name = formName(ty, level);
     assert.equal(formTitle(ty, level), name[0].toUpperCase() + name.slice(1), `${ty} at level ${level}: its one name, only its first letter changed`);
   }
   assert.equal(formTitle(UNKNOWN), 'Link of type 3.23.8 — undocumented here');
-  assert.deepEqual(Object.entries(STRINGS).filter(([, e]) => /^(Bold|Italic|Code|Strikethrough|Subscript|Superscript|Paragraph|Headings?|Flag)\b/.test(e.text)).map(([id]) => id), [], 'no entry holds a title: each is its form\'s name');
+  assert.deepEqual(Object.entries(STRINGS).filter(([, e]) => /^(Bold|Italic|Code|Strikethrough|Subscript|Superscript|Paragraph|Headings?|Marked text)\b/.test(e.text)).map(([id]) => id), [], 'no entry holds a title: each is its form\'s name');
 });
 
 test('a line that would name a form\'s chord names, where none is bound, the act by the form\'s one name and keeps its shape — strikethrough, subscript and superscript, which have no chord — and a chord bound takes the name\'s place, as bold\'s does, the place never blank (issue #463\'s design decision)', () => {
@@ -1025,7 +1064,7 @@ test('a line that would name a form\'s chord names, where none is bound, the act
 });
 
 test('no entry spells a formatting form\'s name save the form\'s own — the heading form\'s in a list among them — and a heading\'s act and take-off, so every place that names a form reads its one name — and none says "struck" (issue #442\'s design decision)', () => {
-  const NAMES = /\b(bold|italic|code|strikethrough|subscript|superscript|paragraph|headings?|flag|struck)\b/i;
+  const NAMES = /\b(bold|italic|code|strikethrough|subscript|superscript|paragraph|headings?|marked text|struck)\b/i;
   const own = new Set(['B3.format.bold', 'B3.format.italic', 'B3.format.code', 'B3.format.strikethrough', 'B3.format.subscript', 'B3.format.superscript', 'B3.format.paragraph', 'B3.format.heading', 'L.format.flag',
     'L.format.headings', 'L.format.make.heading', 'L.format.take-off.heading']);
   for (const id of own) assert.ok(NAMES.test(STRINGS[id].text), `${id} names a form`);
@@ -1066,20 +1105,20 @@ test('a copy with nothing selected is said in the keys-and-clicks decision\'s wo
   assert.deepEqual(hintSentences('L.copy.nothing'), { whole: 'Nothing selected — the clipboard is unchanged.', clause: 'Nothing selected.' }, 'the line, a sentence, its first clause one too');
   assert.deepEqual([sentence('L.copy.nothing.enter', { 'act key': 'Return' }), sentence('L.copy.nothing.shift', { 'select chord': '⇧↓' })], ['Return selects this passage.', '⇧↓ selects this passage.'],
     'each act a sentence of its own, which the hint ends on while it stands whole (O-HINT\'s `ending`), its key a token the press fills as macOS draws it, the token\'s case kept');
-  assert.deepEqual(['L.copy.nothing.enter', 'L.copy.nothing.shift'].map(asTyped), ['Enter selects this passage', 'Shift+↓ selects this passage'], 'the decision\'s words around each key');
+  assert.deepEqual(['L.copy.nothing.enter', 'L.copy.nothing.shift'].map(asDesigned), ['Enter selects this passage', 'Shift+↓ selects this passage'], 'the decision\'s words around each key, by each entry\'s trace where it carries one');
   assert.ok(!t('L.copy.nothing').includes('⟨'), 'the line carries no token for the act: no joiner a missing act would leave behind');
   assert.equal(STRINGS['L.copy.nothing'].hint, 'clause', 'a hint whose first clause stands for it once it was shown whole');
 });
 
 test('the words of a draft holding unsent typing are the decision\'s DRAFT strings, each naming the decision and its screen, none the lane\'s own; the put-back\'s are B3-S7\'s', () => {
   const D = 'ux/questions/2026-11-09-unsent-typing-which-text.decision.md';
-  /** @type {Array<[string, string]>} */
+  /** @type {Array<[string, string]>} each entry and the decision's words for it — held to its trace where it carries one, else to its own words (`designed`) */
   const DRAFTS = [['L.new.wrote.held', 'new in this draft, held on this device'], ['L.held.device', 'held on this device'], ['L.removed.part', 'only part of the passage — you removed the rest'], ['L.removed.all', 'you removed this passage']];
   for (const [id, words] of DRAFTS) {
-    const { text, cls, source, screen, lane } = STRINGS[id];
-    assert.deepEqual([text, cls, source, !!screen, lane], [words, 'DRAFT', D, true, undefined], id);
+    const { cls, source, screen, lane } = STRINGS[id];
+    assert.deepEqual([designed(id), cls, source, !!screen, lane], [words, 'DRAFT', D, true, undefined], id);
   }
-  assert.deepEqual([t('B3.history.put-back'), STRINGS['B3.history.put-back'].source], ['put back in the current text', 'designs/B3-editor.md']);
+  assert.deepEqual([designed('B3.history.put-back'), STRINGS['B3.history.put-back'].source], ['put back in the current text', 'designs/B3-editor.md'], 'B3-S7\'s words, by its trace');
   assert.ok(!lacking().some((x) => DRAFTS.some(([id]) => id === x.id)), 'none of them is listed as the lane\'s own');
 });
 
@@ -1164,7 +1203,7 @@ test('each statement said before a discard on this device is its sense lines —
 });
 
 test('the held words\' lines stand in the table as B3 drafts them — the kept word\'s own statement at a board\'s silence in both forms, the daemon segment\'s held form in both, the moved face\'s final hand slot and the line after a discard that may have landed — each DRAFT with its screen (#529; the moved-document decision)', () => {
-  /** @type {Record<string, string>} */
+  /** @type {Record<string, string>} each entry and B3's words for it — held to its trace where it carries one, else to its own words (`designed`) */
   const WORDS = {
     'B3.kept.held': 'not yet kept — held on this device and sent when your notebook answers',
     'B3.kept.held.board': 'not yet kept — held on this device and sent when ⟨board⟩ can be reached',
@@ -1174,7 +1213,7 @@ test('the held words\' lines stand in the table as B3 drafts them — the kept w
     'B3.discarded.may-have-landed': 'discarded here — it may already be on the board',
   };
   for (const [id, words] of Object.entries(WORDS)) {
-    assert.equal(STRINGS[id]?.text, words, id);
+    assert.equal(STRINGS[id] && designed(id), words, id);
     assert.deepEqual([STRINGS[id].cls, STRINGS[id].source, !!STRINGS[id].screen], ['DRAFT', 'designs/B3-editor.md', true], `${id}: DRAFT, from B3, with its screen`);
   }
   assert.equal(t('B3.save.held'), 'nothing to save — held on this device and sent when your notebook answers', 'Mod+S\'s answer carrying it, on the notebook: the corner\'s word not repeated');

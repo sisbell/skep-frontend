@@ -37,7 +37,7 @@ test('the switch is named by the words before its state and described by its cou
   const off = read(othersSwitch(false, 0)), on = read(othersSwitch(true, 0));
   assert.deepEqual([off.role, off.checked], ['switch', 'false']);
   assert.deepEqual([on.role, on.checked], ['switch', 'true']);
-  assert.equal(off.name, "others' links");
+  assert.equal(off.name, 'Others’ links');
   assert.equal(off.description, '0 touch this document');
   assert.deepEqual([on.name, on.description], [off.name, off.description], 'a press changes the state alone');
 });

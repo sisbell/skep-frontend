@@ -2516,7 +2516,7 @@ test('the selection\'s slots are named by their words alone — each chord drawn
   /** @type {Array<[string, string, string, string, string]>} each slot, its chord, its name, and its chord as drawn on macOS and elsewhere */
   const SLOTS = [['annotate', 'Mod+Shift+A', t('D5.annotate'), '⇧⌘A', 'Ctrl+Shift+A'], ['quote', 'Mod+Shift+C', t('D5.quote'), '⇧⌘C', 'Ctrl+Shift+C'], ['wrote', 'Mod+Shift+O', t('B1.who-wrote'), '⇧⌘O', 'Ctrl+Shift+O'],
     ['uses', 'Mod+Shift+R', t('B1.who-uses'), '⇧⌘R', 'Ctrl+Shift+R'], ['links', 'Mod+Shift+L', t('B1.see-links'), '⇧⌘L', 'Ctrl+Shift+L'], ['follow', 'Mod+Enter', t('B1.follow'), '⌘↩', 'Ctrl+Enter'],
-    ['scene', 'Mod+Shift+Enter', t('B1.side-by-side'), '⇧⌘↩', 'Ctrl+Shift+Enter'], ['linkto', 'Mod+K', 'link to', '⌘K', 'Ctrl+K']];
+    ['scene', 'Mod+Shift+Enter', t('B1.side-by-side'), '⇧⌘↩', 'Ctrl+Shift+Enter'], ['linkto', 'Mod+K', 'Link to', '⌘K', 'Ctrl+K']];
   try {
     for (const platform of [true, false]) {
       KEYS._platform(platform);

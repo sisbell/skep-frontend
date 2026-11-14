@@ -715,7 +715,7 @@ test('a reading scene\'s close is said after it until the next act (issue #50\'s
   LINE.act();
 });
 
-test('the line\'s acts are named by their words alone — Back "back", Forward "forward", no step glyph in either name, the glyphs drawn beside them as before — the trail\'s list exposes its chord as its key and describes it for the ear, and the bar between two parts is hidden from the accessibility tree, each part naming itself (style S22; patterns K1, K3; issue #626)', () => {
+test('the line\'s acts are named by their words alone — Back "Back", Forward "Forward", no step glyph in either name, the glyphs drawn beside them as before — the trail\'s list exposes its chord as its key and describes it for the ear, and the bar between two parts is hidden from the accessibility tree, each part naming itself (style S22; patterns K1, K3; issue #626)', () => {
   const el = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [], contains: () => false };
   LINE.attach(/** @type {any} */ (el), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
   LINE.fit({ room: 4000, measure: counted });
@@ -723,7 +723,7 @@ test('the line\'s acts are named by their words alone — Back "back", Forward "
   const acts = (/<span class="acts">(.*?)<\/span>/.exec(el.innerHTML) || [])[1] || '';
   /** each act's name and its drawn words */
   const named = [...acts.matchAll(/<button([^>]*)>([^<]*)/g)].map((m) => [(/data-act="(\w+)"/.exec(m[1]) || [])[1], (/aria-label="([^"]*)"/.exec(m[1]) || [])[1] ?? null, m[2]]);
-  assert.deepEqual(named.filter(([act]) => act === 'back' || act === 'forward'), [['back', 'back', esc(t('F.back'))], ['forward', 'forward', esc(t('F.forward'))]], `named by their words, drawn as before: ${acts}`);
+  assert.deepEqual(named.filter(([act]) => act === 'back' || act === 'forward'), [['back', 'Back', esc(t('F.back'))], ['forward', 'Forward', esc(t('F.forward'))]], `named by their words, drawn as before: ${acts}`);
   for (const [act, name] of named) assert.ok(!/[‹›]/.test(name || ''), `${act}: no step glyph in its name`);
   const trail = trailChord();
   assert.ok(acts.includes(`<button data-act="trail" title="${esc(drawChord(trail))}" aria-description="${esc(heard(drawChord(trail)))}" aria-keyshortcuts="${esc(keyShortcut(trail))}">`), `the trail's list: its chord its key, its tooltip described for the ear: ${acts}`);
