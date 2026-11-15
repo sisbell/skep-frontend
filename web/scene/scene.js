@@ -290,9 +290,15 @@
 // kept slot stands empty, save the held version's (below); a change of the
 // page's class sets it again from the model's record of its document, as
 // every pane (FP-29). Opened as the moved scene
-// (`Held.heldB`; D6 BM-14), pane B is the held version (`Pane.heldVersion`),
-// the record the page derived of the draft in pane A with its held lines
-// applied: its corner names what it is in the place of the kept word and the
+// (`Held.heldB`; D6 BM-14) on the draft's address, pane B is the held version
+// (`Pane.heldVersion`), derived as the scene opens (`heldSource`): once the
+// draft's flight has landed, its text at the base its held lines name, read
+// from the board's history (M-PUMP's `stateAt`), with those lines applied in
+// their order (M-DERIVE's `applyHeld`) — the text the page shows of the draft
+// where it holds no line by then, the lines name more than one base, one does
+// not apply, or that history is reclaimed or busy; opened on a record, pane B
+// is that record. Its corner
+// names what it is in the place of the kept word and the
 // chip (T-ARTICLE's `held`; B3-S2), and at a selection in its text while the
 // focus stands in it the acts that send — and a printable key — give the one
 // reason that selection keys (`heldVersionReason`): that its words are not in
@@ -411,6 +417,7 @@ import { LINE_H, MEASURE, MEASURE_CPL, CHAR_W, EDGE, EDGE_GAP, fitFor } from '..
 import { holdStack, LINE_BOX } from '../plane/labels.js';
 import { markDirty, READING_PX } from '../plane/camera.js';
 import { documentOf, homeOf, memberOf, versionAddress, isTrunkMember } from '../model/address.js';
+import { applyHeld, recordAt } from '../model/derive.js';
 import { t, tHTML, tRuns, plural, joinRuns, runsText, heard, asHeard, sentence, sentences } from '../strings.js';
 import { esc, byteOffsets, numeral } from '../util.js';
 
@@ -447,7 +454,7 @@ import { esc, byteOffsets, numeral } from '../util.js';
  * @property {ISpan[]} [ids] the passage held by its bytes' identity, for an opener that holds it past the read it was measured on (N-GO's landing): the scene places them in pane A's text as it reads it, in the place of `posA` and `widthA` wherever that text holds any of them (`placedHeld`)
  * @property {number | null} [posB] the position in the second document the opener names — where a link's far end stands in its text now (LK's `farPos`) — where it names one
  * @property {boolean} [wholeB] the far end of the link the scene is opened from names the second document whole: nothing of it is set level with the passage held, and pane B opens at its start (see the head)
- * @property {boolean} [heldB] the scene is the moved scene (D6 BM-14): the second document is the held version, a record the page derived of the first with its held lines applied (`Pane.heldVersion`; see the head)
+ * @property {boolean} [heldB] the scene is the moved scene (D6 BM-14): the second pane is the held version (`Pane.heldVersion`; see the head) — derived as the scene opens where the second document is named by its address (`heldSource`), else the derived record handed in
  */
 
 /**
@@ -1373,6 +1380,41 @@ async function sourceOf(x, stands = () => true) {
 }
 
 /**
+ * The moved scene's held version of a draft, derived as the scene opens on
+ * the draft's address (see the head; B3-S2; D6 BM-14): once the draft's
+ * flight has landed (W-WRITE's `landed`), so a burst the act committed is
+ * among its lines, the draft's text at the base its held lines name, read from
+ * the board's history (M-PUMP's `stateAt`), with those lines applied in their
+ * order (M-DERIVE's `applyHeld`) — the bytes each inserts named by the page's
+ * ordinals for that line (W-WRITE's `heldNames`) — its metadata the model's.
+ * The text the page shows of the draft (T-LAYER's `paneSource`) where it holds
+ * no line by then, its lines name more than one base, one of them does not
+ * apply, or the history at the base is reclaimed or its reconstructions stay
+ * busy — none where that text is no derived record; the refusal the read met
+ * otherwise, as a pane's read refused answers.
+ * @param {string} addr the draft
+ * @param {() => boolean} stands
+ * @returns {ReturnType<typeof readPane>}
+ */
+async function heldSource(addr, stands) {
+  await WRITE.landed(addr);
+  /** @type {Awaited<ReturnType<typeof readPane>>} */
+  const none = { d: null, n: null, whole: false, refused: null, unheard: null };
+  const shown = async () => { const x = LAYER.paneSource(addr); return typeof x === 'string' ? none : sourceOf(x); };
+  if (!stands()) return none;
+  const rows = [...WRITE.heldOf(addr)].sort((x, y) => x.held - y.held);
+  if (!rows.length || rows.some((r) => r.base !== rows[0].base)) return shown();
+  const s = await PUMP.stateAt(addr, rows[0].base);
+  if ('refused' in s) {
+    if (s.refused.name === 'history_reclaimed' || s.refused.name === 'history_busy') return shown();
+    return { ...none, refused: s.refused, unheard: PUMP.unanswered(s.refused) ? s.refused : null };
+  }
+  const meta = REC.has(addr) ? REC.doc(addr).meta : null;
+  const out = applyHeld({ ...recordAt(addr, s.runs, s.at, { image: s.image }), meta }, rows, (x) => (REC.has(x) ? REC.doc(x) : null), WRITE.heldNames(addr));
+  return out.stopped ? shown() : { d: out.doc, n: null, whole: true, refused: null, unheard: null };
+}
+
+/**
  * @typedef {Object} Compared — the two texts' `compare` (`compareBetween`), with the reads made beside it (`readBetween`)
  * @property {ComparePair[]} pairs the runs of shared identity between them (`merged`); none where it told nothing
  * @property {boolean} told it answered
@@ -1719,6 +1761,8 @@ function swap(E, P) {
  * is waited on: it is asked as the scene shows, and adds the bands as it
  * answers (`addBands`). A pane given a derived record in an address's place
  * (`Source`) reads nothing: the record is shown as given (see the head).
+ * Opened as the moved scene on the draft's address (`Held.heldB`), the second
+ * pane is the held version derived as it opens (`heldSource`).
  * @param {Source} a
  * @param {Source} b
  * @param {Held} [held]
@@ -1730,7 +1774,7 @@ export async function open(a, b, held = {}, as = {}) {
   const out = { shown: false, refused: null };
   if (!els) return out;
   await HOST.opening(async (stands) => {
-    const [ra, rb] = await Promise.all([sourceOf(a, stands), sourceOf(b, stands)]);
+    const [ra, rb] = await Promise.all([sourceOf(a, stands), held.heldB && typeof b === 'string' ? heldSource(b, stands) : sourceOf(b, stands)]);
     const da = ra.d, db = rb.d;
     if (!da || !db || !ra.whole || !rb.whole) { if (stands()) out.refused = (!da || !ra.whole ? ra.refused : null) || rb.refused; return null; }
     if (!stands()) return null;

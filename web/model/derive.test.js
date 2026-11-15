@@ -10,7 +10,8 @@
 // were, its transcluded runs read by the stored record's one rule; a span of
 // the typed text split into what the delivered text holds and
 // what the edits made, and a stretch of the delivered text found in it;
-// a past state's record from an `/op-at` delivery; and the character
+// a past state's record from an `/op-at` delivery, the image read beside it
+// kept, so held lines apply over it by their anchors; and the character
 // boundaries and the word stops about a position, the stops macOS's own (FP-6,
 // FP-7, FP-14).
 import { test } from 'node:test';
@@ -290,6 +291,17 @@ test('a held line is applied where its anchors name bytes the text places — af
   const del = heldRow(2, D, { op: 'delete', doc: D, p: at(1), width: '2', as_of: 5 }, { before: D + '.0.1.2', after: D + '.0.1.5', span: [{ start: D + '.0.1.3', width: '2' }] });
   assert.equal(wholeText(applyHeld(d, [del]).doc), 'abef', 'a delete: at its span, where the text holds it whole');
   assert.equal(wholeText(applyHeld(d, [heldRow(3, D, { op: 'insert', doc: D, at: at(2), values: ['X'], as_of: 5 }, { before: { burst: 'b', offset: 0 }, after: null, span: null })]).doc), 'aXbcdef', 'anchors that name no byte the text places: the frame\'s own position');
+});
+
+test('a past state\'s record keeps the image read beside its delivery at the same position, a copy of it, so a held line applied over that past text is placed by the bytes its anchors name (B3-S2; D6 BM-14)', () => {
+  const runs = [contentRun(1, 'Older '), contentRun(7, 'text.')], image = [{ pos: 1, width: 11, prefix: D + '.0.1', ordinal: 1 }];
+  const d = recordAt(D, runs, 42, { image });
+  assert.deepEqual([d.image, d.origins, d.derived], [[{ pos: 1, width: 11, prefix: D + '.0.1', ordinal: 1 }], [], { from: D, rows: [], edits: 0, at: 42 }], 'its image the one read, no transcluded run in it, derived at the position read');
+  const ins = heldRow(1, D, { op: 'insert', doc: D, at: { ordinal: '1', subspace: '1' }, values: ['X'], as_of: 42 }, { before: D + '.0.1.6', after: D + '.0.1.7', span: null });
+  assert.equal(wholeText(applyHeld(d, [ins]).doc), 'Older Xtext.', 'the insert after the byte its anchor names before it');
+  assert.equal(wholeText(applyHeld(recordAt(D, runs, 42), [ins]).doc), 'XOlder text.', 'no image read: the anchors place nothing, the frame\'s own position');
+  image[0].width = 3;
+  assert.equal(d.image[0].width, 11, 'the image handed in copied, never shared');
 });
 
 test('BM-56: a draft\'s edits are placed again in another text by the identity of the bytes each touches and of those either side — an insert after the byte it followed, a removal at the bytes it took wherever they stand — exactly where those bytes still meet, and named adrift where they do not; some left out, the rest stand where their words stood', () => {

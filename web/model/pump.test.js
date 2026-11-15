@@ -64,7 +64,9 @@
 // image its held text lacks, in parts, halved where refused for its size and
 // each refusal recorded once, and a text a whole read finds held with no
 // image covering it read for its image; bytes read by their identity in parts
-// of at most one delivery's items, a refusal handed up. With SKEP_REPLAY
+// of at most one delivery's items, a refusal handed up; and a document's text
+// and its image as they stood at a position of the board's history, read one
+// after the other for an act and kept nowhere. With SKEP_REPLAY
 // naming a script the harness recorded, the model's snapshot is printed for
 // the gate.
 import { test, beforeEach } from 'node:test';
@@ -3873,6 +3875,46 @@ test('the launch\'s reads: the newest row of this hand is asked of the account\'
   assert.equal(await PUMP.landedOf(W, 10), null, 'the state before the write reclaimed: nothing told');
   assert.equal(await PUMP.landedOf('1.0.1.0.10', 40), null, 'a document the page holds no text of: nothing asked, nothing told');
   assert.equal(PUMP.inflightCount(), 0, 'no read left counted in flight');
+});
+
+test('a document\'s text and its image as they stood at a position of the board\'s history are read for an act and kept nowhere: the extent there, asked again at the committed position the board names below it, then the text and its image one after the other; empty where the document was not registered then; asked again whole after the board\'s reconstructions were busy; any other refusal handed up; counted in flight while out (B3-S2; D6 BM-14; wire.md §Reading history)', async () => {
+  const X = '1.0.1.0.120';
+  /** a history read's key: the frame asked as of `at` */
+  const K = (/** @type {number} */ at, /** @type {object} */ frame) => FAKE.keyOf('op', { frame: F.opAt(at, frame) });
+  const span = (/** @type {number} */ at, /** @type {number} */ n) => ({ result: { resp: 'span_set', as_of: at, set: [{ start: '1.1', width: '0.' + n }] } });
+  const delivery = (/** @type {number} */ at, /** @type {string} */ text) => ({ result: { resp: 'delivery', as_of: at, items: [{ content: text }] } });
+  const runs = (/** @type {number} */ at, /** @type {number} */ n) => ({ result: { resp: 'runs', as_of: at, runs: [{ i_start: X + '.0.1.1', width: String(n) }] } });
+  /** the reconstructions busy once more at 6 */
+  let busy = 1;
+  /** @type {Record<string, unknown>} */
+  const script = {
+    [K(5, F.retrieveDocVSpanSet(X))]: { refused: { kind: 'refused', name: 'not_a_position', body: { error: 'not_a_position', nearest: 4 } } },
+    [K(4, F.retrieveDocVSpanSet(X))]: span(4, 11), [K(4, F.retrieveV(X, 1, 11))]: delivery(4, 'Older text.'), [K(4, F.image(X, 1, 11))]: runs(4, 11),
+    [K(2, F.retrieveDocVSpanSet(X))]: { refused: { kind: 'refused', name: 'doc_not_registered' } },
+    [K(3, F.retrieveDocVSpanSet(X))]: { refused: { kind: 'refused', name: 'history_reclaimed', body: { error: 'history_reclaimed', floor: 4 } } },
+    [K(6, F.retrieveV(X, 1, 5))]: delivery(6, 'Newer'), [K(6, F.image(X, 1, 5))]: runs(6, 5),
+    [K(7, F.retrieveDocVSpanSet(X))]: span(7, 5), [K(7, F.retrieveV(X, 1, 5))]: delivery(7, 'Later'), [K(7, F.image(X, 1, 5))]: { refused: { kind: 'refused', name: 'withheld' } },
+  };
+  Object.defineProperty(script, K(6, F.retrieveDocVSpanSet(X)), { enumerable: true, get: () => (busy-- > 0 ? { refused: { kind: 'refused', name: 'history_busy' } } : span(6, 5)) });
+  const fake = FAKE.create(script);
+  PORT.boot(fake);
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1' }));
+  const was = PUMP.inflightCount(), text = K(4, F.retrieveV(X, 1, 11)), image = K(4, F.image(X, 1, 11));
+  const release = fake.hold('op', { frame: F.opAt(4, F.retrieveV(X, 1, 11)) });
+  const first = PUMP.stateAt(X, 5);
+  for (let i = 0; i < 50 && !fake.asked.includes(text); i++) await new Promise((r) => setImmediate(r));
+  assert.deepEqual([fake.asked.includes(text), fake.asked.includes(image), PUMP.inflightCount()], [true, false, was + 1], 'its text out, its image not yet asked: one reconstruction at a time, counted in flight');
+  release();
+  assert.deepEqual(await first, { runs: [{ pos: 1, width: 11, kind: 'content', text: 'Older text.', ref: null, origin: null }], image: [{ pos: 1, width: 11, prefix: X + '.0.1', ordinal: 1 }], at: 4 }, 'read at the committed position the board names below the one asked');
+  assert.deepEqual(fake.asked.filter((k) => k.includes('"at"')), [K(5, F.retrieveDocVSpanSet(X)), K(4, F.retrieveDocVSpanSet(X)), text, image], 'the extent, again at 4, then the text and its image one after the other');
+  assert.deepEqual(await PUMP.stateAt(X, 2), { runs: [], image: [], at: 2 }, 'the document not registered then: it held nothing');
+  assert.deepEqual(await PUMP.stateAt(X, 6), { runs: [{ pos: 1, width: 5, kind: 'content', text: 'Newer', ref: null, origin: null }], image: [{ pos: 1, width: 5, prefix: X + '.0.1', ordinal: 1 }], at: 6 }, 'the reconstructions busy: the whole asked again after the pause');
+  assert.equal(fake.asked.filter((k) => k === K(6, F.retrieveDocVSpanSet(X))).length, 2, 'its extent asked twice');
+  const reclaimed = await PUMP.stateAt(X, 3), refused = await PUMP.stateAt(X, 7);
+  assert.deepEqual(['refused' in reclaimed && reclaimed.refused.name, 'refused' in refused && refused.refused.name], ['history_reclaimed', 'withheld'], 'any other refusal handed up: the history reclaimed, the image\'s own');
+  assert.deepEqual([PUMP.inflightCount(), REC.has(X)], [was, false], 'none left in flight, and nothing kept');
+  assert.deepEqual(fake.unanswered, []);
 });
 
 test('replay: a recorded script from the provider builds the model; the snapshot printed for the gate', async () => {

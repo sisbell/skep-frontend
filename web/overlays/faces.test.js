@@ -35,7 +35,8 @@
 // document's face standing at its corner and never as an overlay — its
 // words, its hands and its acts, its compact form naming its one device's
 // hand, none under the death — its acts made by their keys there, "see the
-// held text" opening the moved scene on the held version, and a press
+// held text" opening the moved scene on the draft's address, a session's end
+// taken whole while that scene's entry stands, and a press
 // answered at it, its line and its hand said each a sentence; the
 // device's refusal, each of its lines a sentence; the hand-over's time
 // elapsed in whole minutes, English words in a German browser too; and
@@ -52,6 +53,7 @@ import * as PROV from './provenance.js';
 import * as PORT from '../bridge/port.js';
 import * as REC from '../model/records.js';
 import * as F from '../model/frames.js';
+import * as PUMP from '../model/pump.js';
 import * as FAKE from '../test/fake-port.js';
 import * as WRITE from '../write/write.js';
 import * as MACHINE from '../write/machine.js';
@@ -1185,15 +1187,15 @@ test('a device\'s label in the moved face is the person\'s own words: the hand a
   WRITE.setHeld(UD, []);
 });
 
-test('BM-14: "see the held text" at the face standing at the corner opens the moved scene as a step on the trail — its entry the draft\'s, the draft in its first pane, in its second the held version the page shows, the scene asked as the moved scene, its held version marked so (SC\'s `Held.heldB`) (issue #599)', () => {
+test('BM-14: "see the held text" at the face standing at the corner opens the moved scene on the draft\'s address as a step on the trail — its entry the draft\'s, both its panes named by that address, never the text the page shows of it with its own edits, the scene asked as the moved scene, which derives its held version as it opens (SC\'s `Held.heldB`, `heldSource`) (issues #599, #618)', () => {
   unkeptDraft();
   WRITE.setHeld(UD, [unkeptRow(1, { cause: 'moved', sent: true, refusal: verdict('arrangement_moved') })]);
   WRITE.addEdit(UD, { pos: 4, width: 0, text: 'd' });
   const was = TRAIL.length();
   assert.equal(FACES.faceAct(UD, 'held'), true);
-  const e = TRAIL.current(), b = /** @type {any} */ (e?.scene?.b);
-  assert.deepEqual([HOST.currentState(), TRAIL.length(), e?.addr, e?.scene?.a, e?.scene?.held], [null, was + 1, UD, UD, { heldB: true }], 'no overlay, one entry at the act: the draft\'s, the scene asked as the moved scene');
-  assert.deepEqual([b?.addr, !!b?.derived, REC.textOf(b?.runs ?? [], b?.from ?? 0, b?.to ?? 0)], [UD, true, 'abcd'], 'its second pane the held version: the record the page shows of the draft');
+  const e = TRAIL.current();
+  assert.deepEqual([HOST.currentState(), TRAIL.length(), e?.addr, e?.scene], [null, was + 1, UD, { a: UD, b: UD, held: { heldB: true }, left: null }], 'no overlay, one entry at the act: the draft\'s, both panes named by its address, the scene asked as the moved scene');
+  assert.deepEqual(e ? GO.scenePair(e) : null, [UD, UD], 'the pair the trail\'s list names and a change of the page\'s class reads again: addresses');
 });
 
 test('BM-19 … BM-27: each other face of unkept words by its state — the hand-over naming the board and the time, its discard\'s statement its own; an island and the held store\'s first refusal, "send again" inert; the device\'s refusal by its class, its one act the whole text\'s copy; the head-unreadable hold\'s discard; the death\'s arm, its second form where the board\'s held lines are not read, and under the keyless session its first with the discard live, its statement the refused run\'s', () => {
@@ -1313,4 +1315,24 @@ test('a paste\'s face says, in its entry\'s words set as a sentence, why nothing
   const label = LAYER.boxName(H).name;
   assert.ok(label && label !== H, 'a source the page holds has a label');
   assert.deepEqual(FACES.pasteWords('differs', H), { id: 'L.paste.differs', text: sentence('L.paste.differs', { source: label }) }, 'words placed new from a source the page holds: it named by its label, as its box is');
+});
+
+// last in the file: the death it takes drops what the model holds for every test after it
+test('a session\'s end taken while the moved scene\'s entry stands on the trail is taken whole: the places the view stands on, its entries\' pairs among them, read as addresses, the death recorded and the page a guest (issue #618; FP-28, FP-29)', () => {
+  unkeptDraft();
+  const fake = FAKE.create({});
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {}, stands: () => TRAIL.all().flatMap((e) => [e.addr, ...(GO.scenePair(e) || [])]) });
+  try {
+    WRITE.setHeld(UD, [unkeptRow(1, { cause: 'moved', sent: true, refusal: verdict('arrangement_moved') })]);
+    WRITE.addEdit(UD, { pos: 4, width: 0, text: 'd' });
+    assert.equal(FACES.faceAct(UD, 'held'), true);
+    assert.equal(TRAIL.current()?.scene?.held.heldB, true, 'the moved scene\'s entry stands');
+    assert.doesNotThrow(() => fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } }), 'the end taken without a fault');
+    assert.deepEqual([REC.session(), REC.deathReason()], [null, { arm: 'closed' }], 'the death recorded, the page a guest');
+  } finally {
+    REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true, fingerprint: null }));
+    PUMP.start({ onDirty: () => {} });
+    PORT.boot(null); WRITE.setHeld(UD, []); WRITE.clearEdits(UD); HOST.dismiss();
+  }
 });

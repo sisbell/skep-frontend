@@ -4,7 +4,8 @@
 // serve as the record shows it: the kept text with the held lines applied in
 // `k` order (`applyHeld`), the delivered text with the page's own edits
 // applied (`applyEdits`), or a past state as an `/op-at` read delivered it
-// (`recordAt`). Each answers a new `Doc` marked `derived` — what it was
+// with the image read beside it (`recordAt`), which the held lines may be
+// applied over in turn. Each answers a new `Doc` marked `derived` — what it was
 // derived from and what was applied — and never writes into M-REC's
 // documents, composes nothing for the bridge and sends nothing (FP-14).
 // `applyHeld` switches on the VALUE of each row's frame's `op` — insert,
@@ -839,15 +840,17 @@ export function fromBase(d, pos, width) {
  * A past state's record (see the head; B3-S7): the runs an `/op-at` read of
  * the document delivered (M-FRAMES's `opAt` around `retrieveV`,
  * `decodeDelivery`), as a derived record of the document at that board
- * position — its blocks derived, its extent the runs' positions, no image and
- * no links read; the document's account and kind from its address, a draft's.
+ * position — its blocks derived, its extent the runs' positions, its image
+ * where one is handed in, read at the same position, else none, and no links
+ * read; the document's account and kind from its address, a draft's.
  * @param {string} addr the document
  * @param {Run[]} runs the delivery, placed at its positions
  * @param {number} at the board position the state was read at
+ * @param {{image?: ImageRun[]}} [o] `image` the text's V→I image as read at `at`, each run at its position
  * @returns {Doc}
  */
-export function recordAt(addr, runs, at) {
-  const t = /** @type {Text} */ ({ runs: merged(runs), image: [], source: [], delta: 0 });
+export function recordAt(addr, runs, at, { image = [] } = {}) {
+  const t = /** @type {Text} */ ({ runs: merged(runs), image: image.map((r) => ({ ...r })), source: [], delta: 0 });
   const e = extentOf(t.runs);
   /** @type {Doc} */
   const base = {

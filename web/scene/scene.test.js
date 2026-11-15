@@ -104,7 +104,11 @@
 // address, its chain probed, its copy named as the plane's box names the same
 // words and its versions read in its place, and an edition read again so
 // still pinned at once by a newer member's arrival (FP-22, FP-23, FP-27,
-// FP-39); and the moved scene's held version — its corner naming what it is
+// FP-39); and the moved scene's held version — derived as the scene opens on
+// the draft's address, once the draft's flight has landed, from the text at
+// its lines' base read from the board's history with its image, those lines
+// applied, the text the page shows where it cannot be so derived — its corner
+// naming what it is
 // in the place of the kept word and the chip, and at a selection in it, the
 // focus there, the acts that send and a printable key giving the one reason
 // the selection keys against the current text, Space keeping K-9's line
@@ -2323,6 +2327,19 @@ Object.assign(script, reads(G, G_TEXT, { published: false }), compared(G, G_TEXT
 const MOVED_ROW = [{ held: 1, doc: G, base: 5, frame: { op: 'insert', doc: G, at: { ordinal: '17', subspace: '1' }, values: ['Held words. '] }, cause: 'moved', sent: true, time: 1 }];
 /** the held version of G as the moved scene's gate door derives it (M-DERIVE's `applyHeld`): G's record with its held line applied, the line's bytes named by the page's own ordinals */
 const heldVersionOfG = () => applyHeld(REC.doc(G), /** @type {import('../model/frames.js').HeldLine[]} */ (F.decodeHeldRows(MOVED_ROW)), () => null, WRITE.heldNames(G)).doc;
+/** G as the board held it at its held line's base, 5: before another hand added " stands here." */
+const G_BASE = 'The kept text.\n\nIts passage';
+/** a read of G as of a position of the board's history, its key */
+const atG = (/** @type {number} */ at, /** @type {object} */ frame) => FAKE.keyOf('op', { frame: F.opAt(at, frame) });
+Object.assign(script, {
+  [atG(5, F.retrieveDocVSpanSet(G))]: { result: { as_of: 5, resp: 'span_set', set: [{ start: '1.1', width: '0.' + G_BASE.length }] } },
+  [atG(5, F.retrieveV(G, 1, G_BASE.length))]: { result: { as_of: 5, resp: 'delivery', items: [{ content: G_BASE }] } },
+  [atG(5, F.image(G, 1, G_BASE.length))]: { result: { as_of: 5, resp: 'runs', runs: [{ i_start: G + '.0.1.1', width: String(G_BASE.length) }] } },
+  [atG(3, F.retrieveDocVSpanSet(G))]: { refused: { kind: 'refused', name: 'history_reclaimed', body: { error: 'history_reclaimed', floor: 4 } } },
+  [atG(9, F.retrieveDocVSpanSet(G))]: UNREACHABLE,
+});
+/** a line of G held moved: MOVED_ROW's, at ordinal `held`, its base `base`, inserting its words at `ordinal` */
+const movedLine = (/** @type {number} */ held, /** @type {number} */ base, /** @type {number} */ ordinal, /** @type {string} */ words = 'Held words. ') => ({ ...MOVED_ROW[0], held, base, time: held, frame: { ...MOVED_ROW[0].frame, at: { ordinal: String(ordinal), subspace: '1' }, values: [words] } });
 /** an image run: `width` positions from `pos`, the bytes of the I-space `prefix` from its `ordinal` */
 const imageRun = (/** @type {number} */ pos, /** @type {number} */ width, /** @type {string} */ prefix, /** @type {number} */ ordinal) => ({ pos, width, prefix, ordinal });
 
@@ -2362,6 +2379,58 @@ test('the moved scene\'s held version\'s corner names what it is in the place of
   assert.ok(!p.cornerB.innerHTML.includes('B3.history.held') && p.cornerB.innerHTML.includes('data-chip="1"'), `its corner a draft's again: ${p.cornerB.innerHTML}`);
   await landed();
   assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+test('the moved scene opened on the draft\'s address derives its held version as it opens, once the draft\'s flight has landed: the text at the base its held lines name, read from the board\'s history with its image, those lines applied in their order — never the text the page shows of the draft, whose own edits no line carries — beside the current text, asking no `compare` (issue #618; B3-S2; D6 BM-14)', () => onPage(async (p) => {
+  const unanswered = fake.unanswered.length, asked = fake.asked.length;
+  const history = [F.retrieveDocVSpanSet(G), F.retrieveV(G, 1, G_BASE.length), F.image(G, 1, G_BASE.length)].map((f) => atG(5, f));
+  await PUMP.loadWhole(G);
+  WRITE.setHeld(G, /** @type {any} */ (F.decodeHeldRows(MOVED_ROW)));
+  WRITE.addEdit(G, { pos: 17, width: 0, text: 'Held words. ' });
+  WRITE.addEdit(G, { pos: 53, width: 0, text: '!' });
+  try {
+    await SCENE.open(G, G, { heldB: true });
+    const panes = SCENE.panes();
+    assert.deepEqual([panes?.b.blocks.map((b) => b.text), panes?.b.derived, panes?.b.held], [['The kept text.', 'Held words. Its passage'], true, true], 'pane B the held version: the text at its line\'s base, its line applied, none of the page\'s own edits');
+    assert.deepEqual([panes?.a.blocks.map((b) => b.text), panes?.a.derived, panes?.a.held], [['The kept text.', 'Its passage stands here.'], false, false], 'pane A the current text');
+    const made = /** @type {any} */ (LAYER.madeOf(shownIn(p.paneB, 'b')));
+    assert.deepEqual(REC.identityIn(made.image, 1, 14), [{ prefix: G + '.0.1', ordinal: 1, width: 14 }], 'its bytes named as the board named them at the base: its image read with its text');
+    const held = REC.identityIn(made.image, 17, 12);
+    assert.ok(held.length > 0 && held.every((x) => REC.isPage(x.prefix)) && held.reduce((n, x) => n + x.width, 0) === 12, `the line's words named by the page's own ordinals for the line: ${JSON.stringify(held)}`);
+    assert.deepEqual(history.map((k) => fake.asked.slice(asked).filter((x) => x === k).length), [1, 1, 1], 'the history read once: its extent, its text, its image');
+    assert.ok(fake.asked.slice(asked).every((k) => !k.includes('"compare"')), 'no compare asked against the derived pane');
+    SCENE.close();
+    WRITE.setHeld(G, []);
+    WRITE.setFlight(G, true);
+    const opening = SCENE.open(G, G, { heldB: true });
+    await new Promise((r) => setTimeout(r, 0));
+    WRITE.setHeld(G, /** @type {any} */ (F.decodeHeldRows([movedLine(1, 5, 17), movedLine(2, 5, 1, 'Lead. ')])));
+    WRITE.setFlight(G, false);
+    await opening;
+    assert.deepEqual([SCENE.panes()?.b.blocks.map((b) => b.text), SCENE.panes()?.b.held], [['Lead. The kept text.', 'Held words. Its passage'], true], 'opened while the draft\'s flight was out: derived once it landed, each line its hold listed applied in its order');
+    assert.deepEqual(fake.unanswered.slice(unanswered), []);
+  } finally { WRITE.setHeld(G, []); WRITE.clearEdits(G); }
+}));
+
+test('the moved scene shows the text the page shows of the draft where its held version cannot be derived from the text at its lines\' base — the lines naming more than one base, a line that does not apply over that text, the history there reclaimed — and opens nothing, its refusal answered, where the board does not answer the read (issue #618; B3-S2)', () => onPage(async () => {
+  const unanswered = fake.unanswered.length;
+  await PUMP.loadWhole(G);
+  WRITE.addEdit(G, { pos: 17, width: 0, text: 'Held words. ' });
+  try {
+    /** @type {Array<[string, Array<ReturnType<typeof movedLine>>, number]>} each case, its lines, and the history reads it makes */
+    const CASES = [['two bases', [movedLine(1, 5, 17), movedLine(2, 7, 1)], 0], ['a line that does not apply', [movedLine(1, 5, 99)], 3], ['the history reclaimed', [movedLine(1, 3, 17)], 1]];
+    for (const [what, rows, reads] of CASES) {
+      const asked = fake.asked.length;
+      WRITE.setHeld(G, /** @type {any} */ (F.decodeHeldRows(rows)));
+      await SCENE.open(G, G, { heldB: true });
+      assert.deepEqual([SCENE.panes()?.b.blocks.map((b) => b.text), SCENE.panes()?.b.derived, SCENE.panes()?.b.held], [['The kept text.', 'Held words. Its passage stands here.'], true, true], `${what}: the text the page shows of the draft, the held version`);
+      assert.equal(fake.asked.slice(asked).filter((k) => k.includes('"at":')).length, reads, `${what}: ${reads} history reads`);
+      SCENE.close();
+    }
+    WRITE.setHeld(G, /** @type {any} */ (F.decodeHeldRows([movedLine(1, 9, 17)])));
+    assert.deepEqual(await SCENE.open(G, G, { heldB: true }), { shown: false, refused: UNREACHABLE.refused }, 'the board not answering the read: nothing opens, its refusal answered');
+    assert.deepEqual(fake.unanswered.slice(unanswered), []);
+  } finally { WRITE.setHeld(G, []); WRITE.clearEdits(G); }
 }));
 
 /**

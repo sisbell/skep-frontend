@@ -91,8 +91,10 @@
 // (`lineage`: `in_claims` and `out_claims` under the audit view; A-56,
 // A-57); the chain to its end (`probeChain`); where a passage's bytes
 // stand in a text (`compareParts`) and a text's image over a region
-// (`imageParts`); and the values bytes hold, read by their identity in parts
-// of at most MAX_DELIVERY_ITEMS positions (`readIdentity`; FP-21).
+// (`imageParts`), at the head or as of a position of the board's history; a
+// document's text and its image as they stood at such a position, kept
+// nowhere (`stateAt`); and the values bytes hold, read by their identity in
+// parts of at most MAX_DELIVERY_ITEMS positions (`readIdentity`; FP-21).
 // The orders every read keeps. A read goes at the page's class (`atClass`):
 // it waits for an acquire out, and one the class changed under, or that met
 // the end of the session it went out under, is asked again in the form the
@@ -341,6 +343,8 @@ const RETRY_MS = 120;
 export const UNREACHED_MS = 2000;
 /** a class scan read whole is asked at most this many times while the board answers `scan_busy` */
 const SCAN_ATTEMPTS = 6;
+/** a state of the board's history read for an act (`stateAt`) is asked whole at most this many times while the board's reconstructions are busy (`history_busy`; unmeasured) */
+const HISTORY_ATTEMPTS = 6;
 /** an act's read — a whole document (`loadWhole`), where a link's end projects (`projectEnd`) — is made at most this many times while what it reads is dropped under it (unmeasured) */
 export const DROP_ATTEMPTS = 4;
 /** an acquire for a session lost that is not back within this long has the line read that the page is reconnecting (FP-28) */
@@ -1395,6 +1399,69 @@ export async function landedOf(doc, position) {
 }
 
 /**
+ * @typedef {Object} State — a document's text and its image as they stood at a position of the board's history (`stateAt`)
+ * @property {import('./frames.js').Run[]} runs its text, placed at its positions from 1
+ * @property {import('./records.js').ImageRun[]} image that text's V→I image, each run at its position
+ * @property {number} at the position read: the one asked, else the committed position the board named below it
+ */
+
+/**
+ * A document's text and its image as they stood at a position of the board's
+ * history, read for an act and kept nowhere (wire.md §Reading history; FP-6):
+ * its extent there, then its text over its first WHOLE_CAP positions and that
+ * text's image, one read after the other (`textParts`, `imageParts`), for the
+ * board reconstructs at most two states at once — all of it read at the
+ * position the board names where the one asked lies inside a commit; empty
+ * where the document was not registered there; asked again whole RETRY_MS
+ * after the board's reconstructions were busy, HISTORY_ATTEMPTS times in all.
+ * Any other refusal is handed up, the board not answering among them. The
+ * reads count as a read in flight.
+ * @param {string} addr
+ * @param {number} at the position of the board's history
+ * @returns {Promise<State | {refused: Refusal}>}
+ */
+export async function stateAt(addr, at) {
+  const key = 'state ' + addr;
+  inflight.add(key);
+  try {
+    let out = await stateOnce(addr, at);
+    for (let asks = 1; asks < HISTORY_ATTEMPTS && 'refused' in out && out.refused.name === 'history_busy'; asks++) {
+      await new Promise((r) => setTimeout(r, RETRY_MS));
+      out = await stateOnce(addr, at);
+    }
+    return out;
+  } finally { inflight.delete(key); dirty(); }
+}
+
+/**
+ * One whole read of `stateAt`'s: the extent at the position, asked again
+ * once at the committed position the board names below it, then the text
+ * and its image there.
+ * @param {string} addr
+ * @param {number} at
+ * @returns {Promise<State | {refused: Refusal}>}
+ */
+async function stateOnce(addr, at) {
+  for (let pos = at, asks = 0; ; asks++) {
+    const out = await read(F.opAt(pos, F.retrieveDocVSpanSet(addr)));
+    if ('refused' in out) {
+      // a document the board had not minted at that position held nothing then
+      if (out.refused.name === 'doc_not_registered') return { runs: [], image: [], at: pos };
+      const nearest = /** @type {{body?: {nearest?: unknown}}} */ (out.refused).body?.nearest;
+      if (asks || out.refused.name !== 'not_a_position' || typeof nearest !== 'number' || nearest >= pos) return out;
+      pos = nearest;
+      continue;
+    }
+    const c = F.decodeSpanSet(out.answer).find((s) => s.subspace === 1), n = Math.min(c ? c.positions : 0, WHOLE_CAP);
+    if (!n) return { runs: [], image: [], at: pos };
+    const text = /** @type {{runs: import('./frames.js').Run[], asOf: number | null} | {refused: Refusal}} */ (await textParts(addr, 1, n, { at: pos }));
+    if ('refused' in text) return text;
+    const im = await imageParts(addr, 1, n, { at: pos });
+    return 'refused' in im ? im : { runs: text.runs, image: placedRuns(im.runs), at: pos };
+  }
+}
+
+/**
  * No catch-up can be done of what the board wrote while the page could not
  * hear it (FP-23): the board marked as a row naming nothing marks it (M-REC's
  * `markBare`), the refresh armed (`arm`), the board lagging from `at` until
@@ -1629,6 +1696,16 @@ export function onRefusal(/** @type {(r: {frame: string, refusal: Refusal, addr:
  * @returns {Promise<{answer: unknown} | {refused: Refusal}>}
  */
 export function read(frame) { return atClass((s) => ask(s, frame)); }
+
+/**
+ * A read frame asked as of a position of the board's history where one is
+ * named — `/op-at`'s form around it (M-FRAMES's `opAt`) — else as it stands,
+ * at the head.
+ * @param {number | null | undefined} at
+ * @param {object} frame
+ * @returns {object}
+ */
+const historyAt = (at, frame) => (at != null ? F.opAt(at, frame) : frame);
 
 /**
  * One call at the page's class: made under the page's session, or in the
@@ -1879,11 +1956,12 @@ export async function compareParts(a, b) {
  * refusal past that bound, or of a single position. Every refusal met is
  * recorded once: as it is met; or, with `o.unrecorded`, the one handed up
  * left for the caller to record by its own rule (`need`'s), and each size
- * refusal halved and gone past recorded as the read ends.
+ * refusal halved and gone past recorded as the read ends. With `o.at`, every
+ * part is read as of that position of the board's history (`historyAt`).
  * @param {string} addr
  * @param {number} pos the region's first position
  * @param {number} width its positions
- * @param {{unrecorded?: boolean}} [o]
+ * @param {{unrecorded?: boolean, at?: number}} [o]
  * @returns {Promise<{runs: Array<{iStart: string, width: number}>} | {refused: Refusal}>}
  */
 export async function imageParts(addr, pos, width, o = {}) {
@@ -1902,7 +1980,7 @@ export async function imageParts(addr, pos, width, o = {}) {
   for (let reads = 0; todo.length; reads++) {
     if (reads >= SPLIT_READS && split.length) return end({ refused: split[split.length - 1] }, split.length - 1);
     const p = /** @type {Operand} */ (todo.shift());
-    const out = await read(F.image(addr, p.pos, p.width));
+    const out = await read(historyAt(o.at, F.image(addr, p.pos, p.width)));
     if (!('refused' in out)) { runs.push(...F.decodeRuns(out.answer)); continue; }
     if (!o.unrecorded) record(out.refused);
     if (!sized(out.refused) || p.width < 2) return end({ refused: out.refused });
@@ -1924,12 +2002,13 @@ export async function imageParts(addr, pos, width, o = {}) {
  * same positions is asked at once with its text (`imageParts`), a halved
  * part's halves each with its own. Each part is told to `part` as it lands —
  * with its image, where one was asked and answered — and no part is asked
- * once `stop` answers true. The text's `as_of` is the earliest its parts were
- * answered at, none where a part said none.
+ * once `stop` answers true. With `o.at`, every part and its image are read as
+ * of that position of the board's history (`historyAt`). The text's `as_of`
+ * is the earliest its parts were answered at, none where a part said none.
  * @param {string} addr
  * @param {number} pos the stretch's first position
  * @param {number} width its positions
- * @param {{part?: (runs: import('./frames.js').Run[], asOf: number | null, image: ImageRead | null) => void, stop?: () => boolean, image?: boolean}} [o]
+ * @param {{part?: (runs: import('./frames.js').Run[], asOf: number | null, image: ImageRead | null) => void, stop?: () => boolean, image?: boolean, at?: number}} [o]
  * @returns {Promise<{runs: import('./frames.js').Run[], asOf: number | null} | {refused: Refusal} | null>} null where `stop` ended it
  */
 export async function textParts(addr, pos, width, o = {}) {
@@ -1945,7 +2024,7 @@ export async function textParts(addr, pos, width, o = {}) {
     if (o.stop && o.stop()) return null;
     if (last && past >= SPLIT_READS) return { refused: last };
     const p = /** @type {Operand} */ (todo.shift());
-    const [out, im] = await Promise.all([read(F.retrieveV(addr, p.pos, p.width)), o.image ? imageParts(addr, p.pos, p.width) : null]);
+    const [out, im] = await Promise.all([read(historyAt(o.at, F.retrieveV(addr, p.pos, p.width))), o.image ? imageParts(addr, p.pos, p.width, { at: o.at }) : null]);
     if (last) past++;
     if (!('refused' in out)) {
       const got = F.decodeDelivery(out.answer, p.pos), at = F.asOf(out.answer);
