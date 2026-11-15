@@ -36,8 +36,16 @@ The paste and the cut at the caret are driven there after them (`paste_rows`; B3
 through the gate's doors — the app's own listeners run over a clipboard the door makes, the system's never read or
 written: plain text pasted at the live caret, kept by the board as one `insert`, taken out and put back by Mod+Z and
 Mod+Shift+Z with the caret where each leaves it (`paste-plain`); a kept word cut — the door's clipboard's two flavors,
-the `delete` its commit sends and S4's mark at the removal — put back by Mod+Z, and its own clipboard pasted as new
-bytes (`cut`); and a paste at the kept caret's span returning the caret and placing its text (`paste-kept-caret`).
+the `delete` its commit sends and S4's mark at the removal — put back by Mod+Z, and its own clipboard pasted, the same
+word placed again by its identity and taken out alone by Mod+Z (`cut`); and a paste at the kept caret's span returning
+the caret and placing its text (`paste-kept-caret`). The same words pasted by identity follow them (`same_rows`; B3-S5
+(i), (iv)): a word of the first edition copied by the copy door and pasted as one `reinstate` of its bytes, and words
+of VERSIONED the page holds no record of read by `retrieve_i` first (`paste-same`); a cut's own clipboard pasted, a
+`delete` then a `reinstate` of the same run (`paste-after-cut`); a word placed again in its own draft and its undo
+taking out the copy alone (`paste-own-draft`); words another page's load typed placed as new bytes (`paste-unminted`);
+a copy's plain text changed at the same lengths placed as new bytes, the paste's face saying so (`paste-forged`); each
+source refusal armed at the paste's `reinstate`, nothing placed, the face in its words (`source-faces`); and the
+`reinstate` held, "not yet kept" (`paste-held`).
 The whole document's entry is a figure (`whole_entry`): the seeded staging draft selected whole and copied through the
 copy door, on the first page.
 Undo, redo and the deletion face are driven there too (`undo_rows`): Mod+Z on
@@ -132,7 +140,7 @@ import re
 import time
 from collections import Counter
 
-from . import DOC, Result, WINDOW, drawn_keys, heard
+from . import DOC, VERSIONED, Result, WINDOW, drawn_keys, heard, trunk_of
 from .wire import READ_PATHS, READ_ROWS, read_ops
 
 # the own draft: the seed's windowed draft W of principal 1 (`WINDOW[2]`), text the person may edit (issue #411)
@@ -248,18 +256,33 @@ STATES = [
     dict(screen='B3-S5', state='paste-kept-caret', walk='W-08', step=4, drawn=True,
          how="Esc at the live caret in the case's own draft — the caret kept, the walk on its span — then the paste door there (D5 K-93; D6 BM-52)",
          claim='the kept caret is returned live and the text placed at it, the caret after it and its mark solid; one `insert` reaches the test board, acked, and the corner reads "kept" (B3.kept)'),
-    dict(screen='B3-S5', state='paste-same', walk='W-08', step=4, drawn=False,
-         how="a copy made on this board pasted in the case's own draft: `reinstate` of the copied bytes", claim='',
-         why="slice 2b: skep's own clipboard entry is not read at a paste — every paste places its plain text as new bytes"),
-    dict(screen='B3-S5', state='source-faces', walk='W-08', step=4, drawn=False,
-         how="arm `op` with `withheld`, `source_not_registered` and `dangling_source` at a paste's `reinstate`", claim='',
-         why='slice 2b: no paste sends a `reinstate`, so no source is consulted and no face answers one'),
+    dict(screen='B3-S5', state='paste-same', walk='W-08', step=4, drawn=True,
+         how="a passage of the first edition (DOC) copied by the copy door, then the paste door at the live caret in the case's own draft, the machine handed in; then the paste door over an entry and a plain text the harness builds of bytes of VERSIONED, whose record the page lets go first, read through the page's port (the paste survey's W5)",
+         claim='one `reinstate` whose runs each name as `origin` the document that minted the copied bytes, acked; the words stand at the caret by their identity, the caret live after them, and the corner reads "kept" (B3.kept); the test board\'s image of the draft names those bytes there, the text shown carries them as a run of that origin, and its origin stands stated in the column\'s edge; a source the page holds no record of is read by `retrieve_i` of those very spans before its `reinstate`, the same words placed'),
+    dict(screen='B3-S5', state='paste-after-cut', walk='W-08', step=4, drawn=True,
+         how="Shift+→ over a kept word of the case's own draft, the cut door, then the paste door with the cut's own clipboard at the line's end (B3-S5 (iv))",
+         claim='the cut sends one `delete`, the paste one `reinstate` of the same run, each acked: the word moved, the test board\'s line the text shown, the corner "kept" (B3.kept)'),
+    dict(screen='B3-S5', state='paste-own-draft', walk='W-08', step=4, drawn=True,
+         how="a word of the case's own draft copied by the copy door and pasted at its line's end (the paste survey's O3, W2)",
+         claim='one `reinstate` of the draft\'s own bytes: the word stands twice, drawn as the reading path draws it, no mark; Mod+Z takes out the copy alone — one `delete` of it, the word it was copied from standing — and Mod+Shift+Z puts the copy back by a `reinstate`, the caret after it'),
+    dict(screen='B3-S5', state='paste-unminted', walk='W-08', step=4, drawn=True,
+         how="the paste door over an entry naming the page's own name of words under another page's load — a copy of words that load typed and the board never minted (P51) — beside their plain text",
+         claim='the plain text placed as new bytes: one `insert` of it, acked; no `reinstate`, nothing said, the corner "kept" (B3.kept)'),
+    dict(screen='B3-S5', state='paste-forged', walk='W-08', step=4, drawn=True,
+         how="a word of the case's own draft copied by the copy door, its plain text changed at the same byte lengths, then the paste door (the paste survey's C3, O6)",
+         claim='the plain text placed as new bytes — one `insert` of the changed words, acked, never a `reinstate` — and the paste\'s face standing where it was made, in the margin beside its line or over the lines beneath it, inside the window: "These words are not the passage in ⟨source⟩ that came with them on the clipboard — placed as new words, not the same material." (L.paste.differs)'),
+    dict(screen='B3-S5', state='source-faces', walk='W-08', step=4, drawn=True,
+         how="`op` armed on 8744 with each source refusal in turn — `withheld` (its site the origin), `source_not_registered`, `dangling_source`, `bad_run`, `too_many_runs`, `empty_result` — while the page is quiet, then the paste door over a copy of the draft's own words (the paste survey's W3)",
+         claim="each arm taken by the paste's `reinstate`, nothing placed and nothing else dialed — the text as it stood — and the paste's face standing where it was made in that refusal's words: the source withheld naming its origin (B3.paste.withheld), the board saying nothing of it (B3.source_not_registered), else a fault of this client's (L.paste.fault); shot at the withheld face, inside the window"),
+    dict(screen='B3-S5', state='paste-held', walk='W-08', step=4, drawn=True,
+         how="`op` armed to answer `held` at a paste's `reinstate` and `held` to list that line, then the paste door (the paste survey's W4)",
+         claim='the paste\'s one `reinstate` answered `held`: the corner reads "not yet kept" (B3.not-yet-kept), the pasted words standing, no face and no island; the line\'s drop takes them out and the corner reads "kept" again'),
     dict(screen='B3-S5', state='published-target', walk='W-04', step=5, drawn=False,
          how="the paste door at the walk's span of an edition, the clipboard naming a draft of the person's own", claim='',
          why="slice 2c: the paste there is answered by C-45 alone — the staging act and C-35's statement beneath it are unbuilt"),
     dict(screen='B3-S5', state='cross-board', walk='W-08', step=4, drawn=False,
          how="the paste door over an entry naming another board's origin", claim='',
-         why="slice 2c: the entry's board is not read; the cross-board face and its slots are unbuilt"),
+         why="no second board exists (the paste survey's O4): another board's entry pastes as plain text, and the cross-board face is slice 2c's"),
     dict(screen='B3-S5', state='quote-pick', walk='W-08', step=4, drawn=False,
          how="Mod+Shift+C at a selection: the destination pick", claim='', why="the quote's slice: the pick overlay is unbuilt"),
     dict(screen='B3-S5', state='quote-inert', walk='W-08', step=4, drawn=False,
@@ -1330,7 +1353,8 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     r.check(bool(boot) and boot.get('machine') is True and bool(session) and session.get('writes') is True,
             "the page opened on the harness's provider with `machine=1` boots with D6's machine handed in, under a session that writes", {'machine': boot and boot.get('machine'), 'writes': session and session.get('writes')})
     if not session or not board or not (boot and boot.get('machine')):
-        for state in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret'):
+        for state in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
+                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held'):
             red(state, 'the machine\'s page did not open')
         return
     sid, account, board_id = session['session'], session['account'], board['board']
@@ -1443,7 +1467,8 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     r.check(stands and line0 == SEED_TEXT.split('\n')[0], "the case's own draft stands at reading scale, its article mounted and its corner beside it, its first line as written",
             {'stands': stands, 'line': line0, 'focus': ctx.js('window.__skep.view.focus()')})
     if not stands:
-        for st in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret'):
+        for st in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
+                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held'):
             red(st, 'the case\'s own draft did not mount')
         return
     # ---- B3-S3: Mod+Z on an empty stack, before anything is typed in the draft (K-75; BM-42) ----------------------------------
@@ -1719,6 +1744,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
                 corner_word=corner_word, first_line=first_line, hold_typed=hold_typed, held_row=held_row, drop_all=drop_all, refusal=refusal)
     undo_rows(ctx, r, shoot, red, ops_allowed, held)
     paste_rows(ctx, r, shoot, red, ops_allowed, held)
+    same_rows(ctx, r, shoot, red, ops_allowed, held)
 
 
 # the words the reopen row's armed line types before the case's own draft's first line: a paragraph of their own
@@ -2036,7 +2062,8 @@ def paste_rows(ctx, r, shoot, red, ops_allowed, m):
     puts it back by a `reinstate`, the caret after it. `cut`: Shift+→ over a kept word, then the cut door — the door's
     clipboard takes the word as plain text and as skep's own entry, the word leaves the text at once, and the burst's
     commit sends one `delete` whose removal carries S4's mark; Mod+Z puts it back, the caret where the cut began; and the
-    cut's own clipboard pasted places its plain text as new bytes, an `insert`. `paste-kept-caret`: Esc keeps the caret,
+    cut's own clipboard pasted places the same word again by its identity, a `reinstate`, taken out alone by Mod+Z.
+    `paste-kept-caret`: Esc keeps the caret,
     and the paste door at its span returns it live and places the text at it. Each word is checked against `strings.js`."""
     mine, sid = m['mine'], m['sid']
     recentre, quiet, caret_end, corner_word, first_line = m['recentre'], m['quiet'], m['caret_end'], m['corner_word'], m['first_line']
@@ -2161,17 +2188,17 @@ def paste_rows(ctx, r, shoot, red, ops_allowed, m):
             and len(removed()) == len(marks0),
             'Mod+Z puts the cut word back by one `reinstate` of its own bytes, its mark gone, and leaves the caret live where the cut began — the selection\'s end',
             {'kept': back, 'shown': first_line(), 'board': board(nb(line)), 'write': w and {k: w[k] for k in ('op', 'doc')}, 'caret': caret(), 'marks': len(removed())})
-    # the cut's own clipboard pasted at the line's end: its plain text placed as new bytes, whatever else it holds
+    # the cut's own clipboard pasted at the line's end: skep's own entry read, the same word placed again by its identity
     end = caret_end(line)
     again = paste(data)
     placed = kept()
     w = last_write(ctx, ops_allowed)
-    r.check(again == {'prevented': True} and placed and bool(w) and w['op'] == 'insert' and w.get('values') == [gone] and '"ack_addr"' in (w.get('answer') or '') and first_line() == line + gone
-            and caret() == {'addr': mine, 'pos': end + width, 'live': True},
-            'the cut\'s own clipboard pasted — its plain text and skep\'s own entry — places the plain text as new bytes, one `insert` acked: the entry is not read yet, so nothing is placed by identity',
-            {'door': again, 'kept': placed, 'write': w and {k: w[k] for k in ('op', 'doc', 'values')}, 'shown': first_line(), 'caret': caret()})
+    r.check(again == {'prevented': True} and placed and bool(w) and w['op'] == 'reinstate' and w['doc'] == mine and '"ack"' in (w.get('answer') or '') and first_line() == line + gone
+            and board(nb(line + gone)) == line + gone and caret() == {'addr': mine, 'pos': end + width, 'live': True},
+            'the cut\'s own clipboard pasted — its plain text and skep\'s own entry — places the same word by its identity, one `reinstate` acked: the word put back by Mod+Z stands twice, the caret after the copy (B3-S5 (iv))',
+            {'door': again, 'kept': placed, 'write': w and {k: w[k] for k in ('op', 'doc')}, 'shown': first_line(), 'caret': caret()})
     chord()
-    r.check(kept() and first_line() == line and board(nb(line)) == line, 'and Mod+Z takes that paste out again, the board following', {'shown': first_line(), 'board': board(nb(line))})
+    r.check(kept() and first_line() == line and board(nb(line)) == line, 'and Mod+Z takes that copy out again, never the word it was copied from, the board following (the paste survey\'s W2)', {'shown': first_line(), 'board': board(nb(line))})
     ctx.js('(async () => { (await import("./overlays/host.js")).dismiss(); })()')
 
     # ---- B3-S5 `paste-kept-caret`: the paste at a kept caret returns it and acts there (K-93; BM-52) ---------------------------------
@@ -2193,6 +2220,328 @@ def paste_rows(ctx, r, shoot, red, ops_allowed, m):
               and len(shown(ctx, '#domlayer .caret-mark')) == 1 and not ctx.js('!!document.querySelector("#domlayer .caret-mark.kept")'))
         return ok, {'kept_before': was, 'door': took2, 'caret_at_act': at_act2, 'kept': landed2, 'write': w2 and {k: w2[k] for k in ('op', 'doc', 'values')}, 'shown': first_line(), 'corner': got, 'caret': c}
     shoot('paste-kept-caret', kept_caret_check, lambda: live_at(end + nb(late)))
+    ctx.drv.key('Escape'); ctx.frames(2)
+
+
+# a copy's entry and a paste's parts by identity, as the page names them (M-PASSAGE's `Entry`): a part `{prefix, ordinal, width}`
+# names the bytes from `prefix.ordinal`, the document that minted them its trunk
+def part_start(part):
+    return '%s.%d' % (part['prefix'], part['ordinal'])
+
+
+def same_rows(ctx, r, shoot, red, ops_allowed, m):
+    """THE SAME WORDS PASTED BY IDENTITY (B3-S5 (i), (iv); the paste survey's P3 … P6, W1 … W5), on the machine's page, in the
+    case's own draft. Each event reaches the page through the gate's doors, and each copy is made by the copy door, the
+    system's clipboard never read or written. `paste-same`: a word of the first edition copied and pasted at the draft's
+    caret — one `reinstate` of its bytes, each run's `origin` the document that minted them, acked, the board's image
+    naming them there, the text shown carrying them as a run of that origin stated in the column's edge — then words of
+    VERSIONED, whose record the page lets go first, the harness reading them through the page's port and building their
+    entry: the page reads them by `retrieve_i` before its `reinstate`. `paste-after-cut`: a word cut, then its own clipboard
+    pasted: a `delete`, then a `reinstate` of the same run. `paste-own-draft`: a word copied and pasted in its own
+    draft, standing twice; Mod+Z takes out the copy alone, Mod+Shift+Z puts it back there. `paste-unminted`: an entry
+    naming words another page's load typed and no board minted — new bytes, an `insert`. `paste-forged`: a copy whose
+    plain text is changed at the same lengths — new bytes, an `insert`, and the paste's face saying so. `source-faces`:
+    `op` armed with each source refusal in turn at the paste's `reinstate` — nothing placed, the face in that refusal's
+    words. `paste-held`: `op` armed `held` at the paste's `reinstate` — "not yet kept", nothing else changed. Each word is
+    checked against `strings.js`."""
+    mine, sid = m['mine'], m['sid']
+    recentre, quiet, caret_end, corner_word, first_line, held_row, drop_all = m['recentre'], m['quiet'], m['caret_end'], m['corner_word'], m['first_line'], m['held_row'], m['drop_all']
+    states = ('paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held')
+    caret = lambda: ctx.js('window.__skep.caret()')
+    paste = lambda data: ctx.js('window.__skep.paste(%s)' % json.dumps(data))
+    place = lambda pos: (ctx.js('(async () => (await import("./text/layer.js")).placeCaret(%s, %d))()' % (json.dumps(mine), pos)), ctx.frames(2))
+    nb = lambda x: len(x.encode('utf8'))
+    kept_word = {'word': t(ctx, 'B3.kept'), 'id': 'B3.kept'}
+    origin = (ctx.js('window.__skep.model.board()') or {}).get('origin')
+    face = lambda: ctx.js('window.__skep.pasteFace()') or {}
+
+    def kept(max_s=15):
+        """the draft kept on the board again: the corner "kept", every edit read back"""
+        ok = wait_for(ctx, '(() => { const s = window.__skep.write.state(%s); return !!s.kept && s.kept.word === "kept" && !s.inFlight && window.__skep.write.edits(%s).filter((e) => e.at == null && !e.based).length === 0; })()' % (json.dumps(mine), json.dumps(mine)), max_s)
+        quiet()
+        return ok
+
+    def board_line():
+        """the draft's first line as the test board holds it, read through the page's port"""
+        got = port_op(ctx, sid, {'op': 'retrieve_v', 'specs': [{'doc': mine, 'span': {'start': '1.1', 'width': '0.400'}}]})
+        return ''.join(i.get('content', '') for i in (((got or {}).get('result') or {}).get('items') or [])).split('\n')[0]
+
+    def n_ops():
+        return ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "op").length')
+
+    def ops_from(n, reads=False):
+        """the page's `op` frames from its n-th on, parsed, each with its answer; reads among them where asked"""
+        out = []
+        for c in (ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "op").map((c) => ({frame: c.frame, answer: c.answer}))') or [])[n:]:
+            try:
+                f = json.loads(c['frame'])
+            except (TypeError, ValueError):
+                continue
+            if isinstance(f, dict) and f.get('op') and 'frame' not in f and (reads or f['op'] not in ops_allowed):
+                out.append(dict(f, answer=c.get('answer') or ''))
+        return out
+
+    def chord(shift=False):
+        ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
+        ctx.drv.key('z', mods=('Meta', 'Shift') if shift else ('Meta',)); ctx.frames(3)
+
+    def copy_words(start, width):
+        """`width` bytes of the draft's text from `start` selected from the caret by Shift+→, as a person selects them, and
+        copied by the copy door: its clipboard's flavors and the entry parsed; the selection then ended and the caret placed
+        again"""
+        place(start)
+        for _ in range(width):
+            ctx.drv.key('ArrowRight', mods=('Shift',)); ctx.frames(1)
+        ctx.frames(2)
+        out = ctx.js('window.__skep.copy()') or {}
+        data = out.get('data') or {}
+        ctx.js('(async () => (await import("./overlays/selection.js")).clear())()')
+        place(start)
+        return data, json.loads(data['application/x-skep-passage']) if data.get('application/x-skep-passage') else None
+
+    def face_off():
+        """the walk taken to another document and back: a paste's face standing leaves with its place"""
+        ctx.leap(DOC, 1); ctx.frames(2)
+        recentre(); ctx.frames(2)
+
+    def face_drawn(wd, want):
+        """the paste's face standing in `want`'s words and drawn inside the window, beside its line or over the lines beneath"""
+        f, top = face(), ctx.js('document.getElementById("line").getBoundingClientRect().bottom')
+        st, dr = f.get('standing') or {}, f.get('drawn') or {}
+        box = dr.get('face') or {}
+        inside = bool(box) and box['x'] >= -0.5 and box['x'] + box['w'] <= wd + 0.5 and box['y'] >= top - 0.5 and box['y'] + box['h'] <= 900 + 0.5
+        shown_text = ctx.js('(() => { const e = document.querySelector("#removed .pasted .part"); return e ? {id: e.dataset.string, text: e.textContent} : null; })()')
+        ok = st.get('addr') == mine and (st.get('id'), st.get('text')) == want and dr.get('by') in ('beside', 'beneath') and inside and shown_text == {'id': want[0], 'text': want[1]}
+        return ok, {'face': f, 'shown': shown_text, 'inside': inside, 'want': want}
+
+    quiet()
+    line = first_line()
+    if not line:
+        for st in states:
+            red(st, 'the draft holds no first line to paste beside')
+        return
+
+    # ---- `paste-same`: a word of the first edition, copied and pasted by identity --------------------------------------------
+    ctx.leap(DOC, 1); ctx.settle(15); ctx.frames(3)
+    d = ctx.js('window.__skep.model.doc(%s)' % json.dumps(DOC)) or {}
+    para = next((b for b in d.get('blocks') or [] if b['kind'] == 'para' and re.search(r'[A-Za-z]{4,}', b['text'])), None)
+    hit = re.search(r'[A-Za-z]{4,}', para['text']) if para else None
+    src_data, src_entry = {}, None
+    if hit:
+        start, width = para['pos'] + nb(para['text'][:hit.start()]), nb(hit.group(0))
+        ctx.js('(async () => { const L = await import("./text/layer.js"); L.placeSelection({addr: %s, pos: %d, width: %d}); })()' % (json.dumps(DOC), start, width)); ctx.frames(2)
+        src_data = (ctx.js('window.__skep.copy()') or {}).get('data') or {}
+        src_entry = json.loads(src_data['application/x-skep-passage']) if src_data.get('application/x-skep-passage') else None
+        ctx.js('(async () => { const s = window.getSelection(); if (s) s.removeAllRanges(); (await import("./overlays/selection.js")).clear(); })()')
+    word = src_data.get('text/plain') or ''
+    recentre(); ctx.frames(2)
+    end = caret_end(line)
+    n0 = n_ops()
+    took = paste(src_data) if src_entry else None
+    at_act = caret()
+    landed = kept()
+    sent = ops_from(n0)
+    parts = (src_entry or {}).get('ids') or []
+    want_runs = [{'i_start': part_start(x), 'origin': trunk_of(x['prefix']), 'width': str(x['width'])} for x in parts]
+    srcs = sorted({trunk_of(x['prefix']) for x in parts})
+    img = port_op(ctx, sid, {'op': 'image', 'd': mine, 'region': [{'start': '1.%d' % end, 'width': '0.%d' % max(1, nb(word))}]})
+    board_ids = [{'i_start': x.get('i_start'), 'width': x.get('width')} for x in (((img or {}).get('result') or {}).get('runs') or [])]
+
+    def same_check(wd):
+        c, got = caret(), corner_word()
+        origins = ctx.js('(async () => (await import("./text/layer.js")).shownOf(%s).origins)()' % json.dumps(mine)) or []
+        signs = [x for x in (ctx.js('window.__skep.edgeSigns()') or []) if x.get('addr') == mine and x.get('origin') in srcs]
+        ok = (bool(src_entry) and bool(word) and took == {'prevented': True} and at_act == {'addr': mine, 'pos': end + nb(word), 'live': True} and landed
+              and [x['op'] for x in sent] == ['reinstate'] and sent[0].get('doc') == mine and sent[0].get('runs') == want_runs and '"ack"' in sent[0]['answer']
+              and first_line() == line + word and got == kept_word and c == at_act)
+        return {'the `reinstate`': (ok, {'door': took, 'word': word, 'entry': src_entry, 'sent': sent, 'want_runs': want_runs, 'caret_at_act': at_act, 'caret': c, 'corner': got, 'shown': first_line()}),
+                "the board's image": (board_ids == [{'i_start': part_start(x), 'width': str(x['width'])} for x in parts], {'board': board_ids, 'parts': parts}),
+                'the run of its origin': (any(o.get('pos') == end and o.get('width') == nb(word) and o.get('doc') in srcs for o in origins) and len(signs) >= 1, {'origins': origins, 'signs': signs, 'srcs': srcs})}
+    shoot('paste-same', same_check, lambda: (recentre(), place(end + nb(word))))
+    line = first_line()
+
+    # the source the page holds no record of: VERSIONED's first words, read through the page's port, its record let go first
+    ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(VERSIONED)); ctx.frames(2)
+    got = port_op(ctx, sid, {'op': 'retrieve_v', 'specs': [{'doc': VERSIONED, 'span': {'start': '1.1', 'width': '0.48'}}]})
+    items = ((got or {}).get('result') or {}).get('items') or []
+    vtext = items[0].get('content', '') if items and isinstance(items[0], dict) else ''
+    vhit = re.search(r'[A-Za-z]{4,}', vtext)
+    far_entry, far_text, far_parts = None, '', []
+    if vhit:
+        vpos, far_text = nb(vtext[:vhit.start()]) + 1, vhit.group(0)
+        vimg = port_op(ctx, sid, {'op': 'image', 'd': VERSIONED, 'region': [{'start': '1.%d' % vpos, 'width': '0.%d' % nb(far_text)}]})
+        for x in ((vimg or {}).get('result') or {}).get('runs') or []:
+            cut = x['i_start'].rfind('.')
+            far_parts.append({'prefix': x['i_start'][:cut], 'ordinal': int(x['i_start'][cut + 1:]), 'width': int(x['width'])})
+        if far_parts and sum(x['width'] for x in far_parts) == nb(far_text):
+            far_entry = {'board': origin, 'doc': VERSIONED, 'member': None, 'plain': False, 'pos': None, 'width': None, 'ids': far_parts, 'version': 2, 'lengths': [x['width'] for x in far_parts]}
+    held_before = ctx.js('(() => { const d = window.__skep.model.doc(%s); return d.from; })()' % json.dumps(VERSIONED))
+    end2 = caret_end(line)
+    n1 = n_ops()
+    took2 = paste({'text/plain': far_text, 'application/x-skep-passage': json.dumps(far_entry)}) if far_entry else None
+    landed2 = kept()
+    seen = ops_from(n1, reads=True)
+    kinds = [x['op'] for x in seen if x['op'] in ('retrieve_i', 'reinstate')]
+    read_spans = next((x.get('spans') for x in seen if x['op'] == 'retrieve_i'), None)
+    put = next((x for x in seen if x['op'] == 'reinstate'), None)
+    r.check(bool(far_entry) and held_before == -1 and took2 == {'prevented': True} and landed2 and kinds == ['retrieve_i', 'reinstate'] and read_spans == [{'start': part_start(x), 'width': str(x['width'])} for x in far_parts]
+            and bool(put) and put.get('runs') == [{'i_start': part_start(x), 'origin': VERSIONED, 'width': str(x['width'])} for x in far_parts] and '"ack"' in put['answer'] and first_line() == line + far_text,
+            "B3-S5 · paste-same (the read by identity): words of %s, a document whose record the page let go, read through the page's port into an entry and a plain text — the paste reads them by `retrieve_i` of those very spans before its `reinstate`, which places the same words, acked (the paste survey's W5)" % VERSIONED,
+            {'entry': far_entry, 'held_before': held_before, 'door': took2, 'kept': landed2, 'ops': [(x['op'], x.get('spans') or x.get('runs')) for x in seen], 'shown': first_line(), 'text': far_text})
+    line = first_line()
+
+    # ---- `paste-after-cut`: a word cut, then its own clipboard pasted at the line's end: a `delete`, then a `reinstate` ---------
+    words = line.split(' ')
+    gone = words[1] + ' '
+    start, width = nb(words[0] + ' ') + 1, nb(gone)
+    moved = words[0] + ' ' + ' '.join(words[2:])
+    place(start)
+    for _ in gone:
+        ctx.drv.key('ArrowRight', mods=('Shift',)); ctx.frames(1)
+    ctx.frames(2)
+    n2 = n_ops()
+    cut_out = ctx.js('window.__skep.cut()') or {}
+    cut_data = cut_out.get('data') or {}
+    cut_entry = json.loads(cut_data['application/x-skep-passage']) if cut_data.get('application/x-skep-passage') else None
+    kept()
+    end3 = caret_end(moved)
+    took3 = paste(cut_data)
+    landed3 = kept()
+    sent3 = ops_from(n2)
+
+    def after_cut_check(wd):
+        ids = (cut_entry or {}).get('ids') or []
+        runs = [{'i_start': part_start(x), 'origin': trunk_of(x['prefix']), 'width': str(x['width'])} for x in ids]
+        ok = (bool(cut_entry) and took3 == {'prevented': True} and landed3 and [x['op'] for x in sent3] == ['delete', 'reinstate'] and all('"ack"' in x['answer'] for x in sent3)
+              and sent3[1].get('runs') == runs and first_line() == moved + gone and board_line() == moved + gone and corner_word() == kept_word)
+        return ok, {'entry': cut_entry, 'door': took3, 'sent': [(x['op'], x.get('runs')) for x in sent3], 'want_runs': runs, 'shown': first_line(), 'board': board_line()}
+    shoot('paste-after-cut', after_cut_check, lambda: (recentre(), place(end3 + width)))
+    line = first_line()
+
+    # ---- `paste-own-draft`: a word copied and pasted in its own draft, standing twice; its undo takes out the copy alone ---------
+    words = line.split(' ')
+    word2 = words[0]
+    data2, entry2 = copy_words(1, nb(word2))
+    end4 = caret_end(line)
+    n4 = n_ops()
+    took4 = paste(data2)
+    landed4 = kept()
+    sent4 = ops_from(n4)
+    twice = line + word2
+
+    def own_check(wd):
+        ids = (entry2 or {}).get('ids') or []
+        ok = (bool(entry2) and data2.get('text/plain') == word2 and took4 == {'prevented': True} and landed4 and [x['op'] for x in sent4] == ['reinstate']
+              and sent4[0].get('runs') == [{'i_start': part_start(x), 'origin': mine, 'width': str(x['width'])} for x in ids] and first_line() == twice and board_line() == twice)
+        return ok, {'entry': entry2, 'door': took4, 'sent': [(x['op'], x.get('runs')) for x in sent4], 'shown': first_line(), 'board': board_line()}
+    if shoot('paste-own-draft', own_check, lambda: (recentre(), place(end4 + nb(word2)))):
+        n5 = n_ops()
+        chord()
+        undone = kept()
+        taken = ops_from(n5)
+        r.check(undone and [(x['op'], x.get('p', {}).get('ordinal'), x.get('width')) for x in taken] == [('delete', str(end4), str(nb(word2)))] and first_line() == line and board_line() == line,
+                'B3-S5 · paste-own-draft: Mod+Z takes out the copy alone — one `delete` at the place it was pasted, never the words it was copied from — the text shown and the board\'s the same (the paste survey\'s W2)',
+                {'kept': undone, 'sent': [(x['op'], x.get('p'), x.get('width')) for x in taken], 'shown': first_line(), 'board': board_line()})
+        n6 = n_ops()
+        chord(shift=True)
+        redone = kept()
+        back = ops_from(n6)
+        r.check(redone and [x['op'] for x in back] == ['reinstate'] and back[0].get('at', {}).get('ordinal') == str(end4) and first_line() == twice and board_line() == twice and caret() == {'addr': mine, 'pos': end4 + nb(word2), 'live': True},
+                'B3-S5 · paste-own-draft: Mod+Shift+Z puts the copy back where it stood by a `reinstate`, the caret after it (the paste survey\'s W2)',
+                {'kept': redone, 'sent': [(x['op'], x.get('at')) for x in back], 'shown': first_line(), 'board': board_line(), 'caret': caret()})
+        chord()
+        r.check(kept() and first_line() == line and board_line() == line, 'and Mod+Z takes the copy out again, the board following', {'shown': first_line(), 'board': board_line()})
+    line = first_line()
+
+    # ---- `paste-unminted`: words another page's load typed and no board minted — new bytes (P51) ----------------------------------
+    fresh = 'Unminted words'
+    other = {'board': origin, 'doc': mine, 'member': None, 'plain': False, 'pos': None, 'width': None, 'ids': [{'prefix': mine + '.0.p', 'ordinal': 1, 'width': nb(fresh), 'load': 'f' * 32}], 'version': 2, 'lengths': [nb(fresh)]}
+    face_before = face().get('standing')
+    end5 = caret_end(line)
+    n7 = n_ops()
+    took5 = paste({'text/plain': fresh, 'application/x-skep-passage': json.dumps(other)})
+    landed5 = kept()
+    sent5 = ops_from(n7)
+
+    def unminted_check(wd):
+        ok = (took5 == {'prevented': True} and landed5 and [x['op'] for x in sent5] == ['insert'] and sent5[0].get('values') == [fresh] and '"ack_addr"' in sent5[0]['answer']
+              and first_line() == line + fresh and corner_word() == kept_word and face().get('standing') == face_before)
+        return ok, {'door': took5, 'sent': [(x['op'], x.get('values')) for x in sent5], 'shown': first_line(), 'face': face()}
+    shoot('paste-unminted', unminted_check, lambda: (recentre(), place(end5 + nb(fresh))))
+    chord()
+    kept()
+    line = first_line()
+
+    # ---- `paste-forged`: a copy's plain text changed at the same lengths: new bytes, and the paste's face saying so --------------
+    word3 = line.split(' ')[0]
+    data3, entry3 = copy_words(1, nb(word3))
+    forged = ''.join(chr((ord(ch) - 97 + 1) % 26 + 97) if 'a' <= ch <= 'z' else chr((ord(ch) - 65 + 1) % 26 + 65) if 'A' <= ch <= 'Z' else ch for ch in word3)
+    end6 = caret_end(line)
+    n8 = n_ops()
+    took6 = paste(dict(data3, **{'text/plain': forged}))
+    landed6 = kept()
+    sent6 = ops_from(n8)
+    label = ctx.js('(async () => (await import("./text/layer.js")).boxName(%s).name)()' % json.dumps(mine))
+    want_forged = ('L.paste.differs', sentence(ctx, 'L.paste.differs', {'source': label}))
+
+    def forged_check(wd):
+        ok = (bool(entry3) and forged != word3 and nb(forged) == nb(word3) and took6 == {'prevented': True} and landed6 and [x['op'] for x in sent6] == ['insert'] and sent6[0].get('values') == [forged]
+              and first_line() == line + forged)
+        return {'the `insert`': (ok, {'door': took6, 'sent': [(x['op'], x.get('values')) for x in sent6], 'shown': first_line(), 'forged': forged}),
+                "the paste's face": face_drawn(wd, want_forged)}
+    shoot('paste-forged', forged_check, lambda: (recentre(), place(end6 + nb(forged))))
+    chord()
+    kept()
+    face_off()
+    line = first_line()
+
+    # ---- `source-faces`: each source refusal armed at the paste's `reinstate`: nothing placed, the face in its words -----------------
+    word4 = line.split(' ')[0]
+    data4, entry4 = copy_words(1, nb(word4))
+    faced = {}
+    for name in ('source_not_registered', 'dangling_source', 'bad_run', 'too_many_runs', 'empty_result', 'withheld'):
+        quiet()
+        caret_end(line)
+        n9, seq = n_ops(), ctx.editor_seq()
+        ctx.arm('op', refusal={'kind': 'refused', 'name': name, 'status': 200, 'code': name, 'detail': None, 'op': 'reinstate', 'site': {'addr': mine} if name == 'withheld' else {}, 'body': None})
+        took7 = paste(data4)
+        came = wait_for(ctx, '(() => { const f = window.__skep.pasteFace().standing; return !!f && f.addr === %s && f.id === %s; })()' % (json.dumps(mine), json.dumps('B3.paste.withheld' if name == 'withheld' else 'B3.source_not_registered' if name == 'source_not_registered' else 'L.paste.fault')), 10)
+        quiet()
+        sent7 = ops_from(n9)
+        want = ('B3.paste.withheld', sentence(ctx, 'B3.paste.withheld', {'origin': mine})) if name == 'withheld' else ('B3.source_not_registered', sentence(ctx, 'B3.source_not_registered', {'address': mine})) if name == 'source_not_registered' else ('L.paste.fault', sentence(ctx, 'L.paste.fault'))
+        st = face().get('standing') or {}
+        faced[name] = want
+        r.check(bool(entry4) and took7 == {'prevented': True} and came and [x['op'] for x in sent7] == ['reinstate'] and name in sent7[0]['answer'] and ctx.consumed('op', seq)
+                and first_line() == line and corner_word() == kept_word and (st.get('id'), st.get('text')) == want and m['state']()['islands'] == [],
+                "B3-S5 · source-faces: the paste's `reinstate` refused `%s` — the arm taken by that frame alone, nothing placed and the text as it stood, the corner \"kept\", and the paste's face in that refusal's words (the paste survey's W3)" % name,
+                {'door': took7, 'came': came, 'sent': [(x['op'], x['answer'][:160]) for x in sent7], 'shown': first_line(), 'face': st, 'want': want})
+
+    def faces_check(wd):
+        return face_drawn(wd, faced.get('withheld') or ('', ''))
+    shoot('source-faces', faces_check, lambda: (recentre(), place(nb(word4) + 1)))
+    face_off()
+
+    # ---- `paste-held`: the paste's `reinstate` answered `held`: "not yet kept", nothing else changed ---------------------------------
+    quiet()
+    caret_end(line)
+    k = ARMED_K + 700
+    seq = ctx.editor_seq()
+    ctx.arm('op', answer={'resp': 'held', 'held': k, 'cause': 'unreachable'})
+    ctx.arm('held', answer=[held_row(k, 'unreachable')])
+    n10 = n_ops()
+    took8 = paste(data4)
+    held_in = wait_for(ctx, '(window.__skep.write.state(%s).held || []).some((x) => x.held === %d)' % (json.dumps(mine), k), 10)
+    quiet()
+    sent8 = ops_from(n10)
+
+    def held_check(wd):
+        got, st = corner_word(), m['state']()
+        ok = (took8 == {'prevented': True} and held_in and [x['op'] for x in sent8] == ['reinstate'] and '"held"' in sent8[0]['answer'] and ctx.consumed('op', seq) and ctx.consumed('held', seq)
+              and bool(got) and got['id'] == 'B3.not-yet-kept' and got['word'] == t(ctx, 'B3.not-yet-kept') and first_line() == line + word4 and st['islands'] == [] and face().get('standing') is None)
+        return ok, {'door': took8, 'held_in': held_in, 'sent': [(x['op'], x['answer'][:120]) for x in sent8], 'corner': got, 'state': st, 'shown': first_line(), 'face': face()}
+    shoot('paste-held', held_check, recentre)
+    out, back = drop_all(k)
+    r.check(bool(out) and out.get('dropped') and back and first_line() == line, "B3-S5 · paste-held: the held line's drop takes the pasted words out, the corner \"kept\" again", {'out': out, 'shown': first_line()})
     ctx.drv.key('Escape'); ctx.frames(2)
 
 

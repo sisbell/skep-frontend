@@ -13,8 +13,10 @@
 // — a draft's undo and redo stacks set by the machine alone, an act telling
 // it how it was made and a run's end told too, the edits an undo or a redo
 // makes added as given, and the removals the deletion face stands at — are
-// held here and gone at a change of class — and the most text one paste
-// places, with its headroom under the board's cap on a frame.
+// held here and gone at a change of class — the most text one paste
+// places, with its headroom under the board's cap on a frame; and bytes the
+// board holds placed by identity as one act, a burst ending short of the
+// rest, and a refused placing told to those watching.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as WRITE from './write.js';
@@ -261,4 +263,44 @@ test('one paste places at most 1 MiB of text: spelled at six bytes a byte — a 
   const control = String.fromCharCode(1);
   assert.deepEqual([byteLength(control), JSON.stringify(control).length - 2], [1, 6], 'a control character: one byte of text, six in JSON');
   assert.equal(CAP - WRITE.PASTE_MAX_BYTES * 6, 2 * MIB, 'the headroom left for the rest of the frame, its anchors and its envelope');
+});
+
+test('bytes the board holds placed by identity are one act of the person\'s and a step of its own — the positions replaced taken out, each stretch the board holds placed as itself by a removal kept only for the put-back after it, its new words beside them under the page\'s next ordinals — the text shown holding them at once; the machine is told the act goes out as a burst of its own, and nothing is added where nothing is placed or the draft cannot be written (B3-S5; the paste survey\'s W1)', () => {
+  const D = '1.0.1.0.2', E = '1.0.1.0.5', own = (/** @type {string} */ addr, /** @type {number} */ n) => `${addr}.0.1.${n}`;
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 6 }]);
+  REC.takeDelivery(D, [{ pos: 1, width: 6, kind: 'content', text: 'abcdef', ref: null, origin: null }], 7, { from: 1, runs: [{ iStart: own(D, 1), width: 6 }] });
+  /** @type {unknown[]} */
+  const told = [];
+  WRITE.machine({ commit() {}, typed: (addr, how, apart) => told.push([addr, how, apart]), ended() {}, leaving: () => false });
+  const took = (/** @type {string} */ text, /** @type {number} */ ordinal) => ({ runs: [{ pos: 1, width: byteLength(text), kind: /** @type {const} */ ('content'), text, ref: null, origin: null }], ids: [{ pos: 1, width: byteLength(text), prefix: `${E}.0.1`, ordinal }] });
+  assert.equal(WRITE.placeSame(D, [{ took: took('XY', 4) }, { text: 'n' }, { took: took('Z', 9) }], 2, 2, { at: 4, own: 'paste' }), 4, 'four positions placed');
+  const shown = applyEdits(REC.doc(D), WRITE.edits(D), (page, width) => REC.pageIds(D, page, width)).doc;
+  assert.deepEqual([REC.textOf(shown.runs, shown.from, shown.to), REC.identityIn(shown.image, 2, 4)], ['aXYnZdef', [{ prefix: `${E}.0.1`, ordinal: 4, width: 2 }, { prefix: REC.pageSpace(D), ordinal: 1, width: 1 }, { prefix: `${E}.0.1`, ordinal: 9, width: 1 }]],
+    'the selection "bc" replaced: the board\'s bytes by their own identity, the new word by the page\'s');
+  assert.deepEqual(WRITE.edits(D).map((e) => [e.pos, e.width, e.text, e.page ?? null, e.back ? e.back.of : null, !!e.based, e.step]),
+    [[2, 2, '', null, null, false, 1], [2, 0, '', null, null, true, 1], [2, 0, '', null, 1, false, 1], [4, 0, 'n', 1, null, false, 1], [5, 0, '', null, null, true, 1], [5, 0, '', null, 4, false, 1]],
+    'one act: the removal, then for each stretch the board holds a removal kept for it and the put-back naming it, the new word between them');
+  assert.deepEqual([WRITE.unsent(D), told], [0, [[D, { at: 4, own: 'paste' }, true]]], 'unsent from the removal on; the machine told of the act, made at the caret, going out apart');
+  assert.equal(WRITE.lastWritten(), D, 'the draft last written');
+  assert.deepEqual([WRITE.placeSame(D, [{ text: '' }], 1, 0), WRITE.lastAct(D)], [0, 1], 'nothing placed: no act');
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  WRITE.setUnwritable('b-1', { why: 'keyless' });
+  assert.deepEqual([WRITE.placeSame(D, [{ took: took('Q', 1) }], 1, 0), WRITE.lastAct(D)], [0, 1], 'a draft that cannot be written: nothing added');
+});
+
+test('a burst carries the unsent edits up to the edit it ends before, the rest unsent for the next; and those watching are told of each placing by identity the board refused for its source, why and where (B3-S5; the paste survey\'s W3)', () => {
+  const D = '1.0.1.0.2';
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 3 }]);
+  REC.takeDelivery(D, [{ pos: 1, width: 3, kind: 'content', text: 'abc', ref: null, origin: null }]);
+  WRITE.addEdits(D, [{ pos: 4, width: 0, text: 'x' }, { pos: 5, width: 0, text: 'y' }, { pos: 6, width: 0, text: 'z' }]);
+  WRITE.markSent(D, 1, 2);
+  assert.deepEqual([WRITE.edits(D).map((e) => e.sent ?? null), WRITE.unsent(D)], [[1, 1, null], 2], 'the first two carried, the third left for the next burst');
+  WRITE.markSent(D, 2);
+  assert.deepEqual(WRITE.edits(D).map((e) => e.sent ?? null), [1, 1, 2], 'with no end named, every unsent edit');
+  /** @type {unknown[]} */
+  const told = [];
+  WRITE.onUnplaced((addr, why) => told.push([addr, why]));
+  const why = { name: 'withheld', origin: '1.0.1.0.9', site: { before: [], after: [] } };
+  WRITE.unplace(D, why);
+  assert.deepEqual(told, [[D, why]], 'told, the draft and why');
 });

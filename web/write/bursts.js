@@ -13,7 +13,12 @@
 // the bytes the place lost, first; then a `reinstate` of each stretch placed
 // there whose bytes the board holds — a put-back's, by their I-runs, never
 // an `insert` of new bytes; then an `insert` of each stretch of bytes the
-// page made, its `values` their text. Every frame carries the typed state it
+// page made, its `values` their text. A burst judged first (`Asked.judged`) —
+// a placing by identity, a paste of the same words — sends each place's
+// stretches the board holds before anything else of the place, in one
+// `reinstate` set before the bytes it lost, then its `delete`, then its
+// `insert`s, so the board judges them before the place changes. Every frame
+// carries the typed state it
 // is given as `as_of`, an `id` of the page's own (`frameId`) and, beside it,
 // its anchors: the I-addresses of the units on either side of the span it
 // edits, read from the image, null at the document's edge, and for a
@@ -116,6 +121,7 @@ import { documentOf } from '../model/address.js';
  * @property {number} seq the number the burst's first frame takes in its `id`, each frame after it the next
  * @property {(page: number) => (AnchorPiece | null)} [piece] the piece naming a byte the page made that the board has not minted, by the page's ordinal for it: the `id` of the insert that carried it and its offset there; null, and where left out, for a byte no insert the shell holds or the page sent carries
  * @property {(burst: string) => boolean} [follows] the inserts a delete may follow, by `id` (the `op` row's `after`): given at the page's close, where a delete of words the board has not minted is handed to the shell with the insert that carried them
+ * @property {boolean} [judged] each place's stretches the board holds go out first, in one `reinstate` set before the bytes the place lost, so the board judges them before anything else of the place changes — then its `delete`, then its `insert`s (W-MACHINE's burst of a placing by identity, which a refusal of that `reinstate` ends)
  */
 
 /** the lead every frame `id` of the page's opens with: never the prefix the shell's resends take, `shell:` */
@@ -318,21 +324,15 @@ export function compose(a) {
   const frames = [];
   let n = a.seq;
   const id = () => frameId(a.load, n++);
+  const iAt = (/** @type {ImageRun} */ r, /** @type {number} */ off) => `${r.prefix}.${r.ordinal + off}`;
+  const widthOf = (/** @type {{runs: ImageRun[]}} */ ch) => ch.runs.reduce((w, r) => w + r.width, 0);
+  /** a `reinstate` of runs of the board's bytes at a position, each run naming the document that minted it */
+  const reinstate = (/** @type {number} */ at, /** @type {ImageRun[]} */ runs) => /** @type {ReinstateFrame} */ ({ op: 'reinstate', doc: addr, at: vpos(at), runs: runs.map((r) => ({ i_start: iAt(r, 0), origin: documentOf(r.prefix) || r.prefix, width: String(r.width) })), as_of: asOf, id: id() });
   try {
     for (const pl of places(before, after)) {
       const left = unit(before, pl.lost - 1, piece), right = unit(before, pl.lost + pl.lostWidth, piece);
-      if (pl.lostWidth > 0) {
-        const span = spanOf(before, pl.lost, pl.lostWidth), follower = span || !a.follows ? null : followed(before, pl.lost, pl.lostWidth, left, right, piece, a.follows);
-        const lost = { words: textOf(before.runs, pl.lost, pl.lost + pl.lostWidth), ids: named(before, pl.lost, pl.lostWidth), before: named(before, pl.lost - 1, 1), after: named(before, pl.lost + pl.lostWidth, 1) };
-        frames.push({
-          frame: { op: 'delete', doc: addr, p: vpos(pl.at), width: String(pl.lostWidth), as_of: asOf, id: id() },
-          anchors: span ? { before: left, after: right, span } : follower ? { before: left, after: right, span: follower.span } : { before: left, after: right }, pages: [], lost,
-          ...(follower ? { after: follower.after } : {}),
-        });
-      }
-      if (pl.gained < 1) continue;
       // what the place gained, cut where its bytes pass between the page's own and the board's
-      const gained = over(after.image, pl.at, pl.gained);
+      const gained = pl.gained < 1 ? [] : over(after.image, pl.at, pl.gained);
       if (!gained) throw new Wait('unread');
       /** @type {Array<{made: boolean, at: number, runs: ImageRun[]}>} */
       const chunks = [];
@@ -340,19 +340,29 @@ export function compose(a) {
         const made = isPage(r.prefix), last = chunks[chunks.length - 1];
         if (last && last.made === made) last.runs.push(r); else chunks.push({ made, at: r.pos, runs: [r] });
       }
-      const widthOf = (/** @type {{runs: ImageRun[]}} */ ch) => ch.runs.reduce((w, r) => w + r.width, 0);
-      const iAt = (/** @type {ImageRun} */ r, /** @type {number} */ off) => `${r.prefix}.${r.ordinal + off}`;
-      // the stretches the board holds first, in the text's order, each after the one before it; then the page's own between them
+      // judged first: every stretch the board holds in one `reinstate`, set before the bytes the place lost
+      const held = a.judged ? chunks.filter((ch) => !ch.made).flatMap((ch) => joined(ch.runs)) : [];
+      const first = held.length ? { width: held.reduce((w, r) => w + r.width, 0), last: iAt(held[held.length - 1], held[held.length - 1].width - 1) } : null;
+      if (held.length) frames.push({ frame: reinstate(pl.at, held), anchors: { before: left, after: pl.lostWidth > 0 ? unit(before, pl.lost, piece) : right }, pages: [] });
+      if (pl.lostWidth > 0) {
+        const span = spanOf(before, pl.lost, pl.lostWidth), follower = span || !a.follows ? null : followed(before, pl.lost, pl.lostWidth, left, right, piece, a.follows);
+        const lost = { words: textOf(before.runs, pl.lost, pl.lost + pl.lostWidth), ids: named(before, pl.lost, pl.lostWidth), before: named(before, pl.lost - 1, 1), after: named(before, pl.lost + pl.lostWidth, 1) };
+        const ahead = first ? first.last : left;
+        frames.push({
+          frame: { op: 'delete', doc: addr, p: vpos(pl.at + (first ? first.width : 0)), width: String(pl.lostWidth), as_of: asOf, id: id() },
+          anchors: span ? { before: ahead, after: right, span } : follower ? { before: ahead, after: right, span: follower.span } : { before: ahead, after: right }, pages: [], lost,
+          ...(follower ? { after: follower.after } : {}),
+        });
+      }
+      if (pl.gained < 1) continue;
+      // the stretches the board holds first, in the text's order, each after the one before it — where none went out judged; then the page's own between them
       let placed = 0;
       /** @type {string | AnchorPiece | null} */
       let prev = left;
-      for (const ch of chunks) {
+      for (const ch of first ? [] : chunks) {
         if (ch.made) continue;
         const runs = joined(ch.runs), end = runs[runs.length - 1];
-        frames.push({
-          frame: { op: 'reinstate', doc: addr, at: vpos(pl.at + placed), runs: runs.map((r) => ({ i_start: iAt(r, 0), origin: documentOf(r.prefix) || r.prefix, width: String(r.width) })), as_of: asOf, id: id() },
-          anchors: { before: prev, after: right }, pages: [],
-        });
+        frames.push({ frame: reinstate(pl.at + placed, runs), anchors: { before: prev, after: right }, pages: [] });
         placed += widthOf(ch); prev = iAt(end, end.width - 1);
       }
       for (const [i, ch] of chunks.entries()) {

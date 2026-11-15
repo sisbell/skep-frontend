@@ -7,7 +7,8 @@
 // mark's act opening and folding it and saying what shows, a whole face said
 // once; and, driven through W-MACHINE, a removal faced where a burst's
 // `delete` takes kept text, none for a character removed inside its own open
-// burst, and at an undo only the words a dial carried.
+// burst, and at an undo only the words a dial carried; and a paste's face
+// raised, said at every paste, replaced and taken down at a change of class.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as DELETION from './deletion.js';
@@ -119,4 +120,19 @@ test('a removal is faced where a burst\'s `delete` takes kept text and not for a
   key(1, 'Z');
   MACHINE.undo(D);
   assert.deepEqual(WRITE.removalsOf(D).map((r) => r.words), ['KL'], 'an undo of words no dial carried faces nothing');
+});
+
+test('a paste\'s face is raised where the paste was made, its words said in the status region as it is raised — again at a paste that raises the same words, so no press meets silence — standing in the place of any paste\'s face before it, and taken down at a change of the page\'s class (B3-S5; FP-41; the paste survey\'s P6)', async () => {
+  assert.equal(DELETION.pasteFace(), null, 'none raised');
+  const withheld = { id: 'B3.paste.withheld', text: 'The source of this passage is withheld from you — 1.0.1.0.30; nothing can be placed from it.' };
+  DELETION.pasted(D, { before: at(25), after: at(26) }, withheld);
+  assert.deepEqual([DELETION.pasteFace(), said], [{ addr: D, ...withheld }, [heard(withheld.text)]], 'raised, and said');
+  DELETION.pasted(D, { before: at(25), after: at(26) }, withheld);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(said, [heard(withheld.text), heard(withheld.text)], 'the same words again at the next paste: said again, the region emptied first');
+  const fault = { id: 'L.paste.fault', text: 'A fault in this client — nothing was placed, and your text is unchanged.' };
+  DELETION.pasted('1.0.1.0.7', { before: [], after: [] }, fault);
+  assert.deepEqual(DELETION.pasteFace(), { addr: '1.0.1.0.7', ...fault }, 'a later paste\'s face in its place');
+  DELETION.classChanged();
+  assert.equal(DELETION.pasteFace(), null, 'a change of the page\'s class takes it down');
 });

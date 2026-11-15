@@ -10,14 +10,17 @@
 // record does not name, composes to none and says why; an undo's inverse —
 // a removal of what its run placed and a put-back of what it removed — is a
 // `delete` then a `reinstate` by identity; each `delete` says what it takes
-// out of the text; and at the page's close a `delete` of words one unanswered
-// insert carried is that insert's follower, its span a piece of it.
+// out of the text; at the page's close a `delete` of words one unanswered
+// insert carried is that insert's follower, its span a piece of it; and a
+// placing by identity — another document's run, and a duplicate in one draft —
+// is one `reinstate` as the wire spells one, judged first where its burst is its
+// own.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as BURSTS from './bursts.js';
 import * as WRITE from './write.js';
 import * as REC from '../model/records.js';
-import { applyEdits, applyHeld } from '../model/derive.js';
+import { applyEdits, applyHeld, stretchIn } from '../model/derive.js';
 import { canon } from '../test/fake-port.js';
 import { byteLength } from '../util.js';
 
@@ -351,4 +354,50 @@ test('BM-73: at the page\'s close a `delete` of words one unanswered insert carr
   WRITE.restore(E, [{ pos: 6, width: 2, text: '' }]);
   assert.deepEqual(framesOf(asked(E, { follows: () => true })).map((f) => [f.anchors, f.after]), [[{ before: { burst: 'page:9f.7', offset: 1 }, after: own(E, 4) }, undefined]],
     'and a `delete` whose edge is a word of another unanswered insert follows neither: every piece of a follower names the insert it follows');
+});
+
+/** a stretch of a record's text as a placing by identity carries it (M-REC's `Took`): its runs and their identity, each from position 1 */
+const took = (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width) => /** @type {import('../model/records.js').Took} */ (stretchIn(REC.doc(addr), pos, width));
+
+test('B3-S5 (i): bytes of another document placed by identity compose as one `reinstate` spelled as the wire\'s example spells one — its runs each `i_start`, `origin` the document that minted them and `width`, as strings — never an insert of new bytes (FP-16; the paste survey\'s W1)', () => {
+  read(D, 'abcdef');
+  read(E, 'xxxhello, wirexx', [{ iStart: own(E, 1), width: 16 }]);
+  assert.equal(WRITE.placeSame(D, [{ took: took(E, 4, 5) }], 3, 0), 5, 'five positions placed');
+  const frames = framesOf(compose(D, WRITE.unsent(D)));
+  assert.equal(frames.length, 1);
+  assert.equal(bare(frames[0].frame), '{"as_of":7,"at":{"ordinal":"3","subspace":"1"},"doc":"1.0.1.0.1","op":"reinstate","runs":[{"i_start":"1.0.1.0.2.0.1.4","origin":"1.0.1.0.2","width":"5"}]}',
+    'the example\'s spelling, member for member: the run of 1.0.1.0.2 named as its origin in the draft 1.0.1.0.1');
+  assert.deepEqual([frames[0].anchors, frames[0].pages], [{ before: own(D, 2), after: own(D, 3) }, []], 'between the units either side, no ordinal of the page\'s made');
+  assert.equal(made(D, frames), typed(D), 'the frame makes the text shown');
+});
+
+test('U2: a duplicate in one draft composes exactly — the draft\'s own bytes placed again, the bytes they were copied from standing, are one `reinstate` of those bytes at the place they go, wherever else they stand: at the text\'s end, and right after the words they were copied from (the paste survey\'s W2)', () => {
+  read(D, 'abcdef');
+  WRITE.placeSame(D, [{ took: took(D, 2, 3) }], 7, 0);
+  let frames = framesOf(compose(D, WRITE.unsent(D)));
+  assert.deepEqual(frames.map((f) => [f.frame.op, /** @type {any} */ (f.frame).at, /** @type {any} */ (f.frame).runs, f.anchors]), [['reinstate', { ordinal: '7', subspace: '1' }, [{ i_start: own(D, 2), origin: D, width: '3' }], { before: own(D, 6), after: null }]],
+    'at the end: one `reinstate` of 2..4 after the last unit');
+  assert.deepEqual([typed(D), made(D, frames)], ['abcdefbcd', 'abcdefbcd'], 'the board made to hold both');
+  REC._reset(); WRITE._reset();
+  read(D, 'abcdef');
+  WRITE.placeSame(D, [{ took: took(D, 2, 2) }], 4, 0);
+  frames = framesOf(compose(D, WRITE.unsent(D)));
+  assert.deepEqual(frames.map((f) => [f.frame.op, /** @type {any} */ (f.frame).at, f.anchors]), [['reinstate', { ordinal: '4', subspace: '1' }, { before: own(D, 3), after: own(D, 4) }]], 'right after the words copied: the copy placed between "c" and "d"');
+  assert.deepEqual([typed(D), made(D, frames)], ['abcbcdef', 'abcbcdef']);
+});
+
+test('a burst of its own sends its place\'s bytes the board holds first, judged — one `reinstate` of every one of them, set before the selection it replaces — then the `delete` of the selection, then its new words between them: so a refusal of the `reinstate` leaves the text as it stood (B3-S5; the paste survey\'s W3)', () => {
+  read(D, 'abcdef');
+  read(E, 'ABCDEFGHIJ', [{ iStart: own(E, 1), width: 10 }]);
+  WRITE.placeSame(D, [{ took: took(E, 4, 2) }, { text: 'N' }, { took: took(E, 9, 1) }], 2, 2);
+  assert.equal(typed(D), 'aDENIdef', 'the selection "bc" replaced by the stretches, the new word between');
+  const judged = BURSTS.compose({ doc: REC.doc(D), edits: WRITE.edits(D), from: WRITE.unsent(D), asOf: 7, ids: (page, width) => REC.pageIds(D, page, width), load: LOAD, seq: 1, judged: true });
+  const frames = framesOf(judged);
+  assert.deepEqual(frames.map((f) => [f.frame.op, /** @type {any} */ (f.frame).at ?? /** @type {any} */ (f.frame).p, /** @type {any} */ (f.frame).runs ?? /** @type {any} */ (f.frame).values ?? /** @type {any} */ (f.frame).width, f.anchors]), [
+    ['reinstate', { ordinal: '2', subspace: '1' }, [{ i_start: own(E, 4), origin: E, width: '2' }, { i_start: own(E, 9), origin: E, width: '1' }], { before: own(D, 1), after: own(D, 2) }],
+    ['delete', { ordinal: '5', subspace: '1' }, '2', { before: own(E, 9), after: own(D, 4), span: [{ start: own(D, 2), width: '2' }] }],
+    ['insert', { ordinal: '4', subspace: '1' }, ['N'], { before: own(E, 5), after: own(E, 9) }],
+  ], 'the board\'s bytes first and in one frame, before the selection; the selection after them; the new word between them');
+  assert.equal(made(D, frames), typed(D), 'the frames make the text shown');
+  assert.deepEqual(framesOf(compose(D, WRITE.unsent(D))).map((f) => f.frame.op), ['delete', 'reinstate', 'reinstate', 'insert'], 'unjudged, the same edits go out as any burst: the selection first, a `reinstate` for each stretch');
 });

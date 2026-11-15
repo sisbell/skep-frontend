@@ -1216,12 +1216,27 @@ def pane_phrase(ctx, side):
       return null; })(%s, %s)''' % (json.dumps(side), PANE_EDGE_PX))
 
 
+def entry_of(data):
+    """skep's own entry on a copy's clipboard, parsed as the harness checks it: its naming — every member FP-27 names a copy
+    by — and whether the rest is the entry's own (M-PASSAGE's `Entry`): version 2, and one byte length a part, the lengths
+    summing to the plain text's UTF-8 bytes with its line endings set; (None, False) where the clipboard holds no entry"""
+    raw = data.get('application/x-skep-passage')
+    entry = json.loads(raw) if raw else None
+    if not isinstance(entry, dict):
+        return None, False
+    text = (data.get('text/plain') or '').replace('\r\n', '\n').replace('\r', '\n')
+    lengths = entry.get('lengths')
+    whole = entry.get('version') == 2 and isinstance(lengths, list) and len(lengths) == len(entry.get('ids') or []) and sum(lengths) == len(text.encode('utf8'))
+    return {k: v for k, v in entry.items() if k not in ('version', 'lengths')}, whole
+
+
 def copied(ctx):
-    """the copy as the copy door runs it now: the span, the flavor parsed, the plain text"""
+    """the copy as the copy door runs it now: the span, the entry's naming and whether the entry is whole (`entry_of`), the
+    plain text"""
     c = ctx.js('window.__skep.copy()')
     data = c.get('data') or {}
-    flavor = data.get('application/x-skep-passage')
-    return {'span': c.get('span'), 'flavor': json.loads(flavor) if flavor else None, 'plain': data.get('text/plain')}
+    flavor, whole = entry_of(data)
+    return {'span': c.get('span'), 'flavor': flavor, 'whole': whole, 'plain': data.get('text/plain')}
 
 
 def own(ctx, span, addr=None):
@@ -1261,9 +1276,9 @@ def flavor_of(ctx, span, doc, member, plain, ids=None):
 
 def names(ctx, c, doc, member, plain, p0, p1, ids=None):
     """does the copy's flavor name the span copied as FP-27 names a copy (`flavor_of`), its bytes by identity never none,
-    and is that span the bytes [p0, p1), three positions either way?"""
+    its entry whole (`entry_of`), and is that span the bytes [p0, p1), three positions either way?"""
     f, s = c['flavor'], c['span']
-    return bool(f) and bool(s) and f == flavor_of(ctx, s, doc, member, plain, ids) and bool(f['ids']) and abs(s['pos'] - p0) <= 3 and abs(s['pos'] + s['width'] - p1) <= 3
+    return bool(f) and bool(s) and f == flavor_of(ctx, s, doc, member, plain, ids) and bool(f['ids']) and c['whole'] and abs(s['pos'] - p0) <= 3 and abs(s['pos'] + s['width'] - p1) <= 3
 
 
 def bare(c, mine):
@@ -1604,8 +1619,8 @@ def record_copy(ctx, r):
     drawn = [w for w in (plane['words'], plane['keys'], 'ANCHOR') if w and w in plain]
     r.check(bool(plane['words']) and not drawn, 'the copy carries none of what the plane draws of the record for whoever is looking', {'drawn': drawn, 'plane': plane})
     member, published = plain_where(ctx, HOME)
-    r.check(c['flavor'] == flavor_of(ctx, span, HOME, member, published) and bool(c['flavor']) and bool(c['flavor']['ids']) and c['span'] == span,
-            'the skep flavor names the record as FP-27 names a copy, though the span holds no text: the board, its home read at its address, %s, and the record\'s bytes by identity (issue #244)'
+    r.check(c['flavor'] == flavor_of(ctx, span, HOME, member, published) and bool(c['flavor']) and bool(c['flavor']['ids']) and c['whole'] and c['span'] == span,
+            'the skep flavor names the record as FP-27 names a copy, though the span holds no text: the board, its home read at its address, %s, and the record\'s bytes by identity, the entry whole (issue #244)'
             % ('the record\'s one position in %s, the member its text is' % member if member else 'no member and no position, its home %s' % ('naming no member' if published else 'a draft')),
             {'flavor': c['flavor'], 'span': c['span'], 'member': member, 'published': published})
     figures['copied'] = plain[:400]
@@ -1729,8 +1744,8 @@ def scene_copy(ctx, r):
           const post = S.copy();
           return {updating: S.scene.updating(), post, now: post.span ? S.model.text(b, post.span.pos, post.span.pos + post.span.width) : null}; })(%s)''' % json.dumps(row))
         data = torn['post'].get('data') or {}
-        flavor = data.get('application/x-skep-passage')
-        mid = {'span': torn['post'].get('span'), 'flavor': json.loads(flavor) if flavor else None, 'plain': data.get('text/plain')}
+        flavor, whole = entry_of(data)
+        mid = {'span': torn['post'].get('span'), 'flavor': flavor, 'whole': whole, 'plain': data.get('text/plain')}
         r.check(names(ctx, pre, B, None, False, ph['p0'], ph['p1'], ids), '(c) a drag over a phrase in pane B, the draft: the copy\'s flavor names the draft and the dragged bytes by identity, never their positions, which move (FP-27; issue #244)',
                 dict(pre, phrase=[ph['p0'], ph['p1'], ph['text']], ids=ids))
         r.check(torn['updating'] and names(ctx, mid, B, None, False, ph['p0'], ph['p1'], ids) and mid['span'] == pre['span'] and bool(pre['plain']) and bare(mid, pre['plain']) and torn['now'] in ('', pre['plain']),
@@ -1772,8 +1787,8 @@ def scene_copy(ctx, r):
         ctx.js('window.__skep.select(%s, %d, %d)' % (json.dumps(DOC), sa['pos'], sa['width']))
         ctx.frames(2)
         c = copied(ctx)
-        r.check(bool(c['flavor']) and bool(c['span']) and [c['span']['addr'], c['span']['pos'], c['span']['width']] == [DOC, sa['pos'], sa['width']] and c['flavor'] == figures['a']['flavor'],
-                '(e) the bytes pane A copied, selected on the plane\'s box at the first edition\'s plain address: the box\'s copy names them as the pane\'s did — the bare address, %s with their positions in it, and their identity alike (issue #244)' % M,
+        r.check(bool(c['flavor']) and bool(c['span']) and [c['span']['addr'], c['span']['pos'], c['span']['width']] == [DOC, sa['pos'], sa['width']] and c['flavor'] == figures['a']['flavor'] and c['whole'],
+                '(e) the bytes pane A copied, selected on the plane\'s box at the first edition\'s plain address: the box\'s copy names them as the pane\'s did — the bare address, %s with their positions in it, and their identity alike — its entry whole (issue #244)' % M,
                 {'box': c['flavor'], 'pane': figures['a']['flavor'], 'span': c['span'], 'pane_span': sa})
         figures['e'] = {'span': c['span'], 'flavor': c['flavor']}
     chord(ctx, 'Escape')
@@ -1870,7 +1885,7 @@ def scene_versions(ctx, r):
                     and corner.get('version') == t('F.version-of', {'k': n, 'n': n}) and corner.get('read') == t('F.versions.read', {'k': 1}),
                     f'(c) the corner\'s act, pressed, reads version {n} back in pane A\'s place, the corner offering version 1: the version left one act away (issue #160)',
                     {'pressed': at, 'pane': {k: pa.get(k) for k in keep}, 'corner': corner})
-            r.check(bool(sc) and sc['held'] and bool(sb) and sc['text'] == sb['text'] and back['plain'] == pre['plain'] and bool(back['flavor']) and [back['flavor'].get(k) for k in ('doc', 'member', 'plain')] == [newest, newest, False],
+            r.check(bool(sc) and sc['held'] and bool(sb) and sc['text'] == sb['text'] and back['plain'] == pre['plain'] and bool(back['flavor']) and back['whole'] and [back['flavor'].get(k) for k in ('doc', 'member', 'plain')] == [newest, newest, False],
                     '(c) the press leaves the selection standing, and the act carries it: on the same words still, the copy naming the version read', {'selection': sc, 'copy': back})
             figures['c'] = {'pressed': at, 'span': back['span']}
         # (d) nothing selected, the paragraph that opens with the stretch version 1 lacks first in view; version 1 read
@@ -3188,10 +3203,10 @@ def typed_copy(ctx, r):
     want = flavor_of(ctx, span, doc, None, False, page + ids) if span and ids else None
     width = lambda f: sum(p['width'] for p in (f or {}).get('ids') or [])
     text = ''.join(e['text'] for e in edits)
-    r.check(text == 'ab' and bool(load) and bool(ids) and bool(plane) and plane['span'] == span and plane['flavor'] == want and width(plane['flavor']) == span['width'] and plane['plain'] == text + (mine or ''),
+    r.check(text == 'ab' and bool(load) and bool(ids) and bool(plane) and plane['span'] == span and plane['flavor'] == want and plane['whole'] and width(plane['flavor']) == span['width'] and plane['plain'] == text + (mine or ''),
             'the copy of `ab` typed in the own draft and the ten bytes after it, on the plane: its flavor names the draft — no member, no positions — and every position it holds in the text\'s order, `ab` by the page\'s own name of its bytes tagged with the page\'s load, then the board\'s ten by their addresses, the widths the span\'s; its plain text `ab` and the paragraph\'s own bytes (issue #432\'s design decision)',
             {'span': span, 'copy': plane, 'want': want, 'edits': edits, 'load': load})
-    r.check(opened and in_pane and bool(pane) and bool(plane) and pane['span'] == span and pane['flavor'] == want and pane['flavor'] == plane['flavor'] and pane['plain'] == plane['plain'],
+    r.check(opened and in_pane and bool(pane) and bool(plane) and pane['span'] == span and pane['flavor'] == want and pane['whole'] and pane['flavor'] == plane['flavor'] and pane['plain'] == plane['plain'],
             'the same span selected in a reading scene\'s pane on the draft\'s text shown and copied: named alike, position by position, its plain text the same (issue #432\'s design decision; FP-38)',
             {'opened': opened, 'selected': in_pane, 'pane': pane, 'plane': plane and plane['flavor']})
     r.figures['typed_copy'] = {'span': span, 'plane': plane and plane['flavor'], 'pane': pane and pane['flavor']}
@@ -3802,12 +3817,12 @@ def paste_and_cut(ctx, r):
         out = cut()
         ctx.frames(2)
         data = (out or {}).get('data') or {}
-        flavor = json.loads(data['application/x-skep-passage']) if data.get('application/x-skep-passage') else None
+        flavor, whole = entry_of(data)
         load, edits = ctx.js('window.__skep.model.load()'), ctx.js('window.__skep.write.edits(%s)' % json.dumps(draft))
         page = edits[0].get('page') if edits else None
         r.check(selected == {'addr': draft, 'pos': P, 'width': 6} and bool(live) and live['live'] and (out or {}).get('prevented') is True
                 and sorted(data) == ['application/x-skep-passage', 'text/plain'] and data['text/plain'] == 'Pasted'
-                and bool(flavor) and flavor.get('doc') == draft and flavor.get('pos') is None and flavor.get('ids') == [{'prefix': draft + '.0.p', 'ordinal': page, 'width': 6, 'load': load}]
+                and bool(flavor) and whole and flavor.get('doc') == draft and flavor.get('pos') is None and flavor.get('ids') == [{'prefix': draft + '.0.p', 'ordinal': page, 'width': 6, 'load': load}]
                 and edits_of()[1:] == [{'pos': P, 'width': 6, 'text': ''}] and ctx.js('window.__skep.selection()') is None and caret_of() == {'addr': draft, 'pos': P, 'live': True} and not hint_of(),
                 '(c) a cut event through the door over a selection drawn in the caret\'s text: the clipboard takes two flavors — the words cut, and skep\'s own entry naming the draft and the bytes, unminted ones by the page\'s own name and load — the platform\'s cut is prevented, the bytes are out as one edit, the selection ended and the caret at the removal (B3-S5 (iv); FP-24, FP-27)',
                 {'selected': selected, 'cut': out and {'prevented': out.get('prevented')}, 'plain': data.get('text/plain'), 'flavor': flavor, 'edits': edits_of(), 'caret': caret_of()})
@@ -4603,12 +4618,12 @@ def run(ctx):
         r.check(not plat['collapsed'] and plat['span'] == sel, 'the platform\'s selection and the page\'s name the same bytes', plat)
         # the copy: the passage named as FP-27 names a copy beside the plain text, never in it (§2.4)
         copied = ctx.js('window.__skep.copy()')
-        flavor = json.loads((copied.get('data') or {}).get('application/x-skep-passage') or 'null')
+        flavor, whole = entry_of(copied.get('data') or {})
         member, published = plain_where(ctx, DOC)
         want = flavor_of(ctx, sel, DOC, member, published) if sel else None
-        r.check(bool(flavor) and bool(sel) and flavor == want and bool(member) and bool(flavor['ids']),
-                'the copy\'s skep flavor names the passage as FP-27 names a copy: the board, the first edition read at its plain address, %s — the member its text is, by the harness\'s own reads of its chain — with the dragged span in it, width and all, and the dragged bytes by identity (issue #244)' % member,
-                {'flavor': flavor, 'want': want})
+        r.check(bool(flavor) and bool(sel) and flavor == want and whole and bool(member) and bool(flavor['ids']),
+                'the copy\'s skep flavor names the passage as FP-27 names a copy: the board, the first edition read at its plain address, %s — the member its text is, by the harness\'s own reads of its chain — with the dragged span in it, width and all, and the dragged bytes by identity, the entry whole: its version and each part\'s length in the plain text (issue #244; M-PASSAGE)' % member,
+                {'flavor': flavor, 'whole': whole, 'want': want})
         own = ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(DOC), sel['pos'], sel['pos'] + sel['width'])) if sel else None
         plain = (copied.get('data') or {}).get('text/plain')
         r.check(plain is not None and plain == own and '≡' not in plain and '⟡' not in plain, 'the copy\'s plain text is the document\'s own bytes over the span — no label or symbol of the page among them', {'plain': (plain or '')[:80], 'own': (own or '')[:80]})

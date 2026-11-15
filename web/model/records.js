@@ -286,7 +286,7 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {number[]} rows the held lines applied, by ordinal, in the order applied
  * @property {number} edits the page-local edits applied
  * @property {number | null} at the board position a past state was read at; null for the held version and the typed text
- * @property {ImageRun[]} [source] for the typed text, every byte of the record by where it came from, in position order (M-DERIVE's `applyEdits`): `prefix` 'base' and `ordinal` its position in the delivered text, or `prefix` 'page' and `ordinal` the page's own for a byte an edit made (`Edit.page`); none for a byte a put-back placed from an edit the record's text holds the change of (`Edit.based`)
+ * @property {ImageRun[]} [source] for the typed text, every byte of the record by where it came from, in position order (M-DERIVE's `applyEdits`): `prefix` 'base' and `ordinal` its position in the delivered text, `prefix` 'page' and `ordinal` the page's own for a byte an edit made (`Edit.page`), or `prefix` 'back' and `ordinal` its count among the bytes edits the record's text holds the change of took (`Edit.based`), for a byte a put-back placed from one
  */
 
 /**
@@ -2199,7 +2199,7 @@ export const pageSpace = (/** @type {string} */ addr) => addr + '.0.p';
 /** is an I-space the page's own of some draft (`pageSpace`)? */
 export const isPage = (/** @type {string} */ prefix) => prefix.endsWith('.0.p');
 /** the draft a page space is of (`pageSpace`) */
-const draftOf = (/** @type {string} */ prefix) => prefix.slice(0, -4);
+export const draftOfPage = (/** @type {string} */ prefix) => prefix.slice(0, -4);
 /**
  * The page's load (see the head): an id drawn once as the page loads —
  * sixteen random bytes, in hex — that tags the page's own name of the bytes
@@ -2271,7 +2271,7 @@ export function pageIds(addr, page, width) {
  */
 function spelled(r) {
   if (!isPage(r.prefix)) return [r];
-  const addr = draftOf(r.prefix);
+  const addr = draftOfPage(r.prefix);
   if (!state.minted.has(addr)) return [r];
   let off = 0;
   return pageIds(addr, r.ordinal, r.width).map((x) => { const out = /** @type {T} */ ({ ...r, ...x, ...('pos' in r ? { pos: /** @type {number} */ (r.pos) + off } : {}) }); off += x.width; return out; });

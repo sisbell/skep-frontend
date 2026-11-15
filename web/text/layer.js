@@ -433,7 +433,9 @@
 // the document its words were read in,
 // and, where its text is a published member, that member by its version
 // address with the span's positions in it, marked where the words were read
-// at the plain address — never a draft's positions. Where the words were
+// at the plain address — never a draft's positions; with the entry's version
+// and each part's byte length in the plain text beside them, where the parts
+// cut it (`entryIn`; M-PASSAGE's `Entry`). Where the words were
 // read is kept beside what each article was made from, set as it is made
 // (`Where`): for a mounted article, the version its box shows, and at a
 // published document's plain address the head its corner names
@@ -482,12 +484,18 @@
 // for Backspace and Delete (`caretReplace`) — each an edit handed to W-WRITE
 // as a key typing at the caret, where the caret stood told with it
 // (W-WRITE's `Typed`), and shown through the derived record, nothing composed
-// and nothing sent here (FP-14). A paste places the clipboard's plain text
-// there, its line endings a typed Enter's, the caret after it, in the place
-// of a selection whole in the caret's text (`caretPaste`; D5 K-93; B3-S5),
-// and a cut writes the clipboard as a copy of that selection does, then takes
-// its bytes out (`caretCut`) — each one edit handed to W-WRITE as a step of
-// its own, where the caret stood told with it. Every other move of the
+// and nothing sent here (FP-14). A paste is read by its clipboard's two
+// flavors (`caretPaste`; D5 K-93; B3-S5; M-PASSAGE's `planOf`): where skep's
+// own entry names this board's bytes and their words — at hand (`atHand`),
+// else read by identity — read as a copy reads them, are its plain text's, it
+// places the same words by identity (W-WRITE's `placeSame`); else its plain
+// text as new bytes, its line endings a typed Enter's, said where the entry
+// named this board's bytes (`PasteTold`) — nothing placed where the source is
+// refused or not read, each told — the caret after what it placed, in the
+// place of a selection whole in the caret's text. A cut writes the clipboard
+// as a copy of that selection does, then takes its bytes out (`caretCut`) —
+// each a step of its own handed to W-WRITE, where the caret stood told with
+// it. Every other move of the
 // caret — a click, an arrow, Home or End, a selection made from it, a
 // return, a leaving, its going — ends the run of typing open at its draft
 // (`setCaret`; W-WRITE's
@@ -527,6 +535,7 @@
 
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
+import * as PASSAGE from '../model/passage.js';
 import * as WRITE from '../write/write.js';
 import * as MACHINE from '../write/machine.js';
 import * as LK from '../links/links.js';
@@ -537,9 +546,10 @@ import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, inFirstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, endsColumn, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, MARGIN, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX, ELLIPSIS } from '../plane/labels.js';
-import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, kindWord, keptHTML, statementHTML, keptWord, keptStatement, faceWords, faceRuns, blockMarks, symbolLit, editionClause, copyText, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
+import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, kindWord, keptHTML, statementHTML, keptWord, keptStatement, faceWords, faceRuns, blockMarks, symbolLit, editionClause, copyText, copyParts, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
 import { farShort, whyOf } from '../beams/held.js';
-import { applyEdits, sourceRuns, fromBase, boundaries, wordStop } from '../model/derive.js';
+import { applyEdits, sourceRuns, fromBase, boundaries, wordStop, stretchIn } from '../model/derive.js';
+import { iRuns } from '../model/frames.js';
 import { homeOf, documentOf, memberOf, versionAddress, accountOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, elementIn, CHROME } from './span.js';
 import { esc, byteLength, numeral } from '../util.js';
@@ -573,16 +583,7 @@ import { t, plural, facedHTML, lastRead, runsText, joinRuns, CLIENT_CLOSE } from
  * @property {boolean} plain its words were read at a published document's plain address
  */
 
-/**
- * @typedef {Object} Copied — a passage as skep's clipboard entry names a copy of it (`namedIn`; FP-27): where its words were read (`Where`), on its board, every position it holds by identity, part by part, and, where a member is named, its positions in that member — never a draft's, which move
- * @property {string} board the board's origin
- * @property {string} doc the document read (`Where.doc`)
- * @property {string | null} member the member its text is (`Where.member`)
- * @property {boolean} plain read at a published document's plain address (`Where.plain`)
- * @property {number | null} pos its first position in `member`; null where no member is named
- * @property {number | null} width its positions there; null with `pos`
- * @property {IdentityPart[]} ids every position it holds, in the text's order, through the image its article was made from (M-REC's `identityParts`): the board's bytes by their permanent addresses, the page's unminted ones by its own name and its load, each stretch that image does not place a gap — their widths the passage's
- */
+/** @typedef {import('../model/passage.js').Naming} Copied a passage as skep's clipboard entry names a copy of it (`namedIn`; FP-27; M-PASSAGE's `Naming`): where its words were read (`Where`), on its board, every position it holds by identity, part by part, and, where a member is named, its positions in that member — never a draft's, which move */
 
 /** @typedef {Omit<Copied, 'ids'> & {ids: ISpan[]}} Named a passage named in the frame a copy of it is (`Copied`; SC's stops, as the reader leaves them), its positions in the member null also where no one stretch of the member holds it, and its bytes by identity whole, read back through an image (M-REC's `placedIn`) — none where the passage holds no byte, or the image it was read through does not cover it */
 
@@ -4817,6 +4818,27 @@ export function namedIn(el, span, board) {
   return { board, doc, member, plain, pos: member ? span.pos : null, width: member ? span.width : null, ids: REC.identityParts(a.made.image, span.pos, span.width) };
 }
 
+/**
+ * The clipboard entry a copy of a span of an article writes (M-PASSAGE's
+ * `Entry`, `entryOf`; FP-27): the span named (`namedIn`), the entry's
+ * version, and each part's byte length in the copy's plain text, its line
+ * endings set as a paste sets them (M-PASSAGE's `linesSet`) — each part's
+ * plain text read by the item rule the plain text is read by (T-ARTICLE's
+ * `copyParts`); none where the parts do not cut that text. Null where
+ * `namedIn` names none.
+ * @param {HTMLElement} el the article's element
+ * @param {Span} span a span of its text
+ * @param {string} board the board's origin
+ * @returns {import('../model/passage.js').Entry | null}
+ */
+export function entryIn(el, span, board) {
+  const named = namedIn(el, span, board), made = madeOf(el);
+  if (!named || !made) return null;
+  const parts = copyParts(made, span, named.ids.map((p) => p.width), originOwner);
+  const set = parts ? parts.map(PASSAGE.linesSet) : null;
+  return PASSAGE.entryOf(named, parts && set && set.join('') === PASSAGE.linesSet(parts.join('')) ? set.map(byteLength) : null);
+}
+
 /** the article a range starts in, else the one it ends in; null where it lies in none */
 function articleOfRange(/** @type {Range} */ range) {
   const at = (/** @type {Node} */ n) => { const e = elementOf(n); return e ? /** @type {HTMLElement | null} */ (e.closest('article.dtext')) : null; };
@@ -5523,36 +5545,157 @@ export function caretErase(dir) {
   return true;
 }
 
-/** @typedef {'placed' | 'none' | 'large'} Pasted what a paste at the caret did (`caretPaste`): `placed` its text stands at the caret; `none` the clipboard held no text, nothing placed; `large` its text is more than one paste places (W-WRITE's `PASTE_MAX_BYTES`), nothing placed */
+/**
+ * @typedef {Object} PasteTold — a paste the person is told of where it was made (`caretPaste`; B3-S5): words skep's own entry named on this board that its plain text does not match, placed as new bytes (`differs`; the paste survey's O6); or nothing placed, the source refused or not read (`unplaced`)
+ * @property {'differs' | 'unplaced'} told
+ * @property {string} name why: `differs`; else the refusal's name — `withheld`, `source_not_registered`, `unread` where the source could not be read, `moved` where the draft's text changed while it was read, any other a fault of the page's own
+ * @property {string | null} doc the document named: for `differs` the one the entry read the words in; for `unplaced` the source refused; null where none is named
+ * @property {{before: ISpan[], after: ISpan[]}} site where the paste was made, by the byte either side of it in the text shown then
+ */
 
-/** the text a paste places (`caretPaste`): the clipboard's, each CR LF and each CR alone a line feed — the line ending a typed Enter puts in */
-export const pasteText = (/** @type {string} */ text) => text.replace(/\r\n?/g, '\n');
+/** @typedef {'placed' | 'same' | 'none' | 'large' | PasteTold} Pasted what a paste at the caret did (`caretPaste`): `placed` its plain text stands at the caret as new bytes; `same` the same words stand there, placed by their identity (B3-S5 (i), (iv)); `none` the clipboard held no text, nothing placed; `large` its text is more than one paste places (W-WRITE's `PASTE_MAX_BYTES`), nothing placed; or what the person is told of it where it was made (`PasteTold`) */
+
+/** the text a paste places (`caretPaste`): the clipboard's, each CR LF and each CR alone a line feed — the line ending a typed Enter puts in (M-PASSAGE's `linesSet`) */
+export const pasteText = (/** @type {string} */ text) => PASSAGE.linesSet(text);
 
 /**
- * Text pasted at a live caret (D5 K-93; B3-S5 (ii); D6 BM-31): the text, its
- * line endings set (`pasteText`), placed as one page-local edit, an act that
- * is a step of its own (W-WRITE's `Typed.own`), and the caret moved past it.
- * A selection of the caret's draft handed in (`over`) that stands whole in
- * the text shown (`wholeIn`) is replaced: the one edit takes its bytes out
- * and the text stands in their place; any other leaves the text placed at
- * the caret. Nothing is placed where the clipboard held no text, or where
- * its text, its line endings set, is more than one paste places, in UTF-8
- * bytes (W-WRITE's `PASTE_MAX_BYTES`). False where no live caret stands, or
- * its draft cannot be written now (W-WRITE's `unwritable`).
+ * @typedef {Object} Words — what bytes named by identity hold, as a paste reads them (`atHand`, `readWords`): the bytes as a placing carries them — their runs and identity (M-REC's `Took`) — and what a copy would read them in, to read them as its plain text does
+ * @property {import('../model/records.js').Took} took
+ * @property {Made} made a text holding them: a record at hand, or the read's own
+ * @property {number} pos where they stand in it
+ * @property {number} width
+ */
+
+/**
+ * The words bytes named by identity hold, from the records at hand (B3-S5;
+ * the paste survey's W5): the first text whose image places them whole in
+ * one stretch — the text the draft shows, then the record of the document an
+ * entry read them in, then their own document's; null where none does.
+ * @param {string} addr the draft the paste is made in
+ * @param {string} doc the document the entry read them in
+ * @param {ISpan} id
+ * @returns {Words | null}
+ */
+function atHand(addr, doc, id) {
+  for (const d of [shownOf(addr), ...[doc, documentOf(id.prefix)].flatMap((a) => (a && REC.has(a) ? [REC.doc(a)] : []))]) {
+    const at = REC.placedIn(d.image, [id]);
+    if (at.length !== 1 || at[0].width !== id.width) continue;
+    const took = stretchIn(d, at[0].pos, id.width);
+    if (took) return { took, made: d, pos: at[0].pos, width: id.width };
+  }
+  return null;
+}
+
+/** the words bytes hold as a read by identity answered them, one value a position (M-FRAMES's `iRuns`), in a text of their own from position 1 */
+function readWords(/** @type {ISpan} */ id, /** @type {ReadonlyArray<import('../model/frames.js').IValue | null>} */ values) {
+  const runs = iRuns(values), image = [{ pos: 1, width: id.width, prefix: id.prefix, ordinal: id.ordinal }];
+  return /** @type {Words} */ ({ took: { runs, ids: image }, made: { addr: documentOf(id.prefix) || id.prefix, runs, blocks: REC.deriveBlocks(runs), image }, pos: 1, width: id.width });
+}
+
+/** what a refusal of a read by identity says of its source, by the name a paste's face takes (`PasteTold.name`): `withheld`; the board saying nothing of the document, `source_not_registered`; any other refusal of the board's, its own name — a fault of the page's; and a read that was never answered, `unread` */
+const readRefusal = (/** @type {import('../bridge/shapes').Refusal} */ r) => (r.name === 'withheld' ? 'withheld' : r.name === 'doc_not_registered' ? 'source_not_registered' : r.kind === 'refused' ? r.name : 'unread');
+
+/** do two runs of bytes by identity name the same bytes in the same order */
+const sameIds = (/** @type {readonly ISpan[]} */ a, /** @type {readonly ISpan[]} */ b) => {
+  const flat = (/** @type {readonly ISpan[]} */ v) => { /** @type {ISpan[]} */ const out = []; for (const r of v) { const l = out[out.length - 1]; if (l && l.prefix === r.prefix && l.ordinal + l.width === r.ordinal) l.width += r.width; else out.push({ ...r }); } return out.map((r) => `${r.prefix}.${r.ordinal}+${r.width}`).join(' '); };
+  return flat(a) === flat(b);
+};
+
+/**
+ * Where a paste made before a read by identity stands in the text shown now
+ * (`caretPaste`): after the byte that stood before it, the selection it
+ * replaces standing whole after that and the byte after both — each by
+ * identity; null where the text no longer holds them so.
+ * @param {string} addr
+ * @param {{before: ISpan[], after: ISpan[]}} site
+ * @param {ISpan[]} sel the selection replaced, by identity; none where none is
+ * @param {number} width its positions
+ * @returns {number | null}
+ */
+function refound(addr, site, sel, width) {
+  const d = shownOf(addr), b = site.before.length ? placedShown(addr, site.before) : null;
+  const p = !b ? (d.from >= 0 ? d.from : 1) : b.length === 1 && b[0].width === 1 ? b[0].pos + 1 : null;
+  if (p == null || (width && !sameIds(shownIdentity(addr, p, width), sel))) return null;
+  return !site.after.length || sameIds(shownIdentity(addr, p + width, 1), site.after) ? p : null;
+}
+
+/**
+ * Text pasted at a live caret (D5 K-93; B3-S5; D6 BM-31), read by its
+ * clipboard's two flavors, the plain text and skep's own entry (M-PASSAGE's
+ * `planOf`): an act that is a step of its own (W-WRITE's `Typed.own`), the
+ * caret moved past what it placed. A selection of the caret's draft handed in
+ * (`over`) that stands whole in the text shown (`wholeIn`) is replaced; any
+ * other leaves the text placed at the caret. The plain text, its line endings
+ * set (`pasteText`), is placed as new bytes (ii) where the entry names no
+ * stretch the board holds, or names another board — saying so (`differs`)
+ * where it named this board's bytes and the plain text could not be cut by
+ * its parts. Else (i), (iv): each stretch the board holds is read — from the
+ * records at hand (`atHand`), else by identity (M-PUMP's `readIdentity`),
+ * which the paste then waits on, answered as a promise — and compared, as a
+ * copy's plain text reads it (T-ARTICLE's `copyText`), with its stretch of
+ * the plain text (C3): where any differs, the plain text is placed as new
+ * bytes and said (`differs`); else the same words are placed by identity,
+ * new words between them (W-WRITE's `placeSame`). Nothing is placed where
+ * the read is refused or not answered, or names a position the document
+ * minted nothing at — each told (`unplaced`) — nor where the draft's text no
+ * longer holds the paste's place by the time it answers (`refound`). Nothing
+ * is placed where the clipboard held no text, or where its text, its line
+ * endings set, is more than one paste places, in UTF-8 bytes (W-WRITE's
+ * `PASTE_MAX_BYTES`). False where no live caret stands, or its draft cannot
+ * be written now (W-WRITE's `unwritable`).
  * @param {string} text the clipboard's plain text, as the paste event carried it
  * @param {Span | null} [over] the selection drawn in the caret's text, in the text shown
- * @returns {Pasted | false}
+ * @param {unknown} [entry] skep's own entry, as the paste event carried it: none where it carried none
+ * @returns {Pasted | false | Promise<Pasted | false>}
  */
-export function caretPaste(text, over = null) {
+export function caretPaste(text, over = null, entry = null) {
   if (!caret_ || !caret_.live || WRITE.unwritable(caret_.addr)) return false;
   const placed = pasteText(text);
   if (!placed) return 'none';
   if (byteLength(placed) > WRITE.PASTE_MAX_BYTES) return 'large';
-  const span = over && over.addr === caret_.addr && wholeIn(shownOf(caret_.addr), over) ? over : null;
-  const pos = span ? span.pos : caret_.pos;
-  WRITE.addEdit(caret_.addr, { pos, width: span ? span.width : 0, text: placed }, { at: caret_.pos, own: 'paste' });
-  setCaret({ ...caret_, pos: pos + byteLength(placed) });
-  return 'placed';
+  const addr = caret_.addr, at = caret_.pos;
+  const span = over && over.addr === addr && wholeIn(shownOf(addr), over) ? over : null;
+  const pos = span ? span.pos : at, width = span ? span.width : 0;
+  const b = REC.board(), plan = PASSAGE.planOf(entry, text, b ? b.origin : null);
+  const site = { before: pos > 1 ? shownIdentity(addr, pos - 1, 1) : [], after: shownIdentity(addr, pos + width, 1) };
+  /** the plain text placed as new bytes at `p`, the caret after it where it still stands where the paste was made */
+  const asNew = (/** @type {number} */ p) => {
+    WRITE.addEdit(addr, { pos: p, width, text: placed }, { at, own: 'paste' });
+    if (caret_ && caret_.addr === addr) setCaret({ ...caret_, pos: p + byteLength(placed) });
+  };
+  if (plan.arm === 'plain') { asNew(pos); return plan.traced ? { told: 'differs', name: 'differs', doc: plan.doc, site } : 'placed'; }
+  /** @type {Array<Words | null>} */
+  const words = plan.pieces.map((p) => (p.id ? atHand(addr, plan.doc, p.id) : null));
+  /** the same words placed at `p` — where each stretch of the board's bytes reads as its stretch of the plain text (C3) — else the plain text as new bytes, said */
+  const place = (/** @type {number} */ p) => {
+    const differs = plan.pieces.some((x, i) => { const w = words[i]; return !!x.id && (!w || PASSAGE.linesSet(copyText(w.made, { addr: w.made.addr, pos: w.pos, width: w.width }, originOwner)) !== x.text); });
+    if (differs) { asNew(p); return /** @type {Pasted} */ ({ told: 'differs', name: 'differs', doc: plan.doc, site }); }
+    const n = WRITE.placeSame(addr, plan.pieces.map((x, i) => (x.id ? { took: /** @type {Words} */ (words[i]).took } : { text: x.text })), p, width, { at, own: 'paste' });
+    if (!n) return false;
+    if (caret_ && caret_.addr === addr) setCaret({ ...caret_, pos: p + n });
+    return /** @type {Pasted} */ ('same');
+  };
+  const lacking = plan.pieces.flatMap((x, i) => (x.id && !words[i] ? [x.id] : []));
+  if (!lacking.length) return place(pos);
+  // a source the records at hand do not hold: read by identity first, the place held by the bytes either side of it
+  const sel = width ? shownIdentity(addr, pos, width) : [];
+  const unplaced = (/** @type {string} */ name, /** @type {string | null} */ doc) => /** @type {Pasted} */ ({ told: 'unplaced', name, doc, site });
+  return PUMP.readIdentity(lacking).then((out) => {
+    if ('refused' in out) {
+      const r = /** @type {{site?: {addr?: unknown}, body?: {site?: {addr?: unknown}}}} */ (out.refused), named = r.site && typeof r.site.addr === 'string' ? r.site.addr : r.body && r.body.site && typeof r.body.site.addr === 'string' ? r.body.site.addr : null;
+      return unplaced(readRefusal(out.refused), named || documentOf(lacking[0].prefix));
+    }
+    let k = 0;
+    for (const [i, x] of plan.pieces.entries()) {
+      if (!x.id || words[i]) continue;
+      const values = out.values.slice(k, k + x.id.width);
+      k += x.id.width;
+      if (values.some((v) => v == null)) return unplaced('dangling_source', documentOf(x.id.prefix));
+      words[i] = readWords(x.id, values);
+    }
+    const p = refound(addr, site, sel, width);
+    return p == null ? unplaced('moved', null) : place(p);
+  });
 }
 
 /** @typedef {'cut' | 'uncopied'} CutMade what a cut at the caret did (`caretCut`): `cut` the clipboard holds the selection and its bytes are out of the text; `uncopied` the clipboard could not take the selection whole, nothing written and nothing removed */
@@ -5828,7 +5971,8 @@ export function clear() {
  * it starts in, else ends in (`spanIn`), through the blocks that article was
  * made from, every position it holds by identity, part by part, where its
  * words were read and, where a member is named, its positions in that member
- * — never a draft's — written whether or not the span holds text. The plain
+ * — never a draft's — with the entry's version and each part's length in the
+ * plain text (`entryIn`), written whether or not the span holds text. The plain
  * text is the span's items in the text's order as the article was made from
  * them (T-ARTICLE's `copyText`) — the bytes the person selected, whatever the
  * model has delivered since, each item that holds no text a stand-in in
@@ -5846,10 +5990,10 @@ export function onCopy(e, board) {
   if (!s || s.rangeCount === 0 || s.isCollapsed || !e.clipboardData) return null;
   const range = s.getRangeAt(0), art = articleOfRange(range), made = art ? madeOf(art) : null;
   const span = art && made ? spanIn(art, made, range) : null;
-  const named = art && span ? namedIn(art, span, board) : null;
+  const named = art && span ? entryIn(art, span, board) : null;
   if (!span || !made || !named) return null;
   e.clipboardData.setData('text/plain', copyText(made, span, originOwner));
-  e.clipboardData.setData('application/x-skep-passage', JSON.stringify(named));
+  e.clipboardData.setData(PASSAGE.TYPE, JSON.stringify(named));
   e.preventDefault();
   return span;
 }

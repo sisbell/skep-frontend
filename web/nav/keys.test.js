@@ -161,7 +161,9 @@
 // ⌃ ⌥ ⇧ ⌘ before its key and "Return" alone, elsewhere its modifiers' words
 // joined by "+" — in the selection's slots and in every key a hint's line
 // names, the draft's own line, K-9's Space line, the corner's way back and
-// the copy line's acts among them (style S21, K16).
+// the copy line's acts among them (style S21, K16). A paste event read by both
+// its flavors as it is dispatched: the same words placed, a source read first
+// holding the keys, and a paste told raising its face.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
@@ -181,6 +183,8 @@ import * as SEL from '../overlays/selection.js';
 import * as HOST from '../overlays/host.js';
 import * as HINT from '../overlays/hint.js';
 import * as FACES from '../overlays/faces.js';
+import * as DELETION from '../overlays/deletion.js';
+import * as PASSAGE from '../model/passage.js';
 import * as CAM from '../plane/camera.js';
 import { cornerHTML, faceWords } from '../text/article.js';
 import { spanOfBlock } from '../text/span.js';
@@ -2489,6 +2493,69 @@ test('a paste event at a live caret places its plain text there — one edit, th
   assert.match(hinted('L.paste.large', tooLarge(most + 1)), /this text is 1\.1\u00a0MB and one paste takes up to 1\u00a0MB/, 'its size rounded up, never read as the bound it passed');
 }));
 
+/** the board's origin a paste of the same words is told by (M-PASSAGE's `planOf`) */
+const ORIGIN = 'http://board.test';
+/** skep's own entry as a copy writes it of bytes the board holds: the draft O's first five, "First" */
+const OWN_ENTRY = JSON.stringify({ board: ORIGIN, doc: O, member: null, plain: false, pos: null, width: null, ids: [{ prefix: O + '.0.1', ordinal: 1, width: 5 }], version: PASSAGE.VERSION, lengths: [5] });
+
+test('B3-S5 (i): a paste event reads skep\'s own entry beside its plain text as it is dispatched, and where the entry names this board\'s bytes and their words are the plain text\'s, places the same words by identity — the caret after them, the walk on the caret\'s span, no face; where the words differ it places the plain text as new bytes and the paste\'s face stands where it was made, its words said; and a paste the board refuses for its source after the act raises that face too (FP-38; the paste survey\'s P3, O6, W3)', () => onPlane(async ({ said }) => {
+  REC.setBoard({ board: 'b-1', name: '', origin: ORIGIN });
+  DELETION._reset();
+  await focusOn(D, 1);
+  await KEYS.dispatch(keyOf('Enter'), PLANE);
+  let c = clip({ 'text/plain': 'First', [PASSAGE.TYPE]: OWN_ENTRY });
+  assert.deepEqual([KEYS.pasteEvent(c.e, EVENT), c.prevented()], [true, true], 'taken, the platform\'s prevented');
+  await KEYS.clipped();
+  assert.deepEqual([shown(), caret(), WRITE.edits(D).map((e) => [e.pos, !!e.based, e.back ? e.back.width : null]), walkAt(), DELETION.pasteFace()], ['First' + TEXT, [D, 6, true], [[1, true, null], [1, false, 5]], ['block', D, 1], null],
+    'O\'s own bytes placed at the caret by their identity, the caret after them, the walk on the caret\'s span, no face');
+  assert.deepEqual(REC.identityIn(LAYER.shownOf(D).image, 1, 5), [{ prefix: O + '.0.1', ordinal: 1, width: 5 }], 'by the identity the entry named');
+  c = clip({ 'text/plain': 'Fixst', [PASSAGE.TYPE]: OWN_ENTRY });
+  KEYS.pasteEvent(c.e, EVENT);
+  await KEYS.clipped();
+  const differs = FACES.pasteWords('differs', O);
+  assert.deepEqual([shown().slice(0, 10), WRITE.edits(D).at(-1)?.text, DELETION.pasteFace(), said.at(-1)], ['FirstFixst', 'Fixst', { addr: D, ...differs }, heard(differs.text)],
+    'the same lengths, other words: the plain text placed as new bytes, and the paste\'s face standing where it was made, said');
+  WRITE.unplace(D, { name: 'withheld', origin: '1.0.1.0.9', site: { before: [], after: [] } });
+  assert.deepEqual(DELETION.pasteFace(), { addr: D, ...FACES.pasteWords('withheld', '1.0.1.0.9') }, 'refused for its source after the act: its face in the place of the one standing');
+  WRITE.unplace(D, { name: 'withheld', origin: '1.0.1.0.9', site: null });
+  assert.deepEqual(DELETION.pasteFace()?.id, 'B3.paste.withheld', 'one made at no caret raises none');
+  DELETION._reset();
+}));
+
+test('B3-S5 (i): a paste whose source no record at hand holds waits on its read by identity, and every key pressed meanwhile is held and made after it, in order — the paste placed first; a paste held meanwhile, as a paste is while a jump is in the air, keeps both flavors, read as its event was dispatched; a read refused places nothing and raises the paste\'s face (FP-25; the paste survey\'s P3, W5)', () => onPlane(async ({ said }) => {
+  REC.setBoard({ board: 'b-1', name: '', origin: ORIGIN });
+  DELETION._reset();
+  const S = '1.0.1.0.30', frame = F.retrieveI([{ start: S + '.0.1.4', width: 3 }]);
+  const entry = JSON.stringify({ board: ORIGIN, doc: S, member: null, plain: false, pos: null, width: null, ids: [{ prefix: S + '.0.1', ordinal: 4, width: 3 }], version: PASSAGE.VERSION, lengths: [3] });
+  const fake = FAKE.create({ [FAKE.keyOf('op', { frame })]: { result: { as_of: 9, items: ['x', 'y', 'z'].map((ch, i) => ({ at: `${S}.0.1.${4 + i}`, value: { content: ch } })), resp: 'i_delivery' } } });
+  PORT.boot(fake);
+  try {
+    await focusOn(D, 1);
+    await KEYS.dispatch(keyOf('Enter'), PLANE);
+    const release = fake.hold('op', { frame });
+    const c = clip({ 'text/plain': 'xyz', [PASSAGE.TYPE]: entry });
+    assert.deepEqual([KEYS.pasteEvent(c.e, EVENT), c.prevented(), editsOfD()], [true, true, []], 'taken; nothing placed while its source is read');
+    assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
+    const second = clip({ 'text/plain': 'First', [PASSAGE.TYPE]: OWN_ENTRY });
+    assert.deepEqual([KEYS.pasteEvent(second.e, EVENT), second.prevented()], [true, true], 'a second paste meanwhile: taken, its two flavors read as it is dispatched');
+    assert.deepEqual([KEYS.holding(), editsOfD()], [2, []], 'the key and the second paste held, nothing typed or placed');
+    release();
+    await KEYS.clipped();
+    for (let i = 0; i < 20 && KEYS.holding(); i++) await tick();
+    await KEYS.clipped();
+    assert.deepEqual([shown().slice(0, 10), caret(), KEYS.holding()], ['xyzqFirstF', [D, 10, true], 0], 'the paste placed by identity, then the key held behind it typed after it, then the second paste');
+    assert.deepEqual([REC.identityIn(LAYER.shownOf(D).image, 1, 3), REC.identityIn(LAYER.shownOf(D).image, 5, 5)], [[{ prefix: S + '.0.1', ordinal: 4, width: 3 }], [{ prefix: O + '.0.1', ordinal: 1, width: 5 }]],
+      'the bytes the read named; and the second paste by the identity its own entry named — the entry held with it');
+    // bytes of it no record at hand holds, their read refused: nothing placed, the face standing
+    const far = F.retrieveI([{ start: S + '.0.1.10', width: 3 }]);
+    PORT.boot(FAKE.create({ [FAKE.keyOf('op', { frame: far })]: { refused: { kind: 'refused', name: 'withheld', status: 200, code: 'withheld', detail: null, op: 'retrieve_i', site: { addr: S }, body: null } } }));
+    const before = editsOfD();
+    KEYS.pasteEvent(clip({ 'text/plain': 'xyz', [PASSAGE.TYPE]: entry.replace('"ordinal":4', '"ordinal":10') }).e, EVENT);
+    await KEYS.clipped();
+    assert.deepEqual([editsOfD(), DELETION.pasteFace(), said.at(-1)], [before, { addr: D, ...FACES.pasteWords('withheld', S) }, heard(FACES.pasteWords('withheld', S).text)], 'refused `withheld`: nothing placed, the face naming the origin, said');
+  } finally { PORT.boot(null); DELETION._reset(); }
+}));
+
 test('a paste event is answered by the test its keydown reads, so one that arrives with no keydown is guarded: off the plane — a field, a control, the line, a corner, a landing\'s line, the scene — it is the platform\'s, untouched; at a span of a draft holding no caret, at another\'s document and at an edition its site\'s line answers it, nothing placed; in a draft that cannot be written the reason\'s line answers it at a live caret and at the kept caret\'s span, which is not returned; and at a document below its reading scale it is the platform\'s (D5 K-93, K-72; D6 BM-52, BM-58; B3-S13)', () => onPlane(async ({ said }) => {
   listed([[E, 'edition']]);
   await focusOn(D, 1);
@@ -2622,7 +2689,7 @@ test('a cut event at a live caret with a selection drawn in its text, on a page 
     assert.deepEqual([KEYS.cutEvent(c.e, EVENT), c.prevented()], [true, true], 'the cut: taken, the platform\'s prevented');
     await KEYS.clipped();
     assert.deepEqual([Object.keys(c.set).sort(), c.set['text/plain'], JSON.parse(c.set['application/x-skep-passage'])],
-      [['application/x-skep-passage', 'text/plain'], 'First', { board: origin, doc: D, member: null, plain: false, pos: null, width: null, ids: [{ prefix: D + '.0.1', ordinal: 1, width: 5 }] }],
+      [['application/x-skep-passage', 'text/plain'], 'First', { board: origin, doc: D, member: null, plain: false, pos: null, width: null, ids: [{ prefix: D + '.0.1', ordinal: 1, width: 5 }], version: 2, lengths: [5] }],
       'the clipboard: the plain text and skep\'s own entry, as a copy of the selection writes them');
     assert.deepEqual([shown(), editsOfD(), caret(), SEL.selected(), overlay(), walkAt(), said.slice(n)], [TEXT.slice(5), [[1, 5, '']], [D, 1, true], null, null, ['block', D, 1], []],
       'the bytes out as one edit, the selection and its card ended, the caret at the removal, the walk on its span, nothing said');

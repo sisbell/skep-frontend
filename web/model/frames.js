@@ -1,7 +1,8 @@
 // M-FRAMES — the wire frames the page composes and the answers it decodes
 // (the structure record §3.2). Layer 1 (the model), pure: no state.
-// The reads alone: `retrieve_v`, `retrieve_doc_v_span_set`,
-// `doc_metadata`, `find_links_v`, `find_links_ftt`, `read_link`,
+// The reads alone: `retrieve_v`, the read by identity `retrieve_i`,
+// `retrieve_doc_v_span_set`, `doc_metadata`, `find_links_v`,
+// `find_links_ftt`, `read_link`,
 // `follow_link`, `image`, `project`, `compare`, `show_origin`,
 // `find_docs_containing`, `effective_owner`, `principal_prefix`, `key_set`,
 // the supersession lineage `in_claims` and `out_claims` (A-56, A-57), the
@@ -19,7 +20,9 @@
 // this module decodes the answers alone.
 // The answers decoded: the delivery's items (`content`, `hex`, `atom`,
 // `atom_hex`, `ref`, `withheld`, and an item of a kind this module does not
-// know, kept at its own place — wire.md §Value encodings), a span set, an
+// know, kept at its own place — wire.md §Value encodings), the values a read
+// by identity delivers, one per position (`decodeIDelivery`), read back as a
+// delivery's runs (`iRuns`), a span set, an
 // `addrs` list, a link value, a follow, the V→I runs, a compare report,
 // `doc_metadata`, `effective_owner`'s pair, `maybe_addr`, `key_set`, the
 // lineage's `claims` (A-82), the orphan preview's `orphans`, and a `rejected`
@@ -80,7 +83,7 @@ import { byteLength } from '../util.js';
 export const READ_OPS = Object.freeze([
   'retrieve_v', 'retrieve_doc_v_span_set', 'doc_metadata', 'find_links_v', 'find_links_ftt', 'read_link',
   'follow_link', 'image', 'project', 'compare', 'show_origin', 'find_docs_containing', 'effective_owner',
-  'principal_prefix', 'key_set', 'in_claims', 'out_claims', 'delete_orphans',
+  'principal_prefix', 'key_set', 'in_claims', 'out_claims', 'delete_orphans', 'retrieve_i',
 ]);
 
 /**
@@ -204,6 +207,13 @@ export const MAX_DELIVERY_ITEMS = 131072;
 
 /** @param {string} doc @param {number} ordinal @param {number} positions */
 export const retrieveV = (doc, ordinal, positions) => ({ op: 'retrieve_v', specs: [{ doc, span: vSpan(ordinal, positions) }] });
+/**
+ * The read by identity (wire.md §Content & provenance reads, `retrieve_i`):
+ * the values at the permanent addresses each span names, `start` a content
+ * element's address and `width` its positions, a natural.
+ * @param {Array<{start: string, width: number}>} spans
+ */
+export const retrieveI = (spans) => ({ op: 'retrieve_i', spans: spans.map((s) => ({ start: s.start, width: String(s.width) })) });
 /** @param {Array<{doc: string, ordinal: number, positions: number}>} specs */
 export const retrieveVMany = (specs) => ({ op: 'retrieve_v', specs: specs.map((s) => ({ doc: s.doc, span: vSpan(s.ordinal, s.positions) })) });
 /** @param {string} doc */
@@ -425,6 +435,80 @@ export function decodeFollow(/** @type {unknown} */ answer) {
   if (a.resp !== 'follow' || !a.result) return null;
   if (a.result.err) return { invalid: true, spans: /** @type {EndRef[]} */ ([]) };
   return { invalid: false, spans: (a.result.ok || []).map(resolveSpan) };
+}
+
+/**
+ * @typedef {{content: string} | {hex: string} | {atom: string} | {atom_hex: string} | {unknown: true}} IValue — one position's value as
+ * `retrieve_i` delivers it (wire.md §The response envelope, `i_delivery`): a per-byte value as `content` or `hex`, a composite as `atom` or
+ * `atom_hex`, and a value of a kind this module does not know kept at its position
+ */
+
+/**
+ * `i_delivery` (retrieve_i): one item per position asked, in span order — its
+ * address and its value, null where the document minted none there (a
+ * position never minted, or a link position) — and the position the read was
+ * answered at. Null where the answer is no such document, or an item is
+ * malformed; a value of a kind this module does not know is kept, unknown.
+ * @param {unknown} answer
+ * @returns {{asOf: number | null, items: Array<{at: string, value: IValue | null}>} | null}
+ */
+export function decodeIDelivery(answer) {
+  const a = /** @type {{resp?: unknown, items?: unknown}} */ (answer || {});
+  if (a.resp !== 'i_delivery' || !Array.isArray(a.items)) return null;
+  /** @type {Array<{at: string, value: IValue | null}>} */
+  const items = [];
+  for (const raw of a.items) {
+    const it = /** @type {{at?: unknown, value?: unknown}} */ (raw && typeof raw === 'object' ? raw : {});
+    if (typeof it.at !== 'string' || !isAddress(it.at) || !('value' in it)) return null;
+    const v = /** @type {Record<string, unknown> | null} */ (it.value);
+    if (v === null) { items.push({ at: it.at, value: null }); continue; }
+    if (typeof v !== 'object' || Array.isArray(v)) return null;
+    const [k] = Object.keys(v), s = v[k];
+    items.push({ at: it.at, value: Object.keys(v).length === 1 && typeof s === 'string' && (k === 'content' || k === 'hex' || k === 'atom' || k === 'atom_hex') ? /** @type {IValue} */ ({ [k]: s }) : { unknown: true } });
+  }
+  return { asOf: asOf(answer), items };
+}
+
+/** each byte a hex string spells, in order; null where it spells none */
+const hexBytes = (/** @type {string} */ h) => (/^([0-9a-fA-F]{2})*$/.test(h) ? Uint8Array.from(h.match(/../g) || [], (x) => parseInt(x, 16)) : null);
+/** bytes read as UTF-8 text; null where they are not UTF-8 */
+const utf8 = (/** @type {Uint8Array} */ b) => { try { return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(b); } catch { return null; } };
+
+/**
+ * Positions' values read by identity as the runs a delivery of them is
+ * (wire.md §Value encodings, the read form), placed from position 1: each
+ * maximal stretch of per-byte values one run — `content` where its bytes
+ * together are UTF-8, else `hex` — each composite value an `atom` or an
+ * `atom_hex` of one position, and each value of a kind this module does not
+ * know, and a per-byte value spelling other than one byte, an `unknown` run
+ * of one. A position with no value is a run of none: the caller reads the
+ * values for those first.
+ * @param {ReadonlyArray<IValue | null>} values one per position, in order
+ * @returns {Run[]}
+ */
+export function iRuns(values) {
+  /** @type {Run[]} */
+  const out = [];
+  /** @type {number[]} the per-byte stretch being gathered */
+  let bytes = [];
+  let pos = 1, from = 1;
+  const close = () => {
+    if (!bytes.length) return;
+    const b = Uint8Array.from(bytes), text = utf8(b);
+    out.push(text != null ? { pos: from, width: b.length, kind: 'content', text, ref: null, origin: null } : { pos: from, width: b.length, kind: 'hex', text: [...b].map((x) => x.toString(16).padStart(2, '0')).join(''), ref: null, origin: null });
+    bytes = [];
+  };
+  for (const v of values) {
+    const per = !v ? null : 'content' in v ? new TextEncoder().encode(v.content) : 'hex' in v ? hexBytes(v.hex) : null;
+    if (per && per.length === 1) { if (!bytes.length) from = pos; bytes.push(per[0]); pos += 1; continue; }
+    close();
+    if (v && 'atom' in v) out.push({ pos, width: 1, kind: 'atom', text: v.atom, ref: null, origin: null });
+    else if (v && 'atom_hex' in v) out.push({ pos, width: 1, kind: 'atom_hex', text: v.atom_hex, ref: null, origin: null });
+    else if (v) out.push({ pos, width: 1, kind: 'unknown', text: '', ref: null, origin: null });
+    pos += 1;
+  }
+  close();
+  return out;
 }
 
 /** `runs` (image): the V→I image, each run's I-start resolved */

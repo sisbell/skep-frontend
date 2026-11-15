@@ -41,7 +41,9 @@
 // elapsed in whole minutes, English words in a German browser too; and
 // every face's words, name and description as S22's table hears them, a
 // draft's name in an
-// inert act's reason and a device's label in a hand kept as written.
+// inert act's reason and a device's label in a hand kept as written; and a
+// paste's face in its own words for each reason it placed nothing or placed
+// new words.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as FACES from './faces.js';
@@ -1288,3 +1290,27 @@ test('BM-16, BM-27: what a discard did is said after it, each a line of its own 
   } finally { MACHINE._reset(); WRITE._reset(); PORT.boot(null); HOST.dismiss(); FACES.readers({ line: (text) => FOCUS.say(text) }); }
 });
 
+
+test('a paste\'s face says, in its entry\'s words set as a sentence, why nothing was placed — the source withheld, its origin named; the board saying nothing of it, by its built words; not read; the draft changed while it was read; and a fault of the page\'s own, `dangling_source`, `bad_run`, `too_many_runs`, `empty_result` or a read\'s own refusal, in a line of its own that promises no held words — or that the words, not the passage they came with, were placed as new words, a source the page holds named by its label; the quote\'s "holds nothing to quote" never said at a paste (B3-S5; the paste survey\'s P6, O6, O11)', () => {
+  const S = '1.0.1.0.30';
+  /** @type {Array<[string, string | null, string, Record<string, string>?]>} each case's name, the document named, the string its face shows and the values its words take */
+  const cases = [
+    ['withheld', S, 'B3.paste.withheld', { origin: S }],
+    ['source_not_registered', S, 'B3.source_not_registered', { address: S }],
+    ['unread', S, 'L.paste.unread'],
+    ['moved', null, 'L.paste.moved'],
+    ['differs', S, 'L.paste.differs', { source: S }],
+    ...['dangling_source', 'bad_run', 'too_many_runs', 'empty_result', 'not_content_subspace', 'empty_width'].map((name) => /** @type {[string, string, string]} */ ([name, S, 'L.paste.fault'])),
+  ];
+  for (const [name, doc, id, values] of cases) {
+    assert.deepEqual(FACES.pasteWords(name, doc), { id, text: sentence(id, values || {}) }, `${name}: its entry, a sentence, its tokens filled`);
+  }
+  assert.ok(!/held here/.test(t('L.paste.fault')) && /nothing was placed/.test(t('L.paste.fault')), 'the page\'s own fault says nothing was placed and never that words are held');
+  assert.notEqual(FACES.pasteWords('dangling_source', S).id, 'B3.dangling_source', 'never the quote\'s words at a paste');
+  const H = '1.0.1.0.31';
+  REC.takeSpanSet(H, [{ subspace: 1, ordinal: 1, positions: 15 }]);
+  REC.takeDelivery(H, [{ pos: 1, width: 15, kind: 'content', text: 'A held source.\n', ref: null, origin: null }]);
+  const label = LAYER.boxName(H).name;
+  assert.ok(label && label !== H, 'a source the page holds has a label');
+  assert.deepEqual(FACES.pasteWords('differs', H), { id: 'L.paste.differs', text: sentence('L.paste.differs', { source: label }) }, 'words placed new from a source the page holds: it named by its label, as its box is');
+});

@@ -89,9 +89,10 @@
 // `projectedIn`); a member's extent (`extentOf`) and its age (`ageOf`),
 // which every `doc_metadata` answered of a member keeps; a link's lineage
 // (`lineage`: `in_claims` and `out_claims` under the audit view; A-56,
-// A-57); the chain to its end (`probeChain`); and where a passage's bytes
+// A-57); the chain to its end (`probeChain`); where a passage's bytes
 // stand in a text (`compareParts`) and a text's image over a region
-// (`imageParts`).
+// (`imageParts`); and the values bytes hold, read by their identity in parts
+// of at most MAX_DELIVERY_ITEMS positions (`readIdentity`; FP-21).
 // The orders every read keeps. A read goes at the page's class (`atClass`):
 // it waits for an acquire out, and one the class changed under, or that met
 // the end of the session it went out under, is asked again in the form the
@@ -1959,6 +1960,43 @@ export async function textParts(addr, pos, width, o = {}) {
   }
   const asOf = asOfs.length && asOfs.every((a) => a != null) ? Math.min(.../** @type {number[]} */ (asOfs)) : null;
   return { runs, asOf };
+}
+
+/**
+ * The values bytes hold, read by their identity (`retrieve_i`; B3-S5; the
+ * paste survey's W5) at the page's class: the spans cut into parts of at most
+ * MAX_DELIVERY_ITEMS positions, a delivery holding one item a position
+ * (FP-21), each part one read, in order. A refusal is recorded and handed up,
+ * the parts after it unasked — `withheld` naming the document the bytes are
+ * of; an answer that is no delivery of as many positions as asked is the
+ * shell's `malformed_answer`. Each position's value in the spans' order, null
+ * where the document minted none there.
+ * @param {readonly import('./records.js').ISpan[]} spans the bytes, by identity, in order
+ * @returns {Promise<{values: Array<import('./frames.js').IValue | null>} | {refused: Refusal}>}
+ */
+export async function readIdentity(spans) {
+  /** @type {Array<Array<{start: string, width: number}>>} */
+  const parts = [[]];
+  let room = F.MAX_DELIVERY_ITEMS;
+  for (const s of spans) {
+    for (let off = 0; off < s.width; ) {
+      if (!room) { parts.push([]); room = F.MAX_DELIVERY_ITEMS; }
+      const w = Math.min(room, s.width - off);
+      parts[parts.length - 1].push({ start: `${s.prefix}.${s.ordinal + off}`, width: w });
+      off += w; room -= w;
+    }
+  }
+  /** @type {Array<import('./frames.js').IValue | null>} */
+  const values = [];
+  for (const part of parts) {
+    if (!part.length) continue;
+    const out = await read(F.retrieveI(part));
+    if ('refused' in out) { refusals.push({ frame: 'retrieve_i', refusal: out.refused, addr: documentOf(part[0].start) || part[0].start }); return { refused: out.refused }; }
+    const got = F.decodeIDelivery(out.answer), want = part.reduce((n, x) => n + x.width, 0);
+    if (!got || got.items.length !== want) return { refused: /** @type {Refusal} */ ({ kind: 'shell', name: 'malformed_answer' }) };
+    for (const i of got.items) values.push(i.value);
+  }
+  return { values };
 }
 
 /** a stretch of text cut into the parts one delivery holds: consecutive stretches of at most MAX_DELIVERY_ITEMS positions, in the text's order */

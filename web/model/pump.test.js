@@ -62,8 +62,10 @@
 // whose image read fails taken alone, the view asking on its own only the
 // image its held text lacks, in parts, halved where refused for its size and
 // each refusal recorded once, and a text a whole read finds held with no
-// image covering it read for its image. With SKEP_REPLAY naming a script the
-// harness recorded, the model's snapshot is printed for the gate.
+// image covering it read for its image; bytes read by their identity in parts
+// of at most one delivery's items, a refusal handed up. With SKEP_REPLAY
+// naming a script the harness recorded, the model's snapshot is printed for
+// the gate.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -3851,4 +3853,39 @@ test('replay: a recorded script from the provider builds the model; the snapshot
   if (process.env.SKEP_REPLAY_OUT) writeFileSync(process.env.SKEP_REPLAY_OUT, snap); // the runner's TAP escapes stdout; the gate reads the file
   else process.stdout.write('SNAPSHOT ' + snap + '\n');
   assert.deepEqual(fake.unanswered, []);
+});
+
+test('bytes read by their identity: `retrieve_i` at the page\'s class, the spans cut into parts of at most MAX_DELIVERY_ITEMS positions — one item a position — each one read in order, the values handed up in the spans\' order, `null` where the document minted none; a refusal recorded and handed up, the parts after it unasked; an answer of too few positions malformed (B3-S5; FP-21)', async () => {
+  const X = '1.0.1.0.40', Y = '1.0.1.0.41', M = F.MAX_DELIVERY_ITEMS;
+  /** @type {string[]} */
+  const asked = [];
+  let refuse = false, short = false;
+  const fake = FAKE.create(new Proxy({}, {
+    get: (_t, key) => {
+      if (!String(key).startsWith('op:')) return undefined;
+      const frame = JSON.parse(String(key).slice(3));
+      if (frame.op !== 'retrieve_i') return undefined;
+      asked.push(frame.spans.map((/** @type {{start: string, width: string}} */ s) => `${s.start}+${s.width}`).join(' '));
+          if (refuse) return { refused: { kind: 'refused', name: 'withheld', status: 200, code: 'withheld', detail: null, op: 'retrieve_i', site: { addr: Y }, body: null } };
+      if (short) return { result: { as_of: 4, items: [], resp: 'i_delivery' } };
+      const items = frame.spans.flatMap((/** @type {{start: string, width: string}} */ s) => Array.from({ length: Number(s.width) }, (_, i) => ({ at: s.start, value: s.start.startsWith(Y) && i === 1 ? null : { content: 'a' } })));
+      return { result: { as_of: 4, items, resp: 'i_delivery' } };
+    },
+  }));
+  PORT.boot(fake);
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  const spans = [{ prefix: X + '.0.1', ordinal: 1, width: M + 3 }, { prefix: Y + '.0.1', ordinal: 5, width: 2 }];
+  const out = await PUMP.readIdentity(spans);
+  assert.deepEqual(asked, [`${X}.0.1.1+${M}`, `${X}.0.1.${M + 1}+3 ${Y}.0.1.5+2`], 'two reads: the first part whole, the second the first span\'s rest and the second span');
+  assert.ok('values' in out);
+  assert.deepEqual([out.values.length, out.values[0], out.values[M + 3], out.values[M + 4]], [M + 5, { content: 'a' }, { content: 'a' }, null], 'every position\'s value in order, null where the document minted none');
+  asked.length = 0;
+  refuse = true;
+  const refusedNow = PUMP.refusalsMet().length;
+  const no = await PUMP.readIdentity(spans);
+  assert.deepEqual(['refused' in no && no.refused.name, asked.length, PUMP.refusalsMet().slice(refusedNow).map((r) => [r.frame, r.refusal.name, r.addr])], ['withheld', 1, [['retrieve_i', 'withheld', X]]], 'refused at the first part: handed up and recorded, the second never asked');
+  refuse = false; short = true;
+  const few = await PUMP.readIdentity([{ prefix: Y + '.0.1', ordinal: 5, width: 2 }]);
+  assert.deepEqual('refused' in few && few.refused, { kind: 'shell', name: 'malformed_answer' }, 'an answer of fewer positions than asked: malformed');
 });

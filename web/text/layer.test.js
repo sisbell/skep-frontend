@@ -78,8 +78,11 @@
 // a paste one edit and a step of its own, its line endings set, in a
 // selection's place or at the caret, nothing placed past its bound; a cut the
 // clipboard's two flavors, then one edit, its face keyed to the `delete` its
-// commit sends and none for words still in their open burst (FP-8, FP-12, FP-20, FP-22, FP-23,
-// FP-24, FP-26, FP-27, FP-30, FP-31, FP-33, FP-34, FP-36, FP-37, FP-38, FP-39).
+// commit sends and none for words still in their open burst; and a paste read
+// by skep's own entry — the same words placed by identity where they match its
+// plain text, at hand or read by identity, else the plain text, told (FP-8,
+// FP-12, FP-20, FP-22, FP-23, FP-24, FP-26, FP-27, FP-30, FP-31, FP-33, FP-34,
+// FP-36, FP-37, FP-38, FP-39).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -2427,11 +2430,12 @@ function cutEvent(none = false) {
 /**
  * The test run on a page of the DOM under `web/test/`: one draft of the session's account holding `WORDS`, read at
  * position 7 with its image, mounted as the layer mounts it at its reading scale; the session one that writes, and D6's
- * machine handed in over a fake port acking every write frame, an insert's bytes minted, and answering no read. Every
- * caret, edit and article is let go after it.
+ * machine handed in over a fake port acking every write frame, an insert's bytes minted, and answering a read only as
+ * `reads` answers it. Every caret, edit and article is let go after it.
  * @param {(d: Drafted) => Promise<void>} body
+ * @param {(frame: Record<string, any>) => unknown} [reads] the answer to a read frame; none, the fake's own refusal, where it gives none
  */
-async function onDraft(body) {
+async function onDraft(body, reads = () => undefined) {
   const dom = page({ width: 1440, height: 900 }), P = '1.0.1.0.2', n = byteLength(WORDS);
   dom.install();
   try {
@@ -2444,8 +2448,8 @@ async function onDraft(body) {
         if (String(key).startsWith('held:')) return { result: [] };
         if (!String(key).startsWith('op:')) return undefined;
         const frame = JSON.parse(String(key).slice(3));
-        // a read the pump makes of the draft it wrote in is no write: left unanswered
-        if (frame.frame || F.READ_OPS.includes(frame.op)) return undefined;
+        // a read the pump makes of the draft it wrote in is no write: answered only where the test answers it
+        if (frame.frame || F.READ_OPS.includes(frame.op)) return reads(frame);
         frames.push(frame);
         return { result: frame.op === 'insert' ? { addr: `${P}.0.1.${1000 * ++k}`, at: 20 + k, resp: 'ack_addr' } : { at: 20 + ++k, resp: 'ack' } };
       },
@@ -2502,6 +2506,72 @@ test('text pasted at a live caret is one page-local edit, a step of its own, the
   }
 }));
 
+/** skep's own entry as a copy writes it, of bytes by identity on the fixture's board, each part's length in the plain text given */
+const entryOf = (/** @type {string} */ doc, /** @type {Array<Record<string, unknown>>} */ ids, /** @type {number[] | null} */ lengths) => JSON.stringify({ board: ORIGIN, doc, member: null, plain: false, pos: null, width: null, ids, version: 2, lengths });
+
+test('B3-S5 (i), C3: a paste whose skep entry names this board\'s bytes, their words at hand, places the same words by their identity — one act, a removal kept for them and the put-back naming it, the caret after them — where those words, read as a copy reads them, are the plain text\'s; and places the plain text as new bytes, saying so where it was made, where they differ at the same lengths, or where the lengths do not cut the plain text (the paste survey\'s C2, O6); another board\'s entry places the plain text, saying nothing', () => onDraft(async ({ P, edits, caret, shown, steps }) => {
+  const words = entryOf(P, [{ prefix: P + '.0.1', ordinal: 9, width: 5 }], [5]);
+  LAYER.placeCaret(P, 26);
+  assert.equal(LAYER.caretPaste('words', null, words), 'same');
+  assert.deepEqual([shown().slice(0, 31), caret(), steps(), WRITE.edits(P).map((e) => [e.pos, e.width, !!e.based, e.back ? e.back.width : null])], ['Tumbler words stand here.words\n', [P, 31, true], [['paste', false]], [[26, 0, true, null], [26, 0, false, 5]]],
+    'the same bytes placed at the caret by identity, the caret after them, one step');
+  assert.deepEqual(REC.identityIn(LAYER.shownOf(P).image, 26, 5), [{ prefix: P + '.0.1', ordinal: 9, width: 5 }], 'by the identity the entry named: standing twice in the draft');
+  WRITE.clearEdits(P);
+  LAYER.placeCaret(P, 26);
+  const site = { before: [{ prefix: P + '.0.1', ordinal: 25, width: 1 }], after: [{ prefix: P + '.0.1', ordinal: 26, width: 1 }] };
+  assert.deepEqual(LAYER.caretPaste('wordz', null, words), { told: 'differs', name: 'differs', doc: P, site }, 'the same lengths, other words: told, where the paste was made');
+  assert.deepEqual([edits(), caret()], [[[26, 0, 'wordz']], [P, 31, true]], 'the plain text placed as new bytes, one edit — never the bytes the entry named');
+  WRITE.clearEdits(P);
+  LAYER.placeCaret(P, 26);
+  assert.deepEqual(LAYER.caretPaste('words!', null, words), { told: 'differs', name: 'differs', doc: P, site }, 'lengths that do not cut the plain text: told the same way');
+  assert.deepEqual(edits(), [[26, 0, 'words!']], 'new bytes');
+  WRITE.clearEdits(P);
+  LAYER.placeCaret(P, 26);
+  assert.equal(LAYER.caretPaste('words', null, JSON.stringify({ ...JSON.parse(words), board: 'http://elsewhere' })), 'placed', 'another board\'s entry: the plain text, nothing said');
+  assert.deepEqual(edits(), [[26, 0, 'words']]);
+}));
+
+test('B3-S5 (i), W5: a paste whose entry names bytes no record at hand holds reads them by identity first — `retrieve_i` of their spans — and waits on it: their words read back as the plain text\'s, the same words are placed where the paste was made; a read refused `withheld` names the origin, `doc_not_registered` the source the board says nothing of, a position the document minted nothing at is the page\'s own fault, a read never answered is said so, and a draft changed at the paste\'s place while it was read is said so — each placing nothing', async () => {
+  const S = '1.0.1.0.30', at = (/** @type {number} */ n) => `${S}.0.1.${n}`;
+  /** @type {string[]} */
+  const asked = [];
+  let answer = (/** @type {Record<string, any>} */ _frame) => /** @type {unknown} */ (undefined);
+  const reads = (/** @type {Record<string, any>} */ frame) => { if (frame.op !== 'retrieve_i') return undefined; asked.push(frame.spans.map((/** @type {{start: string, width: string}} */ x) => `${x.start}+${x.width}`).join(' ')); return answer(frame); };
+  const delivered = (/** @type {Array<Record<string, unknown> | null>} */ values) => ({ result: { as_of: 9, items: values.map((value, i) => ({ at: at(4 + i), value })), resp: 'i_delivery' } });
+  const refused = (/** @type {string} */ name, /** @type {Record<string, unknown>} */ site = {}) => ({ refused: { kind: 'refused', name, status: 200, code: name, detail: null, op: 'retrieve_i', site, body: null } });
+  const entry = entryOf(S, [{ prefix: S + '.0.1', ordinal: 4, width: 3 }], [3]);
+  await onDraft(async ({ P, edits, caret, shown, frames }) => {
+    answer = () => delivered([{ content: 'a' }, { content: 'b' }, { content: 'c' }]);
+    LAYER.placeCaret(P, 26);
+    const out = LAYER.caretPaste('abc', null, entry);
+    assert.ok(out instanceof Promise, 'the source not at hand: the paste waits on its read');
+    assert.deepEqual([await out, asked, shown().slice(0, 29), caret()], ['same', [`${at(4)}+3`], 'Tumbler words stand here.abc\n', [P, 29, true]], 'read by identity, then placed: the same bytes, the caret after them');
+    assert.deepEqual(REC.identityIn(LAYER.shownOf(P).image, 26, 3), [{ prefix: S + '.0.1', ordinal: 4, width: 3 }], 'by the identity read');
+    await new Promise((r) => setImmediate(r)); await new Promise((r) => setImmediate(r));
+    assert.deepEqual(frames.map((f) => [f.op, f.runs]), [['reinstate', [{ i_start: at(4), origin: S, width: '3' }]]], 'its `reinstate` sent after the read');
+    const site = { before: [{ prefix: P + '.0.1', ordinal: 25, width: 1 }], after: [{ prefix: P + '.0.1', ordinal: 26, width: 1 }] };
+    for (const [why, give, name, doc] of /** @type {Array<[string, () => unknown, string, string | null]>} */ ([
+      ['withheld', () => refused('withheld', { addr: S }), 'withheld', S],
+      ['unregistered', () => refused('doc_not_registered'), 'source_not_registered', S],
+      ['a position never minted', () => delivered([{ content: 'a' }, null, { content: 'c' }]), 'dangling_source', S],
+      ['never answered', () => undefined, 'unread', S],
+    ])) {
+      WRITE.clearEdits(P);
+      LAYER.placeCaret(P, 26);
+      answer = give;
+      assert.deepEqual([await LAYER.caretPaste('abc', null, entry), edits(), caret()], [{ told: 'unplaced', name, doc, site }, [], [P, 26, true]], `${why}: nothing placed, told`);
+    }
+    WRITE.clearEdits(P);
+    LAYER.placeCaret(P, 26);
+    answer = () => delivered([{ content: 'x' }, { content: 'y' }, { content: 'z' }]);
+    assert.deepEqual([await LAYER.caretPaste('abc', null, entry), edits()], [{ told: 'differs', name: 'differs', doc: S, site }, [[26, 0, 'abc']]], 'its words read as other words: the plain text placed, told');
+    WRITE.clearEdits(P);
+    LAYER.placeCaret(P, 26);
+    answer = () => { WRITE.addEdit(P, { pos: 25, width: 1, text: '' }); return delivered([{ content: 'a' }, { content: 'b' }, { content: 'c' }]); };
+    assert.deepEqual([await LAYER.caretPaste('abc', null, entry), edits()], [{ told: 'unplaced', name: 'moved', doc: null, site }, [[25, 1, '']]], 'the byte before its place taken out while the source was read: nothing placed, told');
+  }, reads);
+});
+
 test('a paste places nothing where the clipboard held no text, where its text is more than one paste places — counted in UTF-8 bytes once its line endings are set — where no live caret stands, and where the caret\'s draft cannot be written now; the most one paste places is placed whole (B3-S5 (ii); D6 BM-58)', () => onDraft(async ({ P, edits, caret }) => {
   const most = WRITE.PASTE_MAX_BYTES;
   LAYER.placeCaret(P, 9);
@@ -2529,8 +2599,8 @@ test('a cut at a live caret writes the clipboard as a copy of the selection writ
   assert.equal(LAYER.caretCut(c.e, span, ORIGIN), 'cut');
   assert.deepEqual(Object.keys(c.set).sort(), ['application/x-skep-passage', 'text/plain'], 'two flavors, and no other');
   assert.deepEqual([c.set['text/plain'], JSON.parse(c.set['application/x-skep-passage']), c.prevented()],
-    ['words stand', { board: ORIGIN, doc: P, member: null, plain: false, pos: null, width: null, ids: [{ prefix: P + '.0.1', ordinal: 9, width: 11 }] }, true],
-    'the plain text the words cut; the entry the board, the draft — never its positions — and the bytes by identity; the platform\'s cut prevented');
+    ['words stand', { board: ORIGIN, doc: P, member: null, plain: false, pos: null, width: null, ids: [{ prefix: P + '.0.1', ordinal: 9, width: 11 }], version: 2, lengths: [11] }, true],
+    'the plain text the words cut; the entry the board, the draft — never its positions — the bytes by identity, its version and each part\'s length in the plain text; the platform\'s cut prevented');
   assert.deepEqual([edits(), caret(), shown().slice(0, 14), steps()], [[[9, 11, '']], [P, 9, true], 'Tumbler  here.', [['cut', false]]], 'the bytes out as one edit, the caret at the removal, one step that is no run of typing');
   assert.deepEqual([frames, WRITE.removalsOf(P)], [[], []], 'nothing dialed at the act, and no removal faced there');
   WRITE.commit(P);

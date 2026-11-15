@@ -13,7 +13,8 @@
 // `held` event names kept, a placement at several whole places, a past
 // state and a draft's standing among them — every literal the fetched
 // declarations give a union the decoders check taken, and no member the
-// declarations lack read.
+// declarations lack read; and the read by identity, `retrieve_i`, composed and
+// its `i_delivery` decoded as the wire's own examples spell them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -43,6 +44,7 @@ const EXAMPLES = {
   out_claims: '{"op":"out_claims","view":"audit","x":"1.0.1.0.1.0.2.2"}',
   delete_orphans: '{"d":"1.0.1.0.1","op":"delete_orphans","p":{"ordinal":"3","subspace":"1"},"width":"2"}',
   op_at: '{"at":9,"frame":{"op":"retrieve_v","specs":[{"doc":"1.0.1.0.1","span":{"start":"1.1","width":"0.5"}}]}}',
+  retrieve_i: '{"op":"retrieve_i","spans":[{"start":"1.0.1.0.1.0.1.1","width":"5"}]}',
 };
 
 // the wire's own example answers, byte-exact as docs/wire.md carries them (§The response envelope)
@@ -58,6 +60,8 @@ const WIRE = {
   ack_head_moved: '{"at":14,"head_moved":"1.0.1.0.1.3","resp":"ack"}',
   ack_addr: '{"addr":"1.0.1.0.1.0.1.1","at":7,"resp":"ack_addr"}',
   orphans: '{"as_of":9,"orphaned":["1.0.1.0.1.0.2.1"],"resp":"orphans"}',
+  // the read by identity's answer (§The response envelope, `i_delivery`): a per-byte value at the first position, `null` at the second
+  i_delivery: '{"as_of":9,"items":[{"at":"1.0.1.0.1.0.1.1","value":{"content":"h"}},{"at":"1.0.1.0.1.0.1.2","value":null}],"resp":"i_delivery"}',
 };
 
 test('the read composers spell the wire examples exactly', () => {
@@ -79,6 +83,21 @@ test('the read composers spell the wire examples exactly', () => {
   assert.equal(canon(F.inClaims('1.0.1.0.1.0.2.1', 'active')), EXAMPLES.in_claims);
   assert.equal(canon(F.outClaims('1.0.1.0.1.0.2.2', 'audit')), EXAMPLES.out_claims);
   assert.equal(JSON.stringify(F.opAt(9, F.retrieveV('1.0.1.0.1', 1, 5))), EXAMPLES.op_at);
+});
+
+test('the read by identity is a read this module composes as the wire spells it — `retrieve_i`, its spans each a content address and its positions as a natural — joins READ_OPS, and its answer decodes as the wire gives it: one item per position, its address and its value, `null` where the document minted none; read back as a delivery\'s runs, per-byte values together one run of text, else hex, a composite one position (B3-S5; the paste survey\'s W5)', () => {
+  assert.equal(canon(F.retrieveI([{ start: '1.0.1.0.1.0.1.1', width: 5 }])), EXAMPLES.retrieve_i);
+  assert.ok(F.READ_OPS.includes('retrieve_i'), 'a read of wire.md §Content & provenance reads');
+  assert.deepEqual(F.decodeIDelivery(JSON.parse(WIRE.i_delivery)), { asOf: 9, items: [{ at: '1.0.1.0.1.0.1.1', value: { content: 'h' } }, { at: '1.0.1.0.1.0.1.2', value: null }] }, 'the wire\'s own answer');
+  const at = (/** @type {number} */ n) => '1.0.1.0.1.0.1.' + n;
+  assert.deepEqual(F.decodeIDelivery({ as_of: 3, items: [{ at: at(1), value: { atom: 'x' } }, { at: at(2), value: { later: 1 } }], resp: 'i_delivery' })?.items.map((i) => i.value), [{ atom: 'x' }, { unknown: true }], 'a value of a kind it does not know kept at its position');
+  for (const bad of [null, {}, { resp: 'delivery', items: [] }, { resp: 'i_delivery' }, { resp: 'i_delivery', items: [{ value: null }] }, { resp: 'i_delivery', items: [{ at: 'x', value: null }] }, { resp: 'i_delivery', items: [{ at: at(1) }] }, { resp: 'i_delivery', items: [{ at: at(1), value: 'h' }] }]) {
+    assert.equal(F.decodeIDelivery(bad), null, JSON.stringify(bad));
+  }
+  const runs = F.iRuns([{ content: 'h' }, { content: 'i' }, { hex: 'c3' }, { hex: 'a9' }, { atom: 'chunk' }, { hex: 'ff' }, { content: '!' }, { atom_hex: '00ff' }, { unknown: true }]);
+  assert.deepEqual(runs.map((r) => [r.pos, r.width, r.kind, r.text]), [[1, 4, 'content', 'hié'], [5, 1, 'atom', 'chunk'], [6, 2, 'hex', 'ff21'], [8, 1, 'atom_hex', '00ff'], [9, 1, 'unknown', '']],
+    'per-byte values one run — UTF-8 across their bytes as text, the rest hex — a composite one position, an unknown value one position');
+  assert.deepEqual(F.iRuns([{ content: 'hé' }]).map((r) => r.kind), ['unknown'], 'a per-byte value spelling two bytes: none such, kept unknown at its one position');
 });
 
 test('the orphan preview is a read this module composes as the wire spells it — `delete_orphans`, nothing written — and joins READ_OPS, the list the page\'s frames are held to (issue #410)', () => {

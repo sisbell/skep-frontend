@@ -32,12 +32,16 @@
 // and their source with them. An edit whose change the record's text holds
 // already (`Edit.based`) is applied to nothing: it stands for the put-back
 // that names it, which places what it took as the edit keeps it
-// (`Edit.took`), bytes the record's text holds nowhere and no source names.
+// (`Edit.took`), bytes the record's text holds nowhere, sourced as such
+// bytes alone are (`BACK`), so every text the same edits make holds them as
+// one another's.
 // A record `applyHeld` derived with its inserts named is applied over as any
 // record is, its sources standing. `placedAgain` places a draft's edits again
 // in another text — or in the same, some of them left out — by the identity
-// of the bytes each touches and of those either side, and says which it
-// could not place exactly. `madeBy` reads what each edit did as it was
+// of the bytes each touches and of those either side — where those bytes
+// stand twice, a passage placed again in its own draft, at the one stretch or
+// the one place its two sides stand beside — and says which it could not
+// place exactly. `madeBy` reads what each edit did as it was
 // applied — what it removed, what it placed, and the byte either side of its
 // change — by identity, deriving no record, and `stretchIn` a stretch of a
 // record as a put-back places it.
@@ -82,7 +86,7 @@ import { byteLength, byteOffsets, sliceBytes } from '../util.js';
  * @typedef {Object} Text — a text as the kernel edits it: its runs in position order, its image placing them by identity, where each byte came from, and how far its extent moved
  * @property {Run[]} runs
  * @property {ImageRun[]} image
- * @property {ImageRun[]} source every byte by where it came from (`Derivation.source`), as the image places it by identity: `BASE` and its position in the text the kernel started from, or `PAGE` and the page's ordinal for a byte an edit made; none where the caller tracks none
+ * @property {ImageRun[]} source every byte by where it came from (`Derivation.source`), as the image places it by identity: `BASE` and its position in the text the kernel started from, `PAGE` and the page's ordinal for a byte an edit made, or `BACK` and its count among the bytes edits the text holds the change of took, for a byte a put-back placed from one; none where the caller tracks none
  * @property {number} delta the positions added, less the positions removed
  */
 
@@ -90,6 +94,8 @@ import { byteLength, byteOffsets, sliceBytes } from '../util.js';
 export const BASE = 'base';
 /** the source of a byte an edit made: its ordinal the page's own for it (`Text.source`; M-REC's `Edit.page`) */
 export const PAGE = 'page';
+/** the source of a byte a put-back placed from an edit the record's text holds the change of (`Text.source`; M-REC's `Edit.based`): its ordinal counting such bytes in the order the edits took them */
+export const BACK = 'back';
 
 /** a row the apply stopped at */
 class Stop extends Error {
@@ -503,7 +509,7 @@ function anchored(t, row) {
  * identity and their source with them — the same kernel the held lines ride.
  * An edit the record's text holds the change of already (`Edit.based`)
  * changes nothing, and what it took is what it keeps (`Edit.took`), placed
- * by the put-back that names it with no source. An edit outside the text
+ * by the put-back that names it, sourced as such bytes alone are (`BACK`). An edit outside the text
  * held, or a put-back of bytes no earlier edit removed, stops the apply as a
  * row does, named by its index among the edits. The record handed in is
  * never changed.
@@ -589,6 +595,8 @@ function chainOver(doc, ids) {
   let t = /** @type {Text} */ ({ ...textOfDoc(doc), source: doc.derived && doc.derived.source ? doc.derived.source.map((r) => ({ ...r })) : baseSource(doc) });
   /** @type {Chain['removed']} */
   const removed = [];
+  /** the bytes edits the text holds the change of took so far: each its own source (`BACK`), so a put-back of them stands as itself in every text the same edits make */
+  let back = 1;
   return {
     text: () => t,
     removed,
@@ -597,7 +605,11 @@ function chainOver(doc, ids) {
       removed[i] = null;
       if (e.based) {
         // what it took, each byte the page made named as the caller names it now: by the address the board minted it at since
-        if (e.took) removed[i] = { runs: e.took.runs.map(copyRun), ids: e.took.ids.flatMap((r) => (r.prefix === pageSpace(doc.addr) ? renamed(r, ids(r.ordinal, r.width)) : [{ ...r }])), src: [] };
+        if (e.took) {
+          const width = e.took.runs.reduce((n, r) => n + r.width, 0);
+          removed[i] = { runs: e.took.runs.map(copyRun), ids: e.took.ids.flatMap((r) => (r.prefix === pageSpace(doc.addr) ? renamed(r, ids(r.ordinal, r.width)) : [{ ...r }])), src: width ? [{ pos: 1, width, prefix: BACK, ordinal: back }] : [] };
+          back += width;
+        }
         return;
       }
       if (e.width > 0) {
@@ -637,9 +649,14 @@ function chainOver(doc, ids) {
  * what it removed taken out wherever those bytes stand, a stretch at a time;
  * what it placed set where they stood, else after the byte that stood before
  * it, else before the one after it, else at the text's edge it stood at, else
- * at its own position held inside the text. An edit is placed EXACTLY where
- * the bytes it removed stand whole in one stretch and the bytes either side
- * of it stand either side of it still; the rest are named (`adrift`). A
+ * at its own position held inside the text. Where the bytes it removed stand
+ * whole at more than one place — a passage placed again in the same draft —
+ * it takes out the one its two sides stand beside, else, a guess, the one
+ * nearest where it stood; and where a byte either side of it stands twice, it
+ * is set where the two stand side by side, where only one such place holds.
+ * An edit is placed EXACTLY where the bytes it removed stand whole in one
+ * stretch and the bytes either side of it stand either side of it still, and
+ * no guess placed it; the rest are named (`adrift`). A
  * put-back of bytes an edit left out removed is left out with it: those bytes
  * stand where they stood. An edit the record's text holds the change of
  * (`Edit.based`) is kept as it is. Neither record is changed.
@@ -678,15 +695,28 @@ export function placedAgain(was, now, edits, keep = () => true, ids = (page, wid
     /** the first position of the text placed in, and one past its last */
     const start = 1, close = now.extent != null ? now.extent + tb.delta + 1 : eb ? eb.to : 1;
     const one = (/** @type {ISpan[]} */ x) => { const at = x.length ? placedIn(tb.image, x) : []; return at.length === 1 && at[0].width === 1 ? at[0].pos : null; };
-    const before = one(by.before), after = one(by.after);
-    const stands = by.span.length ? placedIn(tb.image, by.span) : [];
+    let before = one(by.before), after = one(by.after);
+    let stands = by.span.length ? placedIn(tb.image, by.span) : [];
+    /** does a stretch [q, q + w) of the text placed in stand between the edit's two sides as the text it was made in held them: its edge, or the byte that stood there */
+    const sides = (/** @type {number} */ q, /** @type {number} */ w) => (by.first ? q === start : by.before.length > 0 && sameIds(identityIn(tb.image, q - 1, 1), by.before))
+      && (by.last ? q + w === close : by.after.length > 0 && sameIds(identityIn(tb.image, q + w, 1), by.after));
+    // bytes that stand twice — a passage placed again in its own draft: the one stretch, or the one place, its two sides stand beside; else the nearest, a guess
+    let guessed = false;
+    const twice = e.width > 0 && by.span.length ? wholeAt(tb.image, by.span) : [];
+    if (twice.length > 1) {
+      const fit = twice.filter((q) => sides(q, e.width)), q = fit.length === 1 ? fit[0] : twice.reduce((m, x) => (Math.abs(x - e.pos) < Math.abs(m - e.pos) ? x : m));
+      stands = [{ pos: q, width: e.width }]; before = q - 1; after = q + e.width; guessed = fit.length !== 1;
+    } else if (!e.width && ((before == null && by.before.length > 0) || (after == null && by.after.length > 0))) {
+      const at = (by.before.length ? bytesAt(tb.image, by.before).map((q) => q + 1) : by.first ? [start] : bytesAt(tb.image, by.after)).filter((q) => sides(q, 0));
+      if (at.length === 1) { before = at[0] - 1; after = at[0]; }
+    }
     const whole = e.width > 0 && stands.length === 1 && stands[0].width === e.width;
     // where it stands: at what it removed, else after the byte before it, else before the one after it, else at the edge it stood at
     const end = whole ? stands[0].pos + e.width : stands.length ? stands[stands.length - 1].pos + stands[stands.length - 1].width : null;
     const pos = stands.length ? stands[0].pos : before != null ? before + 1 : after != null ? after : by.first ? start : by.last ? close : null;
     const left = by.first ? (stands.length ? stands[0].pos : pos) === start : before != null && before + 1 === (stands.length ? stands[0].pos : pos);
     const right = by.last ? (end ?? pos) === close : after != null && after === (end ?? pos);
-    const exact = pos != null && (e.width > 0 ? whole : true) && left && right;
+    const exact = pos != null && (e.width > 0 ? whole : true) && left && right && !guessed;
     const at = pos ?? (eb ? Math.min(Math.max(e.pos, eb.from), eb.to) : 1);
     // what it removed, the stretches after the first taken out first, so each stands where it is named
     for (const st of stands.slice(1).reverse()) put({ ...k, pos: st.pos, width: st.width, text: '', page: null, back: null });
@@ -695,6 +725,29 @@ export function placedAgain(was, now, edits, keep = () => true, ids = (page, wid
     put({ ...k, pos: at, width: stands.length ? stands[0].width : 0, back });
   }
   return { edits: out, index, adrift };
+}
+
+/** do two runs of bytes by identity name the same bytes in the same order, runs that continue each other one */
+function sameIds(/** @type {readonly ISpan[]} */ a, /** @type {readonly ISpan[]} */ b) {
+  const flat = (/** @type {readonly ISpan[]} */ v) => {
+    /** @type {ISpan[]} */
+    const out = [];
+    for (const r of v) { const l = out[out.length - 1]; if (l && l.prefix === r.prefix && l.ordinal + l.width === r.ordinal) l.width += r.width; else out.push({ prefix: r.prefix, ordinal: r.ordinal, width: r.width }); }
+    return out.map((r) => `${r.prefix}.${r.ordinal}+${r.width}`).join(' ');
+  };
+  return a.length > 0 && b.length > 0 && flat(a) === flat(b);
+}
+
+/** every position a byte named by identity stands at in an image, in the text's order: each occurrence apart, never joined */
+function bytesAt(/** @type {ImageRun[]} */ image, /** @type {readonly ISpan[]} */ id) {
+  const [x] = id;
+  return x ? image.flatMap((r) => (r.prefix === x.prefix && x.ordinal >= r.ordinal && x.ordinal < r.ordinal + r.width ? [r.pos + (x.ordinal - r.ordinal)] : [])) : [];
+}
+
+/** every position a stretch of bytes named by identity stands whole at in an image, in order, in the text's order: each occurrence apart, so bytes that stand twice stand at two */
+function wholeAt(/** @type {ImageRun[]} */ image, /** @type {readonly ISpan[]} */ span) {
+  const w = span.reduce((n, x) => n + x.width, 0);
+  return w ? bytesAt(image, span).filter((q) => sameIds(identityIn(image, q, w), span)) : [];
 }
 
 /** a run of bytes the page made, placed as it stands, named by the identity given for them, in order */
@@ -748,7 +801,7 @@ export function sourceRuns(d, pos, width) {
   const out = [];
   for (const r of source) {
     const lo = Math.max(pos, r.pos), hi = Math.min(end, r.pos + r.width);
-    if (lo >= hi) continue;
+    if (lo >= hi || (r.prefix !== BASE && r.prefix !== PAGE)) continue;
     const from = r.ordinal + (lo - r.pos);
     out.push({ pos: lo, width: hi - lo, base: r.prefix === BASE ? from : null, page: r.prefix === PAGE ? from : null });
   }

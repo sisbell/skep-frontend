@@ -77,7 +77,11 @@
 // the act that copies the unkept words out (`Face.head`; D6 BM-10, BM-19,
 // BM-20); `slot_too_large`, S5's `source_not_registered` and `dangling_source`,
 // S12's `bad_target` and `original_not_resident`, and `published_target`
-// C-45; at the one line's sign-in act the session's refusal
+// C-45; a paste's face, keyed on why it placed nothing or placed new words in
+// the same words' place (`pasteWords`; B3-S5) — the source withheld, the
+// board saying nothing of it, not read, the draft changed while it was read,
+// a fault of the page's own in a line of its own, and words that are not the
+// passage the entry named; at the one line's sign-in act the session's refusal
 // — the boot's, or the re-acquire's of a session a restart lost — and a
 // death's arm (C-137, by the death's reason: `deathWords`, the words the
 // line's death arm says too), "signed out" the sign-out marker's alone and
@@ -442,6 +446,38 @@ export function wordsFor(r, ctx = {}) {
     case 'original_not_resident': return f('B3.original_not_resident');
     case 'published_target': return f('C-45', { D: addr });
     default: return f('L.refused', { name });
+  }
+}
+
+/**
+ * The words a paste's face says where the paste was made (B3-S5; the paste
+ * survey's P6, O6, O11), each its entry set as a sentence (ST's `sentence`),
+ * keyed on why and never on prose: words that did not match the passage
+ * skep's own entry named, placed as new words — the document named by its
+ * label where the page holds it (T-LAYER's `boxName`), else its address
+ * (`differs`; `L.paste.differs`); nothing placed, the source withheld from
+ * the person, its origin named (`B3.paste.withheld`); the board saying
+ * nothing of the source (`B3.source_not_registered`, its built words); the
+ * source not read (`unread`; `L.paste.unread`); the draft changed while it was
+ * read (`moved`; `L.paste.moved`); and any other — `dangling_source`,
+ * `bad_run`, `too_many_runs`, `empty_result`, a read's own refusal — a fault
+ * of the page's own, whose line says nothing was placed and never promises
+ * held words (`L.paste.fault`). `wordsFor` keeps "that passage holds nothing
+ * to quote" for the quote alone.
+ * @param {string} name why (T-LAYER's `PasteTold.name`; W-WRITE's `Unplaced.name`)
+ * @param {string | null} doc the document named; none where none is
+ * @returns {{id: string, text: string}}
+ */
+export function pasteWords(name, doc) {
+  const of = doc || '';
+  const said = (/** @type {string} */ id, /** @type {Record<string, string>} */ v = {}) => ({ id, text: sentence(id, v) });
+  switch (name) {
+    case 'differs': return said('L.paste.differs', { source: doc && REC.has(doc) ? LAYER.boxName(doc).name : of });
+    case 'withheld': return said('B3.paste.withheld', { origin: of });
+    case 'source_not_registered': return said('B3.source_not_registered', { address: of });
+    case 'unread': return said('L.paste.unread');
+    case 'moved': return said('L.paste.moved');
+    default: return said('L.paste.fault');
   }
 }
 

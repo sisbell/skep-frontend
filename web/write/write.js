@@ -11,8 +11,13 @@
 // used twice (M-REC's `Edit.page`), each act's edits are one step
 // (`Edit.step`, `addEdits`), and an edit may put back bytes an earlier one
 // removed (`Edit.back`), that earlier edit keeping what it took from then on
-// (`Edit.took`); which of them a burst carried out and where the board acked
-// it (`unsent`, `markSent`, `markAcked`; `Edit.sent`, `Edit.at`), set by the
+// (`Edit.took`); an act that places bytes the board holds by identity — a
+// paste of the same words — places each stretch by a removal kept only for
+// the put-back after it, its new words beside them, its edits going out as a
+// burst of their own (`placeSame`; B3-S5); which of them a burst carried out
+// and where the board acked it, a burst carrying the unsent edits up to an
+// edit it ends before (`unsent`, `markSent`, `markAcked`; `Edit.sent`,
+// `Edit.at`), set by the
 // machine alone; its kept state as its corner reads it — the word, and why
 // the board has not kept its words, which the word's own act says (`keptOf`,
 // `setKept`; B3-S2; D6 BM-8) — set by its owner alone and never by a read; and
@@ -44,7 +49,8 @@
 // kept text a `delete` of the draft carried, or an undo decided at its press
 // (`removalsOf`, `addRemoval`; D6 BM-34, BM-51): what the deletion face is
 // drawn from; and those watching are told of an undo the board declined
-// (`onDeclined`, `decline`; D6 BM-11).
+// (`onDeclined`, `decline`; D6 BM-11), and of a placing by identity it
+// refused for its source (`onUnplaced`, `unplace`; B3-S5).
 // THE HELD LINES THIS WINDOW DID NOT SEND (`setReopened`; D6 BM-29): an
 // earlier launch's, another window's. They are applied over the draft's
 // record before its edits, in the order listed (`baseOf`; M-DERIVE's
@@ -159,8 +165,12 @@ import { byteLength } from '../util.js';
 export const PASTE_MAX_BYTES = 1024 * 1024;
 
 /**
+ * @typedef {{took: import('../model/records.js').Took} | {text: string}} Placing — one stretch a placing by identity places (`placeSame`): bytes the board holds — their runs and their identity, each at its position from 1 (M-REC's `Took`) — or new words, which the page makes
+ */
+
+/**
  * @typedef {Object} Machine — what D6's machine hands in (`machine`)
- * @property {(addr: string, how: Typed | null) => void} typed an act's edits were added to a draft (`addEdits`): a key typing at the caret; an act made there that is a step of its own (`Typed.own`); or, with null, a step of its own made at no caret
+ * @property {(addr: string, how: Typed | null, apart?: boolean) => void} typed an act's edits were added to a draft (`addEdits`, `placeSame`): a key typing at the caret; an act made there that is a step of its own (`Typed.own`); or, with null, a step of its own made at no caret — `apart` where its edits go out as a burst of their own, the open burst committed and answered first (a placing by identity)
  * @property {(addr: string | null) => void} ended the run of typing open at a draft ended — at every draft, with null (`endRun`)
  * @property {(addr: string) => void} commit the open burst of a draft committed now
  * @property {(how: Leaving) => boolean} leaving every draft's unsent words committed as the page leaves them (`leaving`): whether it posted the page's close, which it does at `unload` alone
@@ -183,6 +193,7 @@ export const PASTE_MAX_BYTES = 1024 * 1024;
  * @property {ISpan[]} placed the bytes it placed, by identity, in the order placed: a byte the page made by the page's own name of it, which M-REC reads as the address the board minted it at
  * @property {Taken[]} took what it removed that it had not placed, in the order removed
  * @property {{before: ISpan[], after: ISpan[], pos: number}} began where the caret stood as it began: the byte either side of it, by identity, and its position in the text shown then; no byte and position 0 for a step made at no caret
+ * @property {{before: ISpan[], after: ISpan[]} | null} [where] for a paste, where it placed what it placed: the byte just before that stretch and the byte just after it, by identity, as the text stood right after it — its undo takes out that stretch alone, wherever else its bytes stand, and its redo puts it back there; null for any other step, and where it placed nothing
  * @property {Taken[] | null} stood on the redo stack, the words it placed as they stood when it was undone, in the text's order; null on the undo stack
  * @property {number | null} removal on the redo stack, the removal the deletion face stands at for the words its undo took out (`Removal.id`); null where it stands at none, and on the undo stack
  */
@@ -388,6 +399,52 @@ export function restore(addr, list) {
   return step;
 }
 
+/**
+ * Bytes the board holds placed by identity, as one act of the person's and a
+ * step of its own (see the head; B3-S5 (i), (iv); the paste survey's W1):
+ * `width` positions at `pos` replaced by the stretches given, in order — each
+ * of the board's bytes placed as itself by a removal kept `based` with the
+ * stretch, standing only for the put-back after it that names it, so the text
+ * shown holds those bytes at once (FP-38) and a burst sends them as a
+ * `reinstate` of their I-runs; each of new words an insert named by the
+ * page's next ordinals. The machine handed in is told of the act, made at the
+ * caret as `how` says, as one whose edits go out as a burst of their own
+ * (`Machine.typed`). Nothing where no stretch places a byte, or the draft
+ * cannot be written now (`unwritable`).
+ * @param {string} addr
+ * @param {readonly Placing[]} list the stretches, in the text's order
+ * @param {number} pos where the first goes, a position of the text shown
+ * @param {number} width the positions it replaces there; 0 where it replaces none
+ * @param {Typed | null} [how] the act was made at the caret, and where that caret stood; null for one made at no caret
+ * @returns {number} the positions placed; 0 where nothing was added
+ */
+export function placeSame(addr, list, pos, width, how = null) {
+  const widthOf = (/** @type {Placing} */ p) => ('took' in p ? p.took.runs.reduce((n, r) => n + r.width, 0) : byteLength(p.text));
+  const parts = list.filter((p) => widthOf(p) > 0);
+  if (!parts.length || unwritable(addr)) return 0;
+  const x = editsOf(addr), step = ++x.steps;
+  /** @type {Edit[]} */
+  const made = width > 0 ? [{ pos, width, text: '', page: null, back: null, step }] : [];
+  let at = pos;
+  for (const p of parts) {
+    const w = widthOf(p);
+    if ('took' in p) made.push({ pos: at, width: 0, text: '', page: null, back: null, step, based: true, took: { runs: p.took.runs.map((r) => ({ ...r })), ids: p.took.ids.map((r) => ({ ...r })) }, sent: 0, at: 0 }, { pos: at, width: 0, text: '', page: null, back: { of: -1, from: 0, width: w }, step });
+    else { made.push({ pos: at, width: 0, text: p.text, page: x.next, back: null, step }); x.next += w; }
+    at += w;
+  }
+  // each put-back names the removal just before it, by its place in the list as it is added
+  let carrier = -1;
+  for (const e of made) {
+    if (e.based) { carrier = x.list.length; x.list = [...x.list, e]; continue; }
+    x.list = [...x.list, ...folded(addr, x, e.back ? { ...e, back: { ...e.back, of: carrier } } : e)];
+  }
+  x.rev++;
+  last = addr;
+  bump();
+  if (handed) handed.typed(addr, how, true);
+  return at - pos;
+}
+
 /** how many acts a draft's edits have been made by (`Edit.step`): the newest act's count; 0 where none was made */
 export const lastAct = (/** @type {string} */ addr) => drafts.get(addr)?.steps ?? 0;
 
@@ -434,6 +491,25 @@ const declineWatchers = [];
 export function onDeclined(fn) { declineWatchers.push(fn); }
 /** an undo the board declined (`onDeclined`), told to those watching: by D6's machine alone */
 export function decline(/** @type {string} */ addr, /** @type {string} */ origin) { for (const w of declineWatchers) w(addr, origin); }
+
+/**
+ * @typedef {Object} Unplaced — a placing by identity the board refused for its source (`onUnplaced`)
+ * @property {string} name the refusal's name: `withheld`, `source_not_registered`, `dangling_source`, `bad_run`, `too_many_runs` or `empty_result`
+ * @property {string | null} origin the document the refusal names — `withheld`'s origin, from its site — else the first document of the placing's runs the page holds no record of, else its first; null where none can be named
+ * @property {{before: ISpan[], after: ISpan[]} | null} site where the act's caret stood as it began, by the byte either side (`Step.began`): the face stands there; null where it was made at no caret
+ */
+
+/** @type {Array<(addr: string, why: Unplaced) => void>} those told of each placing by identity the board refused for its source (`onUnplaced`): a registration, which no reset clears */
+const unplacedWatchers = [];
+/**
+ * Be told of each placing by identity the board refused for its source
+ * (B3-S5; the paste survey's W3): its words gone from the text shown, the
+ * text as it stood before it — the draft, and why. What raises its face.
+ * @param {(addr: string, why: Unplaced) => void} fn
+ */
+export function onUnplaced(fn) { unplacedWatchers.push(fn); }
+/** a placing by identity the board refused for its source (`onUnplaced`), told to those watching: by D6's machine alone */
+export function unplace(/** @type {string} */ addr, /** @type {Unplaced} */ why) { for (const w of unplacedWatchers) w(addr, why); }
 
 // ---- the removals the deletion face stands at -----------------------------------
 
@@ -588,14 +664,17 @@ export function unsent(addr) {
 }
 /**
  * A draft's unsent edits marked carried out by a burst (`Edit.sent`): set by
- * D6's machine as it dials the burst. The text they make is unchanged.
+ * D6's machine as it dials the burst — those before the edit `until` names
+ * by its place in the list, where the burst ends short of the rest. The text
+ * they make is unchanged.
  * @param {string} addr
  * @param {number} burst the machine's count of the draft's bursts
+ * @param {number} [until] the first edit the burst does not carry; every unsent one carried where left out
  */
-export function markSent(addr, burst) {
+export function markSent(addr, burst, until = Infinity) {
   const x = drafts.get(addr);
   if (!x) return;
-  x.list = x.list.map((e) => (e.sent == null ? { ...e, sent: burst } : e));
+  x.list = x.list.map((e, i) => (e.sent == null && i < until ? { ...e, sent: burst } : e));
 }
 /**
  * The edits a burst carried out marked acked at a position (`Edit.at`): set

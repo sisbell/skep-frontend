@@ -14,7 +14,8 @@
 // (`write.machine`), a draft's page-local edits (`write.edits`), and its
 // undo and redo stacks, each step by its kind and the words it placed and
 // removed (`write.stacks`); the removals the deletion face stands at as they
-// were last set (`removed`); the
+// were last set (`removed`), and a paste's face as it stands and as it was
+// last set (`pasteFace`); the
 // page's own caret as it stands (`caret`); the mounted
 // articles' text and what stands of each by line (`mountedLines`); the
 // mirror's items; the camera, the focus and its owner's state — the walk's
@@ -749,6 +750,8 @@ export function install(deps) {
     hint: () => HINT.shown(),
     /** the removals of kept text the deletion face stands at, as they were last set (O-DELETION's `shown`): each its draft, whether its face stands whole and how — beside its line or over the lines beneath — its mark's box, its face's, the words removed and the strings its face shows */
     removed: () => DELETION.shown(),
+    /** the paste's face (O-DELETION's): standing — its draft, its words and their string, as the person was told them — and as the last frame set it — beside its line or over the lines beneath, its box; each null where none stands */
+    pasteFace: () => ({ standing: DELETION.pasteFace(), drawn: DELETION.pasteShown() }),
     /** the overlay standing — its id, its kind, its text — and the notice standing below it (O-HOST's; FP-36): its id and its text, null where none stands there */
     overlay: () => { const n = HOST.notice(); return { id: HOST.currentState() ? HOST.currentState()?.id : null, kind: HOST.currentKind(), text: HOST.text(), notice: n ? { id: n.id ?? null, text: HOST.noticeText() } : null }; },
     /** a walk's moment raised as the shell's `moment` event raises one (O-FACES' `moment`; FP-36), and the folded moments the one line's walks' segments are, each its walk and its words (`folded`) */
@@ -772,7 +775,7 @@ export function install(deps) {
       const span = LAYER.onCopy({ clipboardData: { setData: (/** @type {string} */ k, /** @type {string} */ v) => { data[k] = v; } }, preventDefault() {} }, b ? b.origin : '');
       return { span, data };
     },
-    /** the paste door: a paste event made here over a clipboard of its own holding the flavors given, by name, and dispatched at the element holding the focus, so the document's listener takes it as it takes one with no keydown — the system's clipboard never read; whether the page prevented its default, answered once the walk stands on the caret's span (N-KEYS' `clipped`) */
+    /** the paste door: a paste event made here over a clipboard of its own holding the flavors given, by name, and dispatched at the element holding the focus, so the document's listener takes it as it takes one with no keydown — the system's clipboard never read; whether the page prevented its default, answered once the paste's reads are answered, it is placed or told, and the walk stands on the caret's span (N-KEYS' `clipped`) */
     paste: async (/** @type {Record<string, string>} */ data = {}) => {
       const own = new DataTransfer();
       for (const [k, v] of Object.entries(data)) own.setData(k, v);

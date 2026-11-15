@@ -208,7 +208,9 @@
 // own characters and each item a stand-in in square brackets in its place — a
 // withheld run's owner and length, an unshown item's length, a record's own
 // plain contents (`recordContents`) — never what the plane renders for
-// whoever is looking, so a paste never joins text across an item.
+// whoever is looking, so a paste never joins text across an item — and,
+// part by part, the plain text of each consecutive stretch of a span by the
+// same rule, where those stretches cut it (`copyParts`).
 // The first-line rule (`firstLineOf`): the one rule a document's first line
 // is read by wherever the page names the document — its label on the plane,
 // a far end's words, a bundle's, a list row's, the one line's, the ARIA
@@ -2200,4 +2202,33 @@ export function copyText(made, span, ownerOf) {
   }
   close();
   return out.join('');
+}
+
+/**
+ * A span's plain text cut part by part (FP-24, FP-27; the paste survey's
+ * C2): the copy's plain text of each consecutive stretch of the span,
+ * `widths` their positions in order, each read by the item rule `copyText`
+ * reads the span by — null where the parts' texts are not the span's text
+ * cut: an item standing across two parts, or items of one kind and owner
+ * meeting at a part's edge, which share one stand-in. What skep's clipboard
+ * entry measures each part's length in the plain text by.
+ * @param {Copied} made what the article was made from
+ * @param {Span} span the span copied
+ * @param {readonly number[]} widths each part's positions, in order, summing to the span's
+ * @param {(doc: string) => string} ownerOf the owner account of a document, by the one owner rule (T-LAYER's `originOwner`)
+ * @returns {string[] | null}
+ */
+export function copyParts(made, span, widths, ownerOf) {
+  /** @type {string[]} */
+  const out = [];
+  let pos = span.pos, i = 0;
+  for (const w of widths) {
+    // the runs reaching the part: those past the last part's left behind, the text's runs being in position order
+    while (i < made.runs.length && made.runs[i].pos + made.runs[i].width <= pos) i++;
+    let j = i;
+    while (j < made.runs.length && made.runs[j].pos < pos + w) j++;
+    out.push(copyText({ ...made, runs: made.runs.slice(i, j) }, { addr: span.addr, pos, width: w }, ownerOf));
+    pos += w;
+  }
+  return out.join('') === copyText(made, span, ownerOf) ? out : null;
 }

@@ -34,7 +34,10 @@
 // a run refused or handed over, and a refusal kept, refused over its own
 // bytes; a moved document's lines, a line the device refused, and under the
 // death every word the board has not kept, held; and a line another window
-// sent held until it lands.
+// sent held until it lands. A paste of the same words (B3-S5): a burst of its
+// own after the open burst; a refusal of its source placing nothing, any
+// other keeping the standing arm; a cut's paste; and a duplicate in one draft
+// undone and redone where it was placed, its neighbours set again exactly.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -47,7 +50,7 @@ import { estimate } from '../plane/layout.js';
 import * as WRITE from './write.js';
 import * as MACHINE from './machine.js';
 import { frameId } from './bursts.js';
-import { applyEdits } from '../model/derive.js';
+import { applyEdits, stretchIn } from '../model/derive.js';
 import { byteLength } from '../util.js';
 
 const D = '1.0.1.0.2', E = '1.0.1.0.5';
@@ -1446,6 +1449,160 @@ test('BM-2, BM-31: a paste rides the open burst — nothing dialed at the act, i
   assert.deepEqual(dialed(ops, 1), [['insert', 12, ['end.']]], 'a paste ending in punctuation commits at once');
   await flush(); await flush();
   assert.deepEqual([MACHINE.undo(D).out, MACHINE.undo(D).out, shown(D), stacks(D).undo], ['end.', 'P Q', 'abcdefgh', [['typing', false, 2]]], 'two undos take the two pastes back, each alone; the run typed before them stands');
+});
+
+/** a stretch of a record's text as a placing by identity carries it (M-REC's `Took`) */
+const took = (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width) => /** @type {import('../model/records.js').Took} */ (stretchIn(REC.doc(addr), pos, width));
+/** a paste of the same words at a caret standing at `at` (W-WRITE's `placeSame`): the stretches placed at `pos`, `width` bytes of a selection replaced */
+const pasteSame = (/** @type {string} */ addr, /** @type {import('./write.js').Placing[]} */ list, /** @type {number} */ pos, width = 0, at = pos) => WRITE.placeSame(addr, list, pos, width, { at, own: 'paste' });
+
+test('B3-S5 (i), W3: a paste of the same words is a step of its own and goes out as a burst of its own — the open burst committed at the act and answered first, alone, the paste\'s `reinstate` then alone, keys typed after it the next burst at their pause — its text standing at once (FP-38)', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const answers = [later(), later()];
+  const { ops } = boot((frame, n) => (n <= 2 ? answers[n - 1].out : frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)));
+  read(D, 'abcdef');
+  read(E, 'ABCDEFGH');
+  type(D, 7, 'gh');
+  assert.equal(pasteSame(D, [{ took: took(E, 3, 4) }], 9), 4);
+  assert.deepEqual([shown(D), stacks(D).undo, dialed(ops)], ['abcdefghCDEF', [['typing', false, 2], ['paste', false, 1]], [['insert', 7, ['gh']]]],
+    'the paste stands at once, a step of its own; the open burst committed at the act, alone — the paste not in it');
+  answers[0].give(MINTED(own(D, 100), 20));
+  await flush(); await flush();
+  assert.deepEqual(dialed(ops, 1), [['reinstate', 9, [[own(E, 3), '4']]]], 'as the open burst is answered, the paste goes: one `reinstate`, alone');
+  type(D, 13, 'ij');
+  answers[1].give(ACK(21));
+  await flush(); await flush();
+  assert.equal(ops.length, 2, 'keys typed after it wait for their pause');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([dialed(ops, 2), WRITE.keptOf(D)?.word, shown(D)], [[['insert', 13, ['ij']]], 'kept', 'abcdefghCDEFij'], 'the next burst theirs');
+});
+
+test('B3-S5, W3: a paste of the same words whose `reinstate` the board refuses for its source — `withheld`, `source_not_registered`, `dangling_source`, `bad_run`, `too_many_runs`, `empty_result` — places nothing: its `reinstate` goes first and its burst ends there, so the selection it replaced stands again and no frame after it is dialed; no island stands, the step leaves the stacks, the corner reads "kept", and those watching are told why, the document named and where the paste was made', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  const told = [];
+  WRITE.onUnplaced((addr, why) => told.push([addr, why]));
+  const NONE = '1.0.1.0.99';
+  for (const name of ['withheld', 'source_not_registered', 'dangling_source', 'bad_run', 'too_many_runs', 'empty_result']) {
+    MACHINE._reset(); REC._reset(); WRITE._reset();
+    const { ops } = boot((frame, n) => (frame.op === 'reinstate' ? { refused: refusal(name, name === 'withheld' ? { addr: E } : {}) } : frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)));
+    read(D, 'abcdef');
+    read(E, 'ABCDEFGH');
+    // a stretch of a document the page holds no record of, beside one of E's
+    const far = { runs: [{ pos: 1, width: 1, kind: /** @type {const} */ ('content'), text: 'Q', ref: null, origin: null }], ids: [{ pos: 1, width: 1, prefix: `${NONE}.0.1`, ordinal: 7 }] };
+    told.length = 0;
+    pasteSame(D, [{ took: took(E, 3, 2) }, { text: 'n' }, { took: far }], 2, 2, 4);
+    assert.equal(shown(D), 'aCDnQdef', `${name}: the paste stands at once over the selection`);
+    await flush(); await flush();
+    assert.deepEqual([dialed(ops), shown(D), WRITE.islandsOf(D), stacks(D), WRITE.keptOf(D)?.word, WRITE.edits(D)], [[['reinstate', 2, [[own(E, 3), '2'], [`${NONE}.0.1.7`, '1']]]], 'abcdef', [], { undo: [], redo: [] }, 'kept', []],
+      `${name}: one \`reinstate\` of every stretch the board holds, dialed first and alone; refused, nothing after it — the selection "bc" stands again, no island, the step gone, the edits gone`);
+    assert.deepEqual(told, [[D, { name, origin: name === 'withheld' ? E : NONE, site: { before: [{ prefix: `${D}.0.1`, ordinal: 3, width: 1 }], after: [{ prefix: `${D}.0.1`, ordinal: 4, width: 1 }] } }]],
+      `${name}: those watching told — withheld's origin by its site, else the first document the page holds no record of — and where the caret stood as the paste was made`);
+  }
+});
+
+test('B3-S5, W3: every other refusal of a paste\'s `reinstate` keeps the machine\'s standing arm — `arrangement_moved` makes its burst an island, its words standing in the text shown, "not kept" — and no one is told the source was refused', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  const told = [];
+  WRITE.onUnplaced((addr, why) => told.push([addr, why]));
+  const { ops } = boot((frame) => (frame.op === 'reinstate' ? { refused: refusal('arrangement_moved', { as_of: 7, current: 9 }) } : ACK(20)));
+  read(D, 'abcdef');
+  read(E, 'ABCDEFGH');
+  pasteSame(D, [{ took: took(E, 3, 2) }], 2, 2, 4);
+  await flush(); await flush();
+  assert.deepEqual([ops.map((o) => o.frame.op), shown(D), WRITE.islandsOf(D).map((i) => i.name), WRITE.keptOf(D)?.word, told], [['reinstate', 'delete'], 'aCDdef', ['arrangement_moved'], 'not kept', []],
+    'the frames after it dialed as at any refusal, the burst an island its words stand in, nothing told of a source');
+});
+
+test('B3-S5 (iv): a cut and its paste in one draft — the cut one `delete`, the paste one `reinstate` of the cut bytes\' own run where it is pasted, the words their own again', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame, n) => ACK(19 + n));
+  read(D, 'abcdef');
+  const bytes = took(D, 2, 3);
+  cut(D, 2, 3, 5);
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([dialed(ops), shown(D)], [[['delete', 2, '3']], 'aef'], 'the cut: one `delete`');
+  pasteSame(D, [{ took: bytes }], 3);
+  await flush(); await flush();
+  assert.deepEqual([dialed(ops, 1), shown(D), stacks(D).undo.map((x) => x[0])], [[['reinstate', 3, [[own(D, 2), '3']]]], 'aebcdf', ['cut', 'paste']], 'the paste: the same run placed again by identity, after "e"');
+});
+
+test('W2: a passage placed again in its own draft stands twice — its undo takes out the copy alone, by where it placed it, never the words it was copied from, and its redo puts the copy back there by a `reinstate`, the caret after it; a copy never sent leaves with its undo and nothing is sent of it (the paste survey\'s W2, U2)', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame, n) => (frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)));
+  read(D, 'abcdef');
+  pasteSame(D, [{ took: took(D, 2, 3) }], 7);
+  await flush(); await flush();
+  assert.deepEqual([dialed(ops), shown(D)], [[['reinstate', 7, [[own(D, 2), '3']]]], 'abcdefbcd'], 'the copy placed by a `reinstate` of the draft\'s own bytes: they stand twice');
+  assert.deepEqual([MACHINE.undo(D), shown(D)], [{ how: 'done', at: 7, out: 'bcd', back: '' }, 'abcdef'], 'the undo takes the copy out; the words it was copied from stand');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual(dialed(ops, 1), [['delete', 7, '3']], 'one `delete` of the copy, at 7 — never the original at 2');
+  assert.deepEqual([MACHINE.redo(D), shown(D)], [{ how: 'done', at: 10, out: '', back: 'bcd' }, 'abcdefbcd'], 'the redo puts the copy back where it stood, the caret after it');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual(dialed(ops, 2), [['reinstate', 7, [[own(D, 2), '3']]]], 'by a `reinstate` of the same bytes, placed again');
+  assert.deepEqual([MACHINE.undo(D).out, shown(D)], ['bcd', 'abcdef'], 'and taken out again alone');
+  MACHINE._reset(); REC._reset(); WRITE._reset();
+  // a copy right after the words it copies, never sent: an answer the board has not given holds it behind the burst out
+  const first = later();
+  const b = boot((frame, n) => (n === 1 ? first.out : ACK(19 + n)));
+  read(D, 'abcdef');
+  type(D, 7, 'x');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush();
+  pasteSame(D, [{ took: took(D, 2, 2) }], 4);
+  assert.deepEqual([shown(D), b.ops.length], ['abcbcdefx', 1], 'the copy stands at once, unsent behind the burst out');
+  assert.deepEqual([MACHINE.undo(D), shown(D)], [{ how: 'done', at: 4, out: 'bc', back: '' }, 'abcdefx'], 'its undo: the copy gone with its edits, the words copied standing');
+  first.give(ACK(20));
+  await flush(); await flush();
+  assert.deepEqual([b.ops.map((o) => o.frame.op), WRITE.edits(D).filter((e) => e.sent == null)], [['insert'], []], 'nothing of it sent: no edit of it left');
+});
+
+test('W2: a paste the board kept and a read set back — its edits gone from the draft\'s — is still taken out by its undo, where it placed it: new words pasted, and a copy of the draft\'s own words standing twice, each by one `delete` at its place', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame, n) => (frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)));
+  read(D, 'abcdef');
+  /** the draft read again at a position and set in one step, its text and its image as the board holds them */
+  const setTo = (/** @type {string} */ text, /** @type {number} */ at, /** @type {Array<{iStart: string, width: number}>} */ runs) => REC.setAgain(D, {
+    spans: [{ subspace: 1, ordinal: 1, positions: byteLength(text) }], spansAt: at, text: { runs: [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }], asOf: at }, image: { from: 1, runs } });
+  paste(D, 7, 'XY');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  setTo('abcdefXY', 20, [{ iStart: own(D, 1), width: 6 }, { iStart: own(D, 100), width: 2 }]);
+  assert.deepEqual([dialed(ops), WRITE.edits(D), shown(D)], [[['insert', 7, ['XY']]], [], 'abcdefXY'], 'the paste kept and read back: its edits gone from the draft\'s');
+  assert.deepEqual([MACHINE.undo(D), shown(D)], [{ how: 'done', at: 7, out: 'XY', back: '' }, 'abcdef'], 'its undo takes it out all the same');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual(dialed(ops, 1), [['delete', 7, '2']], 'one `delete` of it, where it was placed');
+  setTo('abcdef', 21, [{ iStart: own(D, 1), width: 6 }]);
+  pasteSame(D, [{ took: took(D, 2, 2) }], 7);
+  await flush(); await flush();
+  setTo('abcdefbc', 22, [{ iStart: own(D, 1), width: 6 }, { iStart: own(D, 2), width: 2 }]);
+  assert.deepEqual([dialed(ops, 2), WRITE.edits(D).filter((e) => !e.based), shown(D)], [[['reinstate', 7, [[own(D, 2), '2']]]], [], 'abcdefbc'], 'a copy standing twice, kept and read back');
+  assert.deepEqual([MACHINE.undo(D).out, shown(D)], ['bc', 'abcdef'], 'its undo takes out the copy, the words it was copied from standing');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual(dialed(ops, 3), [['delete', 7, '2']], 'one `delete` of the copy, at 7');
+});
+
+test('W2: a draft set again by a read with a passage standing twice — the copy the board now holds beside the words it copies — places the person\'s edits beside the copy exactly: a word typed after its last byte, and its first byte taken out, each by the bytes either side, never at the original and never at both (M-DERIVE\'s `placedAgain`)', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  boot((frame, n) => (frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(8)));
+  read(D, 'abcdef');
+  pasteSame(D, [{ took: took(D, 2, 2) }], 7);
+  await flush(); await flush();
+  assert.equal(shown(D), 'abcdefbc', 'the copy kept by the board at 8');
+  type(D, 9, 'Q');
+  backspace(D, 8);
+  assert.equal(shown(D), 'abcdefcQ', 'unsent: a word after the copy, the copy\'s "b" taken out');
+  // another writer's byte before the text, the draft read again at 9 and set in one step: the board's text holds the original and the copy
+  REC.setAgain(D, { spans: [{ subspace: 1, ordinal: 1, positions: 9 }], spansAt: 9, text: { runs: [{ pos: 1, width: 9, kind: 'content', text: 'Zabcdefbc', ref: null, origin: null }], asOf: 9 },
+    image: { from: 1, runs: [{ iStart: own(E, 1), width: 1 }, { iStart: own(D, 1), width: 6 }, { iStart: own(D, 2), width: 2 }] } });
+  assert.deepEqual([shown(D), WRITE.staleOf(D)], ['ZabcdefcQ', null], 'each edit set beside the copy exactly — nothing adrift, so nothing is composed as it was typed');
 });
 
 /** what the margin marks of a draft (`marksOf`): each mark's kind, the words of the text shown it stands beside, and the positions there its removal points stand at */
