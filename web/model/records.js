@@ -16,9 +16,10 @@
 // (`takeIndex`), and kept by the feed's rows, never by enumerating
 // documents — a document the page's own write minted listed at its ack
 // (`takeMinted`); documents — their index row, extent, delivered
-// runs and the blocks derived from them, metadata, V→I image as read, each
-// image read replacing what the image held over its window alone
-// (`takeImage`), with the transcluded runs it shows (`transcludedRuns`) and
+// runs, each delivery replacing what the text held over its own positions
+// alone (`takeDelivery`), and the blocks derived from them, metadata, V→I
+// image as read, each image read replacing what the image held over its
+// window alone (`takeImage`), with the transcluded runs it shows (`transcludedRuns`) and
 // the stretches it places nothing of (`imageGaps`, `imageCovers`) — a delivery and the
 // image read with it taken in one step (`takeDelivery`) — the raw set of links touching them,
 // their chain's count and whether the board ended it there, the position
@@ -264,7 +265,7 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {Run[]} runs the delivered runs, merged, in position order
  * @property {number} from the first delivered position, or -1
  * @property {number} to one past the last delivered position
- * @property {number | null} readAt the position the delivery taken last was answered at (its `as_of`) — a widening read asks the whole window again, so it is the text's; null where no delivery said, or none is held
+ * @property {number | null} readAt the position the delivery taken last was answered at (its `as_of`) — a delivery replaces the text over its own positions alone, so text an earlier one left beside it stands as read at that one's; null where no delivery said, or none is held
  * @property {number | null} [extentAt] the position the extent was read at, where its read said (`takeSpanSet`, `setAgain`): for a document of no content, which no delivery is read for, the position its empty text stands as read at; absent or null where no read said, or its delivered state was dropped
  * @property {Block[]} blocks
  * @property {ImageRun[]} image the V→I image as read, in position order: the permanent address of every position it covers
@@ -703,14 +704,7 @@ function keepPublished(d, published) {
     if (r.kind !== 'content') { const x = /** @type {{prefix: string}} */ (over.find((y) => !readable(y.prefix))); out.push(withheldRun(r.pos, r.width, x.prefix)); continue; }
     for (const x of over) out.push(readable(x.prefix) ? { ...r, pos: x.pos, width: x.width, text: sliceBytes(r.text, x.pos - r.pos, x.pos - r.pos + x.width) } : withheldRun(x.pos, x.width, x.prefix));
   }
-  /** @type {Run[]} */
-  const runs = [];
-  for (const r of out) {
-    const last = runs[runs.length - 1];
-    if (last && last.pos + last.width === r.pos && last.kind === r.kind && (r.kind === 'content' || (r.kind === 'withheld' && last.origin === r.origin))) runs[runs.length - 1] = { ...last, width: last.width + r.width, text: last.text + r.text };
-    else runs.push(r);
-  }
-  d.runs = runs; d.blocks = deriveBlocks(runs);
+  d.runs = joinRuns(out); d.blocks = deriveBlocks(d.runs);
 }
 
 /** a withheld run at positions whose bytes lie in the I-space `prefix` names: its origin that I-space's document, as a delivery names it */
@@ -1083,9 +1077,12 @@ export function takeRefused(/** @type {string} */ addr, /** @type {'unregistered
 }
 
 /**
- * A delivery merged into the document's runs: adjacent content runs join,
- * the blocks are re-derived, the window [from, to) widened, the position it
- * was answered at kept (`Doc.readAt`); and the V→I image read with it, where
+ * A delivery merged into the document's runs, replacing what the text held
+ * over its own positions alone: each held run it meets stands as the
+ * stretches of it beside the delivery (`heldBeside`), so every position held
+ * stays held; runs that continue one another join (`joinRuns`), the blocks
+ * are re-derived, the window [from, to) widened, the position it was
+ * answered at kept (`Doc.readAt`); and the V→I image read with it, where
  * one was, placed over the window it was read for in the same step, as
  * `takeImage` places one — one revision and one change told for the two, so
  * no reader meets the delivered text without the image that names its
@@ -1110,17 +1107,11 @@ export function takeDelivery(addr, runs, asOf = null, image = null) {
 /** a delivery merged into a record's runs (`takeDelivery`, `setAgain`): nothing where it carries no run */
 function deliverInto(/** @type {Doc} */ d, /** @type {Run[]} */ runs, /** @type {number | null} */ asOf) {
   if (!runs.length) return;
-  /** @type {Run[]} */
-  const all = d.runs.filter((r) => !runs.some((n) => overlaps(r, n)));
-  all.push(...runs);
-  all.sort((a, b) => a.pos - b.pos);
-  /** @type {Run[]} */
-  const merged = [];
-  for (const r of all) {
-    const last = merged[merged.length - 1];
-    if (last && last.kind === 'content' && r.kind === 'content' && last.pos + last.width === r.pos) { last.text += r.text; last.width += r.width; }
-    else merged.push({ ...r });
-  }
+  const taken = takenBy(runs);
+  let i = 0;
+  /** the stretches of each held run beside the delivery: the held runs stand in position order, so the stretch each is cut by is found on from the last's */
+  const beside = d.runs.flatMap((r) => { while (i < taken.length && taken[i].pos + taken[i].width <= r.pos) i++; return heldBeside(r, taken, i); });
+  const merged = joinRuns([...beside, ...runs].sort((a, b) => a.pos - b.pos));
   d.runs = merged;
   d.from = merged[0].pos;
   d.to = merged[merged.length - 1].pos + merged[merged.length - 1].width;
@@ -1132,8 +1123,116 @@ function deliverInto(/** @type {Doc} */ d, /** @type {Run[]} */ runs, /** @type 
 /** a record's text let go — its runs and blocks given new empty ones, as a delivery gives new ones, its window and the position it was read at with them */
 function noText(/** @type {Doc} */ d) { d.runs = []; d.blocks = []; d.from = -1; d.to = -1; d.readAt = null; }
 
-/** @param {Run} a @param {Run} b */
-const overlaps = (a, b) => a.pos < b.pos + b.width && b.pos < a.pos + a.width;
+/**
+ * The stretches of positions a delivery's runs take, in position order, runs
+ * that meet taking one stretch; a run of no width takes none.
+ * @param {Run[]} runs
+ * @returns {Stretch[]}
+ */
+function takenBy(runs) {
+  /** @type {Stretch[]} */
+  const out = [];
+  for (const r of runs.filter((n) => n.width > 0).sort((a, b) => a.pos - b.pos)) {
+    const last = out[out.length - 1];
+    if (last && r.pos <= last.pos + last.width) last.width = Math.max(last.width, r.pos + r.width - last.pos);
+    else out.push({ pos: r.pos, width: r.width });
+  }
+  return out;
+}
+
+/**
+ * A held run with the stretches a delivery takes cut out of it
+ * (`takeDelivery`): each stretch of it beside them, in position order, as
+ * runs of their own (`pieceOf`); the run itself where none of them meets it.
+ * @param {Run} r
+ * @param {Stretch[]} taken the stretches the delivery takes (`takenBy`)
+ * @param {number} i the first of them ending past the run's start
+ * @returns {Run[]}
+ */
+function heldBeside(r, taken, i) {
+  const end = r.pos + r.width;
+  if (i >= taken.length || taken[i].pos >= end) return [r];
+  /** @type {Run[]} */
+  const out = [];
+  let at = r.pos;
+  for (; i < taken.length && taken[i].pos < end; i++) {
+    if (taken[i].pos > at) out.push(...pieceOf(r, at, taken[i].pos));
+    at = Math.max(at, taken[i].pos + taken[i].width);
+  }
+  if (at < end) out.push(...pieceOf(r, at, end));
+  return out;
+}
+
+/**
+ * A held run's positions [lo, hi) as runs of their own, each new, by its
+ * kind: a content run's cut by its UTF-8 bytes (`bytePieces`); hex at two
+ * digits a position; a withheld run, or an item of a kind the page does not
+ * know, a narrower run of its kind, a withheld run naming its origin. An atom
+ * of either form and a reference are one position wide, so never cut.
+ * @param {Run} r
+ * @param {number} lo
+ * @param {number} hi
+ * @returns {Run[]}
+ */
+function pieceOf(r, lo, hi) {
+  if (r.kind === 'content') return bytePieces(r, lo, hi);
+  if (r.kind === 'hex') return [{ ...r, pos: lo, width: hi - lo, text: r.text.slice(2 * (lo - r.pos), 2 * (hi - r.pos)) }];
+  return [{ ...r, pos: lo, width: hi - lo }];
+}
+
+/** a content run's text as the UTF-8 bytes its positions are */
+const UTF8 = new TextEncoder();
+/** whole characters' bytes read back as text, a leading U+FEFF kept as the character it is */
+const FROM_UTF8 = new TextDecoder('utf-8', { ignoreBOM: true });
+/** is a byte one of a character's later bytes, never its first? */
+const laterByte = (/** @type {number | undefined} */ b) => b !== undefined && (b & 0xc0) === 0x80;
+/** bytes in the wire's per-byte spelling: two lowercase hex digits each (wire.md §Value encodings) */
+const hexOf = (/** @type {Uint8Array} */ b) => [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+
+/**
+ * A content run's positions [lo, hi) as runs of their own, cut by its UTF-8
+ * bytes: the whole characters there as its text, and the bytes of a character
+ * an edge cuts held as hex — one hex run where no whole character stands — so
+ * each position stays held and each content run is as wide as its bytes.
+ * @param {Run} r
+ * @param {number} lo
+ * @param {number} hi
+ * @returns {Run[]}
+ */
+function bytePieces(r, lo, hi) {
+  const bytes = UTF8.encode(r.text), a = lo - r.pos, b = Math.min(hi - r.pos, bytes.length);
+  /** where the whole characters begin, past the later bytes of one the edge at `a` cuts; and where they end, at the first byte of one the edge at `b` cuts */
+  let first = a, last = b;
+  while (first < b && laterByte(bytes[first])) first++;
+  while (last > first && laterByte(bytes[last])) last--;
+  /** @type {Run[]} */
+  const out = [];
+  const hex = (/** @type {number} */ x, /** @type {number} */ y) => { if (y > x) out.push({ ...r, pos: r.pos + x, width: y - x, kind: 'hex', text: hexOf(bytes.subarray(x, y)) }); };
+  if (first === last) { hex(a, b); return out; }
+  hex(a, first);
+  out.push({ ...r, pos: r.pos + first, width: last - first, text: FROM_UTF8.decode(bytes.subarray(first, last)) });
+  hex(last, b);
+  return out;
+}
+
+/**
+ * Runs in position order, each that continues the one before it joined to it
+ * as one run — content to content, a withheld run to one of its origin —
+ * every run new, the runs given standing as they were: what a delivery
+ * merges (`takeDelivery`) and a change of class keeps (`keepPublished`).
+ * @param {Run[]} runs in position order
+ * @returns {Run[]}
+ */
+function joinRuns(runs) {
+  /** @type {Run[]} */
+  const out = [];
+  for (const r of runs) {
+    const last = out[out.length - 1];
+    if (last && last.pos + last.width === r.pos && last.kind === r.kind && (r.kind === 'content' || (r.kind === 'withheld' && last.origin === r.origin))) { last.text += r.text; last.width += r.width; }
+    else out.push({ ...r });
+  }
+  return out;
+}
 
 /**
  * The block kind each run that is not content derives (`deriveBlocks`): its

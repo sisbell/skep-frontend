@@ -56,7 +56,8 @@
 // origin told either way, and every other row leaving them held; a text past
 // one delivery's items read in parts — a whole read, an open find's read of
 // the rest, and a row's read again of the window held, the find's text kept as
-// the view's — a part refused for its size asked as its halves; each part of
+// the view's — a part refused for its size asked as its halves, and the view
+// reading on down such a text keeping each part it read before; each part of
 // the view's window, a whole read's text and each part of an open find's
 // read of the rest read with its image and taken with it in one step, a part
 // whose image read fails taken alone, the view asking on its own only the
@@ -3599,6 +3600,46 @@ test('the view\'s window past one delivery\'s items reads each part of it the pa
   for (let i = 0; i < 12; i++) { PUMP.pump(); await flush(); }
   assert.equal(REC.textBetween(BIG, 1, n + 1), 'a'.repeat(cut) + 'b'.repeat(half) + 'c'.repeat(n - cut - half), 'the window whole, in parts');
   assert.deepEqual([timesAsked(fake, F.retrieveV(BIG, 1, n)), timesAsked(fake, F.retrieveV(BIG, cut + 1, n - cut))], [0, 1], 'never one delivery past the bound; the part refused for its size asked once, then as its halves');
+});
+
+test('the view reading on down a text past one delivery\'s items keeps each part it read before: the part it reads next replaces the text over its own positions alone, so no position read goes unheld and no part is asked twice (FP-6, FP-21)', async () => {
+  const H = '1.0.1.0.15', n = 2000000, cut = F.MAX_DELIVERY_ITEMS;
+  /** @type {Record<string, unknown>} */
+  const s = {};
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: H, kind: 'draft', label: 'd', standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  REC.takeSpanSet(H, [{ subspace: 1, ordinal: 1, positions: n }]);
+  REC.takeMetadata(H, { doc: H, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(H, []);
+  /** the camera over H's estimated column `k` at its reading em: the window the view reads there */
+  const over = (/** @type {number} */ k) => {
+    const box = docBox(H), e = estimate(n, box), c = e.columns[k];
+    CAM.setViewport(1440, 900); CAM.reach(e.fs); CAM.set(CAM.viewAt({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2 }, e.fs));
+    return /** @type {[number, number]} */ (PUMP.spanWindow(REC.doc(H)));
+  };
+  /** the board answering a part of H's text from `pos` and its image: its own bytes, 'a' through the first part's edge and 'b' past it */
+  const part = (/** @type {number} */ pos, /** @type {number} */ width) => {
+    s[opKeyOf(F.retrieveV(H, pos, width))] = filled(pos <= cut ? 'a' : 'b', width);
+    s[opKeyOf(F.image(H, pos, width))] = { result: { as_of: 1, resp: 'runs', runs: [{ i_start: `${H}.0.1.${pos}`, width: String(width) }] } };
+  };
+  const [, w1] = over(55);
+  assert.ok(w1 - 1 > cut && w1 - 1 <= PUMP.WHOLE_CAP, `the window from position 1 past one delivery's items, within the cap: [1, ${w1})`);
+  part(1, cut); part(cut + 1, w1 - cut - 1);
+  for (let i = 0; i < 12; i++) { PUMP.pump(); await flush(); }
+  assert.deepEqual([REC.doc(H).from, REC.doc(H).to], [1, w1], 'read in its two parts');
+  // one column on: the window's second part reaches further, the first still held whole
+  const [, w2] = over(56);
+  assert.ok(w2 > w1 && w2 - 1 <= PUMP.WHOLE_CAP, `the window one column on reaches further: [1, ${w2})`);
+  part(cut + 1, w2 - cut - 1);
+  for (let i = 0; i < 12; i++) { PUMP.pump(); await flush(); }
+  const d = REC.doc(H);
+  assert.deepEqual([d.from, d.to, REC.textBetween(H, 1, cut + 1) === 'a'.repeat(cut), REC.textBetween(H, cut + 1, w2) === 'b'.repeat(w2 - cut - 1)], [1, w2, true, true], 'the first part\'s text stands beside the part read after it');
+  assert.deepEqual(REC.imageGaps(d.image, 1, w2 - 1), [], 'every position held named by its image');
+  assert.deepEqual([timesAsked(fake, F.retrieveV(H, 1, cut)), timesAsked(fake, F.retrieveV(H, cut + 1, w2 - cut - 1))], [1, 1], 'each part asked once: the first never again');
+  assert.deepEqual(fake.unanswered, []);
 });
 
 /** D's chain as the view probes it: its birth its first member, its second not registered */

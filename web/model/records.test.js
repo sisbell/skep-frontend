@@ -2,7 +2,11 @@
 // listing replacing the last whole with the rows taken meanwhile laid over
 // it; deliveries into blocks that tile their bytes, each typed line one and
 // each item one of its kind, runs and blocks replaced whole and never edited
-// in place, a delivery and the image read with it taken in one step; an
+// in place, a delivery replacing the text held over its own positions alone
+// — each held run it meets standing beside it by its kind's cut, a character
+// an edge cuts kept as hex, every position held staying held, withheld runs
+// of one origin that meet one run — a delivery and the image read with it
+// taken in one step; an
 // image read replacing the held image over its own window alone, and the
 // stretches an image places nothing of read from it; a
 // link's stored span placed through the held V→I image, and an
@@ -297,6 +301,83 @@ test('a document\'s blocks and runs are replaced whole, never edited in place: t
   assert.equal(JSON.stringify([taken, runs]), was, 'the blocks and runs taken before the delivery, the invalidation, the second delivery and the feed row are as they were');
   assert.deepEqual([REC.textOf(runs, 1, 13), REC.blockIn(taken, 8)?.text], ['alpha\n\nbeta ', 'beta '], 'their text and their blocks read as they stood');
   assert.deepEqual([REC.textBetween('1.0.1.0.3', 1, 13), REC.blockAt('1.0.1.0.3', 8)], ['', null], 'the model\'s newest is another');
+});
+
+/** a content run at `pos`, as wide as its text's bytes */
+const textRun = (/** @type {number} */ pos, /** @type {string} */ text) => ({ pos, width: byteLength(text), kind: /** @type {const} */ ('content'), text, ref: null, origin: null });
+/** an item's run at `pos` of `width` positions: hex its digits, a withheld run its origin */
+const itemRun = (/** @type {number} */ pos, /** @type {number} */ width, /** @type {import('./frames.js').Run['kind']} */ kind, text = '', /** @type {string | null} */ origin = null) => ({ pos, width, kind, text, ref: null, origin });
+/** a document's runs, each [pos, width, kind, text, origin] */
+const runsOf = (/** @type {string} */ addr) => REC.doc(addr).runs.map((r) => [r.pos, r.width, r.kind, r.text, r.origin]);
+/** do a document's runs hold every position of [from, to), one after another, each content run as wide as its text's bytes? */
+const heldWhole = (/** @type {string} */ addr, /** @type {number} */ from, /** @type {number} */ to) => {
+  let at = from;
+  for (const r of REC.doc(addr).runs) { if (r.pos !== at || (r.kind === 'content' && r.width !== byteLength(r.text))) return false; at += r.width; }
+  return at === to;
+};
+
+test('a delivery replaces the text held over its own positions alone: a held run it meets keeps its stretches beside it — before it, after it or both — as new runs, content joining the delivery\'s, the runs taken before standing as they were; a run it covers goes, and one it does not meet stands (FP-6)', () => {
+  const A = '1.0.1.0.3', B = '1.0.1.0.4', C = '1.0.1.0.5', E = '1.0.1.0.6', F = '1.0.1.0.7', O = '1.0.1.0.1003';
+  REC.takeDelivery(A, [textRun(1, 'first line\nsecond one\nthird line')]);
+  const taken = REC.doc(A).runs, was = JSON.stringify(taken);
+  REC.takeDelivery(A, [textRun(12, 'SECOND ONE\n')]);
+  const a = REC.doc(A);
+  assert.deepEqual([runsOf(A), a.from, a.to], [[[1, 32, 'content', 'first line\nSECOND ONE\nthird line', null]], 1, 33], 'its stretches either side stand: one run, the delivery between them');
+  assert.deepEqual(a.blocks.map((b) => [b.pos, b.width, b.text]), [[1, 11, 'first line'], [12, 11, 'SECOND ONE'], [23, 10, 'third line']], 'its blocks derived again, tiling the text');
+  assert.equal(JSON.stringify(taken), was, 'the runs taken before as they were');
+  REC.takeDelivery(B, [textRun(1, 'abcdefghij0123456789')]);
+  REC.takeDelivery(B, [textRun(11, 'KLMNOPQRSTUVWXYZ!?#$')]);
+  assert.deepEqual([runsOf(B), REC.doc(B).from], [[[1, 30, 'content', 'abcdefghijKLMNOPQRSTUVWXYZ!?#$', null]], 1], 'a delivery over its end: the stretch before it stands');
+  REC.takeDelivery(C, [textRun(11, 'klmnopqrstuvwxyz0123')]);
+  REC.takeDelivery(C, [textRun(1, 'ABCDEFGHIJKLMNOPQRST')]);
+  assert.deepEqual([runsOf(C), REC.doc(C).to], [[[1, 30, 'content', 'ABCDEFGHIJKLMNOPQRSTuvwxyz0123', null]], 31], 'a delivery over its start: the stretch after it stands');
+  REC.takeDelivery(E, [textRun(1, 'covered it'), itemRun(11, 4, 'withheld', '', O), textRun(15, 'untouched.')]);
+  REC.takeDelivery(E, [textRun(1, 'COVERED IT')]);
+  assert.deepEqual(runsOf(E), [[1, 10, 'content', 'COVERED IT', null], [11, 4, 'withheld', '', O], [15, 10, 'content', 'untouched.', null]], 'the run it covers replaced; those it does not meet standing');
+  REC.takeDelivery(F, [textRun(1, 'abcd'), itemRun(5, 4, 'withheld', '', O), textRun(9, 'efghij')]);
+  REC.takeDelivery(F, [textRun(3, 'XYZXYZXYZ')]);
+  assert.deepEqual(runsOf(F), [[1, 14, 'content', 'abXYZXYZXYZhij', null]], 'a delivery across several held runs: the stretches at either end stand, the run between gone');
+});
+
+test('a held content run a delivery cuts inside a character keeps that character\'s bytes on its side as hex, whatever the character\'s width: every position stays held, each content run as wide as its bytes (FP-6; wire.md §Value encodings)', () => {
+  const A = '1.0.1.0.3', B = '1.0.1.0.4', C = '1.0.1.0.5', D = '1.0.1.0.6';
+  // 'aébcd': é's bytes c3 a9; the board's delivery from é's second byte, no UTF-8 alone, as hex
+  REC.takeDelivery(A, [textRun(1, 'aébcd')]);
+  REC.takeDelivery(A, [itemRun(3, 2, 'hex', 'a962')]);
+  assert.deepEqual(runsOf(A), [[1, 1, 'content', 'a', null], [2, 1, 'hex', 'c3', null], [3, 2, 'hex', 'a962', null], [5, 2, 'content', 'cd', null]], 'é\'s first byte held as hex before the delivery');
+  assert.ok(heldWhole(A, 1, 7), 'every position held');
+  // 'x😀y': 😀, past U+FFFF, four bytes f0 9f 98 80; its middle two delivered
+  REC.takeDelivery(B, [textRun(1, 'x😀y')]);
+  REC.takeDelivery(B, [itemRun(3, 2, 'hex', '9f98')]);
+  assert.deepEqual(runsOf(B), [[1, 1, 'content', 'x', null], [2, 1, 'hex', 'f0', null], [3, 2, 'hex', '9f98', null], [5, 1, 'hex', '80', null], [6, 1, 'content', 'y', null]], 'its bytes either side held as hex');
+  assert.ok(heldWhole(B, 1, 7), 'every position held');
+  // 'éé': c3 a9 c3 a9, a delivery of two runs taking its first byte and its last
+  REC.takeDelivery(C, [textRun(1, 'éé')]);
+  REC.takeDelivery(C, [itemRun(1, 1, 'hex', 'c3'), itemRun(4, 1, 'hex', 'a9')]);
+  assert.deepEqual(runsOf(C), [[1, 1, 'hex', 'c3', null], [2, 2, 'hex', 'a9c3', null], [4, 1, 'hex', 'a9', null]], 'a stretch holding no whole character: its bytes one hex run');
+  assert.ok(heldWhole(C, 1, 5), 'every position held');
+  // a stretch opening on U+FEFF, its three bytes ef bb bf: a character of the text, kept
+  REC.takeDelivery(D, [textRun(1, 'ab﻿cd')]);
+  REC.takeDelivery(D, [textRun(1, 'AB')]);
+  assert.deepEqual([runsOf(D), heldWhole(D, 1, 8)], [[[1, 7, 'content', 'AB﻿cd', null]], true], 'U+FEFF kept where the stretch beside the delivery opens on it');
+});
+
+test('a held run of any other kind a delivery meets stands beside it as narrower runs of its kind — hex two digits a position, a withheld run naming its origin, an item of a kind the page does not know — and withheld runs of one origin that meet are one run, one block (FP-6)', () => {
+  const W = '1.0.1.0.3', X = '1.0.1.0.4', H = '1.0.1.0.5', U = '1.0.1.0.6', O = '1.0.1.0.1003', P = '1.0.2.0.9';
+  REC.takeDelivery(W, [itemRun(1, 40, 'withheld', '', O)]);
+  REC.takeDelivery(W, [itemRun(11, 10, 'withheld', '', O)]);
+  assert.deepEqual([runsOf(W), REC.doc(W).blocks.map((b) => [b.pos, b.width, b.kind, b.origin])], [[[1, 40, 'withheld', '', O]], [[1, 40, 'withheld', O]]], 'a withheld run read again in part: one run, one block');
+  REC.takeDelivery(W, [itemRun(11, 10, 'withheld', '', P)]);
+  assert.deepEqual(runsOf(W), [[1, 10, 'withheld', '', O], [11, 10, 'withheld', '', P], [21, 20, 'withheld', '', O]], 'one of another origin delivered inside it: its stretches either side, naming its origin');
+  REC.takeDelivery(X, [itemRun(1, 10, 'withheld', '', O)]);
+  REC.takeDelivery(X, [itemRun(11, 10, 'withheld', '', O)]);
+  assert.deepEqual(runsOf(X), [[1, 20, 'withheld', '', O]], 'two parts meeting inside a withheld run: one run');
+  REC.takeDelivery(H, [itemRun(1, 4, 'hex', 'aabbccdd')]);
+  REC.takeDelivery(H, [textRun(2, 'x')]);
+  assert.deepEqual(runsOf(H), [[1, 1, 'hex', 'aa', null], [2, 1, 'content', 'x', null], [3, 2, 'hex', 'ccdd', null]], 'hex: two digits a position');
+  REC.takeDelivery(U, [itemRun(1, 8, 'unknown')]);
+  REC.takeDelivery(U, [itemRun(4, 1, 'atom', '{}')]);
+  assert.deepEqual(runsOf(U), [[1, 3, 'unknown', '', null], [4, 1, 'atom', '{}', null], [5, 4, 'unknown', '', null]], 'an item of a kind the page does not know: its stretches either side, of its kind');
 });
 
 test('the origins from an image mark the transcluded runs', () => {
