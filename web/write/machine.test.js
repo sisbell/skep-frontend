@@ -37,7 +37,12 @@
 // sent held until it lands. A paste of the same words (B3-S5): a burst of its
 // own after the open burst; a refusal of its source placing nothing, any
 // other keeping the standing arm; a cut's paste; and a duplicate in one draft
-// undone and redone where it was placed, its neighbours set again exactly.
+// undone and redone where it was placed, its neighbours set again exactly. A
+// burst the board took in part, frame by frame (BM-10, BM-19, BM-20, BM-45,
+// BM-81): what it took a burst of its own, so an undo's drop, a refusal after
+// the press, an island, its discard, the keys typed past it, the drain's
+// sending again and the person's discard each act on what it did not take
+// alone, and an undo puts back what it took by a `reinstate`.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -1502,7 +1507,7 @@ test('B3-S5, W3: a paste of the same words whose `reinstate` the board refuses f
   }
 });
 
-test('B3-S5, W3: every other refusal of a paste\'s `reinstate` keeps the machine\'s standing arm — `arrangement_moved` makes its burst an island, its words standing in the text shown, "not kept" — and no one is told the source was refused', async (t) => {
+test('B3-S5, W3, BM-19: every other refusal of a paste\'s `reinstate` keeps the machine\'s standing arm — `arrangement_moved` makes an island of what the board did not take, its words standing in the text shown, "not kept", and its discard leaves the selection the acked `delete` took out — and no one is told the source was refused', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   /** @type {unknown[]} */
   const told = [];
@@ -1513,7 +1518,11 @@ test('B3-S5, W3: every other refusal of a paste\'s `reinstate` keeps the machine
   pasteSame(D, [{ took: took(E, 3, 2) }], 2, 2, 4);
   await flush(); await flush();
   assert.deepEqual([ops.map((o) => o.frame.op), shown(D), WRITE.islandsOf(D).map((i) => i.name), WRITE.keptOf(D)?.word, told], [['reinstate', 'delete'], 'aCDdef', ['arrangement_moved'], 'not kept', []],
-    'the frames after it dialed as at any refusal, the burst an island its words stand in, nothing told of a source');
+    'the frames after it dialed as at any refusal, an island of the paste\'s words standing in the text shown, nothing told of a source');
+  MACHINE.discardIsland(D, 1);
+  await flush();
+  assert.deepEqual([shown(D), WRITE.islandsOf(D), WRITE.keptOf(D)?.word, ops.length], ['adef', [], 'kept', 2],
+    'discarded: the paste\'s words leave and the selection the board took out stays out — the text the board holds — and nothing is sent');
 });
 
 test('B3-S5 (iv): a cut and its paste in one draft — the cut one `delete`, the paste one `reinstate` of the cut bytes\' own run where it is pasted, the words their own again', async (t) => {
@@ -1603,6 +1612,161 @@ test('W2: a draft set again by a read with a passage standing twice — the copy
   REC.setAgain(D, { spans: [{ subspace: 1, ordinal: 1, positions: 9 }], spansAt: 9, text: { runs: [{ pos: 1, width: 9, kind: 'content', text: 'Zabcdefbc', ref: null, origin: null }], asOf: 9 },
     image: { from: 1, runs: [{ iStart: own(E, 1), width: 1 }, { iStart: own(D, 1), width: 6 }, { iStart: own(D, 2), width: 2 }] } });
   assert.deepEqual([shown(D), WRITE.staleOf(D)], ['ZabcdefcQ', null], 'each edit set beside the copy exactly — nothing adrift, so nothing is composed as it was typed');
+});
+
+// ---- a burst the board took in part (D6 BM-10, BM-19, BM-20, BM-32, BM-45, BM-81) ---------------------------------------
+
+/** a key over the selection "cd" of "abcdef", the caret at its end, and one key more: one run, sent as one burst of a `delete` and an `insert` */
+const replaced = () => { WRITE.addEdit(D, { pos: 3, width: 2, text: 'X' }, { at: 5 }); type(D, 4, 'Y'); };
+/** a draft's edits as they stand: what each removes, the text it places, and the position its burst was acked at */
+const sentOf = () => WRITE.edits(D).map((e) => [e.width, e.text, e.at ?? null]);
+
+test('BM-32, BM-81: a burst the board took in part — its `delete` acked, its `insert` held — is split there, what the board took a burst of its own acked where it was taken; an undo of the run drops the held line by one `resolve(drop)` and puts back what the `delete` took by a `reinstate` of its bytes, the text as before the run and the corner "kept"', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  let rows = [];
+  const { ops, resolves } = boot((frame, n) => (n === 1 ? ACK(20) : n === 2 ? HELD(1) : ACK(19 + n)), () => rows, () => { rows = []; return { result: {} }; });
+  read(D, 'abcdef');
+  replaced();
+  rows = [ROW(1, D, { op: 'insert', doc: D })];
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([dialed(ops), shown(D), WRITE.heldOf(D).map((r) => r.held), sentOf(), WRITE.keptOf(D)], [[['delete', 3, '2'], ['insert', 3, ['XY']]], 'abXYef', [1], [[2, '', 20], [0, 'X', null], [0, 'Y', null]], YET('unreachable')],
+    'the selection\'s removal acked at 20 apart from the words held, the text shown the same');
+  assert.deepEqual([MACHINE.undo(D), shown(D)], [{ how: 'done', at: 5, out: 'XY', back: 'cd' }, 'abcdef'], 'the run taken back whole at the press');
+  await flush(); await flush();
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([resolves, dialed(ops, 2), shown(D), WRITE.keptOf(D)?.word, WRITE.edits(D).filter((e) => e.at == null)], [[{ session: 's-1', held: 1, act: 'drop' }], [['reinstate', 3, [[own(D, 3), '2']]]], 'abcdef', 'kept', []],
+    'one `resolve(drop)` of the held line, then one `reinstate` of the bytes the acked `delete` took out: the board\'s text the text shown');
+});
+
+test('BM-45: where the `insert` of a burst whose `delete` the board acked is refused after the press, the refusal is dropped with the words the undo took back — no island — and what the `delete` took is put back by a `reinstate`', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const second = later();
+  const { ops } = boot((frame, n) => (n === 1 ? ACK(20) : n === 2 ? second.out : ACK(19 + n)));
+  read(D, 'abcdef');
+  replaced();
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush();
+  assert.deepEqual(dialed(ops), [['delete', 3, '2'], ['insert', 3, ['XY']]], 'the `delete` acked, the `insert` out');
+  assert.deepEqual([MACHINE.undo(D).back, shown(D)], ['cd', 'abcdef'], 'undone while the `insert` is out');
+  second.give(REFUSED);
+  await flush(); await flush();
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([dialed(ops, 2), ops.slice(2).map((o) => o.frame.as_of), WRITE.islandsOf(D), shown(D), WRITE.keptOf(D)?.word], [[['reinstate', 3, [[own(D, 3), '2']]]], [20], [], 'abcdef', 'kept'],
+    'the refusal dropped with the words, no island; the bytes the board took out put back by their own I-run, typed at the state the `delete`\'s ack raised');
+});
+
+test('BM-45, BM-81: where the `insert` of a burst whose `delete` the board acked is held after the press, the undo drops its line by one `resolve(drop)` and what the `delete` took is put back by a `reinstate`', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const second = later();
+  /** @type {unknown[]} */
+  let rows = [];
+  const { ops, resolves } = boot((frame, n) => (n === 1 ? ACK(20) : n === 2 ? second.out : ACK(19 + n)), () => rows, () => { rows = []; return { result: {} }; });
+  read(D, 'abcdef');
+  replaced();
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush();
+  assert.deepEqual([MACHINE.undo(D).back, shown(D)], ['cd', 'abcdef'], 'undone while the `insert` is out');
+  rows = [ROW(1, D, { op: 'insert', doc: D })];
+  second.give(HELD(1));
+  await flush(); await flush(); await flush();
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([resolves, dialed(ops, 2), WRITE.heldOf(D), shown(D), WRITE.keptOf(D)?.word], [[{ session: 's-1', held: 1, act: 'drop' }], [['reinstate', 3, [[own(D, 3), '2']]]], [], 'abcdef', 'kept'],
+    'held after the press: its line dropped as the undo\'s own act, then the bytes the board took out put back');
+});
+
+test('BM-19: a burst the board took in part and then refused is an island of what it did not take alone — keys typed past it composed against the text the board holds, the acked `delete` in it', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame, n) => (n === 1 ? ACK(20) : n === 2 ? REFUSED : MINTED(own(D, 100 * n), 19 + n)));
+  read(D, 'abcdef');
+  replaced();
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([shown(D), WRITE.islandsOf(D).map((i) => i.id), WRITE.islandWords(D, 1), WRITE.keptOf(D), sentOf()], ['abXYef', [1], 'XY', NOT('island'), [[2, '', 20], [0, 'X', null], [0, 'Y', null]]],
+    'the `insert` refused: its words the island, the removal the board took apart from it');
+  WRITE.endRun(D);
+  type(D, 7, 'g');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush();
+  assert.deepEqual([ops.slice(2).map((o) => [o.frame.op, o.frame.at, o.frame.values, o.frame.as_of, o.anchors]), shown(D)], [[['insert', at(5), ['g'], 20, { before: own(D, 6), after: null }]], 'abXYefg'],
+    'typed past the island: at 5 of the board\'s "abef", typed at the state the `delete`\'s ack raised');
+});
+
+test('BM-19, BM-45, BM-32: the discard of an island of a burst the board took in part leaves what the board took — the selection the acked `delete` removed stays out — and the press after it puts that back by a `reinstate`', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame, n) => (n === 1 ? ACK(20) : n === 2 ? REFUSED : ACK(19 + n)));
+  read(D, 'abcdef');
+  replaced();
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual(MACHINE.undo(D), { how: 'face', at: null, out: '', back: '' }, 'the press answered at the island\'s face');
+  MACHINE.discardIsland(D, 1);
+  assert.deepEqual([shown(D), WRITE.islandsOf(D), WRITE.keptOf(D)?.word, ops.length], ['abef', [], 'kept', 2], 'discarded: the island\'s words gone, the text the board holds, nothing sent');
+  assert.deepEqual([MACHINE.undo(D), shown(D)], [{ how: 'done', at: 5, out: '', back: 'cd' }, 'abcdef'], 'the next press takes back what the board took');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([dialed(ops, 2), WRITE.keptOf(D)?.word], [[['reinstate', 3, [[own(D, 3), '2']]]], 'kept'], 'by one `reinstate` of the bytes the `delete` took out');
+});
+
+test('BM-20: a change the held store\'s bound refused after the board took part of it is sent again by what it did not take alone as the store drains — never the `delete` it took', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let full = true;
+  const { fake, ops } = boot((frame, n) => (n === 1 ? ACK(20) : full ? { refused: { kind: 'shell', name: 'held_full' } } : MINTED(own(D, 50), 21)));
+  read(D, 'abcdef');
+  replaced();
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([WRITE.islandsOf(D).map((i) => i.name), WRITE.unwritable(D)?.why, shown(D)], [['held_full'], 'held_full', 'abXYef'], 'the `insert` refused at the bound: its words wait as an island');
+  full = false;
+  fake.fire('held', EVENT(D, 'kept', 0));
+  await flush(); await flush();
+  assert.deepEqual([dialed(ops, 2), WRITE.islandsOf(D), WRITE.unwritable(D), WRITE.keptOf(D)?.word, shown(D)], [[['insert', 3, ['XY']]], [], null, 'kept', 'abXYef'], 'the store drains: the `insert` sent again alone');
+});
+
+test('BM-10, BM-27: the person\'s discard at the held line of a burst the board took in part drops what the board did not take alone — the selection the acked `delete` removed stays out', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown[]} */
+  let rows = [];
+  const { ops, resolves } = boot((frame, n) => (n === 1 ? ACK(20) : HELD(1, 'out_of_bounds')), () => rows);
+  read(D, 'abcdef');
+  replaced();
+  rows = [ROW(1, D, { op: 'insert', doc: D }, { cause: 'out_of_bounds', sent: true, refusal: refusal('out_of_bounds') })];
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([WRITE.keptOf(D), shown(D)], [NOT('out_of_bounds'), 'abXYef'], 'a refused run: its words standing');
+  rows = [];
+  assert.equal((await MACHINE.drop(D, 1)).dropped, true);
+  await flush();
+  assert.deepEqual([resolves.map((r) => [r.held, r.act]), shown(D), WRITE.keptOf(D)?.word, ops.length], [[[1, 'drop']], 'abef', 'kept', 2],
+    'one `resolve(drop)`: the run\'s words leave the text shown, the removal the board took stands, nothing sent');
+});
+
+test('BM-81, BM-25: an undo of a run whose burst went out as two held lines, the landing read finding the first — the `delete`\'s — kept, drops the second alone and puts back what the kept `delete` took by a `reinstate`', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {any[]} */
+  let rows = [];
+  let drops = 0;
+  const { ops, resolves } = boot((frame, n) => (n === 1 ? HELD(1) : n === 2 ? HELD(2, 'behind') : ACK(30)), () => rows, () => {
+    if (++drops === 1) { rows = rows.filter((r) => r.held !== 1); return { result: { kept: true } }; }
+    rows = [];
+    return { result: {} };
+  });
+  read(D, 'abcdef');
+  replaced();
+  rows = [ROW(1, D, { op: 'delete', doc: D }, { sent: true }), ROW(2, D, { op: 'insert', doc: D }, { cause: 'behind' })];
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([dialed(ops), WRITE.heldOf(D).map((r) => r.held), shown(D)], [[['delete', 3, '2'], ['insert', 3, ['XY']]], [1, 2], 'abXYef'], 'both frames held');
+  assert.deepEqual([MACHINE.undo(D).back, shown(D)], ['cd', 'abcdef'], 'the run taken back at the press');
+  for (let i = 0; i < 4; i++) await flush();
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([resolves.map((r) => [r.held, r.act]), dialed(ops, 2), WRITE.heldOf(D), shown(D)], [[[1, 'drop'], [2, 'drop']], [['reinstate', 3, [[own(D, 3), '2']]]], [], 'abcdef'],
+    'the first line found landed and kept, the second dropped: the bytes the kept `delete` took out put back');
 });
 
 /** what the margin marks of a draft (`marksOf`): each mark's kind, the words of the text shown it stands beside, and the positions there its removal points stand at */

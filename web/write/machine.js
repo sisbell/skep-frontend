@@ -10,13 +10,14 @@
 // commits; with none handed in the page sends nothing.
 // State (FP-10), per draft that was typed in or holds a line (`Draft`): the
 // session its bursts go out under and that session's principal; the pause's
-// timer; how many bursts of it went out; the burst out and awaiting its
-// answer; whether a commit was asked meanwhile; the typed state as its own
-// acks raised it; the bursts not yet acked whole; the held lines of it this
-// window's frames became, by the shell's ordinal, each with the `id` its
-// frame carried; the cause the shell last answered a hold by, what the `held`
-// event last told of it, the moved verdict standing on it; and whether a
-// change of the page's class left words of it unsent. Beside them the count
+// timer; how many bursts of it went out, a part of one the board took split
+// off counted as one; the burst out and awaiting its answer, with the frames
+// of it acked so far; whether a commit was asked meanwhile; the typed state
+// as its own acks raised it; the bursts not yet acked whole; the held lines
+// of it this window's frames became, by the shell's ordinal, each with the
+// frame it holds; the cause the shell last answered a hold by, what the
+// `held` event last told of it, the moved verdict standing on it; and whether
+// a change of the page's class left words of it unsent. Beside them the count
 // the frames' ids are drawn from, the session last seen, the session whose
 // close the page's unload posted, and why the board's drafts cannot be
 // written now, by each cause (`blocks`); the count the steps' ids are drawn
@@ -58,14 +59,21 @@
 // THE ANSWER: an `ack` raises the typed state to its `at` (BM-6), and an
 // insert's `ack_addr` is told to the model for each run of the page's
 // ordinals it carried (M-REC's `mint`); while it is awaited nothing changes
-// (BM-7). The shell's `held` answer (BM-8) keeps the line by its ordinal and
-// the hold's cause; the held lines are read (`readHeld`) before the flight
-// ends, and every later burst is dialed the same way. A placing by identity
-// whose `reinstate` the board refuses for its source (`SOURCE_REFUSALS`)
-// places nothing: its burst ends there, its edits leave, the text standing as
-// before it, its step leaves the stacks, and those watching are told
-// (`unplaced`; W-WRITE's `unplace`). Any other refusal is one the
-// page keeps (BM-19): the burst's edits are an island (W-WRITE's
+// (BM-7). The shell's `held` answer (BM-8) keeps the line by its ordinal, the
+// frame it holds and the hold's cause; the held lines are read (`readHeld`)
+// before the flight ends, and every later burst is dialed the same way. Each
+// frame is a part of its burst answered on its own: once every frame of a
+// burst is answered and not every one acked, and wherever a held line of a
+// burst not acked whole lands, what each frame the board took changed is
+// split from the rest of the burst as a burst of its own, acked where it was
+// taken (`split`; W-WRITE's `splitSent`), so every act on the burst after —
+// its island, its discard, its sending again, an undo's drop of it — acts on
+// what the board did not take alone (BM-10, BM-19, BM-20, BM-45, BM-81). A
+// placing by identity whose `reinstate` the board refuses for its source
+// (`SOURCE_REFUSALS`) places nothing: its burst ends there, its edits leave,
+// the text standing as before it, its step leaves the stacks, and those
+// watching are told (`unplaced`; W-WRITE's `unplace`). Any other refusal is
+// one the page keeps (BM-19): the burst's edits are an island (W-WRITE's
 // `markIsland`), typing goes on past it, and where the refusal says why the
 // board's drafts cannot be written — the held store's bound (BM-20), another
 // window (BM-60), a session that may not write (BM-58), the held file's halt
@@ -199,7 +207,7 @@ export const PAUSE_MS = 500;
  * @property {number} k the burst, by the draft's count
  * @property {Composed[]} frames
  * @property {number} next the frame dialed and awaiting its answer; the frames after it are undialed
- * @property {number[]} acks the positions its frames were acked at, so far
+ * @property {Array<{frame: Composed, at: number}>} acked its frames the board acked so far, each with the position it was acked at
  * @property {boolean} held a frame of it was answered `held`
  * @property {Refusal | null} refusal the refusal a frame of it met; null where none was refused
  * @property {number | null} apart the act it carries alone, where it is a burst of its own (`Draft.apart`): a placing by identity, which a refusal of its source ends (`unplaced`); null for any other burst
@@ -211,13 +219,13 @@ export const PAUSE_MS = 500;
  * @property {string} session the session its bursts go out under: the one that typed them, or the one the same principal came to hold since
  * @property {number} principal that session's principal
  * @property {ReturnType<typeof setTimeout> | null} timer the pause's, while it runs
- * @property {number} bursts how many bursts of it went out
+ * @property {number} bursts how many bursts of it went out, each part of one the board took split off as a burst of its own counted (`split`): the next burst's number is drawn from it
  * @property {Out | null} out the burst out; null where none awaits its answer
  * @property {boolean} due a commit was asked while a burst was out, or while the draft was read again for one: the next burst goes as that ends
  * @property {boolean} reading the draft is being read again before its burst is composed (BM-56)
  * @property {number | null} typed the typed state as the draft's own acks raised it; null before any
  * @property {Map<number, {left: number, at: number, n: number}>} open each burst not yet acked whole: how many of its frames no ack names, the latest position one was acked at, and how many frames it went out as
- * @property {Map<number, {k: number, pages: Composed['pages'], id: string, since: number}>} lines the held lines this window's frames became, by the shell's ordinal: the burst each is of, the page's ordinals its insert carries, the `id` its frame carried, and how many reads of the held lines had gone out as it was answered
+ * @property {Map<number, {k: number, frame: Composed, since: number}>} lines the held lines this window's frames became, by the shell's ordinal: the burst each is of, the frame it holds — its `id`, and the page's ordinals an insert's values carry — and how many reads of the held lines had gone out as it was answered
  * @property {string | null} cause the cause the shell last answered a hold of it by (`held`'s `cause`); null before any
  * @property {HeldState | null} told what the `held` event last told of it, until the lines are read again; null where they were
  * @property {string | null} verdict the moved verdict standing on it, by the line and the two states it names; null where none stands
@@ -468,9 +476,9 @@ function typedState(/** @type {Draft} */ d, /** @type {import('../model/records.
  * @returns {(page: number) => (import('../bridge/shapes').AnchorPiece | null)}
  */
 const pieceOf = (d) => (page) => {
-  for (const l of [...d.lines.values(), ...(d.out ? d.out.frames.map((f) => ({ id: f.frame.id, pages: f.pages })) : [])]) {
+  for (const f of [...[...d.lines.values()].map((l) => l.frame), ...(d.out ? d.out.frames : [])]) {
     let before = 0;
-    for (const p of l.pages) { if (page >= p.page && page < p.page + p.width) return { burst: l.id, offset: before + (page - p.page) }; before += p.width; }
+    for (const p of f.pages) { if (page >= p.page && page < p.page + p.width) return { burst: f.frame.id, offset: before + (page - p.page) }; before += p.width; }
   }
   for (const r of WRITE.reopened(d.addr)) {
     const n = WRITE.nameOf(d.addr, r.row.held), id = r.row.frame.id;
@@ -590,7 +598,7 @@ function commit(addr, last = false) {
   REC.setWriting(addr, true);
   for (const f of out.frames) if (f.lost) removed(addr, f.lost);
   d.open.set(k, { left: out.frames.length, at: out.asOf, n: out.frames.length });
-  d.out = { k, frames: out.frames, next: 0, acks: [], held: false, refusal: null, apart: out.apart };
+  d.out = { k, frames: out.frames, next: 0, acked: [], held: false, refusal: null, apart: out.apart };
   // a burst ended short of a burst of its own: that one goes as this one is answered
   if (out.apart == null && open(addr)) d.due = true;
   dial(d, d.out);
@@ -637,6 +645,26 @@ function frameAcked(/** @type {Draft} */ d, /** @type {number} */ k, /** @type {
 }
 
 /**
+ * What a frame the board took of a burst it did not take whole changed,
+ * split from the rest of the burst as a burst of its own, acked where it was
+ * taken (see the head; W-WRITE's `splitSent`): an insert's bytes by the
+ * page's ordinals its values carry, a reinstate's by its runs, a delete's by
+ * what it took out of the text. Nothing where the frame names none of its
+ * bytes, or no edit of the burst changed them.
+ * @param {Draft} d
+ * @param {number} k the burst
+ * @param {Composed} f the frame the board took
+ * @param {number} at the position it took it at
+ */
+function split(d, k, f, at) {
+  const fr = f.frame;
+  const ids = fr.op === 'insert' ? f.pages.flatMap((p) => REC.pageIds(d.addr, p.page, p.width))
+    : fr.op === 'reinstate' ? fr.runs.flatMap((r) => named(r.i_start, Number(r.width)))
+      : f.lost ? f.lost.ids : [];
+  if (WRITE.splitSent(d.addr, k, ids, d.bursts + 1, at)) d.bursts++;
+}
+
+/**
  * The model told of a draft's acks (see the head): the positions, so the
  * rows at them are read as feedback, and — once the page holds no dialed
  * word of the draft the board has not acked and no line of it is held — that
@@ -651,13 +679,15 @@ function acked(d, ats) {
 
 /**
  * A frame's answer (see the head): an ack raises the typed state and mints
- * an insert's bytes; the shell's `held` answer keeps the line by its ordinal
- * and the hold's cause; anything else is a refusal the page keeps — save an
- * undo's `reinstate` refused `withheld`, which is declined (`declined`), and
- * a refusal of a burst an undo took back, whose words leave with it and
- * which no island keeps (`forget`). The frames after it are dialed in order
- * whatever it was; the burst is finished at the last. Nothing where the
- * machine let the draft go meanwhile (`takeOut`).
+ * an insert's bytes; the shell's `held` answer keeps the line by its ordinal,
+ * the frame and the hold's cause; anything else is a refusal the page keeps —
+ * save an undo's `reinstate` refused `withheld`, which is declined
+ * (`declined`), and a refusal of a burst an undo took back, whose words leave
+ * with it and which no island keeps (`forget`). The frames after it are
+ * dialed in order whatever it was; the burst is finished at the last, what
+ * each frame acked changed split from the rest first where not every frame
+ * was acked (`split`). Nothing where the machine let the draft go meanwhile
+ * (`takeOut`).
  * @param {Draft} d
  * @param {Out} o
  * @param {Composed} f
@@ -670,9 +700,9 @@ function answered(d, o, f, out) {
   if (ack) {
     d.typed = Math.max(d.typed ?? 0, ack.at);
     if ('addr' in ack) mint(d.addr, f.pages, ack.addr, ack.at);
-    o.acks.push(ack.at);
+    o.acked.push({ frame: f, at: ack.at });
     frameAcked(d, o.k, ack.at);
-  } else if (held) { d.lines.set(held.held, { k: o.k, pages: f.pages, id: f.frame.id, since: reads }); d.cause = held.cause; o.held = true; } else {
+  } else if (held) { d.lines.set(held.held, { k: o.k, frame: f, since: reads }); d.cause = held.cause; o.held = true; } else {
     const r = 'refused' in out ? out.refused : /** @type {Refusal} */ ({ kind: 'shell', name: 'malformed_answer' });
     // an undo's `reinstate` the board refuses `withheld` is declined (BM-11): no refused run stands of it
     if (f.frame.op === 'reinstate' && r.name === 'withheld' && inverseOf(d, o.k) != null) declined(d, o.k, 1, r);
@@ -683,10 +713,12 @@ function answered(d, o, f, out) {
   o.next++;
   if (o.next < o.frames.length) { dial(d, o); return; }
   d.out = null;
+  // a burst the board took in part: what it took a burst of its own, before anything acts on the rest
+  if (d.open.has(o.k)) for (const a of o.acked) split(d, o.k, a.frame, a.at);
   // an answer after the press for a burst an undo took back (BM-45): a refusal is dropped with the words, no island and no face
   if (o.refusal && d.undone.has(o.k)) { forget(d, o.k); o.refusal = null; }
   if (o.refusal) refused(d, o.k, o.refusal);
-  acked(d, o.acks);
+  acked(d, o.acked.map((a) => a.at));
   if (o.held) void readHeld(d.session).then(() => after(d, true)); else after(d, !!o.refusal);
 }
 
@@ -742,7 +774,7 @@ function unplaced(d, o, f, r) {
   tidy(addr);
   if (step) WRITE.setStacks(addr, WRITE.undoOf(addr).filter((x) => x.id !== step.id), WRITE.redoOf(addr).filter((x) => x.id !== step.id));
   sweep(addr);
-  acked(d, o.acks);
+  acked(d, o.acked.map((a) => a.at));
   WRITE.unplace(addr, { name: r.name, origin: namedBy(r, f), site: step && step.began.pos ? { before: step.began.before, after: step.began.after } : null });
   after(d, true);
 }
@@ -851,9 +883,11 @@ function setLines(rows, issued) {
  * A held line that left the store kept (see the head; BM-25, BM-29): one of
  * this window's is a frame acked at the position the board took it at, its
  * insert's bytes minted from the address told — at no position where none
- * was told, its edits then leaving at the next read; one this window did not
- * send is applied until a read at or past its landing sets the text
- * (W-WRITE's `landReopened`), its bytes minted the same way.
+ * was told, its edits then leaving at the next read — and, where its burst is
+ * not acked whole, what the frame changed split from the rest of the burst
+ * (`split`); one this window did not send is applied until a read at or past
+ * its landing sets the text (W-WRITE's `landReopened`), its bytes minted the
+ * same way.
  * @param {Draft} d
  * @param {import('../model/frames.js').LandedLine} l
  * @param {number[]} ats the positions lines landed at, added to
@@ -862,9 +896,10 @@ function landed(d, l, ats) {
   const line = d.lines.get(l.held);
   if (line) {
     d.lines.delete(l.held);
-    if (l.addr && l.at != null) mint(d.addr, line.pages, l.addr, l.at);
+    if (l.addr && l.at != null) mint(d.addr, line.frame.pages, l.addr, l.at);
     if (l.at != null) { d.typed = Math.max(d.typed ?? 0, l.at); ats.push(l.at); }
     frameAcked(d, line.k, l.at ?? 0);
+    if (d.open.has(line.k)) split(d, line.k, line.frame, l.at ?? 0);
     return;
   }
   const n = WRITE.nameOf(d.addr, l.held);
@@ -1216,9 +1251,9 @@ function edgeIds(addr, edge, rows, d) {
   if (!edge) return [];
   const row = rows.find((r) => r.frame.op === 'insert' && r.frame.id === edge.burst), n = row ? WRITE.nameOf(addr, row.held) : null;
   if (n) return edge.offset < n.width ? REC.pageIds(addr, n.page + edge.offset, 1) : [];
-  const l = d ? [...d.lines.values()].find((x) => x.id === edge.burst) : undefined;
+  const l = d ? [...d.lines.values()].find((x) => x.frame.frame.id === edge.burst) : undefined;
   let at = edge.offset;
-  for (const p of l ? l.pages : []) { if (at < p.width) return REC.pageIds(addr, p.page + at, 1); at -= p.width; }
+  for (const p of l ? l.frame.pages : []) { if (at < p.width) return REC.pageIds(addr, p.page + at, 1); at -= p.width; }
   return [];
 }
 

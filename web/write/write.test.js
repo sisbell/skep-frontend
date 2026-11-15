@@ -14,9 +14,11 @@
 // it how it was made and a run's end told too, the edits an undo or a redo
 // makes added as given, and the removals the deletion face stands at — are
 // held here and gone at a change of class — the most text one paste
-// places, with its headroom under the board's cap on a frame; and bytes the
+// places, with its headroom under the board's cap on a frame; bytes the
 // board holds placed by identity as one act, a burst ending short of the
-// rest, and a refused placing told to those watching.
+// rest, and a refused placing told to those watching; and a burst the board
+// took in part split at the bytes it took, the text shown the same and each
+// put-back naming a removal cut naming the piece that holds its bytes.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as WRITE from './write.js';
@@ -303,4 +305,60 @@ test('a burst carries the unsent edits up to the edit it ends before, the rest u
   const why = { name: 'withheld', origin: '1.0.1.0.9', site: { before: [], after: [] } };
   WRITE.unplace(D, why);
   assert.deepEqual(told, [[D, why]], 'told, the draft and why');
+});
+
+/** a draft "abcdef" as a read at position 7 delivers it, each byte by its own address, and the text it shows with its edits: its words and their identity */
+function sixBytes(/** @type {string} */ addr) {
+  REC.takeSpanSet(addr, [{ subspace: 1, ordinal: 1, positions: 6 }]);
+  REC.takeDelivery(addr, [{ pos: 1, width: 6, kind: 'content', text: 'abcdef', ref: null, origin: null }], 7, { from: 1, runs: [{ iStart: `${addr}.0.1.1`, width: 6 }] });
+  return () => { const d = applyEdits(REC.doc(addr), WRITE.edits(addr), (page, width) => REC.pageIds(addr, page, width)).doc; return { text: REC.textOf(d.runs, d.from, d.to), image: d.image }; };
+}
+/** an edit as these tests read it: where it acts, what it removes and places, the page's ordinal, the put-back, its burst and where that was acked */
+const row = (/** @type {import('../model/records.js').Edit} */ e) => [e.pos, e.width, e.text, e.page ?? null, e.back ?? null, e.sent ?? null, e.at ?? null];
+
+test('a burst the board took in part is split at the bytes it took: the edit cut there, the part taken a burst of its own acked where it was taken and the rest the burst\'s, each piece keeping its act and the page\'s ordinals; the text shown the same byte for byte; and a put-back naming the removal cut naming the piece that holds its bytes, so it stands as the rest of the burst leaves (D6 BM-32, BM-45, BM-81)', () => {
+  const D = '1.0.1.0.2', shown = sixBytes(D);
+  // "cd" replaced by "XY", sent as burst 1; then, as an undo makes them, "XY" taken out and "cd" put back by the replacement's own removal
+  WRITE.addEdit(D, { pos: 3, width: 2, text: 'XY' });
+  WRITE.markSent(D, 1);
+  WRITE.restore(D, [{ pos: 3, width: 2, text: '' }]);
+  WRITE.restore(D, [{ pos: 3, width: 0, text: '', back: { of: 0, from: 0, width: 2 } }]);
+  const before = shown(), rev = WRITE.editRev(D);
+  assert.equal(before.text, 'abcdef');
+  assert.equal(WRITE.splitSent(D, 1, [{ prefix: `${D}.0.1`, ordinal: 3, width: 2 }], 2, 20), true, 'the board took the `delete` of "cd"');
+  assert.deepEqual(WRITE.edits(D).map(row), [[3, 2, '', null, null, 2, 20], [3, 0, 'XY', 1, null, 1, null], [3, 2, '', null, null, null, null], [3, 0, '', null, { of: 0, from: 0, width: 2 }, null, null]],
+    'the removal of "cd" first, burst 2 acked at 20; the words "XY" burst 1\'s still; the put-back naming the removal piece');
+  assert.deepEqual([shown(), WRITE.editRev(D) > rev, WRITE.edits(D).map((e) => e.step), WRITE.edits(D)[0].took], [before, true, [1, 1, 2, 3], { runs: [{ pos: 1, width: 2, kind: 'content', text: 'cd', ref: null, origin: null }], ids: [{ pos: 1, width: 2, prefix: `${D}.0.1`, ordinal: 3 }] }],
+    'the text shown the same, each byte by the same identity; the change counted; every piece of the act it was made by; the removal piece keeping what it took');
+  assert.equal(WRITE.splitSent(D, 1, [{ prefix: `${D}.0.1`, ordinal: 3, width: 2 }], 3, 21), false, 'nothing of burst 1 left that the bytes name: nothing marked');
+  WRITE.dropEdits(D, (e) => e.sent === 1);
+  assert.deepEqual([WRITE.edits(D).map(row), shown().text], [[[3, 2, '', null, null, 2, 20], [3, 0, '', null, null, null, null], [3, 0, '', null, { of: 0, from: 0, width: 2 }, null, null]], 'abcdef'],
+    'the rest of the burst dropped: the put-back stands with the removal the board took, putting back what it took out');
+});
+
+test('a split cuts an edit wherever the bytes the board took begin and end in what it removed or what it placed, the part taken first — its removals, then its placements — each piece where the pieces before leave the text; a put-back naming the removal is cut where the removal\'s pieces meet; an edit the board took all of is marked whole, and bytes no edit of the burst touched mark nothing (D6 BM-32)', () => {
+  const D = '1.0.1.0.2', E = '1.0.1.0.3', G = '1.0.1.0.4', shownD = sixBytes(D), shownE = sixBytes(E), shownG = sixBytes(G);
+  // the board took "d" alone of the removal of "cd"
+  WRITE.addEdit(D, { pos: 3, width: 2, text: 'XY' });
+  WRITE.markSent(D, 1);
+  WRITE.restore(D, [{ pos: 3, width: 2, text: '' }]);
+  WRITE.restore(D, [{ pos: 3, width: 0, text: '', back: { of: 0, from: 0, width: 2 } }]);
+  const before = shownD();
+  assert.equal(WRITE.splitSent(D, 1, [{ prefix: `${D}.0.1`, ordinal: 4, width: 1 }], 2, 20), true);
+  assert.deepEqual(WRITE.edits(D).map(row), [[4, 1, '', null, null, 2, 20], [3, 1, '', null, null, 1, null], [3, 0, 'XY', 1, null, 1, null], [3, 2, '', null, null, null, null],
+    [3, 0, '', null, { of: 1, from: 0, width: 1 }, null, null], [4, 0, '', null, { of: 0, from: 0, width: 1 }, null, null]],
+  '"d" taken out first, at 4 past "c"; then "c", then "XY"; the put-back of "cd" two, "c" from the piece holding it and "d" from the other');
+  assert.deepEqual([shownD(), WRITE.edits(D).slice(0, 2).map((e) => e.took && e.took.runs.map((r) => r.text).join(''))], [before, ['d', 'c']], 'the text shown the same; each removal piece its share of what the edit took');
+  // the board took the words "XY" and none of the removal of "cd"
+  WRITE.addEdit(E, { pos: 3, width: 2, text: 'XY' });
+  WRITE.markSent(E, 1);
+  const was = shownE();
+  assert.equal(WRITE.splitSent(E, 1, REC.pageIds(E, 1, 2), 2, 21), true);
+  assert.deepEqual([WRITE.edits(E).map(row), shownE()], [[[3, 0, 'XY', 1, null, 2, 21], [5, 2, '', null, null, 1, null]], was], '"XY" placed first, then "cd" taken out past it: the text shown the same');
+  // the board took all of an insert
+  WRITE.addEdit(G, { pos: 7, width: 0, text: 'Q' });
+  WRITE.markSent(G, 1);
+  assert.equal(WRITE.splitSent(G, 1, [{ prefix: `${G}.0.1`, ordinal: 9, width: 1 }], 2, 22), false, 'bytes no edit of the burst touched: nothing marked');
+  assert.equal(WRITE.splitSent(G, 1, REC.pageIds(G, 1, 1), 2, 22), true);
+  assert.deepEqual([WRITE.edits(G).map(row), shownG().text], [[[7, 0, 'Q', 1, null, 2, 22]], 'abcdefQ'], 'taken whole: the edit as it was, marked');
 });

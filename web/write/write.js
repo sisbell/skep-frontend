@@ -17,7 +17,11 @@
 // burst of their own (`placeSame`; B3-S5); which of them a burst carried out
 // and where the board acked it, a burst carrying the unsent edits up to an
 // edit it ends before (`unsent`, `markSent`, `markAcked`; `Edit.sent`,
-// `Edit.at`), set by the
+// `Edit.at`), and a burst the board took in part split at the bytes it took —
+// each edit cut where they begin and end, the part they name first and marked
+// a burst of its own acked where it was taken, every put-back naming a
+// removal cut naming the piece that holds its bytes, the text shown the same
+// byte for byte (`splitSent`) — set by the
 // machine alone; its kept state as its corner reads it — the word, and why
 // the board has not kept its words, which the word's own act says (`keptOf`,
 // `setKept`; B3-S2; D6 BM-8) — set by its owner alone and never by a read; and
@@ -104,8 +108,8 @@
 // Rules: FP-1, FP-2, FP-10, FP-11, FP-14, FP-23, FP-29, FP-34, FP-38.
 
 import * as REC from '../model/records.js';
-import { applyEdits, applyHeld, placedAgain, PAGE } from '../model/derive.js';
-import { byteLength } from '../util.js';
+import { applyEdits, applyHeld, madeBy, placedAgain, stretchIn, PAGE } from '../model/derive.js';
+import { byteLength, sliceBytes } from '../util.js';
 
 /** @typedef {import('../model/records.js').Edit} Edit */
 /** @typedef {import('../model/records.js').Doc} Doc */
@@ -690,6 +694,160 @@ export function markAcked(addr, burst, at) {
   if (!x) return;
   x.list = x.list.map((e) => (e.sent === burst ? { ...e, at } : e));
 }
+
+/**
+ * A burst the board took in part split at what it took (see the head; D6
+ * BM-10, BM-19, BM-20, BM-32, BM-45, BM-81): each edit of burst `k` that no
+ * ack names and that removed or placed a byte `holds` names is cut where
+ * those bytes begin and end (`cutEdit`), the part they name marked burst
+ * `kept` acked at `at` and the rest left burst `k`'s, and every put-back
+ * naming a removal cut is cut the same way, each piece naming the piece that
+ * holds its bytes (`backsOver`). The edits are read over the record they
+ * apply over: the one a text about to go left (`leavingText`), where one
+ * stands, whose edits are those cut. An edit that cannot be cut exactly is
+ * left whole, and the list stands as it stood unless the list cut makes the
+ * text shown byte for byte, each byte by the same identity. Set by D6's
+ * machine alone, as the answers to a burst's frames say what the board took.
+ * @param {string} addr
+ * @param {number} k the burst the board took in part
+ * @param {readonly ISpan[]} holds the bytes the frames it took changed, by identity
+ * @param {number} kept the burst the part it took is marked as
+ * @param {number} at the position the board took that part at
+ * @returns {boolean} whether an edit was marked: false where no edit of the burst removed or placed a byte `holds` names, or the list was left as it stood
+ */
+export function splitSent(addr, k, holds, kept, at) {
+  const x = drafts.get(addr), snap = snaps.get(addr);
+  if (!x || !holds.length || (!snap && !REC.has(addr))) return false;
+  const list = x.list, over = snap ? snap.base : baseOf(addr), ids = idsOf(addr), made = madeBy(over, list, 0, ids);
+  const cut = list.map((e, i) => (e.sent === k && e.at == null && !e.based && e.island == null ? cutEdit(e, made[i], holds, { sent: kept, at }) : null));
+  if (!cut.some((c) => c)) return false;
+  /** @type {Edit[]} */
+  const out = [];
+  /** @type {Array<Array<{index: number, from: number, width: number}>>} each edit's removal as the list cut holds it, by the edit's index: the piece holding each stretch of what it removed, by its offsets from 0 */
+  const removals = [];
+  for (const [i, e] of list.entries()) {
+    removals[i] = [];
+    for (const p of cut[i] ?? [{ edit: e, removes: { from: 0, width: Infinity } }]) {
+      const index = out.length, pieces = p.edit.back ? backsOver(p.edit, removals[p.edit.back.of] ?? []) : [p.edit];
+      if (!pieces) return false;
+      out.push(...pieces);
+      if (p.removes) removals[i].push({ index, ...p.removes });
+    }
+  }
+  /** a text the edits make, as its bytes and their identity */
+  const spelled = (/** @type {readonly Edit[]} */ v) => { const d = applyEdits(over, v, ids).doc; return JSON.stringify([d.runs, d.image]); };
+  if (spelled(out) !== spelled(list)) return false;
+  x.list = out; x.rev++;
+  if (snap) snaps.set(addr, { ...snap, list: out });
+  bump();
+  return true;
+}
+
+/** @typedef {{edit: Edit, removes: {from: number, width: number} | null}} Piece — a piece of an edit cut (`cutEdit`): the edit it is, and the stretch of what the edit removed it removes, by its offsets from 0; null where it removes none */
+
+/**
+ * One edit of a burst the board took in part cut at the bytes it took
+ * (`splitSent`): what it removed and what it placed each cut where `holds`
+ * begins and stops naming their bytes (`partsOf`); the pieces taken first —
+ * their removals, then their placements — then the rest the same way, each
+ * at its position in the text as the pieces before it leave it, so together
+ * they make the text the edit makes. A removal piece keeps its share of what
+ * the edit took where the edit keeps it (`Edit.took`), a text piece its share
+ * of the text and of the page's ordinals (`Edit.page`), a put-back piece its
+ * share of the bytes it puts back (`Edit.back`); every piece keeps the edit's
+ * act (`Edit.step`), and those taken carry `taken`'s marks.
+ * @param {Edit} e
+ * @param {import('../model/derive.js').Made} m what the edit did, by identity (M-DERIVE's `madeBy`)
+ * @param {readonly ISpan[]} holds the bytes the board took, by identity
+ * @param {{sent: number, at: number}} taken the burst and the position the pieces taken are marked with
+ * @returns {Piece[] | null} the pieces in order — the edit whole, marked, where every byte it changed is taken; null where it changed none `holds` names, or a cut would fall inside a character
+ */
+function cutEdit(e, m, holds, taken) {
+  const grew = e.back ? e.back.width : byteLength(e.text);
+  const gone = partsOf(m.took ? m.took.ids : [], e.width, holds), placed = partsOf(imageOf(m.placed), grew, holds);
+  if (![...gone, ...placed].some((s) => s.taken)) return null;
+  if ([...gone, ...placed].every((s) => s.taken)) return [{ edit: { ...e, ...taken }, removes: e.width ? { from: 0, width: e.width } : null }];
+  const widthOf = (/** @type {ReadonlyArray<{width: number}>} */ v) => v.reduce((n, s) => n + s.width, 0);
+  /** what is still to come out of what the edit removed, and what is already in of what it placed */
+  const left = [...gone], put = /** @type {typeof placed} */ ([]);
+  /** @type {Piece[]} */
+  const out = [];
+  for (const first of [true, false]) {
+    const marks = first ? taken : { sent: e.sent };
+    for (const s of gone.filter((q) => q.taken === first)) {
+      if (!m.took || !shareOf(m.took, s.from, s.width)) return null;
+      const pos = e.pos + widthOf(put) + widthOf(left.filter((q) => q.from < s.from));
+      left.splice(left.indexOf(s), 1);
+      out.push({ edit: { pos, width: s.width, text: '', page: null, back: null, step: e.step, ...marks, ...(e.took ? { took: shareOf(e.took, s.from, s.width) } : {}) }, removes: { from: s.from, width: s.width } });
+    }
+    for (const s of placed.filter((q) => q.taken === first)) {
+      const text = e.back ? '' : sliceBytes(e.text, s.from, s.from + s.width);
+      if (!e.back && byteLength(text) !== s.width) return null;
+      const pos = e.pos + widthOf(put.filter((q) => q.from < s.from));
+      put.push(s);
+      out.push({ edit: { pos, width: 0, text, page: e.back || e.page == null ? null : e.page + s.from, back: e.back ? { of: e.back.of, from: e.back.from + s.from, width: s.width } : null, step: e.step, ...marks }, removes: null });
+    }
+  }
+  return out;
+}
+
+/**
+ * The stretch of `width` bytes an edit removed or placed cut where `holds`
+ * begins and stops naming them (`cutEdit`): each part by its offsets from 0,
+ * in order, the parts `holds` names taken; one part not taken where `ids` —
+ * their identity, from position 1 — names them not, or none of them `holds`
+ * names. None where `width` is 0.
+ * @param {import('../model/records.js').ImageRun[]} ids
+ * @param {number} width
+ * @param {readonly ISpan[]} holds
+ * @returns {Array<{from: number, width: number, taken: boolean}>}
+ */
+function partsOf(ids, width, holds) {
+  /** @type {Array<{from: number, width: number, taken: boolean}>} */
+  const out = [];
+  let from = 0;
+  for (const s of width > 0 && ids.length ? REC.placedIn(ids, [...holds]) : []) {
+    const lo = Math.max(from, s.pos - 1), hi = Math.min(width, s.pos - 1 + s.width);
+    if (hi <= lo) continue;
+    if (lo > from) out.push({ from, width: lo - from, taken: false });
+    out.push({ from: lo, width: hi - lo, taken: true });
+    from = hi;
+  }
+  if (from < width) out.push({ from, width: width - from, taken: false });
+  return out;
+}
+
+/**
+ * A put-back as the list cut holds the removal it names (`splitSent`): cut
+ * where that removal's pieces meet, each part naming the piece that holds
+ * its bytes, in the bytes' order, the first keeping what the put-back
+ * removes; null where the pieces do not hold every byte it puts back.
+ * @param {Edit} e the put-back, its `back` naming the removal by its index in the list before the cut
+ * @param {ReadonlyArray<{index: number, from: number, width: number}>} pieces the removal's pieces in the list cut, each by its index there and the stretch of what the removal took it holds
+ * @returns {Edit[] | null}
+ */
+function backsOver(e, pieces) {
+  const b = /** @type {NonNullable<Edit['back']>} */ (e.back), end = b.from + b.width;
+  const { took, ...rest } = e;
+  void took;
+  /** @type {Edit[]} */
+  const out = [];
+  let at = b.from;
+  for (const r of [...pieces].sort((p, q) => p.from - q.from)) {
+    const lo = Math.max(at, r.from), hi = Math.min(end, r.from + r.width);
+    if (hi <= lo) continue;
+    if (lo > at) return null;
+    const back = { of: r.index, from: lo - r.from, width: hi - lo };
+    out.push(out.length ? { ...rest, pos: e.pos + (lo - b.from), width: 0, back } : { ...e, back });
+    at = hi;
+  }
+  return at === end && out.length ? out : null;
+}
+
+/** bytes by identity as an image of their own, each run at its position from 1 */
+const imageOf = (/** @type {readonly ISpan[]} */ ids) => { let at = 1; return ids.map((x) => { const r = { pos: at, width: x.width, prefix: x.prefix, ordinal: x.ordinal }; at += x.width; return r; }); };
+/** `width` bytes of a stretch a put-back places, from its `from`-th counted from 0, as a stretch of their own; null where it does not hold them whole, or a cut falls inside a character */
+const shareOf = (/** @type {import('../model/records.js').Took} */ t, /** @type {number} */ from, /** @type {number} */ width) => stretchIn(/** @type {Doc} */ (/** @type {unknown} */ ({ runs: t.runs, image: t.ids })), from + 1, width);
 /** does a draft hold an edit a burst carried out that no ack names (`markSent`, `markAcked`) — a burst out, a line held, a run the board refused — an island's apart, which no burst carries again? */
 export const unacked = (/** @type {string} */ addr) => edits(addr).some((e) => e.sent != null && e.at == null && e.island == null);
 
