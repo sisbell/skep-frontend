@@ -9,7 +9,7 @@
 # editor case alone arms, fires and writes through, by the page. The secrets
 # come from the environment (SKEP_PROVIDER_SECRET, SKEP_EDITOR_SECRET) and
 # are never written to the tree.
-#   harness/run.sh          the gate
+#   harness/run.sh          the gate (SKEP_GATE_CASES=a,b,c runs those cases alone; default all)
 #   harness/run.sh safari   the OWNER's pass (FP-19): opens the page in Safari, asserts nothing
 set -u
 cd "$(dirname "$0")/.." || exit 2
@@ -42,10 +42,17 @@ if lsof -nP -iTCP:${PAGE_PORT} -sTCP:LISTEN >/dev/null 2>&1; then echo "GATE: po
 python3 -c 'import websocket' 2>/dev/null || { echo "GATE: python3 needs websocket-client"; exit 2; }
 
 status=0
-echo "== the checker"
-npx tsc -p jsconfig.json || { echo "GATE: the checker is red"; status=1; }
-echo "== the pure tests"
-node --test 'web/**/*.test.js' || { echo "GATE: a pure test is red"; status=1; }
+# SKEP_GATE_SKIP_PURE=1: the caller has just run the checker and the pure
+# tests itself (the issue runner's gate does, as its own two steps), so the
+# gate does not run them twice.
+if [ "${SKEP_GATE_SKIP_PURE:-0}" != 1 ]; then
+  echo "== the checker"
+  npx tsc -p jsconfig.json || { echo "GATE: the checker is red"; status=1; }
+  echo "== the pure tests"
+  node --test 'web/**/*.test.js' || { echo "GATE: a pure test is red"; status=1; }
+else
+  echo "== the checker and the pure tests: run by the caller (SKEP_GATE_SKIP_PURE=1)"
+fi
 
 echo "== the page's server on ${PAGE_PORT}"
 python3 harness/serve.py ${PAGE_PORT} --results results --shots shots > "${TMP}/skep-gate-serve.log" 2>&1 &
@@ -62,7 +69,7 @@ echo "== the driver"
 python3 harness/drive.py \
   --page "http://127.0.0.1:${PAGE_PORT}/index.html?provider=${SKEP_PROVIDER_SECRET}&gate=all" \
   --provider "${PROVIDER}" --board "${BOARD}" --editor-provider "${EDITOR_PROVIDER}" \
-  --cases all --results results --shots shots || { echo "GATE: a case is red, or the page threw"; status=1; }
+  --cases "${SKEP_GATE_CASES:-all}" --results results --shots shots || { echo "GATE: a case is red, or the page threw"; status=1; }
 
 echo "== the report"
 python3 harness/report.py > /dev/null || status=1
