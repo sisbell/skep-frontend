@@ -24,8 +24,11 @@
 // it, by their positions and their bytes' identity, where the line stood in
 // its fold, and the position its text was read at (T-LAYER's
 // `Reading`) — written with every view the trail writes: a departure's, a
-// jump's camera leaving (`leaveFrom`), a landing's (`settle`); and where the
-// walk stood in that line's document — or, where the view read none, the
+// jump's camera leaving (`leaveFrom`), a landing's (`settle`); the page's
+// caret where it stands in the draft that view reads, by its position and
+// the bytes either side of it (T-LAYER's `CaretPlace`), re-taken at each
+// departure as the view is, which a return restores kept (B3-S1 (iii)); and
+// where the walk stood in that line's document — or, where the view read none, the
 // board, the account or the mark's stop it stood on, else its place in a
 // document standing in that view — as the entry was departed, where that
 // view shows it, or where a read placed its landing since (`settle`), by
@@ -84,8 +87,8 @@
 // entry back (`giveBack`): its push undone, the entries it dropped and the
 // step it wrote standing again (FP-25).
 // An entry holds no document's words (FP-29): its address, its positions,
-// its view, what that view reads and where the walk stood — each by
-// positions and identity — its step, the step's passage by identity, the
+// its view, what that view reads, where the walk stood and the caret — each
+// by positions and identity — its step, the step's passage by identity, the
 // surfaces it keeps by what they are about, a reading scene's pair, its
 // panes' versions and where the reader stood in each, and an act's name
 // where HOME or WHOLE BOARD pushed it; whoever shows
@@ -93,13 +96,14 @@
 // (N-GO's `wordsOf`). A change of the page's class keeps every entry, its
 // number and its address, and drops what the class it left read there: its
 // notice, save a claim's still reading, the arrival and the surfaces it
-// kept, what its view read, where the walk stood, and where the reader stood
-// in a reading scene it holds (`classChanged`).
+// kept, what its view read, where the walk stood, the caret it held, and
+// where the reader stood in a reading scene it holds (`classChanged`).
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-21, FP-22, FP-23, FP-25, FP-29, FP-36.
 
 /** @typedef {{x: number, y: number, scale: number}} View */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
 /** @typedef {import('../text/layer.js').Reading} Reading */
+/** @typedef {import('../text/layer.js').CaretPlace} CaretPlace */
 
 /**
  * @typedef {Object} Stood — where the walk stood as the reader left an entry, in the view they left it at (see the head): a return puts it back there where the view it lands at shows it
@@ -115,6 +119,7 @@
  * @property {View} view the view the camera is bound for
  * @property {Reading | null} reading what that view reads (T-LAYER's `readAt`); null where it reads no passage
  * @property {Stood | null} stood where the walk stands (N-GO's `stoodIn`): in the document that view reads, or, where the view reads none, on the board, an account or a mark's stop, else in a document standing in that view; null where it stands outside the document the view reads, in a document out of the view where it reads none, on no document where it reads one, or on a place that view does not show
+ * @property {CaretPlace | null} caret the page's caret by its place, where it stands in the draft that view reads (N-GO's): what a return restores; null where it stands in none
  * @property {Record<string, number>} [newer] the boxes a newer version's arrival marked as the reader leaves (N-GO's `newer`), by document, each with the newest member named: re-taken in the place of what the entry recorded (`Entry.newer`); absent, what it recorded stands
  * @property {import('../scene/scene.js').Left | null} [scene] the reading scene standing over the view, as the reader leaves it (SC's `asLeft`): re-taken on an entry a scene was opened as; null where none stands
  */
@@ -188,6 +193,7 @@
  * @property {View} view the view at the entry — the landing's, re-taken at departure; where the camera went, where its read brought no place
  * @property {Reading | null} reading what its view reads, written with the view (see the head): the words a return finds in the text it reaches, and places the view by; null where it reads no passage
  * @property {Stood | null} stood where the walk stood as the entry was last departed, or where a read placed the entry's landing since (`settle`) (see the head): a return puts it back there where the view it lands at shows it; null where neither held one (`Departure`)
+ * @property {CaretPlace | null} caret the page's caret as the entry was last departed, where it stood in the draft that view read (see the head; `Departure`): a return restores it, kept; null where it stood in none, and before a departure
  * @property {Record<string, number>} newer each box whose version kept here a newer version's arrival took, by document, with the newest member named since (see the head): what a return marks the box by (N-GO's); a box absent is unmarked
  * @property {Step | null} step the step that left it for the entry after it, written as a push departed it; none while nothing has, and none where the push took no step this module records
  * @property {string | null} label the act's name where HOME or WHOLE BOARD pushed the entry, the strings table's; null for every other entry, whose document's words are read from the model as it is shown (see the head)
@@ -218,9 +224,9 @@ const claims = new Map();
 /** @type {Pushed | null} the last push, until the next */
 let last = null;
 
-/** an entry re-takes a departure from it (see the head): the view, what it reads and where the walk stood, by value, the boxes an arrival marked where it names them, and on an entry a reading scene was opened as the scene standing over it as the reader leaves it */
+/** an entry re-takes a departure from it (see the head): the view, what it reads, where the walk stood and the caret, by value, the boxes an arrival marked where it names them, and on an entry a reading scene was opened as the scene standing over it as the reader leaves it */
 function taken(/** @type {Entry} */ e, /** @type {Departure} */ d) {
-  e.view = { ...d.view }; e.reading = d.reading; e.stood = d.stood;
+  e.view = { ...d.view }; e.reading = d.reading; e.stood = d.stood; e.caret = d.caret;
   if (d.newer) e.newer = { ...d.newer };
   if (d.scene && e.scene) e.scene = { ...e.scene, left: d.scene };
 }
@@ -333,9 +339,9 @@ function mark(/** @type {Entry} */ e, /** @type {string} */ trunk, /** @type {nu
  * re-taken there first and the step leaving it written on it, in the place
  * of any it held, and the entries ahead of the cursor dropped. The entry
  * pushed reads nothing and holds no walk until a departure or a landing
- * writes them, and marks no box; it is a reading scene's only where `scene`
- * names one.
- * @param {Omit<Entry, 'step' | 'kept' | 'reading' | 'stood' | 'newer' | 'scene'> & {scene?: Opened | null}} e
+ * writes them, nor a caret until a departure does, and marks no box; it is a
+ * reading scene's only where `scene` names one.
+ * @param {Omit<Entry, 'step' | 'kept' | 'reading' | 'stood' | 'caret' | 'newer' | 'scene'> & {scene?: Opened | null}} e
  * @param {Departure | null} departed the departure from the cursor's entry as the teleport left
  * @param {boolean} [claim] the landing waits on a read: the entry stands as a claim until `settle` answers it
  * @param {Step | null} [step] the step the teleport takes from the departed entry: a follow's, a carrying LEAP's, a reading scene's; none for any other move
@@ -344,7 +350,7 @@ function mark(/** @type {Entry} */ e, /** @type {string} */ trunk, /** @type {nu
 export function push(e, departed, claim = false, step = null) {
   retake(departed);
   /** @type {Entry} */
-  const held = { ...e, view: { ...e.view }, reading: null, stood: null, newer: {}, step: null, kept: null, scene: e.scene ?? null };
+  const held = { ...e, view: { ...e.view }, reading: null, stood: null, caret: null, newer: {}, step: null, kept: null, scene: e.scene ?? null };
   last = { entry: held, step: cursor >= 0 ? entries[cursor].step : null, dropped: entries.slice(cursor + 1) };
   if (cursor >= 0) entries[cursor].step = step;
   entries = entries.slice(0, cursor + 1);
@@ -399,13 +405,13 @@ export function keep(e, kept) { e.kept = kept; }
  * step and the boxes an arrival marked (`Entry.newer`), and drops the notice
  * the class it left met there — save a claim's,
  * its read still out, which the new class answers — the arrival and the
- * surfaces it kept, what its view read and where the walk stood; a reading
- * scene's keeps its pair and its panes' versions, and drops where the reader
- * stood in each pane (SC's `Left.spots`).
+ * surfaces it kept, what its view read, where the walk stood and the caret it
+ * held; a reading scene's keeps its pair and its panes' versions, and drops
+ * where the reader stood in each pane (SC's `Left.spots`).
  */
 export function classChanged() {
   for (const e of entries) {
-    e.kept = null; e.reading = null; e.stood = null;
+    e.kept = null; e.reading = null; e.stood = null; e.caret = null;
     if (!claims.has(e)) e.notice = null;
     if (e.scene && e.scene.left) e.scene = { ...e.scene, left: { ...e.scene.left, spots: null } };
   }

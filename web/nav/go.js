@@ -57,7 +57,9 @@
 // with what that view reads (T-LAYER's `readAt`), where the walk stands in
 // the document it reads — or, where the view reads none, the board, the
 // account or the mark's stop it stands on, else its place in a document
-// standing in that view — where that view shows it (`stoodIn`), the version
+// standing in that view — where that view shows it (`stoodIn`), the page's
+// caret by its place where it stands in the draft that view reads (T-LAYER's
+// `caretPlace`; B3-S1 (iii)), the version
 // the entry's box shows, the boxes a newer version's arrival marked, each
 // with the newest member named (`newer`), and
 // a reading scene standing over it as the reader leaves it (SC's `asLeft`).
@@ -213,6 +215,13 @@
 // so a second move made at once loses nothing; a surface the reader made
 // meanwhile stands in their place. A covered place reopens none, and a change
 // of the page's class drops every entry's kept surfaces.
+// The caret's return (B3-S1 (iii)): a cursor move reaching an entry that
+// holds a caret restores it once the walk has landed there and the text its
+// view reads is held, kept where its bytes stand in its draft's text shown
+// now, its span holding the walk where the walk landed on it (`caretBack`;
+// T-LAYER's `restoreCaret`, N-WALK's `holdKept`) — at no covered place, nor
+// where the reader took the camera over, a live caret stands or the move is a
+// reading scene's close, which returns the focus as the scene found it.
 // The surfaces across a version (FP-36, FP-22): a surface standing on a
 // version its box no longer shows — the selection, a card or a list, opened
 // before a version move, while it read, or under a jump to a version address
@@ -733,8 +742,8 @@ function pinTo(addr) {
 /**
  * A departure (see the head): what the departed entry re-takes — the view
  * the camera is bound for (P-CAM's `destination`), what it reads, where the
- * walk stands, the boxes a newer version's arrival marked and a reading scene
- * standing over it (`leavingNow`) — and the
+ * walk stands, the page's caret, the boxes a newer version's arrival marked
+ * and a reading scene standing over it (`leavingNow`) — and the
  * entry's place re-taken where the box it names shows another version as it
  * is left — a newer version's arrival pinned it on the member being read
  * (`arrived`; N-TRAIL's `retakePlace`). Every navigation act departs through
@@ -751,8 +760,9 @@ function departure() {
 
 /**
  * What the entry the reader stands at re-takes as they leave it now (see the
- * head): the view the camera is bound for, what it reads and where the walk
- * stands in it (`leaving`), the boxes a newer version's arrival marked, each
+ * head): the view the camera is bound for, what it reads, where the walk
+ * stands in it and the page's caret where it stands in the draft that view
+ * reads (`leaving`), the boxes a newer version's arrival marked, each
  * with the newest member named (`newer`), which a return marks again where
  * it restores their versions (`restoreVersions`), and the reading scene
  * standing over it as they leave it (SC's `asLeft`), which an entry a scene
@@ -763,14 +773,15 @@ function leavingNow() { return { ...leaving(CAM.destination()), newer: Object.fr
 
 /**
  * What an entry left at a view re-takes (see the head; N-TRAIL's
- * `Departure`): the view, the passage it reads (T-LAYER's `readAt`) and where
- * the walk stands (`stoodIn`).
+ * `Departure`): the view, the passage it reads (T-LAYER's `readAt`), where
+ * the walk stands (`stoodIn`), and the page's caret by its place where it
+ * stands in the draft that view reads (T-LAYER's `caretPlace`).
  * @param {View} view
  * @returns {Departure}
  */
 function leaving(view) {
-  const reading = LAYER.readAt(view);
-  return { view, reading, stood: stoodIn(view, reading) };
+  const reading = LAYER.readAt(view), c = LAYER.caretPlace();
+  return { view, reading, stood: stoodIn(view, reading), caret: c && reading && c.addr === reading.addr ? c : null };
 }
 
 /**
@@ -3216,7 +3227,8 @@ function returnTo(l, view) {
  * `coverOf`), the read that tells it made first beside the flight where the
  * page holds nothing yet of a document the class it left could read
  * (`coverRead`). The surfaces the entry keeps are owed to it from the move,
- * and reopened beside the flight once the place is landed at (`restore`) —
+ * and reopened beside the flight once the place is landed at (`restore`),
+ * the caret it holds restored with them (`caretBack`) —
  * never at a covered place, nor where the reader took the camera over or the
  * read an entry still reading waited on met a failure. An entry a reading
  * scene was opened as reopens the scene (`sceneAt`). A reading scene's close
@@ -3248,7 +3260,7 @@ async function landAtCursor(e, act, byKey, l, returns = false) {
   if (!answer) {
     if (cover === 'unread') await coverRead(act, e, first, byKey, returns);
     else if (at && at.reads.length) await placeRead(act, e, at.reads, first, byKey, null, returns);
-    else { if (!cover) { sayReturn(act, e, told, to); void restore(e, act); } endAir(act, await first); }
+    else { if (!cover) { sayReturn(act, e, told, to); void restore(e, act); void caretBack(e, act, returns); } endAir(act, await first); }
     return;
   }
   await answer;
@@ -3355,6 +3367,7 @@ async function askAgain(act, e, ask, at, to, first, byKey, told) {
     if (takenAt === act) return;
     focusOn({ ...to, take: false }, byKey);
     void restore(e, act);
+    void caretBack(e, act, !!to.returns);
     endAir(act, await first);
     return;
   }
@@ -3928,6 +3941,7 @@ async function placeRead(act, e, texts, first, byKey, n = null, returns = false)
   if (n) showFound(n);
   sayReturn(act, e, told, to);
   void restore(e, act);
+  void caretBack(e, act, returns);
   await flight;
 }
 
@@ -4032,6 +4046,28 @@ async function restore(e, act) {
 
 /** is a return reopening its surfaces now (see the head; `restore`) — the gate's settle waits on it */
 export const restoring = () => restores > 0;
+
+/**
+ * The caret an entry holds restored as the reader left it there (see the
+ * head; B3-S1 (iii)), once the walk has landed (`walking`): kept in its draft
+ * where its bytes stand in the text shown now (T-LAYER's `restoreCaret`), its
+ * span holding the walk where the walk landed on it (N-WALK's `holdKept`).
+ * Nothing at a reading scene's close, which leaves the caret as the scene
+ * found it (`Destination.returns`), where an act was made since, or where a
+ * live caret stands: one the person placed meanwhile.
+ * @param {Entry} e
+ * @param {number} act the move's count
+ * @param {boolean} returns the move is a reading scene's close
+ * @returns {Promise<void>}
+ */
+async function caretBack(e, act, returns) {
+  const c = e.caret;
+  if (!c || returns) return;
+  await walking;
+  const now = LAYER.caret();
+  if (act !== made || (now && now.live)) return;
+  if (LAYER.restoreCaret(c)) WALK.holdKept();
+}
 
 /**
  * A card or a list an entry keeps reopened by its owner from what it is about

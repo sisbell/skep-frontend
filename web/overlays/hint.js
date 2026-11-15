@@ -37,7 +37,8 @@
 // shown whole too.
 // Where it stands (`place`), on each dirty frame, beside the focus the press
 // was made at, which it keeps while it stands: the walk's span at its reading
-// scale — the line holding the caret standing in it, else the position a
+// scale — the line holding its draft's caret standing in it (T-LAYER's
+// `caretIn`), else the position a
 // landing named in it, else its first, each read in the text the page shows
 // of it — at the text's edge, past the signs
 // that edge holds level with the line, its top that line's, its width the
@@ -198,7 +199,7 @@ function siteOf(at) {
   if (at && typeof at.getBoundingClientRect === 'function') return { text: null, el: at };
   const f = WALK.current();
   if (!f || f.kind !== 'block' || f.pos == null || !LAYER.atReadingScale(f.addr)) return { text: null, el: null };
-  const c = LAYER.caret(), landed = WALK.landedAt();
+  const c = LAYER.caretIn(f.addr), landed = WALK.landedAt();
   const pos = c && LAYER.caretInSpan(f.addr, f.pos) ? c.pos : landed != null && landed >= f.pos ? landed : f.pos;
   return { text: { addr: f.addr, pos, first: f.pos }, el: null };
 }

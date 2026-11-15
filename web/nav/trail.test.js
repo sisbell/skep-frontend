@@ -1,5 +1,6 @@
 // N-TRAIL's test: entries pushed by teleports, each departure re-taking the
-// view, what it reads and where the walk stood on the entry it leaves; Back,
+// view, what it reads, where the walk stood and the page's caret on the
+// entry it leaves; Back,
 // Forward and a jump moving the cursor and dropping nothing, a push behind
 // the cursor dropping the entries ahead; a claim standing where it was
 // pushed, re-taken by every departure, settled with a place and where the
@@ -17,11 +18,11 @@
 // counted for; each such re-take recording the newest member named, a later
 // arrival or count raising it, and a departure writing the boxes an arrival
 // marked as the reader left; a change of the page's class dropping what each entry's view
-// read; an entry a reading scene was opened as re-taking the scene as the reader
+// read and the caret it held; an entry a reading scene was opened as re-taking the scene as the reader
 // leaves it, its place never re-taken, and a change of class dropping where
 // they stood in it and keeping the stop they stood on, a stop the panes'
 // `compare` draws by its bytes' identity; and a reset waking every move
-// waiting on a claim (FP-22, FP-23, FP-25, FP-27, FP-29).
+// waiting on a claim (B3-S1 (iii); FP-22, FP-23, FP-25, FP-27, FP-29).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from './trail.js';
@@ -32,12 +33,16 @@ import * as T from './trail.js';
 const v = (/** @type {number} */ n) => ({ x: n, y: n, scale: 1 });
 const e = (/** @type {string} */ addr, /** @type {number} */ n) => ({ addr, pos: null, width: null, view: v(n), label: null, notice: null });
 const addrs = () => T.all().map((x) => x.addr);
-/** a departure at the view n, which reads no passage, the walk in no document read */
-const at = (/** @type {number} */ n) => ({ view: v(n), reading: null, stood: null });
+/** a departure at the view n, which reads no passage, the walk in no document read, no caret standing there */
+const at = (/** @type {number} */ n) => ({ view: v(n), reading: null, stood: null, caret: null });
 /** what the view n reads: the line at its centre, its position n, one position wide, and the view around it, its text read at no known position */
 const readOf = (/** @type {number} */ n) => ({ addr: 'd', at: null, pos: n, width: 1, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], around: [{ pos: n, width: 1, prefix: 'd.0.1', ordinal: n }], p: { x: n, y: n }, line: { x: 0, y: n }, fs: 1, top: 0 });
-/** a departure at the view n, which reads the passage at n, the walk standing there */
-const away = (/** @type {number} */ n) => ({ view: v(n), reading: readOf(n), stood: { addr: 'd', pos: n, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], of: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], end: null } });
+/** a departure at the view n, which reads the passage at n, the walk standing there, no caret standing in the draft it reads */
+const away = (/** @type {number} */ n) => ({ view: v(n), reading: readOf(n), stood: { addr: 'd', pos: n, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], of: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], end: null }, caret: null });
+/** a departure at the view n as `away` makes it, the page's caret standing at n in the draft it reads */
+const writing = (/** @type {number} */ n) => ({ ...away(n), caret: { addr: 'd', pos: n, before: [{ prefix: 'd.0.1', ordinal: n - 1, width: 1 }], after: [{ prefix: 'd.0.1', ordinal: n, width: 1 }] } });
+/** where an entry holds the caret: its position; null where it holds none */
+const caretAt = (/** @type {Entry} */ x) => (x.caret ? x.caret.pos : null);
 /** what an entry keeps of the departure from it: its view's x, what that view reads, where the walk stood */
 const kept = (/** @type {Entry} */ x) => [x.view.x, x.reading && x.reading.pos, x.stood && x.stood.pos];
 /** @type {Notice} a jump's reading notice, as its claim holds it while its read is out */
@@ -179,7 +184,7 @@ test('the cursor\'s entry\'s place re-taken as it is departed — the version it
 });
 
 /** a departure at the view n whose view read the document `addr`, its text read at `readAt`, the walk standing in it */
-const awayIn = (/** @type {string} */ addr, /** @type {number} */ n, /** @type {number | null} */ readAt) => ({ view: v(n), reading: { ...readOf(n), addr, at: readAt }, stood: { addr, pos: n, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], of: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], end: null } });
+const awayIn = (/** @type {string} */ addr, /** @type {number} */ n, /** @type {number | null} */ readAt) => ({ view: v(n), reading: { ...readOf(n), addr, at: readAt }, stood: { addr, pos: n, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], of: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], end: null }, caret: null });
 /** what an entry's record names: its place, the document its view read and the one its walk stood in */
 const named = (/** @type {Entry} */ x) => [x.addr, x.reading && x.reading.addr, x.stood && x.stood.addr];
 
@@ -287,6 +292,22 @@ test('every departure re-takes what its view reads and where the walk stood besi
   assert.deepEqual(kept(T.all()[0]), [70, 70, 70], 'a jump\'s camera leaving re-takes the entry it was made from');
   T.back(at(80));
   assert.deepEqual(kept(r), [80, null, null], 'a departure from a view that reads nothing: neither kept');
+});
+
+test('every departure re-takes the page\'s caret beside the view — a push\'s, Back\'s, Forward\'s, a jump\'s and a jump\'s camera leaving — one holding none writing none; the entry pushed holds none until a departure writes one, and a change of the page\'s class drops it (B3-S1 (iii); FP-29)', () => {
+  T.push(e('a', 1), null);
+  assert.equal(T.all()[0].caret, null, 'pushed: no caret');
+  T.push(e('b', 2), writing(10)); T.push(e('c', 3), writing(20));
+  assert.deepEqual(T.all().map(caretAt), [10, 20, null], 'each push re-takes it on the entry it leaves; the newest holds none, nothing having left it');
+  T.back(writing(30)); T.forward(writing(40)); T.jump(3, writing(50));
+  assert.deepEqual(T.all().map(caretAt), [10, 40, 50], 'Back, Forward and a jump each re-take it on the entry they leave');
+  const r = T.push({ ...e('r', 4), notice: reading }, writing(60), true);
+  T.leaveFrom(r, writing(70));
+  assert.deepEqual(T.all().map(caretAt), [70, null], 'a jump\'s camera leaving re-takes it on the entry the jump was made from');
+  T.back(at(80));
+  assert.equal(r.caret, null, 'a departure holding no caret writes none');
+  T.classChanged();
+  assert.deepEqual(T.all().map((x) => x.caret), [null, null], 'a change of the page\'s class drops every entry\'s caret');
 });
 
 test('a landing that writes a view writes what that view reads and where the walk lands there, in the place of where it stood; one that writes no view keeps all three (issues #221, #297)', () => {

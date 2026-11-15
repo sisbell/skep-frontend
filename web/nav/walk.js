@@ -85,7 +85,9 @@
 // moves the walk — Esc, or the empty click that is the pointer's Esc, which
 // stands the walk on the caret's span at its position (`leaveText`; N-KEYS',
 // APP-INPUT's), or a camera move past the caret's reading
-// scale (`holdCaret`; the re-take's own, and N-KEYS' `whereNow`) — every
+// scale (`holdCaret`; the re-take's own, and N-KEYS' `whereNow`) — or a return
+// restores the caret its trail entry held, the walk landed on its span
+// (`holdKept`; N-GO's `caretBack`; B3-S1 (iii)) — every
 // re-take that ends with a line of that span in the visible view, in text the
 // person may edit at the camera's scale (T-LAYER's `editable`, `spanInView`),
 // stands the walk on it at the caret's position, whatever stands under the
@@ -1588,6 +1590,22 @@ export function holdCaret(how) {
   const left = LAYER.leaveCaret(how);
   if (left) caretHeld = true;
   return left;
+}
+
+/**
+ * The kept caret's span made to hold the walk where the walk stands on it
+ * (see the head): a return restoring the caret its trail entry held (N-GO's
+ * `caretBack`; B3-S1 (iii)), the walk landed on that caret's span — held as
+ * Esc leaves it, no act of the walk's since. Nothing where no kept caret
+ * stands, or the walk stands off its span (T-LAYER's `caretInSpan`).
+ * @returns {boolean} whether the span holds the walk
+ */
+export function holdKept() {
+  carry();
+  const c = LAYER.caret();
+  if (!c || c.live || !focus || focus.kind !== 'block' || focus.addr !== c.addr || focus.pos == null || !LAYER.caretInSpan(c.addr, focus.pos)) return false;
+  caretHeld = true;
+  return true;
 }
 
 /**

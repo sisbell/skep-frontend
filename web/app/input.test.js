@@ -31,7 +31,9 @@
 // and the rest opening its list, the pointer's shape over each its own; a
 // click placing the caret in a draft the person may edit stands the walk on
 // its span, the live caret its mark and no ring drawn, so a slot chord acts
-// there and the next key types at it wherever the walk stood; a click on a
+// there and the next key types at it wherever the walk stood, a caret it
+// leaves in another draft kept there as that draft's last, its open burst
+// committed — a drag's caret likewise — and returned by a key at its span; a click on a
 // block of text the person may not edit stands the walk on that block, the
 // ring drawn there, a live caret left kept, so the next key types nothing; a
 // click on any other of another document's things keeps a live caret, owing
@@ -1680,6 +1682,33 @@ test('a drag reaching from one document into another places no caret, and leaves
   drag({ addr: D, pos: 9 }, { addr: O, pos: 31 });
   await tick();
   assert.deepEqual([caretNow(), SEL.reachesPast()], [null, true], 'with no caret: none placed');
+}));
+
+test('a click placing the caret in another draft the person may edit keeps the caret it leaves as its own draft\'s last, kept where it stood, that draft\'s open burst committed as the click leaves its text — a drag selecting in another draft likewise — and a printable key at its span returns it and types there (B3-S1 P59; FP-40; D5 K-70, K-77; D6 BM-4)', () => onGestures(async ({ D, E, click, drag }) => {
+  /** @type {string[]} */
+  const committed = [];
+  WRITE.machine({ commit: (addr) => { committed.push(addr); }, typed() {}, ended() {}, leaving: () => false });
+  try {
+    click(D, 9);
+    await tick();
+    assert.equal(await KEYS.dispatch(plainKey('a'), ON_PLANE), true);
+    WRITE.setFlight(D, true);
+    click(E, 5);
+    await tick();
+    assert.deepEqual([caretNow(), LAYER.caretIn(D), committed], [[E, 5, true], { addr: D, pos: 10, live: false }, [D]], 'the click in E: the caret live there, D\'s kept where it stood after "a", D\'s open burst committed');
+    assert.equal(await KEYS.dispatch(plainKey('b'), ON_PLANE), true);
+    WRITE.setFlight(E, true);
+    LAYER.frame();
+    drag({ addr: D, pos: 1 }, { addr: D, pos: 8 });
+    await tick();
+    assert.deepEqual([caretNow(), LAYER.caretIn(E), committed], [[D, 8, true], { addr: E, pos: 6, live: false }, [D, E]], 'a drag in D: the caret live at its moving end in D\'s place, E\'s kept where it stood after "b", E\'s open burst committed');
+    assert.equal(await KEYS.dispatch(plainKey('Escape'), ON_PLANE), true);
+    assert.equal(await KEYS.dispatch(plainKey('Escape'), ON_PLANE), true);
+    await tick();
+    await WALK.focusTo(E, 1, true, null, true);
+    assert.equal(await KEYS.dispatch(plainKey('z'), ON_PLANE), true);
+    assert.deepEqual([caretNow(), editsOf(E), LAYER.caretIn(D)], [[E, 7, true], [[5, 0, 'b'], [6, 0, 'z']], { addr: D, pos: 8, live: false }], 'z at E\'s span: E\'s caret returned where it stood and typed at, D\'s kept');
+  } finally { WRITE.machine(null); WRITE.setFlight(D, false); WRITE.setFlight(E, false); WRITE.clearEdits(D); WRITE.clearEdits(E); }
 }));
 
 test('a Shift press the canvas takes on a draft the person may edit before the text under it stands — the caret live there — is held for the text and, once the frame sets it, extends from the caret to the point pressed, the caret live there and the selection standing (issue #568\'s design decision; FP-12, FP-40)', () => onGestures(async ({ D, at, dom, plane, platform }) => {

@@ -73,7 +73,13 @@
 // hands are named, its words said as it comes and changes — a device's
 // label in them the person's own, spoken as written — its acts keyed
 // on it, compact at its document's head with the band holding its row and
-// whole beneath the rows on its act or a press answered at it; and the caret's
+// whole beneath the rows on its act or a press answered at it; each draft's
+// last caret for the session, kept where it stood as a caret is placed in
+// another, returned at its span, marked while the walk's focus holds its
+// span and dropped at a change of the page's class but the page's own, every
+// caret holding its place by the bytes either side of it through a change of
+// its text it did not make, and a return restoring a trail entry's caret
+// kept where its bytes stand; and the caret's
 // paste and cut on a page of the DOM under `web/test/`, D6's machine handed in:
 // a paste one edit and a step of its own, its line endings set, in a
 // selection's place or at the caret, nothing placed past its bound; a cut the
@@ -2395,6 +2401,75 @@ test('a view read under one fit and returned to under another lands framed acros
   const p0 = placeOf(f0, r.pos), p = placeOf(f, r.pos);
   assert.ok(Math.abs((box.y + p.y - v.y) * v.scale - (box.y + p0.y - view.y) * view.scale) < 1e-6, 'the line at its height from the view\'s centre');
 }, 1440, 900));
+
+// ---- each draft's last caret, holding its place by its bytes (B3-S1 P59, P60) ----------------------------------------
+
+/** the two lines `twoDrafts` delivers in each draft, and the second draft */
+const DRAFTED = 'First line.\n\nSecond line here.\n', TWIN = '1.0.1.0.5';
+/** D and TWIN listed as drafts of the session's account, each holding DRAFTED, every byte named through its image, the camera at their reading scale: DRAFTED's length */
+function twoDrafts() {
+  const n = byteLength(DRAFTED);
+  REC.takeIndex(/** @type {any} */ ({ docs: [D, TWIN].map((doc) => ({ doc, kind: 'draft', label: null, standing: 'yours_to_read' })), counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
+  for (const a of [D, TWIN]) {
+    REC.takeSpanSet(a, [{ subspace: 1, ordinal: 1, positions: n }]);
+    REC.takeDelivery(a, [{ pos: 1, width: n, kind: 'content', text: DRAFTED, ref: null, origin: null }], 7, { from: 1, runs: [{ iStart: a + '.0.1.1', width: n }] });
+  }
+  CAM._reset(); CAM.setViewport(1440, 900);
+  const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), c = f.columns[0];
+  CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2, scale: 12 / f.fs });
+  return n;
+}
+
+test('each draft keeps its last caret for the session: a caret placed in another draft leaves the first kept there — read as that draft\'s by caretIn, caretInSpan and caretSpan, marked while the walk\'s focus holds its span, Enter at that span returning it and at another placing one in its place — and a change of the page\'s class drops every draft\'s caret but the page\'s own (B3-S1 P59; D5 M-11; D6 BM-52)', () => {
+  twoDrafts();
+  try {
+    assert.deepEqual([LAYER.editable(D), LAYER.editable(TWIN)], [true, true], 'two drafts the person may edit');
+    LAYER.placeCaret(D, 16); LAYER.caretType('x');
+    LAYER.placeCaret(TWIN, 3);
+    assert.deepEqual([LAYER.caret(), LAYER.caretIn(D), LAYER.caretIn(TWIN)], [{ addr: TWIN, pos: 3, live: true }, { addr: D, pos: 17, live: false }, { addr: TWIN, pos: 3, live: true }], 'the page\'s caret placed in the twin: D keeps its own, kept where it stood');
+    assert.deepEqual([LAYER.caretInSpan(D, 14), LAYER.caretInSpan(D, 1), LAYER.caretInSpan(TWIN, 1), LAYER.caretSpan(D), LAYER.caretSpan()], [true, false, true, { addr: D, pos: 17, block: 14 }, { addr: TWIN, pos: 3, block: 1 }], 'each draft\'s caret in its own span');
+    LAYER.readers({ focus: () => ({ addr: D, pos: 14 }) });
+    assert.deepEqual(LAYER.caretsMarked(), [{ addr: D, pos: 17, live: false }, { addr: TWIN, pos: 3, live: true }], 'the walk\'s focus on the span D\'s caret stands in: that caret marked, kept, beside the page\'s own');
+    LAYER.readers({ focus: () => ({ addr: D, pos: 1 }) });
+    assert.deepEqual(LAYER.caretsMarked(), [{ addr: TWIN, pos: 3, live: true }], 'the walk\'s focus on another span of D: the page\'s own alone');
+    assert.deepEqual(LAYER.caretToSpan(D, 14), { addr: D, pos: 17, live: true }, 'Enter at the span D\'s caret stands in: returned where it stood');
+    assert.deepEqual(LAYER.caretIn(TWIN), { addr: TWIN, pos: 3, live: false }, 'the twin keeping its own, kept');
+    assert.deepEqual(LAYER.caretToSpan(TWIN, 14), { addr: TWIN, pos: 14, live: true }, 'Enter at another span of the twin: a caret placed there');
+    assert.deepEqual([LAYER.caretIn(TWIN), LAYER.caretIn(D)], [{ addr: TWIN, pos: 14, live: true }, { addr: D, pos: 17, live: false }], 'the twin\'s caret replaced, D\'s standing');
+    REC.sessionDied({ arm: 'closed' });
+    assert.deepEqual([LAYER.caretIn(D), LAYER.caret()], [null, { addr: TWIN, pos: 14, live: true }], 'a change of the page\'s class: D\'s caret dropped, the page\'s own standing');
+  } finally { LAYER.dropCaret(); LAYER.readers({}); WRITE.clearEdits(D); CAM._reset(); }
+});
+
+test('a caret holds its place by the bytes either side of it: words another writer set above it, read again with their image, move it on with them — the page\'s own caret and a draft\'s kept one alike — an edit made at no caret moves it too, and a text set again before its image holds it at its position until the image places its bytes; a trail entry holds it by its place, and a return restores it there kept (B3-S1 (iii), P60; FP-38)', () => {
+  const n = twoDrafts();
+  /** D set again in one step as a feed row's reads set it: its text, and the image read with it, or none */
+  const setD = (/** @type {string} */ text, /** @type {Array<{iStart: string, width: number}> | null} */ image) => {
+    const w = byteLength(text);
+    REC.setAgain(D, { spans: [{ subspace: 1, ordinal: 1, positions: w }], text: { runs: [{ pos: 1, width: w, kind: 'content', text, ref: null, origin: null }], asOf: 9 }, ...(image ? { image: { from: 1, runs: image } } : {}) });
+  };
+  const lead = 'Set above.\n\n', k = byteLength(lead), more = 'Another line.\n\n', m = byteLength(more);
+  try {
+    LAYER.placeCaret(D, 16); LAYER.leaveCaret('esc');
+    const left = /** @type {import('./layer.js').CaretPlace} */ (LAYER.caretPlace());
+    assert.deepEqual(left, { addr: D, pos: 16, before: [{ prefix: D + '.0.1', ordinal: 15, width: 1 }], after: [{ prefix: D + '.0.1', ordinal: 16, width: 1 }] }, 'the caret by its place: its position and the bytes either side of it');
+    setD(lead + DRAFTED, [{ iStart: `${D}.0.1.${n + 1}`, width: k }, { iStart: D + '.0.1.1', width: n }]);
+    assert.deepEqual(LAYER.caret(), { addr: D, pos: 16 + k, live: false }, 'a line another writer set above the kept caret, read again: the caret on the same characters');
+    WRITE.addEdit(D, { pos: 1, width: 0, text: 'ab' });
+    assert.equal(LAYER.caret()?.pos, 18 + k, 'an edit made at no caret above it: moved on with its bytes');
+    WRITE.clearEdits(D);
+    assert.equal(LAYER.caret()?.pos, 16 + k, 'that edit gone: back with them');
+    setD(more + lead + DRAFTED, null);
+    assert.equal(LAYER.caret()?.pos, 16 + k, 'set again before its image: held at its position');
+    REC.takeImage(D, 1, [{ iStart: `${D}.0.1.${n + k + 1}`, width: m }, { iStart: `${D}.0.1.${n + 1}`, width: k }, { iStart: D + '.0.1.1', width: n }]);
+    assert.equal(LAYER.caret()?.pos, 16 + k + m, 'its image arrived: on the same characters again');
+    LAYER.placeCaret(TWIN, 1);
+    setD(lead + more + lead + DRAFTED, [{ iStart: `${D}.0.1.${n + k + m + 1}`, width: k }, { iStart: `${D}.0.1.${n + k + 1}`, width: m }, { iStart: `${D}.0.1.${n + 1}`, width: k }, { iStart: D + '.0.1.1', width: n }]);
+    assert.deepEqual(LAYER.caretIn(D), { addr: D, pos: 16 + 2 * k + m, live: false }, 'D\'s kept caret, the page\'s own in the twin: held by its bytes the same way');
+    assert.deepEqual([LAYER.restoreCaret(left), LAYER.caretIn(TWIN)], [{ addr: D, pos: 16 + 2 * k + m, live: false }, { addr: TWIN, pos: 1, live: false }], 'a return restoring the place an entry held: kept where its bytes stand now, the page\'s own, the twin keeping its caret kept');
+    assert.equal(LAYER.caretOwes(), null, 'and the frame owes it nothing: no camera moves for it');
+  } finally { LAYER.dropCaret(); WRITE.clearEdits(D); CAM._reset(); }
+});
 
 // ---- the caret's paste and cut, on a page of the DOM under `web/test/` ------------------------------------------------
 

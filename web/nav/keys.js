@@ -102,9 +102,11 @@
 // THE CARET (D5 K-51, K-70, K-71, K-72, K-76, K-77; D6 BM-1, BM-52, BM-54,
 // BM-70, BM-75): in text the person may edit (T-LAYER's `editable`) Enter at
 // the walk's focused span places the caret at the span's start, or returns
-// the kept one standing in that span (`activateFocus`; T-LAYER's
-// `caretToSpan`); while a live caret stands on the plane in text the person
-// may edit at the camera's scale the focus is at it (`Ctx.where` `caret`,
+// the draft's kept caret standing in that span, the page's own or the one the
+// draft keeps since a caret was set in another (`activateFocus`; T-LAYER's
+// `caretToSpan`, `caretIn`; B3-S1 P59); while a live caret stands on the
+// plane in text the person may edit at the camera's scale the focus is at it
+// (`Ctx.where` `caret`,
 // read as a key is pressed and again as a held key is made, `whereNow`) — a
 // live caret in text that scale does not read, its span then holding the
 // walk (N-WALK's `holdCaret`), or one the walk stands outside of in another
@@ -146,7 +148,7 @@
 // but Space is answered by the draft's own line, naming Enter as the key that
 // places a caret there (`B3.caret.enter`; K-72, K-9), and a paste or a cut
 // there by that line in their own words, each its hint, nothing placed and
-// nothing removed (K-93); at the span a
+// nothing removed (K-93); at the span the draft's
 // kept caret stands in (`keptSpan`), a printable key returns it and types at
 // it as at a live caret (`typeAt`), and Shift with ← or → returns it and
 // extends a selection from it as at a live caret, never from the span's edge
@@ -619,13 +621,13 @@ function draftSpan(ctx) {
   return f && f.kind === 'block' && f.pos != null && LAYER.editable(f.addr) ? { addr: f.addr, pos: f.pos } : null;
 }
 
-/** the walk's focused span of a draft the person may edit holding no caret (`draftSpan`) — the site of the swallow's draft form (K-72, K-93); null anywhere else, and where the kept caret stands in it (`keptSpan`) */
+/** the walk's focused span of a draft the person may edit holding no caret of that draft's (`draftSpan`; T-LAYER's `caretInSpan`) — the site of the swallow's draft form (K-72, K-93); null anywhere else, and where the draft's kept caret stands in it (`keptSpan`) */
 function bareDraftSpan(/** @type {Ctx} */ ctx) {
   const s = draftSpan(ctx);
   return s && !LAYER.caretInSpan(s.addr, s.pos) ? s : null;
 }
 
-/** the walk's focused span of a draft the person may edit holding the kept caret (`draftSpan`) — the span whose keys return it (K-70, K-77; `typeAt`, `extendAtKept`); null anywhere else */
+/** the walk's focused span of a draft the person may edit holding that draft's kept caret — the page's own, or the one the draft keeps (`draftSpan`; T-LAYER's `caretInSpan`) — the span whose keys return it (K-70, K-77; B3-S1 P59; `typeAt`, `extendAtKept`); null anywhere else */
 function keptSpan(/** @type {Ctx} */ ctx) {
   const s = draftSpan(ctx);
   return s && LAYER.caretInSpan(s.addr, s.pos) ? s : null;
@@ -650,10 +652,11 @@ function readOnlySpan(ctx) {
 
 /**
  * The document select-all selects whole (see the head; D5 K-93; B3-S8): the
- * draft the page's live caret stands in; the draft whose kept caret stands
- * in the walk's span, the caret then returned; the edition whose span the
- * walk stands on, which takes no caret — the one test saying published of
- * the version the walk stands in (T-LAYER's `isDraft`; FP-39). Null anywhere
+ * draft the page's live caret stands in; the draft whose own kept caret
+ * stands in the walk's span (`keptSpan`), the caret then returned; the
+ * edition whose span the walk stands on, which takes no caret — the one test
+ * saying published of the version the walk stands in (T-LAYER's `isDraft`;
+ * FP-39). Null anywhere
  * else — a span of a draft holding no caret, another's draft, a document
  * below its reading scale, a field, a control, the scene — where select-all
  * stays the platform's.
@@ -682,7 +685,7 @@ function wholeAt(ctx) {
 async function selectWhole(ctx) {
   const at = wholeAt(ctx);
   if (!at) return;
-  if (at.kept) LAYER.returnCaret();
+  if (at.kept) LAYER.returnCaret(false, at.addr);
   const d = LAYER.shownOf(at.addr), c = LAYER.caret();
   if (d.from < 0) return;
   const end = Math.max(d.to, (d.extent ?? 0) + 1);
@@ -823,7 +826,8 @@ function route(e, chord, ctx) {
   // extended from it, the walk following the caret (K-70; FP-40); at the walk's span in text the person may not edit, a
   // selection extended from the focus's edge (K-70) — each the platform's own extension prevented; anywhere else off a live
   // caret, the platform's
-  if ((chord === 'Shift+←' || chord === 'Shift+→') && keptSpan(ctx)) return async () => { await extendAtKept(e, arrowStep(e)); return true; };
+  const kept = chord === 'Shift+←' || chord === 'Shift+→' ? keptSpan(ctx) : null;
+  if (kept) return async () => { await extendAtKept(e, arrowStep(e), kept.addr); return true; };
   if ((chord === 'Shift+←' || chord === 'Shift+→') && bareDraftSpan(ctx)) return async () => { e.preventDefault(); SEL.extendFromSpan(arrowStep(e)); await WALK.followCaret(); return true; };
   if ((chord === 'Shift+←' || chord === 'Shift+→') && readOnlySpan(ctx)) return () => { e.preventDefault(); SEL.extendFromFocus(arrowStep(e)); return true; };
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
@@ -989,11 +993,11 @@ function editAtCaret(text, erase) {
 /**
  * A printable key on the plane where no live caret stands (see the head): at
  * the walk's focused span of a draft the person may edit, every key but Space
- * — at the span the kept caret stands in (`keptSpan`), the caret returned and
- * the key typed at it as at a live caret, replacing a selection drawn in its
- * text (K-70; BM-52; `editAtCaret`), the walk then standing on the span the
- * caret is in (N-WALK's `followCaret`), the platform's default prevented
- * before it waits; at a span holding no caret (`bareDraftSpan`), the draft's
+ * — at the span the draft's kept caret stands in (`keptSpan`), the caret
+ * returned and the key typed at it as at a live caret, replacing a selection
+ * drawn in its text (K-70; BM-52; `editAtCaret`), the walk then standing on
+ * the span the caret is in (N-WALK's `followCaret`), the platform's default
+ * prevented before it waits; at a span holding no caret (`bareDraftSpan`), the draft's
  * own line naming the key that places a caret there, Enter drawn for this
  * platform (`B3.caret.enter`), its hint (K-72; K-9); at the walk's
  * span of an edition of the session's account or of another's document,
@@ -1009,7 +1013,7 @@ async function typeAt(e, ctx) {
   if (e.key !== ' ' && site && ended && ended.why === 'death' && WRITE.unkept(site) && unwritableSays(site, e, ctx)) return;
   const kept = e.key !== ' ' ? keptSpan(ctx) : null;
   if (kept && unwritableSays(kept.addr, e, ctx)) { e.preventDefault(); return; }
-  if (kept) { e.preventDefault(); LAYER.returnCaret(); editAtCaret(e.key); await WALK.followCaret(); movedSays(kept.addr, e); return; }
+  if (kept) { e.preventDefault(); LAYER.returnCaret(false, kept.addr); editAtCaret(e.key); await WALK.followCaret(); movedSays(kept.addr, e); return; }
   const writing = writingElsewhere(walkSite());
   if (e.key !== ' ' && bareDraftSpan(ctx)) { HINT.show('B3.caret.enter', actKey(), { ...hinted(e, ctx), writing }); return; }
   if (e.key !== ' ' && siteSays(e, ctx, writing)) return;
@@ -1025,8 +1029,9 @@ function walkSite() {
 /**
  * Where the person was writing, which the line a swallowed printable key
  * raises ends with (see the head; B3.undo.last-writing): the draft last
- * written in the page's session (W-WRITE's `lastWritten`), where its caret
- * stands kept and the key was pressed outside that draft — named as the
+ * written in the page's session (W-WRITE's `lastWritten`), where that draft's
+ * caret stands kept — the page's own, or the one the draft keeps (T-LAYER's
+ * `caretIn`) — and the key was pressed outside that draft — named as the
  * status region names its box (T-LAYER's `boxName`), its label a LEAP to the
  * span the kept caret stands in as the label's act is made, the caret's own
  * position named (N-GO's `leapTo`), so the next printable key there types at
@@ -1035,19 +1040,19 @@ function walkSite() {
  * @returns {import('../overlays/hint.js').Writing | null}
  */
 function writingElsewhere(site) {
-  const w = WRITE.lastWritten(), c = LAYER.caret();
-  if (!w || !c || c.live || c.addr !== w || site === w) return null;
+  const w = WRITE.lastWritten(), c = w ? LAYER.caretIn(w) : null;
+  if (!w || !c || c.live || site === w) return null;
   const name = LAYER.boxName(w);
   return {
     label: name.name, named: name.runs,
-    act: (byKey) => { const at = LAYER.caretSpan(); void GO.leapTo(w, { pos: at && at.addr === w ? at.pos : null, how: byKey ? 'key' : 'click', byKey }); },
+    act: (byKey) => { const at = LAYER.caretSpan(w); void GO.leapTo(w, { pos: at ? at.pos : null, how: byKey ? 'key' : 'click', byKey }); },
   };
 }
 
 /**
- * Shift with ← or → at the span a kept caret stands in (see the head; K-70,
- * K-77; B3-S1): the caret returned where it stood and a selection extended
- * from it a step — a word with Option on macOS (`arrowStep`) — as at a live
+ * Shift with ← or → at the span a draft's kept caret stands in (see the
+ * head; K-70, K-77; B3-S1): the caret returned where it stood and a
+ * selection extended from it a step — a word with Option on macOS (`arrowStep`) — as at a live
  * caret, never from the span's edge (O-SELECTION's `extendFromCaret`) — where
  * the caret cannot move that way,
  * the caret live and the selection standing as it stood, its highlight with
@@ -1057,11 +1062,12 @@ function writingElsewhere(site) {
  * page's to place.
  * @param {KeyboardEvent} e
  * @param {ArrowStep} dir
+ * @param {string} addr the draft whose kept caret is returned (`keptSpan`)
  * @returns {Promise<void>}
  */
-async function extendAtKept(e, dir) {
+async function extendAtKept(e, dir, addr) {
   e.preventDefault();
-  LAYER.returnCaret(true);
+  LAYER.returnCaret(true, addr);
   SEL.extendFromCaret(dir);
   await WALK.followCaret();
 }
@@ -1398,7 +1404,7 @@ function pasteAt(text, entry, e, ctx) {
   const live = ctx.where === 'caret' ? LAYER.caret() : null, kept = live ? null : keptSpan(ctx), addr = live ? live.addr : kept ? kept.addr : null;
   if (addr) {
     if (unwritableSays(addr, e, ctx)) return true;
-    if (kept) LAYER.returnCaret();
+    if (kept) LAYER.returnCaret(false, kept.addr);
     const over = selectedAtCaret(), out = LAYER.caretPaste(text, over, entry);
     /** what the paste did, answered: the walk following what it placed, its face where it is told, its line where nothing was placed for its size or its emptiness */
     const answer = (/** @type {import('../text/layer.js').Pasted | false} */ r) => {
@@ -1470,7 +1476,7 @@ export function cutEvent(e, ctx) {
   e.preventDefault();
   if (!addr) { HINT.show('B3.caret.cut', actKey(), hinted(e, ctx)); return true; }
   if (unwritableSays(addr, e, ctx)) return true;
-  if (kept) LAYER.returnCaret();
+  if (kept) LAYER.returnCaret(false, kept.addr);
   const over = selectedAtCaret(), b = REC.board();
   if (!over) { HINT.show('L.copy.nothing', null, hinted(e, ctx)); return true; }
   if (LAYER.caretCut(e, over, b ? b.origin : '') === 'cut') { SEL.clear(); clipping = followed(addr, e); }

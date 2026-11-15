@@ -349,16 +349,17 @@ function leaveFor(span, how) {
 
 /**
  * The anchor a Shift+click in a draft extends from (APP-INPUT's; K-70;
- * FP-40), a position of its text shown: the caret standing there, live or
- * kept — the other end of a selection ending at it (`anchorAt`) — else the
- * end of the selection standing there that no step moves (`Ends`); null
+ * FP-40), a position of its text shown: the draft's caret standing there,
+ * live or kept — the page's own, or the one the draft keeps (T-LAYER's
+ * `caretIn`) — the other end of a selection ending at it (`anchorAt`) — else
+ * the end of the selection standing there that no step moves (`Ends`); null
  * where neither stands in the draft, the Shift+click then a click.
  * @param {string} addr
  * @returns {number | null}
  */
 export function anchorIn(addr) {
-  const c = LAYER.caret();
-  if (c && c.addr === addr) return anchorAt(c);
+  const c = LAYER.caretIn(addr);
+  if (c) return anchorAt(c);
   return sel && sel.addr === addr ? (ends.moves === 'end' ? sel.pos : sel.pos + sel.width) : null;
 }
 

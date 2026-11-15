@@ -92,11 +92,16 @@
 // at the caret where that selection is not whole in the text shown; and an
 // arrow without Shift there ends that selection, ← and → putting the caret at
 // its start and its end; a printable key swallowed outside the draft last
-// written, its caret kept there, ends its line with where the person was
-// writing, the label's act a LEAP back to the kept caret's span; every
-// teleport into a live caret's own draft — a LEAP, Back, Forward, a find's
-// move — leaves the caret kept where it stood, a printable key at the landing
-// answered by the draft's own line, and a zoom past its reading scale leaves
+// written, its caret kept there — the page's own caret there or placed
+// meanwhile in another draft — ends its line with where the person was
+// writing, the label's act a LEAP back to the kept caret's span; a caret
+// placed in another draft leaves the first draft's kept there as that
+// draft's last, a printable key or Enter at its span returning it; Back and
+// Forward restore the caret each trail entry held, kept, the walk on its
+// span, a printable key there typing at it; every
+// teleport into a live caret's own draft that returns to no trail entry — a
+// LEAP, a find's move — leaves the caret kept where it stood, a printable key
+// at the landing answered by the draft's own line, and a zoom past its reading scale leaves
 // it kept too, a key pressed below that scale typing nothing; and Home and
 // End at a live caret move it to the start and the end of its line — a
 // wrap's white space left after it, a break after a hyphen standing on the
@@ -1583,7 +1588,7 @@ test('a key pressed at a corner\'s act while a jump is in the air is held, its d
   } finally { PORT.boot(null); TRAIL._reset(); }
 }));
 
-test('every teleport into the live caret\'s own draft — a LEAP, Back, Forward, a find\'s move — leaves the caret kept where it stood and the walk on its landing, so a printable key there is answered by the draft\'s own line, nothing typed, and Enter there places a caret of its own (D5 M-2, §4 rule 3; K-70, K-77)', () => onPlane(async ({ said }) => {
+test('every teleport into the live caret\'s own draft that returns to no trail entry — a LEAP, a find\'s move — leaves the caret kept where it stood and the walk on its landing, so a printable key there is answered by the draft\'s own line, nothing typed, and Enter there places a caret of its own (D5 M-2, §4 rule 3; K-70, K-77)', () => onPlane(async ({ said }) => {
   const fake = FAKE.create({});
   PORT.boot(fake);
   HOST.attach(/** @type {any} */ (hostEl));
@@ -1598,8 +1603,6 @@ test('every teleport into the live caret\'s own draft — a LEAP, Back, Forward,
     /** @type {Array<[string, () => (Promise<unknown> | null), number, number]>} each teleport, the span it lands on and the span the caret it leaves stands in */
     const jumps = [
       ['a LEAP to the second span', () => GO.leapTo(D, { pos: 14 }), 14, 1],
-      ['Back', () => GO.back(), 1, 14],
-      ['Forward', () => GO.forward(), 14, 1],
       ['a find\'s move to a match in the first span', () => { GO.toMatch(D, { pos: 1, width: 5 }); return null; }, 1, 14],
     ];
     for (const [what, jump, to, from] of jumps) {
@@ -1655,6 +1658,107 @@ test('a printable key swallowed outside the draft last written in the page\'s se
     assert.deepEqual([walkAt(), caret(), TRAIL.current()?.addr], [['block', D, 1], [D, 2, false], D], 'and LEAPs back: the walk on the kept caret\'s span, its trail entry D\'s, the caret kept');
     await press('z');
     assert.deepEqual([WRITE.edits(D).map((e) => [e.pos, e.width, e.text]), caret()], [[[1, 0, 'a'], [2, 0, 'z']], [D, 3, true]], 'z there returns the caret and types at it');
+    assert.deepEqual(fake.unanswered, []);
+  } finally { PORT.boot(null); TRAIL._reset(); }
+}));
+
+/** the text the page shows of a document now */
+const shownOf = (/** @type {string} */ addr) => { const d = LAYER.shownOf(addr); return REC.textOf(d.runs, d.from, d.to); };
+/** a draft's last caret as it stands: its document, its position and whether it is live; null where the draft holds none */
+const caretOf = (/** @type {string} */ addr) => { const c = LAYER.caretIn(addr); return c && [c.addr, c.pos, c.live]; };
+/** a second draft of the session's account, holding the text D holds */
+const D2 = '1.0.1.0.4';
+/** D and D2 listed, each one's metadata and links held beside its text, so a LEAP to either reads nothing */
+function twoDrafts() {
+  listed([[D2, 'draft']]);
+  for (const a of [D, D2]) { REC.takeMetadata(a, { doc: a, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 }); REC.takeLinks(a, []); }
+}
+
+test('a caret placed in another draft leaves the first draft\'s caret kept there as that draft\'s last: at its span a printable key returns it and types at it and Enter returns it alone, the second draft keeping its own the same way, and a caret placed in a draft again replaces that draft\'s alone (B3-S1 P59; D5 K-70, K-77; D6 BM-52)', () => onPlane(async () => {
+  twoDrafts();
+  await focusOn(D, 1);
+  await press('Enter'); await press('a'); await press('Escape');
+  await tick();
+  assert.deepEqual([caret(), shownOf(D).slice(0, 3)], [[D, 2, false], 'aFi'], '"a" typed in D, the caret kept after it');
+  await focusOn(D2, 1);
+  await press('Enter');
+  assert.deepEqual([caret(), caretOf(D), caretOf(D2)], [[D2, 1, true], [D, 2, false], [D2, 1, true]], 'Enter at D2\'s span: the page\'s caret live there, D keeping its own kept where it stood');
+  await press('b'); await press('Escape');
+  await tick();
+  await focusOn(D, 1);
+  await press('q');
+  assert.deepEqual([caret(), shownOf(D).slice(0, 4), caretOf(D2)], [[D, 3, true], 'aqFi', [D2, 2, false]], 'q at D\'s span holding its caret: the caret returned and typed at, D2 keeping its own');
+  await press('Escape');
+  await tick();
+  await focusOn(D2, 1);
+  await press('Enter');
+  assert.deepEqual([caret(), shownOf(D2).slice(0, 3), caretOf(D)], [[D2, 2, true], 'bFi', [D, 3, false]], 'Enter at D2\'s span holding its caret: returned where it stood, nothing inserted');
+  await press('Escape');
+  await tick();
+  const second = LAYER.shownOf(D2).blocks[1].pos;
+  await focusOn(D2, second);
+  await press('Enter');
+  assert.deepEqual([caret(), caretOf(D)], [[D2, second, true], [D, 3, false]], 'Enter at another span of D2: a caret placed there, D2\'s replaced, D\'s standing');
+  assert.deepEqual([WRITE.edits(D).map((e) => [e.pos, e.width, e.text]), WRITE.edits(D2).map((e) => [e.pos, e.width, e.text])], [[[1, 0, 'a'], [2, 0, 'q']], [[1, 0, 'b']]]);
+}));
+
+test('Back and Forward restore the caret each trail entry held as the reader left it — kept, where its bytes stand in its draft\'s text shown now, the walk on its span — so a printable key there types at it, the caret standing in the other draft kept there as that draft\'s last (B3-S1 (iii), P59; D5 K-20, K-21, K-70)', () => onPlane(async () => {
+  const fake = FAKE.create({});
+  PORT.boot(fake);
+  HOST.attach(/** @type {any} */ (hostEl));
+  TRAIL._reset();
+  twoDrafts();
+  try {
+    await landed(GO.leapTo(D, { pos: 1 }));
+    await press('Enter'); await press('a');
+    assert.deepEqual(caret(), [D, 2, true], 'the caret live in D after "a"');
+    await landed(GO.leapTo(D2, { pos: 1 }));
+    assert.deepEqual([caret(), TRAIL.all()[0].caret && [TRAIL.all()[0].caret.addr, TRAIL.all()[0].caret.pos]], [[D, 2, false], [D, 2]], 'the LEAP away leaves D\'s caret kept, and the entry it departs holds it');
+    await press('Enter'); await press('b');
+    await landed(GO.back());
+    await tick();
+    assert.deepEqual([caret(), caretOf(D2), walkAt()], [[D, 2, false], [D2, 2, false], ['block', D, 1]], 'Back: D\'s caret restored kept where it stood, D2\'s kept as its last, the walk on the caret\'s span');
+    const view = CAM.view(), second = LAYER.shownOf(D).blocks[1].pos, there = LAYER.centreOf(D, second);
+    CAM.set({ ...view, x: there.x, y: there.y });
+    assert.equal(WALK.elementUnder(CAM.view()).pos, second, 'the view\'s centre over D\'s second span, its first in view');
+    await WALK.retakeFromView();
+    assert.deepEqual(walkAt(), ['block', D, 1], 'a re-take: the restored caret\'s span holds the walk');
+    CAM.set(view);
+    await press('q');
+    assert.deepEqual([caret(), shownOf(D).slice(0, 4)], [[D, 3, true], 'aqFi'], 'q there returns the caret and types at it');
+    await press('Escape');
+    await tick();
+    await landed(GO.forward());
+    await tick();
+    assert.deepEqual([caret(), caretOf(D), walkAt()], [[D2, 2, false], [D, 3, false], ['block', D2, 1]], 'Forward: D2\'s caret restored kept, D\'s kept as its last');
+    await press('z');
+    assert.deepEqual([caret(), shownOf(D2).slice(0, 4)], [[D2, 3, true], 'bzFi'], 'z there types at D2\'s caret');
+    assert.deepEqual(fake.unanswered, []);
+  } finally { PORT.boot(null); TRAIL._reset(); }
+}));
+
+test('a printable key swallowed outside the draft last written ends its line with where the person was writing while that draft\'s caret stands kept there, the page\'s own caret placed meanwhile in another draft; the label\'s act LEAPs back to that draft\'s kept caret, where the next printable key types at it (B3-S1 P59; issue #496\'s design decision; D5 K-72)', () => onPlane(async ({ said }) => {
+  const fake = FAKE.create({});
+  PORT.boot(fake);
+  TRAIL._reset();
+  twoDrafts();
+  try {
+    await focusOn(D, 1);
+    await press('Enter'); await press('a'); await press('Escape');
+    await tick();
+    await focusOn(D2, 1);
+    await press('Enter'); await press('Escape');
+    await tick();
+    assert.deepEqual([caret(), caretOf(D), WRITE.lastWritten()], [[D2, 1, false], [D, 2, false], D], 'written in D, a caret placed in D2 and kept there: D keeps its own');
+    await focusOn(O, 1);
+    await press('q');
+    const end = sentence('B3.undo.last-writing', { label: LAYER.boxName(D).name });
+    assert.deepEqual([HINT.standing()?.id, HINT.standing()?.writing, said.at(-1)], ['B3.row.others-document', end, heard(sentences(hinted('B3.row.others-document', { owner: '1.0.2' }), end))], 'at O: its line ending with where the person was writing, D');
+    HINT.writingAct(true);
+    await landed();
+    assert.deepEqual([walkAt(), TRAIL.current()?.addr], [['block', D, 1], D], 'the label\'s act LEAPs to D\'s kept caret\'s span');
+    await press('z');
+    assert.deepEqual([caret(), shownOf(D).slice(0, 4)], [[D, 3, true], 'azFi'], 'z there returns D\'s caret and types at it');
     assert.deepEqual(fake.unanswered, []);
   } finally { PORT.boot(null); TRAIL._reset(); }
 }));
