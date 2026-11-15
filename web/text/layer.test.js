@@ -73,8 +73,13 @@
 // hands are named, its words said as it comes and changes — a device's
 // label in them the person's own, spoken as written — its acts keyed
 // on it, compact at its document's head with the band holding its row and
-// whole beneath the rows on its act or a press answered at it (FP-8, FP-12, FP-20, FP-22, FP-23,
-// FP-26, FP-27, FP-30, FP-31, FP-33, FP-34, FP-36, FP-37, FP-39).
+// whole beneath the rows on its act or a press answered at it; and the caret's
+// paste and cut on a page of the DOM under `web/test/`, D6's machine handed in:
+// a paste one edit and a step of its own, its line endings set, in a
+// selection's place or at the caret, nothing placed past its bound; a cut the
+// clipboard's two flavors, then one edit, its face keyed to the `delete` its
+// commit sends and none for words still in their open burst (FP-8, FP-12, FP-20, FP-22, FP-23,
+// FP-24, FP-26, FP-27, FP-30, FP-31, FP-33, FP-34, FP-36, FP-37, FP-38, FP-39).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -97,7 +102,9 @@ import * as FACES from '../overlays/faces.js';
 import { farSays } from '../beams/held.js';
 import { pastSigns } from '../beams/beams.js';
 import { t, tHTML, tRuns, lastRead, sentence, sentences, heard } from '../strings.js';
-import { esc } from '../util.js';
+import { esc, byteLength } from '../util.js';
+import * as MACHINE from '../write/machine.js';
+import { page } from '../test/dom.js';
 
 /** @typedef {import('../plane/layout.js').Fold} Fold */
 
@@ -2385,3 +2392,189 @@ test('a view read under one fit and returned to under another lands framed acros
   const p0 = placeOf(f0, r.pos), p = placeOf(f, r.pos);
   assert.ok(Math.abs((box.y + p.y - v.y) * v.scale - (box.y + p0.y - view.y) * view.scale) < 1e-6, 'the line at its height from the view\'s centre');
 }, 1440, 900));
+
+// ---- the caret's paste and cut, on a page of the DOM under `web/test/` ------------------------------------------------
+
+/** the lines the draft of `onDraft` holds: "words" at 9, "stand" at 15, the second line from 28 */
+const WORDS = 'Tumbler words stand here.\n\nThe second line holds more words.\n';
+/** the board's origin a cut's entry names in `onDraft` */
+const ORIGIN = 'http://board.test';
+/** every answer the fake port owes run */
+const flush = async () => { for (let i = 0; i < 6; i++) await new Promise((r) => setImmediate(r)); };
+
+/**
+ * A cut event as the platform delivers it, over a clipboard of the test's own: the event, the flavors set on that
+ * clipboard, by name, and whether its default was prevented; `none` for an event carrying no clipboard.
+ */
+function cutEvent(none = false) {
+  /** @type {Record<string, string>} */
+  const set = {};
+  let prevented = false;
+  return { e: { clipboardData: none ? null : { setData: (/** @type {string} */ k, /** @type {string} */ v) => { set[k] = v; } }, preventDefault() { prevented = true; } }, set, prevented: () => prevented };
+}
+
+/**
+ * @typedef {Object} Drafted — what `onDraft` hands a test
+ * @property {string} P the draft
+ * @property {Array<Record<string, any>>} frames every write frame the page dialed, in order
+ * @property {() => Array<[number, number, string]>} edits the draft's page-local edits: each its position, the width it replaced and its text
+ * @property {() => ([string, number, boolean] | null)} caret the caret as it stands: its document, its position and whether it is live
+ * @property {() => string} shown the text the page shows of the draft
+ * @property {() => Array<[string, boolean]>} steps the draft's undo stack: each step's kind and whether its run is open
+ * @property {ReturnType<typeof page>} dom the page's DOM
+ */
+
+/**
+ * The test run on a page of the DOM under `web/test/`: one draft of the session's account holding `WORDS`, read at
+ * position 7 with its image, mounted as the layer mounts it at its reading scale; the session one that writes, and D6's
+ * machine handed in over a fake port acking every write frame, an insert's bytes minted, and answering no read. Every
+ * caret, edit and article is let go after it.
+ * @param {(d: Drafted) => Promise<void>} body
+ */
+async function onDraft(body) {
+  const dom = page({ width: 1440, height: 900 }), P = '1.0.1.0.2', n = byteLength(WORDS);
+  dom.install();
+  try {
+    MACHINE._reset(); REC._reset(); WRITE._reset();
+    /** @type {Array<Record<string, any>>} */
+    const frames = [];
+    let k = 0;
+    const fake = FAKE.create(new Proxy({}, {
+      get: (_t, key) => {
+        if (String(key).startsWith('held:')) return { result: [] };
+        if (!String(key).startsWith('op:')) return undefined;
+        const frame = JSON.parse(String(key).slice(3));
+        // a read the pump makes of the draft it wrote in is no write: left unanswered
+        if (frame.frame || F.READ_OPS.includes(frame.op)) return undefined;
+        frames.push(frame);
+        return { result: frame.op === 'insert' ? { addr: `${P}.0.1.${1000 * ++k}`, at: 20 + k, resp: 'ack_addr' } : { at: 20 + ++k, resp: 'ack' } };
+      },
+    }));
+    PORT.boot(fake);
+    REC.setBoard({ board: 'b-1', name: '', origin: ORIGIN });
+    REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true, fingerprint: null }));
+    REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: P, kind: 'draft', label: null, standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+    REC.takeSpanSet(P, [{ subspace: 1, ordinal: 1, positions: n }]);
+    REC.takeDelivery(P, [{ pos: 1, width: n, kind: 'content', text: WORDS, ref: null, origin: null }], 7, { from: 1, runs: [{ iStart: P + '.0.1.1', width: n }] });
+    MACHINE.handIn();
+    CAM.setViewport(1440, 900);
+    const f = LAYER.foldOf(REC.doc(P)), box = docBox(P), c = f.columns[0];
+    CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2, scale: 12 / f.fs });
+    const layer = dom.element('div');
+    layer.id = 'domlayer'; layer.clientWidth = 1440; layer.clientHeight = 900;
+    dom.document.body.appendChild(layer);
+    LAYER.attach(/** @type {any} */ (layer), /** @type {any} */ (null));
+    LAYER.frame();
+    assert.deepEqual([LAYER.isMounted(P), LAYER.editable(P)], [true, true], 'the draft stands as text the person may edit');
+    await body({
+      P, frames, dom,
+      edits: () => WRITE.edits(P).map((e) => [e.pos, e.width, e.text]),
+      caret: () => { const x = LAYER.caret(); return x && [x.addr, x.pos, x.live]; },
+      shown: () => { const d = LAYER.shownOf(P); return d.from < 0 ? '' : REC.textOf(d.runs, d.from, d.to); },
+      steps: () => WRITE.undoOf(P).map((x) => [x.kind, x.open]),
+    });
+  } finally {
+    LAYER.dropCaret(); LAYER.clear(); readers(null);
+    MACHINE._reset(); REC._reset(); WRITE._reset(); PORT.boot(null);
+    dom.uninstall();
+  }
+}
+
+test('text pasted at a live caret is one page-local edit, a step of its own, the caret after it — each CR LF and lone CR a line feed, as a typed Enter\'s; a selection whole in the caret\'s text is replaced by it in the one edit, and one of another document, or reaching past the text shown, is left and the text placed at the caret (D5 K-93; B3-S5 (ii); D6 BM-31)', () => onDraft(async ({ P, edits, caret, shown, steps }) => {
+  LAYER.placeCaret(P, 9);
+  assert.equal(LAYER.caretPaste('new '), 'placed');
+  assert.deepEqual([edits(), caret(), steps(), shown().slice(0, 18)], [[[9, 0, 'new ']], [P, 13, true], [['paste', false]], 'Tumbler new words '], 'one edit at the caret, the caret after the placed text, one step that is no run of typing');
+  assert.equal(LAYER.caretPaste('a\r\nb\rc\n'), 'placed');
+  assert.deepEqual([edits().at(-1), caret(), steps()], [[13, 0, 'a\nb\nc\n'], [P, 19, true], [['paste', false], ['paste', false]]], 'CR LF and a lone CR each a line feed, the caret past the six bytes placed; a second paste a second step');
+  WRITE.clearEdits(P);
+  // "words stand" selected, the caret at its end
+  LAYER.placeCaret(P, 20);
+  assert.equal(LAYER.caretPaste('XY', { addr: P, pos: 9, width: 11 }), 'placed');
+  assert.deepEqual([edits(), caret(), shown().slice(0, 16)], [[[9, 11, 'XY']], [P, 11, true], 'Tumbler XY here.'], 'over a selection: its bytes out and the text in their place, one edit, the caret after the text');
+  WRITE.clearEdits(P);
+  LAYER.placeCaret(P, 9);
+  const n = byteLength(WORDS);
+  for (const [what, over] of /** @type {Array<[string, import('./span.js').Span]>} */ ([['a selection of another document', { addr: '1.0.1.0.3', pos: 1, width: 4 }], ['a selection reaching past the text shown', { addr: P, pos: n - 2, width: 10 }]])) {
+    assert.equal(LAYER.caretPaste('Q', over), 'placed');
+    assert.deepEqual([edits().at(-1), caret()?.[1]], [[9, 0, 'Q'], 10], `${what}: left, the text placed at the caret`);
+    WRITE.clearEdits(P);
+    LAYER.placeCaret(P, 9);
+  }
+}));
+
+test('a paste places nothing where the clipboard held no text, where its text is more than one paste places — counted in UTF-8 bytes once its line endings are set — where no live caret stands, and where the caret\'s draft cannot be written now; the most one paste places is placed whole (B3-S5 (ii); D6 BM-58)', () => onDraft(async ({ P, edits, caret }) => {
+  const most = WRITE.PASTE_MAX_BYTES;
+  LAYER.placeCaret(P, 9);
+  assert.deepEqual([LAYER.caretPaste(''), edits(), caret()], ['none', [], [P, 9, true]], 'no text: nothing placed, the caret where it stood');
+  assert.deepEqual([LAYER.caretPaste('é'.repeat(most / 2) + 'a'), edits(), caret()], ['large', [], [P, 9, true]], 'two-byte characters to the most and one byte more: past it by its bytes, never its characters — nothing placed');
+  assert.deepEqual([LAYER.caretPaste('a'.repeat(most) + '\n'), edits()], ['large', []], 'one byte past the most: nothing placed');
+  assert.deepEqual([LAYER.caretPaste('a'.repeat(most - 1) + '\r\n'), edits().map((e) => [e[0], e[1], byteLength(e[2])]), caret()], ['placed', [[9, 0, most]], [P, 9 + most, true]],
+    'the most one paste places, a CR LF its last byte once set: placed whole');
+  WRITE.clearEdits(P);
+  LAYER.placeCaret(P, 9);
+  WRITE.setUnwritable('b-1', { why: 'keyless' });
+  assert.deepEqual([LAYER.caretPaste('x'), edits(), caret()], [false, [], [P, 9, true]], 'a draft that cannot be written: nothing placed, the caret not moved past words that are not there');
+  WRITE.setUnwritable('b-1', null);
+  LAYER.leaveCaret('esc');
+  assert.deepEqual([LAYER.caretPaste('x'), edits()], [false, []], 'a kept caret: nothing placed until it is returned');
+  LAYER.dropCaret();
+  assert.equal(LAYER.caretPaste('x'), false, 'no caret: nothing placed');
+}));
+
+test('a cut at a live caret writes the clipboard as a copy of the selection writes it — its plain text, and skep\'s own entry naming the board, the draft and the selection\'s bytes by identity — prevents the platform\'s cut, then takes the bytes out as one edit, a step of its own, the caret at the removal; the removal\'s deletion face is keyed to the `delete` its burst\'s commit sends, never to the act (D5 K-93; B3-S5 (iv); D6 BM-31, BM-51; FP-24, FP-27)', () => onDraft(async ({ P, frames, edits, caret, shown, steps }) => {
+  // "words stand" selected, the caret at its end
+  const span = { addr: P, pos: 9, width: 11 };
+  LAYER.placeCaret(P, 20);
+  const c = cutEvent();
+  assert.equal(LAYER.caretCut(c.e, span, ORIGIN), 'cut');
+  assert.deepEqual(Object.keys(c.set).sort(), ['application/x-skep-passage', 'text/plain'], 'two flavors, and no other');
+  assert.deepEqual([c.set['text/plain'], JSON.parse(c.set['application/x-skep-passage']), c.prevented()],
+    ['words stand', { board: ORIGIN, doc: P, member: null, plain: false, pos: null, width: null, ids: [{ prefix: P + '.0.1', ordinal: 9, width: 11 }] }, true],
+    'the plain text the words cut; the entry the board, the draft — never its positions — and the bytes by identity; the platform\'s cut prevented');
+  assert.deepEqual([edits(), caret(), shown().slice(0, 14), steps()], [[[9, 11, '']], [P, 9, true], 'Tumbler  here.', [['cut', false]]], 'the bytes out as one edit, the caret at the removal, one step that is no run of typing');
+  assert.deepEqual([frames, WRITE.removalsOf(P)], [[], []], 'nothing dialed at the act, and no removal faced there');
+  WRITE.commit(P);
+  await flush();
+  assert.deepEqual([frames.map((x) => [x.op, x.p, x.width]), WRITE.removalsOf(P).map((r) => r.words)], [[['delete', { ordinal: '9', subspace: '1' }, '11']], ['words stand']],
+    'the commit sends one `delete`, and the removal its face stands at is made with it');
+}));
+
+test('a cut the clipboard cannot take whole writes nothing and removes nothing: a selection reaching past the text shown, one of no width, an event carrying no clipboard, and a span the platform\'s selection cannot be placed over while another selection stands — what is copied is what is cut; a selection of another document, a kept caret and a draft that cannot be written cut nothing either (B3-S5 (iv); D6 BM-58; FP-20)', () => onDraft(async ({ P, edits, caret, dom }) => {
+  const n = byteLength(WORDS), span = { addr: P, pos: 9, width: 11 };
+  LAYER.placeCaret(P, 20);
+  // a field the reader types in holds the focus, so no range is placed over the span, and the platform's selection stands over "Tumbler"
+  const other = /** @type {Range} */ (LAYER.rangeOf({ addr: P, pos: 1, width: 7 })), field = dom.element('input');
+  dom.document.selection.addRange(/** @type {any} */ (other));
+  dom.document.activeElement = field;
+  const elsewhere = cutEvent();
+  assert.deepEqual([LAYER.caretCut(elsewhere.e, span, ORIGIN), elsewhere.set, elsewhere.prevented(), edits(), LAYER.spanOfSelection()], ['uncopied', {}, false, [], { addr: P, pos: 1, width: 7 }],
+    'the platform\'s selection standing over other words than the span: nothing written — never those other words — and nothing removed');
+  dom.document.activeElement = null;
+  dom.document.selection.removeAllRanges();
+  for (const [what, over, none] of /** @type {Array<[string, import('./span.js').Span, boolean]>} */ ([['a selection reaching past the text shown', { addr: P, pos: n - 2, width: 10 }, false], ['a selection of no width', { addr: P, pos: 9, width: 0 }, false], ['an event carrying no clipboard', span, true]])) {
+    const c = cutEvent(none);
+    assert.deepEqual([LAYER.caretCut(c.e, over, ORIGIN), c.set, c.prevented(), edits(), caret()], ['uncopied', {}, false, [], [P, 20, true]], `${what}: nothing written, nothing removed, the caret where it stood`);
+  }
+  /** a cut of "words stand" made now: what it answered, what it set, and the edits after it */
+  const cut = (/** @type {import('./span.js').Span} */ over = span) => { const c = cutEvent(); return [LAYER.caretCut(c.e, over, ORIGIN), c.set, edits()]; };
+  assert.deepEqual(cut({ addr: '1.0.1.0.3', pos: 9, width: 11 }), [false, {}, []], 'a selection of another document: nothing cut');
+  WRITE.setUnwritable('b-1', { why: 'keyless' });
+  assert.deepEqual(cut(), [false, {}, []], 'a draft that cannot be written: the clipboard untouched, nothing removed');
+  WRITE.setUnwritable('b-1', null);
+  LAYER.leaveCaret('esc');
+  assert.deepEqual(cut(), [false, {}, []], 'a kept caret: nothing cut until it is returned');
+}));
+
+test('words still in their open burst carry no face when cut: typed and cut before any commit, they are named on the clipboard by the page\'s own name of their bytes, and the burst\'s commit sends nothing for them and makes no removal the deletion face stands at (D6 BM-1, BM-51; FP-38)', () => onDraft(async ({ P, frames, edits, shown }) => {
+  LAYER.placeCaret(P, 1);
+  for (const ch of 'abc ') LAYER.caretType(ch);
+  LAYER.frame();
+  assert.deepEqual([shown().slice(0, 11), WRITE.inFlight(P), frames], ['abc Tumbler', true, []], 'four keys typed, their burst open, nothing dialed');
+  const c = cutEvent();
+  assert.equal(LAYER.caretCut(c.e, { addr: P, pos: 1, width: 4 }, ORIGIN), 'cut');
+  assert.deepEqual([c.set['text/plain'], JSON.parse(c.set['application/x-skep-passage']).ids, shown().slice(0, 7)], ['abc ', [{ prefix: REC.pageSpace(P), ordinal: 1, width: 4, load: REC.PAGE_LOAD }], 'Tumbler'],
+    'cut: the clipboard holds their text, the entry naming them by the page\'s own name and its load, and they are out of the text');
+  WRITE.commit(P);
+  await flush();
+  assert.deepEqual([frames, WRITE.removalsOf(P), WRITE.inFlight(P), WRITE.keptOf(P)?.word], [[], [], false, 'kept'], 'the commit sends nothing for them and makes no removal: the burst changes nothing on the board, and the corner reads "kept"');
+}));

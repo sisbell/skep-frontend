@@ -482,9 +482,15 @@
 // for Backspace and Delete (`caretReplace`) — each an edit handed to W-WRITE
 // as a key typing at the caret, where the caret stood told with it
 // (W-WRITE's `Typed`), and shown through the derived record, nothing composed
-// and nothing sent here (FP-14). Every other move of the caret — a click, an
-// arrow, Home or End, a selection made from it, a return, a leaving, its
-// going — ends the run of typing open at its draft (`setCaret`; W-WRITE's
+// and nothing sent here (FP-14). A paste places the clipboard's plain text
+// there, its line endings a typed Enter's, the caret after it, in the place
+// of a selection whole in the caret's text (`caretPaste`; D5 K-93; B3-S5),
+// and a cut writes the clipboard as a copy of that selection does, then takes
+// its bytes out (`caretCut`) — each one edit handed to W-WRITE as a step of
+// its own, where the caret stood told with it. Every other move of the
+// caret — a click, an arrow, Home or End, a selection made from it, a
+// return, a leaving, its going — ends the run of typing open at its draft
+// (`setCaret`; W-WRITE's
 // `endRun`; D6 BM-31). Leaving the text — Esc to the walk at
 // the caret's span, a move of the walk, a teleport's landing, a zoom past its
 // reading scale, a pointer's act on another document or a selection put there
@@ -5478,6 +5484,9 @@ export function caretType(text) {
   return true;
 }
 
+/** does a span stand whole in a text the page shows (`shownOf`): a byte or more, none outside the positions that text holds — M-DERIVE applies no edit past one outside them (`applyEdits`) */
+const wholeIn = (/** @type {Doc} */ d, /** @type {Span} */ span) => d.from >= 0 && span.width >= 1 && span.pos >= d.from && span.pos + span.width <= d.to;
+
 /**
  * A selection of the caret's draft replaced by the text a key puts in at the
  * caret (K-70, K-72, K-76; BM-70, BM-75, BM-80): one edit removing its bytes
@@ -5491,8 +5500,7 @@ export function caretType(text) {
  */
 export function caretReplace(span, text) {
   if (!caret_ || !caret_.live || span.addr !== caret_.addr) return false;
-  const d = shownOf(caret_.addr);
-  if (d.from < 0 || span.width < 1 || span.pos < d.from || span.pos + span.width > d.to) return false;
+  if (!wholeIn(shownOf(caret_.addr), span)) return false;
   WRITE.addEdit(caret_.addr, { pos: span.pos, width: span.width, text }, { at: caret_.pos });
   setCaret({ ...caret_, pos: span.pos + byteLength(text) }, 'collapse', true);
   return true;
@@ -5513,6 +5521,71 @@ export function caretErase(dir) {
   WRITE.addEdit(caret_.addr, { pos: from, width: to - from, text: '' }, { at: caret_.pos });
   setCaret({ ...caret_, pos: from }, 'collapse', true);
   return true;
+}
+
+/** @typedef {'placed' | 'none' | 'large'} Pasted what a paste at the caret did (`caretPaste`): `placed` its text stands at the caret; `none` the clipboard held no text, nothing placed; `large` its text is more than one paste places (W-WRITE's `PASTE_MAX_BYTES`), nothing placed */
+
+/** the text a paste places (`caretPaste`): the clipboard's, each CR LF and each CR alone a line feed — the line ending a typed Enter puts in */
+export const pasteText = (/** @type {string} */ text) => text.replace(/\r\n?/g, '\n');
+
+/**
+ * Text pasted at a live caret (D5 K-93; B3-S5 (ii); D6 BM-31): the text, its
+ * line endings set (`pasteText`), placed as one page-local edit, an act that
+ * is a step of its own (W-WRITE's `Typed.own`), and the caret moved past it.
+ * A selection of the caret's draft handed in (`over`) that stands whole in
+ * the text shown (`wholeIn`) is replaced: the one edit takes its bytes out
+ * and the text stands in their place; any other leaves the text placed at
+ * the caret. Nothing is placed where the clipboard held no text, or where
+ * its text, its line endings set, is more than one paste places, in UTF-8
+ * bytes (W-WRITE's `PASTE_MAX_BYTES`). False where no live caret stands, or
+ * its draft cannot be written now (W-WRITE's `unwritable`).
+ * @param {string} text the clipboard's plain text, as the paste event carried it
+ * @param {Span | null} [over] the selection drawn in the caret's text, in the text shown
+ * @returns {Pasted | false}
+ */
+export function caretPaste(text, over = null) {
+  if (!caret_ || !caret_.live || WRITE.unwritable(caret_.addr)) return false;
+  const placed = pasteText(text);
+  if (!placed) return 'none';
+  if (byteLength(placed) > WRITE.PASTE_MAX_BYTES) return 'large';
+  const span = over && over.addr === caret_.addr && wholeIn(shownOf(caret_.addr), over) ? over : null;
+  const pos = span ? span.pos : caret_.pos;
+  WRITE.addEdit(caret_.addr, { pos, width: span ? span.width : 0, text: placed }, { at: caret_.pos, own: 'paste' });
+  setCaret({ ...caret_, pos: pos + byteLength(placed) });
+  return 'placed';
+}
+
+/** @typedef {'cut' | 'uncopied'} CutMade what a cut at the caret did (`caretCut`): `cut` the clipboard holds the selection and its bytes are out of the text; `uncopied` the clipboard could not take the selection whole, nothing written and nothing removed */
+
+/**
+ * A selection of the caret's draft cut at a live caret (D5 K-93; B3-S5 (iv);
+ * D6 BM-31, BM-51): the clipboard written first, as a copy of the selection
+ * writes it (`onCopy`) — its plain text and skep's own entry, the platform's
+ * cut prevented — then its bytes taken out as one page-local edit, an act
+ * that is a step of its own (W-WRITE's `Typed.own`), the caret at the
+ * removal. The platform's selection is placed over the span first
+ * (`placeSelection`), and the clipboard is written only while it stands over
+ * exactly what a range over the span covers (`rangeOf`, `spanOfSelection`),
+ * so what is copied is what is cut. Nothing is written and nothing removed
+ * where the span is not whole in the text shown (`wholeIn`), no such
+ * selection stands — a line of the span not yet set — or the event carries
+ * no clipboard. False where no live caret stands, the span is another
+ * document's, or the caret's draft cannot be written now (W-WRITE's
+ * `unwritable`).
+ * @param {{clipboardData: {setData(format: string, data: string): void} | null, preventDefault(): void}} e the cut event (the gate's door hands a stub)
+ * @param {Span} span the selection drawn in the caret's text, in the text shown
+ * @param {string} board the board's origin
+ * @returns {CutMade | false}
+ */
+export function caretCut(e, span, board) {
+  if (!caret_ || !caret_.live || span.addr !== caret_.addr || WRITE.unwritable(caret_.addr)) return false;
+  if (!wholeIn(shownOf(caret_.addr), span)) return 'uncopied';
+  placeSelection(span);
+  const over = rangeOf(span), drawn = over ? spanOfRange(over) : null, stands = spanOfSelection();
+  if (!drawn || !stands || !sameSpan(stands, drawn) || !onCopy(e, board)) return 'uncopied';
+  WRITE.addEdit(caret_.addr, { pos: span.pos, width: span.width, text: '' }, { at: caret_.pos, own: 'cut' });
+  setCaret({ ...caret_, pos: span.pos });
+  return 'cut';
 }
 
 /** @typedef {'left' | 'right' | 'wordLeft' | 'wordRight'} ArrowStep the step ← or → makes where the page makes it (K-70, K-71, K-77): a character or a word that way */

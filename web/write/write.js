@@ -32,10 +32,12 @@
 // typing, or an act that is a step of its own, held by the bytes' identity
 // and never by a burst: what it placed, what it removed that it had not
 // placed with the byte either side of each removal, and where its caret
-// stood as it began. An act says whether it is a key typing at the caret and
-// where that caret stood (`Typed`), which the machine is told with it; a move
-// of the caret by any other act ends the run (`endRun`), which the machine is
-// told too. What an undo or a redo makes of a draft's edits the machine adds
+// stood as it began. An act made at the caret says where that caret stood,
+// and whether it is a key typing there or a step of its own — a paste, a cut
+// (`Typed`) — which the machine is told with it; a move of the caret by any
+// other act ends the run (`endRun`), which the machine is told too. One paste
+// places at most PASTE_MAX_BYTES of text. What an undo or a redo makes of a
+// draft's edits the machine adds
 // as they are (`restore`) — an insert naming bytes the page made before by
 // their own ordinals, a removal kept only for the put-back that names it —
 // and W-WRITE tells it of none of them. Beside the stacks, each removal of
@@ -141,13 +143,24 @@ import { byteLength } from '../util.js';
 /** @typedef {'hidden' | 'unload' | 'class'} Leaving — how the page leaves what it holds unsent: `hidden` the page hidden, its calls still answered; `unload` the page going, no answer read; `class` the class the page reads at changed */
 
 /**
- * @typedef {Object} Typed — how an act's edits were made (`addEdits`): a key typing at the caret
- * @property {number} at where the caret stood before the key, a position of the text shown then
+ * @typedef {Object} Typed — how an act's edits were made at the caret (`addEdits`): by a key typing there, or by an act that is a step of its own
+ * @property {number} at where the caret stood before the act, a position of the text shown then
+ * @property {'paste' | 'cut'} [own] the act is a step of its own made at the caret (D6 BM-31) — a paste, a cut — which joins no run of typing and opens none; left out for a key typing at the caret
  */
 
 /**
+ * The most text one paste places, in UTF-8 bytes (B3-S5): 1 MiB, an eighth of
+ * the 8 MiB the board caps a frame's request body at (skep `docs/wire.md`
+ * §Transport). The headroom is the frame's own spelling: JSON spells a byte
+ * of text in at most six (a control character's escape), so the text rides in
+ * at most 6 MiB, and 2 MiB are left for the rest of the frame, its anchors
+ * and its envelope.
+ */
+export const PASTE_MAX_BYTES = 1024 * 1024;
+
+/**
  * @typedef {Object} Machine — what D6's machine hands in (`machine`)
- * @property {(addr: string, how: Typed | null) => void} typed an act's edits were added to a draft (`addEdits`): a key typing at the caret, or, with null, an act that is a step of its own
+ * @property {(addr: string, how: Typed | null) => void} typed an act's edits were added to a draft (`addEdits`): a key typing at the caret; an act made there that is a step of its own (`Typed.own`); or, with null, a step of its own made at no caret
  * @property {(addr: string | null) => void} ended the run of typing open at a draft ended — at every draft, with null (`endRun`)
  * @property {(addr: string) => void} commit the open burst of a draft committed now
  * @property {(how: Leaving) => boolean} leaving every draft's unsent words committed as the page leaves them (`leaving`): whether it posted the page's close, which it does at `unload` alone
@@ -164,12 +177,12 @@ import { byteLength } from '../util.js';
 /**
  * @typedef {Object} Step — one step of a draft's undo stack (D6 BM-31): a run of typing, or an act that is a step of its own
  * @property {number} id the step, by the draft's count of them
- * @property {'typing' | 'put-back'} kind a run of typing — every key that types at one caret; or a put-back of words the person removed
+ * @property {'typing' | 'paste' | 'cut' | 'put-back'} kind a run of typing — every key that types at one caret; a paste or a cut made at the caret; or any other act that is a step of its own — a put-back of words the person removed, a document's first line
  * @property {boolean} open a run of typing no act has ended: the next key that types at the caret joins it
  * @property {number[]} acts the acts it holds, by the count the edits each made carry (`Edit.step`), in the order made
  * @property {ISpan[]} placed the bytes it placed, by identity, in the order placed: a byte the page made by the page's own name of it, which M-REC reads as the address the board minted it at
  * @property {Taken[]} took what it removed that it had not placed, in the order removed
- * @property {{before: ISpan[], after: ISpan[], pos: number}} began where the caret stood as it began: the byte either side of it, by identity, and its position in the text shown then
+ * @property {{before: ISpan[], after: ISpan[], pos: number}} began where the caret stood as it began: the byte either side of it, by identity, and its position in the text shown then; no byte and position 0 for a step made at no caret
  * @property {Taken[] | null} stood on the redo stack, the words it placed as they stood when it was undone, in the text's order; null on the undo stack
  * @property {number | null} removal on the redo stack, the removal the deletion face stands at for the words its undo took out (`Removal.id`); null where it stands at none, and on the undo stack
  */
@@ -315,7 +328,7 @@ const idsOf = (/** @type {string} */ addr) => (/** @type {number} */ page, /** @
  * (`Machine.typed`).
  * @param {string} addr
  * @param {Edit} e
- * @param {Typed | null} [how] the edit is a key typing at the caret (`addEdits`)
+ * @param {Typed | null} [how] how the edit was made at the caret (`addEdits`)
  */
 export function addEdit(addr, e, how = null) { addEdits(addr, [e], how); }
 /**
@@ -324,11 +337,12 @@ export function addEdit(addr, e, how = null) { addEdits(addr, [e], how); }
  * names keeps what it took from now on (`Edit.took`), read from the text as
  * it stands before the act. The machine handed in is told of the act and how
  * it was made (`how`): a key typing at the caret, which joins the caret's run
- * of typing or begins one; any other act, a step of its own. Nothing where
- * the act made none.
+ * of typing or begins one; any other act, a step of its own — a paste or a
+ * cut made at the caret saying where that caret stood. Nothing where the act
+ * made none.
  * @param {string} addr
  * @param {readonly Edit[]} list
- * @param {Typed | null} [how] the act is a key typing at the caret, and where that caret stood; left out for an act that is a step of its own
+ * @param {Typed | null} [how] the act was made at the caret — a key typing there, or a step of its own (`Typed.own`) — and where that caret stood; left out for a step of its own made at no caret
  */
 export function addEdits(addr, list, how = null) {
   if (!list.length || unwritable(addr)) return;

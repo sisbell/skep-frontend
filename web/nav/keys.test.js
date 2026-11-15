@@ -76,8 +76,9 @@
 // in its last span, and one kept in
 // white space alone — a line of spaces, the newlines before the first typed
 // line — in the span the walk stands on there, each a span Esc leaves the
-// walk on and where Enter or a printable key returns the caret, a paste there
-// the platform's; Mod+Enter at
+// walk on and where Enter or a printable key returns the caret, Mod+V and
+// Mod+X there left standing at their keydown for the paste and the cut
+// event, which return the caret and act at it; Mod+Enter at
 // a live caret follows from a selection drawn in the caret's own text alone —
 // with none there, whatever a slot chord made before it, it selects nothing,
 // follows nothing and leaves the caret where it stands, giving the caret's
@@ -135,7 +136,17 @@
 // origin and carrying them where they stand, though the document holds the
 // same bytes again elsewhere, the list standing again on a return; a run withheld from the
 // reader is a target too, named "withheld · ⟨owner⟩" and reached at its own
-// withheld words; and a bare caret in a run keeps the caret's line. Undo and
+// withheld words; and a bare caret in a run keeps the caret's line. The
+// paste and the cut events (D5 K-93; B3-S5; D6 BM-31, BM-52), a key's or a
+// menu's: a paste at a live caret places its plain text as one edit, in a
+// selection's place, its line endings set, the caret after it, and one with
+// no text or past the most one paste places is answered by its line; a cut
+// writes the clipboard as a copy does and takes the selection out, with
+// nothing selected leaves the clipboard and says so, and where the clipboard
+// cannot take the selection whole removes nothing; each is the platform's
+// off the plane, answered by its site's line where nothing may be placed,
+// and by the reason's where the draft cannot be written; and in the air a
+// paste is held with the keys and made at the landing, a cut dropped. Undo and
 // redo (D5 K-75; D6 BM-31 … BM-34, BM-42, BM-45): Mod+Z and Mod+Shift+Z on
 // every platform and Ctrl+Y elsewhere than macOS, where the trail's list is
 // Ctrl+H (K-41); the newest run taken back at the press, the caret where it
@@ -175,13 +186,15 @@ import { cornerHTML, faceWords } from '../text/article.js';
 import { spanOfBlock } from '../text/span.js';
 import { docBox } from '../plane/projection.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
-import { t, tHTML, hintSentences, sentence, sentences, heard } from '../strings.js';
+import { t, tHTML, hintSentences, sentence, sentences, heard, megabytes } from '../strings.js';
 import { esc, fill, byteLength } from '../util.js';
+import { page } from '../test/dom.js';
 
 /** the keys a line's tokens are filled with, by its string, each drawn for this platform as the page draws it (N-KEYS' `drawChord`); none for a line naming no key */
 const keysOf = (/** @type {string} */ id) => /** @type {Record<string, Record<string, string>>} */ ({
   'B3.caret.enter': { 'act key': KEYS.drawChord('Enter') },
   'B3.caret.enter.paste': { 'act key': KEYS.drawChord('Enter') },
+  'B3.caret.cut': { 'act key': KEYS.drawChord('Enter') },
   'L.copy.nothing.enter': { 'act key': KEYS.drawChord('Enter') },
   'L.copy.nothing.shift': { 'select chord': KEYS.drawChord('Shift+↓') },
   'F.swallow.space': { 'space key': KEYS.drawChord('Space'), 'paging key': KEYS.drawChord('PageDown') },
@@ -263,6 +276,20 @@ const shown = () => { const d = LAYER.shownOf(D); return REC.textOf(d.runs, d.fr
 const caret = () => { const c = LAYER.caret(); return c && [c.addr, c.pos, c.live]; };
 /** the walk's move let land */
 const tick = () => new Promise((r) => setTimeout(r, 0));
+/** where a paste or a cut event finds the focus on the plane, as the app hands it in: no key made the act */
+const EVENT = /** @type {const} */ ({ where: 'plane', byKey: false });
+/**
+ * A paste or a cut event as the platform delivers it, over a clipboard of the test's own: the event, the flavors set on
+ * that clipboard, by name, and whether its default was prevented.
+ * @param {Record<string, string> | null} [data] the flavors the clipboard holds, by name; null for an event carrying no clipboard
+ */
+function clip(data = {}) {
+  /** @type {Record<string, string>} */
+  const set = {};
+  let prevented = false;
+  const clipboardData = data && { getData: (/** @type {string} */ k) => data[k] ?? '', setData: (/** @type {string} */ k, /** @type {string} */ v) => { set[k] = v; } };
+  return { e: { clipboardData, preventDefault() { prevented = true; }, target: null }, set, prevented: () => prevented };
+}
 /** the walk's focus on the span of `addr` holding `pos`, as a landing puts it there, reading nothing */
 const focusOn = (/** @type {string} */ addr, /** @type {number} */ pos) => WALK.focusTo(addr, pos, true, null, true);
 
@@ -341,7 +368,7 @@ test('at a span of a draft the person may edit holding no caret a printable key 
   assert.equal(await KEYS.dispatch(keyOf('v', MOD), PLANE), true);
   assert.equal(said.at(-1), spokenHint('B3.caret.enter.paste'), 'a paste: the line in its own words, as a screen reader hears them');
   assert.equal(await KEYS.dispatch(keyOf('x', MOD), PLANE), true);
-  assert.equal(said.at(-1), hinted('B3.caret.cut'), 'a cut: the line in its own words');
+  assert.equal(said.at(-1), spokenHint('B3.caret.cut'), 'a cut: the line in its own words, the key that places a caret named first as the paste\'s names it');
   assert.equal(await KEYS.dispatch(keyOf(' '), PLANE), true);
   assert.equal(said.at(-1), spokenHint('F.swallow.space'), 'Space: K-9\'s own line, whole at its first press, as a screen reader hears it');
   assert.equal(said.at(-1), 'Space does not page here, Page Down does.', 'its dash a pause, the paging key by its words');
@@ -824,7 +851,7 @@ function deliver(/** @type {string} */ addr, /** @type {string} */ text) {
   REC.takeImage(addr, 1, [{ iStart: addr + '.0.1.1', width: n }]);
 }
 
-test('a caret kept in a line of white space alone stands in the span the walk stands on there, the span before it: Esc leaves the walk on that span, and there Enter returns the kept caret where it stood, a printable key returns it and types at it and a paste is the platform\'s, never the line of a span holding no caret; at the span after the line Enter places a caret of its own (D5 §4 rule 20; K-70, K-72, K-77, K-93; BM-52)', () => onPlane(async ({ said }) => {
+test('a caret kept in a line of white space alone stands in the span the walk stands on there, the span before it: Esc leaves the walk on that span, and there Enter returns the kept caret where it stood, a printable key returns it and types at it, and Mod+V and Mod+X are left standing at their keydown for the paste and the cut event, never answered by the line of a span holding no caret — the paste event returning the caret live and placing its text at it, the cut event returning it and, nothing selected, taking nothing; at the span after the line Enter places a caret of its own (D5 §4 rule 20; K-70, K-72, K-77, K-93; BM-52)', () => onPlane(async ({ said }) => {
   deliver(D, 'First line.\n\n   \n\nSecond line here.\n');
   assert.deepEqual(REC.doc(D).blocks.map((b) => [b.pos, b.text]), [[1, 'First line.'], [14, '   '], [19, 'Second line here.']], 'a line of three spaces between two typed lines');
   assert.equal(LAYER.editable(D), true);
@@ -840,8 +867,23 @@ test('a caret kept in a line of white space alone stands in the span the walk st
   await KEYS.dispatch(keyOf('Escape'), PLANE);
   await tick();
   const before = said.length;
-  assert.equal(await KEYS.dispatch(keyOf('v', MOD), PLANE), false, 'a paste at the kept caret\'s span: the platform\'s own');
-  assert.deepEqual([said.length, caret()], [before, [D, 15, false]], 'no line said, the caret kept');
+  assert.equal(await KEYS.dispatch(keyOf('v', MOD), PLANE), false, 'Mod+V at the kept caret\'s span: its keydown left standing for the paste event');
+  assert.equal(await KEYS.dispatch(keyOf('x', MOD), PLANE), false, 'Mod+X there: left for the cut event');
+  assert.deepEqual([said.length, caret()], [before, [D, 15, false]], 'neither keydown says a line or moves the caret');
+  // the events those keydowns leave to the platform (K-93): each returns the kept caret and acts at it
+  const pasted = clip({ 'text/plain': 'in' });
+  assert.deepEqual([KEYS.pasteEvent(pasted.e, EVENT), pasted.prevented()], [true, true], 'the paste event: taken, the platform\'s paste prevented');
+  await KEYS.clipped();
+  assert.deepEqual([caret(), editsOfD(), said.length], [[D, 17, true], [[15, 0, 'in']], before], 'the kept caret returned live and the text placed at it, the caret after it; no line said');
+  WRITE.clearEdits(D);
+  LAYER.placeCaret(D, 15);
+  await KEYS.dispatch(keyOf('Escape'), PLANE);
+  await tick();
+  const cut = clip();
+  assert.deepEqual([KEYS.cutEvent(cut.e, EVENT), cut.prevented(), cut.set], [true, true, {}], 'the cut event: taken, nothing put on the clipboard');
+  assert.deepEqual([caret(), editsOfD(), said.at(-1)], [[D, 15, true], [], spokenHint('L.copy.nothing')], 'the kept caret returned live, nothing selected and so nothing taken: the nothing-selected line');
+  await KEYS.dispatch(keyOf('Escape'), PLANE);
+  await tick();
   assert.equal(await KEYS.dispatch(keyOf('z'), PLANE), true);
   assert.deepEqual([caret(), WRITE.edits(D).map((e) => [e.pos, e.width, e.text]), WALK.current()?.pos], [[D, 16, true], [[15, 0, 'z']], 14], 'a printable key at that span returns the kept caret and types at it, the walk on the line the caret is in, which holds a character now and is an element of the walk');
   await KEYS.dispatch(keyOf('Escape'), PLANE);
@@ -2409,6 +2451,187 @@ test('a character Option types is a printable key: at a live caret ⌥G\'s © an
   assert.deepEqual([shown(), caret()], [typed('©'), [D, 5, true]], 'at the kept caret\'s span ©: the caret returned and © typed at it');
   assert.equal(REC.textOf(REC.doc(D).runs, 1, N + 1), TEXT, 'the model\'s own record stands as the board served it');
 }));
+
+/** each place off the plane a paste or a cut event may find the focus (`Ctx.where`): a field, a control, the line, a corner, a landing's line, the scene */
+const OFF_PLANE = /** @type {const} */ (['field', 'overlay', 'line', 'corner', 'landing', 'scene', 'scene-acts']);
+/** the size a paste too large is said by, and the most one paste places, as its line fills them (ST's `megabytes`) */
+const tooLarge = (/** @type {number} */ bytes) => ({ size: megabytes(bytes), limit: megabytes(WRITE.PASTE_MAX_BYTES) });
+
+test('a paste event at a live caret places its plain text there — one edit, the caret after it, the walk on the caret\'s span, the platform\'s paste prevented and nothing said — in the place of a selection drawn in the caret\'s text, which ends; each CR LF and lone CR a line feed; a clipboard holding no text, or more than one paste places, is answered by its own line and places nothing (D5 K-93; B3-S5 (ii); D6 BM-31)', () => onPlane(async ({ said }) => {
+  await focusOn(D, 1);
+  await KEYS.dispatch(keyOf('Enter'), PLANE);
+  const n = said.length;
+  let c = clip({ 'text/plain': 'ab', 'application/x-skep-passage': '{"board":"elsewhere"}' });
+  assert.deepEqual([KEYS.pasteEvent(c.e, EVENT), c.prevented()], [true, true], 'the paste: taken, the platform\'s prevented');
+  await KEYS.clipped();
+  assert.deepEqual([shown(), caret(), editsOfD(), walkAt(), said.length], ['ab' + TEXT, [D, 3, true], [[1, 0, 'ab']], ['block', D, 1], n],
+    'its plain text placed at the caret as one edit, whatever else the clipboard holds; the caret after it, the walk on its span, nothing said');
+  SEL.select(D, 3, 5);
+  c = clip({ 'text/plain': 'X\r\nY\rZ' });
+  assert.equal(KEYS.pasteEvent(c.e, EVENT), true);
+  await KEYS.clipped();
+  assert.deepEqual([shown(), caret(), editsOfD().at(-1), SEL.selected(), overlay()], ['abX\nY\nZ' + TEXT.slice(5), [D, 3 + 5, true], [3, 5, 'X\nY\nZ'], null, null],
+    'over a selection drawn in the caret\'s text: its bytes taken out and the text in their place, one edit, each CR LF and lone CR a line feed; the selection and its card ended');
+  const before = editsOfD();
+  // the line whole at its first press in the session, its first clause after
+  for (const [what, data, words] of /** @type {Array<[string, Record<string, string> | null, string]>} */ ([['a clipboard holding no text', { 'text/html': '<b>x</b>' }, spokenHint('L.paste.none')], ['an event carrying no clipboard', null, 'Nothing to paste.']])) {
+    c = clip(data);
+    assert.deepEqual([KEYS.pasteEvent(c.e, EVENT), c.prevented()], [true, true], `${what}: taken`);
+    assert.deepEqual([HINT.standing()?.id, HINT.standing()?.whole, said.at(-1), editsOfD(), caret()], ['L.paste.none', hinted('L.paste.none'), words, before, [D, 8, true]], `${what}: its line the hint, nothing placed`);
+    HINT.act();
+  }
+  // more than one paste places, counted in UTF-8 bytes once the line endings are set: two bytes a character, and a CR LF one byte
+  const most = WRITE.PASTE_MAX_BYTES;
+  c = clip({ 'text/plain': 'é'.repeat(most / 2) + '\r\n' });
+  assert.deepEqual([KEYS.pasteEvent(c.e, EVENT), c.prevented()], [true, true], 'a paste one byte past the most: taken');
+  assert.deepEqual([HINT.standing()?.id, HINT.standing()?.whole, editsOfD(), caret()], ['L.paste.large', hinted('L.paste.large', tooLarge(most + 1)), before, [D, 8, true]],
+    'answered by the line naming its size and the most one paste takes, nothing placed');
+  assert.match(hinted('L.paste.large', tooLarge(most + 1)), /this text is 1\.1\u00a0MB and one paste takes up to 1\u00a0MB/, 'its size rounded up, never read as the bound it passed');
+}));
+
+test('a paste event is answered by the test its keydown reads, so one that arrives with no keydown is guarded: off the plane — a field, a control, the line, a corner, a landing\'s line, the scene — it is the platform\'s, untouched; at a span of a draft holding no caret, at another\'s document and at an edition its site\'s line answers it, nothing placed; in a draft that cannot be written the reason\'s line answers it at a live caret and at the kept caret\'s span, which is not returned; and at a document below its reading scale it is the platform\'s (D5 K-93, K-72; D6 BM-52, BM-58; B3-S13)', () => onPlane(async ({ said }) => {
+  listed([[E, 'edition']]);
+  await focusOn(D, 1);
+  await KEYS.dispatch(keyOf('Enter'), PLANE);
+  for (const where of OFF_PLANE) {
+    const c = clip({ 'text/plain': 'ab' }), n = said.length;
+    assert.deepEqual([KEYS.pasteEvent(c.e, { where, byKey: false }), c.prevented(), editsOfD(), said.length, HINT.standing()], [false, false, [], n, null], `at ${where}: the platform's paste, untouched — nothing placed at the caret standing on the plane`);
+  }
+  await KEYS.dispatch(keyOf('Escape'), PLANE);
+  await tick();
+  /** a paste event made at the walk's element: whether the page took it, whether the platform's was prevented, and the hint standing */
+  const paste = () => { const c = clip({ 'text/plain': 'ab' }); return [KEYS.pasteEvent(c.e, EVENT), c.prevented(), HINT.standing()?.id ?? null]; };
+  await focusOn(D, 14);
+  assert.deepEqual([paste(), said.at(-1), caret()], [[true, true, 'B3.caret.enter.paste'], spokenHint('B3.caret.enter.paste'), [D, 1, false]], 'at a span of the draft holding no caret: the draft\'s line, the kept caret in another span not returned');
+  await focusOn(O, 1);
+  assert.deepEqual(paste(), [true, true, 'B3.row.others-document'], 'at another\'s document: its line naming its owner');
+  await focusOn(E, 14);
+  assert.deepEqual([paste(), HINT.standing()?.words], [[true, true, 'C-45'], t('C-45', { D: E })], 'at an edition of the session\'s account: C-45 naming the document');
+  assert.deepEqual([WRITE.edits(D), WRITE.edits(O), WRITE.edits(E)], [[], [], []], 'nothing placed at any of them');
+  // a draft that cannot be written now: the reason's own line, at a live caret and at the kept caret's span
+  WRITE.setUnwritable('b-1', { why: 'keyless' });
+  await focusOn(D, 1);
+  assert.deepEqual([paste(), caret(), WRITE.edits(D)], [[true, true, 'B3.keyless'], [D, 1, false], []], 'at the kept caret\'s span of a draft that cannot be written: the reason\'s line, the caret not returned, nothing placed');
+  WRITE.setUnwritable('b-1', null);
+  await KEYS.dispatch(keyOf('Enter'), PLANE);
+  WRITE.setUnwritable('b-1', { why: 'keyless' });
+  HINT.act();
+  assert.deepEqual([paste(), caret(), WRITE.edits(D)], [[true, true, 'B3.keyless'], [D, 1, true], []], 'and at a live caret there: the same line, nothing placed');
+  WRITE.setUnwritable('b-1', null);
+  // below the draft's reading scale no site of the page's takes a paste
+  await KEYS.dispatch(keyOf('Escape'), PLANE);
+  await tick();
+  HINT.act();
+  CAM.set({ ...CAM.view(), scale: CAM.view().scale / 4 });
+  const c = clip({ 'text/plain': 'ab' });
+  assert.deepEqual([LAYER.atReadingScale(D), KEYS.pasteEvent(c.e, EVENT), c.prevented(), HINT.standing(), WRITE.edits(D)], [false, false, false, null, []], 'below its reading scale: the platform\'s, untouched');
+}));
+
+test('a cut event reads its own selection first: at a live caret with nothing selected the clipboard is left as it is and the copy\'s nothing-selected line is its hint; a selection the clipboard cannot take whole is answered by its own line, nothing written and nothing removed, the selection standing; at a span of a draft holding no caret the draft\'s line answers it; in a draft that cannot be written the reason\'s line; off the plane, at another\'s document and at an edition it is the platform\'s, never prevented (D5 K-92, K-93; B3-S5 (iv); D6 BM-52)', () => onPlane(async ({ said }) => {
+  listed([[E, 'edition']]);
+  /** a cut event made where the focus is: whether the page took it, whether the platform's was prevented, what it set on the clipboard, and the hint standing */
+  const cut = (/** @type {import('./keys.js').Ctx} */ ctx = EVENT) => { const c = clip(); return [KEYS.cutEvent(c.e, ctx), c.prevented(), c.set, HINT.standing()?.id ?? null]; };
+  await focusOn(D, 1);
+  await KEYS.dispatch(keyOf('Enter'), PLANE);
+  assert.deepEqual([cut(), said.at(-1), editsOfD(), caret()], [[true, true, {}, 'L.copy.nothing'], spokenHint('L.copy.nothing'), [], [D, 1, true]],
+    'nothing selected at a live caret: taken, the clipboard left as it is, the nothing-selected line, nothing removed');
+  HINT.act();
+  // the page of stand-ins holds no platform selection over the span, so the clipboard cannot take it
+  SEL.select(D, 1, 5);
+  assert.deepEqual([cut(), HINT.standing()?.whole, editsOfD(), shown(), SEL.selected()], [[true, true, {}, 'L.cut.uncopied'], hinted('L.cut.uncopied'), [], TEXT, { addr: D, pos: 1, width: 5 }],
+    'a selection the clipboard cannot take whole: its line, nothing written, nothing removed, the selection standing');
+  SEL.clear(); HINT.act();
+  for (const where of OFF_PLANE) assert.deepEqual(cut({ where, byKey: false }), [false, false, {}, null], `at ${where}: the platform's cut, untouched`);
+  WRITE.setUnwritable('b-1', { why: 'held_full' });
+  assert.deepEqual([cut(), editsOfD()], [[true, true, {}, 'B3.held_full.caret'], []], 'in a draft that cannot be written: the reason\'s line, nothing removed');
+  WRITE.setUnwritable('b-1', null);
+  await KEYS.dispatch(keyOf('Escape'), PLANE);
+  await tick();
+  await focusOn(D, 14);
+  assert.deepEqual([cut(), HINT.standing()?.whole, caret()], [[true, true, {}, 'B3.caret.cut'], hinted('B3.caret.cut'), [D, 1, false]], 'at a span of the draft holding no caret: the draft\'s line, naming the key that places one');
+  HINT.act();
+  await focusOn(O, 1);
+  assert.deepEqual(cut(), [false, false, {}, null], 'at another\'s document: the platform\'s, never prevented');
+  await focusOn(E, 14);
+  assert.deepEqual(cut(), [false, false, {}, null], 'at an edition: the platform\'s too');
+  assert.deepEqual([WRITE.edits(D), WRITE.edits(O), WRITE.edits(E)], [[], [], []]);
+}));
+
+test('a paste event while a jump is in the air is held with the keys, its text read as the event is dispatched and the platform\'s paste prevented, and made at the landing in their order, where the focus is then — never at the caret the jump leaves; a cut event there is prevented and dropped, the clipboard and the text as they were; in a field each stays the field\'s own (FP-25, FP-20; D5 K-93)', () => onPlane(async ({ said }) => {
+  const fake = FAKE.create({});
+  PORT.boot(fake);
+  HOST.attach(/** @type {any} */ (hostEl));
+  TRAIL._reset();
+  // D's metadata and links held beside its text, so a LEAP to it reads nothing
+  REC.takeMetadata(D, { doc: D, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(D, []);
+  try {
+    await landed(GO.leapTo(D, { pos: 1 }));
+    await KEYS.dispatch(keyOf('Enter'), PLANE);
+    assert.deepEqual(caret(), [D, 1, true], 'the caret live in the first span');
+    SEL.select(D, 1, 5);
+    const jump = GO.leapTo(D, { pos: 14 });
+    assert.equal(GO.inAir(), true, 'a LEAP to the second span in the air');
+    const cut = clip(), paste = clip({ 'text/plain': 'ab' }), inField = { where: /** @type {const} */ ('field'), byKey: false };
+    for (const [what, e, took] of /** @type {const} */ ([['a paste', clip({ 'text/plain': 'ab' }), (/** @type {any} */ x) => KEYS.pasteEvent(x, inField)], ['a cut', clip(), (/** @type {any} */ x) => KEYS.cutEvent(x, inField)]])) {
+      assert.deepEqual([took(e.e), e.prevented(), KEYS.holding()], [false, false, 0], `${what} in a field while the jump flies: the field's own, neither prevented nor held`);
+    }
+    assert.deepEqual([KEYS.cutEvent(cut.e, EVENT), cut.prevented(), cut.set, KEYS.holding(), HINT.standing()], [true, true, {}, 0, null], 'a cut in the air: prevented and dropped, nothing put on the clipboard, nothing held and no line raised');
+    assert.deepEqual([KEYS.pasteEvent(paste.e, EVENT), paste.prevented(), KEYS.holding(), editsOfD()], [true, true, 1, []], 'a paste in the air: prevented and held, nothing placed at the caret the jump leaves');
+    assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
+    assert.equal(KEYS.holding(), 2, 'a key pressed after it held behind it');
+    const n = said.length;
+    await landed(jump);
+    for (let i = 0; i < 20 && KEYS.holding(); i++) await tick();
+    assert.deepEqual([KEYS.holding(), editsOfD(), caret(), walkAt()], [0, [], [D, 1, false], ['block', D, 14]], 'landed: the walk on the second span, the caret kept where it stood, nothing placed and nothing removed');
+    assert.deepEqual(said.slice(n).filter((x) => x.startsWith(KEYS.drawChord('Enter'))), [spokenHint('B3.caret.enter.paste'), heard(hintSentences('B3.caret.enter', keysOf('B3.caret.enter')).clause)],
+      'the paste made at the landing first — a span holding no caret: the draft\'s line for a paste — then the key, in the order pressed');
+    assert.deepEqual(fake.unanswered, []);
+  } finally { PORT.boot(null); TRAIL._reset(); SEL.clear(); }
+}));
+
+test('a cut event at a live caret with a selection drawn in its text, on a page whose article stands: the clipboard is written as a copy of the selection writes it — its plain text, and skep\'s own entry naming the board, the draft and the bytes — the platform\'s cut prevented; the bytes are out of the text as one edit; and the selection and its card are ended, the caret at the removal, the walk on its span, nothing said (D5 K-93; B3-S5 (iv); FP-24, FP-27)', async () => {
+  const dom = page({ width: 1440, height: 900 }), origin = 'http://board.test';
+  dom.install();
+  /** @type {string[]} */
+  const said = [];
+  try {
+    REC._reset(); WRITE._reset(); HINT._reset();
+    REC.setBoard({ board: 'b-1', name: '', origin });
+    REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+    REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: null, standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: N }]);
+    REC.takeDelivery(D, [{ pos: 1, width: N, kind: 'content', text: TEXT, ref: null, origin: null }]);
+    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: N }]);
+    FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { if (v) said.push(v); }, get textContent() { return ''; } }) });
+    HOST.attach(/** @type {any} */ (hostEl));
+    CAM.setViewport(1440, 900);
+    const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), col = f.columns[0];
+    CAM.set({ x: box.x + col.x + col.w / 2, y: box.y + col.y + col.h / 2, scale: 12 / f.fs });
+    const layer = dom.element('div');
+    layer.id = 'domlayer'; layer.clientWidth = 1440; layer.clientHeight = 900;
+    dom.document.body.appendChild(layer);
+    LAYER.attach(/** @type {any} */ (layer), /** @type {any} */ (null));
+    LAYER.frame();
+    await focusOn(D, 1);
+    await KEYS.dispatch(keyOf('Enter'), PLANE);
+    // "First" selected as the page selects it, the platform's selection over it, the caret at its start
+    SEL.select(D, 1, 5);
+    assert.deepEqual([caret(), SEL.selected(), LAYER.spanOfSelection()], [[D, 1, true], { addr: D, pos: 1, width: 5 }, { addr: D, pos: 1, width: 5 }], 'the caret live, "First" selected, the platform\'s selection the page\'s');
+    const c = clip(), n = said.length;
+    assert.deepEqual([KEYS.cutEvent(c.e, EVENT), c.prevented()], [true, true], 'the cut: taken, the platform\'s prevented');
+    await KEYS.clipped();
+    assert.deepEqual([Object.keys(c.set).sort(), c.set['text/plain'], JSON.parse(c.set['application/x-skep-passage'])],
+      [['application/x-skep-passage', 'text/plain'], 'First', { board: origin, doc: D, member: null, plain: false, pos: null, width: null, ids: [{ prefix: D + '.0.1', ordinal: 1, width: 5 }] }],
+      'the clipboard: the plain text and skep\'s own entry, as a copy of the selection writes them');
+    assert.deepEqual([shown(), editsOfD(), caret(), SEL.selected(), overlay(), walkAt(), said.slice(n)], [TEXT.slice(5), [[1, 5, '']], [D, 1, true], null, null, ['block', D, 1], []],
+      'the bytes out as one edit, the selection and its card ended, the caret at the removal, the walk on its span, nothing said');
+  } finally {
+    HOST.dismiss(); SEL.clear(); LAYER.dropCaret(); LAYER.clear();
+    REC._reset(); WRITE._reset(); HINT._reset();
+    dom.uninstall();
+  }
+});
 
 // placed last: the follow it guards against, where it is made, leaves a jump in the air for the tests after it
 test('Mod+Enter at a live caret placed in the draft\'s second line while the walk stands on a link\'s stop in its first, no selection standing, follows no link from the stop — the trail as it was, nothing faced — and leaves the caret where it stands, the caret\'s follow line in the one line and said through the status region (D5 K-51; B3-S13)', () => onPlane(async ({ said }) => {

@@ -62,7 +62,11 @@
 // stands and the stretches of a text the model lacks (`find`), a
 // walk's moment raised and the folded moments (`moments`), the board's
 // writes halted and the halt lifted (`halt`); the selection
-// beside the platform's own (`platformSelection`) and the copy door (`copy`);
+// beside the platform's own (`platformSelection`), the copy door (`copy`), and
+// the paste and the cut doors (`paste`, `cut`) — each an event the door makes
+// over a clipboard of its own and dispatches at the element holding the
+// focus, so the document's listener takes it as it takes one with no
+// keydown, the system's clipboard never read or written;
 // the reveal's state and setters (`reveal`, `links`), each end `links.shown`
 // lists carrying its key and the withheld run it is drawn at, for the marks
 // and mirror checks; the reading scene — opened as a step on the trail, its
@@ -767,6 +771,22 @@ export function install(deps) {
       const b = REC.board();
       const span = LAYER.onCopy({ clipboardData: { setData: (/** @type {string} */ k, /** @type {string} */ v) => { data[k] = v; } }, preventDefault() {} }, b ? b.origin : '');
       return { span, data };
+    },
+    /** the paste door: a paste event made here over a clipboard of its own holding the flavors given, by name, and dispatched at the element holding the focus, so the document's listener takes it as it takes one with no keydown — the system's clipboard never read; whether the page prevented its default, answered once the walk stands on the caret's span (N-KEYS' `clipped`) */
+    paste: async (/** @type {Record<string, string>} */ data = {}) => {
+      const own = new DataTransfer();
+      for (const [k, v] of Object.entries(data)) own.setData(k, v);
+      const e = new ClipboardEvent('paste', { clipboardData: own, bubbles: true, cancelable: true });
+      (document.activeElement || document.body).dispatchEvent(e);
+      await KEYS.clipped();
+      return { prevented: e.defaultPrevented };
+    },
+    /** the cut door: a cut event made here over an empty clipboard of its own and dispatched at the element holding the focus, as the paste door's is — the system's clipboard never written; whether the page prevented its default, and the flavors the page set on that clipboard, by name, answered once the walk stands on the caret's span (N-KEYS' `clipped`) */
+    cut: async () => {
+      const own = new DataTransfer(), e = new ClipboardEvent('cut', { clipboardData: own, bubbles: true, cancelable: true });
+      (document.activeElement || document.body).dispatchEvent(e);
+      await KEYS.clipped();
+      return { prevented: e.defaultPrevented, data: Object.fromEntries([...own.types].map((k) => [k, own.getData(k)])) };
     },
     reveal: (/** @type {string} */ addr) => { const r = LK.state(addr); const o = r.lens.owners, ty = r.lens.types; return { stage: r.stage, others: r.others, lens: { owners: o ? [...o] : null, types: ty ? [...ty] : null, endorsed: r.lens.endorsed } }; },
     links: {

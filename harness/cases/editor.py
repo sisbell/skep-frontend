@@ -32,6 +32,14 @@ minting a draft and sending the line as its first burst, both kept by the test b
 (`mint-row`); Mod+A at the caret in that draft selecting it whole (`select-all`); and the page opened again landing at
 the draft the case last wrote in, the run that write placed outlined, the caret live at its end and the one line saying
 why (`launch`) — the launch's reads a figure.
+The paste and the cut at the caret are driven there after them (`paste_rows`; B3-S5 (ii), (iv)), each event made
+through the gate's doors — the app's own listeners run over a clipboard the door makes, the system's never read or
+written: plain text pasted at the live caret, kept by the board as one `insert`, taken out and put back by Mod+Z and
+Mod+Shift+Z with the caret where each leaves it (`paste-plain`); a kept word cut — the door's clipboard's two flavors,
+the `delete` its commit sends and S4's mark at the removal — put back by Mod+Z, and its own clipboard pasted as new
+bytes (`cut`); and a paste at the kept caret's span returning the caret and placing its text (`paste-kept-caret`).
+The whole document's entry is a figure (`whole_entry`): the seeded staging draft selected whole and copied through the
+copy door, on the first page.
 Undo, redo and the deletion face are driven there too (`undo_rows`): Mod+Z on
 an empty stack, its line and the constant sentence (`undo-lines`); a removal
 of kept words, the deletion face at its commit (`deletion-face`); the undo
@@ -104,8 +112,9 @@ B3-S13; D5 K-72; D6 BM-52).
 
 The own draft is the seeded board's windowed draft of principal 1 (`OWN`,
 1340 bytes). The seed's staging draft (`STAGING`) holds every edition's
-bytes — 6.27 MB at the owner's seed — which a LEAP reads whole and a scene
-pane cannot show, so it is not the one driven.
+bytes — 6.27 MB at the owner's seed — which a LEAP reads the first part of
+and a scene pane cannot show, so it is not the one driven: it is landed at
+once, for the whole document's entry.
 
 The case's own write check runs over the harness's provider's log, where
 `wire.py` (which reads the gate's) sees nothing of this: every dial a route
@@ -228,8 +237,37 @@ STATES = [
     dict(screen='B3-S4', state='deletion-face', walk='W-08', step=8, drawn=True,
          how="Backspace over kept words at the caret in the case's own draft; the burst's commit composes the `delete` (D6 BM-51)",
          claim='the deletion face stands whole at the removal point, in the margin beside its line or over the lines beneath it — "still here — for as long as this board retains it; …" (C-49), then "you alone can still reach what you remove" (B3.deletion.private) — its mark named "removed here" (B3.removed-here), inside the window, taking no focus and no key: the caret stands live where it stood; the `delete` reaches the test board and is acked'),
-    dict(screen='B3-S5', state='paste-quote', walk='W-08', step=4, drawn=False,
-         how="the paste's reader half and the quote's pick", claim='', why="no paste is made at a caret — Mod+V there stays the platform's (K-93) — and the pick overlay is unbuilt: #578's paste quote form"),
+    # B3-S5 — the paste and the cut at the caret (W-08 step 4); what the same material, the published target, the quote and the
+    # carrier wait on
+    dict(screen='B3-S5', state='paste-plain', walk='W-08', step=4, drawn=True,
+         how="the paste door at the live caret in the case's own draft, the machine handed in: a paste event over a clipboard of the door's holding plain text, its line ending a CR LF (D5 K-93)",
+         claim='the text stands at the caret as typed text does, each CR LF a line feed, the caret live after it; it reaches the test board as one `insert`, acked, and the corner reads "kept" (B3.kept); it is one step of the undo stack, no run of typing'),
+    dict(screen='B3-S5', state='cut', walk='W-08', step=4, drawn=True,
+         how="Shift+→ from the caret over a kept word of the case's own draft, then the cut door: a cut event over a clipboard of the door's (D5 K-93; D6 BM-51)",
+         claim="the door's clipboard holds two flavors — the word as plain text, and skep's own entry naming the board, the draft and the word's bytes by identity, never its positions; the word leaves the text at once, the selection ended and the caret live at the removal, one step that is no run of typing and no mark at the act; the burst's commit sends one `delete`, acked, the corner reading \"kept\" (B3.kept); and the removal's mark stands at the removal point inside the window, named \"removed here\" (B3.removed-here)"),
+    dict(screen='B3-S5', state='paste-kept-caret', walk='W-08', step=4, drawn=True,
+         how="Esc at the live caret in the case's own draft — the caret kept, the walk on its span — then the paste door there (D5 K-93; D6 BM-52)",
+         claim='the kept caret is returned live and the text placed at it, the caret after it and its mark solid; one `insert` reaches the test board, acked, and the corner reads "kept" (B3.kept)'),
+    dict(screen='B3-S5', state='paste-same', walk='W-08', step=4, drawn=False,
+         how="a copy made on this board pasted in the case's own draft: `reinstate` of the copied bytes", claim='',
+         why="slice 2b: skep's own clipboard entry is not read at a paste — every paste places its plain text as new bytes"),
+    dict(screen='B3-S5', state='source-faces', walk='W-08', step=4, drawn=False,
+         how="arm `op` with `withheld`, `source_not_registered` and `dangling_source` at a paste's `reinstate`", claim='',
+         why='slice 2b: no paste sends a `reinstate`, so no source is consulted and no face answers one'),
+    dict(screen='B3-S5', state='published-target', walk='W-04', step=5, drawn=False,
+         how="the paste door at the walk's span of an edition, the clipboard naming a draft of the person's own", claim='',
+         why="slice 2c: the paste there is answered by C-45 alone — the staging act and C-35's statement beneath it are unbuilt"),
+    dict(screen='B3-S5', state='cross-board', walk='W-08', step=4, drawn=False,
+         how="the paste door over an entry naming another board's origin", claim='',
+         why="slice 2c: the entry's board is not read; the cross-board face and its slots are unbuilt"),
+    dict(screen='B3-S5', state='quote-pick', walk='W-08', step=4, drawn=False,
+         how="Mod+Shift+C at a selection: the destination pick", claim='', why="the quote's slice: the pick overlay is unbuilt"),
+    dict(screen='B3-S5', state='quote-inert', walk='W-08', step=4, drawn=False,
+         how="the quote's slot at another board's place", claim='', why="the quote's slice: the slot stands inert everywhere with the lane's reason"),
+    dict(screen='B3-S5', state='origin-face', walk='W-08', step=4, drawn=False,
+         how="a quoted run whose words a shot re-minted: the counterpart-first line", claim='', why='S11: no shot re-mints a run, and the records read is unbuilt'),
+    dict(screen='B3-S5', state='paste-digest', walk='W-08', step=4, drawn=False,
+         how="a paste whose HTML carrier's digest no longer matches its plain text", claim='', why="B8's carrier: nothing writes the HTML carrier a digest would be read from"),
     dict(screen='B3-S6', state='picker', walk='W-08', step=4, drawn=False,
          how='the type picker over two held passages', claim='', why="the picker module; a pane's selection (#29, #94)"),
     dict(screen='B3-S7', state='past-states', walk='W-08', step=8, drawn=False,
@@ -1292,7 +1330,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     r.check(bool(boot) and boot.get('machine') is True and bool(session) and session.get('writes') is True,
             "the page opened on the harness's provider with `machine=1` boots with D6's machine handed in, under a session that writes", {'machine': boot and boot.get('machine'), 'writes': session and session.get('writes')})
     if not session or not board or not (boot and boot.get('machine')):
-        for state in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars'):
+        for state in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret'):
             red(state, 'the machine\'s page did not open')
         return
     sid, account, board_id = session['session'], session['account'], board['board']
@@ -1405,7 +1443,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     r.check(stands and line0 == SEED_TEXT.split('\n')[0], "the case's own draft stands at reading scale, its article mounted and its corner beside it, its first line as written",
             {'stands': stands, 'line': line0, 'focus': ctx.js('window.__skep.view.focus()')})
     if not stands:
-        for st in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars'):
+        for st in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret'):
             red(st, 'the case\'s own draft did not mount')
         return
     # ---- B3-S3: Mod+Z on an empty stack, before anything is typed in the draft (K-75; BM-42) ----------------------------------
@@ -1677,8 +1715,10 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
             'as the store drains the page sends the waiting change itself, in its turn: its insert reaches the test board and is acked, the island and the bound\'s reason lift, and the corner reads "kept"',
             {'drained': drained, 'write': w1 and {k2: w1[k2] for k2 in ('op', 'doc', 'values')}, 'state': state(), 'shown': first_line()})
     ctx.drv.key('Escape'); ctx.frames(2)
-    undo_rows(ctx, r, shoot, red, ops_allowed, dict(mine=mine, sid=sid, board_id=board_id, corner=corner, state=state, recentre=recentre, quiet=quiet, caret_end=caret_end, press=press,
-                                                    corner_word=corner_word, first_line=first_line, hold_typed=hold_typed, held_row=held_row, drop_all=drop_all, refusal=refusal))
+    held = dict(mine=mine, sid=sid, board_id=board_id, corner=corner, state=state, recentre=recentre, quiet=quiet, caret_end=caret_end, press=press,
+                corner_word=corner_word, first_line=first_line, hold_typed=hold_typed, held_row=held_row, drop_all=drop_all, refusal=refusal)
+    undo_rows(ctx, r, shoot, red, ops_allowed, held)
+    paste_rows(ctx, r, shoot, red, ops_allowed, held)
 
 
 # the words the reopen row's armed line types before the case's own draft's first line: a paragraph of their own
@@ -1944,6 +1984,218 @@ def undo_rows(ctx, r, shoot, red, ops_allowed, m):
     ctx.drv.key('Escape'); ctx.frames(2)
 
 
+# what the copy door's clipboard takes of the selection standing: its span, the bytes of its plain text and of skep's own
+# entry, and that entry's parts by kind — bytes the board holds, bytes the page made, stretches its image does not place
+COPY_SIZES = '''(() => { const c = window.__skep.copy(), d = c.data || {}, e = d["application/x-skep-passage"] || "", p = d["text/plain"] || "", n = (s) => new TextEncoder().encode(s).length;
+  const ids = e ? JSON.parse(e).ids : [];
+  return {span: c.span, flavors: Object.keys(d).sort(), plain_bytes: n(p), entry_bytes: n(e),
+          parts: {board: ids.filter((x) => !x.gap && !x.load).length, page: ids.filter((x) => x.load).length, gap: ids.filter((x) => x.gap).length}}; })()'''
+
+
+def whole_entry(ctx, r):
+    """THE WHOLE DOCUMENT's ENTRY (the paste survey's U4; FP-18): the seeded staging draft — longer than the page holds at
+    once — landed at, a caret placed at its first position and Mod+A pressed, then the copy door three frames on: what its
+    clipboard takes of the document selected whole, in bytes. The door copies the platform's own selection, which the page
+    places over the lines that stand, so the reading is that moment's and is recorded with what explains it (`at_copy`):
+    the positions the page holds of the draft then, and the span the platform's selection covers — none while its range
+    is still owed. Beside it, for the positions the page held as it landed, the entry T-LAYER names for a copy of them
+    (`namedIn`), no selection made. Reads alone: the caret and the selection are page state, and both are let go after.
+    Its figures, the seconds the landing took among them."""
+    t0 = time.time()
+    ctx.leap(STAGING, 1)
+    out = {'doc': STAGING, 'leap_s': round(time.time() - t0, 1)}
+    try:
+        d = ctx.js('(() => { const d = window.__skep.model.doc(%s); return {extent: d.extent, from: d.from, to: d.to}; })()' % json.dumps(STAGING))
+        out.update(extent=d['extent'], held=[d['from'], d['to']])
+        # the positions the page holds as it lands, named as a copy of them is: read before the selection, which reads on past them
+        out['held_part'] = ctx.js('''(async (addr, from, to) => { const L = await import("./text/layer.js"), rec = L.mountedSet().get(addr), b = window.__skep.model.board();
+          const named = rec && from >= 0 ? L.namedIn(rec.el, {addr, pos: from, width: to - from}, b ? b.origin : "") : null;
+          return named && {width: to - from, entry_bytes: new TextEncoder().encode(JSON.stringify(named)).length,
+                           parts: {board: named.ids.filter((x) => !x.gap && !x.load).length, page: named.ids.filter((x) => x.load).length, gap: named.ids.filter((x) => x.gap).length}}; })(%s, %d, %d)''' % (json.dumps(STAGING), d['from'], d['to']))
+        ctx.js('(async () => (await import("./text/layer.js")).placeCaret(%s, %d))()' % (json.dumps(STAGING), max(1, d['from']))); ctx.frames(2)
+        ctx.drv.key('a', mods=('Meta',)); ctx.frames(3)
+        sel = ctx.js('window.__skep.selection()')
+        at_copy = ctx.js('(() => { const d = window.__skep.model.doc(%s), p = window.__skep.platformSelection(); return {held: [d.from, d.to], platform: p.collapsed ? null : p.span}; })()' % json.dumps(STAGING))
+        t1 = time.time()
+        out.update(selected=sel, at_copy=at_copy, door=ctx.js(COPY_SIZES), door_ms=round((time.time() - t1) * 1000))
+        r.check(sel == {'addr': STAGING, 'pos': 1, 'width': d['extent']} and isinstance((out['door'] or {}).get('entry_bytes'), int),
+                "Mod+A at a caret in the seeded staging draft selects it whole, positions 1 to its extent, and the copy door answers what its clipboard took of it (what the whole document's entry is measured on)",
+                {'selected': sel, 'extent': d['extent'], 'door': out['door']})
+    finally:
+        ctx.js('(async () => { const s = window.getSelection(); if (s) s.removeAllRanges(); const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), L = await import("./text/layer.js"); H.dismiss(); S.clear(); L.dropCaret(); })()')
+        ctx.frames(2)
+    return out
+
+
+def paste_rows(ctx, r, shoot, red, ops_allowed, m):
+    """THE PASTE AND THE CUT AT THE CARET (B3-S5 (ii), (iv); D5 K-93; D6 BM-31, BM-34, BM-51, BM-52), on the machine's page, in
+    the case's own draft. Each event reaches the page through the gate's doors — the app's own listeners run over a
+    clipboard the door makes, an event with no keydown — so the system's clipboard is never read or written.
+    `paste-plain`: the paste door at the live caret places plain text, its CR LF a line feed, the caret after it, sent to
+    the test board as one `insert`; Mod+Z takes it out by one `delete`, the caret where the paste began, and Mod+Shift+Z
+    puts it back by a `reinstate`, the caret after it. `cut`: Shift+→ over a kept word, then the cut door — the door's
+    clipboard takes the word as plain text and as skep's own entry, the word leaves the text at once, and the burst's
+    commit sends one `delete` whose removal carries S4's mark; Mod+Z puts it back, the caret where the cut began; and the
+    cut's own clipboard pasted places its plain text as new bytes, an `insert`. `paste-kept-caret`: Esc keeps the caret,
+    and the paste door at its span returns it live and places the text at it. Each word is checked against `strings.js`."""
+    mine, sid = m['mine'], m['sid']
+    recentre, quiet, caret_end, corner_word, first_line = m['recentre'], m['quiet'], m['caret_end'], m['corner_word'], m['first_line']
+    caret = lambda: ctx.js('window.__skep.caret()')
+    selection = lambda: ctx.js('window.__skep.selection()')
+    removed = lambda: ctx.js('window.__skep.removed()') or []
+    stacks = lambda: ctx.js('window.__skep.write.stacks(%s)' % json.dumps(mine))
+    paste = lambda data: ctx.js('window.__skep.paste(%s)' % json.dumps(data))
+    place = lambda pos: (ctx.js('(async () => (await import("./text/layer.js")).placeCaret(%s, %d))()' % (json.dumps(mine), pos)), ctx.frames(2))
+    nb = lambda s: len(s.encode('utf8'))
+    kept_word = {'word': t(ctx, 'B3.kept'), 'id': 'B3.kept'}
+
+    def stretch(pos, width):
+        """a stretch of the text the page shows of the draft"""
+        return ctx.js('(async () => { const L = await import("./text/layer.js"), R = await import("./model/records.js"), d = L.shownOf(%s); return R.textOf(d.runs, %d, %d); })()' % (json.dumps(mine), pos, pos + width))
+
+    def board(width):
+        """the draft's first `width` bytes as the test board holds them, read through the page's port"""
+        got = port_op(ctx, sid, {'op': 'retrieve_v', 'specs': [{'doc': mine, 'span': {'start': '1.1', 'width': '0.%d' % width}}]})
+        return ''.join(i.get('content', '') for i in (((got or {}).get('result') or {}).get('items') or []))
+
+    def kept(max_s=15):
+        """the draft kept on the board again: the corner "kept", every edit read back"""
+        ok = wait_for(ctx, '(() => { const s = window.__skep.write.state(%s); return !!s.kept && s.kept.word === "kept" && !s.inFlight && window.__skep.write.edits(%s).filter((e) => e.at == null).length === 0; })()' % (json.dumps(mine), json.dumps(mine)), max_s)
+        quiet()
+        return ok
+
+    def chord(shift=False):
+        ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
+        ctx.drv.key('z', mods=('Meta', 'Shift') if shift else ('Meta',)); ctx.frames(3)
+
+    def live_at(pos):
+        """each width frames the draft as a landing does — which keeps the caret — then the caret stands live where the act left it"""
+        recentre()
+        place(pos)
+
+    # ---- B3-S5 `paste-plain`: plain text pasted at the live caret, kept by the board; its undo and its redo -------------------------
+    quiet()
+    line = first_line()
+    pos = caret_end(line)
+    text = ' Pasted here.\r\nA line pasted after it.'
+    want = text.replace('\r\n', '\n')
+    n = nb(want)
+    took = paste({'text/plain': text})
+    at_act = caret()
+    landed = kept()
+    w0 = last_write(ctx, ops_allowed)
+    on_board = board(nb(line) + n)
+    step = (stacks()['undo'] or [{}])[-1]
+
+    def plain_check(wd):
+        c, got, h = caret(), corner_word(), ctx.js('window.__skep.hint()')
+        ok = (took == {'prevented': True} and at_act == {'addr': mine, 'pos': pos + n, 'live': True} and landed
+              and bool(w0) and w0['op'] == 'insert' and w0['doc'] == mine and w0.get('values') == [want] and '"ack_addr"' in (w0.get('answer') or '')
+              and on_board == line + want and stretch(pos, n) == want and first_line() == line + ' Pasted here.' and step.get('kind') == 'paste' and step.get('open') is False
+              and got == kept_word and c == at_act and h is None and len(shown(ctx, '#domlayer .caret-mark')) == 1)
+        return ok, {'door': took, 'caret_at_act': at_act, 'kept': landed, 'write': w0 and {k: w0[k] for k in ('op', 'doc', 'values')}, 'board': on_board, 'shown': stretch(pos, n),
+                    'step': step, 'corner': got, 'caret': c, 'hint': h}
+    shoot('paste-plain', plain_check, lambda: live_at(pos + n))
+    chord()
+    undone = kept()
+    w = last_write(ctx, ops_allowed)
+    r.check(undone and first_line() == line and board(nb(line)) == line and bool(w) and w['op'] == 'delete' and '"ack"' in (w.get('answer') or '') and caret() == {'addr': mine, 'pos': pos, 'live': True}
+            and (stacks()['redo'] or [{}])[-1].get('kind') == 'paste',
+            'Mod+Z takes the paste out whole — one step: the text shown and the test board\'s without it again, by one `delete` acked — and leaves the caret live where the paste began',
+            {'kept': undone, 'shown': first_line(), 'board': board(nb(line)), 'write': w and {k: w[k] for k in ('op', 'doc')}, 'caret': caret(), 'stacks': stacks()})
+    chord(shift=True)
+    redone = kept()
+    w = last_write(ctx, ops_allowed)
+    r.check(redone and board(nb(line) + n) == line + want and stretch(pos, n) == want and bool(w) and w['op'] == 'reinstate' and caret() == {'addr': mine, 'pos': pos + n, 'live': True},
+            'Mod+Shift+Z puts the paste back by a `reinstate` of the bytes its insert minted — never an insert of new ones — and leaves the caret live after the placed text',
+            {'kept': redone, 'board': board(nb(line) + n), 'write': w and {k: w[k] for k in ('op', 'doc')}, 'caret': caret()})
+    ctx.js('(async () => { (await import("./overlays/host.js")).dismiss(); })()')
+
+    # ---- B3-S5 `cut`: a kept word cut — the door's clipboard, the `delete`, S4's mark; its undo; its own clipboard pasted --------------
+    line = first_line()
+    words = line.split(' ')
+    gone = words[1] + ' '
+    start, width = nb(words[0] + ' ') + 1, nb(gone)
+    cut_line = words[0] + ' ' + ' '.join(words[2:])
+    ids = ctx.js('window.__skep.model.identity(%s, %d, %d)' % (json.dumps(mine), start, width))
+    origin = (ctx.js('window.__skep.model.board()') or {}).get('origin')
+    recentre()
+    place(start)
+    for _ in gone:
+        ctx.drv.key('ArrowRight', mods=('Shift',)); ctx.frames(1)
+    ctx.frames(2)
+    selected, began, marks0 = selection(), caret(), removed()
+    out = ctx.js('window.__skep.cut()') or {}
+    ctx.frames(2)
+    act = {'caret': caret(), 'selection': selection(), 'shown': first_line(), 'marks': len(removed()), 'step': (stacks()['undo'] or [{}])[-1]}
+    faced = wait_for(ctx, '(window.__skep.removed() || []).length === %d' % (len(marks0) + 1), 10)
+    landed = kept()
+    w1 = last_write(ctx, ops_allowed)
+    data = out.get('data') or {}
+    flavor = json.loads(data['application/x-skep-passage']) if data.get('application/x-skep-passage') else None
+    r.check(selected == {'addr': mine, 'pos': start, 'width': width} and began == {'addr': mine, 'pos': start + width, 'live': True} and bool(ids) and sum(x['width'] for x in ids) == width,
+            'Shift+→ from the caret runs a selection over a kept word of the draft and the space after it, the caret live at its end (what the cut stands on)', {'selected': selected, 'caret': began, 'ids': ids})
+
+    def cut_check(wd):
+        marks, top = removed(), ctx.js('document.getElementById("line").getBoundingClientRect().bottom')
+        mark = next((x for x in marks if x.get('addr') == mine and x.get('words') == gone), None)
+        box = (mark or {}).get('mark') or {}
+        named = ctx.js('[...document.querySelectorAll("#removed button.mark")].map((b) => b.getAttribute("aria-label"))')
+        inside = bool(box) and box['x'] >= -0.5 and box['x'] + box['w'] <= wd + 0.5 and box['y'] >= top - 0.5 and box['y'] + box['h'] <= 900 + 0.5
+        clip_ok = (out.get('prevented') is True and sorted(data) == ['application/x-skep-passage', 'text/plain'] and data['text/plain'] == gone
+                   and bool(flavor) and flavor.get('board') == origin and flavor.get('doc') == mine and flavor.get('pos') is None and flavor.get('ids') == ids)
+        act_ok = (act['caret'] == {'addr': mine, 'pos': start, 'live': True} and act['selection'] is None and act['shown'] == cut_line and act['marks'] == len(marks0)
+                  and act['step'].get('kind') == 'cut' and act['step'].get('took') == [gone])
+        sent_ok = (faced and landed and bool(w1) and w1['op'] == 'delete' and w1['doc'] == mine and '"ack"' in (w1.get('answer') or '') and first_line() == cut_line and board(nb(cut_line)) == cut_line
+                   and corner_word() == kept_word)
+        face_ok = bool(mark) and len(marks) == len(marks0) + 1 and inside and bool(named) and all(x == t(ctx, 'B3.removed-here') for x in named) and len(shown(ctx, '#removed button.mark')) >= 1
+        return {'the clipboard': (clip_ok, {'door': {'prevented': out.get('prevented')}, 'flavors': sorted(data), 'plain': data.get('text/plain'), 'entry': flavor, 'want_ids': ids, 'origin': origin}),
+                'the act': (act_ok, act),
+                'the `delete`': (sent_ok, {'faced': faced, 'kept': landed, 'write': w1 and {k: w1[k] for k in ('op', 'doc')}, 'shown': first_line(), 'board': board(nb(cut_line)), 'corner': corner_word()}),
+                "S4's mark": (face_ok, {'marks': marks, 'named': named, 'inside': inside})}
+    shoot('cut', cut_check, lambda: live_at(start))
+    chord()
+    back = kept()
+    w = last_write(ctx, ops_allowed)
+    r.check(back and first_line() == line and board(nb(line)) == line and bool(w) and w['op'] == 'reinstate' and '"ack"' in (w.get('answer') or '') and caret() == {'addr': mine, 'pos': start + width, 'live': True}
+            and len(removed()) == len(marks0),
+            'Mod+Z puts the cut word back by one `reinstate` of its own bytes, its mark gone, and leaves the caret live where the cut began — the selection\'s end',
+            {'kept': back, 'shown': first_line(), 'board': board(nb(line)), 'write': w and {k: w[k] for k in ('op', 'doc')}, 'caret': caret(), 'marks': len(removed())})
+    # the cut's own clipboard pasted at the line's end: its plain text placed as new bytes, whatever else it holds
+    end = caret_end(line)
+    again = paste(data)
+    placed = kept()
+    w = last_write(ctx, ops_allowed)
+    r.check(again == {'prevented': True} and placed and bool(w) and w['op'] == 'insert' and w.get('values') == [gone] and '"ack_addr"' in (w.get('answer') or '') and first_line() == line + gone
+            and caret() == {'addr': mine, 'pos': end + width, 'live': True},
+            'the cut\'s own clipboard pasted — its plain text and skep\'s own entry — places the plain text as new bytes, one `insert` acked: the entry is not read yet, so nothing is placed by identity',
+            {'door': again, 'kept': placed, 'write': w and {k: w[k] for k in ('op', 'doc', 'values')}, 'shown': first_line(), 'caret': caret()})
+    chord()
+    r.check(kept() and first_line() == line and board(nb(line)) == line, 'and Mod+Z takes that paste out again, the board following', {'shown': first_line(), 'board': board(nb(line))})
+    ctx.js('(async () => { (await import("./overlays/host.js")).dismiss(); })()')
+
+    # ---- B3-S5 `paste-kept-caret`: the paste at a kept caret returns it and acts there (K-93; BM-52) ---------------------------------
+    line = first_line()
+    end = caret_end(line)
+    ctx.drv.key('Escape'); ctx.frames(2)
+    was = {'caret': caret(), 'focus': ctx.js('(() => { const f = window.__skep.view.focus(); return f && {kind: f.kind, addr: f.addr}; })()')}
+    late = ' Returned.'
+    took2 = paste({'text/plain': late})
+    at_act2 = caret()
+    landed2 = kept()
+    w2 = last_write(ctx, ops_allowed)
+
+    def kept_caret_check(wd):
+        c, got = caret(), corner_word()
+        ok = (was['caret'] == {'addr': mine, 'pos': end, 'live': False} and was['focus'] == {'kind': 'block', 'addr': mine} and took2 == {'prevented': True}
+              and at_act2 == {'addr': mine, 'pos': end + nb(late), 'live': True} and landed2 and bool(w2) and w2['op'] == 'insert' and w2['doc'] == mine and w2.get('values') == [late]
+              and '"ack_addr"' in (w2.get('answer') or '') and first_line() == line + late and board(nb(line + late)) == line + late and got == kept_word and c == at_act2
+              and len(shown(ctx, '#domlayer .caret-mark')) == 1 and not ctx.js('!!document.querySelector("#domlayer .caret-mark.kept")'))
+        return ok, {'kept_before': was, 'door': took2, 'caret_at_act': at_act2, 'kept': landed2, 'write': w2 and {k: w2[k] for k in ('op', 'doc', 'values')}, 'shown': first_line(), 'corner': got, 'caret': c}
+    shoot('paste-kept-caret', kept_caret_check, lambda: live_at(end + nb(late)))
+    ctx.drv.key('Escape'); ctx.frames(2)
+
+
 def run(ctx):
     r = Result()
     rows = {s['state']: dict(s, outcome=('pending' if s['drawn'] else 'not drawn')) for s in STATES}
@@ -2204,6 +2456,14 @@ def run(ctx):
     figures['corner_back'] = way_back
     r.check(way_back['ok'], "Shift+Tab from the own draft's corner, after a printable key there, returns the focus to the plane's stop on the own draft's span, where `x` is answered at the text's edge by the draft's own line (B3.caret.enter) — the way back the corner's line names (B3-S13; D5 K-72; D6 BM-52)", way_back)
     ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()'); ctx.frames(2)
+
+    # ---- (e″) the whole document's entry: the seeded staging draft selected whole and copied through the door (FP-18) ----------
+    try:
+        figures['whole_entry'] = whole_entry(ctx, r)
+    except Exception as e:  # a figure that throws is recorded so; the states after it still run
+        import traceback
+        r.check(False, "the whole document's entry was measured", {'error': str(e), 'trace': traceback.format_exc()[-1500:]})
+    ctx.leap(OWN, target['pos'])
 
     # ---- (f) B3-S2: the moved scene's held version as a derived pane (issue #411; D6 BM-14) ---------------------------------
     first = paras[0]

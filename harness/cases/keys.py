@@ -297,7 +297,14 @@ the creation row at its foot, one Tab from the input and ahead of every
 "open beside"; a Tab at its act while the index's read is held at its answer
 moves nothing until the rows are computed over that answer; and Enter there,
 on this page, sends no write frame and is answered beside the box
-(`start_and_select_all`; D5 K-33, K-93; B3-S1, B3-S8).
+(`start_and_select_all`; D5 K-33, K-93; B3-S1, B3-S8). Mod+V and Mod+X at a
+writable caret are not prevented at their keydown, and the paste and the cut
+event reach the page through the gate's doors, over a clipboard of the
+door's own: at the caret a paste places its plain text and a cut writes two
+flavors and removes its selection, each a page-local edit; at a span holding
+no caret, an edition, another's document and an unwritable draft each says
+its line and places nothing, a cut at text the person may not edit and both
+in a field left to the platform (`paste_and_cut`; D5 K-93; B3-S5).
 """
 import json
 import re
@@ -3720,6 +3727,167 @@ def start_and_select_all(ctx, r):
     return figures
 
 
+# Mod+V's or Mod+X's keydown as a script makes one, dispatched at the element holding the focus: the page's listener
+# answers it, and — no key of the platform's — no paste or cut can follow it and no clipboard is read; whether its default
+# was prevented once the listener's answer was in
+SCRIPTED_KEYDOWN = '''((key) => new Promise((res) => { const e = new KeyboardEvent("keydown", {key, code: "Key" + key.toUpperCase(), metaKey: true, bubbles: true, cancelable: true});
+  (document.activeElement || document.body).dispatchEvent(e); setTimeout(() => res({prevented: e.defaultPrevented}), 60); }))(%s)'''
+
+
+def paste_and_cut(ctx, r):
+    """THE PASTE AND THE CUT AT THE CARET (D5 K-93; B3-S5 (ii), (iv)), on the gate's page, which boots without the machine:
+    every edit below is the page's own and no write frame is sent. The paste and the cut reach the page through the gate's
+    doors alone — the app's own listeners run over a clipboard the door makes — and the two keydowns at a writable caret
+    as a script dispatches them, so the system's clipboard is never read or written:
+    (a) Mod+V and Mod+X at a live caret in the own draft: neither keydown is prevented, nothing said, nothing placed;
+    (b) the paste door there: its plain text placed at the caret as one edit, each CR LF a line feed, the caret after it;
+    (c) the cut door over a selection drawn in the caret's text: the clipboard's two flavors — the words, and skep's own
+        entry naming the draft and the page's own name of the unminted bytes — the bytes out as one edit, the selection
+        ended, the caret at the removal; and with nothing selected, the nothing-selected line and nothing set;
+    (d) at a span of the own draft holding no caret: Mod+V's and Mod+X's keydowns prevented, each answered by the draft's
+        line in its own words; the doors there, an event with no keydown, answered the same, nothing placed; and with
+        the focus on that line's own button a paste event answered as at the plane's stop;
+    (e) at the first edition's span and at another account's document, the paste door is answered by its document's line
+        and the cut door left to the platform;
+    (f) in a draft that cannot be written the paste door at a live caret is answered by the reason's line, nothing placed;
+    (g) with the focus in the LEAP box both doors are the platform's, untouched.
+    Its figures"""
+    figures = {}
+    draft = WINDOW[2]
+    caret_of = lambda: ctx.js('window.__skep.caret()')
+    edits_of = lambda: [{k: e[k] for k in ('pos', 'width', 'text')} for e in ctx.js('window.__skep.write.edits(%s)' % json.dumps(draft))]
+    hint_of = lambda: ctx.js('window.__skep.hint()') or {}
+    writes = lambda: ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "op" && ["insert", "delete", "reinstate"].includes(c.op)).length')
+    unhint = lambda: ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
+    paste = lambda data: ctx.js('window.__skep.paste(%s)' % json.dumps(data))
+    cut = lambda: ctx.js('window.__skep.cut()')
+    ctx.esc()
+    ctx.leap(draft, None)
+    paras = [b for b in ctx.js('window.__skep.model.doc(%s)' % json.dumps(draft))['blocks'] if b['kind'] == 'para' and len(b['text'].strip()) >= 16]
+    if not r.check(len(paras) >= 2, 'the own draft holds two paragraphs of sixteen characters or more (what the paste and the cut stand on)', [b['pos'] for b in paras]):
+        return figures
+    P, other = paras[1]['pos'], paras[0]['pos']
+    writes0 = writes()
+    try:
+        ctx.leap(draft, P)
+        ctx.js(FOCUS_ITEM); ctx.frames(2)
+        chord(ctx, 'Enter')
+        placed = caret_of()
+        # (a) the two keydowns at the writable caret
+        keys = {k: ctx.js(SCRIPTED_KEYDOWN % json.dumps(k)) for k in ('v', 'x')}
+        ctx.frames(2)
+        r.check(placed == {'addr': draft, 'pos': P, 'live': True} and keys == {'v': {'prevented': False}, 'x': {'prevented': False}} and not hint_of() and edits_of() == [] and caret_of() == placed,
+                '(a) Mod+V and Mod+X at a live caret in the own draft are not prevented at their keydown — the default left standing for the paste and the cut event — and say and place nothing themselves (D5 K-93)',
+                {'caret': placed, 'keydowns': keys, 'hint': hint_of(), 'edits': edits_of()})
+        # (b) the paste door
+        text = 'Pasted by the door.\r\nIts second line. '
+        want = text.replace('\r\n', '\n')
+        took = paste({'text/plain': text, 'application/x-skep-passage': json.dumps({'board': 'http://elsewhere.test', 'doc': '9.0.9.0.9', 'ids': []})})
+        ctx.frames(2)
+        end = P + len(want.encode('utf8'))
+        shown = ctx.js('(async () => { const L = await import("./text/layer.js"), R = await import("./model/records.js"), d = L.shownOf(%s); return R.textOf(d.runs, %d, %d); })()' % (json.dumps(draft), P, end))
+        r.check(took == {'prevented': True} and edits_of() == [{'pos': P, 'width': 0, 'text': want}] and caret_of() == {'addr': draft, 'pos': end, 'live': True} and shown == want and not hint_of(),
+                '(b) a paste event with no keydown, through the door, at the live caret: the platform\'s paste prevented and the plain text placed at the caret as one edit — each CR LF a line feed, whatever else the clipboard holds — the caret after it, nothing said (B3-S5 (ii); D5 K-93)',
+                {'took': took, 'edits': edits_of(), 'caret': caret_of(), 'shown': shown, 'hint': hint_of()})
+        figures['paste'] = {'at': P, 'bytes': len(want.encode('utf8'))}
+        # (c) the cut door: nothing selected, then "Pasted" selected
+        none = cut()
+        ctx.frames(2)
+        h = hint_of()
+        r.check(none == {'prevented': True, 'data': {}} and h.get('id') == 'L.copy.nothing' and len(edits_of()) == 1,
+                '(c) a cut event with nothing selected at the live caret: the platform\'s cut prevented, nothing put on the clipboard, nothing removed, and the nothing-selected line its hint (D5 K-92, K-93)', {'cut': none, 'hint': h, 'edits': edits_of()})
+        unhint()
+        ctx.js('window.__skep.select(%s, %d, 6)' % (json.dumps(draft), P)); ctx.frames(2)
+        selected, live = ctx.js('window.__skep.selection()'), caret_of()
+        out = cut()
+        ctx.frames(2)
+        data = (out or {}).get('data') or {}
+        flavor = json.loads(data['application/x-skep-passage']) if data.get('application/x-skep-passage') else None
+        load, edits = ctx.js('window.__skep.model.load()'), ctx.js('window.__skep.write.edits(%s)' % json.dumps(draft))
+        page = edits[0].get('page') if edits else None
+        r.check(selected == {'addr': draft, 'pos': P, 'width': 6} and bool(live) and live['live'] and (out or {}).get('prevented') is True
+                and sorted(data) == ['application/x-skep-passage', 'text/plain'] and data['text/plain'] == 'Pasted'
+                and bool(flavor) and flavor.get('doc') == draft and flavor.get('pos') is None and flavor.get('ids') == [{'prefix': draft + '.0.p', 'ordinal': page, 'width': 6, 'load': load}]
+                and edits_of()[1:] == [{'pos': P, 'width': 6, 'text': ''}] and ctx.js('window.__skep.selection()') is None and caret_of() == {'addr': draft, 'pos': P, 'live': True} and not hint_of(),
+                '(c) a cut event through the door over a selection drawn in the caret\'s text: the clipboard takes two flavors — the words cut, and skep\'s own entry naming the draft and the bytes, unminted ones by the page\'s own name and load — the platform\'s cut is prevented, the bytes are out as one edit, the selection ended and the caret at the removal (B3-S5 (iv); FP-24, FP-27)',
+                {'selected': selected, 'cut': out and {'prevented': out.get('prevented')}, 'plain': data.get('text/plain'), 'flavor': flavor, 'edits': edits_of(), 'caret': caret_of()})
+        figures['cut'] = {'flavors': sorted(data), 'entry_bytes': len(data.get('application/x-skep-passage') or '')}
+        # (f) a draft that cannot be written now: the reason's line, nothing placed (page state alone, then lifted)
+        n_edits = len(edits_of())
+        ctx.js('(async () => { (await import("./write/write.js")).setUnwritable(window.__skep.model.board().board, {why: "keyless"}); })()'); ctx.frames(2)
+        refused = paste({'text/plain': 'never placed'})
+        ctx.frames(2)
+        h = hint_of()
+        ctx.js('(async () => { (await import("./write/write.js")).setUnwritable(window.__skep.model.board().board, null); })()'); ctx.frames(2)
+        r.check(refused == {'prevented': True} and h.get('id') == 'B3.keyless' and len(edits_of()) == n_edits,
+                '(f) a paste event with no keydown at a live caret in a draft that cannot be written: guarded by the listener — prevented, answered by the reason\'s own line, nothing placed (D6 BM-58)', {'paste': refused, 'hint': h, 'edits': edits_of()})
+        unhint()
+        # (d) a span of the own draft holding no caret: the keydowns, then the doors
+        ctx.leap(draft, other)
+        ctx.js(FOCUS_ITEM); ctx.frames(2)
+        kept, lines = caret_of(), {}
+        for key, sid in (('v', 'B3.caret.enter.paste'), ('x', 'B3.caret.cut')):
+            prevented_probe(ctx)
+            chord(ctx, key, mods=('Meta',))
+            lines[key] = {'keydown': ctx.js('window.__gateKeydown'), 'hint': hint_of().get('id'), 'whole': hint_of().get('whole'), 'want': hint_words(ctx, sid, drawn_keys(ctx, sid))}
+            unhint()
+        doors = {}
+        for name, act, sid in (('paste', lambda: paste({'text/plain': 'never placed'}), 'B3.caret.enter.paste'), ('cut', cut, 'B3.caret.cut')):
+            got = act()
+            ctx.frames(2)
+            doors[name] = {'door': {'prevented': got.get('prevented')}, 'set': got.get('data'), 'hint': hint_of().get('id'), 'want': sid}
+            unhint()
+        r.check(bool(kept) and not kept['live'] and all(x['keydown'] and x['keydown']['prevented'] and x['hint'] == sid and x['whole'] == x['want'] for (k, sid), x in zip((('v', 'B3.caret.enter.paste'), ('x', 'B3.caret.cut')), [lines['v'], lines['x']]))
+                and len(edits_of()) == n_edits and caret_of() == kept,
+                '(d) at a span of the own draft holding no caret Mod+V and Mod+X are prevented at their keydown and answered by the draft\'s line in their own words, each naming the key that places a caret, drawn for this platform; nothing placed, the kept caret where it stood (D5 K-93)',
+                {'kept': kept, 'lines': lines, 'edits': len(edits_of())})
+        r.check(all(x['door'] == {'prevented': True} and x['hint'] == x['want'] and not x['set'] for x in doors.values()) and len(edits_of()) == n_edits,
+                '(d) a paste and a cut event with no keydown there, through the doors, are guarded by the listeners: each prevented and answered by the same line, nothing placed, nothing put on the clipboard', doors)
+        # the hint's button holding the focus is a stop of the plane's: a paste event there is answered as at the walk's span
+        ctx.js(SCRIPTED_KEYDOWN % json.dumps('v')); ctx.frames(2)
+        raised, on_hint = hint_of().get('id'), None
+        for _ in range(10):
+            chord(ctx, 'Tab')
+            on_hint = ctx.js('(() => { const a = document.activeElement; return !!(a && a.closest && a.closest("#hint")); })()')
+            if on_hint:
+                break
+        at_hint = paste({'text/plain': 'never placed'})
+        ctx.frames(2)
+        r.check(raised == 'B3.caret.enter.paste' and on_hint and at_hint == {'prevented': True} and hint_of().get('id') == 'B3.caret.enter.paste' and len(edits_of()) == n_edits,
+                '(d) with the focus on the hint\'s own button, a paste event is answered as at the plane\'s stop — prevented, the draft\'s line again — never left to the platform', {'raised': raised, 'on_hint': on_hint, 'paste': at_hint, 'hint': hint_of().get('id')})
+        unhint()
+        ctx.js(FOCUS_ITEM); ctx.frames(2)
+        # (e) the first edition's span, and another account's document
+        sites = {}
+        for name, (doc, pos), sid in (('edition', (DOC, WINDOW[0]), 'C-45'), ('another', REGISTRY, 'B3.row.others-document')):
+            ctx.leap(doc, pos)
+            ctx.js(FOCUS_ITEM); ctx.frames(2)
+            p = paste({'text/plain': 'never placed'})
+            ctx.frames(2)
+            said = hint_of().get('id')
+            unhint()
+            c = cut()
+            ctx.frames(2)
+            sites[name] = {'paste': p, 'hint': said, 'want': sid, 'cut': c, 'after_cut': hint_of().get('id')}
+        r.check(all(x['paste'] == {'prevented': True} and x['hint'] == x['want'] and x['cut'] == {'prevented': False, 'data': {}} and x['after_cut'] is None for x in sites.values())
+                and len(edits_of()) == n_edits,
+                '(e) at the first edition\'s span and at another account\'s document a paste event is prevented and answered by its document\'s line — C-45, B3-S13\'s line naming its owner — nothing placed; a cut event there is the platform\'s, never prevented (D5 K-93)', sites)
+        # (g) the focus in the LEAP box: both the platform's
+        chord(ctx, 'l', mods=('Meta',))
+        ctx.js('(() => { document.getElementById("leapq").value = "typed here"; })()')
+        in_box = ctx.js('document.activeElement ? document.activeElement.id : null')
+        field = {'paste': paste({'text/plain': 'never placed'}), 'cut': cut(), 'value': ctx.js('document.getElementById("leapq").value'), 'hint': hint_of().get('id')}
+        r.check(in_box == 'leapq' and field == {'paste': {'prevented': False}, 'cut': {'prevented': False, 'data': {}}, 'value': 'typed here', 'hint': None} and len(edits_of()) == n_edits,
+                '(g) with the focus in the LEAP box a paste and a cut event are the field\'s own: the listeners return untouched — nothing prevented, nothing said, nothing placed in the draft (D5 K-93)', dict(field, focus=in_box))
+        ctx.esc()
+        r.check(writes() == writes0, 'the paste and the cut on this page, which holds no machine, send no write frame: every edit is the page\'s own', {'writes': [writes0, writes()]})
+    finally:
+        ctx.esc()
+        ctx.js('(async () => { (await import("./write/write.js")).setUnwritable(window.__skep.model.board().board, null); const s = window.getSelection(); if (s) s.removeAllRanges(); const S = await import("./overlays/selection.js"), H = await import("./overlays/host.js"), N = await import("./overlays/hint.js"), L = await import("./text/layer.js"), W = await import("./write/write.js"); H.dismiss(); N.act(); S.clear(); L.dropCaret(); W.clearEdits(%s); L.bump(); })()' % json.dumps(draft))
+        ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(draft)); ctx.settle(); ctx.frames(2)
+    return figures
+
+
 # a query the seeded board's first lines match in several documents: each row naming another document than the one in view offers "open beside"
 QUERY = 'ceremony'
 
@@ -4605,6 +4773,8 @@ def run(ctx):
     held_version(ctx, r)
     # ---- select-all at an edition and at a caret; the creation row's Tab order and its held Tab (K-93, K-33; B3-S8, B3-S1) -----
     r.figures['start_and_select_all'] = start_and_select_all(ctx, r)
+    # ---- the paste and the cut at the caret, through the doors, and their keydowns at each site (K-93; B3-S5) ------------------
+    r.figures['paste_and_cut'] = paste_and_cut(ctx, r)
     r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K at the whole board', 'Mod+Shift+O, Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter at the whole board', 'Enter', 'Mod+Shift+Enter in the LEAP box as opened and on a typed address, Esc closing the scene', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+K, Mod+Shift+A and Mod+Shift+C at the walk\'s block', 'a press on the "link to…" slot', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click, a double-click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+K in the scene', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C with nothing selected, with a selection standing and with one drawn over no range of the platform\'s', 'a copy event with nothing selected and with a selection', 'a click on a column\'s blank room after a drag', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival', 'Mod+K, Mod+Shift+A, Mod+Shift+C, a printable key and Space at a selection in the moved scene\'s held version']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

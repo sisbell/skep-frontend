@@ -69,7 +69,11 @@ the write layer's machine, makes drafts of its own on the test board —
 by its port, and by the LEAP box's creation row — and types in them,
 and it alone arms and fires 8744; nothing else is ever armed. A page
 with the machine opens where its hand last wrote, so that case's pages
-land in the draft it wrote last. Every other page the gate opens boots
+land in the draft it wrote last. A paste or a cut reaches a page the
+gate opens only through the gate's doors (`web/gate/hooks.js`), which
+dispatch the event over a clipboard the door makes: no case presses a
+key the platform would paste or cut by, and none reads or writes the
+system's clipboard. Every other page the gate opens boots
 without the machine, opens at HOME, starts no document from the box,
 and is held to reads frame by frame — each `op` frame it sends through
 8742 names a read and each call is a read row (`harness/cases/wire.py`,

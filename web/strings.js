@@ -40,7 +40,8 @@
 // and zero in words where a site words it (`counted`, `plural`; S18) — never
 // an address, a port, a version number or a position; a time elapsed is
 // whole minutes in this table's English words
-// whatever the browser's language (`duration`; S20); when a thing was made is
+// whatever the browser's language (`duration`; S20), and a size of text
+// megabytes to one decimal (`megabytes`); when a thing was made is
 // said by `dated`, from the board's own testimony and never from the reader's
 // clock, in one form of a date on every surface, bare in a row's fixed slot;
 // in a sentence a time takes "at" and a date "on" (S19): when the page's copy
@@ -394,7 +395,7 @@ export const STRINGS = {
   'B3.kept-in': { text: 'kept in ⟨label⟩', cls: 'DRAFT', kind: 'K14', source: 'designs/B3-editor.md', screen: 'B3-S1: the launch\'s recent rows; B3-S5: a quote\'s line; B3-S9: the composer\'s end' },
   'B3.caret.enter': { text: '⟨act key⟩ places a caret here', cls: 'DRAFT', kind: 'K18', source: 'designs/B3-editor.md', screen: 'B3-S1, B3-S13: a printable key at a span of the draft with no caret (D6 BM-52)', hint: 'clause' },
   'B3.caret.enter.paste': { text: '⟨act key⟩ places a caret here — then paste', cls: 'DRAFT', kind: 'K18', source: 'designs/B3-editor.md', screen: 'B3-S13: a paste at a span of the draft with no caret', hint: 'clause' },
-  'B3.caret.cut': { text: 'select the passage to cut it', cls: 'DRAFT', kind: 'K18', source: 'designs/B3-editor.md', screen: 'B3-S13: a cut at a span of the draft with no caret', hint: 'clause' },
+  'B3.caret.cut': { text: '⟨act key⟩ places a caret here — then select the words to cut', cls: 'DRAFT', kind: 'K18', source: 'designs/B3-editor.md', screen: 'B3-S13: a cut at a span of the draft with no caret', hint: 'clause', was: 'select the passage to cut it' },
   'B3.caret.back': { text: 'your text is back with ⟨back chord⟩', cls: 'DRAFT', kind: 'K18', source: 'designs/B3-editor.md', screen: 'B3-S13: a printable key at a control of the corner (D6 BM-52)', hint: 'clause' },
   'B3.caret.mark': { text: 'a mark — ⟨walk key⟩ moves to the words beside it, and ⟨act key⟩ there places a caret', cls: 'DRAFT', kind: 'K18', source: 'designs/B3-editor.md', screen: 'B3-S13: a printable key at a mark of the draft', hint: 'whole' },
   'B3.tab.exit': { text: '⟨tab key⟩ types a tab here\u00a0— ⟨leave key⟩, then ⟨next key⟩, leaves the text', cls: 'DRAFT', kind: 'K18', source: 'designs/B3-editor.md', screen: 'B3-S1: the line at the focus at the first Tab typed in a session at an editing caret (D5 K-76; D6 BM-54)', cid: 'C-293' },
@@ -1121,7 +1122,7 @@ export const STRINGS = {
   // a copy outside a field with nothing selected (D5 K-92; FP-27): the line, then, a sentence of its own while the line
   // stands whole, the act that selects at the walk's span — Enter's where Enter selects it, Shift+↓'s at any other span at
   // its reading scale — and none anywhere else
-  'L.copy.nothing': { text: 'nothing selected — the clipboard is unchanged', cls: 'DRAFT', kind: 'K18', source: 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md', screen: 'a hint at the focus and the status region: Mod+C, or a copy, with nothing selected outside a field (D5 K-92)', hint: 'clause' },
+  'L.copy.nothing': { text: 'nothing selected — the clipboard is unchanged', cls: 'DRAFT', kind: 'K18', source: 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md', screen: 'a hint at the focus and the status region: Mod+C, or a copy, with nothing selected outside a field (D5 K-92); B3-S5: a cut at the caret with nothing selected (D5 K-93)', hint: 'clause' },
   'L.copy.nothing.enter': { text: '⟨act key⟩ selects this passage', cls: 'DRAFT', kind: 'K18', source: 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md', screen: 'the copy line\'s end where Enter selects the walk\'s span (D5 K-92, K-7)' },
   'L.copy.nothing.shift': { text: '⟨select chord⟩ selects this passage', cls: 'DRAFT', kind: 'K18', source: 'ux/questions/2026-11-10-keys-and-clicks-away-from-the-caret.decision.md', screen: 'the copy line\'s end at any other span at its reading scale (D5 K-92, K-8)' },
   'L.run.not-yet': { text: 'cannot yet be answered', cls: 'DRAFT', kind: 'SP9', source: '', screen: 'B1-S10: a stretch of the selection whose question the board could not answer as of the text the page read', lane: true },
@@ -1236,6 +1237,13 @@ export const STRINGS = {
   // document read at its reading scale; a row naming no document but the one read, or none at all
   'L.mint.private.flag-on': { text: 'readable by you + this machine', cls: 'DRAFT', kind: 'K14', source: '', screen: 'B3-S1: the creation copy at a mint on a notebook whose local trust is on, in the one line — the corner\'s chip\'s words there (C-28)', lane: true },
   'L.start.refused': { text: 'no document was started — ⟨why⟩', cls: 'DRAFT', kind: 'K18', source: '', screen: 'B3-S1: the creation row\'s mint refused, beside the LEAP box', lane: true, hint: 'whole' },
+  // a paste or a cut at the caret that changes nothing (D5 K-93; B3-S5), each its hint there: the clipboard holding no
+  // text; text past what one paste places, ⟨size⟩ its size and ⟨limit⟩ that bound (`megabytes`); a selection the
+  // clipboard could not take whole
+  'L.paste.none': { text: 'nothing to paste — the clipboard holds no text', cls: 'DRAFT', kind: 'K18', source: '', screen: 'B3-S5: a paste at the caret, the clipboard holding no text', lane: true, hint: 'clause' },
+  'L.paste.large': { text: 'too large to paste at once — this text is ⟨size⟩ and one paste takes up to ⟨limit⟩; paste it in parts', cls: 'DRAFT', kind: 'K18', source: '', screen: 'B3-S5: a paste at the caret of more text than one paste places', lane: true, hint: 'clause' },
+  'L.cut.uncopied': { text: 'nothing was cut — this selection could not be copied whole, so the clipboard is unchanged; select a shorter passage and cut again', cls: 'DRAFT', kind: 'K18', source: '', screen: 'B3-S5: a cut at the caret of a selection the clipboard could not take whole', lane: true, hint: 'clause' },
+  'L.size.megabytes': { text: '⟨n⟩\u00a0MB', cls: 'DRAFT', kind: 'K13', source: '', screen: 'B3-S5: a paste too large, its size and the most one paste places', lane: true },
   'L.leap.beside.choose': { text: 'open beside needs a place — choose a row with ⟨row key⟩, or type an address or a first line', cls: 'DRAFT', kind: 'K18', source: '', screen: 'B1-S11: Mod+Shift+Enter in the LEAP box with no row chosen or none answered', lane: true, hint: 'clause' },
   'L.leap.beside.reading': { text: 'open beside needs a document you are reading — go into one first', cls: 'DRAFT', kind: 'K18', source: '', screen: 'B1-S11: Mod+Shift+Enter in the LEAP box with no document at its reading scale', lane: true, hint: 'clause' },
   'L.leap.beside.other': { text: 'this row names no other document — open beside opens another document beside the one you are reading', cls: 'DRAFT', kind: 'K18', source: '', screen: 'B1-S11: Mod+Shift+Enter in the LEAP box at a row naming no other document', lane: true, hint: 'clause' },
@@ -2346,6 +2354,19 @@ const MINUTE_MS = 60 * 1000;
  * @returns {string}
  */
 export const duration = (ms) => plural(Math.max(1, Math.round(ms / MINUTE_MS)), 'L.duration.minutes.1', 'L.duration.minutes');
+
+/** a megabyte as a size of text is counted in: 1,048,576 bytes */
+const MEGABYTE = 1024 * 1024;
+
+/**
+ * A size of text as the page names it to a person (`L.size.megabytes`): in
+ * megabytes, a numeral to one decimal and whole where it has none, its
+ * thousands parted by commas (U's `numeral`), rounded up to the tenth — so a
+ * size past a bound never reads as the bound.
+ * @param {number} bytes
+ * @returns {string}
+ */
+export const megabytes = (bytes) => { const tenths = Math.ceil(bytes * 10 / MEGABYTE), tenth = tenths % 10; return t('L.size.megabytes', { n: numeral((tenths - tenth) / 10) + (tenth ? '.' + tenth : '') }); };
 
 /**
  * The one running mark as markup (foundations §2.1 (4b); style S9): drawn

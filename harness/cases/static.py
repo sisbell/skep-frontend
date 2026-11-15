@@ -25,7 +25,11 @@ tree (T4; M5, M10).
 (vi) the rules' numbers: each number `PATTERNS.md` gives a rule heads one
     bullet, FP-1 to the highest without a gap; every rule cited under
     `web/` and `harness/` and in the documents at the root is one of them;
-    and `AGENTS.md` states their range to the highest.
+    and `AGENTS.md` states their range to the highest;
+(vii) no module reads a clipboard directly: with its comments taken out
+    (`code_of`), no `.readText(`, no `clipboard.read(`, and no `.read(` on a
+    name bound from `navigator.clipboard` — the page reads a clipboard only
+    as a paste event hands it one; `writeText` is no read.
 No page is needed: this case reads the tree."""
 import os
 import re
@@ -63,6 +67,23 @@ CITE = re.compile(r'\bFP-(\d+)')
 RANGE = re.compile(r'\(FP-1\s*…\s*FP-(\d+)\)')
 DOCS = ['README.md', 'AGENTS.md', 'PATTERNS.md']
 CITING = ('.js', '.html', '.css', '.py', '.sh')
+# what `code_of` reads a module's code by: a comment, a string, a template's opening, a slash — a division's or a regular
+# expression's opening, told apart by what stands before it — and the braces a template's `${ }` is counted by
+JS_CODE = re.compile(r'''//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`|/|\{|\}''', re.S)
+# a template's own characters up to its closing backtick or its next `${`
+TEMPLATE_PART = re.compile(r'(?:\\.|\$(?!\{)|[^`\\$])*(?:`|\$\{)', re.S)
+REGEX_LITERAL = re.compile(r'/(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n\[])+/[a-z]*')
+# what a regular expression's literal may follow: the start of the source, a mark an expression begins after, or one of these words
+BEFORE_REGEX = set('(,=:[!&|?{};+-*%<>~^')
+WORDS_BEFORE_REGEX = {'return', 'typeof', 'case', 'do', 'else', 'in', 'of', 'void', 'delete', 'throw', 'new', 'instanceof', 'yield', 'await'}
+# a direct read of a clipboard: `readText` called on anything, `read` called on `clipboard`
+CLIP_READ = re.compile(r'\??\.\s*readText\s*\(|\bclipboard\s*\??\.\s*read\s*\(')
+# `navigator.clipboard` taken whole, no member of it read: what a name is bound from
+CLIP_TAKEN = re.compile(r'\bnavigator\s*\??\.\s*clipboard\b(?!\s*\??\.)')
+# a name an assignment binds, in the statement before a value
+BOUND = re.compile(r'(?<![!=<>])\b([A-Za-z_$][\w$]*)\s*=(?![=>])')
+# `clipboard` renamed as `navigator` is destructured
+CLIP_RENAMED = re.compile(r'\bclipboard\s*:\s*([A-Za-z_$][\w$]*)[^}]*\}\s*=\s*navigator\b')
 
 
 def files():
@@ -125,6 +146,75 @@ def wire_writes(sources):
 def write_literals(f, src, writes):
     """each `op: '<name>'` literal of a module that names a wire write"""
     return [f'{f}:{src.count(chr(10), 0, m.start()) + 1}: {m.group(0)}' for m in OP_LITERAL.finditer(src) if m.group(1) in writes]
+
+
+def code_of(src):
+    """a module's source with its comments taken out — `//` to its line's end, `/* */` — each line kept on its line; a
+    string, a template and a regular expression's literal stand as written, so a comment's mark inside one opens no
+    comment, and the code inside a template's `${ }` is read as code"""
+    out, pos, last, word = [], 0, '', ''
+    # each template the scan stands inside, by how many braces its `${ }` holds open; none in a module's own code
+    depths = []
+    while pos < len(src):
+        m = JS_CODE.search(src, pos)
+        between = src[pos:m.start()] if m else src[pos:]
+        out.append(between)
+        if between.strip():
+            last = between.rstrip()[-1]
+            ident = re.search(r'[A-Za-z_$][\w$]*$', between.rstrip())
+            word = ident.group(0) if ident else ''
+        if not m:
+            break
+        tok, pos = m.group(0), m.end()
+        if tok.startswith('//') or tok.startswith('/*'):
+            out.append('\n' * tok.count('\n') or ' ')
+            continue
+        if tok == '/':
+            lit = REGEX_LITERAL.match(src, m.start()) if (not last or last in BEFORE_REGEX or word in WORDS_BEFORE_REGEX) else None
+            tok = lit.group(0) if lit else tok
+            pos = m.start() + len(tok)
+        elif tok == '{' and depths:
+            depths[-1] += 1
+        elif tok == '}' and depths and depths[-1] == 0:
+            # the `${ }` closed: the template's own characters again, to its end or its next `${`
+            depths.pop()
+            tok, pos, opened = template(src, m.start(), '}')
+            if opened:
+                depths.append(0)
+        elif tok == '}' and depths:
+            depths[-1] -= 1
+        elif tok == '`':
+            tok, pos, opened = template(src, m.start(), '`')
+            if opened:
+                depths.append(0)
+        out.append(tok)
+        last, word = tok[-1], ''
+    return ''.join(out)
+
+
+def template(src, at, opener):
+    """a template's own characters from `at` — its opening backtick, or the brace closing a `${ }` of it — to its closing
+    backtick or its next `${`, as written: the stretch, where it ends, and whether a `${ }` opens there"""
+    m = TEMPLATE_PART.match(src, at + len(opener))
+    end = m.end() if m else len(src)
+    return src[at:end], end, bool(m) and m.group(0).endswith('${')
+
+
+def clipboard_reads(f, code):
+    """each direct read of a clipboard in a module's code, its comments out (`code_of`): `readText` called, `read` called on
+    `clipboard`, and `read` called on a name the module binds from `navigator.clipboard`"""
+    at = lambda m: f'{f}:{code.count(chr(10), 0, m.start()) + 1}: {m.group(0)}'
+    out = [at(m) for m in CLIP_READ.finditer(code)]
+    names = set(CLIP_RENAMED.findall(code))
+    for m in CLIP_TAKEN.finditer(code):
+        # the statement the value stands in, as far back as its line's start or the mark before it
+        opened = max(code.rfind(c, 0, m.start()) for c in ';{}\n') + 1
+        bound = BOUND.findall(code[opened:m.start()])
+        if bound:
+            names.add(bound[-1])
+    for name in sorted(names):
+        out += [at(m) for m in re.finditer(r'(?<![\w$.])' + re.escape(name) + r'\s*\??\.\s*read\s*\(', code)]
+    return out
 
 
 def rule_heads(patterns):
@@ -255,6 +345,14 @@ def run(ctx):
     stated = RANGE.search(open(os.path.join(ROOT, 'AGENTS.md'), encoding='utf8').read())
     r.check(stated is not None and int(stated.group(1)) == top, "AGENTS.md states the rules' range to the highest PATTERNS.md numbers",
             {'stated': stated.group(0) if stated else None, 'highest': top})
+    # (vii) no direct read of a clipboard: a paste event's own data is all the page reads
+    clips, bound = [], []
+    for f, src in sources.items():
+        code = code_of(src) if f.endswith('.js') else src
+        clips += clipboard_reads(f, code)
+        bound += [f for _ in CLIP_TAKEN.finditer(code)]
+    r.check(not clips, "no module under web/ reads a clipboard directly — no `readText(`, no `clipboard.read(`, no `.read(` on a name bound from `navigator.clipboard` — comments apart: a paste event's own data is all the page reads", clips)
+    r.figures['clipboard_bound_in'] = sorted(set(bound))
     r.figures['rules'] = top
     r.figures['rule_citations'] = cites
     r.figures['faces'] = srcs

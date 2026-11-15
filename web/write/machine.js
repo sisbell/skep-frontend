@@ -104,7 +104,9 @@
 // session.
 // THE STACKS (BM-31): each act of a draft's edits is recorded as it is told
 // (`record`): a key typing at the caret joins the run of typing open at the
-// draft, or begins one; any other act is a step of its own. A run ends where
+// draft, or begins one; any other act is a step of its own, one made at the
+// caret — a paste, a cut — keeping where that caret stood as a run does, so
+// its undo leaves the caret there (BM-32, BM-34). A run ends where
 // W-WRITE says the caret moved by another act (`ended`) and at every step of
 // its own, an undo and a redo among them — never at a pause, punctuation, a
 // commit, an ack, a hold or the save chord. A step holds what it placed and
@@ -405,7 +407,7 @@ function arm(/** @type {Draft} */ d) {
  * has not acked, or where the act's edits are an island's alone.
  * The act is recorded first as a step of the draft's undo stack (`record`).
  * @param {string} addr
- * @param {Typed | null} [how] the act is a key typing at the caret (W-WRITE's `Typed`); null for an act that is a step of its own
+ * @param {Typed | null} [how] how the act was made at the caret (W-WRITE's `Typed`): a key typing there, or a step of its own; null for a step of its own made at no caret
  */
 function typed(addr, how = null) {
   record(addr, how);
@@ -1128,7 +1130,7 @@ function edgeIds(addr, edge, rows, d) {
 /**
  * @typedef {Object} Undone — what an undo or a redo did at its press (`undo`, `redo`)
  * @property {'done' | 'empty' | 'face' | 'away'} how `done` a step taken back, or put back; `empty` the stack holds no step; `face` the step's line awaits an act of the person's at its face, and nothing was composed (BM-45); `away` the page holds none of the text the step stands in — a long draft held in part — and nothing was changed: its place is to be read first (BM-42)
- * @property {number | null} at where the caret stands after it, a position of the text shown — at `away`, where the step began, as it was then; null where nothing was done
+ * @property {number | null} at where the caret stands after it, a position of the text shown: after an undo, where the step's caret stood as it began — for a step made at no caret, where what it placed stood — and after a redo, the end of what the step placed, else where it began; at `away`, where the step began, as it was then; null where nothing was done, and where a step made at no caret placed nothing
  * @property {string} out the words it took out of the text; '' where it took none
  * @property {string} back the words it put back; '' where it put none back
  */
@@ -1201,11 +1203,12 @@ function withTaken(list, t) {
  * (see the head; BM-31): a key typing at the caret joins the run of typing
  * open at the draft, or begins one; any other act is a step of its own, and
  * ends the run. The step holds what the act placed and what it removed that
- * the step had not placed, by identity, and a run where its caret stood as it
- * began. A new step empties the redo stack. Nothing where the model holds no
- * record of the draft.
+ * the step had not placed, by identity, and, for an act made at the caret —
+ * a run, a paste, a cut — where that caret stood as it began. A new step
+ * empties the redo stack. Nothing where the model holds no record of the
+ * draft.
  * @param {string} addr
- * @param {Typed | null} how the act is a key typing at the caret; null for an act that is a step of its own
+ * @param {Typed | null} how how the act was made at the caret: a key typing there, or a step of its own (`Typed.own`); null for a step of its own made at no caret
  */
 function record(addr, how) {
   if (!REC.has(addr)) return;
@@ -1214,7 +1217,9 @@ function record(addr, how) {
   if (running && running !== addr) ended(running);
   const base = WRITE.baseOf(addr), ids = idsOf(addr);
   const undone = WRITE.undoOf(addr), top = undone[undone.length - 1];
-  const joins = !!how && !!top && top.open;
+  /** the act is a key typing at the caret: it joins the run open there, or opens one */
+  const typing = !!how && !how.own;
+  const joins = typing && !!top && top.open;
   /** where the caret stood before the act, by the byte either side of it */
   const began = () => {
     if (!how) return { before: [], after: [], pos: 0 };
@@ -1223,7 +1228,7 @@ function record(addr, how) {
   };
   /** @type {Step} */
   const step = joins ? { ...top, acts: [...top.acts, act], placed: [...top.placed], took: [...top.took] }
-    : { id: ++steps, kind: how ? 'typing' : 'put-back', open: !!how, acts: [act], placed: [], took: [], began: began(), stood: null, removal: null };
+    : { id: ++steps, kind: !how ? 'put-back' : how.own ?? 'typing', open: typing, acts: [act], placed: [], took: [], began: began(), stood: null, removal: null };
   for (const m of madeBy(base, list, from, ids)) {
     if (m.took) for (const t of takenOf(m, step.placed)) step.took = withTaken(step.took, t);
     step.placed.push(...m.placed);
@@ -1484,7 +1489,7 @@ export function undo(addr) {
   }
   reopened(d);
   if (d) void settleUndone(d);
-  return { how: 'done', at: step.kind === 'typing' ? caretIn(shownOf(addr), step.began) : stood.length ? Math.min(stands[0].pos, Math.max(1, shownOf(addr).to)) : null, out: stood.map((x) => wordsOf_(x.took)).join(''), back };
+  return { how: 'done', at: step.began.pos ? caretIn(shownOf(addr), step.began) : stood.length ? Math.min(stands[0].pos, Math.max(1, shownOf(addr).to)) : null, out: stood.map((x) => wordsOf_(x.took)).join(''), back };
 }
 
 /**

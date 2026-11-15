@@ -13,7 +13,8 @@
 // — a draft's undo and redo stacks set by the machine alone, an act telling
 // it how it was made and a run's end told too, the edits an undo or a redo
 // makes added as given, and the removals the deletion face stands at — are
-// held here and gone at a change of class.
+// held here and gone at a change of class — and the most text one paste
+// places, with its headroom under the board's cap on a frame.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as WRITE from './write.js';
@@ -252,4 +253,12 @@ test('the removals the deletion face stands at are held per draft, numbered by t
   assert.deepEqual(told, [[D, '1.0.2.0.5']], 'an undo the board declined is told to those watching, with the origin');
   classChanges();
   assert.deepEqual([WRITE.removalsOf(D), WRITE.removalDocs()], [[], []], 'a change of class lets them go');
+});
+
+test('one paste places at most 1 MiB of text: spelled at six bytes a byte — a control character\'s escape, the longest a frame\'s JSON spells a byte of text in — it leaves 2 MiB of the 8 MiB the board caps a frame\'s request body at (B3-S5; skep `docs/wire.md` §Transport)', () => {
+  const MIB = 1024 * 1024, CAP = 8 * MIB;
+  assert.equal(WRITE.PASTE_MAX_BYTES, MIB, 'the bound, in UTF-8 bytes');
+  const control = String.fromCharCode(1);
+  assert.deepEqual([byteLength(control), JSON.stringify(control).length - 2], [1, 6], 'a control character: one byte of text, six in JSON');
+  assert.equal(CAP - WRITE.PASTE_MAX_BYTES * 6, 2 * MIB, 'the headroom left for the rest of the frame, its anchors and its envelope');
 });

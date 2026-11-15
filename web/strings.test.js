@@ -41,14 +41,15 @@
 // lower bound; and every accessible name and description the page sets
 // passes the table — none stands in the markup, and none is set but as
 // `heard(…)`; the words of a draft holding unsent typing are
-// the decision's DRAFT strings; and a copy with nothing selected is said in
+// the decision's DRAFT strings; a copy with nothing selected is said in
 // the keys-and-clicks decision's words, its act's tail apart and its compact
-// form "nothing selected".
+// form "nothing selected"; and the lines a paste and a cut at the caret draw,
+// the lane's own and the one re-worded, with a size of text in megabytes.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { sep } from 'node:path';
-import { STRINGS, KINDS, t, tHTML, tRuns, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, onDay, duration, runningHTML, plural, counted, markCount, typeName, formName, formsNamed, formsAt, formAct, formTakeOff, formTitle, formAgain, hintOf, hintSentences, sentence, sentenceHTML, sentenceRuns, asSentenceRuns, opening, openingHTML, asSentence, ended, endedHTML, sentences, fields, list, heard, asHeard, joinRuns, runsText } from './strings.js';
+import { STRINGS, KINDS, t, tHTML, tRuns, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, onDay, duration, megabytes, runningHTML, plural, counted, markCount, typeName, formName, formsNamed, formsAt, formAct, formTakeOff, formTitle, formAgain, hintOf, hintSentences, sentence, sentenceHTML, sentenceRuns, asSentenceRuns, opening, openingHTML, asSentence, ended, endedHTML, sentences, fields, list, heard, asHeard, joinRuns, runsText } from './strings.js';
 import { fill } from './util.js';
 
 /** a commons type as a link stores it, by its path under the registry document's subspace 3 */
@@ -1085,7 +1086,7 @@ test('a one-line hint\'s compact form is its notice\'s first clause, the text be
     { whole: 'this is 1.0.2\'s document\u00a0— to write about a passage here, select it, then annotate it, or link to it from a document of yours', clause: 'this is 1.0.2\'s document' }, 'another\'s document: its owner named in its first clause, cut at the em dash a no-break space sets off');
   const c45 = hintOf('C-45', { D: '1.0.1.0.3' });
   assert.ok(isPinned('C-45') && STRINGS['C-45'].hint === 'whole' && c45.whole.startsWith('1.0.1.0.3 is published — ') && c45.clause === c45.whole, 'C-45: pinned and marked whole, never cut');
-  for (const id of ['D5.select-first', 'B3.caret.enter', 'B3.caret.cut', 'B3.caret.back', 'B3.row.follow.inert', 'L.no-notebook-yet']) {
+  for (const id of ['D5.select-first', 'B3.caret.enter', 'B3.caret.back', 'B3.row.follow.inert', 'L.no-notebook-yet']) {
     const h = hintOf(id);
     assert.ok(!h.whole.includes(' — ') && h.clause === h.whole, `${id}: no " — " in it, its compact form the notice whole`);
   }
@@ -1246,4 +1247,27 @@ test('the lines the start, the mint, the launch and select-all draw: each a desi
   const field = (/** @type {string} */ id) => { const w = t(id).replace(/\.$/, ''); return w.charAt(0).toLowerCase() + w.slice(1); };
   assert.deepEqual([t('B3.mint.private'), t('L.mint.private.flag-on')], [field('C-28'), field('C-28.flag-on')], 'the creation copy reads as the chip beside the draft reads, in both of its forms');
   assert.ok(!/it stays/.test(t('B3.mint.stays')) && /never delete the document/.test(t('B3.mint.stays')), 'that a document stays is said as what the person can and cannot do');
+});
+
+test('the lines a paste and a cut at the caret draw: the cut\'s line at a span holding no caret re-worded to open as the paste\'s does — the key that places a caret first — keeping the words its source holds as its trace; the three no design carries — nothing to paste, a paste too large, a cut the clipboard could not take — the lane\'s own, each naming its screen and compacting to its first clause; and a size of text said in megabytes to one decimal, rounded up (B3-S5; D5 K-93)', () => {
+  assert.deepEqual([STRINGS['B3.caret.cut'].was, STRINGS['B3.caret.cut'].source, STRINGS['B3.caret.cut'].cls, !!STRINGS['B3.caret.cut'].lane], ['select the passage to cut it', 'designs/B3-editor.md', 'DRAFT', false], 'the cut\'s line: B3\'s words its trace');
+  assert.deepEqual([hintSentences('B3.caret.enter.paste', { 'act key': 'Return' }), hintSentences('B3.caret.cut', { 'act key': 'Return' })],
+    [{ whole: 'Return places a caret here — then paste.', clause: 'Return places a caret here.' }, { whole: 'Return places a caret here — then select the words to cut.', clause: 'Return places a caret here.' }],
+    'the paste\'s line and the cut\'s open alike, on the key that places a caret, and compact to it');
+  /** @type {Array<[string, {whole: string, clause: string}]>} each line the lane added, as its hint says it whole and compact */
+  const LINES = [
+    ['L.paste.none', { whole: 'Nothing to paste — the clipboard holds no text.', clause: 'Nothing to paste.' }],
+    ['L.paste.large', { whole: 'Too large to paste at once — this text is 1.1\u00a0MB and one paste takes up to 1\u00a0MB; paste it in parts.', clause: 'Too large to paste at once.' }],
+    ['L.cut.uncopied', { whole: 'Nothing was cut — this selection could not be copied whole, so the clipboard is unchanged; select a shorter passage and cut again.', clause: 'Nothing was cut.' }],
+  ];
+  for (const [id, said] of LINES) {
+    const e = STRINGS[id];
+    assert.deepEqual([e.cls, e.source, e.lane, e.hint, /B3-S5/.test(e.screen ?? '')], ['DRAFT', '', true, 'clause', true], `${id}: the lane's own, a hint that compacts, its screen named`);
+    assert.deepEqual(hintSentences(id, { size: megabytes(1024 * 1024 + 1), limit: megabytes(1024 * 1024) }), said, `${id}: as its hint says it`);
+    assert.ok(lacking().some((x) => x.id === id), `${id}: listed for the report`);
+  }
+  assert.deepEqual([1, 1024 * 1024, 1024 * 1024 + 1, 1.5 * 1024 * 1024, 1234.04 * 1024 * 1024].map(megabytes), ['0.1\u00a0MB', '1\u00a0MB', '1.1\u00a0MB', '1.5\u00a0MB', '1,234.1\u00a0MB'],
+    'megabytes of 1,048,576 bytes: one decimal, whole where it has none, rounded up to the tenth so a size past a bound never reads as the bound, its thousands parted by commas');
+  assert.deepEqual([STRINGS['L.size.megabytes'].lane, /B3-S5/.test(STRINGS['L.size.megabytes'].screen ?? '')], [true, true], 'the unit\'s entry the lane\'s own');
+  assert.match(STRINGS['L.copy.nothing'].screen ?? '', /B3-S5: a cut/, 'the nothing-selected line names the cut among its screens');
 });

@@ -46,7 +46,10 @@
 // Mod+R and F5 are taken and nothing reloaded (K-94), and the platform's own
 // chords — copy, paste, cut, select all, print, close, quit, minimize, hide,
 // preferences — are never taken save where a site's line answers a paste or a
-// cut (K-93), save select-all where the page selects a document whole
+// cut (K-93) — at a caret that writes, Mod+V and Mod+X are answered before
+// any wait and left standing, so the platform fires the paste or the cut
+// event the page acts on (below) — save select-all where the page selects a
+// document whole
 // (`wholeAt`, `selectWhole`; K-93; B3-S8) — at the page's live caret in a
 // draft, at the span a kept caret stands in, the caret returned, and at the
 // walk's span of an edition, which takes no caret: the whole of the text
@@ -64,6 +67,31 @@
 // takes nothing from — the Edit menu's, the context menu's — is answered the
 // same way (APP's). No key is dispatched while an input method's composition
 // is open (the IME guard).
+// THE PASTE AND THE CUT EVENTS (`pasteEvent`, `cutEvent`; D5 K-93; B3-S5 (ii),
+// (iv); D6 BM-31, BM-52), each handed in by APP with where the focus is, a
+// key's or a menu's alike, and answered by the same tests the keydown reads
+// (`whereNow`, `unwritableSays`, `keptSpan`, `bareDraftSpan`, `siteSays`), so
+// one that arrives with no keydown is guarded here. Off the plane — a field,
+// a control, the line, a corner, the scene — each is the platform's,
+// untouched. At a live caret in a draft that can be written, and at the span
+// a kept caret stands in, the caret returned first: a paste places the
+// event's plain text at the caret as one step of its own, in the place of a
+// selection drawn in the caret's text (`selectedAtCaret`; T-LAYER's
+// `caretPaste`), the walk then on the caret's span — the clipboard holding no
+// text, or more than one paste places, answered by its own line, nothing
+// placed; a cut writes the clipboard as a copy of that selection does and
+// takes its bytes out as one step of its own, the selection ended (T-LAYER's
+// `caretCut`) — with nothing selected there the copy's nothing-selected line,
+// the clipboard left as it is, and where the clipboard could not take the
+// selection whole a line saying so, nothing removed. Where the draft cannot
+// be written the reason's line answers both, and at a span of a draft holding
+// no caret the draft's line in their own words; a paste at the walk's span in
+// text the person may not edit is answered by its document's line, a cut
+// there left to the platform. While a jump is in the air a paste is held with
+// the keys, its text read as the event is dispatched, and made at the landing
+// in their order (`hold`, `replay`); a cut, which writes the clipboard only
+// inside its event, is prevented and dropped. No clipboard is read but an
+// event's own.
 // THE CARET (D5 K-51, K-70, K-71, K-72, K-76, K-77; D6 BM-1, BM-52, BM-54,
 // BM-70, BM-75): in text the person may edit (T-LAYER's `editable`) Enter at
 // the walk's focused span places the caret at the span's start, or returns
@@ -253,7 +281,8 @@
 // K3), its spoken words S22's for the drawn chord.
 // State (FP-10), beside the held keys: whether Mod+S has been
 // answered whole this session (`saveAnswered`), how many keys the dispatch
-// has taken (`keysTaken`), and the save chord's latest answer (`saving`).
+// has taken (`keysTaken`), the save chord's latest answer (`saving`), and the
+// latest paste or cut made (`clipping`).
 // Rules: FP-1, FP-2, FP-9, FP-10, FP-11, FP-13, FP-14, FP-20, FP-21, FP-24,
 // FP-25, FP-27, FP-35, FP-36, FP-38, FP-39, FP-40, FP-41.
 
@@ -279,7 +308,8 @@ import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import { keptWord, keptStatement } from '../text/article.js';
 import { accountOf, documentOf } from '../model/address.js';
-import { t, tRuns, joinRuns, sentence, sentences } from '../strings.js';
+import { byteLength } from '../util.js';
+import { t, tRuns, joinRuns, sentence, sentences, megabytes } from '../strings.js';
 
 /** @typedef {import('../overlays/selection.js').InertSlot} InertSlot */
 /** @typedef {import('../overlays/selection.js').LiveSlot} LiveSlot */
@@ -494,8 +524,22 @@ export const keyShortcut = (chord) => chord.split('+').map((p) => (p === 'Mod' ?
 /** @typedef {() => (boolean | Promise<boolean>)} Act a key's act, made: true where the page took the key */
 
 /**
- * @typedef {Object} Held — a key a jump in the air held for its landing (see the head)
- * @property {KeyboardEvent} e
+ * @typedef {Object} Pressed — what a line raised by an event is told of it (`hinted`): a key's, or a clipboard event's
+ * @property {boolean} [repeat] the key is an auto-repeat
+ * @property {EventTarget | null} target the element the event was aimed at
+ */
+
+/**
+ * @typedef {Object} Clip — a paste or a cut event as the page reads it: the platform's, or one the gate's door makes
+ * @property {{getData(format: string): string, setData(format: string, data: string): void} | null} clipboardData the event's own clipboard: read and written only while the event is dispatched
+ * @property {() => void} preventDefault
+ * @property {EventTarget | null} target
+ */
+
+/**
+ * @typedef {Object} Held — a key a jump in the air held for its landing (see the head), or a paste held as a key is
+ * @property {KeyboardEvent | null} e the key; null for a paste
+ * @property {{text: string, at: Pressed} | null} [paste] a paste's plain text, read as its event was dispatched, and what its line is told of the event (`pasteEvent`)
  * @property {Ctx} ctx where the focus was as it was pressed, and whether a key made it
  * @property {Promise<boolean>} jump the landing it waits for (N-GO's `aground`): true where the jump landed, false where it never did
  */
@@ -515,10 +559,14 @@ let keysTaken = 0;
 let saving = Promise.resolve();
 /** the save chord's latest answer, settled once it is given or dropped (`saveChord`): what the gate and the tests wait on */
 export const saved = () => saving;
+/** @type {Promise<void>} the latest paste or cut made at the caret, settled once the walk stands on the caret's span (`clipped`) */
+let clipping = Promise.resolve();
+/** the latest paste or cut made at the caret, settled once the walk stands on the caret's span and any line its draft owes the edit is said (`pasteAt`, `cutEvent`): what the gate and the tests wait on */
+export const clipped = () => clipping;
 /** the keys that are a modifier going down: none of them a key typed */
 const MODIFIER_KEYS = ['Shift', 'Meta', 'Control', 'Alt', 'AltGraph', 'CapsLock'];
-/** reset what the save chord holds (tests): Mod+S not yet answered whole, no key taken, no answer owed */
-export function _reset() { saveAnswered = false; keysTaken = 0; saving = Promise.resolve(); }
+/** reset what the save chord holds (tests): Mod+S not yet answered whole, no key taken, no answer owed, no paste or cut being made */
+export function _reset() { saveAnswered = false; keysTaken = 0; saving = Promise.resolve(); clipping = Promise.resolve(); }
 
 /** the keys held for a landing, and the one whose act is being made there (the gate's settle signal) */
 export const holding = () => held.length + (making ? 1 : 0);
@@ -646,7 +694,7 @@ async function selectWhole(ctx) {
  * account, where that test does not say published of a document of the
  * session's account, and where the owner the line would name is the
  * session's own account.
- * @param {KeyboardEvent} e
+ * @param {Pressed} e the key, or a paste event
  * @param {Ctx} ctx
  * @param {import('../overlays/hint.js').Writing | null} [writing] where the person was writing, which a printable key's line ends with (`writingElsewhere`); null for a paste
  * @param {import('../overlays/hint.js').Ending | null} [ending] the sentence the line ends on while it stands whole (O-HINT's `show`): the undo chord's (`undoNone`)
@@ -871,7 +919,7 @@ const CARET_LINE = /** @type {Record<import('../write/write.js').Unwritable['why
  * the focus the key was pressed at, said in the status region; nothing where
  * the draft can be written.
  * @param {string} addr the draft
- * @param {KeyboardEvent} e
+ * @param {Pressed} e the key, or a paste or a cut event
  * @param {Ctx} [ctx]
  * @returns {boolean} whether a line answered the key
  */
@@ -882,8 +930,8 @@ function unwritableSays(addr, e, ctx = { where: 'plane', byKey: true }) {
   return true;
 }
 
-/** the first key typed in a draft since a moved verdict came to stand on it, followed by the verdict's line at the focus, once per verdict (D6 BM-18; W-WRITE's `takeMovedKey`) */
-function movedSays(/** @type {string} */ addr, /** @type {KeyboardEvent} */ e) {
+/** the first key typed in a draft since a moved verdict came to stand on it — or the first paste or cut made there — followed by the verdict's line at the focus, once per verdict (D6 BM-18; W-WRITE's `takeMovedKey`) */
+function movedSays(/** @type {string} */ addr, /** @type {Pressed} */ e) {
   if (WRITE.takeMovedKey(addr)) HINT.show('B3.moved.first-key', null, hinted(e, { where: 'plane', byKey: true }));
 }
 
@@ -1156,12 +1204,13 @@ WRITE.onDeclined(declined);
  * made there, in the order pressed, with the context it was pressed in, marked
  * as made there (`Ctx.landed`), each read where the focus is then (`route`);
  * dropped, with every other key held for the same jump, where the jump never
- * lands.
- * @param {KeyboardEvent} e
+ * lands. A paste is held the same way, by its text (`pasteEvent`).
+ * @param {KeyboardEvent | null} e the key; null for a paste
  * @param {Ctx} ctx
+ * @param {Held['paste']} [paste] the paste held in a key's place
  */
-function hold(e, ctx) {
-  held.push({ e, ctx, jump: GO.aground() });
+function hold(e, ctx, paste = null) {
+  held.push({ e, paste, ctx, jump: GO.aground() });
   if (!replaying) void replay();
 }
 
@@ -1173,7 +1222,9 @@ async function replay() {
       const k = held[0];
       if (!(await k.jump)) { while (held.length && held[0].jump === k.jump) held.shift(); continue; }
       held.shift();
-      const run = route(k.e, chordOf(k.e), whereNow({ ...k.ctx, landed: true }));
+      const at = whereNow({ ...k.ctx, landed: true }), pasted = k.paste;
+      // a paste held with the keys is made where the focus is at the landing, the walk on its caret's span before the next is read
+      const run = pasted ? async () => { pasteAt(pasted.text, pasted.at, at); await clipping; return true; } : k.e ? route(k.e, chordOf(k.e), at) : null;
       if (!run) continue;
       making = true;
       try { await run(); } finally { making = false; }
@@ -1250,7 +1301,7 @@ function heldSaid(e, ctx) {
  * What a hint a key raises is told of the key (O-HINT's `show`): whether it
  * is an auto-repeat, and the element it was pressed at where the walk's
  * focus is not it — a control, a corner, the line, a reading scene's pane.
- * @param {{repeat?: boolean, target: EventTarget | null}} e the key, or a copy event
+ * @param {Pressed} e the key, or a copy, a paste or a cut event
  * @param {Ctx} ctx
  * @param {EventTarget | null} [target] the element it was pressed at: the event's target where none is given
  * @returns {{repeat: boolean, at: Element | null}}
@@ -1282,6 +1333,102 @@ export function copyAsDrawn(e, ctx, at = e.target) {
   if (drawn) { LAYER.placeSelection(drawn); return false; }
   e.preventDefault();
   HINT.show('L.copy.nothing', null, { ...hinted(e, ctx, at), ending: selectsHere(ctx) });
+  return true;
+}
+
+/**
+ * A paste event at the page (see the head; D5 K-93; B3-S5 (ii)), a key's or
+ * a menu's: off the plane, or under the scene, left to the platform,
+ * untouched. On the plane its plain text is read from the event's own
+ * clipboard while it is dispatched, and the paste is made where the focus is
+ * (`pasteAt`) — held with the keys for the landing while a jump is in the
+ * air, the platform's paste prevented (`hold`). No other clipboard is read.
+ * @param {Clip} e
+ * @param {Ctx} ctx where the focus is, as the app read it
+ * @returns {boolean} whether the page took the paste, the platform's prevented; false where it is left to the platform
+ */
+export function pasteEvent(e, ctx) {
+  if (ctx.where !== 'plane' || SCENE.isOpen()) return false;
+  ctx = whereNow(ctx);
+  const text = e.clipboardData ? e.clipboardData.getData('text/plain') : '', at = { target: e.target };
+  if (waiting()) { e.preventDefault(); hold(null, ctx, { text, at }); return true; }
+  const took = pasteAt(text, at, ctx);
+  if (took) e.preventDefault();
+  return took;
+}
+
+/**
+ * A paste made where the focus is (`pasteEvent`; D5 K-93; D6 BM-52): at a
+ * live caret, and at the span a kept caret stands in — the caret returned
+ * first — the text placed at the caret as one step of its own, a selection
+ * drawn in the caret's text replaced and ended (T-LAYER's `caretPaste`;
+ * O-SELECTION's `clear`), the walk then on the caret's span and the moved
+ * verdict's line said where the draft owes it (`clipping`); the clipboard
+ * holding no text, or more than one paste places, answered by its own line
+ * at the focus, nothing placed; a draft that cannot be written answered by
+ * its reason's line, no caret returned. At a span of a draft holding no
+ * caret the draft's line names the key that places one; at the walk's span
+ * in text the person may not edit, its document's line (`siteSays`).
+ * @param {string} text the clipboard's plain text, as its event carried it
+ * @param {Pressed} e what its line is told of the event
+ * @param {Ctx} ctx where the focus is now (`whereNow`)
+ * @returns {boolean} whether the page answered the paste; false where no site of the page's takes it
+ */
+function pasteAt(text, e, ctx) {
+  const live = ctx.where === 'caret' ? LAYER.caret() : null, kept = live ? null : keptSpan(ctx), addr = live ? live.addr : kept ? kept.addr : null;
+  if (addr) {
+    if (unwritableSays(addr, e, ctx)) return true;
+    if (kept) LAYER.returnCaret();
+    const over = selectedAtCaret(), out = LAYER.caretPaste(text, over);
+    if (out === 'placed') { if (over) SEL.clear(); clipping = followed(addr, e); }
+    else if (out === 'none') HINT.show('L.paste.none', null, hinted(e, ctx));
+    else if (out === 'large') HINT.show('L.paste.large', { size: megabytes(byteLength(LAYER.pasteText(text))), limit: megabytes(WRITE.PASTE_MAX_BYTES) }, hinted(e, ctx));
+    return true;
+  }
+  if (bareDraftSpan(ctx)) { HINT.show('B3.caret.enter.paste', actKey(), hinted(e, ctx)); return true; }
+  return siteSays(e, ctx);
+}
+
+/** a paste or a cut made at the caret, followed: the walk stood on the span the caret is in (N-WALK's `followCaret`), then the moved verdict's line where the draft owes its first edit one (`movedSays`) */
+async function followed(/** @type {string} */ addr, /** @type {Pressed} */ e) {
+  await WALK.followCaret();
+  movedSays(addr, e);
+}
+
+/**
+ * A cut event at the page (see the head; D5 K-93; B3-S5 (iv); D6 BM-52), a
+ * key's or a menu's: off the plane, or under the scene, left to the
+ * platform, untouched. At a live caret, and at the span a kept caret stands
+ * in — the caret returned first — the selection drawn in the caret's text is
+ * cut: the clipboard written as a copy of it writes it, its bytes taken out
+ * as one step of its own (T-LAYER's `caretCut`), the selection ended
+ * (O-SELECTION's `clear`) and the walk then on the caret's span (`clipping`).
+ * With nothing selected there, the clipboard is left as it is and the copy's
+ * nothing-selected line is the hint; where the clipboard could not take the
+ * selection whole, a line says so and nothing is removed; a draft that
+ * cannot be written is answered by its reason's line, no caret returned. At
+ * a span of a draft holding no caret the draft's line answers it. While a
+ * jump is in the air the cut is prevented and dropped: it writes the
+ * clipboard only inside its event. Anywhere else on the plane it is the
+ * platform's.
+ * @param {Clip} e
+ * @param {Ctx} ctx where the focus is, as the app read it
+ * @returns {boolean} whether the page took the cut, the platform's prevented; false where it is left to the platform
+ */
+export function cutEvent(e, ctx) {
+  if (ctx.where !== 'plane' || SCENE.isOpen()) return false;
+  ctx = whereNow(ctx);
+  if (waiting()) { e.preventDefault(); return true; }
+  const live = ctx.where === 'caret' ? LAYER.caret() : null, kept = live ? null : keptSpan(ctx), addr = live ? live.addr : kept ? kept.addr : null;
+  if (!addr && !bareDraftSpan(ctx)) return false;
+  e.preventDefault();
+  if (!addr) { HINT.show('B3.caret.cut', actKey(), hinted(e, ctx)); return true; }
+  if (unwritableSays(addr, e, ctx)) return true;
+  if (kept) LAYER.returnCaret();
+  const over = selectedAtCaret(), b = REC.board();
+  if (!over) { HINT.show('L.copy.nothing', null, hinted(e, ctx)); return true; }
+  if (LAYER.caretCut(e, over, b ? b.origin : '') === 'cut') { SEL.clear(); clipping = followed(addr, e); }
+  else HINT.show('L.cut.uncopied', null, hinted(e, ctx));
   return true;
 }
 

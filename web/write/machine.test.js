@@ -26,7 +26,11 @@
 // person's act comes first, is declined where its source is withheld, and
 // goes inside the one close; a redo reinstates kept bytes and re-types
 // unminted ones under their own ordinals; and an inverse is never composed as
-// it was typed. What the margin marks (J5, D8): nothing at a line merely held;
+// it was typed. A paste and a cut made at the caret (BM-31): each a step of
+// its own that joins no run — a paste one `insert`, after one `delete` where
+// it replaces a selection, a cut one `delete` — riding the open burst, its
+// undo leaving the caret where the act began and a paste's redo after the
+// placed text. What the margin marks (J5, D8): nothing at a line merely held;
 // a run refused or handed over, and a refusal kept, refused over its own
 // bytes; a moved document's lines, a line the device refused, and under the
 // death every word the board has not kept, held; and a line another window
@@ -1359,6 +1363,89 @@ test('BM-73: at the close a `reinstate` set beside words of the burst out names 
   const carried = b.fake.unloaded[0].close.frames || [];
   assert.deepEqual(carried.map((f) => [/** @type {any} */ (f.frame).op, f.anchors, f.after ?? null]), [['insert', { before: own(E, 2), after: own(E, 3) }, null], ['delete', { before: null, after: own(E, 3) }, null]],
     'a `delete` over words of two unanswered inserts follows neither: it goes as it did, without a span, and names no `after` the row would refuse');
+});
+
+/** a paste at a caret standing at `at` of a draft (W-WRITE's `Typed.own`): its text placed at `pos`, `width` bytes of a selection taken out with it, one edit */
+const paste = (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {string} */ text, width = 0, at = pos) => WRITE.addEdit(addr, { pos, width, text }, { at, own: 'paste' });
+/** a cut at a caret standing at `at` of a draft (W-WRITE's `Typed.own`): `width` bytes of a selection taken out from `pos`, one edit */
+const cut = (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width, /** @type {number} */ at) => WRITE.addEdit(addr, { pos, width, text: '' }, { at, own: 'cut' });
+/** each `op` dialed from the `from`-th on: its op, where it acts and what it carries */
+const dialed = (/** @type {Board['ops']} */ ops, from = 0) => ops.slice(from).map((o) => [o.frame.op, Number((o.frame.at ?? o.frame.p).ordinal), o.frame.values ?? o.frame.width ?? o.frame.runs.map((/** @type {any} */ r) => [r.i_start, r.width])]);
+
+test('BM-31, BM-34, BM-33: a paste made at the caret is a step of its own, joining no run of typing and opening none, and goes out as one `insert`; one undo takes it out — a `delete` of the bytes the insert minted, the caret where the paste began — and its redo places those bytes again by a `reinstate`, never an insert, the caret after the placed text; a key typed after it begins a run of its own', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame, n) => (frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)));
+  read(D, 'abcdef');
+  paste(D, 4, 'XY');
+  assert.deepEqual([stacks(D).undo, ops, shown(D)], [[['paste', false, 1]], [], 'abcXYdef'], 'one step of the stack, no run of typing open, the text placed at once and nothing dialed at the act');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([dialed(ops), WRITE.keptOf(D)?.word], [[['insert', 4, ['XY']]], 'kept'], 'at the pause: one `insert`, its values the pasted text, acked');
+  assert.deepEqual([MACHINE.undo(D), shown(D), stacks(D)], [{ how: 'done', at: 4, out: 'XY', back: '' }, 'abcdef', { undo: [], redo: [['paste', false, 1]] }], 'one undo takes the paste out whole, the caret where it began');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual(dialed(ops, 1), [['delete', 4, '2']], 'its inverse: one `delete` of the placed bytes');
+  assert.deepEqual([MACHINE.redo(D), shown(D), stacks(D)], [{ how: 'done', at: 6, out: '', back: 'XY' }, 'abcXYdef', { undo: [['paste', false, 1]], redo: [] }], 'the redo places it again, the caret after the placed text');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual(dialed(ops, 2), [['reinstate', 4, [[own(D, 100), '2']]]], 'by a `reinstate` of the bytes the insert minted, never an insert of new ones');
+  type(D, 6, 'z');
+  assert.deepEqual(stacks(D).undo, [['paste', false, 1], ['typing', true, 1]], 'a key typed after the paste begins a run of its own');
+});
+
+test('BM-31, BM-32, BM-34: a paste over a selection is one step and goes out as one `delete` then one `insert`; its undo takes the pasted text out and puts the selection\'s own bytes back, the caret where it stood as the paste began — the selection\'s end, never the start of what was placed — and its redo leaves the caret after the placed text', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame, n) => (frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)));
+  read(D, 'abcdef');
+  // "bc" selected forward, the caret at its end, and three bytes pasted over it
+  paste(D, 2, 'XYZ', 2, 4);
+  assert.deepEqual([stacks(D).undo, shown(D)], [[['paste', false, 1]], 'aXYZdef']);
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual(dialed(ops), [['delete', 2, '2'], ['insert', 2, ['XYZ']]], 'one `delete` of the selection, then one `insert` of the text');
+  assert.deepEqual([MACHINE.undo(D), shown(D)], [{ how: 'done', at: 4, out: 'XYZ', back: 'bc' }, 'abcdef'], 'the undo: the text out and the selection back, the caret where the paste began, after "c"');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual(dialed(ops, 2), [['delete', 2, '3'], ['reinstate', 2, [[own(D, 2), '2']]]], 'its inverse: the placed bytes deleted, the selection\'s own bytes reinstated');
+  assert.deepEqual([MACHINE.redo(D), shown(D)], [{ how: 'done', at: 5, out: 'bc', back: 'XYZ' }, 'aXYZdef'], 'the redo: the caret after the placed text');
+});
+
+test('BM-31, BM-51, BM-32: a cut made at the caret is a step of its own and goes out as one `delete`, the removal the deletion face stands at made as that `delete` is composed and never at the act; its undo puts the cut bytes back by a `reinstate` and leaves the caret where the cut began — the selection\'s end where it was made forward, its start where backward — and its redo removes them again, the caret at the removal', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot(() => ACK(20));
+  read(D, 'abcdef');
+  // "bcd" selected forward, the caret at its end
+  cut(D, 2, 3, 5);
+  assert.deepEqual([stacks(D).undo, shown(D), ops, WRITE.removalsOf(D)], [[['cut', false, 1]], 'aef', [], []], 'one step, the bytes out of the text at once; nothing dialed and no removal faced at the act');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([dialed(ops), WRITE.removalsOf(D).map((r) => r.words)], [[['delete', 2, '3']], ['bcd']], 'at the commit: one `delete`, and the removal its face stands at');
+  assert.deepEqual([MACHINE.undo(D), shown(D), WRITE.removalsOf(D)], [{ how: 'done', at: 5, out: '', back: 'bcd' }, 'abcdef', []], 'the undo: the words back, the removal\'s mark gone, the caret where the cut began — after "d"');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual(dialed(ops, 1), [['reinstate', 2, [[own(D, 2), '3']]]], 'by one `reinstate` of the cut bytes');
+  assert.deepEqual([MACHINE.redo(D), shown(D)], [{ how: 'done', at: 2, out: 'bcd', back: '' }, 'aef'], 'the redo: cut again, the caret at the removal');
+  MACHINE.undo(D);
+  WRITE.endRun(D);
+  // the same words selected backward, the caret at the selection's start
+  cut(D, 2, 3, 2);
+  assert.deepEqual(MACHINE.undo(D), { how: 'done', at: 2, out: '', back: 'bcd' }, 'a cut made with the caret at the selection\'s start: its undo leaves the caret there');
+});
+
+test('BM-2, BM-31: a paste rides the open burst — nothing dialed at the act, its text in the one `insert` the burst composes at its pause beside the keys typed before it — and ends the run of typing open at the caret; a paste whose text ends in punctuation commits at once; each paste is its own step, taken back alone', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame, n) => (frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)));
+  read(D, 'abcdef');
+  type(D, 7, 'gh');
+  paste(D, 9, 'P Q');
+  assert.deepEqual([stacks(D).undo, ops], [[['typing', false, 2], ['paste', false, 1]], []], 'the paste ends the run of typing and is a step of its own; the burst stands open, nothing dialed');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual(dialed(ops), [['insert', 7, ['ghP Q']]], 'the pause commits the open burst: one `insert` carrying the typed keys and the pasted text');
+  paste(D, 12, 'end.');
+  assert.deepEqual(dialed(ops, 1), [['insert', 12, ['end.']]], 'a paste ending in punctuation commits at once');
+  await flush(); await flush();
+  assert.deepEqual([MACHINE.undo(D).out, MACHINE.undo(D).out, shown(D), stacks(D).undo], ['end.', 'P Q', 'abcdefgh', [['typing', false, 2]]], 'two undos take the two pastes back, each alone; the run typed before them stands');
 });
 
 /** what the margin marks of a draft (`marksOf`): each mark's kind, the words of the text shown it stands beside, and the positions there its removal points stand at */

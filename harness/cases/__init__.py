@@ -89,6 +89,7 @@ KEYED = {
     'F.swallow.space': {'space key': 'Space', 'paging key': 'PageDown'},
     'B3.caret.enter': {'act key': 'Enter'},
     'B3.caret.enter.paste': {'act key': 'Enter'},
+    'B3.caret.cut': {'act key': 'Enter'},
     'B3.caret.back': {'back chord': 'Shift+Tab'},
     'B3.held.none': {'close key': 'Esc'},
     'L.copy.nothing.enter': {'act key': 'Enter'},

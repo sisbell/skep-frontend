@@ -133,7 +133,10 @@
 // key there made as at the plane's stop. The pointer → APP-INPUT; the copy
 // event → T-LAYER's `onCopy`, and one it takes nothing from → N-KEYS'
 // `copyAsDrawn`, read where the focus is (`whereIs`), then `onCopy` again
-// over the selection that placed under it (FP-24, FP-27); the
+// over the selection that placed under it (FP-24, FP-27); the paste and the
+// cut events, each listened for on the document → N-KEYS' `pasteEvent` and
+// `cutEvent`, with where the focus is read as the copy's is (`clipAt`), each
+// the line's and a hint's next act as a key is (D5 K-93); the
 // events `moment` → a walk's moment (O-FACES'), `held` → logged for the
 // gate beside W-MACHINE's own taking of it; the failure reporter (a line in
 // the page, posted nowhere). The boot hands D6's machine in to W-WRITE
@@ -371,6 +374,10 @@ async function boot() {
     // the selection the page draws, placed under the copy again, copied as the platform now holds it
     LAYER.onCopy(e, origin);
   });
+  /** where a paste or a cut event finds the focus, as N-KEYS reads it: the hint's button a stop of the plane's, as for a key */
+  const clipAt = () => { const w = whereIs(document.activeElement); return /** @type {import('../nav/keys.js').Ctx} */ ({ where: w === 'hint' ? 'plane' : w, byKey: false }); };
+  document.addEventListener('paste', (e) => { LINE.act(); HINT.act(); KEYS.pasteEvent(e, clipAt()); });
+  document.addEventListener('cut', (e) => { LINE.act(); HINT.act(); KEYS.cutEvent(e, clipAt()); });
   window.addEventListener('keydown', async (e) => {
     // a chord the LEAP box closed on acts as anywhere (M-1): read at the focus the close returned, not at the box
     const target = /** @type {HTMLElement | null} */ (e.target);
