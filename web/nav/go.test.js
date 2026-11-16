@@ -1764,7 +1764,7 @@ test('at a link\'s stop of the walk, no selection standing, Mod+Enter follows th
   await onStop();
   const pressed = KEYS.dispatch(keyOf('Enter', { ...MOD, shiftKey: true }), PLANE);
   const opened = TRAIL.current()?.scene;
-  assert.deepEqual(opened && [opened.a, opened.b, opened.held], [D, FAR, { posA: 11, widthA: 5, posB: 20, wholeB: false }], 'Mod+Shift+Enter: the scene beside the far edition, the end\'s own bytes set level with where its far end stands');
+  assert.deepEqual(opened && [opened.a, opened.b, opened.held], [D, FAR, { posA: 11, widthA: 5, posB: 20, wholeB: false, link: PASSAGE }], 'Mod+Shift+Enter: the scene beside the far edition, the end\'s own bytes set level with where its far end stands, the link it is opened from kept with them (SC\'s `Held.link`)');
   assert.deepEqual(departed()?.step, { kind: 'scene', near: D, link: PASSAGE, key: drawn(PASSAGE).key, spans: null }, 'a step on the trail from the end the stop names');
   assert.equal(await pressed, true);
   // no scene to show here: its opening gives its entry back

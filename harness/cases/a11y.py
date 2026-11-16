@@ -44,7 +44,8 @@ focus reached after the plane's stop and the corner, Shift+Tab from it back
 to the corner; the reading scene's stops in the place of the plane's and the
 corner's, pane, its corner, the strokes between its bands in view, pane, its
 corner, the scene's acts (K-61; issues #160 and #331), with nothing the scene
-covers in the ring, nothing inside a pane's
+covers in the ring — the same stops in the same order, each pane and its
+corner named alike, where the panes stack (issue #467) — nothing inside a pane's
 article a control or a stop in the AX tree (SC: the panes are read, never
 pressed), each pane's corner a stop there — its line of acts, whose stop is
 its first act, else itself — named by its own words, which say what the pane
@@ -97,6 +98,9 @@ from . import DOC, FAR_LEAP, HOME, NO_MATCH, RUNS_IN, VERSIONED, WINDOW, Result,
 # its size, the case's own — so the label beside the second never stacks with the line beside the first (O-LAND's
 # `stacks`): each run's item carries its own label
 RUNS_APART_LINES, LINE_RATIO = 4, 1.45
+# a window where a reading scene's panes stack, a pane side by side keeping too few characters (issue #467), and where
+# their corners stand compact, as at the run's window, so each corner's words are the ones it says there
+STACKED_PX = 800
 
 
 def capital(words):
@@ -722,6 +726,37 @@ def run(ctx):
         ring.append(stop())
     r.check(ring == (struck + ['pane A\'s corner', 'pane A', 'the line'])[:3], 'Shift+Tab walks the ring back: from the far end\'s pane to the strokes in view, the other\'s corner, the other pane, and from there to the one line', {'ring': ring})
     r.figures['ring']['scene_back_from_pane_b'] = ring
+    # the same ring and the same names where the panes stack (issue #467's design decision: "The mirror reads the same in both
+    # layouts"): the window narrowed until a pane side by side keeps too few characters, the corners compact there as at the
+    # run's window, the scene's own stops in D5's order from pane B, each pane and its corner named as at the run's window
+    named = lambda: ctx.js('''["sceneA", "sceneB"].map((id) => { const p = document.getElementById(id), c = p.querySelector(':scope > .corner');
+      const words = (e) => (e && e.getAttribute('aria-labelledby') || '').split(' ').map((x) => { const n = document.getElementById(x); return n ? n.textContent : null; });
+      return {role: p.getAttribute('role'), pane: words(p), current: p.getAttribute('aria-current'), corner: c && [c.getAttribute('role'), words(c).join(' ')]}; })''')
+    beside = named()
+    was = ctx.resize(STACKED_PX, 900)
+    try:
+        ctx.settle()
+        ctx.frames(2)
+        stacked = bool((ctx.js('window.__skep.scene.fit()') or {}).get('stacked'))
+        ctx.js('document.getElementById("sceneB").focus({preventScroll: true})')
+        ctx.frames(1)
+        ring = []
+        for _ in range(24):
+            press('Tab')
+            ring.append(stop())
+            if ring[-1] == 'pane B':
+                break
+        own = [s for s in ring if s.startswith(('pane ', 'the scene'))]
+        struck = ['the scene: stroke'] * (ctx.js('document.querySelectorAll("#scenestrokes button").length') or 0)
+        apart = named()
+    finally:
+        ctx.resize(*was)
+        ctx.settle()
+        ctx.frames(2)
+    r.check(stacked and own == ['pane B\'s corner', 'the scene: re-level', 'the scene: x', 'pane A', 'pane A\'s corner'] + struck + ['pane B'] and apart == beside,
+            f'the scene stacked in a {STACKED_PX} px window, its corners compact as side by side: Tab from the far end\'s pane goes round the scene\'s own stops in D5\'s order, as side by side, and each pane and its corner are named as side by side (issue #467: "The mirror reads the same in both layouts")',
+            {'stacked': stacked, 'ring': ring, 'names': {'beside': beside, 'stacked': apart}})
+    r.figures['ring']['scene_stacked_from_pane_b'] = ring
     ctx.js('document.getElementById("sceneB").focus({preventScroll: true})')
     ctx.frames(1)
     # the block holding the window run's first position: the landing the scenes below are opened over, where their Back lands

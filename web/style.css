@@ -530,17 +530,17 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    clicked, so they carry none of the plane's click cues; its acts are its bar's buttons, the dismissal drawn as a bare ×,
    and a pane's corner's act, which reads another version in the pane's place. Each pane's text is one column of
    `--measure` advances of its face — the measure SC fits both panes to and sets on the scene — both panes at one size,
-   the reading size, never set smaller to fit (FP-12, FP-26); it stands against the pane's inner edge, its column's edge
+   the reading size, never set smaller to fit (FP-12, FP-26); it stands against the pane's facing edge, its column's edge
    between them, where the bands and lines leave the pane (foundations §2.5), its corner beside it on the outer side, so
    the room a wide window adds falls outside both — before pane A's corner, after pane B's — and the text keeps its place
-   beside the bands at every width. An auto margin takes that room. It stands below the one line's bottom edge, however
-   many rows the line takes */
+   beside the bands at every width. An auto margin takes that room. Side by side the panes stand `--scene-gap` apart,
+   which SC sets. It stands below the one line's bottom edge, however many rows the line takes */
 #scene { position:fixed; inset:calc(var(--line-bottom, 29px) + 17px) 20px 20px 20px; z-index:26; display:none; background:var(--bg); border:1px solid #6b7382; border-radius:4px; }
 #scene.on { display:block; }
 #scenebar { position:absolute; left:0; right:0; top:0; height:26px; padding:4px 10px; border-bottom:1px solid var(--line); color:var(--dim); font-size:11px; white-space:nowrap; overflow:hidden; }
 #scenebar b { color:var(--accent); }
 #scenebar .x { float:right; color:var(--ink); background:none; border:0; padding:0; margin:0; }
-.pane { position:absolute; top:26px; bottom:0; width:calc(50% - 70px); overflow:auto; padding:14px 18px; display:flex; align-items:flex-start; gap:14px; }
+.pane { position:absolute; top:26px; bottom:0; width:calc(50% - var(--scene-gap) / 2); overflow:auto; padding:14px 18px; display:flex; align-items:flex-start; gap:14px; }
 #sceneA { left:0; } #sceneB { right:0; }
 .pane .dtext { position:static; transform:none; line-height:var(--line-h); flex:none; width:calc(var(--measure) * var(--char-w) * 1em); height:auto; cursor:text; }
 /* a pane's column's edge stands on its inner side, the bands leaving the pane beyond its signs (foundations §3.1): pane A's on
@@ -584,5 +584,21 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #scenestrokes button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
 /* a stop the reader returned to while the panes' compare is read (SC's; FP-34): its count an empty box of its own width */
 #scenestop .n.reading, #scenestrokes button .n.reading { display:inline-block; width:1ch; height:.8em; padding:0; border:1px solid var(--line); background:transparent; vertical-align:middle; }
+/* THE STACKED SCENE (FP-12, FP-26; SC's `stacked`, where side by side a pane would keep fewer than forty characters a
+   line): pane A above pane B, each half the room below the bar, both against the scene's left and `--scene-column` short
+   of its right, so their facing edges, both on the right — the side a document's counts sit on the plane — form one
+   column the ties stand in. Pane B is laid out as pane A: its corner first on its outer side, its text against its facing
+   edge, its column's edge between them, and a rule above it; the order the DOM gives them, which the focus and the mirror
+   read, is the same in both forms. The stop stands against pane B's facing edge in the column, its count after the
+   triangle */
+#scene.stacked .pane { left:0; right:var(--scene-column); width:auto; }
+#scene.stacked #sceneA { bottom:calc(50% - 13px); }
+#scene.stacked #sceneB { top:calc(50% + 13px); border-top:1px solid var(--line); }
+#scene.stacked #sceneB .dtext { padding-left:0; padding-right:var(--edge); }
+#scene.stacked #sceneB .dtext .edge { left:calc(100% + var(--edge-in)); right:auto; text-align:left; }
+#scene.stacked #sceneB > .corner { order:-1; margin-left:auto; }
+#scene.stacked #sceneB > .corner.compact.open { margin-left:auto; margin-right:calc(var(--corner-compact-w) - var(--corner-w)); }
+#scene.stacked #sceneB.head { align-items:flex-end; }
+#scene.stacked #scenestop { padding:0 3px 0 11px; }
 /* a stroke's list (SC's, at O-HOST's): each change's characters in the reading face, their white space kept */
 #overlay .changes .chars { font-family:var(--face-reading); white-space:pre-wrap; }

@@ -2317,7 +2317,8 @@ async function landWithheld(act, far, near, link, entry, byKey, first) {
  * runs' labels where they are two or more, the landing at piece 1; the
  * scene with the document the follow was made from, where that text holds
  * the far end's passage whole, the passage held there by the far end's bytes
- * and set level with its counterpart in the far text (SC's `levels`); at a
+ * and set level with its counterpart in the far text (SC's `levels`), opened
+ * from the link followed (SC's `Held.link`); at a
  * published far document whose text holds part of the passage, all of it in
  * pieces, or none of it — the dead end's face offering it then — the latest
  * member holding it whole, its slot projected into each member and its runs'
@@ -2338,7 +2339,7 @@ function sayFollowed(act, s, entry, placed, pos) {
   const floating = !!placed.runs && !placed.runs.length;
   const offers = !!said && said.state !== 'unknown' && !!passage;
   const source = offers && passage && s.near !== far ? wholeAt(s.near, [passage], passage.width) : null;
-  landed = { addr: far, pos, said, pieces, current: pieces ? pieces.order[0] : 0, floating, withheld: false, beside: source && passage ? { a: s.near, held: { posA: source.pos, widthA: source.width, ids: [passage] } } : null, version: null, crossed: boxOf(s.near) !== boxOf(far) };
+  landed = { addr: far, pos, said, pieces, current: pieces ? pieces.order[0] : 0, floating, withheld: false, beside: source && passage ? { a: s.near, held: { posA: source.pos, widthA: source.width, ids: [passage], link: l.addr } } : null, version: null, crossed: boxOf(s.near) !== boxOf(far) };
   retry = said && said.again ? async (byKey) => {
     const at = made;
     const proj = await PUMP.projectEnd(l.addr, s.farSlot, far);
@@ -2860,7 +2861,7 @@ const addrOf = (/** @type {string | import('../model/records.js').Doc} */ x) => 
  * was made (FP-35).
  * @param {string | import('../model/records.js').Doc} a the document its first pane opens on: the reader's, save at a landing's line, the source of the passage landed; or the record the page shows of it (T-LAYER's `paneSource`), where the opener's positions are that text's
  * @param {string} b the one its second pane opens on
- * @param {import('../scene/scene.js').Held} [held] the passage the opener holds, which the scene sets level
+ * @param {import('../scene/scene.js').Held} [held] the passage the opener holds, which the scene sets level — with the link a link's end `from` names, where `held` names none (SC's `Held.link`)
  * @param {{beside?: 'a' | 'b', from?: {shown: Shown} | {passage: Span} | null, site?: Site | null}} [opts] `beside` the pane holding the document opened beside the reader's, the entry's address — the second where none is named; `from` the link's end or the passage the scene is opened from, which Back lights (`sceneStep`), a link's end naming the far end a face at a far document the board will say nothing of speaks of; `site` where the act was made. The scene takes the focus however the act was made (SC's)
  * @returns {Promise<boolean>} the scene shows
  */
@@ -2869,10 +2870,12 @@ export async function toScene(a, b, held = {}, opts = {}) {
   if (!REC.board()) { FACES.noBoard(opts.site ?? null); return false; }
   const end = opts.from && 'shown' in opts.from ? opts.from.shown : null, site = signed(opts.site ?? null);
   if (end && LK.farEmpty(end)) { FACES.unregistered(end.far, site, { far: true }); return false; }
+  // the link the scene is opened from, kept with the passage held, so its entry and a reopening keep it (SC's `Held.link`)
+  const kept = end && held.link == null ? { ...held, link: end.link.addr } : held;
   const departed = departure(), addr = addrOf(opts.beside === 'a' ? a : b);
-  const entry = TRAIL.push({ addr, pos: null, width: null, view: departed.view, label: null, notice: null, scene: { a, b, held, left: null } }, departed, false, sceneStep(opts.from ?? null));
+  const entry = TRAIL.push({ addr, pos: null, width: null, view: departed.view, label: null, notice: null, scene: { a, b, held: kept, left: null } }, departed, false, sceneStep(opts.from ?? null));
   reach = { act, addr, entry };
-  const out = await SCENE.open(a, b, held, { leaving: () => { reach = null; dismissChrome(entry); } });
+  const out = await SCENE.open(a, b, kept, { leaving: () => { reach = null; dismissChrome(entry); } });
   if (out.shown) return true;
   if (!reach || reach.act !== act) return false;
   reach = null;

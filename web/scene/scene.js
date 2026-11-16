@@ -9,13 +9,15 @@
 // each pane's text — the record it was made from, the version it reads and
 // the address it names, the links and far ends and its owner's byline facts
 // it was set with — and its corner — opened whole or not, its head's rows —
-// the fit both panes are set at and the band their heads reserve, the
-// settings reading and the acts and checks waiting on them, the element it
-// was opened
-// from, and its own end and the faces a returned stop shows, the app's to
-// hand in; view state, never written (FP-7).
-// Two documents at reading scale side by side over the plane, each pane
-// scrolling on its own (R3); the places unmoved, nothing written; the dialog
+// the fit both panes are set at, side by side or stacked, and the band their
+// heads reserve, the settings reading and the acts and checks waiting on
+// them, the element it was opened from and the link it was opened from, the
+// tie the pointer stands on where the panes stack and the tie the last draw
+// drew whole there, and its own end and the faces a returned stop shows, the
+// app's to hand in; view state, never written (FP-7).
+// Two documents at reading scale over the plane, side by side or, where side
+// by side keeps fewer than HEAD_CPL characters a line, stacked (below), each
+// pane scrolling on its own (R3); the places unmoved, nothing written; the dialog
 // named as it attaches by ST's `L.scene-label`. It sets the two ends level
 // (§2.5): the passage the opener holds — a link's span, a selection, the
 // versions list's held passage, provenance's span, a landing's passage —
@@ -84,6 +86,34 @@
 // height, and that edge drawn whole, from the pane's visible top to its
 // bottom, in the end's ink — in the one mark the ends meeting it merge into
 // where several do (`wholeEdges`, `drawEdge`; LK's `mergedMark`).
+// Where the panes stack (`PaneFit.stacked`; FP-12): pane A stands above pane
+// B, both their facing edges on the right — the side a document's counts sit
+// on the plane — so the two edges form one column between the panes and the
+// scene's edge. Each tie is drawn at each of its ends as side by side draws
+// it at that pane's edge, an em of its body leaving the edge and cut there:
+// a band's end a bar — its ground and its edges at its extent, clipped with
+// the stub's triangle — the two bars of one run joined by a hairline along
+// the column at their cut (`drawBars`); a line's end its em at its passage's
+// first line in that end's ink, clipped with the stub's triangle where that
+// line has left the pane (`drawEnd`); a stroke's ends its em in each half
+// side by side draws (`drawStrokeEnds`); a whole document's edge against its
+// pane in the column. No body crosses between the panes save one, drawn whole
+// along the column's outer side (`drawCrossing`): the tie the pointer stands
+// on in the column (`hoverAt`), else the one holding the focus — a stroke's
+// button's stroke, the band holding the passage the stop stands for, a
+// returned stop's — else the line of the link the scene was opened from
+// (`Held.link`), else none (`crossingOf`); a line in pane A's end's ink to
+// the path's middle and pane B's after it, a band its ground along the path,
+// a stroke its halves on the path's halves (FP-30). A stroke's one act, its
+// button, stands on its half at pane A's edge, at that half's middle,
+// whichever pane holds its changed bytes; the stop and a returned stop stand
+// against pane B's facing edge in the column, their count after the
+// triangle. "Level" stacked is the same distance below each pane's top: a
+// whole document's end stands as far below its pane's top as the line's other
+// end stands below its own, and the re-level and the stop's act, which bring
+// each pane's line to a height below that pane's own top, set level so
+// stacked as side by side. The wheel moves the pane under the pointer, and
+// clipped and crowded ends stand per end and per spot, in both forms alike.
 // Every tie is measured from what its panes were set with, never the
 // model's now: a read that drops a pane's document moves no tie off its text.
 // A pane is kept fresh by its kind (FP-23): each feed row M-PUMP takes
@@ -325,20 +355,27 @@
 // itself where it holds none (T-LAYER's `setStops`) — and an act's click,
 // the pointer's or the one the platform makes from its Enter or Space, takes
 // it — a press on the act leaving the selection standing in the pane, the
-// passage the act carries. The scene fits both panes once (`fitOf`; FP-12,
-// FP-26), by P-LAY's fit (`fitFor`) of the narrower pane's content box at the
-// reading size (P-CAM's), no margin past the column's edge — the pane's
-// padding holds that room — and never shrinks their face: each pane's text is
-// one column, the style's `--measure` advances of its face, both panes at the
-// fit's measure and em — MEASURE_CPL with both corners whole beside their
-// columns wherever a pane holds it so; else both compact, their usual states
-// glyphs, the measure kept while it holds, then narrowed in characters while
-// it keeps HEAD_CPL beside them; below that both corners stand at their
-// documents' heads and their room goes back to the measure, the room beside
-// the column's edge alone, the panes side by side however narrow it grows.
-// Beside its column a corner stands on the pane's outer side — pane A's
-// left, pane B's right — held to the top of the pane's scroll, so the bands
-// and lines leave the inner edges clear of it (foundations §3.1). At its
+// passage the act carries. The scene fits both panes once (`fitOf`,
+// `paneFit`; FP-12, FP-26) from its own width, never the panes' as they
+// stand, so the form a fit sets never moves the next fit: by P-LAY's fit
+// (`fitFor`) of a pane's content box side by side — half the scene's width
+// less half SIDE_GAP, less the pane's padding — at the reading size
+// (P-CAM's), no margin past the column's edge — the pane's padding holds that
+// room — and never shrinks their face: each pane's text is one column, the
+// style's `--measure` advances of its face, both panes at the fit's measure
+// and em — MEASURE_CPL with both corners whole beside their columns wherever
+// a pane holds it so; else both compact, their usual states glyphs, the
+// measure kept while it holds, then narrowed in characters while it keeps
+// HEAD_CPL beside them; below that both corners stand at their documents'
+// heads and their room goes back to the measure, the room beside the
+// column's edge alone, while that keeps HEAD_CPL characters; below that the
+// panes stack, and both are fitted by the same rule to a pane's content box
+// stacked — the scene's width less the column. The threshold is read in the
+// face's advance as rendered (P-LAY's `CHAR_W`), so the face and page zoom
+// move it. Beside its column a corner stands on the pane's outer side — pane
+// A's left, pane B's right, side by side; both left, stacked — held to the
+// top of the pane's scroll, so the bands and lines leave the facing edges
+// clear of it (foundations §3.1). At its
 // document's head (the plane's head form; T-LAYER's `sceneHead`) it stands
 // above its text across the column and its edge, its rows at the reading
 // line's pitch, both heads reserving the more of the two corners' rows, so
@@ -354,7 +391,7 @@
 // and the same act, the words a glyph opened among them, closing it again
 // (`openWhole`; FP-26); its stops are T-LAYER's (`setStops`), following the
 // focus along a line of acts (D5 K-57; FP-20). Each column stands against the pane's
-// inner edge, its column's edge between them — its counts there, and the
+// facing edge, its column's edge between them — its counts there, and the
 // statements of the origins its runs of other documents' material are of,
 // withheld and transcluded alike, each once per origin in the pane by the
 // plane's one rule, held inside its text as the pane scrolls
@@ -376,7 +413,7 @@
 // parted by a pause.
 // A change of the panes' size, or a face that arrives once they are set
 // (`refaced`), fits them again (`refit`): where the measure, the corners'
-// form or the em moves, both panes are set again in one step at it, their
+// form, the em or the panes' form moves, both panes are set again in one step at it, their
 // texts kept, the reader's place — its first line in view — the selection
 // and the ends set level carried by their bytes (FP-8, FP-23); else the fit
 // is set on them again in place, their text kept where it stands on screen as
@@ -391,10 +428,17 @@
 // PLACE_TOL px on both sides; a stub's triangle 8 by 4 px, 6 px inside the
 // pane's edge; a whole document's edge EDGE_W px wide, in the gap against
 // the pane, at its mark's value; the stop 16 px tall over the stub's
-// triangle, its count before it; a stroke's button 26 px tall, centred on
-// the middle of the halves drawn, its count in its top 11 px, clear of the
-// stroke; a returned stop's passage named by its first 48 characters at
-// most, cut on a word.
+// triangle, its count before it side by side and after it stacked; a
+// stroke's button 26 px tall, centred on the middle of the halves drawn —
+// stacked, on its half at pane A's edge, half an em out — its count in its
+// top 11 px, clear of the stroke; a returned stop's passage named by its
+// first 48 characters at most, cut on a word. Side by side the panes stand
+// SIDE_GAP px apart; stacked, the column is COLUMN_EM of the reading size's
+// em wide (`columnPx`), each end an em of the panes' from the edge — half the
+// column at most — a band's two bars joined by a hairline HAIRLINE_W px wide
+// at their cut, and the one tie drawn whole along the column half an em
+// inside its outer side, a band's body there a strip a quarter of an em
+// wide; the pointer stands on an end within HIT_PX of its line.
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-12, FP-13, FP-20, FP-21, FP-22, FP-23,
 // FP-24, FP-25, FP-26, FP-27, FP-29, FP-30, FP-31, FP-33, FP-34, FP-36,
 // FP-39.
@@ -413,7 +457,7 @@ import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edg
 import { inkOf, strokeOf, strokeIn, cutAt, pointOn } from '../beams/beams.js';
 import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingLineOf } from '../beams/held.js';
 import { SAMENESS, HOLD, LABEL_MIN_PX, cornerWidth } from '../plane/register.js';
-import { LINE_H, MEASURE, MEASURE_CPL, CHAR_W, EDGE, EDGE_GAP, fitFor } from '../plane/layout.js';
+import { LINE_H, MEASURE, MEASURE_CPL, HEAD_CPL, CHAR_W, EDGE, EDGE_GAP, fitFor } from '../plane/layout.js';
 import { holdStack, LINE_BOX } from '../plane/labels.js';
 import { markDirty, READING_PX } from '../plane/camera.js';
 import { documentOf, homeOf, memberOf, versionAddress, isTrunkMember } from '../model/address.js';
@@ -455,6 +499,7 @@ import { esc, byteOffsets, numeral } from '../util.js';
  * @property {number | null} [posB] the position in the second document the opener names — where a link's far end stands in its text now (LK's `farPos`) — where it names one
  * @property {boolean} [wholeB] the far end of the link the scene is opened from names the second document whole: nothing of it is set level with the passage held, and pane B opens at its start (see the head)
  * @property {boolean} [heldB] the scene is the moved scene (D6 BM-14): the second pane is the held version (`Pane.heldVersion`; see the head) — derived as the scene opens where the second document is named by its address (`heldSource`), else the derived record handed in
+ * @property {string | null} [link] the address of the link the scene is opened from, where it is opened from one: the tie drawn whole between the stacked panes where none holds the pointer or the focus (`crossingOf`)
  */
 
 /**
@@ -526,7 +571,7 @@ import { esc, byteOffsets, numeral } from '../util.js';
 /** @typedef {{pos: number, width: number, x: number, top: number, bottom: number, above: boolean, below: boolean, clipped: boolean}} BandDrawn a band's end as the last draw drew it, on screen: its extent held inside its pane's visible height, and whether it passes the visible top (`above`) or bottom (`below`) */
 /** @typedef {{pos: number, width: number, x: number, y: number, clipped: boolean, cover: boolean, whole: boolean}} LineDrawn a line's end as the last draw drew it, on screen */
 
-/** @typedef {{kind: 'band', link: null, a: BandDrawn, b: BandDrawn} | {kind: 'link', link: string, a: LineDrawn, b: LineDrawn}} Drawn a band or a line as the last draw drew it, its ends on screen */
+/** @typedef {{kind: 'band', link: null, tie: string, a: BandDrawn, b: BandDrawn} | {kind: 'link', link: string, tie: string, a: LineDrawn, b: LineDrawn}} Drawn a band or a line as the last draw drew it, its ends on screen, `tie` its key (`tieKey`) */
 
 /**
  * @typedef {Object} StrokeDrawn — a stroke as the last draw drew it, on screen
@@ -536,8 +581,19 @@ import { esc, byteOffsets, numeral } from '../util.js';
  * @property {boolean} halfA
  * @property {boolean} halfB
  * @property {Change[]} changes
- * @property {{x: number, y: number}} at the point its button stands centred on: the middle of the halves drawn
+ * @property {{x: number, y: number}} at the point its button stands centred on: the middle of the halves drawn — stacked, the middle of its half at pane A's edge
  */
+
+/**
+ * @typedef {Object} Crossing — the one tie the last draw drew whole between the stacked panes (`crossingOf`; see the head)
+ * @property {string} tie its key (`tieKey`)
+ * @property {'band' | 'link' | 'stroke'} kind
+ * @property {string | null} link the link's address, where it is a line
+ * @property {'pointer' | 'focus' | 'opened'} why the pointer stands on it, it holds the focus, or it is the link the scene was opened from
+ * @property {Array<{x: number, y: number}>} path where it was drawn, on screen: from its end at pane A's facing edge out to the column's outer side, along it, and into its end at pane B's — a band's through its ends' middles
+ */
+
+/** @typedef {{tie: string, order: number, x0: number, x1: number, top: number, bottom: number}} Hit an end the last draw drew in the column where the panes stack, on screen, by its tie's key (`tieKey`): what the pointer stands on there (`hoverAt`), a line's first, then a stroke's, then a band's (`order`) */
 
 /**
  * @typedef {Object} Edge — a pane's facing edge as the last draw drew it, the whole-document ends meeting it, on screen
@@ -609,10 +665,11 @@ import { esc, byteOffsets, numeral } from '../util.js';
  */
 
 /**
- * @typedef {Object} PaneFit — how the scene sets both panes, decided once for both from the narrower (`fitOf`; FP-12, FP-26)
+ * @typedef {Object} PaneFit — how the scene sets both panes, decided once for both from the scene's width (`fitOf`, `paneFit`; FP-12, FP-26)
  * @property {number} cpl the measure each pane's column is set at, in characters of its face
  * @property {'whole' | 'compact' | 'head'} corner where both corners stand and in which form: beside their columns, whole or compact, or at their documents' heads
  * @property {number} px the em both articles are set at: the reading size, smaller only where even a column of one character is wider than the pane beside its edge
+ * @property {boolean} stacked the panes stand stacked, pane A above pane B, their facing edges one column on the right (see the head): side by side, a pane would keep fewer than HEAD_CPL characters a line with its corner at its document's head
  */
 
 /**
@@ -649,7 +706,9 @@ import { esc, byteOffsets, numeral } from '../util.js';
  * @property {boolean} told the stop's appearance was said in the status region
  * @property {ISpan[] | null} stepped the passage of pane B the stop's act last went to (`toShared`), by identity through the image pane B's article was made from; null where it went to none since the scene was set level
  * @property {Returned | null} returned the stop drawn only by the panes' `compare` the reader left from, standing with the landing until its answer is taken and the reader has moved on (see the head); null where none stands
- * @property {PaneFit} fit the measure, the corners' form and the em the panes are set at
+ * @property {PaneFit} fit the measure, the corners' form, the em and the panes' form they are set at
+ * @property {string | null} link the address of the link the scene was opened from (`Held.link`): the tie drawn whole between the stacked panes where none holds the pointer or the focus; null where it was opened from none
+ * @property {string | null} hover the tie the pointer stands on in the column where the panes stack, by its key (`tieKey`; `hoverAt`); null where it stands on none
  * @property {number} band the rows both heads reserve above their text — the more of the two corners' (`Pane.rows`) — as last set (`setBand`); 0 where the corners stand beside their columns
  * @property {string} size the panes' sizes the ties were measured at
  * @property {number} updating the settings reading
@@ -682,7 +741,7 @@ import { esc, byteOffsets, numeral } from '../util.js';
  * @property {'shared'} kind
  * @property {Named} at the passage of pane B it stood for
  * @property {Named | null} stepped the passage of pane B its act last went to (`Scene.stepped`); null where it went to none
- * @property {{x: number, y: number}} place where it stood: its right edge and its middle, px from the scene's box
+ * @property {{x: number, y: number}} place where it stood: its edge against pane B's facing edge — its right side by side, its left stacked — and its middle, px from the scene's box
  */
 
 /**
@@ -753,6 +812,17 @@ const SIDES = /** @type {const} */ (['a', 'b']);
 const EDGE_W = 3;
 /** the id of the bar's hidden words that pane B's name ends with where the far end names its document whole (`namePane`) */
 const WHOLE_ID = 'sceneB-whole';
+/** the room between the two panes standing side by side, px: the gap the ties cross, which the style reads as `--scene-gap` */
+export const SIDE_GAP = 140;
+/** the column the stacked panes' facing edges form, in the reading size's em (`columnPx`) */
+export const COLUMN_EM = 2;
+/** the hairline joining a band's two bars along the column where the panes stack, px */
+const HAIRLINE_W = 1;
+/** how near a line's or a stroke's end in the column the pointer stands on it, px (`hoverAt`) */
+const HIT_PX = 4;
+
+/** the column the stacked panes' facing edges form, px: COLUMN_EM of the reading size (P-CAM's), which the style reads as `--scene-column` */
+export const columnPx = () => COLUMN_EM * READING_PX;
 
 /** @type {Scene | null} */
 let scene = null;
@@ -764,6 +834,10 @@ let drawnTies = [];
 let drawnEdges = [];
 /** @type {StrokeDrawn[]} the strokes the last draw drew, in view */
 let drawnStrokes = [];
+/** @type {Crossing | null} the one tie the last draw drew whole between the stacked panes; null where it drew none */
+let drawnCrossing = null;
+/** @type {Hit[]} the ends the last draw drew in the column where the panes stack, which the pointer stands on (`hoverAt`); none side by side */
+let drawnHits = [];
 /** @type {{runs: number, bands: number, strokes: number, ms: number}} the last measure's figures: the runs it read, the bands and strokes it made of them, and the time it took by the platform's clock (FP-18) */
 let lastMeasure = { runs: 0, bands: 0, strokes: 0, ms: 0 };
 /** the scene's own end — a Back from its entry, the app's to hand in (`attach`); until it does, the scene ended where it stands */
@@ -826,7 +900,11 @@ function namePanes(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} *
  * Attach the scene's elements, and the act its own end runs (see the head):
  * the bar's ×, told whether a key pressed it by the focus owner's one
  * reading (FP-20); the stop's act (`toShared`); a stroke's (`showChanges`);
- * each, on a stop the reader returned to, that stop's (`returnedAct`).
+ * each, on a stop the reader returned to, that stop's (`returnedAct`). The
+ * pointer moving over the scene and leaving it keeps the tie it stands on
+ * in the column (`hoverAt`), and the focus entering or leaving a stroke's
+ * button or the stop marks the frame, so the next draw chooses the tie drawn
+ * whole between the stacked panes anew (`crossingOf`; FP-9).
  * @param {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement, stop: HTMLButtonElement, strokes: HTMLElement}} e `strokes` the gutter's layer the strokes' buttons stand in
  * @param {{end?: (byKey: boolean) => void, faces?: Faces}} [acts] `end` the scene's own end: N-GO's `closeScene`, as Esc, zoom-out and ← take it; `faces` the faces a returned stop shows at its site (O-FACES')
  */
@@ -835,11 +913,15 @@ export function attach(e, acts = {}) {
   if (acts.end) ending = acts.end;
   if (acts.faces) faces = acts.faces;
   e.root.setAttribute('aria-label', heard(t('L.scene-label')));
+  setRoom(e);
   e.stop.addEventListener('click', (ev) => stopAct(FOCUS.byKey(ev)));
   e.strokes.addEventListener('click', (ev) => {
     const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (ev.target).closest('[data-stroke]'));
     if (b && b.dataset.stroke) strokeAct(b.dataset.stroke, FOCUS.byKey(ev));
   });
+  e.root.addEventListener('pointermove', (ev) => hoverAt(ev));
+  e.root.addEventListener('pointerleave', () => hoverAt(null));
+  for (const x of [e.strokes, e.stop]) for (const type of ['focusin', 'focusout']) x.addEventListener(type, () => { if (scene && scene.fit.stacked) markDirty(); });
   /** the event's target, where it stands in a pane's corner: on the read it offers (`act`), on a draft's kept word (`kept`), on what opens it whole or compacts it again — a glyph, a head's count, the words a glyph opened — or anywhere on the corner opened whole (`whole`); null elsewhere */
   const onCorner = (/** @type {Event} */ ev) => {
     const tg = /** @type {HTMLElement | null} */ (ev.target), side = ev.currentTarget === e.paneB ? 'b' : 'a';
@@ -874,14 +956,18 @@ export function attach(e, acts = {}) {
 export const isOpen = () => scene !== null;
 /** the addresses the two panes' acts name and their positions are measured against (`Pane.names`) */
 export const pair = () => (scene ? { a: scene.a.names, b: scene.b.names } : null);
-/** the scene's runs of shared identity and the two ends it sets level, read-only (the gate reads them) */
-export const pairs = () => (scene ? { pairs: scene.pairs.map((p) => ({ ...p })), level: { ...scene.level } } : null);
+/** the scene's runs of shared identity, the two ends it sets level and the link it was opened from, read-only (the gate reads them) */
+export const pairs = () => (scene ? { pairs: scene.pairs.map((p) => ({ ...p })), level: { ...scene.level }, link: scene.link } : null);
 /** the last measure's figures (the gate records them; FP-18): the runs it read, the bands and strokes it made of them, and its time in ms */
 export const measured = () => ({ ...lastMeasure });
 /** the bands and lines the last draw drew, their ends on screen (the gate holds each band to its run's lines and each line to its passage's line) */
 export const ties = () => drawnTies.map((d) => /** @type {Drawn} */ ({ ...d, a: { ...d.a }, b: { ...d.b } }));
 /** the facing edges the last draw drew for the whole-document ends meeting them, on screen (the gate holds each to its pane's visible height) */
 export const edges = () => drawnEdges.map((e) => ({ ...e, links: [...e.links] }));
+/** the one tie the last draw drew whole between the stacked panes, on screen (the gate reads it): its key, its kind, its link where it is a line, why it is the one, and its path; null where it drew none */
+export const crossing = () => (drawnCrossing ? { ...drawnCrossing, path: drawnCrossing.path.map((p) => ({ ...p })) } : null);
+/** the fit the panes stand at (the gate reads it): the measure, the corners' form, the em and whether the panes stack; null where the scene does not stand */
+export const fitted = () => (scene ? { ...scene.fit } : null);
 /**
  * The strokes the last draw drew, in view, on screen (the gate reads them):
  * each its key, its two ends, its halves, its changes, the point its button
@@ -1805,8 +1891,9 @@ const textOf = (/** @type {Source} */ x, /** @type {Doc} */ d) => ({ src: addrOf
  * A scene on two panes as it opens (`open`, `reopen`): the ends `levels`
  * sets from the runs and the passage held as pane A's text holds it
  * (`placedHeld`), whether the far end names pane B's document whole, the
- * near passage's positions, and the stop at its first passage, none measured
- * yet; the full measure, the corners whole, until it stands (`stand`). Pane B
+ * near passage's positions, the stop at its first passage and the link it is
+ * opened from (`Held.link`), none measured yet; the full measure side by side,
+ * the corners whole, until it stands (`stand`). Pane B
  * is the held version where the opener asks the moved scene and its record is
  * one the page derived (`Held.heldB`).
  * @param {Pane} pa
@@ -1821,7 +1908,7 @@ function sceneOf(pa, pb, pairs, held) {
   return {
     a: pa, b: pb, pairs, level: levels(pairs, h), whole: !!h.wholeB, widthA: Math.max(1, h.widthA ?? 1),
     bands: [], lines: [], strokes: [], listing: null, relist: null, shared: [], next: 0, at: null, told: false, stepped: null, returned: null,
-    fit: { cpl: MEASURE_CPL, corner: 'whole', px: READING_PX }, band: 0, size: '', updating: 0, waiting: [],
+    fit: { cpl: MEASURE_CPL, corner: 'whole', px: READING_PX, stacked: false }, link: held.link ?? null, hover: null, band: 0, size: '', updating: 0, waiting: [],
   };
 }
 
@@ -2175,11 +2262,11 @@ function named(P, ids) {
   return { board: b ? b.origin : '', ...where, pos: one ? one.pos : null, width: one ? one.width : null, ids };
 }
 
-/** where an element of the scene stands, px from the scene's box: its right edge — the stop's, against pane B's facing edge — else its middle across, and its middle down */
+/** where an element of the scene stands, px from the scene's box: its edge against pane B's facing edge — the stop's, its right side by side and its left stacked — else its middle across, and its middle down */
 function placeIn(/** @type {NonNullable<typeof els>} */ E, /** @type {HTMLElement} */ el, /** @type {'edge' | 'middle'} */ how) {
-  const r = el.getBoundingClientRect(), root = E.root.getBoundingClientRect();
+  const r = el.getBoundingClientRect(), root = E.root.getBoundingClientRect(), stacked = !!scene && scene.fit.stacked;
   const x0 = root.left + E.root.clientLeft, y0 = root.top + E.root.clientTop;
-  return { x: (how === 'edge' ? r.right : r.left + r.width / 2) - x0, y: r.top + r.height / 2 - y0 };
+  return { x: (how === 'edge' ? (stacked ? r.left : r.right) : r.left + r.width / 2) - x0, y: r.top + r.height / 2 - y0 };
 }
 
 /**
@@ -2330,8 +2417,9 @@ function nameReturned(E, S, R) {
  * in the panes' texts now, held inside the panes' visible heights — the stop
  * at a band's clipped end against pane B's facing edge, level with its
  * passage's first line (`sharedAt`); a stroke's button at the middle of the
- * halves its change takes, where its runs' facing bytes meet in each pane
- * (`strokeAt`) — else where it stood as the reader left it.
+ * halves its change takes, where its runs' facing bytes meet in each pane —
+ * stacked, on its half at pane A's edge (`strokeAt`) — else where it stood as
+ * the reader left it.
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  * @param {Returned} R
@@ -2342,20 +2430,20 @@ function placeReturned(E, S, R) {
   const at = p ? { x: p.x - x0, y: p.y - y0 } : R.stop.place;
   R.el.style.left = at.x + 'px';
   R.el.style.top = at.y + 'px';
-  if (R.stop.kind === 'shared') R.el.style.transform = 'translate(-100%, -50%)';
+  if (R.stop.kind === 'shared') R.el.style.transform = S.fit.stacked ? 'translate(0, -50%)' : 'translate(-100%, -50%)';
   R.el.hidden = false;
 }
 
-/** where the passage a returned stop at a band's clipped end stood for stands, on screen: pane B's facing edge, level with its first line, held inside the pane's visible height; null where pane B's text holds none of it */
+/** where the passage a returned stop at a band's clipped end stood for stands, on screen: pane B's facing edge — its left side by side, its right stacked — level with its first line, held inside the pane's visible height; null where pane B's text holds none of it */
 function sharedAt(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} */ S, /** @type {SharedStop} */ stop) {
   const pane = E.paneB, at = REC.placedIn(imageOf(S.b), stop.at.ids)[0];
   const line = at ? lineIn(pane, S.b.names, at.pos, at.width) : null;
   if (!line) return null;
   const r = pane.getBoundingClientRect(), top = r.top + pane.clientTop, half = E.stop.getBoundingClientRect().height / 2 || 8;
-  return { x: r.left, y: Math.max(top + half, Math.min(top + pane.clientHeight - half, top - pane.scrollTop + line.y)) };
+  return { x: S.fit.stacked ? r.right : r.left, y: Math.max(top + half, Math.min(top + pane.clientHeight - half, top - pane.scrollTop + line.y)) };
 }
 
-/** where a returned stroke's runs meet, on screen: the middle of the halves its change takes, between the heights its runs' facing bytes meet at in each pane (`meetAt`), held inside the panes' visible heights; null where a pane's text holds no longer both facing bytes */
+/** where a returned stroke's runs meet, on screen: the middle of the halves its change takes, between the heights its runs' facing bytes meet at in each pane (`meetAt`) — stacked, the middle of its half at pane A's edge, half an em out (`emOf`) — held inside the panes' visible heights; null where a pane's text holds no longer both facing bytes */
 function strokeAt(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} */ S, /** @type {StrokeStop} */ stop) {
   /** the height a pane's runs meet at, px below its content top */
   const meet = (/** @type {Pane} */ P, /** @type {HTMLElement} */ pane) => {
@@ -2371,7 +2459,9 @@ function strokeAt(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} */
     const top = pane.getBoundingClientRect().top + pane.clientTop;
     return Math.max(top, Math.min(top + pane.clientHeight, top - pane.scrollTop + y));
   };
-  const a = { x: E.paneA.getBoundingClientRect().right, y: held(E.paneA, ya) }, b = { x: E.paneB.getBoundingClientRect().left, y: held(E.paneB, yb) };
+  const a = { x: E.paneA.getBoundingClientRect().right, y: held(E.paneA, ya) };
+  if (S.fit.stacked) return { x: a.x + emOf(E, S) / 2, y: a.y };
+  const b = { x: E.paneB.getBoundingClientRect().left, y: held(E.paneB, yb) };
   const halfA = stop.changes.some((c) => c.a.ids.length > 0), halfB = stop.changes.some((c) => c.b.ids.length > 0);
   return pointOn(strokeOf(a, b), halfA && halfB ? GAP_MIDDLE : halfA ? GAP_MIDDLE / 2 : (1 + GAP_MIDDLE) / 2);
 }
@@ -2762,37 +2852,65 @@ function placeAt(P, pos) {
 }
 
 /**
- * The panes' fit, decided once for both (see the head; FP-12, FP-26): P-LAY's
- * fit (`fitFor`) of the narrower pane's content box at the reading size
- * (P-CAM's), each corner beside its column whole or compact with the pane's
- * gap between them, and no margin past the column's edge — the pane's padding
- * holds that room; the full measure at the reading size, the corners whole,
- * where the platform lays out no pane.
+ * The panes' fit from the scene's width (see the head; FP-12, FP-26): side
+ * by side, P-LAY's fit (`fitFor`) of a pane's content box there — half of
+ * `w` less half SIDE_GAP, less the room the pane keeps beside its content —
+ * at the reading size, each corner beside its column whole or compact with
+ * its gap between them, and no margin past the column's edge; where that fit
+ * stands both corners at their documents' heads and keeps fewer than
+ * HEAD_CPL characters a line, stacked, the same fit of a pane's content box
+ * there — `w` less the column, less that room. Pure: the scene's widths
+ * alone, never the panes' as they stand, so the form one fit sets never moves
+ * the next.
+ * @param {number} w the scene's inner width, px
+ * @param {{pad: number, gap: number, column: number}} room `pad` the room a pane keeps beside its content — its padding on both sides and its scrollbar — `gap` the gap its corner keeps from its text, `column` the column's width (`columnPx`), px
+ * @param {number} readPx the reading size, px
+ * @returns {PaneFit}
+ */
+export function paneFit(w, room, readPx) {
+  const corners = { whole: cornerWidth(false), compact: cornerWidth(true), gap: room.gap };
+  /** P-LAY's fit of a pane's content box `cw` px wide, in the form `stacked` names */
+  const at = (/** @type {number} */ cw, /** @type {boolean} */ stacked) => {
+    const F = fitFor(cw, readPx, corners, 0);
+    return { cpl: F.cpl, corner: /** @type {PaneFit['corner']} */ (F.head ? 'head' : F.compact ? 'compact' : 'whole'), px: F.px, stacked };
+  };
+  const beside = at((w - SIDE_GAP) / 2 - room.pad, false);
+  return beside.corner === 'head' && beside.cpl < HEAD_CPL ? at(w - room.column - room.pad, true) : beside;
+}
+
+/**
+ * The panes' fit, decided once for both (see the head; FP-12, FP-26):
+ * `paneFit` of the scene's inner width, the room pane A keeps beside its
+ * content — its padding and its scrollbar, which pane B keeps alike — the gap
+ * its corner keeps from its text and the column (`columnPx`), at the reading
+ * size (P-CAM's); the full measure side by side at the reading size, the
+ * corners whole, where the platform lays out no scene.
  * @param {NonNullable<typeof els>} E
  * @returns {PaneFit}
  */
 function fitOf(E) {
-  /** a pane's content box and the gap its corner keeps from its text, px; null where the platform lays it out nowhere */
-  const room = (/** @type {HTMLElement} */ pane) => {
-    if (typeof getComputedStyle !== 'function' || !(pane.clientWidth > 0)) return null;
-    const cs = getComputedStyle(pane);
-    return { w: pane.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), gap: parseFloat(cs.columnGap) || 0 };
-  };
-  const rooms = [room(E.paneA), room(E.paneB)].filter((r) => r != null);
-  if (!rooms.length) return { cpl: MEASURE_CPL, corner: 'whole', px: READING_PX };
-  const r = rooms.reduce((x, y) => (y.w < x.w ? y : x));
-  const F = fitFor(r.w, READING_PX, { whole: cornerWidth(false), compact: cornerWidth(true), gap: r.gap }, 0);
-  return { cpl: F.cpl, corner: F.head ? 'head' : F.compact ? 'compact' : 'whole', px: F.px };
+  const pane = E.paneA;
+  if (typeof getComputedStyle !== 'function' || !(E.root.clientWidth > 0) || !(pane.clientWidth > 0)) return { cpl: MEASURE_CPL, corner: 'whole', px: READING_PX, stacked: false };
+  const cs = getComputedStyle(pane), bar = Math.max(0, (pane.offsetWidth || pane.clientWidth) - pane.clientWidth);
+  return paneFit(E.root.clientWidth, { pad: parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + bar, gap: parseFloat(cs.columnGap) || 0, column: columnPx() }, READING_PX);
+}
+
+/** the room the style lays the panes out by set on the scene (`--scene-gap`, `--scene-column`): SIDE_GAP side by side, the column stacked (`columnPx`); nothing where the platform lays out nothing */
+function setRoom(/** @type {NonNullable<typeof els>} */ E) {
+  if (typeof getComputedStyle !== 'function') return;
+  E.root.style.setProperty('--scene-gap', SIDE_GAP + 'px');
+  E.root.style.setProperty('--scene-column', columnPx() + 'px');
 }
 
 /**
  * The scene's fit set on the panes (see the head): the measure on the scene,
- * which each article's column reads (the style's `--measure`), both articles
- * at the fit's em, each pane standing its corner beside its column or, at its
- * document's head, above its text, each corner shaped for the form
- * (`shapeCorner`), and the band its heads reserve (`setBand`) — `keep` the
- * text standing where it is on screen as the band moves. Nothing where the
- * platform lays out no pane.
+ * which each article's column reads (the style's `--measure`), the room the
+ * style lays the panes out by (`setRoom`) and their form — stacked or side by
+ * side, the scene's `stacked` class — both articles at the fit's em, each
+ * pane standing its corner beside its column or, at its document's head,
+ * above its text, each corner shaped for the form (`shapeCorner`), and the
+ * band its heads reserve (`setBand`) — `keep` the text standing where it is
+ * on screen as the band moves. Nothing where the platform lays out no pane.
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  * @param {boolean} [keep]
@@ -2801,6 +2919,8 @@ function applyFit(E, S, keep = false) {
   if (typeof getComputedStyle !== 'function') return;
   const F = S.fit;
   E.root.style.setProperty('--measure', String(F.cpl));
+  setRoom(E);
+  E.root.classList.toggle('stacked', F.stacked);
   for (const side of SIDES) {
     const pane = paneEl(E, side), art = articleIn(pane), c = cornerEl(E, side);
     pane.classList.toggle('head', F.corner === 'head');
@@ -2840,19 +2960,20 @@ function rebanded(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} */
 
 /**
  * The panes fitted again as their size or a face changed (see the head): the
- * fit read again (`fitOf`); where its measure, its corners' form or its em
- * moved, both panes set again in one step at it (`setPanes`) — their texts
- * and what they were set with kept, the reader's place, the selection and the
- * ends set level carried by their bytes, the ties measured anew — else the fit
- * set on the panes again in place (`applyFit`), their text kept where it
- * stands, the room below each article and the ties measured anew.
+ * fit read again (`fitOf`); where its measure, its corners' form, its em or
+ * the panes' form moved, both panes set again in one step at it (`setPanes`)
+ * — their texts and what they were set with kept, the reader's place, the
+ * selection and the ends set level carried by their bytes, the ties measured
+ * anew — else the fit set on the panes again in place (`applyFit`), their
+ * text kept where it stands, the room below each article and the ties
+ * measured anew.
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  * @returns {boolean} the panes were set again — and drawn
  */
 function refit(E, S) {
   const F = fitOf(E), was = S.fit;
-  if (F.cpl === was.cpl && F.corner === was.corner && F.px === was.px) {
+  if (F.cpl === was.cpl && F.corner === was.corner && F.px === was.px && F.stacked === was.stacked) {
     applyFit(E, S, true);
     roomBelow(E);
     measure();
@@ -2907,7 +3028,8 @@ function placeHeads(E, S) {
  * (`sourceStatementHTML`), its C-33's words read as it is placed (T-LAYER's
  * `carriesC33`, `originKind`); a key no gap holds; a withheld
  * run's others' count, as the pane was set with it — each in the column's
- * edge on the pane's inner side, beside its run's first line in view — a
+ * edge on the pane's facing side — its inner side by side, its right
+ * stacked — beside its run's first line in view — a
  * transcluded run's the first line in view a character of it stands on, read
  * from the platform's rects over its stretch in each typed line in turn
  * (`textLineIn`) — at a share of the pane's em never below P-REG's
@@ -2984,9 +3106,9 @@ function placeStatements(E, S) {
     const rows = /** @type {HTMLElement[]} */ ([...art.el.querySelectorAll('.run > *')]), first = rows[0], last = rows[rows.length - 1];
     const fixed = /** @type {HTMLElement[]} */ ([...art.el.querySelectorAll('.edge')]).map((e) => { const q = e.getBoundingClientRect(); return { y: q.top, h: q.height }; });
     const ys = holdStack(placing.map((p, k) => ({ y: p.y, h: heights[k] })), first ? first.getBoundingClientRect().top : origin, vis.top + HOLD.gap, last ? last.getBoundingClientRect().bottom : vis.bottom, SIGN_GAP, fixed);
-    const left = pr.left + pane.clientLeft - pane.scrollLeft;
+    const left = pr.left + pane.clientLeft - pane.scrollLeft, right = side === 'a' || S.fit.stacked;
     placing.forEach((p, k) => {
-      const x = side === 'a' ? p.rect.right + EDGE_GAP * px : p.rect.left - EDGE_GAP * px - width;
+      const x = right ? p.rect.right + EDGE_GAP * px : p.rect.left - EDGE_GAP * px - width;
       p.el.style.transform = `translate(${Math.round(x - left)}px, ${Math.round(ys[k] - origin + pane.scrollTop)}px)`;
     });
   }
@@ -3671,12 +3793,17 @@ function level() {
 /**
  * Draw the bands, the strokes and the lines on the scene's canvas at the
  * panes' scrolls now — the panes fitted again first where their size changed
- * since the ties were measured (`refit`): each band at its extent
- * (`drawBand`), held inside each
- * pane's visible height; each stroke whose two heights stand in their panes'
- * visible heights (`drawStroke`); each line's end where its passage's line
- * stands — a whole document's at its pane's facing edge, level with the
- * line's other end — then each facing edge whole-document ends meet
+ * since the ties were measured (`refit`): each band at its extent, held
+ * inside each pane's visible height; each stroke whose two heights stand in
+ * their panes' visible heights; each line's end where its passage's line
+ * stands — a whole document's at its pane's facing edge, as far below its
+ * pane's visible top as the line's other end stands below its own
+ * (`levelWith`) — side by side each between the panes' facing edges
+ * (`drawBand`, `drawStroke`, `drawTie`); stacked each at each of its ends
+ * (`drawBars`, `drawStrokeEnds`, `drawEnd`), the one tie the pointer, the
+ * focus or the scene's opening chooses drawn whole along the column
+ * (`crossingOf`, `drawCrossing`) and the ends the pointer stands on kept
+ * (`drawnHits`); then each facing edge whole-document ends meet
  * (`wholeEdges`, `drawEdge`); the strokes' buttons and the stop placed
  * (`placeStrokes`, `placeStop`) — a stop the reader returned to standing
  * until it is answered and they have moved on from it, then under the
@@ -3694,7 +3821,7 @@ export function draw() {
   const DPR = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
   cv.width = Math.round(c.width * DPR); cv.height = Math.round(c.height * DPR);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.clearRect(0, 0, c.width, c.height);
-  /** a pane on the canvas: its inner edges, its visible content's top and bottom, its content's top */
+  /** a pane on the canvas: its sides, its visible content's top and bottom, its content's top */
   const frame = (/** @type {HTMLElement} */ pane) => {
     const r = pane.getBoundingClientRect(), top = r.top + pane.clientTop - c.top;
     return { x0: r.left - c.left, x1: r.right - c.left, top, bottom: top + pane.clientHeight, origin: top - pane.scrollTop };
@@ -3704,40 +3831,64 @@ export function draw() {
     const y = f.origin + e.y;
     return { y: Math.max(f.top, Math.min(f.bottom, y)), clipped: y < f.top || y > f.bottom, above: y < f.top };
   };
-  /** a whole document's end on the canvas: level with the line's other end, held inside its pane's visible height */
-  const meet = (/** @type {ReturnType<typeof frame>} */ f, /** @type {{y: number} | null} */ o) => ({ y: Math.max(f.top, Math.min(f.bottom, o ? o.y : f.top)), clipped: false, above: false });
   /** a band's end on the canvas: its extent held inside its pane's visible height, and whether it passes the visible top or bottom */
   const span = (/** @type {ReturnType<typeof frame>} */ f, /** @type {BandEnd} */ e) => {
     const top = f.origin + e.top, bottom = f.origin + e.bottom, hold = (/** @type {number} */ y) => Math.max(f.top, Math.min(f.bottom, y));
     return { top: hold(top), bottom: hold(bottom), above: top < f.top, below: bottom > f.bottom };
   };
-  const fa = frame(E.paneA), fb = frame(E.paneB), x0 = fa.x1, x1 = fb.x0;
+  const fa = frame(E.paneA), fb = frame(E.paneB), stacked = S.fit.stacked;
+  // each pane's facing edge — side by side pane A's right and pane B's left, stacked both panes' right — how far an end
+  // leaves it stacked, and where along the column the one tie drawn whole runs
+  const x0 = fa.x1, x1 = stacked ? fb.x1 : fb.x0, em = stacked ? endEm(S.fit.px, c.width - fa.x1) : 0, xc = c.width - em / 2;
+  /** an end the pointer stands on in the column (`Hit`): `top` to `bottom` on the canvas, an em out from the edge at `x`, on screen */
+  const hit = (/** @type {string} */ tie, /** @type {number} */ order, /** @type {number} */ x, /** @type {number} */ top, /** @type {number} */ bottom) => ({ tie, order, x0: x + c.left, x1: x + em + c.left, top: top + c.top, bottom: bottom + c.top });
+  /** a point on the canvas, on screen */
+  const onScreen = (/** @type {{x: number, y: number}} */ p) => ({ x: p.x + c.left, y: p.y + c.top });
+  // every band, every stroke in view and every line, on the canvas
+  const bands = S.bands.map((band) => ({ band, tie: bandKey(band), ea: span(fa, band.a), eb: span(fb, band.b) }));
+  const strokes = S.strokes.flatMap((s) => {
+    const a = { x: x0, y: fa.origin + s.a }, b = { x: x1, y: fb.origin + s.b };
+    return s.key && a.y >= fa.top && a.y <= fa.bottom && b.y >= fb.top && b.y <= fb.bottom ? [{ s, key: s.key, tie: 'stroke ' + s.key, a, b }] : [];
+  });
+  const lines = S.lines.map((tie) => {
+    const ta = tie.a.whole ? null : at(fa, tie.a), tb = tie.b.whole ? null : at(fb, tie.b);
+    return { tie, key: lineKey(tie), ea: ta || levelWith(fa, tb, fb), eb: tb || levelWith(fb, ta, fa) };
+  });
+  const crossing = stacked ? crossingOf([...bands, ...strokes.map((x) => ({ tie: x.tie })), ...lines.map((x) => ({ tie: x.key, link: x.tie.link }))], { hover: S.hover, focus: focusTie(E, S), link: S.link }) : null;
   /** @type {Drawn[]} */
   const out = [];
+  /** @type {StrokeDrawn[]} */
+  const struck = [];
+  /** @type {Hit[]} */
+  const hits = [];
   /** a band's end on screen */
   const bandOnScreen = (/** @type {ReturnType<typeof span>} */ e, /** @type {number} */ x, /** @type {BandEnd} */ end) => ({ pos: end.pos, width: end.width, x: x + c.left, top: e.top + c.top, bottom: e.bottom + c.top, above: e.above, below: e.below, clipped: e.above || e.below });
   ctx.globalAlpha = 1;
-  for (const band of S.bands) {
-    const ea = span(fa, band.a), eb = span(fb, band.b);
-    drawBand(ctx, { x: x0, ...ea }, { x: x1, ...eb });
-    out.push({ kind: 'band', link: null, a: bandOnScreen(ea, x0, band.a), b: bandOnScreen(eb, x1, band.b) });
+  for (const { band, tie, ea, eb } of bands) {
+    if (stacked) drawBars(ctx, { x: x0, ...ea }, { x: x1, ...eb }, em); else drawBand(ctx, { x: x0, ...ea }, { x: x1, ...eb });
+    out.push({ kind: 'band', link: null, tie, a: bandOnScreen(ea, x0, band.a), b: bandOnScreen(eb, x1, band.b) });
+    if (stacked) hits.push(hit(tie, 2, x0, ea.top, ea.bottom), hit(tie, 2, x1, eb.top, eb.bottom));
   }
-  /** @type {StrokeDrawn[]} */
-  const struck = [];
-  for (const s of S.strokes) {
-    const a = { x: x0, y: fa.origin + s.a }, b = { x: x1, y: fb.origin + s.b };
-    if (!s.key || a.y < fa.top || a.y > fa.bottom || b.y < fb.top || b.y > fb.bottom) continue;
-    drawStroke(ctx, a, b, s);
-    const p = pointOn(strokeOf(a, b), s.halfA && s.halfB ? GAP_MIDDLE : s.halfA ? GAP_MIDDLE / 2 : (1 + GAP_MIDDLE) / 2);
-    struck.push({ key: s.key, a: { x: a.x + c.left, y: a.y + c.top }, b: { x: b.x + c.left, y: b.y + c.top }, halfA: s.halfA, halfB: s.halfB, changes: s.changes, at: { x: p.x + c.left, y: p.y + c.top } });
+  for (const { s, key, tie, a, b } of strokes) {
+    /** @type {{x: number, y: number}} */
+    let p;
+    if (stacked) {
+      drawStrokeEnds(ctx, a, b, s, em);
+      p = { x: x0 + em / 2, y: a.y };
+      hits.push(hit(tie, 1, x0, a.y - HIT_PX, a.y + HIT_PX), hit(tie, 1, x1, b.y - HIT_PX, b.y + HIT_PX));
+    } else {
+      drawStroke(ctx, a, b, s);
+      p = pointOn(strokeOf(a, b), s.halfA && s.halfB ? GAP_MIDDLE : s.halfA ? GAP_MIDDLE / 2 : (1 + GAP_MIDDLE) / 2);
+    }
+    struck.push({ key, a: onScreen(a), b: onScreen(b), halfA: s.halfA, halfB: s.halfB, changes: s.changes, at: onScreen(p) });
   }
-  for (const tie of S.lines) {
-    const ta = tie.a.whole ? null : at(fa, tie.a), tb = tie.b.whole ? null : at(fb, tie.b);
-    const ea = ta || meet(fa, tb), eb = tb || meet(fb, ta);
+  for (const { tie, key, ea, eb } of lines) {
     ctx.globalAlpha = tie.value; ctx.lineWidth = 1.6;
-    drawTie(ctx, { x: x0, ...ea }, { x: x1, ...eb }, tie.ink);
+    if (!stacked) drawTie(ctx, { x: x0, ...ea }, { x: x1, ...eb }, tie.ink);
+    else { drawEnd(ctx, { x: x0, ...ea }, tie.ink.a, em); drawEnd(ctx, { x: x1, ...eb }, tie.ink.b, em); }
+    if (stacked) hits.push(hit(key, 0, x0, ea.y - HIT_PX, ea.y + HIT_PX), hit(key, 0, x1, eb.y - HIT_PX, eb.y + HIT_PX));
     out.push({
-      kind: 'link', link: tie.link,
+      kind: 'link', link: tie.link, tie: key,
       a: { pos: tie.a.pos, width: tie.a.width, x: x0 + c.left, y: ea.y + c.top, clipped: ea.clipped, cover: !!tie.a.cover, whole: !!tie.a.whole },
       b: { pos: tie.b.pos, width: tie.b.width, x: x1 + c.left, y: eb.y + c.top, clipped: eb.clipped, cover: !!tie.b.cover, whole: !!tie.b.whole },
     });
@@ -3745,19 +3896,158 @@ export function draw() {
   /** @type {Edge[]} */
   const edged = [];
   for (const e of wholeEdges(S.lines)) {
-    const f = e.side === 'a' ? fa : fb, x = e.side === 'a' ? x0 + EDGE_W / 2 : x1 - EDGE_W / 2, ink = inkOf(e.mark);
+    const f = e.side === 'a' ? fa : fb, x = e.side === 'a' ? x0 + EDGE_W / 2 : stacked ? x1 + EDGE_W / 2 : x1 - EDGE_W / 2, ink = inkOf(e.mark);
     ctx.globalAlpha = e.mark.value; ctx.lineWidth = EDGE_W;
     drawEdge(ctx, x, f.top, f.bottom, ink);
     edged.push({ side: e.side, links: e.links, x: x + c.left, top: f.top + c.top, bottom: f.bottom + c.top, hue: ink.hue, dashed: ink.dash.length > 0 });
+  }
+  /** @type {Crossing | null} */
+  let drawn = null;
+  if (crossing) {
+    const b = bands.find((x) => x.tie === crossing.tie), s = strokes.find((x) => x.tie === crossing.tie), l = lines.find((x) => x.key === crossing.tie);
+    // its body runs on from its ends' cut, an em out from each facing edge, each end drawn as every end is; the path it
+    // stands on runs from the edges themselves
+    /** the path from `x` past pane A's edge at `ya` out to the column's outer side, along it, and into `x` past pane B's at `yb` */
+    const path = (/** @type {number} */ ya, /** @type {number} */ yb, x = 0) => crossingPath({ x: x0 + x, y: ya }, { x: x1 + x, y: yb }, xc);
+    ctx.globalAlpha = 1;
+    if (b) {
+      drawCrossing(ctx, { kind: 'band', a: { x: x0 + em, top: b.ea.top, bottom: b.ea.bottom }, b: { x: x1 + em, top: b.eb.top, bottom: b.eb.bottom }, x: xc, w: em / 4 });
+      drawn = { tie: b.tie, kind: 'band', link: null, why: crossing.why, path: path((b.ea.top + b.ea.bottom) / 2, (b.eb.top + b.eb.bottom) / 2).map(onScreen) };
+    } else if (s) {
+      drawCrossing(ctx, { kind: 'stroke', path: path(s.a.y, s.b.y, em), halves: s.s });
+      drawn = { tie: s.tie, kind: 'stroke', link: null, why: crossing.why, path: path(s.a.y, s.b.y).map(onScreen) };
+    } else if (l) {
+      ctx.globalAlpha = l.tie.value; ctx.lineWidth = 1.6;
+      drawCrossing(ctx, { kind: 'link', path: path(l.ea.y, l.eb.y, em), ink: l.tie.ink });
+      drawn = { tie: l.key, kind: 'link', link: l.tie.link, why: crossing.why, path: path(l.ea.y, l.eb.y).map(onScreen) };
+    }
   }
   ctx.globalAlpha = 1;
   drawnTies = out;
   drawnEdges = edged;
   drawnStrokes = struck;
+  drawnCrossing = drawn;
+  drawnHits = hits;
   placeStrokes(E, S);
   placeStop(E, S);
   placeHeads(E, S);
   placeStatements(E, S);
+}
+
+/** a band's key (`tieKey`): its runs' first positions in each pane */
+const bandKey = (/** @type {Band} */ b) => `band ${b.a.pos} ${b.b.pos}`;
+/** a line's key (`tieKey`): its link and its ends' first positions — one link drawn once for each pair of its ends */
+const lineKey = (/** @type {Tie} */ l) => `link ${l.link} ${l.a.pos} ${l.b.pos}`;
+
+/** how far a tie's end leaves its pane's facing edge where the panes stack, px (see the head): an em of the panes' — `px` — and half the column `col` at most */
+const endEm = (/** @type {number} */ px, /** @type {number} */ col) => Math.max(0, Math.min(px, col / 2));
+
+/** how far a tie's end leaves its pane's facing edge where the panes stack, as the scene stands (`endEm`): the column the room between pane A's facing edge and the canvas's right */
+function emOf(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} */ S) {
+  return endEm(S.fit.px, E.canvas.getBoundingClientRect().right - E.paneA.getBoundingClientRect().right);
+}
+
+/**
+ * A whole document's end on the canvas (see the head): as far below its
+ * pane's visible top as the line's other end stands below its own — the
+ * other end's own height side by side, where the panes' tops are one — held
+ * inside its pane's visible height; at its visible top where the other end is
+ * a whole document too.
+ * @param {{top: number, bottom: number}} f its pane, on the canvas
+ * @param {{y: number} | null} o the line's other end, on the canvas; null where it is a whole document
+ * @param {{top: number}} fo the other end's pane, on the canvas
+ * @returns {{y: number, clipped: boolean, above: boolean}}
+ */
+export function levelWith(f, o, fo) {
+  return { y: Math.max(f.top, Math.min(f.bottom, o ? f.top + (o.y - fo.top) : f.top)), clipped: false, above: false };
+}
+
+/**
+ * The one tie drawn whole between the stacked panes (see the head): of the
+ * ties drawn, the one the pointer stands on, else the one holding the focus,
+ * else the first line of the link the scene was opened from; null where none
+ * of them is drawn.
+ * @param {Array<{tie: string, link?: string | null}>} drawn the ties drawn, each by its key (`tieKey`) and its link where it is a line
+ * @param {{hover: string | null, focus: string | null, link: string | null}} at the tie the pointer stands on, the one holding the focus, by their keys, and the link the scene was opened from
+ * @returns {{tie: string, why: 'pointer' | 'focus' | 'opened'} | null}
+ */
+export function crossingOf(drawn, at) {
+  const keys = new Set(drawn.map((d) => d.tie));
+  if (at.hover != null && keys.has(at.hover)) return { tie: at.hover, why: 'pointer' };
+  if (at.focus != null && keys.has(at.focus)) return { tie: at.focus, why: 'focus' };
+  const opened = at.link != null ? drawn.find((d) => d.link === at.link) : undefined;
+  return opened ? { tie: opened.tie, why: 'opened' } : null;
+}
+
+/**
+ * The tie holding the platform's focus (see the head), by its key
+ * (`tieKey`): a stroke's button's stroke, a returned stroke's; the band whose
+ * run in pane B holds the passage the stop stands for — a returned stop's,
+ * where pane B's text places it now; null where the focus stands on none.
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ * @returns {string | null}
+ */
+function focusTie(E, S) {
+  const at = typeof document !== 'undefined' ? /** @type {HTMLElement | null} */ (document.activeElement) : null, R = S.returned;
+  if (!at) return null;
+  /** the band whose run in pane B holds a position */
+  const bandAt = (/** @type {number} */ pos) => { const b = S.bands.find((x) => x.b.pos <= pos && pos < x.b.pos + x.b.width); return b ? bandKey(b) : null; };
+  if (R && at === R.el) {
+    if (R.stop.kind === 'stroke') return 'stroke ' + R.stop.key;
+    const p = REC.placedIn(imageOf(S.b), R.stop.at.ids)[0];
+    return p ? bandAt(p.pos) : null;
+  }
+  if (at === E.stop) return S.at != null ? bandAt(S.shared[S.at].pos) : null;
+  return E.strokes.contains(at) && at.dataset && at.dataset.stroke ? 'stroke ' + at.dataset.stroke : null;
+}
+
+/**
+ * The tie whose end the last draw drew in the column under a point on screen
+ * (`Hit`): a line's before a stroke's before a band's; null where none
+ * stands there.
+ * @param {Hit[]} hits
+ * @param {number} x
+ * @param {number} y
+ * @returns {string | null}
+ */
+export function hitIn(hits, x, y) {
+  /** @type {Hit | null} */
+  let best = null;
+  for (const h of hits) if (x >= h.x0 && x <= h.x1 && y >= h.top && y <= h.bottom && (!best || h.order < best.order)) best = h;
+  return best ? best.tie : null;
+}
+
+/**
+ * The tie the pointer stands on where the panes stack, kept as the scene's
+ * view state (`Scene.hover`; FP-7): a stroke's button's stroke, else the end
+ * the last draw drew in the column under it (`hitIn`) — the frame marked
+ * where it moved, so the next draw draws that tie whole (FP-9); none where
+ * the pointer leaves the scene or the panes stand side by side.
+ * @param {PointerEvent | null} ev
+ */
+function hoverAt(ev) {
+  const S = scene;
+  if (!S) return;
+  const tg = ev ? /** @type {HTMLElement | null} */ (ev.target) : null;
+  const b = tg && typeof tg.closest === 'function' ? /** @type {HTMLElement | null} */ (tg.closest('#scenestrokes [data-stroke]')) : null;
+  const key = !ev || !S.fit.stacked ? null : b && b.dataset.stroke ? 'stroke ' + b.dataset.stroke : hitIn(drawnHits, ev.clientX, ev.clientY);
+  if (key === S.hover) return;
+  S.hover = key;
+  markDirty();
+}
+
+/**
+ * The path the one tie drawn whole between the stacked panes runs along (see
+ * the head): from its end at pane A's facing edge out to the column's outer
+ * side at `x`, along it, and into its end at pane B's facing edge.
+ * @param {{x: number, y: number}} a its end at pane A's facing edge
+ * @param {{x: number, y: number}} b its end at pane B's
+ * @param {number} x where along the column it runs
+ * @returns {Array<{x: number, y: number}>}
+ */
+export function crossingPath(a, b, x) {
+  return [{ x: a.x, y: a.y }, { x, y: a.y }, { x, y: b.y }, { x: b.x, y: b.y }];
 }
 
 /**
@@ -3807,6 +4097,134 @@ export function drawStroke(ctx, a, b, halves) {
   ctx.lineWidth = STROKE_W;
   if (halves.halfA) strokeIn(ctx, left, BAND_INK, BAND_INK, null);
   if (halves.halfB) strokeIn(ctx, right, BAND_INK, BAND_INK, null);
+}
+
+/**
+ * Draw one band where the panes stack (`draw`; see the head): at each pane's
+ * facing edge a bar — its ground an em wide from the edge, from its extent's
+ * top to its bottom, in sameness's texture, and those its edges, cut an em
+ * out, BAND_EDGE_W px in sameness's boundary, one where it stands no taller
+ * than a line; where it passes its pane's visible top or bottom the stub's
+ * triangle at that edge, in the column, pointing the way it passes — and the
+ * two bars joined by a hairline along the column at their cut, HAIRLINE_W px
+ * in sameness's boundary, from the upper bar's bottom to the lower bar's top.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {{x: number, top: number, bottom: number, above: boolean, below: boolean}} a its end at pane A's facing edge, on the canvas, held inside the pane's visible height
+ * @param {{x: number, top: number, bottom: number, above: boolean, below: boolean}} b its end at pane B's, below pane A's
+ * @param {number} em how far each bar leaves its edge (`endEm`)
+ */
+export function drawBars(ctx, a, b, em) {
+  for (const e of [a, b]) {
+    ctx.beginPath();
+    ctx.moveTo(e.x, e.top); ctx.lineTo(e.x + em, e.top); ctx.lineTo(e.x + em, e.bottom); ctx.lineTo(e.x, e.bottom);
+    ctx.closePath();
+    ctx.fillStyle = SAMENESS.texture;
+    ctx.fill();
+    ctx.lineWidth = BAND_EDGE_W;
+    strokeIn(ctx, strokeOf({ x: e.x, y: e.top }, { x: e.x + em, y: e.top }), BAND_INK, BAND_INK, null);
+    if (e.bottom !== e.top) strokeIn(ctx, strokeOf({ x: e.x, y: e.bottom }, { x: e.x + em, y: e.bottom }), BAND_INK, BAND_INK, null);
+    if (e.above) stub(ctx, e.x + 6, e.top, -1, BAND_INK.hue);
+    if (e.below) stub(ctx, e.x + 6, e.bottom, 1, BAND_INK.hue);
+  }
+  ctx.lineWidth = HAIRLINE_W;
+  strokeIn(ctx, strokeOf({ x: a.x + em, y: a.bottom }, { x: b.x + em, y: b.top }), BAND_INK, BAND_INK, null);
+}
+
+/**
+ * Draw one end of a link's line where the panes stack (`draw`; see the
+ * head), its width and alpha set on the context: an em of the line leaving
+ * its pane's facing edge at its passage's first line, in that end's ink, cut
+ * there; where its line has left the pane, at the pane's edge with the stub's
+ * triangle in that end's hue.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {{x: number, y: number, clipped: boolean, above: boolean}} e the end at its pane's facing edge, on the canvas
+ * @param {Ink} ink that end's
+ * @param {number} em how far it leaves the edge (`endEm`)
+ */
+export function drawEnd(ctx, e, ink, em) {
+  strokeIn(ctx, strokeOf({ x: e.x, y: e.y }, { x: e.x + em, y: e.y }), ink, ink, null);
+  if (e.clipped) stub(ctx, e.x + 6, e.y, e.above ? -1 : 1, ink.hue);
+}
+
+/**
+ * Draw one stroke's ends where the panes stack (`draw`; see the head): an em
+ * of the bands' shared edge leaving each pane's facing edge at its height, in
+ * each half side by side draws — beside each pane holding bytes between the
+ * runs — STROKE_W px in sameness's boundary, and none beside a pane holding
+ * none.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {{x: number, y: number}} a its end at pane A's facing edge, on the canvas
+ * @param {{x: number, y: number}} b its end at pane B's
+ * @param {{halfA: boolean, halfB: boolean}} halves
+ * @param {number} em how far each leaves its edge (`endEm`)
+ */
+export function drawStrokeEnds(ctx, a, b, halves, em) {
+  ctx.lineWidth = STROKE_W;
+  if (halves.halfA) strokeIn(ctx, strokeOf(a, { x: a.x + em, y: a.y }), BAND_INK, BAND_INK, null);
+  if (halves.halfB) strokeIn(ctx, strokeOf(b, { x: b.x + em, y: b.y }), BAND_INK, BAND_INK, null);
+}
+
+/** @typedef {{kind: 'link', path: Array<{x: number, y: number}>, ink: {a: Ink, b: Ink}} | {kind: 'stroke', path: Array<{x: number, y: number}>, halves: {halfA: boolean, halfB: boolean}} | {kind: 'band', a: {x: number, top: number, bottom: number}, b: {x: number, top: number, bottom: number}, x: number, w: number}} Whole the one tie drawn whole between the stacked panes, as `drawCrossing` draws it: a line or a stroke along its path (`crossingPath`), a band from its bars' cut (`a.x`, `b.x`) at their extents to a strip `w` wide along the column at `x` */
+
+/**
+ * Draw the one tie drawn whole between the stacked panes (`draw`; see the
+ * head): a line along its path in pane A's end's ink to the path's middle and
+ * pane B's after it, each stretch drawn from the middle, so they meet there
+ * with no dot or break and a dashed one begins in ink where the other ends
+ * (FP-30), its width and alpha set on the context; a stroke along its path,
+ * STROKE_W px in sameness's boundary, the half to the middle where pane A
+ * holds bytes between the runs and the half after it where pane B does; a
+ * band its ground from each bar's cut at that bar's extent out to a strip
+ * along the column, in sameness's texture, and its two sides its edges,
+ * BAND_EDGE_W px in sameness's boundary.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Whole} w
+ */
+export function drawCrossing(ctx, w) {
+  if (w.kind === 'band') {
+    const { a, b } = w, x0 = w.x - w.w / 2, x1 = w.x + w.w / 2;
+    const outer = [{ x: a.x, y: a.top }, { x: x1, y: a.top }, { x: x1, y: b.bottom }, { x: b.x, y: b.bottom }];
+    const inner = [{ x: b.x, y: b.top }, { x: x0, y: b.top }, { x: x0, y: a.bottom }, { x: a.x, y: a.bottom }];
+    ctx.beginPath();
+    ctx.moveTo(outer[0].x, outer[0].y);
+    for (const p of [...outer.slice(1), ...inner]) ctx.lineTo(p.x, p.y);
+    ctx.closePath();
+    ctx.fillStyle = SAMENESS.texture;
+    ctx.fill();
+    ctx.lineWidth = BAND_EDGE_W;
+    for (const side of [outer, inner]) polyIn(ctx, side, BAND_INK);
+    return;
+  }
+  const [before, after] = halvesOf(w.path);
+  if (w.kind === 'link') { polyIn(ctx, before, w.ink.a); polyIn(ctx, after, w.ink.b); return; }
+  ctx.lineWidth = STROKE_W;
+  if (w.halves.halfA) polyIn(ctx, before, BAND_INK);
+  if (w.halves.halfB) polyIn(ctx, after, BAND_INK);
+}
+
+/**
+ * A path cut at the middle of its length into the stretch before and the
+ * stretch after (`drawCrossing`), each running from the cut — the one before
+ * back to the path's start — so each is stroked from the one point.
+ * @param {Array<{x: number, y: number}>} path two points or more
+ * @returns {[Array<{x: number, y: number}>, Array<{x: number, y: number}>]}
+ */
+export function halvesOf(path) {
+  const lengths = path.slice(1).map((q, i) => Math.hypot(q.x - path[i].x, q.y - path[i].y));
+  let left = lengths.reduce((n, l) => n + l, 0) / 2, i = 0;
+  while (i < lengths.length - 1 && left > lengths[i]) { left -= lengths[i]; i++; }
+  const p = path[i], q = path[i + 1], t = lengths[i] ? Math.min(1, left / lengths[i]) : 0;
+  const m = { x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t };
+  return [[m, ...path.slice(0, i + 1).reverse()], [m, ...path.slice(i + 1)]];
+}
+
+/** stroke a path of straight stretches in one ink, butt-capped, its dash begun at its start; its width and alpha the caller's */
+function polyIn(/** @type {CanvasRenderingContext2D} */ ctx, /** @type {Array<{x: number, y: number}>} */ pts, /** @type {Ink} */ ink) {
+  ctx.lineCap = 'butt'; ctx.strokeStyle = ink.hue; ctx.setLineDash(ink.dash);
+  ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+  for (const p of pts.slice(1)) ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
 }
 
 /** a stroke's button standing in the gutter, by the stroke's key; null where none stands */
@@ -3890,8 +4308,9 @@ export const strokeRuns = (s, A, B, ownerOf) => tRuns('L.scene.stroke.name', { c
 
 /**
  * The strokes' buttons placed at the panes' scrolls now (see the head): one
- * native button for each stroke the last draw drew, in the gutter centred on
- * its point, keyed by the stroke, named by what it stands for, its count
+ * native button for each stroke the last draw drew, centred on its point — in
+ * the gutter side by side, on its half at pane A's edge stacked — keyed by
+ * the stroke, named by what it stands for, its count
  * shown where it stands for two changes or more; each made as its stroke
  * comes into view and taken down as it leaves, the rest moved in place so a
  * focus standing on one stays, and those in view in the order they stand,
@@ -4061,13 +4480,14 @@ export function stopFor(shared, next, view) {
 
 /**
  * The stop placed at the panes' scrolls now (see the head): where `stopFor`
- * stands it, at pane B's facing edge, at the pane's visible top or bottom on
- * the passage's bearing, over the stub's triangle, its count shown where the
- * shared passages are two or more and its name ST's words; its first
- * appearance in the scene said in the status region (FP-36); hidden where
- * every one stands in view, the focus it held handed to pane B (FP-20). A
- * returned stop stands where what it stood for stands (`placeReturned`),
- * named as its answer tells, never hidden.
+ * stands it, against pane B's facing edge — in the gap side by side, in the
+ * column stacked — at the pane's visible top or bottom on the passage's
+ * bearing, over the stub's triangle, its count shown where the shared
+ * passages are two or more and its name ST's words; its first appearance in
+ * the scene said in the status region (FP-36); hidden where every one stands
+ * in view, the focus it held handed to pane B (FP-20). A returned stop stands
+ * where what it stood for stands (`placeReturned`), named as its answer
+ * tells, never hidden.
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  */
@@ -4081,12 +4501,12 @@ function placeStop(E, S) {
     return;
   }
   const n = S.shared.length, id = n > 1 ? 'L.scene.shared' : 'L.scene.shared.1', vals = { D: S.b.shows, n: numeral(n) };
-  const root = E.root.getBoundingClientRect(), r = pane.getBoundingClientRect(), top = r.top + pane.clientTop;
+  const root = E.root.getBoundingClientRect(), r = pane.getBoundingClientRect(), top = r.top + pane.clientTop, stacked = S.fit.stacked;
   stop.setAttribute('aria-label', heard(t(id, vals)));
   stop.textContent = n > 1 ? numeral(n) : '';
-  stop.style.left = r.left - root.left - E.root.clientLeft + 'px';
+  stop.style.left = (stacked ? r.right : r.left) - root.left - E.root.clientLeft + 'px';
   stop.style.top = (to.above ? top : top + pane.clientHeight) - root.top - E.root.clientTop + 'px';
-  stop.style.transform = to.above ? 'translate(-100%, 0)' : 'translate(-100%, -100%)';
+  stop.style.transform = `translate(${stacked ? '0' : '-100%'}, ${to.above ? '0' : '-100%'})`;
   stop.hidden = false;
   if (!S.told) { S.told = true; FOCUS.say(t(id, vals)); }
 }
@@ -4158,9 +4578,11 @@ export function close() {
   drawnTies = [];
   drawnEdges = [];
   drawnStrokes = [];
+  drawnCrossing = null;
+  drawnHits = [];
   for (const side of SIDES) stood[side].clear();
   coverPlane(false);
-  els.root.classList.remove('on'); els.paneA.innerHTML = ''; els.paneB.innerHTML = ''; els.strokes.innerHTML = ''; delete els.bar.dataset.face;
+  els.root.classList.remove('on'); els.root.classList.remove('stacked'); els.paneA.innerHTML = ''; els.paneB.innerHTML = ''; els.strokes.innerHTML = ''; delete els.bar.dataset.face;
   for (const p of [els.paneA, els.paneB]) p.classList.toggle('head', false);
   els.stop.hidden = true;
   els.stop.textContent = '';

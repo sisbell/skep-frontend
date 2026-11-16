@@ -79,8 +79,10 @@
 // held version's selection gives the acts that send (`scene.heldReason`), its
 // pairs, a passage's line in a pane
 // (`scene.at`), its bands beside their runs' lines and its lines beside their
-// passages' lines, and their panes' facing edges (`scene.ties`), the facing
-// edges a whole document's ends meet (`scene.edges`), the stop at a band's
+// passages' lines, and their panes' facing edges by the form the panes stand
+// in (`scene.ties`), the facing edges a whole document's ends meet
+// (`scene.edges`), the one tie drawn whole between the stacked panes and why
+// (`scene.crossing`), the fit the panes stand at (`scene.fit`), the stop at a band's
 // clipped end (`scene.stop`), a stop the reader returned to that only the
 // panes' `compare` draws (`scene.returned`), the strokes between its bands and a stretch of
 // a pane's characters read from the DOM (`scene.strokes`, `scene.text`), each pane
@@ -584,8 +586,9 @@ export function install(deps) {
   }
   /**
    * The reading scene's bands and lines as its last draw drew them, beside
-   * its panes' visible rects and facing edges on screen (pane A's right, pane
-   * B's left): each band's end beside its run read now (`sceneRun`) — the
+   * its panes' visible rects and facing edges on screen — pane A's right and
+   * pane B's left side by side, both panes' right where they stack — and
+   * whether they stack: each band's end beside its run read now (`sceneRun`) — the
    * scene draws a band at its extent, from its run's first line to its last,
    * dividing a line it shares with the band beside it at its middle, holding
    * an end inside its pane's visible height and clipping it where it passes
@@ -598,8 +601,8 @@ export function install(deps) {
    * measure; the layout case holds every end to that.
    */
   function sceneTies() {
-    const a = paneOf('a'), b = paneOf('b'), ra = a ? a.getBoundingClientRect() : null, rb = b ? b.getBoundingClientRect() : null;
-    const around = { paneA: a ? paneRect(a) : null, paneB: b ? paneRect(b) : null, faceA: ra ? ra.right : null, faceB: rb ? rb.left : null };
+    const a = paneOf('a'), b = paneOf('b'), ra = a ? a.getBoundingClientRect() : null, rb = b ? b.getBoundingClientRect() : null, fit = SCENE.fitted(), stacked = !!fit && fit.stacked;
+    const around = { paneA: a ? paneRect(a) : null, paneB: b ? paneRect(b) : null, faceA: ra ? ra.right : null, faceB: rb ? (stacked ? rb.right : rb.left) : null, stacked };
     /** an end's passage's first line read now; none for an end naming its document whole */
     const lineOf = (/** @type {'a' | 'b'} */ side, /** @type {{pos: number, width: number, whole: boolean}} */ e) => (e.whole ? null : (sceneAt(side, e.pos, e.width) || { line: null }).line);
     return SCENE.ties().map((d) => (d.kind === 'band'
@@ -838,11 +841,15 @@ export function install(deps) {
       },
       /** the reason the acts that send — and a printable key — give at the selection standing in the moved scene's held version while the focus stands in it, by its string (SC's `heldVersionReason`; D6 BM-14); null where no such selection stands */
       heldReason: () => SCENE.heldVersionReason(),
-      /** its runs of shared identity, contiguous pairs merged, and the two ends it set level */
+      /** its runs of shared identity, contiguous pairs merged, the two ends it set level, and the link it was opened from */
       pairs: () => SCENE.pairs(),
       at: sceneAt, ties: sceneTies,
       /** the facing edges a whole document's ends meet, as the last draw drew them (FP-30): each its side, its links, its x and its visible top and bottom on screen, its hue and whether it is dashed */
       edges: () => SCENE.edges(),
+      /** the one tie the last draw drew whole between the stacked panes (FP-12, FP-30): its key, its kind, its link where it is a line, why it is the one — the pointer, the focus, or the link the scene was opened from — and its path on screen; null where it drew none */
+      crossing: () => SCENE.crossing(),
+      /** the fit the panes stand at (FP-12, FP-26): the measure, the corners' form, the em, and whether the panes stack; null where no scene stands */
+      fit: () => SCENE.fitted(),
       /** the stop at a band's clipped end, as the last draw placed it (FP-20): whether it stands, the shared passages it steps through, the one it goes to now and the one after, its name, its count and its rect on screen; null where no scene stands */
       stop: () => SCENE.stop(),
       /** a stop drawn only by the panes' `compare` the reader left from, as it stands returned (FP-20, FP-34, FP-21): its kind and key, its element's id, whether it is shown, its name, its count and whether that is being read, its rect on screen, what the answer told and its words, whether an act on it waits, whether the reader moved on, the overlay it shows; null where none stands */

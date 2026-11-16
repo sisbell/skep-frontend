@@ -26,7 +26,15 @@
 // passage out of view, and the opening asking each crossing far end once;
 // what the panes' runs hold of what a stop the reader left from stood for —
 // the passage of pane B the stop at a band's clipped end stood for, the
-// change a stroke stood for, read by bytes' identity (FP-21).
+// change a stroke stood for, read by bytes' identity (FP-21); the stacked
+// scene — the panes standing side by side while a pane there keeps
+// HEAD_CPL characters at its head and stacked a px narrower, by the face's
+// rendered advance; each tie drawn at each of its ends, a band's bars joined
+// by a hairline along the column; the one tie drawn whole along the column,
+// the pointer's before the focus's before the link the scene was opened
+// from, the pointer standing on a line's end before a stroke's before a
+// band's; a whole document's end one distance below its pane's top as the
+// other end below its own (FP-12, FP-26, FP-30).
 // Then, against the fake port and a page of stand-ins — whose stop and
 // strokes' buttons take the focus only while they stand shown, as the
 // platform's do: the scene's focus —
@@ -41,7 +49,8 @@
 // the stop it stood on, an opening abandoned or refused giving its entry
 // back, one at a link's end whose far document the board will say nothing
 // of faced in the far end's words and, known so at the act, never leaving
-// (FP-21, FP-25), the card it was opened from reopened by its close (FP-36),
+// (FP-21, FP-25), one opened from a link's end keeping that link on its
+// entry and through a Back that reopens it, the card it was opened from reopened by its close (FP-36),
 // a live caret it was opened at standing live through its close (D5 K-63);
 // each pane's article
 // T-LAYER's mount on the inner side of its corner, its byline's facts read
@@ -152,6 +161,8 @@ import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as PROV from '../overlays/provenance.js';
 import * as SEL from '../overlays/selection.js';
 import { recorder } from '../test/canvas.js';
+import { HEAD_CPL, CHAR_W, EDGE, fitFor, setAdvance } from '../plane/layout.js';
+import { cornerWidth } from '../plane/register.js';
 
 /** @returns {import('../model/frames.js').ComparePair} */
 const pair = (/** @type {number} */ u1, /** @type {number} */ u2, /** @type {number} */ width) => ({ d1: '1.0.1.0.3', d2: '1.0.1.0.3.2', u1, u2, width });
@@ -471,6 +482,105 @@ test('a whole document\'s edge is one straight stroke down its pane\'s facing ed
   ctx.lineWidth = 3;
   drawEdge(ctx, 601.5, 40, 640, inkOf(/** @type {any} */ ({ hue: HUE.others, linker: 'others' })));
   assert.deepEqual(strokes.map((s) => [s.hue, s.dash, s.cap, s.width, s.start, s.line, s.curve]), [[HUE.others, [5, 4], 'butt', 3, { x: 601.5, y: 40 }, { x: 601.5, y: 640 }, []]]);
+});
+
+// ---- the stacked scene (issue #467's design decisions) -----------------------------------------------------------------
+
+test('the panes stand side by side while a pane there keeps HEAD_CPL characters a line with its corner at its document\'s head, and stack a px narrower — both then fitted by the same rule to the scene\'s width less the column, at the reading size, wherever the scene is narrow; the threshold is read in the face\'s advance as rendered, so a wider face stacks them at a width that stood side by side (issue #467\'s design decision: "The stacking threshold is measured in rendered advance (#16)"; FP-12, FP-26)', () => {
+  const read = CAM.READING_PX, room = { pad: 36, gap: 14, column: SCENE.columnPx() };
+  const corners = { whole: cornerWidth(false), compact: cornerWidth(true), gap: room.gap };
+  /** P-LAY's fit of a content box, as a pane's fit names it */
+  const asPane = (/** @type {number} */ w, /** @type {boolean} */ stacked) => { const F = fitFor(w, read, corners, 0); return { cpl: F.cpl, corner: F.head ? 'head' : F.compact ? 'compact' : 'whole', px: F.px, stacked }; };
+  assert.equal(room.column, SCENE.COLUMN_EM * read, 'the column: COLUMN_EM of the reading size');
+  // the scene's width at which a pane side by side holds exactly HEAD_CPL characters beside its column's edge
+  const at = 2 * ((HEAD_CPL * CHAR_W + EDGE) * read + room.pad) + SCENE.SIDE_GAP;
+  assert.deepEqual(SCENE.paneFit(at, room, read), { cpl: HEAD_CPL, corner: 'head', px: read, stacked: false }, 'at the threshold: side by side, both corners at their documents\' heads, HEAD_CPL characters a line');
+  const narrower = SCENE.paneFit(at - 1, room, read);
+  assert.deepEqual(narrower, asPane(at - 1 - room.column - room.pad, true), 'a px narrower: stacked, fitted to the scene\'s width less the column');
+  assert.ok(narrower.cpl >= HEAD_CPL && narrower.px === read, `stacked there, each pane keeps HEAD_CPL characters or more at the reading size: ${narrower.cpl}`);
+  const phone = SCENE.paneFit(348, room, read);
+  assert.deepEqual(phone, asPane(348 - room.column - room.pad, true), 'a scene 348 px wide: stacked');
+  assert.ok(phone.px === read && phone.cpl > 1, `at the reading size, never smaller: ${JSON.stringify(phone)}`);
+  assert.deepEqual(SCENE.paneFit(1398, room, read), asPane((1398 - SCENE.SIDE_GAP) / 2 - room.pad, false), 'a scene 1398 px wide: side by side, as P-LAY fits a pane there');
+  const was = CHAR_W;
+  try {
+    setAdvance(was * 1.1);
+    assert.equal(SCENE.paneFit(at, room, read).stacked, true, 'a face a tenth wider: stacked at the width that stood side by side');
+  } finally { setAdvance(was); }
+  assert.equal(SCENE.paneFit(at, room, read).stacked, false, 'the face as rendered again: side by side there again');
+});
+
+test('stacked, a band is a bar at each pane\'s facing edge — its ground an em out from the edge over its extent, in sameness\'s texture, its two edges cut an em out in sameness\'s boundary, one where it stands no taller than a line — and a hairline joining the two bars along the column at their cut, from the upper bar\'s bottom to the lower bar\'s top; an end passing its pane\'s visible edge held at it with the stub\'s triangle in the column (issue #467\'s design decisions; foundations §2.5, "HOW THE COLUMN LOOKS")', () => {
+  const { ctx, strokes, filled } = recorder();
+  SCENE.drawBars(ctx, { x: 600, top: 100, bottom: 140, above: false, below: false }, { x: 600, top: 500, bottom: 520, above: false, below: false }, 17);
+  assert.deepEqual(filled.map((f) => [f.fill, f.path.map((q) => [q.op, q.at[0] || null])]), [
+    [SAMENESS.texture, [['move', { x: 600, y: 100 }], ['line', { x: 617, y: 100 }], ['line', { x: 617, y: 140 }], ['line', { x: 600, y: 140 }], ['close', null]]],
+    [SAMENESS.texture, [['move', { x: 600, y: 500 }], ['line', { x: 617, y: 500 }], ['line', { x: 617, y: 520 }], ['line', { x: 600, y: 520 }], ['close', null]]],
+  ], 'each bar\'s ground: an em out from its pane\'s edge, over its extent');
+  assert.deepEqual(strokes.map((q) => [q.hue, q.width, q.start, q.curve[2]]), [
+    [SAMENESS.boundary, 1, { x: 600, y: 100 }, { x: 617, y: 100 }], [SAMENESS.boundary, 1, { x: 600, y: 140 }, { x: 617, y: 140 }],
+    [SAMENESS.boundary, 1, { x: 600, y: 500 }, { x: 617, y: 500 }], [SAMENESS.boundary, 1, { x: 600, y: 520 }, { x: 617, y: 520 }],
+    [SAMENESS.boundary, 1, { x: 617, y: 140 }, { x: 617, y: 500 }],
+  ], 'each bar\'s two edges, cut an em out; then the hairline along the column at their cut, from pane A\'s bar\'s bottom to pane B\'s bar\'s top');
+  const held = recorder();
+  SCENE.drawBars(held.ctx, { x: 600, top: 380, bottom: 400, above: false, below: true }, { x: 600, top: 420, bottom: 440, above: true, below: false }, 17);
+  assert.deepEqual(held.filled.map((f) => f.fill), [SAMENESS.texture, SAMENESS.boundary, SAMENESS.texture, SAMENESS.boundary], 'each end passing its pane\'s visible edge: its ground, then the stub\'s triangle there, in the boundary\'s hue');
+  const flat = recorder();
+  SCENE.drawBars(flat.ctx, { x: 600, top: 110, bottom: 110, above: false, below: false }, { x: 600, top: 500, bottom: 540, above: false, below: false }, 17);
+  assert.equal(flat.strokes.length, 4, 'pane A\'s end none tall: one edge there, two at pane B\'s, and the hairline');
+});
+
+test('stacked, a line\'s end is an em of it leaving its pane\'s facing edge at its passage\'s line, in that end\'s ink, cut there, the stub\'s triangle in its hue where its line has left the pane; a stroke\'s ends are an em of it at each edge in the halves side by side draws, heavier than a band\'s edge (issue #467\'s design decision: "An em of the tie\'s body leaves the edge and is cut there, so an end is never a bare bar")', () => {
+  const ink = inkOf(/** @type {any} */ ({ hue: HUE.others, linker: 'others' }));
+  const end = recorder();
+  SCENE.drawEnd(end.ctx, { x: 600, y: 120, clipped: false, above: false }, ink, 17);
+  assert.deepEqual([end.strokes.map((q) => [q.hue, q.dash, q.cap, q.start, q.curve[2]]), end.fills], [[[HUE.others, [5, 4], 'butt', { x: 600, y: 120 }, { x: 617, y: 120 }]], []], 'an em of the line in its end\'s ink, dashed as that ink is, butt-capped');
+  const clipped = recorder();
+  SCENE.drawEnd(clipped.ctx, { x: 600, y: 40, clipped: true, above: true }, ink, 17);
+  assert.deepEqual(clipped.fills, [HUE.others], 'its line left the pane: the stub\'s triangle in its own hue');
+  const half = recorder();
+  SCENE.drawStrokeEnds(half.ctx, { x: 600, y: 110 }, { x: 600, y: 510 }, { halfA: false, halfB: true }, 17);
+  assert.deepEqual(half.strokes.map((q) => [q.hue, q.width, q.start, q.curve[2]]), [[SAMENESS.boundary, 3, { x: 600, y: 510 }, { x: 617, y: 510 }]], 'pane B alone holds the changed bytes: its end alone, an em at its edge');
+  const both = recorder();
+  SCENE.drawStrokeEnds(both.ctx, { x: 600, y: 110 }, { x: 600, y: 510 }, { halfA: true, halfB: true }, 17);
+  assert.deepEqual(both.strokes.map((q) => [q.start, q.curve[2]]), [[{ x: 600, y: 110 }, { x: 617, y: 110 }], [{ x: 600, y: 510 }, { x: 617, y: 510 }]], 'a replacement: an end at each pane\'s edge');
+});
+
+test('stacked, the one tie drawn whole runs from its end at pane A\'s edge out to the column\'s outer side, along it, and into its end at pane B\'s: a line in pane A\'s end\'s ink to the path\'s middle and pane B\'s after it, both drawn from the middle; a stroke\'s halves on the path\'s halves where their panes hold bytes; a band its ground from its bars\' cut to a strip along the column, edged on both sides (issue #467\'s design decision: "No body crosses between the panes except one, drawn whole along the column\'s outer side"; FP-30)', () => {
+  const path = SCENE.crossingPath({ x: 600, y: 100 }, { x: 600, y: 500 }, 625.5);
+  assert.deepEqual(path, [{ x: 600, y: 100 }, { x: 625.5, y: 100 }, { x: 625.5, y: 500 }, { x: 600, y: 500 }], 'out along pane A\'s end\'s line, along the column, back in along pane B\'s');
+  const ink = { a: inkOf(/** @type {any} */ ({ hue: HUE.owner, linker: 'owner' })), b: inkOf(/** @type {any} */ ({ hue: HUE.others, linker: 'others' })) };
+  const line = recorder();
+  SCENE.drawCrossing(line.ctx, { kind: 'link', path, ink });
+  assert.deepEqual(line.strokes.map((q) => [q.hue, q.dash, q.cap, q.start, q.line]), [[HUE.owner, [], 'butt', { x: 625.5, y: 300 }, { x: 600, y: 100 }], [HUE.others, [5, 4], 'butt', { x: 625.5, y: 300 }, { x: 600, y: 500 }]],
+    'pane A\'s end\'s ink from the middle of the path back to pane A\'s edge, pane B\'s from the middle on to pane B\'s — butt-capped, so they meet and never overlap');
+  const stroke = recorder();
+  SCENE.drawCrossing(stroke.ctx, { kind: 'stroke', path, halves: { halfA: true, halfB: false } });
+  assert.deepEqual(stroke.strokes.map((q) => [q.hue, q.width, q.start, q.line]), [[SAMENESS.boundary, 3, { x: 625.5, y: 300 }, { x: 600, y: 100 }]], 'a stroke whose changed bytes pane A alone holds: the half to the middle alone');
+  const band = recorder();
+  SCENE.drawCrossing(band.ctx, { kind: 'band', a: { x: 617, top: 100, bottom: 140 }, b: { x: 617, top: 500, bottom: 520 }, x: 625.5, w: 4 });
+  assert.deepEqual(band.filled.map((f) => [f.fill, f.path.map((q) => q.at[0] || null)]), [[SAMENESS.texture, [{ x: 617, y: 100 }, { x: 627.5, y: 100 }, { x: 627.5, y: 520 }, { x: 617, y: 520 }, { x: 617, y: 500 }, { x: 623.5, y: 500 }, { x: 623.5, y: 140 }, { x: 617, y: 140 }, null]]],
+    'its ground from pane A\'s bar\'s cut over its extent, down a strip along the column, into pane B\'s bar\'s cut over its extent');
+  assert.deepEqual(band.strokes.map((q) => [q.hue, q.start, q.line]), [[SAMENESS.boundary, { x: 617, y: 100 }, { x: 617, y: 520 }], [SAMENESS.boundary, { x: 617, y: 500 }, { x: 617, y: 140 }]], 'its two sides its edges');
+  assert.deepEqual(SCENE.halvesOf([{ x: 0, y: 0 }, { x: 10, y: 0 }]), [[{ x: 5, y: 0 }, { x: 0, y: 0 }], [{ x: 5, y: 0 }, { x: 10, y: 0 }]], 'a path\'s halves, each from its middle');
+});
+
+test('stacked, the one tie drawn whole is the one the pointer stands on, else the one holding the focus, else the line of the link the scene was opened from, else none — a pointer or a focus on a tie no longer drawn passing to the next; and the pointer stands on a line\'s end before a stroke\'s before a band\'s bar, an em out from the edge (issue #467\'s design decision: "the tie under the pointer or holding the focus; failing that, the link just made; failing that, the link the scene opened from")', () => {
+  const drawn = [{ tie: 'band 1 1' }, { tie: 'stroke k' }, { tie: 'link L 1 1', link: 'L' }, { tie: 'link M 5 5', link: 'M' }];
+  assert.deepEqual(SCENE.crossingOf(drawn, { hover: 'band 1 1', focus: 'stroke k', link: 'M' }), { tie: 'band 1 1', why: 'pointer' }, 'the pointer first');
+  assert.deepEqual(SCENE.crossingOf(drawn, { hover: null, focus: 'stroke k', link: 'M' }), { tie: 'stroke k', why: 'focus' }, 'then the focus');
+  assert.deepEqual(SCENE.crossingOf(drawn, { hover: 'band 9 9', focus: 'stroke gone', link: 'M' }), { tie: 'link M 5 5', why: 'opened' }, 'a pointer and a focus on ties not drawn: the link the scene was opened from');
+  assert.deepEqual([SCENE.crossingOf(drawn, { hover: null, focus: null, link: 'Z' }), SCENE.crossingOf(drawn, { hover: null, focus: null, link: null })], [null, null], 'the link opened from not drawn, or none: no body crosses');
+  const hits = [{ tie: 'band 1 1', order: 2, x0: 600, x1: 617, top: 90, bottom: 200 }, { tie: 'link L 1 1', order: 0, x0: 600, x1: 617, top: 116, bottom: 124 }, { tie: 'stroke k', order: 1, x0: 600, x1: 617, top: 108, bottom: 116 }];
+  assert.deepEqual([SCENE.hitIn(hits, 605, 120), SCENE.hitIn(hits, 605, 110), SCENE.hitIn(hits, 605, 150)], ['link L 1 1', 'stroke k', 'band 1 1'], 'a line\'s end before a stroke\'s before a band\'s bar');
+  assert.deepEqual([SCENE.hitIn(hits, 590, 120), SCENE.hitIn(hits, 620, 120), SCENE.hitIn(hits, 605, 300)], [null, null, null], 'in the pane, past the em, or off every end: none');
+});
+
+test('a whole document\'s end stands as far below its pane\'s visible top as the line\'s other end stands below its own — the other end\'s own height side by side, where the panes\' tops are one — held inside its pane\'s visible height, at its top where the other end is whole too (issue #467\'s design decision: "When stacked, \'level\' means the same distance below each pane\'s top")', () => {
+  assert.deepEqual(SCENE.levelWith({ top: 420, bottom: 800 }, { y: 150 }, { top: 40 }), { y: 530, clipped: false, above: false }, 'stacked: 110 below pane B\'s top, as the other end stands below pane A\'s');
+  assert.equal(SCENE.levelWith({ top: 420, bottom: 800 }, { y: 500 }, { top: 40 }).y, 800, 'held inside its pane');
+  assert.equal(SCENE.levelWith({ top: 40, bottom: 400 }, { y: 150 }, { top: 40 }).y, 150, 'side by side: level with the other end');
+  assert.equal(SCENE.levelWith({ top: 420, bottom: 800 }, null, { top: 40 }).y, 420, 'both ends whole: at its top');
 });
 
 test('the stop stands for the first shared passage out of pane B\'s view, from the one its next act goes to and round again, on its bearing — none where every one stands in view (issue #59\'s design decision: "Where there are several, it shows a count and each further act goes to the next")', () => {
@@ -802,7 +912,7 @@ function page(as = {}) {
     const ev = { type: 'click', detail: 0, target: { closest: (/** @type {string} */ s) => (s === '[data-stroke]' ? b : null) } };
     for (const fn of key == null ? stopOn : strokesOn) fn(ev);
   };
-  return { doc, item, corner, line, bar, paneA, paneB, cornerA, cornerB, headA, headB, stop, stopOn, strokes, names, said, at, covered, press, enter, paneOn, acts };
+  return { doc, root, item, corner, line, bar, paneA, paneB, cornerA, cornerB, headA, headB, stop, stopOn, strokes, names, said, at, covered, press, enter, paneOn, acts };
 }
 
 /** the test run on a page of stand-ins (`page`, as `as` asks), the platform's `document` put back after it */
@@ -941,6 +1051,32 @@ test('leaving a scene\'s entry by a teleport records the scene, and Back onto th
   assert.ok(p.said.slice(told).includes(heard(`${t('L.scene-label')} · ${A} │ ${B}`)), `the status region names the reopened pair, as a screen reader hears it: ${JSON.stringify(p.said.slice(told))}`);
   assert.ok(p.said.slice(told).includes(`${t('L.scene-label')}, ${A}, ${B}`), 'the bar between the pair a pause, as the middle dot before it');
   assert.deepEqual([GO.shownIn(A), GO.shownIn(B)], [A, B], 'no box\'s version changed (FP-22)');
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('a scene opened from a link\'s end keeps that link with the passage held — on its trail entry, and through a Back that reopens it — the tie drawn whole between the stacked panes where nothing else is; one opened from a passage keeps none (issue #467\'s design decision: "failing that, the link the scene opened from")', () => onPage(async (p) => {
+  const C = '1.0.1.0.38', E = '1.0.1.0.39', C_TEXT = 'Eta.\n\nIts cited words.', E_TEXT = 'Theta.\n\nIts words.', X = C + '.0.2.1';
+  const end = (/** @type {string} */ doc, /** @type {number} */ ord) => [{ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.3' }];
+  Object.assign(script, reads(C, C_TEXT), reads(E, E_TEXT), compared(C, C_TEXT, E, E_TEXT), {
+    [FAKE.keyOf('op', { frame: F.findLinksV(C, 1, C_TEXT.length) })]: { result: { as_of: 1, resp: 'addrs', addrs: [X] } },
+    [FAKE.keyOf('op', { frame: F.findLinksV(E, 1, E_TEXT.length) })]: { result: { as_of: 1, resp: 'addrs', addrs: [X] } },
+    [FAKE.keyOf('op', { frame: F.readLink(X) })]: { result: { as_of: 1, resp: 'link_value', link: { slots: [end(C, 1), end(E, 11), [{ start: CITE, width: '0.0.0.0.0.0.0.0.1' }]] } } },
+    [FAKE.keyOf('op', { frame: F.project(X, 2, E) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.11', width: '0.3' }] } },
+    [FAKE.keyOf('op', { frame: F.project(X, 1, C) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.3' }] } },
+  });
+  await onTrail(p);
+  await PUMP.loadWhole(C); await PUMP.loadWhole(E);
+  const s = LK.shown(C).find((x) => x.link.addr === X);
+  assert.ok(s, 'the citation shown at C');
+  assert.equal(await GO.toScene(C, E, { posA: 1, widthA: 3 }, { from: { shown: /** @type {any} */ (s) } }), true, 'the scene shows');
+  assert.deepEqual([TRAIL.current()?.scene?.held, SCENE.pairs()?.link], [{ posA: 1, widthA: 3, link: X }, X], 'opened from the citation\'s end: its entry and the scene keep the link with the passage held');
+  const board = GO.wholeBoard(); await flown(); await board;
+  assert.equal(SCENE.isOpen(), false, 'WHOLE BOARD from the scene: the scene left');
+  const back = GO.back(); await flown(); await back;
+  assert.deepEqual([SCENE.isOpen(), SCENE.pairs()?.link], [true, X], 'Back reopens it as left, the link kept');
+  await KEYS.esc(); await flown();
+  assert.equal(await GO.toScene(C, E, { posA: 1, widthA: 3 }, { from: { passage: { addr: C, pos: 1, width: 3 } } }), true);
+  assert.deepEqual([TRAIL.current()?.scene?.held, SCENE.pairs()?.link], [{ posA: 1, widthA: 3 }, null], 'opened from a passage: no link kept');
   assert.deepEqual(fake.unanswered, []);
 }));
 
@@ -2594,9 +2730,10 @@ test('a pane\'s kind is said once in the status region where its corner\'s slot 
   } finally { listing([]); }
 }));
 
-/** the platform laying the panes out 600 px wide with no padding and an 8 px gap, which fits both corners compact beside their columns (`fitOf`): the act that lays them out where the platform lays out none */
-function compactFit() {
+/** the platform laying the scene out wide enough for its panes to stand side by side 600 px wide each, with no padding and an 8 px gap, which fits both corners compact beside their columns (`fitOf`): the act that lays them out where the platform lays out none */
+function compactFit(/** @type {ReturnType<typeof page>} */ p) {
   const was = globalThis.getComputedStyle;
+  p.root.clientWidth = 2 * 600 + SCENE.SIDE_GAP;
   globalThis.getComputedStyle = /** @type {any} */ (() => ({ paddingLeft: '0px', paddingRight: '0px', columnGap: '8px' }));
   return () => { if (was) globalThis.getComputedStyle = was; else delete (/** @type {any} */ (globalThis)).getComputedStyle; };
 }
@@ -2607,12 +2744,13 @@ const clickIn = (/** @type {ReturnType<typeof page>} */ p, /** @type {'a' | 'b'}
 const stopsIn = (/** @type {any} */ c, /** @type {any[]} */ acts) => [c, ...acts].filter((x) => x.getAttribute('tabindex') === '0').map((x) => (x === c ? 'corner' : LAYER.cornerAct(x)));
 
 test('a pane\'s corner\'s acts are buttons, each act its click\'s: the corner one line of acts whose Tab stop is its first, its element none; the kept word a disclosure of the draft\'s kept statement, the click the platform makes from Enter or Space at it, or a pointer\'s, opening the statement and the next closing it, the focus kept on the word written again; and in the corner a glyph opened whole the kept word\'s click opens the statement still, the corner standing whole until the words the glyph opened are clicked; the scene\'s own keys take no Enter there (D5 K-57, K-74; B3-S2; FP-20, FP-26)', () => onPage(async (p) => {
-  const restore = compactFit();
+  const restore = compactFit(p);
   WRITE.setKept(WRITING, { word: 'kept', reason: null });
   try {
     await SCENE.open(WRITING, B);
     const c = p.cornerA, acts = p.acts.a, keyed = (/** @type {string} */ k) => acts.find((b) => LAYER.cornerAct(b) === k) || null;
     assert.ok(String(c.className).split(' ').includes('compact'), `the panes fitted compact: ${c.className}`);
+    assert.equal(SCENE.fitted()?.stacked, false, 'side by side');
     assert.deepEqual([acts.map(LAYER.cornerAct), c.getAttribute('role'), stopsIn(c, acts)], [['kept', 'whole'], 'toolbar', ['kept']],
       'the draft\'s corner: its kept word and the glyph that opens it whole, one line of acts whose stop is its first act, its element no stop');
     keyed('kept').focus();
@@ -2632,7 +2770,7 @@ test('a pane\'s corner\'s acts are buttons, each act its click\'s: the corner on
 }, { acts: true }));
 
 test('at a pane\'s corner\'s act the dispatch leaves Enter, Space and Shift+Space to the button, raising no line, and takes an auto-repeat, making nothing; ← and → walk the line\'s acts, its stop following the focus, the scene standing at its first act and its last; a printable key but Space is swallowed with K-9\'s line, as elsewhere in a pane (D5 K-9, K-57; FP-20)', () => onPage(async (p) => {
-  const restore = compactFit();
+  const restore = compactFit(p);
   WRITE.setKept(WRITING, { word: 'kept', reason: null });
   /** a key at an act of pane A's corner, as the app hands it to the dispatch there */
   const at = (/** @type {any} */ target, /** @type {string} */ key, /** @type {object} */ mods = {}) => KEYS.dispatch({ ...keyOf(key), repeat: false, target, ...mods }, { where: 'scene', byKey: true });

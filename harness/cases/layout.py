@@ -240,7 +240,21 @@ next block's top to the held row's foot, never under it; the first block in
 view at the run's window still first in view at each window after it; the
 plane under the scene parked meanwhile at the far band,
 where the view reads nothing, so the later cases meet the page as the check
-found it; back on the plane, the box an edition shares with its members
+found it; THE STACKED SCENE (issue #467's design decisions) — side by side
+one px wider than the window at which a pane side by side keeps HEAD_CH
+characters at its document's head, by the page's measured advance, and
+stacked one px narrower; at SCENE_STACKED_PX and SCENE_PHONE_PX pane A above
+pane B, their facing edges one column on the right, each text against its
+facing edge with its corner on its left, both at the reading size, every
+band's and line's end at that column and at its passage's lines, the
+re-level setting the matched lines one distance below each pane's top, the
+pointer on a band's bar drawing that band whole along the column and none
+off it; a stroke's button on its half at pane A's edge, and focused, its
+stroke drawn whole; the link the scene was opened from drawn whole where
+nothing else is; the stop against pane B's facing edge in the column, its
+count after its triangle — unmeasured where it does not stand — and back at
+the run's window side by side again, each pane's first block in view still
+in view; back on the plane, the box an edition shares with its members
 holds one article; opened on a passage beside a document a far end of it
 names whole (issue #59's design decision) — the window run beside the draft,
 then the draft's passage holding its material beside the first edition —
@@ -506,6 +520,11 @@ STOP_AT_PX = 40
 # column's edge, or its width, may stand from where it is held
 SCENE_WIDE_PX, SCENE_HEAD_PX, HEAD_CH = 2560, 1150, 40
 MEASURE_TOL_PX = 0.5
+# the stacked scene (issue #467's design decisions): a window where side by side a pane keeps fewer than HEAD_CH characters
+# at its document's head, and a phone's; the column the stacked panes' facing edges form, in the reading size's em, and the
+# room between the panes standing side by side, in px — the case's own, held apart from the page's COLUMN_EM and SIDE_GAP
+SCENE_STACKED_PX, SCENE_PHONE_PX = 1000, 390
+COLUMN_EM, SIDE_GAP_PX = 2, 140
 CORNER = '#corners [data-corner="%s"]' % DOC
 # the case's own floor for a label, held apart from the page's constant so that lowering the page's cannot pass here
 MIN_LABEL_PX = 9
@@ -1347,7 +1366,8 @@ def ties_hold(r, name, ties, in_view, band=True):
     """every band drawn between the panes stands at its extent on each pane's facing edge (`band_off`, `bands_meet`;
     issue #331's design decision), and every line leaves each pane at its passage's own first line, or, where that line
     has left the pane, at the pane's edge on the side it left by; an end naming its pane's document whole stands at that
-    pane's facing edge, level with the line's other end held inside the pane's visible height, never clipped (issue #59),
+    pane's facing edge, as far below its pane's visible top as the line's other end stands below its own, held inside the
+    pane's visible height — level with it side by side, where the panes' tops are one — never clipped (issues #59, #467),
     and stands in view; `in_view` the ends that must stand in view, a band's where any of its extent does; `band` the
     shared identity is drawn as a band among them"""
     if band:
@@ -1371,8 +1391,8 @@ def ties_hold(r, name, ties, in_view, band=True):
         for side, line, pane, face, other in (('a', t['lineA'], t['paneA'], t.get('faceA'), 'b'), ('b', t['lineB'], t['paneB'], t.get('faceB'), 'a')):
             end = t[side]
             if end.get('whole'):
-                there = t[other]
-                level = None if pane is None else pane['y'] if there.get('whole') else min(max(there['y'], pane['y']), pane['y'] + pane['h'])
+                there, its = t[other], t['pane' + other.upper()]
+                level = None if pane is None or its is None else pane['y'] if there.get('whole') else min(max(pane['y'] + there['y'] - its['y'], pane['y']), pane['y'] + pane['h'])
                 if pane is None or face is None or end['clipped'] or abs(end['x'] - face) > TIE_TOL_PX or abs(end['y'] - level) > TIE_TOL_PX:
                     off.append({'kind': t['kind'], 'link': t['link'], 'side': side, 'whole': True, 'x': end['x'], 'y': end['y'], 'face': face, 'level': level, 'clipped': end['clipped'], 'pane': pane})
                 else:
@@ -1449,10 +1469,16 @@ def stroke_holds(ctx, r, name, s, ties, panes):
             {'halves': [s['halfA'], s['halfB']], 'texts': texts})
     rect, at = s['rect'], s['at']
     hit = ctx.js('''((id, x, y) => { const e = document.elementFromPoint(x, y); return !!e && !!e.closest && !!e.closest('[id="' + id + '"]'); })(%s, %f, %f)''' % (json.dumps(s['id'] or ''), at['x'], at['y']))
-    placed = bool(rect) and abs(rect['x'] + rect['w'] / 2 - at['x']) <= 1 and abs(rect['y'] + rect['h'] / 2 - at['y']) <= 1 and s['a']['x'] <= at['x'] <= s['b']['x'] and hit
+    # side by side, in the gutter between its ends; stacked, on its half at pane A's edge, half an em out, whichever pane holds
+    # its changed bytes (issue #467's design decision: "It stands on the stroke's half at the upper pane's (pane A's) edge")
+    stacked = bool(ties) and bool(ties[0].get('stacked'))
+    em = min(READING_PX, COLUMN_EM * READING_PX / 2)
+    on = abs(at['x'] - (s['a']['x'] + em / 2)) <= 1 and abs(at['y'] - s['a']['y']) <= 1 if stacked else s['a']['x'] <= at['x'] <= s['b']['x']
+    placed = bool(rect) and abs(rect['x'] + rect['w'] / 2 - at['x']) <= 1 and abs(rect['y'] + rect['h'] / 2 - at['y']) <= 1 and on and hit
+    where = 'on its half at pane A\'s facing edge, half an em out' if stacked else 'in the gutter'
     r.check(placed and s['count'] == ('' if len(s['changes']) == 1 else str(len(s['changes']))),
-            f'{name}: the stroke\'s button stands centred on it in the gutter, under the pointer there, its count where it stands for two changes or more',
-            {'rect': rect, 'at': at, 'hit': hit, 'count': s['count'], 'changes': len(s['changes'])})
+            f'{name}: the stroke\'s button stands centred on it {where}, under the pointer there, its count where it stands for two changes or more',
+            {'rect': rect, 'at': at, 'ends': [s['a'], s['b']], 'stacked': stacked, 'hit': hit, 'count': s['count'], 'changes': len(s['changes'])})
     items = [b for x in ('a', 'b') for b in (panes.get(x) or {}).get('blocks', []) for c in s['changes'] if b['kind'] != 'para' and b['pos'] < c[x]['to'] and c[x]['from'] < b['pos'] + b['width']]
     want = None if items else ctx.js('''(async (texts, A, B) => { const {t} = await import('./strings.js');
       const side = (x) => (x ? t('L.scene.change.text', {text: x}) : t('L.scene.change.none'));
@@ -2326,11 +2352,334 @@ def scene_measure_holds(ctx, r):
             'character_px': run['a'] and run['a']['ch'], 'pane_px': sizes, 'opened': opened, 'first_in_view': kept, 'band_while_wide': band, 'reads_while_wide': reads}
 
 
+STACKED_JS = '''(() => { const root = document.getElementById('scene'), r = root.getBoundingClientRect();
+  const side = (id) => { const p = document.getElementById(id), q = p.getBoundingClientRect(), s = getComputedStyle(p), art = p.querySelector(':scope > article.dtext'), c = p.querySelector(':scope > .corner');
+    const a = art && art.getBoundingClientRect(), as = art && getComputedStyle(art), k = c && c.getBoundingClientRect();
+    const signs = [...p.querySelectorAll(':scope > .edge-sign, :scope > article.dtext .edge')].map((e) => e.getBoundingClientRect()).filter((g) => g.width > 0 && g.height > 0).map((g) => ({left: g.left, right: g.right}));
+    return {left: q.left, right: q.right, top: q.top + p.clientTop, bottom: q.top + p.clientTop + p.clientHeight, pad: [parseFloat(s.paddingLeft), parseFloat(s.paddingRight)], over: p.scrollWidth - p.clientWidth, signs,
+            art: a && {left: a.left, right: a.right, pad: [parseFloat(as.paddingLeft), parseFloat(as.paddingRight)], font: parseFloat(as.fontSize)},
+            corner: k && {left: k.left, right: k.right, form: c.classList.contains('head') ? 'head' : c.classList.contains('compact') ? 'compact' : 'whole'}}; };
+  return {vw: window.innerWidth, fit: window.__skep.scene.fit(), stacked: root.classList.contains('stacked'), scene: {left: r.left + root.clientLeft, right: r.left + root.clientLeft + root.clientWidth},
+          a: side('sceneA'), b: side('sceneB')}; })()'''
+
+
+def stacked_off(v):
+    """what is off in the stacked form as a person meets it (issue #467's design decision: "the left pane stands above the
+    right. Both panes put their facing edge on the side where a document's counts sit on the plane, so the two edges form one
+    column"): pane A above pane B, the two the one width, against the scene's left, their facing edges one column of COLUMN_EM
+    of the reading size short of its right; each text against its pane's facing edge with its column's edge on its right —
+    the counts' side — every sign standing in that edge, past the text, and its corner on its left, or across its column at
+    its document's head; both at the reading size, nothing past a pane's width"""
+    a, b, off = v['a'], v['b'], []
+    if not (v['stacked'] and (v['fit'] or {}).get('stacked')):
+        off.append('the scene does not stand stacked')
+    if a['bottom'] > b['top'] + MEASURE_TOL_PX:
+        off.append('pane A above pane B')
+    if abs(a['left'] - b['left']) > MEASURE_TOL_PX or abs(a['right'] - b['right']) > MEASURE_TOL_PX or abs(a['left'] - v['scene']['left']) > MEASURE_TOL_PX:
+        off.append('the panes one width, against the scene\'s left')
+    if abs(v['scene']['right'] - a['right'] - COLUMN_EM * READING_PX) > MEASURE_TOL_PX:
+        off.append('the column between the facing edges and the scene\'s right')
+    for name, p in (('pane A', a), ('pane B', b)):
+        art, c = p['art'], p['corner']
+        if not art or not c:
+            off.append(f'{name} holds no text or no corner')
+            continue
+        if abs(art['right'] - (p['right'] - p['pad'][1])) > MEASURE_TOL_PX or abs(art['pad'][1] - EDGE_EM * art['font']) > MEASURE_TOL_PX or art['pad'][0] > MEASURE_TOL_PX:
+            off.append(f'{name}\'s text against its facing edge, its column\'s edge on its right')
+        if c['form'] == 'head' and (abs(c['left'] - art['left']) > MEASURE_TOL_PX or abs(c['right'] - art['right']) > MEASURE_TOL_PX):
+            off.append(f'{name}\'s corner across its column at its document\'s head')
+        if c['form'] != 'head' and c['right'] > art['left'] + MEASURE_TOL_PX:
+            off.append(f'{name}\'s corner on its left')
+        text = art['right'] - art['pad'][1]
+        if any(g['left'] < text - MEASURE_TOL_PX or g['right'] > art['right'] + MEASURE_TOL_PX for g in p['signs']):
+            off.append(f'{name}\'s signs in its column\'s edge, right of its text')
+        if abs(art['font'] - READING_PX) > 1e-6 or p['over'] > 1:
+            off.append(f'{name} at the reading size, nothing past its width')
+    return off
+
+
+def stacked_level_off(v):
+    """what is off in the two ends set level where the panes stack (issue #467's design decision: "When stacked, 'level'
+    means the same distance below each pane's top"): each matched line as far below its own pane's visible top, LEVEL_TOL_PX
+    either way, inside its pane, holding the same material"""
+    a, b = (v or {}).get('a'), (v or {}).get('b')
+    la, lb = a and a['line'], b and b['line']
+    if not (la and lb):
+        return ['a matched line not read']
+    off = []
+    if abs((la['y'] - a['pane']['y']) - (lb['y'] - b['pane']['y'])) > LEVEL_TOL_PX:
+        off.append('one distance below each pane\'s top')
+    if not (inside(la, a['pane']) and inside(lb, b['pane'])):
+        off.append('inside both panes')
+    if not (a['text'] and b['text'] and a['text'][:24] == b['text'][:24]):
+        off.append('the same material')
+    return off
+
+
+def faces_off(ties):
+    """what is off where the drawn ties stand stacked: every band's and line's end at its pane's facing edge — both panes'
+    right edges, one column — as the gate reads those edges"""
+    off = []
+    for t in ties:
+        if not t.get('stacked') or t.get('faceA') is None or t.get('faceB') is None or abs(t['faceA'] - t['faceB']) > MEASURE_TOL_PX:
+            off.append({'kind': t['kind'], 'faces': [t.get('faceA'), t.get('faceB')], 'stacked': t.get('stacked')})
+        elif abs(t['a']['x'] - t['faceA']) > TIE_TOL_PX or abs(t['b']['x'] - t['faceB']) > TIE_TOL_PX:
+            off.append({'kind': t['kind'], 'tie': t.get('tie'), 'x': [t['a']['x'], t['b']['x']], 'faces': [t['faceA'], t['faceB']]})
+    return off
+
+
+def crossing_off(c, kind, why, face, scene_right):
+    """what is off in the one tie drawn whole between the stacked panes (issue #467's design decision: "No body crosses
+    between the panes except one, drawn whole along the column's outer side"): of `kind`, for `why`, its path from pane A's
+    facing edge out to the column's outer half, along it, and back into pane B's facing edge"""
+    if not c:
+        return ['none drawn whole']
+    off, p = [], c['path']
+    if c['kind'] != kind or c['why'] != why:
+        off.append('the tie and the reason')
+    em = min(READING_PX, COLUMN_EM * READING_PX / 2)
+    if len(p) != 4 or abs(p[0]['x'] - face) > TIE_TOL_PX or abs(p[3]['x'] - face) > TIE_TOL_PX or abs(p[1]['x'] - p[2]['x']) > TIE_TOL_PX \
+            or not (face + em - TIE_TOL_PX <= p[1]['x'] <= scene_right) or abs(p[0]['y'] - p[1]['y']) > TIE_TOL_PX or abs(p[2]['y'] - p[3]['y']) > TIE_TOL_PX:
+        off.append('its path out from pane A\'s edge, along the column\'s outer half, into pane B\'s')
+    return off
+
+
+def scene_stacked_holds(ctx, r):
+    """THE STACKED SCENE (issue #467's design decisions; foundations §2.5, THE STACKED SCENE; FP-12, FP-26): the scene on the
+    first edition and the draft it windows, the plane parked at the far band while the window changes. At SCENE_HEAD_PX the
+    panes stand side by side; one px either side of the window at which a pane side by side keeps HEAD_CH characters at its
+    document's head — the case's own arithmetic, by the page's measured advance — they stand side by side, then stacked; at
+    SCENE_STACKED_PX and at SCENE_PHONE_PX stacked (`stacked_off`), every band's and line's end at the facing edges' column
+    (`faces_off`) and at its passage's lines (`ties_hold`), the re-level act setting the matched lines one distance below each
+    pane's top (`stacked_level_off`); the pointer on a band's bar in the column drawing that band whole along the column, and
+    off it, none; then on VERSIONED's first member beside its latest, at a stroke, its button on its half at pane A's edge
+    (`stroke_holds`) and, focused, that stroke drawn whole; on a citer of FAR_LEAP beside FAR_LEAP opened from the citation, the
+    citation drawn whole as the link the scene was opened from, its whole end's edge in the column (`whole_edges_hold`); the
+    first edition in pane B laid out as pane A, its signs right of its text (`stacked_reversed_holds`); and as a far end naming
+    the draft whole, the stop against pane B's facing edge in the column, its count after its triangle, unmeasured where it
+    does not stand. Back at the run's window the panes stand side by side again, the first block in view
+    in each still in view. Its figures"""
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
+    ctx.settle()
+    ctx.frames(3)
+    run = ctx.js(STACKED_JS)
+    firsts = {s: (pane_blocks(ctx, s) or {}).get('first') for s in 'ab'}
+    landing, box = ctx.camera(), ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
+    ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] / 2, ctx.js('window.__skep.constants.LOD_FAR_LO / 2 / window.__skep.constants.DOC_W'))
+    advance = ctx.js('(async () => (await import("./plane/layout.js")).CHAR_W)()')
+    # the window at which a pane side by side keeps exactly HEAD_CH characters beside its column's edge at the reading size:
+    # the scene's frame — its inset and its border — the room between the panes, and each pane's padding
+    frame = run['vw'] - (run['scene']['right'] - run['scene']['left'])
+    at = 2 * ((HEAD_CH * advance + EDGE_EM) * READING_PX + sum(run['a']['pad'])) + SIDE_GAP_PX + frame
+    figures = {'threshold_px': round(at, 2), 'advance': advance, 'run': [run['vw'], (run['fit'] or {}).get('stacked')]}
+    was = ctx.resize(SCENE_HEAD_PX, 900)
+    try:
+        ctx.settle()
+        ctx.frames(2)
+        head = ctx.js(STACKED_JS)
+        flips = {}
+        for w in (math.ceil(at + 1e-6), math.floor(at - 1e-6)):
+            ctx.resize(w, 900)
+            ctx.settle()
+            ctx.frames(2)
+            flips['w%d' % w] = (ctx.js('window.__skep.scene.fit()') or {}).get('stacked')
+        r.check(not (head['fit'] or {}).get('stacked') and not head['stacked'] and list(flips.values()) == [False, True],
+                f'the scene stands side by side at {SCENE_HEAD_PX} px and at {math.ceil(at + 1e-6)} px, and stacked at {math.floor(at - 1e-6)} px: one px either side of the window at which a pane side by side keeps {HEAD_CH} characters at its document\'s head, by the page\'s measured advance (issue #467\'s design decision: "The stacking threshold is measured in rendered advance")',
+                {'head': head['fit'], 'flips': flips, 'threshold_px': at, 'advance': advance})
+        figures['flips'] = flips
+        for w in (SCENE_STACKED_PX, SCENE_PHONE_PX):
+            ctx.resize(w, 900)
+            ctx.settle()
+            ctx.frames(2)
+            name = f'the scene stacked in a {w} px window'
+            v = ctx.js(STACKED_JS)
+            r.check(not stacked_off(v), f'{name}: pane A above pane B, one width against the scene\'s left, their facing edges one column of {COLUMN_EM} em short of its right; each text against its facing edge, its column\'s edge on its right with every sign in it, and its corner on its left or across it at its head; both at the reading size, nothing past a pane\'s width (issue #467; FP-12, FP-26, FP-31)',
+                    {'off': stacked_off(v), 'fit': v['fit'], 'a': v['a'], 'b': v['b'], 'scene': v['scene']})
+            ctx.js('document.querySelector("#scenebar [data-relevel]").click()')
+            ctx.frames(2)
+            lv = scene_level(ctx)
+            r.check(not stacked_level_off(lv), f'{name}: the re-level sets the matched lines one distance below each pane\'s top, {LEVEL_TOL_PX} px either way, holding the same material (issue #467: "When stacked, \'level\' means the same distance below each pane\'s top")',
+                    {'off': stacked_level_off(lv), 'a': lv and lv['a'], 'b': lv and lv['b']})
+            ties = ctx.js('window.__skep.scene.ties()')
+            r.check(bool(ties) and not faces_off(ties), f'{name}: every band\'s and line\'s end stands at its pane\'s facing edge, both panes\' right, one column (issue #467)', faces_off(ties)[:6])
+            seen = {'fit': v['fit'], 'signs': [len(v['a']['signs']), len(v['b']['signs'])], 'ties': ties_hold(r, name, ties, 2)}
+            # the pointer on a band's bar in the column: that band drawn whole along the column, and off it, none
+            band = next((t for t in ties if t['kind'] == 'band' and t['a']['bottom'] - t['a']['top'] > 4 and not t['a']['clipped']), None)
+            if band:
+                x, y = band['a']['x'] + min(READING_PX, COLUMN_EM * READING_PX / 2) / 2, (band['a']['top'] + band['a']['bottom']) / 2
+                ctx.drv.mouse(x, y, kind='move')
+                ctx.frames(2)
+                on = ctx.js('window.__skep.scene.crossing()')
+                text = ctx.js('(() => { const q = document.getElementById("sceneA").getBoundingClientRect(); return {x: q.left + q.width / 2, y: q.top + q.height / 2}; })()')
+                ctx.drv.mouse(text['x'], text['y'], kind='move')
+                ctx.frames(2)
+                off = ctx.js('window.__skep.scene.crossing()')
+                r.check(not crossing_off(on, 'band', 'pointer', band['faceA'], v['scene']['right']) and on['tie'] == band['tie'] and off is None,
+                        f'{name}: the pointer on a band\'s bar in the column draws that band whole along the column\'s outer side, and moved off it into a pane, no body crosses (issue #467: "the tie under the pointer")',
+                        {'band': band['tie'], 'on': on, 'off': off, 'why_off': crossing_off(on, 'band', 'pointer', band['faceA'], v['scene']['right'])})
+                seen['pointer'] = on and on['tie']
+            else:
+                r.note(f'{name}: the pointer on a band\'s bar: unmeasured — no band\'s end stands in pane A\'s view taller than 4 px (FP-18)')
+            figures['w%d' % w] = seen
+    finally:
+        ctx.resize(*was)
+        ctx.settle()
+        ctx.frames(2)
+    back = ctx.js(STACKED_JS)
+    kept = {s: firsts[s] and ctx.js('''((id, pos) => { const p = document.getElementById(id), q = p.getBoundingClientRect(), e = p.querySelector('.run > [data-pos="' + pos + '"]');
+      if (!e) return false; const b = e.getBoundingClientRect(); return b.bottom > q.top + p.clientTop && b.top < q.top + p.clientTop + p.clientHeight; })(%s, %d)''' % (json.dumps('scene' + s.upper()), firsts[s]['pos'])) for s in 'ab'}
+    r.check(not back['stacked'] and not (back['fit'] or {}).get('stacked') and back['vw'] == run['vw'] and all(kept.values()),
+            f'back at the run\'s {run["vw"]} px window the panes stand side by side again, the first block in view in each before the window changed still in view (FP-8, FP-23)', {'fit': back['fit'], 'kept': kept, 'firsts': firsts})
+    ctx.set_view(landing['x'], landing['y'], landing['scale'])
+    ctx.js('window.__skep.scene.close()')
+    ctx.frames(2)
+    was = ctx.resize(SCENE_STACKED_PX, 900)
+    try:
+        figures['reversed'] = stacked_reversed_holds(ctx, r)
+        figures['strokes'] = stacked_strokes_hold(ctx, r)
+        figures['citation'] = stacked_citation_holds(ctx, r)
+        figures['stop'] = stacked_stop_holds(ctx, r)
+    finally:
+        ctx.resize(*was)
+        ctx.js('window.__skep.scene.close()')
+        ctx.settle()
+        ctx.frames(2)
+    return figures
+
+
+def stacked_reversed_holds(ctx, r):
+    """PANE B LAID OUT AS PANE A WHERE THE PANES STACK (issue #467's design decision: "Both panes put their facing edge on the
+    side where a document's counts sit on the plane"): the draft the first edition windows in pane A and the first edition in
+    pane B, set level at the window run, stacked — pane B's text against its facing edge, its column's edge on its right with
+    every sign in it, the window run's key among them, and its corner on its left (`stacked_off`). Unmeasured where pane B
+    shows no sign. Its figures"""
+    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(WINDOW[2]), json.dumps(DOC)))
+    wait_for(ctx, 'window.__skep.scene.isOpen()')
+    ctx.settle()
+    ctx.frames(3)
+    v = ctx.js(STACKED_JS)
+    name = f'the scene on {WINDOW[2]} beside {DOC}, stacked'
+    if not v['b']['signs']:
+        r.note(f'{name}: pane B\'s signs in its column\'s edge: unmeasured — none stands in view (FP-18)')
+    else:
+        r.check(not stacked_off(v), f'{name}: pane B laid out as pane A — its text against its facing edge, its column\'s edge on its right with every sign in it, its corner on its left (issue #467; FP-31)',
+                {'off': stacked_off(v), 'b': v['b']})
+    ctx.js('window.__skep.scene.close()')
+    ctx.frames(2)
+    return {'signs': [len(v['a']['signs']), len(v['b']['signs'])]}
+
+
+def stacked_strokes_hold(ctx, r):
+    """THE STROKES WHERE THE PANES STACK (issue #467's design decision: "A stroke's act, when the panes stack. It stands on
+    the stroke's half at the upper pane's (pane A's) edge, at that half's middle"): the scene on VERSIONED's first member
+    beside its latest, scrolled to a stroke (`stroke_at_junction`), the stroke holding (`stroke_holds`) — its button on its
+    half at pane A's edge, half an em out, under the pointer there — and its button focused, that stroke drawn whole along
+    the column (issue #467: "the tie … holding the focus"). Unmeasured where no stroke stands. Its figures"""
+    first = VERSIONED + '.1'
+    name = f'the scene on {first} beside {VERSIONED}, stacked'
+    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(first), json.dumps(VERSIONED)))
+    wait_for(ctx, 'window.__skep.scene.isOpen()')
+    ctx.frames(2)
+    v = scene_level(ctx)
+    strokes, tried = stroke_at_junction(ctx, (v or {}).get('pairs') or [])
+    if not strokes:
+        r.note(f'{name}: a stroke between two bands: unmeasured — none in view at any junction ({tried} tried) (FP-18)')
+        ctx.js('window.__skep.scene.close()')
+        ctx.frames(2)
+        return {'junctions': tried}
+    ties = ctx.js('window.__skep.scene.ties()')
+    panes = ctx.js('window.__skep.scene.panes()') or {}
+    held = stroke_holds(ctx, r, name, strokes[0], ties, panes)
+    s = strokes[0]
+    ctx.js('document.getElementById(%s).focus()' % json.dumps(s['id']))
+    ctx.frames(2)
+    c = ctx.js('window.__skep.scene.crossing()')
+    right = ctx.js('(() => { const e = document.getElementById("scene"); return e.getBoundingClientRect().left + e.clientLeft + e.clientWidth; })()')
+    r.check(not crossing_off(c, 'stroke', 'focus', ties[0]['faceA'] if ties else None, right) and c['tie'] == 'stroke ' + s['key'],
+            f'{name}: the stroke\'s button focused, that stroke drawn whole along the column\'s outer side (issue #467: "the tie … holding the focus")', {'crossing': c, 'key': s['key'], 'off': crossing_off(c, 'stroke', 'focus', ties[0]['faceA'] if ties else None, right)})
+    ctx.js('window.__skep.scene.close()')
+    ctx.frames(2)
+    return {'junctions': tried, 'stroke': held, 'crossing': c and c['why']}
+
+
+def stacked_citation_holds(ctx, r):
+    """THE LINK THE SCENE WAS OPENED FROM, WHERE THE PANES STACK (issue #467's design decision: "failing that, the link the
+    scene opened from"): a citer of FAR_LEAP beside FAR_LEAP, opened from the citation it draws — the link its first opening
+    draws, named as the scene's opener (`scene.open`'s `held.link`) — that citation drawn whole along the column, the
+    pointer and the focus on nothing, and its end naming a document whole meeting that pane's facing edge in the column, drawn
+    whole there (`whole_edges_hold`). Its figures"""
+    tried, link, citer = [], None, None
+    for c in CITERS:
+        ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(c), json.dumps(FAR_LEAP)))
+        wait_for(ctx, 'window.__skep.scene.isOpen()')
+        lines = [t for t in ctx.js('window.__skep.scene.ties()') if t['kind'] == 'link']
+        tried.append([c, len(lines)])
+        ctx.js('window.__skep.scene.close()')
+        ctx.frames(2)
+        if lines:
+            citer, link = c, lines[0]['link']
+            break
+    r.check(citer is not None, f'stacked, a scene on a citer of {FAR_LEAP} and {FAR_LEAP} draws its citation', tried)
+    if citer is None:
+        return {'tried': tried}
+    ctx.drv.mouse(2, 2, kind='move')
+    ctx.js('window.__skep.scene.open(%s, %s, %s)' % (json.dumps(citer), json.dumps(FAR_LEAP), json.dumps({'link': link})))
+    wait_for(ctx, 'window.__skep.scene.isOpen()')
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    ctx.frames(2)
+    name = f'the scene on {citer} beside {FAR_LEAP}, stacked, opened from {link}'
+    c = ctx.js('window.__skep.scene.crossing()')
+    ties = ctx.js('window.__skep.scene.ties()')
+    right = ctx.js('(() => { const e = document.getElementById("scene"); return e.getBoundingClientRect().left + e.clientLeft + e.clientWidth; })()')
+    face = ties[0]['faceA'] if ties else None
+    r.check(not crossing_off(c, 'link', 'opened', face, right) and c['link'] == link and (ctx.js('window.__skep.scene.pairs()') or {}).get('link') == link,
+            f'{name}: with neither the pointer nor the focus on a tie, the link the scene was opened from drawn whole along the column\'s outer side (issue #467)', {'crossing': c, 'link': link, 'off': crossing_off(c, 'link', 'opened', face, right)})
+    lines = [t for t in ties if t['kind'] == 'link']
+    edged = whole_edges_hold(ctx, r, name, lines) if any(t[s].get('whole') for t in lines for s in ('a', 'b')) else None
+    ctx.js('window.__skep.scene.close()')
+    ctx.frames(2)
+    return {'citer': citer, 'link': link, 'crossing': c and c['why'], 'edges': edged}
+
+
+def stacked_stop_holds(ctx, r):
+    """THE STOP WHERE THE PANES STACK (issue #467's design decision: each tie at each of its ends as side by side draws it,
+    the stop among them; foundations §2.5: "the stub's count at the column"): the first edition's window run beside the draft
+    it windows, which a far end names whole, pane B scrolled past the passage holding the run's material where the stop does
+    not stand as it opens: the stop against pane B's facing edge in the column, its left on the edge, its count — where it
+    reaches two passages or more — after its triangle. Unmeasured where it never stands. Its figures"""
+    ctx.leap(DOC, WINDOW[0])
+    held = {'posA': WINDOW[0], 'widthA': WINDOW[1], 'wholeB': True}
+    ctx.js('window.__skep.scene.open(%s, %s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2]), json.dumps(held)))
+    wait_for(ctx, 'window.__skep.scene.isOpen() && window.__skep.scene.pairs().pairs.length > 0')
+    ctx.frames(2)
+    s = ctx.js('window.__skep.scene.stop()') or {}
+    if s.get('shared') and not s.get('shown'):
+        s = scrolled_past(ctx, s['shared'][0])
+    if not s.get('shown'):
+        r.note('stacked, the stop at a band\'s clipped end: unmeasured — it stood neither as the scene opened nor with pane B scrolled past its passage (FP-18)')
+        ctx.js('window.__skep.scene.close()')
+        ctx.frames(2)
+        return {'shown': False}
+    ties = ctx.js('window.__skep.scene.ties()')
+    face = ties[0]['faceB'] if ties else None
+    count = ctx.js('''(() => { const e = document.getElementById('scenestop'), n = [...e.childNodes].find((x) => x.nodeType === 3 && x.textContent.trim());
+      if (!n) return null; const g = document.createRange(); g.selectNodeContents(n); const q = g.getBoundingClientRect(); return {left: q.left, right: q.right}; })()''')
+    rect = s['rect']
+    after = count is None or (face is not None and count['left'] >= face + 6 + 4 - TIE_TOL_PX)
+    r.check(face is not None and abs(rect['x'] - face) <= TIE_TOL_PX and after and bool(ties) and ties[0].get('stacked'),
+            'stacked, the stop stands against pane B\'s facing edge in the column, its left on the edge, its count after its triangle (issue #467)',
+            {'stop': s, 'face': face, 'count': count})
+    ctx.js('window.__skep.scene.close()')
+    ctx.frames(2)
+    return {'shown': True, 'count': s.get('count'), 'rect': rect}
+
+
 def scene_holds(ctx, r):
     """THE READING SCENE's checks: opened on the first edition and the draft it windows, nothing held, then as a far end
     naming the draft whole, the window run held; its measure at the run's window and a wide one, its panes read and never
-    clicked; then from the versions list of an edition with two members, its last paragraph held, read side by side with
-    its latest member; its figures"""
+    clicked, and stacked where the window holds too few characters side by side; then from the versions list of an edition
+    with two members, its last paragraph held, read side by side with its latest member; its figures"""
     seen = {}
     ctx.leap(DOC, WINDOW[0])
     ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
@@ -2348,6 +2697,7 @@ def scene_holds(ctx, r):
     seen['whole'] = scene_whole_holds(ctx, r)
     seen['measure'] = scene_measure_holds(ctx, r)
     seen['marks'] = scene_marks_hold(ctx, r)
+    seen['stacked'] = scene_stacked_holds(ctx, r)
     # the versions list, a paragraph past the document's first held: "read side by side" with the latest member sets that paragraph level
     # with what the member holds of it. An edition no later case reads: the member's text, once loaded, stands over its document's box
     ctx.leap(VERSIONED, None)

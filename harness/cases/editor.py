@@ -2966,7 +2966,7 @@ def run(ctx):
                                    'inserted': inserted, 'compare_calls': len(compared), 'panes_shown': panes_shown}),
                 "the panes' text": (all(p['px'] is not None and abs(p['px'] - p['reading']) < 1e-6 and p['over'] <= 1 for p in text), text),
                 'the bar': (bar == {'data-relevel': 1, 'data-x': 1}, {'shown': bar})}
-    shoot('moved-scene', scene_check, marks={NARROW_PX: {"the panes' text": '#467', 'the bar': '#489'}})
+    shoot('moved-scene', scene_check, marks={NARROW_PX: {'the bar': '#489'}})
     ctx.js('window.__skep.scene.close()'); ctx.frames(2)
 
     # ---- (g) B3-S2: STOPPED — the `daemon` event fired by hand (D6 BM-9) -----------------------------------------------------
