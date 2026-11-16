@@ -45,7 +45,11 @@ of VERSIONED the page holds no record of read by `retrieve_i` first (`paste-same
 taking out the copy alone (`paste-own-draft`); words another page's load typed placed as new bytes (`paste-unminted`);
 a copy's plain text changed at the same lengths placed as new bytes, the paste's face saying so (`paste-forged`); each
 source refusal armed at the paste's `reinstate`, nothing placed, the face in its words (`source-faces`); and the
-`reinstate` held, "not yet kept" (`paste-held`).
+`reinstate` held, "not yet kept" (`paste-held`). The paste at a published target follows (`published_rows`; B3-S5, the
+paste survey's P8): a word of the own draft copied by the copy door, then at the first edition's span Mod+V's keydown,
+made as a script makes one, left standing, and the paste door answered by C-45 naming the document, C-241's statement
+naming the own draft beneath it and the staging act standing inert, its press saying its reason — nothing placed and
+nothing sent, the test board's position unmoved (`published-target`).
 The whole document's entry is a figure (`whole_entry`): the seeded staging draft selected whole and copied through the
 copy door, on the first page.
 Undo, redo and the deletion face are driven there too (`undo_rows`): Mod+Z on
@@ -277,12 +281,12 @@ STATES = [
     dict(screen='B3-S5', state='paste-held', walk='W-08', step=4, drawn=True,
          how="`op` armed to answer `held` at a paste's `reinstate` and `held` to list that line, then the paste door (the paste survey's W4)",
          claim='the paste\'s one `reinstate` answered `held`: the corner reads "not yet kept" (B3.not-yet-kept), the pasted words standing, no face and no island; the line\'s drop takes them out and the corner reads "kept" again'),
-    dict(screen='B3-S5', state='published-target', walk='W-04', step=5, drawn=False,
-         how="the paste door at the walk's span of an edition, the clipboard naming a draft of the person's own", claim='',
-         why="slice 2c: the paste there is answered by C-45 alone — the staging act and C-35's statement beneath it are unbuilt"),
+    dict(screen='B3-S5', state='published-target', walk='W-04', step=5, drawn=True,
+         how="a passage of the own draft (OWN) copied by the copy door, the page's selection cleared after it; at the walk's span of the first edition (DOC), the paste door with plain text and no entry, then Mod+V's keydown made as a script makes one, then the paste door with the copy's clipboard, the machine handed in (D5 K-72, K-93; the paste survey's P8)",
+         claim="Mod+V's keydown there is neither prevented nor answered, nothing placed; the paste event places nothing and sends nothing, the edition's text as it stood and the test board's position unmoved — C-45 at the focus naming the document, whole (C-45), beneath it the statement naming the own draft as the status region names its box (B3.quote.published-target, C-241), and beneath them the staging act \"write the next version in a draft\" (B3.write-next) standing inert, described by its reason (L.write-next.inert), inside the window below the one line, at the text's edge where the room there holds it and else over the lines beneath its site, said in the status region; the door with no entry answered by C-45 and its act alone; the act's press shows its reason beside it and says it"),
     dict(screen='B3-S5', state='cross-board', walk='W-08', step=4, drawn=False,
          how="the paste door over an entry naming another board's origin", claim='',
-         why="no second board exists (the paste survey's O4): another board's entry pastes as plain text, and the cross-board face is slice 2c's"),
+         why="the owner's O4 ruling: a paste from another board is allowed, only not built — no second board exists, so another board's entry pastes as plain text (arm ii); the cross-board face, B3-S5's arm (v) and C-268, is a design revisit owed once a second board exists"),
     dict(screen='B3-S5', state='quote-pick', walk='W-08', step=4, drawn=False,
          how="Mod+Shift+C at a selection: the destination pick", claim='', why="the quote's slice: the pick overlay is unbuilt"),
     dict(screen='B3-S5', state='quote-inert', walk='W-08', step=4, drawn=False,
@@ -1354,7 +1358,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
             "the page opened on the harness's provider with `machine=1` boots with D6's machine handed in, under a session that writes", {'machine': boot and boot.get('machine'), 'writes': session and session.get('writes')})
     if not session or not board or not (boot and boot.get('machine')):
         for state in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
-                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held'):
+                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target'):
             red(state, 'the machine\'s page did not open')
         return
     sid, account, board_id = session['session'], session['account'], board['board']
@@ -1468,7 +1472,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
             {'stands': stands, 'line': line0, 'focus': ctx.js('window.__skep.view.focus()')})
     if not stands:
         for st in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
-                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held'):
+                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target'):
             red(st, 'the case\'s own draft did not mount')
         return
     # ---- B3-S3: Mod+Z on an empty stack, before anything is typed in the draft (K-75; BM-42) ----------------------------------
@@ -1745,6 +1749,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     undo_rows(ctx, r, shoot, red, ops_allowed, held)
     paste_rows(ctx, r, shoot, red, ops_allowed, held)
     same_rows(ctx, r, shoot, red, ops_allowed, held)
+    published_rows(ctx, r, shoot, red, ops_allowed, held)
 
 
 # the words the reopen row's armed line types before the case's own draft's first line: a paragraph of their own
@@ -2543,6 +2548,131 @@ def same_rows(ctx, r, shoot, red, ops_allowed, m):
     out, back = drop_all(k)
     r.check(bool(out) and out.get('dropped') and back and first_line() == line, "B3-S5 · paste-held: the held line's drop takes the pasted words out, the corner \"kept\" again", {'out': out, 'shown': first_line()})
     ctx.drv.key('Escape'); ctx.frames(2)
+
+
+# Mod+V's keydown as a script makes one, dispatched at the element holding the focus (keys.py's SCRIPTED_KEYDOWN): the page's
+# listener answers it, and — no key of the platform's — no paste can follow it and no clipboard is read; whether its default
+# was prevented once the listener's answer was in, and the hint standing then
+SCRIPTED_PASTE_KEYDOWN = '''(() => new Promise((res) => { const e = new KeyboardEvent("keydown", {key: "v", code: "KeyV", metaKey: true, bubbles: true, cancelable: true});
+  (document.activeElement || document.body).dispatchEvent(e); setTimeout(() => res({prevented: e.defaultPrevented, hint: window.__skep.hint()}), 60); }))()'''
+
+
+def published_rows(ctx, r, shoot, red, ops_allowed, m):
+    """AT A PUBLISHED TARGET (B3-S5; D5 K-72, K-93; the paste survey's P8), on the machine's page, where any edit would be
+    composed and sent. A passage of the own draft (`OWN`) is copied by the copy door, the page's selection and the
+    platform's cleared after it. At the walk's span of the first edition (`DOC`), an edition of the session's account, at
+    each width: the paste door with plain text and no entry — C-45 and its staging act alone; Mod+V's keydown made as a
+    script makes one — neither prevented nor answered; then the paste door with the copy's clipboard — nothing sent, the
+    edition's text as it stood, C-45 at the focus naming the document, beneath it C-241's statement naming the own draft
+    as the status region names its box, and the staging act standing inert, described by its reason, said in the status
+    region, placed at the text's edge where the room there holds it and else over the lines beneath its site. Then, at
+    the desktop width, the act's press: its reason shown beside it and said. The test board's position before and after
+    the row is a figure, and unmoved. Each word is checked against `strings.js`, and the system's clipboard is never read
+    or written."""
+    quiet = m['quiet']
+    state = 'published-target'
+    n_ops = lambda: ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "op").length')
+
+    def writes_from(n):
+        """the write frames the page sent from its n-th `op` on: every `op` frame that is no read"""
+        out = []
+        for raw in (ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "op").map((c) => c.frame)') or [])[n:]:
+            try:
+                f = json.loads(raw)
+            except (TypeError, ValueError):
+                continue
+            if isinstance(f, dict) and f.get('op') and 'frame' not in f and f['op'] not in ops_allowed:
+                out.append([f['op'], f.get('doc') or f.get('d')])
+        return out
+
+    def shown_text(at, width):
+        """a stretch of the text the page shows of the edition, page-local edits and all"""
+        return ctx.js('(async () => { const L = await import("./text/layer.js"), R = await import("./model/records.js"), d = L.shownOf(%s); return R.textOf(d.runs, %d, %d); })()' % (json.dumps(DOC), at, at + width))
+
+    unhint = lambda: (ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()'), ctx.frames(1))
+    paste = lambda data: ctx.js('window.__skep.paste(%s)' % json.dumps(data))
+    quiet()
+    health0 = ctx.health()
+    n0 = n_ops()
+
+    # ---- the copy: a word of the own draft, by the copy door; the selections cleared after it ---------------------------------
+    ctx.leap(OWN, 1); ctx.settle(15); ctx.frames(3)
+    d = ctx.js('window.__skep.model.doc(%s)' % json.dumps(OWN)) or {}
+    para = next((b for b in d.get('blocks') or [] if b['kind'] == 'para' and re.search(r'[A-Za-z]{4,}', b['text'])), None)
+    hit = re.search(r'[A-Za-z]{4,}', para['text']) if para else None
+    data, entry = {}, None
+    if hit:
+        start, width = para['pos'] + len(para['text'][:hit.start()].encode('utf8')), len(hit.group(0).encode('utf8'))
+        ctx.js('(async () => { const L = await import("./text/layer.js"); L.placeSelection({addr: %s, pos: %d, width: %d}); })()' % (json.dumps(OWN), start, width)); ctx.frames(2)
+        data = (ctx.js('window.__skep.copy()') or {}).get('data') or {}
+        entry = json.loads(data['application/x-skep-passage']) if data.get('application/x-skep-passage') else None
+    ctx.js('(async () => { const s = window.getSelection(); if (s) s.removeAllRanges(); (await import("./overlays/selection.js")).clear(); })()'); ctx.frames(2)
+    origin = (ctx.js('window.__skep.model.board()') or {}).get('origin')
+    label = ctx.js('(async () => (await import("./text/layer.js")).boxName(%s).name)()' % json.dumps(OWN))
+    copied = (bool(entry) and entry.get('doc') == OWN and entry.get('board') == origin and bool(data.get('text/plain')) and bool(label)
+              and ctx.js('window.__skep.selection()') is None)
+    r.check(copied, "B3-S5 · %s: a word of the own draft copied by the copy door — skep's own entry names this board and the own draft as where its words were read, and the page's selection is cleared after it (what the paste stands on)" % state,
+            {'entry': entry, 'plain': data.get('text/plain'), 'origin': origin, 'label': label, 'selection': ctx.js('window.__skep.selection()')})
+    if not copied:
+        red(state, {'entry': entry, 'label': label})
+        return
+    plain = data['text/plain']
+    c45 = hint_whole(ctx, 'C-45', values={'D': DOC})
+    statement = sentence(ctx, 'B3.quote.published-target', {'label': label})
+    reason = sentence(ctx, 'L.write-next.inert')
+    act = {'id': 'B3.write-next', 'label': t(ctx, 'B3.write-next'), 'inert': True, 'named': heard(ctx, t(ctx, 'B3.write-next')), 'described': heard(ctx, reason), 'reason': None}
+    spoken = ctx.js('(async () => { const S = await import("./strings.js"), L = await import("./text/layer.js"); '
+                    'return S.heard(S.joinRuns(" ", [%s, S.sentenceRuns("B3.quote.published-target", {label: L.boxName(%s).runs})])); })()' % (json.dumps(c45), json.dumps(OWN)))
+    recentre = lambda: ctx.leap(DOC, WINDOW[0])
+
+    def published_check(wd):
+        ctx.frames(2)
+        f = ctx.js('window.__skep.view.focus()') or {}
+        at = (f.get('pos') or WINDOW[0])
+        before, n1, kept = shown_text(at, 64), n_ops(), ctx.js('window.__skep.caret()')
+        # the door with plain text and no entry: C-45 and its act alone
+        unhint()
+        alone_door = paste({'text/plain': plain}); ctx.frames(2)
+        alone = ctx.js('window.__skep.hint()') or {}
+        # the chord's keydown, as a script makes one: left to the platform, answering nothing
+        unhint()
+        key = ctx.js(SCRIPTED_PASTE_KEYDOWN); ctx.frames(1)
+        # the paste event with the copy's clipboard
+        door = paste(data); ctx.frames(2)
+        got, h, said = hint(ctx), ctx.js('window.__skep.hint()') or {}, live(ctx)
+        after, sent, edits = shown_text(at, 64), writes_from(n1), ctx.js('window.__skep.write.edits(%s)' % json.dumps(DOC))
+        by = (h.get('placed') or {}).get('by')
+        return {
+            'the keydown': (key == {'prevented': False, 'hint': None}, {'keydown': key}),
+            'the answer': (f.get('kind') == 'block' and f.get('addr') == DOC and door == {'prevented': True} and h.get('id') == 'C-45' and h.get('words') == c45
+                           and h.get('beneath') == {'id': 'B3.quote.published-target', 'words': statement} and h.get('offered') == act and said == spoken
+                           and got['seen'] and not got['line'] and by == ('edge' if wd == WIDE[0] else 'beneath'),
+                           {'focus': f, 'door': door, 'hint': {k: h.get(k) for k in ('id', 'words', 'beneath', 'offered', 'placed')}, 'want': {'words': c45, 'beneath': statement, 'offered': act, 'said': spoken},
+                            'said': said, 'seen': got['seen'], 'box': got['box']}),
+            'no entry': (alone_door == {'prevented': True} and alone.get('id') == 'C-45' and alone.get('words') == c45 and alone.get('beneath') is None and alone.get('offered') == act,
+                         {'door': alone_door, 'hint': {k: alone.get(k) for k in ('id', 'words', 'beneath', 'offered')}}),
+            'nothing placed or sent': (before is not None and after == before and edits == [] and sent == [] and ctx.js('window.__skep.caret()') == kept and (kept or {}).get('addr') != DOC,
+                                       {'text': [before, after], 'edits': edits, 'sent': sent, 'caret': [kept, ctx.js('window.__skep.caret()')]}),
+        }
+    shoot(state, published_check, recentre)
+
+    # the staging act's press, at the desktop width: its reason beside it and said, the hint standing — and again
+    recentre(); ctx.settle(10); ctx.frames(2)
+    unhint()
+    paste(data); ctx.frames(2)
+    pressed = []
+    for _ in range(2):
+        ctx.js('(() => { const b = document.querySelector("#hint button[data-offered]"); if (b) b.click(); })()'); ctx.frames(3)
+        h = ctx.js('window.__skep.hint()') or {}
+        pressed.append({'reason': (h.get('offered') or {}).get('reason'), 'said': live(ctx), 'standing': h.get('id')})
+    r.check(all(p == {'reason': reason, 'said': heard(ctx, reason), 'standing': 'C-45'} for p in pressed),
+            "B3-S5 · %s: the staging act, pressed — its reason beside it, a sentence, and said in the status region, at each press; the hint standing (FP-41)" % state, pressed)
+    unhint()
+    quiet()
+    health1 = ctx.health()
+    r.figures['published_target'] = {'log_position_before': health0.get('log_position'), 'log_position_after': health1.get('log_position'), 'writes': writes_from(n0)}
+    r.check(health1.get('log_position') == health0.get('log_position') and writes_from(n0) == [],
+            "B3-S5 · %s: the row sends no write — no write frame from the page, the test board's log position as it stood" % state, r.figures['published_target'])
 
 
 def run(ctx):

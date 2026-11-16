@@ -454,6 +454,18 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
   box-shadow:0 2px 8px rgba(0,0,0,.45); }
 #hint.writing button { display:inline; padding:0; font:inherit; color:inherit; background:none; border:none; border-radius:0; box-shadow:none; }
 #hint.writing button[data-writing] { text-decoration:underline dotted; cursor:pointer; }
+/* a line holding parts beneath its notice (O-HINT's `beneath`, `offered`): one box, the notice's words, then each part on a
+   line of its own — the statement in the text's ink, the act a slot drawn as the selection's are, an inert one dashed, and
+   beside it the reason a press told */
+#hint.parts { padding:3px 8px; font-size:11px; line-height:1.45; color:var(--warn); background:#1b1f25; border:1px solid var(--warn); border-radius:4px;
+  box-shadow:0 2px 8px rgba(0,0,0,.45); }
+#hint.parts button[data-hint] { display:inline; padding:0; font:inherit; color:inherit; background:none; border:none; border-radius:0; box-shadow:none; }
+#hint .beneath { display:block; margin-top:4px; color:var(--ink); }
+#hint .offered { display:block; margin-top:5px; }
+#hint:is(.writing, .parts) .offered button { display:inline-block; margin:0; padding:1px 6px; font:inherit; color:var(--ink); background:#14181d; border:1px solid #4a5260;
+  border-radius:3px; box-shadow:none; white-space:normal; text-align:left; cursor:pointer; }
+#hint:is(.writing, .parts) .offered button.inert { border-style:dashed; color:var(--dim); cursor:default; }
+#hint .offered .reason { display:block; margin-top:3px; color:var(--dim); }
 
 /* THE OVERLAYS — one at a time, conjured by an act, dismissed by its end; and below it the notice a read brought while it
    stood (O-HOST's; FP-36), placed under its box, drawn as a face is wherever it stands. Each scrolls inside itself past

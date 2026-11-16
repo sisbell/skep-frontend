@@ -29,7 +29,8 @@
 // (below); at the walk's span, at its reading scale, in text the person may
 // not edit, every key but Space answered by its document's line, and a paste
 // there by the same line, nothing placed (`siteSays`; D5 K-72, K-93) — at an
-// edition of the session's account C-45 naming the document, at a document of
+// edition of the session's account C-45 naming the document, the staging act
+// beneath it standing inert (`STAGING`; FP-41), at a document of
 // another account B3-S13's line naming its owner; at the corner of a draft the
 // person may edit, every key but Space answered by B3-S13's line naming the
 // way back to the draft's text by its chord, Shift+Tab (`B3.caret.back`),
@@ -46,9 +47,10 @@
 // Mod+R and F5 are taken and nothing reloaded (K-94), and the platform's own
 // chords — copy, paste, cut, select all, print, close, quit, minimize, hide,
 // preferences — are never taken save where a site's line answers a paste or a
-// cut (K-93) — at a caret that writes, Mod+V and Mod+X are answered before
-// any wait and left standing, so the platform fires the paste or the cut
-// event the page acts on (below) — save select-all where the page selects a
+// cut at its keydown (K-93) — at a caret that writes Mod+V and Mod+X, and at
+// the walk's span of an edition of the person's own Mod+V, are answered
+// before any wait and left standing, so the platform fires the paste or the
+// cut event the page acts on (below) — save select-all where the page selects a
 // document whole
 // (`wholeAt`, `selectWhole`; K-93; B3-S8) — at the page's live caret in a
 // draft, at the span a kept caret stands in, the caret returned, and at the
@@ -93,7 +95,11 @@
 // selection whole a line saying so, nothing removed. Where the draft cannot
 // be written the reason's line answers both, and at a span of a draft holding
 // no caret the draft's line in their own words; a paste at the walk's span in
-// text the person may not edit is answered by its document's line, a cut
+// text the person may not edit is answered by its document's line, nothing
+// placed and nothing sent — at an edition of the person's own C-45 with its
+// staging act and, between them, C-241's statement naming the draft skep's
+// own entry says its words were read in, where that entry is this board's
+// and the draft is the person's own and held (`draftCopied`; B3-S5) — a cut
 // there left to the platform. While a jump is in the air a paste is held with
 // the keys, its two flavors read as the event is dispatched, and made at the
 // landing in their order (`hold`, `replay`); a cut, which writes the clipboard only
@@ -696,35 +702,75 @@ async function selectWhole(ctx) {
 }
 
 /**
- * A printable key or a paste at the walk's span in text the person may not
- * edit (`readOnlySpan`) answered by its document's line, its hint at the
- * focus, nothing placed (see the head; D5 K-72, K-93; foundations §2.7): at
- * a document of the session's account the one test says is published, asked
+ * @typedef {{kind: 'edition', doc: string} | {kind: 'others', owner: string}} Site — the site a printable key or a paste at the walk's span in text the person may not edit is answered at (`readOnlySite`): an edition of the session's account, by its document; a document of another account, by its owner
+ */
+
+/**
+ * The site the walk's span in text the person may not edit (`readOnlySpan`)
+ * answers a printable key or a paste at (see the head; D5 K-72, K-93): a
+ * document of the session's account the one test says is published, asked
  * of the version the walk stands in as its corner asks it (T-LAYER's
- * `isDraft`; FP-39), C-45 naming the document; at a document of another
- * account B3-S13's line naming its owner (M-REC's `ownerAccount`). Nothing
- * is answered, and K-9's line is the caller's, where no session names an
- * account, where that test does not say published of a document of the
- * session's account, and where the owner the line would name is the
- * session's own account.
+ * `isDraft`; FP-39), by the document; a document of another account by its
+ * owner (M-REC's `ownerAccount`). Null where no session names an account,
+ * where that test does not say published of a document of the session's
+ * account, and where the owner the line would name is the session's own
+ * account.
+ * @param {Ctx} ctx
+ * @returns {Site | null}
+ */
+function readOnlySite(ctx) {
+  const s = readOnlySpan(ctx), account = REC.session()?.account, doc = s && documentOf(s.addr);
+  if (!s || !account || !doc) return null;
+  if (accountOf(doc) === account) return LAYER.isDraft(s.addr) === false ? { kind: 'edition', doc } : null;
+  const owner = REC.ownerAccount(REC.doc(REC.has(doc) ? doc : s.addr));
+  return owner && owner !== account ? { kind: 'others', owner } : null;
+}
+
+/** the act C-45 offers beneath it at an edition of the person's own — the staging act (D5 K-72; B3-S5, B3-S10) — standing inert, its reason said at every press (O-HINT's `offeredAct`; FP-41) */
+const STAGING = /** @type {import('../overlays/hint.js').Offered} */ (Object.freeze({ id: 'B3.write-next', reason: 'L.write-next.inert' }));
+
+/**
+ * A printable key, the undo chord or a paste at the walk's span in text the
+ * person may not edit answered by its document's line, its hint at the
+ * focus, nothing placed and nothing sent (see the head; D5 K-72, K-93;
+ * foundations §2.7; `readOnlySite`): at an edition of the session's account
+ * C-45 naming the document, its staging act beneath it, inert (`STAGING`) —
+ * and, for a paste, between them C-241's statement where skep's own entry
+ * names a draft of the person's own as where its words were read
+ * (`draftCopied`; B3-S5); at a document of another account B3-S13's line
+ * naming its owner. Nothing is answered, and K-9's line is the caller's,
+ * where `readOnlySite` names no site.
  * @param {Pressed} e the key, or a paste event
  * @param {Ctx} ctx
- * @param {import('../overlays/hint.js').Writing | null} [writing] where the person was writing, which a printable key's line ends with (`writingElsewhere`); null for a paste
- * @param {import('../overlays/hint.js').Ending | null} [ending] the sentence the line ends on while it stands whole (O-HINT's `show`): the undo chord's (`undoNone`)
+ * @param {{writing?: import('../overlays/hint.js').Writing | null, ending?: import('../overlays/hint.js').Ending | null, entry?: string}} [o] `writing` where the person was writing, which a printable key's line ends with (`writingElsewhere`); `ending` the sentence the line ends on while it stands whole (O-HINT's `show`): the undo chord's (`undoNone`); `entry` skep's own entry, as a paste's event carried it — a paste's alone
  * @returns {boolean} whether a line answered the key
  */
-function siteSays(e, ctx, writing = null, ending = null) {
-  const s = readOnlySpan(ctx), account = REC.session()?.account, doc = s && documentOf(s.addr);
-  if (!s || !account || !doc) return false;
-  if (accountOf(doc) === account) {
-    if (LAYER.isDraft(s.addr) !== false) return false;
-    HINT.show('C-45', { D: doc }, { ...hinted(e, ctx), writing, ending });
-    return true;
-  }
-  const owner = REC.ownerAccount(REC.doc(REC.has(doc) ? doc : s.addr));
-  if (!owner || owner === account) return false;
-  HINT.show('B3.row.others-document', { owner }, { ...hinted(e, ctx), writing, ending });
+function siteSays(e, ctx, o = {}) {
+  const site = readOnlySite(ctx), writing = o.writing ?? null, ending = o.ending ?? null;
+  if (!site) return false;
+  if (site.kind === 'others') { HINT.show('B3.row.others-document', { owner: site.owner }, { ...hinted(e, ctx), writing, ending }); return true; }
+  const from = o.entry != null ? draftCopied(o.entry) : null;
+  HINT.show('C-45', { D: site.doc }, { ...hinted(e, ctx), writing, ending, offered: STAGING, beneath: from ? { id: 'B3.quote.published-target', values: { label: from } } : null });
   return true;
+}
+
+/**
+ * The draft of the person's own a paste's words were copied in, named as the
+ * status region names a box (see the head; B3-S5; T-LAYER's `boxName`): the
+ * document skep's own entry says its words were read in (M-PASSAGE's
+ * `readEntry`, `Naming.doc`) — never the documents its parts' bytes were
+ * minted in — where the entry is this board's, that document is of the
+ * session's account, the page holds its record, and the one test says it is
+ * a draft (T-LAYER's `isDraft`; FP-39). Null where the entry is absent,
+ * malformed or another board's, where it names any other document, and
+ * where the page holds no record of the draft: none is made to name it.
+ * @param {string} entry skep's own entry, as the paste's event carried it: '' where it carried none
+ * @returns {import('../strings.js').Run[] | null} the draft's name, as stretches in their faces
+ */
+function draftCopied(entry) {
+  const e = PASSAGE.readEntry(entry), b = REC.board(), account = REC.session()?.account;
+  if (!e || !b || e.board !== b.origin || !account || accountOf(e.doc) !== account || !REC.has(e.doc) || LAYER.isDraft(e.doc) !== true) return null;
+  return LAYER.boxName(e.doc).runs;
 }
 
 /**
@@ -753,8 +799,8 @@ export async function dispatch(e, ctx) {
   if (mod && !e.shiftKey && (chord === 'Mod+V' || chord === 'Mod+X') && ctx.where === 'caret') { const c = LAYER.caret(); if (c && unwritableSays(c.addr, e, ctx)) return true; }
   // a paste or a cut at a span of a draft the person may edit holding no caret (K-93, K-72): the draft's line in their own words, its hint, nothing placed and nothing removed
   if (mod && !e.shiftKey && (chord === 'Mod+V' || chord === 'Mod+X') && bareDraftSpan(ctx)) { HINT.show(chord === 'Mod+V' ? 'B3.caret.enter.paste' : 'B3.caret.cut', actKey(), hinted(e, ctx)); return true; }
-  // a paste at the walk's span of an edition of the person's own or of another's document (K-72, K-93): its document's line, its hint, nothing placed
-  if (mod && !e.shiftKey && chord === 'Mod+V' && siteSays(e, ctx)) return true;
+  // a paste at the walk's span of another's document (K-72, K-93): its document's line at the keydown, its hint, nothing placed — at an edition of the person's own the keydown is left standing, so the platform's paste event follows and is answered there by what its clipboard names (`pasteAt`)
+  if (mod && !e.shiftKey && chord === 'Mod+V' && readOnlySite(ctx)?.kind === 'others' && siteSays(e, ctx)) return true;
   // a copy outside a field where the platform holds no selection (K-92): the page's line, its default prevented, or the selection it draws placed under the copy
   if (mod && !e.shiftKey && !e.altKey && chord === 'Mod+C' && copyAsDrawn(e, ctx)) return true;
   // the rest of the platform's own, never taken (K-92, K-93): Mod+H among them on macOS alone, the trail's list elsewhere (K-41) — save select-all where the page selects a document whole (`wholeAt`)
@@ -1016,7 +1062,7 @@ async function typeAt(e, ctx) {
   if (kept) { e.preventDefault(); LAYER.returnCaret(false, kept.addr); editAtCaret(e.key); await WALK.followCaret(); movedSays(kept.addr, e); return; }
   const writing = writingElsewhere(walkSite());
   if (e.key !== ' ' && bareDraftSpan(ctx)) { HINT.show('B3.caret.enter', actKey(), { ...hinted(e, ctx), writing }); return; }
-  if (e.key !== ' ' && siteSays(e, ctx, writing)) return;
+  if (e.key !== ' ' && siteSays(e, ctx, { writing })) return;
   swallow(e, ctx, writing);
 }
 
@@ -1197,7 +1243,7 @@ function undoSaid(addr, out, redo) {
  */
 function undoNone(e, ctx) {
   const writing = writingElsewhere(null);
-  if (siteSays(e, ctx, writing, UNDO_CONSTANT)) return;
+  if (siteSays(e, ctx, { writing, ending: UNDO_CONSTANT })) return;
   HINT.show('B3.undo.none', null, { ...hinted(e, ctx), writing, ending: UNDO_CONSTANT });
 }
 
@@ -1392,8 +1438,10 @@ export function pasteEvent(e, ctx) {
  * answered by its own line at the focus, nothing placed; a draft that cannot
  * be written by its reason's line, no caret returned. At a span of a draft
  * holding no caret the draft's line names the key that places one; at the
- * walk's span in text the person may not edit, its document's line
- * (`siteSays`).
+ * walk's span in text the person may not edit, its document's line, nothing
+ * placed and nothing sent — at an edition of the person's own C-45 with its
+ * staging act, and C-241's statement where skep's own entry names a draft of
+ * the person's own (`siteSays`, `draftCopied`; B3-S5).
  * @param {string} text the clipboard's plain text, as its event carried it
  * @param {string} entry skep's own entry, as its event carried it: '' where it carried none
  * @param {Pressed} e what its line is told of the event
@@ -1424,7 +1472,7 @@ function pasteAt(text, entry, e, ctx) {
     return true;
   }
   if (bareDraftSpan(ctx)) { HINT.show('B3.caret.enter.paste', actKey(), hinted(e, ctx)); return true; }
-  return siteSays(e, ctx);
+  return siteSays(e, ctx, { entry });
 }
 
 /**

@@ -13,7 +13,9 @@
 // the draft a printable key, a paste and a cut are answered by the draft's own
 // line, Space by K-9's, at another's document a printable key and a paste by
 // B3-S13's line naming its owner, a cut the platform's, and at an edition of
-// the session's account by C-45 naming the document, whole at every press —
+// the session's account a printable key by C-45 naming the document, whole at
+// every press, its staging act beneath it standing inert, and a paste's
+// keydown left to the platform for its event —
 // K-9's line standing there where no read told the edition is published,
 // where the owner the line would name is the session's own account and where
 // no session names an account, and at a version its box shows the one test
@@ -150,7 +152,13 @@
 // nothing selected leaves the clipboard and says so, and where the clipboard
 // cannot take the selection whole removes nothing; each is the platform's
 // off the plane, answered by its site's line where nothing may be placed,
-// and by the reason's where the draft cannot be written; and in the air a
+// and by the reason's where the draft cannot be written; at an edition of the
+// person's own a paste, the chord's or a menu's, places and sends nothing,
+// answered by C-45 with its staging act inert and, between them, C-241's
+// statement where skep's own entry is this board's and names a draft of the
+// person's own the page holds as where its words were read — never the
+// documents its bytes were minted in — the act's press saying its reason at
+// every press; and in the air a
 // paste is held with the keys and made at the landing, a cut dropped. Undo and
 // redo (D5 K-75; D6 BM-31 … BM-34, BM-42, BM-45): Mod+Z and Mod+Shift+Z on
 // every platform and Ctrl+Y elsewhere than macOS, where the trail's list is
@@ -195,7 +203,7 @@ import { cornerHTML, faceWords } from '../text/article.js';
 import { spanOfBlock } from '../text/span.js';
 import { docBox } from '../plane/projection.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
-import { t, tHTML, hintSentences, sentence, sentences, heard, megabytes } from '../strings.js';
+import { t, tHTML, hintSentences, sentence, sentences, sentenceRuns, joinRuns, heard, megabytes } from '../strings.js';
 import { esc, fill, byteLength } from '../util.js';
 import { page } from '../test/dom.js';
 
@@ -418,6 +426,8 @@ test('at a span of a draft the person may edit holding no caret a printable key 
 
 /** an edition of the session's account, and a document of the session's account's sub-account */
 const E = '1.0.1.0.3', A = '1.0.1.1.0.1';
+/** the act C-45 offers beneath it at an edition of the person's own, as the hint holds it: the staging act, inert, its reason not yet told (D5 K-72; B3-S5) */
+const STAGED = Object.freeze({ id: 'B3.write-next', label: t('B3.write-next'), reason: 'L.write-next.inert', told: false });
 
 /**
  * The index listing D and O as `onPlane` lists them and, beside them, each of `more` by its kind, each of those holding
@@ -434,21 +444,29 @@ function listed(more) {
   }
 }
 
-test('at the walk\'s span of an edition of the session\'s account, at its reading scale, a printable key and a paste are answered by C-45 naming the document — whole at every press — nothing placed, no caret and nothing selected, a cut the platform\'s and Space K-9\'s line; K-9\'s line stands where no read has told the document is published, where the owner another\'s document would name is the session\'s own account, and at another\'s document where no session names an account (D5 K-72, K-93; foundations §2.7)', () => onPlane(async ({ said }) => {
+test('at the walk\'s span of an edition of the session\'s account, at its reading scale, a printable key is answered by C-45 naming the document — whole at every press — its staging act beneath it standing inert, and Mod+V\'s keydown is left to the platform — not taken, not prevented, saying nothing — for the paste event it leaves standing, which C-45 answers; nothing placed, no caret and nothing selected, a cut the platform\'s and Space K-9\'s line; K-9\'s line stands where no read has told the document is published, where the owner another\'s document would name is the session\'s own account, and at another\'s document where no session names an account (D5 K-72, K-93; B3-S5; foundations §2.7)', () => onPlane(async ({ said }) => {
   listed([[E, 'edition']]);
   assert.deepEqual([LAYER.editable(E), LAYER.atReadingScale(E)], [false, true], 'an edition of the session\'s account: text the person may not edit, at its reading scale');
   await focusOn(E, 14);
   const c45 = t('C-45', { D: E });
   assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true);
-  assert.deepEqual([said.at(-1), HINT.standing()], [heard(c45), { id: 'C-45', words: c45, whole: c45, open: true, writing: null }], 'q: C-45 naming the document, whole, drawn as pinned and said as heard');
+  assert.deepEqual([said.at(-1), HINT.standing()], [heard(c45), { id: 'C-45', words: c45, whole: c45, open: true, writing: null, offered: STAGED }], 'q: C-45 naming the document, whole, drawn as pinned and said as heard, the staging act beneath it, inert');
   let n = said.length;
   assert.equal(await KEYS.dispatch(keyOf('w'), PLANE), true);
   await tick();
   assert.deepEqual([said.slice(n), HINT.standing()?.words], [[heard(c45)], c45], 'a later press: C-45 whole again, said again');
+  // the app takes the hint down at every key but Tab and Shift, before the dispatch (APP's `HINT.act`)
+  HINT.act();
   n = said.length;
-  assert.equal(await KEYS.dispatch(keyOf('v', MOD), PLANE), true, 'a paste: taken');
+  let prevented = false;
+  const v = { ...keyOf('v', MOD), preventDefault() { prevented = true; } };
+  assert.deepEqual([await KEYS.dispatch(v, PLANE), prevented], [false, false], 'a paste\'s keydown: neither taken nor prevented — left to the platform, so its paste event follows');
   await tick();
-  assert.deepEqual([said.slice(n), HINT.standing()?.id], [[heard(c45)], 'C-45'], 'and answered by C-45');
+  assert.deepEqual([said.slice(n), HINT.standing()], [[], null], 'and the keydown itself says and raises nothing');
+  const c = clip({ 'text/plain': 'ab' });
+  assert.deepEqual([KEYS.pasteEvent(c.e, EVENT), c.prevented(), HINT.standing()?.id], [true, true, 'C-45'], 'the paste event it leaves standing: taken, its default prevented, and answered by C-45');
+  await tick();
+  assert.deepEqual(said.slice(n), [heard(c45)], 'said again, though the status region held those words');
   assert.equal(await KEYS.dispatch(keyOf('x', MOD), PLANE), false, 'a cut: the platform\'s own, never taken');
   assert.equal(await KEYS.dispatch(keyOf(' '), PLANE), true);
   assert.deepEqual([said.at(-1), HINT.standing()?.id], [spokenHint('F.swallow.space'), 'F.swallow.space'], 'Space: K-9\'s own line');
@@ -2660,7 +2678,7 @@ test('B3-S5 (i): a paste whose source no record at hand holds waits on its read 
   } finally { PORT.boot(null); DELETION._reset(); }
 }));
 
-test('a paste event is answered by the test its keydown reads, so one that arrives with no keydown is guarded: off the plane — a field, a control, the line, a corner, a landing\'s line, the scene — it is the platform\'s, untouched; at a span of a draft holding no caret, at another\'s document and at an edition its site\'s line answers it, nothing placed; in a draft that cannot be written the reason\'s line answers it at a live caret and at the kept caret\'s span, which is not returned; and at a document below its reading scale it is the platform\'s (D5 K-93, K-72; D6 BM-52, BM-58; B3-S13)', () => onPlane(async ({ said }) => {
+test('a paste event is answered by the test its keydown reads, so one that arrives with no keydown is guarded: off the plane — a field, a control, the line, a corner, a landing\'s line, the scene — it is the platform\'s, untouched; at a span of a draft holding no caret, at another\'s document and at an edition its site\'s line answers it, nothing placed — at the edition C-45 with its staging act, and no statement where the clipboard holds no entry of skep\'s; in a draft that cannot be written the reason\'s line answers it at a live caret and at the kept caret\'s span, which is not returned; and at a document below its reading scale it is the platform\'s (D5 K-93, K-72; D6 BM-52, BM-58; B3-S13)', () => onPlane(async ({ said }) => {
   listed([[E, 'edition']]);
   await focusOn(D, 1);
   await KEYS.dispatch(keyOf('Enter'), PLANE);
@@ -2677,7 +2695,8 @@ test('a paste event is answered by the test its keydown reads, so one that arriv
   await focusOn(O, 1);
   assert.deepEqual(paste(), [true, true, 'B3.row.others-document'], 'at another\'s document: its line naming its owner');
   await focusOn(E, 14);
-  assert.deepEqual([paste(), HINT.standing()?.words], [[true, true, 'C-45'], t('C-45', { D: E })], 'at an edition of the session\'s account: C-45 naming the document');
+  assert.deepEqual([paste(), HINT.standing()?.words, HINT.standing()?.offered, HINT.standing()?.beneath], [[true, true, 'C-45'], t('C-45', { D: E }), STAGED, undefined],
+    'at an edition of the session\'s account: C-45 naming the document, its staging act beneath it, inert — and, the clipboard holding no entry of skep\'s, no statement between them');
   assert.deepEqual([WRITE.edits(D), WRITE.edits(O), WRITE.edits(E)], [[], [], []], 'nothing placed at any of them');
   // a draft that cannot be written now: the reason's own line, at a live caret and at the kept caret's span
   WRITE.setUnwritable('b-1', { why: 'keyless' });
@@ -2696,6 +2715,71 @@ test('a paste event is answered by the test its keydown reads, so one that arriv
   CAM.set({ ...CAM.view(), scale: CAM.view().scale / 4 });
   const c = clip({ 'text/plain': 'ab' });
   assert.deepEqual([LAYER.atReadingScale(D), KEYS.pasteEvent(c.e, EVENT), c.prevented(), HINT.standing(), WRITE.edits(D)], [false, false, false, null, []], 'below its reading scale: the platform\'s, untouched');
+}));
+
+test('B3-S5 at a published target: Mod+V\'s keydown at the walk\'s span of an edition of the person\'s own is left to the platform, and its paste event — the chord\'s, or a menu\'s with no keydown, alike — places nothing and sends nothing: C-45 at the focus naming the document, its staging act beneath it standing inert, and between them, where skep\'s own entry is this board\'s and names as where its words were read a draft of the person\'s own the page holds a record of, C-241\'s statement naming that draft as the status region names its box — by the document the entry names, never the documents its bytes were minted in — said after C-45; C-45 alone where the entry names an edition, another\'s draft, a draft the page holds nothing of — no record made to name it — or another board, is malformed, or is absent; and the staging act\'s press shows and says its reason at every press (FP-27, FP-35, FP-39, FP-41; D5 K-72, K-93; the paste survey\'s P8)', () => onPlane(async ({ said }) => {
+  REC.setBoard({ board: 'b-1', name: '', origin: ORIGIN });
+  /** a draft of the person's own the index lists by its label, its text never read; and one the page holds nothing of */
+  const L = '1.0.1.0.8', U = '1.0.1.0.9';
+  listed([[E, 'edition']]);
+  REC.takeIndex(/** @type {any} */ ({ docs: [[D, 'draft', null], [O, 'draft', null], [E, 'edition', null], [L, 'draft', 'Field notes']].map(([doc, kind, label]) => ({ doc, kind, label, standing: kind === 'draft' ? 'yours_to_read' : 'public' })),
+    counts: [{ account: '1.0.1', documents: 3 }, { account: '1.0.2', documents: 1 }], state: { arm: 'complete' } }));
+  const fake = FAKE.create({});
+  PORT.boot(fake);
+  /** every act the write layer's machine is told of: an edit added, a burst committed — none is */
+  const told = /** @type {string[]} */ ([]);
+  WRITE.machine({ commit: (a) => { told.push('commit ' + a); }, typed: (a) => { told.push('typed ' + a); }, ended() {}, leaving: () => false });
+  /** skep's own entry as a copy writes it: the words read in `doc`, on `board`, its bytes those `prefix` minted */
+  const entry = (/** @type {string} */ doc, /** @type {string} */ prefix = doc + '.0.1', board = ORIGIN) => JSON.stringify({ board, doc, member: null, plain: false, pos: null, width: null, ids: [{ prefix, ordinal: 1, width: 5 }], version: PASSAGE.VERSION, lengths: [5] });
+  /** a paste event at the walk's element over a clipboard holding `First` and, where given, skep's own entry: whether the page took it and prevented its default, and the hint it left */
+  const paste = (/** @type {string | null} */ own) => { const c = clip(own == null ? { 'text/plain': 'First' } : { 'text/plain': 'First', [PASSAGE.TYPE]: own }); return [KEYS.pasteEvent(c.e, EVENT), c.prevented(), HINT.standing()]; };
+  const c45 = t('C-45', { D: E });
+  /** C-241's statement naming a draft as the status region names its box, a sentence */
+  const statement = (/** @type {string} */ draft) => sentence('B3.quote.published-target', { label: LAYER.boxName(draft).name });
+  try {
+    await focusOn(E, 14);
+    assert.deepEqual([WALK.current()?.addr, LAYER.editable(E), LAYER.isDraft(E), LAYER.isDraft(D)], [E, false, false, true], 'the walk on the edition\'s span, text the person may not edit; D a draft of the person\'s own');
+    // the chord: its keydown left standing, then the paste event it leaves
+    HINT.act();
+    let prevented = false;
+    const v = { ...keyOf('v', MOD), preventDefault() { prevented = true; } };
+    assert.deepEqual([await KEYS.dispatch(v, PLANE), prevented, HINT.standing()], [false, false, null], 'Mod+V\'s keydown: neither taken nor prevented, nothing raised — left to the platform for its paste event');
+    let n = said.length;
+    const keyed = paste(entry(D));
+    const whole = { id: 'C-45', words: c45, whole: c45, open: true, writing: null, beneath: statement(D), offered: STAGED };
+    assert.deepEqual(keyed, [true, true, whole], 'its event, the entry naming D: taken, its default prevented — C-45 naming the document, C-241\'s statement naming D beneath it, and the staging act, inert');
+    assert.equal(statement(D), 'These words come from your draft "First line." 1.0.1.0.2 — pasted here, they would go into the next version, staged first in a draft of this document; publishing that version asks what of your draft goes public.', 'D named by its first line, quoted, and its address');
+    await tick();
+    assert.deepEqual(said.slice(n), [heard(joinRuns(' ', [c45, sentenceRuns('B3.quote.published-target', { label: LAYER.boxName(D).runs })]))], 'said: C-45, then the statement, the draft\'s name kept as written');
+    // a menu's paste: the event with no keydown, answered the same
+    HINT.act();
+    assert.deepEqual(paste(entry(D)), [true, true, whole], 'a menu\'s paste, no keydown before it: the same answer');
+    // the draft is the document the entry says its words were read in, never the one its bytes were minted in
+    assert.deepEqual(paste(entry(D, E + '.0.1'))[2], whole, 'words read in D whose bytes the edition minted: D named');
+    assert.deepEqual(paste(entry(L))[2], { ...whole, beneath: statement(L) }, 'a draft of the person\'s own the index lists, its text never read: named by its index row\'s label');
+    assert.equal(statement(L), 'These words come from your draft "Field notes" 1.0.1.0.8 — pasted here, they would go into the next version, staged first in a draft of this document; publishing that version asks what of your draft goes public.');
+    // C-45 alone
+    const alone = { id: 'C-45', words: c45, whole: c45, open: true, writing: null, offered: STAGED };
+    for (const [what, own] of /** @type {Array<[string, string | null]>} */ ([
+      ['an entry naming the edition, though its bytes are D\'s', entry(E, D + '.0.1')], ['an entry naming another\'s draft', entry(O)], ['an entry naming a draft the page holds nothing of', entry(U)],
+      ['an entry naming a version address of D, which no copy writes and the page holds no record of', entry(D + '.2', D + '.0.1')],
+      ['an entry of another board naming D', entry(D, D + '.0.1', 'http://elsewhere.test')], ['a malformed entry', '{"board":"' + ORIGIN + '","doc":"' + D + '"}'], ['no entry', null],
+    ])) {
+      HINT.act();
+      assert.deepEqual(paste(own), [true, true, alone], `${what}: C-45 and its staging act, no statement`);
+    }
+    assert.deepEqual([REC.has(U), REC.has(D + '.2')], [false, false], 'no record made to name what the page holds no record of');
+    // the staging act's press: its reason beside it and in the status region, at every press
+    n = said.length;
+    HINT.offeredAct();
+    assert.deepEqual([HINT.standing()?.offered, said.slice(n)], [{ ...STAGED, told: true }, [heard(sentence('L.write-next.inert'))]], 'the act pressed: inert, its reason told and said');
+    HINT.offeredAct();
+    await tick();
+    assert.deepEqual(said.slice(n), [heard(sentence('L.write-next.inert')), heard(sentence('L.write-next.inert'))], 'pressed again: said again, though the status region held those words');
+    assert.equal(sentence('L.write-next.inert'), 'Writing the next version in a draft isn\'t built yet — this document is unchanged.');
+    // nothing placed, nothing composed, nothing sent
+    assert.deepEqual([caret(), SEL.selected(), [D, O, E, L].map((a) => WRITE.edits(a).length), told, fake.asked], [null, null, [0, 0, 0, 0], [], []], 'nothing placed, nothing handed the write layer, no frame sent');
+  } finally { WRITE.machine(null); PORT.boot(null); }
 }));
 
 test('a cut event reads its own selection first: at a live caret with nothing selected the clipboard is left as it is and the copy\'s nothing-selected line is its hint; a selection the clipboard cannot take whole is answered by its own line, nothing written and nothing removed, the selection standing; at a span of a draft holding no caret the draft\'s line answers it; in a draft that cannot be written the reason\'s line; off the plane, at another\'s document and at an edition it is the platform\'s, never prevented (D5 K-92, K-93; B3-S5 (iv); D6 BM-52)', () => onPlane(async ({ said }) => {
@@ -3095,7 +3179,7 @@ test('K-75 with nothing to take back is answered by its line and never does noth
       m = said.length;
       await press('z', MOD);
       await tick();
-      assert.deepEqual([HINT.standing(), said.slice(m)], [{ id: 'C-45', words: c45, whole: c45, open: true, writing: null, ending: constant }, [heard(`${c45} ${constant}`)]], `press ${press_} at an edition of the person's own: C-45 naming it, whole, the constant sentence after it`);
+      assert.deepEqual([HINT.standing(), said.slice(m)], [{ id: 'C-45', words: c45, whole: c45, open: true, writing: null, ending: constant, offered: STAGED }, [heard(`${c45} ${constant}`)]], `press ${press_} at an edition of the person's own: C-45 naming it, whole, the constant sentence after it, its staging act beneath them, inert`);
     }
     assert.deepEqual([fake.asked.filter((k) => k.startsWith('op:') || k.startsWith('resolve:')), WRITE.edits(D).length], [[], 1], 'no press of these composed or sent anything');
   } finally { MACHINE.takeOut(); PORT.boot(null); LAYER.dropCaret(); WRITE.clearEdits(D); KEYS._reset(); }

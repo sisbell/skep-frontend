@@ -43,8 +43,11 @@
 // `heard(…)`; the words of a draft holding unsent typing are
 // the decision's DRAFT strings; a copy with nothing selected is said in
 // the keys-and-clicks decision's words, its act's tail apart and its compact
-// form "nothing selected"; and the lines a paste and a cut at the caret draw,
-// the lane's own and the one re-worded, with a size of text in megabytes.
+// form "nothing selected"; the lines a paste and a cut at the caret draw,
+// the lane's own and the one re-worded, with a size of text in megabytes; and
+// the lines a paste at a published edition draws beneath C-45 — C-241
+// re-worded keeping its trace, the staging act, and the lane's reason it
+// stands inert.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -1270,4 +1273,19 @@ test('the lines a paste and a cut at the caret draw: the cut\'s line at a span h
     'megabytes of 1,048,576 bytes: one decimal, whole where it has none, rounded up to the tenth so a size past a bound never reads as the bound, its thousands parted by commas');
   assert.deepEqual([STRINGS['L.size.megabytes'].lane, /B3-S5/.test(STRINGS['L.size.megabytes'].screen ?? '')], [true, true], 'the unit\'s entry the lane\'s own');
   assert.match(STRINGS['L.copy.nothing'].screen ?? '', /B3-S5: a cut/, 'the nothing-selected line names the cut among its screens');
+});
+
+test('the lines a paste at a published edition draws beneath C-45: C-241 re-worded to say which draft the words come from and where a paste here would put them, its draft named once, keeping the words its source holds as its trace; the staging act in B3-S10\'s words; and the reason that act stands inert the lane\'s own, naming its screen (B3-S5, B3-S10; D5 K-72; FP-41)', () => {
+  const c241 = STRINGS['B3.quote.published-target'];
+  assert.deepEqual([c241.cls, c241.source, c241.cid, !!c241.lane, designed('B3.quote.published-target'), /B3-S5/.test(c241.screen ?? '')],
+    ['DRAFT', 'designs/B3-editor.md', 'C-241', false, 'this would place words from your draft ⟨label⟩ into a published page — it lands as the next version, staged in a draft; publishing that asks what of ⟨label⟩ goes public', true],
+    'C-241: B3-S5\'s words its trace');
+  assert.equal(sentence('B3.quote.published-target', { label: '"Field notes" 1.0.1.0.8' }),
+    'These words come from your draft "Field notes" 1.0.1.0.8 — pasted here, they would go into the next version, staged first in a draft of this document; publishing that version asks what of your draft goes public.',
+    'a sentence naming the draft once, the draft it comes from apart from the draft of this document a next version is staged in');
+  assert.deepEqual([t('B3.write-next'), STRINGS['B3.write-next'].source, STRINGS['B3.write-next'].cls], ['write the next version in a draft', 'designs/B3-editor.md', 'DRAFT'], 'the staging act, as B3-S10 drafts it');
+  const why = STRINGS['L.write-next.inert'];
+  assert.deepEqual([why.cls, why.source, why.lane, why.kind, /B3-S5/.test(why.screen ?? ''), sentence('L.write-next.inert')],
+    ['DRAFT', '', true, 'K9', true, 'Writing the next version in a draft isn\'t built yet — this document is unchanged.'], 'the inert act\'s reason: the lane\'s own, a sentence');
+  assert.ok(lacking().some((x) => x.id === 'L.write-next.inert'), 'listed for the report');
 });

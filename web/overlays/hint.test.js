@@ -13,20 +13,26 @@
 // draft's name kept as written; a line that ends on a
 // sentence of its own shows
 // and says it after both while its notice stands whole, and never beside the
-// compact form, its tokens filled by the values the press hands with it; the
-// next act takes it down, handing a focus its button
+// compact form, its tokens filled by the values the press hands with it; a
+// line holding parts beneath its notice draws the statement, then the act it
+// offers, each on a line of its own, says the statement after the notice, a
+// draft's name in it as written, and leaves the act apart, whose press —
+// inert — shows and says its reason at every press, the focus kept on it;
+// the next act takes it down, handing a focus its button
 // held to the walk's element; and it stands beside the element its press was
 // made at — at its right, else its left, else below, below first where the
 // element stands above the view, else inside it at its foot — under the
-// overlay where they would meet, inside the view (issue #468's design
-// decision).
+// overlay where they would meet, inside the view, a line holding parts over
+// the lines beneath its site where the edge beside it holds less than 140 px
+// (issue #468's design decision; foundations' D3 (c); FP-41).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as HINT from './hint.js';
 import * as HOST from './host.js';
 import * as FOCUS from '../nav/focus.js';
 import * as CAM from '../plane/camera.js';
-import { addressedHTML, hintSentences, sentence, sentences, heard } from '../strings.js';
+import { addressedHTML, hintSentences, sentence, sentences, sentenceRuns, sentenceHTML, joinRuns, heard } from '../strings.js';
+import { esc } from '../util.js';
 
 /** @typedef {{tag: string, attrs: Record<string, string>, text: string, focus: () => void, blur: () => void, getAttribute: (k: string) => string | null}} Kid */
 
@@ -230,6 +236,57 @@ test('a line\'s ending carries the values its tokens are filled with — the cop
   HINT.render();
   assert.deepEqual([HINT.standing()?.ending, said.at(-1)], ['Return selects this passage.', `${heard(whole)} Return selects this passage.`], 'the act\'s key filled, a sentence, said after the notice');
   assert.ok(el.innerHTML.includes('<span class="ending" data-string="L.copy.nothing.enter">Return selects this passage.</span>') && !el.innerHTML.includes('⟨'), `drawn filled: ${el.innerHTML}`);
+});
+
+/** a draft's name as the status region names its box, as stretches in their faces: its first line quoted, a dash of its own among it, then its address */
+const NAMED = /** @type {import('../strings.js').Run[]} */ ([{ text: '"', face: 'client' }, { text: 'Field notes — draft', face: 'reading' }, { text: '" ', face: 'client' }, { text: '1.0.1.0.2', face: 'ident' }]);
+/** C-45 with C-241's statement beneath it and the staging act it offers, as a paste at an edition hands them in */
+const PARTS = { beneath: { id: 'B3.quote.published-target', values: { label: NAMED } }, offered: { id: 'B3.write-next', reason: 'L.write-next.inert' } };
+
+test('a line holding parts beneath its notice draws each on a line of its own, in order — the statement, a sentence, its tokens filled by stretches in their faces, its string on it; then the act it offers, a native button named by its label, its string on it, drawn inert and described by its reason — one box; the line described by the notice whole and the statement, and the status region told the notice, then the statement, the draft\'s name as written, the act apart (D5 K-72; B3-S5; style S22)', () => {
+  HINT.show('C-45', { D: '1.0.1.0.3' }, PARTS);
+  HINT.render();
+  const c45 = hintSentences('C-45', { D: '1.0.1.0.3' }).whole, statement = sentence('B3.quote.published-target', { label: '"Field notes — draft" 1.0.1.0.2' });
+  const spoken = heard(joinRuns(' ', [c45, sentenceRuns('B3.quote.published-target', { label: NAMED })])), reason = sentence('L.write-next.inert');
+  assert.deepEqual([HINT.standing(), said.at(-1)], [{ id: 'C-45', words: c45, whole: c45, open: true, writing: null, beneath: statement, offered: { id: 'B3.write-next', label: 'write the next version in a draft', reason: 'L.write-next.inert', told: false } }, spoken],
+    'the notice whole, the statement beneath it, the act it offers not yet pressed; said: the notice, then the statement');
+  assert.ok(spoken.includes(' Field notes — draft 1.0.1.0.2,') && !spoken.includes('"'), `the draft's name kept as written in what is spoken, its own dash among it, the quotation marks around it silent — ${spoken}`);
+  assert.equal(el.innerHTML, `<button type="button" data-hint="C-45" data-string="C-45" aria-label="${esc(heard(c45))}" aria-describedby="hint-whole">${addressedHTML(c45)}</button>`
+    + `<span class="beneath" data-string="B3.quote.published-target">${sentenceHTML('B3.quote.published-target', { label: NAMED })}</span>`
+    + `<span class="offered"><button type="button" class="inert" data-offered="B3.write-next" data-string="B3.write-next" aria-label="write the next version in a draft" aria-description="${esc(heard(reason))}">write the next version in a draft</button></span>`
+    + `<span id="hint-whole" hidden>${esc(spoken)}</span>`);
+  assert.ok(sentenceHTML('B3.quote.published-target', { label: NAMED }).includes('<span class="reading">Field notes — draft</span>&quot; <span class="id">1.0.1.0.2</span>'), 'the draft\'s first line in the reading face, its address in the identifier\'s');
+  assert.ok(el.classList.contains('parts') && !el.classList.contains('writing'), 'drawn as one box, the parts beneath the notice');
+  HINT.act();
+  HINT.show('C-45', { D: '1.0.1.0.3' });
+  HINT.render();
+  assert.deepEqual([HINT.standing(), el.classList.contains('parts'), el.innerHTML.includes('class="offered"')], [{ id: 'C-45', words: c45, whole: c45, open: true, writing: null }, false, false], 'a line handed no parts holds none');
+});
+
+test('the act a line offers, pressed — a click, a key\'s or the pointer\'s — stands in its place, inert, its reason shown beside it, a sentence, its string on it, and said in the status region at every press, again where the region holds those words; the focus stays on the act, the hint standing (FP-41)', async () => {
+  HINT.show('C-45', { D: '1.0.1.0.3' }, PARTS);
+  HINT.render();
+  const act = () => el.querySelectorAll('button').find((b) => b.getAttribute('data-offered')), reason = sentence('L.write-next.inert');
+  act()?.focus();
+  const n = said.length;
+  el.listeners.click({ type: 'click', detail: 0, target: { closest: (/** @type {string} */ sel) => (sel === 'button[data-offered]' ? {} : null) } });
+  HINT.render();
+  assert.deepEqual([HINT.standing()?.offered?.told, said.slice(n), doc.activeElement === act(), act()?.attrs.class],
+    [true, [heard(reason)], true, 'inert'], 'its reason told and said; the focus kept on the act over the redraw, still inert');
+  assert.ok(el.innerHTML.includes(`write the next version in a draft</button><span class="reason" data-string="L.write-next.inert">${esc(reason)}</span></span>`), `the reason beside it — ${el.innerHTML}`);
+  HINT.offeredAct();
+  await tick();
+  assert.deepEqual([said.slice(n), HINT.standing()?.id], [[heard(reason), heard(reason)], 'C-45'], 'pressed again: said again though the region held those words, the hint standing');
+  HINT.act();
+  HINT.offeredAct();
+  assert.equal(said.length, n + 2, 'with no such act standing, a press says nothing');
+});
+
+test('a line holding parts stands over the lines beneath its site where the text\'s edge beside its line holds less than 140 px for it — from that line\'s start, moved left only as its width needs inside the view, a gap below the line — and at the edge where it holds as much; a line with no parts keeps the edge however narrow (foundations\' D3 (c))', () => {
+  assert.deepEqual([HINT.standsBeneath(true, 124), HINT.standsBeneath(true, 139.5), HINT.standsBeneath(true, 140), HINT.standsBeneath(true, 468), HINT.standsBeneath(false, 60)], [true, true, false, false, false]);
+  const seen = { x: 0, y: 60, w: 390, h: 840 };
+  assert.deepEqual(HINT.beneathLine({ x: 17, y: 438, w: 250, h: 25 }, { w: 300, h: 120 }, seen), { x: 17, y: 471 }, 'from the line\'s start, eight px below it');
+  assert.deepEqual(HINT.beneathLine({ x: 120, y: 438, w: 250, h: 25 }, { w: 378, h: 120 }, seen), { x: 6, y: 471 }, 'moved left as far as its width needs inside the view');
 });
 
 test('the next act takes the hint down, its element emptied on the next frame; a focus its button held is handed to the walk\'s element', () => {

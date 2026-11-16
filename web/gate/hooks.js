@@ -746,7 +746,7 @@ export function install(deps) {
     lineAct: () => LINE.act(),
     trail: () => ({ entries: TRAIL.all(), cursor: TRAIL.cursorIndex(), numbered: TRAIL.numbered().map((r) => ({ n: r.n, addr: r.entry.addr, pos: r.entry.pos, current: r.current })) }),
     line: () => ({ text: LINE.text(), state: LINE.state(), address: LINE.addressDisplay(), layout: LINE.held() }),
-    /** the hint answering a refused press as it stands (O-HINT's): its notice's string, the words it shows and the notice whole, whether it shows the notice whole, the presses its element was drawn for, whether the scene covers it, and where it was set beside what; null where none stands */
+    /** the hint answering a refused press as it stands (O-HINT's): its notice's string, the words it shows and the notice whole, whether it shows the notice whole, the statement beneath it and the act it offers as drawn — the act's label, whether it is inert, its name and description, the reason a press told — the presses its element was drawn for, whether the scene covers it, and where it was set beside what; null where none stands */
     hint: () => HINT.shown(),
     /** the removals of kept text the deletion face stands at, as they were last set (O-DELETION's `shown`): each its draft, whether its face stands whole and how — beside its line or over the lines beneath — its mark's box, its face's, the words removed and the strings its face shows */
     removed: () => DELETION.shown(),
@@ -775,7 +775,7 @@ export function install(deps) {
       const span = LAYER.onCopy({ clipboardData: { setData: (/** @type {string} */ k, /** @type {string} */ v) => { data[k] = v; } }, preventDefault() {} }, b ? b.origin : '');
       return { span, data };
     },
-    /** the paste door: a paste event made here over a clipboard of its own holding the flavors given, by name, and dispatched at the element holding the focus, so the document's listener takes it as it takes one with no keydown — the system's clipboard never read; whether the page prevented its default, answered once the paste's reads are answered, it is placed or told, and the walk stands on the caret's span (N-KEYS' `clipped`) */
+    /** the paste door: a paste event made here over a clipboard of its own holding the flavors given, by name, and dispatched at the element holding the focus, so the document's listener takes it as it takes one with no keydown — the system's clipboard never read; whether the page prevented its default, answered once the paste's reads are answered, it is placed or told, and the walk stands on the caret's span (N-KEYS' `clipped`) — a site's line, which places nothing, standing as the event returns */
     paste: async (/** @type {Record<string, string>} */ data = {}) => {
       const own = new DataTransfer();
       for (const [k, v] of Object.entries(data)) own.setData(k, v);
