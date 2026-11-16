@@ -1573,8 +1573,8 @@ function swallow(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx, /** @ty
  * key waits (`waiting`), each taken so the platform activates nothing, the
  * one held dropped at its landing; at a corner holding no act the page takes
  * neither, its container acting on nothing. ← and → move the focus along the line of acts holding
- * it — the corner's toolbar, or at its document's head the row's (T-LAYER's
- * `setStops`) — staying at its ends. On the plane a printable key but Space at
+ * it — its own toolbar, each line of a corner one, never across lines (T-LAYER's
+ * `setStops`, `lineActs`) — staying at its ends. On the plane a printable key but Space at
  * a corner of a draft the person may edit is answered by the way back to its
  * text (`cornerSays`). A key made at a landing with a corner its context is
  * dropped: no act of a corner is made there (FP-25).
@@ -1592,8 +1592,7 @@ function cornerKey(e, chord, ctx, pane = false) {
   const on = /** @type {HTMLElement | null} */ (target.closest('button'));
   if (e.key === 'Enter' || e.key === ' ') return on && (e.repeat || waiting()) ? () => { e.preventDefault(); return true; } : null;
   if (chord === '←' || chord === '→') {
-    const bar = on ? /** @type {HTMLElement} */ (on.closest('[role="toolbar"]') || corner) : null;
-    const acts = bar ? /** @type {HTMLElement[]} */ ([...bar.querySelectorAll('button')]) : [], i = on ? acts.indexOf(on) : -1;
+    const acts = on ? LAYER.lineActs(on) : [], i = on ? acts.indexOf(on) : -1;
     if (i < 0) return undefined;
     const to = acts[Math.max(0, Math.min(acts.length - 1, i + (chord === '→' ? 1 : -1)))];
     return () => { e.preventDefault(); if (to !== on) FOCUS.land(to); return true; };

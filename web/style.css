@@ -113,6 +113,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 /* a walk's folded moment, a kept clause and the daemon's stopped, unreachable and halted forms: their words whole (FP-26, FP-36) */
 #line .seg.walk { color:var(--warn); }
 #line .seg.kept { color:#cfd6df; }
+/* a draft's history scene's second address (B3-S7; C-363): "as it stood ⟨time⟩", after the address part */
+#line .seg.as-of { color:#cfd6df; }
 /* the acting-as segment and the daemon's form never cut: in a row, each shrinks to the row's room at the most and breaks
    inside it — the segment's fields each a box no wider than the row with a space between two, so it breaks between fields
    and a field wider than the row between its words (L-LINE's `boxed`; FP-26). Compact, the segment is its act, a native
@@ -339,6 +341,20 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .corner .kept-word.pending { background:rgba(139,143,150,.12); border-radius:2px; }
 .corner button.kept-word { text-decoration:underline dotted; }
 .corner .kept-statement { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
+/* the kept line's second act, "show its history" (B3-S7; D5 K-57; P67): the kept word's slot then holds the word with the
+   joiner flush after it, the slot's width T-ARTICLE's, so the act after it stands at one place whichever word stands; the
+   line kept on one line; the act's click cue its own, an inert one dim, still focusable and pressed for its reason */
+.corner .kept-line:has(.kept-slot) { white-space:nowrap; }
+.corner .kept-slot { display:inline-block; white-space:pre; vertical-align:top; }
+.corner .kept-slot > .kept-word { overflow:visible; }
+.corner .kept-sep { white-space:pre; }
+.corner .history { color:#cfd6df; white-space:nowrap; }
+.corner button.history { text-decoration:underline dotted; cursor:pointer; }
+.corner button.history.inert { color:#8b8f96; text-decoration:none; }
+/* a past state's corner (B3-S7): its line in the kept word's place, and the line saying why it shows that state, each on a
+   line of its own, wrapped and never cut */
+.corner .past { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
+.corner .why { display:block; margin-top:.3em; white-space:normal; }
 /* THE FACE BENEATH THE KEPT WORD (B3-S2; P48; P67): a moved document's, never yielding — whole, its sentence and its hands
    on lines of their own, its acts a line of slots, each its label's width and never broken inside, its click cue its act's,
    an inert one dim, and the discard's statement below them; compact, its compact form wrapped and never cut — on one line
@@ -567,6 +583,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #sceneB.head > .corner { order:-1; }
 .pane .corner.head { flex:none; z-index:1; }
 .pane .corner.head > .hrow, .pane .corner.head > .opened { background:var(--bg); }
+/* AN EDITOR PANE'S CORNER'S FOOT in a stacked scene (foundations §2.5; SC's): the rest of its corner
+   after its text and before the next pane — its head holding its kept line and any face alone — standing where it falls,
+   never held, as wide as its head */
+.pane .corner.foot { position:static; flex:none; margin-top:.6em; padding:4px 0; }
 /* the line saying the version a pane reads lacks the passage its corner's act carried, beside its read (THE CORNER) */
 .pane .corner .lacks { display:block; margin-top:.3em; color:var(--warn); }
 #scenebeams { position:absolute; inset:26px 0 0 0; width:100%; height:calc(100% - 26px); pointer-events:none; }
@@ -600,5 +620,28 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #scene.stacked #sceneB > .corner.compact.open { margin-left:auto; margin-right:calc(var(--corner-compact-w) - var(--corner-w)); }
 #scene.stacked #sceneB.head { align-items:flex-end; }
 #scene.stacked #scenestop { padding:0 3px 0 11px; }
+/* THE LIST OF A DRAFT'S PAST STATES (B3-S7; SC's): in the corner's type, newest first. Beside pane B's
+   corner, a narrow column beneath it at the pane's outer side, as wide as the corner, scrolling its rows on its own, which
+   SC places each frame; else after pane B's text, across its column, pane B wrapping it onto a line of its own. Each day's
+   head held at the top of what scrolls it while its rows scroll — below pane B's held head where the list stands after the
+   text (`--past-held`, SC's) — a folded one marked so and naming its hands; a hand once at the head of its run; a row its
+   time of day and what it did; the row of the state pane B shows, or its folded day's head, marked by a bar at its edge;
+   a focused head or row scrolled clear of the held head */
+#scenepast { font:var(--corner-px)/1.4 var(--face-client); color:#8b8f96; user-select:none; -webkit-user-select:none; }
+#scenepast.beside { position:absolute; overflow:auto; z-index:1; background:var(--bg); }
+#scenepast.after { flex:none; align-self:stretch; margin-top:1em; border-top:1px solid var(--line); padding-top:6px; }
+#sceneB.past-after:not(.head) { flex-wrap:wrap; }
+#sceneB.past-after:not(.head) > #scenepast.after { flex:0 0 100%; }
+#scenepast .pl-now { padding:0 0 .2em 6px; color:#cfd6df; }
+#scenepast .pl-now, #scenepast .pl-who, #scenepast .pl-row, #scenepast .pl-head { overflow-wrap:anywhere; }
+#scenepast .pl-head { position:sticky; top:var(--past-held, 0px); z-index:1; display:block; width:100%; margin:0; padding:.15em 0 .15em 6px; border:0; border-left:3px solid transparent; background:var(--bg); color:#cfd6df; font:inherit; text-align:left; white-space:normal; scroll-margin-top:var(--past-held, 0px); }
+#scenepast button.pl-head { cursor:pointer; }
+#scenepast .pl-head .pl-fold { margin-right:.3em; }
+#scenepast .pl-head .pl-hands { display:block; color:#8b8f96; }
+#scenepast .pl-who { padding-left:9px; color:#8b8f96; }
+#scenepast .pl-row { padding-left:6px; border-left:3px solid transparent; color:#cfd6df; font-variant-numeric:tabular-nums; scroll-margin-top:calc(var(--past-held, 0px) + 1.6em); }
+#scenepast [data-shown] { border-left-color:#cfd6df; }
+/* the bar's name for a past state's pane: when it stood, after its address (B3-S7; C-363) */
+#scenebar .as-of { color:#cfd6df; }
 /* a stroke's list (SC's, at O-HOST's): each change's characters in the reading face, their white space kept */
 #overlay .changes .chars { font-family:var(--face-reading); white-space:pre-wrap; }

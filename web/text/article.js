@@ -170,9 +170,14 @@
 // (`keptStatement`; P41), in sentences at every state (ST's `sentence`,
 // `sentences`): at "kept" the save chord's answer, at the other two
 // "nothing to save" before the word and the reason on the act; the
-// statement is Mod+S's answer too (N-KEYS). The corner carries no
-// second act for the past states: the strings table holds no reason for an
-// inert one, and the page invents no wording. They stand outside the
+// statement is Mod+S's answer too (N-KEYS). Where its holder offers it and a
+// state is set, the kept line carries a second act after the word, "show its
+// history" (`historyHTML`; B3-S7; D5 K-57): the word's slot then holds the
+// joiner flush after its word, so the act stands in a slot of its own whose
+// place no word moves (P67); where the act cannot act it stands in its place,
+// focusable, marked inert and described by its reason (FP-41). A past state's
+// corner names what it is in the kept word's place (`ArticleView.past`;
+// B3-S7). They stand outside the
 // article: the article's box clips whatever stands past its measure, so the
 // corner's element is its holder's, T-LAYER's beside the article on the plane
 // and each pane's own in the scene.
@@ -223,10 +228,10 @@
 // face wide, the fingerprint cue's the cue's own CUE_CH characters of the
 // identifier's.
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-21, FP-22, FP-23, FP-24,
-// FP-26, FP-30, FP-31, FP-33, FP-34.
+// FP-26, FP-30, FP-31, FP-33, FP-34, FP-41.
 
 import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint, numeral } from '../util.js';
-import { t, tHTML, tRuns, plural, counted, bracketed, withheldLine, endingOf, addressedHTML, sentence, sentences, asSentence, asSentenceRuns, joinRuns, fields, heard } from '../strings.js';
+import { t, tHTML, tRuns, plural, counted, bracketed, withheldLine, endingOf, addressedHTML, sentence, sentences, asSentence, asSentenceRuns, joinRuns, fields, heard, FIELD } from '../strings.js';
 import { below } from '../overlays/statement.js';
 import { textOf, recordValue } from '../model/records.js';
 import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType, isAddress } from '../model/address.js';
@@ -274,6 +279,8 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {number | null} [lacks] the version a pane's corner says holds none of the passage its act carried (SC; FP-23); absent or null, none
  * @property {boolean} [lags] the board lags past a second (M-PUMP's `boardKept`; FP-23): the corner names neither the latest version nor the chain's count; absent, false
  * @property {KeptState | null} [kept] a draft's kept state (W-WRITE's `keptOf`): the word its corner's slot shows; absent or null, no state is set and the slot stands empty
+ * @property {HistoryAct | null} [history] the kept line's second act, "show its history" (B3-S7; D5 K-57), where its holder offers it: drawn after the kept word while a state is set; absent or null, the line carries the word alone
+ * @property {PastLine | null} [past] the corner is a past state's (SC; B3-S7): its line, "as it stood ⟨time⟩ · ⟨hand⟩", in the place of a draft's kept word, the chip beside it; absent or null, none
  * @property {boolean} [keptOpen] the kept word's statement stands open in the corner, on its act (T-LAYER's `openStatement`, SC's); absent, closed
  * @property {boolean} [held] the corner is the moved scene's held version's (SC; B3-S2; D6 BM-14): no document, with no chip, its line standing in the place of a draft's kept word and its chip; absent, false
  * @property {CornerFace | null} [face] the face standing at a draft's corner beneath its kept word (T-LAYER's reader `face`; B3-S2): a moved document's; absent or null, none
@@ -282,6 +289,18 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {boolean} [acts] false: the corner's items stand as their words, no act among them, save a face's own acts, which no row holds — the form a corner at its document's head opens beneath its rows, which hold its acts (T-LAYER's `headOf`, `sceneHead`); absent, true
  * @property {number} [cpl] the measure the article's column is set at, in characters of its face (P-CAM's measure in force on the plane, the full measure in a pane): what a withheld run's gap holds is read at it (`gapHolds`); absent, the full measure
  * @property {Measure} measure a string's width in a face as the platform sets it (T-LAYER's `widthOf`): every fit the article judges — what a gap holds, a label's cut, a slot's box — reads it
+ */
+
+/**
+ * @typedef {Object} HistoryAct — the kept line's second act as its holder offers it (`ArticleView.history`; B3-S7; D5 K-57)
+ * @property {{id: string, text: string} | null} inert why it cannot act now, said at every press (FP-41); null where it acts
+ */
+
+/**
+ * @typedef {Object} PastLine — what a past state's corner says it is (`ArticleView.past`; B3-S7)
+ * @property {string} time when the state stood, as a sentence names a time (ST's `stoodAt`)
+ * @property {string} hand the hand that made it, in its words: a device's label and its fingerprint's cue, the cue alone, or the cause's words
+ * @property {{id: string, text: string} | null} why a line beneath it saying why the pane shows this state and not the one its act asked; null where it shows that one
  */
 
 /**
@@ -1300,6 +1319,41 @@ export function statementHTML(k, said) {
  */
 const actHTML = (cls, attrs, inner) => `<button type="button" class="${cls}"${attrs} tabindex="-1">${inner}</button>`;
 
+/** the kept line's second act's string (B3-S7): the strings table's words, the owner's ruling O3 */
+const HISTORY_ID = 'B3.past-states';
+
+/**
+ * The kept line's slot with its second act standing, in em of the corner's
+ * size (P67): the kept word's slot and the joiner flush after its word
+ * (ST's `FIELD`), so the act after it holds its place whichever word stands.
+ * @param {Measure} measure
+ */
+const historySlotEm = (measure) => keptSlotEm(measure) + measure(FIELD, 'client');
+
+/**
+ * The kept line's width, in em of the corner's size: the kept word's slot
+ * alone, or, where its second act stands, that slot with its joiner and the
+ * act's own words (`historySlotEm`).
+ * @param {ArticleView} v
+ */
+const keptLineEm = (v) => (v.kept && v.history ? historySlotEm(v.measure) + v.measure(t(HISTORY_ID), 'client') : keptSlotEm(v.measure));
+
+/**
+ * The kept line's second act (B3-S7; D5 K-57; FP-41): a
+ * native button (`actHTML`) keyed on the line (`data-history`), its words the
+ * strings table's; where it cannot act, standing in its place, focusable,
+ * marked inert, titled and described by its reason (FP-41); its words alone
+ * where the view asks no act (`ArticleView.acts`).
+ * @param {HistoryAct} h
+ * @param {ArticleView} v
+ */
+function historyHTML(h, v) {
+  const words = esc(t(HISTORY_ID));
+  if (v.acts === false) return `<span class="history" data-string="${HISTORY_ID}">${words}</span>`;
+  const inert = h.inert ? ` aria-disabled="true" data-inert="${esc(h.inert.id)}" title="${esc(h.inert.text)}" aria-description="${esc(heard(h.inert.text))}"` : '';
+  return actHTML(`history${h.inert ? ' inert' : ''}`, ` data-history data-string="${HISTORY_ID}"${inert}`, words);
+}
+
 /**
  * A draft's kept line (see the head; B3-S2; FP-34): the kept word in its
  * slot of fixed width (`keptSlotEm`), carrying the state's word and its
@@ -1308,16 +1362,19 @@ const actHTML = (cls, attrs, inner) => `<button type="button" class="${cls}"${at
  * the statement whole on a line of its own after it (`statementHTML`). The
  * word is an act (`actHTML`), the disclosure of its statement, saying whether
  * it stands open (D5 K-57, K-74); its words alone where the view asks no act
- * (`ArticleView.acts`).
+ * (`ArticleView.acts`). Where its holder offers the line's second act and a
+ * state is set, the slot holds the word with the joiner flush after it
+ * (`historySlotEm`), and the act stands after the slot (`historyHTML`; B3-S7).
  * @param {ArticleView} v
  * @param {boolean} [statement] the statement opened stands after the slot; false where its holder opens it elsewhere — beneath a head's rows (T-LAYER)
  */
 function keptLineHTML(v, statement = true) {
-  const em = keptSlotEm(v.measure), k = v.kept ?? null;
-  const own = k ? ` data-string="${esc(KEPT_WORDS[k.word])}" style="width:${em}em"` : '';
-  const slot = !k ? `<span class="kept-word pending" aria-hidden="true" style="width:${em}em"></span>`
+  const em = keptSlotEm(v.measure), k = v.kept ?? null, h = k ? v.history ?? null : null;
+  const own = k ? ` data-string="${esc(KEPT_WORDS[k.word])}"${h ? '' : ` style="width:${em}em"`}` : '';
+  const word = !k ? `<span class="kept-word pending" aria-hidden="true" style="width:${em}em"></span>`
     : v.acts === false ? `<span class="kept-word"${own}>${esc(t(KEPT_WORDS[k.word]))}</span>`
       : actHTML('kept-word', ` data-kept="${esc(k.word)}"${own} aria-expanded="${!!v.keptOpen}"`, esc(t(KEPT_WORDS[k.word])));
+  const slot = h ? `<span class="kept-slot" style="width:${historySlotEm(v.measure)}em">${word}<span class="kept-sep" aria-hidden="true">${FIELD}</span></span>${historyHTML(h, v)}` : word;
   return `<span class="kept-line">${slot}</span>` + (k && v.keptOpen && statement ? statementHTML(k, v.keptSaid) : '');
 }
 
@@ -1457,18 +1514,19 @@ function kindHTML(v) {
 export const statedChain = (d, n) => (n != null && n >= 1 && d.meta && d.meta.birth ? n : null);
 
 /**
- * @typedef {Pick<ArticleView, 'members' | 'lags' | 'notebook' | 'localTrust' | 'kept' | 'held' | 'face' | 'originOwner' | 'kind'>} CornerFacts — what a corner's state is made from (`stateItems`): its box's chain, the board's lag, the venue, the local trust flag, a draft's kept state, whether it is the moved scene's held version's, the face standing at it, the one owner rule and the document's kind
+ * @typedef {Pick<ArticleView, 'members' | 'lags' | 'notebook' | 'localTrust' | 'kept' | 'history' | 'held' | 'past' | 'face' | 'originOwner' | 'kind'>} CornerFacts — what a corner's state is made from (`stateItems`): its box's chain, the board's lag, the venue, the local trust flag, a draft's kept state and the act its kept line offers, whether it is the moved scene's held version's or a past state's, the face standing at it, the one owner rule and the document's kind
  */
 
 /**
  * @typedef {Object} StateItem — one item of a corner's state (`stateItems`): a string filled, in the class it stands in
- * @property {'kind' | 'version' | 'st' | 'kept' | 'face' | 'chip' | 'held'} cls the item: the document's kind, its version statement, its state, a draft's kept word, the face standing beneath it, a draft's chip, the held version's line
+ * @property {'kind' | 'version' | 'st' | 'kept' | 'face' | 'chip' | 'held' | 'past' | 'why'} cls the item: the document's kind, its version statement, its state, a draft's kept word, the face standing beneath it, a draft's chip, the held version's line, a past state's line and the line saying why it shows that state
  * @property {string} id its string's id — the kind's `L.slot.reading` while it is being read, its slot an empty box; '' for a draft's kept word while no state is set, its slot an empty box
  * @property {Record<string, string | number>} vals the values its string is filled with
  * @property {Record<string, Face>} faces the faces of the tokens it sets in the identifier's: an owner it names
  * @property {string | null} glyph the glyph its compact form draws, named by its words — a usual state's (FP-26); null where its words stand in either form
  * @property {number | null} members the chain's count the version statement is of, which its act carries; null on every other item, and on the statement while the board lags
  * @property {CornerFace} [face] the face a `face` item draws (`faceHTML`)
+ * @property {string} [words] its words as its holder made them, standing for its string's filled: a past state's line saying why
  */
 
 /**
@@ -1487,7 +1545,10 @@ export const statedChain = (d, n) => (n != null && n >= 1 && d.meta && d.meta.bi
  * where one stands (`ArticleView.face`; B3-S2; foundations §3.1), then its
  * chip (C-28) — the moved scene's held version, which is no document and has
  * no chip, its line in the place of the kept word and the chip
- * (`ArticleView.held`; B3-S2; D6 BM-14); being read or not read, its slot
+ * (`ArticleView.held`; B3-S2; D6 BM-14); a past state, its line "as it stood
+ * ⟨time⟩ · ⟨hand⟩" in the place of the kept word, the line saying why the pane
+ * shows it where it shows another than its act asked, and the chip
+ * (`ArticleView.past`; B3-S7); being read or not read, its slot
  * alone. The one rule the corner draws its state by (`cornerHTML`)
  * and the ARIA mirror's item voices it by (`cornerLead`, `cornerWords`; R94).
  * @param {Doc} d
@@ -1519,6 +1580,10 @@ function stateItems(d, v) {
     return out;
   }
   if (v.kind === 'draft' && v.held) return [kind, item('held', 'B3.history.held', {})];
+  if (v.kind === 'draft' && v.past) {
+    const why = v.past.why ? [item('why', v.past.why.id, {}, null, { words: v.past.why.text })] : [];
+    return [kind, item('past', 'B3.history.row', { time: v.past.time, hand: v.past.hand }), ...why, item('chip', v.localTrust ? 'C-28.flag-on' : 'C-28', {}, 'L.corner.draft')];
+  }
   if (v.kind === 'draft') {
     const face = v.face ? [item('face', v.face.line.id, {}, null, { face: v.face })] : [];
     return [kind, item('kept', v.kept ? KEPT_WORDS[v.kept.word] : '', {}), ...face, item('chip', v.localTrust ? 'C-28.flag-on' : 'C-28', {}, 'L.corner.draft')];
@@ -1547,7 +1612,7 @@ export const cornerLead = (d, v) => { const [i] = stateItems(d, v); return t(i.i
  * @param {CornerFacts} v
  * @returns {string}
  */
-export const cornerWords = (d, v) => stateItems(d, v).slice(1).filter((i) => i.id).map((i) => (i.face ? faceRow(i.face) : t(i.id, i.vals))).join(', ');
+export const cornerWords = (d, v) => stateItems(d, v).slice(1).filter((i) => i.id).map((i) => (i.face ? faceRow(i.face) : i.words ?? t(i.id, i.vals))).join(', ');
 
 /**
  * A corner's state item as markup (`stateItems`): the kind its slot
@@ -1572,8 +1637,8 @@ function stateHTML(i, v, compact, statement = true) {
   if (i.cls === 'kind') return kindHTML(v);
   if (i.cls === 'kept') return keptLineHTML(v, statement);
   if (i.face) return faceHTML(i.face, v, compact);
-  const extra = i.cls === 'chip' ? ' data-chip="1"' : i.cls === 'held' ? ` data-string="${esc(i.id)}"` : i.members != null ? ` data-members="${i.members}"` : '';
-  const words = Object.keys(i.faces).length ? htmlIn(i.id, i.vals, i.faces) : esc(t(i.id, i.vals)), acts = v.acts !== false;
+  const extra = i.cls === 'chip' ? ' data-chip="1"' : i.cls === 'held' || i.cls === 'past' || i.cls === 'why' ? ` data-string="${esc(i.id)}"` : i.members != null ? ` data-members="${i.members}"` : '';
+  const words = i.words != null ? esc(i.words) : Object.keys(i.faces).length ? htmlIn(i.id, i.vals, i.faces) : esc(t(i.id, i.vals)), acts = v.acts !== false;
   if (compact && i.glyph) {
     return acts ? actHTML(`${i.cls} glyph`, `${extra} data-whole aria-expanded="${!!v.opened}" aria-label="${esc(heard(tRuns(i.id, i.vals, i.faces)))}"`, esc(t(i.glyph)))
       : `<span class="${i.cls} glyph"${extra} role="img" aria-label="${esc(heard(tRuns(i.id, i.vals, i.faces)))}">${esc(t(i.glyph))}</span>`;
@@ -1639,8 +1704,8 @@ export function cornerItems(d, v, compact = false, statement = true) {
       const said = compact && i.face.compact ? i.face.compact.text : faceWords(i.face);
       return { cls: i.cls, html: faceHTML(i.face, v, compact), words: said, em: v.measure(said, 'client'), yields: false };
     }
-    const words = i.cls === 'kind' ? (v.kind === 'reading' ? '' : t(i.id)) : i.cls === 'kept' ? (i.id ? t(i.id) : '') : t(i.id, i.vals), glyph = compact && i.glyph ? t(i.glyph) : null;
-    const em = i.cls === 'kind' ? kindSlotEm(v.measure) : i.cls === 'kept' ? keptSlotEm(v.measure) : glyph != null ? v.measure(glyph, 'client') : filledEm(i.id, i.vals, i.faces, v.measure) + (i.cls === 'chip' ? 0.8 : 0);
+    const words = i.cls === 'kind' ? (v.kind === 'reading' ? '' : t(i.id)) : i.cls === 'kept' ? (i.id ? (v.history ? fields(t(i.id), t(HISTORY_ID)) : t(i.id)) : '') : i.words ?? t(i.id, i.vals), glyph = compact && i.glyph ? t(i.glyph) : null;
+    const em = i.cls === 'kind' ? kindSlotEm(v.measure) : i.cls === 'kept' ? keptLineEm(v) : glyph != null ? v.measure(glyph, 'client') : i.words != null ? v.measure(i.words, 'client') : filledEm(i.id, i.vals, i.faces, v.measure) + (i.cls === 'chip' ? 0.8 : 0);
     return { cls: i.cls, html: stateHTML(i, v, compact, statement), words, em, yields: false };
   });
   /** an item of words alone */

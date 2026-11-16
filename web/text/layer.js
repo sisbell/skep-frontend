@@ -292,11 +292,14 @@
 // standing in their place (N-FOCUS's `keep`, by `cornerAct`). Its acts are
 // native buttons the platform activates (T-ARTICLE's), and the focused
 // document's corner alone stands in the Tab order, after the plane's stop
-// (`setStops`): each line of its acts a toolbar whose stop is its first act,
-// the stop following the focus along it and standing on its first act again
-// as the focus leaves it (`rove`), the corner's element no stop; a corner
-// holding no act its element's one stop, a group named by its own words;
-// every other corner out of the order and hidden from assistive technology.
+// (`setStops`): each line of its acts a toolbar of its own whose stop is its
+// first act, no toolbar spanning lines, the stop following the focus along it
+// and standing on its first act again as the focus leaves it (`rove`), the
+// corner's element no stop; a corner holding no act its element's one stop, a
+// group named by its own words; every other corner out of the order and
+// hidden from assistive technology. A draft's kept line carries its second
+// act, "show its history", where the person may edit the draft
+// (`historyAct`), inert with its reason while the board is not answering.
 // While the reading scene stands over
 // the plane the corner layer is inert (`cover`, through N-FOCUS, the focus's
 // owner — FP-20), the scene's panes carrying their own (D5 §4 rule 5); a
@@ -548,7 +551,7 @@
 // (`frameStats`).
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-14, FP-20, FP-21, FP-22, FP-23,
 // FP-24, FP-25, FP-26, FP-27, FP-29, FP-30, FP-31, FP-33, FP-34, FP-36,
-// FP-37, FP-38, FP-39, FP-40.
+// FP-37, FP-38, FP-39, FP-40, FP-41.
 
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
@@ -570,7 +573,7 @@ import { iRuns } from '../model/frames.js';
 import { homeOf, documentOf, memberOf, versionAddress, accountOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, elementIn, CHROME } from './span.js';
 import { esc, byteLength, numeral } from '../util.js';
-import { t, plural, facedHTML, lastRead, runsText, joinRuns, CLIENT_CLOSE } from '../strings.js';
+import { t, plural, facedHTML, lastRead, runsText, joinRuns, sentence, CLIENT_CLOSE } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -1513,7 +1516,23 @@ export function chainOf(addr) {
  */
 function cornerFacts(d, scene = false) {
   const h = REC.health();
-  return { members: chainOf(d.addr), lags: lags(), notebook: onNotebook(), localTrust: !!(h && h.auth && h.auth.local_trust), kept: WRITE.keptOf(d.addr), face: scene ? null : read.face(d.addr), originOwner, kind: kindOf(d) };
+  return { members: chainOf(d.addr), lags: lags(), notebook: onNotebook(), localTrust: !!(h && h.auth && h.auth.local_trust), kept: WRITE.keptOf(d.addr), history: historyAct(d.addr), face: scene ? null : read.face(d.addr), originOwner, kind: kindOf(d) };
+}
+
+/**
+ * The kept line's second act, "show its history", as a draft's corner offers
+ * it (T-ARTICLE's `HistoryAct`; B3-S7): at a draft the
+ * person may edit (`ownDraft`), standing inert while the board is not
+ * answering, by the shell's own verdict (M-REC's `daemon`) — its reason, a
+ * sentence, naming the board as the status region names it (FP-41); none at
+ * any other document.
+ * @param {string} addr
+ * @returns {import('./article.js').HistoryAct | null}
+ */
+export function historyAct(addr) {
+  if (!ownDraft(addr)) return null;
+  const b = REC.board(), board = b ? t('L.mirror.board.name', { node: '1', origin: b.origin }) : '';
+  return { inert: REC.daemon() === 'unreachable' ? { id: 'L.history.unanswered', text: sentence('L.history.unanswered', { board }) } : null };
 }
 
 /** is the venue the person's own notebook — what every corner states its state by (`cornerFacts`), and what the kept word's statement at a board's silence is keyed on (`keptSaid`)? */
@@ -4565,7 +4584,8 @@ function makeCorner(into, addr) {
  * The key a corner's act bears (see the head), which a rewrite of its items
  * puts a focus back on (N-FOCUS's `keep`): each of the face's acts by its key
  * on the face, its compact form's among them; the offered read's, a head's
- * count of the items it folds, the kept word's, the act that opens the corner
+ * count of the items it folds, the kept word's, the kept line's second act's,
+ * the act that opens the corner
  * whole or compacts it again, the version statement's; none for the corner's
  * element itself, which a rewrite never replaces. A reading scene's pane keys
  * its corner's acts by it too.
@@ -4578,6 +4598,7 @@ export function cornerAct(el) {
   if (d.read) return 'read';
   if (d.more) return 'more';
   if (d.kept) return 'kept';
+  if (d.history != null) return 'history';
   if (d.whole != null) return 'whole';
   return e.classList && typeof e.classList.contains === 'function' && e.classList.contains('version') ? 'version' : null;
 }
@@ -4588,16 +4609,40 @@ const allIn = (/** @type {Element} */ el, /** @type {string} */ sel) => (typeof 
 /** the element the platform's focus stands on; null where the page holds none */
 const focusedNow = () => (typeof document !== 'undefined' ? document.activeElement : null);
 
+/** the elements of a corner beside its column that hold a line of several acts (`linesOf`): the kept line with its second act, a face's acts */
+const MULTI = '.kept-line, .face-acts';
+
 /**
- * A corner's Tab stops stood (see the head; D5 K-57; FP-20), on the plane and
- * in a reading scene's pane, whose holder stands them on its own corner: where
- * it holds acts, each line of them a toolbar — the corner beside its column,
- * each row of a corner at its document's head and the form it opens beneath
- * them (`hrowHTML`, `openedHTML`) — whose one stop is the act the focus stands
- * on in it, else its first act, every other act out of the order, and the
- * corner's element no stop; where it holds none, its element its one stop, a
- * group named by its own words; and no stop at all where it is not in the
- * order.
+ * The lines of a corner's acts beside its column (`setStops`): the acts a line
+ * holding several stands together in — the kept line, a face's acts — each
+ * such line one, and every other act, alone on its line, one of its own; in the
+ * corner's order.
+ * @param {HTMLElement[]} acts the corner's acts, in its order
+ * @returns {Array<{el: HTMLElement, acts: HTMLElement[]}>} `el` the element holding the line's acts, else its one act
+ */
+function linesOf(acts) {
+  /** @type {Array<{el: HTMLElement, acts: HTMLElement[]}>} */
+  const out = [];
+  for (const b of acts) {
+    const holder = typeof b.closest === 'function' ? /** @type {HTMLElement | null} */ (b.closest(MULTI)) : null;
+    const line = holder ? out.find((l) => l.el === holder) : null;
+    if (line) line.acts.push(b); else out.push({ el: holder || b, acts: [b] });
+  }
+  return out;
+}
+
+/**
+ * A corner's Tab stops stood (see the head; D5 K-57; FP-20, FP-41), on the
+ * plane and in a reading scene's pane, whose holder stands them
+ * on its own corner: where it holds acts, each line of them a toolbar of its
+ * own, never one spanning lines — at its document's head each row and the form
+ * it opens beneath them (`hrowHTML`, `openedHTML`); beside its column each
+ * line (`linesOf`), the corner itself the toolbar where its acts stand on one
+ * line, else a group of its lines, each line holding several acts a toolbar —
+ * each line's one stop the act the focus stands on in it, else its first act,
+ * every other act out of the order, and the corner's element no stop; where it
+ * holds none, its element its one stop, a group named by its own words; and no
+ * stop at all where it is not in the order.
  * @param {HTMLElement} el the corner's element
  * @param {boolean} mine it is in the Tab order: the focused document's, a pane's
  * @param {boolean} head it stands at its document's head
@@ -4611,11 +4656,32 @@ export function setStops(el, mine, head, at = focusedNow()) {
     return;
   }
   el.removeAttribute('tabindex');
-  el.setAttribute('role', head ? 'group' : 'toolbar');
-  for (const bar of head ? allIn(el, ':scope > [role="toolbar"]') : [el]) {
-    const own = allIn(bar, 'button'), stop = own.find((b) => b === at) || own[0];
-    for (const b of own) b.tabIndex = mine && b === stop ? 0 : -1;
+  /** a line's acts stood: its stop the act the focus stands on in it, else its first */
+  const stand = (/** @type {HTMLElement[]} */ own) => { const stop = own.find((b) => b === at) || own[0]; for (const b of own) b.tabIndex = mine && b === stop ? 0 : -1; };
+  if (head) {
+    el.setAttribute('role', 'group');
+    for (const bar of allIn(el, ':scope > [role="toolbar"]')) stand(allIn(bar, 'button'));
+    return;
   }
+  const lines = linesOf(acts), one = lines.length === 1;
+  el.setAttribute('role', one ? 'toolbar' : 'group');
+  for (const line of lines) {
+    if (line.el !== line.acts[0]) { if (!one && line.acts.length > 1) line.el.setAttribute('role', 'toolbar'); else line.el.removeAttribute('role'); }
+    stand(line.acts);
+  }
+}
+
+/**
+ * The acts of the line of a corner's acts an act stands in, as its stops are
+ * stood (`setStops`): its toolbar's — the corner's own, a line's beside its
+ * column, a row's at its document's head — else the act alone, on a line of
+ * its own. What ← and → walk at a corner (N-KEYS').
+ * @param {HTMLElement} b
+ * @returns {HTMLElement[]}
+ */
+export function lineActs(b) {
+  const corner = typeof b.closest === 'function' ? b.closest('[data-corner]') : null, bar = corner ? b.closest('[role="toolbar"]') : null;
+  return bar && corner && corner.contains(bar) ? allIn(bar, 'button') : [b];
 }
 
 /**
@@ -5198,13 +5264,18 @@ export function planOf(d) { d = shownDoc(d); return articlePlan(d, viewFor(d), R
  * or compact (FP-26), from the view the pane's article is made from — the
  * record's now where none is given (`sceneView`); the scene holds their
  * element, on the pane's outer side, and hands in the version it names, the
- * chain's count and the corner's act (SC).
+ * chain's count and the corner's act (SC) — those `keep` takes alone, where it
+ * is given: the part of an editor pane's corner standing at its foot (SC's
+ * `footed`; foundations §2.5).
  * @param {Doc} d
  * @param {ArticleView} [view]
  * @param {boolean} [compact] the compact form: its usual states glyphs named by their words
+ * @param {(cls: string) => boolean} [keep] the items it holds, by their class (T-ARTICLE's `CornerItem.cls`); every item where none is given
  * @returns {string}
  */
-export function sceneCorner(d, view = viewFor(d, true), compact = false) { return cornerHTML(d, view, compact); }
+export function sceneCorner(d, view = viewFor(d, true), compact = false, keep = undefined) {
+  return keep ? cornerItems(d, view, compact).filter((i) => keep(i.cls)).map((i) => i.html).join('') : cornerHTML(d, view, compact);
+}
 
 /**
  * A pane's corner at its document's head (FP-26; the plane's head form,
@@ -5220,15 +5291,18 @@ export function sceneCorner(d, view = viewFor(d, true), compact = false) { retur
  * (K-74). No row names the document: the scene's bar names each pane's.
  * Its rows stand where its band sets them, each row and the form beneath
  * absolutely placed (the scene moves them as its pane scrolls); every corner
- * carries an item, its kind's slot first, so it stands one row at the least.
+ * carries an item, its kind's slot first, so it stands one row at the least —
+ * save where `keep` takes some items alone: an editor pane's head in a stacked
+ * scene, its kept line and any face (SC's `footed`; foundations §2.5).
  * The scene stands its stops (`setStops`).
  * @param {Doc} d
  * @param {ArticleView} view the pane's view, at its measure (`sceneView`), with the corner's state the scene hands in
- * @param {{px: number, kept: KeptClause | null, open: boolean}} as `px` the em the pane's text is set at; `kept` the pane's kept clause; `open` its items opened whole by the reader's act
+ * @param {{px: number, kept: KeptClause | null, open: boolean, keep?: (cls: string) => boolean}} as `px` the em the pane's text is set at; `kept` the pane's kept clause; `open` its items opened whole by the reader's act; `keep` the items its rows hold, by their class — every item where none is given
  * @returns {{html: string, rows: number}}
  */
 export function sceneHead(d, view, as) {
-  const items = cornerItems(d, { ...view, opened: as.open }, true, false), clause = as.kept;
+  const take = (/** @type {import('./article.js').CornerItem[]} */ all) => (as.keep ? all.filter((i) => /** @type {(cls: string) => boolean} */ (as.keep)(i.cls)) : all);
+  const items = take(cornerItems(d, { ...view, opened: as.open }, true, false)), clause = as.kept;
   const pitch = LINE_H * as.px, width = ((view.cpl ?? MEASURE_CPL) * CHAR_W + EDGE) * as.px;
   const L = headLayout(headItems(items), 0, clause ? { w: cornerPx(clause.text), words: clause.text } : null, width, pitch);
   /** @type {string[]} each row's markup, by row */
@@ -5239,7 +5313,7 @@ export function sceneHead(d, view, as) {
         : items[s.k].html;
     rows[s.row] += `<span class="hslot${s.rows > 1 ? ' wraps' : ''}" style="left:${s.x}px;width:${s.w}px;height:${s.rows * pitch}px;line-height:${s.rows > 1 ? '' : pitch + 'px'}">${html}</span>`;
   }
-  const form = as.open ? openedHTML(cornerItems(d, { ...view, acts: false }).map((i) => i.html), items, L) : view.kept && view.keptOpen ? statementHTML(view.kept, view.keptSaid) : '';
+  const form = as.open ? openedHTML(take(cornerItems(d, { ...view, acts: false })).map((i) => i.html), items, L) : view.kept && view.keptOpen ? statementHTML(view.kept, view.keptSaid) : '';
   const html = rows.map((r, i) => hrowHTML(i, `top:${i * pitch}px;height:${pitch}px`, r)).join('')
     + (form ? openedFormHTML(`top:${L.rows * pitch}px;width:${width}px`, form) : '');
   return { html, rows: L.rows };

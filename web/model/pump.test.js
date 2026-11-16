@@ -3972,3 +3972,48 @@ test('bytes read by their identity: `retrieve_i` at the page\'s class, the spans
   const few = await PUMP.readIdentity([{ prefix: Y + '.0.1', ordinal: 5, width: 2 }]);
   assert.deepEqual('refused' in few && few.refused, { kind: 'shell', name: 'malformed_answer' }, 'an answer of fewer positions than asked: malformed');
 });
+
+test('a draft\'s history is read off the feed narrowed to the draft — `under` the draft, under the session — in windows from the head back as the launch reads, until the rows read hold what the caller asks or the windows reach the feed\'s first position, each window paged by its `next`; the narrowed feed\'s positions never move the page\'s own on the whole feed; the rows below a first read\'s reach read alone; counted in flight while out; a refused page ending the read (B3-S7 THE LIST; the past states survey\'s R1; FP-18)', async () => {
+  const W = '1.0.1.0.12', HEAD = 5000, OWN_W = PUMP.OWN_WINDOW;
+  /** the draft's rows on the narrowed feed: one every hundred positions from 100 */
+  const ROWS = Array.from({ length: 49 }, (_, i) => ({ position: 100 * (i + 1), at: 100 * (i + 1), op: 'insert', docs: [W], class: 'drafts', key: 'bare', time: 1 }));
+  /** @type {any[]} */
+  const asked = [];
+  let refuse = false;
+  const fake = FAKE.create(new Proxy({}, { get: (_t, k) => {
+    const key = String(k);
+    if (!key.startsWith('changes:')) return undefined;
+    const a = JSON.parse(key.slice(8));
+    asked.push(a);
+    if (refuse) return { refused: { kind: 'refused', name: 'feed_rebuilding' } };
+    // a page holds at most three rows past `since`, its `next` the last of them, else the head
+    const page = ROWS.filter((u) => u.position > a.since).slice(0, 3);
+    return { result: { entries: page, next: page.length === 3 ? page[2].position : HEAD, head: HEAD } };
+  } }));
+  PORT.boot(fake);
+  REC._reset();
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  // the page's place on the whole feed behind the board's head, which the narrowed feed's last page answers as its `next`
+  const AT = HEAD - 50;
+  REC.reachFeed(AT);
+  const was = REC.feedAt(), d0 = REC.draftsAt();
+  const reading = PUMP.historyOf(W, { enough: (rows) => rows.length >= 2 });
+  assert.equal(PUMP.inflightCount() > 0, true, 'counted in flight while out');
+  const first = await reading;
+  assert.ok(asked.length > 0 && asked.every((a) => a.under === W && a.session === 's-1'), `every page narrowed to the draft, under the session: ${JSON.stringify(asked.slice(0, 2))}`);
+  assert.deepEqual([asked[0].since, first.from], [AT - OWN_W, AT - OWN_W], 'the first window the newest OWN_WINDOW positions before the page\'s place');
+  assert.deepEqual([first.rows.map((u) => u.position), first.pages, first.read, first.next], [[4500, 4600, 4700, 4800, 4900], 2, 5, HEAD], 'its rows in position order: two rows and more read, no window after it — its pages paged by `next`, its rows counted, its last `next` the narrowed feed\'s head');
+  assert.deepEqual([REC.feedAt(), REC.draftsAt()], [was, d0], 'the narrowed feed\'s `next`, past the page\'s place, moved neither of the page\'s own positions on the whole feed');
+  asked.length = 0;
+  const older = await PUMP.historyOf(W, { below: first.from });
+  assert.deepEqual([asked[0].since, older.from, older.rows.length, older.rows[0].position, older.rows.at(-1)?.position], [first.from - OWN_W, 0, 44, 100, 4400], 'below the first read\'s reach: windows from there back to the feed\'s first position, every row there and none above');
+  assert.equal(REC.feedAt(), was, 'nor did those');
+  asked.length = 0;
+  const all = await PUMP.historyOf(W);
+  assert.deepEqual([all.from, all.rows.length], [0, 49], 'asked for nothing: the windows down to the feed\'s first position');
+  refuse = true;
+  const no = await PUMP.historyOf(W);
+  assert.deepEqual([no.refused?.name, no.rows, PUMP.inflightCount()], ['feed_rebuilding', [], 0], 'a refused page ends the read, its refusal handed up; nothing left in flight');
+  assert.deepEqual(fake.unanswered, []);
+});

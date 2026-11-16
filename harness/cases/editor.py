@@ -50,6 +50,14 @@ paste survey's P8): a word of the own draft copied by the copy door, then at the
 made as a script makes one, left standing, and the paste door answered by C-45 naming the document, C-241's statement
 naming the own draft beneath it and the staging act standing inert, its press saying its reason — nothing placed and
 nothing sent, the test board's position unmoved (`published-target`).
+A draft's history follows them on the same page (`past_rows`; B3-S7, skep-frontend #661, #662, #585, #617): the kept
+line's second act, "show its history", at one place whichever kept word stands, reached by Tab, → and Enter
+(`corner-act`); two lines typed a minute apart and kept, then the act — the scene on the draft beside its state before its
+newest change, that state the test board's text at the position the row below the top row ends at, the history read a
+figure — then `changes` armed once the page is quiet with the draft's own rows and three of the harness's, the list's days
+and rows in the strings table's words, the past pane's corner, the bands, side by side and stacked, the current pane's
+corner split at the narrow width (`read`); and a held line, the act opening on the newest kept state under "now — not yet
+kept" (`unkept`).
 The whole document's entry is a figure (`whole_entry`): the seeded staging draft selected whole and copied through the
 copy door, on the first page.
 Undo, redo and the deletion face are driven there too (`undo_rows`): Mod+Z on
@@ -297,12 +305,15 @@ STATES = [
          how="a paste whose HTML carrier's digest no longer matches its plain text", claim='', why="B8's carrier: nothing writes the HTML carrier a digest would be read from"),
     dict(screen='B3-S6', state='picker', walk='W-08', step=4, drawn=False,
          how='the type picker over two held passages', claim='', why="the picker module; a pane's selection (#29, #94)"),
-    dict(screen='B3-S7', state='past-states', walk='W-08', step=8, drawn=False,
-         how="arm `changes` before the list's read (D6 BM-49)", claim='',
-         why='the past-states list (S7 #87): the page reads `changes` only at a catch-up, so no arm is made'),
-    dict(screen='B3-S7', state='past-state-pane', walk='W-08', step=8, drawn=False,
-         how="a past state's record in the right pane (`recordAt` off an `/op-at` read)", claim='',
-         why="the history read's acts (S7 #84, #88): no act reads a past state"),
+    dict(screen='B3-S7', state='corner-act', walk='W-08', step=8, drawn=True,
+         how="the case's own draft at its corner, its kept word set to each of its three words by the gate's hook; then Tab from the plane's stop, → and Enter (D5 K-57; skep-frontend #585)",
+         claim='the kept line carries its second act after the kept word, "show its history" (B3.past-states), standing at one place whichever word stands; Tab stands on the kept word, → on the act, and Enter there opens the draft\'s history'),
+    dict(screen='B3-S7', state='read', walk='W-08', step=8, drawn=True,
+         how="two lines typed into the case's own draft a minute apart, kept by the test board, then the act clicked; then `changes` armed with the draft's own rows and synthetic ones — a signed row, a publication, a row of lost testimony — and the act clicked again, one day's head clicked folded (skep-frontend #661, #662, #617)",
+         claim='the scene stands on the draft beside its state before its newest change — the text the board held at the position the row below the top row ends at — pane B named "as it stood ⟨time⟩ · ⟨hand⟩" (B3.history.row) with the chip, the bar and the one line naming it "as it stood ⟨time⟩" (B3.history.as-of), the shared runs banded; beside it the list, newest first, each day\'s head its date or "time not recorded" (L.history.time-unrecorded), a folded day\'s head naming its hands, each row its time of day and what it did in the strings table\'s words, the shown row marked; side by side the list beneath pane B\'s corner, stacked at the narrow width the list after pane B\'s text and the current pane\'s kept line at its head, the rest of its corner at its foot'),
+    dict(screen='B3-S7', state='unkept', walk='W-08', step=8, drawn=True,
+         how="a line of the case's own draft held (`op` armed to answer `held`), then the act clicked (skep-frontend #661)",
+         claim='the history opens on the newest kept state, the held words standing in the current pane alone, the list\'s top line "now — not yet kept" (L.history.unkept)'),
     dict(screen='B3-S8', state='select-all', walk='—', step=0, drawn=True,
          how="Mod+A at the live caret in the draft the case minted (K-93)",
          claim="the whole document is one selection, the caret live at its end, the selection's acts' row standing at it inside the window; the platform's copy then takes the document whole as plain text"),
@@ -1358,7 +1369,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
             "the page opened on the harness's provider with `machine=1` boots with D6's machine handed in, under a session that writes", {'machine': boot and boot.get('machine'), 'writes': session and session.get('writes')})
     if not session or not board or not (boot and boot.get('machine')):
         for state in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
-                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target'):
+                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'unkept'):
             red(state, 'the machine\'s page did not open')
         return
     sid, account, board_id = session['session'], session['account'], board['board']
@@ -1472,7 +1483,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
             {'stands': stands, 'line': line0, 'focus': ctx.js('window.__skep.view.focus()')})
     if not stands:
         for st in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
-                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target'):
+                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'unkept'):
             red(st, 'the case\'s own draft did not mount')
         return
     # ---- B3-S3: Mod+Z on an empty stack, before anything is typed in the draft (K-75; BM-42) ----------------------------------
@@ -1750,6 +1761,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     paste_rows(ctx, r, shoot, red, ops_allowed, held)
     same_rows(ctx, r, shoot, red, ops_allowed, held)
     published_rows(ctx, r, shoot, red, ops_allowed, held)
+    past_rows(ctx, r, shoot, red, ops_allowed, held)
 
 
 # the words the reopen row's armed line types before the case's own draft's first line: a paragraph of their own
@@ -2673,6 +2685,233 @@ def published_rows(ctx, r, shoot, red, ops_allowed, m):
     r.figures['published_target'] = {'log_position_before': health0.get('log_position'), 'log_position_after': health1.get('log_position'), 'writes': writes_from(n0)}
     r.check(health1.get('log_position') == health0.get('log_position') and writes_from(n0) == [],
             "B3-S5 · %s: the row sends no write — no write frame from the page, the test board's log position as it stood" % state, r.figures['published_target'])
+
+
+# the kept line's second act at a corner, by the selector a person's eye would find it (T-ARTICLE's `historyHTML`)
+HISTORY_ACT = ' button[data-history]'
+# where the platform's focus stands in a corner: the corner's document and the act it stands on — the kept word, the kept line's
+# second act — or null where it stands in none
+ACT_AT = '''(() => { const e = document.activeElement, c = e && e.closest ? e.closest("[data-corner]") : null;
+  return c ? {corner: c.dataset.corner, act: e.dataset && e.dataset.history != null ? "history" : e.dataset && e.dataset.kept ? "kept" : (e.className || "").split(" ")[0] || null} : null; })()'''
+# a draft's text as the page shows it, whole: what a pane's text is held to
+SHOWN_TEXT = '''(async (a) => { const L = await import("./text/layer.js"), R = await import("./model/records.js"), d = L.shownOf(a); return d.from < 0 ? "" : R.textOf(d.runs, d.from, d.to); })(%s)'''
+# the list of a draft's past states as a person meets it: its top line, each day's head — its words, whether it is an act, folded
+# or open, marked as the shown state's — and its lines, each a hand's or a row's with its words and whether it is the shown
+# state's; where it stands — beside pane B's corner, or after pane B's text — and whether it stands in the window
+PAST_LIST = '''(() => { const l = document.getElementById("scenepast"); if (!l) return null;
+  const q = l.getBoundingClientRect(), c = document.querySelector("#sceneB > .corner"), cq = c ? c.getBoundingClientRect() : null, art = document.querySelector("#sceneB > article.dtext");
+  return {now: (l.querySelector(":scope > .pl-now") || {}).textContent || null,
+          days: [...l.querySelectorAll(":scope > .pl-day")].map((d) => { const h = d.querySelector(":scope > .pl-head");
+            return {key: d.dataset.key, head: h.textContent, act: h.tagName === "BUTTON", folded: h.getAttribute("aria-expanded") === "false", shown: h.hasAttribute("data-shown"),
+                    lines: [...d.querySelectorAll(":scope > .pl-who, :scope > .pl-row")].map((x) => ({who: x.classList.contains("pl-who"), text: x.textContent, last: x.dataset.row ? Number(x.dataset.row) : null, shown: x.hasAttribute("data-shown")}))}; }),
+          beside: l.classList.contains("beside"), after: l.parentElement && l.parentElement.id === "sceneB" && !!art && !!(art.compareDocumentPosition(l) & Node.DOCUMENT_POSITION_FOLLOWING),
+          under: !!cq && q.top >= cq.bottom - 0.5 && Math.abs(q.left - cq.left) <= 1, inView: q.width > 0 && q.height > 0 && q.left >= 0 && q.right <= window.innerWidth + 0.5 && q.top < window.innerHeight}; })()'''
+
+
+def past_rows(ctx, r, shoot, red, ops_allowed, m):
+    """A DRAFT's HISTORY (B3-S7; skep-frontend #661, #662, #585, #617), on the machine's page at the case's own draft
+    (`mine`), each state checked against `strings.js` and shot at both widths. `corner-act`: the kept line's second act at
+    each of the three kept words at one place, Tab from the plane's stop standing on the kept word, → on the act and Enter
+    opening the draft's history. `read`: two lines typed a minute apart and kept by the test board, then the act clicked —
+    the scene on the draft beside its state before its newest change, that state's text the board's at the position the row
+    below the top row ends at, the history read's pages and rows and the state read's time a figure (FP-18); then
+    `changes` armed, once the page is quiet, with the draft's own rows read through the page's port and three synthetic
+    ones below them — a signed row, a publication, a row of lost testimony — the act clicked again and the arm checked
+    taken, one day's head clicked folded; the list's heads and rows in the strings table's words, the past pane's corner,
+    the bar's and the one line's second address, the bands; side by side the list beneath pane B's corner, stacked at the
+    narrow width after pane B's text, the current pane's kept line at its head and the rest of its corner at its foot (D2).
+    `unkept`: a line held, then the act — the newest kept state, the list's top line saying so. No `history.past` is called;
+    the rows' writes are the two typed lines and the held line's drop."""
+    mine, corner, quiet, recentre, caret_end, press, first_line, hold_typed, drop_all = (m[k] for k in ('mine', 'corner', 'quiet', 'recentre', 'caret_end', 'press', 'first_line', 'hold_typed', 'drop_all'))
+    sid = m['sid']
+    act_sel = corner + HISTORY_ACT
+    health0 = ctx.health()
+    calls0 = len(page_calls(ctx))
+    text_of = lambda: ctx.js(SHOWN_TEXT % json.dumps(mine)) or ''
+    flat = lambda s: (s or '').replace('\n', '')
+    pane_text = lambda side: ''.join(b['text'] for b in ((ctx.js('window.__skep.scene.panes()') or {}).get(side) or {}).get('blocks') or [])
+    state_kept = lambda: wait_for(ctx, '(() => { const s = window.__skep.write.state(%s); return !!s.kept && s.kept.word === "kept" && window.__skep.write.edits(%s).length === 0; })()' % (json.dumps(mine), json.dumps(mine)), 20)
+
+    def close_scene():
+        ctx.js('window.__skep.scene.close()'); ctx.settle(15); ctx.frames(2)
+
+    def open_by_act():
+        """the draft's corner brought into view and its kept line's second act clicked, as a pointer's click makes it: whether
+        the scene stands on the draft's history once its reads answer"""
+        recentre(); ctx.settle(10); ctx.frames(2)
+        clicked = ctx.js('((s) => { const b = document.querySelector(s); if (b) b.click(); return !!b; })(%s)' % json.dumps(act_sel))
+        came = clicked and wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return window.__skep.scene.isOpen() && !!p && p.draft === %s; })()' % json.dumps(mine), 30)
+        ctx.settle(20); ctx.frames(3)
+        return came
+
+    # ---- `corner-act`: the act on the kept line, its place unmoved as the word changes; Tab, → and Enter reach it --------------
+    quiet()
+    ctx.js('(async () => (await import("./text/layer.js")).dropCaret())()'); ctx.frames(2)
+
+    def corner_act_check(w):
+        places = {}
+        for word in ('kept', 'not yet kept', 'not kept'):
+            ctx.js('window.__skep.write.setKept(%s, %s)' % (json.dumps(mine), json.dumps({'word': word, 'reason': None}))); ctx.frames(3)
+            places[word] = ctx.js('''((s) => { const b = document.querySelector(s); if (!b) return null; const q = b.getBoundingClientRect();
+              return {x: q.left, y: q.top, text: b.textContent, id: b.dataset.string || null, inert: b.getAttribute("aria-disabled")}; })(%s)''' % json.dumps(act_sel))
+        ctx.js('window.__skep.write.setKept(%s, %s)' % (json.dumps(mine), json.dumps({'word': 'kept', 'reason': None}))); ctx.frames(3)
+        k = places['kept']
+        act_ok = bool(k) and k['text'] == t(ctx, 'B3.past-states') and k['id'] == 'B3.past-states' and k['inert'] is None and len(shown(ctx, act_sel)) == 1
+        unmoved = all(places[x] and k and abs(places[x]['x'] - k['x']) < 0.5 and abs(places[x]['y'] - k['y']) < 0.5 for x in places)
+        # the keys: the plane's stop, then Tab to the corner's stop, → along its line, Enter at the act
+        ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
+        ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})'); ctx.frames(1)
+        ctx.drv.key('Tab'); ctx.settle(); ctx.frames(2)
+        tabbed = ctx.js(ACT_AT)
+        ctx.drv.key('ArrowRight'); ctx.frames(2)
+        arrowed = ctx.js(ACT_AT)
+        ctx.drv.key('Enter')
+        opened = wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return window.__skep.scene.isOpen() && !!p && p.draft === %s; })()' % json.dumps(mine), 30)
+        ctx.settle(20); ctx.frames(2)
+        close_scene(); recentre(); ctx.settle(10); ctx.frames(3)
+        keys_ok = tabbed == {'corner': mine, 'act': 'kept'} and arrowed == {'corner': mine, 'act': 'history'} and opened
+        return {'the act': (act_ok, {'act': k, 'shown': len(shown(ctx, act_sel))}), 'its place': (unmoved, places),
+                'the keys': (keys_ok, {'tab': tabbed, 'arrow': arrowed, 'enter_opened': opened})}
+    shoot('corner-act', corner_act_check, recentre)
+
+    # ---- `read`: two lines a minute apart, kept by the board; the act; the state before the newest change -----------------------
+    quiet()
+    line = first_line()
+    caret_end(line); press(' Earlier.')
+    first_kept = state_kept()
+    quiet()
+    text1 = text_of()
+    minute = ctx.js('Math.floor(Date.now() / 60000)')
+    waited = time.time()
+    while ctx.js('Math.floor(Date.now() / 60000)') <= minute and time.time() - waited < 75:
+        time.sleep(0.5)
+    time.sleep(1.0)
+    caret_end(line + ' Earlier.'); press(' Later.')
+    second_kept = state_kept()
+    quiet()
+    text2 = text_of()
+    ctx.js('(async () => (await import("./text/layer.js")).dropCaret())()'); ctx.frames(2)
+    r.check(first_kept and second_kept and text1 != text2, "B3-S7 · read: two lines typed into the case's own draft a minute apart, each kept by the test board", {'first': first_kept, 'second': second_kept, 'waited_s': round(time.time() - waited, 1)})
+    opened1 = open_by_act()
+    P1 = ctx.js('window.__skep.scene.past()') or {}
+    rows1 = [row for d in P1.get('days') or [] for row in d['rows']]
+    below1 = rows1[1] if len(rows1) > 1 else {}
+    got_b, got_a = pane_text('b'), pane_text('a')
+    real_ok = (opened1 and len(rows1) >= 2 and P1.get('at') == below1.get('last') and flat(got_b) == flat(text1) and flat(got_a) == flat(text2)
+               and rows1[0].get('time') and below1.get('time') and rows1[0]['time'] // 60000 != below1['time'] // 60000)
+    r.check(real_ok, "B3-S7 · read: the act opens the draft's history on its state before its newest change — the text the test board held at the position the row below the top row ends at, the line typed a minute before the newest — its rows two minutes and more", {'opened': opened1, 'at': P1.get('at'), 'rows': [(x['first'], x['last'], x['kind']) for x in rows1[:4]], 'b': got_b[:120], 'want_b': text1[:120], 'a': got_a[-60:]})
+    r.figures['history_read'] = {'figures': P1.get('figures'), 'rows': len(rows1), 'entries': P1.get('entries'), 'days': len(P1.get('days') or [])}
+    close_scene()
+
+    # ---- `read`, again: `changes` armed with the draft's own rows and three of the harness's below them -----------------------------
+    quiet()
+    real, since, head = [], 0, None
+    for _ in range(20):
+        page = ctx.js('(async () => { const P = await import("./bridge/port.js"); return await P.changes({session: %s, since: %d, under: %s}); })()' % (json.dumps(sid), since, json.dumps(mine))) or {}
+        res = page.get('result') or {}
+        real += res.get('entries') or []
+        head = res.get('head', head)
+        if not res or res.get('next', 0) >= res.get('head', 0) or res.get('next', 0) <= since:
+            break
+        since = res['next']
+    p0 = min((u['position'] for u in real), default=0)
+    day_at = lambda back: ctx.js('(() => { const d = new Date(); d.setDate(d.getDate() - %d); d.setHours(15, 0, 0, 0); return d.getTime(); })()' % back)
+    member = trunk_of(DOC) + '.1'
+    synthetic = [
+        {'position': p0 - 3, 'at': p0 - 3, 'op': None, 'docs': None, 'class': 'drafts', 'key': None, 'time': None, 'base': None, 'merge': None},
+        {'position': p0 - 2, 'at': p0 - 2, 'op': 'publish', 'docs': [member, mine], 'class': 'published', 'attest': {'alg': 'mldsa65-ed25519', 'sig': 'ab'}, 'time': day_at(2)},
+        {'position': p0 - 1, 'at': p0 - 1, 'op': 'make_link', 'docs': [mine], 'class': 'drafts', 'attest': {'alg': 'mldsa65-ed25519', 'sig': 'cd'}, 'link': mine + '.0.2.1', 'time': day_at(1)},
+    ]
+    seq = ctx.editor_seq()
+    armed = ctx.arm('changes', answer={'entries': synthetic + real, 'next': head, 'head': head})
+    opened2 = open_by_act()
+    taken = ctx.consumed('changes', seq)
+    r.check(bool(real) and p0 > 3 and (armed.get('result') or {}).get('armed') == 'changes' and opened2 and taken,
+            "B3-S7 · read: `changes` armed, once the page is quiet, with the draft's own rows and three of the harness's below them, at positions at or below the head and `next` at it — the arm taken by the history read",
+            {'real_rows': len(real), 'p0': p0, 'head': head, 'armed': armed, 'opened': opened2, 'consumed': taken})
+    P2 = ctx.js('window.__skep.scene.past()') or {}
+    yesterday = next((d['key'] for d in P2.get('days') or [] if any(x['first'] == p0 - 1 for x in d['rows'])), None)
+    # the reader's act at yesterday's head folds it, where the room it was given did not fold it on opening
+    folded = yesterday and ctx.js('((k) => { const b = document.querySelector(`#scenepast button[data-day="${k}"]`); if (b && b.getAttribute("aria-expanded") === "true") b.click(); return !!b; })(%s)' % json.dumps(yesterday))
+    ctx.frames(3)
+    lists = ctx.js('''(async (h) => { const S = await import("./scene/scene.js"), U = await import("./util.js"), T = await import("./strings.js"), p = S.past();
+      if (!p) return null; const rows = p.days.flatMap((d) => d.rows), below = rows[1];
+      return {below, corner: below ? T.t("B3.history.row", {time: T.stoodAt(below.time), hand: S.handWords(below.hand)}) : null, asOf: below ? T.t("B3.history.as-of", {time: T.stoodAt(below.time)}) : null,
+              days: p.days.map((d) => ({key: d.key, date: d.date, hands: [...new Set(d.rows.map((r) => S.handWords(r.hand)))]})),
+              rows: rows.map((r) => ({last: r.last, time: r.time == null ? null : U.timeOf(r.time), words: r.words, hand: S.handWords(r.hand)}))}; })()''')
+    want = {'signed': t(ctx, 'L.history.hand.signed'), 'unrecorded': t(ctx, 'L.history.time-unrecorded'), 'not_recorded': t(ctx, 'F.slot.not-recorded'), 'folded': t(ctx, 'L.history.folded'),
+            'version': t(ctx, 'B3.history.row.version', {'k': 1, 'E': trunk_of(DOC)}), 'typed': t(ctx, 'B3.history.kind.typed'), 'linked': t(ctx, 'L.history.kind.linked')}
+
+    def read_check(w):
+        P, fit = ctx.js('window.__skep.scene.past()') or {}, ctx.js('window.__skep.scene.fit()') or {}
+        L, ex = ctx.js(PAST_LIST) or {}, lists or {}
+        rows = [row for d in P.get('days') or [] for row in d['rows']]
+        state_ok = (ctx.js('window.__skep.scene.isOpen()') and P.get('draft') == mine and len(rows) >= 2 and P.get('at') == rows[1]['last'] and flat(pane_text('b')) == flat(text1)
+                    and (ctx.js('window.__skep.scene.panes()') or {}).get('b', {}).get('derived') is True)
+        # each day's head its date, or "time not recorded"; yesterday's folded, naming its one hand, "signed"; the rows in the strings table's words
+        heads = {d['key']: d for d in L.get('days') or []}
+        exdays = {d['key']: d for d in ex.get('days') or []}
+        dates_ok = all((heads[k]['head'] == (exdays[k]['date'] if exdays[k]['date'] else want['unrecorded'])) or (heads[k]['folded'] and heads[k]['head'].startswith(want['folded'] + (exdays[k]['date'] or ''))) for k in heads if k in exdays) and set(heads) == set(exdays)
+        y = heads.get(yesterday) or {}
+        folded_ok = bool(folded) and y.get('folded') and y.get('act') and y.get('head') == want['folded'] + (exdays.get(yesterday) or {}).get('date', '') + want['signed'] and y.get('lines') == []
+        lines = [x for d in L.get('days') or [] for x in d['lines'] if not x['who']]
+        exrows = {x['last']: x for x in ex.get('rows') or []}
+        rows_ok = all(x['text'] == (want['not_recorded'] if exrows[x['last']]['time'] is None and exrows[x['last']]['words'] == want['not_recorded'] else f"{exrows[x['last']]['time'] or want['not_recorded']} · {exrows[x['last']]['words']}") for x in lines if x['last'] in exrows)
+        marks_ok = (any(x['words'] == want['version'] for x in ex.get('rows') or []) and any(x['text'] == want['not_recorded'] for x in lines)
+                    and sum(1 for x in lines if x['shown']) == 1 and next((x['last'] for x in lines if x['shown']), None) == P.get('at')
+                    and any(x['text'].endswith(want['typed']) for x in lines))
+        corner_line = ctx.js('(() => { const e = document.querySelector("#sceneB > .corner .past"); return e ? e.textContent : null; })()')
+        chip = ctx.js('!!document.querySelector("#sceneB > .corner [data-chip], #sceneB > .corner .chip")')
+        bar_as_of = ctx.js('(() => { const e = document.querySelector("#scenebar .as-of"); return e ? e.textContent : null; })()')
+        line_as_of = ctx.js('(() => { const e = document.querySelector("#line .seg.as-of"); return e ? e.textContent : null; })()')
+        corner_ok = corner_line == ex.get('corner') and chip and bar_as_of == ex.get('asOf') and line_as_of == ex.get('asOf')
+        ties = ctx.js('window.__skep.scene.ties()') or []
+        bands_ok = any(x['kind'] == 'band' for x in ties) and bool((ctx.js('window.__skep.scene.pairs()') or {}).get('pairs'))
+        if w == WIDE[0]:
+            form_ok = fit.get('stacked') is False and L.get('beside') and L.get('under') and L.get('inView')
+            form = {'stacked': fit.get('stacked'), 'beside': L.get('beside'), 'under': L.get('under'), 'in_view': L.get('inView')}
+        else:
+            d2 = ctx.js('''(() => { const h = document.querySelector("#sceneA > .corner.head"), f = document.querySelector("#sceneA > .corner.foot"), a = document.querySelector("#sceneA > article.dtext");
+              return {head: !!h && !!h.querySelector(".kept-word") && !!h.querySelector("[data-history]") && !h.querySelector(".chip"), foot: !!f && !!f.querySelector(".chip"),
+                      after: !!f && !!a && !!(a.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING)}; })()''')
+            form_ok = fit.get('stacked') is True and L.get('after') and not L.get('beside') and d2 == {'head': True, 'foot': True, 'after': True}
+            form = {'stacked': fit.get('stacked'), 'after': L.get('after'), 'd2': d2}
+        return {'the state': (state_ok, {'at': P.get('at'), 'rows': [x['last'] for x in rows[:4]], 'b': pane_text('b')[:100], 'want': text1[:100]}),
+                'the days': (dates_ok and folded_ok, {'heads': {k: (v['head'], v['folded'], v['act']) for k, v in heads.items()}, 'want': exdays, 'yesterday': y}),
+                'the rows': (rows_ok and marks_ok, {'lines': lines[:10], 'want': list(exrows.values())[:10], 'version': want['version']}),
+                'the corner': (corner_ok, {'corner': corner_line, 'chip': chip, 'bar': bar_as_of, 'line': line_as_of, 'want': [ex.get('corner'), ex.get('asOf')]}),
+                'the bands': (bands_ok, {'ties': [x['kind'] for x in ties]}),
+                'the form': (form_ok, form)}
+    shoot('read', read_check)
+    close_scene()
+
+    # ---- `unkept`: a line held, the act opening on the newest kept state, "now — not yet kept" at the top ---------------------------
+    # the scene's close gave the focus back to the act it was opened from: a LEAP to the draft gives it to the walk again, and
+    # the keys are the caret's
+    recentre(); quiet()
+    caret_end(first_line())
+    k, held_ok, d = hold_typed(' Held.', 'unreachable')
+    ctx.js('(async () => (await import("./text/layer.js")).dropCaret())()'); ctx.frames(2)
+    opened3 = open_by_act()
+    r.check(held_ok and opened3, "B3-S7 · unkept: a line of the case's own draft held, then the act clicked: the history opens", {'held': held_ok, 'detail': d, 'opened': opened3})
+
+    def unkept_check(w):
+        P, L = ctx.js('window.__skep.scene.past()') or {}, ctx.js(PAST_LIST) or {}
+        rows = [row for dd in P.get('days') or [] for row in dd['rows']]
+        ok = (P.get('unkept') is True and L.get('now') == t(ctx, 'L.history.unkept') and bool(rows) and P.get('at') == rows[0]['last']
+              and flat(pane_text('b')) == flat(text2) and 'Held.' in pane_text('a') and 'Held.' not in pane_text('b'))
+        panes = ctx.js('window.__skep.scene.panes()') or {}
+        return ok, {'unkept': P.get('unkept'), 'now': L.get('now'), 'at': P.get('at'), 'top': rows[0]['last'] if rows else None, 'why': P.get('why'), 'a': pane_text('a')[-40:], 'b': pane_text('b')[-40:],
+                    'b_blocks': len((panes.get('b') or {}).get('blocks') or []), 'b_derived': (panes.get('b') or {}).get('derived'), 'want_b': text2[-40:], 'rows': [(x['first'], x['last'], x['kind']) for x in rows[:3]]}
+    shoot('unkept', unkept_check)
+    close_scene()
+    out, back = drop_all(k)
+    r.check(bool(out) and back, "B3-S7 · unkept: the held line dropped, the draft reads \"kept\" again", {'out': out})
+    # the rows called no preview and wrote nothing but their own lines
+    calls = [c['name'] for c in page_calls(ctx)[calls0:]]
+    health1 = ctx.health()
+    r.figures['past_rows'] = {'log_position_before': health0.get('log_position'), 'log_position_after': health1.get('log_position'), 'calls': dict(Counter(calls))}
+    r.check(not any(c.startswith('history.') for c in calls) and 'changes' in calls, "B3-S7: the history read by `changes`, a reading row; no `history.past` or `history.restore` called", dict(Counter(calls)))
 
 
 def run(ctx):

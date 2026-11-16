@@ -413,10 +413,14 @@ def run(ctx):
                   sel: e ? e.getAttribute('aria-selected') : null, overlay: window.__skep.overlay().id, in_overlay: o.contains(e) && e !== o}; })()''')
 
     def line_of(addr):
-        """a corner on the plane as its stops stand: its container's role and tabindex, and each act of it, its class and its
-        tabindex, in their order; None where no corner of the document stands"""
+        """a corner on the plane as its stops stand: its container's role and tabindex, each act of it, its class and its
+        tabindex, in their order, and its lines of acts — each the acts of one toolbar in it, a lone act its own — by their
+        tabindexes; None where no corner of the document stands"""
         return ctx.js('''((a) => { const c = document.querySelector(`#corners [data-corner="${a}"]`); if (!c) return null;
-          return {role: c.getAttribute('role'), tab: c.getAttribute('tabindex'), acts: [...c.querySelectorAll('button')].map((b) => [b.className.split(' ')[0], b.getAttribute('tabindex')])}; })(%s)''' % json.dumps(addr))
+          const acts = [...c.querySelectorAll('button')], lineOf = (b) => { const t = b.closest('[role="toolbar"]'); return t && c.contains(t) ? t : b; };
+          const lines = [...new Set(acts.map(lineOf))];
+          return {role: c.getAttribute('role'), tab: c.getAttribute('tabindex'), acts: acts.map((b) => [b.className.split(' ')[0], b.getAttribute('tabindex')]),
+                  lines: lines.map((l) => acts.filter((b) => lineOf(b) === l).map((b) => b.getAttribute('tabindex')))}; })(%s)''' % json.dumps(addr))
 
     ctx.leap(DOC, WINDOW[0])
     # the line's last stop and the plane's are neighbours in the page's order (D5 §4 rule 5): Tab from the line's last stop
@@ -436,9 +440,9 @@ def run(ctx):
     ctx.frames(1)
     press('Tab')
     f, line = at(), line_of(DOC)
-    r.check(f['corner'] == DOC and f['act'] == 'version' and bool(line) and line['role'] == 'toolbar' and line['tab'] is None and bool(line['acts'])
-            and line['acts'][0] == ['version', '0'] and all(t == '-1' for _, t in line['acts'][1:]),
-            'Tab from the plane\'s stop (the mirror\'s current item) reaches the focused document\'s corner on its first act, its version statement: the corner a line of acts whose one stop that act is, its container no stop (K-57)', dict(f, line=line))
+    r.check(f['corner'] == DOC and f['act'] == 'version' and bool(line) and line['tab'] is None and bool(line['acts']) and line['acts'][0] == ['version', '0']
+            and line['role'] == ('toolbar' if len(line['lines']) == 1 else 'group') and all(l[0] == '0' and all(t == '-1' for t in l[1:]) for l in line['lines']),
+            'Tab from the plane\'s stop (the mirror\'s current item) reaches the focused document\'s corner on its first act, its version statement: each line of its acts a toolbar of its own whose one stop is its first act — the corner itself where its acts stand on one line, else a group of its lines — its container no stop (K-57; issue #585)', dict(f, line=line))
     others = ctx.js('''[...document.querySelectorAll("#corners [data-corner]")].filter((e) => e.dataset.corner !== %s).map((e) => ({addr: e.dataset.corner, hidden: e.getAttribute("aria-hidden"), tab: e.getAttribute("tabindex"),
       stops: [...e.querySelectorAll("button")].filter((b) => b.getAttribute("tabindex") !== "-1").length}))''' % json.dumps(DOC))
     r.check(all(o['hidden'] == 'true' and o['tab'] is None and o['stops'] == 0 for o in others), 'every other corner on the plane is out of the Tab order — its container and every act of it — and hidden from AT', others)
@@ -456,8 +460,8 @@ def run(ctx):
         ax_role, ax_name = (node.get('role') or {}).get('value'), (node.get('name') or {}).get('value') or ''
         act_role, act_name = (act.get('role') or {}).get('value'), (act.get('name') or {}).get('value') or ''
         focused = any(p['name'] == 'focused' and (p.get('value') or {}).get('value') for p in act.get('properties', []))
-        r.check(bool(node) and not node.get('ignored') and ax_role == 'toolbar' and re.sub(r'\s+', '', ax_name) == re.sub(r'\s+', '', words) and words.strip() != '',
-                'the AX tree: the focused corner is a toolbar, not hidden, named by its own words, a compact one\'s glyphs read whole', {'ignored': node.get('ignored'), 'role': ax_role, 'name': ax_name[:120], 'words': words[:120]})
+        r.check(bool(node) and not node.get('ignored') and bool(line) and ax_role == line['role'] and re.sub(r'\s+', '', ax_name) == re.sub(r'\s+', '', words) and words.strip() != '',
+                'the AX tree: the focused corner is its one toolbar where its acts stand on one line, else a group of its lines, not hidden, named by its own words, a compact one\'s glyphs read whole (issue #585)', {'ignored': node.get('ignored'), 'role': ax_role, 'dom_role': line and line['role'], 'name': ax_name[:120], 'words': words[:120]})
         r.check(act_role == 'button' and focused and statement.strip() != '' and re.sub(r'\s+', '', act_name) == re.sub(r'\s+', '', statement),
                 'the AX tree: the focus stands on the corner\'s version statement, a button named by its own words', {'role': act_role, 'focused': focused, 'name': act_name, 'words': statement})
         r.figures['corner_ax'] = {'answered': True, 'role': ax_role, 'name': ax_name[:160], 'act': [act_role, act_name]}
@@ -637,12 +641,14 @@ def run(ctx):
     line_stop = ctx.js('''(() => { const s = [...document.querySelectorAll('#line button:not([disabled]), #line [tabindex="0"]')].pop();
       if (s) s.focus({preventScroll: true}); return s && document.activeElement === s ? s.dataset.act || null : null; })()''')
     ctx.frames(1)
+    # the corner's stops: one for each line of its acts (issue #585)
+    lines = len((line_of(DOC) or {}).get('lines') or []) or 1
     ring = []
-    for _ in range(3):
+    for _ in range(2 + lines):
         press('Tab')
         ring.append(stop())
-    r.check(line_stop is not None and ring[:2] == ['the item', 'the corner: ' + DOC] and ring[2].startswith('the overlay: ') and ring[2] != 'the overlay: x',
-            'a standing card comes after the plane and its corner, and its FIRST stop is its first act, never the dismiss (rule 13): Tab reaches the item, the corner, then the card\'s first act', {'from': line_stop, 'ring': ring})
+    r.check(line_stop is not None and ring[:1 + lines] == ['the item'] + ['the corner: ' + DOC] * lines and ring[1 + lines].startswith('the overlay: ') and ring[1 + lines] != 'the overlay: x',
+            'a standing card comes after the plane and its corner, and its FIRST stop is its first act, never the dismiss (rule 13): Tab reaches the item, the corner — a stop for each line of its acts — then the card\'s first act', {'from': line_stop, 'ring': ring, 'corner_lines': lines})
     press('Tab', mods=('Shift',))
     back = stop()
     r.check(back == 'the corner: ' + DOC, 'Shift+Tab from the card\'s first stop goes back to the corner', {'got': back})

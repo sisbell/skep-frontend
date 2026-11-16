@@ -755,7 +755,7 @@ function page(as = {}) {
     const attrs = {};
     let html = '';
     const e = {
-      id, isConnected: true, dataset: /** @type {Record<string, string>} */ ({}), style: {}, inert: false, hidden: false, tabIndex: -1,
+      id, isConnected: true, dataset: /** @type {Record<string, string>} */ ({}), style: /** @type {any} */ ({ setProperty() {}, removeProperty() {} }), inert: false, hidden: false, tabIndex: -1,
       scrollTop: 0, scrollHeight: 0, clientTop: 0, clientLeft: 0, clientWidth: 600, clientHeight: 400, placed, attrs,
       /** @type {any} the layer holding it, where one does */ parent: null,
       get innerHTML() { return html; }, set innerHTML(/** @type {string} */ v) { html = String(v); },
@@ -814,10 +814,25 @@ function page(as = {}) {
     });
     c.closest = (/** @type {string} */ s) => (names(s, 'div', { ...c.attrs, class: 'corner', 'data-corner': '' }) ? c : null);
     Object.defineProperty(c, 'tabIndex', { get: () => Number(c.attrs.tabindex ?? -1), set: (/** @type {number} */ x) => { c.attrs.tabindex = String(x); } });
+    /** @type {any[]} the elements holding a line of several acts beside the column, as T-LAYER's `setStops` finds them: the kept line, a face's acts */
+    const holders = [];
     const set =(/** @type {string} */ v) => {
       if (acts.includes(doc.activeElement)) doc.activeElement = body;
-      html = String(v); acts.length = 0;
+      html = String(v); acts.length = 0; holders.length = 0;
+      /** each holder's stretch of the markup, from its opening tag to its own closing one */
+      const spans = [...html.matchAll(/<span class="(kept-line|face-acts)">/g)].map((m) => {
+        let depth = 0, at = /** @type {number} */ (m.index);
+        for (const t of html.slice(at).matchAll(/<(\/?)span\b/g)) { depth += t[1] ? -1 : 1; if (!depth) { at += /** @type {number} */ (t.index); break; } }
+        /** @type {Record<string, string>} */
+        const hattrs = {};
+        const h = /** @type {any} */ ({ cls: m[1], from: m.index, to: at, attrs: hattrs, own: /** @type {any[]} */ ([]),
+          setAttribute: (/** @type {string} */ k, /** @type {string} */ x) => { hattrs[k] = String(x); }, removeAttribute: (/** @type {string} */ k) => { delete hattrs[k]; },
+          getAttribute: (/** @type {string} */ k) => hattrs[k] ?? null, querySelectorAll: (/** @type {string} */ q) => (q === 'button' ? h.own.slice() : []) });
+        holders.push(h);
+        return h;
+      });
       for (const m of html.matchAll(/<button ([^>]*)>/g)) {
+        const holder = spans.find((h) => /** @type {number} */ (m.index) > h.from && /** @type {number} */ (m.index) < h.to) || null;
         /** @type {Record<string, string>} */
         const attrs = {};
         for (const a of m[1].matchAll(/([\w-]+)(?:="([^"]*)")?/g)) attrs[a[1]] = a[2] ?? '';
@@ -827,7 +842,7 @@ function page(as = {}) {
           classList: { contains: (/** @type {string} */ k) => (attrs.class || '').split(' ').includes(k) },
           getAttribute: (/** @type {string} */ k) => attrs[k] ?? null, setAttribute: (/** @type {string} */ k, /** @type {string} */ x) => { attrs[k] = String(x); },
           removeAttribute: (/** @type {string} */ k) => { delete attrs[k]; },
-          closest: (/** @type {string} */ s) => (names(s, 'button', attrs) ? b : c.closest(s)),
+          closest: (/** @type {string} */ s) => (names(s, 'button', attrs) ? b : holder && names(s, 'span', { ...holder.attrs, class: holder.cls }) ? holder : c.closest(s)),
           focus() {
             if (!shown()) return;
             const was = doc.activeElement;
@@ -839,11 +854,12 @@ function page(as = {}) {
           blur() { if (doc.activeElement === b) doc.activeElement = body; },
         });
         Object.defineProperty(b, 'tabIndex', { get: () => Number(attrs.tabindex ?? -1), set: (/** @type {number} */ x) => { attrs.tabindex = String(x); } });
+        if (holder) holder.own.push(b);
         acts.push(b);
       }
     };
     c.querySelectorAll = (/** @type {string} */ s) => (s === 'button' || s === 'button, input, [tabindex]' ? acts.slice() : []);
-    c.contains = (/** @type {unknown} */ x) => x === c || acts.includes(x);
+    c.contains = (/** @type {unknown} */ x) => x === c || acts.includes(x) || holders.includes(x);
     Object.defineProperty(c, 'innerHTML', { get: () => html, set });
     // the pane's markup as the scene stands it: the corner's own element holding the items, its acts among them
     Object.defineProperty(pane, 'innerHTML', { get: () => own, set: (/** @type {string} */ v) => { own = String(v); const m = /^<div class="corner[^"]*"[^>]*>([\s\S]*)<\/div>$/.exec(own); set(m ? m[1] : ''); } });
@@ -898,7 +914,11 @@ function page(as = {}) {
   const canvas = Object.assign(element('the scene\'s canvas'), { getContext: () => recorder().ctx });
   SCENE.attach(/** @type {any} */ ({ root, bar, paneA, paneB, canvas, stop, strokes }), {
     end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, a, told) => FACES.floating(far, a, null, told), held: FACES.held },
+    history: (addr) => { void GO.history(addr); },
   });
+  /** @type {any[]} what stands after pane B in the scene: the list of a draft's past states, beside pane B's corner */
+  const afterB = [];
+  Object.assign(paneB, { after: (/** @type {any} */ x) => { if (!afterB.includes(x)) afterB.push(x); x.remove = () => { const i = afterB.indexOf(x); if (i >= 0) afterB.splice(i, 1); }; } });
   HOST.attach(/** @type {any} */ (overlay), as.notice ? /** @type {any} */ (below) : null);
   /** where the platform's focus stands */
   const at = () => doc.activeElement.id;
@@ -912,7 +932,7 @@ function page(as = {}) {
     const ev = { type: 'click', detail: 0, target: { closest: (/** @type {string} */ s) => (s === '[data-stroke]' ? b : null) } };
     for (const fn of key == null ? stopOn : strokesOn) fn(ev);
   };
-  return { doc, root, item, corner, line, bar, paneA, paneB, cornerA, cornerB, headA, headB, stop, stopOn, strokes, names, said, at, covered, press, enter, paneOn, acts };
+  return { doc, root, item, corner, line, bar, paneA, paneB, cornerA, cornerB, headA, headB, stop, stopOn, strokes, names, said, at, covered, press, enter, paneOn, acts, afterB };
 }
 
 /** the test run on a page of stand-ins (`page`, as `as` asks), the platform's `document` put back after it */
@@ -2743,7 +2763,7 @@ const clickIn = (/** @type {ReturnType<typeof page>} */ p, /** @type {'a' | 'b'}
 /** a pane's corner's Tab stops, each by the act it is (T-LAYER's `cornerAct`), the corner's own element as `corner` */
 const stopsIn = (/** @type {any} */ c, /** @type {any[]} */ acts) => [c, ...acts].filter((x) => x.getAttribute('tabindex') === '0').map((x) => (x === c ? 'corner' : LAYER.cornerAct(x)));
 
-test('a pane\'s corner\'s acts are buttons, each act its click\'s: the corner one line of acts whose Tab stop is its first, its element none; the kept word a disclosure of the draft\'s kept statement, the click the platform makes from Enter or Space at it, or a pointer\'s, opening the statement and the next closing it, the focus kept on the word written again; and in the corner a glyph opened whole the kept word\'s click opens the statement still, the corner standing whole until the words the glyph opened are clicked; the scene\'s own keys take no Enter there (D5 K-57, K-74; B3-S2; FP-20, FP-26)', () => onPage(async (p) => {
+test('a pane\'s corner\'s acts are buttons, each act its click\'s: each line of the corner\'s acts a toolbar of its own whose Tab stop is its first act — the kept line, its kept word and its second act; the glyph\'s line — its element none; the kept word a disclosure of the draft\'s kept statement, the click the platform makes from Enter or Space at it, or a pointer\'s, opening the statement and the next closing it, the focus kept on the word written again; and in the corner a glyph opened whole the kept word\'s click opens the statement still, the corner standing whole until the words the glyph opened are clicked; the scene\'s own keys take no Enter there (D5 K-57, K-74; B3-S2; FP-20, FP-26)', () => onPage(async (p) => {
   const restore = compactFit(p);
   WRITE.setKept(WRITING, { word: 'kept', reason: null });
   try {
@@ -2751,8 +2771,8 @@ test('a pane\'s corner\'s acts are buttons, each act its click\'s: the corner on
     const c = p.cornerA, acts = p.acts.a, keyed = (/** @type {string} */ k) => acts.find((b) => LAYER.cornerAct(b) === k) || null;
     assert.ok(String(c.className).split(' ').includes('compact'), `the panes fitted compact: ${c.className}`);
     assert.equal(SCENE.fitted()?.stacked, false, 'side by side');
-    assert.deepEqual([acts.map(LAYER.cornerAct), c.getAttribute('role'), stopsIn(c, acts)], [['kept', 'whole'], 'toolbar', ['kept']],
-      'the draft\'s corner: its kept word and the glyph that opens it whole, one line of acts whose stop is its first act, its element no stop');
+    assert.deepEqual([acts.map(LAYER.cornerAct), c.getAttribute('role'), stopsIn(c, acts)], [['kept', 'history', 'whole'], 'group', ['kept', 'whole']],
+      'the draft\'s corner: its kept word with its second act on the kept line, and the glyph that opens it whole on its own — two lines of acts, each its stop its first act, the corner a group of them, its element no stop (skep-frontend #585)');
     keyed('kept').focus();
     assert.deepEqual([SCENE.key('Enter'), LAYER.statementOpen(WRITING)], [false, false], 'Enter at the kept word: the scene\'s own keys take none of it, and nothing opens');
     clickIn(p, 'a', keyed('kept'), true);
@@ -2769,7 +2789,7 @@ test('a pane\'s corner\'s acts are buttons, each act its click\'s: the corner on
   } finally { LAYER.openStatement(WRITING, false); WRITE.setKept(WRITING, null); restore(); }
 }, { acts: true }));
 
-test('at a pane\'s corner\'s act the dispatch leaves Enter, Space and Shift+Space to the button, raising no line, and takes an auto-repeat, making nothing; ← and → walk the line\'s acts, its stop following the focus, the scene standing at its first act and its last; a printable key but Space is swallowed with K-9\'s line, as elsewhere in a pane (D5 K-9, K-57; FP-20)', () => onPage(async (p) => {
+test('at a pane\'s corner\'s act the dispatch leaves Enter, Space and Shift+Space to the button, raising no line, and takes an auto-repeat, making nothing; ← and → walk the line\'s acts — the kept line\'s word and its second act, never across to the next line — its stop following the focus, the scene standing at its first act and its last; a printable key but Space is swallowed with K-9\'s line, as elsewhere in a pane (D5 K-9, K-57; FP-20; skep-frontend #585)', () => onPage(async (p) => {
   const restore = compactFit(p);
   WRITE.setKept(WRITING, { word: 'kept', reason: null });
   /** a key at an act of pane A's corner, as the app hands it to the dispatch there */
@@ -2786,12 +2806,12 @@ test('at a pane\'s corner\'s act the dispatch leaves Enter, Space and Shift+Spac
     assert.equal(await at(keyed('kept'), ' ', { repeat: true }), true, 'an auto-repeat of Space: taken');
     assert.deepEqual([HINT.standing(), LAYER.statementOpen(WRITING)], [null, false], 'and making nothing');
     assert.equal(await at(keyed('kept'), 'ArrowRight'), true);
-    assert.deepEqual([p.at(), stopsIn(p.cornerA, acts)], [keyed('whole')?.id, ['whole']], '→: the focus on the glyph, the line\'s stop following it');
-    assert.equal(await at(keyed('whole'), 'ArrowRight'), true);
-    assert.deepEqual([p.at(), SCENE.isOpen()], [keyed('whole')?.id, true], '→ at the line\'s last act: taken, nothing further, the scene standing');
-    assert.equal(await at(keyed('whole'), 'ArrowLeft'), true);
+    assert.deepEqual([p.at(), stopsIn(p.cornerA, acts)], [keyed('history')?.id, ['history', 'whole']], '→: the focus on the kept line\'s second act, the line\'s stop following it, the glyph\'s line keeping its own');
+    assert.equal(await at(keyed('history'), 'ArrowRight'), true);
+    assert.deepEqual([p.at(), SCENE.isOpen()], [keyed('history')?.id, true], '→ at the line\'s last act: taken, nothing further — never on the next line\'s glyph — the scene standing');
+    assert.equal(await at(keyed('history'), 'ArrowLeft'), true);
     assert.equal(await at(keyed('kept'), 'ArrowLeft'), true);
-    assert.deepEqual([p.at(), stopsIn(p.cornerA, acts), SCENE.isOpen()], [keyed('kept')?.id, ['kept'], true], '← back to the kept word, then ← at the line\'s first act: the focus there, the scene standing — never its close');
+    assert.deepEqual([p.at(), stopsIn(p.cornerA, acts), SCENE.isOpen()], [keyed('kept')?.id, ['kept', 'whole'], true], '← back to the kept word, then ← at the line\'s first act: the focus there, the scene standing — never its close');
     assert.equal(await at(keyed('kept'), 'q'), true);
     assert.equal(HINT.standing()?.id, 'F.swallow', 'a printable key: swallowed with K-9\'s line');
   } finally { HINT.act(); LAYER.openStatement(WRITING, false); WRITE.setKept(WRITING, null); restore(); }
@@ -2804,7 +2824,7 @@ test('a pane\'s corner holding acts is returned to on its line\'s stop: left by 
     assert.equal(await GO.toScene(WRITING, B), true);
     await flown();
     const acts = p.acts.a, kept = () => acts.find((b) => LAYER.cornerAct(b) === 'kept') || null;
-    assert.deepEqual([acts.map(LAYER.cornerAct), stopsIn(p.cornerA, acts)], [['kept'], ['kept']], 'the draft\'s corner beside its column holds one act, its kept word, the line\'s stop');
+    assert.deepEqual([acts.map(LAYER.cornerAct), stopsIn(p.cornerA, acts)], [['kept', 'history'], ['kept']], 'the draft\'s corner beside its column holds one line of acts, its kept word and its second act, the line\'s stop its kept word');
     kept().focus();
     const board = GO.wholeBoard(); await flown(); await board;
     assert.deepEqual([SCENE.isOpen(), TRAIL.all().find((e) => e.scene)?.scene?.left?.stop], [false, 'a:corner'], 'WHOLE BOARD from the kept word: the scene ended, its entry recording the stop the focus stood on, the corner');
@@ -2952,4 +2972,143 @@ test('a row naming an edition a pane reads at its bare address, read again while
     assert.ok(asked.includes(FAKE.keyOf('op', { frame: F.retrieveV(LF2, 1, LF_TEXT.length) })) && !asked.includes(FAKE.keyOf('op', { frame: F.retrieveV(LF, 1, LF_TEXT.length) })), 'the member read whole, nothing at the bare address');
     assert.deepEqual(fake.unanswered.slice(unanswered), []);
   } finally { CAM._reset(); }
+}));
+
+// ---- a draft's history: a past state beside the current text (B3-S7; skep-frontend #661, #662, #617) ----------------------
+
+/** a draft of the session's account, text the person may edit: its current text, and its feed rows — its mint, a typed line, and its newest change, the line's last word — one bare hand, minutes apart */
+const PASTD = '1.0.1.0.96', PAST_TEXT = 'Its first line. Its newest words.', PAST_AT = 40, PAST_OLD = 'Its first line.';
+const PAST_T0 = Date.UTC(2026, 10, 16, 9);
+const PAST_ROWS = [[30, 'create_new_document', PAST_T0], [PAST_AT, 'insert', PAST_T0 + 2 * 60000], [48, 'insert', PAST_T0 + 5 * 60000]].map(([at, op, time]) => ({ position: at, at, op, docs: [PASTD], class: 'drafts', key: 'bare', time }));
+/** the draft's state at a position as the board answers it: its first `n` bytes, the draft's own */
+const pastAt = (/** @type {number} */ at, /** @type {number} */ n) => ({
+  [FAKE.keyOf('op', { frame: F.opAt(at, F.retrieveDocVSpanSet(PASTD)) })]: { result: { as_of: at, resp: 'span_set', set: [{ start: '1.1', width: '0.' + n }] } },
+  [FAKE.keyOf('op', { frame: F.opAt(at, F.retrieveV(PASTD, 1, n)) })]: { result: { as_of: at, resp: 'delivery', items: [{ content: PAST_TEXT.slice(0, n) }] } },
+  [FAKE.keyOf('op', { frame: F.opAt(at, F.image(PASTD, 1, n)) })]: { result: { as_of: at, resp: 'runs', runs: [{ i_start: PASTD + '.0.1.1', width: String(n) }] } },
+});
+Object.assign(script, reads(PASTD, PAST_TEXT, { published: false }), pastAt(PAST_AT, PAST_OLD.length), pastAt(48, PAST_TEXT.length));
+/** the draft's history scripted as the narrowed feed answers it from where its read begins, its rows those given */
+function pastRows(/** @type {object[]} */ rows = PAST_ROWS) {
+  const since = Math.max(0, (REC.feedAt() ?? 0) - PUMP.OWN_WINDOW);
+  script[FAKE.keyOf('changes', { session: 's-1', since, under: PASTD })] = { result: { entries: rows, next: 60, head: 60 } };
+}
+/** the draft held whole, its kept state "kept", and its history opened from its corner's act (N-GO's `history`) */
+async function pastOpened(/** @type {ReturnType<typeof page>} */ p) {
+  await PUMP.loadWhole(PASTD);
+  WRITE.setKept(PASTD, { word: 'kept', reason: null });
+  pastRows();
+  const opening = GO.history(PASTD); await flown();
+  return opening;
+}
+
+test('the runs a derived pane shares with the other are read off the two records\' images by their bytes\' identity — never asked of the board — each run of runs adjoining in both one (skep-frontend #617)', () => {
+  const image = (/** @type {Array<[number, number]>} */ runs) => { let pos = 1; return runs.map(([ordinal, width]) => { const r = { pos, width, prefix: PASTD + '.0.1', ordinal }; pos += width; return r; }); };
+  const A = { src: PASTD, d: /** @type {any} */ ({ image: image([[1, 16], [40, 3], [17, 17]]) }) }, B = { src: PASTD, d: /** @type {any} */ ({ image: image([[1, 33]]) }) };
+  assert.deepEqual(SCENE.sharedBetween(A, B).map((p) => [p.u1, p.u2, p.width]), [[1, 1, 16], [20, 17, 17]], 'the stretches both hold at their places, the bytes typed between them in none');
+  assert.deepEqual(SCENE.sharedBetween({ src: PASTD, d: /** @type {any} */ ({ image: image([[1, 4], [5, 4]]) }) }, B).map((p) => [p.u1, p.u2, p.width]), [[1, 1, 8]], 'runs adjoining in both texts one run');
+});
+
+test('a draft\'s history opens from its corner\'s act beside the current text: pane A the draft, pane B its state before its newest change — the state the row below the top row ends at — its corner naming it "as it stood ⟨time⟩ · ⟨hand⟩" with the chip and no kept word or act, the bar naming it with when it stood; the focus in pane B; the shared runs read by identity, no `compare` asked; beside it the list, its rows by day, the shown row marked (B3-S7; skep-frontend #661, #662, #617)', () => onPage(async (p) => {
+  await onTrail(p);
+  const compares = () => fake.asked.filter((k) => k.includes('"op":"compare"') && k.includes(PASTD)).length, was = compares();
+  try {
+    assert.equal(await pastOpened(p), true, 'the scene shows');
+    const panes = SCENE.panes(), L = SCENE.past();
+    assert.deepEqual([panes?.a.src, panes?.a.derived, panes?.b.src, panes?.b.derived, SCENE.pastOf()], [PASTD, false, PASTD, true, PASTD], 'pane A the draft read from the board, pane B its past state derived');
+    assert.deepEqual([L?.at, L?.unkept, L?.why], [PAST_AT, false, null], 'the state before the newest change, its row the one below the top');
+    assert.ok(panes?.b.blocks.map((b) => b.text).join('') === PAST_OLD, `pane B the text as it stood: ${JSON.stringify(panes?.b.blocks)}`);
+    const time = lastRead(PAST_T0 + 2 * 60000), hand = t('F.slot.unsigned');
+    assert.ok(p.cornerB.innerHTML.includes(`<span class="past" data-string="B3.history.row">${esc(t('B3.history.row', { time, hand }))}</span>`) && p.cornerB.innerHTML.includes('data-chip="1"') && !p.cornerB.innerHTML.includes('kept-word') && !p.cornerB.innerHTML.includes('data-history'),
+      `pane B's corner: its line in the kept word's place, the chip beside it, no kept word and no act — ${p.cornerB.innerHTML}`);
+    assert.ok(p.cornerA.innerHTML.includes('data-kept="kept"') && p.cornerA.innerHTML.includes('data-history'), `pane A, the current text: the draft's kept word and its second act — ${p.cornerA.innerHTML}`);
+    assert.ok(p.bar.innerHTML.includes(`<span class="as-of" data-string="B3.history.as-of">${esc(t('B3.history.as-of', { time }))}</span>`), `the bar names pane B with when it stood — ${p.bar.innerHTML}`);
+    assert.deepEqual(SCENE.pastAsOf(), { id: 'B3.history.as-of', text: t('B3.history.as-of', { time }) }, 'the one line\'s second address');
+    assert.equal(p.at(), 'pane B', 'the focus in the history pane');
+    assert.deepEqual([compares() - was, SCENE.pairs()?.pairs.map((x) => [x.u1, x.u2, x.width])], [0, [[1, 1, PAST_OLD.length]]], 'no `compare` asked: the run the two texts share read off their images');
+    const list = p.afterB[0];
+    assert.ok(list && list.id === 'scenepast' && String(list.className).includes('beside'), 'the list beside pane B\'s corner, after pane B');
+    const html = String(list.innerHTML);
+    assert.ok(html.includes(`<div class="pl-row" data-row="${PAST_AT}" data-shown="1" aria-current="true">`) && html.includes(`<div class="pl-row" data-row="48">`) && html.includes(`<div class="pl-who">${esc(hand)}</div>`) && !html.includes('pl-now'),
+      `its rows, newest first, the hand once at the head of its run, the shown row marked, no top line: ${html}`);
+    assert.deepEqual(L?.days.map((d) => [d.folded, d.rows.map((r) => r.last)]), [[false, [48, PAST_AT, 30]]], 'one day, open');
+    assert.ok(TRAIL.current()?.scene && typeof TRAIL.current()?.scene?.b === 'object', 'the trail entry keeps the derived record itself');
+  } finally { WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+test('in its own history scene the current text\'s "show its history" moves the focus into the history pane, opening nothing; leaving the scene and coming back by Back reopens it reading nothing of the past state (skep-frontend #661; issue #50)', () => onPage(async (p) => {
+  await onTrail(p);
+  try {
+    await pastOpened(p);
+    const entries = TRAIL.all().length, histories = () => fake.asked.filter((k) => k.includes('"at":') && k.includes(PASTD)).length;
+    p.paneA.focus();
+    await GO.history(PASTD);
+    assert.deepEqual([p.at(), TRAIL.all().length], ['pane B', entries], 'the focus in pane B, no entry pushed');
+    const reads = histories();
+    const board = GO.wholeBoard(); await flown(); await board;
+    assert.equal(SCENE.isOpen(), false, 'WHOLE BOARD left the scene');
+    const back = GO.back(); await flown(); await back;
+    assert.deepEqual([SCENE.isOpen(), SCENE.pastOf(), SCENE.panes()?.b.derived, histories()], [true, PASTD, true, reads], 'Back reopens it on the record its entry kept, no state read again');
+  } finally { WRITE.setKept(PASTD, null); }
+}));
+
+test('a day folds and opens on the reader\'s act at its head alone; rows arriving once the list stands — a feed row naming the draft — open no day and stand in their place (skep-frontend #662)', () => onPage(async (p) => {
+  await onTrail(p);
+  try {
+    await pastOpened(p);
+    const key = /** @type {string} */ (SCENE.past()?.days[0].key);
+    SCENE.foldDay(key);
+    assert.deepEqual(SCENE.past()?.days.map((d) => d.folded), [true], 'folded at its head');
+    assert.ok(String(p.afterB[0].innerHTML).includes(`aria-expanded="false" data-shown="1"`), `the folded head marked, the shown row's bar on it: ${p.afterB[0].innerHTML}`);
+    SCENE.foldDay(key);
+    assert.deepEqual(SCENE.past()?.days.map((d) => d.folded), [false], 'opened again');
+    const older = Date.UTC(2026, 10, 14, 9);
+    SCENE.dropped({ row: /** @type {any} */ ({ position: 20, at: 20, op: 'insert', docs: [PASTD], class: 'drafts', key: 'bare', time: older }), addrs: [PASTD], at: 0 });
+    assert.deepEqual(SCENE.past()?.days.map((d) => [d.folded, d.rows.map((r) => r.last)]), [[false, [48, PAST_AT, 30]], [true, [20]]], 'the row arrived under a day of its own, folded; the open day as it stood');
+  } finally { WRITE.setKept(PASTD, null); }
+}));
+
+test('where the draft holds words the board has not kept, its history opens on the newest kept state, the list\'s top line saying "now — not yet kept" (skep-frontend #661)', () => onPage(async (p) => {
+  await onTrail(p);
+  const held = /** @type {any} */ ({ held: 1, doc: PASTD, base: 48, frame: { op: 'insert', doc: PASTD, at: { ordinal: '1', subspace: '1' }, values: ['x'], as_of: 48, id: 'h.1' }, cause: 'unreachable', sent: false, time: 1 });
+  WRITE.setHeld(PASTD, [held]);
+  try {
+    await pastOpened(p);
+    assert.deepEqual([SCENE.past()?.at, SCENE.past()?.unkept], [48, true], 'the newest kept state, the top row\'s');
+    const html = String(p.afterB[0].innerHTML);
+    assert.ok(html.startsWith(`<div class="pl-now" data-string="L.history.unkept">${esc(t('L.history.unkept'))}</div>`) && html.includes('<div class="pl-row" data-row="48" data-shown="1"'), `the top line above the rows, the top row marked: ${html}`);
+  } finally { WRITE.setHeld(PASTD, []); WRITE.setKept(PASTD, null); }
+}));
+
+test('while the board is not answering, the current text\'s "show its history" stands inert in its place, and every press says why in the status region — said again where the region holds those words — opening nothing (skep-frontend #661; FP-41)', () => onPage(async (p) => {
+  await onTrail(p);
+  await PUMP.loadWhole(PASTD);
+  WRITE.setKept(PASTD, { word: 'kept', reason: null });
+  try {
+    assert.equal(await GO.toScene(PASTD, B), true, 'a scene on the draft and another document');
+    REC.setDaemon('unreachable');
+    SCENE.markKept();
+    assert.ok(p.cornerA.innerHTML.includes('class="history inert"') && p.cornerA.innerHTML.includes('data-inert="L.history.unanswered"'), `the act inert in its place — ${p.cornerA.innerHTML}`);
+    const reason = sentence('L.history.unanswered', { board: t('L.mirror.board.name', { node: '1', origin: '' }) }), n = p.said.length;
+    const target = { closest: (/** @type {string} */ s) => (s === '.corner' || s === '[data-history]' ? {} : null) };
+    p.paneOn.a.click({ type: 'click', detail: 0, target, currentTarget: p.paneA });
+    p.paneOn.a.click({ type: 'click', detail: 0, target, currentTarget: p.paneA });
+    await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual([p.said.slice(n).filter((w) => w).length >= 2, p.said.at(-1), SCENE.pastOf()], [true, heard(reason), null], 'each press says its reason; no history opened');
+  } finally { REC.setDaemon('running'); WRITE.setKept(PASTD, null); }
+}));
+
+test('from another scene\'s pane the current text\'s "show its history" opens the draft\'s history as a step of its own, and Back returns to that scene (skep-frontend #661)', () => onPage(async (p) => {
+  await onTrail(p);
+  await PUMP.loadWhole(PASTD);
+  WRITE.setKept(PASTD, { word: 'kept', reason: null });
+  pastRows();
+  try {
+    assert.equal(await GO.toScene(PASTD, B), true);
+    const target = { closest: (/** @type {string} */ s) => (s === '.corner' || s === '[data-history]' ? {} : null) };
+    p.paneOn.a.click({ type: 'click', detail: 0, target, currentTarget: p.paneA });
+    await flown();
+    assert.deepEqual([SCENE.pastOf(), SCENE.panes()?.b.derived], [PASTD, true], 'the draft\'s history opened over that scene');
+    const back = GO.back(); await flown(); await back;
+    assert.deepEqual([SCENE.isOpen(), SCENE.pastOf(), SCENE.panes()?.b.src], [true, null, B], 'Back: the scene it was opened from, reopened');
+  } finally { WRITE.setKept(PASTD, null); }
 }));

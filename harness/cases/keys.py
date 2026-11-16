@@ -1356,8 +1356,8 @@ def back_after_publish(ctx, r):
     ctx.frames(2)
     offer = ctx.js('''((a) => { const o = document.querySelector(`#corners [data-corner="${a}"] [data-read]`);
       return o ? {read: o.dataset.read, text: o.textContent, tab: o.getAttribute('tabindex'), tag: o.tagName.toLowerCase()} : null; })(%s)''' % json.dumps(newest))
-    want = {'read': str(k + 1), 'text': strings(ctx, 'F.versions.read', {'k': k + 1}), 'tab': '-1', 'tag': 'button'}
-    r.check(offer == want, f'its corner offers to read {V}.{k + 1}, the version that arrived meanwhile, as it would had the reader stayed — a button on the corner\'s line of acts the pointer and → reach, the line\'s Tab stop its first act and never it (issues #240, #557)', {'offer': offer, 'want': want})
+    want = {'read': str(k + 1), 'text': strings(ctx, 'F.versions.read', {'k': k + 1}), 'tab': '0', 'tag': 'button'}
+    r.check(offer == want, f'its corner offers to read {V}.{k + 1}, the version that arrived meanwhile, as it would had the reader stayed — a button on a line of its own after the version statement, that line\'s one Tab stop, the corner\'s lines of acts each its own toolbar (issues #240, #557, #585)', {'offer': offer, 'want': want})
     ctx.js('window.__skep.cards.trailList()')
     ctx.frames(2)
     listed = ctx.js('(() => { const e = document.querySelector(\'#overlay [aria-current="true"] .id\'); return e ? e.textContent : null; })()')

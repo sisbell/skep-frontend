@@ -81,7 +81,11 @@
 // (`placedIdentity`). What one write did to a text is read off two images
 // of it, the one before the write and the one after (`changedBetween`): the
 // stretches the later places that the earlier does not hold, and where the
-// bytes the earlier holds that the later does not stood.
+// bytes the earlier holds that the later does not stood. What two texts
+// share is read off their two images the same way (`sharedRuns`): each
+// stretch both name by the same permanent addresses, at its place in each.
+// A key's device label is the one the page holds for its fingerprint
+// (`labelOf`): the device's key store's, else an account's byline facts'.
 // Every drop is counted and the counts never fall (`dropsOf`, `claimDropsOf`,
 // `keyDrops`): the board's answers come by one channel and the feed's rows
 // by another, so a read can land after the row of a write it was read
@@ -877,6 +881,23 @@ export function ownKeys() {
   if (state.session && state.session.fingerprint) out.add(state.session.fingerprint);
   return out;
 }
+/**
+ * The device label the page holds for a key, by its fingerprint (B3-S7 WHO):
+ * the label the device's key store gives it, else the one an account's byline
+ * facts give its device key (R22's genesis entry); null where neither names
+ * it, or names it with no label — the fingerprint's cue then stands alone.
+ * @param {string} fingerprint 64 lowercase hex
+ * @returns {string | null}
+ */
+export function labelOf(fingerprint) {
+  const own = (state.keys ?? []).find((k) => k.fingerprint === fingerprint);
+  if (own && own.label) return own.label;
+  for (const held of state.accountKeys.values()) {
+    const f = /** @type {Partial<AccountKey>} */ (held.facts);
+    if (f.fingerprint === fingerprint && f.label) return f.label;
+  }
+  return null;
+}
 
 // ---- the index -----------------------------------------------------------------
 
@@ -1550,6 +1571,35 @@ export function changedBetween(before, after) {
   const prev = first.pos > 1 ? placedIn(after, identityIn(before, first.pos - 1, 1)) : [];
   const next = prev.length ? [] : placedIn(after, identityIn(before, last.pos + last.width, 1));
   return { placed, left: prev.length ? prev[0].pos + 1 : next.length ? next[0].pos : 1 };
+}
+
+/**
+ * The runs of shared identity between two texts (B3-S7):
+ * each stretch the two images name by the same permanent addresses, at its
+ * first position in each text and its positions — what `compare` answers of
+ * two texts the board holds, read here off the images the page holds, so a
+ * text the page derived stands beside another by its bytes' identity alone. A
+ * byte the page made is one byte under both its names (`spelled`); one the
+ * other text holds nowhere stands in no run. In the first text's order, then
+ * the second's; none where the two share nothing.
+ * @param {ImageRun[]} a the first text's image, in position order
+ * @param {ImageRun[]} b the second's
+ * @returns {Array<{u1: number, u2: number, width: number}>} `u1` a position of the first text, `u2` of the second
+ */
+export function sharedRuns(a, b) {
+  if (state.minted.size) { a = a.flatMap(spelled); b = b.flatMap(spelled); }
+  /** @type {Map<string, ImageRun[]>} the second image's runs, by the I-space each lies in */
+  const by = new Map();
+  for (const r of b) { const l = by.get(r.prefix); if (l) l.push(r); else by.set(r.prefix, [r]); }
+  /** @type {Array<{u1: number, u2: number, width: number}>} */
+  const out = [];
+  for (const x of a) {
+    for (const y of by.get(x.prefix) || []) {
+      const lo = Math.max(x.ordinal, y.ordinal), hi = Math.min(x.ordinal + x.width, y.ordinal + y.width);
+      if (lo < hi) out.push({ u1: x.pos + (lo - x.ordinal), u2: y.pos + (lo - y.ordinal), width: hi - lo });
+    }
+  }
+  return out.sort((p, q) => p.u1 - q.u1 || p.u2 - q.u2);
 }
 
 /**

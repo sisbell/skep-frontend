@@ -1939,7 +1939,7 @@ test('the plane\'s corner claims no total the board did not give: a chain its pr
   assert.ok(items(D2).includes(esc(t('F.version-of', { k: 2, n: 8 }))), `the chain ended at 8: "version 2 of 8" — ${items(D2)}`);
 }));
 
-test('the plane\'s corner of a box a newer version\'s arrival pinned offers to read the newest member named — an act after its version statement, on the line of acts whose one Tab stop is its first act, the version statement — in the frame the offer stands, raises it in the frame it is raised and drops it in the frame it ends, its article standing all the while; a focus on the offer goes to the offer standing in its place, the line\'s one stop following it, and to the line\'s first act once none does (issue #240; D5 K-57; FP-20, FP-23)', () => onCorner(() => {
+test('the plane\'s corner of a box a newer version\'s arrival pinned offers to read the newest member named — an act on a line of its own after its version statement, each line of acts a toolbar of its own whose one Tab stop is its act, the corner a group of them — in the frame the offer stands, raises it in the frame it is raised and drops it in the frame it ends, its article standing all the while; a focus on the offer goes to the offer standing in its place, and to the corner\'s first act once none does (issue #240; D5 K-57; FP-20, FP-23; skep-frontend #585)', () => onCorner(() => {
   /** the platform's focus, and each element of the page — the corner's buttons as its items set them, each with its attributes — read back as the platform reads them, a move of the focus told to the corner layer as the platform tells it */
   const page = /** @type {any} */ ({ activeElement: null });
   /** @type {Record<string, (ev: any) => void>} the corner layer's focus listeners */
@@ -1998,20 +1998,20 @@ test('the plane\'s corner of a box a newer version\'s arrival pinned offers to r
   offer.n = 3;
   LAYER.frame(mine);
   assert.ok(items().includes(act(3)) && items().indexOf('class="version"') < items().indexOf(act(3)), `the offer in that frame, after the version statement — ${items()}`);
-  assert.deepEqual(stops(), ['version'], 'the offer on the line, out of the Tab order: its one stop still the version statement');
+  assert.deepEqual([corner().getAttribute('role'), stops()], ['group', ['version', 'read']], 'the offer on a line of its own: its own stop beside the version statement\'s, the corner a group of its lines (skep-frontend #585)');
   const read3 = keyed('read');
   read3.focus();
-  assert.deepEqual(stops(), ['read'], 'the focus moved onto the offer, as → moves it: the line\'s one stop follows it');
+  assert.deepEqual(stops(), ['version', 'read'], 'the focus moved onto the offer: each line keeps its one stop');
   offer.n = 4;
   LAYER.frame(mine);
   const read4 = keyed('read');
   assert.ok(items().includes(act(4)) && !items().includes(act(3)), `raised to version 4 in that frame — ${items()}`);
   assert.ok(read4 && read4 !== read3 && page.activeElement === read4, 'the focus on the offer standing in its place');
-  assert.deepEqual(stops(), ['read'], 'the rewrite leaves one Tab stop, on the act the focus stands on');
+  assert.deepEqual(stops(), ['version', 'read'], 'the rewrite leaves each line its one Tab stop, the offer\'s on the act the focus stands on');
   offer.n = null;
   LAYER.frame(mine);
-  assert.ok(!items().includes('data-read') && page.activeElement === keyed('version'), `the offer gone in that frame, the focus on the line's first act, the version statement — ${items()}`);
-  assert.deepEqual(stops(), ['version'], 'one Tab stop still, on the act the focus stands on');
+  assert.ok(!items().includes('data-read') && page.activeElement === keyed('version'), `the offer gone in that frame, the focus on the corner's first act, the version statement — ${items()}`);
+  assert.deepEqual([corner().getAttribute('role'), stops()], ['toolbar', ['version']], 'one line of acts again: the corner its toolbar, one Tab stop, on the act the focus stands on');
   assert.ok(LAYER.isMounted(D2) && LAYER.mounts().at(-1) === last, 'its article standing: nothing mounted again');
 }));
 

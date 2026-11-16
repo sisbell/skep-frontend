@@ -253,6 +253,11 @@
 // head back (`newestOwn`), and where that write landed in its document's
 // text, read off the document's image as it stood before the write
 // (`landedOf`) — each a read in flight while it is out.
+// A draft's history (B3-S7 THE LIST): its feed narrowed to the draft, read in
+// the launch's windows from the head back, the narrowed feed's `next` kept
+// with the read alone and never as the page's place on the whole feed
+// (`historyOf`); and one of its past states, its text and its image read at a
+// position of the board's history (`stateAt`) — each a read in flight.
 // Rules: FP-1, FP-2, FP-6, FP-9, FP-11, FP-21, FP-22, FP-23, FP-27, FP-28,
 // FP-29, FP-34, FP-35.
 
@@ -1353,6 +1358,64 @@ export async function newestOwn() {
         return { row: { position: u.position, op: u.op, docs: u.docs.slice(), cls: u.class }, pages, rows, refused: null };
       }
       if (since === 0) return { row: null, pages, rows, refused: null };
+      until = since;
+    }
+  } finally { inflight.delete(key); dirty(); }
+}
+
+/**
+ * @typedef {Object} HistoryRead — what a draft's history read found (`historyOf`)
+ * @property {FeedUpdate[]} rows the draft's rows the windows read, in position order, each once
+ * @property {number} pages how many `changes` pages were read
+ * @property {number} read how many rows those pages held
+ * @property {number} from the position the windows read down to, the read covering `(from, head]`: 0 where it reached the feed's first position
+ * @property {number | null} next the last page's `next`, a position of the feed narrowed to the draft — kept here alone, never the page's own positions on the whole feed; null where no page answered
+ * @property {Refusal | null} refused the refusal a page met, the read ended there; null where every page answered
+ */
+
+/**
+ * A draft's history (B3-S7 THE LIST; the past states survey's R1): the
+ * board's feed narrowed to the draft (`changes(session, since, under)`), read
+ * in windows from the head back as the launch reads the account's
+ * (`newestOwn`), since the feed reads forward alone — the newest OWN_WINDOW
+ * positions first, forward, page after page, each page from the one before's
+ * `next`, then the window before them, OWN_WIDEN times as many — until the
+ * rows read hold what the caller asks (`enough`) or the windows reach the
+ * feed's first position; from position 0 where the page holds no head
+ * (M-REC's `feedAt`), or below `below` where a read of the windows above it
+ * went before. A page's `next` under the narrowing is a position of the
+ * narrowed feed: it is kept here and never moves the page's own positions on
+ * the whole feed (M-REC's `feedAt`, `draftsAt`). Read in the guest form where
+ * no session stands, whose page of a draft is empty. The reads count as reads
+ * in flight (`inflightCount`). A refused page ends the read, its refusal
+ * handed up with the rows read before it.
+ * @param {string} draft
+ * @param {{enough?: (rows: FeedUpdate[]) => boolean, below?: number}} [o] `enough` the rows read so far hold what the caller asks: no window is read after the one that made it so; `below` read only the positions at and below it — the windows a read before left
+ * @returns {Promise<HistoryRead>}
+ */
+export async function historyOf(draft, o = {}) {
+  const head = o.below ?? REC.feedAt(), key = 'history ' + draft;
+  /** @type {Map<number, FeedUpdate>} */
+  const rows = new Map();
+  /** @type {HistoryRead} */
+  const out = { rows: [], pages: 0, read: 0, from: head ?? 0, next: null, refused: null };
+  inflight.add(key);
+  try {
+    /** the window read last: it read `(since, until]` */
+    let until = head == null ? Infinity : head;
+    for (let width = OWN_WINDOW; ; width *= OWN_WIDEN) {
+      const since = head == null ? 0 : Math.max(0, head - width);
+      for (let from = since; from < until;) {
+        const page = await atClass((x) => PORT.changes(x ? { session: x.session, since: from, under: draft } : { guest: /** @type {const} */ (true), board: REC.board()?.board, since: from, under: draft }));
+        if ('refused' in page) { out.refused = page.refused; break; }
+        out.pages++; out.read += page.result.entries.length; out.next = page.result.next;
+        for (const u of page.result.entries) if (u.position <= until && !rows.has(u.position)) rows.set(u.position, u);
+        if (page.result.next >= page.result.head || page.result.next <= from) break;
+        from = page.result.next;
+      }
+      out.from = since;
+      out.rows = [...rows.values()].sort((a, b) => a.position - b.position);
+      if (out.refused || since === 0 || (o.enough && o.enough(out.rows))) return out;
       until = since;
     }
   } finally { inflight.delete(key); dirty(); }

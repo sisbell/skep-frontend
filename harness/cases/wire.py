@@ -175,6 +175,10 @@ def run(ctx):
     bad_ops = sorted(set(c['op'] for c in cl2 if c['name'] == 'op' and c['op'] not in ops_allowed))
     r.check(not bad_ops, 'every `op` frame the page sent the gate\'s provider from its boot names a read (READ_OPS): no write crossed as it booted, moved the camera and leapt (FP-7)', bad_ops)
     r.check(all(c['name'] in READ_ROWS for c in cl2), 'every call the page made of the gate\'s provider from its boot is a row that reads, or the session\'s own (READ_ROWS): no write, no key ceremony', sorted(set(c['name'] for c in cl2)))
+    # a draft's history is read by `changes` narrowed to the draft, a reading row; the preview, `history.past`, is no reading row
+    # of the gate's and the page never calls it (B3-S7: the editor's slice 3a reads a past state by `/op-at` alone)
+    r.check('changes' in READ_ROWS and 'history.past' not in READ_ROWS and 'history.restore' not in READ_ROWS and not any(c['name'].startswith('history.') for c in cl2),
+            'a draft\'s history reads by `changes`, a reading row; `history.past` and `history.restore` are no reading rows, and the page called neither (B3-S7)', sorted(set(c['name'] for c in cl2)))
     r.check(ctx.js('window.__skep.boot.machine') is False, 'the page the gate opens boots without the machine: what it types stays page-local', ctx.js('window.__skep.boot.machine'))
     health1 = ctx.health()
     r.figures['log_position'] = {'start': health0.get('log_position'), 'after_wire': health1.get('log_position')}

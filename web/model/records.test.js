@@ -1223,3 +1223,25 @@ test('a document the page\'s own write minted is listed at its ack as its mint\'
   REC.takeKeyStore(null, '');
   assert.deepEqual([...REC.ownKeys()], ['f-session'], 'the store unread: the key the session was opened with alone');
 });
+
+test('what two texts share is read off their two images by the bytes\' identity: each stretch both name by the same permanent addresses, at its first position in each and its positions, in the first text\'s order — a stretch one text holds twice shared twice, bytes the other holds nowhere in no stretch, another I-space\'s bytes shared with nothing (B3-S7; skep-frontend #617)', () => {
+  /** an image of a document's runs: each its I-space, its first ordinal and its width, in the text's order */
+  const image = (/** @type {Array<[string, number, number]>} */ runs) => { let pos = 1; return runs.map(([prefix, ordinal, width]) => { const r = { pos, width, prefix, ordinal }; pos += width; return r; }); };
+  const OWN = '1.0.1.0.9.0.1', THEIRS = '1.0.1.0.3.0.1';
+  // a past state, "Hello world." of the draft's own bytes 1-12; the current text: "Hello, " typed bytes, then "world." moved after a quote
+  const past = image([[OWN, 1, 12]]), now = image([[OWN, 1, 5], [OWN, 40, 2], [THEIRS, 7, 4], [OWN, 6, 7]]);
+  assert.deepEqual(REC.sharedRuns(now, past), [{ u1: 1, u2: 1, width: 5 }, { u1: 12, u2: 6, width: 7 }], 'the two stretches both hold, at their places in each; the typed and the quoted bytes in none');
+  assert.deepEqual(REC.sharedRuns(past, now), [{ u1: 1, u2: 1, width: 5 }, { u1: 6, u2: 12, width: 7 }], 'read the other way, the same stretches, first text\'s positions first');
+  assert.deepEqual(REC.sharedRuns(image([[OWN, 1, 4]]), image([[OWN, 1, 4], [OWN, 1, 4]])), [{ u1: 1, u2: 1, width: 4 }, { u1: 1, u2: 5, width: 4 }], 'a stretch the second text holds twice: shared at each place');
+  assert.deepEqual(REC.sharedRuns(image([[OWN, 1, 4]]), image([[THEIRS, 1, 4]])), [], 'bytes of another I-space at the same ordinals: nothing shared');
+  assert.deepEqual(REC.sharedRuns([], past), [], 'a text holding nothing shares nothing');
+});
+
+test('a key\'s device label is the one the page holds for its fingerprint: the device\'s key store\'s, else an account\'s byline facts\'; none where neither names it, or names it with no label (B3-S7 WHO)', () => {
+  const MINE = 'a'.repeat(64), THEIRS = 'b'.repeat(64), BARE = 'c'.repeat(64);
+  REC.takeKeyStore([{ fingerprint: MINE, label: 'desk', bindings: [], unbound: true, payload: null }, { fingerprint: BARE, label: '', bindings: [], unbound: true, payload: null }], '');
+  REC.takeAccountKey('1.0.7', { label: 'kitchen tablet', fingerprint: THEIRS });
+  try {
+    assert.deepEqual([REC.labelOf(MINE), REC.labelOf(THEIRS), REC.labelOf(BARE), REC.labelOf('d'.repeat(64))], ['desk', 'kitchen tablet', null, null]);
+  } finally { REC.takeKeyStore(null, ''); }
+});

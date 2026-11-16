@@ -627,6 +627,18 @@ export const STRINGS = {
   'B3.history.row.withdrawn': { text: 'the words kept, superseding nothing', cls: 'DRAFT', kind: 'K25', source: 'designs/B3-editor.md', screen: 'B3-S7: the withdrawal\'s row' },
   'B3.history.row.withdrawn.draft': { text: 'the words kept, as an ordinary draft', cls: 'DRAFT', kind: 'K25', source: 'designs/B3-editor.md', screen: 'B3-S7: the withdrawal\'s row at a draft side' },
   'B3.history.row.restored': { text: 'set to how it stood ⟨time⟩', cls: 'DRAFT', kind: 'K25', source: 'designs/B3-editor.md', screen: 'B3-S7: the restore\'s row' },
+  // B3-S7's words no design document carries: the corner's act inert while the board is
+  // not answering, the list's top line over words not yet kept, the head of rows with no recorded time, a folded day's mark,
+  // a signed row's hand, and the kinds of change the design gives no word
+  'L.history.unanswered': { text: '⟨board⟩ is not answering — its past states can be read once it answers', cls: 'DRAFT', kind: 'K18', source: '', screen: 'B3-S7: the corner\'s "show its history" inert while the board is not answering', lane: true },
+  'L.history.unkept': { text: 'now — not yet kept', cls: 'DRAFT', kind: 'K25', source: '', screen: 'B3-S7: the list\'s top line where the draft holds words the board has not kept', lane: true },
+  'L.history.time-unrecorded': { text: 'time not recorded', cls: 'DRAFT', kind: 'K25', source: '', screen: 'B3-S7: the list\'s head over rows with no recorded time, folding like a day', lane: true },
+  'L.history.folded': { text: '▸', cls: 'DRAFT', kind: 'K17', source: '', screen: 'B3-S7: the mark of a folded day\'s head in the list', lane: true },
+  'L.history.hand.signed': { text: 'signed', cls: 'DRAFT', kind: 'K28', source: '', screen: 'B3-S7: the list\'s hand at a signed row, which names no key', lane: true },
+  'L.history.kind.rearranged': { text: 'rearranged', cls: 'DRAFT', kind: 'K25', source: '', screen: 'B3-S7: a row\'s kind, a `rearrange`, or a `set_arrangement` naming no base and no merge', lane: true },
+  'L.history.kind.linked': { text: 'linked', cls: 'DRAFT', kind: 'K25', source: '', screen: 'B3-S7: a row\'s kind, a link\'s or a mark\'s write homed in the draft', lane: true },
+  'L.history.kind.unlinked': { text: 'unlinked', cls: 'DRAFT', kind: 'K25', source: '', screen: 'B3-S7: a row\'s kind, a link of the draft\'s retracted', lane: true },
+  'L.history.kind.started': { text: 'started', cls: 'DRAFT', kind: 'K25', source: '', screen: 'B3-S7: a row\'s kind, the draft\'s own mint', lane: true },
   // B3-S9: capture — the composer's head and its second clause, its act, its line as it ends, the held form, the label, where
   // nothing can keep a thought, the captures record's removal line
   'B3.capture.head': { text: 'a thought — kept in ⟨captures⟩', cls: 'DRAFT', kind: 'K24', source: 'designs/B3-editor.md', screen: 'B3-S9: the composer\'s head (D6 BM-68)' },
@@ -1558,8 +1570,8 @@ function fillHTML(template, values, wrap) {
 /** a value's words, its stretches joined */
 const wordsOfValue = (/** @type {Value} */ v) => (Array.isArray(v) ? v.map((r) => r.text).join('') : v);
 
-/** what joins the fields of a row or the segments of a compact line (`fields`) */
-const FIELD = ' · ';
+/** what joins the fields of a row or the segments of a compact line (`fields`), and an act to the word whose line it rides (T-ARTICLE's kept line) */
+export const FIELD = ' · ';
 /** the end mark a sentence takes where its words carry none (`ended`) */
 const STOP = '.';
 /** words that already end as a sentence: an end mark, a closing quotation mark or bracket allowed after it */
@@ -2338,6 +2350,17 @@ export function lastRead(ms, now = Date.now()) {
   const day = dayOf(ms), time = timeOf(ms);
   return day === dayOf(now) ? t('L.time.at', { time }) : t('L.time.day-time', { day, time });
 }
+
+/**
+ * When a past state stood (B3-S7, "as it stood ⟨time⟩"), in a sentence's form
+ * (style S19), from the board's own testimony of its commit: "at" the hour and
+ * the minute, "on" the day first where that was not the day it is now, as
+ * `lastRead` says a time.
+ * @param {number} ms the commit's time, unix milliseconds (the change feed's `time`)
+ * @param {number} [now] the page's clock now
+ * @returns {string}
+ */
+export const stoodAt = (ms, now = Date.now()) => lastRead(ms, now);
 
 /**
  * A day in a sentence (style S19): "on" the day a moment fell on, in the

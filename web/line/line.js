@@ -73,7 +73,9 @@
 // the display names — one M-PUMP holds as it stands past a second while it
 // reads it again (FP-23) — carries its clause in a segment of its own right
 // after the address part (T-LAYER's `keptIn`, so its corner carries none;
-// FP-33), its words whole; where the display names no
+// FP-33), its words whole — after the address part too, while a draft's
+// history scene stands, its second address, "as it stood ⟨time⟩" (SC's
+// `pastAsOf`; B3-S7, C-363); where the display names no
 // kept document, at every scale, the board lagging past a second carries its
 // own there (T-LAYER's `boardKeptIn`), the board heading every place the
 // display names.
@@ -320,6 +322,7 @@ const changes = new Set();
  * @property {() => number} [closed] the reading scenes closed so far (N-GO's `closed`): a new one is said after the close (`closedSaid`)
  * @property {() => import('../scene/scene.js').PaneKept[]} [panes] the reading scene's panes standing kept (SC's `keptPanes`), which the status region speaks for (`keptSaid`)
  * @property {(addr: string) => ({since: number, outcome: import('../model/records.js').Outcome} | null)} [paneLift] how the setting the board's events asked set the pane naming an address (SC's `paneLift`)
+ * @property {() => ({id: string, text: string} | null)} [asOf] the second address a draft's history scene names, "as it stood ⟨time⟩" (SC's `pastAsOf`; B3-S7, C-363); null where none stands
  */
 
 /** @typedef {{addr: string, runs: Array<{pos: number, width: number}>, current: number}} Pieces the runs of an arrival in several, the one the landing stands at by index */
@@ -1376,12 +1379,13 @@ function addressPart(a, at) {
  * @property {{id: string, html: string, halted: boolean, words: string}} daemon
  * @property {{id: string, text: string, running: boolean} | null} aside a jump's face standing out of the visible view (O-HOST's `aside`)
  * @property {import('../text/layer.js').KeptClause | null} kept the document named's clause, else the board's: the board heads every place the display names
+ * @property {{id: string, text: string} | null} asOf a draft's history scene's second address, "as it stood ⟨time⟩" (`Acts.asOf`); null where none stands
  */
 
 /** what the line shows now (`Shown`) */
 function shown() {
   const a = addressDisplay();
-  return { a, acting: actingSegment(), daemon: daemonSegment(), aside: acts && acts.aside ? acts.aside() : null, kept: (a.doc ? LAYER.keptIn(a.doc) : null) || LAYER.boardKeptIn() };
+  return { a, acting: actingSegment(), daemon: daemonSegment(), aside: acts && acts.aside ? acts.aside() : null, kept: (a.doc ? LAYER.keptIn(a.doc) : null) || LAYER.boardKeptIn(), asOf: acts && acts.asOf ? acts.asOf() : null };
 }
 
 /**
@@ -1418,6 +1422,7 @@ function actingHTML(a, form, open) {
 function partsOf(s, at, reserve = false, form = 0) {
   /** @type {Part[]} */
   const parts = [{ key: 'acts', html: actsHTML(reserve || s.acting.signIn) }, { key: 'address', html: reserve ? `<span class="address-part" style="--words:${RESERVE[at]}"></span>` : addressPart(s.a, at) }];
+  if (s.asOf) parts.push({ key: 'as-of', html: `<span class="seg as-of" data-string="${esc(s.asOf.id)}">${esc(s.asOf.text)}</span>` });
   if (s.kept) parts.push({ key: 'kept', html: `<span class="seg kept" data-string="${esc(s.kept.id)}">${esc(s.kept.text)}</span>` });
   parts.push({ key: 'acting', html: actingHTML(s.acting, form, !reserve && actingOpen) }, ...walkParts());
   if (s.daemon.html) parts.push({ key: 'daemon', html: `<span class="seg daemon">${s.daemon.html}</span>` });

@@ -298,6 +298,18 @@
 // which the scene takes; a reopen the board refused is faced at the
 // viewport's corner, the entry standing. A scene's entry changes no box's
 // version, and its place is never re-taken (FP-22).
+// A draft's history opens as such a scene (`history`; B3-S7), from its
+// corner's "show its history": inert, saying why at every
+// press, while the board is not answering (FP-41); in the draft's own history
+// scene, the focus moved into its history pane; else a departure — the
+// draft's open burst committed and its flight landed (W-WRITE's), its history
+// read from the head back (M-PUMP's `historyOf`), the state it opens on read
+// at a position (`stateAt`) and derived (M-DERIVE's `recordAt`) — the state
+// before the draft's newest change, or the newest kept one where words not
+// kept yet stand — then the scene opened on the draft's current text and that
+// state, levelled at the selection standing in the draft, else at the newest
+// change's place nearest the caret (`changeNear`), its entry keeping the
+// derived record, so a return reopens it reading nothing.
 // HOME (the acting account's region), WHOLE BOARD (the board at the clamp)
 // and an account's region push too (foundations §2.2), and so does a walk's
 // moment unfolded where the camera stands away from the view its walk showed
@@ -474,8 +486,8 @@
 // cursor move's 500, a step's and a find's move's 420, a launch's landing
 // 620; a second leg
 // SECOND_LEG_MS (unmeasured).
-// Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-20, FP-21, FP-22, FP-25,
-// FP-29, FP-35, FP-36, FP-39.
+// Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-11, FP-18, FP-20, FP-21,
+// FP-22, FP-25, FP-29, FP-35, FP-36, FP-39, FP-41.
 
 import * as CAM from '../plane/camera.js';
 import * as TRAIL from './trail.js';
@@ -500,7 +512,9 @@ import * as FOCUS from './focus.js';
 import { accountCell, boardCell, continuationCell, continuationOf } from '../plane/projection.js';
 import { documentOf, memberOf, versionAddress, kindOf, isTrunkMember, boardOf, accountOf } from '../model/address.js';
 import { sameSpan } from '../text/span.js';
-import { t } from '../strings.js';
+import { recordAt } from '../model/derive.js';
+import * as PAST from '../model/past.js';
+import { t, sentence } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
@@ -1801,7 +1815,7 @@ export function wordsRuns(e) {
 export function scenePair(e) {
   const o = e.scene;
   if (!o) return null;
-  return o.left ? [o.left.panes.a.shows, o.left.panes.b.shows] : [addrOf(o.a), o.b];
+  return o.left ? [o.left.panes.a.shows, o.left.panes.b.shows] : [addrOf(o.a), addrOf(o.b)];
 }
 
 /**
@@ -2860,7 +2874,7 @@ const addrOf = (/** @type {string | import('../model/records.js').Doc} */ x) => 
  * to fail at the act is. Where no board is held, the act answered where it
  * was made (FP-35).
  * @param {string | import('../model/records.js').Doc} a the document its first pane opens on: the reader's, save at a landing's line, the source of the passage landed; or the record the page shows of it (T-LAYER's `paneSource`), where the opener's positions are that text's
- * @param {string} b the one its second pane opens on
+ * @param {string | import('../model/records.js').Doc} b the one its second pane opens on; or a record the page derived of it (M-DERIVE's) — a past state's (`history`) — which the trail entry keeps, so a return reopens it reading nothing
  * @param {import('../scene/scene.js').Held} [held] the passage the opener holds, which the scene sets level — with the link a link's end `from` names, where `held` names none (SC's `Held.link`)
  * @param {{beside?: 'a' | 'b', from?: {shown: Shown} | {passage: Span} | null, site?: Site | null}} [opts] `beside` the pane holding the document opened beside the reader's, the entry's address — the second where none is named; `from` the link's end or the passage the scene is opened from, which Back lights (`sceneStep`), a link's end naming the far end a face at a far document the board will say nothing of speaks of; `site` where the act was made. The scene takes the focus however the act was made (SC's)
  * @returns {Promise<boolean>} the scene shows
@@ -2899,6 +2913,112 @@ export function closeScene(byKey = false) {
   if (SCENE.isOpen() && e && e.scene && TRAIL.canBack()) { void back(byKey); return; }
   SCENE.close();
   CAM.markDirty();
+}
+
+/** a draft's history act counted: a later one, or any navigation act made while it reads, leaves it opening nothing (`history`) */
+let histories = 0;
+
+/**
+ * The newest change's places in two texts of a draft (B3-S7): each stretch
+ * the current text holds that the past state does not, at
+ * its place in each — the past state's after the byte standing before it there
+ * — and each the past state holds that the current text does not, alike; the
+ * pair whose place in the current text stands nearest `near`, else the first;
+ * null where the two texts hold the same bytes.
+ * @param {import('../model/records.js').ImageRun[]} past the past state's image
+ * @param {import('../model/records.js').ImageRun[]} now the current text's
+ * @param {number | null} near a position of the current text the act stood at: its caret, else the walk's span there
+ * @returns {{a: number, b: number} | null}
+ */
+export function changeNear(past, now, near) {
+  /** where a stretch of one text stands in the other: after the byte before it there, else at its start */
+  const after = (/** @type {import('../model/records.js').ImageRun[]} */ from, /** @type {import('../model/records.js').ImageRun[]} */ into, /** @type {number} */ pos) => {
+    if (pos <= 1) return 1;
+    const at = REC.placedIn(into, REC.identityIn(from, pos - 1, 1));
+    return at.length ? at[0].pos + 1 : 1;
+  };
+  const pairs = [
+    ...REC.changedBetween(past, now).placed.map((s) => ({ a: s.pos, b: after(now, past, s.pos) })),
+    ...REC.changedBetween(now, past).placed.map((s) => ({ b: s.pos, a: after(past, now, s.pos) })),
+  ].sort((x, y) => x.a - y.a);
+  if (!pairs.length) return null;
+  return near == null ? pairs[0] : pairs.reduce((best, p) => (Math.abs(p.a - near) < Math.abs(best.a - near) ? p : best));
+}
+
+/**
+ * A draft's history opened beside its text (B3-S7; FP-25): the
+ * kept line's second act at its corner, on the plane and in a scene's pane
+ * (T-LAYER's `historyAct`). Inert while the board is not answering, its reason
+ * said in the status region at every press (FP-41). In the draft's own history
+ * scene it moves the focus into the history pane (SC's `focusPast`). Else the
+ * act is a departure: the draft's open burst committed and its flight landed
+ * first (W-WRITE's `commit`, `landed`; D6 BM-4), then the draft's
+ * history read from the head back (M-PUMP's `historyOf`) until it holds the
+ * list's top row and the row below it (M-PAST's `rowsOf`), then the state the
+ * history pane opens on read whole at its position (M-PUMP's `stateAt`) and
+ * its record derived (M-DERIVE's `recordAt`), then the scene opened as a step
+ * on the trail (`toScene`), the current text in pane A — the text the page
+ * shows of the draft (T-LAYER's `paneSource`) — and the past state in pane B,
+ * the trail entry keeping the record so a return reopens it reading nothing.
+ * The state is the draft as it stood before its newest change, the position
+ * the row below the top row ends at; where the draft holds words the board has
+ * not kept, the newest kept state, the position the top row ends at, the list
+ * saying so above it; where no row stands below the top, the top row's own,
+ * which is how the draft stands now. A state the board does not read yields
+ * to the newest kept one, read the same way, its corner saying why in the
+ * refusal's words (O-FACES' `wordsFor`); where that is not read either, or the
+ * history read is refused, nothing opens and the act's site says why; where
+ * it reads no row, the status region says the draft stands as it is. The panes
+ * level at a selection standing in the draft, else at the newest change's
+ * place nearest the caret, else the walk's span in the draft (`changeNear`).
+ * A later act made while the reads are out — this one again among them —
+ * leaves it opening nothing. Where no board is held, the act answered where
+ * it was made (FP-35).
+ * @param {string} addr the draft
+ * @param {{site?: Site | null}} [opts] `site` where the act was made
+ * @returns {Promise<boolean>} the scene shows, or the focus went into its history pane
+ */
+export async function history(addr, opts = {}) {
+  if (!REC.board()) { FACES.noBoard(opts.site ?? null); return false; }
+  const act = LAYER.historyAct(addr);
+  if (!act) return false;
+  if (act.inert) { FOCUS.say(act.inert.text, false, true); return false; }
+  if (SCENE.pastOf() === addr) { SCENE.focusPast(); return true; }
+  const mine = ++histories, start = made, site = signed(opts.site ?? null);
+  const stands = () => mine === histories && made === start;
+  WRITE.commit(addr);
+  await WRITE.landed(addr);
+  if (!stands()) return false;
+  const t0 = performance.now();
+  const read = await PUMP.historyOf(addr, { enough: (rows) => PAST.rowsOf(rows).length >= 2 });
+  const readMs = performance.now() - t0;
+  if (!stands()) return false;
+  if (read.refused) { FACES.showRefusal(site, read.refused, addr); return false; }
+  const rows = PAST.rowsOf(read.rows), unkept = WRITE.unkept(addr);
+  // no row read, no state to open on: the draft as it stands is all its history holds
+  if (!rows.length) { FOCUS.say(sentence('B3.history.now'), false, true); return false; }
+  const top = rows[0], below = unkept ? null : rows[1] ?? null;
+  const want = below ? below.last : top.last;
+  const t1 = performance.now();
+  let s = await PUMP.stateAt(addr, want);
+  /** @type {{id: string, text: string} | null} */
+  let why = !unkept && !below ? { id: 'B3.history.now', text: t('B3.history.now') } : null;
+  if ('refused' in s && want !== top.last) {
+    const r = FACES.wordsFor(s.refused);
+    s = await PUMP.stateAt(addr, top.last);
+    why = { id: r.id, text: r.text };
+  }
+  const stateMs = performance.now() - t1;
+  if (!stands()) return false;
+  if ('refused' in s) { FACES.showRefusal(site, s.refused, addr); return false; }
+  const record = { ...recordAt(addr, s.runs, s.at, { image: s.image }), meta: REC.has(addr) ? REC.doc(addr).meta : null };
+  const sel = SEL.selected(), caret = LAYER.caretIn(addr), f = WALK.focusedSpan();
+  const near = caret ? caret.pos : f && f.addr === addr ? f.pos : null;
+  const change = sel && sel.addr === addr ? null : changeNear(s.image, LAYER.shownOf(addr).image, near);
+  /** @type {import('../scene/scene.js').Held} */
+  const held = sel && sel.addr === addr ? { posA: sel.pos, widthA: sel.width } : change ? { posA: change.a, widthA: 1, posB: change.b } : {};
+  held.past = { draft: addr, entries: read.rows, from: read.from, at: s.at, unkept, why, figures: { pages: read.pages, read: read.read, readMs, stateMs, at: s.at } };
+  return toScene(LAYER.paneSource(addr), record, held, { site: opts.site ?? null });
 }
 
 /** HOME's place and view: the acting account's region at mid scale; a guest's the board's extent (R92 rider (c)) */

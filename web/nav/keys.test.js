@@ -623,9 +623,10 @@ test('Mod+C with nothing selected outside a field is taken at its keydown, its d
 }));
 
 /**
- * A corner as T-LAYER stands it, its acts buttons on lines of acts (T-LAYER's `setStops`): beside its column the corner
- * its one line, at its document's head each of its rows a toolbar of its own; stand-ins the keys find their way through
- * and the focus lands on
+ * A corner as T-LAYER stands it, its acts buttons on lines of acts (T-LAYER's `setStops`): each line a toolbar of its
+ * own — beside its column the corner itself where its acts stand on one line, else each line holding several acts, a
+ * lone act its own line; at its document's head each of its rows; stand-ins the keys find their way through and the focus
+ * lands on
  * @param {string[][]} lines each line's acts, by the key each bears
  * @param {boolean} head it stands at its document's head, each line a row of its own
  */
@@ -634,11 +635,15 @@ function cornerOf(lines, head = false) {
   const el = /** @type {any} */ ({ dataset: { corner: D }, focus() { doc.activeElement = el; } });
   /** @type {Record<string, any>} */
   const acts = {};
+  /** @type {any[]} */
+  const holders = [];
+  const one = !head && lines.length === 1;
   const bars = lines.map((keys) => {
     const bar = /** @type {any} */ ({ role: 'toolbar' });
+    holders.push(bar);
     const own = keys.map((k) => {
       const b = /** @type {any} */ ({ key: k, dataset: { [k]: '1' }, focus() { doc.activeElement = b; } });
-      b.closest = (/** @type {string} */ s) => (s === '[data-corner]' ? el : s === 'button' ? b : s === '[role="toolbar"]' ? (head ? bar : null) : null);
+      b.closest = (/** @type {string} */ s) => (s === '[data-corner]' ? el : s === 'button' ? b : s === '[role="toolbar"]' ? (one ? el : head || keys.length > 1 ? bar : null) : null);
       acts[k] = b;
       return b;
     });
@@ -647,6 +652,7 @@ function cornerOf(lines, head = false) {
   });
   el.closest = (/** @type {string} */ s) => (s === '[data-corner]' ? el : null);
   el.querySelectorAll = (/** @type {string} */ s) => (s === 'button' ? bars.flat() : []);
+  el.contains = (/** @type {unknown} */ x) => x === el || holders.includes(x) || Object.values(acts).includes(x);
   return { el, acts };
 }
 
@@ -657,7 +663,7 @@ async function cornerPress(/** @type {unknown} */ target, /** @type {string} */ 
   return { took, prevented };
 }
 
-test('a corner\'s line of acts is a toolbar: → moves the focus to the next act and ← to the one before, each a key the page takes, staying at the line\'s ends; at its document\'s head each row is a line of its own, so ← and → never cross rows; the corner\'s element holding acts is no stop, and ← and → at it, and at a corner offering none, are the platform\'s (D5 K-57, in K-22\'s form; FP-20)', () => onPlane(async () => {
+test('a corner\'s line of acts is a toolbar of its own: → moves the focus to the next act and ← to the one before, each a key the page takes, staying at the line\'s ends; beside its column each line is its own — the kept line holding its word and its second act, the chip\'s glyph alone on its line — and at its document\'s head each row, so ← and → never cross lines; the corner\'s element holding acts is no stop, and ← and → at it, and at a corner offering none, are the platform\'s (D5 K-57, in K-22\'s form; FP-20; skep-frontend #585)', () => onPlane(async () => {
   const doc = /** @type {any} */ (globalThis.document);
   const at = async (/** @type {unknown} */ target, /** @type {string} */ key) => (await cornerPress(target, key)).took;
   // beside its column: one line, the kept word, the version statement and the offered read
@@ -670,6 +676,13 @@ test('a corner\'s line of acts is a toolbar: → moves the focus to the next act
   assert.deepEqual([await at(acts.read, 'ArrowLeft'), await at(acts.kept, 'ArrowLeft'), doc.activeElement], [true, true, acts.kept], '← to the first act, and ← there: taken, the focus staying on it');
   assert.deepEqual([await at(el, 'ArrowRight'), await at(el, 'ArrowLeft')], [false, false], '← and → at the corner\'s element: the platform\'s — it is no stop of the line');
   // at its document's head: the offered read on the first row, the count of the items it folds on the second
+  // beside its column on two lines: the kept line, the kept word and its second act; the chip's glyph on a line of its own
+  const two = cornerOf([['kept', 'history'], ['chip']]);
+  two.acts.kept.focus();
+  assert.deepEqual([await at(two.acts.kept, 'ArrowRight'), doc.activeElement], [true, two.acts.history], '→ at the kept word: its second act, on the same line');
+  assert.deepEqual([await at(two.acts.history, 'ArrowRight'), doc.activeElement], [true, two.acts.history], '→ at the line\'s last act: the focus staying there, never on the next line\'s');
+  two.acts.chip.focus();
+  assert.deepEqual([await at(two.acts.chip, 'ArrowLeft'), doc.activeElement], [true, two.acts.chip], '← at an act alone on its line: the focus staying on it');
   const head = cornerOf([['read'], ['more']], true);
   head.acts.read.focus();
   assert.deepEqual([await at(head.acts.read, 'ArrowRight'), doc.activeElement], [true, head.acts.read], 'at its document\'s head, → at its first row\'s one act: the focus staying on it, never on the next row');
@@ -3325,4 +3338,27 @@ test('Mod+A at the walk\'s span of an edition, which takes no caret, selects the
   listed([]);
   await focusOn(E, 14);
   assert.deepEqual([REC.doc(E).kind, await KEYS.dispatch(keyOf('a', MOD), PLANE), SEL.selected()], ['unknown', false, null], 'no read tells it published: the platform\'s own');
+}));
+
+test('the kept line\'s second act is reached by a corner\'s keys: the corner\'s Tab stop stands on its line\'s first act, the kept word; → moves the focus along the line to "show its history", ← back; Enter, Space and Shift+Space at it are the platform\'s, which activates the button once a press, an auto-repeat taken so it adds nothing (B3-S7; D5 K-57; skep-frontend #585, #661)', () => onPlane(async () => {
+  WRITE.setKept(D, { word: 'kept', reason: null });
+  const dom = page();
+  try {
+    const el = dom.element('div');
+    el.setAttribute('data-corner', D);
+    dom.document.body.appendChild(el);
+    el.innerHTML = cornerHTML(REC.doc(D), LAYER.viewFor(REC.doc(D)));
+    LAYER.setStops(/** @type {any} */ (el), true, false, null);
+    const acts = /** @type {any[]} */ ([...el.querySelectorAll('button')]), kept = acts.find((b) => LAYER.cornerAct(b) === 'kept'), act = acts.find((b) => LAYER.cornerAct(b) === 'history');
+    assert.ok(kept && act, `the kept word and its second act stand on the kept line: ${el.innerHTML}`);
+    assert.deepEqual([el.getAttribute('role'), acts.map((b) => b.tabIndex)], ['toolbar', [0, -1]], 'one line of acts: the corner its toolbar, its one Tab stop the kept word');
+    kept.focus();
+    const at = (/** @type {any} */ target, /** @type {string} */ key, /** @type {object} */ mods = {}) => KEYS.dispatch({ ...keyOf(key, mods), target, preventDefault() {} }, { where: 'corner', byKey: true });
+    assert.deepEqual([await at(kept, 'ArrowRight'), dom.document.activeElement === act], [true, true], '→ from the kept word: the focus on "show its history"');
+    for (const [key, mods, what] of /** @type {Array<[string, object, string]>} */ ([['Enter', {}, 'Enter'], [' ', {}, 'Space'], [' ', { shiftKey: true }, 'Shift+Space']])) {
+      assert.equal(await at(act, key, mods), false, `${what} at the act: the platform's, which activates it`);
+      assert.equal(await at(act, key, { ...mods, repeat: true }), true, `${what}'s auto-repeat: taken, adding nothing`);
+    }
+    assert.deepEqual([await at(act, 'ArrowLeft'), dom.document.activeElement === kept], [true, true], '← back to the kept word');
+  } finally { WRITE.setKept(D, null); }
 }));

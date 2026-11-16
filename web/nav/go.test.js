@@ -4991,3 +4991,97 @@ test('the launch never flies the reader unbidden: where an act was made while it
   });
   globalThis.document.activeElement = null;
 });
+
+// ---- a draft's history (B3-S7; skep-frontend #661) -------------------------------------------------------------------
+
+/** a draft of the session's account as the page holds it, text it may edit: its extent, its text, its image, its kind */
+const HISTORY_DRAFT = '1.0.1.0.61', HISTORY_TEXT = 'Older words. Newer.';
+function historyDraft() {
+  const W = HISTORY_DRAFT, n = HISTORY_TEXT.length;
+  REC.takeSpanSet(W, [{ subspace: 1, ordinal: 1, positions: n }], 50);
+  REC.takeDelivery(W, [{ pos: 1, width: n, kind: 'content', text: HISTORY_TEXT, ref: null, origin: null }], 50, { from: 1, runs: [{ iStart: W + '.0.1.1', width: n }] });
+  REC.takeMetadata(W, { doc: W, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+}
+/** the draft's feed rows: its mint and two inserts of one bare hand, a minute apart and more, the last its newest change */
+const T0 = Date.UTC(2026, 10, 16, 9);
+const HISTORY_ROWS = [[30, 'create_new_document', T0], [40, 'insert', T0 + 2 * 60000], [48, 'insert', T0 + 5 * 60000]].map(([at, op, time]) => ({ position: at, at, op, docs: [HISTORY_DRAFT], class: 'drafts', key: 'bare', time }));
+/** a state of the draft as the board answers it at a position: its extent, its text, its image — its first `n` bytes */
+const stateAnswers = (/** @type {number} */ at, /** @type {number} */ n) => ({
+  [FAKE.keyOf('op', { frame: F.opAt(at, F.retrieveDocVSpanSet(HISTORY_DRAFT)) })]: { result: { as_of: at, resp: 'span_set', set: [{ start: '1.1', width: '0.' + n }] } },
+  [FAKE.keyOf('op', { frame: F.opAt(at, F.retrieveV(HISTORY_DRAFT, 1, n)) })]: { result: { as_of: at, resp: 'delivery', items: [{ content: HISTORY_TEXT.slice(0, n) }] } },
+  [FAKE.keyOf('op', { frame: F.opAt(at, F.image(HISTORY_DRAFT, 1, n)) })]: { result: { as_of: at, resp: 'runs', runs: [{ i_start: HISTORY_DRAFT + '.0.1.1', width: String(n) }] } },
+});
+/**
+ * The draft's history opened over a port of its own (`GO.history`), the shared fake given back after: what was asked, in
+ * order — each `changes` page's arguments, each history read's position — and what the act answered
+ * @param {{refuse?: number[], before?: () => void}} [o] `refuse` the positions whose state the board refuses as reclaimed; `before` what stands as the act is taken
+ * @param {(asked: string[]) => void} [during] read once the act has answered
+ */
+async function historyOver(o = {}, during = () => {}) {
+  /** @type {string[]} */
+  const asked = [];
+  const answers = { ...stateAnswers(40, 12), ...stateAnswers(48, HISTORY_TEXT.length) };
+  const mine = FAKE.create(new Proxy({}, { get: (_t, k) => {
+    const key = String(k);
+    if (key.startsWith('changes:')) { const a = JSON.parse(key.slice(8)); asked.push(`changes under ${a.under}`); return { result: { entries: HISTORY_ROWS, next: 60, head: 60 } }; }
+    if (!key.startsWith('op:')) return undefined;
+    const f = JSON.parse(key.slice(3));
+    if (f.at == null) return undefined;
+    if (f.frame.op === 'retrieve_doc_v_span_set') asked.push(`state at ${f.at}`);
+    if ((o.refuse || []).includes(f.at)) return { refused: { kind: 'refused', name: 'history_reclaimed', body: { error: 'history_reclaimed', floor: 45 } } };
+    return /** @type {Record<string, unknown>} */ (answers)[key];
+  } }));
+  PORT.boot({ ...mine, subscribe() {}, onStream() {} });
+  historyDraft();
+  try {
+    if (o.before) o.before();
+    const opened = await GO.history(HISTORY_DRAFT);
+    during(asked);
+    return { opened, asked };
+  } finally { PORT.boot({ ...fake, subscribe() {}, onStream() {} }); }
+}
+
+test('a draft\'s history opens as a departure: the open burst committed and its flight landed before the history is read; the history read narrowed to the draft; then the state the history pane opens on — the draft as it stood before its newest change, at the position the row below the top row ends at — read at that position (B3-S7; skep-frontend #661; #556\'s decision)', async () => {
+  /** @type {string[]} */
+  const order = [];
+  try {
+    const { asked } = await historyOver({
+      before: () => {
+        WRITE.machine({ commit: (/** @type {string} */ a) => { order.push('commit ' + a); setTimeout(() => { order.push('landed'); WRITE.setFlight(HISTORY_DRAFT, false); }, 5); }, typed() {}, leaving: () => false });
+        WRITE.setFlight(HISTORY_DRAFT, true);
+      },
+    }, (asked) => order.push(...asked));
+    assert.deepEqual(order, ['commit ' + HISTORY_DRAFT, 'landed', 'changes under ' + HISTORY_DRAFT, 'state at 40'], 'the burst committed, its flight landed, then the history read under the draft, then the state at the row below the top row\'s last position');
+    assert.ok(!asked.includes('state at 48'), 'never the newest state, at the top row');
+  } finally { WRITE.machine(null); WRITE.setFlight(HISTORY_DRAFT, false); }
+});
+
+test('where the draft holds words the board has not kept, its history opens on the newest kept state, the top row\'s; and a state the board does not read yields to the newest kept one, read the same way (skep-frontend #661)', async () => {
+  const held = /** @type {any} */ ({ held: 1, doc: HISTORY_DRAFT, base: 48, frame: { op: 'insert', doc: HISTORY_DRAFT, at: { ordinal: '1', subspace: '1' }, values: ['x'], as_of: 48, id: 'h.1' }, cause: 'unreachable', sent: false, time: 1 });
+  try {
+    const unkept = await historyOver({ before: () => WRITE.setHeld(HISTORY_DRAFT, [held]) });
+    assert.deepEqual(unkept.asked, ['changes under ' + HISTORY_DRAFT, 'state at 48'], 'a line held: the newest kept state, the top row\'s');
+  } finally { WRITE.setHeld(HISTORY_DRAFT, []); }
+  const yielded = await historyOver({ refuse: [40] });
+  assert.deepEqual(yielded.asked, ['changes under ' + HISTORY_DRAFT, 'state at 40', 'state at 48'], 'the state before the newest change reclaimed: the newest kept state read in its place');
+});
+
+test('while the board is not answering the act is inert: nothing committed and nothing read (skep-frontend #661; FP-41)', async () => {
+  /** @type {string[]} */
+  const committed = [];
+  REC.setDaemon('unreachable');
+  try {
+    const { opened, asked } = await historyOver({ before: () => WRITE.machine({ commit: (/** @type {string} */ a) => { committed.push(a); }, typed() {}, leaving: () => false }) });
+    assert.deepEqual([opened, asked, committed], [false, [], []]);
+  } finally { REC.setDaemon('running'); WRITE.machine(null); }
+});
+
+test('the newest change\'s place a history scene levels at: each stretch one text holds that the other does not, at its place in each — the past state\'s after the byte standing before it there — the pair nearest the caret, else the first; none where the two hold the same bytes (skep-frontend #661)', () => {
+  const W = '1.0.1.0.62.0.1', at = (/** @type {Array<[number, number]>} */ runs) => { let pos = 1; return runs.map(([ordinal, width]) => { const r = { pos, width, prefix: W, ordinal }; pos += width; return r; }); };
+  // the past state "abcdefghij"; now "abc" + 3 typed bytes + "defg" + "j" (hi removed) + 2 typed bytes
+  const past = at([[1, 10]]), now = at([[1, 3], [40, 3], [4, 4], [10, 1], [50, 2]]);
+  assert.deepEqual(GO.changeNear(past, now, null), { a: 4, b: 4 }, 'nothing near: the first, the typed bytes after "abc", at 4 in each');
+  assert.deepEqual(GO.changeNear(past, now, 11), { a: 11, b: 8 }, 'at "j": the removal of "hi", after "g" in each');
+  assert.deepEqual(GO.changeNear(past, now, 14), { a: 12, b: 11 }, 'at the end: the bytes typed there, after "j" in each');
+  assert.equal(GO.changeNear(past, at([[1, 10]]), 3), null, 'the same bytes: no change to level at');
+});

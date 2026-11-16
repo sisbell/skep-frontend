@@ -841,6 +841,12 @@ export function install(deps) {
       },
       /** the reason the acts that send — and a printable key — give at the selection standing in the moved scene's held version while the focus stands in it, by its string (SC's `heldVersionReason`; D6 BM-14); null where no such selection stands */
       heldReason: () => SCENE.heldVersionReason(),
+      /** a draft's history opened as its corner's "show its history" opens it (N-GO's `history`; B3-S7): whether the scene shows, or the focus went into its history pane */
+      history: (/** @type {string} */ addr) => GO.history(addr),
+      /** the list of a draft's past states as it stands beside pane B (SC's `past`; B3-S7): its draft, the state shown, its top line, its days and their rows, the reads' figures; null where the scene is no draft's history */
+      past: () => SCENE.past(),
+      /** a day of the list folded or opened as the reader's act at its head does (SC's `foldDay`) */
+      foldDay: (/** @type {string} */ key) => { SCENE.foldDay(key); return true; },
       /** its runs of shared identity, contiguous pairs merged, the two ends it set level, and the link it was opened from */
       pairs: () => SCENE.pairs(),
       at: sceneAt, ties: sceneTies,
