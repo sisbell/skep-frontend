@@ -220,8 +220,7 @@
 // view reads is held, kept where its bytes stand in its draft's text shown
 // now, its span holding the walk where the walk landed on it (`caretBack`;
 // T-LAYER's `restoreCaret`, N-WALK's `holdKept`) — at no covered place, nor
-// where the reader took the camera over, a live caret stands or the move is a
-// reading scene's close, which returns the focus as the scene found it.
+// where the reader took the camera over or a live caret stands.
 // The surfaces across a version (FP-36, FP-22): a surface standing on a
 // version its box no longer shows — the selection, a card or a list, opened
 // before a version move, while it read, or under a jump to a version address
@@ -276,7 +275,10 @@
 // bytes are placed through the other text's image (`heldByBytes`), and a far
 // end landing in such a draft is placed by its slot's bytes (`followed`).
 // The reading scene is a step on the trail (`toScene`; FP-25): its opening
-// pushes one entry at the act, the entries ahead of the cursor dropped, its
+// is a departure that keeps the caret — a live one kept where it stands, its
+// burst committed, before the departure records it, so the entry it departs
+// holds the kept caret and no live caret stands under a scene (T-LAYER's
+// `leaveCaret`), as at a reopening (`sceneAt`); it pushes one entry at the act, the entries ahead of the cursor dropped, its
 // address the document opened beside the reader's, holding the pair it opens
 // on and the passage held (N-TRAIL's `Opened`), the entry it departs
 // recording the step it is opened from — a link's end, or a passage by
@@ -291,7 +293,14 @@
 // exactly while the cursor stands on its entry: its own end — Esc, the bar's
 // ×, zoom-out, ← — is Back (`closeScene`), as Mod+[ in it is, lighting the
 // step it was opened from where Back lands (`lightOf`), and each close is
-// counted (`closed`), which the one line says. A cursor move back onto its
+// counted (`closed`), which the one line says. Where an editor pane of the
+// scene held the draft the entry it lands on reads, the close re-takes that
+// pane's caret, kept, and the span the pane's view was anchored at into the
+// entry before the landing (`retakeEditor`; SC's `editorAnchor`; B3-S1,
+// K-63): the view one reading the draft at that span, the walk at the
+// caret's position, so Back lands where the person last wrote in the pane,
+// the caret kept there with its span holding the walk (`caretBack`; K-77),
+// never at the caret or the view the opening stored. A cursor move back onto its
 // entry — Forward after a close, Back after a teleport out, a jump — reopens
 // it as the reader left it (`sceneAt`; SC's `reopen`): the camera to the
 // view under it and the walk re-taken there without the platform's focus,
@@ -2886,6 +2895,8 @@ export async function toScene(a, b, held = {}, opts = {}) {
   if (end && LK.farEmpty(end)) { FACES.unregistered(end.far, site, { far: true }); return false; }
   // the link the scene is opened from, kept with the passage held, so its entry and a reopening keep it (SC's `Held.link`)
   const kept = end && held.link == null ? { ...held, link: end.link.addr } : held;
+  // a departure: a live caret kept where it stands, its burst committed, before the departure records it — no live caret stands under a scene
+  LAYER.leaveCaret('teleport', false);
   const departed = departure(), addr = addrOf(opts.beside === 'a' ? a : b);
   const entry = TRAIL.push({ addr, pos: null, width: null, view: departed.view, label: null, notice: null, scene: { a, b, held: kept, left: null } }, departed, false, sceneStep(opts.from ?? null));
   reach = { act, addr, entry };
@@ -3383,7 +3394,7 @@ async function landAtCursor(e, act, byKey, l, returns = false) {
   if (!answer) {
     if (cover === 'unread') await coverRead(act, e, first, byKey, returns);
     else if (at && at.reads.length) await placeRead(act, e, at.reads, first, byKey, null, returns);
-    else { if (!cover) { sayReturn(act, e, told, to); void restore(e, act); void caretBack(e, act, returns); } endAir(act, await first); }
+    else { if (!cover) { sayReturn(act, e, told, to); void restore(e, act); void caretBack(e, act); } endAir(act, await first); }
     return;
   }
   await answer;
@@ -3490,7 +3501,7 @@ async function askAgain(act, e, ask, at, to, first, byKey, told) {
     if (takenAt === act) return;
     focusOn({ ...to, take: false }, byKey);
     void restore(e, act);
-    void caretBack(e, act, !!to.returns);
+    void caretBack(e, act);
     endAir(act, await first);
     return;
   }
@@ -3553,6 +3564,8 @@ function arrivalSaid(e) {
 async function sceneAt(e, act, byKey, returns = false) {
   const o = /** @type {import('./trail.js').Opened} */ (e.scene);
   arrival = null; landed = null; light = null; lit = [];
+  // a reopening is an opening: a live caret kept where it stands, none standing under the scene
+  LAYER.leaveCaret('teleport', false);
   const at = returning(e);
   const first = leave(act, e, { ...walkOf(e, at), view: at.view, aim: at.aim, take: false, returns }, byKey, 500);
   const out = await SCENE.reopen(o);
@@ -4064,7 +4077,7 @@ async function placeRead(act, e, texts, first, byKey, n = null, returns = false)
   if (n) showFound(n);
   sayReturn(act, e, told, to);
   void restore(e, act);
-  void caretBack(e, act, returns);
+  void caretBack(e, act);
   await flight;
 }
 
@@ -4174,18 +4187,18 @@ export const restoring = () => restores > 0;
  * The caret an entry holds restored as the reader left it there (see the
  * head; B3-S1 (iii)), once the walk has landed (`walking`): kept in its draft
  * where its bytes stand in the text shown now (T-LAYER's `restoreCaret`), its
- * span holding the walk where the walk landed on it (N-WALK's `holdKept`).
- * Nothing at a reading scene's close, which leaves the caret as the scene
- * found it (`Destination.returns`), where an act was made since, or where a
- * live caret stands: one the person placed meanwhile.
+ * span holding the walk where the walk landed on it (N-WALK's `holdKept`) — at
+ * a reading scene's close the caret its editor pane re-took into the entry
+ * (`retakeEditor`), else the one the entry kept as the scene opened. Nothing
+ * where an act was made since, or where a live caret stands: one the person
+ * placed meanwhile.
  * @param {Entry} e
  * @param {number} act the move's count
- * @param {boolean} returns the move is a reading scene's close
  * @returns {Promise<void>}
  */
-async function caretBack(e, act, returns) {
+async function caretBack(e, act) {
   const c = e.caret;
-  if (!c || returns) return;
+  if (!c) return;
   await walking;
   const now = LAYER.caret();
   if (act !== made || (now && now.live)) return;
@@ -4494,10 +4507,12 @@ function carrySelection(c, addr, placed) {
  * view left, the move's light lit where it crosses one step (`lightOf`). A
  * jump reaching gives its entry back before the move reads the trail, and
  * Back abandons it and does nothing more: the camera never left the entry it
- * was made from (see the head). A move one entry back from the entry a
- * reading scene was opened as, the scene standing, is its close, counted
- * (`closed`), its landing returning the focus to the plane as the scene found
- * it (`Destination.returns`).
+ * was made from (see the head). A live caret in a reading scene's editor
+ * pane is kept before the departure records it. A move one entry back from
+ * the entry a reading scene was opened as, the scene standing, is its close,
+ * counted (`closed`), the entry re-taking an editor pane's caret and the span
+ * its view was anchored at first (`retakeEditor`), its landing returning the
+ * focus to the plane as the scene found it (`Destination.returns`).
  * @param {(departed: Departure) => (Entry | null)} move N-TRAIL's move
  * @param {boolean} byKey a key made the act
  * @param {boolean} [abandons] the move is Back, which abandons a jump reaching
@@ -4506,14 +4521,54 @@ function carrySelection(c, addr, placed) {
 async function moveCursor(move, byKey, abandons = false) {
   if (reach) { giveUp(); if (abandons) { nextAct(); return true; } }
   const left = TRAIL.current(), from = TRAIL.cursorIndex(), standing = SCENE.isOpen() && !!left && !!left.scene;
+  // what the scene's editor pane leaves the entry its close lands on, read while it stands; a live caret in it kept (K-77)
+  const anchor = standing ? SCENE.editorAnchor() : null;
+  if (standing) LAYER.leaveCaret('teleport', false);
   const e = move(departure());
   if (!e) return false;
   const act = nextAct();
   const closing = standing && TRAIL.cursorIndex() === from - 1;
-  if (closing) closes++;
+  if (closing) { closes++; if (anchor) retakeEditor(e, anchor); }
   dismissChrome(e);
   await landAtCursor(e, act, byKey, lightOf(left, e, TRAIL.cursorIndex() - from), closing);
   return true;
+}
+
+/**
+ * The entry a reading scene's close lands on re-takes its editor pane's caret
+ * and the span the pane's view was anchored at, before the landing (see the
+ * head; B3-S1's scene rule; D5 K-63) — where that entry is the draft the pane
+ * held, its address or the document its view read: its view the one that
+ * reads the draft at that span (`viewFor`), what that view reads (T-LAYER's
+ * `readAt`), the walk standing at the caret's position, and the caret by its
+ * place — as a departure from it re-takes them (N-TRAIL's `retakeEntry`) — so
+ * Back lands where the person last wrote in the pane, the caret kept there
+ * and its span holding the walk (`caretBack`), never at the caret or the view
+ * the scene's opening stored. Nothing at any other entry.
+ * @param {Entry} e the entry the close lands on
+ * @param {NonNullable<ReturnType<typeof SCENE.editorAnchor>>} anchor what the editor pane leaves it (SC's `editorAnchor`)
+ */
+function retakeEditor(e, anchor) {
+  const doc = anchor.addr;
+  if (boxOf(e.addr) !== boxOf(doc) && !(e.reading && boxOf(e.reading.addr) === boxOf(doc))) return;
+  const view = viewFor(doc, anchor.pos), c = anchor.caret;
+  /** @type {import('./trail.js').Stood} */
+  const stood = { addr: doc, pos: c.pos, ids: LAYER.shownIdentity(doc, c.pos, 1), of: [], end: null };
+  TRAIL.retakeEntry(e, { view, reading: LAYER.readAt(view), stood, caret: c });
+}
+
+/**
+ * Does the entry the standing reading scene opened over hold a draft's caret
+ * (N-TRAIL's `Entry.caret`): the scene's close lands back on it and restores
+ * the caret there — the way back the ending of a line a key raises in the
+ * scene takes (N-KEYS'). False where no scene stands on the trail's current
+ * entry, or nothing stands behind it.
+ * @param {string} addr the draft
+ * @returns {boolean}
+ */
+export function closesTo(addr) {
+  const e = TRAIL.current(), i = TRAIL.cursorIndex(), under = i > 0 ? TRAIL.all()[i - 1] : null;
+  return SCENE.isOpen() && !!e && !!e.scene && !!under && !!under.caret && under.caret.addr === addr;
 }
 
 /**

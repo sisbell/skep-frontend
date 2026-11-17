@@ -314,6 +314,19 @@ STATES = [
     dict(screen='B3-S7', state='unkept', walk='W-08', step=8, drawn=True,
          how="a line of the case's own draft held (`op` armed to answer `held`), then the act clicked (skep-frontend #661)",
          claim='the history opens on the newest kept state, the held words standing in the current pane alone, the list\'s top line "now — not yet kept" (L.history.unkept)'),
+    # B3-S1's scene rule (skep-frontend #556): a reading scene's pane holding the person's own draft is its editor
+    dict(screen='B3-S1', state='pane-typed', walk='W-08', step=3, drawn=True,
+         how="`window.__skep.scene.open(mine, DOC)`, a click on a word of pane A's text, then keys typed there; Mod+Z; a line held there (`op` armed `held`) (D5 K-70, K-72, K-75)",
+         claim="the caret live at the character clicked, its mark in pane A alone; the typed words standing in the pane's text as typed and kept by the test board, sent as the plane's typing is — one `insert` frame of the same shape, through the page's own port to the harness's provider; the pane's corner's kept word moving as the draft's state moves, \"not yet kept\" while the line is held; Mod+Z taking the run back out of the pane's text; stacked, the pane's held head its kept line alone, the rest of its corner at its foot (D2)"),
+    dict(screen='B3-S13', state='pane-lines', walk='W-08', step=4, drawn=True,
+         how="the draft's history opened over its kept caret, then a printable key in the past pane, at a span of the current pane its caret is not in, Space there, at each pane's corner; and beside the first edition, a key in its pane (the decision's third block; D5 K-9, K-72)",
+         claim="each key answered by its pane's own line, never K-9's: the past state's C-337 (B3.history.read-only) ending with where the person was last writing; the current pane's \"Enter places a caret here\" (B3.caret.enter); Space's own K-9 line (F.swallow.space); the current pane's corner the way back to its text (B3.caret.back); the past pane's corner its pane's C-337; an edition of the person's own C-45 — nothing typed"),
+    dict(screen='B3-S13', state='pane-way-back', walk='W-08', step=4, drawn=True,
+         how="a printable key in the history's past pane, then the act of its line's ending — the label (the decision's fourth block)",
+         claim="the focus moved into the current pane onto the span its kept caret stands in, and the next printable key returning the caret and typing there, the past pane unmoved"),
+    dict(screen='B3-S1', state='pane-close', walk='W-08', step=7, drawn=True,
+         how="beside the first edition, pane A scrolled far down its text and a word there clicked and typed at, then Esc and Esc (D5 K-77, K-63; B3-S1's scene rule)",
+         claim="the first Esc leaving the text — the caret kept, the scene standing — the second closing the scene, a Back onto the draft's entry: the plane landing at the span pane A's view was anchored at, never at the view the entry stored as the scene opened, the caret kept there with its span holding the walk, so a key typed then types at it"),
     dict(screen='B3-S8', state='select-all', walk='—', step=0, drawn=True,
          how="Mod+A at the live caret in the draft the case minted (K-93)",
          claim="the whole document is one selection, the caret live at its end, the selection's acts' row standing at it inside the window; the platform's copy then takes the document whole as plain text"),
@@ -1369,7 +1382,8 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
             "the page opened on the harness's provider with `machine=1` boots with D6's machine handed in, under a session that writes", {'machine': boot and boot.get('machine'), 'writes': session and session.get('writes')})
     if not session or not board or not (boot and boot.get('machine')):
         for state in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
-                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'unkept'):
+                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'unkept',
+                      'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close'):
             red(state, 'the machine\'s page did not open')
         return
     sid, account, board_id = session['session'], session['account'], board['board']
@@ -1483,7 +1497,8 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
             {'stands': stands, 'line': line0, 'focus': ctx.js('window.__skep.view.focus()')})
     if not stands:
         for st in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
-                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'unkept'):
+                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'unkept',
+                      'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close'):
             red(st, 'the case\'s own draft did not mount')
         return
     # ---- B3-S3: Mod+Z on an empty stack, before anything is typed in the draft (K-75; BM-42) ----------------------------------
@@ -1762,6 +1777,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     same_rows(ctx, r, shoot, red, ops_allowed, held)
     published_rows(ctx, r, shoot, red, ops_allowed, held)
     past_rows(ctx, r, shoot, red, ops_allowed, held)
+    pane_rows(ctx, r, shoot, red, ops_allowed, held)
 
 
 # the words the reopen row's armed line types before the case's own draft's first line: a paragraph of their own
@@ -2912,6 +2928,293 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
     health1 = ctx.health()
     r.figures['past_rows'] = {'log_position_before': health0.get('log_position'), 'log_position_after': health1.get('log_position'), 'calls': dict(Counter(calls))}
     r.check(not any(c.startswith('history.') for c in calls) and 'changes' in calls, "B3-S7: the history read by `changes`, a reading row; no `history.past` or `history.restore` called", dict(Counter(calls)))
+
+
+# a reading scene's pane as the person meets it, by its side (`A`, `B`): its text, the carets' marks standing in it, its span
+# focus and the spans drawn lit, its scroll, its corner's kept word, and whether the platform's focus stands in its text
+PANE_STATE = '''((side) => { const p = document.getElementById("scene" + side), a = p && p.querySelector(":scope > article.dtext"), P = (window.__skep.scene.panes() || {})[side.toLowerCase()] || {};
+  const w = p && p.querySelector(".corner .kept-word"), at = document.activeElement;
+  return {text: a ? [...a.querySelectorAll(".run > .sp")].map((e) => e.textContent).join("\\n") : null, marks: p ? [...p.querySelectorAll(".caret-mark")].map((m) => (m.classList.contains("kept") ? "kept" : "live")) : [],
+          focus: P.focus == null ? null : P.focus, editor: !!P.editor, lit: a ? [...a.querySelectorAll(".run > .sp.lit")].map((e) => Number(e.dataset.pos)) : [], scroll: p ? Math.round(p.scrollTop) : null,
+          kept: w ? {word: w.textContent, id: w.dataset.string || null} : null, active: !!p && !!at && (at === p || (p.contains(at) && !at.closest(".corner")))}; })(%s)'''
+# a word of a pane's text a person clicks: the first word of three letters or more in the first paragraph standing whole below
+# the pane's held head — or the last such paragraph — as a point on screen between its first two letters, with its block
+WORD_IN_PANE = '''((side, which) => { const pane = document.getElementById("scene" + side), q0 = pane.getBoundingClientRect(), art = pane.querySelector(":scope > article.dtext");
+  const h = pane.querySelector(":scope > .corner.head"), top = Math.max(q0.top, h ? h.getBoundingClientRect().bottom : q0.top) + 2;
+  const ps = [...art.querySelectorAll(".run > .sp")].filter((e) => { const q = e.getBoundingClientRect(); return /[A-Za-z]{3}/.test(e.textContent || "") && q.top >= top && q.bottom <= q0.bottom - 4; });
+  const e = which === "last" ? ps[ps.length - 1] : ps[0]; if (!e) return null;
+  const tn = [...e.childNodes].find((n) => n.nodeType === 3 && /[A-Za-z]{3}/.test(n.data)); if (!tn) return null;
+  const i = tn.data.search(/[A-Za-z]{3}/), r = document.createRange(); r.setStart(tn, i + 1); r.setEnd(tn, i + 2); const q = r.getBoundingClientRect();
+  return {x: q.left + 0.5, y: q.top + q.height / 2, block: Number(e.dataset.pos), width: (e.textContent || "").length}; })(%s, %s)'''
+# a paragraph of a pane's text, `frac` of the way down it, brought by the pane's scroll to stand first in view below what its
+# held head and a form opened beneath it cover, as the scene reads that — its top a hair under it — the head read again once the
+# frames after each scroll have placed it, until the paragraph stands so; then a point on screen between the first two letters
+# of its first word, with its block
+SCROLL_TO_WORD = '''(async (side, frac) => { const pane = document.getElementById("scene" + side), art = pane.querySelector(":scope > article.dtext");
+  const ps = [...art.querySelectorAll(".run > .sp")].filter((e) => /[A-Za-z]{3}/.test(e.textContent || "")); const e = ps[Math.floor(ps.length * frac)]; if (!e) return null;
+  const frames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  for (let k = 0; k < 6; k++) {
+    const h = pane.querySelector(":scope > .corner.head"), o = h ? h.querySelector(":scope > .opened") : null, top0 = pane.getBoundingClientRect().top + pane.clientTop;
+    const clear = h ? h.getBoundingClientRect().bottom - top0 + (o ? o.offsetHeight : 0) : 0, d = Math.round(e.getBoundingClientRect().top - top0 - clear) + 2;
+    if (!d) break;
+    pane.scrollTop += d; await frames();
+  }
+  const tn = [...e.childNodes].find((n) => n.nodeType === 3 && /[A-Za-z]{3}/.test(n.data)); if (!tn) return null;
+  const i = tn.data.search(/[A-Za-z]{3}/), r = document.createRange(); r.setStart(tn, i + 1); r.setEnd(tn, i + 2); const q = r.getBoundingClientRect();
+  return {x: q.left + 0.5, y: q.top + q.height / 2, block: Number(e.dataset.pos)}; })(%s, %s)'''
+# what a click at a point on screen meets: the element there, whether it is a pane's text, the element it stands in, and the
+# held heads' boxes
+HIT_AT = '''((x, y) => { const e = document.elementFromPoint(x, y); if (!e) return null; const box = (el) => { const q = el.getBoundingClientRect(); return [Math.round(q.top), Math.round(q.bottom)]; };
+  return {tag: e.tagName, cls: String(e.className && e.className.baseVal !== undefined ? e.className.baseVal : e.className), text: !!e.closest("article.dtext") && !e.closest(".corner"), corner: !!e.closest(".corner"), within: (e.closest("[id^=scene]") || {}).id || null,
+          heads: [...document.querySelectorAll("#sceneA > .corner.head, #sceneB > .corner.head")].map((h) => ({id: h.id, box: box(h), opened: h.querySelector(":scope > .opened") ? box(h.querySelector(":scope > .opened")) : null, rows: [...h.querySelectorAll(":scope > .hrow")].filter((r) => r.style.visibility !== "hidden").map(box)}))}; })(%s, %s)'''
+# the paragraphs the pane-close row's draft is lengthened by, so its pane scrolls past its first span
+LONG_LINES = ''.join('Line %d of the pane the person scrolls, words to read and to write beside.\n\n' % k for k in range(1, 31))
+
+
+def pane_rows(ctx, r, shoot, red, ops_allowed, m):
+    """THE EDITOR PANE (skep-frontend #556; B3-S1's scene rule; B3-S13; D5 K-60, K-61, K-63, K-70 … K-77, K-93), on the
+    machine's page at the case's own draft (`mine`), each state checked against `strings.js` and shot at both widths — at
+    the narrow one the panes stacked. The draft is lengthened first by a paste at its caret through the gate's paste door, so
+    its pane scrolls. `pane-typed`: the scene beside the first edition, a word of pane A clicked and keys typed there — the
+    caret live in the pane, the words shown as typed and kept by the test board, one `insert` of the shape the plane's typing
+    sends, through the page's own port; Mod+Z taking the run back out; a line held there, the pane's corner "not yet kept",
+    dropped; the word typed again at a click. `pane-lines`: an edition of the person's own beside, then the draft's history
+    opened over its kept caret, each key answered by its pane's own line, the past pane's last. `pane-way-back`: the line's
+    ending's act moving the focus onto the kept caret's span, the next key typing there. `pane-close`: Esc, then Esc, the
+    close re-taking the pane's caret and the span its view was anchored at, a key typing at it. Each row is shot in the state
+    its check ends in. The rows' writes are their own typing, its undo and the paste; no `history.*` call is made."""
+    mine, sid, quiet, recentre, caret_end, press, first_line, hold_typed, drop_all = (m[k] for k in ('mine', 'sid', 'quiet', 'recentre', 'caret_end', 'press', 'first_line', 'hold_typed', 'drop_all'))
+    act_sel = m['corner'] + HISTORY_ACT
+    text_of = lambda: ctx.js(SHOWN_TEXT % json.dumps(mine)) or ''
+    pane = lambda side: ctx.js(PANE_STATE % json.dumps(side)) or {}
+    caret = lambda: ctx.js('window.__skep.caret()')
+    edits = lambda: ctx.js('window.__skep.write.edits(%s).length' % json.dumps(mine))
+    kept_now = lambda max_s=20: wait_for(ctx, '(() => { const s = window.__skep.write.state(%s); return !!s.kept && s.kept.word === "kept" && window.__skep.write.edits(%s).length === 0; })()' % (json.dumps(mine), json.dumps(mine)), max_s)
+    calls0 = len(page_calls(ctx))
+
+    def drop_caret():
+        ctx.js('(async () => (await import("./text/layer.js")).dropCaret())()'); ctx.frames(2)
+
+    def close_scene():
+        if ctx.js('window.__skep.scene.isOpen()'):
+            ctx.js('window.__skep.scene.close()'); ctx.settle(15); ctx.frames(2)
+
+    def beside():
+        """the scene opened beside the first edition from the draft's entry, pane A the draft: whether it shows"""
+        close_scene(); recentre(); ctx.settle(10); ctx.frames(2)
+        ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(mine), json.dumps(DOC)))
+        came = wait_for(ctx, 'window.__skep.scene.isOpen() && (window.__skep.scene.pair() || {}).a === %s' % json.dumps(mine), 30)
+        ctx.settle(15); ctx.frames(3)
+        return came
+
+    def history():
+        """the draft's history opened by its corner's act from the draft's entry, its kept caret standing: whether it shows"""
+        close_scene(); recentre(); ctx.settle(10); ctx.frames(2)
+        clicked = ctx.js('((s) => { const b = document.querySelector(s); if (b) b.click(); return !!b; })(%s)' % json.dumps(act_sel))
+        came = clicked and wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return window.__skep.scene.isOpen() && !!p && p.draft === %s; })()' % json.dumps(mine), 30)
+        ctx.settle(20); ctx.frames(3)
+        return came
+
+    def key_at(sel, key, code=None, then=None):
+        """a key pressed with the platform's focus put on the first element a selector names that takes it, as Tab lands
+        on the first stop that does — else on the first `then` names that does — the hint taken down before it: where the
+        focus stood, the hint it raised (`hint`) and what its ending says"""
+        ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
+        at = ctx.js('((s, t) => { const all = [...document.querySelectorAll(s), ...(t ? document.querySelectorAll(t) : [])]; for (const e of all) { e.focus({preventScroll: true}); if (document.activeElement === e) return true; } return false; })(%s, %s)' % (json.dumps(sel), json.dumps(then)))
+        ctx.frames(1)
+        ctx.drv.key(key, code=code); ctx.frames(2)
+        h = ctx.js('window.__skep.hint()') or {}
+        return {'focused': at, 'id': h.get('id'), 'writing': h.get('writing'), 'seen': hint(ctx)['seen']}
+
+    def inserts():
+        """every `insert` frame naming the draft the page sent, in order"""
+        out = []
+        for c in ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "op").map((c) => c.frame)') or []:
+            try:
+                f = json.loads(c)
+            except (TypeError, ValueError):
+                continue
+            if isinstance(f, dict) and f.get('op') == 'insert' and f.get('doc') == mine:
+                out.append(f)
+        return out
+
+    def click_word(side, which='first'):
+        """a click on a word of a pane's text (`WORD_IN_PANE`): the word's block"""
+        at = ctx.js(WORD_IN_PANE % (json.dumps(side), json.dumps(which)))
+        if at:
+            ctx.drv.click(at['x'], at['y']); ctx.frames(3)
+        return at
+
+    # ---- the draft lengthened: its caret at its text's end, a paste through the gate's door, kept by the board ------------------
+    quiet(); close_scene(); recentre()
+    end = len(text_of().encode('utf8')) + 1
+    ctx.js('(async () => (await import("./text/layer.js")).placeCaret(%s, %d))()' % (json.dumps(mine), end)); ctx.frames(2)
+    pasted = ctx.js('window.__skep.paste(%s)' % json.dumps({'text/plain': '\n\n' + LONG_LINES}))
+    long_kept = kept_now(30)
+    quiet()
+    r.check(bool(pasted) and long_kept and 'Line 30 of the pane' in text_of(), "the case's own draft lengthened by a paste at its caret, through the gate's paste door, and kept by the test board", {'pasted': pasted, 'kept': long_kept})
+    plane_frame = last_write(ctx, ops_allowed)
+    drop_caret()
+
+    # ---- `pane-typed` ------------------------------------------------------------------------------------------------------------
+    def typed_check(w):
+        opened = beside()
+        # stacked, the editor pane's head holds its kept line alone and its foot the rest of its corner (D2): no item of the
+        # foot's stands at its head, where it would lie over the text below
+        head = ctx.js('(() => { const h = document.querySelector("#sceneA > .corner.head"), f = document.querySelector("#sceneA > .corner.foot"); return h ? {kept: !!h.querySelector(".kept-word"), foot_items: h.querySelectorAll(".kind, .chip").length, foot: !!f && !!f.querySelector(".kind") && !!f.querySelector(".chip")} : null; })()')
+        a0 = pane('A')
+        at = click_word('A')
+        c0, a1 = caret(), pane('A')
+        placed = (opened and a0['editor'] and bool(at) and bool(c0) and c0['live'] and c0['addr'] == mine and at['block'] <= c0['pos'] <= at['block'] + at['width']
+                  and a1['marks'] == ['live'] and ctx.js('document.querySelectorAll("#domlayer .caret-mark").length') == 0 and a1['focus'] == at['block'] and a1['active'])
+        seq, n_before = ctx.editor_seq(), len(inserts())
+        # the word counted in the pane's text and the draft's, so what the check at the other width left there counts for nothing
+        word = 'Paned'
+        count = lambda text: (text or '').count(word)
+        n0 = count(a1['text'])
+        press(word); ctx.frames(3)
+        a2 = pane('A')
+        shown_now = count(a2['text']) == n0 + 1 and count(text_of()) == n0 + 1
+        press('.'); kept = kept_now(20)
+        quiet()
+        wrote = last_write(ctx, ops_allowed)
+        on_board = [e for e in ctx.editor_log() if e['seq'] > seq and e['kind'] == 'call' and e.get('call') == 'op']
+        frames = inserts()
+        plane, typed = (frames[n_before - 1] if 0 < n_before <= len(frames) else None), frames[n_before:]
+        same_shape = bool(plane_frame) and bool(wrote) and wrote['op'] == plane_frame['op'] == 'insert' and wrote['doc'] == mine and bool(plane) and bool(typed) and all(set(f) == set(plane) for f in typed)
+        sent = (kept and bool(wrote) and (wrote.get('values') or [''])[0].startswith(word) and '"ack_addr"' in (wrote.get('answer') or '') and same_shape and len(on_board) > 0
+                and (pane('A')['kept'] or {}).get('id') == 'B3.kept')
+        # Mod+Z takes the run back out of the pane's text
+        ctx.drv.key('z', mods=('Meta',)); ctx.frames(3)
+        a3 = pane('A')
+        undone = count(a3['text']) == n0 and count(text_of()) == n0 and (caret() or {}).get('live') is True
+        back = kept_now(20)
+        # a line held in the pane: its corner "not yet kept", then dropped, "kept" again
+        k, held_ok, how = hold_typed(' Holdy', 'unreachable')
+        ctx.frames(3)
+        held_word = (pane('A')['kept'] or {}).get('id')
+        out, dropped = drop_all(k)
+        kept_again = (pane('A')['kept'] or {}).get('id')
+        # the word typed again at a click, and kept: the state the row is shot in, the caret live in the pane beside its words
+        click_word('A'); press(word + '.'); kept_now(20); quiet()
+        a4 = pane('A')
+        shown_again = count(a4['text']) == n0 + 1 and a4['marks'] == ['live'] and (caret() or {}).get('live') is True
+        return {"the head its kept line alone": (w == WIDE[0] or (bool(head) and head['kept'] and head['foot_items'] == 0 and head['foot']), head),
+                'the caret placed': (placed, {'opened': opened, 'at': at, 'caret': c0, 'pane': {x: a1[x] for x in ('marks', 'focus', 'active', 'editor')}}),
+                'the words shown as typed': (shown_now and shown_again, {'text': (a2['text'] or '')[:200], 'word': word, 'before': n0, 'again': {'text': (a4['text'] or '')[:200], 'marks': a4['marks']}}),
+                "sent as the plane's typing is": (sent, {'kept': kept, 'write': wrote and {x: wrote[x] for x in ('op', 'doc', 'values')}, 'plane': plane and sorted(plane), 'typed': [sorted(f) for f in typed], 'logged': len(on_board), 'corner': pane('A')['kept']}),
+                'Mod+Z takes it back': (undone and back, {'text': (a3['text'] or '')[:200], 'before': n0, 'caret': caret(), 'kept': back}),
+                'the corner moves': (held_ok and held_word == 'B3.not-yet-kept' and bool(out) and dropped and kept_again == 'B3.kept', {'held': held_ok, 'how': how, 'held_word': held_word, 'dropped': dropped, 'again': kept_again})}
+    # each width's check starts with the scene the last one was shot in closed and no caret standing
+    again = lambda: (close_scene(), drop_caret(), recentre())
+    shoot('pane-typed', typed_check, again)
+    close_scene(); drop_caret()
+
+    # ---- `pane-lines` ------------------------------------------------------------------------------------------------------------
+    # the draft's name as the status region names its box, read where a check meets the ending: it moves with the draft's first words
+    name_now = lambda: ctx.js('(async () => (await import("./text/layer.js")).boxName(%s).name)()' % json.dumps(mine)) or ''
+
+    def lines_check(w):
+        edition = None
+        if beside():
+            edition = key_at('#sceneB', 'k')
+        close_scene()
+        # the caret kept in the draft, at the start of its first line, before the history opens over it
+        recentre(); caret_end(''); ctx.drv.key('Escape'); ctx.frames(2)
+        opened = history()
+        label = name_now()
+        ending = sentence(ctx, 'B3.undo.last-writing', {'label': label})
+        c, a, b = caret(), pane('A'), pane('B')
+        kept_in_a = opened and bool(c) and not c['live'] and a['editor'] and not b['editor'] and a['marks'] == ['kept'] and b['marks'] == []
+        space = key_at('#sceneB', ' ', code='Space')
+        ctx.js('document.getElementById("sceneA").focus({preventScroll: true})'); ctx.frames(1)
+        ctx.drv.key('ArrowDown'); ctx.frames(2)
+        moved = pane('A')
+        bare = key_at('#sceneA', 'k')
+        own_corner = key_at('#sceneA > .corner button', 'k', then='#sceneA > .corner')
+        # stacked, the past pane's corner's later rows scroll with its text (#669's kind): its act stands at the pane's top
+        ctx.js('document.getElementById("sceneB").scrollTop = 0'); ctx.frames(3)
+        past_corner = key_at('#sceneB > .corner button', 'k', then='#sceneB > .corner')
+        # the past pane's line last: the state the row is shot in
+        past = key_at('#sceneB', 'k')
+        nothing = (caret() or {}).get('live') is not True and edits() == 0
+        return {'the caret kept in the current pane': (kept_in_a, {'caret': c, 'a': {x: a[x] for x in ('editor', 'marks', 'focus')}, 'b': {x: b[x] for x in ('editor', 'marks', 'focus')}}),
+                "the past pane's line": (past['id'] == 'B3.history.read-only' and bool(label) and label in (past['writing'] or '') and past['seen'], {'got': past, 'ending': ending}),
+                "Space's own line": (space['id'] == 'F.swallow.space', space),
+                "the current pane's bare span": (moved['focus'] != a['focus'] and bare['id'] == 'B3.caret.enter' and not bare['writing'], {'got': bare, 'focus': [a['focus'], moved['focus']]}),
+                "the current pane's corner": (own_corner['focused'] and own_corner['id'] == 'B3.caret.back', own_corner),
+                "the past pane's corner": (past_corner['focused'] and past_corner['id'] == 'B3.history.read-only' and label in (past_corner['writing'] or ''), past_corner),
+                "an edition of the person's own": (bool(edition) and edition['id'] == 'C-45', edition),
+                'nothing typed': (nothing, {'caret': caret(), 'edits': edits()})}
+    shoot('pane-lines', lines_check, again)
+    close_scene(); drop_caret()
+
+    # ---- `pane-way-back` ---------------------------------------------------------------------------------------------------------
+    def way_back_check(w):
+        recentre(); caret_end(''); ctx.drv.key('Escape'); ctx.frames(2)
+        opened = history()
+        label = name_now()
+        sb = pane('B')['scroll']
+        said = key_at('#sceneB', 'k')
+        acted = ctx.js('(() => { const b = document.querySelector("#hint button[data-writing]"); if (b) b.click(); return !!b; })()'); ctx.frames(2)
+        span = ctx.js('(async () => (await import("./text/layer.js")).caretSpan(%s))()' % json.dumps(mine)) or {}
+        a = pane('A')
+        moved = acted and a['active'] and a['focus'] == span.get('block')
+        n0, c0 = edits(), caret()
+        ctx.drv.key('W'); ctx.frames(3)
+        c1, a1 = caret(), pane('A')
+        typed = bool(c0) and bool(c1) and c1['live'] and c1['pos'] == c0['pos'] + 1 and edits() == n0 + 1 and 'W' in (a1['text'] or '')
+        unmoved = pane('B')['scroll'] == sb
+        # the letter kept by the board: the state the row is shot in, the caret live in the pane after it
+        kept_now(20); quiet()
+        return {'the ending raised': (opened and said['id'] == 'B3.history.read-only' and bool(label) and label in (said['writing'] or ''), dict(said, label=label)),
+                "the focus on the kept caret's span": (moved, {'acted': acted, 'active': a['active'], 'focus': a['focus'], 'span': span}),
+                'the next key types there': (typed, {'before': c0, 'after': c1, 'text': (a1['text'] or '')[:120]}),
+                'the past pane unmoved': (unmoved, {'scroll': [sb, pane('B')['scroll']]})}
+    shoot('pane-way-back', way_back_check, again)
+    close_scene(); drop_caret()
+
+    # ---- `pane-close` ------------------------------------------------------------------------------------------------------------
+    def close_check(w):
+        drop_caret()
+        opened = beside()
+        stored = ctx.js('(() => { const t = window.__skep.trail(), e = t.entries[t.cursor - 1]; return e ? {addr: e.addr, view: e.view} : null; })()')
+        # pane A scrolled far down its text — the person's own act — and a word of the paragraph standing first in view clicked and typed at
+        at = ctx.js(SCROLL_TO_WORD % (json.dumps('A'), json.dumps(0.7))); ctx.frames(3)
+        # the panes settled — no setting of either out — the paragraph brought there again as the head then stands, and clicked
+        settled = wait_for(ctx, '!window.__skep.scene.updating()', 10); ctx.frames(2)
+        if at:
+            at = ctx.js(SCROLL_TO_WORD % (json.dumps('A'), json.dumps(0.7))) or at
+            hit = ctx.js(HIT_AT % (at['x'], at['y']))
+            ctx.drv.click(at['x'], at['y']); ctx.frames(3)
+            at.update(settled=settled, hit=hit, clicked=caret(), active=ctx.js('(() => { const e = document.activeElement; return e ? e.id || String(e.className) : null; })()'), hint=(ctx.js('window.__skep.hint()') or {}).get('id'))
+        ctx.drv.key('C'); ctx.frames(3)
+        c0 = caret()
+        anchor = ctx.js('(async () => (await import("./scene/scene.js")).editorAnchor())()') or {}
+        ctx.drv.key('Escape'); ctx.frames(2)
+        left = caret()
+        first = ctx.js('window.__skep.scene.isOpen()') and bool(left) and not left['live'] and pane('A')['marks'] == ['kept']
+        ctx.drv.key('Escape'); ctx.settle(20); ctx.frames(4)
+        f, c1, cam = ctx.js('window.__skep.view.focus()'), caret(), ctx.camera()
+        line = ctx.js('((doc, pos) => { const q = (window.__skep.spanRects(doc, pos, 1) || []).filter((x) => x.h > 0); const top = document.getElementById("line").getBoundingClientRect().bottom; return q.length ? {y: q[0].y, inView: q[0].y >= top - 1 && q[0].y + q[0].h <= window.innerHeight + 1} : null; })(%s, %d)' % (json.dumps(mine), anchor.get('pos') or 1))
+        landed = (not ctx.js('window.__skep.scene.isOpen()') and bool(at) and anchor.get('pos') == at['block'] and bool(f) and f['addr'] == mine and f['pos'] == at['block'] and bool(line) and line['inView']
+                  and bool(stored) and bool(cam) and max(abs(cam['y'] - stored['view']['y']), abs(cam['x'] - stored['view']['x'])) * cam['scale'] > 1)
+        retook = bool(c1) and bool(c0) and c1['addr'] == mine and c1['pos'] == c0['pos'] and not c1['live']
+        n0 = edits()
+        ctx.drv.key('D'); ctx.frames(3)
+        c2 = caret()
+        types = bool(c2) and c2['live'] and c2['pos'] == c0['pos'] + 1 and edits() >= n0 + 1
+        # the letter kept by the board: the state the row is shot in, the caret live on the plane after it
+        kept_now(20); quiet()
+        return {'the first Esc leaves the text': (opened and bool(at) and bool(c0) and c0['live'] and first, {'opened': opened, 'at': at, 'caret': c0, 'left': left}),
+                'the second closes, landing at the anchored span': (landed, {'focus': f, 'anchor': {x: anchor.get(x) for x in ('addr', 'pos')}, 'line': line, 'camera': cam, 'stored': stored}),
+                'the caret re-taken there': (retook, {'before': c0, 'after': c1}),
+                'a key types at it': (types, {'caret': c2})}
+    shoot('pane-close', close_check, again)
+    drop_caret()
+    # the rows called no history op of the shell's
+    calls = [c['name'] for c in page_calls(ctx)[calls0:]]
+    r.check(not any(c.startswith('history.') for c in calls), "the editor pane's rows call no `history.*`: reads, their typing, its undo and the paste", dict(Counter(calls)))
 
 
 def run(ctx):

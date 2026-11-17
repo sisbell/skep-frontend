@@ -78,8 +78,11 @@
 // leaves a live caret as it is made, kept where it stood (D5 M-2, §4 rule 3;
 // T-LAYER's `leaveCaret`), so the next key acts where the walk stands and
 // never at a caret it did not land at; save a reading scene's close, whose
-// landing returns the focus to the plane as the scene found it, a live caret
-// standing live (`returnFocusTo`; D5 §4 rule 8, K-63).
+// landing returns the focus to the plane as the scene found it (`returnFocusTo`;
+// D5 §4 rule 8, K-63), no live caret standing under a scene (N-GO's). A caret
+// an editor pane of a reading scene holds is the pane's, never the walk's:
+// the walk neither follows it nor holds its span (`liveCaret`, `heldSpan`;
+// T-LAYER's `caretPane`).
 // The kept caret's span holds the walk (B3-S1's THE KEPT CARET; D5 §4 rule
 // 3): where the person leaves the text at a live caret and no act of theirs
 // moves the walk — Esc, or the empty click that is the pointer's Esc, which
@@ -1633,17 +1636,17 @@ export function leaveText() {
  */
 function heldSpan() {
   const c = caretHeld ? LAYER.caret() : null;
-  const at = c && !c.live && LAYER.editable(c.addr) ? LAYER.caretSpan() : null;
+  const at = c && !c.live && LAYER.editable(c.addr) && !LAYER.caretPane() ? LAYER.caretSpan() : null;
   if (!at) return null;
   const kids = elementsOf(at.addr), node = kids[elementAt(kids, at.addr, at.pos)];
   const b = node && node.kind === 'block' && node.pos != null ? LAYER.blockByPos(at.addr, node.pos) : null;
   return b && LAYER.spanInView(at.addr, b.pos, b.width) ? { node, pos: at.pos } : null;
 }
 
-/** the live caret the walk follows (`followCaret`): one standing in text the person may edit at the camera's scale (T-LAYER's `editable`); null where none does */
+/** the live caret the walk follows (`followCaret`): one standing on the plane in text the person may edit at the camera's scale (T-LAYER's `editable`) — never one a reading scene's editor pane holds, whose pane's span focus follows it (T-LAYER's `caretPane`); null where none does */
 function liveCaret() {
   const c = LAYER.caret();
-  return c && c.live && LAYER.editable(c.addr) ? c : null;
+  return c && c.live && LAYER.editable(c.addr) && !LAYER.caretPane() ? c : null;
 }
 
 /**

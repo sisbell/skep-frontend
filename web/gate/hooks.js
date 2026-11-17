@@ -75,7 +75,8 @@
 // opener holds, and closed by its own end, a Back
 // (`scene.open`, `scene.close`), opened apart from the trail as the moved
 // scene on a document beside the record the page derives from it with held
-// lines applied (`scene.openHeld`; M-DERIVE's `applyHeld`), the reason its
+// lines applied, a live caret kept as every opening keeps it
+// (`scene.openHeld`; M-DERIVE's `applyHeld`, T-LAYER's `leaveCaret`), the reason its
 // held version's selection gives the acts that send (`scene.heldReason`), its
 // pairs, a passage's line in a pane
 // (`scene.at`), its bands beside their runs' lines and its lines beside their
@@ -836,6 +837,8 @@ export function install(deps) {
       /** the scene opened apart from the trail as the moved scene (SC's `Held.heldB`) on a document and, in its second pane, the held version: the record the page derives from it with held lines applied in the order given (M-DERIVE's `applyHeld`; B3-S2, D6 BM-14), each line's inserted bytes named by the page's own ordinals (W-WRITE's `heldNames`), so a copy across them names them so: page state alone, nothing read for the derived pane; whether the scene shows, how many rows applied and why the apply stopped, where it did */
       openHeld: async (/** @type {string} */ a, /** @type {import('../model/frames.js').HeldLine[]} */ rows) => {
         const out = DERIVE.applyHeld(REC.doc(a), rows, (addr) => (REC.has(addr) ? REC.doc(addr) : null), WRITE.heldNames(a));
+        // an opening apart from the trail keeps a live caret all the same: no live caret stands under a scene
+        LAYER.leaveCaret('teleport', false);
         const opened = await SCENE.open(a, out.doc, { heldB: true }, {});
         return { shown: opened.shown, applied: out.applied, stopped: out.stopped ? out.stopped.why : null };
       },

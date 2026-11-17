@@ -43,7 +43,11 @@
 // last writing in ⟨label⟩", a sentence after the line's (O-HINT's), where the
 // key was pressed outside the draft last written in the page's session and
 // that draft's caret stands kept: its label one act back to the kept caret
-// (`writingElsewhere`; W-WRITE's `lastWritten`).
+// (`writingElsewhere`; W-WRITE's `lastWritten`) — in a reading scene, where
+// the key's site is the pane it is pressed at, the shortest way back: the
+// focus moved into the editor pane holding that caret, onto its span; else
+// the scene's close, where the entry it opened over holds the caret; else a
+// LEAP from the scene's entry (`backTo`; SC's `toCaret`, N-GO's `closesTo`).
 // Mod+R and F5 are taken and nothing reloaded (K-94), and the platform's own
 // chords — copy, paste, cut, select all, print, close, quit, minimize, hide,
 // preferences — are never taken save where a site's line answers a paste or a
@@ -74,8 +78,10 @@
 // key's or a menu's alike, and answered by the same tests the keydown reads
 // (`whereNow`, `unwritableSays`, `keptSpan`, `bareDraftSpan`, `siteSays`), so
 // one that arrives with no keydown is guarded here. Off the plane — a field,
-// a control, the line, a corner, the scene — each is the platform's,
-// untouched. At a live caret in a draft that can be written, and at the span
+// a control, the line, a corner — each is the platform's, untouched; in a
+// reading scene, at a pane's text each is answered as on the plane, by the
+// pane's caret, its kept caret's span or its own line (`paneSays`), and
+// anywhere else in the scene it is the platform's. At a live caret in a draft that can be written, and at the span
 // a kept caret stands in, the caret returned first: a paste is made by the
 // event's plain text and skep's own entry, each read as the event is
 // dispatched, at the caret as one step of its own, in the place of a
@@ -176,8 +182,11 @@
 // Esc closes the innermost thing, in one order (`esc`; §4 rule 7; D7): the
 // box, a card or scene still reading, the notice standing below the overlay
 // (FP-36; O-HOST's), the overlay, a jump reaching, the find — its current
-// match left selected with the focus on it (N-FIND's `close`; FP-20) — the
-// scene — its close a Back from its entry (N-GO's `closeScene`) — the
+// match left selected with the focus on it (N-FIND's `close`; FP-20) — in the
+// scene the selection standing in the text of the pane the focus is at, then
+// a live caret in an editor pane, the text left and the caret kept there
+// (`paneEsc`; K-77), then the scene — its close a Back from its entry (N-GO's
+// `closeScene`), which re-takes an editor pane's caret — the
 // selection, then a live caret — the text left to the walk at the caret's
 // span, the caret KEPT there (K-77; BM-4), which Enter, a printable key or
 // Shift with ← or → at that span returns, the span holding the walk through
@@ -234,7 +243,15 @@
 // the walk, Enter activates the focus (K-7) — at a continuation's mark's stop
 // it opens the mark's list — and the paging keys page the camera (K-6);
 // while the scene stands its keys alone are read (`sceneKey`; D5 M-4), and
-// nothing under it takes one. Whether a key made an act is the
+// nothing under it takes one: at a live caret in an editor pane every caret
+// key is the plane's (`caretKey`); at a pane's text where none is live the
+// pane's moves move its span focus (SC's `key`), Enter at an editor pane's
+// span places the caret (SC's `enterSpan`; K-70), and a printable key at the
+// span its kept caret stands in returns it and types there; a pane's corner
+// is routed as a corner, by its pane's test (`cornerKey`); and every key the
+// scene swallows is answered by the line of the pane it is pressed at
+// (`paneSays`) — at the scene's acts by their own (`actsSays`), never by
+// silence — Space by K-9's own line. Whether a key made an act is the
 // focus owner's one reading, handed in by the app with each key (`Ctx.byKey`;
 // FP-20), so a re-take a key made puts the platform's focus on the element it
 // lands on wherever the key was pressed (rules 10, 12), and a surface a key
@@ -271,7 +288,9 @@
 // control but a field, whose own they stay. The chord acts on the draft whose
 // text holds the caret, else the draft whose caret the person last held while
 // that draft stands in view at its reading scale, never on a document a
-// camera move put the walk in (`undoTarget`): W-MACHINE takes the newest step
+// camera move put the walk in — in a reading scene, the draft whose caret,
+// live or kept, an editor pane of the scene holds (`undoTarget`; T-LAYER's
+// `caretPane`), its face and its follow the pane's: W-MACHINE takes the newest step
 // back, or puts the step undone last back, at once; the caret then stands
 // where the step began, live, the walk on its span and its mark brought into
 // view; and what it did is said in the status region alone, never drawn —
@@ -283,7 +302,8 @@
 // reason's line answers it (`unwritableSays`). On an empty stack the undo is
 // answered by the empty stack's line; with no such draft, by the document's
 // line where the walk stands on an edition of the person's own or on
-// another's document (`siteSays`), else by the no-caret line, ending with
+// another's document (`siteSays`) — in a reading scene by the line of the
+// pane it is made at — else by the no-caret line, ending with
 // where the person was last writing; each of the three ending on B3-S3's
 // constant sentence while it stands whole, and each its hint at the focus. An
 // undo the board declines — its source withheld — is said in the one line,
@@ -532,9 +552,10 @@ export const keyShortcut = (chord) => chord.split('+').map((p) => (p === 'Mod' ?
 
 /**
  * @typedef {Object} Ctx — where the focus is, and whether a key made the act
- * @property {'plane' | 'caret' | 'line' | 'box' | 'overlay' | 'landing' | 'corner' | 'scene' | 'scene-acts' | 'field'} where `caret` the plane while a live caret stands in text the person may edit (T-LAYER's `caret`; set here, `whereNow`), `scene` a reading scene's pane, `scene-acts` its bar's buttons, `landing` a landing's line's acts (O-LAND)
+ * @property {'plane' | 'caret' | 'line' | 'box' | 'overlay' | 'landing' | 'corner' | 'scene' | 'scene-acts' | 'field'} where `caret` the plane, or a reading scene's editor pane, while a live caret stands in its text (T-LAYER's `caret`, `caretPane`; set here, `whereNow`), `scene` a reading scene's pane or its corner, `scene-acts` its bar's buttons, `landing` a landing's line's acts (O-LAND)
  * @property {boolean} byKey a key made the act (the focus owner's one reading, `FOCUS.byKey`)
  * @property {boolean} [landed] the key is made at a jump's landing, held while the jump was in the air (`replay`): Esc passes over the chrome a field the reader types in stands in (`esc`), and a key pressed at a corner is dropped (`cornerKey`)
+ * @property {'a' | 'b'} [pane] the reading scene's pane whose text the key was pressed at — never its corner (SC's `textPane`; set here, `whereNow`): its span focus the key's site, and its own line the one a key it swallows raises
  */
 
 /** @typedef {() => (boolean | Promise<boolean>)} Act a key's act, made: true where the page took the key */
@@ -605,7 +626,8 @@ const waiting = () => GO.inAir() || reading !== null || held.length > 0 || repla
  * @returns {Ctx}
  */
 function whereNow(ctx) {
-  if (ctx.where !== 'plane' || SCENE.isOpen()) return ctx;
+  if (SCENE.isOpen()) return inScene(ctx);
+  if (ctx.where !== 'plane') return ctx;
   const c = LAYER.caret(), f = WALK.current();
   if (!c || !c.live) return ctx;
   if (f && f.addr !== c.addr) { LAYER.leaveCaret('walk'); return ctx; }
@@ -614,15 +636,47 @@ function whereNow(ctx) {
 }
 
 /**
+ * Where a key in a reading scene stands (see the head): at a pane's text —
+ * the pane, never its corner — that pane (`Ctx.pane`; SC's `textPane`), and
+ * the caret's where the page's live caret stands in that pane, its draft's
+ * editor (T-LAYER's `caretPane`); a live caret the key finds outside the
+ * editor pane holding it — at another pane's text — left kept where it stood,
+ * as the walk standing outside a caret's document leaves it (D5 M-2).
+ * Everywhere else in the scene — a pane's corner, the scene's acts — as the
+ * app read it.
+ * @param {Ctx} ctx
+ * @returns {Ctx}
+ */
+function inScene(ctx) {
+  if (ctx.where !== 'scene' && ctx.where !== 'caret') return ctx;
+  const side = SCENE.textPane();
+  /** @type {Ctx} */
+  const at = { ...ctx, where: 'scene' };
+  delete at.pane;
+  if (!side) return at;
+  const c = LAYER.caret(), holds = LAYER.caretPane();
+  if (!c || !c.live) return { ...at, pane: side };
+  if (holds && holds.focused) return { ...at, where: 'caret', pane: side };
+  LAYER.leaveCaret('walk');
+  return { ...at, pane: side };
+}
+
+/**
  * The walk's focused span where it is a span of a draft the person may edit
  * and the focus is the plane's — a caret standing in it then kept, a live one
- * making the focus the caret's (`whereNow`); null anywhere else: another's
- * text, a live caret standing, the scene over the plane.
+ * making the focus the caret's (`whereNow`); in a reading scene, the span
+ * focus of the editor pane whose text the key is at, a live caret standing
+ * there apart (SC's `siteOf`); null anywhere else: another's text, a past
+ * state, the held version, a live caret standing, a pane's corner.
  * @param {Ctx} ctx
  * @returns {{addr: string, pos: number} | null}
  */
 function draftSpan(ctx) {
-  if (ctx.where !== 'plane' || SCENE.isOpen()) return null;
+  if (SCENE.isOpen()) {
+    const p = ctx.where === 'scene' && ctx.pane ? SCENE.siteOf(ctx.pane) : null;
+    return p && p.kind === 'editor' && p.focus != null ? { addr: p.names, pos: p.focus } : null;
+  }
+  if (ctx.where !== 'plane') return null;
   const f = WALK.current();
   return f && f.kind === 'block' && f.pos != null && LAYER.editable(f.addr) ? { addr: f.addr, pos: f.pos } : null;
 }
@@ -662,16 +716,24 @@ function readOnlySpan(ctx) {
  * stands in the walk's span (`keptSpan`), the caret then returned; the
  * edition whose span the walk stands on, which takes no caret — the one test
  * saying published of the version the walk stands in (T-LAYER's `isDraft`;
- * FP-39). Null anywhere
+ * FP-39); in a reading scene, the editor pane's live caret's draft and the
+ * draft whose kept caret stands at the editor pane's span focus, and a past
+ * state's pane, read only (SC's `selectAll`; B3-S8). Null anywhere
  * else — a span of a draft holding no caret, another's draft, a document
- * below its reading scale, a field, a control, the scene — where select-all
- * stays the platform's.
+ * below its reading scale, a field, a control, the scene's other panes, its
+ * corners and its acts — where select-all stays the platform's.
  * @param {Ctx} ctx
- * @returns {{addr: string, kept: boolean} | null} the document, and whether its kept caret is returned first
+ * @returns {{addr: string, kept: boolean, pane?: 'a' | 'b'} | null} the document, whether its kept caret is returned first, and the pane it is selected in, in a reading scene
  */
 function wholeAt(ctx) {
-  if (SCENE.isOpen()) return null;
   const c = LAYER.caret();
+  if (SCENE.isOpen()) {
+    const kept = keptSpan(ctx), p = ctx.pane ? SCENE.siteOf(ctx.pane) : null;
+    if (!p) return null;
+    if (ctx.where === 'caret' && c) return { addr: c.addr, kept: false, pane: p.side };
+    if (kept) return { addr: kept.addr, kept: true, pane: p.side };
+    return p.kind === 'past' ? { addr: p.names, kept: false, pane: p.side } : null;
+  }
   if (ctx.where === 'caret') return c ? { addr: c.addr, kept: false } : null;
   const kept = keptSpan(ctx);
   if (kept) return { addr: kept.addr, kept: true };
@@ -692,13 +754,15 @@ async function selectWhole(ctx) {
   const at = wholeAt(ctx);
   if (!at) return;
   if (at.kept) LAYER.returnCaret(false, at.addr);
+  // in a reading scene's pane, the pane's text whole its platform's selection there (SC's `selectAll`)
+  if (at.pane) { SCENE.selectAll(at.pane); SCENE.followCaret(); return; }
   const d = LAYER.shownOf(at.addr), c = LAYER.caret();
   if (d.from < 0) return;
   const end = Math.max(d.to, (d.extent ?? 0) + 1);
   if (end <= 1) return;
   if (c && c.live && c.addr === at.addr) LAYER.placeCaret(at.addr, end, true);
   SEL.select(at.addr, 1, end - 1, 'end');
-  if (c && c.live && c.addr === at.addr) await WALK.followCaret();
+  if (c && c.live && c.addr === at.addr) await follow();
 }
 
 /**
@@ -739,18 +803,73 @@ const STAGING = /** @type {import('../overlays/hint.js').Offered} */ (Object.fre
  * names a draft of the person's own as where its words were read
  * (`draftCopied`; B3-S5); at a document of another account B3-S13's line
  * naming its owner. Nothing is answered, and K-9's line is the caller's,
- * where `readOnlySite` names no site.
+ * where `readOnlySite` names no site. In a reading scene the key's pane
+ * answers by its own line, never K-9's (`paneSays`).
  * @param {Pressed} e the key, or a paste event
  * @param {Ctx} ctx
- * @param {{writing?: import('../overlays/hint.js').Writing | null, ending?: import('../overlays/hint.js').Ending | null, entry?: string}} [o] `writing` where the person was writing, which a printable key's line ends with (`writingElsewhere`); `ending` the sentence the line ends on while it stands whole (O-HINT's `show`): the undo chord's (`undoNone`); `entry` skep's own entry, as a paste's event carried it — a paste's alone
+ * @param {SiteSaying} [o]
  * @returns {boolean} whether a line answered the key
  */
 function siteSays(e, ctx, o = {}) {
+  if (SCENE.isOpen()) return paneSays(e, ctx, o);
   const site = readOnlySite(ctx), writing = o.writing ?? null, ending = o.ending ?? null;
   if (!site) return false;
   if (site.kind === 'others') { HINT.show('B3.row.others-document', { owner: site.owner }, { ...hinted(e, ctx), writing, ending }); return true; }
   const from = o.entry != null ? draftCopied(o.entry) : null;
   HINT.show('C-45', { D: site.doc }, { ...hinted(e, ctx), writing, ending, offered: STAGING, beneath: from ? { id: 'B3.quote.published-target', values: { label: from } } : null });
+  return true;
+}
+
+/**
+ * @typedef {Object} SiteSaying — what a site's line is told of the press it answers (`siteSays`, `paneSays`)
+ * @property {import('../overlays/hint.js').Writing | null} [writing] where the person was writing, which the line ends with (`writingElsewhere`)
+ * @property {import('../overlays/hint.js').Ending | null} [ending] the sentence the line ends on while it stands whole (O-HINT's `show`): the undo chord's (`undoNone`)
+ * @property {string} [entry] skep's own entry, as a paste's event carried it — a paste's alone
+ * @property {'key' | 'paste' | 'undo'} [as] the press: a printable key, a paste, the undo chord — a paste where `entry` is handed in, else a key, where none is named
+ */
+
+/**
+ * A key, a paste or the undo chord at a reading scene's pane answered by the
+ * pane's own line, never K-9's (see the head; FP-40; B3-S13), the pane the key's text
+ * stands at, else the one whose corner it was pressed at (SC's `siteOf`,
+ * `paneHolding`): at a past state's pane C-337 (`B3.history.read-only`); at
+ * the held version the reason its selection keys, else the span at its span
+ * focus (SC's `heldReasonAt`; B3-S2); at an editor pane's span holding no
+ * caret the draft's own line — "Enter places a caret here", the paste's form
+ * for a paste (K-93), the no-caret line for the undo chord (K-75); at an
+ * edition of the person's own C-45 naming it, the staging act beneath it,
+ * inert (`STAGING`), and for a paste C-241's statement where skep's own entry
+ * names a draft of the person's own (`draftCopied`); at a draft of the
+ * person's own no pane edits, the reason's line where it cannot be written
+ * now, else its own line; at another's document B3-S13's line naming its
+ * owner. Each the hint beside the element the key was pressed at, ending with
+ * where the person was writing and on the sentence handed in. False where the
+ * key stands at no pane.
+ * @param {Pressed} e the key, or a paste event
+ * @param {Ctx} ctx
+ * @param {SiteSaying} [o]
+ * @returns {boolean} whether a line answered the key
+ */
+function paneSays(e, ctx, o = {}) {
+  const t0 = /** @type {Element | null} */ (e.target), side = ctx.pane ?? (t0 ? SCENE.paneHolding(t0) : null), p = side ? SCENE.siteOf(side) : null;
+  if (!p) return false;
+  const shown = { ...hinted(e, ctx), writing: o.writing ?? null, ending: o.ending ?? null }, as = o.as ?? (o.entry != null ? 'paste' : 'key');
+  /** the line of a draft's span holding no caret, in the press's own words */
+  const bare = () => HINT.show(as === 'undo' ? 'B3.undo.none' : as === 'paste' ? 'B3.caret.enter.paste' : 'B3.caret.enter', as === 'undo' ? null : actKey(), shown);
+  if (p.kind === 'past') { HINT.show('B3.history.read-only', null, shown); return true; }
+  if (p.kind === 'held') { HINT.show(SCENE.heldReasonAt(p.side) ?? 'B3.held-version.not-current', null, shown); return true; }
+  if (p.kind === 'editor') { bare(); return true; }
+  const account = REC.session()?.account, doc = documentOf(p.names) || p.names;
+  if (account && accountOf(doc) === account) {
+    if (LAYER.isDraft(p.d) === false) {
+      const from = o.entry != null ? draftCopied(o.entry) : null;
+      HINT.show('C-45', { D: doc }, { ...shown, offered: STAGING, beneath: from ? { id: 'B3.quote.published-target', values: { label: from } } : null });
+      return true;
+    }
+    if (!unwritableSays(doc, e, ctx)) bare();
+    return true;
+  }
+  HINT.show('B3.row.others-document', { owner: REC.ownerAccount(p.d) || accountOf(doc) || '' }, shown);
   return true;
 }
 
@@ -841,7 +960,7 @@ function route(e, chord, ctx) {
   if (chord === 'Mod+L') return () => { LEAP.open(); return true; };
   // the trail's list (K-41), by the platform's history chord
   if (chord === trailChord()) return () => { TRAILLIST.open(byKey); return true; };
-  if (chord === 'Mod+S') return () => { saveChord(); return true; }; // K-74: the chord writes nothing; the corner's kept state answers it
+  if (chord === 'Mod+S') return () => { saveChord(ctx, e.target); return true; }; // K-74: the chord writes nothing; the corner's kept state answers it
   // undo and redo (K-75): from the plane, the scene and every control but a field
   const undoes = undoAct(chord);
   if (undoes) return async () => { e.preventDefault(); await undoChord(e, ctx, undoes === 'redo'); return true; };
@@ -879,7 +998,7 @@ function route(e, chord, ctx) {
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
   if (chord === 'Mod+R' || e.key === 'F5') return () => true; // K-94: the plane is live; nothing reloads
   // the caret's keys (see the head): at a live caret, before the walk's
-  if (ctx.where === 'caret') { const act = caretKey(e, chord); if (act) return act; }
+  if (ctx.where === 'caret') { const act = caretKey(e, chord, ctx); if (act) return act; }
   // the corner (K-57): its acts the platform's buttons, ← and → along a line of them, a printable key but Space at a corner
   // of a draft the person may edit answered by the way back to its text (`cornerKey`); its other keys are the platform's
   if (ctx.where === 'corner') { const act = cornerKey(e, chord, ctx); return act === undefined ? null : act; }
@@ -932,34 +1051,38 @@ function findAct(e, dir, ctx) {
  * Shift+Enter put a new line in, Tab a tab character, a printable key its
  * character, each replacing a selection drawn in the caret's own text
  * (`editAtCaret`) — each a change of the text shown alone (T-LAYER) — and the
- * walk then stands on the span the caret is in (N-WALK's `followCaret`), the
- * act ending once it does, so the next key, a held one too (`replay`), acts
- * there. Each is taken even where the caret cannot move that way. Null for
- * any other key, which acts as on the plane. The platform's default is
- * prevented first: an arrow would scroll the mirror, Home and End the page,
- * Tab would move the focus, Backspace would go back.
+ * walk then stands on the span the caret is in (N-WALK's `followCaret`) — in
+ * a reading scene's editor pane, that pane's span focus (`follow`) — the act
+ * ending once it does, so the next key, a held one too (`replay`), acts
+ * there; a line a key raises stands beside the focus it was pressed at,
+ * the pane's in a scene (`hinted`). Each is taken even where the caret cannot
+ * move that way. Null for any other key, which acts as on the plane. The
+ * platform's default is prevented first: an arrow would scroll the mirror or
+ * the pane, Home and End the page, Tab would move the focus, Backspace would
+ * go back.
  * @param {KeyboardEvent} e
  * @param {string} chord
+ * @param {Ctx} ctx
  * @returns {Act | null}
  */
-function caretKey(e, chord) {
+function caretKey(e, chord, ctx) {
   /** @type {Record<string, CaretStep>} */
   const moves = { '←': arrowStep(e), '→': arrowStep(e), '↑': 'up', '↓': 'down', Home: 'home', End: 'end' };
   /** the key's change made at the caret, the walk following it */
-  const at = (/** @type {() => boolean} */ change) => async () => { e.preventDefault(); change(); await WALK.followCaret(); return true; };
+  const at = (/** @type {() => boolean} */ change) => async () => { e.preventDefault(); change(); await follow(); return true; };
   /** a key that puts text in or takes it out: answered by the reason's line where the caret's draft cannot be written, else made, the moved verdict's line after its first */
   const edit = (/** @type {() => boolean} */ change) => async () => {
     e.preventDefault();
     const c = LAYER.caret();
-    if (c && unwritableSays(c.addr, e)) return true;
+    if (c && unwritableSays(c.addr, e, ctx)) return true;
     change();
-    await WALK.followCaret();
-    if (c) movedSays(c.addr, e);
+    await follow();
+    if (c) movedSays(c.addr, e, ctx);
     return true;
   };
   if (chord in moves) return at(() => stepCaret(moves[chord]));
   const shifted = chord.startsWith('Shift+') ? chord.slice(6) : '';
-  if (shifted in moves) return at(() => SEL.extendFromCaret(moves[shifted]));
+  if (shifted in moves) return at(() => extend(moves[shifted]));
   if (chord === 'Backspace') return edit(() => editAtCaret('', -1));
   if (chord === 'Delete') return edit(() => editAtCaret('', 1));
   if (chord === 'Enter' || chord === 'Shift+Enter') return edit(() => editAtCaret('\n'));
@@ -990,9 +1113,9 @@ function unwritableSays(addr, e, ctx = { where: 'plane', byKey: true }) {
   return true;
 }
 
-/** the first key typed in a draft since a moved verdict came to stand on it — or the first paste or cut made there — followed by the verdict's line at the focus, once per verdict (D6 BM-18; W-WRITE's `takeMovedKey`) */
-function movedSays(/** @type {string} */ addr, /** @type {Pressed} */ e) {
-  if (WRITE.takeMovedKey(addr)) HINT.show('B3.moved.first-key', null, hinted(e, { where: 'plane', byKey: true }));
+/** the first key typed in a draft since a moved verdict came to stand on it — or the first paste or cut made there — followed by the verdict's line at the focus the key was made at, once per verdict (D6 BM-18; W-WRITE's `takeMovedKey`) */
+function movedSays(/** @type {string} */ addr, /** @type {Pressed} */ e, /** @type {Ctx} */ ctx = { where: 'plane', byKey: true }) {
+  if (WRITE.takeMovedKey(addr)) HINT.show('B3.moved.first-key', null, hinted(e, ctx));
 }
 
 /**
@@ -1048,21 +1171,29 @@ function editAtCaret(text, erase) {
  * platform (`B3.caret.enter`), its hint (K-72; K-9); at the walk's
  * span of an edition of the session's account or of another's document,
  * every key but Space, its document's line (`siteSays`; K-72); anywhere
- * else, and for Space, swallowed with the K-9 line (`swallow`).
+ * else, and for Space, swallowed with the K-9 line (`swallow`). In a reading
+ * scene the same at a pane's text where no caret is live — its span focus the
+ * site, an editor pane's kept caret's span returning the caret and typing,
+ * any other span answered by its pane's own line (`paneSays`) — every line
+ * ending with where the person was writing, the site the pane (`keySite`);
+ * a key at no pane answered by the scene's acts' line (`actsSays`), never
+ * K-9's, Space alone keeping K-9's own line.
  * @param {KeyboardEvent} e
  * @param {Ctx} ctx
  * @returns {Promise<void>}
  */
 async function typeAt(e, ctx) {
   // a draft the session's ending left standing with its unkept words (D6 BM-24): no caret is placed in it, and a key at it is answered by the ending's caret line
-  const site = walkSite(), ended = site ? WRITE.unwritable(site) : null;
-  if (e.key !== ' ' && site && ended && ended.why === 'death' && WRITE.unkept(site) && unwritableSays(site, e, ctx)) return;
+  const site = keySite(ctx), draft = SCENE.isOpen() ? draftSpan(ctx)?.addr ?? null : site, ended = draft ? WRITE.unwritable(draft) : null;
+  if (e.key !== ' ' && draft && ended && ended.why === 'death' && WRITE.unkept(draft) && unwritableSays(draft, e, ctx)) return;
   const kept = e.key !== ' ' ? keptSpan(ctx) : null;
   if (kept && unwritableSays(kept.addr, e, ctx)) { e.preventDefault(); return; }
-  if (kept) { e.preventDefault(); LAYER.returnCaret(false, kept.addr); editAtCaret(e.key); await WALK.followCaret(); movedSays(kept.addr, e); return; }
-  const writing = writingElsewhere(walkSite());
+  if (kept) { e.preventDefault(); LAYER.returnCaret(false, kept.addr); editAtCaret(e.key); await follow(); movedSays(kept.addr, e, ctx); return; }
+  const writing = writingElsewhere(site);
   if (e.key !== ' ' && bareDraftSpan(ctx)) { HINT.show('B3.caret.enter', actKey(), { ...hinted(e, ctx), writing }); return; }
   if (e.key !== ' ' && siteSays(e, ctx, { writing })) return;
+  // in a reading scene no key is answered by K-9's line: one at no pane, the scene's own, by its acts' line
+  if (e.key !== ' ' && SCENE.isOpen()) { actsSays(e, ctx); return; }
   swallow(e, ctx, writing);
 }
 
@@ -1073,26 +1204,60 @@ function walkSite() {
 }
 
 /**
+ * The site a key was pressed at, as the line it raises is ended against where
+ * the person was writing (`writingElsewhere`): on the plane the document the
+ * walk stands in (`walkSite`); in a reading scene the pane — at its text, or
+ * at its corner — its draft's address where it is that draft's editor, else
+ * the pane itself, a past state or the held version of a draft being a site
+ * other than that draft (SC's `siteOf`, `paneHolding`); null at the scene's
+ * acts and off any document.
+ * @param {Ctx} ctx
+ * @param {EventTarget | null} [target] the element the key was pressed at, which names a pane's corner's pane
+ * @returns {string | null}
+ */
+function keySite(ctx, target = null) {
+  if (!SCENE.isOpen()) return walkSite();
+  const side = ctx.pane ?? (target ? SCENE.paneHolding(/** @type {Element} */ (target)) : null), p = side ? SCENE.siteOf(side) : null;
+  return p ? (p.kind === 'editor' ? p.names : 'pane ' + p.side) : null;
+}
+
+/**
  * Where the person was writing, which the line a swallowed printable key
  * raises ends with (see the head; B3.undo.last-writing): the draft last
  * written in the page's session (W-WRITE's `lastWritten`), where that draft's
  * caret stands kept — the page's own, or the one the draft keeps (T-LAYER's
- * `caretIn`) — and the key was pressed outside that draft — named as the
- * status region names its box (T-LAYER's `boxName`), its label a LEAP to the
- * span the kept caret stands in as the label's act is made, the caret's own
- * position named (N-GO's `leapTo`), so the next printable key there types at
- * it (`typeAt`). Null anywhere else.
- * @param {string | null} site the document the key was pressed at; null where it was pressed at none
+ * `caretIn`) — and the key was pressed at a site other than that draft (`keySite`:
+ * a past state or the held version of the draft among them) — named as the
+ * status region names its box (T-LAYER's `boxName`), its label the shortest
+ * way back to the kept caret (`backTo`). Null anywhere else.
+ * @param {string | null} site the site the key was pressed at (`keySite`); null where it was pressed at none
  * @returns {import('../overlays/hint.js').Writing | null}
  */
 function writingElsewhere(site) {
   const w = WRITE.lastWritten(), c = w ? LAYER.caretIn(w) : null;
   if (!w || !c || c.live || site === w) return null;
   const name = LAYER.boxName(w);
-  return {
-    label: name.name, named: name.runs,
-    act: (byKey) => { const at = LAYER.caretSpan(w); void GO.leapTo(w, { pos: at ? at.pos : null, how: byKey ? 'key' : 'click', byKey }); },
-  };
+  return { label: name.name, named: name.runs, act: (byKey) => backTo(w, byKey) };
+}
+
+/**
+ * The shortest way back to a draft's kept caret (the ending's act; FP-40):
+ * within a reading scene whose editor pane holds the
+ * draft, the focus in that pane on the caret's span, so the next printable
+ * key returns the caret and types there (SC's `toCaret`); else, in a scene
+ * opened over an entry holding that caret, the scene's close — Back onto that
+ * entry, the caret restored there (N-GO's `closesTo`, `closeScene`); else a
+ * LEAP to the span the kept caret stands in, the caret's own position named
+ * (N-GO's `leapTo`) — from a scene's entry, which stands behind it so Back
+ * reopens the scene — so the next printable key there types at it (`typeAt`).
+ * @param {string} w the draft
+ * @param {boolean} byKey a key made the act
+ */
+function backTo(w, byKey) {
+  if (SCENE.isOpen() && SCENE.toCaret(w)) return;
+  if (GO.closesTo(w)) { GO.closeScene(byKey); return; }
+  const at = LAYER.caretSpan(w);
+  void GO.leapTo(w, { pos: at ? at.pos : null, how: byKey ? 'key' : 'click', byKey });
 }
 
 /**
@@ -1114,8 +1279,17 @@ function writingElsewhere(site) {
 async function extendAtKept(e, dir, addr) {
   e.preventDefault();
   LAYER.returnCaret(true, addr);
-  SEL.extendFromCaret(dir);
-  await WALK.followCaret();
+  extend(dir);
+  await follow();
+}
+
+/** Shift with a step at a live caret (K-71): a selection extended from it — the page's on the plane (O-SELECTION's `extendFromCaret`), the platform's in the text of the reading scene's editor pane the caret stands in (SC's `extendFromCaret`) */
+const extend = (/** @type {CaretStep} */ dir) => (LAYER.caretPane() ? SCENE.extendFromCaret(dir) : SEL.extendFromCaret(dir));
+
+/** the walk follows a live caret (N-WALK's `followCaret`) — on the plane; in a reading scene the span focus of the editor pane the caret stands in (SC's `followCaret`) */
+async function follow() {
+  if (LAYER.caretPane()) SCENE.followCaret();
+  else await WALK.followCaret();
 }
 
 /**
@@ -1124,18 +1298,38 @@ async function extendAtKept(e, dir, addr) {
  * committed first (W-WRITE's `commit`), and the answer given once it lands
  * (`landed`), from the kept state it leaves (`saveAnswer`): at once where no
  * burst of the draft is open or awaits its ack (`inFlight`), and not at all
- * where a key was taken before it (`keysTaken`). Nothing where the scene
- * covers the plane, or the chord is made at no document.
+ * where a key was taken before it (`keysTaken`). In a reading scene the
+ * draft is the one the caret stands in where an editor pane holds it, else
+ * the editor pane's whose text or corner the chord was made at, its corner
+ * the pane's (SC's `siteOf`); nothing at any other pane, at the scene's acts,
+ * or where the chord is made at no document.
+ * @param {Ctx} ctx
+ * @param {EventTarget | null} target the element the chord was made at
  */
-function saveChord() {
-  if (SCENE.isOpen()) return;
+function saveChord(ctx, target) {
   const c = LAYER.caret(), f = WALK.current();
-  const addr = c ? c.addr : f && (f.kind === 'document' || f.kind === 'block' || f.kind === 'link') ? f.addr : null;
+  const addr = SCENE.isOpen() ? sceneDraft(ctx, target) : c ? c.addr : f && (f.kind === 'document' || f.kind === 'block' || f.kind === 'link') ? f.addr : null;
   if (!addr) return;
   if (!WRITE.inFlight(addr)) { saveAnswer(addr); return; }
   const pressed = keysTaken;
   WRITE.commit(addr);
   saving = WRITE.landed(addr).then(() => { if (keysTaken === pressed) saveAnswer(addr); });
+}
+
+/**
+ * The draft a chord made in a reading scene acts on (`saveChord`): the page's
+ * caret's, where an editor pane holds it (T-LAYER's `caretPane`); else the
+ * draft of the editor pane whose text or corner the chord was made at (SC's
+ * `siteOf`, `paneHolding`); null anywhere else.
+ * @param {Ctx} ctx
+ * @param {EventTarget | null} target
+ * @returns {string | null}
+ */
+function sceneDraft(ctx, target) {
+  const c = LAYER.caret();
+  if (c && LAYER.caretPane()) return c.addr;
+  const side = ctx.pane ?? (target ? SCENE.paneHolding(/** @type {Element} */ (target)) : null), p = side ? SCENE.siteOf(side) : null;
+  return p && p.kind === 'editor' ? p.names : null;
 }
 
 /**
@@ -1164,13 +1358,15 @@ const UNDO_CONSTANT = /** @type {import('../overlays/hint.js').Ending} */ (Objec
  * The draft the undo chord acts on (see the head; D5 K-75): the one whose
  * text holds the caret; where none does, the draft whose caret the person
  * last held this session — the kept caret's — while it stands in view at its
- * reading scale (T-LAYER's `editable`, `inView`). Null where neither stands,
- * and while the scene covers the plane.
+ * reading scale (T-LAYER's `editable`, `inView`). In a reading scene, the
+ * draft the caret stands in, live or kept, where an editor pane of the scene
+ * holds it — the pane its text in view, whatever the camera's scale (T-LAYER's
+ * `caretPane`). Null where neither stands.
  * @returns {string | null}
  */
 function undoTarget() {
-  if (SCENE.isOpen()) return null;
   const c = LAYER.caret();
+  if (SCENE.isOpen()) return c && LAYER.caretPane() ? c.addr : null;
   return c && LAYER.editable(c.addr) && (c.live || LAYER.inView(c.addr)) ? c.addr : null;
 }
 
@@ -1189,24 +1385,32 @@ function undoTarget() {
  * redo with nothing to put back is taken and says nothing. A step standing
  * in text the page does not hold — a long draft held in part — is reached
  * first by a LEAP to where it began (N-GO's `leapTo`), then taken; where its
- * text is still not held nothing is changed.
+ * text is still not held nothing is changed. In a reading scene the press acts
+ * in the editor pane: no LEAP leaves the scene for a step its text does not
+ * hold, the caret placed live where the step began in that pane, its span
+ * focus following it (`follow`), and a face standing at the pane's corner's
+ * kept word (SC's `keptWordOf`).
  * @param {KeyboardEvent} e
  * @param {Ctx} ctx
  * @param {boolean} redo
  * @returns {Promise<void>}
  */
 async function undoChord(e, ctx, redo) {
-  const addr = undoTarget();
+  const addr = undoTarget(), scene = SCENE.isOpen();
   if (!addr) { if (!redo) undoNone(e, ctx); return; }
   if (unwritableSays(addr, e, ctx)) return;
   let out = redo ? MACHINE.redo(addr) : MACHINE.undo(addr);
-  // the step stands in text the page does not hold of a long draft: its place read first, by a LEAP to where it began, then the press made
-  if (out.how === 'away' && out.at != null) { await GO.leapTo(addr, { pos: out.at, how: 'key', byKey: ctx.byKey }); out = redo ? MACHINE.redo(addr) : MACHINE.undo(addr); }
+  // the step stands in text the page does not hold of a long draft: its place read first, by a LEAP to where it began, then the press made — never out of a scene
+  if (out.how === 'away' && out.at != null && !scene) { await GO.leapTo(addr, { pos: out.at, how: 'key', byKey: ctx.byKey }); out = redo ? MACHINE.redo(addr) : MACHINE.undo(addr); }
   if (out.how === 'away') return;
-  if (out.how === 'face') { const corner = LAYER.cornerOf(addr); if (!FACES.unkept(addr, corner ? /** @type {HTMLElement | null} */ (corner.querySelector('.kept-word')) : null, false)) FACES.answerAtFace(addr); return; }
+  if (out.how === 'face') {
+    const corner = scene ? null : LAYER.cornerOf(addr), word = scene ? SCENE.keptWordOf(addr) : corner ? /** @type {HTMLElement | null} */ (corner.querySelector('.kept-word')) : null;
+    if (!FACES.unkept(addr, word, false)) FACES.answerAtFace(addr);
+    return;
+  }
   if (out.how === 'empty') { if (!redo) HINT.show('B3.undo.empty', null, { ...hinted(e, ctx), ending: UNDO_CONSTANT }); return; }
   if (SEL.selected()) SEL.clear();
-  if (out.at != null) { LAYER.placeCaret(addr, out.at); await WALK.followCaret(); }
+  if (out.at != null) { LAYER.placeCaret(addr, out.at); await follow(); }
   undoSaid(addr, out, redo);
 }
 
@@ -1242,8 +1446,8 @@ function undoSaid(addr, out, redo) {
  * @param {Ctx} ctx
  */
 function undoNone(e, ctx) {
-  const writing = writingElsewhere(null);
-  if (siteSays(e, ctx, { writing, ending: UNDO_CONSTANT })) return;
+  const writing = writingElsewhere(SCENE.isOpen() ? keySite(ctx, e.target) : null);
+  if (siteSays(e, ctx, { writing, ending: UNDO_CONSTANT, as: 'undo' })) return;
   HINT.show('B3.undo.none', null, { ...hinted(e, ctx), writing, ending: UNDO_CONSTANT });
 }
 
@@ -1312,16 +1516,23 @@ async function replay() {
  * nothing for the slots to act on, an inert slot's chord gives its slot's
  * reason as its hint (`inertSaid`); every other slot's chord does nothing. On
  * the one line or a standing overlay every other key is that control's own.
- * At a pane's corner its keys are a corner's (`cornerKey`): Enter and Space
- * its act's, as the platform activates it, else the platform's, and ← and →
- * along the line of its acts where it holds any, Space never swallowed there.
- * Elsewhere ← closes the scene so (K-63); a pane's own keys moved that pane
- * before the dispatch (SC's `key`, K-60), and → and Enter elsewhere in a
- * pane, and Shift with the arrows, are the platform's; on the scene's acts
- * every other key is the button's own — Enter and Space press it; a printable
- * key anywhere else is swallowed — at a selection in the held version, every
- * one but Space answered by that selection's reason, as the slots that send
- * are (`heldSaid`), else the K-9 line its hint.
+ * Select-all at a pane's text selects its text whole where the page selects
+ * it there (`wholeAt`). A pane's corner is routed as a corner, never as its
+ * pane (`cornerKey`): Enter and Space its act's, as the platform activates
+ * it, else the platform's, ← and → along the line of its acts where it holds
+ * any, and a printable key but Space answered by its pane's line — at an
+ * editor pane's corner the way back to the text (`cornerSays`), at any
+ * other's that pane's own (`paneSays`). At a live caret in an editor pane its
+ * keys are the plane's caret's (`caretKey`), the paging keys moving the caret
+ * with its pane (SC's `pageCaret`). Elsewhere ← closes the scene so (K-63).
+ * On the scene's acts every other key is the button's own — Enter and Space
+ * press it — and a printable key but Space is answered by the acts' own line
+ * (`actsSays`). At a pane's text where no caret is live, the pane's moves
+ * move its span focus or the pane (SC's `key`; K-60), Enter at an editor
+ * pane's span places the caret there (SC's `enterSpan`; K-70), Shift with ←
+ * or → at the span its kept caret stands in returns it and extends a
+ * selection from it (`extendAtKept`), and a printable key is typed at the kept
+ * caret's span, else answered by the pane's own line (`typeAt`), Space by K-9's.
  * @param {KeyboardEvent} e
  * @param {string} chord
  * @param {Ctx} ctx
@@ -1336,11 +1547,44 @@ function sceneKey(e, chord, ctx) {
   if (SLOT_CHORDS.has(chord) || e.key === 'F5') return () => true;
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
   if (ctx.where === 'overlay' || ctx.where === 'line') return null; // the overlay's or the line's own keys
-  if (ctx.where === 'scene') { const act = cornerKey(e, chord, ctx, true); if (act !== undefined) return act; }
-  if (chord === '←') return () => { GO.closeScene(ctx.byKey); return true; };
-  if (ctx.where === 'scene-acts') return null; // the button's own keys
-  if (printable(e)) return () => { if (e.key === ' ' || !heldSaid(e, ctx)) swallow(e, ctx, writingElsewhere(ctx.where === 'scene' ? SCENE.paneRead()?.names ?? null : null)); return true; };
+  // select-all (K-93; B3-S8): an editor pane's text whole at its caret, a past state's read only
+  if (chord === 'Mod+A') return wholeAt(ctx) ? async () => { e.preventDefault(); await selectWhole(ctx); return true; } : null;
+  // a pane's corner: a corner's keys, never its pane's
+  if (ctx.where === 'scene' && !ctx.pane) { const act = cornerKey(e, chord, ctx, true); if (act !== undefined) return act; }
+  // the caret's keys at a live caret in an editor pane: the plane's, the paging keys moving it with its pane
+  if (ctx.where === 'caret') {
+    if (chord === 'PageDown' || chord === 'PageUp') return () => { e.preventDefault(); SCENE.pageCaret(chord === 'PageDown' ? 1 : -1); return true; };
+    const act = caretKey(e, chord, ctx);
+    if (act) return act;
+  }
+  if (chord === '←' && ctx.where !== 'caret') return () => { GO.closeScene(ctx.byKey); return true; };
+  if (ctx.where === 'scene-acts') return printable(e) && e.key !== ' ' ? () => { actsSays(e, ctx); return true; } : null; // the button's own keys
+  const side = ctx.pane;
+  if (side && ctx.where === 'scene') {
+    // the pane's own moves where no caret is live (K-60), the span focus with them
+    if (PANE_MOVES.has(chord)) return () => { e.preventDefault(); SCENE.key(chord, side); return true; };
+    if (chord === 'Enter' && draftSpan(ctx)) return () => { SCENE.enterSpan(side); return true; };
+    const kept = chord === 'Shift+←' || chord === 'Shift+→' ? keptSpan(ctx) : null;
+    if (kept) return async () => { await extendAtKept(e, arrowStep(e), kept.addr); return true; };
+  }
+  if (printable(e)) return async () => { await typeAt(e, ctx); return true; };
   return null;
+}
+
+/** a reading scene's pane's own moves where no caret is live (D5 K-60; SC's `key`) */
+const PANE_MOVES = new Set(['↓', '↑', 'PageDown', 'PageUp', 'Home', 'End']);
+
+/**
+ * A printable key but Space at the scene's acts — the bar's buttons, a
+ * stroke's, the stop, the list of a draft's past states (`Ctx.where`
+ * `scene-acts`): answered, never by silence, by the acts' own line naming the
+ * keys they take — Enter takes the act, Tab goes on to the panes — its hint
+ * beside the act, ending with where the person was writing (`writingElsewhere`).
+ * @param {KeyboardEvent} e
+ * @param {Ctx} ctx
+ */
+function actsSays(e, ctx) {
+  HINT.show('L.scene.acts.key', { 'act key': drawChord('Enter'), 'tab key': drawChord('Tab') }, { ...hinted(e, ctx), writing: writingElsewhere(null) });
 }
 
 /**
@@ -1370,7 +1614,7 @@ function heldSaid(e, ctx) {
  * @returns {{repeat: boolean, at: Element | null}}
  */
 function hinted(e, ctx, target = e.target) {
-  const at = /** @type {Element | null} */ (ctx.where === 'plane' || ctx.where === 'caret' ? null : target);
+  const at = /** @type {Element | null} */ (ctx.where === 'plane' || (ctx.where === 'caret' && !ctx.pane) ? null : target);
   return { repeat: !!e.repeat, at: at && typeof at.getBoundingClientRect === 'function' ? at : null };
 }
 
@@ -1401,20 +1645,24 @@ export function copyAsDrawn(e, ctx, at = e.target) {
 
 /**
  * A paste event at the page (see the head; D5 K-93; B3-S5), a key's or a
- * menu's: off the plane, or under the scene, left to the platform,
- * untouched. On the plane its plain text and skep's own entry (M-PASSAGE's
+ * menu's: off the plane — and in a reading scene off a pane's text, at its
+ * corners and its acts — left to the platform, untouched. On the plane, and
+ * at a pane's text, its plain text and skep's own entry (M-PASSAGE's
  * `TYPE`) are read from the event's own clipboard while it is dispatched,
  * before anything waits, and the paste is made where the focus is
- * (`pasteAt`) — held with the keys, both flavors with it, while a jump is in
- * the air or a paste's source is being read, the platform's paste prevented
- * (`hold`). No other clipboard is read.
+ * (`pasteAt`) — at an editor pane's caret as at the plane's, and at any
+ * other pane answered by its own line (`paneSays`) — held with the keys,
+ * both flavors with it, while a jump is in the air or a paste's source is
+ * being read, the platform's paste prevented (`hold`). No other clipboard is
+ * read.
  * @param {Clip} e
  * @param {Ctx} ctx where the focus is, as the app read it
  * @returns {boolean} whether the page took the paste, the platform's prevented; false where it is left to the platform
  */
 export function pasteEvent(e, ctx) {
-  if (ctx.where !== 'plane' || SCENE.isOpen()) return false;
+  if (ctx.where !== (SCENE.isOpen() ? 'scene' : 'plane')) return false;
   ctx = whereNow(ctx);
+  if (SCENE.isOpen() && !ctx.pane) return false;
   const text = e.clipboardData ? e.clipboardData.getData('text/plain') : '', entry = e.clipboardData ? e.clipboardData.getData(PASSAGE.TYPE) : '', at = { target: e.target };
   if (waiting()) { e.preventDefault(); hold(null, ctx, { text, entry, at }); return true; }
   const took = pasteAt(text, entry, at, ctx);
@@ -1457,7 +1705,7 @@ function pasteAt(text, entry, e, ctx) {
     /** what the paste did, answered: the walk following what it placed, its face where it is told, its line where nothing was placed for its size or its emptiness */
     const answer = (/** @type {import('../text/layer.js').Pasted | false} */ r) => {
       const told = r && typeof r === 'object' ? r : null;
-      if (r === 'placed' || r === 'same' || (told && told.told === 'differs')) { if (over) SEL.clear(); clipping = followed(addr, e); }
+      if (r === 'placed' || r === 'same' || (told && told.told === 'differs')) { if (over) SEL.clear(); clipping = followed(addr, e, ctx); }
       if (told) DELETION.pasted(addr, told.site, FACES.pasteWords(told.name, told.doc));
       else if (r === 'none') HINT.show('L.paste.none', null, hinted(e, ctx));
       else if (r === 'large') HINT.show('L.paste.large', { size: megabytes(byteLength(LAYER.pasteText(text))), limit: megabytes(WRITE.PASTE_MAX_BYTES) }, hinted(e, ctx));
@@ -1489,10 +1737,10 @@ function unplaced(addr, why) {
 }
 WRITE.onUnplaced(unplaced);
 
-/** a paste or a cut made at the caret, followed: the walk stood on the span the caret is in (N-WALK's `followCaret`), then the moved verdict's line where the draft owes its first edit one (`movedSays`) */
-async function followed(/** @type {string} */ addr, /** @type {Pressed} */ e) {
-  await WALK.followCaret();
-  movedSays(addr, e);
+/** a paste or a cut made at the caret, followed: the walk stood on the span the caret is in (N-WALK's `followCaret`) — an editor pane's span focus in a reading scene (`follow`) — then the moved verdict's line where the draft owes its first edit one, beside the focus it was made at (`movedSays`) */
+async function followed(/** @type {string} */ addr, /** @type {Pressed} */ e, /** @type {Ctx} */ ctx) {
+  await follow();
+  movedSays(addr, e, ctx);
 }
 
 /**
@@ -1510,13 +1758,15 @@ async function followed(/** @type {string} */ addr, /** @type {Pressed} */ e) {
  * a span of a draft holding no caret the draft's line answers it. While a
  * jump is in the air the cut is prevented and dropped: it writes the
  * clipboard only inside its event. Anywhere else on the plane it is the
- * platform's.
+ * platform's. In a reading scene, at an editor pane's text as on the plane —
+ * its caret's, its kept caret's span's, its other spans' — and anywhere else
+ * in the scene the platform's.
  * @param {Clip} e
  * @param {Ctx} ctx where the focus is, as the app read it
  * @returns {boolean} whether the page took the cut, the platform's prevented; false where it is left to the platform
  */
 export function cutEvent(e, ctx) {
-  if (ctx.where !== 'plane' || SCENE.isOpen()) return false;
+  if (ctx.where !== (SCENE.isOpen() ? 'scene' : 'plane')) return false;
   ctx = whereNow(ctx);
   if (waiting()) { e.preventDefault(); return true; }
   const live = ctx.where === 'caret' ? LAYER.caret() : null, kept = live ? null : keptSpan(ctx), addr = live ? live.addr : kept ? kept.addr : null;
@@ -1527,7 +1777,7 @@ export function cutEvent(e, ctx) {
   if (kept) LAYER.returnCaret(false, kept.addr);
   const over = selectedAtCaret(), b = REC.board();
   if (!over) { HINT.show('L.copy.nothing', null, hinted(e, ctx)); return true; }
-  if (LAYER.caretCut(e, over, b ? b.origin : '') === 'cut') { SEL.clear(); clipping = followed(addr, e); }
+  if (LAYER.caretCut(e, over, b ? b.origin : '') === 'cut') { SEL.clear(); clipping = followed(addr, e, ctx); }
   else HINT.show('L.cut.uncopied', null, hinted(e, ctx));
   return true;
 }
@@ -1576,12 +1826,15 @@ function swallow(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx, /** @ty
  * it — its own toolbar, each line of a corner one, never across lines (T-LAYER's
  * `setStops`, `lineActs`) — staying at its ends. On the plane a printable key but Space at
  * a corner of a draft the person may edit is answered by the way back to its
- * text (`cornerSays`). A key made at a landing with a corner its context is
+ * text (`cornerSays`); at a reading scene's pane's corner, by the pane's test
+ * and never the address the corner names (SC's `siteOf`): at an editor
+ * pane's the way back to its text, at any other's that pane's own line
+ * (`paneSays`). A key made at a landing with a corner its context is
  * dropped: no act of a corner is made there (FP-25).
  * @param {KeyboardEvent} e
  * @param {string} chord
  * @param {Ctx} ctx
- * @param {boolean} [pane] the corner is a reading scene's pane's: a printable key there is the scene's
+ * @param {boolean} [pane] the corner is a reading scene's pane's: its pane answers a printable key there
  * @returns {Act | null | undefined} the key's act; null where the platform takes it; undefined where the corner takes no such key — the focus at no corner, ← or → off a line of acts, a printable key the corner does not answer — and the site holding the corner answers it
  */
 function cornerKey(e, chord, ctx, pane = false) {
@@ -1598,7 +1851,14 @@ function cornerKey(e, chord, ctx, pane = false) {
     return () => { e.preventDefault(); if (to !== on) FOCUS.land(to); return true; };
   }
   const addr = corner.dataset.corner || '';
-  if (!pane && printable(e) && LAYER.editable(addr)) return () => { cornerSays(e, ctx, addr); return true; };
+  // a reading scene's pane's corner: its pane's test, never its address's — a past state's corner names the draft's address too
+  if (pane) {
+    const side = printable(e) ? SCENE.paneHolding(corner) : null, p = side ? SCENE.siteOf(side) : null;
+    if (!p) return undefined;
+    if (p.kind === 'editor') return () => { cornerSays(e, ctx, p.names); return true; };
+    return () => { paneSays(e, { ...ctx, pane: p.side }, { writing: writingElsewhere(keySite(ctx, corner)) }); return true; };
+  }
+  if (printable(e) && LAYER.editable(addr)) return () => { cornerSays(e, ctx, addr); return true; };
   return undefined;
 }
 
@@ -1629,7 +1889,10 @@ function selectFirst(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
 
 /** the selection the screen draws in the text the live caret stands in — what a key's text at the caret replaces, what an arrow at it ends and what Mod+Enter at it follows from (D5 K-51, K-71, K-72; see the head); null where none is drawn there, whatever an earlier act did and wherever else a selection stands, and where it reaches into another document's text (O-SELECTION's `reachesPast`; FP-40) */
 function selectedAtCaret() {
-  const s = SEL.selected(), c = LAYER.caret();
+  const c = LAYER.caret(), pane = LAYER.caretPane();
+  // in a reading scene's editor pane, the platform's selection standing in the pane's text
+  if (pane) { const p = LAYER.selectionIn(pane.article); return p && c && p.span.addr === c.addr ? p.span : null; }
+  const s = SEL.selected();
   return s && c && s.addr === c.addr && !SEL.reachesPast() ? s : null;
 }
 
@@ -1646,7 +1909,10 @@ function followAtCaret(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
  * reaching face among them, whose dismissal abandons the jump — then a jump
  * reaching whose face another overlay took the place of (FP-25; N-GO's
  * `abandon`), the find — its current match left selected, the focus on it
- * (N-FIND's `close`; FP-20) — the scene — its close a Back from its entry
+ * (N-FIND's `close`; FP-20) — in the scene the selection standing in the
+ * text of the pane the focus is at, then a live caret standing in an editor
+ * pane — the text left, the caret kept and its span the pane's focus
+ * (`paneEsc`; K-77, K-61) — then the scene — its close a Back from its entry
  * (N-GO's `closeScene`), which brings back the selection the place it opened
  * over kept — then the selection, then a live caret — the text left to the walk at
  * the caret's span, the caret kept there and its span holding the walk
@@ -1671,10 +1937,28 @@ export function esc(landed = false, pointer = false) {
   if (HOST.current() && !(landed && HOST.typing() && !HOST.notice())) { HOST.dismissInnermost(); return; }
   if (GO.abandon()) return;
   if (FIND.isOpen() && !landed) { void FIND.close(); return; }
-  if (SCENE.isOpen()) { GO.closeScene(!pointer); return; }
+  if (SCENE.isOpen()) { if (!paneEsc()) GO.closeScene(!pointer); return; }
   if (SEL.selected()) { SEL.clear(); return; }
   if (WALK.leaveText() || pointer) return;
   GO.endArrival();
+}
+
+/**
+ * Esc's steps inside a reading scene before its close (see `esc`; D5 K-77,
+ * K-61, K-63): the selection standing in the text of the pane the focus is at
+ * ended (SC's `unselect`); else a live caret standing in an editor pane left
+ * — kept where it stood, its burst committed, its span the pane's focus, so
+ * Tab then moves on round the ring (T-LAYER's `leaveCaret`; SC's
+ * `followCaret`). False where neither stands: the scene closes.
+ * @returns {boolean} a step was taken
+ */
+function paneEsc() {
+  const side = SCENE.textPane(), c = LAYER.caret();
+  if (side && SCENE.unselect(side)) return true;
+  if (!c || !c.live || !LAYER.caretPane()) return false;
+  LAYER.leaveCaret('esc');
+  SCENE.followCaret();
+  return true;
 }
 
 /**

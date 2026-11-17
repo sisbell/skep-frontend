@@ -235,8 +235,8 @@ between them, where the bands leave it; at a window SCENE_HEAD_PX wide, where
 beside its compact corner a pane keeps fewer than HEAD_CH characters, both
 corners at their documents' heads, across their columns' text and edge, both
 texts beginning at one depth, the measure the room beside the edge alone,
-the first rows held where they stand as both panes scroll and ↓ bringing the
-next block's top to the held row's foot, never under it; the first block in
+the first rows held where they stand as both panes scroll and ↓ moving pane A's
+span focus to the next span, its top at the held row's foot, never under it; the first block in
 view at the run's window still first in view at each window after it; the
 plane under the scene parked meanwhile at the far band,
 where the view reads nothing, so the later cases meet the page as the check
@@ -2221,7 +2221,8 @@ def scene_measure_holds(ctx, r):
     beside its compact corner a pane keeps fewer than HEAD_CH characters, both corners at their documents' heads, across
     their columns' text and edge, both texts beginning at one depth below them, the measure the most characters the pane
     holds beside the edge alone, at the reading size; both panes scrolled, each first row held where it stood; ↓ in pane A
-    bringing the next block's top to the held row's foot, never under it. The first block in view at the run's window is
+    moving its span focus from the span in view to the next span, whose top it brings to the held row's foot, never under
+    it. The first block in view at the run's window is
     first in view at each window after it. While the window is changed the plane under the scene stands at the far band,
     where the view reads nothing (M-PUMP's `pump`), so the run's later cases meet the page as the scene's check found it;
     the window, the camera and the scene are put back as they stood. Its figures"""
@@ -2256,11 +2257,14 @@ def scene_measure_holds(ctx, r):
         ctx.frames(3)
         scrolled = pane_columns(ctx)
         before = pane_blocks(ctx, 'a') or {}
+        # the walk's elements of pane A's text, by T-SPAN's grain: a span, never a typed line of white space alone
+        spans = ctx.js('((window.__skep.scene.panes() || {}).a || {blocks: []}).blocks.filter((b) => b.kind !== "para" || (b.text || "").trim() !== "").map((b) => b.pos)') or []
         ctx.js('document.getElementById("sceneA").focus()')
         ctx.drv.key('ArrowDown')
         ctx.settle()
         ctx.frames(2)
         after = pane_blocks(ctx, 'a') or {}
+        focus = ctx.js('((window.__skep.scene.panes() || {}).a || {}).focus')
     finally:
         ctx.resize(*was)
         ctx.set_view(landing['x'], landing['y'], landing['scale'])
@@ -2338,11 +2342,11 @@ def scene_measure_holds(ctx, r):
     held = both(head) and both(scrolled) and all(scrolled[s]['scroll'] > head[s]['scroll'] + 100 and abs(scrolled[s]['corner']['top'] - head[s]['corner']['top']) <= MEASURE_TOL_PX for s, _ in sides)
     r.check(held, f'at a {SCENE_HEAD_PX} px window both panes scrolled: each head\'s first row held where it stood, the text passing under it',
             {name: {'scroll': [head[s] and head[s]['scroll'], scrolled[s] and scrolled[s]['scroll']], 'corner_top': [head[s] and head[s]['corner']['top'], scrolled[s] and scrolled[s]['corner']['top']]} for s, name in sides})
-    want = next((b for b in (before.get('blocks') or []) if b['top'] > (before.get('held') or 0) + 1), None)
+    want = next((b for b in (before.get('blocks') or []) if b['pos'] in spans and b['top'] > (before.get('held') or 0) + 1), None)
     landed = want and next((b for b in (after.get('blocks') or []) if b['pos'] == want['pos']), None)
-    r.check(bool(want) and bool(landed) and after.get('held', 0) > 0 and abs(landed['top'] - after['held']) <= 1,
-            f'at a {SCENE_HEAD_PX} px window ↓ in pane A brings the next block\'s top to the foot of the head\'s held row, a pixel either way — never under it',
-            {'held': [before.get('held'), after.get('held')], 'next': want, 'landed': landed})
+    r.check(bool(want) and bool(landed) and focus == want['pos'] and after.get('held', 0) > 0 and abs(landed['top'] - after['held']) <= 1,
+            f'at a {SCENE_HEAD_PX} px window ↓ in pane A moves its span focus by span from the span in view to the next, whose top it brings to the foot of the head\'s held row, a pixel either way — never under it',
+            {'held': [before.get('held'), after.get('held')], 'next': want, 'landed': landed, 'focus': focus})
     kept = {k: {s: v[s] and v[s]['pos'] for s in 'ab'} for k, v in firsts.items()}
     r.check(all(kept['run'][s] is not None and kept['wide'][s] == kept['run'][s] and kept['head'][s] == kept['run'][s] for s in 'ab'),
             f'the first block in view at the run\'s window is first in view at {SCENE_WIDE_PX} px and at {SCENE_HEAD_PX} px, below a held head\'s row: each refit keeps the reader\'s place', kept,

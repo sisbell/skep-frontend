@@ -51,7 +51,7 @@
 // of faced in the far end's words and, known so at the act, never leaving
 // (FP-21, FP-25), one opened from a link's end keeping that link on its
 // entry and through a Back that reopens it, the card it was opened from reopened by its close (FP-36),
-// a live caret it was opened at standing live through its close (D5 K-63);
+// a live caret it was opened at kept by the opening and re-taken by its close (D5 K-63);
 // each pane's article
 // T-LAYER's mount on the inner side of its corner, its byline's facts read
 // before the pane is set (FP-12, FP-34), its region named by its corner's
@@ -123,7 +123,16 @@
 // the selection keys against the current text, Space keeping K-9's line
 // (D6 BM-14; FP-41), and its last held line discarded, the scene staying,
 // the one line naming the key that closes it as the platform draws it (D6
-// BM-16; style S21).
+// BM-16; style S21). And the editor pane — a pane holding the current text
+// of a draft of the person's own, whatever the camera's scale, never a past
+// state or the held version: its caret keys the plane's, the pane set again
+// from the text shown as typed, one live caret across two editors, ↓ and ↑
+// walking a pane's span focus by span, a swallowed key answered by its
+// pane's own line ending with where the person was last writing, that
+// ending's act the shortest way back, the close re-taking the pane's caret
+// and its anchored span, a click and a drag placing the caret by element, a
+// paste, a cut, the save chord and select-all made in the pane, and Esc's
+// order there (FP-38, FP-40).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -1104,7 +1113,7 @@ test('a scene opened from a link\'s end keeps that link with the passage held �
 const WRITING = '1.0.1.0.70', WRITING_TEXT = 'A draft.\n\nIts passage stands here.';
 Object.assign(script, { ...reads(WRITING, WRITING_TEXT, { published: false }), ...compared(WRITING, WRITING_TEXT, B, B_TEXT), ...compared(B, B_TEXT, WRITING, WRITING_TEXT) });
 
-test('a reading scene opened at a live caret and closed returns the focus to the plane as the scene found it: the close\'s Back leaves the caret live where it stood, so Backspace after it takes the character before the caret out, where every other teleport leaves the caret kept (D5 §4 rule 8, K-63, M-2)', () => onPage(async (p) => {
+test('a reading scene opened at a live caret keeps it (issue #556\'s design decision: "Opening a scene is a departure. It commits the open burst and keeps the caret"): the caret kept where it stood, in the editor pane holding its draft, its span that pane\'s span focus — no live caret under the scene — and the entry it opened over recording it; Esc there closes the scene, a Back that re-takes the editor pane\'s caret: the caret kept where it stood, its span holding the walk, so a printable key types at it (B3-S1\'s scene rule; D5 K-63, K-77)', () => onPage(async (p) => {
   await onTrail(p);
   await PUMP.loadWhole(WRITING);
   const leap = GO.leapTo(WRITING, { pos: 1 }); await flown(); await leap;
@@ -1112,13 +1121,13 @@ test('a reading scene opened at a live caret and closed returns the focus to the
   try {
     LAYER.placeCaret(WRITING, 3);
     assert.equal(await GO.toScene(WRITING, B), true, 'the scene shows');
-    assert.deepEqual(LAYER.caret(), { addr: WRITING, pos: 3, live: true }, 'the caret live under the scene');
+    assert.deepEqual([LAYER.caret(), SCENE.panes()?.a.editor, SCENE.panes()?.a.focus], [{ addr: WRITING, pos: 3, live: false }, true, 1], 'the caret kept where it stood, in pane A, its draft\'s editor, its span the pane\'s focus');
+    const under = TRAIL.all()[TRAIL.cursorIndex() - 1];
+    assert.deepEqual(under.caret && [under.caret.addr, under.caret.pos], [WRITING, 3], 'the entry it opened over records the kept caret');
     await KEYS.esc(); await flown();
-    assert.deepEqual([SCENE.isOpen(), walkAt(), LAYER.caret()], [false, ['block', WRITING, 1], { addr: WRITING, pos: 3, live: true }], 'Esc: the scene closed, the walk on the caret\'s span, the caret live where it stood');
-    assert.equal(await KEYS.dispatch(keyOf('Backspace'), { where: 'plane', byKey: true }), true, 'Backspace: the caret\'s key');
-    assert.deepEqual([WRITE.edits(WRITING).map((x) => [x.pos, x.width, x.text]), LAYER.caret()], [[[2, 1, '']], { addr: WRITING, pos: 2, live: true }], 'the character before the caret taken out');
-    const elsewhere = GO.leapTo(WRITING, { pos: 10 }); await flown(); await elsewhere;
-    assert.deepEqual([walkAt(), LAYER.caret()], [['block', WRITING, 10], { addr: WRITING, pos: 2, live: false }], 'a LEAP to the draft\'s second span, one position back in the text shown: the caret kept where it stood');
+    assert.deepEqual([SCENE.isOpen(), walkAt(), LAYER.caret()], [false, ['block', WRITING, 1], { addr: WRITING, pos: 3, live: false }], 'Esc: the scene closed — no live caret stood in it to leave first — the walk on the caret\'s span, the caret kept there');
+    assert.equal(await KEYS.dispatch(keyOf('x'), { where: 'plane', byKey: true }), true, 'a printable key at the kept caret\'s span');
+    assert.deepEqual([WRITE.edits(WRITING).map((x) => [x.pos, x.width, x.text]), LAYER.caret()], [[[3, 0, 'x']], { addr: WRITING, pos: 4, live: true }], 'the caret returned where it stood and the key typed at it');
     assert.deepEqual(fake.unanswered, []);
   } finally { WRITE.clearEdits(WRITING); LAYER.dropCaret(); }
 }));
@@ -2636,7 +2645,7 @@ function selectWords(dom, article, words) {
   dom.document.selection.set(sn, so, en, eo);
 }
 
-test('at a selection in the moved scene\'s held version, while the focus stands in it, the acts that send — Mod+K, Mod+Shift+A, Mod+Shift+C — and a printable key give the one reason the selection keys, its hint at the pane and said at every press: over the held new words, or over those and words both texts hold, that its words are not in the current text; over words the current text holds too, that they are; Space keeps K-9\'s line; with no selection there, the focus in pane A, or the scene not the moved scene, the slot\'s own reason and K-9\'s line stand (issue #599; D6 BM-14; B3-S2; FP-41)', () => onPageWithText(async (p, dom) => {
+test('at a selection in the moved scene\'s held version, while the focus stands in it, the acts that send — Mod+K, Mod+Shift+A, Mod+Shift+C — and a printable key give the one reason the selection keys, its hint at the pane and said at every press: over the held new words, or over those and words both texts hold, that its words are not in the current text; over words the current text holds too, that they are; Space keeps K-9\'s line; with no selection there the slot\'s own reason stands, and a printable key gives the reason the span at the pane\'s focus keys, never K-9\'s line; with the focus in pane A, or the scene not the moved scene, the slot\'s own reason (issue #599, #556; D6 BM-14; B3-S2; FP-41)', () => onPageWithText(async (p, dom) => {
   const unanswered = fake.unanswered.length;
   await PUMP.loadWhole(G);
   await SCENE.open(G, heldVersionOfG(), { heldB: true });
@@ -2670,7 +2679,7 @@ test('at a selection in the moved scene\'s held version, while the focus stands 
   assert.deepEqual([HOST.currentState(), SCENE.isOpen()], [null, true], 'no overlay opened, the scene standing');
   dom.document.selection.removeAllRanges();
   HINT.act();
-  assert.deepEqual([SCENE.heldVersionReason(), (await press('k', { mod: true })).hint, (await press('q')).hint], [null, 'L.seam.link-to', 'F.swallow'], 'no selection in the held version: the slot\'s own reason, and K-9\'s line');
+  assert.deepEqual([SCENE.heldVersionReason(), (await press('k', { mod: true })).hint, (await press('q')).hint], [null, 'L.seam.link-to', IN], 'no selection in the held version: the slot\'s own reason; a printable key the reason its span focus keys — its first span, the current text holding its words too — never K-9\'s line');
   selectWords(dom, article, 'Held words');
   p.paneA.focus();
   assert.deepEqual([p.at(), SCENE.heldVersionReason(), (await press('k', { mod: true })).hint], ['pane A', null, 'L.seam.link-to'], 'the focus in pane A: the slot\'s own reason');
@@ -2789,7 +2798,7 @@ test('a pane\'s corner\'s acts are buttons, each act its click\'s: each line of 
   } finally { LAYER.openStatement(WRITING, false); WRITE.setKept(WRITING, null); restore(); }
 }, { acts: true }));
 
-test('at a pane\'s corner\'s act the dispatch leaves Enter, Space and Shift+Space to the button, raising no line, and takes an auto-repeat, making nothing; ← and → walk the line\'s acts — the kept line\'s word and its second act, never across to the next line — its stop following the focus, the scene standing at its first act and its last; a printable key but Space is swallowed with K-9\'s line, as elsewhere in a pane (D5 K-9, K-57; FP-20; skep-frontend #585)', () => onPage(async (p) => {
+test('at a pane\'s corner\'s act the dispatch leaves Enter, Space and Shift+Space to the button, raising no line, and takes an auto-repeat, making nothing; ← and → walk the line\'s acts — the kept line\'s word and its second act, never across to the next line — its stop following the focus, the scene standing at its first act and its last; a printable key but Space at the corner of a pane that is its draft\'s editor answered by the way back to the draft\'s text, never K-9\'s line — the corner routed as a corner, never as its pane (D5 K-9, K-57, K-61; B3-S13; FP-20; skep-frontend #585, #556)', () => onPage(async (p) => {
   const restore = compactFit(p);
   WRITE.setKept(WRITING, { word: 'kept', reason: null });
   /** a key at an act of pane A's corner, as the app hands it to the dispatch there */
@@ -2813,7 +2822,7 @@ test('at a pane\'s corner\'s act the dispatch leaves Enter, Space and Shift+Spac
     assert.equal(await at(keyed('kept'), 'ArrowLeft'), true);
     assert.deepEqual([p.at(), stopsIn(p.cornerA, acts), SCENE.isOpen()], [keyed('kept')?.id, ['kept', 'whole'], true], '← back to the kept word, then ← at the line\'s first act: the focus there, the scene standing — never its close');
     assert.equal(await at(keyed('kept'), 'q'), true);
-    assert.equal(HINT.standing()?.id, 'F.swallow', 'a printable key: swallowed with K-9\'s line');
+    assert.equal(HINT.standing()?.id, 'B3.caret.back', 'a printable key at the editor pane\'s corner: the way back to the draft\'s text');
   } finally { HINT.act(); LAYER.openStatement(WRITING, false); WRITE.setKept(WRITING, null); restore(); }
 }, { acts: true }));
 
@@ -3111,4 +3120,340 @@ test('from another scene\'s pane the current text\'s "show its history" opens th
     const back = GO.back(); await flown(); await back;
     assert.deepEqual([SCENE.isOpen(), SCENE.pastOf(), SCENE.panes()?.b.src], [true, null, B], 'Back: the scene it was opened from, reopened');
   } finally { WRITE.setKept(PASTD, null); }
+}));
+
+// ---- the editor pane: a pane holding the current text of a draft of the person's own ------------------------------------
+
+/** two drafts of the session's account and a draft of another's, each read whole as its reads answer */
+const E1 = '1.0.1.0.141', E1_TEXT = 'An own draft.\n\nIts second span stands here.\n   \nA third span to walk to.';
+const E2 = '1.0.1.0.142', E2_TEXT = 'Another own draft.\n\nIts words.';
+const O = '1.0.2.0.143', O_TEXT = 'Their draft.\n\nIts words are theirs.';
+Object.assign(script, reads(E1, E1_TEXT, { published: false }), reads(E2, E2_TEXT, { published: false }), reads(O, O_TEXT, { published: false }),
+  { [FAKE.keyOf('op', { frame: F.docMetadata(O) })]: { result: { ...metadata(O, false, O_TEXT.length).result, owner: '1.0.2' } } }, unsignedAt('1.0.2'),
+  compared(E1, E1_TEXT, E2, E2_TEXT), compared(E2, E2_TEXT, E1, E1_TEXT), compared(E1, E1_TEXT, B, B_TEXT), compared(E1, E1_TEXT, O, O_TEXT));
+/** a past state of a draft, as a history scene derives it: the record of its text at a position of the board's history */
+const pastOf = (/** @type {string} */ addr, /** @type {string} */ text) => /** @type {import('../model/records.js').Doc} */ ({ ...draftOf(addr, text), derived: { from: addr, rows: [], edits: 0, at: 5 } });
+/** a key at a pane's text — or at the element named — as the app hands it to the dispatch there */
+const keyAt = (/** @type {any} */ target, /** @type {string} */ key, /** @type {object} */ mods = {}, where = 'scene') => KEYS.dispatch({ ...keyOf(key), repeat: false, target, ...mods }, { where: /** @type {any} */ (where), byKey: true });
+/** a pane's elements of the walk — its spans, a blank line none — by their first positions */
+const spansOf = (/** @type {'a' | 'b'} */ side) => (SCENE.panes()?.[side].blocks || []).filter((b) => b.kind !== 'para' || b.text.trim() !== '').map((b) => b.pos);
+/** the test run with the layer told the scene's editor panes, as the app tells it (T-LAYER's `panes` reader), no caret standing before or after it */
+async function withEditors(/** @type {() => Promise<void>} */ body) {
+  LAYER.readers({ panes: SCENE.editorPanes });
+  LAYER.dropCaret();
+  try { await body(); } finally { LAYER.dropCaret(); LAYER.readers({}); for (const d of [E1, E2, O]) WRITE.clearEdits(d); HINT.act(); }
+}
+
+test('a pane is its draft\'s editor where it holds the current text of a draft of the person\'s own, whatever the camera\'s scale on the plane — never a past state or the held version of that draft, which name its address too, nor an edition or another\'s document (issue #556\'s scope; FP-38)', () => onPage(() => withEditors(async () => {
+  const unanswered = fake.unanswered.length;
+  await PUMP.loadWhole(E1); await PUMP.loadWhole(G); await PUMP.loadWhole(O);
+  await SCENE.open(E1, B);
+  assert.deepEqual([SCENE.panes()?.a.editor, SCENE.panes()?.b.editor], [true, false], 'the draft\'s pane its editor, the edition\'s pane none');
+  const view = CAM.view();
+  CAM.set({ ...view, scale: view.scale / 1e4 });
+  try {
+    assert.deepEqual([LAYER.editable(E1), SCENE.panes()?.a.editor, !!LAYER.placeCaret(E1, 4)], [false, true, true], 'far below its reading scale on the plane: the pane its editor still, a caret placed in it');
+  } finally { CAM.set(view); }
+  SCENE.close();
+  await SCENE.open(E1, pastOf(E1, E1_TEXT));
+  assert.deepEqual([SCENE.panes()?.a.editor, SCENE.panes()?.b.editor, SCENE.panes()?.b.derived, SCENE.panes()?.b.names], [true, false, true, E1], 'a past state of the draft, naming its address: no editor');
+  SCENE.close();
+  await SCENE.open(G, heldVersionOfG(), { heldB: true });
+  assert.deepEqual([SCENE.panes()?.a.editor, SCENE.panes()?.b.editor, SCENE.panes()?.b.held], [true, false, true], 'the held version of the draft: no editor');
+  SCENE.close();
+  await SCENE.open(E1, O);
+  assert.equal(SCENE.panes()?.b.editor, false, 'another\'s document: no editor');
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
+})));
+
+test('at a live caret in an editor pane every caret key is the plane\'s: a printable key types at the caret, one edit, and the pane is set again from the text shown in its frame — the typed word standing in it, the caret, the pane\'s scroll and the other pane unmoved — Backspace takes a character out, Tab types a tab, Enter a new line, the arrows and Home and End move the caret, and the undo chord acts on the pane\'s draft (D5 K-71, K-72, K-75, K-76; FP-38; issue #556)', () => onPage((p) => withEditors(async () => {
+  await PUMP.loadWhole(E1);
+  await SCENE.open(E1, B);
+  p.paneA.focus();
+  assert.ok(LAYER.placeCaret(E1, 4), 'the caret placed in the editor pane');
+  const placedB = p.paneB.placed.length, textB = SCENE.panes()?.b.blocks.map((b) => b.text), scrollA = p.paneA.scrollTop;
+  const edits = () => WRITE.edits(E1).map((e) => [e.pos, e.width, e.text]);
+  assert.equal(await keyAt(p.paneA, 'x'), true, 'a printable key at the caret: taken');
+  assert.deepEqual([edits(), LAYER.caret()], [[[4, 0, 'x']], { addr: E1, pos: 5, live: true }], 'typed at the caret, one edit, the caret after it');
+  assert.equal(SCENE.panes()?.a.blocks[0].text, 'An own draft.', 'the pane as it stood until its frame');
+  SCENE.followShown();
+  assert.deepEqual([SCENE.panes()?.a.blocks[0].text, SCENE.panes()?.a.derived, SCENE.panes()?.a.editor], ['An xown draft.', true, true], 'the pane set again from the text shown: the typed word standing in it, its editor still');
+  assert.deepEqual([LAYER.caret(), p.paneB.placed.length, SCENE.panes()?.b.blocks.map((b) => b.text), p.paneA.scrollTop], [{ addr: E1, pos: 5, live: true }, placedB, textB, scrollA], 'the caret where it stood, the other pane set nowhere again, the pane\'s scroll unmoved');
+  await keyAt(p.paneA, 'Backspace');
+  assert.deepEqual([edits(), LAYER.caret()?.pos], [[[4, 0, 'x'], [4, 1, '']], 4], 'Backspace: the character before the caret taken out');
+  await keyAt(p.paneA, 'Tab');
+  await keyAt(p.paneA, 'Enter');
+  assert.deepEqual([edits().slice(2), LAYER.caret()?.pos], [[[4, 0, '\t'], [5, 0, '\n']], 6], 'Tab types a tab and Enter a new line (K-76)');
+  await keyAt(p.paneA, 'ArrowLeft');
+  assert.equal(LAYER.caret()?.pos, 5, '←: the caret a character back');
+  await keyAt(p.paneA, 'Home');
+  assert.equal(LAYER.caret()?.pos, 1, 'Home: the caret at its line\'s start');
+  await keyAt(p.paneA, 'z', { metaKey: KEYS.MAC, ctrlKey: !KEYS.MAC });
+  assert.equal(HINT.standing()?.id, 'B3.undo.empty', 'the undo chord finds the pane\'s draft its target — its stack empty with no machine — never the no-caret line');
+  SCENE.followShown();
+  assert.ok(SCENE.panes()?.a.blocks.some((b) => b.text.includes('\t')), 'the pane set again with the tab typed');
+})));
+
+test('where both panes hold drafts of the person\'s own, each is its draft\'s editor with its own caret, one live at a time: Enter at the other pane\'s span places the caret there, the first draft\'s kept where it stood (issue #556\'s design decision; B3-S1 P59)', () => onPage((p) => withEditors(async () => {
+  await PUMP.loadWhole(E1); await PUMP.loadWhole(E2);
+  await SCENE.open(E1, E2);
+  assert.deepEqual([SCENE.panes()?.a.editor, SCENE.panes()?.b.editor], [true, true], 'both panes their drafts\' editors');
+  p.paneA.focus();
+  LAYER.placeCaret(E1, 4);
+  p.paneB.focus();
+  assert.equal(await keyAt(p.paneB, 'Home'), true, 'Home in pane B: its span focus on its first span');
+  assert.equal(await keyAt(p.paneB, 'Enter'), true, 'Enter there');
+  assert.deepEqual([LAYER.caret(), LAYER.caretIn(E1)], [{ addr: E2, pos: 1, live: true }, { addr: E1, pos: 4, live: false }], 'the caret live in pane B\'s draft at the span\'s start, pane A\'s kept where it stood: one live caret');
+  await keyAt(p.paneB, 'y');
+  assert.deepEqual([WRITE.edits(E2).map((e) => e.text), WRITE.edits(E1)], [['y'], []], 'the key typed in pane B\'s draft alone');
+})));
+
+test('↓ and ↑ in a scene\'s pane where no caret is live move its span focus by span — its text\'s spans in order, a blank line and a line of white space none, a focus standing on none taken at the span in view first and the key moving on from it — ↓ at the last and ↑ at the first standing; Home and End stand it on its first and its last span; each span said in the status region as the mirror names one; Enter at an editor pane\'s span places the caret at its start (D5 K-60, K-70; issue #556)', () => onPage((p) => withEditors(async () => {
+  await PUMP.loadWhole(E1);
+  await SCENE.open(E1, B);
+  p.paneA.focus();
+  const spans = spansOf('a'), focus = () => SCENE.panes()?.a.focus, n = p.said.length;
+  assert.deepEqual([spans.length, SCENE.panes()?.a.blocks.length], [3, 4], `three spans — a blank line none, and a typed line of white space alone a block but no span: ${spans}`);
+  /** @type {Array<number | null | undefined>} */
+  const walked = [];
+  for (const key of ['ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowUp', 'ArrowUp', 'ArrowUp']) { await keyAt(p.paneA, key); walked.push(focus()); }
+  assert.deepEqual(walked, [spans[1], spans[2], spans[2], spans[1], spans[0], spans[0]], 'by span: from the span in view to the next, then over the line of white space to the last, standing there; then back, standing at the first');
+  assert.ok(p.said.slice(n).some((s) => s.includes('Its second span stands here.')), `the span said as the mirror names it: ${p.said.slice(n)}`);
+  await keyAt(p.paneA, 'End');
+  assert.equal(focus(), spans[2], 'End: its last span');
+  await keyAt(p.paneA, 'Home');
+  assert.equal(focus(), spans[0], 'Home: its first span');
+  await keyAt(p.paneA, 'ArrowDown');
+  assert.equal(await keyAt(p.paneA, 'Enter'), true, 'Enter at the span');
+  assert.deepEqual(LAYER.caret(), { addr: E1, pos: spans[1], live: true }, 'the caret live at the span\'s start');
+})));
+
+test('a key swallowed in a scene is answered by its pane\'s own line, never K-9\'s: at a span of an editor pane holding no caret "Enter places a caret here"; Space K-9\'s own line; at a past state\'s pane C-337 — and at its corner, by the pane and never by the address its corner names — each ending with where the person was last writing, the site the pane; at the editor pane\'s corner the way back to its text; at an edition of the person\'s own C-45; at another\'s document B3-S13\'s line; at the scene\'s acts their own line, never silence (the decision\'s third block; D5 K-9, K-72; B3-S13; issue #556)', () => onPage((p) => withEditors(async () => {
+  await PUMP.loadWhole(E1); await PUMP.loadWhole(O);
+  // the person writes in E1 and leaves its caret kept: the draft last written in
+  await SCENE.open(E1, B);
+  p.paneA.focus();
+  LAYER.placeCaret(E1, 4);
+  await keyAt(p.paneA, 'q');
+  await keyAt(p.paneA, 'Escape');
+  assert.deepEqual([LAYER.caret(), SCENE.isOpen()], [{ addr: E1, pos: 5, live: false }, true], 'Esc at the live caret: the text left, the caret kept, the scene standing');
+  const name = LAYER.boxName(E1).name, writing = () => HINT.standing()?.writing ?? null;
+  /** a key at an element, and the line it raised: its string and the ending it carries */
+  const said = async (/** @type {any} */ target, /** @type {string} */ key, where = 'scene') => { HINT.act(); target.focus(); await keyAt(target, key, {}, where); return [HINT.standing()?.id ?? null, writing()]; };
+  p.paneB.focus();
+  const [edition, atEdition] = await said(p.paneB, 'k');
+  assert.ok(edition === 'C-45' && !!atEdition && atEdition.includes(name), `at an edition of the person's own: C-45, ending with where the person was last writing — the kept caret in the other pane's draft — ${edition} · ${atEdition}`);
+  SCENE.close();
+  await SCENE.open(E1, pastOf(E1, E1_TEXT));
+  p.paneB.focus();
+  const [past, ending] = await said(p.paneB, 'k');
+  assert.ok(past === 'B3.history.read-only' && !!ending && ending.includes(name), `at the past state's pane: C-337, ending with where the person was last writing — ${past} · ${ending}`);
+  assert.deepEqual((await said(p.paneB, ' '))[0], 'F.swallow.space', 'Space: K-9\'s own line');
+  assert.deepEqual(await said(p.cornerB, 'k'), [past, ending], 'at the past pane\'s corner: its pane\'s line, never the way back the draft\'s address would name');
+  assert.equal((await said(p.cornerA, 'k'))[0], 'B3.caret.back', 'at the editor pane\'s corner: the way back to its text');
+  p.paneA.focus();
+  await keyAt(p.paneA, 'ArrowDown');
+  assert.notEqual(SCENE.panes()?.a.focus, 1, 'the span focus off the kept caret\'s span');
+  assert.deepEqual(await said(p.paneA, 'k'), ['B3.caret.enter', null], 'at a span of the editor pane holding no caret: the draft\'s own line, no ending — the key\'s site the draft itself');
+  assert.equal((await said(p.stop, 'k', 'scene-acts'))[0], 'L.scene.acts.key', 'at the scene\'s acts: their own line, never silence');
+  SCENE.close();
+  await SCENE.open(E1, O);
+  p.paneB.focus();
+  assert.deepEqual(await said(p.paneB, 'k'), ['B3.row.others-document', ending], 'at another\'s document: B3-S13\'s line naming its owner, ending with where the person was last writing');
+  assert.deepEqual([WRITE.edits(E1).map((e) => e.text), LAYER.caret()?.live], [['q'], false], 'nothing typed by any of them, the caret kept');
+}), { acts: true }));
+
+test('the ending\'s act takes the shortest way back (the decision\'s fourth block): within the scene the focus moves to the editor pane holding the kept caret, onto its span, and the next printable key there returns the caret and types; where no pane holds it, the scene opened over an entry holding the caret, the scene\'s close, a Back onto that entry, the caret restored there; else a LEAP from the scene\'s entry, which stands behind it (FP-40; issue #556)', () => onPage((p) => withEditors(async () => {
+  await onTrail(p);
+  await PUMP.loadWhole(E1);
+  await SCENE.open(E1, B);
+  p.paneA.focus();
+  LAYER.placeCaret(E1, 4);
+  await keyAt(p.paneA, 'q');
+  await keyAt(p.paneA, 'Escape');
+  SCENE.close();
+  await SCENE.open(E1, pastOf(E1, E1_TEXT));
+  p.paneA.focus();
+  await keyAt(p.paneA, 'ArrowDown');
+  p.paneB.focus();
+  HINT.act();
+  await keyAt(p.paneB, 'k');
+  assert.ok(HINT.standing()?.writing, 'the past pane\'s line ends with where the person was last writing');
+  const trail = TRAIL.all().length;
+  HINT.writingAct(true);
+  assert.deepEqual([p.at(), SCENE.panes()?.a.focus, SCENE.isOpen(), TRAIL.all().length], ['pane A', 1, true, trail], 'the label\'s act: the focus in pane A on the kept caret\'s span, the scene standing, no LEAP');
+  await keyAt(p.paneA, 'w');
+  assert.deepEqual([LAYER.caret(), WRITE.edits(E1).map((e) => [e.pos, e.text])], [{ addr: E1, pos: 6, live: true }, [[4, 'q'], [5, 'w']]], 'the next printable key returns the caret and types there');
+})));
+
+test('the scene\'s close re-takes its editor pane\'s caret and the span its view was anchored at into the entry it lands on (B3-S1\'s scene rule; D5 K-63, K-77): the person writes further down the pane, Esc leaves the text with the caret kept and the scene standing, and the next Esc closes it — a Back landing there, the caret kept with its span holding the walk, never at the caret the opening stored, so a printable key types at it (issue #556)', () => onPage((p) => withEditors(async () => {
+  await onTrail(p);
+  await PUMP.loadWhole(E1);
+  const leap = GO.leapTo(E1, { pos: 1 }); await flown(); await leap;
+  assert.ok(LAYER.placeCaret(E1, 4), 'a live caret in the draft on the plane');
+  assert.equal(await GO.toScene(E1, B), true, 'the scene shows');
+  await flown();
+  const opened = TRAIL.all()[TRAIL.cursorIndex() - 1].caret;
+  assert.deepEqual(opened && [opened.addr, opened.pos], [E1, 4], 'the entry it opened over stores the caret as the opening kept it');
+  p.paneA.focus();
+  const spans = spansOf('a');
+  while (SCENE.panes()?.a.focus !== spans[2]) await keyAt(p.paneA, 'ArrowDown');
+  await keyAt(p.paneA, 'Enter');
+  await keyAt(p.paneA, 'w');
+  assert.deepEqual(LAYER.caret(), { addr: E1, pos: spans[2] + 1, live: true }, 'the person writes at the third span');
+  KEYS.esc();
+  assert.deepEqual([SCENE.isOpen(), LAYER.caret()], [true, { addr: E1, pos: spans[2] + 1, live: false }], 'the first Esc leaves the text: the caret kept, the scene standing');
+  KEYS.esc(); await flown();
+  assert.deepEqual([SCENE.isOpen(), LAYER.caret(), walkAt()], [false, { addr: E1, pos: spans[2] + 1, live: false }, ['block', E1, spans[2]]], 'the next closes it: the caret kept where the person last wrote, its span the walk\'s — never the caret the opening stored');
+  assert.equal(await KEYS.dispatch(keyOf('x'), { where: 'plane', byKey: true }), true);
+  assert.deepEqual([LAYER.caret(), WRITE.edits(E1).map((e) => [e.pos, e.text])], [{ addr: E1, pos: spans[2] + 2, live: true }, [[spans[2], 'w'], [spans[2] + 1, 'x']]], 'a printable key returns the caret and types at it');
+})));
+
+test('a click on an editor pane\'s text places the caret at the character clicked, and a drag\'s release leaves it live at its selection\'s moving end, the selection standing — each read by the pane\'s article\'s element (T-LAYER\'s `caretFromPlatform`, `selectionIn`), the pane\'s span focus on the caret\'s span; a click on another pane\'s text keeps a live caret where it stood, that pane\'s span focus on the span clicked (FP-40; D5 K-70; issue #556)', () => onPageWithText(async (p, dom) => {
+  LAYER.readers({ panes: SCENE.editorPanes });
+  LAYER.dropCaret();
+  try {
+    await PUMP.loadWhole(E1);
+    await SCENE.open(E1, B);
+    const a = shownIn(p.paneA, 'a'), b = shownIn(p.paneB, 'b'), s = dom.document.selection;
+    /** a click on a pane's text as the platform hands it to the pane, its selection where the press left it */
+    const click = (/** @type {'a' | 'b'} */ side, /** @type {any} */ art) => p.paneOn[side].click({ type: 'click', detail: 1, target: art.querySelector('.run'), currentTarget: side === 'a' ? p.paneA : p.paneB });
+    selectWords(dom, a, 'own');
+    s.collapse(s.anchorNode, s.anchorOffset);
+    p.paneA.focus();
+    click('a', a);
+    assert.deepEqual([LAYER.caret(), SCENE.panes()?.a.focus], [{ addr: E1, pos: 4, live: true }, 1], 'a click before "own": the caret live there, the pane\'s span focus on its span');
+    selectWords(dom, a, 'draft');
+    s.set(s.focusNode, s.focusOffset, s.anchorNode, s.anchorOffset);
+    click('a', a);
+    assert.deepEqual([LAYER.caret(), LAYER.selectionIn(a)?.span, LAYER.selectionIn(a)?.backward], [{ addr: E1, pos: 8, live: true }, { addr: E1, pos: 8, width: 5 }, true], 'a drag backward over "draft": the caret live at its moving end, the selection standing');
+    selectWords(dom, b, 'passage');
+    s.collapse(s.anchorNode, s.anchorOffset);
+    p.paneB.focus();
+    click('b', b);
+    assert.deepEqual([LAYER.caret(), SCENE.panes()?.b.focus], [{ addr: E1, pos: 8, live: false }, 14], 'a click on the edition\'s text: the caret kept where it stood, pane B\'s span focus on the span clicked');
+  } finally { LAYER.dropCaret(); LAYER.readers({}); }
+}));
+
+/** a clipboard event as the platform hands one to the page, over a clipboard holding `data`: what the page set on it, and whether it prevented the platform's own */
+function clipOf(/** @type {Record<string, string>} */ data = {}) {
+  /** @type {Record<string, string>} */
+  const set = {};
+  let prevented = false;
+  const clipboardData = { getData: (/** @type {string} */ k) => data[k] ?? '', setData: (/** @type {string} */ k, /** @type {string} */ v) => { set[k] = v; } };
+  return { e: /** @type {any} */ ({ clipboardData, preventDefault() { prevented = true; }, target: null }), set, prevented: () => prevented };
+}
+/** a press of a pane's text as the platform hands the pane its click, its selection where the press left it */
+const pressText = (/** @type {any} */ p, /** @type {'a' | 'b'} */ side, /** @type {any} */ art) => p.paneOn[side].click({ type: 'click', detail: 1, target: art.querySelector('.run'), currentTarget: side === 'a' ? p.paneA : p.paneB });
+const MOD = { metaKey: KEYS.MAC, ctrlKey: !KEYS.MAC };
+
+test('at a live caret in an editor pane a paste, a cut, the save chord and select-all act in the pane as on the plane: the paste\'s words placed at the caret, the caret after them; a cut taking the words selected in the pane\'s text out, the clipboard holding them; Mod+S answered from the pane\'s draft\'s kept state; Mod+A selecting the pane\'s text whole, the caret live at its end (D5 K-74, K-93; B3-S5, B3-S8; issue #556)', () => onPageWithText(async (p, dom) => {
+  LAYER.readers({ panes: SCENE.editorPanes });
+  LAYER.dropCaret();
+  KEYS._reset();
+  try {
+    await PUMP.loadWhole(E1);
+    await SCENE.open(E1, B);
+    p.paneA.focus();
+    assert.ok(LAYER.placeCaret(E1, 4), 'the caret live in the editor pane, before "own"');
+    const edits = () => WRITE.edits(E1).map((e) => [e.pos, e.width, e.text]);
+    const pasted = clipOf({ 'text/plain': 'pasted ' });
+    assert.deepEqual([KEYS.pasteEvent(pasted.e, { where: 'scene', byKey: false }), pasted.prevented()], [true, true], 'the paste at the pane\'s caret: taken, the platform\'s prevented');
+    await KEYS.clipped();
+    assert.deepEqual([edits(), LAYER.caret()], [[[4, 0, 'pasted ']], { addr: E1, pos: 11, live: true }], 'its words placed at the caret, the caret after them');
+    SCENE.followShown();
+    const a = shownIn(p.paneA, 'a');
+    assert.equal(SCENE.panes()?.a.blocks[0].text, 'An pasted own draft.', 'the pane set again with the words pasted');
+    selectWords(dom, a, 'own');
+    pressText(p, 'a', a);
+    assert.deepEqual([LAYER.caret(), LAYER.selectionIn(a)?.span], [{ addr: E1, pos: 14, live: true }, { addr: E1, pos: 11, width: 3 }], 'a drag over "own": the caret live at its end, the selection standing in the pane');
+    const cut = clipOf();
+    assert.deepEqual([KEYS.cutEvent(cut.e, { where: 'scene', byKey: false }), cut.prevented(), cut.set['text/plain']], [true, true, 'own'], 'the cut at the pane\'s caret: taken, the clipboard holding the words selected in the pane');
+    await KEYS.clipped();
+    assert.deepEqual([edits().at(-1), LAYER.caret()], [[11, 3, ''], { addr: E1, pos: 11, live: true }], 'the words taken out, the caret where they stood');
+    SCENE.followShown();
+    WRITE.setKept(E1, { word: 'kept', reason: null });
+    const told = p.said.length;
+    assert.equal(await keyAt(p.paneA, 's', MOD), true, 'Mod+S at the pane\'s caret: taken');
+    assert.deepEqual([LAYER.statementOpen(E1), p.said.slice(told).at(-1)], [true, 'Nothing to save, everything here is kept.'], 'answered from the pane\'s draft: its kept statement whole, said');
+    LAYER.openStatement(E1, false);
+    WRITE.setKept(E1, null);
+    const d = LAYER.shownOf(E1), end = Math.max(d.to, (d.extent ?? 0) + 1);
+    assert.equal(await keyAt(p.paneA, 'a', MOD), true, 'Mod+A at the pane\'s caret: taken');
+    assert.deepEqual([LAYER.selectionIn(shownIn(p.paneA, 'a'))?.span, LAYER.caret()], [{ addr: E1, pos: 1, width: end - 1 }, { addr: E1, pos: end, live: true }], 'the pane\'s text selected whole, the caret live at its end');
+  } finally { LAYER.dropCaret(); LAYER.readers({}); WRITE.clearEdits(E1); HINT.act(); }
+}));
+
+test('at a span of an editor pane holding no caret a paste and a cut are answered by the draft\'s line in their own words — nothing placed, nothing removed, no caret placed — and at a past state\'s pane select-all selects its text whole, read only, placing no caret (D5 K-93; D6 BM-52; B3-S8; issue #556)', () => onPageWithText(async (p) => {
+  LAYER.readers({ panes: SCENE.editorPanes });
+  LAYER.dropCaret();
+  try {
+    await PUMP.loadWhole(E1);
+    await SCENE.open(E1, pastOf(E1, E1_TEXT));
+    p.paneA.focus();
+    await keyAt(p.paneA, 'Home');
+    assert.equal(SCENE.panes()?.a.focus, 1, 'pane A\'s span focus on its first span, no caret standing');
+    HINT.act();
+    const pasted = clipOf({ 'text/plain': 'words' });
+    assert.deepEqual([KEYS.pasteEvent(pasted.e, { where: 'scene', byKey: false }), pasted.prevented(), HINT.standing()?.id], [true, true, 'B3.caret.enter.paste'], 'a paste at the bare span: taken, the paste\'s form of the draft\'s line');
+    HINT.act();
+    const cut = clipOf();
+    assert.deepEqual([KEYS.cutEvent(cut.e, { where: 'scene', byKey: false }), cut.prevented(), cut.set, HINT.standing()?.id], [true, true, {}, 'B3.caret.cut'], 'a cut there: taken, nothing put on the clipboard, the cut\'s form');
+    assert.deepEqual([WRITE.edits(E1), LAYER.caret()], [[], null], 'nothing placed, nothing removed, no caret');
+    HINT.act();
+    p.paneB.focus();
+    assert.equal(await keyAt(p.paneB, 'a', MOD), true, 'Mod+A at the past state\'s pane: taken');
+    assert.deepEqual([LAYER.selectionIn(shownIn(p.paneB, 'b'))?.span, LAYER.caret()], [{ addr: E1, pos: 1, width: byteLength(E1_TEXT) }, null], 'the past state\'s text selected whole, read only: no caret placed');
+  } finally { LAYER.dropCaret(); LAYER.readers({}); HINT.act(); }
+}));
+
+test('Esc in a scene ends what stands nearest first: the selection standing in the text of the pane the focus is at — at an editor pane\'s live caret the caret standing live where it is, the frame collapsing the selection at it — then a live caret in an editor pane, the text left, the caret kept and the scene standing; then the scene (D5 K-63, K-77; issue #556)', () => onPageWithText(async (p, dom) => {
+  LAYER.readers({ panes: SCENE.editorPanes });
+  LAYER.dropCaret();
+  try {
+    await onTrail(p);
+    await PUMP.loadWhole(E1);
+    const leap = GO.leapTo(E1, { pos: 1 }); await flown(); await leap;
+    assert.equal(await GO.toScene(E1, B), true, 'the scene shows');
+    await flown();
+    const a = shownIn(p.paneA, 'a'), b = shownIn(p.paneB, 'b'), s = dom.document.selection;
+    p.paneB.focus();
+    selectWords(dom, b, 'passage');
+    pressText(p, 'b', b);
+    assert.ok(LAYER.selectionIn(b), 'a drag over "passage" in pane B: its selection standing');
+    KEYS.esc();
+    assert.deepEqual([LAYER.selectionIn(b), SCENE.isOpen()], [null, true], 'Esc: pane B\'s selection ended, the scene standing');
+    p.paneA.focus();
+    selectWords(dom, a, 'own');
+    pressText(p, 'a', a);
+    assert.deepEqual([LAYER.caret(), LAYER.selectionIn(a)?.span], [{ addr: E1, pos: 7, live: true }, { addr: E1, pos: 4, width: 3 }], 'a drag over "own" in the editor pane: the caret live at its end, the selection standing');
+    KEYS.esc();
+    assert.deepEqual([LAYER.caret(), SCENE.isOpen()], [{ addr: E1, pos: 7, live: true }, true], 'Esc: the selection\'s step — the caret standing live where it is, the scene standing');
+    // the frame collapses the platform's selection at the caret's mark (T-LAYER's), which the page of stand-ins draws none of
+    s.collapse(s.focusNode, s.focusOffset);
+    KEYS.esc();
+    assert.deepEqual([LAYER.caret(), SCENE.isOpen()], [{ addr: E1, pos: 7, live: false }, true], 'the next leaves the text: the caret kept, the scene standing');
+    KEYS.esc(); await flown();
+    assert.equal(SCENE.isOpen(), false, 'the next closes the scene');
+  } finally { LAYER.dropCaret(); LAYER.readers({}); }
+}));
+
+test('where both panes hold drafts of the person\'s own, a click in the other pane\'s text places the caret there, the caret in the first draft kept where it stood: one live caret at a time (B3-S1 P59; FP-40; issue #556)', () => onPageWithText(async (p, dom) => {
+  LAYER.readers({ panes: SCENE.editorPanes });
+  LAYER.dropCaret();
+  try {
+    await PUMP.loadWhole(E1); await PUMP.loadWhole(E2);
+    await SCENE.open(E1, E2);
+    const a = shownIn(p.paneA, 'a'), b = shownIn(p.paneB, 'b'), s = dom.document.selection;
+    selectWords(dom, a, 'own');
+    s.collapse(s.anchorNode, s.anchorOffset);
+    p.paneA.focus();
+    pressText(p, 'a', a);
+    assert.deepEqual(LAYER.caret(), { addr: E1, pos: 4, live: true }, 'a click in pane A\'s text: the caret live in its draft');
+    selectWords(dom, b, 'own');
+    s.collapse(s.anchorNode, s.anchorOffset);
+    p.paneB.focus();
+    pressText(p, 'b', b);
+    assert.deepEqual([LAYER.caret(), LAYER.caretIn(E1)], [{ addr: E2, pos: 9, live: true }, { addr: E1, pos: 4, live: false }], 'a click in pane B\'s text: the caret live in its draft, pane A\'s kept where it stood');
+  } finally { LAYER.dropCaret(); LAYER.readers({}); }
 }));

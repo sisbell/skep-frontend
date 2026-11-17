@@ -66,7 +66,9 @@
 // the caret live at its end; a removal's place; a whole arrangement's head;
 // an edition with a draft of its family and with none; no own row, a refused
 // read and a page that does not write leaving HOME; a held line winning; and
-// a launch frame the reader took over left alone.
+// a launch frame the reader took over left alone. A reading scene's opening
+// keeps a live caret before its departure records it, every draft's open
+// burst committed by that departure.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -5084,4 +5086,23 @@ test('the newest change\'s place a history scene levels at: each stretch one tex
   assert.deepEqual(GO.changeNear(past, now, 11), { a: 11, b: 8 }, 'at "j": the removal of "hi", after "g" in each');
   assert.deepEqual(GO.changeNear(past, now, 14), { a: 12, b: 11 }, 'at the end: the bytes typed there, after "j" in each');
   assert.equal(GO.changeNear(past, at([[1, 10]]), 3), null, 'the same bytes: no change to level at');
+});
+
+test('opening a reading scene is a departure that keeps the caret (issue #556\'s design decision: "Opening a scene is a departure. It commits the open burst and keeps the caret … So no live caret ever stands under a scene"): a live caret kept where it stood, at the act, before the departure records it — the entry it departs holding the kept caret — and every draft\'s open burst committed by that departure', async () => {
+  const SD = '1.0.1.0.152', OTHER_DRAFT = '1.0.1.0.153', TEXT = 'A draft a scene opens over.\n\nIts second line.';
+  held(SD, TEXT, [[1, TEXT.length]]);
+  /** @type {string[]} */
+  const committed = [];
+  WRITE.machine({ commit: (addr) => committed.push(addr), typed() {}, ended() {}, leaving() {} });
+  try {
+    await run(GO.leapTo(SD, { pos: 1 }));
+    assert.ok(LAYER.placeCaret(SD, 4), 'a live caret in the draft');
+    WRITE.setFlight(OTHER_DRAFT, true);
+    const opening = GO.toScene(SD, D);
+    assert.deepEqual(LAYER.caret(), { addr: SD, pos: 4, live: false }, 'kept at the act, before the scene shows: no live caret under it');
+    const left = TRAIL.all()[TRAIL.cursorIndex() - 1];
+    assert.deepEqual(left && left.caret && [left.caret.addr, left.caret.pos], [SD, 4], 'the entry the scene departs records the kept caret');
+    assert.ok(committed.includes(OTHER_DRAFT), `the departure commits every draft's open burst: ${committed}`);
+    await run(opening);
+  } finally { WRITE.machine(null); WRITE.setFlight(OTHER_DRAFT, false); LAYER.dropCaret(); }
 });

@@ -6,7 +6,7 @@
 // stroke whose list stands, the stop's next passage, the passage its act last
 // went to and whether its appearance was said, a stop the reader returned to
 // with what its answer told and an act waiting on it, the panes' scrolls,
-// each pane's text — the record it was made from, the version it reads and
+// each pane's span focus, each pane's text — the record it was made from, the version it reads and
 // the address it names, the links and far ends and its owner's byline facts
 // it was set with — and its corner — opened whole or not, its head's rows —
 // the fit both panes are set at, side by side or stacked, and the band their
@@ -17,7 +17,8 @@
 // app's to hand in; view state, never written (FP-7).
 // Two documents at reading scale over the plane, side by side or, where side
 // by side keeps fewer than HEAD_CPL characters a line, stacked (below), each
-// pane scrolling on its own (R3); the places unmoved, nothing written; the dialog
+// pane scrolling on its own (R3); the places unmoved, the scene itself writing
+// nothing — an editor pane's typing is its caret's (below); the dialog
 // named as it attaches by ST's `L.scene-label`. It sets the two ends level
 // (§2.5): the passage the opener holds — a link's span, a selection, the
 // versions list's held passage, provenance's span, a landing's passage —
@@ -285,10 +286,45 @@
 // far end names its document whole, by those and ST's `L.scene.whole-end`
 // after them, `aria-current="location"` on it, the end being the document and
 // no passage of it — its kind said once in the status region where its
-// corner's slot fills while the focus stands in the pane (`sayKind`; FP-36);
-// and ↓ and ↑ in it move by
-// block — the next block's top brought to the pane's top (K-60) — PageDown
-// and PageUp by most of a pane, Home and End to its ends (`move`).
+// corner's slot fills while the focus stands in the pane (`sayKind`; FP-36).
+// Each pane holds a span focus of its own (`Pane.focus`), the platform's
+// focus in one pane at a time (FP-20), walked by T-SPAN's grain over the
+// pane's own record — a past state's and the held version's apart from the
+// plane's: where no caret is live in it, ↓ and ↑ move it by span, a blank
+// line none — a span focus the pane's own scroll left out of view taken again
+// at the span in view first, as the plane's walk is after a camera move — its
+// top brought to the pane's visible top and the span said in the status
+// region as the mirror names one (`walkPane`, `showSpan`, `saySpan`; K-60); PageDown and
+// PageUp move the pane by most of its height, Home and End to its first and
+// its last span (`move`); the focus come into a pane's text — Tab, a click,
+// the way back's act — stands it on the span in view, the kept caret's span
+// where that stands in view (`entered`, `spanInView`; K-61); it is drawn lit
+// by T-ARTICLE's rule (T-LAYER's `markPaneFocus`).
+// A pane holding the current text of a draft of the person's own is its
+// draft's editor (`editor`; FP-38), whatever the camera's scale on the
+// plane; a past state and the held version of the draft, which name its
+// address too, are none. T-LAYER serves its caret there — the editor panes
+// handed to it as they stand (`editorPanes`; its `panes` reader) — placed by
+// a click at the character clicked, a drag's release at its moving end, the
+// selection standing (`textAct`), or Enter at its span focus (`enterSpan`;
+// K-70); its mark set in the pane's article and brought into view by the
+// pane's scroll (`intoPane`), the camera standing; every caret key the
+// plane's (N-KEYS'), the paging keys moving it with the pane (`pageCaret`);
+// a live caret's span the pane's span focus (`followCaret`). Each frame that
+// moved the text the page shows of the draft — the person's typing, or the
+// record under it — sets the pane again from it (`followShown`), the other
+// pane, its scroll and the caret unmoved. Where both panes are editors each
+// keeps its draft's caret, one live at a time. Opened over a caret, the
+// scene keeps it (N-GO's): where its draft is an editor pane's it stands
+// kept there, hollow, the pane's span focus on its span (`stand`). A key the
+// scene swallows is answered by the line of the pane it is pressed at, the
+// pane's corner among it, by the pane's own test, never the address its
+// corner names (`siteOf`, `paneHolding`; N-KEYS' `paneSays`); the way back
+// the line's ending offers moves the focus into the editor pane holding the
+// kept caret, onto its span (`toCaret`). The scene's close re-takes an
+// editor pane's caret and the span its view was anchored at — the first span
+// in view, of two editors the one whose caret was last held — into the entry
+// it lands on (`editorAnchor`; N-GO's; B3-S1).
 // Where the far end names pane B's document whole and the `compare` finds the
 // near passage there, the passages of pane B holding its material
 // (`counterparts`), in pane B's order, are reached by the stop (`#scenestop`;
@@ -426,9 +462,10 @@
 // plane's one rule, held inside its text as the pane scrolls
 // (`placeStatements`; FP-31) — the bands leaving the pane beyond them
 // (foundations §3.1; FP-26): a window wider than the measure needs widens the outer
-// margins, never the line. The panes are read, not acted on (B1-S9): nothing
-// in a pane's article is a control (T-ARTICLE's scene-mode variant), and the
-// keys a pane takes move that pane alone (`key`). The bar names each pane by
+// margins, never the line. Nothing in a pane's article is a control
+// (T-ARTICLE's scene-mode variant; B1-S9): the keys a pane takes where no
+// caret is live move its span focus and that pane alone (`key`), and only an
+// editor pane takes a caret (above). The bar names each pane by
 // the address it shows, in the identifier's face (P-REG's FACE), so no head's
 // row names it. The scene's acts are its bar's
 // buttons — re-level (K-62, its chord drawn for the platform, rule 19) and
@@ -470,7 +507,7 @@
 // wide; the pointer stands on an end within HIT_PX of its line.
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-12, FP-13, FP-20, FP-21, FP-22, FP-23,
 // FP-24, FP-25, FP-26, FP-27, FP-29, FP-30, FP-31, FP-33, FP-34, FP-36,
-// FP-39, FP-41.
+// FP-38, FP-39, FP-40, FP-41.
 
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
@@ -491,6 +528,7 @@ import { holdStack, LINE_BOX } from '../plane/labels.js';
 import { markDirty, READING_PX } from '../plane/camera.js';
 import { documentOf, homeOf, memberOf, versionAddress, isTrunkMember } from '../model/address.js';
 import { applyHeld, recordAt } from '../model/derive.js';
+import { elementIn, isElement } from '../text/span.js';
 import * as PAST from '../model/past.js';
 import { t, tHTML, tRuns, plural, joinRuns, runsText, heard, asHeard, sentence, sentences, fields, stoodAt, FIELD } from '../strings.js';
 import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../util.js';
@@ -721,6 +759,7 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {number} rows its corner's rows at its document's head as last written (`cornerForm`); 0 beside its column
  * @property {import('../text/article.js').Kind} heard its corner's kind slot as the scene last read it (`markKept`): what the slot filling under the focus is told against
  * @property {boolean} heldVersion it shows the moved scene's held version (`Held.heldB`; D6 BM-14): the derived record it was opened on, which its corner names so and at a selection in which the acts that send give their reason (`heldVersionReason`); false on every other pane, and once the pane is set from a record not derived
+ * @property {number | null} focus its span focus (D5 K-60, K-61): the first position of the span of its text it stands on, which ↓ and ↑ move, Tab into the pane lands, a click stands on, a live caret's span holds and its keys act at (`walkPane`, `entered`, `textAct`, `followCaret`); null where it stands on none
  */
 
 /**
@@ -906,6 +945,8 @@ let ending = (/** @type {boolean} */ _byKey) => close();
 let faces = null;
 /** a draft's history opened from a pane's corner — its kept line's second act (N-GO's `history`), the app's to hand in (`attach`); nothing until it does */
 let history = (/** @type {string} */ _addr, /** @type {boolean} */ _byKey) => {};
+/** the reader's next act, a click on a pane's text being one — what stands on the one line and a hint taken down (L-LINE's `act`, O-HINT's `act`), the app's to hand in (`attach`); nothing until it does */
+let acted = () => {};
 /** @type {Record<'a' | 'b', Map<string, string>>} the run each origin's statement stands beside in each pane, by origin: the run's identity, kept while a line of that run is in view (`placeStatements`) */
 const stood = { a: new Map(), b: new Map() };
 /** the room between two signs stacked in a pane's column's edge, px: the plane's (T-LAYER's) */
@@ -968,13 +1009,14 @@ function namePanes(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} *
  * button or the stop marks the frame, so the next draw chooses the tie drawn
  * whole between the stacked panes anew (`crossingOf`; FP-9).
  * @param {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement, stop: HTMLButtonElement, strokes: HTMLElement}} e `strokes` the gutter's layer the strokes' buttons stand in
- * @param {{end?: (byKey: boolean) => void, faces?: Faces, history?: (addr: string, byKey: boolean) => void}} [acts] `end` the scene's own end: N-GO's `closeScene`, as Esc, zoom-out and ← take it; `faces` the faces a returned stop shows at its site (O-FACES'); `history` a draft's history opened from a pane's corner (N-GO's `history`)
+ * @param {{end?: (byKey: boolean) => void, faces?: Faces, history?: (addr: string, byKey: boolean) => void, acted?: () => void}} [acts] `end` the scene's own end: N-GO's `closeScene`, as Esc, zoom-out and ← take it; `faces` the faces a returned stop shows at its site (O-FACES'); `history` a draft's history opened from a pane's corner (N-GO's `history`); `acted` the reader's next act, which a click on a pane's text is (L-LINE's and O-HINT's `act`)
  */
 export function attach(e, acts = {}) {
   els = e;
   if (acts.end) ending = acts.end;
   if (acts.faces) faces = acts.faces;
   if (acts.history) history = acts.history;
+  if (acts.acted) acted = acts.acted;
   e.root.setAttribute('aria-label', heard(t('L.scene-label')));
   setRoom(e);
   e.stop.addEventListener('click', (ev) => stopAct(FOCUS.byKey(ev)));
@@ -1006,13 +1048,21 @@ export function attach(e, acts = {}) {
     // platform makes from Enter or Space at the act — the kept word opening its statement or closing it, a glyph or a head's
     // count opening the corner whole, and one on the corner opened closing it (FP-26)
     p.addEventListener('mousedown', (ev) => { if (onCorner(ev)) ev.preventDefault(); });
+    // a click on a corner's act takes it; one on the pane's text, or a drag's release there, is the pointer's act on the text (`textAct`)
     p.addEventListener('click', (ev) => {
       const on = onCorner(ev), side = p === e.paneB ? 'b' : 'a';
       if (on === 'act') act(side); else if (on === 'kept') keptAct(side); else if (on === 'history') historyAct(side, FOCUS.byKey(ev)); else if (on === 'whole') openWhole(side);
+      else if (onText(ev.target)) textAct(e, side);
     });
-    // a corner's stop follows the focus along its line of acts, and stands on its first act again as the focus leaves it
-    p.addEventListener('focusin', (ev) => rove(ev.target, ev.target));
-    p.addEventListener('focusout', (ev) => rove(ev.target, ev.relatedTarget));
+    // a corner's stop follows the focus along its line of acts, and stands on its first act again as the focus leaves it; the
+    // focus come into the pane's text from outside it stands its span focus on the span in view (`entered`)
+    p.addEventListener('focusin', (ev) => {
+      rove(ev.target, ev.target);
+      const side = p === e.paneB ? 'b' : 'a';
+      if (textHolds(e, side, /** @type {Element | null} */ (ev.target)) && !textHolds(e, side, /** @type {Element | null} */ (ev.relatedTarget))) entered(e, side);
+      markDirty();
+    });
+    p.addEventListener('focusout', (ev) => { rove(ev.target, ev.relatedTarget); markDirty(); });
   }
   // a click on an act is its button's wherever on the button it lands — the re-level's chord mark among them
   e.bar.addEventListener('click', (ev) => { const tg = /** @type {HTMLElement} */ (ev.target); if (tg.closest('[data-x]')) ending(FOCUS.byKey(ev)); else if (tg.closest('[data-relevel]')) relevel(); });
@@ -1140,7 +1190,7 @@ export function heldVersionReason() {
 export function panes() {
   const S = scene;
   if (!S) return null;
-  const of = (/** @type {Pane} */ P) => ({ doc: P.doc, src: P.src, names: P.names, shows: P.shows, kind: P.kind, k: P.k, n: P.n, read: P.read, lacks: P.lacks, derived: !!P.d.derived, held: P.heldVersion, blocks: P.d.blocks.map((b) => ({ pos: b.pos, width: b.width, kind: b.kind, text: b.text })) });
+  const of = (/** @type {Pane} */ P) => ({ doc: P.doc, src: P.src, names: P.names, shows: P.shows, kind: P.kind, k: P.k, n: P.n, read: P.read, lacks: P.lacks, derived: !!P.d.derived, held: P.heldVersion, editor: editor(P), focus: P.focus, blocks: P.d.blocks.map((b) => ({ pos: b.pos, width: b.width, kind: b.kind, text: b.text })) });
   return { a: of(S.a), b: of(S.b) };
 }
 
@@ -1661,7 +1711,7 @@ function paneAt(side, src, r) {
   return {
     side, doc: src, src, names, shows: kind === 'bare' ? src : names, kind, k, n: kind === 'draft' ? null : r.n, read: null, lacks: null,
     d: { ...r.d }, view: LAYER.sceneView(r.d), corner: '', placed: new Map(), place: null, el: null, serial: 0, sets: 0, kept: null, lift: null, signs: null, facts: undefined,
-    open: false, rows: 0, heard: LAYER.kindOf(r.d), heldVersion: false,
+    open: false, rows: 0, heard: LAYER.kindOf(r.d), heldVersion: false, focus: null,
   };
 }
 
@@ -1674,6 +1724,15 @@ function paneAt(side, src, r) {
  * @param {Pane} P
  */
 const current = (P) => !P.d.derived || (P.d.derived.at == null && !P.d.derived.rows.length && !P.heldVersion);
+
+/**
+ * Is a pane its draft's editor (see the head): it holds the current text
+ * (`current`) of a draft of the person's own (T-LAYER's `ownDraft`), whatever
+ * the camera's scale — never a past state or the held version, which name the
+ * draft's address too, nor an edition or another's document.
+ * @param {Pane} P
+ */
+const editor = (P) => current(P) && P.kind === 'draft' && LAYER.ownDraft(P.names);
 
 /**
  * What a pane's corner is made from now (see the head): its record, named as
@@ -1784,7 +1843,7 @@ const lags = () => PUMP.boardKept() !== null;
  * @returns {{met: Refusal | null, since: number} | null}
  */
 function paneHeld(P) {
-  if (P.d.derived) return null;
+  if (P.d.derived && !editor(P)) return null;
   return P.kept && performance.now() - P.kept.since >= PUMP.KEPT_MS ? { met: P.kept.met, since: P.kept.at } : PUMP.kept(P.src);
 }
 
@@ -1814,11 +1873,14 @@ export function markKept() {
   const S = scene, E = els;
   if (!S || !E) return;
   const signs = LAYER.keptRunsKey(), lagging = String(lags());
+  const at = typeof document !== 'undefined' ? document.activeElement : null, own = LAYER.caret(), live = own && own.live ? LAYER.caretPane() : null;
   for (const side of SIDES) {
     const P = S[side], items = cornerForm(P, S.fit);
     const c = /** @type {HTMLElement | null} */ (paneEl(E, side).querySelector(':scope > .corner'));
     if (c && (items.html + (items.foot ?? '') !== P.corner || c.dataset.lags !== lagging)) { writeCorner(E, P, items); nameBar(E, P); }
     sayKind(E, P);
+    // the span focus marked as the plane marks the walk's span, while the pane's text holds the platform's focus and no live caret stands in it, the caret then the mark (D5 §4 rule 2)
+    if (P.el) LAYER.markPaneFocus(P.el, P.focus != null && textHolds(E, side, at) && !(live && live.article === P.el) ? P.focus : null);
   }
   if (SIDES.some((side) => S[side].el && S[side].signs !== signs)) placeStatements(E, S);
   rebanded(E, S);
@@ -1880,14 +1942,15 @@ const formClass = (/** @type {PaneFit} */ F, /** @type {Pane} */ P) => (F.corner
  * whether the board lagged as it was made (`data-lags`) — its element a
  * group and its one Tab stop, until its stops are stood on its acts
  * (T-LAYER's `setStops`); the items it holds and its rows kept on the pane as
- * last written (`Pane.corner`, `Pane.rows`).
+ * last written (`Pane.corner`, `Pane.rows`) — an editor pane's foot's among
+ * them, which its foot holds and never its head (`placeFoot`).
  * @param {Pane} P
  * @param {PaneFit} F
  */
 function cornerMarkup(P, F) {
   const made = cornerForm(P, F);
   P.corner = made.html + (made.foot ?? ''); P.rows = made.rows;
-  return `<div class="corner${formClass(F, P)}" data-corner="${esc(P.shows)}" data-lags="${lags()}" id="${cornerId(P.side)}" role="group" aria-labelledby="${cornerId(P.side)}" tabindex="0">${P.corner}</div>`;
+  return `<div class="corner${formClass(F, P)}" data-corner="${esc(P.shows)}" data-lags="${lags()}" id="${cornerId(P.side)}" role="group" aria-labelledby="${cornerId(P.side)}" tabindex="0">${made.html}</div>`;
 }
 
 /**
@@ -2161,6 +2224,9 @@ function stand(E, S, face) {
     swap(E, P);
     placeFoot(E, P, cornerForm(P, S.fit).foot);
     pane.setAttribute('tabindex', '0');
+    // an editor pane's span focus on the span its draft's caret stands in, kept there as the scene opens (B3-S1's scene rule)
+    const k = editor(P) ? LAYER.caretSpan(P.names) : null;
+    if (k && k.block != null) P.focus = k.block;
   }
   namePanes(E, S);
   applyFit(E, S);
@@ -3523,7 +3589,7 @@ function setPanes(S, sets, pairs) {
   const carried = sets.map(({ side, next, down, same }) => {
     const P = S[side], made = P.el ? LAYER.madeOf(P.el) : null, image = made ? made.image : [], pane = paneEl(E, side);
     const here = placeAt(P, next.hold ? next.hold.from : same ? firstLineIn(P, pane) : firstInView(pane));
-    if (down) { P.place = P.place || here; return { side, next, same, place: null, sel: null, level: null }; }
+    if (down) { P.place = P.place || here; P.focus = null; return { side, next, same, place: null, sel: null, level: null, focus: null }; }
     const place = same ? here : P.place || here;
     if (!same) P.place = null;
     const sel = P.el ? LAYER.selectionIn(P.el) : null, lv = S.level[side];
@@ -3531,6 +3597,7 @@ function setPanes(S, sets, pairs) {
       side, next, same, place,
       sel: sel ? { ids: REC.identityIn(image, sel.span.pos, sel.span.width), backward: sel.backward } : null,
       level: lv != null ? { pos: lv, ids: REC.identityIn(image, lv, 1) } : null,
+      focus: P.focus != null ? { pos: P.focus, ids: REC.identityIn(image, P.focus, 1) } : null,
     };
   });
   for (const { side, next, same } of carried) {
@@ -3545,7 +3612,7 @@ function setPanes(S, sets, pairs) {
   applyFit(E, S);
   standList(E, S);
   roomBelow(E);
-  for (const { side, next, place, sel, level } of carried) {
+  for (const { side, next, place, sel, level, focus } of carried) {
     const P = S[side], pane = paneEl(E, side), image = P.d.image;
     /** where a carried byte stands in the text taken: by its identity, the corner's act's passage at the position it names, else where it stood */
     const there = (/** @type {{pos: number, ids: ISpan[]}} */ x) => {
@@ -3560,6 +3627,8 @@ function setPanes(S, sets, pairs) {
       if (z) LAYER.selectIn(P.el, { addr: P.names, pos: at[0].pos, width: z.pos + z.width - at[0].pos }, sel.backward);
     }
     if (level) S.level[side] = there(level);
+    // the span focus on the span holding its byte in the text taken, else where it stood (T-SPAN's `elementIn`)
+    if (focus) { const b = elementIn(P.d.blocks, there(focus)); P.focus = b ? b.pos : null; }
   }
   if (pairs) S.pairs = pairs;
   for (const side of SIDES) {
@@ -3611,8 +3680,9 @@ async function update(side, how = {}) {
   const S = scene;
   if (!S) return;
   const P = S[side], Q = S[otherSide(side)], serial = ++P.serial;
-  // a derived record is the page's, not the board's: no read sets it again (see the head)
-  if (P.d.derived) return;
+  // a derived record is the page's, not the board's: no read sets it again (see the head) — save an editor pane's, the text the
+  // page shows of its draft, whose record the read sets again under it
+  if (P.d.derived && !editor(P)) return;
   const stale = () => scene !== S || P.serial !== serial;
   // the board's events ask it: the pane stands kept as it shows until a setting of it lands, saying so once it has stood a second
   if (!how.src && !P.kept) { P.kept = { since: performance.now(), at: how.at ?? Date.now(), met: null }; setTimeout(markDirty, PUMP.KEPT_MS); }
@@ -3633,6 +3703,8 @@ async function update(side, how = {}) {
     // a version the corner's act could not read whole leaves the pane as it shows
     if (!d || (how.src && !r.whole)) return;
     if (P.kind === 'bare' && !how.src && P.k != null && r.n != null && r.n > P.k) { pin(S, side, P.k, r.n); return; }
+    // an editor pane is set from the text the page shows of its draft over the record read: the person's own words in it (FP-38)
+    const own = !how.src && editor(P) ? LAYER.shownOf(src) : null;
     const kind = how.src ? 'pinned' : P.kind === 'pinned' ? 'pinned' : kindAt(src, d);
     const k = kind === 'pinned' ? memberOf(src) : kind === 'bare' ? r.n : null;
     const names = kind === 'bare' && r.n ? versionAddress(src, r.n) : src;
@@ -3647,18 +3719,19 @@ async function update(side, how = {}) {
       hold = { from: into.from, to: into.to };
       lacks = into.none ? k : null;
     }
+    const text = own || d;
     for (;;) {
       const seen = Q.sets;
-      const mine = { src, d, shown: LK.shown(src, d) }, theirs = { src: Q.src, d: Q.d, shown: Q.view.marks };
+      const mine = { src, d: text, shown: LK.shown(src, text) }, theirs = { src: Q.src, d: Q.d, shown: Q.view.marks };
       const between = await readBetween(side === 'a' ? mine : theirs, side === 'a' ? theirs : mine);
       if (stale()) return;
       if (Q.sets !== seen) continue;
       if (!how.src && between.unheard) { unset(between.unheard); return; }
       const read = how.read !== undefined ? how.read : P.read;
       // set from its reads: kept no more, from the step that sets it — a setting the board's events asked saying whether it changed what the pane shows
-      if (!how.src && P.kept) P.lift = { since: P.kept.at, outcome: REC.shownBy(P.d) === REC.shownBy(d) ? 'unchanged' : 'changed' };
+      if (!how.src && P.kept) P.lift = { since: P.kept.at, outcome: REC.shownBy(P.d) === REC.shownBy(text) ? 'unchanged' : 'changed' };
       P.kept = null;
-      setPanes(S, [{ side, next: { d, kind, src, names, shows: kind === 'bare' ? src : names, k, n, read, lacks, hold } }], between.pairs);
+      setPanes(S, [{ side, next: { d: text, kind, src, names, shows: kind === 'bare' ? src : names, k, n, read, lacks, hold } }], between.pairs);
       answer(S, between);
       return;
     }
@@ -4898,7 +4971,8 @@ function standList(E, S) {
   }
   const el = pastEl, beside = listBeside(S.fit);
   el.className = 'pastlist ' + (beside ? 'beside' : 'after');
-  if (beside) E.paneB.after(el); else E.paneB.append(el);
+  // moved only where it stands elsewhere, so a setting of a pane leaves its rows where they are scrolled
+  if (beside) { if (E.paneB.nextElementSibling !== el) E.paneB.after(el); } else if (el.parentElement !== E.paneB || E.paneB.lastElementChild !== el) E.paneB.append(el);
   E.paneB.classList.toggle('past-after', !beside);
   placeList(E, S);
   if (!L.opened) {
@@ -5074,54 +5148,508 @@ export function close() {
   markDirty();
 }
 
+// ---- the editor pane, and each pane's span focus (see the head) -------------------------------------------------------------
+
+/** the elements of the walk a pane's text holds, in its order (T-SPAN's `isElement`) */
+const elementsIn = (/** @type {Pane} */ P) => P.d.blocks.filter(isElement);
+
+/** a span's parts standing in a pane's article, by the span's first position */
+const partsAt = (/** @type {HTMLElement} */ art, /** @type {number} */ pos) => /** @type {HTMLElement[]} */ ([...art.querySelectorAll('.run > .sp, .run > .withheld')]).filter((x) => Number(x.dataset.pos) === pos);
+
+/** does an element stand on a pane's text, its article's, and not in its corner or the list beside it: where a click is the pointer's act on the text (`textAct`) */
+const onText = (/** @type {EventTarget | null} */ t) => {
+  const el = /** @type {HTMLElement | null} */ (t);
+  return !!el && typeof el.closest === 'function' && !!el.closest('article.dtext') && !el.closest('.corner, #scenepast');
+};
+
 /**
- * The scroll that brings the block next below (dir 1) or above (dir −1) the
- * pane's visible top to it, in px of the pane's content — the first block
- * whose top lies past that top by more than a pixel, the pane's visible top
- * taken below what a held head covers (`clearOf`), so the block stands clear
- * of it; the pane's end past the last block, its top before the first. Null
- * where the pane holds no article.
- * @param {HTMLElement} pane
- * @param {1 | -1} dir
- * @returns {number | null}
+ * Does the platform's focus stand in a pane's text (see the head): on the
+ * pane itself, or on an element in it but its corner and the list beside it —
+ * where a key is the pane's own, and its span focus or its caret takes it.
+ * @param {NonNullable<typeof els>} E
+ * @param {'a' | 'b'} side
+ * @param {Element | null} at
+ * @returns {boolean}
  */
-function blockTop(pane, dir) {
-  const art = articleIn(pane); if (!art) return null;
-  const origin = pane.getBoundingClientRect().top + pane.clientTop - pane.scrollTop, clear = clearOf(pane);
-  const tops = [...art.el.querySelectorAll('.run > .sp, .run > .withheld')].map((e) => e.getBoundingClientRect().top - origin);
-  const at = pane.scrollTop + clear;
-  const next = dir > 0 ? tops.find((y) => y > at + 1) : tops.slice().reverse().find((y) => y < at - 1);
-  if (next == null) return dir > 0 ? pane.scrollHeight : 0;
-  return Math.max(0, Math.round(next - clear));
-}
-
-/** a pane's own key now (K-60): ↓/↑ by block — the next block's top brought to the pane's top, below what a held head covers — PageDown/PageUp by most of the pane, Home/End to its ends */
-function move(/** @type {HTMLElement} */ pane, /** @type {string} */ k) {
-  const step = pane.clientHeight * 0.8;
-  if (k === 'PageDown') pane.scrollTop += step; else if (k === 'PageUp') pane.scrollTop -= step;
-  else if (k === '↓' || k === '↑') { const top = blockTop(pane, k === '↓' ? 1 : -1); if (top == null) return false; pane.scrollTop = top; }
-  else if (k === 'Home') pane.scrollTop = 0; else if (k === 'End') pane.scrollTop = pane.scrollHeight;
-  else return false;
-  draw(); return true;
+function textHolds(E, side, at) {
+  const pane = paneEl(E, side);
+  if (!at || (at !== pane && !pane.contains(at))) return false;
+  return at === pane || !(typeof at.closest === 'function' && at.closest('.corner, #scenepast'));
 }
 
 /**
- * The scene's own keys: a pane's (K-60) move the pane the focus stands in —
- * pane A where it stands in neither — each move waiting for a pane being set
- * again (`whenSet`), the key taken meanwhile. False for any other key: a
- * pane's corner's acts are buttons, whose Enter and Space the platform takes,
- * each act its click's (`attach`).
+ * The pane whose text holds the platform's focus (`textHolds`): where a key
+ * pressed in the scene acts (N-KEYS'); null at a pane's corner, at the scene's
+ * acts, outside the scene, and where no scene stands.
+ * @returns {'a' | 'b' | null}
+ */
+export function textPane() {
+  const E = els;
+  if (!scene || !E) return null;
+  const at = typeof document !== 'undefined' ? document.activeElement : null;
+  return SIDES.find((side) => textHolds(E, side, at)) ?? null;
+}
+
+/** the pane an element stands in, its corner among it — where a key at a pane's corner is answered by that pane's line (N-KEYS'); null outside the panes */
+export function paneHolding(/** @type {Element | null} */ el) {
+  const E = els;
+  return E && scene && el ? SIDES.find((side) => paneEl(E, side).contains(el)) ?? null : null;
+}
+
+/**
+ * The editor panes as they stand (see the head): each pane holding the
+ * current text of a draft of the person's own (`editor`), with its article,
+ * its draft, its span focus, whether its text holds the platform's focus and
+ * how its scroll brings a stretch of the screen inside it (`intoPane`) — what
+ * T-LAYER draws the caret's mark in and brings it into view by (its `panes`
+ * reader); none where no scene stands.
+ * @returns {import('../text/layer.js').EditorPane[]}
+ */
+export function editorPanes() {
+  const S = scene, E = els;
+  if (!S || !E) return [];
+  const at = typeof document !== 'undefined' ? document.activeElement : null;
+  return SIDES.flatMap((side) => {
+    const P = S[side];
+    return P.el && editor(P) ? [{ article: P.el, addr: P.names, focus: P.focus, focused: textHolds(E, side, at), into: (/** @type {{top: number, bottom: number}} */ r) => intoPane(E, side, r) }] : [];
+  });
+}
+
+/**
+ * A pane's scroll moved the least that brings a stretch of the screen inside
+ * its visible height, below what its held head covers (`clearOf`): the
+ * caret's mark as the frame sets it, a span its focus moved to (FP-37); the
+ * other pane and the camera unmoved (R3).
+ * @param {NonNullable<typeof els>} E
+ * @param {'a' | 'b'} side
+ * @param {{top: number, bottom: number}} r on screen
+ */
+function intoPane(E, side, r) {
+  const pane = paneEl(E, side);
+  if (typeof pane.getBoundingClientRect !== 'function') return;
+  const q = pane.getBoundingClientRect(), top = q.top + pane.clientTop + clearOf(pane), bottom = q.top + pane.clientTop + pane.clientHeight;
+  const dy = r.bottom > bottom ? Math.min(r.bottom - bottom, r.top - top) : r.top < top ? r.top - top : 0;
+  if (dy) pane.scrollTop += dy;
+}
+
+/** does a line of a pane's span stand inside its visible height, below what its held head covers; true where the platform lays out no article, the span then taken as in view */
+function spanShown(/** @type {NonNullable<typeof els>} */ E, /** @type {Pane} */ P, /** @type {number} */ pos) {
+  const pane = paneEl(E, P.side), art = articleIn(pane);
+  if (!art || typeof pane.getBoundingClientRect !== 'function') return true;
+  const q = pane.getBoundingClientRect(), top = q.top + pane.clientTop + clearOf(pane), bottom = q.top + pane.clientTop + pane.clientHeight;
+  return partsAt(art.el, pos).some((x) => { const r = x.getBoundingClientRect(); return r.height > 0 && r.bottom > top && r.top < bottom; });
+}
+
+/**
+ * The span in view of a pane (D5 K-61; B3-S1's kept caret): in an editor
+ * pane the span its draft's caret stands in where a line of it stands in view
+ * — the kept caret's span holding the focus as on the plane — else the first
+ * span in view (`firstInView`), by T-SPAN's rule, else its text's first
+ * element; null where its text holds none.
+ * @param {NonNullable<typeof els>} E
+ * @param {Pane} P
+ * @returns {Block | null}
+ */
+function spanInView(E, P) {
+  const all = elementsIn(P), k = editor(P) ? LAYER.caretSpan(P.names) : null;
+  const held = k && k.block != null ? all.find((b) => b.pos === k.block) : null;
+  if (held && spanShown(E, P, held.pos)) return held;
+  const first = firstInView(paneEl(E, P.side)), b = first != null ? elementIn(P.d.blocks, first) : null;
+  return b || all[0] || null;
+}
+
+/**
+ * The focus come into a pane's text from outside it — Tab, Shift+Tab, a
+ * click, the way back's act (D5 K-61): its span focus on the span in view
+ * (`spanInView`) where it stands on none, or on one out of view.
+ * @param {NonNullable<typeof els>} E
+ * @param {'a' | 'b'} side
+ */
+function entered(E, side) {
+  const S = scene;
+  if (!S) return;
+  const P = S[side];
+  if (P.focus != null && spanShown(E, P, P.focus)) return;
+  const b = spanInView(E, P);
+  P.focus = b ? b.pos : null;
+}
+
+/**
+ * A pane's span focus brought into view (FP-37): its span's top brought to
+ * the pane's visible top below what a held head covers — a walk key's move,
+ * as the plane's walk flies to its element — or, where `least` asks, the
+ * pane's scroll moved the least that brings its first line in view
+ * (`intoPane`). Nothing where the platform lays out no article.
+ * @param {NonNullable<typeof els>} E
+ * @param {Pane} P
+ * @param {boolean} least
+ */
+function showSpan(E, P, least) {
+  const pane = paneEl(E, P.side), art = articleIn(pane), at = P.focus;
+  if (!art || at == null || typeof pane.getBoundingClientRect !== 'function') return;
+  const part = partsAt(art.el, at)[0];
+  if (!part) return;
+  const r = part.getBoundingClientRect();
+  if (least) { intoPane(E, P.side, { top: r.top, bottom: Math.min(r.bottom, r.top + LINE_H * READING_PX) }); return; }
+  const origin = pane.getBoundingClientRect().top + pane.clientTop - pane.scrollTop;
+  pane.scrollTop = Math.max(0, Math.round(r.top - origin - clearOf(pane)));
+}
+
+/**
+ * A span of a pane's text said in the status region as the ARIA mirror names
+ * a document's span (N-WALK's; ST's `L.mirror.span`, `L.mirror.span.bare`,
+ * `L.mirror.item`), from the pane's own text, which a past state and the held
+ * version hold apart from the plane's: where it stands, what it reads, and
+ * its place among the pane's spans — rendered for the ear (ST's `heard`), the
+ * document's words kept as written.
+ * @param {Pane} P
+ * @param {Block} b
+ * @param {Block[]} all the pane's elements, in order
+ */
+function saySpan(P, b, all) {
+  const own = b.kind === 'para' ? sentence('L.mirror.span', { p: b.pos, extent: P.d.extent != null ? numeral(P.d.extent) : '?', document: P.shows, same: '', text: b.text }) : sentence('L.mirror.span.bare', { p: b.pos, document: P.shows });
+  FOCUS.say(heard(sentences(own, t('L.mirror.item', { i: numeral(all.indexOf(b) + 1), n: numeral(all.length) }))));
+}
+
+/**
+ * A pane's span focus moved by span (D5 K-60): ↓ to the next element of the
+ * walk its text holds (T-SPAN's `isElement`), ↑ to the one before — a span
+ * focus standing on none, or on one the pane's own scroll left out of view,
+ * taken again at the span in view first (`spanInView`), as the plane's walk is
+ * taken again after a camera move, and the key moving on from it — the span's
+ * top brought to the pane's visible top (`showSpan`), that pane alone moving
+ * (R3), the span said as the mirror names one (`saySpan`); the focus standing
+ * where its text holds no element that way.
+ * @param {NonNullable<typeof els>} E
+ * @param {Pane} P
+ * @param {1 | -1} dir
+ */
+function walkPane(E, P, dir) {
+  const all = elementsIn(P);
+  if (P.focus == null || !spanShown(E, P, P.focus)) { const b = spanInView(E, P); P.focus = b ? b.pos : null; }
+  const i = P.focus != null ? all.findIndex((b) => b.pos === P.focus) : -1, to = i < 0 ? null : all[i + dir];
+  if (!to) return;
+  P.focus = to.pos;
+  showSpan(E, P, false);
+  saySpan(P, to, all);
+}
+
+/**
+ * A pane's own key, where no live caret stands in it (D5 K-60): ↓ and ↑ by
+ * span (`walkPane`); PageDown and PageUp by most of the pane, its span focus
+ * then on the span in view where it stood out of view, as the plane's walk is
+ * taken again after a paging key; Home and End to the pane's ends, its span
+ * focus on its first and its last span. The scene's ties drawn at the scroll.
+ * @param {NonNullable<typeof els>} E
+ * @param {Pane} P
+ * @param {string} k
+ * @returns {boolean}
+ */
+function move(E, P, k) {
+  const pane = paneEl(E, P.side), step = pane.clientHeight * 0.8, all = elementsIn(P);
+  if (k === '↓' || k === '↑') walkPane(E, P, k === '↓' ? 1 : -1);
+  else if (k === 'PageDown' || k === 'PageUp') {
+    pane.scrollTop += k === 'PageDown' ? step : -step;
+    if (P.focus == null || !spanShown(E, P, P.focus)) { const b = spanInView(E, P); P.focus = b ? b.pos : null; }
+  } else if (k === 'Home') { pane.scrollTop = 0; if (all.length) P.focus = all[0].pos; }
+  else if (k === 'End') { pane.scrollTop = pane.scrollHeight; if (all.length) P.focus = all[all.length - 1].pos; }
+  else return false;
+  draw(); markDirty(); return true;
+}
+
+/**
+ * The scene's own keys at a pane's text (D5 K-60): the pane's moves
+ * (`move`) at the pane whose text holds the focus — or the one named — each
+ * waiting for a pane being set again (`whenSet`), the key taken meanwhile.
+ * False for any other key, at a pane's corner, whose keys are a corner's
+ * (N-KEYS' `cornerKey`), and where no pane's text holds the focus.
  * @param {string} k the chord (N-KEYS's `chordOf`)
+ * @param {'a' | 'b' | null} [side] the pane: the one whose text holds the focus where none is named (`textPane`)
  * @returns {boolean} the scene took the key
  */
-export function key(k) {
+export function key(k, side = textPane()) {
+  const S = scene, E = els;
+  if (!S || !E || !side || !MOVES.includes(k)) return false;
+  actedIn(S);
+  const P = S[side];
+  if (!S.updating) return move(E, P, k);
+  S.waiting.push(() => move(E, P, k));
+  return true;
+}
+
+/**
+ * Each editor pane set again from the text the page shows of its draft where
+ * that text moved since the pane was set (see the head; FP-38) — the person's
+ * typing, or the record under it set again — in one step with nothing read
+ * (`setPanes`): its place, its selection, its span focus and the end set level
+ * in it carried by their bytes' identity, the runs the two texts share read
+ * off their images by identity (`sharedBetween`), so words not yet kept carry
+ * no band, the other pane unmoved; a live caret standing in it then holding
+ * its span focus (`followCaret`). Nothing while a setting reads, which sets
+ * it from the text shown as it lands (`update`), nor where no scene stands.
+ * The app runs it on each dirty frame before T-LAYER's, so the caret's mark is
+ * set in the text the caret stands in.
+ */
+export function followShown() {
+  const S = scene;
+  if (!S || S.updating || !els) return;
+  for (const side of SIDES) {
+    const P = S[side];
+    if (!P.el || !editor(P)) continue;
+    const d = LAYER.shownOf(P.names);
+    if (d.from < 0 || (d.runs === P.d.runs && d.image === P.d.image && d.blocks === P.d.blocks)) continue;
+    const Q = S[otherSide(side)], mine = { src: P.names, d }, theirs = { src: Q.src, d: Q.d };
+    setPanes(S, [{ side, next: { d, view: LAYER.sceneView(d), kind: 'draft', src: P.names, names: P.names, shows: P.shows, k: null, n: null, read: P.read, lacks: P.lacks, hold: null } }], side === 'a' ? sharedBetween(mine, theirs) : sharedBetween(theirs, mine));
+    const c = LAYER.caret(), at = c && c.live && c.addr === P.names ? LAYER.caretSpan(P.names) : null;
+    if (at && at.block != null) P.focus = at.block;
+  }
+}
+
+/**
+ * The span focus of the editor pane the page's own caret stands in, on the
+ * span the caret stands in (T-LAYER's `caretSpan`), as the plane's walk follows
+ * a live caret (B3-S13; N-WALK's `followCaret`): a key at the caret, a click
+ * placing it, a return to it. Nothing where no editor pane holds the caret.
+ */
+export function followCaret() {
+  const S = scene, pane = LAYER.caretPane();
+  if (!S || !pane) return;
+  const side = SIDES.find((s) => S[s].el === pane.article), at = LAYER.caretSpan(pane.addr);
+  if (side && at && at.block != null) S[side].focus = at.block;
+  markDirty();
+}
+
+/**
+ * A click on a pane's text, or a drag's release there (FP-40; D5 K-70), the
+ * reader's next act (`acted`, the app's): in an editor pane the caret placed
+ * live at the character clicked (T-LAYER's `caretFromPlatform`,
+ * `placeCaret`) — after a drag, or a double- or triple-click, at the moving
+ * end of the selection standing in the pane's text, the selection standing
+ * (`keep`) — its span focus following it (`followCaret`); in any other pane a
+ * live caret kept where it stood (T-LAYER's `leaveCaret`), its view and the
+ * platform's selection standing on what was clicked, and the pane's span
+ * focus on the span clicked, so the next key starts there.
+ * @param {NonNullable<typeof els>} E
+ * @param {'a' | 'b'} side
+ */
+function textAct(E, side) {
+  const S = scene;
+  if (!S) return;
+  acted();
+  const P = S[side];
+  if (!P.el) return;
+  const sel = LAYER.selectionIn(P.el);
+  const at = sel ? { addr: sel.span.addr, pos: sel.backward ? sel.span.pos : sel.span.pos + sel.span.width } : LAYER.caretFromPlatform();
+  if (!at || at.addr !== P.names) return;
+  if (editor(P)) { if (LAYER.placeCaret(P.names, at.pos, !!sel)) followCaret(); return; }
+  const c = LAYER.caret();
+  if (c && c.live) LAYER.leaveCaret('pointer', false);
+  const b = elementIn(P.d.blocks, at.pos);
+  if (b) P.focus = b.pos;
+  if (typeof document !== 'undefined' && !textHolds(E, side, document.activeElement)) FOCUS.land(paneEl(E, side));
+  markDirty();
+}
+
+/**
+ * Enter at an editor pane's span focus (D5 K-70): the caret placed live at
+ * the span's start, or the draft's kept caret standing in that span returned
+ * where it stood (T-LAYER's `caretToSpan`), the span focus following it. False
+ * where the pane is no editor, or stands on no span.
+ * @param {'a' | 'b'} side
+ * @returns {boolean}
+ */
+export function enterSpan(side) {
+  const S = scene, P = S ? S[side] : null;
+  if (!P || !editor(P) || P.focus == null || !LAYER.caretToSpan(P.names, P.focus)) return false;
+  followCaret();
+  return true;
+}
+
+/**
+ * A paging key at the live caret of an editor pane (D5 K-60, K-71): the pane
+ * paged by most of its height, as K-60 pages it, and the caret moved to the
+ * line then standing where its mark stood (T-LAYER's `caretToPoint`), its span
+ * focus with it (`followCaret`). False where no live caret stands in an
+ * editor pane.
+ * @param {1 | -1} dir
+ * @returns {boolean}
+ */
+export function pageCaret(dir) {
+  const S = scene, E = els, pane = LAYER.caretPane(), c = LAYER.caret();
+  if (!S || !E || !pane || !c || !c.live) return false;
+  const side = SIDES.find((s) => S[s].el === pane.article);
+  if (!side) return false;
+  const el = paneEl(E, side), mark = /** @type {HTMLElement | null} */ (pane.article.querySelector('.caret-mark'));
+  const r = mark && typeof mark.getBoundingClientRect === 'function' ? mark.getBoundingClientRect() : null;
+  el.scrollTop += dir * el.clientHeight * 0.8;
+  if (r && r.height > 0) LAYER.caretToPoint(r.left + 1, r.top + r.height / 2);
+  followCaret();
+  draw();
+  return true;
+}
+
+/**
+ * Shift with an arrow, Home or End at the live caret of an editor pane (D5
+ * K-71): the caret moved a step that way (T-LAYER's `caretMove`) and the
+ * platform's selection in the pane's text made to run from its anchor — the
+ * other end of a selection there ending at the caret, else the caret — to the
+ * caret (T-LAYER's `selectIn`), the caret's span the focus; where the step
+ * brings the caret back to its anchor, none standing there (T-LAYER's
+ * `unselectIn`). False where no live caret stands in an editor pane, or it
+ * cannot move that way.
+ * @param {import('../text/layer.js').CaretStep} dir
+ * @returns {boolean}
+ */
+export function extendFromCaret(dir) {
+  const pane = LAYER.caretPane(), c = LAYER.caret();
+  if (!pane || !c || !c.live) return false;
+  const s = LAYER.selectionIn(pane.article), span = s && s.span.addr === c.addr ? s.span : null;
+  const anchor = !span ? c.pos : span.pos === c.pos ? span.pos + span.width : span.pos + span.width === c.pos ? span.pos : c.pos;
+  if (!LAYER.caretMove(dir, anchor)) return false;
+  const to = /** @type {import('../text/layer.js').Caret} */ (LAYER.caret()).pos;
+  if (to === anchor) LAYER.unselectIn(pane.article);
+  else LAYER.selectIn(pane.article, { addr: c.addr, pos: Math.min(anchor, to), width: Math.abs(to - anchor) }, to < anchor);
+  followCaret();
+  return true;
+}
+
+/**
+ * Select-all in a pane (D5 K-93; B3-S8): its text whole the platform's
+ * selection there (T-LAYER's `selectIn`) — at an editor pane's live caret the
+ * caret live at its end, the run of typing open there ended (T-LAYER's
+ * `placeCaret`); at a past state's, read only, no caret (B3-S8). False where
+ * its text holds none.
+ * @param {'a' | 'b'} side
+ * @returns {boolean}
+ */
+export function selectAll(side) {
+  const S = scene, P = S ? S[side] : null;
+  if (!P || !P.el || P.d.from < 0) return false;
+  const end = Math.max(P.d.to, (P.d.extent ?? 0) + 1);
+  if (end <= 1) return false;
+  const c = LAYER.caret();
+  if (editor(P) && c && c.live && c.addr === P.names) LAYER.placeCaret(P.names, end, true);
+  return LAYER.selectIn(P.el, { addr: P.names, pos: 1, width: end - 1 }, false);
+}
+
+/**
+ * The selection standing in a pane's text ended (D5 K-77; §4 rule 7): Esc's
+ * first step there — at the live caret of an editor pane the caret standing
+ * live where it stands, the platform's selection collapsed at it (T-LAYER's
+ * `placeCaret`), else the platform's selection collapsed where it stands
+ * (T-LAYER's `unselectIn`). False where none stands there.
+ * @param {'a' | 'b'} side
+ * @returns {boolean}
+ */
+export function unselect(side) {
+  const S = scene, P = S ? S[side] : null;
+  if (!P || !P.el || !LAYER.selectionIn(P.el)) return false;
+  const c = LAYER.caret(), pane = LAYER.caretPane();
+  if (c && c.live && pane && pane.article === P.el) LAYER.placeCaret(c.addr, c.pos);
+  else LAYER.unselectIn(P.el);
+  return true;
+}
+
+/**
+ * The way back to a draft's kept caret within the scene (the ending's act;
+ * FP-40): the platform's focus in the
+ * editor pane holding the draft, its span focus on the span the caret stands
+ * in, brought into view (`showSpan`), so the next printable key there returns
+ * the caret and types (N-KEYS'). False where no editor pane holds the draft,
+ * or the draft holds no caret.
+ * @param {string} addr the draft
+ * @returns {boolean}
+ */
+export function toCaret(addr) {
   const S = scene, E = els;
   if (!S || !E) return false;
-  const at = typeof document !== 'undefined' ? /** @type {HTMLElement | null} */ (document.activeElement) : null;
-  const pane = at && E.paneB.contains(at) ? E.paneB : E.paneA;
-  if (!MOVES.includes(k)) return false;
-  actedIn(S);
-  if (!S.updating) return move(pane, k);
-  S.waiting.push(() => move(pane, k));
+  const side = SIDES.find((s) => editor(S[s]) && S[s].names === addr), at = side ? LAYER.caretSpan(addr) : null;
+  if (!side || !at || at.block == null) return false;
+  const P = S[side];
+  P.focus = at.block;
+  showSpan(E, P, true);
+  FOCUS.land(paneEl(E, side));
+  markDirty();
   return true;
+}
+
+/**
+ * @typedef {Object} PaneSite — a pane as a key at its text or its corner is answered (N-KEYS'): what text it holds — its draft's editor (`editor`), a past state of a draft (`past`), the moved scene's held version or another record the page derived with held lines applied (`held`), else a text it reads (`read`) — the address its acts name and the one it shows, its record, its span focus and its element, where a line a key raises stands beside
+ * @property {'a' | 'b'} side
+ * @property {'editor' | 'past' | 'held' | 'read'} kind
+ * @property {string} names
+ * @property {string} shows
+ * @property {Doc} d
+ * @property {number | null} focus
+ * @property {HTMLElement} el
+ */
+
+/**
+ * A pane as a key at it is answered (`PaneSite`); null where no scene stands.
+ * @param {'a' | 'b'} side
+ * @returns {PaneSite | null}
+ */
+export function siteOf(side) {
+  const S = scene, E = els;
+  if (!S || !E) return null;
+  const P = S[side], d = P.d.derived;
+  const kind = editor(P) ? 'editor' : d && d.at != null ? 'past' : P.heldVersion || (d && d.rows.length) ? 'held' : 'read';
+  return { side, kind, names: P.names, shows: P.shows, d: P.d, focus: P.focus, el: paneEl(E, side) };
+}
+
+/**
+ * The reason a key at a held version gives (see the head; D6 BM-14; B3-S2):
+ * at a selection standing in its text, the one that selection keys
+ * (`heldVersionReasonOf`); with none, the one the span its span focus stands
+ * on keys — else the span in view — against the current text in the other
+ * pane, the nearest rule the design gives a key at such a span; null where
+ * the pane holds no held version beside a current text.
+ * @param {'a' | 'b'} side
+ * @returns {HeldReason | null}
+ */
+export function heldReasonAt(side) {
+  const S = scene, E = els;
+  if (!S || !E) return null;
+  const P = S[side], Q = S[otherSide(side)];
+  if (!P.el || !Q.el || !current(Q) || current(P) || (P.d.derived && P.d.derived.at != null)) return null;
+  const a = LAYER.madeOf(Q.el), b = LAYER.madeOf(P.el), sel = LAYER.selectionIn(P.el);
+  if (!a || !b) return null;
+  if (sel) return heldVersionReasonOf(a.image, b.image, sel.span);
+  const at = P.focus != null ? P.d.blocks.find((x) => x.pos === P.focus) : spanInView(E, P);
+  return at ? heldVersionReasonOf(a.image, b.image, { pos: at.pos, width: at.width }) : null;
+}
+
+/**
+ * The kept word of the corner of the editor pane holding a draft (`editor`):
+ * where a face the undo chord answers there stands (N-KEYS'; O-FACES'
+ * `unkept`); null where no editor pane holds the draft, or its corner holds
+ * no kept word.
+ * @param {string} addr
+ * @returns {HTMLElement | null}
+ */
+export function keptWordOf(addr) {
+  const S = scene, E = els, side = S && E ? SIDES.find((s) => editor(S[s]) && S[s].names === addr) : null;
+  return S && E && side ? /** @type {HTMLElement | null} */ (paneEl(E, side).querySelector('.corner .kept-word')) : null;
+}
+
+/**
+ * What the scene's close re-takes into the entry it lands on (see the head;
+ * B3-S1's scene rule; D5 K-63), read before it closes: of the editor panes,
+ * the one whose caret the person last held — the page's own caret's draft,
+ * else the one whose text holds the focus, else the first — its draft, that
+ * draft's caret by its place (T-LAYER's `caretPlaceIn`), and the span its view
+ * was anchored at, the first in view (§3.2's anchor), by position in the text
+ * shown and by its byte's identity; null where no editor pane holds a draft
+ * with a caret, or no scene stands.
+ * @returns {{addr: string, caret: import('../text/layer.js').CaretPlace, pos: number, ids: ISpan[]} | null}
+ */
+export function editorAnchor() {
+  const S = scene, E = els;
+  if (!S || !E) return null;
+  const own = LAYER.caret(), at = typeof document !== 'undefined' ? document.activeElement : null, list = SIDES.filter((s) => !!S[s].el && editor(S[s]));
+  const side = list.find((s) => !!own && S[s].names === own.addr) ?? list.find((s) => textHolds(E, s, at)) ?? list[0];
+  const P = side ? S[side] : null, caret = P ? LAYER.caretPlaceIn(P.names) : null;
+  if (!P || !caret) return null;
+  const first = firstInView(paneEl(E, P.side)), b = first != null ? elementIn(P.d.blocks, first) : null, pos = b ? b.pos : caret.pos;
+  return { addr: P.names, caret, pos, ids: REC.identityIn(imageOf(P), pos, 1) };
 }

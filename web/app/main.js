@@ -52,7 +52,8 @@
 // is set again as, N-GO's `vanished`, FP-21 — how far an in-document
 // find's box pushes a corner's items down, N-FIND's `atop` — and the newer
 // version a corner offers to read where an arrival pinned its box, N-GO's
-// `newerAt`, FP-23); N-LEAP's (the current address, L-LINE's
+// `newerAt`, FP-23 — and a reading scene's editor panes as they stand, which
+// the caret is served in, SC's `editorPanes`, FP-38); N-LEAP's (the current address, L-LINE's
 // `currentAddress`, and the document in view — the document the line's
 // `addressDisplay` names at its reading scale, as the version its box shows,
 // N-GO's `shownIn`, FP-22 — beside which a row opens its place, `reading`
@@ -71,7 +72,8 @@
 // of its acts ends, O-HINT's `show`, `act`); N-WALK's Enter at the walk's
 // element, an activation reaching a mirror item made as the line's and a
 // hint's next act and as N-KEYS' `activate`; SC's own end, a Back from its entry
-// (N-GO's `closeScene`), and
+// (N-GO's `closeScene`), a click on a pane's text made as the line's and a
+// hint's next act, and
 // the faces a stop the reader returned to shows at its site (O-FACES'
 // `reaching`, `floating`, `held`); O-LAND's hand-off and its pieces' element;
 // O-HINT's hand-off;
@@ -86,8 +88,10 @@
 // The loop (`loop`, on `requestAnimationFrame`): step the camera's flight,
 // pump every 90 ms, and on a dirty frame — the mark, a camera move, a model,
 // write (W-WRITE's), layer or kept revision, a flight, an overlay standing, a
-// phase — run T-LAYER's frame first, so what stands is decided before
-// anything is drawn (FP-8), then the landing rule at an arrival whose text
+// phase — set a reading scene's editor panes again from the text the page
+// shows of their drafts where it moved (SC's `followShown`; FP-38), then run
+// T-LAYER's frame, so what stands is decided before anything is drawn and a
+// caret's mark is set in the text it stands in (FP-8), then the landing rule at an arrival whose text
 // was set again (N-GO's `recheck`; FP-21) and at every surface standing on a version its box no
 // longer shows (N-GO's `surfacesAcross`; FP-36), the find read again
 // (N-FIND's `refresh`), mark the mirror's
@@ -124,8 +128,8 @@
 // its strokes' buttons among the scene's acts, as its bar's buttons are) and
 // whether a key
 // made it by N-FOCUS's one reading (FP-20): a chord the LEAP box closed on
-// is read at the focus the close returned (M-1); in the scene the scene's
-// keys go first (SC's `key`); ↓ and ↑ in an overlay, or in the notice below
+// is read at the focus the close returned (M-1); in the scene N-KEYS reads
+// them as the scene's (its `sceneKey`); ↓ and ↑ in an overlay, or in the notice below
 // it (O-HOST's), move among the controls of the one holding the focus
 // through the controller; every key but Tab and Shift is the line's next
 // act, and every one but an auto-repeat a hint's (O-HINT's `act`) — Enter
@@ -252,6 +256,8 @@ function loop(/** @type {number} */ now) {
     const t0 = performance.now();
     if (!bootInfo.firstFrame) bootInfo.firstFrame = SHIPPED.map((f) => [f, document.fonts.check(f)]);
     WALK.carry();
+    // an editor pane set again from its draft's text shown before the layer sets the caret's mark in it
+    if (SCENE.isOpen()) SCENE.followShown();
     LAYER.frame((addr) => { const f = WALK.current(); return !!f && f.addr === addr; });
     GO.recheck();
     GO.surfacesAcross();
@@ -357,11 +363,11 @@ async function boot() {
   HINT.attach(el('hint'), { handOff: () => WALK.focusItem() });
   DELETION.attach(el('removed'));
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')), stop: /** @type {HTMLButtonElement} */ (el('scenestop')), strokes: el('scenestrokes') },
-    { end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, at, told) => FACES.floating(far, at, null, told), held: FACES.held }, history: (addr) => { void GO.history(addr); } });
+    { end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, at, told) => FACES.floating(far, at, null, told), held: FACES.held }, history: (addr) => { void GO.history(addr); }, acted: () => { LINE.act(); HINT.act(); } });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote'), foot: el('leapfoot') }, () => LINE.currentAddress(), reading, (words, id) => LINE.transient(words, id));
   FIND.attach({ box: el('find'), input: /** @type {HTMLInputElement} */ (el('findq')), count: el('findcount'), prev: /** @type {HTMLButtonElement} */ (el('findprev')), next: /** @type {HTMLButtonElement} */ (el('findnext')), note: el('findnote') });
   LINE.attach(el('line'), { open: (byKey, at) => LEAP.open(at), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed(), panes: SCENE.keptPanes, paneLift: SCENE.paneLift, asOf: SCENE.pastAsOf, hint: (id, at) => HINT.show(id, null, { at }), acted: () => HINT.act() });
-  LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a), vanished: GO.vanished, atop: FIND.atop, newer: GO.newerAt, face: FACES.cornerFace });
+  LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a), vanished: GO.vanished, atop: FIND.atop, newer: GO.newerAt, face: FACES.cornerFace, panes: SCENE.editorPanes });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn, text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null), first: LAYER.firstOfFar });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords(), enter: () => { LINE.act(); HINT.act(); return KEYS.activate(); } });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
@@ -383,7 +389,6 @@ async function boot() {
     const target = /** @type {HTMLElement | null} */ (e.target);
     const where = whereIs(target && target.closest && target.closest('#leap') && !LEAP.isOpen() ? document.activeElement : e.target);
     const byKey = FOCUS.byKey(e);
-    if (where === 'scene' && SCENE.isOpen() && SCENE.key(KEYS.chordOf(e))) { e.preventDefault(); return; }
     if (where === 'overlay' && !e.shiftKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
       const box = /** @type {HTMLElement | null} */ (document.activeElement && document.activeElement.closest('#overlay, #notice')) || el('overlay');
       const items = /** @type {HTMLElement[]} */ ([...box.querySelectorAll('button:not([disabled]), input, [tabindex="0"]')]); const i = items.indexOf(/** @type {HTMLElement} */ (document.activeElement)); const n = items[Math.max(0, Math.min(items.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]; if (n) FOCUS.land(n); e.preventDefault(); return;

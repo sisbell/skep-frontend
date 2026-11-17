@@ -2555,17 +2555,22 @@ def focus_rules(ctx, r):
         plat = ctx.js('window.__skep.platformSelection()')
         r.check(not same_view({'cam': cam0}, {'cam': cam1}) and state(ctx)['sel'] is None and plat['collapsed'], '#88: a camera-key drag over an article pans the camera and selects nothing — no selection of the page\'s, none of the platform\'s', {'cam': [cam0, cam1], 'sel': state(ctx)['sel'], 'platform': plat})
         chord(ctx, 'Escape')
-    # K-60 (#121): ↓ in a pane brings the next block's top to the pane's top
+    # K-60 (#121, #556): ↓ in a pane moves its span focus by span — the next span of its text, whose top it brings to the pane's
+    # top below what a held head covers — the span drawn lit
     open_scene(ctx)
-    want = ctx.js('''(() => { const pane = document.getElementById('sceneB'), art = pane.querySelector('article.dtext');
-      if (!art) return null; const origin = pane.getBoundingClientRect().top + pane.clientTop - pane.scrollTop;
-      const tops = [...art.querySelectorAll('.run > .sp, .run > .withheld')].map((e) => e.getBoundingClientRect().top - origin);
-      const at = pane.scrollTop, next = tops.find((y) => y > at + 1); return next == null ? null : Math.max(0, Math.round(next)); })()''')
-    before = ctx.js('document.getElementById("sceneB").scrollTop')
-    ctx.js('document.getElementById("sceneB").focus()'); ctx.frames(1)
+    ctx.js('document.getElementById("sceneB").focus()'); ctx.frames(2)
+    before = ctx.js('''(() => { const P = window.__skep.scene.panes().b, els = P.blocks.filter((b) => b.kind !== "para" || (b.text || "").trim() !== "");
+      const i = els.findIndex((b) => b.pos === P.focus); return {focus: P.focus, next: i >= 0 && els[i + 1] ? els[i + 1].pos : null, scroll: document.getElementById("sceneB").scrollTop}; })()''')
     chord(ctx, 'ArrowDown')
-    after = ctx.js('document.getElementById("sceneB").scrollTop')
-    r.check(want is not None and after != before and abs(after - want) <= 1, 'K-60 (#121): ↓ in a pane brings the next block\'s top to the pane\'s top, not a fixed 48 px', {'before': before, 'after': after, 'want': want})
+    ctx.frames(2)
+    after = ctx.js('''((pos) => { const pane = document.getElementById("sceneB"), P = window.__skep.scene.panes().b, top = pane.getBoundingClientRect().top + pane.clientTop;
+      const e = [...pane.querySelectorAll(":scope > article.dtext .run > .sp, :scope > article.dtext .run > .withheld")].find((x) => Number(x.dataset.pos) === pos), h = pane.querySelector(":scope > .corner.head");
+      return {focus: P.focus, top: e ? e.getBoundingClientRect().top - top : null, clear: h ? h.getBoundingClientRect().bottom - top : 0, scroll: pane.scrollTop, room: pane.scrollHeight - pane.clientHeight - pane.scrollTop,
+              lit: [...pane.querySelectorAll(".run > .sp.lit")].map((x) => Number(x.dataset.pos))}; })(%s)''' % json.dumps(before and before['next']))
+    r.check(bool(before) and before['focus'] is not None and before['next'] is not None and after['focus'] == before['next'] and after['top'] is not None
+            and (abs(after['top'] - after['clear']) <= 1 or after['room'] <= 1) and after['lit'] == [before['next']],
+            'K-60 (#121, #556): ↓ in a pane moves its span focus by span, to the next span of its text — never a block\'s scroll from its top — that span\'s top brought to the pane\'s top and drawn lit',
+            {'before': before, 'after': after})
     # #118: Mod+L in the scene opens the box over it; the box's Esc leaves the scene standing
     chord(ctx, 'l', mods=('Meta',))
     box = ctx.js('''(() => { const leap = document.getElementById('leap'), scene = document.getElementById('scene');

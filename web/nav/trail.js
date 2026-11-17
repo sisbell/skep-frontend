@@ -237,6 +237,16 @@ function retake(/** @type {Departure | null} */ departed) {
 }
 
 /**
+ * An entry re-takes what a reading scene's editor pane leaves it as the scene
+ * closes onto it (N-GO's; B3-S1's scene rule): the view, what it reads, where
+ * the walk stands and the caret, by value, as a departure from it re-takes
+ * them (`taken`), so the close lands where the person last wrote in the pane.
+ * @param {Entry} e
+ * @param {Departure} d
+ */
+export function retakeEntry(e, d) { taken(e, d); }
+
+/**
  * The cursor's entry's place re-taken as it is departed (see the head): the
  * version its box shows then, where that is another than the one the entry
  * names — a claim's never, which keeps the address its jump named while its
