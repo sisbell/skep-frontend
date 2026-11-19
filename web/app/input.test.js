@@ -855,7 +855,7 @@ test('a wheel series under way as a jump\'s camera left is dropped whole — the
   }
 });
 
-test('a wheel over the overlay or the notice below it is theirs: its default stands, so it scrolls what of them scrolls, and the camera stays; over the plane the wheel is the camera\'s', () => {
+test('a wheel over the overlay, the notice below it, or the deletion face\'s layer standing over the reading scene is theirs: its default stands, so it scrolls what of them scrolls, and the camera stays; over the plane, and over that layer on the plane, the wheel is the camera\'s', () => {
   const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
   /** @type {Map<string, (e: unknown) => void>} the window's listeners, by event */
   const win = new Map();
@@ -876,8 +876,9 @@ test('a wheel over the overlay or the notice below it is theirs: its default sta
       const now = CAM.view();
       return { prevented, moved: now.x !== was.x || now.y !== was.y || now.scale !== was.scale };
     };
-    for (const id of ['#overlay', '#notice']) assert.deepEqual(over(id), { prevented: false, moved: false }, `over ${id}: its default stands, the camera stays`);
+    for (const id of ['#overlay', '#notice', '#removed.scene']) assert.deepEqual(over(id), { prevented: false, moved: false }, `over ${id}: its default stands, the camera stays`);
     assert.equal(over('#plane').prevented, true, 'over the plane: the wheel is the camera\'s, its default prevented');
+    assert.equal(over('#removed').prevented, true, 'over the deletion face\'s layer on the plane: the wheel is the camera\'s');
   } finally {
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }

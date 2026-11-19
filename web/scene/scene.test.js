@@ -3444,7 +3444,7 @@ test('at a span of an editor pane holding no caret a paste and a cut are answere
 
 Object.assign(script, compared(B, B_TEXT, E1, E1_TEXT));
 
-/** the deletion face's layer as the app attaches it (O-DELETION's): its markup as last written, and the classes it holds */
+/** the deletion face's layer as the app attaches it (O-DELETION's): whether a paste's face is written in it, how many removals' marks are, and the classes it holds */
 function faceLayer() {
   let html = '';
   /** @type {Set<string>} */
@@ -3454,7 +3454,7 @@ function faceLayer() {
     get innerHTML() { return html; }, set innerHTML(/** @type {string} */ v) { html = String(v); },
     classList: { toggle: (/** @type {string} */ c, /** @type {boolean} */ on) => { if (on) classes.add(c); else classes.delete(c); } },
   }));
-  return { written: () => html.includes('data-paste='), classes };
+  return { written: () => html.includes('data-paste='), marks: () => (html.match(/data-removal=/g) || []).length, classes };
 }
 
 test('a paste\'s face raised in a reading scene stands while the platform\'s focus stands in a pane that is its draft\'s editor, whatever the walk under the scene stands on, written in its layer lifted over the scene; the focus gone into another document\'s pane takes it down for good, though the walk stands on the draft; one raised on the plane stands under a scene, judged by nothing and not written there (B3-S5; the paste survey\'s P6; foundations §3.1)', () => onPage(async (p) => {
@@ -3497,6 +3497,32 @@ test('a paste\'s face raised in a reading scene stands while the platform\'s foc
     DELETION.render();
     assert.deepEqual([DELETION.pasteFace(), layer.written()], [{ addr: E1, ...words }, false], 'raised on the plane: standing under the scene, the focus in another document\'s pane, and not written there');
   } finally { DELETION._reset(); }
+}));
+
+test('a removal of kept text in a draft a reading scene\'s editor pane holds stands in that pane, whatever the walk under the scene stands on: its mark written in its layer lifted over the scene, its face whole at the draft\'s first removal in the page\'s session and said once as it first stands; and it stands in no scene where no editor pane holds the draft — beside a past state of it, which names its address (B3-S4; foundations §3.1; issue #674)', () => onPage(async (p) => {
+  const layer = faceLayer();
+  /** a removal at the draft's third position, by the bytes either side of it, the byte it took by an identity the text no longer holds */
+  const removal = () => ({ before: LAYER.shownIdentity(E1, 2, 1), after: LAYER.shownIdentity(E1, 3, 1), words: 'x', ids: [{ prefix: E1 + '.0.1', ordinal: 900, width: 1 }] });
+  const whole = heard(DELETION.partsOf({ shared: false, edition: null }).map((x) => x.text).join(' '));
+  try {
+    await PUMP.loadWhole(E1); await PUMP.loadWhole(B);
+    // opened from the edition: the walk under the scene on it, the draft in pane B its editor
+    await WALK.focusTo(B, 1, true, null, true);
+    await SCENE.open(B, E1);
+    p.paneB.focus();
+    assert.deepEqual([SCENE.panes()?.b.editor, WALK.current()?.addr, WRITE.removalsOf(E1).length, removal().before.length], [true, B, 0, 1], 'pane B the draft\'s editor, the walk under the scene on the edition, no removal made');
+    const n = p.said.length;
+    WRITE.addRemoval(E1, removal());
+    DELETION.render();
+    assert.deepEqual([layer.marks(), layer.classes.has('on'), layer.classes.has('scene'), DELETION.standing(E1)], [1, true, true, [{ id: 1, whole: true }]], 'its mark written in its layer lifted over the scene, its face whole');
+    DELETION.render();
+    assert.deepEqual(p.said.slice(n), [whole], 'its face said once, as it first stands');
+    SCENE.close();
+    // the edition beside a past state of the draft: no editor pane holds the draft
+    await SCENE.open(B, pastOf(E1, E1_TEXT));
+    DELETION.render();
+    assert.deepEqual([SCENE.panes()?.b.editor, SCENE.panes()?.b.names, layer.marks(), layer.classes.has('on'), layer.classes.has('scene')], [false, E1, 0, false, false], 'beside a past state of the draft: nothing written, the layer not lifted');
+  } finally { WRITE.dropRemovals(E1, () => true); DELETION._reset(); }
 }));
 
 test('Esc in a scene ends what stands nearest first: the selection standing in the text of the pane the focus is at — at an editor pane\'s live caret the caret standing live where it is, the frame collapsing the selection at it — then a live caret in an editor pane, the text left, the caret kept and the scene standing; then the scene (D5 K-63, K-77; issue #556)', () => onPageWithText(async (p, dom) => {

@@ -23,11 +23,21 @@
 // the edition of the draft. It never takes the focus and holds no key: its
 // mark is a native button, in the page's order after a landing's labels,
 // described by the face's words rendered for the ear (ST's `heard`), the
-// draft's name in them as written, and moving the focus to it ends nothing. It moves no text: beside its line
-// where the margin holds FACE_MIN_PX of room, else a layer over the lines
-// beneath its site. A whole face is said once in the status region as it
-// first stands (FP-36) — by the press that made it, where one asks first
-// (`take`), else as the frame draws it — the draft's name in it as written.
+// draft's name in them as written; a press on it leaves the focus where it
+// stands, its click its act, and moving the focus to it ends nothing. It
+// moves no text: beside its line where the margin holds FACE_MIN_PX of room,
+// else a layer over the lines beneath its site. A draft's removals stand on
+// the plane where the draft stands as text at its reading scale; while a
+// reading scene stands, where an editor pane holds the draft (SC's
+// `editorPanes`), and nowhere else: at the line of the editor pane holding
+// the draft that the removal point stands on (SC's `editorLine`), by the same
+// rule inside the room the pane gives it — over the lines above its site
+// where the room beneath leaves its face none — the mark held inside that
+// room, short of its right edge, and hidden with its face where the mark
+// would cross the room's top or its foot; placed again as the pane scrolls.
+// A whole face is said once in the status region as it first stands
+// (FP-36) — by the press that made it, where one asks first (`take`), else as
+// the frame draws it — the draft's name in it as written.
 // A paste's face (`pasted`) is its words alone, no mark: what the page placed
 // instead of the same words, or why it placed nothing (O-FACES'
 // `pasteWords`), set at the edge of the line holding where the paste was made
@@ -35,19 +45,19 @@
 // again at every paste that raises it (FP-41); standing until the next paste's
 // takes its place, or its place is left — never at typing there or at Esc
 // (`left`). One raised while a reading scene stands is that scene's until no
-// scene stands: it stands at the line of the editor pane holding its draft
-// that the paste's site stands on (SC's `editorLine`), by the same rule inside
-// the room the pane gives it — over the lines above its site where the room
-// beneath leaves it none — its layer lifted over the scene and letting the
-// pointer through to the pane, placed again as the pane scrolls and hidden
-// while its line stands outside that room; its place is left once the
+// scene stands: it stands in the editor pane holding its draft as a removal
+// there does, at the line the paste's site stands on, its face hidden only
+// while that line stands outside the room; its place is left once the
 // platform's focus stands in a pane that is no editor of its draft, at the
 // pane's text or its corner (SC's `paneHolding`, `siteOf`) — another
 // document's, a past state's, the held version's — and never at the scene's
-// own acts. Every other face is the plane's: a reading scene covers it,
+// own acts. Any other paste's face is the plane's: a reading scene covers it,
 // judging nothing, and with none standing its place is left once the walk
-// stands on what is not its draft. A change of the page's class forgets what
-// was open and takes a paste's face down (`classChanged`).
+// stands on what is not its draft. While anything stands in a scene, the
+// layer is lifted over the scene (the `scene` class), each face letting the
+// pointer through to the pane beneath and each mark taking it. A change of
+// the page's class forgets what was open and takes a paste's face down
+// (`classChanged`).
 // Figures: MARK_PX 12, a face at most FACE_MAX_PX 280 and beside its line
 // only with FACE_MIN_PX 140 of room (unmeasured).
 // Rules: FP-1, FP-2, FP-9, FP-10, FP-11, FP-13, FP-20, FP-26, FP-31, FP-33,
@@ -98,6 +108,7 @@ import { esc } from '../util.js';
  * @property {By} by how its face stands at its line
  * @property {Rect} mark where its mark stands
  * @property {Rect | null} face where its face stands; null where it is compact
+ * @property {'a' | 'b' | null} side the reading scene's pane it stands in; null on the plane
  */
 
 /** the mark's side, px */
@@ -129,11 +140,13 @@ let raised = 0;
 let pasteDrawn = null;
 
 /**
- * Attach the face's element: a press on a mark is its act (`act`).
+ * Attach the face's element: a press on a mark leaves the platform's focus
+ * where it stands, and its click is its act (`act`).
  * @param {HTMLElement} e
  */
 export function attach(e) {
   el = e;
+  e.addEventListener('mousedown', (ev) => { if ((/** @type {HTMLElement} */ (ev.target)).closest('button[data-removal]')) ev.preventDefault(); });
   e.addEventListener('click', (ev) => {
     const b = /** @type {HTMLElement | null} */ ((/** @type {HTMLElement} */ (ev.target)).closest('button[data-removal]'));
     if (b) act(b.dataset.doc || '', Number(b.dataset.removal));
@@ -290,13 +303,14 @@ function markup(/** @type {string} */ addr, /** @type {Removal} */ r, /** @type 
 
 /**
  * The faces redrawn from state (FP-13), on each dirty frame (see the head):
- * the removals of every draft standing as text at its reading scale, each
- * with a mark at the edge of the line holding its removal point and, where
- * it stands whole, its face — written again where what stands changed, the
- * focus kept on the mark it stood on — then placed; a whole face not yet
- * said, said. No removal stands while the reading scene covers the plane; a
- * paste's face the scene holds stands in it, its layer lifted over the scene
- * (the `scene` class).
+ * the removals of every draft that stands — on the plane as text at its
+ * reading scale, and while a reading scene stands in an editor pane alone —
+ * each with a mark at the edge of the line holding its removal point and,
+ * where it stands whole, its face — written again where what stands
+ * changed, the focus kept on the mark it stood on — then placed; a whole face
+ * not yet said, said. A paste's face the scene holds stands in it; while
+ * anything stands in a scene, the layer is lifted over it (the `scene`
+ * class).
  */
 export function render() {
   if (!el) return;
@@ -304,11 +318,11 @@ export function render() {
   takeIn();
   /** @type {Array<{addr: string, r: Removal, whole: boolean, pos: number}>} */
   const stands = [];
-  if (!inScene) {
-    for (const addr of WRITE.removalDocs()) {
-      if (!REC.has(addr) || !LAYER.isMounted(addr) || !LAYER.atReadingScale(addr)) continue;
-      for (const r of WRITE.removalsOf(addr)) { const pos = pointOf(addr, r); if (pos != null) stands.push({ addr, r, whole: open.get(addr) === r.id, pos }); }
-    }
+  // the drafts whose removals stand: while a scene stands, those an editor pane holds; else those standing as text at their reading scale
+  const editors = inScene ? SCENE.editorPanes().map((x) => x.addr) : null;
+  for (const addr of WRITE.removalDocs()) {
+    if (!REC.has(addr) || !(editors ? editors.includes(addr) : LAYER.isMounted(addr) && LAYER.atReadingScale(addr))) continue;
+    for (const r of WRITE.removalsOf(addr)) { const pos = pointOf(addr, r); if (pos != null) stands.push({ addr, r, whole: open.get(addr) === r.id, pos }); }
   }
   // the paste's face: the plane's once no scene stands; gone for good once its place is left; standing — the scene's in the editor
   // pane holding its draft, the plane's where its draft stands at its reading scale
@@ -316,14 +330,14 @@ export function render() {
   if (paste && left(paste)) paste = null;
   const p = !paste ? null : inScene ? (paste.scene ? paste : null) : REC.has(paste.addr) && LAYER.isMounted(paste.addr) && LAYER.atReadingScale(paste.addr) ? paste : null;
   const at = p && !inScene ? pointOf(p.addr, p) : null, face = p && (inScene || at != null) ? { p, pos: at } : null;
-  const key = JSON.stringify([stands.map((s) => [s.addr, s.r.id, s.whole, s.whole ? faceOf(s.addr, s.r) : null]), face ? [face.p.n, inScene] : null]);
+  const key = JSON.stringify([inScene, stands.map((s) => [s.addr, s.r.id, s.whole, s.whole ? faceOf(s.addr, s.r) : null]), face ? face.p.n : null]);
   if (key !== written) {
     FOCUS.keep(host, (x) => (x.getAttribute('data-removal') ? `${x.getAttribute('data-doc')}:${x.getAttribute('data-removal')}` : null), () => { host.innerHTML = stands.map((s) => markup(s.addr, s.r, s.whole)).join('') + (face ? pasteMarkup(face.p) : ''); });
     host.classList.toggle('on', stands.length > 0 || !!face);
-    host.classList.toggle('scene', !!face && inScene);
+    host.classList.toggle('scene', inScene && (stands.length > 0 || !!face));
     written = key;
   }
-  place(stands, face);
+  place(stands, face, inScene);
   for (const s of stands) if (s.whole && owed.get(s.addr) === s.r.id) { owed.delete(s.addr); FOCUS.say(saidOf(faceOf(s.addr, s.r))); }
 }
 
@@ -331,17 +345,20 @@ export function render() {
  * Each removal placed (see the head): its mark at the edge of the line
  * holding its removal point, level with the line's middle; its face beside
  * the mark where the margin holds FACE_MIN_PX of room, else over the lines
- * beneath its site, held inside the visible view. A removal whose line is
- * not laid out is hidden. The paste's face after them by the same rule at
+ * beneath its site — on the plane held inside the visible view; while a
+ * reading scene stands, at the line of the editor pane holding its draft
+ * (SC's `editorLine`), held inside the room the pane gives it, over the lines
+ * above its site where the room beneath leaves it none, the mark held inside
+ * that room, short of its right edge. A removal whose line is not laid out is
+ * hidden, and in a pane one whose mark would cross the room's top or its
+ * foot. The paste's face after them by the same rule at
  * where the paste was made, below a face standing whole where it would meet
- * it — the scene's at the line of the editor pane holding its draft (SC's
- * `editorLine`), held inside the room the pane gives it, over the lines above
- * its site where the room beneath leaves it none, hidden where that line
- * stands outside the room.
+ * it, hidden where its line stands outside the room.
  * @param {Array<{addr: string, r: Removal, whole: boolean, pos: number}>} stands
  * @param {{p: Pasted, pos: number | null} | null} pastedAt the paste's face standing, and the position of the text shown it stands at on the plane — null where the scene holds it
+ * @param {boolean} inScene a reading scene stands: each stands in the editor pane holding its draft
  */
-function place(stands, pastedAt) {
+function place(stands, pastedAt, inScene) {
   drawn = [];
   pasteDrawn = null;
   if (!el || (!stands.length && !pastedAt)) return;
@@ -349,18 +366,21 @@ function place(stands, pastedAt) {
   /** where a position of a draft's text shown is left on the plane (BM's `leaveAt`): the line holding it, the position held inside the text */
   const onPlane = (/** @type {string} */ addr, /** @type {number} */ pos) => { const d = LAYER.shownOf(addr); return leaveAt(g, addr, [{ pos: d.from >= 0 ? Math.max(d.from, Math.min(pos, d.to - 1)) : pos, width: 1 }]); };
   /**
-   * One box placed at a line: the box at the line's edge, level with its middle, and its face beside it, else beneath — where
-   * `held` asks and the room beneath it is short, above it — inside `room`; the box hidden where the line is not laid out
+   * One box placed at a line: its mark at the line's edge, level with its middle, and its face beside it, else beneath — in an
+   * editor pane, where the room beneath it is short, above it — inside `room`; the box hidden where the line is not laid out.
+   * In an editor pane a box holding a mark keeps it inside the room — no further right than the room's right edge less the
+   * mark — and is hidden where the mark would cross the room's top or its foot
    * @param {HTMLElement} box
    * @param {{line: Rect, from: {x: number, y: number}} | null} at the line, and where a face beside it leaves it
    * @param {Rect} room what the face is held inside: the visible view, or the room an editor pane gives it
-   * @param {boolean} held the face stands over the lines above its line where the room beneath it is short
+   * @param {boolean} pane `room` is the room an editor pane gives it
    * @returns {{mark: Rect, face: Rect | null, by: By} | null}
    */
-  const set = (box, at, room, held) => {
-    box.style.display = at ? '' : 'none';
-    if (!at) return null;
-    const x = at.from.x + GAP, y = at.line.y + at.line.h / 2 - MARK_PX / 2;
+  const set = (box, at, room, pane) => {
+    const x = !at ? 0 : pane ? Math.min(at.from.x + GAP, room.x + room.w - MARK_PX) : at.from.x + GAP, y = at ? at.line.y + at.line.h / 2 - MARK_PX / 2 : 0;
+    const off = !at || (pane && !!box.querySelector('.mark') && (y < room.y || y + MARK_PX > room.y + room.h));
+    box.style.display = off ? 'none' : '';
+    if (!at || off) return null;
     box.style.left = x + 'px'; box.style.top = y + 'px';
     const mark = { x, y, w: MARK_PX, h: MARK_PX };
     const face = /** @type {HTMLElement | null} */ (box.querySelector('.face'));
@@ -371,14 +391,16 @@ function place(stands, pastedAt) {
     const fx = beside ? x + MARK_PX + GAP : Math.max(room.x + INSET, Math.min(at.line.x, room.x + room.w - INSET - q.width));
     let fy = beside ? Math.max(room.y + INSET, Math.min(at.line.y, floor)) : at.line.y + at.line.h + GAP;
     for (const o of drawn) if (o.face && fx < o.face.x + o.face.w && o.face.x < fx + q.width && fy < o.face.y + o.face.h && o.face.y < fy + q.height) fy = o.face.y + o.face.h + GAP;
-    const above = held && !beside && fy > floor;
+    const above = pane && !beside && fy > floor;
     if (above) fy = Math.max(room.y + INSET, Math.min(at.line.y - GAP - q.height, floor));
     face.style.left = (fx - x) + 'px'; face.style.top = (fy - y) + 'px';
     return { mark, face: { x: fx, y: fy, w: q.width, h: q.height }, by: beside ? 'beside' : above ? 'above' : 'beneath' };
   };
   for (const [i, s] of stands.entries()) {
-    const box = /** @type {HTMLElement | undefined} */ (host.children[i]), at = box ? set(box, onPlane(s.addr, s.pos), view, false) : null;
-    if (at) drawn.push({ addr: s.addr, id: s.r.id, whole: !!at.face, by: at.by, mark: at.mark, face: at.face });
+    const box = /** @type {HTMLElement | undefined} */ (host.children[i]);
+    if (!box) continue;
+    const line = inScene ? SCENE.editorLine(s.addr, s.r) : null, at = inScene ? set(box, line, line ? line.room : view, true) : set(box, onPlane(s.addr, s.pos), view, false);
+    if (at) drawn.push({ addr: s.addr, id: s.r.id, whole: !!at.face, by: at.by, mark: at.mark, face: at.face, side: line ? line.side : null });
   }
   const box = pastedAt ? /** @type {HTMLElement | undefined} */ (host.children[stands.length]) : undefined;
   if (!pastedAt || !box) return;
@@ -393,7 +415,7 @@ export const rects = () => [...drawn.flatMap((x) => (x.face ? [x.face] : [])), .
 /** the paste's face as it was last set (the gate reads it): its draft, its words and their string, how it stands at its line, its box, and the reading scene's pane it stands in — null on the plane; null where none stands drawn */
 export const pasteShown = () => (pasteDrawn ? { ...pasteDrawn, face: { ...pasteDrawn.face } } : null);
 
-/** the removals as they were last set (the gate reads them), each with the strings its face shows where it stands whole */
+/** the removals as they were last set (the gate reads them) — each its draft, how its face stands, its boxes and the reading scene's pane it stands in (`Drawn`) — with the words removed and the strings its face shows where it stands whole */
 export function shown() {
   return drawn.map((x) => {
     const r = WRITE.removalsOf(x.addr).find((q) => q.id === x.id);

@@ -322,17 +322,17 @@
 // corner names (`siteOf`, `paneHolding`; N-KEYS' `paneSays`); the way back
 // the line's ending offers moves the focus into the editor pane holding the
 // kept caret, onto its span (`toCaret`). A face the person's act at the
-// caret raises — O-DELETION's paste's face — stands at the line of the
-// editor pane holding its draft that its site stands on, the site placed by
-// its bytes in the image the pane's article was made from, leaving the line
-// past the signs its column's edge holds level with it, inside the room the
-// pane gives a face: its visible box below what its held head covers, clear
-// of its corner beside its column and of its corner's foot (`editorLine`); a
-// pane's scroll marks the frame, so the face is placed again as the pane
-// moves (FP-9). The scene's close re-takes an
-// editor pane's caret and the span its view was anchored at — the first span
-// in view, of two editors the one whose caret was last held — into the entry
-// it lands on (`editorAnchor`; N-GO's; B3-S1).
+// caret raises — O-DELETION's: a removal's mark and its face, a paste's
+// face — stands at the line of the editor pane holding its draft that its
+// site stands on, the site placed by its bytes in the image the pane's
+// article was made from, leaving the line past the signs its column's edge
+// holds level with it, inside the room the pane gives a face: its visible
+// box below what its held head covers, clear of its corner beside its column
+// and of its corner's foot (`editorLine`); a pane's scroll marks the frame,
+// so the face is placed again as the pane moves (FP-9). The scene's close
+// re-takes an editor pane's caret and the span its view was anchored at — the
+// first span in view, of two editors the one whose caret was last held — into
+// the entry it lands on (`editorAnchor`; N-GO's; B3-S1).
 // Where the far end names pane B's document whole and the `compare` finds the
 // near passage there, the passages of pane B holding its material
 // (`counterparts`), in pane B's order, are reached by the stop (`#scenestop`;
@@ -5305,7 +5305,7 @@ function intoPane(E, side, r) {
 }
 
 /**
- * @typedef {Object} EditorLine — the line of an editor pane's text a face raised at its draft stands at, on screen (`editorLine`)
+ * @typedef {Object} EditorLine — the line of an editor pane's text a face raised at its draft, or a removal's mark, stands at, on screen (`editorLine`)
  * @property {'a' | 'b'} side the pane
  * @property {Rect} line the box of the glyph at the face's site, else of the last before it that sets one
  * @property {{x: number, y: number}} from where a face beside the line leaves it: past its block's right edge and any sign the column's edge holds level with it (BM's `pastSigns`), level with the line's middle
@@ -5314,9 +5314,10 @@ function intoPane(E, side, r) {
 
 /**
  * The line of the editor pane holding a draft a site of the draft's text
- * stands on, where a face raised there stands (see the head; O-DELETION's;
- * FP-31, FP-38): of the editor panes holding the draft, the one whose text
- * holds the platform's focus, else the first, as T-LAYER's caret takes one;
+ * stands on, where a face raised there, or a removal's mark, stands (see the
+ * head; O-DELETION's; FP-31, FP-38): of the editor panes holding the draft,
+ * the one whose text holds the platform's focus, else the first, as
+ * T-LAYER's caret takes one;
  * the site placed by its bytes in the image the pane's article was made from
  * — after the byte that stood before it, else before the one after it, the
  * text's first position where it names neither — and held inside the text;

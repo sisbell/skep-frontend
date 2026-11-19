@@ -5,7 +5,8 @@
 // a count of links the page did not read; the face whole at a draft's first
 // removal in the page's session and a compact mark at every later one, its
 // mark's act opening and folding it and saying what shows, a whole face said
-// once; and, driven through W-MACHINE, a removal faced where a burst's
+// once; a press on a mark leaving the focus where it stands; and, driven
+// through W-MACHINE, a removal faced where a burst's
 // `delete` takes kept text, none for a character removed inside its own open
 // burst, and at an undo only the words a dial carried; and a paste's face
 // raised, said at every paste, replaced and taken down at a change of class.
@@ -74,6 +75,24 @@ test('the face stands whole at a draft\'s first removal in the page\'s session a
   DELETION.classChanged();
   WRITE.addRemoval(D, { before: [], after: [], words: 'z', ids: at(9) });
   assert.deepEqual(DELETION.standing(D), [{ id: 1, whole: true }], 'the first removal after it stands whole again');
+});
+
+test('a press on a mark leaves the platform\'s focus where it stands — its mousedown\'s default prevented, which would focus the button — and its click is its act; a press on a face\'s words is the platform\'s (D5 K-59; FP-20; issue #674)', () => {
+  /** @type {Record<string, (ev: any) => void>} the layer's listeners, as the module attaches them */
+  const on = {};
+  DELETION.attach(/** @type {any} */ ({ addEventListener: (/** @type {string} */ type, /** @type {(ev: any) => void} */ fn) => { on[type] = fn; } }));
+  /** an event of `type` at the mark of D's removal `id`, else at a face's words: whether its default was prevented */
+  const press = (/** @type {string} */ type, /** @type {number | null} */ id) => {
+    let prevented = false;
+    const mark = id == null ? null : { dataset: { doc: D, removal: String(id) } };
+    on[type]({ target: { closest: (/** @type {string} */ s) => (s === 'button[data-removal]' ? mark : null) }, preventDefault() { prevented = true; } });
+    return prevented;
+  };
+  WRITE.addRemoval(D, { before: at(1), after: at(3), words: 'b', ids: at(2) });
+  assert.deepEqual(DELETION.standing(D), [{ id: 1, whole: true }], 'the draft\'s first removal: its face whole');
+  assert.deepEqual([press('mousedown', 1), press('mousedown', null)], [true, false], 'a press on the mark: its default prevented; on a face\'s words: the platform\'s');
+  press('click', 1);
+  assert.deepEqual([DELETION.standing(D), said.at(-1)], [[{ id: 1, whole: false }], t('B3.removed-here')], 'its click its act: the face folded to its mark, which is named');
 });
 
 test('a removal is faced where a burst\'s `delete` takes kept text and not for a character removed inside its own open burst; at an undo it is keyed, at the press, to the words a dial carried and never to words no dial carried; and the mark goes as the words come back (D6 BM-34, BM-51)', async (t) => {

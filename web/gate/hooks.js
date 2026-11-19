@@ -752,7 +752,7 @@ export function install(deps) {
     line: () => ({ text: LINE.text(), state: LINE.state(), address: LINE.addressDisplay(), layout: LINE.held() }),
     /** the hint answering a refused press as it stands (O-HINT's): its notice's string, the words it shows and the notice whole, whether it shows the notice whole, the statement beneath it and the act it offers as drawn — the act's label, whether it is inert, its name and description, the reason a press told — the presses its element was drawn for, whether the scene covers it, and where it was set beside what; null where none stands */
     hint: () => HINT.shown(),
-    /** the removals of kept text the deletion face stands at, as they were last set (O-DELETION's `shown`): each its draft, whether its face stands whole and how — beside its line or over the lines beneath — its mark's box, its face's, the words removed and the strings its face shows */
+    /** the removals of kept text the deletion face stands at, as they were last set (O-DELETION's `shown`): each its draft, whether its face stands whole and how — beside its line, over the lines beneath or, in a reading scene's pane, above — its mark's box, its face's, the reading scene's pane it stands in (`side`, null on the plane), the words removed and the strings its face shows */
     removed: () => DELETION.shown(),
     /** the paste's face (O-DELETION's): standing — its draft, its words and their string, as the person was told them — and as the last frame set it — beside its line, over the lines beneath or, in a reading scene's pane, above, its box, and that pane (`side`, null on the plane); each null where none stands */
     pasteFace: () => ({ standing: DELETION.pasteFace(), drawn: DELETION.pasteShown() }),

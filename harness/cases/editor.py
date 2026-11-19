@@ -66,7 +66,11 @@ the caret (`pane-typed`, `pane-lines`, `pane-way-back`, `pane-close`); and a pas
 the paste was made, the face over the scene inside the pane, carried by its scroll and letting a wheel through to it
 (`pane-source-face`); a forged copy pasted in pane B of a scene
 opened from the first edition, the face standing there whatever the walk under the scene stands on, gone once the focus
-goes into the edition's pane (`pane-forged-face`).
+goes into the edition's pane (`pane-forged-face`); and a removal of kept text made at a caret in a pane faced there (B3-S4;
+skep-frontend #674): its mark in pane A level with the caret's line over the scene, pressed with the pointer opening its
+face whole in the pane, the focus and the live caret standing there, a wheel over it moving no camera, the pane's scroll
+carrying it and Mod+Z taking it down; a mark in pane B clear of its corner; and a removal made on the plane standing in
+pane A as the scene opens over its draft (`pane-removal`).
 The whole document's entry is a figure (`whole_entry`): the seeded staging draft selected whole and copied through the
 copy door, on the first page.
 Undo, redo and the deletion face are driven there too (`undo_rows`): Mod+Z on
@@ -344,6 +348,9 @@ STATES = [
     dict(screen='B3-S5', state='pane-forged-face', walk='W-08', step=4, drawn=True,
          how="a word of the case's own draft copied by the copy door, its plain text changed at the same byte lengths; a LEAP to the first edition, the scene opened from there with the draft in pane B (`scene.open(DOC, mine)`), a word of pane B's text clicked, then the paste door (the paste survey's C3, P6)",
          claim="one `insert` of the changed words, acked, and the paste's face standing where the paste was made, in pane B, though the walk under the scene stands on the first edition: \"These words are not the passage in ⟨source⟩ that came with them on the clipboard — placed as new words, not the same material.\" (L.paste.differs), the source named as the draft was named when the paste was made — inside the pane's visible box below its held head and clear of its corner; the focus moved into pane A, the face gone"),
+    dict(screen='B3-S4', state='pane-removal', walk='W-08', step=8, drawn=True,
+         how="the scene beside the first edition (`scene.open(mine, DOC)`), a word of pane A's text clicked, then Backspace there over a kept character — the burst's commit composes the `delete` (D6 BM-51); the mark pressed with the pointer; then, from the first edition's entry, the same at a word of pane B; and a removal made on the plane before the scene opens over the draft (skep-frontend #674)",
+         claim="the removal's mark stands in pane A level with the line the caret stands on, inside the pane's visible box below its held head and clear of its corner, over the scene — the element a pointer meets there — named \"removed here\" (B3.removed-here); a press on it opens its face whole beneath or beside its line inside the pane, \"still here — for as long as this board retains it; …\" (C-49) then \"you alone can still reach what you remove\" (B3.deletion.private), the pointer passing through the face, said in the status region, the platform's focus and the live caret standing in the pane; a wheel over the mark moves no camera; the pane's scroll carries it with its line; Mod+Z in the pane takes it down; a mark in pane B stands clear of pane B's corner; and a removal made on the plane stands in pane A over the scene as the scene opens over its draft"),
     dict(screen='B3-S8', state='select-all', walk='—', step=0, drawn=True,
          how="Mod+A at the live caret in the draft the case minted (K-93)",
          claim="the whole document is one selection, the caret live at its end, the selection's acts' row standing at it inside the window; the platform's copy then takes the document whole as plain text"),
@@ -1400,7 +1407,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     if not session or not board or not (boot and boot.get('machine')):
         for state in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
                       'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'unkept',
-                      'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face'):
+                      'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face', 'pane-removal'):
             red(state, 'the machine\'s page did not open')
         return
     sid, account, board_id = session['session'], session['account'], board['board']
@@ -1515,7 +1522,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     if not stands:
         for st in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
                       'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'unkept',
-                      'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face'):
+                      'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face', 'pane-removal'):
             red(st, 'the case\'s own draft did not mount')
         return
     # ---- B3-S3: Mod+Z on an empty stack, before anything is typed in the draft (K-75; BM-42) ----------------------------------
@@ -3084,6 +3091,16 @@ SCROLL_FRAMES = '''(async (side, n, step) => { const p = document.getElementById
   for (let i = 0; i < n; i++) { p.scrollTop = s0 + (i %% 2 ? 0 : step); await frame(); }
   p.scrollTop = s0; await frame(); await frame();
   return window.__skep.frames().filter((x) => x.t >= t0).map((x) => x.drawMs); })(%s, %d, %d)'''
+# the deletion face's layer as a removal stands in it over the reading scene, at a point on screen — a mark's middle: whether
+# the layer is lifted there (its `scene` class), its z-index beside the scene's, whether it follows the scene in the page,
+# whether the pointer passes through a removal's face standing whole, the words that face shows by their strings, and
+# whether the element a pointer meets at the point is a removal's mark
+REMOVAL_OVER = '''((x, y) => { const r = document.getElementById("removed"), s = document.getElementById("scene"), z = (e) => parseInt(getComputedStyle(e).zIndex, 10) || 0;
+  const f = r.querySelector(".removal.whole:not(.pasted) .face"), e = document.elementFromPoint(x, y);
+  return {lifted: r.classList.contains("scene"), z: [z(r), z(s)], after: !!(s.compareDocumentPosition(r) & Node.DOCUMENT_POSITION_FOLLOWING), through: f ? getComputedStyle(f).pointerEvents : null,
+          parts: f ? [...f.querySelectorAll(".part")].map((p) => ({id: p.dataset.string, text: p.textContent})) : [], hit: !!e && !!e.closest("#removed button.mark")}; })(%s, %s)'''
+# the caret's mark in a reading scene's pane, by its side (`A`, `B`), on screen; null where none stands there
+CARET_IN_PANE = '''((side) => { const m = document.querySelector("#scene" + side + " .caret-mark"); if (!m) return null; const q = m.getBoundingClientRect(); return {x: q.left, y: q.top, w: q.width, h: q.height}; })(%s)'''
 
 
 def pane_rows(ctx, r, shoot, red, ops_allowed, m):
@@ -3101,8 +3118,13 @@ def pane_rows(ctx, r, shoot, red, ops_allowed, m):
     face in pane A over the scene, carried by the pane's scroll, a wheel over it scrolling the pane and never the plane, the
     page's frames while the pane scrolls a figure. `pane-forged-face`: from the first edition's entry, the draft in pane B, a
     forged copy pasted at a word there — its `insert`, and the face in pane B though the walk under the scene stands on the
-    edition, gone once the focus goes into pane A. Each row is shot in the state its check ends in. The rows' writes are
-    their own typing, its undo and the pastes; no `history.*` call is made."""
+    edition, gone once the focus goes into pane A. `pane-removal`: Backspace over a kept character at a word of pane A — its
+    `delete` — the removal's mark in pane A level with the caret's line, over the scene; pressed with the pointer, its face
+    whole in the pane, the focus and the live caret standing there; a wheel over it moving no camera; the pane's scroll
+    carrying it, the page's frames while the pane scrolls a figure; Mod+Z taking it back; then the same in pane B, the mark
+    clear of pane B's corner, and a removal made on the plane standing in pane A as the scene opens over the draft. Each row
+    is shot in the state its check ends in. The rows' writes are their own typing, its undo, the pastes and the removals,
+    each taken back; no `history.*` call is made."""
     mine, sid, quiet, recentre, caret_end, press, first_line, hold_typed, drop_all = (m[k] for k in ('mine', 'sid', 'quiet', 'recentre', 'caret_end', 'press', 'first_line', 'hold_typed', 'drop_all'))
     act_sel = m['corner'] + HISTORY_ACT
     text_of = lambda: ctx.js(SHOWN_TEXT % json.dumps(mine)) or ''
@@ -3362,6 +3384,17 @@ def pane_rows(ctx, r, shoot, red, ops_allowed, m):
         ctx.js('(async () => { const s = window.getSelection(); if (s) s.removeAllRanges(); (await import("./overlays/selection.js")).clear(); })()'); ctx.frames(2)
         return word, data
 
+    def in_room(box, room):
+        """does a box on screen stand inside a pane's room as `PANE_ROOM` reads it: its visible box, below what its held head
+        covers"""
+        top = max(room.get('y', 0), room.get('held') or 0)
+        return (bool(box) and bool(room) and box['x'] >= room['x'] - 0.5 and box['x'] + box['w'] <= room['x'] + room['w'] + 0.5
+                and box['y'] >= top - 0.5 and box['y'] + box['h'] <= room['y'] + room['h'] + 0.5)
+
+    def clear_of(box, o):
+        """does a box on screen stand clear of another — a pane's corner, its corner's foot — where that one stands"""
+        return not o or box['x'] + box['w'] <= o['x'] + 0.5 or o['x'] + o['w'] <= box['x'] + 0.5 or box['y'] + box['h'] <= o['y'] + 0.5 or o['y'] + o['h'] <= box['y'] + 0.5
+
     def face_in(side, want):
         """the paste's face standing in `want`'s words and drawn in pane `side`, inside the room it stands in there — the pane's
         visible box below what its held head covers, apart from its corner beside its column and its corner's foot — its layer
@@ -3370,10 +3403,8 @@ def pane_rows(ctx, r, shoot, red, ops_allowed, m):
         st, dr = f.get('standing') or {}, f.get('drawn') or {}
         box, room, over = dr.get('face') or {}, ctx.js(PANE_ROOM % json.dumps(side)) or {}, ctx.js(OVER_SCENE) or {}
         shown_text = ctx.js('(() => { const e = document.querySelector("#removed .pasted .part"); return e ? {id: e.dataset.string, text: e.textContent} : null; })()')
-        top = max(room.get('y', 0), room.get('held') or 0)
-        inside = (bool(box) and bool(room) and box['x'] >= room['x'] - 0.5 and box['x'] + box['w'] <= room['x'] + room['w'] + 0.5
-                  and box['y'] >= top - 0.5 and box['y'] + box['h'] <= room['y'] + room['h'] + 0.5)
-        apart = lambda o: not o or box['x'] + box['w'] <= o['x'] + 0.5 or o['x'] + o['w'] <= box['x'] + 0.5 or box['y'] + box['h'] <= o['y'] + 0.5 or o['y'] + o['h'] <= box['y'] + 0.5
+        inside = in_room(box, room)
+        apart = lambda o: clear_of(box, o)
         lifted = over.get('lifted') is True and len(over.get('z') or []) == 2 and over['z'][0] >= over['z'][1] and over.get('after') is True and over.get('through') == 'none'
         ok = (st.get('addr') == mine and (st.get('id'), st.get('text')) == want and dr.get('side') == side.lower() and inside and apart(room.get('corner')) and apart(room.get('foot'))
               and shown_text == {'id': want[0], 'text': want[1]} and lifted)
@@ -3458,9 +3489,159 @@ def pane_rows(ctx, r, shoot, red, ops_allowed, m):
     ctx.js('document.getElementById("sceneA").focus({preventScroll: true})'); ctx.frames(3)
     r.check(stood and face().get('standing') is None, "B3-S5 · pane-forged-face: the focus moved into pane A, the first edition's, the paste's face standing in pane B goes (the paste survey's P6)", {'stood': stood, 'after': face()})
     close_scene(); drop_caret()
+
+    # ---- `pane-removal`: a removal of kept text made at a caret in an editor pane, its mark and its face there ---------------------
+    removed = lambda: ctx.js('window.__skep.removed()') or []
+    removal_ids = lambda: ctx.js('(async (a) => (await import("./write/write.js")).removalsOf(a).map((x) => x.id))(%s)' % json.dumps(mine)) or []
+    # the Backspace the row pressed last and the removal it made, taken back before the next (`take_back`)
+    made = {'pressed': False, 'id': None}
+
+    def new_mark(side, ids0):
+        """the draft's removal made since `ids0` as the last frame set it, drawn in pane `side` (`a`, `b`) — on the plane where
+        None; None where it stands drawn nowhere there"""
+        got = [x for x in removed() if x['addr'] == mine and x['id'] not in ids0 and x.get('side') == side]
+        return got[-1] if got else None
+
+    def backspace(side, ids0):
+        """Backspace at the caret over a kept character, the page quiet before it: the burst's commit composes its `delete`.
+        Whether its mark came drawn where `side` names (`new_mark`), whether the draft was then kept again, and the write sent"""
+        made.update(pressed=True, id=None)
+        ctx.drv.key('Backspace'); ctx.frames(2)
+        came = wait_for(ctx, '(window.__skep.removed() || []).some((x) => x.addr === %s && !%s.includes(x.id) && x.side === %s)' % (json.dumps(mine), json.dumps(ids0), json.dumps(side)), 10)
+        kept = kept_now(20)
+        quiet()
+        fresh = [i for i in removal_ids() if i not in ids0]
+        made['id'] = fresh[-1] if fresh else None
+        return came, kept, last_write(ctx, ops_allowed)
+
+    def take_back(where):
+        """the Backspace the row pressed last taken back by Mod+Z, where one is: the draft kept again by one `reinstate`, acked,
+        and its removal's mark gone — a check of its own"""
+        if not made['pressed']:
+            return
+        rid = made['id']
+        made.update(pressed=False, id=None)
+        ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
+        ctx.drv.key('z', mods=('Meta',)); ctx.frames(3)
+        back = kept_now(20)
+        quiet()
+        w_ = last_write(ctx, ops_allowed)
+        gone = rid is not None and rid not in removal_ids() and all(x['id'] != rid for x in removed())
+        r.check(back and gone and bool(w_) and w_['op'] == 'reinstate' and w_['doc'] == mine and '"ack"' in (w_.get('answer') or ''),
+                "B3-S4 · pane-removal: Mod+Z %s takes the removal back — one `reinstate`, acked — and its mark with it (D6 BM-32)" % where,
+                {'kept': back, 'removal': rid, 'gone': gone, 'write': w_ and {k: w_[k] for k in ('op', 'doc')}, 'removals': removal_ids()})
+
+    def press_mark(ids0):
+        """the pointer pressed at the middle of the mark of the draft's removal made since `ids0` in pane A: that removal as
+        the next frame set it"""
+        cur = new_mark('a', ids0)
+        if cur:
+            ctx.drv.click(cur['mark']['x'] + cur['mark']['w'] / 2, cur['mark']['y'] + cur['mark']['h'] / 2); ctx.frames(3)
+        return new_mark('a', ids0)
+
+    def removal_check(w):
+        opened = beside()
+        # a word of a paragraph a third of the way down pane A's text, brought to stand first in view, clicked: the caret live there
+        at = ctx.js(SCROLL_TO_WORD % (json.dumps('A'), json.dumps(0.3)))
+        settled = wait_for(ctx, '!window.__skep.scene.updating()', 10); ctx.frames(2)
+        if at:
+            at = ctx.js(SCROLL_TO_WORD % (json.dumps('A'), json.dumps(0.3))) or at
+            ctx.drv.click(at['x'], at['y']); ctx.frames(3)
+        quiet()
+        c0, before, ids0 = caret(), text_of(), removal_ids()
+        came, kept, wrote = backspace('a', ids0)
+        mk, c1, after = new_mark('a', ids0), caret(), text_of()
+        room, cm = ctx.js(PANE_ROOM % json.dumps('A')) or {}, ctx.js(CARET_IN_PANE % json.dumps('A'))
+        box = (mk or {}).get('mark') or {}
+        mid = (box['x'] + box['w'] / 2, box['y'] + box['h'] / 2) if box else (0, 0)
+        over = ctx.js(REMOVAL_OVER % mid) or {}
+        lifted = over.get('lifted') is True and len(over.get('z') or []) == 2 and over['z'][0] >= over['z'][1] and over.get('after') is True
+        level = bool(box) and bool(cm) and cm['y'] - 2 <= mid[1] <= cm['y'] + cm['h'] + 2
+        made_ok = (opened and bool(at) and bool(c0) and c0['live'] and c0['addr'] == mine and came and kept and bool(wrote) and wrote['op'] == 'delete' and wrote['doc'] == mine
+                   and '"ack"' in (wrote.get('answer') or '') and bool(mk) and len(mk['words']) == 1 and nb(after) == nb(before) - nb(mk['words']))
+        placed = (made_ok and in_room(box, room) and clear_of(box, room.get('corner')) and clear_of(box, room.get('foot')) and level and lifted and over.get('hit') is True
+                  and bool(c1) and c1['live'] and c1['pos'] == c0['pos'] - nb(mk['words']))
+        # the mark pressed with the pointer: its face whole — pressed again where the press folded a face that stood whole
+        was_whole = bool(mk) and mk['whole']
+        mk2 = press_mark(ids0)
+        toggled = bool(mk2) and mk2['whole'] != was_whole
+        if mk2 and not mk2['whole']:
+            mk2 = press_mark(ids0)
+        fbox = (mk2 or {}).get('face') or {}
+        over2, said, c2, pa = ctx.js(REMOVAL_OVER % mid) or {}, live(ctx), caret(), pane('A')
+        named = ctx.js("""(() => { const b = document.querySelector('#removed .removal:not(.pasted) button.mark[aria-expanded="true"]'); return b ? {title: b.getAttribute("title"), name: b.getAttribute("aria-label")} : null; })()""")
+        want = [{'id': 'C-49', 'text': t(ctx, 'C-49')}, {'id': 'B3.deletion.private', 'text': t(ctx, 'B3.deletion.private')}]
+        whole = (toggled and bool(mk2) and mk2['whole'] and in_room(fbox, room) and clear_of(fbox, room.get('corner')) and clear_of(fbox, room.get('foot'))
+                 and [{'id': p['id'], 'text': p['text']} for p in mk2['parts']] == want and over2.get('parts') == want and over2.get('through') == 'none'
+                 and said == heard(ctx, '%s %s' % (t(ctx, 'C-49'), t(ctx, 'B3.deletion.private'))) and named == {'title': t(ctx, 'B3.removed-here'), 'name': t(ctx, 'B3.removed-here')})
+        stays = pa['active'] and not ctx.js('document.getElementById("removed").contains(document.activeElement)') and bool(c2) and c2 == c1
+        # a wheel over the mark: the plane under the scene unmoved
+        cam0 = ctx.camera()
+        if box:
+            ctx.drv.wheel(mid[0], mid[1], dy=40)
+        ctx.frames(3); time.sleep(0.3); ctx.frames(2)
+        cam1 = ctx.camera()
+        # pane A scrolled up a line: the mark carried down with its line by as much
+        pitch = round(ctx.js('(() => { const a = document.querySelector("#sceneA > article.dtext"); return a ? parseFloat(getComputedStyle(a).lineHeight) : 0; })()') or 0)
+        s0, y0 = scroll_of('A'), ((new_mark('a', ids0) or {}).get('mark') or {}).get('y')
+        ctx.js('document.getElementById("sceneA").scrollTop -= %d' % pitch); ctx.frames(3)
+        s1, y1 = scroll_of('A'), ((new_mark('a', ids0) or {}).get('mark') or {}).get('y')
+        carried = pitch > 0 and s1 < s0 and y0 is not None and y1 is not None and abs((y1 - y0) - (s0 - s1)) <= 1.5
+        ctx.js('document.getElementById("sceneA").scrollTop = %s' % json.dumps(s0)); ctx.frames(3)
+        # the page's frames while pane A scrolls with the face standing (FP-18), the pane then where it stood: the state the row is shot in
+        ms = ctx.js(SCROLL_FRAMES % (json.dumps('A'), 12, max(1, pitch))) or []
+        r.figures.setdefault('pane_removal_scroll', {})[str(w)] = {'frames': len(ms), 'max_ms': round(max(ms), 2) if ms else None, 'median_ms': round(sorted(ms)[len(ms) // 2], 2) if ms else None}
+        ctx.frames(2)
+        return {'the removal made at the caret': (made_ok, {'opened': opened, 'settled': settled, 'at': at, 'caret': c0, 'came': came, 'kept': kept, 'write': wrote and {k: wrote[k] for k in ('op', 'doc')},
+                                                            'removal': mk and {k: mk[k] for k in ('id', 'words', 'whole', 'side')}, 'bytes': [nb(before), nb(after)]}),
+                'its mark in pane A over the scene, level with the caret': (placed, {'mark': box, 'room': room, 'caret_mark': cm, 'over': over, 'caret': c1}),
+                'its press opens its face whole in the pane': (whole, {'removal': mk2, 'over': over2, 'said': said, 'named': named, 'want': want}),
+                'the focus and the live caret stand in the pane': (stays, {'active': pa['active'], 'caret': [c1, c2]}),
+                'a wheel over it moves no camera': (bool(box) and cam1 == cam0, {'camera': [cam0, cam1]}),
+                'carried by the scroll': (carried, {'pitch': pitch, 'scroll': [s0, s1], 'y': [y0, y1]})}
+    # each width's check starts with the last one's removal taken back in its pane, the scene closed and no caret standing
+    shoot('pane-removal', removal_check, lambda: (take_back('in pane A'), again()))
+    take_back('in pane A')
+    close_scene(); drop_caret()
+    ctx.resize(*WIDE)
+    # in pane B: the scene opened from the first edition's entry, the draft in pane B, a word there clicked and a character taken out
+    ctx.leap(DOC, 1); ctx.frames(2)
+    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(mine)))
+    opened_b = wait_for(ctx, 'window.__skep.scene.isOpen() && (window.__skep.scene.pair() || {}).b === %s' % json.dumps(mine), 30)
+    ctx.settle(15); ctx.frames(3)
+    at_b = click_word('B')
+    quiet()
+    ids0 = removal_ids()
+    came_b, kept_b, wrote_b = backspace('b', ids0)
+    mk_b, room_b = new_mark('b', ids0), ctx.js(PANE_ROOM % json.dumps('B')) or {}
+    box_b = (mk_b or {}).get('mark') or {}
+    r.check(opened_b and bool(at_b) and came_b and kept_b and bool(wrote_b) and wrote_b['op'] == 'delete' and in_room(box_b, room_b) and clear_of(box_b, room_b.get('corner')) and clear_of(box_b, room_b.get('foot')),
+            "B3-S4 · pane-removal at %d px: a removal made at a caret in pane B, the draft's editor beside the first edition, stands drawn there — its mark inside the pane's visible box below its held head and clear of pane B's corner beside its column" % WIDE[0],
+            {'opened': opened_b, 'at': at_b, 'came': came_b, 'kept': kept_b, 'write': wrote_b and {k: wrote_b[k] for k in ('op', 'doc')}, 'mark': mk_b, 'room': room_b, 'fit': ctx.js('window.__skep.scene.fit()')})
+    take_back('in pane B')
+    close_scene(); drop_caret()
+    # on the plane: the caret at the end of the draft's first line, a character taken out there, then the scene opened over the
+    # draft, pane A at its top
+    recentre()
+    caret_end(first_line())
+    quiet()
+    ids0 = removal_ids()
+    came_p, kept_p, wrote_p = backspace(None, ids0)
+    on_plane = new_mark(None, ids0)
+    opened_p = beside()
+    ctx.js('document.getElementById("sceneA").scrollTop = 0'); ctx.frames(3)
+    mk_p, room_p = new_mark('a', ids0), ctx.js(PANE_ROOM % json.dumps('A')) or {}
+    box_p = (mk_p or {}).get('mark') or {}
+    over_p = ctx.js(REMOVAL_OVER % ((box_p['x'] + box_p['w'] / 2, box_p['y'] + box_p['h'] / 2) if box_p else (0, 0))) or {}
+    r.check(came_p and kept_p and bool(wrote_p) and wrote_p['op'] == 'delete' and bool(on_plane) and opened_p and in_room(box_p, room_p) and clear_of(box_p, room_p.get('corner'))
+            and clear_of(box_p, room_p.get('foot')) and over_p.get('lifted') is True and len(over_p.get('z') or []) == 2 and over_p['z'][0] >= over_p['z'][1] and over_p.get('after') is True and over_p.get('hit') is True,
+            "B3-S4 · pane-removal at %d px: a removal made on the plane, its mark standing there, stands in pane A over the scene as the scene opens over its draft — inside the pane's visible box and clear of its corner, the element a pointer meets at its mark" % WIDE[0],
+            {'came': came_p, 'kept': kept_p, 'write': wrote_p and {k: wrote_p[k] for k in ('op', 'doc')}, 'on_plane': on_plane, 'opened': opened_p, 'mark': mk_p, 'room': room_p, 'over': over_p})
+    take_back('in the scene over a removal made on the plane')
+    close_scene(); drop_caret()
     # the rows called no history op of the shell's
     calls = [c['name'] for c in page_calls(ctx)[calls0:]]
-    r.check(not any(c.startswith('history.') for c in calls), "the editor pane's rows call no `history.*`: reads, their typing, its undo and the paste", dict(Counter(calls)))
+    r.check(not any(c.startswith('history.') for c in calls), "the editor pane's rows call no `history.*`: reads, their typing, its undo, the paste and the removals", dict(Counter(calls)))
 
 
 def run(ctx):

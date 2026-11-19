@@ -88,15 +88,15 @@
 // article with the key held is the camera's, the pointer captured by the
 // plane, and selects nothing); it zooms by the pinch (Ctrl+wheel, as a
 // trackpad sends it) and by Mod+wheel (K-12). A wheel over the chrome — the
-// overlay and the notice below it, the reading scene, the LEAP box, the one
-// line — is the chrome's own, scrolling what of it scrolls, and moves no
-// camera; the mirror takes no pointer event, so a wheel over it is the
-// plane's. A wheel over the plane hides the walk's panel. While a jump is in the air
-// (FP-25) a wheel series — wheel events less than SERIES_MS apart — begun
-// before the jump's camera left (N-GO's `airSince`) is dropped whole, so a
-// trackpad's momentum never moves the camera the jump took; any other wheel
-// or pinch event, and the camera key's drag as it moves, takes the camera
-// over (N-GO's `takeOver`). A wheel schedules the walk's re-take, and the
+// overlay and the notice below it, the reading scene and what O-DELETION
+// stands over it, the LEAP box, the one line — is the chrome's own, scrolling
+// what of it scrolls, and moves no camera; the mirror takes no pointer event,
+// so a wheel over it is the plane's. A wheel over the plane hides the walk's
+// panel. While a jump is in the air (FP-25) a wheel series — wheel events
+// less than SERIES_MS apart — begun before the jump's camera left (N-GO's
+// `airSince`) is dropped whole, so a trackpad's momentum never moves the
+// camera the jump took; any other wheel or pinch event, and the camera key's
+// drag as it moves, takes the camera over (N-GO's `takeOver`). A wheel schedules the walk's re-take, and the
 // camera key's drag re-takes as it ends (N-WALK's `retakeFromView`); it takes
 // down what stands on the one line until the next act, and leaves the line's
 // layout as it stands (L-LINE's `panned`), where a click is the reader's act
@@ -390,7 +390,7 @@ export function attach(els) {
   });
   window.addEventListener('wheel', (e) => {
     const t = /** @type {HTMLElement} */ (e.target);
-    if (t.closest && t.closest('#overlay, #notice, #scene, #leap, #line')) return;
+    if (t.closest && t.closest('#overlay, #notice, #scene, #removed.scene, #leap, #line')) return;
     e.preventDefault();
     WALK.hidePanel();
     if (dropped(e.timeStamp)) return;

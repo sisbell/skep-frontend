@@ -447,7 +447,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    box, the overlay and the LEAP box — save while the LEAP box stands, when it is the box's own refused press's, beside the
    box and over it where it finds no room outside it; opaque, as all chrome over the plane is, its border the warning hue
    its words take; one button, its words wrapping inside the room it is given (FP-26, FP-31) */
-/* the deletion face (O-DELETION's; B3-S4): each removal's mark in the margin at its line's edge — the removed hue, a struck dash, never the caret's upright form — and the face it opens beside it, or over the lines beneath where the margin holds no room; it moves no text */
+/* the deletion face (O-DELETION's; B3-S4): each removal's mark in the margin at its line's edge — the removed hue, a struck dash, never the caret's upright form — and the face it opens beside it, or over the lines beneath where the margin holds no room; it moves no text; a press on a mark leaves the focus where it stands */
 #removed { position:fixed; left:0; top:0; z-index:24; display:none; pointer-events:none; }
 #removed.on { display:block; }
 #removed .removal { position:fixed; left:0; top:0; pointer-events:none; }
@@ -457,9 +457,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #removed .mark:hover { background:#2a1c1e; }
 #removed .face { position:absolute; left:16px; top:0; width:max-content; max-width:280px; pointer-events:auto; padding:4px 8px; font-size:11px; line-height:1.45; color:var(--ink); background:#1b1f25; border:1px solid var(--bad); border-radius:4px; box-shadow:0 2px 10px rgba(0,0,0,.4); }
 #removed .face .part + .part { margin-top:3px; color:var(--dim); }
-/* a paste's face the reading scene holds (O-DELETION's): its layer over the scene, which it follows in the page, under the
-   hint, the find box, the overlay and the LEAP box; the pointer passing through it to the pane beneath, whose wheel scrolls
-   the pane, never the plane under the scene */
+/* what the reading scene holds of the layer (O-DELETION's), a removal's mark and face or a paste's face in an editor pane:
+   the layer over the scene, which it follows in the page, under the hint, the find box, the overlay and the LEAP box; the
+   pointer passing through each face to the pane beneath, whose wheel scrolls the pane, and each mark taking it, a wheel
+   there moving no camera (APP-INPUT's) — never the plane under the scene */
 #removed.scene { z-index:26; }
 #removed.scene .face { pointer-events:none; }
 #hint { position:fixed; left:0; top:0; z-index:27; display:none; max-width:360px; }
