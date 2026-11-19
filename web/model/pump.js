@@ -33,9 +33,10 @@
 // names (the trail's), the texts the trail's entries the reader has left read
 // and who is told of each chain a refresh counts (N-TRAIL's `readings`,
 // `countedAt`), who is told of a board found open, and the text an open find
-// searches (N-FIND's `searched`), which the view keeps as it keeps the
-// documents it shows (`shownNow`); the view's text reads the board refused
-// for their size (`halved`).
+// searches (N-FIND's `searched`) and the drafts a reading scene's editor
+// panes hold (SC's `editorPanes`), which the view keeps, at any scale, as it
+// keeps the documents it shows (`shownNow`); the view's text reads the board
+// refused for their size (`halved`).
 // The view's needs (`pump`; FP-11: the plane's pure camera arithmetic beside
 // the model): at mid scale and nearer, for the documents in view that stand
 // whole — a continuation drawn as one mark asks nothing for its members —
@@ -137,7 +138,8 @@
 // `publish` row's member to the app with the row's position before anything
 // is dropped (`arrive`), then goes to M-REC's index and invalidation — every
 // document it touches dropped, but
-// those the view shows — the text an open find searches among them — and the
+// those the view shows — the text an open find searches and the drafts a
+// reading scene's editor panes hold among them — and the
 // homes of the edition claims on the origins
 // those window, whose metadata decides the clause there (`keptNow`), which
 // stand as held while they are read again and are set in one step as their
@@ -173,8 +175,9 @@
 // the member a text read at each position was (`mintedBy`), so each entry
 // re-takes its own, then each held edition whose chain advanced past the
 // member its text is (`memberShown`) taking that member's arrival; what a
-// row naming it would keep stands as held — what the view shows, each draft
-// the window writes in, each draft being typed in or holding dialed words —
+// row naming it would keep stands as held — what the view shows, a reading
+// scene's editor panes' drafts among it, each draft the window writes in,
+// each draft being typed in or holding dialed words —
 // the rest dropped (M-REC's `takeRefresh`); each that stands is read again
 // (`readFresh`) and set in one step (M-REC's `setAgain`), or, where the board
 // left a part of its reads unanswered, read again as a row naming it is until
@@ -430,6 +433,8 @@ let readings = () => [];
 let onCounted = () => {};
 /** @type {() => (string | null)} the text an open find searches (N-FIND's `searched`, handed in at `start`): kept as the view keeps the documents it shows (`shownNow`); null where no find is open */
 let finding = () => null;
+/** @type {() => string[]} the drafts a reading scene's editor panes hold (SC's `editorPanes`, handed in at `start`): kept as the view keeps the documents it shows (`shownNow`) */
+let editing = () => [];
 /** @type {{session: boolean}} how the page opens its board (`openBoard`): whether it asks a session — the gate's guest asks none — as the boot opened it, which the list read again keeps */
 let opening = { session: true };
 /** @type {Promise<boolean> | null} the list read again, out (`retryBoards`): a second press joins it */
@@ -659,7 +664,7 @@ let subscribed = false;
  * they held as it stood with them (`unkeepAll`) and the board's lag, lets go
  * of the rows held, the gap and the faces kept, and forgets the positions the
  * catch-ups read.
- * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string, at: number | null, newest: number | null) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], readings?: () => Array<{addr: string, at: number}>, onCounted?: (trunk: string, memberAt: (at: number) => string | null, newest: number) => void, onOpen?: () => void, finding?: () => (string | null)}} opts `shown` the version each box shows, which the view reads; `onPublish` told of each trunk member `D.k+1` a `publish` row names, with the row's position, before the row drops what the page held of `D`, and of each a refresh finds past the member a text is, with none and the chain's count as the newest member known; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop, and of the documents whose byline owner facts taken anew decide; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `readings` what the trail's entries the reader has left read, each by its document and the position its text was read at, and `onCounted` told of each chain a refresh counts for them or for a text it holds, with the chain's count, before any arrival it finds (`refresh`); `onOpen` told once a board the list read again found is open (`retryBoards`); `finding` the text an open find searches (N-FIND's `searched`), which the view keeps as it keeps the documents it shows
+ * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string, at: number | null, newest: number | null) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], readings?: () => Array<{addr: string, at: number}>, onCounted?: (trunk: string, memberAt: (at: number) => string | null, newest: number) => void, onOpen?: () => void, finding?: () => (string | null), editing?: () => string[]}} opts `shown` the version each box shows, which the view reads; `onPublish` told of each trunk member `D.k+1` a `publish` row names, with the row's position, before the row drops what the page held of `D`, and of each a refresh finds past the member a text is, with none and the chain's count as the newest member known; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop, and of the documents whose byline owner facts taken anew decide; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `readings` what the trail's entries the reader has left read, each by its document and the position its text was read at, and `onCounted` told of each chain a refresh counts for them or for a text it holds, with the chain's count, before any arrival it finds (`refresh`); `onOpen` told once a board the list read again found is open (`retryBoards`); `finding` the text an open find searches (N-FIND's `searched`), and `editing` the drafts a reading scene's editor panes hold (SC's `editorPanes`), which the view keeps as it keeps the documents it shows
  */
 export function start(opts) {
   dirty = opts.onDirty;
@@ -671,6 +676,7 @@ export function start(opts) {
   onCounted = opts.onCounted || (() => {});
   onOpen = opts.onOpen || (() => {});
   finding = opts.finding || (() => null);
+  editing = opts.editing || (() => []);
   standing = new Set(); halved.clear(); typingRows.clear(); ownDocs.clear();
   classes++; again.clear(); claimsOut.clear(); unkeepAll(); unkeep(keptBoard, BOARD); lifts.clear(); boardFound = null;
   rowsHeld = null; caught = null; gap = null; faces.clear(); ownAt.clear();
@@ -732,8 +738,8 @@ export function takeRow(u) {
  * A feed row the page takes: the member a
  * `publish` names arriving first, at the row's position (`arrive`), while the
  * page still holds the trunk's text; then the row laid into M-REC's index and
- * invalidation — each document it touches that the view keeps, the view's
- * with the box pins the
+ * invalidation — each document it touches that the view keeps, the view's —
+ * a reading scene's editor panes' drafts among them — with the box pins the
  * arrival took and the homes of the edition claims on the origins those
  * window (`keptNow`), kept as held from `at` and read again (`readAgain`),
  * every other dropped; where it touches a doc 1, the byline cause of each
@@ -777,11 +783,11 @@ function applyRow(u, at, raiseFeed = true) {
   dirty();
 }
 
-/** the documents the view shows: those in view (`visibleDocs`) — each box's document, and the version it shows — nearer than far scale, where the view reads; and the text an open find searches, at any scale (`finding`) */
+/** the documents the view shows, each once: those in view (`visibleDocs`) — each box's document, and the version it shows — nearer than far scale, where the view reads; and, at any scale, the text an open find searches (`finding`) and the drafts a reading scene's editor panes hold (`editing`) */
 const shownNow = () => {
   if (!started) return [];
   const f = finding(), out = lodOf(cam.scale).name !== 'far' ? visibleDocs().map((d) => d.addr) : [];
-  return f && !out.includes(f) ? [...out, f] : out;
+  return [...new Set([...out, ...(f ? [f] : []), ...editing()])];
 };
 
 /** the origins the withheld runs of the documents the view shows name (`shownNow`): their edition claims are kept as held while a change of them is read (`claimsAgain`) */
@@ -789,7 +795,8 @@ const originsShown = () => new Set(shownNow().flatMap((a) => REC.withheldOrigins
 
 /**
  * What a feed row keeps as held, reading it again (`readAgain`): the
- * documents the view shows (`shownNow`), the homes of the edition claims
+ * documents the view shows (`shownNow`) — the drafts a reading scene's editor
+ * panes hold among them, at any scale — the homes of the edition claims
  * held on the origins their withheld runs name, whose publication and owner
  * decide the clause there (PUB-5.99; T-ARTICLE's `editionClause`), and each
  * draft the window's own writes were told of while the page holds its text
@@ -3012,7 +3019,8 @@ export async function readMetadata(addr) {
  * passage being read there is held across its move (T-LAYER's `holdAcross`) —
  * one whose member cannot be told, or whose box the app did not pin, left as
  * it stands; (2) what a row naming it would keep — what the view shows
- * (`shownNow`), with the pins taken, each draft the window writes in
+ * (`shownNow`), with the pins taken, a reading scene's editor panes' drafts
+ * among it at any scale, each draft the window writes in
  * (`ownHeld`) and each draft being typed in or holding dialed words (M-REC's
  * `typing`, `writing`) — kept with the members a text was handed to and the
  * editions left as they stand, and everything else dropped (M-REC's

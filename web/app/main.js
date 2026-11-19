@@ -84,7 +84,8 @@
 // again beside the view's, and what the entries the reader has left read,
 // with who re-takes the member each read once a refresh counts its chain —
 // N-TRAIL's `readings`, `countedAt` — and the text an open find searches,
-// N-FIND's `searched` — FP-6, FP-22, FP-23, FP-29).
+// N-FIND's `searched`, and the drafts a reading scene's editor panes hold,
+// SC's `editorPanes`, each kept as the view's — FP-6, FP-22, FP-23, FP-29).
 // The loop (`loop`, on `requestAnimationFrame`): step the camera's flight,
 // pump every 90 ms, and on a dirty frame — the mark, a camera move, a model,
 // write (W-WRITE's), layer or kept revision, a flight, an overlay standing, a
@@ -403,7 +404,7 @@ async function boot() {
   // the adapter: the bridge client where the flag stands and its port names one; nothing otherwise, the port told why
   const adapter = SECRET && PROVIDER ? DEV.create({ provider: PROVIDER, secret: SECRET, record: !!GATE }) : null;
   PORT.boot(adapter, { badPort: !!SECRET && !PROVIDER });
-  PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived, onDrop: dropped, stands: () => TRAIL.all().flatMap((e) => [e.addr, ...(GO.scenePair(e) || [])]), readings: TRAIL.readings, onCounted: TRAIL.countedAt, onOpen: () => { void launch(); }, finding: FIND.searched });
+  PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived, onDrop: dropped, stands: () => TRAIL.all().flatMap((e) => [e.addr, ...(GO.scenePair(e) || [])]), readings: TRAIL.readings, onCounted: TRAIL.countedAt, onOpen: () => { void launch(); }, finding: FIND.searched, editing: () => SCENE.editorPanes().map((p) => p.addr) });
   PORT.on('moment', (d) => FACES.moment(/** @type {import('../bridge/shapes').MomentEvent} */ (d)));
   const heldSeen = /** @type {unknown[]} */ ([]);
   PORT.on('held', (d) => { heldSeen.push(d); });

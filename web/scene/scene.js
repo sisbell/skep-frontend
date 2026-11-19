@@ -303,7 +303,10 @@
 // A pane holding the current text of a draft of the person's own is its
 // draft's editor (`editor`; FP-38), whatever the camera's scale on the
 // plane; a past state and the held version of the draft, which name its
-// address too, are none. T-LAYER serves its caret there — the editor panes
+// address too, are none. M-PUMP keeps its draft as the view's while it stands
+// (`editorPanes`, handed to it as its `editing` reader, the app's), so a row
+// or a refresh reads the draft again in place and drops nothing of it from
+// under the pane. T-LAYER serves its caret there — the editor panes
 // handed to it as they stand (`editorPanes`; its `panes` reader) — placed by
 // a click at the character clicked, a drag's release at its moving end, the
 // selection standing (`textAct`), or Enter at its span focus (`enterSpan`;
@@ -312,9 +315,10 @@
 // plane's (N-KEYS'), the paging keys moving it with the pane (`pageCaret`);
 // a live caret's span the pane's span focus (`followCaret`). Each frame that
 // moved the text the page shows of the draft — the person's typing, or the
-// record under it — sets the pane again from it (`followShown`), the other
-// pane, its scroll and the caret unmoved. Where both panes are editors each
-// keeps its draft's caret, one live at a time. Opened over a caret, the
+// record under it — sets the pane again from it (`followShown`), whether or
+// not a setting of it reads, a setting landing on that text as it stands
+// then (`update`); the other pane, its scroll and the caret unmoved. Where
+// both panes are editors each keeps its draft's caret, one live at a time. Opened over a caret, the
 // scene keeps it (N-GO's): where its draft is an editor pane's it stands
 // kept there, hollow, the pane's span focus on its span (`stand`). A key the
 // scene swallows is answered by the line of the pane it is pressed at, the
@@ -1764,6 +1768,9 @@ const current = (P) => !P.d.derived || (P.d.derived.at == null && !P.d.derived.r
  * @param {Pane} P
  */
 const editor = (P) => current(P) && P.kind === 'draft' && LAYER.ownDraft(P.names);
+
+/** do two records hold one text as the page took it: the same runs, image and blocks, each given new arrays where a record is set again or derived anew (M-REC's `setAgain`, T-LAYER's `shownOf`) */
+const sameText = (/** @type {Pick<Doc, 'runs' | 'image' | 'blocks'>} */ x, /** @type {Pick<Doc, 'runs' | 'image' | 'blocks'>} */ y) => x.runs === y.runs && x.image === y.image && x.blocks === y.blocks;
 
 /**
  * What a pane's corner is made from now (see the head): its record, named as
@@ -3722,7 +3729,11 @@ function whenSet(fn) {
  * asked of the pane, the one step (`setPanes`) — its `compare` read again
  * where the other pane was set meanwhile, so the bands stand on both texts as
  * they are — and a stop the reader returned to answered by that `compare`
- * (`answer`). A newer member found where a row naming it was not seen pins an
+ * (`answer`). An editor pane is set from the text the page shows of its draft
+ * (T-LAYER's `shownOf`), taken as each pass of the reads between the panes
+ * begins, a pass where that text moved while they were out read again over
+ * it (FP-38), so the setting lands on the words standing as it lands. A newer
+ * member found where a row naming it was not seen pins an
  * edition at its bare address instead (`pin`). A setting the board's events
  * asked (`Pane.kept`) is made from its reads' answers alone: where its whole
  * read met a refusal that says nothing of the document, the pane keeps what
@@ -3763,8 +3774,6 @@ async function update(side, how = {}) {
     // a version the corner's act could not read whole leaves the pane as it shows
     if (!d || (how.src && !r.whole)) return;
     if (P.kind === 'bare' && !how.src && P.k != null && r.n != null && r.n > P.k) { pin(S, side, P.k, r.n); return; }
-    // an editor pane is set from the text the page shows of its draft over the record read: the person's own words in it (FP-38)
-    const own = !how.src && editor(P) ? LAYER.shownOf(src) : null;
     const kind = how.src ? 'pinned' : P.kind === 'pinned' ? 'pinned' : kindAt(src, d);
     const k = kind === 'pinned' ? memberOf(src) : kind === 'bare' ? r.n : null;
     const names = kind === 'bare' && r.n ? versionAddress(src, r.n) : src;
@@ -3779,13 +3788,16 @@ async function update(side, how = {}) {
       hold = { from: into.from, to: into.to };
       lacks = into.none ? k : null;
     }
-    const text = own || d;
     for (;;) {
       const seen = Q.sets;
+      // an editor pane is set from the text the page shows of its draft over the record read, taken again at each pass: the person's own words in it (FP-38)
+      const own = !how.src && editor(P) ? LAYER.shownOf(src) : null, text = own || d, took = { runs: text.runs, image: text.image, blocks: text.blocks };
       const mine = { src, d: text, shown: LK.shown(src, text) }, theirs = { src: Q.src, d: Q.d, shown: Q.view.marks };
       const between = await readBetween(side === 'a' ? mine : theirs, side === 'a' ? theirs : mine);
       if (stale()) return;
       if (Q.sets !== seen) continue;
+      // the text an editor pane shows moved while the reads were out — typed in, or its record set again under it: read between again over it as it stands
+      if (own && !sameText(LAYER.shownOf(src), took)) continue;
       if (!how.src && between.unheard) { unset(between.unheard); return; }
       const read = how.read !== undefined ? how.read : P.read;
       // set from its reads: kept no more, from the step that sets it — a setting the board's events asked saying whether it changed what the pane shows
@@ -5274,6 +5286,7 @@ export function paneHolding(/** @type {Element | null} */ el) {
  * its draft, its span focus, whether its text holds the platform's focus and
  * how its scroll brings a stretch of the screen inside it (`intoPane`) — what
  * T-LAYER draws the caret's mark in and brings it into view by (its `panes`
+ * reader), and whose drafts M-PUMP keeps as the view's (its `editing`
  * reader); none where no scene stands.
  * @returns {import('../text/layer.js').EditorPane[]}
  */
@@ -5519,19 +5532,19 @@ export function key(k, side = textPane()) {
  * in it carried by their bytes' identity, the runs the two texts share read
  * off their images by identity (`sharedBetween`), so words not yet kept carry
  * no band, the other pane unmoved; a live caret standing in it then holding
- * its span focus (`followCaret`). Nothing while a setting reads, which sets
- * it from the text shown as it lands (`update`), nor where no scene stands.
- * The app runs it on each dirty frame before T-LAYER's, so the caret's mark is
- * set in the text the caret stands in.
+ * its span focus (`followCaret`). So too while a setting reads, which lands
+ * on the text shown as it stands then (`update`); nothing where no scene
+ * stands. The app runs it on each dirty frame before T-LAYER's, so the
+ * caret's mark is set in the text the caret stands in.
  */
 export function followShown() {
   const S = scene;
-  if (!S || S.updating || !els) return;
+  if (!S || !els) return;
   for (const side of SIDES) {
     const P = S[side];
     if (!P.el || !editor(P)) continue;
     const d = LAYER.shownOf(P.names);
-    if (d.from < 0 || (d.runs === P.d.runs && d.image === P.d.image && d.blocks === P.d.blocks)) continue;
+    if (d.from < 0 || sameText(d, P.d)) continue;
     const Q = S[otherSide(side)], mine = { src: P.names, d }, theirs = { src: Q.src, d: Q.d };
     setPanes(S, [{ side, next: { d, view: LAYER.sceneView(d), kind: 'draft', src: P.names, names: P.names, shows: P.shows, k: null, n: null, read: P.read, lacks: P.lacks, hold: null } }], side === 'a' ? sharedBetween(mine, theirs) : sharedBetween(theirs, mine));
     const c = LAYER.caret(), at = c && c.live && c.addr === P.names ? LAYER.caretSpan(P.names) : null;

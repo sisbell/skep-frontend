@@ -32,7 +32,8 @@
 // re-taking the member its own text was, a shown document whose reads there
 // the board answers in part read again as a row naming it is, a draft being
 // typed in, holding dialed words or written in by the window kept at any
-// scale and read only once it waits on no writing, and a change of class
+// scale and read only once it waits on no writing, a draft a reading scene's
+// editor pane holds kept at any scale too, and a change of class
 // ending its reads where they stand; a row naming a document the view
 // shows, which keeps it as held until its reads again set it in one step,
 // rows meanwhile queueing one more read, kept from the row's arrival — each
@@ -3336,6 +3337,42 @@ test('a refresh at far scale drops nothing of a draft being typed in, holding di
   await PUMP.refresh();
   await settle();
   assert.deepEqual([texts(), REC.doc(D).from, REC.textBetween(D, 1, 31)], [4, 1, FOURTH_TEXT], 'a draft the window wrote in, waiting on no writing: kept, read again and set in one step');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a refresh and a row keep a draft a reading scene\'s editor pane holds as the view keeps what it shows, at far scale too — read again over the window held and set in one step, its text never dropped — and a refresh drops it once no editor pane holds it (FP-23, FP-38)', async () => {
+  const DR = '1.0.1.0.5';
+  const s = {
+    ...NONE_LISTED, ...noEditionLinks(DR),
+    [opKeyOf(F.retrieveDocVSpanSet(DR))]: { result: { as_of: 9, resp: 'span_set', set: [{ start: '1.1', width: '0.12' }] } },
+    [opKeyOf(F.image(DR, 1, 12))]: { result: { as_of: 9, resp: 'runs', runs: [{ i_start: DR + '.0.1.1', width: '12' }] } },
+  };
+  // the draft's text as the refresh's read, then the row's, answers it
+  inTurn(s, F.retrieveV(DR, 1, 12), deliveredAt('draft words!', 9), deliveredAt('draft words?', 11));
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  /** the drafts the scene's editor panes hold, as SC's `editorPanes` names them */
+  let editing = [DR];
+  PUMP.start({ onDirty: () => {}, editing: () => editing });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.takeIndex(draftsListed([DR]));
+  readDraft(DR);
+  farOver('1.0.1');
+  assert.equal(lodOf(CAM.cam.scale).name, 'far', 'the view at far scale, where it shows no document');
+  let emptied = false, watching = true;
+  REC.watch(() => { if (watching && REC.doc(DR).from < 0) emptied = true; });
+  const texts = () => timesAsked(fake, F.retrieveV(DR, 1, 12));
+  fake.fire('feed', naming(20, null));
+  await PUMP.refresh();
+  assert.deepEqual([REC.doc(DR).from, REC.textBetween(DR, 1, 13), texts(), emptied], [1, 'draft words!', 1, false], 'the refresh: kept, read again over the window held and set in one step, never dropped');
+  fake.fire('feed', { board: 'b-1', update: { position: 21, at: 21, op: 'insert', docs: [DR], class: 'drafts', session: 's-1' } });
+  await until(() => REC.textBetween(DR, 1, 13) === 'draft words?', 'the row: read again and set');
+  assert.deepEqual([texts(), emptied], [2, false], 'its text standing while the row\'s read was out');
+  watching = false;
+  editing = [];
+  fake.fire('feed', naming(22, null));
+  await PUMP.refresh();
+  assert.deepEqual([REC.doc(DR).from, texts()], [-1, 2], 'no editor pane holding it: the refresh drops it, nothing read');
   assert.deepEqual(fake.unanswered, []);
 });
 
