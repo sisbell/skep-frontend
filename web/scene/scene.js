@@ -367,12 +367,16 @@
 // beside it, and where it shows another state than its act asked a line
 // saying why (`pastLine`) — the bar naming it with when it stood, "as it
 // stood ⟨time⟩" (C-363), which the one line names too (`pastAsOf`); beside it
-// stands the list of the draft's past states (`standList`; FP-36): beneath
-// pane B's corner at its outer side while the corner stands
-// beside its column, else after pane B's text — the rows M-PAST makes of the
+// stands the list of the draft's past states (`standList`; FP-36): side by
+// side, in a column of its own at pane B's outer side, from the panes' top to
+// the scene's foot, as wide as its head needs (`listPx`), while the panes
+// beside it keep HEAD_CPL characters a line (`PaneFit.outer`), else after
+// pane B's text — the rows M-PAST makes of the
 // draft's feed rows, newest first, by day, the days open on opening those
 // M-PAST's `openOnOpening` names for the room the list is given, a day's head
-// folding or opening it on the reader's act alone (`foldDay`), the row of the
+// folding or opening it on the reader's act alone (`foldDay`), each row its
+// time of day in a slot as wide as the widest and what it did beside it
+// (`rowHTML`), the row of the
 // state shown marked, or its folded day's head; above them, where the draft
 // held words the board had not kept, "now — not yet kept". Rows arriving
 // after it stands — those below the history read's reach, read as it stands
@@ -437,7 +441,14 @@
 // panes stack, and both are fitted by the same rule to a pane's content box
 // stacked — the scene's width less the column. The threshold is read in the
 // face's advance as rendered (P-LAY's `CHAR_W`), so the face and page zoom
-// move it. Beside its column a corner stands on the pane's outer side — pane
+// move it. A draft's history stands the list's column at pane B's outer side
+// (`PaneFit.outer`): side by side both corners stand at their documents'
+// heads at every width, and the column's room comes out of both panes'
+// content boxes, half from each, never from SIDE_GAP, while each keeps
+// HEAD_CPL characters a line beside its column's edge; below that the column
+// stands after pane B's text and the panes are fitted without it, their
+// corners at their heads still; the panes stack where any scene's do. Beside
+// its column a corner stands on the pane's outer side — pane
 // A's left, pane B's right, side by side; both left, stacked — held to the
 // top of the pane's scroll, so the bands and lines leave the facing edges
 // clear of it (foundations §3.1). At its
@@ -499,7 +510,11 @@
 // stacked, on its half at pane A's edge, half an em out — its count in its
 // top 11 px, clear of the stroke; a returned stop's passage named by its
 // first 48 characters at most, cut on a word. Side by side the panes stand
-// SIDE_GAP px apart; stacked, the column is COLUMN_EM of the reading size's
+// SIDE_GAP px apart, the list's column, where one stands, as wide as its
+// head's stop and both step acts set on one line a space apart at the list's
+// size, rounded up, with LIST_PAD px of padding on each side, a rule
+// LIST_RULE px wide at its inner edge and the platform's scrollbar
+// (`listPx`); stacked, the column is COLUMN_EM of the reading size's
 // em wide (`columnPx`), each end an em of the panes' from the edge — half the
 // column at most — a band's two bars joined by a hairline HAIRLINE_W px wide
 // at their cut, and the one tie drawn whole along the column half an em
@@ -768,6 +783,7 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {'whole' | 'compact' | 'head'} corner where both corners stand and in which form: beside their columns, whole or compact, or at their documents' heads
  * @property {number} px the em both articles are set at: the reading size, smaller only where even a column of one character is wider than the pane beside its edge
  * @property {boolean} stacked the panes stand stacked, pane A above pane B, their facing edges one column on the right (see the head): side by side, a pane would keep fewer than HEAD_CPL characters a line with its corner at its document's head
+ * @property {number} outer the width of the column standing at pane B's outer side, px — a draft's history's list (`listPx`), which both panes give room to equally; 0 where none stands: none asked for, the panes stacked, or the list standing after pane B's text
  */
 
 /**
@@ -804,7 +820,7 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {boolean} told the stop's appearance was said in the status region
  * @property {ISpan[] | null} stepped the passage of pane B the stop's act last went to (`toShared`), by identity through the image pane B's article was made from; null where it went to none since the scene was set level
  * @property {Returned | null} returned the stop drawn only by the panes' `compare` the reader left from, standing with the landing until its answer is taken and the reader has moved on (see the head); null where none stands
- * @property {PaneFit} fit the measure, the corners' form, the em and the panes' form they are set at
+ * @property {PaneFit} fit the measure, the corners' form, the em, the panes' form and the column at pane B's outer side they are set at
  * @property {string | null} link the address of the link the scene was opened from (`Held.link`): the tie drawn whole between the stacked panes where none holds the pointer or the focus; null where it was opened from none
  * @property {string | null} hover the tie the pointer stands on in the column where the panes stack, by its key (`tieKey`; `hoverAt`); null where it stands on none
  * @property {number} band the rows both heads reserve above their text — the more of the two corners' (`Pane.rows`) — as last set (`setBand`); 0 where the corners stand beside their columns
@@ -915,6 +931,10 @@ const WHOLE_ID = 'sceneB-whole';
 export const SIDE_GAP = 140;
 /** the column the stacked panes' facing edges form, in the reading size's em (`columnPx`) */
 export const COLUMN_EM = 2;
+/** the room the list's column keeps on each side of its words, px, which the style reads as `--scene-list-pad` (`listPx`) */
+export const LIST_PAD = 10;
+/** the rule at the list's column's inner edge, against pane B, px wide, which the style reads as `--scene-list-rule` (`listPx`) */
+export const LIST_RULE = 1;
 /** the hairline joining a band's two bars along the column where the panes stack, px */
 const HAIRLINE_W = 1;
 /** how near a line's or a stroke's end in the column the pointer stands on it, px (`hoverAt`) */
@@ -2117,7 +2137,7 @@ function sceneOf(pa, pb, pairs, held) {
   return {
     a: pa, b: pb, pairs, level: levels(pairs, h), whole: !!h.wholeB, widthA: Math.max(1, h.widthA ?? 1),
     bands: [], lines: [], strokes: [], listing: null, relist: null, shared: [], next: 0, at: null, told: false, stepped: null, returned: null,
-    fit: { cpl: MEASURE_CPL, corner: 'whole', px: READING_PX, stacked: false }, link: held.link ?? null, hover: null, band: 0, size: '', updating: 0, waiting: [],
+    fit: { cpl: MEASURE_CPL, corner: 'whole', px: READING_PX, stacked: false, outer: 0 }, link: held.link ?? null, hover: null, band: 0, size: '', updating: 0, waiting: [],
     past: held.past && pb.d.derived ? pastListOf(held.past) : null,
   };
 }
@@ -2205,7 +2225,7 @@ function stand(E, S, face) {
   S.b.placed = placedInto(S.b, [...S.a.view.marks, ...S.b.view.marks]);
   coverPlane(true);
   E.root.classList.add('on');
-  S.fit = fitOf(E);
+  S.fit = fitOf(E, S);
   for (const side of SIDES) S[side].view = { ...S[side].view, cpl: S.fit.cpl };
   E.strokes.innerHTML = '';
   if (face) E.bar.dataset.face = face; else delete E.bar.dataset.face;
@@ -3068,6 +3088,9 @@ function placeAt(P, pos) {
   return line && made ? { pos, ids: REC.identityIn(made.image, pos, 1), at: line.top - pane.scrollTop } : null;
 }
 
+/** a corner no pane holds beside its column: P-LAY's fit given it stands the corner at its document's head (`paneFit`) */
+const AT_HEAD = Object.freeze({ whole: Infinity, compact: Infinity, gap: 0 });
+
 /**
  * The panes' fit from the scene's width (see the head; FP-12, FP-26): side
  * by side, P-LAY's fit (`fitFor`) of a pane's content box there — half of
@@ -3076,53 +3099,78 @@ function placeAt(P, pos) {
  * its gap between them, and no margin past the column's edge; where that fit
  * stands both corners at their documents' heads and keeps fewer than
  * HEAD_CPL characters a line, stacked, the same fit of a pane's content box
- * there — `w` less the column, less that room. Pure: the scene's widths
- * alone, never the panes' as they stand, so the form one fit sets never moves
- * the next.
+ * there — `w` less the column, less that room. Where a column asks to stand
+ * at pane B's outer side (`room.outer`), side by side both corners stand at
+ * their documents' heads (`AT_HEAD`): the column standing, its width taken
+ * from both panes' content boxes, half from each, while each keeps HEAD_CPL
+ * characters a line so; else the column after pane B's text and the panes
+ * fitted without it; the panes stacked by the same test either way. Pure: the
+ * scene's widths alone, never the panes' as they stand, so the form one fit
+ * sets never moves the next.
  * @param {number} w the scene's inner width, px
- * @param {{pad: number, gap: number, column: number}} room `pad` the room a pane keeps beside its content — its padding on both sides and its scrollbar — `gap` the gap its corner keeps from its text, `column` the column's width (`columnPx`), px
+ * @param {{pad: number, gap: number, column: number, outer: number}} room `pad` the room a pane keeps beside its content — its padding on both sides and its scrollbar — `gap` the gap its corner keeps from its text, `column` the column's width (`columnPx`), `outer` the width of the column asking to stand at pane B's outer side (`listPx`), 0 where none asks, px
  * @param {number} readPx the reading size, px
  * @returns {PaneFit}
  */
 export function paneFit(w, room, readPx) {
-  const corners = { whole: cornerWidth(false), compact: cornerWidth(true), gap: room.gap };
-  /** P-LAY's fit of a pane's content box `cw` px wide, in the form `stacked` names */
-  const at = (/** @type {number} */ cw, /** @type {boolean} */ stacked) => {
-    const F = fitFor(cw, readPx, corners, 0);
-    return { cpl: F.cpl, corner: /** @type {PaneFit['corner']} */ (F.head ? 'head' : F.compact ? 'compact' : 'whole'), px: F.px, stacked };
+  const corners = { whole: cornerWidth(false), compact: cornerWidth(true), gap: room.gap }, heads = room.outer > 0 ? AT_HEAD : corners;
+  /** P-LAY's fit of a pane's content box `cw` px wide beside corners `size` wide, in the form `stacked` names, the column at pane B's outer side `outer` px wide */
+  const at = (/** @type {number} */ cw, /** @type {import('../plane/layout.js').CornerSize} */ size, /** @type {boolean} */ stacked, /** @type {number} */ outer) => {
+    const F = fitFor(cw, readPx, size, 0);
+    return { cpl: F.cpl, corner: /** @type {PaneFit['corner']} */ (F.head ? 'head' : F.compact ? 'compact' : 'whole'), px: F.px, stacked, outer };
   };
-  const beside = at((w - SIDE_GAP) / 2 - room.pad, false);
-  return beside.corner === 'head' && beside.cpl < HEAD_CPL ? at(w - room.column - room.pad, true) : beside;
+  if (room.outer > 0) {
+    const listed = at((w - SIDE_GAP - room.outer) / 2 - room.pad, AT_HEAD, false, room.outer);
+    if (listed.cpl >= HEAD_CPL) return listed;
+  }
+  const beside = at((w - SIDE_GAP) / 2 - room.pad, heads, false, 0);
+  return beside.corner === 'head' && beside.cpl < HEAD_CPL ? at(w - room.column - room.pad, corners, true, 0) : beside;
 }
 
 /**
  * The panes' fit, decided once for both (see the head; FP-12, FP-26):
  * `paneFit` of the scene's inner width, the room pane A keeps beside its
  * content — its padding and its scrollbar, which pane B keeps alike — the gap
- * its corner keeps from its text and the column (`columnPx`), at the reading
- * size (P-CAM's); the full measure side by side at the reading size, the
- * corners whole, where the platform lays out no scene.
+ * its corner keeps from its text, the column (`columnPx`) and, at a draft's
+ * history, the list's column beside that scrollbar (`listPx`), at the reading
+ * size (P-CAM's); where the platform lays out no scene, the full measure side
+ * by side at the reading size, the corners whole — at a draft's history, at
+ * their documents' heads beside the list's column.
  * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
  * @returns {PaneFit}
  */
-function fitOf(E) {
-  const pane = E.paneA;
-  if (typeof getComputedStyle !== 'function' || !(E.root.clientWidth > 0) || !(pane.clientWidth > 0)) return { cpl: MEASURE_CPL, corner: 'whole', px: READING_PX, stacked: false };
+function fitOf(E, S) {
+  const pane = E.paneA, listed = !!S.past;
+  if (typeof getComputedStyle !== 'function' || !(E.root.clientWidth > 0) || !(pane.clientWidth > 0)) return { cpl: MEASURE_CPL, corner: listed ? 'head' : 'whole', px: READING_PX, stacked: false, outer: listed ? listPx(0) : 0 };
   const cs = getComputedStyle(pane), bar = Math.max(0, (pane.offsetWidth || pane.clientWidth) - pane.clientWidth);
-  return paneFit(E.root.clientWidth, { pad: parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + bar, gap: parseFloat(cs.columnGap) || 0, column: columnPx() }, READING_PX);
+  return paneFit(E.root.clientWidth, { pad: parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + bar, gap: parseFloat(cs.columnGap) || 0, column: columnPx(), outer: listed ? listPx(bar) : 0 }, READING_PX);
 }
 
-/** the room the style lays the panes out by set on the scene (`--scene-gap`, `--scene-column`): SIDE_GAP side by side, the column stacked (`columnPx`); nothing where the platform lays out nothing */
-function setRoom(/** @type {NonNullable<typeof els>} */ E) {
+/**
+ * The room the style lays the panes out by set on the scene: SIDE_GAP side
+ * by side (`--scene-gap`), the column stacked (`columnPx`, `--scene-column`),
+ * and the list's column at pane B's outer side `outer` px wide, none where it
+ * is 0 (`--scene-list`), with its padding and its rule (`--scene-list-pad`,
+ * `--scene-list-rule`). Nothing where the platform lays out nothing.
+ * @param {NonNullable<typeof els>} E
+ * @param {number} [outer]
+ */
+function setRoom(E, outer = 0) {
   if (typeof getComputedStyle !== 'function') return;
-  E.root.style.setProperty('--scene-gap', SIDE_GAP + 'px');
-  E.root.style.setProperty('--scene-column', columnPx() + 'px');
+  const s = E.root.style;
+  s.setProperty('--scene-gap', SIDE_GAP + 'px');
+  s.setProperty('--scene-column', columnPx() + 'px');
+  s.setProperty('--scene-list', outer + 'px');
+  s.setProperty('--scene-list-pad', LIST_PAD + 'px');
+  s.setProperty('--scene-list-rule', LIST_RULE + 'px');
 }
 
 /**
  * The scene's fit set on the panes (see the head): the measure on the scene,
  * which each article's column reads (the style's `--measure`), the room the
- * style lays the panes out by (`setRoom`) and their form — stacked or side by
+ * style lays the panes out by — the list's column at pane B's outer side among
+ * it (`setRoom`) — and their form — stacked or side by
  * side, the scene's `stacked` class — both articles at the fit's em, each
  * pane standing its corner beside its column or, at its document's head,
  * above its text, each corner shaped for the form (`shapeCorner`), and the
@@ -3136,7 +3184,7 @@ function applyFit(E, S, keep = false) {
   if (typeof getComputedStyle !== 'function') return;
   const F = S.fit;
   E.root.style.setProperty('--measure', String(F.cpl));
-  setRoom(E);
+  setRoom(E, F.outer);
   E.root.classList.toggle('stacked', F.stacked);
   for (const side of SIDES) {
     const pane = paneEl(E, side), art = articleIn(pane), c = cornerEl(E, side);
@@ -3177,8 +3225,9 @@ function rebanded(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} */
 
 /**
  * The panes fitted again as their size or a face changed (see the head): the
- * fit read again (`fitOf`); where its measure, its corners' form, its em or
- * the panes' form moved, both panes set again in one step at it (`setPanes`)
+ * fit read again (`fitOf`); where its measure, its corners' form, its em, the
+ * panes' form or the column at pane B's outer side moved, both panes set
+ * again in one step at it (`setPanes`)
  * — their texts and what they were set with kept, the reader's place, the
  * selection and the ends set level carried by their bytes, the ties measured
  * anew — else the fit set on the panes again in place (`applyFit`), their
@@ -3189,8 +3238,8 @@ function rebanded(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} */
  * @returns {boolean} the panes were set again — and drawn
  */
 function refit(E, S) {
-  const F = fitOf(E), was = S.fit;
-  if (F.cpl === was.cpl && F.corner === was.corner && F.px === was.px && F.stacked === was.stacked) {
+  const F = fitOf(E, S), was = S.fit;
+  if (F.cpl === was.cpl && F.corner === was.corner && F.px === was.px && F.stacked === was.stacked && F.outer === was.outer) {
     applyFit(E, S, true);
     standList(E, S);
     roomBelow(E);
@@ -4808,10 +4857,23 @@ function stub(/** @type {CanvasRenderingContext2D} */ ctx, /** @type {number} */
 
 /** @type {HTMLElement | null} the list's element (`#scenepast`), made as a draft's history first stands; null until then */
 let pastEl = null;
-/** the room between pane B's corner and the list beneath it, beside its column (px) */
-const LIST_GAP = 8;
 /** a row's height where the platform lays out no list (px): the room the column gives is counted in rows of it */
 const ROW_PX = 18;
+/** the acts the list's head holds on its one line, by their strings, in its order: its stop and its two steps (B3-S7 THE LIST; D5 K-102) */
+const LIST_HEAD = Object.freeze(['B3.history.stop', 'B3.history.earlier-change', 'B3.history.next-change']);
+
+/**
+ * The width of the list's column at pane B's outer side (see the head), px:
+ * as wide as its head needs to hold its stop and both step acts on one line
+ * — their words a space apart in the list's type, the corner's (T-LAYER's
+ * `cornerPx`), rounded up — with LIST_PAD on each side of them, its rule
+ * (LIST_RULE) and a scrollbar `bar` px wide.
+ * @param {number} bar the platform's scrollbar's width, px: 0 where it lays its scrollbars over what scrolls
+ * @returns {number}
+ */
+export function listPx(bar) {
+  return Math.ceil(LAYER.cornerPx(LIST_HEAD.map((id) => t(id)).join(' '))) + 2 * LIST_PAD + LIST_RULE + bar;
+}
 
 /**
  * The words a hand is named by in the list and at a past state's corner (B3-S7
@@ -4853,17 +4915,18 @@ export function whatOf(row) {
 
 /**
  * A row of the list as markup (B3-S7): its time of day — the date its day's
- * head names (U's `timeOf`, the reader's own zone) — and what it did, parted
- * by the field joiner; where the board lost both its time and its op, "not
- * recorded" said once for the two (FP-34); the row standing for the state
- * pane B shows marked so, its bar the style's.
+ * head names (U's `timeOf`, the reader's own zone) — in its slot, and what it
+ * did in a box of its own, parted by the field joiner, which keeps its spaces
+ * in the row the style lays out; where the board lost both its time and its
+ * op, "not recorded" said once for the two (FP-34); the row standing for the
+ * state pane B shows marked so, its bar the style's.
  * @param {import('../model/past.js').Row} row
  * @param {boolean} shown
  */
 function rowHTML(row, shown) {
   const what = whatOf(row), lost = row.time == null && row.kind === 'unknown' && !row.landmark;
-  const time = row.time == null ? t('F.slot.not-recorded') : timeOf(row.time);
-  const words = lost ? `<span class="pl-time">${esc(time)}</span>` : `<span class="pl-time">${esc(time)}</span>${esc(FIELD)}<span class="pl-what" data-string="${esc(what.id)}">${esc(what.text)}</span>`;
+  const time = `<span class="pl-time">${esc(row.time == null ? t('F.slot.not-recorded') : timeOf(row.time))}</span>`;
+  const words = lost ? time : `${time}<span class="pl-join">${esc(FIELD)}</span><span class="pl-what" data-string="${esc(what.id)}">${esc(what.text)}</span>`;
   return `<div class="pl-row" data-row="${row.last}"${shown ? ' data-shown="1" aria-current="true"' : ''}>${words}</div>`;
 }
 
@@ -4944,15 +5007,16 @@ function pastListOf(h) {
   return { draft: h.draft, entries: [...h.entries], rows, days: PAST.daysOf(rows), open: new Set(), opened: false, at: h.at, unkept: h.unkept, why: h.why, from: h.from, reading: false, figures: { ...h.figures, older: null }, html: '' };
 }
 
-/** does the list stand beneath pane B's corner beside its column (see the head) — else after pane B's text, the corners at their documents' heads or the panes stacked */
-const listBeside = (/** @type {PaneFit} */ F) => !F.stacked && F.corner !== 'head';
+/** does the list stand in its own column at pane B's outer side (`PaneFit.outer`; see the head) — else after pane B's text */
+const listBeside = (/** @type {PaneFit} */ F) => F.outer > 0;
 
 /**
  * The list stood in the scene (see the head): its element made the first
- * time, an act on a day's head folding or opening that day (`foldDay`);
- * beside pane B's corner where the corner stands beside its column — after
- * pane B in the page's order, placed beneath the corner each frame
- * (`placeList`) — else pane B's last item, after its text; written
+ * time, an act on a day's head folding or opening that day (`foldDay`); in
+ * its column at pane B's outer side where the fit stands one (`listBeside`)
+ * — after pane B in the page's order, the style standing it there — else
+ * pane B's last item, after its text; its rows' time slot as wide as the
+ * widest time of day in its type (T-LAYER's `cornerPx`; `--pl-time`); written
  * (`writeList`) and, the first time it stands, the days open on opening set
  * from the rows the room it is given holds (M-PAST's `openOnOpening`); the
  * rows below the read's reach then read (`readOlder`). Nothing where the
@@ -4971,6 +5035,7 @@ function standList(E, S) {
   }
   const el = pastEl, beside = listBeside(S.fit);
   el.className = 'pastlist ' + (beside ? 'beside' : 'after');
+  el.style.setProperty('--pl-time', LAYER.cornerPx(timeOf(0)) + 'px');
   // moved only where it stands elsewhere, so a setting of a pane leaves its rows where they are scrolled
   if (beside) { if (E.paneB.nextElementSibling !== el) E.paneB.after(el); } else if (el.parentElement !== E.paneB || E.paneB.lastElementChild !== el) E.paneB.append(el);
   E.paneB.classList.toggle('past-after', !beside);
@@ -5021,22 +5086,17 @@ function inViewIn(/** @type {HTMLElement} */ el, /** @type {HTMLElement} */ box)
 }
 
 /**
- * The list placed as the fit stands it (see the head): beside pane B's corner,
- * beneath it in its column, as wide as it, down to pane B's visible foot, its
- * rows scrolling inside it; after pane B's text, its days' heads held below
- * what pane B's held head covers (`clearOf`). Nothing where the platform lays
- * out no list.
+ * The list placed as the fit stands it (see the head): in its column, where
+ * the style stands it, its days' heads held at its own top as its rows
+ * scroll; after pane B's text, its days' heads held below what pane B's held
+ * head covers (`clearOf`). Nothing where the platform lays out no list.
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  */
 function placeList(E, S) {
-  const el = pastEl, c = cornerEl(E, 'b');
+  const el = pastEl;
   if (!el || !S.past || typeof el.getBoundingClientRect !== 'function') return;
-  if (!listBeside(S.fit) || !c) { Object.assign(el.style, { left: '', top: '', width: '', height: '' }); el.style.setProperty('--past-held', clearOf(E.paneB) + 'px'); return; }
-  el.style.removeProperty('--past-held');
-  const r = E.root.getBoundingClientRect(), q = c.getBoundingClientRect(), p = E.paneB.getBoundingClientRect();
-  const top = q.bottom - r.top - E.root.clientTop + LIST_GAP, foot = p.top + E.paneB.clientTop + E.paneB.clientHeight - r.top - E.root.clientTop;
-  Object.assign(el.style, { left: (q.left - r.left - E.root.clientLeft) + 'px', top: top + 'px', width: q.width + 'px', height: Math.max(0, foot - top) + 'px' });
+  if (listBeside(S.fit)) el.style.removeProperty('--past-held'); else el.style.setProperty('--past-held', clearOf(E.paneB) + 'px');
 }
 
 /**
@@ -5140,6 +5200,7 @@ export function close() {
   for (const side of SIDES) stood[side].clear();
   coverPlane(false);
   if (pastEl) { pastEl.remove(); els.paneB.classList.toggle('past-after', false); }
+  setRoom(els);
   els.root.classList.remove('on'); els.root.classList.remove('stacked'); els.paneA.innerHTML = ''; els.paneB.innerHTML = ''; els.strokes.innerHTML = ''; delete els.bar.dataset.face;
   for (const p of [els.paneA, els.paneB]) p.classList.toggle('head', false);
   els.stop.hidden = true;

@@ -857,7 +857,7 @@ export function install(deps) {
       edges: () => SCENE.edges(),
       /** the one tie the last draw drew whole between the stacked panes (FP-12, FP-30): its key, its kind, its link where it is a line, why it is the one — the pointer, the focus, or the link the scene was opened from — and its path on screen; null where it drew none */
       crossing: () => SCENE.crossing(),
-      /** the fit the panes stand at (FP-12, FP-26): the measure, the corners' form, the em, and whether the panes stack; null where no scene stands */
+      /** the fit the panes stand at (FP-12, FP-26): the measure, the corners' form, the em, whether the panes stack, and the width of the column standing at pane B's outer side; null where no scene stands */
       fit: () => SCENE.fitted(),
       /** the stop at a band's clipped end, as the last draw placed it (FP-20): whether it stands, the shared passages it steps through, the one it goes to now and the one after, its name, its count and its rect on screen; null where no scene stands */
       stop: () => SCENE.stop(),

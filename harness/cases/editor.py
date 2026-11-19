@@ -148,11 +148,13 @@ opened again at the end, for the cases' order and the driver's close
 count."""
 import copy
 import json
+import math
 import re
 import time
 from collections import Counter
 
 from . import DOC, VERSIONED, Result, WINDOW, drawn_keys, heard, trunk_of
+from .layout import EDGE_EM, HEAD_CH, READING_PX, SIDE_GAP_PX
 from .wire import READ_PATHS, READ_ROWS, read_ops
 
 # the own draft: the seed's windowed draft W of principal 1 (`WINDOW[2]`), text the person may edit (issue #411)
@@ -310,7 +312,7 @@ STATES = [
          claim='the kept line carries its second act after the kept word, "show its history" (B3.past-states), standing at one place whichever word stands; Tab stands on the kept word, → on the act, and Enter there opens the draft\'s history'),
     dict(screen='B3-S7', state='read', walk='W-08', step=8, drawn=True,
          how="two lines typed into the case's own draft a minute apart, kept by the test board, then the act clicked; then `changes` armed with the draft's own rows and synthetic ones — a signed row, a publication, a row of lost testimony — and the act clicked again, one day's head clicked folded (skep-frontend #661, #662, #617)",
-         claim='the scene stands on the draft beside its state before its newest change — the text the board held at the position the row below the top row ends at — pane B named "as it stood ⟨time⟩ · ⟨hand⟩" (B3.history.row) with the chip, the bar and the one line naming it "as it stood ⟨time⟩" (B3.history.as-of), the shared runs banded; beside it the list, newest first, each day\'s head its date or "time not recorded" (L.history.time-unrecorded), a folded day\'s head naming its hands, each row its time of day and what it did in the strings table\'s words, the shown row marked; side by side the list beneath pane B\'s corner, stacked at the narrow width the list after pane B\'s text and the current pane\'s kept line at its head, the rest of its corner at its foot'),
+         claim='the scene stands on the draft beside its state before its newest change — the text the board held at the position the row below the top row ends at — pane B named "as it stood ⟨time⟩ · ⟨hand⟩" (B3.history.row) with the chip, the bar and the one line naming it "as it stood ⟨time⟩" (B3.history.as-of), the shared runs banded; beside it the list, newest first, each day\'s head its date or "time not recorded" (L.history.time-unrecorded), a folded day\'s head naming its hands, each row its time of day and what it did in the strings table\'s words, the shown row marked, no word of it drawn across two lines and every timed row\'s time in one slot; side by side both corners at their documents\' heads, both texts at one depth, and the list in a column of its own at pane B\'s outer side, from the panes\' top to the scene\'s foot, as wide as its head needs to hold its stop and both step acts on one line, the two panes one width either side of the whole gutter, each keeping forty characters a line or more; one px either side of the window at which beside the list the panes keep forty characters, the list in its column, then after pane B\'s text, the panes side by side; stacked at the narrow width the list after pane B\'s text and the current pane\'s kept line at its head, the rest of its corner at its foot (skep-frontend #668)'),
     dict(screen='B3-S7', state='unkept', walk='W-08', step=8, drawn=True,
          how="a line of the case's own draft held (`op` armed to answer `held`), then the act clicked (skep-frontend #661)",
          claim='the history opens on the newest kept state, the held words standing in the current pane alone, the list\'s top line "now — not yet kept" (L.history.unkept)'),
@@ -2713,15 +2715,40 @@ ACT_AT = '''(() => { const e = document.activeElement, c = e && e.closest ? e.cl
 SHOWN_TEXT = '''(async (a) => { const L = await import("./text/layer.js"), R = await import("./model/records.js"), d = L.shownOf(a); return d.from < 0 ? "" : R.textOf(d.runs, d.from, d.to); })(%s)'''
 # the list of a draft's past states as a person meets it: its top line, each day's head — its words, whether it is an act, folded
 # or open, marked as the shown state's — and its lines, each a hand's or a row's with its words and whether it is the shown
-# state's; where it stands — beside pane B's corner, or after pane B's text — and whether it stands in the window
+# state's; where it stands — in its column at pane B's outer side, or after pane B's text — and whether it stands in the window
 PAST_LIST = '''(() => { const l = document.getElementById("scenepast"); if (!l) return null;
-  const q = l.getBoundingClientRect(), c = document.querySelector("#sceneB > .corner"), cq = c ? c.getBoundingClientRect() : null, art = document.querySelector("#sceneB > article.dtext");
+  const q = l.getBoundingClientRect(), art = document.querySelector("#sceneB > article.dtext");
   return {now: (l.querySelector(":scope > .pl-now") || {}).textContent || null,
           days: [...l.querySelectorAll(":scope > .pl-day")].map((d) => { const h = d.querySelector(":scope > .pl-head");
             return {key: d.dataset.key, head: h.textContent, act: h.tagName === "BUTTON", folded: h.getAttribute("aria-expanded") === "false", shown: h.hasAttribute("data-shown"),
                     lines: [...d.querySelectorAll(":scope > .pl-who, :scope > .pl-row")].map((x) => ({who: x.classList.contains("pl-who"), text: x.textContent, last: x.dataset.row ? Number(x.dataset.row) : null, shown: x.hasAttribute("data-shown")}))}; }),
           beside: l.classList.contains("beside"), after: l.parentElement && l.parentElement.id === "sceneB" && !!art && !!(art.compareDocumentPosition(l) & Node.DOCUMENT_POSITION_FOLLOWING),
-          under: !!cq && q.top >= cq.bottom - 0.5 && Math.abs(q.left - cq.left) <= 1, inView: q.width > 0 && q.height > 0 && q.left >= 0 && q.right <= window.innerWidth + 0.5 && q.top < window.innerHeight}; })()'''
+          inView: q.width > 0 && q.height > 0 && q.left >= 0 && q.right <= window.innerWidth + 0.5 && q.top < window.innerHeight}; })()'''
+# the list's head's stop and both step acts, by their strings, in the order its one line holds them (B3-S7 THE LIST; D5 K-102)
+LIST_HEAD_IDS = ('B3.history.stop', 'B3.history.earlier-change', 'B3.history.next-change')
+# the list's column as a person meets it beside the panes: its box — sides, top and foot — its content box's width, and the width
+# a line of the words given takes in it, unwrapped, in the list's own type; the scene's inner right, foot and width; and each
+# pane's sides, top, width, the room it keeps beside its content — its padding and its scrollbar — and its text's depth in its
+# content, whatever its scroll
+LIST_COLUMN = '''((head) => { const l = document.getElementById("scenepast"), sc = document.getElementById("scene"); if (!l || !sc) return null;
+  const q = l.getBoundingClientRect(), s = getComputedStyle(l), r = sc.getBoundingClientRect();
+  const probe = document.createElement("span"); probe.style.whiteSpace = "nowrap"; probe.textContent = head; l.prepend(probe); const need = probe.getBoundingClientRect().width; probe.remove();
+  const pane = (id) => { const p = document.getElementById(id), b = p.getBoundingClientRect(), ps = getComputedStyle(p), a = p.querySelector(":scope > article.dtext"), ab = a ? a.getBoundingClientRect() : null;
+    return {left: b.left, right: b.right, top: b.top, width: b.width, pad: parseFloat(ps.paddingLeft) + parseFloat(ps.paddingRight) + (p.offsetWidth - p.clientWidth), depth: ab ? ab.top - (b.top + p.clientTop) + p.scrollTop : null}; };
+  return {left: q.left, right: q.right, top: q.top, bottom: q.bottom, width: q.width, inner: l.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight), need,
+          scene: {right: r.left + sc.clientLeft + sc.clientWidth, bottom: r.top + sc.clientTop + sc.clientHeight, width: sc.clientWidth}, a: pane("sceneA"), b: pane("sceneB")}; })(%s)'''
+# the words of the list's top line, its days' heads, its hands and its rows each drawn across two lines or more: none where every
+# word stands whole on one line
+LIST_BROKEN = '''(() => { const l = document.getElementById("scenepast"); if (!l) return null; const out = [];
+  for (const x of l.querySelectorAll(".pl-now, .pl-head, .pl-who, .pl-row")) {
+    const w = document.createTreeWalker(x, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) for (const m of n.data.matchAll(/\\S+/g)) {
+      const g = document.createRange(); g.setStart(n, m.index); g.setEnd(n, m.index + m[0].length);
+      const tops = [...g.getClientRects()].filter((k) => k.width > 0).map((k) => k.top);
+      if (tops.length && Math.max(...tops) - Math.min(...tops) > 4) out.push(m[0]); } }
+  return out; })()'''
+# each timed row's time slot in the list, as drawn: its left edge and its width, by row
+LIST_SLOTS = '''(() => [...document.querySelectorAll("#scenepast .pl-row > .pl-time")].filter((e) => /^\\d\\d:\\d\\d$/.test(e.textContent || "")).map((e) => { const q = e.getBoundingClientRect(); return [q.left, q.width]; }))()'''
 
 
 def past_rows(ctx, r, shoot, red, ops_allowed, m):
@@ -2733,9 +2760,15 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
     below the top row ends at, the history read's pages and rows and the state read's time a figure (FP-18); then
     `changes` armed, once the page is quiet, with the draft's own rows read through the page's port and three synthetic
     ones below them — a signed row, a publication, a row of lost testimony — the act clicked again and the arm checked
-    taken, one day's head clicked folded; the list's heads and rows in the strings table's words, the past pane's corner,
-    the bar's and the one line's second address, the bands; side by side the list beneath pane B's corner, stacked at the
-    narrow width after pane B's text, the current pane's kept line at its head and the rest of its corner at its foot (D2).
+    taken, one day's head clicked folded; the list's heads and rows in the strings table's words, each word whole on one
+    line and each timed row's time in one slot, the past pane's corner, the bar's and the one line's second address, the
+    bands; side by side both corners at their heads, both texts at one depth, and the list in its own column at pane B's
+    outer side from the panes' top to the scene's foot, as wide as a line of its head's stop and both step acts needs, the
+    panes one width either side of the whole gutter, the column's width and the panes' measure figures (FP-18); one px
+    either side of the window at which beside it the panes keep HEAD_CH characters — the case's own arithmetic, by the
+    page's measured advance and the column as laid out — the list in its column, then after pane B's text, the panes side
+    by side (skep-frontend #668); stacked at the narrow width after pane B's text, the current pane's kept line at its head
+    and the rest of its corner at its foot (D2).
     `unkept`: a line held, then the act — the newest kept state, the list's top line saying so. No `history.past` is called;
     the rows' writes are the two typed lines and the held line's drop."""
     mine, corner, quiet, recentre, caret_end, press, first_line, hold_typed, drop_all = (m[k] for k in ('mine', 'corner', 'quiet', 'recentre', 'caret_end', 'press', 'first_line', 'hold_typed', 'drop_all'))
@@ -2883,9 +2916,28 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
         corner_ok = corner_line == ex.get('corner') and chip and bar_as_of == ex.get('asOf') and line_as_of == ex.get('asOf')
         ties = ctx.js('window.__skep.scene.ties()') or []
         bands_ok = any(x['kind'] == 'band' for x in ties) and bool((ctx.js('window.__skep.scene.pairs()') or {}).get('pairs'))
+        # every word of the list whole on its line, a long row taking two lines between words; every timed row's time in one slot
+        broken, slots = ctx.js(LIST_BROKEN), ctx.js(LIST_SLOTS) or []
+        spread = lambda k: max(x[k] for x in slots) - min(x[k] for x in slots) if slots else None
+        words_ok = broken == [] and len(slots) >= 2 and spread(0) <= 0.5 and spread(1) <= 0.5
         if w == WIDE[0]:
-            form_ok = fit.get('stacked') is False and L.get('beside') and L.get('under') and L.get('inView')
-            form = {'stacked': fit.get('stacked'), 'beside': L.get('beside'), 'under': L.get('under'), 'in_view': L.get('inView')}
+            g = ctx.js(LIST_COLUMN % json.dumps(head_words)) or {}
+            a, b, sc = g.get('a') or {}, g.get('b') or {}, g.get('scene') or {}
+            near = lambda x, y, tol=0.5: x is not None and y is not None and abs(x - y) <= tol
+            # in its column at pane B's outer side, from the panes' top to the scene's foot; both corners at their heads, both texts at one depth
+            placed = (bool(g) and fit.get('stacked') is False and fit.get('corner') == 'head' and (fit.get('outer') or 0) > 0 and L.get('beside') and L.get('inView')
+                      and near(g.get('right'), sc.get('right')) and near(g.get('top'), a.get('top')) and near(g.get('top'), b.get('top')) and near(g.get('bottom'), sc.get('bottom'))
+                      and near(a.get('depth'), b.get('depth')))
+            # the panes one width either side of the whole gutter, pane B short of the column, each keeping HEAD_CH characters or more
+            shared = (bool(g) and b.get('right', math.inf) <= g.get('left', -math.inf) + 0.5 and near(a.get('width'), b.get('width'), 1)
+                      and near((b.get('left') or 0) - (a.get('right') or 0), SIDE_GAP_PX, 1) and (fit.get('cpl') or 0) >= HEAD_CH)
+            # as wide as its head needs: a line of its stop and both step acts fits its content box, which is no wider than that line, rounded up
+            sized = bool(g) and g['need'] <= g['inner'] + 0.5 and g['inner'] <= g['need'] + 1.5
+            form_ok = placed and shared and sized
+            form = {'fit': fit, 'beside': L.get('beside'), 'in_view': L.get('inView'), 'column': {k: g.get(k) for k in ('left', 'right', 'top', 'bottom', 'width', 'inner', 'need')},
+                    'scene': sc, 'a': a, 'b': b}
+            if g:
+                r.figures['history_list'] = {'window_px': w, 'column_px': g['width'], 'content_px': g['inner'], 'head_line_px': round(g['need'], 2), 'cpl': fit.get('cpl'), 'pane_px': a.get('width')}
         else:
             d2 = ctx.js('''(() => { const h = document.querySelector("#sceneA > .corner.head"), f = document.querySelector("#sceneA > .corner.foot"), a = document.querySelector("#sceneA > article.dtext");
               return {head: !!h && !!h.querySelector(".kept-word") && !!h.querySelector("[data-history]") && !h.querySelector(".chip"), foot: !!f && !!f.querySelector(".chip"),
@@ -2897,8 +2949,37 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
                 'the rows': (rows_ok and marks_ok, {'lines': lines[:10], 'want': list(exrows.values())[:10], 'version': want['version']}),
                 'the corner': (corner_ok, {'corner': corner_line, 'chip': chip, 'bar': bar_as_of, 'line': line_as_of, 'want': [ex.get('corner'), ex.get('asOf')]}),
                 'the bands': (bands_ok, {'ties': [x['kind'] for x in ties]}),
+                'the words': (words_ok, {'broken': broken, 'slots': slots[:8]}),
                 'the form': (form_ok, form)}
+    head_words = ' '.join(t(ctx, k) for k in LIST_HEAD_IDS)
     shoot('read', read_check)
+
+    # ---- `read`, the list's column's edge: one px either side of the window at which, beside the list, the panes keep HEAD_CH
+    # characters a line — the list in its column, then after pane B's text, the panes side by side with their corners at their
+    # heads at both; the case's own arithmetic, by the page's measured advance and the column as laid out ----------------------------
+    was = ctx.resize(*WIDE)
+    flips, edge = {}, {}
+    try:
+        ctx.settle(10); ctx.frames(3)
+        g = ctx.js(LIST_COLUMN % json.dumps(head_words)) or {}
+        advance = ctx.js('(async () => (await import("./plane/layout.js")).CHAR_W)()') or 0
+        if g and advance:
+            frame = WIDE[0] - g['scene']['width']
+            at = 2 * ((HEAD_CH * advance + EDGE_EM) * READING_PX + g['a']['pad']) + SIDE_GAP_PX + g['width'] + frame
+            edge = {'threshold_px': round(at, 2), 'wider_px': math.ceil(at + 1e-6), 'narrower_px': math.floor(at - 1e-6), 'advance': advance, 'column_px': g['width'], 'frame_px': frame, 'pad_px': g['a']['pad']}
+            for w in (edge['wider_px'], edge['narrower_px']):
+                ctx.resize(w, WIDE[1]); ctx.settle(10); ctx.frames(3)
+                fit, L = ctx.js('window.__skep.scene.fit()') or {}, ctx.js(PAST_LIST) or {}
+                flips[w] = {x: fit.get(x) for x in ('outer', 'corner', 'stacked', 'cpl')}
+                flips[w].update(beside=L.get('beside'), after=L.get('after'))
+    finally:
+        ctx.resize(*was); ctx.frames(3)
+    side = lambda f, beside: bool(f) and f['corner'] == 'head' and f['stacked'] is False and ((f['outer'] or 0) > 0) == beside and f['beside'] is beside and bool(f['after']) is not beside
+    wider, narrower = flips.get(edge.get('wider_px')), flips.get(edge.get('narrower_px'))
+    r.check(side(wider, True) and (wider['cpl'] or 0) >= HEAD_CH and side(narrower, False),
+            f"B3-S7 · read: one px either side of the window at which, beside the list's column, the panes keep {HEAD_CH} characters a line — the list in its column at pane B's outer side, then after pane B's text — the panes side by side with both corners at their documents' heads at both (skep-frontend #668)",
+            {'edge': edge, 'flips': flips})
+    r.figures['history_list_edge'] = dict(edge, flips={str(k): v for k, v in flips.items()})
     close_scene()
 
     # ---- `unkept`: a line held, the act opening on the newest kept state, "now — not yet kept" at the top ---------------------------

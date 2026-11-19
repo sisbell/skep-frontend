@@ -1681,8 +1681,8 @@ function headKey(d) {
   return JSON.stringify([F.cpl, F.px, CHAR_W, lags(), read.newer(d.addr), k ? k.text : null]);
 }
 
-/** a corner's words' width at the interface's size, in px (`measureRun`) */
-const cornerPx = (/** @type {string} */ text) => measureRun(text, CORNER.px, 'normal', 'client');
+/** words' width in the corner's type — the client's face at the interface's size, P-REG's CORNER — in px, as the platform sets them (`measureRun`) */
+export const cornerPx = (/** @type {string} */ text) => measureRun(text, CORNER.px, 'normal', 'client');
 
 /** the lines a corner's words take wrapped at their spaces at a width, at the interface's size */
 function linesAt(/** @type {string} */ words, /** @type {number} */ width) {

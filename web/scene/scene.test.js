@@ -170,7 +170,7 @@ import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as PROV from '../overlays/provenance.js';
 import * as SEL from '../overlays/selection.js';
 import { recorder } from '../test/canvas.js';
-import { HEAD_CPL, CHAR_W, EDGE, fitFor, setAdvance } from '../plane/layout.js';
+import { HEAD_CPL, MEASURE_CPL, CHAR_W, EDGE, fitFor, setAdvance } from '../plane/layout.js';
 import { cornerWidth } from '../plane/register.js';
 
 /** @returns {import('../model/frames.js').ComparePair} */
@@ -496,14 +496,14 @@ test('a whole document\'s edge is one straight stroke down its pane\'s facing ed
 // ---- the stacked scene (issue #467's design decisions) -----------------------------------------------------------------
 
 test('the panes stand side by side while a pane there keeps HEAD_CPL characters a line with its corner at its document\'s head, and stack a px narrower — both then fitted by the same rule to the scene\'s width less the column, at the reading size, wherever the scene is narrow; the threshold is read in the face\'s advance as rendered, so a wider face stacks them at a width that stood side by side (issue #467\'s design decision: "The stacking threshold is measured in rendered advance (#16)"; FP-12, FP-26)', () => {
-  const read = CAM.READING_PX, room = { pad: 36, gap: 14, column: SCENE.columnPx() };
+  const read = CAM.READING_PX, room = { pad: 36, gap: 14, column: SCENE.columnPx(), outer: 0 };
   const corners = { whole: cornerWidth(false), compact: cornerWidth(true), gap: room.gap };
   /** P-LAY's fit of a content box, as a pane's fit names it */
-  const asPane = (/** @type {number} */ w, /** @type {boolean} */ stacked) => { const F = fitFor(w, read, corners, 0); return { cpl: F.cpl, corner: F.head ? 'head' : F.compact ? 'compact' : 'whole', px: F.px, stacked }; };
+  const asPane = (/** @type {number} */ w, /** @type {boolean} */ stacked) => { const F = fitFor(w, read, corners, 0); return { cpl: F.cpl, corner: F.head ? 'head' : F.compact ? 'compact' : 'whole', px: F.px, stacked, outer: 0 }; };
   assert.equal(room.column, SCENE.COLUMN_EM * read, 'the column: COLUMN_EM of the reading size');
   // the scene's width at which a pane side by side holds exactly HEAD_CPL characters beside its column's edge
   const at = 2 * ((HEAD_CPL * CHAR_W + EDGE) * read + room.pad) + SCENE.SIDE_GAP;
-  assert.deepEqual(SCENE.paneFit(at, room, read), { cpl: HEAD_CPL, corner: 'head', px: read, stacked: false }, 'at the threshold: side by side, both corners at their documents\' heads, HEAD_CPL characters a line');
+  assert.deepEqual(SCENE.paneFit(at, room, read), { cpl: HEAD_CPL, corner: 'head', px: read, stacked: false, outer: 0 }, 'at the threshold: side by side, both corners at their documents\' heads, HEAD_CPL characters a line');
   const narrower = SCENE.paneFit(at - 1, room, read);
   assert.deepEqual(narrower, asPane(at - 1 - room.column - room.pad, true), 'a px narrower: stacked, fitted to the scene\'s width less the column');
   assert.ok(narrower.cpl >= HEAD_CPL && narrower.px === read, `stacked there, each pane keeps HEAD_CPL characters or more at the reading size: ${narrower.cpl}`);
@@ -517,6 +517,34 @@ test('the panes stand side by side while a pane there keeps HEAD_CPL characters 
     assert.equal(SCENE.paneFit(at, room, read).stacked, true, 'a face a tenth wider: stacked at the width that stood side by side');
   } finally { setAdvance(was); }
   assert.equal(SCENE.paneFit(at, room, read).stacked, false, 'the face as rendered again: side by side there again');
+});
+
+test('a column asking to stand at pane B\'s outer side — a draft\'s history\'s list — stands both corners at their documents\' heads at every side-by-side width, its width taken from both panes\' content boxes, half from each and never from the gap, while each keeps HEAD_CPL characters a line; a px narrower it stands after pane B\'s text, the panes side by side without it and their corners at their heads still; the panes stack where any scene\'s do (issue #668\'s design decision; FP-12, FP-26)', () => {
+  const read = CAM.READING_PX, room = { pad: 36, gap: 14, column: SCENE.columnPx(), outer: 0 }, listed = { ...room, outer: 200 };
+  /** the measure a pane's content box `cw` px wide keeps beside its column's edge alone, at the reading size: a corner at its document's head */
+  const headCpl = (/** @type {number} */ cw) => Math.max(1, Math.min(MEASURE_CPL, Math.floor((cw - EDGE * read) / (CHAR_W * read) + 1e-9)));
+  /** a pane's fit side by side with its corner at its document's head, its content box `cw` px wide, the column at pane B's outer side `outer` px wide */
+  const atHead = (/** @type {number} */ cw, /** @type {number} */ outer) => ({ cpl: headCpl(cw), corner: 'head', px: read, stacked: false, outer });
+  assert.deepEqual(SCENE.paneFit(1398, listed, read), atHead((1398 - SCENE.SIDE_GAP - 200) / 2 - room.pad, 200),
+    'a scene 1398 px wide — a 1440 px window: both corners at their heads, the column\'s 200 px out of the two panes\' content boxes alike, the gap whole');
+  assert.equal(SCENE.paneFit(1398, room, read).corner, 'compact', 'the same scene with no column: the corners compact beside their columns');
+  assert.deepEqual(SCENE.paneFit(2518, listed, read), atHead((2518 - SCENE.SIDE_GAP - 200) / 2 - room.pad, 200), 'a scene 2518 px wide: the corners at their heads still, the measure full');
+  assert.equal(SCENE.paneFit(2518, listed, read).cpl, MEASURE_CPL);
+  // the scene's width at which a pane beside the column holds exactly HEAD_CPL characters beside its column's edge
+  const at2 = 2 * ((HEAD_CPL * CHAR_W + EDGE) * read + room.pad) + SCENE.SIDE_GAP + 200;
+  assert.deepEqual(SCENE.paneFit(at2, listed, read), { cpl: HEAD_CPL, corner: 'head', px: read, stacked: false, outer: 200 }, 'at the threshold: the column standing, HEAD_CPL characters a line');
+  assert.deepEqual(SCENE.paneFit(at2 - 1, listed, read), atHead((at2 - 1 - SCENE.SIDE_GAP) / 2 - room.pad, 0), 'a px narrower: the column after pane B\'s text, the panes side by side without it, their corners at their heads');
+  // the stacking threshold as any scene's: the width at which a pane side by side holds HEAD_CPL characters with no column
+  const at = 2 * ((HEAD_CPL * CHAR_W + EDGE) * read + room.pad) + SCENE.SIDE_GAP;
+  assert.deepEqual(SCENE.paneFit(at, listed, read), atHead((at - SCENE.SIDE_GAP) / 2 - room.pad, 0), 'at the stacking threshold: side by side, the column after pane B\'s text');
+  assert.deepEqual(SCENE.paneFit(at - 1, listed, read), SCENE.paneFit(at - 1, room, read), 'a px narrower: stacked as a scene with no column is');
+  assert.equal(SCENE.paneFit(at - 1, listed, read).stacked, true);
+});
+
+test('the list\'s column is as wide as its head needs to hold its stop and both step acts on one line, a space apart in the corner\'s type and rounded up, with LIST_PAD on each side, its rule and the platform\'s scrollbar (issue #668\'s design decision)', () => {
+  const head = ['B3.history.stop', 'B3.history.earlier-change', 'B3.history.next-change'].map((id) => t(id)).join(' ');
+  assert.equal(SCENE.listPx(0), Math.ceil(LAYER.cornerPx(head)) + 2 * SCENE.LIST_PAD + SCENE.LIST_RULE, `the head "${head}" and the column's chrome`);
+  assert.equal(SCENE.listPx(15), SCENE.listPx(0) + 15, 'a scrollbar 15 px wide: 15 px wider');
 });
 
 test('stacked, a band is a bar at each pane\'s facing edge — its ground an em out from the edge over its extent, in sameness\'s texture, its two edges cut an em out in sameness\'s boundary, one where it stands no taller than a line — and a hairline joining the two bars along the column at their cut, from the upper bar\'s bottom to the lower bar\'s top; an end passing its pane\'s visible edge held at it with the stub\'s triangle in the column (issue #467\'s design decisions; foundations §2.5, "HOW THE COLUMN LOOKS")', () => {
@@ -3034,8 +3062,10 @@ test('a draft\'s history opens from its corner\'s act beside the current text: p
     assert.deepEqual(SCENE.pastAsOf(), { id: 'B3.history.as-of', text: t('B3.history.as-of', { time }) }, 'the one line\'s second address');
     assert.equal(p.at(), 'pane B', 'the focus in the history pane');
     assert.deepEqual([compares() - was, SCENE.pairs()?.pairs.map((x) => [x.u1, x.u2, x.width])], [0, [[1, 1, PAST_OLD.length]]], 'no `compare` asked: the run the two texts share read off their images');
+    const fit = SCENE.fitted();
+    assert.deepEqual([fit?.corner, fit?.stacked, fit?.outer], ['head', false, SCENE.listPx(0)], 'side by side, both corners at their documents\' heads, the list\'s column standing at pane B\'s outer side (issue #668)');
     const list = p.afterB[0];
-    assert.ok(list && list.id === 'scenepast' && String(list.className).includes('beside'), 'the list beside pane B\'s corner, after pane B');
+    assert.ok(list && list.id === 'scenepast' && String(list.className).includes('beside'), 'the list in its column at pane B\'s outer side, after pane B in the page\'s order');
     const html = String(list.innerHTML);
     assert.ok(html.includes(`<div class="pl-row" data-row="${PAST_AT}" data-shown="1" aria-current="true">`) && html.includes(`<div class="pl-row" data-row="48">`) && html.includes(`<div class="pl-who">${esc(hand)}</div>`) && !html.includes('pl-now'),
       `its rows, newest first, the hand once at the head of its run, the shown row marked, no top line: ${html}`);

@@ -549,15 +549,16 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    the reading size, never set smaller to fit (FP-12, FP-26); it stands against the pane's facing edge, its column's edge
    between them, where the bands and lines leave the pane (foundations §2.5), its corner beside it on the outer side, so
    the room a wide window adds falls outside both — before pane A's corner, after pane B's — and the text keeps its place
-   beside the bands at every width. An auto margin takes that room. Side by side the panes stand `--scene-gap` apart,
-   which SC sets. It stands below the one line's bottom edge, however many rows the line takes */
+   beside the bands at every width. An auto margin takes that room. Side by side the panes stand `--scene-gap` apart, the
+   one width, short of the list's column at the scene's right where one stands (`--scene-list`), SC setting both. It
+   stands below the one line's bottom edge, however many rows the line takes */
 #scene { position:fixed; inset:calc(var(--line-bottom, 29px) + 17px) 20px 20px 20px; z-index:26; display:none; background:var(--bg); border:1px solid #6b7382; border-radius:4px; }
 #scene.on { display:block; }
 #scenebar { position:absolute; left:0; right:0; top:0; height:26px; padding:4px 10px; border-bottom:1px solid var(--line); color:var(--dim); font-size:11px; white-space:nowrap; overflow:hidden; }
 #scenebar b { color:var(--accent); }
 #scenebar .x { float:right; color:var(--ink); background:none; border:0; padding:0; margin:0; }
-.pane { position:absolute; top:26px; bottom:0; width:calc(50% - var(--scene-gap) / 2); overflow:auto; padding:14px 18px; display:flex; align-items:flex-start; gap:14px; }
-#sceneA { left:0; } #sceneB { right:0; }
+.pane { position:absolute; top:26px; bottom:0; width:calc(50% - (var(--scene-gap) + var(--scene-list, 0px)) / 2); overflow:auto; padding:14px 18px; display:flex; align-items:flex-start; gap:14px; }
+#sceneA { left:0; } #sceneB { right:var(--scene-list, 0px); }
 .pane .dtext { position:static; transform:none; line-height:var(--line-h); flex:none; width:calc(var(--measure) * var(--char-w) * 1em); height:auto; cursor:text; }
 /* a pane's column's edge stands on its inner side, the bands leaving the pane beyond its signs (foundations §3.1): pane A's on
    the right of its text, pane B's on the left, the article's box taking the edge's room */
@@ -620,26 +621,33 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #scene.stacked #sceneB > .corner.compact.open { margin-left:auto; margin-right:calc(var(--corner-compact-w) - var(--corner-w)); }
 #scene.stacked #sceneB.head { align-items:flex-end; }
 #scene.stacked #scenestop { padding:0 3px 0 11px; }
-/* THE LIST OF A DRAFT'S PAST STATES (B3-S7; SC's): in the corner's type, newest first. Beside pane B's
-   corner, a narrow column beneath it at the pane's outer side, as wide as the corner, scrolling its rows on its own, which
-   SC places each frame; else after pane B's text, across its column, pane B wrapping it onto a line of its own. Each day's
-   head held at the top of what scrolls it while its rows scroll — below pane B's held head where the list stands after the
-   text (`--past-held`, SC's) — a folded one marked so and naming its hands; a hand once at the head of its run; a row its
-   time of day and what it did; the row of the state pane B shows, or its folded day's head, marked by a bar at its edge;
-   a focused head or row scrolled clear of the held head */
+/* THE LIST OF A DRAFT'S PAST STATES (B3-S7; SC's): in the corner's type, newest first. Side by side, a column of its own
+   at the scene's right, pane B's outer side, from the panes' top to the scene's foot, `--scene-list` wide — as wide as its
+   head needs to hold its stop and both step acts on one line, which SC sets — `--scene-list-pad` inside each side and a
+   rule `--scene-list-rule` wide against pane B, scrolling its rows on its own, its scroller's top padding clearing the
+   day's head held there; else after pane B's text, across its column, pane B wrapping it onto a line of its own. Each
+   day's head held at the top of what scrolls it while its rows scroll — below pane B's held head where the list stands
+   after the text (`--past-held`, SC's) — a folded one marked so and naming its hands; a hand once at the head of its run;
+   a row its time of day in a slot of tabular figures as wide as the widest (`--pl-time`, SC's) and what it did beside it,
+   wrapping only between words and hanging under its own first word; the row of the state pane B shows, or its folded
+   day's head, marked by a bar at its edge; a focused head or row scrolled clear of the held head */
 #scenepast { font:var(--corner-px)/1.4 var(--face-client); color:#8b8f96; user-select:none; -webkit-user-select:none; }
-#scenepast.beside { position:absolute; overflow:auto; z-index:1; background:var(--bg); }
+#scenepast.beside { position:absolute; top:26px; right:0; bottom:0; width:var(--scene-list); padding:8px var(--scene-list-pad); border-left:var(--scene-list-rule) solid var(--line); overflow:auto; z-index:1; background:var(--bg); scroll-padding-top:1.7em; }
 #scenepast.after { flex:none; align-self:stretch; margin-top:1em; border-top:1px solid var(--line); padding-top:6px; }
 #sceneB.past-after:not(.head) { flex-wrap:wrap; }
 #sceneB.past-after:not(.head) > #scenepast.after { flex:0 0 100%; }
 #scenepast .pl-now { padding:0 0 .2em 6px; color:#cfd6df; }
-#scenepast .pl-now, #scenepast .pl-who, #scenepast .pl-row, #scenepast .pl-head { overflow-wrap:anywhere; }
-#scenepast .pl-head { position:sticky; top:var(--past-held, 0px); z-index:1; display:block; width:100%; margin:0; padding:.15em 0 .15em 6px; border:0; border-left:3px solid transparent; background:var(--bg); color:#cfd6df; font:inherit; text-align:left; white-space:normal; scroll-margin-top:var(--past-held, 0px); }
+#scenepast .pl-head { position:sticky; top:var(--past-held, 0px); z-index:1; display:block; width:100%; margin:0; padding:.15em 0 .15em 6px; border:0; border-left:3px solid transparent; background:var(--bg); color:#cfd6df; font:inherit; text-align:left; white-space:normal; }
 #scenepast button.pl-head { cursor:pointer; }
 #scenepast .pl-head .pl-fold { margin-right:.3em; }
 #scenepast .pl-head .pl-hands { display:block; color:#8b8f96; }
 #scenepast .pl-who { padding-left:9px; color:#8b8f96; }
-#scenepast .pl-row { padding-left:6px; border-left:3px solid transparent; color:#cfd6df; font-variant-numeric:tabular-nums; scroll-margin-top:calc(var(--past-held, 0px) + 1.6em); }
+#scenepast .pl-row { display:flex; align-items:baseline; padding-left:6px; border-left:3px solid transparent; color:#cfd6df; font-variant-numeric:tabular-nums; }
+#scenepast .pl-time { flex:none; min-width:var(--pl-time, auto); }
+#scenepast .pl-join { flex:none; white-space:pre; }
+#scenepast .pl-what { flex:1 1 0; min-width:0; }
+#scenepast.after .pl-head { scroll-margin-top:var(--past-held, 0px); }
+#scenepast.after .pl-row { scroll-margin-top:calc(var(--past-held, 0px) + 1.6em); }
 #scenepast [data-shown] { border-left-color:#cfd6df; }
 /* the bar's name for a past state's pane: when it stood, after its address (B3-S7; C-363) */
 #scenebar .as-of { color:#cfd6df; }
