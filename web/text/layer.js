@@ -480,10 +480,11 @@
 // `returnCaret`); a trail entry holds the page's caret by its place as the
 // reader leaves the entry (`caretPlace`) and a return restores it there, kept
 // (`restoreCaret`; B3-S1 (iii); N-GO's); and every caret holds its place by
-// the bytes either side of it, placed again where they stand in the text
-// shown wherever that text changes under it — another writer's commit read
-// again, an edit made at no caret — held at its position where the text
-// places neither, its bytes kept for a later text (`settled`; B3-S1 P60;
+// the bytes either side of it, each only where its text places that byte once
+// (`placedAt`), placed again where they stand in the text shown wherever that
+// text changes under it — another writer's commit read again, an edit made at
+// no caret, a paste's words taken back out — held at its position where the
+// text places neither, its bytes kept for a later text (`settled`; B3-S1 P60;
 // FP-38); a change of the page's class drops every draft's caret but the
 // page's own. A caret is a
 // position of the text shown, placed by Enter at a focused span at the span's
@@ -666,8 +667,8 @@ import { t, plural, facedHTML, lastRead, runsText, joinRuns, sentence, CLIENT_CL
  * @typedef {Object} CaretPlace — a caret by its place (see the head): what a trail entry holds of the page's caret as the reader leaves it (N-TRAIL's), and what a return restores (`restoreCaret`)
  * @property {string} addr the draft
  * @property {number} pos its position in the text shown as it was last placed
- * @property {ISpan[]} before the byte just before it, by identity, which places it again just after that byte; none at the text's first position, or where the text's image did not cover that byte
- * @property {ISpan[]} after the byte just after it, which places it just before that byte where the one before stands nowhere; none at the text's end, or where the image did not cover it
+ * @property {ISpan[]} before the byte just before it, by identity, which places it again just after that byte; none at the text's first position, where the text's image did not cover that byte, or where it placed that byte twice
+ * @property {ISpan[]} after the byte just after it, which places it just before that byte where the one before stands nowhere; none at the text's end, where the image did not cover it, or where it placed it twice
  */
 
 /**
@@ -5554,13 +5555,18 @@ function placeOfBytes(d, c) {
 /**
  * A caret as the layer keeps it (`Placed`): at its position in its draft's
  * text shown as that text stands now, the bytes either side of it read
- * through the text's image (M-REC's `identityIn`).
+ * through the text's image (M-REC's `identityIn`) — each only where that
+ * image places it once (`onlyAt`), so a byte the text holds twice, the
+ * draft's own words placed again by their identity, never names the caret's
+ * place (FP-38).
  * @param {Caret} c
  * @returns {Placed}
  */
 function placedAt(c) {
   const d = shownOf(c.addr);
-  return { addr: c.addr, pos: c.pos, live: c.live, before: c.pos > 1 ? REC.identityIn(d.image, c.pos - 1, 1) : [], after: REC.identityIn(d.image, c.pos, 1), runs: d.runs, image: d.image };
+  /** the byte at a position, by identity, where the text's image places it there alone; none where it places it twice */
+  const own = (/** @type {number} */ pos) => { const id = REC.identityIn(d.image, pos, 1); return onlyAt(d.image, id) === pos ? id : []; };
+  return { addr: c.addr, pos: c.pos, live: c.live, before: c.pos > 1 ? own(c.pos - 1) : [], after: own(c.pos), runs: d.runs, image: d.image };
 }
 
 /**

@@ -86,7 +86,9 @@
 // clipboard's two flavors, then one edit, its face keyed to the `delete` its
 // commit sends and none for words still in their open burst; and a paste read
 // by skep's own entry — the same words placed by identity where they match its
-// plain text, at hand or read by identity, else the plain text, told (FP-8,
+// plain text, at hand or read by identity, else the plain text, told — the
+// caret after the draft's own words placed again held by no byte the text
+// holds twice, so their source refused leaves it where the paste was made (FP-8,
 // FP-12, FP-20, FP-22, FP-23, FP-24, FP-26, FP-27, FP-30, FP-31, FP-33, FP-34,
 // FP-36, FP-37, FP-38, FP-39).
 import { test, beforeEach } from 'node:test';
@@ -2505,12 +2507,13 @@ function cutEvent(none = false) {
 /**
  * The test run on a page of the DOM under `web/test/`: one draft of the session's account holding `WORDS`, read at
  * position 7 with its image, mounted as the layer mounts it at its reading scale; the session one that writes, and D6's
- * machine handed in over a fake port acking every write frame, an insert's bytes minted, and answering a read only as
- * `reads` answers it. Every caret, edit and article is let go after it.
+ * machine handed in over a fake port acking every write frame `writes` gives no answer to, an insert's bytes minted, and
+ * answering a read only as `reads` answers it. Every caret, edit and article is let go after it.
  * @param {(d: Drafted) => Promise<void>} body
  * @param {(frame: Record<string, any>) => unknown} [reads] the answer to a read frame; none, the fake's own refusal, where it gives none
+ * @param {(frame: Record<string, any>) => unknown} [writes] the answer to a write frame; the fake's ack where it gives none
  */
-async function onDraft(body, reads = () => undefined) {
+async function onDraft(body, reads = () => undefined, writes = () => undefined) {
   const dom = page({ width: 1440, height: 900 }), P = '1.0.1.0.2', n = byteLength(WORDS);
   dom.install();
   try {
@@ -2526,7 +2529,7 @@ async function onDraft(body, reads = () => undefined) {
         // a read the pump makes of the draft it wrote in is no write: answered only where the test answers it
         if (frame.frame || F.READ_OPS.includes(frame.op)) return reads(frame);
         frames.push(frame);
-        return { result: frame.op === 'insert' ? { addr: `${P}.0.1.${1000 * ++k}`, at: 20 + k, resp: 'ack_addr' } : { at: 20 + ++k, resp: 'ack' } };
+        return writes(frame) ?? { result: frame.op === 'insert' ? { addr: `${P}.0.1.${1000 * ++k}`, at: 20 + k, resp: 'ack_addr' } : { at: 20 + ++k, resp: 'ack' } };
       },
     }));
     PORT.boot(fake);
@@ -2605,6 +2608,17 @@ test('B3-S5 (i), C3: a paste whose skep entry names this board\'s bytes, their w
   assert.equal(LAYER.caretPaste('words', null, JSON.stringify({ ...JSON.parse(words), board: 'http://elsewhere' })), 'placed', 'another board\'s entry: the plain text, nothing said');
   assert.deepEqual(edits(), [[26, 0, 'words']]);
 }));
+
+test('a byte the text holds twice names no caret\'s place: after the draft\'s own words pasted by their identity, the caret is held by the byte after it alone, so the board refusing the paste\'s source takes the words back out and leaves the caret where the paste was made — never after the words they were copied from (FP-38; B3-S5; the paste survey\'s W3)', () => onDraft(async ({ P, frames, edits, caret, shown }) => {
+  const words = entryOf(P, [{ prefix: P + '.0.1', ordinal: 9, width: 5 }], [5]);
+  LAYER.placeCaret(P, 26);
+  assert.equal(LAYER.caretPaste('words', null, words), 'same');
+  assert.deepEqual([shown().slice(0, 30), LAYER.caretPlace()], ['Tumbler words stand here.words', { addr: P, pos: 31, before: [], after: [{ prefix: P + '.0.1', ordinal: 26, width: 1 }] }],
+    'the same bytes standing twice, the caret after them held by the byte after it: the one before it stands twice');
+  await flush();
+  assert.deepEqual([frames.map((f) => f.op), edits(), shown().slice(0, 26), caret()], [['reinstate'], [], 'Tumbler words stand here.\n', [P, 26, true]],
+    'its `reinstate` refused `withheld`: nothing placed, the text as it stood, the caret live where the paste was made');
+}, undefined, (frame) => (frame.op === 'reinstate' ? { refused: { kind: 'refused', name: 'withheld', status: 200, code: 'withheld', detail: null, op: 'reinstate', site: { addr: '1.0.1.0.2' }, body: null } } : undefined)));
 
 test('B3-S5 (i), W5: a paste whose entry names bytes no record at hand holds reads them by identity first — `retrieve_i` of their spans — and waits on it: their words read back as the plain text\'s, the same words are placed where the paste was made; a read refused `withheld` names the origin, `doc_not_registered` the source the board says nothing of, a position the document minted nothing at is the page\'s own fault, a read never answered is said so, and a draft changed at the paste\'s place while it was read is said so — each placing nothing', async () => {
   const S = '1.0.1.0.30', at = (/** @type {number} */ n) => `${S}.0.1.${n}`;

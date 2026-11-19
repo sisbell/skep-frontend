@@ -754,7 +754,7 @@ export function install(deps) {
     hint: () => HINT.shown(),
     /** the removals of kept text the deletion face stands at, as they were last set (O-DELETION's `shown`): each its draft, whether its face stands whole and how — beside its line or over the lines beneath — its mark's box, its face's, the words removed and the strings its face shows */
     removed: () => DELETION.shown(),
-    /** the paste's face (O-DELETION's): standing — its draft, its words and their string, as the person was told them — and as the last frame set it — beside its line or over the lines beneath, its box; each null where none stands */
+    /** the paste's face (O-DELETION's): standing — its draft, its words and their string, as the person was told them — and as the last frame set it — beside its line, over the lines beneath or, in a reading scene's pane, above, its box, and that pane (`side`, null on the plane); each null where none stands */
     pasteFace: () => ({ standing: DELETION.pasteFace(), drawn: DELETION.pasteShown() }),
     /** the overlay standing — its id, its kind, its text — and the notice standing below it (O-HOST's; FP-36): its id and its text, null where none stands there */
     overlay: () => { const n = HOST.notice(); return { id: HOST.currentState() ? HOST.currentState()?.id : null, kind: HOST.currentKind(), text: HOST.text(), notice: n ? { id: n.id ?? null, text: HOST.noticeText() } : null }; },

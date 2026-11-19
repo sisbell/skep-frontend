@@ -321,7 +321,15 @@
 // pane's corner among it, by the pane's own test, never the address its
 // corner names (`siteOf`, `paneHolding`; N-KEYS' `paneSays`); the way back
 // the line's ending offers moves the focus into the editor pane holding the
-// kept caret, onto its span (`toCaret`). The scene's close re-takes an
+// kept caret, onto its span (`toCaret`). A face the person's act at the
+// caret raises — O-DELETION's paste's face — stands at the line of the
+// editor pane holding its draft that its site stands on, the site placed by
+// its bytes in the image the pane's article was made from, leaving the line
+// past the signs its column's edge holds level with it, inside the room the
+// pane gives a face: its visible box below what its held head covers, clear
+// of its corner beside its column and of its corner's foot (`editorLine`); a
+// pane's scroll marks the frame, so the face is placed again as the pane
+// moves (FP-9). The scene's close re-takes an
 // editor pane's caret and the span its view was anchored at — the first span
 // in view, of two editors the one whose caret was last held — into the entry
 // it lands on (`editorAnchor`; N-GO's; B3-S1).
@@ -535,7 +543,7 @@ import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { drawChord, keyShortcut } from '../nav/keys.js';
 import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML, cornerLead, kindWord, statedChain } from '../text/article.js';
-import { inkOf, strokeOf, strokeIn, cutAt, pointOn } from '../beams/beams.js';
+import { inkOf, strokeOf, strokeIn, cutAt, pointOn, pastSigns } from '../beams/beams.js';
 import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingLineOf } from '../beams/held.js';
 import { SAMENESS, HOLD, LABEL_MIN_PX, cornerWidth } from '../plane/register.js';
 import { LINE_H, MEASURE, MEASURE_CPL, HEAD_CPL, CHAR_W, EDGE, EDGE_GAP, fitFor } from '../plane/layout.js';
@@ -558,6 +566,7 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
 /** @typedef {import('../model/pump.js').Dropped} Dropped */
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../beams/beams.js').Ink} Ink */
+/** @typedef {import('../beams/beams.js').Rect} Rect */
 /** @typedef {import('../plane/register.js').Mark} Mark */
 /** @typedef {import('../text/article.js').ArticleView} ArticleView */
 /** @typedef {import('../text/layer.js').Where} Where */
@@ -1027,7 +1036,9 @@ function namePanes(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} *
  * pointer moving over the scene and leaving it keeps the tie it stands on
  * in the column (`hoverAt`), and the focus entering or leaving a stroke's
  * button or the stop marks the frame, so the next draw chooses the tie drawn
- * whole between the stacked panes anew (`crossingOf`; FP-9).
+ * whole between the stacked panes anew (`crossingOf`; FP-9). A pane's scroll
+ * draws the ties at once and marks the frame, so what stands over the panes
+ * — a face at an editor pane's line (`editorLine`) — is placed again.
  * @param {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement, stop: HTMLButtonElement, strokes: HTMLElement}} e `strokes` the gutter's layer the strokes' buttons stand in
  * @param {{end?: (byKey: boolean) => void, faces?: Faces, history?: (addr: string, byKey: boolean) => void, acted?: () => void}} [acts] `end` the scene's own end: N-GO's `closeScene`, as Esc, zoom-out and ← take it; `faces` the faces a returned stop shows at its site (O-FACES'); `history` a draft's history opened from a pane's corner (N-GO's `history`); `acted` the reader's next act, which a click on a pane's text is (L-LINE's and O-HINT's `act`)
  */
@@ -1062,7 +1073,7 @@ export function attach(e, acts = {}) {
     if (scene && c) LAYER.setStops(c, true, scene.fit.corner === 'head', /** @type {Element | null} */ (at));
   };
   for (const p of [e.paneA, e.paneB]) {
-    p.addEventListener('scroll', () => draw());
+    p.addEventListener('scroll', () => { draw(); markDirty(); });
     // a press on a pane's corner's act, or on what opens the corner whole, leaves the platform's selection where it stands —
     // the passage the act carries — as a press on text would not; a click on an act takes it — a pointer's, or the one the
     // platform makes from Enter or Space at the act — the kept word opening its statement or closing it, a glyph or a head's
@@ -5291,6 +5302,67 @@ function intoPane(E, side, r) {
   const q = pane.getBoundingClientRect(), top = q.top + pane.clientTop + clearOf(pane), bottom = q.top + pane.clientTop + pane.clientHeight;
   const dy = r.bottom > bottom ? Math.min(r.bottom - bottom, r.top - top) : r.top < top ? r.top - top : 0;
   if (dy) pane.scrollTop += dy;
+}
+
+/**
+ * @typedef {Object} EditorLine — the line of an editor pane's text a face raised at its draft stands at, on screen (`editorLine`)
+ * @property {'a' | 'b'} side the pane
+ * @property {Rect} line the box of the glyph at the face's site, else of the last before it that sets one
+ * @property {{x: number, y: number}} from where a face beside the line leaves it: past its block's right edge and any sign the column's edge holds level with it (BM's `pastSigns`), level with the line's middle
+ * @property {Rect} room the box a face stands inside: the pane's visible box below what its held head covers (`clearOf`), clear of its corner beside its column, and of its corner's foot on the side of the foot the line stands
+ */
+
+/**
+ * The line of the editor pane holding a draft a site of the draft's text
+ * stands on, where a face raised there stands (see the head; O-DELETION's;
+ * FP-31, FP-38): of the editor panes holding the draft, the one whose text
+ * holds the platform's focus, else the first, as T-LAYER's caret takes one;
+ * the site placed by its bytes in the image the pane's article was made from
+ * — after the byte that stood before it, else before the one after it, the
+ * text's first position where it names neither — and held inside the text;
+ * the box of the glyph there, else of the last before it that sets one,
+ * sixteen positions back at most, as `lineAt` reads a line. Null where no
+ * editor pane holds the draft, its article places neither byte, no glyph
+ * sets the line, or the line's middle stands outside the room a face stands
+ * in.
+ * @param {string} addr the draft
+ * @param {{before: ISpan[], after: ISpan[]}} site the bytes either side of it, by identity
+ * @returns {EditorLine | null}
+ */
+export function editorLine(addr, site) {
+  const S = scene, E = els;
+  if (!S || !E) return null;
+  const at = typeof document !== 'undefined' ? document.activeElement : null, holding = SIDES.filter((s) => !!S[s].el && editor(S[s]) && S[s].names === addr);
+  const side = holding.find((s) => textHolds(E, s, at)) ?? holding[0];
+  if (!side) return null;
+  const P = S[side], art = /** @type {HTMLElement} */ (P.el), made = LAYER.madeOf(art), pane = paneEl(E, side);
+  if (!made || typeof pane.getBoundingClientRect !== 'function' || typeof art.getBoundingClientRect !== 'function') return null;
+  const before = site.before.length ? REC.placedIn(made.image, site.before) : [], after = before.length || !site.after.length ? [] : REC.placedIn(made.image, site.after);
+  const last = before[before.length - 1];
+  const pos = last ? last.pos + last.width : after.length ? after[0].pos : !site.before.length && !site.after.length && P.d.from >= 0 ? P.d.from : null;
+  if (pos == null) return null;
+  const inText = P.d.from >= 0 ? Math.max(P.d.from, Math.min(pos, P.d.to - 1)) : pos;
+  /** @type {{rect: DOMRect, pos: number} | null} the glyph the line is read from, and its position */
+  let glyph = null;
+  for (let k = inText; !glyph && k >= Math.max(1, inText - 16); k--) {
+    const range = LAYER.rangeIn(art, { addr: P.names, pos: k, width: 1 }), r = range ? [...range.getClientRects()].find((q) => q.width > 0 && q.height > 0) : null;
+    if (r) glyph = { rect: r, pos: k };
+  }
+  const g = glyph, b = g ? made.blocks.find((x) => x.pos <= g.pos && g.pos < x.pos + x.width) : null;
+  const blockEl = g && b ? /** @type {HTMLElement | null} */ (art.querySelector(`.run > [data-pos="${b.pos}"]`)) : null;
+  if (!g || !blockEl) return null;
+  const rectOf = (/** @type {Element} */ x) => { const q = x.getBoundingClientRect(); return { x: q.left, y: q.top, w: q.width, h: q.height }; };
+  const line = { x: g.rect.left, y: g.rect.top, w: g.rect.width, h: g.rect.height }, mid = line.y + line.h / 2;
+  // the room: the pane's visible box below its held head, less the column of its corner beside its text on whichever side it
+  // stands, and cut at its corner's foot on the side of the foot the line stands
+  const q = pane.getBoundingClientRect(), top0 = q.top + pane.clientTop;
+  let left = q.left + pane.clientLeft, right = left + pane.clientWidth, top = top0 + clearOf(pane), bottom = top0 + pane.clientHeight;
+  const c = pane.querySelector(':scope > .corner:not(.head):not(.foot)'), foot = pane.querySelector(':scope > .corner.foot');
+  if (c) { const k = c.getBoundingClientRect(), a = art.getBoundingClientRect(); if (k.left + k.right > a.left + a.right) right = Math.min(right, k.left); else left = Math.max(left, k.right); }
+  if (foot) { const f = foot.getBoundingClientRect(); if (mid < f.top) bottom = Math.min(bottom, f.top); else top = Math.max(top, f.bottom); }
+  if (mid < top || mid > bottom) return null;
+  const signs = [...blockEl.querySelectorAll(':scope > .edge'), ...pane.querySelectorAll(':scope > .edge-sign')].map(rectOf);
+  return { side, line, from: { x: pastSigns({ line, block: rectOf(blockEl), signs }), y: mid }, room: { x: left, y: top, w: Math.max(0, right - left), h: bottom - top } };
 }
 
 /** does a line of a pane's span stand inside its visible height, below what its held head covers; true where the platform lays out no article, the span then taken as in view */

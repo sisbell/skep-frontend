@@ -44,7 +44,8 @@ of VERSIONED the page holds no record of read by `retrieve_i` first (`paste-same
 `delete` then a `reinstate` of the same run (`paste-after-cut`); a word placed again in its own draft and its undo
 taking out the copy alone (`paste-own-draft`); words another page's load typed placed as new bytes (`paste-unminted`);
 a copy's plain text changed at the same lengths placed as new bytes, the paste's face saying so (`paste-forged`); each
-source refusal armed at the paste's `reinstate`, nothing placed, the face in its words (`source-faces`); and the
+source refusal armed at the paste's `reinstate`, nothing placed, the caret where the paste was made, the face in its
+words (`source-faces`); and the
 `reinstate` held, "not yet kept" (`paste-held`). The paste at a published target follows (`published_rows`; B3-S5, the
 paste survey's P8): a word of the own draft copied by the copy door, then at the first edition's span Mod+V's keydown,
 made as a script makes one, left standing, and the paste door answered by C-45 naming the document, C-241's statement
@@ -58,6 +59,14 @@ figure — then `changes` armed once the page is quiet with the draft's own rows
 and rows in the strings table's words, the past pane's corner, the bands, side by side and stacked, the current pane's
 corner split at the narrow width (`read`); and a held line, the act opening on the newest kept state under "now — not yet
 kept" (`unkept`).
+The editor pane follows them (`pane_rows`; skep-frontend #556, B3-S1's scene rule, B3-S13): a reading scene's pane holding
+the case's own draft typed in, its keys answered by its own lines, the way back to the kept caret, and the close re-taking
+the caret (`pane-typed`, `pane-lines`, `pane-way-back`, `pane-close`); and a paste made in a pane faced where it was made
+(B3-S5; the paste survey's P6): the source refused `withheld` at a word of pane A, the caret and the pane standing where
+the paste was made, the face over the scene inside the pane, carried by its scroll and letting a wheel through to it
+(`pane-source-face`); a forged copy pasted in pane B of a scene
+opened from the first edition, the face standing there whatever the walk under the scene stands on, gone once the focus
+goes into the edition's pane (`pane-forged-face`).
 The whole document's entry is a figure (`whole_entry`): the seeded staging draft selected whole and copied through the
 copy door, on the first page.
 Undo, redo and the deletion face are driven there too (`undo_rows`): Mod+Z on
@@ -287,7 +296,7 @@ STATES = [
          claim='the plain text placed as new bytes — one `insert` of the changed words, acked, never a `reinstate` — and the paste\'s face standing where it was made, in the margin beside its line or over the lines beneath it, inside the window: "These words are not the passage in ⟨source⟩ that came with them on the clipboard — placed as new words, not the same material." (L.paste.differs)'),
     dict(screen='B3-S5', state='source-faces', walk='W-08', step=4, drawn=True,
          how="`op` armed on 8744 with each source refusal in turn — `withheld` (its site the origin), `source_not_registered`, `dangling_source`, `bad_run`, `too_many_runs`, `empty_result` — while the page is quiet, then the paste door over a copy of the draft's own words (the paste survey's W3)",
-         claim="each arm taken by the paste's `reinstate`, nothing placed and nothing else dialed — the text as it stood — and the paste's face standing where it was made in that refusal's words: the source withheld naming its origin (B3.paste.withheld), the board saying nothing of it (B3.source_not_registered), else a fault of this client's (L.paste.fault); shot at the withheld face, inside the window"),
+         claim="each arm taken by the paste's `reinstate`, nothing placed and nothing else dialed — the text as it stood, the caret live where the paste was made and never after the words it was copied from — and the paste's face standing where it was made in that refusal's words: the source withheld naming its origin (B3.paste.withheld), the board saying nothing of it (B3.source_not_registered), else a fault of this client's (L.paste.fault); shot at the withheld face, inside the window"),
     dict(screen='B3-S5', state='paste-held', walk='W-08', step=4, drawn=True,
          how="`op` armed to answer `held` at a paste's `reinstate` and `held` to list that line, then the paste door (the paste survey's W4)",
          claim='the paste\'s one `reinstate` answered `held`: the corner reads "not yet kept" (B3.not-yet-kept), the pasted words standing, no face and no island; the line\'s drop takes them out and the corner reads "kept" again'),
@@ -329,6 +338,12 @@ STATES = [
     dict(screen='B3-S1', state='pane-close', walk='W-08', step=7, drawn=True,
          how="beside the first edition, pane A scrolled far down its text and a word there clicked and typed at, then Esc and Esc (D5 K-77, K-63; B3-S1's scene rule)",
          claim="the first Esc leaving the text — the caret kept, the scene standing — the second closing the scene, a Back onto the draft's entry: the plane landing at the span pane A's view was anchored at, never at the view the entry stored as the scene opened, the caret kept there with its span holding the walk, so a key typed then types at it"),
+    dict(screen='B3-S5', state='pane-source-face', walk='W-08', step=4, drawn=True,
+         how="a word of the case's own draft copied by the copy door; the scene beside the first edition (`scene.open(mine, DOC)`), a word of pane A's text clicked, `op` armed `withheld` at the paste's `reinstate` while the page is quiet, then the paste door (the paste survey's P6, W3)",
+         claim="the arm taken by the paste's `reinstate`, nothing placed and the text as it stood, the caret live where the paste was made — never after the words it was copied from, so the pane stands where it stood — and the paste's face standing where the paste was made, in pane A, in the source's refusal's words (B3.paste.withheld) — inside the pane's visible box below its held head and clear of its corner, its layer over the scene; a wheel over it scrolls the pane and never moves the plane; the pane's scroll carries it with its line"),
+    dict(screen='B3-S5', state='pane-forged-face', walk='W-08', step=4, drawn=True,
+         how="a word of the case's own draft copied by the copy door, its plain text changed at the same byte lengths; a LEAP to the first edition, the scene opened from there with the draft in pane B (`scene.open(DOC, mine)`), a word of pane B's text clicked, then the paste door (the paste survey's C3, P6)",
+         claim="one `insert` of the changed words, acked, and the paste's face standing where the paste was made, in pane B, though the walk under the scene stands on the first edition: \"These words are not the passage in ⟨source⟩ that came with them on the clipboard — placed as new words, not the same material.\" (L.paste.differs), the source named as the draft was named when the paste was made — inside the pane's visible box below its held head and clear of its corner; the focus moved into pane A, the face gone"),
     dict(screen='B3-S8', state='select-all', walk='—', step=0, drawn=True,
          how="Mod+A at the live caret in the draft the case minted (K-93)",
          claim="the whole document is one selection, the caret live at its end, the selection's acts' row standing at it inside the window; the platform's copy then takes the document whole as plain text"),
@@ -1385,7 +1400,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     if not session or not board or not (boot and boot.get('machine')):
         for state in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
                       'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'unkept',
-                      'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close'):
+                      'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face'):
             red(state, 'the machine\'s page did not open')
         return
     sid, account, board_id = session['session'], session['account'], board['board']
@@ -1500,7 +1515,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     if not stands:
         for st in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
                       'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'unkept',
-                      'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close'):
+                      'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face'):
             red(st, 'the case\'s own draft did not mount')
         return
     # ---- B3-S3: Mod+Z on an empty stack, before anything is typed in the draft (K-75; BM-42) ----------------------------------
@@ -2276,9 +2291,9 @@ def same_rows(ctx, r, shoot, red, ops_allowed, m):
     draft, standing twice; Mod+Z takes out the copy alone, Mod+Shift+Z puts it back there. `paste-unminted`: an entry
     naming words another page's load typed and no board minted — new bytes, an `insert`. `paste-forged`: a copy whose
     plain text is changed at the same lengths — new bytes, an `insert`, and the paste's face saying so. `source-faces`:
-    `op` armed with each source refusal in turn at the paste's `reinstate` — nothing placed, the face in that refusal's
-    words. `paste-held`: `op` armed `held` at the paste's `reinstate` — "not yet kept", nothing else changed. Each word is
-    checked against `strings.js`."""
+    `op` armed with each source refusal in turn at the paste's `reinstate` — nothing placed, the caret where the paste was
+    made, the face in that refusal's words. `paste-held`: `op` armed `held` at the paste's `reinstate` — "not yet kept",
+    nothing else changed. Each word is checked against `strings.js`."""
     mine, sid = m['mine'], m['sid']
     recentre, quiet, caret_end, corner_word, first_line, held_row, drop_all = m['recentre'], m['quiet'], m['caret_end'], m['corner_word'], m['first_line'], m['held_row'], m['drop_all']
     states = ('paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held')
@@ -2536,7 +2551,7 @@ def same_rows(ctx, r, shoot, red, ops_allowed, m):
     faced = {}
     for name in ('source_not_registered', 'dangling_source', 'bad_run', 'too_many_runs', 'empty_result', 'withheld'):
         quiet()
-        caret_end(line)
+        made_at = caret_end(line)
         n9, seq = n_ops(), ctx.editor_seq()
         ctx.arm('op', refusal={'kind': 'refused', 'name': name, 'status': 200, 'code': name, 'detail': None, 'op': 'reinstate', 'site': {'addr': mine} if name == 'withheld' else {}, 'body': None})
         took7 = paste(data4)
@@ -2544,16 +2559,16 @@ def same_rows(ctx, r, shoot, red, ops_allowed, m):
         quiet()
         sent7 = ops_from(n9)
         want = ('B3.paste.withheld', sentence(ctx, 'B3.paste.withheld', {'origin': mine})) if name == 'withheld' else ('B3.source_not_registered', sentence(ctx, 'B3.source_not_registered', {'address': mine})) if name == 'source_not_registered' else ('L.paste.fault', sentence(ctx, 'L.paste.fault'))
-        st = face().get('standing') or {}
+        st, c7 = face().get('standing') or {}, caret()
         faced[name] = want
         r.check(bool(entry4) and took7 == {'prevented': True} and came and [x['op'] for x in sent7] == ['reinstate'] and name in sent7[0]['answer'] and ctx.consumed('op', seq)
-                and first_line() == line and corner_word() == kept_word and (st.get('id'), st.get('text')) == want and m['state']()['islands'] == [],
-                "B3-S5 · source-faces: the paste's `reinstate` refused `%s` — the arm taken by that frame alone, nothing placed and the text as it stood, the corner \"kept\", and the paste's face in that refusal's words (the paste survey's W3)" % name,
-                {'door': took7, 'came': came, 'sent': [(x['op'], x['answer'][:160]) for x in sent7], 'shown': first_line(), 'face': st, 'want': want})
+                and first_line() == line and c7 == {'addr': mine, 'pos': made_at, 'live': True} and corner_word() == kept_word and (st.get('id'), st.get('text')) == want and m['state']()['islands'] == [],
+                "B3-S5 · source-faces: the paste's `reinstate` refused `%s` — the arm taken by that frame alone, nothing placed and the text as it stood, the caret live where the paste was made — never after the words it was copied from — the corner \"kept\", and the paste's face in that refusal's words (the paste survey's W3)" % name,
+                {'door': took7, 'came': came, 'sent': [(x['op'], x['answer'][:160]) for x in sent7], 'shown': first_line(), 'caret': c7, 'made_at': made_at, 'face': st, 'want': want})
 
     def faces_check(wd):
         return face_drawn(wd, faced.get('withheld') or ('', ''))
-    shoot('source-faces', faces_check, lambda: (recentre(), place(nb(word4) + 1)))
+    shoot('source-faces', faces_check, lambda: (recentre(), caret_end(line)))
     face_off()
 
     # ---- `paste-held`: the paste's `reinstate` answered `held`: "not yet kept", nothing else changed ---------------------------------
@@ -3050,6 +3065,25 @@ HIT_AT = '''((x, y) => { const e = document.elementFromPoint(x, y); if (!e) retu
           heads: [...document.querySelectorAll("#sceneA > .corner.head, #sceneB > .corner.head")].map((h) => ({id: h.id, box: box(h), opened: h.querySelector(":scope > .opened") ? box(h.querySelector(":scope > .opened")) : null, rows: [...h.querySelectorAll(":scope > .hrow")].filter((r) => r.style.visibility !== "hidden").map(box)}))}; })(%s, %s)'''
 # the paragraphs the pane-close row's draft is lengthened by, so its pane scrolls past its first span
 LONG_LINES = ''.join('Line %d of the pane the person scrolls, words to read and to write beside.\n\n' % k for k in range(1, 31))
+# a reading scene's pane as a face standing in it is held to, by its side (`A`, `B`), on screen: its visible box — its client
+# box — the foot of what its held head and a form opened beneath it cover, null where no head is held, and the boxes of its
+# corner standing beside its column and of its corner's foot, each null where none stands
+PANE_ROOM = '''((side) => { const p = document.getElementById("scene" + side); if (!p) return null;
+  const q = p.getBoundingClientRect(), box = (e) => { if (!e) return null; const r = e.getBoundingClientRect(); return {x: r.left, y: r.top, w: r.width, h: r.height}; };
+  const h = p.querySelector(":scope > .corner.head"), o = h ? h.querySelector(":scope > .opened") : null;
+  return {x: q.left + p.clientLeft, y: q.top + p.clientTop, w: p.clientWidth, h: p.clientHeight, held: h ? h.getBoundingClientRect().bottom + (o ? o.offsetHeight : 0) : null,
+          corner: box(p.querySelector(":scope > .corner:not(.head):not(.foot)")), foot: box(p.querySelector(":scope > .corner.foot"))}; })(%s)'''
+# the deletion face's layer as it stands over the reading scene: whether it is lifted there (its `scene` class), its z-index
+# beside the scene's, whether it follows the scene in the page, and whether the pointer passes through a paste's face in it
+OVER_SCENE = '''(() => { const r = document.getElementById("removed"), s = document.getElementById("scene"), f = r.querySelector(".pasted .face"), z = (e) => parseInt(getComputedStyle(e).zIndex, 10) || 0;
+  return {lifted: r.classList.contains("scene"), z: [z(r), z(s)], after: !!(s.compareDocumentPosition(r) & Node.DOCUMENT_POSITION_FOLLOWING), through: f ? getComputedStyle(f).pointerEvents : null}; })()'''
+# a pane scrolled a step down and back `n` times, the page's frame let pass after each, and put back where it stood: the cost of
+# each of the page's frames over them, ms (FP-18)
+SCROLL_FRAMES = '''(async (side, n, step) => { const p = document.getElementById("scene" + side), s0 = p.scrollTop, t0 = performance.now();
+  const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
+  for (let i = 0; i < n; i++) { p.scrollTop = s0 + (i %% 2 ? 0 : step); await frame(); }
+  p.scrollTop = s0; await frame(); await frame();
+  return window.__skep.frames().filter((x) => x.t >= t0).map((x) => x.drawMs); })(%s, %d, %d)'''
 
 
 def pane_rows(ctx, r, shoot, red, ops_allowed, m):
@@ -3062,8 +3096,13 @@ def pane_rows(ctx, r, shoot, red, ops_allowed, m):
     dropped; the word typed again at a click. `pane-lines`: an edition of the person's own beside, then the draft's history
     opened over its kept caret, each key answered by its pane's own line, the past pane's last. `pane-way-back`: the line's
     ending's act moving the focus onto the kept caret's span, the next key typing there. `pane-close`: Esc, then Esc, the
-    close re-taking the pane's caret and the span its view was anchored at, a key typing at it. Each row is shot in the state
-    its check ends in. The rows' writes are their own typing, its undo and the paste; no `history.*` call is made."""
+    close re-taking the pane's caret and the span its view was anchored at, a key typing at it. `pane-source-face`: the
+    draft's own words pasted at a word of pane A, `op` armed `withheld` at their `reinstate` — nothing placed, the paste's
+    face in pane A over the scene, carried by the pane's scroll, a wheel over it scrolling the pane and never the plane, the
+    page's frames while the pane scrolls a figure. `pane-forged-face`: from the first edition's entry, the draft in pane B, a
+    forged copy pasted at a word there — its `insert`, and the face in pane B though the walk under the scene stands on the
+    edition, gone once the focus goes into pane A. Each row is shot in the state its check ends in. The rows' writes are
+    their own typing, its undo and the pastes; no `history.*` call is made."""
     mine, sid, quiet, recentre, caret_end, press, first_line, hold_typed, drop_all = (m[k] for k in ('mine', 'sid', 'quiet', 'recentre', 'caret_end', 'press', 'first_line', 'hold_typed', 'drop_all'))
     act_sel = m['corner'] + HISTORY_ACT
     text_of = lambda: ctx.js(SHOWN_TEXT % json.dumps(mine)) or ''
@@ -3293,6 +3332,132 @@ def pane_rows(ctx, r, shoot, red, ops_allowed, m):
                 'a key types at it': (types, {'caret': c2})}
     shoot('pane-close', close_check, again)
     drop_caret()
+
+    # ---- `pane-source-face`, `pane-forged-face`: a paste's face where the paste was made, in the pane --------------------------------
+    nb = lambda x: len(x.encode('utf8'))
+    face = lambda: ctx.js('window.__skep.pasteFace()') or {}
+    paste = lambda data: ctx.js('window.__skep.paste(%s)' % json.dumps(data))
+    n_ops = lambda: ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "op").length')
+    scroll_of = lambda side: ctx.js('document.getElementById("scene%s").scrollTop' % side)
+    drawn_box = lambda: ((face().get('drawn') or {}).get('face')) or {}
+
+    def ops_from(n):
+        """the page's `op` frames from its n-th on that are no read, parsed, each with its answer"""
+        out = []
+        for c in (ctx.js('window.__skep.bridge.calls().filter((c) => c.name === "op").map((c) => ({frame: c.frame, answer: c.answer}))') or [])[n:]:
+            try:
+                f = json.loads(c['frame'])
+            except (TypeError, ValueError):
+                continue
+            if isinstance(f, dict) and f.get('op') and 'frame' not in f and f['op'] not in ops_allowed:
+                out.append(dict(f, answer=c.get('answer') or ''))
+        return out
+
+    def copied():
+        """the first word of the draft's first line selected on the plane and copied by the copy door, the selection then
+        ended: the word, and the clipboard's flavors"""
+        word = first_line().split(' ')[0]
+        ctx.js('(async () => { const L = await import("./text/layer.js"); L.placeSelection({addr: %s, pos: 1, width: %d}); })()' % (json.dumps(mine), nb(word))); ctx.frames(2)
+        data = (ctx.js('window.__skep.copy()') or {}).get('data') or {}
+        ctx.js('(async () => { const s = window.getSelection(); if (s) s.removeAllRanges(); (await import("./overlays/selection.js")).clear(); })()'); ctx.frames(2)
+        return word, data
+
+    def face_in(side, want):
+        """the paste's face standing in `want`'s words and drawn in pane `side`, inside the room it stands in there — the pane's
+        visible box below what its held head covers, apart from its corner beside its column and its corner's foot — its layer
+        lifted over the scene and the pointer passing through it: as a check's part, (ok, detail)"""
+        f = face()
+        st, dr = f.get('standing') or {}, f.get('drawn') or {}
+        box, room, over = dr.get('face') or {}, ctx.js(PANE_ROOM % json.dumps(side)) or {}, ctx.js(OVER_SCENE) or {}
+        shown_text = ctx.js('(() => { const e = document.querySelector("#removed .pasted .part"); return e ? {id: e.dataset.string, text: e.textContent} : null; })()')
+        top = max(room.get('y', 0), room.get('held') or 0)
+        inside = (bool(box) and bool(room) and box['x'] >= room['x'] - 0.5 and box['x'] + box['w'] <= room['x'] + room['w'] + 0.5
+                  and box['y'] >= top - 0.5 and box['y'] + box['h'] <= room['y'] + room['h'] + 0.5)
+        apart = lambda o: not o or box['x'] + box['w'] <= o['x'] + 0.5 or o['x'] + o['w'] <= box['x'] + 0.5 or box['y'] + box['h'] <= o['y'] + 0.5 or o['y'] + o['h'] <= box['y'] + 0.5
+        lifted = over.get('lifted') is True and len(over.get('z') or []) == 2 and over['z'][0] >= over['z'][1] and over.get('after') is True and over.get('through') == 'none'
+        ok = (st.get('addr') == mine and (st.get('id'), st.get('text')) == want and dr.get('side') == side.lower() and inside and apart(room.get('corner')) and apart(room.get('foot'))
+              and shown_text == {'id': want[0], 'text': want[1]} and lifted)
+        return ok, {'face': f, 'room': room, 'over': over, 'shown': shown_text, 'inside': inside, 'want': want}
+
+    def source_face_check(w):
+        word, data = copied()
+        opened = beside()
+        # a word of a paragraph a third of the way down pane A's text, brought to stand first in view, clicked: the caret live there
+        at = ctx.js(SCROLL_TO_WORD % (json.dumps('A'), json.dumps(0.3)))
+        settled = wait_for(ctx, '!window.__skep.scene.updating()', 10); ctx.frames(2)
+        if at:
+            at = ctx.js(SCROLL_TO_WORD % (json.dumps('A'), json.dumps(0.3))) or at
+            ctx.drv.click(at['x'], at['y']); ctx.frames(3)
+        c = caret()
+        quiet()
+        before, n0, seq = text_of(), n_ops(), ctx.editor_seq()
+        ctx.arm('op', refusal={'kind': 'refused', 'name': 'withheld', 'status': 200, 'code': 'withheld', 'detail': None, 'op': 'reinstate', 'site': {'addr': mine}, 'body': None})
+        took = paste(data)
+        came = wait_for(ctx, '(() => { const f = window.__skep.pasteFace().standing; return !!f && f.addr === %s && f.id === "B3.paste.withheld"; })()' % json.dumps(mine), 10)
+        quiet()
+        sent, c1 = ops_from(n0), caret()
+        want = ('B3.paste.withheld', sentence(ctx, 'B3.paste.withheld', {'origin': mine}))
+        refused = (bool(data.get('application/x-skep-passage')) and opened and bool(c) and c['live'] and c['addr'] == mine and took == {'prevented': True} and came
+                   and [x['op'] for x in sent] == ['reinstate'] and 'withheld' in sent[0]['answer'] and ctx.consumed('op', seq) and text_of() == before and c1 == c)
+        faced = face_in('A', want)
+        # pane A scrolled up a line: the face carried down with its line by as much
+        pitch = round(ctx.js('(() => { const a = document.querySelector("#sceneA > article.dtext"); return a ? parseFloat(getComputedStyle(a).lineHeight) : 0; })()') or 0)
+        s0, y0 = scroll_of('A'), drawn_box().get('y')
+        ctx.js('document.getElementById("sceneA").scrollTop -= %d' % pitch); ctx.frames(3)
+        s1, y1 = scroll_of('A'), drawn_box().get('y')
+        carried = pitch > 0 and s1 < s0 and y0 is not None and y1 is not None and abs((y1 - y0) - (s0 - s1)) <= 1.5
+        ctx.js('document.getElementById("sceneA").scrollTop = %s' % json.dumps(s0)); ctx.frames(3)
+        # a wheel over the face's middle scrolls pane A beneath it, the plane under the scene unmoved
+        b = drawn_box()
+        cam0, s2 = ctx.camera(), scroll_of('A')
+        if b:
+            ctx.drv.wheel(b['x'] + b['w'] / 2, b['y'] + b['h'] / 2, dy=40)
+        rolled = bool(b) and wait_for(ctx, 'document.getElementById("sceneA").scrollTop > %s' % json.dumps(s2), 3)
+        ctx.frames(3)
+        cam1 = ctx.camera()
+        ctx.js('document.getElementById("sceneA").scrollTop = %s' % json.dumps(s2)); ctx.frames(3)
+        # the page's frames while pane A scrolls with the face standing (FP-18), the pane then where it stood: the state the row is shot in
+        ms = ctx.js(SCROLL_FRAMES % (json.dumps('A'), 12, max(1, pitch))) or []
+        r.figures.setdefault('pane_face_scroll', {})[str(w)] = {'frames': len(ms), 'max_ms': round(max(ms), 2) if ms else None, 'median_ms': round(sorted(ms)[len(ms) // 2], 2) if ms else None}
+        ctx.frames(2)
+        return {'nothing placed': (refused, {'opened': opened, 'settled': settled, 'at': at, 'caret': [c, c1], 'door': took, 'came': came, 'sent': [(x['op'], x['answer'][:160]) for x in sent],
+                                            'consumed': ctx.consumed('op', seq), 'unchanged': text_of() == before, 'word': word}),
+                'the face in pane A': faced,
+                'carried by the scroll': (carried, {'pitch': pitch, 'scroll': [s0, s1], 'y': [y0, y1]}),
+                'a wheel over it scrolls the pane': (rolled and cam1 == cam0, {'box': b, 'scroll': s2, 'rolled': rolled, 'camera': [cam0, cam1]})}
+    shoot('pane-source-face', source_face_check, again)
+    close_scene(); drop_caret()
+
+    def forged_face_check(w):
+        word, data = copied()
+        forged = ''.join(chr((ord(ch) - 97 + 1) % 26 + 97) if 'a' <= ch <= 'z' else chr((ord(ch) - 65 + 1) % 26 + 65) if 'A' <= ch <= 'Z' else ch for ch in word)
+        # the scene opened from the first edition: the walk under it there, the draft in pane B
+        ctx.leap(DOC, 1); ctx.frames(2)
+        ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(mine)))
+        opened = wait_for(ctx, 'window.__skep.scene.isOpen() && (window.__skep.scene.pair() || {}).b === %s' % json.dumps(mine), 30)
+        ctx.settle(15); ctx.frames(3)
+        walk = ctx.js('window.__skep.view.focus()') or {}
+        at = click_word('B')
+        c = caret()
+        quiet()
+        # the source named as the face names it at the act, from the draft's record before the board keeps the forged words
+        n0, source = n_ops(), name_now()
+        took = paste(dict(data, **{'text/plain': forged}))
+        landed = kept_now(20)
+        quiet()
+        sent = ops_from(n0)
+        want = ('L.paste.differs', sentence(ctx, 'L.paste.differs', {'source': source}))
+        placed = (bool(data.get('application/x-skep-passage')) and forged != word and nb(forged) == nb(word) and opened and bool(at) and bool(c) and c['live'] and c['addr'] == mine
+                  and took == {'prevented': True} and landed and [x['op'] for x in sent] == ['insert'] and sent[0].get('values') == [forged] and '"ack_addr"' in sent[0]['answer'])
+        return {'the `insert`': (placed, {'opened': opened, 'at': at, 'caret': c, 'door': took, 'kept': landed, 'sent': [(x['op'], x.get('values')) for x in sent], 'word': word, 'forged': forged}),
+                'the walk under the scene on the edition': (walk.get('addr') == DOC, walk),
+                'the face in pane B': face_in('B', want)}
+    shoot('pane-forged-face', forged_face_check, again)
+    # the focus moved into pane A, the first edition's: the face standing in pane B goes
+    stood = (face().get('standing') or {}).get('id') == 'L.paste.differs'
+    ctx.js('document.getElementById("sceneA").focus({preventScroll: true})'); ctx.frames(3)
+    r.check(stood and face().get('standing') is None, "B3-S5 · pane-forged-face: the focus moved into pane A, the first edition's, the paste's face standing in pane B goes (the paste survey's P6)", {'stood': stood, 'after': face()})
+    close_scene(); drop_caret()
     # the rows called no history op of the shell's
     calls = [c['name'] for c in page_calls(ctx)[calls0:]]
     r.check(not any(c.startswith('history.') for c in calls), "the editor pane's rows call no `history.*`: reads, their typing, its undo and the paste", dict(Counter(calls)))

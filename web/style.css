@@ -457,6 +457,11 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #removed .mark:hover { background:#2a1c1e; }
 #removed .face { position:absolute; left:16px; top:0; width:max-content; max-width:280px; pointer-events:auto; padding:4px 8px; font-size:11px; line-height:1.45; color:var(--ink); background:#1b1f25; border:1px solid var(--bad); border-radius:4px; box-shadow:0 2px 10px rgba(0,0,0,.4); }
 #removed .face .part + .part { margin-top:3px; color:var(--dim); }
+/* a paste's face the reading scene holds (O-DELETION's): its layer over the scene, which it follows in the page, under the
+   hint, the find box, the overlay and the LEAP box; the pointer passing through it to the pane beneath, whose wheel scrolls
+   the pane, never the plane under the scene */
+#removed.scene { z-index:26; }
+#removed.scene .face { pointer-events:none; }
 #hint { position:fixed; left:0; top:0; z-index:27; display:none; max-width:360px; }
 #leap.on ~ #hint { z-index:32; }
 #hint.on { display:block; }

@@ -132,7 +132,11 @@
 // ending's act the shortest way back, the close re-taking the pane's caret
 // and its anchored span, a click and a drag placing the caret by element, a
 // paste, a cut, the save chord and select-all made in the pane, and Esc's
-// order there (FP-38, FP-40).
+// order there (FP-38, FP-40); and a paste's face raised in the scene
+// standing while the focus stands in its draft's editor pane, whatever the
+// walk under the scene stands on, written in its layer lifted over the scene
+// and gone once the focus goes into another document's pane, one raised on
+// the plane judged by nothing under a scene (B3-S5).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -147,6 +151,7 @@ import * as LAYER from '../text/layer.js';
 import * as HOST from '../overlays/host.js';
 import * as HINT from '../overlays/hint.js';
 import * as FACES from '../overlays/faces.js';
+import * as DELETION from '../overlays/deletion.js';
 import * as FOCUS from '../nav/focus.js';
 import * as KEYS from '../nav/keys.js';
 import * as SCENE from './scene.js';
@@ -3435,6 +3440,63 @@ test('at a span of an editor pane holding no caret a paste and a cut are answere
     assert.equal(await keyAt(p.paneB, 'a', MOD), true, 'Mod+A at the past state\'s pane: taken');
     assert.deepEqual([LAYER.selectionIn(shownIn(p.paneB, 'b'))?.span, LAYER.caret()], [{ addr: E1, pos: 1, width: byteLength(E1_TEXT) }, null], 'the past state\'s text selected whole, read only: no caret placed');
   } finally { LAYER.dropCaret(); LAYER.readers({}); HINT.act(); }
+}));
+
+Object.assign(script, compared(B, B_TEXT, E1, E1_TEXT));
+
+/** the deletion face's layer as the app attaches it (O-DELETION's): its markup as last written, and the classes it holds */
+function faceLayer() {
+  let html = '';
+  /** @type {Set<string>} */
+  const classes = new Set();
+  DELETION.attach(/** @type {any} */ ({
+    children: [], addEventListener() {}, contains: () => false,
+    get innerHTML() { return html; }, set innerHTML(/** @type {string} */ v) { html = String(v); },
+    classList: { toggle: (/** @type {string} */ c, /** @type {boolean} */ on) => { if (on) classes.add(c); else classes.delete(c); } },
+  }));
+  return { written: () => html.includes('data-paste='), classes };
+}
+
+test('a paste\'s face raised in a reading scene stands while the platform\'s focus stands in a pane that is its draft\'s editor, whatever the walk under the scene stands on, written in its layer lifted over the scene; the focus gone into another document\'s pane takes it down for good, though the walk stands on the draft; one raised on the plane stands under a scene, judged by nothing and not written there (B3-S5; the paste survey\'s P6; foundations §3.1)', () => onPage(async (p) => {
+  const layer = faceLayer(), words = FACES.pasteWords('differs', E1);
+  /** where a paste was made in the draft, by the bytes either side of its third position */
+  const site = () => ({ before: LAYER.shownIdentity(E1, 2, 1), after: LAYER.shownIdentity(E1, 3, 1) });
+  try {
+    await PUMP.loadWhole(E1); await PUMP.loadWhole(B);
+    // opened from the edition: the walk under the scene on it, the draft in pane B its editor
+    await WALK.focusTo(B, 1, true, null, true);
+    await SCENE.open(B, E1);
+    p.paneB.focus();
+    assert.deepEqual([SCENE.panes()?.b.editor, WALK.current()?.addr, site().before.length], [true, B, 1], 'pane B the draft\'s editor, the walk under the scene on the edition');
+    DELETION.pasted(E1, site(), words);
+    DELETION.render();
+    assert.deepEqual([DELETION.pasteFace(), layer.written(), layer.classes.has('scene')], [{ addr: E1, ...words }, true, true], 'the face standing, written in its layer lifted over the scene');
+    p.paneA.focus();
+    DELETION.render();
+    assert.deepEqual([DELETION.pasteFace(), layer.written(), layer.classes.has('scene')], [null, false, false], 'the focus in the edition\'s pane: the face gone');
+    p.paneB.focus();
+    DELETION.render();
+    assert.equal(DELETION.pasteFace(), null, 'gone for good: the focus back in the draft\'s pane raises nothing');
+    SCENE.close();
+    // opened from the draft: the walk under the scene on it, the draft in pane A its editor
+    await WALK.focusTo(E1, 1, true, null, true);
+    await SCENE.open(E1, B);
+    p.paneA.focus();
+    DELETION.pasted(E1, site(), words);
+    DELETION.render();
+    assert.deepEqual([DELETION.pasteFace(), layer.written()], [{ addr: E1, ...words }, true], 'the face standing while the focus stands in the draft\'s pane');
+    p.paneB.focus();
+    DELETION.render();
+    assert.deepEqual([DELETION.pasteFace(), WALK.current()?.addr], [null, E1], 'the focus walked into the edition\'s pane: the face gone, though the walk under the scene stands on the draft');
+    SCENE.close();
+    // raised on the plane, the walk on the draft: a scene covers it and judges nothing
+    DELETION.pasted(E1, site(), words);
+    DELETION.render();
+    await SCENE.open(B, E1);
+    p.paneA.focus();
+    DELETION.render();
+    assert.deepEqual([DELETION.pasteFace(), layer.written()], [{ addr: E1, ...words }, false], 'raised on the plane: standing under the scene, the focus in another document\'s pane, and not written there');
+  } finally { DELETION._reset(); }
 }));
 
 test('Esc in a scene ends what stands nearest first: the selection standing in the text of the pane the focus is at — at an editor pane\'s live caret the caret standing live where it is, the frame collapsing the selection at it — then a live caret in an editor pane, the text left, the caret kept and the scene standing; then the scene (D5 K-63, K-77; issue #556)', () => onPageWithText(async (p, dom) => {
