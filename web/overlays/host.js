@@ -122,7 +122,9 @@
 // set as `aria-label` and `aria-description`, the dialog's drawn text
 // holding only what it shows. A face a key or the system raised is heard
 // through the one status region without the focus moving (D4; K-58), its
-// caption before its words, the same words for the ear — save one whose
+// caption before its words, the same words for the ear — again where the
+// region holds them already for a face that answers an act at every press
+// (`Overlay.again`; FP-41) — save one whose
 // words the landing that met it says where the focus lands (`told`; N-WALK's
 // description), which is heard there once.
 // Each act is told whether a key ran it by the controller's one reading:
@@ -165,7 +167,8 @@
 // dismissed, the focus returning through the controller — save a jump's
 // reading or reaching face, whose read the new class answers, and a moment's
 // face, which is the shell's.
-// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20, FP-25, FP-26, FP-29, FP-36.
+// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20, FP-25, FP-26, FP-29, FP-36,
+// FP-41.
 
 import { sx, sy, viewport, markDirty } from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
@@ -209,6 +212,7 @@ import { esc } from '../util.js';
  * @property {About} [about] what a card or a list is about (see the head): what a departure keeps of it; none for a face, a moment and the trail's list
  * @property {boolean} [notice] a face a read brought once it answered, or a version move's reading face (see the head): no act on the chrome, standing below what the reader opened; it never takes the focus
  * @property {boolean} [described] a card whose words are its content (see the head): named by its words' head, as a face is, and described by what stands beneath it
+ * @property {boolean} [again] a face that answers an act at every press (FP-41): said through the status region again where it holds the face's words already
  */
 
 /** @type {HTMLElement | null} */
@@ -457,7 +461,7 @@ export function show(o) {
   if (!o.notice) { made++; reading = 0; }
   if (!el) return;
   if (o.notice && opened(current)) { stack(o); return; }
-  if (o.kind === 'face' && typing()) { const words = wordsOf(o.html); if (words.length) FOCUS.say(words); return; }
+  if (o.kind === 'face' && typing()) { const words = wordsOf(o.html); if (words.length) FOCUS.say(words, false, !!o.again); return; }
   if (jumpFace(o)) takeDownStacked();
   const host = el;
   const from = document.activeElement; // where the act found the focus — read first, for the markup written below removes a control of this host that held it
@@ -478,7 +482,7 @@ export function show(o) {
     else FOCUS.open('overlay', { el: host, from, byKey: !!o.takeFocus || ((replacing || lifted) && held), first: firstControl(host, o.first) });
   }
   place();
-  if (o.kind === 'face' && !o.takeFocus && !o.told) FOCUS.say(faceWords(host));
+  if (o.kind === 'face' && !o.takeFocus && !o.told) FOCUS.say(faceWords(host), false, !!o.again);
   markDirty();
 }
 
@@ -494,12 +498,12 @@ export function show(o) {
  */
 function stack(o) {
   const say = !o.told || typing();
-  if (!stackEl) { const words = say ? wordsOf(o.html) : []; if (words.length) FOCUS.say(words); return; }
+  if (!stackEl) { const words = say ? wordsOf(o.html) : []; if (words.length) FOCUS.say(words, false, !!o.again); return; }
   const host = stackEl;
   if (stacked) { const fresh = stacked.id !== o.id; stacked = o; FOCUS.keep(host, keyOf, () => writeInto(host, o, 'notice', fresh)); }
   else { stacked = o; writeInto(host, o, 'notice', true); FOCUS.open('notice', { el: host, byKey: false }); }
   place();
-  if (say) FOCUS.say(faceWords(host));
+  if (say) FOCUS.say(faceWords(host), false, !!o.again);
   markDirty();
 }
 

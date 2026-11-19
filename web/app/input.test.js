@@ -65,8 +65,10 @@
 // document places no caret, leaving the caret by the document its moving end
 // lies in; and an engine that clears the platform's selection as the focus
 // moves gets the drag's selection back, its direction kept, once the walk's
-// item has taken the focus (FP-12, FP-20, FP-21, FP-24, FP-25, FP-30, FP-34,
-// FP-35, FP-36, FP-40).
+// item has taken the focus; and a pointer's press and a wheel, wherever they
+// fall, are acts an undo reading where its step stands keeps, the step taken
+// where it stands and the caret left where it stood (FP-12, FP-20, FP-21,
+// FP-24, FP-25, FP-30, FP-34, FP-35, FP-36, FP-40).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';
@@ -74,6 +76,7 @@ import * as HOST from '../overlays/host.js';
 import * as SEL from '../overlays/selection.js';
 import * as REC from '../model/records.js';
 import * as WRITE from '../write/write.js';
+import * as MACHINE from '../write/machine.js';
 import * as LAYER from '../text/layer.js';
 import * as LK from '../links/links.js';
 import * as PORT from '../bridge/port.js';
@@ -1789,4 +1792,43 @@ test('with no caret standing, a drag in text the person may not edit, forward or
   assert.deepEqual([walkAt(), WALK.panelShown(), FOCUS.ringShown(), mirror.classList.contains('shown')], [['block', O, 1], true, true, true], '↑: the walk on the first line, its panel shown, the ring drawn');
   dom.fire('window', 'pointerdown', { target: dom.document.body });
   assert.deepEqual([WALK.panelShown(), FOCUS.ringShown(), mirror.classList.contains('shown')], [false, true, false], 'a pointer\'s press: the panel hidden, the ring standing');
+}));
+
+test('a pointer\'s press and a wheel, wherever they fall — a wheel over the overlay among them — are acts an undo reading the text its step stands in keeps: the step taken where it stands once the read answers, the live caret where it stood, never placed where the step began (issue #673\'s design decision; FP-25)', () => onGestures(async ({ D, E, dom }) => {
+  const n = byteLength(LINES), fake = FAKE.create({});
+  PORT.boot(fake);
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  MACHINE.handIn();
+  /** @type {Array<[string, string, () => void]>} each act, and the draft it is made over */
+  const acts = [
+    ['a press', D, () => dom.fire('window', 'pointerdown', { target: dom.document.body })],
+    ['a wheel over the overlay', E, () => dom.fire('window', 'wheel', { target: { closest: () => ({ id: 'overlay' }) }, preventDefault() {}, ctrlKey: false, metaKey: false, deltaX: 0, deltaY: 40, clientX: 700, clientY: 450, timeStamp: performance.now() })],
+  ];
+  try {
+    for (const [what, addr, act] of acts) {
+      const first = F.retrieveV(addr, 1, 27), shown = () => { const d = LAYER.shownOf(addr); return REC.textOf(d.runs, d.from, d.to); };
+      // a step kept by the board — "Tumbler" typed at the draft's first position — and the draft held from its second span on, as a long draft is
+      const at = { before: [], after: [{ prefix: addr + '.0.1', ordinal: 8, width: 1 }], pos: 1 };
+      WRITE.setStacks(addr, [{ id: 1, kind: 'typing', open: false, acts: [99], placed: [{ prefix: addr + '.0.1', ordinal: 1, width: 7 }], took: [], began: at, place: at, where: null, stood: null, removal: null }], []);
+      REC.invalidate(addr);
+      REC.takeSpanSet(addr, [{ subspace: 1, ordinal: 1, positions: n }]);
+      REC.takeDelivery(addr, [{ pos: 28, width: n - 27, kind: 'content', text: LINES.slice(27), ref: null, origin: null }], 7, { from: 28, runs: [{ iStart: addr + '.0.1.28', width: n - 27 }] });
+      await WALK.focusTo(addr, 28, true, null, true);
+      LAYER.placeCaret(addr, 40);
+      const script = /** @type {Record<string, unknown>} */ ({
+        [FAKE.keyOf('op', { frame: first })]: { result: { as_of: 8, resp: 'delivery', items: [{ content: LINES.slice(0, 27) }] } },
+        [FAKE.keyOf('op', { frame: F.image(addr, 1, 27) })]: { result: { as_of: 8, resp: 'runs', runs: [{ i_start: addr + '.0.1.1', width: '27' }] } },
+      });
+      const board = FAKE.create(script);
+      PORT.boot(board);
+      const release = board.hold('op', { frame: first });
+      const pressing = KEYS.dispatch(plainKey('z', MOD), ON_PLANE);
+      for (let i = 0; i < 40 && !board.asked.includes(FAKE.keyOf('op', { frame: first })); i++) await tick();
+      assert.ok(board.asked.includes(FAKE.keyOf('op', { frame: first })), `${what}: the undo reading where its step stands`);
+      act();
+      release();
+      await pressing;
+      assert.deepEqual([shown(), caretNow(), WRITE.undoOf(addr).length], [LINES.slice(7), [addr, 33, true], 0], `${what}: the step taken where it stands, the caret where it stood, by its bytes — never placed where the step began`);
+    }
+  } finally { MACHINE.takeOut(); PORT.boot(null); KEYS._reset(); }
 }));

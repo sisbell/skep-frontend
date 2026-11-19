@@ -631,6 +631,14 @@ export const STRINGS = {
   // not answering, the list's top line over words not yet kept, the head of rows with no recorded time, a folded day's mark,
   // a signed row's hand, and the kinds of change the design gives no word
   'L.history.unanswered': { text: '⟨board⟩ is not answering — its past states can be read once it answers', cls: 'DRAFT', kind: 'K18', source: '', screen: 'B3-S7: the corner\'s "show its history" inert while the board is not answering', lane: true },
+  // B3-S3's words no design document carries: the undo chord reading where its step was made, then the running mark, and
+  // the step not taken where that read fails or the board already does not answer, a redo's alike
+  'L.undo.reading': { text: 'undoing — reading where that change was made', cls: 'DRAFT', kind: 'K32', source: '', screen: 'B3-S3: the undo chord reading the text its step stands in, at the act\'s site, else the one line (D5 K-75)', lane: true },
+  'L.redo.reading': { text: 'redoing — reading where that change was made', cls: 'DRAFT', kind: 'K32', source: '', screen: 'B3-S3: the redo chord reading the text its step stands in, at the act\'s site, else the one line (D5 K-75)', lane: true },
+  'L.undo.unanswered': { text: 'not undone — ⟨board⟩ is not answering', cls: 'DRAFT', kind: 'K6', source: '', screen: 'B3-S3: the undo chord at a step whose text could not be read, the board not answering, said at every press (D5 K-75)', lane: true },
+  'L.undo.unanswered.next': { text: 'that change is still the next to undo; ⟨undo chord⟩ again once it answers', cls: 'DRAFT', kind: 'K18', source: '', screen: 'B3-S3: after the undo chord\'s not-answering line (D5 K-75)', lane: true },
+  'L.redo.unanswered': { text: 'not redone — ⟨board⟩ is not answering', cls: 'DRAFT', kind: 'K6', source: '', screen: 'B3-S3: the redo chord at a step whose text could not be read, the board not answering, said at every press (D5 K-75)', lane: true },
+  'L.redo.unanswered.next': { text: 'that change is still the next to redo; ⟨redo chord⟩ again once it answers', cls: 'DRAFT', kind: 'K18', source: '', screen: 'B3-S3: after the redo chord\'s not-answering line (D5 K-75)', lane: true },
   'L.history.unkept': { text: 'now — not yet kept', cls: 'DRAFT', kind: 'K25', source: '', screen: 'B3-S7: the list\'s top line where the draft holds words the board has not kept', lane: true },
   'L.history.time-unrecorded': { text: 'time not recorded', cls: 'DRAFT', kind: 'K25', source: '', screen: 'B3-S7: the list\'s head over rows with no recorded time, folding like a day', lane: true },
   'L.history.folded': { text: '▸', cls: 'DRAFT', kind: 'K17', source: '', screen: 'B3-S7: the mark of a folded day\'s head in the list', lane: true },

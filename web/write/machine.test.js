@@ -25,8 +25,10 @@
 // the drop where the landing cannot be read, is answered at a face where the
 // person's act comes first, is declined where its source is withheld, and
 // goes inside the one close; a redo reinstates kept bytes and re-types
-// unminted ones under their own ordinals; and an inverse is never composed as
-// it was typed. A paste and a cut made at the caret (BM-31): each a step of
+// unminted ones under their own ordinals; an inverse is never composed as
+// it was typed; and a step is decided over text the page holds of it — never
+// by one byte beside it — its text read outward from where it stands, one
+// made at no caret too, where the page holds it in part (BM-42). A paste and a cut made at the caret (BM-31): each a step of
 // its own that joins no run — a paste one `insert`, after one `delete` where
 // it replaces a selection, a cut one `delete` — riding the open burst, its
 // undo leaving the caret where the act began and a paste's redo after the
@@ -49,6 +51,7 @@ import * as PORT from '../bridge/port.js';
 import * as FAKE from '../test/fake-port.js';
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
+import * as F from '../model/frames.js';
 import * as CAM from '../plane/camera.js';
 import { docBox } from '../plane/projection.js';
 import { estimate } from '../plane/layout.js';
@@ -1037,6 +1040,89 @@ test('BM-42: where the page holds a long draft in part and none of the text a ke
     'none of the step\'s text is held: nothing changed, the step still on the stack — never taken for one with nothing left — and the answer says where it began');
   window(1, 'abXYcdef', [[1, 2], [100, 2], [3, 4]]);
   assert.deepEqual([MACHINE.undo(D).how, shown(D).slice(0, 6), stacks(D)], ['done', 'abcdef', { undo: [], redo: [['typing', false, 2]] }], 'its text held again: the step taken back');
+});
+
+test('BM-42: a step is decided over text the page holds of it — every stretch of its bytes and those beside them read on both sides — never by one byte beside it: held text ending at the byte before its words, or between them, answers where it stands, nothing taken, the step never passed as spent and the stack never said empty; a redo the same; and a step made at no caret answers where its first edit was made (issue #673\'s design decision)', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  boot((frame, n) => (frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)));
+  /** a stretch of the draft as a read delivers it — the draft twenty-two positions long — each run of it by its first address */
+  const window = (/** @type {number} */ pos, /** @type {string} */ text, /** @type {Array<[number, number]>} */ stretches, asOf = 30) => {
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 22 }]);
+    REC.takeDelivery(D, [{ pos, width: byteLength(text), kind: 'content', text, ref: null, origin: null }], asOf, { from: pos, runs: stretches.map(([first, width]) => ({ iStart: own(D, first), width })) });
+  };
+  window(1, 'abcdefgh', [[1, 8]], 7);
+  type(D, 7, 'XY');
+  WRITE.endRun(D);
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  window(1, 'abcdefXYgh', [[1, 6], [100, 2], [7, 2]]);
+  assert.deepEqual([WRITE.edits(D), stacks(D).undo, WRITE.undoOf(D)[0].place.pos], [[], [['typing', false, 2]], 7], 'a run typed at 7, kept and read back: no edit of it on the page, its place where its caret stood');
+  REC.invalidate(D);
+  window(1, 'abcdef', [[1, 6]]);
+  assert.deepEqual([MACHINE.undo(D), stacks(D), shown(D)], [{ how: 'away', at: 7, out: '', back: '' }, { undo: [['typing', false, 2]], redo: [] }, 'abcdef'],
+    'held to the byte before its words alone: where it stands answered, nothing taken — the step neither passed as spent nor the stack said empty');
+  REC.invalidate(D);
+  window(1, 'abcdefX', [[1, 6], [100, 1]]);
+  assert.deepEqual([MACHINE.undo(D), stacks(D), shown(D)], [{ how: 'away', at: 7, out: '', back: '' }, { undo: [['typing', false, 2]], redo: [] }, 'abcdefX'], 'held to the middle of its words: never taken in part');
+  REC.invalidate(D);
+  window(1, 'abcdefXYgh', [[1, 6], [100, 2], [7, 2]]);
+  assert.deepEqual([MACHINE.undo(D), shown(D).slice(0, 8), stacks(D)], [{ how: 'done', at: 7, out: 'XY', back: '' }, 'abcdefgh', { undo: [], redo: [['typing', false, 2]] }], 'held with a byte read past it on each side: taken back');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  window(1, 'abcdefghij', [[1, 10]], 40);
+  REC.invalidate(D);
+  window(12, 'lmnop', [[12, 5]], 40);
+  assert.deepEqual([MACHINE.redo(D), stacks(D)], [{ how: 'away', at: 7, out: '', back: '' }, { undo: [], redo: [['typing', false, 2]] }], 'a redo whose text is not held: where it stands, nothing put back');
+  // a step made at no caret: where its first edit was made
+  WRITE.setStacks(D, [], []);
+  REC.invalidate(D);
+  window(1, 'abcdefghij', [[1, 10]], 40);
+  WRITE.addEdits(D, [{ pos: 9, width: 1, text: '' }]);
+  const step = WRITE.undoOf(D)[0];
+  assert.deepEqual([step.kind, step.began.pos, step.place.pos, step.place.before, step.place.after], ['put-back', 0, 9, [{ prefix: `${D}.0.1`, ordinal: 8, width: 1 }], [{ prefix: `${D}.0.1`, ordinal: 9, width: 1 }]],
+    'made at no caret: no caret\'s place, but its own — its first edit\'s position and the byte either side of it');
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  window(1, 'abcdefghj', [[1, 8], [10, 1]], 50);
+  REC.invalidate(D);
+  window(12, 'lmnop', [[12, 5]], 50);
+  assert.deepEqual(MACHINE.undo(D), { how: 'away', at: 9, out: '', back: '' }, 'its text not held: answered where it stands');
+});
+
+test('BM-42: the text a step stands in read where the page does not hold it (`reach`) — outward from where the step stands, once its draft\'s flight has landed, its text and image taken in one step — changes nothing of the draft\'s edits or its stacks, and the press after it is decided over held text; a refusal the read meets is handed up, the step left as it stood (issue #673\'s design decision; FP-27)', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  /** @type {unknown} what the board answers the read of the text past the held text, from the run's place on */
+  let rest = { result: { as_of: 41, resp: 'delivery', items: [{ content: 'XYghijklmnopqrst' }] } };
+  const TEXT_ON = FAKE.canon(F.retrieveV(D, 7, 16)), IMAGE_ON = FAKE.canon(F.image(D, 7, 16));
+  const image = { result: { as_of: 41, resp: 'runs', runs: [{ i_start: own(D, 100), width: '2' }, { i_start: own(D, 7), width: '14' }] } };
+  const { ops } = boot((frame, n) => (FAKE.canon(frame) === TEXT_ON ? rest : FAKE.canon(frame) === IMAGE_ON ? image : frame.op === 'insert' ? MINTED(own(D, 100 * n), 19 + n) : ACK(19 + n)));
+  const window = (/** @type {number} */ pos, /** @type {string} */ text, /** @type {Array<[number, number]>} */ stretches, asOf = 30) => {
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 22 }]);
+    REC.takeDelivery(D, [{ pos, width: byteLength(text), kind: 'content', text, ref: null, origin: null }], asOf, { from: pos, runs: stretches.map(([first, width]) => ({ iStart: own(D, first), width })) });
+  };
+  window(1, 'abcdefgh', [[1, 8]], 7);
+  type(D, 7, 'XY');
+  WRITE.endRun(D);
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  const writes = ops.length;
+  REC.invalidate(D);
+  window(1, 'abcdef', [[1, 6]], 40);
+  assert.equal(MACHINE.undo(D).how, 'away', 'the run\'s text not held');
+  let reached = MACHINE.reach(D, false);
+  await flush(); await flush();
+  assert.deepEqual([await reached, WRITE.edits(D), stacks(D), shown(D).slice(0, 10)], [{ refused: null }, [], { undo: [['typing', false, 2]], redo: [] }, 'abcdefXYgh'], 'read from where it stands: the text past the held text and its image taken, nothing else changed');
+  assert.deepEqual(ops.slice(writes).map((o) => o.frame.op), ['retrieve_v', 'image'], 'one read of the text and its image, asked together');
+  assert.deepEqual(ops.slice(writes).map((o) => FAKE.canon(o.frame)), [TEXT_ON, IMAGE_ON], 'from the step\'s place on, nearest it first');
+  assert.deepEqual([MACHINE.undo(D), shown(D).slice(0, 8)], [{ how: 'done', at: 7, out: 'XY', back: '' }, 'abcdefgh'], 'the press after it decided over held text');
+  // a refusal the read meets, for the redo of that step: the undo's inverse kept by the board first
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  REC.invalidate(D);
+  window(1, 'abcdef', [[1, 6]], 50);
+  rest = { refused: { kind: 'unreachable', name: 'unreachable' } };
+  reached = MACHINE.reach(D, true);
+  assert.deepEqual([await reached, stacks(D), shown(D)], [{ refused: { kind: 'unreachable', name: 'unreachable' } }, { undo: [], redo: [['typing', false, 2]] }, 'abcdef'], 'handed up, the step as it stood, nothing read in');
 });
 
 test('BM-34: an undo of a run whose burst is in flight takes it back on the page at once and sends its inverse only after the ack, which mints the bytes the `delete` names; a refusal answered after the press is dropped with the words, no island kept and no face raised (BM-45)', async (t) => {

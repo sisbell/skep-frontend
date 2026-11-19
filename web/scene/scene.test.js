@@ -133,7 +133,9 @@
 // pane's own line ending with where the person was last writing, that
 // ending's act the shortest way back, the close re-taking the pane's caret
 // and its anchored span, a click and a drag placing the caret by element, a
-// paste, a cut, the save chord and select-all made in the pane, and Esc's
+// paste, a cut, the save chord and select-all made in the pane, the undo
+// chord at a step whose text the pane does not hold reading it where the step
+// stands, the scene standing, and Esc's
 // order there (FP-38, FP-40); its draft kept as the view's while a refresh
 // reads it again, at far scale too, the pane its editor throughout — a key
 // and the redo chord made at its caret at once — and the pane following the
@@ -3244,6 +3246,40 @@ test('at a live caret in an editor pane every caret key is the plane\'s: a print
   SCENE.followShown();
   assert.ok(SCENE.panes()?.a.blocks.some((b) => b.text.includes('\t')), 'the pane set again with the tab typed');
 })));
+
+test('the undo chord at a live caret in an editor pane whose step stands in text the pane does not hold reads that text where the step stands, as on the plane, the scene standing and nothing moved while it reads, its line standing; then takes the step in the pane as over held text, the caret where it began (issue #673\'s design decision; D5 K-75)', () => onPage((p) => withEditors(() => withMachine(async () => {
+  await PUMP.loadWhole(E1);
+  await SCENE.open(E1, B);
+  p.paneA.focus();
+  /** E1's own bytes from its `ordinal`-th, `width` of them */
+  const ownE1 = (/** @type {number} */ ordinal, /** @type {number} */ width) => [{ prefix: E1 + '.0.1', ordinal, width }];
+  const FIRST = F.retrieveV(E1, 1, 15);
+  Object.assign(script, {
+    [FAKE.keyOf('op', { frame: FIRST })]: { result: { as_of: 9, resp: 'delivery', items: [{ content: E1_TEXT.slice(0, 15) }] } },
+    [FAKE.keyOf('op', { frame: F.image(E1, 1, 15) })]: { result: { as_of: 9, resp: 'runs', runs: [{ i_start: E1 + '.0.1.1', width: '15' }] } },
+  });
+  try {
+    // a step of E1's kept by the board — "xyz" taken out before "own" — and E1 held from its second span on, as a long draft is
+    const at = { before: ownE1(3, 1), after: ownE1(4, 1), pos: 4 };
+    const xyz = { runs: [{ pos: 1, width: 3, kind: /** @type {const} */ ('content'), text: 'xyz', ref: null, origin: null }], ids: [{ pos: 1, width: 3, prefix: E1 + '.0.1', ordinal: 900 }] };
+    WRITE.setStacks(E1, [{ id: 1, kind: 'typing', open: false, acts: [99], placed: [], took: [{ took: xyz, before: ownE1(3, 1), after: ownE1(4, 1) }], began: at, place: at, where: null, stood: null, removal: null }], []);
+    REC.invalidate(E1);
+    REC.takeSpanSet(E1, [{ subspace: 1, ordinal: 1, positions: E1_TEXT.length }]);
+    REC.takeDelivery(E1, [{ pos: 16, width: E1_TEXT.length - 15, kind: 'content', text: E1_TEXT.slice(15), ref: null, origin: null }], 8, { from: 16, runs: [{ iStart: E1 + '.0.1.16', width: E1_TEXT.length - 15 }] });
+    SCENE.followShown();
+    LAYER.placeCaret(E1, 30);
+    const release = fake.hold('op', { frame: FIRST }), trail = TRAIL.length();
+    const pressing = keyAt(p.paneA, 'z', { metaKey: KEYS.MAC, ctrlKey: !KEYS.MAC });
+    await until(() => fake.asked.includes(FAKE.keyOf('op', { frame: FIRST })), 'the text before the held text asked, from where the step stands');
+    assert.deepEqual([SCENE.isOpen(), HOST.currentState()?.id, TRAIL.length(), LAYER.caret(), WRITE.undoOf(E1).length], [true, 'undoing:' + E1, trail, { addr: E1, pos: 30, live: true }, 1],
+      'reading: the scene standing, its line standing, nothing moved and nothing taken');
+    release();
+    await pressing;
+    SCENE.followShown();
+    assert.deepEqual([SCENE.isOpen(), HOST.currentState(), SCENE.panes()?.a.blocks[0].text, LAYER.caret(), WRITE.undoOf(E1).length, WRITE.removalsOf(E1)], [true, null, 'An xyzown draft.', { addr: E1, pos: 4, live: true }, 0, []],
+      'the read answered: its line gone, the step taken in the pane — the words it took out put back — the caret where it began, the scene standing');
+  } finally { HOST.dismiss(); WRITE.setStacks(E1, [], []); WRITE.setFlight(E1, false); }
+}))));
 
 test('where both panes hold drafts of the person\'s own, each is its draft\'s editor with its own caret, one live at a time: Enter at the other pane\'s span places the caret there, the first draft\'s kept where it stood (issue #556\'s design decision; B3-S1 P59)', () => onPage((p) => withEditors(async () => {
   await PUMP.loadWhole(E1); await PUMP.loadWhole(E2);

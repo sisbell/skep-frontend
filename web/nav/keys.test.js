@@ -168,8 +168,12 @@
 // naming where the person was last writing, an edition's and another's
 // document's — each ending on the constant sentence while it stands whole;
 // a step whose line awaits the person's act answered at its face, a moved
-// run's at its face standing at the corner, its words said; and an undo the
-// board declined said in the one line as two sentences. A chord is drawn as
+// run's at its face standing at the corner, its words said; an undo the
+// board declined said in the one line as two sentences; and a step whose text
+// the page does not hold read where it stands, nothing moved meanwhile, its
+// line at the act's site, keys waiting behind it, Esc setting it aside, a
+// pointer's act keeping it, and a failed read, or a board already not
+// answering, saying why at every press. A chord is drawn as
 // the platform's menus draw it — on macOS its modifier glyphs in the order
 // ⌃ ⌥ ⇧ ⌘ before its key and "Return" alone, elsewhere its modifiers' words
 // joined by "+" — in the selection's slots and in every key a hint's line
@@ -203,7 +207,7 @@ import { cornerHTML, faceWords } from '../text/article.js';
 import { spanOfBlock } from '../text/span.js';
 import { docBox } from '../plane/projection.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
-import { t, tHTML, hintSentences, sentence, sentences, sentenceRuns, joinRuns, heard, megabytes } from '../strings.js';
+import { t, tHTML, hintSentences, opening, sentence, sentences, sentenceRuns, joinRuns, heard, megabytes } from '../strings.js';
 import { esc, fill, byteLength } from '../util.js';
 import { page } from '../test/dom.js';
 
@@ -3361,4 +3365,153 @@ test('the kept line\'s second act is reached by a corner\'s keys: the corner\'s 
     }
     assert.deepEqual([await at(act, 'ArrowLeft'), dom.document.activeElement === kept], [true, true], '← back to the kept word');
   } finally { WRITE.setKept(D, null); }
+}));
+
+// ---- the undo chord at a step whose text the page does not hold (D5 K-75; D6 BM-42) ---------------------------------------
+
+/** D's own bytes from its `ordinal`-th, `width` of them, by identity */
+const ownOfD = (/** @type {number} */ ordinal, /** @type {number} */ width) => [{ prefix: D + '.0.1', ordinal, width }];
+/** a step of D's stack, kept by the board: its own first word "First", typed at a caret standing at D's first position before " line." */
+const typedFirst = () => /** @type {import('../write/write.js').Step} */ ({
+  id: 1, kind: 'typing', open: false, acts: [99], placed: ownOfD(1, 5), took: [], began: { before: [], after: ownOfD(6, 1), pos: 1 }, place: { before: [], after: ownOfD(6, 1), pos: 1 }, where: null, stood: null, removal: null,
+});
+/** D held in part, as a long draft is: its extent, and its text from its second span on with its image — none of its first line */
+function partOfD() {
+  REC.invalidate(D);
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: N }]);
+  REC.takeDelivery(D, [{ pos: 14, width: N - 13, kind: 'content', text: TEXT.slice(13), ref: null, origin: null }], 7, { from: 14, runs: [{ iStart: D + '.0.1.14', width: N - 13 }] });
+}
+/** the read D's first line and the blank line after it are asked by, near the step's place */
+const FIRST_LINES = F.retrieveV(D, 1, 13);
+/** the board answering that read, and the image asked with it */
+const firstLines = () => /** @type {Record<string, unknown>} */ ({
+  [FAKE.keyOf('op', { frame: FIRST_LINES })]: { result: { as_of: 8, resp: 'delivery', items: [{ content: TEXT.slice(0, 13) }] } },
+  [FAKE.keyOf('op', { frame: F.image(D, 1, 13) })]: { result: { as_of: 8, resp: 'runs', runs: [{ i_start: D + '.0.1.1', width: '13' }] } },
+});
+/** the overlay host and the element its notice stands in below it as elements of the test DOM, so a face's words are said as the host says them, the platform's element class a stand-in an anchor is told apart from; the stand-ins put back after */
+function hostOnPage() {
+  const g = /** @type {any} */ (globalThis), was = g.HTMLElement;
+  g.HTMLElement = class {};
+  const dom = page();
+  HOST.attach(/** @type {any} */ (dom.element('div')), /** @type {any} */ (dom.element('div')));
+  return { restore: () => { HOST.dismiss(); HOST.attach(/** @type {any} */ (hostEl)); g.HTMLElement = was; } };
+}
+/** ticks let pass until a call is asked of the fake port */
+async function untilAskedOf(/** @type {ReturnType<typeof FAKE.create>} */ fake, /** @type {object} */ frame) {
+  const key = FAKE.keyOf('op', { frame });
+  for (let i = 0; i < 40 && !fake.asked.includes(key); i++) await tick();
+  assert.ok(fake.asked.includes(key), 'asked: ' + key);
+}
+/** ticks let pass until no key waits and none is made */
+async function keysMade() { for (let i = 0; i < 40 && KEYS.holding() > 0; i++) await tick(); }
+
+test('K-75 at a step whose text the page does not hold — a long draft held in part — moves nothing while it reads the text where the step stands: no LEAP and no trail entry, the camera, the walk, the caret and the text still, its line at the act\'s site with the running mark and said; keys pressed meanwhile, a navigation act among them, wait behind it; as the read answers its line goes, the step is taken as over held text, the caret where it began, and the keys are made after it in order (issue #673\'s design decision; D5 K-75; D6 BM-42; FP-25)', () => onPlane(async ({ said }) => {
+  const host = hostOnPage(), fake = FAKE.create(firstLines());
+  PORT.boot(fake);
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  MACHINE.handIn();
+  try {
+    partOfD();
+    WRITE.setStacks(D, [typedFirst()], []);
+    await focusOn(D, 14);
+    LAYER.placeCaret(D, 20);
+    const release = fake.hold('op', { frame: FIRST_LINES });
+    const trail = TRAIL.length(), view = CAM.view(), walk = [WALK.current()?.addr, WALK.current()?.pos], n = said.length;
+    const pressing = KEYS.dispatch(keyOf('z', MOD), PLANE);
+    await untilAskedOf(fake, FIRST_LINES);
+    assert.deepEqual([HOST.currentState()?.id, TRAIL.length(), CAM.view(), [WALK.current()?.addr, WALK.current()?.pos], caret(), shown(), WRITE.undoOf(D).length], ['undoing:' + D, trail, view, walk, [D, 20, true], TEXT.slice(13), 1],
+      'reading: its line standing, nothing moved — no trail entry, the camera, the walk and the caret where they stood, the text and the stack as they stood');
+    const html = String(HOST.currentState()?.html);
+    assert.ok(html.includes('aria-busy="true"') && html.includes('data-string="L.running"'), `its words in flight, the running mark after them: ${html}`);
+    assert.deepEqual(said.slice(n), [heard(opening('L.undo.reading'))], 'its line said as a jump\'s reading face is: its words alone');
+    assert.equal(await KEYS.dispatch(keyOf('q'), PLANE), true, 'a printable key at the caret: taken');
+    assert.equal(await KEYS.dispatch(keyOf('[', MOD), PLANE), true, 'Back: taken');
+    assert.deepEqual([shown(), KEYS.holding(), TRAIL.length()], [TEXT.slice(13), 3, trail], 'both wait behind the read: nothing typed, Back made nowhere yet');
+    release();
+    await pressing;
+    await keysMade();
+    assert.deepEqual([HOST.currentState(), shown(), caret(), WRITE.undoOf(D).map((s) => s.acts.includes(99)), WRITE.redoOf(D).length], [null, 'q' + TEXT.slice(5), [D, 2, true], [false], 0],
+      'its line gone; the step taken as over held text, the caret where it began; then the key typed there, after it — a step of its own, which empties the redo stack');
+    assert.ok(said.slice(n).some((s) => s.startsWith(heard(t('B3.undo.said.taken-out', { 'first words': 'First' })))), `what it took out said: ${said.slice(n).join(' | ')}`);
+    const ops = fake.asked.filter((k) => k.startsWith('op:')).map((k) => JSON.parse(k.slice(3)).op);
+    assert.deepEqual(ops.slice(0, 2), ['retrieve_v', 'image'], 'the board asked the read near the step first, its image with it');
+    assert.ok('delete,insert'.startsWith(ops.slice(2).join()), `then, Back departing from the text after the key, the undo's inverse before the key typed after it: ${ops}`);
+  } finally { MACHINE.takeOut(); PORT.boot(null); host.restore(); LAYER.dropCaret(); WRITE.clearEdits(D); WRITE.setStacks(D, [], []); KEYS._reset(); }
+}));
+
+test('Esc sets an undo reading the text its step stands in aside — its line, standing below the card the reader opened, taken down, the card standing, the keys held behind it dropped, the step left next as the read answers, nothing taken — and a pointer\'s or the camera\'s act made meanwhile keeps it: the step taken where it stands as the read answers and said, the caret where that act left it (issue #673\'s design decision; FP-25, FP-36)', () => onPlane(async ({ said }) => {
+  const host = hostOnPage(), fake = FAKE.create(firstLines());
+  PORT.boot(fake);
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  MACHINE.handIn();
+  try {
+    partOfD();
+    WRITE.setStacks(D, [typedFirst()], []);
+    await focusOn(D, 14);
+    LAYER.placeCaret(D, 20);
+    HOST.show({ kind: 'card', id: 'card:open', anchor: null, html: '<span class="label">a card the reader opened</span>', acts: {} });
+    let release = fake.hold('op', { frame: FIRST_LINES });
+    let pressing = KEYS.dispatch(keyOf('z', MOD), PLANE);
+    await untilAskedOf(fake, FIRST_LINES);
+    assert.deepEqual([HOST.currentState()?.id, HOST.notice()?.id], ['card:open', 'undoing:' + D], 'its line a notice below the card the reader opened, covering none of it');
+    await KEYS.dispatch(keyOf('q'), PLANE);
+    assert.equal(await KEYS.dispatch(keyOf('Escape'), PLANE), true, 'Esc: taken at once, never held');
+    await tick();
+    assert.deepEqual([HOST.currentState()?.id, HOST.notice(), caret(), KEYS.holding()], ['card:open', null, [D, 20, true], 1], 'its line, the innermost thing, taken down — the card standing — the caret live where it stood, the key held behind it dropped');
+    release();
+    await pressing;
+    await keysMade();
+    assert.deepEqual([shown(), WRITE.undoOf(D).length, WRITE.redoOf(D).length, caret()], [TEXT, 1, 0, [D, 20, true]], 'the read answered: nothing taken, the step still next, no key typed');
+    HOST.dismiss();
+    // a pointer's act made while it reads, leaving the caret kept where it stood
+    partOfD();
+    release = fake.hold('op', { frame: FIRST_LINES });
+    const n = said.length;
+    pressing = KEYS.dispatch(keyOf('z', MOD), PLANE);
+    await untilAskedOf(fake, FIRST_LINES);
+    KEYS.pointed();
+    LAYER.leaveCaret('walk');
+    release();
+    await pressing;
+    assert.deepEqual([shown(), WRITE.undoOf(D).length, caret()], [TEXT.slice(5), 0, [D, 15, false]], 'the step taken where it stands; the caret kept where the pointer\'s act left it, by its bytes, never placed where the step began');
+    assert.ok(said.slice(n).some((s) => s.startsWith(heard(t('B3.undo.said.taken-out', { 'first words': 'First' })))), 'and said');
+  } finally { MACHINE.takeOut(); PORT.boot(null); host.restore(); LAYER.dropCaret(); WRITE.clearEdits(D); WRITE.setStacks(D, [], []); KEYS._reset(); }
+}));
+
+test('where the board already does not answer, the undo chord at a step whose text the page does not hold reads nothing and is answered at once at the act\'s site — "Not undone — ⟨board⟩ is not answering." then that the change is still the next to undo — said again at every press, a redo\'s in its own words; where its read meets the board not answering the same line, and any other refusal in its own words, the step staying next (issue #673\'s design decision; FP-34, FP-41)', () => onPlane(async ({ said }) => {
+  const host = hostOnPage(), script = firstLines(), fake = FAKE.create(script);
+  PORT.boot(fake);
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  MACHINE.handIn();
+  const board = t('L.mirror.board.name', { node: '1', origin: '' });
+  const notUndone = heard(sentences(sentence('L.undo.unanswered', { board }), sentence('L.undo.unanswered.next', { 'undo chord': KEYS.drawChord('Mod+Z') })));
+  const reads = () => fake.asked.filter((k) => k.includes('"op":"retrieve_v"')).length;
+  try {
+    partOfD();
+    WRITE.setStacks(D, [typedFirst()], []);
+    await focusOn(D, 14);
+    LAYER.placeCaret(D, 20);
+    REC.setDaemon('unreachable');
+    for (const press of [1, 2]) {
+      const n = said.length;
+      await KEYS.dispatch(keyOf('z', MOD), PLANE);
+      await tick();
+      assert.deepEqual([HOST.currentState()?.id, said.slice(n), reads(), WRITE.undoOf(D).length, shown()], ['face:not-undone', [notUndone], 0, 1, TEXT.slice(13)], `press ${press}: at once, nothing read, its line said — again, though the region holds it — and nothing changed`);
+    }
+    const stood = /** @type {import('../write/write.js').Step} */ ({ ...typedFirst(), stood: [{ took: { runs: [{ pos: 1, width: 5, kind: 'content', text: 'First', ref: null, origin: null }], ids: [{ pos: 1, width: 5, prefix: D + '.0.1', ordinal: 1 }] }, before: [], after: ownOfD(6, 1) }] });
+    WRITE.setStacks(D, [], [stood]);
+    let n = said.length;
+    await KEYS.dispatch(keyOf('z', { ...MOD, shiftKey: true }), PLANE);
+    assert.deepEqual([HOST.currentState()?.id, said.slice(n)], ['face:not-redone', [heard(sentences(sentence('L.redo.unanswered', { board }), sentence('L.redo.unanswered.next', { 'redo chord': KEYS.drawChord('Mod+Shift+Z') })))]], 'a redo\'s line in its own words');
+    WRITE.setStacks(D, [typedFirst()], []);
+    REC.setDaemon('running');
+    HOST.dismiss();
+    script[FAKE.keyOf('op', { frame: FIRST_LINES })] = { refused: { kind: 'unreachable', name: 'unreachable' } };
+    n = said.length;
+    await KEYS.dispatch(keyOf('z', MOD), PLANE);
+    assert.deepEqual([HOST.currentState()?.id, said.at(-1), reads(), WRITE.undoOf(D).length], ['face:not-undone', notUndone, 1, 1], 'its read met the board not answering: the same line, the step next');
+    script[FAKE.keyOf('op', { frame: FIRST_LINES })] = { refused: { kind: 'refused', name: 'range_not_present', status: 200, code: 'range_not_present', detail: null, op: 'retrieve_v', site: {}, body: null } };
+    await KEYS.dispatch(keyOf('z', MOD), PLANE);
+    assert.deepEqual([HOST.currentState()?.id, said.at(-1), reads(), WRITE.undoOf(D).length, shown()], ['face:not-undone', heard(sentence('B1.range_not_present')), 2, 1, TEXT.slice(13)], 'another refusal: its own words, the step next, nothing changed');
+  } finally { REC.setDaemon(null); MACHINE.takeOut(); PORT.boot(null); host.restore(); LAYER.dropCaret(); WRITE.clearEdits(D); WRITE.setStacks(D, [], []); KEYS._reset(); }
 }));

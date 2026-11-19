@@ -12,7 +12,10 @@
 // and made at the jump's landing (`replay`) in the order pressed, with the
 // context it was pressed in, marked as made there, its act read again where
 // the focus is then (`route`), so a key means the same however slowly the
-// board answers; a jump that never lands drops the keys it held. A key made
+// board answers; a jump that never lands drops the keys it held. While an
+// undo or a redo reads the text its step stands in, every key but Esc is
+// held so, the navigation acts too, and made once its outcome is known —
+// dropped where Esc sets it aside (`undoChord`). A key made
 // at the landing takes nothing from a field the reader types in (FP-20): a
 // surface it opens stands beside the field, which keeps the caret (N-FOCUS's
 // `open`), and Esc passes over the chrome the field stands in (`esc`); one
@@ -181,7 +184,9 @@
 // does nothing.
 // Esc closes the innermost thing, in one order (`esc`; §4 rule 7; D7): the
 // box, a card or scene still reading, the notice standing below the overlay
-// (FP-36; O-HOST's), the overlay, a jump reaching, the find — its current
+// (FP-36; O-HOST's), the overlay, an undo reading the text its step stands
+// in — set aside by a key's Esc alone, its line taken down — a jump
+// reaching, the find — its current
 // match left selected with the focus on it (N-FIND's `close`; FP-20) — in the
 // scene the selection standing in the text of the pane the focus is at, then
 // a live caret in an editor pane, the text left and the caret kept there
@@ -297,7 +302,19 @@
 // "taken out — …" then "put back — …" by the first words of each. Where the
 // step's line awaits an act of the person's at its face, the press shows that
 // face — a moved document's standing at its corner, opened whole there where
-// it stands compact and its words said — and takes none of its acts. Where
+// it stands compact and its words said — and takes none of its acts. A step
+// whose text the page does not hold — a long draft held in part, on the
+// plane or in an editor pane — moves nothing while that text is read
+// (W-MACHINE's `reach`): a line at the act's site says the chord is reading
+// where the change was made, with the running mark, placed and heard as a
+// jump's reading face is, and goes as the read answers, the press then
+// decided as over held text; keys pressed meanwhile wait behind it and are
+// made after it in order, Esc sets it aside, and a pointer's or the
+// camera's act is kept, the step then taken where it stands and said
+// (`pointed`). Where the read fails the step stays next, and the line says
+// why at every press in its cause's words — the board not answering, said at
+// once with no read where the board already does not answer, else the
+// refusal's own (O-FACES' `notUndone`; FP-34, FP-41). Where
 // the draft cannot be written the
 // reason's line answers it (`unwritableSays`). On an empty stack the undo is
 // answered by the empty stack's line; with no such draft, by the document's
@@ -316,10 +333,12 @@
 // K3), its spoken words S22's for the drawn chord.
 // State (FP-10), beside the held keys: whether Mod+S has been
 // answered whole this session (`saveAnswered`), how many keys the dispatch
-// has taken (`keysTaken`), the save chord's latest answer (`saving`), and the
-// latest paste or cut made (`clipping`).
+// has taken (`keysTaken`), the save chord's latest answer (`saving`), the
+// latest paste or cut made (`clipping`), and the undo or redo reading the
+// text its step stands in — set aside, or kept by a pointer's or the
+// camera's act (`undoing`).
 // Rules: FP-1, FP-2, FP-9, FP-10, FP-11, FP-13, FP-14, FP-20, FP-21, FP-24,
-// FP-25, FP-27, FP-35, FP-36, FP-38, FP-39, FP-40, FP-41.
+// FP-25, FP-27, FP-34, FP-35, FP-36, FP-38, FP-39, FP-40, FP-41.
 
 import * as GO from './go.js';
 import * as WALK from './walk.js';
@@ -554,7 +573,7 @@ export const keyShortcut = (chord) => chord.split('+').map((p) => (p === 'Mod' ?
  * @typedef {Object} Ctx — where the focus is, and whether a key made the act
  * @property {'plane' | 'caret' | 'line' | 'box' | 'overlay' | 'landing' | 'corner' | 'scene' | 'scene-acts' | 'field'} where `caret` the plane, or a reading scene's editor pane, while a live caret stands in its text (T-LAYER's `caret`, `caretPane`; set here, `whereNow`), `scene` a reading scene's pane or its corner, `scene-acts` its bar's buttons, `landing` a landing's line's acts (O-LAND)
  * @property {boolean} byKey a key made the act (the focus owner's one reading, `FOCUS.byKey`)
- * @property {boolean} [landed] the key is made at a jump's landing, held while the jump was in the air (`replay`): Esc passes over the chrome a field the reader types in stands in (`esc`), and a key pressed at a corner is dropped (`cornerKey`)
+ * @property {boolean} [landed] the key is made at a jump's landing, held while the jump was in the air — or once an undo reading the text its step stands in is decided, held behind it (`replay`): Esc passes over the chrome a field the reader types in stands in (`esc`), and a key pressed at a corner is dropped (`cornerKey`)
  * @property {'a' | 'b'} [pane] the reading scene's pane whose text the key was pressed at — never its corner (SC's `textPane`; set here, `whereNow`): its span focus the key's site, and its own line the one a key it swallows raises
  */
 
@@ -578,7 +597,7 @@ export const keyShortcut = (chord) => chord.split('+').map((p) => (p === 'Mod' ?
  * @property {KeyboardEvent | null} e the key; null for a paste
  * @property {{text: string, entry: string, at: Pressed} | null} [paste] a paste's plain text and skep's own entry, each read as its event was dispatched, and what its line is told of the event (`pasteEvent`)
  * @property {Ctx} ctx where the focus was as it was pressed, and whether a key made it
- * @property {Promise<boolean>} jump the landing it waits for (N-GO's `aground`): true where the jump landed, false where it never did
+ * @property {Promise<boolean>} jump the landing it waits for (N-GO's `aground`), after a paste's read or an undo's outcome where one was out as it was pressed (`Undoing.decided`): true where it came, false where the jump never landed or Esc set the undo aside
  */
 
 /** @type {Held[]} the keys held, in the order they were pressed */
@@ -600,18 +619,32 @@ export const saved = () => saving;
 let clipping = Promise.resolve();
 /** @type {Promise<unknown> | null} a paste whose source is being read by identity (T-LAYER's `caretPaste`), settled once it is placed or told: keys wait for it as for a jump in the air (`waiting`) */
 let reading = null;
+
+/**
+ * @typedef {Object} Undoing — an undo or a redo reading the text its step stands in (`undoChord`; see the head)
+ * @property {string} addr the draft
+ * @property {boolean} aside Esc set it aside (`setAside`): its read's answer changes nothing, and the keys held behind it are dropped
+ * @property {boolean} kept a pointer's or the camera's act was made while it read (`pointed`): the step is taken where it stands, said, and nothing else moved
+ * @property {Promise<boolean>} decided the press's outcome known: true once its step is taken, answered at its face or not taken — what the keys held behind it wait on (`hold`); false where it was set aside
+ * @property {(known: boolean) => void} settle `decided` settled; once, any later call doing nothing
+ */
+
+/** @type {Undoing | null} the undo or redo reading the text its step stands in, until the chord's act ends; null where none reads */
+let undoing = null;
+/** does an undo or a redo reading the text its step stands in hold the keys behind it: one reads, and Esc has not set it aside */
+const undoWaits = () => !!undoing && !undoing.aside;
 /** the latest paste or cut made at the caret, settled once the walk stands on the caret's span and any line its draft owes the edit is said (`pasteAt`, `cutEvent`): what the gate and the tests wait on */
 export const clipped = () => clipping;
 /** the keys that are a modifier going down: none of them a key typed */
 const MODIFIER_KEYS = ['Shift', 'Meta', 'Control', 'Alt', 'AltGraph', 'CapsLock'];
-/** reset what the save chord holds (tests): Mod+S not yet answered whole, no key taken, no answer owed, no paste or cut being made */
-export function _reset() { saveAnswered = false; keysTaken = 0; saving = Promise.resolve(); clipping = Promise.resolve(); reading = null; }
+/** reset what the save chord holds (tests): Mod+S not yet answered whole, no key taken, no answer owed, no paste or cut being made, no undo reading */
+export function _reset() { saveAnswered = false; keysTaken = 0; saving = Promise.resolve(); clipping = Promise.resolve(); reading = null; undoing = null; }
 
-/** the keys held for a landing, and the one whose act is being made there (the gate's settle signal) */
-export const holding = () => held.length + (making ? 1 : 0);
+/** the keys held for a landing, the one whose act is being made there, and an undo or a redo reading the text its step stands in (the gate's settle signal) */
+export const holding = () => held.length + (making ? 1 : 0) + (undoing ? 1 : 0);
 
-/** does a key the page acts on wait now: a jump is in the air, a paste's source is being read (`reading`), or held keys wait for their landing or are being made there (`hold`) */
-const waiting = () => GO.inAir() || reading !== null || held.length > 0 || replaying;
+/** does a key the page acts on wait now: a jump is in the air, a paste's source is being read (`reading`), an undo or a redo reads the text its step stands in (`undoWaits`), or held keys wait for their landing or are being made there (`hold`) */
+const waiting = () => GO.inAir() || reading !== null || undoWaits() || held.length > 0 || replaying;
 
 /**
  * Where the focus is, read now (see the head): the plane while a live caret
@@ -900,7 +933,11 @@ function draftCopied(entry) {
  * during an IME composition. The navigation acts are made at once; every
  * other key the page would act on while a jump is in the air — or while the
  * keys it held are being made — waits for its landing (`hold`; see the head),
- * save the line's ← and →, which move among its acts. Every key but a walk
+ * save the line's ← and →, which move among its acts. While an undo or a
+ * redo reads the text its step stands in, every key waits behind it, the
+ * navigation acts too, save Esc where no jump in the air or paste's read
+ * holds it: made at once, its order setting that undo aside (`undoChord`,
+ * `esc`). Every key but a walk
  * key or K-8 at the plane, and a modifier going down, hides the walk's panel
  * as it is pressed (N-WALK's `hidePanel`; see the head).
  * @param {KeyboardEvent} e
@@ -930,17 +967,33 @@ export async function dispatch(e, ctx) {
     if (REC.board() && (chord === 'Mod+F' || findDir(chord))) return findAct(e, findDir(chord), ctx)();
     return false; // a field takes its keys
   }
-  const byKey = ctx.byKey;
-  // the navigation acts — Back / Forward (K-20, K-21), the trail (K-40), WHOLE BOARD / HOME (K-13, K-14): made at once, a jump in the air abandoned (FP-25)
-  if (chord === 'Mod+[') { GO.back(byKey); return true; }
-  if (chord === 'Mod+]') { GO.forward(byKey); return true; }
-  if (/^Mod\+[1-9]$/.test(chord)) { GO.toTrailEntry(Number(chord.slice(4)), byKey); return true; }
-  if (chord === 'Mod+0') { GO.wholeBoard(byKey); return true; }
-  if (chord === 'Mod+Shift+H') { GO.home(byKey); return true; }
+  // the navigation acts: made at once, a jump in the air abandoned (FP-25) — held, as every other key is, behind an undo reading the text its step stands in
+  const nav = navAct(chord, ctx.byKey);
+  if (nav) { if (undoWaits()) { e.preventDefault(); hold(e, ctx); return true; } return nav(); }
   const run = route(e, chord, ctx);
   if (!run) return false;
-  if (waiting() && !(ctx.where === 'line' && (chord === '←' || chord === '→'))) { e.preventDefault(); hold(e, ctx); return true; }
+  // Esc sets an undo reading the text its step stands in aside at once, where no jump in the air or paste's read holds it too
+  const sets = chord === 'Esc' && undoWaits() && !GO.inAir() && reading === null;
+  if (waiting() && !sets && !(ctx.where === 'line' && (chord === '←' || chord === '→'))) { e.preventDefault(); hold(e, ctx); return true; }
   return run();
+}
+
+/**
+ * The navigation acts — Back and Forward (K-20, K-21), the trail (K-40),
+ * WHOLE BOARD and HOME (K-13, K-14) — unmade: made at once, a jump in the
+ * air abandoned (FP-25), save behind an undo reading the text its step
+ * stands in (`dispatch`, `replay`). Null for any other chord.
+ * @param {string} chord
+ * @param {boolean} byKey
+ * @returns {Act | null}
+ */
+function navAct(chord, byKey) {
+  if (chord === 'Mod+[') return () => { GO.back(byKey); return true; };
+  if (chord === 'Mod+]') return () => { GO.forward(byKey); return true; };
+  if (/^Mod\+[1-9]$/.test(chord)) return () => { GO.toTrailEntry(Number(chord.slice(4)), byKey); return true; };
+  if (chord === 'Mod+0') return () => { GO.wholeBoard(byKey); return true; };
+  if (chord === 'Mod+Shift+H') return () => { GO.home(byKey); return true; };
+  return null;
 }
 
 /**
@@ -1382,36 +1435,132 @@ function undoTarget() {
  * whole there where it stands compact and its words said (O-FACES'
  * `answerAtFace`). A draft that cannot be written now is answered by its
  * reason's line; an empty undo stack by its own; no target by `undoNone`. A
- * redo with nothing to put back is taken and says nothing. A step standing
- * in text the page does not hold — a long draft held in part — is reached
- * first by a LEAP to where it began (N-GO's `leapTo`), then taken; where its
- * text is still not held nothing is changed. In a reading scene the press acts
- * in the editor pane: no LEAP leaves the scene for a step its text does not
- * hold, the caret placed live where the step began in that pane, its span
- * focus following it (`follow`), and a face standing at the pane's corner's
- * kept word (SC's `keptWordOf`).
+ * redo with nothing to put back is taken and says nothing. A step whose text
+ * the page does not hold — a long draft held in part — moves nothing while
+ * its text is read (W-MACHINE's `reach`): its line stands at the act's site,
+ * "undoing — reading where that change was made" with the running mark,
+ * placed and heard as a jump's reading face is (`undoSite`; O-FACES'
+ * `undoReading`; FP-25), and goes as the read answers, the press then decided
+ * as over held text. Meanwhile every key waits behind it and is made after
+ * it in order (`hold`), Esc sets it aside — the keys behind it dropped, its
+ * answer changing nothing (`setAside`) — and a pointer's or the camera's act
+ * is kept (`pointed`): the step is then taken where it stands and said, the
+ * caret, the selection, the walk and the view left as that act left them.
+ * Where its read fails the step stays next, and the line says why at the
+ * act's site, at every press — "not undone — ⟨board⟩ is not answering" and
+ * that it is still next, at once with no read where the board already does
+ * not answer (M-REC's `daemon`), else the refusal's own words (O-FACES'
+ * `notUndone`; FP-34, FP-41); a redo's lines its own. In a reading scene the
+ * press acts in the editor pane, which reads the same way, the scene
+ * standing: the caret placed live where the step began in that pane, its
+ * span focus following it (`follow`), and a face or a line standing at the
+ * pane's corner's kept word (SC's `keptWordOf`).
  * @param {KeyboardEvent} e
  * @param {Ctx} ctx
  * @param {boolean} redo
  * @returns {Promise<void>}
  */
 async function undoChord(e, ctx, redo) {
-  const addr = undoTarget(), scene = SCENE.isOpen();
+  const addr = undoTarget();
   if (!addr) { if (!redo) undoNone(e, ctx); return; }
   if (unwritableSays(addr, e, ctx)) return;
-  let out = redo ? MACHINE.redo(addr) : MACHINE.undo(addr);
-  // the step stands in text the page does not hold of a long draft: its place read first, by a LEAP to where it began, then the press made — never out of a scene
-  if (out.how === 'away' && out.at != null && !scene) { await GO.leapTo(addr, { pos: out.at, how: 'key', byKey: ctx.byKey }); out = redo ? MACHINE.redo(addr) : MACHINE.undo(addr); }
-  if (out.how === 'away') return;
-  if (out.how === 'face') {
-    const corner = scene ? null : LAYER.cornerOf(addr), word = scene ? SCENE.keptWordOf(addr) : corner ? /** @type {HTMLElement | null} */ (corner.querySelector('.kept-word')) : null;
-    if (!FACES.unkept(addr, word, false)) FACES.answerAtFace(addr);
-    return;
+  const press = () => (redo ? MACHINE.redo(addr) : MACHINE.undo(addr));
+  let out = press();
+  /** @type {Undoing | null} the press's own read, where it reads */
+  let mine = null;
+  try {
+    if (out.how === 'away') {
+      if (REC.daemon() === 'unreachable') { FACES.notUndone(addr, undoSite(addr), null, redo); return; }
+      const u = mine = undoing = begun(addr);
+      FACES.undoReading(addr, undoSite(addr), redo);
+      // its line stands until the outcome is known: the press met a step the page holds, or the read failed
+      for (;;) {
+        const r = await MACHINE.reach(addr, redo);
+        if (u.aside) return;
+        if (r.refused || WRITE.unwritable(addr)) {
+          FACES.endUndoReading(addr);
+          if (r.refused) FACES.notUndone(addr, undoSite(addr), r.refused, redo); else unwritableSays(addr, e, ctx);
+          return;
+        }
+        out = press();
+        if (out.how !== 'away') break;
+      }
+      FACES.endUndoReading(addr);
+    }
+    if (out.how === 'face') {
+      const scene = SCENE.isOpen(), corner = scene ? null : LAYER.cornerOf(addr), word = scene ? SCENE.keptWordOf(addr) : corner ? /** @type {HTMLElement | null} */ (corner.querySelector('.kept-word')) : null;
+      if (!FACES.unkept(addr, word, false)) FACES.answerAtFace(addr);
+      return;
+    }
+    if (out.how === 'empty') { if (!redo) HINT.show('B3.undo.empty', null, { ...hinted(e, ctx), ending: UNDO_CONSTANT }); return; }
+    // a pointer's or the camera's act made while the step's text was read is kept: the step taken where it stands, and said
+    if (!(mine && mine.kept)) {
+      if (SEL.selected()) SEL.clear();
+      if (out.at != null) { LAYER.placeCaret(addr, out.at); await follow(); }
+    }
+    undoSaid(addr, out, redo);
+  } finally {
+    if (mine) {
+      if (!mine.aside) FACES.endUndoReading(addr);
+      mine.settle(!mine.aside);
+      if (undoing === mine) undoing = null;
+    }
   }
-  if (out.how === 'empty') { if (!redo) HINT.show('B3.undo.empty', null, { ...hinted(e, ctx), ending: UNDO_CONSTANT }); return; }
-  if (SEL.selected()) SEL.clear();
-  if (out.at != null) { LAYER.placeCaret(addr, out.at); await follow(); }
-  undoSaid(addr, out, redo);
+}
+
+/**
+ * An undo or a redo begun reading the text its step stands in (`Undoing`):
+ * neither set aside nor kept, its outcome not yet known.
+ * @param {string} addr the draft
+ * @returns {Undoing}
+ */
+function begun(addr) {
+  /** @type {(known: boolean) => void} */
+  let settle = () => {};
+  /** @type {Promise<boolean>} */
+  const decided = new Promise((r) => { settle = r; });
+  return { addr, aside: false, kept: false, decided, settle };
+}
+
+/**
+ * Where the undo chord's lines stand — its act's site (FP-25): on the plane
+ * beneath the character the draft's caret stands before, the draft the
+ * anchor's sign, so the one line carries the line's words while the draft is
+ * out of the visible view (O-HOST's `aside`); in a reading scene at the kept
+ * word of the corner of the editor pane holding the draft (SC's
+ * `keptWordOf`), where a face the chord answers stands, else beneath that
+ * pane's text (T-LAYER's `caretPane`), else at the viewport's corner.
+ * @param {string} addr the draft
+ * @returns {import('../overlays/host.js').Anchor | null}
+ */
+function undoSite(addr) {
+  if (SCENE.isOpen()) { const word = SCENE.keptWordOf(addr), pane = LAYER.caretPane(); return word ? { el: word } : pane ? { el: pane.article } : null; }
+  const c = LAYER.caretSpan(addr);
+  return { span: { addr, pos: c ? c.pos : 1, width: 1 }, sign: addr };
+}
+
+/**
+ * A pointer's or the camera's act made (APP-INPUT's: every press, every
+ * wheel): an undo or a redo reading the text its step stands in is kept —
+ * its step taken where it stands once its read answers, and said, nothing
+ * moved for it (`undoChord`). Nothing where none reads.
+ */
+export function pointed() { if (undoing && !undoing.aside) undoing.kept = true; }
+
+/**
+ * Esc at an undo or a redo reading the text its step stands in (`esc`): set
+ * aside — its line taken down where it still stands (O-FACES'
+ * `endUndoReading`), the keys held behind it dropped, its read's answer
+ * changing nothing. False where none reads, or it stands aside already.
+ * @returns {boolean}
+ */
+function setAside() {
+  const u = undoing;
+  if (!u || u.aside) return false;
+  u.aside = true;
+  FACES.endUndoReading(u.addr);
+  u.settle(false);
+  return true;
 }
 
 /**
@@ -1470,14 +1619,19 @@ WRITE.onDeclined(declined);
  * made there, in the order pressed, with the context it was pressed in, marked
  * as made there (`Ctx.landed`), each read where the focus is then (`route`);
  * dropped, with every other key held for the same jump, where the jump never
- * lands. A paste is held the same way, by its text (`pasteEvent`).
+ * lands. A paste is held the same way, by its text (`pasteEvent`). A key an
+ * undo or a redo reading the text its step stands in finds waits for its
+ * outcome the same way, a navigation act among them (`navAct`), and is
+ * dropped where Esc sets it aside (`Undoing.decided`).
  * @param {KeyboardEvent | null} e the key; null for a paste
  * @param {Ctx} ctx
  * @param {Held['paste']} [paste] the paste held in a key's place
  */
 function hold(e, ctx, paste = null) {
-  const out = reading;
-  held.push({ e, paste, ctx, jump: out ? out.then(() => GO.aground()) : GO.aground() });
+  const out = reading, u = undoing && !undoing.aside ? undoing.decided : null;
+  /** @type {Promise<boolean>} */
+  const jump = u ? u.then((known) => (known ? GO.aground() : false)) : out ? out.then(() => GO.aground()) : GO.aground();
+  held.push({ e, paste, ctx, jump });
   if (!replaying) void replay();
 }
 
@@ -1491,7 +1645,7 @@ async function replay() {
       held.shift();
       const at = whereNow({ ...k.ctx, landed: true }), pasted = k.paste;
       // a paste held with the keys is made where the focus is at the landing, the walk on its caret's span before the next is read
-      const run = pasted ? async () => { pasteAt(pasted.text, pasted.entry, pasted.at, at); await clipping; return true; } : k.e ? route(k.e, chordOf(k.e), at) : null;
+      const run = pasted ? async () => { pasteAt(pasted.text, pasted.entry, pasted.at, at); await clipping; return true; } : k.e ? navAct(chordOf(k.e), at.byKey) ?? route(k.e, chordOf(k.e), at) : null;
       if (!run) continue;
       making = true;
       try { await run(); } finally { making = false; }
@@ -1906,7 +2060,10 @@ function followAtCaret(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
  * the box, the card or scene still reading (O-HOST's opening, ended alone:
  * the overlay standing under it stands), the notice standing below the
  * overlay, then the overlay (O-HOST's `dismissInnermost`; FP-36) — a jump's
- * reaching face among them, whose dismissal abandons the jump — then a jump
+ * reaching face among them, whose dismissal abandons the jump, and the undo
+ * chord's reading line, which a key's Esc takes down by setting its undo
+ * aside (`setAside`) — then an undo reading whose line another overlay took
+ * the place of, set aside, a key's Esc alone, then a jump
  * reaching whose face another overlay took the place of (FP-25; N-GO's
  * `abandon`), the find — its current match left selected, the focus on it
  * (N-FIND's `close`; FP-20) — in the scene the selection standing in the
@@ -1934,7 +2091,11 @@ function followAtCaret(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
 export function esc(landed = false, pointer = false) {
   if (LEAP.isOpen() && !landed) { LEAP.close(); return; }
   if (HOST.pending()) { HOST.endOpening(); return; }
+  // an undo reading the text its step stands in, its line the innermost thing: a key's Esc sets it aside, the pointer's leaves it reading
+  const u = undoing;
+  if (!pointer && u && !u.aside && FACES.undoReadingInnermost(u.addr)) { setAside(); return; }
   if (HOST.current() && !(landed && HOST.typing() && !HOST.notice())) { HOST.dismissInnermost(); return; }
+  if (!pointer && setAside()) return;
   if (GO.abandon()) return;
   if (FIND.isOpen() && !landed) { void FIND.close(); return; }
   if (SCENE.isOpen()) { if (!paneEsc()) GO.closeScene(!pointer); return; }

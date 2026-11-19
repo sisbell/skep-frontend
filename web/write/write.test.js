@@ -209,7 +209,7 @@ test('a draft\'s undo and redo stacks are held here and set by the machine alone
   WRITE.endRun();
   assert.deepEqual(told, [['typed', D, { at: 5 }], ['typed', D, null], ['ended', D], ['ended', null]], 'a key typing at the caret tells where the caret stood; any other act tells none; a run\'s end is told, every draft\'s where none is named');
   /** @type {import('./write.js').Step} */
-  const step = { id: 1, kind: 'typing', open: true, acts: [2], placed: [{ prefix: REC.pageSpace(D), ordinal: 2, width: 1 }], took: [], began: { before: [], after: [], pos: 5 }, stood: null, removal: null };
+  const step = { id: 1, kind: 'typing', open: true, acts: [2], placed: [{ prefix: REC.pageSpace(D), ordinal: 2, width: 1 }], took: [], began: { before: [], after: [], pos: 5 }, place: { before: [], after: [], pos: 5 }, stood: null, removal: null };
   const rev = WRITE.rev();
   WRITE.setStacks(D, [step], []);
   assert.deepEqual([WRITE.undoOf(D), WRITE.redoOf(D), WRITE.rev() > rev], [[step], [], true], 'set as the machine sets them, counted for the loop');

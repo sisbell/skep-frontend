@@ -7,7 +7,9 @@
 // the platform holding a selection with extent (`rangeAtPress`), the span a
 // click on a block placed the platform's range over, until the next press
 // lets it go (`clickPlaced`), and the wheel series' clock (`wheelAt`,
-// `seriesFrom`).
+// `seriesFrom`). Every press and every wheel, wherever it falls, is told to
+// N-KEYS as the pointer's or the camera's act it is, so an undo reading the
+// text its step stands in is kept (N-KEYS' `pointed`).
 // The press rule (foundations §2.4): a pointer's drag never pans. At the
 // readable threshold and above it selects the text it crosses — the
 // platform's selection on the mounted layer — and that selection is the
@@ -281,8 +283,8 @@ export function attach(els) {
     drag = { px: e.clientX, py: e.clientY, moved: 0, cameraKey: true };
     els.plane.setPointerCapture(e.pointerId); els.plane.classList.add('dragging');
   };
-  // every pointer press is an act that is no walk key's: the walk's panel hidden, wherever it falls
-  window.addEventListener('pointerdown', () => { WALK.hidePanel(); }, true);
+  // every pointer press is an act that is no walk key's: the walk's panel hidden, wherever it falls, and an undo reading kept (N-KEYS' `pointed`)
+  window.addEventListener('pointerdown', () => { WALK.hidePanel(); KEYS.pointed(); }, true);
   els.plane.addEventListener('pointerdown', (e) => {
     held = null;
     clickPlaced = null;
@@ -389,6 +391,8 @@ export function attach(els) {
     if (moved.dx || moved.dy) CAM.markDirty();
   });
   window.addEventListener('wheel', (e) => {
+    // every wheel is the camera's act, or a pane's or a control's own scroll: an undo reading kept (N-KEYS' `pointed`)
+    KEYS.pointed();
     const t = /** @type {HTMLElement} */ (e.target);
     if (t.closest && t.closest('#overlay, #notice, #scene, #removed.scene, #leap, #line')) return;
     e.preventDefault();

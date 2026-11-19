@@ -12,7 +12,9 @@
 // placeholder's record, at the run's positions, about the run, described by
 // its words, taking the focus where a key opened it; "who wrote this?" and "who uses this?"
 // refused `withheld` showing that face; a jump reading and a jump reaching,
-// each its words then the one running mark (FP-25); the fifth cell a follow
+// each its words then the one running mark (FP-25); the undo chord reading
+// where its step stands, its words then the running mark, and its step not
+// taken, in its cause's words, said at every press (FP-34, FP-41); the fifth cell a follow
 // meets in its far end's words, its label's first, and a typed address's in
 // the board's alone (FP-21); the dead end's
 // face and the version offer it takes as it is found
@@ -451,6 +453,44 @@ test('a jump reaching says so in its own words at the act\'s site, the one runni
   FACES.reaching(D, at, () => { abandoned++; });
   HOST.dismiss();
   assert.deepEqual([HOST.currentState(), abandoned], [null, 1], 'dismissed — Esc\'s innermost thing — it abandons the jump');
+});
+
+test('the undo chord reading where its step stands says so at the act\'s site in its own words — a redo\'s its own — the one running mark drawn after them, heard as a face is, its words alone, a notice offering no act and taking no focus, the innermost thing until it is taken down where it stands; its step not taken says why in its cause\'s words — the board not answering, given no refusal or one of the board\'s silence, then that the change is still next, each a sentence, a redo\'s its own; any other refusal its own words — offering no act, said through the status region again at every press though the region holds those words (issue #673\'s design decision; FP-25, FP-34, FP-41)', async () => {
+  const D = '1.0.1.0.3', at = { span: { addr: D, pos: 11, width: 1 }, sign: D };
+  for (const [redo, id] of /** @type {Array<[boolean, string]>} */ ([[false, 'L.undo.reading'], [true, 'L.redo.reading']])) {
+    FACES.undoReading(D, at, redo);
+    const f = faceShown(), o = HOST.currentState();
+    assert.deepEqual([f?.id, f?.words, f?.running, f?.acts, o?.anchor, o?.takeFocus, o?.notice], ['undoing:' + D, [id, opening(id)], true, [], at, undefined, true], `${id}: its words at the act's site, the draft its sign, the running mark after them, a notice with no act, no focus taken`);
+    assert.ok(!opening(id).includes('…'), `${id}: its words type no ellipsis: the mark is drawn`);
+    assert.equal(live.textContent, heard(opening(id)), `${id}: heard through the one status region, its words alone`);
+    assert.equal(FACES.undoReadingInnermost(D), true, `${id}: the innermost thing standing`);
+    FACES.endUndoReading(D);
+    assert.deepEqual([HOST.currentState(), FACES.undoReadingInnermost(D)], [null, false], `${id}: taken down where it stands`);
+  }
+  const board = t('L.mirror.board.name', { node: '1', origin: '' });
+  /** the not-answering line, an undo's or a redo's */
+  const silent = (/** @type {boolean} */ redo) => (redo
+    ? sentences(sentence('L.redo.unanswered', { board }), sentence('L.redo.unanswered.next', { 'redo chord': KEYS.drawChord('Mod+Shift+Z') }))
+    : sentences(sentence('L.undo.unanswered', { board }), sentence('L.undo.unanswered.next', { 'undo chord': KEYS.drawChord('Mod+Z') })));
+  const unreachable = /** @type {Refusal} */ ({ kind: 'unreachable', name: 'unreachable' });
+  for (const [redo, r] of /** @type {Array<[boolean, Refusal | null]>} */ ([[false, null], [false, unreachable], [true, null], [true, unreachable]])) {
+    const what = `${redo ? 'a redo' : 'an undo'}, ${r ? 'its read unanswered' : 'the board already silent'}`, id = redo ? 'L.redo.unanswered' : 'L.undo.unanswered';
+    live.textContent = '';
+    FACES.notUndone(D, at, r, redo);
+    const f = faceShown(), o = HOST.currentState();
+    assert.deepEqual([f?.id, f?.words, f?.running, f?.acts, o?.anchor, o?.notice], ['face:' + (redo ? 'not-redone' : 'not-undone'), [id, silent(redo)], false, [], at, true], `${what}: the board not answering, then that the change is still next, at the act's site, a notice with no act`);
+    assert.ok(!silent(redo).includes('⟨'), `${what}: no token left unfilled`);
+    assert.equal(live.textContent, heard(silent(redo)), `${what}: said through the status region`);
+    FACES.notUndone(D, at, r, redo);
+    assert.equal(live.textContent, '', `${what}, pressed again: the region emptied at once, though it held those words (FP-41)`);
+    await new Promise((res) => setTimeout(res, 0));
+    assert.equal(live.textContent, heard(silent(redo)), `${what}, pressed again: said again on the next frame`);
+    HOST.dismiss();
+  }
+  const range = /** @type {Refusal} */ ({ kind: 'refused', name: 'range_not_present', status: 200, code: 'range_not_present', detail: null, op: 'retrieve_v', site: {}, body: null });
+  FACES.notUndone(D, at, range, false);
+  assert.deepEqual([faceShown()?.id, faceShown()?.words, faceShown()?.acts, live.textContent], ['face:not-undone', ['B1.range_not_present', sentence('B1.range_not_present')], [], heard(sentence('B1.range_not_present'))], 'any other refusal: its own words, no act, said');
+  HOST.dismiss();
 });
 
 test('a refusal whose entry stands alone at its face is set as a sentence — no link at the address, the passage no longer where it was — and the fifth cell\'s words stand as written, a sentence of their own, the address filled (style S1, S2)', () => {

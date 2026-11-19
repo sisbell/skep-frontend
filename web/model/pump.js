@@ -82,7 +82,9 @@
 // image in one step (`loadWhole`, `wholeOf`);
 // the rest of a document's text an open find searches, each part read with
 // its image and the two taken into the model in one step as they land
-// (`readRest`; FP-6, FP-27);
+// (`readRest`; FP-6, FP-27); a draft's text read outward from where the undo
+// chord's step stands, nearest it first, until what the step needs is held,
+// each part taken the same way (`readNear`);
 // the reads a face stating a withheld origin needs before it shows
 // (`claimsToRead`, `readClaims`); a document's metadata where the page holds
 // neither it nor a refusal of it — a claim's home's, the home of a link a
@@ -2855,6 +2857,97 @@ async function restOf(addr, dropped, part) {
   }
   dirty();
   return { refused: null };
+}
+
+/**
+ * A draft's text read near a place, for the undo chord (W-MACHINE's `reach`;
+ * D5 K-75): its extent first where the record lacks it; then, nearest the
+ * place first — at one distance, a part after it before one before it — each stretch of
+ * its positions the record holds no text of, read with its image and the two
+ * taken into the model in one step as each part lands (`textParts`; M-REC's
+ * `takeDelivery`; FP-27), and each stretch of held text its held image names
+ * nothing of, its image read alone (`imageParts`; M-REC's `takeImage`), each
+ * at most MAX_DELIVERY_ITEMS positions (`nearest`), until `done` answers true
+ * or every such stretch has been asked once in the pass. Each pass waits
+ * first for the reads again of a document the view keeps (`readAgainFirst`);
+ * a pass the document was dropped under takes nothing more and is begun
+ * again, at most DROP_ATTEMPTS passes.
+ * @param {string} addr the draft
+ * @param {number} from a position of its text: the place the reading starts from
+ * @param {() => boolean} done whether the page holds what the reading is for
+ * @returns {Promise<{refused: Refusal | null}>} the refusal the extent, a text or an image met; none where `done` answered true, every stretch was asked, or the passes ran out
+ */
+export async function readNear(addr, from, done) {
+  for (let pass = 1; ; pass++) {
+    await readAgainFirst(addr);
+    const out = await nearOf(addr, from, watchDrops(addr), done);
+    if (out !== 'dropped') return out;
+    if (pass >= DROP_ATTEMPTS) { dirty(); return { refused: null }; }
+  }
+}
+
+/**
+ * One pass of `readNear`.
+ * @param {string} addr
+ * @param {number} from
+ * @param {() => boolean} dropped the document dropped since the pass began
+ * @param {() => boolean} done
+ * @returns {Promise<{refused: Refusal | null} | 'dropped'>}
+ */
+async function nearOf(addr, from, dropped, done) {
+  const d = REC.doc(addr);
+  if (d.extent == null) {
+    const out = await read(F.retrieveDocVSpanSet(addr));
+    if (dropped()) return 'dropped';
+    if ('refused' in out) { refusals.push({ frame: 'retrieve_doc_v_span_set', refusal: out.refused, addr }); refuseDoc(d, out.refused); dirty(); return { refused: out.refused }; }
+    REC.takeSpanSet(addr, F.decodeSpanSet(out.answer), F.asOf(out.answer));
+  }
+  /** @type {Set<string>} the stretches the pass asked */
+  const asked = new Set();
+  for (let next = done() ? null : nearest(REC.doc(addr), from, asked); next; next = done() ? null : nearest(REC.doc(addr), from, asked)) {
+    asked.add(next.of + ':' + next.pos + ':' + next.width);
+    if (next.of === 'text') {
+      const out = await textParts(addr, next.pos, next.width, { image: true, part: (runs, asOf, image) => { if (dropped()) return; REC.takeDelivery(addr, runs, asOf, image); dirty(); }, stop: dropped });
+      if (!out || dropped()) return 'dropped';
+      if ('refused' in out) { refuseDoc(REC.doc(addr), out.refused); dirty(); return { refused: out.refused }; }
+    } else {
+      const im = await imageParts(addr, next.pos, next.width);
+      if (dropped()) return 'dropped';
+      if ('refused' in im) { dirty(); return { refused: im.refused }; }
+      REC.takeImage(addr, next.pos, im.runs);
+      dirty();
+    }
+  }
+  dirty();
+  return { refused: null };
+}
+
+/**
+ * The stretch a read near a place asks next (`readNear`): of the stretches a
+ * document's record lacks — its text (`textLacked`), else the image of text
+ * it holds (`imageLacked`) — the part of at most MAX_DELIVERY_ITEMS positions
+ * nearest the place, one holding it centred on it; at one distance a part
+ * after the place before one before it, a text before an image. None the
+ * pass asked already, and none where nothing is lacked.
+ * @param {Doc} d
+ * @param {number} from the place
+ * @param {Set<string>} asked the stretches the pass asked, as `of:pos:width`
+ * @returns {{of: 'text' | 'image', pos: number, width: number} | null}
+ */
+function nearest(d, from, asked) {
+  const M = F.MAX_DELIVERY_ITEMS;
+  /** @type {Array<{of: 'text' | 'image', lo: number, hi: number}>} each stretch lacked, [lo, hi), texts first */
+  const lacked = [...textLacked(d).map(([lo, hi]) => ({ of: /** @type {const} */ ('text'), lo, hi })), ...imageLacked(d).map((g) => ({ of: /** @type {const} */ ('image'), lo: g.pos, hi: g.pos + g.width }))];
+  /** @type {{of: 'text' | 'image', pos: number, width: number, far: number, before: boolean} | null} */
+  let best = null;
+  for (const { of, lo, hi } of lacked) {
+    // the stretch cut to its part nearest the place: ending at it, beginning at it, or centred on it
+    const pos = hi <= from ? Math.max(lo, hi - M) : lo > from ? lo : Math.max(lo, Math.min(from - Math.floor(M / 2), hi - M));
+    const part = { of, pos, width: Math.min(hi, pos + M) - pos, far: hi <= from ? from - hi + 1 : lo > from ? lo - from : 0, before: hi <= from };
+    if (part.width < 1 || asked.has(of + ':' + part.pos + ':' + part.width)) continue;
+    if (!best || part.far < best.far || (part.far === best.far && !part.before && best.before)) best = part;
+  }
+  return best ? { of: best.of, pos: best.pos, width: best.width } : null;
 }
 
 /**

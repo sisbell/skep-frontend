@@ -58,7 +58,10 @@
 // one delivery's items read in parts — a whole read, an open find's read of
 // the rest, and a row's read again of the window held, the find's text kept as
 // the view's — a part refused for its size asked as its halves, and the view
-// reading on down such a text keeping each part it read before; each part of
+// reading on down such a text keeping each part it read before; a read near
+// a place for the undo chord asking what the record lacks nearest the place
+// first, stopping once what it reads for is held, handing up a refusal and
+// begun again under a drop; each part of
 // the view's window, a whole read's text and each part of an open find's
 // read of the rest read with its image and taken with it in one step, a part
 // whose image read fails taken alone, the view asking on its own only the
@@ -3785,6 +3788,53 @@ test('a find\'s read of the rest asks each part\'s image with its text and takes
   firstWindow();
   assert.deepEqual(await PUMP.readRest(R), { refused: null }, 'read again, the last part\'s image refused: no refusal of the text');
   assert.deepEqual([REC.textBetween(R, n, n + 1), REC.imageGaps(REC.doc(R).image, 1, n)], ['c', [{ pos: head + 1 + cut, width: rest - cut }]], 'that part\'s text taken alone at once, its image left for the view to ask');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a read near a place, for the undo chord: the extent first where the record lacks it; then of the stretches lacked, nearest the place first — one holding it, then one after it before one before it — the image of held text read alone, a text read with its image and the two taken in one step; it stops as `done` answers true, hands up the refusal a read meets, and begins a pass again where the document is dropped under it, taking nothing that pass read (D5 K-75; FP-27)', async () => {
+  const N = '1.0.1.0.16';
+  /** N's own bytes from `pos`, as `image` answers them */
+  const own = (/** @type {number} */ pos, /** @type {number} */ width) => ({ result: { as_of: 1, resp: 'runs', runs: [{ i_start: `${N}.0.1.${pos}`, width: String(width) }] } });
+  /** @type {Record<string, unknown>} */
+  const s = {
+    [opKeyOf(F.retrieveDocVSpanSet(N))]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.40' }] } },
+    [opKeyOf(F.image(N, 21, 10))]: own(21, 10),
+    [opKeyOf(F.retrieveV(N, 31, 10))]: filled('d', 10), [opKeyOf(F.image(N, 31, 10))]: own(31, 10),
+    [opKeyOf(F.retrieveV(N, 1, 10))]: filled('a', 10), [opKeyOf(F.image(N, 1, 10))]: own(1, 10),
+  };
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  /** N's middle held as the view leaves it — its text from 11 to 30, its image over the first ten of them — its extent not read */
+  const middle = () => {
+    REC.invalidate(N);
+    REC.takeDelivery(N, [{ pos: 11, width: 20, kind: 'content', text: 'b'.repeat(10) + 'c'.repeat(10), ref: null, origin: null }], 1, { from: 11, runs: [{ iStart: `${N}.0.1.11`, width: 10 }] });
+  };
+  middle();
+  const from = fake.asked.length;
+  assert.deepEqual(await PUMP.readNear(N, 25, () => REC.doc(N).to > 40), { refused: null });
+  assert.deepEqual(fake.asked.slice(from), [opKeyOf(F.retrieveDocVSpanSet(N)), opKeyOf(F.image(N, 21, 10)), opKeyOf(F.retrieveV(N, 31, 10)), opKeyOf(F.image(N, 31, 10))],
+    'its extent, then the image of the held text holding the place, then the text after it with its image — and no more once `done` holds');
+  assert.deepEqual([REC.textBetween(N, 11, 41), REC.imageGaps(REC.doc(N).image, 11, 30)], ['b'.repeat(10) + 'c'.repeat(10) + 'd'.repeat(10), []], 'each taken: the text after with its image, the image of the text held');
+  assert.deepEqual(await PUMP.readNear(N, 25, () => false), { refused: null }, 'read on to the end: nothing left to ask');
+  assert.deepEqual([REC.textBetween(N, 1, 41), REC.imageGaps(REC.doc(N).image, 1, 40), fake.asked.slice(from + 4)], ['a'.repeat(10) + 'b'.repeat(10) + 'c'.repeat(10) + 'd'.repeat(10), [], [opKeyOf(F.retrieveV(N, 1, 10)), opKeyOf(F.image(N, 1, 10))]], 'the text before the place last, with its image: N held whole');
+  // a refusal the read meets
+  middle();
+  s[opKeyOf(F.retrieveV(N, 31, 10))] = { refused: { kind: 'refused', name: 'range_not_present', code: 'range_not_present' } };
+  assert.deepEqual(await PUMP.readNear(N, 35, () => false), { refused: { kind: 'refused', name: 'range_not_present', code: 'range_not_present' } }, 'handed up');
+  assert.equal(REC.doc(N).to, 31, 'nothing of the refused part taken');
+  // a pass the document is dropped under, begun again: the board answering the part as it stood, then as it stands
+  inTurn(s, F.retrieveV(N, 31, 10), filled('e', 10), filled('g', 10));
+  middle();
+  const release = fake.hold('op', { frame: F.retrieveV(N, 31, 10) }), asks = askedOf(fake, F.retrieveV(N, 31, 10));
+  const reading = PUMP.readNear(N, 35, () => REC.doc(N).to > 40);
+  await until(() => askedOf(fake, F.retrieveV(N, 31, 10)) > asks, 'the part asked');
+  REC.invalidate(N);
+  REC.takeSpanSet(N, [{ subspace: 1, ordinal: 1, positions: 40 }]);
+  REC.takeDelivery(N, [{ pos: 11, width: 20, kind: 'content', text: 'f'.repeat(20), ref: null, origin: null }], 2, { from: 11, runs: [{ iStart: `${N}.0.1.11`, width: 20 }] });
+  release();
+  assert.deepEqual(await reading, { refused: null });
+  assert.deepEqual([REC.textBetween(N, 11, 41), askedOf(fake, F.retrieveV(N, 31, 10))], ['f'.repeat(20) + 'g'.repeat(10), 4], 'the answer the drop overtook taken nowhere; the pass begun again over what the drop left, its own answer taken');
   assert.deepEqual(fake.unanswered, []);
 });
 

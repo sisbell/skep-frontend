@@ -40,8 +40,9 @@
 // and gone at a change of the page's class. A step (`Step`) is a run of
 // typing, or an act that is a step of its own, held by the bytes' identity
 // and never by a burst: what it placed, what it removed that it had not
-// placed with the byte either side of each removal, and where its caret
-// stood as it began. An act made at the caret says where that caret stood,
+// placed with the byte either side of each removal, where its caret
+// stood as it began, and where in the text it stands — a step made at no
+// caret too (`Step.place`). An act made at the caret says where that caret stood,
 // and whether it is a key typing there or a step of its own — a paste, a cut
 // (`Typed`) — which the machine is told with it; a move of the caret by any
 // other act ends the run (`endRun`), which the machine is told too. One paste
@@ -197,6 +198,7 @@ export const PASTE_MAX_BYTES = 1024 * 1024;
  * @property {ISpan[]} placed the bytes it placed, by identity, in the order placed: a byte the page made by the page's own name of it, which M-REC reads as the address the board minted it at
  * @property {Taken[]} took what it removed that it had not placed, in the order removed
  * @property {{before: ISpan[], after: ISpan[], pos: number}} began where the caret stood as it began: the byte either side of it, by identity, and its position in the text shown then; no byte and position 0 for a step made at no caret
+ * @property {{before: ISpan[], after: ISpan[], pos: number}} place where the step stands in the text, which the undo chord reads its text from where the page does not hold it (D5 K-75): for a step made at the caret where that caret stood as it began (`began`); for one made at no caret where its first edit was made — the byte either side of that position, by identity, and the position, in the text shown then
  * @property {{before: ISpan[], after: ISpan[]} | null} [where] for a paste, where it placed what it placed: the byte just before that stretch and the byte just after it, by identity, as the text stood right after it — its undo takes out that stretch alone, wherever else its bytes stand, and its redo puts it back there; null for any other step, and where it placed nothing
  * @property {Taken[] | null} stood on the redo stack, the words it placed as they stood when it was undone, in the text's order; null on the undo stack
  * @property {number | null} removal on the redo stack, the removal the deletion face stands at for the words its undo took out (`Removal.id`); null where it stands at none, and on the undo stack

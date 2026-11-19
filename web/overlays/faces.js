@@ -113,7 +113,14 @@
 // face shown as a notice (O-HOST's), the move leaving no place (FP-36) — a
 // jump's anchored, as every face N-GO shows for a jump is, with the document
 // it stands at, out of the visible view of which the one line carries its
-// words (O-HOST's `sign`). A face
+// words (O-HOST's `sign`). The undo chord reading the text its step stands
+// in (D5 K-75): its line at the act's site, placed and heard as a jump's
+// reading face is, its words then the one running mark, its overlay named
+// `undoing:⟨address⟩` (`undoReading`); and that step not taken, its read
+// failed or the board already not answering, in its cause's words — the
+// board not answering, else the refusal's own — said at every press, its
+// overlay `face:not-undone`, a redo's `face:not-redone` (`notUndone`;
+// FP-34, FP-41). A face
 // never takes the focus (D5 §4 rule 4; K-58): it is heard through the one
 // status region (D4, O-HOST's), and a face offered by a key's act takes none
 // either; a walk's moment alone takes it. A refusal's face that answers an
@@ -218,7 +225,7 @@ import { below, spoken } from './statement.js';
 import { entitlementArm, placeholderOf, faceRuns, CLAUSE_READING } from '../text/article.js';
 import { retries, lineOf, floatingSaid } from '../beams/held.js';
 import { drawChord } from '../nav/keys.js';
-import { t, tRuns, addressedHTML, endingOf, sentence, heard, duration, runningHTML } from '../strings.js';
+import { t, tRuns, addressedHTML, endingOf, opening, sentence, sentences, heard, duration, runningHTML } from '../strings.js';
 import { esc, fingerprintCue } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
@@ -820,6 +827,59 @@ export function held(said, anchor, again = null, told = false) {
   const id = said.state === 'unknown' ? 'L.held.unknown' : said.state === 'pieces' ? 'L.held.pieces' : 'L.held.part';
   HOST.show({ kind: 'face', id: 'face:held', anchor: toAnchor(anchor), told, acts: again ? { a0: () => again() } : {},
     html: faceHTML({ id, text: lineOf(said), acts: again ? [{ label: t('B1.try-again') }] : [] }) });
+}
+
+/** the undo chord's reading line's overlay id, before the draft it reads in */
+const UNDOING = 'undoing:';
+
+/**
+ * The undo chord reading the text its step stands in (D5 K-75; FP-25): its
+ * line at the act's site (N-KEYS'), "undoing — reading where that change was
+ * made", a redo's its own, its words then the one running mark
+ * (`runningFaceHTML`), heard through the one status region as every face is,
+ * its words alone, and carried by the one line while the draft its anchor's
+ * `sign` names stands out of the visible view; taken down as its read
+ * answers or Esc sets its undo aside (`endUndoReading`), and as any face is
+ * by a pointer's act that ends the chrome — its undo reading on. A notice
+ * (O-HOST's): it stands below a card, a list or a moment the reader opened,
+ * covering neither (FP-36). It offers no act.
+ * @param {string} addr the draft
+ * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor the act's site
+ * @param {boolean} redo
+ */
+export function undoReading(addr, anchor, redo) {
+  const id = redo ? 'L.redo.reading' : 'L.undo.reading';
+  HOST.show({ kind: 'face', id: UNDOING + addr, anchor: toAnchor(anchor), notice: true, html: runningFaceHTML(id, opening(id)) });
+}
+
+/** is the undo chord's reading line for a draft the innermost thing standing (`undoReading`) — the notice below the overlay, or the overlay with none below it: what Esc closes first (N-KEYS' `esc`) */
+export const undoReadingInnermost = (/** @type {string} */ addr) => { const below = HOST.notice(); return below ? below.id === UNDOING + addr : HOST.currentIs(UNDOING + addr); };
+
+/** the undo chord's reading line for a draft taken down where it still stands, its read answered or set aside: its own completion, no act on the chrome (O-HOST's `complete`) */
+export function endUndoReading(/** @type {string} */ addr) { HOST.complete(UNDOING + addr); }
+
+/**
+ * The undo chord's step not taken, the text it stands in not read (D5 K-75;
+ * FP-34, FP-41): at the act's site, in its cause's words — the board not
+ * answering, as it already did not at the press or as the read met it
+ * (M-PUMP's `unanswered`): "not undone — ⟨board⟩ is not answering", then
+ * that the change is still the next to undo and the chord again once the
+ * board answers, each a sentence, a redo's its own; any other refusal its own
+ * words (`wordsFor`) — and said through the status region at every press,
+ * though it holds those words already (O-HOST's `again`). A notice
+ * (O-HOST's), standing below a card, a list or a moment the reader opened
+ * (FP-36). It offers no act.
+ * @param {string} addr the draft
+ * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor the act's site
+ * @param {Refusal | null} r the refusal the read met; null where the board already did not answer and nothing was read
+ * @param {boolean} redo
+ */
+export function notUndone(addr, anchor, r, redo) {
+  const board = boardName(), id = redo ? 'L.redo.unanswered' : 'L.undo.unanswered';
+  const words = !r || PUMP.unanswered(r)
+    ? { id, text: sentences(sentence(id, { board }), redo ? sentence('L.redo.unanswered.next', { 'redo chord': drawChord('Mod+Shift+Z') }) : sentence('L.undo.unanswered.next', { 'undo chord': drawChord('Mod+Z') })) }
+    : wordsFor(r, { addr, board });
+  HOST.show({ kind: 'face', id: 'face:' + (redo ? 'not-redone' : 'not-undone'), anchor: toAnchor(anchor), notice: true, again: true, html: faceHTML({ id: words.id, text: words.text, acts: [] }) });
 }
 
 /** the reading face ends where it still stands — in the overlay's place, or below it as a notice — its jump's read answered, its own completion (O-HOST's `complete`): an overlay shown since stands, and a card asked since still opens */

@@ -125,7 +125,8 @@
 // caret — a paste, a cut — keeping where that caret stood as a run does, so
 // its undo leaves the caret there (BM-32, BM-34), and a paste keeping where
 // it placed what it placed, by the byte either side (`Step.where`; the paste
-// survey's W2). A run ends where
+// survey's W2); every step, one made at no caret too, keeps where it stands
+// (`Step.place`). A run ends where
 // W-WRITE says the caret moved by another act (`ended`) and at every step of
 // its own, an undo and a redo among them — never at a pause, punctuation, a
 // commit, an ack, a hold or the save chord. A step holds what it placed and
@@ -144,7 +145,14 @@
 // shell's landing read, its inverse is sent; refused as unread, the drop is
 // owed, the draft's commits held back, and it is asked again at the next read
 // of the held lines that is not its own. A step whose line awaits an act of
-// the person's is answered at its face and composes nothing. An undo's
+// the person's is answered at its face and composes nothing. Every step is
+// decided over text the page holds of it — the text whole, else every
+// stretch of the step's bytes and the bytes beside them read on both sides
+// (`holds`); a step the page does not hold so — a long draft held in part —
+// is answered `away`, nothing changed, neither taken in part nor passed as
+// spent, and its text is read by `reach` before the press is decided: once
+// the draft's flight has landed, M-PUMP's read outward from where the step
+// stands (`Step.place`; M-PUMP's `readNear`). An undo's
 // `reinstate` refused `withheld` is declined (`declined`; BM-11, BM-12): its
 // line dropped, its put-back gone, the step off the stack, those watching
 // told. An inverse is composed where the text shown places it, never as it
@@ -1261,8 +1269,8 @@ function edgeIds(addr, edge, rows, d) {
 
 /**
  * @typedef {Object} Undone — what an undo or a redo did at its press (`undo`, `redo`)
- * @property {'done' | 'empty' | 'face' | 'away'} how `done` a step taken back, or put back; `empty` the stack holds no step; `face` the step's line awaits an act of the person's at its face, and nothing was composed (BM-45); `away` the page holds none of the text the step stands in — a long draft held in part — and nothing was changed: its place is to be read first (BM-42)
- * @property {number | null} at where the caret stands after it, a position of the text shown: after an undo, where the step's caret stood as it began — for a step made at no caret, where what it placed stood — and after a redo, the end of what the step placed, else where it began; at `away`, where the step began, as it was then; null where nothing was done, and where a step made at no caret placed nothing
+ * @property {'done' | 'empty' | 'face' | 'away'} how `done` a step taken back, or put back; `empty` the stack holds no step; `face` the step's line awaits an act of the person's at its face, and nothing was composed (BM-45); `away` the page does not hold what the step needs (`holds`) — the text it stands in, of a long draft held in part, or the draft's record — and nothing was changed: its text is to be read first (`reach`; BM-42)
+ * @property {number | null} at where the caret stands after it, a position of the text shown: after an undo, where the step's caret stood as it began — for a step made at no caret, where what it placed stood — and after a redo, the end of what the step placed, else where it began; at `away`, where the step stands (`Step.place`), as it was then; null where nothing was done, and where a step made at no caret placed nothing
  * @property {string} out the words it took out of the text; '' where it took none
  * @property {string} back the words it put back; '' where it put none back
  */
@@ -1375,10 +1383,10 @@ function withTaken(list, t) {
  * (see the head; BM-31): a key typing at the caret joins the run of typing
  * open at the draft, or begins one; any other act is a step of its own, and
  * ends the run. The step holds what the act placed and what it removed that
- * the step had not placed, by identity, and, for an act made at the caret —
- * a run, a paste, a cut — where that caret stood as it began. A new step
- * empties the redo stack. Nothing where the model holds no record of the
- * draft.
+ * the step had not placed, by identity; for an act made at the caret — a
+ * run, a paste, a cut — where that caret stood as it began; and, for every
+ * step, where it stands (`Step.place`). A new step empties the redo stack.
+ * Nothing where the model holds no record of the draft.
  * @param {string} addr
  * @param {Typed | null} how how the act was made at the caret: a key typing there, or a step of its own (`Typed.own`); null for a step of its own made at no caret
  */
@@ -1392,15 +1400,18 @@ function record(addr, how) {
   /** the act is a key typing at the caret: it joins the run open there, or opens one */
   const typing = !!how && !how.own;
   const joins = typing && !!top && top.open;
-  /** where the caret stood before the act, by the byte either side of it */
-  const began = () => {
-    if (!how) return { before: [], after: [], pos: 0 };
-    const was = applyEdits(base, list.slice(0, from), ids).doc;
-    return { before: how.at > 1 ? REC.identityIn(was.image, how.at - 1, 1) : [], after: REC.identityIn(was.image, how.at, 1), pos: how.at };
+  /** where the act was made, by the byte either side of it in the text as it stood before the act: where its caret stood, else where its first edit was made */
+  const placeOf = () => {
+    const was = applyEdits(base, list.slice(0, from), ids).doc, pos = how ? how.at : list[from].pos;
+    return { before: pos > 1 ? REC.identityIn(was.image, pos - 1, 1) : [], after: REC.identityIn(was.image, pos, 1), pos };
   };
   /** @type {Step} */
-  const step = joins ? { ...top, acts: [...top.acts, act], placed: [...top.placed], took: [...top.took] }
-    : { id: ++steps, kind: !how ? 'put-back' : how.own ?? 'typing', open: typing, acts: [act], placed: [], took: [], began: began(), where: null, stood: null, removal: null };
+  let step;
+  if (joins) step = { ...top, acts: [...top.acts, act], placed: [...top.placed], took: [...top.took] };
+  else {
+    const place = placeOf();
+    step = { id: ++steps, kind: !how ? 'put-back' : how.own ?? 'typing', open: typing, acts: [act], placed: [], took: [], began: how ? place : { before: [], after: [], pos: 0 }, place, where: null, stood: null, removal: null };
+  }
   const made = madeBy(base, list, from, ids);
   for (const m of made) {
     if (m.took) for (const t of takenOf(m, step.placed)) step.took = withTaken(step.took, t);
@@ -1428,10 +1439,101 @@ function ended(addr = null) {
 /** does the page hold a draft's text whole: its image names every position of its extent */
 const holdsWhole = (/** @type {string} */ addr) => { const b = WRITE.baseOf(addr); return b.extent != null && (b.extent === 0 || REC.identityIn(b.image, 1, b.extent).length > 0); };
 
-/** does a text place anything of a step — a byte it placed or removed, or one that stood beside its changes or its caret: whether the page holds the text the step stands in, where it holds a draft in part */
-const inReach = (/** @type {ImageRun[]} */ image, /** @type {Step} */ step) => placedNow(image, step).length > 0 || one(image, step.began.before) != null || one(image, step.began.after) != null
-  || step.took.some((t) => standing(image, t.took.ids) > 0 || one(image, t.before) != null || one(image, t.after) != null)
-  || (step.stood ?? []).some((t) => one(image, t.before) != null || one(image, t.after) != null);
+/**
+ * The bytes, by identity, a step's text is read for (`holds`): what it
+ * placed, what it removed, its words as they stood when it was undone, and
+ * the byte either side of each removal, of each of those words, of where it
+ * stands (`Step.place`) and of where a paste placed.
+ * @param {Step} step
+ * @returns {ISpan[]}
+ */
+function bytesOf(step) {
+  const id = (/** @type {readonly ISpan[]} */ s) => s.map((x) => ({ prefix: x.prefix, ordinal: x.ordinal, width: x.width }));
+  const taken = (/** @type {readonly Taken[]} */ list) => list.flatMap((t) => [...id(t.took.ids), ...id(t.before), ...id(t.after)]);
+  return [...id(step.placed), ...taken(step.took), ...taken(step.stood ?? []), ...id(step.place.before), ...id(step.place.after), ...(step.where ? [...id(step.where.before), ...id(step.where.after)] : [])];
+}
+
+/**
+ * Does the text a draft shows hold what a step needs for the undo chord to
+ * decide it as it decides any step over held text (D5 K-75; D6 BM-42): the
+ * text whole (`holdsWhole`); else at least one stretch of the step's bytes
+ * (`bytesOf`) placed, and every stretch of them placed read on both sides —
+ * the position before it and the one after it named by the image, or past an
+ * end of the text. A step none of whose bytes the text places, or one of
+ * whose stretches runs into text the page has not read, is not held: nothing
+ * of it is decided — no part of it is taken, nor is it taken for a step with
+ * nothing left (`spent`).
+ * @param {string} addr
+ * @param {Doc} doc the text the draft shows (`shownOf`)
+ * @param {Step} step
+ * @returns {boolean}
+ */
+function holds(addr, doc, step) {
+  if (holdsWhole(addr)) return true;
+  const ids = bytesOf(step), at = ids.length ? REC.placedIn(doc.image, ids) : [];
+  /** a position named by the image, or past an end of the text */
+  const read = (/** @type {number} */ p) => p < 1 || (doc.extent != null && p > doc.extent) || REC.identityIn(doc.image, p, 1).length > 0;
+  return at.length > 0 && at.every((s) => read(s.pos - 1) && read(s.pos + s.width));
+}
+
+/** the answer to a press whose step the page does not hold (`holds`): nothing changed, and where the step stands */
+const away = (/** @type {Step} */ step) => /** @type {Undone} */ ({ how: 'away', at: step.place.pos || null, out: '', back: '' });
+
+/**
+ * The step the undo chord's next press meets where the page does not hold
+ * what it needs to decide it (`holds`): for an undo the newest step that is
+ * not one the text shows spent — the press passes those (`undo`) — and for a
+ * redo the step undone last; where the model holds no record of the draft,
+ * that stack's newest step. Null where the press meets a step the page holds,
+ * or none.
+ * @param {string} addr
+ * @param {boolean} redo
+ * @returns {Step | null}
+ */
+function unheld(addr, redo) {
+  const list = redo ? WRITE.redoOf(addr) : WRITE.undoOf(addr);
+  if (!list.length) return null;
+  if (!REC.has(addr)) return list[list.length - 1];
+  const doc = shownOf(addr);
+  for (let i = list.length - 1; i >= 0; i--) {
+    const s = list[i];
+    if (!holds(addr, doc, s)) return s;
+    if (redo || !spent(doc.image, s)) return null;
+  }
+  return null;
+}
+
+/** how much of a draft the model holds: its extent, the positions it holds text of and those its image names — what a read near a place adds to (`reach`) */
+const heldSoFar = (/** @type {string} */ addr) => { const d = REC.doc(addr); return (d.extent == null ? 0 : 1) + d.runs.reduce((n, r) => n + r.width, 0) + d.image.reduce((n, r) => n + r.width, 0); };
+
+/**
+ * The text the undo chord's next press needs read, where the page does not
+ * hold it (`unheld`; D5 K-75; D6 BM-42): once the draft's flight has landed
+ * (W-WRITE's `landed`), so nothing is read under words dialed and not acked,
+ * the draft's text read outward from where that step stands (`Step.place`;
+ * M-PUMP's `readNear`) until the page holds the step — and on from where the
+ * step after it stands, where the one it held is spent — or a read is
+ * refused. Nothing of the draft's edits or its stacks changes: the press is
+ * decided after it (`undo`, `redo`). A read that adds nothing and leaves the
+ * step unheld is answered as the shell's `malformed_answer`: the board's
+ * answers did not deliver what was asked.
+ * @param {string} addr the draft
+ * @param {boolean} redo the redo stack's step, else the undo stack's
+ * @returns {Promise<{refused: Refusal | null}>} the refusal a read met; none where the page holds what the press needs
+ */
+export async function reach(addr, redo) {
+  await WRITE.landed(addr);
+  /** is the step the next press meets, by its id, the one read for — the page not yet holding it */
+  const still = (/** @type {Step} */ s) => unheld(addr, redo)?.id === s.id;
+  for (;;) {
+    const s = unheld(addr, redo);
+    if (!s) return { refused: null };
+    const was = heldSoFar(addr);
+    const out = await PUMP.readNear(addr, s.place.pos || 1, () => !still(s));
+    if (out.refused) return { refused: out.refused };
+    if (still(s) && heldSoFar(addr) <= was) return { refused: refusal('malformed_answer') };
+  }
+}
 
 /** has a step nothing left to take back: none of what it placed stands in a text — a paste's where it placed it (`placedNow`) — and all it removed does */
 const spent = (/** @type {ImageRun[]} */ image, /** @type {Step} */ step) => !placedNow(image, step).length && step.took.every((t) => standing(image, t.took.ids) >= widthOf(t.took.ids));
@@ -1626,8 +1728,11 @@ function reopened(d) {
  * a refused run, the hand-over, a refusal the page keeps, a moved document —
  * composes nothing and is answered so. A step with nothing left to take
  * back leaves the stack unsaid, and the press goes on to the one before.
- * Where the page holds a draft in part and none of the text the step stands
- * in, nothing is changed and the answer says where the step began.
+ * Every step is decided over text the page holds of it (`holds`): where it
+ * holds a draft in part without what the step needs, or holds no record of
+ * the draft, nothing is changed — no step left unsaid, none taken in part —
+ * and the answer says where the step stands, its text to be read first
+ * (`reach`). Nothing to undo is answered only where the stack holds no step.
  * The words the step placed that a dial carried are a removal the deletion
  * face stands at, decided here (BM-34).
  * @param {string} addr the draft
@@ -1636,13 +1741,17 @@ function reopened(d) {
 export function undo(addr) {
   /** @type {Undone} */
   const none = { how: 'empty', at: null, out: '', back: '' };
-  if (!handed || !REC.has(addr)) return none;
+  if (!handed) return none;
   ended();
-  const stack = [...WRITE.undoOf(addr)], redone = [...WRITE.redoOf(addr)], doc = shownOf(addr), whole = holdsWhole(addr);
-  while (stack.length && (whole || inReach(doc.image, stack[stack.length - 1])) && spent(doc.image, stack[stack.length - 1])) stack.pop();
+  const stack = [...WRITE.undoOf(addr)], redone = [...WRITE.redoOf(addr)];
+  if (!REC.has(addr)) return stack.length ? away(stack[stack.length - 1]) : none;
+  const doc = shownOf(addr);
+  /** does the text shown hold what a step needs (`holds`) */
+  const held = (/** @type {Step} */ s) => holds(addr, doc, s);
+  while (stack.length && held(stack[stack.length - 1]) && spent(doc.image, stack[stack.length - 1])) stack.pop();
   const step = stack[stack.length - 1];
   if (!step) { WRITE.setStacks(addr, stack, redone); return none; }
-  if (!whole && !inReach(doc.image, step)) { WRITE.setStacks(addr, stack, redone); return { ...none, how: 'away', at: step.began.pos || null }; }
+  if (!held(step)) { WRITE.setStacks(addr, stack, redone); return away(step); }
   const d = draftOf(addr), list = WRITE.edits(addr), rows = WRITE.heldOf(addr);
   const mine = (/** @type {Edit} */ e) => e.step != null && !e.based && step.acts.includes(e.step);
   /** the held lines of a burst, by their rows */
@@ -1691,18 +1800,20 @@ export function undo(addr) {
  * bytes, never new ones; words no board minted as the page's own again,
  * under the ordinals they had, unsent and sent at the next commit. A burst of
  * the step an undo held as its own is the draft's again. The step returns to
- * the undo stack closed: typing after it begins a new run.
+ * the undo stack closed: typing after it begins a new run. Where the page
+ * does not hold what the step needs (`holds`), nothing is changed and the
+ * answer says where the step stands, as `undo`'s does.
  * @param {string} addr the draft
  * @returns {Undone}
  */
 export function redo(addr) {
   /** @type {Undone} */
   const none = { how: 'empty', at: null, out: '', back: '' };
-  if (!handed || !REC.has(addr)) return none;
+  if (!handed) return none;
   ended();
   const redone = [...WRITE.redoOf(addr)], step = redone.pop();
   if (!step) return none;
-  if (!holdsWhole(addr) && !inReach(shownOf(addr).image, step)) return { ...none, how: 'away', at: step.began.pos || null };
+  if (!REC.has(addr) || !holds(addr, shownOf(addr), step)) return away(step);
   const d = draftOf(addr);
   let out = '';
   for (const t of step.took) {
