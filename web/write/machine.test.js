@@ -9,7 +9,8 @@
 // applied over the text in order and never twice, one that cannot apply held
 // apart; a landing minting, and one with no position re-read in one step; each
 // face act one `resolve` and a re-read (BM-10, BM-16, BM-17, BM-27); a foreign
-// row waiting for the commit and the edits carried through it (BM-56, BM-57);
+// row waiting for the commit and the edits carried through it, the draft kept
+// while the commit's read is out with the camera gone from it (BM-56, BM-57);
 // each read-only-whole reason set and lifted and the draining store sending
 // the waiting change (BM-20, BM-30, BM-58, BM-60); each page-kept refusal an
 // island, composed past and discarded on the page (BM-19); the device's
@@ -2117,6 +2118,69 @@ test('a draft the window writes in is kept as the view\'s wherever the plane pla
   fake.fire('feed', { board: 'b-1', update: { position: 20, at: 20, op: 'insert', docs: [G], class: 'drafts', session: 's-1' } });
   for (let i = 0; i < 6; i++) await flush();
   assert.deepEqual([REC.doc(G).from, REC.textBetween(G, 1, 6)], [1, 'abcd.'], 'its own row, the camera still away: nothing of it dropped');
+});
+
+test('BM-56: a draft whose burst\'s commit waits on the read it owes is kept as it stands while that read is out, the camera gone from it — another writer\'s row meanwhile drops nothing — and the burst goes out composed against the text the read after that row set', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  // the board the fake port stands in for: another writer puts "NEW " at the draft's head while the person types, then "Z" at its end while the commit's read is out
+  let text = 'abc def', position = 7;
+  /** @type {number[]} */
+  let ordinals = [1, 2, 3, 4, 5, 6, 7];
+  /** the next read of the draft's text is answered when the test gives it, with the text as it stood at the ask */
+  let holding = false;
+  let giveText = () => {};
+  const { fake, ops } = boot((frame) => {
+    switch (frame.op) {
+      case 'insert': {
+        const pos = Number(frame.at.ordinal), words = frame.values.join('');
+        text = text.slice(0, pos - 1) + words + text.slice(pos - 1);
+        ordinals = [...ordinals.slice(0, pos - 1), ...[...words].map((_c, i) => 90 + i), ...ordinals.slice(pos - 1)];
+        return MINTED(own(E, 90), ++position + 12);
+      }
+      case 'retrieve_doc_v_span_set': return { result: { as_of: position + 12, resp: 'span_set', set: [{ start: '1.1', width: '0.' + text.length }] } };
+      case 'doc_metadata': return frame.doc === E ? { result: { as_of: position + 12, resp: 'doc_metadata', doc: E, published: false, owner: '1.0.1' } } : { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } };
+      case 'retrieve_v': {
+        const out = { result: { as_of: position + 12, resp: 'delivery', items: [{ content: text }] } };
+        if (!holding) return out;
+        holding = false;
+        const l = later();
+        giveText = () => l.give(out);
+        return l.out;
+      }
+      case 'image': return { result: { as_of: position + 12, resp: 'runs', runs: ordinals.map((o) => ({ i_start: own(E, o), width: '1' })) } };
+      case 'find_links_v': return { result: { as_of: position + 12, resp: 'addrs', addrs: [] } };
+      default: return undefined;
+    }
+  });
+  PUMP.start({ onDirty: () => {} });
+  REC.takeAccountKey('1.0.1', { label: 'dev-notebook', fingerprint: 'e4272902a11439e5' });
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: E, kind: 'draft', label: null, standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  const box = docBox(E), e = estimate(7, box), c = e.columns[0];
+  CAM.setViewport(1440, 900); CAM.reach(e.fs); CAM.set(CAM.viewAt({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2 }, e.fs));
+  const settle = async () => { for (let i = 0; i < 40 && !PUMP.settled(); i++) await flush(); };
+  await settle();
+  assert.deepEqual([REC.textBetween(E, 1, 8), REC.doc(E).readAt], ['abc def', 19], 'the draft read in view');
+  WRITE.addEdit(E, { pos: 4, width: 0, text: 'X' });
+  text = 'NEW abc def'; ordinals = [201, 202, 203, 204, 1, 2, 3, 4, 5, 6, 7]; position = 9;
+  fake.fire('feed', { board: 'b-1', update: { position: 21, at: 21, op: 'insert', docs: [E], class: 'drafts', session: 's-1' } });
+  await flush();
+  assert.deepEqual([REC.textBetween(E, 1, 8), PUMP.owesRead(E)], ['abc def', true], 'while the burst stands open the row sets nothing: the read owed');
+  // the camera drawn back to the far band, where the view reads no document; the pause commits the burst, and the commit's read of the text waits on the test
+  CAM.set({ x: 5, y: 5, scale: 1e-6 });
+  holding = true;
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush();
+  text = 'NEW abc defZ'; ordinals = [...ordinals, 205]; position = 10;
+  fake.fire('feed', { board: 'b-1', update: { position: 22, at: 22, op: 'insert', docs: [E], class: 'drafts', session: 's-1' } });
+  await flush();
+  assert.deepEqual([REC.doc(E).from, REC.textBetween(E, 1, 8), ops.filter((o) => o.frame.op === 'insert').length], [1, 'abc def', 0], 'another writer\'s row while the commit\'s read is out: the draft kept as it stood, nothing dialed');
+  giveText();
+  for (let i = 0; i < 4; i++) await flush();
+  const sent = ops.filter((o) => o.frame.op === 'insert');
+  assert.deepEqual([sent.length, sent[0]?.frame.values, sent[0]?.frame.at, sent[0]?.frame.as_of, sent[0]?.anchors], [1, ['X'], at(8), 22, { before: own(E, 3), after: own(E, 4) }],
+    'the read the row overtook set nothing; the one after it set the draft, and the burst went out composed against that text, typed at the state it was answered at');
+  for (let i = 0; i < 4; i++) await flush();
+  assert.deepEqual([REC.textBetween(E, 1, 14), shown(E), WRITE.keptOf(E)?.word], ['NEW abcX defZ', 'NEW abcX defZ', 'kept'], 'acked: the draft read again and set, the text shown the same');
 });
 
 test('BM-32, BM-34: an undo\'s inverse is composed against the text shown, by identity, and never as it was typed — where a line of the undone run leaves the shell\'s list with no landing and the next read holds none of its words, the inverse takes nothing back, and the keys typed after it are sent as they stand', async (t) => {
