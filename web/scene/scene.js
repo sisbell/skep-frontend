@@ -281,12 +281,14 @@
 // (`from`).
 // Each pane is a named region (SC9), named as the ARIA mirror names a
 // document's item: by its corner's first item — its document's kind, else a
-// refused document's own words (`paneLead`) — then its own document's
+// refused document's own words, else a titled corner's line, a device's label
+// in it kept as written (`paneLead`) — then its own document's
 // address, the head of the article it holds (`namePane`) — pane B, where the
 // far end names its document whole, by those and ST's `L.scene.whole-end`
 // after them, `aria-current="location"` on it, the end being the document and
 // no passage of it — its kind said once in the status region where its
-// corner's slot fills while the focus stands in the pane (`sayKind`; FP-36).
+// corner's slot fills while the focus stands in the pane, a titled corner,
+// which stands no slot, saying none (`sayKind`; FP-36).
 // Each pane holds a span focus of its own (`Pane.focus`), the platform's
 // focus in one pane at a time (FP-20), walked by T-SPAN's grain over the
 // pane's own record — a past state's and the held version's apart from the
@@ -375,7 +377,8 @@
 // every pane (FP-29). Opened as a draft's history (`Held.past`; B3-S7; N-GO's
 // `history`), pane B is a past state of the draft, derived from the board's
 // history at a position (M-DERIVE's `recordAt`), its corner naming what it is
-// in the kept word's place — "as it stood ⟨time⟩ · ⟨hand⟩" with the chip
+// in the kept word's place — "as it stood ⟨time⟩ · ⟨hand⟩", a key of the
+// reader's own named by its device label alone (`handFields`), with the chip
 // beside it, and where it shows another state than its act asked a line
 // saying why (`pastLine`) — the bar naming it with when it stood, "as it
 // stood ⟨time⟩" (C-363), which the one line names too (`pastAsOf`); beside it
@@ -430,7 +433,8 @@
 // its words as one from the plane's box names the same words (FP-27); the
 // scene keeps no DOM text of its own. Each pane carries its own document's
 // corner (ux-T2; T-LAYER's `sceneCorner` and `sceneHead` make its items), its
-// first slot its document's kind by the one test (T-LAYER's `kindOf`; FP-33):
+// first slot its document's kind by the one test (T-LAYER's `kindOf`; FP-33),
+// save a titled corner's, which its title leads (below):
 // named by its own words (D5 K-57), its stops the pane's next after the pane
 // itself in either form — a line of its acts holding one stop, or the corner
 // itself where it holds none (T-LAYER's `setStops`) — and an act's click,
@@ -467,11 +471,21 @@
 // document's head (the plane's head form; T-LAYER's `sceneHead`) it stands
 // above its text across the column and its edge, its rows at the reading
 // line's pitch, both heads reserving the more of the two corners' rows, so
-// both texts begin at one depth (`setBand`) — its first row held at the
-// pane's top as the pane scrolls, its later rows scrolling with the text
-// under it (`placeHeads`) — and no line the re-level, ↓ or ↑, the stop's act
-// or a carried place brings to the pane's top stands under what that row and
-// a form opened beneath it cover (`clearOf`). A corner's acts are buttons the
+// both texts begin at one depth (`setBand`) — its rows held at the pane's top
+// as the pane scrolls, through the last that stands what the pane must not
+// lose: which state it shows, a face, its title (T-LAYER's `HeadLayout.held`),
+// the corner's own box (`Pane.heldRows`). A past state's corner and the held
+// version's are titled there (`titled`; T-ARTICLE's `ArticleView.titled`):
+// its line first, in the kind's place, no kind's slot standing, on rows of
+// its own — as many as its lines take at the fit, broken at its joiners as
+// T-LAYER breaks it, and never fewer while the fit stands — a substitution's
+// words held with it, the rest of its corner on the rows after. Its later rows
+// scroll with the text, under the held rows and out at the pane's top, clipped
+// there and never hidden, so each keeps its Tab stops, a focus coming to one
+// scrolling the pane the least that brings it below them (`placeHeads`,
+// `headInView`) — and no line the re-level, ↓ or ↑, the stop's act or a
+// carried place brings to the pane's top stands under what those rows and a
+// form opened beneath them cover (`clearOf`). A corner's acts are buttons the
 // platform activates — Enter at its press, Space at its release — each act its
 // click's, a pointer's or the platform's (`attach`): the read offered, the
 // kept word opening its statement (`keptAct`), a glyph or a head's count
@@ -546,7 +560,7 @@ import * as HOST from '../overlays/host.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { drawChord, keyShortcut } from '../nav/keys.js';
-import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML, cornerLead, kindWord, statedChain } from '../text/article.js';
+import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML, cornerLeadRuns, kindWord, statedChain } from '../text/article.js';
 import { inkOf, strokeOf, strokeIn, cutAt, pointOn, pastSigns } from '../beams/beams.js';
 import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingLineOf } from '../beams/held.js';
 import { SAMENESS, HOLD, LABEL_MIN_PX, cornerWidth } from '../plane/register.js';
@@ -606,7 +620,7 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {number} from the position its read reached down to: rows below it are read as the scene stands (`readOlder`); 0 where every row is read
  * @property {number} at the board position of the state pane B shows
  * @property {boolean} unkept the draft held words the board had not kept as the act was taken: the list's top line says so
- * @property {{id: string, text: string} | null} why why pane B shows another state than the act asked; null where it shows that one
+ * @property {import('../text/article.js').PastWhy | null} why why pane B shows another state than the act asked, and whether a refusal substituted it; null where it shows that one
  * @property {{pages: number, read: number, readMs: number, stateMs: number, at: number}} figures the history read's pages and rows and its time, and the state read's time and position (FP-18)
  */
 
@@ -620,7 +634,7 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {boolean} opened the days open on opening are set: the list has stood once
  * @property {number} at the board position of the state pane B shows
  * @property {boolean} unkept the list's top line says the draft holds words not yet kept
- * @property {{id: string, text: string} | null} why why pane B shows another state than the act asked
+ * @property {import('../text/article.js').PastWhy | null} why why pane B shows another state than the act asked, and whether a refusal substituted it
  * @property {number} from the position the rows read reach down to; 0 where every row is read
  * @property {boolean} reading rows below `from` are being read
  * @property {PastHeld['figures'] & {older: {pages: number, read: number, ms: number} | null}} figures the reads' figures, the read of the older rows among them once it lands (FP-18)
@@ -785,6 +799,7 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {AccountFacts | undefined} facts the owner's byline facts its article's byline was made with (`ownerFacts`), undefined where they were not read: what owner facts taken anew are checked against (`dropped`)
  * @property {boolean} open the reader's act opened its corner whole where it stands compact or at its document's head (`openWhole`; FP-26), until the act again closes it
  * @property {number} rows its corner's rows at its document's head as last written (`cornerForm`); 0 beside its column
+ * @property {number} heldRows its corner's rows held at the pane's top at its document's head as last written (T-LAYER's `HeadLayout.held`): a titled corner's never fewer than at the last writing at the same fit, so a change of its line within the fit removes none (`titled`); 0 beside its column, and as the pane is set again at another fit or from another record
  * @property {import('../text/article.js').Kind} heard its corner's kind slot as the scene last read it (`markKept`): what the slot filling under the focus is told against
  * @property {boolean} heldVersion it shows the moved scene's held version (`Held.heldB`; D6 BM-14): the derived record it was opened on, which its corner names so and at a selection in which the acts that send give their reason (`heldVersionReason`); false on every other pane, and once the pane is set from a record not derived
  * @property {number | null} focus its span focus (D5 K-60, K-61): the first position of the span of its text it stands on, which ↓ and ↑ move, Tab into the pane lands, a click stands on, a live caret's span holds and its keys act at (`walkPane`, `entered`, `textAct`, `followCaret`); null where it stands on none
@@ -1089,11 +1104,13 @@ export function attach(e, acts = {}) {
       if (on === 'act') act(side); else if (on === 'kept') keptAct(side); else if (on === 'history') historyAct(side, FOCUS.byKey(ev)); else if (on === 'whole') openWhole(side);
       else if (onText(ev.target)) textAct(e, side);
     });
-    // a corner's stop follows the focus along its line of acts, and stands on its first act again as the focus leaves it; the
-    // focus come into the pane's text from outside it stands its span focus on the span in view (`entered`)
+    // a corner's stop follows the focus along its line of acts, and stands on its first act again as the focus leaves it; a
+    // head's row that scrolls is brought below the held rows as the focus comes to stand in it (`headInView`); the focus come
+    // into the pane's text from outside it stands its span focus on the span in view (`entered`)
     p.addEventListener('focusin', (ev) => {
       rove(ev.target, ev.target);
       const side = p === e.paneB ? 'b' : 'a';
+      headInView(e, side, ev.target);
       if (textHolds(e, side, /** @type {Element | null} */ (ev.target)) && !textHolds(e, side, /** @type {Element | null} */ (ev.relatedTarget))) entered(e, side);
       markDirty();
     });
@@ -1219,13 +1236,14 @@ export function heldVersionReason() {
  * opened on, the record its text was made from, the address its acts name and
  * the one it shows, its kind, its version and the chain's count, its corner's
  * act and what its corner says it lacks, whether its record is one the page
- * derived, whether it shows the moved scene's held version, and the blocks
+ * derived, whether it shows the moved scene's held version, its corner's rows
+ * held at its top at its document's head (`Pane.heldRows`), and the blocks
  * its article was made from.
  */
 export function panes() {
   const S = scene;
   if (!S) return null;
-  const of = (/** @type {Pane} */ P) => ({ doc: P.doc, src: P.src, names: P.names, shows: P.shows, kind: P.kind, k: P.k, n: P.n, read: P.read, lacks: P.lacks, derived: !!P.d.derived, held: P.heldVersion, editor: editor(P), focus: P.focus, blocks: P.d.blocks.map((b) => ({ pos: b.pos, width: b.width, kind: b.kind, text: b.text })) });
+  const of = (/** @type {Pane} */ P) => ({ doc: P.doc, src: P.src, names: P.names, shows: P.shows, kind: P.kind, k: P.k, n: P.n, read: P.read, lacks: P.lacks, derived: !!P.d.derived, held: P.heldVersion, heldRows: P.heldRows, editor: editor(P), focus: P.focus, blocks: P.d.blocks.map((b) => ({ pos: b.pos, width: b.width, kind: b.kind, text: b.text })) });
   return { a: of(S.a), b: of(S.b) };
 }
 
@@ -1746,7 +1764,7 @@ function paneAt(side, src, r) {
   return {
     side, doc: src, src, names, shows: kind === 'bare' ? src : names, kind, k, n: kind === 'draft' ? null : r.n, read: null, lacks: null,
     d: { ...r.d }, view: LAYER.sceneView(r.d), corner: '', placed: new Map(), place: null, el: null, serial: 0, sets: 0, kept: null, lift: null, signs: null, facts: undefined,
-    open: false, rows: 0, heard: LAYER.kindOf(r.d), heldVersion: false, focus: null,
+    open: false, rows: 0, heldRows: 0, heard: LAYER.kindOf(r.d), heldVersion: false, focus: null,
   };
 }
 
@@ -1783,19 +1801,26 @@ const sameText = (/** @type {Pick<Doc, 'runs' | 'image' | 'blocks'>} */ x, /** @
  * draft's current text alone (`current`) — another derived record's slot
  * empty, the held version's line in its place and the chip's
  * (`Pane.heldVersion`; D6 BM-14), a past state's line naming when it stood and
- * whose hand made it (`pastLine`; B3-S7) — and its document's kind by the one
- * test (T-LAYER's `kindOf`).
+ * whose hand made it (`pastLine`; B3-S7), either one the corner's title where
+ * the fit stands the corner at its document's head (T-ARTICLE's
+ * `ArticleView.titled`) — and its document's kind by the one test (T-LAYER's
+ * `kindOf`).
  * @param {Pane} P
+ * @param {PaneFit | null} [F] the fit its corner stands in: the scene's where none is given
  * @returns {{d: Doc, view: ArticleView}}
  */
-function paneCorner(P) {
+function paneCorner(P, F = scene ? scene.fit : null) {
   const d = P.shows === P.d.addr ? P.d : { ...P.d, addr: P.shows }, now = current(P);
   const past = scene && scene.past && P.side === 'b' && P.d.derived && P.d.derived.at != null ? pastLine(scene.past) : null;
-  return { d, view: { ...P.view, members: P.n, read: P.read, lacks: P.lacks, lags: lags(), kept: now ? WRITE.keptOf(P.names) : null, history: now ? LAYER.historyAct(P.names) : null, keptOpen: now && LAYER.statementOpen(P.names), held: P.heldVersion, past, kind: LAYER.kindOf(P.d) } };
+  const atHead = !!F && F.corner === 'head';
+  return { d, view: { ...P.view, members: P.n, read: P.read, lacks: P.lacks, lags: lags(), kept: now ? WRITE.keptOf(P.names) : null, history: now ? LAYER.historyAct(P.names) : null, keptOpen: now && LAYER.statementOpen(P.names), held: P.heldVersion, past, titled: atHead && (P.heldVersion || past != null), kind: LAYER.kindOf(P.d) } };
 }
 
-/** a pane's corner's first item in words (T-ARTICLE's `cornerLead`): its document's kind, else a refused document's own words — what its region's name leads with (`namePane`) */
-const paneLead = (/** @type {Pane} */ P) => { const c = paneCorner(P); return cornerLead(c.d, c.view); };
+/** does a pane's corner stand titled (see the head; T-ARTICLE's `ArticleView.titled`): a past state's or the held version's at its document's head */
+const titled = (/** @type {Pane} */ P) => !!paneCorner(P).view.titled;
+
+/** a pane's corner's first item as stretches in their faces (T-ARTICLE's `cornerLeadRuns`): its document's kind, else a refused document's own words, else its title's line, a device's label in it the person's own words — what its region's name leads with (`namePane`), rendered for the ear (ST's `heard`) */
+const paneLead = (/** @type {Pane} */ P) => { const c = paneCorner(P); return cornerLeadRuns(c.d, c.view); };
 
 /** the items an editor pane's head holds in a stacked scene (foundations §2.5): its kept line and a face standing beneath it; the rest stand at its foot */
 const HEAD_ITEMS = (/** @type {string} */ cls) => cls === 'kept' || cls === 'face';
@@ -1820,23 +1845,26 @@ const footed = (P, F) => F.stacked && F.corner === 'head' && current(P) && !!LAY
  * it (`Pane.open`), the glyph it opened in its words as the act that compacts
  * it again (T-ARTICLE's `ArticleView.opened`) — the clause its last item
  * (`sceneCorner`); at its document's head, the clause first on its first row
- * and a form the act opened beneath its rows (`sceneHead`) — save an editor
- * pane in a stacked scene (`footed`), whose head holds its kept line and any
- * face alone (`HEAD_ITEMS`) and whose foot, after its text, the rest of its
- * corner, compact, its kept clause last (`foot`).
+ * and a form the act opened beneath its rows (`sceneHead`) — a titled
+ * corner's title first, on rows never fewer than its held rows as last
+ * written (`Pane.heldRows`) — save an editor pane in a stacked scene
+ * (`footed`), whose head holds its kept line and any face alone
+ * (`HEAD_ITEMS`) and whose foot, after its text, the rest of its corner,
+ * compact, its kept clause last (`foot`); with the rows of its head held at
+ * the pane's top (`held`), none beside its column.
  * @param {Pane} P
  * @param {PaneFit} F
- * @returns {{html: string, rows: number, foot: string | null}}
+ * @returns {{html: string, rows: number, held: number, foot: string | null}}
  */
 function cornerForm(P, F) {
-  const { d, view } = paneCorner(P);
+  const { d, view } = paneCorner(P, F);
   if (F.corner === 'head' && footed(P, F)) {
     const head = LAYER.sceneHead(d, view, { px: F.px, kept: null, open: P.open, keep: HEAD_ITEMS });
     return { ...head, foot: LAYER.sceneCorner(d, view, true, (cls) => !HEAD_ITEMS(cls)) + keptHTML(paneKept(P)) };
   }
-  if (F.corner === 'head') return { ...LAYER.sceneHead(d, view, { px: F.px, kept: paneKept(P), open: P.open }), foot: null };
+  if (F.corner === 'head') return { ...LAYER.sceneHead(d, view, { px: F.px, kept: paneKept(P), open: P.open, floor: view.titled ? P.heldRows : 0 }), foot: null };
   const compact = F.corner === 'compact';
-  return { html: LAYER.sceneCorner(d, { ...view, opened: compact && P.open }, compact && !P.open) + keptHTML(paneKept(P)), rows: 0, foot: null };
+  return { html: LAYER.sceneCorner(d, { ...view, opened: compact && P.open }, compact && !P.open) + keptHTML(paneKept(P)), rows: 0, held: 0, foot: null };
 }
 
 /**
@@ -1979,23 +2007,25 @@ const formClass = (/** @type {PaneFit} */ F, /** @type {Pane} */ P) => (F.corner
  * plane's corner is (D5 K-57), in the fit's form (`formClass`), marked with
  * whether the board lagged as it was made (`data-lags`) — its element a
  * group and its one Tab stop, until its stops are stood on its acts
- * (T-LAYER's `setStops`); the items it holds and its rows kept on the pane as
- * last written (`Pane.corner`, `Pane.rows`) — an editor pane's foot's among
- * them, which its foot holds and never its head (`placeFoot`).
+ * (T-LAYER's `setStops`); the items it holds, its rows and its rows held at
+ * the pane's top kept on the pane as last written (`Pane.corner`,
+ * `Pane.rows`, `Pane.heldRows`) — an editor pane's foot's among them, which
+ * its foot holds and never its head (`placeFoot`).
  * @param {Pane} P
  * @param {PaneFit} F
  */
 function cornerMarkup(P, F) {
   const made = cornerForm(P, F);
-  P.corner = made.html + (made.foot ?? ''); P.rows = made.rows;
+  P.corner = made.html + (made.foot ?? ''); P.rows = made.rows; P.heldRows = made.held;
   return `<div class="corner${formClass(F, P)}" data-corner="${esc(P.shows)}" data-lags="${lags()}" id="${cornerId(P.side)}" role="group" aria-labelledby="${cornerId(P.side)}" tabindex="0">${made.html}</div>`;
 }
 
 /**
  * A pane's corner shaped for the fit's form (see the head): its class
  * (`formClass`) and, at its document's head, its width across the pane's
- * column — its text and its edge — and its first row's height, the reading
- * line's pitch; neither beside its column.
+ * column — its text and its edge — and the height of its rows held at the
+ * pane's top (`Pane.heldRows`), at the reading line's pitch; neither beside
+ * its column.
  * @param {HTMLElement} c
  * @param {PaneFit} F
  * @param {Pane} P
@@ -2004,7 +2034,7 @@ function shapeCorner(c, F, P) {
   const head = F.corner === 'head';
   c.className = 'corner' + formClass(F, P);
   c.style.width = head ? (F.cpl * CHAR_W + EDGE) * F.px + 'px' : '';
-  c.style.height = head ? LINE_H * F.px + 'px' : '';
+  c.style.height = head ? Math.max(1, P.heldRows) * LINE_H * F.px + 'px' : '';
 }
 
 /**
@@ -2014,22 +2044,24 @@ function shapeCorner(c, F, P) {
  * standing in its place, else on its first stop (FP-20; T-LAYER's
  * `cornerAct`); shaped for the form (`shapeCorner`); the items as given, else
  * made now (`cornerForm`), its foot stood or taken down with them
- * (`placeFoot`), and its rows kept on the pane. The band the heads reserve is
- * set apart (`setBand`).
+ * (`placeFoot`), and its rows and its rows held at the pane's top kept on the
+ * pane before it is shaped. The band the heads reserve is set apart
+ * (`setBand`).
  * @param {NonNullable<typeof els>} E
  * @param {Pane} P
- * @param {{html: string, rows: number, foot: string | null} | null} [items]
+ * @param {{html: string, rows: number, held: number, foot: string | null} | null} [items]
  */
 function writeCorner(E, P, items = null) {
   const S = scene, c = cornerEl(E, P.side);
   if (!S || !c) return;
   const made = items || cornerForm(P, S.fit);
+  P.corner = made.html + (made.foot ?? ''); P.rows = made.rows; P.heldRows = made.held;
   c.dataset.corner = P.shows;
   c.dataset.lags = String(lags());
   shapeCorner(c, S.fit, P);
   FOCUS.keep(c, LAYER.cornerAct, () => { c.innerHTML = made.html; LAYER.setStops(c, true, S.fit.corner === 'head', null); });
   placeFoot(E, P, made.foot);
-  P.corner = made.html + (made.foot ?? ''); P.rows = made.rows;
+  placeHeads(E, S);
 }
 
 /** the bar's name for a pane, written again: the address it shows — a past state's with when it stood after it, "as it stood ⟨time⟩" (`pastAsOf`; C-363) — and the hidden words its region's name leads with (`paneLead`), rendered for the ear (ST's `heard`) */
@@ -2046,7 +2078,8 @@ function nameBar(/** @type {NonNullable<typeof els>} */ E, /** @type {Pane} */ P
  * fills while the platform's focus stands in the pane (see the head; FP-36):
  * the slot's words as it says them once no longer being read (T-LAYER's
  * `kindOf`; T-ARTICLE's `kindWord`). Each call reads the slot again
- * (`Pane.heard`).
+ * (`Pane.heard`); nothing is said for a titled corner, which stands no kind's
+ * slot (`titled`).
  * @param {NonNullable<typeof els>} E
  * @param {Pane} P
  */
@@ -2054,7 +2087,7 @@ function sayKind(E, P) {
   const k = LAYER.kindOf(P.d), was = P.heard;
   P.heard = k;
   const at = typeof document !== 'undefined' ? document.activeElement : null;
-  if (was === 'reading' && k !== 'reading' && !!at && paneEl(E, P.side).contains(at)) FOCUS.say(kindWord(k).text);
+  if (was === 'reading' && k !== 'reading' && !!at && paneEl(E, P.side).contains(at) && !titled(P)) FOCUS.say(kindWord(k).text);
 }
 
 /** the byline facts the model holds now of the owner of the record a pane is set from (M-REC's `accountKey`, `ownerAccount`): what its article's byline is made with */
@@ -3217,9 +3250,10 @@ function applyFit(E, S, keep = false) {
  * The band the panes' heads reserve above their text set (see the head;
  * FP-26): at their documents' heads, the more of the two corners' rows (`Pane.rows`)
  * at the reading line's pitch, so both texts begin at one depth — each
- * corner's first row its own box, the rest of the band below it — and none
- * beside their columns; where it moved and `keep` asks, each pane scrolled by
- * as much, so its text stands where it stood on screen (FP-8).
+ * corner's rows held at the pane's top its own box (`Pane.heldRows`), the
+ * rest of the band below it — and none beside their columns; where it moved
+ * and `keep` asks, each pane scrolled by as much, so its text stands where it
+ * stood on screen (FP-8).
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  * @param {boolean} keep
@@ -3229,8 +3263,8 @@ function setBand(E, S, keep) {
   const pitch = LINE_H * S.fit.px, band = S.fit.corner === 'head' ? Math.max(S.a.rows, S.b.rows, 1) : 0, was = S.band;
   S.band = band;
   for (const side of SIDES) {
-    const c = cornerEl(E, side);
-    if (c) c.style.marginBottom = band > 1 ? (band - 1) * pitch + 'px' : '';
+    const c = cornerEl(E, side), below = band - Math.max(1, S[side].heldRows);
+    if (c) c.style.marginBottom = band > 0 && below > 0 ? below * pitch + 'px' : '';
     if (keep && band !== was && was > 0 && band > 0) paneEl(E, side).scrollTop += (band - was) * pitch;
   }
   return band !== was;
@@ -3273,12 +3307,14 @@ function refit(E, S) {
 }
 
 /**
- * The heads' later rows and the forms opened beneath them placed at the
- * panes' scrolls (see the head; FP-26): each corner's first row held at its
- * pane's top by the style, its later rows where the band sets them, scrolling
- * with the text and hidden once they have passed wholly under the first, a
- * form opened beneath them below the last of its rows, or below the first as
- * they pass under it.
+ * The heads' rows that scroll and the forms opened beneath them placed at the
+ * panes' scrolls (see the head; FP-26): each corner's rows held at its pane's
+ * top held there by the style with the corner's own box (`Pane.heldRows`),
+ * every later row where the band sets it, scrolling with the text — under the
+ * held rows, then out of the pane at its top, clipped there and never hidden,
+ * so it keeps its Tab stops and its place in the accessibility tree — a form
+ * opened beneath them below the last of its rows, or below the held rows as
+ * they pass under them.
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  */
@@ -3286,19 +3322,52 @@ function placeHeads(E, S) {
   if (S.fit.corner !== 'head') return;
   const pitch = LINE_H * S.fit.px;
   for (const side of SIDES) {
-    const c = cornerEl(E, side), art = articleIn(paneEl(E, side));
-    if (!c || !art) continue;
-    // how far the pane's scroll has carried the held row below where the band sets it
-    const shift = c.getBoundingClientRect().top - (art.el.getBoundingClientRect().top - S.band * pitch);
+    const c = cornerEl(E, side), held = Math.max(1, S[side].heldRows), shift = headShift(E, S, side);
+    if (!c || shift == null) continue;
     for (const r of /** @type {NodeListOf<HTMLElement>} */ (c.querySelectorAll(':scope > .hrow'))) {
-      const k = Number(r.dataset.row), y = k * pitch - shift;
-      if (!k) continue;
-      r.style.top = Math.max(0, y) + 'px';
-      r.style.visibility = y < 0 ? 'hidden' : '';
+      const k = Number(r.dataset.row);
+      if (k >= held) r.style.top = k * pitch - shift + 'px';
     }
     const o = /** @type {HTMLElement | null} */ (c.querySelector(':scope > .opened'));
-    if (o) o.style.top = Math.max(pitch, S[side].rows * pitch - shift) + 'px';
+    if (o) o.style.top = Math.max(held * pitch, S[side].rows * pitch - shift) + 'px';
   }
+}
+
+/**
+ * How far a pane's scroll has carried its corner's held rows below where the
+ * band sets them at its document's head, px (see the head): what its rows
+ * that scroll stand that far above their own places by (`placeHeads`); null
+ * where no corner and no article stand there to read it from.
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ * @param {'a' | 'b'} side
+ * @returns {number | null}
+ */
+function headShift(E, S, side) {
+  const c = cornerEl(E, side), art = articleIn(paneEl(E, side));
+  return c && art ? c.getBoundingClientRect().top - (art.el.getBoundingClientRect().top - S.band * LINE_H * S.fit.px) : null;
+}
+
+/**
+ * A head's row that scrolls brought below the rows held at its pane's top
+ * where the focus comes to stand in it (see the head; FP-20, FP-26): the pane
+ * scrolled up the least that stands the row there, and its rows placed again
+ * at once (`placeHeads`), so the platform finds what took the focus in view;
+ * nothing for a held row, a form opened beneath them — which stands below
+ * them — or anything outside a head.
+ * @param {NonNullable<typeof els>} E
+ * @param {'a' | 'b'} side
+ * @param {EventTarget | null} target what took the focus
+ */
+function headInView(E, side, target) {
+  const S = scene, el = /** @type {HTMLElement | null} */ (target);
+  if (!S || S.fit.corner !== 'head' || !el || typeof el.closest !== 'function') return;
+  const r = /** @type {HTMLElement | null} */ (el.closest('.hrow')), c = cornerEl(E, side), shift = headShift(E, S, side);
+  if (!r || !c || !c.contains(r) || shift == null) return;
+  const k = Number(r.dataset.row), held = Math.max(1, S[side].heldRows), over = shift - (k - held) * LINE_H * S.fit.px;
+  if (!(k >= held) || over <= 0) return;
+  paneEl(E, side).scrollTop -= over;
+  placeHeads(E, S);
 }
 
 /**
@@ -3433,10 +3502,11 @@ function textLineIn(art, run, vis, lh) {
 
 /**
  * How far below a pane's visible top its head covers it, held there (see the
- * head; FP-26): to the foot of its first row — held where the pane's padding
- * leaves it — and of a form opened beneath it, px, as the pane stands — what
- * no act that brings a line to the pane's top leaves that line under; 0 where
- * its corner stands beside its column.
+ * head; FP-26): to the foot of its rows held at its top (`Pane.heldRows`), the
+ * corner's own box — held where the pane's padding leaves it — and of a form
+ * opened beneath them, px, as the pane stands — what no act that brings a
+ * line to the pane's top leaves that line under; 0 where its corner stands
+ * beside its column.
  * @param {HTMLElement} pane
  * @returns {number}
  */
@@ -3644,7 +3714,8 @@ function measure() {
  * keeps its text, its lines broken anew: its place is its first line in view
  * (`firstLineIn`), no `compare` read against it is outdated by it, and a
  * place kept for such a read stays kept. A pane set from a record not derived
- * is the held version no more (`Pane.heldVersion`).
+ * is the held version no more (`Pane.heldVersion`). Each pane set counts its
+ * corner's rows held at its top anew (`Pane.heldRows`).
  * @param {Scene} S
  * @param {Array<{side: 'a' | 'b', next: Next, down?: boolean, same?: boolean}>} sets `down` the pane taken down to its cover at a change of the page's class; `same` the pane set again at a new fit, its text the one it shows
  * @param {ComparePair[] | null} pairs the runs of shared identity between the panes now; null where they stand as they were
@@ -3669,7 +3740,8 @@ function setPanes(S, sets, pairs) {
   });
   for (const { side, next, same } of carried) {
     const P = S[side], view = { ...(next.view ?? LAYER.sceneView(next.d)), cpl: S.fit.cpl };
-    Object.assign(P, { d: { ...next.d }, view, kind: next.kind, src: next.src, names: next.names, shows: next.shows, k: next.k, n: next.n, read: next.read, lacks: next.lacks, heldVersion: P.heldVersion && !!next.d.derived });
+    // set at another fit, or from another record: its held rows counted anew there
+    Object.assign(P, { d: { ...next.d }, view, kind: next.kind, src: next.src, names: next.names, shows: next.shows, k: next.k, n: next.n, read: next.read, lacks: next.lacks, heldVersion: P.heldVersion && !!next.d.derived, heldRows: 0 });
     if (!same) P.sets++;
     swap(E, P);
     writeCorner(E, P);
@@ -4899,19 +4971,31 @@ export function listPx(bar) {
 }
 
 /**
- * The words a hand is named by in the list and at a past state's corner (B3-S7
- * WHO; the past states survey's R6): the writing key's device label as the
- * page holds it (M-REC's `labelOf`) and its fingerprint's cue, the cue alone
- * where no label is held; "unsigned" for a keyless hand and for the board's
- * own; "not recorded" where the board lost the testimony; "signed" for a
- * signed row, which names no key and is never named lost.
+ * The fields a hand is named by in the list and at a past state's corner,
+ * each a stretch in its face (B3-S7 WHO; the past states survey's R6): the
+ * writing key's device label as the page holds it (M-REC's `labelOf`) — the
+ * person's own words — and its fingerprint's cue, the identifier's; a key of
+ * the reader's own (M-REC's `ownKeys`) by its label alone, as their byline
+ * names them (T-ARTICLE's `bylineOf`; FP-34); the cue alone where no label is
+ * held; "unsigned" for a
+ * keyless hand and for the board's own; "not recorded" where the board lost
+ * the testimony; "signed" for a signed row, which names no key and is never
+ * named lost — each the client's.
  * @param {import('../model/past.js').Hand} h
- * @returns {string}
+ * @returns {import('../strings.js').Run[]}
  */
-export function handWords(h) {
-  if (h.kind === 'key') { const fp = h.fingerprint || '', label = REC.labelOf(fp), cue = fingerprintCue(fp); return label ? fields(label, cue) : cue; }
-  return t(h.kind === 'lost' ? 'F.slot.not-recorded' : h.kind === 'signed' ? 'L.history.hand.signed' : 'F.slot.unsigned');
+export function handFields(h) {
+  if (h.kind === 'key') {
+    const fp = h.fingerprint || '', label = REC.labelOf(fp), cue = /** @type {import('../strings.js').Run} */ ({ text: fingerprintCue(fp), face: 'ident' });
+    if (!label) return [cue];
+    const named = /** @type {import('../strings.js').Run} */ ({ text: label, face: 'reading' });
+    return REC.ownKeys().has(fp) ? [named] : [named, cue];
+  }
+  return [{ text: t(h.kind === 'lost' ? 'F.slot.not-recorded' : h.kind === 'signed' ? 'L.history.hand.signed' : 'F.slot.unsigned'), face: 'client' }];
 }
+
+/** the words a hand is named by (`handFields`): its fields, parted by the field joiner (ST's `fields`) */
+export const handWords = (/** @type {import('../model/past.js').Hand} */ h) => fields(...handFields(h).map((r) => r.text));
 
 /** each kind of change's words in the strings table (B3-S7 WHAT; M-PAST's `kindOf`): the op lost, "not recorded" */
 const KIND_IDS = /** @type {Record<import('../model/past.js').Kind, string>} */ ({
@@ -4990,14 +5074,14 @@ export function listHTML(L) {
  * A past state's corner line (see the head; B3-S7): when the state pane B
  * shows stood — the time its row's last commit was made, as a sentence names
  * a time (ST's `stoodAt`), "not recorded" where the board lost it — whose hand
- * made it (`handWords`), and why the pane shows it where it shows another than
- * its act asked.
+ * made it, its fields in their faces (`handFields`), and why the pane shows
+ * it where it shows another than its act asked.
  * @param {PastList} L
  * @returns {import('../text/article.js').PastLine}
  */
 function pastLine(L) {
   const row = PAST.rowHolding(L.rows, L.at);
-  return { time: row && row.time != null ? stoodAt(row.time) : t('F.slot.not-recorded'), hand: row ? handWords(row.hand) : t('F.slot.not-recorded'), why: L.why };
+  return { time: row && row.time != null ? stoodAt(row.time) : t('F.slot.not-recorded'), hand: row ? handFields(row.hand) : [{ text: t('F.slot.not-recorded'), face: 'client' }], why: L.why };
 }
 
 /** the draft whose history the scene stands on (`Held.past`); null where it stands on none (N-GO's `history`) */

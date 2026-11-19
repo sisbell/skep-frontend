@@ -2771,6 +2771,28 @@ LIST_BROKEN = '''(() => { const l = document.getElementById("scenepast"); if (!l
   return out; })()'''
 # each timed row's time slot in the list, as drawn: its left edge and its width, by row
 LIST_SLOTS = '''(() => [...document.querySelectorAll("#scenepast .pl-row > .pl-time")].filter((e) => /^\\d\\d:\\d\\d$/.test(e.textContent || "")).map((e) => { const q = e.getBoundingClientRect(); return [q.left, q.width]; }))()'''
+# how far pane B is scrolled down for its title to be read held at its top (`PAST_TITLE`), px
+TITLE_SCROLL_PX = 300
+# a past state's pane at its document's head as the person meets it (issue #677): its title — the past line's element, its
+# words, whether it stands on a held row, its box and the held rows' box below the pane's visible top, whether the pointer
+# meets it at its first words — before and after pane B is scrolled `down` px (formatted with it), and how far the pane moved;
+# then, so scrolled, the chip's glyph focused — whether the focus stands on it, whether its row is held, its row's box and the
+# held rows' box; whether a kind's slot stands in the corner, the rows the scene says it holds, pane B's name, and how many of
+# both heads' rows are hidden; pane B's scroll put back after
+PAST_TITLE = '''(async (down) => { const pane = document.getElementById("sceneB"), c = pane && pane.querySelector(":scope > .corner.head"); if (!c) return null;
+  const frames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const box = (e) => { const t0 = pane.getBoundingClientRect().top + pane.clientTop, q = e.getBoundingClientRect(); return {top: q.top - t0, bottom: q.bottom - t0}; };
+  const read = () => { const t = c.querySelector('[data-string="B3.history.row"]'), row = t && t.closest(".hrow");
+    const hit = !!t && (() => { const q = t.getBoundingClientRect(), e = document.elementFromPoint(q.left + Math.min(8, q.width / 2), q.top + Math.min(8, q.height / 2)); return !!e && t.contains(e); })();
+    return {words: t ? t.textContent : null, held: !!row && row.dataset.held === "1", box: t ? box(t) : null, head: box(c), hit}; };
+  const s0 = pane.scrollTop, at = read();
+  pane.scrollTop = s0 + down; await frames();
+  const scrolled = read(), moved = pane.scrollTop - s0, chip = c.querySelector("button[data-chip]");
+  let focused = null;
+  if (chip) { chip.focus(); await frames(); const r = chip.closest(".hrow"); focused = {on: document.activeElement === chip, held: r ? r.dataset.held === "1" : null, row: r ? box(r) : null, head: box(c)}; chip.blur(); }
+  const hidden = [...document.querySelectorAll("#sceneA > .corner.head > .hrow, #sceneB > .corner.head > .hrow")].filter((r) => getComputedStyle(r).visibility === "hidden").length;
+  pane.scrollTop = s0; await frames();
+  return {at, scrolled, moved, focused, hidden, kind: !!c.querySelector(".kind"), rows: ((window.__skep.scene.panes() || {}).b || {}).heldRows, name: (document.getElementById("sceneB-kind") || {}).textContent || null}; })(%s)'''
 
 
 def past_rows(ctx, r, shoot, red, ops_allowed, m):
@@ -2784,7 +2806,9 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
     ones below them — a signed row, a publication, a row of lost testimony — the act clicked again and the arm checked
     taken, one day's head clicked folded; the list's heads and rows in the strings table's words, each word whole on one
     line and each timed row's time in one slot, the past pane's corner, the bar's and the one line's second address, the
-    bands; side by side both corners at their heads, both texts at one depth, and the list in its own column at pane B's
+    past pane's title at its document's head — its line first, held at the pane's top as its text scrolls, no kind's slot,
+    the pane named by it, the chip on a row that scrolls brought below the held rows as the focus comes to it, no head's
+    row hidden (issue #677) — the bands; side by side both corners at their heads, both texts at one depth, and the list in its own column at pane B's
     outer side from the panes' top to the scene's foot, as wide as a line of its head's stop and both step acts needs, the
     panes one width either side of the whole gutter, the column's width and the panes' measure figures (FP-18); one px
     either side of the window at which beside it the panes keep HEAD_CH characters — the case's own arithmetic, by the
@@ -2936,6 +2960,16 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
         bar_as_of = ctx.js('(() => { const e = document.querySelector("#scenebar .as-of"); return e ? e.textContent : null; })()')
         line_as_of = ctx.js('(() => { const e = document.querySelector("#line .seg.as-of"); return e ? e.textContent : null; })()')
         corner_ok = corner_line == ex.get('corner') and chip and bar_as_of == ex.get('asOf') and line_as_of == ex.get('asOf')
+        # the line pane B's title at its document's head: first, on its held rows, no kind's slot, pane B named by it; held
+        # there as the text scrolls under it; the chip on a row that scrolls, brought below the held rows as the focus comes
+        # to it; no head's row hidden (issue #677)
+        ti = ctx.js(PAST_TITLE % json.dumps(TITLE_SCROLL_PX)) or {}
+        at, down, chip_at = ti.get('at') or {}, ti.get('scrolled') or {}, ti.get('focused') or {}
+        held_box, title_box, chip_row = down.get('head') or {}, down.get('box') or {}, chip_at.get('row') or {}
+        title_ok = (bool(ti) and not ti.get('kind') and at.get('words') == ex.get('corner') and at.get('held') and (ti.get('rows') or 0) >= 1 and ti.get('name') == heard(ctx, ex.get('corner') or '')
+                    and (ti.get('moved') or 0) >= 100 and down.get('words') == ex.get('corner') and down.get('hit') and title_box.get('top', -1) >= held_box.get('top', 0) - 0.5
+                    and title_box.get('bottom', 1e9) <= held_box.get('bottom', 0) + 0.5 and chip_at.get('on') and chip_at.get('held') is False
+                    and chip_row.get('top', -1) >= (chip_at.get('head') or {}).get('bottom', 1e9) - 0.5 and ti.get('hidden') == 0)
         ties = ctx.js('window.__skep.scene.ties()') or []
         bands_ok = any(x['kind'] == 'band' for x in ties) and bool((ctx.js('window.__skep.scene.pairs()') or {}).get('pairs'))
         # every word of the list whole on its line, a long row taking two lines between words; every timed row's time in one slot
@@ -2970,6 +3004,7 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
                 'the days': (dates_ok and folded_ok, {'heads': {k: (v['head'], v['folded'], v['act']) for k, v in heads.items()}, 'want': exdays, 'yesterday': y}),
                 'the rows': (rows_ok and marks_ok, {'lines': lines[:10], 'want': list(exrows.values())[:10], 'version': want['version']}),
                 'the corner': (corner_ok, {'corner': corner_line, 'chip': chip, 'bar': bar_as_of, 'line': line_as_of, 'want': [ex.get('corner'), ex.get('asOf')]}),
+                'the title': (title_ok, dict(ti, want=ex.get('corner'))),
                 'the bands': (bands_ok, {'ties': [x['kind'] for x in ties]}),
                 'the words': (words_ok, {'broken': broken, 'slots': slots[:8]}),
                 'the form': (form_ok, form)}
@@ -3066,10 +3101,11 @@ SCROLL_TO_WORD = '''(async (side, frac) => { const pane = document.getElementByI
   const i = tn.data.search(/[A-Za-z]{3}/), r = document.createRange(); r.setStart(tn, i + 1); r.setEnd(tn, i + 2); const q = r.getBoundingClientRect();
   return {x: q.left + 0.5, y: q.top + q.height / 2, block: Number(e.dataset.pos)}; })(%s, %s)'''
 # what a click at a point on screen meets: the element there, whether it is a pane's text, the element it stands in, and the
-# held heads' boxes
+# held heads' boxes — each head's rows those standing inside its pane's visible box, a row scrolled out at its top clipped there
 HIT_AT = '''((x, y) => { const e = document.elementFromPoint(x, y); if (!e) return null; const box = (el) => { const q = el.getBoundingClientRect(); return [Math.round(q.top), Math.round(q.bottom)]; };
+  const shown = (r, p) => { const q = r.getBoundingClientRect(), b = p.getBoundingClientRect(), top = b.top + p.clientTop; return q.bottom > top && q.top < top + p.clientHeight; };
   return {tag: e.tagName, cls: String(e.className && e.className.baseVal !== undefined ? e.className.baseVal : e.className), text: !!e.closest("article.dtext") && !e.closest(".corner"), corner: !!e.closest(".corner"), within: (e.closest("[id^=scene]") || {}).id || null,
-          heads: [...document.querySelectorAll("#sceneA > .corner.head, #sceneB > .corner.head")].map((h) => ({id: h.id, box: box(h), opened: h.querySelector(":scope > .opened") ? box(h.querySelector(":scope > .opened")) : null, rows: [...h.querySelectorAll(":scope > .hrow")].filter((r) => r.style.visibility !== "hidden").map(box)}))}; })(%s, %s)'''
+          heads: [...document.querySelectorAll("#sceneA > .corner.head, #sceneB > .corner.head")].map((h) => ({id: h.id, box: box(h), opened: h.querySelector(":scope > .opened") ? box(h.querySelector(":scope > .opened")) : null, rows: [...h.querySelectorAll(":scope > .hrow")].filter((r) => shown(r, h.parentElement)).map(box)}))}; })(%s, %s)'''
 # the paragraphs the pane-close row's draft is lengthened by, so its pane scrolls past its first span
 LONG_LINES = ''.join('Line %d of the pane the person scrolls, words to read and to write beside.\n\n' % k for k in range(1, 31))
 # a reading scene's pane as a face standing in it is held to, by its side (`A`, `B`), on screen: its visible box — its client

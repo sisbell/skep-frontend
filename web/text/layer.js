@@ -415,7 +415,10 @@
 // the view it draws at that measure (`sceneView`), which the scene keeps so a
 // pane is set again from them with no read (SC; FP-23); its corner's items
 // are made here too, beside its column whole or compact (`sceneCorner`), or
-// at its document's head in the plane's head form (`sceneHead`; FP-26); and
+// at its document's head in the plane's head form (`sceneHead`; FP-26) — a
+// past state's or the held version's title on its first rows, broken at its
+// joiners as its width asks (`titleLines`), and the rows the scene holds at
+// the pane's top marked so (`HeadLayout.held`); and
 // what it was made from is kept beside it as a
 // mounted article's is (`madeOf`) — its document's blocks, runs and image as
 // the model held them, which the model replaces whole and never edits in
@@ -579,7 +582,7 @@ import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, inFirstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, endsColumn, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, MARGIN, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX, ELLIPSIS } from '../plane/labels.js';
-import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, kindWord, keptHTML, statementHTML, keptWord, keptStatement, faceWords, faceRuns, blockMarks, symbolLit, editionClause, copyText, copyParts, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
+import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, titleHTML, kindWord, keptHTML, statementHTML, keptWord, keptStatement, faceWords, faceRuns, blockMarks, symbolLit, editionClause, copyText, copyParts, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
 import { farShort, whyOf } from '../beams/held.js';
 import { applyEdits, sourceRuns, fromBase, boundaries, wordStop, stretchIn } from '../model/derive.js';
 import { iRuns } from '../model/frames.js';
@@ -791,6 +794,7 @@ import { t, plural, facedHTML, lastRead, runsText, joinRuns, sentence, CLIENT_CL
  * @property {HeadSlot[]} slots its items and the kept clause, each where it stands
  * @property {number} name the room its first row leaves the document's name, px from the head's left: the name stands in [0, name)
  * @property {number} folded the items folded into the count, "⟨n⟩ more"
+ * @property {number} held its rows held at a reading scene's pane's top as the text scrolls (SC's): through the last row a title, the kept clause or an item that holds stands on, the first at the least; the rest scroll with the text
  */
 
 /**
@@ -1685,15 +1689,51 @@ function headKey(d) {
 /** words' width in the corner's type — the client's face at the interface's size, P-REG's CORNER — in px, as the platform sets them (`measureRun`) */
 export const cornerPx = (/** @type {string} */ text) => measureRun(text, CORNER.px, 'normal', 'client');
 
-/** the lines a corner's words take wrapped at their spaces at a width, at the interface's size */
-function linesAt(/** @type {string} */ words, /** @type {number} */ width) {
-  const space = cornerPx(' ');
+/** the lines a corner's words take wrapped at their spaces at a width, measured by `wide` — the interface's size (`cornerPx`) where none is given */
+function linesAt(/** @type {string} */ words, /** @type {number} */ width, wide = cornerPx) {
+  const space = wide(' ');
   let n = 1, x = 0;
   for (const w of words.split(' ')) {
-    const ww = cornerPx(w);
+    const ww = wide(w);
     if (x > 0 && x + space + ww > width + 1e-6) { n++; x = ww; } else x += (x > 0 ? space : 0) + ww;
   }
   return n;
+}
+
+/**
+ * A title's lines at a width (T-ARTICLE's `Title`; FP-26): its line whole
+ * where the width holds it, else broken at its joiners of the lowest rank
+ * first and each part of that break laid out again so — a past state's time
+ * over its hand, then the hand's label over its cue; the held words after
+ * their dash — a part wider than the width standing on a line of its own,
+ * wrapped between its words, never cut. Each line its words, the joiner it
+ * breaks at at its end, so the lines read together are the line's words;
+ * `count` the lines they take — a wrapped one counted line by line — with a
+ * substitution's words after them on lines of their own (`linesAt`).
+ * @param {import('./article.js').Title} title
+ * @param {number} width px
+ * @param {(s: string) => number} [wide] words' width, px: the corner's type at its own size (`cornerPx`) where none is given
+ * @returns {{lines: Array<{words: string, wraps: boolean}>, count: number}}
+ */
+export function titleLines(title, width, wide = cornerPx) {
+  const n = title.parts.length, text = title.parts.map((p) => runsText(p));
+  /** the parts from `i` up to `j` as one line's words, the joiner after the last where the line breaks there */
+  const words = (/** @type {number} */ i, /** @type {number} */ j) => text.slice(i, j).map((s, k) => (k ? title.joins[i + k - 1].text : '') + s).join('') + (j < n ? title.joins[j - 1].text : '');
+  /** does the width hold those parts as one line, as drawn — a joiner at its end standing, its space after it collapsed */
+  const fits = (/** @type {number} */ i, /** @type {number} */ j) => wide(words(i, j).trimEnd()) <= width + 1e-6;
+  /** @type {Array<[number, number]>} */
+  const spans = [];
+  const lay = (/** @type {number} */ i, /** @type {number} */ j) => {
+    if (j - i < 2 || fits(i, j)) { spans.push([i, j]); return; }
+    const rank = Math.min(...title.joins.slice(i, j - 1).map((x) => x.rank));
+    let from = i;
+    for (let k = i + 1; k < j; k++) if (title.joins[k - 1].rank === rank) { lay(from, k); from = k; }
+    lay(from, j);
+  };
+  if (n) lay(0, n);
+  const lines = spans.map(([i, j]) => ({ words: words(i, j), wraps: !fits(i, j) }));
+  const count = lines.reduce((c, l) => c + (l.wraps ? linesAt(l.words.trimEnd(), width, wide) : 1), 0) + (title.substituted ? linesAt(title.substituted.text, width, wide) : 0);
+  return { lines, count };
 }
 
 /** the width of the count the items a head's rows cannot hold fold into, "⟨n⟩ more" (`headLayout`) */
@@ -1705,8 +1745,8 @@ const clauseWidth = (/** @type {{text: string}} */ k) => measureRun(k.text, ADDR
 /** the least room a document's name keeps on its head's first row: its address whole at its one size, so whether its region is named moves no row (`docLabel`) */
 const nameWidth = (/** @type {Doc} */ d) => measureRun(d.addr, ADDRESS.px, ADDRESS.weight, 'ident');
 
-/** a corner's items as a head's rows read them (`headLayout`): each one's width at the interface's size — a face's its words measured there (`cornerPx`), for they wrap where a row cannot hold them — its words, and whether it yields */
-const headItems = (/** @type {import('./article.js').CornerItem[]} */ items) => items.map((i) => ({ w: i.cls === 'face' ? cornerPx(i.words) : i.em * CORNER.px, yields: i.yields, words: i.words }));
+/** a corner's items as a head's rows read them (`headLayout`): each one's width at the interface's size — a face's its words measured there (`cornerPx`), for they wrap where a row cannot hold them — its words, whether it yields, and whether it holds at a reading scene's pane's top */
+const headItems = (/** @type {import('./article.js').CornerItem[]} */ items) => items.map((i) => ({ w: i.cls === 'face' ? cornerPx(i.words) : i.em * CORNER.px, yields: i.yields, words: i.words, holds: i.holds }));
 
 /**
  * The depth a document's head takes above its first row, in the body's em
@@ -1730,25 +1770,30 @@ function headBand(d, v) {
 }
 
 /**
- * A corner's rows at its document's head (see the head; FP-26): on its first
- * row the document's name — the least it keeps, its address (`name`) — then
- * the kept clause, then the corner's items in their one order while they fit,
- * all after the name standing at the row's end and the name's room before
- * them (`HeadLayout.name`); an item that never yields and does not fit beside
+ * A corner's rows at its document's head (see the head; FP-26): where the
+ * corner is titled, its first item across the head on the first `title` rows
+ * (T-ARTICLE's `cornerTitle`); else on its first row the document's name — the
+ * least it keeps, its address (`name`) — then the kept clause, then the
+ * corner's items in their one order while they fit, all after the name
+ * standing at the row's end and the name's room before them
+ * (`HeadLayout.name`); an item that never yields and does not fit beside
  * those before it wrapped whole onto the next row — kept on its own row where
- * nothing stands before it, as on a first row a name of no room leaves empty —
- * its words wrapped where it is wider than the head, taking the rows they need
- * at `pitch` (`linesAt`); an item that yields and does not fit beside those
- * before it folded into the count, "⟨n⟩ more", which takes the next slot
- * after the last placed.
- * @param {Array<{w: number, yields: boolean, words: string}>} items the corner's items, compact, at the interface's size (`headItems`)
+ * nothing stands before it, as on a first row a name of no room leaves empty
+ * — its words wrapped where it is wider than the head, taking the rows they
+ * need at `pitch` (`linesAt`); an item that yields and does not fit beside
+ * those before it folded into the count, "⟨n⟩ more", which takes the next
+ * slot after the last placed. Its rows held at a reading scene's pane's top
+ * run through the last that a title, the kept clause or an item that holds
+ * stands on (`HeadLayout.held`).
+ * @param {Array<{w: number, yields: boolean, words: string, holds?: boolean}>} items the corner's items, compact, at the interface's size (`headItems`), `holds` where it holds at a pane's top (T-ARTICLE's `CornerItem.holds`)
  * @param {number} name the least room the name keeps, px (`nameWidth`)
  * @param {{w: number, words: string} | null} clause the kept clause (`clauseWidth`); null where none stands
  * @param {number} width the head's width, px
  * @param {number} pitch its rows' pitch, px
+ * @param {number} [title] the rows the first item takes across the head as its title; 0, where none is given, for a corner no title leads
  * @returns {HeadLayout}
  */
-export function headLayout(items, name, clause, width, pitch) {
+export function headLayout(items, name, clause, width, pitch, title = 0) {
   /** @type {HeadSlot[]} */
   const slots = [];
   let row = 0, x = name, folded = 0;
@@ -1763,13 +1808,15 @@ export function headLayout(items, name, clause, width, pitch) {
     slots.push({ k, row, x: 0, w: width, rows });
     row += rows - 1; x = width;
   };
+  if (title > 0 && items.length) { slots.push({ k: 0, row: 0, x: 0, w: width, rows: title }); row = title - 1; x = width; }
   if (clause) place(-1, clause.w, clause.words, false);
-  items.forEach((it, k) => place(k, it.w, it.words, it.yields));
+  items.forEach((it, k) => { if (!(title > 0 && k === 0)) place(k, it.w, it.words, it.yields); });
   if (folded) place(-2, moreWidth(folded), t('L.corner.more', { n: numeral(folded) }), false);
   // the first row's slots stand at its end, the name's room before them
   const end0 = Math.max(name, ...slots.filter((s) => s.row === 0).map((s) => s.x + s.w)), shift = Math.max(0, width - end0);
   for (const s of slots) if (s.row === 0) s.x += shift;
-  return { rows: row + 1, slots, name: name + shift, folded };
+  const held = Math.max(1, ...slots.filter((s) => s.k === -1 || (s.k >= 0 && (items[s.k].holds || (title > 0 && s.k === 0)))).map((s) => s.row + s.rows));
+  return { rows: row + 1, slots, name: name + shift, folded, held };
 }
 
 /** no count at a block: what the lines' key reads every block's as */
@@ -4750,8 +4797,8 @@ export const cornerStop = (el) => allIn(el, 'button').find((b) => b.getAttribute
 /** a head's count of the items its rows fold, "⟨n⟩ more" (`headLayout`): the act that opens them whole beneath its rows, saying whether they stand opened (D5 K-57; FP-26) */
 const moreHTML = (/** @type {number} */ n, /** @type {boolean} */ open) => `<button type="button" class="more" data-more="${n}" aria-expanded="${open}" tabindex="-1">${esc(t('L.corner.more', { n: numeral(n) }))}</button>`;
 
-/** a head's row as markup: a row holding an act a line of acts of its own (`setStops`) */
-const hrowHTML = (/** @type {number} */ i, /** @type {string} */ style, /** @type {string} */ inner) => `<div class="hrow" data-row="${i}"${inner.includes('<button') ? ' role="toolbar"' : ''} style="${style}">${inner}</div>`;
+/** a head's row as markup: a row holding an act a line of acts of its own (`setStops`), marked where it is held at a reading scene's pane's top (`HeadLayout.held`) */
+const hrowHTML = (/** @type {number} */ i, /** @type {string} */ style, /** @type {string} */ inner, held = false) => `<div class="hrow" data-row="${i}"${held ? ' data-held="1"' : ''}${inner.includes('<button') ? ' role="toolbar"' : ''} style="${style}">${inner}</div>`;
 
 /**
  * The form a head opens beneath its rows, every item whole (`openCorner`):
@@ -5344,34 +5391,45 @@ export function sceneCorner(d, view = viewFor(d, true), compact = false, keep = 
  * item whole on a glyph's or the count's act, its words alone where its rows
  * hold its act (`openedHTML`), a draft's kept statement on its kept word's
  * (K-74). No row names the document: the scene's bar names each pane's.
- * Its rows stand where its band sets them, each row and the form beneath
- * absolutely placed (the scene moves them as its pane scrolls); every corner
- * carries an item, its kind's slot first, so it stands one row at the least —
- * save where `keep` takes some items alone: an editor pane's head in a stacked
- * scene, its kept line and any face (SC's `footed`; foundations §2.5).
- * The scene stands its stops (`setStops`).
+ * Titled (T-ARTICLE's `ArticleView.titled`), its title across the head on its
+ * first rows, laid out on its lines in the corner's type at its own size and
+ * leading (`titleLines`, `cornerPx`), as many rows as those lines take and
+ * never fewer than `floor`, the rest of its items on the rows after. Each row
+ * stands where its band sets it, as tall as the slots beginning on it take — a
+ * wrapped slot's later rows standing in its own row — and the form beneath,
+ * each absolutely placed (the scene moves them as its pane scrolls), the rows
+ * held at the pane's top marked so (`HeadLayout.held`); every corner carries
+ * an item, its kind's slot first, else its title, so it stands one row at the
+ * least — save where `keep` takes some items alone: an editor pane's head in a
+ * stacked scene, its kept line and any face (SC's `footed`; foundations
+ * §2.5). The scene stands its stops (`setStops`).
  * @param {Doc} d
  * @param {ArticleView} view the pane's view, at its measure (`sceneView`), with the corner's state the scene hands in
- * @param {{px: number, kept: KeptClause | null, open: boolean, keep?: (cls: string) => boolean}} as `px` the em the pane's text is set at; `kept` the pane's kept clause; `open` its items opened whole by the reader's act; `keep` the items its rows hold, by their class — every item where none is given
- * @returns {{html: string, rows: number}}
+ * @param {{px: number, kept: KeptClause | null, open: boolean, keep?: (cls: string) => boolean, floor?: number}} as `px` the em the pane's text is set at; `kept` the pane's kept clause; `open` its items opened whole by the reader's act; `keep` the items its rows hold, by their class — every item where none is given; `floor` the rows a title takes at the least — none where none is given
+ * @returns {{html: string, rows: number, held: number}} `held` its rows held at the pane's top (`HeadLayout.held`)
  */
 export function sceneHead(d, view, as) {
   const take = (/** @type {import('./article.js').CornerItem[]} */ all) => (as.keep ? all.filter((i) => /** @type {(cls: string) => boolean} */ (as.keep)(i.cls)) : all);
   const items = take(cornerItems(d, { ...view, opened: as.open }, true, false)), clause = as.kept;
   const pitch = LINE_H * as.px, width = ((view.cpl ?? MEASURE_CPL) * CHAR_W + EDGE) * as.px;
-  const L = headLayout(headItems(items), 0, clause ? { w: cornerPx(clause.text), words: clause.text } : null, width, pitch);
+  const title = items.length && items[0].title ? items[0].title : null, lines = title ? titleLines(title, width) : null;
+  const titled = lines ? Math.max(1, Math.ceil(lines.count * CORNER_LINE / pitch - 1e-9), as.floor ?? 0) : 0;
+  const L = headLayout(headItems(items), 0, clause ? { w: cornerPx(clause.text), words: clause.text } : null, width, pitch, titled);
   /** @type {string[]} each row's markup, by row */
   const rows = Array.from({ length: L.rows }, () => '');
+  /** @type {number[]} the rows the slots beginning on each row take, by row: 0 where none begins there */
+  const tall = Array.from({ length: L.rows }, () => 0);
   for (const s of L.slots) {
     const html = s.k === -1 ? keptHTML(clause)
       : s.k === -2 ? moreHTML(L.folded, as.open)
-        : items[s.k].html;
+        : title && lines && s.k === 0 ? titleHTML(title, lines.lines) : items[s.k].html;
     rows[s.row] += `<span class="hslot${s.rows > 1 ? ' wraps' : ''}" style="left:${s.x}px;width:${s.w}px;height:${s.rows * pitch}px;line-height:${s.rows > 1 ? '' : pitch + 'px'}">${html}</span>`;
+    tall[s.row] = Math.max(tall[s.row], s.rows);
   }
   const form = as.open ? openedHTML(take(cornerItems(d, { ...view, acts: false })).map((i) => i.html), items, L) : view.kept && view.keptOpen ? statementHTML(view.kept, view.keptSaid) : '';
-  const html = rows.map((r, i) => hrowHTML(i, `top:${i * pitch}px;height:${pitch}px`, r)).join('')
+  const html = rows.map((r, i) => (tall[i] ? hrowHTML(i, `top:${i * pitch}px;height:${tall[i] * pitch}px`, r, i < L.held) : '')).join('')
     + (form ? openedFormHTML(`top:${L.rows * pitch}px;width:${width}px`, form) : '');
-  return { html, rows: L.rows };
+  return { html, rows: L.rows, held: L.held };
 }
 
 /** a document's corner on the plane, or null where it carries none now (the gate's containment check reads it) */

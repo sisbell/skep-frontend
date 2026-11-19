@@ -14,7 +14,11 @@
 // fold reserves, its first row held below the line, a form opened beneath it,
 // the band's change re-anchoring the camera — and a kept word said where it
 // changes; a reading scene's pane's view at its measure and its corner,
-// compact beside its column or at its document's head, no row naming it; a
+// compact beside its column or at its document's head, no row naming it, its
+// rows held at the pane's top through what says which state it shows — a past
+// state's or the held version's title on its first rows, broken at its middle
+// dots first and the held words after their dash, as many rows as its lines
+// take and never fewer than the floor handed in; a
 // document's region and the view's window over it; a span in the visible
 // view, read in a draft's typed text where the edits carried it; what a view
 // reads in a draft's typed text read of the text shown, and a stretch the
@@ -108,11 +112,11 @@ import { CORNER, ADDRESS, COL, HOLD, MARGIN, cornerWidth } from '../plane/regist
 import { holdTop, holdStack, lineHeight, runsOf } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME } from '../plane/lod.js';
-import { CLAUSE_READING, articleHTML, faceRuns } from './article.js';
+import { CLAUSE_READING, articleHTML, faceRuns, cornerTitle } from './article.js';
 import * as FACES from '../overlays/faces.js';
 import { farSays } from '../beams/held.js';
 import { pastSigns } from '../beams/beams.js';
-import { t, tHTML, tRuns, lastRead, sentence, sentences, heard } from '../strings.js';
+import { t, tHTML, tRuns, lastRead, sentence, sentences, heard, FIELD as JOINER } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import * as MACHINE from '../write/machine.js';
 import { page } from '../test/dom.js';
@@ -2089,9 +2093,10 @@ test('a reading scene\'s pane\'s view is at the pane\'s measure, and its corner 
   assert.ok(LAYER.sceneCorner(d, view, true).includes('class="st glyph"') && LAYER.sceneCorner(d, view, true).includes(`aria-label="${esc(heard(latest))}"`) && !LAYER.sceneCorner(d, view).includes('glyph'), 'beside its column, compact: the state a glyph named by its words, heard; whole: its words');
   assert.ok([LAYER.sceneCorner(d, view), LAYER.sceneCorner(d, view, true)].every((c) => c.startsWith(`<span class="kind" data-kind="published" data-string="F.published"`)), 'its kind first, in either form');
   /** a head's rows: each its index, its top and its height, and its markup */
-  const rowsOf = (/** @type {string} */ html) => [...html.matchAll(/<div class="hrow" data-row="(\d+)"( role="toolbar")? style="top:([\d.]+)px;height:([\d.]+)px">(.*?)<\/div>/g)].map((m) => ({ k: Number(m[1]), bar: !!m[2], top: Number(m[3]), h: Number(m[4]), html: m[5] }));
+  const rowsOf = (/** @type {string} */ html) => [...html.matchAll(/<div class="hrow" data-row="(\d+)"( data-held="1")?( role="toolbar")? style="top:([\d.]+)px;height:([\d.]+)px">(.*?)<\/div>/g)].map((m) => ({ k: Number(m[1]), held: !!m[2], bar: !!m[3], top: Number(m[4]), h: Number(m[5]), html: m[6] }));
   const head = LAYER.sceneHead(d, view, { px, kept: null, open: false }), rows = rowsOf(head.html);
   assert.ok(head.rows === 3 && rows.length === 3 && rows.every((r, i) => r.k === i && Math.abs(r.top - i * pitch) < 1e-6 && Math.abs(r.h - pitch) < 1e-6), `its rows at the reading line's pitch, each where its band sets it: ${JSON.stringify(rows)}`);
+  assert.deepEqual([head.held, rows.map((r) => r.held)], [2, [true, true, false]], 'its rows held at a pane\'s top: through the version statement and the state, which say which state it shows; the count of what folds scrolls (issue #677)');
   assert.ok(!head.html.includes('class="name"'), `no row naming the document: ${head.html}`);
   assert.ok(rows.some((r) => r.bar) && rows.every((r) => r.bar === r.html.includes('<button')), `each row holding an act a line of acts, a toolbar, and no other row one: ${JSON.stringify(rows.map((r) => [r.k, r.bar]))}`);
   const slots = [...head.html.matchAll(/class="hslot[^"]*" style="left:([\d.]+)px;width:([\d.]+)px;/g)].map((m) => Number(m[1]) + Number(m[2]));
@@ -2109,6 +2114,56 @@ test('a reading scene\'s pane\'s view is at the pane\'s measure, and its corner 
   assert.ok(form && Math.abs(Number(form[1]) - opened.rows * pitch) < 1e-6 && Math.abs(Number(form[2]) - width) < 1e-6 && form[3].includes(esc(latest)) && form[3].includes('data-read="2"'), `opened: every item whole beneath its rows, across the head: ${opened.html}`);
   const reading = LAYER.sceneHead({ ...d, kind: /** @type {any} */ ('unknown'), meta: null }, { ...view, read: null, kind: 'reading' }, { px, kept: null, open: false });
   assert.ok(reading.rows === 1 && rowsOf(reading.html).length === 1 && rowsOf(reading.html)[0].html.includes('class="kind pending"'), `its kind being read: its one row its slot, an empty box: ${reading.html}`);
+  const wide = rowsOf(LAYER.sceneHead(d, view, { px, kept, open: false }).html), rowOf = (/** @type {string} */ s) => wide.find((r) => r.html.includes(s));
+  assert.ok(wide[0].held && wide[0].h > pitch && wide[0].html.includes('data-string="L.kept.links"') && rowOf('class="kind"')?.held && rowOf('data-members="3"')?.held && rowOf('data-more="1"')?.held === false,
+    `a clause wider than the head held whole on the one row its words wrap across, the kind and the version statement on the rows after it held too, so which state the pane shows never scrolls; the count of what folds not held (issue #677): ${JSON.stringify(wide.map((r) => [r.k, r.held, r.h]))}`);
+});
+
+/** a past state's line as T-ARTICLE titles it (`cornerTitle`): its time, then its hand's label and cue */
+const PAST_LINE = /** @type {import('../strings.js').Run[]} */ ([{ text: 'dev-notebook', face: 'reading' }, { text: 'e427 2902 a114 39e5', face: 'ident' }]);
+const PAST_TITLE = /** @type {import('./article.js').Title} */ (cornerTitle({ titled: true, past: { time: 'at 00:35', hand: PAST_LINE, why: null } }));
+
+test('a title\'s lines at a width: its line whole where the width holds it; else broken at its middle dots first — the time over the hand — then the hand\'s label over its cue where the hand alone is wider; the held words after their dash; a part wider than the width on a line of its own, wrapped between its words and counted line by line, never cut — each line ending with the joiner it breaks at, the lines read together the line\'s words, a substitution\'s words counted on lines of their own after them (issue #677; FP-26)', () => {
+  const all = t('B3.history.row', { time: 'at 00:35', hand: 'dev-notebook · e427 2902 a114 39e5' }), hand = 'dev-notebook · e427 2902 a114 39e5', w = LAYER.cornerPx;
+  assert.deepEqual(LAYER.titleLines(PAST_TITLE, w(all)), { lines: [{ words: all, wraps: false }], count: 1 }, 'held whole on one line where the width holds it');
+  const two = LAYER.titleLines(PAST_TITLE, w(all) - 1);
+  assert.deepEqual(two, { lines: [{ words: `as it stood at 00:35${JOINER}`, wraps: false }, { words: hand, wraps: false }], count: 2 }, 'a px short: the time over the hand, the dot ending the time\'s line');
+  const three = LAYER.titleLines(PAST_TITLE, w(hand) - 1);
+  assert.deepEqual(three.lines.map((l) => l.words), [`as it stood at 00:35${JOINER}`, `dev-notebook${JOINER}`, 'e427 2902 a114 39e5'], 'narrower than the hand: its label over its cue');
+  assert.equal(three.lines.map((l) => l.words).join(''), all, 'the lines read together are the line\'s words');
+  const tight = LAYER.titleLines(PAST_TITLE, w('e427 2902 a114 39e5'));
+  assert.deepEqual([tight.lines[0], tight.count], [{ words: `as it stood at 00:35${JOINER}`, wraps: true }, 2 + 1 + 1], 'a time wider than the width: on its own line, wrapped between its words, two lines of it counted');
+  const held = /** @type {import('./article.js').Title} */ (cornerTitle({ titled: true, held: true })), words = t('B3.history.held'), dash = words.indexOf('— ') + 2;
+  assert.deepEqual(LAYER.titleLines(held, w(words) - 1).lines.map((l) => l.words), [words.slice(0, dash), words.slice(dash)], 'the held words broken after their dash');
+  const busy = { id: 'B3.history.busy', text: t('B3.history.busy'), substituted: true };
+  assert.equal(LAYER.titleLines({ ...PAST_TITLE, substituted: busy }, w(all)).count, 2, 'a substitution\'s words on a line of their own after the line');
+});
+
+test('a past state\'s corner titled at a pane\'s head stands its title across the head on its first rows, held at the pane\'s top, no kind\'s slot: one row where its line holds one line, more as the head narrows — as many as its lines take at the corner\'s own leading, never fewer than the floor handed in — the words saying it is how the draft stands now and the chip on the rows after, which scroll; the held version\'s words broken after their dash (issue #677; FP-26)', () => {
+  deliver();
+  const d = { ...REC.doc(D), kind: /** @type {const} */ ('draft'), meta: null }, px = 17, pitch = LINE_H * px, leading = CORNER.px * 1.4;
+  const now = { id: 'B3.history.now', text: t('B3.history.now'), substituted: false };
+  const viewAt = (/** @type {number} */ cpl, /** @type {Partial<import('./article.js').ArticleView>} */ o) => ({ ...LAYER.sceneView(d, cpl), kind: /** @type {const} */ ('draft'), titled: true, ...o });
+  /** a head's rows: each its index, whether it is held, its top and its height, and its markup */
+  const rowsOf = (/** @type {string} */ html) => [...html.matchAll(/<div class="hrow" data-row="(\d+)"( data-held="1")?( role="toolbar")? style="top:([\d.]+)px;height:([\d.]+)px">(.*?)<\/div>(?=<div|$)/g)].map((m) => ({ k: Number(m[1]), held: !!m[2], top: Number(m[4]), h: Number(m[5]), html: m[6] }));
+  const linesIn = (/** @type {string} */ html) => [...html.matchAll(/<span class="tl(?: wraps)?">(.*?)<\/span>/g)].map((m) => m[1]);
+  const past = { time: 'at 00:35', hand: PAST_LINE, why: now };
+  const wide = LAYER.sceneHead(d, viewAt(MEASURE_CPL, { past }), { px, kept: null, open: false }), wideRows = rowsOf(wide.html);
+  assert.ok(!wide.html.includes('class="kind'), `no kind's slot: ${wide.html}`);
+  assert.deepEqual([wide.held, wideRows[0].k, wideRows[0].held, linesIn(wideRows[0].html).length], [1, 0, true, 1], 'a line the head holds whole: one row, held, the title on it');
+  assert.ok(wideRows[0].html.includes('data-string="B3.history.row"') && wideRows.slice(1).every((r) => !r.held) && wideRows.slice(1).some((r) => r.html.includes('data-string="B3.history.now"')) && wideRows.slice(1).some((r) => r.html.includes('data-chip')),
+    `the words saying it is how the draft stands now and the chip on the rows after it, not held: ${JSON.stringify(wideRows.map((r) => [r.k, r.held]))}`);
+  const cpl = [...Array(MEASURE_CPL).keys()].map((c) => c + 1).find((c) => LAYER.titleLines(PAST_TITLE, (c * CHAR_W + EDGE) * px).lines.length === 2);
+  assert.ok(cpl, 'a measure at which the line breaks once');
+  const width = (/** @type {number} */ cpl * CHAR_W + EDGE) * px, broken = LAYER.titleLines(PAST_TITLE, width);
+  const narrow = LAYER.sceneHead(d, viewAt(/** @type {number} */ (cpl), { past }), { px, kept: null, open: false }), held = Math.max(1, Math.ceil(broken.count * leading / pitch - 1e-9)), rows = rowsOf(narrow.html);
+  assert.deepEqual([narrow.held, rows[0].held, Math.round(rows[0].h * 100), linesIn(rows[0].html)], [held, true, Math.round(held * pitch * 100), broken.lines.map((l) => esc(l.words))],
+    'the time over the hand, held: as many rows as its lines take at the corner\'s leading, one row standing them all');
+  assert.ok(rows.slice(1).every((r) => r.k >= held && !r.held), `the rest on the rows after the title, none held: ${JSON.stringify(rows.map((r) => [r.k, r.held]))}`);
+  const floored = LAYER.sceneHead(d, viewAt(MEASURE_CPL, { past }), { px, kept: null, open: false, floor: 3 });
+  assert.deepEqual([floored.held, rowsOf(floored.html)[0].h > 2.9 * pitch], [3, true], 'never fewer rows than the floor handed in');
+  const heldVersion = LAYER.sceneHead(d, viewAt(MEASURE_CPL, { held: true }), { px, kept: null, open: false });
+  assert.ok(heldVersion.held >= 1 && heldVersion.rows === heldVersion.held && rowsOf(heldVersion.html)[0].html.includes('data-string="B3.history.held"') && !heldVersion.html.includes('class="kind'), `the held version: its words alone, held: ${heldVersion.html}`);
 });
 
 /**

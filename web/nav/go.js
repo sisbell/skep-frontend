@@ -315,7 +315,9 @@
 // read from the head back (M-PUMP's `historyOf`), the state it opens on read
 // at a position (`stateAt`) and derived (M-DERIVE's `recordAt`) — the state
 // before the draft's newest change, or the newest kept one where words not
-// kept yet stand — then the scene opened on the draft's current text and that
+// kept yet stand, or where the board reads not the one asked, a substitution
+// its corner holds with its line (T-ARTICLE's `PastWhy`) — then the scene
+// opened on the draft's current text and that
 // state, levelled at the selection standing in the draft, else at the newest
 // change's place nearest the caret (`changeNear`), its entry keeping the
 // derived record, so a return reopens it reading nothing.
@@ -2975,9 +2977,11 @@ export function changeNear(past, now, near) {
  * the row below the top row ends at; where the draft holds words the board has
  * not kept, the newest kept state, the position the top row ends at, the list
  * saying so above it; where no row stands below the top, the top row's own,
- * which is how the draft stands now. A state the board does not read yields
- * to the newest kept one, read the same way, its corner saying why in the
- * refusal's words (O-FACES' `wordsFor`); where that is not read either, or the
+ * which is how the draft stands now, its corner saying so. A state the board
+ * does not read yields to the newest kept one, read the same way, its corner
+ * saying why in the refusal's words (O-FACES' `wordsFor`) — a substitution,
+ * which its corner holds with its line (T-ARTICLE's `PastWhy`); where that is
+ * not read either, or the
  * history read is refused, nothing opens and the act's site says why; where
  * it reads no row, the status region says the draft stands as it is. The panes
  * level at a selection standing in the draft, else at the newest change's
@@ -3012,12 +3016,12 @@ export async function history(addr, opts = {}) {
   const want = below ? below.last : top.last;
   const t1 = performance.now();
   let s = await PUMP.stateAt(addr, want);
-  /** @type {{id: string, text: string} | null} */
-  let why = !unkept && !below ? { id: 'B3.history.now', text: t('B3.history.now') } : null;
+  /** @type {import('../text/article.js').PastWhy | null} */
+  let why = !unkept && !below ? { id: 'B3.history.now', text: t('B3.history.now'), substituted: false } : null;
   if ('refused' in s && want !== top.last) {
     const r = FACES.wordsFor(s.refused);
     s = await PUMP.stateAt(addr, top.last);
-    why = { id: r.id, text: r.text };
+    why = { id: r.id, text: r.text, substituted: true };
   }
   const stateMs = performance.now() - t1;
   if (!stands()) return false;

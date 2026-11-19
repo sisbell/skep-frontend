@@ -380,14 +380,21 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    cut, the room above it its own padding, so the corner is placed by the items above it alone (T-LAYER) */
 .corner .kept { display:block; padding-top:.3em; color:#cfd6df; white-space:normal; }
 /* A CORNER AT ITS DOCUMENT'S HEAD (FP-26, FP-31): across the column being read, its rows on the document's own ground at
-   the reading line's pitch, which T-LAYER sets — the first held below the one line, or at the top of a reading scene's
-   pane, and over the rest as they pass under it — its element the first row's box, the focus's ring on it; on the plane
-   the document's name on the first row, drawn and never announced; each item in a slot of its own width T-LAYER sets, its
-   words on one line, one whose words are wider than the head wrapped on the rows it takes; the forms its acts open whole
-   beneath its rows, wrapped and never cut */
+   the reading line's pitch, which T-LAYER sets — the first held below the one line, or the rows T-LAYER marks held at the
+   top of a reading scene's pane, and over the rest as they pass under them — its element the held rows' box, the focus's
+   ring on it; on the plane the document's name on the first row, drawn and never announced; each item in a slot of its
+   own width T-LAYER sets, its words on one line, one whose words are wider than the head wrapped on the rows it takes;
+   the forms its acts open whole beneath its rows, wrapped and never cut */
 #corners .corner.head { padding:0; background:transparent; border-radius:0; }
 :is(#corners, .pane) .corner.head > .hrow { position:absolute; left:0; right:0; z-index:1; }
-:is(#corners, .pane) .corner.head > .hrow[data-row="0"] { z-index:2; }
+:is(#corners, .pane) .corner.head > .hrow:is([data-row="0"], [data-held]) { z-index:2; }
+/* a past state's or the held version's title in a reading scene's pane (SC's; FP-26): its line and a substitution's words
+   held at the pane's top, each beginning a line of its own, the line's lines as T-LAYER breaks it — each whole on one line,
+   one wider than the head wrapped between its words — never cut, folded or hidden */
+.pane .corner.head .hslot > .title { display:block; white-space:normal; }
+.pane .corner .title > .past, .pane .corner .title > .held, .pane .corner .title > .why { display:block; margin:0; }
+.pane .corner .title .tl { display:block; white-space:nowrap; }
+.pane .corner .title .tl.wraps { white-space:normal; }
 #corners .corner.head .name { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
 #corners .corner.head .name > span { position:absolute; top:0; white-space:pre; }
 :is(#corners, .pane) .corner.head .hslot { position:absolute; top:0; display:flex; align-items:center; white-space:nowrap; }
@@ -582,9 +589,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #sceneA > .corner.compact.open { margin-right:calc(var(--corner-compact-w) - var(--corner-w)); }
 #sceneB > .corner.compact.open { margin-left:calc(var(--corner-compact-w) - var(--corner-w)); }
 /* A PANE'S CORNER AT ITS DOCUMENT'S HEAD (FP-26): the pane a column, its corner above its text — pane B's first, though it
-   follows its article in the order — across the column's text and edge at the width SC sets, its first row its own box,
+   follows its article in the order — across the column's text and edge at the width SC sets, its held rows its own box,
    held at the pane's top as the pane scrolls, the band SC sets below it; its later rows and a form opened beneath them
-   SC places, on the scene's ground; each column against its pane's inner edge still */
+   SC places, on the scene's ground, the rows passing under the held ones and out at the pane's top, clipped there by its
+   scroll and never hidden; each column against its pane's inner edge still */
 .pane.head { flex-direction:column; row-gap:0; }
 #sceneA.head { align-items:flex-end; }
 #sceneB.head > .corner { order:-1; }

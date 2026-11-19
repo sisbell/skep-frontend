@@ -119,8 +119,12 @@
 // the draft's address, once the draft's flight has landed, from the text at
 // its lines' base read from the board's history with its image, those lines
 // applied, the text the page shows where it cannot be so derived — its corner
-// naming what it is
-// in the place of the kept word and the chip, and at a selection in it, the
+// naming what it is in the place of the kept word and the chip — at its
+// document's head that line, like a past state's, the corner's title in the
+// kind's place, held at the pane's top on rows that its line's widest form at
+// the fit takes, a substitution held with it, the pane named by it and a hand
+// of the reader's own key by its label alone (FP-26, FP-34) — and at a
+// selection in it, the
 // focus there, the acts that send and a printable key giving the one reason
 // the selection keys against the current text, Space keeping K-9's line
 // (D6 BM-14; FP-41), and its last held line discarded, the scene staying,
@@ -173,8 +177,8 @@ import * as GO from '../nav/go.js';
 import * as TRAIL from '../nav/trail.js';
 import * as CAM from '../plane/camera.js';
 import { accountCell } from '../plane/projection.js';
-import { t, tHTML, lastRead, addressedHTML, sentence, sentences, hintSentences, heard, runsText, asRuns } from '../strings.js';
-import { esc } from '../util.js';
+import { t, tHTML, lastRead, addressedHTML, sentence, sentences, hintSentences, heard, runsText, asRuns, fields } from '../strings.js';
+import { esc, fingerprintCue } from '../util.js';
 import * as LK from '../links/links.js';
 import { inkOf } from '../beams/beams.js';
 import { edgeStatementHTML, placeholderOf, originRunsOf, sourceStatementHTML } from '../text/article.js';
@@ -183,7 +187,7 @@ import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as PROV from '../overlays/provenance.js';
 import * as SEL from '../overlays/selection.js';
 import { recorder } from '../test/canvas.js';
-import { HEAD_CPL, MEASURE_CPL, CHAR_W, EDGE, fitFor, setAdvance } from '../plane/layout.js';
+import { HEAD_CPL, MEASURE_CPL, CHAR_W, EDGE, LINE_H, fitFor, setAdvance } from '../plane/layout.js';
 import { cornerWidth } from '../plane/register.js';
 
 /** @returns {import('../model/frames.js').ComparePair} */
@@ -3077,10 +3081,16 @@ test('a draft\'s history opens from its corner\'s act beside the current text: p
     assert.deepEqual([panes?.a.src, panes?.a.derived, panes?.b.src, panes?.b.derived, SCENE.pastOf()], [PASTD, false, PASTD, true, PASTD], 'pane A the draft read from the board, pane B its past state derived');
     assert.deepEqual([L?.at, L?.unkept, L?.why], [PAST_AT, false, null], 'the state before the newest change, its row the one below the top');
     assert.ok(panes?.b.blocks.map((b) => b.text).join('') === PAST_OLD, `pane B the text as it stood: ${JSON.stringify(panes?.b.blocks)}`);
-    const time = lastRead(PAST_T0 + 2 * 60000), hand = t('F.slot.unsigned');
-    assert.ok(p.cornerB.innerHTML.includes(`<span class="past" data-string="B3.history.row">${esc(t('B3.history.row', { time, hand }))}</span>`) && p.cornerB.innerHTML.includes('data-chip="1"') && !p.cornerB.innerHTML.includes('kept-word') && !p.cornerB.innerHTML.includes('data-history'),
-      `pane B's corner: its line in the kept word's place, the chip beside it, no kept word and no act — ${p.cornerB.innerHTML}`);
-    assert.ok(p.cornerA.innerHTML.includes('data-kept="kept"') && p.cornerA.innerHTML.includes('data-history'), `pane A, the current text: the draft's kept word and its second act — ${p.cornerA.innerHTML}`);
+    const time = lastRead(PAST_T0 + 2 * 60000), hand = t('F.slot.unsigned'), line = t('B3.history.row', { time, hand });
+    const rowB = /^<div class="hrow" data-row="0" data-held="1"[^>]*>(.*?)<\/div>/.exec(p.cornerB.innerHTML);
+    assert.ok(rowB && rowB[1].includes(`<span class="title"><span class="past" data-string="B3.history.row"><span class="tl">${esc(line)}</span></span></span>`) && !rowB[1].includes('data-chip') && !p.cornerB.innerHTML.includes('class="kind'),
+      `pane B's corner at its document's head titled: its line first, in the kind's place, on its first row, held at the pane's top — no kind's slot (issue #677) — ${p.cornerB.innerHTML}`);
+    assert.ok(/<div class="hrow" data-row="[1-9]\d*" role="toolbar"[^>]*>.*data-chip="1"/.test(p.cornerB.innerHTML) && !p.cornerB.innerHTML.includes('kept-word') && !p.cornerB.innerHTML.includes('data-history'),
+      `the chip on a row after it, which scrolls; no kept word and no act — ${p.cornerB.innerHTML}`);
+    assert.deepEqual([SCENE.panes()?.b.heldRows, SCENE.panes()?.a.heldRows], [1, 1], 'one row held in each: the line the head holds whole, and pane A\'s kind and kept line');
+    assert.ok(p.bar.innerHTML.includes(`<span id="sceneB-kind" hidden>${esc(heard(line))}</span>`) && p.bar.innerHTML.includes(`<span id="sceneA-kind" hidden>${esc(t('F.kind.draft'))}</span>`),
+      `pane B named by its line, pane A by its kind (issue #677) — ${p.bar.innerHTML}`);
+    assert.ok(p.cornerA.innerHTML.includes('class="kind"') && p.cornerA.innerHTML.includes('data-kept="kept"') && p.cornerA.innerHTML.includes('data-history'), `pane A, the current text: its kind, the draft's kept word and its second act — ${p.cornerA.innerHTML}`);
     assert.ok(p.bar.innerHTML.includes(`<span class="as-of" data-string="B3.history.as-of">${esc(t('B3.history.as-of', { time }))}</span>`), `the bar names pane B with when it stood — ${p.bar.innerHTML}`);
     assert.deepEqual(SCENE.pastAsOf(), { id: 'B3.history.as-of', text: t('B3.history.as-of', { time }) }, 'the one line\'s second address');
     assert.equal(p.at(), 'pane B', 'the focus in the history pane');
@@ -3174,6 +3184,88 @@ test('from another scene\'s pane the current text\'s "show its history" opens th
     assert.deepEqual([SCENE.isOpen(), SCENE.pastOf(), SCENE.panes()?.b.src], [true, null, B], 'Back: the scene it was opened from, reopened');
   } finally { WRITE.setKept(PASTD, null); }
 }));
+
+/** the platform laying the scene out `width` px wide, with no padding and an 8 px gap (`fitOf`): the act that lays the panes out where the platform lays out none; what puts it back */
+function fitAt(/** @type {ReturnType<typeof page>} */ p, /** @type {number} */ width) {
+  const was = globalThis.getComputedStyle, wide = p.root.clientWidth;
+  p.root.clientWidth = width;
+  globalThis.getComputedStyle = /** @type {any} */ (() => ({ paddingLeft: '0px', paddingRight: '0px', columnGap: '8px' }));
+  return () => { p.root.clientWidth = wide; if (was) globalThis.getComputedStyle = was; else delete (/** @type {any} */ (globalThis)).getComputedStyle; };
+}
+/** a head's width at a fit, px: the pane's column and its edge (SC's `shapeCorner`) */
+const headPx = (/** @type {{cpl: number, px: number}} */ F) => (F.cpl * CHAR_W + EDGE) * F.px;
+/** the first row of a corner at its document's head, held at the pane's top: its height and the title's lines */
+const titleRow = (/** @type {string} */ html) => { const m = /^<div class="hrow" data-row="0" data-held="1" style="top:0px;height:([\d.]+)px">(.*?)<\/div>/.exec(html); return m ? { h: Number(m[1]), lines: [...m[2].matchAll(/<span class="tl(?: wraps)?">(.*?)<\/span>/g)].map((x) => x[1]) } : null; };
+
+test('the moved scene\'s held version at its document\'s head is titled: its words first, in the kind\'s place, held at the pane\'s top on their first row, no kind\'s slot, and pane B named by them; pane A, the current text, its kind first and named by it (issue #677; FP-26, FP-39)', () => onPage(async (p) => {
+  const restore = fitAt(p, 1100);
+  try {
+    await PUMP.loadWhole(G);
+    await SCENE.open(G, heldVersionOfG(), { heldB: true });
+    const fit = SCENE.fitted(), words = t('B3.history.held');
+    assert.deepEqual([fit?.corner, fit?.stacked, SCENE.panes()?.b.held], ['head', false, true], 'side by side, both corners at their documents\' heads, pane B the held version');
+    const row = titleRow(p.cornerB.innerHTML);
+    assert.ok(row && row.lines.join('') === esc(words) && p.cornerB.innerHTML.includes('<span class="held" data-string="B3.history.held">') && !p.cornerB.innerHTML.includes('class="kind'), `pane B's corner: the held words on its first row, held, no kind's slot — ${p.cornerB.innerHTML}`);
+    assert.ok(p.bar.innerHTML.includes(`<span id="sceneB-kind" hidden>${esc(heard(words))}</span>`) && p.bar.innerHTML.includes(`<span id="sceneA-kind" hidden>${esc(t('F.kind.draft'))}</span>`), `pane B named by the held words, pane A by its kind — ${p.bar.innerHTML}`);
+    assert.ok(/^<div class="hrow" data-row="0" data-held="1"[^>]*><span class="hslot"[^>]*><span class="kind"/.test(p.cornerA.innerHTML), `pane A's corner: its kind first — ${p.cornerA.innerHTML}`);
+  } finally { restore(); }
+}, { acts: true }));
+
+test('a titled corner keeps its held rows while its fit stands: its line narrower once the reader\'s own key is told — its label alone — holds the rows the wider line took, and a refit counts them anew; its line\'s label kept as written in pane B\'s name (issue #677; FP-26)', () => onPage(async (p) => {
+  await onTrail(p);
+  const fp = '7a'.repeat(32), cue = fingerprintCue(fp), time = lastRead(PAST_T0 + 2 * 60000);
+  const fit1 = { cpl: MEASURE_CPL, px: 17 }, fit2 = SCENE.paneFit(1440, { pad: 0, gap: 8, column: SCENE.columnPx(), outer: SCENE.listPx(0) }, 17);
+  /** a label the line breaks at as another's key at the scene's fit and holds whole at the narrower fit as the reader's own */
+  const label = [...Array(160).keys()].map((n) => 'desk – ' + 'x'.repeat(n)).find((l) => LAYER.cornerPx(t('B3.history.row', { time, hand: fields(l, cue) })) > headPx(fit1)
+    && LAYER.cornerPx(fields(l, cue)) <= headPx(fit1) && LAYER.cornerPx(t('B3.history.row', { time, hand: l })) <= headPx(fit2));
+  assert.ok(label && fit2.cpl < fit1.cpl, 'a label to break the line at the scene\'s fit and not at the narrower one');
+  REC.takeAccountKey('1.0.77', { label: /** @type {string} */ (label), fingerprint: fp });
+  await PUMP.loadWhole(PASTD);
+  WRITE.setKept(PASTD, { word: 'kept', reason: null });
+  pastRows(PAST_ROWS.map((r) => ({ ...r, key: fp })));
+  let restore = () => {};
+  try {
+    const opening = GO.history(PASTD); await flown();
+    assert.equal(await opening, true, 'the scene shows');
+    const two = titleRow(p.cornerB.innerHTML), pitch = LINE_H * 17;
+    assert.deepEqual([SCENE.panes()?.b.heldRows, two?.lines.length, Math.round((two?.h ?? 0) * 100)], [2, 2, Math.round(2 * pitch * 100)], `another's key: the time over the hand, two rows held — ${p.cornerB.innerHTML}`);
+    assert.ok(p.bar.innerHTML.includes(esc(/** @type {string} */ (label))), `pane B's name keeps the label as written, its dash never read as "to": ${p.bar.innerHTML}`);
+    REC.takeKeyStore([{ label: /** @type {string} */ (label), fingerprint: fp, bindings: [] }], 'origin-1');
+    SCENE.markKept();
+    const one = titleRow(p.cornerB.innerHTML);
+    assert.deepEqual([one?.lines, SCENE.panes()?.b.heldRows, Math.round((one?.h ?? 0) * 100)], [[esc(t('B3.history.row', { time, hand: /** @type {string} */ (label) }))], 2, Math.round(2 * pitch * 100)],
+      'the reader\'s own key told: its label alone, one line — and the two rows the wider line took still held at this fit');
+    restore = fitAt(p, 1440);
+    SCENE.refaced(); SCENE.draw();
+    assert.deepEqual([SCENE.fitted()?.cpl, SCENE.panes()?.b.heldRows, titleRow(p.cornerB.innerHTML)?.lines.length], [fit2.cpl, 1, 1], 'a refit to another fit counts them anew: one row');
+  } finally { restore(); REC.takeKeyStore(null, 'origin-1'); WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+test('where the board will not read the state before the newest change, the history pane opens on the newest kept one and its corner at its document\'s head holds the refusal\'s words with its line — a substitution, on its held rows — the bar naming the state shown (issue #677; B3-S7)', () => onPage(async (p) => {
+  await onTrail(p);
+  const key = FAKE.keyOf('op', { frame: F.opAt(PAST_AT, F.retrieveDocVSpanSet(PASTD)) }), was = script[key];
+  script[key] = { refused: { kind: 'refused', name: 'history_reclaimed', body: { error: 'history_reclaimed', floor: 35 } } };
+  try {
+    assert.equal(await pastOpened(p), true, 'the scene shows');
+    const why = SCENE.past()?.why;
+    assert.deepEqual([SCENE.past()?.at, why?.id, why?.substituted], [48, 'B3.history.reclaimed', true], 'the newest kept state in its place, why it stands so a substitution');
+    const row = /^<div class="hrow" data-row="0" data-held="1"[^>]*>(.*?)<\/div>/.exec(p.cornerB.innerHTML);
+    assert.ok(row && row[1].includes('data-string="B3.history.row"') && row[1].includes(`<span class="why" data-string="B3.history.reclaimed">${esc(why?.text ?? '')}</span>`) && (SCENE.panes()?.b.heldRows ?? 0) >= 2,
+      `its line and the refusal's words after it on the held rows, two at the least: ${p.cornerB.innerHTML}`);
+  } finally { script[key] = was; WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+test('a hand is named by its fields, each in its face: a key of the reader\'s own by its device label alone, as their byline names them; another\'s key by its label and its fingerprint\'s cue; a key no label names by its cue; a keyless hand by its words — the list and a past state\'s corner alike (issue #677; FP-34)', () => {
+  const own = '3c'.repeat(32), theirs = '4d'.repeat(32), unnamed = '5e'.repeat(32);
+  REC.takeKeyStore([{ label: 'dev-notebook', fingerprint: own, bindings: [] }], 'origin-1');
+  REC.takeAccountKey('1.0.78', { label: 'their-laptop', fingerprint: theirs });
+  try {
+    assert.deepEqual([SCENE.handFields({ kind: 'key', fingerprint: own }), SCENE.handWords({ kind: 'key', fingerprint: own })], [[{ text: 'dev-notebook', face: 'reading' }], 'dev-notebook'], 'the reader\'s own key: its label alone, the person\'s own words');
+    assert.deepEqual([SCENE.handFields({ kind: 'key', fingerprint: theirs }), SCENE.handWords({ kind: 'key', fingerprint: theirs })], [[{ text: 'their-laptop', face: 'reading' }, { text: fingerprintCue(theirs), face: 'ident' }], fields('their-laptop', fingerprintCue(theirs))], 'another\'s key: its label, then its cue in the identifier\'s face');
+    assert.deepEqual(SCENE.handFields({ kind: 'key', fingerprint: unnamed }), [{ text: fingerprintCue(unnamed), face: 'ident' }], 'a key no label names: its cue alone');
+    assert.deepEqual(SCENE.handFields({ kind: 'bare', fingerprint: null }), [{ text: t('F.slot.unsigned'), face: 'client' }], 'a keyless hand: its words');
+  } finally { REC.takeKeyStore(null, 'origin-1'); }
+});
 
 // ---- the editor pane: a pane holding the current text of a draft of the person's own ------------------------------------
 
